@@ -1,0 +1,40 @@
+abbr ch='chezmoi'
+abbr chad='chezmoi add --template'
+abbr chap='chezmoi apply --interactive'
+abbr chcd='vim $(chezmoi list -p absolute -i files | fzf)'
+abbr chcs='vim $(chezmoi list -p source-absolute -i files | fzf)'
+abbr chch='chezmoi chattr +template'
+abbr chd='chezmoi data'
+abbr che='chezmoi edit --interactive --apply'
+abbr chl='chezmoi list -p source-absolute -i files'
+
+abbr gb='git branch'
+abbr gc='git checkout'
+abbr gcb='git checkout -b'
+abbr gcs='git checkout staging'
+abbr gcm='git checkout master'
+abbr gf='git fetch -p'
+abbr gs='git status'
+abbr gd='git diff'
+abbr gl='git log --oneline -n 10'
+abbr gpoh='git push origin HEAD'
+abbr gpom='git pull origin master --no-commit'
+
+abbr fgb='() { local branches branch ; branches=$(git branch -a) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && $(echo -n "${${branch:2}#*remotes/origin/}" | pbcopy) }'
+abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
+abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | pbcopy) }"
+abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | pbcopy) }"
+abbr fz="() { local res=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$res" ]; then cd $res ; else return 1 ; fi }"
+
+abbr mh='make help'
+abbr ml='make lint'
+abbr mf='make freshup-local-for-py-engineer'
+
+abbr nr='npm run'
+abbr nrb='npm run build'
+abbr nrd='npm run dev'
+abbr nrf='npm run fix'
+abbr nrl='npm run lint'
+abbr nrs='npm run storybook'
+abbr nrt='npm run test'
+abbr nrv='npm run vite'

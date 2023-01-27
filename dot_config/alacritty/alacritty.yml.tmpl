@@ -1,0 +1,94 @@
+
+env:
+  TERM: alacritty
+
+# Colors (Hyper)
+colors:
+  primary:
+    background: '#191724'
+    foreground: '#ffffff'
+  cursor:
+    text: '#E0DEF4'
+    cursor: '#ffffff'
+
+  normal:
+    black:   '#000000'
+    red:     '#fe0100'
+    green:   '#33ff00'
+    yellow:  '#feff00'
+    blue:    '#0066ff'
+    magenta: '#cc00ff'
+    cyan:    '#00ffff'
+    white:   '#d0d0d0'
+
+  bright:
+    black:   '#808080'
+    red:     '#fe0100'
+    green:   '#33ff00'
+    yellow:  '#feff00'
+    blue:    '#0066ff'
+    magenta: '#cc00ff'
+    cyan:    '#00ffff'
+    white:   '#FFFFFF'
+
+  search:
+    matches:
+      foreground: '#feff00'
+      background: '#ffffff'
+    focused_match:
+      foreground: '#ffffff'
+      background: '#ff00ff'
+
+  bar:
+    background: '#c5c8c6'
+    foreground: '#1d1f21'
+
+window:
+  opacity: 0.95
+  decorations: None #windowバーを非表示
+
+font:
+  normal:
+    family: 'FiraCode NF'
+  bold:
+    family: 'FiraCode NF'
+{{- if eq .chezmoi.os "darwin" }}
+# macOS
+alt_send_esc: false # altキーでEsc(^[)が押されないようにする、\入力のため
+
+key_bindings:
+  - { key: D,           mods: Command,           chars: "\x02\x25"} # ctrl + b → "(ペインを左右に分割)
+  - { key: D,           mods: Command|Shift,     chars: "\x02\x22"} # ctrl + b → %(ペインを上下に分割)
+  - { key: C,           mods: Command,           chars: "\x02\x5b"} # ctrl + b → [(コピーモード)
+  - { key: F,           mods: Command,           chars: "\x02\x1b"} # ctrl + b → ctrl + [(コピーモード→検索、カスタム)
+  - { key: L,           mods: Command,           chars: "\x02\x73"} # ctrl + b → s(ペイン一覧表示)
+  - { key: L,           mods: Command|Shift,     chars: "\x02\x77"} # ctrl + b → w(ウィンドウ一覧表示)
+  - { key: P,           mods: Command,           chars: "\x02\x10"} # ctrl + b → ctrl + p(popup windowを起動、カスタム)
+  - { key: S,           mods: Command,           chars: "\x02\x13"} # ctrl + b → ctrl + s(tmux-resurrect、ウィンドウの保存)
+  - { key: R,           mods: Command,           chars: "\x02\x13"} # ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+  - { key: R,           mods: Command|Shift,     chars: "\x02\x72"} # ctrl + b → r(.tmux.confの再読込、カスタム)
+  - { key: T,           mods: Command,           chars: "\x02\x63"} # ctrl + b → c(ウィンドウの作成)
+  - { key: W,           mods: Command,           chars: "\x02\x78"} # ctrl + b → x(ウィンドウの破棄)
+  - { key: W,           mods: Command|Shift,     chars: "\x02\x64"} # ctrl + b → d(ウィンドウのデタッチ)
+  - { key: Z,           mods: Command,           chars: "\x02\x7a"} # ctrl + b → z(ペインの一時拡大/縮小)
+  - { key: Left,        mods: Command,           chars: "\x02\x68"} # ctrl + b → h(左のペインに移動、カスタム)
+  - { key: Down,        mods: Command,           chars: "\x02\x6a"} # ctrl + b → j(下のペインに移動、カスタム)
+  - { key: Up,          mods: Command,           chars: "\x02\x6b"} # ctrl + b → k(上のペインに移動、カスタム)
+  - { key: Right,       mods: Command,           chars: "\x02\x6c"} # ctrl + b → l(右のペインに移動、カスタム)
+  - { key: Left,        mods: Command|Shift,     chars: "\x02\x08"} # ctrl + b → ctrl + h(ペインを左に広げる、カスタム)
+  - { key: Down,        mods: Command|Shift,     chars: "\x02\x0a"} # ctrl + b → ctrl + j(ペインを下に広げる、カスタム)
+  - { key: Up,          mods: Command|Shift,     chars: "\x02\x0b"} # ctrl + b → ctrl + k(ペインを上に広げる、カスタム)
+  - { key: Right,       mods: Command|Shift,     chars: "\x02\x0c"} # ctrl + b → ctrl + l(ペインを右に広げる、カスタム)
+  - { key: LBracket,    mods: Command|Shift,     chars: "\x02\x70"} # ctrl + b → p(前のウィンドウに移動)
+  - { key: RBracket,    mods: Command|Shift,     chars: "\x02\x6e"} # ctrl + b → n(次のウィンドウに移動)
+  - { key: Space,       mods: Command,           chars: "\x02\x20"} # ctrl + b → space(popup windowを起動、カスタム)
+  - { key: Key1,        mods: Command,           chars: "\x02\x31"} # ctrl + b → 1(ウィンドウ1に移動)
+  - { key: Key2,        mods: Command,           chars: "\x02\x32"} # ctrl + b → 2(ウィンドウ2に移動)
+  - { key: Key3,        mods: Command,           chars: "\x02\x33"} # ctrl + b → 3(ウィンドウ3に移動)
+  - { key: Key4,        mods: Command,           chars: "\x02\x34"} # ctrl + b → 4(ウィンドウ4に移動)
+  - { key: Key5,        mods: Command,           chars: "\x02\x35"} # ctrl + b → 5(ウィンドウ5に移動)
+  - { key: Key6,        mods: Command,           chars: "\x02\x36"} # ctrl + b → 6(ウィンドウ6に移動)
+  - { key: Key7,        mods: Command,           chars: "\x02\x37"} # ctrl + b → 7(ウィンドウ7に移動)
+  - { key: Key8,        mods: Command,           chars: "\x02\x38"} # ctrl + b → 8(ウィンドウ8に移動)
+  - { key: Key9,        mods: Command,           chars: "\x02\x39"} # ctrl + b → 9(ウィンドウ9に移動)
+{{- end }}

@@ -1,0 +1,46 @@
+#!/bin/bash
+code --install-extension adam-bender.commit-message-editor
+code --install-extension alefragnani.project-manager
+code --install-extension ambooth.git-rename
+code --install-extension dbaeumer.vscode-eslint
+code --install-extension eamodio.gitlens
+code --install-extension emmanuelbeziat.vscode-great-icons
+code --install-extension esbenp.prettier-vscode
+code --install-extension formulahendry.auto-rename-tag
+code --install-extension GitHub.remotehub
+code --install-extension GitHub.vscode-pull-request-github
+code --install-extension Gruntfuggly.activitusbar
+code --install-extension Gruntfuggly.todo-tree
+code --install-extension humao.rest-client
+code --install-extension koalamer.labeled-bookmarks
+code --install-extension mechatroner.rainbow-csv
+code --install-extension mhutchie.git-graph
+code --install-extension ms-azuretools.vscode-docker
+code --install-extension MS-CEINTL.vscode-language-pack-ja
+code --install-extension ms-python.isort
+code --install-extension ms-python.pylint
+code --install-extension ms-python.python
+code --install-extension ms-vscode-remote.remote-containers
+code --install-extension ms-vscode.makefile-tools
+code --install-extension ms-vscode.remote-repositories
+code --install-extension njpwerner.autodocstring
+code --install-extension oderwat.indent-rainbow
+code --install-extension ryuta46.multi-command
+code --install-extension shardulm94.trailing-spaces
+code --install-extension shd101wyy.markdown-preview-enhanced
+code --install-extension streetsidesoftware.code-spell-checker
+code --install-extension tamasfe.even-better-toml
+code --install-extension usernamehw.errorlens
+code --install-extension vincaslt.highlight-matching-tag
+code --install-extension wix.vscode-import-cost
+code --install-extension yardensachs.copy-python-path
+code --install-extension yzhang.markdown-all-in-one
+
+{{- if eq .chezmoi.os "darwin" }}
+# macOS
+code --install-extension Vue.volar
+code --install-extension taichi.vscode-textlint
+code --install-extension EditorConfig.EditorConfig
+code --install-extension antfu.unocss
+{{- end }}
+

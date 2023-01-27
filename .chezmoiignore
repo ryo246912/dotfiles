@@ -1,0 +1,7 @@
+{{ if eq .chezmoi.os "darwin" }}
+# macOS
+{{ else }}
+# WSL
+.hammerspoon
+keybindings_darwin.json
+{{ end }}

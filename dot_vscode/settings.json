@@ -1,0 +1,261 @@
+{
+  ///////////////////////////////////////////////
+  // 基本設定
+  ///////////////////////////////////////////////
+  "editor.rulers": [90],
+  "editor.guides.bracketPairs": true,
+  // 連続した空白文字を表示
+  "editor.renderWhitespace": "boundary",
+  // コードスニペット時も補完を有効にする
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.tabSize": 2,
+  // コピー時にシンタックスハイライトは除く
+  "editor.copyWithSyntaxHighlighting": false,
+  // 右端のミニマップ非表示
+  "editor.minimap.enabled": false,
+  // ブレイクポイント表示等のグリフマージン非表示
+  "editor.glyphMargin": false,
+  // エディタ全体の設定
+  "explorer.confirmDragAndDrop": false,
+  // エクスプローラの自動フォーカスを無効にする
+  "explorer.autoReveal": false,
+  "explorer.confirmDelete": false,
+  // エクスプローラの自動開閉をされないフォルダ群
+  "explorer.autoRevealExclude": {
+    "**/.venv": true
+  },
+  "update.showReleaseNotes": false,
+  "terminal.integrated.fontFamily": "FiraCode Nerd Font Mono",
+  // MacのNativeWindowで各ウィンドウをタブのように表示
+  // "window.nativeTabs": true,
+  "workbench.editor.splitInGroupLayout": "vertical",
+  // タブを閉じたときに右タブにフォーカスする
+  "workbench.editor.focusRecentEditorAfterClose": false,
+  // CodeNavigationでの移動はプレビューモード(同一タブ)で開く
+  "workbench.editor.enablePreviewFromCodeNavigation": true,
+  // 左端のアクティビティバー非表示
+  "workbench.activityBar.visible": false,
+  // タイトルバーのレイアウトコントロールを非表示
+  "workbench.layoutControl.enabled": false,
+  ///////////////////////////////////////////////
+  // 各言語の設定
+  ///////////////////////////////////////////////
+  "css.hover.references": false,
+  "css.hover.documentation": false,
+  "html.hover.references": false,
+  "html.hover.documentation": false,
+  "scss.hover.references": false,
+  "scss.hover.documentation": false,
+  "less.hover.references": false,
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.pylintEnabled": true,
+  "python.formatting.provider": "black",
+  // 返り値のTypeHintを表示
+  "python.analysis.inlayHints.functionReturnTypes": true,
+  "[python]": {
+    "editor.tabSize": 4
+  },
+  "[vue][json][jsonc][javascript][typescript][scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnPaste": true,
+    // "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true
+    }
+  },
+  ///////////////////////////////////////////////
+  // 拡張機能
+  ///////////////////////////////////////////////
+  "activitusbar.showSourceControlCounter": true,
+  "activitusbar.activeColour":"#FFFFFF",
+  "activitusbar.inactiveColour": "#FFFFFF",
+  "activitusbar.views": [
+    {
+      "name": "scm",
+      "codicon": "source-control-view-icon"
+    },
+  ],
+  "bookmarks.sideBar.expanded": true,
+  "bookmarks.saveBookmarksInProject": true,
+  "commit-message-editor.view.defaultView": "form",
+  "commit-message-editor.tokens": [
+    {
+      "label": "Type",
+      "name": "type",
+      "type": "enum",
+      "description": "コミット種別  | Type of changes",
+      "options": [
+        {
+          "label": "feature",
+          "value": "feature",
+          "description": "機能追加"
+        },
+        {
+          "label": "add",
+          "value": "add",
+          "description": "新規追加(機能ほどではない？)"
+        },
+        {
+          "label": "fix",
+          "value": "fix",
+          "description": "バグ修正 | A bug fix"
+        },
+        {
+          "label": "hotfix",
+          "value": "hotfix",
+          "description": "緊急対応"
+        },
+        {
+          "label": "refactor",
+          "value": "refactor",
+          "description": "リファクタリング=バグ修正、機能追加・修正なしのコード変更\nA code change that neither fixes a bug nor adds a feature"
+        },
+        {
+          "label": "wip",
+          "value": "wip",
+          "description": "作業中(あとでコミット戻してまとめる)"
+        },
+        {
+          "label": "docs",
+          "value": "docs",
+          "description": "Documentation only changes"
+        },
+        {
+          "label": "remove",
+          "value": "remove",
+          "description": "ファイル削除"
+        },
+        {
+          "label": "revert",
+          "value": "revert",
+          "description": "変更取り消し"
+        },
+        {
+          "label": "----"
+        },
+        {
+          "label": "update",
+          "value": "update",
+          "description": "コード内容以外の修正（コメント・ドキュメント）"
+        },
+        {
+          "label": "chore",
+          "description": "Updating grunt tasks etc; no production code change"
+        },
+        {
+          "label": "archived",
+          "value": "archived",
+          "description": "アーカイブ化"
+        }
+      ]
+    },
+    {
+      "label": "Scope",
+      "name": "scope",
+      "type": "text",
+      "description": "コミットタイプの詳細情報(コミットタイプの目的語) | 例.feat(parser)：配列を解析する機能を追加する",
+      "prefix": "(",
+      "suffix": ")"
+    },
+    {
+      "label": "Short description",
+      "name": "description",
+      "type": "text",
+      "description": "1行タイトル(変更理由等を記載する) | Short description in the subject line.",
+      "maxLength": 70
+    },
+    {
+      "label": "Body",
+      "name": "body",
+      "type": "text",
+      "description": "変更理由詳細 | Optional body",
+      "maxLines": 10,
+      "multiline": true,
+      "lines": 5
+    },
+    {
+      "label": "Breaking change",
+      "name": "breaking_change",
+      "type": "boolean",
+      "value": "BREAKING CHANGE: ",
+      "default": false
+    },
+    {
+      "label": "Footer",
+      "name": "footer",
+      "type": "text",
+      "description": "コミットログの内容に関するURLを載せる | Optional footer",
+      "multiline": true
+    }
+  ],
+  "commit-message-editor.staticTemplate": [
+    "feat: Short description",
+    "",
+    "Message body",
+    "",
+    "Message footer"
+  ],
+  "commit-message-editor.dynamicTemplate": [
+    "{type}{scope}: {description}",
+    "",
+    "{body}",
+    "",
+    "{breaking_change}{footer}"
+  ],
+  "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
+  "gitlens.defaultDateLocale": null,
+  // hoverでdiffの内容は非表示
+  "gitlens.hovers.currentLine.changes": false,
+  "gitlens.blame.heatmap.location": "left",
+  "gitlens.views.branches.branches.layout": "list",
+  // gitlensのkeybindingをalternateパターンにする
+  "gitlens.keymap": "alternate",
+  "gitlens.fileAnnotations.command": "blame",
+  "jupyter.interactiveWindowMode": "perFile",
+  "jupyter.disableJupyterAutoStart": true,
+  "multiCommand.commands": [
+    {
+      "command": "multiCommand.closeEditorFocusLeft",
+      "sequence": [
+        "workbench.action.closeActiveEditor",
+        "workbench.action.previousEditor"
+      ]
+    }
+  ],
+  "projectManager.sortList": "Name",
+  // prettierをデフォルトではOFFにする
+  "prettier.enable": false,
+  "todo-tree.general.tags": [
+    "BUG",
+    "HACK",
+    "FIXME",
+    "TODO",
+    "XXX",
+    "[ ]",
+    "[x]",
+    "NOTE",
+    "MEMO"
+  ],
+  "statsBar.cpuLoad.format": "CPU:${percent}%",
+  "statsBar.modules": ["cpuLoad", "memoUsage"],
+  "statsBar.memoUsage.format": "Memory:${percent}%",
+  "statsBar.location": "Right",
+  "workbench.iconTheme": "vscode-great-icons",
+  "vscodemacros.macroFilePath": "{HOME}/private/vsc-macro/macro.js",
+  "volar.codeLens.scriptSetupTools": true,
+  "vim.insertModeKeyBindings": [
+    {
+      "before": ["j", "j"],
+      "after": ["<Esc>"]
+    }
+  ],
+  "vim.hlsearch": true,
+  // pythonの言語サーバpylanceにしてみる
+  "python.languageServer": "Pylance",
+  ///////////////////////////////////////////////
+  // 以下自動設定
+  ///////////////////////////////////////////////
+  "window.zoomLevel": -1,
+}

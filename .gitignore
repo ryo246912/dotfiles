@@ -1,0 +1,5 @@
+dot_gitconfig.secret
+dot_gitconfig.secret-noreply
+dot_zshrc.secret
+
+**/mycheat_private.cheat

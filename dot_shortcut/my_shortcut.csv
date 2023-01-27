@@ -1,0 +1,117 @@
+項目,Mac,Win/WSL,内容
+-,-,-,-
+DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
+DBeaver,F7,-,結果パネルの切替
+DBeaver,Esc,-,セルの変更をリセット
+DBeaver,cmd + space,-,×値ビューア開閉(show/hide results panel) ※カスタム
+DBeaver,cmd + space,-,オーダーの切替 ※カスタム
+DBeaver,cmd + shift + e,-,タブ切り替え
+DBeaver,cmd + shift + [],-,前・次のタブ ※カスタム
+DBeaver,cmd + [],-,前・次の下位タブ ※カスタム
+DBeaver,cmd + shift + option + [],-,ビューの切り替え ※カスタム
+DBeaver,ctrl + enter,-,カーソルの1SQLを実行
+DBeaver,Ctrl + space,-,SQL補完
+DBeaver,Ctrl + s,-,変更を適用(データ保存)
+DBeaver,Ctrl + r,-,変更をリセット
+DBeaver,F5,-,更新
+Google Chrome,cmd + ;/-,-,拡大/縮小
+Google Chrome,cmd + Y,-,履歴表示
+Google Chrome,cmd + [],-,ディベロッパーツールでのフォーカスの移動
+Google Chrome,cmd + shift + p,ctrl + shift + r|shift + F5,ハード再読込(キャッシュ削除&ハード再読込は「開発者ツールを開いた状態で」再読込右クリック)
+Google Chrome,cmd + shift + a,-,タブ一覧表示
+Google Chrome,cmd + shift + t,-,ウィンドウの復元
+Google Chrome,cmd + shift + ↓,-,one tabに格納 ※カスタム
+Google Chrome,cmd + shift + y,-,テキストの翻訳※カスタム,
+Google Chrome,cmd + option + i,-,ディベロッパーツールの表示
+Google Chrome,ctrl + shift + fn + ↑↓,-,現在のタブを左/右に移動
+Googleスプレッドシート,入力 → shift + 矢印 → cmd + Enter,-,一括入力
+Googleスプレッドシート,option + ↑↓,-,シート切替
+iTerm2,cmd + d,-,画面を左右に分割
+iTerm2,cmd + shift + d,-,画面を上下に分割
+iTerm2,cmd + [],-,分割画面の移動
+iTerm2,option + space,-,ホットキー起動
+Mac,ctrl + F2,-,メニューバー操作
+Mac,ctrl + F3,-,Dock操作
+Mac,ctrl + ↓,-,ウィジェット表示 ※カスタム
+Mac,cmd + shift + 4,-,スクリーンショット：一部撮影
+Mac,cmd + shift + 5,-,スクリーンショット：コントロール表示
+Mac,cmd + ctrl + F,-,フルスクリーン
+Mac,cmd + space,-,スポットライト起動
+Mac,cmd + shift + .,-,隠しファイルを表示
+Mac,cmd + d,-,保存しない（ファイル保存時のダイアログ）
+Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
+Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
+Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
+Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
+Notion,cmd + /,-,編集画面表示
+Notion,cmd + Enter,-,カーソルブロックを操作(ページを開く・ToDoオンオフ・トグル開閉)
+Sticky,cmd + m,-,折りたたみ・展開
+Slack,cmd + shift + c,-,コード表示
+Slack,cmd + T,-,ページ移動
+Slack,cmd + shift + t,-,スレッドへ移動
+Slack,cmd + shift + a,-,未読のダイアログを表示
+Slack,option + ↑↓,-,前/次のチャンネルへ移動
+Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
+Slack,F6/shift + F6,-,次/前のセクションにフォーカス
+Slack,cmd + [],-,履歴を進む/戻る
+Slack,cmd + .,-,右サイドバーを表示/非表示
+Slack,cmd + shift + D,-,左サイドバーを表示/非表示
+Vim,v,-,ビジュアルモード
+Vim,i,-,インサートモード
+Vim,w|b|W|B,-,1単語次/前にカーソル移動、(スペース区切りで)1単語次/前にカーソル移動
+Vim,f|F<文字>,-,行内でカーソル前/後の指定文字に移動、;|次の候補に移動
+Vim,e|E,-,カーソル位置の最後/次の単語の最後に移動
+Vim,^|$,-,行の先頭/末尾に移動
+Vim,-|+,-,前/次の行の先頭に移動
+Vim,{|},-,前/次の段落に移動
+Vim,<n>G,-,n行目に移動
+Vim,/|?<文字>,-,検索
+Vim,v,-,選択範囲開始
+Vim,y,-,選択範囲をコピー
+Vim,yy,-,1行をコピー
+Vim,p|P,-,貼り付け/カーソル前に貼り付け
+Vim,d,-,選択範囲を切り取り
+Vim,dd,-,カーソルのある行を削除する
+Vim,u,-,変更を元に戻す(undo)
+Vim,ctrl + r,-,戻しすぎた変更を戻す(redo)
+Vim,q:,-,コマンドラインウィンドウ(履歴)表示
+Vim,q/|?,-,コマンド履歴の前方/後方検索
+Vim,q: → ctrl + c,-,コマンドラインに履歴を送る
+Vim,:q,-,終了
+Vim,:q!,-,ファイル保存せず終了
+Vim,:w,-,保存
+Vim,:wq,-,保存して終了
+Vim,:<n>,-,n行目に移動
+VSCode,ctrl + -,-,定義に戻る
+VSCode,ctrl + shift + M,-,問題を表示
+VSCode,cmd + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
+VSCode,cmd + space,-,プレビューモードの解除(※カスタム)
+VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
+VSCode,cmd + shift + e,-,エディタにフォーカス
+VSCode,cmd + shift + k,-,選択行を削除
+VSCode,cmd + shift + [],-,タブ切り替え
+VSCode,cmd + shift + option + [],-,タブの位置移動(※カスタム)
+VSCode,ctrl + [],-,エディタの幅を縮小/拡大(※カスタム)
+VSCode,ctrl + shift + [],-,エディタの高さを縮小/拡大(※カスタム)
+VSCode,cmd + d,-,右に分割(※カスタム)
+VSCode,cmd + shift + d,-,下に分割(※カスタム)
+VSCode,cmd + option + space,-,ホバーの表示(※カスタム)
+VSCode,cmd + option + [],-,折りたたみ
+VSCode,cmd + option + l,-,選択範囲内で検索(FindinSelection)ON/OFF
+VSCode,cmd + option + ↑↓,-,マルチカーソル
+VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
+VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
+VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
+VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
+VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
+VSCode,cmd + k → cmd + J,-,閉じタグをすべて開く
+VSCode,cmd + shift + o,-,ファイルシンボルを表示
+VSCode,option + ↑↓,-,行を入れ替え
+VSCode,option + Shift + ↑↓,-,行をコピー
+VSCode,option + shift + v,-,(vscodevim)vscodevimの有効無効切り替え(カスタム)
+VSCode,option + b,-,(gitlens)Git Blame表示
+VSCode,option + h,-,(gitlens)ブランチの履歴表示
+VSCode,option + (カンマ)|.,-,(gitlens)前/後のRevisionとの差分を表示
+VSCode,option + shift + .,-,(gitlens)現ファイルとの差分を表示
+VSCode,option + shift + (カンマ),-,(gitlens)カーソル行での前Revisionの差分を表示
+VSCode,コマンドパレット → Wrap with Abbreviation,-,タグで囲む

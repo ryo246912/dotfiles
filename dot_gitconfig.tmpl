@@ -1,0 +1,27 @@
+[color]
+  ui = auto
+[core]
+  editor = vim
+[grep]
+  lineNumber = true
+[pager]
+  diff = delta
+  log = delta
+  reflog = delta
+  show = delta
+[delta]
+  plus-style = "syntax #012800"
+  minus-style = "syntax #340001"
+  syntax-theme = base16
+  navigate = true
+  line-numbers = true
+  side-by-side = true
+[interactive]
+  diffFilter = delta --color-only
+{{- if eq .chezmoi.os "darwin" }}
+[include]
+  path = ~/.gitconfig.secret-noreply
+[includeIf "gitdir:~/projects/"]
+  path = ~/.gitconfig.secret
+{{- end }}
+

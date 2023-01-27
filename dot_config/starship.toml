@@ -1,0 +1,143 @@
+# right_format = """$battery$memory_usage$time"""
+
+# 改行($line_break)前に隙間埋め($fill)+$battery$memory_usage$time$line_breakを挿入
+format = """
+$username\
+$hostname\
+$localip\
+$shlvl\
+$singularity\
+$kubernetes\
+$directory\
+$vcsh\
+$git_branch\
+$git_commit\
+$git_state\
+$git_metrics\
+$git_status\
+$hg_branch\
+$docker_context\
+$package\
+$c\
+$cmake\
+$cobol\
+$daml\
+$dart\
+$deno\
+$dotnet\
+$elixir\
+$elm\
+$erlang\
+$golang\
+$guix_shell\
+$haskell\
+$haxe\
+$helm\
+$java\
+$julia\
+$kotlin\
+$lua\
+$nim\
+$nodejs\
+$ocaml\
+$opa\
+$perl\
+$php\
+$pulumi\
+$purescript\
+$python\
+$raku\
+$rlang\
+$red\
+$ruby\
+$rust\
+$scala\
+$swift\
+$terraform\
+$vlang\
+$vagrant\
+$zig\
+$buf\
+$nix_shell\
+$conda\
+$meson\
+$spack\
+$aws\
+$gcloud\
+$openstack\
+$azure\
+$env_var\
+$crystal\
+$custom\
+$sudo\
+$cmd_duration\
+$jobs\
+$status\
+$os\
+$container\
+$shell\
+$fill\
+$memory_usage\
+$battery\
+$time\
+$line_break\
+$character"""
+
+[[battery.display]]
+threshold = 100
+
+[character]
+error_symbol = "[❯](bold red)"
+success_symbol = "[❯](bold green)"
+
+[directory]
+truncation_length = 100
+truncate_to_repo = false
+truncation_symbol = "…/"
+
+[docker_context]
+format = "[🐋 $context](blue bold) "
+
+[gcloud]
+disabled = true
+
+[git_commit]
+only_detached = false
+tag_symbol = "🔖"
+
+[git_branch]
+symbol = " "
+
+[git_status]
+format = "$conflicted$stashed[$diverged](cyan) "
+conflicted = "❌"
+diverged = "⇕●${ahead_count}●${behind_count}" #HEADの前/後に積まれたコミット数
+stashed = '📦${count}'
+
+[memory_usage]
+disabled = false
+format = '$symbol[${ram_pct}/32GB( \${swap})]($style) '
+symbol = "💻"
+threshold = -1
+
+[nodejs]
+format = '[${symbol}(${version})]($style) '
+
+[python]
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style) '
+
+[sudo]
+disabled = false
+
+[time]
+disabled = false
+format = '🕙[\[$time\]]($style) '
+time_format = "%T"
+utc_time_offset = "9"
+
+# アーキテクチャの表示
+[custom.arch]
+command = "uname -m"
+when = """ test $(uname -m) = "x86_64" """
+style = "bold yellow"
+format = "[$output]($style) "

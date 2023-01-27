@@ -1,0 +1,220 @@
+% shortcut
+
+# my shortsut list
+cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf
+
+;--------------------------------------------------------------
+; chrome
+;--------------------------------------------------------------
+
+% chrome
+
+# select tab
+bash ~/chrome_tab_activate.sh
+
+;--------------------------------------------------------------
+; django
+;--------------------------------------------------------------
+
+% django
+
+# show migration list SQL ex) python manage.py showmigrations issues
+python manage.py showmigrations <app_name>
+
+# check migration SQL ex) python manage.py sqlmigrate issues 0035
+python manage.py sqlmigrate <app_name> <migration_name>
+
+# rollback migration ex) python manage.py migrate concierges 0031
+python manage.py migrate <app_name> <rollback_to_migration_name>
+
+;--------------------------------------------------------------
+; docker
+;--------------------------------------------------------------
+
+% docker
+
+# docker exec ex) docker container exec -it <container_id> bash
+docker container exec -it <container_id> <command>
+
+$ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
+
+;--------------------------------------------------------------
+; git
+;--------------------------------------------------------------
+
+% git
+
+# git diff staging file
+git diff --cached -- $(git rev-parse --show-toplevel)/<filename> | delta<_no-gitconfig>
+
+# git diff between commits(default)
+git diff <commit1>...<commit2> | delta<_no-gitconfig>
+
+# git show
+git show <commit1> | delta<_no-gitconfig>
+
+# git cherry-pick
+git cherry-pick -n <commit1>
+
+# git restore(default)
+git checkout <commit>
+
+# rename git branch
+git branch -m <branch> <new_branch>
+
+# delete git branch
+<git_fetch_>git branch -d <branch>
+
+# delete git branch --merged
+git fetch -p && git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+
+# delete git remote branch
+git push origin :<branch>
+
+# git grep
+git grep -l "<regex>" -- "<path>"
+
+# stash list
+git stash list
+
+# stash show
+git stash show <stash_num> ; read ; git stash show <stash_num> -p
+
+# stash pop
+git stash show <stash_num> -p ; read ; git stash pop <stash_num>
+
+$ _no-gitconfig: echo -e " --no-gitconfig\n"
+$ git_fetch_: echo -e "\ngit fetch -p && "
+$ commit1: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
+$ commit2: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
+$ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
+$ branch: cat <(git branch --contains) <(git branch) | awk '{print $NF}'
+$ stash_num: git stash list | column -t -s: --- --column 1
+$ filename: git diff --cached --name-only && echo "" --- --column 1 --preview "git diff --cached -- $(git rev-parse --show-toplevel)/{1} | delta --no-gitconfig"
+
+;--------------------------------------------------------------
+; GitHub
+;--------------------------------------------------------------
+
+% GitHub CLI
+
+# pr list, -s:{open|closed|merged|all}
+gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
+
+# pr view
+gh pr view <pr_no> --comments<_web>
+
+# pr diff
+gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | delta<_no-gitconfig>
+
+# pr checks
+gh pr checks <pr_no><_--watch><_web>
+
+# watch workflow
+gh run watch
+
+# watch error workflow log
+gh run view --log-failed
+
+# rerun error workflow
+gh run rerun --failed
+
+# pr status
+gh pr status
+
+# pr checkout
+gh pr checkout <pr_no>
+
+# pr review
+gh pr review <pr_no> <approve_comment> -b "<comment>"
+
+# issues list(HOST)
+gh issue list --author "<author>" --state <state>
+
+# issues list, owner:repository owner(ex:pytorch), repository:repository name(ex:pytorch/pytorch)
+gh issue list --repo "<repository>" --state <state> --search "<search>"
+
+# issues view
+gh issue view <issue_no><_web>
+
+# repository list, owner:repository owner(ex:pytorch) -L:max num
+gh repo list <owner> -L 100
+
+# repository show, owner:repository owner(ex:pytorch)
+gh repo view <repository> -w
+
+$ author: echo -e "\n@me"
+$ search: echo -e "\nuser-review-requested:@me"
+$ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
+$ _no-gitconfig: echo -e " --no-gitconfig\n"
+$ _--watch: echo -e "\n --watch"
+$ _--name-only: echo -e "\n --name-only"
+$ state: echo -e "open\nall\nclosed\nmerged"
+$ _web: echo -e "\n -w"
+$ pr_no: gh pr list --author "<author>" --state <state> --json number,title,headRefName,updatedAt --template \
+  '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
+$ issue_no: gh issue list --state all --json number,state,title,author,updatedAt --template \
+  '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .state .title .author.login (timeago .updatedAt)}}{{end}}' --- --column 1
+$ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,description,updatedAt --template \
+  '{{range .}}{{tablerow (printf .nameWithOwner) .description .description (timeago .updatedAt)}}{{end}}' --- --column 1
+
+;--------------------------------------------------------------
+; mySQL
+;--------------------------------------------------------------
+
+% mySQL
+
+# mysql login ex)mysql -u root -p test_xxx
+mysql -u <user> -p <database>
+
+;--------------------------------------------------------------
+; shell
+;--------------------------------------------------------------
+
+% shell:grep
+
+# -i:ignore upper&lower,-n:rows ex) grep -in "" apps/**/*.py
+grep -in "<regex>" <path>
+
+# -l:only filename ex) grep -il "" apps/**/*.py
+grep -il "<regex>" <path>
+
+# -E:pattern match ex) grep -E "(X|Y)" apps/**/*.py
+grep -inE "(<pattern1>|<pattern2>)" <path>
+
+# -C n:output {n} lines ex) grep -C 1 -in "" apps/**/*.py
+grep -C <n> -i "<regex>" <path>
+
+% shell:ssh
+
+# ssh-add
+eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
+
+% shell
+
+# watch linux os version
+cat /etc/os-release
+
+# watch kernel version
+uname -a
+
+;--------------------------------------------------------------
+; SQL
+;--------------------------------------------------------------
+
+% SQL
+
+# show variables
+SHOW VARIABLES;
+
+;--------------------------------------------------------------
+; python
+;--------------------------------------------------------------
+
+% Python
+
+# delete .pyc files
+find . -name \*.pyc -delete;
+
+# http server
+python -m http.server 8888
