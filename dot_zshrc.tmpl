@@ -11,9 +11,6 @@ SAVEHIST=100000
 setopt share_history
 # 同じコマンドをヒストリに渡さない
 setopt hist_ignore_all_dups
-bindkey -e
-# 逆Tab方向に移動
-bindkey '^[^i' reverse-menu-complete
 
 autoload -Uz compinit
 compinit
@@ -26,6 +23,10 @@ if [ -e "${ZSH_SECRET_CONF}" ]; then
   source "${ZSH_SECRET_CONF}"
 fi
 
+# キーバインドをemacs風にする
+bindkey -e
+# 逆Tab方向に移動
+bindkey '^[^i' reverse-menu-complete
 {{- if eq .chezmoi.os "darwin" }}
 # option + ←→で単語毎のカーソル移動
 bindkey "3C" forward-word
@@ -201,6 +202,7 @@ fi
 
 # nodenv setting
 eval "$(nodenv init -)"
+export PATH="$(npm root -g):$PATH"
 {{- end }}
 
 # z
