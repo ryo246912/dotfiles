@@ -35,8 +35,7 @@ code --install-extension vincaslt.highlight-matching-tag
 code --install-extension wix.vscode-import-cost
 code --install-extension yardensachs.copy-python-path
 code --install-extension yzhang.markdown-all-in-one
-
-{{- if eq .chezmoi.os "darwin" }}
+{{ if eq .chezmoi.os "darwin" -}}
 # macOS
 code --install-extension Vue.volar
 code --install-extension taichi.vscode-textlint
