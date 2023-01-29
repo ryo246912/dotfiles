@@ -21,7 +21,7 @@ Google Chrome,cmd + shift + p,ctrl + shift + r|shift + F5,ハード再読込(キ
 Google Chrome,cmd + shift + a,-,タブ一覧表示
 Google Chrome,cmd + shift + t,-,ウィンドウの復元
 Google Chrome,cmd + shift + ↓,-,one tabに格納 ※カスタム
-Google Chrome,cmd + shift + y,-,テキストの翻訳※カスタム,
+Google Chrome,cmd + shift + y,-,テキストの翻訳※カスタム
 Google Chrome,cmd + option + i,-,ディベロッパーツールの表示
 Google Chrome,ctrl + shift + fn + ↑↓,-,現在のタブを左/右に移動
 Googleスプレッドシート,入力 → shift + 矢印 → cmd + Enter,-,一括入力
