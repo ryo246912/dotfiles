@@ -17,12 +17,6 @@ compinit
 
 zstyle ':completion:*:default' menu select=1
 
-# .zshrc.secretの読込
-ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
-if [ -e "${ZSH_SECRET_CONF}" ]; then
-  source "${ZSH_SECRET_CONF}"
-fi
-
 # キーバインドをemacs風にする
 bindkey -e
 # 逆Tab方向に移動
@@ -217,3 +211,9 @@ eval "$(starship init zsh)"
 
 # navi
 eval "$(navi widget zsh)"
+
+# .zshrc.secretの読込
+ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
+if [ -e "${ZSH_SECRET_CONF}" ]; then
+  source "${ZSH_SECRET_CONF}"
+fi

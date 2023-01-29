@@ -7,6 +7,7 @@ abbr chch='chezmoi chattr +template'
 abbr chd='chezmoi data'
 abbr che='chezmoi edit --interactive --apply'
 abbr chl='chezmoi list -p source-absolute -i files'
+abbr chm='chezmoi merge $(chezmoi list -p absolute -i files | fzf)'
 
 abbr gb='git branch'
 abbr gc='git checkout'
@@ -20,15 +21,19 @@ abbr gl='git log --oneline -n 10'
 abbr gpoh='git push origin HEAD'
 abbr gpom='git pull origin master --no-commit'
 
+{{ if eq .chezmoi.os "darwin" -}}
 abbr fgb='() { local branches branch ; branches=$(git branch -a) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && $(echo -n "${${branch:2}#*remotes/origin/}" | pbcopy) }'
 abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
 abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | pbcopy) }"
 abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | pbcopy) }"
+{{- end }}
 abbr fz="() { local res=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$res" ]; then cd $res ; else return 1 ; fi }"
 
+{{ if eq .chezmoi.os "darwin" -}}
 abbr mh='make help'
 abbr ml='make lint'
 abbr mf='make freshup-local-for-py-engineer'
+{{- end }}
 
 abbr nr='npm run'
 abbr nrb='npm run build'
