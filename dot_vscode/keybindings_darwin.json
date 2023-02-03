@@ -345,8 +345,13 @@
   {
     "key": "cmd+w",
     "command": "-workbench.action.closeActiveEditor"
-  }
+  },
+  // (GitHub) PRのビューにフォーカス
+  {
+    "key": "ctrl+cmd+g",
+    "command": "github:activePullRequest.focus"
   ///////////////////////////////////////////////
   // 以下自動入力
   ///////////////////////////////////////////////
+  }
 ]
