@@ -52,7 +52,7 @@ alias nr='npm run'
 #--------------------------------------------------------------
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
+export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
 export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 
 {{ if eq .chezmoi.os "darwin" -}}
@@ -206,7 +206,7 @@ export PATH="$(npm root -g):$PATH"
 fpath=(~/.zsh/completion $fpath)
 zstyle ':completion:*:*:git:*' script ~/.zsh/completion/git-completion.bash
 
-#sratship
+# sratship
 eval "$(starship init zsh)"
 
 # navi

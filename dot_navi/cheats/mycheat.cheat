@@ -13,6 +13,15 @@ cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf
 bash ~/chrome_tab_activate.sh
 
 ;--------------------------------------------------------------
+; cspell
+;--------------------------------------------------------------
+
+% cspell
+
+# cspell lint master...HEAD
+cspell --no-progress --root ~ $(git diff -r --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD)
+
+;--------------------------------------------------------------
 ; django
 ;--------------------------------------------------------------
 
@@ -45,10 +54,13 @@ $ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.St
 % git
 
 # git diff staging file
-git diff --cached -- $(git rev-parse --show-toplevel)/<filename> | delta<_no-gitconfig>
+git diff --cached -- <filename1> | delta<_no-gitconfig>
+
+# git diff between master...HEAD
+git diff<_--name-only> master...HEAD -- <filename2> | delta<_no-gitconfig>
 
 # git diff between commits(default)
-git diff <commit1>...<commit2> | delta<_no-gitconfig>
+git diff <commit1>...<commit2> -- <filename3> | delta<_no-gitconfig>
 
 # git show
 git show <commit1> | delta<_no-gitconfig>
@@ -58,6 +70,9 @@ git cherry-pick -n <commit1>
 
 # git restore(default)
 git checkout <commit>
+
+# rename git file/directory
+git mv <file_directory> <file_directory>
 
 # rename git branch
 git branch -m <branch> <new_branch>
@@ -70,6 +85,9 @@ git fetch -p && git branch --merged master ; read ; git branch --merged master |
 
 # delete git remote branch
 git push origin :<branch>
+
+# git rebase
+git rebase -i <commit1>
 
 # git grep
 git grep -l "<regex>" -- "<path>"
@@ -84,13 +102,18 @@ git stash show <stash_num> ; read ; git stash show <stash_num> -p
 git stash show <stash_num> -p ; read ; git stash pop <stash_num>
 
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
+$ _--name-only: echo -e "\n --name-only"
 $ git_fetch_: echo -e "\ngit fetch -p && "
 $ commit1: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ branch: cat <(git branch --contains) <(git branch) | awk '{print $NF}'
 $ stash_num: git stash list | column -t -s: --- --column 1
-$ filename: git diff --cached --name-only && echo "" --- --column 1 --preview "git diff --cached -- $(git rev-parse --show-toplevel)/{1} | delta --no-gitconfig"
+$ type: echo -e "f\nd"
+$ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
+$ filename1: echo "." && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff -- {1} | delta --no-gitconfig"
+$ filename2: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
+$ filename3: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
 
 ;--------------------------------------------------------------
 ; GitHub
@@ -110,6 +133,24 @@ gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | d
 # pr checks
 gh pr checks <pr_no><_--watch><_web>
 
+# pr checkout
+gh pr checkout <pr_no>
+
+# status
+gh status
+
+# pr & issue status
+gh pr status ; gh issue status
+
+# issues view
+gh issue view <issue_no> --comments<_web>
+
+# issues list(HOST)
+gh issue list --assignee "<author>" --state <state>
+
+# issues list, owner:repository owner(ex:pytorch), repository:repository name(ex:pytorch/pytorch)
+gh issue list --repo "<repository>" --state <state> --search "<search>"
+
 # watch workflow
 gh run watch
 
@@ -119,23 +160,8 @@ gh run view --log-failed
 # rerun error workflow
 gh run rerun --failed
 
-# pr status
-gh pr status
-
-# pr checkout
-gh pr checkout <pr_no>
-
 # pr review
 gh pr review <pr_no> <approve_comment> -b "<comment>"
-
-# issues list(HOST)
-gh issue list --author "<author>" --state <state>
-
-# issues list, owner:repository owner(ex:pytorch), repository:repository name(ex:pytorch/pytorch)
-gh issue list --repo "<repository>" --state <state> --search "<search>"
-
-# issues view
-gh issue view <issue_no><_web>
 
 # repository list, owner:repository owner(ex:pytorch) -L:max num
 gh repo list <owner> -L 100
@@ -151,9 +177,9 @@ $ _--watch: echo -e "\n --watch"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
-$ pr_no: gh pr list --author "<author>" --state <state> --json number,title,headRefName,updatedAt --template \
+$ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --json number,title,headRefName,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
-$ issue_no: gh issue list --state all --json number,state,title,author,updatedAt --template \
+$ issue_no: gh issue list --assignee "<author>" --state <state> --json number,state,title,author,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .state .title .author.login (timeago .updatedAt)}}{{end}}' --- --column 1
 $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,description,updatedAt --template \
   '{{range .}}{{tablerow (printf .nameWithOwner) .description .description (timeago .updatedAt)}}{{end}}' --- --column 1
