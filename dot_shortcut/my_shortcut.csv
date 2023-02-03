@@ -87,6 +87,7 @@ VSCode,ctrl + shift + M,-,問題を表示
 VSCode,cmd + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
 VSCode,cmd + space,-,プレビューモードの解除(※カスタム)
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
+VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + shift + e,-,エディタにフォーカス
 VSCode,cmd + shift + k,-,選択行を削除
 VSCode,cmd + shift + [],-,タブ切り替え
