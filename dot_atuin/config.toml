@@ -1,0 +1,5 @@
+style = "compact"
+
+filter_mode_shell_up_key_binding = "host"
+
+search_mode = "fuzzy"
