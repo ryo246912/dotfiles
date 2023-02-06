@@ -45,6 +45,26 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 # docker exec ex) docker container exec -it <container_id> bash
 docker container exec -it <container_id> <command>
 
+# docker disk free
+docker system df
+
+# docker disk image -s:file block size -k:KB  file:Docker.raw or Docker.qcow2
+ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
+
+# docker no referrenced images -f:filter (dangling=not referenced by any containers)
+docker images -f dangling=true
+
+# docker remove no referenced images -q:only display volume names
+docker rmi $(docker images -q -f dangling=true) 
+
+# docker no referenced volume -f:filter (dangling=not referenced by any containers)
+docker volume ls -f dangling=true
+
+# docker remove no referenced volume -q:only display volume names
+docker volume rm $(docker volume ls -q -f dangling=true)
+
+# docker remove unused build cache
+docker builder prune
 $ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
 
 ;--------------------------------------------------------------
