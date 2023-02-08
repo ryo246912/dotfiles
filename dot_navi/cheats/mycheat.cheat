@@ -181,7 +181,7 @@ gh run view --log-failed
 gh run rerun --failed
 
 # pr review
-gh pr review <pr_no> <approve_comment> -b "<comment>"
+gh pr review <pr_review_no> <approve_comment> -b "<comment>"
 
 # repository list, owner:repository owner(ex:pytorch) -L:max num
 gh repo list <owner> -L 100
@@ -198,6 +198,8 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --json number,title,headRefName,updatedAt --template \
+  '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
+$ pr_review_no: gh pr list --search "user-review-requested:@me" --state open --json number,title,headRefName,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
 $ issue_no: gh issue list --assignee "<author>" --state <state> --json number,state,title,author,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .state .title .author.login (timeago .updatedAt)}}{{end}}' --- --column 1
