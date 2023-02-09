@@ -1,0 +1,180 @@
+#--------------------------------------------------------------
+# alias
+#--------------------------------------------------------------
+
+alias gb='git branch'
+alias gf='git fetch -p'
+alias ll='ls -l'
+alias mh='make help'
+alias nr='npm run'
+
+#--------------------------------------------------------------
+# fzf
+#--------------------------------------------------------------
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+
+{{ if eq .chezmoi.os "darwin" -}}
+# fcb - fuzzy chrome bookmark
+fcb() {
+  bookmarks_path="$HOME/Library/Application Support/Google/Chrome/Profile 1/Bookmarks"
+
+  jq_script='
+    def ancestors: while(. | length >= 2; del(.[-1,-2]));
+    . as $in | paths(.url?) as $key | $in | getpath($key) | {name,url, path: [$key[0:-2] | ancestors as $a | $in | getpath($a) | .name?] | reverse | join("/") } | .path + "/" + .name + "\t" + .url'
+
+  jq -r "$jq_script" < "$bookmarks_path" \
+    | sed -E $'s/(.*)\t(.*)/\\1\t\x1b[36m\\2\x1b[m/g' \
+    | fzf --ansi \
+    | cut -d$'\t' -f2 \
+    | xargs open
+}
+
+# fch - fuzzy chrome history
+fch() {
+  local cols sep google_history open
+  cols=$(( COLUMNS / 3 ))
+  sep='{::}'
+
+  if [ "$(uname)" = "Darwin" ]; then
+    google_history="$HOME/Library/Application Support/Google/Chrome/Profile 1/History"
+    open=open
+  else
+    google_history="$HOME/.config/google-chrome/Profile 1/History"
+    open=xdg-open
+  fi
+  cp -f "$google_history" /tmp/h
+  sqlite3 -separator $sep /tmp/h \
+    "select substr(title, 1, $cols), url
+     from urls order by last_visit_time desc" |
+  awk -F $sep '{printf "%-'$cols's  \x1b[36m%s\x1b[m\n", $1, $2}' |
+  fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' | xargs $open > /dev/null 2> /dev/null
+}
+
+# ff - fuzzy find
+ff() {
+  find ${1:-.} | fzf | tr -d '\n'| pbcopy
+}
+
+# fgb - fuzzy git branch
+fgb() {
+  local branches branch
+  branches=$(git branch -a) &&
+  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
+  $(echo "${branch#*remotes/origin/}" | tr -d '\n' | pbcopy)
+}
+
+# fgc - fuzzy git checkout branch
+fgc() {
+  local branches branch
+  branches=$(git branch -vv) &&
+  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
+  git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //")
+}
+
+# fgh - fuzzy git hash copy
+fgh() {
+  local commits commit
+  commits=$(git log --oneline) &&
+  commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") &&
+  $(echo "$commit" | awk '{print $1}' | tr -d '\n' | pbcopy)
+}
+
+# fghd - fuzzy git hash diff copy
+fghd() {
+  local commits commit1 commit2
+  commits=$(git log --oneline) &&
+  commit1=$(echo "$commits" | fzf | awk '{print $1}') &&
+  commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{print $1}') &&
+  git diff "$commit1...$commit2" | delta &&
+  $(echo "$commit1...$commit2" | tr -d '\n' | pbcopy)
+}
+
+# fnr - fuzzy npm run
+fnr() {
+  local script
+  script=$(cat package.json | jq -r '.scripts | to_entries[] | [.key,.value] | @csv' | column -t -s, | fzf | awk '{print $1}' | tr -d '"') &&
+  if [ -n "$script" ]; then
+    npm run $script
+  fi
+}
+{{- end }}
+
+# fz - fuzzy z command
+fz() {
+  local res=$(z | sort -rn | cut -c 12- | fzf)
+  if [ -n "$res" ]; then
+      cd $res
+  else
+      return 1
+  fi
+}
+
+#--------------------------------------------------------------
+# plugin
+#--------------------------------------------------------------
+
+# wait = 遅延読み込み wait"0"と同義
+# lucid = プラグイン読込時の表示をOFF
+# atload = 読込完了時に実行する関数を指定
+# as"program" = zshプラグインでないものを読込
+# pick = 引数に与えられたものを$pathに追加
+# blockf = プラグインによる$pathの変更を禁止する
+zinit wait lucid light-mode blockf for \
+    ellie/atuin \
+    olets/zsh-abbr \
+    denisidoro/navi \
+    zdharma/fast-syntax-highlighting \
+    as"program" cp"z.sh -> z" pick"z" rupa/z \
+    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
+    atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
+    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
+    as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
+    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+
+#--------------------------------------------------------------
+# function
+#--------------------------------------------------------------
+
+#--------------------------------------------------------------
+# other
+#--------------------------------------------------------------
+# pyenv setting
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if command -v pyenv 1>/dev/null 2>&1; then
+  eval "$(pyenv init -)"
+fi
+
+# nodenv setting
+eval "$(nodenv init -)"
+export PATH="$(npm root -g):$PATH"
+
+# atuin
+export ATUIN_CONFIG_DIR="$HOME/.atuin"
+
+# navi
+eval "$(navi widget zsh)"
+
+# z
+. ~/z/z.sh
+
+# .zshrc.secretの読込
+ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
+if [ -e "${ZSH_SECRET_CONF}" ]; then
+  source "${ZSH_SECRET_CONF}"
+fi
+
+# 補完の読込
+autoload -Uz compinit
+autoload -Uz _zinit
+(( ${+_comps} )) && _comps[zinit]=_zinit
+compinit
+
+# zprofでのプロファイル測定用
+if (which zprof > /dev/null 2>&1) ;then
+  zprof
+fi
