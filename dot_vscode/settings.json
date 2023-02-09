@@ -24,10 +24,23 @@
   "explorer.autoRevealExclude": {
     "**/.venv": true
   },
-  "update.showReleaseNotes": false,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  // 検索対象から除外
+  "search.exclude": {
+    "**\/*.json": true,
+    "**\/build": true,
+    "**\/dist": true,
+    "**\/node_modules": true,
+    "**\/.git": true,
+    "**\/.venv": true,
+    "**\/site-packages": true,
+    "**\/.mypy_cache": true
+  },
   "terminal.integrated.fontFamily": "FiraCode Nerd Font Mono",
   // MacのNativeWindowで各ウィンドウをタブのように表示
   // "window.nativeTabs": true,
+  "update.showReleaseNotes": false,
   "workbench.editor.splitInGroupLayout": "vertical",
   // タブを閉じたときに右タブにフォーカスする
   "workbench.editor.focusRecentEditorAfterClose": false,
@@ -49,8 +62,18 @@
   "less.hover.references": false,
   "python.linting.enabled": true,
   "python.linting.flake8Enabled": true,
-  "python.linting.pylintEnabled": true,
   "python.formatting.provider": "black",
+  "python.analysis.extraPaths": [
+    ".venv",
+  ],
+  // pythonの言語サーバpylanceにする
+  "python.languageServer": "Pylance", "python.linting.pylintEnabled": true,
+  // pylanceで自動インポートを有効にする
+  "python.analysis.autoImportCompletions": true,
+  // pylanceがライブラリ・ファイルのインデックス作成を有効にする
+  "python.analysis.indexing": true,
+  // pylanceでユーザーシンボルの自動インポートを有効にする
+  "python.analysis.autoImportUserSymbols": true,
   // 返り値のTypeHintを表示
   "python.analysis.inlayHints.functionReturnTypes": true,
   "[python]": {
@@ -204,6 +227,7 @@
     "",
     "{breaking_change}{footer}"
   ],
+  "githubPullRequests.fileListLayout": "tree",
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
   // hoverでdiffの内容は非表示
@@ -252,8 +276,6 @@
     }
   ],
   "vim.hlsearch": true,
-  // pythonの言語サーバpylanceにしてみる
-  "python.languageServer": "Pylance",
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
