@@ -47,7 +47,8 @@ Notion,cmd + /,-,編集画面表示
 Notion,cmd + Enter,-,カーソルブロックを操作(ページを開く・ToDoオンオフ・トグル開閉)
 Sticky,cmd + m,-,折りたたみ・展開
 Slack,cmd + shift + c,-,コード表示
-Slack,cmd + T,-,ページ移動
+Slack,cmd + r,-,再読み込み
+Slack,cmd + t,-,ページ移動
 Slack,cmd + shift + t,-,スレッドへ移動
 Slack,cmd + shift + a,-,未読のダイアログを表示
 Slack,option + ↑↓,-,前/次のチャンネルへ移動
