@@ -101,7 +101,7 @@ git branch -m <branch> <branch>
 <git_fetch_>git branch -d <branch>
 
 # delete git branch --merged
-<git_fetch_>&& git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+<git_fetch_>git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>
