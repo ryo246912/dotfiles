@@ -61,13 +61,14 @@
   "scss.hover.documentation": false,
   "less.hover.references": false,
   "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
   "python.linting.flake8Enabled": true,
   "python.formatting.provider": "black",
   "python.analysis.extraPaths": [
     ".venv",
   ],
   // pythonの言語サーバpylanceにする
-  "python.languageServer": "Pylance", "python.linting.pylintEnabled": true,
+  "python.languageServer": "Pylance", 
   // pylanceで自動インポートを有効にする
   "python.analysis.autoImportCompletions": true,
   // pylanceがライブラリ・ファイルのインデックス作成を有効にする
