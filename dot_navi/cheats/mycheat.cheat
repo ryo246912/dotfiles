@@ -19,7 +19,7 @@ bash ~/chrome_tab_activate.sh
 % cspell
 
 # cspell lint master...HEAD
-cspell --no-progress --root ~ $(git diff -r --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD)
+cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD)
 
 ;--------------------------------------------------------------
 ; django
@@ -95,7 +95,7 @@ git checkout <commit>
 git mv <file_directory> <file_directory>
 
 # rename git branch
-git branch -m <branch> <new_branch>
+git branch -m <branch> <branch>
 
 # delete git branch
 <git_fetch_>git branch -d <branch>
@@ -127,7 +127,7 @@ $ git_fetch_: echo -e "\ngit fetch -p && "
 $ commit1: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
-$ branch: cat <(git branch --contains) <(git branch) | awk '{print $NF}'
+$ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
 $ stash_num: git stash list | column -t -s: --- --column 1
 $ type: echo -e "f\nd"
 $ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
