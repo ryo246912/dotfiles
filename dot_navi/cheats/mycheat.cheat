@@ -74,7 +74,7 @@ $ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.St
 % git
 
 # git diff staging file
-git diff --cached -- <filename1> | delta<_no-gitconfig>
+git diff --cached -- <staging_filename> | delta<_no-gitconfig>
 
 # git diff between master...HEAD
 git diff<_--name-only> master...HEAD -- <filename2> | delta<_no-gitconfig>
@@ -101,7 +101,7 @@ git branch -m <branch> <branch>
 <git_fetch_>git branch -d <branch>
 
 # delete git branch --merged
-git fetch -p && git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+<git_fetch_>&& git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>
@@ -111,6 +111,9 @@ git rebase -i <commit1>
 
 # git grep
 git grep -l "<regex>" -- "<path>"
+
+# stash file
+git stash -- <working_filename> 
 
 # stash list
 git stash list
@@ -131,9 +134,10 @@ $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF
 $ stash_num: git stash list | column -t -s: --- --column 1
 $ type: echo -e "f\nd"
 $ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
-$ filename1: echo "." && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff -- {1} | delta --no-gitconfig"
+$ staging_filename: echo "." && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
 $ filename2: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
 $ filename3: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
+$ working_filename: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 
 ;--------------------------------------------------------------
 ; GitHub
