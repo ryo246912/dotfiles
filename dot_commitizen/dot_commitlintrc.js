@@ -22,6 +22,7 @@ module.exports = {
       { value: 'add',      name: 'add:      追加(機能追加ほどではない)', emoji: '' },
       { value: 'fix',      name: 'fix:      バグ修正', emoji: ':bug:' },
       { value: 'docs',     name: 'docs:     ドキュメントのみの変更', emoji: ':memo:' },
+      { value: 'move',     name: 'move:     ファイル名変更・ファイル移動', emoji: '' },
       { value: 'refactor', name: 'refactor: リファクタリングのための変更（機能追加やバグ修正を含まない）', emoji: ':recycle:' },
       { value: 'chore',    name: 'chore:    その他の変更（ソースやテストの変更を含まない）', emoji: ':hammer:' },
       { value: 'revert',   name: 'revert:   リバート', emoji: ':rewind:' },
