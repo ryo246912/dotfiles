@@ -74,6 +74,16 @@
     "command": "-workbench.view.scm",
     "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
   },
+  // 検索リストにフォーカス
+  {
+    "key": "ctrl+cmd+f",
+    "command": "search.action.focusSearchList"
+  },
+  {
+    "key": "ctrl+cmd+f",
+    "command": "-workbench.action.toggleFullScreen",
+    "when": "!isIOS"
+  },
   // タブを右に移動
   {
     "key": "shift+alt+cmd+]",
@@ -83,7 +93,6 @@
     "key": "cmd+k shift+cmd+right",
     "command": "-workbench.action.moveEditorRightInGroup"
   },
-
   // タブを左に移動
   {
     "key": "shift+alt+cmd+[",
@@ -350,8 +359,13 @@
   {
     "key": "ctrl+cmd+g",
     "command": "github:activePullRequest.focus"
-  ///////////////////////////////////////////////
-  // 以下自動入力
-  ///////////////////////////////////////////////
+  },
+  // (Github) Githubを表示
+  {
+    "key": "ctrl+shift+cmd+g",
+    "command": "workbench.view.extension.github-pull-requests"
+    ///////////////////////////////////////////////
+    // 以下自動入力
+    ///////////////////////////////////////////////
   }
 ]
