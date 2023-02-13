@@ -55,7 +55,7 @@ ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 docker images -f dangling=true
 
 # docker remove no referenced images -q:only display volume names
-docker rmi $(docker images -q -f dangling=true) 
+docker rmi $(docker images -q -f dangling=true)
 
 # docker no referenced volume -f:filter (dangling=not referenced by any containers)
 docker volume ls -f dangling=true
@@ -113,7 +113,7 @@ git rebase -i <commit1>
 git grep -l "<regex>" -- "<path>"
 
 # stash file
-git stash -- <working_filename> 
+git stash --message <message> -- <working_filename>
 
 # stash list
 git stash list
