@@ -78,7 +78,7 @@ zinit light-mode for \
 
 # launch tmux when start zsh
 if [ "$TERM" = "alacritty" ] && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-    exec tmux
+  tmux
 fi
 
 {{ if eq .chezmoi.os "darwin" -}}
