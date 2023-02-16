@@ -114,7 +114,7 @@
   },
   // エディタを右に分割
   {
-    "key": "cmd+d",
+    "key": "alt+cmd+d",
     "command": "workbench.action.splitEditorRight"
   },
   // shift + ↑で行ごとセレクトできるように
@@ -234,22 +234,31 @@
   },
   // エクスプローラでアクティブなファイルにフォーカスを移動
   {
-    "key": "cmd+e",
+    "key": "alt+cmd+e",
     "command": "workbench.files.action.showActiveFileInExplorer"
+  },
+  {
+    "key": "alt+cmd+e",
+    "command": "-rest-client.switch-environment"
+  },
+  // アクティブなエディタグループにフォーカス
+  {
+    "key": "cmd+e",
+    "command": "workbench.action.focusActiveEditorGroup"
   },
   // エディタを下に移動
   {
-    "key": "alt+cmd+right",
+    "key": "cmd+d",
     "command": "workbench.action.moveEditorToBelowGroup"
   },
   // エディタを上に移動
   {
-    "key": "alt+cmd+left",
+    "key": "shift+cmd+d",
     "command": "workbench.action.moveEditorToAboveGroup"
   },
   // 下にエディタを分割
   {
-    "key": "shift+cmd+d",
+    "key": "shift+alt+cmd+d",
     "command": "workbench.action.splitEditorDown"
   },
   // 拡大
