@@ -4,6 +4,9 @@
 
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 
+# プロンプトの表示 %F{}%f:色の指定、%B{}%b:太文字
+PROMPT="%B%F{6}%~%f%b$ "
+
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
 # ファイルに保存される履歴の件数
@@ -67,10 +70,10 @@ zinit light-mode for \
     zdharma-continuum/zinit-annex-rust
 
 ### End of Zinit's installer chunk
-zinit light-mode for \
-    from"gh-r" nocompile sbin src"init.zsh" \
-    atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
-    starship/starship
+# zinit light-mode for \
+#     from"gh-r" nocompile sbin src"init.zsh" \
+#     atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
+#     starship/starship
 
 #--------------------------------------------------------------
 # terminal
