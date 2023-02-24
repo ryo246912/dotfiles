@@ -7,7 +7,8 @@ export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 # jobsの数を表示、%(1x.true.false):三項式
 number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
 # プロンプトの表示 %F{}%f:色の指定、%B{}%b:太文字
-PROMPT="%B%F{6}%~%f%b${number_of_jobs}$ "
+PROMPT="
+%B%F{6}%~%f%b${number_of_jobs}%# "
 
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
@@ -28,6 +29,12 @@ setopt hist_save_no_dups
 
 zstyle ':completion:*:default' menu select=1
 
+# 端末ラインのキーバインド設定
+# ctrl + dは無効
+stty eof undef
+# ctrl + zはsuspend
+stty susp ^Z
+
 # キーバインドをemacs風にする
 bindkey -e
 # 逆Tab方向に移動
@@ -46,6 +53,10 @@ bindkey "4D" backward-kill-word
 # }
 # zle -N my-backward-kill-word
 # bindkey "4D" my-backward-kill-word
+
+# ctrl + p/nをhistory-search-xxxに変更
+bindkey "^n" history-search-forward
+bindkey "^p" history-search-backward
 {{- end }}
 
 #--------------------------------------------------------------

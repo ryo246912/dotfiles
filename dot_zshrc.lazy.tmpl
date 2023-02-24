@@ -9,10 +9,34 @@ alias mh='make help'
 alias nr='npm run'
 
 #--------------------------------------------------------------
+# plugin
+#--------------------------------------------------------------
+
+# wait = 遅延読み込み wait"0"と同義
+# lucid = プラグイン読込時の表示をOFF
+# atload = 読込完了時に実行する関数を指定
+# as"program" = zshプラグインでないものを読込
+# pick = 引数に与えられたものを$pathに追加
+# blockf = プラグインによる$pathの変更を禁止する
+zinit wait lucid light-mode blockf for \
+    ellie/atuin \
+    atload"source ~/.fzf.zsh" junegunn/fzf \
+    olets/zsh-abbr \
+    denisidoro/navi \
+    zdharma/fast-syntax-highlighting \
+    as"program" cp"z.sh -> z" pick"z" rupa/z \
+    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
+    atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
+    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
+    as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
+    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+
+#--------------------------------------------------------------
 # fzf
 #--------------------------------------------------------------
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
 export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 
@@ -113,31 +137,31 @@ fz() {
 }
 
 #--------------------------------------------------------------
-# plugin
+# function・zsh widget
 #--------------------------------------------------------------
 
-# wait = 遅延読み込み wait"0"と同義
-# lucid = プラグイン読込時の表示をOFF
-# atload = 読込完了時に実行する関数を指定
-# as"program" = zshプラグインでないものを読込
-# pick = 引数に与えられたものを$pathに追加
-# blockf = プラグインによる$pathの変更を禁止する
-zinit wait lucid light-mode blockf for \
-    ellie/atuin \
-    olets/zsh-abbr \
-    denisidoro/navi \
-    zdharma/fast-syntax-highlighting \
-    as"program" cp"z.sh -> z" pick"z" rupa/z \
-    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
-    atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
-    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
-    as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
-    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+_gitui() {
+  BUFFER='gitui'
+  zle accept-line
+}
+zle -N _gitui
+bindkey "^Gg" _gitui
 
-#--------------------------------------------------------------
-# function
-#--------------------------------------------------------------
+_fzf_insert_last_command_word() {
+  local word
+  word=$(echo $(history -1) | cut -f 2- -d " " | tr ' ' '\n' | fzf)
+  BUFFER="$BUFFER$word"
+  zle redisplay
+}
+zle -N _fzf_insert_last_command_word
+bindkey '^D' _fzf_insert_last_command_word
+
+_cd-up () {
+  BUFFER='cd ../'
+  zle accept-line
+}
+zle -N _cd-up
+bindkey '^Y' _cd-up
 
 #--------------------------------------------------------------
 # other
