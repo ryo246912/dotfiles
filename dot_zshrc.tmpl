@@ -36,27 +36,46 @@ stty eof undef
 stty susp ^Z
 
 # キーバインドをemacs風にする
-bindkey -e
-# 逆Tab方向に移動
-bindkey '^[^i' reverse-menu-complete
+# bindkey -e
+# キーバインドをvi風にする
+bindkey -v
+
+# viinsのkeymapにemacsのコマンドを設定
+bindkey -M viins '^A'  beginning-of-line
+bindkey -M viins '^B'  backward-char
+bindkey -M viins '^E'  end-of-line
+bindkey -M viins '^F'  forward-char
+bindkey -M viins '^H'  backward-delete-char
+bindkey -M viins '^K'  kill-line
+bindkey -M viins '^N'  history-search-forward
+bindkey -M viins '^P'  history-search-backward
+bindkey -M viins '^U'  backward-kill-line
+bindkey -M viins '^Xv' quoted-insert
+bindkey -M viins '^W'  backward-kill-word
+
 {{ if eq .chezmoi.os "darwin" -}}
+# shift + Tabで逆Tab方向に移動
+bindkey '^[[Z' reverse-menu-complete
+
 # option + ←→で単語毎のカーソル移動
-bindkey "3C" forward-word
-bindkey "3D" backward-word
+bindkey "^[[1;3C" forward-word
+bindkey -M vicmd "^[[1;3C" forward-word
+bindkey "^[[1;3D" backward-word
+bindkey -M vicmd "^[[1;3D" backward-word
 
 # option + shift + ←で単語毎の削除
-bindkey "4D" backward-kill-word
+bindkey "^[[1;4D" backward-kill-word
 # 上がうまくいかなかった時のカスタム関数
 # my-backward-kill-word() {
 #   zle backward-kill-word &&
 #   zle backward-delete-char
 # }
 # zle -N my-backward-kill-word
-# bindkey "4D" my-backward-kill-word
+# bindkey "^[[1;4D" my-backward-kill-word
 
 # ctrl + p/nをhistory-search-xxxに変更
-bindkey "^n" history-search-forward
-bindkey "^p" history-search-backward
+bindkey "^N" history-search-forward
+bindkey "^P" history-search-backward
 {{- end }}
 
 #--------------------------------------------------------------
@@ -87,6 +106,64 @@ zinit light-mode for \
 #     from"gh-r" nocompile sbin src"init.zsh" \
 #     atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
 #     starship/starship
+
+#--------------------------------------------------------------
+# zsh-vimode-visual
+#--------------------------------------------------------------
+zinit light-mode for \
+    b4b4r07/zsh-vimode-visual
+# ctrl + vでvi-visual-modeに入る
+bindkey '^V' vi-visual-mode
+# vでカーソル位置リセット(vi-visual-modeに入り直す)
+bindkey -M vivis 'v' vi-visual-mode
+# iでviinsモードに入る
+bindkey -M vivis "i" vi-insert
+{{ if eq .chezmoi.os "darwin" -}}
+bindkey -M vivis "^[[1;3C" vi-visual-forward-word
+bindkey -M vivis "^[[1;3D" vi-visual-backward-word
+# spaceで選択範囲をスペースで囲うように置き換える
+bindkey -M vivis " " vi-visual-surround-space
+# spaceで選択範囲シングルクォートで囲うように置き換える
+bindkey -M vivis "'" vi-visual-surround-squote
+# spaceで選択範囲ダブルクォートで囲うように置き換える
+bindkey -M vivis "\"" vi-visual-surround-dquote
+# spaceで選択範囲()で囲うように置き換える
+bindkey -M vivis "(" vi-visual-surround-parenthesis
+# spaceで選択範囲()で囲うように置き換える
+bindkey -M vivis ")" vi-visual-surround-parenthesis
+{{- end }}
+
+terminfo_down_sc=$terminfo[cud1]$terminfo[cuu1]$terminfo[sc]$terminfo[cud1]
+left_down_prompt_preexec() {
+    print -rn -- $terminfo[el]
+}
+add-zsh-hook preexec left_down_prompt_preexec
+
+function zle-keymap-select zle-line-init zle-line-finish
+{
+    case $KEYMAP in
+        main|viins)
+            # PROMPT_2="$fg[white]-- INSERT --$reset_color"
+            PROMPT_2=""
+            ;;
+        vicmd)
+            PROMPT_2="$fg[green]-- NORMAL --$reset_color"
+            ;;
+        vivis|vivli)
+            PROMPT_2="$fg[yellow]-- VISUAL --$reset_color"
+            ;;
+    esac
+
+    # %{$terminfo_down_sc$PROMPT_2$terminfo[rc]% で下にstatus表示
+    PROMPT="
+%{$terminfo_down_sc$PROMPT_2$terminfo[rc]%}%B%F{6}%~%f%b${number_of_jobs}%# "
+    zle reset-prompt
+}
+
+zle -N zle-line-init
+zle -N zle-line-finish
+zle -N zle-keymap-select
+zle -N edit-command-line
 
 #--------------------------------------------------------------
 # terminal

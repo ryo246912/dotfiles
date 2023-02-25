@@ -19,13 +19,13 @@ alias nr='npm run'
 # pick = 引数に与えられたものを$pathに追加
 # blockf = プラグインによる$pathの変更を禁止する
 zinit wait lucid light-mode blockf for \
+    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
     ellie/atuin \
     atload"source ~/.fzf.zsh" junegunn/fzf \
     olets/zsh-abbr \
     denisidoro/navi \
     zdharma/fast-syntax-highlighting \
     as"program" cp"z.sh -> z" pick"z" rupa/z \
-    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
     atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
     silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
     as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
@@ -140,13 +140,15 @@ fz() {
 # function・zsh widget
 #--------------------------------------------------------------
 
+# ctrl + g → ctrl + gでgitui起動
 _gitui() {
   BUFFER='gitui'
   zle accept-line
 }
 zle -N _gitui
-bindkey "^Gg" _gitui
+bindkey "^G^G" _gitui
 
+# ctrl + dで直前のコマンドをスペース区切りで選択して出力
 _fzf_insert_last_command_word() {
   local word
   word=$(echo $(history -1) | cut -f 2- -d " " | tr ' ' '\n' | fzf)
@@ -156,12 +158,30 @@ _fzf_insert_last_command_word() {
 zle -N _fzf_insert_last_command_word
 bindkey '^D' _fzf_insert_last_command_word
 
+# option + ↑で１つ上のディレクトリに移動
 _cd-up () {
   BUFFER='cd ../'
   zle accept-line
 }
 zle -N _cd-up
-bindkey '^Y' _cd-up
+bindkey '^[[1;3A' _cd-up
+
+autoload -U modify-current-argument
+# Esc + sで単語を''で囲む
+_quote-previous-word-in-single() {
+    modify-current-argument '${(qq)${(Q)ARG}}'
+    zle vi-forward-blank-word
+}
+zle -N _quote-previous-word-in-single
+bindkey '^[s' _quote-previous-word-in-single
+
+# Esc + dで単語を""で囲む
+_quote-previous-word-in-double() {
+    modify-current-argument '${(qqq)${(Q)ARG}}'
+    zle vi-forward-blank-word
+}
+zle -N _quote-previous-word-in-double
+bindkey '^[d' _quote-previous-word-in-double
 
 #--------------------------------------------------------------
 # other
