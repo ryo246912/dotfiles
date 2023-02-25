@@ -32,6 +32,10 @@ zstyle ':completion:*:default' menu select=1
 # 端末ラインのキーバインド設定
 # ctrl + dは無効
 stty eof undef
+# ctrl + qは無効
+stty start undef
+# ctrl + sは無効
+stty stop undef
 # ctrl + zはsuspend
 stty susp ^Z
 

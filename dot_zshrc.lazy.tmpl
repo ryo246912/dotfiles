@@ -140,15 +140,15 @@ fz() {
 # function・zsh widget
 #--------------------------------------------------------------
 
-# ctrl + g → ctrl + gでgitui起動
+# ctrl + dでgitui起動
 _gitui() {
   BUFFER='gitui'
   zle accept-line
 }
 zle -N _gitui
-bindkey "^G^G" _gitui
+bindkey "^D" _gitui
 
-# ctrl + dで直前のコマンドをスペース区切りで選択して出力
+# ctrl + q → ctrl + aで直前のコマンドをスペース区切りで選択して出力
 _fzf_insert_last_command_word() {
   local word
   word=$(echo $(history -1) | cut -f 2- -d " " | tr ' ' '\n' | fzf)
@@ -156,7 +156,7 @@ _fzf_insert_last_command_word() {
   zle redisplay
 }
 zle -N _fzf_insert_last_command_word
-bindkey '^D' _fzf_insert_last_command_word
+bindkey '^Q^A' _fzf_insert_last_command_word
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
