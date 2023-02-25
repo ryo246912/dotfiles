@@ -1,5 +1,6 @@
 項目,Mac,Win/WSL,内容
 -,-,-,-
+Clibor,cmd + shift + c,ctrl + shift + c,FIFOモード ※カスタム
 DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
 DBeaver,F7,-,結果パネルの切替
 DBeaver,Esc,-,セルの変更をリセット
@@ -14,16 +15,23 @@ DBeaver,Ctrl + space,-,SQL補完
 DBeaver,Ctrl + s,-,変更を適用(データ保存)
 DBeaver,Ctrl + r,-,変更をリセット
 DBeaver,F5,-,更新
-Google Chrome,cmd + ;/-,-,拡大/縮小
+Google Chrome,cmd + +/-,-,拡大/縮小
+Google Chrome,cmd + 0,-,倍率を戻す
 Google Chrome,cmd + y,-,履歴表示
-Google Chrome,cmd + [],-,ディベロッパーツールでのフォーカスの移動
-Google Chrome,cmd + shift + p,ctrl + shift + r|shift + F5,ハード再読込(キャッシュ削除&ハード再読込は「開発者ツールを開いた状態で」再読込右クリック)
+Google Chrome,cmd + [],-,(ディベロッパーツールで)フォーカスの移動
 Google Chrome,cmd + shift + a,-,タブ一覧表示
+Google Chrome,cmd + shift + d,-,(ディベロッパーツールで)ウィンドウの方向切り替え
+Google Chrome,cmd + shift + m,-,(通常で)プロファイル選択
+Google Chrome,cmd + shift + m,-,(ディベロッパーツールで)PC/SPの表示切り替え
+Google Chrome,cmd + shift + r,ctrl + shift + r|shift + F5,ハード再読込(キャッシュ削除&ハード再読込は「開発者ツールを開いた状態で」再読込右クリック)
 Google Chrome,cmd + shift + t,-,ウィンドウの復元
-Google Chrome,cmd + shift + ↓,-,one tabに格納 ※カスタム
 Google Chrome,cmd + shift + w,-,ウィンドウを閉じる
 Google Chrome,cmd + shift + y,-,テキストの翻訳 ※カスタム
-Google Chrome,cmd + option + i,-,ディベロッパーツールの表示
+Google Chrome,cmd + shift + ↓,-,one tabに格納 ※カスタム
+Google Chrome,cmd + option + c,-,DOMツールでディベロッパーツールの表示
+Google Chrome,cmd + option + i/F12,-,ディベロッパーツールの表示
+Google Chrome,cmd + option + u,ctrl + u,ソースコードの表示
+Google Chrome,ctrl + l,-,(ディベロッパーツールで)コンソールログ消去
 Google Chrome,ctrl + shift + fn + ↑↓,-,現在のタブを左/右に移動
 Googleスプレッドシート,入力 → shift + 矢印 → cmd + Enter,-,一括入力
 Googleスプレッドシート,option + ↑↓,-,シート切替
@@ -123,3 +131,17 @@ VSCode,option + shift + v,-,(vscodevim)vscodevimの有効無効切り替え ※�
 VSCode,option + shift + .,-,(gitlens)現ファイルとの差分を表示
 VSCode,option + shift + (カンマ),-,(gitlens)カーソル行での前Revisionの差分を表示
 VSCode,コマンドパレット → Wrap with Abbreviation,-,タグで囲む
+zsh/terminal,ctrl + a,ctrl + a,先頭に戻る(beginning-of-line)
+zsh/terminal,ctrl + c,ctrl + c,割り込みシグナルを送る(kill -INT/intrシグナル)
+zsh/terminal,ctrl + e,ctrl + e,末尾に進む(end-of-line)
+zsh/terminal,ctrl + h,ctrl + h,1文字削除(backward-delete-char)
+zsh/terminal,ctrl + i,ctrl + i,補完展開(expand-or-complete)
+zsh/terminal,ctrl + k,ctrl + k,カーソル後削除(kill-line)
+zsh/terminal,ctrl + l,ctrl + l,スクリーンclear(clear-screen)
+zsh/terminal,ctrl + n,ctrl + n,次のコマンド履歴を表示(down-line-or-hisotry→history-search-forward)
+zsh/terminal,ctrl + p,ctrl + p,前のコマンド履歴を表示(up-line-or-hisotry→history-search-backward)
+zsh/terminal,ctrl + q,ctrl + q,画面の出力を再開する(startシグナル)
+zsh/terminal,ctrl + s,ctrl + s,画面の出力を停止する(stopシグナル)
+zsh/terminal,ctrl + v,ctrl + v,特殊文字(^[=ESCや^M=エンターなど)の入力(quoted-insert)
+zsh/terminal,ctrl + w,ctrl + w,1単語の削除(backward-kill-word)
+zsh/terminal,ctrl + z,ctrl + z,停止シグナルを送る(suspシグナル)
