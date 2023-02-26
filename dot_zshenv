@@ -1,0 +1,5 @@
+# Rust
+. "$HOME/.cargo/env"
+
+# zprofでプロファイリング
+# zmodload zsh/zprof && zprof
