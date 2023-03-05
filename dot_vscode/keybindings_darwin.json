@@ -53,6 +53,17 @@
   ///////////////////////////////////////////////
   // 通常設定
   ///////////////////////////////////////////////
+  // cmd + shift + eでエクスプローラにフォーカス(エディタ側にはフォーカスしない)
+  {
+    "key": "shift+cmd+e",
+    "command": "workbench.files.action.focusFilesExplorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
+  {
+    "key": "shift+cmd+e",
+    "command": "-workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
   // ソース管理(Git)にフォーカスする
   {
     "key": "shift+cmd+g",
@@ -291,6 +302,24 @@
   {
     "key": "cmd+k enter",
     "command": "-workbench.action.keepEditor"
+  },
+  // 検索結果を全て展開(エクスプローラフォーカス時)
+  {
+    "key": "cmd+right",
+    "command": "search.action.expandSearchResults",
+    "when": "listFocus && treeElementCanExpand && !inputFocus || listFocus && treeElementHasChild && !inputFocus"
+  },
+  // 新しいファイル作成(エクスプローラフォーカス時)
+  {
+    "key": "cmd+n",
+    "command": "explorer.newFile",
+    "when": "listFocus && !inputFocus || listFocus && !inputFocus"
+  },
+  // 新しいフォルダ作成(エクスプローラフォーカス時)
+  {
+    "key": "shift+cmd+n",
+    "command": "explorer.newFolder",
+    "when": "listFocus && !inputFocus || listFocus && !inputFocus"
   },
   ///////////////////////////////////////////////
   // 拡張機能

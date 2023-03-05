@@ -15,6 +15,9 @@ DBeaver,Ctrl + space,-,SQL補完
 DBeaver,Ctrl + s,-,変更を適用(データ保存)
 DBeaver,Ctrl + r,-,変更をリセット
 DBeaver,F5,-,更新
+GitHub,option + クリック,alt + クリック,トグル(show resolved・fileのviewedなど)の全開閉切り替え
+Google Chrome,Esc,-,(ディベロッパーツールで)コンソールドロワーのON/OFF
+Google Chrome,F7,-,CaretブラウジングON/OFF切替
 Google Chrome,cmd + +/-,-,拡大/縮小
 Google Chrome,cmd + 0,-,倍率を戻す
 Google Chrome,cmd + y,-,履歴表示
@@ -23,15 +26,19 @@ Google Chrome,cmd + shift + a,-,タブ一覧表示
 Google Chrome,cmd + shift + d,-,(ディベロッパーツールで)ウィンドウの方向切り替え
 Google Chrome,cmd + shift + m,-,(通常で)プロファイル選択
 Google Chrome,cmd + shift + m,-,(ディベロッパーツールで)PC/SPの表示切り替え
+Google Chrome,cmd + shift + p,ctrl + shift + p,(ディベロッパーツールで)コマンドパレット
 Google Chrome,cmd + shift + r,ctrl + shift + r|shift + F5,ハード再読込(キャッシュ削除&ハード再読込は「開発者ツールを開いた状態で」再読込右クリック)
 Google Chrome,cmd + shift + t,-,ウィンドウの復元
 Google Chrome,cmd + shift + w,-,ウィンドウを閉じる
 Google Chrome,cmd + shift + y,-,テキストの翻訳 ※カスタム
 Google Chrome,cmd + shift + ↓,-,one tabに格納 ※カスタム
-Google Chrome,cmd + option + c,-,DOMツールでディベロッパーツールの表示
+Google Chrome,cmd + option + c/cmd + shift + c,ctrl + shift + c,DOMツールでディベロッパーツールの表示
+Google Chrome,cmd + option + j,ctrl + shift + j,JavaScriptコンソールでディベロッパーツールの表示
 Google Chrome,cmd + option + i/F12,-,ディベロッパーツールの表示
 Google Chrome,cmd + option + u,ctrl + u,ソースコードの表示
-Google Chrome,ctrl + l,-,(ディベロッパーツールで)コンソールログ消去
+Google Chrome,ctrl + l,ctrl + l,(ディベロッパーツールで)コンソールログ消去
+Google Chrome,ctrl + g,-,タブをグループ化 ※カスタム
+Google Chrome,ctrl + p,-,タブを固定 ※カスタム
 Google Chrome,ctrl + shift + fn + ↑↓,-,現在のタブを左/右に移動
 Googleスプレッドシート,入力 → shift + 矢印 → cmd + Enter,-,一括入力
 Googleスプレッドシート,option + ↑↓,-,シート切替
@@ -39,15 +46,21 @@ iTerm2,cmd + d,-,画面を左右に分割
 iTerm2,cmd + shift + d,-,画面を上下に分割
 iTerm2,cmd + [],-,分割画面の移動
 iTerm2,option + space,-,ホットキー起動
+Mac,ctrl + 1,-,（Mission Control）仮装ディスプレイ1に切替
+Mac,ctrl + 2,-,（Mission Control）仮装ディスプレイ2に切替
+Mac,ctrl + F1,-,VoiceOverのオンオフ ※カスタム
 Mac,ctrl + F2,-,メニューバー操作
 Mac,ctrl + F3,-,Dock操作
+Mac,ctrl + shift + F1,-,アクセシビリティコントロールの表示 ※カスタム
+Mac,ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 ※カスタム
 Mac,ctrl + ↓,-,ウィジェット表示 ※カスタム
+Mac,cmd + d,-,保存しない（ファイル保存時のダイアログ）
+Mac,cmd + m,-,ウィンドウ最小化
 Mac,cmd + shift + 4,-,スクリーンショット：一部撮影
 Mac,cmd + shift + 5,-,スクリーンショット：コントロール表示
 Mac,cmd + ctrl + f,-,フルスクリーン
 Mac,cmd + space,-,スポットライト起動
 Mac,cmd + shift + .,-,隠しファイルを表示
-Mac,cmd + d,-,保存しない（ファイル保存時のダイアログ）
 Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
 Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
 Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
