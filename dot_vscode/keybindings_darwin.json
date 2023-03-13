@@ -337,7 +337,7 @@
   },
   // (vscodevim)vscodevimをON/OFF切り替える
   {
-    "key": "shift+alt+v",
+    "key": "alt+cmd+v",
     "command": "toggleVim"
   },
   // (labeled bookmark)labeled bookmarkにフォーカスする
@@ -396,7 +396,7 @@
   // (GitHub) PRのビューにフォーカス
   {
     "key": "ctrl+cmd+g",
-    "command": "github:activePullRequest.focus"
+    "command": "prStatus:github.focus"
   },
   // (Github) Githubを表示
   {

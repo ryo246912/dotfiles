@@ -52,7 +52,7 @@ Mac,ctrl + F1,-,VoiceOverのオンオフ ※カスタム
 Mac,ctrl + F2,-,メニューバー操作
 Mac,ctrl + F3,-,Dock操作
 Mac,ctrl + shift + F1,-,アクセシビリティコントロールの表示 ※カスタム
-Mac,ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 ※カスタム
+Mac,ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 カスタム
 Mac,ctrl + ↓,-,ウィジェット表示 ※カスタム
 Mac,cmd + d,-,保存しない（ファイル保存時のダイアログ）
 Mac,cmd + m,-,ウィンドウ最小化
@@ -122,8 +122,10 @@ VSCode,cmd + shift + o,-,ファイルシンボルを表示
 VSCode,cmd + shift + w,-,ウィンドウを閉じる
 VSCode,cmd + shift + [],-,タブ切り替え
 VSCode,cmd + shift + option + [],-,タブの位置移動 ※カスタム
+VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
 VSCode,cmd + option + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
 VSCode,cmd + option + d,-,右に分割 ※カスタム
+VSCode,cmd + option + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,cmd + option + shift + d,-,下に分割 ※カスタム
 VSCode,cmd + option + shift + g,-,(GitHub)下に分割 ※カスタム
 VSCode,cmd + option + space,-,ホバーの表示 ※カスタム
@@ -132,7 +134,6 @@ VSCode,cmd + option + l,-,選択範囲内で検索(FindinSelection)ON/OFF
 VSCode,cmd + option + ↑↓,-,マルチカーソル
 VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
 VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
-VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
 VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + J,-,閉じタグをすべて開く
 VSCode,option + b,-,(gitlens)Git Blame表示
@@ -140,7 +141,6 @@ VSCode,option + h,-,(gitlens)ブランチの履歴表示
 VSCode,option + ↑↓,-,行を入れ替え
 VSCode,option + (カンマ)|.,-,(gitlens)前/後のRevisionとの差分を表示
 VSCode,option + Shift + ↑↓,-,行をコピー
-VSCode,option + shift + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,option + shift + .,-,(gitlens)現ファイルとの差分を表示
 VSCode,option + shift + (カンマ),-,(gitlens)カーソル行での前Revisionの差分を表示
 VSCode,コマンドパレット → Wrap with Abbreviation,-,タグで囲む
