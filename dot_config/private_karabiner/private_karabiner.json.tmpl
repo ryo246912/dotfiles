@@ -1,4 +1,4 @@
-{
+ {
     "global": {
         "check_for_updates_on_startup": true,
         "show_in_menu_bar": true,
@@ -10,7 +10,7 @@
             "complex_modifications": {
                 "parameters": {
                     "basic.simultaneous_threshold_milliseconds": 50,
-                    "basic.to_delayed_action_delay_milliseconds": 300,
+                    "basic.to_delayed_action_delay_milliseconds": 200,
                     "basic.to_if_alone_timeout_milliseconds": 500,
                     "basic.to_if_held_down_threshold_milliseconds": 500,
                     "mouse_motion_to_scroll.speed": 100
@@ -19,6 +19,7 @@
                     {
                         "description": "control 'japanese_kana' & Double tap 'japanese_kana' to 'enter'",
                         "manipulators": [
+                            {{- /* かな1回押した状態のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -29,6 +30,7 @@
                                 ],
                                 "from": {
                                     "key_code": "japanese_kana",
+                                    {{- /* 修飾キー等押していても有効化 */}}
                                     "modifiers": {
                                         "optional": [
                                             "any"
@@ -42,6 +44,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」キーのキーバインド(enの場合) */}}
                             {
                                 "conditions": [
                                     {
@@ -80,6 +83,7 @@
                                         }
                                     }
                                 ],
+                                {{- /* ホールドからボタンを話した時の状態 */}}
                                 "to_after_key_up": [
                                     {
                                         "set_variable": {
@@ -88,6 +92,7 @@
                                         }
                                     }
                                 ],
+                                {{- /* ボタンを長押ししたときの状態、delayで「ja」に変わった後に言語を「en」に戻す */}}
                                 "to_if_held_down": [
                                     {
                                         "set_variable": {
@@ -99,7 +104,9 @@
                                         "key_code": "japanese_eisuu"
                                     }
                                 ],
+                                {{- /* ボタンを押した後にdelayで実施される動作 */}}
                                 "to_delayed_action": {
+                                    {{- /* ボタンを押した後に他のボタンを押された時の動作 */}}
                                     "to_if_canceled": [
                                         {
                                             "set_variable": {
@@ -108,6 +115,7 @@
                                             }
                                         }
                                     ],
+                                    {{- /* ボタンを押した後に一定時間経過した時の動作、通常通りそのまま押した時の動作 */}}
                                     "to_if_invoked": [
                                         {
                                             "set_variable": {
@@ -122,6 +130,7 @@
                                 },
                                 "type": "basic"
                             },
+                            {{- /* 「かな」キーのキーバインド(jaの場合) */}}
                             {
                                 "conditions": [
                                     {
@@ -201,6 +210,7 @@
                             }
                         ]
                     },
+                    {{- /* 「かな」+hjklのキーバインド */}}
                     {
                         "description": "'japanese_kana + hjkl' to 'arrow key'",
                         "manipulators": [
@@ -325,6 +335,7 @@
                             }
                         ]
                     },
+                    {{- /* right_command単体、right_command+jkをを押した時のキーバインド */}}
                     {
                         "description": "'right command' + hjkl to 'PgUp/Dn'",
                         "manipulators": [
@@ -353,7 +364,9 @@
                                         }
                                     }
                                 ],
+                                {{- /* right_command単体で押された時のキーバインド */}}
                                 "to_if_alone": [
+                                    {{- /* 右クリックのキーバインド */}}
                                     {
                                         "pointing_button": "button2"
                                     }
@@ -422,6 +435,7 @@
                     },
                     "ignore": false,
                     "manipulate_caps_lock_led": false,
+                    {{- /* right_shift →　ctrl への変換 */}}
                     "simple_modifications": [
                         {
                             "from": {
