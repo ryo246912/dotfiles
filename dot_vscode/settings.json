@@ -68,13 +68,13 @@
     ".venv",
   ],
   // pythonの言語サーバpylanceにする
-  "python.languageServer": "Pylance", 
+  "python.languageServer": "Pylance",
   // pylanceで自動インポートを有効にする
-  "python.analysis.autoImportCompletions": true,
+  // "python.analysis.autoImportCompletions": true,
   // pylanceがライブラリ・ファイルのインデックス作成を有効にする
   "python.analysis.indexing": true,
   // pylanceでユーザーシンボルの自動インポートを有効にする
-  "python.analysis.autoImportUserSymbols": true,
+  // "python.analysis.autoImportUserSymbols": true,
   // 返り値のTypeHintを表示
   "python.analysis.inlayHints.functionReturnTypes": true,
   "[python]": {
@@ -228,7 +228,12 @@
     "",
     "{breaking_change}{footer}"
   ],
+  // 変更されたファイルの一覧を表示するときに使用するレイアウトです。
   "githubPullRequests.fileListLayout": "tree",
+  // PR ブランチがローカルでチェックアウトされたときに、リモートから変更をプルします。
+  "githubPullRequests.pullBranch": "always",
+  // コメントタイプのデフォルトをレビューにする
+  "githubPullRequests.defaultCommentType": "review",
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
   // hoverでdiffの内容は非表示
@@ -277,6 +282,13 @@
     }
   ],
   "vim.hlsearch": true,
+  // yank時にハイライトする
+  "vim.highlightedyank.enable": true,
+  // クリップボードにもコピーする
+  "vim.useSystemClipboard": true,
+  // .vimrcの読み込み
+  "vim.vimrc.enable": true,
+  "vim.vimrc.path": "$HOME/.vimrc",
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
