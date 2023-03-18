@@ -17,26 +17,6 @@
     "command": "workbench.action.nextEditor"
   },
   {
-    "key": "ctrl+shift+g",
-    "command": "workbench.action.terminal.findPrevious",
-    "when": "terminalFindFocused && terminalHasBeenCreated || terminalFindFocused && terminalProcessSupported || terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
-  },
-  {
-    "key": "shift+cmd+g",
-    "command": "-workbench.action.terminal.findPrevious",
-    "when": "terminalFindFocused && terminalHasBeenCreated || terminalFindFocused && terminalProcessSupported || terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
-  },
-  {
-    "key": "ctrl+shift+g",
-    "command": "editor.action.previousMatchFindAction",
-    "when": "editorFocus"
-  },
-  {
-    "key": "shift+cmd+g",
-    "command": "-editor.action.previousMatchFindAction",
-    "when": "editorFocus"
-  },
-  {
     "key": "shift+left",
     "command": "-cursorColumnSelectLeft",
     "when": "editorColumnSelection && textInputFocus"
@@ -77,15 +57,14 @@
   },
   {
     "key": "shift+cmd+g",
-    "command": "workbench.view.scm",
-    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+    "command": "-workbench.action.terminal.findPrevious",
+    "when": "terminalFindFocused && terminalHasBeenCreated || terminalFindFocused && terminalProcessSupported || terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
   },
   {
-    "key": "ctrl+shift+g",
-    "command": "-workbench.view.scm",
-    "when": "workbench.scm.active && !gitlens:disabled && config.gitlens.keymap == 'chorded'"
+    "key": "shift+cmd+g",
+    "command": "-editor.action.previousMatchFindAction",
+    "when": "editorFocus"
   },
-  // 検索リストにフォーカス
   {
     "key": "ctrl+cmd+f",
     "command": "search.action.focusSearchList"
@@ -394,13 +373,22 @@
     "command": "-workbench.action.closeActiveEditor"
   },
   // (GitHub) PRのビューにフォーカス
+  // when : ActivePRが表示可能な場合
   {
     "key": "ctrl+cmd+g",
-    "command": "prStatus:github.focus"
+    "command": "prStatus:github.focus",
+    "when": "github:activePullRequest.visible"
+  },
+  // (Github) Githubを表示
+  // when : ActivePRが表示可能でない場合
+  {
+    "key": "ctrl+cmd+g",
+    "command": "workbench.view.extension.github-pull-requests",
+    "when": "!github:activePullRequest.visible"
   },
   // (Github) Githubを表示
   {
-    "key": "ctrl+shift+cmd+g",
+    "key": "alt+cmd+g",
     "command": "workbench.view.extension.github-pull-requests"
     ///////////////////////////////////////////////
     // 以下自動入力

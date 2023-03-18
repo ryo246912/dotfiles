@@ -67,6 +67,7 @@ Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ
 Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
 Notion,cmd + /,-,編集画面表示
 Notion,cmd + Enter,-,カーソルブロックを操作(ページを開く・ToDoオンオフ・トグル開閉)
+Notion,cmd + shift + u,-,一つ上の階層に行く
 Sticky,cmd + m,-,折りたたみ・展開
 Slack,cmd + shift + c,-,コード表示
 Slack,cmd + r,-,再読み込み
@@ -111,12 +112,14 @@ VSCode,ctrl + [],-,エディタの幅を縮小/拡大 ※カスタム
 VSCode,ctrl + shift + [],-,エディタの高さを縮小/拡大 ※カスタム
 VSCode,cmd + d,-,タブ(エディタ)を下のグループに移動 ※カスタム
 VSCode,cmd + e,-,アクティブなエディタグループにフォーカス ※カスタム
+VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
 VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
 VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
 VSCode,cmd + shift + e,-,エディタにフォーカス
+VSCode,cmd + shift + g,-,(GitHub)Gitにフォーカス ※カスタム
 VSCode,cmd + shift + k,-,選択行を削除
 VSCode,cmd + shift + o,-,ファイルシンボルを表示
 VSCode,cmd + shift + w,-,ウィンドウを閉じる
@@ -125,6 +128,7 @@ VSCode,cmd + shift + option + [],-,タブの位置移動 ※カスタム
 VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
 VSCode,cmd + option + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
 VSCode,cmd + option + d,-,右に分割 ※カスタム
+VSCode,cmd + option + g,-,(GitHub)GitHubのビューにフォーカス ※カスタム
 VSCode,cmd + option + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,cmd + option + shift + d,-,下に分割 ※カスタム
 VSCode,cmd + option + shift + g,-,(GitHub)下に分割 ※カスタム
