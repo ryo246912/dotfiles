@@ -10,8 +10,8 @@
             "complex_modifications": {
                 "parameters": {
                     "basic.simultaneous_threshold_milliseconds": 50,
-                    "basic.to_delayed_action_delay_milliseconds": 500,
-                    "basic.to_if_alone_timeout_milliseconds": 1000,
+                    "basic.to_delayed_action_delay_milliseconds": 300,
+                    "basic.to_if_alone_timeout_milliseconds": 500,
                     "basic.to_if_held_down_threshold_milliseconds": 500,
                     "mouse_motion_to_scroll.speed": 100
                 },
@@ -28,7 +28,12 @@
                                     }
                                 ],
                                 "from": {
-                                    "key_code": "japanese_kana"
+                                    "key_code": "japanese_kana",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
                                 },
                                 "to": [
                                     {
@@ -43,10 +48,23 @@
                                         "name": "press_japanese_kana_for_enter",
                                         "type": "variable_if",
                                         "value": 0
+                                    },
+                                    {
+                                        "input_sources": [
+                                            {
+                                                "language": "en"
+                                            }
+                                        ],
+                                        "type": "input_source_if"
                                     }
                                 ],
                                 "from": {
-                                    "key_code": "japanese_kana"
+                                    "key_code": "japanese_kana",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
                                 },
                                 "to": [
                                     {
@@ -55,6 +73,102 @@
                                             "value": 1
                                         }
                                     },
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_arrow",
+                                            "value": 1
+                                        }
+                                    }
+                                ],
+                                "to_after_key_up": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_arrow",
+                                            "value": 0
+                                        }
+                                    }
+                                ],
+                                "to_if_held_down": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_arrow",
+                                            "value": 1
+                                        }
+                                    },
+                                    {
+                                        "key_code": "japanese_eisuu"
+                                    }
+                                ],
+                                "to_delayed_action": {
+                                    "to_if_canceled": [
+                                        {
+                                            "set_variable": {
+                                                "name": "press_japanese_kana_for_enter",
+                                                "value": 0
+                                            }
+                                        }
+                                    ],
+                                    "to_if_invoked": [
+                                        {
+                                            "set_variable": {
+                                                "name": "press_japanese_kana_for_enter",
+                                                "value": 0
+                                            }
+                                        },
+                                        {
+                                            "key_code": "japanese_kana"
+                                        }
+                                    ]
+                                },
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_enter",
+                                        "type": "variable_if",
+                                        "value": 0
+                                    },
+                                    {
+                                        "input_sources": [
+                                            {
+                                                "language": "ja"
+                                            }
+                                        ],
+                                        "type": "input_source_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "japanese_kana",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_enter",
+                                            "value": 1
+                                        }
+                                    },
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_arrow",
+                                            "value": 1
+                                        }
+                                    }
+                                ],
+                                "to_after_key_up": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_japanese_kana_for_arrow",
+                                            "value": 0
+                                        }
+                                    }
+                                ],
+                                "to_if_held_down": [
                                     {
                                         "set_variable": {
                                             "name": "press_japanese_kana_for_arrow",
@@ -83,20 +197,12 @@
                                         }
                                     ]
                                 },
-                                "to_after_key_up": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 0
-                                        }
-                                    }
-                                ],
                                 "type": "basic"
                             }
                         ]
                     },
                     {
-                        "description": "'japanese_kana + hjkl' to 'arrow'",
+                        "description": "'japanese_kana + hjkl' to 'arrow key'",
                         "manipulators": [
                             {
                                 "from": {
@@ -218,6 +324,89 @@
                                 "type": "basic"
                             }
                         ]
+                    },
+                    {
+                        "description": "'right command' + hjkl to 'PgUp/Dn'",
+                        "manipulators": [
+                            {
+                                "from": {
+                                    "key_code": "right_command",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_right_command",
+                                            "value": 1
+                                        }
+                                    }
+                                ],
+                                "to_after_key_up": [
+                                    {
+                                        "set_variable": {
+                                            "name": "press_right_command",
+                                            "value": 0
+                                        }
+                                    }
+                                ],
+                                "to_if_alone": [
+                                    {
+                                        "pointing_button": "button2"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "j",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_down"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "k",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_up"
+                                    }
+                                ],
+                                "type": "basic"
+                            }
+                        ]
                     }
                 ]
             },
@@ -234,16 +423,6 @@
                     "ignore": false,
                     "manipulate_caps_lock_led": false,
                     "simple_modifications": [
-                        {
-                            "from": {
-                                "key_code": "right_command"
-                            },
-                            "to": [
-                                {
-                                    "pointing_button": "button2"
-                                }
-                            ]
-                        },
                         {
                             "from": {
                                 "key_code": "right_shift"
