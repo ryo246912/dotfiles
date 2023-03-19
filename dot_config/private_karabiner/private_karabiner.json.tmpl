@@ -210,10 +210,11 @@
                             }
                         ]
                     },
-                    {{- /* 「かな」+hjklのキーバインド */}}
+                    {{- /* 「かな」+hjkl・nm,.・bのキーバインド */}}
                     {
-                        "description": "'japanese_kana + hjkl' to 'arrow key'",
+                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm,.' to 'cursor move'/'japanese_kana + b' to ESC",
                         "manipulators": [
+                            {{- /* 「かな」+hjklのキーバインド */}}
                             {
                                 "from": {
                                     "key_code": "japanese_kana"
@@ -332,12 +333,112 @@
                                     }
                                 ],
                                 "type": "basic"
+                            },
+                            {{- /* 「かな」+nm,.のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "n"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "x": -3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "m"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "y": 3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "comma"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "y": -3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "period"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "x": 3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+bのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "b"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "escape"
+                                    }
+                                ],
+                                "type": "basic"
                             }
                         ]
                     },
-                    {{- /* right_command単体、right_command+jkをを押した時のキーバインド */}}
+                    {{- /* right_command単体、right_command+hjklをを押した時のキーバインド */}}
                     {
-                        "description": "'right command' + hjkl to 'PgUp/Dn'",
+                        "description": "'right command' + hjkl to 'Home/PgDn/PgUp/End'",
                         "manipulators": [
                             {
                                 "from": {
@@ -369,6 +470,29 @@
                                     {{- /* 右クリックのキーバインド */}}
                                     {
                                         "pointing_button": "button2"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "h",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "home"
                                     }
                                 ],
                                 "type": "basic"
@@ -415,6 +539,29 @@
                                 "to": [
                                     {
                                         "key_code": "page_up"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "l",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "end"
                                     }
                                 ],
                                 "type": "basic"
