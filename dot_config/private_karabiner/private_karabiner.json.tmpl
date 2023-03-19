@@ -210,9 +210,9 @@
                             }
                         ]
                     },
-                    {{- /* 「かな」+yuio・hjkl・nm,.・bのキーバインド */}}
+                    {{- /* 「かな」+yuio・hjkl・nm・bのキーバインド */}}
                     {
-                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm,.' to 'cursor move'/'japanese_kana + b' to ESC",
+                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm' to 'delete/Enter'/'japanese_kana + b' to ESC",
                         "manipulators": [
                             {
                                 "from": {
@@ -242,6 +242,7 @@
                                 "type": "basic"
                             },
                             {{- /* 「かな」+yuioのキーバインド */}}
+                            {{- /* 「かな」+yのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -269,6 +270,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+uのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -292,6 +294,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+iのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -315,6 +318,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+oのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -343,6 +347,7 @@
                                 "type": "basic"
                             },
                             {{- /* 「かな」+hjklのキーバインド */}}
+                            {{- /* 「かな」+hのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -366,6 +371,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+jのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -389,6 +395,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+kのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -412,6 +419,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+lのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -435,7 +443,8 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* 「かな」+nm,.のキーバインド */}}
+                            {{- /* 「かな」+nmのキーバインド */}}
+                            {{- /* 「かな」+nのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -449,13 +458,12 @@
                                 },
                                 "to": [
                                     {
-                                        "mouse_key": {
-                                            "x": -3072
-                                        }
+                                        "key_code": "delete_or_backspace"
                                     }
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+mのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -469,49 +477,7 @@
                                 },
                                 "to": [
                                     {
-                                        "mouse_key": {
-                                            "y": 3072
-                                        }
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_arrow",
-                                        "type": "variable_if",
-                                        "value": 1
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "comma"
-                                },
-                                "to": [
-                                    {
-                                        "mouse_key": {
-                                            "y": -3072
-                                        }
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_arrow",
-                                        "type": "variable_if",
-                                        "value": 1
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "period"
-                                },
-                                "to": [
-                                    {
-                                        "mouse_key": {
-                                            "x": 3072
-                                        }
+                                        "key_code": "return_or_enter"
                                     }
                                 ],
                                 "type": "basic"
@@ -537,9 +503,9 @@
                             }
                         ]
                     },
-                    {{- /* right_command単体、right_command+hjklをを押した時のキーバインド */}}
+                    {{- /* right_command単体、right_command+hjkl・nm,.をを押した時のキーバインド */}}
                     {
-                        "description": "'right command' + hjkl to 'Home/PgDn/PgUp/End'",
+                        "description": "'right_command' + hjkl to 'Home/PgDn/PgUp/End'/'right_command + nm,.' to 'cursor move'",
                         "manipulators": [
                             {
                                 "from": {
@@ -575,6 +541,8 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* right_command+hjklのキーバインド */}}
+                            {{- /* right_command+hのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -598,6 +566,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* right_command+jのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -621,6 +590,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* right_command+kのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -644,6 +614,7 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* right_command+lのキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -663,6 +634,91 @@
                                 "to": [
                                     {
                                         "key_code": "end"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* right_command+nm,.のキーバインド */}}
+                            {{- /* right_command+nのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "n"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "x": -3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* right_command+mのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "m"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "y": 3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* right_command+,のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "comma"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "y": -3072
+                                        }
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* right_command+.のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_right_command",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "period"
+                                },
+                                "to": [
+                                    {
+                                        "mouse_key": {
+                                            "x": 3072
+                                        }
                                     }
                                 ],
                                 "type": "basic"
