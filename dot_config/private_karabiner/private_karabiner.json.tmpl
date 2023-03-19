@@ -210,11 +210,10 @@
                             }
                         ]
                     },
-                    {{- /* 「かな」+hjkl・nm,.・bのキーバインド */}}
+                    {{- /* 「かな」+yuio・hjkl・nm,.・bのキーバインド */}}
                     {
                         "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm,.' to 'cursor move'/'japanese_kana + b' to ESC",
                         "manipulators": [
-                            {{- /* 「かな」+hjklのキーバインド */}}
                             {
                                 "from": {
                                     "key_code": "japanese_kana"
@@ -242,6 +241,108 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+yuioのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "y",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "close_bracket",
+                                        "modifiers": [
+                                            "left_shift",
+                                            "left_command"
+                                        ]
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "u",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_down"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "i",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_up"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "o",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "backslash",
+                                        "modifiers": [
+                                            "left_shift",
+                                            "left_command"
+                                        ]
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+hjklのキーバインド */}}
                             {
                                 "conditions": [
                                     {
