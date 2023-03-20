@@ -210,9 +210,9 @@
                             }
                         ]
                     },
-                    {{- /* 「かな」+yuio・hjkl・nm・bのキーバインド */}}
+                    {{- /* 「かな」+yuio・hjkl・nm,.・bのキーバインド */}}
                     {
-                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm' to 'delete/Enter'/'japanese_kana + b' to ESC",
+                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm' to 'delete/Enter'/'japanese_kana + ,.' to 'back/forward'/'japanese_kana + b' to ESC",
                         "manipulators": [
                             {
                                 "from": {
@@ -443,7 +443,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* 「かな」+nmのキーバインド */}}
+                            {{- /* 「かな」+nm,.のキーバインド */}}
                             {{- /* 「かな」+nのキーバインド */}}
                             {
                                 "conditions": [
@@ -478,6 +478,60 @@
                                 "to": [
                                     {
                                         "key_code": "return_or_enter"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+,のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {{- /* VSCode時のみに限定 */}}
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "comma"
+                                },
+                                "to": [
+                                    {{- /* VSCodeのカスタムのキーバインドに割り当てる */}}
+                                    {
+                                        "key_code": "f11"
+                                    },
+                                    {
+                                        "key_code": "f10"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+.のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "period"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f10"
+                                    },
+                                    {
+                                        "key_code": "f11"
                                     }
                                 ],
                                 "type": "basic"
