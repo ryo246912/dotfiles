@@ -300,6 +300,11 @@
     "command": "explorer.newFolder",
     "when": "listFocus && !inputFocus || listFocus && !inputFocus"
   },
+  // 現在開いているファイルのパスをコピー
+  {
+    "key": "alt+p",
+    "command": "workbench.action.files.copyPathOfActiveFile"
+  },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////

@@ -142,11 +142,13 @@ VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + J,-,閉じタグをすべて開く
 VSCode,option + b,-,(gitlens)Git Blame表示
 VSCode,option + h,-,(gitlens)ブランチの履歴表示
+VSCode,option + p,-,現在開いているファイルパスをコピー ※カスタム
 VSCode,option + ↑↓,-,行を入れ替え
 VSCode,option + (カンマ)|.,-,(gitlens)前/後のRevisionとの差分を表示
 VSCode,option + Shift + ↑↓,-,行をコピー
 VSCode,option + shift + .,-,(gitlens)現ファイルとの差分を表示
 VSCode,option + shift + (カンマ),-,(gitlens)カーソル行での前Revisionの差分を表示
+VSCode,コマンドパレット → Excel to Markdown table,-,(Excel to Markdown table)スプレッドシートをmarkdown表に変換
 VSCode,コマンドパレット → Wrap with Abbreviation,-,タグで囲む
 zsh/terminal,ctrl + a,ctrl + a,先頭に戻る(beginning-of-line)
 zsh/terminal,ctrl + c,ctrl + c,割り込みシグナルを送る(kill -INT/intrシグナル)
