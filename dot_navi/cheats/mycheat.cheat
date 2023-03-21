@@ -220,6 +220,18 @@ $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,descr
 mysql -u <user> -p <database>
 
 ;--------------------------------------------------------------
+; OSX : macOS
+;--------------------------------------------------------------
+
+% osx macOS
+
+# show system defaults
+defaults read | less
+
+# show running application
+lsappinfo list | less
+
+;--------------------------------------------------------------
 ; python
 ;--------------------------------------------------------------
 
