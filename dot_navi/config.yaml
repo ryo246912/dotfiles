@@ -4,14 +4,15 @@
 style:
   tag:
     color: cyan # text color. possible values: https://bit.ly/3gloNNI
-    width_percentage: 26 # column width relative to the terminal window
+    width_percentage: 10 # column width relative to the terminal window
     min_width: 20 # minimum column width as number of characters
   comment:
-    color: blue
+    color: green
     width_percentage: 42
     min_width: 45
   snippet:
-    color: white
+    color: yellow
+    width_percentage: 48
 
 finder:
   command: fzf # equivalent to the --finder option

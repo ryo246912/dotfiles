@@ -27,13 +27,13 @@ cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-par
 
 % django
 
-# show migration list SQL ex) python manage.py showmigrations issues
+# show migration list SQL [ex:python manage.py showmigrations issues]
 python manage.py showmigrations <app_name>
 
-# check migration SQL ex) python manage.py sqlmigrate issues 0035
+# check migration SQL [ex:python manage.py sqlmigrate issues 0035]
 python manage.py sqlmigrate <app_name> <migration_name>
 
-# rollback migration ex) python manage.py migrate concierges 0031
+# rollback migration [ex:python manage.py migrate concierges 0031]
 python manage.py migrate <app_name> <rollback_to_migration_name>
 
 ;--------------------------------------------------------------
@@ -42,25 +42,25 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 
 % docker
 
-# docker exec ex) docker container exec -it <container_id> bash
+# docker exec [ex:docker container exec -it <container_id> bash]
 docker container exec -it <container_id> <command>
 
 # docker disk free
 docker system df
 
-# docker disk image -s:file block size -k:KB  file:Docker.raw or Docker.qcow2
+# docker disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
-# docker no referenced images -f:filter (dangling=not referenced by any containers)
+# docker no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker images -f dangling=true
 
-# docker remove no referenced images -q:only display volume names
+# docker remove no referenced images [-q:only display volume names]
 docker rmi $(docker images -q -f dangling=true)
 
-# docker no referenced volume -f:filter (dangling=not referenced by any containers)
+# docker no referenced volume [-f:filter (dangling=not referenced by any containers)]
 docker volume ls -f dangling=true
 
-# docker remove no referenced volume -q:only display volume names
+# docker remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
 
 # docker remove unused build cache
@@ -101,7 +101,7 @@ git branch -m <branch> <branch>
 <git_fetch_>git branch -d <branch>
 
 # delete git branch --merged
-<git_fetch_>git branch --merged master ; read ; git branch --merged master | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+<git_fetch_>git branch --merged master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>
@@ -134,10 +134,10 @@ $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF
 $ stash_num: git stash list | column -t -s: --- --column 1
 $ type: echo -e "f\nd"
 $ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
-$ filename1: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
-$ filename2: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
-$ working_filename: echo "." && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
-$ staging_filename: echo "." && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
+$ filename1: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
+$ filename2: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
+$ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
+$ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
 
 ;--------------------------------------------------------------
 ; GitHub
@@ -145,7 +145,7 @@ $ staging_filename: echo "." && git diff --cached --name-only --line-prefix=$(gi
 
 % GitHub CLI
 
-# pr list, -s:{open|closed|merged|all}
+# pr list [-s:open|closed|merged|all]
 gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
 
 # pr view
@@ -172,7 +172,7 @@ gh issue view <issue_no> --comments<_web>
 # issues list(HOST)
 gh issue list --assignee "<author>" --state <state>
 
-# issues list, owner:repository owner(ex:pytorch), repository:repository name(ex:pytorch/pytorch)
+# issues list [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
 gh issue list --repo "<repository>" --state <state> --search "<search>"
 
 # watch workflow
@@ -187,10 +187,10 @@ gh run rerun --failed
 # pr review
 gh pr review <pr_review_no> <approve_comment> -b "<comment>"
 
-# repository list, owner:repository owner(ex:pytorch) -L:max num
+# repository list [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
 
-# repository show, owner:repository owner(ex:pytorch)
+# repository show [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
 $ author: echo -e "\n@me"
@@ -216,7 +216,7 @@ $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,descr
 
 % mySQL
 
-# mysql login ex)mysql -u root -p test_xxx
+# mysql login [ex:mysql -u root -p test_xxx]
 mysql -u <user> -p <database>
 
 ;--------------------------------------------------------------
@@ -232,22 +232,100 @@ find . -name \*.pyc -delete;
 python -m http.server 8888
 
 ;--------------------------------------------------------------
-; shell
+; shell (pipe-command)
 ;--------------------------------------------------------------
 
-% shell:grep
+% pipe-command
 
-# -i:ignore upper&lower,-n:rows ex) grep -in "" apps/**/*.py
-grep -in "<regex>" <path>
+# awk : print $no field
+awk '{print $<no>}'
 
-# -l:only filename ex) grep -il "" apps/**/*.py
-grep -il "<regex>" <path>
+# awk : print $no multi field
+awk '{print $<no>,$<no2>}'
 
-# -E:pattern match ex) grep -E "(X|Y)" apps/**/*.py
-grep -inE "(<pattern1>|<pattern2>)" <path>
+# awk : print filter [ex:awk '$5 >= 1000 {print $1}'][ex:awk '/^l/ {print $1}']
+awk '<condition> {print $<no>}'
 
-# -C n:output {n} lines ex) grep -C 1 -in "" apps/**/*.py
-grep -C <n> -i "<regex>" <path>
+# awk : [-F:separater,default=' ']
+awk -F "<separator>" '{print $<no>}'
+
+# column : [-t:multi column=determine the number of columns][-s:separater][ex:column -t -s,]
+column -t -s<separater>
+
+# column : csv to table
+column -t -s,
+
+# cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
+cut -<cb> <cut_list>
+
+# cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
+cut -d "<separater>" -f <cut_no>
+
+# fzf [-m:multi select]
+fzf
+
+# less
+less
+
+# grep : normal
+grep "<regex>"
+
+# grep : [-i:ignore upper&lower][-n:output rows number]
+grep -in "<regex>"
+
+# grep : [-l:only filename] [ex:grep -il "" apps/**/*.py]
+grep -il "<regex>"
+
+# grep : [-E:extend regex,pattern match] [ex:grep -E "(X|Y)" apps/**/*.py]
+grep -inE "(<pattern1>|<pattern2>)"
+
+# grep : [-C n:output {n} lines] [ex:grep -C 1 -in "" apps/**/*.py]
+grep -C <n> -i "<regex>"
+
+# grep : [-v:output not match]
+grep -vE "<regex>"
+
+# head : [-n:output number]
+head -n <num>
+
+# sed : replace [ex:sed 's/ /!/']
+sed 's/<before>/<after>/'
+
+# sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
+sed -n <start>,<end>p
+
+# sed : output matched line [-n:print only applied][ex:sed -n /^-/p]
+sed -n /<regex>/p
+
+# sed : delete selected line[ex:sed 1,5d]
+sed <start>,<end>d
+
+# sed : delete matched line [ex:sed /^d/d]
+sed /<regex>/d
+
+# tail : [-n:output number]
+tail -n <num>
+
+# tail : [-r:reverse]
+tail -r
+
+# tr : replace char [ex:tr 012 abc]
+tr <before> <after>
+
+# tr : delete char [ex:tr -d '\n']
+tr -d '<char>'
+
+# xargs : output to args [-I:arg replace][ex:xargs -I % git branch -d %]
+xargs -I %
+
+$ no: echo -e "\n(NF-1)\nNF"
+$ no2: echo -e "\n(NF-1)\nNF"
+$ cb: echo -e "c\nb"
+$ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
+
+;--------------------------------------------------------------
+; shell
+;--------------------------------------------------------------
 
 % shell:ssh
 
@@ -256,11 +334,34 @@ eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
 % shell
 
+# cat : concatenate command output(process substitution)
+cat <() <()
+
+# cat : output file(hear document)
+cat << EOF
+
 # watch linux os version
 cat /etc/os-release
 
+# echo exit status
+echo $?
+
+# curl : curl http header
+curl -s -D - localhost:8080 -o /dev/null
+
+# df : disk free [--total:linux only][-h:human-readable]
+df -h<_--total>
+
+# du : disk usage [-c:display total][-s:display only depth0 directory][-h:human-readable]
+du -csh
+
+# lsof(=list open files) : show file,pid,user[-i:port]
+lsof -i:<port>
+
 # watch kernel version
 uname -a
+
+$ _--total: echo -e "\n --total"
 
 ;--------------------------------------------------------------
 ; SQL
@@ -276,7 +377,7 @@ SHOW VARIABLES;
 ;--------------------------------------------------------------
 
 % tmux
-# tmux pane move -h:yoko,-v:tate
+# tmux pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
 # tmux pipe-pane

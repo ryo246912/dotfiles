@@ -148,15 +148,32 @@ _gitui() {
 zle -N _gitui
 bindkey "^D" _gitui
 
-# ctrl + q → ctrl + aで直前のコマンドをスペース区切りで選択して出力
-_fzf_insert_last_command_word() {
-  local word
-  word=$(echo $(history -1) | cut -f 2- -d " " | tr ' ' '\n' | fzf)
-  BUFFER="$BUFFER$word"
+# ctrl + q → ctrl + aで直近のコマンドの単語をスペース区切りで選択して出力
+_fzf_insert_command_word() {
+  local command word
+  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  word=$(echo $command | tr ' ' '\n' | fzf)
+  if [ -n "$word" ] ; then
+    BUFFER="$BUFFER $word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
   zle redisplay
 }
-zle -N _fzf_insert_last_command_word
-bindkey '^Q^A' _fzf_insert_last_command_word
+zle -N _fzf_insert_command_word
+bindkey '^Q^A' _fzf_insert_command_word
+
+# ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
+_navi_insert_pipe_snippet() {
+  local word
+  word=$(_navi_call --print --query "pipe-command ")
+  if [ -n "$word" ] ; then
+    BUFFER="$BUFFER | $word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
+  zle redisplay
+}
+zle -N _navi_insert_pipe_snippet
+bindkey '^Q^Q' _navi_insert_pipe_snippet
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
