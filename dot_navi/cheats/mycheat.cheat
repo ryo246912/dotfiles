@@ -385,5 +385,5 @@ tmux pipe-pane -t <pane_from> 'cat | grep "<word>" >> <tty>' ; read ; tmux pipe-
 
 $ hv: echo -e "v\nh"
 $ pane_from: echo "." && tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" | column -t --- --column 1
-$ pane_to: echo "." && tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path}" | column -t --- --column 1
+$ pane_to: echo "." && tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" | column -t --- --column 1
 $ tty: tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" | column -t --- --column 6
