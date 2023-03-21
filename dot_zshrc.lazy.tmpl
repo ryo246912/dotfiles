@@ -148,20 +148,6 @@ _gitui() {
 zle -N _gitui
 bindkey "^D" _gitui
 
-# ctrl + q → ctrl + aで直近のコマンドの単語をスペース区切りで選択して出力
-_fzf_insert_command_word() {
-  local command word
-  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
-  word=$(echo $command | tr ' ' '\n' | fzf)
-  if [ -n "$word" ] ; then
-    BUFFER="$BUFFER $word"
-    CURSOR=$#BUFFER #カーソルを末尾に移動
-  fi
-  zle redisplay
-}
-zle -N _fzf_insert_command_word
-bindkey '^Q^A' _fzf_insert_command_word
-
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
@@ -174,6 +160,66 @@ _navi_insert_pipe_snippet() {
 }
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
+
+# ctrl + q → ctrl + aでコマンド履歴からwordを選択して出力
+_fzf_insert_command_word() {
+  local num command line array1 array2 word
+  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  if [ -n "$command" ] ; then
+    for i in $(seq $(echo $command | wc -m)) ; do
+      array1+=( "$(cut -c $i- <(echo $command))\n" )
+    done
+  fi
+  if [ -n "${array1[*]}" ] ; then
+    line=$(echo -e "${array1[@]}" | fzf)
+    num=$(echo $line | wc -m)
+    for j in $(seq $num) ; do
+      array2+=( "$(cut -c -$((num-j+1)) <(echo $line))\n" )
+    done
+  fi
+  if [ -n "${array2[*]}" ] ; then
+    word=$(echo -e "${array2[@]}" | fzf)
+    word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
+    word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
+    word=$(echo $word | tr -d '\n')
+  fi
+  if [ -n "$word" ] ; then
+    BUFFER="$BUFFER $word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
+  zle redisplay
+}
+zle -N _fzf_insert_command_word
+bindkey '^Q^A' _fzf_insert_command_word
+
+# ctrl + q → ctrl + zで画面キャプチャしてwordを選択してコピー
+_copy_word() {
+  local num line1 line2 array1 array2 word
+  line1=$(tmux capture-pane -p | fzf)
+  if [ -n "$line1" ] ; then
+    for i in $(seq $(echo $line1 | wc -m)) ; do
+      array1+=( "$(cut -c $i- <(echo $line1))\n" )
+    done
+  fi
+  if [ -n "${array1[*]}" ] ; then
+    line2=$(echo -e "${array1[@]}" | fzf)
+    num=$(echo $line2 | wc -m)
+    for j in $(seq $num) ; do
+      array2+=( "$(cut -c -$((num-j+1)) <(echo $line2))\n" )
+    done
+  fi
+  if [ -n "${array2[*]}" ] ; then
+    word=$(echo -e "${array2[@]}" | fzf)
+    word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
+    word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
+  fi
+  if [ -n "$word" ] ; then
+    echo $word | tr -d '\n' | pbcopy
+  fi
+  zle redisplay
+}
+zle -N _copy_word
+bindkey '^Q^Z' _copy_word
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
