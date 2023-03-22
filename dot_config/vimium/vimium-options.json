@@ -1,6 +1,19 @@
 {
   "settingsVersion": "1.67.4",
-  "exclusionRules": [],
+  "exclusionRules": [
+    {
+      "pattern": "http*://calendar.google.com/*",
+      "passKeys": "jkm"
+    },
+    {
+      "pattern": "http*://mail.google.com/mail/u/*",
+      "passKeys": "jkxu"
+    },
+    {
+      "pattern": "http*://github.com/*",
+      "passKeys": "gigpt"
+    }
+  ],
   "filterLinkHints": false,
   "waitForEnterForFilteredHints": true,
   "hideHud": false,
