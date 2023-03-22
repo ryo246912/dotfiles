@@ -210,9 +210,9 @@
                             }
                         ]
                     },
-                    {{- /* 「かな」+yuio・hjkl・nm,.・bのキーバインド */}}
+                    {{- /* 「かな」+yuio・hjkl・nm,.・bp;のキーバインド */}}
                     {
-                        "description": "'japanese_kana + hjkl' to 'arrow key'/'japanese_kana + nm' to 'delete/Enter'/'japanese_kana + ,.' to 'back/forward'/'japanese_kana + b' to ESC",
+                        "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'nm' to 'delete/Enter'|';p' to 'back/forward'|'b' to ESC|',.' to 'tab/shift+tab'",
                         "manipulators": [
                             {
                                 "from": {
@@ -489,23 +489,14 @@
                                         "name": "press_japanese_kana_for_arrow",
                                         "type": "variable_if",
                                         "value": 1
-                                    },
-                                    {{- /* VSCode時のみに限定 */}}
-                                    {
-                                        "type": "frontmost_application_if",
-                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
                                     }
                                 ],
                                 "from": {
                                     "key_code": "comma"
                                 },
                                 "to": [
-                                    {{- /* VSCodeのカスタムのキーバインドに割り当てる */}}
                                     {
-                                        "key_code": "f11"
-                                    },
-                                    {
-                                        "key_code": "f10"
+                                        "key_code": "tab"
                                     }
                                 ],
                                 "type": "basic"
@@ -517,10 +508,6 @@
                                         "name": "press_japanese_kana_for_arrow",
                                         "type": "variable_if",
                                         "value": 1
-                                    },
-                                    {
-                                        "type": "frontmost_application_if",
-                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
                                     }
                                 ],
                                 "from": {
@@ -528,14 +515,15 @@
                                 },
                                 "to": [
                                     {
-                                        "key_code": "f10"
-                                    },
-                                    {
-                                        "key_code": "f11"
+                                        "key_code": "tab",
+                                        "modifiers": [
+                                            "left_shift"
+                                        ]
                                     }
                                 ],
                                 "type": "basic"
                             },
+
                             {{- /* 「かな」+bのキーバインド */}}
                             {
                                 "conditions": [
@@ -551,6 +539,60 @@
                                 "to": [
                                     {
                                         "key_code": "escape"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+;のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "semicolon"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f10"
+                                    },
+                                    {
+                                        "key_code": "f11"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+pのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {{- /* VSCode時のみに限定 */}}
+                                    {
+                                        "type": "frontmost_application_if",
+                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "p"
+                                },
+                                "to": [
+                                    {{- /* VSCodeのカスタムのキーバインドに割り当てる */}}
+                                    {
+                                        "key_code": "f11"
+                                    },
+                                    {
+                                        "key_code": "f10"
                                     }
                                 ],
                                 "type": "basic"
