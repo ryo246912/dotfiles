@@ -16,200 +16,6 @@
                     "mouse_motion_to_scroll.speed": 100
                 },
                 "rules": [
-                    {
-                        "description": "control 'japanese_kana' & Double tap 'japanese_kana' to 'enter'",
-                        "manipulators": [
-                            {{- /* かな1回押した状態のキーバインド */}}
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_enter",
-                                        "type": "variable_if",
-                                        "value": 1
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "japanese_kana",
-                                    {{- /* 修飾キー等押していても有効化 */}}
-                                    "modifiers": {
-                                        "optional": [
-                                            "any"
-                                        ]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "return_or_enter"
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {{- /* 「かな」キーのキーバインド(enの場合) */}}
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_enter",
-                                        "type": "variable_if",
-                                        "value": 0
-                                    },
-                                    {
-                                        "input_sources": [
-                                            {
-                                                "language": "en"
-                                            }
-                                        ],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "japanese_kana",
-                                    "modifiers": {
-                                        "optional": [
-                                            "any"
-                                        ]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_enter",
-                                            "value": 1
-                                        }
-                                    },
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 1
-                                        }
-                                    }
-                                ],
-                                {{- /* ホールドからボタンを話した時の状態 */}}
-                                "to_after_key_up": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 0
-                                        }
-                                    }
-                                ],
-                                {{- /* ボタンを長押ししたときの状態、delayで「ja」に変わった後に言語を「en」に戻す */}}
-                                "to_if_held_down": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 1
-                                        }
-                                    },
-                                    {
-                                        "key_code": "japanese_eisuu"
-                                    }
-                                ],
-                                {{- /* ボタンを押した後にdelayで実施される動作 */}}
-                                "to_delayed_action": {
-                                    {{- /* ボタンを押した後に他のボタンを押された時の動作 */}}
-                                    "to_if_canceled": [
-                                        {
-                                            "set_variable": {
-                                                "name": "press_japanese_kana_for_enter",
-                                                "value": 0
-                                            }
-                                        }
-                                    ],
-                                    {{- /* ボタンを押した後に一定時間経過した時の動作、通常通りそのまま押した時の動作 */}}
-                                    "to_if_invoked": [
-                                        {
-                                            "set_variable": {
-                                                "name": "press_japanese_kana_for_enter",
-                                                "value": 0
-                                            }
-                                        },
-                                        {
-                                            "key_code": "japanese_kana"
-                                        }
-                                    ]
-                                },
-                                "type": "basic"
-                            },
-                            {{- /* 「かな」キーのキーバインド(jaの場合) */}}
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_enter",
-                                        "type": "variable_if",
-                                        "value": 0
-                                    },
-                                    {
-                                        "input_sources": [
-                                            {
-                                                "language": "ja"
-                                            }
-                                        ],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "japanese_kana",
-                                    "modifiers": {
-                                        "optional": [
-                                            "any"
-                                        ]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_enter",
-                                            "value": 1
-                                        }
-                                    },
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 1
-                                        }
-                                    }
-                                ],
-                                "to_after_key_up": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 0
-                                        }
-                                    }
-                                ],
-                                "to_if_held_down": [
-                                    {
-                                        "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
-                                            "value": 1
-                                        }
-                                    }
-                                ],
-                                "to_delayed_action": {
-                                    "to_if_canceled": [
-                                        {
-                                            "set_variable": {
-                                                "name": "press_japanese_kana_for_enter",
-                                                "value": 0
-                                            }
-                                        }
-                                    ],
-                                    "to_if_invoked": [
-                                        {
-                                            "set_variable": {
-                                                "name": "press_japanese_kana_for_enter",
-                                                "value": 0
-                                            }
-                                        },
-                                        {
-                                            "key_code": "japanese_kana"
-                                        }
-                                    ]
-                                },
-                                "type": "basic"
-                            }
-                        ]
-                    },
                     {{- /* 「かな」+yuio・hjkl・nm,.・bp;のキーバインド */}}
                     {
                         "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'nm' to 'delete/Enter'|';p' to 'back/forward'|'b' to ESC|',.' to 'tab/shift+tab'",
@@ -226,6 +32,7 @@
                                         }
                                     }
                                 ],
+                                {{- /* ホールドからボタンを話した時の状態 */}}
                                 "to_after_key_up": [
                                     {
                                         "set_variable": {
@@ -234,6 +41,7 @@
                                         }
                                     }
                                 ],
+                                {{- /* かな単体で押された時のキーバインド */}}
                                 "to_if_alone": [
                                     {
                                         "key_code": "japanese_kana"
@@ -253,6 +61,7 @@
                                 ],
                                 "from": {
                                     "key_code": "y",
+                                    {{- /* 修飾キー等押していても有効化 */}}
                                     "modifiers": {
                                         "optional": [
                                             "any"
@@ -552,8 +361,10 @@
                                         "value": 1
                                     },
                                     {
-                                        "type": "frontmost_application_if",
-                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                        "bundle_identifiers": [
+                                            "^com\\.microsoft\\.VSCode$"
+                                        ],
+                                        "type": "frontmost_application_if"
                                     }
                                 ],
                                 "from": {
@@ -579,8 +390,10 @@
                                     },
                                     {{- /* VSCode時のみに限定 */}}
                                     {
-                                        "type": "frontmost_application_if",
-                                        "bundle_identifiers": ["^com\\.microsoft\\.VSCode$"]
+                                        "bundle_identifiers": [
+                                            "^com\\.microsoft\\.VSCode$"
+                                        ],
+                                        "type": "frontmost_application_if"
                                     }
                                 ],
                                 "from": {
