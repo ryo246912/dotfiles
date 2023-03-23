@@ -11,13 +11,13 @@
     },
     {
       "pattern": "http*://github.com/*",
-      "passKeys": "gigpt"
+      "passKeys": "t"
     }
   ],
   "filterLinkHints": false,
   "waitForEnterForFilteredHints": true,
   "hideHud": false,
-  "keyMappings": "# マッピング一度リセット\nunmapAll\n\n# 移動\nmap j scrollPageDown\nmap k scrollPageUp\nmap i scrollToTop\nmap u scrollToBottom\n\n# 戻る/進む\nmap h goBack\nmap l goForward\n\n# リロード\nmap r reload\n\n# urlをコピー\nmap gy copyCurrentUrl\n# コピーしたurlを新しいタブで開く\nmap p openCopiedUrlInNewTab\n\n# リンクにフォーカス\nmap q LinkHints.activateMode action=focus\nmap gg LinkHints.activateMode action=focus\n# リンクを新しいタブで開く\nmap g<space> LinkHints.activateMode\nmap Q LinkHints.activateMode\nmap G LinkHints.activateMode\n# ビジュアルモード\nmap <m-V> enterVisualMode\n# インサートモード(Vimium無効)\nmap <m-i> enterInsertMode\n\n# inputタグにフォーカス\nmap gi focusInput \nmap gf nextFrame\nmap gF mainFrame\n\n# 上の階層のURLへ\nmap gu goUp\nmap gU goToRoot\n\n# 前/次のページに行く\nmap [[ goPrevious\nmap ]] goNext\nmap gh goPrevious\nmap gl goNext\n\n# タブ移動\nmap y previousTab\nmap o nextTab\n\n# タブを左右に動かす\nmap Y moveTabLeft\nmap gy moveTabLeft\nmap O moveTabRight\nmap go moveTabRight\n\n# タブを閉じる/作成\nmap n removeTab\nmap . createTab\n\n# タブをピン留めする\nmap p togglePinTab\n\n# ブックマーク開く\nmap b Vomnibar.activateBookmarksInNewTab",
+  "keyMappings": "# マッピング一度リセット\nunmapAll\n\n# 移動\nmap j scrollPageDown\nmap k scrollPageUp\nmap i scrollToTop\nmap u scrollToBottom\n\n# 戻る/進む\nmap h goBack\nmap l goForward\n\n# リロード\nmap r reload\n\n# urlをコピー\nmap gy copyCurrentUrl\n# コピーしたurlを新しいタブで開く\nmap p openCopiedUrlInNewTab\n\n# リンクにフォーカス\nmap q LinkHints.activateMode action=focus\nmap gg LinkHints.activateMode action=focus\n# リンクを新しいタブで開く\nmap g<space> LinkHints.activateMode\nmap Q LinkHints.activateMode\nmap G LinkHints.activateMode\n# ビジュアルモード\nmap <m-v> enterVisualMode\nmap v enterVisualMode\n# インサートモード(Vimium無効)\nmap <m-i> enterInsertMode\nmap gv enterInsertMode\n\n# inputタグにフォーカス\nmap gi focusInput \nmap gf nextFrame\nmap gF mainFrame\n\n# 上の階層のURLへ\nmap gu goUp\nmap gU goToRoot\n\n# 前/次のページに行く\nmap [[ goPrevious\nmap ]] goNext\nmap gh goPrevious\nmap gl goNext\n\n# タブ移動\nmap y previousTab\nmap o nextTab\n\n# タブを左右に動かす\nmap Y moveTabLeft\nmap gy moveTabLeft\nmap O moveTabRight\nmap go moveTabRight\n\n# タブを閉じる/作成\nmap n removeTab\nmap . createTab\n\n# タブをピン留めする\nmap p togglePinTab\n\n# ブックマーク開く\nmap b Vomnibar.activateBookmarksInNewTab",
   "linkHintCharacters": "67890",
   "linkHintNumbers": "0123456789",
   "newTabUrl": "about:newtab",
