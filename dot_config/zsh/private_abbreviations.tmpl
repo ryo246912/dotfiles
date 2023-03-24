@@ -10,20 +10,25 @@ abbr che='chezmoi edit --interactive --apply'
 abbr chl='chezmoi list -p source-absolute -i files'
 abbr chm='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && chezmoi merge $file }'
 
+abbr cz='czg'
+
 abbr es='exec $SHELL -l'
+
+abbr ga='git add'
 abbr gb='git branch'
 abbr gc='git checkout'
-abbr gu='gitui'
 abbr gcb='git checkout -b'
 abbr gcs='git checkout staging'
 abbr gcm='git checkout master'
-abbr gf='git fetch -p'
-abbr gs='git status'
 abbr gd='git diff'
+abbr gf='git fetch -p'
 abbr gl='git log --oneline -n 10'
+abbr gpo='git pull origin --no-commit'
 abbr gpoh='git push origin HEAD'
 abbr gpom='git pull origin master --no-commit'
 abbr grom='git rebase origin/master'
+abbr gs='git status'
+abbr gu='gitui'
 
 {{ if eq .chezmoi.os "darwin" -}}
 abbr fgb='() { local branches branch ; branches=$(git branch -a) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && $(echo -n "${${branch:2}#*remotes/origin/}" | pbcopy) }'
