@@ -98,7 +98,7 @@ git mv <file_directory> <file_directory>
 git branch -m <branch> <branch>
 
 # delete git branch
-<git_fetch_>git branch -d <branch>
+<git_fetch_>git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
 
 # delete git branch --merged
 <git_fetch_>git branch --merged master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
@@ -126,6 +126,7 @@ git stash show <stash_num> -p ; read ; git stash pop <stash_num>
 
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
+$ delete_flag: echo -e "d\nD"
 $ git_fetch_: echo -e "\ngit fetch -p && "
 $ commit1: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
@@ -217,7 +218,7 @@ $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,descr
 % mySQL
 
 # mysql login [ex:mysql -u root -p test_xxx]
-mysql -u <user> -p <database>
+echo -n "mysql -u <user> -p <database>" | pbcopy
 
 ;--------------------------------------------------------------
 ; OSX : macOS
@@ -327,8 +328,11 @@ tr <before> <after>
 # tr : delete char [ex:tr -d '\n']
 tr -d '<char>'
 
+# wc : word count [-m:count chars][-l:count lines]
+wc -lm
+
 # xargs : output to args [-I:arg replace][ex:xargs -I % git branch -d %]
-xargs -I %
+xargs -I % <command> %
 
 $ no: echo -e "\n(NF-1)\nNF"
 $ no2: echo -e "\n(NF-1)\nNF"
@@ -382,7 +386,10 @@ $ _--total: echo -e "\n --total"
 % SQL
 
 # show variables
-SHOW VARIABLES;
+echo -n "SHOW VARIABLES;" | pbcopy
+
+# show databases
+echo -n "SHOW DATABASES;" | pbcopy
 
 ;--------------------------------------------------------------
 ; tmux
