@@ -82,8 +82,11 @@ git diff<_--name-only> master...HEAD -- <filename1> | delta<_no-gitconfig>
 # git diff between commits(default)
 git diff <commit1>...<commit2> -- <filename2> | delta<_no-gitconfig>
 
-# git show
+# git show commit
 git show <commit1> | delta<_no-gitconfig>
+
+# git show commit file
+git show <commit1>:<git_filename>
 
 # git cherry-pick
 git cherry-pick -n <commit1>
@@ -109,8 +112,14 @@ git push origin :<branch>
 # git rebase
 git rebase -i <commit1>
 
-# git grep
-git grep -l "<regex>" -- "<path>"
+# git grep [-i:ignore upper&lower]
+git grep -i "<regex>" <commit1> -- <path>
+
+# git grep [-l:only filename]
+git grep -lE "<regex>" <commit1> -- <path>
+
+# git grep [-v:output not match]
+git grep -lv "<regex>" <commit1> -- <path>
 
 # stash file
 git stash --message "<message>" -- <working_filename>
@@ -118,25 +127,31 @@ git stash --message "<message>" -- <working_filename>
 # stash list
 git stash list
 
-# stash show
-git stash show <stash_num> ; read ; git stash show <stash_num> -p
+# stash show [-p:patch]
+git stash show <stash_num> -p
 
 # stash pop
-git stash show <stash_num> -p ; read ; git stash pop <stash_num>
+git stash pop <stash_num>
+
+# stash pop file
+git checkout <stash_num> <stash_file>
 
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
 $ delete_flag: echo -e "d\nD"
 $ git_fetch_: echo -e "\ngit fetch -p && "
-$ commit1: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
-$ commit2: git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
-$ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline | sed 's/ /!/' --- --column 1 --delimiter ! --preview "git show {1} | delta --no-gitconfig"
+$ commit1: git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
+$ commit2: git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
+$ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
 $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
-$ stash_num: git stash list | column -t -s: --- --column 1
+$ path: echo "" && git ls-tree <commit1> --name-only -dr
+$ stash_num: git stash list --- --column 1 --delimiter : --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
+$ stash_file: git stash show --name-only <stash_num>
 $ type: echo -e "f\nd"
 $ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
 $ filename1: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
 $ filename2: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
+$ git_filename: git ls-tree -r --name-only <commit1>
 $ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 $ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
 
