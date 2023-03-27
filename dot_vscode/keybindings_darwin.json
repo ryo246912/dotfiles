@@ -317,6 +317,23 @@
     "command": "editor.action.revealDefinition",
     "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
   },
+  // DiffEditorでsidebyside表示の切り替え
+  {
+    "key": "shift+cmd+d",
+    "command": "toggle.diff.renderSideBySide",
+    "when": "inDiffEditor"
+  },
+  // DiffEditorで逆側にフォーカス
+  {
+    "key": "cmd+d",
+    "command": "workbench.action.compareEditor.focusOtherSide",
+    "when": "inDiffEditor"
+  },
+  // 開発者コンテキストキーの検査
+  {
+    "key": "cmd+k i",
+    "command": "workbench.action.inspectContextKeys"
+  },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
