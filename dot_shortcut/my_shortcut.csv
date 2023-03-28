@@ -130,6 +130,7 @@ VSCode,cmd + option + d,-,右に分割 ※カスタム
 VSCode,cmd + option + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
 VSCode,cmd + option + g,-,(GitHub)GitHubのビューにフォーカス ※カスタム
 VSCode,cmd + option + i,-,開発者ツールの切り替え(chromeのconsoleキーと同じ)
+VSCode,cmd + option + j,-,開発者コンテキストキー(when句)の調査 ※カスタム
 VSCode,cmd + option + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,cmd + option + shift + d,-,下に分割 ※カスタム
 VSCode,cmd + option + shift + g,-,(GitHub)下に分割 ※カスタム
@@ -139,7 +140,6 @@ VSCode,cmd + option + l,-,選択範囲内で検索(FindinSelection)ON/OFF
 VSCode,cmd + option + ↑↓,-,マルチカーソル
 VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
 VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
-VSCode,cmd + k → i,-,開発者コンテキストキー(when句)の調査 ※カスタム
 VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + J,-,閉じタグをすべて開く
 VSCode,option + b,-,(gitlens)Git Blame表示

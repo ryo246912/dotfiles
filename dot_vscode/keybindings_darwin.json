@@ -331,8 +331,13 @@
   },
   // 開発者コンテキストキーの検査
   {
-    "key": "cmd+k i",
+    "key": "alt+cmd+j",
     "command": "workbench.action.inspectContextKeys"
+  },
+  // 開発者ツールの切り替え(when句なしにしていつでも開くように)
+  {
+    "key": "alt+cmd+i",
+    "command": "workbench.action.toggleDevTools"
   },
   ///////////////////////////////////////////////
   // 拡張機能
@@ -406,6 +411,12 @@
     "key": "cmd+w",
     "command": "-workbench.action.closeActiveEditor"
   },
+  // (Gitlens) DiffEditorで開いた元ファイルを開く
+  {
+    "key": "cmd+o",
+    "command": "gitlens.openWorkingFile",
+    "when": "inDiffEditor"
+  },
   // (GitHub) PRのビューにフォーカス
   // when : ActivePRが表示可能な場合
   {
@@ -413,6 +424,12 @@
     "command": "prStatus:github.focus",
     "when": "github:activePullRequest.visible"
   },
+  // (Github) 元のファイルを開く（vscodeのbugでショートカットキーが効かないよう?）
+  // {
+  //   "key": "cmd+enter",
+  //   "command": "pr.openOriginalFile",
+  //   "when": "activeViewlet == 'workbench.view.extension.github-pull-requests'"
+  // },
   // (Github) Githubを表示
   // when : ActivePRが表示可能でない場合
   {
