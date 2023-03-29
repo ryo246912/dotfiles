@@ -209,6 +209,7 @@ gh repo list <owner> -L 100
 # repository show [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
+
 $ author: echo -e "\n@me"
 $ search: echo -e "\nuser-review-requested:@me"
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
@@ -236,6 +237,21 @@ $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,descr
 echo -n "mysql -u <user> -p <database>" | pbcopy
 
 ;--------------------------------------------------------------
+; node
+;--------------------------------------------------------------
+
+% node
+
+# nodenv show current version & installed versions
+nodenv versions
+
+# nodenv installable versions
+nodenv install --list | less
+
+# nodenv install version
+nodenv install <version>
+
+;--------------------------------------------------------------
 ; OSX : macOS
 ;--------------------------------------------------------------
 
@@ -258,6 +274,15 @@ find . -name \*.pyc -delete;
 
 # http server
 python -m http.server 8888
+
+# pyenv show current version & installed versions
+pyenv versions
+
+# pyenv installable versions
+pyenv install --list | less
+
+# pyenv install version
+pyenv install <version>
 
 ;--------------------------------------------------------------
 ; shell (pipe-command)
@@ -366,10 +391,10 @@ eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 % shell
 
 # cat : concatenate command output(process substitution)
-cat <() <()
+cat <(<command1>) <(<command2>)
 
 # cat : output file(hear document)
-cat << EOF
+cat << EOF > <filename>
 
 # watch linux os version
 cat /etc/os-release
