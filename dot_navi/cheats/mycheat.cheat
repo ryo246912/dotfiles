@@ -356,7 +356,7 @@ grep -vE "<regex>"
 # head : [-n:output number]
 head -n <num>
 
-# sed : replace [ex:sed 's/ /!/']
+# sed : replace [-e:multi command][ex:sed 's/ /!/'][ex:sed -e 1d -e '$ s/$/\n/']
 sed 's/<before>/<after>/'
 
 # sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
@@ -365,7 +365,7 @@ sed -n <start>,<end>p
 # sed : output matched line [-n:print only applied][ex:sed -n /^-/p]
 sed -n /<regex>/p
 
-# sed : delete selected line[ex:sed 1,5d]
+# sed : delete selected line [-e:multi command][ex:sed 1,5d][ex:sed -e 1d -e '$ s/$/\n/']
 sed <start>,<end>d
 
 # sed : delete matched line [ex:sed /^d/d]
@@ -389,8 +389,8 @@ wc -lm
 # xargs : output to args [-I:arg replace][ex:xargs -I % git branch -d %]
 xargs -I % <command> %
 
-$ no: echo -e "\n(NF-1)\nNF"
-$ no2: echo -e "\n(NF-1)\nNF"
+$ no: echo -e "1\n(NF-1)\nNF"
+$ no2: echo -e "1\n(NF-1)\nNF"
 $ cb: echo -e "c\nb"
 $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 
@@ -404,6 +404,12 @@ $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
 % shell
+
+# cal : callender[-y:year]
+cal -3
+
+# cal : callender
+cal <month_year>
 
 # cat : concatenate command output(process substitution)
 cat <(<command1>) <(<command2>)
