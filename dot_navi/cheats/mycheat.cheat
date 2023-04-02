@@ -77,10 +77,13 @@ $ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.St
 git diff --cached -- <staging_filename> | delta<_no-gitconfig>
 
 # git diff between master...HEAD
-git diff<_--name-only> master...HEAD -- <filename1> | delta<_no-gitconfig>
+git diff<_--name-only> master...HEAD -- <master-head_filename> | delta<_no-gitconfig>
 
-# git diff between commits(default)
-git diff <commit1>...<commit2> -- <filename2> | delta<_no-gitconfig>
+# git diff between commits [ex:master...HEAD]
+git diff<_--name-only> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
+
+# git diff between commits filter by string [-S:string(search word)][ex:master...HEAD]
+git diff<_--name-only> -S <string> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
 
 # git show commit
 git show <commit1> | delta<_no-gitconfig>
@@ -91,14 +94,23 @@ git show <commit1>:<git_filename>
 # git cherry-pick
 git cherry-pick -n <commit1>
 
+# git create branch
+git branch <branch_name> <commit1>
+
 # git restore(default)
-git checkout <commit>
+git checkout <checkout_commit>
 
 # rename git file/directory
 git mv <file_directory> <file_directory>
 
 # rename git branch
 git branch -m <branch> <branch>
+
+# reset recent commit
+git reset --soft HEAD^
+
+# reset working directory
+git checkout . && git clean -f
 
 # delete git branch
 <git_fetch_>git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
@@ -113,13 +125,13 @@ git push origin :<branch>
 git rebase -i <commit1>
 
 # git grep [-i:ignore upper&lower]
-git grep -i "<regex>" <commit1> -- <path>
+git grep -i "<regex>" <grep_commit> -- <path>
 
 # git grep [-l:only filename]
-git grep -lE "<regex>" <commit1> -- <path>
+git grep -lE "<regex>" <grep_commit> -- <path>
 
 # git grep [-v:output not match]
-git grep -lv "<regex>" <commit1> -- <path>
+git grep -lv "<regex>" <grep_commit> -- <path>
 
 # stash file
 git stash --message "<message>" -- <working_filename>
@@ -140,17 +152,18 @@ $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
 $ delete_flag: echo -e "d\nD"
 $ git_fetch_: echo -e "\ngit fetch -p && "
-$ commit1: git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
-$ commit2: git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
-$ commit: git branch | awk '{print $NF}' ; git log <branch> --oneline --- --column 1 --delimiter " " --preview "git show {1} | delta --no-gitconfig"
+$ commit1: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ commit2: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ checkout_commit: git branch | awk '{print $NF}' ; git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <file_directory> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
 $ path: echo "" && git ls-tree <commit1> --name-only -dr
 $ stash_num: git stash list --- --column 1 --delimiter : --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
 $ stash_file: git stash show --name-only <stash_num>
-$ type: echo -e "f\nd"
-$ file_directory: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <type> -name "*" -print
-$ filename1: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
-$ filename2: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
+$ file_or_directory: echo -e "f\nd"
+$ file_directory: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
+$ master-head_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
+$ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
 $ git_filename: git ls-tree -r --name-only <commit1>
 $ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 $ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
@@ -209,6 +222,8 @@ gh repo list <owner> -L 100
 # repository show [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
+# stars show
+gh user-stars | xargs -I % open %
 
 $ author: echo -e "\n@me"
 $ search: echo -e "\nuser-review-requested:@me"
