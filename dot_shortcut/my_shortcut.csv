@@ -2,13 +2,15 @@
 -,-,-,-
 Clibor,cmd + shift + c,ctrl + shift + c,FIFOモード ※カスタム
 DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
+DBeaver,F3,-,SQLエディタ(SQL scripts一覧)
 DBeaver,F7,-,結果パネルの切替
 DBeaver,Esc,-,セルの変更をリセット
+DBeaver,cmd + [],-,前・次の下位タブ ※カスタム
+DBeaver,cmd + (カンマ),-,設定
 DBeaver,cmd + space,-,×値ビューア開閉(show/hide results panel) ※カスタム
 DBeaver,cmd + space,-,オーダーの切替 ※カスタム
 DBeaver,cmd + shift + e,-,タブ切り替え
 DBeaver,cmd + shift + [],-,前・次のタブ ※カスタム
-DBeaver,cmd + [],-,前・次の下位タブ ※カスタム
 DBeaver,cmd + shift + option + [],-,ビューの切り替え ※カスタム
 DBeaver,ctrl + enter,-,カーソルの1SQLを実行
 DBeaver,Ctrl + space,-,SQL補完
@@ -19,6 +21,7 @@ GitHub,option + クリック,alt + クリック,トグル(show resolved・file�
 Google Chrome,Esc,-,(ディベロッパーツールで)コンソールドロワーのON/OFF
 Google Chrome,F7,-,CaretブラウジングON/OFF切替
 Google Chrome,cmd + +/-,-,拡大/縮小
+Google Chrome,cmd + (カンマ),-,設定
 Google Chrome,cmd + 0,-,倍率を戻す
 Google Chrome,cmd + y,-,履歴表示
 Google Chrome,cmd + [],-,(ディベロッパーツールで)フォーカスの移動
@@ -51,6 +54,7 @@ Mac,ctrl + 2,-,（Mission Control）仮装ディスプレイ2に切替
 Mac,ctrl + F1,-,VoiceOverのオンオフ ※カスタム
 Mac,ctrl + F2,-,メニューバー操作
 Mac,ctrl + F3,-,Dock操作
+Mac,ctrl + F8,-,(右上の)ステータスメニュー操作
 Mac,ctrl + shift + F1,-,アクセシビリティコントロールの表示 ※カスタム
 Mac,ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 カスタム
 Mac,ctrl + ↓,-,ウィジェット表示 ※カスタム
@@ -131,6 +135,7 @@ VSCode,cmd + option + e,-,開いているファイルのエクスプローラに
 VSCode,cmd + option + g,-,(GitHub)GitHubのビューにフォーカス ※カスタム
 VSCode,cmd + option + i,-,開発者ツールの切り替え(chromeのconsoleキーと同じ)
 VSCode,cmd + option + j,-,開発者コンテキストキー(when句)の調査 ※カスタム
+VSCode,cmd + option + t,-,タイムラインにフォーカス ※カスタム
 VSCode,cmd + option + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,cmd + option + shift + d,-,下に分割 ※カスタム
 VSCode,cmd + option + shift + g,-,(GitHub)下に分割 ※カスタム
@@ -141,7 +146,9 @@ VSCode,cmd + option + ↑↓,-,マルチカーソル
 VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
 VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
 VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
-VSCode,cmd + k → cmd + J,-,閉じタグをすべて開く
+VSCode,cmd + k → cmd + j,-,閉じタグをすべて開く
+VSCode,cmd + k → cmd + [,-,再帰的に折りたたむ
+VSCode,cmd + k → cmd + ],-,再起的に展開する
 VSCode,option + b,-,(gitlens)Git Blame表示
 VSCode,option + h,-,(gitlens)ブランチの履歴表示
 VSCode,option + p,-,現在開いているファイルパスをコピー ※カスタム

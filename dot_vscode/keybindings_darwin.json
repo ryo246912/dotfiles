@@ -339,6 +339,15 @@
     "key": "alt+cmd+i",
     "command": "workbench.action.toggleDevTools"
   },
+  // タイムラインにフォーカス
+  {
+    "key": "alt+cmd+t",
+    "command": "timeline.focus"
+  },
+  {
+    "key": "alt+cmd+t",
+    "command": "-workbench.action.closeOtherEditors"
+  },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
