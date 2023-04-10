@@ -400,9 +400,20 @@ $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 
 % shell:ssh
 
-# ssh-add
+# ssh : login by .ssh/config [-T:HOST][-l:login user]
+ssh -T <HOST>
+
+# ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
+ssh-add
+
+# ssh-add : show secret key
+ssh-add -l
+
+# ssh-agent : ssh-add [eval $(ssh-agent):terminate ssh-agent=ssh-agent -k][exec ssh-agent $SHELL:terminate ssh-agent=exit]
 eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
+# ssh-agent : terminate ssh-agent [-k:kill]
+ssh-agent -k
 % shell
 
 # cal : callender[-y:year]
