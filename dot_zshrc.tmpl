@@ -4,11 +4,17 @@
 
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 
-# jobsの数を表示、%(1x.true.false):三項式
+# jobsの数を表示、%(1j.true.false):三項式、1j:jobs数が1以上でtrue
 number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
-# プロンプトの表示 %F{}%f:色の指定、%B{}%b:太文字
+# 終了ステータスを表示、0?:終了ステータスが0でtrue、%#:ユーザ種別
+exit_status="%(0?.%F{002}.%F{001})%#%f"
+# ディレクトリ表示、%F{}%f:色の指定、%B{}%b:太文字、%~:$HOMEからのパス
+directory="%B%F{6}%~%f%b"
+# プロンプト
+MAINPROMPT="${directory}${number_of_jobs}${exit_status} "
+# プロンプトの設定
 PROMPT="
-%B%F{6}%~%f%b${number_of_jobs}%# "
+${MAINPROMPT}"
 
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
@@ -160,7 +166,7 @@ function zle-keymap-select zle-line-init zle-line-finish
 
     # %{$terminfo_down_sc$PROMPT_2$terminfo[rc]% で下にstatus表示
     PROMPT="
-%{$terminfo_down_sc$PROMPT_2$terminfo[rc]%}%B%F{6}%~%f%b${number_of_jobs}%# "
+%{$terminfo_down_sc$PROMPT_2$terminfo[rc]%}${MAINPROMPT}"
     zle reset-prompt
 }
 
