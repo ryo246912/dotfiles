@@ -73,7 +73,7 @@ $ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.St
 
 % git
 
-# git diff staging file
+# git diff staging file [--cached(staged):diff staging and commit]
 git diff --cached -- <staging_filename> | delta<_no-gitconfig>
 
 # git diff between master...HEAD
@@ -101,22 +101,25 @@ git branch <branch_name> <commit1>
 git checkout <checkout_commit>
 
 # rename git file/directory
-git mv <file_directory> <file_directory>
+git mv <files> <files>
 
 # rename git branch
 git branch -m <branch> <branch>
 
+# git revert
+git revert <commit1>
+
 # reset recent commit
 git reset --soft HEAD^
 
-# reset working directory
+# clear working directory
 git checkout . && git clean -f
 
 # delete git branch
-<git_fetch_>git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
+git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
 
 # delete git branch --merged
-<git_fetch_>git branch --merged master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+git branch --merged master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>
@@ -132,6 +135,9 @@ git grep -lE "<regex>" <grep_commit> -- <path>
 
 # git grep [-v:output not match]
 git grep -lv "<regex>" <grep_commit> -- <path>
+
+# git log file
+git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <files>
 
 # stash file
 git stash --message "<message>" -- <working_filename>
@@ -151,17 +157,15 @@ git checkout <stash_num> <stash_file>
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
 $ delete_flag: echo -e "d\nD"
-$ git_fetch_: echo -e "\ngit fetch -p && "
 $ commit1: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
-$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <file_directory> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <files> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
 $ path: echo "" && git ls-tree <commit1> --name-only -dr
 $ stash_num: git stash list --- --column 1 --delimiter : --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
 $ stash_file: git stash show --name-only <stash_num>
-$ file_or_directory: echo -e "f\nd"
-$ file_directory: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
+$ files: echo "" && git ls-files
 $ master-head_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
 $ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
 $ git_filename: git ls-tree -r --name-only <commit1>
@@ -222,7 +226,10 @@ gh repo list <owner> -L 100
 # repository show [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
-# stars show
+# show user star
+open <starred_url>
+
+# show my star
 gh user-stars | xargs -I % open %
 
 $ author: echo -e "\n@me"
@@ -241,6 +248,7 @@ $ issue_no: gh issue list --assignee "<author>" --state <state> --json number,st
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .state .title .author.login (timeago .updatedAt)}}{{end}}' --- --column 1
 $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,description,updatedAt --template \
   '{{range .}}{{tablerow (printf .nameWithOwner) .description .description (timeago .updatedAt)}}{{end}}' --- --column 1
+$ starred_url: gh api '/users/<user>/starred?per_page=100&page=<page>' | jq -r '( ["name","pushed_at","stars","url"] , (.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) ) | @csv' | column -t -s, --- --header-lines 1 --column 4
 
 ;--------------------------------------------------------------
 ; mySQL
@@ -248,7 +256,7 @@ $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,descr
 
 % mySQL
 
-# mysql login [ex:mysql -u root -p test_xxx]
+# mysql login [-u:user][-p:database]
 echo -n "mysql -u <user> -p <database>" | pbcopy
 
 ;--------------------------------------------------------------
@@ -269,6 +277,11 @@ nodenv install <version>
 ;--------------------------------------------------------------
 ; OSX : macOS
 ;--------------------------------------------------------------
+
+% brew
+
+# brew list [--cask]
+brew list --versions
 
 % osx macOS
 
@@ -356,6 +369,9 @@ grep -vE "<regex>"
 # head : [-n:output number]
 head -n <num>
 
+# jq : [-r:raw output]
+jq -r '.'
+
 # sed : replace [-e:multi command][ex:sed 's/ /!/'][ex:sed -e 1d -e '$ s/$/\n/']
 sed 's/<before>/<after>/'
 
@@ -414,6 +430,7 @@ eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
 # ssh-agent : terminate ssh-agent [-k:kill]
 ssh-agent -k
+
 % shell
 
 # cal : callender[-y:year]
@@ -431,17 +448,29 @@ cat << EOF > <filename>
 # watch linux os version
 cat /etc/os-release
 
+# curl : download file[-O:remote-name][-o:output filename][-s:silence][-S:show error when -s]
+curl -sS -O '<url>'
+
+# curl : curl http header[-I:show only header][-H:header ex) -H 'Content-Type: application/json']
+curl -sI '<url>' -H '<header>'
+
+# curl : POST [-X:request method][-d:post data ex) -d 'key=value&key2=value2']
+curl -X 'POST' '<url>' -H '<header>' -d '<data>'
+
 # echo exit status
 echo $?
-
-# curl : curl http header
-curl -s -D - localhost:8080 -o /dev/null
 
 # df : disk free [--total:linux only][-h:human-readable]
 df -h<_--total>
 
 # du : disk usage [-c:display total][-s:display only depth0 directory][-h:human-readable]
 du -csh
+
+# find : exclude ".*" directory&file [-o:or][-type:d,f,l=link][-name:filename][-prune:not search recursively,"condition1 -prune" -o "condition2 -print"]
+find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
+
+# ln : link [-s:symbolic][-f:force(overwrite)][-b:create backup]
+ln -s <file> <dir>
 
 # lsof(=list open files) : show file,pid,user[-i:port]
 lsof -i:<port>
@@ -450,6 +479,10 @@ lsof -i:<port>
 uname -a
 
 $ _--total: echo -e "\n --total"
+$ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
+$ file_or_directory: echo -e "f\nd"
+$ file: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
+$ dir: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
 
 ;--------------------------------------------------------------
 ; SQL
