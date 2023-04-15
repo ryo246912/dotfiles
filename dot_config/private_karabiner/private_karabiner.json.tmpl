@@ -18,7 +18,7 @@
                 "rules": [
                     {{- /* 「かな」+yuio・hjkl・nm,.・bp;のキーバインド */}}
                     {
-                        "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'n.' to 'delete/Enter'|';p' to 'back/forward'|'b' to ESC|'m,' to 'tab/shift+tab'",
+                        "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'n.' to 'delete/Enter'|';p' to 'back/forward'|'b' to ESC|'m,' to 'tab/shift+tab'|'right_command' to 「英字/かな」の切り替え",
                         "manipulators": [
                             {
                                 "from": {
@@ -405,6 +405,70 @@
                                     },
                                     {
                                         "key_code": "f10"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+right_commandのキーバインド(かな→英字) */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {
+                                        "input_sources": [
+                                            {
+                                                "language": "ja"
+                                            }
+                                        ],
+                                        "type": "input_source_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "right_command",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "japanese_eisuu"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
+                            {{- /* 「かな」+right_commandのキーバインド(英字→かな) */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    },
+                                    {
+                                        "input_sources": [
+                                            {
+                                                "language": "en"
+                                            }
+                                        ],
+                                        "type": "input_source_if"
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "right_command",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "japanese_kana"
                                     }
                                 ],
                                 "type": "basic"
