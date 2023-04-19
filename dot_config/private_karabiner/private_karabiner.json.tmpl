@@ -18,7 +18,7 @@
                 "rules": [
                     {{- /* 「かな」+yuio・hjkl・nm,.・bp;のキーバインド */}}
                     {
-                        "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'n.' to 'delete/Enter'|';p' to 'back/forward'|'b' to ESC|'m,' to 'tab/shift+tab'|'right_command' to 「英字/かな」の切り替え",
+                        "description": "'japanese_kana' + 'hjkl' to 'arrow key'|'n./' to 'delete/Enter/right click'|';p' to 'back/forward'|'b' to ESC|'m,' to 'tab/shift+tab'|'right_command' to 「英字/かな」の切り替え",
                         "manipulators": [
                             {
                                 "from": {
@@ -332,6 +332,31 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+/のキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana_for_arrow",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "slash",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {{- /* 右クリックのキーバインド */}}
+                                    {
+                                        "pointing_button": "button2"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
                             {{- /* 「かな」+bのキーバインド */}}
                             {
                                 "conditions": [
@@ -506,9 +531,8 @@
                                 ],
                                 {{- /* right_command単体で押された時のキーバインド */}}
                                 "to_if_alone": [
-                                    {{- /* 右クリックのキーバインド */}}
                                     {
-                                        "pointing_button": "button2"
+                                        "key_code": "right_command"
                                     }
                                 ],
                                 "type": "basic"
