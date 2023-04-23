@@ -330,6 +330,9 @@ awk '<condition> {print $<no>}'
 # awk : [-F:separater,default=' ']
 awk -F "<separator>" '{print $<no>}'
 
+# bat : [-l:language]
+bat -l <extension>
+
 # column : [-t:multi column=determine the number of columns][-s:separater][ex:column -t -s,]
 column -t -s<separater>
 
