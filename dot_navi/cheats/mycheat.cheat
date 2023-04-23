@@ -45,6 +45,9 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 # docker exec [ex:docker container exec -it <container_id> bash]
 docker container exec -it <container_id> <command>
 
+# docker ps
+docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
+
 # docker disk free
 docker system df
 
@@ -282,6 +285,11 @@ nodenv install <version>
 
 # brew list [--cask]
 brew list --versions
+
+# brew upgrade app
+brew upgrade <app>
+
+$ app: brew list -1 --formula && brew list -1 --cask
 
 % osx macOS
 
