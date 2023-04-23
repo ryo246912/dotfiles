@@ -247,6 +247,31 @@ zle -N _quote-previous-word-in-double
 bindkey '^[d' _quote-previous-word-in-double
 
 #--------------------------------------------------------------
+# function
+#--------------------------------------------------------------
+
+function ssh() {
+  # tmux起動時
+  if [[ -n $(printenv TMUX) ]] ; then
+    # 接続先ホスト名に応じて背景色切り替え
+    if [[ `echo $1 | grep 'audit'` ]] ; then
+      tmux set -p window-active-style 'bg=#400000'
+      tmux set -p window-style 'bg=#400000'
+    else
+      tmux set -p window-active-style 'bg=#002800'
+      tmux set -p window-style 'bg=#002800'
+    fi
+
+    command ssh $@
+    # 色設定を戻す
+    tmux set -p window-style 'bg=#303030'
+    tmux set -p window-active-style 'bg=#000000'
+  else
+    command ssh $@
+  fi
+}
+
+#--------------------------------------------------------------
 # other
 #--------------------------------------------------------------
 # pyenv setting
