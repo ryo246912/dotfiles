@@ -311,9 +311,24 @@
     "command": "workbench.action.navigateBack",
     "when": "canNavigateBack"
   },
+  {
+    "key": "ctrl+shift+z",
+    "command": "workbench.action.navigateBack",
+    "when": "canNavigateBack"
+  },
+  // ファイルに移動(ファイルに戻る)
+  {
+    "key": "ctrl+cmd+z",
+    "command": "workbench.action.quickOpen"
+  },
   // 定義先へ進む
   {
     "key": "f10 f11",
+    "command": "editor.action.revealDefinition",
+    "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
+  },
+  {
+    "key": "ctrl+z",
     "command": "editor.action.revealDefinition",
     "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
   },
