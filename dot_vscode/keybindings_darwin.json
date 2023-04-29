@@ -377,6 +377,12 @@
     "command": "-markdown-preview-enhanced.openPreviewToTheSide",
     "when": "editorLangId == 'markdown'"
   },
+  // (markdown all in one)toggleMath[cmd+m]をOFFにする
+  {
+    "key": "cmd+m",
+    "command": "-markdown.extension.editing.toggleMath",
+    "when": "editorTextFocus && !editorReadonly && editorLangId =~ /^markdown$|^rmd$|^quarto$/"
+  },
   // (vscodevim)vscodevimをON/OFF切り替える
   {
     "key": "alt+cmd+v",
@@ -440,6 +446,11 @@
     "key": "cmd+o",
     "command": "gitlens.openWorkingFile",
     "when": "inDiffEditor"
+  },
+  // (GitHub) PRのレビューコメントを追加
+  {
+    "key": "ctrl+c",
+    "command": "workbench.action.addComment"
   },
   // (GitHub) PRのビューにフォーカス
   // when : ActivePRが表示可能な場合
