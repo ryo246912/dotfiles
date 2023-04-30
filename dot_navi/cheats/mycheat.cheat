@@ -27,14 +27,20 @@ cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-par
 
 % django
 
-# show migration list SQL [ex:python manage.py showmigrations issues]
-python manage.py showmigrations <app_name>
+# show migration
+echo -n "python manage.py showmigrations" | pbcopy
 
-# check migration SQL [ex:python manage.py sqlmigrate issues 0035]
-python manage.py sqlmigrate <app_name> <migration_name>
+# show migration app [ex:python manage.py showmigrations issues]
+echo -n "python manage.py showmigrations <app_name>" | pbcopy
+
+# make migration
+echo -n "python manage.py makemigrations" | pbcopy
+
+# check migration [ex:python manage.py sqlmigrate issues 0035]
+echo -n "python manage.py sqlmigrate <app_name> <migration_name>" | pbcopy
 
 # rollback migration [ex:python manage.py migrate concierges 0031]
-python manage.py migrate <app_name> <rollback_to_migration_name>
+echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | pbcopy
 
 ;--------------------------------------------------------------
 ; docker
@@ -45,8 +51,14 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 # docker exec [ex:docker container exec -it <container_id> bash]
 docker container exec -it <container_id> <command>
 
-# docker ps
-docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
+# docker ps [-a:all]
+docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
+
+# docker image list [-a:all]
+docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+
+# docker network list
+docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
 # docker disk free
 docker system df
@@ -54,10 +66,13 @@ docker system df
 # docker disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
+# docker remove container
+docker rm <container_id>
+
 # docker no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker images -f dangling=true
 
-# docker remove no referenced images [-q:only display volume names]
+# docker remove no referenced images [-q:only display volume names] [ex:docker rmi <image_id>]
 docker rmi $(docker images -q -f dangling=true)
 
 # docker no referenced volume [-f:filter (dangling=not referenced by any containers)]
@@ -66,9 +81,26 @@ docker volume ls -f dangling=true
 # docker remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
 
+# docker remove network
+docker network prune
+
 # docker remove unused build cache
 docker builder prune
-$ container_id: docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
+
+# docker run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d <image> bash]
+docker run -it -d --name <name> <image_id> <command>
+
+$ container_id: docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
+$ image_id: docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" --- --headers 1 --column 1
+
+;--------------------------------------------------------------
+; docker compose
+;--------------------------------------------------------------
+
+% docker compose
+
+# docker compose exec [--project-directory:][--env-file:]
+docker-compose exec <service> <command>
 
 ;--------------------------------------------------------------
 ; git
@@ -299,6 +331,9 @@ defaults read | less
 # show running application
 lsappinfo list | less
 
+# delete cache memory
+sudo purge
+
 ;--------------------------------------------------------------
 ; python
 ;--------------------------------------------------------------
@@ -480,11 +515,23 @@ du -csh
 # find : exclude ".*" directory&file [-o:or][-type:d,f,l=link][-name:filename][-prune:not search recursively,"condition1 -prune" -o "condition2 -print"]
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
 
+# kill : [-s:signal,9=KILL,15=TERM(default)]
+kill -s <pid>
+
+# killall : [-s:signal,9=KILL,15=TERM(default)][ex:killall mysqld]
+killall <command_name>
+
 # ln : link [-s:symbolic][-f:force(overwrite)][-b:create backup]
 ln -s <file> <dir>
 
 # lsof(=list open files) : show file,pid,user[-i:port]
 lsof -i:<port>
+
+# ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
+ps axu | less
+
+# ps : [o:format]
+ps axo pid,ppid,tty,user,start,command | less
 
 # watch kernel version
 uname -a
