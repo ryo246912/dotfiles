@@ -154,7 +154,7 @@ git branch <branch_name> <commit1>
 git checkout <checkout_commit>
 
 # rename git file/directory
-git mv <files> <files>
+git mv <ls-files> <ls-files>
 
 # rename git branch
 git branch -m <branch> <branch>
@@ -165,6 +165,9 @@ git revert <commit1>
 # reset recent commit
 git reset --soft HEAD^
 
+# clear working directory file
+git checkout <modified_files>
+
 # clear working directory
 git checkout . && git clean -f
 
@@ -172,7 +175,7 @@ git checkout . && git clean -f
 git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
 
 # delete git branch --merged
-git branch --merged master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+git branch --merged origin/master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>
@@ -189,8 +192,11 @@ git grep -lE "<regex>" <grep_commit> -- <path>
 # git grep [-v:output not match]
 git grep -lv "<regex>" <grep_commit> -- <path>
 
+# git cat-file
+git cat-file -p <commit1>:<ls-tree-files> | bat -l <extension>
+
 # git log file
-git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <files>
+git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <ls-files>
 
 # stash file
 git stash --message "<message>" -- <working_filename>
@@ -207,18 +213,30 @@ git stash pop <stash_num>
 # stash pop file
 git checkout <stash_num> <stash_file>
 
+# meta : show relative path to git top-level directory
+git rev-parse --show-cdup
+
+# meta : show relative path to pwd
+git rev-parse --show-prefix
+
+# meta : show absolute path to git top-level directory
+git rev-parse --show-toplevel
+
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
 $ delete_flag: echo -e "d\nD"
 $ commit1: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
-$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <files> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
 $ path: echo "" && git ls-tree <commit1> --name-only -dr
 $ stash_num: git stash list --- --column 1 --delimiter : --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
-$ stash_file: git stash show --name-only <stash_num>
-$ files: echo "" && git ls-files
+$ stash_file: git stash show --name-only <stash_num> --- --multi
+$ modified_files: git ls-files -m --- --multi
+$ ls-files: echo "" && git ls-files
+$ ls-tree-files: echo "" && git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
+$ extension: echo "" && echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
 $ master-head_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
 $ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
 $ git_filename: git ls-tree -r --name-only <commit1>
@@ -234,6 +252,9 @@ $ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git
 # pr list [-s:open|closed|merged|all]
 gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
 
+# pr branch copy
+echo -n <pr_branch> | pbcopy
+
 # pr view
 gh pr view <pr_no> --comments<_web>
 
@@ -245,6 +266,18 @@ gh pr checks <pr_no><_--watch><_web>
 
 # pr checkout
 gh pr checkout <pr_no>
+
+# pr create (master)
+gh pr create
+
+# pr create (develop)
+gh pr create --base <base_branch>
+
+# pr edit
+gh pr edit <pr_my_no>
+
+# pr review
+gh pr review <pr_review_no>
 
 # status
 gh status
@@ -270,9 +303,6 @@ gh run view --log-failed
 # rerun error workflow
 gh run rerun --failed
 
-# pr review
-gh pr review <pr_review_no> <approve_comment> -b "<comment>"
-
 # repository list [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
 
@@ -295,13 +325,17 @@ $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --json number,title,headRefName,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
+$ pr_branch: gh pr list --search "user-review-requested:@me" --state open --json number,title,headRefName,updatedAt --template \
+  '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 3
+$ pr_my_no: gh pr list --author "@me" --state <state> --json number,title,headRefName,updatedAt --template \
+  '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
 $ pr_review_no: gh pr list --search "user-review-requested:@me" --state open --json number,title,headRefName,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .title .headRefName (timeago .updatedAt)}}{{end}}' --- --column 1
 $ issue_no: gh issue list --assignee "<author>" --state <state> --json number,state,title,author,updatedAt --template \
   '{{range .}}{{tablerow (printf "%v" .number | autocolor "green") .state .title .author.login (timeago .updatedAt)}}{{end}}' --- --column 1
 $ repository: gh repo list <owner> -L 100 --json nameWithOwner,description,description,updatedAt --template \
   '{{range .}}{{tablerow (printf .nameWithOwner) .description .description (timeago .updatedAt)}}{{end}}' --- --column 1
-$ starred_url: gh api '/users/<user>/starred?per_page=100&page=<page>' | jq -r '( ["name","pushed_at","stars","url"] , (.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) ) | @csv' | column -t -s, --- --header-lines 1 --column 4
+$ starred_url: for page in {1..3}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
 
 ;--------------------------------------------------------------
 ; mySQL
