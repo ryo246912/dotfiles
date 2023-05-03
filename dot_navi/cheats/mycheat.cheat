@@ -436,11 +436,11 @@ grep -vE "<regex>"
 # head : [-n:output number]
 head -n <num>
 
-# jq : [-r:raw output]
+# jq : [-r:raw output]['.':array]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
 
 # sed : replace [-e:multi command][ex:sed 's/ /!/'][ex:sed -e 1d -e '$ s/$/\n/']
-sed 's/<before>/<after>/'
+sed 's/<before>/<after>/g'
 
 # sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
 sed -n <start>,<end>p
@@ -465,6 +465,9 @@ tr <before> <after>
 
 # tr : delete char [ex:tr -d '\n']
 tr -d '<char>'
+
+# vim
+vim -
 
 # wc : word count [-m:count chars][-l:count lines]
 wc -lm
@@ -557,6 +560,23 @@ ps axo pid,ppid,tty,user,start,command | less
 # watch kernel version
 uname -a
 
+% shell:oneliner
+
+# if
+if <condition> ; then <true_command> ; else <false_command> ;fi
+
+# if : [a != b:not equal][-n "$var":not zero][-e path:exist file]
+[ <condition> ] && <true_command> || <false_command>
+
+# for : [ex:for code in {000..255}; do print -nP -- "%F{$code}$code %f"; [ $((${code} % 16)) -eq 15 ] && echo; done]
+for i in {1..<num>}; do <command> ; done
+
+# while : [ex:while read -r LINE; do echo "${LINE}" ; done]
+while <condition>; do <command> ; done
+
+# function : [ex:() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }]
+() { local <var> ; <command1> ; <command2> }
+
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
@@ -582,6 +602,9 @@ echo -n "SHOW DATABASES;" | pbcopy
 % tmux
 # tmux pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
+
+# tmux respawn-pane [-k:kill existing command,-c:start-directory]
+tmux respawn-pane -k -c '#{pane_current_path}'
 
 # tmux pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep "<word>" >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
