@@ -18,19 +18,27 @@ alias nr='npm run'
 # as"program" = zshプラグインでないものを読込
 # pick = 引数に与えられたものを$pathに追加
 # blockf = プラグインによる$pathの変更を禁止する
+# from = clone先を指定、from"github"(デフォルト)/from"gh-r"(Github Release)
+zinit wait lucid light-mode blockf from"gh-r" as"program" for \
+    atload"source ~/.fzf.zsh" junegunn/fzf \
+    pick"bat*/bat" mv"bat*/autocomplete/bat.zsh -> _bat" @'sharkdp/bat' \
+    pick'delta*/delta' @'dandavison/delta' \
+    cargo"navi" pick"bin/navi" atload"eval $(navi widget zsh)" denisidoro/navi \
+    pick"gh*/bin/gh" atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" @'cli/cli'
 zinit wait lucid light-mode blockf for \
     atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
     ellie/atuin \
-    atload"source ~/.fzf.zsh" junegunn/fzf \
     olets/zsh-abbr \
-    denisidoro/navi \
+    atload"source autopair.zsh && autopair-init" hlissner/zsh-autopair \
     zdharma/fast-syntax-highlighting \
-    as"program" cp"z.sh -> z" pick"z" rupa/z \
     atload"source asdf.sh" @'asdf-vm/asdf' \
+    as"program" atload"source z.sh" cp"z.sh -> z" pick"z" rupa/z \
     atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
-    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
     as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
-    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
+    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" atload"fpath=(~/.zsh/completion $fpath)" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
+    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker" \
+    as"completion" lukechilds/zsh-better-npm-completion \
+    as"program" pick"git-jump" "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
 
 #--------------------------------------------------------------
@@ -295,10 +303,10 @@ export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
 export PATH="$ASDF_DATA_SHIMS:$ASDF_DATA_INSTALLS:$PATH"
 
 # navi
-eval "$(navi widget zsh)"
+# eval "$(navi widget zsh)"
 
 # z
-. ~/z/z.sh
+# . ~/z/z.sh
 
 # bat
 export BAT_THEME="Monokai Extended"
