@@ -26,6 +26,7 @@ zinit wait lucid light-mode blockf for \
     denisidoro/navi \
     zdharma/fast-syntax-highlighting \
     as"program" cp"z.sh -> z" pick"z" rupa/z \
+    atload"source asdf.sh" @'asdf-vm/asdf' \
     atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
     silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
     as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
@@ -275,18 +276,23 @@ function ssh() {
 # other
 #--------------------------------------------------------------
 # pyenv setting
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init -)"
-fi
+#export PYENV_ROOT="$HOME/.pyenv"
+#export PATH="$PYENV_ROOT/bin:$PATH"
+#if command -v pyenv 1>/dev/null 2>&1; then
+#  eval "$(pyenv init -)"
+#fi
 
 # nodenv setting
-eval "$(nodenv init -)"
-export PATH="$(npm root -g):$PATH"
+#eval "$(nodenv init -)"
+#export PATH="$(npm root -g):$PATH"
 
 # atuin
 export ATUIN_CONFIG_DIR="$HOME/.atuin"
+
+# asdf
+export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
+export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
+export PATH="$ASDF_DATA_SHIMS:$ASDF_DATA_INSTALLS:$PATH"
 
 # navi
 eval "$(navi widget zsh)"

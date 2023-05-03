@@ -4,13 +4,34 @@
 cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf
 
 ;--------------------------------------------------------------
-; chrome
+; asdf
 ;--------------------------------------------------------------
 
-% chrome
+% asdf
 
-# select tab
-bash ~/chrome_tab_activate.sh
+# plugin added list
+asdf plugin list --urls
+
+# plugin list all
+asdf plugin list all | less
+
+# plugin add [ex:asdf plugin add <name> <git-url>]
+asdf plugin add <name> <git-url>
+
+# install [ex:asdf install <name> <version>]
+asdf install <name> <version>
+
+# installed list [ex:asdf list <name>]
+asdf list <name>
+
+# current
+asdf current
+
+# set version in shell section [ex:asdf shell <name> <version>]
+asdf shell <name> <version>
+
+# which command
+asdf which <command>
 
 ;--------------------------------------------------------------
 ; cspell
