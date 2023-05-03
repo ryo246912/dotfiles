@@ -20,12 +20,12 @@ alias nr='npm run'
 # blockf = プラグインによる$pathの変更を禁止する
 # from = clone先を指定、from"github"(デフォルト)/from"gh-r"(Github Release)
 zinit wait lucid light-mode blockf from"gh-r" as"program" for \
-    atload"source ~/.fzf.zsh" junegunn/fzf \
     pick"bat*/bat" mv"bat*/autocomplete/bat.zsh -> _bat" @'sharkdp/bat' \
     pick'delta*/delta' @'dandavison/delta' \
     cargo"navi" pick"bin/navi" atload"eval $(navi widget zsh)" denisidoro/navi \
     pick"gh*/bin/gh" atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" @'cli/cli'
 zinit wait lucid light-mode blockf for \
+    atload"source ~/.fzf.zsh" junegunn/fzf \
     atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
     ellie/atuin \
     olets/zsh-abbr \
