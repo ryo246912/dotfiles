@@ -1,0 +1,15 @@
+# パスの重複を除く
+typeset -U path PATH
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+path=(
+  $HOME/{,s}bin(N)
+  /{opt,user}/local/{,s}bin(N)
+  $path
+)
+
+# .zprofile.secretの読込
+ZPROFILE_SECRET_CONF="${HOME}/.zprofile.secret"
+if [ -e "${ZPROFILE_SECRET_CONF}" ]; then
+  source "${ZPROFILE_SECRET_CONF}"
+fi
