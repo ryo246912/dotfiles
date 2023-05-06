@@ -116,6 +116,12 @@ zinit wait lucid light-mode blockf for \
     atload"eval $(navi widget zsh)" \
     denisidoro/navi
 
+# up #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"up-darwin -> up" \
+    @'akavel/up'
+
 # z #
 zinit wait lucid light-mode blockf for \
     as"program" pick"z" \
@@ -282,6 +288,13 @@ _gitui() {
 zle -N _gitui
 bindkey "^D" _gitui
 
+# ctrl + nでnnn起動
+_nnn() {
+  BUFFER='nnn -dH'
+  zle accept-line
+}
+zle -N _nnn
+bindkey "^N" _nnn
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
