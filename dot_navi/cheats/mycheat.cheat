@@ -245,6 +245,10 @@ $ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git 
 $ git_filename: git ls-tree -r --name-only <commit1>
 $ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 $ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
+% ghq
+
+# ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
+ghq get <url>
 
 ;--------------------------------------------------------------
 ; GitHub

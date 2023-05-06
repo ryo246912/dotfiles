@@ -91,6 +91,12 @@ zinit wait lucid blockf for \
     "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
     "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
 
+# ghq #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"*/ghq" \
+    @'x-motemen/ghq'
+
 # gitui #
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"gitui" \
@@ -295,6 +301,7 @@ _nnn() {
 }
 zle -N _nnn
 bindkey "^N" _nnn
+
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
@@ -468,6 +475,7 @@ fi
 autoload -Uz compinit
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
+
 {{ if eq .chezmoi.os "darwin" -}}
 if [ $(date +'%j') != $(/usr/bin/stat -f '%Sm' -t '%j' ~/.zcompdump) ]; then
   compinit
