@@ -13,3 +13,18 @@ ZPROFILE_SECRET_CONF="${HOME}/.zprofile.secret"
 if [ -e "${ZPROFILE_SECRET_CONF}" ]; then
   source "${ZPROFILE_SECRET_CONF}"
 fi
+
+# バックグラウンドでzcompile
+# [-s:sizeが0以上][-nt:タイムスタンプが新しいか]
+{
+  files=(
+    $HOME/.zprofile{,.secret}
+    $HOME/.zshrc{,.secret,.lazy}
+    $HOME/.zcompdump
+  )
+  for file in "${files[@]}" ; do
+    if [[ -s "$file" && (! -s "${file}.zwc" || "$file" -nt "${file}.zwc") ]]; then
+      zcompile "$file"
+    fi
+  done
+} &!
