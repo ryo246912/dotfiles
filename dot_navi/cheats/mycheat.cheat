@@ -1,7 +1,7 @@
 % shortcut
 
 # my shortcut list
-cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf
+cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
 
 ;--------------------------------------------------------------
 ; asdf
@@ -13,7 +13,7 @@ cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf
 asdf plugin list --urls
 
 # plugin list all
-asdf plugin list all | less
+asdf plugin list all | vim -
 
 # plugin add [ex:asdf plugin add <name> <git-url>]
 asdf plugin add <name> <git-url>
@@ -363,7 +363,7 @@ echo -n "mysql -u <user> -p <database>" | pbcopy
 nodenv versions
 
 # nodenv installable versions
-nodenv install --list | less
+nodenv install --list | vim -
 
 # nodenv install version
 nodenv install <version>
@@ -385,7 +385,7 @@ npx sort-package-json
 % brew
 
 # brew list [--cask]
-brew list --versions | less
+brew list --versions | vim -
 
 # brew (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
 brew install --dry-run <app_name>
@@ -407,10 +407,10 @@ $ app: brew list -1 --formula && brew list -1 --cask
 % osx macOS
 
 # show system defaults
-defaults read | less
+defaults read | vim -
 
 # show running application
-lsappinfo list | less
+lsappinfo list | vim -
 
 # delete cache memory
 sudo purge
@@ -431,7 +431,7 @@ python -m http.server 8888
 pyenv versions
 
 # pyenv installable versions
-pyenv install --list | less
+pyenv install --list | vim -
 
 # pyenv install version
 pyenv install <version>
