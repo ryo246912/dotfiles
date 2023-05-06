@@ -271,7 +271,7 @@ fz() {
 }
 
 #--------------------------------------------------------------
-# function・zsh widget
+# zsh widget
 #--------------------------------------------------------------
 
 # ctrl + dでgitui起動
@@ -295,7 +295,33 @@ _navi_insert_pipe_snippet() {
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
 
-# ctrl + q → ctrl + aでコマンド履歴からwordを選択して出力
+# ctrl + q → ctrl + aで画面キャプチャしてwordを選択してコピー
+_delete_space() {
+  local TMP_BUFFER
+  TMP_BUFFER=$BUFFER
+  TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
+  TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
+  TMP_BUFFER=$(echo $TMP_BUFFER | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  BUFFER=$TMP_BUFFER
+  zle redisplay
+}
+zle -N _delete_space
+bindkey '^Q^A' _delete_space
+
+# ctrl + q → ctrl + zでコマンド履歴を選択して出力
+_fzf_insert_command() {
+  local num command line array1 array2 word
+  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  if [ -n "$command" ] ; then
+    BUFFER="$BUFFER $command"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
+  zle redisplay
+}
+zle -N _fzf_insert_command
+bindkey '^Q^Z' _fzf_insert_command
+
+# ctrl + q → ctrl + xでコマンド履歴からwordを選択して出力
 _fzf_insert_command_word() {
   local num command line array1 array2 word
   command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
@@ -324,9 +350,9 @@ _fzf_insert_command_word() {
   zle redisplay
 }
 zle -N _fzf_insert_command_word
-bindkey '^Q^A' _fzf_insert_command_word
+bindkey '^Q^X' _fzf_insert_command_word
 
-# ctrl + q → ctrl + zで画面キャプチャしてwordを選択してコピー
+# ctrl + q → ctrl + wで画面キャプチャしてwordを選択してコピー
 _copy_word() {
   local num line1 line2 array1 array2 word
   line1=$(tmux capture-pane -p | fzf)
@@ -353,7 +379,7 @@ _copy_word() {
   zle redisplay
 }
 zle -N _copy_word
-bindkey '^Q^Z' _copy_word
+bindkey '^Q^W' _copy_word
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
