@@ -1,8 +1,10 @@
+# cSpell:disable
 #--------------------------------------------------------------
 # zsh
 #--------------------------------------------------------------
 
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
+export EDITOR=vim
 
 # jobsの数を表示、%(1j.true.false):三項式、1j:jobs数が1以上でtrue
 number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
@@ -122,6 +124,16 @@ zinit light-mode for \
 #--------------------------------------------------------------
 zinit light-mode for \
     b4b4r07/zsh-vimode-visual
+
+# 選択範囲を{}で囲うように置き換え
+vi-visual-surround-curlybrackets()
+{
+    zle vi-visual-kill
+    BUFFER="$LBUFFER{$CUTBUFFER}$RBUFFER"
+    zle vi-visual-exit
+}
+zle -N vi-visual-surround-curlybrackets
+
 # ctrl + vでvi-visual-modeに入る
 bindkey '^V' vi-visual-mode
 # vでカーソル位置リセット(vi-visual-modeに入り直す)
@@ -133,14 +145,16 @@ bindkey -M vivis "^[[1;3C" vi-visual-forward-word
 bindkey -M vivis "^[[1;3D" vi-visual-backward-word
 # spaceで選択範囲をスペースで囲うように置き換える
 bindkey -M vivis " " vi-visual-surround-space
-# spaceで選択範囲シングルクォートで囲うように置き換える
+# 'で選択範囲シングルクォートで囲うように置き換える
 bindkey -M vivis "'" vi-visual-surround-squote
-# spaceで選択範囲ダブルクォートで囲うように置き換える
+# "で選択範囲ダブルクォートで囲うように置き換える
 bindkey -M vivis "\"" vi-visual-surround-dquote
-# spaceで選択範囲()で囲うように置き換える
+# ()で選択範囲()で囲うように置き換える
 bindkey -M vivis "(" vi-visual-surround-parenthesis
-# spaceで選択範囲()で囲うように置き換える
 bindkey -M vivis ")" vi-visual-surround-parenthesis
+# {}で選択範囲{}で囲うように置き換える
+bindkey -M vivis "{" vi-visual-surround-curlybrackets
+bindkey -M vivis "}" vi-visual-surround-curlybrackets
 {{- end }}
 
 terminfo_down_sc=$terminfo[cud1]$terminfo[cuu1]$terminfo[sc]$terminfo[cud1]
