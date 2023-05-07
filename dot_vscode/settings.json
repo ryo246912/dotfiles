@@ -77,6 +77,13 @@
   // "python.analysis.autoImportUserSymbols": true,
   // 返り値のTypeHintを表示
   "python.analysis.inlayHints.functionReturnTypes": true,
+  // ImportCompletionsを有効
+  "python.analysis.autoImportCompletions": true,
+  // 文字列のパスのコードジャンプを有効
+  "python.analysis.gotoDefinitionInStringLiteral": true,
+  // 以下2つでf-stringの補完を有効
+  "python.analysis.autoFormatStrings": true,
+  "python.analysis.pylanceLspClientEnabled": true,
   "[python]": {
     "editor.tabSize": 4
   },
@@ -92,6 +99,7 @@
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
+  // (ActivitusBar)
   "activitusbar.showSourceControlCounter": true,
   "activitusbar.activeColour":"#FFFFFF",
   "activitusbar.inactiveColour": "#FFFFFF",
@@ -101,8 +109,10 @@
       "codicon": "source-control-view-icon"
     },
   ],
+  // (Bookmarks)
   "bookmarks.sideBar.expanded": true,
   "bookmarks.saveBookmarksInProject": true,
+  // (CommitMessageEditor)
   "commit-message-editor.view.defaultView": "form",
   "commit-message-editor.tokens": [
     {
@@ -228,23 +238,24 @@
     "",
     "{breaking_change}{footer}"
   ],
-  // 変更されたファイルの一覧を表示するときに使用するレイアウトです。
+  // (GitHub Pull Requests and Issues) 変更されたファイルの一覧を表示するときに使用するレイアウトです。
   "githubPullRequests.fileListLayout": "tree",
-  // PR ブランチがローカルでチェックアウトされたときに、リモートから変更をプルします。
+  // (GitHub Pull Requests and Issues) PR ブランチがローカルでチェックアウトされたときに、リモートから変更をプルします。
   "githubPullRequests.pullBranch": "always",
-  // コメントタイプのデフォルトをレビューにする
+  // (GitHub Pull Requests and Issues) コメントタイプのデフォルトをレビューにする
   "githubPullRequests.defaultCommentType": "review",
+  // (Gitlens)
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
-  // hoverでdiffの内容は非表示
+  // (Gitlens) hoverでdiffの内容は非表示
   "gitlens.hovers.currentLine.changes": false,
   "gitlens.blame.heatmap.location": "left",
   "gitlens.views.branches.branches.layout": "list",
-  // gitlensのkeybindingをalternateパターンにする
+  // (Gitlens) gitlensのkeybindingをalternateパターンにする
   "gitlens.keymap": "alternate",
   "gitlens.fileAnnotations.command": "blame",
-  "jupyter.interactiveWindowMode": "perFile",
   "jupyter.disableJupyterAutoStart": true,
+  // (MultiCommand)
   "multiCommand.commands": [
     {
       "command": "multiCommand.closeEditorFocusLeft",
@@ -255,8 +266,9 @@
     }
   ],
   "projectManager.sortList": "Name",
-  // prettierをデフォルトではOFFにする
+  // (prettier) prettierをデフォルトではOFFにする
   "prettier.enable": false,
+  // (Todo Tree)
   "todo-tree.general.tags": [
     "BUG",
     "HACK",
@@ -268,13 +280,17 @@
     "NOTE",
     "MEMO"
   ],
+  // (Status Bar)
   "statsBar.cpuLoad.format": "CPU:${percent}%",
   "statsBar.modules": ["cpuLoad", "memoUsage"],
   "statsBar.memoUsage.format": "Memory:${percent}%",
   "statsBar.location": "Right",
   "workbench.iconTheme": "vscode-great-icons",
   "vscodemacros.macroFilePath": "{HOME}/private/vsc-macro/macro.js",
+  // (Git Worktrees) worktreeのディレクトリを指定
+  "vsCodeGitWorktrees.worktrees.dir.path": "/$HOME/projects/visasq/worktree",
   "volar.codeLens.scriptSetupTools": true,
+  // (Vim)
   "vim.insertModeKeyBindings": [
     {
       "before": ["j", "j"],
@@ -282,11 +298,11 @@
     }
   ],
   "vim.hlsearch": true,
-  // yank時にハイライトする
+  // (Vim) yank時にハイライトする
   "vim.highlightedyank.enable": true,
-  // クリップボードにもコピーする
+  // (Vim) クリップボードにもコピーする
   "vim.useSystemClipboard": true,
-  // .vimrcの読み込み
+  // (Vim) .vimrcの読み込み
   "vim.vimrc.enable": true,
   "vim.vimrc.path": "$HOME/.vimrc",
   ///////////////////////////////////////////////

@@ -307,30 +307,32 @@
   },
   // 戻る
   {
-    "key": "f11 f10",
-    "command": "workbench.action.navigateBack",
-    "when": "canNavigateBack"
-  },
-  {
-    "key": "ctrl+shift+z",
+    "key": "ctrl+z ctrl+a",
     "command": "workbench.action.navigateBack",
     "when": "canNavigateBack"
   },
   // ファイルに移動(ファイルに戻る)
   {
-    "key": "ctrl+cmd+z",
+    "key": "ctrl+z ctrl+q",
     "command": "workbench.action.quickOpen"
   },
   // 定義先へ進む
   {
-    "key": "f10 f11",
+    "key": "ctrl+z ctrl+z",
     "command": "editor.action.revealDefinition",
     "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
   },
+  // 再帰的に折りたたむ
   {
-    "key": "ctrl+z",
-    "command": "editor.action.revealDefinition",
-    "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
+    "key": "ctrl+z ctrl+x",
+    "command": "editor.foldRecursively",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+  // 再帰的に展開する
+  {
+    "key": "ctrl+z ctrl+s",
+    "command": "editor.unfoldRecursively",
+    "when": "editorTextFocus && foldingEnabled"
   },
   // DiffEditorでsidebyside表示の切り替え
   {
@@ -362,6 +364,11 @@
   {
     "key": "alt+cmd+t",
     "command": "-workbench.action.closeOtherEditors"
+  },
+  // コマンドパレットを表示
+  {
+    "key": "ctrl+x",
+    "command": "workbench.action.showCommands"
   },
   ///////////////////////////////////////////////
   // 拡張機能
@@ -441,11 +448,25 @@
     "key": "cmd+w",
     "command": "-workbench.action.closeActiveEditor"
   },
+  // (ToggleQuotes) quoteの切り替え
+  {
+    "key": "shift+cmd+2",
+    "command": "editor.togglequotes"
+  },
+  {
+    "key": "shift+cmd+7",
+    "command": "-editor.togglequotes"
+  },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {
     "key": "cmd+o",
     "command": "gitlens.openWorkingFile",
     "when": "inDiffEditor"
+  },
+  // (GitHub) コメントビューの開閉
+  {
+    "key": "shift+cmd+r",
+    "command": "workbench.panel.comments"
   },
   // (GitHub) PRのレビューコメントを追加
   {

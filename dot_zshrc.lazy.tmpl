@@ -1,3 +1,4 @@
+# cSpell:disable
 #--------------------------------------------------------------
 # alias
 #--------------------------------------------------------------
@@ -14,31 +15,176 @@ alias nr='npm run'
 
 # wait = 遅延読み込み wait"0"と同義
 # lucid = プラグイン読込時の表示をOFF
-# atload = 読込完了時に実行する関数を指定
-# as"program" = zshプラグインでないものを読込
-# pick = 引数に与えられたものを$pathに追加
 # blockf = プラグインによる$pathの変更を禁止する
+# light-mode = for構文におけるzinit light(light-modeがない場合はzinit snippet相当)
+# as"program" = zshプラグインでないものを読込(ソースを$pathに追加)
+# as"completion" = 補完プラグインとして追加
+# from = clone先を指定 [from"github"(デフォルト)/from"gh-r"(Github Release)]
+# bpick= gh-rするファイル名を指定 [例.bpick"nnn-v*"]
+# mv = ファイルをmv
+# cp = ファイルをcp
+# atclone= clone後に実行する関数を指定
+# atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
+# make= make install
+# rustup = rust installer
+# cargo = rust builder and package manager
+# (plugin script loading)
+# src = 読込完了時に指定ファイル読込
+# atload = 読込完了時に実行する関数を指定
+# pick = 引数に与えられたものを$pathに追加
+# sbin = 引数に与えられたものを$pathに追加
+
+### command ###
+
+# asdf #
+__asdf_atload() {
+    export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
+    export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
+    export PATH="$ASDF_DATA_SHIMS:$ASDF_DATA_INSTALLS:$PATH"
+}
 zinit wait lucid light-mode blockf for \
-    atload"_zsh_autosuggest_start" zsh-users/zsh-autosuggestions \
-    ellie/atuin \
-    atload"source ~/.fzf.zsh" junegunn/fzf \
+    src"asdf.sh" \
+    atload"__asdf_atload" \
+    @'asdf-vm/asdf'
+
+# atuin #
+__atuin_atload() {
+    eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
+    export ATUIN_CONFIG_DIR="$HOME/.atuin"
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" rustup cargo"atuin" \
+    sbin"atuin*/atuin" \
+    atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
+    atload"__atuin_atload" \
+    ellie/atuin
+
+# bat #
+__bat_atload() {
+    export BAT_THEME="Monokai Extended"
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"bat*/bat" \
+    cp"bat*/autocomplete/bat.zsh -> _bat" \
+    atload"__bat_atload" \
+    @'sharkdp/bat'
+
+# delta #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"delta*/delta" \
+    atload"compdef _gnu_generic delta" \
+    @'dandavison/delta'
+
+# fzf #
+__fzf_atload() {
+    export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
+    export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"fzf" \
+    atload"__fzf_atload" \
+    junegunn/fzf
+zinit wait lucid blockf for \
+    "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
+    "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
+
+# ghq #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"*/ghq" \
+    @'x-motemen/ghq'
+
+# gitui #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" cargo"gitui" \
+    sbin"gitui" \
+    @'extrawurst/gitui'
+
+# github-cli #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"gh*/bin/gh" \
+    atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" \
+    @'cli/cli'
+
+# git-jump #
+zinit wait lucid light-mode blockf for \
+    as"program" pick"git-jump" \
+    "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
+
+# navi #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" cargo"navi" \
+    sbin"navi" \
+    atload"eval $(navi widget zsh)" \
+    denisidoro/navi
+
+# up #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"up-darwin -> up" \
+    @'akavel/up'
+
+# z #
+zinit wait lucid light-mode blockf for \
+    as"program" pick"z" \
+    src"z.sh" cp"z.sh -> z" \
+    rupa/z
+
+### node ###
+zinit wait lucid light-mode blockf for \
+    node"!cspell -> cspell" \
+    node"!czg -> czg" \
+    z-shell/0
+
+### plugin ###
+__zsh-autosuggestions_atload() {
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+    _zsh_autosuggest_start
+}
+zinit wait lucid light-mode blockf for \
+    atload"__zsh-autosuggestions_atload" \
+    zsh-users/zsh-autosuggestions
+
+zinit wait lucid light-mode blockf for \
+    atload"source autopair.zsh && autopair-init" \
+    hlissner/zsh-autopair
+
+zinit wait lucid light-mode blockf for \
     olets/zsh-abbr \
-    denisidoro/navi \
-    zdharma/fast-syntax-highlighting \
-    as"program" cp"z.sh -> z" pick"z" rupa/z \
-    atload"zicompinit; zicdreplay" zsh-users/zsh-completions \
-    silent atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash" \
-    as"completion" atload"zicompinit; zicdreplay" mv"git-completion.zsh -> _git" "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh" \
-    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+    zdharma/fast-syntax-highlighting
+
+### completion ###
+
+zinit wait lucid light-mode blockf for \
+    as"completion" \
+    atload"zicompinit; zicdreplay" cp"git-completion.zsh -> _git" \
+    "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh"
+
+zinit wait lucid light-mode blockf for \
+    silent \
+    atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" \
+    "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash"
+
+zinit wait lucid light-mode blockf for \
+    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker" \
+    as"completion" "https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/zsh/_docker-compose" \
+    as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew"
+
+zinit wait lucid light-mode blockf for \
+    src"tmux" \
+    as"completion" "https://github.com/imomaliev/tmux-bash-completion/blob/master/completions/tmux"
+
+zinit wait lucid light-mode blockf for \
+    cp"zsh-better-npm-completion.plugin.zsh -> _npm" \
+    as"completion" "https://github.com/lukechilds/zsh-better-npm-completion/blob/master/zsh-better-npm-completion.plugin.zsh"
 
 #--------------------------------------------------------------
-# fzf
+# fzf-function
 #--------------------------------------------------------------
-
-# [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
-export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
 
 {{ if eq .chezmoi.os "darwin" -}}
 # fcb - fuzzy chrome bookmark
@@ -137,7 +283,7 @@ fz() {
 }
 
 #--------------------------------------------------------------
-# function・zsh widget
+# zsh widget
 #--------------------------------------------------------------
 
 # ctrl + dでgitui起動
@@ -147,6 +293,14 @@ _gitui() {
 }
 zle -N _gitui
 bindkey "^D" _gitui
+
+# ctrl + nでnnn起動
+_nnn() {
+  BUFFER='nnn -dH'
+  zle accept-line
+}
+zle -N _nnn
+bindkey "^N" _nnn
 
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
@@ -161,7 +315,33 @@ _navi_insert_pipe_snippet() {
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
 
-# ctrl + q → ctrl + aでコマンド履歴からwordを選択して出力
+# ctrl + q → ctrl + aで画面キャプチャしてwordを選択してコピー
+_delete_space() {
+  local TMP_BUFFER
+  TMP_BUFFER=$BUFFER
+  TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
+  TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
+  TMP_BUFFER=$(echo $TMP_BUFFER | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  BUFFER=$TMP_BUFFER
+  zle redisplay
+}
+zle -N _delete_space
+bindkey '^Q^A' _delete_space
+
+# ctrl + q → ctrl + zでコマンド履歴を選択して出力
+_fzf_insert_command() {
+  local num command line array1 array2 word
+  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  if [ -n "$command" ] ; then
+    BUFFER="$BUFFER $command"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
+  zle redisplay
+}
+zle -N _fzf_insert_command
+bindkey '^Q^Z' _fzf_insert_command
+
+# ctrl + q → ctrl + xでコマンド履歴からwordを選択して出力
 _fzf_insert_command_word() {
   local num command line array1 array2 word
   command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
@@ -190,9 +370,9 @@ _fzf_insert_command_word() {
   zle redisplay
 }
 zle -N _fzf_insert_command_word
-bindkey '^Q^A' _fzf_insert_command_word
+bindkey '^Q^X' _fzf_insert_command_word
 
-# ctrl + q → ctrl + zで画面キャプチャしてwordを選択してコピー
+# ctrl + q → ctrl + wで画面キャプチャしてwordを選択してコピー
 _copy_word() {
   local num line1 line2 array1 array2 word
   line1=$(tmux capture-pane -p | fzf)
@@ -219,7 +399,7 @@ _copy_word() {
   zle redisplay
 }
 zle -N _copy_word
-bindkey '^Q^Z' _copy_word
+bindkey '^Q^W' _copy_word
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
@@ -275,27 +455,15 @@ function ssh() {
 # other
 #--------------------------------------------------------------
 # pyenv setting
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-if command -v pyenv 1>/dev/null 2>&1; then
-  eval "$(pyenv init -)"
-fi
+#export PYENV_ROOT="$HOME/.pyenv"
+#export PATH="$PYENV_ROOT/bin:$PATH"
+#if command -v pyenv 1>/dev/null 2>&1; then
+#  eval "$(pyenv init -)"
+#fi
 
 # nodenv setting
-eval "$(nodenv init -)"
-export PATH="$(npm root -g):$PATH"
-
-# atuin
-export ATUIN_CONFIG_DIR="$HOME/.atuin"
-
-# navi
-eval "$(navi widget zsh)"
-
-# z
-. ~/z/z.sh
-
-# bat
-export BAT_THEME="Monokai Extended"
+#eval "$(nodenv init -)"
+#export PATH="$(npm root -g):$PATH"
 
 # .zshrc.secretの読込
 ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
@@ -307,7 +475,16 @@ fi
 autoload -Uz compinit
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
+
+{{ if eq .chezmoi.os "darwin" -}}
+if [ $(date +'%j') != $(/usr/bin/stat -f '%Sm' -t '%j' ~/.zcompdump) ]; then
+  compinit
+else
+  compinit -C
+fi
+{{- else -}}
 compinit
+{{- end }}
 
 # zprofでのプロファイル測定用
 if (which zprof > /dev/null 2>&1) ;then

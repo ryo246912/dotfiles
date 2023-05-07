@@ -1,6 +1,16 @@
 項目,Mac,Win/WSL,内容
 -,-,-,-
 Clibor,cmd + shift + c,ctrl + shift + c,FIFOモード ※カスタム
+ClickUp,b,-,(Viewの画面で)Board形式で表示
+ClickUp,l,-,(Viewの画面で)List形式で表示
+ClickUp,n,-,通知一覧を表示
+ClickUp,q,-,サイドバーの開閉
+ClickUp,s / cmd + k,-,コマンドセンター表示
+ClickUp,/,-,(コマンドセンターで)コマンド一覧表示
+ClickUp,cmd + c,-,(コマンドセンターで)URLリンクをコピー
+ClickUp,cmd + l,-,(コマンドセンターで)現在の画面でフィルタ
+ClickUp,space,-,(通知一覧で）画面をリロード
+ClickUp,shift + ?,-,ショートカット一覧表示
 DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
 DBeaver,F3,-,SQLエディタ(SQL scripts一覧)
 DBeaver,F7,-,結果パネルの切替
@@ -49,8 +59,6 @@ iTerm2,cmd + d,-,画面を左右に分割
 iTerm2,cmd + shift + d,-,画面を上下に分割
 iTerm2,cmd + [],-,分割画面の移動
 iTerm2,option + space,-,ホットキー起動
-Mac,ctrl + 1,-,（Mission Control）仮装ディスプレイ1に切替
-Mac,ctrl + 2,-,（Mission Control）仮装ディスプレイ2に切替
 Mac,ctrl + F1,-,VoiceOverのオンオフ ※カスタム
 Mac,ctrl + F2,-,メニューバー操作
 Mac,ctrl + F3,-,Dock操作
@@ -63,9 +71,13 @@ Mac,cmd + m,-,ウィンドウ最小化
 Mac,cmd + shift + 4,-,スクリーンショット：一部撮影
 Mac,cmd + shift + 5,-,スクリーンショット：コントロール表示
 Mac,cmd + ctrl + f,-,フルスクリーン
+Mac,cmd + ctrl + q,-,画面のロック
 Mac,cmd + space,-,スポットライト起動
 Mac,cmd + shift + .,-,隠しファイルを表示
+Mac,option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
+Mac,option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
 Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
+Mac,option + cmd + esc,-,アプリ強制終了
 Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
 Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
 Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
@@ -84,6 +96,24 @@ Slack,cmd + shift + t,-,スレッドへ移動
 Slack,option + ↑↓,-,前/次のチャンネルへ移動
 Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
+Tmux,ctrl + b → c(cmd + t),ctrl + b → c,ウィンドウの作成
+Tmux,ctrl + b → d(cmd + shift + w),ctrl + b → d,ウィンドウのデタッチ
+Tmux,ctrl + b → e(cmd + e),ctrl + b → e,synchronize-panesのON/OFF ※カスタム
+Tmux,ctrl + b → hjkl(cmd + ←↓↑→),ctrl + b → hjkl,上下左右にペイン移動 ※カスタム
+Tmux,ctrl + b → pn(cmd + shift + []),ctrl + b → pn,前後のウィンドウに移動
+Tmux,ctrl + b → s(cmd + l),ctrl + b → s,ペイン一覧表示
+Tmux,ctrl + b → r(cmd + shift + r),ctrl + b → r,tmux.confの再読込 ※カスタム
+Tmux,ctrl + b → w(cmd + shift + l),ctrl + b → w,ウィンドウ一覧表示
+Tmux,ctrl + b → x(cmd + w),ctrl + b → x,ウィンドウの破棄
+Tmux,ctrl + b → z(cmd + z),ctrl + b → d,ペインの一時拡大/縮小
+Tmux,ctrl + b → {}(cmd + shift + alt + ↑↓),ctrl + b → {},ペインを前後に入れ替え
+Tmux,ctrl + b → "(cmd + d),ctrl + b → ",ペインを左右に分割
+Tmux,ctrl + b → %(cmd + shift + d),ctrl + b → %,ペインを上下に分割
+Tmux,ctrl + b → [(cmd + c),ctrl + b → [,コピーモード
+Tmux,ctrl + b → ctrl + hjkl(cmd + shift + ←↓↑→),ctrl + b → ctrl + hjkl,上下左右にペインを広げる ※カスタム
+Tmux,ctrl + b → ctrl + p(cmd + p),ctrl + b → ctrl + p,popup windowの起動 ※カスタム
+Tmux,ctrl + b → ctrl + r(cmd + r),ctrl + b → ctrl + r,tmux-resurrect、ウィンドウの復元
+Tmux,ctrl + b → ctrl + s(cmd + s),ctrl + b → ctrl + s,tmux-resurrect、ウィンドウの保存
 Vim,v,-,ビジュアルモード
 Vim,i,-,インサートモード
 Vim,w|b|W|B,-,1単語次/前にカーソル移動、(スペース区切りで)1単語次/前にカーソル移動
@@ -110,23 +140,39 @@ Vim,:q!,-,ファイル保存せず終了
 Vim,:w,-,保存
 Vim,:wq,-,保存して終了
 Vim,:<n>,-,n行目に移動
+VSCode,ctrl + c,-,(GitHub)コメントを追加 ※カスタム
+VSCode,ctrl + g,-,選択行に移動
+VSCode,ctrl + r,-,最近開いたファイルやフォルダ
+VSCode,ctrl + q,-,QuickOpenView(各フォームにフォーカス)
+VSCode,ctrl + w,-,ウィンドウの切り替え
+VSCode,ctrl + x,-,コマンドパレットを表示 ※カスタム
+VSCode,ctrl + z → ctrl + a,-,前に移動 ※カスタム
+VSCode,ctrl + z → ctrl + q,-,最近開いたファイルに移動 ※カスタム
+VSCode,ctrl + z → ctrl + s,-,再帰的に展開する ※カスタム
+VSCode,ctrl + z → ctrl + x,-,再帰的に折りたたむ ※カスタム
+VSCode,ctrl + z → ctrl + z,-,定義元へ移動 ※カスタム
 VSCode,ctrl + -,-,定義に戻る
-VSCode,ctrl + shift + M,-,問題を表示
 VSCode,ctrl + [],-,エディタの幅を縮小/拡大 ※カスタム
 VSCode,ctrl + shift + [],-,エディタの高さを縮小/拡大 ※カスタム
 VSCode,cmd + d,-,タブ(エディタ)を下のグループに移動 ※カスタム
+VSCode,cmd + d,-,[diff editor]逆側のエディタにフォーカス ※カスタム
 VSCode,cmd + e,-,アクティブなエディタグループにフォーカス ※カスタム
+VSCode,cmd + o,-,[diff editor]元のファイルを開く
 VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
 VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
 VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
+VSCode,cmd + shift + d,-,[diff editor]sidebyside表示の切り替え ※カスタム
 VSCode,cmd + shift + e,-,エディタにフォーカス
 VSCode,cmd + shift + g,-,(GitHub)Gitにフォーカス ※カスタム
 VSCode,cmd + shift + k,-,選択行を削除
+VSCode,cmd + shift + m,-,問題を表示
 VSCode,cmd + shift + o,-,ファイルシンボルを表示
+VSCode,cmd + shift + r,-,(GitHub)コメントにフォーカス ※カスタム
 VSCode,cmd + shift + w,-,ウィンドウを閉じる
+VSCode,cmd + shift + 2,-,(ToggleQuotes)Quotoの切り替え ※カスタム
 VSCode,cmd + shift + [],-,タブ切り替え
 VSCode,cmd + shift + option + [],-,タブの位置移動 ※カスタム
 VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
