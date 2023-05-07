@@ -150,6 +150,9 @@ git show <commit1>:<git_filename>
 # git cherry-pick
 git cherry-pick -n <commit1>
 
+# git cherry-pick file
+git checkout <commit1>:<diff_filename>
+
 # git create branch
 git branch <branch_name> <commit1>
 
@@ -187,13 +190,16 @@ git push origin :<branch>
 git rebase -i <commit1>
 
 # git grep [-i:ignore upper&lower]
-git grep -i "<regex>" <grep_commit> -- <path>
+git grep -i "<regex>" <grep_commit> -- <dir>
 
 # git grep [-l:only filename]
-git grep -lE "<regex>" <grep_commit> -- <path>
+git grep -lE "<regex>" <grep_commit> -- <dir>
 
 # git grep [-v:output not match]
-git grep -lv "<regex>" <grep_commit> -- <path>
+git grep -lv "<regex>" <grep_commit> -- <dir>
+
+# git-jump grep
+() { local hash_file_num ; hash_file_num=$(<git_grep_command> | cut -d ' ' -f 1 | rev | cut -c 2- | rev | fzf) && git cat-file -p $(echo $hash_file_num | cut -d : -f -2) | vim +$(echo $hash_file_num | cut -d : -f 3-) -}
 
 # git cat-file
 git cat-file -p <commit1>:<ls-tree-files> | bat -l <extension>
@@ -231,20 +237,22 @@ $ delete_flag: echo -e "d\nD"
 $ commit1: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
-$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch) | awk '{print $NF}'
-$ path: echo "" && git ls-tree <commit1> --name-only -dr
+$ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> --- --column 1 --delimiter ; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ dir: echo "" && git ls-tree <grep_commit> --name-only -dr
 $ stash_num: git stash list --- --column 1 --delimiter : --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
 $ stash_file: git stash show --name-only <stash_num> --- --multi
 $ modified_files: git ls-files -m --- --multi
 $ ls-files: echo "" && git ls-files
 $ ls-tree-files: echo "" && git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
 $ extension: echo "" && echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
-$ master-head_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --column 1 --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
-$ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2>
+$ master-head_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD --- --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
+$ commit1-commit2_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> --- --multi --expand
 $ git_filename: git ls-tree -r --name-only <commit1>
-$ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --column 1 --preview "git diff HEAD -- {1} | delta --no-gitconfig"
-$ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --column 1 --preview "git diff --cached -- {1} | delta --no-gitconfig"
+$ diff_filename: git diff --name-only <commit1> | xargs -I % echo "<commit1>;%" --- --delimiter ; --column 2 --preview "git show {1}:{2} | delta --no-gitconfig"
+$ working_filename: echo "" && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD --- --multi --expand --preview "git diff HEAD -- {1} | delta --no-gitconfig"
+$ staging_filename: echo "" && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ --- --multi --expand --preview "git diff --cached -- {1} | delta --no-gitconfig"
+
 % ghq
 
 # ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
