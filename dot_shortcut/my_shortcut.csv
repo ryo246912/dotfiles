@@ -140,23 +140,39 @@ Vim,:q!,-,ファイル保存せず終了
 Vim,:w,-,保存
 Vim,:wq,-,保存して終了
 Vim,:<n>,-,n行目に移動
+VSCode,ctrl + c,-,(GitHub)コメントを追加 ※カスタム
+VSCode,ctrl + g,-,選択行に移動
+VSCode,ctrl + r,-,最近開いたファイルやフォルダ
+VSCode,ctrl + q,-,QuickOpenView(各フォームにフォーカス)
+VSCode,ctrl + w,-,ウィンドウの切り替え
+VSCode,ctrl + x,-,コマンドパレットを表示 ※カスタム
+VSCode,ctrl + z → ctrl + a,-,前に移動 ※カスタム
+VSCode,ctrl + z → ctrl + q,-,最近開いたファイルに移動 ※カスタム
+VSCode,ctrl + z → ctrl + s,-,再帰的に展開する ※カスタム
+VSCode,ctrl + z → ctrl + x,-,再帰的に折りたたむ ※カスタム
+VSCode,ctrl + z → ctrl + z,-,定義元へ移動 ※カスタム
 VSCode,ctrl + -,-,定義に戻る
-VSCode,ctrl + shift + M,-,問題を表示
 VSCode,ctrl + [],-,エディタの幅を縮小/拡大 ※カスタム
 VSCode,ctrl + shift + [],-,エディタの高さを縮小/拡大 ※カスタム
 VSCode,cmd + d,-,タブ(エディタ)を下のグループに移動 ※カスタム
+VSCode,cmd + d,-,[diff editor]逆側のエディタにフォーカス ※カスタム
 VSCode,cmd + e,-,アクティブなエディタグループにフォーカス ※カスタム
+VSCode,cmd + o,-,[diff editor]元のファイルを開く
 VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
 VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
 VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
+VSCode,cmd + shift + d,-,[diff editor]sidebyside表示の切り替え ※カスタム
 VSCode,cmd + shift + e,-,エディタにフォーカス
 VSCode,cmd + shift + g,-,(GitHub)Gitにフォーカス ※カスタム
 VSCode,cmd + shift + k,-,選択行を削除
+VSCode,cmd + shift + m,-,問題を表示
 VSCode,cmd + shift + o,-,ファイルシンボルを表示
+VSCode,cmd + shift + r,-,(GitHub)コメントにフォーカス ※カスタム
 VSCode,cmd + shift + w,-,ウィンドウを閉じる
+VSCode,cmd + shift + 2,-,(ToggleQuotes)Quotoの切り替え ※カスタム
 VSCode,cmd + shift + [],-,タブ切り替え
 VSCode,cmd + shift + option + [],-,タブの位置移動 ※カスタム
 VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
