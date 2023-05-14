@@ -156,6 +156,9 @@ git checkout <commit1>:<diff_filename>
 # git create branch
 git branch <branch_name> <commit1>
 
+# git branch
+git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t'
+
 # git restore(default)
 git checkout <checkout_commit>
 

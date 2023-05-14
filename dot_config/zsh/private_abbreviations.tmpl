@@ -46,7 +46,7 @@ abbr gma='git merge --abort'
 abbr gp='git pull --no-commit'
 abbr gpo='git pull origin --no-commit'
 abbr gpoh='git push origin HEAD'
-abbr gpoh='git push origin staging'
+abbr gpos='git push origin staging'
 abbr gpom='git pull origin master --no-commit'
 abbr gra='git rebase --abort'
 abbr grc='git rebase --continue'
@@ -59,8 +59,8 @@ abbr gst='git stash'
 abbr gu='gitui'
 
 {{ if eq .chezmoi.os "darwin" -}}
-abbr fgb='() { local branches branch ; branches=$(git branch -a) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && $(echo -n "${${branch:2}#*remotes/origin/}" | pbcopy) }'
-abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
+abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | pbcopy"
+abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf ) && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
 abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | pbcopy) }"
 abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | pbcopy) }"
 {{- end }}
