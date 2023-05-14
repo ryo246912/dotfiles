@@ -178,10 +178,10 @@ git checkout <modified_files>
 git checkout . && git clean -f
 
 # delete git branch
-git branch | fzf -m | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
+git branch | fzf | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
 
 # delete git branch --merged
-git branch --merged origin/master | fzf -m | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+git branch --merged origin/master | fzf | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
 
 # delete git remote branch
 git push origin :<branch>

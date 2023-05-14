@@ -80,7 +80,7 @@ zinit wait lucid light-mode blockf for \
 # fzf #
 __fzf_atload() {
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
-    export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+    export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border'
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
