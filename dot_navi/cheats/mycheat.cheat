@@ -102,6 +102,8 @@ docker volume ls -f dangling=true
 # docker remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
 
+# docker remove(container/image/build cache)
+docker system prune
 # docker remove network
 docker network prune
 
@@ -500,8 +502,11 @@ bat -
 # column : [-t:multi column=determine the number of columns][-s:separater][ex:column -t -s,]
 column -t -s<separater>
 
+# column : tab to table
+column -ts $'\t'
+
 # column : csv to table
-column -t -s,
+column -ts,
 
 # cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
 cut -<cb> <cut_list>
@@ -598,6 +603,9 @@ ssh-add
 # ssh-add : show secret key
 ssh-add -l
 
+# ssh-keyscan : get public ssh key [ex:ssh-keyscan github.com >> ~/.ssh/known_hosts]
+ssh-keyscan <HOST> >> ~/.ssh/known_hosts
+
 # ssh-agent : ssh-add [eval $(ssh-agent):terminate ssh-agent=ssh-agent -k][exec ssh-agent $SHELL:terminate ssh-agent=exit]
 eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
@@ -692,8 +700,8 @@ while <condition>; do <command> ; done
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
-$ file: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
-$ dir: echo "" && find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
+$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
+$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
 
 ;--------------------------------------------------------------
 ; SQL
