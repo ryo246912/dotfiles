@@ -1,12 +1,13 @@
+```sh
 % shortcut
 
 # my shortcut list
 cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
-
+```
 ;--------------------------------------------------------------
 ; asdf
 ;--------------------------------------------------------------
-
+```sh
 % asdf
 
 # plugin added list
@@ -32,20 +33,20 @@ asdf shell <name> <version>
 
 # which command
 asdf which <command>
-
+```
 ;--------------------------------------------------------------
 ; cspell
 ;--------------------------------------------------------------
-
+```sh
 % cspell
 
 # cspell lint master...HEAD
 cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD)
-
+```
 ;--------------------------------------------------------------
 ; django
 ;--------------------------------------------------------------
-
+```sh
 % django
 
 # show migration
@@ -62,11 +63,11 @@ echo -n "python manage.py sqlmigrate <app_name> <migration_name>" | pbcopy
 
 # rollback migration [ex:python manage.py migrate concierges 0031]
 echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | pbcopy
-
+```
 ;--------------------------------------------------------------
 ; docker
 ;--------------------------------------------------------------
-
+```sh
 % docker
 
 # docker exec [ex:docker container exec -it <container_id> bash]
@@ -113,23 +114,23 @@ docker builder prune
 
 # docker run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d <image> bash]
 docker run -it -d --name <name> <image_id> <command>
-
+```
 $ container_id: docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
 $ image_id: docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" --- --headers 1 --column 1
 
 ;--------------------------------------------------------------
 ; docker compose
 ;--------------------------------------------------------------
-
+```sh
 % docker compose
 
 # docker compose exec [--project-directory:][--env-file:]
 docker-compose exec <service> <command>
-
+```
 ;--------------------------------------------------------------
 ; gcloud
 ;--------------------------------------------------------------
-
+```sh
 % gcloud
 
 # show current config
@@ -149,13 +150,13 @@ gcloud config configurations create <name>
 
 # set config [ex:gcloud config set compute/zone asia-northeast1-a]
 gcloud config set <section>/<property> <value>
-
+```
 $ name: gcloud config configurations list | awk '{print $1}' --- --headers 1
 
 ;--------------------------------------------------------------
 ; git
 ;--------------------------------------------------------------
-
+```sh
 % git
 
 # git diff staging file [--cached(staged):diff staging and commit]
@@ -265,7 +266,7 @@ git rev-parse --show-prefix
 
 # meta : show absolute path to git top-level directory
 git rev-parse --show-toplevel
-
+```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
 $ delete_flag: echo -e "d\nD"
@@ -310,14 +311,14 @@ $ staging_filename: git diff --cached --name-only --line-prefix=$(git rev-parse 
   --preview "git diff --cached -- {1} | delta --no-gitconfig"
 
 % ghq
-
+```sh
 # ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
 ghq get <url>
-
+```
 ;--------------------------------------------------------------
 ; GitHub
 ;--------------------------------------------------------------
-
+```sh
 % GitHub CLI
 
 # pr list [-s:open|closed|merged|all]
@@ -391,7 +392,7 @@ open <starred_url>
 
 # show my star
 gh user-stars | xargs -I % open %
-
+```
 $ author: echo -e "\n@me"
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me"
 $ contributor_search: gh api "/repos/$(git config --get remote.origin.url | sed -e 's/^git@.*:\([[:graph:]]*\).git/\1/')/contributors" | jq -r '(.[] | ["involves:"+.login],[ "author:"+.login] | @tsv )' | column -ts $'\t'
@@ -441,16 +442,16 @@ $ starred_url: for page in {1..3}; do result=$(gh api "/users/<user>/starred?per
 ;--------------------------------------------------------------
 ; mySQL
 ;--------------------------------------------------------------
-
+```sh
 % mySQL
 
 # mysql login [-u:user][-p:database]
 echo -n "mysql -u <user> -p <database>" | pbcopy
-
+```
 ;--------------------------------------------------------------
 ; node
 ;--------------------------------------------------------------
-
+```sh
 % node
 
 # nodenv show current version & installed versions
@@ -471,14 +472,14 @@ npm edit <package>
 
 # sort package-json
 npx sort-package-json
-
+```
 ;--------------------------------------------------------------
 ; OSX : macOS
 ;--------------------------------------------------------------
-
+```sh
 % brew
 
-# brew list [--cask]
+# brew list [--cask|--formula][-1:one column]
 brew list --versions | vim -
 
 # brew (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
@@ -496,8 +497,6 @@ bat -l rb $(brew edit --print-path <app_name>)
 # open app homegage [ex:brew home colordiff]
 brew home <app_name>
 
-$ app: brew list -1 --formula && brew list -1 --cask
-
 % osx macOS
 
 # show system defaults
@@ -508,11 +507,11 @@ lsappinfo list | vim -
 
 # delete cache memory
 sudo purge
-
+```
 ;--------------------------------------------------------------
 ; python
 ;--------------------------------------------------------------
-
+```sh
 % Python
 
 # delete .pyc files
@@ -529,11 +528,11 @@ pyenv install --list | vim -
 
 # pyenv install version
 pyenv install <version>
-
+```
 ;--------------------------------------------------------------
 ; shell (pipe-command)
 ;--------------------------------------------------------------
-
+```sh
 % pipe-command
 
 # awk : print $no field
@@ -637,7 +636,7 @@ wc -lm
 
 # xargs : output to args [-I:arg replace][ex:xargs -I % git branch -d %]
 xargs -I % <command> %
-
+```
 $ no: echo -e "1\n(NF-1)\nNF"
 $ no2: echo -e "1\n(NF-1)\nNF"
 $ cb: echo -e "c\nb"
@@ -646,7 +645,7 @@ $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 ;--------------------------------------------------------------
 ; shell
 ;--------------------------------------------------------------
-
+```sh
 % shell:ssh
 
 # ssh : login by .ssh/config [-T:HOST][-l:login user]
@@ -680,7 +679,8 @@ cat <(<command1>) <(<command2>)
 
 # cat : output file(hear document)
 cat << EOF > <filename>
-
+```
+```sh
 # watch linux os version
 cat /etc/os-release
 
@@ -751,7 +751,7 @@ while <condition>; do <command> ; done
 
 # function : [ex:() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }]
 () { local <var> ; <command1> ; <command2> }
-
+```
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
@@ -761,7 +761,7 @@ $ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name
 ;--------------------------------------------------------------
 ; SQL
 ;--------------------------------------------------------------
-
+```sh
 % SQL
 
 # show variables
@@ -769,11 +769,11 @@ echo -n "SHOW VARIABLES;" | pbcopy
 
 # show databases
 echo -n "SHOW DATABASES;" | pbcopy
-
+```
 ;--------------------------------------------------------------
 ; tmux
 ;--------------------------------------------------------------
-
+```sh
 % tmux
 # tmux pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
@@ -783,7 +783,7 @@ tmux respawn-pane -k -c '#{pane_current_path}'
 
 # tmux pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep "<word>" >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
-
+```
 $ hv: echo -e "v\nh"
 $ pane_from: echo "." && tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" | column -t --- --column 1
 $ pane_to: echo "." && tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" | column -t --- --column 1
@@ -792,7 +792,7 @@ $ tty: tmux lsp -a -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command
 ;--------------------------------------------------------------
 ; zinit
 ;--------------------------------------------------------------
-
+```sh
 % zinit
 # report plugin
 zi report
@@ -808,3 +808,4 @@ zi edit <plugin>
 
 # delete plugin [ex:zinit delete sharkdp/bat]
 zi delete <plugin>
+```
