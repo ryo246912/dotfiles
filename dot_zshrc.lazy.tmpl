@@ -70,6 +70,16 @@ zinit wait lucid light-mode blockf for \
     atload"__bat_atload" \
     @'sharkdp/bat'
 
+# Clipboard #
+__clipboard_atload() {
+    export CLIPBOARD_SILENT=1
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"bin/cb" \
+    atload"__clipboard_atload" \
+    @'Slackadays/Clipboard'
+
 # delta #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -222,10 +232,11 @@ fch() {
   awk -F $sep '{printf "%-'$cols's  \x1b[36m%s\x1b[m\n", $1, $2}' |
   fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' | xargs $open > /dev/null 2> /dev/null
 }
+{{- end }}
 
 # ff - fuzzy find
 ff() {
-  find ${1:-.} | fzf | tr -d '\n'| pbcopy
+  find ${1:-.} | fzf | tr -d '\n'| cb
 }
 
 # fgb - fuzzy git branch
@@ -249,7 +260,7 @@ fgh() {
   local commits commit
   commits=$(git log --oneline) &&
   commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") &&
-  $(echo "$commit" | awk '{print $1}' | tr -d '\n' | pbcopy)
+  $(echo "$commit" | awk '{print $1}' | tr -d '\n' | cb)
 }
 
 # fghd - fuzzy git hash diff copy
@@ -259,7 +270,7 @@ fghd() {
   commit1=$(echo "$commits" | fzf | awk '{print $1}') &&
   commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{print $1}') &&
   git diff "$commit1...$commit2" | delta &&
-  $(echo "$commit1...$commit2" | tr -d '\n' | pbcopy)
+  $(echo "$commit1...$commit2" | tr -d '\n' | cb)
 }
 
 # fnr - fuzzy npm run
@@ -270,7 +281,6 @@ fnr() {
     npm run $script
   fi
 }
-{{- end }}
 
 # fz - fuzzy z command
 fz() {
@@ -394,7 +404,7 @@ _copy_word() {
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
   fi
   if [ -n "$word" ] ; then
-    echo $word | tr -d '\n' | pbcopy
+    echo $word | tr -d '\n' | cb
   fi
   zle redisplay
 }

@@ -50,19 +50,19 @@ cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-par
 % django
 
 # show migration
-echo -n "python manage.py showmigrations" | pbcopy
+echo -n "python manage.py showmigrations" | cb
 
 # show migration app [ex:python manage.py showmigrations issues]
-echo -n "python manage.py showmigrations <app_name>" | pbcopy
+echo -n "python manage.py showmigrations <app_name>" | cb
 
 # make migration
-echo -n "python manage.py makemigrations" | pbcopy
+echo -n "python manage.py makemigrations" | cb
 
 # check migration [ex:python manage.py sqlmigrate issues 0035]
-echo -n "python manage.py sqlmigrate <app_name> <migration_name>" | pbcopy
+echo -n "python manage.py sqlmigrate <app_name> <migration_name>" | cb
 
 # rollback migration [ex:python manage.py migrate concierges 0031]
-echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | pbcopy
+echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | cb
 ```
 ;--------------------------------------------------------------
 ; docker
@@ -325,7 +325,7 @@ ghq get <url>
 gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
 
 # pr branch copy
-echo -n <pr_branch> | pbcopy
+echo -n <pr_branch> | cb
 
 # pr view(my)
 gh pr view <pr_no> --comments<_web>
@@ -445,8 +445,8 @@ $ starred_url: for page in {1..3}; do result=$(gh api "/users/<user>/starred?per
 ```sh
 % mySQL
 
-# mysql login [-u:user][-p:database]
-echo -n "mysql -u <user> -p <database>" | pbcopy
+# login [-u:user][-p:database]
+echo -n "mysql -u <user> -p <database>" | cb
 ```
 ;--------------------------------------------------------------
 ; node
@@ -765,10 +765,10 @@ $ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name
 % SQL
 
 # show variables
-echo -n "SHOW VARIABLES;" | pbcopy
+echo -n "SHOW VARIABLES;" | cb
 
 # show databases
-echo -n "SHOW DATABASES;" | pbcopy
+echo -n "SHOW DATABASES;" | cb
 ```
 ;--------------------------------------------------------------
 ; tmux

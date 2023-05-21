@@ -58,12 +58,10 @@ abbr gs='git status'
 abbr gst='git stash'
 abbr gu='gitui'
 
-{{ if eq .chezmoi.os "darwin" -}}
-abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | pbcopy"
-abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf ) && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
-abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | pbcopy) }"
-abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | pbcopy) }"
-{{- end }}
+abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb"
+abbr fgc="git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %"
+abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }"
+abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }"
 abbr fgq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 abbr fz='() { local dir=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 
