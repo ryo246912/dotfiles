@@ -87,6 +87,12 @@ zinit wait lucid light-mode blockf for \
     atload"compdef _gnu_generic delta" \
     @'dandavison/delta'
 
+# dura #
+zinit wait lucid light-mode blockf for \
+    cargo"dura" \
+    sbin"bin/dura" \
+    @'tkellogg/dura'
+
 # fzf #
 __fzf_atload() {
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
