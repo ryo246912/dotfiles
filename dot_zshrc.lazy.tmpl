@@ -247,18 +247,12 @@ ff() {
 
 # fgb - fuzzy git branch
 fgb() {
-  local branches branch
-  branches=$(git branch -a) &&
-  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
-  $(echo "${branch#*remotes/origin/}" | tr -d '\n' | pbcopy)
+  git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
 }
 
 # fgc - fuzzy git checkout branch
 fgc() {
-  local branches branch
-  branches=$(git branch -vv) &&
-  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
-  git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //")
+  git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
 }
 
 # fgh - fuzzy git hash copy

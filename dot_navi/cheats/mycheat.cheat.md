@@ -159,50 +159,80 @@ $ name: gcloud config configurations list | awk '{print $1}' --- --headers 1
 ```sh
 % git
 
-# git diff staging file [--cached(staged):diff staging and commit]
+# diff staging file [--cached(staged):diff staging and commit]
 git diff --cached -- <staging_filename> | delta<_no-gitconfig>
 
-# git diff between master...HEAD
-git diff<_--name-only> master...HEAD -- <master-head_filename> | delta<_no-gitconfig>
+# diff between master-base-branch...HEAD
+git diff<_--name-only> $(git show-branch --merge-base master HEAD)...HEAD -- <master-head_filename> | delta<_no-gitconfig>
 
-# git diff between commits [ex:master...HEAD]
+# diff between commits [ex:master...HEAD]
+git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
+
+# diff between commits filter by file [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
 
-# git diff between commits filter by string [-S:string(search word)][ex:master...HEAD]
+# diff between commits filter by string [-S:string(search word)][ex:master...HEAD]
 git diff<_--name-only> -S <string> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
 
-# git show commit
+# diff between merge commit
+git diff<_--name-only> HEAD~1...HEAD | delta<_no-gitconfig>
+
+# show commit
 git show <commit1> | delta<_no-gitconfig>
 
-# git show commit file
+# show commit file
 git show <commit1>:<git_filename>
 
-# git cherry-pick
-git cherry-pick -n <commit1>
+# show commit (contributor)
+git show <contributor_commit> | delta<_no-gitconfig>
 
-# git cherry-pick file
-git checkout <commit1>:<diff_filename>
+# show previous commit [ex:git show HEAD^^,HEAD~2]
+git show HEAD~<num> | delta<_no-gitconfig>
 
-# git create branch
+# cherry-pick
+git cherry-pick -n <cherry_commit>
+
+# cherry-pick file
+git checkout <commit1> <diff_filename>
+
+# create branch
 git branch <branch_name> <commit1>
 
-# git branch
-git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | less
+# create branch & checkout
+git checkout -b <branch_name> <commit1>
 
-# git restore(default)
+# set upstream branch [-u:upstream branch] [ex:git branch -r origin/feature-branch]
+git branch -u origin/$(git symbolic-ref --short HEAD)
+
+# branch list
+git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | vim -
+
+# restore(default)
 git checkout <checkout_commit>
 
-# git merge dry-run
+# merge dry-run
 git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
+
+# commit fixup
+git commit --fixup <commit1>
+
+# commit default message
+git commit --no-edit
 
 # rename git file/directory
 git mv <ls-files> <ls-files>
 
-# rename git branch
+# rename local branch
 git branch -m <branch> <branch>
 
-# git revert
+# rename remote branch
+git push origin :<branch> <branch>
+
+# revert
 git revert <commit1>
+
+# revert merge commit [-m:mainline parent-number(1,2..)]
+git revert -m 1 <commit1>
 
 # reset recent commit
 git reset --soft HEAD^
@@ -213,67 +243,114 @@ git checkout <modified_files>
 # clear working directory
 git checkout . && git clean -f
 
-# delete git branch
-git branch | fzf | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
+# clear staging
+git reset --mixed HEAD
 
-# delete git branch --merged
-git branch --merged origin/master | fzf | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -d %
+# list tag [-l "pattern":list]
+git tag -l "*<tag_search>*" --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
 
-# delete git remote branch
+# create tag [-a:annotated][-m:message][ex:git tag -a v1.0 -m 'message']
+git tag <tag_name>
+
+# push tag [--tag:push all tag][ex:git push origin v1.0]
+git push origin --tag
+
+# delete branch
+git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{print $1}' | grep -vE '^\*|master$' | xargs -I % git branch -<delete_flag> %
+
+# delete branch --merged
+git branch --merged origin/master --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{print $1}' | grep -vE '^\*|^archived.*|master$' | xargs -I % git branch -D %
+
+# delete remote branch
 git push origin :<branch>
 
-# git rebase
-git rebase -i <commit1>
+# rebase
+git rebase --autosquash -i <commit1>
 
-# git grep [-i:ignore upper&lower]
+# git grep one commit [-i:ignore upper&lower]
 git grep -i "<regex>" <grep_commit> -- <dir>
 
-# git grep [-l:only filename]
+# git grep one commit [-l:only filename]
 git grep -lE "<regex>" <grep_commit> -- <dir>
 
-# git grep [-v:output not match]
+# git grep one commit [-v:output not match]
 git grep -lv "<regex>" <grep_commit> -- <dir>
+
+# git grep between commit [-i:ignore upper&lower]
+git grep -i "<regex>" $(git rev-list <commit1>...<commit2>) --
+
+# git grep files
+git grep -i "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
 
 # git-jump grep
 () { local hash_file_num ; hash_file_num=$(<git_grep_command> | cut -d ' ' -f 1 | rev | cut -c 2- | rev | fzf) && git cat-file -p $(echo $hash_file_num | cut -d : -f -2) | vim +$(echo $hash_file_num | cut -d : -f 3-) -}
 
-# git cat-file
+# cat-file
 git cat-file -p <commit1>:<ls-tree-files> | bat -l <extension>
 
-# git log file
-git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <ls-files>
+# log graph (contributor)
+git log --author="<contributor>" --all --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --graph
+
+# log file
+git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> -- <ls-files>
+
+# log delete file
+git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+
+# stash working file
+git commit -m 'commit staging' && git stash --message "<message>" -- <working_filename> && git reset --soft HEAD^
 
 # stash file
 git stash --message "<message>" -- <working_filename>
 
-# stash list
+# list stash
 git stash list
 
-# stash show [-p:patch]
+# show stash [-p:patch]
 git stash show <stash_num> -p
 
-# stash pop
+# pop stash
 git stash pop <stash_num>
 
-# stash pop file
+# pop stash file
 git checkout <stash_num> <stash_file>
 
-# meta : show relative path to git top-level directory
+# config list [-l:list]
+git config -l --show-origin<_--option> | column -ts $'\t'
+
+# meta : display HEAD branch
+git symbolic-ref --short HEAD
+
+# meta : display merge-base [ex:git merge-base master HEAD]
+git merge-base master HEAD
+
+# meta : display HEAD hash [HEAD^@:all parents]
+git rev-parse --short HEAD
+
+# meta : display relative path to git top-level directory
 git rev-parse --show-cdup
 
-# meta : show relative path to pwd
+# meta : display relative path to pwd
 git rev-parse --show-prefix
 
-# meta : show absolute path to git top-level directory
+# meta : display absolute path to git top-level directory
 git rev-parse --show-toplevel
 ```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only"
+$ _--option: echo -e "\n --global\n --local\n --system"
+$ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
 $ commit1: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ; \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ cherry_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ;  --multi --expand \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ contributor_commit: git log --all --author="<contributor>" --pretty=format:"%C(auto)%h; (%Cblue%ad%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
@@ -283,6 +360,7 @@ $ branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch --format='%(refnam
   --- --column 1
 $ all_branch: cat <(git rev-parse --abbrev-ref HEAD) <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
+$ contributor: git log --format="%cn:%ce" | sort -fu | column -ts ":" --- --column 1
 $ grep_commit: git log <branch> --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
@@ -290,23 +368,23 @@ $ dir: git ls-tree <grep_commit> --name-only -dr
 $ stash_num: git stash list \
   --- --column 1 --delimiter : \
   --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
-$ stash_file: git stash show --name-only <stash_num> --- --multi
-$ modified_files: git ls-files -m --- --multi
+$ stash_file: echo . && git stash show --name-only <stash_num> --- --multi --expand
+$ modified_files: echo . && git ls-files -m --- --multi --expand
 $ ls-files: git ls-files
 $ ls-tree-files: git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
 $ extension: echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
-$ master-head_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD \
-  --- --preview "git diff master...HEAD -- {1} | delta --no-gitconfig"
-$ commit1-commit2_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
+$ master-head_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base master HEAD)...HEAD \
+  --- --preview "git diff $(git show-branch --merge-base master HEAD)...HEAD -- {1} | delta --no-gitconfig"
+$ commit1-commit2_filename: echo . && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
 $ git_filename: git ls-tree -r --name-only <commit1>
 $ diff_filename: git diff --name-only <commit1> | xargs -I % echo "<commit1>;%" \
   --- --delimiter ; --column 2 \
   --preview "git show {1}:{2} | delta --no-gitconfig"
-$ working_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD \
+$ working_filename: echo . && git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD \
   --- --multi --expand \
   --preview "git diff HEAD -- {1} | delta --no-gitconfig"
-$ staging_filename: git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
+$ staging_filename: echo . && git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
   --- --multi --expand \
   --preview "git diff --cached -- {1} | delta --no-gitconfig"
 
@@ -328,11 +406,12 @@ git branch -l "dura*" | xargs -I % git branch -D %
 # ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
 ghq get <url>
 ```
+
 ;--------------------------------------------------------------
 ; GitHub
 ;--------------------------------------------------------------
 ```sh
-% GitHub CLI
+% gh
 
 # pr list [-s:open|closed|merged|all]
 gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
@@ -340,11 +419,9 @@ gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
 # pr branch copy
 echo -n <pr_branch> | cb
 
-# pr view(my)
+# pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
 gh pr view <pr_no> --comments<_web>
-
-# pr view(contributor)
-gh pr view <pr_contributor_no> --comments<_web>
+; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 
 # pr diff
 gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | delta<_no-gitconfig>
@@ -355,10 +432,7 @@ gh pr checks <pr_no><_--watch><_web>
 # pr checkout
 gh pr checkout <pr_no>
 
-# pr create (master)
-gh pr create
-
-# pr create (develop)
+# pr create [--base:base-branch]
 gh pr create --base <base_branch>
 
 # pr edit
@@ -394,63 +468,95 @@ gh run view --log-failed
 # rerun error workflow
 gh run rerun --failed
 
-# repository list [owner:repository owner(ex:pytorch)][-L:max num]
+# list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
 
-# repository show [owner:repository owner(ex:pytorch)]
+# display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
-# show user star
+# display user star
 open <starred_url>
 
-# show my star
+# display my star
 gh user-stars | xargs -I % open %
 ```
-$ author: echo -e "\n@me"
-$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me"
-$ contributor_search: gh api "/repos/$(git config --get remote.origin.url | sed -e 's/^git@.*:\([[:graph:]]*\).git/\1/')/contributors" | jq -r '(.[] | ["involves:"+.login],[ "author:"+.login] | @tsv )' | column -ts $'\t'
+$ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
+$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--watch: echo -e "\n --watch"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
+$ base_branch: echo -e "\nmaster"
+
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
-  --json number,title,author,state,isDraft,updatedAt,headRefName --template \
-  '{{tablerow "no" "title" "author" "state" "draft" "updatedAt" "branch"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state .isDraft (timeago .updatedAt) .headRefName}}{{end}}' \
-  --- --headers 1 --column 1
-$ pr_contributor_no: gh pr list --search "<contributor_search>" --state <state> --limit 100 \
-  --json number,title,author,state,isDraft,updatedAt,headRefName --template \
-  '{{tablerow "no" "title" "author" "state" "draft" "updatedAt" "branch"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state .isDraft (timeago .updatedAt) .headRefName}}{{end}}' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ pr_branch: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,headRefName --template \
-  '{{tablerow "no" "title" "author" "state" "draft" "updatedAt" "branch"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state .isDraft (timeago .updatedAt) .headRefName}}{{end}}' \
-  --- --headers 1 --column 7
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 8
 $ pr_my_no: gh pr list --author "@me" --state <state> --limit 100 \
-  --json number,title,author,state,isDraft,updatedAt,headRefName --template \
-  '{{tablerow "no" "title" "author" "state" "draft" "updatedAt" "branch"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state .isDraft (timeago .updatedAt) .headRefName}}{{end}}' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ pr_review_no: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,headRefName --template \
-  '{{tablerow "no" "title" "author" "state" "draft" "updatedAt" "branch"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state .isDraft (timeago .updatedAt) .headRefName}}{{end}}' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ issue_no: gh issue list --assignee "<author>" --state <state> \
-  --json number,title,author,state,updatedAt --template \
-  '{{tablerow "no" "title" "author" "state" "updatedAt"}} \
-  {{- range .}}{{tablerow (printf "%v" .number) .title .author.login .state (timeago .updatedAt)}}{{end}}' \
+  --json number,title,author,state,updatedAt,createdAt \
+  --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ repository: gh repo list <owner> -L 100 \
-  --json nameWithOwner,updatedAt,isPrivate,description --template \
-  '{{tablerow "repo" "updatedAt" "isPrivate" "description" }} \
-  {{- range .}}{{tablerow .nameWithOwner (timeago .updatedAt) .isPrivate .description}}{{end}}' \
+  --json nameWithOwner,isArchived,isPrivate,pushedAt,description \
+  --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ starred_url: for page in {1..3}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
+
+```sh
+% gh-rest-api
+
+#  list organization members [per_page:numbers]
+gh api "/orgs/<org>/members?per_page=100" | jq '.'
+; https://docs.github.com/ja/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
+
+#  list contributors [per_page:numbers] [api:/repos/{owner}/{repo}/contributors]
+gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq '.'
+; https://docs.github.com/ja/rest/repos/repos?apiVersion=2022-11-28#list-repository-contributors
+
+#  search [q:query ex)q=windows+label:bug+language:python+state:open&sort=created&order=asc]
+gh api "/search/issues?q=<commithash>+type:pr+repo:$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')" | jq -r '.items[] | [.number , .title , .user.login , (.created_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ] | @tsv' | column -ts $'\t'
+; https://docs.github.com/ja/rest/search/search?apiVersion=2022-11-28#search-issues-and-pull-requests
+; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
+
+#  user star [per_page:numbers]
+gh api "/users/<user>/starred?per_page=100" | jq '.'
+; https://docs.github.com/ja/rest/activity/starring?apiVersion=2022-11-28#list-repositories-starred-by-a-user
+
+% gh-tool
+
+# act : list workflows for a specific event [-l:list]
+act -l <event>
+
+# act : dry-run workflows for a specific event[-n:dry-run]
+act -n <event> -W <workflow>
+
+# act : run workflows for a specific event
+act <event> -W <workflow>
+
+```
+$ event: echo -e "push\npull_request\nissues"
+$ workflow: find .github/workflows
+;$
 
 ;--------------------------------------------------------------
 ; mySQL
