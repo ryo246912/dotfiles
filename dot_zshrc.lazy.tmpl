@@ -315,10 +315,15 @@ bindkey "^N" _nnn
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
-  word=$(_navi_call --print --query "pipe-command ")
+  word=$(_navi_call --print --query "shell:pipe-command ")
   if [ -n "$word" ] ; then
-    BUFFER="$BUFFER | $word"
-    CURSOR=$#BUFFER #カーソルを末尾に移動
+    if [[ $word =~ ">" ]] ; then
+      BUFFER="$BUFFER $word"
+      CURSOR=$#BUFFER #カーソルを末尾に移動
+    else
+      BUFFER="$BUFFER | $word"
+      CURSOR=$#BUFFER #カーソルを末尾に移動
+    fi
   fi
   zle redisplay
 }

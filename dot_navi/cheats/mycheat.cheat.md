@@ -652,7 +652,7 @@ pyenv install <version>
 ; shell (pipe-command)
 ;--------------------------------------------------------------
 ```sh
-% pipe-command
+% shell:pipe-command
 
 # awk : print $no field
 awk '{print $<no>}'
@@ -755,6 +755,16 @@ wc -lm
 
 # xargs : output to args [-I:arg replace][ex:xargs -I % git branch -d %]
 xargs -I % <command> %
+
+# redirect : redirect std output(1>) to other [ex:command 1> stdout.txt]
+1>
+
+# redirect : redirect error output(2>) to null [ex:find . 2> /dev/null]
+2> /dev/null
+
+# redirect : merge error output(2>) to std output(&1) [ex:ls > file 2>&1]
+2>&1
+
 ```
 $ no: echo -e "1\n(NF-1)\nNF"
 $ no2: echo -e "1\n(NF-1)\nNF"
