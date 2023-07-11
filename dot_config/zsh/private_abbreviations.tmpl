@@ -12,6 +12,9 @@ abbr chm='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ 
 
 abbr cz='czg'
 
+abbr d='docker'
+abbr dc='docker-compose'
+
 abbr es='exec $SHELL -l'
 
 abbr -g g='git'
@@ -89,5 +92,7 @@ abbr nrt='npm run test'
 abbr nrtd='npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD | grep -E ".*spec.*")'
 abbr nrv='npm run vite'
 
+abbr up='echo | up'
+abbr w='which'
 abbr -g p='|'
 abbr -g v='vim'
