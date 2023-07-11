@@ -131,6 +131,12 @@ zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
     "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
 
+# jq #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" bpick"jq-osx-*" \
+    sbin"jq* -> jq" \
+    @'jqlang/jq'
+
 # navi #
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
