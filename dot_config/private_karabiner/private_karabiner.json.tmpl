@@ -27,7 +27,7 @@
                                 "to": [
                                     {
                                         "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
+                                            "name": "press_japanese_kana",
                                             "value": 1
                                         }
                                     }
@@ -36,7 +36,7 @@
                                 "to_after_key_up": [
                                     {
                                         "set_variable": {
-                                            "name": "press_japanese_kana_for_arrow",
+                                            "name": "press_japanese_kana",
                                             "value": 0
                                         }
                                     }
@@ -49,12 +49,32 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+tのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "t"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f3",
+                                        "modifiers": "left_control"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
                             {{- /* 「かな」+yuioのキーバインド */}}
                             {{- /* 「かな」+yのキーバインド */}}
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -83,7 +103,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -107,7 +127,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -131,7 +151,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -155,12 +175,32 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+gのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "g"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f2",
+                                        "modifiers": "left_control"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
                             {{- /* 「かな」+hjklのキーバインド */}}
                             {{- /* 「かな」+hのキーバインド */}}
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -184,7 +224,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -208,7 +248,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -232,7 +272,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -252,12 +292,31 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+bのキーバインド */}}
+                            {
+                                "conditions": [
+                                    {
+                                        "name": "press_japanese_kana",
+                                        "type": "variable_if",
+                                        "value": 1
+                                    }
+                                ],
+                                "from": {
+                                    "key_code": "b"
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "escape"
+                                    }
+                                ],
+                                "type": "basic"
+                            },
                             {{- /* 「かな」+nm,.のキーバインド */}}
                             {{- /* 「かな」+nのキーバインド */}}
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -276,7 +335,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -295,7 +354,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -317,7 +376,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -336,7 +395,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -357,30 +416,12 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* 「かな」+bのキーバインド */}}
-                            {
-                                "conditions": [
-                                    {
-                                        "name": "press_japanese_kana_for_arrow",
-                                        "type": "variable_if",
-                                        "value": 1
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "b"
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "escape"
-                                    }
-                                ],
-                                "type": "basic"
-                            },
+                            {{- /* 「かな」+;pのキーバインド */}}
                             {{- /* 「かな」+;のキーバインド */}}
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -402,7 +443,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     }
@@ -421,19 +462,14 @@
                                 ],
                                 "type": "basic"
                             },
+                            {{- /* 「かな」+:@のキーバインド */}}
                             {{- /* 「かな」+:のキーバインド */}}
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
-                                    },
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.microsoft\\.VSCode$"
-                                        ],
-                                        "type": "frontmost_application_if"
                                     }
                                 ],
                                 "from": {
@@ -441,10 +477,8 @@
                                 },
                                 "to": [
                                     {
-                                        "key_code": "f10"
-                                    },
-                                    {
-                                        "key_code": "f11"
+                                        "key_code": "tab",
+                                        "modifiers": "left_option"
                                     }
                                 ],
                                 "type": "basic"
@@ -453,28 +487,18 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
-                                    },
-                                    {{- /* VSCode時のみに限定 */}}
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.microsoft\\.VSCode$"
-                                        ],
-                                        "type": "frontmost_application_if"
                                     }
                                 ],
                                 "from": {
                                     "key_code": "open_bracket"
                                 },
                                 "to": [
-                                    {{- /* VSCodeのカスタムのキーバインドに割り当てる */}}
                                     {
-                                        "key_code": "f11"
-                                    },
-                                    {
-                                        "key_code": "f10"
+                                        "key_code": "tab",
+                                        "modifiers": ["left_shift","left_option"]
                                     }
                                 ],
                                 "type": "basic"
@@ -483,7 +507,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     },
@@ -515,7 +539,7 @@
                             {
                                 "conditions": [
                                     {
-                                        "name": "press_japanese_kana_for_arrow",
+                                        "name": "press_japanese_kana",
                                         "type": "variable_if",
                                         "value": 1
                                     },
@@ -809,11 +833,11 @@
                             }
                         ]
                     },
-                    {{- /* right_option+keyを押した時のキーバインド */}}
+                    {{- /* left_option+keyを押した時のキーバインド */}}
                     {
                         "description": "'option + key' to Open Apps",
                         "manipulators": [
-                            {{- /* right_option+aを押した時のキーバインド */}}
+                            {{- /* left_option+aを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -840,7 +864,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+cを押した時のキーバインド */}}
+                            {{- /* left_option+cを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -867,7 +891,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+dを押した時のキーバインド */}}
+                            {{- /* left_option+dを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -894,7 +918,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+fを押した時のキーバインド */}}
+                            {{- /* left_option+fを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -921,7 +945,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+gを押した時のキーバインド */}}
+                            {{- /* left_option+gを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -948,7 +972,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+kを押した時のキーバインド */}}
+                            {{- /* left_option+kを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -975,7 +999,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+nを押した時のキーバインド */}}
+                            {{- /* left_option+nを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -1002,7 +1026,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+sを押した時のキーバインド */}}
+                            {{- /* left_option+sを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -1029,7 +1053,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+vを押した時のキーバインド */}}
+                            {{- /* left_option+vを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {
@@ -1056,7 +1080,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {{- /* right_option+zを押した時のキーバインド */}}
+                            {{- /* left_option+zを押した時のキーバインド */}}
                             {
                                 "conditions": [
                                     {

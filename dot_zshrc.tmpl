@@ -12,8 +12,14 @@ number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
 exit_status="%(0?.%F{002}.%F{001})%#%f"
 # ディレクトリ表示、%F{}%f:色の指定、%B{}%b:太文字、%~:$HOMEからのパス
 directory="%B%F{6}%~%f%b"
+# python、venv表示
+if [ -n "$VIRTUAL_ENV" ]; then
+  PYTHON_VIRTUAL_ENV="($(basename $VIRTUAL_ENV))"
+else
+  PYTHON_VIRTUAL_ENV=""
+fi
 # プロンプト
-MAINPROMPT="${directory}${number_of_jobs}${exit_status} "
+MAINPROMPT="${PYTHON_VIRTUAL_ENV}${directory}${number_of_jobs}${exit_status} "
 # プロンプトの設定
 PROMPT="
 ${MAINPROMPT}"

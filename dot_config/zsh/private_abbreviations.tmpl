@@ -12,6 +12,9 @@ abbr chm='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ 
 
 abbr cz='czg'
 
+abbr d='docker'
+abbr dc='docker-compose'
+
 abbr es='exec $SHELL -l'
 
 abbr -g g='git'
@@ -21,6 +24,7 @@ abbr gad='git add --dry-run'
 abbr gad.='git add --dry-run .'
 abbr gap='git add -p'
 abbr gb='git branch'
+abbr gbv="git branch --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t'"
 abbr gc='git checkout'
 abbr gca='git commit --amend'
 abbr gcam='git commit --amend -m ""'
@@ -29,15 +33,17 @@ abbr gcb='git checkout -b'
 abbr gchb='git checkout -b'
 abbr gchs='git checkout staging'
 abbr gchm='git checkout master'
+abbr gch='git cherry-pick -n'
 abbr gd='git diff'
 abbr gdeos='git describe origin/staging'
 abbr gdeom='git describe origin/master'
 abbr gdn='git diff --name-only'
 abbr gds='git diff --cached'
 abbr gdsn='git diff --cached --name-only'
-abbr gf='git fetch -p'
+abbr gf='git fetch -p --tags'
 abbr gg='git grep'
 abbr gl='git log -n 10 --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
+abbr glg='git log --all --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%Cblue%ad%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
 abbr glp='git log -n 10 --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent'
 abbr gm='git merge --no-ff'
 abbr gmd='git merge --no-commit --no-ff && git diff --cached --name-only'
@@ -46,24 +52,27 @@ abbr gma='git merge --abort'
 abbr gp='git pull --no-commit'
 abbr gpo='git pull origin --no-commit'
 abbr gpoh='git push origin HEAD'
-abbr gpoh='git push origin staging'
+abbr gpos='git push origin staging'
 abbr gpom='git pull origin master --no-commit'
 abbr gra='git rebase --abort'
 abbr grc='git rebase --continue'
 abbr gre='git rebase --edit-todo'
 abbr grs='git rebase --skip'
+abbr greom='git reset --hard origin/master'
+abbr greos='git reset --hard origin/staging'
 abbr gref='git reflog'
 abbr grom='git rebase origin/master'
 abbr gs='git status'
+abbr gsh='git show HEAD'
 abbr gst='git stash'
+abbr gtr="git tag -l '*release*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'"
+abbr gts="git tag -l '*staging*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'"
 abbr gu='gitui'
 
-{{ if eq .chezmoi.os "darwin" -}}
-abbr fgb='() { local branches branch ; branches=$(git branch -a) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && $(echo -n "${${branch:2}#*remotes/origin/}" | pbcopy) }'
-abbr fgc="() { local branches branch ; branches=$(git branch -vv) && branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") && git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //") }"
-abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | pbcopy) }"
-abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | pbcopy) }"
-{{- end }}
+abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb"
+abbr fgc="git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %"
+abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }"
+abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }"
 abbr fgq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 abbr fz='() { local dir=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 
@@ -83,6 +92,7 @@ abbr nrt='npm run test'
 abbr nrtd='npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD | grep -E ".*spec.*")'
 abbr nrv='npm run vite'
 
+abbr up='echo | up'
+abbr w='which'
 abbr -g p='|'
-
 abbr -g v='vim'

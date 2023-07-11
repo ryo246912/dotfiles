@@ -96,24 +96,24 @@ Slack,cmd + shift + t,-,スレッドへ移動
 Slack,option + ↑↓,-,前/次のチャンネルへ移動
 Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
-Tmux,ctrl + b → c(cmd + t),ctrl + b → c,ウィンドウの作成
-Tmux,ctrl + b → d(cmd + shift + w),ctrl + b → d,ウィンドウのデタッチ
-Tmux,ctrl + b → e(cmd + e),ctrl + b → e,synchronize-panesのON/OFF ※カスタム
-Tmux,ctrl + b → hjkl(cmd + ←↓↑→),ctrl + b → hjkl,上下左右にペイン移動 ※カスタム
-Tmux,ctrl + b → pn(cmd + shift + []),ctrl + b → pn,前後のウィンドウに移動
-Tmux,ctrl + b → s(cmd + l),ctrl + b → s,ペイン一覧表示
-Tmux,ctrl + b → r(cmd + shift + r),ctrl + b → r,tmux.confの再読込 ※カスタム
-Tmux,ctrl + b → w(cmd + shift + l),ctrl + b → w,ウィンドウ一覧表示
-Tmux,ctrl + b → x(cmd + w),ctrl + b → x,ウィンドウの破棄
-Tmux,ctrl + b → z(cmd + z),ctrl + b → d,ペインの一時拡大/縮小
-Tmux,ctrl + b → {}(cmd + shift + alt + ↑↓),ctrl + b → {},ペインを前後に入れ替え
-Tmux,ctrl + b → "(cmd + d),ctrl + b → ",ペインを左右に分割
-Tmux,ctrl + b → %(cmd + shift + d),ctrl + b → %,ペインを上下に分割
-Tmux,ctrl + b → [(cmd + c),ctrl + b → [,コピーモード
-Tmux,ctrl + b → ctrl + hjkl(cmd + shift + ←↓↑→),ctrl + b → ctrl + hjkl,上下左右にペインを広げる ※カスタム
-Tmux,ctrl + b → ctrl + p(cmd + p),ctrl + b → ctrl + p,popup windowの起動 ※カスタム
-Tmux,ctrl + b → ctrl + r(cmd + r),ctrl + b → ctrl + r,tmux-resurrect、ウィンドウの復元
-Tmux,ctrl + b → ctrl + s(cmd + s),ctrl + b → ctrl + s,tmux-resurrect、ウィンドウの保存
+Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
+Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ
+Tmux,ctrl + b → e [cmd + e],ctrl + b → e,synchronize-panesのON/OFF ※カスタム
+Tmux,ctrl + b → hjkl [cmd + ←↓↑→],ctrl + b → hjkl,上下左右にペイン移動 ※カスタム
+Tmux,ctrl + b → pn [cmd + shift + [] ],ctrl + b → pn,前後のウィンドウに移動
+Tmux,ctrl + b → s [cmd + l],ctrl + b → s,ペイン一覧表示
+Tmux,ctrl + b → r [cmd + shift + r],ctrl + b → r,tmux.confの再読込 ※カスタム
+Tmux,ctrl + b → w [cmd + shift + l],ctrl + b → w,ウィンドウ一覧表示
+Tmux,ctrl + b → x [cmd + w],ctrl + b → x,ウィンドウの破棄
+Tmux,ctrl + b → z [cmd + z],ctrl + b → d,ペインの一時拡大/縮小
+Tmux,ctrl + b → {} [cmd + shift + alt + ↑↓],ctrl + b → {},ペインを前後に入れ替え
+Tmux,ctrl + b → (ダブルクォート) [cmd + d],ctrl + b → (ダブルクォート),ペインを左右に分割、(ダブルクォート=")
+Tmux,ctrl + b → % [cmd + shift + d],ctrl + b → %,ペインを上下に分割
+Tmux,ctrl + b → [ [cmd + c],ctrl + b → [,コピーモード
+Tmux,ctrl + b → ctrl + hjkl [cmd + shift + ←↓↑→],ctrl + b → ctrl + hjkl,上下左右にペインを広げる ※カスタム
+Tmux,ctrl + b → ctrl + p [cmd + p],ctrl + b → ctrl + p,popup windowの起動 ※カスタム
+Tmux,ctrl + b → ctrl + r [cmd + r],ctrl + b → ctrl + r,tmux-resurrect、ウィンドウの復元
+Tmux,ctrl + b → ctrl + s [cmd + s],ctrl + b → ctrl + s,tmux-resurrect、ウィンドウの保存
 Vim,v,-,ビジュアルモード
 Vim,i,-,インサートモード
 Vim,w|b|W|B,-,1単語次/前にカーソル移動、(スペース区切りで)1単語次/前にカーソル移動

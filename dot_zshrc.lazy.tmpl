@@ -6,6 +6,7 @@
 alias gb='git branch'
 alias gf='git fetch -p'
 alias ll='ls -l'
+alias la='ls -la'
 alias mh='make help'
 alias nr='npm run'
 
@@ -70,6 +71,16 @@ zinit wait lucid light-mode blockf for \
     atload"__bat_atload" \
     @'sharkdp/bat'
 
+# Clipboard #
+__clipboard_atload() {
+    export CLIPBOARD_SILENT=1
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"bin/cb" \
+    atload"__clipboard_atload" \
+    @'Slackadays/Clipboard'
+
 # delta #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -77,10 +88,16 @@ zinit wait lucid light-mode blockf for \
     atload"compdef _gnu_generic delta" \
     @'dandavison/delta'
 
+# dura #
+zinit wait lucid light-mode blockf for \
+    cargo"dura" \
+    sbin"bin/dura" \
+    @'tkellogg/dura'
+
 # fzf #
 __fzf_atload() {
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
-    export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+    export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border'
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -115,6 +132,12 @@ zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
     "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
 
+# jq #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" bpick"jq-osx-*" \
+    sbin"jq* -> jq" \
+    @'jqlang/jq'
+
 # navi #
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
@@ -133,6 +156,14 @@ zinit wait lucid light-mode blockf for \
     as"program" pick"z" \
     src"z.sh" cp"z.sh -> z" \
     rupa/z
+
+{{ if eq .chezmoi.os "darwin" -}}
+# blueutil #
+zinit wait lucid light-mode blockf for \
+    make \
+    sbin"blueutil" \
+    @'toy/blueutil'
+{{- end }}
 
 ### node ###
 zinit wait lucid light-mode blockf for \
@@ -222,26 +253,21 @@ fch() {
   awk -F $sep '{printf "%-'$cols's  \x1b[36m%s\x1b[m\n", $1, $2}' |
   fzf --ansi --multi | sed 's#.*\(https*://\)#\1#' | xargs $open > /dev/null 2> /dev/null
 }
+{{- end }}
 
 # ff - fuzzy find
 ff() {
-  find ${1:-.} | fzf | tr -d '\n'| pbcopy
+  find ${1:-.} | fzf | tr -d '\n'| cb
 }
 
 # fgb - fuzzy git branch
 fgb() {
-  local branches branch
-  branches=$(git branch -a) &&
-  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
-  $(echo "${branch#*remotes/origin/}" | tr -d '\n' | pbcopy)
+  git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
 }
 
 # fgc - fuzzy git checkout branch
 fgc() {
-  local branches branch
-  branches=$(git branch -vv) &&
-  branch=$(echo "$branches" | fzf --preview "git log --color=always --oneline --graph {1}") &&
-  git checkout $(echo "$branch" | awk '{print $1}' | sed "s/.* //")
+  git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
 }
 
 # fgh - fuzzy git hash copy
@@ -249,7 +275,7 @@ fgh() {
   local commits commit
   commits=$(git log --oneline) &&
   commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") &&
-  $(echo "$commit" | awk '{print $1}' | tr -d '\n' | pbcopy)
+  $(echo "$commit" | awk '{print $1}' | tr -d '\n' | cb)
 }
 
 # fghd - fuzzy git hash diff copy
@@ -259,7 +285,7 @@ fghd() {
   commit1=$(echo "$commits" | fzf | awk '{print $1}') &&
   commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{print $1}') &&
   git diff "$commit1...$commit2" | delta &&
-  $(echo "$commit1...$commit2" | tr -d '\n' | pbcopy)
+  $(echo "$commit1...$commit2" | tr -d '\n' | cb)
 }
 
 # fnr - fuzzy npm run
@@ -270,7 +296,6 @@ fnr() {
     npm run $script
   fi
 }
-{{- end }}
 
 # fz - fuzzy z command
 fz() {
@@ -305,10 +330,15 @@ bindkey "^N" _nnn
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
-  word=$(_navi_call --print --query "pipe-command ")
+  word=$(_navi_call --print --query "shell:pipe-command ")
   if [ -n "$word" ] ; then
-    BUFFER="$BUFFER | $word"
-    CURSOR=$#BUFFER #カーソルを末尾に移動
+    if [[ $word =~ ">" ]] ; then
+      BUFFER="$BUFFER $word"
+      CURSOR=$#BUFFER #カーソルを末尾に移動
+    else
+      BUFFER="$BUFFER | $word"
+      CURSOR=$#BUFFER #カーソルを末尾に移動
+    fi
   fi
   zle redisplay
 }
@@ -394,7 +424,7 @@ _copy_word() {
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
   fi
   if [ -n "$word" ] ; then
-    echo $word | tr -d '\n' | pbcopy
+    echo $word | tr -d '\n' | cb
   fi
   zle redisplay
 }
