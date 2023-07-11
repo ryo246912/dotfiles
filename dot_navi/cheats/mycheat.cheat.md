@@ -70,49 +70,49 @@ echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | cb
 ```sh
 % docker
 
-# docker exec [ex:docker container exec -it <container_id> bash]
+# exec [ex:docker container exec -it <container_id> bash]
 docker container exec -it <container_id> <command>
 
-# docker ps [-a:all]
+# ps [-a:all]
 docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
 
-# docker image list [-a:all]
+# image list [-a:all]
 docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
 
-# docker network list
+# network list
 docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
-# docker disk free
+# disk free
 docker system df
 
-# docker disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
+# disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
 # docker remove container
 docker rm <container_id>
 
-# docker no referenced images [-f:filter (dangling=not referenced by any containers)]
+# no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker images -f dangling=true
 
-# docker remove no referenced images [-q:only display volume names] [ex:docker rmi <image_id>]
+# remove no referenced images [-q:only display volume names] [ex:docker rmi <image_id>]
 docker rmi $(docker images -q -f dangling=true)
 
 # docker no referenced volume [-f:filter (dangling=not referenced by any containers)]
 docker volume ls -f dangling=true
 
-# docker remove no referenced volume [-q:only display volume names]
+# remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
 
-# docker remove(container/image/build cache)
+# remove(container/image/build cache)
 docker system prune
 
-# docker remove network
+# remove network
 docker network prune
 
-# docker remove unused build cache
+# remove unused build cache
 docker builder prune
 
-# docker run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d <image> bash]
+# run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d <image> bash]
 docker run -it -d --name <name> <image_id> <command>
 ```
 $ container_id: docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
@@ -133,13 +133,13 @@ docker-compose exec <service> <command>
 ```sh
 % gcloud
 
-# show current config
+# display current config
 gcloud config list
 
-# show configs list
+# display configs list
 gcloud config configurations list
 
-# show config
+# display config
 gcloud config configurations describe <name>
 
 # switch config
@@ -162,7 +162,7 @@ $ name: gcloud config configurations list | awk '{print $1}' --- --headers 1
 # diff staging file [--cached(staged):diff staging and commit]
 git diff --cached -- <staging_filename> | delta<_no-gitconfig>
 
-# diff between master-base-branch...HEAD
+# diff between master-base-branch...HEAD[-U(--unified):display num line ex)git diff -U0]
 git diff<_--name-only> $(git show-branch --merge-base master HEAD)...HEAD -- <master-head_filename> | delta<_no-gitconfig>
 
 # diff between commits [ex:master...HEAD]
@@ -573,7 +573,7 @@ echo -n "mysql -u <user> -p <database>" | cb
 ```sh
 % node
 
-# nodenv show current version & installed versions
+# nodenv display current version & installed versions
 nodenv versions
 
 # nodenv installable versions
@@ -598,19 +598,19 @@ npx sort-package-json
 ```sh
 % brew
 
-# brew list [--cask|--formula][-1:one column]
+# list [--cask|--formula][-1:one column]
 brew list --versions | vim -
 
-# brew (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
+# (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
 brew install --dry-run <app_name>
 
-# brew upgrade app
+# upgrade app
 brew upgrade <app>
 
-# brew app dependence [--tree:][ex:brew deps --tree tmux]
+# app dependence [--tree:][ex:brew deps --tree ruby]
 brew deps --tree <app_name>
 
-# show install formula [ex:bat -l rb $(brew edit --print-path tmux)]
+# display install formula [ex:bat -l rb $(brew edit --print-path ruby)]
 bat -l rb $(brew edit --print-path <app_name>)
 
 # open app homegage [ex:brew home colordiff]
@@ -639,10 +639,10 @@ $ device: blueutil --paired --format json-pretty \
 ```sh
 % osx macOS
 
-# show system defaults
+# display system defaults
 defaults read | vim -
 
-# show running application
+# display running application
 lsappinfo list | vim -
 
 # delete cache memory
@@ -660,7 +660,7 @@ find . -name \*.pyc -delete;
 # http server
 python -m http.server 8888
 
-# pyenv show current version & installed versions
+# pyenv display current version & installed versions
 pyenv versions
 
 # pyenv installable versions
@@ -804,7 +804,7 @@ ssh -T <HOST>
 # ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
 ssh-add
 
-# ssh-add : show secret key
+# ssh-add : display secret key
 ssh-add -l
 
 # ssh-keyscan : get public ssh key [ex:ssh-keyscan github.com >> ~/.ssh/known_hosts]
@@ -837,7 +837,7 @@ cat /etc/os-release
 # curl : download file[-O:remote-name][-o:output filename][-s:silence][-S:show error when -s]
 curl -sS -O '<url>'
 
-# curl : curl http header[-I:show only header][-H:header ex) -H 'Content-Type: application/json']
+# curl : curl http header[-I:display only header][-H:header ex) -H 'Content-Type: application/json']
 curl -sI '<url>' -H '<header>'
 
 # curl : POST [-X:request method][-d:post data ex) -d 'key=value&key2=value2']
@@ -852,7 +852,7 @@ df -h<_--total>
 # du : disk usage [-c:display total][-s:display only depth0 directory][-h:human-readable]
 du -csh
 
-# find : exclude ".*" directory&file [-o:or][-type:d,f,l=link][-name:filename][-prune:not search recursively,"condition1 -prune" -o "condition2 -print"]
+# find : exclude ".*" directory&file [-o:or][-not:not operator][-type:d,f,l=link][-path:pathname][-name:filename][-prune:not search recursively,"condition1 -prune" -o "condition2 -print"][-print:default action][-exec:command(ex:-exec sha1sum {} \;)]
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
@@ -864,7 +864,7 @@ killall <command_name>
 # ln : link [-s:symbolic][-f:force(overwrite)][-b:create backup][ex:ln -sf ~/.private/.zprofile.secret ~]
 ln -s <file> <dir>
 
-# lsof(=list open files) : show file,pid,user[-i:port]
+# lsof(=list open files) : display file,pid,user[-i:port]
 lsof -i:<port>
 
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
@@ -925,13 +925,13 @@ echo -n "SHOW DATABASES;" | cb
 ;--------------------------------------------------------------
 ```sh
 % tmux
-# tmux pane move [-h:yoko,-v:tate]
+# pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
-# tmux respawn-pane [-k:kill existing command,-c:start-directory]
+# respawn-pane [-k:kill existing command,-c:start-directory]
 tmux respawn-pane -k -c '#{pane_current_path}'
 
-# tmux pipe-pane
+# pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep "<word>" >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
 ```
 $ hv: echo -e "v\nh"
