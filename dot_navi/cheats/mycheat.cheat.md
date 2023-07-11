@@ -616,6 +616,27 @@ bat -l rb $(brew edit --print-path <app_name>)
 # open app homegage [ex:brew home colordiff]
 brew home <app_name>
 
+% blueutil
+
+# turn on-off bluetooth
+blueutil --power <on_off>
+
+# connect device
+blueutil --power 1 && blueutil --connect <device>
+
+# disconnect device
+blueutil --disconnect <device> && blueutil --power 0
+
+# connect/disconnect device
+blueutil --paired --format json-pretty
+```
+$ on_off: echo -e "1\n0"
+$ device: blueutil --paired --format json-pretty \
+  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+
+```sh
 % osx macOS
 
 # show system defaults

@@ -150,6 +150,14 @@ zinit wait lucid light-mode blockf for \
     src"z.sh" cp"z.sh -> z" \
     rupa/z
 
+{{ if eq .chezmoi.os "darwin" -}}
+# blueutil #
+zinit wait lucid light-mode blockf for \
+    make \
+    sbin"blueutil" \
+    @'toy/blueutil'
+{{- end }}
+
 ### node ###
 zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
