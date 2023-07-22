@@ -474,11 +474,9 @@ gh repo list <owner> -L 100
 # display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
-# display user star
-open <starred_url>
 
-# display my star
-gh user-stars | xargs -I % open %
+# display user star
+open-cli <starred_url>
 ```
 $ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
@@ -489,6 +487,7 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
+$ user: echo -e "\n$(git config --get-all user.name)"
 
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -520,7 +519,7 @@ $ repository: gh repo list <owner> -L 100 \
   --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
-$ starred_url: for page in {1..3}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
+$ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
 
 ```sh
 % gh-rest-api
