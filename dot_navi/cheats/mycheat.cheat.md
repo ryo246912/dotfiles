@@ -459,14 +459,20 @@ gh issue list --assignee "<author>" --state <state>
 # issues list [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
 gh issue list --repo "<repository>" --state <state> --search "<search>"
 
-# watch workflow
-gh run watch
+# workflow summary view
+gh workflow view<_web>
 
-# watch error workflow log
-gh run view --log-failed
+# workflow list [-w:filter workflow][--branch:filter branch][--user:filter user]
+gh run list -L 100 -w "<workflow>" --user "<author>"
 
-# rerun error workflow
-gh run rerun --failed
+# workflow view [-v:show job steps][--log,--log-failed:view log]
+gh run view <run_id> -v <_web><_--log_>--job=<job_id>
+
+# workflow watch
+gh run watch <run_id>
+
+# workflow rerun error
+gh run rerun <run_id> --failed
 
 # list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
@@ -487,6 +493,7 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
+$ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
 
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
@@ -512,6 +519,16 @@ $ pr_review_no: gh pr list --search "user-review-requested:@me" --state open \
 $ issue_no: gh issue list --assignee "<author>" --state <state> \
   --json number,title,author,state,updatedAt,createdAt \
   --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+$ workflow: gh workflow list \
+  | column -ts $'\t' \
+  --- --column 1
+$ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
+  | column -ts $'\t' \
+  --- --column 7
+$ job_id: gh run view <run_id> --json jobs \
+  --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
 $ repository: gh repo list <owner> -L 100 \
