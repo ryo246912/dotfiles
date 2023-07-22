@@ -19,14 +19,20 @@ DBeaver,cmd + [],-,前・次の下位タブ ※カスタム
 DBeaver,cmd + (カンマ),-,設定
 DBeaver,cmd + space,-,×値ビューア開閉(show/hide results panel) ※カスタム
 DBeaver,cmd + space,-,オーダーの切替 ※カスタム
+DBeaver,cmd + enter,-,リンク先に移動 ※カスタム
+DBeaver,cmd + option + ←→,-,ヒストリーを戻す/進む
 DBeaver,cmd + shift + e,-,タブ切り替え
 DBeaver,cmd + shift + [],-,前・次のタブ ※カスタム
 DBeaver,cmd + shift + option + [],-,ビューの切り替え ※カスタム
 DBeaver,ctrl + enter,-,カーソルの1SQLを実行
-DBeaver,Ctrl + space,-,SQL補完
-DBeaver,Ctrl + s,-,変更を適用(データ保存)
-DBeaver,Ctrl + r,-,変更をリセット
+DBeaver,ctrl + space,-,SQL補完
+DBeaver,ctrl + s,-,変更を適用(データ保存)
+DBeaver,ctrl + r,-,変更をリセット
 DBeaver,F5,-,更新
+Figma,/,-,コメント
+Figma,cmd + f,-,検索
+Figma,cmd + .,-,サイドバー等をON/OFF
+Figma,cmd + /,-,クイックアクション(≒コマンドパレット)
 GitHub,option + クリック,alt + クリック,トグル(show resolved・fileのviewedなど)の全開閉切り替え
 Google Chrome,Esc,-,(ディベロッパーツールで)コンソールドロワーのON/OFF
 Google Chrome,F7,-,CaretブラウジングON/OFF切替
@@ -81,6 +87,14 @@ Mac,option + cmd + esc,-,アプリ強制終了
 Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
 Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
 Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
+nnn,e,e,ファイル編集[e=edit]
+nnn,n → f/d,n → f/d,ファイル/ディレクトリ等作成[n=new][f=file][d=directory]
+nnn,o → commnad →g/c,o → commnad →g/c,ファイルを開く(command例=vim.open)[o=open/g=gui/c=cli]
+nnn,q|Q,q|Q,閉じる[q=quit]
+nnn,r,r,ファイル名変更[r=rename]
+nnn,v,v,ファイル移動[v=move]
+nnn,enter,enter,ファイルを開く
+nnn,space,space,ファイル複数選択
 Notion,cmd + /,-,編集画面表示
 Notion,cmd + Enter,-,カーソルブロックを操作(ページを開く・ToDoオンオフ・トグル開閉)
 Notion,cmd + shift + u,-,一つ上の階層に行く
