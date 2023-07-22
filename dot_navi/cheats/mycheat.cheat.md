@@ -88,17 +88,17 @@ docker system df
 # disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
-# docker remove container
-docker rm <container_id>
-
-# no referenced images [-f:filter (dangling=not referenced by any containers)]
+# display no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker images -f dangling=true
+
+# display no referenced volume [-f:filter (dangling=not referenced by any containers)]
+docker volume ls -f dangling=true
 
 # remove no referenced images [-q:only display volume names] [ex:docker rmi <image_id>]
 docker rmi $(docker images -q -f dangling=true)
 
-# docker no referenced volume [-f:filter (dangling=not referenced by any containers)]
-docker volume ls -f dangling=true
+# remove container
+docker rm <container_id>
 
 # remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
@@ -112,8 +112,12 @@ docker network prune
 # remove unused build cache
 docker builder prune
 
-# run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d <image> bash]
+# run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
 docker run -it -d --name <name> <image_id> <command>
+
+# build[-t:tag][ex:docker run -it -d ubuntu:22.04 bash]
+docker build -t <name> <image_id> <command>
+
 ```
 $ container_id: docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" --- --headers 1 --column 1
 $ image_id: docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" --- --headers 1 --column 1
@@ -124,9 +128,30 @@ $ image_id: docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Reposi
 ```sh
 % docker compose
 
-# docker compose exec [--project-directory:][--env-file:]
-docker-compose exec <service> <command>
+# ls [--all]
+docker-compose ls --all
+
+# ps [--all]
+docker-compose -p <project> ps --all
+
+# start
+docker-compose -p <project> start <service>
+
+# restart
+docker-compose -p <project> restart <service>
+
+# stop
+docker-compose -p <project> stop <service>
+
+# down
+docker-compose -p <project> down <service>
+
+# exec [--project-directory:][--env KEY=VALUE][--env-file:]
+docker-compose -p <project> exec <service> <command>
 ```
+$ project: docker-compose ls --all --- --headers 1 --column 1
+$ service: docker-compose -p <project> ps --all --- --headers 1 --column 3
+
 ;--------------------------------------------------------------
 ; gcloud
 ;--------------------------------------------------------------
