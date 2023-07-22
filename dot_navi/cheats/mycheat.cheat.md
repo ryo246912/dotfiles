@@ -480,6 +480,14 @@ gh repo list <owner> -L 100
 # display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
+# project list [owner:repository owner(ex:pytorch)][-L:max num]
+gh project list --owner <owner> -L 100
+
+# project item-list [owner:repository owner(ex:pytorch)][-L:max num]
+gh project item-list --owner <owner> --format json -L 100 <project_no> | jq -r '["repo","no","type","status","assignee","title","url"] , (.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) | @tsv' | column -ts $'\t'
+
+# project item
+open-cli <issue_url>
 
 # display user star
 open-cli <starred_url>
@@ -536,6 +544,14 @@ $ repository: gh repo list <owner> -L 100 \
   --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
+$ project_no: gh project list --owner <owner> \
+  | column -ts $'\t' \
+  --- --column 1
+$ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_no> \
+  | jq -r '(.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) ,["repo","no","type","status","assignee","title","url"] | @tsv' \
+  | tail -r \
+  | column -ts $'\t' \
+  --- --headers 1 --column 7
 $ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
 
 ```sh
