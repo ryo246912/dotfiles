@@ -47,7 +47,12 @@
   // ソース管理(Git)にフォーカスする
   {
     "key": "shift+cmd+g",
-    "command": "workbench.view.scm",
+    "command": "workbench.scm.focus",
+    "when": "workbench.scm.active"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "-workbench.view.scm",
     "when": "workbench.scm.active"
   },
   {
@@ -65,6 +70,7 @@
     "command": "-editor.action.previousMatchFindAction",
     "when": "editorFocus"
   },
+  // 検索結果にフォーカスする
   {
     "key": "ctrl+cmd+f",
     "command": "search.action.focusSearchList"
@@ -406,6 +412,13 @@
     "key": "alt+cmd+v",
     "command": "toggleVim"
   },
+  // (ErrorLens) Error Codeをコピー
+  // when : Problem Viewにフォーカス時
+  {
+    "key": "alt+cmd+c",
+    "command": "errorLens.copyProblemCode",
+    "when": "focusedView == 'workbench.panel.markers.view'"
+  },
   // (labeled bookmark)labeled bookmarkにフォーカスする
   {
     "key": "alt+cmd+b",
@@ -511,6 +524,12 @@
     "key": "cmd+o",
     "command": "gitlens.openWorkingFile",
     "when": "inDiffEditor"
+  },
+  // (Gitlens) Commitsにフォーカスする
+  {
+    "key": "ctrl+cmd+c",
+    "command": "gitlens.views.commits.focus",
+    "when": "!gitlens:disabled"
   },
   // (GitHub) コメントビューの開閉
   {
