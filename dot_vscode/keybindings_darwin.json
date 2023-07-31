@@ -102,11 +102,6 @@
     "key": "alt+cmd+left",
     "command": "-workbench.action.previousEditor"
   },
-  // エディタを右に分割
-  {
-    "key": "alt+cmd+d",
-    "command": "workbench.action.splitEditorRight"
-  },
   // shift + ↑で行ごとセレクトできるように
   {
     "key": "shift+up",
@@ -246,10 +241,26 @@
     "key": "shift+cmd+d",
     "command": "workbench.action.moveEditorToAboveGroup"
   },
+  // エディタを右に分割
+  // {
+  //   "key": "alt+cmd+d",
+  //   "command": "workbench.action.splitEditorRight"
+  // },
   // 下にエディタを分割
+  // {
+  //   "key": "shift+alt+cmd+d",
+  //   "command": "workbench.action.splitEditorDown"
+  // },
+  // 同一エディタ内でのエディタ分割切り替え
   {
-    "key": "shift+alt+cmd+d",
-    "command": "workbench.action.splitEditorDown"
+    "key": "alt+cmd+d",
+    "command": "workbench.action.toggleSplitEditorInGroup"
+  },
+  // もう一方のエディタにフォーカス(同一エディタ分割時)
+  {
+    "key": "cmd+d",
+    "command": "workbench.action.focusOtherSideEditor",
+    "when": "!activeEditorCanSplitInGroup"
   },
   // 拡大
   {
