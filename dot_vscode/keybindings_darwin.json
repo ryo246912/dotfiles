@@ -468,6 +468,44 @@
     "key": "shift+cmd+7",
     "command": "-editor.togglequotes"
   },
+  // (Jumpy) Wordのjump mode
+  {
+    "key": "shift+cmd+j",
+    "command": "extension.jumpy-word"
+  },
+  // (Jumpy) jump modeの解除
+  {
+    "key": "escape",
+    "command": "extension.jumpy-exit",
+    "when": "jumpy.isJumpyMode"
+  },
+  // (Jumpy) Lineのjump mode
+  {
+    "key": "ctrl+cmd+j",
+    "command": "extension.jumpy-line"
+  },
+  // (MetaGo)下の空白行に移動
+  {
+    "key": "cmd+]",
+    "command": "metaGo.gotoEmptyLineDown",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "alt+end",
+    "command": "-metaGo.gotoEmptyLineDown",
+    "when": "editorTextFocus"
+  },
+  // (MetaGo)上の空白行に移動 ※コマンドタイトル表示がselectなのミスっぽい「xx: metaGo.select Empty Line Move Up」
+  {
+    "key": "cmd+[",
+    "command": "metaGo.gotoEmptyLineUp",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "alt+home",
+    "command": "-metaGo.gotoEmptyLineUp",
+    "when": "editorTextFocus"
+  },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {
     "key": "cmd+o",
