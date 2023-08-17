@@ -40,8 +40,14 @@ asdf which <command>
 ```sh
 % cspell
 
-# cspell lint master...HEAD
-cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD)
+# lint [-c:config file][-e:exclude file]
+cspell --no-progress -c ~/.cspell/cspell.json --gitignore . | vim -
+
+# lint base-branch...HEAD [--root:root directory, defaults=current directory]
+cspell --no-progress -c ~/.cspell/cspell.json --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base master HEAD)...HEAD)
+
+# search(show) dictionary [The word is found in a dictionary if * appears ex:sql *php]
+cspell trace "<word>"
 ```
 ;--------------------------------------------------------------
 ; django
@@ -85,6 +91,15 @@ docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.T
 # network list
 docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
+# inspect container
+docker inspect <container_id> | vim -
+
+# inspect image
+docker image inspect <image_id> | vim -
+
+# inspect network
+docker network inspect <network_id> | vim -
+
 # disk free
 docker system df
 
@@ -125,9 +140,13 @@ docker build -t <name> <image_id> <command>
 $ container_id: docker ps -a \
   --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
   --- --headers 1 --column 1
+$ network_id: docker network ls \
+  --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
+  --- --headers 1 --column 1
 $ image_id: docker images -a \
   --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
   --- --headers 1 --column 1
+;$
 
 ;--------------------------------------------------------------
 ; docker compose
@@ -732,12 +751,31 @@ nodenv install --list | vim -
 
 # nodenv install version
 nodenv install <version>
+```
 
+```sh
 % npm
 
-# edit package [ex:npm edit axios]
+# display bin directory [ex: $(npm bin)/cspell]
+npm bin
+
+# open package files [ex:npm edit axios]
 npm edit <package>
 
+# open package homepage [ex:npm home axios]
+npm home <package>
+
+# open package repo [ex:npm repo axios]
+npm repo <package>
+
+# open package issue page [ex:npm bugs axios]
+npm bugs <package>
+
+# prune unnecessary package
+npm prune
+```
+
+```sh
 % npx
 
 # sort package-json
@@ -766,7 +804,9 @@ bat -l rb $(brew edit --print-path <app_name>)
 
 # open app homegage [ex:brew home colordiff]
 brew home <app_name>
+```
 
+```sh
 % blueutil
 
 # turn on-off bluetooth
@@ -787,18 +827,6 @@ $ device: blueutil --paired --format json-pretty \
   | column -ts $'\t' \
   --- --headers 1 --column 1
 
-```sh
-% osx macOS
-
-# display system defaults
-defaults read | vim -
-
-# display running application
-lsappinfo list | vim -
-
-# delete cache memory
-sudo purge
-```
 ;--------------------------------------------------------------
 ; python
 ;--------------------------------------------------------------
@@ -838,6 +866,9 @@ awk '<condition> {print $<no>}'
 # awk : [-F:separater,default=' ']
 awk -F "<separator>" '{print $<no>}'
 
+# basename : [-s:remove extension] [ex:basename -s .git repo-name.git]
+basename -s <extension> <path>
+
 # bat : [-l:language]
 bat -l <extension>
 
@@ -859,29 +890,29 @@ cut -<cb> <cut_list>
 # cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
 cut -d "<separater>" -f <cut_no>
 
+# dirname : [ex:dirname $(which dirname)]
+dirname <path>
+
 # fzf [-m:multi select]
 fzf
 
 # less
 less
 
-# grep : normal
-grep "<regex>"
+# grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r "navi" ./**/*dot* , grep -E "(X|Y)" apps/**/*.py]
+grep -Enr "<regex>" ./**/*
 
-# grep : [-i:ignore upper&lower][-n:output rows number]
-grep -in "<regex>"
+# grep : [-i:ignore upper&lower]
+grep -Einr "<regex>" ./**/*
 
 # grep : [-l:only filename] [ex:grep -il "" apps/**/*.py]
-grep -il "<regex>"
+grep -Elnr "<regex>" ./**/*
 
-# grep : [-E:extend regex,pattern match] [ex:grep -E "(X|Y)" apps/**/*.py]
-grep -inE "(<pattern1>|<pattern2>)"
-
-# grep : [-C n:output {n} lines] [ex:grep -C 1 -in "" apps/**/*.py]
-grep -C <n> -i "<regex>"
+# grep : [-B/A/C n:(before/after/both)output {n} lines] [ex:grep -C 1 -in "" apps/**/*.py]
+grep -<line_output_option> <n> -Enr "<regex>" ./**/*
 
 # grep : [-v:output not match]
-grep -vE "<regex>"
+grep -vEr "<regex>" ./**/*
 
 # head : [-n:output number]
 head -n <num>
@@ -889,8 +920,11 @@ head -n <num>
 # jq : [-r:raw output]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
 
-# sed : replace [-e:multi command][ex:sed 's/ /!/'][ex:sed -e 1d -e '$ s/$/\n/']
-sed 's/<before>/<after>/g'
+# sed : replace [-e:multi command][ex:sed 's| |!|'][ex:sed -e 1d -e '$ s/$/\n/']
+sed -e 's/<before>/<after>/g'
+
+# sed : extract word [-r:regex \(\) -> ()][¥1:first()][&:word] [ex:sed -r 's/.*github.com.(.*).git/\1/']
+sed -r 's/<before>/\1/'
 
 # sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
 sed -n <start>,<end>p
@@ -903,6 +937,9 @@ sed <start>,<end>d
 
 # sed : delete matched line [ex:sed /^d/d]
 sed /<regex>/d
+
+# sort : sort [-r:reverse][-n:numeric-sort][-k:field (ex:-k 2)][-t:delimiter (-t ,)][-u:unique] [ex:sort -rn -k 2 -t ,]
+sort -nu
 
 # tail : [-n:output number]
 tail -n <num>
@@ -938,10 +975,13 @@ xargs -I % <command> %
 2>&1
 
 ```
+
 $ no: echo -e "1\n(NF-1)\nNF"
 $ no2: echo -e "1\n(NF-1)\nNF"
 $ cb: echo -e "c\nb"
 $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
+$ line_output_option: echo -e "A\nB\nC"
+;$
 
 ;--------------------------------------------------------------
 ; shell
@@ -949,8 +989,8 @@ $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 ```sh
 % shell:ssh
 
-# ssh : login by .ssh/config [-T:HOST][-l:login user]
-ssh -T <HOST>
+# ssh : login by .ssh/config [-T:config HOST][-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
+ssh -AT <HOST>
 
 # ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
 ssh-add
@@ -966,7 +1006,9 @@ eval $(ssh-agent) && ssh-add ~/.ssh/{id_rsa,id_ed25519}
 
 # ssh-agent : terminate ssh-agent [-k:kill]
 ssh-agent -k
+```
 
+```sh
 % shell:jq-script
 
 # if
@@ -986,7 +1028,9 @@ jq -r '(.<key> | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
 
 # header
 jq -r '["<key1>","<key2>"], (.[] | [.<key1> , .<key2>]) | @tsv'
+```
 
+```sh
 % shell:command
 
 # cal : calendar[-y:year]
@@ -1002,9 +1046,6 @@ cat <(<command1>) <(<command2>)
 cat << EOF > <filename>
 ```
 ```sh
-# watch linux os version
-cat /etc/os-release
-
 # curl : download file[-O:remote-name][-o:output filename][-s:silence][-S:show error when -s]
 curl -sS -O '<url>'
 
@@ -1013,6 +1054,12 @@ curl -sI '<url>' -H '<header>'
 
 # curl : POST [-X:request method][-d:post data ex: -d 'key=value&key2=value2']
 curl -X 'POST' '<url>' -H '<header>' -d '<data>'
+
+# chsh : change shell
+chsh -s $(which zsh)
+
+# echo args[$@:args(array)][$*:args(string)]
+echo $* $@
 
 # echo exit status
 echo $?
@@ -1023,7 +1070,25 @@ df -h<_--total>
 # du : disk usage [-c:display total][-s:display only depth0 directory][-h:human-readable]
 du -csh
 
-# find : exclude ".*" directory&file [-o:or][-not:not operator][-type:d,f,l=link][-path:pathname][-name:filename][-prune:not search recursively,"condition1 -prune" -o "condition2 -print"][-print:default action][-exec:command(ex:-exec sha1sum {} \;)]
+# find : find path (option) [ex:find . -name "*.app"][-depth,-maxdepth,-mindepth:directory depth][-printf:print format]
+find . --depth 1
+
+# find : output directory [-type:d,f,l=link][-path:pathname ex:./app/src/models/users][-not:not operator]
+find . -type d -path "*" -not -path ".*"
+
+# find : output file [-type:d,f,l=link][-path:pathname ex:./app/src/models/users][-name:filename ex:user.py][-not:not operator]
+find . -type f -path "*" -name "*" -not -name ".*"
+
+# find : output file [-regex:filename regex]
+find . -type f -path "*" -regex ".*"
+
+# find : and condition [-a:and]
+find . -regex ".*" -a -not -regex ".*"
+
+# find : prune or print [-prune:not search recursively,"condition1 -prune" -o "condition2 -print"][-o:or][-print:default action][-exec:command(ex:-exec sha1sum {} \;)]
+find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name "*" -print
+
+# find : exclude ".*" directory&file
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
@@ -1039,17 +1104,89 @@ ln -s <file> <dir>
 lsof -i:<port>
 
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
-ps axu | less
+ps axu | vim -
 
-# ps : [o:format]
-ps axo pid,ppid,tty,user,start,command | less
+# ps : [o:format][pgid:process group id][sess:session id]
+ps axo pid,ppid,pgid,sess,tty,user,start,command | vim -
+
+# set : set shell option [-o:set option][+o:unset option][ex:set -o noclobber]
+set -o <option>
+
+# set : display shell option command
+set +o
+
+# tar : display contents [-t(--list):display content][-v:verbose][-f:archive file][ex:tar -tvf libs.tar.gz]
+tar -tvf <file>
+
+# tar : create archive [-c:create archive][-z(--gzip):extract or compress gzip][ex:tar -czvf libs.tgz *]
+tar -czvf <name>.<extension> *
+
+# tar : extract archive [-x:extract archive][ex:tar -xzvf libs.tgz "*.txt"]
+tar -xzvf <file>
 
 # type : [a:all][ex:type -a python]
 type -a <command>
 
-# watch kernel version
-uname -a
+# unset : unset shell variable
+unset <var>
+```
 
+$ _--total: echo -e "\n --total"
+$ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
+$ file_or_directory: echo -e "f\nd"
+;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
+;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
+$ extension: echo -e "tar.gz\ntgz"
+;$
+;--------------------------------------------------------------
+; shell : macOS
+;--------------------------------------------------------------
+
+```sh
+% shell:macOS
+
+# display system defaults
+defaults read | vim -
+
+# display running application
+lsappinfo list | vim -
+
+# display macOS version
+sw_vers
+
+# display system profile
+system_profiler <datatype>
+
+# kill Finder
+defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
+
+# delete cache memory
+sudo purge
+
+# open app(macOS)
+open-cli <url_or_file> -- <app>
+```
+$ datatype : system_profiler -listDataTypes \
+  --- --multi --expand
+$ app : system_profiler "SPApplicationsDataType" -json \
+  | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 2
+
+```sh
+% shell:display
+
+# display shells
+cat /etc/shells
+
+# display linux os version
+cat /etc/os-release
+
+# display kernel version
+uname -a
+```
+
+```sh
 % shell:syntax
 
 # array [${array[@]}:array][${array[*]}:string][${#array[@]}:items]
@@ -1073,11 +1210,19 @@ while <condition>; do <command> ; done
 # function : [ex:() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }]
 () { local <var> ; <command1> ; <command2> }
 ```
-$ _--total: echo -e "\n --total"
-$ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
-$ file_or_directory: echo -e "f\nd"
-$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
-$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
+
+```sh
+% shell:bash
+
+# var : shell current process
+echo $$
+
+# var : shell parent process
+echo $PPID
+
+# var : pipestatus
+echo ${PIPESTATUS[@]}
+```
 
 ;--------------------------------------------------------------
 ; SQL
@@ -1095,6 +1240,9 @@ SHOW DATABASES;
 ;--------------------------------------------------------------
 ```sh
 % tmux
+# keys
+tmux list-keys | vim -
+
 # pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
