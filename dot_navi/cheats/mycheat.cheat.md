@@ -195,11 +195,14 @@ $ name: gcloud config configurations list \
 ```sh
 % git
 
-# diff staging file [--cached(staged):diff staging and commit]
-git diff --cached -- <staging_filename> | delta<_no-gitconfig>
+# diff option [--no-pager][--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line][--no-patch:not display diff][-U(--unified):display num line ex:git diff -U0][--no-renames:ignore rename file][-M -- file1 file2:rename file diff]
+git --no-pager diff --pickaxe-regex -S <regex> -U0
 
-# diff between master-base-branch...HEAD[-U(--unified):display num line ex)git diff -U0]
-git diff<_--name-only> $(git show-branch --merge-base master HEAD)...HEAD -- <master-head_filename> | delta<_no-gitconfig>
+# diff staging file [--cached(staged):diff staging and commit][--stat/numstat/patch-with-stat:show stat]
+git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
+
+# diff between base-branch...HEAD
+git diff<_--name-only> $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
 
 # diff between commits [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
@@ -207,14 +210,11 @@ git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
 # diff between commits filter by file [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
 
-# diff between commits filter by string [-S:string(search word)][ex:master...HEAD]
-git diff<_--name-only> -S <string> <commit1>...<commit2> -- <commit1-commit2_filename> | delta<_no-gitconfig>
-
 # diff between merge commit
 git diff<_--name-only> HEAD~1...HEAD | delta<_no-gitconfig>
 
-# show commit
-git show <commit1> | delta<_no-gitconfig>
+# show commit [--stat/numstat/patch-with-stat:show stat]
+git show <commit1><_stat> | delta<_no-gitconfig>
 
 # show commit file
 git show <commit1>:<git_filename>
@@ -222,8 +222,11 @@ git show <commit1>:<git_filename>
 # show commit (contributor)
 git show <contributor_commit> | delta<_no-gitconfig>
 
-# show previous commit [ex:git show HEAD^^,HEAD~2]
+# show parents commit [ex:git show HEAD^^,HEAD~2]
 git show HEAD~<num> | delta<_no-gitconfig>
+
+# show children commit [ex:git show HEAD^^,HEAD~2]
+git show $(git log -n $((<num>+1)) --pretty=format:"%h" HEAD^...HEAD | tail -n 1) | delta<_no-gitconfig>
 
 # cherry-pick
 git cherry-pick -n <cherry_commit>
@@ -303,35 +306,44 @@ git push origin :<branch>
 # rebase
 git rebase --autosquash -i <commit1>
 
-# git grep one commit [-i:ignore upper&lower]
-git grep -i "<regex>" <grep_commit> -- <dir>
+# git grep [-i:ignore upper&lower][-P:perl regex]
+git grep -iP "<regex>" <grep_commit> -- <dir>
 
-# git grep one commit [-l:only filename]
-git grep -lE "<regex>" <grep_commit> -- <dir>
+# git grep look{ahead,behind} regex [positive ahead:X(?=Y)] [negative ahead:X(?!Y)][positive behind:(?<=Y)X][negative behind:(?<!Y)X]
+git grep -P "<look_regex>" <grep_commit> -- <dir>
 
-# git grep one commit [-v:output not match]
-git grep -lv "<regex>" <grep_commit> -- <dir>
+# git grep only filename [-l:only filename]
+git grep -lP "<regex>" <grep_commit> -- <dir>
+
+# git grep not match [-v:output not match]
+git grep -lvP "<regex>" <grep_commit> -- <dir>
 
 # git grep between commit [-i:ignore upper&lower]
-git grep -i "<regex>" $(git rev-list <commit1>...<commit2>) --
+git grep -iP "<regex>" $(git rev-list <commit1>...<commit2>) --
 
 # git grep files
-git grep -i "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
+git grep -iP "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
 
 # git-jump grep
 () { local hash_file_num ; hash_file_num=$(<git_grep_command> | cut -d ' ' -f 1 | rev | cut -c 2- | rev | fzf) && git cat-file -p $(echo $hash_file_num | cut -d : -f -2) | vim +$(echo $hash_file_num | cut -d : -f 3-) -}
 
 # cat-file
-git cat-file -p <commit1>:<ls-tree-files> | bat -l <extension>
+git cat-file -p <commit1>:<ls-tree-files><_pipe>
 
-# log graph (contributor)
-git log --author="<contributor>" --all --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --graph
+# log contributor
+git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
-# log file
-git log --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> -- <ls-files>
+# log graph
+git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
+
+# log file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> <file_option><ls-files>
+
+# log change word or line [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> <regex>
 
 # log delete file
-git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # stash working file
 git commit -m 'commit staging' && git stash --message "<message>" -- <working_filename> && git reset --soft HEAD^
@@ -351,6 +363,9 @@ git stash pop <stash_num>
 # pop stash file
 git checkout <stash_num> <stash_file>
 
+# clone [--depth:shallow clone][--filter=blob:none ;blob-less clone][--filter=tree:0 ;tree-less clone]
+git clone<_shallow-option> <repo_url>
+
 # config list [-l:list]
 git config -l --show-origin<_--option> | column -ts $'\t'
 
@@ -358,7 +373,7 @@ git config -l --show-origin<_--option> | column -ts $'\t'
 git symbolic-ref --short HEAD
 
 # meta : display merge-base [ex:git merge-base master HEAD]
-git merge-base master HEAD
+git merge-base <base_branch> HEAD
 
 # meta : display HEAD hash [HEAD^@:all parents]
 git rev-parse --short HEAD
@@ -373,29 +388,36 @@ git rev-parse --show-prefix
 git rev-parse --show-toplevel
 ```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
-$ _--name-only: echo -e "\n --name-only"
+$ _--name-only: echo -e "\n --name-only\n --name-status"
 $ _--option: echo -e "\n --global\n --local\n --system"
+$ _stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
+$ _shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
 $ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
+$ base_branch: echo -e "\nmaster"
+$ file_option: echo -e "-- \n-L 1,+10:\n-L :class:"
+$ search_option: echo -e "--pickaxe-regex -S\n-G"
+$ look_regex: echo -e "<search_word>(?=(<look_word>))\n<search_word>(?!(<look_word>))\n(?<=(<look_word>))<search_word>\n(?<!(<look_word>))<search_word>"
+
 $ commit1: git log <branch> \
-  --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> \
-  --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ cherry_commit: git log <branch> \
-  --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ;  --multi --expand \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ contributor_commit: git log --all --author="<contributor>" \
-  --pretty=format:"%C(auto)%h; (%Cblue%ad%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --pretty=format:"%C(auto)%h; (%Cblue%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; \
   git log <branch> \
-  --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat \
@@ -411,7 +433,7 @@ $ contributor: git log --format="%cn:%ce" \
   | column -ts ":" \
   --- --column 1
 $ grep_commit: git log <branch> \
-  --pretty=format:"%h; (%ad)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ dir: git ls-tree <grep_commit> --name-only -dr
@@ -427,8 +449,11 @@ $ modified_files: echo . && \
 $ ls-files: git ls-files
 $ ls-tree-files: git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
 $ extension: echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
-$ master-head_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base master HEAD)...HEAD \
-  --- --preview "git diff $(git show-branch --merge-base master HEAD)...HEAD -- {1} | delta --no-gitconfig"
+$ _pipe: echo -e " | bat -l <extension>\n > <ls-tree-files>"
+$ base-head_diff_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base <base_branch> HEAD)...HEAD \
+  | xargs -I % echo "<base_branch>;%" \
+  --- --delimiter ; --column 2 \
+  --preview "git diff $(git show-branch --merge-base {1} HEAD)...HEAD -- {2} | delta --no-gitconfig"
 $ commit1-commit2_filename: echo . && \
   git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
@@ -445,6 +470,11 @@ $ staging_filename: echo . && \
   git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
   --- --multi --expand \
   --preview "git diff --cached -- {1} | delta --no-gitconfig"
+$ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
+  --json fullName,description,language,pushedAt,stargazersCount,url \
+  --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 5
 
 ```sh
 % git-tool
@@ -480,6 +510,12 @@ echo -n <pr_branch> | cb
 # pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
 gh pr view <pr_no> --comments<_web>
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
+
+# pr view search by file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
+for commit in <commits_filter_by_file>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
+
+# pr view search by word [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
+for commit in <commits_filter_by_word>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
 
 # pr diff
 gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | delta<_no-gitconfig>
@@ -549,6 +585,9 @@ open-cli <issue_url>
 
 # display user star
 open-cli <starred_url>
+
+# search repo [_query|stars:>=n|stars:<n]
+open-cli <repo_url>
 ```
 $ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
@@ -561,7 +600,23 @@ $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
+$ _--first-parent: echo -e "\n --first-parent"
+$ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
+$ search_option: echo -e "--pickaxe-regex -S\n-G"
+$ ls-files: git ls-files
+$ all_branch: cat \
+  <(git rev-parse --abbrev-ref HEAD) \
+  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  --- --column 1
 
+$ commits_filter_by_file: git log --no-patch<_--first-parent> \
+  --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  <all_branch> <file_option><ls-files> \
+  --- --column 1 --delimiter ; --multi --expand
+$ commits_filter_by_word: git log --no-patch<_--first-parent> \
+  --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  <search_option> <regex> \
+  --- --column 1 --delimiter ; --multi --expand
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
   --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
@@ -610,7 +665,12 @@ $ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_
   | tail -r \
   | column -ts $'\t' \
   --- --headers 1 --column 7
-$ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url]) | @tsv' | column -ts $'\t' --- --column 4
+$ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url,.description]) | @tsv' | column -ts $'\t' --- --column 4
+$ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
+  --json fullName,description,language,pushedAt,stargazersCount,url \
+  --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 5
 
 ```sh
 % gh-rest-api
@@ -631,7 +691,9 @@ gh api "/search/issues?q=<commithash>+type:pr+repo:$(git config remote.origin.ur
 #  user star [per_page:numbers]
 gh api "/users/<user>/starred?per_page=100" | jq '.'
 ; https://docs.github.com/ja/rest/activity/starring?apiVersion=2022-11-28#list-repositories-starred-by-a-user
+```
 
+```sh
 % gh-tool
 
 # act : list workflows for a specific event [-l:list]
