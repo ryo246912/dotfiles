@@ -50,19 +50,22 @@ cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-par
 % django
 
 # show migration
-echo -n "python manage.py showmigrations" | cb
+python manage.py showmigrations
 
 # show migration app [ex:python manage.py showmigrations issues]
-echo -n "python manage.py showmigrations <app_name>" | cb
+python manage.py showmigrations <app_name>
 
 # make migration
-echo -n "python manage.py makemigrations" | cb
+python manage.py makemigrations --name <name>
+
+# migrate [ex:python manage.py migrate concierges 0031]
+python manage.py migrate <app_name> <migration_name>
 
 # check migration [ex:python manage.py sqlmigrate issues 0035]
-echo -n "python manage.py sqlmigrate <app_name> <migration_name>" | cb
+python manage.py sqlmigrate <app_name> <migration_name>
 
 # rollback migration [ex:python manage.py migrate concierges 0031]
-echo -n "python manage.py migrate <app_name> <rollback_to_migration_name>" | cb
+python manage.py migrate <app_name> <rollback_to_migration_name>
 ```
 ;--------------------------------------------------------------
 ; docker
@@ -1022,9 +1025,8 @@ $ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name
 
 # show variables
 echo -n "SHOW VARIABLES;" | cb
-
 # show databases
-echo -n "SHOW DATABASES;" | cb
+SHOW DATABASES;
 ```
 ;--------------------------------------------------------------
 ; tmux

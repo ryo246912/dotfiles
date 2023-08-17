@@ -139,10 +139,10 @@ zinit wait lucid light-mode blockf for \
     @'jqlang/jq'
 
 # navi #
+# atload"eval $(navi widget zsh)" \
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
     sbin"navi" \
-    atload"eval $(navi widget zsh)" \
     denisidoro/navi
 
 # up #
@@ -328,10 +328,21 @@ _nnn() {
 zle -N _nnn
 bindkey "^N" _nnn
 
+# ctrl + gでtmux pop windowでnavi widgetを呼び出し
+_custom_navi_widget() {
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E \
+  'window=$(tmux display -p -F "#S:#I.#P") && \
+  export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+  navi --print | tr -d "\n" | tmux load-buffer -b tmp - && tmux paste-buffer -drp -t $window -b tmp'
+}
+zle -N _custom_navi_widget
+bindkey '^G' _custom_navi_widget
+
 # ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
-  word=$(_navi_call --print --query "shell:pipe-command ")
+  word=$(navi --print --query "shell:pipe-command ")
   if [ -n "$word" ] ; then
     if [[ $word =~ ">" ]] ; then
       BUFFER="$BUFFER $word"
@@ -431,6 +442,14 @@ _copy_word() {
 }
 zle -N _copy_word
 bindkey '^Q^W' _copy_word
+
+# ctrl + q → ctrl + gでnaviのコマンドをクリップボードにコピー
+_navi_copy_snippet() {
+  navi --print | cb
+  zle redisplay
+}
+zle -N _navi_copy_snippet
+bindkey '^Q^G' _navi_copy_snippet
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
