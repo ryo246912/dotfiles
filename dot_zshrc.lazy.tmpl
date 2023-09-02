@@ -312,10 +312,9 @@ fz() {
 # zsh widget
 #--------------------------------------------------------------
 
-# ctrl + dでgitui起動
+# ctrl + dでtmux pop windowでgitui起動
 _gitui() {
-  BUFFER='gitui'
-  zle accept-line
+  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
 }
 zle -N _gitui
 bindkey "^D" _gitui
@@ -339,10 +338,16 @@ _custom_navi_widget() {
 zle -N _custom_navi_widget
 bindkey '^G' _custom_navi_widget
 
-# ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
+# ctrl + q → ctrl + qでtmux pop windowでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
-  word=$(navi --print --query "shell:pipe-command ")
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    navi --print --query "shell:pipe-command " | tr -d "\n" | tmux load-buffer -b tmp - \
+  '
+  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+    word=$(tmux show-buffer -b tmp)
+  fi && \
   if [ -n "$word" ] ; then
     if [[ $word =~ ">" ]] ; then
       BUFFER="$BUFFER $word"
@@ -351,8 +356,8 @@ _navi_insert_pipe_snippet() {
       BUFFER="$BUFFER | $word"
       CURSOR=$#BUFFER #カーソルを末尾に移動
     fi
-  fi
-  zle redisplay
+  fi && \
+  tmux delete-buffer -b tmp
 }
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
