@@ -329,11 +329,17 @@ bindkey "^N" _nnn
 
 # ctrl + gでtmux pop windowでnavi widgetを呼び出し
 _custom_navi_widget() {
-  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E \
-  'window=$(tmux display -p -F "#S:#I.#P") && \
-  export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
-  navi --print | tr -d "\n" | tmux load-buffer -b tmp - && tmux paste-buffer -drp -t $window -b tmp'
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    window=$(tmux display -p -F "#S:#I.#P") && \
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" && \
+    tmux paste-buffer -drp -t $window -b tmp \
+  '
 }
 zle -N _custom_navi_widget
 bindkey '^G' _custom_navi_widget
@@ -343,7 +349,11 @@ _navi_insert_pipe_snippet() {
   local word
   tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
     export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    navi --print --query "shell:pipe-command " | tr -d "\n" | tmux load-buffer -b tmp - \
+    TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" \
   '
   if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
     word=$(tmux show-buffer -b tmp)
@@ -448,10 +458,21 @@ _copy_word() {
 zle -N _copy_word
 bindkey '^Q^W' _copy_word
 
-# ctrl + q → ctrl + gでnaviのコマンドをクリップボードにコピー
+# ctrl + q → ctrl + gでtmux pop windowでnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
-  navi --print | cb
-  zle redisplay
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" \
+  '
+  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+    tmux show-buffer -b tmp | cb
+  fi && \
+  tmux delete-buffer -b tmp
 }
 zle -N _navi_copy_snippet
 bindkey '^Q^G' _navi_copy_snippet
