@@ -321,7 +321,7 @@ bindkey "^D" _gitui
 
 # ctrl + nでnnn起動
 _nnn() {
-  BUFFER='nnn -dH'
+  BUFFER='nnn -dHUx'
   zle accept-line
 }
 zle -N _nnn
@@ -362,7 +362,7 @@ _navi_insert_pipe_snippet() {
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
 
-# ctrl + q → ctrl + aで画面キャプチャしてwordを選択してコピー
+# ctrl + q → ctrl + aで余分な空白を削除
 _delete_space() {
   local TMP_BUFFER
   TMP_BUFFER=$BUFFER
