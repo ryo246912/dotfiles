@@ -47,7 +47,12 @@
   // ソース管理(Git)にフォーカスする
   {
     "key": "shift+cmd+g",
-    "command": "workbench.view.scm",
+    "command": "workbench.scm.focus",
+    "when": "workbench.scm.active"
+  },
+  {
+    "key": "shift+cmd+g",
+    "command": "-workbench.view.scm",
     "when": "workbench.scm.active"
   },
   {
@@ -65,6 +70,7 @@
     "command": "-editor.action.previousMatchFindAction",
     "when": "editorFocus"
   },
+  // 検索結果にフォーカスする
   {
     "key": "ctrl+cmd+f",
     "command": "search.action.focusSearchList"
@@ -101,11 +107,6 @@
   {
     "key": "alt+cmd+left",
     "command": "-workbench.action.previousEditor"
-  },
-  // エディタを右に分割
-  {
-    "key": "alt+cmd+d",
-    "command": "workbench.action.splitEditorRight"
   },
   // shift + ↑で行ごとセレクトできるように
   {
@@ -246,10 +247,26 @@
     "key": "shift+cmd+d",
     "command": "workbench.action.moveEditorToAboveGroup"
   },
+  // エディタを右に分割
+  // {
+  //   "key": "alt+cmd+d",
+  //   "command": "workbench.action.splitEditorRight"
+  // },
   // 下にエディタを分割
+  // {
+  //   "key": "shift+alt+cmd+d",
+  //   "command": "workbench.action.splitEditorDown"
+  // },
+  // 同一エディタ内でのエディタ分割切り替え
   {
-    "key": "shift+alt+cmd+d",
-    "command": "workbench.action.splitEditorDown"
+    "key": "alt+cmd+d",
+    "command": "workbench.action.toggleSplitEditorInGroup"
+  },
+  // もう一方のエディタにフォーカス(同一エディタ分割時)
+  {
+    "key": "cmd+d",
+    "command": "workbench.action.focusOtherSideEditor",
+    "when": "!activeEditorCanSplitInGroup"
   },
   // 拡大
   {
@@ -322,6 +339,12 @@
     "command": "editor.action.revealDefinition",
     "when": "editorHasDefinitionProvider && editorTextFocus && !isInEmbeddedEditor"
   },
+  // 定義をPeekで表示
+  {
+    "key": "ctrl+z ctrl+s",
+    "command": "editor.action.peekDefinition",
+    "when": "editorHasDefinitionProvider && editorTextFocus && !inReferenceSearchEditor && !isInEmbeddedEditor"
+  },
   // 再帰的に折りたたむ
   {
     "key": "ctrl+z ctrl+x",
@@ -330,7 +353,7 @@
   },
   // 再帰的に展開する
   {
-    "key": "ctrl+z ctrl+s",
+    "key": "ctrl+z ctrl+w",
     "command": "editor.unfoldRecursively",
     "when": "editorTextFocus && foldingEnabled"
   },
@@ -358,17 +381,114 @@
   },
   // タイムラインにフォーカス
   {
-    "key": "alt+cmd+t",
+    "key": "alt+cmd+h",
     "command": "timeline.focus"
   },
   {
-    "key": "alt+cmd+t",
-    "command": "-workbench.action.closeOtherEditors"
+    "key": "alt+cmd+h",
+    "command": "-rest-client.history"
   },
   // コマンドパレットを表示
   {
     "key": "ctrl+x",
     "command": "workbench.action.showCommands"
+  },
+  // DiffEditor(レビューペイン)で次の差分に移動
+  {
+    "key": "alt+cmd+n",
+    "command": "editor.action.diffReview.next",
+    "when": "isInDiffEditor"
+  },
+  // DiffEditor(レビューペイン)で前の差分に移動
+  {
+    "key": "shift+alt+cmd+n",
+    "command": "editor.action.diffReview.prev",
+    "when": "isInDiffEditor"
+  },
+  // 次のシンボルハイライトに移動
+  {
+    "key": "cmd+n",
+    "command": "editor.action.wordHighlight.next",
+    "when": "editorTextFocus && hasWordHighlights"
+  },
+  // 前のシンボルハイライトに移動
+  {
+    "key": "shift+cmd+n",
+    "command": "editor.action.wordHighlight.prev",
+    "when": "editorTextFocus && hasWordHighlights"
+  },
+  // 次の変更に移動
+  {
+    "key": "cmd+n",
+    "command": "workbench.action.editor.nextChange",
+    "when": "editorTextFocus && !textCompareEditorActive && !hasWordHighlights"
+  },
+  // 比較エディタで次の変更に移動
+  {
+    "key": "cmd+n",
+    "command": "workbench.action.compareEditor.nextChange",
+    "when": "textCompareEditorVisible"
+  },
+  // 前の変更に移動
+  {
+    "key": "shift+cmd+n",
+    "command": "workbench.action.editor.previousChange",
+    "when": "editorTextFocus && !hasWordHighlights && !textCompareEditorActive"
+  },
+  // 比較エディタで前の変更に移動
+  {
+    "key": "shift+cmd+n",
+    "command": "workbench.action.compareEditor.previousChange",
+    "when": "textCompareEditorVisible"
+  },
+  // ブラケットを削除
+  {
+    "key": "shift+cmd+backspace",
+    "command": "editor.action.removeBrackets",
+    "when": "editorTextFocus"
+  },
+  // ブラケットに移動
+  {
+    "key": "shift+cmd+9",
+    "command": "editor.action.jumpToBracket",
+    "when": "editorTextFocus"
+  },
+  // ブラケット部分を選択
+  {
+    "key": "shift+cmd+8",
+    "command": "editor.action.selectToBracket"
+  },
+  // 新しいファイルを作成(WordHighlightsなし時)
+  {
+    "key": "cmd+n",
+    "command": "workbench.action.files.newUntitledFile",
+    "when": "editorTextFocus && !hasWordHighlights && !textCompareEditorVisible"
+  },
+  {
+    "key": "cmd+n",
+    "command": "-workbench.action.files.newUntitledFile"
+  },
+  // 新しいウィンドウを作成(WordHighlightsなし時)
+  {
+    "key": "shift+cmd+n",
+    "command": "workbench.action.newWindow",
+    "when": "editorTextFocus && !hasWordHighlights && !textCompareEditorVisible"
+  },
+  {
+    "key": "shift+cmd+n",
+    "command": "-workbench.action.newWindow"
+  },
+  // 選択範囲の縮小
+  {
+    "key": "alt+cmd+left",
+    "command": "editor.action.smartSelect.shrink",
+    "when": "editorTextFocus"
+  },
+  // 選択範囲の拡大
+  {
+    "key": "alt+cmd+right",
+    "command": "editor.action.smartSelect.expand",
+    "when": "editorTextFocus"
   },
   ///////////////////////////////////////////////
   // 拡張機能
@@ -394,6 +514,13 @@
   {
     "key": "alt+cmd+v",
     "command": "toggleVim"
+  },
+  // (ErrorLens) Error Codeをコピー
+  // when : Problem Viewにフォーカス時
+  {
+    "key": "alt+cmd+c",
+    "command": "errorLens.copyProblemCode",
+    "when": "focusedView == 'workbench.panel.markers.view'"
   },
   // (labeled bookmark)labeled bookmarkにフォーカスする
   {
@@ -448,6 +575,15 @@
     "key": "cmd+w",
     "command": "-workbench.action.closeActiveEditor"
   },
+  // (Tab Groups) Tab Groupsビューにフォーカス
+  {
+    "key": "alt+cmd+t",
+    "command": "workbench.view.extension.tab-groups"
+  },
+  {
+    "key": "alt+cmd+t",
+    "command": "-workbench.action.closeOtherEditors"
+  },
   // (ToggleQuotes) quoteの切り替え
   {
     "key": "shift+cmd+2",
@@ -457,11 +593,55 @@
     "key": "shift+cmd+7",
     "command": "-editor.togglequotes"
   },
+  // (Jumpy) Wordのjump mode
+  {
+    "key": "shift+cmd+j",
+    "command": "extension.jumpy-word"
+  },
+  // (Jumpy) jump modeの解除
+  {
+    "key": "escape",
+    "command": "extension.jumpy-exit",
+    "when": "jumpy.isJumpyMode"
+  },
+  // (Jumpy) Lineのjump mode
+  {
+    "key": "ctrl+cmd+j",
+    "command": "extension.jumpy-line"
+  },
+  // (MetaGo)下の空白行に移動
+  {
+    "key": "cmd+]",
+    "command": "metaGo.gotoEmptyLineDown",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "alt+end",
+    "command": "-metaGo.gotoEmptyLineDown",
+    "when": "editorTextFocus"
+  },
+  // (MetaGo)上の空白行に移動 ※コマンドタイトル表示がselectなのミスっぽい「xx: metaGo.select Empty Line Move Up」
+  {
+    "key": "cmd+[",
+    "command": "metaGo.gotoEmptyLineUp",
+    "when": "editorTextFocus"
+  },
+  {
+    "key": "alt+home",
+    "command": "-metaGo.gotoEmptyLineUp",
+    "when": "editorTextFocus"
+  },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {
     "key": "cmd+o",
     "command": "gitlens.openWorkingFile",
     "when": "inDiffEditor"
+  },
+  // (Gitlens) Commitsにフォーカスする
+  {
+    "key": "ctrl+cmd+c",
+    "command": "gitlens.views.commits.focus",
+    "when": "!gitlens:disabled"
   },
   // (GitHub) コメントビューの開閉
   {

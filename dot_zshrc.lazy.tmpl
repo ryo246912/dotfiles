@@ -139,10 +139,10 @@ zinit wait lucid light-mode blockf for \
     @'jqlang/jq'
 
 # navi #
+# atload"eval $(navi widget zsh)" \
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
     sbin"navi" \
-    atload"eval $(navi widget zsh)" \
     denisidoro/navi
 
 # up #
@@ -169,6 +169,7 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
     node"!czg -> czg" \
+    node"!open-cli -> open-cli" \
     z-shell/0
 
 ### plugin ###
@@ -210,7 +211,7 @@ zinit wait lucid light-mode blockf for \
     as"completion" "https://github.com/imomaliev/tmux-bash-completion/blob/master/completions/tmux"
 
 zinit wait lucid light-mode blockf for \
-    cp"zsh-better-npm-completion.plugin.zsh -> _npm" \
+    atload"source zsh-better-npm-completion.plugin.zsh" \
     as"completion" "https://github.com/lukechilds/zsh-better-npm-completion/blob/master/zsh-better-npm-completion.plugin.zsh"
 
 #--------------------------------------------------------------
@@ -311,26 +312,42 @@ fz() {
 # zsh widget
 #--------------------------------------------------------------
 
-# ctrl + dでgitui起動
+# ctrl + dでtmux pop windowでgitui起動
 _gitui() {
-  BUFFER='gitui'
-  zle accept-line
+  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
 }
 zle -N _gitui
 bindkey "^D" _gitui
 
 # ctrl + nでnnn起動
 _nnn() {
-  BUFFER='nnn -dH'
+  BUFFER='nnn -dHUx'
   zle accept-line
 }
 zle -N _nnn
 bindkey "^N" _nnn
 
-# ctrl + q → ctrl + qでnaviに登録されたpipe commandのsnippet呼び出し
+# ctrl + gでtmux pop windowでnavi widgetを呼び出し
+_custom_navi_widget() {
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E \
+  'window=$(tmux display -p -F "#S:#I.#P") && \
+  export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+  navi --print | tr -d "\n" | tmux load-buffer -b tmp - && tmux paste-buffer -drp -t $window -b tmp'
+}
+zle -N _custom_navi_widget
+bindkey '^G' _custom_navi_widget
+
+# ctrl + q → ctrl + qでtmux pop windowでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   local word
-  word=$(_navi_call --print --query "shell:pipe-command ")
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    navi --print --query "shell:pipe-command " | tr -d "\n" | tmux load-buffer -b tmp - \
+  '
+  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+    word=$(tmux show-buffer -b tmp)
+  fi && \
   if [ -n "$word" ] ; then
     if [[ $word =~ ">" ]] ; then
       BUFFER="$BUFFER $word"
@@ -339,13 +356,13 @@ _navi_insert_pipe_snippet() {
       BUFFER="$BUFFER | $word"
       CURSOR=$#BUFFER #カーソルを末尾に移動
     fi
-  fi
-  zle redisplay
+  fi && \
+  tmux delete-buffer -b tmp
 }
 zle -N _navi_insert_pipe_snippet
 bindkey '^Q^Q' _navi_insert_pipe_snippet
 
-# ctrl + q → ctrl + aで画面キャプチャしてwordを選択してコピー
+# ctrl + q → ctrl + aで余分な空白を削除
 _delete_space() {
   local TMP_BUFFER
   TMP_BUFFER=$BUFFER
@@ -430,6 +447,14 @@ _copy_word() {
 }
 zle -N _copy_word
 bindkey '^Q^W' _copy_word
+
+# ctrl + q → ctrl + gでnaviのコマンドをクリップボードにコピー
+_navi_copy_snippet() {
+  navi --print | cb
+  zle redisplay
+}
+zle -N _navi_copy_snippet
+bindkey '^Q^G' _navi_copy_snippet
 
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {

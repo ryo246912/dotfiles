@@ -42,9 +42,9 @@ abbr gds='git diff --cached'
 abbr gdsn='git diff --cached --name-only'
 abbr gf='git fetch -p --tags'
 abbr gg='git grep'
-abbr gl='git log -n 10 --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
-abbr glg='git log --all --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%Cblue%ad%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
-abbr glp='git log -n 10 --pretty=format:"%C(auto)%h (%Cblue%ad%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent'
+abbr gl='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
+abbr glg='git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"'
+abbr glp='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent'
 abbr gm='git merge --no-ff'
 abbr gmd='git merge --no-commit --no-ff && git diff --cached --name-only'
 abbr gmo='git merge --no-ff origin/'
@@ -73,7 +73,7 @@ abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %
 abbr fgc="git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %"
 abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }"
 abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }"
-abbr fgq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
+abbr fhq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 abbr fz='() { local dir=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 
 {{ if eq .chezmoi.os "darwin" -}}
@@ -92,7 +92,7 @@ abbr nrt='npm run test'
 abbr nrtd='npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD | grep -E ".*spec.*")'
 abbr nrv='npm run vite'
 
-abbr up='echo | up'
+abbr up='up --noinput'
 abbr w='which'
 abbr -g p='|'
 abbr -g v='vim'
