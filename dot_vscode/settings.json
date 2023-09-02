@@ -2,6 +2,10 @@
   ///////////////////////////////////////////////
   // 基本設定
   ///////////////////////////////////////////////
+  // 新しいdiffエディタを使用する
+  "diffEditor.experimental.useVersion2": true,
+  // 未変更部分は折りたたむ
+  "diffEditor.experimental.collapseUnchangedRegions": true,
   "editor.rulers": [90],
   "editor.guides.bracketPairs": true,
   // 連続した空白文字を表示
@@ -11,10 +15,14 @@
   "editor.tabSize": 2,
   // コピー時にシンタックスハイライトは除く
   "editor.copyWithSyntaxHighlighting": false,
+  // インデントガイドをOFFにする
+  "editor.guides.indentation": false,
   // 右端のミニマップ非表示
   "editor.minimap.enabled": false,
   // ブレイクポイント表示等のグリフマージン非表示
   "editor.glyphMargin": false,
+  // 閉じタグを一緒に編集
+  "editor.linkedEditing": true,
   // エディタ全体の設定
   "explorer.confirmDragAndDrop": false,
   // エクスプローラの自動フォーカスを無効にする
@@ -26,6 +34,8 @@
   },
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
+  // URLコピー時にリンク化する
+  "markdown.editor.pasteUrlAsFormattedLink.enabled": "smart",
   // 検索対象から除外
   "search.exclude": {
     "**\/*.json": true,
@@ -60,6 +70,7 @@
   "scss.hover.references": false,
   "scss.hover.documentation": false,
   "less.hover.references": false,
+  // (Python)
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": true,
   "python.linting.flake8Enabled": true,
@@ -77,16 +88,21 @@
   // "python.analysis.autoImportUserSymbols": true,
   // 返り値のTypeHintを表示
   "python.analysis.inlayHints.functionReturnTypes": true,
-  // ImportCompletionsを有効
-  "python.analysis.autoImportCompletions": true,
   // 文字列のパスのコードジャンプを有効
   "python.analysis.gotoDefinitionInStringLiteral": true,
   // 以下2つでf-stringの補完を有効
-  "python.analysis.autoFormatStrings": true,
-  "python.analysis.pylanceLspClientEnabled": true,
+  // "python.analysis.autoFormatStrings": true,
+  // "python.analysis.pylanceLspClientEnabled": true,
   "[python]": {
     "editor.tabSize": 4
   },
+  // (JavaScript・TypeScript)
+  // 型よりソースコードに優先的にジャンプする
+  "javascript.preferGoToSourceDefinition": true,
+  "typescript.preferGoToSourceDefinition": true,
+  // autoImportをOFFにする
+  "typescript.suggest.autoImports": false,
+  "javascript.suggest.autoImports": false,
   "[vue][json][jsonc][javascript][typescript][scss]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
@@ -255,6 +271,16 @@
   "gitlens.keymap": "alternate",
   "gitlens.fileAnnotations.command": "blame",
   "jupyter.disableJupyterAutoStart": true,
+  // (indenticator) デフォルトのインデントは非表示にする
+  "indenticator.showIndentGuide": false,
+  // (indenticator) ラインの色設定
+  "indenticator.inner.color.dark": "#777",
+  // (indenticator) innerのインデントは表示にする
+  "indenticator.inner.showIndentGuide": true,
+  // (jumpy)
+  "jumpy.fontSize": 12,
+  "jumpy.darkThemeBackground": "yellow",
+  "jumpy.fontFamily": "Menlo, Monaco, 'Courier New', monospace",
   // (MultiCommand)
   "multiCommand.commands": [
     {
