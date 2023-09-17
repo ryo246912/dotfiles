@@ -1,0 +1,4 @@
+[manager]
+sort_by        = "alphabetical"
+show_hidden    = true 
+sort_reverse   = false

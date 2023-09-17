@@ -151,6 +151,12 @@ zinit wait lucid light-mode blockf for \
     sbin"up-darwin -> up" \
     @'akavel/up'
 
+# yazi #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" cargo"yazi" \
+    sbin"yazi* -> yazi" \
+    @'sxyazi/yazi'
+
 # z #
 zinit wait lucid light-mode blockf for \
     as"program" pick"z" \
@@ -326,6 +332,13 @@ _nnn() {
 }
 zle -N _nnn
 bindkey "^N" _nnn
+
+# ctrl + yでyazi起動
+_yazi() {
+  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" yazi
+}
+zle -N _yazi
+bindkey "^Y" _yazi
 
 # ctrl + gでtmux pop windowでnavi widgetを呼び出し
 _custom_navi_widget() {
