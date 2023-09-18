@@ -400,7 +400,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo $TMP_BUFFER | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e 's/  */ /g') #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -410,7 +410,7 @@ bindkey '^Q^A' _delete_space
 # ctrl + q → ctrl + zでコマンド履歴を選択して出力
 _fzf_insert_command() {
   local num command line array1 array2 word
-  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
   if [ -n "$command" ] ; then
     BUFFER="$BUFFER $command"
     CURSOR=$#BUFFER #カーソルを末尾に移動
@@ -423,15 +423,15 @@ bindkey '^Q^Z' _fzf_insert_command
 # ctrl + q → ctrl + xでコマンド履歴からwordを選択して出力
 _fzf_insert_command_word() {
   local num command line array1 array2 word
-  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
   if [ -n "$command" ] ; then
-    for i in $(seq $(echo $command | wc -m)) ; do
+    for i in $(seq $(echo "$command" | wc -m)) ; do
       array1+=( "$(cut -c $i- <(echo $command))\n" )
     done
   fi
   if [ -n "${array1[*]}" ] ; then
     line=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo $line | wc -m)
+    num=$(echo "$line" | wc -m)
     for j in $(seq $num) ; do
       array2+=( "$(cut -c -$((num-j+1)) <(echo $line))\n" )
     done
@@ -440,7 +440,7 @@ _fzf_insert_command_word() {
     word=$(echo -e "${array2[@]}" | fzf)
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
     word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
-    word=$(echo $word | tr -d '\n')
+    word=$(echo "$word" | tr -d '\n')
   fi
   if [ -n "$word" ] ; then
     BUFFER="$BUFFER $word"
@@ -456,13 +456,13 @@ _copy_word() {
   local num line1 line2 array1 array2 word
   line1=$(tmux capture-pane -p | fzf)
   if [ -n "$line1" ] ; then
-    for i in $(seq $(echo $line1 | wc -m)) ; do
+    for i in $(seq $(echo "$line1" | wc -m)) ; do
       array1+=( "$(cut -c $i- <(echo $line1))\n" )
     done
   fi
   if [ -n "${array1[*]}" ] ; then
     line2=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo $line2 | wc -m)
+    num=$(echo "$line2" | wc -m)
     for j in $(seq $num) ; do
       array2+=( "$(cut -c -$((num-j+1)) <(echo $line2))\n" )
     done
@@ -473,7 +473,7 @@ _copy_word() {
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
   fi
   if [ -n "$word" ] ; then
-    echo $word | tr -d '\n' | cb
+    echo "$word" | tr -d '\n' | cb
   fi
   zle redisplay
 }
@@ -532,7 +532,7 @@ function ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
     # 接続先ホスト名に応じて背景色切り替え
-    if [[ `echo $1 | grep 'audit'` ]] ; then
+    if [[ `echo "$1" | grep 'audit'` ]] ; then
       tmux set -p window-active-style 'bg=#400000'
       tmux set -p window-style 'bg=#400000'
     else
