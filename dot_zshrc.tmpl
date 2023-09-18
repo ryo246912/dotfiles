@@ -5,6 +5,7 @@
 
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 export EDITOR=vim
+export VIMINIT='let $MYVIMRC="~/.config/vim/.vimrc" | source $MYVIMRC'
 
 # jobsの数を表示、%(1j.true.false):三項式、1j:jobs数が1以上でtrue
 number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
