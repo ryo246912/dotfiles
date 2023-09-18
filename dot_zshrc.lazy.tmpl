@@ -548,6 +548,13 @@ function ssh() {
 #--------------------------------------------------------------
 # other
 #--------------------------------------------------------------
+# historyの保存先
+export NODE_REPL_HISTORY="$HOME/.local/state/node/.node_repl_history"
+export SQLITE_HISTORY="$HOME/.local/state/sqlite/.sqlite_history"
+export MYSQL_HISTFILE="$HOME/.local/state/mysql/.mysql_history"
+export PSQL_HISTORY="$HOME/.local/state/psql/.psql_history"
+export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
+
 # pyenv setting
 #export PYENV_ROOT="$HOME/.pyenv"
 #export PATH="$PYENV_ROOT/bin:$PATH"

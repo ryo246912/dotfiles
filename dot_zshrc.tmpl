@@ -27,6 +27,8 @@ MAINPROMPT="${PYTHON_VIRTUAL_ENV}${directory}${datetime}${number_of_jobs}${exit_
 PROMPT="
 ${MAINPROMPT}"
 
+# zsh_historyの保存先
+export HISTFILE="$HOME/.local/state/zsh/.zsh_history"
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
 # ファイルに保存される履歴の件数
