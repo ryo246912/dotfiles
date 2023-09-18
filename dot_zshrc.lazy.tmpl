@@ -163,9 +163,13 @@ zinit wait lucid light-mode blockf for \
     @'sxyazi/yazi'
 
 # z #
+__z_atload() {
+    export _Z_DATA="$HOME/.local/state/z/.z"
+}
 zinit wait lucid light-mode blockf for \
     as"program" pick"z" \
     src"z.sh" cp"z.sh -> z" \
+    atload"__z_atload" \
     rupa/z
 
 {{ if eq .chezmoi.os "darwin" -}}
