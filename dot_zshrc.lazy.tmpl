@@ -1,7 +1,17 @@
 # cSpell:disable
 #--------------------------------------------------------------
-# alias
+# path , alias
 #--------------------------------------------------------------
+
+{{ if eq .chezmoi.os "darwin" -}}
+path=(
+  /opt/homebrew/opt/coreutils/libexec/gnubin(N)
+  /opt/homebrew/opt/findutils/libexec/gnubin(N)
+  /opt/homebrew/opt/grep/libexec/gnubin(N)
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin(N)
+  $path
+)
+{{- end }}
 
 alias gb='git branch'
 alias gf='git fetch -p'
