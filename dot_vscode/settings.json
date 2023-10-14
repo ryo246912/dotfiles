@@ -51,6 +51,8 @@
   // MacのNativeWindowで各ウィンドウをタブのように表示
   // "window.nativeTabs": true,
   "update.showReleaseNotes": false,
+  // 新しく開くウィンドウのサイズ指定
+  "window.newWindowDimensions": "maximized",
   "workbench.editor.splitInGroupLayout": "vertical",
   // タブを閉じたときに右タブにフォーカスする
   "workbench.editor.focusRecentEditorAfterClose": false,

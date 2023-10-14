@@ -21,7 +21,7 @@ finder:
 
 cheats:
   paths:
-    - ~/.navi/cheats
+    - ~/.config/navi/cheats
   # path: /path/to/some/dir # (DEPRECATED) equivalent to the --path option
 
 # search:

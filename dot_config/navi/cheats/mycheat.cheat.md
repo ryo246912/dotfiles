@@ -2,7 +2,7 @@
 % shortcut
 
 # my shortcut list
-cat ~/.shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
+cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
 ```
 ;--------------------------------------------------------------
 ; asdf

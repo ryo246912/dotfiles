@@ -5,6 +5,7 @@
 
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 export EDITOR=vim
+export VIMINIT='let $MYVIMRC="~/.config/vim/.vimrc" | source $MYVIMRC'
 
 # jobsの数を表示、%(1j.true.false):三項式、1j:jobs数が1以上でtrue
 number_of_jobs="%(1j.%F{208}(%f%F{226}%B%j%b%F{208})%f.)"
@@ -26,6 +27,8 @@ MAINPROMPT="${PYTHON_VIRTUAL_ENV}${directory}${datetime}${number_of_jobs}${exit_
 PROMPT="
 ${MAINPROMPT}"
 
+# zsh_historyの保存先
+export HISTFILE="$HOME/.local/state/zsh/.zsh_history"
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
 # ファイルに保存される履歴の件数
@@ -202,8 +205,8 @@ zle -N edit-command-line
 #--------------------------------------------------------------
 
 # launch tmux when start zsh
-if [ "$TERM" = "alacritty" ] && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-  tmux
+if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+  tmux attach || tmux
 fi
 
 {{ if eq .chezmoi.os "darwin" -}}

@@ -1,0 +1,159 @@
+[fonts]
+size = 14
+[fonts.regular]
+family = "FiraCode NF"
+
+# Perfomance
+#
+# Set WGPU rendering performance
+# High: Adapter that has the highest performance. This is often a discrete GPU.
+# Low: Adapter that uses the least possible power. This is often an integrated GPU.
+performance = "High"
+
+# Padding-x
+padding-x = 0
+
+# Option as Alt
+#
+# This config only works on MacOs.
+# Possible choices: 'both', 'left' and 'right'.
+option_as_alt = 'both'
+
+[window]
+width = 1200
+height = 800
+opacity = 1.0
+mode = "Maximized"
+
+# Navigation
+#
+# "mode" - Define navigation mode: CollapsedTab, BottomTab, TopTab, Breadcrumb.
+# "clickable" - Enable click on tabs to switch.
+# "use-current-path" - Use same path whenever a new tab is created.
+# "color-automation" - Set a specific color for the tab whenever a specific program is running.
+# "macos-hide-window-buttons" - (MacOS only) Hide window buttons
+#
+[navigation]
+clickable = true
+use-current-path = true
+macos-hide-window-buttons = true
+
+# Shell
+#
+# You can set `shell.program` to the path of your favorite shell, e.g. `/bin/fish`.
+# Entries in `shell.args` are passed unmodified as arguments to the shell.
+#
+# Default:
+#   - (macOS) user login shell
+#   - (Linux/BSD) user login shell
+#   - (Windows) powershell
+#
+shell = { program = "/bin/zsh", args = ["--login","-c 'tmux attach || tmux'"] }
+
+# Startup directory
+#
+# Directory the shell is started in. If this is unset the working
+# directory of the parent process will be used.
+#
+# This configuration only has effect if use-fork is disabled
+working_dir = "~"
+
+# Editor
+#
+# You can set your default editor to open configuration file
+editor = "vim"
+
+# Disable render when unfocused
+#
+# This property disable renderer processes while Rio is unfocused.
+disable-renderer-when-unfocused = false
+
+# Use fork
+#
+# Defaults for POSIX-based systems (Windows is not configurable):
+# MacOS: spawn processes
+# Linux/BSD: fork processes
+#
+use-fork = false
+
+# Colors
+# https://github.com/dracula/rio-terminal/blob/9ef402c48b5540f60397c478c89500415a235a3a/dracula.toml
+[colors]
+background       = '#191724'
+foreground       = '#ffffff'
+cursor           = '#ffffff'
+tabs             = '#808080'
+tabs-active      = '#feff00'
+
+# normal
+black            = '#000000'
+red              = '#fe0100'
+green            = '#33ff00'
+yellow           = '#feff00'
+blue             = '#0066ff'
+magenta          = '#cc00ff'
+cyan             = '#00ffff'
+white            = '#d0d0d0'
+
+# light
+light-black      = '#808080'
+light-red        = '#fe0100'
+light-green      = '#33ff00'
+light-yellow     = '#feff00'
+light-blue       = '#0066ff'
+light-magenta    = '#cc00ff'
+light-cyan       = '#00ffff'
+light-white      = '#d0d0d0'
+
+# Bindings
+# super = command
+[bindings]
+keys = [
+  { key = "d",           with = "super",             bytes = [2,37]}  , # ctrl + b → "(ペインを左右に分割)
+  { key = "d",           with = "super |Shift",      bytes = [2,34]}  , # ctrl + b → %(ペインを上下に分割)
+  { key = "c",           with = "super",             bytes = [2,91]}  , # ctrl + b → [(コピーモード)
+  { key = "e",           with = "super",             bytes = [2,80]}  , # ctrl + b → P(easymotion search、カスタム)
+  { key = "e",           with = "super | Shift",     bytes = [2,81]}  , # ctrl + b → Q(easymotion easycopy、カスタム)
+  { key = "f",           with = "super",             bytes = [2,27]}  , # ctrl + b → ctrl + [(コピーモード→検索、カスタム)
+  { key = "j",           with = "super",             bytes = [2,79]}  , # ctrl + b → O(mode切替→easy motion jump line、カスタム)
+  { key = "l",           with = "super",             bytes = [2,115]} , # ctrl + b → s(ペイン一覧表示)
+  { key = "l",           with = "super | Shift",     bytes = [2,119]} , # ctrl + b → w(ウィンドウ一覧表示)
+  { key = "o",           with = "super",             bytes = [2,82]}  , # ctrl + b → R(easymotion quickopen 、カスタム)
+  { key = "p",           with = "super",             bytes = [2,16]}  , # ctrl + b → ctrl + p(popup windowを起動、カスタム)
+  { key = "r",           with = "super",             bytes = [2,114]} , # ctrl + b → r(.tmux.confの再読込、カスタム)
+  { key = "s",           with = "super",             bytes = [2,101]} , # ctrl + b → e(synchronize-panesのON/OFF、カスタム)
+  { key = "r",           with = "super | Shift",     bytes = [2,18]}  , # ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+  { key = "s",           with = "super | Shift",     bytes = [2,19]}  , # ctrl + b → ctrl + s(tmux-resurrect、ウィンドウの保存)
+  { key = "t",           with = "super",             action = "None"} , # 既存 cmd + t キーバインドを無効にする
+  { key = "t",           with = "super",             bytes = [2,99]}  , # ctrl + b → c(ウィンドウの作成)
+  { key = "t",           with = "super | Shift",     action = "None"} , # cmd + shift + t(タブ作成)
+  { key = "w",           with = "super",             bytes = [2,120]} , # ctrl + b → x(ウィンドウの破棄)
+  { key = "w",           with = "super | Shift",     bytes = [2,100]} , # ctrl + b → d(ウィンドウのデタッチ)
+  { key = "z",           with = "super",             bytes = [2,122]} , # ctrl + b → z(ペインの一時拡大/縮小)
+  { key = "left",        with = "super",             bytes = [2,104]} , # ctrl + b → h(左のペインに移動、カスタム)
+  { key = "down",        with = "super",             bytes = [2,106]} , # ctrl + b → j(下のペインに移動、カスタム)
+  { key = "up",          with = "super",             bytes = [2,107]} , # ctrl + b → k(上のペインに移動、カスタム)
+  { key = "right",       with = "super",             bytes = [2,108]} , # ctrl + b → l(右のペインに移動、カスタム)
+  { key = "left",        with = "Command|Shift",     bytes = [2,8]}   , # ctrl + b → ctrl + h(ペインを左に広げる、カスタム)
+  { key = "down",        with = "Command|Shift",     bytes = [2,10]}  , # ctrl + b → ctrl + j(ペインを下に広げる、カスタム)
+  { key = "up",          with = "Command|Shift",     bytes = [2,11]}  , # ctrl + b → ctrl + k(ペインを上に広げる、カスタム)
+  { key = "right",       with = "Command|Shift",     bytes = [2,12]}  , # ctrl + b → ctrl + l(ペインを右に広げる、カスタム)
+  { key = "up",          with = "Command|Shift|Alt", bytes = [2,123]} , # ctrl + b → {(ペインを前に入れ替え)
+  { key = "down",        with = "Command|Shift|Alt", bytes = [2,125]} , # ctrl + b → }(ペインを後ろに入れ替え)
+  { key = "[",           with = "Command",           bytes = [2,9]}   , # ctrl + b → ctrl + i(前のペインに移動、カスタム)
+  { key = "]",           with = "Command",           bytes = [2,29]}  , # ctrl + b → ctrl + ](次のペインに移動、カスタム)
+  { key = "[",           with = "Command|Shift",     bytes = [2,112]} , # ctrl + b → p(前のウィンドウに移動)
+  { key = "]",           with = "Command|Shift",     bytes = [2,110]} , # ctrl + b → n(次のウィンドウに移動)
+  { key = "[",           with = "Command|Shift|Alt", bytes = [2,24]}  , # ctrl + b → ctrl + x(ウィンドウを前に入れ替え、カスタム)
+  { key = "]",           with = "Command|Shift|Alt", bytes = [2,25]}  , # ctrl + b → ctrl + y(ウィンドウを後ろに入れ替え、カスタム)
+  { key = "space",       with = "Command",           bytes = [2,32]}  , # ctrl + b → space(popup windowを起動、カスタム)
+  { key = "1",           with = "Command",           bytes = [2,49]}  , # ctrl + b → 1(ウィンドウ1に移動)
+  { key = "2",           with = "Command",           bytes = [2,50]}  , # ctrl + b → 2(ウィンドウ2に移動)
+  { key = "3",           with = "Command",           bytes = [2,51]}  , # ctrl + b → 3(ウィンドウ3に移動)
+  { key = "4",           with = "Command",           bytes = [2,52]}  , # ctrl + b → 4(ウィンドウ4に移動)
+  { key = "5",           with = "Command",           bytes = [2,53]}  , # ctrl + b → 5(ウィンドウ5に移動)
+  { key = "6",           with = "Command",           bytes = [2,54]}  , # ctrl + b → 6(ウィンドウ6に移動)
+  { key = "7",           with = "Command",           bytes = [2,55]}  , # ctrl + b → 7(ウィンドウ7に移動)
+  { key = "8",           with = "Command",           bytes = [2,56]}  , # ctrl + b → 8(ウィンドウ8に移動)
+  { key = "9",           with = "Command",           bytes = [2,57]}  , # ctrl + b → 9(ウィンドウ9に移動)
+]

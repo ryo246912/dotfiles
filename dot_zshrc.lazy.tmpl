@@ -1,7 +1,17 @@
 # cSpell:disable
 #--------------------------------------------------------------
-# alias
+# path , alias
 #--------------------------------------------------------------
+
+{{ if eq .chezmoi.os "darwin" -}}
+path=(
+  /opt/homebrew/opt/coreutils/libexec/gnubin(N)
+  /opt/homebrew/opt/findutils/libexec/gnubin(N)
+  /opt/homebrew/opt/grep/libexec/gnubin(N)
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin(N)
+  $path
+)
+{{- end }}
 
 alias gb='git branch'
 alias gf='git fetch -p'
@@ -41,6 +51,7 @@ alias nr='npm run'
 __asdf_atload() {
     export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
     export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
+    export ASDF_CONFIG_FILE="$HOME/.config/asdf/.asdfrc"
     export PATH="$ASDF_DATA_SHIMS:$ASDF_DATA_INSTALLS:$PATH"
 }
 zinit wait lucid light-mode blockf for \
@@ -51,7 +62,7 @@ zinit wait lucid light-mode blockf for \
 # atuin #
 __atuin_atload() {
     eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
-    export ATUIN_CONFIG_DIR="$HOME/.atuin"
+    export ATUIN_CONFIG_DIR="$HOME/.config/atuin"
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" rustup cargo"atuin" \
@@ -140,9 +151,13 @@ zinit wait lucid light-mode blockf for \
 
 # navi #
 # atload"eval $(navi widget zsh)" \
+__navi_atclone() {
+    ln -s ~/.config/navi/config.yaml "$(navi info config-path)"
+}
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
     sbin"navi" \
+    atclone"__navi_atclone" \
     denisidoro/navi
 
 # up #
@@ -151,11 +166,32 @@ zinit wait lucid light-mode blockf for \
     sbin"up-darwin -> up" \
     @'akavel/up'
 
-# z #
+# yazi #
 zinit wait lucid light-mode blockf for \
-    as"program" pick"z" \
-    src"z.sh" cp"z.sh -> z" \
-    rupa/z
+    from"gh-r" cargo"yazi" \
+    sbin"yazi* -> yazi" \
+    @'sxyazi/yazi'
+
+# z #
+#__z_atload() {
+#    export _Z_DATA="$HOME/.local/state/z/.z"
+#}
+#zinit wait lucid light-mode blockf for \
+#    as"program" pick"z" \
+#    src"z.sh" cp"z.sh -> z" \
+#    atload"__z_atload" \
+#    rupa/z
+
+# zoxide #
+__zoxide_atload() {
+    export _ZO_DATA_DIR="$HOME/.local/state/zoxide"
+    eval "$(zoxide init zsh)"
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"zoxide" \
+    atload"__zoxide_atload" \
+    @'ajeetdsouza/zoxide'
 
 {{ if eq .chezmoi.os "darwin" -}}
 # blueutil #
@@ -299,14 +335,14 @@ fnr() {
 }
 
 # fz - fuzzy z command
-fz() {
-  local res=$(z | sort -rn | cut -c 12- | fzf)
-  if [ -n "$res" ]; then
-      cd $res
-  else
-      return 1
-  fi
-}
+#fz() {
+#  local res=$(z | sort -rn | cut -c 12- | fzf)
+#  if [ -n "$res" ]; then
+#      cd $res
+#  else
+#      return 1
+#  fi
+#}
 
 #--------------------------------------------------------------
 # zsh widget
@@ -327,13 +363,26 @@ _nnn() {
 zle -N _nnn
 bindkey "^N" _nnn
 
+# ctrl + yでyazi起動
+_yazi() {
+  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" yazi
+}
+zle -N _yazi
+bindkey "^Y" _yazi
+
 # ctrl + gでtmux pop windowでnavi widgetを呼び出し
 _custom_navi_widget() {
-  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E \
-  'window=$(tmux display -p -F "#S:#I.#P") && \
-  export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
-  navi --print | tr -d "\n" | tmux load-buffer -b tmp - && tmux paste-buffer -drp -t $window -b tmp'
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    window=$(tmux display -p -F "#S:#I.#P") && \
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" && \
+    tmux paste-buffer -drp -t $window -b tmp \
+  '
 }
 zle -N _custom_navi_widget
 bindkey '^G' _custom_navi_widget
@@ -343,7 +392,11 @@ _navi_insert_pipe_snippet() {
   local word
   tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
     export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    navi --print --query "shell:pipe-command " | tr -d "\n" | tmux load-buffer -b tmp - \
+    TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" \
   '
   if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
     word=$(tmux show-buffer -b tmp)
@@ -368,7 +421,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo $TMP_BUFFER | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e 's/  */ /g') #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -378,7 +431,7 @@ bindkey '^Q^A' _delete_space
 # ctrl + q → ctrl + zでコマンド履歴を選択して出力
 _fzf_insert_command() {
   local num command line array1 array2 word
-  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
   if [ -n "$command" ] ; then
     BUFFER="$BUFFER $command"
     CURSOR=$#BUFFER #カーソルを末尾に移動
@@ -391,15 +444,15 @@ bindkey '^Q^Z' _fzf_insert_command
 # ctrl + q → ctrl + xでコマンド履歴からwordを選択して出力
 _fzf_insert_command_word() {
   local num command line array1 array2 word
-  command=$(cat <(echo $BUFFER) <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
   if [ -n "$command" ] ; then
-    for i in $(seq $(echo $command | wc -m)) ; do
+    for i in $(seq $(echo "$command" | wc -m)) ; do
       array1+=( "$(cut -c $i- <(echo $command))\n" )
     done
   fi
   if [ -n "${array1[*]}" ] ; then
     line=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo $line | wc -m)
+    num=$(echo "$line" | wc -m)
     for j in $(seq $num) ; do
       array2+=( "$(cut -c -$((num-j+1)) <(echo $line))\n" )
     done
@@ -408,7 +461,7 @@ _fzf_insert_command_word() {
     word=$(echo -e "${array2[@]}" | fzf)
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
     word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
-    word=$(echo $word | tr -d '\n')
+    word=$(echo "$word" | tr -d '\n')
   fi
   if [ -n "$word" ] ; then
     BUFFER="$BUFFER $word"
@@ -424,13 +477,13 @@ _copy_word() {
   local num line1 line2 array1 array2 word
   line1=$(tmux capture-pane -p | fzf)
   if [ -n "$line1" ] ; then
-    for i in $(seq $(echo $line1 | wc -m)) ; do
+    for i in $(seq $(echo "$line1" | wc -m)) ; do
       array1+=( "$(cut -c $i- <(echo $line1))\n" )
     done
   fi
   if [ -n "${array1[*]}" ] ; then
     line2=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo $line2 | wc -m)
+    num=$(echo "$line2" | wc -m)
     for j in $(seq $num) ; do
       array2+=( "$(cut -c -$((num-j+1)) <(echo $line2))\n" )
     done
@@ -441,17 +494,28 @@ _copy_word() {
     word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
   fi
   if [ -n "$word" ] ; then
-    echo $word | tr -d '\n' | cb
+    echo "$word" | tr -d '\n' | cb
   fi
   zle redisplay
 }
 zle -N _copy_word
 bindkey '^Q^W' _copy_word
 
-# ctrl + q → ctrl + gでnaviのコマンドをクリップボードにコピー
+# ctrl + q → ctrl + gでtmux pop windowでnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
-  navi --print | cb
-  zle redisplay
+  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \ #後方の空白文字を削除
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \ #前方の空白文字を削除
+    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \ #複数の連続した空白を1つにする
+    tmux set-buffer -b tmp "$TMP_BUFFER" \
+  '
+  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+    tmux show-buffer -b tmp | cb
+  fi && \
+  tmux delete-buffer -b tmp
 }
 zle -N _navi_copy_snippet
 bindkey '^Q^G' _navi_copy_snippet
@@ -489,7 +553,7 @@ function ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
     # 接続先ホスト名に応じて背景色切り替え
-    if [[ `echo $1 | grep 'audit'` ]] ; then
+    if [[ `echo "$1" | grep 'audit'` ]] ; then
       tmux set -p window-active-style 'bg=#400000'
       tmux set -p window-style 'bg=#400000'
     else
@@ -509,6 +573,13 @@ function ssh() {
 #--------------------------------------------------------------
 # other
 #--------------------------------------------------------------
+# historyの保存先
+export NODE_REPL_HISTORY="$HOME/.local/state/node/.node_repl_history"
+export SQLITE_HISTORY="$HOME/.local/state/sqlite/.sqlite_history"
+export MYSQL_HISTFILE="$HOME/.local/state/mysql/.mysql_history"
+export PSQL_HISTORY="$HOME/.local/state/psql/.psql_history"
+export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
+
 # pyenv setting
 #export PYENV_ROOT="$HOME/.pyenv"
 #export PATH="$PYENV_ROOT/bin:$PATH"

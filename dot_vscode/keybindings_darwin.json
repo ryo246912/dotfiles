@@ -293,7 +293,8 @@
   // プレビューモードを解除
   {
     "key": "cmd+space",
-    "command": "workbench.action.keepEditor"
+    "command": "workbench.action.keepEditor",
+    "when": "!activeEditorIsNotPreview"
   },
   {
     "key": "cmd+k enter",
@@ -489,6 +490,18 @@
     "key": "alt+cmd+right",
     "command": "editor.action.smartSelect.expand",
     "when": "editorTextFocus"
+  },
+  // ダブとピン止めする
+  {
+    "key": "cmd+space",
+    "command": "workbench.action.pinEditor",
+    "when": "!activeEditorIsPinned"
+  },
+  // ダブのピン止めを解除する
+  {
+    "key": "cmd+space",
+    "command": "workbench.action.unpinEditor",
+    "when": "activeEditorIsPinned"
   },
   ///////////////////////////////////////////////
   // 拡張機能
