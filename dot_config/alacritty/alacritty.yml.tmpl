@@ -45,6 +45,7 @@ colors:
 
 window:
   opacity: 0.95
+  startup_mode: Maximized
   decorations: None #windowバーを非表示
 
 font:
@@ -52,9 +53,17 @@ font:
     family: 'FiraCode NF'
   bold:
     family: 'FiraCode NF'
+
+shell:
+  program: /bin/zsh
+#  args:
+#    - --login
+#    - -c
+#    - "tmux attach || tmux"
+
 {{ if eq .chezmoi.os "darwin" -}}
 # macOS
-alt_send_esc: false # altキーでEsc(^[)が押されないようにする、\入力のため
+# alt_send_esc: false # altキーでEsc(^[)が押されないようにする、\入力のため
 
 # https://github.com/alacritty/alacritty/blob/5a728195048aa177c69bf48c1e0235a0b24859c3/alacritty.yml
 key_bindings:
