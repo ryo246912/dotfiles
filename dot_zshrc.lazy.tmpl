@@ -173,14 +173,25 @@ zinit wait lucid light-mode blockf for \
     @'sxyazi/yazi'
 
 # z #
-__z_atload() {
-    export _Z_DATA="$HOME/.local/state/z/.z"
+#__z_atload() {
+#    export _Z_DATA="$HOME/.local/state/z/.z"
+#}
+#zinit wait lucid light-mode blockf for \
+#    as"program" pick"z" \
+#    src"z.sh" cp"z.sh -> z" \
+#    atload"__z_atload" \
+#    rupa/z
+
+# zoxide #
+__zoxide_atload() {
+    export _ZO_DATA_DIR="$HOME/.local/state/zoxide"
+    eval "$(zoxide init zsh)"
 }
 zinit wait lucid light-mode blockf for \
-    as"program" pick"z" \
-    src"z.sh" cp"z.sh -> z" \
-    atload"__z_atload" \
-    rupa/z
+    from"gh-r" \
+    sbin"zoxide" \
+    atload"__zoxide_atload" \
+    @'ajeetdsouza/zoxide'
 
 {{ if eq .chezmoi.os "darwin" -}}
 # blueutil #
@@ -324,14 +335,14 @@ fnr() {
 }
 
 # fz - fuzzy z command
-fz() {
-  local res=$(z | sort -rn | cut -c 12- | fzf)
-  if [ -n "$res" ]; then
-      cd $res
-  else
-      return 1
-  fi
-}
+#fz() {
+#  local res=$(z | sort -rn | cut -c 12- | fzf)
+#  if [ -n "$res" ]; then
+#      cd $res
+#  else
+#      return 1
+#  fi
+#}
 
 #--------------------------------------------------------------
 # zsh widget
