@@ -138,6 +138,14 @@ zinit wait lucid light-mode blockf for \
     atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" \
     @'cli/cli'
 
+# gh-extension(gh-poi) #
+{{ if eq .chezmoi.os "darwin" -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"darwin* -> gh-poi" \
+    @'seachicken/gh-poi'
+{{- end }}
+
 # git-jump #
 zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
@@ -161,10 +169,12 @@ zinit wait lucid light-mode blockf for \
     denisidoro/navi
 
 # up #
+{{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"up-darwin -> up" \
     @'akavel/up'
+{{- end }}
 
 # yazi #
 zinit wait lucid light-mode blockf for \
