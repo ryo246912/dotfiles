@@ -591,6 +591,11 @@ export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 #eval "$(nodenv init -)"
 #export PATH="$(npm root -g):$PATH"
 
+{{ if eq .chezmoi.os "darwin" -}}
+# GokuRakuJoudo(Karabiner-Elements)の設定
+export GOKU_EDN_CONFIG_FILE="$HOME/.config/karabiner/karabiner.edn"
+{{- end }}
+
 # .zshrc.secretの読込
 ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
 if [ -e "${ZSH_SECRET_CONF}" ]; then
