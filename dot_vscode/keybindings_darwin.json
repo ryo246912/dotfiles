@@ -495,13 +495,13 @@
   {
     "key": "cmd+space",
     "command": "workbench.action.pinEditor",
-    "when": "!activeEditorIsPinned"
+    "when": "activeEditorIsNotPreview && !activeEditorIsPinned"
   },
   // ダブのピン止めを解除する
   {
     "key": "cmd+space",
     "command": "workbench.action.unpinEditor",
-    "when": "activeEditorIsPinned"
+    "when": "activeEditorIsNotPreview && activeEditorIsPinned"
   },
   ///////////////////////////////////////////////
   // 拡張機能
