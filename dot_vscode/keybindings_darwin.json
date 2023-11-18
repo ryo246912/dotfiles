@@ -36,8 +36,8 @@
   // cmd + shift + eでエクスプローラにフォーカス(エディタ側にはフォーカスしない)
   {
     "key": "shift+cmd+e",
-    "command": "workbench.files.action.focusFilesExplorer",
-    "when": "viewContainer.workbench.view.explorer.enabled"
+    "command": "workbench.files.action.focusFilesExplorer"
+    // "when": "viewContainer.workbench.view.explorer.enabled" //フォーカスが効かなくなったのでwhen部分をOFFにする
   },
   {
     "key": "shift+cmd+e",
