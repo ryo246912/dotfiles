@@ -801,51 +801,6 @@ npm prune
 # sort package-json
 npx sort-package-json
 ```
-;--------------------------------------------------------------
-; OSX : macOS
-;--------------------------------------------------------------
-```sh
-% brew
-
-# list [--cask|--formula][-1:one column]
-brew list --versions | vim -
-
-# (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
-brew install --dry-run <app_name>
-
-# upgrade app
-brew upgrade <app>
-
-# app dependence [--tree:][ex:brew deps --tree ruby]
-brew deps --tree <app_name>
-
-# display install formula [ex:bat -l rb $(brew edit --print-path ruby)]
-bat -l rb $(brew edit --print-path <app_name>)
-
-# open app homegage [ex:brew home colordiff]
-brew home <app_name>
-```
-
-```sh
-% blueutil
-
-# turn on-off bluetooth
-blueutil --power <on_off>
-
-# connect device
-blueutil --power 1 && blueutil --connect <device>
-
-# disconnect device
-blueutil --disconnect <device> && blueutil --power 0
-
-# connect/disconnect device
-blueutil --paired --format json-pretty
-```
-$ on_off: echo -e "1\n0"
-$ device: blueutil --paired --format json-pretty \
-  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
 
 ;--------------------------------------------------------------
 ; python
@@ -1163,34 +1118,105 @@ $ extension: echo -e "tar.gz\ntgz"
 ;--------------------------------------------------------------
 
 ```sh
+% brew
+
+# list [--cask,--formula][-1:one column]
+brew list --versions<_--filter> | vim -
+
+# install app [-n:dry-run][app:formula,user/repo/formula][ex:brew install -n fzf]
+brew install<_--dry-run><_--cask> <app_name>
+
+# upgrade app
+brew upgrade<_--cask> <app>
+
+# uninstall unnecessary dependence
+brew autoremove
+
+# app dependence [--tree:][--installed:list dependencies currently installed][ex:brew deps --tree ruby]
+brew deps --installed --tree <app_name>
+
+# display install formula [ex:bat -l rb $(brew edit --print-path ruby)]
+bat -l rb $(brew edit --print-path <app_name>)
+
+# open app homegage [ex:brew home colordiff]
+brew home <app_name>
+```
+$ _--filter: echo -e "\n --formula\n --cask"
+$ _--dry-run: echo -e "\n --dry-run"
+$ _--cask: echo -e "\n --cask"
+;$
+
+```sh
+% blueutil
+
+# turn on-off bluetooth
+blueutil --power <on_off>
+
+# connect device
+blueutil --power 1 && blueutil --connect <device>
+
+# disconnect device
+blueutil --disconnect <device> && blueutil --power 0
+
+# connect/disconnect device
+blueutil --paired --format json-pretty
+```
+$ on_off: echo -e "1\n0"
+$ device: blueutil --paired --format json-pretty \
+  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+
+```sh
 % shell:macOS
 
-# display system defaults
+# jot(BSD) : [-r:random]
+jot -r 1
+
+# display mac commnad [-r:recursive]
+zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | vim -
+
+# defaults : display system defaults
 defaults read | vim -
 
-# display running application
+# defaults : kill Finder
+defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
+
+# lsappinfo : display running application
 lsappinfo list | vim -
 
-# display macOS version
+# networksetup : display network devices
+networksetup -listallhardwareports
+
+# networksetup : display connected network list
+networksetup -listpreferredwirelessnetworks en0
+
+# networksetup : toggle wifi power on/off
+networksetup -setairportpower en0 on
+
+# sw_vers : display macOS version
 sw_vers
 
-# display system profile
+# system_profiler : display system profile
 system_profiler <datatype>
-
-# kill Finder
-defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
 
 # delete cache memory
 sudo purge
 
 # open app(macOS)
 open-cli <url_or_file> -- <app>
+
+# t-rec : record to gif [-q:quiet][-w:rec window]
+t-rec -q -w <window> -o ~/private/gif/$(date "+%y%m%d-%H%M%S")_<name>
 ```
 $ datatype : system_profiler -listDataTypes \
   --- --multi --expand
 $ app : system_profiler "SPApplicationsDataType" -json \
   | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
   | column -ts $'\t' \
+  --- --headers 1 --column 2
+$ window: t-rec --ls-win \
+  | column -ts $'|' \
   --- --headers 1 --column 2
 
 ```sh
