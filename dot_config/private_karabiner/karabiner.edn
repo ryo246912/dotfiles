@@ -32,23 +32,23 @@
                 :vscode ["^com\\.microsoft\\.VSCode$"]}
  :main [{:des "japanese_kana mode"
          :rules [[:japanese_kana ["japanese_kana mode" 1] nil {:afterup ["japanese_kana mode" 0] :alone :japanese_kana}]
-                 [:t :!OSleft_arrow ["japanese_kana mode" 1]] ;; option + shift + ←
-                 ;; [:t :!Tf2 ["japanese_kana mode" 1]] ;; ctrl + f2
+                 ;;  [:t :!OSleft_arrow ["japanese_kana mode" 1]] ;; option + shift + ←
+                 [:t :!Tf2 ["japanese_kana mode" 1]] ;; ctrl + f2
                  [:y :!CSclose_bracket ["japanese_kana mode" 1]] ;; shift + cmd + [
                  [:u :page_down ["japanese_kana mode" 1]]
                  [:i :page_up ["japanese_kana mode" 1]]
                  [:o :!CSbackslash ["japanese_kana mode" 1]] ;; shift + cmd + ]
-                 [:p :!OSright_arrow ["japanese_kana mode" 1]]  ;; option + shift + →
-                 ;; [:p :!CStab ["japanese_kana mode" 1]]  ;; cmd + shift + tab
+                 ;;  [:p :!OSright_arrow ["japanese_kana mode" 1]]  ;; option + shift + →
+                 [:p :!CStab ["japanese_kana mode" 1]]  ;; cmd + shift + tab
                  [:open_bracket :!CStab ["japanese_kana mode" 1]]  ;; cmd + shift + tab
-                 ;; [:g :!Tf3 ["japanese_kana mode" 1]] ;; ctrl + f3
-                 [:g :!Oleft_arrow ["japanese_kana mode" 1]] ;; option + ←
+                 [:g :!Tf3 ["japanese_kana mode" 1]] ;; ctrl + f3
+                 ;; [:g :!Oleft_arrow ["japanese_kana mode" 1]] ;; option + ←
                  [:h :left_arrow ["japanese_kana mode" 1]]
                  [:j :down_arrow ["japanese_kana mode" 1]]
                  [:k :up_arrow ["japanese_kana mode" 1]]
                  [:l :right_arrow ["japanese_kana mode" 1]]
-                 [:semicolon :!Oright_arrow ["japanese_kana mode" 1]]  ;; option + →
-                 ;; [:semicolon :!Ctab ["japanese_kana mode" 1]]  ;; cmd + tab
+                 ;; [:semicolon :!Oright_arrow ["japanese_kana mode" 1]]  ;; option + →
+                 [:semicolon :!Ctab ["japanese_kana mode" 1]]  ;; cmd + tab
                  [:quote :!Ctab ["japanese_kana mode" 1]]  ;; cmd + tab
                  [:b :escape ["japanese_kana mode" 1]]
                  [:n :delete_or_backspace ["japanese_kana mode" 1]]
@@ -63,10 +63,15 @@
                  [:right_arrow :!Tright_arrow ["japanese_kana mode" 1]] ;; ctrl + →
                  [:right_command :japanese_eisuu [:ja ["japanese_kana mode" 1]]]
                  [:right_command :japanese_kana [:en ["japanese_kana mode" 1]]]]}
+        {:des "slack"
+         :rules [[:!CSf [:!Cf :spacebar :f :r :o :m :quote :open_bracket] [:slack]]
+                 [:!CTd [:!Ct :d :e :v] [:slack]]
+                 [:!CTl [:!Ct :l :o :g] [:slack]]
+                 [:!CTt [:!Ct :t :i :m :e :s] [:slack]]]}
         {:des "left_option mode"
          :rules [:left-option-mode
                  [:a [:open "Arc"]]
-                ;;  [:c [:open "Google Chrome"]]
+                 ;;  [:c [:open "Google Chrome"]]
                  [:d [:open "DBeaver"]]
                  [:f [:open "Finder"]]
                  [:g [:open "Gather"]]
@@ -82,7 +87,7 @@
                  [:right_command [["modifier status" 2] [:notification "modifier=commnad+shift"]] [["spacebar mode" 1] ["modifier status" 1]]]
                  [:right_command [["modifier status" 0] [:notification "modifier=none"]] [["spacebar mode" 1] ["modifier status" 2]]]
                  [:japanese_eisuu [["modifier status" 0] [:notification "modifier=none"]] ["spacebar mode" 1]]
-                 ;; "modifier + 矢印"
+                 ;; "modifier status 1"(command+矢印)
                  [:left_arrow :!Oleft_arrow [["spacebar mode" 0] ["modifier status" 1]]]
                  [:right_arrow :!Oright_arrow [["spacebar mode" 0] ["modifier status" 1]]]
                  ;; "modifier status 1"(command)
@@ -244,4 +249,3 @@
                  [:comma [:!CSc ["modifier status" 0]] [["spacebar mode" 1] ["modifier status" 2]]]
                  [:period [:!CSx ["modifier status" 0]] [["spacebar mode" 1] ["modifier status" 2]]]
                  [:slash [:!CSz ["modifier status" 0]] [["spacebar mode" 1] ["modifier status" 2]]]]}]}
-
