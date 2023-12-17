@@ -250,6 +250,9 @@ git show $(git log -n $((<num>+1)) --pretty=format:"%h" HEAD^...HEAD | tail -n 1
 # cherry-pick
 git cherry-pick -n <cherry_commit>
 
+# cherry-pick multi commits [two dots diff:(cherry-pick commit1)^..(cherry-pick commit2)]
+git cherry-pick <commit1>^..<commit2>
+
 # cherry-pick file
 git checkout <commit1> <diff_filename>
 
@@ -323,7 +326,7 @@ git branch --merged origin/master --format='%(refname:short) %09 %(committername
 git push origin :<branch>
 
 # rebase
-git rebase --autosquash -i <commit1>
+git rebase --autosquash --autostash -i <commit1>
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP "<regex>" <grep_commit> -- <dir>
@@ -365,16 +368,16 @@ git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(au
 git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # stash working file
-git commit -m 'commit staging' && git stash --message "<message>" -- <working_filename> && git reset --soft HEAD^
+git commit -m 'commit staging' && git stash --include-untracked --message "<message>" -- <working_filename> && git reset --soft HEAD^
 
 # stash file
-git stash --message "<message>" -- <working_filename>
+git stash --include-untracked --message "<message>" -- <working_filename>
 
 # list stash
 git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
 
-# show stash [-p:patch]
-git stash show <stash_num> -p
+# show stash [-p:patch][-u:--include-untracked]
+git stash show <stash_num> -u -p
 
 # pop stash
 git stash pop <stash_num>
@@ -384,6 +387,12 @@ git checkout <stash_num> <stash_file>
 
 # cherry-pick stash
 git cherry-pick -n <stash_num>
+
+# bisect start [ex:git bisect start <bad-commit> <good-commit>]
+git bisect start <commit1> <commit2>
+
+# bisect show now commit
+git bisect view
 
 # clone [--depth:shallow clone][--filter=blob:none ;blob-less=commit&tree only][--filter=tree:0 ;tree-less=commit only]
 git clone<_shallow-option> <repo_url>
@@ -464,9 +473,9 @@ $ contributor: git log --format="%cn:%ce" \
 $ dir: git ls-tree <grep_commit> --name-only -dr
 $ stash_num: git stash list \
   --- --column 1 --delimiter : \
-  --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
+  --preview "git stash show {1} -u ; git stash show {1} -up | delta --no-gitconfig"
 $ stash_file: echo . && \
-  git stash show --name-only <stash_num> \
+  git stash show --name-only -u <stash_num> \
   --- --multi --expand
 $ modified_files: echo . && \
   git ls-files -m \
