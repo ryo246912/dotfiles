@@ -1,14 +1,12 @@
+# https://github.com/raphamorim/rio/blob/main/CHANGELOG.md
 [fonts]
 size = 14
 [fonts.regular]
 family = "FiraCode NF"
 
-# Perfomance
-#
-# Set WGPU rendering performance
-# High: Adapter that has the highest performance. This is often a discrete GPU.
-# Low: Adapter that uses the least possible power. This is often an integrated GPU.
+[renderer]
 performance = "High"
+backend = "Automatic"
 
 # Padding-x
 padding-x = 0
@@ -23,7 +21,8 @@ option_as_alt = 'both'
 width = 1200
 height = 800
 opacity = 1.0
-mode = "Maximized"
+# mode = "Maximized"
+mode = "Fullscreen"
 
 # Navigation
 #
@@ -31,12 +30,10 @@ mode = "Maximized"
 # "clickable" - Enable click on tabs to switch.
 # "use-current-path" - Use same path whenever a new tab is created.
 # "color-automation" - Set a specific color for the tab whenever a specific program is running.
-# "macos-hide-window-buttons" - (MacOS only) Hide window buttons
 #
 [navigation]
 clickable = true
 use-current-path = true
-macos-hide-window-buttons = true
 
 # Shell
 #
@@ -112,10 +109,11 @@ keys = [
   { key = "d",           with = "super",             bytes = [2,37]}  , # ctrl + b → "(ペインを左右に分割)
   { key = "d",           with = "super |Shift",      bytes = [2,34]}  , # ctrl + b → %(ペインを上下に分割)
   { key = "c",           with = "super",             bytes = [2,91]}  , # ctrl + b → [(コピーモード)
-  { key = "e",           with = "super",             bytes = [2,80]}  , # ctrl + b → P(easymotion search、カスタム)
+  # { key = "e",           with = "super",             bytes = [2,80]}  , # ctrl + b → P(easymotion search、カスタム)
+  { key = "e",           with = "super",             bytes = [2,32]}  , # ctrl + b → space(tmux-thumbs、カスタム)
   { key = "e",           with = "super | Shift",     bytes = [2,81]}  , # ctrl + b → Q(easymotion easycopy、カスタム)
   { key = "f",           with = "super",             bytes = [2,27]}  , # ctrl + b → ctrl + [(コピーモード→検索、カスタム)
-  { key = "j",           with = "super",             bytes = [2,79]}  , # ctrl + b → O(mode切替→easy motion jump line、カスタム)
+  # { key = "j",           with = "super",             bytes = [2,79]}  , # ctrl + b → O(mode切替→easy motion jump line、カスタム)
   { key = "l",           with = "super",             bytes = [2,115]} , # ctrl + b → s(ペイン一覧表示)
   { key = "l",           with = "super | Shift",     bytes = [2,119]} , # ctrl + b → w(ウィンドウ一覧表示)
   { key = "o",           with = "super",             bytes = [2,82]}  , # ctrl + b → R(easymotion quickopen 、カスタム)
@@ -146,7 +144,7 @@ keys = [
   { key = "]",           with = "Command|Shift",     bytes = [2,110]} , # ctrl + b → n(次のウィンドウに移動)
   { key = "[",           with = "Command|Shift|Alt", bytes = [2,24]}  , # ctrl + b → ctrl + x(ウィンドウを前に入れ替え、カスタム)
   { key = "]",           with = "Command|Shift|Alt", bytes = [2,25]}  , # ctrl + b → ctrl + y(ウィンドウを後ろに入れ替え、カスタム)
-  { key = "space",       with = "Command",           bytes = [2,32]}  , # ctrl + b → space(popup windowを起動、カスタム)
+  # { key = "space",       with = "Command",           bytes = [2,32]}  , # ctrl + b → space(popup windowを起動、カスタム)
   { key = "1",           with = "Command",           bytes = [2,49]}  , # ctrl + b → 1(ウィンドウ1に移動)
   { key = "2",           with = "Command",           bytes = [2,50]}  , # ctrl + b → 2(ウィンドウ2に移動)
   { key = "3",           with = "Command",           bytes = [2,51]}  , # ctrl + b → 3(ウィンドウ3に移動)
