@@ -217,10 +217,12 @@ VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
 VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
 VSCode,cmd + [],-,空白行へ上下移動 ※カスタム
 VSCode,cmd + ↑↓,-,先頭/末尾に移動
+VSCode,cmd + ↑↓,-,入力コントロールと結果の間を移動
 VSCode,cmd + .,-,(マークダウン)URLペースト時のコントロールを選択
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + j,-,(Jumpy)選択ラインに移動 ※カスタム
+VSCode,cmd + ctrl + ↑↓,-,(metaGo)1行上下選択 ※カスタム
 VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
 VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
 VSCode,cmd + shift + d,-,[diff editor]sidebyside表示の切り替え ※カスタム
@@ -258,6 +260,7 @@ VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
 VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
 VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + j,-,閉じタグをすべて開く
+VSCode,cmd + k → cmd + m,-,EditorGroupを最大化する(toggleMaximizeEditorGroup)
 VSCode,cmd + k → cmd + [,-,再帰的に折りたたむ
 VSCode,cmd + k → cmd + ],-,再起的に展開する
 VSCode,option + b,-,(gitlens)Git Blame表示

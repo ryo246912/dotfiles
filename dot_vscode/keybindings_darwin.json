@@ -30,6 +30,11 @@
     "key": "cmd+e",
     "command": "-actions.findWithSelection"
   },
+  {
+    "key": "cmd+e",
+    "command": "-editor.action.toggleScreenReaderAccessibilityMode",
+    "when": "accessibilityHelpIsShown"
+  },
   ///////////////////////////////////////////////
   // 通常設定
   ///////////////////////////////////////////////
@@ -643,6 +648,18 @@
     "key": "alt+home",
     "command": "-metaGo.gotoEmptyLineUp",
     "when": "editorTextFocus"
+  },
+  // (metaGo)1行下をセレクト
+  {
+    "key": "ctrl+cmd+down",
+    "command": "metaGo.selectLineDown",
+    "when": "textInputFocus"
+  },
+  // (metaGo)1行上をセレクト
+  {
+    "key": "ctrl+cmd+up",
+    "command": "metaGo.selectLineUp",
+    "when": "textInputFocus"
   },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {
