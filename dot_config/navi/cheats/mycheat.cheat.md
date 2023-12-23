@@ -758,15 +758,6 @@ $ event: echo -e "push\npull_request\nissues"
 $ workflow: find .github/workflows
 
 ;--------------------------------------------------------------
-; mySQL
-;--------------------------------------------------------------
-```sh
-% mySQL
-
-# login [-u:user][-p:database]
-echo -n "mysql -u <user> -p <database>" | cb
-```
-;--------------------------------------------------------------
 ; node
 ;--------------------------------------------------------------
 ```sh
@@ -786,7 +777,7 @@ nodenv install <version>
 % npm
 
 # display bin directory [ex: $(npm bin)/cspell]
-npm bin
+$(npm bin)<command>
 
 # open package files [ex:npm edit axios]
 npm edit <package>
@@ -832,6 +823,7 @@ pyenv install --list | vim -
 # pyenv install version
 pyenv install <version>
 ```
+
 ;--------------------------------------------------------------
 ; shell (pipe-command)
 ;--------------------------------------------------------------
@@ -868,14 +860,26 @@ column -ts $'\t'
 # column : csv to table
 column -ts,
 
+# command : exec not user-defined command(not alias&function)[-v:display command path]
+command <command>
+
+# command : exec not alias command(not alias)[ex:"ls"]
+"<command>"
+
 # cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
 cut -<cb> <cut_list>
 
 # cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
 cut -d "<separater>" -f <cut_no>
 
+# date : ["+":format]
+date "+%y/%m/%d %H:%M:%S"
+
 # dirname : [ex:dirname $(which dirname)]
 dirname <path>
+
+# fx [-m:multi select]
+fx
 
 # fzf [-m:multi select]
 fzf
@@ -904,11 +908,17 @@ head -n <num>
 # jq : [-r:raw output]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
 
-# sed : replace [-e:multi command][ex:sed 's| |!|'][ex:sed -e 1d -e '$ s/$/\n/']
-sed -e 's/<before>/<after>/g'
+# sed : replace [-e:multi command][ex:sed -e 1d -e '$ s/$/\n/'][regex:.|[a-z]|[^0-9]|.*][ex:sed 's| |!|']
+sed -e 's/<regex>/<after>/g'
+
+# sed : add [-e:multi command][symbol:^=head,$=tail]
+sed -e 's/<symbol>/<after>/g'
+
+# sed : delete [-e:multi command][regex:^$=line,]
+sed -e 's/<regex>/<after>/g'
 
 # sed : extract word [-r:regex \(\) -> ()][¥1:first()][&:word] [ex:sed -r 's/.*github.com.(.*).git/\1/']
-sed -r 's/<before>/\1/'
+sed -r 's/<regex>/\1/'
 
 # sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
 sed -n <start>,<end>p
@@ -955,8 +965,17 @@ xargs -I % <command> %
 # redirect : redirect error output(2>) to null [ex:find . 2> /dev/null]
 2> /dev/null
 
+# redirect : redirect std output(1>) to null & error output(2>) to std output
+> /dev/null 2>&1
+
+# redirect : redirect std output(1>) to null & error output(2>) to pipe
+(<command> > /dev/null) 2>&1 |
+
 # redirect : merge error output(2>) to std output(&1) [ex:ls > file 2>&1]
 2>&1
+
+# redirect : here string (echo string pipe)
+<<< "<string>"
 
 ```
 
@@ -965,6 +984,7 @@ $ no2: echo -e "1\n(NF-1)\nNF"
 $ cb: echo -e "c\nb"
 $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 $ line_output_option: echo -e "A\nB\nC"
+$ symbol: echo -e "^\n$"
 ;$
 
 ;--------------------------------------------------------------
@@ -975,6 +995,9 @@ $ line_output_option: echo -e "A\nB\nC"
 
 # ssh : login by .ssh/config [-T:config HOST][-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
 ssh -AT <HOST>
+
+# ssh : locale [SendEnv LANG LC_*:take over local locale]
+vim /etc/ssh/ssh_config
 
 # ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
 ssh-add
@@ -1026,7 +1049,7 @@ cal <month_year>
 # cat : concatenate command output(process substitution)
 cat <(<command1>) <(<command2>)
 
-# cat : output file(hear document)
+# cat : output file(here document)
 cat << EOF > <filename>
 ```
 ```sh
@@ -1039,14 +1062,17 @@ curl -sI '<url>' -H '<header>'
 # curl : POST [-X:request method][-d:post data ex: -d 'key=value&key2=value2']
 curl -X 'POST' '<url>' -H '<header>' -d '<data>'
 
-# chsh : change shell
-chsh -s $(which zsh)
+# chsh : change shell [ex:chsh -s $(which zsh)]
+chsh -s <shells>
 
 # echo args[$@:args(array)][$*:args(string)]
 echo $* $@
 
 # echo exit status
 echo $?
+
+# echo $path
+echo $PATH | sed -e 's/:/\n/g'
 
 # df : disk free [--total:linux only][-h:human-readable]
 df -h<_--total>
@@ -1087,6 +1113,9 @@ ln -s <file> <dir>
 # lsof(=list open files) : display file,pid,user[-i:port]
 lsof -i:<port>
 
+# ping : [-c <num>:ping count][-w:ping while][ex:ping www.google.co.jp]
+ping <address>
+
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
 ps axu | vim -
 
@@ -1113,15 +1142,93 @@ type -a <command>
 
 # unset : unset shell variable
 unset <var>
-```
 
+# watch : [-e:exit if error][-d:emphasis diff][-t:no title][-n:exec timespan(s)]
+watch -n <second> -edt '<command>'
+
+# watch :
+watch -edt '<command> ; ! echo $?'
+```
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
+$ shells: cat /etc/shells | sed 1,4d
 ;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
 ;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
 $ extension: echo -e "tar.gz\ntgz"
 ;$
+
+```sh
+% shell:bash
+
+# show bindkey
+bind | vim -
+
+# var : shell current process
+echo $$
+
+# var : shell parent process
+echo $PPID
+
+# var : pipestatus
+echo ${PIPESTATUS[@]}
+
+# show shell option[i:interactive]
+echo $-
+
+# exec command [-c:exec commnad][-i:interactive shell=bashrc][-l=login shell=bashprofile]
+sh -i -l -c '<command>'
+```
+
+```sh
+% shell:zsh
+
+# show bindkey
+bindkey | vim -
+
+# manual zshbuiltins
+man zshbuiltins
+
+# show/set shell option
+setopt
+```
+
+```sh
+% shell:display
+
+# display shells
+cat /etc/shells
+
+# display linux os version
+cat /etc/os-release
+
+# display kernel version [architecture:arm64=M series,x86_64:AMD64 compatible]
+uname -a
+```
+
+;--------------------------------------------------------------
+; shell : linux
+;--------------------------------------------------------------
+
+```sh
+% shell:linux
+
+# free : [-h:human][-c:count][-s:interval seconds]
+free -h -c 12 -s 300
+
+# ldd(list dynamic dependency) :
+ldd $(which <command>)
+
+# sar : [-P:processor][ex:sar <option> <interval> <count>]
+sar -P ALL 1 10
+
+# sar : [-r:memory]
+sar -r 1 10
+
+# sar : [-B:paging]
+sar -B 1 10
+```
+
 ;--------------------------------------------------------------
 ; shell : macOS
 ;--------------------------------------------------------------
@@ -1209,8 +1316,20 @@ sw_vers
 # system_profiler : display system profile
 system_profiler <datatype>
 
-# delete cache memory
+# perf : delete cache memory
 sudo purge
+
+# perf : delete cache memory(watch)
+watch -n 900 -edt 'sudo purge'
+
+# perf : delete system cache(/System/Library/Caches) local cache(/Library/Caches/) user cache(~/Library/Caches)
+sudo rm -rf /System/Library/Caches/* /Library/Caches/* ~/Library/Caches/*
+
+# perf : swap off(=unload) , swap on(=load)
+sudo launchctl <load_unload> /System/Library/LaunchDaemons/com.apple.dynamic_pager.plist
+
+# perf : delete escaping memory data for sleep mode
+sudo rm -r /private/var/vm/sleepimage
 
 # open app(macOS)
 open-cli <url_or_file> -- <app>
@@ -1220,6 +1339,7 @@ t-rec -q -w <window> -o ~/private/gif/$(date "+%y%m%d-%H%M%S")_<name>
 ```
 $ datatype : system_profiler -listDataTypes \
   --- --multi --expand
+$ load_unload: echo -e "unload\nload"
 $ app : system_profiler "SPApplicationsDataType" -json \
   | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
   | column -ts $'\t' \
@@ -1228,18 +1348,9 @@ $ window: t-rec --ls-win \
   | column -ts $'|' \
   --- --headers 1 --column 2
 
-```sh
-% shell:display
-
-# display shells
-cat /etc/shells
-
-# display linux os version
-cat /etc/os-release
-
-# display kernel version
-uname -a
-```
+;--------------------------------------------------------------
+; shell : syntax
+;--------------------------------------------------------------
 
 ```sh
 % shell:syntax
@@ -1266,29 +1377,13 @@ while <condition>; do <command> ; done
 () { local <var> ; <command1> ; <command2> }
 ```
 
-```sh
-% shell:bash
-
-# var : shell current process
-echo $$
-
-# var : shell parent process
-echo $PPID
-
-# var : pipestatus
-echo ${PIPESTATUS[@]}
-```
-
 ;--------------------------------------------------------------
 ; SQL
 ;--------------------------------------------------------------
 ```sh
-% SQL
-
-# show variables
-echo -n "SHOW VARIABLES;" | cb
-# show databases
-SHOW DATABASES;
+% MySQL
+# login [-u:user][-p:database]
+mysql -u <user> -p <database>
 ```
 ;--------------------------------------------------------------
 ; tmux
@@ -1367,3 +1462,15 @@ zi edit <plugin>
 # delete plugin [ex:zinit delete sharkdp/bat]
 zi delete <plugin>
 ```
+
+;--------------------------------------------------------------
+; other
+;--------------------------------------------------------------
+```sh
+% other
+# weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
+curl -s "<version>wttr.in/<location_or_help>"
+```
+
+$ version: echo -e "\nv2."
+$ location_or_help: echo -e "\n:help"

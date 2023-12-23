@@ -1,16 +1,19 @@
 項目,Mac,Win/WSL,内容
 -,-,-,-
 Arc,cmd + d,-,タブのピン止め
-Arc,cmd + n,-,新しいウィンドウ(ウィンドウよりタブに近い)を開く
+Arc,cmd + n,-,新しいウィンドウ(複製)を開く
+Arc,cmd + o,-,preview windowをタブとして開く
 Arc,cmd + s,-,サイドバーの開閉
 Arc,cmd + t,-,新しいタブ(コマンドパレットに似てる)を開く
 Arc,cmd + <num>,-,サイドバーのn番目のアイテムを開く
 Arc,cmd + ctrl + n,-,新しいシークレットウィンドウ(incognito)を開く
 Arc,cmd + option + d,-,画面分割 ※カスタム
-Arc,cmd + option + n,-,小さなウィンドウを開く
+Arc,cmd + option + g,-,ChatGPT
+Arc,cmd + option + n,-,小さなウィンドウ(little arc)を開く
 Arc,cmd + option + ←→,-,スペースを移動
 Arc,cmd + shift + l,-,分割画面切り替え
 Arc,cmd + shift + n,-,新しいウィンドウを開く
+Arc,cmd + shift + r,-,強制リロード
 Arc,cmd + shift + ;,-,画面分割(デフォルト)
 Arc,ctrl + d,-,ディベロッパーモードのON/OFF
 Arc,ctrl + shift + [],-,分割画面切り替え
@@ -97,7 +100,7 @@ Mac,cmd + shift + .,-,隠しファイルを表示
 Mac,option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
 Mac,option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
 Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
-Mac,option + cmd + esc,-,アプリ強制終了
+Mac,option + cmd + Esc,-,アプリ強制終了
 Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
 Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
 Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
@@ -127,6 +130,7 @@ Slack,cmd + .,-,右サイドバーを表示/非表示
 Slack,cmd + shift + a,-,未読のダイアログを表示
 Slack,cmd + shift + d,-,左サイドバーを表示/非表示
 Slack,cmd + shift + t,-,スレッドへ移動
+Slack,cmd + ctrl + ←→,-,セクション切り替え
 Slack,option + ↑↓,-,前/次のチャンネルへ移動
 Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
