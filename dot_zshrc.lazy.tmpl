@@ -406,16 +406,16 @@ bindkey "^Y" _yazi
 
 # ctrl + gでtmux pop windowでnavi widgetを呼び出し
 _custom_navi_widget() {
+  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+  #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+  #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+  #複数の連続した空白を1つにする sed -e "s/  */ /g"
   tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
     window=$(tmux display -p -F "#S:#I.#P") && \
     export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
     TMP_BUFFER=$(navi --print | tr "\n" " ") && \
-    #後方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    #前方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    #複数の連続した空白を1つにする
     TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
     tmux set-buffer -b tmp "$TMP_BUFFER" && \
     tmux paste-buffer -drp -t $window -b tmp \
@@ -426,15 +426,15 @@ bindkey '^G' _custom_navi_widget
 
 # ctrl + q → ctrl + qでtmux pop windowでnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
+  #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+  #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+  #複数の連続した空白を1つにする sed -e "s/  */ /g"
   local word
   tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
     export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
     TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
-    #後方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    #前方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    #複数の連続した空白を1つにする
     TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
     tmux set-buffer -b tmp "$TMP_BUFFER" \
   '
@@ -543,15 +543,15 @@ bindkey '^Q^W' _copy_word
 
 # ctrl + q → ctrl + gでtmux pop windowでnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
+  # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
+  #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+  #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+  #複数の連続した空白を1つにする sed -e "s/  */ /g"
   tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
     export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
     TMP_BUFFER=$(navi --print | tr "\n" " ") && \
-    #後方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    #前方の空白文字を削除
     TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    #複数の連続した空白を1つにする
     TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
     tmux set-buffer -b tmp "$TMP_BUFFER" \
   '
