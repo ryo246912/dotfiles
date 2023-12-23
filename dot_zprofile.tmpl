@@ -1,6 +1,8 @@
 # パスの重複を除く
 typeset -U path PATH
+{{ if eq .chezmoi.os "darwin" -}}
 eval "$(/opt/homebrew/bin/brew shellenv)"
+{{- end }}
 
 path=(
   $HOME/{,s}bin(N)
