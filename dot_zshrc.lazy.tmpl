@@ -123,7 +123,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"fzf" \
     atload"__fzf_atload" \
-    junegunn/fzf
+    @'junegunn/fzf'
 zinit wait lucid blockf for \
     "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
     "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
@@ -181,7 +181,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
     sbin"navi" \
     atclone"__navi_atclone" \
-    denisidoro/navi
+    @'denisidoro/navi'
 
 # up #
 zinit wait lucid light-mode blockf for \
@@ -216,6 +216,7 @@ zinit wait lucid light-mode blockf for \
 
 # zoxide #
 __zoxide_atload() {
+    mkdir -p "$HOME/.local/state/zoxide" 2>/dev/null
     export _ZO_DATA_DIR="$HOME/.local/state/zoxide"
     eval "$(zoxide init zsh)"
 }
@@ -238,7 +239,7 @@ zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
     node"!czg -> czg" \
     node"!open-cli -> open-cli" \
-    z-shell/0
+    @'z-shell/0'
 
 ### plugin ###
 __zsh-autosuggestions_atload() {
@@ -247,15 +248,15 @@ __zsh-autosuggestions_atload() {
 }
 zinit wait lucid light-mode blockf for \
     atload"__zsh-autosuggestions_atload" \
-    zsh-users/zsh-autosuggestions
+    @'zsh-users/zsh-autosuggestions'
 
 zinit wait lucid light-mode blockf for \
     atload"source autopair.zsh && autopair-init" \
-    hlissner/zsh-autopair
+    @'hlissner/zsh-autopair'
 
 zinit wait lucid light-mode blockf for \
-    olets/zsh-abbr \
-    zdharma/fast-syntax-highlighting
+    @'olets/zsh-abbr' \
+    @'zdharma/fast-syntax-highlighting'
 
 ### completion ###
 
@@ -616,10 +617,15 @@ function ssh() {
 # other
 #--------------------------------------------------------------
 # historyの保存先
+mkdir -p "$HOME/.local/state/node" 2>/dev/null
 export NODE_REPL_HISTORY="$HOME/.local/state/node/.node_repl_history"
+mkdir -p "$HOME/.local/state/sqlite" 2>/dev/null
 export SQLITE_HISTORY="$HOME/.local/state/sqlite/.sqlite_history"
+mkdir -p "$HOME/.local/state/mysql" 2>/dev/null
 export MYSQL_HISTFILE="$HOME/.local/state/mysql/.mysql_history"
+mkdir -p "$HOME/.local/state/psql" 2>/dev/null
 export PSQL_HISTORY="$HOME/.local/state/psql/.psql_history"
+mkdir -p "$HOME/.local/state/less" 2>/dev/null
 export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 
 # slack

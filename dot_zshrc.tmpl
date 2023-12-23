@@ -28,6 +28,7 @@ PROMPT="
 ${MAINPROMPT}"
 
 # zsh_historyの保存先
+mkdir -p "$HOME/.local/state/zsh" 2>/dev/null
 export HISTFILE="$HOME/.local/state/zsh/.zsh_history"
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
@@ -133,10 +134,10 @@ source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
 # Load a few important annexes, without Turbo
 # (this is currently required for annexes)
 zinit light-mode for \
-    zdharma-continuum/zinit-annex-as-monitor \
-    zdharma-continuum/zinit-annex-bin-gem-node \
-    zdharma-continuum/zinit-annex-patch-dl \
-    zdharma-continuum/zinit-annex-rust
+    '@zdharma-continuum/zinit-annex-as-monitor' \
+    '@zdharma-continuum/zinit-annex-bin-gem-node' \
+    '@zdharma-continuum/zinit-annex-patch-dl' \
+    '@zdharma-continuum/zinit-annex-ru'st
 
 ### End of Zinit's installer chunk
 # zinit light-mode for \
@@ -148,7 +149,7 @@ zinit light-mode for \
 # zsh-vimode-visual
 #--------------------------------------------------------------
 zinit light-mode for \
-    b4b4r07/zsh-vimode-visual
+    @'b4b4r07/zsh-vimode-visual'
 
 # 選択範囲を{}で囲うように置き換え
 vi-visual-surround-curlybrackets()
@@ -264,4 +265,4 @@ chpwd() {
 # .zshrc.lazyを遅延読み込み
 zinit wait lucid light-mode as'null' \
     atinit'source "${HOME}/.zshrc.lazy"' \
-    for 'zdharma-continuum/null'
+    for @'zdharma-continuum/null'
