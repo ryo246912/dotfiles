@@ -76,10 +76,10 @@ bindkey -M viins '^U'  backward-kill-line
 bindkey -M viins '^Xv' quoted-insert
 bindkey -M viins '^W'  backward-kill-word
 
-{{ if eq .chezmoi.os "darwin" -}}
 # shift + Tabで逆Tab方向に移動
 bindkey '^[[Z' reverse-menu-complete
 
+{{ if eq .chezmoi.os "darwin" -}}
 # option + ←→で単語毎のカーソル移動
 bindkey "^[[1;3C" forward-word
 bindkey -M vicmd "^[[1;3C" forward-word
@@ -101,11 +101,19 @@ bindkey "^[[1;4D" backward-kill-word
 # }
 # zle -N my-backward-kill-word
 # bindkey "^[[1;4D" my-backward-kill-word
+{{- else -}}
+# option + ←→で単語毎のカーソル移動
+bindkey "^[[1;5C" forward-word
+bindkey -M vicmd "^[[1;5C" forward-word
+bindkey "^[[1;5D" backward-word
+bindkey -M vicmd "^[[1;5D" backward-word
+# option + shift + ←で単語毎の削除
+bindkey "^[[1;6D" backward-kill-word
+{{- end }}
 
 # ctrl + p/nをhistory-search-xxxに変更
 bindkey "^N" history-search-forward
 bindkey "^P" history-search-backward
-{{- end }}
 
 #--------------------------------------------------------------
 # plugin
@@ -157,9 +165,6 @@ bindkey '^V' vi-visual-mode
 bindkey -M vivis 'v' vi-visual-mode
 # iでviinsモードに入る
 bindkey -M vivis "i" vi-insert
-{{ if eq .chezmoi.os "darwin" -}}
-bindkey -M vivis "^[[1;3C" vi-visual-forward-word
-bindkey -M vivis "^[[1;3D" vi-visual-backward-word
 # spaceで選択範囲をスペースで囲うように置き換える
 bindkey -M vivis " " vi-visual-surround-space
 # 'で選択範囲シングルクォートで囲うように置き換える
@@ -172,6 +177,13 @@ bindkey -M vivis ")" vi-visual-surround-parenthesis
 # {}で選択範囲{}で囲うように置き換える
 bindkey -M vivis "{" vi-visual-surround-curlybrackets
 bindkey -M vivis "}" vi-visual-surround-curlybrackets
+
+{{ if eq .chezmoi.os "darwin" -}}
+bindkey -M vivis "^[[1;3C" vi-visual-forward-word
+bindkey -M vivis "^[[1;3D" vi-visual-backward-word
+{{- else -}}
+bindkey -M vivis "^[[1;5C" vi-visual-forward-word
+bindkey -M vivis "^[[1;5D" vi-visual-backward-word
 {{- end }}
 
 terminfo_down_sc=$terminfo[cud1]$terminfo[cuu1]$terminfo[sc]$terminfo[cud1]

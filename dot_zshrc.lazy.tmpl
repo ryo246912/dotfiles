@@ -64,12 +64,21 @@ __atuin_atload() {
     eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
     export ATUIN_CONFIG_DIR="$HOME/.config/atuin"
 }
+{{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" rustup cargo"atuin" \
     sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
-    ellie/atuin
+    @'atuinsh/atuin'
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" bpick"*x86_64-unknown-linux-musl*" rustup cargo"atuin" \
+    sbin"atuin*/atuin" \
+    atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
+    atload"__atuin_atload" \
+    @'atuinsh/atuin'
+{{- end }}
 
 # bat #
 __bat_atload() {
@@ -145,6 +154,11 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"darwin* -> gh-poi" \
     @'seachicken/gh-poi'
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"linux* -> gh-poi" \
+    @'seachicken/gh-poi'
 {{- end }}
 
 # git-jump #
@@ -154,7 +168,7 @@ zinit wait lucid light-mode blockf for \
 
 # jq #
 zinit wait lucid light-mode blockf for \
-    from"gh-r" bpick"jq-osx-*" \
+    from"gh-r" \
     sbin"jq* -> jq" \
     @'jqlang/jq'
 
@@ -170,18 +184,25 @@ zinit wait lucid light-mode blockf for \
     denisidoro/navi
 
 # up #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"up* -> up" \
+    @'akavel/up'
+
+# yazi #
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    sbin"up-darwin -> up" \
-    @'akavel/up'
-{{- end }}
-
-# yazi #
-zinit wait lucid light-mode blockf for \
-    from"gh-r" cargo"yazi" \
     sbin"yazi*/yazi -> yazi" \
     @'sxyazi/yazi'
+{{ else -}}
+# NOTE:version `GLIBC_2.33' not foundのエラー回避のため暫定的にversion固定
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v0.1.4" \
+    sbin"yazi* -> yazi" \
+    @'sxyazi/yazi'
+{{- end }}
 
 # z #
 #__z_atload() {
