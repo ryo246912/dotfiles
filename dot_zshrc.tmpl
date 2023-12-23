@@ -80,7 +80,7 @@ bindkey -M viins '^W'  backward-kill-word
 # shift + Tabで逆Tab方向に移動
 bindkey '^[[Z' reverse-menu-complete
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 # option + ←→で単語毎のカーソル移動
 bindkey "^[[1;3C" forward-word
 bindkey -M vicmd "^[[1;3C" forward-word
@@ -102,7 +102,7 @@ bindkey "^[[1;4D" backward-kill-word
 # }
 # zle -N my-backward-kill-word
 # bindkey "^[[1;4D" my-backward-kill-word
-{{- else -}}
+{{ else }}
 # option + ←→で単語毎のカーソル移動
 bindkey "^[[1;5C" forward-word
 bindkey -M vicmd "^[[1;5C" forward-word
@@ -179,10 +179,10 @@ bindkey -M vivis ")" vi-visual-surround-parenthesis
 bindkey -M vivis "{" vi-visual-surround-curlybrackets
 bindkey -M vivis "}" vi-visual-surround-curlybrackets
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 bindkey -M vivis "^[[1;3C" vi-visual-forward-word
 bindkey -M vivis "^[[1;3D" vi-visual-backward-word
-{{- else -}}
+{{ else }}
 bindkey -M vivis "^[[1;5C" vi-visual-forward-word
 bindkey -M vivis "^[[1;5D" vi-visual-backward-word
 {{- end }}
@@ -228,7 +228,7 @@ if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /d
   tmux attach || tmux
 fi
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 # iTerm2
 tab-color() {
   echo -ne "\033]6;1;bg;red;brightness;$1\a"

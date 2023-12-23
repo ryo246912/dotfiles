@@ -89,7 +89,7 @@ abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && 
 abbr fhq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 #abbr fz='() { local dir=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 abbr mh='make help'
 abbr ml='make lint'
 abbr mf='make freshup-local-for-py-engineer'

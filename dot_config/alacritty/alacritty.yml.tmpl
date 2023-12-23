@@ -61,7 +61,7 @@ shell:
 #    - -c
 #    - "tmux attach || tmux"
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 # macOS
 # alt_send_esc: false # altキーでEsc(^[)が押されないようにする、\入力のため
 

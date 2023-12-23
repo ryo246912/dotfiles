@@ -71,7 +71,7 @@ zinit wait lucid light-mode blockf for \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
     @'atuinsh/atuin'
-{{ else -}}
+{{ else }}
 zinit wait lucid light-mode blockf for \
     from"gh-r" bpick"*x86_64-unknown-linux-musl*" rustup cargo"atuin" \
     sbin"atuin*/atuin" \
@@ -154,7 +154,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"darwin* -> gh-poi" \
     @'seachicken/gh-poi'
-{{ else -}}
+{{ else }}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"linux* -> gh-poi" \
@@ -195,7 +195,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"yazi*/yazi -> yazi" \
     @'sxyazi/yazi'
-{{ else -}}
+{{ else }}
 # NOTE:version `GLIBC_2.33' not foundのエラー回避のため暫定的にversion固定
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
