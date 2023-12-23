@@ -48,6 +48,12 @@ alias nr='npm run'
 ### command ###
 
 # asdf #
+__asdf_atclone() {
+    asdf plugin add chezmoi https://github.com/joke/asdf-chezmoi.git
+    asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+    asdf plugin add python https://github.com/danhper/asdf-python.git
+    asdf plugin add tmux https://github.com/aphecetche/asdf-tmux.git
+}
 __asdf_atload() {
     export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
     export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
@@ -56,6 +62,7 @@ __asdf_atload() {
 }
 zinit wait lucid light-mode blockf for \
     src"asdf.sh" \
+    atclone"__asdf_atclone" \
     atload"__asdf_atload" \
     @'asdf-vm/asdf'
 
