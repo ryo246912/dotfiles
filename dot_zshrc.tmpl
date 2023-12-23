@@ -86,6 +86,12 @@ bindkey -M vicmd "^[[1;3C" forward-word
 bindkey "^[[1;3D" backward-word
 bindkey -M vicmd "^[[1;3D" backward-word
 
+# option + ←→で単語毎のカーソル移動(rio)
+bindkey "^[f" forward-word
+bindkey -M vicmd "^[f" forward-word
+bindkey "^[b" backward-word
+bindkey -M vicmd "^[b" backward-word
+
 # option + shift + ←で単語毎の削除
 bindkey "^[[1;4D" backward-kill-word
 # 上がうまくいかなかった時のカスタム関数

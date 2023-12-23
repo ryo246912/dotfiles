@@ -1,16 +1,19 @@
 項目,Mac,Win/WSL,内容
 -,-,-,-
 Arc,cmd + d,-,タブのピン止め
-Arc,cmd + n,-,新しいウィンドウ(ウィンドウよりタブに近い)を開く
+Arc,cmd + n,-,新しいウィンドウ(複製)を開く
+Arc,cmd + o,-,preview windowをタブとして開く
 Arc,cmd + s,-,サイドバーの開閉
 Arc,cmd + t,-,新しいタブ(コマンドパレットに似てる)を開く
 Arc,cmd + <num>,-,サイドバーのn番目のアイテムを開く
 Arc,cmd + ctrl + n,-,新しいシークレットウィンドウ(incognito)を開く
 Arc,cmd + option + d,-,画面分割 ※カスタム
-Arc,cmd + option + n,-,小さなウィンドウを開く
+Arc,cmd + option + g,-,ChatGPT
+Arc,cmd + option + n,-,小さなウィンドウ(little arc)を開く
 Arc,cmd + option + ←→,-,スペースを移動
 Arc,cmd + shift + l,-,分割画面切り替え
 Arc,cmd + shift + n,-,新しいウィンドウを開く
+Arc,cmd + shift + r,-,強制リロード
 Arc,cmd + shift + ;,-,画面分割(デフォルト)
 Arc,ctrl + d,-,ディベロッパーモードのON/OFF
 Arc,ctrl + shift + [],-,分割画面切り替え
@@ -97,7 +100,7 @@ Mac,cmd + shift + .,-,隠しファイルを表示
 Mac,option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
 Mac,option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
 Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
-Mac,option + cmd + esc,-,アプリ強制終了
+Mac,option + cmd + Esc,-,アプリ強制終了
 Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
 Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
 Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
@@ -127,6 +130,7 @@ Slack,cmd + .,-,右サイドバーを表示/非表示
 Slack,cmd + shift + a,-,未読のダイアログを表示
 Slack,cmd + shift + d,-,左サイドバーを表示/非表示
 Slack,cmd + shift + t,-,スレッドへ移動
+Slack,cmd + ctrl + ←→,-,セクション切り替え
 Slack,option + ↑↓,-,前/次のチャンネルへ移動
 Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
@@ -217,10 +221,12 @@ VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
 VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
 VSCode,cmd + [],-,空白行へ上下移動 ※カスタム
 VSCode,cmd + ↑↓,-,先頭/末尾に移動
+VSCode,cmd + ↑↓,-,入力コントロールと結果の間を移動
 VSCode,cmd + .,-,(マークダウン)URLペースト時のコントロールを選択
 VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + j,-,(Jumpy)選択ラインに移動 ※カスタム
+VSCode,cmd + ctrl + ↑↓,-,(metaGo)1行上下選択 ※カスタム
 VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
 VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
 VSCode,cmd + shift + d,-,[diff editor]sidebyside表示の切り替え ※カスタム
@@ -258,6 +264,7 @@ VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
 VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
 VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + j,-,閉じタグをすべて開く
+VSCode,cmd + k → cmd + m,-,EditorGroupを最大化する(toggleMaximizeEditorGroup)
 VSCode,cmd + k → cmd + [,-,再帰的に折りたたむ
 VSCode,cmd + k → cmd + ],-,再起的に展開する
 VSCode,option + b,-,(gitlens)Git Blame表示
@@ -283,7 +290,12 @@ zsh/terminal,ctrl + l,ctrl + l,スクリーンclear(clear-screen)
 zsh/terminal,ctrl + n,ctrl + n,次のコマンド履歴を表示(down-line-or-hisotry→history-search-forward)
 zsh/terminal,ctrl + p,ctrl + p,前のコマンド履歴を表示(up-line-or-hisotry→history-search-backward)
 zsh/terminal,ctrl + q,ctrl + q,画面の出力を再開する(startシグナル)
+zsh/terminal,ctrl + r,ctrl + r,履歴後方検索(history-incremental-search-backward)
+zsh/terminal,ctrl + s,ctrl + s,履歴前方検索(history-incremental-search-forward)
 zsh/terminal,ctrl + s,ctrl + s,画面の出力を停止する(stopシグナル)
-zsh/terminal,ctrl + v,ctrl + v,特殊文字(^[=ESCや^M=エンターなど)の入力(quoted-insert)
+zsh/terminal,ctrl + u,ctrl + u,カーソル前削除(kill-whole-line)
+zsh/terminal,ctrl + v,ctrl + v,特殊文字(^[=Escや^M=エンターなど)の入力(quoted-insert)
 zsh/terminal,ctrl + w,ctrl + w,1単語の削除(backward-kill-word)
 zsh/terminal,ctrl + z,ctrl + z,停止シグナルを送る(suspシグナル)
+zsh/terminal,Esc → b,-,1単語戻る(backward-word)
+zsh/terminal,Esc → f,-,1単語進む(forward-word)

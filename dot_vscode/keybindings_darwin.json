@@ -30,14 +30,19 @@
     "key": "cmd+e",
     "command": "-actions.findWithSelection"
   },
+  {
+    "key": "cmd+e",
+    "command": "-editor.action.toggleScreenReaderAccessibilityMode",
+    "when": "accessibilityHelpIsShown"
+  },
   ///////////////////////////////////////////////
   // 通常設定
   ///////////////////////////////////////////////
   // cmd + shift + eでエクスプローラにフォーカス(エディタ側にはフォーカスしない)
   {
     "key": "shift+cmd+e",
-    "command": "workbench.files.action.focusFilesExplorer",
-    "when": "viewContainer.workbench.view.explorer.enabled"
+    "command": "workbench.files.action.focusFilesExplorer"
+    // "when": "viewContainer.workbench.view.explorer.enabled" //フォーカスが効かなくなったのでwhen部分をOFFにする
   },
   {
     "key": "shift+cmd+e",
@@ -495,13 +500,13 @@
   {
     "key": "cmd+space",
     "command": "workbench.action.pinEditor",
-    "when": "!activeEditorIsPinned"
+    "when": "activeEditorIsNotPreview && !activeEditorIsPinned"
   },
   // ダブのピン止めを解除する
   {
     "key": "cmd+space",
     "command": "workbench.action.unpinEditor",
-    "when": "activeEditorIsPinned"
+    "when": "activeEditorIsNotPreview && activeEditorIsPinned"
   },
   ///////////////////////////////////////////////
   // 拡張機能
@@ -643,6 +648,18 @@
     "key": "alt+home",
     "command": "-metaGo.gotoEmptyLineUp",
     "when": "editorTextFocus"
+  },
+  // (metaGo)1行下をセレクト
+  {
+    "key": "ctrl+cmd+down",
+    "command": "metaGo.selectLineDown",
+    "when": "textInputFocus"
+  },
+  // (metaGo)1行上をセレクト
+  {
+    "key": "ctrl+cmd+up",
+    "command": "metaGo.selectLineUp",
+    "when": "textInputFocus"
   },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {

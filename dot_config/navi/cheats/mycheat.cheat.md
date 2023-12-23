@@ -215,7 +215,7 @@ $ name: gcloud config configurations list \
 % git
 
 # diff option [--no-pager][--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line][--no-patch:not display diff][-U(--unified):display num line ex:git diff -U0][--no-renames:ignore rename file][-M -- file1 file2:rename file diff]
-git --no-pager diff --pickaxe-regex -S <regex> -U0
+git --no-pager diff --pickaxe-regex -S "<regex>" -U0
 
 # diff staging file [--cached(staged):diff staging and commit][--stat/numstat/patch-with-stat:show stat]
 git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
@@ -241,14 +241,17 @@ git show <commit1>:<git_filename>
 # show commit (contributor)
 git show <contributor_commit> | delta<_no-gitconfig>
 
-# show parents commit [ex:git show HEAD^^,HEAD~2]
+# show parents commit [^n:n-th parent][~n:n n-th first-parent][ex:git show HEAD^^,HEAD~2]
 git show HEAD~<num> | delta<_no-gitconfig>
 
-# show children commit [ex:git show HEAD^^,HEAD~2]
+# show children commit [^n:n-th parent][~n:n n-th first-parent][ex:git show HEAD^^,HEAD~2]
 git show $(git log -n $((<num>+1)) --pretty=format:"%h" HEAD^...HEAD | tail -n 1) | delta<_no-gitconfig>
 
 # cherry-pick
 git cherry-pick -n <cherry_commit>
+
+# cherry-pick multi commits [two dots diff:(cherry-pick commit1)^..(cherry-pick commit2)]
+git cherry-pick <commit1>^..<commit2>
 
 # cherry-pick file
 git checkout <commit1> <diff_filename>
@@ -292,8 +295,8 @@ git revert <commit1>
 # revert merge commit [-m:mainline parent-number(1,2..)]
 git revert -m 1 <commit1>
 
-# reset recent commit
-git reset --soft HEAD^
+# reset recent commit [^n:n-th parent][~n:n n-th first-parent]
+git reset --soft HEAD~
 
 # clear working directory file
 git checkout <modified_files>
@@ -323,7 +326,7 @@ git branch --merged origin/master --format='%(refname:short) %09 %(committername
 git push origin :<branch>
 
 # rebase
-git rebase --autosquash -i <commit1>
+git rebase --autosquash --autostash -i <commit1>
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP "<regex>" <grep_commit> -- <dir>
@@ -352,29 +355,29 @@ git cat-file -p <commit1>:<ls-tree-files><_pipe>
 # log contributor
 git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
-# log graph
+# log graph [--all:all branch]
 git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
 
 # log file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
 git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> <file_option><ls-files>
 
-# log change word or line [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
-git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> <regex>
+# log change word [-S --pickaxe-regex:filter by word(regex) word count change in diff][-G:filter by regex in diff]
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> "<regex>"
 
 # log delete file
 git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # stash working file
-git commit -m 'commit staging' && git stash --message "<message>" -- <working_filename> && git reset --soft HEAD^
+git commit -m 'commit staging' && git stash --include-untracked --message "<message>" -- <working_filename> && git reset --soft HEAD^
 
 # stash file
-git stash --message "<message>" -- <working_filename>
+git stash --include-untracked --message "<message>" -- <working_filename>
 
 # list stash
-git stash list
+git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
 
-# show stash [-p:patch]
-git stash show <stash_num> -p
+# show stash [-p:patch][-u:--include-untracked]
+git stash show <stash_num> -u -p
 
 # pop stash
 git stash pop <stash_num>
@@ -382,7 +385,16 @@ git stash pop <stash_num>
 # pop stash file
 git checkout <stash_num> <stash_file>
 
-# clone [--depth:shallow clone][--filter=blob:none ;blob-less clone][--filter=tree:0 ;tree-less clone]
+# cherry-pick stash
+git cherry-pick -n <stash_num>
+
+# bisect start [ex:git bisect start <bad-commit> <good-commit>]
+git bisect start <commit1> <commit2>
+
+# bisect show now commit
+git bisect view
+
+# clone [--depth:shallow clone][--filter=blob:none ;blob-less=commit&tree only][--filter=tree:0 ;tree-less=commit only]
 git clone<_shallow-option> <repo_url>
 
 # config list [-l:list]
@@ -405,6 +417,9 @@ git rev-parse --show-prefix
 
 # meta : display absolute path to git top-level directory
 git rev-parse --show-toplevel
+
+# meta : count-object
+git count-objects -v
 ```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only\n --name-status"
@@ -451,16 +466,16 @@ $ contributor: git log --format="%cn:%ce" \
   | sort -fu \
   | column -ts ":" \
   --- --column 1
-$ grep_commit: git log <branch> \
-  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
-  --- --column 1 --delimiter ; \
-  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+; $ grep_commit: git log <branch> \
+;   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
+;   --- --column 1 --delimiter ; \
+;   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ dir: git ls-tree <grep_commit> --name-only -dr
 $ stash_num: git stash list \
   --- --column 1 --delimiter : \
-  --preview "git stash show {1} ; git stash show {1} -p | delta --no-gitconfig"
+  --preview "git stash show {1} -u ; git stash show {1} -up | delta --no-gitconfig"
 $ stash_file: echo . && \
-  git stash show --name-only <stash_num> \
+  git stash show --name-only -u <stash_num> \
   --- --multi --expand
 $ modified_files: echo . && \
   git ls-files -m \
@@ -482,18 +497,15 @@ $ diff_filename: git diff --name-only <commit1> \
   --- --delimiter ; --column 2 \
   --preview "git show {1}:{2} | delta --no-gitconfig"
 $ working_filename: echo . && \
-  git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ HEAD \
+  git status --porcelain \
+  | cut -c4- \
+  | sed -e "s|^|$(pwd)/|g" \
   --- --multi --expand \
   --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 $ staging_filename: echo . && \
   git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
   --- --multi --expand \
   --preview "git diff --cached -- {1} | delta --no-gitconfig"
-$ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
-  --json fullName,description,language,pushedAt,stargazersCount,url \
-  --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 5
 
 ```sh
 % git-tool
@@ -527,7 +539,7 @@ gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
 echo -n <pr_branch> | cb
 
 # pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
-gh pr view <pr_no> --comments<_web>
+for no in <pr_no>; do gh pr view $no --comments<_web> ; done
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 
 # pr view search by file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
@@ -593,11 +605,24 @@ gh repo list <owner> -L 100
 # display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
+# project view [owner:repository owner(ex:pytorch)]
+gh project view --owner <owner> -w <project_no>
+
 # project list [owner:repository owner(ex:pytorch)][-L:max num]
 gh project list --owner <owner> -L 100
 
 # project item-list [owner:repository owner(ex:pytorch)][-L:max num]
 gh project item-list --owner <owner> --format json -L 100 <project_no> | jq -r '["repo","no","type","status","assignee","title","url"] , (.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) | @tsv' | column -ts $'\t'
+
+# display authentication state[auth scope ex:gist,read:org,read:project,repo]
+gh auth status
+; https://docs.github.com/ja/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
+
+# add authentication [ex:gh auth refresh -s project]
+gh auth refresh -s <scope>
+
+# cache list
+gh cache list
 
 # project item
 open-cli <issue_url>
@@ -607,19 +632,23 @@ open-cli <starred_url>
 
 # search repo [_query|stars:>=n|stars:<n]
 open-cli <repo_url>
+
+# delete(poi) branch
+gh-poi<_--dry-run>
 ```
 $ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--watch: echo -e "\n --watch"
+$ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
-$ _--first-parent: echo -e "\n --first-parent"
+$ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ ls-files: git ls-files
@@ -628,19 +657,19 @@ $ all_branch: cat \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 
-$ commits_filter_by_file: git log --no-patch<_--first-parent> \
+$ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   <all_branch> <file_option><ls-files> \
   --- --column 1 --delimiter ; --multi --expand
-$ commits_filter_by_word: git log --no-patch<_--first-parent> \
+$ commits_filter_by_word: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
-  <search_option> <regex> \
+  <search_option> "<regex>" \
   --- --column 1 --delimiter ; --multi --expand
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
   --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
   | column -ts $'\t' \
-  --- --headers 1 --column 1
+  --- --headers 1 --column 1 --multi --expand
 $ pr_branch: gh pr list --search "user-review-requested:@me" --state open \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
   --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
@@ -729,15 +758,6 @@ $ event: echo -e "push\npull_request\nissues"
 $ workflow: find .github/workflows
 
 ;--------------------------------------------------------------
-; mySQL
-;--------------------------------------------------------------
-```sh
-% mySQL
-
-# login [-u:user][-p:database]
-echo -n "mysql -u <user> -p <database>" | cb
-```
-;--------------------------------------------------------------
 ; node
 ;--------------------------------------------------------------
 ```sh
@@ -757,7 +777,7 @@ nodenv install <version>
 % npm
 
 # display bin directory [ex: $(npm bin)/cspell]
-npm bin
+$(npm bin)<command>
 
 # open package files [ex:npm edit axios]
 npm edit <package>
@@ -781,51 +801,6 @@ npm prune
 # sort package-json
 npx sort-package-json
 ```
-;--------------------------------------------------------------
-; OSX : macOS
-;--------------------------------------------------------------
-```sh
-% brew
-
-# list [--cask|--formula][-1:one column]
-brew list --versions | vim -
-
-# (dry-run) install app [-n:dry-run][ex:brew install -n fzf]
-brew install --dry-run <app_name>
-
-# upgrade app
-brew upgrade <app>
-
-# app dependence [--tree:][ex:brew deps --tree ruby]
-brew deps --tree <app_name>
-
-# display install formula [ex:bat -l rb $(brew edit --print-path ruby)]
-bat -l rb $(brew edit --print-path <app_name>)
-
-# open app homegage [ex:brew home colordiff]
-brew home <app_name>
-```
-
-```sh
-% blueutil
-
-# turn on-off bluetooth
-blueutil --power <on_off>
-
-# connect device
-blueutil --power 1 && blueutil --connect <device>
-
-# disconnect device
-blueutil --disconnect <device> && blueutil --power 0
-
-# connect/disconnect device
-blueutil --paired --format json-pretty
-```
-$ on_off: echo -e "1\n0"
-$ device: blueutil --paired --format json-pretty \
-  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
 
 ;--------------------------------------------------------------
 ; python
@@ -848,6 +823,7 @@ pyenv install --list | vim -
 # pyenv install version
 pyenv install <version>
 ```
+
 ;--------------------------------------------------------------
 ; shell (pipe-command)
 ;--------------------------------------------------------------
@@ -884,14 +860,26 @@ column -ts $'\t'
 # column : csv to table
 column -ts,
 
+# command : exec not user-defined command(not alias&function)[-v:display command path]
+command <command>
+
+# command : exec not alias command(not alias)[ex:"ls"]
+"<command>"
+
 # cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
 cut -<cb> <cut_list>
 
 # cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
 cut -d "<separater>" -f <cut_no>
 
+# date : ["+":format]
+date "+%y/%m/%d %H:%M:%S"
+
 # dirname : [ex:dirname $(which dirname)]
 dirname <path>
+
+# fx [-m:multi select]
+fx
 
 # fzf [-m:multi select]
 fzf
@@ -920,11 +908,17 @@ head -n <num>
 # jq : [-r:raw output]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
 
-# sed : replace [-e:multi command][ex:sed 's| |!|'][ex:sed -e 1d -e '$ s/$/\n/']
-sed -e 's/<before>/<after>/g'
+# sed : replace [-e:multi command][ex:sed -e 1d -e '$ s/$/\n/'][regex:.|[a-z]|[^0-9]|.*][ex:sed 's| |!|']
+sed -e 's/<regex>/<after>/g'
+
+# sed : add [-e:multi command][symbol:^=head,$=tail]
+sed -e 's/<symbol>/<after>/g'
+
+# sed : delete [-e:multi command][regex:^$=line,]
+sed -e 's/<regex>/<after>/g'
 
 # sed : extract word [-r:regex \(\) -> ()][¥1:first()][&:word] [ex:sed -r 's/.*github.com.(.*).git/\1/']
-sed -r 's/<before>/\1/'
+sed -r 's/<regex>/\1/'
 
 # sed : output selected line [-n:print only applied][ex:sed -n 10,11p]
 sed -n <start>,<end>p
@@ -971,8 +965,17 @@ xargs -I % <command> %
 # redirect : redirect error output(2>) to null [ex:find . 2> /dev/null]
 2> /dev/null
 
+# redirect : redirect std output(1>) to null & error output(2>) to std output
+> /dev/null 2>&1
+
+# redirect : redirect std output(1>) to null & error output(2>) to pipe
+(<command> > /dev/null) 2>&1 |
+
 # redirect : merge error output(2>) to std output(&1) [ex:ls > file 2>&1]
 2>&1
+
+# redirect : here string (echo string pipe)
+<<< "<string>"
 
 ```
 
@@ -981,6 +984,7 @@ $ no2: echo -e "1\n(NF-1)\nNF"
 $ cb: echo -e "c\nb"
 $ cut_list: echo -e "<start_no>\n<start_no>-<end_no>\n<start_no>-\n-<end_no>"
 $ line_output_option: echo -e "A\nB\nC"
+$ symbol: echo -e "^\n$"
 ;$
 
 ;--------------------------------------------------------------
@@ -991,6 +995,9 @@ $ line_output_option: echo -e "A\nB\nC"
 
 # ssh : login by .ssh/config [-T:config HOST][-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
 ssh -AT <HOST>
+
+# ssh : locale [SendEnv LANG LC_*:take over local locale]
+vim /etc/ssh/ssh_config
 
 # ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
 ssh-add
@@ -1042,7 +1049,7 @@ cal <month_year>
 # cat : concatenate command output(process substitution)
 cat <(<command1>) <(<command2>)
 
-# cat : output file(hear document)
+# cat : output file(here document)
 cat << EOF > <filename>
 ```
 ```sh
@@ -1055,14 +1062,17 @@ curl -sI '<url>' -H '<header>'
 # curl : POST [-X:request method][-d:post data ex: -d 'key=value&key2=value2']
 curl -X 'POST' '<url>' -H '<header>' -d '<data>'
 
-# chsh : change shell
-chsh -s $(which zsh)
+# chsh : change shell [ex:chsh -s $(which zsh)]
+chsh -s <shells>
 
 # echo args[$@:args(array)][$*:args(string)]
 echo $* $@
 
 # echo exit status
 echo $?
+
+# echo $path
+echo $PATH | sed -e 's/:/\n/g'
 
 # df : disk free [--total:linux only][-h:human-readable]
 df -h<_--total>
@@ -1103,6 +1113,9 @@ ln -s <file> <dir>
 # lsof(=list open files) : display file,pid,user[-i:port]
 lsof -i:<port>
 
+# ping : [-c <num>:ping count][-w:ping while][ex:ping www.google.co.jp]
+ping <address>
+
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
 ps axu | vim -
 
@@ -1129,49 +1142,56 @@ type -a <command>
 
 # unset : unset shell variable
 unset <var>
-```
 
+# watch : [-e:exit if error][-d:emphasis diff][-t:no title][-n:exec timespan(s)]
+watch -n <second> -edt '<command>'
+
+# watch :
+watch -edt '<command> ; ! echo $?'
+```
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
+$ shells: cat /etc/shells | sed 1,4d
 ;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
 ;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
 $ extension: echo -e "tar.gz\ntgz"
 ;$
-;--------------------------------------------------------------
-; shell : macOS
-;--------------------------------------------------------------
 
 ```sh
-% shell:macOS
+% shell:bash
 
-# display system defaults
-defaults read | vim -
+# show bindkey
+bind | vim -
 
-# display running application
-lsappinfo list | vim -
+# var : shell current process
+echo $$
 
-# display macOS version
-sw_vers
+# var : shell parent process
+echo $PPID
 
-# display system profile
-system_profiler <datatype>
+# var : pipestatus
+echo ${PIPESTATUS[@]}
 
-# kill Finder
-defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
+# show shell option[i:interactive]
+echo $-
 
-# delete cache memory
-sudo purge
-
-# open app(macOS)
-open-cli <url_or_file> -- <app>
+# exec command [-c:exec commnad][-i:interactive shell=bashrc][-l=login shell=bashprofile]
+sh -i -l -c '<command>'
 ```
-$ datatype : system_profiler -listDataTypes \
-  --- --multi --expand
-$ app : system_profiler "SPApplicationsDataType" -json \
-  | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 2
+
+```sh
+% shell:zsh
+
+# show bindkey
+bindkey | vim -
+
+# manual zshbuiltins
+man zshbuiltins
+
+# show/set shell option
+setopt
+```
 
 ```sh
 % shell:display
@@ -1182,9 +1202,155 @@ cat /etc/shells
 # display linux os version
 cat /etc/os-release
 
-# display kernel version
+# display kernel version [architecture:arm64=M series,x86_64:AMD64 compatible]
 uname -a
 ```
+
+;--------------------------------------------------------------
+; shell : linux
+;--------------------------------------------------------------
+
+```sh
+% shell:linux
+
+# free : [-h:human][-c:count][-s:interval seconds]
+free -h -c 12 -s 300
+
+# ldd(list dynamic dependency) :
+ldd $(which <command>)
+
+# sar : [-P:processor][ex:sar <option> <interval> <count>]
+sar -P ALL 1 10
+
+# sar : [-r:memory]
+sar -r 1 10
+
+# sar : [-B:paging]
+sar -B 1 10
+```
+
+;--------------------------------------------------------------
+; shell : macOS
+;--------------------------------------------------------------
+
+```sh
+% brew
+
+# list [--cask,--formula][-1:one column]
+brew list --versions<_--filter> | vim -
+
+# install app [-n:dry-run][app:formula,user/repo/formula][ex:brew install -n fzf]
+brew install<_--dry-run><_--cask> <app_name>
+
+# upgrade app
+brew upgrade<_--cask> <app>
+
+# uninstall unnecessary dependence
+brew autoremove
+
+# app dependence [--tree:][--installed:list dependencies currently installed][ex:brew deps --tree ruby]
+brew deps --installed --tree <app_name>
+
+# display install formula [ex:bat -l rb $(brew edit --print-path ruby)]
+bat -l rb $(brew edit --print-path <app_name>)
+
+# open app homegage [ex:brew home colordiff]
+brew home <app_name>
+```
+$ _--filter: echo -e "\n --formula\n --cask"
+$ _--dry-run: echo -e "\n --dry-run"
+$ _--cask: echo -e "\n --cask"
+;$
+
+```sh
+% blueutil
+
+# turn on-off bluetooth
+blueutil --power <on_off>
+
+# connect device
+blueutil --power 1 && blueutil --connect <device>
+
+# disconnect device
+blueutil --disconnect <device> && blueutil --power 0
+
+# connect/disconnect device
+blueutil --paired --format json-pretty
+```
+$ on_off: echo -e "1\n0"
+$ device: blueutil --paired --format json-pretty \
+  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+
+```sh
+% shell:macOS
+
+# jot(BSD) : [-r:random]
+jot -r 1
+
+# display mac commnad [-r:recursive]
+zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | vim -
+
+# defaults : display system defaults
+defaults read | vim -
+
+# defaults : kill Finder
+defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
+
+# lsappinfo : display running application
+lsappinfo list | vim -
+
+# networksetup : display network devices
+networksetup -listallhardwareports
+
+# networksetup : display connected network list
+networksetup -listpreferredwirelessnetworks en0
+
+# networksetup : toggle wifi power on/off
+networksetup -setairportpower en0 on
+
+# sw_vers : display macOS version
+sw_vers
+
+# system_profiler : display system profile
+system_profiler <datatype>
+
+# perf : delete cache memory
+sudo purge
+
+# perf : delete cache memory(watch)
+watch -n 900 -edt 'sudo purge'
+
+# perf : delete system cache(/System/Library/Caches) local cache(/Library/Caches/) user cache(~/Library/Caches)
+sudo rm -rf /System/Library/Caches/* /Library/Caches/* ~/Library/Caches/*
+
+# perf : swap off(=unload) , swap on(=load)
+sudo launchctl <load_unload> /System/Library/LaunchDaemons/com.apple.dynamic_pager.plist
+
+# perf : delete escaping memory data for sleep mode
+sudo rm -r /private/var/vm/sleepimage
+
+# open app(macOS)
+open-cli <url_or_file> -- <app>
+
+# t-rec : record to gif [-q:quiet][-w:rec window]
+t-rec -q -w <window> -o ~/private/gif/$(date "+%y%m%d-%H%M%S")_<name>
+```
+$ datatype : system_profiler -listDataTypes \
+  --- --multi --expand
+$ load_unload: echo -e "unload\nload"
+$ app : system_profiler "SPApplicationsDataType" -json \
+  | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 2
+$ window: t-rec --ls-win \
+  | column -ts $'|' \
+  --- --headers 1 --column 2
+
+;--------------------------------------------------------------
+; shell : syntax
+;--------------------------------------------------------------
 
 ```sh
 % shell:syntax
@@ -1211,29 +1377,13 @@ while <condition>; do <command> ; done
 () { local <var> ; <command1> ; <command2> }
 ```
 
-```sh
-% shell:bash
-
-# var : shell current process
-echo $$
-
-# var : shell parent process
-echo $PPID
-
-# var : pipestatus
-echo ${PIPESTATUS[@]}
-```
-
 ;--------------------------------------------------------------
 ; SQL
 ;--------------------------------------------------------------
 ```sh
-% SQL
-
-# show variables
-echo -n "SHOW VARIABLES;" | cb
-# show databases
-SHOW DATABASES;
+% MySQL
+# login [-u:user][-p:database]
+mysql -u <user> -p <database>
 ```
 ;--------------------------------------------------------------
 ; tmux
@@ -1269,6 +1419,30 @@ $ tty: tmux lsp -a \
   --- --column 6
 
 ;--------------------------------------------------------------
+; vim
+;--------------------------------------------------------------
+```sh
+% vim:command
+# guit (no save)
+:q!
+
+# guit (save)
+:wq
+
+# move n rows
+:<n>
+
+# reload current buffer(file) [e=edit]
+:e
+
+# vim command history [q: → ctrl + c]
+q:
+
+# vim command history search
+q/
+```
+
+;--------------------------------------------------------------
 ; zinit
 ;--------------------------------------------------------------
 ```sh
@@ -1288,3 +1462,15 @@ zi edit <plugin>
 # delete plugin [ex:zinit delete sharkdp/bat]
 zi delete <plugin>
 ```
+
+;--------------------------------------------------------------
+; other
+;--------------------------------------------------------------
+```sh
+% other
+# weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
+curl -s "<version>wttr.in/<location_or_help>"
+```
+
+$ version: echo -e "\nv2."
+$ location_or_help: echo -e "\n:help"
