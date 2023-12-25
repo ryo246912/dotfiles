@@ -126,17 +126,18 @@ OneNote,-,ctrl + shift + g,セッション(タブのようなもの)にフォー
 OneNote,-,ctrl + alt + g,ページにフォーカス
 OneNote,-,ctrl + fn + ↑↓,ページの上下移動
 Sticky,cmd + m,-,折りたたみ・展開
-Slack,cmd + shift + c,-,コード表示
-Slack,cmd + r,-,再読み込み
-Slack,cmd + t,-,ページ移動
-Slack,cmd + [],-,履歴を進む/戻る
-Slack,cmd + .,-,右サイドバーを表示/非表示
-Slack,cmd + shift + a,-,未読のダイアログを表示
-Slack,cmd + shift + d,-,左サイドバーを表示/非表示
-Slack,cmd + shift + t,-,スレッドへ移動
+Slack,cmd + r,ctrl + r,再読み込み
+Slack,cmd + t,ctrl + t,ページ移動
+Slack,cmd + [],ctrl + [],履歴を進む/戻る
+Slack,cmd + .,ctrl + .,右サイドバーを表示/非表示
+Slack,cmd + shift + a,ctrl + shift + a,未読のダイアログを表示
+Slack,cmd + shift + c,ctrl + shift + c,コード表示
+Slack,cmd + shift + d,ctrl + shift + d,左サイドバーを表示/非表示
+Slack,cmd + shift + t,ctrl + shift + t,スレッドへ移動
+Slack,cmd + shift + y,ctrl + shift + y,ステータス変更
 Slack,cmd + ctrl + ←→,-,セクション切り替え
-Slack,option + ↑↓,-,前/次のチャンネルへ移動
-Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
+Slack,option + ↑↓,alt + ↑↓,前/次のチャンネルへ移動
+Slack,option + shift + ↑↓,alt + shift + ↑↓,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
 Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
 Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ
