@@ -664,7 +664,22 @@ function ssh() {
   fi
 }
 
+
+export APPDATA="/mnt/c/Users/$WINUSER/AppData"
+{{ if eq .chezmoi.os "linux" -}}
+cp_winhost() {
+  # alacrittyの設定ファイルをコピー
+  [ "$(date -r $HOME/.config/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+}
+{{- end }}
 #--------------------------------------------------------------
+# terminal
+#--------------------------------------------------------------
+
+# alacritty
+[ -n "$WINUSER" ] && mkdir -p "$APPDATA/Roaming/alacritty" 2>/dev/null
+[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.yml" ] && cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
 # other
 #--------------------------------------------------------------
 # historyの保存先
