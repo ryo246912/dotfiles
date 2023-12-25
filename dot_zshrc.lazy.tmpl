@@ -186,6 +186,9 @@ zinit wait lucid light-mode blockf for \
 # navi #
 # atload"eval $(navi widget zsh)" \
 __navi_atclone() {
+    [ -e "~/.config/navi/config.yaml" ] && \
+    [ -e "$(navi info config-path)" ] && \
+    [ "~/.config/navi/config.yaml" = "$(navi info config-path)" ] && \
     ln -s ~/.config/navi/config.yaml "$(navi info config-path)"
 }
 zinit wait lucid light-mode blockf for \
@@ -246,10 +249,15 @@ zinit wait lucid light-mode blockf for \
 {{- end }}
 
 ### node ###
+__node_atclone() {
+    [ -e "~/.config/commitizen/.czrc" ] && ln -f ~/.config/commitizen/.czrc ~/.czrc
+    [ -e "~/.config/commitizen/.commitlintrc.js" ] && ln -f ~/.config/commitizen/.commitlintrc.js ~/.commitlintrc.js
+}
 zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
     node"!czg -> czg" \
     node"!open-cli -> open-cli" \
+    atclone"__node_atclone" \
     @'z-shell/0'
 
 ### plugin ###
