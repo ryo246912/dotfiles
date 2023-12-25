@@ -1216,11 +1216,23 @@ uname -a
 ```sh
 % shell:linux
 
-# apt : update
+# apt(Debian) : update package
 sudo apt update
 
-# apt : install [-y:yes]
-sudo apt install -y <package>
+# apt(Debian) : upgrade specified package
+sudo apt install --only-upgrade <package>
+
+# apt(Debian) : install package [-y:yes]
+sudo apt update && sudo apt install -y <package>
+
+# apt(Debian) : uninstall package and unnecessary package
+sudo apt remove -y <package> && sudo apt autoremove -y
+
+# apt(Debian) : apt command history
+cat /var/log/apt/history.log<_grep>
+
+# apt(Debian) : add third-party package [ex.sudo add-apt-repository ppa:git-core/ppa]
+sudo add-apt-repository ppa:git-core/ppa
 
 # free : [-h:human][-c:count][-s:interval seconds]
 free -h -c 12 -s 300
@@ -1237,6 +1249,8 @@ sar -r 1 10
 # sar : [-B:paging]
 sar -B 1 10
 ```
+$ _grep : echo -e "\n | grep 'Commandline'"
+;$
 
 ;--------------------------------------------------------------
 ; shell : Windows(WSL)
