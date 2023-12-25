@@ -105,7 +105,7 @@
   // autoImportをOFFにする
   "typescript.suggest.autoImports": false,
   "javascript.suggest.autoImports": false,
-  "[vue][json][jsonc][javascript][typescript][scss]": {
+  "[vue][json][jsonc][javascript][typescript][typescriptreact][scss]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
     // "editor.formatOnSave": true,

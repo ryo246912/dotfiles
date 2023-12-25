@@ -674,6 +674,8 @@ cp_winhost() {
   # VSCodeの設定ファイルをコピー
   [ "$(date -r $HOME/.vscode/keybindings.json '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/Code/User/keybindings.json '+%Y/%m/%d %H:%M')" ] && \
   cp "$HOME/.vscode/keybindings.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  [ "$(date -r $HOME/.vscode/settings.json '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/Code/User/settings.json '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
 }
 {{- end }}
 #--------------------------------------------------------------
