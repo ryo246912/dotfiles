@@ -671,6 +671,9 @@ cp_winhost() {
   # alacrittyの設定ファイルをコピー
   [ "$(date -r $HOME/.config/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" ] && \
   cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+  # VSCodeの設定ファイルをコピー
+  [ "$(date -r $HOME/.vscode/keybindings.json '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/Code/User/keybindings.json '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.vscode/keybindings.json" "$APPDATA/Roaming/Code/User/keybindings.json"
 }
 {{- end }}
 #--------------------------------------------------------------
