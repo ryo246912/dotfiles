@@ -674,11 +674,16 @@ function ssh() {
 
 
 export APPDATA="/mnt/c/Users/$WINUSER/AppData"
+export USERDIR="/mnt/c/Users/$WINUSER"
 {{ if eq .chezmoi.os "linux" -}}
 cp_winhost() {
   # alacrittyの設定ファイルをコピー
   [ "$(date -r $HOME/.config/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" ] && \
   cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+
+  # AutoHotkeyの設定ファイルをコピー
+  [ "$(date -r $HOME/.config/autohotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" != "$(date -r $USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
 
   # rioの設定ファイルをコピー
   [ "$(date -r $HOME/.config/rio/config.toml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Local/rio/config.toml '+%Y/%m/%d %H:%M')" ] && \
