@@ -615,6 +615,10 @@ RemapKey(key) {
     Space & n::RemapKey("!+b")                    ;「Space」+ n → b
 #HotIf
 
+; その他設定
+; ウィンドウ最小化
+#+Down::Send "#{Down}#{Down}"                     ; Win(#) + Shift(+) + ↓ → (Win + ↓) + (Win + ↓)
+
 ; アプリ毎の設定
 #HotIf WinActive("OneNote")
 ;リンク化する
