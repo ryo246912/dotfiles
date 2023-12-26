@@ -1183,8 +1183,8 @@ sh -i -l -c '<command>'
 ```sh
 % shell:zsh
 
-# show bindkey
-bindkey | vim -
+# show bindkey[-M : selected keymap]
+bindkey -M <keymap> | vim -
 
 # manual zshbuiltins
 man zshbuiltins
@@ -1192,6 +1192,9 @@ man zshbuiltins
 # show/set shell option
 setopt
 ```
+$ keymap: bindkey -l
+;$
+
 
 ```sh
 % shell:display
@@ -1213,6 +1216,12 @@ uname -a
 ```sh
 % shell:linux
 
+# apt : update
+sudo apt update
+
+# apt : install [-y:yes]
+sudo apt install -y <package>
+
 # free : [-h:human][-c:count][-s:interval seconds]
 free -h -c 12 -s 300
 
@@ -1227,6 +1236,26 @@ sar -r 1 10
 
 # sar : [-B:paging]
 sar -B 1 10
+```
+
+;--------------------------------------------------------------
+; shell : Windows(WSL)
+;--------------------------------------------------------------
+
+```sh
+% shell:Windows(WSL)
+
+# wsl : installable list
+wsl --list --online
+
+# wsl : install distro
+wsl --install -d <distro>
+
+# wsl : display installed distro
+wsl -l -v
+
+# wsl : launch wsl root directory[-e <command>:exec command]
+wsl ~
 ```
 
 ;--------------------------------------------------------------

@@ -1,11 +1,18 @@
 abbr ch='chezmoi'
 abbr chad='chezmoi add --template'
+{{ if eq .chezmoi.os "darwin" -}}
 abbr chap='chezmoi apply --interactive'
+abbr chas='chezmoi apply --source-path'
+{{ else -}}
+abbr chap='chezmoi apply --interactive && cp_winhost'
+abbr chas='chezmoi apply --source-path && cp_winhost'
+{{- end }}
 abbr chcd='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && vim $file }'
 abbr chcs='() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }'
 abbr chch='chezmoi chattr +template'
 abbr chd='chezmoi data'
 abbr chdi='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && chezmoi diff $file }'
+abbr chig='chezmoi ignored'
 abbr che='chezmoi edit --interactive --apply'
 abbr chl='chezmoi list -p source-absolute -i files'
 abbr chm='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && chezmoi merge $file }'
@@ -89,11 +96,13 @@ abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && 
 abbr fhq='() { local dir=$(ghq list --full-path | fzf ) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 #abbr fz='() { local dir=$(z | sort -rn | cut -c 12- | fzf) ; if [ -n "$dir" ]; then cd $dir ; else return 1 ; fi }'
 
-{{ if eq .chezmoi.os "darwin" -}}
+{{- if eq .chezmoi.os "darwin" -}}
 abbr mh='make help'
 abbr ml='make lint'
 abbr mf='make freshup-local-for-py-engineer'
 {{- end }}
+
+abbr np='() { local COMMAND=$(navi --print) && echo "実行しますか? : $COMMAND" && read && eval "$COMMAND" }'
 
 abbr nr='npm run'
 abbr nrb='npm run build'
@@ -105,6 +114,7 @@ abbr nrt='npm run test'
 abbr nrtd='npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ master...HEAD | grep -E ".*spec.*")'
 abbr nrv='npm run vite'
 
+abbr s='sudo'
 abbr up='up --noinput'
 abbr w='which'
 abbr y='yazi'

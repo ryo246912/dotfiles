@@ -1,7 +1,11 @@
-{{ if eq .chezmoi.os "darwin" }}
-# macOS
-{{ else }}
-# WSL
-.hammerspoon
-keybindings_darwin.json
-{{ end }}
+{{- if eq .chezmoi.os "darwin" -}}
+.config/autohotkey*
+{{ else -}}
+.config/karabiner*
+.config/rectangle*
+**/dbeaver_shortcut.csv
+{{- end }}
+.config/hammerspoon*
+.config/starship*
+**/keybindings_darwin.json
+**/keybindings_linux.json

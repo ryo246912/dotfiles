@@ -121,6 +121,10 @@ nnn,space,space,ファイル複数選択
 Notion,cmd + /,-,編集画面表示
 Notion,cmd + Enter,-,カーソルブロックを操作(ページを開く・ToDoオンオフ・トグル開閉)
 Notion,cmd + shift + u,-,一つ上の階層に行く
+OneNote,-,ctrl + g,ノートブックを切替
+OneNote,-,ctrl + shift + g,セッション(タブのようなもの)にフォーカス
+OneNote,-,ctrl + alt + g,ページにフォーカス
+OneNote,-,ctrl + fn + ↑↓,ページの上下移動
 Sticky,cmd + m,-,折りたたみ・展開
 Slack,cmd + shift + c,-,コード表示
 Slack,cmd + r,-,再読み込み
@@ -197,105 +201,104 @@ Vim,:q!,:q!,ファイル保存せず終了
 Vim,:w,:w,保存
 Vim,:wq,:wq,保存して終了
 Vim,:<n>,:<n>,n行目に移動
-VSCode,ctrl + c,-,(GitHub)コメントを追加 ※カスタム
-VSCode,ctrl + g,-,選択行に移動
+VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム
+VSCode,ctrl + g,CapsLk + g(shift + alt + g),選択行に移動
 VSCode,ctrl + r,-,最近開いたファイルやフォルダ
 VSCode,ctrl + q,-,QuickOpenView(各フォームにフォーカス)
-VSCode,ctrl + w,-,ウィンドウの切り替え
-VSCode,ctrl + x,-,コマンドパレットを表示 ※カスタム
-VSCode,ctrl + z → ctrl + a,-,前に移動 ※カスタム
-VSCode,ctrl + z → ctrl + q,-,最近開いたファイルに移動 ※カスタム
-VSCode,ctrl + z → ctrl + s,-,再帰的に展開する ※カスタム
-VSCode,ctrl + z → ctrl + x,-,再帰的に折りたたむ ※カスタム
-VSCode,ctrl + z → ctrl + z,-,定義元へ移動 ※カスタム
+VSCode,ctrl + w,CapsLk + w(shift + alt + w),ウィンドウの切り替え
+VSCode,ctrl + x,CapsLk + x(shift + alt + x),コマンドパレットを表示 ※カスタム
+VSCode,ctrl + z → ctrl + a,CapsLk + z → CapsLk + a(shift + alt + z → shift + alt + a),前に移動 ※カスタム
+VSCode,ctrl + z → ctrl + q,CapsLk + z → CapsLk + q(shift + alt + z → shift + alt + q),最近開いたファイルに移動 ※カスタム
+VSCode,ctrl + z → ctrl + s,CapsLk + z → CapsLk + s(shift + alt + z → shift + alt + s),再帰的に展開する ※カスタム
+VSCode,ctrl + z → ctrl + x,CapsLk + z → CapsLk + x(shift + alt + z → shift + alt + x),再帰的に折りたたむ ※カスタム
+VSCode,ctrl + z → ctrl + z,CapsLk + z → CapsLk + z(shift + alt + z → shift + alt + z),定義元へ移動 ※カスタム
 VSCode,ctrl + -,-,定義に戻る
-VSCode,ctrl + [],-,エディタの幅を縮小/拡大 ※カスタム
-VSCode,ctrl + shift + [],-,エディタの高さを縮小/拡大 ※カスタム
-VSCode,cmd + d,-,タブ(エディタ)を下のグループに移動 ※カスタム
-VSCode,cmd + d,-,[diff editor]逆側のエディタにフォーカス ※カスタム
-VSCode,cmd + e,-,アクティブなエディタグループにフォーカス ※カスタム
-VSCode,cmd + j,-,パネルの表示/非表示の切り替え
-VSCode,cmd + l,-,行全体を選択
-VSCode,cmd + o,-,[diff editor]元のファイルを開く
-VSCode,cmd + r,-,ウィンドウの再読み込み(Reload Window)
-VSCode,cmd + space,-,プレビューモードの解除 ※カスタム
-VSCode,cmd + [],-,空白行へ上下移動 ※カスタム
-VSCode,cmd + ↑↓,-,先頭/末尾に移動
-VSCode,cmd + ↑↓,-,入力コントロールと結果の間を移動
-VSCode,cmd + .,-,(マークダウン)URLペースト時のコントロールを選択
-VSCode,cmd + ctrl + e,-,エクスプローラ:開いているエディタビューにフォーカス ※カスタム
-VSCode,cmd + ctrl + g,-,(GitHub)GitHubPRビューにフォーカス ※カスタム
-VSCode,cmd + ctrl + j,-,(Jumpy)選択ラインに移動 ※カスタム
-VSCode,cmd + ctrl + ↑↓,-,(metaGo)1行上下選択 ※カスタム
-VSCode,cmd + shift + b,-,(labeled bookmark)Bookmark登録 ※カスタム
-VSCode,cmd + shift + d,-,タブ(エディタ)を上のグループに移動 ※カスタム
-VSCode,cmd + shift + d,-,[diff editor]sidebyside表示の切り替え ※カスタム
-VSCode,cmd + shift + e,-,エディタにフォーカス
-VSCode,cmd + shift + g,-,(GitHub)Gitにフォーカス ※カスタム
-VSCode,cmd + shift + j,-,(Jumpy)選択ワードに移動 ※カスタム
-VSCode,cmd + shift + k,-,選択行を削除
-VSCode,cmd + shift + m,-,問題を表示
-VSCode,cmd + shift + o,-,ファイルシンボルを表示
-VSCode,cmd + shift + r,-,(GitHub)コメントにフォーカス ※カスタム
-VSCode,cmd + shift + w,-,ウィンドウを閉じる
-VSCode,cmd + shift + 2,-,(ToggleQuotes)Quotoの切り替え ※カスタム
-VSCode,cmd + shift + ¥,-,対になるブラケットに移動
-VSCode,cmd + shift + [],-,タブ切り替え
-VSCode,cmd + shift + option + [],-,タブの位置移動 ※カスタム
-VSCode,cmd + shift + option + ←↓↑→,-,矩形選択(絡む選択)
-VSCode,cmd + option + b,-,(labeled bookmark)Active Groupにフォーカスする ※カスタム
-VSCode,cmd + option + c,-,(Error lens)エラーのcodeをコピー ※カスタム
-VSCode,cmd + option + d,-,右に分割 ※カスタム
-VSCode,cmd + option + e,-,開いているファイルのエクスプローラにフォーカス ※カスタム
-VSCode,cmd + option + g,-,(GitHub)GitHubのビューにフォーカス ※カスタム
-VSCode,cmd + option + h,-,history(タイムライン)にフォーカス ※カスタム
-VSCode,cmd + option + i,-,開発者ツールの切り替え(chromeのconsoleキーと同じ)
-VSCode,cmd + option + j,-,開発者コンテキストキー(when句)の調査(Developer: Inspect Context Keys) ※カスタム
-VSCode,cmd + option + t,-,(Tab Groups)Tab Groupsビューにフォーカス ※カスタム
-VSCode,cmd + option + v,-,(vscodevim)vscodevimの有効無効切り替え ※カスタム
+VSCode,ctrl + [],CapsLk + [](shift + alt + []),エディタの幅を縮小/拡大 ※カスタム
+VSCode,ctrl + shift + [],CapsLk + shift + [](ctrl + shift + alt + []),エディタの高さを縮小/拡大 ※カスタム
+VSCode,cmd + d,ctrl + d,タブ(エディタ)を下のグループに移動 ※カスタム
+VSCode,cmd + d,ctrl + d,[diff editor]逆側のエディタにフォーカス ※カスタム
+VSCode,cmd + e,ctrl + e,アクティブなエディタグループにフォーカス ※カスタム
+VSCode,cmd + j,ctrl + j,パネルの表示/非表示の切り替え
+VSCode,cmd + l,ctrl + l,行全体を選択
+VSCode,cmd + o,ctrl + o,[diff editor]元のファイルを開く
+VSCode,cmd + r,ctrl + r,ウィンドウの再読み込み(Reload Window)
+VSCode,cmd + space,ctrl + space,プレビューモードの解除 ※カスタム
+VSCode,cmd + [],ctrl + [],空白行へ上下移動 ※カスタム
+VSCode,cmd + ↑↓,ctrl + ↑↓,先頭/末尾に移動
+VSCode,cmd + ↑↓,ctrl + ↑↓,入力コントロールと結果の間を移動
+VSCode,cmd + .,ctrl + .,(マークダウン)URLペースト時のコントロールを選択
+VSCode,cmd + ctrl + e,ctrl + CapsLk + e(ctrl + shift + alt + e),エクスプローラ:開いているエディタビューにフォーカス ※カスタム
+VSCode,cmd + ctrl + g,ctrl + CapsLk + g(ctrl + shift + alt + g),(GitHub)GitHubPRビューにフォーカス ※カスタム
+VSCode,cmd + ctrl + j,ctrl + CapsLk + j(ctrl + shift + alt + j),(Jumpy)選択ラインに移動 ※カスタム
+VSCode,cmd + ctrl + ↑↓,ctrl + CapsLk + ↑↓(ctrl + shift + alt + ↑↓),(metaGo)1行上下選択 ※カスタム
+VSCode,cmd + shift + b,ctrl + shift + b,(labeled bookmark)Bookmark登録 ※カスタム
+VSCode,cmd + shift + d,ctrl + shift + d,タブ(エディタ)を上のグループに移動 ※カスタム
+VSCode,cmd + shift + d,ctrl + shift + d,[diff editor]sidebyside表示の切り替え ※カスタム
+VSCode,cmd + shift + e,ctrl + shift + e,エディタにフォーカス
+VSCode,cmd + shift + g,ctrl + shift + g,(GitHub)Gitにフォーカス ※カスタム
+VSCode,cmd + shift + j,ctrl + shift + j,(Jumpy)選択ワードに移動 ※カスタム
+VSCode,cmd + shift + k,ctrl + shift + k,選択行を削除
+VSCode,cmd + shift + m,ctrl + shift + m,問題を表示
+VSCode,cmd + shift + o,ctrl + shift + o,ファイルシンボルを表示
+VSCode,cmd + shift + r,ctrl + shift + r,(GitHub)コメントにフォーカス ※カスタム
+VSCode,cmd + shift + w,ctrl + shift + w,ウィンドウを閉じる
+VSCode,cmd + shift + 2,ctrl + shift + 2,(ToggleQuotes)Quotoの切り替え ※カスタム
+VSCode,cmd + shift + ¥,ctrl + shift + ¥,対になるブラケットに移動
+VSCode,cmd + shift + [],ctrl + PgUp/PgDown,タブ切り替え
+VSCode,cmd + shift + option + [],ctrl + shift + PgUp/PgDown,タブの位置移動 ※カスタム
+VSCode,cmd + shift + option + ←↓↑→,ctrl + alt + Home/PgDown/PgUp/End,矩形選択(絡む選択)
+VSCode,cmd + option + b,ctrl + alt + b,(labeled bookmark)Active Groupにフォーカスする ※カスタム
+VSCode,cmd + option + c,ctrl + alt + c,(Error lens)エラーのcodeをコピー ※カスタム
+VSCode,cmd + option + d,ctrl + alt + d,右に分割 ※カスタム
+VSCode,cmd + option + e,ctrl + alt + e,開いているファイルのエクスプローラにフォーカス ※カスタム
+VSCode,cmd + option + g,ctrl + alt + g,(GitHub)GitHubのビューにフォーカス ※カスタム
+VSCode,cmd + option + h,ctrl + alt + h,history(タイムライン)にフォーカス ※カスタム
+VSCode,cmd + option + i,ctrl + alt + i,開発者ツールの切り替え(chromeのconsoleキーと同じ)
+VSCode,cmd + option + j,ctrl + alt + j,開発者コンテキストキー(when句)の調査(Developer: Inspect Context Keys) ※カスタム
+VSCode,cmd + option + t,ctrl + alt + t,(Tab Groups)Tab Groupsビューにフォーカス ※カスタム
+VSCode,cmd + option + v,ctrl + alt + v,(vscodevim)vscodevimの有効無効切り替え ※カスタム
 VSCode,cmd + option + shift + d,-,下に分割 ※カスタム
 VSCode,cmd + option + shift + g,-,(GitHub)下に分割 ※カスタム
-VSCode,cmd + option + space,-,ホバーの表示 ※カスタム
-VSCode,cmd + option + [],-,折りたたみ
-VSCode,cmd + option + l,-,選択範囲内で検索(FindinSelection)ON/OFF
-VSCode,cmd + option + ←→,-,選択範囲の縮小/拡大 ※カスタム
-VSCode,cmd + option + ↑↓,-,マルチカーソル
-VSCode,cmd + option + 0,-,(vscode-input-sequence)マルチカーソル+連番
-VSCode,cmd + option + ←/→,-,タブ(エディタ)を上下のグループに移動 ※カスタム
-VSCode,cmd + k → cmd + <num>,-,タグを<num>レベルで閉じる
-VSCode,cmd + k → cmd + j,-,閉じタグをすべて開く
-VSCode,cmd + k → cmd + m,-,EditorGroupを最大化する(toggleMaximizeEditorGroup)
-VSCode,cmd + k → cmd + [,-,再帰的に折りたたむ
-VSCode,cmd + k → cmd + ],-,再起的に展開する
-VSCode,option + b,-,(gitlens)Git Blame表示
-VSCode,option + h,-,(gitlens)ブランチの履歴表示
-VSCode,option + p,-,現在開いているファイルパスをコピー ※カスタム
-VSCode,option + ↑↓,-,行を入れ替え
-VSCode,option + (カンマ)|.,-,(gitlens)前/後のRevisionとの差分を表示
-VSCode,option + Shift + ↑↓,-,行をコピー
-VSCode,option + shift + .,-,(gitlens)現ファイルとの差分を表示
-VSCode,option + shift + (カンマ),-,(gitlens)カーソル行での前Revisionの差分を表示
+VSCode,cmd + option + space,ctrl + alt + space,ホバーの表示 ※カスタム
+VSCode,cmd + option + [],ctrl + shift + [],折りたたみ
+VSCode,cmd + option + l,alt + l,選択範囲内で検索(FindinSelection)ON/OFF
+VSCode,cmd + option + ←→,ctrl + alt + ←→,選択範囲の縮小/拡大 ※カスタム
+VSCode,cmd + option + ↑↓,ctrl + alt + ↑↓,マルチカーソル
+VSCode,cmd + option + 0,ctrl + alt + 0,(vscode-input-sequence)マルチカーソル+連番
+VSCode,cmd + k → cmd + <num>,ctrl + k → ctrl + <num>,タグを<num>レベルで閉じる
+VSCode,cmd + k → cmd + j,ctrl + k → ctrl + j,閉じタグをすべて開く
+VSCode,cmd + k → cmd + m,ctrl + k → ctrl + m,EditorGroupを最大化する(toggleMaximizeEditorGroup)
+VSCode,cmd + k → cmd + [,ctrl + k → ctrl + [,再帰的に折りたたむ
+VSCode,cmd + k → cmd + ],ctrl + k → ctrl + ],再起的に展開する
+VSCode,option + b,alt + b,(gitlens)Git Blame表示
+VSCode,option + h,alt + h,(gitlens)ブランチの履歴表示
+VSCode,option + p,alt + p,現在開いているファイルパスをコピー ※カスタム
+VSCode,option + ↑↓,alt + ↑↓,行を入れ替え
+VSCode,option + (カンマ)|.,alt + (カンマ)|.,(gitlens)前/後のRevisionとの差分を表示
+VSCode,option + shift + ↑↓,alt + shift + ↑↓,行をコピー
+VSCode,option + shift + .,alt + shift + .,(gitlens)現ファイルとの差分を表示
+VSCode,option + shift + (カンマ),alt + shift + (カンマ),(gitlens)カーソル行での前Revisionの差分を表示
 VSCode(コマンドパレット),Excel to Markdown table,-,(Excel to Markdown table)スプレッドシートをmarkdown表に変換
 VSCode(コマンドパレット),Emmet: Wrap with Abbreviation,-,タグで囲む
 VSCode(コマンドパレット),Developer: Inspect Context Keys,-,開発者コンテキストキー(when句)の調査
 VSCode(コマンドパレット),Developer: Show Running Extensions,-,拡張機能の表示
 VSCode(コマンドパレット),Developer: Startup Performance,-,スタートアップパフォーマンス表示
-zsh/terminal,ctrl + a,ctrl + a,先頭に戻る(beginning-of-line)
+zsh/terminal,ctrl + a,CapsLk + a(shift + alt + a),先頭に戻る(beginning-of-line)
 zsh/terminal,ctrl + c,ctrl + c,割り込みシグナルを送る(kill -INT/intrシグナル)
-zsh/terminal,ctrl + e,ctrl + e,末尾に進む(end-of-line)
-zsh/terminal,ctrl + h,ctrl + h,1文字削除(backward-delete-char)
-zsh/terminal,ctrl + i,ctrl + i,補完展開(expand-or-complete)
-zsh/terminal,ctrl + k,ctrl + k,カーソル後削除(kill-line)
-zsh/terminal,ctrl + l,ctrl + l,スクリーンclear(clear-screen)
-zsh/terminal,ctrl + n,ctrl + n,次のコマンド履歴を表示(down-line-or-hisotry→history-search-forward)
-zsh/terminal,ctrl + p,ctrl + p,前のコマンド履歴を表示(up-line-or-hisotry→history-search-backward)
-zsh/terminal,ctrl + q,ctrl + q,画面の出力を再開する(startシグナル)
-zsh/terminal,ctrl + r,ctrl + r,履歴後方検索(history-incremental-search-backward)
-zsh/terminal,ctrl + s,ctrl + s,履歴前方検索(history-incremental-search-forward)
-zsh/terminal,ctrl + s,ctrl + s,画面の出力を停止する(stopシグナル)
-zsh/terminal,ctrl + u,ctrl + u,カーソル前削除(kill-whole-line)
-zsh/terminal,ctrl + v,ctrl + v,特殊文字(^[=Escや^M=エンターなど)の入力(quoted-insert)
-zsh/terminal,ctrl + w,ctrl + w,1単語の削除(backward-kill-word)
-zsh/terminal,ctrl + z,ctrl + z,停止シグナルを送る(suspシグナル)
-zsh/terminal,Esc → b,-,1単語戻る(backward-word)
-zsh/terminal,Esc → f,-,1単語進む(forward-word)
+zsh/terminal,ctrl + e,CapsLk + e(shift + alt + e),末尾に進む(end-of-line)
+zsh/terminal,ctrl + h,CapsLk + h(shift + alt + h),1文字削除(backward-delete-char)
+zsh/terminal,ctrl + i,CapsLk + i(shift + alt + i),補完展開(expand-or-complete)
+zsh/terminal,ctrl + k,CapsLk + k(shift + alt + k),カーソル後削除(kill-line)
+zsh/terminal,ctrl + l,CapsLk + l(shift + alt + l),スクリーンclear(clear-screen)
+zsh/terminal,ctrl + n,CapsLk + n(shift + alt + n),次のコマンド履歴を表示(down-line-or-hisotry→history-search-forward)
+zsh/terminal,ctrl + p,CapsLk + p(shift + alt + p),前のコマンド履歴を表示(up-line-or-hisotry→history-search-backward)
+zsh/terminal,ctrl + q,CapsLk + q(shift + alt + q),画面の出力を再開する(startシグナル)
+zsh/terminal,ctrl + r,CapsLk + r(shift + alt + r),履歴後方検索(history-incremental-search-backward)
+zsh/terminal,ctrl + s,CapsLk + s(shift + alt + s),履歴前方検索(history-incremental-search-forward)
+zsh/terminal,ctrl + s,CapsLk + s(shift + alt + s),画面の出力を停止する(stopシグナル)
+zsh/terminal,ctrl + u,CapsLk + u(shift + alt + u),カーソル前削除(kill-whole-line)
+zsh/terminal,ctrl + v,CapsLk + v(shift + alt + v),特殊文字(^[=Escや^M=エンターなど)の入力(quoted-insert)
+zsh/terminal,ctrl + w,CapsLk + w(shift + alt + w),1単語の削除(backward-kill-word)
+zsh/terminal,ctrl + z,CapsLk + z(shift + alt + z),停止シグナルを送る(suspシグナル)
+zsh/terminal,Esc → b,Esc → b,1単語戻る(backward-word)
+zsh/terminal,Esc → f,Esc → f,1単語進む(forward-word)

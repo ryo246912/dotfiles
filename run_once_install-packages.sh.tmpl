@@ -1,11 +1,7 @@
 #!/bin/bash
-{{ if eq .chezmoi.os "darwin" }}
+
 ### hard link ###
-
-# commitizen #
-ln -f ~/.config/commitizen/.czrc ~/.czrc
-ln -f ~/.config/commitizen/.commitlintrc.js ~/.commitlintrc.js
-
+{{- if eq .chezmoi.os "darwin" -}}
 # navi #
 [ -e "~/.config/private/navi/mycheat_private.cheat.md" ] && ln -f ~/.config/private/navi/mycheat_private.cheat.md ~/.config/navi/cheats
 ln -f ~/.private/.zprofile.secret ~
@@ -42,4 +38,4 @@ EOF
 for package in $(echo $CASKPACKAGES); do
   brew install --cask $package
 done
-{{ end }}
+{{- end }}

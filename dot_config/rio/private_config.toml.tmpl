@@ -45,7 +45,14 @@ use-current-path = true
 #   - (Linux/BSD) user login shell
 #   - (Windows) powershell
 #
+{{ if eq .chezmoi.os "darwin" -}}
 shell = { program = "/bin/zsh", args = ["--login","-c 'tmux attach || tmux'"] }
+{{ else -}}
+[shell]
+program = "wsl ~"
+args = ["-d Ubuntu-20.04"]
+# args = ["-d Ubuntu-20.04","-e 'tmux attach || tmux'"]
+{{- end }}
 
 # Startup directory
 #
@@ -103,6 +110,8 @@ light-cyan       = '#00ffff'
 light-white      = '#d0d0d0'
 
 # Bindings
+# https://raphamorim.io/rio/docs/key-bindings
+{{ if eq .chezmoi.os "darwin" -}}
 # super = command
 [bindings]
 keys = [
@@ -155,3 +164,56 @@ keys = [
   { key = "8",           with = "Command",           bytes = [2,56]}  , # ctrl + b → 8(ウィンドウ8に移動)
   { key = "9",           with = "Command",           bytes = [2,57]}  , # ctrl + b → 9(ウィンドウ9に移動)
 ]
+{{ else -}}
+[bindings]
+keys = [
+  { key = "d",           with = "control",           bytes = [2,37]}  , # ctrl + b → "(ペインを左右に分割)
+  { key = "d",           with = "control|Shift",     bytes = [2,34]}  , # ctrl + b → %(ペインを上下に分割)
+  { key = "c",           with = "control|Alt",       bytes = [2,91]}  , # ctrl + b → [(コピーモード)
+  # { key = "e",           with = "control",           bytes = [2,80]}  , # ctrl + b → P(easymotion search、カスタム)
+  { key = "e",           with = "control",           bytes = [2,32]}  , # ctrl + b → space(tmux-thumbs、カスタム)
+  { key = "e",           with = "control | Shift",   bytes = [2,81]}  , # ctrl + b → Q(easymotion easycopy、カスタム)
+  { key = "f",           with = "control",           bytes = [2,27]}  , # ctrl + b → ctrl + [(コピーモード→検索、カスタム)
+  # { key = "j",           with = "control",           bytes = [2,79]}  , # ctrl + b → O(mode切替→easy motion jump line、カスタム)
+  { key = "l",           with = "control",           bytes = [2,115]} , # ctrl + b → s(ペイン一覧表示)
+  { key = "l",           with = "control | Shift",   bytes = [2,119]} , # ctrl + b → w(ウィンドウ一覧表示)
+  { key = "o",           with = "control",           bytes = [2,82]}  , # ctrl + b → R(easymotion quickopen 、カスタム)
+  { key = "p",           with = "control",           bytes = [2,16]}  , # ctrl + b → ctrl + p(popup windowを起動、カスタム)
+  { key = "r",           with = "control",           bytes = [2,114]} , # ctrl + b → r(.tmux.confの再読込、カスタム)
+  { key = "s",           with = "control",           bytes = [2,101]} , # ctrl + b → e(synchronize-panesのON/OFF、カスタム)
+  { key = "r",           with = "control | Shift",   bytes = [2,18]}  , # ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+  { key = "s",           with = "control | Shift",   bytes = [2,19]}  , # ctrl + b → ctrl + s(tmux-resurrect、ウィンドウの保存)
+  { key = "t",           with = "control",           action = "None"} , # 既存 cmd + t キーバインドを無効にする
+  { key = "t",           with = "control",           bytes = [2,99]}  , # ctrl + b → c(ウィンドウの作成)
+  { key = "t",           with = "control | Shift",   action = "None"} , # cmd + shift + t(タブ作成)
+  { key = "w",           with = "control",           bytes = [2,120]} , # ctrl + b → x(ウィンドウの破棄)
+  { key = "w",           with = "control | Shift",   bytes = [2,100]} , # ctrl + b → d(ウィンドウのデタッチ)
+  { key = "z",           with = "control",           bytes = [2,122]} , # ctrl + b → z(ペインの一時拡大/縮小)
+  { key = "left",        with = "control",           bytes = [2,104]} , # ctrl + b → h(左のペインに移動、カスタム)
+  { key = "down",        with = "control",           bytes = [2,106]} , # ctrl + b → j(下のペインに移動、カスタム)
+  { key = "up",          with = "control",           bytes = [2,107]} , # ctrl + b → k(上のペインに移動、カスタム)
+  { key = "right",       with = "control",           bytes = [2,108]} , # ctrl + b → l(右のペインに移動、カスタム)
+  { key = "left",        with = "control|Shift",     bytes = [2,8]}   , # ctrl + b → ctrl + h(ペインを左に広げる、カスタム)
+  { key = "down",        with = "control|Shift",     bytes = [2,10]}  , # ctrl + b → ctrl + j(ペインを下に広げる、カスタム)
+  { key = "up",          with = "control|Shift",     bytes = [2,11]}  , # ctrl + b → ctrl + k(ペインを上に広げる、カスタム)
+  { key = "right",       with = "control|Shift",     bytes = [2,12]}  , # ctrl + b → ctrl + l(ペインを右に広げる、カスタム)
+  { key = "up",          with = "control|Shift|Alt", bytes = [2,123]} , # ctrl + b → {(ペインを前に入れ替え)
+  { key = "down",        with = "control|Shift|Alt", bytes = [2,125]} , # ctrl + b → }(ペインを後ろに入れ替え)
+  { key = "[",           with = "control",           bytes = [2,9]}   , # ctrl + b → ctrl + i(前のペインに移動、カスタム)
+  { key = "]",           with = "control",           bytes = [2,29]}  , # ctrl + b → ctrl + ](次のペインに移動、カスタム)
+  { key = "pageup",      with = "control",           bytes = [2,112]} , # ctrl + b → p(前のウィンドウに移動)
+  { key = "pagedown",    with = "control",           bytes = [2,110]} , # ctrl + b → n(次のウィンドウに移動)
+  { key = "pageup",      with = "control|Shift",     bytes = [2,24]}  , # ctrl + b → ctrl + x(ウィンドウを前に入れ替え、カスタム)
+  { key = "pagedown",    with = "control|Shift"    , bytes = [2,25]}  , # ctrl + b → ctrl + y(ウィンドウを後ろに入れ替え、カスタム)
+  # { key = "space",       with = "control",           bytes = [2,32]}  , # ctrl + b → space(popup windowを起動、カスタム)
+  { key = "1",           with = "control",           bytes = [2,49]}  , # ctrl + b → 1(ウィンドウ1に移動)
+  { key = "2",           with = "control",           bytes = [2,50]}  , # ctrl + b → 2(ウィンドウ2に移動)
+  { key = "3",           with = "control",           bytes = [2,51]}  , # ctrl + b → 3(ウィンドウ3に移動)
+  { key = "4",           with = "control",           bytes = [2,52]}  , # ctrl + b → 4(ウィンドウ4に移動)
+  { key = "5",           with = "control",           bytes = [2,53]}  , # ctrl + b → 5(ウィンドウ5に移動)
+  { key = "6",           with = "control",           bytes = [2,54]}  , # ctrl + b → 6(ウィンドウ6に移動)
+  { key = "7",           with = "control",           bytes = [2,55]}  , # ctrl + b → 7(ウィンドウ7に移動)
+  { key = "8",           with = "control",           bytes = [2,56]}  , # ctrl + b → 8(ウィンドウ8に移動)
+  { key = "9",           with = "control",           bytes = [2,57]}  , # ctrl + b → 9(ウィンドウ9に移動)
+]
+{{- end }}
