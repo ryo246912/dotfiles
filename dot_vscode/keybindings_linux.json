@@ -517,7 +517,7 @@
     "when": "activeEditorIsNotPreview && activeEditorIsPinned"
   },
   ///////////////////////////////////////////////
-  // linuxのみ
+  // Winのみ
   ///////////////////////////////////////////////
   // 選択行に移動
   {
@@ -631,6 +631,11 @@
     "key": "shift+alt+left",
     "command": "cursorHomeSelect",
     "when": "textInputFocus"
+  },
+  // ウィンドウ切替
+  {
+    "key": "shift+alt+w",
+    "command": "workbench.action.switchWindow"
   },
   ///////////////////////////////////////////////
   // 拡張機能

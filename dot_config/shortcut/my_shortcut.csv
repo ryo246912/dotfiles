@@ -82,28 +82,6 @@ iTerm2,cmd + d,-,画面を左右に分割
 iTerm2,cmd + shift + d,-,画面を上下に分割
 iTerm2,cmd + [],-,分割画面の移動
 iTerm2,option + space,-,ホットキー起動
-Mac,ctrl + F1,-,VoiceOverのオンオフ ※カスタム
-Mac,ctrl + F2,-,メニューバー操作
-Mac,ctrl + F3,-,Dock操作
-Mac,ctrl + F8,-,(右上の)ステータスメニュー操作
-Mac,ctrl + shift + F1,-,アクセシビリティコントロールの表示 ※カスタム
-Mac,ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 カスタム
-Mac,ctrl + ↓,-,ウィジェット表示 ※カスタム
-Mac,cmd + d,-,保存しない（ファイル保存時のダイアログ）
-Mac,cmd + m,-,ウィンドウ最小化
-Mac,cmd + shift + 4,-,スクリーンショット：一部撮影
-Mac,cmd + shift + 5,-,スクリーンショット：コントロール表示
-Mac,cmd + ctrl + f,-,フルスクリーン
-Mac,cmd + ctrl + q,-,画面のロック
-Mac,cmd + space,-,スポットライト起動
-Mac,cmd + shift + .,-,隠しファイルを表示
-Mac,option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
-Mac,option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
-Mac,option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
-Mac,option + cmd + Esc,-,アプリ強制終了
-Mac(Rectangle),ctrl + ←/→,-,ウィンドウ左/右半分 ※カスタム
-Mac(Rectangle),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※カスタム
-Mac(Rectangle),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※カスタム
 Mirror-QWERTY,cmd + space + ;,ctrl + 変換 + ;,cmd(ctrl) + a(全選択)
 Mirror-QWERTY,cmd + space + (カンマ),ctrl + 変換 + (カンマ),cmd(ctrl) + c(コピー)
 Mirror-QWERTY,cmd + space + j,ctrl + 変換 + j,cmd(ctrl) + f(検索)
@@ -125,18 +103,60 @@ OneNote,-,ctrl + g,ノートブックを切替
 OneNote,-,ctrl + shift + g,セッション(タブのようなもの)にフォーカス
 OneNote,-,ctrl + alt + g,ページにフォーカス
 OneNote,-,ctrl + fn + ↑↓,ページの上下移動
+OS(Mac),ctrl + F1,-,VoiceOverのオンオフ ※カスタム
+OS(Mac),ctrl + F2,-,メニューバー操作
+OS(Mac),ctrl + F3,-,Dock操作
+OS(Mac),ctrl + F8,-,(右上の)ステータスメニュー操作
+OS(Mac),ctrl + shift + F1,-,アクセシビリティコントロールの表示 ※カスタム
+OS(Mac),ctrl + shift + ←→,-,(Mission Control) 左右の仮装ディスプレイに切替 カスタム
+OS(Mac),ctrl + ←/→,Win + ←→,ウィンドウ左/右半分 ※MacはRectangleのカスタム
+OS(Mac),ctrl + ↓,-,ウィジェット表示 ※カスタム
+OS(Mac),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※Rectangleのカスタム
+OS(Mac),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※Rectangleのカスタム
+OS(Mac),cmd + ctrl + q,Win + l,画面のロック
+OS(Mac),cmd + d,-,保存しない（ファイル保存時のダイアログ）
+OS(Mac),cmd + m,Win + ↓,ウィンドウ最小化
+OS(Mac),cmd + shift + 4,Win + shift + s,スクリーンショット：一部撮影
+OS(Mac),cmd + shift + 5,-,スクリーンショット：コントロール表示
+OS(Mac),cmd + ctrl + f,-,フルスクリーン
+OS(Mac),cmd + space,-,スポットライト起動
+OS(Mac),cmd + shift + .,-,隠しファイルを表示
+OS(Mac),option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
+OS(Mac),option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
+OS(Mac),option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
+OS(Mac),option + cmd + Esc,-,アプリ強制終了
+OS(Win),-,ctrl + tab,同じアプリ間でウインドウの切替
+OS(Win),-,ctrl + shift + Esc,タスクマネージャーを表示
+OS(Win),-,alt + tab,ウインドウの切替
+OS(Win),-,Win + a,タスクトレイの表示
+OS(Win),-,Win + b,隠れているタスクトレイにフォーカス
+OS(Win),-,Win + d(Win + M),デスクトップの表示
+OS(Win),-,Win + e,新規エクスプローラを開く
+OS(Win),-,Win + i(Win + u),設定メニューを開く
+OS(Win),cmd + ctrl + q,Win + l,画面のロック
+OS(Win),-,Win + p,ディスプレイ設定
+OS(Win),-,Win + q(Win + s),スタートメニュー(検索)の表示
+OS(Win),-,Win + r,ファイル名を指定して実行
+OS(Win),-,Win + t,タスクバーの選択
+OS(Win),-,Win + x,スタートメニュー(右クリック)の表示
+OS(Win),ctrl + ←/→,Win + ←→,ウィンドウ左/右半分 ※MacはRectangleのカスタム
+OS(Win),cmd + m,Win + ↓,ウィンドウ最小化
+OS(Win),-,Win + tab,タスクビューの表示
+OS(Win),cmd + shift + 4,Win + shift + s,スクリーンショット：一部撮影
+OS(Win),-,Win + shift + ←→,ディスプレイ間でウインドウを移動
 Sticky,cmd + m,-,折りたたみ・展開
-Slack,cmd + shift + c,-,コード表示
-Slack,cmd + r,-,再読み込み
-Slack,cmd + t,-,ページ移動
-Slack,cmd + [],-,履歴を進む/戻る
-Slack,cmd + .,-,右サイドバーを表示/非表示
-Slack,cmd + shift + a,-,未読のダイアログを表示
-Slack,cmd + shift + d,-,左サイドバーを表示/非表示
-Slack,cmd + shift + t,-,スレッドへ移動
+Slack,cmd + r,ctrl + r,再読み込み
+Slack,cmd + t,ctrl + t,ページ移動
+Slack,cmd + [],ctrl + [],履歴を進む/戻る
+Slack,cmd + .,ctrl + .,右サイドバーを表示/非表示
+Slack,cmd + shift + a,ctrl + shift + a,未読のダイアログを表示
+Slack,cmd + shift + c,ctrl + shift + c,コード表示
+Slack,cmd + shift + d,ctrl + shift + d,左サイドバーを表示/非表示
+Slack,cmd + shift + t,ctrl + shift + t,スレッドへ移動
+Slack,cmd + shift + y,ctrl + shift + y,ステータス変更
 Slack,cmd + ctrl + ←→,-,セクション切り替え
-Slack,option + ↑↓,-,前/次のチャンネルへ移動
-Slack,option + shift + ↑↓,-,未読の前/次のチャンネルへ移動
+Slack,option + ↑↓,alt + ↑↓,前/次のチャンネルへ移動
+Slack,option + shift + ↑↓,alt + shift + ↑↓,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
 Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
 Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ

@@ -394,8 +394,20 @@ git bisect start <commit1> <commit2>
 # bisect show now commit
 git bisect view
 
-# clone [--depth:shallow clone][--filter=blob:none ;blob-less=commit&tree only][--filter=tree:0 ;tree-less=commit only]
+# clone [--depth:shallow clone][--filter=blob:none ;blob-less=commit&tree only][--filter=tree:0 ;tree-less=commit only] [repo_url:(ssh)git@github.com:<user>/<repo>.git(http)https://github.com/<user>/<repo>.git]
 git clone<_shallow-option> <repo_url>
+
+# display remote
+git remote -v
+
+# set remote url [ex:git remote set-url origin git@github.com:<user>/<repo>.git]
+git remote set-url <shortname> <url>
+
+# add remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
+git remote add <shortname> <url>
+
+# add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
+git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
 
 # config list [-l:list]
 git config -l --show-origin<_--option> | column -ts $'\t'
@@ -432,6 +444,7 @@ $ base_branch: echo -e "\nmaster"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :class:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ look_regex: echo -e "<search_word>(?=(<look_word>))\n<search_word>(?!(<look_word>))\n(?<=(<look_word>))<search_word>\n(?<!(<look_word>))<search_word>"
+$ repo_url: echo -e "\ngit@github.com:\nhttps://github.com/"
 
 $ commit1: git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
@@ -999,11 +1012,20 @@ ssh -AT <HOST>
 # ssh : locale [SendEnv LANG LC_*:take over local locale]
 vim /etc/ssh/ssh_config
 
+# ssh : copy ssh key(Mac)
+pbcopy < ~/.ssh/id_rsa.pub
+
+# ssh : copy ssh key(Win)
+clip.exe < ~/.ssh/id_rsa.pub
+
 # ssh-add : add secret key [--apple-use-keychain(ex:-K):add OS keychain store][default=add {id_rsa,id_dsa,identify}]
 ssh-add
 
 # ssh-add : display secret key
 ssh-add -l
+
+# ssh-keygen : create secret key (default:id_rsa{,.pub}) [-t:algorithm]
+ssh-keygen -t rsa
 
 # ssh-keyscan : get public ssh key [ex:ssh-keyscan github.com >> ~/.ssh/known_hosts]
 ssh-keyscan <HOST> >> ~/.ssh/known_hosts
@@ -1216,11 +1238,23 @@ uname -a
 ```sh
 % shell:linux
 
-# apt : update
+# apt(Debian) : update package
 sudo apt update
 
-# apt : install [-y:yes]
-sudo apt install -y <package>
+# apt(Debian) : upgrade specified package
+sudo apt install --only-upgrade <package>
+
+# apt(Debian) : install package [-y:yes]
+sudo apt update && sudo apt install -y <package>
+
+# apt(Debian) : uninstall package and unnecessary package
+sudo apt remove -y <package> && sudo apt autoremove -y
+
+# apt(Debian) : apt command history
+cat /var/log/apt/history.log<_grep>
+
+# apt(Debian) : add third-party package [ex.sudo add-apt-repository ppa:git-core/ppa]
+sudo add-apt-repository ppa:git-core/ppa
 
 # free : [-h:human][-c:count][-s:interval seconds]
 free -h -c 12 -s 300
@@ -1237,6 +1271,8 @@ sar -r 1 10
 # sar : [-B:paging]
 sar -B 1 10
 ```
+$ _grep : echo -e "\n | grep 'Commandline'"
+;$
 
 ;--------------------------------------------------------------
 ; shell : Windows(WSL)

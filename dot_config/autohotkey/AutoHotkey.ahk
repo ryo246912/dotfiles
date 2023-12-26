@@ -614,3 +614,13 @@ RemapKey(key) {
     Space & m::RemapKey("!+v")                    ;「Space」+ m → v
     Space & n::RemapKey("!+b")                    ;「Space」+ n → b
 #HotIf
+
+; その他設定
+; ウィンドウ最小化
+#+Down::Send "#{Down}#{Down}"                     ; Win(#) + Shift(+) + ↓ → (Win + ↓) + (Win + ↓)
+
+; アプリ毎の設定
+#HotIf WinActive("OneNote")
+;リンク化する
+^+k::Send "^k^v"                                  ; ctrl(^) + Shift(+) + k → (ctrl + k) + (ctrl + v)
+#HotIf
