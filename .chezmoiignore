@@ -7,5 +7,7 @@
 {{- end }}
 .config/hammerspoon*
 .config/starship*
+**/executable_extensions_darwin.sh
+**/executable_extensions_linux.sh
 **/keybindings_darwin.json
 **/keybindings_linux.json
