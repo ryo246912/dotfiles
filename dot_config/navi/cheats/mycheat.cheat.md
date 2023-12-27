@@ -1533,6 +1533,9 @@ zi delete <plugin>
 ;--------------------------------------------------------------
 ```sh
 % other
+# vscode : display installed extensions
+code --list-extensions | xargs -L 1 echo code --install-extension
+
 # weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
 curl -s "<version>wttr.in/<location_or_help>"
 ```
