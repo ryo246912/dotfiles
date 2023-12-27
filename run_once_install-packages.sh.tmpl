@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### hard link ###
-{{- if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.os "darwin" -}}
 # navi #
 [ -e "~/.config/private/navi/mycheat_private.cheat.md" ] && ln -f ~/.config/private/navi/mycheat_private.cheat.md ~/.config/navi/cheats
 ln -f ~/.private/.zprofile.secret ~

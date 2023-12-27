@@ -1,6 +1,6 @@
 # Rust
 . "$HOME/.cargo/env"
-{{- if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.os "darwin" -}}
 # FIXME: .zprofile読み込まれない関係でPATHが通らなかったため暫定的に記載
 eval "$(/opt/homebrew/bin/brew shellenv)"
 {{- end }}

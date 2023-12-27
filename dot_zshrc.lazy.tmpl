@@ -139,6 +139,12 @@ zinit wait lucid blockf for \
     "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
     "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
 
+# fx #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"fx* -> fx" \
+    @'antonmedv/fx'
+
 # ghq #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -704,6 +710,7 @@ cp_winhost() {
 # tpmのインストール
 ! [ -e "$HOME/.config/tmux/plugins/tpm" ] && git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
 
+{{ if eq .chezmoi.os "linux" -}}
 # alacritty
 [ -n "$WINUSER" ] && mkdir -p "$APPDATA/Roaming/alacritty" 2>/dev/null
 [ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.yml" ] && cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
@@ -711,6 +718,7 @@ cp_winhost() {
 # rio
 [ -n "$WINUSER" ] && mkdir -p "$APPDATA/Local/rio" 2>/dev/null
 [ -n "$WINUSER" ] && ! [ -e "$APPDATA/Local/rio/config.toml" ] && cp "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
+{{- end }}
 
 #--------------------------------------------------------------
 # other
