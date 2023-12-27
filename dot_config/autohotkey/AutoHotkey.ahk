@@ -621,6 +621,8 @@ RemapKey(key) {
 
 ; アプリ毎の設定
 #HotIf WinActive("OneNote")
-;リンク化する
+; リンク化する
 ^+k::Send "^k^v"                                  ; ctrl(^) + Shift(+) + k → (ctrl + k) + (ctrl + v)
+; 値のみ貼り付け
+^+v::Send "{AppsKey}{Down}{Down}{Right}{Right}{Enter}"  ; ctrl(^) + Shift(+) + v
 #HotIf
