@@ -294,7 +294,7 @@ if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /d
   tmux attach || tmux
 fi
 
-{{- if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.os "darwin" -}}
 # iTerm2
 tab-color() {
   echo -ne "\033]6;1;bg;red;brightness;$1\a"

@@ -15,7 +15,7 @@
 	pushInsteadOf = git://github.com/
 	pushInsteadOf = https://github.com/
 [delta]
-{{- if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.os "darwin" }}
   plus-style = "syntax #012800"
   minus-style = "syntax #340001"
 {{- end }}
@@ -25,7 +25,7 @@
   side-by-side = true
 [interactive]
   diffFilter = delta --color-only
-{{- if eq .chezmoi.os "darwin" -}}
+{{ if eq .chezmoi.os "darwin" }}
 [include]
   path = ~/.gitconfig.secret-noreply
 [includeIf "gitdir:~/projects/"]
