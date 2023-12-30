@@ -604,13 +604,13 @@ gh workflow view<_web>
 gh run list -L 100 -w "<workflow>" --user "<author>"
 
 # workflow view [-v:show job steps][--log,--log-failed:view log]
-gh run view <run_id> -v <_web><_--log_>--job=<job_id>
+gh run view -v <_web><_--log_>--job=<job_id>
 
 # workflow watch
-gh run watch <run_id>
+gh run watch
 
 # workflow rerun error
-gh run rerun <run_id> --failed
+gh run rerun --failed
 
 # list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
@@ -706,10 +706,10 @@ $ issue_no: gh issue list --assignee "<author>" --state <state> \
 $ workflow: gh workflow list \
   | column -ts $'\t' \
   --- --column 1
-$ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
+; $ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
   | column -ts $'\t' \
   --- --column 7
-$ job_id: gh run view <run_id> --json jobs \
+; $ job_id: gh run view <run_id> --json jobs \
   --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
