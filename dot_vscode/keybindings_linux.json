@@ -16,14 +16,6 @@
   //   "command": "-list.select",
   //   "when": "listFocus && !inputFocus && !notebookCellListFocused"
   // },
-  // {
-  //   "key": "ctrl + pageup",
-  //   "command": "-workbench.action.previousEditor"
-  // },
-  // {
-  //   "key": "ctrl + tab",
-  //   "command": "workbench.action.nextEditor"
-  // },
   {
     "key": "shift+left",
     "command": "-cursorColumnSelectLeft",
@@ -85,42 +77,9 @@
   },
   // 検索結果にフォーカスする
   {
-    "key": "ctrl+shift+f",
+    "key": "ctrl+shift+alt+f",
     "command": "search.action.focusSearchList"
   },
-  {
-    "key": "ctrl+shift+f",
-    "command": "-workbench.action.toggleFullScreen",
-    "when": "!isIOS"
-  },
-  // タブを右に移動
-  // {
-  //   "key": "shift+alt+cmd+]",
-  //   "command": "workbench.action.moveEditorRightInGroup"
-  // },
-  // {
-  //   "key": "cmd+k shift+cmd+right",
-  //   "command": "-workbench.action.moveEditorRightInGroup"
-  // },
-  // タブを左に移動
-  // {
-  //   "key": "shift+alt+cmd+[",
-  //   "command": "workbench.action.moveEditorLeftInGroup"
-  // },
-  // {
-  //   "key": "cmd+k shift+cmd+left",
-  //   "command": "-workbench.action.moveEditorLeftInGroup"
-  // },
-  // タブを下グループに移動
-  // {
-  //   "key": "alt+cmd+right",
-  //   "command": "-workbench.action.nextEditor"
-  // },
-  // タブを上グループに移動
-  // {
-  //   "key": "alt+cmd+left",
-  //   "command": "-workbench.action.previousEditor"
-  // },
   // shift + ↑で行ごとセレクトできるように
   {
     "key": "shift+up",
