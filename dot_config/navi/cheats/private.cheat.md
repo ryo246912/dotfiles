@@ -20,6 +20,32 @@ $ environment: echo -e "production\npreview"
 
 ```sh
 ;--------------------------------------------------------------
+; fly
+;--------------------------------------------------------------
+% fly
+
+# display apps list
+fly apps list
+
+# open dashboard
+fly dashboard -a "<app>"
+
+# display log
+fly logs -a "<app>"
+
+# connect postgres
+fly postgres connect -a "<psgl_app>"
+
+# open docs
+fly docs
+```
+
+$ app: fly apps list
+$ psgl_app: echo -e "psgl\n"
+;$
+
+```sh
+;--------------------------------------------------------------
 ; blog
 ;--------------------------------------------------------------
 % blog
