@@ -684,8 +684,8 @@ export USERDIR="/mnt/c/Users/$WINUSER"
 {{ if eq .chezmoi.os "linux" -}}
 cp_winhost() {
   # alacrittyの設定ファイルをコピー
-  [ "$(date -r $HOME/.config/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+  [ "$(date -r $HOME/.config/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
 
   # AutoHotkeyの設定ファイルをコピー
   [ "$(date -r $HOME/.config/autohotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" != "$(date -r $USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" ] && \
