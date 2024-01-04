@@ -618,6 +618,9 @@ gh repo list <owner> -L 100
 # display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
 
+# create repository [--private,--public]
+gh repo create <name> --private
+
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
 
@@ -810,6 +813,12 @@ npm prune
 
 ```sh
 % npx
+
+# eslint : show config
+npx eslint --print-config .eslintrc.js
+
+# tsc : show config
+npx tsc --showConfig
 
 # sort package-json
 npx sort-package-json
