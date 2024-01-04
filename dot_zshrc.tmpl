@@ -21,8 +21,14 @@ if [ -n "$VIRTUAL_ENV" ]; then
 else
   PYTHON_VIRTUAL_ENV=""
 fi
+# nix-shell表示
+if [ -n "$IN_NIX_SHELL" ]; then
+  IN_NIX_SHELL="[nix-shell]"
+else
+  IN_NIX_SHELL=""
+fi
 # プロンプト
-MAINPROMPT="${PYTHON_VIRTUAL_ENV}${directory}${datetime}${number_of_jobs}${exit_status} "
+MAINPROMPT="${IN_NIX_SHELL}${PYTHON_VIRTUAL_ENV}${directory}${datetime}${number_of_jobs}${exit_status} "
 # プロンプトの設定
 PROMPT="
 ${MAINPROMPT}"

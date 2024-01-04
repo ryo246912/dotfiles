@@ -1547,6 +1547,15 @@ zi delete <plugin>
 ;--------------------------------------------------------------
 ```sh
 % other
+# nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
+nix-shell --run zsh -p <package>
+
+# nix : exec nix-shell(experimental)
+nix shell nixpkgs#<package>
+
+# nix : search package [https://search.nixos.org/packages]
+nix search nixpkgs "^<package>$"
+
 # vscode : display installed extensions
 code --list-extensions | xargs -L 1 echo code --install-extension
 

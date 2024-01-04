@@ -39,3 +39,10 @@ for package in $(echo $CASKPACKAGES); do
   brew install --cask $package
 done
 {{- end }}
+
+# Nix
+{{ if eq .chezmoi.os "darwin" -}}
+[ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]
+{{ else -}}
+[ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+{{- end }}
