@@ -604,19 +604,22 @@ gh workflow view<_web>
 gh run list -L 100 -w "<workflow>" --user "<author>"
 
 # workflow view [-v:show job steps][--log,--log-failed:view log]
-gh run view <run_id> -v <_web><_--log_>--job=<job_id>
+gh run view -v <_web><_--log_>--job=<job_id>
 
 # workflow watch
-gh run watch <run_id>
+gh run watch
 
 # workflow rerun error
-gh run rerun <run_id> --failed
+gh run rerun --failed
 
 # list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
 
 # display repository [owner:repository owner(ex:pytorch)]
 gh repo view <repository> -w
+
+# create repository [--private,--public]
+gh repo create <name> --private
 
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
@@ -706,10 +709,10 @@ $ issue_no: gh issue list --assignee "<author>" --state <state> \
 $ workflow: gh workflow list \
   | column -ts $'\t' \
   --- --column 1
-$ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
+; $ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
   | column -ts $'\t' \
   --- --column 7
-$ job_id: gh run view <run_id> --json jobs \
+; $ job_id: gh run view <run_id> --json jobs \
   --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
@@ -810,6 +813,12 @@ npm prune
 
 ```sh
 % npx
+
+# eslint : show config
+npx eslint --print-config .eslintrc.js
+
+# tsc : show config
+npx tsc --showConfig
 
 # sort package-json
 npx sort-package-json
@@ -1461,9 +1470,35 @@ while <condition>; do <command> ; done
 ;--------------------------------------------------------------
 ```sh
 % MySQL
-# login [-u:user][-p:database]
-mysql -u <user> -p <database>
+# login [-u:user][-D:database][-p:password]
+mysql -u <user> -D <database>
 ```
+
+```sh
+% postgreSQL
+
+# login [-U:user][-p:port,default 5432][-d:database]
+psql -U <user> -p "<port>" -d "<database>"
+
+# display(list) databases
+psql -l
+
+# display(list) databases [+:with size, tablespace, and description]
+\l+
+
+# connect database
+\c <database>
+
+# display tables list
+\dt
+
+# display table column
+\d+ <table>
+
+# display connection info
+\conninfo
+```
+
 ;--------------------------------------------------------------
 ; tmux
 ;--------------------------------------------------------------
@@ -1547,6 +1582,15 @@ zi delete <plugin>
 ;--------------------------------------------------------------
 ```sh
 % other
+# nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
+nix-shell --run zsh -p <package>
+
+# nix : exec nix-shell(experimental)
+nix shell nixpkgs#<package>
+
+# nix : search package [https://search.nixos.org/packages]
+nix search nixpkgs "^<package>$"
+
 # vscode : display installed extensions
 code --list-extensions | xargs -L 1 echo code --install-extension
 

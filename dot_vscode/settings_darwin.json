@@ -315,8 +315,6 @@
   "statsBar.location": "Right",
   "workbench.iconTheme": "vscode-great-icons",
   "vscodemacros.macroFilePath": "{HOME}/private/vsc-macro/macro.js",
-  // (Git Worktrees) worktreeのディレクトリを指定
-  "vsCodeGitWorktrees.worktrees.dir.path": "/$HOME/projects/visasq/worktree",
   "volar.codeLens.scriptSetupTools": true,
   // (Vim)
   "vim.insertModeKeyBindings": [
