@@ -1,0 +1,602 @@
+# Colors (Hyper)
+# [colors.bar]
+# background = "#c5c8c6"
+# foreground = "#1d1f21"
+
+[colors.bright]
+black = "#808080"
+blue = "#0066ff"
+cyan = "#00ffff"
+green = "#33ff00"
+magenta = "#cc00ff"
+red = "#fe0100"
+white = "#FFFFFF"
+yellow = "#feff00"
+
+[colors.cursor]
+cursor = "#ffffff"
+text = "#E0DEF4"
+
+[colors.normal]
+black = "#000000"
+blue = "#0066ff"
+cyan = "#00ffff"
+green = "#33ff00"
+magenta = "#cc00ff"
+red = "#fe0100"
+white = "#d0d0d0"
+yellow = "#feff00"
+
+[colors.primary]
+background = "#191724"
+foreground = "#ffffff"
+
+[colors.search.focused_match]
+background = "#ff00ff"
+foreground = "#ffffff"
+
+[colors.search.matches]
+background = "#ffffff"
+foreground = "#feff00"
+
+[env]
+TERM = "alacritty"
+
+{{ if eq .chezmoi.os "linux" -}}
+[font]
+size = 8.0
+{{- end }}
+
+[font.bold]
+family = "FiraCode NF"
+
+[font.normal]
+family = "FiraCode NF"
+
+{{ if eq .chezmoi.os "darwin" -}}
+# ctrl + b → "(ペインを左右に分割)
+[[keyboard.bindings]]
+chars = "\u0002%"
+key = "D"
+mods = "Command"
+
+# ctrl + b → %(ペインを上下に分割)
+[[keyboard.bindings]]
+chars = "\u0002\""
+key = "D"
+mods = "Command|Shift"
+
+# ctrl + b → [(コピーモード)
+[[keyboard.bindings]]
+chars = "\u0002["
+key = "C"
+mods = "Command"
+
+# ctrl + b → space(tmux-thumbs、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002 "
+key = "E"
+mods = "Command"
+
+# ctrl + b → Q(easymotion easycopy、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002Q"
+key = "E"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + [(コピーモード→検索、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u001B"
+key = "F"
+mods = "Command"
+
+# ctrl + b → s(ペイン一覧表示)
+[[keyboard.bindings]]
+chars = "\u0002s"
+key = "L"
+mods = "Command"
+
+# ctrl + b → w(ウィンドウ一覧表示)
+[[keyboard.bindings]]
+chars = "\u0002w"
+key = "L"
+mods = "Command|Shift"
+
+# ctrl + b → R(easymotion quickopen 、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002R"
+key = "O"
+mods = "Command"
+
+# ctrl + b → ctrl + p(popup windowを起動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0010"
+key = "P"
+mods = "Command"
+
+# ctrl + b → r(.tmux.confの再読込、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002r"
+key = "R"
+mods = "Command"
+
+# ctrl + b → e(synchronize-panesのON/OFF、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002e"
+key = "S"
+mods = "Command"
+
+# ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+[[keyboard.bindings]]
+chars = "\u0002\u0012"
+key = "R"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + s(tmux-resurrect、ウィンドウの保存)
+[[keyboard.bindings]]
+chars = "\u0002\u0013"
+key = "S"
+mods = "Command|Shift"
+
+# ctrl + b → c(ウィンドウの作成)
+[[keyboard.bindings]]
+chars = "\u0002c"
+key = "T"
+mods = "Command"
+
+# ctrl + b → x(ウィンドウの破棄)
+[[keyboard.bindings]]
+chars = "\u0002x"
+key = "W"
+mods = "Command"
+
+# ctrl + b → d(ウィンドウのデタッチ)
+[[keyboard.bindings]]
+chars = "\u0002d"
+key = "W"
+mods = "Command|Shift"
+
+# ctrl + b → z(ペインの一時拡大/縮小)
+[[keyboard.bindings]]
+chars = "\u0002z"
+key = "Z"
+mods = "Command"
+
+# ctrl + b → h(左のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002h"
+key = "Left"
+mods = "Command"
+
+# ctrl + b → j(下のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002j"
+key = "Down"
+mods = "Command"
+
+# ctrl + b → k(上のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002k"
+key = "Up"
+mods = "Command"
+
+# ctrl + b → l(右のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002l"
+key = "Right"
+mods = "Command"
+
+# ctrl + b → ctrl + h(ペインを左に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\b"
+key = "Left"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + i(ペインを下に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0009"
+key = "Down"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + k(ペインを上に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u000B"
+key = "Up"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + l(ペインを右に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\f"
+key = "Right"
+mods = "Command|Shift"
+
+# ctrl + b → {(ペインを前に入れ替え)
+[[keyboard.bindings]]
+chars = "\u0002{"
+key = "Up"
+mods = "Command|Shift|Alt"
+
+# ctrl + b → }(ペインを後ろに入れ替え)
+[[keyboard.bindings]]
+chars = "\u0002}"
+key = "Down"
+mods = "Command|Shift|Alt"
+
+# ctrl + b → ctrl + i(前のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\t"
+key = "LBracket"
+mods = "Command"
+
+# ctrl + b → ctrl + ](次のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u001D"
+key = "RBracket"
+mods = "Command"
+
+# ctrl + b → p(前のウィンドウに移動)
+[[keyboard.bindings]]
+chars = "\u0002p"
+key = "LBracket"
+mods = "Command|Shift"
+
+# ctrl + b → n(次のウィンドウに移動)
+[[keyboard.bindings]]
+chars = "\u0002n"
+key = "RBracket"
+mods = "Command|Shift"
+
+# ctrl + b → ctrl + x(ウィンドウを前に入れ替え、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0018"
+key = "LBracket"
+mods = "Command|Shift|Alt"
+
+# ctrl + b → ctrl + y(ウィンドウを後ろに入れ替え、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0019"
+key = "RBracket"
+mods = "Command|Shift|Alt"
+
+# ctrl + b → space(popup windowを起動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002 "
+key = "Space"
+mods = "Command"
+
+# ctrl + b → 1(ウィンドウ1に移動)
+[[keyboard.bindings]]
+chars = "\u00021"
+key = "Key1"
+mods = "Command"
+
+# ctrl + b → 2(ウィンドウ2に移動)
+[[keyboard.bindings]]
+chars = "\u00022"
+key = "Key2"
+mods = "Command"
+
+# ctrl + b → 3(ウィンドウ3に移動)
+[[keyboard.bindings]]
+chars = "\u00023"
+key = "Key3"
+mods = "Command"
+
+# ctrl + b → 4(ウィンドウ4に移動)
+[[keyboard.bindings]]
+chars = "\u00024"
+key = "Key4"
+mods = "Command"
+
+# ctrl + b → 5(ウィンドウ5に移動)
+[[keyboard.bindings]]
+chars = "\u00025"
+key = "Key5"
+mods = "Command"
+
+# ctrl + b → 6(ウィンドウ6に移動)
+[[keyboard.bindings]]
+chars = "\u00026"
+key = "Key6"
+mods = "Command"
+
+# ctrl + b → 7(ウィンドウ7に移動)
+[[keyboard.bindings]]
+chars = "\u00027"
+key = "Key7"
+mods = "Command"
+
+# ctrl + b → 8(ウィンドウ8に移動)
+[[keyboard.bindings]]
+chars = "\u00028"
+key = "Key8"
+mods = "Command"
+
+# ctrl + b → 9(ウィンドウ9に移動)
+[[keyboard.bindings]]
+chars = "\u00029"
+key = "Key9"
+mods = "Command"
+{{ else -}}
+# ctrl + b → "(ペインを左右に分割)
+[[keyboard.bindings]]
+chars = "\u0002%"
+key = "D"
+mods = "Control"
+
+# ctrl + b → %(ペインを上下に分割)
+[[keyboard.bindings]]
+chars = "\u0002\""
+key = "D"
+mods = "Control|Shift"
+
+# ctrl + b → [(コピーモード)
+[[keyboard.bindings]]
+chars = "\u0002["
+key = "C"
+mods = "Control|Alt"
+
+# ctrl + b → space(tmux-thumbs、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002 "
+key = "E"
+mods = "Control"
+
+# ctrl + b → Q(easymotion easycopy、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002Q"
+key = "E"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + [(コピーモード→検索、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u001B"
+key = "F"
+mods = "Control"
+
+# ctrl + b → O(mode切替→easy motion jump line、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002O"
+key = "J"
+mods = "Control"
+
+# ctrl + b → s(ペイン一覧表示)
+[[keyboard.bindings]]
+chars = "\u0002s"
+key = "L"
+mods = "Control"
+
+# ctrl + b → w(ウィンドウ一覧表示)
+[[keyboard.bindings]]
+chars = "\u0002w"
+key = "L"
+mods = "Control|Shift"
+
+# ctrl + b → R(easymotion quickopen 、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002R"
+key = "O"
+mods = "Control"
+
+# ctrl + b → ctrl + p(popup windowを起動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0010"
+key = "P"
+mods = "Control"
+
+# ctrl + b → r(.tmux.confの再読込、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002r"
+key = "R"
+mods = "Control"
+
+# ctrl + b → e(synchronize-panesのON/OFF、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002e"
+key = "S"
+mods = "Control"
+
+# ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+[[keyboard.bindings]]
+chars = "\u0002\u0012"
+key = "R"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + s(tmux-resurrect、ウィンドウの保存)
+[[keyboard.bindings]]
+chars = "\u0002\u0013"
+key = "S"
+mods = "Control|Shift"
+
+# ctrl + b → c(ウィンドウの作成)
+[[keyboard.bindings]]
+chars = "\u0002c"
+key = "T"
+mods = "Control"
+
+# ctrl + b → x(ウィンドウの破棄)
+[[keyboard.bindings]]
+chars = "\u0002x"
+key = "W"
+mods = "Control"
+
+# ctrl + b → d(ウィンドウのデタッチ)
+[[keyboard.bindings]]
+chars = "\u0002d"
+key = "W"
+mods = "Control|Shift"
+
+# ctrl + b → z(ペインの一時拡大/縮小)
+[[keyboard.bindings]]
+chars = "\u0002z"
+key = "Z"
+mods = "Control"
+
+# ctrl + b → h(左のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002h"
+key = "Left"
+mods = "Control"
+
+# ctrl + b → j(下のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002j"
+key = "Down"
+mods = "Control"
+
+# ctrl + b → k(上のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002k"
+key = "Up"
+mods = "Control"
+
+# ctrl + b → l(右のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002l"
+key = "Right"
+mods = "Control"
+
+# ctrl + b → ctrl + h(ペインを左に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\b"
+key = "Left"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + i(ペインを下に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0009"
+key = "Down"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + k(ペインを上に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u000B"
+key = "Up"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + l(ペインを右に広げる、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\f"
+key = "Right"
+mods = "Control|Shift"
+
+# ctrl + b → {(ペインを前に入れ替え)
+[[keyboard.bindings]]
+chars = "\u0002{"
+key = "Up"
+mods = "Control|Shift|Alt"
+
+# ctrl + b → }(ペインを後ろに入れ替え)
+[[keyboard.bindings]]
+chars = "\u0002}"
+key = "Down"
+mods = "Control|Shift|Alt"
+
+# ctrl + b → ctrl + i(前のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\t"
+key = "LBracket"
+mods = "Control"
+
+# ctrl + b → ctrl + ](次のペインに移動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u001D"
+key = "RBracket"
+mods = "Control"
+
+# ctrl + b → p(前のウィンドウに移動)
+[[keyboard.bindings]]
+chars = "\u0002p"
+key = "PageUp"
+mods = "Control"
+
+# ctrl + b → n(次のウィンドウに移動)
+[[keyboard.bindings]]
+chars = "\u0002n"
+key = "PageDown"
+mods = "Control"
+
+# ctrl + b → ctrl + x(ウィンドウを前に入れ替え、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0018"
+key = "PageUp"
+mods = "Control|Shift"
+
+# ctrl + b → ctrl + y(ウィンドウを後ろに入れ替え、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002\u0019"
+key = "PageDown"
+mods = "Control|Shift"
+
+# ctrl + b → space(popup windowを起動、カスタム)
+[[keyboard.bindings]]
+chars = "\u0002 "
+key = "Space"
+mods = "Control"
+
+# ctrl + b → 1(ウィンドウ1に移動)
+[[keyboard.bindings]]
+chars = "\u00021"
+key = "Key1"
+mods = "Control"
+
+# ctrl + b → 2(ウィンドウ2に移動)
+[[keyboard.bindings]]
+chars = "\u00022"
+key = "Key2"
+mods = "Control"
+
+# ctrl + b → 3(ウィンドウ3に移動)
+[[keyboard.bindings]]
+chars = "\u00023"
+key = "Key3"
+mods = "Control"
+
+# ctrl + b → 4(ウィンドウ4に移動)
+[[keyboard.bindings]]
+chars = "\u00024"
+key = "Key4"
+mods = "Control"
+
+# ctrl + b → 5(ウィンドウ5に移動)
+[[keyboard.bindings]]
+chars = "\u00025"
+key = "Key5"
+mods = "Control"
+
+# ctrl + b → 6(ウィンドウ6に移動)
+[[keyboard.bindings]]
+chars = "\u00026"
+key = "Key6"
+mods = "Control"
+
+# ctrl + b → 7(ウィンドウ7に移動)
+[[keyboard.bindings]]
+chars = "\u00027"
+key = "Key7"
+mods = "Control"
+
+# ctrl + b → 8(ウィンドウ8に移動)
+[[keyboard.bindings]]
+chars = "\u00028"
+key = "Key8"
+mods = "Control"
+
+# ctrl + b → 9(ウィンドウ9に移動)
+[[keyboard.bindings]]
+chars = "\u00029"
+key = "Key9"
+mods = "Control"
+{{- end }}
+
+[shell]
+{{ if eq .chezmoi.os "darwin" -}}
+program = "/bin/zsh"
+{{ else -}}
+program = "/Windows/System32/wsl.exe ~ -d Ubuntu-20.04"
+{{- end }}
+
+[window]
+decorations = "none"  #windowバーを非表示
+opacity = 0.95
+startup_mode = "Maximized"

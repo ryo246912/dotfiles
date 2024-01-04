@@ -713,7 +713,7 @@ cp_winhost() {
 {{ if eq .chezmoi.os "linux" -}}
 # alacritty
 [ -n "$WINUSER" ] && mkdir -p "$APPDATA/Roaming/alacritty" 2>/dev/null
-[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.yml" ] && cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.toml" ] && cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
 
 # rio
 [ -n "$WINUSER" ] && mkdir -p "$APPDATA/Local/rio" 2>/dev/null
