@@ -171,7 +171,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"darwin* -> gh-poi" \
     @'seachicken/gh-poi'
-{{ else }}
+{{ else -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"linux* -> gh-poi" \
@@ -203,6 +203,16 @@ zinit wait lucid light-mode blockf for \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
 
+# ugrep #
+{{ if eq .chezmoi.os "darwin" -}}
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"ug* -> ug" \
+    sbin"ugrep* -> ugrep" \
+    @'Genivia/ugrep'
+{{- end }}
+
 # up #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -215,7 +225,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"yazi*/yazi -> yazi" \
     @'sxyazi/yazi'
-{{ else }}
+{{ else -}}
 # NOTE:version `GLIBC_2.33' not foundのエラー回避のため暫定的にversion固定
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
