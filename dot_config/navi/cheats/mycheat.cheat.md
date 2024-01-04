@@ -1461,9 +1461,35 @@ while <condition>; do <command> ; done
 ;--------------------------------------------------------------
 ```sh
 % MySQL
-# login [-u:user][-p:database]
-mysql -u <user> -p <database>
+# login [-u:user][-D:database][-p:password]
+mysql -u <user> -D <database>
 ```
+
+```sh
+% postgreSQL
+
+# login [-U:user][-p:port,default 5432][-d:database]
+psql -U <user> -p "<port>" -d "<database>"
+
+# display(list) databases
+psql -l
+
+# display(list) databases [+:with size, tablespace, and description]
+\l+
+
+# connect database
+\c <database>
+
+# display tables list
+\dt
+
+# display table column
+\d+ <table>
+
+# display connection info
+\conninfo
+```
+
 ;--------------------------------------------------------------
 ; tmux
 ;--------------------------------------------------------------
