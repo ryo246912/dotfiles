@@ -4,10 +4,11 @@
 # my shortcut list
 cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
 ```
+
+```sh
 ;--------------------------------------------------------------
 ; asdf
 ;--------------------------------------------------------------
-```sh
 % asdf
 
 # plugin added list
@@ -34,10 +35,11 @@ asdf shell <name> <version>
 # which command
 asdf which <command>
 ```
+
+```sh
 ;--------------------------------------------------------------
 ; cspell
 ;--------------------------------------------------------------
-```sh
 % cspell
 
 # lint [-c:config file][-e:exclude file]
@@ -49,10 +51,11 @@ cspell --no-progress -c ~/.cspell/cspell.json --root ~ $(git diff --name-only --
 # search(show) dictionary [The word is found in a dictionary if * appears ex:sql *php]
 cspell trace "<word>"
 ```
+
+```sh
 ;--------------------------------------------------------------
 ; django
 ;--------------------------------------------------------------
-```sh
 % django
 
 # show migration
@@ -73,10 +76,11 @@ python manage.py sqlmigrate <app_name> <migration_name>
 # rollback migration [ex:python manage.py migrate concierges 0031]
 python manage.py migrate <app_name> <rollback_to_migration_name>
 ```
+
+```sh
 ;--------------------------------------------------------------
 ; docker
 ;--------------------------------------------------------------
-```sh
 % docker
 
 # exec [ex:docker container exec -it <container_id> bash]
@@ -148,10 +152,10 @@ $ image_id: docker images -a \
   --- --headers 1 --column 1
 ;$
 
+```sh
 ;--------------------------------------------------------------
 ; docker compose
 ;--------------------------------------------------------------
-```sh
 % docker compose
 
 # ls [--all]
@@ -180,10 +184,10 @@ $ project: docker-compose ls --all \
 $ service: docker-compose -p <project> ps --all \
   --- --headers 1 --column 3
 
+```sh
 ;--------------------------------------------------------------
 ; gcloud
 ;--------------------------------------------------------------
-```sh
 % gcloud
 
 # display current config
@@ -208,10 +212,10 @@ $ name: gcloud config configurations list \
   | awk '{print $1}' \
   --- --headers 1
 
+```sh
 ;--------------------------------------------------------------
 ; git
 ;--------------------------------------------------------------
-```sh
 % git
 
 # diff option [--no-pager][--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line][--no-patch:not display diff][-U(--unified):display num line ex:git diff -U0][--no-renames:ignore rename file][-M -- file1 file2:rename file diff]
@@ -539,10 +543,10 @@ git branch -l "dura*" | xargs -I % git branch -D %
 ghq get <url>
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; GitHub
 ;--------------------------------------------------------------
-```sh
 % gh
 
 # pr list [-s:open|closed|merged|all]
@@ -773,10 +777,10 @@ act <event> -W <workflow>
 $ event: echo -e "push\npull_request\nissues"
 $ workflow: find .github/workflows
 
+```sh
 ;--------------------------------------------------------------
 ; node
 ;--------------------------------------------------------------
-```sh
 % node
 
 # nodenv display current version & installed versions
@@ -824,10 +828,10 @@ npx tsc --showConfig
 npx sort-package-json
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; python
 ;--------------------------------------------------------------
-```sh
 % Python
 
 # delete .pyc files
@@ -846,10 +850,10 @@ pyenv install --list | vim -
 pyenv install <version>
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; Rust
 ;--------------------------------------------------------------
-```sh
 % Rust
 
 # Rust install latest stable version
@@ -860,10 +864,10 @@ rustup update
 
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; shell (pipe-command)
 ;--------------------------------------------------------------
-```sh
 % shell:pipe-command
 
 # awk : print $no field
@@ -1023,10 +1027,10 @@ $ line_output_option: echo -e "A\nB\nC"
 $ symbol: echo -e "^\n$"
 ;$
 
+```sh
 ;--------------------------------------------------------------
 ; shell
 ;--------------------------------------------------------------
-```sh
 % shell:ssh
 
 # ssh : login by .ssh/config [-T:config HOST][-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
@@ -1254,11 +1258,11 @@ cat /etc/os-release
 uname -a
 ```
 
+
+```sh
 ;--------------------------------------------------------------
 ; shell : linux
 ;--------------------------------------------------------------
-
-```sh
 % shell:linux
 
 # apt(Debian) : update package
@@ -1297,11 +1301,11 @@ sar -B 1 10
 $ _grep : echo -e "\n | grep 'Commandline'"
 ;$
 
+
+```sh
 ;--------------------------------------------------------------
 ; shell : Windows(WSL)
 ;--------------------------------------------------------------
-
-```sh
 % shell:Windows(WSL)
 
 # wsl : installable list
@@ -1317,11 +1321,11 @@ wsl -l -v
 wsl ~
 ```
 
+
+```sh
 ;--------------------------------------------------------------
 ; shell : macOS
 ;--------------------------------------------------------------
-
-```sh
 % brew
 
 # list [--cask,--formula][-1:one column]
@@ -1436,11 +1440,11 @@ $ window: t-rec --ls-win \
   | column -ts $'|' \
   --- --headers 1 --column 2
 
+
+```sh
 ;--------------------------------------------------------------
 ; shell : syntax
 ;--------------------------------------------------------------
-
-```sh
 % shell:syntax
 
 # array [${array[@]}:array][${array[*]}:string][${#array[@]}:items]
@@ -1465,10 +1469,10 @@ while <condition>; do <command> ; done
 () { local <var> ; <command1> ; <command2> }
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; SQL
 ;--------------------------------------------------------------
-```sh
 % MySQL
 # login [-u:user][-D:database][-p:password]
 mysql -u <user> -D <database>
@@ -1499,10 +1503,10 @@ psql -l
 \conninfo
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; tmux
 ;--------------------------------------------------------------
-```sh
 % tmux
 # keys
 tmux list-keys | vim -
@@ -1532,10 +1536,10 @@ $ tty: tmux lsp -a \
   | column -t \
   --- --column 6
 
+```sh
 ;--------------------------------------------------------------
 ; vim
 ;--------------------------------------------------------------
-```sh
 % vim:command
 # guit (no save)
 :q!
@@ -1556,10 +1560,10 @@ q:
 q/
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; zinit
 ;--------------------------------------------------------------
-```sh
 % zinit
 # report plugin
 zi report
@@ -1577,10 +1581,10 @@ zi edit <plugin>
 zi delete <plugin>
 ```
 
+```sh
 ;--------------------------------------------------------------
 ; other
 ;--------------------------------------------------------------
-```sh
 % other
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>
