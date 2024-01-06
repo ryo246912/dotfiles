@@ -24,6 +24,7 @@ alias nr='npm run'
 # plugin
 #--------------------------------------------------------------
 
+# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#ice-modifiers
 # wait = 遅延読み込み wait"0"と同義
 # lucid = プラグイン読込時の表示をOFF
 # blockf = プラグインによる$pathの変更を禁止する
@@ -36,6 +37,7 @@ alias nr='npm run'
 # cp = ファイルをcp
 # atclone= clone後に実行する関数を指定
 # atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
+# configure=./configureを実行、make前に実行の場合はconfigure'!'
 # make= make install
 # rustup = rust installer
 # cargo = rust builder and package manager
@@ -50,11 +52,13 @@ alias nr='npm run'
 # asdf #
 __asdf_atclone() {
     asdf plugin add chezmoi https://github.com/joke/asdf-chezmoi.git
+    asdf plugin add golang https://github.com/asdf-community/asdf-golang.git
     asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
     asdf plugin add python https://github.com/danhper/asdf-python.git
     asdf plugin add tmux https://github.com/aphecetche/asdf-tmux.git
 }
 __asdf_atload() {
+    export ASDF_GOLANG_MOD_VERSION_ENABLED=true
     export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
     export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
     export ASDF_CONFIG_FILE="$HOME/.config/asdf/.asdfrc"
@@ -171,7 +175,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"darwin* -> gh-poi" \
     @'seachicken/gh-poi'
-{{ else }}
+{{ else -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"linux* -> gh-poi" \
@@ -182,6 +186,12 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
     "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
+
+# ijq #
+zinit wait lucid light-mode blockf for \
+    make \
+    sbin"ijq -> ijq" \
+    @'gpanders/ijq'
 
 # jq #
 zinit wait lucid light-mode blockf for \
@@ -203,6 +213,23 @@ zinit wait lucid light-mode blockf for \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
 
+# ugrep #
+{{ if eq .chezmoi.os "darwin" -}}
+zinit wait lucid light-mode blockf for \
+     configure"!" \
+     make"all install PREFIX=$ZPFX" \
+     pick"bin/ug bin/ugrep" \
+     sbin"bin/ug -> ug" \
+     sbin"bin/ugrep -> ugrep" \
+     @'Genivia/ugrep'
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"ug* -> ug" \
+    sbin"ugrep* -> ugrep" \
+    @'Genivia/ugrep'
+{{- end }}
+
 # up #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -215,7 +242,7 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"yazi*/yazi -> yazi" \
     @'sxyazi/yazi'
-{{ else }}
+{{ else -}}
 # NOTE:version `GLIBC_2.33' not foundのエラー回避のため暫定的にversion固定
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -684,8 +711,8 @@ export USERDIR="/mnt/c/Users/$WINUSER"
 {{ if eq .chezmoi.os "linux" -}}
 cp_winhost() {
   # alacrittyの設定ファイルをコピー
-  [ "$(date -r $HOME/.config/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.yml '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.config/alacritty/alacritty.yml" "$APPDATA/Roaming/alacritty/alacritty.yml"
+  [ "$(date -r $HOME/.config/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" ] && \
+  cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
 
   # AutoHotkeyの設定ファイルをコピー
   [ "$(date -r $HOME/.config/autohotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" != "$(date -r $USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" ] && \
