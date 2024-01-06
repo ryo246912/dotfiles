@@ -371,11 +371,14 @@ git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(au
 # log delete file
 git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
+# log unreachable commit
+git fsck --unreachable | awk '/commit/ {print $3}' | xargs git log --merges --no-walk --grep="<regex>" --all-match --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S"
+
 # stash working file
-git commit -m 'commit staging' && git stash --include-untracked --message "<message>" -- <working_filename> && git reset --soft HEAD^
+git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
 
 # stash file
-git stash --include-untracked --message "<message>" -- <working_filename>
+git stash --include-untracked --message "<prefix><message>" -- <working_filename>
 
 # list stash
 git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
@@ -449,6 +452,7 @@ $ file_option: echo -e "-- \n-L 1,+10:\n-L :class:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ look_regex: echo -e "<search_word>(?=(<look_word>))\n<search_word>(?!(<look_word>))\n(?<=(<look_word>))<search_word>\n(?<!(<look_word>))<search_word>"
 $ repo_url: echo -e "\ngit@github.com:\nhttps://github.com/"
+$ prefix: echo -e "wip: \nmemo: \n"
 
 $ commit1: git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
