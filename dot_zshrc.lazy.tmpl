@@ -24,6 +24,7 @@ alias nr='npm run'
 # plugin
 #--------------------------------------------------------------
 
+# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#ice-modifiers
 # wait = 遅延読み込み wait"0"と同義
 # lucid = プラグイン読込時の表示をOFF
 # blockf = プラグインによる$pathの変更を禁止する
@@ -36,6 +37,7 @@ alias nr='npm run'
 # cp = ファイルをcp
 # atclone= clone後に実行する関数を指定
 # atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
+# configure=./configureを実行、make前に実行の場合はconfigure'!'
 # make= make install
 # rustup = rust installer
 # cargo = rust builder and package manager
@@ -213,6 +215,13 @@ zinit wait lucid light-mode blockf for \
 
 # ugrep #
 {{ if eq .chezmoi.os "darwin" -}}
+zinit wait lucid light-mode blockf for \
+     configure"!" \
+     make"all install PREFIX=$ZPFX" \
+     pick"bin/ug bin/ugrep" \
+     sbin"bin/ug -> ug" \
+     sbin"bin/ugrep -> ugrep" \
+     @'Genivia/ugrep'
 {{ else -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
