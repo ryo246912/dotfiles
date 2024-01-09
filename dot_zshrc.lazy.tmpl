@@ -272,7 +272,7 @@ zinit wait lucid light-mode blockf for \
 __zoxide_atload() {
     mkdir -p "$HOME/.local/state/zoxide" 2>/dev/null
     export _ZO_DATA_DIR="$HOME/.local/state/zoxide"
-    eval "$(zoxide init zsh)"
+    eval "$(zoxide init zsh --cmd j)"
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
