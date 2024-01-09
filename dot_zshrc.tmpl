@@ -54,6 +54,9 @@ setopt hist_reduce_blanks
 setopt hist_save_no_dups
 
 zstyle ':completion:*:default' menu select=1
+# makeコマンド補完
+zstyle ':completion:*:make:*:targets' call-command true
+zstyle ':completion:*:*:make:*' tag-order 'targets'
 
 # 端末ラインのキーバインド設定
 {{ if eq .chezmoi.os "darwin" -}}
