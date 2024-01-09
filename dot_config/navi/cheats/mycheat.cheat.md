@@ -43,14 +43,18 @@ asdf which <command>
 % cspell
 
 # lint [-c:config file][-e:exclude file]
-cspell --no-progress -c ~/.cspell/cspell.json --gitignore . | vim -
+cspell --no-progress --gitignore . | vim -
 
 # lint base-branch...HEAD [--root:root directory, defaults=current directory]
-cspell --no-progress -c ~/.cspell/cspell.json --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base master HEAD)...HEAD)
+cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base origin/<merge-base> HEAD)...HEAD)
 
 # search(show) dictionary [The word is found in a dictionary if * appears ex:sql *php]
 cspell trace "<word>"
 ```
+
+$ merge-base: gh pr list --search "$(git rev-parse --short HEAD)" --limit 1 --json baseRefName --jq '.[] | .baseRefName' && \
+  echo master
+;$
 
 ```sh
 ;--------------------------------------------------------------
@@ -648,6 +652,9 @@ gh auth refresh -s <scope>
 # cache list
 gh cache list
 
+# meta : display PR merge-base branch
+gh pr list --search "$(git rev-parse --short <branch>)" --limit 1 --json baseRefName --jq '.[] | .baseRefName'
+
 # project item
 open-cli <issue_url>
 
@@ -670,6 +677,7 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
+$ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
 $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
