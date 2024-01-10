@@ -261,11 +261,18 @@ zinit wait lucid light-mode blockf for \
 #    atload"__z_atload" \
 #    rupa/z
 
+# zabrze #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    as"program" \
+    atload'eval "$(zabrze init --bind-keys)"' \
+    @'Ryooooooga/zabrze'
+
 # zoxide #
 __zoxide_atload() {
     mkdir -p "$HOME/.local/state/zoxide" 2>/dev/null
     export _ZO_DATA_DIR="$HOME/.local/state/zoxide"
-    eval "$(zoxide init zsh)"
+    eval "$(zoxide init zsh --cmd j)"
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -307,8 +314,10 @@ zinit wait lucid light-mode blockf for \
     @'hlissner/zsh-autopair'
 
 zinit wait lucid light-mode blockf for \
-    @'olets/zsh-abbr' \
     @'zdharma/fast-syntax-highlighting'
+
+# zinit wait lucid light-mode blockf for \
+#     @'olets/zsh-abbr'
 
 ### completion ###
 
@@ -323,9 +332,15 @@ zinit wait lucid light-mode blockf for \
     "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash"
 
 zinit wait lucid light-mode blockf for \
-    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker" \
-    as"completion" "https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/zsh/_docker-compose" \
-    as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew" \
+    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
+
+zinit wait lucid light-mode blockf for \
+    as"completion" "https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/zsh/_docker-compose"
+
+zinit wait lucid light-mode blockf for \
+    as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew"
+
+zinit wait lucid light-mode blockf for \
     as"completion" "https://github.com/jarun/nnn/blob/master/misc/auto-completion/zsh/_nnn"
 
 zinit wait lucid light-mode blockf for \
