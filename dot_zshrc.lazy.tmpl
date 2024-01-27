@@ -395,7 +395,7 @@ fch() {
 
 # ff - fuzzy find
 ff() {
-  find ${1:-.} | fzf | tr -d '\n'| cb
+  find ${1:-.} | fzf | tr -d '\n' | cb
 }
 
 # fgb - fuzzy git branch
@@ -449,9 +449,14 @@ fnr() {
 # zsh widget
 #--------------------------------------------------------------
 
-# ctrl + d(alt + shift + d)でtmux pop windowでgitui起動
+# ctrl + d(alt + shift + d)でgitui起動
 _gitui() {
-  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
+  else
+    BUFFER='gitui'
+    zle accept-line
+  fi
 }
 zle -N _gitui
 {{ if eq .chezmoi.os "darwin" -}}
@@ -474,7 +479,12 @@ bindkey "^[N" _nnn
 
 # ctrl + y(alt + shift + y)でyazi起動
 _yazi() {
-  tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" yazi
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" yazi
+  else
+    BUFFER='yazi'
+    zle accept-line
+  fi
 }
 zle -N _yazi
 {{ if eq .chezmoi.os "darwin" -}}
@@ -483,22 +493,34 @@ bindkey "^Y" _yazi
 bindkey "^[Y" _yazi
 {{- end }}
 
-# ctrl + g(alt + shift + g)でtmux pop windowでnavi widgetを呼び出し
+# ctrl + g(alt + shift + g)でnavi widgetを呼び出し
 _custom_navi_widget() {
   # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
   #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
-  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
-    window=$(tmux display -p -F "#S:#I.#P") && \
-    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
-    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
-    tmux set-buffer -b tmp "$TMP_BUFFER" && \
-    tmux paste-buffer -drp -t $window -b tmp \
-  '
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      window=$(tmux display -p -F "#S:#I.#P") && \
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+      TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+      TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
+      TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      tmux set-buffer -b tmp "$TMP_BUFFER" && \
+      tmux paste-buffer -drp -t $window -b tmp \
+    '
+  else
+    local word
+    word=$(navi --print | tr "\n" " ")
+    #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+    word=${word%"${word##*[![:space:]]}"}
+    #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+    word=${word#"${word%%[![:space:]]*}"}
+    BUFFER="$word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+    zle redisplay
+  fi
 }
 zle -N _custom_navi_widget
 {{ if eq .chezmoi.os "darwin" -}}
@@ -507,33 +529,40 @@ bindkey '^G' _custom_navi_widget
 bindkey '^[G' _custom_navi_widget
 {{- end }}
 
-# ctrl + q → ctrl + q(alt + shift + q → alt + shift + q)でtmux pop windowでnaviに登録されたpipe commandのsnippet呼び出し
+# ctrl + q → ctrl + q(alt + shift + q → alt + shift + q)でnaviに登録されたpipe commandのsnippet呼び出し
 _navi_insert_pipe_snippet() {
   #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
   local word
-  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
-    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
-    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
-    tmux set-buffer -b tmp "$TMP_BUFFER" \
-  '
-  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
-    word=$(tmux show-buffer -b tmp)
-  fi && \
-  if [ -n "$word" ] ; then
-    if [[ $word =~ ">" ]] ; then
-      BUFFER="$BUFFER $word"
-      CURSOR=$#BUFFER #カーソルを末尾に移動
-    else
-      BUFFER="$BUFFER | $word"
-      CURSOR=$#BUFFER #カーソルを末尾に移動
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+      TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
+      TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
+      TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      tmux set-buffer -b tmp "$TMP_BUFFER" \
+    '
+    if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+      word=$(tmux show-buffer -b tmp)
     fi
+    tmux delete-buffer -b tmp
+  else
+    word=$(navi --print --query "shell:pipe-command " | tr "\n" " ")
+    #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+    word=${word%"${word##*[![:space:]]}"}
+    #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+    word=${word#"${word%%[![:space:]]*}"}
   fi && \
-  tmux delete-buffer -b tmp
+  if [ -n "$word" ] && [[ $word =~ ">" ]] ; then
+    BUFFER="$BUFFER $word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  elif [ -n "$word" ] ; then
+    BUFFER="$BUFFER | $word"
+    CURSOR=$#BUFFER #カーソルを末尾に移動
+  fi
+  zle redisplay
 }
 zle -N _navi_insert_pipe_snippet
 {{ if eq .chezmoi.os "darwin" -}}
@@ -644,24 +673,34 @@ bindkey '^Q^W' _copy_word
 bindkey '^[Q^[W' _copy_word
 {{- end }}
 
-# ctrl + q → ctrl + g(alt + shift + q → alt + shift + g)でtmux pop windowでnaviのコマンドをクリップボードにコピー
+# ctrl + q → ctrl + g(alt + shift + q → alt + shift + g)でnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
   # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
   #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
-  tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
-    export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-    TMP_BUFFER=$(navi --print | tr "\n" " ") && \
-    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
-    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-    TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
-    tmux set-buffer -b tmp "$TMP_BUFFER" \
-  '
-  if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
-    tmux show-buffer -b tmp | cb
-  fi && \
-  tmux delete-buffer -b tmp
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+      TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+      TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
+      TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      tmux set-buffer -b tmp "$TMP_BUFFER" \
+    '
+    if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
+      tmux show-buffer -b tmp | cb
+    fi && \
+    tmux delete-buffer -b tmp
+  else
+    word=$(navi --print | tr "\n" " ")
+    #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+    word=${word%"${word##*[![:space:]]}"}
+    #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+    word=${word#"${word%%[![:space:]]*}"}
+    echo "$word" | tr -d '\n' | cb
+    zle redisplay
+  fi
 }
 zle -N _navi_copy_snippet
 {{ if eq .chezmoi.os "darwin" -}}
