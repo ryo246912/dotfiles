@@ -131,8 +131,16 @@ abbrevs:
     abbr: gchs
     snippet: git checkout staging
 
-  - name: gcr
-    abbr: gcr
+  - name: gco
+    abbr: gco
+    snippet: git commit
+
+  - name: (gcof|gcfh)
+    abbr-pattern: (gcof|gcfh)
+    snippet: git commit --fixup HEAD
+
+  - name: gcr|gchr
+    abbr-pattern: (gcr|gchr)
     snippet: git cherry-pick -n
 
   - name: gd
@@ -150,6 +158,10 @@ abbrevs:
   - name: ghs
     abbr: ghs
     snippet: gh status
+
+  - name: ghp
+    abbr: ghp
+    snippet: gh-poi
 
   - name: gl
     abbr: gl
@@ -287,9 +299,17 @@ abbrevs:
     abbr: ml
     snippet: make lint
 
+  - name: mlo
+    abbr: mlo
+    snippet: make local
+
   - name: mf
     abbr: mf
     snippet: make freshup-local-for-py-engineer
+
+  - name: mu
+    abbr: mu
+    snippet: make unittest
 
   # - name: np
   #   abbr: np
@@ -452,11 +472,11 @@ abbrevs:
     global: true
     context: '^git\s(cherry-pick|rebase|merge)\s'
 
-  - name: (git diff) --name-only
+  - name: (git diff|log|show) --name-only
     abbr: "no"
     snippet: --name-only
     global: true
-    context: 'git\s(diff|log)\s'
+    context: 'git\s(diff|log|show)\s'
 
   - name: (git diff) --cached
     abbr: ca
