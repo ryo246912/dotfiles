@@ -327,7 +327,7 @@
   "vim.useSystemClipboard": true,
   // (Vim) .vimrcの読み込み
   "vim.vimrc.enable": true,
-  "vim.vimrc.path": "$HOME/.vimrc",
+  "vim.vimrc.path": "$HOME/.config/vim/.vimrc",
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
