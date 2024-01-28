@@ -63,11 +63,26 @@
                  [:right_arrow :!Tright_arrow ["japanese_kana mode" 1]] ;; ctrl + →
                  [:right_command :japanese_eisuu [:ja ["japanese_kana mode" 1]]]
                  [:right_command :japanese_kana [:en ["japanese_kana mode" 1]]]]}
+        {:des "Arc"
+         :rules [[:!O1 [:close_bracket :m :u :s :t :backslash] [:arc]] ;; option + 1 → [must]
+                 [:!O2 [:close_bracket :s :h :o :u :l :d :backslash] [:arc]] ;; option + 2 → [should]
+                 [:!O3 [:close_bracket :o :p :t :i :o :n :a :l :backslash] [:arc]] ;; option + 3 → [optional]
+                 [:!O4 [:close_bracket :i :m :o :backslash] [:arc]] ;; option + 4 → [imo]
+                 [:!O5 [:close_bracket :!Sq :backslash] [:arc]] ;; option + 5 → [Q]
+                 ]}
+        {:des "VSCode"
+         :rules [[:!O1 [:close_bracket :m :u :s :t :backslash] [:vscode]] ;; option + 1 → [must]
+                 [:!O2 [:close_bracket :s :h :o :u :l :d :backslash] [:vscode]] ;; option + 2 → [should]
+                 [:!O3 [:close_bracket :o :p :t :i :o :n :a :l :backslash] [:vscode]] ;; option + 3 → [optional]
+                 [:!O4 [:close_bracket :i :m :o :backslash] [:vscode]] ;; option + 4 → [imo]
+                 [:!O5 [:close_bracket :!Sq :backslash] [:vscode]] ;; option + 5 → [Q]
+                 ]}
         {:des "slack"
-         :rules [[:!CSf [:!Cf :spacebar :f :r :o :m :quote :open_bracket] [:slack]]
-                 [:!CTd [:!Ct :d :e :v] [:slack]]
-                 [:!CTl [:!Ct :l :o :g] [:slack]]
-                 [:!CTt [:!Ct :t :i :m :e :s] [:slack]]]}
+         :rules [[:!CSf [:!Cf :spacebar :f :r :o :m :quote :open_bracket] [:slack]] ;; cmd + shift + f
+                 [:!CTd [:!Ct :d :e :v] [:slack]] ;; cmd + ctrl + d
+                 [:!CTl [:!Ct :l :o :g] [:slack]] ;; cmd + ctrl + l
+                 [:!CTt [:!Ct :t :i :m :e :s] [:slack]] ;; cmd + ctrl + t
+                 ]}
         {:des "left_option mode"
          :rules [:left-option-mode
                  [:a [:open "Arc"]]

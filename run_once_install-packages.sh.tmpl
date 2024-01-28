@@ -42,7 +42,9 @@ done
 
 # Nix
 {{ if eq .chezmoi.os "darwin" -}}
-[ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh
+# nix-installerでインストール
+# https://github.com/DeterminateSystems/nix-installer
+[ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ] && curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 {{ else -}}
 [ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 {{- end }}
