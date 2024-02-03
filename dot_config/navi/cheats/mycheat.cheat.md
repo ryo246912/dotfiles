@@ -231,6 +231,9 @@ git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
 # diff between base-branch...HEAD
 git diff<_--name-only> $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
 
+# diff between base-branch...HEAD(difft)
+GIT_EXTERNAL_DIFF="difft" git diff $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename>
+
 # diff between commits [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
 
@@ -242,6 +245,9 @@ git diff<_--name-only> HEAD~1...HEAD | delta<_no-gitconfig>
 
 # show commit [--stat/numstat/patch-with-stat:show stat]
 git show <commit1><_stat> | delta<_no-gitconfig>
+
+# show commit(difft)
+GIT_EXTERNAL_DIFF=difft git show <commit1> --ext-diff
 
 # show commit file
 git show <commit1>:<git_filename>
@@ -266,6 +272,9 @@ git checkout <commit1> <diff_filename>
 
 # create branch
 git branch <branch_name> <commit1>
+
+# git chechout detached branch
+git checkout HEAD^0
 
 # create branch & checkout
 git checkout -b <branch_name> <commit1>
@@ -333,8 +342,11 @@ git branch --merged origin/master --format='%(refname:short) %09 %(committername
 # delete remote branch
 git push origin :<branch>
 
-# rebase
+# rebase interactive
 git rebase --autosquash --autostash -i <commit1>
+
+# rebase onto [--onto: --onto <base_branch> <pick_base_commit>^ HEAD]
+git rebase --autosquash --onto <base_branch> <commit1>
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP "<regex>" <grep_commit> -- <dir>
@@ -419,6 +431,9 @@ git remote add <shortname> <url>
 
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
+
+# check-ignore
+git check-ignore -v <file>
 
 # config list [-l:list]
 git config -l --show-origin<_--option> | column -ts $'\t'
