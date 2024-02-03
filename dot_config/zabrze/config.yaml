@@ -165,15 +165,15 @@ abbrevs:
 
   - name: gl
     abbr: gl
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -n 10
+    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 10
 
   - name: gll
     abbr: gll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -n 20
+    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 20
 
   - name: glll
     abbr: glll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -n 30
+    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 30
 
   - name: glg
     abbr: glg
@@ -181,7 +181,7 @@ abbrevs:
 
   - name: glp
     abbr: glp
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent -n 10
+    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent -n 10
 
   - name: gm
     abbr: gm

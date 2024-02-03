@@ -361,7 +361,7 @@ git grep -iP "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-fil
 git cat-file -p <commit1>:<ls-tree-files><_pipe>
 
 # log contributor
-git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # log graph [--all:all branch]
 git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
@@ -373,7 +373,7 @@ git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(au
 git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> "<regex>"
 
 # log delete file
-git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # log unreachable commit
 git fsck --unreachable | awk '/commit/ {print $3}' | xargs git log --merges --no-walk --grep="<regex>" --all-match --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S"
