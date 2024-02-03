@@ -747,6 +747,8 @@ bindkey '^[d' _quote-previous-word-in-double
 function ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
+    # locale対応
+    export LC_CTYPE=en_US.UTF-8
     # 接続先ホスト名に応じて背景色切り替え
     if [[ `echo "$1" | grep 'audit'` ]] ; then
       tmux set -p window-active-style 'bg=#400000'
