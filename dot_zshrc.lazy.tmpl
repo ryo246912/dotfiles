@@ -301,15 +301,21 @@ __node_atclone() {
 }
 zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
-    node"!czg -> czg" \
-    node"!open-cli -> open-cli" \
     atclone"__node_atclone" \
-    @'z-shell/0'
+    @'ryo246912/null3'
+
+zinit wait lucid light-mode blockf for \
+    node"!czg -> czg" \
+    @'ryo246912/null'
+
+zinit wait lucid light-mode blockf for \
+    node"!open-cli -> open-cli" \
+    @'ryo246912/null1'
 
 ### python ###
 zinit wait lucid light-mode blockf for \
     pip"!gita -> gita" \
-    @'vladdoster/null'
+    @'ryo246912/null2'
 
 ### plugin ###
 __zsh-autosuggestions_atload() {
