@@ -562,6 +562,9 @@ dura serve | jq '"\(.time) \(.fields.operation.Snapshot.op.commit_hash) \(.field
 # dura delete branch [optional:git branch -l "dura*" | grep -vE "dura/$(git rev-parse HEAD)"]
 git branch -l "dura*" | xargs -I % git branch -D %
 
+# gita display repo dirs
+gita freeze | column -ts, | awk '{print $3}'
+
 # ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
 ghq get <url>
 ```

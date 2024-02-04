@@ -306,6 +306,11 @@ zinit wait lucid light-mode blockf for \
     atclone"__node_atclone" \
     @'z-shell/0'
 
+### python ###
+zinit wait lucid light-mode blockf for \
+    pip"!gita -> gita" \
+    @'vladdoster/null'
+
 ### plugin ###
 __zsh-autosuggestions_atload() {
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
@@ -356,6 +361,10 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     atload"source zsh-better-npm-completion.plugin.zsh" \
     as"completion" "https://github.com/lukechilds/zsh-better-npm-completion/blob/master/zsh-better-npm-completion.plugin.zsh"
+
+zinit wait lucid light-mode blockf for \
+    as"completion" "https://github.com/nosarthur/gita/blob/master/auto-completion/zsh/_gita" \
+    as"completion" "https://github.com/nosarthur/gita/blob/master/auto-completion/zsh/.gita-completion.zsh"
 
 #--------------------------------------------------------------
 # fzf-function
