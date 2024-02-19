@@ -345,7 +345,7 @@ abbrevs:
 
   - name: nrtd
     abbr: nrtd
-    snippet: npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E ".*spec.*")
+    snippet: npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')
 
   - name: nrv
     abbr: nrv
