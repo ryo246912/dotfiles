@@ -7,6 +7,10 @@ abbrevs:
     abbr: as
     snippet: atuin stats
 
+  - name: c.
+    abbr: c.
+    snippet: code .
+
   - name: ch
     abbr: ch
     snippet: chezmoi

@@ -62,6 +62,8 @@
   "workbench.activityBar.visible": false,
   // タイトルバーのレイアウトコントロールを非表示
   "workbench.layoutControl.enabled": false,
+  // エクスプローラのStickyScrollをOFFにする
+  "workbench.tree.enableStickyScroll": false,
   ///////////////////////////////////////////////
   // 各言語の設定
   ///////////////////////////////////////////////
