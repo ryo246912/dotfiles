@@ -3,3 +3,20 @@ style = "compact"
 filter_mode_shell_up_key_binding = "host"
 
 search_mode = "fuzzy"
+
+sync_address = "https://ryo-shellhistory.fly.dev"
+
+filter_mode = "directory"
+
+show_preview=true
+
+timezone = "+9"
+
+common_subcommands = [
+  "git",
+  "npm",
+  "gh",
+  "docker",
+  "docker-compose",
+  "make",
+]

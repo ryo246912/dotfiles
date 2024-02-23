@@ -77,8 +77,8 @@ __atuin_atload() {
 }
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
-    from"gh-r" cargo"atuin" \
-    sbin"bin*/atuin" \
+    from"gh-r" \
+    sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
     @'atuinsh/atuin'
