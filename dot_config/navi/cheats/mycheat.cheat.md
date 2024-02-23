@@ -223,13 +223,16 @@ $ name: gcloud config configurations list \
 % git
 
 # diff option [--no-pager][--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line][--no-patch:not display diff][-U(--unified):display num line ex:git diff -U0][--no-renames:ignore rename file][-M -- file1 file2:rename file diff]
-git --no-pager diff --pickaxe-regex -S "<regex>" -U0
+git --no-pager diff --pickaxe-regex -S '<regex>' -U0
 
 # diff staging file [--cached(staged):diff staging and commit][--stat/numstat/patch-with-stat:show stat]
 git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
 
 # diff between base-branch...HEAD
 git diff<_--name-only> $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
+
+# diff between base-branch...HEAD(difft)
+GIT_EXTERNAL_DIFF="difft" git diff $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename>
 
 # diff between commits [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
@@ -242,6 +245,9 @@ git diff<_--name-only> HEAD~1...HEAD | delta<_no-gitconfig>
 
 # show commit [--stat/numstat/patch-with-stat:show stat]
 git show <commit1><_stat> | delta<_no-gitconfig>
+
+# show commit(difft)
+GIT_EXTERNAL_DIFF=difft git show <commit1> --ext-diff
 
 # show commit file
 git show <commit1>:<git_filename>
@@ -266,6 +272,9 @@ git checkout <commit1> <diff_filename>
 
 # create branch
 git branch <branch_name> <commit1>
+
+# git chechout detached branch
+git checkout HEAD^0
 
 # create branch & checkout
 git checkout -b <branch_name> <commit1>
@@ -316,7 +325,7 @@ git checkout . && git clean -f
 git reset --mixed HEAD
 
 # list tag [-l "pattern":list]
-git tag -l "*<tag_search>*" --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
+git tag -l '*<tag_search>*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
 
 # create tag [-a:annotated][-m:message][ex:git tag -a v1.0 -m 'message']
 git tag <tag_name>
@@ -333,26 +342,29 @@ git branch --merged origin/master --format='%(refname:short) %09 %(committername
 # delete remote branch
 git push origin :<branch>
 
-# rebase
+# rebase interactive
 git rebase --autosquash --autostash -i <commit1>
 
+# rebase onto [--onto: --onto <base_branch> <pick_base_commit>^ HEAD]
+git rebase --autosquash --onto <base_branch> <commit1>
+
 # git grep [-i:ignore upper&lower][-P:perl regex]
-git grep -iP "<regex>" <grep_commit> -- <dir>
+git grep -iP '<regex>' <grep_commit> -- <dir>
 
 # git grep look{ahead,behind} regex [positive ahead:X(?=Y)] [negative ahead:X(?!Y)][positive behind:(?<=Y)X][negative behind:(?<!Y)X]
-git grep -P "<look_regex>" <grep_commit> -- <dir>
+git grep -P '<look_regex>' <grep_commit> -- <dir>
 
 # git grep only filename [-l:only filename]
-git grep -lP "<regex>" <grep_commit> -- <dir>
+git grep -lP '<regex>' <grep_commit> -- <dir>
 
 # git grep not match [-v:output not match]
-git grep -lvP "<regex>" <grep_commit> -- <dir>
+git grep -lvP '<regex>' <grep_commit> -- <dir>
 
 # git grep between commit [-i:ignore upper&lower]
-git grep -iP "<regex>" $(git rev-list <commit1>...<commit2>) --
+git grep -iP '<regex>' $(git rev-list <commit1>...<commit2>) --
 
 # git grep files
-git grep -iP "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
+git grep -iP '<regex>' $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
 
 # git-jump grep
 () { local hash_file_num ; hash_file_num=$(<git_grep_command> | cut -d ' ' -f 1 | rev | cut -c 2- | rev | fzf) && git cat-file -p $(echo $hash_file_num | cut -d : -f -2) | vim +$(echo $hash_file_num | cut -d : -f 3-) -}
@@ -361,7 +373,7 @@ git grep -iP "<regex>" $(git rev-list master -- <ls-tree-files>) -- <ls-tree-fil
 git cat-file -p <commit1>:<ls-tree-files><_pipe>
 
 # log contributor
-git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # log graph [--all:all branch]
 git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
@@ -370,13 +382,13 @@ git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(a
 git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> <file_option><ls-files>
 
 # log change word [-S --pickaxe-regex:filter by word(regex) word count change in diff][-G:filter by regex in diff]
-git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> "<regex>"
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <search_option> '<regex>'
 
 # log delete file
-git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # log unreachable commit
-git fsck --unreachable | awk '/commit/ {print $3}' | xargs git log --merges --no-walk --grep="<regex>" --all-match --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S"
+git fsck --unreachable | awk '/commit/ {print $3}' | xargs git log --merges --no-walk --grep='<regex>' --all-match --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
 # stash working file
 git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
@@ -419,6 +431,9 @@ git remote add <shortname> <url>
 
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
+
+# check-ignore
+git check-ignore -v <file>
 
 # config list [-l:list]
 git config -l --show-origin<_--option> | column -ts $'\t'
@@ -545,7 +560,10 @@ dura serve | jq '"\(.time) \(.fields.operation.Snapshot.op.commit_hash) \(.field
 (cd $(z | sort -rn | cut -c 12- | fzf) && ghq list --full-path | xargs -I % sh -c "cd % && dura unwatch")
 
 # dura delete branch [optional:git branch -l "dura*" | grep -vE "dura/$(git rev-parse HEAD)"]
-git branch -l "dura*" | xargs -I % git branch -D %
+git branch -l 'dura*' | xargs -I % git branch -D %
+
+# gita display repo dirs
+gita freeze | column -ts, | awk '{print $3}'
 
 # ghq clone [ex:ghq get x-motemen/ghq , ghq get https://github.com/x-motemen/ghq]
 ghq get <url>
@@ -939,20 +957,20 @@ fzf
 # less
 less
 
-# grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r "navi" ./**/*dot* , grep -E "(X|Y)" apps/**/*.py]
-grep -Enr "<regex>" ./**/*
+# grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
+grep -Enr '<regex>' ./**/*
 
 # grep : [-i:ignore upper&lower]
-grep -Einr "<regex>" ./**/*
+grep -Einr '<regex>' ./**/*
 
-# grep : [-l:only filename] [ex:grep -il "" apps/**/*.py]
-grep -Elnr "<regex>" ./**/*
+# grep : [-l:only filename] [ex:grep -il '' apps/**/*.py]
+grep -Elnr '<regex>' ./**/*
 
-# grep : [-B/A/C n:(before/after/both)output {n} lines] [ex:grep -C 1 -in "" apps/**/*.py]
-grep -<line_output_option> <n> -Enr "<regex>" ./**/*
+# grep : [-B/A/C n:(before/after/both)output {n} lines] [ex:grep -C 1 -in '' apps/**/*.py]
+grep -<line_output_option> <n> -Enr '<regex>' ./**/*
 
 # grep : [-v:output not match]
-grep -vEr "<regex>" ./**/*
+grep -vEr '<regex>' ./**/*
 
 # head : [-n:output number]
 head -n <num>
@@ -1141,26 +1159,26 @@ df -h<_--total>
 # du : disk usage [-c:display total][-s:display only depth0 directory][-h:human-readable]
 du -csh
 
-# find : find path (option) [ex:find . -name "*.app"][-depth,-maxdepth,-mindepth:directory depth][-printf:print format]
+# find : find path (option) [ex:find . -name '*.app'][-depth,-maxdepth,-mindepth:directory depth][-printf:print format]
 find . --depth 1
 
 # find : output directory [-type:d,f,l=link][-path:pathname ex:./app/src/models/users][-not:not operator]
-find . -type d -path "*" -not -path ".*"
+find . -type d -path '*' -not -path '.*'
 
 # find : output file [-type:d,f,l=link][-path:pathname ex:./app/src/models/users][-name:filename ex:user.py][-not:not operator]
-find . -type f -path "*" -name "*" -not -name ".*"
+find . -type f -path '*' -name '*' -not -name '.*'
 
 # find : output file [-regex:filename regex]
-find . -type f -path "*" -regex ".*"
+find . -type f -path '*' -regex '.*'
 
 # find : and condition [-a:and]
-find . -regex ".*" -a -not -regex ".*"
+find . -regex '.*' -a -not -regex '.*'
 
 # find : prune or print [-prune:not search recursively,"condition1 -prune" -o "condition2 -print"][-o:or][-print:default action][-exec:command(ex:-exec sha1sum {} \;)]
-find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name "*" -print
+find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name '*' -print
 
-# find : exclude ".*" directory&file
-find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type <file_or_directory> -name "*" -print
+# find : exclude '.*' directory&file
+find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type <file_or_directory> -name '*' -print
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
 kill -s <pid>
@@ -1195,7 +1213,7 @@ tar -tvf <file>
 # tar : create archive [-c:create archive][-z(--gzip):extract or compress gzip][ex:tar -czvf libs.tgz *]
 tar -czvf <name>.<extension> *
 
-# tar : extract archive [-x:extract archive][ex:tar -xzvf libs.tgz "*.txt"]
+# tar : extract archive [-x:extract archive][ex:tar -xzvf libs.tgz '*.txt']
 tar -xzvf <file>
 
 # type : [a:all][ex:type -a python]
@@ -1214,8 +1232,8 @@ $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
 $ shells: cat /etc/shells | sed 1,4d
-;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print
-;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type d -name "*" -print
+;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type f -name '*' -print
+;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type d -name '*' -print
 $ extension: echo -e "tar.gz\ntgz"
 ;$
 
@@ -1530,7 +1548,7 @@ tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 tmux respawn-pane -k -c '#{pane_current_path}'
 
 # pipe-pane
-tmux pipe-pane -t <pane_from> 'cat | grep "<word>" >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
+tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
 ```
 $ hv: echo -e "v\nh"
 $ pane_from: echo "." && \

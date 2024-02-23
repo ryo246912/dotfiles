@@ -62,6 +62,8 @@
   "workbench.activityBar.visible": false,
   // タイトルバーのレイアウトコントロールを非表示
   "workbench.layoutControl.enabled": false,
+  // エクスプローラのStickyScrollをOFFにする
+  "workbench.tree.enableStickyScroll": false,
   ///////////////////////////////////////////////
   // 各言語の設定
   ///////////////////////////////////////////////
@@ -330,7 +332,7 @@
   "vim.useSystemClipboard": true,
   // (Vim) .vimrcの読み込み
   "vim.vimrc.enable": true,
-  "vim.vimrc.path": "$HOME/.vimrc",
+  "vim.vimrc.path": "$HOME/.config/vim/.vimrc",
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
