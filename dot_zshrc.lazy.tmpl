@@ -84,8 +84,8 @@ zinit wait lucid light-mode blockf for \
     @'atuinsh/atuin'
 {{ else }}
 zinit wait lucid light-mode blockf for \
-    from"gh-r" bpick"*x86_64-unknown-linux-musl*" cargo"atuin" \
-    sbin"bin*/atuin" \
+    from"gh-r" bpick"*x86_64-unknown-linux-musl*" \
+    sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
     @'atuinsh/atuin'
@@ -847,6 +847,12 @@ export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 
 # slack
 export SLACK_DEVELOPER_MENU=true
+
+{{ if eq .chezmoi.os "linux" -}}
+# fly
+export FLYCTL_INSTALL="$HOME/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+{{- end }}
 
 # pyenv setting
 #export PYENV_ROOT="$HOME/.pyenv"
