@@ -219,6 +219,12 @@ zinit wait lucid light-mode blockf for \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
 
+# tgpt #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"tgpt* -> tgpt" \
+    @'aandrew-me/tgpt'
+
 # ugrep #
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
