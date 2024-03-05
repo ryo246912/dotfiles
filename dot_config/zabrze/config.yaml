@@ -528,12 +528,24 @@ abbrevs:
     global: true
     context: 'git\slog\s'
 
+  - name: (git log) --reverse
+    abbr: r
+    snippet: --reverse
+    global: true
+    context: 'git\slog\s'
+
   - name: (git log) -n <num>
     abbr-pattern: n\d+$
     snippet: -n ${abbr/n/}
     evaluate: true
     global: true
     context: 'git\slog\s'
+
+  - name: (git merge) --no-commit
+    abbr: nc
+    snippet: --no-commit
+    global: true
+    context: 'git\smerge\s'
 
   # - name: (git push) --force-if-includes
   #   abbr: f

@@ -318,8 +318,8 @@ git reset --soft HEAD~
 # clear working directory file
 git checkout <modified_files>
 
-# clear working directory
-git checkout . && git clean -f
+# clear working directory[-f:force][-d:directory]
+git checkout . && git clean -df
 
 # clear staging
 git reset --mixed HEAD
