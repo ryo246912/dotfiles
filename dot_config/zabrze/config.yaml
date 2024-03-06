@@ -199,6 +199,10 @@ abbrevs:
     abbr: gmo
     snippet: git merge --no-ff origin/
 
+  - name: gmu
+    abbr: gmu
+    snippet: git merge --no-ff upstream/
+
   - name: gp
     abbr: gp
     snippet: git pull --no-commit
@@ -242,6 +246,10 @@ abbrevs:
   - name: grom
     abbr: grom
     snippet: git rebase --autostash origin/master
+
+  - name: grum
+    abbr: grum
+    snippet: git rebase --autostash upstream/master
 
   - name: gs
     abbr: gs
