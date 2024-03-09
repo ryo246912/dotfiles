@@ -6,8 +6,6 @@ search_mode = "fuzzy"
 
 sync_address = "https://ryo-shellhistory.fly.dev"
 
-filter_mode = "directory"
-
 show_preview=true
 
 timezone = "+9"
