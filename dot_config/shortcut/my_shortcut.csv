@@ -33,6 +33,7 @@ DBeaver,F3,-,SQLエディタ(SQL scripts一覧)
 DBeaver,F7,-,結果パネルの切替
 DBeaver,Esc,-,セルの変更をリセット
 DBeaver,cmd + [],-,前・次の下位タブ ※カスタム
+DBeaver,cmd + ↑↓-,-,最初/最後の行へ移動 ※カスタム
 DBeaver,cmd + (カンマ),-,設定
 DBeaver,cmd + space,-,×値ビューア開閉(show/hide results panel) ※カスタム
 DBeaver,cmd + space,-,オーダーの切替 ※カスタム
@@ -43,8 +44,10 @@ DBeaver,cmd + shift + [],-,前・次のタブ ※カスタム
 DBeaver,cmd + shift + option + [],-,ビューの切り替え ※カスタム
 DBeaver,ctrl + enter,-,カーソルの1SQLを実行
 DBeaver,ctrl + space,-,SQL補完
+DBeaver,ctrl + g,-,指定行へ移動
 DBeaver,ctrl + s,-,変更を適用(データ保存)
 DBeaver,ctrl + r,-,変更をリセット
+DBeaver,ctrl + shift + g,-,指定列へ移動
 DBeaver,F5,-,更新
 Figma,/,-,コメント
 Figma,cmd + f,-,検索
