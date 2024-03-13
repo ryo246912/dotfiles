@@ -572,3 +572,15 @@ abbrevs:
     snippet: -f
     global: true
     context: '^git\spush\s'
+
+  - name: (git show) --no-patch
+    abbr: np
+    snippet: --no-patch
+    global: true
+    context: '^git\sshow\s'
+
+  - name: (git show) --stat
+    abbr-pattern: (s|st)
+    snippet: --stat
+    global: true
+    context: '^git\sshow\s'
