@@ -533,7 +533,7 @@ _custom_navi_widget() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" && \
       tmux paste-buffer -drp -t $window -b tmp \
     '
@@ -604,7 +604,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e 's/  */ /g' ) #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -712,7 +712,7 @@ _navi_copy_snippet() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
