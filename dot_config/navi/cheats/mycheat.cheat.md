@@ -145,16 +145,15 @@ docker run -it -d --name <name> <image_id> <command>
 docker build -t <name> <image_id> <command>
 
 ```
-
 $ container_id: docker ps -a \
- --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
- --- --headers 1 --column 1
+  --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
+  --- --headers 1 --column 1
 $ network_id: docker network ls \
- --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
- --- --headers 1 --column 1
+  --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
+  --- --headers 1 --column 1
 $ image_id: docker images -a \
- --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
- --- --headers 1 --column 1
+  --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
+  --- --headers 1 --column 1
 ;$
 
 ```sh
@@ -184,11 +183,10 @@ docker-compose -p <project> down <service>
 # exec [--project-directory:][--env KEY=VALUE][--env-file:]
 docker-compose -p <project> exec <service> <command>
 ```
-
 $ project: docker-compose ls --all \
- --- --headers 1 --column 1
+  --- --headers 1 --column 1
 $ service: docker-compose -p <project> ps --all \
- --- --headers 1 --column 3
+  --- --headers 1 --column 3
 
 ```sh
 ;--------------------------------------------------------------
@@ -214,10 +212,9 @@ gcloud config configurations create <name>
 # set config [ex:gcloud config set compute/zone asia-northeast1-a]
 gcloud config set <section>/<property> <value>
 ```
-
 $ name: gcloud config configurations list \
- | awk '{print $1}' \
- --- --headers 1
+  | awk '{print $1}' \
+  --- --headers 1
 
 ```sh
 ;--------------------------------------------------------------
@@ -462,12 +459,11 @@ git rev-parse --show-toplevel
 # meta : count-object
 git count-objects -v
 ```
-
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only\n --name-status"
-$ \_--option: echo -e "\n --global\n --local\n --system"
-$ \_stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
-$ \_shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
+$ _--option: echo -e "\n --global\n --local\n --system"
+$ _stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
+$ _shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
 $ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
 $ base_branch: echo -e "\nmaster"
@@ -478,78 +474,78 @@ $ repo_url: echo -e "\ngit@github.com:\nhttps://github.com/"
 $ prefix: echo -e "wip: \nmemo: \n"
 
 $ commit1: git log <branch> \
- --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- --- --column 1 --delimiter ; \
- --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ; \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> \
- --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- --- --column 1 --delimiter ; \
- --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
-$ cherry*commit: git log <branch> \
- --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- --- --column 1 --delimiter ; --multi --expand \
- --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ; \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ cherry_commit: git log <branch> \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ;  --multi --expand \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ contributor_commit: git log --all --author="<contributor>" \
- --pretty=format:"%C(auto)%h; (%Cblue%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- --- --column 1 --delimiter ; \
- --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+  --pretty=format:"%C(auto)%h; (%Cblue%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ; \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ checkout_commit: git branch | awk '{print $NF}' ; \
   git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ branch: cat \
- <(git rev-parse --abbrev-ref HEAD) \
- <(git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  <(git rev-parse --abbrev-ref HEAD) \
+  <(git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 $ all_branch: cat \
- <(git rev-parse --abbrev-ref HEAD) \
- <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  <(git rev-parse --abbrev-ref HEAD) \
+  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 $ contributor: git log --format="%cn:%ce" \
- | sort -fu \
- | column -ts ":" \
- --- --column 1
+  | sort -fu \
+  | column -ts ":" \
+  --- --column 1
 ; $ grep_commit: git log <branch> \
-; --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
-; --- --column 1 --delimiter ; \
-; --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+;   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" -- <ls-files> \
+;   --- --column 1 --delimiter ; \
+;   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ dir: git ls-tree <grep_commit> --name-only -dr
 $ stash_num: git stash list \
- --- --column 1 --delimiter : \
- --preview "git stash show {1} -u ; git stash show {1} -up | delta --no-gitconfig"
+  --- --column 1 --delimiter : \
+  --preview "git stash show {1} -u ; git stash show {1} -up | delta --no-gitconfig"
 $ stash_file: echo . && \
- git stash show --name-only -u <stash_num> \
- --- --multi --expand
+  git stash show --name-only -u <stash_num> \
+  --- --multi --expand
 $ modified_files: echo . && \
- git ls-files -m \
- --- --multi --expand
+  git ls-files -m \
+  --- --multi --expand
 $ ls-files: git ls-files
 $ ls-tree-files: git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
-$ extension: echo <ls-tree-files> | sed 's/^.*\.\([^\.]\_\)$/\1/'
-$ \_pipe: echo -e " | bat -l <extension>\n > <ls-tree-files>"
+$ extension: echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
+$ _pipe: echo -e " | bat -l <extension>\n > <ls-tree-files>"
 $ base-head_diff_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base <base_branch> HEAD)...HEAD \
   | xargs -I % echo "<base_branch>;%" \
   --- --delimiter ; --column 2 \
   --preview "git diff $(git show-branch --merge-base {1} HEAD)...HEAD -- {2} | delta --no-gitconfig"
 $ commit1-commit2_filename: echo . && \
- git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
+  git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
 $ git_filename: git ls-tree -r --name-only <commit1>
 $ diff_filename: git diff --name-only <commit1> \
- | xargs -I % echo "<commit1>;%" \
- --- --delimiter ; --column 2 \
- --preview "git show {1}:{2} | delta --no-gitconfig"
+  | xargs -I % echo "<commit1>;%" \
+  --- --delimiter ; --column 2 \
+  --preview "git show {1}:{2} | delta --no-gitconfig"
 $ working_filename: echo . && \
- git status --porcelain \
- | cut -c4- \
- | sed -e "s|^|$(pwd)/|g" \
+  git status --porcelain \
+  | cut -c4- \
+  | sed -e "s|^|$(pwd)/|g" \
   --- --multi --expand \
   --preview "git diff HEAD -- {1} | delta --no-gitconfig"
 $ staging_filename: echo . && \
- git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
- --- --multi --expand \
- --preview "git diff --cached -- {1} | delta --no-gitconfig"
+  git diff --cached --name-only --line-prefix=$(git rev-parse --show-toplevel)/ \
+  --- --multi --expand \
+  --preview "git diff --cached -- {1} | delta --no-gitconfig"
 
 ```sh
 % git-tool
@@ -689,64 +685,63 @@ open-cli <repo_url>
 # delete(poi) branch
 gh-poi<_--dry-run>
 ```
-
-$ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/._github.com.\(._\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
-$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(._\)._/\1/' -e 's/\.git//')/contributors?per*page=100" | jq -r '(.[] | "involves:"+.login )')"
+$ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
+$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
-$ \_no-gitconfig: echo -e " --no-gitconfig\n"
-$ *--watch: echo -e "\n --watch"
+$ _no-gitconfig: echo -e " --no-gitconfig\n"
+$ _--watch: echo -e "\n --watch"
 $ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "\nmaster"
 $ branch: echo -e "HEAD\n"
-$ _--log\_: echo -e "\n --log \n --log-failed "
+$ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
-$ _-m_--merges\*--first-parent : echo -e "\n -m --merges --first-parent"
+$ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ ls-files: git ls-files
 $ all_branch: cat \
- <(git rev-parse --abbrev-ref HEAD) \
- <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
- --- --column 1
+  <(git rev-parse --abbrev-ref HEAD) \
+  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  --- --column 1
 
-$ commits*filter_by_file: git log<*-m*--merges*--first-parent> \
- --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- <all*branch> <file_option><ls-files> \
- --- --column 1 --delimiter ; --multi --expand
-$ commits_filter_by_word: git log<*-m*--merges*--first-parent> \
- --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
- <search_option> "<regex>" \
- --- --column 1 --delimiter ; --multi --expand
+$ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
+  --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  <all_branch> <file_option><ls-files> \
+  --- --column 1 --delimiter ; --multi --expand
+$ commits_filter_by_word: git log<_-m_--merges_--first-parent> \
+  --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  <search_option> "<regex>" \
+  --- --column 1 --delimiter ; --multi --expand
 $ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
- --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
- --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
- | column -ts $'\t' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1 --multi --expand
 $ pr_branch: gh pr list --search "user-review-requested:@me" --state open \
- --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
- --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
- | column -ts $'\t' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 8
 $ pr_my_no: gh pr list --author "@me" --state <state> --limit 100 \
- --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
- --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
- | column -ts $'\t' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ pr_review_no: gh pr list --search "user-review-requested:@me" --state open \
- --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
- --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
- | column -ts $'\t' \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ issue_no: gh issue list --assignee "<author>" --state <state> \
- --json number,title,author,state,updatedAt,createdAt \
- --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
- | column -ts $'\t' \
+  --json number,title,author,state,updatedAt,createdAt \
+  --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ workflow: gh workflow list \
- | column -ts $'\t' \
+  | column -ts $'\t' \
   --- --column 1
 ; $ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
   | column -ts $'\t' \
@@ -756,24 +751,24 @@ $ workflow: gh workflow list \
   | column -ts $'\t' \
   --- --headers 1 --column 1
 $ repository: gh repo list <owner> -L 100 \
- --json nameWithOwner,isArchived,isPrivate,pushedAt,description \
- --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
- | column -ts $'\t' \
+  --json nameWithOwner,isArchived,isPrivate,pushedAt,description \
+  --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ project_no: gh project list --owner <owner> \
- | column -ts $'\t' \
+  | column -ts $'\t' \
   --- --column 1
 $ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_no> \
- | jq -r '(.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) ,["repo","no","type","status","assignee","title","url"] | @tsv' \
- | tail -r \
- | column -ts $'\t' \
+  | jq -r '(.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) ,["repo","no","type","status","assignee","title","url"] | @tsv' \
+  | tail -r \
+  | column -ts $'\t' \
   --- --headers 1 --column 7
 $ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url,.description]) | @tsv' | column -ts $'\t' --- --column 4
-$ repo_url: gh search repos "<word><\_query>" --sort stars --limit 100 \
- --json fullName,description,language,pushedAt,stargazersCount,url \
- --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
- | column -ts $'\t' \
- --- --headers 1 --column 5
+$ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
+  --json fullName,description,language,pushedAt,stargazersCount,url \
+  --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 5
 
 ```sh
 % gh-rest-api
@@ -809,7 +804,6 @@ act -n <event> -W <workflow>
 act <event> -W <workflow>
 
 ```
-
 $ event: echo -e "push\npull_request\nissues"
 $ workflow: find .github/workflows
 
@@ -1137,7 +1131,6 @@ cat <(<command1>) <(<command2>)
 # cat : output file(here document)
 cat << EOF > <filename>
 ```
-
 ```sh
 # curl : download file[-O:remote-name][-o:output filename][-s:silence][-S:show error when -s]
 curl -sS -O '<url>'
@@ -1235,13 +1228,12 @@ watch -n <second> -edt '<command>'
 # watch :
 watch -edt '<command> ; ! echo $?'
 ```
-
-$ \_--total: echo -e "\n --total"
+$ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
 $ file_or_directory: echo -e "f\nd"
 $ shells: cat /etc/shells | sed 1,4d
-;$ file: find $PWD -type d -path "$PWD/._" -prune -o -not -name '._' -type f -name '_' -print
-;$ dir: find $PWD -type d -path "$PWD/._" -prune -o -not -name '._' -type d -name '_' -print
+;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type f -name '*' -print
+;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type d -name '*' -print
 $ extension: echo -e "tar.gz\ntgz"
 ;$
 
@@ -1279,9 +1271,9 @@ man zshbuiltins
 # show/set shell option
 setopt
 ```
-
 $ keymap: bindkey -l
 ;$
+
 
 ```sh
 % shell:display
@@ -1295,6 +1287,7 @@ cat /etc/os-release
 # display kernel version [architecture:arm64=M series,x86_64:AMD64 compatible]
 uname -a
 ```
+
 
 ```sh
 ;--------------------------------------------------------------
@@ -1335,9 +1328,9 @@ sar -r 1 10
 # sar : [-B:paging]
 sar -B 1 10
 ```
-
-$ \_grep : echo -e "\n | grep 'Commandline'"
+$ _grep : echo -e "\n | grep 'Commandline'"
 ;$
+
 
 ```sh
 ;--------------------------------------------------------------
@@ -1357,6 +1350,7 @@ wsl -l -v
 # wsl : launch wsl root directory[-e <command>:exec command]
 wsl ~
 ```
+
 
 ```sh
 ;--------------------------------------------------------------
@@ -1385,10 +1379,9 @@ bat -l rb $(brew edit --print-path <app_name>)
 # open app homegage [ex:brew home colordiff]
 brew home <app_name>
 ```
-
 $ _--filter: echo -e "\n --formula\n --cask"
 $ _--dry-run: echo -e "\n --dry-run"
-$ \_--cask: echo -e "\n --cask"
+$ _--cask: echo -e "\n --cask"
 ;$
 
 ```sh
@@ -1406,12 +1399,11 @@ blueutil --disconnect <device> && blueutil --power 0
 # connect/disconnect device
 blueutil --paired --format json-pretty
 ```
-
 $ on_off: echo -e "1\n0"
 $ device: blueutil --paired --format json-pretty \
- | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
- | column -ts $'\t' \
- --- --headers 1 --column 1
+  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
 
 ```sh
 % shell:macOS
@@ -1467,17 +1459,17 @@ open-cli <url_or_file> -- <app>
 # t-rec : record to gif [-q:quiet][-w:rec window]
 t-rec -q -w <window> -o ~/private/gif/$(date "+%y%m%d-%H%M%S")_<name>
 ```
-
 $ datatype : system_profiler -listDataTypes \
- --- --multi --expand
+  --- --multi --expand
 $ load_unload: echo -e "unload\nload"
 $ app : system_profiler "SPApplicationsDataType" -json \
- | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
- | column -ts $'\t' \
+  | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 2
 $ window: t-rec --ls-win \
- | column -ts $'|' \
- --- --headers 1 --column 2
+  | column -ts $'|' \
+  --- --headers 1 --column 2
+
 
 ```sh
 ;--------------------------------------------------------------
@@ -1558,22 +1550,21 @@ tmux respawn-pane -k -c '#{pane_current_path}'
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
 ```
-
 $ hv: echo -e "v\nh"
 $ pane_from: echo "." && \
- tmux lsp -a \
- -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
- | column -t \
- --- --column 1
+  tmux lsp -a \
+  -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
+  | column -t \
+  --- --column 1
 $ pane_to: echo "." && \
- tmux lsp -a \
- -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
- | column -t \
- --- --column 1
+  tmux lsp -a \
+  -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
+  | column -t \
+  --- --column 1
 $ tty: tmux lsp -a \
- -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
- | column -t \
- --- --column 6
+  -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
+  | column -t \
+  --- --column 6
 
 ```sh
 ;--------------------------------------------------------------
