@@ -199,6 +199,10 @@ abbrevs:
     abbr: gmo
     snippet: git merge --no-ff origin/
 
+  - name: gmu
+    abbr: gmu
+    snippet: git merge --no-ff upstream/
+
   - name: gp
     abbr: gp
     snippet: git pull --no-commit
@@ -242,6 +246,10 @@ abbrevs:
   - name: grom
     abbr: grom
     snippet: git rebase --autostash origin/master
+
+  - name: grum
+    abbr: grum
+    snippet: git rebase --autostash upstream/master
 
   - name: gs
     abbr: gs
@@ -528,12 +536,24 @@ abbrevs:
     global: true
     context: 'git\slog\s'
 
+  - name: (git log) --reverse
+    abbr: r
+    snippet: --reverse
+    global: true
+    context: 'git\slog\s'
+
   - name: (git log) -n <num>
     abbr-pattern: n\d+$
     snippet: -n ${abbr/n/}
     evaluate: true
     global: true
     context: 'git\slog\s'
+
+  - name: (git merge) --no-commit
+    abbr: nc
+    snippet: --no-commit
+    global: true
+    context: 'git\smerge\s'
 
   # - name: (git push) --force-if-includes
   #   abbr: f

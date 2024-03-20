@@ -84,8 +84,8 @@ zinit wait lucid light-mode blockf for \
     @'atuinsh/atuin'
 {{ else }}
 zinit wait lucid light-mode blockf for \
-    from"gh-r" bpick"*x86_64-unknown-linux-musl*" cargo"atuin" \
-    sbin"bin*/atuin" \
+    from"gh-r" bpick"*x86_64-unknown-linux-musl*" \
+    sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
     @'atuinsh/atuin'
@@ -218,6 +218,12 @@ zinit wait lucid light-mode blockf for \
     sbin"navi" \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
+
+# tgpt #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"tgpt* -> tgpt" \
+    @'aandrew-me/tgpt'
 
 # ugrep #
 {{ if eq .chezmoi.os "darwin" -}}
@@ -527,7 +533,7 @@ _custom_navi_widget() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" && \
       tmux paste-buffer -drp -t $window -b tmp \
     '
@@ -598,7 +604,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e 's/  */ /g' ) #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -706,7 +712,7 @@ _navi_copy_snippet() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
@@ -841,6 +847,12 @@ export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 
 # slack
 export SLACK_DEVELOPER_MENU=true
+
+{{ if eq .chezmoi.os "linux" -}}
+# fly
+export FLYCTL_INSTALL="$HOME/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+{{- end }}
 
 # pyenv setting
 #export PYENV_ROOT="$HOME/.pyenv"
