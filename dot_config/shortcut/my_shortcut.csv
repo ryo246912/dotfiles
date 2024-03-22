@@ -162,6 +162,8 @@ Slack,cmd + ctrl + ←→,-,セクション切り替え
 Slack,option + ↑↓,alt + ↑↓,前/次のチャンネルへ移動
 Slack,option + shift + ↑↓,alt + shift + ↑↓,未読の前/次のチャンネルへ移動
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
+Thunderbird,-,shift + c,メールを全て既読にする
+Thunderbird,-,shift + F5,全てのアカウントの新着メールを受信
 Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
 Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ
 Tmux,ctrl + b → e [cmd + e],ctrl + b → e,synchronize-panesのON/OFF ※カスタム
