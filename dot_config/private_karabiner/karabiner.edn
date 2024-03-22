@@ -87,16 +87,16 @@
                  ]}
         {:des "left_option mode"
          :rules [:left-option-mode
-                 [:a [:open "Arc"]]
-                 ;;  [:c [:open "Google Chrome"]]
-                 [:d [:open "DBeaver"]]
-                 [:f [:open "Finder"]]
-                 [:g [:open "Gather"]]
-                 [:k [:open "Keeper Password Manager"]]
-                 [:n [:open "Notion"]]
-                 [:s [:open "Slack"]]
-                 [:t [:open "Alacritty"]]
-                 [:v [:open "Visual Studio Code"]]
+                 ;; [:a [:open "Arc"]]
+                 ;; [:c [:open "Google Chrome"]]
+                 ;; [:d [:open "DBeaver"]]
+                 ;; [:f [:open "Finder"]]
+                 ;; [:g [:open "Gather"]]
+                 ;; [:k [:open "Keeper Password Manager"]]
+                 ;; [:n [:open "Notion"]]
+                 ;; [:s [:open "Slack"]]
+                 ;; [:t [:open "Alacritty"]]
+                 ;; [:v [:open "Visual Studio Code"]]
                  [:z [:open "System Preferences"]]]}
         {:des "spacebar mode"
          :rules [[:spacebar ["spacebar mode" 1] nil {:afterup ["spacebar mode" 0] :alone :spacebar}]

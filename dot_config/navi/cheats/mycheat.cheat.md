@@ -424,10 +424,10 @@ git clone<_shallow-option> <repo_url>
 git remote -v
 
 # set remote url [ex:git remote set-url origin git@github.com:<user>/<repo>.git]
-git remote set-url <shortname> <url>
+git remote set-url <shortname> git@github.com:<user>/<repo>.git
 
 # add remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
-git remote add <shortname> <url>
+git remote add <shortname> git@github.com:<user>/<repo>.git
 
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')

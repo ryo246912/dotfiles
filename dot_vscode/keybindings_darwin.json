@@ -659,13 +659,13 @@
   },
   // (metaGo)1行下をセレクト
   {
-    "key": "ctrl+cmd+down",
+    "key": "ctrl+shift+down",
     "command": "metaGo.selectLineDown",
     "when": "textInputFocus"
   },
   // (metaGo)1行上をセレクト
   {
-    "key": "ctrl+cmd+up",
+    "key": "ctrl+shift+up",
     "command": "metaGo.selectLineUp",
     "when": "textInputFocus"
   },
@@ -691,6 +691,12 @@
     "key": "ctrl+c",
     "command": "workbench.action.addComment"
   },
+  // (GitHub) PRのsuggestionを追加
+  {
+    "key": "ctrl+s",
+    "command": "pr.makeSuggestion",
+    "when": "commentEditorFocused"
+  },
   // (GitHub) PRのビューにフォーカス
   // when : ActivePRが表示可能な場合
   {
@@ -715,6 +721,16 @@
   {
     "key": "alt+cmd+g",
     "command": "workbench.view.extension.github-pull-requests"
+  },
+  // (go-to-relative)相対行で移動する
+  {
+    "key": "ctrl+shift+g",
+    "command": "go-to-relative.goToLine"
+  },
+  // (go-to-relative)被っているキーバインドをOFFにする
+  {
+    "key": "shift+cmd+g",
+    "command": "-go-to-relative.goToLineNegative"
     ///////////////////////////////////////////////
     // 以下自動入力
     ///////////////////////////////////////////////
