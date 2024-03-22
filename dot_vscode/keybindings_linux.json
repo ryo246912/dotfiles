@@ -771,6 +771,12 @@
     "key": "shift+alt+c",
     "command": "workbench.action.addComment"
   },
+  // (GitHub) PRのsuggestionを追加
+  {
+    "key": "shift+alt+s",
+    "command": "pr.makeSuggestion",
+    "when": "commentEditorFocused"
+  },
   // (GitHub) PRのビューにフォーカス
   // when : ActivePRが表示可能な場合
   {
@@ -795,6 +801,16 @@
   {
     "key": "ctrl+alt+g",
     "command": "workbench.view.extension.github-pull-requests"
+  },
+  // (go-to-relative)相対行で移動する
+  {
+    "key": "ctrl+shift+alt+g",
+    "command": "go-to-relative.goToLine"
+  },
+  // (go-to-relative)被っているキーバインドをOFFにする
+  {
+    "key": "ctrl+shift+alt+g",
+    "command": "-go-to-relative.goToLineNegative"
     ///////////////////////////////////////////////
     // 以下自動入力
     ///////////////////////////////////////////////
