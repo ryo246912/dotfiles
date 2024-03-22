@@ -1616,6 +1616,9 @@ zi delete <plugin>
 ; other
 ;--------------------------------------------------------------
 % other
+# deepl : transrate [-s: stdin]
+deepl -s --to '<language>' <<< "<word>"
+
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>
 
@@ -1632,5 +1635,6 @@ code --list-extensions | xargs -L 1 echo code --install-extension
 curl -s "<version>wttr.in/<location_or_help>"
 ```
 
+$ language: echo -e "ja\nen"
 $ version: echo -e "\nv2."
 $ location_or_help: echo -e "\n:help"
