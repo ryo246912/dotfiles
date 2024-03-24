@@ -1,5 +1,6 @@
 {{- if eq .chezmoi.os "darwin" -}}
 .config/autohotkey*
+.config/atuin/fly.toml
 {{ else -}}
 .config/karabiner*
 .config/rectangle*
