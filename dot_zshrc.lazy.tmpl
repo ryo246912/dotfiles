@@ -610,7 +610,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n\t" " " | sed -e 's/  */ /g') #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -706,6 +706,19 @@ bindkey '^Q^W' _copy_word
 bindkey '^[Q^[W' _copy_word
 {{- end }}
 
+# ctrl + q → ctrl + s(alt + shift + q → alt + shift + s)でshortcut表示
+_shortcut() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+    '
+  else
+    cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+  fi
+}
+zle -N _shortcut
+bindkey '^Q^S' _shortcut
+
 # ctrl + q → ctrl + g(alt + shift + q → alt + shift + g)でnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
   # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
@@ -718,7 +731,7 @@ _navi_copy_snippet() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
