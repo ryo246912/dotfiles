@@ -134,8 +134,10 @@ zinit wait lucid light-mode blockf for \
 # fzf #
 __fzf_atload() {
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
+    {{ if eq .chezmoi.os "darwin" -}}
+    export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border --bind ctrl-k:kill-line,alt-right:forward-word,alt-left:backward-word'
+    {{ else -}}
     export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border'
-    {{ if eq .chezmoi.os "linux" -}}
     bindkey "^[R" fzf-history-widget # alt + shift + r
     bindkey -r "^R"
     {{- end }}
