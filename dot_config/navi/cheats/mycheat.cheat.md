@@ -15,7 +15,7 @@ cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
 asdf plugin list --urls
 
 # plugin list all
-asdf plugin list all | vim -
+asdf plugin list all | less -iRMW --use-color
 
 # plugin add [ex:asdf plugin add <name> <git-url>]
 asdf plugin add <name> <git-url>
@@ -43,7 +43,7 @@ asdf which <command>
 % cspell
 
 # lint [-c:config file][-e:exclude file]
-cspell --no-progress --gitignore . | vim -
+cspell --no-progress --gitignore . | less -iRMW --use-color
 
 # lint base-branch...HEAD [--root:root directory, defaults=current directory]
 cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base origin/<merge-base> HEAD)...HEAD)
@@ -87,8 +87,8 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 ;--------------------------------------------------------------
 % docker
 
-# exec [ex:docker container exec -it <container_id> bash]
-docker container exec -it <container_id> <command>
+# exec [ex:docker container exec -it <container> bash]
+docker container exec -it <container> <command>
 
 # ps [-a:all]
 docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
@@ -100,13 +100,13 @@ docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.T
 docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
 # inspect container
-docker inspect <container_id> | vim -
+docker inspect <container> | less -iRMW --use-color
 
 # inspect image
-docker image inspect <image_id> | vim -
+docker image inspect <image_id> | less -iRMW --use-color
 
 # inspect network
-docker network inspect <network_id> | vim -
+docker network inspect <network> | less -iRMW --use-color
 
 # disk free
 docker system df
@@ -124,7 +124,7 @@ docker volume ls -f dangling=true
 docker rmi $(docker images -q -f dangling=true)
 
 # remove container
-docker rm <container_id>
+docker rm <container>
 
 # remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
@@ -138,19 +138,22 @@ docker network prune
 # remove unused build cache
 docker builder prune
 
-# run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+docker exec -it <command>
+
+# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
 docker run -it -d --name <name> <image_id> <command>
 
 # build[-t:tag][ex:docker run -it -d ubuntu:22.04 bash]
 docker build -t <name> <image_id> <command>
 
 ```
-$ container_id: docker ps -a \
+$ container: docker ps -a \
   --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
-  --- --headers 1 --column 1
-$ network_id: docker network ls \
+  --- --headers 1 --column 2
+$ network: docker network ls \
   --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
-  --- --headers 1 --column 1
+  --- --headers 1 --column 2
 $ image_id: docker images -a \
   --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
   --- --headers 1 --column 1
@@ -168,7 +171,7 @@ docker-compose ls --all
 # ps [--all]
 docker-compose -p <project> ps --all
 
-# start
+# start (starts existing containers)
 docker-compose -p <project> start <service>
 
 # restart
@@ -180,8 +183,14 @@ docker-compose -p <project> stop <service>
 # down
 docker-compose -p <project> down <service>
 
-# exec [--project-directory:][--env KEY=VALUE][--env-file:]
+# exec (execute a command in a running container)[--project-directory:specify compose file][--env KEY=VALUE][--env-file:specify env file]
 docker-compose -p <project> exec <service> <command>
+
+# run (create container & execute a command)
+docker-compose -p <project> run <service> <command>
+
+# up (build image & create container & execute a command from compose file)[-d:detach mode=run background][-f compose.yml]
+docker-compose -p <project> up -d
 ```
 $ project: docker-compose ls --all \
   --- --headers 1 --column 1
@@ -279,11 +288,17 @@ git checkout HEAD^0
 # create branch & checkout
 git checkout -b <branch_name> <commit1>
 
+# create branch & checkout(record base-branch)
+git checkout -b <branch_name> <all_branch> && git config "branch.$(git symbolic-ref --short HEAD).base-branch" <all_branch>
+
+# record base-branch
+git config "branch.$(git symbolic-ref --short HEAD).base-branch" <current_branch>
+
 # set upstream branch [-u:upstream branch] [ex:git branch -r origin/feature-branch]
 git branch -u origin/$(git symbolic-ref --short HEAD)
 
-# branch list
-git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | vim -
+# branch & tag list
+git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
 # restore(default)
 git checkout <checkout_commit>
@@ -292,7 +307,7 @@ git checkout <checkout_commit>
 git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
 
 # commit fixup
-git commit --fixup <commit1>
+git commit --fixup <commit1> && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet <commit1>~
 
 # commit default message
 git commit --no-edit
@@ -377,6 +392,9 @@ git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blu
 
 # log graph [--all:all branch]
 git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
+
+# log commit
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> | grep -C 3 --color=auto <commit>
 
 # log file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
 git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> <file_option><ls-files>
@@ -501,6 +519,11 @@ $ branch: cat \
 $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  --- --column 1
+$ current_branch: git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' \
+  | grep "$(git rev-parse --short HEAD)" \
+  | grep -v "$(git symbolic-ref --short HEAD)" \
+  | column -ts $'\t' \
   --- --column 1
 $ contributor: git log --format="%cn:%ce" \
   | sort -fu \
@@ -694,7 +717,7 @@ $ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
-$ base_branch: echo -e "\nmaster"
+$ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch)\nmaster"
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
@@ -817,7 +840,7 @@ $ workflow: find .github/workflows
 nodenv versions
 
 # nodenv installable versions
-nodenv install --list | vim -
+nodenv install --list | less -iRMW --use-color
 
 # nodenv install version
 nodenv install <version>
@@ -874,7 +897,7 @@ python -m http.server 8888
 pyenv versions
 
 # pyenv installable versions
-pyenv install --list | vim -
+pyenv install --list | less -iRMW --use-color
 
 # pyenv install version
 pyenv install <version>
@@ -954,8 +977,8 @@ fx
 # fzf [-m:multi select]
 fzf
 
-# less
-less
+# less [-i:ignore-case][-M:prompt more verbosely][-W:highlight first unread line after scrolling][-R:ANSI "color" escape sequences to be displayed in their raw][--use-color:enables colored]
+less -iRMW --use-color
 
 # grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
 grep -Enr '<regex>' ./**/*
@@ -1196,10 +1219,10 @@ lsof -i:<port>
 ping <address>
 
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
-ps axu | vim -
+ps axu | less -iRMW --use-color
 
 # ps : [o:format][pgid:process group id][sess:session id]
-ps axo pid,ppid,pgid,sess,tty,user,start,command | vim -
+ps axo pid,ppid,pgid,sess,tty,user,start,command | less -iRMW --use-color
 
 # set : set shell option [-o:set option][+o:unset option][ex:set -o noclobber]
 set -o <option>
@@ -1241,7 +1264,7 @@ $ extension: echo -e "tar.gz\ntgz"
 % shell:bash
 
 # show bindkey
-bind | vim -
+bind | less -iRMW --use-color
 
 # var : shell current process
 echo $$
@@ -1263,7 +1286,7 @@ sh -i -l -c '<command>'
 % shell:zsh
 
 # show bindkey[-M : selected keymap]
-bindkey -M <keymap> | vim -
+bindkey -M <keymap> | less -iRMW --use-color
 
 # manual zshbuiltins
 man zshbuiltins
@@ -1359,7 +1382,7 @@ wsl ~
 % brew
 
 # list [--cask,--formula][-1:one column]
-brew list --versions<_--filter> | vim -
+brew list --versions<_--filter> | less -iRMW --use-color
 
 # install app [-n:dry-run][app:formula,user/repo/formula][ex:brew install -n fzf]
 brew install<_--dry-run><_--cask> <app_name>
@@ -1412,16 +1435,16 @@ $ device: blueutil --paired --format json-pretty \
 jot -r 1
 
 # display mac commnad [-r:recursive]
-zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | vim -
+zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | less -iRMW --use-color
 
 # defaults : display system defaults
-defaults read | vim -
+defaults read | less -iRMW --use-color
 
 # defaults : kill Finder
 defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
 
 # lsappinfo : display running application
-lsappinfo list | vim -
+lsappinfo list | less -iRMW --use-color
 
 # networksetup : display network devices
 networksetup -listallhardwareports
@@ -1539,7 +1562,7 @@ psql -l
 ;--------------------------------------------------------------
 % tmux
 # keys
-tmux list-keys | vim -
+tmux list-keys | less -iRMW --use-color
 
 # pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>

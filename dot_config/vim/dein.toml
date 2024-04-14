@@ -1,0 +1,35 @@
+# hook_add	プラグインが dein.vim によって追加されたとき
+# hook_source	プラグインが読み込まれる直前
+# hook_post_source	プラグインが読み込まれた直後
+# hook_post_update	プラグインが更新された直後
+
+[[plugins]]
+repo = 'junegunn/fzf'
+hook_post_update = './install --all'
+merged = 0
+
+[[plugins]]
+repo = 'junegunn/fzf.vim'
+hook_add = '''
+" ヒストリを表示
+nnoremap <silent> ,r :<C-u>:History:<CR>
+cnoremap <C-r> :<C-u>:History:<CR>
+'''
+
+[[plugins]]
+repo = 'nanotee/zoxide.vim'
+hook_add = '''
+cnoremap zz :Zi<CR>
+'''
+
+# ファイラー
+[[plugins]]
+repo = 'lambdalisue/fern.vim'
+hook_add = '''
+noremap <silent> ,e :<C-u>:Fern . -drawer -reveal=%<CR>
+noremap <silent> ,b :<C-u>:Fern . -drawer -reveal=% -toggle<CR>
+'''
+
+# エディター関連
+[[plugins]]
+repo = 'bronson/vim-trailing-whitespace'

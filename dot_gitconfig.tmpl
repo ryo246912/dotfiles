@@ -25,6 +25,10 @@
   side-by-side = true
 [interactive]
   diffFilter = delta --color-only
+[rerere]
+	enabled = true
+[init]
+	defaultBranch = main
 {{ if eq .chezmoi.os "darwin" }}
 [include]
   path = ~/.gitconfig.secret-noreply

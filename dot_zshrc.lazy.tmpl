@@ -134,8 +134,10 @@ zinit wait lucid light-mode blockf for \
 # fzf #
 __fzf_atload() {
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
+    {{ if eq .chezmoi.os "darwin" -}}
+    export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border --bind ctrl-k:kill-line,alt-right:forward-word,alt-left:backward-word'
+    {{ else -}}
     export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border'
-    {{ if eq .chezmoi.os "linux" -}}
     bindkey "^[R" fzf-history-widget # alt + shift + r
     bindkey -r "^R"
     {{- end }}
@@ -188,6 +190,18 @@ zinit wait lucid light-mode blockf for \
     @'seachicken/gh-poi'
 {{- end }}
 
+# glow #
+__glow_atclone() {
+{{ if eq .chezmoi.os "darwin" -}}
+    [ -e "$HOME/.config/glow/glow.yml" ] && ln -f "$HOME/.config/glow/glow.yml" "$HOME/Library/Preferences/glow/glow.yml"
+{{- end }}
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"glow" \
+    atclone"__glow_atclone" \
+    @'charmbracelet/glow'
+
 # git-jump #
 zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
@@ -208,10 +222,10 @@ zinit wait lucid light-mode blockf for \
 # navi #
 # atload"eval $(navi widget zsh)" \
 __navi_atclone() {
-    [ -e "~/.config/navi/config.yaml" ] && \
+    [ -e "$HOME/.config/navi/config.yaml" ] && \
     [ -e "$(navi info config-path)" ] && \
-    [ "~/.config/navi/config.yaml" = "$(navi info config-path)" ] && \
-    ln -s ~/.config/navi/config.yaml "$(navi info config-path)"
+    [ "$HOME/.config/navi/config.yaml" = "$(navi info config-path)" ] && \
+    ln -s "$HOME/.config/navi/config.yaml" "$(navi info config-path)"
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
@@ -302,8 +316,8 @@ zinit wait lucid light-mode blockf for \
 
 ### node ###
 __node_atclone() {
-    [ -e "~/.config/commitizen/.czrc" ] && ln -f ~/.config/commitizen/.czrc ~/.czrc
-    [ -e "~/.config/commitizen/.commitlintrc.js" ] && ln -f ~/.config/commitizen/.commitlintrc.js ~/.commitlintrc.js
+    [ -e "$HOME/.config/commitizen/.czrc" ] && ln -f "$HOME/.config/commitizen/.czrc" "$HOME/.czrc"
+    [ -e "$HOME/.config/commitizen/.commitlintrc.js" ] && ln -f "$HOME/.config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
 }
 zinit wait lucid light-mode blockf for \
     node"!cspell -> cspell" \
@@ -608,7 +622,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n\t" " " | sed -e 's/  */ /g') #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -704,6 +718,19 @@ bindkey '^Q^W' _copy_word
 bindkey '^[Q^[W' _copy_word
 {{- end }}
 
+# ctrl + q → ctrl + s(alt + shift + q → alt + shift + s)でshortcut表示
+_shortcut() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+    '
+  else
+    cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+  fi
+}
+zle -N _shortcut
+bindkey '^Q^S' _shortcut
+
 # ctrl + q → ctrl + g(alt + shift + q → alt + shift + g)でnaviのコマンドをクリップボードにコピー
 _navi_copy_snippet() {
   # [-b:buffer name][-d:delete buffer][-r:LFを自動で置換しない][-p:paste時にコマンドを自動で実行しない][-t:target pane]
@@ -716,7 +743,7 @@ _navi_copy_snippet() {
       TMP_BUFFER=$(navi --print | tr "\n" " ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr '\n' ' ' | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e "s/  */ /g") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
@@ -886,7 +913,7 @@ autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
 
 {{ if eq .chezmoi.os "darwin" -}}
-if [ $(date +'%j') != $(/usr/bin/stat -f '%Sm' -t '%j' ~/.zcompdump) ]; then
+if [ $(date +'%j') != $(/usr/bin/stat -f '%Sm' -t '%j' "$HOME/.zcompdump") ]; then
   compinit
 else
   compinit -C

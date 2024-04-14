@@ -1,0 +1,3 @@
+# ヘルプの日本語化
+[[plugins]]
+repo = 'vim-jp/vimdoc-ja'

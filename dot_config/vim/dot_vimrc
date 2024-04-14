@@ -3,9 +3,9 @@
 set nobackup
 "スワップファイルを作らない
 set noswapfile
-" マウス操作の有効化 & ホイール操作の有効化
+" マウス操作の有効化
 set mouse=a
-set ttymouse=xterm2
+
 
 "" エディタ表示関係
 " カーソルラインをハイライト
@@ -47,6 +47,7 @@ set smartcase
 " インクリメンタルサーチ
 set incsearch
 
+
 "" 入力関連
 " タブ文字の表示幅
 set tabstop=2
@@ -62,12 +63,88 @@ filetype plugin indent on
 set expandtab
 " カーソルを行頭、行末で止まらないようにする
 set whichwrap=b,s,h,l,<,>,[,]
+" BSで削除できるものを指定
+" indent  : 行頭の空白
+" eol     : 改行
+" start   : 挿入モード開始位置より手前の文字
+set backspace=indent,eol,start
 
-" コマンドラインモードで<Tab>キーによるファイル名補完を有効にする
-set wildmenu
+"" キーバインド関連
+" {n,i,x,c...}[nore]map: [non-recursive] map (n:normal,i:insert,x:visual,c:command lineモード)
+" xnoremap <key-sequence> <vim-command>
+" d,c,sはレジスタに登録しないようにする
+" nnoremap d "_d
+" nnoremap D "_D
+" xnoremap d "_d
+" nnoremap c "_c
+" nnoremap C "_C
+" nnoremap s "_s
+" nnoremap S "_S
+" xnoremap c "_c
+" xnoremap C "_C
+
+" clipboardにyank
+noremap gy "+y
 " ESC連打でハイライト解除
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
+" ctrl + kでカーソルより後ろ削除
+cnoremap <C-k> <C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>
+" Emacs-like movement in Insert/Command
+noremap! <C-a> <Home>
+noremap! <C-e> <End>
+
+" コマンドラインモード
+" コマンドラインモードで<Tab>キーによるファイル名補完を有効にする
+set wildmenu
+
 " clipboardにコピー
-set clipboard+=unnamed
+" set clipboard+=unnamed
 " デフォルトを垂直分割にする
 set diffopt=vertical
+
+"" プラグイン関係
+" dein.vimのディレクトリ設定
+let s:dein_dir = expand('~/.cache/dein')
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
+
+" dein.vimインストールチェック
+if &runtimepath !~# '/dein.vim'
+  if !isdirectory(s:dein_repo_dir)
+    execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+  endif
+  execute 'set runtimepath^=' . s:dein_repo_dir
+endif
+
+" dein.vimの設定
+if dein#load_state(s:dein_dir)
+  call dein#begin(s:dein_dir)
+
+  " .tomlファイルのディレクトリ設定
+  let s:rc_dir = expand('~/.config/vim')
+  if !isdirectory(s:rc_dir)
+    call mkdir(s:rc_dir, 'p')
+  endif
+
+  " tomlファイル読み込み&cache
+  let s:toml = s:rc_dir . '/dein.toml'
+  call dein#load_toml(s:toml, {'lazy': 0})
+
+  let s:toml_lazy=s:rc_dir . '/dein-lazy.toml'
+  call dein#load_toml(s:toml_lazy, {'lazy': 1})
+
+  call dein#end()
+  call dein#save_state()
+endif
+
+" pluginインストールチェック
+if dein#check_install()
+  call dein#install()
+endif
+
+" plugin削除チェック
+" let s:removed_plugins = dein#check_clean()
+" if len(s:removed_plugins) > 0
+"   call map(s:removed_plugins, "delete(v:val, 'rf')")
+"   call dein#recache_runtimepath()
+" endif
+
