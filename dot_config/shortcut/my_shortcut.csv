@@ -235,6 +235,11 @@ Vim,:w,:w,保存
 Vim,:x,:x,保存して終了(変更なしは保存しない)
 Vim,:wq,:wq,保存して終了(変更なしも保存)
 Vim,:<n>,:<n>,n行目に移動
+Vim(fern),a -> action,a -> action,アクション名を実行
+Vim(fern),E,E,別ウィンドウで開く
+Vim(fern),del,del,親フォルダに移動
+Vim(fern),(カンマ)b,(カンマ)b,ファイラーの開閉 ※カスタム
+Vim(fern),(カンマ)e,(カンマ)e,ファイラーを開く ※カスタム
 VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム
 VSCode,ctrl + g,CapsLk + g(shift + alt + g),選択行に移動
 VSCode,ctrl + r,-,最近開いたファイルやフォルダ

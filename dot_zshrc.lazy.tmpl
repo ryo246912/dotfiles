@@ -190,6 +190,18 @@ zinit wait lucid light-mode blockf for \
     @'seachicken/gh-poi'
 {{- end }}
 
+# glow #
+__glow_atclone() {
+{{ if eq .chezmoi.os "darwin" -}}
+    [ -e "$HOME/.config/glow/glow.yml" ] && ln -f "$HOME/.config/glow/glow.yml" "$HOME/Library/Preferences/glow/glow.yml"
+{{- end }}
+}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"glow" \
+    atclone"__glow_atclone" \
+    @'charmbracelet/glow'
+
 # git-jump #
 zinit wait lucid light-mode blockf for \
     as"program" pick"git-jump" \
