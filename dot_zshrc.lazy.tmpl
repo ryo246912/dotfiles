@@ -51,11 +51,12 @@ alias nr='npm run'
 
 # asdf #
 __asdf_atclone() {
-    asdf plugin add chezmoi https://github.com/joke/asdf-chezmoi.git
-    asdf plugin add golang https://github.com/asdf-community/asdf-golang.git
-    asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
-    asdf plugin add python https://github.com/danhper/asdf-python.git
-    asdf plugin add tmux https://github.com/aphecetche/asdf-tmux.git
+    asdf plugin add act
+    asdf plugin add chezmoi
+    asdf plugin add golang
+    asdf plugin add nodejs
+    asdf plugin add python
+    asdf plugin add tmux
 }
 __asdf_atload() {
     export ASDF_GOLANG_MOD_VERSION_ENABLED=true
