@@ -87,8 +87,8 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 ;--------------------------------------------------------------
 % docker
 
-# exec [ex:docker container exec -it <container_id> bash]
-docker container exec -it <container_id> <command>
+# exec [ex:docker container exec -it <container> bash]
+docker container exec -it <container> <command>
 
 # ps [-a:all]
 docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
@@ -100,13 +100,13 @@ docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.T
 docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
 # inspect container
-docker inspect <container_id> | vim -
+docker inspect <container> | less -iRMW --use-color
 
 # inspect image
-docker image inspect <image_id> | vim -
+docker image inspect <image_id> | less -iRMW --use-color
 
 # inspect network
-docker network inspect <network_id> | vim -
+docker network inspect <network> | less -iRMW --use-color
 
 # disk free
 docker system df
@@ -124,7 +124,7 @@ docker volume ls -f dangling=true
 docker rmi $(docker images -q -f dangling=true)
 
 # remove container
-docker rm <container_id>
+docker rm <container>
 
 # remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
@@ -138,19 +138,22 @@ docker network prune
 # remove unused build cache
 docker builder prune
 
-# run(create container&command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+docker exec -it <command>
+
+# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
 docker run -it -d --name <name> <image_id> <command>
 
 # build[-t:tag][ex:docker run -it -d ubuntu:22.04 bash]
 docker build -t <name> <image_id> <command>
 
 ```
-$ container_id: docker ps -a \
+$ container: docker ps -a \
   --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
-  --- --headers 1 --column 1
-$ network_id: docker network ls \
+  --- --headers 1 --column 2
+$ network: docker network ls \
   --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
-  --- --headers 1 --column 1
+  --- --headers 1 --column 2
 $ image_id: docker images -a \
   --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
   --- --headers 1 --column 1
@@ -168,7 +171,7 @@ docker-compose ls --all
 # ps [--all]
 docker-compose -p <project> ps --all
 
-# start
+# start (starts existing containers)
 docker-compose -p <project> start <service>
 
 # restart
@@ -180,8 +183,14 @@ docker-compose -p <project> stop <service>
 # down
 docker-compose -p <project> down <service>
 
-# exec [--project-directory:][--env KEY=VALUE][--env-file:]
+# exec (execute a command in a running container)[--project-directory:specify compose file][--env KEY=VALUE][--env-file:specify env file]
 docker-compose -p <project> exec <service> <command>
+
+# run (create container & execute a command)
+docker-compose -p <project> run <service> <command>
+
+# up (build image & create container & execute a command from compose file)[-d:detach mode=run background][-f compose.yml]
+docker-compose -p <project> up -d
 ```
 $ project: docker-compose ls --all \
   --- --headers 1 --column 1
