@@ -1,10 +1,10 @@
 abbrevs:
-  - name: ase
-    abbr: ase
+  - name: (ats|ase)
+    abbr-pattern: (ats|ase)
     snippet: atuin search -i
 
-  - name: as
-    abbr: as
+  - name: atst
+    abbr: atst
     snippet: atuin stats
 
   - name: c.

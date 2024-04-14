@@ -980,20 +980,20 @@ fzf
 # less [-i:ignore-case][-M:prompt more verbosely][-W:highlight first unread line after scrolling][-R:ANSI "color" escape sequences to be displayed in their raw][--use-color:enables colored]
 less -iRMW --use-color
 
-# grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
-grep -Enr '<regex>' ./**/*
-
-# grep : [-i:ignore upper&lower]
-grep -Einr '<regex>' ./**/*
+# grep : normal [-r:recursive][-i:ignore upper&lower][-n:output rows number][-e:multi condition][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
+grep -Pinr '<regex>' ./**/*
 
 # grep : [-l:only filename] [ex:grep -il '' apps/**/*.py]
-grep -Elnr '<regex>' ./**/*
+grep -Plnr '<regex>' ./**/*
 
 # grep : [-B/A/C n:(before/after/both)output {n} lines] [ex:grep -C 1 -in '' apps/**/*.py]
-grep -<line_output_option> <n> -Enr '<regex>' ./**/*
+grep -<line_output_option> <n> -Pnr '<regex>' ./**/*
 
-# grep : [-v:output not match]
-grep -vEr '<regex>' ./**/*
+# grep : [-v:output not match][ex:grep -v -e <word1> -e <word2>]
+grep -vPr '<regex>' ./**/*
+
+# grep : [-o:only matching][ex:grep -Po "v[0-9]*\.[0-9]*.[0-9]*"]
+grep -oP '<regex>'
 
 # head : [-n:output number]
 head -n <num>
