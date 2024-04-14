@@ -99,6 +99,10 @@ abbrevs:
     abbr: gb
     snippet: git branch
 
+  - name: gba
+    abbr: gba
+    snippet: git branch -a --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
+
   - name: gbi
     abbr: gbi
     snippet: git bisect
@@ -554,6 +558,12 @@ abbrevs:
     snippet: --no-commit
     global: true
     context: 'git\smerge\s'
+
+  - name: (git pull) --rebase
+    abbr: re
+    snippet: --rebase
+    global: true
+    context: 'git\spull\s'
 
   # - name: (git push) --force-if-includes
   #   abbr: f

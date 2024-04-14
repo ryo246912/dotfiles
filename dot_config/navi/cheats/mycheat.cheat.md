@@ -279,11 +279,17 @@ git checkout HEAD^0
 # create branch & checkout
 git checkout -b <branch_name> <commit1>
 
+# create branch & checkout(record base-branch)
+git checkout -b <branch_name> <all_branch> && git config "branch.$(git symbolic-ref --short HEAD).base-branch" <all_branch>
+
+# record base-branch
+git config "branch.$(git symbolic-ref --short HEAD).base-branch" <current_branch>
+
 # set upstream branch [-u:upstream branch] [ex:git branch -r origin/feature-branch]
 git branch -u origin/$(git symbolic-ref --short HEAD)
 
-# branch list
-git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | vim -
+# branch & tag list
+git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
 # restore(default)
 git checkout <checkout_commit>
@@ -292,7 +298,7 @@ git checkout <checkout_commit>
 git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
 
 # commit fixup
-git commit --fixup <commit1>
+git commit --fixup <commit1> && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet <commit1>~
 
 # commit default message
 git commit --no-edit
@@ -377,6 +383,9 @@ git log -n 30 --author="<contributor>" --all --pretty=format:"%C(auto)%h (%C(blu
 
 # log graph [--all:all branch]
 git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch>
+
+# log commit
+git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> | grep -C 3 --color=auto <commit>
 
 # log file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
 git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S" <all_branch> <file_option><ls-files>
@@ -501,6 +510,11 @@ $ branch: cat \
 $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  --- --column 1
+$ current_branch: git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' \
+  | grep "$(git rev-parse --short HEAD)" \
+  | grep -v "$(git symbolic-ref --short HEAD)" \
+  | column -ts $'\t' \
   --- --column 1
 $ contributor: git log --format="%cn:%ce" \
   | sort -fu \
@@ -694,7 +708,7 @@ $ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
-$ base_branch: echo -e "\nmaster"
+$ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch)\nmaster"
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
