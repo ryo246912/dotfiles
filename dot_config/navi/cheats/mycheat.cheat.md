@@ -15,7 +15,7 @@ cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
 asdf plugin list --urls
 
 # plugin list all
-asdf plugin list all | vim -
+asdf plugin list all | less -iRMW --use-color
 
 # plugin add [ex:asdf plugin add <name> <git-url>]
 asdf plugin add <name> <git-url>
@@ -43,7 +43,7 @@ asdf which <command>
 % cspell
 
 # lint [-c:config file][-e:exclude file]
-cspell --no-progress --gitignore . | vim -
+cspell --no-progress --gitignore . | less -iRMW --use-color
 
 # lint base-branch...HEAD [--root:root directory, defaults=current directory]
 cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base origin/<merge-base> HEAD)...HEAD)
@@ -840,7 +840,7 @@ $ workflow: find .github/workflows
 nodenv versions
 
 # nodenv installable versions
-nodenv install --list | vim -
+nodenv install --list | less -iRMW --use-color
 
 # nodenv install version
 nodenv install <version>
@@ -897,7 +897,7 @@ python -m http.server 8888
 pyenv versions
 
 # pyenv installable versions
-pyenv install --list | vim -
+pyenv install --list | less -iRMW --use-color
 
 # pyenv install version
 pyenv install <version>
@@ -977,8 +977,8 @@ fx
 # fzf [-m:multi select]
 fzf
 
-# less
-less
+# less [-i:ignore-case][-M:prompt more verbosely][-W:highlight first unread line after scrolling][-R:ANSI "color" escape sequences to be displayed in their raw][--use-color:enables colored]
+less -iRMW --use-color
 
 # grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
 grep -Enr '<regex>' ./**/*
@@ -1219,10 +1219,10 @@ lsof -i:<port>
 ping <address>
 
 # ps : [a:other tty process][x:no tty process][u:user-friendly=USER,PID,%CPU,%MEM,VSZ,RSS,TT,STAT,STARTED,TIME,COMMAND]
-ps axu | vim -
+ps axu | less -iRMW --use-color
 
 # ps : [o:format][pgid:process group id][sess:session id]
-ps axo pid,ppid,pgid,sess,tty,user,start,command | vim -
+ps axo pid,ppid,pgid,sess,tty,user,start,command | less -iRMW --use-color
 
 # set : set shell option [-o:set option][+o:unset option][ex:set -o noclobber]
 set -o <option>
@@ -1264,7 +1264,7 @@ $ extension: echo -e "tar.gz\ntgz"
 % shell:bash
 
 # show bindkey
-bind | vim -
+bind | less -iRMW --use-color
 
 # var : shell current process
 echo $$
@@ -1286,7 +1286,7 @@ sh -i -l -c '<command>'
 % shell:zsh
 
 # show bindkey[-M : selected keymap]
-bindkey -M <keymap> | vim -
+bindkey -M <keymap> | less -iRMW --use-color
 
 # manual zshbuiltins
 man zshbuiltins
@@ -1382,7 +1382,7 @@ wsl ~
 % brew
 
 # list [--cask,--formula][-1:one column]
-brew list --versions<_--filter> | vim -
+brew list --versions<_--filter> | less -iRMW --use-color
 
 # install app [-n:dry-run][app:formula,user/repo/formula][ex:brew install -n fzf]
 brew install<_--dry-run><_--cask> <app_name>
@@ -1435,16 +1435,16 @@ $ device: blueutil --paired --format json-pretty \
 jot -r 1
 
 # display mac commnad [-r:recursive]
-zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | vim -
+zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | less -iRMW --use-color
 
 # defaults : display system defaults
-defaults read | vim -
+defaults read | less -iRMW --use-color
 
 # defaults : kill Finder
 defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
 
 # lsappinfo : display running application
-lsappinfo list | vim -
+lsappinfo list | less -iRMW --use-color
 
 # networksetup : display network devices
 networksetup -listallhardwareports
@@ -1562,7 +1562,7 @@ psql -l
 ;--------------------------------------------------------------
 % tmux
 # keys
-tmux list-keys | vim -
+tmux list-keys | less -iRMW --use-color
 
 # pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
