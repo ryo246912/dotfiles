@@ -69,7 +69,7 @@ abbrevs:
 
   - name: dc
     abbr: dc
-    snippet: docker-compose
+    snippet: docker compose
 
   - name: e
     abbr: e
