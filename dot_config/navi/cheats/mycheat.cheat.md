@@ -1049,6 +1049,9 @@ tail -n <num>
 # tail : [-r:reverse]
 tail -r
 
+# tgpt :
+tgpt "<prompt>"
+
 # tr : replace char [ex:tr 012 abc]
 tr <before> <after>
 

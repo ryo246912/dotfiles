@@ -79,6 +79,26 @@ abbrevs:
     abbr: es
     snippet: exec $SHELL -l
 
+  - name: fgb
+    abbr: fgb
+    snippet: git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
+
+  - name: fgc
+    abbr: fgc
+    snippet: git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
+
+  - name: fgh
+    abbr: fgh
+    snippet: () { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }
+
+  - name: fghd
+    abbr: fghd
+    snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
+
+  - name: fghd
+    abbr: fghd
+    snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
+
   - name: g
     abbr: g
     snippet: git
@@ -287,25 +307,6 @@ abbrevs:
     abbr: gu
     snippet: gitui
 
-  - name: fgb
-    abbr: fgb
-    snippet: git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
-
-  - name: fgc
-    abbr: fgc
-    snippet: git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
-
-  - name: fgh
-    abbr: fgh
-    snippet: () { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }
-
-  - name: fghd
-    abbr: fghd
-    snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
-
-  - name: fghd
-    abbr: fghd
-    snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
   - name: ld
     abbr: ld
     snippet: lazydocker
