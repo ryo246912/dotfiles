@@ -761,6 +761,31 @@
     "command": "gitlens.views.commits.focus",
     "when": "!gitlens:disabled"
   },
+  // TODO : (Gitlens) Git Blame表示(alt+b→alt+/に変更)
+  // {
+  //   "key": "alt+/",
+  //   "command": "gitlens.toggleFileBlame",
+  //   "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && gitlens:activeFileStatus =~ /blameable/"
+  // },
+  // {
+  //   "key": "alt+/",
+  //   "command": "-gitlens.gitCommands",
+  //   "when": "!gitlens:disabled && config.gitlens.keymap == 'alternate'"
+  // },
+  // {
+  //   "key": "alt+/",
+  //   "command": "-metaGo.gotoSmart"
+  // },
+  // {
+  //   "key": "alt+b",
+  //   "command": "-gitlens.toggleFileBlame",
+  //   "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && gitlens:activeFileStatus =~ /blameable/"
+  // },
+  // {
+  //   "key": "alt+b",
+  //   "command": "-metaGo.scrollCurrentLineToBottom",
+  //   "when": "editorTextFocus"
+  // },
   // (GitHub) コメントビューの開閉
   {
     "key": "ctrl+shift+r",

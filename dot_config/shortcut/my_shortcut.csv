@@ -7,7 +7,9 @@ Arc,cmd + o,-,preview windowをタブとして開く
 Arc,cmd + s,-,サイドバーの開閉
 Arc,cmd + t,-,新しいタブ(コマンドパレットに似てる)を開く
 Arc,cmd + <num>,-,サイドバーのn番目のアイテムを開く
+Arc,cmd + [],-,最新のタブに前後に切り替え
 Arc,cmd + ctrl + n,-,新しいシークレットウィンドウ(incognito)を開く
+Arc,cmd + ctrl + [],-,分割画面切り替え
 Arc,cmd + option + d,-,画面分割 ※カスタム
 Arc,cmd + option + g,-,ChatGPT
 Arc,cmd + option + n,-,小さなウィンドウ(little arc)を開く
@@ -17,7 +19,7 @@ Arc,cmd + shift + n,-,新しいウィンドウを開く
 Arc,cmd + shift + r,-,強制リロード
 Arc,cmd + shift + ;,-,画面分割(デフォルト)
 Arc,ctrl + d,-,ディベロッパーモードのON/OFF
-Arc,ctrl + shift + [],-,分割画面切り替え
+Arc,ctrl + shift + [],-,(廃止)分割画面切り替え
 Clibor,cmd + shift + c,ctrl + shift + c,FIFOモード ※カスタム
 ClickUp,b,-,(Viewの画面で)Board形式で表示
 ClickUp,l,-,(Viewの画面で)List形式で表示
@@ -121,14 +123,15 @@ OS(Mac),ctrl + ←/→,Win + ←→,ウィンドウ左/右半分 ※MacはRectan
 OS(Mac),ctrl + ↓,-,ウィジェット表示 ※カスタム
 OS(Mac),ctrl + shift + ←/→,-,ウィンドウ2/3にして左/右寄せ ※Rectangleのカスタム
 OS(Mac),ctrl + ;/-,-,ウィンドウ拡大/縮小 ※Rectangleのカスタム
-OS(Mac),cmd + ctrl + q,Win + l,画面のロック
 OS(Mac),cmd + d,-,保存しない（ファイル保存時のダイアログ）
 OS(Mac),cmd + m,Win + ↓,ウィンドウ最小化
 OS(Mac),cmd + shift + 4,Win + shift + s,スクリーンショット：一部撮影
 OS(Mac),cmd + shift + 5,-,スクリーンショット：コントロール表示
+OS(Mac),cmd + shift + .,-,隠しファイルを表示
+OS(Mac),cmd + shift + space,-,文字ビューア(絵文字)を表示
+OS(Mac),cmd + ctrl + q,Win + l,画面のロック
 OS(Mac),cmd + ctrl + f,-,フルスクリーン
 OS(Mac),cmd + space,-,スポットライト起動
-OS(Mac),cmd + shift + .,-,隠しファイルを表示
 OS(Mac),option + 1,-,（Mission Control）仮装ディスプレイ1に切替 ※カスタム
 OS(Mac),option + 2,-,（Mission Control）仮装ディスプレイ2に切替 ※カスタム
 OS(Mac),option + Tab,-,ウィンドウの移動(次のウィンドウを捜査対象とする) ※カスタム
@@ -152,6 +155,12 @@ OS(Win),cmd + m,Win + ↓,ウィンドウ最小化
 OS(Win),-,Win + tab,タスクビューの表示
 OS(Win),cmd + shift + 4,Win + shift + s,スクリーンショット：一部撮影
 OS(Win),-,Win + shift + ←→,ディスプレイ間でウインドウを移動
+Raycast,cmd + カンマ,-,Raycastの設定画面起動
+Raycast,option + b,-,Raindropの検索
+Raycast,option + e,-,絵文字の検索
+Raycast,option + t,-,Arcのタブ検索
+Raycast,option + ←→,-,windowの
+Raycast,option + space,-,Raycastの起動
 Sticky,cmd + m,-,折りたたみ・展開
 Slack,cmd + r,ctrl + r,再読み込み
 Slack,cmd + t,ctrl + t,ページ移動
@@ -217,13 +226,17 @@ Vim,{|},{|},前/次の段落に移動
 Vim,A,A,(矩形選択で)選択末尾にインサートモード
 Vim,c,c,(矩形選択で)選択範囲を削除してインサートモード
 Vim,d,d,(矩形選択で)選択範囲を削除
+Vim,gt|gT,gt|gT,(netrwで)前後のタブに移動
 Vim,r,r,(矩形選択で)選択範囲を1文字に置換
 Vim,I,I,(矩形選択で)選択先頭にインサートモード
 Vim,y,y,(矩形選択で)選択範囲にyank
 Vim,<n>G,<n>G,n行目に移動
 Vim,/<文字>|?<文字>,/<文字>|?<文字>,検索
-Vim,ctrl + v→ ctrl + i,-,矩形選択のビジュアルモード→挿入モード
+Vim,ctrl + h|l,ctrl + h|l,行頭・行末に移動 ※カスタム
 Vim,ctrl + r,-,戻しすぎた変更を戻す(redo)
+Vim,ctrl + r,-,コマンド履歴を表示(fzf) ※カスタム
+Vim,ctrl + v→ ctrl + i,-,矩形選択のビジュアルモード→挿入モード
+Vim,ctrl + w→ hjkl,-,分割ウィンドウの上下左右移動
 Vim,q:,q:,コマンドラインウィンドウ(履歴)表示
 Vim,q/|q?,q/|q?,コマンド履歴の前方/後方検索
 Vim,q: → ctrl + c,-,コマンドラインに履歴を送る
@@ -309,10 +322,10 @@ VSCode,cmd + k → cmd + j,ctrl + k → ctrl + j,閉じタグをすべて開く
 VSCode,cmd + k → cmd + m,ctrl + k → ctrl + m,EditorGroupを最大化する(toggleMaximizeEditorGroup)
 VSCode,cmd + k → cmd + [,ctrl + k → ctrl + [,再帰的に折りたたむ
 VSCode,cmd + k → cmd + ],ctrl + k → ctrl + ],再起的に展開する
-VSCode,option + b,alt + b,(gitlens)Git Blame表示
 VSCode,option + h,alt + h,(gitlens)ブランチの履歴表示
 VSCode,option + p,alt + p,現在開いているファイルパスをコピー ※カスタム
 VSCode,option + ↑↓,alt + ↑↓,行を入れ替え
+VSCode,option + /,alt + /,(gitlens)Git Blame表示 ※カスタム
 VSCode,option + (カンマ)|.,alt + (カンマ)|.,(gitlens)前/後のRevisionとの差分を表示
 VSCode,option + shift + ↑↓,alt + shift + ↑↓,行をコピー
 VSCode,option + shift + .,alt + shift + .,(gitlens)現ファイルとの差分を表示

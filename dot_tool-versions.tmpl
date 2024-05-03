@@ -1,12 +1,14 @@
-{{- if eq .chezmoi.os "darwin" -}}
+act 0.2.61
+chezmoi 2.33.2
+tmux 3.4
+vim 9.1.0
+{{ if eq .chezmoi.os "darwin" -}}
 python 3.11.7
 nodejs 16.13.2
 terraform 1.6.5
-chezmoi 2.33.2
-tmux 3.4
+ruby 3.3.1
 {{ else -}}
 python 3.11.7
 nodejs 20.9.0
-chezmoi 2.33.2
-tmux 3.4
+ruby 3.3.1
 {{- end }}

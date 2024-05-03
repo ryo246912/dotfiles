@@ -87,20 +87,17 @@ python manage.py migrate <app_name> <rollback_to_migration_name>
 ;--------------------------------------------------------------
 % docker
 
-# exec [ex:docker container exec -it <container> bash]
-docker container exec -it <container> <command>
+# container ls(ps) [-a:all]
+docker container ls -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
 
-# ps [-a:all]
-docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}"
-
-# image list [-a:all]
-docker images -a --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}"
+# image list(images) [-a:all]
+docker image ls -a --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}\t{{.Size}}"
 
 # network list
 docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}"
 
 # inspect container
-docker inspect <container> | less -iRMW --use-color
+docker container inspect <container> | less -iRMW --use-color
 
 # inspect image
 docker image inspect <image_id> | less -iRMW --use-color
@@ -115,16 +112,16 @@ docker system df
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
 # display no referenced images [-f:filter (dangling=not referenced by any containers)]
-docker images -f dangling=true
+docker image ls -f dangling=true
 
 # display no referenced volume [-f:filter (dangling=not referenced by any containers)]
 docker volume ls -f dangling=true
 
-# remove no referenced images [-q:only display volume names] [ex:docker rmi <image_id>]
-docker rmi $(docker images -q -f dangling=true)
+# remove no referenced images(rmi) [-q:only display volume names] [ex:docker rmi <image_id>]
+docker image rm $(docker images -q -f dangling=true)
 
 # remove container
-docker rm <container>
+docker container rm <container>
 
 # remove no referenced volume [-q:only display volume names]
 docker volume rm $(docker volume ls -q -f dangling=true)
@@ -138,24 +135,24 @@ docker network prune
 # remove unused build cache
 docker builder prune
 
-# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
-docker exec -it <command>
+# build(create image from dockerfile)[-t: name:tag][-f DockerfileName:(default:Dockerfile)][--no-cache][ex:docker build -t image_name .(dockerfile directory)]
+docker image build -t <image_name> .
 
-# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
-docker run -it -d --name <name> <image_id> <command>
+# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][-p:port][-v:volume][-w:exec command in WD][-e:env][--privileged:sudo][ex:docker run -it -d -p 80:8080 -v ~/xxx:/var/xxx -w /app -e var=xxx ubuntu:22.04 bash]
+docker container run -it -d --name <container_name> <image_id> <command>
 
-# build[-t:tag][ex:docker run -it -d ubuntu:22.04 bash]
-docker build -t <name> <image_id> <command>
+# exec (execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+docker container exec -it <command>
 
 ```
-$ container: docker ps -a \
+$ container: docker container ls -a \
   --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
   --- --headers 1 --column 2
 $ network: docker network ls \
   --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}\t{{.CreatedAt}}" \
   --- --headers 1 --column 2
-$ image_id: docker images -a \
-  --format "table {{.Repository}}:{{.Tag}}\t{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Size}}" \
+$ image_id: docker image ls -a \
+  --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}\t{{.Size}}" \
   --- --headers 1 --column 1
 ;$
 
@@ -166,35 +163,35 @@ $ image_id: docker images -a \
 % docker compose
 
 # ls [--all]
-docker-compose ls --all
+docker compose ls --all
 
 # ps [--all]
-docker-compose -p <project> ps --all
+docker compose -p <project> ps --all
 
 # start (starts existing containers)
-docker-compose -p <project> start <service>
+docker compose -p <project> start <service>
 
 # restart
-docker-compose -p <project> restart <service>
+docker compose -p <project> restart <service>
 
 # stop
-docker-compose -p <project> stop <service>
+docker compose -p <project> stop <service>
 
 # down
-docker-compose -p <project> down <service>
+docker compose -p <project> down <service>
 
 # exec (execute a command in a running container)[--project-directory:specify compose file][--env KEY=VALUE][--env-file:specify env file]
-docker-compose -p <project> exec <service> <command>
+docker compose -p <project> exec <service> <command>
 
 # run (create container & execute a command)
-docker-compose -p <project> run <service> <command>
+docker compose -p <project> run <service> <command>
 
 # up (build image & create container & execute a command from compose file)[-d:detach mode=run background][-f compose.yml]
-docker-compose -p <project> up -d
+docker compose -p <project> up -d
 ```
-$ project: docker-compose ls --all \
+$ project: docker compose ls --all \
   --- --headers 1 --column 1
-$ service: docker-compose -p <project> ps --all \
+$ service: docker compose -p <project> ps --all \
   --- --headers 1 --column 3
 
 ```sh
@@ -306,6 +303,9 @@ git checkout <checkout_commit>
 # merge dry-run
 git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
 
+# merge --no-commit
+git merge --no-commit origin/<merge_branch>
+
 # commit fixup
 git commit --fixup <commit1> && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet <commit1>~
 
@@ -360,8 +360,8 @@ git push origin :<branch>
 # rebase interactive
 git rebase --autosquash --autostash -i <commit1>
 
-# rebase onto [--onto: --onto <base_branch> <pick_base_commit>^ HEAD]
-git rebase --autosquash --onto <base_branch> <commit1>
+# rebase onto [--onto: --onto <base_branch> <pick_start_commit> ~ <pick_end_commit>(HEAD)]
+git rebase --autosquash --onto <all_branch> <commit1>
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP '<regex>' <grep_commit> -- <dir>
@@ -407,6 +407,9 @@ git log --diff-filter=D --name-only --pretty=format:"%C(auto)%h (%C(blue)%cd%C(a
 
 # log unreachable commit
 git fsck --unreachable | awk '/commit/ {print $3}' | xargs git log --merges --no-walk --grep='<regex>' --all-match --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d [%C(magenta)%an%C(auto)] %s" --date=format:"%Y/%m/%d %H:%M:%S"
+
+# log commit(difft)
+GIT_EXTERNAL_DIFF=difft git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --ext-diff -p -n 10
 
 # stash working file
 git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
@@ -459,10 +462,13 @@ git config -l --show-origin<_--option> | column -ts $'\t'
 # meta : display HEAD branch
 git symbolic-ref --short HEAD
 
+# meta : display base-branch
+git config branch.$(git symbolic-ref --short HEAD).base-branch
+
 # meta : display merge-base [ex:git merge-base master HEAD]
 git merge-base <base_branch> HEAD
 
-# meta : display HEAD hash [HEAD^@:all parents]
+# meta : display HEAD commit hash [HEAD^@:all parents]
 git rev-parse --short HEAD
 
 # meta : display relative path to git top-level directory
@@ -484,12 +490,15 @@ $ _stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
 $ _shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
 $ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
-$ base_branch: echo -e "\nmaster"
+$ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :class:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ look_regex: echo -e "<search_word>(?=(<look_word>))\n<search_word>(?!(<look_word>))\n(?<=(<look_word>))<search_word>\n(?<!(<look_word>))<search_word>"
 $ repo_url: echo -e "\ngit@github.com:\nhttps://github.com/"
 $ prefix: echo -e "wip: \nmemo: \n"
+$ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
+$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
+$ state: echo -e "open\nall\nclosed\nmerged"
 
 $ commit1: git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
@@ -520,6 +529,12 @@ $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
+$ merge_branch: git fetch -p --tags && \
+  gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 8
 $ current_branch: git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' \
   | grep "$(git rev-parse --short HEAD)" \
   | grep -v "$(git symbolic-ref --short HEAD)" \
@@ -717,7 +732,7 @@ $ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
-$ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch)\nmaster"
+$ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
@@ -786,7 +801,7 @@ $ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_
   | tail -r \
   | column -ts $'\t' \
   --- --headers 1 --column 7
-$ starred_url: for page in {1..5}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url,.description]) | @tsv' | column -ts $'\t' --- --column 4
+$ starred_url: for page in {<start_page_no>..<end_page_no>}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url,.description]) | @tsv' | column -ts $'\t' --- --column 4
 $ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
   --json fullName,description,language,pushedAt,stargazersCount,url \
   --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
@@ -796,20 +811,20 @@ $ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
 ```sh
 % gh-rest-api
 
-#  list organization members [per_page:numbers]
+# list organization members [per_page:numbers]
 gh api "/orgs/<org>/members?per_page=100" | jq '.'
 ; https://docs.github.com/ja/rest/orgs/members?apiVersion=2022-11-28#list-organization-members
 
-#  list contributors [per_page:numbers] [api:/repos/{owner}/{repo}/contributors]
+# list contributors [per_page:numbers] [api:/repos/{owner}/{repo}/contributors]
 gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq '.'
 ; https://docs.github.com/ja/rest/repos/repos?apiVersion=2022-11-28#list-repository-contributors
 
-#  search [q:query ex:q=windows+label:bug+language:python+state:open&sort=created&order=asc]
+# search [q:query ex:q=windows+label:bug+language:python+state:open&sort=created&order=asc]
 gh api "/search/issues?q=<commithash>+type:pr+repo:$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')" | jq -r '.items[] | [.number , .title , .user.login , (.created_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ] | @tsv' | column -ts $'\t'
 ; https://docs.github.com/ja/rest/search/search?apiVersion=2022-11-28#search-issues-and-pull-requests
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 
-#  user star [per_page:numbers]
+# user star [per_page:numbers]
 gh api "/users/<user>/starred?per_page=100" | jq '.'
 ; https://docs.github.com/ja/rest/activity/starring?apiVersion=2022-11-28#list-repositories-starred-by-a-user
 ```
@@ -980,20 +995,20 @@ fzf
 # less [-i:ignore-case][-M:prompt more verbosely][-W:highlight first unread line after scrolling][-R:ANSI "color" escape sequences to be displayed in their raw][--use-color:enables colored]
 less -iRMW --use-color
 
-# grep : normal [-r:recursive][-n:output rows number][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
-grep -Enr '<regex>' ./**/*
-
-# grep : [-i:ignore upper&lower]
-grep -Einr '<regex>' ./**/*
+# grep : normal [-r:recursive][-i:ignore upper&lower][-n:output rows number][-e:multi condition][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
+grep -Pinr '<regex>' ./**/*
 
 # grep : [-l:only filename] [ex:grep -il '' apps/**/*.py]
-grep -Elnr '<regex>' ./**/*
+grep -Plnr '<regex>' ./**/*
 
 # grep : [-B/A/C n:(before/after/both)output {n} lines] [ex:grep -C 1 -in '' apps/**/*.py]
-grep -<line_output_option> <n> -Enr '<regex>' ./**/*
+grep -<line_output_option> <n> -Pnr '<regex>' ./**/*
 
-# grep : [-v:output not match]
-grep -vEr '<regex>' ./**/*
+# grep : [-v:output not match][ex:grep -v -e <word1> -e <word2>]
+grep -vPr '<regex>' ./**/*
+
+# grep : [-o:only matching][ex:grep -Po "v[0-9]*\.[0-9]*.[0-9]*"]
+grep -oP '<regex>'
 
 # head : [-n:output number]
 head -n <num>
@@ -1033,6 +1048,9 @@ tail -n <num>
 
 # tail : [-r:reverse]
 tail -r
+
+# tgpt :
+tgpt "<prompt>"
 
 # tr : replace char [ex:tr 012 abc]
 tr <before> <after>

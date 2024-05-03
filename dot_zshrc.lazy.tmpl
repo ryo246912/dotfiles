@@ -51,11 +51,14 @@ alias nr='npm run'
 
 # asdf #
 __asdf_atclone() {
-    asdf plugin add chezmoi https://github.com/joke/asdf-chezmoi.git
-    asdf plugin add golang https://github.com/asdf-community/asdf-golang.git
-    asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
-    asdf plugin add python https://github.com/danhper/asdf-python.git
-    asdf plugin add tmux https://github.com/aphecetche/asdf-tmux.git
+    asdf plugin add act
+    asdf plugin add chezmoi
+    asdf plugin add golang
+    asdf plugin add nodejs
+    asdf plugin add python
+    asdf plugin add ruby
+    asdf plugin add tmux
+    asdf plugin add vim
 }
 __asdf_atload() {
     export ASDF_GOLANG_MOD_VERSION_ENABLED=true
@@ -218,6 +221,12 @@ zinit wait lucid light-mode blockf for \
     from"gh-r" \
     sbin"jq* -> jq" \
     @'jqlang/jq'
+
+# lazydocker #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    sbin"lazydocker* -> lazydocker" \
+    @'jesseduffield/lazydocker'
 
 # navi #
 # atload"eval $(navi widget zsh)" \
@@ -548,21 +557,23 @@ _custom_navi_widget() {
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       window=$(tmux display -p -F "#S:#I.#P") && \
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+      TMP_BUFFER=$(navi --print) && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$TMP_BUFFER") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" && \
       tmux paste-buffer -drp -t $window -b tmp \
     '
   else
-    local word
-    word=$(navi --print | tr "\n" " ")
+    local TMP_BUFFER
     #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
-    word=${word%"${word##*[![:space:]]}"}
     #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
-    word=${word#"${word%%[![:space:]]*}"}
-    BUFFER="$word"
+    #複数の連続した空白を1つにする sed -e "s/  */ /g"
+    TMP_BUFFER=$(navi --print) && \
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
+    TMP_BUFFER=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$TMP_BUFFER")
+    BUFFER="$TMP_BUFFER"
     CURSOR=$#BUFFER #カーソルを末尾に移動
     zle redisplay
   fi
@@ -583,10 +594,10 @@ _navi_insert_pipe_snippet() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      TMP_BUFFER=$(navi --print --query "shell:pipe-command " | tr "\n" " ") && \
+      TMP_BUFFER=$(navi --print --query "shell:pipe-command ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$TMP_BUFFER") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
@@ -594,11 +605,12 @@ _navi_insert_pipe_snippet() {
     fi
     tmux delete-buffer -b tmp
   else
-    word=$(navi --print --query "shell:pipe-command " | tr "\n" " ")
     #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
-    word=${word%"${word##*[![:space:]]}"}
     #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
-    word=${word#"${word%%[![:space:]]*}"}
+    word=$(navi --print --query "shell:pipe-command ") && \
+    word=${word%"${word##*[![:space:]]}"} && \
+    word=${word#"${word%%[![:space:]]*}"} && \
+    word=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$word")
   fi && \
   if [ -n "$word" ] && [[ $word =~ ">" ]] ; then
     BUFFER="$BUFFER $word"
@@ -622,7 +634,7 @@ _delete_space() {
   TMP_BUFFER=$BUFFER
   TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} #後方の空白文字を削除
   TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} #前方の空白文字を削除
-  TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n\t" " " | sed -e 's/  */ /g') #複数の連続した空白を1つにする
+  TMP_BUFFER=$((tr "\n\t" " " | sed -e 's/  */ /g') <<< "$TMP_BUFFER") #複数の連続した空白を1つにする
   BUFFER=$TMP_BUFFER
   zle redisplay
 }
@@ -636,7 +648,7 @@ bindkey '^[Q^[A' _delete_space
 # ctrl + q → ctrl + z(alt + shift + q → alt + shift + z)でコマンド履歴を選択して出力
 _fzf_insert_command() {
   local num command line array1 array2 word
-  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tac) | fzf)
   if [ -n "$command" ] ; then
     BUFFER="$BUFFER $command"
     CURSOR=$#BUFFER #カーソルを末尾に移動
@@ -653,7 +665,7 @@ bindkey '^[Q^[Z' _fzf_insert_command
 # ctrl + q → ctrl + x(alt + shift + q → alt + shift + x)でコマンド履歴からwordを選択して出力
 _fzf_insert_command_word() {
   local num command line array1 array2 word
-  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tail -r) | fzf)
+  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tac) | fzf)
   if [ -n "$command" ] ; then
     for i in $(seq $(echo "$command" | wc -m)) ; do
       array1+=( "$(cut -c $i- <(echo $command))\n" )
@@ -740,10 +752,10 @@ _navi_copy_snippet() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      TMP_BUFFER=$(navi --print | tr "\n" " ") && \
+      TMP_BUFFER=$(navi --print) && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
       TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
-      TMP_BUFFER=$(echo "$TMP_BUFFER" | tr "\n" " " | sed -e "s/  */ /g") && \
+      TMP_BUFFER=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$TMP_BUFFER") && \
       tmux set-buffer -b tmp "$TMP_BUFFER" \
     '
     if tmux show-buffer -b tmp > /dev/null 2>&1 ; then
@@ -751,12 +763,13 @@ _navi_copy_snippet() {
     fi && \
     tmux delete-buffer -b tmp
   else
-    word=$(navi --print | tr "\n" " ")
     #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
-    word=${word%"${word##*[![:space:]]}"}
     #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
-    word=${word#"${word%%[![:space:]]*}"}
-    echo "$word" | tr -d '\n' | cb
+    TMP_BUFFER=$(navi --print)
+    TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
+    TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
+    TMP_BUFFER=$((tr "\n" " " | sed -e "s/  */ /g") <<< "$TMP_BUFFER")
+    echo "$TMP_BUFFER" | tr -d '\n' | cb
     zle redisplay
   fi
 }
