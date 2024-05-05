@@ -4,11 +4,25 @@ typeset -U path PATH
 eval "$(/opt/homebrew/bin/brew shellenv)"
 {{- end }}
 
+{{ if eq .chezmoi.os "darwin" -}}
 path=(
   $HOME/{,s}bin(N)
   /{opt,user}/local/{,s}bin(N)
+  /opt/homebrew/opt/coreutils/libexec/gnubin(N)
+  /opt/homebrew/opt/findutils/libexec/gnubin(N)
+  /opt/homebrew/opt/grep/libexec/gnubin(N)
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin(N)
+  $HOME/.cargo/bin(N)
   $path
 )
+{{ else -}}
+path=(
+  $HOME/{,s}bin(N)
+  /{opt,user}/local/{,s}bin(N)
+  $HOME/.cargo/bin(N)
+  $path
+)
+{{- end }}
 
 # .zprofile.secretの読込
 ZPROFILE_SECRET_CONF="${HOME}/.zprofile.secret"
