@@ -822,6 +822,24 @@ function ssh() {
   fi
 }
 
+zsh-startuptime() {
+  local time_rc
+  local total_msec=0
+  local msec
+  for i in $(seq 1 10); do
+    msec=$((TIMEFMT='%mE'; time zsh -i -c exit) 2>/dev/stdout >/dev/null | tr -d "ms")
+    echo "${(l:2:)i}: ${msec} [ms]"
+    total_msec=$(( $total_msec + $msec ))
+  done
+  time_rc=$(( ${total_msec} / 10 ))
+  local time_norc
+  time_norc=$((TIMEFMT="%mE"; time zsh -df -i -c "autoload -Uz compinit && compinit -C; exit") &> /dev/stdout)
+  echo "my zshrc: ${time_rc}ms\ndefault zsh: ${time_norc}\n"
+}
+
+zsh-profiler() {
+  ZSHRC_PROFILE=1 zsh -i -c zprof
+}
 
 export APPDATA="/mnt/c/Users/$WINUSER/AppData"
 export USERDIR="/mnt/c/Users/$WINUSER"
@@ -925,7 +943,19 @@ fi
 compinit
 {{- end }}
 
-# zprofでのプロファイル測定用
-if (which zprof > /dev/null 2>&1) ;then
-  zprof
+# バックグラウンドでzcompile
+# [-s:sizeが0以上][-nt:タイムスタンプが新しいか]
+{
+  files=(
+    $HOME/.zprofile{,.secret}
+    $HOME/.zshrc{,.secret,.lazy}
+    $HOME/.zcompdump
+  )
+  for file in "${files[@]}" ; do
+    if [[ -s "$file" && (! -s "${file}.zwc" || "$file" -nt "${file}.zwc") ]]; then
+      zcompile "$file"
+    fi
+  done
+} &!
+
 fi
