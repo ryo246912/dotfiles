@@ -96,14 +96,20 @@ zinit wait lucid light-mode blockf for \
     @'sharkdp/bat'
 
 # Clipboard #
-__clipboard_atload() {
-    export CLIPBOARD_SILENT=1
-}
+# __clipboard_atload() {
+#     export CLIPBOARD_SILENT=1
+# }
+# zinit wait lucid light-mode blockf for \
+#     from"gh-r" \
+#     sbin"bin/cb" \
+#     atload"__clipboard_atload" \
+#     @'Slackadays/Clipboard'
+
 zinit wait lucid light-mode blockf for \
-    from"gh-r" \
-    sbin"bin/cb" \
-    atload"__clipboard_atload" \
-    @'Slackadays/Clipboard'
+    atclone"go build cmd/gocopy/gocopy.go && go build cmd/gopaste/gopaste.go" atpull"%atclone" \
+    sbin"gocopy -> gocopy" \
+    sbin"gopaste -> gopaste" \
+    @'atotto/clipboard'
 
 # delta #
 zinit wait lucid light-mode blockf for \
@@ -819,6 +825,14 @@ function ssh() {
     tmux set -p window-active-style 'bg=#000000'
   else
     command ssh $@
+  fi
+}
+
+cb() {
+  if command -v pbcopy &> /dev/null; then
+    command pbcopy
+  elif command -v clip.exe &> /dev/null; then
+    command clip.exe
   fi
 }
 
