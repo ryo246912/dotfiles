@@ -235,13 +235,8 @@ vi-visual-surround-curlybrackets()
 }
 zle -N vi-visual-surround-curlybrackets
 
-{{ if eq .chezmoi.os "darwin" -}}
-# ctrl + vでvi-visual-modeに入る
-bindkey '^V' vi-visual-mode
-{{ else }}
-# alt + shift + vでvi-visual-modeに入る
-bindkey '^[V' vi-visual-mode
-{{- end }}
+# Escでvi-visual-modeに入る
+bindkey '^[' vi-visual-exit
 # vでカーソル位置リセット(vi-visual-modeに入り直す)
 bindkey -M vivis 'v' vi-visual-mode
 # iでviinsモードに入る
