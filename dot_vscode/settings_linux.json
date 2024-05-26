@@ -23,6 +23,8 @@
   "editor.glyphMargin": false,
   // 閉じタグを一緒に編集
   "editor.linkedEditing": true,
+  // fontFamily
+  "editor.fontFamily": "'HackGen35 Console NF', Menlo, Monaco, 'Courier New', monospace",
   // エディタ全体の設定
   "explorer.confirmDragAndDrop": false,
   // エクスプローラの自動フォーカスを無効にする
@@ -46,7 +48,6 @@
     "**\/site-packages": true,
     "**\/.mypy_cache": true
   },
-  "terminal.integrated.fontFamily": "FiraCode Nerd Font Mono",
   // MacのNativeWindowで各ウィンドウをタブのように表示
   // "window.nativeTabs": true,
   "update.showReleaseNotes": false,
