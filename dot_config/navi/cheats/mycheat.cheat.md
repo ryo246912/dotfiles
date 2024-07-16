@@ -1234,7 +1234,7 @@ find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name '*' 
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type <file_or_directory> -name '*' -print
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
-kill -s <pid>
+kill -s KILL <pid>
 
 # killall : [-s:signal,9=KILL,15=TERM(default)][ex:killall mysqld]
 killall <command_name>
@@ -1670,7 +1670,7 @@ zi delete <plugin>
 ;--------------------------------------------------------------
 % other
 # deepl : transrate [-s: stdin]
-deepl -s --to '<language>' <<< "<word>"
+deepl -s --to '<language>' <<< "<input>"
 
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>
@@ -1681,6 +1681,9 @@ nix shell nixpkgs#<package>
 # nix : search package [https://search.nixos.org/packages]
 nix search nixpkgs "^<package>$"
 
+# tgpt : pipe paste
+tgpt "<prompt>" <<< "<input>"
+
 # vscode : display installed extensions
 code --list-extensions | xargs -L 1 echo code --install-extension
 
@@ -1689,5 +1692,6 @@ curl -s "<version>wttr.in/<location_or_help>"
 ```
 
 $ language: echo -e "ja\nen"
+$ input: echo -e '$(gopaste)\n'
 $ version: echo -e "\nv2."
 $ location_or_help: echo -e "\n:help"

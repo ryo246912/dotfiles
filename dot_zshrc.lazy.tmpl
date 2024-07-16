@@ -450,7 +450,7 @@ ff() {
 
 # fgb - fuzzy git branch
 fgb() {
-  git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
+  git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
 }
 
 # fgc - fuzzy git checkout branch
@@ -805,7 +805,7 @@ bindkey '^[d' _quote-previous-word-in-double
 # function
 #--------------------------------------------------------------
 
-function ssh() {
+ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
     # locale対応
@@ -971,5 +971,3 @@ compinit
     fi
   done
 } &!
-
-fi

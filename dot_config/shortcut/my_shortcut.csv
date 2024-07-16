@@ -161,6 +161,7 @@ Raycast,option + e,-,絵文字の検索
 Raycast,option + t,-,Arcのタブ検索
 Raycast,option + ←→,-,windowの
 Raycast,option + space,-,Raycastの起動
+Safari,cmd + ctrl + r,-,レスポンシブデザインモードにする
 Sticky,cmd + m,-,折りたたみ・展開
 Slack,cmd + r,ctrl + r,再読み込み
 Slack,cmd + t,ctrl + t,ページ移動
@@ -204,6 +205,7 @@ Vim,e|E,e|E,カーソル位置の最後/次の単語の最後に移動
 Vim,f|F<文字>,f|F<文字>,行内でカーソル前/後の指定文字に移動、;|次の候補に移動
 Vim,gg,gg,ファイルの先頭に移動
 Vim,G,G,ファイルの末尾に移動
+Vim,GG,GG,ファイルの最終行末尾に移動 ※カスタム
 Vim,gj|gk,gj|gk,(エディタ上で折り返されていても)上下に移動
 Vim,i,i,インサートモード
 Vim,p|P,p|P,カーソルの下/上行に貼り付け
@@ -253,6 +255,7 @@ Vim(fern),E,E,別ウィンドウで開く
 Vim(fern),del,del,親フォルダに移動
 Vim(fern),(カンマ)b,(カンマ)b,ファイラーの開閉 ※カスタム
 Vim(fern),(カンマ)e,(カンマ)e,ファイラーを開く ※カスタム
+Vim(fern),?,?,ヘルプを開く
 VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム
 VSCode,ctrl + g,CapsLk + g(shift + alt + g),選択行に移動
 VSCode,ctrl + r,-,最近開いたファイルやフォルダ
@@ -279,6 +282,8 @@ VSCode,cmd + [],ctrl + [],空白行へ上下移動 ※カスタム
 VSCode,cmd + ↑↓,ctrl + ↑↓,先頭/末尾に移動
 VSCode,cmd + ↑↓,ctrl + ↑↓,入力コントロールと結果の間を移動
 VSCode,cmd + .,ctrl + .,(マークダウン)URLペースト時のコントロールを選択
+VSCode,cmd + .,ctrl + .,quick fix(修正・コメントアウト)
+VSCode,cmd + F2(cmd + shift + l),ctrl + F2((ctrl + shift + l)),すべての単語を変更
 VSCode,cmd + ctrl + e,ctrl + CapsLk + e(ctrl + shift + alt + e),エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,ctrl + CapsLk + g(ctrl + shift + alt + g),(GitHub)GitHubPRビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + j,ctrl + CapsLk + j(ctrl + shift + alt + j),(Jumpy)選択ラインに移動 ※カスタム
@@ -297,6 +302,7 @@ VSCode,cmd + shift + w,ctrl + shift + w,ウィンドウを閉じる
 VSCode,cmd + shift + 2,ctrl + shift + 2,(ToggleQuotes)Quotoの切り替え ※カスタム
 VSCode,cmd + shift + ¥,ctrl + shift + ¥,対になるブラケットに移動
 VSCode,cmd + shift + [],ctrl + PgUp/PgDown,タブ切り替え
+VSCode,cmd + shift + backspace,ctrl + shift + backspace,カッコを外す
 VSCode,cmd + shift + option + [],ctrl + shift + PgUp/PgDown,タブの位置移動 ※カスタム
 VSCode,cmd + shift + option + ←↓↑→,ctrl + alt + Home/PgDown/PgUp/End,矩形選択(絡む選択)
 VSCode,cmd + option + b,ctrl + alt + b,(labeled bookmark)Active Groupにフォーカスする ※カスタム
@@ -317,9 +323,11 @@ VSCode,cmd + option + l,alt + l,選択範囲内で検索(FindinSelection)ON/OFF
 VSCode,cmd + option + ←→,ctrl + alt + ←→,選択範囲の縮小/拡大 ※カスタム
 VSCode,cmd + option + ↑↓,ctrl + alt + ↑↓,マルチカーソル
 VSCode,cmd + option + 0,ctrl + alt + 0,(vscode-input-sequence)マルチカーソル+連番
+VSCode,cmd + k → m,ctrl + k → m,言語モードの選択 ※カスタム
 VSCode,cmd + k → cmd + <num>,ctrl + k → ctrl + <num>,タグを<num>レベルで閉じる
 VSCode,cmd + k → cmd + j,ctrl + k → ctrl + j,閉じタグをすべて開く
 VSCode,cmd + k → cmd + m,ctrl + k → ctrl + m,EditorGroupを最大化する(toggleMaximizeEditorGroup)
+VSCode,cmd + k → cmd + n,ctrl + k → ctrl + n,言語モードの選択 ※カスタム
 VSCode,cmd + k → cmd + [,ctrl + k → ctrl + [,再帰的に折りたたむ
 VSCode,cmd + k → cmd + ],ctrl + k → ctrl + ],再起的に展開する
 VSCode,option + h,alt + h,(gitlens)ブランチの履歴表示
@@ -330,6 +338,7 @@ VSCode,option + (カンマ)|.,alt + (カンマ)|.,(gitlens)前/後のRevisionと
 VSCode,option + shift + ↑↓,alt + shift + ↑↓,行をコピー
 VSCode,option + shift + .,alt + shift + .,(gitlens)現ファイルとの差分を表示
 VSCode,option + shift + (カンマ),alt + shift + (カンマ),(gitlens)カーソル行での前Revisionの差分を表示
+VSCode,F2,F2,シンボルの名前変更(rename synbol)
 VSCode(コマンドパレット),Excel to Markdown table,-,(Excel to Markdown table)スプレッドシートをmarkdown表に変換
 VSCode(コマンドパレット),Emmet: Wrap with Abbreviation,-,タグで囲む
 VSCode(コマンドパレット),Developer: Inspect Context Keys,-,開発者コンテキストキー(when句)の調査
