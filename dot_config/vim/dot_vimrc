@@ -6,6 +6,21 @@ set noswapfile
 " マウス操作の有効化
 set mouse=a
 
+"" ファイラー(netrw)
+" ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
+filetype plugin indent on
+" ファイルツリーの表示形式、1にするとls -laのような表示になります
+let g:netrw_liststyle=1
+" ヘッダを非表示にする
+let g:netrw_banner=0
+" サイズを(K,M,G)で表示する
+let g:netrw_sizestyle="H"
+" 日付フォーマットを yyyy/mm/dd(曜日) hh:mm:ss で表示する
+let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
+" プレビューウィンドウを垂直分割で表示する
+let g:netrw_preview=1
+" Enterで、タブ表示
+let g:netrw_browse_split = 3
 
 "" エディタ表示関係
 " カーソルラインをハイライト
@@ -57,8 +72,6 @@ set autoindent
 set smartindent
 " 対応する括弧を表示
 set showmatch
-" ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
-filetype plugin indent on
 " tabの代わり指定のspace数を入力
 set expandtab
 " カーソルを行頭、行末で止まらないようにする
@@ -83,6 +96,12 @@ set backspace=indent,eol,start
 " xnoremap c "_c
 " xnoremap C "_C
 
+" 最終行の行末に移動
+nnoremap GG G$
+xnoremap GG G$
+" ctrl + hl →　行頭・行末移動
+nnoremap <C-h> ^
+nnoremap <C-l> $
 " clipboardにyank
 noremap gy "+y
 " ESC連打でハイライト解除
