@@ -516,6 +516,40 @@
     "command": "workbench.action.unpinEditor",
     "when": "activeEditorIsNotPreview && activeEditorIsPinned"
   },
+  // 言語モードの選択
+  {
+    "key": "cmd+k cmd+n",
+    "command": "workbench.action.editor.changeLanguageMode",
+    "when": "!notebookEditorFocused"
+  },
+  // エクスプローラでの検索
+  {
+    "key": "cmd+f",
+    "command": "list.find",
+    "when": "listFocus && listSupportsFind"
+  },
+  {
+    "key": "alt+cmd+f",
+    "command": "-list.find",
+    "when": "listFocus && listSupportsFind"
+  },
+  // クイック検索をcmd+fにする
+  {
+    "key": "cmd+f",
+    "command": "workbench.action.quickTextSearch",
+    "when": "editorFocus && editorIsOpen"
+  },
+  // 通常の検索をalt+cmd+fにする
+  {
+    "key": "alt+cmd+f",
+    "command": "actions.find",
+    "when": "editorFocus && editorIsOpen"
+  },
+  {
+    "key": "cmd+f",
+    "command": "-actions.find",
+    "when": "editorFocus || editorIsOpen"
+  },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
@@ -659,13 +693,13 @@
   },
   // (metaGo)1行下をセレクト
   {
-    "key": "ctrl+shift+down",
+    "key": "ctrl+cmd+down",
     "command": "metaGo.selectLineDown",
     "when": "textInputFocus"
   },
   // (metaGo)1行上をセレクト
   {
-    "key": "ctrl+shift+up",
+    "key": "ctrl+cmd+up",
     "command": "metaGo.selectLineUp",
     "when": "textInputFocus"
   },
@@ -746,6 +780,11 @@
   {
     "key": "alt+cmd+g",
     "command": "workbench.view.extension.github-pull-requests"
+  },
+  // (GitHub Copilot)Copilot Chatにフォーカス
+  {
+    "key": "cmd+g",
+    "command": "workbench.panel.chat.view.copilot.focus"
   },
   // (go-to-relative)相対行で移動する
   {

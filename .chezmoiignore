@@ -3,6 +3,7 @@
 .config/atuin/fly.toml
 {{ else -}}
 .config/karabiner*
+.config/raycast*
 .config/rectangle*
 **/dbeaver_shortcut.csv
 {{- end }}

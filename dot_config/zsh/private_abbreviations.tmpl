@@ -92,7 +92,7 @@ abbr gtr="git tag -l '*release*' --sort=-creatordate --format='%(if) %(*objectna
 abbr gts="git tag -l '*staging*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'"
 abbr gu='gitui'
 
-abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb"
+abbr fgb="git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb"
 abbr fgc="git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %"
 abbr fgh="() { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }"
 abbr fghd="() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }"

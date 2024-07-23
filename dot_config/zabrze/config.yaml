@@ -81,7 +81,7 @@ abbrevs:
 
   - name: fgb
     abbr: fgb
-    snippet: git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' --sort=-committerdate | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
+    snippet: git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
 
   - name: fgc
     abbr: fgc
@@ -182,6 +182,14 @@ abbrevs:
   - name: gfu
     abbr: gfu
     snippet: git fetch -p --tags upstream
+
+  - name: ghb
+    abbr: ghb
+    snippet: gh browse
+
+  - name: ghbs
+    abbr: ghbs
+    snippet: gh browse --settings
 
   - name: ghs
     abbr: ghs
@@ -295,6 +303,10 @@ abbrevs:
     abbr: gshhh
     snippet: git show HEAD~2
 
+  - name: (gshs|gds)
+    abbr-pattern: (gshs|gds)
+    snippet: git diff --cached
+
   - name: gtr
     abbr: gtr
     snippet: git tag -l '*release*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
@@ -381,7 +393,7 @@ abbrevs:
     snippet: sudo
 
   - name: ug
-    abbr: ug
+    abbr-pattern: (ug|igrep)
     snippet: ug -QPn
 
   - name: up
@@ -436,8 +448,14 @@ abbrevs:
     global: true
     context: '^git.*add\s'
 
+  - name: (git branch|for-each-ref) --sort=-committerdate
+    abbr: sc
+    snippet: --sort=-committerdate
+    global: true
+    context: '^git\s(branch|for-each-ref)\s'
+
   - name: (git branch) -vv
-    abbr: v
+    abbr-pattern: (v|vv)
     snippet: -vv
     global: true
     context: '^git.*branch\s'

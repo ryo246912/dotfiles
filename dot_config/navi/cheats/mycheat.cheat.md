@@ -46,7 +46,7 @@ asdf which <command>
 cspell --no-progress --gitignore . | less -iRMW --use-color
 
 # lint base-branch...HEAD [--root:root directory, defaults=current directory]
-cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base origin/<merge-base> HEAD)...HEAD)
+cspell --no-progress --root ~ $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git merge-base origin/<merge-base> HEAD)...HEAD)
 
 # search(show) dictionary [The word is found in a dictionary if * appears ex:sql *php]
 cspell trace "<word>"
@@ -235,10 +235,13 @@ git --no-pager diff --pickaxe-regex -S '<regex>' -U0
 git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
 
 # diff between base-branch...HEAD
-git diff<_--name-only> $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
+git diff<_--name-only> $(git merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
 
 # diff between base-branch...HEAD(difft)
-GIT_EXTERNAL_DIFF="difft" git diff $(git show-branch --merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename>
+GIT_EXTERNAL_DIFF="difft" git diff $(git merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename>
+
+# diff between merge-base...origin/master
+git diff<_--name-only> $(git merge-base origin/<base_branch> HEAD)...origin/<base_branch> | delta<_no-gitconfig>
 
 # diff between commits [ex:master...HEAD]
 git diff<_--name-only> <commit1>...<commit2> | delta<_no-gitconfig>
@@ -280,7 +283,7 @@ git checkout <commit1> <diff_filename>
 git branch <branch_name> <commit1>
 
 # git chechout detached branch
-git checkout HEAD^0
+git checkout HEAD~0
 
 # create branch & checkout
 git checkout -b <branch_name> <commit1>
@@ -288,14 +291,17 @@ git checkout -b <branch_name> <commit1>
 # create branch & checkout(record base-branch)
 git checkout -b <branch_name> <all_branch> && git config "branch.$(git symbolic-ref --short HEAD).base-branch" <all_branch>
 
+# checkout remote branch
+git checkout -b <remote_branch> origin/<remote_branch>
+
 # record base-branch
 git config "branch.$(git symbolic-ref --short HEAD).base-branch" <current_branch>
 
 # set upstream branch [-u:upstream branch] [ex:git branch -r origin/feature-branch]
 git branch -u origin/$(git symbolic-ref --short HEAD)
 
-# branch & tag list
-git for-each-ref --sort=-committerdate --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
+# branch & tag list[--sort=-committerdate]
+git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
 # restore(default)
 git checkout <checkout_commit>
@@ -360,8 +366,8 @@ git push origin :<branch>
 # rebase interactive
 git rebase --autosquash --autostash -i <commit1>
 
-# rebase onto [--onto: --onto <base_branch> <pick_start_commit> ~ <pick_end_commit>(HEAD)]
-git rebase --autosquash --onto <all_branch> <commit1>
+# rebase onto [--onto: --onto <base_branch> <pick_start_commit>^ ~ <pick_end_commit>(HEAD)] [ex.git rebase --onto release/xxx abcdef^]
+git rebase --autosquash --autostash --onto <all_branch> <commit1>^
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP '<regex>' <grep_commit> -- <dir>
@@ -525,6 +531,8 @@ $ branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
+$ remote_branch: git branch -r --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' \
+  --- --column 1 --map "sed s'|origin/||'"
 $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
@@ -562,10 +570,10 @@ $ ls-files: git ls-files
 $ ls-tree-files: git ls-tree --name-only --full-name -r <commit1> $(git rev-parse --show-toplevel)
 $ extension: echo <ls-tree-files> | sed 's/^.*\.\([^\.]*\)$/\1/'
 $ _pipe: echo -e " | bat -l <extension>\n > <ls-tree-files>"
-$ base-head_diff_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git show-branch --merge-base <base_branch> HEAD)...HEAD \
+$ base-head_diff_filename: git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ $(git merge-base <base_branch> HEAD)...HEAD \
   | xargs -I % echo "<base_branch>;%" \
   --- --delimiter ; --column 2 \
-  --preview "git diff $(git show-branch --merge-base {1} HEAD)...HEAD -- {2} | delta --no-gitconfig"
+  --preview "git diff $(git merge-base {1} HEAD)...HEAD -- {2} | delta --no-gitconfig"
 $ commit1-commit2_filename: echo . && \
   git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
@@ -639,7 +647,7 @@ gh pr checks <pr_no><_--watch><_web>
 gh pr checkout <pr_no>
 
 # pr create [--base:base-branch]
-gh pr create --base <base_branch>
+gh pr create --base "<base_branch>"
 
 # pr edit
 gh pr edit <pr_my_no>
@@ -711,6 +719,9 @@ gh cache list
 # meta : display PR merge-base branch
 gh pr list --search "$(git rev-parse --short <branch>)" --limit 1 --json baseRefName --jq '.[] | .baseRefName'
 
+# open repository in the web browser[--branch:][ex.gh browse --branch "main",gh browse --settings]
+gh browse<_browse_option>
+
 # project item
 open-cli <issue_url>
 
@@ -739,6 +750,7 @@ $ user: echo -e "\n$(git config --get-all user.name)"
 $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
+$ _browse_option: echo -e "\n --settings\n --branch ''\n --commit ''"
 $ ls-files: git ls-files
 $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
@@ -1222,7 +1234,7 @@ find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name '*' 
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type <file_or_directory> -name '*' -print
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
-kill -s <pid>
+kill -s KILL <pid>
 
 # killall : [-s:signal,9=KILL,15=TERM(default)][ex:killall mysqld]
 killall <command_name>
@@ -1658,7 +1670,7 @@ zi delete <plugin>
 ;--------------------------------------------------------------
 % other
 # deepl : transrate [-s: stdin]
-deepl -s --to '<language>' <<< "<word>"
+deepl -s --to '<language>' <<< "<input>"
 
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>
@@ -1669,6 +1681,9 @@ nix shell nixpkgs#<package>
 # nix : search package [https://search.nixos.org/packages]
 nix search nixpkgs "^<package>$"
 
+# tgpt : pipe paste
+tgpt "<prompt>" <<< "<input>"
+
 # vscode : display installed extensions
 code --list-extensions | xargs -L 1 echo code --install-extension
 
@@ -1677,5 +1692,6 @@ curl -s "<version>wttr.in/<location_or_help>"
 ```
 
 $ language: echo -e "ja\nen"
+$ input: echo -e '$(gopaste)\n'
 $ version: echo -e "\nv2."
 $ location_or_help: echo -e "\n:help"
