@@ -475,6 +475,40 @@
     "command": "workbench.action.unpinEditor",
     "when": "activeEditorIsNotPreview && activeEditorIsPinned"
   },
+  // 言語モードの選択
+  {
+    "key": "ctrl+k ctrl+n",
+    "command": "workbench.action.editor.changeLanguageMode",
+    "when": "!notebookEditorFocused"
+  },
+  // TODO : エクスプローラでの検索
+  {
+    "key": "ctrl+f",
+    "command": "list.find",
+    "when": "listFocus && listSupportsFind"
+  },
+  {
+    "key": "alt+ctrl+f",
+    "command": "-list.find",
+    "when": "listFocus && listSupportsFind"
+  },
+  // クイック検索をctrl+fにする
+  {
+    "key": "ctrl+f",
+    "command": "workbench.action.quickTextSearch",
+    "when": "editorFocus && editorIsOpen"
+  },
+  // 通常の検索をalt+ctrl+fにする
+  {
+    "key": "alt+ctrl+f",
+    "command": "actions.find",
+    "when": "editorFocus && editorIsOpen"
+  },
+  {
+    "key": "ctrl+f",
+    "command": "-actions.find",
+    "when": "editorFocus || editorIsOpen"
+  },
   ///////////////////////////////////////////////
   // Winのみ
   ///////////////////////////////////////////////
@@ -827,6 +861,12 @@
     "key": "ctrl+alt+g",
     "command": "workbench.view.extension.github-pull-requests"
   },
+  // TODO
+  // (GitHub Copilot)Copilot Chatにフォーカス
+  // {
+  //   "key": "ctrl+g",
+  //   "command": "workbench.panel.chat.view.copilot.focus"
+  // },
   // (go-to-relative)相対行で移動する
   {
     "key": "ctrl+shift+alt+g",
