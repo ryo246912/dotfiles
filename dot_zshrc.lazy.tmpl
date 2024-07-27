@@ -805,6 +805,14 @@ bindkey '^[d' _quote-previous-word-in-double
 # function
 #--------------------------------------------------------------
 
+cb() {
+  if command -v pbcopy &> /dev/null; then
+    command pbcopy
+  elif command -v clip.exe &> /dev/null; then
+    command clip.exe
+  fi
+}
+
 ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
@@ -828,12 +836,6 @@ ssh() {
   fi
 }
 
-cb() {
-  if command -v pbcopy &> /dev/null; then
-    command pbcopy
-  elif command -v clip.exe &> /dev/null; then
-    command clip.exe
-  fi
 }
 
 zsh-startuptime() {
