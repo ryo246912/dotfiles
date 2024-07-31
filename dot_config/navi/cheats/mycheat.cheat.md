@@ -646,8 +646,8 @@ gh pr checks <pr_no><_--watch><_web>
 # pr checkout
 gh pr checkout <pr_no>
 
-# pr create [--base:base-branch]
-gh pr create --base "<base_branch>"
+# pr create [--base:base-branch][--assignee "@me":assign me]
+gh pr create --base "<base_branch>" --assignee "" --body-file "<pr_body>"
 
 # pr edit
 gh pr edit <pr_my_no>
@@ -744,6 +744,7 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
+$ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"

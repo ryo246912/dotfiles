@@ -484,6 +484,12 @@ abbrevs:
     global: true
     context: '^git.*commit\s'
 
+  - name: (git commit) --allow-empty
+    abbr-pattern: (ea|ae)
+    snippet: --allow-empty
+    global: true
+    context: '^git.*commit\s'
+
   - name: (git checkout) master
     abbr: m
     snippet: master
