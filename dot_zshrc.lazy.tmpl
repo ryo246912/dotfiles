@@ -28,7 +28,7 @@ alias nr='npm run'
 # atclone= clone後に実行する関数を指定
 # atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
 # configure=./configureを実行、make前に実行の場合はconfigure'!'
-# make= make install
+# make= make install、インストール先を指定するにはmake PREFIX=$ZPFX
 # rustup = rust installer
 # cargo = rust builder and package manager
 # (plugin script loading)
@@ -36,6 +36,9 @@ alias nr='npm run'
 # atload = 読込完了時に実行する関数を指定
 # pick = 引数に与えられたものを$pathに追加
 # sbin = 引数に与えられたものを$pathに追加
+
+# 実行順:atinit -> atpull! -> make'!!' -> mv -> cp -> make! -> atclone/atpull -> make -> (plugin script loading) -> src -> multisrc -> atload.
+# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#order-of-execution
 
 ### command ###
 
@@ -237,6 +240,15 @@ zinit wait lucid light-mode blockf for \
     sbin"navi" \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
+
+# tig #
+zinit wait lucid light-mode blockf for \
+    atclone"make configure && make prefix=$ZPFX install-release-doc" \
+    atpull"%atclone" \
+    ver"tig-2.5.10" \
+    configure"!" \
+    make"install PREFIX=$ZPFX" \
+    @'jonas/tig'
 
 # tgpt #
 zinit wait lucid light-mode blockf for \

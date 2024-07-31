@@ -392,6 +392,18 @@ abbrevs:
     abbr: s
     snippet: sudo
 
+  - name: t
+    abbr: t
+    snippet: tig
+
+  - name: tb
+    abbr: tb
+    snippet: tig blame
+
+  - name: ts
+    abbr: ts
+    snippet: tig status
+
   - name: ug
     abbr-pattern: (ug|igrep)
     snippet: ug -QPn
@@ -622,3 +634,9 @@ abbrevs:
     snippet: --stat
     global: true
     context: '^git\sshow\s'
+
+  - name: (tig) --all
+    abbr: a
+    snippet: --all
+    global: true
+    context: '^tig\s'
