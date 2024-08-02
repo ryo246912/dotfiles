@@ -719,7 +719,7 @@
   {
     "key": "alt+/",
     "command": "gitlens.toggleFileBlame",
-    "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && gitlens:activeFileStatus =~ /blameable/"
+    "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && resource in 'gitlens:tabs:blameable'"
   },
   {
     "key": "alt+/",
@@ -733,7 +733,7 @@
   {
     "key": "alt+b",
     "command": "-gitlens.toggleFileBlame",
-    "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && gitlens:activeFileStatus =~ /blameable/"
+    "when": "editorTextFocus && config.gitlens.keymap == 'alternate' && resource in 'gitlens:tabs:blameable'"
   },
   {
     "key": "alt+b",
