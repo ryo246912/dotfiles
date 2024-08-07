@@ -763,6 +763,7 @@ bindkey '^[Q^[W' _copy_word
 _shortcut() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
       cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
   else
