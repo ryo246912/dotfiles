@@ -234,6 +234,9 @@ git --no-pager diff --pickaxe-regex -S '<regex>' -U0
 # diff staging file [--cached(staged):diff staging and commit][--stat/numstat/patch-with-stat:show stat]
 git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
 
+# diff merge conflict file
+git diff --diff-filter=U
+
 # diff between base-branch...HEAD
 git diff<_--name-only> $(git merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
 
@@ -311,6 +314,9 @@ git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
 
 # merge --no-commit
 git merge --no-commit origin/<merge_branch>
+
+# merge ours/theirs
+git checkout<_--ours_theirs> -- <conflict_files> && git add <conflict_files>
 
 # commit fixup
 git commit --fixup <commit1> && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet <commit1>~
@@ -494,6 +500,7 @@ $ _--name-only: echo -e "\n --name-only\n --name-status"
 $ _--option: echo -e "\n --global\n --local\n --system"
 $ _stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
 $ _shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
+$ _--ours_theirs: echo -e " --ours\n --theirs"
 $ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
@@ -578,6 +585,10 @@ $ commit1-commit2_filename: echo . && \
   git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
 $ git_filename: git ls-tree -r --name-only <commit1>
+$ conflict_files: echo . && \
+  git diff --name-only --diff-filter=U \
+  --- --multi --expand \
+  --preview "git diff {1} | delta --no-gitconfig"
 $ diff_filename: git diff --name-only <commit1> \
   | xargs -I % echo "<commit1>;%" \
   --- --delimiter ; --column 2 \
@@ -848,14 +859,12 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 # act : list workflows for a specific event [-l:list]
 act -l <event>
 
-# act : dry-run workflows for a specific event[-n:dry-run]
-act -n <event> -W <workflow>
-
-# act : run workflows for a specific event
-act <event> -W <workflow>
+# act : run workflows for a specific event[-n:dry-run]
+act<_-dry-run_><event> -W <workflow>
 
 ```
 $ event: echo -e "push\npull_request\nissues"
+$ _-dry-run_: echo -e " \n -n "
 $ workflow: find .github/workflows
 
 ```sh
