@@ -396,6 +396,10 @@ abbrevs:
     abbr: t
     snippet: tig
 
+  - name: ta
+    abbr: ta
+    snippet: tig --all
+
   - name: tb
     abbr: tb
     snippet: tig blame
