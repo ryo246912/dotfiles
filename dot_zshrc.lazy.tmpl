@@ -216,11 +216,6 @@ zinit wait lucid light-mode blockf for \
     atclone"__glow_atclone" \
     @'charmbracelet/glow'
 
-# git-jump #
-zinit wait lucid light-mode blockf for \
-    as"program" pick"git-jump" \
-    "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
-
 # ijq #
 zinit wait lucid light-mode blockf for \
     make \
@@ -351,6 +346,17 @@ zinit wait lucid light-mode blockf for \
     sbin"blueutil" \
     @'toy/blueutil'
 {{- end }}
+
+## programs ##
+
+# git-jump #
+zinit wait lucid light-mode blockf for \
+    as"program" pick"git-jump" \
+    "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
+
+zinit wait lucid light-mode blockf for \
+    as"program" pick"fzf-tmux" \
+    "https://github.com/junegunn/fzf/blob/master/bin/fzf-tmux"
 
 ### node ###
 __node_atclone() {
@@ -844,6 +850,14 @@ cb() {
     command pbcopy
   elif command -v clip.exe &> /dev/null; then
     command clip.exe
+  fi
+}
+
+open() {
+  if command -v open &> /dev/null; then
+    command open
+  elif command -v xdg-open &> /dev/null; then
+    command xdg-open
   fi
 }
 
