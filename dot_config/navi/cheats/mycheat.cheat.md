@@ -17,8 +17,8 @@ asdf plugin list --urls
 # plugin list all
 asdf plugin list all | less -iRMW --use-color
 
-# plugin add [ex:asdf plugin add <name> <git-url>]
-asdf plugin add <name> <git-url>
+# plugin add [ex:asdf plugin add <name>]
+asdf plugin add <name>
 
 # install [ex:asdf install <name> <version>]
 asdf install <name> <version>
@@ -71,14 +71,11 @@ python manage.py showmigrations <app_name>
 # make migration
 python manage.py makemigrations --name <name>
 
-# migrate [ex:python manage.py migrate concierges 0031]
+# migrate [ex:python manage.py migrate concierges 0031][zero:all reset,ex:python manage.py migrate concierges zero]
 python manage.py migrate <app_name> <migration_name>
 
 # check migration [ex:python manage.py sqlmigrate issues 0035]
 python manage.py sqlmigrate <app_name> <migration_name>
-
-# rollback migration [ex:python manage.py migrate concierges 0031]
-python manage.py migrate <app_name> <rollback_to_migration_name>
 ```
 
 ```sh
@@ -192,7 +189,7 @@ docker compose -p <project> up -d
 $ project: docker compose ls --all \
   --- --headers 1 --column 1
 $ service: docker compose -p <project> ps --all \
-  --- --headers 1 --column 3
+  --- --headers 1 --column 4
 
 ```sh
 ;--------------------------------------------------------------
@@ -886,8 +883,8 @@ nodenv install <version>
 ```sh
 % npm
 
-# display bin directory [ex: $(npm bin)/cspell]
-$(npm bin)<command>
+# display bin directory [ex: $(npm root)/.bin/cspell]
+$(npm root)/.bin/<command>
 
 # open package files [ex:npm edit axios]
 npm edit <package>
@@ -1031,6 +1028,9 @@ grep -vPr '<regex>' ./**/*
 
 # grep : [-o:only matching][ex:grep -Po "v[0-9]*\.[0-9]*.[0-9]*"]
 grep -oP '<regex>'
+
+# gron : json to flat and filter to json [-u:ungron]['del(.[] | nulls)':remove null]
+gron | grep -p '<regex>' | gron -u | jq 'del(.[] | nulls)'
 
 # head : [-n:output number]
 head -n <num>
@@ -1201,8 +1201,8 @@ curl -sS -O '<url>'
 # curl : curl http header[-I:display only header][-H:header ex: -H 'Content-Type: application/json']
 curl -sI '<url>' -H '<header>'
 
-# curl : POST [-X:request method][-d:post data ex: -d 'key=value&key2=value2']
-curl -X 'POST' '<url>' -H '<header>' -d '<data>'
+# curl : POST [-i:include headers][-X:request method][-d:post data ex: -d '{"key1":"value1", "key2":"'"$value2"'"}']
+curl -isS -X 'POST' '<url>' -H '<header>' -d '{"<key1>":"<value1>","<key2>":"'"$<value2>"'"}'
 
 # chsh : change shell [ex:chsh -s $(which zsh)]
 chsh -s <shells>
@@ -1255,6 +1255,12 @@ ln -s <file> <dir>
 # lsof(=list open files) : display file,pid,user[-i:port]
 lsof -i:<port>
 
+# make help
+grep "^[a-zA-Z\-]*:" Makefile | sed -e 's/^/make /' -e 's/://'
+
+# make print
+make -n <make_command>
+
 # ping : [-c <num>:ping count][-w:ping while][ex:ping www.google.co.jp]
 ping <address>
 
@@ -1298,6 +1304,8 @@ $ shells: cat /etc/shells | sed 1,4d
 ;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type f -name '*' -print
 ;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type d -name '*' -print
 $ extension: echo -e "tar.gz\ntgz"
+$ make_command: grep "^[a-zA-Z\-]*:" Makefile | sed -e 's/://' \
+  --- --map "cut -d' ' -f1"
 ;$
 
 ```sh
@@ -1546,7 +1554,7 @@ $ window: t-rec --ls-win \
 # if
 if <condition> ; then <true_command> ; else <false_command> ;fi
 
-# if : [a != b:not equal][-n "$var":not zero][-e path:exist file]
+# if : [a != b:not equal(int,str)][-n "$var":not zero][-z "$var":zero][-e path:exist file][1 -le 10,10 -ge 1:{less,greter} equal]
 [ <condition> ] && <true_command> || <false_command>
 
 # for : [ex:for code in {000..255}; do print -nP -- "%F{$code}$code %f"; [ $((${code} % 16)) -eq 15 ] && echo; done]
@@ -1608,7 +1616,10 @@ tmux list-keys | less -iRMW --use-color
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
 # respawn-pane [-k:kill existing command,-c:start-directory]
-tmux respawn-pane -k -c '#{pane_current_path}'
+tmux respawn-pane -k -c '#{pane_current_path}' -t <pane_to>
+
+# window move
+tmux swap-window -t <window_no>
 
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
