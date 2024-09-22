@@ -971,6 +971,15 @@ export PSQL_HISTORY="$HOME/.local/state/psql/.psql_history"
 mkdir -p "$HOME/.local/state/less" 2>/dev/null
 export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 
+# less
+export LESS_TERMCAP_mb=$'\e[1;32m'
+export LESS_TERMCAP_md=$'\e[1;32m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_so=$'\e[01;33m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export LESS_TERMCAP_us=$'\e[1;4;31m'
+
 # slack
 export SLACK_DEVELOPER_MENU=true
 
