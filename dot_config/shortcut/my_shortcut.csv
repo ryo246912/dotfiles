@@ -207,14 +207,20 @@ Vim,gg,gg,ファイルの先頭に移動
 Vim,G,G,ファイルの末尾に移動
 Vim,GG,GG,ファイルの最終行末尾に移動 ※カスタム
 Vim,gj|gk,gj|gk,(エディタ上で折り返されていても)上下に移動
+Vim,g1~g9,g1-g9,タブ1-9にフォーカス ※カスタム
+Vim,g~,g~,大文字小文字を入れ替える
+Vim,gu|gU,gu|gU,小(大)文字に変換
+Vim,gx,gx,URLを開く
 Vim,i,i,インサートモード
 Vim,p|P,p|P,カーソルの下/上行に貼り付け
 Vim,s,s,カーソル位置の文字を消してインサートモード
+Vim,S,S,カーソル位置の行を消してインサートモード
 Vim,u,u,変更を元に戻す(undo)
 Vim,v,v,ビジュアルモード、(ビジュアルモードで)選択範囲開始
 Vim,V,V,行選択のビジュアルモード
 Vim,w|W,w|W,1単語次にカーソル移動、(スペース区切りで)1単語次にカーソル移動
 Vim,x,x,カーソル上の文字を削除
+Vim,X,X,カーソル前の文字を削除
 Vim,y,y,選択範囲をコピー
 Vim,yy,yy,1行をコピー
 Vim,ZQ,ZQ,保存せずに終了
@@ -225,23 +231,33 @@ Vim,0,0,行の先頭に移動(インデントも無視する)
 Vim,^|$,^|$,行の先頭/末尾に移動
 Vim,-|+,-|+,前/次の行の先頭に移動
 Vim,{|},{|},前/次の段落に移動
-Vim,A,A,(矩形選択で)選択末尾にインサートモード
-Vim,c,c,(矩形選択で)選択範囲を削除してインサートモード
-Vim,d,d,(矩形選択で)選択範囲を削除
 Vim,gt|gT,gt|gT,(netrwで)前後のタブに移動
-Vim,r,r,(矩形選択で)選択範囲を1文字に置換
-Vim,I,I,(矩形選択で)選択先頭にインサートモード
-Vim,y,y,(矩形選択で)選択範囲にyank
 Vim,<n>G,<n>G,n行目に移動
 Vim,/<文字>|?<文字>,/<文字>|?<文字>,検索
+Vim,(カンマ)[,(カンマ)[,(help)1つ前の項目にjump ※カスタム
+Vim,(カンマ)],(カンマ)],(help)項目にjump ※カスタム
 Vim,ctrl + h|l,ctrl + h|l,行頭・行末に移動 ※カスタム
-Vim,ctrl + r,-,戻しすぎた変更を戻す(redo)
-Vim,ctrl + r,-,コマンド履歴を表示(fzf) ※カスタム
-Vim,ctrl + v→ ctrl + i,-,矩形選択のビジュアルモード→挿入モード
+Vim,ctrl + t,ctrl + t,(help)1つ前の項目にjump
+Vim,ctrl + ],ctrl + ],(help)項目をjump
+Vim,ctrl + r,ctrl + r,戻しすぎた変更を戻す(redo)
+Vim,ctrl + v→ A,ctrl + v→ A,(矩形選択で)選択末尾にインサートモード
+Vim,ctrl + v→ c,ctrl + v→ c,(矩形選択で)選択範囲を削除してインサートモード
+Vim,ctrl + v→ d,ctrl + v→ d,(矩形選択で)選択範囲を削除
+Vim,ctrl + v→ r,ctrl + v→ r,(矩形選択で)選択範囲を1文字に置換
+Vim,ctrl + v→ I,ctrl + v→ I,(矩形選択で)選択先頭にインサートモード
+Vim,ctrl + v→ y,ctrl + v→ y,(矩形選択で)選択範囲にyank
 Vim,ctrl + w→ hjkl,-,分割ウィンドウの上下左右移動
+Vim,ctrl + w→ HJKL,-,ウィンドウの上下左右に入れ替え
+Vim,ctrl + w→ n,-,ウィンドウを分割して開く
+Vim,ctrl + w→ s|v,-,ウィンドウを縦(split←horizonal使えないので)/横(vertical)に分割
 Vim,q:,q:,コマンドラインウィンドウ(履歴)表示
 Vim,q/|q?,q/|q?,コマンド履歴の前方/後方検索
+Vim,q: → i,-,履歴を編集してから実行
+Vim,q: → Enter,-,履歴を実行
 Vim,q: → ctrl + c,-,コマンドラインに履歴を送る
+Vim,:b <バッファ>,:b <バッファ>,バッファを開く
+Vim,:sb1~sb9,:sb1~sb9,任意のバッファを新規ウィンドウで開く
+Vim,:ls,:ls,バッファ確認
 Vim,:n,:n,複数ファイルを編集中は次のファイルへ移動
 Vim,:p,:p,複数ファイルを編集中は前のファイルへ移動
 Vim,:q,:q,終了
@@ -250,12 +266,25 @@ Vim,:w,:w,保存
 Vim,:x,:x,保存して終了(変更なしは保存しない)
 Vim,:wq,:wq,保存して終了(変更なしも保存)
 Vim,:<n>,:<n>,n行目に移動
+Vim,:(ctrl +d),:(ctrl +d),ファイル候補を表示
+Vim(commentary),(選択して)gc,(選択して)gc,選択範囲をコメントアウト
+Vim(fzf),(popup windowで)ctrl + t,(popup windowで)ctrl + t,新しいタブで開く
+Vim(fzf),(popup windowで)ctrl + v,(popup windowで)ctrl + v,横に新しく開く
+Vim(fzf),(カンマ)B,(カンマ)B,Buffer一覧を表示 ※カスタム
+Vim(fzf),(カンマ)c,(カンマ)C,コマンド一覧を表示 ※カスタム
+Vim(fzf),(カンマ)f,(カンマ)f,File一覧を表示 ※カスタム
+Vim(fzf),(カンマ)r,(カンマ)r,最近開いたファイルを表示 ※カスタム
+Vim(fzf),(カンマ)R,(カンマ)R,コマンド履歴を表示 ※カスタム
+Vim(fzf),(カンマ)w,(カンマ)w,Window一覧を表示 ※カスタム
+Vim(fzf),:ctrl + r,:ctrl + r,コマンド履歴を表示 ※カスタム
 Vim(fern),a -> action,a -> action,アクション名を実行
 Vim(fern),E,E,別ウィンドウで開く
 Vim(fern),del,del,親フォルダに移動
 Vim(fern),(カンマ)b,(カンマ)b,ファイラーの開閉 ※カスタム
 Vim(fern),(カンマ)e,(カンマ)e,ファイラーを開く ※カスタム
 Vim(fern),?,?,ヘルプを開く
+Vim(surround),S<text>,S<text>,選択範囲を囲む
+Vim(zoxide),:ctrl + zz,:ctrl + zz,Zoxideを起動 ※カスタム
 VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム
 VSCode,ctrl + g,CapsLk + g(shift + alt + g),選択行に移動
 VSCode,ctrl + r,-,最近開いたファイルやフォルダ
