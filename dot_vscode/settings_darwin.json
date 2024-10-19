@@ -46,7 +46,6 @@
   "multiDiffEditor.experimental.enabled": true,
   // 検索対象から除外
   "search.exclude": {
-    "**\/*.json": true,
     "**\/build": true,
     "**\/dist": true,
     "**\/node_modules": true,
@@ -349,6 +348,8 @@
     }
   ],
   "vim.hlsearch": true,
+  // (Vim)インサートモードで行末で止まらないようにする
+  "vim.whichwrap": "h,l,<,>,[,]",
   // (Vim) yank時にハイライトする
   "vim.highlightedyank.enable": true,
   // (Vim) クリップボードにもコピーする
