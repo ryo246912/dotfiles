@@ -193,6 +193,29 @@ $ service: docker compose -p <project> ps --all \
 
 ```sh
 ;--------------------------------------------------------------
+; docker-tool
+;--------------------------------------------------------------
+% docker-tool(dive)
+
+# dive image
+dive <image>
+
+# dive build [-f:file path][--target <target>:target image]
+dive build -f <dockerfile><_--target_target_> .
+
+# dive workaround
+export DOCKER_HOST=$(docker context inspect -f '{{ .Endpoints.docker.Host }}')
+```
+
+$ image: docker image ls -a \
+  --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}\t{{.Size}}" \
+  --- --headers 1 --column 2
+$ dockerfile: find . -type f -name '*Dockerfile' -not -name '.*'
+$ _--target_target_: echo -e "\n --target_target "
+;$
+
+```sh
+;--------------------------------------------------------------
 ; gcloud
 ;--------------------------------------------------------------
 % gcloud
