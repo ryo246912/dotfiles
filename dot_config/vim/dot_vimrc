@@ -5,6 +5,8 @@ set nobackup
 set noswapfile
 " マウス操作の有効化
 set mouse=a
+" コマンドラインの履歴上限を10000件にする
+set history=10000
 
 "" ファイラー(netrw)
 " ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
@@ -19,14 +21,14 @@ let g:netrw_sizestyle="H"
 let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
 " プレビューウィンドウを垂直分割で表示する
 let g:netrw_preview=1
-" Enterで、タブ表示
-let g:netrw_browse_split = 3
+" Enterで、垂直分割表示
+let g:netrw_browse_split = 2
 
 "" エディタ表示関係
 " カーソルラインをハイライト
 set cursorline
-" 行番号の表示
-set number
+" 相対行番号の表示
+set relativenumber
 " シンタックスハイライト有効
 syntax on
 " カーソル位置表示
@@ -99,9 +101,11 @@ set backspace=indent,eol,start
 " 最終行の行末に移動
 nnoremap GG G$
 xnoremap GG G$
-" ctrl + hl →　行頭・行末移動
-nnoremap <C-h> ^
-nnoremap <C-l> $
+" ,hl → 行頭・行末移動
+nnoremap ,h ^
+nnoremap ,l $
+xnoremap ,h ^
+xnoremap ,l $h
 " clipboardにyank
 noremap gy "+y
 " ESC連打でハイライト解除
@@ -111,6 +115,45 @@ cnoremap <C-k> <C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>
 " Emacs-like movement in Insert/Command
 noremap! <C-a> <Home>
 noremap! <C-e> <End>
+" 新しいタブを開く
+nnoremap ,t :tabnew<CR>
+" タグジャンプする/1つ前のタグに戻る
+nnoremap ,] :tag<CR>
+nnoremap ,[ :pop<CR>
+" 相対・絶対行の表示切替
+nnoremap ,n :set relativenumber!<CR>
+" popupでterminalを開く
+nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+
+" ウィンドウ最大化/もとに戻す関数
+let g:toggle_window_size = 0
+function! ToggleWindowSize()
+  if g:toggle_window_size == 1
+    exec "normal \<C-w>="
+    let g:toggle_window_size = 0
+  else
+    :resize
+    :vertical resize
+    let g:toggle_window_size = 1
+  endif
+endfunction
+nnoremap ,z :call ToggleWindowSize()<CR>
+
+" g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
+function! GoToNthTab(n)
+  " 目的のタブ番号を計算
+  let target_tab = a:n
+  " タブ番号が存在する範囲内であればタブに移動
+  if target_tab <= tabpagenr('$')
+    execute "tabnext " . target_tab
+  else
+    echoerr "Target tab does not exist"
+  endif
+endfunction
+for i in range(1, 9)
+  execute "nnoremap g" . i . " :call GoToNthTab(" . i . ")<CR>"
+endfor
 
 " コマンドラインモード
 " コマンドラインモードで<Tab>キーによるファイル名補完を有効にする

@@ -1,0 +1,8 @@
+keybinding:
+  toggle-collapse-dir: space,enter
+
+filetree:
+  collapse-dir: true
+
+layer:
+  show-aggregated-changes: true

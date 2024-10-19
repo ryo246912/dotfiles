@@ -11,15 +11,33 @@ merged = 0
 [[plugins]]
 repo = 'junegunn/fzf.vim'
 hook_add = '''
-" ヒストリを表示
-nnoremap <silent> ,r :<C-u>:History:<CR>
-cnoremap <C-r> :<C-u>:History:<CR>
+" fzfコマンドのprefixを設定
+let g:fzf_command_prefix = 'Fzf'
+
+" bufferを表示
+nnoremap <silent> ,B :<C-u>:FzfBuffers<CR>
+" Commandを表示
+nnoremap <silent> ,C :<C-u>:FzfCommands<CR>
+" Filesを表示
+nnoremap <silent> ,f :<C-u>:FzfFiles<CR>
+" Helpを表示
+nnoremap <silent> ,H :<C-u>:FzfHelptags<CR>
+" ファイル履歴を表示
+nnoremap <silent> ,r :<C-u>:FzfHistory<CR>
+" コマンド履歴を表示
+nnoremap <silent> ,R :<C-u>:FzfHistory:<CR>
+cnoremap <C-r> :<C-u>:FzfHistory:<CR>
+" Windowを表示
+nnoremap <silent> ,w :<C-u>:FzfWindows<CR>
 '''
 
 [[plugins]]
 repo = 'nanotee/zoxide.vim'
 hook_add = '''
-cnoremap zz :Zi<CR>
+" cdの際にdirectoryのスコアを増やす
+let g:zoxide_hook = 'pwd'
+" zoxideを起動
+cnoremap zz :i<CR>
 '''
 
 [[plugins]]
@@ -44,6 +62,12 @@ noremap <silent> ,b :<C-u>:Fern . -drawer -reveal=% -toggle<CR>
 # エディター関連
 [[plugins]]
 repo = 'jiangmiao/auto-pairs'
+hook_add = '''
+" auto-pairsの削除を無効
+let g:AutoPairsMapBS = 0
+" auto-pairsのスペースを無効
+let g:AutoPairsMapSpace = 0
+'''
 
 [[plugins]]
 repo = 'tpope/vim-surround'
@@ -56,6 +80,10 @@ repo = 'simeji/winresizer'
 
 [[plugins]]
 repo = 'bronson/vim-trailing-whitespace'
+
+## コメントアウト
+[[plugins]]
+repo = 'tpope/vim-commentary'
 
 # markdown
 [[plugins]]

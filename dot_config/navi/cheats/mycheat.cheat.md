@@ -17,8 +17,8 @@ asdf plugin list --urls
 # plugin list all
 asdf plugin list all | less -iRMW --use-color
 
-# plugin add [ex:asdf plugin add <name> <git-url>]
-asdf plugin add <name> <git-url>
+# plugin add [ex:asdf plugin add <name>]
+asdf plugin add <name>
 
 # install [ex:asdf install <name> <version>]
 asdf install <name> <version>
@@ -71,14 +71,11 @@ python manage.py showmigrations <app_name>
 # make migration
 python manage.py makemigrations --name <name>
 
-# migrate [ex:python manage.py migrate concierges 0031]
+# migrate [ex:python manage.py migrate concierges 0031][zero:all reset,ex:python manage.py migrate concierges zero]
 python manage.py migrate <app_name> <migration_name>
 
 # check migration [ex:python manage.py sqlmigrate issues 0035]
 python manage.py sqlmigrate <app_name> <migration_name>
-
-# rollback migration [ex:python manage.py migrate concierges 0031]
-python manage.py migrate <app_name> <rollback_to_migration_name>
 ```
 
 ```sh
@@ -192,7 +189,30 @@ docker compose -p <project> up -d
 $ project: docker compose ls --all \
   --- --headers 1 --column 1
 $ service: docker compose -p <project> ps --all \
-  --- --headers 1 --column 3
+  --- --headers 1 --column 4
+
+```sh
+;--------------------------------------------------------------
+; docker-tool
+;--------------------------------------------------------------
+% docker-tool(dive)
+
+# dive image
+dive <image>
+
+# dive build [-f:file path][--target <target>:target image]
+dive build -f <dockerfile><_--target_target_> .
+
+# dive workaround
+export DOCKER_HOST=$(docker context inspect -f '{{ .Endpoints.docker.Host }}')
+```
+
+$ image: docker image ls -a \
+  --format "table {{.ID}}\t{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}\t{{.Size}}" \
+  --- --headers 1 --column 2
+$ dockerfile: find . -type f -name '*Dockerfile' -not -name '.*'
+$ _--target_target_: echo -e "\n --target_target "
+;$
 
 ```sh
 ;--------------------------------------------------------------
@@ -233,6 +253,9 @@ git --no-pager diff --pickaxe-regex -S '<regex>' -U0
 
 # diff staging file [--cached(staged):diff staging and commit][--stat/numstat/patch-with-stat:show stat]
 git diff --cached<_stat> -- <staging_filename> | delta<_no-gitconfig>
+
+# diff merge conflict file
+git diff --diff-filter=U
 
 # diff between base-branch...HEAD
 git diff<_--name-only> $(git merge-base <base_branch> HEAD)...HEAD -- <base-head_diff_filename> | delta<_no-gitconfig>
@@ -311,6 +334,9 @@ git merge --no-commit --no-ff <all_branch> && git diff --cached --name-only
 
 # merge --no-commit
 git merge --no-commit origin/<merge_branch>
+
+# merge ours/theirs
+git checkout<_--ours_theirs> -- <conflict_files> && git add <conflict_files>
 
 # commit fixup
 git commit --fixup <commit1> && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet <commit1>~
@@ -494,6 +520,7 @@ $ _--name-only: echo -e "\n --name-only\n --name-status"
 $ _--option: echo -e "\n --global\n --local\n --system"
 $ _stat: echo -e "\n --stat\n --numstat\n --patch-with-stat"
 $ _shallow-option: echo -e "\n --depth 1\n --filter=blob:none\n --filter=tree:0"
+$ _--ours_theirs: echo -e " --ours\n --theirs"
 $ tag_search: echo -e "staging\nrelease"
 $ delete_flag: echo -e "d\nD"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
@@ -578,6 +605,10 @@ $ commit1-commit2_filename: echo . && \
   git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ <commit1>...<commit2> \
   --- --multi --expand
 $ git_filename: git ls-tree -r --name-only <commit1>
+$ conflict_files: echo . && \
+  git diff --name-only --diff-filter=U \
+  --- --multi --expand \
+  --preview "git diff {1} | delta --no-gitconfig"
 $ diff_filename: git diff --name-only <commit1> \
   | xargs -I % echo "<commit1>;%" \
   --- --delimiter ; --column 2 \
@@ -646,8 +677,8 @@ gh pr checks <pr_no><_--watch><_web>
 # pr checkout
 gh pr checkout <pr_no>
 
-# pr create [--base:base-branch]
-gh pr create --base "<base_branch>"
+# pr create [--base:base-branch][--assignee "@me":assign me]
+gh pr create --base "<base_branch>" --assignee "" --body-file "<pr_body>"
 
 # pr edit
 gh pr edit <pr_my_no>
@@ -744,6 +775,7 @@ $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
+$ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
@@ -847,14 +879,12 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 # act : list workflows for a specific event [-l:list]
 act -l <event>
 
-# act : dry-run workflows for a specific event[-n:dry-run]
-act -n <event> -W <workflow>
-
-# act : run workflows for a specific event
-act <event> -W <workflow>
+# act : run workflows for a specific event[-n:dry-run]
+act<_-dry-run_><event> -W <workflow>
 
 ```
 $ event: echo -e "push\npull_request\nissues"
+$ _-dry-run_: echo -e " \n -n "
 $ workflow: find .github/workflows
 
 ```sh
@@ -876,8 +906,8 @@ nodenv install <version>
 ```sh
 % npm
 
-# display bin directory [ex: $(npm bin)/cspell]
-$(npm bin)<command>
+# display bin directory [ex: $(npm root)/.bin/cspell]
+$(npm root)/.bin/<command>
 
 # open package files [ex:npm edit axios]
 npm edit <package>
@@ -1021,6 +1051,9 @@ grep -vPr '<regex>' ./**/*
 
 # grep : [-o:only matching][ex:grep -Po "v[0-9]*\.[0-9]*.[0-9]*"]
 grep -oP '<regex>'
+
+# gron : json to flat and filter to json [-u:ungron]['del(.[] | nulls)':remove null]
+gron | grep -p '<regex>' | gron -u | jq 'del(.[] | nulls)'
 
 # head : [-n:output number]
 head -n <num>
@@ -1191,8 +1224,8 @@ curl -sS -O '<url>'
 # curl : curl http header[-I:display only header][-H:header ex: -H 'Content-Type: application/json']
 curl -sI '<url>' -H '<header>'
 
-# curl : POST [-X:request method][-d:post data ex: -d 'key=value&key2=value2']
-curl -X 'POST' '<url>' -H '<header>' -d '<data>'
+# curl : POST [-i:include headers][-X:request method][-d:post data ex: -d '{"key1":"value1", "key2":"'"$value2"'"}']
+curl -isS -X 'POST' '<url>' -H '<header>' -d '{"<key1>":"<value1>","<key2>":"'"$<value2>"'"}'
 
 # chsh : change shell [ex:chsh -s $(which zsh)]
 chsh -s <shells>
@@ -1245,6 +1278,12 @@ ln -s <file> <dir>
 # lsof(=list open files) : display file,pid,user[-i:port]
 lsof -i:<port>
 
+# make help
+grep "^[a-zA-Z\-]*:" Makefile | sed -e 's/^/make /' -e 's/://'
+
+# make print
+make -n <make_command>
+
 # ping : [-c <num>:ping count][-w:ping while][ex:ping www.google.co.jp]
 ping <address>
 
@@ -1288,6 +1327,8 @@ $ shells: cat /etc/shells | sed 1,4d
 ;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type f -name '*' -print
 ;$ dir: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type d -name '*' -print
 $ extension: echo -e "tar.gz\ntgz"
+$ make_command: grep "^[a-zA-Z\-]*:" Makefile | sed -e 's/://' \
+  --- --map "cut -d' ' -f1"
 ;$
 
 ```sh
@@ -1536,7 +1577,7 @@ $ window: t-rec --ls-win \
 # if
 if <condition> ; then <true_command> ; else <false_command> ;fi
 
-# if : [a != b:not equal][-n "$var":not zero][-e path:exist file]
+# if : [a != b:not equal(int,str)][-n "$var":not zero][-z "$var":zero][-e path:exist file][1 -le 10,10 -ge 1:{less,greter} equal]
 [ <condition> ] && <true_command> || <false_command>
 
 # for : [ex:for code in {000..255}; do print -nP -- "%F{$code}$code %f"; [ $((${code} % 16)) -eq 15 ] && echo; done]
@@ -1598,7 +1639,10 @@ tmux list-keys | less -iRMW --use-color
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
 # respawn-pane [-k:kill existing command,-c:start-directory]
-tmux respawn-pane -k -c '#{pane_current_path}'
+tmux respawn-pane -k -c '#{pane_current_path}' -t <pane_to>
+
+# window move
+tmux swap-window -t <window_no>
 
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>

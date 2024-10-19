@@ -28,7 +28,7 @@ alias nr='npm run'
 # atclone= clone後に実行する関数を指定
 # atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
 # configure=./configureを実行、make前に実行の場合はconfigure'!'
-# make= make install
+# make= make install、インストール先を指定するにはmake PREFIX=$ZPFX
 # rustup = rust installer
 # cargo = rust builder and package manager
 # (plugin script loading)
@@ -36,6 +36,9 @@ alias nr='npm run'
 # atload = 読込完了時に実行する関数を指定
 # pick = 引数に与えられたものを$pathに追加
 # sbin = 引数に与えられたものを$pathに追加
+
+# 実行順:atinit -> atpull! -> make'!!' -> mv -> cp -> make! -> atclone/atpull -> make -> (plugin script loading) -> src -> multisrc -> atload.
+# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#order-of-execution
 
 ### command ###
 
@@ -71,6 +74,7 @@ __atuin_atload() {
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v18.0.1" \
     sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
@@ -78,6 +82,7 @@ zinit wait lucid light-mode blockf for \
 {{ else }}
 zinit wait lucid light-mode blockf for \
     from"gh-r" bpick"*x86_64-unknown-linux-musl*" \
+    ver"v18.0.1" \
     sbin"atuin*/atuin" \
     atclone"atuin gen-completions --shell zsh > _atuin" atpull"%atclone" \
     atload"__atuin_atload" \
@@ -90,6 +95,7 @@ __bat_atload() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.23.0" \
     sbin"bat*/bat" \
     cp"bat*/autocomplete/bat.zsh -> _bat" \
     atload"__bat_atload" \
@@ -114,6 +120,7 @@ zinit wait lucid light-mode blockf for \
 # delta #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"0.16.5" \
     sbin"delta*/delta" \
     atload"compdef _gnu_generic delta" \
     @'dandavison/delta'
@@ -121,6 +128,7 @@ zinit wait lucid light-mode blockf for \
 # difftastic #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"0.54.0" \
     sbin"difft" \
     @'Wilfred/difftastic'
 
@@ -143,6 +151,7 @@ __fzf_atload() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.55.0" \
     sbin"fzf" \
     atload"__fzf_atload" \
     @'junegunn/fzf'
@@ -153,25 +162,28 @@ zinit wait lucid blockf for \
 # fx #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"30.1.0" \
     sbin"fx* -> fx" \
     @'antonmedv/fx'
 
 # ghq #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v1.4.2" \
     sbin"*/ghq" \
     @'x-motemen/ghq'
 
 # gitui #
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"gitui" \
-    sbin"gitui" \
     ver"v0.22.1" \
+    sbin"gitui" \
     @'extrawurst/gitui'
 
 # github-cli #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v2.55.0" \
     sbin"gh*/bin/gh" \
     atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" \
     @'cli/cli'
@@ -180,11 +192,13 @@ zinit wait lucid light-mode blockf for \
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.10.1" \
     sbin"darwin* -> gh-poi" \
     @'seachicken/gh-poi'
 {{ else -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.10.1" \
     sbin"linux* -> gh-poi" \
     @'seachicken/gh-poi'
 {{- end }}
@@ -197,14 +211,10 @@ __glow_atclone() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v1.5.1" \
     sbin"glow" \
     atclone"__glow_atclone" \
     @'charmbracelet/glow'
-
-# git-jump #
-zinit wait lucid light-mode blockf for \
-    as"program" pick"git-jump" \
-    "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
 
 # ijq #
 zinit wait lucid light-mode blockf for \
@@ -215,12 +225,14 @@ zinit wait lucid light-mode blockf for \
 # jq #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"jq-1.6" \
     sbin"jq* -> jq" \
     @'jqlang/jq'
 
 # lazydocker #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.23.1" \
     sbin"lazydocker* -> lazydocker" \
     @'jesseduffield/lazydocker'
 
@@ -234,13 +246,24 @@ __navi_atclone() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
+    ver"v2.22.1" \
     sbin"navi" \
     atclone"__navi_atclone" \
     @'denisidoro/navi'
 
+# tig #
+zinit wait lucid light-mode blockf for \
+    atclone"make configure && make prefix=$ZPFX install-release-doc" \
+    atpull"%atclone" \
+    ver"tig-2.5.10" \
+    configure"!" \
+    make"install PREFIX=$ZPFX" \
+    @'jonas/tig'
+
 # tgpt #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v2.7.1" \
     sbin"tgpt* -> tgpt" \
     @'aandrew-me/tgpt'
 
@@ -256,6 +279,7 @@ zinit wait lucid light-mode blockf for \
 {{ else -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v4.4.1" \
     sbin"ug* -> ug" \
     sbin"ugrep* -> ugrep" \
     @'Genivia/ugrep'
@@ -264,6 +288,7 @@ zinit wait lucid light-mode blockf for \
 # up #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.4" \
     sbin"up* -> up" \
     @'akavel/up'
 
@@ -271,6 +296,7 @@ zinit wait lucid light-mode blockf for \
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.2.5" \
     sbin"yazi*/yazi -> yazi" \
     @'sxyazi/yazi'
 {{ else -}}
@@ -295,6 +321,7 @@ zinit wait lucid light-mode blockf for \
 # zabrze #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.3.0" \
     as"program" \
     atload'eval "$(zabrze init --bind-keys)"' \
     @'Ryooooooga/zabrze'
@@ -307,6 +334,7 @@ __zoxide_atload() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
+    ver"v0.9.2" \
     sbin"zoxide" \
     atload"__zoxide_atload" \
     @'ajeetdsouza/zoxide'
@@ -318,6 +346,17 @@ zinit wait lucid light-mode blockf for \
     sbin"blueutil" \
     @'toy/blueutil'
 {{- end }}
+
+## programs ##
+
+# git-jump #
+zinit wait lucid light-mode blockf for \
+    as"program" pick"git-jump" \
+    "https://github.com/git/git/blob/master/contrib/git-jump/git-jump"
+
+zinit wait lucid light-mode blockf for \
+    as"program" pick"fzf-tmux" \
+    "https://github.com/junegunn/fzf/blob/master/bin/fzf-tmux"
 
 ### node ###
 __node_atclone() {
@@ -730,6 +769,7 @@ bindkey '^[Q^[W' _copy_word
 _shortcut() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
       cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
   else
@@ -805,6 +845,22 @@ bindkey '^[d' _quote-previous-word-in-double
 # function
 #--------------------------------------------------------------
 
+cb() {
+  if command -v pbcopy &> /dev/null; then
+    command pbcopy
+  elif command -v clip.exe &> /dev/null; then
+    command clip.exe
+  fi
+}
+
+open() {
+  if command -v open &> /dev/null; then
+    command open
+  elif command -v xdg-open &> /dev/null; then
+    command xdg-open
+  fi
+}
+
 ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
@@ -828,12 +884,16 @@ ssh() {
   fi
 }
 
-cb() {
-  if command -v pbcopy &> /dev/null; then
-    command pbcopy
-  elif command -v clip.exe &> /dev/null; then
-    command clip.exe
-  fi
+zsh-history-backup() {
+  local backup_dir="$HOME/.local/state/zsh"
+  while sleep $((60 * 15)) ; do
+    if [[ $(wc -l "$backup_dir/.zsh_history" | grep -o '[0-9]*') -gt 1000 ]] ; then
+      cp -u "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
+      echo "$(date "+[%y/%m/%d %H:%M:%S]") zsh-history-backup!"
+    else
+      osascript -e 'display notification "Backup Error!" with title "zsh"'
+    fi
+  done
 }
 
 zsh-startuptime() {
@@ -911,8 +971,20 @@ export PSQL_HISTORY="$HOME/.local/state/psql/.psql_history"
 mkdir -p "$HOME/.local/state/less" 2>/dev/null
 export LESSHISTFILE="$HOME/.local/state/less/.lesshst"
 
+# less
+export LESS_TERMCAP_mb=$'\e[1;32m'
+export LESS_TERMCAP_md=$'\e[1;32m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_so=$'\e[01;33m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export LESS_TERMCAP_us=$'\e[1;4;31m'
+
 # slack
 export SLACK_DEVELOPER_MENU=true
+
+# docker
+export COMPOSE_MENU=0
 
 {{ if eq .chezmoi.os "linux" -}}
 # fly

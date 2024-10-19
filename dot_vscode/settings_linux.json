@@ -4,8 +4,12 @@
   ///////////////////////////////////////////////
   // 新しいdiffエディタを使用する
   "diffEditor.experimental.useVersion2": true,
+  // 差分エディタを並べて表示
+  "diffEditor.renderSideBySide": true,
   // 未変更部分は折りたたむ
   // "diffEditor.experimental.collapseUnchangedRegions": true,
+  // 非変更のコードを折りたたむ
+  "diffEditor.hideUnchangedRegions.enabled": true,
   "editor.rulers": [90],
   "editor.guides.bracketPairs": true,
   // 連続した空白文字を表示
@@ -38,9 +42,10 @@
   "files.trimTrailingWhitespace": true,
   // URLコピー時にリンク化する
   "markdown.editor.pasteUrlAsFormattedLink.enabled": "smart",
+  // 複数ファイルの差分表示を有効にする
+  "multiDiffEditor.experimental.enabled": true,
   // 検索対象から除外
   "search.exclude": {
-    "**\/*.json": true,
     "**\/build": true,
     "**\/dist": true,
     "**\/node_modules": true,
@@ -48,18 +53,25 @@
     "**\/site-packages": true,
     "**\/.mypy_cache": true
   },
+  // Quick Open におけるエディター履歴の並べ替え順序制御
+  "search.quickOpen.history.filterSortOrder": "recency",
   // MacのNativeWindowで各ウィンドウをタブのように表示
   // "window.nativeTabs": true,
   "update.showReleaseNotes": false,
   // 新しく開くウィンドウのサイズ指定
   "window.newWindowDimensions": "maximized",
+  // タブの高さをコンパクトにする
+  "window.density.editorTabHeight": "compact",
   "workbench.editor.splitInGroupLayout": "vertical",
   // タブを閉じたときに右タブにフォーカスする
   "workbench.editor.focusRecentEditorAfterClose": false,
   // CodeNavigationでの移動はプレビューモード(同一タブ)で開く
   "workbench.editor.enablePreviewFromCodeNavigation": true,
+  // ピン止めしたタブを別行にする
+  "workbench.editor.pinnedTabsOnSeparateRow": true,
   // 左端のアクティビティバー非表示
   "workbench.activityBar.visible": false,
+  "workbench.activityBar.location": "hidden",
   // タイトルバーのレイアウトコントロールを非表示
   "workbench.layoutControl.enabled": false,
   ///////////////////////////////////////////////
@@ -90,8 +102,11 @@
   // "python.analysis.autoImportUserSymbols": true,
   // 返り値のTypeHintを表示
   "python.analysis.inlayHints.functionReturnTypes": true,
+  // inlayHintsをすべて表示
+  "python.analysis.inlayHints.callArgumentNames": "all",
   // 文字列のパスのコードジャンプを有効
   "python.analysis.gotoDefinitionInStringLiteral": true,
+  "python.venvPath": "./.venv",
   // 以下2つでf-stringの補完を有効
   // "python.analysis.autoFormatStrings": true,
   // "python.analysis.pylanceLspClientEnabled": true,
@@ -262,6 +277,10 @@
   "githubPullRequests.pullBranch": "always",
   // (GitHub Pull Requests and Issues) コメントタイプのデフォルトをレビューにする
   "githubPullRequests.defaultCommentType": "review",
+  // (GitHub Pull Requests and Issues) GitHubのmultiDiffを表示
+  "githubPullRequests.focusedMode": "multiDiff",
+  // (GitHub Copilot) 自動で補完が出るようにする
+  "github.copilot.editor.enableAutoCompletions": true,
   // (Gitlens)
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
@@ -283,6 +302,8 @@
   "jumpy.fontSize": 12,
   "jumpy.darkThemeBackground": "yellow",
   "jumpy.fontFamily": "Menlo, Monaco, 'Courier New', monospace",
+  // (metaGo)
+  "metaGo.decoration.characters": "6, 7, 8, 9, 0",
   // (MultiCommand)
   "multiCommand.commands": [
     {
@@ -322,6 +343,8 @@
     }
   ],
   "vim.hlsearch": true,
+  // (Vim)インサートモードで行末で止まらないようにする
+  "vim.whichwrap": "h,l,<,>,[,]",
   // (Vim) yank時にハイライトする
   "vim.highlightedyank.enable": true,
   // (Vim) クリップボードにもコピーする
