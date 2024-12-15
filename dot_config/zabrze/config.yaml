@@ -387,6 +387,10 @@ abbrevs:
     abbr: nrl
     snippet: npm run lint
 
+  - name: nro
+    abbr: nro
+    snippet: npm run orval
+
   - name: nrt
     abbr: nrt
     snippet: npm run test
@@ -419,6 +423,10 @@ abbrevs:
   - name: prl
     abbr: prl
     snippet: pdm run lint
+
+  - name: prt
+    abbr: prt
+    snippet: pdm run test
 
   - name: ps
     abbr: ps
@@ -507,7 +515,8 @@ abbrevs:
     context: '^git\s(branch|for-each-ref)\s'
 
   - name: (git branch) -vv
-    abbr-pattern: (v|vv)
+    abbr: vv
+    # abbr-pattern: (v|vv)
     snippet: -vv
     global: true
     context: '^git.*branch\s'
