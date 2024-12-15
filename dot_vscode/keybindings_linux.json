@@ -790,9 +790,14 @@
     "when": "inDiffEditor"
   },
   // (Gitlens) Commitsにフォーカスする
+  // {
+  //   "key": "ctrl+shift+alt+c",
+  //   "command": "gitlens.views.commits.focus",
+  //   "when": "!gitlens:disabled"
+  // },
   {
     "key": "ctrl+shift+alt+c",
-    "command": "gitlens.views.commits.focus",
+    "command": "gitlens.views.scm.grouped.focus",
     "when": "!gitlens:disabled"
   },
   // TODO : (Gitlens) Git Blame表示(alt+b→alt+/に変更)
