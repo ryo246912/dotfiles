@@ -1639,6 +1639,9 @@ psql -l
 # keys
 tmux list-keys | less -iRMW --use-color
 
+# list-panes
+tmux list-panes -s -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty} [history #{history_size}/#{history_limit}, #{history_bytes} bytes]" | column -t
+
 # pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
