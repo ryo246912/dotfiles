@@ -485,6 +485,9 @@ git remote add <shortname> git@github.com:<user>/<repo>.git
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
 
+# add origin/HEAD
+git remote set-head origin main
+
 # check-ignore
 git check-ignore -v <file>
 
@@ -695,8 +698,8 @@ gh pr status ; gh issue status
 # issues view
 gh issue view <issue_no> --comments<_web>
 
-# issues create
-gh issue create
+# issues create[--assignee "@me":assign me]
+gh issue create --assignee "" --body-file "<issue_body>"
 
 # issues list(HOST)
 gh issue list --assignee "<author>" --state <state>
@@ -765,8 +768,8 @@ open-cli <repo_url>
 # delete(poi) branch
 gh-poi<_--dry-run>
 ```
-$ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
-$ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
+$ author: echo -e "@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
+$ search: echo -e "user-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--watch: echo -e "\n --watch"
@@ -776,6 +779,7 @@ $ state: echo -e "open\nall\nclosed\nmerged"
 $ _web: echo -e "\n -w"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
 $ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
+$ issue_body: find ~/private/Issue -type f -path "*.md" | sort
 $ branch: echo -e "HEAD\n"
 $ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
