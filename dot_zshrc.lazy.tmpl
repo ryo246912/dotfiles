@@ -252,6 +252,7 @@ zinit wait lucid light-mode blockf for \
     @'denisidoro/navi'
 
 # tig #
+{{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
     atclone"make configure && make prefix=$ZPFX install-release-doc" \
     atpull"%atclone" \
@@ -259,6 +260,7 @@ zinit wait lucid light-mode blockf for \
     configure"!" \
     make"install PREFIX=$ZPFX" \
     @'jonas/tig'
+{{- end }}
 
 # tgpt #
 zinit wait lucid light-mode blockf for \
