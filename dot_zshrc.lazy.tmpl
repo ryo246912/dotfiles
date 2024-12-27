@@ -398,6 +398,14 @@ zinit wait lucid light-mode blockf for \
     atload"source autopair.zsh && autopair-init" \
     @'hlissner/zsh-autopair'
 
+__zsh-auto-notify_atload() {
+    export AUTO_NOTIFY_THRESHOLD=20
+    AUTO_NOTIFY_IGNORE+=("czg" "chezmoi apply" "gitui")
+}
+zinit wait lucid light-mode blockf for \
+    atload"__zsh-auto-notify_atload" \
+    @'MichaelAquilina/zsh-auto-notify'
+
 zinit wait lucid light-mode blockf for \
     @'zdharma/fast-syntax-highlighting'
 

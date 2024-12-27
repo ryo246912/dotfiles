@@ -165,7 +165,8 @@ abbrevs:
 
   - name: gchm
     abbr: gchm
-    snippet: git checkout master
+    evaluate: true
+    snippet: git checkout $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
 
   - name: gchs
     abbr: gchs
@@ -243,9 +244,19 @@ abbrevs:
     abbr: gmo
     snippet: git merge --no-ff origin/
 
+  - name: gmom
+    abbr: gmom
+    evaluate: true
+    snippet: git merge --no-ff $(git rev-parse --abbrev-ref origin/HEAD)
+
   - name: gmu
     abbr: gmu
     snippet: git merge --no-ff upstream/
+
+  - name: gmum
+    abbr: gmum
+    evaluate: true
+    snippet: git merge --no-ff $(git rev-parse --abbrev-ref upstream/HEAD)
 
   - name: gp
     abbr: gp
@@ -257,7 +268,8 @@ abbrevs:
 
   - name: gpom
     abbr: gpom
-    snippet: git pull origin master --no-commit
+    evaluate: true
+    snippet: git pull origin $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
 
   - name: gpos
     abbr: gpos
@@ -265,7 +277,8 @@ abbrevs:
 
   - name: gpum
     abbr: gpum
-    snippet: git pull upstream master --no-commit
+    evaluate: true
+    snippet: git pull upstream $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
 
   - name: gr
     abbr: gr
@@ -281,7 +294,8 @@ abbrevs:
 
   - name: greom
     abbr: greom
-    snippet: git reset --hard origin/master
+    evaluate: true
+    snippet: git reset --hard $(git rev-parse --abbrev-ref origin/HEAD)
 
   - name: greos
     abbr: greos
@@ -289,11 +303,13 @@ abbrevs:
 
   - name: grom
     abbr: grom
-    snippet: git rebase --autostash origin/master
+    evaluate: true
+    snippet: git rebase --autostash $(git rev-parse --abbrev-ref origin/HEAD)
 
   - name: grum
     abbr: grum
-    snippet: git rebase --autostash upstream/master
+    evaluate: true
+    snippet: git rebase --autostash upstream/$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
 
   - name: gs
     abbr: gs
@@ -387,6 +403,10 @@ abbrevs:
     abbr: nrl
     snippet: npm run lint
 
+  - name: nro
+    abbr: nro
+    snippet: npm run orval
+
   - name: nrt
     abbr: nrt
     snippet: npm run test
@@ -419,6 +439,10 @@ abbrevs:
   - name: prl
     abbr: prl
     snippet: pdm run lint
+
+  - name: prt
+    abbr: prt
+    snippet: pdm run test
 
   - name: ps
     abbr: ps
@@ -507,7 +531,8 @@ abbrevs:
     context: '^git\s(branch|for-each-ref)\s'
 
   - name: (git branch) -vv
-    abbr-pattern: (v|vv)
+    abbr: vv
+    # abbr-pattern: (v|vv)
     snippet: -vv
     global: true
     context: '^git.*branch\s'
@@ -542,9 +567,10 @@ abbrevs:
     global: true
     context: '^git.*commit\s'
 
-  - name: (git checkout) master
+  - name: (git checkout) master/main
     abbr: m
-    snippet: master
+    snippet: $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
+    evaluate: true
     global: true
     context: '^git\scheckout\s'
 
