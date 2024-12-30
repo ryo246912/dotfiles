@@ -91,6 +91,8 @@ set backspace=indent,eol,start
 set paste
 
 "" キーバインド関連
+" leaderキーを設定
+let mapleader = ","
 " {n,i,x,c...}[nore]map: [non-recursive] map (n:normal,i:insert,x:visual,c:command lineモード)
 " xnoremap <key-sequence> <vim-command>
 " d,c,sはレジスタに登録しないようにする
@@ -107,11 +109,11 @@ set paste
 " 最終行の行末に移動
 nnoremap GG G$
 xnoremap GG G$
-" ,hl → 行頭・行末移動
-nnoremap ,h ^
-nnoremap ,l $
-xnoremap ,h ^
-xnoremap ,l $h
+" <leader>hl → 行頭・行末移動
+nnoremap <leader>h ^
+nnoremap <leader>l $
+xnoremap <leader>h ^
+xnoremap <leader>l $h
 " clipboardにyank
 noremap gy "+y
 " ESC連打でハイライト解除
@@ -122,15 +124,19 @@ cnoremap <C-k> <C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>
 noremap! <C-a> <Home>
 noremap! <C-e> <End>
 " 新しいタブを開く
-nnoremap ,t :tabnew<CR>
+nnoremap <leader>t :tabnew<CR>
 " タグジャンプする/1つ前のタグに戻る
-nnoremap ,] :tag<CR>
-nnoremap ,[ :pop<CR>
+nnoremap <leader>] :tag<CR>
+nnoremap <leader>[ :pop<CR>
 " 相対・絶対行の表示切替
-nnoremap ,n :<C-u>setlocal relativenumber!<CR>
+nnoremap <leader>n :<C-u>setlocal relativenumber!<CR>
+" 挿入モードの切り替え
+nnoremap <leader>P :set paste!<CR>
 " popupでterminalを開く
-nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
-nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+" ターミナル開く
+nnoremap <leader>T :let $VIM_DIR=expand('%:p:h')<CR>:terminal<CR>cd $VIM_DIR<CR>
 
 " ウィンドウ最大化/もとに戻す関数
 let g:toggle_window_size = 0
@@ -144,7 +150,7 @@ function! ToggleWindowSize()
     let g:toggle_window_size = 1
   endif
 endfunction
-nnoremap ,z :call ToggleWindowSize()<CR>
+nnoremap <leader>z :call ToggleWindowSize()<CR>
 
 " g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
 function! GoToNthTab(n)
@@ -215,4 +221,3 @@ endif
 "   call map(s:removed_plugins, "delete(v:val, 'rf')")
 "   call dein#recache_runtimepath()
 " endif
-

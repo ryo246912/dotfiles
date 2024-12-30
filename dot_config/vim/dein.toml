@@ -15,20 +15,20 @@ hook_add = '''
 let g:fzf_command_prefix = 'Fzf'
 
 " bufferを表示
-nnoremap <silent> ,B :<C-u>:FzfBuffers<CR>
+nnoremap <silent> <leader>b :<C-u>:FzfBuffers<CR>
 " Commandを表示
-nnoremap <silent> ,C :<C-u>:FzfCommands<CR>
+nnoremap <silent> <leader>C :<C-u>:FzfCommands<CR>
 " Filesを表示
-nnoremap <silent> ,f :<C-u>:FzfFiles<CR>
+nnoremap <silent> <leader>f :<C-u>:FzfFiles<CR>
 " Helpを表示
-nnoremap <silent> ,H :<C-u>:FzfHelptags<CR>
+nnoremap <silent> <leader>H :<C-u>:FzfHelptags<CR>
 " ファイル履歴を表示
-nnoremap <silent> ,r :<C-u>:FzfHistory<CR>
+nnoremap <silent> <leader>r :<C-u>:FzfHistory<CR>
 " コマンド履歴を表示
-nnoremap <silent> ,R :<C-u>:FzfHistory:<CR>
+nnoremap <silent> <leader>R :<C-u>:FzfHistory:<CR>
 cnoremap <C-r> :<C-u>:FzfHistory:<CR>
 " Windowを表示
-nnoremap <silent> ,w :<C-u>:FzfWindows<CR>
+nnoremap <silent> <leader>w :<C-u>:FzfWindows<CR>
 '''
 
 [[plugins]]
@@ -52,11 +52,13 @@ repo = 'lambdalisue/fern.vim'
 hook_add = '''
 " 隠しファイルも表示する
 let g:fern#default_hidden = 1
+let g:fern#opener = 'split'
 
-" ,eでdrawerを開くまたはフォーカスする
-noremap <silent> ,e :<C-u>:Fern . -drawer -reveal=%<CR>
-" ,bでdrawerを開閉する
-noremap <silent> ,b :<C-u>:Fern . -drawer -reveal=% -toggle<CR>
+" <leader>eでdrawerを開くまたはフォーカスする
+noremap <silent> <leader>e :<C-u>:Fern . -drawer -reveal=%<CR>
+" <leader>sでdrawerを開閉する
+noremap <silent> <leader>s :<C-u>:Fern . -drawer -reveal=% -toggle<CR>
+"
 '''
 
 # エディター関連
