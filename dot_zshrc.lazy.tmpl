@@ -400,6 +400,7 @@ zinit wait lucid light-mode blockf for \
     atload"source autopair.zsh && autopair-init" \
     @'hlissner/zsh-autopair'
 
+{{ if eq .chezmoi.os "darwin" -}}
 __zsh-auto-notify_atload() {
     export AUTO_NOTIFY_THRESHOLD=20
     AUTO_NOTIFY_IGNORE+=("czg" "chezmoi apply" "gitui")
@@ -407,6 +408,7 @@ __zsh-auto-notify_atload() {
 zinit wait lucid light-mode blockf for \
     atload"__zsh-auto-notify_atload" \
     @'MichaelAquilina/zsh-auto-notify'
+{{- end}}
 
 zinit wait lucid light-mode blockf for \
     @'zdharma/fast-syntax-highlighting'
@@ -599,6 +601,7 @@ _custom_navi_widget() {
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
   if [ -n "$TMUX" ]; then
+  {{ if eq .chezmoi.os "darwin" -}}
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       window=$(tmux display -p -F "#S:#I.#P") && \
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
@@ -609,6 +612,17 @@ _custom_navi_widget() {
       tmux set-buffer -b tmp "$TMP_BUFFER" && \
       tmux paste-buffer -drp -t $window -b tmp \
     '
+  {{ else }}
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      window=$(tmux display -p -F "#S:#I.#P") && \
+      export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
+      TMP_BUFFER=$(navi --print) && \
+      TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
+      TMP_BUFFER=${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"} && \
+      tmux set-buffer -b tmp "$TMP_BUFFER" && \
+      tmux paste-buffer -drp -t $window -b tmp \
+    '
+  {{- end }}
   else
     local TMP_BUFFER
     #後方の空白文字を削除 ${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"}
