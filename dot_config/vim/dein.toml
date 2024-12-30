@@ -88,3 +88,13 @@ repo = 'tpope/vim-commentary'
 # markdown
 [[plugins]]
 repo = 'ksudate/prev-md.vim'
+# vim-session
+[[plugins]]
+repo = 'tpope/vim-obsession'
+hook_add = '''
+" セッションの保存マッピング
+cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
+
+" セッションの読み込みマッピング
+cabbr sr :source ~/.local/state/vim/Session.vim<CR>
+'''

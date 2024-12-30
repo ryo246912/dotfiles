@@ -7,6 +7,8 @@ set noswapfile
 set mouse=a
 " コマンドラインの履歴上限を10000件にする
 set history=10000
+" session保存時のオプション
+set sessionoptions+=localoptions
 
 "" ファイラー(netrw)
 " ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
