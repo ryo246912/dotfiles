@@ -962,6 +962,9 @@ pyenv install --list | less -iRMW --use-color
 
 # pyenv install version
 pyenv install <version>
+
+# uvx
+uvx <libs>
 ```
 
 ```sh
