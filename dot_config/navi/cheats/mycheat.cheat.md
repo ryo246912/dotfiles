@@ -962,6 +962,9 @@ pyenv install --list | less -iRMW --use-color
 
 # pyenv install version
 pyenv install <version>
+
+# uvx
+uvx <libs>
 ```
 
 ```sh
@@ -1675,23 +1678,22 @@ $ tty: tmux lsp -a \
 ; vim
 ;--------------------------------------------------------------
 % vim:command
-# guit (no save)
-:q!
-
-# guit (save)
-:wq
-
 # move n rows
 :<n>
 
 # reload current buffer(file) [e=edit]
 :e
 
-# vim command history [q: → ctrl + c]
+# command history [q: → ctrl + c]
 q:
 
-# vim command history search
+# command history search
 q/
+# change paste mode
+:set paste!
+
+# display leader key
+:echo mapleader
 ```
 
 ```sh

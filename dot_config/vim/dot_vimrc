@@ -7,6 +7,8 @@ set noswapfile
 set mouse=a
 " コマンドラインの履歴上限を10000件にする
 set history=10000
+" session保存時のオプション
+set sessionoptions+=localoptions
 
 "" ファイラー(netrw)
 " ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
@@ -70,6 +72,8 @@ set incsearch
 "" 入力関連
 " タブ文字の表示幅
 set tabstop=2
+" 自動インデントのスペース幅
+set shiftwidth=2
 " 改行時に同じレベルにインデントする
 set autoindent
 " 改行時に入力された行の末尾に合わせて次の行のインデントを増減する
@@ -85,31 +89,40 @@ set whichwrap=b,s,h,l,<,>,[,]
 " eol     : 改行
 " start   : 挿入モード開始位置より手前の文字
 set backspace=indent,eol,start
-" 挿入モードでのインデント無効
-set paste
 
 "" キーバインド関連
+" leaderキーを設定
+let mapleader = ","
 " {n,i,x,c...}[nore]map: [non-recursive] map (n:normal,i:insert,x:visual,c:command lineモード)
 " xnoremap <key-sequence> <vim-command>
+" xをdに割り当て
+nnoremap x d
+xnoremap x d
+" xxをddに割り当て
+nnoremap xx dd
+xnoremap xx dd
+" ddを無効化してバッファに影響しないようにする
+nnoremap dd "_dd
+xnoremap dd "_dd
 " d,c,sはレジスタに登録しないようにする
-" nnoremap d "_d
-" nnoremap D "_D
-" xnoremap d "_d
-" nnoremap c "_c
-" nnoremap C "_C
-" nnoremap s "_s
-" nnoremap S "_S
-" xnoremap c "_c
-" xnoremap C "_C
+nnoremap d "_d
+xnoremap d "_d
+nnoremap D "_D
+nnoremap s "_s
+nnoremap S "_S
+nnoremap c "_c
+xnoremap c "_c
+nnoremap C "_C
+xnoremap C "_C
 
 " 最終行の行末に移動
 nnoremap GG G$
 xnoremap GG G$
-" ,hl → 行頭・行末移動
-nnoremap ,h ^
-nnoremap ,l $
-xnoremap ,h ^
-xnoremap ,l $h
+" <leader>hl → 行頭・行末移動
+nnoremap <leader>h ^
+nnoremap <leader>l $
+xnoremap <leader>h ^
+xnoremap <leader>l $h
 " clipboardにyank
 noremap gy "+y
 " ESC連打でハイライト解除
@@ -120,15 +133,26 @@ cnoremap <C-k> <C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>
 noremap! <C-a> <Home>
 noremap! <C-e> <End>
 " 新しいタブを開く
-nnoremap ,t :tabnew<CR>
+nnoremap <leader>t :tabnew<CR>
 " タグジャンプする/1つ前のタグに戻る
-nnoremap ,] :tag<CR>
-nnoremap ,[ :pop<CR>
+nnoremap <leader>] :tag<CR>
+nnoremap <leader>[ :pop<CR>
 " 相対・絶対行の表示切替
-nnoremap ,n :<C-u>setlocal relativenumber!<CR>
+nnoremap <leader>n :<C-u>setlocal relativenumber!<CR>
 " popupでterminalを開く
-nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
-nnoremap ,p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
+" ターミナル開く
+nnoremap <leader>T :let $VIM_DIR=expand('%:p:h')<CR>:terminal<CR>cd $VIM_DIR<CR>
+
+" abbr
+cabbr he help
+cabbr te terminal
+cabbr sv source ~/.config/vim/.vimrc
+" 挿入モードの切り替え
+cabbr <leader>P :set paste!
+" :s で%s//(置換後)/gを呼び出し
+cabbr <expr> s getcmdtype() .. getcmdline() ==# ':s' ? [getchar(), ''][1] .. "%s///g<Left><Left>" : 's'
 
 " ウィンドウ最大化/もとに戻す関数
 let g:toggle_window_size = 0
@@ -142,7 +166,7 @@ function! ToggleWindowSize()
     let g:toggle_window_size = 1
   endif
 endfunction
-nnoremap ,z :call ToggleWindowSize()<CR>
+nnoremap <leader>z :call ToggleWindowSize()<CR>
 
 " g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
 function! GoToNthTab(n)

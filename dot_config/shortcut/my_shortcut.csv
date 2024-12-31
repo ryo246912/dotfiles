@@ -283,6 +283,8 @@ Vim(fern),del,del,親フォルダに移動
 Vim(fern),(カンマ)b,(カンマ)b,ファイラーの開閉 ※カスタム
 Vim(fern),(カンマ)e,(カンマ)e,ファイラーを開く ※カスタム
 Vim(fern),?,?,ヘルプを開く
+Vim(surround),cs{前}{後},cs{前}{後},囲みを変更
+Vim(surround),ds{囲み},cs{囲み},囲みを削除
 Vim(surround),S<text>,S<text>,選択範囲を囲む
 Vim(zoxide),:ctrl + zz,:ctrl + zz,Zoxideを起動 ※カスタム
 VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム

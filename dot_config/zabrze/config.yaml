@@ -444,8 +444,8 @@ abbrevs:
     abbr: prt
     snippet: pdm run test
 
-  - name: ps
-    abbr: ps
+  - name: (psy|pdsy)
+    abbr-pattern: (psy|pdsy)
     snippet: pdm sync
 
   - name: s
