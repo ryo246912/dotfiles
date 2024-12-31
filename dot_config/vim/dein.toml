@@ -13,6 +13,13 @@ repo = 'junegunn/fzf.vim'
 hook_add = '''
 " fzfコマンドのprefixを設定
 let g:fzf_command_prefix = 'Fzf'
+" enterで水平分割で開く
+" ctrl-{h,v}で垂直・水平分割で開く
+let g:fzf_action = {
+        \ 'enter': 'vsplit',
+        \ 'ctrl-h': 'split',
+        \ 'ctrl-v': 'vsplit',
+        \ 'ctrl-t': 'tabedit' }
 
 " bufferを表示
 nnoremap <silent> <leader>b :<C-u>:FzfBuffers<CR>
@@ -37,7 +44,7 @@ hook_add = '''
 " cdの際にdirectoryのスコアを増やす
 let g:zoxide_hook = 'pwd'
 " zoxideを起動
-cnoremap zz :i<CR>
+cnoremap zz :Zi<CR>
 '''
 
 [[plugins]]

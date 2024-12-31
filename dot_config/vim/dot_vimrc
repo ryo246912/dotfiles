@@ -87,24 +87,31 @@ set whichwrap=b,s,h,l,<,>,[,]
 " eol     : 改行
 " start   : 挿入モード開始位置より手前の文字
 set backspace=indent,eol,start
-" 挿入モードでのインデント無効
-set paste
 
 "" キーバインド関連
 " leaderキーを設定
 let mapleader = ","
 " {n,i,x,c...}[nore]map: [non-recursive] map (n:normal,i:insert,x:visual,c:command lineモード)
 " xnoremap <key-sequence> <vim-command>
+" xをdに割り当て
+nnoremap x d
+xnoremap x d
+" xxをddに割り当て
+nnoremap xx dd
+xnoremap xx dd
+" ddを無効化してバッファに影響しないようにする
+nnoremap dd "_dd
+xnoremap dd "_dd
 " d,c,sはレジスタに登録しないようにする
-" nnoremap d "_d
-" nnoremap D "_D
-" xnoremap d "_d
-" nnoremap c "_c
-" nnoremap C "_C
-" nnoremap s "_s
-" nnoremap S "_S
-" xnoremap c "_c
-" xnoremap C "_C
+nnoremap d "_d
+xnoremap d "_d
+nnoremap D "_D
+nnoremap s "_s
+nnoremap S "_S
+nnoremap c "_c
+xnoremap c "_c
+nnoremap C "_C
+xnoremap C "_C
 
 " 最終行の行末に移動
 nnoremap GG G$
@@ -130,13 +137,19 @@ nnoremap <leader>] :tag<CR>
 nnoremap <leader>[ :pop<CR>
 " 相対・絶対行の表示切替
 nnoremap <leader>n :<C-u>setlocal relativenumber!<CR>
-" 挿入モードの切り替え
-nnoremap <leader>P :set paste!<CR>
 " popupでterminalを開く
 nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
 nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
 " ターミナル開く
 nnoremap <leader>T :let $VIM_DIR=expand('%:p:h')<CR>:terminal<CR>cd $VIM_DIR<CR>
+
+" abbr
+cabbr te terminal
+cabbr sv source ~/.config/vim/.vimrc
+" 挿入モードの切り替え
+cabbr <leader>P :set paste!
+" :s で%s//(置換後)/gを呼び出し
+cabbr <expr> s getcmdtype() .. getcmdline() ==# ':s' ? [getchar(), ''][1] .. "%s///g<Left><Left>" : 's'
 
 " ウィンドウ最大化/もとに戻す関数
 let g:toggle_window_size = 0
@@ -221,3 +234,4 @@ endif
 "   call map(s:removed_plugins, "delete(v:val, 'rf')")
 "   call dein#recache_runtimepath()
 " endif
+
