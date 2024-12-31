@@ -72,6 +72,8 @@ set incsearch
 "" 入力関連
 " タブ文字の表示幅
 set tabstop=2
+" 自動インデントのスペース幅
+set shiftwidth=2
 " 改行時に同じレベルにインデントする
 set autoindent
 " 改行時に入力された行の末尾に合わせて次の行のインデントを増減する
@@ -144,6 +146,7 @@ nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_fi
 nnoremap <leader>T :let $VIM_DIR=expand('%:p:h')<CR>:terminal<CR>cd $VIM_DIR<CR>
 
 " abbr
+cabbr he help
 cabbr te terminal
 cabbr sv source ~/.config/vim/.vimrc
 " 挿入モードの切り替え

@@ -14,9 +14,9 @@ hook_add = '''
 " fzfコマンドのprefixを設定
 let g:fzf_command_prefix = 'Fzf'
 " enterで水平分割で開く
+" \ 'enter': 'vsplit',
 " ctrl-{h,v}で垂直・水平分割で開く
 let g:fzf_action = {
-        \ 'enter': 'vsplit',
         \ 'ctrl-h': 'split',
         \ 'ctrl-v': 'vsplit',
         \ 'ctrl-t': 'tabedit' }
