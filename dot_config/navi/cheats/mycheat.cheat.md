@@ -1411,8 +1411,11 @@ sudo apt remove -y <package> && sudo apt autoremove -y
 # apt(Debian) : apt command history
 cat /var/log/apt/history.log<_grep>
 
+# apt(Debian) : display source list
+cat /etc/apt/sources.list | sed -e "/^#/d" -e "/^$/d"
+
 # apt(Debian) : add third-party package [ex.sudo add-apt-repository ppa:git-core/ppa]
-sudo add-apt-repository ppa:git-core/ppa
+sudo add-apt-repository ppa:git-core/ppa && sudo apt update
 
 # free : [-h:human][-c:count][-s:interval seconds]
 free -h -c 12 -s 300
@@ -1448,8 +1451,11 @@ wsl --install -d <distro>
 # wsl : display installed distro
 wsl -l -v
 
-# wsl : launch wsl root directory[-e <command>:exec command]
-wsl ~
+# wsl : launch wsl root directory[-e <command>:exec command ex)wsl -d <distro> -e cat /etc/os-release]
+wsl -e <command>
+
+# wsl : delete distro
+wsl --unregister <distro>
 ```
 
 
