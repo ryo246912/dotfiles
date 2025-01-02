@@ -446,8 +446,8 @@ GIT_EXTERNAL_DIFF=difft git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto)
 # stash working file
 git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
 
-# stash file
-git stash --include-untracked --message "<prefix><message>" -- <working_filename>
+# stash file[--include-untracked: untrack file]
+yes a | git stash -p --message "<prefix><message>" -- <working_filename>
 
 # list stash
 git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
