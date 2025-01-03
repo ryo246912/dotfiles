@@ -452,6 +452,11 @@ abbrevs:
     abbr: s
     snippet: sudo
 
+  - name: sp
+    abbr: sp
+    global: true
+    snippet: "|& spacer --after 5"
+
   - name: t
     abbr: t
     snippet: tig

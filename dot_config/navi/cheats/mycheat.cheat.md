@@ -1023,10 +1023,10 @@ command <command>
 # command : exec not alias command(not alias)[ex:"ls"]
 "<command>"
 
-# cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
+# cut : separate input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
 cut -<cb> <cut_list>
 
-# cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
+# cut : separate input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
 cut -d "<separater>" -f <cut_no>
 
 # date : ["+":format]
