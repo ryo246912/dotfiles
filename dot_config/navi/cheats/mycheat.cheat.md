@@ -568,7 +568,7 @@ $ all_branch: cat \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 $ merge_branch: git fetch -p --tags && \
-  gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
+  gh pr list --author "<author>" --search "<pr_search>" --state <state> --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
   --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
   | column -ts $'\t' \
@@ -651,7 +651,7 @@ ghq get <url>
 
 ```sh
 ;--------------------------------------------------------------
-; GitHub
+; GitHub CLI
 ;--------------------------------------------------------------
 % gh
 
@@ -664,9 +664,34 @@ echo -n <pr_branch> | cb
 # pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
 for no in <pr_no>; do gh pr view $no --comments<_web> ; done
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
+# pr list search[--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME'][--author:USERNAME][-s:open|closed|merged|all][--limit:--state all --limit 100]
+gh pr list --author "" --assignee "" --search "<pr_search>" --state all --limit 100
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+  --jq '
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+    ( .[] |
+    [.number
+    , .title[0:50]
+    , .author.login
+    , .state
+    , (if .isDraft then "◯" else "☓" end )
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+    , .headRefName])
+    | @tsv
+  '
+  | column -ts $'\t'
+  | fzf --no-sort --header-lines=1
+
+# pr view search[-s:open|closed|merged|all][--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME']
+for no in <pr_nos>; do
+  gh pr view $no --comments -w;
+done
 
 # pr view search by file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
-for commit in <commits_filter_by_file>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
+for commit in <commits_filter_by_file>; do
+  gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}');
+done
 
 # pr view search by word [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
 for commit in <commits_filter_by_word>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
@@ -679,12 +704,14 @@ gh pr checks <pr_no><_--watch><_web>
 
 # pr checkout
 gh pr checkout <pr_no>
+for commit in <commits_filter_by_word>; do
+  gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}');
+done
 
 # pr create [--base:base-branch][--assignee "@me":assign me]
-gh pr create --base "<base_branch>" --assignee "" --body-file "<pr_body>"
-
 # pr edit
 gh pr edit <pr_my_no>
+gh pr create --base "<base_branch>" --assignee "@me" --body-file "<pr_body>"
 
 # pr review
 gh pr review <pr_review_no>
@@ -699,8 +726,6 @@ gh pr status ; gh issue status
 gh issue view <issue_no> --comments<_web>
 
 # issues create[--assignee "@me":assign me]
-gh issue create --assignee "" --body-file "<issue_body>"
-
 # issues list(HOST)
 gh issue list --assignee "<author>" --state <state>
 
@@ -712,15 +737,22 @@ gh workflow view<_web>
 
 # workflow list [-w:filter workflow][--branch:filter branch][--user:filter user]
 gh run list -L 100 -w "<workflow>" --user "<author>"
+gh issue create --assignee "@me" --body-file "<issue_body>"
 
 # workflow view [-v:show job steps][--log,--log-failed:view log]
 gh run view -v <_web><_--log_>--job=<job_id>
 
 # workflow watch
 gh run watch
+# issues list search [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
+gh issue list --repo "<repository>" --search "<issue_search>" --state all --limit 100
 
 # workflow rerun error
 gh run rerun --failed
+# issues view search [repository:repository name(ex:pytorch/pytorch)]
+for no in <issue_nos>; do
+  gh issue view $no --repo "<repository>" --comments -w;
+done
 
 # list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
@@ -730,6 +762,9 @@ gh repo view <repository> -w
 
 # create repository [--private,--public]
 gh repo create <name> --private
+
+# fork repository
+gh repo fork <repository>
 
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
@@ -773,6 +808,28 @@ $ search: echo -e "user-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(g
 $ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--watch: echo -e "\n --watch"
+$ pr_search: echo -e "\
+  user-review-requested:@me\n\
+  reviewed-by:@me\n\
+  involves:@me\n\
+  <keyword> in:title\n\
+  <keyword> in:title,body\n\
+  <keyword> in:comment\n\
+  base:$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')\n\
+  mentions:@me\n\
+  $(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:\(.login)"+"\n"+"author:\(.login)" )')\
+  " \
+  | awk '{$1=$1; print}'
+$ issue_search: echo -e "\
+  <keyword> in:title\n\
+  <keyword> in:title,body\n\
+  <keyword> in:comment\n\
+  is:open\n\
+  is:closed\
+  " \
+  | awk '{$1=$1; print}' \
+  --- --multi
+; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 $ _--dry-run: echo -e "\n --dry-run"
 $ _--name-only: echo -e "\n --name-only"
 $ state: echo -e "open\nall\nclosed\nmerged"
@@ -795,37 +852,60 @@ $ all_branch: cat \
 
 $ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
-  <all_branch> <file_option><ls-files> \
+  <file_option><ls-files> \
   --- --column 1 --delimiter ; --multi --expand
 $ commits_filter_by_word: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   <search_option> "<regex>" \
   --- --column 1 --delimiter ; --multi --expand
-$ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
+$ pr: gh pr list --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  --jq ' \
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"], \
+    ( .[] | \
+    [.number \
+    , .title[0:50] \
+    , .author.login \
+    , .state \
+    , (if .isDraft then "◯" else "☓" end ) \
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , .headRefName]) \
+    | @tsv \
+  ' \
+  | column -ts $'\t' \
+  --- --headers 1
+$ pr_no: echo "<pr>" --- --column 1
+$ pr_nos: gh pr list --author "" --search "<pr_search>" --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq ' \
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"], \
+    ( .[] | \
+    [.number \
+    , .title[0:50] \
+    , .author.login \
+    , .state \
+    , (if .isDraft then "◯" else "☓" end ) \
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , .headRefName]) \
+    | @tsv \
+  ' \
   | column -ts $'\t' \
   --- --headers 1 --column 1 --multi --expand
-$ pr_branch: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+$ issue_nos: gh issue list --repo "<repository>" --search "<issue_search>" --state all --limit 100 \
+   --json number,title,state,createdAt \
+   --jq ' \
+     ["no","title","state","createdAt"], \
+     ( .[] | \
+     [.number \
+     , .title[0:200] \
+     , .state \
+     , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ]) \
+     | @tsv \
+   ' \
   | column -ts $'\t' \
-  --- --headers 1 --column 8
-$ pr_my_no: gh pr list --author "@me" --state <state> --limit 100 \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ pr_review_no: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ issue_no: gh issue list --assignee "<author>" --state <state> \
-  --json number,title,author,state,updatedAt,createdAt \
-  --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
+  --- --headers 1 --column 1 --multi --expand
 $ workflow: gh workflow list \
   | column -ts $'\t' \
   --- --column 1
@@ -836,9 +916,17 @@ $ workflow: gh workflow list \
   --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
-$ repository: gh repo list <owner> -L 100 \
-  --json nameWithOwner,isArchived,isPrivate,pushedAt,description \
-  --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
+$ repository: gh search repos --sort stars --match name <repo_name> \
+  --json fullName,stargazersCount,pushedAt,description \
+  --jq '\
+    ["repo","stars","pushedAt","description"] \
+    , ( .[] | \
+    [.fullName \
+    ,.stargazersCount \
+    ,(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    ,.description[0:50] \
+    ]) | @tsv \
+  '\
   | column -ts $'\t' \
   --- --headers 1 --column 1
 $ project_no: gh project list --owner <owner> \
