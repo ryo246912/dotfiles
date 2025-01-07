@@ -655,15 +655,6 @@ ghq get <url>
 ;--------------------------------------------------------------
 % gh
 
-# pr list [-s:open|closed|merged|all]
-gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
-
-# pr branch copy
-echo -n <pr_branch> | cb
-
-# pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
-for no in <pr_no>; do gh pr view $no --comments<_web> ; done
-; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 # pr list search[--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME'][--author:USERNAME][-s:open|closed|merged|all][--limit:--state all --limit 100]
 gh pr list --author "" --assignee "" --search "<pr_search>" --state all --limit 100
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -694,61 +685,22 @@ for commit in <commits_filter_by_file>; do
 done
 
 # pr view search by word [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
-for commit in <commits_filter_by_word>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
-
-# pr diff
-gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | delta<_no-gitconfig>
-
-# pr checks
-gh pr checks <pr_no><_--watch><_web>
-
-# pr checkout
-gh pr checkout <pr_no>
 for commit in <commits_filter_by_word>; do
   gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}');
 done
 
 # pr create [--base:base-branch][--assignee "@me":assign me]
-# pr edit
-gh pr edit <pr_my_no>
 gh pr create --base "<base_branch>" --assignee "@me" --body-file "<pr_body>"
 
 # pr review
 gh pr review <pr_review_no>
 
-# status
-gh status
-
-# pr & issue status
-gh pr status ; gh issue status
-
-# issues view
-gh issue view <issue_no> --comments<_web>
-
 # issues create[--assignee "@me":assign me]
-# issues list(HOST)
-gh issue list --assignee "<author>" --state <state>
-
-# issues list [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
-gh issue list --repo "<repository>" --state <state> --search "<search>"
-
-# workflow summary view
-gh workflow view<_web>
-
-# workflow list [-w:filter workflow][--branch:filter branch][--user:filter user]
-gh run list -L 100 -w "<workflow>" --user "<author>"
 gh issue create --assignee "@me" --body-file "<issue_body>"
 
-# workflow view [-v:show job steps][--log,--log-failed:view log]
-gh run view -v <_web><_--log_>--job=<job_id>
-
-# workflow watch
-gh run watch
 # issues list search [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
 gh issue list --repo "<repository>" --search "<issue_search>" --state all --limit 100
 
-# workflow rerun error
-gh run rerun --failed
 # issues view search [repository:repository name(ex:pytorch/pytorch)]
 for no in <issue_nos>; do
   gh issue view $no --repo "<repository>" --comments -w;
@@ -785,9 +737,6 @@ gh auth refresh -s <scope>
 # cache list
 gh cache list
 
-# meta : display PR merge-base branch
-gh pr list --search "$(git rev-parse --short <branch>)" --limit 1 --json baseRefName --jq '.[] | .baseRefName'
-
 # open repository in the web browser[--branch:][ex.gh browse --branch "main",gh browse --settings]
 gh browse<_browse_option>
 
@@ -799,15 +748,7 @@ open-cli <starred_url>
 
 # search repo [_query|stars:>=n|stars:<n]
 open-cli <repo_url>
-
-# delete(poi) branch
-gh-poi<_--dry-run>
 ```
-$ author: echo -e "@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
-$ search: echo -e "user-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
-$ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
-$ _no-gitconfig: echo -e " --no-gitconfig\n"
-$ _--watch: echo -e "\n --watch"
 $ pr_search: echo -e "\
   user-review-requested:@me\n\
   reviewed-by:@me\n\
@@ -830,25 +771,15 @@ $ issue_search: echo -e "\
   | awk '{$1=$1; print}' \
   --- --multi
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
-$ _--dry-run: echo -e "\n --dry-run"
-$ _--name-only: echo -e "\n --name-only"
-$ state: echo -e "open\nall\nclosed\nmerged"
-$ _web: echo -e "\n -w"
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
 $ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
 $ issue_body: find ~/private/Issue -type f -path "*.md" | sort
-$ branch: echo -e "HEAD\n"
-$ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
 $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ _browse_option: echo -e "\n --settings\n --branch ''\n --commit ''"
 $ ls-files: git ls-files
-$ all_branch: cat \
-  <(git rev-parse --abbrev-ref HEAD) \
-  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
-  --- --column 1
 
 $ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
@@ -906,16 +837,6 @@ $ issue_nos: gh issue list --repo "<repository>" --search "<issue_search>" --sta
    ' \
   | column -ts $'\t' \
   --- --headers 1 --column 1 --multi --expand
-$ workflow: gh workflow list \
-  | column -ts $'\t' \
-  --- --column 1
-; $ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
-  | column -ts $'\t' \
-  --- --column 7
-; $ job_id: gh run view <run_id> --json jobs \
-  --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
 $ repository: gh search repos --sort stars --match name <repo_name> \
   --json fullName,stargazersCount,pushedAt,description \
   --jq '\
@@ -964,20 +885,6 @@ gh api "/search/issues?q=<commithash>+type:pr+repo:$(git config remote.origin.ur
 gh api "/users/<user>/starred?per_page=100" | jq '.'
 ; https://docs.github.com/ja/rest/activity/starring?apiVersion=2022-11-28#list-repositories-starred-by-a-user
 ```
-
-```sh
-% gh-tool
-
-# act : list workflows for a specific event [-l:list]
-act -l <event>
-
-# act : run workflows for a specific event[-n:dry-run]
-act<_-dry-run_><event> -W <workflow>
-
-```
-$ event: echo -e "push\npull_request\nissues"
-$ _-dry-run_: echo -e " \n -n "
-$ workflow: find .github/workflows
 
 ```sh
 ;--------------------------------------------------------------
