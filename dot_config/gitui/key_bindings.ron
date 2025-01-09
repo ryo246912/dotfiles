@@ -1,27 +1,28 @@
 (
-    // v0.23で以下deprecated
-    focus_right: Some(( code: Char('l'), modifiers: ( bits: 0,),)),
-    focus_left: Some(( code: Char('h'), modifiers: ( bits: 0,),)),
-    focus_above: Some(( code: Char('k'), modifiers: ( bits: 0,),)),
-    focus_below: Some(( code: Char('j'), modifiers: ( bits: 0,),)),
-
-    move_left: Some(( code: Char('h'), modifiers: ( bits: 0,),)),
-    move_right: Some(( code: Char('l'), modifiers: ( bits: 0,),)),
-    move_up: Some(( code: Char('k'), modifiers: ( bits: 0,),)),
-    move_down: Some(( code: Char('j'), modifiers: ( bits: 0,),)),
-
-    page_up: Some(( code: Char('i'), modifiers: ( bits: 0,),)),
-    page_down: Some(( code: Char('u'), modifiers: ( bits: 0,),)),
-
-    open_help: Some(( code: F(1), modifiers: ( bits: 0,))),
-
-//     move_left: Some(( code: Char('h'), modifiers: "")),
-//     move_right: Some(( code: Char('l'), modifiers: "")),
-//     move_up: Some(( code: Char('k'), modifiers: "")),
-//     move_down: Some(( code: Char('j'), modifiers: "")),
+// v0.23で以下deprecated
+//    focus_right: Some(( code: Char('l'), modifiers: ( bits: 0,),)),
+//    focus_left: Some(( code: Char('h'), modifiers: ( bits: 0,),)),
+//    focus_above: Some(( code: Char('k'), modifiers: ( bits: 0,),)),
+//    focus_below: Some(( code: Char('j'), modifiers: ( bits: 0,),)),
 //
-//     page_up: Some(( code: Char('i'), modifiers: "")),
-//     page_down: Some(( code: Char('u'), modifiers: "")),
+//    move_left: Some(( code: Char('h'), modifiers: ( bits: 0,),)),
+//    move_right: Some(( code: Char('l'), modifiers: ( bits: 0,),)),
+//    move_up: Some(( code: Char('k'), modifiers: ( bits: 0,),)),
+//    move_down: Some(( code: Char('j'), modifiers: ( bits: 0,),)),
 //
-//     open_help: Some(( code: F(1), modifiers: "")),
+//    page_up: Some(( code: Char('i'), modifiers: ( bits: 0,),)),
+//    page_down: Some(( code: Char('u'), modifiers: ( bits: 0,),)),
+//
+//    open_help: Some(( code: F(1), modifiers: ( bits: 0,))),
+
+// v0.23移行はこちら
+//    move_left: Some(( code: Char('h'), modifiers: "")),
+//    move_right: Some(( code: Char('l'), modifiers: "")),
+//    move_up: Some(( code: Char('k'), modifiers: "")),
+//    move_down: Some(( code: Char('j'), modifiers: "")),
+//
+//    page_up: Some(( code: Char('i'), modifiers: "")),
+//    page_down: Some(( code: Char('u'), modifiers: "")),
+//
+//    open_help: Some(( code: F(1), modifiers: "")),
 )
