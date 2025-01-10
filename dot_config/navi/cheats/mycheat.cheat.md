@@ -1325,6 +1325,9 @@ ps axu | less -iRMW --use-color
 # ps : [o:format][pgid:process group id][sess:session id]
 ps axo pid,ppid,pgid,sess,tty,user,start,command | less -iRMW --use-color
 
+# sudo : sudo cd & exec command
+sudo sh -c "cd <directory>; <command>"
+
 # set : set shell option [-o:set option][+o:unset option][ex:set -o noclobber]
 set -o <option>
 
