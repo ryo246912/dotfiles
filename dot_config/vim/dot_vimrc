@@ -196,6 +196,14 @@ set wildmenu
 
 " clipboardにコピー
 " set clipboard+=unnamed
+" WSLの場合はclip.exeでコピー
+if has('unix') && system('uname -r') =~ 'microsoft' && system('uname') =~ 'Linux'
+  augroup Yank
+    autocmd!
+    " +レジスタにyankされた場合のみ、クリップボードにコピー
+    autocmd TextYankPost * if v:event['regname'] ==# '+' | :call system('clip.exe', @") | endif
+  augroup END
+endif
 " デフォルトを垂直分割にする
 set diffopt=vertical
 

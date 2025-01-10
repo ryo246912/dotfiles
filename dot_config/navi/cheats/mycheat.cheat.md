@@ -895,6 +895,9 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 # install package
 mise use -g <package>:<tool>
 
+# list installable list
+mise ls-remote <package> | less -iRMW --use-color
+
 # list installed
 mise ls<_--current>
 
@@ -1325,6 +1328,9 @@ ps axu | less -iRMW --use-color
 # ps : [o:format][pgid:process group id][sess:session id]
 ps axo pid,ppid,pgid,sess,tty,user,start,command | less -iRMW --use-color
 
+# sudo : sudo cd & exec command
+sudo sh -c "cd <directory>; <command>"
+
 # set : set shell option [-o:set option][+o:unset option][ex:set -o noclobber]
 set -o <option>
 
@@ -1433,11 +1439,17 @@ sudo apt update && sudo apt install -y <package>
 # apt(Debian) : uninstall package and unnecessary package
 sudo apt remove -y <package> && sudo apt autoremove -y
 
+# apt(Debian) : display install list
+apt-mark showmanual | less -iRMW --use-color
+
+# apt(Debian) : display install list
+cat /var/log/apt/history.log | grep 'install ' | less -iRMW --use-color
+
 # apt(Debian) : apt command history
-cat /var/log/apt/history.log<_grep>
+cat /var/log/apt/history.log<_grep> | less -iRMW --use-color
 
 # apt(Debian) : display source list
-cat /etc/apt/sources.list | sed -e "/^#/d" -e "/^$/d"
+cat /etc/apt/sources.list | sed -e "/^#/d" -e "/^$/d" | less -iRMW --use-color
 
 # apt(Debian) : add third-party package [ex.sudo add-apt-repository ppa:git-core/ppa]
 sudo add-apt-repository ppa:git-core/ppa && sudo apt update
@@ -1475,6 +1487,12 @@ wsl --install -d <distro>
 
 # wsl : display installed distro
 wsl -l -v
+
+# wsl : export
+wsl --export <distro> <distro>.tar
+
+# wsl : import
+wsl --import <new_distro> <old_distro> <old_distro>.tar
 
 # wsl : launch wsl root directory[-e <command>:exec command ex)wsl -d <distro> -e cat /etc/os-release]
 wsl -e <command>

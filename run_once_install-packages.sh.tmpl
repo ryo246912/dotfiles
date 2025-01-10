@@ -39,6 +39,16 @@ EOF
 for package in $(echo $CASKPACKAGES); do
   brew install --cask $package
 done
+{{ else -}}
+read -r -d '' PACKAGES <<EOF
+git
+gpg
+zsh
+EOF
+
+for package in $(echo $PACKAGES); do
+  apt install -y $package
+done
 {{- end }}
 
 # Nix
