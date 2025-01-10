@@ -895,6 +895,9 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 # install package
 mise use -g <package>:<tool>
 
+# list installable list
+mise ls-remote <package> | less -iRMW --use-color
+
 # list installed
 mise ls<_--current>
 
