@@ -1033,6 +1033,9 @@ cp_winhost() {
 # rio
 [ -n "$WINUSER" ] && mkdir -p "$APPDATA/Local/rio" 2>/dev/null
 [ -n "$WINUSER" ] && ! [ -e "$APPDATA/Local/rio/config.toml" ] && cp "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
+
+# gpg
+export GPG_TTY=$(tty)
 {{- end }}
 
 #--------------------------------------------------------------
