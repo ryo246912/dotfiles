@@ -59,6 +59,10 @@ abbrevs:
     abbr: chl
     snippet: chezmoi list -p source-absolute -i files
 
+  - name: chm
+    abbr: chm
+    snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
+
   - name: cz
     abbr: cz
     snippet: czg
