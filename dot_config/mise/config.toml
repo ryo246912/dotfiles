@@ -6,6 +6,7 @@ node = "20"
 "npm:open-cli" = "latest"
 "pipx:deepl-cli" = "latest"
 usage = "latest"
+vim = "latest"
 
 [settings]
 
@@ -14,4 +15,3 @@ bun = true
 
 [settings.pipx]
 uvx = true
-
