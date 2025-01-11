@@ -533,6 +533,10 @@ abbrevs:
     abbr: gu
     snippet: gitui
 
+  - name: koji
+    abbr: ko
+    snippet: koji --config ~/.config/koji/config.toml
+
   - name: ld
     abbr: ld
     snippet: lazydocker
