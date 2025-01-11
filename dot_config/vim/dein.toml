@@ -17,9 +17,10 @@ let g:fzf_command_prefix = 'Fzf'
 " \ 'enter': 'vsplit',
 " ctrl-{h,v}で垂直・水平分割で開く
 let g:fzf_action = {
+        \ 'ctrl-y': 'split',
         \ 'ctrl-h': 'split',
         \ 'ctrl-v': 'vsplit',
-        \ 'ctrl-t': 'tabedit' }
+        \ 'ctrl-t': 'vsplit' }
 
 " bufferを表示
 nnoremap <silent> <leader>b :<C-u>:FzfBuffers<CR>

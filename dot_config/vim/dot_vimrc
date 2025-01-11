@@ -126,7 +126,7 @@ xnoremap <leader>l $h
 " clipboardにyank
 noremap gy "+y
 " ESC連打でハイライト解除
-nmap <Esc><Esc> :nohlsearch<CR><Esc>
+nnoremap <Esc><Esc> :nohlsearch<CR><Esc>
 " ctrl + kでカーソルより後ろ削除
 cnoremap <C-k> <C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>
 " Emacs-like movement in Insert/Command
@@ -142,12 +142,19 @@ nnoremap <leader>n :<C-u>setlocal relativenumber!<CR>
 " popupでterminalを開く
 nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
 nnoremap <leader>p :call popup_create(term_start([&shell], #{ hidden: 1, term_finish: 'close'}), #{ border: [], minwidth: winwidth(0), minheight: &lines/2 })<CR>
-" ターミナル開く
-nnoremap <leader>T :let $VIM_DIR=expand('%:p:h')<CR>:terminal<CR>cd $VIM_DIR<CR>
+" インサートモードに戻る
+tnoremap <F2> <C-\><C-n>
+" 選択範囲を検索
+vnoremap / <ESC>/\%V
+vnoremap ? <ESC>?\%V
 
 " abbr
 cabbr he help
 cabbr te terminal
+cabbr teh horizon terminal
+cabbr tet horizon terminal
+cabbr tev vertical terminal
+cabbr tey vertical terminal
 cabbr sv source ~/.config/vim/.vimrc
 " 挿入モードの切り替え
 cabbr <leader>P :set paste!
