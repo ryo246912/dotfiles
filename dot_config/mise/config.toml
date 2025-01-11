@@ -1,0 +1,17 @@
+[tools]
+bun = "latest"
+node = "20"
+"npm:cspell" = "latest"
+"npm:czg" = "latest"
+"npm:open-cli" = "latest"
+"pipx:deepl-cli" = "latest"
+usage = "latest"
+vim = "latest"
+
+[settings]
+
+[settings.npm]
+bun = true
+
+[settings.pipx]
+uvx = true

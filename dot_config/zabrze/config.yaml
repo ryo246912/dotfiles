@@ -19,8 +19,8 @@ abbrevs:
     abbr: chad
     snippet: chezmoi add --template
 
-  - name: chap
-    abbr: chap
+  - name: (chap|chpa)
+    abbr-pattern: (chap|chpa)
     snippet: chezmoi apply --interactive
 
   - name: chas
@@ -58,6 +58,10 @@ abbrevs:
   - name: chl
     abbr: chl
     snippet: chezmoi list -p source-absolute -i files
+
+  - name: chm
+    abbr: chm
+    snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
 
   - name: cz
     abbr: cz
@@ -155,6 +159,10 @@ abbrevs:
     abbr: gca
     snippet: git commit --amend
 
+  - name: gcne
+    abbr: gcne
+    snippet: git commit --no-edit
+
   - name: gcb
     abbr: gcb
     snippet: git checkout -b
@@ -180,13 +188,21 @@ abbrevs:
     abbr-pattern: (gcof|gcfh)
     snippet: git commit --fixup HEAD
 
-  - name: gcr|gchr
+  - name: (gcr|gchr)
     abbr-pattern: (gcr|gchr)
     snippet: git cherry-pick -n
 
   - name: gd
     abbr: gd
     snippet: git diff
+
+  - name: gdc
+    abbr: gdc
+    snippet: git diff --diff-filter=U
+
+  - name: gds
+    abbr: gds
+    snippet: git diff --cached
 
   - name: gf
     abbr: gf
@@ -200,9 +216,183 @@ abbrevs:
     abbr: ghb
     snippet: gh browse
 
+  - name: ghbb
+    abbr: ghbb
+    snippet: gh browse --branch $(git symbolic-ref --short HEAD)
+
   - name: ghbs
     abbr: ghbs
     snippet: gh browse --settings
+
+  - name: ghil
+    abbr: ghil
+    snippet: gh issue list --author "" --assignee "" --search "{}" --state all --limit 100
+      --json number,title,author,state,updatedAt,createdAt
+      --jq '
+        ["no","title","author","state","updatedAt","createdAt"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+
+  - name: ghiv
+    abbr: ghiv
+    snippet: gh issue view --comments $(gh issue list --state all --limit 100
+      --json number,title,author,state,updatedAt,createdAt
+      --jq '
+        ["no","title","author","state","updatedAt","createdAt"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}') -w
+
+  - name: ghpc
+    abbr: ghpc
+    snippet: gh pr checkout $(gh pr list --search "user-review-requested:@me" --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+
+  - name: ghpd
+    abbr: ghpd
+    snippet: gh pr diff $(gh pr list --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+      | diffnav
+
+  - name: ghpe
+    abbr: ghpe
+    snippet: gh pr edit $(gh pr list --author "@me" --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+
+  - name: ghpl
+    abbr: ghpl
+    snippet: gh pr list --author "" --assignee "" --search "{}" --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+
+  - name: ghpv
+    abbr: ghpv
+    snippet: gh pr view --comments $(gh pr list --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+
+  - name: ghpw
+    abbr: ghpw
+    snippet: gh pr checks --watch
+
+  - name: ghrl
+    abbr: ghrl
+    snippet: gh run list --limit 40
+
+  - name: ghrlf
+    abbr: ghrlf
+    snippet: gh run list --status failure
+
+  - name: ghrll
+    abbr: ghrll
+    snippet: gh run list -w $(gh workflow list | column -ts $'\t' | fzf | awk '{print $1}')
+
+  - name: ghrr
+    abbr: ghrr
+    snippet: gh run rerun --failed
+
+  - name: ghrv
+    abbr: ghrv
+    snippet: gh run view --log-failed
+
+  - name: ghrw
+    abbr: ghrw
+    snippet: gh run watch
 
   - name: ghs
     abbr: ghs
@@ -347,9 +537,21 @@ abbrevs:
     abbr: gu
     snippet: gitui
 
+  - name: koji
+    abbr: ko
+    snippet: koji --config ~/.config/koji/config.toml
+
   - name: ld
     abbr: ld
     snippet: lazydocker
+
+  - name: la
+    abbr: la
+    snippet: ls -la
+
+  - name: ll
+    abbr: ll
+    snippet: ls -l
 
   - name: m
     abbr: m
@@ -365,7 +567,7 @@ abbrevs:
 
   - name: mlo
     abbr: mlo
-    snippet: make local
+    snippet: make local | spacer --after 5
 
   - name: mf
     abbr: mf
@@ -430,7 +632,7 @@ abbrevs:
 
   - name: prd
     abbr: prd
-    snippet: pdm run dev
+    snippet: pdm run dev | spacer --after 5
 
   - name: prf
     abbr: prf
@@ -451,6 +653,11 @@ abbrevs:
   - name: s
     abbr: s
     snippet: sudo
+
+  - name: sp
+    abbr: sp
+    global: true
+    snippet: "|& spacer --after 5"
 
   - name: t
     abbr: t

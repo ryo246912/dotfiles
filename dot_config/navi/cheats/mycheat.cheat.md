@@ -446,8 +446,8 @@ GIT_EXTERNAL_DIFF=difft git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto)
 # stash working file
 git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
 
-# stash file
-git stash --include-untracked --message "<prefix><message>" -- <working_filename>
+# stash file[--include-untracked: untrack file]
+yes a | git stash -p --message "<prefix><message>" -- <working_filename>
 
 # list stash
 git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
@@ -568,7 +568,7 @@ $ all_branch: cat \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 $ merge_branch: git fetch -p --tags && \
-  gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
+  gh pr list --author "<author>" --search "<pr_search>" --state <state> --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
   --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
   | column -ts $'\t' \
@@ -651,76 +651,60 @@ ghq get <url>
 
 ```sh
 ;--------------------------------------------------------------
-; GitHub
+; GitHub CLI
 ;--------------------------------------------------------------
 % gh
 
-# pr list [-s:open|closed|merged|all]
-gh pr list --author "<author>" --assignee "" --search "<search>" --state <state>
+# pr list search[--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME'][--author:USERNAME][-s:open|closed|merged|all][--limit:--state all --limit 100]
+gh pr list --author "" --assignee "" --search "<pr_search>" --state all --limit 100
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+  --jq '
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+    ( .[] |
+    [.number
+    , .title[0:50]
+    , .author.login
+    , .state
+    , (if .isDraft then "◯" else "☓" end )
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+    , .headRefName])
+    | @tsv
+  '
+  | column -ts $'\t'
+  | fzf --no-sort --header-lines=1
 
-# pr branch copy
-echo -n <pr_branch> | cb
-
-# pr view [--author:USERNAME][--search:commithash,'created:<2011-01-01',''word in:title,body ','involves:USERNAME','reviewed-by:USERNAME'][-s:open|closed|merged|all]
-for no in <pr_no>; do gh pr view $no --comments<_web> ; done
-; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
+# pr view search[-s:open|closed|merged|all][--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME']
+for no in <pr_nos>; do
+  gh pr view $no --comments -w;
+done
 
 # pr view search by file [-L <start>,<end>:<file>(ex:-L 10,+10:sample.py) : select line][-L :<func>:<file>(ex: :SampleClass:sample.py) : select func]
-for commit in <commits_filter_by_file>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
+for commit in <commits_filter_by_file>; do
+  gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}');
+done
 
 # pr view search by word [--pickaxe-regex -S:filter by word(regex) count][-G:filter by regex change line]
-for commit in <commits_filter_by_word>; do gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}') ; done
-
-# pr diff
-gh pr view <pr_no> | sed -n 11,12p ; read ; gh pr diff <pr_no><_--name-only> | delta<_no-gitconfig>
-
-# pr checks
-gh pr checks <pr_no><_--watch><_web>
-
-# pr checkout
-gh pr checkout <pr_no>
+for commit in <commits_filter_by_word>; do
+  gh pr view -w $(gh pr list --state "all" --search "$commit base:master" | head -n 1 | awk '{print $1}');
+done
 
 # pr create [--base:base-branch][--assignee "@me":assign me]
-gh pr create --base "<base_branch>" --assignee "" --body-file "<pr_body>"
-
-# pr edit
-gh pr edit <pr_my_no>
+gh pr create --base "<base_branch>" --assignee "@me" --body-file "<pr_body>"
 
 # pr review
 gh pr review <pr_review_no>
 
-# status
-gh status
-
-# pr & issue status
-gh pr status ; gh issue status
-
-# issues view
-gh issue view <issue_no> --comments<_web>
-
 # issues create[--assignee "@me":assign me]
-gh issue create --assignee "" --body-file "<issue_body>"
+gh issue create --assignee "@me" --body-file "<issue_body>"
 
-# issues list(HOST)
-gh issue list --assignee "<author>" --state <state>
+# issues list search [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
+gh issue list --repo "<repository>" --search "<issue_search>" --state all --limit 100
 
-# issues list [owner:repository owner(ex:pytorch)][repository:repository name(ex:pytorch/pytorch)]
-gh issue list --repo "<repository>" --state <state> --search "<search>"
-
-# workflow summary view
-gh workflow view<_web>
-
-# workflow list [-w:filter workflow][--branch:filter branch][--user:filter user]
-gh run list -L 100 -w "<workflow>" --user "<author>"
-
-# workflow view [-v:show job steps][--log,--log-failed:view log]
-gh run view -v <_web><_--log_>--job=<job_id>
-
-# workflow watch
-gh run watch
-
-# workflow rerun error
-gh run rerun --failed
+# issues view search [repository:repository name(ex:pytorch/pytorch)]
+for no in <issue_nos>; do
+  gh issue view $no --repo "<repository>" --comments -w;
+done
 
 # list repository [owner:repository owner(ex:pytorch)][-L:max num]
 gh repo list <owner> -L 100
@@ -730,6 +714,9 @@ gh repo view <repository> -w
 
 # create repository [--private,--public]
 gh repo create <name> --private
+
+# fork repository
+gh repo fork <repository>
 
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
@@ -750,9 +737,6 @@ gh auth refresh -s <scope>
 # cache list
 gh cache list
 
-# meta : display PR merge-base branch
-gh pr list --search "$(git rev-parse --short <branch>)" --limit 1 --json baseRefName --jq '.[] | .baseRefName'
-
 # open repository in the web browser[--branch:][ex.gh browse --branch "main",gh browse --settings]
 gh browse<_browse_option>
 
@@ -764,81 +748,106 @@ open-cli <starred_url>
 
 # search repo [_query|stars:>=n|stars:<n]
 open-cli <repo_url>
-
-# delete(poi) branch
-gh-poi<_--dry-run>
 ```
-$ author: echo -e "@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
-$ search: echo -e "user-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
-$ approve_comment: echo -e "\n--comment\n--request-changes\n--approve"
-$ _no-gitconfig: echo -e " --no-gitconfig\n"
-$ _--watch: echo -e "\n --watch"
-$ _--dry-run: echo -e "\n --dry-run"
-$ _--name-only: echo -e "\n --name-only"
-$ state: echo -e "open\nall\nclosed\nmerged"
-$ _web: echo -e "\n -w"
+$ pr_search: echo -e "\
+  user-review-requested:@me\n\
+  reviewed-by:@me\n\
+  involves:@me\n\
+  <keyword> in:title\n\
+  <keyword> in:title,body\n\
+  <keyword> in:comment\n\
+  base:$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')\n\
+  mentions:@me\n\
+  $(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:\(.login)"+"\n"+"author:\(.login)" )')\
+  " \
+  | awk '{$1=$1; print}'
+$ issue_search: echo -e "\
+  <keyword> in:title\n\
+  <keyword> in:title,body\n\
+  <keyword> in:comment\n\
+  is:open\n\
+  is:closed\
+  " \
+  | awk '{$1=$1; print}' \
+  --- --multi
+; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
 $ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
 $ issue_body: find ~/private/Issue -type f -path "*.md" | sort
-$ branch: echo -e "HEAD\n"
-$ _--log_: echo -e "\n --log \n --log-failed "
 $ user: echo -e "\n$(git config --get-all user.name)"
 $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ _browse_option: echo -e "\n --settings\n --branch ''\n --commit ''"
 $ ls-files: git ls-files
-$ all_branch: cat \
-  <(git rev-parse --abbrev-ref HEAD) \
-  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
-  --- --column 1
 
 $ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
-  <all_branch> <file_option><ls-files> \
+  <file_option><ls-files> \
   --- --column 1 --delimiter ; --multi --expand
 $ commits_filter_by_word: git log<_-m_--merges_--first-parent> \
   --pretty=format:"%h; (%cd)%d [%an] %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   <search_option> "<regex>" \
   --- --column 1 --delimiter ; --multi --expand
-$ pr_no: gh pr list --author "<author>" --search "<search>" --state <state> --limit 100 \
+$ pr: gh pr list --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+  --jq ' \
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"], \
+    ( .[] | \
+    [.number \
+    , .title[0:50] \
+    , .author.login \
+    , .state \
+    , (if .isDraft then "◯" else "☓" end ) \
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , .headRefName]) \
+    | @tsv \
+  ' \
+  | column -ts $'\t' \
+  --- --headers 1
+$ pr_no: echo "<pr>" --- --column 1
+$ pr_nos: gh pr list --author "" --search "<pr_search>" --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq ' \
+    ["no","title","author","state","draft","updatedAt","createdAt","branch"], \
+    ( .[] | \
+    [.number \
+    , .title[0:50] \
+    , .author.login \
+    , .state \
+    , (if .isDraft then "◯" else "☓" end ) \
+    , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    , .headRefName]) \
+    | @tsv \
+  ' \
   | column -ts $'\t' \
   --- --headers 1 --column 1 --multi --expand
-$ pr_branch: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
+$ issue_nos: gh issue list --repo "<repository>" --search "<issue_search>" --state all --limit 100 \
+   --json number,title,state,createdAt \
+   --jq ' \
+     ["no","title","state","createdAt"], \
+     ( .[] | \
+     [.number \
+     , .title[0:200] \
+     , .state \
+     , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ]) \
+     | @tsv \
+   ' \
   | column -ts $'\t' \
-  --- --headers 1 --column 8
-$ pr_my_no: gh pr list --author "@me" --state <state> --limit 100 \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ pr_review_no: gh pr list --search "user-review-requested:@me" --state open \
-  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
-  --jq '["no","title","author","state","draft","updatedAt","createdAt","branch"], (.[] | [.number , .title , .author.login , .state , (if .isDraft then "◯" else "☓" end ) , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) , .headRefName]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ issue_no: gh issue list --assignee "<author>" --state <state> \
-  --json number,title,author,state,updatedAt,createdAt \
-  --jq '["no","title","author","state","updatedAt","createdAt"], (.[] | [.number , .title , .author.login , .state , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ,(.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ workflow: gh workflow list \
-  | column -ts $'\t' \
-  --- --column 1
-; $ run_id: gh run list -L 100 -w "<workflow>" --user "<author>" \
-  | column -ts $'\t' \
-  --- --column 7
-; $ job_id: gh run view <run_id> --json jobs \
-  --jq '["id","name","status","url"] , (.jobs[] | [.databaseId,.name,.status,.url]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
-$ repository: gh repo list <owner> -L 100 \
-  --json nameWithOwner,isArchived,isPrivate,pushedAt,description \
-  --jq '["repo","isArchived","isPrivate","pushedAt","description"], ( sort_by(.pushedAt) | reverse | .[] | [.nameWithOwner ,(if .isArchived then "◯" else "☓" end),(if .isPrivate then "◯" else "☓" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.description]) | @tsv' \
+  --- --headers 1 --column 1 --multi --expand
+$ repository: gh search repos --sort stars --match name <repo_name> \
+  --json fullName,stargazersCount,pushedAt,description \
+  --jq '\
+    ["repo","stars","pushedAt","description"] \
+    , ( .[] | \
+    [.fullName \
+    ,.stargazersCount \
+    ,(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) \
+    ,.description[0:50] \
+    ]) | @tsv \
+  '\
   | column -ts $'\t' \
   --- --headers 1 --column 1
 $ project_no: gh project list --owner <owner> \
@@ -878,18 +887,34 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 ```
 
 ```sh
-% gh-tool
+;--------------------------------------------------------------
+; mise
+;--------------------------------------------------------------
+% mise
 
-# act : list workflows for a specific event [-l:list]
-act -l <event>
+# install package
+mise use -g <package>:<tool>
 
-# act : run workflows for a specific event[-n:dry-run]
-act<_-dry-run_><event> -W <workflow>
+# list installed
+mise ls<_--current>
 
+# set only current shell session[ex:mise shell node@20]
+mise shell <tool_version>
+
+# exec command [ex:mise exec -- node -v,mise exec node@20 python@3.11 --command "node -v && python -V"]
+mise exec -- <command>
+
+# set settings [ex:mise settings idiomatic_version_file=true]
+mise settings <key>=<value>
+
+# display config
+mise config get
+
+# display config list[ex:mise shell node@20]
+mise config
 ```
-$ event: echo -e "push\npull_request\nissues"
-$ _-dry-run_: echo -e " \n -n "
-$ workflow: find .github/workflows
+$ package: echo -e "npm\pipx\naqua"
+$ _--current: echo -e "\n --current"
 
 ```sh
 ;--------------------------------------------------------------
@@ -1023,10 +1048,10 @@ command <command>
 # command : exec not alias command(not alias)[ex:"ls"]
 "<command>"
 
-# cut : extract input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
+# cut : separate input by bytes [-c:char,-b:byte][cut_list:start-end,start-,-end]
 cut -<cb> <cut_list>
 
-# cut : extract input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
+# cut : separate input by field [-d:separater,default='\t'][-f:cut by field:no1,no2][ex:cut -f 1,7]
 cut -d "<separater>" -f <cut_no>
 
 # date : ["+":format]
@@ -1411,8 +1436,11 @@ sudo apt remove -y <package> && sudo apt autoremove -y
 # apt(Debian) : apt command history
 cat /var/log/apt/history.log<_grep>
 
+# apt(Debian) : display source list
+cat /etc/apt/sources.list | sed -e "/^#/d" -e "/^$/d"
+
 # apt(Debian) : add third-party package [ex.sudo add-apt-repository ppa:git-core/ppa]
-sudo add-apt-repository ppa:git-core/ppa
+sudo add-apt-repository ppa:git-core/ppa && sudo apt update
 
 # free : [-h:human][-c:count][-s:interval seconds]
 free -h -c 12 -s 300
@@ -1448,8 +1476,11 @@ wsl --install -d <distro>
 # wsl : display installed distro
 wsl -l -v
 
-# wsl : launch wsl root directory[-e <command>:exec command]
-wsl ~
+# wsl : launch wsl root directory[-e <command>:exec command ex)wsl -d <distro> -e cat /etc/os-release]
+wsl -e <command>
+
+# wsl : delete distro
+wsl --unregister <distro>
 ```
 
 
