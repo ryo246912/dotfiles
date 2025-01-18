@@ -916,7 +916,7 @@ mise config get
 # display config list[ex:mise shell node@20]
 mise config
 ```
-$ package: echo -e "npm\pipx\naqua"
+$ package: echo -e "npm\npipx\naqua"
 $ _--current: echo -e "\n --current"
 
 ```sh
