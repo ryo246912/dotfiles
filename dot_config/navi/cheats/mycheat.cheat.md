@@ -936,7 +936,7 @@ nodenv install <version>
 ```
 
 ```sh
-% npm
+% npm&pnpm
 
 # display bin directory [ex: $(npm root)/.bin/cspell]
 $(npm root)/.bin/<command>
@@ -955,6 +955,9 @@ npm bugs <package>
 
 # prune unnecessary package
 npm prune
+
+# npx for pnpm
+pnpm dlx <package>
 ```
 
 ```sh

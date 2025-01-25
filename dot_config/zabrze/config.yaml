@@ -629,26 +629,52 @@ abbrevs:
   - name: pr
     abbr: pr
     snippet: pdm run
+    if: '[[ -f "./pyproject.toml" ]]'
 
   - name: prd
     abbr: prd
     snippet: pdm run dev | spacer --after 5
+    if: '[[ -f "./pyproject.toml" ]]'
 
   - name: prf
     abbr: prf
     snippet: pdm run fix
+    if: '[[ -f "./pyproject.toml" ]]'
 
   - name: prl
     abbr: prl
     snippet: pdm run lint
+    if: '[[ -f "./pyproject.toml" ]]'
 
   - name: prt
     abbr: prt
     snippet: pdm run test
+    if: '[[ -f "./pyproject.toml" ]]'
 
   - name: (psy|pdsy)
     abbr-pattern: (psy|pdsy)
     snippet: pdm sync
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pnpm ci|pnpm install --frozen-lockfile
+    abbr: pc
+    snippet: pnpm install --frozen-lockfile
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm (install|add) package
+    abbr-pattern: (pi|pa)
+    snippet: pnpm add
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm install
+    abbr: pin
+    snippet: pnpm install
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm uninstall package
+    abbr-pattern: (pui|pre)
+    snippet: pnpm remove
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
 
   - name: s
     abbr: s
