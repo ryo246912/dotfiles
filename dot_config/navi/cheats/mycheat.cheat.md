@@ -1265,6 +1265,15 @@ curl -sI '<url>' -H '<header>'
 # curl : POST [-i:include headers][-X:request method][-d:post data ex: -d '{"key1":"value1", "key2":"'"$value2"'"}']
 curl -isS -X 'POST' '<url>' -H '<header>' -d '{"<key1>":"<value1>","<key2>":"'"$<value2>"'"}'
 
+# chown : change file owner [-c:display change details] [chown <owner>:<group> .]
+sudo chown -Rc <username>:<username> <file>
+
+# chmod : change file permission [4=read(r),2=write(w),1=exec(x)/7=rwx,6=rw-,4=r--][764=owner:7,group:6,other=4]
+sudo chmod -R 764 <file>
+
+# chmod : change file permission [ugo+-=rwx : u=user,g=group,o=other : +=add,-=remove,=set][ex: chmod u+x file, chmod g-w file]
+sudo chmod -R u+wrx <file>
+
 # chsh : change shell [ex:chsh -s $(which zsh)]
 chsh -s <shells>
 
@@ -1301,8 +1310,17 @@ find . -regex '.*' -a -not -regex '.*'
 # find : prune or print [-prune:not search recursively,"condition1 -prune" -o "condition2 -print"][-o:or][-print:default action][-exec:command(ex:-exec sha1sum {} \;)]
 find $PWD -type d -path "$PWD/.*" -prune -o -type <file_or_directory> -name '*' -print
 
+# find : delete file [ex:find . -type f -path "*:Zone.Identifier" -delete]
+find . -type f -path "<file>" -delete
+
 # find : exclude '.*' directory&file
 find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type <file_or_directory> -name '*' -print
+
+# groups : display group
+groups
+
+# id : display uid gid groups
+id
 
 # kill : [-s:signal,9=KILL,15=TERM(default)]
 kill -s KILL <pid>
@@ -1363,6 +1381,7 @@ watch -edt '<command> ; ! echo $?'
 ```
 $ _--total: echo -e "\n --total"
 $ header: echo -e "\naccept: application/json\nCookie: X-CSRF-Token="
+$ username: whoami
 $ file_or_directory: echo -e "f\nd"
 $ shells: cat /etc/shells | sed 1,4d
 ;$ file: find $PWD -type d -path "$PWD/.*" -prune -o -not -name '.*' -type f -name '*' -print
@@ -1497,7 +1516,7 @@ wsl --export <distro> <distro>.tar
 # wsl : import
 wsl --import <new_distro> <old_distro> <old_distro>.tar
 
-# wsl : launch wsl root directory[-e <command>:exec command ex)wsl -d <distro> -e cat /etc/os-release]
+# wsl : launch wsl root directory[-e <command> or -- <command>:exec command ex)wsl -d <distro> -e cat /etc/os-release,wsl -- cat /etc/os-release]
 wsl -e <command>
 
 # wsl : delete distro
