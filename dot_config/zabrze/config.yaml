@@ -159,6 +159,10 @@ abbrevs:
     abbr: gca
     snippet: git commit --amend
 
+  - name: gcm
+    abbr: gcm
+    snippet: git commit -m '{}'
+
   - name: gcne
     abbr: gcne
     snippet: git commit --no-edit
@@ -366,7 +370,8 @@ abbrevs:
 
   - name: ghpr
     abbr: ghpr
-    snippet: gh pr ready $(gh pr list --author "@me" --state all --limit 100
+    cursor: "👇"
+    snippet: gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
         ["no","title","author","state","draft","updatedAt","createdAt","branch"],
@@ -444,23 +449,28 @@ abbrevs:
 
   - name: gl
     abbr: gl
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 10
+    cursor: "👇"
+    snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: gll
     abbr: gll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 20
+    cursor: "👇"
+    snippet: git log -n 20 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glll
     abbr: glll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 30
+    cursor: "👇"
+    snippet: git log -n 30 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glg
     abbr: glg
-    snippet: git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+    cursor: "👇"
+    snippet: git log 👇--date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glp
     abbr: glp
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent -n 10
+    cursor: "👇"
+    snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent
 
   - name: gm
     abbr: gm
@@ -494,7 +504,8 @@ abbrevs:
 
   - name: gpoh
     abbr: gpoh
-    snippet: git push origin HEAD
+    cursor: "👇"
+    snippet: git push 👇origin HEAD
 
   - name: gpom
     abbr: gpom
