@@ -517,6 +517,9 @@ git rev-parse --show-toplevel
 
 # meta : count-object
 git count-objects -v
+
+# git no config
+GIT_CONFIG_GLOBAL=/dev/null
 ```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only\n --name-status"
