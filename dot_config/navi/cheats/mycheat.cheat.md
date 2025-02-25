@@ -1799,6 +1799,12 @@ zi delete <plugin>
 # deepl : transrate [-s: stdin]
 deepl -s --to '<language>' <<< "<input>"
 
+# ffmpeg : convert to mp4 file [-c:v video codec,-c:a audio codec]
+ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
+
+# ffmpeg : convert from mp4 file to gif file
+ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
+
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>
 
