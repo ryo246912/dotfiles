@@ -224,6 +224,25 @@ abbrevs:
     abbr: ghbs
     snippet: gh browse --settings
 
+  - name: ghie
+    abbr: ghie
+    snippet: gh issue edit $(gh issue list --author "@me" --state all --limit 100
+      --json number,title,author,state,updatedAt,createdAt
+      --jq '
+        ["no","title","author","state","updatedAt","createdAt"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+
   - name: ghil
     abbr: ghil
     snippet: gh issue list --author "" --assignee "" --search "{}" --state all --limit 100
@@ -344,6 +363,27 @@ abbrevs:
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
+
+  - name: ghpr
+    abbr: ghpr
+    snippet: gh pr ready $(gh pr list --author "@me" --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
 
   - name: ghpv
     abbr: ghpv
@@ -933,6 +973,12 @@ abbrevs:
     snippet: --stat
     global: true
     context: '^git\sshow\s'
+
+  - name: (gh pr ready) --undo
+    abbr-pattern: (d|u)
+    snippet: --undo
+    global: true
+    context: '^gh\spr\sready'
 
   - name: (pdm run) -l
     abbr: l
