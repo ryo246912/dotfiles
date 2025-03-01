@@ -447,7 +447,7 @@ GIT_EXTERNAL_DIFF=difft git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto)
 git commit -m 'commit staging' && git stash --include-untracked --message "<prefix><message>" -- <working_filename> && git reset --soft HEAD^
 
 # stash file[--include-untracked: untrack file]
-yes a | git stash -p --message "<prefix><message>" -- <working_filename>
+git stash --include-untracked --message "<prefix><message>" -- <working_filename>
 
 # list stash
 git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
@@ -517,6 +517,9 @@ git rev-parse --show-toplevel
 
 # meta : count-object
 git count-objects -v
+
+# git no config
+GIT_CONFIG_GLOBAL=/dev/null
 ```
 $ _no-gitconfig: echo -e " --no-gitconfig\n"
 $ _--name-only: echo -e "\n --name-only\n --name-status"
@@ -1795,6 +1798,12 @@ zi delete <plugin>
 % other
 # deepl : transrate [-s: stdin]
 deepl -s --to '<language>' <<< "<input>"
+
+# ffmpeg : convert to mp4 file [-c:v video codec,-c:a audio codec]
+ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
+
+# ffmpeg : convert from mp4 file to gif file
+ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 
 # nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
 nix-shell --run zsh -p <package>

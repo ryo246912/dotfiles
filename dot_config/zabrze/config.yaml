@@ -89,7 +89,8 @@ abbrevs:
 
   - name: fgc
     abbr: fgc
-    snippet: git branch --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
+    cursor: "👇"
+    snippet: git branch --sort=-committerdate👇 --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
 
   - name: fgh
     abbr: fgh
@@ -125,7 +126,8 @@ abbrevs:
 
   - name: gba
     abbr: gba
-    snippet: git branch -a --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
+    cursor: "👇"
+    snippet: git branch -a --sort=-committerdate👇--format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
   - name: gbi
     abbr: gbi
@@ -145,11 +147,12 @@ abbrevs:
 
   - name: gbv
     abbr: gbv
-    snippet: git branch --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t'
+    cursor: "👇"
+    snippet: git branch --sort=-committerdate👇 --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t'
 
   - name: gbvv
     abbr: gbvv
-    snippet: git branch -vv
+    snippet: git branch -vv --sort=-committerdate
 
   - name: gc
     abbr: gc
@@ -158,6 +161,10 @@ abbrevs:
   - name: gca
     abbr: gca
     snippet: git commit --amend
+
+  - name: gcm
+    abbr: gcm
+    snippet: git commit -m '{}'
 
   - name: gcne
     abbr: gcne
@@ -223,6 +230,25 @@ abbrevs:
   - name: ghbs
     abbr: ghbs
     snippet: gh browse --settings
+
+  - name: ghie
+    abbr: ghie
+    snippet: gh issue edit $(gh issue list --author "@me" --state all --limit 100
+      --json number,title,author,state,updatedAt,createdAt
+      --jq '
+        ["no","title","author","state","updatedAt","createdAt"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
 
   - name: ghil
     abbr: ghil
@@ -345,6 +371,28 @@ abbrevs:
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
 
+  - name: ghpr
+    abbr: ghpr
+    cursor: "👇"
+    snippet: gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100
+      --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
+      --jq '
+        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+        ( .[] |
+        [.number
+        , .title[0:50]
+        , .author.login
+        , .state
+        , (if .isDraft then "◯" else "☓" end )
+        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        , .headRefName])
+        | @tsv
+      '
+      | column -ts $'\t'
+      | fzf --no-sort --header-lines=1
+      | awk '{ print $1}')
+
   - name: ghpv
     abbr: ghpv
     snippet: gh pr view --comments $(gh pr list --state all --limit 100
@@ -404,23 +452,28 @@ abbrevs:
 
   - name: gl
     abbr: gl
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 10
+    cursor: "👇"
+    snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: gll
     abbr: gll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 20
+    cursor: "👇"
+    snippet: git log -n 20 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glll
     abbr: glll
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" -n 30
+    cursor: "👇"
+    snippet: git log -n 30 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glg
     abbr: glg
-    snippet: git log --date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
+    cursor: "👇"
+    snippet: git log 👇--date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: glp
     abbr: glp
-    snippet: git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent -n 10
+    cursor: "👇"
+    snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent
 
   - name: gm
     abbr: gm
@@ -454,7 +507,8 @@ abbrevs:
 
   - name: gpoh
     abbr: gpoh
-    snippet: git push origin HEAD
+    cursor: "👇"
+    snippet: git push 👇origin HEAD
 
   - name: gpom
     abbr: gpom
@@ -933,6 +987,12 @@ abbrevs:
     snippet: --stat
     global: true
     context: '^git\sshow\s'
+
+  - name: (gh pr ready) --undo
+    abbr-pattern: (d|u)
+    snippet: --undo
+    global: true
+    context: '^gh\spr\sready'
 
   - name: (pdm run) -l
     abbr: l
