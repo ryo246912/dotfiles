@@ -162,9 +162,14 @@ abbrevs:
     abbr: gca
     snippet: git commit --amend
 
+  - name: gcan
+    abbr: gcan
+    snippet: git commit --amend --no-edit
+
   - name: gcm
     abbr: gcm
-    snippet: git commit -m '{}'
+    cursor: "👇"
+    snippet: git commit -m '{👇}'
 
   - name: gcne
     abbr: gcne
