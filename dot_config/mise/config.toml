@@ -1,5 +1,11 @@
+[env]
+# https://evermeet.cx/ffmpeg/
+# https://github.com/acj/asdf-ffmpeg
+ASDF_FFMPEG_ENABLE = "gpl libx264"
+
 [tools]
 bun = "latest"
+ffmpeg = "latest"
 node = "20"
 "npm:cspell" = "latest"
 "npm:czg" = "latest"
@@ -15,3 +21,4 @@ bun = true
 
 [settings.pipx]
 uvx = true
+
