@@ -196,6 +196,13 @@ zinit wait lucid light-mode blockf for \
     atclone"./gh*/bin/gh completion -s zsh >_gh" atpull"%atclone" \
     @'cli/cli'
 
+# git-who #
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v0.7" \
+    sbin"git-who" \
+    @'sinclairtarget/git-who'
+
 # gh-extension(gh-poi) #
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
