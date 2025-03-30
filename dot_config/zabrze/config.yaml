@@ -168,8 +168,7 @@ abbrevs:
 
   - name: gcm
     abbr: gcm
-    cursor: "👇"
-    snippet: git commit -m '{👇}'
+    snippet: git commit -m '{}'
 
   - name: gcne
     abbr: gcne
