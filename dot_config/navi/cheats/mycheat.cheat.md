@@ -895,7 +895,7 @@ gh api "/users/<user>/starred?per_page=100" | jq '.'
 ;--------------------------------------------------------------
 % mise
 
-# install package
+# install package[npx: npm:prettier,pipx: pipx:httpie]
 mise use -g <package>:<tool>
 
 # list installable list
