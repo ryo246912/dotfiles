@@ -420,7 +420,7 @@ abbrevs:
 
   - name: ghpw
     abbr: ghpw
-    snippet: gh pr checks --watch
+    snippet: gh pr checks $(git symbolic-ref --short HEAD) --watch
 
   - name: ghrl
     abbr: ghrl
