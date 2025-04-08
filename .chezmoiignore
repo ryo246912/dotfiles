@@ -8,6 +8,7 @@
 **/dbeaver_shortcut.csv
 {{- end }}
 .config/hammerspoon*
+.config/memo*
 .config/starship*
 **/alacritty.yml
 **/extensions_darwin.sh
@@ -16,3 +17,5 @@
 **/keybindings_linux.json
 **/settings_darwin.json
 **/settings_linux.json
+
+README.md
