@@ -47,6 +47,7 @@ operator + (motion/textobject)
   - s : surround
     - cs{前}{後} : 囲みを前→後に変更 例.cs’"
     - ys{textobject}{囲み} : 囲みを挿入(大体iwだと思う)例.ysiw"
+      - 範囲選択→ S{囲み} : 選択部分を囲む
     - ds{囲み} : 囲みを削除
 
 ## help
