@@ -572,12 +572,40 @@ abbrevs:
     snippet: git show
 
   - name: gshh
-    abbr: gshh
+    abbr-pattern: (gshh|gsh1)
     snippet: git show HEAD~1
 
   - name: gshhh
-    abbr: gshhh
+    abbr-pattern: (gshhh|gsh2)
     snippet: git show HEAD~2
+
+  - name: gs3
+    abbr: gsh3
+    snippet: git show HEAD~3
+
+  - name: gs4
+    abbr: gsh4
+    snippet: git show HEAD~4
+
+  - name: gs5
+    abbr: gsh5
+    snippet: git show HEAD~5
+
+  - name: gs6
+    abbr: gsh6
+    snippet: git show HEAD~6
+
+  - name: gs7
+    abbr: gsh7
+    snippet: git show HEAD~7
+
+  - name: gs8
+    abbr: gsh8
+    snippet: git show HEAD~8
+
+  - name: gs9
+    abbr: gsh9
+    snippet: git show HEAD~9
 
   - name: (gshs|gds)
     abbr-pattern: (gshs|gds)
