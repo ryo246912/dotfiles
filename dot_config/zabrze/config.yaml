@@ -837,6 +837,66 @@ abbrevs:
     global: true
     context: '^git\s'
 
+  - name: (git) HEAD commit
+    abbr: h
+    snippet: HEAD
+    global: true
+    context: '^git\s'
+
+  - name: (git) 1 previous commit
+    abbr: h1
+    snippet: HEAD~1
+    global: true
+    context: '^git\s'
+
+  - name: (git) 2 previous commit
+    abbr: h2
+    snippet: HEAD~2
+    global: true
+    context: '^git\s'
+
+  - name: (git) 3 previous commit
+    abbr: h3
+    snippet: HEAD~3
+    global: true
+    context: '^git\s'
+
+  - name: (git) 4 previous commit
+    abbr: h4
+    snippet: HEAD~4
+    global: true
+    context: '^git\s'
+
+  - name: (git) 5 previous commit
+    abbr: h5
+    snippet: HEAD~5
+    global: true
+    context: '^git\s'
+
+  - name: (git) 6 previous commit
+    abbr: h6
+    snippet: HEAD~6
+    global: true
+    context: '^git\s'
+
+  - name: (git) 7 previous commit
+    abbr: h7
+    snippet: HEAD~7
+    global: true
+    context: '^git\s'
+
+  - name: (git) 8 previous commit
+    abbr: h8
+    snippet: HEAD~8
+    global: true
+    context: '^git\s'
+
+  - name: (git) 9 previous commit
+    abbr: h9
+    snippet: HEAD~9
+    global: true
+    context: '^git\s'
+
   - name: (git add) --dry-run
     abbr: d
     snippet: --dry-run
