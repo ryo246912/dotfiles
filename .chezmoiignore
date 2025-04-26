@@ -9,6 +9,7 @@
 {{- end }}
 .config/hammerspoon*
 .config/memo*
+.config/sidebery*
 .config/starship*
 **/alacritty.yml
 **/extensions_darwin.sh
