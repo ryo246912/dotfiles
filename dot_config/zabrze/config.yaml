@@ -611,7 +611,7 @@ abbrevs:
     abbr: gshh
     snippet: git show HEAD~1
 
-  - name: gshhh
+  - name: gshh
     abbr-pattern: (gshhh|gsh2)
     snippet: git show HEAD~2
 
