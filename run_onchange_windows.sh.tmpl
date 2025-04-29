@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# 移動対象のファイル
+# {{ include "dot_config/claude/claude_desktop_config.json" | sha256sum }}
+
+{{ if contains "WSL" .chezmoi.kernel.osrelease -}}
+# 配列でキーと値を管理
+# 保存元ファイルパス 保存先ディレクトリ
+file_mappings=(
+  "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config.json" "/mnt/c/Users/$WINUSER/AppData/Roaming/Claude/claude_desktop_config.json"
+)
+
+# 配列をループで処理
+for ((i=0; i<${#file_mappings[@]}; i+=2)); do
+  source_file="${file_mappings[i]}"
+  dest_dir="${file_mappings[i+1]}"
+  cp "$source_file" "$dest_dir"
+  echo "Copied $source_file to $dest_dir"
+done
+{{ end -}}

@@ -7,6 +7,7 @@
 .config/rectangle*
 **/dbeaver_shortcut.csv
 {{- end }}
+.config/claude*
 .config/hammerspoon*
 .config/memo*
 .config/sidebery*
