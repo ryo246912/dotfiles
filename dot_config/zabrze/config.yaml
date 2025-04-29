@@ -203,17 +203,53 @@ abbrevs:
     abbr-pattern: (gcr|gchr)
     snippet: git cherry-pick -n
 
-  - name: gd
-    abbr: gd
+  - name: gd|gshss
+    abbr-pattern: (gd|gshss)
     snippet: git diff
 
   - name: gdc
     abbr: gdc
     snippet: git diff --diff-filter=U
 
-  - name: gds
-    abbr: gds
+  - name: gdc|gds|gshs
+    abbr-pattern: (gdc|gds|gshs)
     snippet: git diff --cached
+
+  - name: gshd
+    abbr: gshd
+    snippet: git diff HEAD~1...HEAD
+
+  - name: gshhd|gsh2d
+    abbr-pattern: (gshhd|gsh2d)
+    snippet: git diff HEAD~2...HEAD~1
+
+  - name: gshhhd|gsh3d
+    abbr-pattern: (gshhhd|gsh3d)
+    snippet: git diff HEAD~3...HEAD~2
+
+  - name: gsh4d
+    abbr: gsh4d
+    snippet: git diff HEAD~4...HEAD~3
+
+  - name: gsh5d
+    abbr: gsh5d
+    snippet: git diff HEAD~5...HEAD~4
+
+  - name: gsh6d
+    abbr: gsh6d
+    snippet: git diff HEAD~6...HEAD~5
+
+  - name: gsh7d
+    abbr: gsh7d
+    snippet: git diff HEAD~7...HEAD~6
+
+  - name: gsh8d
+    abbr: gsh8d
+    snippet: git diff HEAD~8...HEAD~7
+
+  - name: gsh9d
+    abbr: gsh9d
+    snippet: git diff HEAD~9...HEAD~8
 
   - name: gf
     abbr: gf
@@ -572,10 +608,10 @@ abbrevs:
     snippet: git show
 
   - name: gshh
-    abbr-pattern: (gshh|gsh1)
+    abbr: gshh
     snippet: git show HEAD~1
 
-  - name: gshhh
+  - name: gshh
     abbr-pattern: (gshhh|gsh2)
     snippet: git show HEAD~2
 

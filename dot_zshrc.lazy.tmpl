@@ -226,7 +226,7 @@ __glow_atclone() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    ver"v1.5.1" \
+    ver"v2.1.0" \
     sbin"glow" \
     atclone"__glow_atclone" \
     @'charmbracelet/glow'
@@ -1001,29 +1001,7 @@ zsh-profiler() {
   ZSHRC_PROFILE=1 zsh -i -c zprof
 }
 
-export APPDATA="/mnt/c/Users/$WINUSER/AppData"
-export USERDIR="/mnt/c/Users/$WINUSER"
-{{ if eq .chezmoi.os "linux" -}}
-cp_winhost() {
-  # alacrittyの設定ファイルをコピー
-  [ "$(date -r $HOME/.config/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/alacritty/alacritty.toml '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
-
-  # AutoHotkeyの設定ファイルをコピー
-  [ "$(date -r $HOME/.config/autohotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" != "$(date -r $USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
-
-  # rioの設定ファイルをコピー
-  [ "$(date -r $HOME/.config/rio/config.toml '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Local/rio/config.toml '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
-
-  # VSCodeの設定ファイルをコピー
-  [ "$(date -r $HOME/.vscode/keybindings.json '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/Code/User/keybindings.json '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.vscode/keybindings.json" "$APPDATA/Roaming/Code/User/keybindings.json"
-  [ "$(date -r $HOME/.vscode/settings.json '+%Y/%m/%d %H:%M')" != "$(date -r $APPDATA/Roaming/Code/User/settings.json '+%Y/%m/%d %H:%M')" ] && \
-  cp "$HOME/.vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
 }
-{{- end }}
 
 #--------------------------------------------------------------
 # terminal

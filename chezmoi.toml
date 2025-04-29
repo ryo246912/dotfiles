@@ -1,0 +1,4 @@
+[scriptEnv]
+    WINUSER = "r-ksk"
+    APPDATA = "/mnt/c/Users/$WINUSER/AppData"
+    USERDIR = "/mnt/c/Users/$WINUSER"

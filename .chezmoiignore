@@ -7,8 +7,10 @@
 .config/rectangle*
 **/dbeaver_shortcut.csv
 {{- end }}
+.config/claude*
 .config/hammerspoon*
 .config/memo*
+.config/sidebery*
 .config/starship*
 **/alacritty.yml
 **/extensions_darwin.sh

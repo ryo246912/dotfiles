@@ -1,12 +1,7 @@
 abbr ch='chezmoi'
 abbr chad='chezmoi add --template'
-{{ if eq .chezmoi.os "darwin" -}}
 abbr chap='chezmoi apply --interactive'
 abbr chas='chezmoi apply --source-path'
-{{ else -}}
-abbr chap='chezmoi apply --interactive && cp_winhost'
-abbr chas='chezmoi apply --source-path && cp_winhost'
-{{- end }}
 abbr chcd='() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && vim $file }'
 abbr chcs='() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }'
 abbr chch='chezmoi chattr +template'
