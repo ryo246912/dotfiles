@@ -2,19 +2,52 @@
 
 # 移動対象のファイル
 # {{ include "dot_config/claude/claude_desktop_config.json" | sha256sum }}
+# {{ include "dot_config/autohotkey/AutoHotkey.ahk" | sha256sum }}
+# {{ include "dot_config/alacritty/alacritty.toml.tmpl" | sha256sum }}
+# {{ include "dot_config/rio/private_config.toml.tmpl" | sha256sum }}
+# {{ include "dot_vscode/keybindings_linux.json" | sha256sum }}
+# {{ include "dot_vscode/settings_linux.json" | sha256sum }}
 
 {{ if contains "WSL" .chezmoi.kernel.osrelease -}}
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
-  "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config.json" "/mnt/c/Users/$WINUSER/AppData/Roaming/Claude/claude_desktop_config.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
+  "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
+  "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
+  "$HOME/.vscode/keybindings.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  "$HOME/.vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
 )
 
 # 配列をループで処理
 for ((i=0; i<${#file_mappings[@]}; i+=2)); do
   source_file="${file_mappings[i]}"
   dest_dir="${file_mappings[i+1]}"
-  cp "$source_file" "$dest_dir"
-  echo "Copied $source_file to $dest_dir"
+
+  # コピー元とコピー先の更新日時を比較
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_fileをコピーしますか? (y/n/d)"
+    read -r answer
+
+    case "$answer" in
+      y|Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n|N)
+        break
+        ;;
+      d|D)
+        delta "$source_file" "$dest_dir"
+        ;;
+      *)
+        ;;
+    esac
+  done
 done
 {{ end -}}
