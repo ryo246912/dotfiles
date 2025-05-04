@@ -7,7 +7,6 @@ pdm 2.19.1
 ruby 3.3.1
 uv 0.5.5
 tmux 3.5
-vim 9.1.0
 {{ if eq .chezmoi.os "darwin" -}}
 python 3.11.7
 nodejs 20.16.0
@@ -15,4 +14,6 @@ terraform 1.6.5
 {{ else -}}
 python 3.11.7
 nodejs 20.9.0
+kotlin 2.0.21
+java adoptopenjdk-21.0.5+11.0.LTS
 {{- end }}
