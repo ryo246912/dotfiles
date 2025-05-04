@@ -141,6 +141,11 @@ docker container run -it -d --name <container_name> <image_id> <command>
 # exec (execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
 docker container exec -it <command>
 
+# volume mount and exec
+docker run --rm -v <volume_name>:/from alpine sh -c "<command>"
+
+# volume mount (copy)
+docker run --rm -v <volume_name_from>:/from -v <volume_name_to>:/to alpine sh -c "cd /from && cp -av . /to"
 ```
 $ container: docker container ls -a \
   --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.RunningFor}}" \
@@ -188,8 +193,9 @@ docker compose -p <project> up -d
 ```
 $ project: docker compose ls --all \
   --- --headers 1 --column 1
-$ service: docker compose -p <project> ps --all \
-  --- --headers 1 --column 4
+$ service: docker compose -p <project> ps --all --format json \
+  | jq -r '["Name","Service","State","Command"] ,(.[] | [.Name,.Service,.State,.Command]) | @tsv' \
+  --- --headers 1 --column 2
 
 ```sh
 ;--------------------------------------------------------------
@@ -716,7 +722,7 @@ gh repo list <owner> -L 100
 gh repo view <repository> -w
 
 # create repository [--private,--public]
-gh repo create <name> --private
+gh repo create <name> --private --push --source=.
 
 # fork repository
 gh repo fork <repository>
