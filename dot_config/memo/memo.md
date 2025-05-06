@@ -240,8 +240,28 @@
     conditionで()いらない、;で事前に変数定義できる
     - `if y:= xx; cond {}`
 
+  - switch文
+  ```go
+  switch var {
+    case "xxx":
+      ...
+    default:
+      ...
+  }
+  ```
+  例.
+  ```go
+  switch language {
+    case spanish:
+      prefix = spanishHelloPrefix
+    case french:
+      prefix = frenchHelloPrefix
+    default:
+      prefix = englishHelloPrefix
+	}
+  ```
   - for文、`i,v := range xxx`
-    - `for i,item := range xxx {}`
+    - `for i,item :/rangerange xxx {}`
     - `for i := 0; i < 10; i++ {}`
     - `for condition {}`
 - エラー
@@ -269,9 +289,81 @@ go get github.com/gin-gonic/gin
   例. go install golang.org/x/website/tour@latest
 - go run xxx.mod : ファイル実行
 
-## パッケージ
+- gore
+  goのREPL
+
+## パッケージ・モジュール
+### モジュール
+- モジュールは、Goのコードを管理する単位で、1つのプロジェクト全体を指します。
+モジュールは、go.mod ファイルで定義されます。
+このファイルには、モジュール名や依存関係が記述されています。
+Goでは、go.mod がPythonの requirements.txt に相当しますが、Goは依存関係の解決を自動化する仕組みが組み込まれています。
+- モジュールは、他のプロジェクトからインポートして使用できます。
+- モジュールはプロジェクト全体を指し、その中に複数のパッケージが含まれます。
+→モジュールが1プロジェクト
+
+`go mod init example.com/myproject`にて以下が生成
+```go
+module example.com/myproject
+
+go 1.20
+```
+
+### パッケージ
 - Goのプログラムは、パッケージ( package )で構成されます。
 プログラムは main パッケージから開始されます。
+Go では、`main`パッケージはエントリポイントを定義する特別なパッケージです。
+`main`パッケージ内には必ず 1 つの`main`関数が必要で、これがプログラムの実行開始点になります。
+
+- パッケージは、Goのコードを整理するための単位で、1つのディレクトリ内にある関連するファイルをまとめます。
+各ファイルの先頭で package パッケージ名 を指定します。
+パッケージ名は通常、ディレクトリ名と一致します。
+ディレクトリ内のすべてのGoファイルは、同じパッケージ名を持つ必要があります。
+- Goでは、ディレクトリ自体がパッケージとして扱われ、特別なファイル（例: __init__.py）は必要ありません。
+Goでは、ディレクトリ単位でパッケージを管理します。
+```
+myproject/
+├── go.mod
+├── main.go
+└── math/
+    └── add.go
+```
+
+```go
+# add.go
+package math
+
+func Add(a, b int) int {
+    return a + b
+}
+
+# main.go
+package main
+
+import (
+    "example.com/myproject/math" # <モジュール>/<パッケージ>
+    "fmt"
+)
+
+func main() {
+    result := math.Add(2, 3)
+
+    fmt.Println(result) // 出力: 5
+}
+```
+- スクリプトなどはディレクトリを切りつつ、mainパッケージとして扱うことでエラーを回避できる
+Go では、ディレクトリごとにパッケージが分かれます。
+  - `scripts`ディレクトリに`generate.go`を移動することで、`generate.go`は独立した`main`パッケージとして扱われます。
+  - `main.go`と`scripts/generate.go`はそれぞれ独立した`main`パッケージとして扱われるため、`main`関数が競合しません。
+- `scripts/generate.go`を`go run`で実行すると、そのファイル内の`main`関数がエントリポイントとして使用されます
+
+```
+/
+├── main.go (既存のmainパッケージ)
+├── scripts/
+│   └── generate.go (別のmainパッケージ)
+```
+
 - 規約で、パッケージ名はインポートパスの最後の要素と同じ名前になります。
 例えば、インポートパスが "math/rand" のパッケージは、 package rand ステートメントで始まるファイル群で構成します。
 例.
@@ -360,6 +452,12 @@ Goで「型がインターフェースを実装する」という言い方は、
     fmt.Printf("(%v, %T)\n", i, i)
   }
   ```
+- インターフェース型とnil
+Goでは、error型はインターフェース型です。
+インターフェース型の値は、具体的な型とその値のペアで構成されています。
+具体的な型がnilでない場合、そのインターフェースは有効な値を持ちます。
+具体的な型がnilで、値もnilの場合、そのインターフェースはnilとみなされます。
+→ ようはインターフェース型はnilの可能性あり、これはコンパイラでも検知できない
 
 ## 型アサーション
 - `t, ok := i.(T)`
@@ -391,6 +489,54 @@ var p *int
   fmt.Println(*p) // ポインタpを通してiから値を読みだす
   *p = 21         // ポインタpを通してiへ値を代入する
   ```
+  - *Stringなど、Optionalを表現する際に、ポインタ型で表現することがある
+    - Go では、ポインタ型のフィールドは`nil`を持つことができるため、値が存在しない場合を区別できます。
+    ポインタ型を使用することで、JSON のシリアライズ時にフィールドを省略することが可能です。
+    `omitempty`タグを使用すると、フィールドが`nil`の場合に JSON 出力から省略されます。
+
+
+    - 例:
+
+    ```go
+    type Artist struct {
+      Name        string  `json:"name"`
+      NameEnglish *string `json:"nameEnglish,omitempty"`
+    }
+    ```
+
+- ポインタと値型、イミュータブル
+  - Go は基本的にイミュータブルなデータ構造をサポートしていません。
+  そのため、イミュータブルな操作を実現するには、新しいスライスや構造体を作成する形で実装します。
+  イミュータブルなデータ構造を使用すると、データを変更するたびに新しいコピーを作成する必要があります。
+
+  - Go では、ポインタと値型を使い分けることで、必要に応じてデータの変更を制御できます。
+  ポインタを使用すればデータを直接変更でき、値型を使用すればデータのコピーを作成して変更を防ぐことができます。
+  この柔軟性により、イミュータブルなデータ構造がなくても多くのユースケースに対応できます。
+  - 値型
+  Go における「値型」とは、変数がその値そのものを保持するデータ型を指します。
+  値型の変数を別の変数に代入すると、元の値のコピーが作成されます。
+  そのため、値型の変数を変更しても、他の変数には影響を与えません。
+
+  - 値型は**コピーが作成される**:
+    ```go
+    a := 10
+    b := a // 値型の変数を代入すると、元の値のコピーが作成されます。
+    b = 20
+    fmt.Println(a) // 10
+    fmt.Println(b) // 20
+    ```
+
+  - ポインタ型は、値そのものではなく、値が格納されているメモリのアドレスを保持します。
+  ポインタを使うと、値を直接変更することができます。
+
+  ```go
+  a := 10
+  b := &a // a のアドレスを b に代入
+  *b = 20
+  fmt.Println(a) // 20
+  ```
+
+
 
 - ポインタレシーバ
   - ひとつは、メソッドがレシーバが指す先の変数を変更するためです。
@@ -503,6 +649,7 @@ Go のスライスは 長さ（length）と容量（capacity） を持つ
 スライスの要素を変更すると、その元となる配列の対応する要素が変更されます。
 
   - スライス作成、make([]type,要素,容量)
+  スライスの作成には容量が決まっている場合はlenとかで要素数を指定する `s := make([]int,len(slice))`
   例.
   ```go
   b := make([]int, 0, 5)
@@ -532,7 +679,7 @@ Go のスライスは 長さ（length）と容量（capacity） を持つ
   slice = append(slice, 6)       // 追加
   ```
   例.配列の結合
-  ・append() に ...（スプレッド演算子のようなもの）を付ける。
+  ・append() に 末尾に...（スプレッド演算子のようなもの）を付ける。
   ```go
   slice = append(slice, []int{4, 5}...)  // [1, 2, 3, 4, 5]
   ```
@@ -541,6 +688,24 @@ Go のスライスは 長さ（length）と容量（capacity） を持つ
   ```go
   slice := []int{10, 20, 30, 40, 50}
   subSlice := slice[1:4]
+  ```
+  - スライスから新しいスライスを作成することができます。
+  この新しいスライスは、元のスライスと同じ配列を参照します。
+  ```go
+  original := []int{1, 2, 3, 4, 5}
+  subSlice := original[1:4] // [2, 3, 4]
+  subSlice[0] = 10
+  fmt.Println(original) // [1, 10, 3, 4, 5] //もとの配列も変わる
+  ```
+  - スライスのコピーcopy(s, originslice[:])
+  独立したスライスを作成するには、copy 関数を使用する。
+  ```go
+  original := []int{1, 2, 3, 4, 5}
+  independent := make([]int, len(original[1:4]))
+  copy(independent, original[1:4]) // [2, 3, 4]
+  independent[0] = 10
+  fmt.Println(original)    // [1, 2, 3, 4, 5]
+  fmt.Println(independent) // [10, 3, 4]
   ```
   - 長さ、len(xxx)
   スライスの長さは、それに含まれる要素の数です。
@@ -680,6 +845,33 @@ var (
 	p  = &Vertex{1, 2} // has type *Vertex
 )
 ```
+
+- 構造体埋め込み（移譲）
+・埋め込みは、ある型（ここでは*Resolver）を構造体に直接組み込むことで、その型のメソッドやフィールドを継承するような動作を実現します。
+```go
+type mutationResolver struct {
+  *Resolver
+  // field *Resolverという形ではない
+}
+```
+この構造体には、*Resolver（ポインタ型のResolver）が埋め込まれています。
+埋め込まれた*Resolverのメソッドやフィールドを、mutationResolverから直接呼び出すことができる。
+
+- Goでは、&を使って構造体（struct）のポインタを生成することがよくある
+ポインタを使うと、元のデータを直接変更できる(ポインタなしだとインスタンスをコピーする)
+Pythonでは、すべてのオブジェクトが参照（ポインタのようなもの）として扱われます。
+そのため、Goのように明示的に&を使う必要はありません。
+- 逆に、&を使わない場合は別インスタンスになる
+Pythonの場合は、オブジェクトは参照型なので、明示的にコピーを作成する必要がある
+```go
+user := model.User{
+    ID:   "123",
+    Name: "John",
+}
+anotherUser := user // userとanotherUserは別インスタンス
+anotherUser.Name = "Doe" //user.NameはJohnのまま
+```
+
 - structのフィールドは、ドット( . )を用いてアクセスします。
 例.
 ```go
@@ -891,6 +1083,81 @@ Go では errors.Is() や errors.As() を使ってエラーの種類を判定す
       fmt.Println("Result:", result)
   }
   ```
+## goroutine・channel
+- goroutine (ゴルーチン)は、Goのランタイムに管理される軽量なスレッドです。
+go f(x, y, z)
+と書けば、新しいgoroutineが実行されます。
+
+- f , x , y , z の評価は、実行元(current)のgoroutineで実行され
+- f の実行は、新しいgoroutineで実行されます。
+
+
+- channel（チャネル）で、ゴルーチン間でのデータのやり取りが可能
+```go
+# チャネルの作成
+c := make(chan int)
+# 値の送信
+チャネルが閉じた場合はokがfalseになる
+c ,ok <- x
+# 値の受信
+v := <-c
+println(<-c)
+```
+
+- select ステートメントは、goroutineを複数の通信操作で待たせます。
+select は、複数ある case のいずれかが準備できるようになるまでブロックし、準備ができた case を実行します。
+```go
+	x, y := 0, 1
+	for {
+		select {
+		// xの値をcチャネルに送信
+		case c <- x:
+			x, y = y, x+y
+		// quitチャネルを受信したら、後続の処理を実行
+		case <-quit:
+			fmt.Println("quit")
+			return
+    default:
+      fmt.println("wait")
+      time.Sleep(50 * time.Millisecond)
+		}
+
+	}
+```
+
+## テスト
+- xxx_test.goのような名前のファイルにある必要があります。
+- テスト関数はTestという単語で始まる必要があります。
+- テスト関数は1つの引数のみをとります。 t *testing.T
+- *testing.T 型を使うには、他のファイルの fmt と同じように import "testing" が必要です。
+- * testing.Tタイプのtがテストフレームワークへのhook(フック)である
+```go
+package main
+
+import "testing"
+
+func TestHello(t *testing.T) {
+    got := Hello()
+    want := "Hello, world"
+
+    if got != want {
+        t.Errorf("got %q want %q", got, want)
+    }
+}
+```
+
+- ベンチマーク
+testing.Bは、暗号的に命名されたb.Nにアクセスできるようになります。
+
+
+ベンチマークコードが実行されると、b.N回実行され、かかる時間を測定します。
+```go
+func BenchmarkRepeat(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        Repeat("a")
+    }
+}
+```
 
 ## 他
 
@@ -908,8 +1175,72 @@ func main() {
 }
 ```
 
-- print デバック
+- fmtモジュール
+  https://qiita.com/atsutama/items/466e71e79ba876f0d666
+  - 接頭詞
+    - Print{,f,ln} 	fmt.Print, fmt.Printf, fmt.Println 	標準出力への出力
+      - fmt.Print(a ...interface{}) (n int, err error)
+      - fmt.Printf(format string, a ...interface{}) (n int, err error)
+    - SPrint{,f,ln} 	fmt.Sprint, fmt.Sprintf, fmt.Sprintln 	文字列生成
+    - FPrint{,f,ln} 	fmt.Fprint, fmt.Fprintf, fmt.Fprintln 	io.Writer インターフェースを満たす任意の出力ストリームに出力
+  - 接尾詞
+    - 末尾f fmt.{,S,P}Printf フォーマットで使用する
+    - 末尾ln 末尾改行あり
+    - 末尾なし 末尾改行なし
+
+  - 書式指定子
+  %s、文字列
+  %d、数字
+  %T、任意の型
   ```go
   import "fmt"
   fmt.Println(add(42, 13))
+
+  word := "Go言語"
+  s := fmt.Spintf("I like %s.\n", word) // s == "I like Go言語."
   ```
+
+## gqlgen
+- ファイル構成
+```
+├── gqlgen.yml               // 設定ファイル
+├── graph
+│   ├── generated            // 自動生成されたパッケージ（基本的にいじらない）
+│   │   └── generated.go
+│   ├── model                // Goで実装したgraph model用のパッケージ（自動生成されたファイルと自分でもファイルを定義することが可能）
+│   │   └── models_gen.go    // 自動生成のファイル
+│   ├── resolver.go          // ルートのresolverの型定義ファイル. 再生成で上書きされない。
+│   ├── schema.graphqls      // GraphQLのスキーマ定義ファイル. 分割してもOK
+│   └── schema.resolvers.go  // schema.graphqlから生成されたresolverの実装ファイル,エンドポイントの設定(type Query と type Mutation は graph/schema.resolvers.go に作成されます。)
+└── server.go                // アプリへのエントリポイント. 再生成で上書きされない。
+```
+
+- gqlsqlの流れ
+  - GraphQL(schema.graphqls)のスキーマを定義・編集
+  - gqlgenのコマンドを実行 go run github.com/99designs/gqlgen generate
+  - 定義したスキーマを元に、Goの構造体や関数が自動的に生成される
+  - その中の関数などを実装してサーバーに組み込むと、GraphQLのクエリを理解でき、求められたJSONを返すAPIが構築できる
+
+- 自動生成のレスポンスの型を変更したい場合は、
+  - 自動生成のmodels_gen.goの内容を削除
+  - `graph/models/xxx.go`に新しく型を定義
+  ```go
+  package model
+
+  type Todo struct {
+          ID     string `json:"id"`
+          Text   string `json:"text"`
+          Done   bool   `json:"done"`
+          UserID string `json:"userId"`
+          User   *User  `json:"user"`
+
+  }
+  ```
+
+- gqlgen.ymlを変更
+```yml
+Todo:
+  fields:
+    user:
+      resolver: true
+```

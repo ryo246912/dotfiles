@@ -178,6 +178,7 @@ Slack,option + shift + ↑↓,alt + shift + ↑↓,未読の前/次のチャン�
 Slack,F6/shift + F6,-,次/前のセクションにフォーカス
 Thunderbird,-,shift + c,メールを全て既読にする
 Thunderbird,-,shift + F5,全てのアカウントの新着メールを受信
+tig,J/K,J/K,(main view)で左側にdiff viewを表示しながら、コミットログを上下移動
 Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
 Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ
 Tmux,ctrl + b → e [cmd + e],ctrl + b → e,synchronize-panesのON/OFF ※カスタム
@@ -314,6 +315,7 @@ VSCode,cmd + ↑↓,ctrl + ↑↓,先頭/末尾に移動
 VSCode,cmd + ↑↓,ctrl + ↑↓,入力コントロールと結果の間を移動
 VSCode,cmd + .,ctrl + .,(マークダウン)URLペースト時のコントロールを選択
 VSCode,cmd + .,ctrl + .,quick fix(修正・コメントアウト)
+VSCode,cmd + @,ctrl + @,ターミナルを開く
 VSCode,cmd + F2(cmd + shift + l),ctrl + F2((ctrl + shift + l)),すべての単語を変更
 VSCode,cmd + ctrl + e,ctrl + CapsLk + e(ctrl + shift + alt + e),エクスプローラ:開いているエディタビューにフォーカス ※カスタム
 VSCode,cmd + ctrl + g,ctrl + CapsLk + g(ctrl + shift + alt + g),(GitHub)GitHubPRビューにフォーカス ※カスタム
@@ -375,6 +377,9 @@ VSCode(コマンドパレット),Emmet: Wrap with Abbreviation,-,タグで囲む
 VSCode(コマンドパレット),Developer: Inspect Context Keys,-,開発者コンテキストキー(when句)の調査
 VSCode(コマンドパレット),Developer: Show Running Extensions,-,拡張機能の表示
 VSCode(コマンドパレット),Developer: Startup Performance,-,スタートアップパフォーマンス表示
+Zen,-,ctrl + alt + d,画面分割 ※カスタム
+Zen,-,ctrl + alt + shift + d,画面分割戻す ※カスタム
+Zen,-,alt + ],画面分割切り替え ※カスタム
 zsh/terminal,ctrl + a,CapsLk + a(shift + alt + a),先頭に戻る(beginning-of-line)
 zsh/terminal,ctrl + c,ctrl + c,割り込みシグナルを送る(kill -INT/intrシグナル)
 zsh/terminal,ctrl + e,CapsLk + e(shift + alt + e),末尾に進む(end-of-line)
