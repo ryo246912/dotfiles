@@ -203,6 +203,21 @@ zinit wait lucid light-mode blockf for \
     sbin"git-who" \
     @'sinclairtarget/git-who'
 
+# gh-extension(gh-dash) #
+{{ if eq .chezmoi.os "darwin" -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v4.14.0" \
+    sbin"*darwin* -> gh-dash" \
+    @'dlvhdr/gh-dash'
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v4.14.0" \
+    sbin"*linux* -> gh-dash" \
+    @'dlvhdr/gh-dash'
+{{- end }}
+
 # gh-extension(gh-poi) #
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
@@ -638,6 +653,22 @@ zle -N _nnn
 bindkey "^N" _nnn
 {{ else }}
 bindkey "^[N" _nnn
+{{- end }}
+
+# ctrl + w(alt + shift + w)でgitui起動
+_gh-dash() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
+  else
+    BUFFER='gh-dash'
+    zle accept-line
+  fi
+}
+zle -N _gh-dash
+{{ if eq .chezmoi.os "darwin" -}}
+bindkey "^W" _gh-dash
+{{ else }}
+bindkey "^[W" _gh-dash
 {{- end }}
 
 # ctrl + y(alt + shift + y)でyazi起動
