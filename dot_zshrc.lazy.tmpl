@@ -1001,16 +1001,43 @@ ssh() {
   fi
 }
 
-zsh-history-backup() {
+_zsh-history-backup() {
   local backup_dir="$HOME/.local/state/zsh"
   while sleep $((60 * 15)) ; do
     if [[ $(wc -l "$backup_dir/.zsh_history" | grep -o '[0-9]*') -gt 1000 ]] ; then
-      cp -u "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
+      cp -f "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
       echo "$(date "+[%y/%m/%d %H:%M:%S]") zsh-history-backup!"
     else
       osascript -e 'display notification "Backup Error!" with title "zsh"'
     fi
   done
+}
+
+zsh-history-backup() {
+  local pid_file="$HOME/.zsh_history_backup_process.pid"
+  local cmd="_zsh-history-backup"
+
+  # すでにプロセスが実行中かチェック
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file")
+
+    # プロセスが実行中か確認
+    if ps -p "$existing_pid" > /dev/null 2>&1; then
+      return 0
+    # elif [[ "$(pwd)" != "$HOME" ]]; then
+    #   echo "$(pwd)"
+    #   echo $PWD
+    #   return 0
+    else
+      echo "pidファイルはあるがプロセスがないので削除"
+      rm -f "$pid_file"
+    fi
+  fi
+
+  # バックアップコマンドをバックグラウンド実行 & PID を保存
+  $cmd &
+  echo $! > "$pid_file"
+  echo "バックアッププロセスを開始しました (PID: $(cat "$pid_file"))"
 }
 
 zsh-startuptime() {
@@ -1126,6 +1153,9 @@ fi
 {{- else -}}
 compinit
 {{- end }}
+
+# historyの定期バックアップを起動
+zsh-history-backup
 
 # バックグラウンドでzcompile
 # [-s:sizeが0以上][-nt:タイムスタンプが新しいか]
