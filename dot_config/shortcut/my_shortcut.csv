@@ -8,10 +8,12 @@ Arc,cmd + s,-,サイドバーの開閉
 Arc,cmd + t,-,新しいタブ(コマンドパレットに似てる)を開く
 Arc,cmd + <num>,-,サイドバーのn番目のアイテムを開く
 Arc,cmd + [],-,最新のタブに前後に切り替え
+Arc,cmd + ctrl + e,-,フォーカス移動(Reveal Current Tab,※カスタム)
 Arc,cmd + ctrl + n,-,新しいシークレットウィンドウ(incognito)を開く
 Arc,cmd + ctrl + [],-,分割画面切り替え
 Arc,cmd + option + d,-,画面分割 ※カスタム
 Arc,cmd + option + g,-,ChatGPT
+Arc,cmd + option + j,-,会議ツールを開く
 Arc,cmd + option + n,-,小さなウィンドウ(little arc)を開く
 Arc,cmd + option + ←→,-,スペースを移動
 Arc,cmd + shift + l,-,分割画面切り替え
@@ -328,6 +330,7 @@ VSCode,cmd + shift + e,ctrl + shift + e,エディタにフォーカス
 VSCode,cmd + shift + g,ctrl + shift + g,(GitHub)Gitにフォーカス ※カスタム
 VSCode,cmd + shift + j,ctrl + shift + j,(Jumpy)選択ワードに移動 ※カスタム
 VSCode,cmd + shift + k,ctrl + shift + k,選択行を削除
+VSCode,cmd + shift + l,ctrl + shift + l,ハイライト部分をマルチカーソル
 VSCode,cmd + shift + m,ctrl + shift + m,問題を表示
 VSCode,cmd + shift + o,ctrl + shift + o,ファイルシンボルを表示
 VSCode,cmd + shift + r,ctrl + shift + r,(GitHub)コメントにフォーカス ※カスタム

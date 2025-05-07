@@ -11,6 +11,10 @@ abbrevs:
     abbr: c.
     snippet: code .
 
+  - name: c3
+    abbr: c3
+    snippet: cal -3
+
   - name: ch
     abbr: ch
     snippet: chezmoi
@@ -62,6 +66,10 @@ abbrevs:
   - name: chm
     abbr: chm
     snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
+
+  - name: cy
+    abbr: cy
+    snippet: cal -y
 
   - name: cz
     abbr: cz
@@ -562,6 +570,11 @@ abbrevs:
   - name: gpos
     abbr: gpos
     snippet: git push origin staging
+
+  - name: gpuh
+    abbr: gpuh
+    cursor: "👇"
+    snippet: git push 👇upstream HEAD
 
   - name: gpum
     abbr: gpum
