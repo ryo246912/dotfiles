@@ -9,6 +9,9 @@ tmux list-panes -s -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command
 # pane move [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
+# respawn-current-pane [-k:kill existing command,-c:start-directory]
+tmux respawn-pane -k -c '#{pane_current_path}' -t .
+
 # respawn-pane [-k:kill existing command,-c:start-directory]
 tmux respawn-pane -k -c '#{pane_current_path}' -t <pane_to>
 
