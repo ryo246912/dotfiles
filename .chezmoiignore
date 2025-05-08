@@ -5,14 +5,16 @@
 .config/karabiner*
 .config/raycast*
 .config/rectangle*
-**/dbeaver_shortcut.csv
 {{- end }}
 .config/claude*
+.config/dbeaver*
 .config/hammerspoon*
 .config/memo*
 .config/sidebery*
 .config/starship*
 .config/vscode*
 **/alacritty.yml
+not_config*
+chezmoi.toml
 
 README.md
