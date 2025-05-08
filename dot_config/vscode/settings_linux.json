@@ -10,7 +10,9 @@
   // "diffEditor.experimental.collapseUnchangedRegions": true,
   // 非変更のコードを折りたたむ
   "diffEditor.hideUnchangedRegions.enabled": true,
-  "editor.rulers": [90],
+  "editor.rulers": [
+    90
+  ],
   "editor.guides.bracketPairs": true,
   // 連続した空白文字を表示
   "editor.renderWhitespace": "boundary",
@@ -86,9 +88,14 @@
   "less.hover.references": false,
   // (Python)
   "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true,
-  "python.linting.flake8Enabled": true,
-  "python.formatting.provider": "black",
+  // リポジトリのpythonディレクトリも追加する
+  // 例.
+  // "python.analysis.extraPaths": [
+  //   "app"
+  // ],
+  // "python.linting.pylintEnabled": true,
+  // "python.linting.flake8Enabled": true,
+  // "python.formatting.provider": "black",
   "python.analysis.extraPaths": [
     ".venv",
   ],
@@ -134,7 +141,7 @@
   ///////////////////////////////////////////////
   // (ActivitusBar)
   "activitusbar.showSourceControlCounter": true,
-  "activitusbar.activeColour":"#FFFFFF",
+  "activitusbar.activeColour": "#FFFFFF",
   "activitusbar.inactiveColour": "#FFFFFF",
   "activitusbar.views": [
     {
@@ -279,8 +286,6 @@
   "githubPullRequests.defaultCommentType": "review",
   // (GitHub Pull Requests and Issues) GitHubのmultiDiffを表示
   "githubPullRequests.focusedMode": "multiDiff",
-  // (GitHub Copilot) 自動で補完が出るようにする
-  "github.copilot.editor.enableAutoCompletions": true,
   // (Gitlens)
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
@@ -329,7 +334,10 @@
   ],
   // (Status Bar)
   "statsBar.cpuLoad.format": "CPU:${percent}%",
-  "statsBar.modules": ["cpuLoad", "memoUsage"],
+  "statsBar.modules": [
+    "cpuLoad",
+    "memoUsage"
+  ],
   "statsBar.memoUsage.format": "Memory:${percent}%",
   "statsBar.location": "Right",
   "workbench.iconTheme": "vscode-great-icons",
@@ -338,8 +346,13 @@
   // (Vim)
   "vim.insertModeKeyBindings": [
     {
-      "before": ["j", "j"],
-      "after": ["<Esc>"]
+      "before": [
+        "j",
+        "j"
+      ],
+      "after": [
+        "<Esc>"
+      ]
     }
   ],
   "vim.hlsearch": true,

@@ -111,7 +111,7 @@ nix search nixpkgs "^<package>$"
 tgpt "<prompt>" <<< "<input>"
 
 # vscode : display installed extensions
-code --list-extensions | xargs -L 1 echo code --install-extension
+code --list-extensions | xargs -L 1 echo code --install-extension > dot_vscode/executable_extensions.sh
 
 # weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
 curl -s "<version>wttr.in/<location_or_help>"

@@ -1,0 +1,46 @@
+#!/bin/bash
+code --install-extension alefragnani.project-manager
+code --install-extension ambooth.git-rename
+# code --install-extension auchenberg.vscode-browser-preview #VScodeでブラウザをプレビューする拡張
+code --install-extension BriteSnow.vscode-toggle-quotes
+code --install-extension brunnerh.file-properties-viewer
+code --install-extension csholmq.excel-to-markdown-table
+code --install-extension danielbreiner.go-to-relative
+code --install-extension dbaeumer.vscode-eslint
+code --install-extension eamodio.gitlens
+code --install-extension emmanuelbeziat.vscode-great-icons
+code --install-extension esbenp.prettier-vscode
+code --install-extension EXCEEDSYSTEM.vscode-macros
+code --install-extension formulahendry.auto-rename-tag
+code --install-extension GitHub.remotehub
+code --install-extension github.copilot
+code --install-extension github.copilot-chat
+code --install-extension GitHub.vscode-pull-request-github
+code --install-extension Gruntfuggly.todo-tree
+code --install-extension johnpyp.vscode-jumpy-plus
+code --install-extension koalamer.labeled-bookmarks
+code --install-extension mechatroner.rainbow-csv
+code --install-extension metaseed.metago
+code --install-extension metaseed.MetaJump
+code --install-extension metaseed.MetaWord
+code --install-extension mhutchie.git-graph
+code --install-extension MS-CEINTL.vscode-language-pack-ja
+code --install-extension ms-vscode.makefile-tools
+code --install-extension ms-vscode.remote-repositories
+# code --install-extension ms-vsliveshare.vsliveshare
+code --install-extension njpwerner.autodocstring
+code --install-extension oderwat.indent-rainbow
+code --install-extension oouo-diogo-perdigao.docthis
+code --install-extension ryuta46.multi-command
+code --install-extension saoudrizwan.claude-dev
+code --install-extension sgryjp.japanese-word-handler
+code --install-extension shardulm94.trailing-spaces
+code --install-extension shd101wyy.markdown-preview-enhanced
+code --install-extension stevencl.addDocComments
+code --install-extension streetsidesoftware.code-spell-checker
+code --install-extension tamasfe.even-better-toml
+code --install-extension tomoki1207.vscode-input-sequence
+code --install-extension usama8800.tab-groups
+code --install-extension usernamehw.errorlens
+code --install-extension voidei.vscode-vimrc
+code --install-extension yoavbls.pretty-ts-errors
