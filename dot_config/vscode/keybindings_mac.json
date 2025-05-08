@@ -534,22 +534,22 @@
     "when": "listFocus && listSupportsFind"
   },
   // クイック検索をcmd+fにする
-  {
-    "key": "cmd+f",
-    "command": "workbench.action.quickTextSearch",
-    "when": "editorFocus && editorIsOpen"
-  },
+  // {
+  //   "key": "cmd+f",
+  //   "command": "workbench.action.quickTextSearch",
+  //   "when": "editorFocus && editorIsOpen"
+  // },
   // 通常の検索をalt+cmd+fにする
-  {
-    "key": "alt+cmd+f",
-    "command": "actions.find",
-    "when": "editorFocus && editorIsOpen"
-  },
-  {
-    "key": "cmd+f",
-    "command": "-actions.find",
-    "when": "editorFocus || editorIsOpen"
-  },
+  // {
+  //   "key": "alt+cmd+f",
+  //   "command": "actions.find",
+  //   "when": "editorFocus && editorIsOpen"
+  // },
+  // {
+  //   "key": "cmd+f",
+  //   "command": "-actions.find",
+  //   "when": "editorFocus || editorIsOpen"
+  // },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
@@ -616,7 +616,9 @@
   {
     "key": "cmd+w",
     "command": "extension.multiCommand.execute",
-    "args": { "command": "multiCommand.closeEditorFocusLeft" },
+    "args": {
+      "command": "multiCommand.closeEditorFocusLeft"
+    },
     "when": "!activeEditorIsLastInGroup"
   },
   //// 一番右タブの時は通常通り閉じるだけ
@@ -786,10 +788,29 @@
     "key": "alt+cmd+g",
     "command": "workbench.view.extension.github-pull-requests"
   },
+  // (GitHub) すべてのコメントを閉じる
+  {
+    "key": "ctrl+shift+c",
+    "command": "workbench.action.collapseAllComments"
+  },
+  {
+    "key": "ctrl+cmd+c",
+    "command": "gitlens.views.scm.grouped.focus"
+  },
+  {
+    "key": "alt+c",
+    "command": "claude-dev.SidebarProvider.focus"
+  },
+  {
+    "key": "alt+c",
+    "command": "-gitlens.showQuickCommitFileDetails",
+    "when": "editorTextFocus && !gitlens:disabled && config.gitlens.keymap == 'alternate'"
+  },
   // (GitHub Copilot)Copilot Chatにフォーカス
   {
-    "key": "cmd+g",
-    "command": "workbench.panel.chat.view.copilot.focus"
+    "key": "shift+cmd+i",
+    "command": "workbench.panel.chat",
+    "when": "workbench.panel.chat.view.copilot.active"
   },
   // (go-to-relative)相対行で移動する
   {

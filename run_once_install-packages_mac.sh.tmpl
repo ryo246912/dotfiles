@@ -1,17 +1,17 @@
 #!/bin/bash
 
-### hard link ###
 {{ if eq .chezmoi.os "darwin" -}}
 # navi #
 [ -e "~/.config/private/navi/mycheat_private.cheat.md" ] && ln -f ~/.config/private/navi/mycheat_private.cheat.md ~/.config/navi/cheats
 ln -f ~/.private/.zprofile.secret ~
 ln -f ~/.private/navi/mycheat_private.cheat ~/.navi/cheats
-ln -f vscode/snippet/global.code-snippets ~/.vscode/
 
 read -r -d '' PACKAGES <<EOF
 colordiff
+docker
 font-hackgen
 font-hackgen-nerd
+git
 gpg
 pinentry-mac
 t-rec
@@ -30,6 +30,7 @@ done
 read -r -d '' CASKPACKAGES <<EOF
 alacritty
 arc
+chatgpt
 karabiner-elements
 keyboardcleantool
 raycast
@@ -39,23 +40,8 @@ EOF
 for package in $(echo $CASKPACKAGES); do
   brew install --cask $package
 done
-{{ else -}}
-read -r -d '' PACKAGES <<EOF
-git
-gpg
-zsh
-EOF
 
-for package in $(echo $PACKAGES); do
-  apt install -y $package
-done
-{{- end }}
-
-# Nix
-{{ if eq .chezmoi.os "darwin" -}}
 # nix-installerでインストール
 # https://github.com/DeterminateSystems/nix-installer
 [ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ] && curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-{{ else -}}
-[ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 {{- end }}

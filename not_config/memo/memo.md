@@ -89,6 +89,23 @@
   - baseline : flex アイテムのベースライン（テキストの下端）に配置
   - stretch : 親要素の横幅に合わせて flex アイテムを伸縮
 
+## その他
+- はみ出した文字を...で設定
+  - white-space: nowrap;
+  テキストを1行に収めるためのスタイルです。
+  テキストが改行されることを防ぎます。
+  - text-overflow: ellipsis;
+  テキストが要素の幅を超えた場合に、末尾に「...」を表示します。
+  これにより、長いテキストが視覚的に切り詰められます。
+  - overflow: hidden;
+  要素の幅を超えた部分のテキストを非表示にします。
+  これにより、要素外にテキストがはみ出ることを防ぎます。
+  ```css
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  ```
+
 # TypeScript
 
 - テンプレートリテラル型 `${T}`

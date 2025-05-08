@@ -474,7 +474,17 @@ zinit wait lucid light-mode blockf for \
 {{ if eq .chezmoi.os "darwin" -}}
 __zsh-auto-notify_atload() {
     export AUTO_NOTIFY_THRESHOLD=20
-    AUTO_NOTIFY_IGNORE+=("czg" "chezmoi apply" "gitui")
+    AUTO_NOTIFY_IGNORE+=(
+      "czg"
+      "chezmoi apply"
+      "git log"
+      "git show"
+      "git rebase"
+      "gitui"
+      "gh pr create"
+      "gh pr diff"
+      "gh pr edit"
+    )
 }
 zinit wait lucid light-mode blockf for \
     atload"__zsh-auto-notify_atload" \

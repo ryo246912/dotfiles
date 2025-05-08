@@ -5,19 +5,16 @@
 .config/karabiner*
 .config/raycast*
 .config/rectangle*
-**/dbeaver_shortcut.csv
 {{- end }}
 .config/claude*
+.config/dbeaver*
 .config/hammerspoon*
 .config/memo*
 .config/sidebery*
 .config/starship*
+.config/vscode*
 **/alacritty.yml
-**/extensions_darwin.sh
-**/extensions_linux.sh
-**/keybindings_darwin.json
-**/keybindings_linux.json
-**/settings_darwin.json
-**/settings_linux.json
+not_config*
+chezmoi.toml
 
 README.md

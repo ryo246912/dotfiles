@@ -1,0 +1,61 @@
+prSections:
+- title: All PRs
+  filters: sort:created-desc
+- title: Open PRs
+  filters: is:open sort:created-desc
+issuesSections:
+- title: All Issues
+  filters: sort:created-desc
+- title: Open Issues
+  filters: is:open sort:created-desc
+defaults:
+  preview:
+    open: true
+    # previewの幅を設定
+    width: 150
+  prsLimit: 20
+  issuesLimit: 20
+  view: prs
+  layout:
+    prs:
+      updatedAt:
+        width: 7
+      repo:
+        width: 15
+      author:
+        width: 15
+      assignees:
+        width: 20
+        hidden: true
+      base:
+        width: 15
+        hidden: true
+      lines:
+        width: 16
+    issues:
+      updatedAt:
+        width: 7
+      repo:
+        width: 15
+      creator:
+        width: 10
+      assignees:
+        width: 20
+        hidden: true
+  refetchIntervalMinutes: 30
+keybindings:
+  issues: []
+  prs:
+    # keybindingを無効
+    - key: a
+    - key: A
+    - key: g
+    - key: m
+    - key: u
+repoPaths: {}
+theme:
+  ui:
+    table:
+      showSeparator: true
+pager:
+  diff: diffnav

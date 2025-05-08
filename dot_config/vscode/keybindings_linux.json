@@ -493,22 +493,22 @@
     "when": "listFocus && listSupportsFind"
   },
   // クイック検索をctrl+fにする
-  {
-    "key": "ctrl+f",
-    "command": "workbench.action.quickTextSearch",
-    "when": "editorFocus && editorIsOpen"
-  },
+  // {
+  //   "key": "ctrl+f",
+  //   "command": "workbench.action.quickTextSearch",
+  //   "when": "editorFocus && editorIsOpen"
+  // },
   // 通常の検索をalt+ctrl+fにする
-  {
-    "key": "alt+ctrl+f",
-    "command": "actions.find",
-    "when": "editorFocus && editorIsOpen"
-  },
-  {
-    "key": "ctrl+f",
-    "command": "-actions.find",
-    "when": "editorFocus || editorIsOpen"
-  },
+  // {
+  //   "key": "alt+ctrl+f",
+  //   "command": "actions.find",
+  //   "when": "editorFocus && editorIsOpen"
+  // },
+  // {
+  //   "key": "ctrl+f",
+  //   "command": "-actions.find",
+  //   "when": "editorFocus || editorIsOpen"
+  // },
   ///////////////////////////////////////////////
   // Winのみ
   ///////////////////////////////////////////////
@@ -551,7 +551,7 @@
     "when": "textInputFocus"
   },
   // 一番下まで選択
-    {
+  {
     "key": "ctrl+shift+down",
     "command": "-cursorDownSelect",
     "when": "textInputFocus"
@@ -696,7 +696,9 @@
   {
     "key": "ctrl+w",
     "command": "extension.multiCommand.execute",
-    "args": { "command": "multiCommand.closeEditorFocusLeft" },
+    "args": {
+      "command": "multiCommand.closeEditorFocusLeft"
+    },
     "when": "!activeEditorIsLastInGroup"
   },
   //// 一番右タブの時は通常通り閉じるだけ
@@ -866,6 +868,29 @@
     "key": "ctrl+alt+g",
     "command": "workbench.view.extension.github-pull-requests"
   },
+  // (GitHub) すべてのコメントを閉じる
+  // {
+  //   "key": "alt+shift+c",
+  //   "command": "workbench.action.collapseAllComments"
+  // },
+  // {
+  //   "key": "alt+shift+ctrl+c",
+  //   "command": "gitlens.views.scm.grouped.focus"
+  // },
+  // {
+  //   "key": "alt+c",
+  //   "command": "claude-dev.SidebarProvider.focus"
+  // },
+  // {
+  //   "key": "alt+c",
+  //   "command": "-gitlens.showQuickCommitFileDetails",
+  //   "when": "editorTextFocus && !gitlens:disabled && config.gitlens.keymap == 'alternate'"
+  // },
+  // {
+  //   "key": "shift+cmd+i",
+  //   "command": "workbench.panel.chat",
+  //   "when": "workbench.panel.chat.view.copilot.active"
+  // },
   // TODO
   // (GitHub Copilot)Copilot Chatにフォーカス
   // {
