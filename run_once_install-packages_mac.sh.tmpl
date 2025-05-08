@@ -1,47 +1,87 @@
 #!/bin/bash
 
 {{ if eq .chezmoi.os "darwin" -}}
-# navi #
-[ -e "~/.config/private/navi/mycheat_private.cheat.md" ] && ln -f ~/.config/private/navi/mycheat_private.cheat.md ~/.config/navi/cheats
-ln -f ~/.private/.zprofile.secret ~
-ln -f ~/.private/navi/mycheat_private.cheat ~/.navi/cheats
+install_package() {
+  local PACKAGES=(
+    colordiff
+    docker
+    font-hackgen
+    font-hackgen-nerd
+    git
+    gpg
+    pinentry-mac
+    t-rec
+    yqrashawn/goku/goku
 
-read -r -d '' PACKAGES <<EOF
-colordiff
-docker
-font-hackgen
-font-hackgen-nerd
-git
-gpg
-pinentry-mac
-t-rec
-yqrashawn/goku/goku
+    coreutils
+    findutils
+    gnu-sed
+    grep
+  )
 
-coreutils
-findutils
-gnu-sed
-grep
-EOF
+  for package in "${PACKAGES[@]}"; do
+    if ! brew list "$package" &>/dev/null; then
+      brew install "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
 
-for package in $(echo $PACKAGES); do
-  brew install $package
+install_cask_package() {
+  local CASKPACKAGES=(
+    alacritty
+    arc
+    chatgpt
+    dbeaver-community
+    karabiner-elements
+    keyboardcleantool
+    raycast
+    visual-studio-code
+  )
+
+  for package in "${CASKPACKAGES[@]}"; do
+    if ! brew list --cask "$package" &>/dev/null; then
+      brew install --cask "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
+# 実行したいコマンドを入力
+commands=(
+  "install_package"
+  "install_cask_package"
+  # nix-installerでインストール
+  # https://github.com/DeterminateSystems/nix-installer
+  "[ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ] && curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install"
+)
+
+execute_command() {
+  local command="$1"
+
+  while true; do
+    echo "$command"
+    echo "を実行しますか? (y/n)"
+    read -r answer
+
+    case "$answer" in
+      y|Y)
+        eval "$command"
+        break
+        ;;
+      n|N)
+        break
+        ;;
+      *)
+        echo "無効な入力です。y または n を入力してください。"
+        ;;
+    esac
+  done
+}
+
+for cmd in "${commands[@]}"; do
+  execute_command "$cmd"
 done
-
-read -r -d '' CASKPACKAGES <<EOF
-alacritty
-arc
-chatgpt
-karabiner-elements
-keyboardcleantool
-raycast
-visual-studio-code
-EOF
-
-for package in $(echo $CASKPACKAGES); do
-  brew install --cask $package
-done
-
-# nix-installerでインストール
-# https://github.com/DeterminateSystems/nix-installer
-[ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ] && curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 {{- end }}

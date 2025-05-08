@@ -1,16 +1,53 @@
 #!/bin/bash
 
 {{ if and (hasKey .chezmoi.kernel "osrelease") (contains "WSL" .chezmoi.kernel.osrelease) -}}
-read -r -d '' PACKAGES <<EOF
-git
-gpg
-zsh
-EOF
+install_package() {
+  local PACKAGES=(
+    git
+    gpg
+    zsh
+  )
 
-for package in $(echo $PACKAGES); do
-  apt install -y $package
+  for package in "${PACKAGES[@]}"; do
+    if ! dpkg -l | grep -q "$package"; then
+      apt install -y "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
+# 実行したいコマンドを入力
+commands=(
+  "install_package"
+  # Nix
+  # "[ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon"
+)
+
+execute_command() {
+  local command="$1"
+
+  while true; do
+    echo "$command"
+    echo "を実行しますか? (y/n)"
+    read -r answer
+
+    case "$answer" in
+      y|Y)
+        eval "$command"
+        break
+        ;;
+      n|N)
+        break
+        ;;
+      *)
+        echo "無効な入力です。y または n を入力してください。"
+        ;;
+    esac
+  done
+}
+
+for cmd in "${commands[@]}"; do
+  execute_command "$cmd"
 done
-
-# Nix
-# [ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 {{ end -}}
