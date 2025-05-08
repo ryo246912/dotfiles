@@ -1,0 +1,16 @@
+#!/bin/bash
+
+{{ if and (hasKey .chezmoi.kernel "osrelease") (contains "WSL" .chezmoi.kernel.osrelease) -}}
+read -r -d '' PACKAGES <<EOF
+git
+gpg
+zsh
+EOF
+
+for package in $(echo $PACKAGES); do
+  apt install -y $package
+done
+
+# Nix
+# [ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+{{ end -}}
