@@ -897,10 +897,10 @@ _shortcut() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+      cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
   else
-    cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+    cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
   fi
 }
 zle -N _shortcut
@@ -1067,8 +1067,6 @@ zsh-startuptime() {
 
 zsh-profiler() {
   ZSHRC_PROFILE=1 zsh -i -c zprof
-}
-
 }
 
 #--------------------------------------------------------------
