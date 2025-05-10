@@ -1,0 +1,11 @@
+-- https://auth0.com/docs/ja-jp/deploy-monitor/logs/log-search-query-syntax
+
+-- ワイルドカードの場合、リテラルは3文字以上である必要。
+-- たとえば、name:*usaは使用できますが、name:*saは使用できません。
+
+-- 包括的な範囲には[min TO max]のように角括弧を使用し、排他的な範囲には{min TO max}のように中括弧を使用。
+-- たとえば、2018年12月18日から現在までのログをすべて見つけるには、q=date:[2018-12-18 TO *]を使用します。
+-- 保存期間の始めから2018年12月19日の前日までのログを見つけるには、q=date:[* TO 2018-12-19}
+
+client_name:*legacy*
+user_name:*xxx*
