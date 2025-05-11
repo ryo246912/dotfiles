@@ -1,6 +1,14 @@
 #!/bin/bash
 
 {{ if eq .chezmoi.os "darwin" -}}
+install_brew() {
+  if ! command -v brew &>/dev/null; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  else
+    echo "Homebrew is already installed"
+  fi
+}
+
 install_package() {
   local PACKAGES=(
     colordiff
@@ -33,29 +41,46 @@ install_cask_package() {
     alacritty
     arc
     chatgpt
+    clibor
     dbeaver-community
+    docker
+    google-japanese-ime
     karabiner-elements
     keyboardcleantool
+    slack
     raycast
     visual-studio-code
   )
 
   for package in "${CASKPACKAGES[@]}"; do
     if ! brew list --cask "$package" &>/dev/null; then
-      brew install --cask "$package"
+      if [[ "$package" == "clibor" ]]; then
+        HOMEBREW_CASK_OPTS="--language=ja" brew install --cask "$package"
+      else
+        brew install --cask "$package"
+      fi
     else
       echo "$package is already installed"
     fi
   done
 }
 
+install_nix() {
+  if ! command -v nix &>/dev/null; then
+    # nix-installerでインストール
+    # https://github.com/DeterminateSystems/nix-installer
+    curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+  else
+    echo "Nix is already installed"
+  fi
+}
+
 # 実行したいコマンドを入力
 commands=(
+  "install_brew"
   "install_package"
   "install_cask_package"
-  # nix-installerでインストール
-  # https://github.com/DeterminateSystems/nix-installer
-  "[ ! -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ] && curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install"
+  "install_nix"
 )
 
 execute_command() {
