@@ -20,6 +20,9 @@ tmux swap-window -t <window_no>
 
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
+
+# arrange layout
+tmux select-layout tiled
 ```
 $ hv: echo -e "v\nh"
 $ pane_from: echo "." && \

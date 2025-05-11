@@ -59,6 +59,9 @@ zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | less -iRMW --use-color
 # defaults : display system defaults
 defaults read | less -iRMW --use-color
 
+# defaults : output system defaults and diff
+defaults read > before ; read ; defaults read > after && delta before after
+
 # defaults : kill Finder
 defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
 
