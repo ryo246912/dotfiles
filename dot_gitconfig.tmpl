@@ -31,6 +31,8 @@
   enabled = true
 [init]
   defaultBranch = main
+[advice]
+  skippedCherryPicks = false
 {{ if eq .chezmoi.os "darwin" }}
 [include]
   path = ~/.gitconfig.secret-noreply

@@ -17,11 +17,19 @@ install_package() {
   done
 }
 
+install_nix() {
+  if ! command -v nix &>/dev/null; then
+    # curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+  else
+    echo "Nix is already installed"
+  fi
+}
+
+
 # 実行したいコマンドを入力
 commands=(
   "install_package"
-  # Nix
-  # "[ ! -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && curl -L https://nixos.org/nix/install | sh -s -- --no-daemon"
+  "install_nix"
 )
 
 execute_command() {

@@ -11,6 +11,7 @@ node = "20"
 "npm:czg" = "latest"
 "npm:open-cli" = "latest"
 "pipx:deepl-cli" = "latest"
+stripe = "latest"
 usage = "latest"
 vim = "latest"
 
