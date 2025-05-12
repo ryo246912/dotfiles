@@ -2,3 +2,6 @@ pager = "delta"
 [edit]
     command = "code"
     args = ["--wait","--new-window"]
+[scriptEnv]
+    APPDATA = "/mnt/c/Users/r-ksk/AppData"
+    USERDIR = "/mnt/c/Users/r-ksk"

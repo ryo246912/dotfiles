@@ -67,6 +67,11 @@ abbrevs:
     abbr: chm
     snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
 
+  - name: cht
+    abbr: cht
+    cursor: "👇"
+    snippet: chezmoi execute-template '{{ .chezmoi.👇 }}'
+
   - name: cy
     abbr: cy
     snippet: cal -y

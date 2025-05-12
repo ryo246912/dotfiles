@@ -1077,14 +1077,6 @@ zsh-profiler() {
 ! [ -e "$HOME/.config/tmux/plugins/tpm" ] && git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
 
 {{ if eq .chezmoi.os "linux" -}}
-# alacritty
-[ -n "$WINUSER" ] && mkdir -p "$APPDATA/Roaming/alacritty" 2>/dev/null
-[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.toml" ] && cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
-
-# rio
-[ -n "$WINUSER" ] && mkdir -p "$APPDATA/Local/rio" 2>/dev/null
-[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Local/rio/config.toml" ] && cp "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
-
 # gpg
 export GPG_TTY=$(tty)
 {{- end }}
