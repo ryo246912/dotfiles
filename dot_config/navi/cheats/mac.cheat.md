@@ -60,10 +60,10 @@ zgrep -lr -e 'Mac OS X' -e 'macOS' /usr/share/man/*/* | less -iRMW --use-color
 defaults read | less -iRMW --use-color
 
 # defaults : output system defaults and diff
-defaults read > before ; read ; defaults read > after && delta before after
+defaults read > before ; echo "入力待ちです" ; read ; defaults read > after && delta before after
 
-# defaults : kill Finder
-defaults write com.apple.Finder QuitMenuItem -boolean true && killall Finder
+# defaults : read shortcut key
+defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys | awk '/[^0-9]<No> = /,/};/'
 
 # lsappinfo : display running application
 lsappinfo list | less -iRMW --use-color

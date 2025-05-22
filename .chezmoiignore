@@ -15,6 +15,7 @@
 .config/vscode*
 **/alacritty.yml
 not_config*
+flake*
 chezmoi.toml
 
 README.md
