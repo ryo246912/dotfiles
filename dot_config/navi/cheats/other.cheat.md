@@ -98,15 +98,6 @@ ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
 # ffmpeg : convert from mp4 file to gif file
 ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 
-# nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
-nix-shell --run zsh -p <package>
-
-# nix : exec nix-shell(experimental)
-nix shell nixpkgs#<package>
-
-# nix : search package [https://search.nixos.org/packages]
-nix search nixpkgs "^<package>$"
-
 # tgpt : pipe paste
 tgpt "<prompt>" <<< "<input>"
 
