@@ -89,13 +89,13 @@
   // (Python)
   "python.linting.enabled": true,
   "python.analysis.extraPaths": [
-    ".venv",
-    "app"  // リポジトリのpythonディレクトリも追加する
+    ".venv"
+    // "app"  // リポジトリのpythonディレクトリも追加する
   ],
   // pythonの言語サーバpylanceにする
   "python.languageServer": "Pylance",
   // pylanceで自動インポートを有効にする
-  // "python.analysis.autoImportCompletions": true,
+  "python.analysis.autoImportCompletions": true,
   // pylanceがライブラリ・ファイルのインデックス作成を有効にする
   "python.analysis.indexing": true,
   // pylanceでユーザーシンボルの自動インポートを有効にする
@@ -111,7 +111,6 @@
   // "python.analysis.autoFormatStrings": true,
   "mypy-type-checker.preferDaemon": true,
   "mypy-type-checker.reportingScope": "workspace",
-  "python.analysis.autoImportCompletions": true,
   "python.analysis.packageIndexDepths": [
     {
       "name": "fastapi",
@@ -147,6 +146,7 @@
   // HACK : [javascript]を以下と合わせて設定すると、うまく動かないため別で定義する
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.addMissingImports": "explicit",
@@ -158,7 +158,6 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
-    "editor.formatOnType": true,
     "editor.codeActionsOnSave": {
       "source.addMissingImports": "explicit",
       "source.fixAll.eslint": "explicit",
@@ -168,8 +167,7 @@
   "[json][jsonc][scss]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
-    "editor.formatOnSave": true,
-    "editor.formatOnType": true
+    "editor.formatOnSave": true
   },
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml",
@@ -186,7 +184,7 @@
     {
       "name": "scm",
       "codicon": "source-control-view-icon"
-    },
+    }
   ],
   // (Bookmarks)
   "bookmarks.sideBar.expanded": true,
