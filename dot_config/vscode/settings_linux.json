@@ -2,12 +2,10 @@
   ///////////////////////////////////////////////
   // 基本設定
   ///////////////////////////////////////////////
-  // 新しいdiffエディタを使用する
-  "diffEditor.experimental.useVersion2": true,
   // 差分エディタを並べて表示
   "diffEditor.renderSideBySide": true,
   // 未変更部分は折りたたむ
-  // "diffEditor.experimental.collapseUnchangedRegions": true,
+  "diffEditor.experimental.collapseUnchangedRegions": true,
   // 非変更のコードを折りたたむ
   "diffEditor.hideUnchangedRegions.enabled": true,
   "editor.rulers": [
@@ -48,12 +46,12 @@
   "multiDiffEditor.experimental.enabled": true,
   // 検索対象から除外
   "search.exclude": {
-    "**\/build": true,
-    "**\/dist": true,
-    "**\/node_modules": true,
-    "**\/.git": true,
-    "**\/site-packages": true,
-    "**\/.mypy_cache": true
+    "**/build": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/site-packages": true,
+    "**/.mypy_cache": true
   },
   // Quick Open におけるエディター履歴の並べ替え順序制御
   "search.quickOpen.history.filterSortOrder": "recency",
@@ -76,6 +74,8 @@
   "workbench.activityBar.location": "hidden",
   // タイトルバーのレイアウトコントロールを非表示
   "workbench.layoutControl.enabled": false,
+  // エクスプローラのStickyScrollをOFFにする
+  "workbench.tree.enableStickyScroll": false,
   ///////////////////////////////////////////////
   // 各言語の設定
   ///////////////////////////////////////////////
@@ -88,16 +88,9 @@
   "less.hover.references": false,
   // (Python)
   "python.linting.enabled": true,
-  // リポジトリのpythonディレクトリも追加する
-  // 例.
-  // "python.analysis.extraPaths": [
-  //   "app"
-  // ],
-  // "python.linting.pylintEnabled": true,
-  // "python.linting.flake8Enabled": true,
-  // "python.formatting.provider": "black",
   "python.analysis.extraPaths": [
     ".venv",
+    "app"  // リポジトリのpythonディレクトリも追加する
   ],
   // pythonの言語サーバpylanceにする
   "python.languageServer": "Pylance",
@@ -114,27 +107,73 @@
   // 文字列のパスのコードジャンプを有効
   "python.analysis.gotoDefinitionInStringLiteral": true,
   "python.venvPath": "./.venv",
-  // 以下2つでf-stringの補完を有効
+  // 以下でf-stringの補完を有効
   // "python.analysis.autoFormatStrings": true,
-  // "python.analysis.pylanceLspClientEnabled": true,
+  "mypy-type-checker.preferDaemon": true,
+  "mypy-type-checker.reportingScope": "workspace",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "fastapi",
+      "depth": 3,
+      "includeAllSymbols": true
+    },
+    {
+      "name": "pydantic",
+      "depth": 2,
+      "includeAllSymbols": false
+    },
+    {
+      "name": "sqlalchemy",
+      "depth": 3,
+      "includeAllSymbols": false
+    }
+  ],
   "[python]": {
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
   // (JavaScript・TypeScript)
-  // 型よりソースコードに優先的にジャンプする
-  "javascript.preferGoToSourceDefinition": true,
-  "typescript.preferGoToSourceDefinition": true,
   // autoImportをOFFにする
-  "typescript.suggest.autoImports": false,
-  "javascript.suggest.autoImports": false,
-  "[vue][json][jsonc][javascript][typescript][typescriptreact][scss][markdown][astro][yaml]": {
+  // "typescript.suggest.autoImports": false,
+  // "javascript.suggest.autoImports": false,
+  "javascript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  // HACK : [javascript]を以下と合わせて設定すると、うまく動かないため別で定義する
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.addMissingImports": "explicit",
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+  "[vue][typescript][typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
     "editor.formatOnType": true,
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
+      "source.addMissingImports": "explicit",
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
     }
+  },
+  "[json][jsonc][scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
   },
   ///////////////////////////////////////////////
   // 拡張機能
@@ -286,6 +325,25 @@
   "githubPullRequests.defaultCommentType": "review",
   // (GitHub Pull Requests and Issues) GitHubのmultiDiffを表示
   "githubPullRequests.focusedMode": "multiDiff",
+  // (GitHub Pull Requests and Issues) クエリ一覧
+  "githubPullRequests.queries": [
+    {
+      "label": "自分のレビュー待ち",
+      "query": "is:open review-requested:${user}"
+    },
+    {
+      "label": "自分に割り当て済み",
+      "query": "is:open assignee:${user}"
+    },
+    {
+      "label": "すべての問題",
+      "query": ""
+    },
+    {
+      "label": "自分が作成",
+      "query": "is:open author:${user}"
+    }
+  ],
   // (Gitlens)
   "gitlens.defaultDateFormat": "YYYY/MM/DD hh:mm:ssa",
   "gitlens.defaultDateLocale": null,
@@ -365,6 +423,12 @@
   // (Vim) .vimrcの読み込み
   "vim.vimrc.enable": true,
   "vim.vimrc.path": "$HOME/.config/vim/.vimrc",
+  // (Vue)
+  "vue.autoInsert.dotValue": true,
+  "vue.inlayHints.missingProps": true,
+  "vue.inlayHints.optionsWrapper": true,
+  "vue.updateImportsOnFileMove.enabled": true,
+  "vue.inlayHints.inlineHandlerLeading": true,
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
