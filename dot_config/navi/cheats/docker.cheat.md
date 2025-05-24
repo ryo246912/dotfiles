@@ -52,11 +52,14 @@ docker builder prune
 # build(create image from dockerfile)[-t: name:tag][-f DockerfileName:(default:Dockerfile)][--no-cache][ex:docker build -t image_name .(dockerfile directory)]
 docker image build -t <image_name> .
 
-# run (create container & execute a command) [-d:run background][-i:wait stdin][-t:tty][-p:port][-v:volume][-w:exec command in WD][-e:env][--privileged:sudo][ex:docker run -it -d -p 80:8080 -v ~/xxx:/var/xxx -w /app -e var=xxx ubuntu:22.04 bash]
+# run (create temporary container & execute a command) [-d:run background][-i:wait stdin][-t:tty][-p:port][-e:env][--privileged:sudo][ex:docker run -it --rm mysql:tag --verbose --help]
+docker container run -it --rm <image_id> <command>
+
+# run (create remain container & execute a command) [-d:run background][-i:wait stdin][-t:tty][-p:port][-v:volume][-w:exec command in WD][-e:env][--privileged:sudo][ex:docker run -it -d -p 80:8080 -v ~/xxx:/var/xxx -w /app -e var=xxx ubuntu:22.04 bash]
 docker container run -it -d --name <container_name> <image_id> <command>
 
-# exec (execute a command) [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
-docker container exec -it <command>
+# exec in existed container [-d:run background][-i:wait stdin][-t:tty][ex:docker run -it -d ubuntu:22.04 bash]
+docker container exec -it <container> <command>
 
 # volume mount and exec
 docker run --rm -v <volume_name>:/from alpine sh -c "<command>"
@@ -111,6 +114,7 @@ $ project: docker compose ls --all \
   --- --headers 1 --column 1
 $ service: docker compose -p <project> ps --all --format json \
   | jq -r '["Name","Service","State","Command"] ,(.[] | [.Name,.Service,.State,.Command]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 2
 
 ```sh

@@ -5,6 +5,9 @@
 mise use -g <package>:<tool>
 
 # list installable list
+mise use
+
+# list installable package list
 mise ls-remote <package> | less -iRMW --use-color
 
 # list installed
