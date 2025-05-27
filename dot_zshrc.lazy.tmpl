@@ -1014,7 +1014,7 @@ ssh() {
 _zsh-history-backup() {
   local backup_dir="$HOME/.local/state/zsh"
   while sleep $((60 * 15)) ; do
-    if [[ $(wc -l "$backup_dir/.zsh_history" | grep -o '[0-9]*') -gt 1000 ]] ; then
+    if [[ $(wc -l "$backup_dir/.zsh_history" | awk '{print $1}') -gt 1000 ]] ; then
       cp -f "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
       echo "$(date "+[%y/%m/%d %H:%M:%S]") zsh-history-backup!"
     else
@@ -1024,20 +1024,22 @@ _zsh-history-backup() {
 }
 
 zsh-history-backup() {
+  # ロックディレクトリを作成して排他制御
+  local lock_file="$HOME/.zsh_history_backup.lock"
   local pid_file="$HOME/.zsh_history_backup_process.pid"
   local cmd="_zsh-history-backup"
+
+  if ! mkdir "$lock_file" 2>/dev/null; then
+    return 0
+  fi
+  # ターミナル終了時にロックを解除するトラップを設定
+  trap "rmdir \"$lock_file\" 2>/dev/null" EXIT
 
   # すでにプロセスが実行中かチェック
   if [[ -f "$pid_file" ]]; then
     local existing_pid=$(cat "$pid_file")
-
-    # プロセスが実行中か確認
     if ps -p "$existing_pid" > /dev/null 2>&1; then
       return 0
-    # elif [[ "$(pwd)" != "$HOME" ]]; then
-    #   echo "$(pwd)"
-    #   echo $PWD
-    #   return 0
     else
       echo "pidファイルはあるがプロセスがないので削除"
       rm -f "$pid_file"
@@ -1048,6 +1050,7 @@ zsh-history-backup() {
   $cmd &
   echo $! > "$pid_file"
   echo "バックアッププロセスを開始しました (PID: $(cat "$pid_file"))"
+  rmdir "$lock_file" 2>/dev/null
 }
 
 zsh-startuptime() {
