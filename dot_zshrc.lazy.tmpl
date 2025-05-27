@@ -1082,6 +1082,9 @@ zsh-profiler() {
 {{ if eq .chezmoi.os "linux" -}}
 # gpg
 export GPG_TTY=$(tty)
+# 現在のTTYを gpg-agent に通知
+gpg-connect-agent updatestartuptty /bye > /dev/null
+gpgconf --launch gpg-agent
 {{- end }}
 
 #--------------------------------------------------------------
