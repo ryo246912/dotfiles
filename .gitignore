@@ -6,7 +6,6 @@ dot_gitconfig.secret-noreply
 dot_zprofile.secret
 dot_zshrc.secret
 
-**/mycheat_private.cheat
 
 # AI
 .chatlog
