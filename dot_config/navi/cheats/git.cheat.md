@@ -166,9 +166,6 @@ git grep -iP '<regex>' $(git rev-list <commit1>...<commit2>) --
 # git grep files
 git grep -iP '<regex>' $(git rev-list master -- <ls-tree-files>) -- <ls-tree-files>
 
-# git-jump grep
-() { local hash_file_num ; hash_file_num=$(<git_grep_command> | cut -d ' ' -f 1 | rev | cut -c 2- | rev | fzf) && git cat-file -p $(echo $hash_file_num | cut -d : -f -2) | vim +$(echo $hash_file_num | cut -d : -f 3-) -}
-
 # cat-file
 git cat-file -p <commit1>:<ls-tree-files><_pipe>
 
