@@ -1,17 +1,5 @@
 # cSpell:disable
 #--------------------------------------------------------------
-# path , alias
-#--------------------------------------------------------------
-
-alias gb='git branch'
-alias gf='git fetch -p'
-alias ll='ls -l'
-alias la='ls -la'
-alias mh='make help'
-alias nr='npm run'
-alias vim='nvim'
-
-#--------------------------------------------------------------
 # plugin
 #--------------------------------------------------------------
 
@@ -322,7 +310,7 @@ zinit wait lucid light-mode blockf for \
 # NOTE:version `GLIBC_2.33' not foundのエラー回避のため暫定的にversion固定
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    ver"v0.1.4" \
+    ver"v25.4.8" \
     sbin"yazi* -> yazi" \
     @'sxyazi/yazi'
 {{- end }}
@@ -958,6 +946,8 @@ gpg-connect-agent updatestartuptty /bye > /dev/null
 gpgconf --launch gpg-agent
 {{- end }}
 
+[[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
+
 #--------------------------------------------------------------
 # other
 #--------------------------------------------------------------
@@ -993,17 +983,6 @@ export COMPOSE_MENU=0
 export FLYCTL_INSTALL="$HOME/.fly"
 export PATH="$FLYCTL_INSTALL/bin:$PATH"
 {{- end }}
-
-# pyenv setting
-#export PYENV_ROOT="$HOME/.pyenv"
-#export PATH="$PYENV_ROOT/bin:$PATH"
-#if command -v pyenv 1>/dev/null 2>&1; then
-#  eval "$(pyenv init -)"
-#fi
-
-# nodenv setting
-#eval "$(nodenv init -)"
-#export PATH="$(npm root -g):$PATH"
 
 {{ if eq .chezmoi.os "darwin" -}}
 # GokuRakuJoudo(Karabiner-Elements)の設定
