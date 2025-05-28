@@ -432,9 +432,6 @@ zinit wait lucid light-mode blockf for \
     as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew"
 
 zinit wait lucid light-mode blockf for \
-    as"completion" "https://github.com/jarun/nnn/blob/master/misc/auto-completion/zsh/_nnn"
-
-zinit wait lucid light-mode blockf for \
     src"tmux" \
     as"completion" "https://github.com/imomaliev/tmux-bash-completion/blob/master/completions/tmux"
 
@@ -550,18 +547,6 @@ zle -N _gitui
 bindkey "^D" _gitui
 {{ else }}
 bindkey "^[D" _gitui
-{{- end }}
-
-# ctrl + n(alt + shift + n)でnnn起動
-_nnn() {
-  BUFFER='nnn -dHUx'
-  zle accept-line
-}
-zle -N _nnn
-{{ if eq .chezmoi.os "darwin" -}}
-bindkey "^N" _nnn
-{{ else }}
-bindkey "^[N" _nnn
 {{- end }}
 
 # ctrl + w(alt + shift + w)でgitui起動
