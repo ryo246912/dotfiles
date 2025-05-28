@@ -203,6 +203,21 @@ zinit wait lucid light-mode blockf for \
     sbin"git-who" \
     @'sinclairtarget/git-who'
 
+# gh-extension(gh-dash) #
+{{ if eq .chezmoi.os "darwin" -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v4.14.0" \
+    sbin"*darwin* -> gh-dash" \
+    @'dlvhdr/gh-dash'
+{{ else -}}
+zinit wait lucid light-mode blockf for \
+    from"gh-r" \
+    ver"v4.14.0" \
+    sbin"*linux* -> gh-dash" \
+    @'dlvhdr/gh-dash'
+{{- end }}
+
 # gh-extension(gh-poi) #
 {{ if eq .chezmoi.os "darwin" -}}
 zinit wait lucid light-mode blockf for \
@@ -247,7 +262,7 @@ zinit wait lucid light-mode blockf for \
 # koji #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    ver"v3.0.0" \
+    ver"v3.1.0" \
     sbin"koji* -> koji" \
     @'cococonscious/koji'
 
@@ -459,7 +474,17 @@ zinit wait lucid light-mode blockf for \
 {{ if eq .chezmoi.os "darwin" -}}
 __zsh-auto-notify_atload() {
     export AUTO_NOTIFY_THRESHOLD=20
-    AUTO_NOTIFY_IGNORE+=("czg" "chezmoi apply" "gitui")
+    AUTO_NOTIFY_IGNORE+=(
+      "czg"
+      "chezmoi apply"
+      "git log"
+      "git show"
+      "git rebase"
+      "gitui"
+      "gh pr create"
+      "gh pr diff"
+      "gh pr edit"
+    )
 }
 zinit wait lucid light-mode blockf for \
     atload"__zsh-auto-notify_atload" \
@@ -638,6 +663,22 @@ zle -N _nnn
 bindkey "^N" _nnn
 {{ else }}
 bindkey "^[N" _nnn
+{{- end }}
+
+# ctrl + w(alt + shift + w)でgitui起動
+_gh-dash() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
+  else
+    BUFFER='gh-dash'
+    zle accept-line
+  fi
+}
+zle -N _gh-dash
+{{ if eq .chezmoi.os "darwin" -}}
+bindkey "^W" _gh-dash
+{{ else }}
+bindkey "^[W" _gh-dash
 {{- end }}
 
 # ctrl + y(alt + shift + y)でyazi起動
@@ -856,10 +897,10 @@ _shortcut() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+      cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
   else
-    cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+    cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
   fi
 }
 zle -N _shortcut
@@ -970,16 +1011,46 @@ ssh() {
   fi
 }
 
-zsh-history-backup() {
+_zsh-history-backup() {
   local backup_dir="$HOME/.local/state/zsh"
   while sleep $((60 * 15)) ; do
-    if [[ $(wc -l "$backup_dir/.zsh_history" | grep -o '[0-9]*') -gt 1000 ]] ; then
-      cp -u "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
+    if [[ $(wc -l "$backup_dir/.zsh_history" | awk '{print $1}') -gt 1000 ]] ; then
+      cp -f "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
       echo "$(date "+[%y/%m/%d %H:%M:%S]") zsh-history-backup!"
     else
       osascript -e 'display notification "Backup Error!" with title "zsh"'
     fi
   done
+}
+
+zsh-history-backup() {
+  # ロックディレクトリを作成して排他制御
+  local lock_file="$HOME/.zsh_history_backup.lock"
+  local pid_file="$HOME/.zsh_history_backup_process.pid"
+  local cmd="_zsh-history-backup"
+
+  if ! mkdir "$lock_file" 2>/dev/null; then
+    return 0
+  fi
+  # ターミナル終了時にロックを解除するトラップを設定
+  trap "rmdir \"$lock_file\" 2>/dev/null" EXIT
+
+  # すでにプロセスが実行中かチェック
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file")
+    if ps -p "$existing_pid" > /dev/null 2>&1; then
+      return 0
+    else
+      echo "pidファイルはあるがプロセスがないので削除"
+      rm -f "$pid_file"
+    fi
+  fi
+
+  # バックアップコマンドをバックグラウンド実行 & PID を保存
+  $cmd &
+  echo $! > "$pid_file"
+  echo "バックアッププロセスを開始しました (PID: $(cat "$pid_file"))"
+  rmdir "$lock_file" 2>/dev/null
 }
 
 zsh-startuptime() {
@@ -1001,8 +1072,6 @@ zsh-profiler() {
   ZSHRC_PROFILE=1 zsh -i -c zprof
 }
 
-}
-
 #--------------------------------------------------------------
 # terminal
 #--------------------------------------------------------------
@@ -1011,16 +1080,11 @@ zsh-profiler() {
 ! [ -e "$HOME/.config/tmux/plugins/tpm" ] && git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
 
 {{ if eq .chezmoi.os "linux" -}}
-# alacritty
-[ -n "$WINUSER" ] && mkdir -p "$APPDATA/Roaming/alacritty" 2>/dev/null
-[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Roaming/alacritty/alacritty.toml" ] && cp "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
-
-# rio
-[ -n "$WINUSER" ] && mkdir -p "$APPDATA/Local/rio" 2>/dev/null
-[ -n "$WINUSER" ] && ! [ -e "$APPDATA/Local/rio/config.toml" ] && cp "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
-
 # gpg
 export GPG_TTY=$(tty)
+# 現在のTTYを gpg-agent に通知
+gpg-connect-agent updatestartuptty /bye > /dev/null
+gpgconf --launch gpg-agent
 {{- end }}
 
 #--------------------------------------------------------------
@@ -1095,6 +1159,9 @@ fi
 {{- else -}}
 compinit
 {{- end }}
+
+# historyの定期バックアップを起動
+zsh-history-backup
 
 # バックグラウンドでzcompile
 # [-s:sizeが0以上][-nt:タイムスタンプが新しいか]

@@ -1,0 +1,34 @@
+{
+  "folders": [
+    {
+      // 本ファイルからの相対パス
+      "path": "../../"
+    }
+  ],
+  "settings": {
+    "workbench.colorCustomizations": {
+      "activityBar.background": "#800000",
+      "titleBar.activeBackground": "#800000",
+      "statusBar.background": "#800000"
+    },
+  }
+}
+
+// HTML標準16色
+// "#000000":"black" //x
+// "#c0c0c0":"silver" //x
+// "#800000":"maroon"
+// "#800080":"purple"
+// "#008000":"green"
+// "#808000":"olive"
+// "#000080":"navy"
+// "#008080":"teal"
+
+// "#808080":"gray"
+// "#ffffff":"white"
+// "#ff0000":"red"
+// "#ff00ff":"fuchsia"
+// "#00ff00":"lime"
+// "#ffff00":"yellow"
+// "#0000ff":"blue"
+// "#00ffff":"aqua"

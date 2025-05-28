@@ -2,7 +2,7 @@
 % shortcut
 
 # my shortcut list
-cat ~/.config/shortcut/my_shortcut.csv | column -t -s, | fzf --no-sort
+cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort
 ```
 
 ```sh
@@ -98,20 +98,11 @@ ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
 # ffmpeg : convert from mp4 file to gif file
 ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 
-# nix : exec nix-shell [--run cmd:executes the command in a non-interactive shell][-p:setup package shell]
-nix-shell --run zsh -p <package>
-
-# nix : exec nix-shell(experimental)
-nix shell nixpkgs#<package>
-
-# nix : search package [https://search.nixos.org/packages]
-nix search nixpkgs "^<package>$"
-
 # tgpt : pipe paste
 tgpt "<prompt>" <<< "<input>"
 
 # vscode : display installed extensions
-code --list-extensions | xargs -L 1 echo code --install-extension
+code --list-extensions | xargs -L 1 echo code --install-extension > dot_config/vscode/executable_extensions.sh
 
 # weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
 curl -s "<version>wttr.in/<location_or_help>"

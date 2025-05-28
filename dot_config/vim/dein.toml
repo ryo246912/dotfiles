@@ -48,12 +48,6 @@ let g:zoxide_hook = 'pwd'
 cnoremap zz :Zi<CR>
 '''
 
-[[plugins]]
-repo = 'vim-denops/denops.vim'
-
-[[plugins]]
-repo = 'lambdalisue/gin.vim'
-
 # ファイラー
 [[plugins]]
 repo = 'lambdalisue/fern.vim'
@@ -105,6 +99,6 @@ hook_add = '''
 " セッションの保存マッピング
 cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
 
-" セッションの読み込みマッピング
-cabbr sr :source ~/.local/state/vim/Session.vim<CR>
+" セッションの読み込み&セッションの保存マッピング
+cabbr sr :source ~/.local/state/vim/Session.vim \| Obsession ~/.local/state/vim/Session.vim<CR>
 '''

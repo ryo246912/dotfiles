@@ -1,0 +1,220 @@
+{
+  // Place your GLOBAL snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and
+  // description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope
+  // is left empty or omitted, the snippet gets applied to all languages. The prefix is what is
+  // used to trigger the snippet and the body will be expanded and inserted. Possible variables are:
+  // $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders.
+  // Placeholders with the same ids are connected.
+  // Example:
+  // "Print to console": {
+  // 	"scope": "javascript,typescript",
+  // 	"prefix": "log",
+  // 	"body": [
+  // 		"console.log('$1');",
+  // 		"$2"
+  // 	],
+  // 	"description": "Log output to console"
+  // }
+  // html
+  "html : コメントアウト(styleタグ)": {
+    "prefix": "co",
+    "body": ["<style>/*", " ${TM_SELECTED_TEXT}", "*/</style>"],
+    "description": "styleタグでコメントアウト"
+  },
+  "html : コメントアウト(scriptタグ)": {
+    "prefix": "co",
+    "body": ["<script>/*", " ${TM_SELECTED_TEXT}", "*/</script>"],
+    "description": "scriptタグでコメントアウト"
+  },
+  // javascript
+  "javascript : console.log()": {
+    "prefix": "cl",
+    "body": ["console.log($1)"],
+    "description": "console.log()"
+  },
+  "javascript : JSDocのテンプレ": {
+    "prefix": "js",
+    "body": ["/**", " * @description  $1", " */"],
+    "description": "JSDoc;"
+  },
+  "javascript : disable eslint": {
+    "prefix": ["es", "di"],
+    "body": [
+      "${1|// eslint-disable-next-line,/* eslint-disable */,/* eslint-enable */|}"
+    ],
+    "description": "disable eslint"
+  },
+  "javascript : optional chainning": {
+    "prefix": "?",
+    "body": ["?"],
+    "description": "null/undefinedのときはプロパティアクセスは行わない(JavaScript)"
+  },
+  "javascript : sleep処理": {
+    "prefix": "sl",
+    "body": ["await new Promise(resolve => setTimeout(resolve, 1000));"],
+    "description": "sleep処理"
+  },
+  // typescript
+  "typescript : Non-Null Assertion": {
+    "prefix": "!",
+    "body": ["!"],
+    "description": "not nullなことをTSに保証する(TypeScript)"
+  },
+  // DOM
+  "DOM : focusをなくす(input.value?.$el.blur)": {
+    "prefix": "dom",
+    "body": [
+      "const input = ref<{ $el: HTMLInputElement }>();",
+      "const onSubmit = () => {",
+      "  input.value?.$el.blur();",
+      "};",
+      "<AtomInput",
+      "  ref='input'",
+      "/>"
+    ],
+    "description": "focusをなくす"
+  },
+  // python2
+  "python2 : print(PRINT2)": {
+    "prefix": "pr",
+    "body": [
+      "import sys, codecs",
+      "sys.stdout = codecs.getwriter('utf-8')(sys.stdout)",
+      "${1| ,from inspect import currentframe|}",
+      "print('PRINT:{}:{}:{}'.format(currentframe().f_code.co_filename,currentframe().f_code.co_name,str(currentframe().f_lineno)))",
+      "print('PRINT:'+unicode(str($2),encoding='utf-8').encode().decode('unicode-escape',errors='ignore'))",
+      "print('PRINT:-----------------------')"
+    ],
+    "description": "print()"
+  },
+  "python2 : print(stout)": {
+    "prefix": "pr",
+    "body": [
+      "import sys, codecs",
+      "sys.stdout = codecs.getwriter('utf-8')(sys.stdout)",
+    ],
+    "description": "print(stout)"
+  },
+  "python2 : typehint": {
+    "prefix": "ty",
+    "body": ["# type: (${1}) -> ${2}"],
+    "description": "print()"
+  },
+  "python2 : [コード上]str(byte) → unicode(日本語)に変換": {
+    "prefix": ["de","pr"],
+    "body": [".decode('utf-8')"],
+    "description": "u'ででも可"
+  },
+  "python2 : [ターミナル,print()]unicode(日本語) → str(byte)に変換": {
+    "prefix": ["en","pr"],
+    "body": [".encode('utf-8')"],
+    "description": "print()時に使用"
+  },
+  "python2 : super": {
+    "prefix": "su",
+    "body": ["super(${1}, self)"],
+    "description": "クラス名"
+  },
+  "python2 : timezone(JST)": {
+    "prefix": ["ti","jst"],
+    "body": [
+      "class JstTzinfo(datetime.tzinfo):",
+      "",
+      "    def utcoffset(self, dt): return datetime.timedelta(hours=9)",
+      "    def dst(self, dt): return datetime.timedelta(0)",
+      "    def tzname(self, dt): return 'JST'",
+      "    def olsen_name(self): return 'Tokyo/Asia'",
+      "    def __repr__(self): return 'JST()'",
+      "",
+      "JST = JstTzinfo()",
+    ],
+    "description": "timezone(JST)"
+  },
+  "python2 : set timezone no change time": {
+    "prefix": ["ti","jst"],
+    "body": [
+      ".replace(tzinfo=JST)",
+    ],
+    "description": "set timezone no change time"
+  },
+  "python2 : alter timezone change time": {
+    "prefix": ["ti","utc"],
+    "body": [
+      ".astimezone(timezone.utc)",
+    ],
+    "description": "alter timezone change time"
+  },
+  // python3
+  "python : pprint(PRINT)": {
+    "prefix": "pr",
+    "body": [
+      "import pprint",
+      "print('PRINT:-----------------------------------------------')",
+      "pprint.pprint($1, width=180)",
+      "print('PRINT:-----------------------------------------------')"
+    ],
+    "description": "pprint()"
+  },
+  "python : print(PRINT)[currentframe]": {
+    "prefix": "pr",
+    "body": [
+      "${1| ,from inspect import currentframe|}",
+      "print('PRINT:-----------------------------------------------')",
+      "print('PRINT:{}:{}:{}'.format(currentframe().f_code.co_filename,currentframe().f_code.co_name,str(currentframe().f_lineno)))",
+      "print('PRINT:{}'.format($2))",
+      "print('PRINT:-----------------------------------------------')"
+    ],
+    "description": "print()"
+  },
+  "python : disable pylint&flake8": {
+    "prefix": ["di","py"],
+    "body": ["${1|# pylint: disable=,# pylint: disable-next=,# noqa: |}${2|unused-import,bad-continuation,E501|}"],
+    "description": "disable pylint"
+  },
+  "python : disable mypy": {
+    "prefix": ["di"],
+    "body": ["# type: ignore[${2| ,arg-type|}]"],
+    "description": "disable mypy"
+  },
+  "python : datetime(timezone)": {
+    "prefix": ["da","ti"],
+    "body": [
+      "${1| ,datetime.datetime(tzinfo=None),datetime.now(tz=None)|}"
+    ],
+    "description": "datetime(timezone)"
+  },
+  // Vue
+  "Vue : props type(1は|の代わり)": {
+    "prefix": "ty",
+    "body": [
+      "${1|type: Array as PropType<string[]>,type: Number as PropType<number 1 null>|}"
+    ],
+    "description": "Vue : props type(Array)"
+  },
+  // tips
+  "regex : positive lookahead(?) X(?=Y)": {
+    "prefix": "re",
+    "body": ["$1(?=$2)"],
+    "description": "肯定先読みX(?=Y)で、XのあとにYが続く場合にだけマッチする"
+  },
+  "regex : negative lookahead(?) X(?!Y)": {
+    "prefix": "re",
+    "body": ["$1(?!$2)"],
+    "description": "否定先読みX(?!Y)で、XのあとにYが続かない場合にだけマッチする"
+  },
+  "regex : positive lookbehind(?<) (?<=Y)X": {
+    "prefix": "re",
+    "body": ["(?<=($1))$2"],
+    "description": "肯定後読み(Positive lookbehind): (?<=Y)X はXの前にYがある場合にのみマッチする"
+  },
+  "regex : negative lookbehind(?<) (?<!Y)X": {
+    "prefix": "re",
+    "body": ["(?<!($1))$2"],
+    "description": "否定後読み(Negative lookbehind): (?<!Y)X は Xの前にYがない場合にのみマッチする"
+  },
+  "enclose#": {
+    "prefix": "#",
+    "body": ["# ${TM_SELECTED_TEXT} #"],
+    "description": "enclose#"
+  }
+}

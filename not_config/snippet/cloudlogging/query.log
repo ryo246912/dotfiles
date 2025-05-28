@@ -1,0 +1,38 @@
+-- 時刻 timestamp >= before AND timestamp <= after
+-- timestamp >= "2023-06-27T12:40:00+09:00" AND timestamp <= "2023-07-27T14:40:00+09:00"
+
+-- resource
+-- モニタリングリソース
+-- resource.type="cloud_run_revision" -- Cloud Run
+
+-- labels
+-- インスタンスID
+-- labels.instanceId="xxx"
+-- サービス名
+-- labels.service=(xxx OR expert)
+-- Cloud Runのサービス名
+-- labels.service-name=xxx
+
+-- HttpRequest : https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#HttpRequest
+-- ステータスコード
+-- httpRequest.status>=400 httpRequest.status<500
+-- httpRequest.status>=200
+-- HTTPメソッド
+-- httpRequest.requestMethod=(GET OR POST OR PUT)
+-- リクエストURL
+-- httpRequest.requestUrl=~"/"
+-- リファラー
+-- httpRequest.referrer=~"/"
+-- レイテンシー (ex.0.259400s=259ms)
+-- httpRequest.latency>="2s"
+-- UserAgent
+-- httpRequest.userAgent: "Mozilla/5.0 (iPhone"
+-- IPアドレス
+-- httpRequest.remoteIp="127.0.0.1"
+
+---------------------------------------------------------------------------------------
+-- NOT field=value or -field=value | NOT演算子(-も同じ)
+-- field :"value"|部分一致
+-- field =~"regex"|正規表現
+-- field !~"regex"|正規表現(not pattern)
+-- severity=(ERROR OR CRITICAL OR ALERT OR EMERGENCY)

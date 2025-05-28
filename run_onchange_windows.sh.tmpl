@@ -5,10 +5,10 @@
 # {{ include "dot_config/autohotkey/AutoHotkey.ahk" | sha256sum }}
 # {{ include "dot_config/alacritty/alacritty.toml.tmpl" | sha256sum }}
 # {{ include "dot_config/rio/private_config.toml.tmpl" | sha256sum }}
-# {{ include "dot_vscode/keybindings_linux.json" | sha256sum }}
-# {{ include "dot_vscode/settings_linux.json" | sha256sum }}
+# {{ include "dot_config/vscode/keybindings_linux.json" | sha256sum }}
+# {{ include "dot_config/vscode/settings.json" | sha256sum }}
 
-{{ if contains "WSL" .chezmoi.kernel.osrelease -}}
+{{ if and (hasKey .chezmoi.kernel "osrelease") (contains "WSL" .chezmoi.kernel.osrelease) -}}
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
@@ -16,8 +16,10 @@ file_mappings=(
   "{{ .chezmoi.sourceDir }}/dot_config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
   "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
   "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
-  "$HOME/.vscode/keybindings.json" "$APPDATA/Roaming/Code/User/keybindings.json"
-  "$HOME/.vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/keybindings_linux.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
 )
 
 # 配列をループで処理
@@ -31,7 +33,7 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
   fi
 
   while true; do
-    echo "$source_fileをコピーしますか? (y/n/d)"
+    echo "$source_file をコピーしますか? (y/n/d)"
     read -r answer
 
     case "$answer" in

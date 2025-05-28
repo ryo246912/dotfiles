@@ -49,5 +49,12 @@ npx tsc --showConfig
 npx sort-package-json
 ```
 
+```sh
+% storybook
+
+# storybook : run local-server
+npm run build-storybook ; echo "入力待ちです" ; read ; cd ./storybook-static && python -m http.server 8888
+```
+
 $ xxx: echo xxx
 ;$
