@@ -8,7 +8,6 @@
 {{- end }}
 .config/claude*
 .config/dbeaver*
-.config/hammerspoon*
 .config/memo*
 .config/sidebery*
 .config/starship*
