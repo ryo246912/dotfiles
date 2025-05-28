@@ -621,10 +621,6 @@ abbrevs:
     abbr: gs
     snippet: git status
 
-  - name: (gsa|gtl)
-    abbr-pattern: (gsa|gtl)
-    snippet: gita ll
-
   - name: gsh
     abbr: gsh
     snippet: git show

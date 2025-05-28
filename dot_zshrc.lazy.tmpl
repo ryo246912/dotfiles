@@ -374,33 +374,6 @@ zinit wait lucid light-mode blockf for \
     as"program" pick"fzf-tmux" \
     "https://github.com/junegunn/fzf/blob/master/bin/fzf-tmux"
 
-### node ###
-# __node_atclone() {
-#     [ -e "$HOME/.config/commitizen/.czrc" ] && ln -f "$HOME/.config/commitizen/.czrc" "$HOME/.czrc"
-#     [ -e "$HOME/.config/commitizen/.commitlintrc.js" ] && ln -f "$HOME/.config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
-# }
-# zinit wait lucid light-mode blockf for \
-#     node"!cspell -> cspell" \
-#     atclone"__node_atclone" \
-#     @'ryo246912/null3'
-#
-# zinit wait lucid light-mode blockf for \
-#     node"!czg -> czg" \
-#     @'ryo246912/null'
-#
-# zinit wait lucid light-mode blockf for \
-#     node"!open-cli -> open-cli" \
-#     @'ryo246912/null1'
-
-### python ###
-# zinit wait lucid light-mode blockf for \
-#     pip"!gita -> gita" \
-#     @'ryo246912/null2'
-#
-# zinit wait lucid light-mode blockf for \
-#     pip"deepl <- !deepl-cli -> deepl" \
-#     @'ryo246912/null4'
-
 ### plugin ###
 __zsh-autosuggestions_atload() {
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
@@ -471,10 +444,6 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     atload"source zsh-better-npm-completion.plugin.zsh" \
     as"completion" "https://github.com/lukechilds/zsh-better-npm-completion/blob/master/zsh-better-npm-completion.plugin.zsh"
-
-# zinit wait lucid light-mode blockf for \
-#     as"completion" "https://github.com/nosarthur/gita/blob/master/auto-completion/zsh/_gita" \
-#     as"completion" "https://github.com/nosarthur/gita/blob/master/auto-completion/zsh/.gita-completion.zsh"
 
 zinit wait lucid light-mode blockf for \
     as"completion" "https://github.com/jdx/mise/blob/main/completions/_mise"
