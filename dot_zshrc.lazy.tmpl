@@ -334,16 +334,6 @@ zinit wait lucid light-mode blockf for \
     @'sxyazi/yazi'
 {{- end }}
 
-# z #
-#__z_atload() {
-#    export _Z_DATA="$HOME/.local/state/z/.z"
-#}
-#zinit wait lucid light-mode blockf for \
-#    as"program" pick"z" \
-#    src"z.sh" cp"z.sh -> z" \
-#    atload"__z_atload" \
-#    rupa/z
-
 # zabrze #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
@@ -575,16 +565,6 @@ fnr() {
     npm run $script
   fi
 }
-
-# fz - fuzzy z command
-#fz() {
-#  local res=$(z | sort -rn | cut -c 12- | fzf)
-#  if [ -n "$res" ]; then
-#      cd $res
-#  else
-#      return 1
-#  fi
-#}
 
 #--------------------------------------------------------------
 # zsh widget
