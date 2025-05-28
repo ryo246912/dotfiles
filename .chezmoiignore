@@ -4,7 +4,6 @@
 {{ else -}}
 .config/karabiner*
 .config/raycast*
-.config/rectangle*
 {{- end }}
 .config/claude*
 .config/dbeaver*
