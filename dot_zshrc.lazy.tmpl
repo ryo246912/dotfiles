@@ -78,15 +78,6 @@ zinit wait lucid light-mode blockf for \
     @'sharkdp/bat'
 
 # Clipboard #
-# __clipboard_atload() {
-#     export CLIPBOARD_SILENT=1
-# }
-# zinit wait lucid light-mode blockf for \
-#     from"gh-r" \
-#     sbin"bin/cb" \
-#     atload"__clipboard_atload" \
-#     @'Slackadays/Clipboard'
-
 zinit wait lucid light-mode blockf for \
     atclone"go build cmd/gocopy/gocopy.go && go build cmd/gopaste/gopaste.go" atpull"%atclone" \
     sbin"gocopy -> gocopy" \
