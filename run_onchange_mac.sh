@@ -1,10 +1,10 @@
 #!/bin/bash
+[ "$(uname)" != "Darwin" ] && exit
 
 # 移動対象のファイル
 # {{ include "dot_config/vscode/keybindings_mac.json" | sha256sum }}
 # {{ include "dot_config/vscode/settings.json" | sha256sum }}
 
-{{ if eq .chezmoi.os "darwin" -}}
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
@@ -42,4 +42,3 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
     esac
   done
 done
-{{ end -}}

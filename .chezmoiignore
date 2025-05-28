@@ -13,6 +13,7 @@
 .config/sidebery*
 .config/starship*
 .config/vscode*
+.config/zsh/temp/*
 **/alacritty.yml
 not_config*
 flake*

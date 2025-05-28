@@ -1,5 +1,6 @@
 .venv/*
 
+dot_config/zsh/temp
 dot_gitconfig.secret
 dot_gitconfig.secret-noreply
 dot_zprofile.secret
