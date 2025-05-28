@@ -9,7 +9,6 @@
 .config/dbeaver*
 .config/memo*
 .config/sidebery*
-.config/starship*
 .config/vscode*
 .config/zsh/temp/*
 **/alacritty.yml
