@@ -42,31 +42,6 @@ alias vim='nvim'
 # https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#order-of-execution
 
 ### command ###
-
-# asdf #
-# __asdf_atclone() {
-#     asdf plugin add act
-#     asdf plugin add chezmoi
-#     asdf plugin add golang
-#     asdf plugin add nodejs
-#     asdf plugin add python
-#     asdf plugin add ruby
-#     asdf plugin add tmux
-#     asdf plugin add vim
-# }
-# __asdf_atload() {
-#     export ASDF_GOLANG_MOD_VERSION_ENABLED=true
-#     export ASDF_DATA_SHIMS="$HOME/.asdf/shims"
-#     export ASDF_DATA_INSTALLS="$HOME/.asdf/installs"
-#     export ASDF_CONFIG_FILE="$HOME/.config/asdf/.asdfrc"
-#     export PATH="$ASDF_DATA_SHIMS:$ASDF_DATA_INSTALLS:$PATH"
-# }
-# zinit wait lucid light-mode blockf for \
-#     src"asdf.sh" \
-#     atclone"__asdf_atclone" \
-#     atload"__asdf_atload" \
-#     @'asdf-vm/asdf'
-
 # atuin #
 __atuin_atload() {
     eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
