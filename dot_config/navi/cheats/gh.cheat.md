@@ -16,8 +16,8 @@ gh pr list --author "" --assignee "" --search "<pr_search>" --state all --limit 
     , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
     , .headRefName])
     | @tsv
-  '
-  | column -ts $'\t'
+  ' \
+  | column -ts $'\t' \
   | fzf --no-sort --header-lines=1
 
 # pr view search[-s:open|closed|merged|all][--search:1)commithash,2)'created:<2011-01-01',3)'word in:title''word in:title,body',4)'involves:USERNAME',5)'reviewed-by:USERNAME']
@@ -90,7 +90,45 @@ gh browse<_browse_option>
 open-cli <issue_url>
 
 # display user star
-open-cli <starred_url>
+gh api graphql<_--paginate> -f username="<username>" -f query='
+  query ($username: String!, $endCursor: String) {
+    user(login: $username) {
+      starredRepositories(first: 100, after: $endCursor, orderBy: {field: STARRED_AT, direction: DESC}) {
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+        nodes {
+          name
+          url
+          description
+          stargazerCount
+          pushedAt
+          languages(first:1) {
+            nodes {
+              name
+            }
+          }
+        }
+      }
+    }
+  }' \
+  | jq -r -s '
+     .[] |
+    .data.user.starredRepositories.nodes[] |
+    [
+        .name,
+        (.languages.nodes[0]?.name // "-"),
+        (.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d_%H:%M:%S")),
+        .stargazerCount,
+        .url,
+        .description
+    ]
+  | @tsv' \
+  | column -ts $'\t' \
+  | fzf --no-sort \
+  | awk '{print $5}' \
+  | xargs open-cli
 
 # search repo [_query|stars:>=n|stars:<n]
 open-cli <repo_url>
@@ -125,6 +163,7 @@ $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
 $ search_option: echo -e "--pickaxe-regex -S\n-G"
 $ _browse_option: echo -e "\n --settings\n --branch ''\n --commit ''"
+$ _--paginate: echo -e "\n --paginate"
 $ ls-files: git ls-files
 
 $ commits_filter_by_file: git log<_-m_--merges_--first-parent> \
@@ -204,7 +243,6 @@ $ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_
   | tail -r \
   | column -ts $'\t' \
   --- --headers 1 --column 7
-$ starred_url: for page in {<start_page_no>..<end_page_no>}; do result=$(gh api "/users/<user>/starred?per_page=100&page=$page") ; [ -z "$result" ] && break ; echo "$result" ; done | jq -r '(.[] | [.full_name,(.pushed_at | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazers_count,.html_url,.description]) | @tsv' | column -ts $'\t' --- --column 4
 $ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
   --json fullName,description,language,pushedAt,stargazersCount,url \
   --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
