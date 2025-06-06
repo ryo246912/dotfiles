@@ -1,0 +1,15 @@
+query($username: String!, $endCursor: String) {
+  user(login: $username) {
+    login
+      starredRepositories(first:100, after: $endCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          name
+        }
+        totalCount
+      }
+  }
+}
