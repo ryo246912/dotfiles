@@ -1,6 +1,6 @@
 #!/bin/bash
+[ "$(uname)" != "Linux" ] && exit
 
-{{ if and (hasKey .chezmoi.kernel "osrelease") (contains "WSL" .chezmoi.kernel.osrelease) -}}
 install_package() {
   local PACKAGES=(
     git
@@ -59,4 +59,3 @@ execute_command() {
 for cmd in "${commands[@]}"; do
   execute_command "$cmd"
 done
-{{ end -}}

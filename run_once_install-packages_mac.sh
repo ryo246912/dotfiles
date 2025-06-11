@@ -1,6 +1,6 @@
 #!/bin/bash
+[ "$(uname)" != "Darwin" ] && exit
 
-{{ if eq .chezmoi.os "darwin" -}}
 install_brew() {
   if ! command -v brew &>/dev/null; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -213,4 +213,3 @@ execute_command() {
 for cmd in "${commands[@]}"; do
   execute_command "$cmd"
 done
-{{- end }}

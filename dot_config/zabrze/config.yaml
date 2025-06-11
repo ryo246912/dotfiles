@@ -80,6 +80,10 @@ abbrevs:
     abbr: cz
     snippet: czg
 
+  - name: cza
+    abbr: cza
+    snippet: czg ai -N=3
+
   - name: d
     abbr: d
     snippet: docker
@@ -620,10 +624,6 @@ abbrevs:
   - name: gs
     abbr: gs
     snippet: git status
-
-  - name: (gsa|gtl)
-    abbr-pattern: (gsa|gtl)
-    snippet: gita ll
 
   - name: gsh
     abbr: gsh

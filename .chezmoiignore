@@ -4,15 +4,13 @@
 {{ else -}}
 .config/karabiner*
 .config/raycast*
-.config/rectangle*
 {{- end }}
 .config/claude*
 .config/dbeaver*
-.config/hammerspoon*
 .config/memo*
 .config/sidebery*
-.config/starship*
 .config/vscode*
+.config/zsh/temp/*
 **/alacritty.yml
 not_config*
 flake*

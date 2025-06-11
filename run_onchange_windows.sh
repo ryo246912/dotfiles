@@ -1,4 +1,5 @@
 #!/bin/bash
+[ "$(uname)" != "Linux" ] && exit
 
 # 移動対象のファイル
 # {{ include "dot_config/claude/claude_desktop_config.json" | sha256sum }}
@@ -8,7 +9,6 @@
 # {{ include "dot_config/vscode/keybindings_linux.json" | sha256sum }}
 # {{ include "dot_config/vscode/settings.json" | sha256sum }}
 
-{{ if and (hasKey .chezmoi.kernel "osrelease") (contains "WSL" .chezmoi.kernel.osrelease) -}}
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
@@ -52,4 +52,3 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
     esac
   done
 done
-{{ end -}}

@@ -95,15 +95,6 @@ Mirror-QWERTY,cmd + space + (カンマ),ctrl + 変換 + (カンマ),cmd(ctrl) + 
 Mirror-QWERTY,cmd + space + j,ctrl + 変換 + j,cmd(ctrl) + f(検索)
 Mirror-QWERTY,(cmd + )space + u,(ctrl + )変換 + u,(cmd/ctrl +) r(リロード)
 Mirror-QWERTY,cmd + space + o,ctrl + 変換 + o,cmd(ctrl) + w(閉じる)
-nnn,e,e,ファイル編集[e=edit]
-nnn,n → f/d,n → f/d,ファイル/ディレクトリ等作成[n=new][f=file][d=directory]
-nnn,o → commnad →g/c,o → commnad →g/c,ファイルを開く(command例=vim.open)[o=open/g=gui/c=cli]
-nnn,q|Q,q|Q,閉じる[q=quit]
-nnn,r,r,ファイル名変更[r=rename]
-nnn,t,t,ソート[a=ascend/d=desend/t=time/s=size/e=exe]
-nnn,v,v,ファイル移動[v=move]
-nnn,enter,enter,ファイルを開く
-nnn,space,space,ファイル複数選択
 Notion,Esc,Esc,ブロック選択
 Notion,-,ctrl + \,サイドメニュー開閉
 Notion,cmd + /,-,編集画面表示

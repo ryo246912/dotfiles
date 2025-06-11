@@ -98,9 +98,6 @@ ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
 # ffmpeg : convert from mp4 file to gif file
 ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 
-# tgpt : pipe paste
-tgpt "<prompt>" <<< "<input>"
-
 # vscode : display installed extensions
 code --list-extensions | xargs -L 1 echo code --install-extension > dot_config/vscode/executable_extensions.sh
 

@@ -550,6 +550,17 @@
   //   "command": "-actions.find",
   //   "when": "editorFocus || editorIsOpen"
   // },
+  // suggestionの表示
+  {
+    "key": "cmd+space",
+    "command": "editor.action.triggerSuggest",
+    "when": "editorHasCompletionItemProvider && textInputFocus && !editorReadonly && !suggestWidgetVisible"
+  },
+  {
+    "key": "ctrl+space",
+    "command": "-editor.action.triggerSuggest",
+    "when": "editorHasCompletionItemProvider && textInputFocus && !editorReadonly && !suggestWidgetVisible"
+  },
   ///////////////////////////////////////////////
   // 拡張機能
   ///////////////////////////////////////////////
