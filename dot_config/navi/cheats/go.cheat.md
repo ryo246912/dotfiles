@@ -21,7 +21,7 @@ $ xxx: echo xxx
 % go(package)
 
 # pkgsite
-pkgsite
+pkgsite --http "localhost:<port>"
 
 # cloc
 gocloc $(go env GOROOT)/src/<package>
