@@ -80,6 +80,10 @@ abbrevs:
     abbr: cz
     snippet: czg
 
+  - name: cza
+    abbr: cza
+    snippet: czg ai -N=3
+
   - name: d
     abbr: d
     snippet: docker
