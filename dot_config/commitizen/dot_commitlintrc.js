@@ -1,4 +1,3 @@
-// commitlint.config.js | .commitlintrc.js
 /** @type {import('cz-git').UserConfig} */
 module.exports = {
   rules: {

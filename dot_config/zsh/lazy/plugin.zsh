@@ -186,10 +186,6 @@ zinit wait lucid light-mode blockf for \
 
 # mise #
 __mise_atload() {
-    # czg
-    [ -e "$HOME/.config/commitizen/.czrc" ] && [ -z "$HOME/.czrc" ] && ln -f "$HOME/.config/commitizen/.czrc" "$HOME/.czrc"
-    [ -e "$HOME/.config/commitizen/.commitlintrc.js" ] && [ -z "$HOME/.commitlintrc.js" ] && ln -f "$HOME/.config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
-    # mise
     eval "$(mise activate zsh)"
 }
 
