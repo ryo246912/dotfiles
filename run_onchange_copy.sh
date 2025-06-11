@@ -2,11 +2,13 @@
 
 # 移動対象のファイル
 # {{ include "dot_config/commitizen/dot_commitlintrc.js" | sha256sum }}
+# {{ include "dot_config/navi/config.yaml" | sha256sum }}
 
 # 配列でキーと値を管理
 # コマンド 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
   "commitizen" "{{ .chezmoi.sourceDir }}/dot_config/commitizen/dot_commitlintrc.js" "{{ .chezmoi.homeDir }}/.commitlintrc.js"
+  "navi" "{{ .chezmoi.sourceDir }}/dot_config/navi/config.yaml" "$(navi info config-path)"
 )
 
 # 配列をループで処理

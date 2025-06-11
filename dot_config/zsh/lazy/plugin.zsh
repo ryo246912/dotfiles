@@ -209,18 +209,10 @@ zinit wait lucid light-mode blockf for \
 fi
 
 # navi #
-# atload"eval $(navi widget zsh)" \
-__navi_atclone() {
-    [ -e "$HOME/.config/navi/config.yaml" ] && \
-    [ -e "$(navi info config-path)" ] && \
-    [ "$HOME/.config/navi/config.yaml" = "$(navi info config-path)" ] && \
-    ln -s "$HOME/.config/navi/config.yaml" "$(navi info config-path)"
-}
 zinit wait lucid light-mode blockf for \
     from"gh-r" cargo"navi" \
     ver"v2.22.1" \
     sbin"navi" \
-    atclone"__navi_atclone" \
     @'denisidoro/navi'
 
 # tig #
