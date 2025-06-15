@@ -4,6 +4,7 @@
 ASDF_FFMPEG_ENABLE = "gpl libx264"
 
 [tools]
+"aqua:suzuki-shunsuke/pinact" = "latest"
 bun = "latest"
 ffmpeg = "latest"
 node = "20"
@@ -12,6 +13,7 @@ node = "20"
 "npm:open-cli" = "latest"
 "pipx:deepl-cli" = "latest"
 stripe = "latest"
+tmux = "3.5"
 usage = "latest"
 vim = "latest"
 
@@ -22,4 +24,3 @@ bun = true
 
 [settings.pipx]
 uvx = true
-
