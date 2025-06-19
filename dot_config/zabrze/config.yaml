@@ -497,6 +497,14 @@ abbrevs:
 
   - name: ghrv
     abbr: ghrv
+    snippet: gh run view
+
+  - name: ghrvl
+    abbr: ghrvl
+    snippet: gh run view --log
+
+  - name: ghrvll
+    abbr: ghrvll
     snippet: gh run view --log-failed
 
   - name: ghrw
