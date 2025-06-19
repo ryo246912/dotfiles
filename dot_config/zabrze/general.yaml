@@ -1,0 +1,198 @@
+abbrevs:
+  # atuin commands
+  - name: (ats|ase)
+    abbr-pattern: (ats|ase)
+    snippet: atuin search -i
+
+  - name: atst
+    abbr: atst
+    snippet: atuin stats
+
+  # basic commands
+  - name: c.
+    abbr: c.
+    snippet: code .
+
+  - name: c3
+    abbr: c3
+    snippet: cal -3
+
+  - name: cy
+    abbr: cy
+    snippet: cal -y
+
+  - name: e
+    abbr: e
+    snippet: echo
+
+  - name: es
+    abbr: es
+    snippet: exec $SHELL -l
+
+  - name: la
+    abbr: la
+    snippet: ls -la
+
+  - name: ll
+    abbr: ll
+    snippet: ls -l
+
+  - name: s
+    abbr: s
+    snippet: sudo
+
+  - name: v
+    abbr: v
+    snippet: vim
+
+  - name: v.
+    abbr: v.
+    snippet: vim .
+
+  - name: w
+    abbr: w
+    snippet: which
+
+  - name: "y"
+    abbr: "y"
+    snippet: yazi
+
+  # commitizen
+  - name: cz
+    abbr: cz
+    snippet: czg
+
+  - name: cza
+    abbr: cza
+    snippet: czg ai -N=3
+
+  # docker
+  - name: d
+    abbr: d
+    snippet: docker
+
+  - name: dc
+    abbr: dc
+    snippet: docker compose
+
+  - name: ld
+    abbr: ld
+    snippet: lazydocker
+
+  # koji
+  - name: koji
+    abbr: ko
+    snippet: koji --config ~/.config/koji/config.toml
+
+  # make
+  - name: m
+    abbr: m
+    snippet: make
+
+  - name: mh
+    abbr: mh
+    snippet: make help
+
+  - name: ml
+    abbr: ml
+    snippet: make lint
+
+  - name: mlo
+    abbr: mlo
+    snippet: make local | spacer --after 5
+
+  - name: mf
+    abbr: mf
+    snippet: make freshup-local-for-py-engineer
+
+  - name: mu
+    abbr: mu
+    snippet: make unittest
+
+  # pdm commands
+  - name: pr
+    abbr: pr
+    snippet: pdm run
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: prd
+    abbr: prd
+    snippet: pdm run dev | spacer --after 5
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: prf
+    abbr: prf
+    snippet: pdm run fix
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: prl
+    abbr: prl
+    snippet: pdm run lint
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: prt
+    abbr: prt
+    snippet: pdm run test
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: (psy|pdsy)
+    abbr-pattern: (psy|pdsy)
+    snippet: pdm sync
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  # tig
+  - name: t
+    abbr: t
+    snippet: tig
+
+  - name: ta
+    abbr: ta
+    snippet: tig --all
+
+  - name: tb
+    abbr: tb
+    snippet: tig blame
+
+  - name: ts
+    abbr: ts
+    snippet: tig status
+
+  # other tools
+  - name: ug
+    abbr-pattern: (ug|igrep)
+    snippet: ug -QPn
+
+  - name: up
+    abbr: up
+    snippet: up --noinput
+
+  - name: zi
+    abbr: zi
+    snippet: zinit
+
+  - name: zz
+    abbr: zz
+    snippet: ji
+
+  # Global abbreviations
+  - name: p
+    abbr: p
+    snippet: "|"
+    global: true
+
+  - name: sp
+    abbr: sp
+    global: true
+    snippet: "|& spacer --after 5"
+
+  - name: (delta) --no-gitconfig
+    abbr: ng
+    snippet: --no-gitconfig
+    global: true
+    context: '.*delta\s'
+
+  - name: (pdm run) -l
+    abbr: l
+    snippet: -l
+    global: true
+    context: '^pdm\srun\s'

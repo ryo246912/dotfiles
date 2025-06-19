@@ -1,0 +1,62 @@
+abbrevs:
+  # npm commands
+  - name: nc
+    abbr: nc
+    snippet: npm ci
+
+  - name: nr
+    abbr: nr
+    snippet: npm run
+
+  - name: nrb
+    abbr: nrb
+    snippet: npm run build
+
+  - name: nrd
+    abbr: nrd
+    snippet: npm run dev
+
+  - name: nrf
+    abbr: nrf
+    snippet: npm run fix
+
+  - name: nrl
+    abbr: nrl
+    snippet: npm run lint
+
+  - name: nro
+    abbr: nro
+    snippet: npm run orval
+
+  - name: nrt
+    abbr: nrt
+    snippet: npm run test
+
+  - name: nrtd
+    abbr: nrtd
+    snippet: npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')
+
+  - name: nrv
+    abbr: nrv
+    snippet: npm run vite
+
+  # pnpm commands
+  - name: pnpm ci|pnpm install --frozen-lockfile
+    abbr: pc
+    snippet: pnpm install --frozen-lockfile
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm (install|add) package
+    abbr-pattern: (pi|pa)
+    snippet: pnpm add
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm install
+    abbr: pin
+    snippet: pnpm install
+    if: '[[ -f "./pnpm-lock.yaml" ]]'
+
+  - name: pnpm uninstall package
+    abbr-pattern: (pui|pre)
+    snippet: pnpm remove
+    if: '[[ -f "./pnpm-lock.yaml" ]]'

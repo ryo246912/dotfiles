@@ -1,0 +1,58 @@
+abbrevs:
+  # Basic chezmoi commands
+  - name: ch
+    abbr: ch
+    snippet: chezmoi
+
+  - name: chad
+    abbr: chad
+    snippet: chezmoi add --template
+
+  - name: (chap|chpa)
+    abbr-pattern: (chap|chpa)
+    snippet: chezmoi apply --interactive
+
+  - name: chas
+    abbr: chas
+    snippet: chezmoi apply --source-path
+
+  - name: chcd
+    abbr: chcd
+    snippet: () { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && vim $file }
+
+  - name: chch
+    abbr: chch
+    snippet: chezmoi chattr +template
+
+  - name: chcs
+    abbr: chcs
+    snippet: () { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }
+
+  - name: chd
+    abbr: chd
+    snippet: chezmoi data
+
+  - name: chdi
+    abbr: chdi
+    snippet: () { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && chezmoi diff $file }
+
+  - name: chig
+    abbr: chig
+    snippet: chezmoi ignored
+
+  - name: che
+    abbr: che
+    snippet: chezmoi edit --interactive --apply
+
+  - name: chl
+    abbr: chl
+    snippet: chezmoi list -p source-absolute -i files
+
+  - name: chm
+    abbr: chm
+    snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
+
+  - name: cht
+    abbr: cht
+    cursor: "👇"
+    snippet: chezmoi execute-template '{{ .chezmoi.👇 }}'
