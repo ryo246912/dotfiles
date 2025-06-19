@@ -5,6 +5,7 @@
 .config/karabiner*
 .config/raycast*
 {{- end }}
+_*
 .config/claude*
 .config/dbeaver*
 .config/memo*
