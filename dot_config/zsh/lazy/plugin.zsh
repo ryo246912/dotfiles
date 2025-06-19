@@ -269,7 +269,7 @@ fi
 # zabrze #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    ver"v0.3.0" \
+    ver"v0.5.0" \
     as"program" \
     atload'eval "$(zabrze init --bind-keys)"' \
     @'Ryooooooga/zabrze'

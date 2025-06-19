@@ -8,5 +8,5 @@ node_modules/
 __pycache__/
 *.pyc
 
-# AI
-.ai
+# _folder
+_*
