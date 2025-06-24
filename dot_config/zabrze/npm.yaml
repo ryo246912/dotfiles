@@ -1,52 +1,52 @@
 abbrevs:
   # npm commands
-  - name: nc
+  - name: npm ci
     abbr: nc
     snippet: npm ci
 
-  - name: nr
+  - name: npm run
     abbr: nr
     snippet: npm run
 
-  - name: nrb
+  - name: npm run build
     abbr: nrb
     snippet: npm run build
 
-  - name: nrd
+  - name: npm run dev
     abbr: nrd
     snippet: npm run dev
 
-  - name: nrf
+  - name: npm run fix
     abbr: nrf
     snippet: npm run fix
 
-  - name: nrl
+  - name: npm run lint
     abbr: nrl
     snippet: npm run lint
 
-  - name: nro
+  - name: npm run orval
     abbr: nro
     snippet: npm run orval
 
-  - name: nrt
+  - name: npm run test
     abbr: nrt
     snippet: npm run test
 
-  - name: nrtd
+  - name: npm run test
     abbr: nrtd
     snippet: npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')
 
-  - name: nrv
+  - name: npm run vite
     abbr: nrv
     snippet: npm run vite
 
   # pnpm commands
-  - name: pnpm ci|pnpm install --frozen-lockfile
+  - name: pnpm ci
     abbr: pc
     snippet: pnpm install --frozen-lockfile
     if: '[[ -f "./pnpm-lock.yaml" ]]'
 
-  - name: pnpm (install|add) package
+  - name: pnpm (install|add)
     abbr-pattern: (pi|pa)
     snippet: pnpm add
     if: '[[ -f "./pnpm-lock.yaml" ]]'
@@ -56,7 +56,7 @@ abbrevs:
     snippet: pnpm install
     if: '[[ -f "./pnpm-lock.yaml" ]]'
 
-  - name: pnpm uninstall package
+  - name: pnpm uninstall
     abbr-pattern: (pui|pre)
     snippet: pnpm remove
     if: '[[ -f "./pnpm-lock.yaml" ]]'

@@ -1,356 +1,348 @@
 abbrevs:
   # Basic git commands
-  - name: g
+  - name: git
     abbr: g
     snippet: git
 
-  - name: ga
+  - name: git add
     abbr: ga
     snippet: git add
 
-  - name: ga.
+  - name: git add .
     abbr: ga.
     snippet: git add .
 
-  - name: gap
+  - name: git add -p
     abbr: gap
     snippet: git add -p
 
-  - name: gb
+  - name: git branch
     abbr: gb
     snippet: git branch
 
-  - name: gba
+  - name: git branch -a
     abbr: gba
     cursor: "👇"
     snippet: git branch -a --sort=-committerdate👇--format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
-  - name: gbi
+  - name: git bisect
     abbr: gbi
     snippet: git bisect
 
-  - name: gbib
+  - name: git bisect bad
     abbr: gbib
     snippet: git bisect bad
 
-  - name: gbig
+  - name: git bisect good
     abbr: gbig
     snippet: git bisect good
 
-  - name: gbir
+  - name: git bisect reset
     abbr: gbir
     snippet: git bisect reset
 
-  - name: gbv
+  - name: git branch verbose
     abbr: gbv
     cursor: "👇"
     snippet: git branch --sort=-committerdate👇 --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t'
 
-  - name: gbvv
+  - name: git branch verbose2
     abbr: gbvv
     snippet: git branch -vv --sort=-committerdate
 
   # Checkout commands
-  - name: gc
-    abbr: gc
-    snippet: git checkout
-
-  - name: gcb
+  - name: git checkout -b
     abbr: gcb
     snippet: git checkout -b
 
-  - name: gch
+  - name: git checkout
     abbr: gch
     snippet: git checkout
 
-  - name: gchm
+  - name: git checkout master
     abbr: gchm
     evaluate: true
     snippet: git checkout $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
 
-  - name: gchs
+  - name: git checkout staging
     abbr: gchs
     snippet: git checkout staging
 
   # Commit commands
-  - name: gco
+  - name: git commit
     abbr: gco
     snippet: git commit
 
-  - name: gca
+  - name: git commit --amend
     abbr: gca
     snippet: git commit --amend
 
-  - name: gcan
+  - name: git commit --amend --no-edit
     abbr: gcan
     snippet: git commit --amend --no-edit
 
-  - name: gcm
+  - name: git commit -m ''
     abbr: gcm
     snippet: git commit -m '{}'
 
-  - name: gcne
+  - name: git commit --no-edit
     abbr: gcne
     snippet: git commit --no-edit
 
-  - name: (gcof|gcfh)
+  - name: git commit --fixup HEAD
     abbr-pattern: (gcof|gcfh)
     snippet: git commit --fixup HEAD
 
-  - name: (gcr|gchr)
+  - name: git cherry-pick -n
     abbr-pattern: (gcr|gchr)
     snippet: git cherry-pick -n
 
   # Diff commands
-  - name: gd|gshss
+  - name: git diff
     abbr-pattern: (gd|gshss)
     snippet: git diff
 
-  - name: gdc
+  - name: git diff change
     abbr: gdc
     snippet: git diff --diff-filter=U
 
-  - name: gdc|gds|gshs
+  - name: git diff --cached(staged)
     abbr-pattern: (gdc|gds|gshs)
     snippet: git diff --cached
 
-  - name: gshd
+  - name: git show diff
     abbr: gshd
     snippet: git diff HEAD~1...HEAD
 
-  - name: gshhd|gsh2d
+  - name: git show diff2
     abbr-pattern: (gshhd|gsh2d)
     snippet: git diff HEAD~2...HEAD~1
 
-  - name: gshhhd|gsh3d
+  - name: git show diff3
     abbr-pattern: (gshhhd|gsh3d)
     snippet: git diff HEAD~3...HEAD~2
 
-  - name: gsh4d
+  - name: git show diff4
     abbr: gsh4d
     snippet: git diff HEAD~4...HEAD~3
 
-  - name: gsh5d
+  - name: git show diff5
     abbr: gsh5d
     snippet: git diff HEAD~5...HEAD~4
 
-  - name: gsh6d
+  - name: git show diff6
     abbr: gsh6d
     snippet: git diff HEAD~6...HEAD~5
 
-  - name: gsh7d
+  - name: git show diff7
     abbr: gsh7d
     snippet: git diff HEAD~7...HEAD~6
 
-  - name: gsh8d
+  - name: git show diff8
     abbr: gsh8d
     snippet: git diff HEAD~8...HEAD~7
 
-  - name: gsh9d
+  - name: git show diff9
     abbr: gsh9d
     snippet: git diff HEAD~9...HEAD~8
 
   # Fetch commands
-  - name: gf
+  - name: git fetch
     abbr: gf
     snippet: git fetch -p --tags
 
-  - name: gfu
+  - name: git fetch upstream
     abbr: gfu
     snippet: git fetch -p --tags upstream
 
   # Log commands
-  - name: gl
+  - name: git log
     abbr: gl
     cursor: "👇"
     snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
-  - name: gll
+  - name: git log -n 20
     abbr: gll
     cursor: "👇"
     snippet: git log -n 20 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
-  - name: glll
+  - name: git log -n 30
     abbr: glll
     cursor: "👇"
     snippet: git log -n 30 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
-  - name: glg
+  - name: git log --graph
     abbr: glg
     cursor: "👇"
     snippet: git log 👇--date-order --graph --pretty=format:"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s" --date=format:"%Y/%m/%d %H:%M:%S"
 
-  - name: glp
+  - name: git log --first-parent
     abbr: glp
     cursor: "👇"
     snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" --first-parent
 
   # Merge commands
-  - name: gm
+  - name: git merge
     abbr: gm
     snippet: git merge --no-ff
 
-  - name: gma
+  - name: git merge --abort
     abbr: gma
     snippet: git merge --abort
 
-  - name: gmo
+  - name: git merge origin/xxx
     abbr: gmo
     snippet: git merge --no-ff origin/
 
-  - name: gmom
+  - name: git merge origin/master
     abbr: gmom
     evaluate: true
     snippet: git merge --no-ff $(git rev-parse --abbrev-ref origin/HEAD)
 
-  - name: gmu
+  - name: git merge upstream/xxx
     abbr: gmu
     snippet: git merge --no-ff upstream/
 
-  - name: gmum
+  - name: git merge upstream/master
     abbr: gmum
     evaluate: true
     snippet: git merge --no-ff $(git rev-parse --abbrev-ref upstream/HEAD)
 
   # Pull/Push commands
-  - name: gp
+  - name: git pull
     abbr: gp
     snippet: git pull --no-commit
 
-  - name: gpoh
+  - name: git push origin HEAD
     abbr: gpoh
     cursor: "👇"
     snippet: git push 👇origin HEAD
 
-  - name: gpom
+  - name: git pull origin master
     abbr: gpom
     evaluate: true
     snippet: git pull origin $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
 
-  - name: gpos
+  - name: git push origin staging
     abbr: gpos
     snippet: git push origin staging
 
-  - name: gpuh
+  - name: git push upstream HEAD
     abbr: gpuh
     cursor: "👇"
     snippet: git push 👇upstream HEAD
 
-  - name: gpum
+  - name: git pull upstream master
     abbr: gpum
     evaluate: true
     snippet: git pull upstream $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
 
   # Rebase commands
-  - name: gr
+  - name: git rebase
     abbr: gr
     snippet: git rebase --autostash
 
-  - name: gra
+  - name: git rebase --abort
     abbr: gra
     snippet: git rebase --abort
 
-  - name: grc
+  - name: git rebase --continue
     abbr: grc
     snippet: git rebase --continue
 
-  - name: greom
+  - name: git reset --hard origin/master
     abbr: greom
     evaluate: true
     snippet: git reset --hard $(git rev-parse --abbrev-ref origin/HEAD)
 
-  - name: greos
+  - name: git reset --hard origin/staging
     abbr: greos
     snippet: git reset --hard origin/staging
 
-  - name: grom
+  - name: git rebase origin/master
     abbr: grom
     evaluate: true
     snippet: git rebase --autostash $(git rev-parse --abbrev-ref origin/HEAD)
 
-  - name: grum
+  - name: git rebase upstream/master
     abbr: grum
     evaluate: true
     snippet: git rebase --autostash upstream/$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
 
   # Status and show commands
-  - name: gs
+  - name: git status
     abbr: gs
     snippet: git status
 
-  - name: gsh
+  - name: git show
     abbr: gsh
     snippet: git show
 
-  - name: gshh
+  - name: git show HEAD~1
     abbr: gshh
     snippet: git show HEAD~1
 
-  - name: gshh
+  - name: git show HEAD~2
     abbr-pattern: (gshhh|gsh2)
     snippet: git show HEAD~2
 
-  - name: gs3
+  - name: git show HEAD~3
     abbr: gsh3
     snippet: git show HEAD~3
 
-  - name: gs4
+  - name: git show HEAD~4
     abbr: gsh4
     snippet: git show HEAD~4
 
-  - name: gs5
+  - name: git show HEAD~5
     abbr: gsh5
     snippet: git show HEAD~5
 
-  - name: gs6
+  - name: git show HEAD~6
     abbr: gsh6
     snippet: git show HEAD~6
 
-  - name: gs7
+  - name: git show HEAD~7
     abbr: gsh7
     snippet: git show HEAD~7
 
-  - name: gs8
+  - name: git show HEAD~8
     abbr: gsh8
     snippet: git show HEAD~8
 
-  - name: gs9
+  - name: git show HEAD~9
     abbr: gsh9
     snippet: git show HEAD~9
 
-  - name: (gshs|gds)
-    abbr-pattern: (gshs|gds)
-    snippet: git diff --cached
-
   # Tag commands
-  - name: gtr
+  - name: git tag list release
     abbr: gtr
     snippet: git tag -l '*release*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
 
-  - name: gts
+  - name: git tag list staging
     abbr: gts
     snippet: git tag -l '*staging*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'
 
   # Gitui
-  - name: gu
+  - name: gitui
     abbr: gu
     snippet: gitui
 
   # FZF git shortcuts
-  - name: fgb
+  - name: fuzzy git branch
     abbr: fgb
     snippet: git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\n' | cb
 
-  - name: fgc
+  - name: fuzzy git checkout
     abbr: fgc
     cursor: "👇"
     snippet: git branch --sort=-committerdate👇 --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %
 
-  - name: fgh
+  - name: fuzzy git hash copy
     abbr: fgh
     snippet: () { local commits commit ; commits=$(git log --oneline) && commit=$(echo "$commits" | fzf --preview "git show {1} | delta --no-gitconfig") && $(echo -n "$commit" | awk '{printf $1}' | cb) }
 
-  - name: fghd
+  - name: fuzzy git hash diff copy
     abbr: fghd
     snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
 
@@ -602,9 +594,3 @@ abbrevs:
     snippet: --stat
     global: true
     context: '^git\sshow\s'
-
-  - name: (tig) --all
-    abbr: a
-    snippet: --all
-    global: true
-    context: '^tig\s'

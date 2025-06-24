@@ -1,24 +1,21 @@
 abbrevs:
-  # GitHub browse commands
-  - name: ghb
+  - name: gh browse
     abbr: ghb
     snippet: gh browse
 
-  - name: ghbb
+  - name: gh browse --branch
     abbr: ghbb
     snippet: gh browse --branch $(git symbolic-ref --short HEAD)
 
-  - name: ghbs
+  - name: gh browse --settings
     abbr: ghbs
     snippet: gh browse --settings
 
-  # GitHub dashboard
-  - name: ghd
+  - name: gh-dash
     abbr: ghd
     snippet: gh-dash
 
-  # GitHub issue commands
-  - name: ghie
+  - name: gh issue edit
     abbr: ghie
     snippet: gh issue edit $(gh issue list --author "@me" --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
@@ -37,7 +34,7 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
-  - name: ghil
+  - name: gh issue list
     abbr: ghil
     snippet: gh issue list --author "" --assignee "" --search "{}" --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
@@ -55,7 +52,7 @@ abbrevs:
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
 
-  - name: ghiv
+  - name: gh issue view
     abbr: ghiv
     snippet: gh issue view --comments $(gh issue list --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
@@ -75,7 +72,7 @@ abbrevs:
       | awk '{ print $1}') -w
 
   # GitHub pull request commands
-  - name: ghpc
+  - name: gh pr checkout
     abbr: ghpc
     snippet: gh pr checkout $(gh pr list --search "user-review-requested:@me" --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -96,7 +93,7 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
-  - name: ghpd
+  - name: gh pr diff
     abbr: ghpd
     snippet: gh pr diff $(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -118,7 +115,7 @@ abbrevs:
       | awk '{ print $1}')
       | diffnav
 
-  - name: ghpe
+  - name: gh pr edit
     abbr: ghpe
     snippet: gh pr edit $(gh pr list --author "@me" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -139,7 +136,7 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
-  - name: ghpl
+  - name: gh pr list
     abbr: ghpl
     snippet: gh pr list --author "" --assignee "" --search "{}" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -159,7 +156,7 @@ abbrevs:
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
 
-  - name: ghpr
+  - name: gh pr ready
     abbr: ghpr
     cursor: "👇"
     snippet: gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100
@@ -181,7 +178,7 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
-  - name: ghpv
+  - name: gh pr view
     abbr: ghpv
     snippet: gh pr view --comments $(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
@@ -202,54 +199,51 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
-  - name: ghpw
+  - name: gh pr checks --watch
     abbr: ghpw
     snippet: gh pr checks $(git symbolic-ref --short HEAD) --watch
 
-  # GitHub run commands
-  - name: ghrl
+  - name: gh run list
     abbr: ghrl
     snippet: gh run list --limit 40
 
-  - name: ghrlf
+  - name: gh run list --status failure
     abbr: ghrlf
     snippet: gh run list --status failure
 
-  - name: ghrll
+  - name: gh run list -w xxx
     abbr: ghrll
     snippet: gh run list -w $(gh workflow list | column -ts $'\t' | fzf | awk '{print $1}')
 
-  - name: ghrr
+  - name: gh run rerun --failed
     abbr: ghrr
     snippet: gh run rerun --failed
 
-  - name: ghrv
+  - name: gh run view
     abbr: ghrv
     snippet: gh run view
 
-  - name: ghrvl
+  - name: gh run view --log
     abbr: ghrvl
     snippet: gh run view --log
 
-  - name: ghrvll
+  - name: gh run view --log-failed
     abbr: ghrvll
     snippet: gh run view --log-failed
 
-  - name: ghrw
+  - name: gh run watch
     abbr: ghrw
     snippet: gh run watch
 
-  # GitHub status
-  - name: ghs
+  - name: gh status
     abbr: ghs
     snippet: gh status
 
   # GitHub poi
-  - name: ghp
+  - name: gh-poi
     abbr: ghp
     snippet: gh-poi
 
-  # GitHub global abbreviations
   - name: (gh pr ready) --undo
     abbr-pattern: (d|u)
     snippet: --undo
