@@ -1,0 +1,57 @@
+abbrevs:
+  - name: chezmoi
+    abbr: ch
+    snippet: chezmoi
+
+  - name: chezmoi add
+    abbr: chad
+    snippet: chezmoi add --template
+
+  - name: chezmoi apply --interactive
+    abbr-pattern: (chap|chpa)
+    snippet: chezmoi apply --interactive
+
+  - name: chezmoi apply --source-path
+    abbr: chas
+    snippet: chezmoi apply --source-path
+
+  - name: chezmoi cat dest
+    abbr: chcd
+    snippet: () { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && vim $file }
+
+  - name: chezmoi chattr
+    abbr: chch
+    snippet: chezmoi chattr +template
+
+  - name: chezmoi cat soruce
+    abbr: chcs
+    snippet: () { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n "$file" ] && vim $file }
+
+  - name: chezmoi data
+    abbr: chd
+    snippet: chezmoi data
+
+  - name: chezmoi diff
+    abbr: chdi
+    snippet: () { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n "$file" ] && chezmoi diff $file }
+
+  - name: chezmoi ignored
+    abbr: chig
+    snippet: chezmoi ignored
+
+  - name: chezmoi edit
+    abbr: che
+    snippet: chezmoi edit --interactive --apply
+
+  - name: chezmoi list
+    abbr: chl
+    snippet: chezmoi list -p source-absolute -i files
+
+  - name: chezmoi merge
+    abbr: chm
+    snippet: chezmoi merge $(chezmoi list -p absolute -i files | fzf)
+
+  - name: chezmoi execute-template
+    abbr: cht
+    cursor: "👇"
+    snippet: chezmoi execute-template '{{ .chezmoi.👇 }}'

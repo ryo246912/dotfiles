@@ -1,0 +1,221 @@
+abbrevs:
+  # atuin commands
+  - name: atuin search -i
+    abbr-pattern: (ats|ase)
+    snippet: atuin search -i
+
+  - name: atuin stats
+    abbr: atst
+    snippet: atuin stats
+
+  # basic commands
+  - name: code .
+    abbr: c.
+    snippet: code .
+
+  - name: cal -3
+    abbr: c3
+    snippet: cal -3
+
+  - name: cal -y
+    abbr: cy
+    snippet: cal -y
+
+  - name: echo
+    abbr: e
+    snippet: echo
+
+  - name: exec $SHELL -l
+    abbr: es
+    snippet: exec $SHELL -l
+
+  - name: ls -la
+    abbr: la
+    snippet: ls -la
+
+  - name: ls -l
+    abbr: ll
+    snippet: ls -l
+
+  - name: nvim
+    abbr: n
+    snippet: nvim
+
+  - name: sudo
+    abbr: s
+    snippet: sudo
+
+  - name: vim
+    abbr: v
+    snippet: vim
+
+  - name: vim .
+    abbr: v.
+    snippet: vim .
+
+  - name: which
+    abbr: w
+    snippet: which
+
+  - name: yazi
+    abbr: "y"
+    snippet: yazi
+
+  # commitizen
+  - name: czg
+    abbr: cz
+    snippet: czg
+
+  - name: czg ai -N=3
+    abbr: cza
+    snippet: czg ai -N=3
+
+  # docker
+  - name: docker
+    abbr: d
+    snippet: docker
+
+  - name: docker compose
+    abbr: dc
+    snippet: docker compose
+
+  - name: lazydocker
+    abbr: ld
+    snippet: lazydocker
+
+  # koji
+  - name: koji --config ~/.config/koji/config.toml
+    abbr: ko
+    snippet: koji --config ~/.config/koji/config.toml
+
+  # make
+  - name: make
+    abbr: m
+    snippet: make
+
+  - name: make help
+    abbr: mh
+    snippet: make help
+
+  - name: make lint
+    abbr: ml
+    snippet: make lint
+
+  - name: make local
+    abbr: mlo
+    snippet: make local | spacer --after 5
+
+  - name: make freshup-local-for-py-engineer
+    abbr: mf
+    snippet: make freshup-local-for-py-engineer
+
+  - name: make unittest
+    abbr: mu
+    snippet: make unittest
+
+  # mise
+  - name: mise run
+    abbr: mr
+    snippet: mise run
+
+  - name: mise run --dry-run
+    abbr: mrd
+    snippet: mise run --dry-run
+
+  - name: mise tasks
+    abbr: mt
+    snippet: mise tasks --hidden
+
+  # pdm commands
+  - name: pdm run
+    abbr: pr
+    snippet: pdm run
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pdm run dev | spacer --after 5
+    abbr: prd
+    snippet: pdm run dev | spacer --after 5
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pdm run fix
+    abbr: prf
+    snippet: pdm run fix
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pdm run lint
+    abbr: prl
+    snippet: pdm run lint
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pdm run test
+    abbr: prt
+    snippet: pdm run test
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  - name: pdm sync
+    abbr-pattern: (psy|pdsy)
+    snippet: pdm sync
+    if: '[[ -f "./pyproject.toml" ]]'
+
+  # tig
+  - name: tig
+    abbr: t
+    snippet: tig
+
+  - name: tig --all
+    abbr: ta
+    snippet: tig --all
+
+  - name: tig blame
+    abbr: tb
+    snippet: tig blame
+
+  - name: tig status
+    abbr: ts
+    snippet: tig status
+
+  - name: (tig) --all
+    abbr: a
+    snippet: --all
+    global: true
+    context: '^tig\s'
+
+  # other tools
+  - name: ug -QPn
+    abbr-pattern: (ug|igrep)
+    snippet: ug -QPn
+
+  - name: up --noinput
+    abbr: up
+    snippet: up --noinput
+
+  - name: zinit
+    abbr: zi
+    snippet: zinit
+
+  - name: ji
+    abbr: zz
+    snippet: ji
+
+  # Global abbreviations
+  - name: "|"
+    abbr: p
+    snippet: "|"
+    global: true
+
+  - name: "|& spacer --after 5"
+    abbr: sp
+    global: true
+    snippet: "|& spacer --after 5"
+
+  - name: (delta) --no-gitconfig
+    abbr: ng
+    snippet: --no-gitconfig
+    global: true
+    context: '.*delta\s'
+
+  - name: (pdm run) -l
+    abbr: l
+    snippet: -l
+    global: true
+    context: '^pdm\srun\s'
