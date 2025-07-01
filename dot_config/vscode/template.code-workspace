@@ -2,16 +2,16 @@
   "folders": [
     {
       // 本ファイルからの相対パス
-      "path": "../../"
-    }
+      "path": "../../",
+    },
   ],
   "settings": {
     "workbench.colorCustomizations": {
       "activityBar.background": "#800000",
       "titleBar.activeBackground": "#800000",
-      "statusBar.background": "#800000"
+      "statusBar.background": "#800000",
     },
-  }
+  },
 }
 
 // HTML標準16色

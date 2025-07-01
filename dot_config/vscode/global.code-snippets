@@ -19,46 +19,46 @@
   "html : コメントアウト(styleタグ)": {
     "prefix": "co",
     "body": ["<style>/*", " ${TM_SELECTED_TEXT}", "*/</style>"],
-    "description": "styleタグでコメントアウト"
+    "description": "styleタグでコメントアウト",
   },
   "html : コメントアウト(scriptタグ)": {
     "prefix": "co",
     "body": ["<script>/*", " ${TM_SELECTED_TEXT}", "*/</script>"],
-    "description": "scriptタグでコメントアウト"
+    "description": "scriptタグでコメントアウト",
   },
   // javascript
   "javascript : console.log()": {
     "prefix": "cl",
     "body": ["console.log($1)"],
-    "description": "console.log()"
+    "description": "console.log()",
   },
   "javascript : JSDocのテンプレ": {
     "prefix": "js",
     "body": ["/**", " * @description  $1", " */"],
-    "description": "JSDoc;"
+    "description": "JSDoc;",
   },
   "javascript : disable eslint": {
     "prefix": ["es", "di"],
     "body": [
-      "${1|// eslint-disable-next-line,/* eslint-disable */,/* eslint-enable */|}"
+      "${1|// eslint-disable-next-line,/* eslint-disable */,/* eslint-enable */|}",
     ],
-    "description": "disable eslint"
+    "description": "disable eslint",
   },
   "javascript : optional chainning": {
     "prefix": "?",
     "body": ["?"],
-    "description": "null/undefinedのときはプロパティアクセスは行わない(JavaScript)"
+    "description": "null/undefinedのときはプロパティアクセスは行わない(JavaScript)",
   },
   "javascript : sleep処理": {
     "prefix": "sl",
     "body": ["await new Promise(resolve => setTimeout(resolve, 1000));"],
-    "description": "sleep処理"
+    "description": "sleep処理",
   },
   // typescript
   "typescript : Non-Null Assertion": {
     "prefix": "!",
     "body": ["!"],
-    "description": "not nullなことをTSに保証する(TypeScript)"
+    "description": "not nullなことをTSに保証する(TypeScript)",
   },
   // DOM
   "DOM : focusをなくす(input.value?.$el.blur)": {
@@ -70,9 +70,9 @@
       "};",
       "<AtomInput",
       "  ref='input'",
-      "/>"
+      "/>",
     ],
-    "description": "focusをなくす"
+    "description": "focusをなくす",
   },
   // python2
   "python2 : print(PRINT2)": {
@@ -83,9 +83,9 @@
       "${1| ,from inspect import currentframe|}",
       "print('PRINT:{}:{}:{}'.format(currentframe().f_code.co_filename,currentframe().f_code.co_name,str(currentframe().f_lineno)))",
       "print('PRINT:'+unicode(str($2),encoding='utf-8').encode().decode('unicode-escape',errors='ignore'))",
-      "print('PRINT:-----------------------')"
+      "print('PRINT:-----------------------')",
     ],
-    "description": "print()"
+    "description": "print()",
   },
   "python2 : print(stout)": {
     "prefix": "pr",
@@ -93,30 +93,30 @@
       "import sys, codecs",
       "sys.stdout = codecs.getwriter('utf-8')(sys.stdout)",
     ],
-    "description": "print(stout)"
+    "description": "print(stout)",
   },
   "python2 : typehint": {
     "prefix": "ty",
     "body": ["# type: (${1}) -> ${2}"],
-    "description": "print()"
+    "description": "print()",
   },
   "python2 : [コード上]str(byte) → unicode(日本語)に変換": {
-    "prefix": ["de","pr"],
+    "prefix": ["de", "pr"],
     "body": [".decode('utf-8')"],
-    "description": "u'ででも可"
+    "description": "u'ででも可",
   },
   "python2 : [ターミナル,print()]unicode(日本語) → str(byte)に変換": {
-    "prefix": ["en","pr"],
+    "prefix": ["en", "pr"],
     "body": [".encode('utf-8')"],
-    "description": "print()時に使用"
+    "description": "print()時に使用",
   },
   "python2 : super": {
     "prefix": "su",
     "body": ["super(${1}, self)"],
-    "description": "クラス名"
+    "description": "クラス名",
   },
   "python2 : timezone(JST)": {
-    "prefix": ["ti","jst"],
+    "prefix": ["ti", "jst"],
     "body": [
       "class JstTzinfo(datetime.tzinfo):",
       "",
@@ -128,21 +128,17 @@
       "",
       "JST = JstTzinfo()",
     ],
-    "description": "timezone(JST)"
+    "description": "timezone(JST)",
   },
   "python2 : set timezone no change time": {
-    "prefix": ["ti","jst"],
-    "body": [
-      ".replace(tzinfo=JST)",
-    ],
-    "description": "set timezone no change time"
+    "prefix": ["ti", "jst"],
+    "body": [".replace(tzinfo=JST)"],
+    "description": "set timezone no change time",
   },
   "python2 : alter timezone change time": {
-    "prefix": ["ti","utc"],
-    "body": [
-      ".astimezone(timezone.utc)",
-    ],
-    "description": "alter timezone change time"
+    "prefix": ["ti", "utc"],
+    "body": [".astimezone(timezone.utc)"],
+    "description": "alter timezone change time",
   },
   // python3
   "python : pprint(PRINT)": {
@@ -151,9 +147,9 @@
       "import pprint",
       "print('PRINT:-----------------------------------------------')",
       "pprint.pprint($1, width=180)",
-      "print('PRINT:-----------------------------------------------')"
+      "print('PRINT:-----------------------------------------------')",
     ],
-    "description": "pprint()"
+    "description": "pprint()",
   },
   "python : print(PRINT)[currentframe]": {
     "prefix": "pr",
@@ -162,59 +158,59 @@
       "print('PRINT:-----------------------------------------------')",
       "print('PRINT:{}:{}:{}'.format(currentframe().f_code.co_filename,currentframe().f_code.co_name,str(currentframe().f_lineno)))",
       "print('PRINT:{}'.format($2))",
-      "print('PRINT:-----------------------------------------------')"
+      "print('PRINT:-----------------------------------------------')",
     ],
-    "description": "print()"
+    "description": "print()",
   },
   "python : disable pylint&flake8": {
-    "prefix": ["di","py"],
-    "body": ["${1|# pylint: disable=,# pylint: disable-next=,# noqa: |}${2|unused-import,bad-continuation,E501|}"],
-    "description": "disable pylint"
+    "prefix": ["di", "py"],
+    "body": [
+      "${1|# pylint: disable=,# pylint: disable-next=,# noqa: |}${2|unused-import,bad-continuation,E501|}",
+    ],
+    "description": "disable pylint",
   },
   "python : disable mypy": {
     "prefix": ["di"],
     "body": ["# type: ignore[${2| ,arg-type|}]"],
-    "description": "disable mypy"
+    "description": "disable mypy",
   },
   "python : datetime(timezone)": {
-    "prefix": ["da","ti"],
-    "body": [
-      "${1| ,datetime.datetime(tzinfo=None),datetime.now(tz=None)|}"
-    ],
-    "description": "datetime(timezone)"
+    "prefix": ["da", "ti"],
+    "body": ["${1| ,datetime.datetime(tzinfo=None),datetime.now(tz=None)|}"],
+    "description": "datetime(timezone)",
   },
   // Vue
   "Vue : props type(1は|の代わり)": {
     "prefix": "ty",
     "body": [
-      "${1|type: Array as PropType<string[]>,type: Number as PropType<number 1 null>|}"
+      "${1|type: Array as PropType<string[]>,type: Number as PropType<number 1 null>|}",
     ],
-    "description": "Vue : props type(Array)"
+    "description": "Vue : props type(Array)",
   },
   // tips
   "regex : positive lookahead(?) X(?=Y)": {
     "prefix": "re",
     "body": ["$1(?=$2)"],
-    "description": "肯定先読みX(?=Y)で、XのあとにYが続く場合にだけマッチする"
+    "description": "肯定先読みX(?=Y)で、XのあとにYが続く場合にだけマッチする",
   },
   "regex : negative lookahead(?) X(?!Y)": {
     "prefix": "re",
     "body": ["$1(?!$2)"],
-    "description": "否定先読みX(?!Y)で、XのあとにYが続かない場合にだけマッチする"
+    "description": "否定先読みX(?!Y)で、XのあとにYが続かない場合にだけマッチする",
   },
   "regex : positive lookbehind(?<) (?<=Y)X": {
     "prefix": "re",
     "body": ["(?<=($1))$2"],
-    "description": "肯定後読み(Positive lookbehind): (?<=Y)X はXの前にYがある場合にのみマッチする"
+    "description": "肯定後読み(Positive lookbehind): (?<=Y)X はXの前にYがある場合にのみマッチする",
   },
   "regex : negative lookbehind(?<) (?<!Y)X": {
     "prefix": "re",
     "body": ["(?<!($1))$2"],
-    "description": "否定後読み(Negative lookbehind): (?<!Y)X は Xの前にYがない場合にのみマッチする"
+    "description": "否定後読み(Negative lookbehind): (?<!Y)X は Xの前にYがない場合にのみマッチする",
   },
   "enclose#": {
     "prefix": "#",
     "body": ["# ${TM_SELECTED_TEXT} #"],
-    "description": "enclose#"
-  }
+    "description": "enclose#",
+  },
 }

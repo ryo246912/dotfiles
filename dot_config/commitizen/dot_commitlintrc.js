@@ -1,3 +1,4 @@
+/* prettier-ignore */
 /** @type {import('cz-git').UserConfig} */
 module.exports = {
   rules: {

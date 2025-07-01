@@ -8,9 +8,7 @@
   "diffEditor.experimental.collapseUnchangedRegions": true,
   // 非変更のコードを折りたたむ
   "diffEditor.hideUnchangedRegions.enabled": true,
-  "editor.rulers": [
-    90
-  ],
+  "editor.rulers": [90],
   "editor.guides.bracketPairs": true,
   // 連続した空白文字を表示
   "editor.renderWhitespace": "boundary",
@@ -37,6 +35,15 @@
   // エクスプローラの自動開閉をされないフォルダ群
   "explorer.autoRevealExclude": {
     "**/.venv": true
+  },
+  // ファイル関連付け
+  "files.associations": {
+    "compose*.yml": "yaml",
+    "compose*.yaml": "yaml",
+    "docker-compose*.yml": "yaml",
+    "docker-compose*.yaml": "yaml",
+    ".github/workflows/*.yml": "yaml",
+    ".github/workflows/*.yaml": "yaml"
   },
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
@@ -165,6 +172,11 @@
     }
   },
   "[json][jsonc][scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true
+  },
+  "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true
@@ -392,10 +404,7 @@
   ],
   // (Status Bar)
   "statsBar.cpuLoad.format": "CPU:${percent}%",
-  "statsBar.modules": [
-    "cpuLoad",
-    "memoUsage"
-  ],
+  "statsBar.modules": ["cpuLoad", "memoUsage"],
   "statsBar.memoUsage.format": "Memory:${percent}%",
   "statsBar.location": "Right",
   "workbench.iconTheme": "vscode-great-icons",
@@ -404,13 +413,8 @@
   // (Vim)
   "vim.insertModeKeyBindings": [
     {
-      "before": [
-        "j",
-        "j"
-      ],
-      "after": [
-        "<Esc>"
-      ]
+      "before": ["j", "j"],
+      "after": ["<Esc>"]
     }
   ],
   "vim.hlsearch": true,
@@ -432,5 +436,5 @@
   ///////////////////////////////////////////////
   // 以下自動設定
   ///////////////////////////////////////////////
-  "window.zoomLevel": -1,
+  "window.zoomLevel": -1
 }
