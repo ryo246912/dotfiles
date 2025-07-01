@@ -14,8 +14,11 @@ _*
 .config/zsh/temp/*
 **/alacritty.yml
 not_config*
+
 flake*
 chezmoi.toml
+mise.toml
+taplo.toml
 
 README.md
 CLAUDE.md

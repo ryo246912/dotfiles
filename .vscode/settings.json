@@ -1,0 +1,27 @@
+{
+  // ファイル関連付け
+  "files.associations": {
+    "compose*.yml": "yaml",
+    "compose*.yaml": "yaml",
+    "docker-compose*.yml": "yaml",
+    "docker-compose*.yaml": "yaml",
+    ".github/workflows/*.yml": "yaml",
+    ".github/workflows/*.yaml": "yaml"
+  },
+  // json
+  "[json][jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  // yaml
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  // toml
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
+  },
+  "evenBetterToml.taplo.configFile.path": "taplo.toml"
+}

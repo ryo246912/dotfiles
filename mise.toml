@@ -1,0 +1,78 @@
+# lint
+[tasks.lint-action]
+depends = [
+    "lint-actionlint",
+    "lint-ghalint",
+    "lint-zizmor",
+]
+description = "Run all action linters"
+
+[tasks.lint-other]
+depends = [
+    "lint-json",
+    "lint-toml",
+    "lint-yaml",
+]
+description = "Run other linters"
+
+# fix
+[tasks.fix-action]
+description = "Run fix actions files"
+run         = ["pinact run", "disable-checkout-persist-credentials"]
+
+[tasks.fix-other]
+depends = [
+    "fix-json",
+    "fix-toml",
+    "fix-yaml",
+]
+description = "Run other formatter"
+
+# actions
+[tasks.lint-actionlint]
+description = "Run actionlint"
+hide        = true
+run         = "actionlint -ignore 'SC2016:'"
+
+[tasks.lint-zizmor]
+description = "Run zizmor"
+hide        = true
+run         = "zizmor --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
+
+[tasks.lint-ghalint]
+description = "Run ghalint"
+hide        = true
+run         = "ghalint run"
+
+# toml
+[tasks.lint-toml]
+description = "Run lint TOML files"
+hide        = true
+run         = "taplo format --check"
+
+[tasks.fix-toml]
+description = "Run fix TOML files"
+hide        = true
+run         = "taplo format"
+
+# yaml
+[tasks.lint-yaml]
+description = "Run lint YAML files"
+hide        = true
+run         = "prettier --check '**/*.{yaml,yml}'"
+
+[tasks.fix-yaml]
+description = "Run fix YAML files"
+hide        = true
+run         = "prettier --write '**/*.{yaml,yml}'"
+
+# json
+[tasks.lint-json]
+description = "Run lint json files"
+hide        = true
+run         = "prettier --check '**/*.json'"
+
+[tasks.fix-json]
+description = "Run fix json files"
+hide        = true
+run         = "prettier --write '**/*.json'"
