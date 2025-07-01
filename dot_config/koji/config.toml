@@ -1,30 +1,29 @@
-autocomplete = true
+autocomplete     = true
 breaking_changes = false
-issues = false
-emoji = false
-sign = false
+emoji            = false
+issues           = false
+sign             = false
 
 [[commit_types]]
-name = "feat"
 description = "新機能"
+name        = "feat"
 
 [[commit_types]]
-name = "chore"
 description = "その他(雑多な対応)"
+name        = "chore"
 
 [[commit_types]]
-name = "fix"
 description = "バグ修正"
+name        = "fix"
 
 [[commit_types]]
-name = "refactor"
 description = "リファクタリングのための変更(機能追加やバグ修正を含まない)"
+name        = "refactor"
 
 [[commit_types]]
-name = "wip"
 description = "作業途中"
+name        = "wip"
 
 [[commit_types]]
-name = "test"
 description = "テスト"
-
+name        = "test"
