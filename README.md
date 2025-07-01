@@ -8,4 +8,3 @@
 - Terminal: [Alacritty](https://github.com/alacritty/alacritty)
   - Terminal Multiplexer: [tmux](https://github.com/tmux/tmux)
 - Editor: VSCode,NeoVim
-

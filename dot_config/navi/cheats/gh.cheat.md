@@ -140,7 +140,7 @@ $ pr_search: echo -e "\
   <keyword> in:title\n\
   <keyword> in:title,body\n\
   <keyword> in:comment\n\
-  base:$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')\n\
+  base:$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)\n\
   mentions:@me\n\
   $(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:\(.login)"+"\n"+"author:\(.login)" )')\
   " \

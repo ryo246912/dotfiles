@@ -7,4 +7,10 @@ dot_zprofile.secret
 dot_zshrc.secret
 
 # AI
-.ai
+_ai
+
+## claude
+settings.local.json
+
+## VSCode
+mcp.json

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies", "renovate"],
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+  "dependencyDashboard": true,
+  "timezone": "Asia/Tokyo",
+  "reviewers": ["ryo246912"],
+  "vulnerabilityAlerts": {
+    "groupName": null,
+    "schedule": [],
+    "dependencyDashboardApproval": false,
+    "minimumReleaseAge": null,
+    "rangeStrategy": "update-lockfile",
+    "commitMessageSuffix": "[SECURITY]",
+    "branchTopic": "{{{datasource}}}-{{{depNameSanitized}}}-vulnerability",
+    "prCreation": "immediate",
+    "vulnerabilityFixStrategy": "lowest"
+  }
+}

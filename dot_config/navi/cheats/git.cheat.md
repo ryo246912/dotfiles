@@ -235,8 +235,8 @@ git remote add <shortname> git@github.com:<user>/<repo>.git
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
 
-# add origin/HEAD
-git remote set-head origin main
+# add origin/HEAD (-> git symbolic-ref refs/remotes/origin/HEAD)
+git remote set-head origin -a
 
 # check-ignore
 git check-ignore -v <file>

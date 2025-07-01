@@ -1,4 +1,4 @@
 [manager]
-sort_by        = "alphabetical"
-show_hidden    = true 
-sort_reverse   = false
+show_hidden  = true
+sort_by      = "alphabetical"
+sort_reverse = false

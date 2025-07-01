@@ -4,12 +4,11 @@
 # hook_post_update	プラグインが更新された直後
 
 [[plugins]]
-repo = 'junegunn/fzf'
 hook_post_update = './install --all'
-merged = 0
+merged           = 0
+repo             = 'junegunn/fzf'
 
 [[plugins]]
-repo = 'junegunn/fzf.vim'
 hook_add = '''
 " fzfコマンドのprefixを設定
 let g:fzf_command_prefix = 'Fzf'
@@ -38,19 +37,19 @@ cnoremap <C-r> :<C-u>:FzfHistory:<CR>
 " Windowを表示
 nnoremap <silent> <leader>w :<C-u>:FzfWindows<CR>
 '''
+repo = 'junegunn/fzf.vim'
 
 [[plugins]]
-repo = 'nanotee/zoxide.vim'
 hook_add = '''
 " cdの際にdirectoryのスコアを増やす
 let g:zoxide_hook = 'pwd'
 " zoxideを起動
 cnoremap zz :Zi<CR>
 '''
+repo = 'nanotee/zoxide.vim'
 
 # ファイラー
 [[plugins]]
-repo = 'lambdalisue/fern.vim'
 hook_add = '''
 " 隠しファイルも表示する
 let g:fern#default_hidden = 1
@@ -62,16 +61,17 @@ noremap <silent> <leader>e :<C-u>:Fern . -drawer -reveal=%<CR>
 noremap <silent> <leader>s :<C-u>:Fern . -drawer -reveal=% -toggle<CR>
 "
 '''
+repo = 'lambdalisue/fern.vim'
 
 # エディター関連
 [[plugins]]
-repo = 'jiangmiao/auto-pairs'
 hook_add = '''
 " auto-pairsの削除を無効
 let g:AutoPairsMapBS = 0
 " auto-pairsのスペースを無効
 let g:AutoPairsMapSpace = 0
 '''
+repo = 'jiangmiao/auto-pairs'
 
 [[plugins]]
 repo = 'tpope/vim-surround'
@@ -94,7 +94,6 @@ repo = 'tpope/vim-commentary'
 repo = 'ksudate/prev-md.vim'
 # vim-session
 [[plugins]]
-repo = 'tpope/vim-obsession'
 hook_add = '''
 " セッションの保存マッピング
 cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
@@ -102,3 +101,4 @@ cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
 " セッションの読み込み&セッションの保存マッピング
 cabbr sr :source ~/.local/state/vim/Session.vim \| Obsession ~/.local/state/vim/Session.vim<CR>
 '''
+repo = 'tpope/vim-obsession'

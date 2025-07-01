@@ -3,29 +3,29 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "ryo-shellhistory"
+app            = "ryo-shellhistory"
 primary_region = "nrt"
 
 [experimental]
-  cmd = ["server", "start"]
+cmd = ["server", "start"]
 
 [build]
-  image = "ghcr.io/atuinsh/atuin:v18.0.1"
+image = "ghcr.io/atuinsh/atuin:v18.0.1"
 
 [env]
-  ATUIN_HOST = "0.0.0.0"
-  ATUIN_OPEN_REGISTRATION = "false"
-  ATUIN_PORT = "8888"
+ATUIN_HOST              = "0.0.0.0"
+ATUIN_OPEN_REGISTRATION = "false"
+ATUIN_PORT              = "8888"
 
 [http_service]
-  internal_port = 8888
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
-  processes = ["app"]
+auto_start_machines  = true
+auto_stop_machines   = true
+force_https          = true
+internal_port        = 8888
+min_machines_running = 0
+processes            = ["app"]
 
 [[vm]]
-  cpu_kind = "shared"
-  cpus = 1
-  memory_mb = 256
+cpu_kind  = "shared"
+cpus      = 1
+memory_mb = 256

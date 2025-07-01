@@ -1,13 +1,13 @@
 prSections:
-- title: All PRs
-  filters: sort:created-desc
-- title: Open PRs
-  filters: is:open sort:created-desc
+  - title: All PRs
+    filters: sort:created-desc
+  - title: Open PRs
+    filters: is:open sort:created-desc
 issuesSections:
-- title: All Issues
-  filters: sort:created-desc
-- title: Open Issues
-  filters: is:open sort:created-desc
+  - title: All Issues
+    filters: sort:created-desc
+  - title: Open Issues
+    filters: is:open sort:created-desc
 defaults:
   preview:
     open: true

@@ -6,15 +6,15 @@ search_mode = "fuzzy"
 
 sync_address = "https://ryo-shellhistory.fly.dev"
 
-show_preview=true
+show_preview = true
 
 timezone = "+9"
 
 common_subcommands = [
-  "git",
-  "npm",
-  "gh",
-  "docker",
-  "docker-compose",
-  "make",
+    "git",
+    "npm",
+    "gh",
+    "docker",
+    "docker-compose",
+    "make",
 ]
