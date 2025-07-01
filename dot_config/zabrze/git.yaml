@@ -62,7 +62,7 @@ abbrevs:
   - name: git checkout master
     abbr: gchm
     evaluate: true
-    snippet: git checkout $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
+    snippet: git checkout $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
 
   - name: git checkout staging
     abbr: gchs
@@ -197,7 +197,7 @@ abbrevs:
   - name: git merge origin/master
     abbr: gmom
     evaluate: true
-    snippet: git merge --no-ff $(git rev-parse --abbrev-ref origin/HEAD)
+    snippet: git merge --no-ff origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
 
   - name: git merge upstream/xxx
     abbr: gmu
@@ -221,7 +221,7 @@ abbrevs:
   - name: git pull origin master
     abbr: gpom
     evaluate: true
-    snippet: git pull origin $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
+    snippet: git pull origin $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4) --no-commit
 
   - name: git push origin staging
     abbr: gpos
@@ -235,7 +235,7 @@ abbrevs:
   - name: git pull upstream master
     abbr: gpum
     evaluate: true
-    snippet: git pull upstream $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||') --no-commit
+    snippet: git pull upstream $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4) --no-commit
 
   # Rebase commands
   - name: git rebase
@@ -253,7 +253,7 @@ abbrevs:
   - name: git reset --hard origin/master
     abbr: greom
     evaluate: true
-    snippet: git reset --hard $(git rev-parse --abbrev-ref origin/HEAD)
+    snippet: git reset --hard origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
 
   - name: git reset --hard origin/staging
     abbr: greos
@@ -262,12 +262,12 @@ abbrevs:
   - name: git rebase origin/master
     abbr: grom
     evaluate: true
-    snippet: git rebase --autostash $(git rev-parse --abbrev-ref origin/HEAD)
+    snippet: git rebase --autostash origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
 
   - name: git rebase upstream/master
     abbr: grum
     evaluate: true
-    snippet: git rebase --autostash upstream/$(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
+    snippet: git rebase --autostash upstream/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
 
   # Status and show commands
   - name: git status
@@ -469,7 +469,7 @@ abbrevs:
 
   - name: (git checkout) master/main
     abbr: m
-    snippet: $(git rev-parse --abbrev-ref origin/HEAD | sed 's|^origin/||')
+    snippet: $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
     evaluate: true
     global: true
     context: '^git\scheckout\s'
