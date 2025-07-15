@@ -28,6 +28,11 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
   source_file="${file_mappings[i]}"
   dest_dir="${file_mappings[i+1]}"
 
+  # コピー先のディレクトリが存在しない場合は作成
+  dest_parent_dir=$(dirname "$dest_dir")
+  if [ ! -d "$dest_parent_dir" ]; then
+    mkdir -p "$dest_parent_dir"
+  fi
   # コピー元とコピー先の更新日時を比較
   if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
     continue

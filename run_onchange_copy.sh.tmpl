@@ -2,13 +2,11 @@
 
 # 移動対象のファイル
 # {{ include "dot_config/commitizen/dot_commitlintrc.js" | sha256sum }}
-# {{ include "dot_config/navi/config.yaml" | sha256sum }}
 
 # 配列でキーと値を管理
 # コマンド 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
   "commitizen" "{{ .chezmoi.sourceDir }}/dot_config/commitizen/dot_commitlintrc.js" "{{ .chezmoi.homeDir }}/.commitlintrc.js"
-  "navi" "{{ .chezmoi.sourceDir }}/dot_config/navi/config.yaml" "$(navi info config-path)"
 )
 
 # 配列をループで処理
@@ -20,6 +18,11 @@ for ((i=0; i<${#file_mappings[@]}; i+=3)); do
   # コマンドのPATHが通っていない場合はskip
   if ! command -v "$command" &> /dev/null; then
     continue
+  fi
+  # コピー先のディレクトリが存在しない場合は作成
+  dest_parent_dir=$(dirname "$dest_dir")
+  if [ ! -d "$dest_parent_dir" ]; then
+    mkdir -p "$dest_parent_dir"
   fi
   # コピー元とコピー先の更新日時を比較
   if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then

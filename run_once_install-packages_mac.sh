@@ -4,6 +4,7 @@
 install_brew() {
   if ! command -v brew &>/dev/null; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    source "$ZDOTDIR/.zshrc"
   else
     echo "Homebrew is already installed"
   fi
@@ -16,6 +17,7 @@ install_package() {
     font-hackgen
     font-hackgen-nerd
     git
+    go
     gpg
     pinentry-mac
     t-rec
@@ -40,15 +42,18 @@ install_cask_package() {
   local CASKPACKAGES=(
     alacritty
     arc
+    battery
     chatgpt
     clibor
     dbeaver-community
     docker
+    google-chrome
     google-japanese-ime
     karabiner-elements
     keyboardcleantool
-    slack
     raycast
+    slack
+    thebrowsercompany-dia
     visual-studio-code
   )
 
@@ -56,6 +61,9 @@ install_cask_package() {
     if ! brew list --cask "$package" &>/dev/null; then
       if [[ "$package" == "clibor" ]]; then
         HOMEBREW_CASK_OPTS="--language=ja" brew install --cask "$package"
+      elif [[ "$package" == "google-japanese-ime" ]]; then
+        sudo softwareupdate --install-rosetta
+        brew install --cask "$package"
       else
         brew install --cask "$package"
       fi
@@ -74,31 +82,31 @@ setup_settings() {
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 6
   fi
   # Finder: 隠しファイルを表示する
-  if [ "$(defaults read com.apple.finder AppleShowAllFiles)" -ne 1 ]; then
+  if [ "$(defaults read com.apple.finder AppleShowAllFiles 2>/dev/null)" -ne 1 ]; then
     defaults write com.apple.finder AppleShowAllFiles 1
   fi
   # Finder: 拡張子を表示する
-  if [ "$(defaults read com.apple.finder AppleShowAllExtensions)" -ne 1 ]; then
+  if [ "$(defaults read com.apple.finder AppleShowAllExtensions 2>/dev/null)" -ne 1 ]; then
     defaults write com.apple.finder AppleShowAllExtensions 1
   fi
   # Finder: パスのパンくずリストを表示する
-  if [ "$(defaults read com.apple.finder ShowPathbar)" -ne 1 ]; then
+  if [ "$(defaults read com.apple.finder ShowPathbar 2>/dev/null)" -ne 1 ]; then
     defaults write com.apple.finder ShowPathbar 1
   fi
   # Finder: Finderを終了するメニューを表示する
-  if [ "$(defaults read com.apple.Finder QuitMenuItem)" -ne 1 ]; then
+  if [ "$(defaults read com.apple.Finder QuitMenuItem 2>/dev/null)" -ne 1 ]; then
     defaults write com.apple.Finder QuitMenuItem 1
   fi
   # キーボード: キーのリピート速度(小さい数値ほど速い)
-  if [ "$(defaults read -g KeyRepeat)" -ne 2 ]; then
+  if [ "$(defaults read -g KeyRepeat 2>/dev/null)" -ne 2 ]; then
     defaults write -g KeyRepeat 2
   fi
   # キーボード: リピート入力認識までの時間(15ms/step、15 = 225ms)
-  if [ "$(defaults read -g InitialKeyRepeat)" -ne 15 ]; then
+  if [ "$(defaults read -g InitialKeyRepeat 2>/dev/null)" -ne 15 ]; then
     defaults write -g InitialKeyRepeat 15
   fi
   # トラックパッド: スクロール方向を順方向にする(NOTE:なぜかOFFが自然な方向になる)
-  if [ "$(defaults read -g com.apple.swipescrolldirection)" -ne 0 ]; then
+  if [ "$(defaults read -g com.apple.swipescrolldirection 2>/dev/null)" -ne 0 ]; then
     defaults write -g com.apple.swipescrolldirection 0
   fi
 

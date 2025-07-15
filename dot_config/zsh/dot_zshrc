@@ -1,5 +1,10 @@
 # cSpell:disable
 
+# launch tmux when start zsh
+if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+  tmux attach || tmux
+fi
+
 for file in $XDG_CONFIG_HOME/zsh/*.zsh; do
   source "$file"
 done
