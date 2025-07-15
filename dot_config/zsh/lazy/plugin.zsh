@@ -120,10 +120,10 @@ zinit wait lucid light-mode blockf for \
 
 # gitui #
 zinit wait lucid light-mode blockf for \
-    from"gh-r" cargo"gitui" \
+    from"gh-r" \
     ver"v0.22.1" \
     sbin"gitui" \
-    @'extrawurst/gitui'
+    @'gitui-org/gitui'
 
 # github-cli #
 zinit wait lucid light-mode blockf for \
