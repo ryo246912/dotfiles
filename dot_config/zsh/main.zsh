@@ -19,12 +19,24 @@ setopt hist_reduce_blanks
 # ファイル書出の際、新しいコマンドと寿福する古いコマンドは無視
 setopt hist_save_no_dups
 
+if [ "$(uname)" = "Darwin" ]; then
+  # ctrl + dは無効
+  stty eof undef
+  # ctrl + qは無効
+  stty start undef
+  # ctrl + sは無効
+  stty stop undef
+  # ctrl + zはsuspend
+  stty susp ^Z
+  # NOTE:sttyを変更するのは要注意
+  # alt + shift + cはinterrupt
+  # stty intr "^[C"
+  # alt + shift + zはsuspend
+  # stty susp "^[Z"
+  stty susp undef
+fi
+
 zstyle ':completion:*:default' menu select=1
 # makeコマンド補完
 zstyle ':completion:*:make:*:targets' call-command true
 zstyle ':completion:*:*:make:*' tag-order 'targets'
-
-# launch tmux when start zsh
-if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-  tmux attach || tmux
-fi

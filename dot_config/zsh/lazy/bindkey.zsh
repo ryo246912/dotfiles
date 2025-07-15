@@ -1,20 +1,3 @@
-if [ "$(uname)" = "Darwin" ]; then
-  # ctrl + dは無効
-  stty eof undef
-  # ctrl + qは無効
-  stty start undef
-  # ctrl + sは無効
-  stty stop undef
-  # ctrl + zはsuspend
-  stty susp ^Z
-  # NOTE:sttyを変更するのは要注意
-  # alt + shift + cはinterrupt
-  # stty intr "^[C"
-  # alt + shift + zはsuspend
-  # stty susp "^[Z"
-  stty susp undef
-fi
-
 # キーバインドをemacs風にする
 # bindkey -e
 # キーバインドをvi風にする

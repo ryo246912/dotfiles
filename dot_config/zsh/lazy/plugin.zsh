@@ -103,7 +103,7 @@ __fzf_atload() {
 }
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
-    ver"v0.55.0" \
+    ver"v0.64.0" \
     sbin"fzf" \
     atload"__fzf_atload" \
     @'junegunn/fzf'
@@ -120,10 +120,10 @@ zinit wait lucid light-mode blockf for \
 
 # gitui #
 zinit wait lucid light-mode blockf for \
-    from"gh-r" cargo"gitui" \
+    from"gh-r" \
     ver"v0.22.1" \
     sbin"gitui" \
-    @'extrawurst/gitui'
+    @'gitui-org/gitui'
 
 # github-cli #
 zinit wait lucid light-mode blockf for \

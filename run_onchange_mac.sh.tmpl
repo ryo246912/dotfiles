@@ -4,12 +4,14 @@
 # 移動対象のファイル
 # {{ include "dot_config/vscode/keybindings_mac.json" | sha256sum }}
 # {{ include "dot_config/vscode/settings.json" | sha256sum }}
+# {{ include "dot_config/navi/config.yaml" | sha256sum }}
 
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/keybindings_mac.json" "{{ .chezmoi.homeDir }}/Library/Application Support/Code/User/keybindings.json"
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "{{ .chezmoi.homeDir }}/Library/Application Support/Code/User/settings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/navi/config.yaml" "{{ .chezmoi.homeDir }}/Library/Application Support/navi/config.yaml"
 )
 
 # 配列をループで処理
@@ -17,6 +19,11 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
   source_file="${file_mappings[i]}"
   dest_dir="${file_mappings[i+1]}"
 
+  # コピー先のディレクトリが存在しない場合は作成
+  dest_parent_dir=$(dirname "$dest_dir")
+  if [ ! -d "$dest_parent_dir" ]; then
+    mkdir -p "$dest_parent_dir"
+  fi
   # コピー元とコピー先の更新日時を比較
   if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
     continue
