@@ -25,6 +25,10 @@ abbrevs:
     cursor: "👇"
     snippet: git branch -a --sort=-committerdate👇--format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
+  - name: git branch --show-current
+    abbr: gbc
+    snippet: git branch --show-current
+
   - name: git bisect
     abbr: gbi
     snippet: git bisect
