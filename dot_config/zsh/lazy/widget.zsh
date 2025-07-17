@@ -14,7 +14,7 @@ else
   bindkey "^[D" _gitui
 fi
 
-# ctrl + w(alt + shift + w)でgh-dash起動
+# ctrl + x(alt + shift + x)でgh-dash起動
 _gh-dash() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
@@ -25,9 +25,9 @@ _gh-dash() {
 }
 zle -N _gh-dash
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^W" _gh-dash
+  bindkey "^X" _gh-dash
 else
-  bindkey "^[W" _gh-dash
+  bindkey "^[X" _gh-dash
 fi
 
 # ctrl + y(alt + shift + y)でyazi起動
