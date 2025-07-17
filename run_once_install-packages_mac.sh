@@ -51,6 +51,7 @@ install_cask_package() {
     google-japanese-ime
     karabiner-elements
     keyboardcleantool
+    mise
     raycast
     slack
     thebrowsercompany-dia
@@ -67,6 +68,23 @@ install_cask_package() {
       else
         brew install --cask "$package"
       fi
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
+install_private_cask_package() {
+  local CASKPACKAGES=(
+    claude
+    google-drive
+    obsidian
+    thunderbird
+  )
+
+  for package in "${CASKPACKAGES[@]}"; do
+    if ! brew list --cask "$package" &>/dev/null; then
+        brew install --cask "$package"
     else
       echo "$package is already installed"
     fi
