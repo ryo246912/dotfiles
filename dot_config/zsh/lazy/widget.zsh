@@ -296,8 +296,7 @@ fi
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
-      tmux send-keys -t popup "sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh" C-m && \
-      tmux attach -t popup \
+      sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh \
     '
   else
     BUFFER='sh "$HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh"'
