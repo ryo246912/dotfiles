@@ -18,6 +18,8 @@ setopt hist_ignore_space
 setopt hist_reduce_blanks
 # ファイル書出の際、新しいコマンドと寿福する古いコマンドは無視
 setopt hist_save_no_dups
+# 対話型シェルでのコメントを有効
+setopt INTERACTIVE_COMMENTS
 
 if [ "$(uname)" = "Darwin" ]; then
   # ctrl + dは無効
