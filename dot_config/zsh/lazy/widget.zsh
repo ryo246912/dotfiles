@@ -14,7 +14,7 @@ else
   bindkey "^[D" _gitui
 fi
 
-# ctrl + w(alt + shift + w)でgh-dash起動
+# ctrl + x(alt + shift + x)でgh-dash起動
 _gh-dash() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
@@ -25,9 +25,9 @@ _gh-dash() {
 }
 zle -N _gh-dash
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^W" _gh-dash
+  bindkey "^X" _gh-dash
 else
-  bindkey "^[W" _gh-dash
+  bindkey "^[X" _gh-dash
 fi
 
 # ctrl + y(alt + shift + y)でyazi起動
@@ -207,11 +207,13 @@ else
   bindkey '^[Q^[G' _navi_copy_snippet
 fi
 
-# ctrl + q → ctrl + d(alt + shift + q → alt + shift + d)でgit_worktree_manager.shを実行
+# ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)でgit_worktree_manager.shを実行
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
-      sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh \
+      local current_path="$(pwd)" && \
+      tmux send-keys -t popup "cd $current_path && sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh" C-m && \
+      tmux attach -t popup
     '
   else
     BUFFER='sh "$HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh"'
@@ -220,9 +222,9 @@ _git_worktree_manager() {
 }
 zle -N _git_worktree_manager
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^Q^D" _git_worktree_manager
+  bindkey "^Q^W" _git_worktree_manager
 else
-  bindkey "^[Q^[D" _git_worktree_manager
+  bindkey "^[Q^[W" _git_worktree_manager
 fi
 
 # option + ↑で１つ上のディレクトリに移動
