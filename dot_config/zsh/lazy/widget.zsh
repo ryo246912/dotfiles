@@ -292,6 +292,25 @@ else
   bindkey '^[Q^[G' _navi_copy_snippet
 fi
 
+# ctrl + q → ctrl + d(alt + shift + q → alt + shift + d)でgit_worktree_manager.shを実行
+_git_worktree_manager() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
+      tmux send-keys -t popup "sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh" C-m && \
+      tmux attach -t popup \
+    '
+  else
+    BUFFER='sh "$HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh"'
+    zle accept-line
+  fi
+}
+zle -N _git_worktree_manager
+if [ "$(uname)" = "Darwin" ]; then
+  bindkey "^Q^D" _git_worktree_manager
+else
+  bindkey "^[Q^[D" _git_worktree_manager
+fi
+
 # option + ↑で１つ上のディレクトリに移動
 _cd-up () {
   BUFFER='cd ../'
