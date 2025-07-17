@@ -14,7 +14,7 @@ else
   bindkey "^[D" _gitui
 fi
 
-# ctrl + w(alt + shift + w)でgitui起動
+# ctrl + w(alt + shift + w)でgh-dash起動
 _gh-dash() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
@@ -156,91 +156,6 @@ else
   bindkey '^[Q^[A' _delete_space
 fi
 
-# ctrl + q → ctrl + z(alt + shift + q → alt + shift + z)でコマンド履歴を選択して出力
-_fzf_insert_command() {
-  local num command line array1 array2 word
-  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tac) | fzf)
-  if [ -n "$command" ] ; then
-    BUFFER="$BUFFER $command"
-    CURSOR=$#BUFFER #カーソルを末尾に移動
-  fi
-  zle redisplay
-}
-zle -N _fzf_insert_command
-if [ "$(uname)" = "Darwin" ]; then
-  bindkey '^Q^Z' _fzf_insert_command
-else
-  bindkey '^[Q^[Z' _fzf_insert_command
-fi
-
-# ctrl + q → ctrl + x(alt + shift + q → alt + shift + x)でコマンド履歴からwordを選択して出力
-_fzf_insert_command_word() {
-  local num command line array1 array2 word
-  command=$(cat <(echo "$BUFFER") <(history -100000 | cut -f 4- -d " " | tac) | fzf)
-  if [ -n "$command" ] ; then
-    for i in $(seq $(echo "$command" | wc -m)) ; do
-      array1+=( "$(cut -c $i- <(echo $command))\n" )
-    done
-  fi
-  if [ -n "${array1[*]}" ] ; then
-    line=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo "$line" | wc -m)
-    for j in $(seq $num) ; do
-      array2+=( "$(cut -c -$((num-j+1)) <(echo $line))\n" )
-    done
-  fi
-  if [ -n "${array2[*]}" ] ; then
-    word=$(echo -e "${array2[@]}" | fzf)
-    word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
-    word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
-    word=$(echo "$word" | tr -d '\n')
-  fi
-  if [ -n "$word" ] ; then
-    BUFFER="$BUFFER $word"
-    CURSOR=$#BUFFER #カーソルを末尾に移動
-  fi
-  zle redisplay
-}
-zle -N _fzf_insert_command_word
-if [ "$(uname)" = "Darwin" ]; then
-  bindkey '^Q^X' _fzf_insert_command_word
-else
-  bindkey '^[Q^[X' _fzf_insert_command_word
-fi
-
-# ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)で画面キャプチャしてwordを選択してコピー
-_copy_word() {
-  local num line1 line2 array1 array2 word
-  line1=$(tmux capture-pane -p | fzf)
-  if [ -n "$line1" ] ; then
-    for i in $(seq $(echo "$line1" | wc -m)) ; do
-      array1+=( "$(cut -c $i- <(echo $line1))\n" )
-    done
-  fi
-  if [ -n "${array1[*]}" ] ; then
-    line2=$(echo -e "${array1[@]}" | fzf)
-    num=$(echo "$line2" | wc -m)
-    for j in $(seq $num) ; do
-      array2+=( "$(cut -c -$((num-j+1)) <(echo $line2))\n" )
-    done
-  fi
-  if [ -n "${array2[*]}" ] ; then
-    word=$(echo -e "${array2[@]}" | fzf)
-    word=${word%"${word##*[![:space:]]}"} #後方の空白文字を削除
-    word=${word#"${word%%[![:space:]]*}"} #前方の空白文字を削除
-  fi
-  if [ -n "$word" ] ; then
-    echo "$word" | tr -d '\n' | cb
-  fi
-  zle redisplay
-}
-zle -N _copy_word
-if [ "$(uname)" = "Darwin" ]; then
-  bindkey '^Q^W' _copy_word
-else
-  bindkey '^[Q^[W' _copy_word
-fi
-
 # ctrl + q → ctrl + s(alt + shift + q → alt + shift + s)でshortcut表示
 _shortcut() {
   if [ -n "$TMUX" ]; then
@@ -296,8 +211,7 @@ fi
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
-      tmux send-keys -t popup "sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh" C-m && \
-      tmux attach -t popup \
+      sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh \
     '
   else
     BUFFER='sh "$HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh"'
