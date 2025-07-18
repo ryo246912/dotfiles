@@ -1,0 +1,48 @@
+{
+  "shortcuts": {
+    "returnToMenu": {
+      "ctrl": true,
+      "key": "e"
+    },
+    "cancel": {
+      "key": "escape"
+    }
+  },
+  "statusHooks": {
+    "idle": {
+      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'がIdle状態です\" with title \"Claude Code\" sound name \"Hero\"'",
+      "enabled": true
+    },
+    "waiting_input": {
+      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'が入力待ちです\" with title \"Claude Code\" sound name \"Glass\"'",
+      "enabled": true
+    }
+  },
+  "worktree": {
+    "autoDirectory": true,
+    "autoDirectoryPattern": ".git/worktrees/{branch}"
+  },
+  "command": {
+    "command": "claude"
+  },
+  "commandPresets": {
+    "presets": [
+      {
+        "id": "1",
+        "name": "Main",
+        "command": "claude",
+        "args": [
+          "--resume"
+        ]
+      },
+      {
+        "id": "1752767057209",
+        "name": "Gemini",
+        "command": "gemini",
+        "detectionStrategy": "gemini"
+      }
+    ],
+    "defaultPresetId": "1",
+    "selectPresetOnStart": true
+  }
+}

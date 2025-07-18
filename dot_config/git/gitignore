@@ -8,5 +8,28 @@ node_modules/
 __pycache__/
 *.pyc
 
-# _folder
+# git
+COMMIT_EDITMSG
+commondir
+config
+description
+FETCH_HEAD
+gitdir
+gitui
+HEAD
+index
+index.lock
+MERGE_RR
+ORIG_HEAD
+packed-refs
+
+# AI
 _*
+
+## Claude
+settings.local.json
+TASKS.md
+PLAN.md
+
+## VSCode
+mcp.json
