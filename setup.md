@@ -12,12 +12,35 @@
   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
   ```
 
+
+- [ ] miseの実行
+  - [ ] ghコマンドのインストール
+    ```sh
+    brew install gh
+    ```
+  - [ ] ghコマンドのログイン
+    ```sh
+    gh auth login --scopes 'project'
+    ```
+  - [ ] GITHUB_TOKENを環境変数に設定
+    ```sh
+    export GITHUB_TOKEN=$(gh auth token)
+    ```
+  - [ ] ランタイムのインストール
+    ```sh
+    mise install --jobs=1 node python rust
+    ```
+  - [ ] 他ツールのインストール
+    ```sh
+    mise install --jobs=1
+    ```
+
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `goku`を実行
-  ```sh
-  goku
-  ```
+    ```sh
+    goku
+    ```
 
 - [ ] Clibor
   - [ ] 定型文を設定
@@ -74,8 +97,6 @@
     cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
     mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
-- [ ] github cli
-  - [ ] `gh auth login --scopes 'project'`
 - [ ] git
   - [ ] 秘密鍵の設定
       - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
@@ -93,8 +114,8 @@
       ```sh
       gpg --full-generate-key
       ```
-        - 作成後、以下のコマンドでfingerprintを確認
-          - GPG_KEY_IDの内容をgitconfigに設定する
+      - 作成後、以下のコマンドでfingerprintを確認
+        - GPG_KEY_IDの内容をgitconfigに設定する
       ```sh
       gpg --list-secret-keys --keyid-format LONG
       ```
