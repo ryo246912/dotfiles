@@ -10,4 +10,4 @@
 - Editor: VSCode,NeoVim
 
 # Setup
-- [setup](SETUP.md)
+- [setup](setup.md)

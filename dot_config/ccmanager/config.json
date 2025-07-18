@@ -31,9 +31,7 @@
         "id": "1",
         "name": "Main",
         "command": "claude",
-        "args": [
-          "--resume"
-        ]
+        "args": ["--resume"]
       },
       {
         "id": "1752767057209",
