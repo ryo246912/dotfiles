@@ -20,6 +20,7 @@ install_package() {
     git
     go
     gpg
+    mise
     pinentry-mac
     t-rec
     yqrashawn/goku/goku
