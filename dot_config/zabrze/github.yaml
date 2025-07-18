@@ -74,7 +74,7 @@ abbrevs:
   # GitHub pull request commands
   - name: gh pr checkout
     abbr: ghpc
-    snippet: gh pr checkout $(gh pr list --search "user-review-requested:@me" --limit 100
+    snippet: gh pr checkout --detach $(gh pr list --search "user-review-requested:@me" --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
         ["no","title","author","state","draft","updatedAt","createdAt","branch"],
