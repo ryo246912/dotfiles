@@ -194,6 +194,10 @@ abbrevs:
     abbr: gma
     snippet: git merge --abort
 
+  - name: git merge --squash
+    abbr: gms
+    snippet: git merge --squash
+
   - name: git merge origin/xxx
     abbr: gmo
     snippet: git merge --no-ff origin/
