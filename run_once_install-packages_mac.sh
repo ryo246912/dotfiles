@@ -12,6 +12,7 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
+    bitwarden-cli
     colordiff
     docker
     font-hackgen
@@ -76,6 +77,7 @@ install_cask_package() {
 
 install_private_cask_package() {
   local CASKPACKAGES=(
+    bitwarden
     claude
     google-drive
     obsidian
