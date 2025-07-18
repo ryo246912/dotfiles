@@ -95,6 +95,12 @@ repo = 'ksudate/prev-md.vim'
 # vim-session
 [[plugins]]
 hook_add = '''
+" セッション用ディレクトリを作成
+let s:session_dir = expand('~/.local/state/vim')
+if !isdirectory(s:session_dir)
+  call mkdir(s:session_dir, 'p')
+endif
+
 " セッションの保存マッピング
 cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
 
