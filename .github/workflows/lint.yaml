@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   lint-json:
+    if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,6 +41,7 @@ jobs:
         run: prettier --check '**/*.json'
 
   lint-yaml:
+    if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,6 +59,7 @@ jobs:
         run: prettier --check '**/*.{yaml,yml}'
 
   lint-toml:
+    if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
       contents: read
