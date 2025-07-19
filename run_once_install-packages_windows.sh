@@ -1,16 +1,51 @@
 #!/bin/bash
 [ "$(uname)" != "Linux" ] && exit
 
+install_scoop() {
+  if ! command -v scoop &>/dev/null; then
+    powershell.exe -c "set-executionpolicy remotesigned -scope currentuser"
+    powershell.exe -c "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')"
+  else
+    echo "Scoop is already installed"
+  fi
+}
+
 install_package() {
   local PACKAGES=(
     git
     gpg
+    # go
+    # https://mise.jdx.dev/installing-mise.html#apt
+    # mise
     zsh
   )
 
   for package in "${PACKAGES[@]}"; do
     if ! dpkg -l | grep -q "$package"; then
       apt install -y "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
+install_scoop_package() {
+  local PACKAGES=(
+    alacritty
+    bitwarden
+    thunderbird
+    vscode
+  )
+
+  for package in "${PACKAGES[@]}"; do
+    if ! scoop list | grep -q "$package"; then
+      if [[ "$package" == "alacritty" ]]; then
+        scoop install git
+        scoop bucket add extras
+        scoop install "$package"
+      else
+        scoop install "$package"
+      fi
     else
       echo "$package is already installed"
     fi
@@ -29,7 +64,9 @@ install_nix() {
 
 # 実行したいコマンドを入力
 commands=(
+  "install_scoop"
   "install_package"
+  "install_scoop_package"
   "install_nix"
 )
 
