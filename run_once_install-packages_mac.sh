@@ -14,7 +14,6 @@ install_package() {
   local PACKAGES=(
     bitwarden-cli
     colordiff
-    docker
     font-hackgen
     font-hackgen-nerd
     git
