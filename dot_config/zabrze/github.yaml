@@ -239,10 +239,18 @@ abbrevs:
     abbr: ghs
     snippet: gh status
 
-  # GitHub poi
+  # GitHub extension
+  - name: gh-actions-dash
+    abbr: ghad
+    snippet: gh-actions-dash
+
   - name: gh-poi
     abbr: ghp
     snippet: gh-poi
+
+  - name: gh-reassign-reviewer
+    abbr: ghr
+    snippet: gh-reassign-reviewer
 
   - name: (gh pr ready) --undo
     abbr-pattern: (d|u)
