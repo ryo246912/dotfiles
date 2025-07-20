@@ -156,6 +156,26 @@ else
   bindkey '^[Q^[A' _delete_space
 fi
 
+# ctrl + q → ctrl + z(alt + shift + q → alt + shift + z)で先頭に#を追加 or 削除
+_insert_comment() {
+  if [[ $BUFFER =~ ^[[:space:]]*# ]]; then
+      # 既にコメントアウトされている場合は解除
+      BUFFER=${BUFFER#"${BUFFER%%[![:space:]]*}"}  # 前方の空白を削除
+      BUFFER=${BUFFER#\#}  # #を削除
+      BUFFER=${BUFFER#[[:space:]]}  # #の後の空白を削除
+  else
+      # コメントアウトされていない場合は追加
+      BUFFER="# $BUFFER"
+  fi
+  zle redisplay
+}
+zle -N _insert_comment
+if [ "$(uname)" = "Darwin" ]; then
+  bindkey '^Q^Z' _insert_comment
+else
+  bindkey '^[Q^[Z' _insert_comment
+fi
+
 # ctrl + q → ctrl + s(alt + shift + q → alt + shift + s)でshortcut表示
 _shortcut() {
   if [ -n "$TMUX" ]; then

@@ -108,7 +108,11 @@ zinit wait lucid light-mode blockf for \
     @'MichaelAquilina/zsh-auto-notify'
 fi
 
+__fast-syntax-highlighting_atload() {
+    FAST_HIGHLIGHT_STYLES[comment]=white
+}
 zinit wait lucid light-mode blockf for \
+    atload"__fast-syntax-highlighting_atload" \
     @'zdharma/fast-syntax-highlighting'
 
 ### completion ###

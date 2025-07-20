@@ -7,9 +7,9 @@ abbrevs:
     abbr: chad
     snippet: chezmoi add --template
 
-  - name: chezmoi apply --interactive
+  - name: chezmoi apply --interactive --exclude=scripts,templates
     abbr-pattern: (chap|chpa)
-    snippet: chezmoi apply --interactive
+    snippet: chezmoi apply --interactive --exclude=scripts,templates
 
   - name: chezmoi apply --source-path
     abbr: chas

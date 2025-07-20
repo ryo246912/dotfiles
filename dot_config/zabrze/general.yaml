@@ -92,26 +92,27 @@ abbrevs:
   - name: make
     abbr: m
     snippet: make
+    if: '[[ -f "./Makefile" ]]'
 
   - name: make help
     abbr: mh
     snippet: make help
+    if: '[[ -f "./Makefile" ]]'
 
   - name: make lint
     abbr: ml
     snippet: make lint
+    if: '[[ -f "./Makefile" ]]'
 
   - name: make local
     abbr: mlo
     snippet: make local | spacer --after 5
-
-  - name: make freshup-local-for-py-engineer
-    abbr: mf
-    snippet: make freshup-local-for-py-engineer
+    if: '[[ -f "./Makefile" ]]'
 
   - name: make unittest
     abbr: mu
     snippet: make unittest
+    if: '[[ -f "./Makefile" ]]'
 
   # mise
   - name: mise run
@@ -125,6 +126,14 @@ abbrevs:
   - name: mise tasks
     abbr: mt
     snippet: mise tasks --hidden
+
+  - name: mise use
+    abbr: mu
+    snippet: mise use
+
+  - name: mise use -g
+    abbr: mug
+    snippet: mise use -g
 
   # pdm commands
   - name: pdm run
