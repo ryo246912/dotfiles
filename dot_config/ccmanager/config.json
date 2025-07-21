@@ -10,11 +10,11 @@
   },
   "statusHooks": {
     "idle": {
-      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'がIdle状態です\" with title \"Claude Code\" sound name \"Hero\"'",
+      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'がIdle状態です\" with title \"CCManager\" sound name \"Hero\"'",
       "enabled": true
     },
     "waiting_input": {
-      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'が入力待ちです\" with title \"Claude Code\" sound name \"Glass\"'",
+      "command": "osascript -e 'display notification \"'\"$CCMANAGER_WORKTREE\"'の '\"$CCMANAGER_WORKTREE_BRANCH\"'が入力待ちです\" with title \"CCManager\" sound name \"Glass\"'",
       "enabled": true
     }
   },
