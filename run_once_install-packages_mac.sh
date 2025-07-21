@@ -12,7 +12,6 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
-    bitwarden-cli
     colordiff
     font-hackgen
     font-hackgen-nerd
