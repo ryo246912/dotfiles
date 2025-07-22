@@ -80,6 +80,8 @@ install_private_cask_package() {
     claude
     google-drive
     obsidian
+    tailscale-app
+    termius
     thunderbird
   )
 
