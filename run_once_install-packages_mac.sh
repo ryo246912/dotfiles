@@ -20,7 +20,6 @@ install_package() {
     gpg
     mise
     pinentry-mac
-    t-rec
     yqrashawn/goku/goku
 
     coreutils
@@ -56,6 +55,7 @@ install_cask_package() {
     slack
     thebrowsercompany-dia
     visual-studio-code
+    zoom
   )
 
   for package in "${CASKPACKAGES[@]}"; do
