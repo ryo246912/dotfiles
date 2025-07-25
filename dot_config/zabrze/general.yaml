@@ -38,20 +38,16 @@ abbrevs:
     snippet: ls -l
 
   - name: nvim
-    abbr: n
+    abbr-pattern: (nv|vi)
     snippet: nvim
+
+  - name: nvim .
+    abbr-pattern: (n\.|v\.)
+    snippet: nvim .
 
   - name: sudo
     abbr: s
     snippet: sudo
-
-  - name: vim
-    abbr: v
-    snippet: vim
-
-  - name: vim .
-    abbr: v.
-    snippet: vim .
 
   - name: which
     abbr: w
