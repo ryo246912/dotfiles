@@ -113,7 +113,7 @@ docker compose -p <project> up -d
 $ project: docker compose ls --all \
   --- --headers 1 --column 1
 $ service: docker compose -p <project> ps --all --format json \
-  | jq -r '["Name","Service","State","Command"] ,(.[] | [.Name,.Service,.State,.Command]) | @tsv' \
+  | jq -r ' ["Name","Service","State","Command"], (if type == "array" then .[] else . end | [.Name,.Service,.State,.Command]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 2
 

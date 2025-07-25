@@ -8,7 +8,7 @@ Arc,cmd + s,-,サイドバーの開閉
 Arc,cmd + t,-,新しいタブ(コマンドパレットに似てる)を開く
 Arc,cmd + <num>,-,サイドバーのn番目のアイテムを開く
 Arc,cmd + [],-,最新のタブに前後に切り替え
-Arc,cmd + ctrl + e,-,フォーカス移動(Reveal Current Tab,※カスタム)
+Arc,cmd + ctrl + e,-,フォーカス移動(Reveal Current Tab ※カスタム)
 Arc,cmd + ctrl + n,-,新しいシークレットウィンドウ(incognito)を開く
 Arc,cmd + ctrl + [],-,分割画面切り替え
 Arc,cmd + option + d,-,画面分割 ※カスタム

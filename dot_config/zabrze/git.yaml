@@ -23,7 +23,7 @@ abbrevs:
   - name: git branch -a
     abbr: gba
     cursor: "👇"
-    snippet: git branch -a --sort=-committerdate👇--format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
+    snippet: git branch -a --sort=-committerdate👇 --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color
 
   - name: git branch --show-current
     abbr: gbc

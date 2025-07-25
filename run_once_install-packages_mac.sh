@@ -12,9 +12,7 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
-    bitwarden-cli
     colordiff
-    docker
     font-hackgen
     font-hackgen-nerd
     git
@@ -22,7 +20,6 @@ install_package() {
     gpg
     mise
     pinentry-mac
-    t-rec
     yqrashawn/goku/goku
 
     coreutils
@@ -58,6 +55,7 @@ install_cask_package() {
     slack
     thebrowsercompany-dia
     visual-studio-code
+    zoom
   )
 
   for package in "${CASKPACKAGES[@]}"; do
@@ -82,6 +80,8 @@ install_private_cask_package() {
     claude
     google-drive
     obsidian
+    tailscale-app
+    termius
     thunderbird
   )
 
