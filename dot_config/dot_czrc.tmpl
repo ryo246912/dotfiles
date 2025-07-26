@@ -1,0 +1,7 @@
+{{- if eq ((fromJson (output "bw" "status" "--raw")).status) "unlocked" -}}
+{
+  "openAIToken":"{{ (bitwarden "item" "GitHub PAT(cz-git)").notes | trim }}",
+  "apiEndpoint":"https://models.inference.ai.azure.com",
+  "apiModel":"gpt-4o-mini"
+}
+{{- end }}

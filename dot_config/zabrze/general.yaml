@@ -62,9 +62,13 @@ abbrevs:
     abbr: cz
     snippet: czg
 
-  - name: czg ai -N=3
+  - name: czg ai
     abbr: cza
-    snippet: czg ai -N=3
+    snippet: czg ai
+
+  - name: czg ai(English)
+    abbr: czae
+    snippet: CZ_LANG=en czg ai
 
   # docker
   - name: docker
