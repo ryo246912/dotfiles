@@ -354,6 +354,14 @@ abbrevs:
     abbr: fghd
     snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
 
+  - name: fuzzy git worktree change directory
+    abbr: fgwc
+    snippet: cd "$(git worktree list | fzf --preview='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" {2}' | awk '{print $1}')"
+
+  - name: fuzzy git worktree delete directory
+    abbr: fgwd
+    snippet: git worktree remove -f "$(git worktree list | fzf --preview='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" {2}' | awk '{print $1}')"
+
   # Git global abbreviations
   - name: (git) commit
     abbr: co

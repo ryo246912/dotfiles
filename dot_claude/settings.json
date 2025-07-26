@@ -1,0 +1,85 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mise list:*)",
+      "Bash(ccmanager --help)",
+      "Bash(xcode-select:*)",
+      "Bash(claude mcp:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(shfmt:*)",
+      "WebFetch(domain:docs.anthropic.com)"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm -rf:*)",
+      "Read(**/.env.*)",
+      "Read(.env.*)",
+      "Read(id_rsa)",
+      "Read(id_ed25519)",
+      "Read(**/*token*)",
+      "Read(**/*key*)",
+      "Write(.env*)",
+      "Write(**/secrets/**)"
+    ]
+  },
+  "bash": {
+    "allowedCommands": [
+      "powershell.exe -Command '[System.Media.SystemSounds]::Exclamation.Play()'",
+      "powershell.exe -Command '[System.Media.SystemSounds]::Hand.Play()'",
+      "powershell.exe -Command '[System.Media.SystemSounds]::Question.Play()'"
+    ],
+    "blockUnlistedCommands": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs -r sed -i -e 's/[[:space:]]*$//' -e '$a\\'"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".js\") or endswith(\".ts\") or endswith(\".jsx\") or endswith(\".tsx\") or endswith(\".json\") or endswith(\".yml\") or endswith(\".yaml\"))' | xargs -r prettier --write"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".toml\"))' | xargs -r taplo format --check"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".go\"))' | xargs -r golangci-lint run --fix"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"確認待ちです。\" with title \"Claude Code\" sound name \"Glass\"'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"作業が完了しました。\" with title \"Claude Code\" sound name \"Hero\"'"
+          }
+        ]
+      }
+    ]
+  }
+}

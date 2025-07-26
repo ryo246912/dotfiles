@@ -101,6 +101,7 @@ select_action() {
 code	VS Codeでディレクトリを開く
 nvim	Neovimでディレクトリを開く
 czg	czgでコミットを作成
+diff	git diffを表示
 cd	ディレクトリに移動する（新しいシェル）"
 
 	# fzfでアクション選択
@@ -218,6 +219,24 @@ open_czg() {
 	return 0
 }
 
+# git diffを表示
+show_diff() {
+	local worktree_path="$1"
+	local branch_name="$2"
+
+	if [ ! -d "$worktree_path" ]; then
+		error_exit "worktreeディレクトリが存在しません: $worktree_path"
+	fi
+
+	# worktreeディレクトリに移動してczgを起動
+	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
+
+	# git diffを表示
+	git diff main "$branch_name" | delta --no-config
+
+	return 0
+}
+
 # ディレクトリに移動（新しいシェル）
 change_directory() {
 	local worktree_path="$1"
@@ -254,6 +273,9 @@ execute_action() {
 	"czg")
 		open_czg "$worktree_path" "$branch_name"
 		;;
+	"diff")
+		show_diff "$worktree_path" "$branch_name"
+		;;
 	"cd")
 		change_directory "$worktree_path" "$branch_name"
 		;;
@@ -282,6 +304,7 @@ Git Worktree Manager - git worktreeの管理とアクション実行
   code            VS Codeでディレクトリを開く
   nvim            Neovimでディレクトリを開く
   czg             czgでコミットを作成
+  diff            git diffを表示
   cd              ディレクトリに移動する（新しいシェル）
 
 実行例:
@@ -293,6 +316,7 @@ Git Worktree Manager - git worktreeの管理とアクション実行
   git_worktree_manager.sh code
   git_worktree_manager.sh nvim
   git_worktree_manager.sh czg
+  git_worktree_manager.sh diff
   git_worktree_manager.sh cd
 
   # その他
