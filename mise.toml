@@ -79,7 +79,7 @@ run         = "prettier --write '**/*.json'"
 
 [tools]
 actionlint                     = "1.7.7"
-"aqua:suzuki-shunsuke/ghalint" = "1.5.1"
+"aqua:suzuki-shunsuke/ghalint" = "1.5.3"
 "npm:@taplo/cli"               = "0.7.0"
 "npm:prettier"                 = "3.6.0"
 "pipx:zizmor"                  = "1.9.0"
