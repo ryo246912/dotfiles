@@ -8,13 +8,13 @@ go mod init github.com/<name>/<project>
 go env
 
 # go install bin list
-yazi $(go env GOPATH)/bin
+<cmd> $(go env GOPATH)/bin
 
 # go source code
-yazi $(go env GOROOT)
+<cmd> $(go env GOROOT)
 ```
 
-$ xxx: echo xxx
+$ cmd: echo -n "ls -l\nyazi"
 ;$
 
 ```sh
