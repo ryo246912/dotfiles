@@ -785,6 +785,11 @@
     "command": "metaGo.selectLineUp",
     "when": "textInputFocus"
   },
+  {
+    "key": "ctrl+shift+alt+l",
+    "command": "metaGo.selectLineUp",
+    "when": "textInputFocus"
+  },
   // (Gitlens) DiffEditorで開いた元ファイルを開く
   {
     "key": "ctrl+o",
