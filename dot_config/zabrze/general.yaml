@@ -13,6 +13,10 @@ abbrevs:
     abbr: c.
     snippet: code .
 
+  - name: caffeinate
+    abbr: ca
+    snippet: caffeinate
+
   - name: cal -3
     abbr: c3
     snippet: cal -3
