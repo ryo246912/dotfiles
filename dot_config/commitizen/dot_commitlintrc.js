@@ -25,6 +25,16 @@ module.exports = {
       { value: 'wip',      name: 'wip:      作業途中', emoji: '' },
       { value: 'test',     name: 'test:     テスト', emoji: ':white_check_mark:' },
     ],
+    aiQuestionCB: ({ maxSubjectLength, diff, type }) => {
+      const isEnglish = process.env.CZ_LANG === 'en'
+
+      if (isEnglish) {
+        return `Write an insightful and concise Git commit message in the present tense for the following Git diff code, without any prefixes, and no longer than ${maxSubjectLength} characters.: \`\`\`diff\n${diff}\n\`\`\``
+      } else {
+        return `以下のGit diff コードに対して、簡潔で洞察に富んだ日本語のGitコミットメッセージを現在形・体言止めで書いてください。プレフィックスは不要で、${maxSubjectLength}文字以内にしてください: \`\`\`diff\n${diff}\n\`\`\``
+      }
+    },
+    aiNumber: 3,
     useEmoji: false,
     skipQuestions: ['breaking','footerPrefix'],
     maxHeaderLength: 72,

@@ -33,6 +33,7 @@ ClickUp,cmd + c,-,(コマンドセンターで)URLリンクをコピー
 ClickUp,cmd + l,-,(コマンドセンターで)現在の画面でフィルタ
 ClickUp,space,-,(通知一覧で）画面をリロード
 ClickUp,shift + ?,-,ショートカット一覧表示
+claude,ctrl + j,-,改行
 DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
 DBeaver,F3,-,SQLエディタ(SQL scripts一覧)
 DBeaver,F7,-,結果パネルの切替
@@ -249,6 +250,7 @@ Vim,q/|q?,q/|q?,コマンド履歴の前方/後方検索
 Vim,q: → i,-,履歴を編集してから実行
 Vim,q: → Enter,-,履歴を実行
 Vim,q: → ctrl + c,-,コマンドラインに履歴を送る
+Vim,qq → (作業入力) → q → @q,-,マクロ記録→保存
 Vim,:b <バッファ>,:b <バッファ>,バッファを開く
 Vim,:sb1~sb9,:sb1~sb9,任意のバッファを新規ウィンドウで開く
 Vim,:ls,:ls,バッファ確認
@@ -281,6 +283,7 @@ Vim(surround),cs{前}{後},cs{前}{後},囲みを変更
 Vim(surround),ds{囲み},cs{囲み},囲みを削除
 Vim(surround),S<text>,S<text>,選択範囲を囲む
 Vim(zoxide),:ctrl + zz,:ctrl + zz,Zoxideを起動 ※カスタム
+Vimium,範囲選択 → p,範囲選択 → p,現在のタブで検索
 VSCode,ctrl + c,CapsLk + c(shift + alt + c),(GitHub)コメントを追加 ※カスタム
 VSCode,ctrl + g,CapsLk + g(shift + alt + g),選択行に移動
 VSCode,ctrl + r,-,最近開いたファイルやフォルダ

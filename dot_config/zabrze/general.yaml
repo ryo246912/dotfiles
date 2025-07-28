@@ -13,6 +13,10 @@ abbrevs:
     abbr: c.
     snippet: code .
 
+  - name: caffeinate
+    abbr: ca
+    snippet: caffeinate
+
   - name: cal -3
     abbr: c3
     snippet: cal -3
@@ -20,6 +24,14 @@ abbrevs:
   - name: cal -y
     abbr: cy
     snippet: cal -y
+
+  - name: ccmanager
+    abbr: ccm
+    snippet: ccmanager
+
+  - name: ccmanager devcontainer
+    abbr: ccmc
+    snippet: ccmanager --devc-up-command "devcontainer up --workspace-folder . --config ~/.config/devcontainer/claude/devcontainer.json" --devc-exec-command "claude --resume --dangerously-skip-permissions"
 
   - name: echo
     abbr: e
@@ -62,9 +74,13 @@ abbrevs:
     abbr: cz
     snippet: czg
 
-  - name: czg ai -N=3
+  - name: czg ai
     abbr: cza
-    snippet: czg ai -N=3
+    snippet: czg ai
+
+  - name: czg ai(English)
+    abbr: czae
+    snippet: CZ_LANG=en czg ai
 
   # docker
   - name: docker
@@ -78,6 +94,17 @@ abbrevs:
   - name: lazydocker
     abbr: ld
     snippet: lazydocker
+
+  # go
+  - name: go test ./...
+    abbr: got
+    snippet: go test ./...
+
+  - name: ./...
+    abbr-pattern: (....|.4)
+    snippet: ./...
+    global: true
+    context: '^go\s'
 
   # koji
   - name: koji --config ~/.config/koji/config.toml

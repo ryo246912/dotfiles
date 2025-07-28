@@ -108,3 +108,27 @@ cabbr ss :Obsession ~/.local/state/vim/Session.vim<CR>
 cabbr sr :source ~/.local/state/vim/Session.vim \| Obsession ~/.local/state/vim/Session.vim<CR>
 '''
 repo = 'tpope/vim-obsession'
+
+# git関連
+[[plugins]]
+hook_add = '''
+" Gitステータス
+nnoremap <leader>gs :Git<CR>
+" Git差分
+nnoremap <leader>gd :Git diff<CR>
+" Git差分 (分割表示)
+nnoremap <leader>gv :Gdiffsplit<CR>
+" Git show (最新コミットの詳細)
+nnoremap <leader>gh :Git show<CR>
+" Git log -p
+nnoremap <leader>gl :Git log -p --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"<CR>
+" Git log
+nnoremap <leader>gL :Git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"<CR>
+" Git branch
+nnoremap <leader>gb :Git branch<CR>
+" Git current branch
+nnoremap <leader>gB :Git branch --show-current<CR>
+" Gitui
+nnoremap <leader>gu :tabnew \| terminal gitui<CR>
+'''
+repo = 'tpope/vim-fugitive'

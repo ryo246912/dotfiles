@@ -52,6 +52,20 @@ install_scoop_package() {
   done
 }
 
+install_private_scoop_package() {
+  local PACKAGES=(
+    NeeView
+  )
+
+  for package in "${PACKAGES[@]}"; do
+    if ! scoop list | grep -q "$package"; then
+      scoop install "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
 install_nix() {
   if ! command -v nix &>/dev/null; then
     true
@@ -67,6 +81,7 @@ commands=(
   "install_scoop"
   "install_package"
   "install_scoop_package"
+  "install_private_scoop_package"
   "install_nix"
 )
 

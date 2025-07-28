@@ -7,14 +7,17 @@ go mod init github.com/<name>/<project>
 # go env
 go env
 
+# go test [-count=1:no-cache]
+go test -shuffle=on -count=1
+
 # go install bin list
-yazi $(go env GOPATH)/bin
+<cmd> $(go env GOPATH)/bin
 
 # go source code
-yazi $(go env GOROOT)
+<cmd> $(go env GOROOT)
 ```
 
-$ xxx: echo xxx
+$ cmd: echo -n "ls -l\nyazi"
 ;$
 
 ```sh

@@ -119,36 +119,17 @@ abbrevs:
     snippet: git diff HEAD~1...HEAD
 
   - name: git show diff2
-    abbr-pattern: (gshhd|gsh2d)
+    abbr: gshhd
     snippet: git diff HEAD~2...HEAD~1
 
   - name: git show diff3
-    abbr-pattern: (gshhhd|gsh3d)
+    abbr: gshhhd
     snippet: git diff HEAD~3...HEAD~2
 
-  - name: git show diff4
-    abbr: gsh4d
-    snippet: git diff HEAD~4...HEAD~3
-
-  - name: git show diff5
-    abbr: gsh5d
-    snippet: git diff HEAD~5...HEAD~4
-
-  - name: git show diff6
-    abbr: gsh6d
-    snippet: git diff HEAD~6...HEAD~5
-
-  - name: git show diff7
-    abbr: gsh7d
-    snippet: git diff HEAD~7...HEAD~6
-
-  - name: git show diff8
-    abbr: gsh8d
-    snippet: git diff HEAD~8...HEAD~7
-
   - name: git show diff9
-    abbr: gsh9d
-    snippet: git diff HEAD~9...HEAD~8
+    abbr-pattern: ^gshd(?<num>\d+)$
+    evaluate: true
+    snippet: git diff HEAD~$num...HEAD~$(($num - 1))
 
   # Fetch commands
   - name: git fetch
@@ -174,6 +155,12 @@ abbrevs:
     abbr: glll
     cursor: "👇"
     snippet: git log -n 30 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
+
+  - name: git log -n num * 10
+    abbr-pattern: ^gl(?<num>\d+)$
+    cursor: "👇"
+    evaluate: true
+    snippet: git log -n $(($num * 10)) 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
   - name: git log --graph
     abbr: glg
@@ -291,36 +278,13 @@ abbrevs:
     snippet: git show HEAD~1
 
   - name: git show HEAD~2
-    abbr-pattern: (gshhh|gsh2)
+    abbr: gshhh
     snippet: git show HEAD~2
 
-  - name: git show HEAD~3
-    abbr: gsh3
-    snippet: git show HEAD~3
-
-  - name: git show HEAD~4
-    abbr: gsh4
-    snippet: git show HEAD~4
-
-  - name: git show HEAD~5
-    abbr: gsh5
-    snippet: git show HEAD~5
-
-  - name: git show HEAD~6
-    abbr: gsh6
-    snippet: git show HEAD~6
-
-  - name: git show HEAD~7
-    abbr: gsh7
-    snippet: git show HEAD~7
-
-  - name: git show HEAD~8
-    abbr: gsh8
-    snippet: git show HEAD~8
-
-  - name: git show HEAD~9
-    abbr: gsh9
-    snippet: git show HEAD~9
+  - name: git show HEAD~num
+    abbr-pattern: ^gsh(?<num>\d+)$
+    evaluate: true
+    snippet: git show HEAD~$num
 
   # Tag commands
   - name: git tag list release
@@ -354,6 +318,14 @@ abbrevs:
     abbr: fghd
     snippet: () { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo "$commits" | fzf | awk '{printf $1}') && commit2=$(echo "$commits" | fzf --preview "git diff "$commit1...{1}" | delta --no-gitconfig" | awk '{printf $1}') && git diff "$commit1...$commit2" | delta && $(echo -n "$commit1...$commit2" | cb) }
 
+  - name: fuzzy git worktree change directory
+    abbr: fgwc
+    snippet: cd "$(git worktree list | fzf --preview='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" {2}' | awk '{print $1}')"
+
+  - name: fuzzy git worktree delete directory
+    abbr: fgwd
+    snippet: git worktree remove -f "$(git worktree list | fzf --preview='git log -n 10 --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S" {2}' | awk '{print $1}')"
+
   # Git global abbreviations
   - name: (git) commit
     abbr: co
@@ -373,57 +345,10 @@ abbrevs:
     global: true
     context: '^git\s'
 
-  - name: (git) 1 previous commit
-    abbr: h1
-    snippet: HEAD~1
-    global: true
-    context: '^git\s'
-
-  - name: (git) 2 previous commit
-    abbr: h2
-    snippet: HEAD~2
-    global: true
-    context: '^git\s'
-
-  - name: (git) 3 previous commit
-    abbr: h3
-    snippet: HEAD~3
-    global: true
-    context: '^git\s'
-
-  - name: (git) 4 previous commit
-    abbr: h4
-    snippet: HEAD~4
-    global: true
-    context: '^git\s'
-
-  - name: (git) 5 previous commit
-    abbr: h5
-    snippet: HEAD~5
-    global: true
-    context: '^git\s'
-
-  - name: (git) 6 previous commit
-    abbr: h6
-    snippet: HEAD~6
-    global: true
-    context: '^git\s'
-
-  - name: (git) 7 previous commit
-    abbr: h7
-    snippet: HEAD~7
-    global: true
-    context: '^git\s'
-
-  - name: (git) 8 previous commit
-    abbr: h8
-    snippet: HEAD~8
-    global: true
-    context: '^git\s'
-
-  - name: (git) 9 previous commit
-    abbr: h9
-    snippet: HEAD~9
+  - name: (git) $num previous commit
+    abbr-pattern: h(?<num>\d+)$
+    snippet: HEAD~$num
+    evaluate: true
     global: true
     context: '^git\s'
 
