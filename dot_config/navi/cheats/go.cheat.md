@@ -7,6 +7,9 @@ go mod init github.com/<name>/<project>
 # go env
 go env
 
+# go test [-count=1:no-cache]
+go test -shuffle=on -count=1
+
 # go install bin list
 <cmd> $(go env GOPATH)/bin
 

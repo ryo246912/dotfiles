@@ -95,6 +95,17 @@ abbrevs:
     abbr: ld
     snippet: lazydocker
 
+  # go
+  - name: go test ./...
+    abbr: got
+    snippet: go test ./...
+
+  - name: ./...
+    abbr-pattern: (....|.4)
+    snippet: ./...
+    global: true
+    context: '^go\s'
+
   # koji
   - name: koji --config ~/.config/koji/config.toml
     abbr: ko
