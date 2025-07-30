@@ -18,3 +18,9 @@ claude_check_version() {
 }
 
 alias claude="claude_check_version"
+
+if [ "$(uname)" = "Linux" ]; then
+  # powershell
+  alias pwsh="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+  alias powershell="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+fi
