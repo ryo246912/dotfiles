@@ -153,6 +153,8 @@ open_gitui() {
 	# gituiを起動
 	gitui
 
+	exec "$SHELL"
+
 	return 0
 }
 
@@ -194,6 +196,8 @@ open_nvim() {
 	# neovimを起動
 	nvim .
 
+	exec "$SHELL"
+
 	return 0
 }
 
@@ -216,6 +220,8 @@ open_czg() {
 	# czgを起動
 	czg
 
+	exec "$SHELL"
+
 	return 0
 }
 
@@ -232,7 +238,9 @@ show_diff() {
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
 
 	# git diffを表示
-	git diff main "$branch_name" | delta --no-config
+	git diff main "$branch_name" | delta --no-gitconfig
+
+	exec "$SHELL"
 
 	return 0
 }
@@ -249,7 +257,7 @@ change_directory() {
 	# worktreeディレクトリに移動して新しいシェルを起動
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
 
-    exec "$SHELL"
+  exec "$SHELL"
 
 	return 0
 }
