@@ -3,12 +3,7 @@
   "mcpServers": {
     "playwright": {
       "command": "/Users/ryo./.local/share/mise/installs/bun/1.1.43/bin/bunx",
-      "args": [
-        "@playwright/mcp@0.0.31",
-        "--browser",
-        "webkit",
-        "--headless"
-      ]
+      "args": ["@playwright/mcp@0.0.31", "--browser", "webkit", "--headless"]
     },
     "mcp-deepwiki": {
       "command": "/Users/ryo./.local/share/mise/installs/bun/1.1.43/bin/bunx",
