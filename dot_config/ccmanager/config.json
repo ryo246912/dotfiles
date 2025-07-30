@@ -20,7 +20,7 @@
   },
   "worktree": {
     "autoDirectory": true,
-    "autoDirectoryPattern": ".git/worktrees/{branch}"
+    "autoDirectoryPattern": "../worktrees/{branch}"
   },
   "command": {
     "command": "claude"
@@ -37,7 +37,8 @@
         "id": "1752767057209",
         "name": "Gemini",
         "command": "gemini",
-        "detectionStrategy": "gemini"
+        "detectionStrategy": "gemini",
+        "args": ["-s"]
       }
     ],
     "defaultPresetId": "1",
