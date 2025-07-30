@@ -21,6 +21,9 @@ tmux swap-window -t <window_no>
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
 
+# capture-pane [-p:print,-S:start-line,-t:pane]
+tmux capture-pane -p -S -100 -t <pane_from>
+
 # arrange layout
 tmux select-layout tiled
 ```

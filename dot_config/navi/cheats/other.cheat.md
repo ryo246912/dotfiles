@@ -7,6 +7,19 @@ cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --
 
 ```sh
 ;--------------------------------------------------------------
+; claude
+;--------------------------------------------------------------
+% claude
+
+# mcp add
+claude mcp add <name> -s <scope> -- <command>
+```
+
+$ scope: echo -e "user\nproject\nlocal"
+;$
+
+```sh
+;--------------------------------------------------------------
 ; cspell
 ;--------------------------------------------------------------
 % cspell

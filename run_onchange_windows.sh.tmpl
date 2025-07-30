@@ -2,7 +2,7 @@
 [ "$(uname)" != "Linux" ] && exit
 
 # 移動対象のファイル
-# {{ include "dot_config/claude/claude_desktop_config.json" | sha256sum }}
+# {{ include "dot_config/claude/claude_desktop_config_win.json" | sha256sum }}
 # {{ include "dot_config/autohotkey/AutoHotkey.ahk" | sha256sum }}
 # {{ include "dot_config/alacritty/alacritty.toml.tmpl" | sha256sum }}
 # {{ include "dot_config/rio/private_config.toml.tmpl" | sha256sum }}
@@ -13,7 +13,7 @@
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
 file_mappings=(
-  "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config_win.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
   "{{ .chezmoi.sourceDir }}/dot_config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
   "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
   "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
@@ -51,7 +51,7 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
         break
         ;;
       d|D)
-        delta "$source_file" "$dest_dir"
+        delta "$dest_dir" "$source_file"
         ;;
       *)
         ;;
