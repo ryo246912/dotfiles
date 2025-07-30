@@ -42,7 +42,7 @@ for ((i=0; i<${#file_mappings[@]}; i+=2)); do
         break
         ;;
       d|D)
-        delta "$source_file" "$dest_dir"
+        delta "$dest_dir" "$source_file"
         ;;
       *)
         ;;
