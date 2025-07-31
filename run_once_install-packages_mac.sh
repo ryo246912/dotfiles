@@ -12,6 +12,7 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
+    bun
     colordiff
     font-hackgen
     font-hackgen-nerd

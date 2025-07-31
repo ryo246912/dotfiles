@@ -33,6 +33,8 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "actionlint"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: actionlint
         run: |
           actionlint \
@@ -53,6 +55,8 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "aqua:suzuki-shunsuke/ghalint"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: ghalint
         run: ghalint run
         env:
@@ -72,6 +76,8 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "pipx:zizmor"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: zizmor
         run: zizmor --pedantic --format=github --min-severity=low .github/workflows
         env:

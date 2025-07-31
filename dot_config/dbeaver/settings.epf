@@ -61,7 +61,6 @@
 /instance/org.jkiss.dbeaver.core/dataformat.profile.country=JP
 /instance/org.jkiss.dbeaver.core/dataformat.profile.language=ja
 /instance/org.jkiss.dbeaver.core/default.hex.width=8
-/instance/org.jkiss.dbeaver.core/dialog.default.folder=/Users/ryo.kuramitsu/Downloads
 /instance/org.jkiss.dbeaver.core/driver.selector.orderBy=score
 /instance/org.jkiss.dbeaver.core/hex.font.name=Courier New
 /instance/org.jkiss.dbeaver.core/hex.font.size=10
@@ -139,7 +138,6 @@
 /instance/org.jkiss.dbeaver.core/sql.proposals.insert.table.alias=NONE
 /instance/org.jkiss.dbeaver.core/tipOfTheDayInitializer.notFirstRun=true
 /instance/org.jkiss.dbeaver.core/ui.auto.update.check.time=1746754354906
-/instance/org.jkiss.dbeaver.core/ui.drivers.home=/Users/ryo.kuramitsu/Library/DBeaverData/drivers
 /instance/org.jkiss.dbeaver.core/ui.render.boolean.style.checked.align=CENTER
 /instance/org.jkiss.dbeaver.core/ui.render.boolean.style.mode=ICON
 /instance/org.jkiss.dbeaver.core/ui.render.boolean.style.null.align=CENTER

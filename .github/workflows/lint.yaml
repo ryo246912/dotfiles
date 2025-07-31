@@ -37,6 +37,8 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "npm:prettier"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: prettier
         run: prettier --check '**/*.json'
 
@@ -55,6 +57,8 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "npm:prettier"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: prettier
         run: prettier --check '**/*.{yaml,yml}'
 
@@ -72,5 +76,7 @@ jobs:
         with:
           version: 2024.12.24
           install_args: "npm:@taplo/cli"
+        env:
+          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: taplo
         run: taplo format --check
