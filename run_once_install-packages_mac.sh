@@ -12,7 +12,8 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
-    bun
+    oven-sh/bun/bun
+    blueutil
     colordiff
     font-hackgen
     font-hackgen-nerd
@@ -54,7 +55,6 @@ install_cask_package() {
     google-japanese-ime
     karabiner-elements
     keyboardcleantool
-    mise
     raycast
     slack
     thebrowsercompany-dia
@@ -107,31 +107,31 @@ setup_settings() {
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 6
   fi
   # Finder: 隠しファイルを表示する
-  if [ "$(defaults read com.apple.finder AppleShowAllFiles 2>/dev/null)" -ne 1 ]; then
+  if [ "${$(defaults read com.apple.finder AppleShowAllFiles 2>/dev/null):-0}" -ne 1 ]; then
     defaults write com.apple.finder AppleShowAllFiles 1
   fi
   # Finder: 拡張子を表示する
-  if [ "$(defaults read com.apple.finder AppleShowAllExtensions 2>/dev/null)" -ne 1 ]; then
+  if [ "${$(defaults read com.apple.finder AppleShowAllExtensions 2>/dev/null):-0}" -ne 1 ]; then
     defaults write com.apple.finder AppleShowAllExtensions 1
   fi
   # Finder: パスのパンくずリストを表示する
-  if [ "$(defaults read com.apple.finder ShowPathbar 2>/dev/null)" -ne 1 ]; then
+  if [ "${$(defaults read com.apple.finder ShowPathbar 2>/dev/null):-0}" -ne 1 ]; then
     defaults write com.apple.finder ShowPathbar 1
   fi
   # Finder: Finderを終了するメニューを表示する
-  if [ "$(defaults read com.apple.Finder QuitMenuItem 2>/dev/null)" -ne 1 ]; then
+  if [ "${$(defaults read com.apple.Finder QuitMenuItem 2>/dev/null):-0}" -ne 1 ]; then
     defaults write com.apple.Finder QuitMenuItem 1
   fi
   # キーボード: キーのリピート速度(小さい数値ほど速い)
-  if [ "$(defaults read -g KeyRepeat 2>/dev/null)" -ne 2 ]; then
+  if [ "${$(defaults read -g KeyRepeat 2>/dev/null):-0}" -ne 2 ]; then
     defaults write -g KeyRepeat 2
   fi
   # キーボード: リピート入力認識までの時間(15ms/step、15 = 225ms)
-  if [ "$(defaults read -g InitialKeyRepeat 2>/dev/null)" -ne 15 ]; then
+  if [ "${$(defaults read -g InitialKeyRepeat 2>/dev/null):-0}" -ne 15 ]; then
     defaults write -g InitialKeyRepeat 15
   fi
   # トラックパッド: スクロール方向を順方向にする(NOTE:なぜかOFFが自然な方向になる)
-  if [ "$(defaults read -g com.apple.swipescrolldirection 2>/dev/null)" -ne 0 ]; then
+  if [ "${$(defaults read -g com.apple.swipescrolldirection 2>/dev/null):-0}" -ne 0 ]; then
     defaults write -g com.apple.swipescrolldirection 0
   fi
 
