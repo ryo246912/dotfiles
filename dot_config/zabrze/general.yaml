@@ -22,7 +22,7 @@ abbrevs:
     snippet: cal -3
 
   - name: cal -y
-    abbr: cy
+    abbr-pattern: ^cy
     snippet: cal -y
 
   - name: ccmanager
@@ -50,11 +50,11 @@ abbrevs:
     snippet: ls -l
 
   - name: nvim
-    abbr-pattern: (nv|vi)
+    abbr-pattern: (^nv|^v)
     snippet: nvim
 
   - name: nvim .
-    abbr-pattern: (n\.|v\.)
+    abbr-pattern: (^n\.|^v\.)
     snippet: nvim .
 
   - name: sudo
@@ -97,11 +97,11 @@ abbrevs:
 
   # go
   - name: go test ./...
-    abbr: got
+    abbr-pattern: ^got
     snippet: go test ./...
 
   - name: ./...
-    abbr-pattern: (....|.4)
+    abbr-pattern: (\.\.\.\.|\.4)
     snippet: ./...
     global: true
     context: '^go\s'

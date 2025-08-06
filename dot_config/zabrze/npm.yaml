@@ -1,11 +1,11 @@
 abbrevs:
   # npm commands
   - name: npm ci
-    abbr: nc
+    abbr-pattern: ^nc
     snippet: npm ci
 
   - name: npm run
-    abbr: nr
+    abbr-pattern: ^nr
     snippet: npm run
 
   - name: npm run build
@@ -42,21 +42,21 @@ abbrevs:
 
   # pnpm commands
   - name: pnpm ci
-    abbr: pc
+    abbr-pattern: (^pc|^nc)
     snippet: pnpm install --frozen-lockfile
     if: '[[ -f "./pnpm-lock.yaml" ]]'
 
   - name: pnpm (install|add)
-    abbr-pattern: (pi|pa)
+    abbr-pattern: (^pi|^pa)
     snippet: pnpm add
     if: '[[ -f "./pnpm-lock.yaml" ]]'
 
   - name: pnpm install
-    abbr: pin
+    abbr-pattern: ^pin
     snippet: pnpm install
     if: '[[ -f "./pnpm-lock.yaml" ]]'
 
   - name: pnpm uninstall
-    abbr-pattern: (pui|pre)
+    abbr-pattern: (^pui|^pre)
     snippet: pnpm remove
     if: '[[ -f "./pnpm-lock.yaml" ]]'
