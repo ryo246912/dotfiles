@@ -85,6 +85,22 @@ repo = 'simeji/winresizer'
 [[plugins]]
 repo = 'bronson/vim-trailing-whitespace'
 
+[[plugins]]
+repo = 'sheerun/vim-polyglot'
+
+[[plugins]]
+hook_add = '''
+colorscheme molokai
+
+" 256色
+set t_Co=256
+" truecolor
+set termguicolors
+" 背景色
+set background=dark
+'''
+repo = 'tomasr/molokai'
+
 ## コメントアウト
 [[plugins]]
 repo = 'tpope/vim-commentary'
