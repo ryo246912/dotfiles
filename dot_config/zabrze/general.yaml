@@ -138,6 +138,18 @@ abbrevs:
     if: '[[ -f "./Makefile" ]]'
 
   # mise
+  - name: mise install
+    abbr: mi
+    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1
+
+  - name: mise ls
+    abbr: mls
+    snippet: mise ls
+
+  - name: mise ls --current
+    abbr: mlsc
+    snippet: mise ls --current
+
   - name: mise run
     abbr: mr
     snippet: mise run
