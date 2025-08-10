@@ -19,6 +19,7 @@ install_package() {
     git
     go
     gpg
+    ijq
     mise
     pinentry-mac
     ugrep
@@ -40,7 +41,7 @@ install_package() {
 }
 
 install_cask_package() {
-  local CASKPACKAGES=(
+  local PACKAGES=(
     alacritty
     arc
     battery
@@ -48,6 +49,7 @@ install_cask_package() {
     clibor
     dbeaver-community
     docker
+    firefox
     google-chrome
     google-japanese-ime
     karabiner-elements
@@ -60,7 +62,7 @@ install_cask_package() {
     zoom
   )
 
-  for package in "${CASKPACKAGES[@]}"; do
+  for package in "${PACKAGES[@]}"; do
     if ! brew list --cask "$package" &>/dev/null; then
       if [[ "$package" == "clibor" ]]; then
         HOMEBREW_CASK_OPTS="--language=ja" brew install --cask "$package"
@@ -77,7 +79,7 @@ install_cask_package() {
 }
 
 install_private_cask_package() {
-  local CASKPACKAGES=(
+  local PACKAGES=(
     bitwarden
     claude
     google-drive
@@ -87,7 +89,7 @@ install_private_cask_package() {
     thunderbird
   )
 
-  for package in "${CASKPACKAGES[@]}"; do
+  for package in "${PACKAGES[@]}"; do
     if ! brew list --cask "$package" &>/dev/null; then
         brew install --cask "$package"
     else

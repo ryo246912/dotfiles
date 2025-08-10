@@ -34,6 +34,8 @@ install_scoop_package() {
   local PACKAGES=(
     alacritty
     bitwarden
+    firefox
+    obsidian
     thunderbird
     vscode
   )
