@@ -41,6 +41,8 @@
 {{ if eq .chezmoi.os "darwin" }}
 [include]
   path = ~/.gitconfig.secret-noreply
+[includeIf "gitdir:~/work/"]
+  path = ~/.gitconfig.secret
 [includeIf "gitdir:~/projects/"]
   path = ~/.gitconfig.secret
 {{ else }}
