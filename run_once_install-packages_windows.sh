@@ -17,6 +17,7 @@ install_package() {
     # go
     # https://mise.jdx.dev/installing-mise.html#apt
     # mise
+    ugrep
     zsh
   )
 
@@ -33,6 +34,8 @@ install_scoop_package() {
   local PACKAGES=(
     alacritty
     bitwarden
+    firefox
+    obsidian
     thunderbird
     vscode
   )

@@ -159,7 +159,7 @@ cabbr sv source ~/.config/vim/.vimrc
 " 挿入モードの切り替え
 cabbr <leader>P :set paste!
 " :s で%s//(置換後)/gを呼び出し
-cabbr <expr> s getcmdtype() .. getcmdline() ==# ':s' ? [getchar(), ''][1] .. "%s///g<Left><Left>" : 's'
+cabbr <expr> s getcmdtype() .. getcmdline() ==# ':s' ? [getchar(), ''][1] .. "%s//" : 's'
 
 " ウィンドウ最大化/もとに戻す関数
 let g:toggle_window_size = 0

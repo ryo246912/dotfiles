@@ -49,24 +49,6 @@ zinit wait lucid light-mode blockf for \
     @'jonas/tig'
 fi
 
-# ugrep #
-if [ "$(uname)" = "Darwin" ]; then
-zinit wait lucid light-mode blockf for \
-    configure"!" \
-    make"all install PREFIX=$ZPFX" \
-    pick"bin/ug bin/ugrep" \
-    sbin"bin/ug -> ug" \
-    sbin"bin/ugrep -> ugrep" \
-    @'Genivia/ugrep'
-else
-zinit wait lucid light-mode blockf for \
-    from"gh-r" \
-    ver"v4.4.1" \
-    sbin"ug* -> ug" \
-    sbin"ugrep* -> ugrep" \
-    @'Genivia/ugrep'
-fi
-
 # blueutil #
 if [ "$(uname)" = "Darwin" ]; then
 zinit wait lucid light-mode blockf for \
