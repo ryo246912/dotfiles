@@ -5,6 +5,7 @@
 # {{ include "dot_config/claude/claude_desktop_config_mac.json" | sha256sum }}
 # {{ include "dot_config/vscode/keybindings_mac.json" | sha256sum }}
 # {{ include "dot_config/vscode/settings.json" | sha256sum }}
+# {{ include "dot_config/vscode/global.code-snippets" | sha256sum }}
 # {{ include "dot_config/navi/config.yaml" | sha256sum }}
 
 # 配列でキーと値を管理
@@ -13,6 +14,7 @@ file_mappings=(
   "{{ .chezmoi.sourceDir }}/dot_config/claude/claude_desktop_config_mac.json" "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/keybindings_mac.json" "{{ .chezmoi.homeDir }}/Library/Application Support/Code/User/keybindings.json"
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "{{ .chezmoi.homeDir }}/Library/Application Support/Code/User/settings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/global.code-snippets" "{{ .chezmoi.homeDir }}/Library/Application Support/Code/User/snippets/global.code-snippets"
   "{{ .chezmoi.sourceDir }}/dot_config/navi/config.yaml" "{{ .chezmoi.homeDir }}/Library/Application Support/navi/config.yaml"
 )
 

@@ -1,0 +1,10 @@
+// Project Managerのテンプレート
+[
+  {
+    "name": "dotfiles",
+    "rootPath": "/Users/ryo/.vscode/workspaces/dotfiles.code-workspace",
+    "paths": [],
+    "tags": [],
+    "enabled": true
+  }
+]

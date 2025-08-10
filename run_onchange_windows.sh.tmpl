@@ -8,7 +8,7 @@
 # {{ include "dot_config/rio/private_config.toml.tmpl" | sha256sum }}
 # {{ include "dot_config/vscode/keybindings_linux.json" | sha256sum }}
 # {{ include "dot_config/vscode/settings.json" | sha256sum }}
-
+# {{ include "dot_config/vscode/global.code-snippets" | sha256sum }}
 
 # 配列でキーと値を管理
 # 保存元ファイルパス 保存先ディレクトリ
@@ -21,6 +21,8 @@ file_mappings=(
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
   "{{ .chezmoi.sourceDir }}/dot_config/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/global.code-snippets" "$APPDATA/Roaming/Code/User/snippets/global.code-snippets"
+  "{{ .chezmoi.sourceDir }}/dot_config/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
 )
 
 # 配列をループで処理
