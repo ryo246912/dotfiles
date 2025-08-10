@@ -98,6 +98,20 @@ install_private_cask_package() {
   done
 }
 
+install_work_package() {
+  local PACKAGES=(
+    inkscape
+  )
+
+  for package in "${PACKAGES[@]}"; do
+    if ! brew list "$package" &>/dev/null; then
+        brew install "$package"
+    else
+      echo "$package is already installed"
+    fi
+  done
+}
+
 setup_settings() {
   # メニューバーのアイコンの間隔を狭くする
   if ! defaults -currentHost read -globalDomain NSStatusItemSpacing &>/dev/null || [ "$(defaults -currentHost read -globalDomain NSStatusItemSpacing)" -ne 6 ]; then
@@ -216,6 +230,7 @@ commands=(
   "install_brew"
   "install_package"
   "install_cask_package"
+  "install_work_package"
   "setup_settings"
   # "install_nix"
 )
