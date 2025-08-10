@@ -106,6 +106,20 @@ abbrevs:
     global: true
     context: '^go\s'
 
+  # jira
+  - name: jira copy title
+    abbr: jct
+    # $3~$(NF-1)行目の文字を結合、[とスペースをエスケープ
+    snippet: jira issue list -a$(jira me) --plain | column -ts $'\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s " "$i; print $2"_"s}' | sed 's/ /\\ /g; s/\[/\\\[/g' | cb
+
+  - name: jira issue list -a$(jira me)
+    abbr: jl
+    snippet: jira issue list -a$(jira me)
+
+  - name: jira issue list
+    abbr: jll
+    snippet: jira issue list
+
   # koji
   - name: koji --config ~/.config/koji/config.toml
     abbr: ko

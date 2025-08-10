@@ -101,11 +101,17 @@ install_private_cask_package() {
 install_work_package() {
   local PACKAGES=(
     inkscape
+    jira-cli
   )
 
   for package in "${PACKAGES[@]}"; do
     if ! brew list "$package" &>/dev/null; then
+      if [[ "$package" == "jira-cli" ]]; then
+        brew tap ankitpokhrel/jira-cli
         brew install "$package"
+      else
+        brew install "$package"
+      fi
     else
       echo "$package is already installed"
     fi
