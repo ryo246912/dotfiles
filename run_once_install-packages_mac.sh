@@ -21,6 +21,7 @@ install_package() {
     gpg
     mise
     pinentry-mac
+    ugrep
     yqrashawn/goku/goku
 
     coreutils

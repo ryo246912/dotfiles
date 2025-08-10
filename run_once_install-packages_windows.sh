@@ -17,6 +17,7 @@ install_package() {
     # go
     # https://mise.jdx.dev/installing-mise.html#apt
     # mise
+    ugrep
     zsh
   )
 
