@@ -109,6 +109,9 @@ sed /<regex>/d
 # sort : sort [-r:reverse][-n:numeric-sort][-k:field (ex:-k 2)][-t:delimiter (-t ,)][-u:unique] [ex:sort -rn -k 2 -t ,]
 sort -nu
 
+# spacer
+spacer --after 5
+
 # tail : [-n:output number]
 tail -n <num>
 

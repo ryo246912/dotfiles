@@ -11,25 +11,12 @@ zinit wait lucid light-mode blockf for \
     atclone"__glow_atclone" \
     @'charmbracelet/glow'
 
-# ijq #
-zinit wait lucid light-mode blockf for \
-    make \
-    sbin"ijq -> ijq" \
-    @'gpanders/ijq'
-
 # koji #
 zinit wait lucid light-mode blockf for \
     from"gh-r" \
     ver"v3.1.0" \
     sbin"koji* -> koji" \
     @'cococonscious/koji'
-
-# spacer #
-zinit wait lucid light-mode blockf for \
-    from"gh-r" \
-    ver"v0.3.0" \
-    sbin"spacer* -> spacer" \
-    @'samwho/spacer'
 
 ## programs ##
 zinit wait lucid light-mode blockf for \
