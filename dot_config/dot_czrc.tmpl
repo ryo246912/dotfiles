@@ -1,6 +1,6 @@
-{{- if and  (lookPath "bw") (eq ((fromJson (output "bw" "status" "--raw")).status) "unlocked") -}}
+{{- if and (lookPath "bw") (eq ((fromJson (output "bw" "status" "--raw")).status) "unlocked") (eq ((fromJson (output "bw" "status" "--raw")).userId) "90ff874c-4863-4008-8cf4-b31e00b84f50") -}}
 {
-  "openAIToken":"{{ (bitwarden "item" "GitHub PAT(cz-git)").notes | trim }}",
+  "openAIToken":"{{ (bitwarden "item" "GitHub PAT(cz-git)").login.password | trim }}",
   "apiEndpoint":"https://models.inference.ai.azure.com",
   "apiModel":"gpt-4o-mini"
 }
