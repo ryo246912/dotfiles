@@ -1,11 +1,21 @@
+.ifs:
+  - &npm '[[ -f "./package-lock.json" ]] && ! [[ -f "./pnpm-lock.yaml" ]]'
+  - &pnpm '[[ -f "./pnpm-lock.yaml" ]]'
+
 abbrevs:
   # npm commands
   - name: npm ci
-    abbr: nc
+    abbr-pattern: ^nc$
     snippet: npm ci
+    if: *npm
+
+  - name: npm install
+    abbr-pattern: ^ni$
+    snippet: npm install
+    if: *npm
 
   - name: npm run
-    abbr: nr
+    abbr-pattern: ^nr$
     snippet: npm run
 
   - name: npm run build
@@ -42,21 +52,16 @@ abbrevs:
 
   # pnpm commands
   - name: pnpm ci
-    abbr: pc
+    abbr-pattern: ^nc$
     snippet: pnpm install --frozen-lockfile
-    if: '[[ -f "./pnpm-lock.yaml" ]]'
+    if: *pnpm
 
-  - name: pnpm (install|add)
-    abbr-pattern: (pi|pa)
+  - name: pnpm add
+    abbr-pattern: ^ni$
     snippet: pnpm add
-    if: '[[ -f "./pnpm-lock.yaml" ]]'
-
-  - name: pnpm install
-    abbr: pin
-    snippet: pnpm install
-    if: '[[ -f "./pnpm-lock.yaml" ]]'
+    if: *pnpm
 
   - name: pnpm uninstall
-    abbr-pattern: (pui|pre)
+    abbr-pattern: ^nun
     snippet: pnpm remove
-    if: '[[ -f "./pnpm-lock.yaml" ]]'
+    if: *pnpm

@@ -49,14 +49,6 @@ zinit wait lucid light-mode blockf for \
     @'jonas/tig'
 fi
 
-# blueutil #
-if [ "$(uname)" = "Darwin" ]; then
-zinit wait lucid light-mode blockf for \
-    make \
-    sbin"blueutil" \
-    @'toy/blueutil'
-fi
-
 ### plugin ###
 __zsh-autosuggestions_atload() {
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"

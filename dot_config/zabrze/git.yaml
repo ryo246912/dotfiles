@@ -1,11 +1,25 @@
+.contexts:
+  - &git '^git\s'
+  - &gitadd '^git.*add\s'
+  - &gitbranch '^git.*branch\s'
+  - &gitbisect '^git\sbisect\s'
+  - &gitcommit '^git.*commit\s'
+  - &gitcheckout '^git\scheckout\s'
+  - &gitdiff 'git\sdiff\s'
+  - &gitlog 'git\slog\s'
+  - &gitmerge 'git\smerge\s'
+  - &gitpull 'git\spull\s'
+  - &gitpush 'git\spush\s'
+  - &gitshow 'git\sshow\s'
+
 abbrevs:
   # Basic git commands
   - name: git
-    abbr: g
+    abbr-pattern: ^g$
     snippet: git
 
   - name: git add
-    abbr: ga
+    abbr-pattern: ^ga$
     snippet: git add
 
   - name: git add .
@@ -17,7 +31,7 @@ abbrevs:
     snippet: git add -p
 
   - name: git branch
-    abbr: gb
+    abbr-pattern: ^gb$
     snippet: git branch
 
   - name: git branch -a
@@ -103,7 +117,7 @@ abbrevs:
 
   # Diff commands
   - name: git diff
-    abbr-pattern: (gd|gshss)
+    abbr-pattern: (^gd$|gshss)
     snippet: git diff
 
   - name: git diff change
@@ -133,7 +147,7 @@ abbrevs:
 
   # Fetch commands
   - name: git fetch
-    abbr: gf
+    abbr-pattern: ^gf$
     snippet: git fetch -p --tags
 
   - name: git fetch upstream
@@ -142,7 +156,7 @@ abbrevs:
 
   # Log commands
   - name: git log
-    abbr: gl
+    abbr-pattern: ^gl$
     cursor: "👇"
     snippet: git log -n 10 👇--pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"
 
@@ -174,7 +188,7 @@ abbrevs:
 
   # Merge commands
   - name: git merge
-    abbr: gm
+    abbr-pattern: ^gm$
     snippet: git merge --no-ff
 
   - name: git merge --abort
@@ -205,7 +219,7 @@ abbrevs:
 
   # Pull/Push commands
   - name: git pull
-    abbr: gp
+    abbr-pattern: ^gp$
     snippet: git pull --no-commit
 
   - name: git push origin HEAD
@@ -234,7 +248,7 @@ abbrevs:
 
   # Rebase commands
   - name: git rebase
-    abbr: gr
+    abbr-pattern: ^gr$
     snippet: git rebase --autostash
 
   - name: git rebase --abort
@@ -266,7 +280,7 @@ abbrevs:
 
   # Status and show commands
   - name: git status
-    abbr: gs
+    abbr-pattern: ^gs$
     snippet: git status
 
   - name: git show
@@ -297,7 +311,7 @@ abbrevs:
 
   # Gitui
   - name: gitui
-    abbr: gu
+    abbr-pattern: ^gu$
     snippet: gitui
 
   # FZF git shortcuts
@@ -331,32 +345,32 @@ abbrevs:
     abbr: co
     snippet: commit
     global: true
-    context: '^git\s'
+    context: *git
 
   - name: (git) log
     abbr: l
     snippet: log
     global: true
-    context: '^git\s'
+    context: *git
 
   - name: (git) HEAD commit
     abbr: h
     snippet: HEAD
     global: true
-    context: '^git\s'
+    context: *git
 
   - name: (git) $num previous commit
     abbr-pattern: h(?<num>\d+)$
     snippet: HEAD~$num
     evaluate: true
     global: true
-    context: '^git\s'
+    context: *git
 
   - name: (git add) --dry-run
     abbr: d
     snippet: --dry-run
     global: true
-    context: '^git.*add\s'
+    context: *gitadd
 
   - name: (git branch|for-each-ref) --sort=-committerdate
     abbr: sc
@@ -368,56 +382,56 @@ abbrevs:
     abbr: vv
     snippet: -vv
     global: true
-    context: '^git.*branch\s'
+    context: *gitbranch
 
   - name: (git bisect) bad
     abbr: b
     snippet: bad
     global: true
-    context: '^git\sbisect\s'
+    context: *gitbisect
 
   - name: (git bisect) good
     abbr: g
     snippet: good
     global: true
-    context: '^git\sbisect\s'
+    context: *gitbisect
 
   - name: (git bisect) reset
     abbr: r
     snippet: reset
     global: true
-    context: '^git\sbisect\s'
+    context: *gitbisect
 
   - name: (git commit) -m ""
     abbr: m
     snippet: -m ""
     global: true
-    context: '^git.*commit\s'
+    context: *gitcommit
 
   - name: (git commit) --allow-empty
     abbr-pattern: (ea|ae)
     snippet: --allow-empty
     global: true
-    context: '^git.*commit\s'
+    context: *gitcommit
 
   - name: (git checkout) master/main
     abbr: m
     snippet: $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)
     evaluate: true
     global: true
-    context: '^git\scheckout\s'
+    context: *gitcheckout
 
   - name: (git checkout) origin
     abbr: o
     snippet: origin/
     global: true
-    context: '^git\scheckout\s'
+    context: *gitcheckout
 
   - name: (git checkout) staging
     abbr: s
     snippet: staging
     global: true
-    context: '^git\scheckout\s'
+    context: *gitcheckout
 
   - name: (git cherry-pick|rebase|merge) --abort
     abbr: a
@@ -441,89 +455,89 @@ abbrevs:
     abbr: ca
     snippet: --cached
     global: true
-    context: 'git\sdiff\s'
+    context: *gitdiff
 
   - name: (git diff) --staged
     abbr: st
     snippet: --staged
     global: true
-    context: 'git\sdiff\s'
+    context: *gitdiff
 
   - name: (git log) --all
     abbr: al
     snippet: --all
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) --first-parent
     abbr: (fp|fi)
     snippet: --first-parent
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) --graph
     abbr: gr
     snippet: --graph
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) --no-walk
     abbr: nw
     snippet: --no-walk
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) --oneline
     abbr-pattern: (on|ol)
     snippet: --oneline
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) --reverse
     abbr: r
     snippet: --reverse
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git log) -n <num>
     abbr-pattern: n\d+$
     snippet: -n ${abbr/n/}
     evaluate: true
     global: true
-    context: 'git\slog\s'
+    context: *gitlog
 
   - name: (git merge) --no-commit
     abbr: nc
     snippet: --no-commit
     global: true
-    context: 'git\smerge\s'
+    context: *gitmerge
 
   - name: (git pull) --rebase
     abbr: re
     snippet: --rebase
     global: true
-    context: 'git\spull\s'
+    context: *gitpull
 
   - name: (git push) --force-with-lease
     abbr: f
     snippet: --force-with-lease
     global: true
-    context: '^git\spush\s'
+    context: *gitpush
 
   - name: (git push) -f
     abbr-pattern: (ff|fo)
     snippet: -f
     global: true
-    context: '^git\spush\s'
+    context: *gitpush
 
   - name: (git show) --no-patch
     abbr: np
     snippet: --no-patch
     global: true
-    context: '^git\sshow\s'
+    context: *gitshow
 
   - name: (git show) --stat
     abbr-pattern: (-s|-st)
     snippet: --stat
     global: true
-    context: '^git\sshow\s'
+    context: *gitshow

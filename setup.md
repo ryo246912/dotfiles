@@ -108,6 +108,16 @@
       ```sh
       gpg --export-secret-keys --armor <fingerprint> > ~/.secret_key.asc
       ```
+        - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
+        ```sh
+        gpg --list-secret-keys --keyid-format LONG
+        # ----------------------------------
+        # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
+        #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+        # uid                 [ultimate] Your Name <your.email@example.com>
+        # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
+        ```
+        - パスフレーズは、パスワードマネージャーに保存しているものを参照
       - 新規に秘密鍵を作成する場合は、以下のコマンドを実行
         - 基本そのままEnterを押していく
         - 名前・メールアドレスは、gitの設定と同じものを使用
@@ -123,6 +133,34 @@
      ```
      sh ./not_config/script/setup_git_gpg.sh
      ```
+  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+    - 秘密鍵の生成
+    ```sh
+    ssh-keygen -t ed25519 -C "<mail_address>"
+    ```
+    - パスフレーズを入力
+    - Githubに公開鍵を登録
+    ```sh
+    gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
+    ```
+    - ssh-agentにsshキーを追加
+    ```sh
+    eval "$(ssh-agent -s)"
+    ```
+    ```sh
+    touch ~/.ssh/config
+    ```
+    ```sh
+    cat << EOF >> ~/.ssh/config
+    Host github.com
+      AddKeysToAgent yes
+      UseKeychain yes
+      IdentityFile ~/.ssh/id_ed25519
+    EOF
+    ```
+    ```sh
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+    ```
 
 ### プライベート設定
 - [ ] thunderbird

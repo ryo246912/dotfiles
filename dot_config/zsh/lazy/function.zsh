@@ -42,7 +42,6 @@ _zsh-history-backup() {
   while sleep $((60 * 15)) ; do
     if [[ $(wc -l "$backup_dir/.zsh_history" | awk '{print $1}') -gt 1000 ]] ; then
       cp -f "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
-      echo "$(date "+[%y/%m/%d %H:%M:%S]") zsh-history-backup!"
     else
       osascript -e 'display notification "Backup Error!" with title "zsh"'
     fi

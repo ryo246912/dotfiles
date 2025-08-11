@@ -5,3 +5,5 @@ command = "code"
 [scriptEnv]
 APPDATA = "/mnt/c/Users/r-ksk/AppData"
 USERDIR = "/mnt/c/Users/r-ksk"
+[bitwarden]
+unlock = "auto"

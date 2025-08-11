@@ -47,14 +47,26 @@ confirm_and_execute() {
 
 # Git設定関数
 setup_git_user() {
-  git config --global user.name "$GIT_USER_NAME"
-  git config --global user.email "$GIT_USER_EMAIL"
+  if git config --list | grep "user.name=$GIT_USER_NAME" &>/dev/null; then
+    echo "Gitのユーザー情報は既に設定されています"
+  else
+    git config --global user.name "$GIT_USER_NAME"
+  fi
+  if git config --list | grep "user.email=$GIT_USER_EMAIL" &>/dev/null; then
+    echo "Gitのメールアドレスは既に設定されています"
+  else
+    git config --global user.email "$GIT_USER_EMAIL"
+  fi
   echo "設定完了: user.name = $GIT_USER_NAME, user.email = $GIT_USER_EMAIL"
 }
 
 # GPGキー設定関数
 setup_gpg_key() {
-  git config --global user.signingkey "$GPG_KEY_ID"
+  if git config --list | grep "user.signingkey=$GPG_KEY_ID" &>/dev/null; then
+    echo "GitのGPG署名キーは既に設定されています"
+  else
+    git config --global user.signingkey "$GPG_KEY_ID"
+  fi
   echo "設定完了: user.signingkey = $GPG_KEY_ID"
 }
 

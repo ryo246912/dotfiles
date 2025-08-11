@@ -1,0 +1,7 @@
+# AWS
+# https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html#envvars-list
+export AWS_CLI_AUTO_PROMPT=on-partial
+{{ if and (lookPath "bw") (eq ((fromJson (output "bw" "status" "--raw")).status) "unlocked") (eq ((fromJson (output "bw" "status" "--raw")).userId) "4a227a7e-b5b3-471b-a05f-b32f00f1f636") -}}
+# jira
+export JIRA_API_TOKEN="{{ (bitwarden "item" "Jira API Token").login.password | trim }}"
+{{- end }}
