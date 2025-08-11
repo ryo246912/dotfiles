@@ -1,3 +1,6 @@
+.ifs:
+  - &make '[[ -f "./Makefile" ]]'
+
 abbrevs:
   # atuin commands
   - name: atuin search -i
@@ -10,19 +13,19 @@ abbrevs:
 
   # basic commands
   - name: code .
-    abbr: c.
+    abbr-pattern: ^c\.$
     snippet: code .
 
   - name: caffeinate
-    abbr: ca
+    abbr-pattern: ^ca$
     snippet: caffeinate
 
   - name: cal -3
-    abbr: c3
+    abbr-pattern: ^c3$
     snippet: cal -3
 
   - name: cal -y
-    abbr-pattern: ^cy
+    abbr-pattern: ^cy$
     snippet: cal -y
 
   - name: ccmanager
@@ -34,19 +37,19 @@ abbrevs:
     snippet: ccmanager --devc-up-command "devcontainer up --workspace-folder . --config ~/.config/devcontainer/claude/devcontainer.json" --devc-exec-command "claude --resume --dangerously-skip-permissions"
 
   - name: echo
-    abbr: e
+    abbr-pattern: ^e$
     snippet: echo
 
   - name: exec $SHELL -l
-    abbr: es
+    abbr-pattern: ^es$
     snippet: exec $SHELL -l
 
   - name: ls -la
-    abbr: la
+    abbr-pattern: ^la$
     snippet: ls -la
 
   - name: ls -l
-    abbr: ll
+    abbr-pattern: ^ll$
     snippet: ls -l
 
   - name: nvim
@@ -58,20 +61,20 @@ abbrevs:
     snippet: nvim .
 
   - name: sudo
-    abbr: s
+    abbr-pattern: ^s$
     snippet: sudo
 
   - name: which
-    abbr: w
+    abbr-pattern: ^w$
     snippet: which
 
   - name: yazi
-    abbr: "y"
+    abbr-pattern: ^y$
     snippet: yazi
 
   # commitizen
   - name: czg
-    abbr: cz
+    abbr-pattern: ^cz$
     snippet: czg
 
   - name: czg ai
@@ -84,20 +87,20 @@ abbrevs:
 
   # docker
   - name: docker
-    abbr: d
+    abbr-pattern: ^d$
     snippet: docker
 
   - name: docker compose
-    abbr: dc
+    abbr-pattern: ^dc$
     snippet: docker compose
 
   - name: lazydocker
-    abbr: ld
+    abbr-pattern: ^ld$
     snippet: lazydocker
 
   # go
   - name: go test ./...
-    abbr-pattern: ^got
+    abbr-pattern: ^got$
     snippet: go test ./...
 
   - name: ./...
@@ -113,7 +116,7 @@ abbrevs:
     snippet: jira issue list -a$(jira me) --plain | column -ts $'\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s " "$i; print $2"_"s}' | sed 's/ /\\ /g; s/\[/\\\[/g' | cb
 
   - name: jira issue list -a$(jira me)
-    abbr: jl
+    abbr-pattern: ^jl$
     snippet: jira issue list -a$(jira me)
 
   - name: jira issue list
@@ -122,38 +125,38 @@ abbrevs:
 
   # koji
   - name: koji --config ~/.config/koji/config.toml
-    abbr: ko
+    abbr-pattern: ^ko$
     snippet: koji --config ~/.config/koji/config.toml
 
   # make
   - name: make
-    abbr: m
+    abbr-pattern: ^m$
     snippet: make
-    if: '[[ -f "./Makefile" ]]'
+    if: *make
 
   - name: make help
-    abbr: mh
+    abbr-pattern: ^mh$
     snippet: make help
-    if: '[[ -f "./Makefile" ]]'
+    if: *make
 
   - name: make lint
-    abbr: ml
+    abbr-pattern: ^ml$
     snippet: make lint
-    if: '[[ -f "./Makefile" ]]'
+    if: *make
 
   - name: make local
     abbr: mlo
     snippet: make local | spacer --after 5
-    if: '[[ -f "./Makefile" ]]'
+    if: *make
 
   - name: make unittest
-    abbr: mu
+    abbr-pattern: ^mu$
     snippet: make unittest
-    if: '[[ -f "./Makefile" ]]'
+    if: *make
 
   # mise
   - name: mise install
-    abbr: mi
+    abbr-pattern: ^mi$
     snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1
 
   - name: mise ls
@@ -165,7 +168,7 @@ abbrevs:
     snippet: mise ls --current
 
   - name: mise run
-    abbr: mr
+    abbr-pattern: ^mr$
     snippet: mise run
 
   - name: mise run --dry-run
@@ -173,63 +176,32 @@ abbrevs:
     snippet: mise run --dry-run
 
   - name: mise tasks
-    abbr: mt
+    abbr-pattern: ^mt$
     snippet: mise tasks --hidden
 
   - name: mise use
-    abbr: mu
+    abbr-pattern: ^mu$
     snippet: mise use
 
   - name: mise use -g
     abbr: mug
     snippet: mise use -g
 
-  # pdm commands
-  - name: pdm run
-    abbr: pr
-    snippet: pdm run
-    if: '[[ -f "./pyproject.toml" ]]'
-
-  - name: pdm run dev | spacer --after 5
-    abbr: prd
-    snippet: pdm run dev | spacer --after 5
-    if: '[[ -f "./pyproject.toml" ]]'
-
-  - name: pdm run fix
-    abbr: prf
-    snippet: pdm run fix
-    if: '[[ -f "./pyproject.toml" ]]'
-
-  - name: pdm run lint
-    abbr: prl
-    snippet: pdm run lint
-    if: '[[ -f "./pyproject.toml" ]]'
-
-  - name: pdm run test
-    abbr: prt
-    snippet: pdm run test
-    if: '[[ -f "./pyproject.toml" ]]'
-
-  - name: pdm sync
-    abbr-pattern: (psy|pdsy)
-    snippet: pdm sync
-    if: '[[ -f "./pyproject.toml" ]]'
-
   # tig
   - name: tig
-    abbr: t
+    abbr-pattern: ^t$
     snippet: tig
 
   - name: tig --all
-    abbr: ta
+    abbr-pattern: ^ta$
     snippet: tig --all
 
   - name: tig blame
-    abbr: tb
+    abbr-pattern: ^tb$
     snippet: tig blame
 
   - name: tig status
-    abbr: ts
+    abbr-pattern: ^ts$
     snippet: tig status
 
   - name: (tig) --all
@@ -244,15 +216,15 @@ abbrevs:
     snippet: ug -QPn
 
   - name: up --noinput
-    abbr: up
+    abbr-pattern: ^up$
     snippet: up --noinput
 
   - name: zinit
-    abbr: zi
+    abbr-pattern: ^zi$
     snippet: zinit
 
   - name: ji
-    abbr: zz
+    abbr-pattern: ^zz$
     snippet: ji
 
   # Global abbreviations
@@ -271,9 +243,3 @@ abbrevs:
     snippet: --no-gitconfig
     global: true
     context: '.*delta\s'
-
-  - name: (pdm run) -l
-    abbr: l
-    snippet: -l
-    global: true
-    context: '^pdm\srun\s'

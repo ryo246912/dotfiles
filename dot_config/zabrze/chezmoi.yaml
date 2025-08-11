@@ -1,6 +1,6 @@
 abbrevs:
   - name: chezmoi
-    abbr: ch
+    abbr-pattern: ^ch$
     snippet: chezmoi
 
   - name: chezmoi add

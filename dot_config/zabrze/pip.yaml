@@ -1,0 +1,40 @@
+.ifs:
+  - &pdm '[[ -f "./pyproject.toml" ]]'
+
+abbrevs:
+  # pdm commands
+  - name: pdm run
+    abbr-pattern: ^pr$
+    snippet: pdm run
+    if: *pdm
+
+  - name: pdm run dev | spacer --after 5
+    abbr: prd
+    snippet: pdm run dev | spacer --after 5
+    if: *pdm
+
+  - name: pdm run fix
+    abbr: prf
+    snippet: pdm run fix
+    if: *pdm
+
+  - name: pdm run lint
+    abbr: prl
+    snippet: pdm run lint
+    if: *pdm
+
+  - name: pdm run test
+    abbr: prt
+    snippet: pdm run test
+    if: *pdm
+
+  - name: pdm sync
+    abbr-pattern: (psy|pdsy)
+    snippet: pdm sync
+    if: *pdm
+
+  - name: (pdm run) -l
+    abbr: l
+    snippet: -l
+    global: true
+    context: '^pdm\srun\s'
