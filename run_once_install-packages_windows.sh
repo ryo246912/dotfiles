@@ -12,6 +12,8 @@ install_scoop() {
 
 install_package() {
   local PACKAGES=(
+    # https://bun.com/docs/installation#macos-and-linux
+    # bun
     git
     gpg
     # go
