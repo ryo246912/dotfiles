@@ -129,6 +129,24 @@
       ```sh
       gpg --list-secret-keys --keyid-format LONG
       ```
+      - (新しいメールアドレスを紐づける場合)GPGキーにメールアドレスを追加
+        ```sh
+        gpg --edit-key XXXXXXXXXXXXXXXX
+        ```
+        - adduidで編集、以下を入力して新しいメールアドレスを追加
+          - Real name: 登録したい名前
+          - Email address: 登録したいメールアドレス
+          - Comment: コメント（任意）
+        ```sh
+        gpg> adduid
+        ```
+      - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
+      ```sh
+      gh gpg-key delete $(gh gpg-key list | awk '{print $3}')
+      ```
+      ```sh
+      gpg --armor --export XXXXXXXXXXXXXXXX | gh gpg-key add
+      ```
   - [ ] gpg_agent・gitの設定
      ```
      sh ./not_config/script/setup_git_gpg.sh
