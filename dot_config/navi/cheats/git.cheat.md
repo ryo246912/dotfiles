@@ -238,8 +238,8 @@ git remote add upstream https://github.com/$(git remote get-url upstream |sed -e
 # add origin/HEAD (-> git symbolic-ref refs/remotes/origin/HEAD)
 git remote set-head origin -a
 
-# check-ignore
-git check-ignore -v <file>
+# check-ignore file
+git check-ignore -v **/*
 
 # config list [-l:list]
 git config -l --show-origin<_--option> | column -ts $'\t'
