@@ -153,14 +153,26 @@
      ```
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
-    ```sh
-    ssh-keygen -t ed25519 -C "<mail_address>"
-    ```
-    - パスフレーズを入力
-    - Githubに公開鍵を登録
-    ```sh
-    gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
-    ```
+      1. ssh-keygenで生成→登録
+        ```sh
+        ssh-keygen -t ed25519 -C "<mail_address>"
+        ```
+        - パスフレーズを入力
+        - Githubに公開鍵を登録
+        ```sh
+        gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
+        ```
+      2. ghコマンドで生成→登録
+        - sshを選択
+        ```sh
+        gh auth login
+        ```
+        - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
+        ```
+        ? Generate a new SSH key to add to your GitHub account? (Y/n) Y
+        ? Enter a passphrase for your new SSH key (Optional)
+        ? Title for your SSH key: (GitHub CLI)
+        ```
     - ssh-agentにsshキーを追加
     ```sh
     eval "$(ssh-agent -s)"
