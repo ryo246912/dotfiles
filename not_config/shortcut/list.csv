@@ -57,8 +57,10 @@ DBeaver,ctrl + shift + g,-,指定列へ移動
 DBeaver,F5,-,更新
 Figma,/,-,コメント
 Figma,cmd + f,-,検索
-Figma,cmd + .,-,サイドバー等をON/OFF
 Figma,cmd + /,-,クイックアクション(≒コマンドパレット)
+Figma,cmd + .,-,サイドバー等をON/OFF
+Figma,cmd長押し,-,奥の要素を選択
+Figma,option長押し,-,要素間の距離を測定
 GitHub,option + クリック,alt + クリック,トグル(show resolved・fileのviewedなど)の全開閉切り替え
 Google Chrome,Esc,-,(ディベロッパーツールで)コンソールドロワーのON/OFF
 Google Chrome,F7,-,CaretブラウジングON/OFF切替

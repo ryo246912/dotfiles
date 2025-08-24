@@ -113,14 +113,22 @@ abbrevs:
   - name: jira copy title
     abbr: jct
     # $3~$(NF-1)行目の文字を結合、[とスペースをエスケープ
-    snippet: jira issue list -a$(jira me) --plain | column -ts $'\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s " "$i; print $2"_"s}' | sed 's/ /\\ /g; s/\[/\\\[/g' | cb
+    snippet: jira issue list -a$(jira me) -s~Done --plain | column -ts $'\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s " "$i; print "["$2"]"s}' | sed 's/ /\\ /g; s/\[/\\\[/g' | cb
 
-  - name: jira issue list -a$(jira me)
+  - name: jira issue list -a$(jira me) -s~Done
     abbr-pattern: ^jl$
+    snippet: jira issue list -a$(jira me) -s~Done
+
+  - name: jira issue list -a$(jira me) all
+    abbr-pattern: ^jla$
     snippet: jira issue list -a$(jira me)
 
-  - name: jira issue list
+  - name: jira issue list -s~Done
     abbr: jll
+    snippet: jira issue list -s~Done
+
+  - name: jira issue list all
+    abbr: jlla
     snippet: jira issue list
 
   # koji
@@ -216,8 +224,9 @@ abbrevs:
 
   # other tools
   - name: ug -QPn
-    abbr-pattern: (ug|igrep)
+    abbr-pattern: (ug$|igrep)
     snippet: ug -QPn
+    global: true
 
   - name: up --noinput
     abbr-pattern: ^up$

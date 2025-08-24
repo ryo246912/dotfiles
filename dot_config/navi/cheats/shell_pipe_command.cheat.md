@@ -49,7 +49,7 @@ date "+%y/%m/%d %H:%M:%S"
 # dirname : [ex:dirname $(which dirname)]
 dirname <path>
 
-# fx [-m:multi select]
+# fx
 fx
 
 # fzf [-m:multi select]

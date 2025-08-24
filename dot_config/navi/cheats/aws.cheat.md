@@ -33,7 +33,11 @@ aws iam list-groups-for-user --user-name $(aws sts get-caller-identity --query "
 
 # iam : display mfadevices
 aws iam list-mfa-devices
+
+# organization : display organization id [Organization.Id = o-xxx][Organization.MasterAccountId = YYYYYYYYYYYY(12)]
+aws organizations describe-organization --query '<organization_id>' --output text --profile <profile>
 ```
 
 $ profile: aws configure list-profiles
+$ organization_id: echo -n 'Organization.Id\nOrganization.MasterAccountId'
 ;$
