@@ -128,6 +128,9 @@ tar -xzvf <file>
 # type : [a:all][ex:type -a python]
 type -a <command>
 
+# tree : [-L <num>>:directory depth]
+tree
+
 # unset : unset shell variable
 unset <var>
 

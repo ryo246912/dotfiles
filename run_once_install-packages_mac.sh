@@ -30,6 +30,7 @@ install_package() {
     findutils
     gnu-sed
     grep
+    tree
   )
 
   for package in "${PACKAGES[@]}"; do

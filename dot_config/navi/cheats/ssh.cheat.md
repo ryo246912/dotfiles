@@ -1,8 +1,11 @@
 ```sh
 % shell:ssh
 
-# ssh : login by .ssh/config [-T:config HOST][-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
-ssh -AT <HOST>
+# ssh : login [-i:identity file][-p:port][ex:ssh -i xx.pem -p 10000 test-user@11.22.33.44]
+ssh -i <private_key> -p <port> <user>@<host>
+
+# ssh : login by .ssh/config [-l:login user][-A:Forward Agent][ex:ssh -A user@example.com]
+ssh -AT <user>@<host>
 
 # ssh : locale [SendEnv LANG LC_*:take over local locale]
 vim /etc/ssh/ssh_config
@@ -20,7 +23,7 @@ ssh-add
 ssh-add -l
 
 # ssh-keygen : create secret key (default:id_rsa{,.pub}) [-t:algorithm]
-ssh-keygen -t rsa
+ssh-keygen -t <algorithm> -C "<mail_address>"
 
 # ssh-keyscan : get public ssh key [ex:ssh-keyscan github.com >> ~/.ssh/known_hosts]
 ssh-keyscan <HOST> >> ~/.ssh/known_hosts
