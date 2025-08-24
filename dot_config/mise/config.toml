@@ -60,7 +60,7 @@ tmux                                                        = "3.5"
 "ubi:sharkdp/bat"                                           = "0.25.0"
 "ubi:sinclairtarget/git-who"                                = "1.2"
 usage                                                       = "2.2.2"
-uv                                                          = "0.8.12"
+uv                                                          = "0.8.13"
 vim                                                         = "9.1.1006"
 yazi                                                        = "25.5.31"
 
