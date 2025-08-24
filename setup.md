@@ -191,6 +191,27 @@
     ```sh
     ssh-add --apple-use-keychain ~/.ssh/id_ed25519
     ```
+- [ ] sshの設定(オプション)
+  - 秘密鍵を共有してもらって保存
+  ```sh
+  cat << EOF > ~/.ssh/xx.pem
+  -----BEGIN RSA PRIVATE KEY-----
+  ...
+  -----END RSA PRIVATE KEY-----
+  EOF
+  ```
+  - sshコマンド
+    - サーバーの以下教えてもらう
+      - port
+      - host名 or ip
+      - ユーザ名
+    ```sh
+    ssh -i ~/.ssh/xx.pem -p <port> <user>@<bastion_host>
+    ```
+    - 踏み台サーバ経由してのポートフォワーディング
+    ```sh
+    ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
+    ```
 
 ### プライベート設定
 - [ ] thunderbird
