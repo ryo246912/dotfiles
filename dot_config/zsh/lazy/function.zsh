@@ -14,6 +14,56 @@ open() {
   fi
 }
 
+#
+# 引数として受け取ったコマンドを指定回数繰り返す関数
+#
+# 使用方法: loop -n <回数> <コマンド...>
+# 例: loop -n 3 echo "こんにちは"
+#
+loop() {
+  local count=0
+  local cmd=""
+
+  # オプションから回数を解析
+  OPTIND=1
+  while getopts "n:" opt; do
+    case "$opt" in
+      n)
+        count="$OPTARG"
+        ;;
+      \?)
+        echo "エラー: 無効なオプションです。" >&2
+        echo "使用方法: loop -n <回数> <コマンド...>" >&2
+        return 1
+        ;;
+    esac
+  done
+
+  # オプション部分を引数リストから削除
+  shift $((OPTIND-1))
+
+  # 残りの引数を実行するコマンドとして取得
+  cmd="$@"
+
+  # 回数が指定されていない、または0以下の場合はエラーを表示
+  if [[ -z "$count" || "$count" -le 0 ]]; then
+    echo "エラー: 繰り返しの回数を正の整数で指定してください (-n <回数>)。" >&2
+    echo "使用方法: loop -n <回数> <コマンド...>" >&2
+    return 1
+  fi
+
+  # コマンドが指定されていない場合はエラーを表示
+  if [[ -z "$cmd" ]]; then
+    echo "エラー: 実行するコマンドを指定してください。" >&2
+    echo "使用方法: loop -n <回数> <コマンド...>" >&2
+    return 1
+  fi
+
+  for i in $(seq 1 "$count"); do
+    eval "$cmd"
+  done
+}
+
 ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then
