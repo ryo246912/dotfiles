@@ -68,9 +68,11 @@ __zsh-auto-notify_atload() {
     AUTO_NOTIFY_IGNORE+=(
       "czg"
       "chezmoi apply"
+      "git branch"
       "git log"
       "git show"
       "git rebase"
+      "gh-dash"
       "gitui"
       "gh pr create"
       "gh pr diff"
