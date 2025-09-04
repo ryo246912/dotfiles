@@ -205,33 +205,21 @@ abbrevs:
     abbr: ghpw
     snippet: gh pr checks $(git symbolic-ref --short HEAD) --watch
 
-  - name: gh run list
-    abbr: ghrl
-    snippet: gh run list --limit 40
-
-  - name: gh run list --status failure
-    abbr: ghrlf
-    snippet: gh run list --status failure
-
   - name: gh run list -w xxx
-    abbr: ghrll
+    abbr: ghrl
     snippet: gh run list -w $(gh workflow list | column -ts $'\t' | fzf | awk '{print $1}')
+
+  - name: gh run list --branch xxx
+    abbr: ghrlb
+    snippet: gh run list --branch $(git symbolic-ref --short HEAD)
 
   - name: gh run rerun --failed
     abbr: ghrr
     snippet: gh run rerun --failed
 
-  - name: gh run view
-    abbr: ghrv
-    snippet: gh run view
-
   - name: gh run view --log
-    abbr: ghrvl
+    abbr: ghrv
     snippet: gh run view --log
-
-  - name: gh run view --log-failed
-    abbr: ghrvll
-    snippet: gh run view --log-failed
 
   - name: gh run watch
     abbr: ghrw
