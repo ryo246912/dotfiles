@@ -11,6 +11,23 @@ abbrevs:
     abbr: ghbs
     snippet: gh browse --settings
 
+  - name: gh cache list
+    abbr: ghcl
+    snippet: gh cache list
+      --json key,ref,sizeInBytes,createdAt,lastAccessedAt
+      --jq '
+        ["key","sizeInBytes","createdAt","lastAccessedAt","ref"],
+        ( .[] |
+        [.key
+        , ((.sizeInBytes / 1024 / 1024 * 100 | floor / 100) | tostring + "MB")
+        , ( ((now - (.createdAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+        , ( ((now - (.lastAccessedAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+        , .ref
+        ])
+        | @tsv
+      '
+      | column -ts $'\t'
+
   - name: gh-dash
     abbr: ghd
     snippet: gh-dash
