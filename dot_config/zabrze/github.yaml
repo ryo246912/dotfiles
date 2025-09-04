@@ -44,7 +44,8 @@ abbrevs:
         , .author.login
         , .state
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -63,7 +64,8 @@ abbrevs:
         , .author.login
         , .state
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -82,7 +84,8 @@ abbrevs:
         , .author.login
         , .state
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) ])
+        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -104,7 +107,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -125,7 +129,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -147,7 +152,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -168,7 +174,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -189,7 +196,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
@@ -211,7 +219,8 @@ abbrevs:
         , (if .isDraft then "◯" else "☓" end )
         , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
         , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName])
+        , .headRefName
+        ])
         | @tsv
       '
       | column -ts $'\t'
