@@ -64,6 +64,23 @@ loop() {
   done
 }
 
+measure_time(){
+  # 開始時刻を記録
+  start_time=$(date +%s.%N)
+
+  # 実行したいコマンド
+  # コマンドラインから渡されたすべての引数を実行
+  "$@"
+
+  # 終了時刻を記録
+  end_time=$(date +%s.%N)
+
+  # 経過時間を計算し四捨五入して小数第1位まで表示 (bcで差を計算→awkのprintfで丸め)
+  elapsed_time=$(echo "$end_time - $start_time" | bc -l | awk '{printf "%.1f", $0}')
+
+  echo "Execution time: $elapsed_time seconds"
+}
+
 ssh() {
   # tmux起動時
   if [[ -n $(printenv TMUX) ]] ; then

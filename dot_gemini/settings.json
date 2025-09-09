@@ -7,9 +7,8 @@
       "command": "/opt/homebrew/bin/bunx",
       "args": ["@playwright/mcp@0.0.31", "--browser", "webkit", "--headless"]
     },
-    "mcp-deepwiki": {
-      "command": "/opt/homebrew/bin/bunx",
-      "args": ["mcp-deepwiki@0.0.10"]
+    "deepwiki": {
+      "url": "https://mcp.deepwiki.com/sse"
     }
   }
 }

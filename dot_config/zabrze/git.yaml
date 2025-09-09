@@ -246,7 +246,7 @@ abbrevs:
     evaluate: true
     snippet: git pull upstream $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4) --no-commit
 
-  # Rebase commands
+  # Rebase/Reset commands
   - name: git rebase
     abbr-pattern: ^gr$
     snippet: git rebase --autostash
@@ -258,6 +258,10 @@ abbrevs:
   - name: git rebase --continue
     abbr: grc
     snippet: git rebase --continue
+
+  - name: git reset --soft HEAD~
+    abbr: gre
+    snippet: git reset --soft HEAD~
 
   - name: git reset --hard origin/master
     abbr: greom

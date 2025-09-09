@@ -167,12 +167,8 @@ abbrevs:
     abbr-pattern: ^mi$
     snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1
 
-  - name: mise ls
-    abbr: mls
-    snippet: mise ls
-
   - name: mise ls --current
-    abbr: mlsc
+    abbr: mls
     snippet: mise ls --current
 
   - name: mise run
