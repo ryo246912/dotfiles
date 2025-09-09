@@ -1,18 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
-  "labels": [
-    "renovate"
-  ],
+  "extends": ["config:recommended"],
+  "labels": ["renovate"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
   "dependencyDashboard": true,
   "timezone": "Asia/Tokyo",
-  "reviewers": [
-    "ryo246912"
-  ],
+  "reviewers": ["ryo246912"],
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
   "vulnerabilityAlerts": {
@@ -27,22 +21,15 @@
     "vulnerabilityFixStrategy": "lowest"
   },
   "mise": {
-    "managerFilePatterns": [
-      "dot_config/mise/**/*.toml"
-    ]
+    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
   },
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
+      "matchUpdateTypes": ["minor", "patch"],
       "matchCurrentVersion": "!/^0/"
     },
     {
-      "matchManagers": [
-        "gomod"
-      ],
+      "matchManagers": ["gomod"],
       "groupName": "Go modules"
     }
   ]
