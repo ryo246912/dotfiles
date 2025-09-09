@@ -18,6 +18,11 @@
     "prCreation": "immediate",
     "vulnerabilityFixStrategy": "lowest"
   },
+  "mise": {
+    "managerFilePatterns": [
+      "dot_config/mise/**/*.toml"
+    ]
+  },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
