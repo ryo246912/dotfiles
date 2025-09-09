@@ -54,7 +54,8 @@ abbrevs:
 
   - name: gh issue view
     abbr: ghiv
-    snippet: gh issue view --comments $(gh issue list --state all --limit 100
+    cursor: "👇"
+    snippet: gh issue view --comments 👇$(gh issue list --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
       --jq '
         ["no","title","author","state","updatedAt","createdAt"],
@@ -180,7 +181,8 @@ abbrevs:
 
   - name: gh pr view
     abbr: ghpv
-    snippet: gh pr view --comments $(gh pr list --state all --limit 100
+    cursor: "👇"
+    snippet: gh pr view --comments 👇$(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
         ["no","title","author","state","draft","updatedAt","createdAt","branch"],
@@ -251,6 +253,12 @@ abbrevs:
   - name: gh-reassign-reviewer
     abbr: ghr
     snippet: gh-reassign-reviewer
+
+  - name: (gh pr/issue view) -w
+    abbr: w
+    snippet: -w
+    global: true
+    context: '^gh\spr\s(view|issue)'
 
   - name: (gh pr ready) --undo
     abbr-pattern: (d|u)
