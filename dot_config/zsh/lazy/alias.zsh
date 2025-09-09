@@ -17,7 +17,7 @@ claude_check_version() {
   fi
 }
 
-alias claude="claude_check_version"
+# alias claude="claude_check_version"
 
 if [ "$(uname)" = "Linux" ]; then
   # powershell
