@@ -7,6 +7,8 @@
   "dependencyDashboard": true,
   "timezone": "Asia/Tokyo",
   "reviewers": ["ryo246912"],
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
   "vulnerabilityAlerts": {
     "groupName": null,
     "schedule": [],
@@ -17,6 +19,9 @@
     "branchTopic": "{{{datasource}}}-{{{depNameSanitized}}}-vulnerability",
     "prCreation": "immediate",
     "vulnerabilityFixStrategy": "lowest"
+  },
+  "mise": {
+    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
   },
   "packageRules": [
     {
