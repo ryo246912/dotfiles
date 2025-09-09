@@ -10,6 +10,9 @@ mise use
 # list installable package list
 mise ls-remote <package> | less -iRMW --use-color
 
+# display tool info
+mise tool <package>
+
 # set only current shell session[ex:mise shell node@20]
 mise shell <tool_version>
 
