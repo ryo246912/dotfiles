@@ -63,7 +63,7 @@ tmux                                                        = "3.5"
 "ubi:sinclairtarget/git-who"                                = "1.2"
 "ubi:sxyazi/yazi"                                           = "25.5.31"
 "ubi:twpayne/chezmoi"                                       = "2.65.0"
-"ubi:wagoodman/dive"                                        = "0.12.0"
+"ubi:wagoodman/dive"                                        = "0.13.1"
 usage                                                       = "2.2.2"
 vim                                                         = "9.1.1006"
 
