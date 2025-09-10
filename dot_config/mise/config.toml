@@ -36,7 +36,7 @@ slsa-verifier                                               = "2.7.1"
 terraform                                                   = "1.13.1"
 tmux                                                        = "3.5"
 "ubi:Ryooooooga/zabrze"                                     = "0.5.0"
-"ubi:Wilfred/difftastic"                                    = { version = "0.54.0", exe = "difft" }
+"ubi:Wilfred/difftastic"                                    = { version = "0.64.0", exe = "difft" }
 "ubi:ajeetdsouza/zoxide"                                    = "0.9.8"
 "ubi:akavel/up"                                             = "0.4"
 "ubi:antonmedv/fx"                                          = "39.1.0"
