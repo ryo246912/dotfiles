@@ -44,7 +44,7 @@ tmux                                                        = "3.5"
 "ubi:atuinsh/atuin"                                         = "18.0.1"
 "ubi:bitwarden/clients"                                     = { version = "cli-v2025.6.1", exe = "bw", tag_regex = '^cli-v\d+(\.\d+)*' }
 "ubi:dandavison/delta"                                      = "0.16.5"
-"ubi:denisidoro/navi"                                       = "2.22.1"
+"ubi:denisidoro/navi"                                       = "2.24.0"
 "ubi:dlvhdr/diffnav"                                        = "0.3.1"
 "ubi:dlvhdr/gh-dash"                                        = "4.16.2"
 "ubi:gitui-org/gitui"                                       = "0.22.1"
