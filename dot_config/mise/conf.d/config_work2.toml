@@ -1,5 +1,5 @@
 [tools]
 "aqua:ariga/atlas"    = "0.36.1"
-aws-cli               = "2.28.6"
+aws-cli               = "2.28.25"
 direnv                = "2.37.1"
 "npm:graphql-voyager" = "2.1.0"
