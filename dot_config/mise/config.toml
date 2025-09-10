@@ -49,7 +49,7 @@ tmux                                                        = "3.5"
 "ubi:dlvhdr/gh-dash"                                        = "4.16.2"
 "ubi:gitui-org/gitui"                                       = "0.22.1"
 "ubi:hadolint/hadolint"                                     = "2.12.0"
-"ubi:jesseduffield/lazydocker"                              = "0.23.1"
+"ubi:jesseduffield/lazydocker"                              = "0.24.1"
 "ubi:junegunn/fzf"                                          = "0.64.0"
 "ubi:koalaman/shellcheck"                                   = "0.11.0"
 "ubi:mvdan/sh"                                              = { version = "3.12.0", exe = "shfmt" }
