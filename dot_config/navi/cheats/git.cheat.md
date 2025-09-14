@@ -100,6 +100,9 @@ git commit --no-edit
 # rename git file/directory
 git mv <ls-files> <ls-files>
 
+# remove git file from git (keep local file)
+git rm --cached <file>
+
 # rename local branch
 git branch -m <branch> <branch>
 
