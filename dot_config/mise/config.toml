@@ -2,6 +2,7 @@
 # https://evermeet.cx/ffmpeg/
 # https://github.com/acj/asdf-ffmpeg
 ASDF_FFMPEG_ENABLE = "gpl libx264"
+MISE_JOBS          = 1
 
 [tools]
 # ffmpeg                                                      = "latest"
