@@ -25,31 +25,11 @@
 # 実行順:atinit -> atpull! -> make'!!' -> mv -> cp -> make! -> atclone/atpull -> make -> (plugin script loading) -> src -> multisrc -> atload.
 # https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#order-of-execution
 
-### command ###
-
-# Clipboard #
-zinit wait lucid light-mode blockf for \
-    atclone"go build cmd/gocopy/gocopy.go && go build cmd/gopaste/gopaste.go" atpull"%atclone" \
-    sbin"gocopy -> gocopy" \
-    sbin"gopaste -> gopaste" \
-    @'atotto/clipboard'
-
+### plugin ###
 zinit wait lucid blockf for \
     "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
     "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
 
-# tig #
-if [ "$(uname)" = "Darwin" ]; then
-zinit wait lucid light-mode blockf for \
-    atclone"make configure && make prefix=$ZPFX install-release-doc" \
-    atpull"%atclone" \
-    ver"tig-2.5.10" \
-    configure"!" \
-    make"install PREFIX=$ZPFX" \
-    @'jonas/tig'
-fi
-
-### plugin ###
 __zsh-autosuggestions_atload() {
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
     _zsh_autosuggest_start

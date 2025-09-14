@@ -14,7 +14,10 @@ MISE_JOBS          = 1
 bun                                                         = "1.2.21"
 cosign                                                      = "2.5.3"
 github-cli                                                  = "2.79.0"
+"github:jonas/tig"                                          = { version = "tig-2.5.10", bin_path = "{version}/bin", postinstall = "cd $HOME/.local/share/mise/installs/github-jonas-tig/tig-2.5.10 && make install" }
 "go:github.com/air-verse/air"                               = "1.63.0"
+"go:github.com/atotto/clipboard/cmd/gocopy"                 = "0.1.4"
+"go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
 "go:github.com/go-delve/delve/cmd/dlv"                      = "1.25.2"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.1"
 jq                                                          = "1.6"
