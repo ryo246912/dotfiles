@@ -162,39 +162,6 @@ abbrevs:
     snippet: make unittest
     if: *make
 
-  # mise
-  - name: mise install
-    abbr-pattern: ^mi$
-    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1
-
-  - name: mise ls --current
-    abbr: mls
-    snippet: mise ls --current
-
-  - name: mise run
-    abbr-pattern: ^mr$
-    snippet: mise run
-
-  - name: mise run --dry-run
-    abbr: mrd
-    snippet: mise run --dry-run
-
-  - name: mise tasks
-    abbr-pattern: ^mt$
-    snippet: mise tasks --hidden
-
-  - name: mise use
-    abbr-pattern: ^mu$
-    snippet: mise use
-
-  - name: mise upgrade
-    abbr-pattern: ^mup$
-    snippet: mise upgrade --interactive --bump
-
-  - name: mise use -g
-    abbr: mug
-    snippet: mise use -g
-
   # tig
   - name: tig
     abbr-pattern: ^t$
