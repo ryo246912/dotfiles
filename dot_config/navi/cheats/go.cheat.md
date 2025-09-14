@@ -29,6 +29,7 @@ go list -f '{{if eq .Name "main"}}{{.Dir}}/{{join .GoFiles " "}}{{end}}' ./...
 go list -f '{{join .Deps "\n"}}' <module> | xargs go list -f '{{if not .Standard}}{{.ImportPath}}{{end}}'
 ```
 
+$ cmd: echo -n "ls -l\nyazi"
 $ module: go list -f '{{if eq .Name "main"}}{{.Dir}}{{end}}' ./...
 ;$
 

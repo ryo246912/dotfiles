@@ -80,14 +80,14 @@ gh auth status
 # add authentication [ex:gh auth refresh -s project]
 gh auth refresh -s <scope>
 
+# view job log [--log-failed]
+gh run view --job <job_id>
+
 # cache list
 gh cache list
 
 # open repository in the web browser[--branch:][ex.gh browse --branch "main",gh browse --settings]
 gh browse<_browse_option>
-
-# project item
-open-cli <issue_url>
 
 # display user star
 gh api graphql<_--paginate> -f username="<username>" -f query='
@@ -238,11 +238,6 @@ $ repository: gh search repos --sort stars --match name <repo_name> \
 $ project_no: gh project list --owner <owner> \
   | column -ts $'\t' \
   --- --column 1
-$ issue_url: gh project item-list --owner <owner> --format json -L 100 <project_no> \
-  | jq -r '(.items[] | [.content.repository,.content.number, .content.type ,(if has("status") then .status else "-" end), .assignees[0], .title , .content.url]) ,["repo","no","type","status","assignee","title","url"] | @tsv' \
-  | tail -r \
-  | column -ts $'\t' \
-  --- --headers 1 --column 7
 $ repo_url: gh search repos "<word><_query>" --sort stars --limit 100 \
   --json fullName,description,language,pushedAt,stargazersCount,url \
   --jq '["repo","language","pushedAt","star","url","description"], (.[] | [.fullName,(if .language != "" then .language else "-" end),(.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")),.stargazersCount,.url,.description]) | @tsv' \
