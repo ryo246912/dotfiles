@@ -36,7 +36,7 @@ node                                                        = "22.17.1"
 "pipx:zizmor"                                               = "1.12.1"
 python                                                      = "3.13.7"
 rust                                                        = "1.89.0"
-terraform                                                   = "1.13.1"
+terraform                                                   = "1.13.2"
 tmux                                                        = "3.5"
 "ubi:Ryooooooga/zabrze"                                     = "0.5.0"
 "ubi:Wilfred/difftastic"                                    = { version = "0.64.0", exe = "difft" }
