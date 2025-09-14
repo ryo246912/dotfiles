@@ -3,7 +3,7 @@
 aws-cli                          = "2.28.25"
 direnv                           = "2.37.1"
 "go:github.com/99designs/gqlgen" = "0.17.78"
-"go:gotest.tools/gotestsum"      = "1.12.3"
+"go:gotest.tools/gotestsum"      = "1.13.0"
 "npm:graphql-voyager"            = "2.1.0"
 "ubi:Songmu/ecschedule"          = "0.15.3"
 "ubi:ankitpokhrel/jira-cli"      = { version = "1.7.0", exe = "jira" }
