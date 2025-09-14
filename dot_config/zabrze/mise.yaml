@@ -5,7 +5,7 @@ abbrevs:
 
   - name: mise install interactive
     abbr-pattern: ^mii$
-    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1 $(mise ls --current | fzf | awk '{print $1}')
+    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1 $(mise ls --current | fzf | awk '{printf "%s ", $1}' | sed 's/ $//')
 
   - name: mise ls --current
     abbr: mls
