@@ -57,6 +57,7 @@ tmux                                                        = "3.5"
 "ubi:koalaman/shellcheck"                                   = "0.11.0"
 "ubi:mvdan/sh"                                              = { version = "3.12.0", exe = "shfmt" }
 "ubi:neovim/neovim"                                         = { version = "0.11.4", exe = "nvim" }
+"ubi:pnpm/pnpm"                                             = "10.16.1"
 "ubi:rhysd/actionlint"                                      = "1.7.7"
 "ubi:ryo246912/gh-actions-dash"                             = "0.1.5"
 "ubi:ryo246912/gh-reassign-reviewer"                        = "0.0.6"
