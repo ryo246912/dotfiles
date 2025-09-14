@@ -20,7 +20,6 @@ install_package() {
     git
     go
     gpg
-    ijq
     mise
     pinentry-mac
     ugrep
