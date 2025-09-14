@@ -187,7 +187,7 @@ abbrevs:
 
   # other tools
   - name: ug -QPn
-    abbr-pattern: (ug$|igrep)
+    abbr-pattern: (^ug$|igrep)
     snippet: ug -QPn
     global: true
 
