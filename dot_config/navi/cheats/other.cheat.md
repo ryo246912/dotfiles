@@ -40,11 +40,11 @@ rustup install stable
 # Rust: update
 rustup update
 
-# renovate: dry-run
-LOG_LEVEL=debug bunx renovate --local --token "$(gh auth token)" --dry-run ryo246912/dotfiles
+# renovate: dry-run remote
+LOG_LEVEL=debug renovate --token "$(ghtkn get)" --dry-run ryo246912/dotfiles
 
 # renovate: run local
-LOG_LEVEL=debug bunx renovate --token "$(gh auth token)" --dry-run --platform=local
+LOG_LEVEL=debug renovate --token "$(ghtkn get)" --dry-run --platform=local
 
 # vim : move n rows
 :<n>
