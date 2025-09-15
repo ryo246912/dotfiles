@@ -205,7 +205,7 @@ abbrevs:
 
   # Global abbreviations
   - name: "|"
-    abbr: p
+    abbr-pattern: ^pi$
     snippet: "|"
     global: true
 
