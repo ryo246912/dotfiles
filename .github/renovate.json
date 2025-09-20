@@ -33,6 +33,10 @@
       "groupName": "Go modules"
     },
     {
+      "matchDepNames": ["ubi:jonas/tig"],
+      "versionCompatibility": "^(?<compatibility>tig-)(?<version>.*)$"
+    },
+    {
       "matchDepNames": ["ubi:bitwarden/clients"],
       "versionCompatibility": "^(?<compatibility>cli-v)(?<version>.*)$"
     }
