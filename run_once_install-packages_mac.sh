@@ -14,13 +14,11 @@ install_package() {
   local PACKAGES=(
     oven-sh/bun/bun
     blueutil
-    colordiff
     font-hackgen
     font-hackgen-nerd
     git
     go
     gpg
-    ijq
     mise
     pinentry-mac
     ugrep

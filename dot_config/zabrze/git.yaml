@@ -482,6 +482,12 @@ abbrevs:
     global: true
     context: *gitdiff
 
+  - name: (git log) -p
+    abbr: p
+    snippet: -p
+    global: true
+    context: *gitlog
+
   - name: (git log) --all
     abbr: al
     snippet: --all
