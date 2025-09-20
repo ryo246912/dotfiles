@@ -52,7 +52,7 @@ tmux                                                       = "3.5"
 "ubi:dlvhdr/diffnav"                                       = "0.3.1"
 "ubi:dlvhdr/gh-dash"                                       = "4.16.2"
 "ubi:gitui-org/gitui"                                      = "0.22.1"
-"ubi:gpanders/ijq"                                         = "1.1.2"
+"ubi:gpanders/ijq"                                         = "1.2.0"
 "ubi:hadolint/hadolint"                                    = "2.13.1"
 "ubi:jesseduffield/lazydocker"                             = "0.24.1"
 "ubi:jonas/tig"                                            = { version = "tig-2.6.0", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
