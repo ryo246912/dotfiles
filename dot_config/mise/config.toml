@@ -14,7 +14,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 bun                                                         = "1.2.22"
 cosign                                                      = "2.6.0"
 github-cli                                                  = "2.79.0"
-"github:jonas/tig"                                          = { version = "tig-2.5.10", postinstall = "cd $HOME/.local/share/mise/installs/github-jonas-tig/tig-2.5.10 && make install" }
 "go:github.com/air-verse/air"                               = "1.63.0"
 "go:github.com/atotto/clipboard/cmd/gocopy"                 = "0.1.4"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
@@ -59,6 +58,7 @@ tmux                                                        = "3.5"
 "ubi:gpanders/ijq"                                          = "1.1.2"
 "ubi:hadolint/hadolint"                                     = "2.13.1"
 "ubi:jesseduffield/lazydocker"                              = "0.24.1"
+"ubi:jonas/tig"                                             = { version = "tig-2.5.10", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | sort -V | tail -n 1)" && make install' }
 "ubi:junegunn/fzf"                                          = "0.65.2"
 "ubi:koalaman/shellcheck"                                   = "0.11.0"
 "ubi:mvdan/sh"                                              = { version = "3.12.0", exe = "shfmt" }
