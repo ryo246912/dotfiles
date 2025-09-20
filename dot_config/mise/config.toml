@@ -55,7 +55,7 @@ tmux                                                       = "3.5"
 "ubi:gpanders/ijq"                                         = "1.1.2"
 "ubi:hadolint/hadolint"                                    = "2.13.1"
 "ubi:jesseduffield/lazydocker"                             = "0.24.1"
-"ubi:jonas/tig"                                            = { version = "tig-2.5.10", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | sort -V | tail -n 1)" && make install' }
+"ubi:jonas/tig"                                            = { version = "tig-2.5.10", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
 "ubi:junegunn/fzf"                                         = "0.65.2"
 "ubi:koalaman/shellcheck"                                  = "0.11.0"
 "ubi:mvdan/sh"                                             = { version = "3.12.0", exe = "shfmt" }
