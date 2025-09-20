@@ -31,6 +31,10 @@
     {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
+    },
+    {
+      "matchDepNames": ["ubi:bitwarden/clients"],
+      "extractVersion": "^cli-v(?<version>.*)"
     }
   ]
 }
