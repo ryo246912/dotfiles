@@ -34,7 +34,7 @@
     },
     {
       "matchDepNames": ["ubi:bitwarden/clients"],
-      "extractVersion": "^cli-v(?<version>.*)"
+      "versionCompatibility": "^(?<compatibility>cli-v)(?<version>.*)$"
     }
   ]
 }
