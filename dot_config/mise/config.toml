@@ -46,7 +46,7 @@ tmux                                                       = "3.5"
 "ubi:antonmedv/fx"                                         = "39.1.0"
 "ubi:astral-sh/uv"                                         = "0.8.17"
 "ubi:atuinsh/atuin"                                        = "18.0.1"
-"ubi:bitwarden/clients"                                    = { version = "cli-v2025.6.1", exe = "bw", tag_regex = '^cli-v\d+(\.\d+)*' }
+"ubi:bitwarden/clients"                                    = { version = "cli-v2025.8.0", exe = "bw", tag_regex = '^cli-v\d+(\.\d+)*' }
 "ubi:dandavison/delta"                                     = "0.18.2"
 "ubi:denisidoro/navi"                                      = "2.23.0"
 "ubi:dlvhdr/diffnav"                                       = "0.3.1"
