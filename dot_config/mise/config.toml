@@ -18,7 +18,7 @@ github-cli                                                 = "2.79.0"
 "go:github.com/x-motemen/gore/cmd/gore"                    = "0.6.1"
 "http:colordiff"                                           = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 jq                                                         = "1.6"
-node                                                       = "22.17.1"
+node                                                       = "22.19.0"
 "npm:@anthropic-ai/claude-code"                            = "1.0.48"
 "npm:@devcontainers/cli"                                   = "0.80.1"
 "npm:@google/gemini-cli"                                   = "0.2.1"
