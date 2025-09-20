@@ -20,6 +20,36 @@
     "prCreation": "immediate",
     "vulnerabilityFixStrategy": "lowest"
   },
+  "customDatasources": {
+    "brew-formula": {
+      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/formula/{{{packageName}}}.json",
+      "transformTemplates": [
+        "{ \"releases\": [ { \"version\": versions.stable, \"isDeprecated\": deprecated, \"sourceUrl\": homepage } ] }"
+      ],
+      "format": "json"
+    },
+    "brew-cask": {
+      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/cask/{{{packageName}}}.json",
+      "transformTemplates": [
+        "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"sourceUrl\": homepage } ] }"
+      ],
+      "format": "json"
+    }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["**/brew.json"],
+      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "custom.brew-formula"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["**/brew_cask.json"],
+      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "custom.brew-cask"
+    }
+  ],
   "mise": {
     "managerFilePatterns": ["dot_config/mise/**/*.toml"]
   },
