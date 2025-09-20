@@ -14,7 +14,6 @@ install_package() {
   local PACKAGES=(
     oven-sh/bun/bun
     blueutil
-    colordiff
     font-hackgen
     font-hackgen-nerd
     git
