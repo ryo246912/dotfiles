@@ -1,0 +1,3 @@
+apps:
+  - name: ryo246912/none
+    client_id: Iv23liBhxOxAuB9wfBOa # Mandatory. GitHub App Client ID
