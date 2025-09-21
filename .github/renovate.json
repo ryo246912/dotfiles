@@ -24,14 +24,14 @@
     "brew-formula": {
       "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/formula/{{{packageName}}}.json",
       "transformTemplates": [
-        "{ \"releases\": [ { \"version\": versions.stable, \"isDeprecated\": deprecated, \"releaseTimestamp\": generated_date & 'T00:00:00Z', \"digest\": urls.stable.checksum } ], \"homepage\": homepage, \"sourceUrl\": (urls.head.url ? urls.head.url : homepage) }"
+        "{ \"releases\": [ { \"version\": versions.stable, \"isDeprecated\": deprecated, \"digest\": urls.stable.checksum } ], \"homepage\": homepage, \"sourceUrl\": (urls.head.url ? urls.head.url : homepage), \"changelogUrl\": ($contains($string(urls.head.url ? urls.head.url : homepage), 'github.com') ? $join([$replace((urls.head.url ? urls.head.url : homepage), /\\.git$/, ''), '/releases'], '') : '') }"
       ],
       "format": "json"
     },
     "brew-cask": {
       "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/cask/{{{packageName}}}.json",
       "transformTemplates": [
-        "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"releaseTimestamp\": generated_date & 'T00:00:00Z', \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage }"
+        "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage, \"changelogUrl\": ($contains($string(homepage), 'github.com') ? $join([$replace((homepage), /\\.git$/, ''), '/releases'], '') : '') }"
       ],
       "format": "json"
     }
