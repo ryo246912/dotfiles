@@ -3,7 +3,7 @@
   "oven-sh/bun/bun": "1.2.19",
   "coreutils": "9.7",
   "findutils": "4.10.0",
-  "gh": "2.76.2",
+  "gh": "2.79.0",
   "git": "2.50.1",
   "gnu-sed": "4.9",
   "gnupg": "2.4.8",
