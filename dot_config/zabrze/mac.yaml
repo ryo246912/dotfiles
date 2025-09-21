@@ -1,0 +1,4 @@
+abbrevs:
+  - name: taproom(brew list)
+    abbr-pattern: brl
+    snippet: taproom -f "Expl. Installed" -t
