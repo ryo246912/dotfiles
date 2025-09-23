@@ -1,6 +1,6 @@
 [tools]
 "aqua:ariga/atlas"               = "0.37.0"
-aws-cli                          = "2.28.25"
+aws-cli                          = "2.30.6"
 direnv                           = "2.37.1"
 "go:github.com/99designs/gqlgen" = "0.17.78"
 "go:gotest.tools/gotestsum"      = "1.13.0"
