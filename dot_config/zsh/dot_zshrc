@@ -6,6 +6,7 @@ if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /d
 fi
 
 for file in $XDG_CONFIG_HOME/zsh/*.zsh; do
+  [[ "$file" == *lazy.zsh ]] && continue
   source "$file"
 done
 
@@ -28,7 +29,7 @@ zinit light-mode for \
     '@zdharma-continuum/zinit-annex-patch-dl' \
     '@zdharma-continuum/zinit-annex-rust'
 
-# .zshrc.lazyを遅延読み込み
+# lazy.zshを遅延読み込み
 zinit wait lucid light-mode as'null' \
-    atinit'source "${HOME}/.config/zsh/zshrc.lazy"' \
+    atinit'source "${HOME}/.config/zsh/lazy.zsh"' \
     for @'zdharma-continuum/null'

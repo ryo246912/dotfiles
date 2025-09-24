@@ -16,7 +16,7 @@ fi
 {
   files=(
     $HOME/.zprofile{,.secret}
-    $HOME/.zshrc{,.secret,.lazy}
+    $HOME/.zshrc{,.secret}
     $HOME/.zcompdump
   )
   for file in "${files[@]}" ; do
