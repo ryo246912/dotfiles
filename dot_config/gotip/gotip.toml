@@ -1,0 +1,14 @@
+command = [
+    "gotestsum",
+    "--format",
+    "dots-v2",
+    "--",
+    "-run",
+    "${name}",
+    "${package}",
+    "-count=1",
+    "-v",
+]
+
+[history]
+limit = 1000
