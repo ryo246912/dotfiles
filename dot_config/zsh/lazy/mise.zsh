@@ -32,6 +32,11 @@ if command -v atuin >/dev/null 2>&1; then
     __generate_and_load_completion "atuin"
 fi
 
+# aqua
+if command -v aqua >/dev/null 2>&1; then
+    export AQUA_GLOBAL_CONFIG="$HOME/.config/aqua/aqua.yaml"
+fi
+
 # bat
 if command -v bat >/dev/null 2>&1; then
     export BAT_THEME="Monokai Extended"

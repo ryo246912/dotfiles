@@ -11,6 +11,11 @@ abbrevs:
     abbr: atst
     snippet: atuin stats
 
+  # aqua commands
+  - name: aqua search
+    abbr-pattern: (^as$|^ag$)
+    snippet: aqua g
+
   # basic commands
   - name: code .
     abbr-pattern: ^c\.$
