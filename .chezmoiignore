@@ -11,7 +11,7 @@ _*
 .config/memo*
 .config/sidebery*
 .config/vscode*
-.config/zsh/temp/*
+**/*temp*
 **/alacritty.yml
 not_config*
 
