@@ -10,6 +10,12 @@ cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --
 ; other
 ;--------------------------------------------------------------
 % other
+# act : list workflows for a specific event [-l:list]
+act -l <event>
+
+# act : run workflows for a specific event[-n:dry-run]
+act<_-dry-run_><event> -W <workflow>
+
 # claude : mcp add
 claude mcp add <name> -s <scope> -- <command>
 
@@ -85,6 +91,11 @@ zi edit <plugin>
 # zinit : delete plugin [ex:zinit delete sharkdp/bat]
 zi delete <plugin>
 ```
+; act
+$ event: echo -e "push\npull_request\nissues"
+$ _-dry-run_: echo -e " \n -n "
+$ workflow: find .github/workflows
+
 ; claude
 $ scope: echo -e "user\nproject\nlocal"
 

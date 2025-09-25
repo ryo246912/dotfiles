@@ -1,0 +1,4 @@
+--container-architecture linux/amd64
+-P ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-latest
+-P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:js-22.04
+-P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:js-20.04
