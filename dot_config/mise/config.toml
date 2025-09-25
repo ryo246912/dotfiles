@@ -40,7 +40,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:wagoodman/dive"                                       = "0.13.1"
 "aqua:zizmorcore/zizmor"                                    = "1.12.1"
 bun                                                         = "1.2.22"
-"cosign"                                                    = "2.6.0"
+cosign                                                      = "2.6.0"
 "go:github.com/air-verse/air"                               = "1.63.0"
 "go:github.com/atotto/clipboard/cmd/gocopy"                 = "0.1.4"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
@@ -85,6 +85,7 @@ auto_install = false
 experimental = true
 gpg_verify   = true
 jobs         = 1
+lockfile     = true
 
 [settings.npm]
 bun = true
