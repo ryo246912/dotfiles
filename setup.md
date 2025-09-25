@@ -26,13 +26,17 @@
     ```sh
     export GITHUB_TOKEN=$(gh auth token)
     ```
+  - [ ] 検証ツールのインストール
+    ```sh
+    mise install --jobs=1 cosign slsa-verifier
+    ```
   - [ ] ランタイムのインストール
     ```sh
     mise install --jobs=1 node python rust
     ```
   - [ ] 他ツールのインストール
     ```sh
-    mise install --jobs=1
+    mise install --jobs=2
     ```
 
 - [ ] karabiner-elements
