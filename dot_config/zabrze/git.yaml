@@ -318,6 +318,10 @@ abbrevs:
     abbr: gst
     snippet: git stash --include-untracked --message "wip; {}" -- "."
 
+  - name: git stash list
+    abbr: gsl
+    snippet: git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/%m/%d-%H:%M:%S"
+
   - name: git stash pop
     abbr: gsp
     snippet: git stash pop stash@{0}

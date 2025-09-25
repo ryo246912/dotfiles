@@ -5,11 +5,15 @@ abbrevs:
 
   - name: mise install interactive
     abbr-pattern: ^mii$
-    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1 $(mise ls --current | fzf | awk '{printf "%s ", $1}' | sed 's/ $//')
+    snippet: GITHUB_TOKEN=$(gh auth token) mise install --jobs=1 $(mise ls --current | fzf -m | awk '{printf "%s ", $1}' | sed 's/ $//')
 
   - name: mise ls --current
     abbr: mls
     snippet: mise ls --current
+
+  - name: mise ls interactive
+    abbr: mlss
+    snippet: mise ls $(mise ls --current | fzf -m | awk '{printf "%s ", $1}' | sed 's/ $//')
 
   - name: mise run
     abbr-pattern: ^mr$
@@ -26,6 +30,11 @@ abbrevs:
   - name: mise use
     abbr-pattern: ^mu$
     snippet: mise use
+
+
+  - name: mise uninstall interactive
+    abbr-pattern: ^mui$
+    snippet: mise uninstall $(mise ls --current | fzf -m | awk '{printf "%s ", $1}' | sed 's/ $//')
 
   - name: mise upgrade
     abbr-pattern: ^mup$
