@@ -7,7 +7,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-"aqua:Wilfred/difftastic"                                   = "0.64.0"
+"aqua:Wilfred/difftastic"                                   = "0.65.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.9.8"
 "aqua:antonmedv/fx"                                         = "39.1.0"
 "aqua:astral-sh/uv"                                         = "0.8.22"
