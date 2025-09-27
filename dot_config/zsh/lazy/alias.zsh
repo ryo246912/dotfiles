@@ -1,4 +1,5 @@
 alias vim="nvim"
+alias fly="flyctl"
 
 claude_check_version() {
   local desired_version="1.0.48"
