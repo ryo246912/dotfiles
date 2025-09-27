@@ -4,7 +4,7 @@
 "aqua:ariga/atlas"               = "0.37.0"
 "aqua:aws/aws-cli"               = "2.30.6"
 "aqua:direnv/direnv"             = "2.37.1"
-"aqua:kayac/ecspresso"           = "2.6.0"
+"aqua:kayac/ecspresso"           = "2.6.1"
 "go:github.com/99designs/gqlgen" = "0.17.78"
 "go:gotest.tools/gotestsum"      = "1.13.0"
 "npm:graphql-voyager"            = "2.1.0"
