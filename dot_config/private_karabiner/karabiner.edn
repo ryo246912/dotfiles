@@ -97,7 +97,8 @@
                  ;; [:s [:open "Slack"]]
                  ;; [:t [:open "Alacritty"]]
                  ;; [:v [:open "Visual Studio Code"]]
-                 [:z [:open "System Preferences"]]]}
+                 ;; [:z [:open "System Preferences"]]
+                 ]}
         {:des "spacebar mode"
          :rules [[:spacebar ["spacebar mode" 1] nil {:afterup ["spacebar mode" 0] :alone :spacebar}]
                  [:right_command [["modifier status" 1] [:notification "modifier=commnad"]] [["spacebar mode" 1] ["modifier status" 0]]]

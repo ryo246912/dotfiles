@@ -5,28 +5,28 @@
 flyctl auth signup
 
 # display apps list
-fly apps list
+flyctl apps list
 
 # status
-fly status -a "<app>"
+flyctl status -a "<app>"
 
 # ssh
-fly ssh console -a "<app>"
+flyctl ssh console -a "<app>"
 
 # open dashboard
-fly dashboard -a "<app>"
+flyctl dashboard -a "<app>"
 
 # display log
-fly logs -a "<app>"
+flyctl logs -a "<app>"
 
 # connect postgres
-fly postgres connect -a "<psgl_app>"
+flyctl postgres connect -a "<psgl_app>"
 
 # open docs
-fly docs
+flyctl docs
 ```
 
-$ app: fly apps list \
-  --- --headers 1 --column 1
+$ app: flyctl apps list \
+  --- --headers 1 --map "awk '{print $1}'"
 $ psgl_app: echo -e "psgl\n"
 ;$
