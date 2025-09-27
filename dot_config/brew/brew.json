@@ -1,7 +1,7 @@
 {
   "blueutil": "2.13.0",
   "oven-sh/bun/bun": "1.2.19",
-  "coreutils": "9.7",
+  "coreutils": "9.8",
   "findutils": "4.10.0",
   "gh": "2.79.0",
   "git": "2.51.0",
