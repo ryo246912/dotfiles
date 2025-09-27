@@ -39,6 +39,14 @@
   "customManagers": [
     {
       "customType": "regex",
+      "managerFilePatterns": ["**/fly.toml"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>[^\":]+(?::\\d+)?(?:/[^\":]+)*):(?<currentValue>v?[^\"/:]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["**/brew.json"],
       "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
       "datasourceTemplate": "custom.brew-formula"
