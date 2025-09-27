@@ -4,13 +4,13 @@
 #
 
 app            = "ryo-shellhistory"
-primary_region = "nrt"
+primary_region = "nrt"              # 東京リージョン
 
 [experimental]
 cmd = ["server", "start"]
 
 [build]
-image = "ghcr.io/atuinsh/atuin:v18.0.1"
+image = "ghcr.io/atuinsh/atuin:v18.8.0"
 
 [env]
 ATUIN_HOST              = "0.0.0.0"
@@ -18,14 +18,23 @@ ATUIN_OPEN_REGISTRATION = "false"
 ATUIN_PORT              = "8888"
 
 [http_service]
-auto_start_machines  = true
-auto_stop_machines   = true
+auto_start_machines  = true    # オンデマンド起動
+auto_stop_machines   = "stop"  # 自動停止
 force_https          = true
 internal_port        = 8888
-min_machines_running = 0
+min_machines_running = 0       # 最小起動数
 processes            = ["app"]
 
+[checks]
+[checks.atuin_health]
+grace_period = "30s"
+method       = "GET"
+path         = "/"
+port         = 8888
+timeout      = "5s"
+type         = "http"
+
 [[vm]]
-cpu_kind  = "shared"
-cpus      = 1
-memory_mb = 256
+cpu_kind  = "shared" # 最安のCPUタイプ
+cpus      = 1        # 最小CPU数
+memory_mb = 256      # 最小メモリ
