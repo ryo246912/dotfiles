@@ -8,8 +8,12 @@ abbrevs:
     snippet: chezmoi add --template
 
   - name: chezmoi apply --interactive --exclude=scripts,templates
-    abbr-pattern: (chap|chpa)
+    abbr-pattern: (^chap$|chpa)
     snippet: chezmoi apply --interactive --exclude=scripts,templates
+
+  - name: chezmoi apply (source)
+    abbr: chapp
+    snippet: chezmoi add $(chezmoi list -p absolute -i files | fzf -m)
 
   - name: chezmoi apply --source-path
     abbr: chas

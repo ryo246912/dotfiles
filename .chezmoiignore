@@ -1,9 +1,12 @@
 {{- if eq .chezmoi.os "darwin" -}}
-.config/autohotkey*
+**/*autohotkey*
 .config/atuin/fly.toml
+**/*win*
 {{ else -}}
-.config/karabiner*
-.config/raycast*
+**/*karabiner*
+**/*raycast*
+**/*mac*
+**/*brew*
 {{- end }}
 _*
 .config/claude*
@@ -11,7 +14,6 @@ _*
 .config/memo*
 .config/sidebery*
 .config/vscode*
-.config/zsh/temp/*
 **/alacritty.yml
 not_config*
 
