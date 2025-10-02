@@ -2,7 +2,7 @@
 "aqua:Songmu/ecschedule"         = "0.15.3"
 "aqua:ankitpokhrel/jira-cli"     = "1.7.0"
 "aqua:ariga/atlas"               = "0.37.0"
-"aqua:aws/aws-cli"               = "2.30.6"
+"aqua:aws/aws-cli"               = "2.31.3"
 "aqua:direnv/direnv"             = "2.37.1"
 "aqua:kayac/ecspresso"           = "2.6.1"
 "go:github.com/99designs/gqlgen" = "0.17.78"
