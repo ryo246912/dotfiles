@@ -90,19 +90,6 @@ abbrevs:
     abbr: czae
     snippet: CZ_LANG=en czg ai
 
-  # docker
-  - name: docker
-    abbr-pattern: ^d$
-    snippet: docker
-
-  - name: docker compose
-    abbr-pattern: ^dc$
-    snippet: docker compose
-
-  - name: lazydocker
-    abbr-pattern: ^ld$
-    snippet: lazydocker
-
   # go
   - name: go test ./...
     abbr-pattern: ^got$

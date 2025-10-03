@@ -1,0 +1,32 @@
+abbrevs:
+  - name: docker
+    abbr-pattern: ^d$
+    snippet: docker
+
+  - name: docker compose
+    abbr-pattern: ^dc$
+    snippet: docker compose
+
+  - name: docker compose up
+    abbr-pattern: ^dcu$
+    snippet: docker compose up
+
+  - name: docker compose stop
+    abbr-pattern: ^dcs$
+    snippet: docker compose stop
+
+  - name: docker compose down
+    abbr-pattern: ^dcd$
+    snippet: docker compose down
+
+  - name: docker compose ls
+    abbr-pattern: ^dcl$
+    snippet: docker compose ls --all
+
+  - name: docker compose ps
+    abbr-pattern: ^dcp$
+    snippet: docker compose ps --all
+
+  - name: lazydocker
+    abbr-pattern: ^ld$
+    snippet: lazydocker
