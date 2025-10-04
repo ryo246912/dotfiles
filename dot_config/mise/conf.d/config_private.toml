@@ -1,4 +1,4 @@
 [tools]
 java                  = "21.0.2"
 kotlin                = "2.2.10"
-"ubi:superfly/flyctl" = "0.3.185"
+"ubi:superfly/flyctl" = "0.3.189"
