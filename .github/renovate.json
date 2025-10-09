@@ -1,82 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "labels": ["renovate"],
+  "extends": [
+    "github>ryo246912/renovate-config"
+  ],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
-  "dependencyDashboard": true,
-  "timezone": "Asia/Tokyo",
   "reviewers": ["ryo246912"],
-  "minimumReleaseAge": "3 days",
-  "internalChecksFilter": "strict",
-  "vulnerabilityAlerts": {
-    "groupName": null,
-    "schedule": [],
-    "dependencyDashboardApproval": false,
-    "minimumReleaseAge": null,
-    "rangeStrategy": "update-lockfile",
-    "commitMessageSuffix": "[SECURITY]",
-    "branchTopic": "{{{datasource}}}-{{{depNameSanitized}}}-vulnerability",
-    "prCreation": "immediate",
-    "vulnerabilityFixStrategy": "lowest"
-  },
-  "customDatasources": {
-    "brew-formula": {
-      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/formula/{{{packageName}}}.json",
-      "transformTemplates": [
-        "{ \"releases\": [ { \"version\": versions.stable, \"isDeprecated\": deprecated, \"digest\": urls.stable.checksum } ], \"homepage\": homepage, \"sourceUrl\": (urls.head.url ? urls.head.url : homepage), \"changelogUrl\": ($contains($string(urls.head.url ? urls.head.url : homepage), 'github.com') ? $join([$replace((urls.head.url ? urls.head.url : homepage), /\\.git$/, ''), '/releases'], '') : '') }"
-      ],
-      "format": "json"
-    },
-    "brew-cask": {
-      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/cask/{{{packageName}}}.json",
-      "transformTemplates": [
-        "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage, \"changelogUrl\": ($contains($string(homepage), 'github.com') ? $join([$replace((homepage), /\\.git$/, ''), '/releases'], '') : '') }"
-      ],
-      "format": "json"
-    }
-  },
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["**/fly.toml"],
-      "matchStrings": [
-        "image\\s*=\\s*\"(?<depName>[^\":]+(?::\\d+)?(?:/[^\":]+)*):(?<currentValue>v?[^\"/:]+)\""
-      ],
-      "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["**/brew.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-formula"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["**/brew_cask.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-cask"
-    }
-  ],
-  "mise": {
-    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
-  },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch"],
-      "matchCurrentVersion": "!/^0/"
-    },
-    {
-      "matchManagers": ["gomod"],
-      "groupName": "Go modules"
-    },
-    {
-      "matchDepNames": ["ubi:jonas/tig"],
-      "versionCompatibility": "^(?<compatibility>tig-)(?<version>.*)$"
-    },
-    {
-      "matchDepNames": ["ubi:bitwarden/clients"],
-      "versionCompatibility": "^(?<compatibility>cli-v)(?<version>.*)$"
-    }
-  ]
+  "minimumReleaseAge": "3 days"
 }
