@@ -20,7 +20,8 @@
   },
   "worktree": {
     "autoDirectory": true,
-    "autoDirectoryPattern": "../worktrees/{branch}"
+    "autoDirectoryPattern": "../worktrees/{branch}",
+    "copySessionData": true
   },
   "command": {
     "command": "claude"
@@ -43,5 +44,6 @@
     ],
     "defaultPresetId": "1",
     "selectPresetOnStart": true
-  }
+  },
+  "worktreeHooks": {}
 }
