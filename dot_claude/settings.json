@@ -31,6 +31,9 @@
     ],
     "blockUnlistedCommands": true
   },
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -55,28 +58,6 @@
           {
             "type": "command",
             "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "osascript -e 'display notification \"確認待ちです。\" with title \"Claude Code\" sound name \"Glass\"'"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "osascript -e 'display notification \"作業が完了しました。\" with title \"Claude Code\" sound name \"Hero\"'"
           }
         ]
       }
