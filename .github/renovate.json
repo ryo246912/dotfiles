@@ -1,8 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>ryo246912/renovate-config"
-  ],
+  "extends": ["github>ryo246912/renovate-config"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
   "reviewers": ["ryo246912"],
