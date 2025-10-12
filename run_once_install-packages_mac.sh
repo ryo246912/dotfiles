@@ -22,7 +22,6 @@ install_package() {
     mise
     pinentry-mac
     ugrep
-    yqrashawn/goku/goku
 
     coreutils
     findutils

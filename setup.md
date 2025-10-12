@@ -41,9 +41,9 @@
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
-  - [ ] `goku`を実行
+  - [ ] `karabiner.ts`を実行
     ```sh
-    goku
+    mise run karabiner-apply
     ```
 
 - [ ] Clibor
