@@ -58,7 +58,7 @@ abbrevs:
     snippet: ls -l
 
   - name: nvim
-    abbr-pattern: (^nv|^v)
+    abbr-pattern: (^nv$|^v$)
     snippet: nvim
 
   - name: nvim .
