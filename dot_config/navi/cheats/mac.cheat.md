@@ -8,7 +8,7 @@ brew list --versions<_--filter> | less -iRMW --use-color
 brew install<_--dry-run><_--cask> <app_name>
 
 # upgrade app
-brew upgrade<_--cask> <app>
+brew upgrade<_--cask> <app_name>
 
 # uninstall unnecessary dependence
 brew autoremove
@@ -28,6 +28,7 @@ brew info --installed --json | jq 'map(select(.installed[].installed_on_request 
 # cask
 brew info --cask --installed --json=v2 | jq '.casks | map({key: .full_token, value: .version}) | from_entries' > ~/.local/share/chezmoi/dot_config/brew/brew_cask.json
 ```
+$ app_name: brew list -1 | grep -v "==>"
 $ _--filter: echo -e "\n --formula\n --cask"
 $ _--dry-run: echo -e "\n --dry-run"
 $ _--cask: echo -e "\n --cask"
