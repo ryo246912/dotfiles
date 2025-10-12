@@ -6,6 +6,7 @@ cabbr tet horizon terminal
 cabbr tev vertical terminal
 cabbr tey vertical terminal
 " 設定ファイルをリロードする
+" TODO: 修正する
 cabbr sv luafile ~/.config/nvim/init.lua
 " 挿入モードの切り替え
 cabbr <leader>P :set paste!
