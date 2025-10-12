@@ -77,6 +77,16 @@ description = "Run fix json files"
 hide        = true
 run         = "prettier --write '**/*.json'"
 
+[tasks.karabiner-apply]
+description = "build and apply karabiner.ts configuration"
+run         = ["bun dot_config/karabiner-ts/karabiner.ts"]
+
+[tasks.karabiner-dry-run]
+description = "build and dry-run karabiner.ts configuration"
+run = [
+    "bun dot_config/karabiner-ts/karabiner.ts --dry-run > dot_config/karabiner-ts/karabiner.json",
+]
+
 [tools]
 actionlint                     = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.3"
