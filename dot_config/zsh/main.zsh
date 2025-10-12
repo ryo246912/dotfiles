@@ -1,6 +1,5 @@
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 export EDITOR=vim
-export VIMINIT='let $MYVIMRC="~/.config/vim/.vimrc" | source $MYVIMRC'
 
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
