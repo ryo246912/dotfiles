@@ -4,7 +4,18 @@ return {
       dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' },
       ---@module 'render-markdown'
       ---@type render.md.UserConfig
-      opts = {},
+      opts = {
+        render_modes = true,
+        heading = {
+          width = "block",
+          left_pad = 0,
+          right_pad = 4,
+          icons = {},
+        },
+        code = {
+          width = "block",
+        },
+      },
   },
   {
     "rcarriga/nvim-notify",
