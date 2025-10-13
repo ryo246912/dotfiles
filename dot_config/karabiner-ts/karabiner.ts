@@ -1,5 +1,6 @@
 import { writeToProfile } from "karabiner.ts";
 import * as application from "./rules/applicationRule";
+import * as general from "./rules/generalRule";
 import * as japaneseKana from "./rules/japaneseKanaRule";
 import * as spacebar from "./rules/spacebarRule";
 
@@ -39,6 +40,7 @@ const writeTarget = isDryRun ? "--dry-run" : "Default";
 writeToProfile(
   writeTarget,
   [
+    general.Rules,
     japaneseKana.Rules,
     application.arcRules,
     application.vscodeRules,
