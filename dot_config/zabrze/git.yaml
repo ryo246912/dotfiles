@@ -326,11 +326,6 @@ abbrevs:
     abbr: gsp
     snippet: git stash pop stash@{0}
 
-  # Gitui
-  - name: gitui
-    abbr-pattern: ^gu$
-    snippet: gitui
-
   # FZF git shortcuts
   - name: fuzzy git branch
     abbr: fgb
@@ -570,3 +565,32 @@ abbrevs:
     snippet: --stat
     global: true
     context: *gitshow
+
+  # Gitui
+  - name: gitui
+    abbr-pattern: ^gu$
+    snippet: gitui
+
+  # tig
+  - name: tig
+    abbr-pattern: ^t$
+    snippet: tig
+
+  - name: tig --all
+    abbr-pattern: ^ta$
+    snippet: tig --all
+
+  - name: tig blame
+    abbr-pattern: ^tb$
+    snippet: tig blame
+
+  - name: tig status
+    abbr-pattern: ^ts$
+    snippet: tig status
+
+  - name: (tig) --all
+    abbr: a
+    snippet: --all
+    global: true
+    context: '^tig\s'
+
