@@ -82,7 +82,7 @@ tmux                                                        = "3.5"
 "ubi:ryo246912/gh-actions-dash"                             = "0.1.5"
 "ubi:ryo246912/gh-reassign-reviewer"                        = "0.0.6"
 "ubi:seachicken/gh-poi"                                     = "0.14.1"
-"ubi:shazow/wifitui"                                        = "0.4.2"
+"ubi:shazow/wifitui"                                        = "0.5.0"
 usage                                                       = "2.3.2"
 vim                                                         = "9.1.1006"
 
