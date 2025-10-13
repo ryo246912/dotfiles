@@ -176,6 +176,9 @@ abbrevs:
     snippet: --all
     global: true
     context: '^tig\s'
+  - name: rtty
+    abbr-pattern: (^rt$|^bt$)
+    snippet: rtty run zsh --font-size 12
 
   # other tools
   - name: ug -QPn
