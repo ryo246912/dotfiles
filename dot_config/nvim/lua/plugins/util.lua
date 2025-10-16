@@ -32,6 +32,12 @@ return {
     dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
     opts = {
       max_count = 10,
+        disabled_keys = {
+          ["<Up>"] = {},    -- 矢印キー(上)を許可
+          ["<Down>"] = {},  -- 矢印キー(下)を許可
+          ["<Left>"] = {},  -- 矢印キー(左)を許可
+          ["<Right>"] = {}, -- 矢印キー(右)を許可
+      }
     },
   },
   {
