@@ -64,7 +64,7 @@ run         = "prettier --check '**/*.{yaml,yml}'"
 [tasks.fix-yaml]
 description = "Run fix YAML files"
 hide        = true
-run         = "prettier --write '**/*.{yaml,yml}'"
+run         = "prettier --write --list-different '**/*.{yaml,yml}'"
 
 # json
 [tasks.lint-json]
@@ -75,16 +75,20 @@ run         = "prettier --check '**/*.json'"
 [tasks.fix-json]
 description = "Run fix json files"
 hide        = true
-run         = "prettier --write '**/*.json'"
+run         = "prettier --write --list-different '**/*.json'"
 
 [tasks.karabiner-apply]
 description = "build and apply karabiner.ts configuration"
-run         = ["bun dot_config/karabiner-ts/karabiner.ts"]
+run = [
+    "mise run karabiner-dry-run",
+    "bun dot_config/karabiner-ts/karabiner.ts",
+]
 
 [tasks.karabiner-dry-run]
 description = "build and dry-run karabiner.ts configuration"
 run = [
     "bun dot_config/karabiner-ts/karabiner.ts --dry-run > dot_config/karabiner-ts/karabiner.json",
+    "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
 ]
 
 [tools]
