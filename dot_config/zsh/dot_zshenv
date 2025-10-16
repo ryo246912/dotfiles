@@ -15,15 +15,15 @@ fi
 # . "$HOME/.cargo/env"
 
 # Nix
-if [ "$(uname)" = "Darwin" ]; then
-  if [ -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]; then
-    . "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh";
-  fi
-else
-  if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
-    . "$HOME/.nix-profile/etc/profile.d/nix.sh";
-  fi
-fi
+# if [ "$(uname)" = "Darwin" ]; then
+#   if [ -e "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]; then
+#     . "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh";
+#   fi
+# else
+#   if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+#     . "$HOME/.nix-profile/etc/profile.d/nix.sh";
+#   fi
+# fi
 
 # FIXME: .zprofile読み込まれない関係でPATHが通らなかったため暫定的に記載
 if [ "$(uname)" = "Darwin" ]; then
