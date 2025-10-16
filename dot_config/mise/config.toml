@@ -52,7 +52,7 @@ cosign                                                      = "2.6.1"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.1"
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 node                                                        = "22.19.0"
-"npm:@anthropic-ai/claude-code"                             = "2.0.9"
+"npm:@anthropic-ai/claude-code"                             = "2.0.14"
 "npm:@devcontainers/cli"                                    = "0.80.1"
 "npm:@github/copilot-language-server"                       = "1.380.0"
 "npm:@google/gemini-cli"                                    = "0.8.2"
