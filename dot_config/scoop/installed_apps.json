@@ -1,0 +1,94 @@
+{
+    "apps": [
+        {
+            "Version": "0.15.1",
+            "Updated": "2025-05-14T22:41:05.6282381+09:00",
+            "Name": "alacritty",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "2025.9.0",
+            "Updated": "2025-09-28T12:00:04.5811748+09:00",
+            "Name": "bitwarden",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "6.2",
+            "Updated": "2022-10-17T23:01:24.3164184+09:00",
+            "Name": "firacode",
+            "Info": "",
+            "Source": "nerd-fonts"
+        },
+        {
+            "Version": "3.6.9202",
+            "Updated": "2025-09-28T00:19:08.7830581+09:00",
+            "Name": "musicbee",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "44.1",
+            "Updated": "2025-09-28T11:49:02.5077728+09:00",
+            "Name": "NeeView",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "1.9.12",
+            "Updated": "2025-09-13T21:12:50.0744629+09:00",
+            "Name": "obsidian",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "2.1.0",
+            "Updated": "2025-10-02T22:29:07.5191401+09:00",
+            "Name": "scoop-search",
+            "Info": "",
+            "Source": "main"
+        },
+        {
+            "Version": "143.0.1",
+            "Updated": "2025-09-28T12:00:48.2693333+09:00",
+            "Name": "thunderbird",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "1.104.2",
+            "Updated": "2025-09-28T11:58:57.6264675+09:00",
+            "Name": "vscode",
+            "Info": "",
+            "Source": "extras"
+        },
+        {
+            "Version": "1.16.1b",
+            "Updated": "2025-10-15T22:41:15.7079802+09:00",
+            "Name": "zen-browser",
+            "Info": "",
+            "Source": null
+        }
+    ],
+    "buckets": [
+        {
+            "Name": "main",
+            "Source": "https://github.com/ScoopInstaller/Main",
+            "Updated": "2025-10-18T17:29:21+09:00",
+            "Manifests": 1406
+        },
+        {
+            "Name": "extras",
+            "Source": "https://github.com/ScoopInstaller/Extras",
+            "Updated": "2025-10-01T09:43:07+09:00",
+            "Manifests": 2190
+        },
+        {
+            "Name": "nerd-fonts",
+            "Source": "https://github.com/matthewjberger/scoop-nerd-fonts",
+            "Updated": "2025-10-18T14:22:02+09:00",
+            "Manifests": 367
+        }
+    ]
+}
