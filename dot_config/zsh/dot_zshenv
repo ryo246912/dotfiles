@@ -31,5 +31,10 @@ if [ "$(uname)" = "Darwin" ]; then
 fi
 
 if command -v mise >/dev/null 2>&1; then
-  eval "$(mise activate zsh --shims)"
+  if [ "$(uname)" = "Darwin" ]; then
+    eval "$(mise activate zsh --shims)"
+  else
+    # NOTE: WSLだとPATHが長すぎてargument list too longエラーが出るため、evalの内容をベタ書きする
+    export PATH="$HOME/bin/mise:$HOME/.local/share/mise/shims:$PATH"
+  fi
 fi
