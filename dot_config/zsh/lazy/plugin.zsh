@@ -46,17 +46,22 @@ if [ "$(uname)" = "Darwin" ]; then
 __zsh-auto-notify_atload() {
     export AUTO_NOTIFY_THRESHOLD=20
     AUTO_NOTIFY_IGNORE+=(
+      "ccmanager"
+      "claude"
       "czg"
       "chezmoi apply"
       "git branch"
       "git log"
       "git show"
       "git rebase"
+      "gemini"
       "gh-dash"
+      "gh-actions-dash"
       "gitui"
       "gh pr create"
       "gh pr diff"
       "gh pr edit"
+      "yazi"
     )
 }
 zinit wait lucid light-mode blockf for \
