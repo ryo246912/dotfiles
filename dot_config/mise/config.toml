@@ -48,7 +48,7 @@ cosign                                                      = "2.6.1"
 "go:github.com/atotto/clipboard/cmd/gocopy"                 = "0.1.4"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
 "go:github.com/go-delve/delve/cmd/dlv"                      = "1.25.2"
-"go:github.com/lusingander/gotip/cmd/gotip"                 = "0.6.0"
+"go:github.com/lusingander/gotip/cmd/gotip"                 = "0.6.1"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.1"
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 node                                                        = "22.19.0"
