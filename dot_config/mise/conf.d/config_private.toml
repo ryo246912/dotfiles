@@ -1,4 +1,4 @@
 [tools]
-java                  = "21.0.2"
+java                  = "21.0.9+10.0.LTS"
 kotlin                = "2.2.10"
 "ubi:superfly/flyctl" = "0.3.192"
