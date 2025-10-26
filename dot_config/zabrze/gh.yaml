@@ -116,6 +116,11 @@ abbrevs:
       | fzf --no-sort --header-lines=1
       | awk '{ print $1}')
 
+  - name: gh pr create
+    abbr: ghpcr
+    evaluate: true
+    snippet: gh pr create --base "$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)" --assignee "@me"
+
   - name: gh pr diff
     abbr: ghpd
     snippet: gh pr diff $(gh pr list --state all --limit 100
