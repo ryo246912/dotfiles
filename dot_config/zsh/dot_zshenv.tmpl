@@ -55,9 +55,13 @@ else
 fi
 
 if [ "$(uname)" = "Darwin" ]; then
-{{ output "/opt/homebrew/bin/brew" "shellenv" | trim}}
+{{- if (lookPath "brew") -}}
+{{ output "brew" "shellenv" | trim }}
+{{- end }}
 fi
 
 if command -v mise >/dev/null 2>&1; then
+{{- if (lookPath "mise") -}}
 {{ output "mise" "activate" "zsh" "--shims" | trim }}
+{{- end }}
 fi
