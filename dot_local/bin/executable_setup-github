@@ -33,7 +33,7 @@ build_ruleset_json() {
     local stale_reviews_bool
     stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
 
-    cat <<EOF
+    cat <<EOF | grep -v '#'
 {
   "name": "$RULESET_NAME",
   "target": "branch",
