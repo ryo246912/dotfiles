@@ -33,7 +33,7 @@ if [ "$(uname)" = "Darwin" ]; then
   export ANDROID_HOME=$HOME/Library/Android/sdk
   path=(
     $HOME/{,.local/}{,s}bin(N)
-    /{opt,user}/local/{,s}bin(N)
+    /{opt,usr}/local/{,s}bin(N)
     /opt/homebrew/opt/coreutils/libexec/gnubin(N)
     /opt/homebrew/opt/findutils/libexec/gnubin(N)
     /opt/homebrew/opt/grep/libexec/gnubin(N)
@@ -47,7 +47,7 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   path=(
     $HOME/{,.local/}{,s}bin(N)
-    /{opt,user}/local/{,s}bin(N)
+    /{opt,usr}/local/{,s}bin(N)
     $HOME/.cargo/bin(N)
     $HOME/go/bin(N)
     $path
