@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GitHub リポジトリの設定更新とルールセット作成を行う統合スクリプト
-# 使用方法: ./setup-github.sh <owner/repository_name>
+# 使用方法: setup-github <owner/repository_name>
 
 set -euo pipefail
 

@@ -301,7 +301,7 @@ show_help() {
 Git Worktree Manager - git worktreeの管理とアクション実行
 
 使用方法:
-  git_worktree_manager.sh [オプション] [アクション]
+  git-worktree-manager [オプション] [アクション]
 
 オプション:
   --help, -h      このヘルプを表示
@@ -317,18 +317,18 @@ Git Worktree Manager - git worktreeの管理とアクション実行
 
 実行例:
   # インタラクティブ選択（worktree選択 → アクション選択）
-  git_worktree_manager.sh
+  git-worktree-manager
 
   # 直接アクション指定（worktree選択のみ）
-  git_worktree_manager.sh gitui
-  git_worktree_manager.sh code
-  git_worktree_manager.sh nvim
-  git_worktree_manager.sh czg
-  git_worktree_manager.sh diff
-  git_worktree_manager.sh cd
+  git-worktree-manager gitui
+  git-worktree-manager code
+  git-worktree-manager nvim
+  git-worktree-manager czg
+  git-worktree-manager diff
+  git-worktree-manager cd
 
   # その他
-  git_worktree_manager.sh --debug   # デバッグモード
+  git-worktree-manager --debug   # デバッグモード
 
 EOF
 }
