@@ -18,11 +18,56 @@ ALLOW_MERGE_COMMIT="true"
 RULESET_NAME="main"
 ENFORCEMENT="disabled"
 REF_INCLUDE=("~DEFAULT_BRANCH")
-PREVENT_DELETION="true"
-ALLOW_UPDATE="false"
 REQUIRED_APPROVING_REVIEW_COUNT="1"
 REQUIRE_LAST_PUSH_APPROVAL="true"
 DISMISS_STALE_REVIEWS="true"
+
+# ルールセットJSON構築共通関数
+build_ruleset_json() {
+    local refs_json
+    refs_json=$(refs_to_json "${REF_INCLUDE[@]}")
+
+    local last_push_bool
+    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
+
+    local stale_reviews_bool
+    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
+
+    cat <<EOF
+{
+  "name": "$RULESET_NAME",
+  "target": "branch",
+  "enforcement": "$ENFORCEMENT",
+  "conditions": {
+    "ref_name": {
+      "include": $refs_json,
+      "exclude": []
+    }
+  },
+  "rules": [
+    # Restrict creations
+    { "type": "creation", "parameters": {} },
+    # Restrict deletions
+    { "type": "deletion", "parameters": {} },
+    # Require linear history
+    { "type": "non_fast_forward" },
+    { "type": "required_linear_history" },
+    # Require signed commits
+    { "type": "required_signatures" },
+    # Require a pull request before merging
+    { "type": "pull_request",
+      "parameters": {
+        "dismiss_stale_reviews_on_push": $stale_reviews_bool,
+        "require_code_owner_review": false,
+        "require_last_push_approval": $last_push_bool,
+        "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
+        "required_review_thread_resolution": false
+      }
+    }
+  ]
+}
+EOF
+}
 
 # ヘルプメッセージ
 show_help() {
@@ -178,72 +223,9 @@ create_ruleset() {
     local repo_path="$OWNER/$REPO_NAME"
     echo "ルールセット '$RULESET_NAME' を作成しています..."
 
-    local refs_json
-    refs_json=$(refs_to_json "${REF_INCLUDE[@]}")
-
-    local deletion_bool
-    deletion_bool=$(bool_to_json "$PREVENT_DELETION")
-
-    local update_bool
-    update_bool=$(bool_to_json "$ALLOW_UPDATE")
-
-    local last_push_bool
-    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
-
-    local stale_reviews_bool
-    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
-
     local ruleset_json
-    read -r -d '' ruleset_json <<EOF || true
-{
-  "name": "$RULESET_NAME",
-  "target": "branch",
-  "enforcement": "$ENFORCEMENT",
-  "conditions": {
-    "ref_name": {
-      "include": $refs_json,
-      "exclude": []
-    }
-  },
-  "rules": [
-    {
-      "type": "creation",
-      "parameters": {}
-    },
-    {
-      "type": "deletion",
-      "parameters": {}
-    },
-    {
-      "type": "non_fast_forward"
-    },
-    {
-      "type": "required_linear_history"
-    },
-    {
-      "type": "required_signatures"
-    },
-    {
-      "type": "update",
-      "parameters": {
-        "update_allows_fetch_and_merge": false
-      }
-    },
-    {
-      "type": "pull_request",
-      "parameters": {
-        "dismiss_stale_reviews_on_push": $stale_reviews_bool,
-        "require_code_owner_review": false,
-        "require_last_push_approval": $last_push_bool,
-        "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": false
-      }
-    }
-  ]
-}
-EOF
+    ruleset_json=$(build_ruleset_json)
 
-    # ルールセット作成 API呼び出し
     gh api "repos/$repo_path/rulesets" \
         --method POST \
         --input - <<< "$ruleset_json" \
@@ -258,72 +240,9 @@ update_ruleset() {
     local ruleset_id="$1"
     echo "ルールセット '$RULESET_NAME' (ID: $ruleset_id) を更新しています..."
 
-    local refs_json
-    refs_json=$(refs_to_json "${REF_INCLUDE[@]}")
-
-    local deletion_bool
-    deletion_bool=$(bool_to_json "$PREVENT_DELETION")
-
-    local update_bool
-    update_bool=$(bool_to_json "$ALLOW_UPDATE")
-
-    local last_push_bool
-    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
-
-    local stale_reviews_bool
-    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
-
     local ruleset_json
-    read -r -d '' ruleset_json <<EOF || true
-{
-  "name": "$RULESET_NAME",
-  "target": "branch",
-  "enforcement": "$ENFORCEMENT",
-  "conditions": {
-    "ref_name": {
-      "include": $refs_json,
-      "exclude": []
-    }
-  },
-  "rules": [
-    {
-      "type": "creation",
-      "parameters": {}
-    },
-    {
-      "type": "deletion",
-      "parameters": {}
-    },
-    {
-      "type": "non_fast_forward"
-    },
-    {
-      "type": "required_linear_history"
-    },
-    {
-      "type": "required_signatures"
-    },
-    {
-      "type": "update",
-      "parameters": {
-        "update_allows_fetch_and_merge": false
-      }
-    },
-    {
-      "type": "pull_request",
-      "parameters": {
-        "dismiss_stale_reviews_on_push": $stale_reviews_bool,
-        "require_code_owner_review": false,
-        "require_last_push_approval": $last_push_bool,
-        "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": false
-      }
-    }
-  ]
-}
-EOF
+    ruleset_json=$(build_ruleset_json)
 
-    # ルールセット更新 API呼び出し
     gh api "repos/$repo_path/rulesets/$ruleset_id" \
         --method PUT \
         --input - <<< "$ruleset_json" \
@@ -352,11 +271,21 @@ setup_ruleset() {
     echo "  - ルールセット名: $RULESET_NAME"
     echo "  - 実行モード: $ENFORCEMENT"
     echo "  - 対象ブランチ: ${REF_INCLUDE[*]}"
-    echo "  - 削除防止: $PREVENT_DELETION"
-    echo "  - 更新許可: $ALLOW_UPDATE"
+    echo "  - 削除防止: true"
+    echo "  - 更新許可: true"
     echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
     echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
     echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
+}
+
+setup_notifications() {
+    local repo_path="$OWNER/$REPO_NAME"
+
+    if gh api -X PUT "repos/$repo_path/subscription" -f ignored=true 2>/dev/null; then
+        echo "リポジトリ '$repo_path' の通知をIgnoreに設定しました。"
+    else
+        echo "注意: 通知設定に失敗しました。権限を確認してください。" >&2
+    fi
 }
 
 # メイン処理
@@ -379,6 +308,10 @@ main() {
     echo "=== ステップ 2: ルールセットの設定 ==="
     setup_ruleset
     echo
+
+    # ステップ3: 通知設定
+    echo "=== ステップ 3: 通知設定 ==="
+    setup_notifications
 
     echo "=== 完了: すべての設定が完了しました ==="
 }
