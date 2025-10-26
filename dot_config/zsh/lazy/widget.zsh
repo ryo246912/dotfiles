@@ -227,16 +227,16 @@ else
   bindkey '^[Q^[G' _navi_copy_snippet
 fi
 
-# ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)でgit_worktree_manager.shを実行
+# ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)でgit-worktree-managerを実行
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
       local current_path="$(pwd)" && \
-      tmux send-keys -t popup "cd $current_path && sh $HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh" C-m && \
+      tmux send-keys -t popup "cd $current_path && git-worktree-manager" C-m && \
       tmux attach -t popup
     '
   else
-    BUFFER='sh "$HOME/.local/share/chezmoi/not_config/script/git_worktree_manager.sh"'
+    BUFFER='git-worktree-manager'
     zle accept-line
   fi
 }

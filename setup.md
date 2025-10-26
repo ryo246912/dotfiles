@@ -153,7 +153,7 @@
       ```
   - [ ] gpg_agent・gitの設定
      ```
-     sh ./not_config/script/setup_git_gpg.sh
+     setup-git-gpg
      ```
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
