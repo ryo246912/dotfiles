@@ -20,7 +20,7 @@ concurrency:
 jobs:
   actionlint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read
@@ -42,7 +42,7 @@ jobs:
           -ignore 'SC2016:'
   ghalint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read
@@ -63,7 +63,7 @@ jobs:
           GHALINT_LOG_COLOR: always
   zizmor:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read

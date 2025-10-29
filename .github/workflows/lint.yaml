@@ -24,7 +24,7 @@ concurrency:
 jobs:
   lint-json:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read
@@ -44,7 +44,7 @@ jobs:
 
   lint-yaml:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read
@@ -64,7 +64,7 @@ jobs:
 
   lint-toml:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
     timeout-minutes: 1
