@@ -4,6 +4,9 @@
 # go mod init
 go mod init github.com/<name>/<project>
 
+# go mod why
+go mod why -m <module>
+
 # go env
 go env
 

@@ -120,8 +120,19 @@ description = "Run other linters"
 
 # fix
 [tasks.fix-action]
+depends = [
+    "fix-action-pinact",
+    "fix-action-disable-checkout-persist-credentials",
+]
 description = "Run fix actions files"
-run         = ["pinact run", "disable-checkout-persist-credentials"]
+
+[tasks.fix-action-pinact]
+description = "Run fix actions pinact"
+run         = ["pinact run"]
+
+[tasks.fix-action-disable-checkout-persist-credentials]
+description = "Run fix actions disable-checkout-persist-credentials"
+run         = ["disable-checkout-persist-credentials"]
 
 [tasks.fix-other]
 depends = [
