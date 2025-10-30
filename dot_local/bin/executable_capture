@@ -1,0 +1,79 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = [
+#   "pyautogui",
+# ]
+# ///
+
+import time
+import pyautogui
+import os
+import subprocess
+from datetime import datetime
+
+def capture_kindle_screenshots(book_title: str, page_delay: int, num_pages: int):
+    # 保存フォルダを作成（重複時は日付を付与）
+    base_folder = os.path.join(os.path.expanduser("~"), "Documents", book_title)
+    output_folder = base_folder
+    if os.path.exists(base_folder):
+        dt = datetime.now().strftime("%y%m%d_%H%M")
+        output_folder = f"{base_folder}_{dt}"
+    os.makedirs(output_folder, exist_ok=True)
+
+    print("""
+- スクリーンショットを行うアプリがアクティブで、最初のページが表示されていることを確認してください。
+- 最大化(cmd + Ctrl + F)して全画面がキャプチャされるようにしてください。
+    """.strip())
+    input("準備ができたらEnterキーを押してください...(5秒後に開始)")
+
+    # カウントダウン処理
+    for i in range(5, 0, -1):
+        print(f"{i}...")
+        time.sleep(1)
+    print("キャプチャを開始します。")
+
+    page_count = 0
+    while True:
+        # ページ数を指定した場合の処理
+        if page_count >= num_pages:
+            print(f"指定されたページ数（{num_pages}ページ）に達しました。キャプチャを終了します。")
+            break
+
+        # スクリーンショットを保存
+        screenshot_path = os.path.join(output_folder, f"page_{page_count:04d}.png") # ファイル名をpage_0001.pngのようにする
+
+        # macOSのscreencaptureコマンドを使用
+        subprocess.run(['screencapture', '-x', screenshot_path], check=True)
+
+        # ページをめくる操作
+        pyautogui.press('right') # キーボードの右矢印キーを押してページを送る
+        time.sleep(page_delay)
+
+        page_count += 1
+
+        if page_count > 1000:
+            print("1000ページを超えました。強制終了します。")
+            break
+
+if __name__ == "__main__":
+    import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="自動スクリーンショットツール (ex. capture --title 'test' --delay 2 --pages 3)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+
+    parser.add_argument("--title", type=str, default="Book", help="保存フォルダ名（本のタイトル）")
+    parser.add_argument("--delay", type=int, default=2, help="ページめくり後の待機時間（秒）")
+    parser.add_argument("--pages", type=int, required=True, help="キャプチャするページ数（必須）")
+
+    # -h/--helpはargparseが自動で対応
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
+    args = parser.parse_args()
+
+    capture_kindle_screenshots(args.title, args.delay, args.pages)
+    print("処理が完了しました。")
