@@ -1,6 +1,3 @@
-.ifs:
-  - &make '[[ -f "./Makefile" ]]'
-
 abbrevs:
   # atuin commands
   - name: atuin search -i
@@ -127,32 +124,6 @@ abbrevs:
   - name: koji --config ~/.config/koji/config.toml
     abbr-pattern: ^ko$
     snippet: koji --config ~/.config/koji/config.toml
-
-  # make
-  - name: make
-    abbr-pattern: ^m$
-    snippet: make
-    if: *make
-
-  - name: make help
-    abbr-pattern: ^mh$
-    snippet: make help
-    if: *make
-
-  - name: make lint
-    abbr-pattern: ^ml$
-    snippet: make lint
-    if: *make
-
-  - name: make local
-    abbr: mlo
-    snippet: make local | spacer --after 5
-    if: *make
-
-  - name: make unittest
-    abbr-pattern: ^mu$
-    snippet: make unittest
-    if: *make
 
   - name: rtty
     abbr-pattern: (^rt$|^bt$)
