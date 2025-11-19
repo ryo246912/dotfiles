@@ -1,4 +1,5 @@
-[manager]
+[mgr]
+linemode     = "custom"
 show_hidden  = true
 sort_by      = "alphabetical"
 sort_reverse = false
