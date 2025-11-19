@@ -156,8 +156,8 @@ $ issue_search: echo -e "\
   --- --multi
 ; https://docs.github.com/ja/search-github/searching-on-github/searching-issues-and-pull-requests
 $ base_branch: echo -e "$(git config branch.$(git symbolic-ref --short HEAD).base-branch | sed 's/^origin\///')\nmaster\nmain"
-$ pr_body: find ~/private/Pull-Request -type f -path "*.md" | sort
-$ issue_body: find ~/private/Issue -type f -path "*.md" | sort
+$ pr_body: find ~/private/note/work2/Pull-Request -type f -path "*.md" | sort
+$ issue_body: find ~/private/note/work2/Issue -type f -path "*.md" | sort
 $ user: echo -e "\n$(git config --get-all user.name)"
 $ _-m_--merges_--first-parent : echo -e "\n -m --merges --first-parent"
 $ file_option: echo -e "-- \n-L 1,+10:\n-L :func:"
