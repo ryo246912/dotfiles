@@ -88,9 +88,9 @@ abbrevs:
     snippet: CZ_LANG=en czg ai
 
   # go
-  - name: go test ./...
+  - name: gotip --view=history
     abbr-pattern: ^got$
-    snippet: go test ./...
+    snippet: gotip --view=history -- --tags=shipper_resolver_test,admin_resolver_test,forwarder_resolver_test,resolver_test
 
   - name: ./...
     abbr-pattern: (\.\.\.\.|\.4)
