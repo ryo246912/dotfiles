@@ -5,7 +5,7 @@
 "aqua:aws/aws-cli"               = "2.31.8"
 "aqua:direnv/direnv"             = "2.37.1"
 "aqua:kayac/ecspresso"           = "2.6.1"
-"aqua:sqldef/sqldef/psqldef"     = "3.6.3"
+"aqua:sqldef/sqldef/psqldef"     = "3.6.7"
 "go:github.com/99designs/gqlgen" = "0.17.81"
 "go:gotest.tools/gotestsum"      = "1.13.0"
 "npm:graphql-voyager"            = "2.1.0"
