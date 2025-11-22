@@ -44,7 +44,7 @@ blueutil --power <on_off>
 blueutil --power 1 && blueutil --connect <device>
 
 # disconnect device
-blueutil --disconnect <device> && blueutil --power 0
+blueutil --disconnect <connected_device> && blueutil --power 0
 
 # connect/disconnect device
 blueutil --paired --format json-pretty
@@ -52,6 +52,10 @@ blueutil --paired --format json-pretty
 $ on_off: echo -e "1\n0"
 $ device: blueutil --paired --format json-pretty \
   | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+$ connected_device: blueutil --paired --format json-pretty \
+  | jq -r '["address","name","connected"] , (.[] | select(.connected == true) | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
   | column -ts $'\t' \
   --- --headers 1 --column 1
 
