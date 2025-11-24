@@ -1,6 +1,9 @@
 ```sh
 % network
 
+# global ip address
+curl ifconfig.me
+
 # dig
 dig <domain>
 

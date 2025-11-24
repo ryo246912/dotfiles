@@ -1,0 +1,523 @@
+{
+  "general_settings": {
+    "betaFeatures": false,
+    "legacyMode": false,
+    "openBehavior": "popup",
+    "saveBehavior": "addToObsidian",
+    "showMoreActionsButton": false,
+    "silentOpen": true
+  },
+  "highlighter_settings": {
+    "alwaysShowHighlights": true,
+    "highlightBehavior": "highlight-inline",
+    "highlighterEnabled": true
+  },
+  "interpreter_settings": {
+    "defaultPromptContext": "{{content}}",
+    "interpreterAutoRun": false,
+    "interpreterEnabled": false,
+    "interpreterModel": "1748053054250",
+    "models": [],
+    "providers": []
+  },
+  "migrationVersion": 1,
+  "property_types": [
+    {
+      "defaultValue": "{{title}}",
+      "name": "title",
+      "type": "text"
+    },
+    {
+      "defaultValue": "{{url}}",
+      "name": "source",
+      "type": "text"
+    },
+    {
+      "defaultValue": "{{author|split:\", \"|wikilink|join}}",
+      "name": "author",
+      "type": "multitext"
+    },
+    {
+      "defaultValue": "{{published|date:\"YYYY-MM-DD HH:mm\"}}",
+      "name": "published",
+      "type": "date"
+    },
+    {
+      "defaultValue": "{{date|date:\"YYYY-MM-DD HH:mm\"}}",
+      "name": "created",
+      "type": "date"
+    },
+    {
+      "defaultValue": "clippings",
+      "name": "tags",
+      "type": "multitext"
+    }
+  ],
+  "reader_settings": {
+    "fontSize": 1.5,
+    "lineHeight": 1.6,
+    "maxWidth": 38,
+    "theme": "default",
+    "themeMode": "auto"
+  },
+  "stats": {
+    "addToObsidian": 302,
+    "copyToClipboard": 0,
+    "saveFile": 1,
+    "share": 0
+  },
+  "template_17479604476272zkthch46": {
+    "id": "17479604476272zkthch46",
+    "name": "その他",
+    "behavior": "create",
+    "noteNameFormat": "{{title | safe_name}}",
+    "path": "Zettelkasten/B-literatures-その他",
+    "noteContentFormat": "# 本文\n{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "",
+        "type": "multitext"
+      }
+    ],
+    "triggers": []
+  },
+  "template_1748048827125g2jzjqoyo": {
+    "id": "1748048827125g2jzjqoyo",
+    "name": "Twitter",
+    "behavior": "create",
+    "noteNameFormat": "{{meta:property:og:title | replace:\"/\":\"\" | split:\"\\n\" | first | safe_name | slice:0,100}}",
+    "path": "Zettelkasten/B-Tweet",
+    "noteContentFormat": "{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{meta:property:og:title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,twitter",
+        "type": "multitext"
+      }
+    ],
+    "triggers": [
+      "https://x.com/"
+    ]
+  },
+  "template_1748071137900417311pbg": {
+    "id": "1748071137900417311pbg",
+    "name": "URLのみ",
+    "behavior": "create",
+    "noteNameFormat": "{{title | safe_name}}",
+    "path": "Zettelkasten/B-literatures",
+    "noteContentFormat": "",
+    "context": "{{title}}",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,urlのみ",
+        "type": "multitext"
+      }
+    ],
+    "triggers": [
+      "https://speakerdeck.com/"
+    ]
+  },
+  "template_1748160596431c0rxqbq4k": {
+    "id": "1748160596431c0rxqbq4k",
+    "name": "検索メモ",
+    "behavior": "create",
+    "noteNameFormat": "{{title | safe_name}}",
+    "path": "Zettelkasten/A-fleetings",
+    "noteContentFormat": "- [ ] {{title}}\n\n{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,検索メモ",
+        "type": "multitext"
+      }
+    ],
+    "triggers": []
+  },
+  "template_1762524404538gn36gf2aj": {
+    "id": "1762524404538gn36gf2aj",
+    "name": "Twitter(投資)",
+    "behavior": "create",
+    "noteNameFormat": "{{meta:property:og:title | replace:\"/\":\"\" | split:\"\\n\" | first | safe_name | slice:0,100}}",
+    "path": "Zettelkasten/B-Tweet-投資",
+    "noteContentFormat": "{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{meta:property:og:title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,twitter",
+        "type": "multitext"
+      }
+    ],
+    "triggers": [
+      "https://x.com/"
+    ]
+  },
+  "template_1762524538731sgguhvrz4": {
+    "id": "1762524538731sgguhvrz4",
+    "name": "Twitter(その他)",
+    "behavior": "create",
+    "noteNameFormat": "{{meta:property:og:title | replace:\"/\":\"\" | split:\"\\n\" | first | safe_name | slice:0,100}}",
+    "path": "Zettelkasten/B-Tweet-その他",
+    "noteContentFormat": "{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{meta:property:og:title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,twitter",
+        "type": "multitext"
+      }
+    ],
+    "triggers": [
+      "https://x.com/"
+    ]
+  },
+  "template_1762524566401svkuvd3x7": {
+    "id": "1762524566401svkuvd3x7",
+    "name": "Twitter(料理)",
+    "behavior": "create",
+    "noteNameFormat": "{{meta:property:og:title | replace:\"/\":\"\" | split:\"\\n\" | first | safe_name | slice:0,100}}",
+    "path": "01-生活/料理/レシピ一覧",
+    "noteContentFormat": "{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{meta:property:og:title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "clippings,twitter",
+        "type": "multitext"
+      }
+    ],
+    "triggers": [
+      "https://x.com/"
+    ]
+  },
+  "template_1763793173378ns8wxka41": {
+    "id": "1763793173378ns8wxka41",
+    "name": "投資",
+    "behavior": "create",
+    "noteNameFormat": "{{title | safe_name}}",
+    "path": "Zettelkasten/B-literatures-投資",
+    "noteContentFormat": "# 本文\n{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "",
+        "type": "multitext"
+      }
+    ],
+    "triggers": []
+  },
+  "template_1763793197119danu9ab27": {
+    "id": "1763793197119danu9ab27",
+    "name": "デフォルト",
+    "behavior": "create",
+    "noteNameFormat": "{{title | safe_name}}",
+    "path": "Zettelkasten/B-literatures",
+    "noteContentFormat": "# 本文\n{{content}}",
+    "context": "",
+    "properties": [
+      {
+        "id": "17479604476298ml4ark8l",
+        "name": "title",
+        "value": "{{title}}",
+        "type": "text"
+      },
+      {
+        "id": "17479604476292e8zkrk27",
+        "name": "source",
+        "value": "{{url}}",
+        "type": "text"
+      },
+      {
+        "id": "1747960447629aqditkkpo",
+        "name": "author",
+        "value": "{{author|split:\\\", \\\"|wikilink|join}}",
+        "type": "multitext"
+      },
+      {
+        "id": "1747960447629qvyt0i0j6",
+        "name": "published",
+        "value": "{{published|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629pyu4quqor",
+        "name": "created",
+        "value": "{{date|date:\\\"YYYY-MM-DD HH:mm\\\"}}",
+        "type": "date"
+      },
+      {
+        "id": "1747960447629h94smprei",
+        "name": "tags",
+        "value": "",
+        "type": "multitext"
+      }
+    ],
+    "triggers": []
+  },
+  "template_list": [
+    "1763793197119danu9ab27",
+    "17479604476272zkthch46",
+    "1763793173378ns8wxka41",
+    "1748071137900417311pbg",
+    "1748048827125g2jzjqoyo",
+    "1762524404538gn36gf2aj",
+    "1762524566401svkuvd3x7",
+    "1762524538731sgguhvrz4",
+    "1748160596431c0rxqbq4k"
+  ],
+  "vaults": []
+}
