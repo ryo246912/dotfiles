@@ -21,6 +21,7 @@ install_package() {
     gpg
     mise
     pinentry-mac
+    silicon
     ugrep
 
     coreutils

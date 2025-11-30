@@ -1,0 +1,7 @@
+commands:
+- lang: qr
+  run: 'qrencode -o "{{output}}" -t png "{{input}}"'
+  ext: png
+- lang: '{go,rust,python,javascript,typescript,toml,yaml,bash,sh,json}'
+  run: 'silicon -l "{{lang}}" -o "{{output}}"'
+  ext: png
