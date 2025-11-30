@@ -31,7 +31,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "actionlint"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
@@ -53,7 +52,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "aqua:suzuki-shunsuke/ghalint"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
@@ -74,7 +72,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "pipx:zizmor"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s

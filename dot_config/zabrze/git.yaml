@@ -593,4 +593,3 @@ abbrevs:
     snippet: --all
     global: true
     context: '^tig\s'
-

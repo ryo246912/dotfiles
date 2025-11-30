@@ -31,7 +31,6 @@ abbrevs:
     abbr-pattern: ^mu$
     snippet: mise use
 
-
   - name: mise uninstall interactive
     abbr-pattern: ^mui$
     snippet: mise uninstall $(mise ls --current | fzf -m | awk '{printf "%s ", $1}' | sed 's/ $//')

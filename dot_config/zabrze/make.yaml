@@ -31,4 +31,3 @@ abbrevs:
     abbr-pattern: ^fm$
     snippet: fzf-make --history
     if: *make
-

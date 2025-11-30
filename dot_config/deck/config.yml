@@ -1,0 +1,20 @@
+basePresentationID: ""
+breaks: true
+
+defaults:
+  - if: page == 1
+    layout: title-and-subtitle
+  - if: images.size() >= 3 || codeBlocks.size() >= 3
+    layout: title-and-body-and-image3
+  - if: images.size() == 2 || codeBlocks.size() == 2
+    layout: title-and-body-and-image2
+  - if: (images.size() == 1 || codeBlocks.size() == 1) && bodies.size() == 0
+    layout: title-and-image
+  - if: images.size() == 1 || codeBlocks.size() == 1
+    layout: title-and-body-and-image
+  - if: titles.size() == 1 && subtitles.size() == 0 && bodies.size() == 0
+    layout: section
+  - if: speakerNote.contains("TODO")
+    skip: true
+  - if: true
+    layout: title-and-body

@@ -35,7 +35,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "npm:prettier"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
@@ -55,7 +54,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "npm:prettier"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
@@ -74,7 +72,6 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
         with:
-          version: 2024.12.24
           install_args: "npm:@taplo/cli"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
