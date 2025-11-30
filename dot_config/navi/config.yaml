@@ -26,9 +26,8 @@ cheats:
   # path: /path/to/some/dir # (DEPRECATED) equivalent to the --path option
 
 # search:
-  # tags: git,!checkout # equivalent to the --tag-rules option
+# tags: git,!checkout # equivalent to the --tag-rules option
 
 shell:
   command: zsh # shell used for shell out. possible values: bash, zsh, dash, ...
   # finder_command: bash # similar, but for fzf's internals
-

@@ -16,15 +16,15 @@ abbrevs:
     snippet: gh cache list
       --json key,ref,sizeInBytes,createdAt,lastAccessedAt
       --jq '
-        ["key","sizeInBytes","createdAt","lastAccessedAt","ref"],
-        ( .[] |
-        [.key
-        , ((.sizeInBytes / 1024 / 1024 * 100 | floor / 100) | tostring + "MB")
-        , ( ((now - (.createdAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
-        , ( ((now - (.lastAccessedAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
-        , .ref
-        ])
-        | @tsv
+      ["key","sizeInBytes","createdAt","lastAccessedAt","ref"],
+      ( .[] |
+      [.key
+      , ((.sizeInBytes / 1024 / 1024 * 100 | floor / 100) | tostring + "MB")
+      , ( ((now - (.createdAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+      , ( ((now - (.lastAccessedAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+      , .ref
+      ])
+      | @tsv
       '
       | column -ts $'\t'
 
@@ -34,19 +34,20 @@ abbrevs:
 
   - name: gh issue edit
     abbr: ghie
-    snippet: gh issue edit $(gh issue list --author "@me" --state all --limit 100
+    snippet:
+      gh issue edit $(gh issue list --author "@me" --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
       --jq '
-        ["no","title","author","state","updatedAt","createdAt"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        ])
-        | @tsv
+      ["no","title","author","state","updatedAt","createdAt"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -54,19 +55,20 @@ abbrevs:
 
   - name: gh issue list
     abbr: ghil
-    snippet: gh issue list --author "" --assignee "" --search "{}" --state all --limit 100
+    snippet:
+      gh issue list --author "" --assignee "" --search "{}" --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
       --jq '
-        ["no","title","author","state","updatedAt","createdAt"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        ])
-        | @tsv
+      ["no","title","author","state","updatedAt","createdAt"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -77,16 +79,16 @@ abbrevs:
     snippet: gh issue view --comments 👇$(gh issue list --state all --limit 100
       --json number,title,author,state,updatedAt,createdAt
       --jq '
-        ["no","title","author","state","updatedAt","createdAt"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        ])
-        | @tsv
+      ["no","title","author","state","updatedAt","createdAt"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -96,21 +98,22 @@ abbrevs:
   - name: gh pr checkout
     abbr: ghpc
     cursor: "👇"
-    snippet: gh pr checkout 👇$(gh pr list --search "user-review-requested:@me" --limit 100
+    snippet:
+      gh pr checkout 👇$(gh pr list --search "user-review-requested:@me" --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -126,18 +129,18 @@ abbrevs:
     snippet: gh pr diff $(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -149,18 +152,18 @@ abbrevs:
     snippet: gh pr edit $(gh pr list --author "@me" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -168,21 +171,22 @@ abbrevs:
 
   - name: gh pr list
     abbr: ghpl
-    snippet: gh pr list --author "" --assignee "" --search "{}" --state all --limit 100
+    snippet:
+      gh pr list --author "" --assignee "" --search "{}" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -193,18 +197,18 @@ abbrevs:
     snippet: gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
@@ -216,18 +220,18 @@ abbrevs:
     snippet: gh pr view --comments 👇$(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName
       --jq '
-        ["no","title","author","state","draft","updatedAt","createdAt","branch"],
-        ( .[] |
-        [.number
-        , .title[0:50]
-        , .author.login
-        , .state
-        , (if .isDraft then "◯" else "☓" end )
-        , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
-        , .headRefName
-        ])
-        | @tsv
+      ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+      ( .[] |
+      [.number
+      , .title[0:50]
+      , .author.login
+      , .state
+      , (if .isDraft then "◯" else "☓" end )
+      , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+      , .headRefName
+      ])
+      | @tsv
       '
       | column -ts $'\t'
       | fzf --no-sort --header-lines=1
