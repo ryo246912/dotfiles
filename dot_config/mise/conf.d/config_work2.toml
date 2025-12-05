@@ -1,5 +1,5 @@
 [tools]
-"aqua:Songmu/ecschedule"         = "0.15.3"
+"aqua:Songmu/ecschedule"         = "0.17.2"
 "aqua:ankitpokhrel/jira-cli"     = "1.7.0"
 "aqua:ariga/atlas"               = "0.37.0"
 "aqua:aws/aws-cli"               = "2.31.8"
