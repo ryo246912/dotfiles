@@ -12,5 +12,6 @@
   "mise": "2025.11.3",
   "pinentry-mac": "1.3.1.1",
   "silicon": "0.5.3",
+  "kamillobinski/thock/thock": "1.17.2",
   "tree": "2.2.1"
 }
