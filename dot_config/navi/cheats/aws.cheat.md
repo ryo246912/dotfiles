@@ -14,7 +14,7 @@ aws configure list
 aws sts get-caller-identity --profile <profile>
 
 # sso : login sso
-aws sso login --profile <profile>
+aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 
 # iam : display iam users
 aws iam list-users | fx
