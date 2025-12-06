@@ -120,7 +120,7 @@ abbrevs:
       | awk '{ print $1}')
 
   - name: gh pr create
-    abbr: ghpcr
+    abbr-pattern: (ghpcr|ghpcrr)
     evaluate: true
     snippet: gh pr create --base "$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)" --assignee "@me"
 
