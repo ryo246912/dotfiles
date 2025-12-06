@@ -12,6 +12,7 @@ _*
 .config/claude*
 .config/dbeaver*
 .config/memo*
+.config/rclone*
 .config/sidebery*
 .config/vscode*
 **/alacritty.yml

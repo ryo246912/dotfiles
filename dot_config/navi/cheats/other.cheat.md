@@ -46,6 +46,15 @@ rustup install stable
 # Rust: update
 rustup update
 
+# rclone: config
+rclone config show
+
+# rclone: lsd [ex: rclone lsd aws-s3:folder-name]
+rclone lsd <remote>:<folder-name>
+
+# rclone: copy [ex: rclone copy aws-s3:folder-name google-drive:"ファイル/" -P --include "xxx/**"]
+rclone copy <remote>:<folder-name> <remote2>:<folder-name2> -P
+
 # renovate: dry-run remote
 LOG_LEVEL=debug renovate --token "$(ghtkn get)" --dry-run ryo246912/dotfiles
 
