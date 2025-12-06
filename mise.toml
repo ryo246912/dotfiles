@@ -95,5 +95,5 @@ run = [
 actionlint                     = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.3"
 "npm:@taplo/cli"               = "0.7.0"
-"npm:prettier"                 = "3.7.3"
+"npm:prettier"                 = "3.7.4"
 "pipx:zizmor"                  = "1.12.1"
