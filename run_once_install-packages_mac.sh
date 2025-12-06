@@ -56,6 +56,7 @@ install_cask_package() {
     keyboardcleantool
     raycast
     slack
+    thock
     thebrowsercompany-dia
     visual-studio-code
     zoom
@@ -68,6 +69,10 @@ install_cask_package() {
       elif [[ "$package" == "google-japanese-ime" ]]; then
         sudo softwareupdate --install-rosetta
         brew install --cask "$package"
+      elif [[ "$package" == "thock" ]]; then
+        brew tap kamillobinski/thock
+        brew install "$package"
+        thock --install
       else
         brew install --cask "$package"
       fi
