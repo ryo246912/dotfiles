@@ -1,0 +1,15 @@
+{
+  "p": "cmd:cmd_goFolder",
+  "j": "cmd:cmd_selectNextMsg",
+  "k": "cmd:cmd_selectPreviousMsg",
+  ".": "cmd:cmd_openMessage",
+  "r": "cmd:cmd_reply",
+  "m": "cmd:cmd_markAllRead",
+  "l": "window.document.getElementById('tabmail-tabs').advanceSelectedTab(1, true)",
+  "h": "window.document.getElementById('tabmail-tabs').advanceSelectedTab(-1, true)",
+  "shift+j": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex += 1;",
+  "shift+k": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex -= 1;",
+  "u": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex += 1;",
+  "i": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex -= 1;",
+  "n": "cmd:cmd_close"
+}
