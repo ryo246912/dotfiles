@@ -20,3 +20,31 @@ function Linemode:custom()
 	local size = self._file:size()
 	return string.format("%s|%s|%s", size and ya.readable_size(size) or "-", btime, mtime)
 end
+
+require("zoxide"):setup {
+	update_db = true,
+}
+
+-- Plugin auto-installer
+local function ensure_plugin(repo, name)
+	local plugin_path = os.getenv("HOME") .. "/.config/yazi/plugins/" .. name
+	local cmd = string.format("[ ! -d %s ] && git clone %s %s || true", plugin_path, repo, plugin_path)
+	os.execute(cmd)
+end
+
+ensure_plugin("https://github.com/stelcodes/bunny.yazi", "bunny.yazi")
+
+require("bunny"):setup({
+	hops = {
+		{ key = "h",          path = "~",                          desc = "Home" },
+		{ key = "c",          path = "~/.config",                  desc = "Config" },
+		{ key = "l",          path = "~/.local",                   desc = "Local share" },
+		{ key = "d",          path = "~/Downloads",                desc = "Downloads" },
+		{ key = "g",          path = "~/Library/CloudStorage/",    desc = "Google Drive" },
+	},
+	desc_strategy = "path",
+	ephemeral = true,
+	tabs = true,
+	notify = false,
+	fuzzy_cmd = "fzf",
+})
