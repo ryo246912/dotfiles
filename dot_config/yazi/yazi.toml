@@ -3,3 +3,8 @@ linemode     = "custom"
 show_hidden  = true
 sort_by      = "alphabetical"
 sort_reverse = false
+
+[opener]
+edit = [
+    { run = 'nvim "$@"', block = true, for = "unix" },
+]
