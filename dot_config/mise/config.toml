@@ -90,6 +90,7 @@ tmux                                                        = "3.5"
 "ubi:ryo246912/gh-reassign-reviewer"                        = "0.0.6"
 "ubi:seachicken/gh-poi"                                     = "0.14.1"
 "ubi:shazow/wifitui"                                        = "0.8.0"
+"ubi:skanehira/ghost"                                       = "0.2.0"
 usage                                                       = "2.9.0"
 vim                                                         = "9.1.1006"
 
