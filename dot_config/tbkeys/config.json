@@ -1,7 +1,7 @@
 {
   "p": "cmd:cmd_goFolder",
-  "j": "cmd:cmd_selectNextMsg",
-  "k": "cmd:cmd_selectPreviousMsg",
+  "j": "cmd:cmd_nextMsg",
+  "k": "cmd:cmd_previousMsg",
   ".": "cmd:cmd_openMessage",
   "r": "cmd:cmd_reply",
   "m": "cmd:cmd_markAllRead",
@@ -11,5 +11,5 @@
   "shift+k": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex -= 1;",
   "u": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex += 1;",
   "i": "window.gTabmail.currentAbout3Pane.folderTree.selectedIndex -= 1;",
-  "n": "cmd:cmd_close"
+  "n": "tbkeys:closeMessageAndRefresh"
 }

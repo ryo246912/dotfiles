@@ -215,7 +215,11 @@ abbrevs:
       | awk '{ print $1}')
 
   - name: gh pr view
-    abbr: ghpv
+    abbr-pattern: ^ghpv$
+    snippet: gh pr view --web
+
+  - name: gh pr view verbose
+    abbr: ghpvv
     cursor: "👇"
     snippet: gh pr view --comments 👇$(gh pr list --state all --limit 100
       --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName

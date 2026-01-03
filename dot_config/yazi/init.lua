@@ -28,8 +28,32 @@ require("zoxide"):setup {
 -- Plugin auto-installer
 local function ensure_plugin(repo, name)
 	local plugin_path = os.getenv("HOME") .. "/.config/yazi/plugins/" .. name
-	local cmd = string.format("[ ! -d %s ] && git clone %s %s || true", plugin_path, repo, plugin_path)
-	os.execute(cmd)
+	local check_cmd = string.format("[ -d %s ]", plugin_path)
+	local exists = os.execute(check_cmd)
+	if not exists then
+		ya.notify {
+			title = "Plugin Installer",
+			content = string.format("Installing %s...", name),
+			timeout = 3,
+		}
+		local clone_cmd = string.format("git clone %s %s", repo, plugin_path)
+		local success = os.execute(clone_cmd)
+		if success then
+			ya.notify {
+				title = "Plugin Installer",
+				content = string.format("%s installed successfully", name),
+				timeout = 3,
+				level = "info",
+			}
+		else
+			ya.notify {
+				title = "Plugin Installer",
+				content = string.format("Failed to install %s", name),
+				timeout = 5,
+				level = "error",
+			}
+		end
+	end
 end
 
 ensure_plugin("https://github.com/stelcodes/bunny.yazi", "bunny.yazi")

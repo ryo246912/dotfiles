@@ -98,6 +98,9 @@ grep "^[a-zA-Z\-]*:" Makefile | sed -e 's/^/make /' -e 's/://'
 # make print
 make -n <make_command>
 
+# create jwt key
+openssl rand -hex 32
+
 # ping : [-c <num>:ping count][-w:ping while][ex:ping www.google.co.jp]
 ping <address>
 
