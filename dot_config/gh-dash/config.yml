@@ -1,8 +1,11 @@
+# yaml-language-server: $schema=https://gh-dash.dev/schema.json
 prSections:
-  - title: All PRs
-    filters: sort:created-desc
   - title: Open PRs
     filters: is:open sort:created-desc
+  - title: Needs My Review
+    filters: is:open review-requested:@me sort:created-desc
+  - title: All PRs
+    filters: sort:created-desc
 issuesSections:
   - title: All Issues
     filters: sort:created-desc

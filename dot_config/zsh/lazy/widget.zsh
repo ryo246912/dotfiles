@@ -1,23 +1,23 @@
-# ctrl + d(alt + shift + d)でgitui起動
-_gitui() {
+# ctrl + d(alt + shift + d)でlazygit起動
+_lazygit() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" lazygit
   else
-    BUFFER='gitui'
+    BUFFER='lazygit'
     zle accept-line
   fi
 }
-zle -N _gitui
+zle -N _lazygit
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^D" _gitui
+  bindkey "^D" _lazygit
 else
-  bindkey "^[D" _gitui
+  bindkey "^[D" _lazygit
 fi
 
 # ctrl + x(alt + shift + x)でgh-dash起動
 _gh-dash() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gh-dash
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" "tmux-popup-manager gh-dash"
   else
     BUFFER='gh-dash'
     zle accept-line
@@ -33,7 +33,8 @@ fi
 # ctrl + y(alt + shift + y)でyazi起動
 _yazi() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" yazi
+    # cf. https://github.com/sxyazi/yazi/issues/2308#issuecomment-2731102243
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" "tmux-popup-manager yazi _ZO_DATA_DIR=$HOME/.local/state/zoxide"
   else
     BUFFER='yazi'
     zle accept-line
@@ -230,11 +231,7 @@ fi
 # ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)でgit-worktree-managerを実行
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
-      local current_path="$(pwd)" && \
-      tmux send-keys -t popup "cd $current_path && git-worktree-manager" C-m && \
-      tmux attach -t popup
-    '
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" "tmux-popup-manager git-worktree-manager"
   else
     BUFFER='git-worktree-manager'
     zle accept-line

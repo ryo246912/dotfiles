@@ -9,6 +9,7 @@ set -euo pipefail
 REPO_NAME=""
 OWNER=""
 REPO_FULL_NAME=""
+IS_PRIVATE=""
 
 # リポジトリ設定
 ALLOW_SQUASH_MERGE="true"
@@ -88,7 +89,12 @@ show_help() {
   ブランチ更新許可: true
   マージ後ブランチ削除: true
   Issues機能: true
-  セキュリティスキャン: enabled（可能な場合）
+
+Dependabotセキュリティ設定（固定）:
+  Dependabot alerts: enabled
+  Dependabot security updates: enabled
+  Dependency graph: enabled
+  Dependabot version updates: 状態確認のみ（手動で無効化が必要）
 
 ルールセット設定（固定）:
   ルールセット名: main
@@ -158,6 +164,13 @@ ensure_repository_exists() {
         echo "エラー: リポジトリ '$repo_path' が見つかりません。" >&2
         echo "リポジトリが存在することを確認してください。" >&2
         exit 1
+    fi
+
+    # プライベートリポジトリかどうかを判定
+    IS_PRIVATE=$(gh api "repos/$repo_path" --jq '.private' 2>/dev/null || echo "false")
+
+    if [ "$IS_PRIVATE" = "true" ]; then
+        echo "注意: プライベートリポジトリです。一部の機能（ルールセット）はGitHub Proが必要なためスキップされます。"
     fi
 }
 
@@ -288,6 +301,54 @@ setup_notifications() {
     fi
 }
 
+# Dependabotセキュリティ機能の有効化
+setup_dependabot_security() {
+    local repo_path="$OWNER/$REPO_NAME"
+    local success=true
+
+    echo "Dependabotセキュリティ機能を設定中..."
+
+    # Dependabot alerts を有効化
+    if gh api -X PUT "repos/$repo_path/vulnerability-alerts" 2>/dev/null; then
+        echo "  ✓ Dependabot alerts を有効化しました"
+    else
+        echo "  ✗ Dependabot alerts の有効化に失敗しました" >&2
+        success=false
+    fi
+
+    # Dependabot security updates を有効化
+    if gh api -X PUT "repos/$repo_path/automated-security-fixes" 2>/dev/null; then
+        echo "  ✓ Dependabot security updates を有効化しました"
+    else
+        echo "  ✗ Dependabot security updates の有効化に失敗しました" >&2
+        success=false
+    fi
+
+    # Dependency graph を有効化（リポジトリ設定経由）
+    if gh api "repos/$repo_path" --method PATCH \
+        --field has_vulnerability_alerts=true 2>/dev/null; then
+        echo "  ✓ Dependency graph を有効化しました"
+    else
+        echo "  ✗ Dependency graph の有効化に失敗しました" >&2
+        success=false
+    fi
+
+    # Dependabot version updates の状態を確認（情報提供のみ）
+    echo "  ℹ Dependabot version updates の状態を確認中..."
+    if gh api "repos/$repo_path/contents/.github/dependabot.yml" 2>/dev/null >/dev/null; then
+        echo "  ⚠ Dependabot version updates が有効です（.github/dependabot.yml が存在）"
+        echo "    無効化する場合は手動で .github/dependabot.yml を削除してください"
+    else
+        echo "  ✓ Dependabot version updates は無効です（.github/dependabot.yml なし）"
+    fi
+
+    if [ "$success" = true ]; then
+        echo "Dependabotセキュリティ機能の設定が完了しました。"
+    else
+        echo "注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。" >&2
+    fi
+}
+
 # メイン処理
 main() {
     parse_args "$@"
@@ -306,11 +367,20 @@ main() {
 
     # ステップ2: ルールセット設定
     echo "=== ステップ 2: ルールセットの設定 ==="
-    setup_ruleset
+    if [ "$IS_PRIVATE" = "true" ]; then
+        echo "プライベートリポジトリのため、ルールセット設定をスキップします（GitHub Pro が必要）。"
+    else
+        setup_ruleset
+    fi
     echo
 
-    # ステップ3: 通知設定
-    echo "=== ステップ 3: 通知設定 ==="
+    # ステップ3: Dependabotセキュリティ機能の有効化
+    echo "=== ステップ 3: Dependabotセキュリティ機能の有効化 ==="
+    setup_dependabot_security
+    echo
+
+    # ステップ4: 通知設定
+    echo "=== ステップ 4: 通知設定 ==="
     setup_notifications
 
     echo "=== 完了: すべての設定が完了しました ==="

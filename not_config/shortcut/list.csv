@@ -34,6 +34,7 @@ ClickUp,cmd + l,-,(コマンドセンターで)現在の画面でフィルタ
 ClickUp,space,-,(通知一覧で）画面をリロード
 ClickUp,shift + ?,-,ショートカット一覧表示
 claude,ctrl + j,-,改行
+claude,!,-,bashモード
 DBeaver,space,-,結果ビューアとアクティブパネルのフォーカス切替(Activate results/panel) ※カスタム
 DBeaver,F3,-,SQLエディタ(SQL scripts一覧)
 DBeaver,F7,-,結果パネルの切替

@@ -20,8 +20,8 @@ return {
       keymap("n", "<leader>gb", ":Git branch<CR>", { noremap = true })
       -- Git current branch
       keymap("n", "<leader>gB", ":Git branch --show-current<CR>", { noremap = true })
-      -- Gitui
-      keymap("n", "<leader>gu", ":tabnew | terminal gitui<CR>", { noremap = true })
+      -- lazygit
+      keymap("n", "<leader>lg", ":tabnew | terminal lazygit<CR>", { noremap = true })
     end,
   },
 }
