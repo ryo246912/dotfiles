@@ -1,0 +1,34 @@
+customCommands:
+  - command: czg
+    context: files
+    output: terminal
+    key: c
+  - command: chezmoi apply --interactive --exclude=scripts,templates
+    context: files
+    output: terminal
+    key: C
+  - command: nvim
+    context: files
+    output: terminal
+    key: n
+  - command: gh-dash
+    context: files
+    output: terminal
+    key: x
+  - command: yazi
+    context: files
+    output: terminal
+    key: Y
+  - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet {{.SelectedLocalCommit.Hash}}~1"
+    key: F
+    context: "commits"
+    description: "Fixup and Auto-squash into selected commit"
+promptToReturnFromSubprocess: false
+gui:
+  language: "ja"
+  showIcons: true
+  splitDiff: "always"
+git:
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never --no-gitconfig
