@@ -97,7 +97,7 @@ select_worktree() {
 # アクションを選択
 select_action() {
 	# 利用可能なアクションとその説明
-	local actions="gitui	GitUIでリポジトリを開く
+	local actions="lazygit	Lazygitでリポジトリを開く
 code	VS Codeでディレクトリを開く
 nvim	Neovimでディレクトリを開く
 czg	czgでコミットを作成
@@ -134,8 +134,8 @@ cd	ディレクトリに移動する（新しいシェル）"
 	return 0
 }
 
-# gituiを開く
-open_gitui() {
+# lazygitを開く
+open_lazygit() {
 	local worktree_path="$1"
 	local branch_name="$2"
 
@@ -143,15 +143,15 @@ open_gitui() {
 		error_exit "worktreeディレクトリが存在しません: $worktree_path"
 	fi
 
-	if ! command -v gitui &>/dev/null; then
-		error_exit "gitui コマンドが見つかりません"
+	if ! command -v lazygit &>/dev/null; then
+		error_exit "lazygit コマンドが見つかりません"
 	fi
 
-	# worktreeディレクトリに移動してgituiを起動
+	# worktreeディレクトリに移動してlazygitを起動
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
 
-	# gituiを起動
-	gitui
+	# lazygitを起動
+	lazygit
 
 	exec "$SHELL"
 
@@ -269,8 +269,8 @@ execute_action() {
 	local action="$3"
 
 	case "$action" in
-	"gitui")
-		open_gitui "$worktree_path" "$branch_name"
+	"lazygit")
+		open_lazygit "$worktree_path" "$branch_name"
 		;;
 	"code")
 		open_code "$worktree_path" "$branch_name"
@@ -308,7 +308,7 @@ Git Worktree Manager - git worktreeの管理とアクション実行
   --debug         デバッグモード（詳細情報を表示）
 
 アクション:
-  gitui           GitUIでリポジトリを開く
+  lazygit         Lazygitでリポジトリを開く
   code            VS Codeでディレクトリを開く
   nvim            Neovimでディレクトリを開く
   czg             czgでコミットを作成
@@ -320,7 +320,7 @@ Git Worktree Manager - git worktreeの管理とアクション実行
   git-worktree-manager
 
   # 直接アクション指定（worktree選択のみ）
-  git-worktree-manager gitui
+  git-worktree-manager lazygit
   git-worktree-manager code
   git-worktree-manager nvim
   git-worktree-manager czg
@@ -348,7 +348,7 @@ main() {
 	fi
 
 	# 直接アクション指定の場合
-	if [[ "${1:-}" =~ ^(gitui|code|nvim|czg|cd)$ ]]; then
+	if [[ "${1:-}" =~ ^(lazygit|code|nvim|czg|diff|cd)$ ]]; then
 		SELECTED_ACTION="$1"
 		shift
 	fi

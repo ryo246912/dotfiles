@@ -1,17 +1,17 @@
-# ctrl + d(alt + shift + d)でgitui起動
-_gitui() {
+# ctrl + d(alt + shift + d)でlazygit起動
+_lazygit() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" gitui
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" lazygit
   else
-    BUFFER='gitui'
+    BUFFER='lazygit'
     zle accept-line
   fi
 }
-zle -N _gitui
+zle -N _lazygit
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^D" _gitui
+  bindkey "^D" _lazygit
 else
-  bindkey "^[D" _gitui
+  bindkey "^[D" _lazygit
 fi
 
 # ctrl + x(alt + shift + x)でgh-dash起動

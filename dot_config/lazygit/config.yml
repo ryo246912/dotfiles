@@ -1,0 +1,45 @@
+customCommands:
+  - command: czg
+    context: "files, worktrees, localBranches, remotes, tags"
+    output: terminal
+    key: c
+  - command: chezmoi apply --interactive --exclude=scripts,templates
+    context: "files, worktrees, localBranches, remotes, tags"
+    output: terminal
+    key: C
+  - command: nvim
+    context: "files, worktrees"
+    output: terminal
+    key: n
+  - command: gh-dash
+    context: "files, worktrees, localBranches, remotes, tags"
+    output: terminal
+    key: x
+  - command: yazi
+    context: "files, worktrees, localBranches, remotes, tags"
+    output: terminal
+    key: Y
+  - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet {{.SelectedLocalCommit.Hash}}~1"
+    key: F
+    context: commits
+    description: "Fixup and Auto-squash into selected commit"
+  - command: >
+      git checkout -b {{.Form.newBranchName}} {{or .SelectedLocalBranch.Name .SelectedRemoteBranch.Name .SelectedTag.Name}} &&
+      git config "branch.$(git symbolic-ref --short HEAD).base-branch" {{or .SelectedLocalBranch.Name .SelectedRemoteBranch.Name .SelectedTag.Name}}
+    key: n
+    context: "localBranches, remotes, tags"
+    prompts:
+      - type: "input"
+        title: "Enter new branch name"
+        key: "newBranchName"
+    loadingText: "Creating branch and setting config..."
+    description: "Create new branch with base-branch config"
+promptToReturnFromSubprocess: false
+gui:
+  language: "ja"
+  showIcons: true
+  splitDiff: "always"
+git:
+  pagers:
+    - colorArg: always
+      pager: delta --paging=never --no-gitconfig

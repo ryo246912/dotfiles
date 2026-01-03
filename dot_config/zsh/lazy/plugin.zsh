@@ -57,6 +57,7 @@ __zsh-auto-notify_atload() {
       "gemini"
       "gh-dash"
       "gh-actions-dash"
+      "lazygit"
       "gitui"
       "gh pr create"
       "gh pr diff"
