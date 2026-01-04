@@ -1,13 +1,25 @@
+# yaml-language-server: $schema=https://gh-dash.dev/schema.json
 prSections:
-  - title: All PRs
-    filters: sort:created-desc
   - title: Open PRs
-    filters: is:open sort:created-desc
+    filters: >-
+      is:open
+      sort:created-desc
+  - title: Needs My Review
+    filters: >-
+      is:open
+      review-requested:@me
+      sort:created-desc
+  - title: All PRs
+    filters: >-
+      sort:created-desc
 issuesSections:
   - title: All Issues
-    filters: sort:created-desc
+    filters: >-
+      sort:created-desc
   - title: Open Issues
-    filters: is:open sort:created-desc
+    filters: >-
+      is:open
+      sort:created-desc
 defaults:
   preview:
     open: true
@@ -45,13 +57,14 @@ defaults:
   refetchIntervalMinutes: 30
 keybindings:
   issues: []
-  prs:
-    # keybindingを無効
-    - key: a
-    - key: A
-    - key: g
-    - key: m
-    - key: u
+  prs: []
+  # prs:
+  # keybindingを無効
+  # - key: a
+  # - key: A
+  # - key: g
+  # - key: m
+  # - key: u
 repoPaths: {}
 theme:
   ui:

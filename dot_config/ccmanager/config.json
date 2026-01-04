@@ -35,6 +35,12 @@
         "args": ["--resume"]
       },
       {
+        "id": "2",
+        "name": "claude(no resume)",
+        "command": "claude",
+        "args": [""]
+      },
+      {
         "id": "1752767057209",
         "name": "Gemini",
         "command": "gemini",

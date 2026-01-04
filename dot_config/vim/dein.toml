@@ -144,7 +144,7 @@ nnoremap <leader>gL :Git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d
 nnoremap <leader>gb :Git branch<CR>
 " Git current branch
 nnoremap <leader>gB :Git branch --show-current<CR>
-" Gitui
-nnoremap <leader>gu :tabnew \| terminal gitui<CR>
+" lazygit
+nnoremap <leader>lg :tabnew \| terminal lazygit<CR>
 '''
 repo = 'tpope/vim-fugitive'

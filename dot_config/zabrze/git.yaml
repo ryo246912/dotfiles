@@ -571,6 +571,11 @@ abbrevs:
     abbr-pattern: ^gu$
     snippet: gitui
 
+  # lazygit
+  - name: lazygit
+    abbr-pattern: ^lg$
+    snippet: lazygit
+
   # tig
   - name: tig
     abbr-pattern: ^t$
