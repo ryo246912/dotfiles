@@ -98,6 +98,15 @@ abbrevs:
     global: true
     context: '^go\s'
 
+  # ghost
+  - name: ghost
+    abbr-pattern: ^gt$
+    snippet: ghost
+
+  - name: ghost run
+    abbr-pattern: ^gtr$
+    snippet: ghost run
+
   # jira
   - name: jira copy title
     abbr: jct
