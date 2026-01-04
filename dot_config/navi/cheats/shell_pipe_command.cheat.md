@@ -58,6 +58,9 @@ fzf
 # less [-i:ignore-case][-M:prompt more verbosely][-W:highlight first unread line after scrolling][-R:ANSI "color" escape sequences to be displayed in their raw][--use-color:enables colored]
 less -iRMW --use-color
 
+# lnav [-c:command]
+lnav -c ':set-text-view-mode raw'
+
 # grep : normal [-r:recursive][-i:ignore upper&lower][-n:output rows number][-e:multi condition][-E:extend regex,*/+/{n}/(X|Y)][-P:perl regex] [ex: grep -r 'navi' ./**/*dot* , grep -E '(X|Y)' apps/**/*.py]
 grep -Pinr '<regex>' ./**/*
 
@@ -78,6 +81,9 @@ gron | grep -p '<regex>' | gron -u | jq 'del(.[] | nulls)'
 
 # head : [-n:output number]
 head -n <num>
+
+# ijq
+ijq
 
 # jq : [-r:raw output]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
