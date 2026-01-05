@@ -77,6 +77,9 @@ zinit wait lucid light-mode blockf for \
     atload"__fast-syntax-highlighting_atload" \
     @'zdharma/fast-syntax-highlighting'
 
+zinit wait lucid light-mode blockf for \
+    @'ryo246912/ni.zsh'
+
 ### completion ###
 zinit wait lucid light-mode blockf for \
     as"completion" \

@@ -1,67 +1,48 @@
 .ifs:
-  - &npm '[[ -f "./package-lock.json" ]] && ! [[ -f "./pnpm-lock.yaml" ]]'
-  - &pnpm '[[ -f "./pnpm-lock.yaml" ]]'
+  - &lockfile '[[ -f "./pnpm-lock.yaml" ]] || [[ -f "./package-lock.json" ]] || [[ -f "./yarn.lock" ]] || [[ -f "./bun.lock" ]] || [[ -f "./deno.lock" ]]'
 
 abbrevs:
-  # npm commands
-  - name: npm ci
+  - name: ni ci
     abbr-pattern: ^nc$
-    snippet: npm ci
-    if: *npm
+    snippet: ni ci
+    if: *lockfile
 
-  - name: npm install
-    abbr-pattern: ^ni$
-    snippet: npm install
-    if: *npm
+  - name: ni add
+    abbr-pattern: ^na$
+    snippet: ni add
+    if: *lockfile
 
-  - name: npm run
+  - name: ni run
     abbr-pattern: ^nr$
-    snippet: npm run
+    snippet: ni run
+    if: *lockfile
 
-  - name: npm run build
+  - name: ni run build
     abbr: nrb
-    snippet: npm run build
+    snippet: ni run build
+    if: *lockfile
 
-  - name: npm run dev
+  - name: ni run dev
     abbr: nrd
-    snippet: npm run dev
+    snippet: ni run dev
+    if: *lockfile
 
-  - name: npm run fix
+  - name: ni run fix
     abbr: nrf
-    snippet: npm run fix
+    snippet: ni run fix
+    if: *lockfile
 
-  - name: npm run lint
+  - name: ni run lint
     abbr: nrl
-    snippet: npm run lint
+    snippet: ni run lint
+    if: *lockfile
 
-  - name: npm run orval
-    abbr: nro
-    snippet: npm run orval
+  - name: ni run test
+    abbr-pattern: (^nrt$|^nt$)
+    snippet: ni run test
+    if: *lockfile
 
-  - name: npm run test
-    abbr: nrt
-    snippet: npm run test
-
-  - name: npm run test
+  - name: ni run test
     abbr: nrtd
-    snippet: npm run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')
-
-  - name: npm run vite
-    abbr: nrv
-    snippet: npm run vite
-
-  # pnpm commands
-  - name: pnpm ci
-    abbr-pattern: ^nc$
-    snippet: pnpm install --frozen-lockfile
-    if: *pnpm
-
-  - name: pnpm add
-    abbr-pattern: ^ni$
-    snippet: pnpm add
-    if: *pnpm
-
-  - name: pnpm uninstall
-    abbr-pattern: ^nun
-    snippet: pnpm remove
-    if: *pnpm
+    snippet: ni run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')
+    if: *lockfile
