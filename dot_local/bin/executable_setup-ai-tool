@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export DISABLE_AUTOUPDATER=1
+
+claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp
+claude mcp add -s user -t http deepwiki https://mcp.deepwiki.com/mcp
+claude mcp add -s user chrome-devtools bunx chrome-devtools-mcp@latest
+# /plugin marketplace add anthropics/skills
