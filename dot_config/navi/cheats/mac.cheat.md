@@ -88,6 +88,9 @@ networksetup -listpreferredwirelessnetworks en0
 # networksetup : toggle wifi power on/off
 networksetup -setairportpower en0 on
 
+# osascript : display notification
+osascript -e 'display notification "作業が完了しました" with title "通知タイトル" sound name "Glass"'
+
 # sw_vers : display macOS version
 sw_vers
 
