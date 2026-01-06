@@ -78,7 +78,7 @@ zinit wait lucid light-mode blockf for \
     @'zdharma/fast-syntax-highlighting'
 
 zinit wait lucid light-mode blockf for \
-    @'ryo246912/ni.zsh'
+    @'azu/ni.zsh'
 
 ### completion ###
 zinit wait lucid light-mode blockf for \
@@ -103,10 +103,6 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     src"tmux" \
     as"completion" "https://github.com/imomaliev/tmux-bash-completion/blob/master/completions/tmux"
-
-zinit wait lucid light-mode blockf for \
-    atload"source zsh-better-npm-completion.plugin.zsh" \
-    as"completion" "https://github.com/lukechilds/zsh-better-npm-completion/blob/master/zsh-better-npm-completion.plugin.zsh"
 
 zinit wait lucid light-mode blockf for \
     mv"chezmoi.zsh -> _chezmoi" \
