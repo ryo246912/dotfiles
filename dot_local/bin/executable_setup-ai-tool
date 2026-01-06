@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Check for required binaries
+if ! command -v claude &> /dev/null; then
+  echo "✖ Error: 'claude' command not found. Please install Claude CLI first."
+  exit 1
+fi
+
+if ! command -v bun &> /dev/null; then
+  echo "✖ Error: 'bun' command not found. Please install bun first."
+  exit 1
+fi
+
+export DISABLE_AUTOUPDATER=1
+
+# Helper function to check if MCP is already registered
+mcp_exists() {
+  local name="$1"
+  claude mcp list 2>/dev/null | grep -q "\"$name\"" && return 0 || return 1
+}
+
+# Add MCPs if not already present
+echo "[setup-ai-tool] Configuring Claude MCPs..."
+
+if ! mcp_exists "context7"; then
+  echo "Adding context7 MCP..."
+  if claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp; then
+    echo "✔ context7 MCP added"
+  else
+    echo "✖ Failed to add context7 MCP"
+    exit 1
+  fi
+else
+  echo "✓ context7 MCP already registered"
+fi
+
+if ! mcp_exists "deepwiki"; then
+  echo "Adding deepwiki MCP..."
+  if claude mcp add -s user -t http deepwiki https://mcp.deepwiki.com/mcp; then
+    echo "✔ deepwiki MCP added"
+  else
+    echo "✖ Failed to add deepwiki MCP"
+    exit 1
+  fi
+else
+  echo "✓ deepwiki MCP already registered"
+fi
+
+if ! mcp_exists "chrome-devtools"; then
+  echo "Adding chrome-devtools MCP..."
+  if claude mcp add -s user chrome-devtools bunx chrome-devtools-mcp@latest; then
+    echo "✔ chrome-devtools MCP added"
+  else
+    echo "✖ Failed to add chrome-devtools MCP"
+    exit 1
+  fi
+else
+  echo "✓ chrome-devtools MCP already registered"
+fi
+
+echo "[setup-ai-tool] Setup completed successfully!"
+# TODO: anthropics/skills plugin will be added once marketplace is stable
+# /plugin marketplace add anthropics/skills
