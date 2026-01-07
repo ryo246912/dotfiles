@@ -62,7 +62,7 @@ gh repo view <repository> -w
 gh repo create <name> --private --push --source=.
 
 # fork repository
-gh repo fork <repository>
+gh repo fork --clone --remote --default-branch-only <repository>
 
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
