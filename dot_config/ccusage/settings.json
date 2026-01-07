@@ -1,0 +1,9 @@
+{
+  "$schema": "https://ccusage.com/config-schema.json",
+  "commands": {
+    "statusline": {
+      "offline": false,
+      "refreshInterval": 5
+    }
+  }
+}

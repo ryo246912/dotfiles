@@ -36,8 +36,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh",
-    "padding": 0
+    "command": "ccusage statusline --visual-burn-rate emoji"
   },
   "hooks": {
     "PostToolUse": [
