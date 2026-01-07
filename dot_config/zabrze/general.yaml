@@ -36,7 +36,7 @@ abbrevs:
 
   - name: ccmanager devcontainer
     abbr: ccmc
-    snippet: ccmanager --devc-up-command "devcontainer up --workspace-folder . --config ~/.config/devcontainer/claude/devcontainer.json" --devc-exec-command "claude --resume --dangerously-skip-permissions"
+    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config ~/.config/devcontainer/claude/devcontainer.json" --devc-exec-command "claude --resume --dangerously-skip-permissions"
 
   - name: echo
     abbr-pattern: ^e$
