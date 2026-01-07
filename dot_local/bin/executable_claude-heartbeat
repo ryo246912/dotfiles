@@ -16,7 +16,7 @@ echo $$ > "$LOCKFILE"
 trap "rm -f '$LOCKFILE'" EXIT
 
 SCHEDULED_TIMES=("09:00" "14:05" "20:10")
-LOOP_INTERVAL=30
+LOOP_INTERVAL=$((60 * 30)) # 30 minutes
 last_run=""
 
 echo "[claude-heartbeat] watching times: ${SCHEDULED_TIMES[*]}"
@@ -37,17 +37,17 @@ while true; do
   for t in "${SCHEDULED_TIMES[@]}"; do
     t_minutes=$(time_to_minutes "$t")
     key="${today} ${t}"
-    
+
     # Use >= comparison to catch scheduled times even if skipped by sleep interval
     if [[ "$now_minutes" -ge "$t_minutes" && "$last_run" != "$key" ]]; then
       last_run="$key"
       echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sending heartbeat to Claude..."
-      
-      # Retry logic: attempt up to 3 times with 5-second intervals
-      max_retries=3
+
+      # Retry logic: attempt up to 2 times with 5-second intervals
+      max_retries=2
       retry_count=0
       success=false
-      
+
       while [ $retry_count -lt $max_retries ]; do
         if claude -p "hello" >/dev/null 2>&1; then
           echo "✔ Claude responded"
@@ -61,7 +61,7 @@ while true; do
           fi
         fi
       done
-      
+
       if [ "$success" = false ]; then
         echo "✖ Claude failed after $max_retries attempts"
       fi
