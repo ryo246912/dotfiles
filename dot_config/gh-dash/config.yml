@@ -56,9 +56,15 @@ defaults:
         hidden: true
   refetchIntervalMinutes: 30
 keybindings:
-  prs:
-    - key: "M"
-      command: "gh pr merge {{ .PrNumber }} --admin"
+  issues: []
+  prs: []
+  # prs:
+  # keybindingを無効
+  # - key: a
+  # - key: A
+  # - key: g
+  # - key: m
+  # - key: u
 repoPaths: {}
 theme:
   ui:
