@@ -222,6 +222,10 @@ abbrevs:
     abbr-pattern: ^gp$
     snippet: git pull --no-commit
 
+  - name: git pull --rebase --autostash
+    abbr: gpr
+    snippet: git pull --rebase --autostash
+
   - name: git push origin HEAD
     abbr: gpoh
     cursor: "👇"
@@ -537,8 +541,14 @@ abbrevs:
     context: *gitmerge
 
   - name: (git pull) --rebase
-    abbr: re
+    abbr: r
     snippet: --rebase
+    global: true
+    context: *gitpull
+
+  - name: (git pull) --autostash
+    abbr: s
+    snippet: --autostash
     global: true
     context: *gitpull
 

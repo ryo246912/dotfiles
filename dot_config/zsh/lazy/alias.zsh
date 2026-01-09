@@ -1,5 +1,6 @@
 alias vim="nvim"
 alias fly="flyctl"
+alias restore_tmux="~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
 
 claude_check_version() {
   local desired_version="1.0.48"
@@ -25,3 +26,4 @@ if [ "$(uname)" = "Linux" ]; then
   alias pwsh="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
   alias powershell="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
 fi
+
