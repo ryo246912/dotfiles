@@ -3,6 +3,10 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: c
+  - command: gitui
+    context: "files"
+    output: terminal
+    key: u
   - command: chezmoi apply --interactive --exclude=scripts,templates
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
