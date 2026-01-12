@@ -1,14 +1,24 @@
 {
-  "theme": "GitHub",
-  "selectedAuthType": "oauth-personal",
-  "usageStatisticsEnabled": false,
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "ui": {
+    "theme": "GitHub"
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
   "mcpServers": {
-    "playwright": {
-      "command": "/opt/homebrew/bin/bunx",
-      "args": ["@playwright/mcp@0.0.31", "--browser", "webkit", "--headless"]
-    },
+    // https://docs.devin.ai/ja/work-with-devin/deepwiki-mcp#sse-server-sent-events-/sse
     "deepwiki": {
       "url": "https://mcp.deepwiki.com/sse"
+    },
+    // https://github.com/d-kimuson/modular-mcp
+    "modular-mcp": {
+      "command": "npx",
+      "args": ["-y", "@kimuson/modular-mcp", "$HOME/.claude/modular-mcp.json"]
     }
   }
 }

@@ -20,7 +20,7 @@
   },
   "worktree": {
     "autoDirectory": true,
-    "autoDirectoryPattern": "../worktrees/{branch}",
+    "autoDirectoryPattern": "../worktrees/{project}-{branch}",
     "copySessionData": true
   },
   "command": {

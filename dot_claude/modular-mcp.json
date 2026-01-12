@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/d-kimuson/modular-mcp/refs/heads/main/config-schema.json",
+  "mcpServers": {
+    "context7": {
+      "description": "プログラミングライブラリ・フレームワークの最新ドキュメントとコード例を検索・取得するツール",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "playwright": {
+      "description": "Webブラウザの自動操作・テスト・スクレイピングに使用するツール",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "chrome-devtools": {
+      "description": "Google ChromeのDevToolsを使ってブラウザを制御・デバッグするツール",
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browserUrl=http://localhost:9222"
+      ]
+    }
+  }
+}

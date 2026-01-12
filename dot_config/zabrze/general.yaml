@@ -37,11 +37,12 @@ abbrevs:
   - name: ccmanager devcontainer(claude)
     abbr-pattern: (^ccmc$|ccmcc)
     cursor: "👇"
-    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config ~/.config/devcontainer/devcontainer.json" --devc-exec-command "claude --resume👇 --dangerously-skip-permissions"
+    evaluate: true
+    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json" --devc-exec-command "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --resume👇 --dangerously-skip-permissions"
 
   - name: ccmanager devcontainer(gemini)
     abbr: ccmcg
-    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config ~/.config/devcontainer/devcontainer.json" --devc-exec-command "gemini --yolo"
+    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json" --devc-exec-command "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo"
 
   - name: echo
     abbr-pattern: ^e$
