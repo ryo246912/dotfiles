@@ -1,17 +1,33 @@
 {
+  // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
-  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu-24.04",
-  "features": {
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5": {},
-    "ghcr.io/devcontainers/features/aws-cli:1.1.2": {},
-    // "ghcr.io/devcontainers/features/docker-outside-of-docker:1.6.5": {},
-    "ghcr.io/devcontainers/features/github-cli:1.0.15": {}
+  "build": {
+    "dockerfile": "Dockerfile"
   },
+  // https://github.com/devcontainers/features/tree/main/src
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
+  },
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+  },
+  // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
+  // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
+    // .config
     "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
+    // git - parent directory of workspace
+    // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
+    "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
+    "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+    // AI agent configs
     "type=bind,source=${localEnv:HOME}/.claude,target=/home/vscode/.claude",
     "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
     "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
     "type=bind,source=${localEnv:HOME}/.gemini/settings.json,target=/home/vscode/.gemini/settings.json,readonly"
-  ]
+  ],
+  "postStartCommand": "mise trust"
 }
