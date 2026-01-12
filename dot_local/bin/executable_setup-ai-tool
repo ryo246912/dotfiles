@@ -13,50 +13,63 @@ fi
 
 export DISABLE_AUTOUPDATER=1
 
+# Get MCP list once and reuse it
+MCP_LIST=$(claude mcp list 2>/dev/null)
+
 # Helper function to check if MCP is already registered
 mcp_exists() {
   local name="$1"
-  claude mcp list 2>/dev/null | grep -q "\"$name\"" && return 0 || return 1
+  echo "$MCP_LIST" | grep -q "\"$name\"" && return 0 || return 1
+}
+
+# MCPs to add
+MCP_NAMES=(
+  # "context7"
+  "deepwiki"
+  # "chrome-devtools"
+  "modular-mcp"
+)
+MCP_ARGS=(
+  # "-s user --transport http context7 https://mcp.context7.com/mcp"
+  "-s user -t http deepwiki https://mcp.deepwiki.com/mcp"
+  # "-s user chrome-devtools bunx chrome-devtools-mcp@latest"
+  "--transport stdio -s user modular-mcp -- npx -y @kimuson/modular-mcp $HOME/.claude/modular-mcp.json"
+)
+
+# Function to add or skip MCP
+add_or_skip_mcp() {
+  local name="$1"
+  local args="$2"
+
+  if ! mcp_exists "$name"; then
+    echo "Adding $name MCP..."
+    local output
+    output=$(eval "claude mcp add $args" 2>&1)
+    if [ $? -eq 0 ]; then
+      echo "✔ $name MCP added"
+      return 0
+    elif echo "$output" | grep -q "already exists"; then
+      echo "✓ $name MCP already registered"
+      return 0
+    else
+      echo "✖ Failed to add $name MCP"
+      echo "$output"
+      return 1
+    fi
+  else
+    echo "✓ $name MCP already registered"
+    return 0
+  fi
 }
 
 # Add MCPs if not already present
 echo "[setup-ai-tool] Configuring Claude MCPs..."
 
-if ! mcp_exists "context7"; then
-  echo "Adding context7 MCP..."
-  if claude mcp add -s user --transport http context7 https://mcp.context7.com/mcp; then
-    echo "✔ context7 MCP added"
-  else
-    echo "✖ Failed to add context7 MCP"
+for i in "${!MCP_NAMES[@]}"; do
+  if ! add_or_skip_mcp "${MCP_NAMES[$i]}" "${MCP_ARGS[$i]}"; then
     exit 1
   fi
-else
-  echo "✓ context7 MCP already registered"
-fi
-
-if ! mcp_exists "deepwiki"; then
-  echo "Adding deepwiki MCP..."
-  if claude mcp add -s user -t http deepwiki https://mcp.deepwiki.com/mcp; then
-    echo "✔ deepwiki MCP added"
-  else
-    echo "✖ Failed to add deepwiki MCP"
-    exit 1
-  fi
-else
-  echo "✓ deepwiki MCP already registered"
-fi
-
-if ! mcp_exists "chrome-devtools"; then
-  echo "Adding chrome-devtools MCP..."
-  if claude mcp add -s user chrome-devtools bunx chrome-devtools-mcp@latest; then
-    echo "✔ chrome-devtools MCP added"
-  else
-    echo "✖ Failed to add chrome-devtools MCP"
-    exit 1
-  fi
-else
-  echo "✓ chrome-devtools MCP already registered"
-fi
+done
 
 echo "[setup-ai-tool] Setup completed successfully!"
 # TODO: anthropics/skills plugin will be added once marketplace is stable

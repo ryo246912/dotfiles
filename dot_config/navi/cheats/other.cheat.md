@@ -19,6 +19,9 @@ act<_-dry-run_><event> -W <workflow>
 # claude : mcp add
 claude mcp add <name> -s <scope> -- <command>
 
+# claude : display mcp servers(user scope)
+cat ~/.claude.json | jq '.mcpServers'
+
 # cspell : lint [-c:config file][-e:exclude file]
 cspell --no-progress --gitignore . | less -iRMW --use-color
 

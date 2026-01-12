@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "modular-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@kimuson/modular-mcp", "$HOME/.claude/modular-mcp.json"],
+      "env": {}
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    }
+  }
+}

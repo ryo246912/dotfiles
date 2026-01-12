@@ -1,13 +1,12 @@
 {
   "globalShortcut": "",
   "mcpServers": {
-    "playwright": {
-      "command": "/opt/homebrew/bin/bunx",
-      "args": ["@playwright/mcp@0.0.31", "--browser", "webkit", "--headless"]
+    "deepwiki": {
+      "url": "https://mcp.deepwiki.com/sse"
     },
-    "mcp-deepwiki": {
-      "command": "/opt/homebrew/bin/bunx",
-      "args": ["mcp-deepwiki@0.0.10"]
+    "modular-mcp": {
+      "command": "npx",
+      "args": ["-y", "@kimuson/modular-mcp", "$HOME/.claude/modular-mcp.json"]
     }
   }
 }
