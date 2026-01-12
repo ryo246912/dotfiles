@@ -20,7 +20,7 @@
   },
   "worktree": {
     "autoDirectory": true,
-    "autoDirectoryPattern": ".git/wk/{project}-{branch}",
+    "autoDirectoryPattern": "../worktrees/{project}-{branch}",
     "copySessionData": true
   },
   "command": {
