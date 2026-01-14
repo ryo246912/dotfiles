@@ -6,17 +6,26 @@ tmux list-keys | less -iRMW --use-color
 # list-panes
 tmux list-panes -s -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty} [history #{history_size}/#{history_limit}, #{history_bytes} bytes]" | column -t
 
-# pane move [-h:yoko,-v:tate]
+# move pane
+tmux choose-tree -F "[#I#P] #{pane_current_command} #{pane_current_path}" -w -Z -f '#{!=:#{window_active},1}' "join-pane -t '%%'"
+
+# move pane from to [-h:yoko,-v:tate]
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
+
+# move window
+tmux choose-tree -F "[#I#P] #{pane_current_command} #{pane_current_path}" -Z -s "move-window -t '%%'"
+
+# swap(move) window
+tmux swap-window -t <window_no>
+
+# create new session
+tmux new-session -d -s "$(basename "$(pwd)")" -c "$(pwd)"
 
 # respawn-current-pane [-k:kill existing command,-c:start-directory]
 tmux respawn-pane -k -c '#{pane_current_path}' -t .
 
 # respawn-pane [-k:kill existing command,-c:start-directory]
 tmux respawn-pane -k -c '#{pane_current_path}' -t <pane_to>
-
-# window move
-tmux swap-window -t <window_no>
 
 # pipe-pane
 tmux pipe-pane -t <pane_from> 'cat | grep '<word>' >> <tty>' ; read ; tmux pipe-pane -t <pane_from>
