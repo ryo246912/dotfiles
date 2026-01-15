@@ -26,6 +26,7 @@
     // AI agent configs
     "type=bind,source=${localEnv:HOME}/.claude,target=/home/vscode/.claude",
     "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
+    "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.claude.json",
     "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
     "type=bind,source=${localEnv:HOME}/.gemini/settings.json,target=/home/vscode/.gemini/settings.json,readonly"
   ],
