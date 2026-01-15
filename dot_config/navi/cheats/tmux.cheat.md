@@ -13,7 +13,7 @@ tmux choose-tree -F "[#I#P] #{pane_current_command} #{pane_current_path}" -w -Z 
 tmux join-pane -<hv> -s <pane_from> -t <pane_to>
 
 # move window
-tmux choose-tree -F "[#I#P] #{pane_current_command} #{pane_current_path}" -Z -s "move-window -t '%%'"
+tmux choose-tree -F "[#I#P] #{pane_current_command} #{pane_current_path}" -w -Z -s "move-window -t '%%'"
 
 # swap(move) window
 tmux swap-window -t <window_no>
@@ -35,8 +35,15 @@ tmux capture-pane -p -S -100 -t <pane_from>
 
 # arrange layout
 tmux select-layout tiled
+
+# restore resurrect file
+ln -sf <resurrect_file> ~/.local/share/tmux/resurrect/last && tmux run-shell ~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh
+
+# relink resurrect file
+ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last
 ```
 $ hv: echo -e "v\nh"
+$ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f | head -n 10
 $ pane_from: echo "." && \
   tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
