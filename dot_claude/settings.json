@@ -34,6 +34,9 @@
   "env": {
     "DISABLE_AUTOUPDATER": "1"
   },
+  "git": {
+    "includeCoAuthor": false
+  },
   "statusLine": {
     "type": "command",
     "command": "ccusage statusline --visual-burn-rate emoji"
