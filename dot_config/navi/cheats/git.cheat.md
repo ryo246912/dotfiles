@@ -70,6 +70,9 @@ git checkout -b <branch_name> <all_branch> && git config "branch.$(git symbolic-
 # checkout remote branch
 git checkout -b <remote_branch> origin/<remote_branch>
 
+# checkout partial sparse-checkout directory
+git sparse-checkout set <dir>
+
 # record base-branch
 git config "branch.$(git symbolic-ref --short HEAD).base-branch" <current_branch>
 

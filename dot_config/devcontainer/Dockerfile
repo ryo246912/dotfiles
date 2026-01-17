@@ -18,6 +18,9 @@ RUN /usr/local/bin/mise install -C /mise && \
     /usr/local/bin/mise reshim -C /mise && \
     /usr/local/bin/mise trust
 
+# install tool via curl
+RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+
 WORKDIR /workspace
 
 # Ensure proper permissions for mounted volumes

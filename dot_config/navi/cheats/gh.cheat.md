@@ -64,6 +64,9 @@ gh repo create <name> --private --push --source=.
 # fork repository
 gh repo fork --clone --remote --default-branch-only <repository>
 
+# clone repository
+gh repo clone <repository> -- --filter=blob:none --sparse --depth 1
+
 # project view [owner:repository owner(ex:pytorch)]
 gh project view --owner <owner> -w <project_no>
 

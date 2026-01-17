@@ -23,9 +23,6 @@ MERGE_RR
 ORIG_HEAD
 packed-refs
 
-# AI
-_*
-
 ## Claude
 settings.local.json
 

@@ -65,7 +65,7 @@ return {
             local bufnr = vim.api.nvim_get_current_buf()
             local state = vim.b[bufnr].nes_state
             if state then
-                require("copilot-lsp.nes").dismiss_pending_nes()
+                vim.b[bufnr].nes_state = nil
             else
                 vim.cmd("noh") -- 検索ハイライトをクリア
             end
@@ -74,7 +74,7 @@ return {
             local bufnr = vim.api.nvim_get_current_buf()
             local state = vim.b[bufnr].nes_state
             if state then
-                require("copilot-lsp.nes").dismiss_pending_nes()
+                vim.b[bufnr].nes_state = nil
                 return '' -- Consume the Esc key
             else
                 return '<esc>' -- Fallback to normal Esc behavior
