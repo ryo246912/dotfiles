@@ -2,6 +2,7 @@
   "blueutil": "2.13.0",
   "oven-sh/bun/bun": "1.2.19",
   "coreutils": "9.9",
+  "ffmpeg": "8.0.1_1",
   "findutils": "4.10.0",
   "gh": "2.83.1",
   "git": "2.52.0",
