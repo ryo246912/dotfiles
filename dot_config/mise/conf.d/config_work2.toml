@@ -7,7 +7,7 @@
 "aqua:kayac/ecspresso"           = "2.7.0"
 "aqua:rclone/rclone"             = "1.72.0"
 "aqua:sqldef/sqldef/psqldef"     = "3.6.3"
-"go:github.com/99designs/gqlgen" = "0.17.85"
+"go:github.com/99designs/gqlgen" = "0.17.86"
 "go:gotest.tools/gotestsum"      = "1.13.0"
 "npm:graphql-voyager"            = "2.1.0"
 "pipx:awslogs"                   = "0.15.0"
