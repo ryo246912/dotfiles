@@ -25,6 +25,9 @@ ssh-add -l
 # ssh-keygen : create secret key (default:id_rsa{,.pub}) [-t:algorithm]
 ssh-keygen -t <algorithm> -C "<mail_address>"
 
+# ssh-keygen : remove host and re-login [ex:ssh-keygen -R github.com && ssh -i ~/.ssh/id_ed25519 -p 22]
+ssh-keygen -R <HOST> && ssh -i <private_key> -p <port> <user>@<HOST>
+
 # ssh-keyscan : get public ssh key [ex:ssh-keyscan github.com >> ~/.ssh/known_hosts]
 ssh-keyscan <HOST> >> ~/.ssh/known_hosts
 
