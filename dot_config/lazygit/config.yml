@@ -11,10 +11,6 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: C
-  - command: nvim
-    context: "files, worktrees"
-    output: terminal
-    key: n
   - command: gh-dash
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
@@ -23,6 +19,10 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
+  - command: nvim {{.SelectedFile.Name}}
+    context: "files"
+    output: terminal
+    key: e
   - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet {{.SelectedLocalCommit.Hash}}~1"
     key: F
     context: commits
