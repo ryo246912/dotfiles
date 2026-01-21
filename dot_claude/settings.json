@@ -1,4 +1,7 @@
 {
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(mise list:*)",
@@ -22,24 +25,6 @@
       "Write(.env*)",
       "Write(**/secrets/**)"
     ]
-  },
-  "bash": {
-    "allowedCommands": [
-      "powershell.exe -Command '[System.Media.SystemSounds]::Exclamation.Play()'",
-      "powershell.exe -Command '[System.Media.SystemSounds]::Hand.Play()'",
-      "powershell.exe -Command '[System.Media.SystemSounds]::Question.Play()'"
-    ],
-    "blockUnlistedCommands": true
-  },
-  "env": {
-    "DISABLE_AUTOUPDATER": "1"
-  },
-  "git": {
-    "includeCoAuthor": false
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "ccusage statusline --visual-burn-rate emoji"
   },
   "hooks": {
     "PostToolUse": [
@@ -73,5 +58,19 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "ccusage statusline --visual-burn-rate emoji"
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "expo-deployment@expo-plugins": true
+  },
+  "bash": {
+    "blockUnlistedCommands": true
+  },
+  "git": {
+    "includeCoAuthor": false
   }
 }
