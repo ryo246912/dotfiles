@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+  "google_auth": false,
+  "agents": {
+    // 高度な推論と長いコンテキストが必要
+    "Sisyphus": {
+      "model": "opencode/glm-4.7-free"
+    },
+    // 大量のドキュメント検索
+    "librarian": {
+      "model": "opencode/gemini-3-pro"
+    },
+    // 高速なコード検索に特化
+    "explore": {
+      "model": "opencode/grok-code-fast-1"
+    },
+    // 複雑なアーキテクチャ判断に強い
+    "oracle": {
+      "model": "opencode/glm-4.7-free"
+    },
+    // UIコード生成のバランス型
+    "frontend-ui-ux-engineer": {
+      "model": "google/antigravity-gemini-3-pro-high"
+    },
+    "document-writer": {
+      "model": "google/antigravity-gemini-3-flash"
+    },
+    "multimodal-looker": {
+      "model": "google/antigravity-gemini-3-flash"
+    }
+  }
+}

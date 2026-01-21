@@ -44,6 +44,10 @@ abbrevs:
     abbr: ccmcg
     snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json" --devc-exec-command "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo"
 
+  - name: ccmanager devcontainer(opencode)
+    abbr: ccmco
+    snippet: ccmanager --devc-up-command "devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json" --devc-exec-command "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json opencode"
+
   - name: echo
     abbr-pattern: ^e$
     snippet: echo
