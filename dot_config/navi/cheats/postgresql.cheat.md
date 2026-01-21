@@ -13,6 +13,9 @@ pg_dump -U <user> -d <db> > backup.sql
 # restore
 psql -U <user> -d <db> < backup.sql
 
+# drop database [ex.dropdb -h 0.0.0.0 -p 8890 -U root izanami]
+dropdb -h <host> -p <port> -U <user> <database>
+
 # display(list) databases [+:with size, tablespace, and description]
 \l+
 

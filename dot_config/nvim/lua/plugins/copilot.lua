@@ -75,7 +75,6 @@ return {
             local state = vim.b[bufnr].nes_state
             if state then
                 vim.b[bufnr].nes_state = nil
-                return '' -- Consume the Esc key
             else
                 return '<esc>' -- Fallback to normal Esc behavior
             end
