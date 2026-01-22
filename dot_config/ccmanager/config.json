@@ -34,7 +34,7 @@
         "name": "Main",
         "command": "claude",
         "args": ["--resume"],
-        "fallbackArgs": [""]
+        "fallbackArgs": []
       },
       {
         "id": "2",
