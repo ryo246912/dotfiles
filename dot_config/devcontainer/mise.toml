@@ -15,3 +15,9 @@ node                             = "22.19.0"
 "npm:opencode-ai"                = "1.1.31"
 "npm:prettier"                   = "3.8.1"
 python                           = "3.14.0"
+
+[settings.npm]
+bun = true
+
+[settings.pipx]
+uvx = true
