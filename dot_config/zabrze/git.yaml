@@ -532,9 +532,9 @@ abbrevs:
     global: true
     context: *gitmerge
 
-  - name: (git pull) --rebase
+  - name: (git pull) --rebase --autostash
     abbr: r
-    snippet: --rebase
+    snippet: --rebase --autostash
     global: true
     context: *gitpull
 
