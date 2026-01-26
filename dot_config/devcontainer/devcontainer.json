@@ -29,8 +29,8 @@
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
-    "type=bind,source=${localEnv:HOME}/.gemini/settings.json,target=/home/vscode/.gemini/settings.json,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode,readonly",
+    "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
+    "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
   ],
   "postCreateCommand": "if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then cp /tmp/claude-config-host.json ~/.claude.json; fi",
