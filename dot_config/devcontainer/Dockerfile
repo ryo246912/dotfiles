@@ -13,8 +13,14 @@ ENV PATH="/mise/data/shims:/mise/shims:/mise/installs:$PATH"
 
 COPY mise.toml /mise/config.toml
 
-# Install tools via mise (as root to install globally)
-RUN /usr/local/bin/mise install -C /mise && \
+# First, install gh
+RUN /usr/local/bin/mise install -C /mise aqua:cli/cli && \
+    /usr/local/bin/mise reshim -C /mise
+
+# Install all tools via mise with GitHub auth available
+RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml \
+    /usr/local/bin/mise install -C /mise aqua:cli/cli && \
+    GITHUB_TOKEN=$(gh auth token) /usr/local/bin/mise install -C /mise && \
     /usr/local/bin/mise reshim -C /mise && \
     /usr/local/bin/mise trust
 
