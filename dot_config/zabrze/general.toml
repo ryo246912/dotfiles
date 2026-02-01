@@ -1,213 +1,213 @@
 [[snippets]]
-name = "atuin search -i"
+name            = "atuin search -i"
+snippet         = "atuin search -i"
 trigger-pattern = "(ats|ase)"
-snippet = "atuin search -i"
 
 [[snippets]]
-name = "atuin stats"
-trigger = "atst"
+name    = "atuin stats"
 snippet = "atuin stats"
+trigger = "atst"
 
 [[snippets]]
-name = "aqua search"
+name            = "aqua search"
+snippet         = "aqua g"
 trigger-pattern = "(^as$|^ag$)"
-snippet = "aqua g"
 
 [[snippets]]
-name = "code ."
+name            = "code ."
+snippet         = "code ."
 trigger-pattern = "^c\\.$"
-snippet = "code ."
 
 [[snippets]]
-name = "caffeinate"
+name            = "caffeinate"
+snippet         = "caffeinate"
 trigger-pattern = "^ca$"
-snippet = "caffeinate"
 
 [[snippets]]
-name = "cal -3"
+name            = "cal -3"
+snippet         = "cal -3"
 trigger-pattern = "^c3$"
-snippet = "cal -3"
 
 [[snippets]]
-name = "cal -y"
+name            = "cal -y"
+snippet         = "cal -y"
 trigger-pattern = "^cy$"
-snippet = "cal -y"
 
 [[snippets]]
-name = "ccmanager"
-trigger = "ccm"
+name    = "ccmanager"
 snippet = "ccmanager"
+trigger = "ccm"
 
 [[snippets]]
-name = "ccmanager devcontainer(claude)"
+cursor          = "👇"
+evaluate        = true
+name            = "ccmanager devcontainer(claude)"
+snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --resume👇 --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmc$|ccmcc)"
-cursor = "👇"
-evaluate = true
-snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --resume👇 --dangerously-skip-permissions\""
 
 [[snippets]]
-name = "ccmanager devcontainer(gemini)"
-trigger = "ccmcg"
+name    = "ccmanager devcontainer(gemini)"
 snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo\""
+trigger = "ccmcg"
 
 [[snippets]]
-name = "ccmanager devcontainer(opencode)"
-trigger = "ccmco"
+name    = "ccmanager devcontainer(opencode)"
 snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json opencode\""
+trigger = "ccmco"
 
 [[snippets]]
-name = "echo"
+name            = "echo"
+snippet         = "echo"
 trigger-pattern = "^e$"
-snippet = "echo"
 
 [[snippets]]
-name = "exec $SHELL -l"
+name            = "exec $SHELL -l"
+snippet         = "exec $SHELL -l"
 trigger-pattern = "^es$"
-snippet = "exec $SHELL -l"
 
 [[snippets]]
-name = "ls -la"
+name            = "ls -la"
+snippet         = "ls -la"
 trigger-pattern = "^la$"
-snippet = "ls -la"
 
 [[snippets]]
-name = "ls -l"
+name            = "ls -l"
+snippet         = "ls -l"
 trigger-pattern = "^ll$"
-snippet = "ls -l"
 
 [[snippets]]
-name = "nvim"
+name            = "nvim"
+snippet         = "nvim"
 trigger-pattern = "(^nv$|^v$)"
-snippet = "nvim"
 
 [[snippets]]
-name = "nvim ."
+name            = "nvim ."
+snippet         = "nvim ."
 trigger-pattern = "(^n\\.|^v\\.)"
-snippet = "nvim ."
 
 [[snippets]]
-name = "sudo"
+name            = "sudo"
+snippet         = "sudo"
 trigger-pattern = "^s$"
-snippet = "sudo"
 
 [[snippets]]
-name = "which"
+name            = "which"
+snippet         = "which"
 trigger-pattern = "^w$"
-snippet = "which"
 
 [[snippets]]
-name = "yazi"
+name            = "yazi"
+snippet         = "yazi"
 trigger-pattern = "^y$"
-snippet = "yazi"
 
 [[snippets]]
-name = "czg"
+name            = "czg"
+snippet         = "czg"
 trigger-pattern = "^cz$"
-snippet = "czg"
 
 [[snippets]]
-name = "czg ai"
-trigger = "cza"
+name    = "czg ai"
 snippet = "czg ai"
+trigger = "cza"
 
 [[snippets]]
-name = "czg ai(English)"
-trigger = "czae"
+name    = "czg ai(English)"
 snippet = "CZ_LANG=en czg ai"
+trigger = "czae"
 
 [[snippets]]
-name = "gotip --view=history"
+name            = "gotip --view=history"
+snippet         = "gotip --view=history -- --tags=shipper_resolver_test,admin_resolver_test,forwarder_resolver_test,resolver_test"
 trigger-pattern = "^got$"
-snippet = "gotip --view=history -- --tags=shipper_resolver_test,admin_resolver_test,forwarder_resolver_test,resolver_test"
 
 [[snippets]]
-name = "./..."
+context         = "^go\\s"
+global          = true
+name            = "./..."
+snippet         = "./..."
 trigger-pattern = "(\\.\\.\\.\\.|\\.4)"
-snippet = "./..."
-global = true
-context = "^go\\s"
 
 [[snippets]]
-name = "ghost"
+name            = "ghost"
+snippet         = "ghost"
 trigger-pattern = "^gt$"
-snippet = "ghost"
 
 [[snippets]]
-name = "ghost run"
+name            = "ghost run"
+snippet         = "ghost run"
 trigger-pattern = "^gtr$"
-snippet = "ghost run"
 
 [[snippets]]
-name = "jira copy title"
-trigger = "jct"
+name    = "jira copy title"
 snippet = "jira issue list -a$(jira me) -s~Done --plain | column -ts $'\\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s \" \"$i; print \"[\"$2\"]\"s}' | sed 's/ /\\\\ /g; s/\\[/\\\\\\[/g' | cb"
+trigger = "jct"
 
 [[snippets]]
-name = "jira issue list -a$(jira me) -s~Done"
+name            = "jira issue list -a$(jira me) -s~Done"
+snippet         = "jira issue list -a$(jira me) -s~Done"
 trigger-pattern = "^jl$"
-snippet = "jira issue list -a$(jira me) -s~Done"
 
 [[snippets]]
-name = "jira issue list -a$(jira me) all"
+name            = "jira issue list -a$(jira me) all"
+snippet         = "jira issue list -a$(jira me)"
 trigger-pattern = "^jla$"
-snippet = "jira issue list -a$(jira me)"
 
 [[snippets]]
-name = "jira issue list -s~Done"
-trigger = "jll"
+name    = "jira issue list -s~Done"
 snippet = "jira issue list -s~Done"
+trigger = "jll"
 
 [[snippets]]
-name = "jira issue list all"
-trigger = "jlla"
+name    = "jira issue list all"
 snippet = "jira issue list"
+trigger = "jlla"
 
 [[snippets]]
-name = "koji --config ~/.config/koji/config.toml"
+name            = "koji --config ~/.config/koji/config.toml"
+snippet         = "koji --config ~/.config/koji/config.toml"
 trigger-pattern = "^ko$"
-snippet = "koji --config ~/.config/koji/config.toml"
 
 [[snippets]]
-name = "rtty"
+name            = "rtty"
+snippet         = "rtty run zsh --font-size 12"
 trigger-pattern = "(^rt$|^bt$)"
-snippet = "rtty run zsh --font-size 12"
 
 [[snippets]]
-name = "ug -QPn"
+global          = true
+name            = "ug -QPn"
+snippet         = "ug -QPn"
 trigger-pattern = "(^ug$|igrep)"
-snippet = "ug -QPn"
-global = true
 
 [[snippets]]
-name = "up --noinput"
+name            = "up --noinput"
+snippet         = "up --noinput"
 trigger-pattern = "^up$"
-snippet = "up --noinput"
 
 [[snippets]]
-name = "zinit"
+name            = "zinit"
+snippet         = "zinit"
 trigger-pattern = "^zi$"
-snippet = "zinit"
 
 [[snippets]]
-name = "ji"
+name            = "ji"
+snippet         = "ji"
 trigger-pattern = "^zz$"
-snippet = "ji"
 
 [[snippets]]
-name = "|"
+global          = true
+name            = "|"
+snippet         = "|"
 trigger-pattern = "^pi$"
-snippet = "|"
-global = true
 
 [[snippets]]
-name = "|& spacer --after 5"
-trigger = "sp"
-global = true
+global  = true
+name    = "|& spacer --after 5"
 snippet = "|& spacer --after 5"
+trigger = "sp"
 
 [[snippets]]
-name = "(delta) --no-gitconfig"
-trigger = "ng"
-snippet = "--no-gitconfig"
-global = true
 context = ".*delta\\s"
+global  = true
+name    = "(delta) --no-gitconfig"
+snippet = "--no-gitconfig"
+trigger = "ng"

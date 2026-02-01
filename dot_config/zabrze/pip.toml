@@ -1,42 +1,42 @@
 [[snippets]]
-name = "pdm run"
+if              = "[[ -f \"./pyproject.toml\" ]]"
+name            = "pdm run"
+snippet         = "pdm run"
 trigger-pattern = "^pr$"
-snippet = "pdm run"
-if = "[[ -f \"./pyproject.toml\" ]]"
 
 [[snippets]]
-name = "pdm run dev | spacer --after 5"
-trigger = "prd"
+if      = "[[ -f \"./pyproject.toml\" ]]"
+name    = "pdm run dev | spacer --after 5"
 snippet = "pdm run dev | spacer --after 5"
-if = "[[ -f \"./pyproject.toml\" ]]"
+trigger = "prd"
 
 [[snippets]]
-name = "pdm run fix"
-trigger = "prf"
+if      = "[[ -f \"./pyproject.toml\" ]]"
+name    = "pdm run fix"
 snippet = "pdm run fix"
-if = "[[ -f \"./pyproject.toml\" ]]"
+trigger = "prf"
 
 [[snippets]]
-name = "pdm run lint"
-trigger = "prl"
+if      = "[[ -f \"./pyproject.toml\" ]]"
+name    = "pdm run lint"
 snippet = "pdm run lint"
-if = "[[ -f \"./pyproject.toml\" ]]"
+trigger = "prl"
 
 [[snippets]]
-name = "pdm run test"
-trigger = "prt"
+if      = "[[ -f \"./pyproject.toml\" ]]"
+name    = "pdm run test"
 snippet = "pdm run test"
-if = "[[ -f \"./pyproject.toml\" ]]"
+trigger = "prt"
 
 [[snippets]]
-name = "pdm sync"
+if              = "[[ -f \"./pyproject.toml\" ]]"
+name            = "pdm sync"
+snippet         = "pdm sync"
 trigger-pattern = "(psy|pdsy)"
-snippet = "pdm sync"
-if = "[[ -f \"./pyproject.toml\" ]]"
 
 [[snippets]]
-name = "(pdm run) -l"
-trigger = "l"
-snippet = "-l"
-global = true
 context = "^pdm\\srun\\s"
+global  = true
+name    = "(pdm run) -l"
+snippet = "-l"
+trigger = "l"

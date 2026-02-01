@@ -1,4 +1,4 @@
 [[snippets]]
-name = "taproom(brew list)"
+name            = "taproom(brew list)"
+snippet         = "taproom -f \"Expl. Installed\" -t"
 trigger-pattern = "brl"
-snippet = "taproom -f \"Expl. Installed\" -t"

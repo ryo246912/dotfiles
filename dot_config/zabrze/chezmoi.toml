@@ -1,75 +1,75 @@
 [[snippets]]
-name = "chezmoi"
+name            = "chezmoi"
+snippet         = "chezmoi"
 trigger-pattern = "^ch$"
-snippet = "chezmoi"
 
 [[snippets]]
-name = "chezmoi add"
-trigger = "chad"
+name    = "chezmoi add"
 snippet = "chezmoi add --template"
+trigger = "chad"
 
 [[snippets]]
-name = "chezmoi apply --interactive --exclude=scripts,templates"
+name            = "chezmoi apply --interactive --exclude=scripts,templates"
+snippet         = "chezmoi apply --interactive --exclude=scripts,templates"
 trigger-pattern = "(^chap$|chpa)"
-snippet = "chezmoi apply --interactive --exclude=scripts,templates"
 
 [[snippets]]
-name = "chezmoi apply (source)"
-trigger = "chapp"
+name    = "chezmoi apply (source)"
 snippet = "chezmoi add $(chezmoi list -p absolute -i files | fzf -m)"
+trigger = "chapp"
 
 [[snippets]]
-name = "chezmoi apply --source-path"
-trigger = "chas"
+name    = "chezmoi apply --source-path"
 snippet = "chezmoi apply --source-path"
+trigger = "chas"
 
 [[snippets]]
-name = "chezmoi cat dest"
-trigger = "chcd"
+name    = "chezmoi cat dest"
 snippet = "() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n \"$file\" ] && vim $file }"
+trigger = "chcd"
 
 [[snippets]]
-name = "chezmoi chattr"
-trigger = "chch"
+name    = "chezmoi chattr"
 snippet = "chezmoi chattr +template"
+trigger = "chch"
 
 [[snippets]]
-name = "chezmoi cat soruce"
-trigger = "chcs"
+name    = "chezmoi cat source"
 snippet = "() { local file ; file=$(chezmoi list -p source-absolute -i files | fzf) ; [ -n \"$file\" ] && vim $file }"
+trigger = "chcs"
 
 [[snippets]]
-name = "chezmoi data"
-trigger = "chd"
+name    = "chezmoi data"
 snippet = "chezmoi data"
+trigger = "chd"
 
 [[snippets]]
-name = "chezmoi diff"
-trigger = "chdi"
+name    = "chezmoi diff"
 snippet = "() { local file ; file=$(chezmoi list -p absolute -i files | fzf) ; [ -n \"$file\" ] && chezmoi diff $file }"
+trigger = "chdi"
 
 [[snippets]]
-name = "chezmoi ignored"
-trigger = "chig"
+name    = "chezmoi ignored"
 snippet = "chezmoi ignored"
+trigger = "chig"
 
 [[snippets]]
-name = "chezmoi edit"
-trigger = "che"
+name    = "chezmoi edit"
 snippet = "chezmoi edit --interactive --apply"
+trigger = "che"
 
 [[snippets]]
-name = "chezmoi list"
-trigger = "chl"
+name    = "chezmoi list"
 snippet = "chezmoi list -p source-absolute -i files"
+trigger = "chl"
 
 [[snippets]]
-name = "chezmoi merge"
-trigger = "chm"
+name    = "chezmoi merge"
 snippet = "chezmoi merge $(chezmoi list -p absolute -i files | fzf)"
+trigger = "chm"
 
 [[snippets]]
-name = "chezmoi execute-template"
-trigger = "cht"
-cursor = "👇"
+cursor  = "👇"
+name    = "chezmoi execute-template"
 snippet = "chezmoi execute-template '{{ .chezmoi.👇 }}'"
+trigger = "cht"

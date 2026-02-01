@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV SHELL /usr/bin/zsh
-RUN zsh
 #set default shell to zsh
 RUN chsh -s /bin/zsh
 

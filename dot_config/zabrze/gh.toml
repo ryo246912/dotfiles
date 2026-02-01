@@ -1,21 +1,20 @@
 [[snippets]]
-name = "gh browse"
-trigger = "ghb"
+name    = "gh browse"
 snippet = "gh browse"
+trigger = "ghb"
 
 [[snippets]]
-name = "gh browse --branch"
-trigger = "ghbb"
+name    = "gh browse --branch"
 snippet = "gh browse --branch $(git symbolic-ref --short HEAD)"
+trigger = "ghbb"
 
 [[snippets]]
-name = "gh browse --settings"
-trigger = "ghbs"
+name    = "gh browse --settings"
 snippet = "gh browse --settings"
+trigger = "ghbs"
 
 [[snippets]]
 name = "gh cache list"
-trigger = "ghcl"
 snippet = """
 gh cache list \
   --json key,ref,sizeInBytes,createdAt,lastAccessedAt \
@@ -32,15 +31,15 @@ gh cache list \
   ' \
   | column -ts $'\\t'
 """
+trigger = "ghcl"
 
 [[snippets]]
-name = "gh-dash"
-trigger = "ghd"
+name    = "gh-dash"
 snippet = "gh-dash"
+trigger = "ghd"
 
 [[snippets]]
 name = "gh issue edit"
-trigger = "ghie"
 snippet = """
 gh issue edit $(gh issue list --author "@me" --state all --limit 100 \
   --json number,title,author,state,updatedAt,createdAt \
@@ -60,10 +59,10 @@ gh issue edit $(gh issue list --author "@me" --state all --limit 100 \
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}')
 """
+trigger = "ghie"
 
 [[snippets]]
 name = "gh issue list"
-trigger = "ghil"
 snippet = """
 gh issue list --author "" --assignee "" --search "{}" --state all --limit 100 \
   --json number,title,author,state,updatedAt,createdAt \
@@ -82,11 +81,11 @@ gh issue list --author "" --assignee "" --search "{}" --state all --limit 100 \
   | column -ts $'\\t' \
   | fzf --no-sort --header-lines=1
 """
+trigger = "ghil"
 
 [[snippets]]
-name = "gh issue view"
-trigger = "ghiv"
 cursor = "👇"
+name = "gh issue view"
 snippet = """
 gh issue view --comments 👇$(gh issue list --state all --limit 100 \
   --json number,title,author,state,updatedAt,createdAt \
@@ -106,11 +105,11 @@ gh issue view --comments 👇$(gh issue list --state all --limit 100 \
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}') -w
 """
+trigger = "ghiv"
 
 [[snippets]]
-name = "gh pr checkout"
-trigger = "ghpc"
 cursor = "👇"
+name = "gh pr checkout"
 snippet = """
 gh pr checkout 👇$(gh pr list --search "user-review-requested:@me" --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -132,16 +131,16 @@ gh pr checkout 👇$(gh pr list --search "user-review-requested:@me" --limit 100
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}')
 """
+trigger = "ghpc"
 
 [[snippets]]
-name = "gh pr create"
+evaluate        = true
+name            = "gh pr create"
+snippet         = "gh pr create --base \"$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)\" --assignee \"@me\""
 trigger-pattern = "(ghpcr|ghpcrr)"
-evaluate = true
-snippet = "gh pr create --base \"$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)\" --assignee \"@me\""
 
 [[snippets]]
 name = "gh pr diff"
-trigger = "ghpd"
 snippet = """
 gh pr diff $(gh pr list --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -164,10 +163,10 @@ gh pr diff $(gh pr list --state all --limit 100 \
   | awk '{ print $1}') \
   | diffnav
 """
+trigger = "ghpd"
 
 [[snippets]]
 name = "gh pr edit"
-trigger = "ghpe"
 snippet = """
 gh pr edit $(gh pr list --author "@me" --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -189,10 +188,10 @@ gh pr edit $(gh pr list --author "@me" --state all --limit 100 \
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}')
 """
+trigger = "ghpe"
 
 [[snippets]]
 name = "gh pr list"
-trigger = "ghpl"
 snippet = """
 gh pr list --author "" --assignee "" --search "{}" --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -213,11 +212,11 @@ gh pr list --author "" --assignee "" --search "{}" --state all --limit 100 \
   | column -ts $'\\t' \
   | fzf --no-sort --header-lines=1
 """
+trigger = "ghpl"
 
 [[snippets]]
-name = "gh pr ready"
-trigger = "ghpr"
 cursor = "👇"
+name = "gh pr ready"
 snippet = """
 gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -239,16 +238,16 @@ gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100 \
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}')
 """
+trigger = "ghpr"
 
 [[snippets]]
-name = "gh pr view"
+name            = "gh pr view"
+snippet         = "gh pr view --web"
 trigger-pattern = "^ghpv$"
-snippet = "gh pr view --web"
 
 [[snippets]]
-name = "gh pr view verbose"
-trigger = "ghpvv"
 cursor = "👇"
+name = "gh pr view verbose"
 snippet = """
 gh pr view --comments 👇$(gh pr list --state all --limit 100 \
   --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
@@ -270,74 +269,75 @@ gh pr view --comments 👇$(gh pr list --state all --limit 100 \
   | fzf --no-sort --header-lines=1 \
   | awk '{ print $1}')
 """
+trigger = "ghpvv"
 
 [[snippets]]
-name = "gh pr checks --watch"
-trigger = "ghpw"
+name    = "gh pr checks --watch"
 snippet = "gh pr checks $(git symbolic-ref --short HEAD) --watch"
+trigger = "ghpw"
 
 [[snippets]]
-name = "gh run list -w xxx"
-trigger = "ghrl"
+name    = "gh run list -w xxx"
 snippet = "gh run list -w $(gh workflow list | column -ts $'\\t' | fzf | awk '{print $1}')"
+trigger = "ghrl"
 
 [[snippets]]
-name = "gh run list --branch xxx"
-trigger = "ghrlb"
+name    = "gh run list --branch xxx"
 snippet = "gh run list --branch $(git symbolic-ref --short HEAD)"
+trigger = "ghrlb"
 
 [[snippets]]
-name = "gh run rerun --failed"
-trigger = "ghrr"
+name    = "gh run rerun --failed"
 snippet = "gh run rerun --failed"
+trigger = "ghrr"
 
 [[snippets]]
-name = "gh run view --log"
-trigger = "ghrv"
+name    = "gh run view --log"
 snippet = "gh run view --log"
+trigger = "ghrv"
 
 [[snippets]]
-name = "gh run watch"
-trigger = "ghrw"
+name    = "gh run watch"
 snippet = "gh run watch"
+trigger = "ghrw"
 
 [[snippets]]
-name = "gh status"
-trigger = "ghs"
+name    = "gh status"
 snippet = "gh status"
+trigger = "ghs"
 
 [[snippets]]
-name = "gh-actions-dash"
-trigger = "ghad"
+name    = "gh-actions-dash"
 snippet = "gh-actions-dash"
+trigger = "ghad"
 
 [[snippets]]
-name = "gh-poi"
-trigger = "ghp"
+name    = "gh-poi"
 snippet = "gh-poi"
+trigger = "ghp"
 
 [[snippets]]
-name = "gh-reassign-reviewer"
-trigger = "ghr"
+name    = "gh-reassign-reviewer"
 snippet = "gh-reassign-reviewer"
+trigger = "ghr"
 
 [[snippets]]
-name = "(gh pr/issue view) -w"
-trigger = "w"
-snippet = "-w"
-global = true
 context = "^gh\\spr\\s(view|issue)"
+global  = true
+name    = "(gh pr/issue view) -w"
+snippet = "-w"
+trigger = "w"
 
 [[snippets]]
-name = "(gh pr checkout) --detach"
-trigger = "d"
-snippet = "--detach"
-global = true
 context = "^gh\\spr\\scheckout"
+global  = true
+name    = "(gh pr checkout) --detach"
+snippet = "--detach"
+trigger = "d"
 
 [[snippets]]
-name = "(gh pr ready) --undo"
+context         = "^gh\\spr\\sready"
+global          = true
+name            = "(gh pr ready) --undo"
+snippet         = "--undo"
 trigger-pattern = "(d|u)"
-snippet = "--undo"
-global = true
-context = "^gh\\spr\\sready"

@@ -46,15 +46,5 @@
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
     }
-  ],
-  "regexManagers": [
-    {
-      "fileMatch": ["(^|/)dot_config/sheldon/plugins\\.toml$"],
-      "matchStrings": [
-        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
-    }
   ]
 }

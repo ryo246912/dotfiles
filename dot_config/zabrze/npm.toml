@@ -1,53 +1,53 @@
 [[snippets]]
-name = "ni ci"
+if              = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name            = "ni ci"
+snippet         = "ni ci"
 trigger-pattern = "^nc$"
-snippet = "ni ci"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
 
 [[snippets]]
-name = "ni add"
+if              = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name            = "ni add"
+snippet         = "ni add"
 trigger-pattern = "^na$"
-snippet = "ni add"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
 
 [[snippets]]
-name = "ni run"
+if              = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name            = "ni run"
+snippet         = "ni run"
 trigger-pattern = "^nr$"
-snippet = "ni run"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
 
 [[snippets]]
-name = "ni run build"
-trigger = "nrb"
+if      = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name    = "ni run build"
 snippet = "ni run build"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+trigger = "nrb"
 
 [[snippets]]
-name = "ni run dev"
-trigger = "nrd"
+if      = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name    = "ni run dev"
 snippet = "ni run dev"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+trigger = "nrd"
 
 [[snippets]]
-name = "ni run fix"
-trigger = "nrf"
+if      = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name    = "ni run fix"
 snippet = "ni run fix"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+trigger = "nrf"
 
 [[snippets]]
-name = "ni run lint"
-trigger = "nrl"
+if      = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name    = "ni run lint"
 snippet = "ni run lint"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+trigger = "nrl"
 
 [[snippets]]
-name = "ni run test"
+if              = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name            = "ni run test"
+snippet         = "ni run test"
 trigger-pattern = "(^nrt$|^nt$)"
-snippet = "ni run test"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
 
 [[snippets]]
-name = "ni run test"
-trigger = "nrtd"
+if      = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+name    = "ni run test"
 snippet = "ni run test $(git diff --name-only --line-prefix=$(git rev-parse --show-toplevel)/ origin/master...HEAD | grep -E '.*spec.*')"
-if = "[[ -f \"./pnpm-lock.yaml\" ]] || [[ -f \"./package-lock.json\" ]] || [[ -f \"./yarn.lock\" ]] || [[ -f \"./bun.lock\" ]] || [[ -f \"./deno.lock\" ]]"
+trigger = "nrtd"
