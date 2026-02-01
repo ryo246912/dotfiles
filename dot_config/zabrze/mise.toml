@@ -1,0 +1,54 @@
+[[snippets]]
+name = "mise install"
+trigger-pattern = "^mi$"
+snippet = "GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
+
+[[snippets]]
+name = "mise install interactive"
+trigger-pattern = "^mii$"
+snippet = "GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//')"
+
+[[snippets]]
+name = "mise ls --current"
+trigger = "mls"
+snippet = "mise ls --current"
+
+[[snippets]]
+name = "mise ls interactive"
+trigger = "mlss"
+snippet = "mise ls $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//')"
+
+[[snippets]]
+name = "mise run"
+trigger-pattern = "^mr$"
+snippet = "mise run"
+
+[[snippets]]
+name = "mise run --dry-run"
+trigger = "mrd"
+snippet = "mise run --dry-run"
+
+[[snippets]]
+name = "mise tasks"
+trigger-pattern = "^mt$"
+snippet = "mise tasks --hidden"
+
+[[snippets]]
+name = "mise use"
+trigger-pattern = "^mu$"
+snippet = "mise use"
+
+[[snippets]]
+name = "mise uninstall interactive"
+trigger-pattern = "^mui$"
+snippet = "mise uninstall $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//') --all"
+
+[[snippets]]
+name = "mise upgrade"
+trigger-pattern = "^mup$"
+snippet = "mise upgrade --interactive --bump"
+
+[[snippets]]
+name = "mise use -g"
+trigger = "mug"
+snippet = "mise use -g"

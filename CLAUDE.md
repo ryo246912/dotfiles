@@ -131,9 +131,9 @@ Scoop (Windows/WSL2)
 
 ### Abbreviations System
 
-The repository uses [zabrze](https://github.com/orhun/zabrze) for shell abbreviations. Configuration is split into multiple YAML files:
+The repository uses [zabrze](https://github.com/orhun/zabrze) for shell abbreviations. Configuration is split into multiple TOML files:
 
-**Git abbreviations (80+ aliases in `git.yaml`):**
+**Git abbreviations (80+ aliases in `git.toml`):**
 - `ga` → `git add`
 - `gc` → `git commit`
 - `gd` → `git diff`
@@ -144,39 +144,39 @@ The repository uses [zabrze](https://github.com/orhun/zabrze) for shell abbrevia
 - `gwtl` → `git worktree list`
 - And many more...
 
-**Chezmoi abbreviations (`chezmoi.yaml`):**
+**Chezmoi abbreviations (`chezmoi.toml`):**
 - `che` → `chezmoi edit`
 - `chad` → `chezmoi add`
 - `chap` → `chezmoi apply`
 - `chd` → `chezmoi diff`
 - `chl` → `chezmoi list`
 
-**GitHub CLI abbreviations (`gh.yaml`):**
+**GitHub CLI abbreviations (`gh.toml`):**
 - `ghpl` → `gh pr list`
 - `ghpv` → `gh pr view`
 - `ghpc` → `gh pr create`
 - `ghil` → `gh issue list`
 
-**Docker abbreviations (`docker.yaml`):**
+**Docker abbreviations (`docker.toml`):**
 - `dco` → `docker compose`
 - `dps` → `docker ps`
 - `dim` → `docker images`
 
-**npm abbreviations (`npm.yaml`):**
+**npm abbreviations (`npm.toml`):**
 - `nrd` → `npm run dev`
 - `nrl` → `npm run lint`
 - `nrt` → `npm run test`
 - `nrb` → `npm run build`
 
-**mise abbreviations (`mise.yaml`):**
+**mise abbreviations (`mise.toml`):**
 - `mii` → `mise install`
 - `miu` → `mise use`
 - `mir` → `mise run`
 
-**General abbreviations (`general.yaml`):**
+**General abbreviations (`general.toml`):**
 - Various system commands and shortcuts
 
-**Platform-specific (`mac.yaml`):**
+**Platform-specific (`mac.toml`):**
 - macOS-specific commands
 
 ## Configuration Files
@@ -189,7 +189,7 @@ This repository manages 46+ tool configurations in `dot_config/`:
 - `tmux/` - tmux terminal multiplexer (custom keybindings, status bar)
 - `tig/` - Tig Git TUI
 - `zsh/` - Zsh shell (modularized with lazy loading)
-- `zabrze/` - Command abbreviations (9 YAML files, 200+ abbreviations)
+- `zabrze/` - Command abbreviations (10 TOML files, 200+ abbreviations)
 - `atuin/` - Shell history manager (fuzzy search, sync support)
 
 ### Editors & IDEs (4 tools)
@@ -665,8 +665,7 @@ This repository treats personal development environment as code:
 
 - Many configurations are cross-platform with conditional logic for OS-specific behavior
 
-- The abbreviation system is extensive - check `dot_config/zabrze/*.yaml` for all command shortcuts
-
+- The abbreviation system is extensive - check `dot_config/zabrze/*.toml` for all command shortcuts
 - XDG Base Directory specification is fully implemented - all configs follow XDG standards
 
 - The repository supports both personal and work environments with dedicated configuration files
@@ -680,6 +679,6 @@ This repository treats personal development environment as code:
 - **setup.md** - Detailed step-by-step setup instructions
 - **README.md** - Repository overview and quick start
 - **mise.toml** - Complete list of managed tools and available tasks
-- **dot_config/zabrze/*.yaml** - All available command abbreviations
+- **dot_config/zabrze/*.toml** - All available command abbreviations
 - **dot_config/git/config.tmpl** - Git configuration and aliases
 - **.chezmoiignore** - Complete list of ignored files and patterns
