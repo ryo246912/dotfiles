@@ -1,0 +1,213 @@
+[[snippets]]
+name = "atuin search -i"
+trigger-pattern = "(ats|ase)"
+snippet = "atuin search -i"
+
+[[snippets]]
+name = "atuin stats"
+trigger = "atst"
+snippet = "atuin stats"
+
+[[snippets]]
+name = "aqua search"
+trigger-pattern = "(^as$|^ag$)"
+snippet = "aqua g"
+
+[[snippets]]
+name = "code ."
+trigger-pattern = "^c\\.$"
+snippet = "code ."
+
+[[snippets]]
+name = "caffeinate"
+trigger-pattern = "^ca$"
+snippet = "caffeinate"
+
+[[snippets]]
+name = "cal -3"
+trigger-pattern = "^c3$"
+snippet = "cal -3"
+
+[[snippets]]
+name = "cal -y"
+trigger-pattern = "^cy$"
+snippet = "cal -y"
+
+[[snippets]]
+name = "ccmanager"
+trigger = "ccm"
+snippet = "ccmanager"
+
+[[snippets]]
+name = "ccmanager devcontainer(claude)"
+trigger-pattern = "(^ccmc$|ccmcc)"
+cursor = "👇"
+evaluate = true
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --resume👇 --dangerously-skip-permissions\""
+
+[[snippets]]
+name = "ccmanager devcontainer(gemini)"
+trigger = "ccmcg"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo\""
+
+[[snippets]]
+name = "ccmanager devcontainer(opencode)"
+trigger = "ccmco"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json opencode\""
+
+[[snippets]]
+name = "echo"
+trigger-pattern = "^e$"
+snippet = "echo"
+
+[[snippets]]
+name = "exec $SHELL -l"
+trigger-pattern = "^es$"
+snippet = "exec $SHELL -l"
+
+[[snippets]]
+name = "ls -la"
+trigger-pattern = "^la$"
+snippet = "ls -la"
+
+[[snippets]]
+name = "ls -l"
+trigger-pattern = "^ll$"
+snippet = "ls -l"
+
+[[snippets]]
+name = "nvim"
+trigger-pattern = "(^nv$|^v$)"
+snippet = "nvim"
+
+[[snippets]]
+name = "nvim ."
+trigger-pattern = "(^n\\.|^v\\.)"
+snippet = "nvim ."
+
+[[snippets]]
+name = "sudo"
+trigger-pattern = "^s$"
+snippet = "sudo"
+
+[[snippets]]
+name = "which"
+trigger-pattern = "^w$"
+snippet = "which"
+
+[[snippets]]
+name = "yazi"
+trigger-pattern = "^y$"
+snippet = "yazi"
+
+[[snippets]]
+name = "czg"
+trigger-pattern = "^cz$"
+snippet = "czg"
+
+[[snippets]]
+name = "czg ai"
+trigger = "cza"
+snippet = "czg ai"
+
+[[snippets]]
+name = "czg ai(English)"
+trigger = "czae"
+snippet = "CZ_LANG=en czg ai"
+
+[[snippets]]
+name = "gotip --view=history"
+trigger-pattern = "^got$"
+snippet = "gotip --view=history -- --tags=shipper_resolver_test,admin_resolver_test,forwarder_resolver_test,resolver_test"
+
+[[snippets]]
+name = "./..."
+trigger-pattern = "(\\.\\.\\.\\.|\\.4)"
+snippet = "./..."
+global = true
+context = "^go\\s"
+
+[[snippets]]
+name = "ghost"
+trigger-pattern = "^gt$"
+snippet = "ghost"
+
+[[snippets]]
+name = "ghost run"
+trigger-pattern = "^gtr$"
+snippet = "ghost run"
+
+[[snippets]]
+name = "jira copy title"
+trigger = "jct"
+snippet = "jira issue list -a$(jira me) -s~Done --plain | column -ts $'\\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s \" \"$i; print \"[\"$2\"]\"s}' | sed 's/ /\\\\ /g; s/\\[/\\\\\\[/g' | cb"
+
+[[snippets]]
+name = "jira issue list -a$(jira me) -s~Done"
+trigger-pattern = "^jl$"
+snippet = "jira issue list -a$(jira me) -s~Done"
+
+[[snippets]]
+name = "jira issue list -a$(jira me) all"
+trigger-pattern = "^jla$"
+snippet = "jira issue list -a$(jira me)"
+
+[[snippets]]
+name = "jira issue list -s~Done"
+trigger = "jll"
+snippet = "jira issue list -s~Done"
+
+[[snippets]]
+name = "jira issue list all"
+trigger = "jlla"
+snippet = "jira issue list"
+
+[[snippets]]
+name = "koji --config ~/.config/koji/config.toml"
+trigger-pattern = "^ko$"
+snippet = "koji --config ~/.config/koji/config.toml"
+
+[[snippets]]
+name = "rtty"
+trigger-pattern = "(^rt$|^bt$)"
+snippet = "rtty run zsh --font-size 12"
+
+[[snippets]]
+name = "ug -QPn"
+trigger-pattern = "(^ug$|igrep)"
+snippet = "ug -QPn"
+global = true
+
+[[snippets]]
+name = "up --noinput"
+trigger-pattern = "^up$"
+snippet = "up --noinput"
+
+[[snippets]]
+name = "zinit"
+trigger-pattern = "^zi$"
+snippet = "zinit"
+
+[[snippets]]
+name = "ji"
+trigger-pattern = "^zz$"
+snippet = "ji"
+
+[[snippets]]
+name = "|"
+trigger-pattern = "^pi$"
+snippet = "|"
+global = true
+
+[[snippets]]
+name = "|& spacer --after 5"
+trigger = "sp"
+global = true
+snippet = "|& spacer --after 5"
+
+[[snippets]]
+name = "(delta) --no-gitconfig"
+trigger = "ng"
+snippet = "--no-gitconfig"
+global = true
+context = ".*delta\\s"
