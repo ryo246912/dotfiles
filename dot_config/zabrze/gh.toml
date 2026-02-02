@@ -1,0 +1,343 @@
+[[snippets]]
+name    = "gh browse"
+snippet = "gh browse"
+trigger = "ghb"
+
+[[snippets]]
+name    = "gh browse --branch"
+snippet = "gh browse --branch $(git symbolic-ref --short HEAD)"
+trigger = "ghbb"
+
+[[snippets]]
+name    = "gh browse --settings"
+snippet = "gh browse --settings"
+trigger = "ghbs"
+
+[[snippets]]
+name = "gh cache list"
+snippet = """
+gh cache list \
+  --json key,ref,sizeInBytes,createdAt,lastAccessedAt \
+  --jq '
+  ["key","sizeInBytes","createdAt","lastAccessedAt","ref"],
+  ( .[] |
+  [.key
+  , ((.sizeInBytes / 1024 / 1024 * 100 | floor / 100) | tostring + "MB")
+  , ( ((now - (.createdAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+  , ( ((now - (.lastAccessedAt | sub("\\..*";"") | strptime("%Y-%m-%dT%H:%M:%S") | mktime)) / 3600) | floor | tostring + " hours ago" )
+  , .ref
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t'
+"""
+trigger = "ghcl"
+
+[[snippets]]
+name    = "gh-dash"
+snippet = "gh-dash"
+trigger = "ghd"
+
+[[snippets]]
+name = "gh issue edit"
+snippet = """
+gh issue edit $(gh issue list --author "@me" --state all --limit 100 \
+  --json number,title,author,state,updatedAt,createdAt \
+  --jq '
+  ["no","title","author","state","updatedAt","createdAt"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}')
+"""
+trigger = "ghie"
+
+[[snippets]]
+name = "gh issue list"
+snippet = """
+gh issue list --author "" --assignee "" --search "{}" --state all --limit 100 \
+  --json number,title,author,state,updatedAt,createdAt \
+  --jq '
+  ["no","title","author","state","updatedAt","createdAt"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1
+"""
+trigger = "ghil"
+
+[[snippets]]
+cursor = "👇"
+name = "gh issue view"
+snippet = """
+gh issue view --comments 👇$(gh issue list --state all --limit 100 \
+  --json number,title,author,state,updatedAt,createdAt \
+  --jq '
+  ["no","title","author","state","updatedAt","createdAt"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}') -w
+"""
+trigger = "ghiv"
+
+[[snippets]]
+cursor = "👇"
+name = "gh pr checkout"
+snippet = """
+gh pr checkout 👇$(gh pr list --search "user-review-requested:@me" --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}')
+"""
+trigger = "ghpc"
+
+[[snippets]]
+evaluate        = true
+name            = "gh pr create"
+snippet         = "gh pr create --base \"$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)\" --assignee \"@me\""
+trigger-pattern = "(ghpcr|ghpcrr)"
+
+[[snippets]]
+name = "gh pr diff"
+snippet = """
+gh pr diff $(gh pr list --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}') \
+  | diffnav
+"""
+trigger = "ghpd"
+
+[[snippets]]
+name = "gh pr edit"
+snippet = """
+gh pr edit $(gh pr list --author "@me" --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}')
+"""
+trigger = "ghpe"
+
+[[snippets]]
+name = "gh pr list"
+snippet = """
+gh pr list --author "" --assignee "" --search "{}" --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1
+"""
+trigger = "ghpl"
+
+[[snippets]]
+cursor = "👇"
+name = "gh pr ready"
+snippet = """
+gh pr ready 👇$(gh pr list --author "@me" --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}')
+"""
+trigger = "ghpr"
+
+[[snippets]]
+name            = "gh pr view"
+snippet         = "gh pr view --web"
+trigger-pattern = "^ghpv$"
+
+[[snippets]]
+cursor = "👇"
+name = "gh pr view verbose"
+snippet = """
+gh pr view --comments 👇$(gh pr list --state all --limit 100 \
+  --json number,title,author,state,isDraft,updatedAt,createdAt,headRefName \
+  --jq '
+  ["no","title","author","state","draft","updatedAt","createdAt","branch"],
+  ( .[] |
+  [.number
+  , .title[0:50]
+  , .author.login
+  , .state
+  , (if .isDraft then "◯" else "☓" end )
+  , (.updatedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , (.createdAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S"))
+  , .headRefName
+  ])
+  | @tsv
+  ' \
+  | column -ts $'\\t' \
+  | fzf --no-sort --header-lines=1 \
+  | awk '{ print $1}')
+"""
+trigger = "ghpvv"
+
+[[snippets]]
+name    = "gh pr checks --watch"
+snippet = "gh pr checks $(git symbolic-ref --short HEAD) --watch"
+trigger = "ghpw"
+
+[[snippets]]
+name    = "gh run list -w xxx"
+snippet = "gh run list -w $(gh workflow list | column -ts $'\\t' | fzf | awk '{print $1}')"
+trigger = "ghrl"
+
+[[snippets]]
+name    = "gh run list --branch xxx"
+snippet = "gh run list --branch $(git symbolic-ref --short HEAD)"
+trigger = "ghrlb"
+
+[[snippets]]
+name    = "gh run rerun --failed"
+snippet = "gh run rerun --failed"
+trigger = "ghrr"
+
+[[snippets]]
+name    = "gh run view --log"
+snippet = "gh run view --log"
+trigger = "ghrv"
+
+[[snippets]]
+name    = "gh run watch"
+snippet = "gh run watch"
+trigger = "ghrw"
+
+[[snippets]]
+name    = "gh status"
+snippet = "gh status"
+trigger = "ghs"
+
+[[snippets]]
+name    = "gh-actions-dash"
+snippet = "gh-actions-dash"
+trigger = "ghad"
+
+[[snippets]]
+name    = "gh-poi"
+snippet = "gh-poi"
+trigger = "ghp"
+
+[[snippets]]
+name    = "gh-reassign-reviewer"
+snippet = "gh-reassign-reviewer"
+trigger = "ghr"
+
+[[snippets]]
+context = "^gh\\spr\\s(view|issue)"
+global  = true
+name    = "(gh pr/issue view) -w"
+snippet = "-w"
+trigger = "w"
+
+[[snippets]]
+context = "^gh\\spr\\scheckout"
+global  = true
+name    = "(gh pr checkout) --detach"
+snippet = "--detach"
+trigger = "d"
+
+[[snippets]]
+context         = "^gh\\spr\\sready"
+global          = true
+name            = "(gh pr ready) --undo"
+snippet         = "--undo"
+trigger-pattern = "(d|u)"

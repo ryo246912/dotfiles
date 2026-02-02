@@ -4,5 +4,47 @@
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
   "reviewers": ["ryo246912"],
-  "minimumReleaseAge": "3 days"
+  "minimumReleaseAge": "3 days",
+  "mise": {
+    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
+  },
+  "devcontainer": {
+    "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""
+      ],
+      "depNameTemplate": "devcontainers/cli",
+      "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"go:github\\.com/atotto/clipboard/cmd/(?:gocopy|gopaste)\"\\s*=\\s*\"(?<currentValue>.*?)\""
+      ],
+      "packageNameTemplate": "github.com/atotto/clipboard",
+      "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": ["pipx:awslogs\\s*=\\s*\"(?<currentValue>.*?)\""],
+      "depNameTemplate": "awslogs",
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
+      "matchStrings": [
+        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ]
 }

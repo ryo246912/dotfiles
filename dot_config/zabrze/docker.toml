@@ -1,0 +1,39 @@
+[[snippets]]
+name            = "docker"
+snippet         = "docker"
+trigger-pattern = "^d$"
+
+[[snippets]]
+name            = "docker compose"
+snippet         = "docker compose"
+trigger-pattern = "^dc$"
+
+[[snippets]]
+name            = "docker compose up"
+snippet         = "docker compose up"
+trigger-pattern = "^dcu$"
+
+[[snippets]]
+name            = "docker compose stop"
+snippet         = "docker compose stop"
+trigger-pattern = "^dcs$"
+
+[[snippets]]
+name            = "docker compose down"
+snippet         = "docker compose down"
+trigger-pattern = "^dcd$"
+
+[[snippets]]
+name            = "docker compose ls"
+snippet         = "docker compose ls --all"
+trigger-pattern = "^dcl$"
+
+[[snippets]]
+name            = "docker compose ps"
+snippet         = "docker compose ps --all"
+trigger-pattern = "^dcp$"
+
+[[snippets]]
+name            = "lazydocker"
+snippet         = "lazydocker"
+trigger-pattern = "^ld$"

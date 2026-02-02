@@ -1,0 +1,719 @@
+[[snippets]]
+name            = "git"
+snippet         = "git"
+trigger-pattern = "^g$"
+
+[[snippets]]
+name            = "git add"
+snippet         = "git add"
+trigger-pattern = "^ga$"
+
+[[snippets]]
+name    = "git add ."
+snippet = "git add ."
+trigger = "ga."
+
+[[snippets]]
+name    = "git add -p"
+snippet = "git add -p"
+trigger = "gap"
+
+[[snippets]]
+name            = "git branch"
+snippet         = "git branch"
+trigger-pattern = "^gb$"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git branch -a"
+snippet = "git branch -a --sort=-committerdate👇 --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | less -iRMW --use-color"
+trigger = "gba"
+
+[[snippets]]
+name    = "git branch --show-current"
+snippet = "git branch --show-current"
+trigger = "gbc"
+
+[[snippets]]
+name    = "git bisect"
+snippet = "git bisect"
+trigger = "gbi"
+
+[[snippets]]
+name    = "git bisect bad"
+snippet = "git bisect bad"
+trigger = "gbib"
+
+[[snippets]]
+name    = "git bisect good"
+snippet = "git bisect good"
+trigger = "gbig"
+
+[[snippets]]
+name    = "git bisect reset"
+snippet = "git bisect reset"
+trigger = "gbir"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git branch verbose"
+snippet = "git branch --sort=-committerdate👇 --format='%(HEAD) %(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t'"
+trigger = "gbv"
+
+[[snippets]]
+name    = "git branch verbose2"
+snippet = "git branch -vv --sort=-committerdate"
+trigger = "gbvv"
+
+[[snippets]]
+name    = "git checkout -b"
+snippet = "git checkout -b"
+trigger = "gcb"
+
+[[snippets]]
+name    = "git checkout"
+snippet = "git checkout"
+trigger = "gch"
+
+[[snippets]]
+evaluate = true
+name     = "git checkout master"
+snippet  = "git checkout $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "gchm"
+
+[[snippets]]
+name    = "git checkout staging"
+snippet = "git checkout staging"
+trigger = "gchs"
+
+[[snippets]]
+name    = "git commit"
+snippet = "git commit"
+trigger = "gco"
+
+[[snippets]]
+name    = "git commit --amend"
+snippet = "git commit --amend"
+trigger = "gca"
+
+[[snippets]]
+name    = "git commit --amend --no-edit"
+snippet = "git commit --amend --no-edit"
+trigger = "gcan"
+
+[[snippets]]
+name    = "git commit -m ''"
+snippet = "git commit -m '{}'"
+trigger = "gcm"
+
+[[snippets]]
+name    = "git commit --no-edit"
+snippet = "git commit --no-edit"
+trigger = "gcne"
+
+[[snippets]]
+name            = "git commit --fixup HEAD"
+snippet         = "git commit --fixup HEAD"
+trigger-pattern = "(gcof|gcfh)"
+
+[[snippets]]
+name            = "git cherry-pick -n"
+snippet         = "git cherry-pick -n"
+trigger-pattern = "(gcr|gchr)"
+
+[[snippets]]
+name            = "git diff"
+snippet         = "git diff"
+trigger-pattern = "(^gd$|gshss)"
+
+[[snippets]]
+name    = "git diff change"
+snippet = "git diff --diff-filter=U"
+trigger = "gdc"
+
+[[snippets]]
+name            = "git diff --cached(staged)"
+snippet         = "git diff --cached"
+trigger-pattern = "(gds|gshs)"
+
+[[snippets]]
+name    = "git show diff"
+snippet = "git diff HEAD~1...HEAD"
+trigger = "gshd"
+
+[[snippets]]
+name    = "git show diff2"
+snippet = "git diff HEAD~2...HEAD~1"
+trigger = "gshhd"
+
+[[snippets]]
+name    = "git show diff3"
+snippet = "git diff HEAD~3...HEAD~2"
+trigger = "gshhhd"
+
+[[snippets]]
+evaluate        = true
+name            = "git show diff9"
+snippet         = "git diff HEAD~$num...HEAD~$(($num - 1))"
+trigger-pattern = "^gshd(?<num>\\d+)$"
+
+[[snippets]]
+name            = "git fetch"
+snippet         = "git fetch -p --tags"
+trigger-pattern = "^gf$"
+
+[[snippets]]
+name    = "git fetch upstream"
+snippet = "git fetch -p --tags upstream"
+trigger = "gfu"
+
+[[snippets]]
+cursor          = "👇"
+name            = "git log"
+snippet         = "git log -n 10 👇--pretty=format:\"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]\" --date=format:\"%Y/%m/%d %H:%M:%S\""
+trigger-pattern = "^gl$"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git log -n 20"
+snippet = "git log -n 20 👇--pretty=format:\"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]\" --date=format:\"%Y/%m/%d %H:%M:%S\""
+trigger = "gll"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git log -n 30"
+snippet = "git log -n 30 👇--pretty=format:\"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]\" --date=format:\"%Y/%m/%d %H:%M:%S\""
+trigger = "glll"
+
+[[snippets]]
+cursor          = "👇"
+evaluate        = true
+name            = "git log -n num * 10"
+snippet         = "git log -n $(($num * 10)) 👇--pretty=format:\"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]\" --date=format:\"%Y/%m/%d %H:%M:%S\""
+trigger-pattern = "^gl(?<num>\\d+)$"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git log --graph"
+snippet = "git log 👇--date-order --graph --pretty=format:\"%C(auto)%>|(60)%h (%C(blue)%cd%C(auto)) %<(15,trunc)%cN%d %s\" --date=format:\"%Y/%m/%d %H:%M:%S\""
+trigger = "glg"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git log --first-parent"
+snippet = "git log -n 10 👇--pretty=format:\"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]\" --date=format:\"%Y/%m/%d %H:%M:%S\" --first-parent"
+trigger = "glp"
+
+[[snippets]]
+name            = "git merge"
+snippet         = "git merge --no-ff"
+trigger-pattern = "^gm$"
+
+[[snippets]]
+name    = "git merge --abort"
+snippet = "git merge --abort"
+trigger = "gma"
+
+[[snippets]]
+name    = "git merge --squash"
+snippet = "git merge --squash"
+trigger = "gms"
+
+[[snippets]]
+name    = "git merge origin/xxx"
+snippet = "git merge --no-ff origin/"
+trigger = "gmo"
+
+[[snippets]]
+evaluate = true
+name     = "git merge origin/master"
+snippet  = "git merge --no-ff origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "gmom"
+
+[[snippets]]
+name    = "git merge upstream/xxx"
+snippet = "git merge --no-ff upstream/"
+trigger = "gmu"
+
+[[snippets]]
+evaluate = true
+name     = "git merge upstream/master"
+snippet  = "git merge --no-ff $(git rev-parse --abbrev-ref upstream/HEAD)"
+trigger  = "gmum"
+
+[[snippets]]
+name            = "git pull"
+snippet         = "git pull --no-commit"
+trigger-pattern = "^gp$"
+
+[[snippets]]
+name    = "git pull --rebase --autostash"
+snippet = "git pull --rebase --autostash"
+trigger = "gpr"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git push origin HEAD"
+snippet = "git push 👇origin HEAD"
+trigger = "gpoh"
+
+[[snippets]]
+evaluate = true
+name     = "git pull origin master"
+snippet  = "git pull origin $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4) --no-commit"
+trigger  = "gpom"
+
+[[snippets]]
+name    = "git push origin staging"
+snippet = "git push origin staging"
+trigger = "gpos"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git push upstream HEAD"
+snippet = "git push 👇upstream HEAD"
+trigger = "gpuh"
+
+[[snippets]]
+evaluate = true
+name     = "git pull upstream master"
+snippet  = "git pull upstream $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4) --no-commit"
+trigger  = "gpum"
+
+[[snippets]]
+name            = "git rebase"
+snippet         = "git rebase --autostash"
+trigger-pattern = "^gr$"
+
+[[snippets]]
+name    = "git rebase --abort"
+snippet = "git rebase --abort"
+trigger = "gra"
+
+[[snippets]]
+name    = "git rebase --continue"
+snippet = "git rebase --continue"
+trigger = "grc"
+
+[[snippets]]
+name    = "git reset --soft HEAD~"
+snippet = "git reset --soft HEAD~"
+trigger = "gre"
+
+[[snippets]]
+evaluate = true
+name     = "git reset --hard origin/master"
+snippet  = "git reset --hard origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "greom"
+
+[[snippets]]
+name    = "git reset --hard origin/staging"
+snippet = "git reset --hard origin/staging"
+trigger = "greos"
+
+[[snippets]]
+evaluate = true
+name     = "git rebase origin/master"
+snippet  = "git rebase --autostash origin/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "grom"
+
+[[snippets]]
+evaluate = true
+name     = "git rebase upstream/master"
+snippet  = "git rebase --autostash upstream/$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "grum"
+
+[[snippets]]
+name            = "git status"
+snippet         = "git status"
+trigger-pattern = "^gs$"
+
+[[snippets]]
+name    = "git show"
+snippet = "git show"
+trigger = "gsh"
+
+[[snippets]]
+name    = "git show HEAD~1"
+snippet = "git show HEAD~1"
+trigger = "gshh"
+
+[[snippets]]
+name    = "git show HEAD~2"
+snippet = "git show HEAD~2"
+trigger = "gshhh"
+
+[[snippets]]
+evaluate        = true
+name            = "git show HEAD~num"
+snippet         = "git show HEAD~$num"
+trigger-pattern = "^gsh(?<num>\\d+)$"
+
+[[snippets]]
+name    = "git tag list release"
+snippet = "git tag -l '*release*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'"
+trigger = "gtr"
+
+[[snippets]]
+name    = "git tag list staging"
+snippet = "git tag -l '*staging*' --sort=-creatordate --format='%(if) %(*objectname) %(then) %(*objectname:short) %(else) %(objectname:short) %(end) %09 %(objecttype) %09 %(refname:short) %09 %(creatordate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | head -n 5 | column -ts $'\t'"
+trigger = "gts"
+
+[[snippets]]
+name    = "git stash"
+snippet = "git stash --include-untracked --message \"wip; {}\" -- \".\""
+trigger = "gst"
+
+[[snippets]]
+name    = "git stash list"
+snippet = "git stash list --pretty=format:\"%C(green)%gd %C(auto)%h%d %s\" --date=format:\"%Y/%m/%d-%H:%M:%S\""
+trigger = "gsl"
+
+[[snippets]]
+name    = "git stash pop"
+snippet = "git stash pop stash@{0}"
+trigger = "gsp"
+
+[[snippets]]
+name    = "fuzzy git branch"
+snippet = "git for-each-ref --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | tr -d '\\n' | cb"
+trigger = "fgb"
+
+[[snippets]]
+cursor  = "👇"
+name    = "fuzzy git checkout"
+snippet = "git branch --sort=-committerdate👇 --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t' | fzf | awk '{ print $1 }' | xargs -I % git checkout %"
+trigger = "fgc"
+
+[[snippets]]
+name    = "fuzzy git hash copy"
+snippet = "() { local commits commit ; commits=$(git log --oneline) && commit=$(echo \"$commits\" | fzf --preview \"git show {1} | delta --no-gitconfig\") && $(echo -n \"$commit\" | awk '{printf $1}' | cb) }"
+trigger = "fgh"
+
+[[snippets]]
+name    = "fuzzy git hash diff copy"
+snippet = "() { local commits commit1 commit2 ; commits=$(git log --oneline) && commit1=$(echo \"$commits\" | fzf | awk '{printf $1}') && commit2=$(echo \"$commits\" | fzf --preview \"git diff \"$commit1...{1}\" | delta --no-gitconfig\" | awk '{printf $1}') && git diff \"$commit1...$commit2\" | delta && $(echo -n \"$commit1...$commit2\" | cb) }"
+trigger = "fghd"
+
+[[snippets]]
+context = "^git\\s"
+global  = true
+name    = "(git) commit"
+snippet = "commit"
+trigger = "co"
+
+[[snippets]]
+context = "^git\\s"
+global  = true
+name    = "(git) log"
+snippet = "log"
+trigger = "l"
+
+[[snippets]]
+context = "^git\\s"
+global  = true
+name    = "(git) HEAD commit"
+snippet = "HEAD"
+trigger = "h"
+
+[[snippets]]
+context         = "^git\\s"
+evaluate        = true
+global          = true
+name            = "(git) $num previous commit"
+snippet         = "HEAD~$num"
+trigger-pattern = "h(?<num>\\d+)$"
+
+[[snippets]]
+context = "^git.*add\\s"
+global  = true
+name    = "(git add) --dry-run"
+snippet = "--dry-run"
+trigger = "d"
+
+[[snippets]]
+context = "^git\\s(branch|for-each-ref)\\s"
+global  = true
+name    = "(git branch|for-each-ref) --sort=-committerdate"
+snippet = "--sort=-committerdate"
+trigger = "sc"
+
+[[snippets]]
+context = "^git.*branch\\s"
+global  = true
+name    = "(git branch) -vv"
+snippet = "-vv"
+trigger = "vv"
+
+[[snippets]]
+context = "^git\\sbisect\\s"
+global  = true
+name    = "(git bisect) bad"
+snippet = "bad"
+trigger = "b"
+
+[[snippets]]
+context = "^git\\sbisect\\s"
+global  = true
+name    = "(git bisect) good"
+snippet = "good"
+trigger = "g"
+
+[[snippets]]
+context = "^git\\sbisect\\s"
+global  = true
+name    = "(git bisect) reset"
+snippet = "reset"
+trigger = "r"
+
+[[snippets]]
+context = "^git.*commit\\s"
+global  = true
+name    = "(git commit) -m \"\""
+snippet = "-m \"\""
+trigger = "m"
+
+[[snippets]]
+context         = "^git.*commit\\s"
+global          = true
+name            = "(git commit) --allow-empty"
+snippet         = "--allow-empty"
+trigger-pattern = "(ea|ae)"
+
+[[snippets]]
+context  = "^git\\scheckout\\s"
+evaluate = true
+global   = true
+name     = "(git checkout) master/main"
+snippet  = "$(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
+trigger  = "m"
+
+[[snippets]]
+context = "^git\\scheckout\\s"
+global  = true
+name    = "(git checkout) origin"
+snippet = "origin/"
+trigger = "o"
+
+[[snippets]]
+context = "^git\\scheckout\\s"
+global  = true
+name    = "(git checkout) staging"
+snippet = "staging"
+trigger = "s"
+
+[[snippets]]
+context = "^git\\s(cherry-pick|rebase|merge)\\s"
+global  = true
+name    = "(git cherry-pick|rebase|merge) --abort"
+snippet = "--abort"
+trigger = "a"
+
+[[snippets]]
+context = "^git\\s(cherry-pick|rebase|merge)\\s"
+global  = true
+name    = "(git cherry-pick|rebase|merge) --continue"
+snippet = "--continue"
+trigger = "c"
+
+[[snippets]]
+context = "git\\s(diff|log|show)\\s"
+global  = true
+name    = "(git diff|log|show) --name-only"
+snippet = "--name-only"
+trigger = "no"
+
+[[snippets]]
+context = "git\\sdiff\\s"
+global  = true
+name    = "(git diff) --cached"
+snippet = "--cached"
+trigger = "ca"
+
+[[snippets]]
+context = "git\\sdiff\\s"
+global  = true
+name    = "(git diff) --no-index"
+snippet = "--no-index"
+trigger = "ni"
+
+[[snippets]]
+context = "git\\sdiff\\s"
+global  = true
+name    = "(git diff) --staged"
+snippet = "--staged"
+trigger = "st"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) -p"
+snippet = "-p"
+trigger = "p"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) --all"
+snippet = "--all"
+trigger = "al"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) --first-parent"
+snippet = "--first-parent"
+trigger = "fp|fi"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) --graph"
+snippet = "--graph"
+trigger = "gr"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) --no-walk"
+snippet = "--no-walk"
+trigger = "nw"
+
+[[snippets]]
+context         = "git\\slog\\s"
+global          = true
+name            = "(git log) --oneline"
+snippet         = "--oneline"
+trigger-pattern = "(on|ol)"
+
+[[snippets]]
+context = "git\\slog\\s"
+global  = true
+name    = "(git log) --reverse"
+snippet = "--reverse"
+trigger = "r"
+
+[[snippets]]
+context         = "git\\slog\\s"
+evaluate        = true
+global          = true
+name            = "(git log) -n <num>"
+snippet         = "-n ${trigger/n/}"
+trigger-pattern = "n\\d+$"
+
+[[snippets]]
+context = "^git\\smerge\\s"
+global  = true
+name    = "(git merge) --no-commit"
+snippet = "--no-commit"
+trigger = "nc"
+
+[[snippets]]
+context = "^git\\spull\\s"
+global  = true
+name    = "(git pull) --rebase --autostash"
+snippet = "--rebase --autostash"
+trigger = "r"
+
+[[snippets]]
+context = "^git\\spull\\s"
+global  = true
+name    = "(git pull) --autostash"
+snippet = "--autostash"
+trigger = "s"
+
+[[snippets]]
+context = "^git\\spush\\s"
+global  = true
+name    = "(git push) --force-with-lease"
+snippet = "--force-with-lease"
+trigger = "f"
+
+[[snippets]]
+context         = "^git\\spush\\s"
+global          = true
+name            = "(git push) -f"
+snippet         = "-f"
+trigger-pattern = "(ff|fo)"
+
+[[snippets]]
+context = "^git\\sshow\\s"
+global  = true
+name    = "(git show) --no-patch"
+snippet = "--no-patch"
+trigger = "np"
+
+[[snippets]]
+context         = "^git\\sshow\\s"
+global          = true
+name            = "(git show) --stat"
+snippet         = "--stat"
+trigger-pattern = "(-s|-st)"
+
+[[snippets]]
+name            = "gitui"
+snippet         = "gitui"
+trigger-pattern = "^gu$"
+
+[[snippets]]
+name    = "gwq"
+snippet = "gwq"
+trigger = "gw"
+
+[[snippets]]
+name    = "gwq add"
+snippet = "gwq add -i -b"
+trigger = "gwa"
+
+[[snippets]]
+name    = "gwq cd"
+snippet = "gwq cd"
+trigger = "gwc"
+
+[[snippets]]
+name    = "gwq delete(remove)"
+snippet = "gwq remove"
+trigger = "gwd"
+
+[[snippets]]
+cursor  = "👇"
+name    = "gwq exec"
+snippet = "gwq exec👇 --"
+trigger = "gwe"
+
+[[snippets]]
+name    = "gwq list"
+snippet = "gwq list"
+trigger = "gwl"
+
+[[snippets]]
+name            = "lazygit"
+snippet         = "lazygit"
+trigger-pattern = "^lg$"
+
+[[snippets]]
+name            = "tig"
+snippet         = "tig"
+trigger-pattern = "^t$"
+
+[[snippets]]
+name            = "tig --all"
+snippet         = "tig --all"
+trigger-pattern = "^ta$"
+
+[[snippets]]
+name            = "tig blame"
+snippet         = "tig blame"
+trigger-pattern = "^tb$"
+
+[[snippets]]
+name            = "tig status"
+snippet         = "tig status"
+trigger-pattern = "^ts$"
+
+[[snippets]]
+context = "^tig\\s"
+global  = true
+name    = "(tig) --all"
+snippet = "--all"
+trigger = "a"

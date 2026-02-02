@@ -1,0 +1,35 @@
+[[snippets]]
+if              = "[[ -f \"./Makefile\" ]]"
+name            = "make"
+snippet         = "make"
+trigger-pattern = "^m$"
+
+[[snippets]]
+if              = "[[ -f \"./Makefile\" ]]"
+name            = "make help"
+snippet         = "make help"
+trigger-pattern = "^mh$"
+
+[[snippets]]
+if              = "[[ -f \"./Makefile\" ]]"
+name            = "make lint"
+snippet         = "make lint"
+trigger-pattern = "^ml$"
+
+[[snippets]]
+if      = "[[ -f \"./Makefile\" ]]"
+name    = "make local"
+snippet = "make local | spacer --after 5"
+trigger = "mlo"
+
+[[snippets]]
+if              = "[[ -f \"./Makefile\" ]]"
+name            = "make unittest"
+snippet         = "make unittest"
+trigger-pattern = "^mu$"
+
+[[snippets]]
+if              = "[[ -f \"./Makefile\" ]]"
+name            = "fzf-make"
+snippet         = "fzf-make --history"
+trigger-pattern = "^fm$"
