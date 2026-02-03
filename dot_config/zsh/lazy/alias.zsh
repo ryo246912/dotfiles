@@ -21,6 +21,11 @@ claude_check_version() {
 
 # alias claude="claude_check_version"
 
+if [ "$(uname)" = "Darwin" ]; then
+  # chrome
+  alias chrome="/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome"
+fi
+
 if [ "$(uname)" = "Linux" ]; then
   # powershell
   alias pwsh="/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"

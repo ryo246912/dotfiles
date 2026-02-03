@@ -16,6 +16,9 @@ act -l <event>
 # act : run workflows for a specific event[-n:dry-run]
 act<_-dry-run_><event> -W <workflow>
 
+# chrome : open with remote-debugging-port and user-data-dir
+chrome --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile1 > /dev/null 2>&1 &
+
 # claude : mcp add
 claude mcp add <name> -s <scope> -- <command>
 
