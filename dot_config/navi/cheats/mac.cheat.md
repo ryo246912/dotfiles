@@ -27,6 +27,10 @@ brew info --installed --json | jq 'map(select(.installed[].installed_on_request 
 
 # cask
 brew info --cask --installed --json=v2 | jq '.casks | map({key: .full_token, value: .version}) | from_entries' > ~/.local/share/chezmoi/dot_config/brew/brew_cask.json
+
+% other
+# chrome : list user profile
+cat ~/Library/Application\ Support/Google/Chrome/Local\ State | jq -r '.profile.info_cache | to_entries[] | "\(.key): \(.value.name)"'
 ```
 $ app_name: brew list -1 | grep -v "==>"
 $ _--filter: echo -e "\n --formula\n --cask"
