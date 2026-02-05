@@ -1,5 +1,5 @@
 [tools]
-"aqua:supabase/cli"   = "2.70.5"
+"aqua:supabase/cli"   = "2.75.0"
 java                  = "21.0.2"
 kotlin                = "2.2.10"
 "ubi:render-oss/cli"  = { version = "2.6.1", rename_exe = "render" }
