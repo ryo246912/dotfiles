@@ -90,7 +90,7 @@ terraform                                                   = "1.14.0"
 tmux                                                        = "3.5"
 "ubi:Ryooooooga/zabrze"                                     = "0.7.2"
 "ubi:akavel/up"                                             = "0.4"
-"ubi:aquaproj/aqua"                                         = "2.56.5"
+"ubi:aquaproj/aqua"                                         = "2.56.6"
 "ubi:gpanders/ijq"                                          = "1.1.2"
 "ubi:jonas/tig"                                             = { version = "tig-2.6.0", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
 "ubi:ryo246912/gh-actions-dash"                             = "0.1.5"
