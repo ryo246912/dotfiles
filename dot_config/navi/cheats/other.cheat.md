@@ -43,6 +43,9 @@ ffmpeg -i <input_file> -c:v libx264 -c:a aac <input_file>.mp4
 # ffmpeg : convert from mp4 file to gif file
 ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 
+# gh-md-toc : generate table of contents
+gh-md-toc <markdown_file> --insert --no-backup
+
 # inkscape : convert from svg file to png file
 inkscape --export-filename="<output_file>.png" --export-width=<width> --export-height=<width> <input_file>
 
@@ -118,6 +121,7 @@ $ scope: echo -e "user\nproject\nlocal"
 $ merge-base: gh pr list --search "$(git rev-parse --short HEAD)" --limit 1 --json baseRefName --jq '.[] | .baseRefName' && \
   echo master
 
+$ markdown_file: find . -type f -name "*.md"
 $ language: echo -e "ja\nen"
 $ input: echo -e '$(gopaste)\n'
 $ version: echo -e "\nv2."
