@@ -32,6 +32,11 @@ export SLACK_DEVELOPER_MENU=true
 # docker
 export COMPOSE_MENU=0
 
+# GitHub CLI
+if command -v gh >/dev/null 2>&1; then
+  export GH_TOKEN=$(gh auth token)
+fi
+
 # .zshrc.secretの読込
 ZSH_SECRET_CONF="${HOME}/.zshrc.secret"
 if [ -e "${ZSH_SECRET_CONF}" ]; then
