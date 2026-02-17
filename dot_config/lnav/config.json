@@ -1,6 +1,13 @@
 {
   "$schema": "https://lnav.org/schemas/config-v1.schema.json",
   "ui": {
-    "theme": "eldar"
+    "theme": "eldar",
+    "keymap-defs": {
+      "default": {
+        "x79": {
+          "command": ":write-to /dev/clipboard"
+        }
+      }
+    }
   }
 }

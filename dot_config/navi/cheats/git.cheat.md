@@ -238,6 +238,9 @@ git remote set-url <shortname> git@github.com:<user>/<repo>.git
 # add remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add <shortname> git@github.com:<user>/<repo>.git
 
+# add origin url
+git remote add origin $(gh repo view owner/repo --json sshUrl -q .sshUrl)
+
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
 
