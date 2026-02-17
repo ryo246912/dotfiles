@@ -11,7 +11,7 @@ ENV SHELL /usr/bin/zsh
 RUN chsh -s /bin/zsh
 
 # Install mise to /usr/local/bin for global access
-RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
+RUN MISE_VERSION=v2026.2.13 curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
 
 # Configure mise environment variables
 ENV MISE_DATA_DIR="/mise/data"
@@ -20,7 +20,6 @@ ENV MISE_STATE_DIR="/mise/state"
 ENV MISE_CACHE_DIR="/mise/cache"
 # MEMO : postStartCommandではPATHが通らないためこちらで直接PATH(/mise/data/shims)を指定
 ENV PATH="/mise/data/shims:/mise/shims:/mise/installs:$PATH"
-
 COPY mise.toml /mise/config.toml
 
 # First, install gh
