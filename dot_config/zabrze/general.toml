@@ -56,6 +56,11 @@ snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --works
 trigger = "ccmco"
 
 [[snippets]]
+name    = "ccmanager devcontainer(copilot)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gh copilot --yolo\""
+trigger = "ccmcp"
+
+[[snippets]]
 name            = "echo"
 snippet         = "echo"
 trigger-pattern = "^e$"

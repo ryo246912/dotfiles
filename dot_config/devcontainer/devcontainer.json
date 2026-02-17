@@ -19,6 +19,8 @@
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
+    // .ssh
+    "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // git - parent directory of workspace
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
@@ -29,6 +31,7 @@
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
+    "type=bind,source=${localEnv:HOME}/.local/state/.copilot,target=/home/vscode/.local/state/.copilot",
     "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
     "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"

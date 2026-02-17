@@ -367,12 +367,17 @@ trigger = "gst"
 [[snippets]]
 name    = "git stash list"
 snippet = "git stash list --pretty=format:\"%C(green)%gd %C(auto)%h%d %s\" --date=format:\"%Y/%m/%d-%H:%M:%S\""
-trigger = "gsl"
+trigger = "gstl"
 
 [[snippets]]
 name    = "git stash pop"
 snippet = "git stash pop stash@{0}"
-trigger = "gsp"
+trigger = "gstp"
+
+[[snippets]]
+name    = "git stash show"
+snippet = "git stash show -p $(git stash list --pretty=format:\"%C(green)%gd %C(auto)%h%d %s\" | fzf | awk '{ print $1 }' | tr -d '\\n')"
+trigger = "gsts"
 
 [[snippets]]
 name    = "fuzzy git branch"

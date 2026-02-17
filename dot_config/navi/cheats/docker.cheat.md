@@ -52,6 +52,9 @@ docker builder prune
 # build(create image from dockerfile)[-t: name:tag][-f DockerfileName:(default:Dockerfile)][--no-cache][ex:docker build -t image_name .(dockerfile directory)]
 docker image build -t <image_name> .
 
+# run (create temporary container & execute) [ex:docker run --rm mysql:tag/docker run --rm image_name]
+docker container run --rm <image_id>
+
 # run (create temporary container & execute a command) [-d:run background][-i:wait stdin][-t:tty][-p:port][-e:env][--privileged:sudo][ex:docker run -it --rm mysql:tag --verbose --help]
 docker container run -it --rm <image_id> <command>
 
