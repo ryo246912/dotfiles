@@ -9,7 +9,9 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
   },
   "remoteEnv": {
-    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    // claudeがxterm-256colorを必要とするため、TERMを設定
+    "TERM": "xterm-256color"
   },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
