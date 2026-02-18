@@ -127,7 +127,6 @@ Scoop (Windows/WSL2)
 **AI Integration:**
 - Claude Desktop with custom commands (kiro, deepwiki, article, review-fix)
 - Gemini API integration
-- Chat logs stored in `_ai/chatlog/`
 
 ### Abbreviations System
 
@@ -357,17 +356,6 @@ These scripts run when their content or dependencies change:
 
 **Location:** `dot_gemini/`
 - Gemini-specific configuration and custom commands
-
-### AI Workspace
-
-**Directory:** `_ai/`
-```
-_ai/
-├── chatlog/      # Daily chat logs (YYMMDD.md format)
-│   └── 250106.md # Example: January 6, 2025
-├── files/        # AI-generated file output directory
-└── TODO.md       # AI-related TODO tracking
-```
 
 ## Custom Scripts
 
