@@ -153,8 +153,6 @@ open_lazygit() {
 	# lazygitを起動
 	lazygit
 
-	exec "$SHELL"
-
 	return 0
 }
 
@@ -196,8 +194,6 @@ open_nvim() {
 	# neovimを起動
 	nvim .
 
-	exec "$SHELL"
-
 	return 0
 }
 
@@ -220,8 +216,6 @@ open_czg() {
 	# czgを起動
 	czg
 
-	exec "$SHELL"
-
 	return 0
 }
 
@@ -239,8 +233,6 @@ show_diff() {
 
 	# git diffを表示
 	git diff main "$branch_name" | delta --no-gitconfig
-
-	exec "$SHELL"
 
 	return 0
 }
@@ -355,13 +347,13 @@ main() {
 
 	# worktree選択
 	if ! select_worktree; then
-		error_exit "worktreeの選択に失敗しました"
+		exit 0
 	fi
 
 	# アクション選択（直接指定されていない場合のみ）
 	if [ -z "$SELECTED_ACTION" ]; then
 		if ! select_action; then
-			error_exit "アクションの選択に失敗しました"
+			exit 0
 		fi
 	fi
 
