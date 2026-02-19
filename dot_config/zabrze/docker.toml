@@ -34,6 +34,11 @@ snippet         = "docker compose ps --all"
 trigger-pattern = "^dcp$"
 
 [[snippets]]
+name            = "d4s"
+snippet         = "d4s"
+trigger-pattern = "^d4$"
+
+[[snippets]]
 name            = "lazydocker"
 snippet         = "lazydocker"
 trigger-pattern = "^ld$"
