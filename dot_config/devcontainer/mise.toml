@@ -1,5 +1,5 @@
 [tools]
-"aqua:astral-sh/uv"              = "0.9.26"
+"aqua:astral-sh/uv"              = "0.10.3"
 "aqua:cli/cli"                   = "2.86.0"
 "aqua:golangci/golangci-lint"    = "2.9.0"
 "aqua:koalaman/shellcheck"       = "0.11.0"
