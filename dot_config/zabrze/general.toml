@@ -42,7 +42,7 @@ trigger = "ccm"
 cursor          = "👇"
 evaluate        = true
 name            = "ccmanager devcontainer(claude)"
-snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --resume👇 --dangerously-skip-permissions\""
+snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmc$|ccmcc)"
 
 [[snippets]]
@@ -214,6 +214,20 @@ global  = true
 name    = "|& spacer --after 5"
 snippet = "|& spacer --after 5"
 trigger = "sp"
+
+[[snippets]]
+context = ".*claude\\s"
+global  = true
+name    = "(claude) --dangerously-skip-permissions"
+snippet = "--dangerously-skip-permissions"
+trigger = "yl"
+
+[[snippets]]
+context = ".*(copilot|gemini)\\s"
+global  = true
+name    = "(copilot|gemini) --yolo"
+snippet = "--yolo"
+trigger = "yl"
 
 [[snippets]]
 context = ".*delta\\s"
