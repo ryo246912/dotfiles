@@ -81,6 +81,11 @@ snippet         = "ls -l"
 trigger-pattern = "^ll$"
 
 [[snippets]]
+name            = "multi-worktree"
+snippet         = "multi-worktree"
+trigger-pattern = "^mw$"
+
+[[snippets]]
 name            = "nvim"
 snippet         = "nvim"
 trigger-pattern = "(^nv$|^v$)"
