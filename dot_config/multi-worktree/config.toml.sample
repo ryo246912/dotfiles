@@ -1,0 +1,63 @@
+[groups.default]
+# 管理対象のリポジトリのパス（絶対パスまたは ~ を使った相対パス）
+repos = [
+  "~/dev/repo-a",
+  "~/dev/repo-b",
+]
+# worktree を作成する基準ディレクトリ（リポジトリからの相対パス）
+base_dir = "../worktrees"
+# worktree ディレクトリ名のプレフィックス
+worktree_prefix = "multi-worktree"
+
+[groups.work]
+repos = [
+  "~/work/frontend",
+  "~/work/backend",
+  "~/work/infra",
+]
+base_dir = "../worktrees"
+worktree_prefix = "multi-worktree"
+
+# グループ別 devcontainer 設定（オプション）
+# exec サブコマンドで使用する devcontainer のオプション設定
+[groups.default.devcontainer]
+# devcontainer up コマンドのオプション（配列形式）
+up_opts = [
+    "--workspace-folder",
+    ".",
+    "--config",
+    "$HOME/.config/devcontainer/devcontainer.json",
+]
+# devcontainer exec コマンドのオプション（配列形式）
+exec_opts = [
+    "--workspace-folder",
+    ".",
+    "--config",
+    "$HOME/.config/devcontainer/devcontainer.json",
+]
+
+[groups.work.devcontainer]
+# devcontainer up コマンドのオプション（配列形式）
+up_opts = [
+    "--workspace-folder",
+    ".",
+    "--config",
+    "$HOME/.config/devcontainer/devcontainer.json",
+]
+# devcontainer exec コマンドのオプション（配列形式）
+exec_opts = [
+    "--workspace-folder",
+    ".",
+    "--config",
+    "$HOME/.config/devcontainer/devcontainer.json",
+]
+
+# 全グループ共通の設定
+[settings]
+# デフォルトで使用するグループ名
+default_group = "default"
+
+# devcontainer 共通設定
+[settings.devcontainer]
+# コンテナが既に起動している場合、devcontainer up をスキップするか
+skip_up_if_running = true

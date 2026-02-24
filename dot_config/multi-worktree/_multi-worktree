@@ -1,0 +1,63 @@
+#compdef multi-worktree
+# multi-worktree zsh completion
+
+_multi_worktree() {
+    local -a subcommands
+    subcommands=(
+        'create:マルチrepoのworktreeを一括作成'
+        'remove:worktreeを一括削除'
+        'list:タスク一覧表示'
+        'status:各repoの状態確認'
+        'cd:worktreeディレクトリに移動'
+        'exec:devcontainerでコマンド実行'
+        'open:VSCodeでworktreeを開く'
+        'help:ヘルプを表示'
+    )
+
+    local -a task_names
+    task_names=(${(f)"$(multi-worktree list 2>/dev/null | awk '{print $1}')"})
+
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments -C \
+        '1: :->subcommand' \
+        '*:: :->args' \
+        && return 0
+
+    case $state in
+        subcommand)
+            _describe -t subcommands 'multi-worktree subcommand' subcommands
+            ;;
+        args)
+            case $line[1] in
+                create)
+                    _arguments \
+                        '1:task-name:' \
+                        '--group=[グループ名]:group:'
+                    ;;
+                remove|status|cd|open)
+                    _arguments \
+                        "1:task-name:(($task_names))" \
+                        '--group=[グループ名]:group:'
+                    ;;
+                exec)
+                    _arguments \
+                        "1:task-name:(($task_names))" \
+                        '*:command:'
+                    ;;
+                list)
+                    _arguments \
+                        '--group=[グループ名]:group:'
+                    ;;
+                help)
+                    # no arguments
+                    ;;
+            esac
+            ;;
+    esac
+
+    return 0
+}
+
+_multi_worktree "$@"
