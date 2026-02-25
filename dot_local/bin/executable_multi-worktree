@@ -181,6 +181,14 @@ get_config_array() {
     printf '%s\n' "${result[@]}"
 }
 
+# パス展開（~ と $HOME）
+expand_path() {
+    local path="$1"
+    path="${path/#\~/$HOME}"
+    path="${path//\$HOME/$HOME}"
+    echo "$path"
+}
+
 # デフォルトグループの取得
 get_default_group() {
     local value=""
@@ -216,7 +224,7 @@ get_worktree_base_dir() {
     local task_name="$1"
     local group="${2:-$(get_default_group)}"
 
-    local base_dir=$(get_config_value "$group" "base_dir")
+    local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
     local prefix=$(get_config_value "$group" "worktree_prefix")
 
     # タスク名から / を - に変換してディレクトリ名を作成
@@ -373,7 +381,7 @@ cmd_create() {
 
         if [[ ! -d "$repo" ]]; then
             log_warn "リポジトリが見つかりません: $repo"
-            ((fail_count++))
+            ((++fail_count))
             continue
         fi
 
@@ -393,8 +401,18 @@ cmd_create() {
             fi
 
             # worktree を作成
+            # ブランチが既に存在する場合は -b オプションを使用しない
+            local add_args=()
+            if git show-ref --verify --quiet "refs/heads/$task_name"; then
+                # ブランチが既に存在する場合
+                add_args=("$task_name")
+            else
+                # ブランチが存在しない場合は新規作成
+                add_args=("-b" "$task_name")
+            fi
+
             local error_output
-            if error_output=$(git worktree add "$worktree_path" -b "$task_name" 2>&1); then
+            if error_output=$(git worktree add "$worktree_path" "${add_args[@]}" 2>&1); then
                 log_success "[$repo_name] worktree を作成しました: $worktree_path"
                 exit 0
             else
@@ -406,9 +424,9 @@ cmd_create() {
 
         # サブシェルの終了ステータスを確認
         if [[ $? -eq 0 ]]; then
-            ((success_count++))
+            ((++success_count))
         else
-            ((fail_count++))
+            ((++fail_count))
         fi
     done
 
@@ -521,7 +539,7 @@ EOF
 cmd_list() {
     local group="${1:-$(get_default_group)}"
 
-    local base_dir=$(get_config_value "$group" "base_dir")
+    local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
     local prefix=$(get_config_value "$group" "worktree_prefix")
 
     if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
@@ -672,8 +690,10 @@ cmd_exec() {
     if [[ "$is_running" == "false" ]]; then
         log_info "devcontainer を起動中..."
 
-        local up_cmd="devcontainer up $up_opts"
-        eval "$up_cmd"
+        # オプションを配列として解析して安全に実行
+        local -a up_args
+        read -ra up_args <<< "$up_opts"
+        devcontainer up "${up_args[@]}"
 
         if [[ $? -ne 0 ]]; then
             log_error "devcontainer の起動に失敗しました"
@@ -684,8 +704,10 @@ cmd_exec() {
     # devcontainer exec の実行
     log_info "コマンドを実行中: $command"
 
-    local exec_cmd="devcontainer exec $exec_opts $command"
-    eval "$exec_cmd"
+    # オプションを配列として解析して安全に実行
+    local -a exec_args
+    read -ra exec_args <<< "$exec_opts"
+    devcontainer exec "${exec_args[@]}" "$@"
 
     local exit_code=$?
 
@@ -778,17 +800,25 @@ cmd_remove() {
 
         if [[ $? -eq 0 ]]; then
             log_success "[$repo_name] worktree を削除しました"
-            ((success_count++))
+            ((++success_count))
         else
             log_error "[$repo_name] worktree の削除に失敗しました"
-            ((fail_count++))
+            ((++fail_count))
         fi
     done
 
-    # ディレクトリを削除
-    if [[ -d "$worktree_base_dir" ]]; then
-        rm -rf "$worktree_base_dir"
-        log_success "ディレクトリを削除しました: $worktree_base_dir"
+    # .devcontainer ディレクトリなど、git worktree remove で削除されない残存ファイルを削除
+    if [[ $fail_count -eq 0 ]]; then
+        if [[ -d "$worktree_base_dir" ]]; then
+            # 空でないディレクトリが残っている場合のみ削除
+            if [[ -n "$(ls -A "$worktree_base_dir" 2>/dev/null)" ]]; then
+                rm -rf "$worktree_base_dir"
+                log_success "残存ディレクトリを削除しました: $worktree_base_dir"
+            fi
+        fi
+    else
+        log_warn "一部の worktree 削除に失敗したため、ディレクトリは残します: $worktree_base_dir"
+        log_info "手動で確認・修正後、再度削除を実行してください"
     fi
 
     log_info "完了: 成功 $success_count / 失敗 $fail_count"
