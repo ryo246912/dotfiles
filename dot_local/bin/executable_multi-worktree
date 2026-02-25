@@ -221,6 +221,42 @@ get_default_group() {
     echo "default"
 }
 
+# base_dirを絶対パスに解決する共通関数
+resolve_base_dir() {
+    local base_dir="$1"
+    local group="$2"
+
+    # すでに絶対パスの場合はそのまま返す
+    if [[ "$base_dir" == /* ]]; then
+        echo "$base_dir"
+        return 0
+    fi
+
+    # 相対パスの場合、最初のリポジトリを基準に絶対パスを取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -gt 0 ]]; then
+        local first_repo="${repos[0]}"
+        first_repo="${first_repo/#\~/$HOME}"
+        first_repo="${first_repo//\$HOME/$HOME}"
+
+        if [[ -d "$first_repo" ]]; then
+            # 最初のリポジトリのディレクトリからの相対パスとして解決
+            local resolved_path=$(cd "$first_repo" && cd "$base_dir" 2>/dev/null && pwd)
+            if [[ -n "$resolved_path" ]]; then
+                echo "$resolved_path"
+                return 0
+            fi
+        fi
+    fi
+
+    # 解決できない場合は元のパスをそのまま返す
+    echo "$base_dir"
+}
+
 # worktree のベースディレクトリを取得
 get_worktree_base_dir() {
     local task_name="$1"
@@ -228,6 +264,9 @@ get_worktree_base_dir() {
 
     local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
     local prefix=$(get_config_value "$group" "worktree_prefix")
+
+    # base_dirを絶対パスに解決
+    base_dir=$(resolve_base_dir "$base_dir" "$group")
 
     # タスク名から / を - に変換してディレクトリ名を作成
     local dir_name=$(echo "$task_name" | sed 's/\//-/g')
@@ -549,6 +588,9 @@ cmd_list() {
         return 1
     fi
 
+    # base_dirを絶対パスに解決（共通関数を使用）
+    base_dir=$(resolve_base_dir "$base_dir" "$group")
+
     # worktree ディレクトリを検索（TSV形式で出力）
     if [[ ! -d "$base_dir" ]]; then
         # ディレクトリが存在しない場合は何も出力しない
@@ -556,6 +598,12 @@ cmd_list() {
     fi
 
     for dir in "$base_dir"/${prefix}-*; do
+        # globパターンにマッチするものがない場合、パターン自体が返される
+        # その場合はスキップ
+        if [[ ! -e "$dir" ]]; then
+            continue
+        fi
+
         if [[ -d "$dir" ]]; then
             local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
             local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
