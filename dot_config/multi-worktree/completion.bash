@@ -6,7 +6,7 @@ _multi_worktree_completion() {
     _init_completion || return
 
     # サブコマンドのリスト
-    local subcommands="create remove list status cd exec open help"
+    local subcommands="create remove list status sync cd exec open help"
 
     # 最初の引数（サブコマンド）の補完
     if [[ $cword -eq 1 ]]; then
@@ -25,7 +25,7 @@ _multi_worktree_completion() {
             fi
             ;;
 
-        remove|status|cd|exec|open)
+        remove|status|sync|cd|exec|open)
             # これらのサブコマンドはタスク名を補完
             if [[ $cword -eq 2 ]]; then
                 # タスク名の一覧を取得（multi-worktree list の出力をパース）
