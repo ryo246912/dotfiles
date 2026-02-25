@@ -166,3 +166,7 @@ zsh-profiler() {
 
 # historyの定期バックアップを起動
 zsh-history-backup
+
+if command -v multi-worktree >/dev/null 2>&1; then
+    fpath=(~/.config/multi-worktree $fpath)
+fi
