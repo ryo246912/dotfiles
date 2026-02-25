@@ -25,25 +25,47 @@ _multi_worktree_completion() {
             fi
             ;;
 
-        remove|status|sync|cd|exec|open)
+        remove|status|cd|open)
             # これらのサブコマンドはタスク名を補完
             if [[ $cword -eq 2 ]]; then
                 # タスク名の一覧を取得（multi-worktree list の出力をパース）
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ "$cur" == --* ]]; then
-                # --group= オプション
-                if [[ "$subcommand" != "exec" ]]; then
-                    COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+            fi
+            ;;
+
+        sync)
+            # syncコマンドはタスク名とリポジトリ名を補完
+            if [[ $cword -eq 2 ]]; then
+                # タスク名の一覧を取得
+                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
+                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+            else
+                # タスク名以降はリポジトリ名を補完
+                # タスク名から worktree ディレクトリ内のリポジトリ名を取得
+                local task_name="${words[2]}"
+                if [[ -n "$task_name" ]]; then
+                    # multi-worktree list の出力から該当タスクのパスを取得
+                    local task_path=$(multi-worktree list 2>/dev/null | awk -v task="$task_name" '$1 == task {print $3}' | head -n 1)
+                    if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+                        # worktree ディレクトリ内のリポジトリ名（ディレクトリ名）を取得
+                        local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
+                        COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
+                    fi
                 fi
             fi
             ;;
 
-        list)
-            # list は --group= オプションのみ
-            if [[ "$cur" == --* ]]; then
-                COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+        exec)
+            # execコマンドはタスク名を補完（--groupオプションなし）
+            if [[ $cword -eq 2 ]]; then
+                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
+                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
             fi
+            ;;
+
+        list)
+            # list は引数なし
             ;;
 
         help)

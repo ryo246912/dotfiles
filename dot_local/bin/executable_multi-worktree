@@ -43,23 +43,24 @@ Usage: multi-worktree <subcommand> [options]
 サブコマンド:
   create <task-name> [--group=GROUP]  マルチrepoのworktreeを一括作成
   remove <task-name>                   worktreeを一括削除
-  list                                 タスク一覧表示
+  list                                 タスク一覧表示（group列を含む）
   status <task-name>                   各repoの状態確認
-  sync <task-name>                     worktreeの内容をメインworktreeに同期
+  sync <task-name> [repo...]          worktreeの内容をメインworktreeに同期
   cd <task-name>                       worktreeディレクトリに移動
   exec <task-name> <command>           devcontainerでコマンド実行
-  open <task-name> [--group=GROUP]    VSCodeでworktreeを開く
+  open <task-name>                     VSCodeでworktreeを開く
   help                                 このヘルプを表示
 
 オプション:
-  --group=GROUP  使用するリポジトリグループ（デフォルト: default）
+  --group=GROUP  使用するリポジトリグループ（createコマンドのみ、デフォルト: default）
 
 例:
   multi-worktree create feat/add-auth
   multi-worktree create feat/new-feature --group=work
   multi-worktree list
   multi-worktree status feat/add-auth
-  multi-worktree sync feat/add-auth
+  multi-worktree sync feat/add-auth                    # 全リポジトリを同期
+  multi-worktree sync feat/add-auth repo1 repo2        # 特定のリポジトリのみ同期
   multi-worktree cd feat/add-auth
   multi-worktree exec feat/add-auth ccmanager
   multi-worktree open feat/add-auth
@@ -576,57 +577,87 @@ EOF
     log_success "devcontainer.json を生成しました: $devcontainer_file"
 }
 
+# 全グループ名を取得する
+get_all_groups() {
+    local groups=()
+    local in_groups_section=false
+
+    while IFS= read -r line; do
+        # コメントと空行をスキップ
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # [groups.xxx] の形式を検出
+        if [[ "$line" =~ ^\[groups\.([^]]+)\] ]]; then
+            local group_name="${BASH_REMATCH[1]}"
+            groups+=("$group_name")
+        fi
+    done < "$CONFIG_FILE"
+
+    printf '%s\n' "${groups[@]}"
+}
+
 # list サブコマンド
 cmd_list() {
-    local group="${1:-$(get_default_group)}"
+    # 全グループを取得
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
 
-    local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
-    local prefix=$(get_config_value "$group" "worktree_prefix")
-
-    if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
-        log_error "グループ '$group' の設定が見つかりません" >&2
+    # グループが1つも見つからない場合
+    if [[ ${#all_groups[@]} -eq 0 ]]; then
+        log_error "設定ファイルにグループが見つかりません" >&2
         return 1
     fi
 
-    # base_dirを絶対パスに解決（共通関数を使用）
-    base_dir=$(resolve_base_dir "$base_dir" "$group")
+    # 各グループのworktreeを表示
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
 
-    # worktree ディレクトリを検索（TSV形式で出力）
-    if [[ ! -d "$base_dir" ]]; then
-        # ディレクトリが存在しない場合は何も出力しない
-        return 0
-    fi
-
-    for dir in "$base_dir"/${prefix}-*; do
-        # globパターンにマッチするものがない場合、パターン自体が返される
-        # その場合はスキップ
-        if [[ ! -e "$dir" ]]; then
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
             continue
         fi
 
-        if [[ -d "$dir" ]]; then
-            local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
-            local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+        # base_dirを絶対パスに解決（共通関数を使用）
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
 
-            # リポジトリ数をカウント
-            local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
+        # worktree ディレクトリを検索（TSV形式で出力）
+        if [[ ! -d "$base_dir" ]]; then
+            continue
+        fi
 
-            # devcontainer の有無を確認
-            local has_devcontainer=""
-            if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
-                has_devcontainer="devcontainer"
+        for dir in "$base_dir"/${prefix}-*; do
+            # globパターンにマッチするものがない場合、パターン自体が返される
+            # その場合はスキップ
+            if [[ ! -e "$dir" ]]; then
+                continue
             fi
 
-            # TSV形式で出力: <task-name>\t<path>\t<repo-count> repos\t[devcontainer]
-            echo -e "${task_name}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
-        fi
+            if [[ -d "$dir" ]]; then
+                local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
+                local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+
+                # リポジトリ数をカウント
+                local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
+
+                # devcontainer の有無を確認
+                local has_devcontainer=""
+                if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
+                    has_devcontainer="devcontainer"
+                fi
+
+                # TSV形式で出力: <task-name>\t<group>\t<path>\t<repo-count> repos\t[devcontainer]
+                echo -e "${task_name}\t${group}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
+            fi
+        done
     done
 }
 
 # status サブコマンド
 cmd_status() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    local group=$(get_default_group)
 
     local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
@@ -675,7 +706,7 @@ cmd_status() {
 # cd サブコマンド
 cmd_cd() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    local group=$(get_default_group)
 
     local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
@@ -772,7 +803,9 @@ cmd_exec() {
 # sync サブコマンド
 cmd_sync() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    shift
+    local selected_repos=("$@")  # 選択されたリポジトリ名（引数で渡される）
+    local group=$(get_default_group)
 
     local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
@@ -790,6 +823,33 @@ cmd_sync() {
     while IFS= read -r repo; do
         repos+=("$repo")
     done < <(get_config_array "$group" "repos")
+
+    # 選択されたリポジトリがある場合、それらのみをフィルタリング
+    if [[ ${#selected_repos[@]} -gt 0 ]]; then
+        local filtered_repos=()
+        for selected in "${selected_repos[@]}"; do
+            local found=false
+            for repo in "${repos[@]}"; do
+                local repo_name=$(basename "$repo")
+                if [[ "$repo_name" == "$selected" ]]; then
+                    filtered_repos+=("$repo")
+                    found=true
+                    break
+                fi
+            done
+            if [[ "$found" == false ]]; then
+                log_warn "リポジトリ '$selected' は設定に存在しません"
+            fi
+        done
+
+        if [[ ${#filtered_repos[@]} -eq 0 ]]; then
+            log_error "有効なリポジトリが選択されていません"
+            return 1
+        fi
+
+        repos=("${filtered_repos[@]}")
+        log_info "選択されたリポジトリ: ${#repos[@]} 個"
+    fi
 
     # 各リポジトリで同期を実行
     local success_count=0
@@ -866,7 +926,7 @@ cmd_sync() {
 # open サブコマンド
 cmd_open() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    local group=$(get_default_group)
 
     local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
@@ -891,7 +951,7 @@ cmd_open() {
 # remove サブコマンド
 cmd_remove() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    local group=$(get_default_group)
 
     local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
@@ -1010,13 +1070,7 @@ main() {
 
         list)
             check_config || return 1
-
-            local group=$(get_default_group)
-            if [[ $# -gt 0 ]] && [[ "$1" =~ ^--group= ]]; then
-                group="${1#*=}"
-            fi
-
-            cmd_list "$group"
+            cmd_list
             ;;
 
         status)
@@ -1028,24 +1082,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_status "$task_name" "$group"
+            cmd_status "$1"
             ;;
 
         sync)
@@ -1058,23 +1095,9 @@ main() {
             fi
 
             local task_name="$1"
-            local group=$(get_default_group)
-
             shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
 
-            cmd_sync "$task_name" "$group"
+            cmd_sync "$task_name" "$@"
             ;;
 
         cd)
@@ -1086,24 +1109,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_cd "$task_name" "$group"
+            cmd_cd "$1"
             ;;
 
         exec)
@@ -1130,24 +1136,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_open "$task_name" "$group"
+            cmd_open "$1"
             ;;
 
         remove)
@@ -1159,24 +1148,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_remove "$task_name" "$group"
+            cmd_remove "$1"
             ;;
 
         help|--help|-h)
