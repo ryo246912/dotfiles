@@ -22,7 +22,7 @@ _multi_worktree() {
     _multi_worktree_repo_names() {
         local task_name="$1"
         if [[ -n "$task_name" ]]; then
-            local task_path=$(multi-worktree list 2>/dev/null | awk -v task="$task_name" '$1 == task {print $3}' | head -n 1)
+            local task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
             if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
                 local -a repo_names
                 repo_names=(${(f)"$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)"})

@@ -252,6 +252,13 @@ resolve_base_dir() {
                 return 0
             fi
         fi
+
+        # first_repoが存在しない、またはcdに失敗した場合でも絶対パスを返す
+        # realpath -m は存在しないパスでも正規化できる
+        if command -v realpath &>/dev/null; then
+            echo "$(realpath -m "$first_repo/$base_dir")"
+            return 0
+        fi
     fi
 
     # 解決できない場合は元のパスをそのまま返す
@@ -866,6 +873,7 @@ cmd_sync() {
 
         if [[ ! -d "$worktree_path" ]]; then
             log_warn "[$repo_name] worktree が見つかりません: $worktree_path"
+            ((++fail_count))
             continue
         fi
 
