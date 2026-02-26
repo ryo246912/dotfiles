@@ -603,6 +603,83 @@ get_all_groups() {
     printf '%s\n' "${groups[@]}"
 }
 
+# タスク名から worktree ディレクトリパスを検索する
+# 全グループの base_dir を走査してタスクに対応するディレクトリを見つける
+find_worktree_dir() {
+    local task_name="$1"
+
+    # タスク名から / を - に変換してディレクトリ名を作成
+    local dir_name=$(echo "$task_name" | sed 's/\//-/g')
+
+    # 全グループを走査
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
+
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
+
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+            continue
+        fi
+
+        # base_dirを絶対パスに解決
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
+
+        # worktree ディレクトリパスを構築
+        local worktree_dir="${base_dir}/${prefix}-${dir_name}"
+
+        # ディレクトリが存在すれば、そのパスを返す
+        if [[ -d "$worktree_dir" ]]; then
+            echo "$worktree_dir"
+            return 0
+        fi
+    done
+
+    # 見つからなかった場合は空文字を返す
+    return 1
+}
+
+# タスク名からグループ名を検索する
+find_group_by_task() {
+    local task_name="$1"
+
+    # タスク名から / を - に変換してディレクトリ名を作成
+    local dir_name=$(echo "$task_name" | sed 's/\//-/g')
+
+    # 全グループを走査
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
+
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
+
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+            continue
+        fi
+
+        # base_dirを絶対パスに解決
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
+
+        # worktree ディレクトリパスを構築
+        local worktree_dir="${base_dir}/${prefix}-${dir_name}"
+
+        # ディレクトリが存在すれば、そのグループ名を返す
+        if [[ -d "$worktree_dir" ]]; then
+            echo "$group"
+            return 0
+        fi
+    done
+
+    # 見つからなかった場合は空文字を返す
+    return 1
+}
+
 # list サブコマンド
 cmd_list() {
     # 全グループを取得
@@ -664,12 +741,11 @@ cmd_list() {
 # status サブコマンド
 cmd_status() {
     local task_name="$1"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -713,12 +789,11 @@ cmd_status() {
 # cd サブコマンド
 cmd_cd() {
     local task_name="$1"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -744,12 +819,18 @@ cmd_exec() {
     fi
 
     local command="$@"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
         return 1
     fi
 
@@ -812,12 +893,18 @@ cmd_sync() {
     local task_name="$1"
     shift
     local selected_repos=("$@")  # 選択されたリポジトリ名（引数で渡される）
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
         return 1
     fi
 
@@ -934,12 +1021,11 @@ cmd_sync() {
 # open サブコマンド
 cmd_open() {
     local task_name="$1"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -959,12 +1045,18 @@ cmd_open() {
 # remove サブコマンド
 cmd_remove() {
     local task_name="$1"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
         return 1
     fi
 
