@@ -41,18 +41,19 @@ Usage: multi-worktree <subcommand> [options]
 マルチリポジトリ × git worktree 管理ツール
 
 サブコマンド:
-  create <task-name> [--group=GROUP]  マルチrepoのworktreeを一括作成
-  remove <task-name>                   worktreeを一括削除
-  list                                 タスク一覧表示（group列を含む）
-  status <task-name>                   各repoの状態確認
-  sync <task-name> [repo...]          worktreeの内容をメインworktreeに同期
-  cd <task-name>                       worktreeディレクトリに移動
-  exec <task-name> <command>           devcontainerでコマンド実行
-  open <task-name>                     VSCodeでworktreeを開く
-  help                                 このヘルプを表示
+  create <task-name> [--group=GROUP]    マルチrepoのworktreeを一括作成
+  remove <task-name> [--force]          worktreeを一括削除
+  list                                   タスク一覧表示（group列を含む）
+  status <task-name>                     各repoの状態確認
+  sync <task-name> [repo...]            worktreeの内容をメインworktreeに同期
+  cd <task-name>                         worktreeディレクトリに移動
+  exec <task-name> <command>             devcontainerでコマンド実行
+  open <task-name>                       VSCodeでworktreeを開く
+  help                                   このヘルプを表示
 
 オプション:
   --group=GROUP  使用するリポジトリグループ（createコマンドのみ、デフォルト: default）
+  --force        git worktree remove失敗時も強制削除（removeコマンドのみ）
 
 例:
   multi-worktree create feat/add-auth
@@ -64,7 +65,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree cd feat/add-auth
   multi-worktree exec feat/add-auth ccmanager
   multi-worktree open feat/add-auth
-  multi-worktree remove feat/add-auth
+  multi-worktree remove feat/add-auth                  # 通常削除
+  multi-worktree remove feat/add-auth --force          # 強制削除
 EOF
 }
 
@@ -1083,6 +1085,7 @@ cmd_open() {
 # remove サブコマンド
 cmd_remove() {
     local task_name="$1"
+    local force="${2:-false}"
 
     local worktree_base_dir=$(find_worktree_dir "$task_name")
 
@@ -1100,6 +1103,9 @@ cmd_remove() {
 
     log_warn "タスク '$task_name' の worktree を削除します"
     log_info "ディレクトリ: $worktree_base_dir"
+    if [[ "$force" == "true" ]]; then
+        log_warn "強制削除モード: git worktree remove が失敗してもディレクトリを削除します"
+    fi
     echo ""
 
     # 確認
@@ -1135,22 +1141,58 @@ cmd_remove() {
 
         log_info "[$repo_name] worktree を削除中..."
 
+        # git worktree remove を試行
+        local git_remove_success=false
         (
             cd "$repo"
-            git worktree remove "$worktree_path" --force &>/dev/null
+            if git worktree remove "$worktree_path" --force &>/dev/null; then
+                exit 0
+            else
+                exit 1
+            fi
         )
 
         if [[ $? -eq 0 ]]; then
+            git_remove_success=true
             log_success "[$repo_name] worktree を削除しました"
             ((++success_count))
         else
-            log_error "[$repo_name] worktree の削除に失敗しました"
-            ((++fail_count))
+            if [[ "$force" == "true" ]]; then
+                # 強制モード: ディレクトリを削除
+                if [[ -d "$worktree_path" ]]; then
+                    rm -rf "$worktree_path"
+                    log_warn "[$repo_name] git worktree remove 失敗。ディレクトリを強制削除しました"
+                    ((++success_count))
+                else
+                    log_success "[$repo_name] ディレクトリは既に削除済みです"
+                    ((++success_count))
+                fi
+            else
+                log_error "[$repo_name] worktree の削除に失敗しました"
+                ((++fail_count))
+            fi
         fi
     done
 
+    # 強制モードの場合、各リポジトリで git worktree prune を実行
+    if [[ "$force" == "true" ]]; then
+        log_info "git worktree の登録情報をクリーンアップ中..."
+        for repo in "${repos[@]}"; do
+            repo="${repo/#\~/$HOME}"
+            repo="${repo//\$HOME/$HOME}"
+            [[ ! -d "$repo" ]] && continue
+
+            local repo_name=$(basename "$repo")
+            (
+                cd "$repo"
+                git worktree prune &>/dev/null
+            )
+            log_info "[$repo_name] git worktree prune を実行しました"
+        done
+    fi
+
     # .devcontainer ディレクトリなど、git worktree remove で削除されない残存ファイルを削除
-    if [[ $fail_count -eq 0 ]]; then
+    if [[ $fail_count -eq 0 ]] || [[ "$force" == "true" ]]; then
         if [[ -d "$worktree_base_dir" ]]; then
             # 空でないディレクトリが残っている場合のみ削除
             if [[ -n "$(ls -A "$worktree_base_dir" 2>/dev/null)" ]]; then
@@ -1286,7 +1328,24 @@ main() {
                 return 1
             fi
 
-            cmd_remove "$1"
+            local task_name="$1"
+            local force=false
+            shift
+
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --force)
+                        force=true
+                        ;;
+                    *)
+                        log_error "不明なオプション: $1"
+                        return 1
+                        ;;
+                esac
+                shift
+            done
+
+            cmd_remove "$task_name" "$force"
             ;;
 
         help|--help|-h)
