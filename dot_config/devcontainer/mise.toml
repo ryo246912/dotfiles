@@ -7,7 +7,7 @@
 "aqua:mvdan/sh"                  = "3.12.0"
 bun                              = "1.3.5"
 go                               = "1.25.6"
-node                             = "22.19.0"
+node                             = "24.14.0"
 "npm:@google/gemini-cli"         = "0.28.2"
 "npm:@taplo/cli"                 = "0.7.0"
 "npm:@typescript/native-preview" = "7.0.0-dev.20251014.1"
