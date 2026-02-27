@@ -4,7 +4,7 @@
 "aqua:ariga/atlas"               = "0.37.0"
 "aqua:aws/aws-cli"               = "2.33.14"
 "aqua:direnv/direnv"             = "2.37.1"
-"aqua:kayac/ecspresso"           = "2.7.0"
+"aqua:kayac/ecspresso"           = "2.7.1"
 "aqua:rclone/rclone"             = "1.72.0"
 "aqua:sqldef/sqldef/psqldef"     = "3.6.3"
 "go:github.com/99designs/gqlgen" = "0.17.86"
