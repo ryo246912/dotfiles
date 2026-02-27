@@ -1,0 +1,64 @@
+[[snippets]]
+name    = "ccmanager"
+snippet = "ccmanager"
+trigger = "ccm"
+
+[[snippets]]
+cursor          = "👇"
+evaluate        = true
+name            = "ccmanager devcontainer(claude)"
+snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --dangerously-skip-permissions\""
+trigger-pattern = "(^ccmc$|ccmcc)"
+
+[[snippets]]
+name    = "ccmanager devcontainer(gemini)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo\""
+trigger = "ccmcg"
+
+[[snippets]]
+name    = "ccmanager devcontainer(opencode)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json opencode\""
+trigger = "ccmco"
+
+[[snippets]]
+name    = "ccmanager devcontainer(copilot)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json copilot --yolo\""
+trigger = "ccmcp"
+
+[[snippets]]
+global  = true
+name    = "claude"
+snippet = "claude"
+trigger = "cl"
+
+[[snippets]]
+global  = true
+name    = "claude --dangerously-skip-permissions"
+snippet = "claude --dangerously-skip-permissions"
+trigger = "cly"
+
+[[snippets]]
+global  = true
+name    = "copilot"
+snippet = "copilot"
+trigger = "co"
+
+[[snippets]]
+global  = true
+name    = "copilot --yolo"
+snippet = "copilot --yolo"
+trigger = "coy"
+
+[[snippets]]
+context = ".*claude\\s"
+global  = true
+name    = "(claude) --dangerously-skip-permissions"
+snippet = "--dangerously-skip-permissions"
+trigger = "yl"
+
+[[snippets]]
+context = ".*(copilot|gemini)\\s"
+global  = true
+name    = "(copilot|gemini) --yolo"
+snippet = "--yolo"
+trigger = "yl"

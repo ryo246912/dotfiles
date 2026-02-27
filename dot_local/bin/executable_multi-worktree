@@ -41,27 +41,32 @@ Usage: multi-worktree <subcommand> [options]
 マルチリポジトリ × git worktree 管理ツール
 
 サブコマンド:
-  create <task-name> [--group=GROUP]  マルチrepoのworktreeを一括作成
-  remove <task-name>                   worktreeを一括削除
-  list                                 タスク一覧表示
-  status <task-name>                   各repoの状態確認
-  cd <task-name>                       worktreeディレクトリに移動
-  exec <task-name> <command>           devcontainerでコマンド実行
-  open <task-name> [--group=GROUP]    VSCodeでworktreeを開く
-  help                                 このヘルプを表示
+  create <task-name> [--group=GROUP]    マルチrepoのworktreeを一括作成
+  remove <task-name> [--force]          worktreeを一括削除
+  list                                   タスク一覧表示（group列を含む）
+  status <task-name>                     各repoの状態確認
+  sync <task-name> [repo...]            worktreeの内容をメインworktreeに同期
+  cd <task-name>                         worktreeディレクトリに移動
+  exec <task-name> <command>             devcontainerでコマンド実行
+  open <task-name>                       VSCodeでworktreeを開く
+  help                                   このヘルプを表示
 
 オプション:
-  --group=GROUP  使用するリポジトリグループ（デフォルト: default）
+  --group=GROUP  使用するリポジトリグループ（createコマンドのみ、デフォルト: default）
+  --force        git worktree remove失敗時も強制削除（removeコマンドのみ）
 
 例:
   multi-worktree create feat/add-auth
   multi-worktree create feat/new-feature --group=work
   multi-worktree list
   multi-worktree status feat/add-auth
+  multi-worktree sync feat/add-auth                    # 全リポジトリを同期
+  multi-worktree sync feat/add-auth repo1 repo2        # 特定のリポジトリのみ同期
   multi-worktree cd feat/add-auth
   multi-worktree exec feat/add-auth ccmanager
   multi-worktree open feat/add-auth
-  multi-worktree remove feat/add-auth
+  multi-worktree remove feat/add-auth                  # 通常削除
+  multi-worktree remove feat/add-auth --force          # 強制削除
 EOF
 }
 
@@ -219,6 +224,49 @@ get_default_group() {
     echo "default"
 }
 
+# base_dirを絶対パスに解決する共通関数
+resolve_base_dir() {
+    local base_dir="$1"
+    local group="$2"
+
+    # すでに絶対パスの場合はそのまま返す
+    if [[ "$base_dir" == /* ]]; then
+        echo "$base_dir"
+        return 0
+    fi
+
+    # 相対パスの場合、最初のリポジトリを基準に絶対パスを取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -gt 0 ]]; then
+        local first_repo="${repos[0]}"
+        first_repo="${first_repo/#\~/$HOME}"
+        first_repo="${first_repo//\$HOME/$HOME}"
+
+        if [[ -d "$first_repo" ]]; then
+            # 最初のリポジトリのディレクトリからの相対パスとして解決
+            local resolved_path=$(cd "$first_repo" && cd "$base_dir" 2>/dev/null && pwd)
+            if [[ -n "$resolved_path" ]]; then
+                echo "$resolved_path"
+                return 0
+            fi
+        fi
+
+        # first_repoが存在しない、またはcdに失敗した場合でも絶対パスを返す
+        # realpath -m は存在しないパスでも正規化できる
+        if command -v realpath &>/dev/null; then
+            echo "$(realpath -m "$first_repo/$base_dir")"
+            return 0
+        fi
+    fi
+
+    # 解決できない場合は元のパスをそのまま返す
+    echo "$base_dir"
+}
+
 # worktree のベースディレクトリを取得
 get_worktree_base_dir() {
     local task_name="$1"
@@ -226,6 +274,9 @@ get_worktree_base_dir() {
 
     local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
     local prefix=$(get_config_value "$group" "worktree_prefix")
+
+    # base_dirを絶対パスに解決
+    base_dir=$(resolve_base_dir "$base_dir" "$group")
 
     # タスク名から / を - に変換してディレクトリ名を作成
     local dir_name=$(echo "$task_name" | sed 's/\//-/g')
@@ -469,8 +520,17 @@ generate_devcontainer() {
     local task_dir_name=$(echo "$task_name" | sed 's/\//-/g')
     local worktree_name="multi-worktree-${task_dir_name}"
 
-    # マウント設定を生成
-    local mounts="["
+    # ベーステンプレートのパス
+    local base_template="$HOME/.config/devcontainer/devcontainer.json"
+
+    if [[ ! -f "$base_template" ]]; then
+        log_error "ベーステンプレートが見つかりません: $base_template"
+        log_info "chezmoi apply を実行してベーステンプレートを配置してください"
+        return 1
+    fi
+
+    # マウント設定を生成（JSON配列形式）
+    local worktree_mounts="["
     local first=true
 
     for repo in "${repos[@]}"; do
@@ -495,93 +555,237 @@ generate_devcontainer() {
         if [[ "$first" == true ]]; then
             first=false
         else
-            mounts+=","
+            worktree_mounts+=","
         fi
 
         # worktree のマウント
-        mounts+="\n    \"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
+        worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
 
         # 実体リポジトリのマウント（.git アクセス用）
-        mounts+=",\n    \"type=bind,source=${repo},target=${repo}\""
+        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
     done
 
-    # 共通設定のマウントを追加
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly\""
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly\""
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.claude,target=/home/vscode/.claude\""
+    worktree_mounts+="]"
 
-    mounts+="\n  ]"
+    # jq を使ってベーステンプレートを読み込み、マウント設定を追加
+    # JSONCのコメントを除去してからjqでパース
+    if command -v jq &>/dev/null; then
+        # // で始まる行コメントを除去（文字列内の // は保護）
+        grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||' | \
+        jq --argjson new_mounts "$worktree_mounts" \
+           --arg workspace_folder "/workspaces/${worktree_name}" \
+           --arg task_name "$task_name" \
+           '.mounts += $new_mounts |
+            .workspaceFolder = $workspace_folder |
+            .name = "Multi-worktree: " + $task_name' \
+           > "$devcontainer_file"
+    else
+        log_error "jq コマンドが見つかりません。インストールしてください: mise install jq"
+        return 1
+    fi
 
-    # devcontainer.json を生成
-    cat > "$devcontainer_file" <<EOF
+    log_success "devcontainer.json を生成しました: $devcontainer_file"
+
+    # .claude/settings.local.json を生成
+    local claude_dir="${worktree_base_dir}/.claude"
+    mkdir -p "$claude_dir"
+
+    local claude_settings_file="${claude_dir}/settings.local.json"
+
+    cat > "$claude_settings_file" <<'EOF'
 {
-  "name": "Multi-worktree: ${task_name}",
-  "build": {
-    "dockerfile": "\${localEnv:HOME}/.config/devcontainer/Dockerfile"
-  },
-  "workspaceFolder": "/workspaces/${worktree_name}",
-  "mounts": $(echo -e "$mounts"),
-  "remoteEnv": {
-    "GH_TOKEN": "\${localEnv:GH_TOKEN}",
-    "TERM": "xterm-256color",
-    "CCMANAGER_WORKTREE_PATH": "/workspaces/${worktree_name}",
-    "CCMANAGER_WORKTREE_BRANCH": "${task_name}"
-  },
-  "postCreateCommand": "",
-  "postStartCommand": "mise trust"
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\""
+          }
+        ]
+      }
+    ]
+  }
 }
 EOF
 
-    log_success "devcontainer.json を生成しました: $devcontainer_file"
+    log_success ".claude/settings.local.json を生成しました: $claude_settings_file"
+}
+
+# 全グループ名を取得する
+get_all_groups() {
+    local groups=()
+    local in_groups_section=false
+
+    while IFS= read -r line; do
+        # コメントと空行をスキップ
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+        # [groups.xxx] の形式を検出
+        if [[ "$line" =~ ^\[groups\.([^]]+)\] ]]; then
+            local group_name="${BASH_REMATCH[1]}"
+            groups+=("$group_name")
+        fi
+    done < "$CONFIG_FILE"
+
+    printf '%s\n' "${groups[@]}"
+}
+
+# タスク名から worktree ディレクトリパスを検索する
+# 全グループの base_dir を走査してタスクに対応するディレクトリを見つける
+find_worktree_dir() {
+    local task_name="$1"
+
+    # タスク名から / を - に変換してディレクトリ名を作成
+    local dir_name=$(echo "$task_name" | sed 's/\//-/g')
+
+    # 全グループを走査
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
+
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
+
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+            continue
+        fi
+
+        # base_dirを絶対パスに解決
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
+
+        # worktree ディレクトリパスを構築
+        local worktree_dir="${base_dir}/${prefix}-${dir_name}"
+
+        # ディレクトリが存在すれば、そのパスを返す
+        if [[ -d "$worktree_dir" ]]; then
+            echo "$worktree_dir"
+            return 0
+        fi
+    done
+
+    # 見つからなかった場合は空文字を返す
+    return 1
+}
+
+# タスク名からグループ名を検索する
+find_group_by_task() {
+    local task_name="$1"
+
+    # タスク名から / を - に変換してディレクトリ名を作成
+    local dir_name=$(echo "$task_name" | sed 's/\//-/g')
+
+    # 全グループを走査
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
+
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
+
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+            continue
+        fi
+
+        # base_dirを絶対パスに解決
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
+
+        # worktree ディレクトリパスを構築
+        local worktree_dir="${base_dir}/${prefix}-${dir_name}"
+
+        # ディレクトリが存在すれば、そのグループ名を返す
+        if [[ -d "$worktree_dir" ]]; then
+            echo "$group"
+            return 0
+        fi
+    done
+
+    # 見つからなかった場合は空文字を返す
+    return 1
 }
 
 # list サブコマンド
 cmd_list() {
-    local group="${1:-$(get_default_group)}"
+    # 全グループを取得
+    local all_groups=()
+    while IFS= read -r group; do
+        all_groups+=("$group")
+    done < <(get_all_groups)
 
-    local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
-    local prefix=$(get_config_value "$group" "worktree_prefix")
-
-    if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
-        log_error "グループ '$group' の設定が見つかりません" >&2
+    # グループが1つも見つからない場合
+    if [[ ${#all_groups[@]} -eq 0 ]]; then
+        log_error "設定ファイルにグループが見つかりません" >&2
         return 1
     fi
 
-    # worktree ディレクトリを検索（TSV形式で出力）
-    if [[ ! -d "$base_dir" ]]; then
-        # ディレクトリが存在しない場合は何も出力しない
-        return 0
-    fi
+    # 各グループのworktreeを表示
+    for group in "${all_groups[@]}"; do
+        local base_dir=$(expand_path "$(get_config_value "$group" "base_dir")")
+        local prefix=$(get_config_value "$group" "worktree_prefix")
 
-    for dir in "$base_dir"/${prefix}-*; do
-        if [[ -d "$dir" ]]; then
-            local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
-            local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+        if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+            continue
+        fi
 
-            # リポジトリ数をカウント
-            local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
+        # base_dirを絶対パスに解決（共通関数を使用）
+        base_dir=$(resolve_base_dir "$base_dir" "$group")
 
-            # devcontainer の有無を確認
-            local has_devcontainer=""
-            if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
-                has_devcontainer="devcontainer"
+        # worktree ディレクトリを検索（TSV形式で出力）
+        if [[ ! -d "$base_dir" ]]; then
+            continue
+        fi
+
+        for dir in "$base_dir"/${prefix}-*; do
+            # globパターンにマッチするものがない場合、パターン自体が返される
+            # その場合はスキップ
+            if [[ ! -e "$dir" ]]; then
+                continue
             fi
 
-            # TSV形式で出力: <task-name>\t<path>\t<repo-count> repos\t[devcontainer]
-            echo -e "${task_name}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
-        fi
+            if [[ -d "$dir" ]]; then
+                local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
+                local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+
+                # リポジトリ数をカウント
+                local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
+
+                # devcontainer の有無を確認
+                local has_devcontainer=""
+                if [[ -f "$dir/.devcontainer/devcontainer.json" ]]; then
+                    has_devcontainer="devcontainer"
+                fi
+
+                # TSV形式で出力: <task-name>\t<group>\t<path>\t<repo-count> repos\t[devcontainer]
+                echo -e "${task_name}\t${group}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
+            fi
+        done
     done
 }
 
 # status サブコマンド
 cmd_status() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -625,12 +829,11 @@ cmd_status() {
 # cd サブコマンド
 cmd_cd() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -656,12 +859,18 @@ cmd_exec() {
     fi
 
     local command="$@"
-    local group=$(get_default_group)
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
         return 1
     fi
 
@@ -719,15 +928,144 @@ cmd_exec() {
     log_success "コマンドが正常に完了しました"
 }
 
+# sync サブコマンド
+cmd_sync() {
+    local task_name="$1"
+    shift
+    local selected_repos=("$@")  # 選択されたリポジトリ名（引数で渡される）
+
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
+
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
+        return 1
+    fi
+
+    log_info "タスク '$task_name' の worktree をメインworktreeに同期します"
+    log_info "ディレクトリ: $worktree_base_dir"
+    echo ""
+
+    # リポジトリリストの取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    # 選択されたリポジトリがある場合、それらのみをフィルタリング
+    if [[ ${#selected_repos[@]} -gt 0 ]]; then
+        local filtered_repos=()
+        for selected in "${selected_repos[@]}"; do
+            local found=false
+            for repo in "${repos[@]}"; do
+                local repo_name=$(basename "$repo")
+                if [[ "$repo_name" == "$selected" ]]; then
+                    filtered_repos+=("$repo")
+                    found=true
+                    break
+                fi
+            done
+            if [[ "$found" == false ]]; then
+                log_warn "リポジトリ '$selected' は設定に存在しません"
+            fi
+        done
+
+        if [[ ${#filtered_repos[@]} -eq 0 ]]; then
+            log_error "有効なリポジトリが選択されていません"
+            return 1
+        fi
+
+        repos=("${filtered_repos[@]}")
+        log_info "選択されたリポジトリ: ${#repos[@]} 個"
+    fi
+
+    # 各リポジトリで同期を実行
+    local success_count=0
+    local fail_count=0
+
+    for repo in "${repos[@]}"; do
+        # チルダ展開と環境変数展開
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+        [[ ! -d "$repo" ]] && continue
+
+        local repo_name=$(basename "$repo")
+        local worktree_path="${worktree_base_dir}/${repo_name}"
+
+        if [[ ! -d "$worktree_path" ]]; then
+            log_warn "[$repo_name] worktree が見つかりません: $worktree_path"
+            ((++fail_count))
+            continue
+        fi
+
+        log_info "[$repo_name] 同期中..."
+
+        # サブシェルで同期処理を実行（エラーが発生しても継続）
+        (
+            set +e  # エラーで停止しない
+            cd "$worktree_path" || exit 1
+
+            # メインworktreeディレクトリを取得
+            local main_worktree_dir
+            main_worktree_dir="$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')"
+
+            if [[ -z "$main_worktree_dir" ]] || [[ ! -d "$main_worktree_dir" ]]; then
+                log_error "[$repo_name] メインworktreeが見つかりません"
+                exit 1
+            fi
+
+            # 現在のHEADをdetachモードでメインworktreeにチェックアウト
+            local current_head
+            current_head="$(git rev-parse HEAD)"
+
+            if ! git -C "$main_worktree_dir" checkout --detach "$current_head" 2>/dev/null; then
+                log_error "[$repo_name] checkout --detach に失敗しました"
+                exit 1
+            fi
+
+            # rsyncでファイルを同期（.gitを除外）
+            if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
+                log_error "[$repo_name] rsync に失敗しました"
+                exit 1
+            fi
+
+            log_success "[$repo_name] 同期完了: $main_worktree_dir"
+            exit 0
+        )
+
+        # サブシェルの終了ステータスを確認
+        if [[ $? -eq 0 ]]; then
+            ((++success_count))
+        else
+            ((++fail_count))
+        fi
+    done
+
+    echo ""
+    log_info "完了: 成功 $success_count / 失敗 $fail_count"
+
+    if [[ $fail_count -eq 0 ]]; then
+        log_success "すべてのリポジトリの同期が完了しました"
+    else
+        log_warn "一部のリポジトリの同期に失敗しました"
+        return 1
+    fi
+}
+
 # open サブコマンド
 cmd_open() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
         return 1
     fi
 
@@ -747,17 +1085,27 @@ cmd_open() {
 # remove サブコマンド
 cmd_remove() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
+    local force="${2:-false}"
 
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    local worktree_base_dir=$(find_worktree_dir "$task_name")
 
-    if [[ ! -d "$worktree_base_dir" ]]; then
-        log_error "タスク '$task_name' の worktree が見つかりません: $worktree_base_dir"
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local group=$(find_group_by_task "$task_name")
+
+    if [[ -z "$group" ]]; then
+        log_error "タスク '$task_name' のグループが見つかりません"
         return 1
     fi
 
     log_warn "タスク '$task_name' の worktree を削除します"
     log_info "ディレクトリ: $worktree_base_dir"
+    if [[ "$force" == "true" ]]; then
+        log_warn "強制削除モード: git worktree remove が失敗してもディレクトリを削除します"
+    fi
     echo ""
 
     # 確認
@@ -793,22 +1141,58 @@ cmd_remove() {
 
         log_info "[$repo_name] worktree を削除中..."
 
+        # git worktree remove を試行
+        local git_remove_success=false
         (
             cd "$repo"
-            git worktree remove "$worktree_path" --force &>/dev/null
+            if git worktree remove "$worktree_path" --force &>/dev/null; then
+                exit 0
+            else
+                exit 1
+            fi
         )
 
         if [[ $? -eq 0 ]]; then
+            git_remove_success=true
             log_success "[$repo_name] worktree を削除しました"
             ((++success_count))
         else
-            log_error "[$repo_name] worktree の削除に失敗しました"
-            ((++fail_count))
+            if [[ "$force" == "true" ]]; then
+                # 強制モード: ディレクトリを削除
+                if [[ -d "$worktree_path" ]]; then
+                    rm -rf "$worktree_path"
+                    log_warn "[$repo_name] git worktree remove 失敗。ディレクトリを強制削除しました"
+                    ((++success_count))
+                else
+                    log_success "[$repo_name] ディレクトリは既に削除済みです"
+                    ((++success_count))
+                fi
+            else
+                log_error "[$repo_name] worktree の削除に失敗しました"
+                ((++fail_count))
+            fi
         fi
     done
 
+    # 強制モードの場合、各リポジトリで git worktree prune を実行
+    if [[ "$force" == "true" ]]; then
+        log_info "git worktree の登録情報をクリーンアップ中..."
+        for repo in "${repos[@]}"; do
+            repo="${repo/#\~/$HOME}"
+            repo="${repo//\$HOME/$HOME}"
+            [[ ! -d "$repo" ]] && continue
+
+            local repo_name=$(basename "$repo")
+            (
+                cd "$repo"
+                git worktree prune &>/dev/null
+            )
+            log_info "[$repo_name] git worktree prune を実行しました"
+        done
+    fi
+
     # .devcontainer ディレクトリなど、git worktree remove で削除されない残存ファイルを削除
-    if [[ $fail_count -eq 0 ]]; then
+    if [[ $fail_count -eq 0 ]] || [[ "$force" == "true" ]]; then
         if [[ -d "$worktree_base_dir" ]]; then
             # 空でないディレクトリが残っている場合のみ削除
             if [[ -n "$(ls -A "$worktree_base_dir" 2>/dev/null)" ]]; then
@@ -866,13 +1250,7 @@ main() {
 
         list)
             check_config || return 1
-
-            local group=$(get_default_group)
-            if [[ $# -gt 0 ]] && [[ "$1" =~ ^--group= ]]; then
-                group="${1#*=}"
-            fi
-
-            cmd_list "$group"
+            cmd_list
             ;;
 
         status)
@@ -884,24 +1262,22 @@ main() {
                 return 1
             fi
 
+            cmd_status "$1"
+            ;;
+
+        sync)
+            check_config || return 1
+
+            if [[ $# -eq 0 ]]; then
+                log_error "タスク名を指定してください"
+                show_usage
+                return 1
+            fi
+
             local task_name="$1"
-            local group=$(get_default_group)
-
             shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
 
-            cmd_status "$task_name" "$group"
+            cmd_sync "$task_name" "$@"
             ;;
 
         cd)
@@ -913,24 +1289,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_cd "$task_name" "$group"
+            cmd_cd "$1"
             ;;
 
         exec)
@@ -957,24 +1316,7 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local group=$(get_default_group)
-
-            shift
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --group=*)
-                        group="${1#*=}"
-                        ;;
-                    *)
-                        log_error "不明なオプション: $1"
-                        return 1
-                        ;;
-                esac
-                shift
-            done
-
-            cmd_open "$task_name" "$group"
+            cmd_open "$1"
             ;;
 
         remove)
@@ -987,13 +1329,13 @@ main() {
             fi
 
             local task_name="$1"
-            local group=$(get_default_group)
-
+            local force=false
             shift
+
             while [[ $# -gt 0 ]]; do
                 case "$1" in
-                    --group=*)
-                        group="${1#*=}"
+                    --force)
+                        force=true
                         ;;
                     *)
                         log_error "不明なオプション: $1"
@@ -1003,7 +1345,7 @@ main() {
                 shift
             done
 
-            cmd_remove "$task_name" "$group"
+            cmd_remove "$task_name" "$force"
             ;;
 
         help|--help|-h)

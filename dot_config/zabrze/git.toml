@@ -661,52 +661,6 @@ snippet         = "gitui"
 trigger-pattern = "^gu$"
 
 [[snippets]]
-name    = "gwq"
-snippet = "gwq"
-trigger = "gw"
-
-[[snippets]]
-name    = "gwq add"
-snippet = "gwq add -i -b"
-trigger = "gwa"
-
-[[snippets]]
-name    = "gwq cd"
-snippet = "gwq cd"
-trigger = "gwc"
-
-[[snippets]]
-name    = "gwq delete(remove)"
-snippet = "gwq remove"
-trigger = "gwd"
-
-[[snippets]]
-cursor  = "👇"
-name    = "gwq exec"
-snippet = "gwq exec👇 --"
-trigger = "gwe"
-
-[[snippets]]
-name    = "gwq list"
-snippet = "gwq list"
-trigger = "gwl"
-
-[[snippets]]
-name    = "git worktree sync"
-snippet = "git -C \"$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')\" checkout --detach \"$(git rev-parse HEAD)\""
-trigger = "gws"
-
-[[snippets]]
-name    = "git worktree sync all"
-snippet = "MAIN_WORKTREE_DIR=\"$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')\" && git -C \"$MAIN_WORKTREE_DIR\" checkout --detach \"$(git rev-parse HEAD)\" && rsync -a --exclude '.git' \"$PWD/\" \"$MAIN_WORKTREE_DIR/\""
-trigger = "gwsa"
-
-[[snippets]]
-name    = "git worktree sync all(--delete)"
-snippet = "MAIN_WORKTREE_DIR=\"$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')\" && git -C \"$MAIN_WORKTREE_DIR\" checkout --detach \"$(git rev-parse HEAD)\" && rsync -a --delete --exclude '.git' \"$PWD/\" \"$MAIN_WORKTREE_DIR/\""
-trigger = "gwsad"
-
-[[snippets]]
 name            = "lazygit"
 snippet         = "lazygit"
 trigger-pattern = "^lg$"
