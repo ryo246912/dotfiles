@@ -570,8 +570,8 @@ generate_devcontainer() {
     # jq を使ってベーステンプレートを読み込み、マウント設定を追加
     # JSONCのコメントを除去してからjqでパース
     if command -v jq &>/dev/null; then
-        # // で始まる行コメントとインラインコメントを除去
-        grep -v '^\s*//' "$base_template" | sed 's|//.*||' | \
+        # // で始まる行コメントを除去（文字列内の // は保護）
+        grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||' | \
         jq --argjson new_mounts "$worktree_mounts" \
            --arg workspace_folder "/workspaces/${worktree_name}" \
            --arg task_name "$task_name" \

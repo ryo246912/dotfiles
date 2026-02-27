@@ -25,7 +25,18 @@ _multi_worktree_completion() {
             fi
             ;;
 
-        remove|status|cd|open)
+        remove)
+            # removeサブコマンドはタスク名と--forceを補完
+            if [[ $cword -eq 2 ]]; then
+                # タスク名の一覧を取得（multi-worktree list の出力をパース）
+                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
+                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+            elif [[ $cword -eq 3 ]]; then
+                COMPREPLY=($(compgen -W "--force" -- "$cur"))
+            fi
+            ;;
+
+        status|cd|open)
             # これらのサブコマンドはタスク名を補完
             if [[ $cword -eq 2 ]]; then
                 # タスク名の一覧を取得（multi-worktree list の出力をパース）

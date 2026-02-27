@@ -50,7 +50,12 @@ _multi_worktree() {
                         '1:task-name:' \
                         '--group=[グループ名]:group:'
                     ;;
-                remove|status|cd|open)
+                remove)
+                    _arguments \
+                        "1:task-name:(($task_names))" \
+                        '--force[git worktree remove失敗時も強制削除]'
+                    ;;
+                status|cd|open)
                     _arguments \
                         "1:task-name:(($task_names))"
                     ;;
