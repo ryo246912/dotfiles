@@ -1,6 +1,6 @@
 [tools]
 "aqua:supabase/cli"   = "2.70.5"
 java                  = "21.0.2"
-kotlin                = "2.2.10"
+kotlin                = "2.3.10"
 "ubi:render-oss/cli"  = { version = "2.6.1", rename_exe = "render" }
 "ubi:superfly/flyctl" = "0.3.192"
