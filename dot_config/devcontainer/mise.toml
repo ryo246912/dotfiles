@@ -4,7 +4,7 @@
 "aqua:golangci/golangci-lint"    = "2.10.1"
 "aqua:koalaman/shellcheck"       = "0.11.0"
 "aqua:mvdan/sh"                  = "3.12.0"
-bun                              = "1.3.5"
+bun                              = "1.3.9"
 go                               = "1.25.6"
 node                             = "22.19.0"
 "npm:@anthropic-ai/claude-code"  = "2.0.14"
