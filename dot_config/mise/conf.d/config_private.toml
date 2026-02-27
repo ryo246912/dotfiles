@@ -3,4 +3,4 @@
 java                  = "21.0.2"
 kotlin                = "2.2.10"
 "ubi:render-oss/cli"  = { version = "2.6.1", rename_exe = "render" }
-"ubi:superfly/flyctl" = "0.3.192"
+"ubi:superfly/flyctl" = "0.4.15"
