@@ -19,43 +19,70 @@ PRのレビューコメント（インラインコメント、会話コメント
          - 見つからない場合はエラーメッセージを表示
 
    - **レビューコメントの取得**（インラインコメント含む）:
+
+      **1. インラインコメント（Review Comments）の取得** ← **最も重要！**
+      ```bash
+      # リポジトリのowner/nameを取得
+      gh repo view --json owner,name --jq '{owner: .owner.login, name: .name}'
+
+      # インラインコメントを作成日時順で取得
+      gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate \
+        --jq 'sort_by(.created_at) | .[] | {
+          id: .id,
+          author: .user.login,
+          body: .body,
+          path: .path,
+          line: .original_line,
+          created_at: .created_at,
+          diff_hunk: .diff_hunk
+        }'
+      ```
+
+      インラインコメントのデータ構造:
+      ```json
+      {
+        "id": 2850734717,
+        "author": "gemini-code-assist[bot]",
+        "body": "While this addition is correctly sorted...",
+        "path": "dot_config/mise/config.toml",
+        "line": 87,
+        "created_at": "2026-02-25T04:18:36Z",
+        "diff_hunk": "@@ -84,6 +84,7 @@ node = \"22.19.0\"\n \"npm:prettier\" = \"3.8.1\"\n \"npm:renovate\" = \"43.0.6\"\n \"npm:ulid\" = \"3.0.2\"\n+\"pipx:fast-resume\" = \"1.17.0\""
+      }
+      ```
+
+      **2. PR全体の情報（会話コメント、レビューサマリー）の取得**
       ```bash
       gh pr view <PR番号> --json reviews,comments
       ```
 
-      取得するデータ構造:
+      PR全体の情報のデータ構造:
       ```json
       {
-      "reviews": [
-         {
+        "reviews": [
+          {
+            "id": "PRR_xxx",
             "author": { "login": "reviewer1" },
             "body": "レビュー全体のコメント",
-            "state": "CHANGES_REQUESTED",
-            "comments": [
-            {
-               "path": "src/main.ts",
-               "position": 42,
-               "body": "エラーハンドリングが不足しています",
-               "diffHunk": "@@ -40,6 +40,8 @@\n ...",
-               "line": 42,
-               "startLine": null
-            }
-            ]
-         }
-      ],
-      "comments": [
-         {
+            "state": "COMMENTED",
+            "submittedAt": "2026-02-25T04:18:36Z"
+          }
+        ],
+        "comments": [
+          {
+            "id": "IC_xxx",
             "author": { "login": "user1" },
-            "body": "全体的に良い実装ですね"
-         }
-      ]
+            "body": "全体的に良い実装ですね",
+            "createdAt": "2026-02-25T04:16:55Z"
+          }
+        ]
       }
       ```
 
    - **コメントの種類を区別**:
-      - `reviews[].comments[]`: **インラインコメント**（ファイルの特定行に対するコメント）← **これが重要！**
-      - `reviews[].body`: レビューサマリーコメント
-      - `comments[]`: PR全体へのコメント（会話タブのコメント）
+      - **インラインコメント**（`gh api .../comments`で取得）: ファイルの特定行に対するコメント ← **修正対応の主な対象！**
+      - **レビューサマリー**（`reviews[].body`）: レビュー全体のサマリーコメント
+      - **会話コメント**（`comments[]`）: PR全体へのコメント（会話タブのコメント）
 
 2. レビューコメントの整理と表示:
    - **インラインコメントを優先的に表示**
@@ -128,9 +155,10 @@ e. 修正内容をユーザーに説明
 
 注意事項:
 - インラインコメントを優先的に処理する（具体的なコード指摘のため）
-- reviews[].comments[]配列からインラインコメントを抽出する
-- pathとline（またはposition）からファイルと行番号を特定
-- diffHunkを参照して、コメントが指摘している具体的なコードを確認
+- `gh api repos/<owner>/<repo>/pulls/<PR番号>/comments` でインラインコメントを取得
+- `created_at` でソートして時系列順に処理
+- `path` と `line` からファイルと行番号を特定
+- `diff_hunk` を参照して、コメントが指摘している具体的なコードを確認
 - レビューコメントの内容を正確に理解し、適切な修正を提案してください
 - ユーザーの意図を確認しながら進めてください
 - 複数のファイルにまたがる修正の場合は、関連性を考慮して順序を決定してください
@@ -149,12 +177,13 @@ e. 修正内容をユーザーに説明
 ユーザー: PR #123 のレビューに対応して
 
 アシスタント:
-1. gh pr view 123 --json reviews,comments でレビューコメント（インラインコメント含む）を取得
-2. reviews[].comments[]からインラインコメントを抽出
-3. レビュー指摘事項をリスト表示（インラインコメントを優先）
-4. ユーザーに対応する指摘を確認
-5. 選択された指摘に対してコード修正を実行
-6. 修正完了後、コミットメッセージを提案
+1. gh repo view でリポジトリ情報（owner/name）を取得
+2. gh api repos/<owner>/<repo>/pulls/123/comments でインラインコメントを取得（created_at 順）
+3. gh pr view 123 --json reviews,comments でレビューサマリーと会話コメントを取得
+4. レビュー指摘事項をリスト表示（インラインコメントを優先）
+5. ユーザーに対応する指摘を確認
+6. 選択された指摘に対してコード修正を実行
+7. 修正完了後、コミットメッセージを提案
 
 パターン2: PR番号を指定しない場合（現在のブランチのPRを自動検索）
 
@@ -163,9 +192,10 @@ e. 修正内容をユーザーに説明
 アシスタント:
 1. git branch --show-current で現在のブランチ名を取得 (例: feature/add-login)
 2. gh pr list --head feature/add-login でPRを検索
-3. 見つかったPR番号でレビューコメント（インラインコメント含む）を取得
-4. reviews[].comments[]からインラインコメントを抽出
-5. レビュー指摘事項をリスト表示（インラインコメントを優先）
-6. ユーザーに対応する指摘を確認
-7. 選択された指摘に対してコード修正を実行
-8. 修正完了後、コミットメッセージを提案
+3. gh repo view でリポジトリ情報（owner/name）を取得
+4. gh api repos/<owner>/<repo>/pulls/<PR番号>/comments でインラインコメントを取得（created_at 順）
+5. gh pr view <PR番号> --json reviews,comments でレビューサマリーと会話コメントを取得
+6. レビュー指摘事項をリスト表示（インラインコメントを優先）
+7. ユーザーに対応する指摘を確認
+8. 選択された指摘に対してコード修正を実行
+9. 修正完了後、コミットメッセージを提案
