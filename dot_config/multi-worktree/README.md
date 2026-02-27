@@ -53,6 +53,39 @@ autoload -Uz compinit && compinit
 - オプションの補完（`--group=` の補完）
 - Zsh では各サブコマンドの説明も表示されます
 
+### devcontainer からホストへの通知設定（macOS のみ）
+
+devcontainer 内から macOS ホストに通知を送る場合、SSH 経由で通知を行います。初回セットアップ時に以下の設定が必要です：
+
+```bash
+# 1. devcontainer 専用の SSH 鍵を生成（既に存在する場合はスキップ）
+if [ ! -f ~/.ssh/id_docker_devcontainer ]; then
+  ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_docker_devcontainer
+fi
+
+# 2. 公開鍵を authorized_keys に追加（重複チェック付き）
+if ! grep -q "$(cat ~/.ssh/id_docker_devcontainer.pub)" ~/.ssh/authorized_keys 2>/dev/null; then
+  cat ~/.ssh/id_docker_devcontainer.pub >> ~/.ssh/authorized_keys
+fi
+
+# 3. 権限設定
+chmod 600 ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/id_docker_devcontainer
+
+# 4. 確認
+ls -la ~/.ssh/id_docker_devcontainer*
+grep docker_devcontainer ~/.ssh/authorized_keys
+```
+
+**設定後の動作:**
+- コンテナ起動時に自動的に SSH 設定が行われます
+- Claude Code の hooks（Notification、Stop）が macOS の通知センターに表示されます
+- コンテナを再作成しても設定は永続化されます
+
+**注意事項:**
+- macOS の「システム設定 > 一般 > 共有 > リモートログイン」が有効になっている必要があります
+- `authorized_keys` へは公開鍵の追加のみで、既存の鍵は保持されます（rename 不要）
+
 ## 設定ファイル
 
 `~/.config/multi-worktree/config.toml` の例：

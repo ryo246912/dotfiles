@@ -518,8 +518,17 @@ generate_devcontainer() {
     local task_dir_name=$(echo "$task_name" | sed 's/\//-/g')
     local worktree_name="multi-worktree-${task_dir_name}"
 
-    # マウント設定を生成
-    local mounts="["
+    # ベーステンプレートのパス
+    local base_template="$HOME/.config/devcontainer/devcontainer.json"
+
+    if [[ ! -f "$base_template" ]]; then
+        log_error "ベーステンプレートが見つかりません: $base_template"
+        log_info "chezmoi apply を実行してベーステンプレートを配置してください"
+        return 1
+    fi
+
+    # マウント設定を生成（JSON配列形式）
+    local worktree_mounts="["
     local first=true
 
     for repo in "${repos[@]}"; do
@@ -544,44 +553,73 @@ generate_devcontainer() {
         if [[ "$first" == true ]]; then
             first=false
         else
-            mounts+=","
+            worktree_mounts+=","
         fi
 
         # worktree のマウント
-        mounts+="\n    \"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
+        worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
 
         # 実体リポジトリのマウント（.git アクセス用）
-        mounts+=",\n    \"type=bind,source=${repo},target=${repo}\""
+        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
     done
 
-    # 共通設定のマウントを追加
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly\""
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly\""
-    mounts+=",\n    \"type=bind,source=\${localEnv:HOME}/.claude,target=/home/vscode/.claude\""
+    worktree_mounts+="]"
 
-    mounts+="\n  ]"
+    # jq を使ってベーステンプレートを読み込み、マウント設定を追加
+    # JSONCのコメントを除去してからjqでパース
+    if command -v jq &>/dev/null; then
+        # // で始まる行コメントとインラインコメントを除去
+        grep -v '^\s*//' "$base_template" | sed 's|//.*||' | \
+        jq --argjson new_mounts "$worktree_mounts" \
+           --arg workspace_folder "/workspaces/${worktree_name}" \
+           --arg task_name "$task_name" \
+           '.mounts += $new_mounts |
+            .workspaceFolder = $workspace_folder |
+            .name = "Multi-worktree: " + $task_name' \
+           > "$devcontainer_file"
+    else
+        log_error "jq コマンドが見つかりません。インストールしてください: mise install jq"
+        return 1
+    fi
 
-    # devcontainer.json を生成
-    cat > "$devcontainer_file" <<EOF
+    log_success "devcontainer.json を生成しました: $devcontainer_file"
+
+    # .claude/settings.local.json を生成
+    local claude_dir="${worktree_base_dir}/.claude"
+    mkdir -p "$claude_dir"
+
+    local claude_settings_file="${claude_dir}/settings.local.json"
+
+    cat > "$claude_settings_file" <<'EOF'
 {
-  "name": "Multi-worktree: ${task_name}",
-  "build": {
-    "dockerfile": "\${localEnv:HOME}/.config/devcontainer/Dockerfile"
-  },
-  "workspaceFolder": "/workspaces/${worktree_name}",
-  "mounts": $(echo -e "$mounts"),
-  "remoteEnv": {
-    "GH_TOKEN": "\${localEnv:GH_TOKEN}",
-    "TERM": "xterm-256color",
-    "CCMANAGER_WORKTREE_PATH": "/workspaces/${worktree_name}",
-    "CCMANAGER_WORKTREE_BRANCH": "${task_name}"
-  },
-  "postCreateCommand": "",
-  "postStartCommand": "mise trust"
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\""
+          }
+        ]
+      }
+    ]
+  }
 }
 EOF
 
-    log_success "devcontainer.json を生成しました: $devcontainer_file"
+    log_success ".claude/settings.local.json を生成しました: $claude_settings_file"
 }
 
 # 全グループ名を取得する

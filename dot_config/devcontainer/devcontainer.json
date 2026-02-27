@@ -2,16 +2,18 @@
   // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile"
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
+    // "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
   },
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
-    "TERM": "xterm-256color"
+    "TERM": "xterm-256color",
+    // ホストのユーザー名（SSH接続用）
+    "HOST_USER": "${localEnv:USER}"
   },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
@@ -23,6 +25,10 @@
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
+    // devcontainer専用のSSH鍵（ホスト通知用）
+    "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer,target=/home/vscode/.ssh/id_ed25519,readonly",
+    // devcontainer scripts
+    "type=bind,source=${localEnv:HOME}/.config/devcontainer/scripts,target=/home/vscode/.config/devcontainer/scripts,readonly",
     // git - parent directory of workspace
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
@@ -38,6 +44,6 @@
     "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
   ],
-  "postCreateCommand": "if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then cp /tmp/claude-config-host.json ~/.claude.json; fi",
-  "postStartCommand": "mise trust"
+  "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
+  "postStartCommand": "bash /home/vscode/.config/devcontainer/scripts/post-start.sh"
 }
