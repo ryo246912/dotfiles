@@ -66,7 +66,14 @@ _multi_worktree() {
                         _arguments '--group=[グループ名]:group:'
                     fi
                     ;;
-                cd|open)
+                cd)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    elif [[ $CURRENT -eq 3 ]]; then
+                        _multi_worktree_repo_names "${words[2]}"
+                    fi
+                    ;;
+                open)
                     _arguments \
                         "1:task-name:(($task_names))"
                     ;;
