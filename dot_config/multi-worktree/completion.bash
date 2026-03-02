@@ -61,14 +61,13 @@ _multi_worktree_completion() {
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
             else
-                # タスク名以降はリポジトリ名を補完
-                # タスク名から worktree ディレクトリ内のリポジトリ名を取得
+                # タスク名以降は --all オプションとリポジトリ名を補完
                 local task_name="${words[2]}"
-                if [[ -n "$task_name" ]]; then
-                    # multi-worktree list の出力から該当タスクのパスを取得（タブ区切りを明示）
+                if [[ "$cur" == --* ]]; then
+                    COMPREPLY=($(compgen -W "--all" -- "$cur"))
+                elif [[ -n "$task_name" ]]; then
                     local task_path=$(multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
                     if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-                        # worktree ディレクトリ内のリポジトリ名（ディレクトリ名）を取得
                         local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
                         COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
                     fi

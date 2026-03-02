@@ -71,9 +71,12 @@ _multi_worktree() {
                     ;;
                 sync)
                     if [[ $CURRENT -eq 2 ]]; then
-                        _arguments "1:task-name:(($task_names))"
+                        _describe 'task name' task_names
                     else
                         local task_name="${words[2]}"
+                        local -a sync_opts
+                        sync_opts=('--all:rsyncで完全同期（checkout --detach + rsync）')
+                        _describe 'options' sync_opts
                         _multi_worktree_repo_names "$task_name"
                     fi
                     ;;

@@ -46,7 +46,8 @@ Usage: multi-worktree <subcommand> [options]
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
   status main [--group=GROUP]           各repoのデフォルトブランチ（メインworktree）の状態確認
-  sync <task-name> [repo...]            worktreeの内容をメインworktreeに同期
+  sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
+  sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name>                         worktreeディレクトリに移動
   exec <task-name> <command>             devcontainerでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
@@ -67,8 +68,10 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree status feat/add-auth
   multi-worktree status main                       # デフォルトグループの各repoのデフォルトブランチ状態確認
   multi-worktree status main --group=work          # workグループの各repoのデフォルトブランチ状態確認
-  multi-worktree sync feat/add-auth                    # 全リポジトリを同期
-  multi-worktree sync feat/add-auth repo1 repo2        # 特定のリポジトリのみ同期
+  multi-worktree sync feat/add-auth                    # 全リポジトリのHEADをcheckout --detach
+  multi-worktree sync feat/add-auth --all              # 全リポジトリをrsyncで完全同期
+  multi-worktree sync feat/add-auth repo1 repo2        # 特定リポジトリのHEADをcheckout --detach
+  multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
   multi-worktree cd feat/add-auth
   multi-worktree exec feat/add-auth ccmanager
   multi-worktree open feat/add-auth
@@ -1174,7 +1177,8 @@ cmd_exec() {
 # sync サブコマンド
 cmd_sync() {
     local task_name="$1"
-    shift
+    local use_all="$2"
+    shift 2
     local selected_repos=("$@")  # 選択されたリポジトリ名（引数で渡される）
 
     local worktree_base_dir=$(find_worktree_dir "$task_name")
@@ -1191,7 +1195,11 @@ cmd_sync() {
         return 1
     fi
 
-    log_info "タスク '$task_name' の worktree をメインworktreeに同期します"
+    if [[ "$use_all" == "true" ]]; then
+        log_info "タスク '$task_name' の worktree をメインworktreeにrsyncで完全同期します"
+    else
+        log_info "タスク '$task_name' の worktree のHEADをメインworktreeにcheckout --detachします"
+    fi
     log_info "ディレクトリ: $worktree_base_dir"
     echo ""
 
@@ -1272,13 +1280,17 @@ cmd_sync() {
                 exit 1
             fi
 
-            # rsyncでファイルを同期（.gitを除外）
-            if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
-                log_error "[$repo_name] rsync に失敗しました"
-                exit 1
+            if [[ "$use_all" == "true" ]]; then
+                # rsyncでファイルを同期（.gitを除外）
+                if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
+                    log_error "[$repo_name] rsync に失敗しました"
+                    exit 1
+                fi
+                log_success "[$repo_name] 完全同期完了: $main_worktree_dir"
+            else
+                log_success "[$repo_name] checkout --detach 完了: $main_worktree_dir"
             fi
 
-            log_success "[$repo_name] 同期完了: $main_worktree_dir"
             exit 0
         )
 
@@ -1555,9 +1567,27 @@ main() {
             fi
 
             local task_name="$1"
+            local use_all="false"
             shift
 
-            cmd_sync "$task_name" "$@"
+            local selected_repos=()
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --all)
+                        use_all="true"
+                        ;;
+                    --*)
+                        log_error "不明なオプション: $1"
+                        return 1
+                        ;;
+                    *)
+                        selected_repos+=("$1")
+                        ;;
+                esac
+                shift
+            done
+
+            cmd_sync "$task_name" "$use_all" "${selected_repos[@]}"
             ;;
 
         cd)
