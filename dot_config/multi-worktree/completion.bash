@@ -36,7 +36,16 @@ _multi_worktree_completion() {
             fi
             ;;
 
-        status|cd|open)
+        status)
+            if [[ $cword -eq 2 ]]; then
+                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
+                COMPREPLY=($(compgen -W "main $task_names" -- "$cur"))
+            elif [[ $cword -eq 3 && "${words[2]}" == "main" ]]; then
+                COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+            fi
+            ;;
+
+        cd|open)
             # これらのサブコマンドはタスク名を補完
             if [[ $cword -eq 2 ]]; then
                 # タスク名の一覧を取得（multi-worktree list の出力をパース）

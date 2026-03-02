@@ -45,6 +45,7 @@ Usage: multi-worktree <subcommand> [options]
   remove <task-name> [--force]          worktreeを一括削除
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
+  status main [--group=GROUP]           各repoのデフォルトブランチ（メインworktree）の状態確認
   sync <task-name> [repo...]            worktreeの内容をメインworktreeに同期
   cd <task-name>                         worktreeディレクトリに移動
   exec <task-name> <command>             devcontainerでコマンド実行
@@ -54,7 +55,7 @@ Usage: multi-worktree <subcommand> [options]
 オプション:
   --branch=BRANCH    checkout するブランチ名（createコマンドのみ、省略時はfzfで選択）
   --default-branch   各リポジトリのデフォルトブランチを checkout（createコマンドのみ）
-  --group=GROUP      使用するリポジトリグループ（createコマンドのみ、デフォルト: default）
+  --group=GROUP      使用するリポジトリグループ（create/status mainコマンド、デフォルト: default）
   --force            git worktree remove失敗時も強制削除（removeコマンドのみ）
 
 例:
@@ -64,6 +65,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree create feat/new-feature --group=work --branch=develop
   multi-worktree list
   multi-worktree status feat/add-auth
+  multi-worktree status main                       # デフォルトグループの各repoのデフォルトブランチ状態確認
+  multi-worktree status main --group=work          # workグループの各repoのデフォルトブランチ状態確認
   multi-worktree sync feat/add-auth                    # 全リポジトリを同期
   multi-worktree sync feat/add-auth repo1 repo2        # 特定のリポジトリのみ同期
   multi-worktree cd feat/add-auth
@@ -997,6 +1000,75 @@ cmd_status() {
     done
 }
 
+# status main サブコマンド
+# 設定に登録された各リポジトリ（メインworktree）のステータスを表示する
+cmd_status_main() {
+    local group="${1:-$(get_default_group)}"
+
+    # リポジトリ一覧を取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_error "グループ '$group' のリポジトリが設定されていません"
+        return 1
+    fi
+
+    log_info "グループ '$group' の各リポジトリ（デフォルトブランチ）のステータス"
+    echo ""
+
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+
+        if [[ ! -d "$repo" ]]; then
+            echo -e "${YELLOW}=== $(basename "$repo") ===${NC}"
+            echo -e "${RED}ディレクトリが見つかりません: $repo${NC}"
+            echo ""
+            continue
+        fi
+
+        local repo_name=$(basename "$repo")
+        echo -e "${BLUE}=== $repo_name ===${NC}"
+
+        (
+            cd "$repo"
+
+            # ブランチ情報
+            local branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+            local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+                | sed 's|^refs/remotes/origin/||')
+            if [[ -z "$default_branch" ]]; then
+                for b in main master; do
+                    if git show-ref --verify --quiet "refs/remotes/origin/$b" 2>/dev/null; then
+                        default_branch="$b"
+                        break
+                    fi
+                done
+            fi
+
+            echo "ブランチ: $branch${default_branch:+ (デフォルト: $default_branch)}"
+
+            # 変更状況
+            if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+                echo -e "${YELLOW}変更あり${NC}"
+                git status --short
+            else
+                echo -e "${GREEN}変更なし${NC}"
+            fi
+
+            # 最新のコミット
+            echo ""
+            echo "最新のコミット:"
+            git log --oneline -3 2>/dev/null || echo "コミット履歴なし"
+        )
+
+        echo ""
+    done
+}
+
 # cd サブコマンド
 cmd_cd() {
     local task_name="$1"
@@ -1451,7 +1523,26 @@ main() {
                 return 1
             fi
 
-            cmd_status "$1"
+            if [[ "$1" == "main" ]]; then
+                shift
+                local group
+                group=$(get_default_group)
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --group=*)
+                            group="${1#*=}"
+                            ;;
+                        *)
+                            log_error "不明なオプション: $1"
+                            return 1
+                            ;;
+                    esac
+                    shift
+                done
+                cmd_status_main "$group"
+            else
+                cmd_status "$1"
+            fi
             ;;
 
         sync)
