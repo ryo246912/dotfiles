@@ -49,7 +49,8 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name>                         worktreeディレクトリに移動
-  exec <task-name> <command>             devcontainerでコマンド実行
+  dev <task-name> <command>              devcontainerでコマンド実行
+  exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
   help                                   このヘルプを表示
 
@@ -73,7 +74,9 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree sync feat/add-auth repo1 repo2        # 特定リポジトリのHEADをcheckout --detach
   multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
   multi-worktree cd feat/add-auth
-  multi-worktree exec feat/add-auth ccmanager
+  multi-worktree dev feat/add-auth ccmanager
+  multi-worktree exec feat/add-auth repo1 -- npm install
+  multi-worktree exec feat/add-auth repo1 -- make build
   multi-worktree open feat/add-auth
   multi-worktree remove feat/add-auth                  # 通常削除
   multi-worktree remove feat/add-auth --force          # 強制削除
@@ -1094,8 +1097,8 @@ cmd_cd() {
     exec "$shell"
 }
 
-# exec サブコマンド
-cmd_exec() {
+# dev サブコマンド
+cmd_dev() {
     local task_name="$1"
     shift
 
@@ -1168,6 +1171,58 @@ cmd_exec() {
 
     if [[ $exit_code -ne 0 ]]; then
         log_error "コマンドの実行に失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "コマンドが正常に完了しました"
+}
+
+# exec サブコマンド
+# worktreeの指定リポジトリディレクトリでコマンドを直接実行する
+# 引数: task_name, repo_name, -- <command...>
+cmd_exec() {
+    local task_name="$1"
+    local repo_name="$2"
+    shift 2
+
+    # -- セパレータをスキップ
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        log_error "実行するコマンドを指定してください（-- の後に指定）"
+        return 1
+    fi
+
+    local worktree_base_dir
+    worktree_base_dir=$(find_worktree_dir "$task_name")
+
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local worktree_path="${worktree_base_dir}/${repo_name}"
+
+    if [[ ! -d "$worktree_path" ]]; then
+        log_error "リポジトリ '$repo_name' の worktree が見つかりません: $worktree_path"
+        return 1
+    fi
+
+    log_info "[$repo_name] コマンド実行: $*"
+    log_info "ディレクトリ: $worktree_path"
+    echo ""
+
+    (
+        cd "$worktree_path" || exit 1
+        "$@"
+    )
+
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "コマンドが失敗しました (終了コード: $exit_code)"
         return $exit_code
     fi
 
@@ -1602,7 +1657,7 @@ main() {
             cmd_cd "$1"
             ;;
 
-        exec)
+        dev)
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
@@ -1614,7 +1669,23 @@ main() {
             local task_name="$1"
             shift
 
-            cmd_exec "$task_name" "$@"
+            cmd_dev "$task_name" "$@"
+            ;;
+
+        exec)
+            check_config || return 1
+
+            if [[ $# -lt 2 ]]; then
+                log_error "タスク名とリポジトリ名を指定してください"
+                show_usage
+                return 1
+            fi
+
+            local task_name="$1"
+            local repo_name="$2"
+            shift 2
+
+            cmd_exec "$task_name" "$repo_name" "$@"
             ;;
 
         open)

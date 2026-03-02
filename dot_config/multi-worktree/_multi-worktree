@@ -10,7 +10,8 @@ _multi_worktree() {
         'status:各repoの状態確認'
         'sync:worktreeの内容をメインworktreeに同期（リポジトリ選択可）'
         'cd:worktreeディレクトリに移動'
-        'exec:devcontainerでコマンド実行'
+        'dev:devcontainerでコマンド実行'
+        'exec:worktreeの指定リポジトリディレクトリでコマンド実行'
         'open:VSCodeでworktreeを開く'
         'help:ヘルプを表示'
     )
@@ -80,10 +81,20 @@ _multi_worktree() {
                         _multi_worktree_repo_names "$task_name"
                     fi
                     ;;
-                exec)
+                dev)
                     _arguments \
                         "1:task-name:(($task_names))" \
                         '*:command:'
+                    ;;
+                exec)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    elif [[ $CURRENT -eq 3 ]]; then
+                        _multi_worktree_repo_names "${words[2]}"
+                    else
+                        # -- 以降はコマンド補完（ファイル補完にフォールバック）
+                        _default
+                    fi
                     ;;
                 list)
                     # no arguments
