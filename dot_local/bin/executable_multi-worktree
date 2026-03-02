@@ -41,29 +41,42 @@ Usage: multi-worktree <subcommand> [options]
 マルチリポジトリ × git worktree 管理ツール
 
 サブコマンド:
-  create <task-name> [--group=GROUP]    マルチrepoのworktreeを一括作成
+  create <task-name> [--branch=BRANCH|--default-branch] [--group=GROUP]  マルチrepoのworktreeを一括作成
   remove <task-name> [--force]          worktreeを一括削除
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
-  sync <task-name> [repo...]            worktreeの内容をメインworktreeに同期
+  status main [--group=GROUP]           各repoのデフォルトブランチ（メインworktree）の状態確認
+  sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
+  sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name>                         worktreeディレクトリに移動
-  exec <task-name> <command>             devcontainerでコマンド実行
+  dev <task-name> <command>              devcontainerでコマンド実行
+  exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
   help                                   このヘルプを表示
 
 オプション:
-  --group=GROUP  使用するリポジトリグループ（createコマンドのみ、デフォルト: default）
-  --force        git worktree remove失敗時も強制削除（removeコマンドのみ）
+  --branch=BRANCH    checkout するブランチ名（createコマンドのみ、省略時はfzfで選択）
+  --default-branch   各リポジトリのデフォルトブランチを checkout（createコマンドのみ）
+  --group=GROUP      使用するリポジトリグループ（create/status mainコマンド、デフォルト: default）
+  --force            git worktree remove失敗時も強制削除（removeコマンドのみ）
 
 例:
-  multi-worktree create feat/add-auth
-  multi-worktree create feat/new-feature --group=work
+  multi-worktree create feat/add-auth                              # fzf でブランチを選択して作成
+  multi-worktree create feat/add-auth --branch=main               # 全リポジトリで main ブランチを checkout
+  multi-worktree create feat/add-auth --default-branch            # 各リポジトリのデフォルトブランチを checkout
+  multi-worktree create feat/new-feature --group=work --branch=develop
   multi-worktree list
   multi-worktree status feat/add-auth
-  multi-worktree sync feat/add-auth                    # 全リポジトリを同期
-  multi-worktree sync feat/add-auth repo1 repo2        # 特定のリポジトリのみ同期
+  multi-worktree status main                       # デフォルトグループの各repoのデフォルトブランチ状態確認
+  multi-worktree status main --group=work          # workグループの各repoのデフォルトブランチ状態確認
+  multi-worktree sync feat/add-auth                    # 全リポジトリのHEADをcheckout --detach
+  multi-worktree sync feat/add-auth --all              # 全リポジトリをrsyncで完全同期
+  multi-worktree sync feat/add-auth repo1 repo2        # 特定リポジトリのHEADをcheckout --detach
+  multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
   multi-worktree cd feat/add-auth
-  multi-worktree exec feat/add-auth ccmanager
+  multi-worktree dev feat/add-auth ccmanager
+  multi-worktree exec feat/add-auth repo1 -- npm install
+  multi-worktree exec feat/add-auth repo1 -- make build
   multi-worktree open feat/add-auth
   multi-worktree remove feat/add-auth                  # 通常削除
   multi-worktree remove feat/add-auth --force          # 強制削除
@@ -384,16 +397,140 @@ get_devcontainer_skip_up_if_running() {
     fi
 }
 
+# グループ内の全リポジトリを並列で fetch する
+fetch_repos() {
+    local repos=("$@")
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    local pids=()
+    local expanded_repos=()
+
+    log_info "全リポジトリを並列 fetch 中..."
+
+    for repo in "${repos[@]}"; do
+        local expanded_repo="${repo/#\~/$HOME}"
+        expanded_repo="${expanded_repo//\$HOME/$HOME}"
+        expanded_repos+=("$expanded_repo")
+        local repo_name
+        repo_name=$(basename "$expanded_repo")
+
+        # バックグラウンドで fetch を実行
+        (
+            if git -C "$expanded_repo" fetch origin 2>/dev/null; then
+                echo "success"
+            else
+                echo "fail"
+            fi
+        ) > "$tmpdir/$repo_name" &
+        pids+=($!)
+    done
+
+    # 全バックグラウンドプロセスの完了を待つ
+    for pid in "${pids[@]}"; do
+        wait "$pid" 2>/dev/null || true
+    done
+
+    # 結果を集計・表示
+    local success_count=0
+    local fail_count=0
+    for expanded_repo in "${expanded_repos[@]}"; do
+        local repo_name
+        repo_name=$(basename "$expanded_repo")
+        local result
+        result=$(cat "$tmpdir/$repo_name" 2>/dev/null)
+        if [[ "$result" == "success" ]]; then
+            log_success "[$repo_name] fetch 完了"
+            ((++success_count))
+        else
+            log_warn "[$repo_name] fetch に失敗しました（続行します）"
+            ((++fail_count))
+        fi
+    done
+
+    rm -rf "$tmpdir"
+    log_info "fetch 完了: 成功 $success_count / 失敗 $fail_count"
+}
+
+# リポジトリのデフォルトブランチを取得する
+# 優先順位: origin/HEAD symbolic-ref → main → master → フォールバック main
+get_repo_default_branch() {
+    local repo="$1"
+    local default_branch
+
+    # origin/HEAD の symbolic ref から取得（fetch 済みであれば最速）
+    default_branch=$(git -C "$repo" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+        | sed 's|^refs/remotes/origin/||')
+    if [[ -n "$default_branch" ]]; then
+        echo "$default_branch"
+        return 0
+    fi
+
+    # フォールバック: main, master の順で存在チェック
+    for branch in main master; do
+        if git -C "$repo" show-ref --verify --quiet "refs/remotes/origin/$branch" 2>/dev/null; then
+            echo "$branch"
+            return 0
+        fi
+    done
+
+    # 最終フォールバック
+    echo "main"
+}
+
+# 全リポジトリで共通して checkout 可能なブランチ候補を収集する
+# - origin/* のリモートトラッキングブランチ（worktree checkout 済みを除外）
+collect_branch_candidates() {
+    local repos=("$@")
+    local first=true
+    local common_candidates=""
+
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+        [[ ! -d "$repo" ]] && continue
+
+        # worktree でチェックアウト中のブランチ一覧（除外リスト）
+        local checked_out
+        checked_out=$(git -C "$repo" worktree list --porcelain \
+            | grep "^branch " | sed 's|^branch refs/heads/||')
+
+        # リモートトラッキングブランチ（checkout 済みを除外、HEAD を除外）
+        local candidates
+        candidates=$(git -C "$repo" branch -r --format='%(refname:short)' \
+            | grep '^origin/' \
+            | sed 's|^origin/||' \
+            | grep -v '^HEAD$' \
+            | while read -r branch; do
+                echo "$checked_out" | grep -qx "$branch" || echo "$branch"
+              done)
+
+        if $first; then
+            common_candidates="$candidates"
+            first=false
+        else
+            # 共通部分を残す（comm -12 は両方にある行）
+            common_candidates=$(comm -12 \
+                <(echo "$common_candidates" | sort) \
+                <(echo "$candidates" | sort))
+        fi
+    done
+
+    echo "$common_candidates"
+}
+
 # create サブコマンド
+# 引数: task_name（worktreeディレクトリ名）, branch_name（checkoutするブランチ名）, group, use_default_branch
 cmd_create() {
     local task_name="$1"
-    local group="${2:-$(get_default_group)}"
-
-    log_info "タスク '$task_name' の worktree を作成します (グループ: $group)"
+    local branch_name="${2:-}"
+    local group="${3:-$(get_default_group)}"
+    local use_default_branch="${4:-false}"
 
     # 設定の読み込み
-    local base_dir=$(get_config_value "$group" "base_dir")
-    local prefix=$(get_config_value "$group" "worktree_prefix")
+    local base_dir
+    base_dir=$(get_config_value "$group" "base_dir")
+    local prefix
+    prefix=$(get_config_value "$group" "worktree_prefix")
 
     if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
         log_error "グループ '$group' の設定が見つかりません"
@@ -413,8 +550,43 @@ cmd_create() {
 
     log_info "対象リポジトリ: ${#repos[@]} 個"
 
-    # worktree ベースディレクトリ
-    local worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+    # 全リポジトリを一括 fetch
+    fetch_repos "${repos[@]}"
+
+    # ブランチの解決
+    if [[ "$use_default_branch" == "true" ]]; then
+        # --default-branch: 各リポジトリでループ内に個別解決するためここでは何もしない
+        log_info "タスク '$task_name' の worktree を作成します (ブランチ: 各リポジトリのデフォルトブランチ, グループ: $group)"
+    elif [[ -z "$branch_name" ]]; then
+        # ブランチ未指定の場合は fzf でインタラクティブに選択
+        if ! command -v fzf &>/dev/null; then
+            log_error "fzf がインストールされていません。--branch=BRANCH で指定するか、fzf をインストールしてください"
+            return 1
+        fi
+
+        log_info "checkout 可能なブランチを収集中..."
+        local candidates
+        candidates=$(collect_branch_candidates "${repos[@]}")
+
+        if [[ -z "$candidates" ]]; then
+            log_error "checkout 可能なブランチが見つかりません"
+            return 1
+        fi
+
+        branch_name=$(echo "$candidates" | fzf --prompt="checkout branch> " --height=40%)
+
+        if [[ -z "$branch_name" ]]; then
+            log_error "ブランチが選択されませんでした"
+            return 1
+        fi
+        log_info "タスク '$task_name' の worktree を作成します (ブランチ: $branch_name, グループ: $group)"
+    else
+        log_info "タスク '$task_name' の worktree を作成します (ブランチ: $branch_name, グループ: $group)"
+    fi
+
+    # worktree ベースディレクトリ（task_name から決定）
+    local worktree_base_dir
+    worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
     log_info "作成先: $worktree_base_dir"
 
@@ -436,7 +608,8 @@ cmd_create() {
             continue
         fi
 
-        local repo_name=$(basename "$repo")
+        local repo_name
+        repo_name=$(basename "$repo")
         local worktree_path="${worktree_base_dir}/${repo_name}"
 
         log_info "[$repo_name] worktree を作成中..."
@@ -446,25 +619,32 @@ cmd_create() {
             set +e  # エラーで停止しない
             cd "$repo" || exit 1
 
-            # デフォルトブランチを fetch
-            if ! git fetch origin 2>/dev/null; then
-                log_warn "[$repo_name] fetch に失敗しました"
+            # ブランチを解決（--default-branch の場合は各リポジトリで個別に取得）
+            local resolved_branch
+            if [[ "$use_default_branch" == "true" ]]; then
+                resolved_branch=$(get_repo_default_branch "$repo")
+                log_info "[$repo_name] デフォルトブランチ: $resolved_branch"
+            else
+                resolved_branch="$branch_name"
             fi
 
-            # worktree を作成
-            # ブランチが既に存在する場合は -b オプションを使用しない
+            # worktree を作成（ブランチ存在チェック）
+            # local ブランチ → remote のみ → 存在しない の順で確認
             local add_args=()
-            if git show-ref --verify --quiet "refs/heads/$task_name"; then
-                # ブランチが既に存在する場合
-                add_args=("$task_name")
+            if git show-ref --verify --quiet "refs/heads/$resolved_branch"; then
+                # local ブランチが存在する
+                add_args=("$resolved_branch")
+            elif git show-ref --verify --quiet "refs/remotes/origin/$resolved_branch"; then
+                # remote にのみ存在 → tracking ブランチとして作成
+                add_args=("-b" "$resolved_branch" "origin/$resolved_branch")
             else
-                # ブランチが存在しない場合は新規作成
-                add_args=("-b" "$task_name")
+                log_warn "[$repo_name] ブランチ '$resolved_branch' が見つかりません。スキップします"
+                exit 1
             fi
 
             local error_output
             if error_output=$(git worktree add "$worktree_path" "${add_args[@]}" 2>&1); then
-                log_success "[$repo_name] worktree を作成しました: $worktree_path"
+                log_success "[$repo_name] worktree を作成しました: $worktree_path (ブランチ: $resolved_branch)"
                 exit 0
             else
                 log_error "[$repo_name] worktree の作成に失敗しました"
@@ -826,6 +1006,75 @@ cmd_status() {
     done
 }
 
+# status main サブコマンド
+# 設定に登録された各リポジトリ（メインworktree）のステータスを表示する
+cmd_status_main() {
+    local group="${1:-$(get_default_group)}"
+
+    # リポジトリ一覧を取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_error "グループ '$group' のリポジトリが設定されていません"
+        return 1
+    fi
+
+    log_info "グループ '$group' の各リポジトリ（デフォルトブランチ）のステータス"
+    echo ""
+
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+
+        if [[ ! -d "$repo" ]]; then
+            echo -e "${YELLOW}=== $(basename "$repo") ===${NC}"
+            echo -e "${RED}ディレクトリが見つかりません: $repo${NC}"
+            echo ""
+            continue
+        fi
+
+        local repo_name=$(basename "$repo")
+        echo -e "${BLUE}=== $repo_name ===${NC}"
+
+        (
+            cd "$repo"
+
+            # ブランチ情報
+            local branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+            local default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
+                | sed 's|^refs/remotes/origin/||')
+            if [[ -z "$default_branch" ]]; then
+                for b in main master; do
+                    if git show-ref --verify --quiet "refs/remotes/origin/$b" 2>/dev/null; then
+                        default_branch="$b"
+                        break
+                    fi
+                done
+            fi
+
+            echo "ブランチ: $branch${default_branch:+ (デフォルト: $default_branch)}"
+
+            # 変更状況
+            if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+                echo -e "${YELLOW}変更あり${NC}"
+                git status --short
+            else
+                echo -e "${GREEN}変更なし${NC}"
+            fi
+
+            # 最新のコミット
+            echo ""
+            echo "最新のコミット:"
+            git log --oneline -3 2>/dev/null || echo "コミット履歴なし"
+        )
+
+        echo ""
+    done
+}
+
 # cd サブコマンド
 cmd_cd() {
     local task_name="$1"
@@ -848,8 +1097,8 @@ cmd_cd() {
     exec "$shell"
 }
 
-# exec サブコマンド
-cmd_exec() {
+# dev サブコマンド
+cmd_dev() {
     local task_name="$1"
     shift
 
@@ -928,10 +1177,63 @@ cmd_exec() {
     log_success "コマンドが正常に完了しました"
 }
 
+# exec サブコマンド
+# worktreeの指定リポジトリディレクトリでコマンドを直接実行する
+# 引数: task_name, repo_name, -- <command...>
+cmd_exec() {
+    local task_name="$1"
+    local repo_name="$2"
+    shift 2
+
+    # -- セパレータをスキップ
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        log_error "実行するコマンドを指定してください（-- の後に指定）"
+        return 1
+    fi
+
+    local worktree_base_dir
+    worktree_base_dir=$(find_worktree_dir "$task_name")
+
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local worktree_path="${worktree_base_dir}/${repo_name}"
+
+    if [[ ! -d "$worktree_path" ]]; then
+        log_error "リポジトリ '$repo_name' の worktree が見つかりません: $worktree_path"
+        return 1
+    fi
+
+    log_info "[$repo_name] コマンド実行: $*"
+    log_info "ディレクトリ: $worktree_path"
+    echo ""
+
+    (
+        cd "$worktree_path" || exit 1
+        "$@"
+    )
+
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "コマンドが失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "コマンドが正常に完了しました"
+}
+
 # sync サブコマンド
 cmd_sync() {
     local task_name="$1"
-    shift
+    local use_all="$2"
+    shift 2
     local selected_repos=("$@")  # 選択されたリポジトリ名（引数で渡される）
 
     local worktree_base_dir=$(find_worktree_dir "$task_name")
@@ -948,7 +1250,11 @@ cmd_sync() {
         return 1
     fi
 
-    log_info "タスク '$task_name' の worktree をメインworktreeに同期します"
+    if [[ "$use_all" == "true" ]]; then
+        log_info "タスク '$task_name' の worktree をメインworktreeにrsyncで完全同期します"
+    else
+        log_info "タスク '$task_name' の worktree のHEADをメインworktreeにcheckout --detachします"
+    fi
     log_info "ディレクトリ: $worktree_base_dir"
     echo ""
 
@@ -1029,13 +1335,17 @@ cmd_sync() {
                 exit 1
             fi
 
-            # rsyncでファイルを同期（.gitを除外）
-            if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
-                log_error "[$repo_name] rsync に失敗しました"
-                exit 1
+            if [[ "$use_all" == "true" ]]; then
+                # rsyncでファイルを同期（.gitを除外）
+                if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
+                    log_error "[$repo_name] rsync に失敗しました"
+                    exit 1
+                fi
+                log_success "[$repo_name] 完全同期完了: $main_worktree_dir"
+            else
+                log_success "[$repo_name] checkout --detach 完了: $main_worktree_dir"
             fi
 
-            log_success "[$repo_name] 同期完了: $main_worktree_dir"
             exit 0
         )
 
@@ -1229,23 +1539,41 @@ main() {
             fi
 
             local task_name="$1"
-            local group=$(get_default_group)
+            local branch_name=""
+            local group
+            group=$(get_default_group)
+            local use_default_branch="false"
 
             shift
             while [[ $# -gt 0 ]]; do
                 case "$1" in
+                    --branch=*)
+                        branch_name="${1#*=}"
+                        ;;
+                    --default-branch)
+                        use_default_branch="true"
+                        ;;
                     --group=*)
                         group="${1#*=}"
                         ;;
-                    *)
+                    --*)
                         log_error "不明なオプション: $1"
+                        return 1
+                        ;;
+                    *)
+                        log_error "不明な引数: $1"
                         return 1
                         ;;
                 esac
                 shift
             done
 
-            cmd_create "$task_name" "$group"
+            if [[ -n "$branch_name" && "$use_default_branch" == "true" ]]; then
+                log_error "--branch と --default-branch は同時に指定できません"
+                return 1
+            fi
+
+            cmd_create "$task_name" "$branch_name" "$group" "$use_default_branch"
             ;;
 
         list)
@@ -1262,7 +1590,26 @@ main() {
                 return 1
             fi
 
-            cmd_status "$1"
+            if [[ "$1" == "main" ]]; then
+                shift
+                local group
+                group=$(get_default_group)
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --group=*)
+                            group="${1#*=}"
+                            ;;
+                        *)
+                            log_error "不明なオプション: $1"
+                            return 1
+                            ;;
+                    esac
+                    shift
+                done
+                cmd_status_main "$group"
+            else
+                cmd_status "$1"
+            fi
             ;;
 
         sync)
@@ -1275,9 +1622,27 @@ main() {
             fi
 
             local task_name="$1"
+            local use_all="false"
             shift
 
-            cmd_sync "$task_name" "$@"
+            local selected_repos=()
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --all)
+                        use_all="true"
+                        ;;
+                    --*)
+                        log_error "不明なオプション: $1"
+                        return 1
+                        ;;
+                    *)
+                        selected_repos+=("$1")
+                        ;;
+                esac
+                shift
+            done
+
+            cmd_sync "$task_name" "$use_all" "${selected_repos[@]}"
             ;;
 
         cd)
@@ -1292,7 +1657,7 @@ main() {
             cmd_cd "$1"
             ;;
 
-        exec)
+        dev)
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
@@ -1304,7 +1669,23 @@ main() {
             local task_name="$1"
             shift
 
-            cmd_exec "$task_name" "$@"
+            cmd_dev "$task_name" "$@"
+            ;;
+
+        exec)
+            check_config || return 1
+
+            if [[ $# -lt 2 ]]; then
+                log_error "タスク名とリポジトリ名を指定してください"
+                show_usage
+                return 1
+            fi
+
+            local task_name="$1"
+            local repo_name="$2"
+            shift 2
+
+            cmd_exec "$task_name" "$repo_name" "$@"
             ;;
 
         open)
