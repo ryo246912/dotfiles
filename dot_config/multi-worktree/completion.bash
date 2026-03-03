@@ -45,10 +45,22 @@ _multi_worktree_completion() {
             fi
             ;;
 
-        cd|open)
-            # これらのサブコマンドはタスク名を補完
+        cd)
             if [[ $cword -eq 2 ]]; then
-                # タスク名の一覧を取得（multi-worktree list の出力をパース）
+                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
+                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+            elif [[ $cword -eq 3 ]]; then
+                local task_name="${words[2]}"
+                local task_path=$(multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
+                if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+                    local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
+                    COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
+                fi
+            fi
+            ;;
+
+        open)
+            if [[ $cword -eq 2 ]]; then
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
             fi
