@@ -10,7 +10,8 @@ _multi_worktree() {
         'status:各repoの状態確認'
         'sync:worktreeの内容をメインworktreeに同期（リポジトリ選択可）'
         'cd:worktreeディレクトリに移動'
-        'exec:devcontainerでコマンド実行'
+        'dev:devcontainerでコマンド実行'
+        'exec:worktreeの指定リポジトリディレクトリでコマンド実行'
         'open:VSCodeでworktreeを開く'
         'help:ヘルプを表示'
     )
@@ -55,22 +56,52 @@ _multi_worktree() {
                         "1:task-name:(($task_names))" \
                         '--force[git worktree remove失敗時も強制削除]'
                     ;;
-                status|cd|open)
+                status)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        local -a main_args
+                        main_args=('main:各repoのデフォルトブランチ（メインworktree）の状態確認')
+                        _describe 'special' main_args
+                        _describe 'task name' task_names
+                    elif [[ "${words[2]}" == "main" ]]; then
+                        _arguments '--group=[グループ名]:group:'
+                    fi
+                    ;;
+                cd)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    elif [[ $CURRENT -eq 3 ]]; then
+                        _multi_worktree_repo_names "${words[2]}"
+                    fi
+                    ;;
+                open)
                     _arguments \
                         "1:task-name:(($task_names))"
                     ;;
                 sync)
                     if [[ $CURRENT -eq 2 ]]; then
-                        _arguments "1:task-name:(($task_names))"
+                        _describe 'task name' task_names
                     else
                         local task_name="${words[2]}"
+                        local -a sync_opts
+                        sync_opts=('--all:rsyncで完全同期（checkout --detach + rsync）')
+                        _describe 'options' sync_opts
                         _multi_worktree_repo_names "$task_name"
                     fi
                     ;;
-                exec)
+                dev)
                     _arguments \
                         "1:task-name:(($task_names))" \
                         '*:command:'
+                    ;;
+                exec)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    elif [[ $CURRENT -eq 3 ]]; then
+                        _multi_worktree_repo_names "${words[2]}"
+                    else
+                        # -- 以降はコマンド補完（ファイル補完にフォールバック）
+                        _default
+                    fi
                     ;;
                 list)
                     # no arguments
