@@ -41,7 +41,7 @@ Usage: multi-worktree <subcommand> [options]
 マルチリポジトリ × git worktree 管理ツール
 
 サブコマンド:
-  create <task-name> [--branch=BRANCH|--default-branch] [--group=GROUP]  マルチrepoのworktreeを一括作成
+  create <task-name> [--from=FROM_BRANCH] [--group=GROUP]  マルチrepoのworktreeを一括作成
   remove <task-name> [--force]          worktreeを一括削除
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
@@ -519,12 +519,11 @@ collect_branch_candidates() {
 }
 
 # create サブコマンド
-# 引数: task_name（worktreeディレクトリ名）, branch_name（checkoutするブランチ名）, group, use_default_branch
+# 引数: task_name（worktreeディレクトリ名）, group, from_branch（ベースブランチ）
 cmd_create() {
     local task_name="$1"
-    local branch_name="${2:-}"
-    local group="${3:-$(get_default_group)}"
-    local use_default_branch="${4:-false}"
+    local group="${2:-$(get_default_group)}"
+    local from_branch="${3:-}"
 
     # 設定の読み込み
     local base_dir
@@ -553,36 +552,9 @@ cmd_create() {
     # 全リポジトリを一括 fetch
     fetch_repos "${repos[@]}"
 
-    # ブランチの解決
-    if [[ "$use_default_branch" == "true" ]]; then
-        # --default-branch: 各リポジトリでループ内に個別解決するためここでは何もしない
-        log_info "タスク '$task_name' の worktree を作成します (ブランチ: 各リポジトリのデフォルトブランチ, グループ: $group)"
-    elif [[ -z "$branch_name" ]]; then
-        # ブランチ未指定の場合は fzf でインタラクティブに選択
-        if ! command -v fzf &>/dev/null; then
-            log_error "fzf がインストールされていません。--branch=BRANCH で指定するか、fzf をインストールしてください"
-            return 1
-        fi
-
-        log_info "checkout 可能なブランチを収集中..."
-        local candidates
-        candidates=$(collect_branch_candidates "${repos[@]}")
-
-        if [[ -z "$candidates" ]]; then
-            log_error "checkout 可能なブランチが見つかりません"
-            return 1
-        fi
-
-        branch_name=$(echo "$candidates" | fzf --prompt="checkout branch> " --height=40%)
-
-        if [[ -z "$branch_name" ]]; then
-            log_error "ブランチが選択されませんでした"
-            return 1
-        fi
-        log_info "タスク '$task_name' の worktree を作成します (ブランチ: $branch_name, グループ: $group)"
-    else
-        log_info "タスク '$task_name' の worktree を作成します (ブランチ: $branch_name, グループ: $group)"
-    fi
+    # ブランチの解決: タスク名をブランチ名として使用し、ベースブランチから新規作成
+    local from_label="${from_branch:-各リポジトリのデフォルトブランチ}"
+    log_info "タスク '$task_name' の worktree を作成します (新規ブランチ: $task_name, ベース: $from_label, グループ: $group)"
 
     # worktree ベースディレクトリ（task_name から決定）
     local worktree_base_dir
@@ -619,17 +591,10 @@ cmd_create() {
             set +e  # エラーで停止しない
             cd "$repo" || exit 1
 
-            # ブランチを解決（--default-branch の場合は各リポジトリで個別に取得）
-            local resolved_branch
-            if [[ "$use_default_branch" == "true" ]]; then
-                resolved_branch=$(get_repo_default_branch "$repo")
-                log_info "[$repo_name] デフォルトブランチ: $resolved_branch"
-            else
-                resolved_branch="$branch_name"
-            fi
+            local resolved_branch="$task_name"
 
             # worktree を作成（ブランチ存在チェック）
-            # local ブランチ → remote のみ → 存在しない の順で確認
+            # local ブランチ → remote のみ → ベースから新規作成 の順で確認
             local add_args=()
             if git show-ref --verify --quiet "refs/heads/$resolved_branch"; then
                 # local ブランチが存在する
@@ -638,8 +603,23 @@ cmd_create() {
                 # remote にのみ存在 → tracking ブランチとして作成
                 add_args=("-b" "$resolved_branch" "origin/$resolved_branch")
             else
-                log_warn "[$repo_name] ブランチ '$resolved_branch' が見つかりません。スキップします"
-                exit 1
+                # ブランチが存在しない → ベースブランチから新規作成
+                local base_branch
+                if [[ -n "$from_branch" ]]; then
+                    base_branch="$from_branch"
+                else
+                    base_branch=$(get_repo_default_branch "$repo")
+                fi
+                local base_ref
+                if git show-ref --verify --quiet "refs/remotes/origin/$base_branch"; then
+                    base_ref="origin/$base_branch"
+                elif git show-ref --verify --quiet "refs/heads/$base_branch"; then
+                    base_ref="$base_branch"
+                else
+                    log_warn "[$repo_name] ベースブランチ '$base_branch' が見つかりません。スキップします"
+                    exit 1
+                fi
+                add_args=("-b" "$resolved_branch" "$base_ref")
             fi
 
             local error_output
@@ -1551,19 +1531,15 @@ main() {
             fi
 
             local task_name="$1"
-            local branch_name=""
             local group
             group=$(get_default_group)
-            local use_default_branch="false"
+            local from_branch=""
 
             shift
             while [[ $# -gt 0 ]]; do
                 case "$1" in
-                    --branch=*)
-                        branch_name="${1#*=}"
-                        ;;
-                    --default-branch)
-                        use_default_branch="true"
+                    --from=*)
+                        from_branch="${1#*=}"
                         ;;
                     --group=*)
                         group="${1#*=}"
@@ -1580,12 +1556,7 @@ main() {
                 shift
             done
 
-            if [[ -n "$branch_name" && "$use_default_branch" == "true" ]]; then
-                log_error "--branch と --default-branch は同時に指定できません"
-                return 1
-            fi
-
-            cmd_create "$task_name" "$branch_name" "$group" "$use_default_branch"
+            cmd_create "$task_name" "$group" "$from_branch"
             ;;
 
         list)
