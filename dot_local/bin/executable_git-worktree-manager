@@ -388,8 +388,8 @@ open_multi_worktree_tiled() {
 		return 1
 	fi
 
-	# cd の場合のみ、タスクルートディレクトリも別ペインとして追加
-	if [[ "$cmd" == "cd" ]]; then
+	# cd または lazygit の場合のみ、タスクルートディレクトリも別ペインとして追加
+	if [[ "$cmd" == "cd" ]] || [[ "$cmd" == "lazygit" ]]; then
 		repos+=("$task_path")
 	fi
 
@@ -416,11 +416,23 @@ open_multi_worktree_tiled() {
 	local shell_cmd
 	[[ "$cmd" == "cd" ]] && shell_cmd="zsh" || shell_cmd="zsh -f"
 
+	# 各repoのペイン起動コマンドを決定
+	# lazygit モードで非gitディレクトリ（タスクルートなど）は通常のzshで起動
+	local -a pane_shells=()
+	for _repo in "${repos[@]}"; do
+		local _d="${_repo%/}"
+		if [[ "$cmd" == "lazygit" ]] && ! [[ -f "$_d/.git" ]] && ! [[ -d "$_d/.git" ]]; then
+			pane_shells+=("zsh")
+		else
+			pane_shells+=("$shell_cmd")
+		fi
+	done
+
 	# ペインIDリスト（%N形式）: pane-base-index に依存しない一意なID
 	local -a pane_ids=()
 
 	# ペイン0: 新しいウィンドウを作成し、最初のペインIDを取得
-	tmux new-window -n "$window_name" -c "${repos[0]}" -t "${session_name}:" "$shell_cmd"
+	tmux new-window -n "$window_name" -c "${repos[0]}" -t "${session_name}:" "${pane_shells[0]}"
 	local win_idx
 	win_idx=$(tmux display-message -t "${session_name}:${window_name}" -p '#{window_index}')
 	pane_ids+=("$(tmux display-message -t "${session_name}:${win_idx}" -p '#{pane_id}')")
@@ -428,13 +440,14 @@ open_multi_worktree_tiled() {
 	if [[ "${DEBUG:-}" == "1" ]]; then
 		echo "[DEBUG] session=$session_name window=$window_name win_idx=$win_idx count=$count cmd=$cmd" >&2
 		echo "[DEBUG] repos: ${repos[*]}" >&2
+		echo "[DEBUG] pane_shells: ${pane_shells[*]}" >&2
 		echo "[DEBUG] pane_ids[0]=${pane_ids[0]}" >&2
 	fi
 
 	if [[ $count -ge 2 ]]; then
 		# ペイン1: ペイン0を水平分割して右列先頭を作成
 		local pid
-		pid=$(tmux split-window -h -t "${pane_ids[0]}" -c "${repos[1]}" -P -F '#{pane_id}' "$shell_cmd")
+		pid=$(tmux split-window -h -t "${pane_ids[0]}" -c "${repos[1]}" -P -F '#{pane_id}' "${pane_shells[1]}")
 		pane_ids+=("$pid")
 	fi
 
@@ -442,7 +455,7 @@ open_multi_worktree_tiled() {
 	# pane_ids[0]=左上, pane_ids[1]=右上, pane_ids[2]=左2行目, pane_ids[3]=右2行目 ...
 	local i=2
 	while [[ $i -lt $count ]]; do
-		pid=$(tmux split-window -v -t "${pane_ids[$((i - 2))]}" -c "${repos[$i]}" -P -F '#{pane_id}' "$shell_cmd")
+		pid=$(tmux split-window -v -t "${pane_ids[$((i - 2))]}" -c "${repos[$i]}" -P -F '#{pane_id}' "${pane_shells[$i]}")
 		pane_ids+=("$pid")
 		i=$((i + 1))
 	done
@@ -450,10 +463,14 @@ open_multi_worktree_tiled() {
 	# タイルレイアウトで均等化
 	tmux select-layout -t "${session_name}:${win_idx}" tiled
 
-	# lazygit の場合のみ各ペインにコマンドを送信（cd の場合はシェルが起動済み）
+	# lazygit の場合、gitディレクトリのペインのみlazygitを送信
+	# 非gitディレクトリ（タスクルートなど）はshellのみ起動済み
 	if [[ "$cmd" == "lazygit" ]]; then
-		for pid in "${pane_ids[@]}"; do
-			tmux send-keys -t "$pid" "lazygit" Enter
+		for idx in "${!pane_ids[@]}"; do
+			local _d="${repos[$idx]%/}"
+			if [[ -f "$_d/.git" ]] || [[ -d "$_d/.git" ]]; then
+				tmux send-keys -t "${pane_ids[$idx]}" "lazygit" Enter
+			fi
 		done
 	fi
 
