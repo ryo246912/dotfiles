@@ -88,10 +88,24 @@ _multi_worktree_completion() {
             ;;
 
         dev)
-            # devコマンドはタスク名を補完
             if [[ $cword -eq 2 ]]; then
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+            elif [[ $cword -ge 3 ]]; then
+                # [dev_commands] セクションからコマンド名を補完
+                local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
+                if [[ -f "$config_file" ]]; then
+                    local dev_cmd_names
+                    dev_cmd_names=$(awk '
+                        /^\[dev_commands\]/ { in_section=1; next }
+                        /^\[/ { in_section=0 }
+                        in_section && /^[[:space:]]*[^[:space:]=]+[[:space:]]*=/ {
+                            match($0, /^[[:space:]]*([^[:space:]=]+)/, arr)
+                            print arr[1]
+                        }
+                    ' "$config_file")
+                    COMPREPLY=($(compgen -W "$dev_cmd_names" -- "$cur"))
+                fi
             fi
             ;;
 

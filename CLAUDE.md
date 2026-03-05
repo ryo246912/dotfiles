@@ -42,7 +42,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 │   ├── devcontainer/       # Dev Container configuration
 │   ├── zabrze/             # Shell abbreviations system
 │   └── [40+ other tools]   # See "Configuration Files" section
-├── dot_claude/             # Claude AI tool settings and commands
+├── dot_claude/             # Claude AI tool settings and skills
 ├── dot_gemini/             # Google Gemini API settings and commands
 ├── dot_local/bin/          # Custom utility scripts (8 scripts)
 ├── not_config/             # Non-chezmoi managed files (snippets, memos)
@@ -125,7 +125,7 @@ Scoop (Windows/WSL2)
 - gh-dash - GitHub Dashboard CLI
 
 **AI Integration:**
-- Claude Desktop with custom commands (kiro, deepwiki, article, review-fix)
+- Claude Desktop with custom skills (deepwiki, article, review-fix, pr-review)
 - Gemini API integration
 
 ### Abbreviations System
@@ -346,7 +346,7 @@ These scripts run when their content or dependencies change:
 - `dot_config/claude/claude_desktop_config_mac.json` - macOS config
 - `dot_config/claude/claude_desktop_config_win.json` - Windows config
 
-**Custom Commands (Skills):**
+**Custom Skills:**
 - `kiro` - Spec-driven development
 - `deepwiki` - GitHub Wiki search using deepwiki tool
 - `article` - Technical article creation
