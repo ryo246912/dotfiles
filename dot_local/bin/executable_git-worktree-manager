@@ -337,7 +337,8 @@ select_multi_worktree_task() {
 select_multi_worktree_command() {
 	local actions
 	actions="lazygit	lazygit でリポジトリを開く
-cd	シェルでディレクトリを開く"
+cd	シェルでディレクトリを開く
+vscode	VS Code でルートディレクトリを開く"
 
 	local selected
 	selected=$(echo "$actions" | fzf \
@@ -359,6 +360,16 @@ open_multi_worktree_tiled() {
 	local task_path="$1"
 	local task_name="$2"
 	local cmd="${3:-lazygit}"
+
+	# vscode の場合はルートディレクトリを直接開く
+	if [[ "$cmd" == "vscode" ]]; then
+		if ! command -v code &>/dev/null; then
+			echo "${RED}エラー: VS Code (code コマンド) が見つかりません${NC}" >&2
+			return 1
+		fi
+		code "$task_path"
+		return 0
+	fi
 
 	# git worktree のみを対象にリポジトリ一覧を取得
 	# .git ファイル（worktree）または .git ディレクトリ（通常repo）が存在するもののみ
