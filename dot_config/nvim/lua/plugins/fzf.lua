@@ -1,42 +1,61 @@
 return {
   {
-    "junegunn/fzf",
-    build = "./install --all",
-  },
-  {
-    "junegunn/fzf.vim",
-    dependencies = { "junegunn/fzf" },
-    init = function()
-      -- fzfコマンドのprefixを設定
-      vim.g.fzf_command_prefix = 'Fzf'
-    end,
+    "ibhagwan/fzf-lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
-      -- ctrl-{h,v}で垂直・水平分割で開く
-      vim.g.fzf_action = {
-        ['ctrl-y'] = 'split',
-        ['ctrl-h'] = 'split',
-        ['ctrl-v'] = 'vsplit',
-        ['ctrl-t'] = 'vsplit'
-      }
+      require("fzf-lua").setup({
+        -- ctrl-{h,v}で水平・垂直分割で開く
+        actions = {
+          files = {
+            ["default"] = require("fzf-lua.actions").file_edit,
+            ["ctrl-h"]  = require("fzf-lua.actions").file_split,
+            ["ctrl-v"]  = require("fzf-lua.actions").file_vsplit,
+            ["ctrl-t"]  = require("fzf-lua.actions").file_tabedit,
+          },
+        },
+      })
 
-      -- Key mappings
+      local fzf = require("fzf-lua")
       local keymap = vim.keymap.set
 
-      -- bufferを表示
-      keymap("n", "<leader>b", ":<C-u>:FzfBuffers<CR>", { noremap = true, silent = true })
-      -- Commandを表示
-      keymap("n", "<leader>C", ":<C-u>:FzfCommands<CR>", { noremap = true, silent = true })
-      -- Filesを表示
-      keymap("n", "<leader>f", ":<C-u>:FzfFiles<CR>", { noremap = true, silent = true })
-      -- Helpを表示
-      keymap("n", "<leader>H", ":<C-u>:FzfHelptags<CR>", { noremap = true, silent = true })
+      -- ファイル名で検索（VSCode Ctrl+P 相当）
+      keymap("n", "<leader>p", fzf.files, { noremap = true, silent = true, desc = "ファイル名検索" })
+
+      -- 現在のファイル内でワード検索 → マッチ位置にジャンプ
+      keymap("n", "<leader>f", function()
+        local current_file = vim.api.nvim_buf_get_name(0)
+        if current_file == "" then
+          return
+        end
+
+        fzf.live_grep({
+          cwd = vim.fn.getcwd(),
+          search_paths = { current_file },
+        })
+      end, { noremap = true, silent = true, desc = "現在ファイル内検索" })
+
+      -- pwd 以下をワード検索 → マッチ位置にジャンプ（VSCode Ctrl+Shift+F 相当）
+      keymap("n", "<leader>F", function()
+        fzf.live_grep({ cwd = vim.fn.getcwd() })
+      end, { noremap = true, silent = true, desc = "リポジトリ全体検索" })
+
+      -- カーソル下の単語で pwd 以下を Grep
+      keymap("n", "<leader>P", function()
+        fzf.grep_cword({ cwd = vim.fn.getcwd() })
+      end, { noremap = true, silent = true, desc = "カーソル下の単語で検索" })
+
+      -- バッファを表示
+      keymap("n", "<leader>b", fzf.buffers,         { noremap = true, silent = true, desc = "バッファ検索" })
+      -- コマンドを表示
+      keymap("n", "<leader>C", fzf.commands,        { noremap = true, silent = true, desc = "コマンド検索" })
+      -- ヘルプを表示
+      keymap("n", "<leader>H", fzf.help_tags,       { noremap = true, silent = true, desc = "ヘルプ検索" })
       -- ファイル履歴を表示
-      keymap("n", "<leader>r", ":<C-u>:FzfHistory<CR>", { noremap = true, silent = true })
+      keymap("n", "<leader>r", fzf.oldfiles,        { noremap = true, silent = true, desc = "ファイル履歴" })
       -- コマンド履歴を表示
-      keymap("n", "<leader>R", ":<C-u>:FzfHistory:<CR>", { noremap = true, silent = true })
-      keymap("c", "<C-r>", ":<C-u>:FzfHistory:<CR>", { noremap = true })
-      -- Windowを表示
-      keymap("n", "<leader>w", ":<C-u>:FzfWindows<CR>", { noremap = true, silent = true })
+      keymap("n", "<leader>R", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
+      -- ウィンドウを表示
+      keymap("n", "<leader>w", fzf.tabs,            { noremap = true, silent = true, desc = "タブ/ウィンドウ検索" })
     end,
   },
 }
