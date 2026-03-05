@@ -1385,33 +1385,29 @@ cmd_sync() {
             set +e  # エラーで停止しない
             cd "$worktree_path" || exit 1
 
-            # メインworktreeディレクトリを取得
-            local main_worktree_dir
-            main_worktree_dir="$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')"
-
-            if [[ -z "$main_worktree_dir" ]] || [[ ! -d "$main_worktree_dir" ]]; then
-                log_error "[$repo_name] メインworktreeが見つかりません"
+            if [[ ! -d "$repo" ]]; then
+                log_error "[$repo_name] リポジトリディレクトリが見つかりません: $repo"
                 exit 1
             fi
 
-            # 現在のHEADをdetachモードでメインworktreeにチェックアウト
+            # 現在のHEADをdetachモードでrepoにチェックアウト
             local current_head
             current_head="$(git rev-parse HEAD)"
 
-            if ! git -C "$main_worktree_dir" checkout --detach "$current_head" 2>/dev/null; then
+            if ! git -C "$repo" checkout --detach "$current_head" 2>/dev/null; then
                 log_error "[$repo_name] checkout --detach に失敗しました"
                 exit 1
             fi
 
             if [[ "$use_all" == "true" ]]; then
                 # rsyncでファイルを同期（.gitを除外）
-                if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
+                if ! rsync -a --exclude '.git' "$PWD/" "$repo/" 2>/dev/null; then
                     log_error "[$repo_name] rsync に失敗しました"
                     exit 1
                 fi
-                log_success "[$repo_name] 完全同期完了: $main_worktree_dir"
+                log_success "[$repo_name] 完全同期完了: $repo"
             else
-                log_success "[$repo_name] checkout --detach 完了: $main_worktree_dir"
+                log_success "[$repo_name] checkout --detach 完了: $repo"
             fi
 
             exit 0
@@ -1701,7 +1697,7 @@ main() {
                 shift
             done
 
-            cmd_sync "$task_name" "$use_all" "${selected_repos[@]}"
+            cmd_sync "$task_name" "$use_all" "${selected_repos[@]+"${selected_repos[@]}"}"
             ;;
 
         cd)
