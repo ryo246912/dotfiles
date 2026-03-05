@@ -115,9 +115,28 @@ _multi_worktree() {
                     fi
                     ;;
                 dev)
-                    _arguments \
-                        "1:task-name:(($task_names))" \
-                        '*:command:'
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    elif [[ $CURRENT -ge 3 ]]; then
+                        local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
+                        if [[ -f "$config_file" ]]; then
+                            local -a _dev_vals _dev_disp
+                            local _in_sec=false _ln
+                            while IFS= read -r _ln; do
+                                [[ "$_ln" =~ '^[[:space:]]*#' ]] && continue
+                                if [[ "$_ln" == '[dev_commands]' ]]; then
+                                    _in_sec=true; continue
+                                elif [[ "$_ln" =~ '^\[' ]]; then
+                                    _in_sec=false; continue
+                                fi
+                                if $_in_sec && [[ "$_ln" =~ '^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*"(.*)"[[:space:]]*$' ]]; then
+                                    _dev_vals+=("${match[2]}")
+                                    _dev_disp+=("${match[1]} -- ${match[2]}")
+                                fi
+                            done < "$config_file"
+                            [[ ${#_dev_vals[@]} -gt 0 ]] && compadd -d _dev_disp -a _dev_vals
+                        fi
+                    fi
                     ;;
                 exec)
                     if [[ $CURRENT -eq 2 ]]; then

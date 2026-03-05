@@ -49,7 +49,7 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
-  dev <task-name> <command>              devcontainerでコマンド実行
+  dev <task-name> [command]              devcontainerでコマンド実行（省略時は [dev_commands] からfzf選択）
   exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
   exec main [--group=GROUP] <repo> -- <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
@@ -100,6 +100,11 @@ check_config() {
         log_info ""
         log_info "[settings]"
         log_info "default_group = \"default\""
+        log_info ""
+        log_info "[dev_commands]"
+        log_info "claude = \"claude --dangerously-skip-permissions\""
+        log_info "copilot = \"copilot --yolo\""
+        log_info "codex = \"codex --yolo\""
         log_info "TOML"
         return 1
     fi
@@ -398,6 +403,34 @@ get_devcontainer_skip_up_if_running() {
     else
         echo "$value"
     fi
+}
+
+# [dev_commands] セクションからコマンド一覧を読み込む
+# 出力形式: name\tcommand (TSV)
+get_dev_commands() {
+    local in_section=false
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+
+        if [[ "$line" =~ ^\[dev_commands\] ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]]; then
+            # key = "value" または key = 'value' 形式をパース
+            if [[ "$line" =~ ^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*\"(.*)\"[[:space:]]*$ ]]; then
+                printf '%s\t%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+            elif [[ "$line" =~ ^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*\'(.*)\'[[:space:]]*$ ]]; then
+                printf '%s\t%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+            fi
+        fi
+    done < "$CONFIG_FILE"
 }
 
 # グループ内の全リポジトリを並列で fetch する
@@ -1098,11 +1131,37 @@ cmd_dev() {
     shift
 
     if [[ $# -eq 0 ]]; then
-        log_error "実行するコマンドを指定してください"
-        return 1
+        # 設定ファイルの [dev_commands] から fzf で選択
+        local dev_cmds
+        dev_cmds=$(get_dev_commands)
+
+        if [[ -z "$dev_cmds" ]]; then
+            log_error "実行するコマンドを指定してください（設定ファイルに [dev_commands] を追加するか、引数で直接指定）"
+            return 1
+        fi
+
+        local selected
+        selected=$(echo "$dev_cmds" | fzf \
+            --header="実行するコマンドを選択" \
+            --delimiter=$'\t' \
+            --with-nth=1,2 \
+            --preview="echo 'コマンド: {2}'" \
+            --preview-window="bottom:3")
+
+        if [[ -z "$selected" ]]; then
+            log_warn "選択がキャンセルされました"
+            return 0
+        fi
+
+        local selected_cmd
+        selected_cmd=$(echo "$selected" | cut -f2)
+
+        # 選択されたコマンドを positional parameters に設定
+        read -ra _cmd_args <<< "$selected_cmd"
+        set -- "${_cmd_args[@]}"
     fi
 
-    local command="$@"
+    local command="$*"
 
     local worktree_base_dir=$(find_worktree_dir "$task_name")
 

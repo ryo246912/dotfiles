@@ -61,3 +61,11 @@ default_group = "default"
 [settings.devcontainer]
 # コンテナが既に起動している場合、devcontainer up をスキップするか
 skip_up_if_running = true
+
+# dev サブコマンドで使用するコマンド一覧
+# `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
+[dev_commands]
+claude = "claude --dangerously-skip-permissions"
+copilot = "copilot --yolo"
+codex = "codex --yolo"
+gemini = "gemini --yolo"
