@@ -125,7 +125,7 @@ Scoop (Windows/WSL2)
 - gh-dash - GitHub Dashboard CLI
 
 **AI Integration:**
-- Claude Desktop with custom skills (kiro, deepwiki, article, review-fix)
+- Claude Desktop with custom skills (deepwiki, article, review-fix, pr-review)
 - Gemini API integration
 
 ### Abbreviations System

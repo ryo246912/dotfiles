@@ -166,7 +166,7 @@ _multi_worktree() {
                         # exec <task> の場合
                         if [[ $CURRENT -eq 3 ]]; then
                             _multi_worktree_repo_names "${words[2]}"
-                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[4]}" != "--" ]]; then
+                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[3]}" != "--" ]]; then
                             local -a sep
                             sep=('--:コマンドセパレータ')
                             _describe 'separator' sep
