@@ -17,6 +17,42 @@ return {
 
       local fzf = require("fzf-lua")
       local keymap = vim.keymap.set
+      local function select_tabpage()
+        local tabs = vim.api.nvim_list_tabpages()
+        local current_tab = vim.api.nvim_get_current_tabpage()
+        local items = {}
+
+        for _, tab in ipairs(tabs) do
+          local wins = vim.api.nvim_tabpage_list_wins(tab)
+          local win = wins[1]
+          local buf = win and vim.api.nvim_win_get_buf(win) or nil
+          local name = buf and vim.api.nvim_buf_get_name(buf) or ""
+          local label = name ~= "" and vim.fn.fnamemodify(name, ":~:.") or "[No Name]"
+          local tabnr = vim.api.nvim_tabpage_get_number(tab)
+          local current = tab == current_tab and "*" or " "
+          table.insert(items, string.format("%d\t%s %s", tabnr, current, label))
+        end
+
+        fzf.fzf_exec(items, {
+          prompt = "Tabs> ",
+          actions = {
+            ["default"] = function(selected)
+              local choice = selected and selected[1] or nil
+              local tabnr = choice and tonumber(choice:match("^(%d+)\t")) or nil
+              if not tabnr then
+                return
+              end
+
+              for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
+                if vim.api.nvim_tabpage_get_number(tab) == tabnr and vim.api.nvim_tabpage_is_valid(tab) then
+                  vim.api.nvim_set_current_tabpage(tab)
+                  return
+                end
+              end
+            end,
+          },
+        })
+      end
 
       -- ファイル名で検索（VSCode Ctrl+P 相当）
       keymap("n", "<leader>p", fzf.files, { noremap = true, silent = true, desc = "ファイル名検索" })
@@ -54,8 +90,8 @@ return {
       keymap("n", "<leader>r", fzf.oldfiles,        { noremap = true, silent = true, desc = "ファイル履歴" })
       -- コマンド履歴を表示
       keymap("n", "<leader>R", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
-      -- ウィンドウを表示
-      keymap("n", "<leader>w", fzf.tabs,            { noremap = true, silent = true, desc = "タブ/ウィンドウ検索" })
+      -- タブを選択して切り替え
+      keymap("n", "<leader>w", select_tabpage,      { noremap = true, silent = true, desc = "タブ選択" })
     end,
   },
 }
