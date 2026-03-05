@@ -333,10 +333,32 @@ select_multi_worktree_task() {
 	return 0
 }
 
-# タスク内の全リポジトリを tmux tiled layout で lazygit 起動
+# multi-worktree モードで実行するコマンドを選択
+select_multi_worktree_command() {
+	local actions
+	actions="lazygit	lazygit でリポジトリを開く
+cd	シェルでディレクトリを開く"
+
+	local selected
+	selected=$(echo "$actions" | fzf \
+		--header="実行するコマンドを選択" \
+		--delimiter=$'\t' \
+		--with-nth=1,2 \
+		--preview-window="hidden")
+
+	if [[ -z "$selected" ]]; then
+		echo "${YELLOW}選択がキャンセルされました${NC}" >&2
+		return 1
+	fi
+
+	echo "$selected" | cut -f1
+}
+
+# タスク内の全リポジトリを tmux tiled layout で起動
 open_multi_worktree_tiled() {
 	local task_path="$1"
 	local task_name="$2"
+	local cmd="${3:-lazygit}"
 
 	# git worktree のみを対象にリポジトリ一覧を取得
 	# .git ファイル（worktree）または .git ディレクトリ（通常repo）が存在するもののみ
@@ -355,10 +377,10 @@ open_multi_worktree_tiled() {
 		return 1
 	fi
 
-	# tmux 環境外の場合は最初のリポジトリで lazygit を直接起動
+	# tmux 環境外の場合は最初のリポジトリで直接起動
 	if [[ -z "${TMUX:-}" ]]; then
-		echo "${YELLOW}tmux 環境ではないため、最初のリポジトリで lazygit を起動します${NC}" >&2
-		cd "${repos[0]}" && lazygit
+		echo "${YELLOW}tmux 環境ではないため、最初のリポジトリで ${cmd} を起動します${NC}" >&2
+		cd "${repos[0]}" && [[ "$cmd" == "lazygit" ]] && lazygit || exec zsh
 		return 0
 	fi
 
@@ -371,22 +393,24 @@ open_multi_worktree_tiled() {
 	session_name=$(tmux display-message -p '#S')
 
 	# 2列固定レイアウト: 左列 repos[0,2,4...] / 右列 repos[1,3,5...]
-	# 全ペインを先に作成してからlazygitを送信する（lazygit起動中のペイン分割を避ける）
-	# zsh -f でシェル起動（zinit/mise trust等の初期化スキップ）
+	# lazygit: zsh -f で起動後に send-keys でlazygit送信（シェル初期化スキップ）
+	# cd:      zsh で起動（通常シェル、ユーザー設定を読み込む）
 
 	local count=${#repos[@]}
+	local shell_cmd
+	[[ "$cmd" == "cd" ]] && shell_cmd="zsh" || shell_cmd="zsh -f"
 
 	# ペインIDリスト（%N形式）: pane-base-index に依存しない一意なID
 	local -a pane_ids=()
 
 	# ペイン0: 新しいウィンドウを作成し、最初のペインIDを取得
-	tmux new-window -n "$window_name" -c "${repos[0]}" -t "${session_name}:" "zsh -f"
+	tmux new-window -n "$window_name" -c "${repos[0]}" -t "${session_name}:" "$shell_cmd"
 	local win_idx
 	win_idx=$(tmux display-message -t "${session_name}:${window_name}" -p '#{window_index}')
 	pane_ids+=("$(tmux display-message -t "${session_name}:${win_idx}" -p '#{pane_id}')")
 
 	if [[ "${DEBUG:-}" == "1" ]]; then
-		echo "[DEBUG] session=$session_name window=$window_name win_idx=$win_idx count=$count" >&2
+		echo "[DEBUG] session=$session_name window=$window_name win_idx=$win_idx count=$count cmd=$cmd" >&2
 		echo "[DEBUG] repos: ${repos[*]}" >&2
 		echo "[DEBUG] pane_ids[0]=${pane_ids[0]}" >&2
 	fi
@@ -394,7 +418,7 @@ open_multi_worktree_tiled() {
 	if [[ $count -ge 2 ]]; then
 		# ペイン1: ペイン0を水平分割して右列先頭を作成
 		local pid
-		pid=$(tmux split-window -h -t "${pane_ids[0]}" -c "${repos[1]}" -P -F '#{pane_id}' "zsh -f")
+		pid=$(tmux split-window -h -t "${pane_ids[0]}" -c "${repos[1]}" -P -F '#{pane_id}' "$shell_cmd")
 		pane_ids+=("$pid")
 	fi
 
@@ -402,7 +426,7 @@ open_multi_worktree_tiled() {
 	# pane_ids[0]=左上, pane_ids[1]=右上, pane_ids[2]=左2行目, pane_ids[3]=右2行目 ...
 	local i=2
 	while [[ $i -lt $count ]]; do
-		pid=$(tmux split-window -v -t "${pane_ids[$((i - 2))]}" -c "${repos[$i]}" -P -F '#{pane_id}' "zsh -f")
+		pid=$(tmux split-window -v -t "${pane_ids[$((i - 2))]}" -c "${repos[$i]}" -P -F '#{pane_id}' "$shell_cmd")
 		pane_ids+=("$pid")
 		i=$((i + 1))
 	done
@@ -410,10 +434,12 @@ open_multi_worktree_tiled() {
 	# タイルレイアウトで均等化
 	tmux select-layout -t "${session_name}:${win_idx}" tiled
 
-	# 全ペインに lazygit を送信（zsh -f はすぐ起動するのでsleep不要）
-	for pid in "${pane_ids[@]}"; do
-		tmux send-keys -t "$pid" "lazygit" Enter
-	done
+	# lazygit の場合のみ各ペインにコマンドを送信（cd の場合はシェルが起動済み）
+	if [[ "$cmd" == "lazygit" ]]; then
+		for pid in "${pane_ids[@]}"; do
+			tmux send-keys -t "$pid" "lazygit" Enter
+		done
+	fi
 
 	# overlay セッションのクライアントが detach したとき（Ctrl+B+D 等）に
 	# 作成した lazygit ウィンドウを自動で閉じる
@@ -431,7 +457,9 @@ run_multi_worktree_mode() {
 	if ! select_multi_worktree_task; then
 		return 1
 	fi
-	open_multi_worktree_tiled "$SELECTED_TASK_PATH" "$SELECTED_TASK_NAME"
+	local cmd
+	cmd=$(select_multi_worktree_command) || return 0
+	open_multi_worktree_tiled "$SELECTED_TASK_PATH" "$SELECTED_TASK_NAME" "$cmd"
 }
 
 # ヘルプを表示
