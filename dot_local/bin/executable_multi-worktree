@@ -49,8 +49,9 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
-  dev <task-name> <command>              devcontainerでコマンド実行
+  dev <task-name> [command]              devcontainerでコマンド実行（省略時は [dev_commands] からfzf選択）
   exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
+  exec main [--group=GROUP] <repo> -- <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
   help                                   このヘルプを表示
 
@@ -77,6 +78,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree dev feat/add-auth ccmanager
   multi-worktree exec feat/add-auth repo1 -- npm install
   multi-worktree exec feat/add-auth repo1 -- make build
+  multi-worktree exec main repo1 -- npm install
+  multi-worktree exec main --group=work repo1 -- make build
   multi-worktree open feat/add-auth
   multi-worktree remove feat/add-auth                  # 通常削除
   multi-worktree remove feat/add-auth --force          # 強制削除
@@ -97,6 +100,11 @@ check_config() {
         log_info ""
         log_info "[settings]"
         log_info "default_group = \"default\""
+        log_info ""
+        log_info "[dev_commands]"
+        log_info "claude = \"claude --dangerously-skip-permissions\""
+        log_info "copilot = \"copilot --yolo\""
+        log_info "codex = \"codex --yolo\""
         log_info "TOML"
         return 1
     fi
@@ -395,6 +403,34 @@ get_devcontainer_skip_up_if_running() {
     else
         echo "$value"
     fi
+}
+
+# [dev_commands] セクションからコマンド一覧を読み込む
+# 出力形式: name\tcommand (TSV)
+get_dev_commands() {
+    local in_section=false
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+
+        if [[ "$line" =~ ^\[dev_commands\] ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]]; then
+            # key = "value" または key = 'value' 形式をパース
+            if [[ "$line" =~ ^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*\"(.*)\"[[:space:]]*$ ]]; then
+                printf '%s\t%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+            elif [[ "$line" =~ ^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*\'(.*)\'[[:space:]]*$ ]]; then
+                printf '%s\t%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+            fi
+        fi
+    done < "$CONFIG_FILE"
 }
 
 # グループ内の全リポジトリを並列で fetch する
@@ -1095,11 +1131,37 @@ cmd_dev() {
     shift
 
     if [[ $# -eq 0 ]]; then
-        log_error "実行するコマンドを指定してください"
-        return 1
+        # 設定ファイルの [dev_commands] から fzf で選択
+        local dev_cmds
+        dev_cmds=$(get_dev_commands)
+
+        if [[ -z "$dev_cmds" ]]; then
+            log_error "実行するコマンドを指定してください（設定ファイルに [dev_commands] を追加するか、引数で直接指定）"
+            return 1
+        fi
+
+        local selected
+        selected=$(echo "$dev_cmds" | fzf \
+            --header="実行するコマンドを選択" \
+            --delimiter=$'\t' \
+            --with-nth=1,2 \
+            --preview="echo 'コマンド: {2}'" \
+            --preview-window="bottom:3")
+
+        if [[ -z "$selected" ]]; then
+            log_warn "選択がキャンセルされました"
+            return 0
+        fi
+
+        local selected_cmd
+        selected_cmd=$(echo "$selected" | cut -f2)
+
+        # 選択されたコマンドを positional parameters に設定
+        read -ra _cmd_args <<< "$selected_cmd"
+        set -- "${_cmd_args[@]}"
     fi
 
-    local command="$@"
+    local command="$*"
 
     local worktree_base_dir=$(find_worktree_dir "$task_name")
 
@@ -1188,7 +1250,10 @@ cmd_exec() {
     fi
 
     local worktree_base_dir
-    worktree_base_dir=$(find_worktree_dir "$task_name")
+    worktree_base_dir=$(find_worktree_dir "$task_name") || {
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    }
 
     if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
         log_error "タスク '$task_name' の worktree が見つかりません"
@@ -1203,11 +1268,81 @@ cmd_exec() {
     fi
 
     log_info "[$repo_name] コマンド実行: $*"
+
     log_info "ディレクトリ: $worktree_path"
     echo ""
 
     (
         cd "$worktree_path" || exit 1
+        "$@"
+    )
+
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "コマンドが失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "コマンドが正常に完了しました"
+}
+
+# exec main サブコマンド
+# 設定に登録された各リポジトリ（メインworktree）の指定リポジトリでコマンドを実行する
+# 引数: group, repo_name, -- <command...>
+cmd_exec_main() {
+    local group="$1"
+    local repo_name="$2"
+    shift 2
+
+    # -- セパレータをスキップ
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        log_error "実行するコマンドを指定してください（-- の後に指定）"
+        return 1
+    fi
+
+    # グループのリポジトリ一覧を取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_error "グループ '$group' のリポジトリが設定されていません"
+        return 1
+    fi
+
+    # repo_name に一致するリポジトリを検索
+    local target_repo=""
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+        if [[ "$(basename "$repo")" == "$repo_name" ]]; then
+            target_repo="$repo"
+            break
+        fi
+    done
+
+    if [[ -z "$target_repo" ]]; then
+        log_error "リポジトリ '$repo_name' がグループ '$group' に見つかりません"
+        return 1
+    fi
+
+    if [[ ! -d "$target_repo" ]]; then
+        log_error "リポジトリディレクトリが見つかりません: $target_repo"
+        return 1
+    fi
+
+    log_info "[$repo_name] コマンド実行 (main): $*"
+    log_info "ディレクトリ: $target_repo"
+    echo ""
+
+    (
+        cd "$target_repo" || exit 1
         "$@"
     )
 
@@ -1309,33 +1444,29 @@ cmd_sync() {
             set +e  # エラーで停止しない
             cd "$worktree_path" || exit 1
 
-            # メインworktreeディレクトリを取得
-            local main_worktree_dir
-            main_worktree_dir="$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')"
-
-            if [[ -z "$main_worktree_dir" ]] || [[ ! -d "$main_worktree_dir" ]]; then
-                log_error "[$repo_name] メインworktreeが見つかりません"
+            if [[ ! -d "$repo" ]]; then
+                log_error "[$repo_name] リポジトリディレクトリが見つかりません: $repo"
                 exit 1
             fi
 
-            # 現在のHEADをdetachモードでメインworktreeにチェックアウト
+            # 現在のHEADをdetachモードでrepoにチェックアウト
             local current_head
             current_head="$(git rev-parse HEAD)"
 
-            if ! git -C "$main_worktree_dir" checkout --detach "$current_head" 2>/dev/null; then
+            if ! git -C "$repo" checkout --detach "$current_head" 2>/dev/null; then
                 log_error "[$repo_name] checkout --detach に失敗しました"
                 exit 1
             fi
 
             if [[ "$use_all" == "true" ]]; then
                 # rsyncでファイルを同期（.gitを除外）
-                if ! rsync -a --exclude '.git' "$PWD/" "$main_worktree_dir/" 2>/dev/null; then
+                if ! rsync -a --exclude '.git' "$PWD/" "$repo/" 2>/dev/null; then
                     log_error "[$repo_name] rsync に失敗しました"
                     exit 1
                 fi
-                log_success "[$repo_name] 完全同期完了: $main_worktree_dir"
+                log_success "[$repo_name] 完全同期完了: $repo"
             else
-                log_success "[$repo_name] checkout --detach 完了: $main_worktree_dir"
+                log_success "[$repo_name] checkout --detach 完了: $repo"
             fi
 
             exit 0
@@ -1625,7 +1756,7 @@ main() {
                 shift
             done
 
-            cmd_sync "$task_name" "$use_all" "${selected_repos[@]}"
+            cmd_sync "$task_name" "$use_all" "${selected_repos[@]+"${selected_repos[@]}"}"
             ;;
 
         cd)
@@ -1664,11 +1795,43 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local repo_name="$2"
-            shift 2
+            if [[ "$1" == "main" ]]; then
+                shift
+                local group
+                group=$(get_default_group)
+                local repo_name=""
 
-            cmd_exec "$task_name" "$repo_name" "$@"
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --group=*)
+                            group="${1#*=}"
+                            shift
+                            ;;
+                        --)
+                            shift
+                            break
+                            ;;
+                        *)
+                            repo_name="$1"
+                            shift
+                            break
+                            ;;
+                    esac
+                done
+
+                if [[ -z "$repo_name" ]]; then
+                    log_error "リポジトリ名を指定してください"
+                    return 1
+                fi
+
+                cmd_exec_main "$group" "$repo_name" "$@"
+            else
+                local task_name="$1"
+                local repo_name="$2"
+                shift 2
+
+                cmd_exec "$task_name" "$repo_name" "$@"
+            fi
             ;;
 
         open)
