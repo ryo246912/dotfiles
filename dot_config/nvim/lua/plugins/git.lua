@@ -133,8 +133,18 @@ return {
       keymap("n", "<leader>gb", ":Git branch<CR>", { noremap = true })
       -- Git current branch
       keymap("n", "<leader>gB", ":Git branch --show-current<CR>", { noremap = true })
-      -- lazygit
-      keymap("n", "<leader>lg", ":tabnew | terminal lazygit<CR>", { noremap = true })
+    end,
+  },
+  {
+    "kdheepak/lazygit.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    config = function()
+      local keymap = vim.keymap.set
+
+      -- lazygit をフローティングウィンドウで開く
+      keymap("n", "<leader>lg", ":LazyGit<CR>", { noremap = true, silent = true, desc = "lazygit を開く" })
+      -- 現在ファイルのリポジトリで lazygit を開く
+      keymap("n", "<leader>lf", ":LazyGitCurrentFile<CR>", { noremap = true, silent = true, desc = "lazygit（現在ファイル）" })
     end,
   },
 }
