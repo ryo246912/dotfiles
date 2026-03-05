@@ -51,6 +51,7 @@ Usage: multi-worktree <subcommand> [options]
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
   dev <task-name> <command>              devcontainerでコマンド実行
   exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
+  exec main [--group=GROUP] <repo> -- <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
   help                                   このヘルプを表示
 
@@ -77,6 +78,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree dev feat/add-auth ccmanager
   multi-worktree exec feat/add-auth repo1 -- npm install
   multi-worktree exec feat/add-auth repo1 -- make build
+  multi-worktree exec main repo1 -- npm install
+  multi-worktree exec main --group=work repo1 -- make build
   multi-worktree open feat/add-auth
   multi-worktree remove feat/add-auth                  # 通常削除
   multi-worktree remove feat/add-auth --force          # 強制削除
@@ -1188,7 +1191,10 @@ cmd_exec() {
     fi
 
     local worktree_base_dir
-    worktree_base_dir=$(find_worktree_dir "$task_name")
+    worktree_base_dir=$(find_worktree_dir "$task_name") || {
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    }
 
     if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
         log_error "タスク '$task_name' の worktree が見つかりません"
@@ -1203,11 +1209,81 @@ cmd_exec() {
     fi
 
     log_info "[$repo_name] コマンド実行: $*"
+
     log_info "ディレクトリ: $worktree_path"
     echo ""
 
     (
         cd "$worktree_path" || exit 1
+        "$@"
+    )
+
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "コマンドが失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "コマンドが正常に完了しました"
+}
+
+# exec main サブコマンド
+# 設定に登録された各リポジトリ（メインworktree）の指定リポジトリでコマンドを実行する
+# 引数: group, repo_name, -- <command...>
+cmd_exec_main() {
+    local group="$1"
+    local repo_name="$2"
+    shift 2
+
+    # -- セパレータをスキップ
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        log_error "実行するコマンドを指定してください（-- の後に指定）"
+        return 1
+    fi
+
+    # グループのリポジトリ一覧を取得
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_error "グループ '$group' のリポジトリが設定されていません"
+        return 1
+    fi
+
+    # repo_name に一致するリポジトリを検索
+    local target_repo=""
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+        if [[ "$(basename "$repo")" == "$repo_name" ]]; then
+            target_repo="$repo"
+            break
+        fi
+    done
+
+    if [[ -z "$target_repo" ]]; then
+        log_error "リポジトリ '$repo_name' がグループ '$group' に見つかりません"
+        return 1
+    fi
+
+    if [[ ! -d "$target_repo" ]]; then
+        log_error "リポジトリディレクトリが見つかりません: $target_repo"
+        return 1
+    fi
+
+    log_info "[$repo_name] コマンド実行 (main): $*"
+    log_info "ディレクトリ: $target_repo"
+    echo ""
+
+    (
+        cd "$target_repo" || exit 1
         "$@"
     )
 
@@ -1664,11 +1740,43 @@ main() {
                 return 1
             fi
 
-            local task_name="$1"
-            local repo_name="$2"
-            shift 2
+            if [[ "$1" == "main" ]]; then
+                shift
+                local group
+                group=$(get_default_group)
+                local repo_name=""
 
-            cmd_exec "$task_name" "$repo_name" "$@"
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --group=*)
+                            group="${1#*=}"
+                            shift
+                            ;;
+                        --)
+                            shift
+                            break
+                            ;;
+                        *)
+                            repo_name="$1"
+                            shift
+                            break
+                            ;;
+                    esac
+                done
+
+                if [[ -z "$repo_name" ]]; then
+                    log_error "リポジトリ名を指定してください"
+                    return 1
+                fi
+
+                cmd_exec_main "$group" "$repo_name" "$@"
+            else
+                local task_name="$1"
+                local repo_name="$2"
+                shift 2
+
+                cmd_exec "$task_name" "$repo_name" "$@"
+            fi
             ;;
 
         open)

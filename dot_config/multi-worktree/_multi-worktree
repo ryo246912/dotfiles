@@ -19,16 +19,42 @@ _multi_worktree() {
     local -a task_names
     task_names=(${(f)"$(multi-worktree list 2>/dev/null | awk '{print $1}')"})
 
-    # リポジトリ名を補完する関数
+    # リポジトリ名を補完する関数（git worktreeのみ対象）
     _multi_worktree_repo_names() {
         local task_name="$1"
         if [[ -n "$task_name" ]]; then
-            local task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
+            local task_path
+            task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
             if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
                 local -a repo_names
-                repo_names=(${(f)"$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)"})
+                local d name
+                for d in "$task_path"/*/; do
+                    [[ -d "$d" ]] || continue
+                    name=$(basename "$d")
+                    [[ "$name" == .* ]] && continue
+                    [[ -f "$d/.git" ]] || [[ -d "$d/.git" ]] || continue
+                    repo_names+=("$name:worktreeのディレクトリで実行")
+                done
                 _describe 'repository name' repo_names
             fi
+        fi
+    }
+
+    # メインworktreeのリポジトリ名を補完する関数（既存タスクのworktreeからrepo名を取得）
+    _multi_worktree_main_repo_names() {
+        local task_path
+        task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' 'NR==1{print $3}')
+        if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+            local -a repo_names
+            local d name
+            for d in "$task_path"/*/; do
+                [[ -d "$d" ]] || continue
+                name=$(basename "$d")
+                [[ "$name" == .* ]] && continue
+                [[ -f "$d/.git" ]] || [[ -d "$d/.git" ]] || continue
+                repo_names+=("$name:メインworktreeのディレクトリで実行")
+            done
+            _describe 'repository name' repo_names
         fi
     }
 
@@ -95,12 +121,39 @@ _multi_worktree() {
                     ;;
                 exec)
                     if [[ $CURRENT -eq 2 ]]; then
+                        local -a main_args
+                        main_args=('main:メインworktreeのリポジトリでコマンド実行')
+                        _describe 'special' main_args
                         _describe 'task name' task_names
-                    elif [[ $CURRENT -eq 3 ]]; then
-                        _multi_worktree_repo_names "${words[2]}"
+                    elif [[ "${words[2]}" == "main" ]]; then
+                        # exec main の場合
+                        if [[ $CURRENT -eq 3 ]]; then
+                            # --group か repo名
+                            local -a main_opts
+                            main_opts=('--group=[グループ名]:group:')
+                            _arguments "${main_opts[@]}"
+                            _multi_worktree_main_repo_names
+                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[3]}" == --group=* ]]; then
+                            # --group=GROUP の次はrepo名
+                            _multi_worktree_main_repo_names
+                        elif [[ "${words[-1]}" != "--" ]]; then
+                            local -a sep
+                            sep=('--:コマンドセパレータ')
+                            _describe 'separator' sep
+                        else
+                            _command_names -e
+                        fi
                     else
-                        # -- 以降はコマンド補完（ファイル補完にフォールバック）
-                        _default
+                        # exec <task> の場合
+                        if [[ $CURRENT -eq 3 ]]; then
+                            _multi_worktree_repo_names "${words[2]}"
+                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[4]}" != "--" ]]; then
+                            local -a sep
+                            sep=('--:コマンドセパレータ')
+                            _describe 'separator' sep
+                        else
+                            _command_names -e
+                        fi
                     fi
                     ;;
                 list)

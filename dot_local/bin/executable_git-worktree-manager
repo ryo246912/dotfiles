@@ -377,6 +377,11 @@ open_multi_worktree_tiled() {
 		return 1
 	fi
 
+	# cd の場合のみ、タスクルートディレクトリも別ペインとして追加
+	if [[ "$cmd" == "cd" ]]; then
+		repos+=("$task_path")
+	fi
+
 	# tmux 環境外の場合は最初のリポジトリで直接起動
 	if [[ -z "${TMUX:-}" ]]; then
 		echo "${YELLOW}tmux 環境ではないため、最初のリポジトリで ${cmd} を起動します${NC}" >&2
@@ -438,6 +443,13 @@ open_multi_worktree_tiled() {
 	if [[ "$cmd" == "lazygit" ]]; then
 		for pid in "${pane_ids[@]}"; do
 			tmux send-keys -t "$pid" "lazygit" Enter
+		done
+	fi
+
+	# cd の場合は各ペインにEnterを送信（zsh初期化完了後のプロンプト表示のため）
+	if [[ "$cmd" == "cd" ]]; then
+		for pid in "${pane_ids[@]}"; do
+			tmux send-keys -t "$pid" "" Enter
 		done
 	fi
 
