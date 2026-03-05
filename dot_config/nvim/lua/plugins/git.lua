@@ -31,8 +31,55 @@ return {
         },
       })
 
-      -- <leader>g で差分パネルを開く（gitui 風: working/staged 分離 + diff 表示）
-      vim.keymap.set("n", "<leader>g", ":DiffviewOpen<CR>", { noremap = true, silent = true, desc = "Git差分パネルを開く" })
+      -- リポジトリを選択して DiffviewOpen
+      local function open_diffview()
+        local cwd = vim.fn.getcwd()
+        local repos = {}
+
+        -- .git がディレクトリ（通常リポジトリ）またはファイル（worktree）か確認
+        local function is_git_root(dir)
+          local git = dir .. "/.git"
+          return vim.fn.isdirectory(git) == 1 or vim.fn.filereadable(git) == 1
+        end
+
+        if is_git_root(cwd) then
+          table.insert(repos, cwd)
+        end
+        for _, p in ipairs(vim.fn.glob(cwd .. "/*/.git", false, true)) do
+          local dir = vim.fn.fnamemodify(p, ":h")
+          if is_git_root(dir) then table.insert(repos, dir) end
+        end
+        for _, p in ipairs(vim.fn.glob(cwd .. "/*/*/.git", false, true)) do
+          local dir = vim.fn.fnamemodify(p, ":h")
+          if is_git_root(dir) then table.insert(repos, dir) end
+        end
+
+        local function launch(repo)
+          local prev_cwd = vim.fn.getcwd()
+          vim.fn.chdir(repo)
+          vim.cmd("DiffviewOpen")
+          vim.schedule(function()
+            vim.fn.chdir(prev_cwd)
+          end)
+        end
+
+        if #repos == 0 then
+          vim.cmd("DiffviewOpen")
+        elseif #repos == 1 then
+          launch(repos[1])
+        else
+          require("fzf-lua").fzf_exec(repos, {
+            prompt = "リポジトリ選択> ",
+            actions = {
+              ["default"] = function(selected)
+                if selected and selected[1] then launch(selected[1]) end
+              end,
+            },
+          })
+        end
+      end
+
+      vim.keymap.set("n", "<leader>g", open_diffview, { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
     end,
   },
   {
@@ -141,8 +188,33 @@ return {
     config = function()
       local keymap = vim.keymap.set
 
-      -- lazygit をフローティングウィンドウで開く
-      keymap("n", "<leader>lg", ":LazyGit<CR>", { noremap = true, silent = true, desc = "lazygit を開く" })
+      -- lazygit -p <path> でフローティングターミナルを開く（cd 不要）
+      local function open_lazygit(path)
+        local cmd = path and ("lazygit -p " .. vim.fn.shellescape(path)) or "lazygit"
+        local buf = vim.api.nvim_create_buf(false, true)
+        local width  = math.floor(vim.o.columns * 0.9)
+        local height = math.floor(vim.o.lines   * 0.9)
+        local win = vim.api.nvim_open_win(buf, true, {
+          relative = "editor",
+          width    = width,
+          height   = height,
+          row      = math.floor((vim.o.lines   - height) / 2),
+          col      = math.floor((vim.o.columns - width)  / 2),
+          style    = "minimal",
+          border   = "rounded",
+        })
+        vim.fn.termopen(cmd, {
+          on_exit = function()
+            if vim.api.nvim_win_is_valid(win) then
+              vim.api.nvim_win_close(win, true)
+            end
+          end,
+        })
+        vim.cmd("startinsert")
+      end
+
+      -- lazygit をフローティングウィンドウで開く（cwd）
+      keymap("n", "<leader>lg", ":LazyGit<CR>",            { noremap = true, silent = true, desc = "lazygit を開く" })
       -- 現在ファイルのリポジトリで lazygit を開く
       keymap("n", "<leader>lf", ":LazyGitCurrentFile<CR>", { noremap = true, silent = true, desc = "lazygit（現在ファイル）" })
     end,
