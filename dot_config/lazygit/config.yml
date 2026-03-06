@@ -23,6 +23,11 @@ customCommands:
     context: "files"
     output: terminal
     key: e
+  - command: $SHELL || zsh || bash
+    context: "files, worktrees, localBranches, remotes, tags, commits"
+    output: terminal
+    key: t
+    description: "Open temporary terminal"
   - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet {{.SelectedLocalCommit.Hash}}~1"
     key: F
     context: commits
