@@ -21,6 +21,7 @@ module.exports = {
       { value: 'feat',     name: 'feat:     新機能', emoji: ':sparkles:' },
       { value: 'chore',    name: 'chore:    その他の変更（ソースやテストの変更を含まない）', emoji: ':hammer:' },
       { value: 'fix',      name: 'fix:      バグ修正', emoji: ':bug:' },
+      { value: 'docs',     name: 'docs:     ドキュメント', emoji: ':memo:' },
       { value: 'refactor', name: 'refactor: リファクタリング（削除の場合はremoveをscopeに入れる）', emoji: ':recycle:' },
       { value: 'wip',      name: 'wip:      作業途中', emoji: '' },
       { value: 'test',     name: 'test:     テスト', emoji: ':white_check_mark:' },
