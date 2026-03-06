@@ -86,6 +86,28 @@ Usage: multi-worktree <subcommand> [options]
 EOF
 }
 
+# 強制削除を試行する（通常削除に失敗したら sudo を試す）
+force_remove_dir() {
+    local target="$1"
+
+    [[ ! -e "$target" ]] && return 0
+
+    if rm -rf "$target" 2>/dev/null; then
+        return 0
+    fi
+
+    if command -v sudo >/dev/null 2>&1; then
+        if sudo -n rm -rf "$target" 2>/dev/null; then
+            return 0
+        fi
+
+        sudo rm -rf "$target"
+        return $?
+    fi
+
+    return 1
+}
+
 # 設定ファイルの存在チェック
 check_config() {
     if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -1537,7 +1559,7 @@ cmd_remove() {
     log_warn "タスク '$task_name' の worktree を削除します"
     log_info "ディレクトリ: $worktree_base_dir"
     if [[ "$force" == "true" ]]; then
-        log_warn "強制削除モード: git worktree remove が失敗してもディレクトリを削除します"
+        log_warn "強制削除モード: 削除失敗時に権限調整と強制削除を試行します"
     fi
     echo ""
 
@@ -1575,67 +1597,62 @@ cmd_remove() {
         log_info "[$repo_name] worktree を削除中..."
 
         # git worktree remove を試行
-        local git_remove_success=false
-        (
-            cd "$repo"
-            if git worktree remove "$worktree_path" --force &>/dev/null; then
-                exit 0
-            else
-                exit 1
-            fi
-        )
+        local remove_status=0
+        if (
+            set +e
+            cd "$repo" || exit 1
+            git worktree remove "$worktree_path" --force &>/dev/null
+            exit $?
+        ); then
+            remove_status=0
+        else
+            remove_status=$?
+        fi
 
-        if [[ $? -eq 0 ]]; then
-            git_remove_success=true
+        if [[ $remove_status -eq 0 ]]; then
             log_success "[$repo_name] worktree を削除しました"
             ((++success_count))
         else
-            if [[ "$force" == "true" ]]; then
-                # 強制モード: ディレクトリを削除
-                if [[ -d "$worktree_path" ]]; then
-                    rm -rf "$worktree_path"
-                    log_warn "[$repo_name] git worktree remove 失敗。ディレクトリを強制削除しました"
+            if [[ -d "$worktree_path" ]]; then
+                if force_remove_dir "$worktree_path"; then
+                    log_warn "[$repo_name] git worktree remove 失敗。権限を無視して削除しました"
                     ((++success_count))
                 else
-                    log_success "[$repo_name] ディレクトリは既に削除済みです"
-                    ((++success_count))
+                    log_error "[$repo_name] ディレクトリの強制削除に失敗しました"
+                    ((++fail_count))
                 fi
             else
-                log_error "[$repo_name] worktree の削除に失敗しました"
-                ((++fail_count))
+                log_success "[$repo_name] ディレクトリは既に削除済みです"
+                ((++success_count))
             fi
         fi
     done
 
-    # 強制モードの場合、各リポジトリで git worktree prune を実行
-    if [[ "$force" == "true" ]]; then
-        log_info "git worktree の登録情報をクリーンアップ中..."
-        for repo in "${repos[@]}"; do
-            repo="${repo/#\~/$HOME}"
-            repo="${repo//\$HOME/$HOME}"
-            [[ ! -d "$repo" ]] && continue
+    log_info "git worktree の登録情報をクリーンアップ中..."
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+        [[ ! -d "$repo" ]] && continue
 
-            local repo_name=$(basename "$repo")
-            (
-                cd "$repo"
-                git worktree prune &>/dev/null
-            )
-            log_info "[$repo_name] git worktree prune を実行しました"
-        done
-    fi
+        local repo_name=$(basename "$repo")
+        (
+            cd "$repo"
+            git worktree prune &>/dev/null
+        )
+        log_info "[$repo_name] git worktree prune を実行しました"
+    done
 
     # .devcontainer ディレクトリなど、git worktree remove で削除されない残存ファイルを削除
-    if [[ $fail_count -eq 0 ]] || [[ "$force" == "true" ]]; then
-        if [[ -d "$worktree_base_dir" ]]; then
-            # 空でないディレクトリが残っている場合のみ削除
-            if [[ -n "$(ls -A "$worktree_base_dir" 2>/dev/null)" ]]; then
-                rm -rf "$worktree_base_dir"
+    if [[ -d "$worktree_base_dir" ]]; then
+        # 空でないディレクトリが残っている場合のみ削除
+        if [[ -n "$(ls -A "$worktree_base_dir" 2>/dev/null)" ]]; then
+            if force_remove_dir "$worktree_base_dir"; then
                 log_success "残存ディレクトリを削除しました: $worktree_base_dir"
+            else
+                log_error "残存ディレクトリの削除に失敗しました: $worktree_base_dir"
+                ((++fail_count))
             fi
         fi
-    else
-        log_warn "一部の worktree 削除に失敗したため、ディレクトリは残します: $worktree_base_dir"
-        log_info "手動で確認・修正後、再度削除を実行してください"
     fi
 
     log_info "完了: 成功 $success_count / 失敗 $fail_count"
