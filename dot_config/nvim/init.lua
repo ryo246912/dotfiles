@@ -1,3 +1,7 @@
+-- Disable netrw early to avoid neo-tree startup race
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 -- Load core settings
 require("core.options")
 require("core.keymaps")

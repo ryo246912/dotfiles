@@ -1,8 +1,8 @@
 vim.cmd([[
 cabbr he help
 cabbr te terminal
-cabbr teh horizon terminal
-cabbr tet horizon terminal
+cabbr teh horizontal terminal
+cabbr tet horizontal terminal
 cabbr tev vertical terminal
 cabbr tey vertical terminal
 " 設定ファイルをリロードする

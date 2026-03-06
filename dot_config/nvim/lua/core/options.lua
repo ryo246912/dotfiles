@@ -28,6 +28,7 @@ vim.g.netrw_browse_split = 2
 -- エディタ表示関係
 -- カーソルラインをハイライト
 vim.opt.cursorline = true
+vim.opt.cursorcolumn = true
 -- 行番号を表示
 vim.opt.number = true
 -- 相対行番号の表示
