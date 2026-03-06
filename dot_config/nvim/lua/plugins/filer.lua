@@ -9,10 +9,6 @@ return {
     },
     lazy = false,
     config = function()
-      -- netrwを無効化（neo-treeと競合するため）
-      vim.g.loaded_netrw = 1
-      vim.g.loaded_netrwPlugin = 1
-
       require("neo-tree").setup({
         close_if_last_window = false,
         popup_border_style = "rounded",

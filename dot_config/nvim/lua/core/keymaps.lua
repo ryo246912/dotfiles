@@ -71,7 +71,7 @@ keymap({ "i", "c" }, "<C-e>", "<End>", { noremap = true })
 keymap("c", "<C-k>", [[<C-\>e(" ".getcmdline())[:getcmdpos()-1][1:]<CR>]], { noremap = true })
 
 -- 新しいタブを開く
-keymap("n", "<leader>t", ":tabnew<CR>", { noremap = true })
+keymap("n", "<leader>T", ":tabnew<CR>", { noremap = true })
 -- タグジャンプする/1つ前のタグに戻る
 keymap("n", "<leader>]", ":tag<CR>", { noremap = true })
 keymap("n", "<leader>[", ":pop<CR>", { noremap = true })

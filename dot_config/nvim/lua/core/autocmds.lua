@@ -11,3 +11,15 @@ if vim.fn.has('unix') == 1 and vim.fn.system('uname -r'):find('microsoft') and v
     end,
   })
 end
+
+-- terminalを開いたら即入力できるようにする（:terminal, split terminal, toggleterm共通）
+local terminal_group = vim.api.nvim_create_augroup('TerminalInsert', { clear = true })
+vim.api.nvim_create_autocmd('TermOpen', {
+  group = terminal_group,
+  pattern = '*',
+  callback = function(args)
+    if vim.bo[args.buf].buftype == 'terminal' then
+      vim.cmd('startinsert')
+    end
+  end,
+})
