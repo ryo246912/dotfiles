@@ -10,9 +10,7 @@ return {
       -- カラースキーム設定
       vim.cmd.colorscheme("molokai")
 
-      -- 80列目の色は灰色周辺の色に変更
-      -- TODO: 別途修正する
-      -- vim.cmd("highlight ColorColumn ctermbg=235 guibg=#2c2d27")
+      vim.api.nvim_set_hl(0, "CursorColumn", { ctermbg = 236, bg = "#3a3d41" })
     end,
   },
 }
