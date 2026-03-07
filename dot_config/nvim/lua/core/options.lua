@@ -6,8 +6,8 @@ vim.opt.swapfile = false
 vim.opt.mouse = "a"
 -- コマンドラインの履歴上限を10000件にする
 vim.opt.history = 10000
--- session保存時のオプション
-vim.opt.sessionoptions:append("localoptions")
+-- options/localoptions 以外は保存して、編集状態を広く復元する
+vim.opt.sessionoptions = { "blank", "buffers", "curdir", "folds", "help", "tabpages", "winsize", "terminal" }
 
 -- ファイラー(netrw)
 -- ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
