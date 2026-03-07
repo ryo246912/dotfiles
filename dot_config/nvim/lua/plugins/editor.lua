@@ -1,11 +1,8 @@
 return {
   {
-    "jiangmiao/auto-pairs",
+    "windwp/nvim-autopairs",
     config = function()
-      -- auto-pairsの削除を無効
-      vim.g.AutoPairsMapBS = 0
-      -- auto-pairsのスペースを無効
-      vim.g.AutoPairsMapSpace = 0
+      require("nvim-autopairs").setup({})
     end,
   },
   {
