@@ -227,7 +227,9 @@ get_config_array() {
         fi
     done < "$CONFIG_FILE"
 
-    printf '%s\n' "${result[@]}"
+    if [[ ${#result[@]} -gt 0 ]]; then
+        printf '%s\n' "${result[@]}"
+    fi
 }
 
 # パス展開（~ と $HOME）
