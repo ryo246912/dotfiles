@@ -19,7 +19,7 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
-  - command: nvim {{.SelectedFile.Name}}
+  - command: nvim '{{.SelectedFile.Name}}'
     context: "files"
     output: terminal
     key: e
@@ -43,6 +43,20 @@ customCommands:
         key: "newBranchName"
     loadingText: "Creating branch and setting config..."
     description: "Create new branch with base-branch config"
+  - command: >-
+      bash -c '
+      target="{{.SelectedLocalBranch.Name}}";
+      current="{{.CheckedOutBranch.Name}}";
+      wt=$(git worktree list --porcelain | awk -v b="refs/heads/$target" "/^worktree /{p=\$2} /^branch /{if(\$2==b) print p}");
+      if [ -n "$wt" ]; then
+        git -C "$wt" merge "$current";
+      else
+        git checkout "$target" && git merge "$current" && git checkout "$current";
+      fi'
+    key: m
+    context: localBranches
+    description: "Merge current branch into selected branch"
+    loadingText: "Merging..."
 promptToReturnFromSubprocess: false
 gui:
   language: "ja"
