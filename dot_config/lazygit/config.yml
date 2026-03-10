@@ -57,6 +57,10 @@ customCommands:
       {{ .CheckedOutBranch.Name | quote }}
     key: m
     context: localBranches
+    prompts:
+      - type: "confirm"
+        title: "Merge branch"
+        body: "merge {{.CheckedOutBranch.Name}} to {{.SelectedLocalBranch.Name}}?"
     description: "Merge current branch into selected branch"
     loadingText: "Merging..."
 promptToReturnFromSubprocess: false
