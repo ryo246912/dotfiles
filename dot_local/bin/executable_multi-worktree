@@ -50,8 +50,8 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
   dev <task-name> [command]              devcontainerでコマンド実行（省略時は [dev_commands] からfzf選択）
-  exec <task-name> <repo> -- <command>  worktreeの指定リポジトリディレクトリでコマンド実行
-  exec main [--group=GROUP] <repo> -- <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
+  exec <task-name> [<repo>] <command>   worktreeでコマンド実行（repo省略時はroot、指定時はそのリポジトリ）
+  exec main [--group=GROUP] <repo> <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
   help                                   このヘルプを表示
 
@@ -76,10 +76,11 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
   multi-worktree cd feat/add-auth
   multi-worktree dev feat/add-auth ccmanager
-  multi-worktree exec feat/add-auth repo1 -- npm install
-  multi-worktree exec feat/add-auth repo1 -- make build
-  multi-worktree exec main repo1 -- npm install
-  multi-worktree exec main --group=work repo1 -- make build
+  multi-worktree exec feat/add-auth npm install
+  multi-worktree exec feat/add-auth repo1 npm install
+  multi-worktree exec feat/add-auth repo1 make build
+  multi-worktree exec main repo1 npm install
+  multi-worktree exec main --group=work repo1 make build
   multi-worktree open feat/add-auth
   multi-worktree remove feat/add-auth                  # 通常削除
   multi-worktree remove feat/add-auth --force          # 強制削除
@@ -226,7 +227,9 @@ get_config_array() {
         fi
     done < "$CONFIG_FILE"
 
-    printf '%s\n' "${result[@]}"
+    if [[ ${#result[@]} -gt 0 ]]; then
+        printf '%s\n' "${result[@]}"
+    fi
 }
 
 # パス展開（~ と $HOME）
@@ -1255,21 +1258,10 @@ cmd_dev() {
 
 # exec サブコマンド
 # worktreeの指定リポジトリディレクトリでコマンドを直接実行する
-# 引数: task_name, repo_name, -- <command...>
+# 引数: task_name, [repo_name,] <command...>
 cmd_exec() {
     local task_name="$1"
-    local repo_name="$2"
-    shift 2
-
-    # -- セパレータをスキップ
-    if [[ "${1:-}" == "--" ]]; then
-        shift
-    fi
-
-    if [[ $# -eq 0 ]]; then
-        log_error "実行するコマンドを指定してください（-- の後に指定）"
-        return 1
-    fi
+    shift
 
     local worktree_base_dir
     worktree_base_dir=$(find_worktree_dir "$task_name") || {
@@ -1282,14 +1274,30 @@ cmd_exec() {
         return 1
     fi
 
-    local worktree_path="${worktree_base_dir}/${repo_name}"
+    # repoが指定されているかチェック（worktreeのサブディレクトリかどうか）
+    local worktree_path
+    local log_prefix
+    if [[ -n "${1:-}" ]] && [[ "${1}" != "--" ]] && [[ -d "${worktree_base_dir}/${1}" ]]; then
+        local repo_name="$1"
+        shift
+        worktree_path="${worktree_base_dir}/${repo_name}"
+        log_prefix="[$repo_name]"
+    else
+        worktree_path="${worktree_base_dir}"
+        log_prefix="[root]"
+    fi
 
-    if [[ ! -d "$worktree_path" ]]; then
-        log_error "リポジトリ '$repo_name' の worktree が見つかりません: $worktree_path"
+    # -- セパレータをスキップ
+    if [[ "${1:-}" == "--" ]]; then
+        shift
+    fi
+
+    if [[ $# -eq 0 ]]; then
+        log_error "実行するコマンドを指定してください"
         return 1
     fi
 
-    log_info "[$repo_name] コマンド実行: $*"
+    log_info "$log_prefix コマンド実行: $*"
 
     log_info "ディレクトリ: $worktree_path"
     echo ""
@@ -1323,7 +1331,7 @@ cmd_exec_main() {
     fi
 
     if [[ $# -eq 0 ]]; then
-        log_error "実行するコマンドを指定してください（-- の後に指定）"
+        log_error "実行するコマンドを指定してください"
         return 1
     fi
 
@@ -1806,8 +1814,8 @@ main() {
         exec)
             check_config || return 1
 
-            if [[ $# -lt 2 ]]; then
-                log_error "タスク名とリポジトリ名を指定してください"
+            if [[ $# -eq 0 ]]; then
+                log_error "タスク名を指定してください"
                 show_usage
                 return 1
             fi
@@ -1844,10 +1852,9 @@ main() {
                 cmd_exec_main "$group" "$repo_name" "$@"
             else
                 local task_name="$1"
-                local repo_name="$2"
-                shift 2
+                shift
 
-                cmd_exec "$task_name" "$repo_name" "$@"
+                cmd_exec "$task_name" "$@"
             fi
             ;;
 
