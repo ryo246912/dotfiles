@@ -5,6 +5,16 @@ size = 11
 family = "HackGen35 Console NF"
 [fonts.bold]
 family = "HackGen35 Console NF"
+style = "Normal"
+weight = 700
+[fonts.italic]
+family = "HackGen35 Console NF"
+style = "Normal"
+weight = 400
+[fonts.bold-italic]
+family = "HackGen35 Console NF"
+style = "Normal"
+weight = 700
 
 [renderer]
 performance = "High"
@@ -12,6 +22,7 @@ backend = "Automatic"
 
 # Padding-x
 padding-x = 0
+padding-y = [0, 0]
 
 # Option as Alt
 #
@@ -25,6 +36,7 @@ height = 800
 opacity = 0.95
 decorations = "Disabled"  # windowバーを非表示
 mode = "Maximized"
+confirm-before-quit = false
 
 # Navigation
 #
@@ -38,6 +50,16 @@ mode = "Plain"  # ナビゲーションバーを非表示
 clickable = true
 use-current-path = true
 
+# Cursor
+[cursor]
+shape = "Block"
+blinking = false
+hide-mouse-cursor-when-typing = true
+
+# Keyboard
+[keyboard]
+ime-cursor-positioning = true
+
 # Shell
 #
 # You can set `shell.program` to the path of your favorite shell, e.g. `/bin/fish`.
@@ -48,14 +70,9 @@ use-current-path = true
 #   - (Linux/BSD) user login shell
 #   - (Windows) powershell
 #
-{{ if eq .chezmoi.os "darwin" -}}
-shell = { program = "/bin/zsh", args = ["--login","-c 'tmux attach || tmux'"] }
-{{ else -}}
-[shell]
-program = "wsl ~"
-args = ["-d Ubuntu-20.04"]
-# args = ["-d Ubuntu-20.04","-e 'tmux attach || tmux'"]
-{{- end }}
+[platform]
+macos.shell = { program = "/bin/zsh" }
+windows.shell = { program = "wsl", args = ["-d", "Ubuntu-20.04", "--cd", "~"] }
 
 # Startup directory
 #
@@ -68,7 +85,7 @@ working_dir = "~"
 # Editor
 #
 # You can set your default editor to open configuration file
-editor = "vim"
+editor = "nvim"
 
 # Disable render when unfocused
 #
