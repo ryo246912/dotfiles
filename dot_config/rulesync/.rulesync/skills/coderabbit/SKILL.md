@@ -1,6 +1,9 @@
 ---
 name: coderabbit
 description: CodeRabbit CLI を使って PR やコミットの自動レビューを実行する skill。prompt-only と plain の切り替え、実行手順、結果活用が必要なときに使う。
+targets:
+  - claudecode
+  - codexcli
 ---
 
 # CodeRabbit CLI によるコード自動レビュー

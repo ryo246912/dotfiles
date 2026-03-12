@@ -22,6 +22,8 @@ flake*
 chezmoi.toml
 mise.toml
 taplo.toml
+rulesync.jsonc
+rulesync.lock
 
 README.md
 CLAUDE.md
