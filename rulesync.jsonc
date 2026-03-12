@@ -1,0 +1,9 @@
+{
+  "targets": ["claudecode"],
+  "features": ["rules"],
+  "baseDirs": ["."],
+  "delete": false,
+  "verbose": false,
+  "silent": false,
+  "global": false,
+}
