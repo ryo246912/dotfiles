@@ -1,5 +1,9 @@
-description = "CodeRabbit CLIを用いてコード自動レビューを行うコマンド"
-prompt = """
+---
+targets:
+  - geminicli
+description: CodeRabbit CLIを用いてコード自動レビューを行うコマンド
+---
+
 # CodeRabbit CLI によるコード自動レビュー
 
 ## 概要
@@ -19,6 +23,7 @@ coderabbit --prompt-only
 ```
 
 **説明**
+
 - CodeRabbitの対話的なプロンプトを通じてコードレビューを実行
 - ユーザーとのやり取りを通じて、詳細なレビューコメントを生成
 - PIR（Pull Request Review）の形式で結果が得られる
@@ -30,6 +35,7 @@ coderabbit --plain
 ```
 
 **説明**
+
 - シンプルなテキスト形式でコードレビュー結果を出力
 - プログラム的な処理や自動化に適した形式
 - 構造化されたレビュー内容を取得できる
@@ -54,4 +60,3 @@ CodeRabbitの実行時に、以下のオプションを指定できます：
 - `--prompt-only`: 対話的なプロンプトモードを使用（デフォルト）
 - `--plain`: シンプルなテキスト形式でレビュー結果を出力
 - その他のオプションについては、`coderabbit --help` で確認してください
-"""

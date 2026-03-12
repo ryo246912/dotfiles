@@ -1,0 +1,8 @@
+{
+  "targets": ["claudecode", "codexcli", "geminicli", "copilotonvs"],
+  "features": ["rules", "skills", "commands"],
+  "delete": false,
+  "verbose": false,
+  "silent": false,
+  "global": true,
+}
