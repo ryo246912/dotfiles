@@ -1,0 +1,85 @@
+# Ghostty is configured to match the existing tmux-first setup as closely as
+# possible without depending on manual host-local tweaks.
+
+term = xterm-ghostty
+
+font-family = "HackGen35 Console NF"
+font-size = 12
+
+background = #191724
+foreground = #ffffff
+cursor-color = #ffffff
+background-opacity = 0.95
+
+window-padding-x = 0
+window-padding-y = 0
+
+confirm-close-surface = false
+window-decoration = false
+
+palette = 0=#000000
+palette = 1=#fe0100
+palette = 2=#33ff00
+palette = 3=#feff00
+palette = 4=#0066ff
+palette = 5=#cc00ff
+palette = 6=#00ffff
+palette = 7=#d0d0d0
+palette = 8=#808080
+palette = 9=#fe0100
+palette = 10=#33ff00
+palette = 11=#feff00
+palette = 12=#0066ff
+palette = 13=#cc00ff
+palette = 14=#00ffff
+palette = 15=#ffffff
+
+{{ if eq .chezmoi.os "darwin" -}}
+macos-option-as-alt = true
+
+keybind = super+d=text:\u0002%
+keybind = super+shift+d=text:\u0002"
+keybind = super+c=text:\u0002[
+keybind = super+e=text:\u0002\u0020
+keybind = super+shift+e=text:\u0002Q
+keybind = super+f=text:\u0002\u0006
+keybind = super+l=text:\u0002s
+keybind = super+shift+l=text:\u0002w
+keybind = super+o=text:\u0002R
+keybind = super+p=text:\u0002\u0010
+keybind = super+shift+p=text:\u0002\u0014
+keybind = super+r=text:\u0002r
+keybind = super+s=text:\u0002e
+keybind = super+shift+r=text:\u0002\u0012
+keybind = super+shift+s=text:\u0002\u0013
+keybind = super+t=text:\u0002c
+keybind = super+w=text:\u0002x
+keybind = super+shift+w=text:\u0002d
+keybind = super+z=text:\u0002z
+keybind = super+left=text:\u0002h
+keybind = super+down=text:\u0002j
+keybind = super+up=text:\u0002k
+keybind = super+right=text:\u0002l
+keybind = super+shift+left=text:\u0002\u0008
+keybind = super+shift+down=text:\u0002\u0009
+keybind = super+shift+up=text:\u0002\u000b
+keybind = super+shift+right=text:\u0002\u000c
+keybind = super+shift+alt+up=text:\u0002{
+keybind = super+shift+alt+down=text:\u0002}
+keybind = super+left_bracket=text:\u0002\u0009
+keybind = super+right_bracket=text:\u0002\u001d
+keybind = super+shift+left_bracket=text:\u0002p
+keybind = super+shift+right_bracket=text:\u0002n
+keybind = super+shift+alt+left_bracket=text:\u0002\u0018
+keybind = super+shift+alt+right_bracket=text:\u0002\u0019
+keybind = super+space=text:\u0002\u0020
+keybind = super+1=text:\u00021
+keybind = super+2=text:\u00022
+keybind = super+3=text:\u00023
+keybind = super+4=text:\u00024
+keybind = super+5=text:\u00025
+keybind = super+6=text:\u00026
+keybind = super+7=text:\u00027
+keybind = super+8=text:\u00028
+keybind = super+9=text:\u00029
+{{- end }}

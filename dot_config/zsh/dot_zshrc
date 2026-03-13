@@ -1,7 +1,21 @@
 # cSpell:disable
 
 # launch tmux when start zsh
-if { [ "$TERM" = "alacritty" ] || [ "$TERM" = "rio" ] } && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
+should_auto_attach_tmux=0
+
+case "${TERM:-}" in
+  alacritty|rio|wezterm|ghostty|xterm-ghostty)
+    should_auto_attach_tmux=1
+    ;;
+esac
+
+case "${TERM_PROGRAM:-}" in
+  WezTerm|ghostty|Ghostty)
+    should_auto_attach_tmux=1
+    ;;
+esac
+
+if [ "$should_auto_attach_tmux" -eq 1 ] && command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
   tmux attach || tmux
 fi
 
