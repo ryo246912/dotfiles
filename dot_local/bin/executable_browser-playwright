@@ -1,0 +1,316 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+
+const DEFAULT_TIMEOUT = Number.parseInt(
+  process.env.BROWSER_PLAYWRIGHT_TIMEOUT || '15000',
+  10,
+);
+
+function usage() {
+  process.stderr.write(
+    [
+      'Usage: browser-playwright <command> [arguments]',
+      '',
+      'Commands:',
+      '  pages <slot>',
+      '  goto <slot> <url>',
+      '  screenshot <slot> <url> <output>',
+      '  click <slot> <url> <selector> [expected_selector]',
+      '',
+    ].join('\n'),
+  );
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function tryExec(command, args, extraEnv = {}) {
+  try {
+    return execFileSync(command, args, {
+      encoding: 'utf8',
+      env: { ...process.env, ...extraEnv },
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function findExecutable(name) {
+  const pathEntries = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  for (const entry of pathEntries) {
+    const candidate = path.join(entry, name);
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  return '';
+}
+
+function resolveConfigPath() {
+  const candidates = [
+    process.env.BROWSER_CLI_CONFIG,
+    path.join(process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config'), 'browser-cli', 'slots.json'),
+    path.resolve(__dirname, '..', '..', 'dot_config', 'browser-cli', 'slots.json'),
+  ];
+
+  for (const candidate of unique(candidates)) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error('slots.json not found. Set BROWSER_CLI_CONFIG or deploy ~/.config/browser-cli/slots.json');
+}
+
+function loadSlot(slotId) {
+  const config = JSON.parse(fs.readFileSync(resolveConfigPath(), 'utf8'));
+  const slot = config.slots.find((entry) => entry.id === slotId);
+  if (!slot) {
+    throw new Error(`unknown slot: ${slotId}`);
+  }
+  return slot;
+}
+
+function resolvePlaywright() {
+  const candidates = [];
+
+  if (process.env.PLAYWRIGHT_PACKAGE_DIR) {
+    candidates.push(process.env.PLAYWRIGHT_PACKAGE_DIR);
+  }
+
+  if (process.env.PLAYWRIGHT_CLI_BIN) {
+    candidates.push(
+      path.resolve(path.dirname(process.env.PLAYWRIGHT_CLI_BIN), '..', 'node_modules', 'playwright'),
+    );
+  }
+
+  const misePlaywright = tryExec('mise', ['which', 'playwright'], {
+    MISE_CACHE_DIR: process.env.MISE_CACHE_DIR || '/tmp/mise-cache',
+  });
+  if (misePlaywright) {
+    candidates.push(path.resolve(path.dirname(misePlaywright), '..', 'node_modules', 'playwright'));
+  }
+
+  const pathPlaywright = findExecutable('playwright');
+  if (pathPlaywright && !pathPlaywright.includes(`${path.sep}shims${path.sep}`)) {
+    candidates.push(path.resolve(path.dirname(pathPlaywright), '..', 'node_modules', 'playwright'));
+  }
+
+  const npmRoot = tryExec('npm', ['root', '-g']);
+  if (npmRoot) {
+    candidates.push(path.join(npmRoot, 'playwright'));
+  }
+
+  for (const candidate of unique(candidates)) {
+    if (fs.existsSync(path.join(candidate, 'index.js'))) {
+      return require(candidate);
+    }
+  }
+
+  throw new Error('Playwright package could not be resolved. Set PLAYWRIGHT_PACKAGE_DIR or install playwright via mise.');
+}
+
+const { chromium } = resolvePlaywright();
+
+function printJson(value) {
+  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function waitForSettled(page) {
+  try {
+    await page.waitForLoadState('networkidle', {
+      timeout: Math.min(DEFAULT_TIMEOUT, 5000),
+    });
+  } catch {
+    // Some pages never reach networkidle. domcontentloaded is already enough.
+  }
+}
+
+async function summarizePage(page) {
+  try {
+    return {
+      title: await page.title(),
+      url: page.url(),
+    };
+  } catch {
+    return {
+      title: '',
+      url: page.url(),
+    };
+  }
+}
+
+async function connect(slotId) {
+  const slot = loadSlot(slotId);
+  const browser = await chromium.connectOverCDP(slot.browserUrl);
+  return { slot, browser };
+}
+
+async function createPage(browser) {
+  if (browser.contexts().length > 0) {
+    return browser.contexts()[0].newPage();
+  }
+
+  if (typeof browser.newPage === 'function') {
+    return browser.newPage();
+  }
+
+  const context = await browser.newContext();
+  return context.newPage();
+}
+
+async function commandPages(slotId) {
+  const { slot, browser } = await connect(slotId);
+  const pages = [];
+
+  for (const [contextIndex, context] of browser.contexts().entries()) {
+    for (const [pageIndex, page] of context.pages().entries()) {
+      pages.push({
+        contextIndex,
+        pageIndex,
+        ...(await summarizePage(page)),
+      });
+    }
+  }
+
+  printJson({
+    browserUrl: slot.browserUrl,
+    pages,
+    slot: slot.id,
+  });
+}
+
+async function commandGoto(slotId, targetUrl) {
+  const { slot, browser } = await connect(slotId);
+  const page = await createPage(browser);
+
+  await page.goto(targetUrl, {
+    timeout: DEFAULT_TIMEOUT,
+    waitUntil: 'domcontentloaded',
+  });
+  await waitForSettled(page);
+  await page.bringToFront();
+
+  printJson({
+    action: 'goto',
+    browserUrl: slot.browserUrl,
+    page: await summarizePage(page),
+    slot: slot.id,
+    targetUrl,
+  });
+}
+
+async function commandScreenshot(slotId, targetUrl, outputPath) {
+  const { slot, browser } = await connect(slotId);
+  const page = await createPage(browser);
+  const resolvedOutput = path.resolve(outputPath);
+
+  fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
+  await page.goto(targetUrl, {
+    timeout: DEFAULT_TIMEOUT,
+    waitUntil: 'domcontentloaded',
+  });
+  await waitForSettled(page);
+  await page.screenshot({
+    fullPage: true,
+    path: resolvedOutput,
+  });
+  await page.close().catch(() => {});
+
+  printJson({
+    action: 'screenshot',
+    browserUrl: slot.browserUrl,
+    outputPath: resolvedOutput,
+    slot: slot.id,
+    targetUrl,
+  });
+}
+
+async function commandClick(slotId, targetUrl, selector, expectedSelector) {
+  const { slot, browser } = await connect(slotId);
+  const page = await createPage(browser);
+  const target = page.locator(selector).first();
+
+  await page.goto(targetUrl, {
+    timeout: DEFAULT_TIMEOUT,
+    waitUntil: 'domcontentloaded',
+  });
+  await waitForSettled(page);
+  await target.click({
+    timeout: DEFAULT_TIMEOUT,
+  });
+
+  if (expectedSelector) {
+    await page.locator(expectedSelector).first().waitFor({
+      state: 'visible',
+      timeout: DEFAULT_TIMEOUT,
+    });
+  } else {
+    await waitForSettled(page);
+  }
+
+  await page.bringToFront();
+
+  printJson({
+    action: 'click',
+    browserUrl: slot.browserUrl,
+    expectedSelector: expectedSelector || null,
+    page: await summarizePage(page),
+    selector,
+    slot: slot.id,
+    targetUrl,
+  });
+}
+
+async function main() {
+  const [command, ...args] = process.argv.slice(2);
+
+  if (!command || command === 'help' || command === '--help' || command === '-h') {
+    usage();
+    return;
+  }
+
+  switch (command) {
+    case 'pages':
+      if (args.length !== 1) {
+        throw new Error('usage: browser-playwright pages <slot>');
+      }
+      await commandPages(args[0]);
+      return;
+    case 'goto':
+      if (args.length !== 2) {
+        throw new Error('usage: browser-playwright goto <slot> <url>');
+      }
+      await commandGoto(args[0], args[1]);
+      return;
+    case 'screenshot':
+      if (args.length !== 3) {
+        throw new Error('usage: browser-playwright screenshot <slot> <url> <output>');
+      }
+      await commandScreenshot(args[0], args[1], args[2]);
+      return;
+    case 'click':
+      if (args.length < 3 || args.length > 4) {
+        throw new Error('usage: browser-playwright click <slot> <url> <selector> [expected_selector]');
+      }
+      await commandClick(args[0], args[1], args[2], args[3]);
+      return;
+    default:
+      throw new Error(`unknown command: ${command}`);
+  }
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`browser-playwright: ${message}\n`);
+  process.exit(1);
+});

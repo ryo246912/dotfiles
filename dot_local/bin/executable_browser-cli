@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage: browser-cli <command> [arguments]
+
+Commands:
+  list
+  show <slot>
+  url <slot>
+  status [slot]
+  json-version <slot>
+  start <slot>
+  host-command start <slot>
+  pages <slot>
+  goto <slot> <url>
+  screenshot <slot> <url> <output>
+  click <slot> <url> <selector> [expected_selector]
+EOF
+}
+
+die() {
+  echo "browser-cli: $*" >&2
+  exit 1
+}
+
+config_candidates() {
+  local script_root repo_candidate
+
+  if [ -n "${BROWSER_CLI_CONFIG:-}" ]; then
+    printf '%s\n' "${BROWSER_CLI_CONFIG}"
+  fi
+
+  printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/browser-cli/slots.json"
+
+  script_root="$(cd "${SCRIPT_DIR}/../.." >/dev/null 2>&1 && pwd || true)"
+  repo_candidate="${script_root}/dot_config/browser-cli/slots.json"
+  printf '%s\n' "${repo_candidate}"
+}
+
+resolve_config() {
+  local candidate
+
+  while IFS= read -r candidate; do
+    [ -n "${candidate}" ] || continue
+    if [ -f "${candidate}" ]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done < <(config_candidates)
+
+  die "slots.json not found. Set BROWSER_CLI_CONFIG or deploy ~/.config/browser-cli/slots.json"
+}
+
+slot_json() {
+  local slot_id="${1:-}"
+  jq -c --arg id "${slot_id}" '.slots[] | select(.id == $id)' "$(resolve_config)"
+}
+
+require_slot() {
+  local slot_id="${1:-}" slot_data
+
+  slot_data="$(slot_json "${slot_id}")"
+  [ -n "${slot_data}" ] || die "unknown slot: ${slot_id}"
+  printf '%s\n' "${slot_data}"
+}
+
+slot_field() {
+  local slot_id="${1:?slot id required}" field="${2:?jq filter required}"
+  require_slot "${slot_id}" | jq -r "${field}"
+}
+
+escape_for_double_quotes() {
+  local value="${1//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '%s' "${value}"
+}
+
+build_start_command() {
+  local slot_id="${1:?slot id required}"
+  local port user_data_dir chrome_bin escaped_bin escaped_dir
+
+  port="$(slot_field "${slot_id}" '.port')"
+  user_data_dir="$(slot_field "${slot_id}" '.userDataDir')"
+  escaped_dir="$(escape_for_double_quotes "${user_data_dir}")"
+  chrome_bin="${BROWSER_CLI_CHROME_BIN:-}"
+
+  if [ -n "${chrome_bin}" ]; then
+    escaped_bin="$(escape_for_double_quotes "${chrome_bin}")"
+    printf '"%s" --remote-debugging-port=%s --user-data-dir="%s" about:blank >/dev/null 2>&1 &\n' \
+      "${escaped_bin}" "${port}" "${escaped_dir}"
+    return 0
+  fi
+
+  if [ "$(uname)" = "Darwin" ]; then
+    printf 'open -na "Google Chrome" --args --remote-debugging-port=%s --user-data-dir="%s" about:blank\n' \
+      "${port}" "${escaped_dir}"
+    return 0
+  fi
+
+  printf 'google-chrome --remote-debugging-port=%s --user-data-dir="%s" about:blank >/dev/null 2>&1 &\n' \
+    "${port}" "${escaped_dir}"
+}
+
+print_slot_list() {
+  local config
+  config="$(resolve_config)"
+
+  printf 'ID\tPORT\tBROWSER URL\tUSER DATA DIR\n'
+  jq -r '.slots[] | [.id, (.port | tostring), .browserUrl, .userDataDir] | @tsv' "${config}"
+}
+
+show_slot() {
+  local slot_id="${1:?slot id required}"
+  require_slot "${slot_id}" | jq .
+}
+
+slot_url() {
+  local slot_id="${1:?slot id required}"
+  slot_field "${slot_id}" '.browserUrl'
+}
+
+json_version() {
+  local slot_id="${1:?slot id required}" browser_url
+  browser_url="$(slot_url "${slot_id}")"
+  curl -fsSL "${browser_url%/}/json/version"
+}
+
+status_line() {
+  local slot_id="${1:?slot id required}"
+  local port browser_url version_json browser_label protocol_version
+
+  port="$(slot_field "${slot_id}" '.port')"
+  browser_url="$(slot_url "${slot_id}")"
+
+  if version_json="$(curl -fsSL --max-time "${BROWSER_CLI_CURL_TIMEOUT:-3}" "${browser_url%/}/json/version" 2>/dev/null)"; then
+    browser_label="$(printf '%s' "${version_json}" | jq -r '.Browser // "reachable"')"
+    protocol_version="$(printf '%s' "${version_json}" | jq -r '.Protocol-Version // "-"')"
+    printf '%s\t%s\treachable\t%s (protocol %s)\n' "${slot_id}" "${port}" "${browser_label}" "${protocol_version}"
+    return 0
+  fi
+
+  printf '%s\t%s\tunreachable\t%s\n' "${slot_id}" "${port}" "${browser_url}"
+  return 1
+}
+
+print_status() {
+  local config slot_id failed=0
+  config="$(resolve_config)"
+
+  printf 'ID\tPORT\tSTATUS\tDETAILS\n'
+  if [ $# -gt 0 ]; then
+    status_line "$1"
+    return $?
+  fi
+
+  while IFS= read -r slot_id; do
+    status_line "${slot_id}" || failed=1
+  done < <(jq -r '.slots[].id' "${config}")
+
+  return "${failed}"
+}
+
+resolve_playwright_helper() {
+  local candidate
+
+  for candidate in \
+    "${BROWSER_PLAYWRIGHT_BIN:-}" \
+    "${SCRIPT_DIR}/browser-playwright" \
+    "${SCRIPT_DIR}/executable_browser-playwright" \
+    "$(command -v browser-playwright 2>/dev/null || true)"
+  do
+    [ -n "${candidate}" ] || continue
+    if [ -x "${candidate}" ]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+
+  die "browser-playwright helper not found"
+}
+
+delegate_playwright() {
+  local helper
+  helper="$(resolve_playwright_helper)"
+  exec "${helper}" "$@"
+}
+
+main() {
+  local command="${1:-}"
+
+  case "${command}" in
+    list)
+      [ $# -eq 1 ] || die "usage: browser-cli list"
+      print_slot_list
+      ;;
+    show)
+      [ $# -eq 2 ] || die "usage: browser-cli show <slot>"
+      show_slot "$2"
+      ;;
+    url)
+      [ $# -eq 2 ] || die "usage: browser-cli url <slot>"
+      slot_url "$2"
+      ;;
+    status)
+      [ $# -le 2 ] || die "usage: browser-cli status [slot]"
+      if [ $# -eq 2 ]; then
+        print_status "$2"
+      else
+        print_status
+      fi
+      ;;
+    json-version)
+      [ $# -eq 2 ] || die "usage: browser-cli json-version <slot>"
+      json_version "$2"
+      ;;
+    start)
+      [ $# -eq 2 ] || die "usage: browser-cli start <slot>"
+      eval "$(build_start_command "$2")"
+      jq -n \
+        --arg slot "$2" \
+        --arg browserUrl "$(slot_url "$2")" \
+        --argjson port "$(slot_field "$2" '.port')" \
+        '{slot: $slot, port: $port, browserUrl: $browserUrl, started: true}'
+      ;;
+    host-command)
+      [ $# -eq 3 ] || die "usage: browser-cli host-command start <slot>"
+      [ "$2" = "start" ] || die "usage: browser-cli host-command start <slot>"
+      build_start_command "$3"
+      ;;
+    pages|goto|screenshot|click)
+      shift
+      delegate_playwright "${command}" "$@"
+      ;;
+    -h|--help|help|"")
+      usage
+      ;;
+    *)
+      die "unknown command: ${command}"
+      ;;
+  esac
+}
+
+main "$@"

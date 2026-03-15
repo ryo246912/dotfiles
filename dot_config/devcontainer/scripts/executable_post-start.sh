@@ -18,6 +18,8 @@ else
 echo "ℹ️ SSH config (mac-host) は既に存在します"
 fi
 
+echo "ℹ️ Browser bridge は ssh mac-host と host.docker.internal を利用します"
+
 # mise trust を実行
 mise trust
 echo "✓ mise trust を実行しました"

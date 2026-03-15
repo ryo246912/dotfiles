@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "defaults": {
+    "hostAlias": "mac-host",
+    "browserHost": "host.docker.internal"
+  },
+  "slots": [
+    {
+      "id": "slot1",
+      "displayName": "Chrome Slot 1",
+      "port": 9222,
+      "browserUrl": "http://host.docker.internal:9222",
+      "userDataDir": "$HOME/chrome-profiles/slot1",
+      "hostAlias": "mac-host",
+      "notes": "default validation slot"
+    },
+    {
+      "id": "slot2",
+      "displayName": "Chrome Slot 2",
+      "port": 9223,
+      "browserUrl": "http://host.docker.internal:9223",
+      "userDataDir": "$HOME/chrome-profiles/slot2",
+      "hostAlias": "mac-host",
+      "notes": "secondary profile"
+    },
+    {
+      "id": "slot3",
+      "displayName": "Chrome Slot 3",
+      "port": 9224,
+      "browserUrl": "http://host.docker.internal:9224",
+      "userDataDir": "$HOME/chrome-profiles/slot3",
+      "hostAlias": "mac-host",
+      "notes": "tertiary profile"
+    }
+  ]
+}

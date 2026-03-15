@@ -13,7 +13,10 @@
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
-    "HOST_USER": "${localEnv:USER}"
+    "HOST_USER": "${localEnv:USER}",
+    // host Chrome remote debugging slot の既定値
+    "BROWSER_HOST": "host.docker.internal",
+    "BROWSER_SLOT_DEFAULT": "slot1"
   },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",

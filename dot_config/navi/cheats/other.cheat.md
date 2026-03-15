@@ -19,6 +19,33 @@ act<_-dry-run_><event> -W <workflow>
 # chrome : open with remote-debugging-port and user-data-dir
 chrome --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile1 > /dev/null 2>&1 &
 
+# browser-cli : list configured browser slots
+browser-cli list
+
+# browser-cli : emit host command for a slot
+browser-cli host-command start <slot>
+
+# browser-cli : start host Chrome slot from devcontainer
+ssh mac-host "$(browser-cli host-command start <slot>)"
+
+# browser-cli : check slot status
+browser-cli status <slot>
+
+# browser-cli : show /json/version for a slot
+browser-cli json-version <slot>
+
+# browser-cli : list pages for a slot
+browser-cli pages <slot>
+
+# browser-cli : open a page in a selected slot
+browser-cli goto <slot> <url>
+
+# browser-cli : take a screenshot through Playwright CDP
+browser-cli screenshot <slot> <url> <output_path>
+
+# browser-cli : click a selector and optionally wait for the expected selector
+browser-cli click <slot> <url> <selector> <expected_selector>
+
 # claude : mcp add
 claude mcp add <name> -s <scope> -- <command>
 

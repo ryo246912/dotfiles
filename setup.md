@@ -53,6 +53,30 @@
   - [ ] Vimium
     - [ ] 設定で`Vimium Options.json`をインポート
   - [ ] Tab Position Options
+  - [ ] Browser CLI / host Chrome bridge
+    - [ ] source of truth を確認
+      ```sh
+      jq . dot_config/browser-cli/slots.json
+      ```
+    - [ ] host で slot を起動
+      ```sh
+      browser-cli start slot1
+      browser-cli status slot1
+      ```
+    - [ ] devcontainer から host Chrome を起動・確認
+      ```sh
+      browser_cli=./dot_local/bin/executable_browser-cli
+      ssh mac-host "$($browser_cli host-command start slot2)"
+      curl http://host.docker.internal:9223/json/version
+      $browser_cli pages slot2
+      ```
+    - [ ] Playwright helper で最小操作を確認
+      ```sh
+      browser_cli=./dot_local/bin/executable_browser-cli
+      $browser_cli goto slot2 https://example.com
+      $browser_cli screenshot slot2 https://example.com /tmp/dotfile-30-slot2.png
+      $browser_cli click slot2 https://example.com 'role=link[name="More information..."]'
+      ```
 
 
 - [ ] Raycast
