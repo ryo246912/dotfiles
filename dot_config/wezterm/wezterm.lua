@@ -29,6 +29,7 @@ config.window_padding = {
 }
 config.hide_tab_bar_if_only_one_tab = true
 config.use_fancy_tab_bar = false
+config.disable_default_key_bindings = true
 config.colors = {
   foreground = "#ffffff",
   background = "#191724",
@@ -106,6 +107,11 @@ if is_darwin then
   send_string_binding("7", "CMD", "\x027")
   send_string_binding("8", "CMD", "\x028")
   send_string_binding("9", "CMD", "\x029")
+  table.insert(keys, {
+    key = "v",
+    mods = "CMD",
+    action = wezterm.action.PasteFrom("Clipboard"),
+  })
 else
   config.default_prog = { "wsl.exe", "~", "-d", "Ubuntu-20.04" }
 end
