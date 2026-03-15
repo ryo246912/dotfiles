@@ -1,3 +1,15 @@
+local function run_gitlink(open_in_browser)
+  local command = open_in_browser and "GitLink!" or "GitLink"
+  local mode = vim.api.nvim_get_mode().mode
+
+  if mode == "v" or mode == "V" or mode == "\22" then
+    vim.cmd(("'<,'>%s"):format(command))
+    return
+  end
+
+  vim.cmd(command)
+end
+
 return {
   {
     "sindrets/diffview.nvim",
@@ -181,6 +193,33 @@ return {
       -- Git current branch
       keymap("n", "<leader>gB", ":Git branch --show-current<CR>", { noremap = true })
     end,
+  },
+  {
+    "linrongbin16/gitlinker.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    cmd = { "GitLink" },
+    keys = {
+      {
+        "<leader>gy",
+        function()
+          run_gitlink(false)
+        end,
+        mode = { "n", "x" },
+        desc = "Git permalinkをコピー",
+      },
+      {
+        "<leader>gY",
+        function()
+          run_gitlink(true)
+        end,
+        mode = { "n", "x" },
+        desc = "Git permalinkを開く",
+      },
+    },
+    config = function(_, opts)
+      require("gitlinker").setup(opts)
+    end,
+    opts = {},
   },
   {
     "kdheepak/lazygit.nvim",

@@ -12,4 +12,5 @@
 # Setup
 
 - [setup](setup.md)
+- [Git / Claude tool guides](tool-guides.md)
 - [rulesync usage](dot_config/rulesync/README.md)

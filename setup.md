@@ -1,5 +1,9 @@
 # Setup
 
+## 補助ドキュメント
+
+- [Git / Claude tool guides](tool-guides.md)
+
 ## Mac
 ### 初期設定
 - [ ] XCode CLIのインストール
