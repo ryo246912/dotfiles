@@ -1,0 +1,17 @@
+WRN 2026-03-14T12:46:52.243 ?.51847    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./qCI117/nvim.51847.0
+WRN 2026-03-14T21:30:56.008 ?.47571    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./4FE5UK/nvim.47571.0
+WRN 2026-03-14T21:30:56.115 ?.47571    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./4FE5UK/fzf-lua.1773491456.47571.1
+WRN 2026-03-14T21:40:34.600 ?.25292    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./Hpmpmh/nvim.25292.0
+WRN 2026-03-14T21:41:35.053 ?.59570    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./qSm0ys/nvim.59570.0
+WRN 2026-03-14T21:41:35.053 ?.59569    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./kmHcg2/nvim.59569.0
+WRN 2026-03-14T21:41:35.090 ?.59578    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./iLptf5/nvim.59578.0
+WRN 2026-03-14T21:41:35.091 ?.59581    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./MBt6qi/nvim.59581.0
+WRN 2026-03-14T21:41:35.091 ?.59588    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./nY3lFb/nvim.59588.0
+WRN 2026-03-14T21:41:35.092 ?.59582    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./1z2bOv/nvim.59582.0
+WRN 2026-03-14T21:41:35.092 ?.59586    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./hetKec/nvim.59586.0
+WRN 2026-03-14T21:41:35.093 ?.59589    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./fqak9c/nvim.59589.0
+WRN 2026-03-14T21:41:35.094 ?.59583    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./YYbgLZ/nvim.59583.0
+WRN 2026-03-14T21:42:01.753 ?.73057    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./dwbO2b/nvim.73057.0
+WRN 2026-03-14T21:42:33.125 ?.88316    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./AjYA3s/nvim.88316.0
+WRN 2026-03-14T21:42:33.155 ?.88426    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./CWMPGj/nvim.88426.0
+WRN 2026-03-14T21:42:33.155 ?.88548    server_start:199: Failed to start server: operation not permitted: /var/folders/lh/hmlfr28n18gfppcq5yzt2g4h0000gn/T/nvim.ryo./rwKT2m/nvim.88548.0

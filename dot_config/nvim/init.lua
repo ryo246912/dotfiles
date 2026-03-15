@@ -6,6 +6,7 @@ vim.g.loaded_netrwPlugin = 1
 require("core.options")
 require("core.keymaps")
 require("core.autocmds")
+require("core.file_actions").setup()
 require("core.abbreviations")
 
 -- bootstrap lazy.nvim

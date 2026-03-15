@@ -65,6 +65,29 @@ keymap({ "n", "x" }, "gy", '"+y', { noremap = true })
 -- ESC連打でハイライト解除
 keymap("n", "<Esc><Esc>", ":nohlsearch<CR><Esc>", { noremap = true, silent = true })
 
+local function ensure_search_target(default_motion)
+  if vim.v.hlsearch == 1 and vim.fn.getreg("/") ~= "" then
+    return default_motion
+  end
+
+  local word = vim.fn.expand("<cword>")
+  if word == "" then
+    return default_motion
+  end
+
+  vim.fn.setreg("/", "\\V\\<" .. vim.fn.escape(word, "\\") .. "\\>")
+  vim.o.hlsearch = true
+  return default_motion
+end
+
+keymap("n", "n", function()
+  return ensure_search_target("n")
+end, { expr = true, noremap = true, silent = true, desc = "現在の検索またはカーソル単語の次へ" })
+
+keymap("n", "N", function()
+  return ensure_search_target("N")
+end, { expr = true, noremap = true, silent = true, desc = "現在の検索またはカーソル単語の前へ" })
+
 -- Emacs-like movement in Insert/Command
 keymap({ "i", "c" }, "<C-a>", "<Home>", { noremap = true })
 keymap({ "i", "c" }, "<C-e>", "<End>", { noremap = true })
@@ -78,6 +101,8 @@ keymap("n", "<leader>[", ":pop<CR>", { noremap = true })
 
 -- 相対・絶対行の表示切替
 keymap("n", "<leader>n", ":<C-u>setlocal relativenumber!<CR>", { noremap = true })
+keymap("n", "<leader>uf", "<Cmd>FormatBuffer<CR>", { noremap = true, silent = true, desc = "現在ファイルを format" })
+keymap("n", "<leader>uh", "<Cmd>SaveHooksToggle<CR>", { noremap = true, silent = true, desc = "save hook 切替" })
 
 -- popupでterminalを開く
 -- TODO: 別途修正する

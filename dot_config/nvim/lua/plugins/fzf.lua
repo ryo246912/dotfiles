@@ -3,6 +3,10 @@ return {
     "ibhagwan/fzf-lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
+      if #vim.api.nvim_list_uis() == 0 then
+        return
+      end
+
       require("fzf-lua").setup({
         -- ctrl-{h,v}で水平・垂直分割で開く
         actions = {

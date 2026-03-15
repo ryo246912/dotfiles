@@ -13,6 +13,7 @@ return {
       })
 
       local Terminal = require("toggleterm.terminal").Terminal
+      local file_actions = require("core.file_actions")
       local keymap = vim.keymap.set
       local terminal_history_path = vim.fn.stdpath("state") .. "/terminal_command_history"
       local max_history = 30
@@ -99,6 +100,33 @@ return {
         end)
       end
 
+      local function open_current_file_action_picker()
+        local actions = file_actions.get_buffer_actions(0)
+        if #actions == 0 then
+          vim.notify("現在ファイル向けの lint / test / format コマンド候補が見つかりません。", vim.log.levels.WARN)
+          return
+        end
+
+        local labels = {}
+        for _, action in ipairs(actions) do
+          table.insert(labels, string.format("[%s] %s", action.kind:upper(), action.label))
+        end
+
+        vim.ui.select(labels, { prompt = "現在ファイルで実行するコマンドを選択" }, function(_, idx)
+          local action = idx and actions[idx] or nil
+          if not action then
+            return
+          end
+
+          local prepared = file_actions.prepare_action_run(0, action)
+          if not prepared then
+            return
+          end
+
+          run_popup_command(file_actions.action_to_shell_command(prepared))
+        end)
+      end
+
       local keifu = Terminal:new({
         cmd = "keifu",
         direction = "horizontal",
@@ -137,8 +165,12 @@ return {
         filetree:toggle()
       end
 
+      pcall(vim.api.nvim_del_user_command, "CurrentFileActions")
+      vim.api.nvim_create_user_command("CurrentFileActions", open_current_file_action_picker, {})
+
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
       keymap("n", "<leader>cp", function() run_popup_command("chezmoi apply --interactive") end, { noremap = true, silent = true, desc = "chezmoi apply --interactive" })
+      keymap("n", "<leader>cf", open_current_file_action_picker, { noremap = true, silent = true, desc = "現在ファイルの lint / test / format" })
       keymap("n", "<leader>C", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンドを選んでポップアップ実行" })
       keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })
       keymap({ "n", "t" }, "<leader>E", toggle_filetree, { noremap = true, silent = true, desc = "filetree(ft) を開閉" })
