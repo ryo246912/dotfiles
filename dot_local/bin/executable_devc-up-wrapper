@@ -1,3 +1,235 @@
 #!/bin/bash
 
-exec "$@" # 元のコマンドを実行
+set -euo pipefail
+
+DOCKER_BIN="${DOCKER_BIN:-docker}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+log() {
+    printf '[devc-up-wrapper] %s\n' "$*" >&2
+}
+
+resolve_abs_path() {
+    local path="$1"
+    local dir base
+
+    if [[ -z "$path" ]]; then
+        return 1
+    fi
+
+    if [[ -d "$path" ]]; then
+        (
+            cd "$path" 2>/dev/null &&
+                pwd -P
+        )
+        return 0
+    fi
+
+    if [[ "$path" == /* ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+
+    dir=$(dirname "$path")
+    base=$(basename "$path")
+
+    (
+        cd "$dir" 2>/dev/null &&
+            printf '%s/%s\n' "$(pwd -P)" "$base"
+    )
+}
+
+get_file_mtime_epoch() {
+    local path="$1"
+
+    if [[ ! -e "$path" ]]; then
+        return 1
+    fi
+
+    if stat -f '%m' "$path" >/dev/null 2>&1; then
+        stat -f '%m' "$path"
+    else
+        stat -c '%Y' "$path"
+    fi
+}
+
+iso8601_to_epoch() {
+    "$PYTHON_BIN" - "$1" <<'PY'
+import datetime
+import sys
+
+value = sys.argv[1].strip()
+
+if value.endswith("Z"):
+    value = value[:-1] + "+00:00"
+
+try:
+    dt = datetime.datetime.fromisoformat(value)
+except ValueError:
+    tz = ""
+    main = value
+    if len(value) >= 6 and value[-6] in "+-":
+        tz = value[-6:]
+        main = value[:-6]
+    if "." in main:
+        prefix, fraction = main.split(".", 1)
+        digits = "".join(ch for ch in fraction if ch.isdigit())
+        main = f"{prefix}.{digits[:6].ljust(6, '0')}"
+    value = main + tz
+    dt = datetime.datetime.fromisoformat(value)
+
+if dt.tzinfo is None:
+    dt = dt.replace(tzinfo=datetime.timezone.utc)
+
+print(int(dt.timestamp()))
+PY
+}
+
+get_workspace_folder() {
+    local current_dir="$1"
+    shift
+    local workspace_folder="$current_dir"
+    local arg next_arg
+
+    while (($#)); do
+        arg="$1"
+        shift
+        case "$arg" in
+        --workspace-folder)
+            if (($#)); then
+                next_arg="$1"
+                shift
+                workspace_folder="$next_arg"
+            fi
+            ;;
+        --workspace-folder=*)
+            workspace_folder="${arg#*=}"
+            ;;
+        esac
+    done
+
+    resolve_abs_path "$workspace_folder"
+}
+
+get_config_path() {
+    local workspace_folder="$1"
+    shift
+    local config_path=""
+    local arg next_arg
+
+    while (($#)); do
+        arg="$1"
+        shift
+        case "$arg" in
+        --config|--override-config)
+            if (($#)); then
+                next_arg="$1"
+                shift
+                config_path="$next_arg"
+            fi
+            ;;
+        --config=*|--override-config=*)
+            config_path="${arg#*=}"
+            ;;
+        esac
+    done
+
+    if [[ -z "$config_path" ]]; then
+        if [[ -f "$workspace_folder/.devcontainer/devcontainer.json" ]]; then
+            config_path="$workspace_folder/.devcontainer/devcontainer.json"
+        else
+            config_path="$workspace_folder/.devcontainer.json"
+        fi
+    fi
+
+    resolve_abs_path "$config_path"
+}
+
+collect_input_files() {
+    local config_path="$1"
+    local config_dir
+
+    config_dir=$(dirname "$config_path")
+    printf '%s\n' "$config_path"
+
+    if [[ -f "$config_dir/Dockerfile" ]]; then
+        printf '%s\n' "$config_dir/Dockerfile"
+    fi
+
+    if [[ -f "$config_dir/mise.toml" ]]; then
+        printf '%s\n' "$config_dir/mise.toml"
+    fi
+}
+
+get_matching_container_ids() {
+    local workspace_folder="$1"
+    local config_path="$2"
+
+    "$DOCKER_BIN" ps -q -a \
+        --filter "label=devcontainer.local_folder=$workspace_folder" \
+        --filter "label=devcontainer.config_file=$config_path"
+}
+
+remove_stale_devcontainer_if_needed() {
+    local current_dir="$1"
+    shift
+    local workspace_folder config_path latest_input_epoch latest_container_epoch
+    local input_file input_mtime created_at created_epoch container_id
+    local container_ids=()
+
+    workspace_folder=$(get_workspace_folder "$current_dir" "$@") || return 0
+    config_path=$(get_config_path "$workspace_folder" "$@") || return 0
+
+    latest_input_epoch=0
+    while IFS= read -r input_file; do
+        [[ -n "$input_file" ]] || continue
+        input_mtime=$(get_file_mtime_epoch "$input_file" || true)
+        if [[ -n "$input_mtime" ]] && ((input_mtime > latest_input_epoch)); then
+            latest_input_epoch="$input_mtime"
+        fi
+    done < <(collect_input_files "$config_path")
+
+    if ((latest_input_epoch == 0)); then
+        return 0
+    fi
+
+    while IFS= read -r container_id; do
+        [[ -n "$container_id" ]] || continue
+        container_ids+=("$container_id")
+    done < <(get_matching_container_ids "$workspace_folder" "$config_path" 2>/dev/null || true)
+
+    if ((${#container_ids[@]} == 0)); then
+        return 0
+    fi
+
+    latest_container_epoch=0
+    for container_id in "${container_ids[@]}"; do
+        created_at=$("$DOCKER_BIN" inspect --format '{{.Created}}' "$container_id" 2>/dev/null || true)
+        [[ -n "$created_at" ]] || continue
+        created_epoch=$(iso8601_to_epoch "$created_at" 2>/dev/null || true)
+        if [[ -n "$created_epoch" ]] && ((created_epoch > latest_container_epoch)); then
+            latest_container_epoch="$created_epoch"
+        fi
+    done
+
+    if ((latest_container_epoch == 0)); then
+        return 0
+    fi
+
+    if ((latest_input_epoch > latest_container_epoch)); then
+        log "Detected newer devcontainer inputs. Removing the existing container before rebuild."
+        "$DOCKER_BIN" rm -f "${container_ids[@]}" >/dev/null
+    fi
+}
+
+main() {
+    local current_dir="$PWD"
+
+    if (($# >= 2)) && [[ "$1" == "devcontainer" ]] && [[ "$2" == "up" ]]; then
+        remove_stale_devcontainer_if_needed "$current_dir" "$@"
+    fi
+
+    exec "$@"
+}
+
+main "$@"

@@ -26,6 +26,22 @@ snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --works
 trigger = "ccmcp"
 
 [[snippets]]
+name    = "ccmanager devcontainer(codex)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json codex --yolo\""
+trigger = "ccmcx"
+
+[[snippets]]
+name            = "devcontainer up"
+snippet         = "devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
+trigger-pattern = "^devcu$"
+
+[[snippets]]
+cursor          = "👇"
+name            = "devcontainer exec"
+snippet         = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json 👇"
+trigger-pattern = "^devce$"
+
+[[snippets]]
 global  = true
 name    = "claude"
 snippet = "claude"
@@ -50,6 +66,18 @@ snippet = "copilot --yolo"
 trigger = "coy"
 
 [[snippets]]
+global  = true
+name    = "codex"
+snippet = "codex"
+trigger = "cx"
+
+[[snippets]]
+global  = true
+name    = "codex --yolo"
+snippet = "codex --yolo"
+trigger = "cxy"
+
+[[snippets]]
 context = ".*claude\\s"
 global  = true
 name    = "(claude) --dangerously-skip-permissions"
@@ -57,8 +85,8 @@ snippet = "--dangerously-skip-permissions"
 trigger = "yl"
 
 [[snippets]]
-context = ".*(copilot|gemini)\\s"
+context = ".*(copilot|codex|gemini)\\s"
 global  = true
-name    = "(copilot|gemini) --yolo"
+name    = "(copilot|codex|gemini) --yolo"
 snippet = "--yolo"
 trigger = "yl"

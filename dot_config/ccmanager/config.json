@@ -48,6 +48,18 @@
         "command": "gemini",
         "detectionStrategy": "gemini",
         "args": ["-s"]
+      },
+      {
+        "id": "1752796500000",
+        "name": "Copilot",
+        "command": "copilot",
+        "args": ["--yolo"]
+      },
+      {
+        "id": "1752796500001",
+        "name": "Codex",
+        "command": "codex",
+        "args": ["--yolo"]
       }
     ],
     "defaultPresetId": "1",
