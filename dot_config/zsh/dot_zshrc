@@ -4,14 +4,15 @@
 should_auto_attach_tmux=0
 
 case "${TERM:-}" in
-  alacritty|rio|wezterm|ghostty|xterm-ghostty)
+  alacritty|rio|ghostty|xterm-ghostty)
     should_auto_attach_tmux=1
     ;;
-esac
-
-case "${TERM_PROGRAM:-}" in
-  WezTerm|ghostty|Ghostty)
-    should_auto_attach_tmux=1
+  *)
+    case "${TERM_PROGRAM:-}" in
+      WezTerm|ghostty|Ghostty)
+        should_auto_attach_tmux=1
+        ;;
+    esac
     ;;
 esac
 
