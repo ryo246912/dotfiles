@@ -6,7 +6,7 @@
 "aqua:koalaman/shellcheck"       = "0.11.0"
 "aqua:mvdan/sh"                  = "3.13.0"
 "aqua:openai/codex"              = "0.110.0"
-bun                              = "1.3.5"
+bun                              = "1.3.11"
 "github:github/copilot-cli"      = "1.0.9"
 go                               = "1.25.6"
 node                             = "22.19.0"
