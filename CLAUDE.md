@@ -107,9 +107,8 @@ Scoop (Windows/WSL2)
 
 **Terminal:**
 
-- Alacritty with tmux as terminal multiplexer
-- Rio terminal as alternative
-- Auto-launch tmux in Alacritty/Rio terminals
+- Alacritty, Ghostty, Rio, and WezTerm with tmux as terminal multiplexer
+- Auto-launch tmux in supported terminal emulators
 
 **Shell:**
 
@@ -197,10 +196,12 @@ The repository uses [zabrze](https://github.com/orhun/zabrze) for shell abbrevia
 
 This repository manages 46+ tool configurations in `dot_config/`:
 
-### Terminal & Shell (7 tools)
+### Terminal & Shell (9 tools)
 
 - `alacritty/` - Alacritty terminal emulator (TOML config with keybindings)
+- `ghostty/` - Ghostty terminal emulator
 - `rio/` - Rio terminal emulator
+- `wezterm/` - WezTerm terminal emulator (Lua config with tmux-oriented keybindings)
 - `tmux/` - tmux terminal multiplexer (custom keybindings, status bar)
 - `tig/` - Tig Git TUI
 - `zsh/` - Zsh shell (modularized with lazy loading)
@@ -275,7 +276,7 @@ This repository manages 46+ tool configurations in `dot_config/`:
 
 ## Template System
 
-Chezmoi templates (6 files with `.tmpl` extension) enable platform-specific configurations:
+Chezmoi templates (7 files with `.tmpl` extension) enable platform-specific configurations:
 
 **Template Features:**
 
@@ -289,9 +290,10 @@ Chezmoi templates (6 files with `.tmpl` extension) enable platform-specific conf
 1. `dot_config/zsh/dot_zshenv.tmpl` - Zsh environment variables (XDG, PATH)
 2. `dot_config/git/config.tmpl` - Git config (platform-specific, Delta integration)
 3. `dot_config/alacritty/alacritty.toml.tmpl` - Alacritty terminal config
-4. `dot_config/rio/private_config.toml.tmpl` - Rio terminal config
-5. `dot_config/zsh/lazy/work.zsh.tmpl` - Work-specific zsh config
-6. `dot_config/dot_czrc.tmpl` - commitizen configuration
+4. `dot_config/ghostty/config.tmpl` - Ghostty terminal config
+5. `dot_config/rio/private_config.toml.tmpl` - Rio terminal config
+6. `dot_config/zsh/lazy/work.zsh.tmpl` - Work-specific zsh config
+7. `dot_config/dot_czrc.tmpl` - commitizen configuration
 
 ## Platform Support
 

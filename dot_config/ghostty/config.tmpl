@@ -1,0 +1,88 @@
+# Ghostty is configured to match the existing tmux-first setup as closely as
+# possible without depending on manual host-local tweaks.
+
+term = xterm-ghostty
+
+font-family = "HackGen35 Console NF"
+font-size = 12
+
+background = #191724
+foreground = #ffffff
+cursor-color = #ffffff
+cursor-text = #E0DEF4
+background-opacity = 0.95
+
+window-padding-x = 0
+window-padding-y = 0
+
+confirm-close-surface = false
+window-decoration = false
+maximize = true
+
+palette = 0=#000000
+palette = 1=#fe0100
+palette = 2=#33ff00
+palette = 3=#feff00
+palette = 4=#0066ff
+palette = 5=#cc00ff
+palette = 6=#00ffff
+palette = 7=#d0d0d0
+palette = 8=#808080
+palette = 9=#fe0100
+palette = 10=#33ff00
+palette = 11=#feff00
+palette = 12=#0066ff
+palette = 13=#cc00ff
+palette = 14=#00ffff
+palette = 15=#ffffff
+
+{{ if eq .chezmoi.os "darwin" -}}
+macos-option-as-alt = true
+
+keybind = super+d=text:\x02%
+keybind = super+shift+d=text:\x02"
+keybind = super+c=text:\x02[
+keybind = super+e=text:\x02\x20
+keybind = super+shift+e=text:\x02Q
+keybind = super+f=text:\x02\x06
+keybind = super+l=text:\x02s
+keybind = super+shift+l=text:\x02w
+keybind = super+o=text:\x02R
+keybind = super+p=text:\x02\x10
+keybind = super+shift+p=text:\x02\x14
+keybind = super+r=text:\x02r
+keybind = super+s=text:\x02e
+keybind = super+shift+r=text:\x02\x12
+keybind = super+shift+s=text:\x02\x13
+keybind = super+t=text:\x02c
+keybind = super+w=text:\x02x
+keybind = super+x=text:\x02x
+keybind = super+shift+w=text:\x02d
+keybind = super+z=text:\x02z
+keybind = super+left=text:\x02h
+keybind = super+down=text:\x02j
+keybind = super+up=text:\x02k
+keybind = super+right=text:\x02l
+keybind = super+shift+left=text:\x02\x08
+keybind = super+shift+down=text:\x02\x09
+keybind = super+shift+up=text:\x02\x0b
+keybind = super+shift+right=text:\x02\x0c
+keybind = super+shift+alt+up=text:\x02{
+keybind = super+shift+alt+down=text:\x02}
+keybind = super+[=text:\x02\x09
+keybind = super+]=text:\x02\x1d
+keybind = super+shift+[=text:\x02p
+keybind = super+shift+]=text:\x02n
+keybind = super+shift+alt+[=text:\x02\x18
+keybind = super+shift+alt+]=text:\x02\x19
+keybind = super+space=text:\x02\x20
+keybind = super+1=text:\x021
+keybind = super+2=text:\x022
+keybind = super+3=text:\x023
+keybind = super+4=text:\x024
+keybind = super+5=text:\x025
+keybind = super+6=text:\x026
+keybind = super+7=text:\x027
+keybind = super+8=text:\x028
+keybind = super+9=text:\x029
+{{- end }}

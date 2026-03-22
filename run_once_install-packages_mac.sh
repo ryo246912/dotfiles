@@ -50,6 +50,7 @@ install_cask_package() {
     dbeaver-community
     docker
     firefox
+    ghostty
     google-chrome
     google-japanese-ime
     karabiner-elements
@@ -59,6 +60,7 @@ install_cask_package() {
     thock
     thebrowsercompany-dia
     visual-studio-code
+    wezterm@nightly
     zoom
   )
 
