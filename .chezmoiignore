@@ -9,6 +9,8 @@
 **/*brew*
 {{- end }}
 _*
+plan*
+
 .config/claude*
 .config/dbeaver*
 .config/memo*
