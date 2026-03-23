@@ -1,0 +1,54 @@
+language: "ja"
+tone_instructions: "簡潔かつ事実ベースで記述し、推測は推測と明記してください。"
+early_access: false
+enable_free_tier: true
+
+reviews:
+  profile: "chill"
+  high_level_summary: true
+  high_level_summary_instructions: |
+    PR の要約は次の 3 セクションのみで構成してください。
+    1. 変更内容概要
+    2. 変更理由
+    3. 確認した項目
+
+    ファイルごとの変更一覧や細かな差分説明は不要です。
+    変更意図が読み取りづらい場合のみ、背景や狙いを短く補足してください。
+  high_level_summary_in_walkthrough: false
+  review_status: false
+  review_details: false
+  collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: false
+  path_filters:
+    - "!not_config/**"
+    - "!dot_config/sidebery/**"
+    - "!dot_config/dbeaver/**"
+    - "!dot_config/raycast/**"
+  path_instructions:
+    - path: "dot_config/**/*.json"
+      instructions: |
+        コメント付き JSONC や既存キーの意図を尊重し、不要な整形だけの指摘は避けてください。
+        ユーザー設定の意味が変わる変更や既存コメントの消失を優先して確認してください。
+    - path: "dot_gemini/settings.json"
+      instructions: |
+        OAuth、privacy、MCP 設定を壊さないことを優先し、認証方式や外部連携の退行を重点的に確認してください。
+    - path: "dot_local/bin/**"
+      instructions: |
+        シェルスクリプトでは引用、冪等性、エラーハンドリング、macOS と Linux の差異による退行を重点的に確認してください。
+    - path: ".github/workflows/**"
+      instructions: |
+        GitHub Actions では権限、キャッシュ、シェル実行時の安全性、action バージョンの妥当性を重点的に確認してください。
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
