@@ -225,7 +225,7 @@ This repository manages 46+ tool configurations in `dot_config/`:
 
 ### Development Tools (5 tools)
 
-- `mise/` - Tool version manager (100+ tools, task definitions, conf.d/ splits)
+- `mise/` - Tool version manager (100+ tools, task definitions, `config.<env>.toml` splits)
 - `aqua/` - YAML-based package manager
 - `nix/` - Nix package manager
 - `gotip/` - Go development configuration
@@ -659,7 +659,7 @@ This repository treats personal development environment as code:
 ### 2. Modularization
 
 - Zsh configuration split into `lazy/` modules
-- mise configuration split into `conf.d/` files
+- mise configuration split into `config.<env>.toml` files (`MISE_ENV` select)
 - Zabrze abbreviations split by category
 - Chezmoi scripts split by purpose
 

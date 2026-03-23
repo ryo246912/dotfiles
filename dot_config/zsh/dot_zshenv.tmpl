@@ -60,6 +60,21 @@ if [ "$(uname)" = "Darwin" ]; then
 {{- end }}
 fi
 
+# HOST_ENV をホスト名で解決する
+if [ -z "${HOST_ENV:-}" ]; then
+    _host_id="${MISE_HOST_ID:-$(scutil --get LocalHostName 2>/dev/null || hostname -s 2>/dev/null)}"
+    _host_env="$(awk -F= -v h="$_host_id" \
+        '!/^[[:space:]]*(#|$)/{gsub(/[[:space:]]/, ""); if ($1 == h) {print $2; exit}}' \
+        "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/host-env.map" 2>/dev/null)"
+    [ -n "$_host_env" ] && export HOST_ENV="$_host_env"
+    unset _host_id _host_env
+fi
+
+# HOST_ENV から MISE_ENV を導出
+if [ -z "${MISE_ENV:-}" ] && [ -n "${HOST_ENV:-}" ]; then
+    export MISE_ENV="$HOST_ENV"
+fi
+
 if command -v mise >/dev/null 2>&1; then
 {{ if (lookPath "mise") -}}
 {{ output "mise" "activate" "zsh" "--shims" | trim }}
