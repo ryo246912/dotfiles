@@ -1,0 +1,7 @@
+# host-id=env
+# host-id is resolved from `scutil --get LocalHostName` on macOS, or `hostname -s` on other platforms.
+# env format: <os>,<role>  (must match config.<os>.toml and config.<role>.toml)
+# examples:
+ryo-mac-private=mac,private
+ryo-mac-work=mac,work2
+ryo-win=windows,private
