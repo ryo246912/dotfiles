@@ -1,4 +1,4 @@
 [tools]
 "aqua:supabase/cli"   = "2.70.5"
 "ubi:render-oss/cli"  = { version = "2.6.1", rename_exe = "render" }
-"ubi:superfly/flyctl" = "0.3.192"
+"ubi:superfly/flyctl" = "0.4.25"
