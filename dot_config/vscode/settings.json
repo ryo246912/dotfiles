@@ -201,6 +201,9 @@
   // (Bookmarks)
   "bookmarks.sideBar.expanded": true,
   "bookmarks.saveBookmarksInProject": true,
+  // (Gemini Code Assist)
+  // trusted workspace で Agent mode の操作確認を自動承認する
+  "geminicodeassist.agentYoloMode": true,
   // (CommitMessageEditor)
   "commit-message-editor.view.defaultView": "form",
   "commit-message-editor.tokens": [

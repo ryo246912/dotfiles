@@ -7,6 +7,9 @@
   "ui": {
     "theme": "GitHub"
   },
+  "general": {
+    "previewFeatures": true
+  },
   "privacy": {
     "usageStatisticsEnabled": false
   },
