@@ -1,37 +1,42 @@
 [[snippets]]
-name    = "gwq"
-snippet = "gwq"
+name    = "wtp"
+snippet = "wtp"
 trigger = "gw"
 
 [[snippets]]
-name    = "gwq add"
-snippet = "gwq add -i -b"
+name    = "wtp add"
+snippet = "wtp add"
 trigger = "gwa"
 
 [[snippets]]
-name    = "gwq cd"
-snippet = "gwq cd"
+name    = "wtp add (new branch)"
+snippet = "wtp add -b"
+trigger = "gwab"
+
+[[snippets]]
+name    = "wtp cd"
+snippet = "wtp cd"
 trigger = "gwc"
 
 [[snippets]]
-name    = "gwq delete(remove)"
-snippet = "gwq remove"
+name    = "wtp remove"
+snippet = "wtp remove"
 trigger = "gwd"
 
 [[snippets]]
+name    = "wtp remove --with-branch"
+snippet = "wtp remove --with-branch"
+trigger = "gwdb"
+
+[[snippets]]
 cursor  = "👇"
-name    = "gwq exec"
-snippet = "gwq exec 👇 --"
+name    = "wtp exec"
+snippet = "wtp exec 👇 --"
 trigger = "gwe"
 
 [[snippets]]
-name            = "gwq exec HEAD --"
-snippet         = "gwq exec HEAD --"
-trigger-pattern = "^(gweh|gwem)$"
-
-[[snippets]]
-name    = "gwq list"
-snippet = "gwq list"
+name    = "wtp list"
+snippet = "wtp list"
 trigger = "gwl"
 
 [[snippets]]
