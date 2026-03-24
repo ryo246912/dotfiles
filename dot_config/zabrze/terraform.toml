@@ -1,0 +1,49 @@
+[[snippets]]
+name            = "terraform"
+snippet         = "terraform"
+trigger-pattern = "^tf$"
+
+[[snippets]]
+name    = "terraform init"
+snippet = "terraform init"
+trigger = "tfi"
+
+[[snippets]]
+name    = "terraform plan"
+snippet = "terraform plan"
+trigger = "tfp"
+
+[[snippets]]
+name    = "terraform apply"
+snippet = "terraform apply"
+trigger = "tfa"
+
+[[snippets]]
+name    = "terraform fmt -recursive"
+snippet = "terraform fmt -recursive"
+trigger = "tff"
+
+[[snippets]]
+name    = "terraform validate"
+snippet = "terraform validate"
+trigger = "tfv"
+
+[[snippets]]
+name    = "terraform show"
+snippet = "terraform show"
+trigger = "tfs"
+
+[[snippets]]
+name    = "terraform state"
+snippet = "terraform state"
+trigger = "tfst"
+
+[[snippets]]
+name    = "terraform workspace"
+snippet = "terraform workspace"
+trigger = "tfw"
+
+[[snippets]]
+name    = "terraform output"
+snippet = "terraform output"
+trigger = "tfo"
