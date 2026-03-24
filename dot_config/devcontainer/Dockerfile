@@ -11,7 +11,7 @@ ENV SHELL /usr/bin/zsh
 RUN chsh -s /bin/zsh
 
 # Install mise to /usr/local/bin for global access
-RUN MISE_VERSION=v2026.2.13 curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
+RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
 
 # Configure mise environment variables
 ENV MISE_DATA_DIR="/mise/data"
