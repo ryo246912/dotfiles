@@ -167,6 +167,23 @@ zsh-profiler() {
 # historyの定期バックアップを起動
 zsh-history-backup
 
+# fzf + wtp: インタラクティブにリモートブランチを選択してworktree作成
+fwtp() {
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "fzf is required" >&2
+    return 1
+  fi
+  if ! command -v wtp >/dev/null 2>&1; then
+    echo "wtp is required" >&2
+    return 1
+  fi
+  local branch
+  branch=$(git branch -r | grep -v HEAD | sed 's|.*origin/||' | sort -u | \
+    fzf --preview 'git log --oneline --color=always origin/{} 2>/dev/null | head -10' \
+        --prompt 'Select remote branch: ')
+  [ -n "$branch" ] && wtp add "$branch"
+}
+
 if command -v multi-worktree >/dev/null 2>&1; then
     fpath=(~/.config/multi-worktree $fpath)
 fi
