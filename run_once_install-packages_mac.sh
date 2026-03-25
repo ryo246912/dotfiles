@@ -237,6 +237,16 @@ install_nix() {
   fi
 }
 
+setup_nix_darwin() {
+  if ! command -v darwin-rebuild &>/dev/null; then
+    echo "nix-darwinをインストールしています..."
+    nix run nix-darwin -- switch --flake "${XDG_DATA_HOME:-$HOME/.local/share}/chezmoi#darwin"
+  else
+    echo "nix-darwinは既にインストールされています。設定を適用しています..."
+    darwin-rebuild switch --flake "${XDG_DATA_HOME:-$HOME/.local/share}/chezmoi#darwin"
+  fi
+}
+
 # 実行したいコマンドを入力
 commands=(
   "install_brew"
@@ -244,7 +254,10 @@ commands=(
   "install_cask_package"
   "install_work_package"
   "setup_settings"
-  # "install_nix"
+  "install_nix"
+  # nix-darwinでHomebrewを管理する場合は以下を有効にする
+  # （install_package, install_cask_package, install_work_package の代わりに使用）
+  # "setup_nix_darwin"
 )
 
 execute_command() {

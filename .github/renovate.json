@@ -11,6 +11,9 @@
   "devcontainer": {
     "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
   },
+  "nix": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
