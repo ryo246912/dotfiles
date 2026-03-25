@@ -45,6 +45,36 @@ snippet = "wtp list"
 trigger = "gwl"
 
 [[snippets]]
+name    = "gtr new (worktree)"
+snippet = "git gtr new"
+trigger = "gwgn"
+
+[[snippets]]
+name    = "gtr new --cd (worktree + cd)"
+snippet = "git gtr new --cd"
+trigger = "gwgnc"
+
+[[snippets]]
+name    = "gtr cd (fzf interactive)"
+snippet = "gtr cd"
+trigger = "gwgc"
+
+[[snippets]]
+name    = "gtr rm (remove worktree)"
+snippet = "git gtr rm"
+trigger = "gwgr"
+
+[[snippets]]
+name    = "gtr list"
+snippet = "git gtr list"
+trigger = "gwgl"
+
+[[snippets]]
+name    = "gtr clean --merged"
+snippet = "git gtr clean --merged"
+trigger = "gwgcl"
+
+[[snippets]]
 name    = "git worktree sync"
 snippet = "git -C \"$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')\" checkout --detach \"$(git rev-parse HEAD)\""
 trigger = "gws"

@@ -70,6 +70,11 @@ if command -v wtp >/dev/null 2>&1; then
     eval "$(wtp shell-init zsh)"
 fi
 
+# gtr (git-worktree-runner)
+if command -v git-gtr >/dev/null 2>&1; then
+    eval "$(git gtr init zsh)"
+fi
+
 # mise
 if command -v mise >/dev/null 2>&1; then
     __generate_and_load_completion "mise"
