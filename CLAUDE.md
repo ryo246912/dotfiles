@@ -74,7 +74,7 @@ mise (Main tool version manager)
 │   └── Python tools (zizmor, etc.)
 ├── go (Go language packages)
 │   └── Go CLI tools
-└── ubi (Universal binary installer)
+└── github (GitHub releases)
     └── Latest Rust/Go tools
 
 Homebrew (macOS only)
