@@ -338,7 +338,9 @@ select_multi_worktree_command() {
 	local actions
 	actions="lazygit	lazygit でリポジトリを開く
 cd	シェルでディレクトリを開く
-vscode	VS Code でルートディレクトリを開く"
+code	VS Code でルートディレクトリを開く
+nvim	Neovim でルートディレクトリを開く
+sync	multi-worktree sync でworktreeを同期する"
 
 	local selected
 	selected=$(echo "$actions" | fzf \
@@ -361,13 +363,34 @@ open_multi_worktree_tiled() {
 	local task_name="$2"
 	local cmd="${3:-lazygit}"
 
-	# vscode の場合はルートディレクトリを直接開く
-	if [[ "$cmd" == "vscode" ]]; then
+	# code の場合はルートディレクトリを直接開く
+	if [[ "$cmd" == "code" ]] || [[ "$cmd" == "vscode" ]]; then
 		if ! command -v code &>/dev/null; then
 			echo "${RED}エラー: VS Code (code コマンド) が見つかりません${NC}" >&2
 			return 1
 		fi
 		code "$task_path"
+		return 0
+	fi
+
+	# nvim の場合はルートディレクトリを直接開く
+	if [[ "$cmd" == "nvim" ]]; then
+		if ! command -v nvim &>/dev/null; then
+			echo "${RED}エラー: Neovim (nvim コマンド) が見つかりません${NC}" >&2
+			return 1
+		fi
+		cd "$task_path" || return 1
+		nvim .
+		return 0
+	fi
+
+	# sync の場合は multi-worktree sync を実行する
+	if [[ "$cmd" == "sync" ]]; then
+		if ! command -v multi-worktree &>/dev/null; then
+			echo "${RED}エラー: multi-worktree コマンドが見つかりません${NC}" >&2
+			return 1
+		fi
+		multi-worktree sync "$task_name"
 		return 0
 	fi
 
