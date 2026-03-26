@@ -47,3 +47,19 @@ trigger = "tfw"
 name    = "terraform output"
 snippet = "terraform output"
 trigger = "tfo"
+
+# terraform-tools
+[[snippets]]
+name    = "tflint"
+snippet = "tflint"
+trigger = "tfl"
+
+[[snippets]]
+name    = "tftui"
+snippet = "tftui"
+trigger = "tft"
+
+[[snippets]]
+name    = "pug (tetui2)"
+snippet = "pug"
+trigger = "tft2"
