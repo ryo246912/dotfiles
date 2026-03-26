@@ -55,6 +55,21 @@ snippet = "tflint"
 trigger = "tfl"
 
 [[snippets]]
+name    = "tflint --init"
+snippet = "tflint --init"
+trigger = "tfli"
+
+[[snippets]]
+name    = "tflint --recursive"
+snippet = "tflint --recursive"
+trigger = "tflr"
+
+[[snippets]]
+name    = "tflint --fix"
+snippet = "tflint --fix"
+trigger = "tflf"
+
+[[snippets]]
 name    = "tftui"
 snippet = "tftui"
 trigger = "tft"
@@ -63,3 +78,29 @@ trigger = "tft"
 name    = "pug (tetui2)"
 snippet = "pug"
 trigger = "tft2"
+
+# trivy
+[[snippets]]
+name    = "trivy"
+snippet = "trivy"
+trigger = "trv"
+
+[[snippets]]
+name    = "trivy image"
+snippet = "trivy image"
+trigger = "trvi"
+
+[[snippets]]
+name    = "trivy fs"
+snippet = "trivy fs ."
+trigger = "trvf"
+
+[[snippets]]
+name    = "trivy config"
+snippet = "trivy config ."
+trigger = "trvc"
+
+[[snippets]]
+name    = "trivy repo"
+snippet = "trivy repo"
+trigger = "trvr"
