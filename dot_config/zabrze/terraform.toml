@@ -14,9 +14,39 @@ snippet = "terraform plan"
 trigger = "tfp"
 
 [[snippets]]
+name    = "TF_LOG=DEBUG terraform plan"
+snippet = "TF_LOG=DEBUG terraform plan"
+trigger = "tfpd"
+
+[[snippets]]
+name    = "TF_LOG_CORE=DEBUG terraform plan"
+snippet = "TF_LOG_CORE=DEBUG terraform plan"
+trigger = "tfpcd"
+
+[[snippets]]
+name    = "TF_LOG_PROVIDER=DEBUG terraform plan"
+snippet = "TF_LOG_PROVIDER=DEBUG terraform plan"
+trigger = "tfppd"
+
+[[snippets]]
 name    = "terraform apply"
 snippet = "terraform apply"
 trigger = "tfa"
+
+[[snippets]]
+name    = "TF_LOG=DEBUG terraform apply"
+snippet = "TF_LOG=DEBUG terraform apply"
+trigger = "tfad"
+
+[[snippets]]
+name    = "TF_LOG_CORE=DEBUG terraform apply"
+snippet = "TF_LOG_CORE=DEBUG terraform apply"
+trigger = "tfacd"
+
+[[snippets]]
+name    = "TF_LOG_PROVIDER=DEBUG terraform apply"
+snippet = "TF_LOG_PROVIDER=DEBUG terraform apply"
+trigger = "tfapd"
 
 [[snippets]]
 name    = "terraform fmt -recursive"
