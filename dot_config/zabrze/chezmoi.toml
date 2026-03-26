@@ -73,3 +73,8 @@ cursor  = "👇"
 name    = "chezmoi execute-template"
 snippet = "chezmoi execute-template '{{ .chezmoi.👇 }}'"
 trigger = "cht"
+
+[[snippets]]
+name            = "lazychezmoi"
+snippet         = "lazychezmoi"
+trigger-pattern = "^lc$"
