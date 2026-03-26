@@ -14,17 +14,17 @@ snippet = "terraform plan"
 trigger = "tfp"
 
 [[snippets]]
-name    = "TF_LOG=DEBUG terraform plan"
+name    = "terraform plan (Debug: All)"
 snippet = "TF_LOG=DEBUG terraform plan"
 trigger = "tfpd"
 
 [[snippets]]
-name    = "TF_LOG_CORE=DEBUG terraform plan"
+name    = "terraform plan (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform plan"
 trigger = "tfpcd"
 
 [[snippets]]
-name    = "TF_LOG_PROVIDER=DEBUG terraform plan"
+name    = "terraform plan (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform plan"
 trigger = "tfppd"
 
@@ -34,17 +34,17 @@ snippet = "terraform apply"
 trigger = "tfa"
 
 [[snippets]]
-name    = "TF_LOG=DEBUG terraform apply"
+name    = "terraform apply (Debug: All)"
 snippet = "TF_LOG=DEBUG terraform apply"
 trigger = "tfad"
 
 [[snippets]]
-name    = "TF_LOG_CORE=DEBUG terraform apply"
+name    = "terraform apply (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform apply"
 trigger = "tfacd"
 
 [[snippets]]
-name    = "TF_LOG_PROVIDER=DEBUG terraform apply"
+name    = "terraform apply (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform apply"
 trigger = "tfapd"
 
