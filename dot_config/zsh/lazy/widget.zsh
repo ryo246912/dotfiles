@@ -4,11 +4,11 @@ _select_tool() {
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
       tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
-      if tmux has-session -t popup 2>/dev/null; then \
-        tmux new-window -t popup -c "$current_path" "$tool" ; \
-        tmux attach -t popup ; \
+      if tmux has-session -t overlay 2>/dev/null; then \
+        tmux new-window -t overlay -c "$current_path" "$tool" ; \
+        tmux attach -t overlay ; \
       else \
-        tmux new-session -s popup -c "$current_path" "$tool" \; set-option status off; \
+        tmux new-session -s overlay -c "$current_path" "$tool" \; set-option status off; \
       fi \
     '
   else
