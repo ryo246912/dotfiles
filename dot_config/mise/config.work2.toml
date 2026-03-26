@@ -1,5 +1,6 @@
 [tools]
 "aqua:Songmu/ecschedule"                    = "0.17.2"
+"aqua:aqua:keidarcy/e1s"                    = "1.0.53"
 "aqua:aqua:leg100/pug"                      = "0.6.5"
 "aqua:aquasecurity/trivy"                   = "0.69.3"
 "aqua:ariga/atlas"                          = "0.37.0"
