@@ -7,7 +7,7 @@ customCommands:
     context: "files"
     output: terminal
     key: u
-  - command: chezmoi apply --interactive --exclude=scripts,templates
+  - command: lazychezmoi
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: C
