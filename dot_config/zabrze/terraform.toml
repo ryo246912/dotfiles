@@ -21,12 +21,12 @@ trigger = "tfpd"
 [[snippets]]
 name    = "terraform plan (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform plan"
-trigger = "tfpcd"
+trigger = "tfpdc"
 
 [[snippets]]
 name    = "terraform plan (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform plan"
-trigger = "tfppd"
+trigger = "tfpdp"
 
 [[snippets]]
 name    = "terraform apply"
@@ -41,12 +41,12 @@ trigger = "tfad"
 [[snippets]]
 name    = "terraform apply (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform apply"
-trigger = "tfacd"
+trigger = "tfadc"
 
 [[snippets]]
 name    = "terraform apply (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform apply"
-trigger = "tfapd"
+trigger = "tfadp"
 
 [[snippets]]
 name    = "terraform fmt -recursive"
