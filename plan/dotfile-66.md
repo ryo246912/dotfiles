@@ -6,6 +6,7 @@
 - 対象リポジトリは `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の `main`。
 - classic branch protection の削除や更新はこの ticket の script スコープから外し、`Settings > Rules` / `Settings > Branches` の監査だけ継続する。
 - 最新コメントで Python 版の可読性に再指摘が入ったため、repo 既存の Bun 運用に寄せて TypeScript 化する。
+- 追加コメントを受け、引数未指定時は current git repository の `origin` から対象 GitHub repo を自動解決できるようにする。
 
 ## 要件
 
@@ -15,6 +16,7 @@
 - ruleset の bypass actor に `RepositoryRole` の admin を `pull_request` モードで設定し、admin だけが PR 経由でセルフマージできること。
 - ruleset の pull request rule は `approval 1 / dismiss stale reviews / last push approval / code owner review false / review thread resolution false / allowed merge methods = merge,squash` を満たすこと。
 - script は classic branch protection を新規作成・更新・削除しないこと。
+- 引数未指定時は current git repository の `origin` remote から `owner/repo` を解決し、明示引数と同じ設定フローを実行できること。
 - `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の `Settings > Rules` / `Settings > Branches` / effective rules を監査し、malicious collaborator を想定した妥当性を説明できること。
 - `CODEOWNERS` の有無に依存せず、admin bypass を ruleset で表現すること。
 
@@ -48,6 +50,7 @@
 - repo には `bun` の導入実績があり、`dot_local/bin/executable_deepwiki` など Bun 実行の単一ファイル script も既に存在する。
 - `#!/usr/bin/env bun` の拡張子なし実行ファイルでも TypeScript 構文を解釈できることを `/tmp` の最小 script で確認した。
 - 既存 path を維持しつつ、GitHub API 向けの config を object literal でそのまま並べる形にすると、payload の意図が Python 版より追いやすい。
+- この repo の `origin` は `https://github.com/ryo246912/dotfiles.git` であり、引数未指定でも current directory から対象 repo を一意に解決できる条件がある。
 
 ### GitHub 仕様上の判断材料
 
@@ -62,6 +65,7 @@
 - 既存 path `dot_local/bin/executable_setup-github` は維持したまま、shebang を `#!/usr/bin/env bun` に切り替える。
 - repository settings と ruleset config を GitHub API の field 名に寄せた object literal で宣言し、payload 変換を最小限にする。
 - `gh api` 呼び出しは薄い helper にまとめ、repository settings / ruleset / dependabot / notifications の責務を保つ。
+- 引数解決は `owner/repo` の明示指定を優先しつつ、未指定時だけ current git repository の `origin` を読み取る分岐を追加する。
 - `RepositoryRole(admin) + pull_request` bypass、`allowed_merge_methods=[merge,squash]`、optional required status checks の扱いは維持する。
 
 ### 2. remote 監査の観点を ruleset 中心に固定する
@@ -98,8 +102,11 @@
 - `gh api repos/ryo246912/dotfiles/branches/main/protection`
 - `gh pr view 739 --repo ryo246912/dotfiles --json url,isDraft,labels,headRefName,headRefOid,baseRefName,state,title`
 - `gh api repos/ryo246912/dotfiles/compare/main...DOTFILE-66`
+- `./dot_local/bin/executable_setup-github`
+- `zsh -lc 'cd /tmp && /Users/ryo./Programming/ai/DOTFILE-66/dot_local/bin/executable_setup-github'`
 - 実装後の期待値:
   - `setup-github` は Bun/TypeScript 実装へ置き換わるが ruleset を更新するだけで classic branch protection API を叩かない
+  - 引数未指定時は current git repository の `origin` から `owner/repo` を解決して実行できる
   - `rulesets/<id>` に admin `RepositoryRole` bypass と PR review 条件が残る
   - `rules/branches/main` に ruleset 由来の `pull_request` / `non_fast_forward` / `required_linear_history` / `required_signatures` が残る
   - `branches/main/protection` は監査対象としてのみ扱い、script の副作用で変化しない

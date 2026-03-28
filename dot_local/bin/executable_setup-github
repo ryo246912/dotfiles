@@ -20,6 +20,13 @@ type RepositoryInfo = {
   private?: boolean
 }
 
+type RepositoryTarget = {
+  owner: string
+  repoName: string
+  repoPath: string
+  source: "argument" | "current git repository"
+}
+
 type RulesetSummary = {
   id?: number
   name?: string
@@ -152,15 +159,79 @@ function buildRulesetPayload() {
   }
 }
 
+function parseGitHubRepoPath(remoteUrl: string) {
+  const match = remoteUrl
+    .trim()
+    .match(
+      /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([^/]+)\/([^/]+?)(?:\.git)?\/?$/,
+    )
+
+  if (!match) {
+    return null
+  }
+
+  return `${match[1]}/${match[2]}`
+}
+
+function resolveRepoFromCurrentDirectory(): RepositoryTarget {
+  const insideWorktree = runCommand(
+    ["git", "rev-parse", "--is-inside-work-tree"],
+    { check: false },
+  )
+
+  if (insideWorktree.status !== 0 || insideWorktree.stdout.trim() !== "true") {
+    console.error(
+      "エラー: 引数が未指定で、カレントディレクトリは git repository として判定できませんでした。",
+    )
+    showHelp()
+    process.exit(1)
+  }
+
+  const remoteUrlResult = runCommand(
+    ["git", "config", "--get", "remote.origin.url"],
+    {
+      check: false,
+    },
+  )
+  const remoteUrl = remoteUrlResult.stdout.trim()
+
+  if (remoteUrlResult.status !== 0 || remoteUrl === "") {
+    console.error(
+      "エラー: 引数が未指定ですが、current git repository に `origin` remote がありません。",
+    )
+    showHelp()
+    process.exit(1)
+  }
+
+  const repoPath = parseGitHubRepoPath(remoteUrl)
+
+  if (!repoPath) {
+    console.error(
+      `エラー: origin remote '${remoteUrl}' から GitHub の owner/repo を解決できません。`,
+    )
+    showHelp()
+    process.exit(1)
+  }
+
+  const [owner, repoName] = repoPath.split("/", 2)
+
+  return {
+    owner,
+    repoName,
+    repoPath,
+    source: "current git repository",
+  }
+}
+
 function showHelp() {
   const scriptName = process.argv[1]
 
-  console.log(`使用方法: ${scriptName} <owner/repository_name>
+  console.log(`使用方法: ${scriptName} [owner/repository_name]
 
 リポジトリと ruleset を設定します。
 
-必須引数:
-  owner/repository_name     設定を更新するリポジトリ（owner/repo 形式）
+引数:
+  owner/repository_name     省略可能。未指定時は current git repository の \`origin\` から解決
 
 設定値を変更したい場合は、スクリプト内の定数オブジェクトを編集してください。
 
@@ -199,14 +270,14 @@ ruleset 設定（固定）:
   }
 
 例:
+  ${scriptName}
   ${scriptName} username/my-repo
   ${scriptName} organization/another-repo`)
 }
 
-function parseArgs(argv: string[]) {
+function parseArgs(argv: string[]): RepositoryTarget {
   if (argv.length === 0) {
-    showHelp()
-    process.exit(1)
+    return resolveRepoFromCurrentDirectory()
   }
 
   if (argv[0] === "-h" || argv[0] === "--help") {
@@ -245,7 +316,12 @@ function parseArgs(argv: string[]) {
     process.exit(1)
   }
 
-  return { owner, repoName, repoPath: `${owner}/${repoName}` }
+  return {
+    owner,
+    repoName,
+    repoPath: `${owner}/${repoName}`,
+    source: "argument",
+  }
 }
 
 function ensureRepositoryExists(repoPath: string) {
@@ -465,10 +541,11 @@ function setupDependabotSecurity(repoPath: string) {
 }
 
 function main() {
-  const { repoPath } = parseArgs(process.argv.slice(2))
+  const { repoPath, source } = parseArgs(process.argv.slice(2))
 
   console.log("=== GitHub リポジトリと ruleset の設定を開始します ===")
   console.log(`リポジトリ: ${repoPath}`)
+  console.log(`解決元: ${source === "argument" ? "引数" : "current git repository"}`)
   console.log("")
 
   const isPrivate = ensureRepositoryExists(repoPath)
