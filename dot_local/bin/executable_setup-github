@@ -1,131 +1,163 @@
-#!/bin/bash
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# ///
 
-# GitHub リポジトリの設定更新とルールセット作成を行う統合スクリプト
-# 使用方法: setup-github <owner/repository_name>
+import json
+import re
+import subprocess
+import sys
+from typing import Any, Optional
 
-set -euo pipefail
 
-# 固定値設定
-REPO_NAME=""
-OWNER=""
-REPO_FULL_NAME=""
-IS_PRIVATE=""
+RULESET_NAME = "main"
+ENFORCEMENT = "active"
+DEFAULT_BRANCH_REF = "~DEFAULT_BRANCH"
+REQUIRED_APPROVING_REVIEW_COUNT = 1
+REQUIRE_LAST_PUSH_APPROVAL = True
+DISMISS_STALE_REVIEWS = True
+REQUIRE_CODE_OWNER_REVIEW = False
+REQUIRED_REVIEW_THREAD_RESOLUTION = False
+ALLOWED_MERGE_METHODS = ["merge", "squash"]
+REQUIRED_STATUS_CHECK_CONTEXTS: list[str] = []
+ADMIN_BYPASS_ROLE_ID = 5
 
-# リポジトリ設定
-ALLOW_SQUASH_MERGE="true"
-ALLOW_MERGE_COMMIT="true"
+ALLOW_SQUASH_MERGE = True
+ALLOW_MERGE_COMMIT = True
 
-# ルールセット設定
-RULESET_NAME="main"
-ENFORCEMENT="active"
-DEFAULT_BRANCH_REF="~DEFAULT_BRANCH"
-REQUIRED_APPROVING_REVIEW_COUNT="1"
-REQUIRE_LAST_PUSH_APPROVAL="true"
-DISMISS_STALE_REVIEWS="true"
-REQUIRE_CODE_OWNER_REVIEW="false"
-REQUIRED_REVIEW_THREAD_RESOLUTION="false"
-ALLOWED_MERGE_METHODS_JSON='["merge","squash"]'
-ALLOWED_MERGE_METHODS_DISPLAY="merge, squash"
-REQUIRED_STATUS_CHECK_CONTEXTS=()
-# GitHub の RepositoryRole で admin を表す固定 ID
-ADMIN_BYPASS_ROLE_ID="5"
 
-# JSON文字列の最小エスケープ
-json_escape() {
-    local value="$1"
-    value=${value//\\/\\\\}
-    value=${value//\"/\\\"}
-    printf '%s' "$value"
-}
+def run_command(
+    command: list[str],
+    *,
+    input_text: Optional[str] = None,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command,
+        input=input_text,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if check and result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or "command failed"
+        raise RuntimeError(message)
+    return result
 
-# optionalなrequired status checksルールを構築
-build_required_status_checks_rule_json() {
-    if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
-        return
-    fi
 
-    local checks_json=""
-    local context
+def format_field_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
-    for context in "${REQUIRED_STATUS_CHECK_CONTEXTS[@]}"; do
-        local escaped_context
-        escaped_context=$(json_escape "$context")
 
-        if [[ -n "$checks_json" ]]; then
-            checks_json+=", "
-        fi
+def gh_api(
+    endpoint: str,
+    *,
+    method: Optional[str] = None,
+    fields: Optional[dict[str, Any]] = None,
+    input_json: Optional[str] = None,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    command = ["gh", "api", endpoint]
+    if method:
+        command.extend(["--method", method])
+    if fields:
+        for name, value in fields.items():
+            command.extend(["--field", f"{name}={format_field_value(value)}"])
+    if input_json is not None:
+        command.extend(["--input", "-"])
+    return run_command(command, input_text=input_json, check=check)
 
-        checks_json+="{\"context\":\"$escaped_context\"}"
-    done
 
-    cat <<EOF
-,
-    { "type": "required_status_checks",
-      "parameters": {
-        "do_not_enforce_on_create": false,
-        "required_status_checks": [$checks_json],
-        "strict_required_status_checks_policy": true
-      }
+def gh_api_json(
+    endpoint: str,
+    *,
+    method: Optional[str] = None,
+    fields: Optional[dict[str, Any]] = None,
+    input_json: Optional[str] = None,
+    check: bool = True,
+) -> Any:
+    result = gh_api(
+        endpoint,
+        method=method,
+        fields=fields,
+        input_json=input_json,
+        check=check,
+    )
+    output = result.stdout.strip()
+    if not output:
+        return None
+    return json.loads(output)
+
+
+def build_ruleset_payload() -> dict[str, Any]:
+    rules: list[dict[str, Any]] = [
+        {"type": "creation", "parameters": {}},
+        {"type": "deletion", "parameters": {}},
+        {"type": "non_fast_forward"},
+        {"type": "required_linear_history"},
+        {"type": "required_signatures"},
+        {
+            "type": "pull_request",
+            "parameters": {
+                "dismiss_stale_reviews_on_push": DISMISS_STALE_REVIEWS,
+                "require_code_owner_review": REQUIRE_CODE_OWNER_REVIEW,
+                "require_last_push_approval": REQUIRE_LAST_PUSH_APPROVAL,
+                "required_approving_review_count": REQUIRED_APPROVING_REVIEW_COUNT,
+                "required_review_thread_resolution": REQUIRED_REVIEW_THREAD_RESOLUTION,
+                "allowed_merge_methods": ALLOWED_MERGE_METHODS,
+            },
+        },
+    ]
+
+    if REQUIRED_STATUS_CHECK_CONTEXTS:
+        rules.append(
+            {
+                "type": "required_status_checks",
+                "parameters": {
+                    "do_not_enforce_on_create": False,
+                    "required_status_checks": [
+                        {"context": context}
+                        for context in REQUIRED_STATUS_CHECK_CONTEXTS
+                    ],
+                    "strict_required_status_checks_policy": True,
+                },
+            }
+        )
+
+    return {
+        "name": RULESET_NAME,
+        "target": "branch",
+        "enforcement": ENFORCEMENT,
+        "bypass_actors": [
+            {
+                "actor_id": ADMIN_BYPASS_ROLE_ID,
+                "actor_type": "RepositoryRole",
+                "bypass_mode": "pull_request",
+            }
+        ],
+        "conditions": {
+            "ref_name": {
+                "include": [DEFAULT_BRANCH_REF],
+                "exclude": [],
+            }
+        },
+        "rules": rules,
     }
-EOF
-}
 
-# ルールセットJSON構築共通関数
-build_ruleset_json() {
-    local status_checks_rule_json
-    status_checks_rule_json=$(build_required_status_checks_rule_json)
 
-    cat <<EOF | grep -v '#'
-{
-  "name": "$RULESET_NAME",
-  "target": "branch",
-  "enforcement": "$ENFORCEMENT",
-  "bypass_actors": [
-    { "actor_id": $ADMIN_BYPASS_ROLE_ID, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }
-  ],
-  "conditions": {
-    "ref_name": {
-      "include": ["$DEFAULT_BRANCH_REF"],
-      "exclude": []
-    }
-  },
-  "rules": [
-    # Restrict creations
-    { "type": "creation", "parameters": {} },
-    # Restrict deletions
-    { "type": "deletion", "parameters": {} },
-    # Require linear history
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" },
-    # Require signed commits
-    { "type": "required_signatures" },
-    # Require a pull request before merging
-    { "type": "pull_request",
-      "parameters": {
-        "dismiss_stale_reviews_on_push": $DISMISS_STALE_REVIEWS,
-        "require_code_owner_review": $REQUIRE_CODE_OWNER_REVIEW,
-        "require_last_push_approval": $REQUIRE_LAST_PUSH_APPROVAL,
-        "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": $REQUIRED_REVIEW_THREAD_RESOLUTION,
-        "allowed_merge_methods": $ALLOWED_MERGE_METHODS_JSON
-      }
-    }$status_checks_rule_json
-  ]
-}
-EOF
-}
+def show_help() -> None:
+    script_name = sys.argv[0]
+    print(
+        f"""使用方法: {script_name} <owner/repository_name>
 
-# ヘルプメッセージ
-show_help() {
-    cat << EOF
-使用方法: $0 <owner/repository_name>
-
-リポジトリとルールセットを設定します。
+リポジトリと ruleset を設定します。
 
 必須引数:
-  owner/repository_name     設定を更新するリポジトリ（owner/repo形式）
+  owner/repository_name     設定を更新するリポジトリ（owner/repo 形式）
 
-設定値を変更したい場合は、スクリプト内の設定値を編集してください。
+設定値を変更したい場合は、スクリプト内の定数を編集してください。
 
 リポジトリ設定（固定）:
   スカッシュマージ許可: true
@@ -135,294 +167,250 @@ show_help() {
   マージ後ブランチ削除: true
   Issues機能: true
 
-Dependabotセキュリティ設定（固定）:
+Dependabot セキュリティ設定（固定）:
   Dependabot alerts: enabled
   Dependabot security updates: enabled
   Dependency graph: enabled
   Dependabot version updates: 状態確認のみ（手動で無効化が必要）
 
-ルールセット設定（固定）:
-  ルールセット名: main
-  実行モード: active
-  対象ブランチ: $DEFAULT_BRANCH_REF
+ruleset 設定（固定）:
+  ルールセット名: {RULESET_NAME}
+  実行モード: {ENFORCEMENT}
+  対象ブランチ: {DEFAULT_BRANCH_REF}
   classic branch protection: 扱わない
-  bypass actor: admin role（pull_requestのみ）
+  bypass actor: admin role（pull_request のみ）
   削除防止: true
-  更新許可: false（PR経由のみ）
-  必要承認数: 1
-  最新プッシュ承認要求: true
-  古いレビュー却下: true
-  Code Owner review要求: false
-  会話解決要求: false
-  許可マージ方法: $ALLOWED_MERGE_METHODS_DISPLAY
-  required status checks: 既定では未設定
+  更新許可: false（PR 経由のみ）
+  必要承認数: {REQUIRED_APPROVING_REVIEW_COUNT}
+  最新プッシュ承認要求: {str(REQUIRE_LAST_PUSH_APPROVAL).lower()}
+  古いレビュー却下: {str(DISMISS_STALE_REVIEWS).lower()}
+  Code Owner review 要求: {str(REQUIRE_CODE_OWNER_REVIEW).lower()}
+  会話解決要求: {str(REQUIRED_REVIEW_THREAD_RESOLUTION).lower()}
+  許可マージ方法: {", ".join(ALLOWED_MERGE_METHODS)}
+  required status checks: {"未設定" if not REQUIRED_STATUS_CHECK_CONTEXTS else ", ".join(REQUIRED_STATUS_CHECK_CONTEXTS)}
 
 例:
-  $0 username/my-repo
-  $0 organization/another-repo
+  {script_name} username/my-repo
+  {script_name} organization/another-repo
+"""
+    )
 
-EOF
-}
 
-# 引数解析
-parse_args() {
-    if [[ $# -eq 0 ]]; then
-        show_help
-        exit 1
-    fi
+def parse_args(argv: list[str]) -> tuple[str, str]:
+    if not argv:
+        show_help()
+        raise SystemExit(1)
 
-    # ヘルプオプションの確認
-    if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-        show_help
-        exit 0
-    fi
+    if argv[0] in {"-h", "--help"}:
+        show_help()
+        raise SystemExit(0)
 
-    REPO_FULL_NAME="$1"
+    if len(argv) > 1:
+        print(f"エラー: 余分な引数が指定されています: {' '.join(argv[1:])}", file=sys.stderr)
+        print("このスクリプトは owner/repository 形式の引数のみを受け取ります。", file=sys.stderr)
+        show_help()
+        raise SystemExit(1)
 
-    # 2番目以降の引数があった場合はエラー
-    if [[ $# -gt 1 ]]; then
-        echo "エラー: 余分な引数が指定されています: ${@:2}" >&2
-        echo "このスクリプトはowner/repository形式の引数のみを受け取ります。" >&2
-        show_help
-        exit 1
-    fi
+    repo_full_name = argv[0]
+    if not re.fullmatch(r"[^/]+/[^/]+", repo_full_name):
+        print("エラー: リポジトリ名は 'owner/repository' の形式で指定してください。", file=sys.stderr)
+        print("例: username/my-repo", file=sys.stderr)
+        show_help()
+        raise SystemExit(1)
 
-    # owner/repository形式の検証と分割
-    if [[ ! "$REPO_FULL_NAME" =~ ^[^/]+/[^/]+$ ]]; then
-        echo "エラー: リポジトリ名は 'owner/repository' の形式で指定してください。" >&2
-        echo "例: username/my-repo" >&2
-        show_help
-        exit 1
-    fi
+    owner, repo_name = repo_full_name.split("/", 1)
+    if not owner or not repo_name:
+        print("エラー: owner または repository 名が空です。", file=sys.stderr)
+        print("正しい形式: owner/repository", file=sys.stderr)
+        show_help()
+        raise SystemExit(1)
 
-    # ownerとrepository名を分割
-    OWNER="${REPO_FULL_NAME%%/*}"
-    REPO_NAME="${REPO_FULL_NAME##*/}"
+    return owner, repo_name
 
-    # 空の値をチェック
-    if [[ -z "$OWNER" || -z "$REPO_NAME" ]]; then
-        echo "エラー: owner または repository 名が空です。" >&2
-        echo "正しい形式: owner/repository" >&2
-        show_help
-        exit 1
-    fi
-}
 
-# リポジトリの存在確認（必須）
-ensure_repository_exists() {
-    local repo_path="$OWNER/$REPO_NAME"
-    if ! gh repo view "$repo_path" &>/dev/null; then
-        echo "エラー: リポジトリ '$repo_path' が見つかりません。" >&2
-        echo "リポジトリが存在することを確認してください。" >&2
-        exit 1
-    fi
+def ensure_repository_exists(repo_path: str) -> bool:
+    result = gh_api(f"repos/{repo_path}", check=False)
+    if result.returncode != 0:
+        print(f"エラー: リポジトリ '{repo_path}' が見つかりません。", file=sys.stderr)
+        print("リポジトリが存在することを確認してください。", file=sys.stderr)
+        raise SystemExit(1)
 
-    # プライベートリポジトリかどうかを判定
-    IS_PRIVATE=$(gh api "repos/$repo_path" --jq '.private' 2>/dev/null || echo "false")
+    repo_info = json.loads(result.stdout)
+    is_private = bool(repo_info.get("private", False))
+    if is_private:
+        print("注意: プライベートリポジトリです。一部の機能（ruleset）は GitHub Pro が必要なためスキップされます。")
+    return is_private
 
-    if [ "$IS_PRIVATE" = "true" ]; then
-        echo "注意: プライベートリポジトリです。一部の機能（ルールセット）はGitHub Proが必要なためスキップされます。"
-    fi
-}
 
-# リポジトリ設定更新
-update_repository_settings() {
-    local repo_path="$OWNER/$REPO_NAME"
+def update_repository_settings(repo_path: str) -> None:
+    print("リポジトリ設定を更新中...")
+    result = gh_api(
+        f"repos/{repo_path}",
+        method="PATCH",
+        fields={
+            "allow_squash_merge": ALLOW_SQUASH_MERGE,
+            "allow_merge_commit": ALLOW_MERGE_COMMIT,
+            "allow_rebase_merge": False,
+            "allow_update_branch": True,
+            "delete_branch_on_merge": True,
+            "has_issues": True,
+        },
+        check=False,
+    )
+    if result.returncode != 0:
+        print("注意: 一部の設定更新に失敗しました。権限を確認してください。")
 
-    # マージ設定とその他の設定をAPI経由で更新
-    echo "リポジトリ設定を更新中..."
-    gh api "repos/$repo_path" --method PATCH \
-        --field allow_squash_merge="$ALLOW_SQUASH_MERGE" \
-        --field allow_merge_commit="$ALLOW_MERGE_COMMIT" \
-        --field allow_rebase_merge=false \
-        --field allow_update_branch=true \
-        --field delete_branch_on_merge=true \
-        --field has_issues=true \
-        > /dev/null \
-        2>/dev/null || echo "注意: 一部の設定更新に失敗しました。権限を確認してください。"
+    print(f"リポジトリ '{repo_path}' の設定を更新しました。")
+    print("更新された設定:")
+    print(f"  - スカッシュマージ許可: {str(ALLOW_SQUASH_MERGE).lower()}")
+    print(f"  - マージコミット許可: {str(ALLOW_MERGE_COMMIT).lower()}")
+    print("  - リベースマージ許可: false")
+    print("  - ブランチ更新許可: true")
+    print("  - マージ後ブランチ削除: true")
+    print("  - Issues機能: true")
 
-    echo "リポジトリ '$repo_path' の設定を更新しました。"
-    echo "更新された設定:"
-    echo "  - スカッシュマージ許可: $ALLOW_SQUASH_MERGE"
-    echo "  - マージコミット許可: $ALLOW_MERGE_COMMIT"
-    echo "  - リベースマージ許可: false"
-    echo "  - ブランチ更新許可: true"
-    echo "  - マージ後ブランチ削除: true"
-    echo "  - Issues機能: true"
-}
 
-# 既存ルールセットの確認
-get_existing_ruleset_id() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local ruleset_id
+def get_existing_ruleset_id(repo_path: str) -> Optional[int]:
+    rulesets = gh_api_json(f"repos/{repo_path}/rulesets")
+    if not isinstance(rulesets, list):
+        return None
+    for ruleset in rulesets:
+        if ruleset.get("name") == RULESET_NAME:
+            return ruleset.get("id")
+    return None
 
-    ruleset_id=$(gh api "repos/$repo_path/rulesets" --jq ".[] | select(.name == \"$RULESET_NAME\") | .id" 2>/dev/null || echo "")
-    echo "$ruleset_id"
-}
 
-# ルールセット作成
-create_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
-    echo "ルールセット '$RULESET_NAME' を作成しています..."
+def create_ruleset(repo_path: str) -> None:
+    print(f"ルールセット '{RULESET_NAME}' を作成しています...")
+    payload = json.dumps(build_ruleset_payload())
+    gh_api(f"repos/{repo_path}/rulesets", method="POST", input_json=payload)
+    print(f"ルールセット '{RULESET_NAME}' を作成しました。")
 
-    local ruleset_json
-    ruleset_json=$(build_ruleset_json)
 
-    gh api "repos/$repo_path/rulesets" \
-        --method POST \
-        --input - <<< "$ruleset_json" \
-        --jq '.id' > /dev/null
+def update_ruleset(repo_path: str, ruleset_id: int) -> None:
+    print(f"ルールセット '{RULESET_NAME}' (ID: {ruleset_id}) を更新しています...")
+    payload = json.dumps(build_ruleset_payload())
+    gh_api(f"repos/{repo_path}/rulesets/{ruleset_id}", method="PUT", input_json=payload)
+    print(f"ルールセット '{RULESET_NAME}' を更新しました。")
 
-    echo "ルールセット '$RULESET_NAME' を作成しました。"
-}
 
-# ルールセット更新
-update_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local ruleset_id="$1"
-    echo "ルールセット '$RULESET_NAME' (ID: $ruleset_id) を更新しています..."
+def setup_ruleset(repo_path: str) -> None:
+    existing_ruleset_id = get_existing_ruleset_id(repo_path)
+    if existing_ruleset_id is not None:
+        print("ルールセットが既に存在します。更新します。")
+        update_ruleset(repo_path, existing_ruleset_id)
+    else:
+        create_ruleset(repo_path)
 
-    local ruleset_json
-    ruleset_json=$(build_ruleset_json)
+    print("ルールセット設定が完了しました。")
+    print("設定されたルールセット:")
+    print(f"  - ルールセット名: {RULESET_NAME}")
+    print(f"  - 実行モード: {ENFORCEMENT}")
+    print(f"  - 対象ブランチ: {DEFAULT_BRANCH_REF}")
+    print("  - bypass actor: admin role (pull_request only)")
+    print("  - 削除防止: true")
+    print("  - 更新許可: false (PR 経由のみ)")
+    print(f"  - 必要承認数: {REQUIRED_APPROVING_REVIEW_COUNT}")
+    print(f"  - 最新プッシュ承認要求: {str(REQUIRE_LAST_PUSH_APPROVAL).lower()}")
+    print(f"  - 古いレビュー却下: {str(DISMISS_STALE_REVIEWS).lower()}")
+    print(f"  - Code Owner review要求: {str(REQUIRE_CODE_OWNER_REVIEW).lower()}")
+    print(f"  - 会話解決要求: {str(REQUIRED_REVIEW_THREAD_RESOLUTION).lower()}")
+    print(f"  - 許可マージ方法: {', '.join(ALLOWED_MERGE_METHODS)}")
+    if REQUIRED_STATUS_CHECK_CONTEXTS:
+        print(f"  - required status checks: {' '.join(REQUIRED_STATUS_CHECK_CONTEXTS)}")
+    else:
+        print("  - required status checks: 未設定")
 
-    gh api "repos/$repo_path/rulesets/$ruleset_id" \
-        --method PUT \
-        --input - <<< "$ruleset_json" \
-        --jq '.id' > /dev/null
 
-    echo "ルールセット '$RULESET_NAME' を更新しました。"
-}
+def setup_notifications(repo_path: str) -> None:
+    result = gh_api(
+        f"repos/{repo_path}/subscription",
+        method="PUT",
+        fields={"ignored": True},
+        check=False,
+    )
+    if result.returncode == 0:
+        print(f"リポジトリ '{repo_path}' の通知を Ignore に設定しました。")
+    else:
+        print("注意: 通知設定に失敗しました。権限を確認してください。", file=sys.stderr)
 
-# ルールセット設定処理
-setup_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
 
-    # 既存ルールセットの確認
-    local existing_ruleset_id
-    existing_ruleset_id=$(get_existing_ruleset_id)
+def setup_dependabot_security(repo_path: str) -> None:
+    print("Dependabot セキュリティ機能を設定中...")
+    success = True
 
-    if [[ -n "$existing_ruleset_id" ]]; then
-        echo "ルールセットが既に存在します。更新します。"
-        update_ruleset "$existing_ruleset_id"
-    else
-        create_ruleset
-    fi
+    if gh_api(f"repos/{repo_path}/vulnerability-alerts", method="PUT", check=False).returncode == 0:
+        print("  - Dependabot alerts を有効化しました")
+    else:
+        print("  - Dependabot alerts の有効化に失敗しました", file=sys.stderr)
+        success = False
 
-    echo "ルールセット設定が完了しました。"
-    echo "設定されたルールセット:"
-    echo "  - ルールセット名: $RULESET_NAME"
-    echo "  - 実行モード: $ENFORCEMENT"
-    echo "  - 対象ブランチ: $DEFAULT_BRANCH_REF"
-    echo "  - bypass actor: admin role (pull_request only)"
-    echo "  - 削除防止: true"
-    echo "  - 更新許可: false (PR経由のみ)"
-    echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
-    echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
-    echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
-    echo "  - Code Owner review要求: $REQUIRE_CODE_OWNER_REVIEW"
-    echo "  - 会話解決要求: $REQUIRED_REVIEW_THREAD_RESOLUTION"
-    echo "  - 許可マージ方法: $ALLOWED_MERGE_METHODS_DISPLAY"
-    if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
-        echo "  - required status checks: 未設定"
-    else
-        echo "  - required status checks: ${REQUIRED_STATUS_CHECK_CONTEXTS[*]}"
-    fi
-}
+    if gh_api(f"repos/{repo_path}/automated-security-fixes", method="PUT", check=False).returncode == 0:
+        print("  - Dependabot security updates を有効化しました")
+    else:
+        print("  - Dependabot security updates の有効化に失敗しました", file=sys.stderr)
+        success = False
 
-setup_notifications() {
-    local repo_path="$OWNER/$REPO_NAME"
+    dependency_graph_result = gh_api(
+        f"repos/{repo_path}",
+        method="PATCH",
+        fields={"has_vulnerability_alerts": True},
+        check=False,
+    )
+    if dependency_graph_result.returncode == 0:
+        print("  - Dependency graph を有効化しました")
+    else:
+        print("  - Dependency graph の有効化に失敗しました", file=sys.stderr)
+        success = False
 
-    if gh api -X PUT "repos/$repo_path/subscription" -f ignored=true > /dev/null 2>/dev/null; then
-        echo "リポジトリ '$repo_path' の通知をIgnoreに設定しました。"
-    else
-        echo "注意: 通知設定に失敗しました。権限を確認してください。" >&2
-    fi
-}
+    print("  - Dependabot version updates の状態を確認中...")
+    dependabot_config_result = gh_api(
+        f"repos/{repo_path}/contents/.github/dependabot.yml",
+        check=False,
+    )
+    if dependabot_config_result.returncode == 0:
+        print("  - Dependabot version updates が有効です（.github/dependabot.yml が存在）")
+        print("    無効化する場合は手動で .github/dependabot.yml を削除してください")
+    else:
+        print("  - Dependabot version updates は無効です（.github/dependabot.yml なし）")
 
-# Dependabotセキュリティ機能の有効化
-setup_dependabot_security() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local success=true
+    if success:
+        print("Dependabot セキュリティ機能の設定が完了しました。")
+    else:
+        print("注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。", file=sys.stderr)
 
-    echo "Dependabotセキュリティ機能を設定中..."
 
-    # Dependabot alerts を有効化
-    if gh api -X PUT "repos/$repo_path/vulnerability-alerts" 2>/dev/null; then
-        echo "  ✓ Dependabot alerts を有効化しました"
-    else
-        echo "  ✗ Dependabot alerts の有効化に失敗しました" >&2
-        success=false
-    fi
+def main(argv: list[str]) -> int:
+    owner, repo_name = parse_args(argv)
+    repo_path = f"{owner}/{repo_name}"
 
-    # Dependabot security updates を有効化
-    if gh api -X PUT "repos/$repo_path/automated-security-fixes" 2>/dev/null; then
-        echo "  ✓ Dependabot security updates を有効化しました"
-    else
-        echo "  ✗ Dependabot security updates の有効化に失敗しました" >&2
-        success=false
-    fi
+    print("=== GitHub リポジトリと ruleset の設定を開始します ===")
+    print(f"リポジトリ: {repo_path}")
+    print()
 
-    # Dependency graph を有効化（リポジトリ設定経由）
-    if gh api "repos/$repo_path" --method PATCH \
-        --field has_vulnerability_alerts=true > /dev/null 2>/dev/null; then
-        echo "  ✓ Dependency graph を有効化しました"
-    else
-        echo "  ✗ Dependency graph の有効化に失敗しました" >&2
-        success=false
-    fi
+    is_private = ensure_repository_exists(repo_path)
 
-    # Dependabot version updates の状態を確認（情報提供のみ）
-    echo "  ℹ Dependabot version updates の状態を確認中..."
-    if gh api "repos/$repo_path/contents/.github/dependabot.yml" 2>/dev/null >/dev/null; then
-        echo "  ⚠ Dependabot version updates が有効です（.github/dependabot.yml が存在）"
-        echo "    無効化する場合は手動で .github/dependabot.yml を削除してください"
-    else
-        echo "  ✓ Dependabot version updates は無効です（.github/dependabot.yml なし）"
-    fi
+    print("=== ステップ 1: リポジトリ設定の更新 ===")
+    update_repository_settings(repo_path)
+    print()
 
-    if [ "$success" = true ]; then
-        echo "Dependabotセキュリティ機能の設定が完了しました。"
-    else
-        echo "注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。" >&2
-    fi
-}
+    print("=== ステップ 2: ruleset の設定 ===")
+    if is_private:
+        print("プライベートリポジトリのため、ruleset 設定をスキップします（GitHub Pro が必要）。")
+    else:
+        setup_ruleset(repo_path)
+    print()
 
-# メイン処理
-main() {
-    parse_args "$@"
+    print("=== ステップ 3: Dependabot セキュリティ機能の有効化 ===")
+    setup_dependabot_security(repo_path)
+    print()
 
-    echo "=== GitHub リポジトリとルールセットの設定を開始します ==="
-    echo "リポジトリ: $OWNER/$REPO_NAME"
-    echo
+    print("=== ステップ 4: 通知設定 ===")
+    setup_notifications(repo_path)
 
-    # リポジトリの存在確認（必須）
-    ensure_repository_exists
+    print("=== 完了: すべての設定が完了しました ===")
+    return 0
 
-    # ステップ1: リポジトリ設定更新
-    echo "=== ステップ 1: リポジトリ設定の更新 ==="
-    update_repository_settings
-    echo
 
-    # ステップ2: ルールセット設定
-    echo "=== ステップ 2: ルールセットの設定 ==="
-    if [ "$IS_PRIVATE" = "true" ]; then
-        echo "プライベートリポジトリのため、ルールセット設定をスキップします（GitHub Pro が必要）。"
-    else
-        setup_ruleset
-    fi
-    echo
-
-    # ステップ3: Dependabotセキュリティ機能の有効化
-    echo "=== ステップ 3: Dependabotセキュリティ機能の有効化 ==="
-    setup_dependabot_security
-    echo
-
-    # ステップ4: 通知設定
-    echo "=== ステップ 4: 通知設定 ==="
-    setup_notifications
-
-    echo "=== 完了: すべての設定が完了しました ==="
-}
-
-# スクリプト実行
-main "$@"
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
