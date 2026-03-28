@@ -18,96 +18,52 @@ ALLOW_MERGE_COMMIT="true"
 # ルールセット設定
 RULESET_NAME="main"
 ENFORCEMENT="active"
-REF_INCLUDE=("~DEFAULT_BRANCH")
+DEFAULT_BRANCH_REF="~DEFAULT_BRANCH"
 REQUIRED_APPROVING_REVIEW_COUNT="1"
 REQUIRE_LAST_PUSH_APPROVAL="true"
 DISMISS_STALE_REVIEWS="true"
 REQUIRE_CODE_OWNER_REVIEW="false"
 REQUIRED_REVIEW_THREAD_RESOLUTION="false"
-ALLOWED_MERGE_METHODS=("merge" "squash")
+ALLOWED_MERGE_METHODS_JSON='["merge","squash"]'
+ALLOWED_MERGE_METHODS_DISPLAY="merge, squash"
 REQUIRED_STATUS_CHECK_CONTEXTS=()
 # GitHub の RepositoryRole で admin を表す固定 ID
-BYPASS_REPOSITORY_ROLE_IDS=("5")
+ADMIN_BYPASS_ROLE_ID="5"
 
-# JSON文字列のエスケープ
-escape_json_string() {
+# JSON文字列の最小エスケープ
+json_escape() {
     local value="$1"
     value=${value//\\/\\\\}
     value=${value//\"/\\\"}
     printf '%s' "$value"
 }
 
-# 文字列配列をJSON配列に変換
-strings_to_json() {
-    local items=("$@")
-    local json="["
-    local index
-
-    for index in "${!items[@]}"; do
-        local escaped
-        escaped=$(escape_json_string "${items[$index]}")
-        json="${json}\"${escaped}\""
-        if [[ $index -lt $((${#items[@]} - 1)) ]]; then
-            json="${json},"
-        fi
-    done
-
-    json="${json}]"
-    echo "$json"
-}
-
-# required status checks配列をJSON配列に変換
-status_checks_to_json() {
-    local contexts=("$@")
-    local json="["
-    local index
-
-    for index in "${!contexts[@]}"; do
-        local escaped
-        escaped=$(escape_json_string "${contexts[$index]}")
-        json="${json}{\"context\":\"${escaped}\"}"
-        if [[ $index -lt $((${#contexts[@]} - 1)) ]]; then
-            json="${json},"
-        fi
-    done
-
-    json="${json}]"
-    echo "$json"
-}
-
-# bypass actor配列をJSON配列に変換
-build_bypass_actors_json() {
-    local role_ids=("$@")
-    local json="["
-    local index
-
-    for index in "${!role_ids[@]}"; do
-        json="${json}{\"actor_id\":${role_ids[$index]},\"actor_type\":\"RepositoryRole\",\"bypass_mode\":\"pull_request\"}"
-        if [[ $index -lt $((${#role_ids[@]} - 1)) ]]; then
-            json="${json},"
-        fi
-    done
-
-    json="${json}]"
-    echo "$json"
-}
-
 # optionalなrequired status checksルールを構築
 build_required_status_checks_rule_json() {
     if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
-        echo ""
         return
     fi
 
-    local required_status_checks_json
-    required_status_checks_json=$(status_checks_to_json "${REQUIRED_STATUS_CHECK_CONTEXTS[@]}")
+    local checks_json=""
+    local context
+
+    for context in "${REQUIRED_STATUS_CHECK_CONTEXTS[@]}"; do
+        local escaped_context
+        escaped_context=$(json_escape "$context")
+
+        if [[ -n "$checks_json" ]]; then
+            checks_json+=", "
+        fi
+
+        checks_json+="{\"context\":\"$escaped_context\"}"
+    done
 
     cat <<EOF
 ,
     { "type": "required_status_checks",
       "parameters": {
         "do_not_enforce_on_create": false,
-        "required_status_checks": $required_status_checks_json,
+        "required_status_checks": [$checks_json],
         "strict_required_status_checks_policy": true
       }
     }
@@ -116,27 +72,6 @@ EOF
 
 # ルールセットJSON構築共通関数
 build_ruleset_json() {
-    local refs_json
-    refs_json=$(refs_to_json "${REF_INCLUDE[@]}")
-
-    local last_push_bool
-    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
-
-    local stale_reviews_bool
-    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
-
-    local code_owner_review_bool
-    code_owner_review_bool=$(bool_to_json "$REQUIRE_CODE_OWNER_REVIEW")
-
-    local review_thread_resolution_bool
-    review_thread_resolution_bool=$(bool_to_json "$REQUIRED_REVIEW_THREAD_RESOLUTION")
-
-    local allowed_merge_methods_json
-    allowed_merge_methods_json=$(strings_to_json "${ALLOWED_MERGE_METHODS[@]}")
-
-    local bypass_actors_json
-    bypass_actors_json=$(build_bypass_actors_json "${BYPASS_REPOSITORY_ROLE_IDS[@]}")
-
     local status_checks_rule_json
     status_checks_rule_json=$(build_required_status_checks_rule_json)
 
@@ -145,10 +80,12 @@ build_ruleset_json() {
   "name": "$RULESET_NAME",
   "target": "branch",
   "enforcement": "$ENFORCEMENT",
-  "bypass_actors": $bypass_actors_json,
+  "bypass_actors": [
+    { "actor_id": $ADMIN_BYPASS_ROLE_ID, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }
+  ],
   "conditions": {
     "ref_name": {
-      "include": $refs_json,
+      "include": ["$DEFAULT_BRANCH_REF"],
       "exclude": []
     }
   },
@@ -165,12 +102,12 @@ build_ruleset_json() {
     # Require a pull request before merging
     { "type": "pull_request",
       "parameters": {
-        "dismiss_stale_reviews_on_push": $stale_reviews_bool,
-        "require_code_owner_review": $code_owner_review_bool,
-        "require_last_push_approval": $last_push_bool,
+        "dismiss_stale_reviews_on_push": $DISMISS_STALE_REVIEWS,
+        "require_code_owner_review": $REQUIRE_CODE_OWNER_REVIEW,
+        "require_last_push_approval": $REQUIRE_LAST_PUSH_APPROVAL,
         "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": $review_thread_resolution_bool,
-        "allowed_merge_methods": $allowed_merge_methods_json
+        "required_review_thread_resolution": $REQUIRED_REVIEW_THREAD_RESOLUTION,
+        "allowed_merge_methods": $ALLOWED_MERGE_METHODS_JSON
       }
     }$status_checks_rule_json
   ]
@@ -207,7 +144,7 @@ Dependabotセキュリティ設定（固定）:
 ルールセット設定（固定）:
   ルールセット名: main
   実行モード: active
-  対象ブランチ: ~DEFAULT_BRANCH
+  対象ブランチ: $DEFAULT_BRANCH_REF
   classic branch protection: 扱わない
   bypass actor: admin role（pull_requestのみ）
   削除防止: true
@@ -217,7 +154,7 @@ Dependabotセキュリティ設定（固定）:
   古いレビュー却下: true
   Code Owner review要求: false
   会話解決要求: false
-  許可マージ方法: merge, squash
+  許可マージ方法: $ALLOWED_MERGE_METHODS_DISPLAY
   required status checks: 既定では未設定
 
 例:
@@ -314,29 +251,6 @@ update_repository_settings() {
     echo "  - Issues機能: true"
 }
 
-# 真偽値の変換
-bool_to_json() {
-    case "$1" in
-        true|True|TRUE) echo "true" ;;
-        false|False|FALSE) echo "false" ;;
-        *) echo "$1" ;;
-    esac
-}
-
-# ref_include配列をJSON配列に変換
-refs_to_json() {
-    local refs=("$@")
-    local json="["
-    for i in "${!refs[@]}"; do
-        json="$json\"${refs[i]}\""
-        if [[ $i -lt $((${#refs[@]} - 1)) ]]; then
-            json="$json,"
-        fi
-    done
-    json="$json]"
-    echo "$json"
-}
-
 # 既存ルールセットの確認
 get_existing_ruleset_id() {
     local repo_path="$OWNER/$REPO_NAME"
@@ -398,7 +312,7 @@ setup_ruleset() {
     echo "設定されたルールセット:"
     echo "  - ルールセット名: $RULESET_NAME"
     echo "  - 実行モード: $ENFORCEMENT"
-    echo "  - 対象ブランチ: ${REF_INCLUDE[*]}"
+    echo "  - 対象ブランチ: $DEFAULT_BRANCH_REF"
     echo "  - bypass actor: admin role (pull_request only)"
     echo "  - 削除防止: true"
     echo "  - 更新許可: false (PR経由のみ)"
@@ -407,7 +321,7 @@ setup_ruleset() {
     echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
     echo "  - Code Owner review要求: $REQUIRE_CODE_OWNER_REVIEW"
     echo "  - 会話解決要求: $REQUIRED_REVIEW_THREAD_RESOLUTION"
-    echo "  - 許可マージ方法: ${ALLOWED_MERGE_METHODS[*]}"
+    echo "  - 許可マージ方法: $ALLOWED_MERGE_METHODS_DISPLAY"
     if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
         echo "  - required status checks: 未設定"
     else
