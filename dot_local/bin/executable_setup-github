@@ -1,171 +1,176 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.9"
-# ///
+#!/usr/bin/env bun
 
-import json
-import re
-import subprocess
-import sys
-from typing import Any, Optional
+import { spawnSync } from "node:child_process"
 
+type FieldValue = string | number | boolean
 
-RULESET_NAME = "main"
-ENFORCEMENT = "active"
-DEFAULT_BRANCH_REF = "~DEFAULT_BRANCH"
-REQUIRED_APPROVING_REVIEW_COUNT = 1
-REQUIRE_LAST_PUSH_APPROVAL = True
-DISMISS_STALE_REVIEWS = True
-REQUIRE_CODE_OWNER_REVIEW = False
-REQUIRED_REVIEW_THREAD_RESOLUTION = False
-ALLOWED_MERGE_METHODS = ["merge", "squash"]
-REQUIRED_STATUS_CHECK_CONTEXTS: list[str] = []
-ADMIN_BYPASS_ROLE_ID = 5
+type CommandOptions = {
+  inputText?: string
+  check?: boolean
+}
 
-ALLOW_SQUASH_MERGE = True
-ALLOW_MERGE_COMMIT = True
+type GhApiOptions = {
+  method?: string
+  fields?: Record<string, FieldValue>
+  inputJson?: string
+  check?: boolean
+}
 
+type RepositoryInfo = {
+  private?: boolean
+}
 
-def run_command(
-    command: list[str],
-    *,
-    input_text: Optional[str] = None,
-    check: bool = True,
-) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
-        command,
-        input=input_text,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if check and result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or "command failed"
-        raise RuntimeError(message)
-    return result
+type RulesetSummary = {
+  id?: number
+  name?: string
+}
 
+const REPOSITORY_SETTINGS = {
+  allow_squash_merge: true,
+  allow_merge_commit: true,
+  allow_rebase_merge: false,
+  allow_update_branch: true,
+  delete_branch_on_merge: true,
+  has_issues: true,
+} as const
 
-def format_field_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    return str(value)
+const RULESET_CONFIG = {
+  name: "main",
+  target: "branch",
+  enforcement: "active",
+  default_branch_ref: "~DEFAULT_BRANCH",
+  bypass_actors: [
+    {
+      actor_id: 5,
+      actor_type: "RepositoryRole",
+      bypass_mode: "pull_request",
+    },
+  ],
+  pull_request: {
+    dismiss_stale_reviews_on_push: true,
+    require_code_owner_review: false,
+    require_last_push_approval: true,
+    required_approving_review_count: 1,
+    required_review_thread_resolution: false,
+    allowed_merge_methods: ["merge", "squash"],
+  },
+  required_status_check_contexts: [] as string[],
+} as const
 
+function runCommand(
+  command: string[],
+  { inputText, check = true }: CommandOptions = {},
+) {
+  const result = spawnSync(command[0], command.slice(1), {
+    input: inputText,
+    encoding: "utf-8",
+  })
 
-def gh_api(
-    endpoint: str,
-    *,
-    method: Optional[str] = None,
-    fields: Optional[dict[str, Any]] = None,
-    input_json: Optional[str] = None,
-    check: bool = True,
-) -> subprocess.CompletedProcess[str]:
-    command = ["gh", "api", endpoint]
-    if method:
-        command.extend(["--method", method])
-    if fields:
-        for name, value in fields.items():
-            command.extend(["--field", f"{name}={format_field_value(value)}"])
-    if input_json is not None:
-        command.extend(["--input", "-"])
-    return run_command(command, input_text=input_json, check=check)
+  if (result.error && check) {
+    throw result.error
+  }
 
+  if (check && result.status !== 0) {
+    const message =
+      result.stderr.trim() || result.stdout.trim() || "command failed"
+    throw new Error(message)
+  }
 
-def gh_api_json(
-    endpoint: str,
-    *,
-    method: Optional[str] = None,
-    fields: Optional[dict[str, Any]] = None,
-    input_json: Optional[str] = None,
-    check: bool = True,
-) -> Any:
-    result = gh_api(
-        endpoint,
-        method=method,
-        fields=fields,
-        input_json=input_json,
-        check=check,
-    )
-    output = result.stdout.strip()
-    if not output:
-        return None
-    return json.loads(output)
+  return result
+}
 
+function ghApi(
+  endpoint: string,
+  { method, fields, inputJson, check = true }: GhApiOptions = {},
+) {
+  const command = ["gh", "api", endpoint]
 
-def build_ruleset_payload() -> dict[str, Any]:
-    rules: list[dict[str, Any]] = [
-        {"type": "creation", "parameters": {}},
-        {"type": "deletion", "parameters": {}},
-        {"type": "non_fast_forward"},
-        {"type": "required_linear_history"},
-        {"type": "required_signatures"},
-        {
-            "type": "pull_request",
-            "parameters": {
-                "dismiss_stale_reviews_on_push": DISMISS_STALE_REVIEWS,
-                "require_code_owner_review": REQUIRE_CODE_OWNER_REVIEW,
-                "require_last_push_approval": REQUIRE_LAST_PUSH_APPROVAL,
-                "required_approving_review_count": REQUIRED_APPROVING_REVIEW_COUNT,
-                "required_review_thread_resolution": REQUIRED_REVIEW_THREAD_RESOLUTION,
-                "allowed_merge_methods": ALLOWED_MERGE_METHODS,
-            },
-        },
-    ]
+  if (method) {
+    command.push("--method", method)
+  }
 
-    if REQUIRED_STATUS_CHECK_CONTEXTS:
-        rules.append(
-            {
-                "type": "required_status_checks",
-                "parameters": {
-                    "do_not_enforce_on_create": False,
-                    "required_status_checks": [
-                        {"context": context}
-                        for context in REQUIRED_STATUS_CHECK_CONTEXTS
-                    ],
-                    "strict_required_status_checks_policy": True,
-                },
-            }
-        )
-
-    return {
-        "name": RULESET_NAME,
-        "target": "branch",
-        "enforcement": ENFORCEMENT,
-        "bypass_actors": [
-            {
-                "actor_id": ADMIN_BYPASS_ROLE_ID,
-                "actor_type": "RepositoryRole",
-                "bypass_mode": "pull_request",
-            }
-        ],
-        "conditions": {
-            "ref_name": {
-                "include": [DEFAULT_BRANCH_REF],
-                "exclude": [],
-            }
-        },
-        "rules": rules,
+  if (fields) {
+    for (const [name, value] of Object.entries(fields)) {
+      command.push("--field", `${name}=${String(value)}`)
     }
+  }
 
+  if (inputJson !== undefined) {
+    command.push("--input", "-")
+  }
 
-def show_help() -> None:
-    script_name = sys.argv[0]
-    print(
-        f"""使用方法: {script_name} <owner/repository_name>
+  return runCommand(command, { inputText: inputJson, check })
+}
+
+function ghApiJson<T>(
+  endpoint: string,
+  { method, fields, inputJson, check = true }: GhApiOptions = {},
+) {
+  const result = ghApi(endpoint, { method, fields, inputJson, check })
+  const output = result.stdout.trim()
+  return output ? (JSON.parse(output) as T) : null
+}
+
+function buildRulesetPayload() {
+  const rules = [
+    { type: "creation", parameters: {} },
+    { type: "deletion", parameters: {} },
+    { type: "non_fast_forward" },
+    { type: "required_linear_history" },
+    { type: "required_signatures" },
+    {
+      type: "pull_request",
+      parameters: RULESET_CONFIG.pull_request,
+    },
+  ]
+
+  if (RULESET_CONFIG.required_status_check_contexts.length > 0) {
+    rules.push({
+      type: "required_status_checks",
+      parameters: {
+        do_not_enforce_on_create: false,
+        required_status_checks: RULESET_CONFIG.required_status_check_contexts.map(
+          (context) => ({ context }),
+        ),
+        strict_required_status_checks_policy: true,
+      },
+    })
+  }
+
+  return {
+    name: RULESET_CONFIG.name,
+    target: RULESET_CONFIG.target,
+    enforcement: RULESET_CONFIG.enforcement,
+    bypass_actors: RULESET_CONFIG.bypass_actors,
+    conditions: {
+      ref_name: {
+        include: [RULESET_CONFIG.default_branch_ref],
+        exclude: [],
+      },
+    },
+    rules,
+  }
+}
+
+function showHelp() {
+  const scriptName = process.argv[1]
+
+  console.log(`使用方法: ${scriptName} <owner/repository_name>
 
 リポジトリと ruleset を設定します。
 
 必須引数:
   owner/repository_name     設定を更新するリポジトリ（owner/repo 形式）
 
-設定値を変更したい場合は、スクリプト内の定数を編集してください。
+設定値を変更したい場合は、スクリプト内の定数オブジェクトを編集してください。
 
 リポジトリ設定（固定）:
-  スカッシュマージ許可: true
-  マージコミット許可: true
-  リベースマージ許可: false
-  ブランチ更新許可: true
-  マージ後ブランチ削除: true
-  Issues機能: true
+  スカッシュマージ許可: ${String(REPOSITORY_SETTINGS.allow_squash_merge)}
+  マージコミット許可: ${String(REPOSITORY_SETTINGS.allow_merge_commit)}
+  リベースマージ許可: ${String(REPOSITORY_SETTINGS.allow_rebase_merge)}
+  ブランチ更新許可: ${String(REPOSITORY_SETTINGS.allow_update_branch)}
+  マージ後ブランチ削除: ${String(REPOSITORY_SETTINGS.delete_branch_on_merge)}
+  Issues機能: ${String(REPOSITORY_SETTINGS.has_issues)}
 
 Dependabot セキュリティ設定（固定）:
   Dependabot alerts: enabled
@@ -174,243 +179,322 @@ Dependabot セキュリティ設定（固定）:
   Dependabot version updates: 状態確認のみ（手動で無効化が必要）
 
 ruleset 設定（固定）:
-  ルールセット名: {RULESET_NAME}
-  実行モード: {ENFORCEMENT}
-  対象ブランチ: {DEFAULT_BRANCH_REF}
+  ルールセット名: ${RULESET_CONFIG.name}
+  実行モード: ${RULESET_CONFIG.enforcement}
+  対象ブランチ: ${RULESET_CONFIG.default_branch_ref}
   classic branch protection: 扱わない
   bypass actor: admin role（pull_request のみ）
   削除防止: true
   更新許可: false（PR 経由のみ）
-  必要承認数: {REQUIRED_APPROVING_REVIEW_COUNT}
-  最新プッシュ承認要求: {str(REQUIRE_LAST_PUSH_APPROVAL).lower()}
-  古いレビュー却下: {str(DISMISS_STALE_REVIEWS).lower()}
-  Code Owner review 要求: {str(REQUIRE_CODE_OWNER_REVIEW).lower()}
-  会話解決要求: {str(REQUIRED_REVIEW_THREAD_RESOLUTION).lower()}
-  許可マージ方法: {", ".join(ALLOWED_MERGE_METHODS)}
-  required status checks: {"未設定" if not REQUIRED_STATUS_CHECK_CONTEXTS else ", ".join(REQUIRED_STATUS_CHECK_CONTEXTS)}
+  必要承認数: ${RULESET_CONFIG.pull_request.required_approving_review_count}
+  最新プッシュ承認要求: ${String(RULESET_CONFIG.pull_request.require_last_push_approval)}
+  古いレビュー却下: ${String(RULESET_CONFIG.pull_request.dismiss_stale_reviews_on_push)}
+  Code Owner review 要求: ${String(RULESET_CONFIG.pull_request.require_code_owner_review)}
+  会話解決要求: ${String(RULESET_CONFIG.pull_request.required_review_thread_resolution)}
+  許可マージ方法: ${RULESET_CONFIG.pull_request.allowed_merge_methods.join(", ")}
+  required status checks: ${
+    RULESET_CONFIG.required_status_check_contexts.length > 0
+      ? RULESET_CONFIG.required_status_check_contexts.join(", ")
+      : "未設定"
+  }
 
 例:
-  {script_name} username/my-repo
-  {script_name} organization/another-repo
-"""
+  ${scriptName} username/my-repo
+  ${scriptName} organization/another-repo`)
+}
+
+function parseArgs(argv: string[]) {
+  if (argv.length === 0) {
+    showHelp()
+    process.exit(1)
+  }
+
+  if (argv[0] === "-h" || argv[0] === "--help") {
+    showHelp()
+    process.exit(0)
+  }
+
+  if (argv.length > 1) {
+    console.error(
+      `エラー: 余分な引数が指定されています: ${argv.slice(1).join(" ")}`,
     )
-
-
-def parse_args(argv: list[str]) -> tuple[str, str]:
-    if not argv:
-        show_help()
-        raise SystemExit(1)
-
-    if argv[0] in {"-h", "--help"}:
-        show_help()
-        raise SystemExit(0)
-
-    if len(argv) > 1:
-        print(f"エラー: 余分な引数が指定されています: {' '.join(argv[1:])}", file=sys.stderr)
-        print("このスクリプトは owner/repository 形式の引数のみを受け取ります。", file=sys.stderr)
-        show_help()
-        raise SystemExit(1)
-
-    repo_full_name = argv[0]
-    if not re.fullmatch(r"[^/]+/[^/]+", repo_full_name):
-        print("エラー: リポジトリ名は 'owner/repository' の形式で指定してください。", file=sys.stderr)
-        print("例: username/my-repo", file=sys.stderr)
-        show_help()
-        raise SystemExit(1)
-
-    owner, repo_name = repo_full_name.split("/", 1)
-    if not owner or not repo_name:
-        print("エラー: owner または repository 名が空です。", file=sys.stderr)
-        print("正しい形式: owner/repository", file=sys.stderr)
-        show_help()
-        raise SystemExit(1)
-
-    return owner, repo_name
-
-
-def ensure_repository_exists(repo_path: str) -> bool:
-    result = gh_api(f"repos/{repo_path}", check=False)
-    if result.returncode != 0:
-        print(f"エラー: リポジトリ '{repo_path}' が見つかりません。", file=sys.stderr)
-        print("リポジトリが存在することを確認してください。", file=sys.stderr)
-        raise SystemExit(1)
-
-    repo_info = json.loads(result.stdout)
-    is_private = bool(repo_info.get("private", False))
-    if is_private:
-        print("注意: プライベートリポジトリです。一部の機能（ruleset）は GitHub Pro が必要なためスキップされます。")
-    return is_private
-
-
-def update_repository_settings(repo_path: str) -> None:
-    print("リポジトリ設定を更新中...")
-    result = gh_api(
-        f"repos/{repo_path}",
-        method="PATCH",
-        fields={
-            "allow_squash_merge": ALLOW_SQUASH_MERGE,
-            "allow_merge_commit": ALLOW_MERGE_COMMIT,
-            "allow_rebase_merge": False,
-            "allow_update_branch": True,
-            "delete_branch_on_merge": True,
-            "has_issues": True,
-        },
-        check=False,
+    console.error(
+      "このスクリプトは owner/repository 形式の引数のみを受け取ります。",
     )
-    if result.returncode != 0:
-        print("注意: 一部の設定更新に失敗しました。権限を確認してください。")
+    showHelp()
+    process.exit(1)
+  }
 
-    print(f"リポジトリ '{repo_path}' の設定を更新しました。")
-    print("更新された設定:")
-    print(f"  - スカッシュマージ許可: {str(ALLOW_SQUASH_MERGE).lower()}")
-    print(f"  - マージコミット許可: {str(ALLOW_MERGE_COMMIT).lower()}")
-    print("  - リベースマージ許可: false")
-    print("  - ブランチ更新許可: true")
-    print("  - マージ後ブランチ削除: true")
-    print("  - Issues機能: true")
+  const repoFullName = argv[0]
 
-
-def get_existing_ruleset_id(repo_path: str) -> Optional[int]:
-    rulesets = gh_api_json(f"repos/{repo_path}/rulesets")
-    if not isinstance(rulesets, list):
-        return None
-    for ruleset in rulesets:
-        if ruleset.get("name") == RULESET_NAME:
-            return ruleset.get("id")
-    return None
-
-
-def create_ruleset(repo_path: str) -> None:
-    print(f"ルールセット '{RULESET_NAME}' を作成しています...")
-    payload = json.dumps(build_ruleset_payload())
-    gh_api(f"repos/{repo_path}/rulesets", method="POST", input_json=payload)
-    print(f"ルールセット '{RULESET_NAME}' を作成しました。")
-
-
-def update_ruleset(repo_path: str, ruleset_id: int) -> None:
-    print(f"ルールセット '{RULESET_NAME}' (ID: {ruleset_id}) を更新しています...")
-    payload = json.dumps(build_ruleset_payload())
-    gh_api(f"repos/{repo_path}/rulesets/{ruleset_id}", method="PUT", input_json=payload)
-    print(f"ルールセット '{RULESET_NAME}' を更新しました。")
-
-
-def setup_ruleset(repo_path: str) -> None:
-    existing_ruleset_id = get_existing_ruleset_id(repo_path)
-    if existing_ruleset_id is not None:
-        print("ルールセットが既に存在します。更新します。")
-        update_ruleset(repo_path, existing_ruleset_id)
-    else:
-        create_ruleset(repo_path)
-
-    print("ルールセット設定が完了しました。")
-    print("設定されたルールセット:")
-    print(f"  - ルールセット名: {RULESET_NAME}")
-    print(f"  - 実行モード: {ENFORCEMENT}")
-    print(f"  - 対象ブランチ: {DEFAULT_BRANCH_REF}")
-    print("  - bypass actor: admin role (pull_request only)")
-    print("  - 削除防止: true")
-    print("  - 更新許可: false (PR 経由のみ)")
-    print(f"  - 必要承認数: {REQUIRED_APPROVING_REVIEW_COUNT}")
-    print(f"  - 最新プッシュ承認要求: {str(REQUIRE_LAST_PUSH_APPROVAL).lower()}")
-    print(f"  - 古いレビュー却下: {str(DISMISS_STALE_REVIEWS).lower()}")
-    print(f"  - Code Owner review要求: {str(REQUIRE_CODE_OWNER_REVIEW).lower()}")
-    print(f"  - 会話解決要求: {str(REQUIRED_REVIEW_THREAD_RESOLUTION).lower()}")
-    print(f"  - 許可マージ方法: {', '.join(ALLOWED_MERGE_METHODS)}")
-    if REQUIRED_STATUS_CHECK_CONTEXTS:
-        print(f"  - required status checks: {' '.join(REQUIRED_STATUS_CHECK_CONTEXTS)}")
-    else:
-        print("  - required status checks: 未設定")
-
-
-def setup_notifications(repo_path: str) -> None:
-    result = gh_api(
-        f"repos/{repo_path}/subscription",
-        method="PUT",
-        fields={"ignored": True},
-        check=False,
+  if (!/^[^/]+\/[^/]+$/.test(repoFullName)) {
+    console.error(
+      "エラー: リポジトリ名は 'owner/repository' の形式で指定してください。",
     )
-    if result.returncode == 0:
-        print(f"リポジトリ '{repo_path}' の通知を Ignore に設定しました。")
-    else:
-        print("注意: 通知設定に失敗しました。権限を確認してください。", file=sys.stderr)
+    console.error("例: username/my-repo")
+    showHelp()
+    process.exit(1)
+  }
 
+  const [owner, repoName] = repoFullName.split("/", 2)
 
-def setup_dependabot_security(repo_path: str) -> None:
-    print("Dependabot セキュリティ機能を設定中...")
-    success = True
+  if (!owner || !repoName) {
+    console.error("エラー: owner または repository 名が空です。")
+    console.error("正しい形式: owner/repository")
+    showHelp()
+    process.exit(1)
+  }
 
-    if gh_api(f"repos/{repo_path}/vulnerability-alerts", method="PUT", check=False).returncode == 0:
-        print("  - Dependabot alerts を有効化しました")
-    else:
-        print("  - Dependabot alerts の有効化に失敗しました", file=sys.stderr)
-        success = False
+  return { owner, repoName, repoPath: `${owner}/${repoName}` }
+}
 
-    if gh_api(f"repos/{repo_path}/automated-security-fixes", method="PUT", check=False).returncode == 0:
-        print("  - Dependabot security updates を有効化しました")
-    else:
-        print("  - Dependabot security updates の有効化に失敗しました", file=sys.stderr)
-        success = False
+function ensureRepositoryExists(repoPath: string) {
+  const result = ghApi(`repos/${repoPath}`, { check: false })
 
-    dependency_graph_result = gh_api(
-        f"repos/{repo_path}",
-        method="PATCH",
-        fields={"has_vulnerability_alerts": True},
-        check=False,
+  if (result.status !== 0) {
+    console.error(`エラー: リポジトリ '${repoPath}' が見つかりません。`)
+    console.error("リポジトリが存在することを確認してください。")
+    process.exit(1)
+  }
+
+  const repoInfo = JSON.parse(result.stdout) as RepositoryInfo
+  const isPrivate = Boolean(repoInfo.private)
+
+  if (isPrivate) {
+    console.log(
+      "注意: プライベートリポジトリです。一部の機能（ruleset）は GitHub Pro が必要なためスキップされます。",
     )
-    if dependency_graph_result.returncode == 0:
-        print("  - Dependency graph を有効化しました")
-    else:
-        print("  - Dependency graph の有効化に失敗しました", file=sys.stderr)
-        success = False
+  }
 
-    print("  - Dependabot version updates の状態を確認中...")
-    dependabot_config_result = gh_api(
-        f"repos/{repo_path}/contents/.github/dependabot.yml",
-        check=False,
+  return isPrivate
+}
+
+function updateRepositorySettings(repoPath: string) {
+  console.log("リポジトリ設定を更新中...")
+
+  const result = ghApi(`repos/${repoPath}`, {
+    method: "PATCH",
+    fields: REPOSITORY_SETTINGS,
+    check: false,
+  })
+
+  if (result.status !== 0) {
+    console.log("注意: 一部の設定更新に失敗しました。権限を確認してください。")
+  }
+
+  console.log(`リポジトリ '${repoPath}' の設定を更新しました。`)
+  console.log("更新された設定:")
+  console.log(
+    `  - スカッシュマージ許可: ${String(REPOSITORY_SETTINGS.allow_squash_merge)}`,
+  )
+  console.log(
+    `  - マージコミット許可: ${String(REPOSITORY_SETTINGS.allow_merge_commit)}`,
+  )
+  console.log(
+    `  - リベースマージ許可: ${String(REPOSITORY_SETTINGS.allow_rebase_merge)}`,
+  )
+  console.log(
+    `  - ブランチ更新許可: ${String(REPOSITORY_SETTINGS.allow_update_branch)}`,
+  )
+  console.log(
+    `  - マージ後ブランチ削除: ${String(REPOSITORY_SETTINGS.delete_branch_on_merge)}`,
+  )
+  console.log(`  - Issues機能: ${String(REPOSITORY_SETTINGS.has_issues)}`)
+}
+
+function getExistingRulesetId(repoPath: string) {
+  const rulesets = ghApiJson<RulesetSummary[]>(`repos/${repoPath}/rulesets`)
+
+  if (!Array.isArray(rulesets)) {
+    return null
+  }
+
+  const current = rulesets.find(
+    (ruleset) => ruleset.name === RULESET_CONFIG.name,
+  )
+
+  return current?.id ?? null
+}
+
+function createRuleset(repoPath: string) {
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を作成しています...`)
+  ghApi(`repos/${repoPath}/rulesets`, {
+    method: "POST",
+    inputJson: JSON.stringify(buildRulesetPayload()),
+  })
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を作成しました。`)
+}
+
+function updateRuleset(repoPath: string, rulesetId: number) {
+  console.log(
+    `ルールセット '${RULESET_CONFIG.name}' (ID: ${rulesetId}) を更新しています...`,
+  )
+  ghApi(`repos/${repoPath}/rulesets/${rulesetId}`, {
+    method: "PUT",
+    inputJson: JSON.stringify(buildRulesetPayload()),
+  })
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を更新しました。`)
+}
+
+function setupRuleset(repoPath: string) {
+  const existingRulesetId = getExistingRulesetId(repoPath)
+
+  if (existingRulesetId !== null) {
+    console.log("ルールセットが既に存在します。更新します。")
+    updateRuleset(repoPath, existingRulesetId)
+  } else {
+    createRuleset(repoPath)
+  }
+
+  console.log("ルールセット設定が完了しました。")
+  console.log("設定されたルールセット:")
+  console.log(`  - ルールセット名: ${RULESET_CONFIG.name}`)
+  console.log(`  - 実行モード: ${RULESET_CONFIG.enforcement}`)
+  console.log(`  - 対象ブランチ: ${RULESET_CONFIG.default_branch_ref}`)
+  console.log("  - bypass actor: admin role (pull_request only)")
+  console.log("  - 削除防止: true")
+  console.log("  - 更新許可: false (PR 経由のみ)")
+  console.log(
+    `  - 必要承認数: ${RULESET_CONFIG.pull_request.required_approving_review_count}`,
+  )
+  console.log(
+    `  - 最新プッシュ承認要求: ${String(RULESET_CONFIG.pull_request.require_last_push_approval)}`,
+  )
+  console.log(
+    `  - 古いレビュー却下: ${String(RULESET_CONFIG.pull_request.dismiss_stale_reviews_on_push)}`,
+  )
+  console.log(
+    `  - Code Owner review要求: ${String(RULESET_CONFIG.pull_request.require_code_owner_review)}`,
+  )
+  console.log(
+    `  - 会話解決要求: ${String(RULESET_CONFIG.pull_request.required_review_thread_resolution)}`,
+  )
+  console.log(
+    `  - 許可マージ方法: ${RULESET_CONFIG.pull_request.allowed_merge_methods.join(", ")}`,
+  )
+
+  if (RULESET_CONFIG.required_status_check_contexts.length > 0) {
+    console.log(
+      `  - required status checks: ${RULESET_CONFIG.required_status_check_contexts.join(", ")}`,
     )
-    if dependabot_config_result.returncode == 0:
-        print("  - Dependabot version updates が有効です（.github/dependabot.yml が存在）")
-        print("    無効化する場合は手動で .github/dependabot.yml を削除してください")
-    else:
-        print("  - Dependabot version updates は無効です（.github/dependabot.yml なし）")
+  } else {
+    console.log("  - required status checks: 未設定")
+  }
+}
 
-    if success:
-        print("Dependabot セキュリティ機能の設定が完了しました。")
-    else:
-        print("注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。", file=sys.stderr)
+function setupNotifications(repoPath: string) {
+  const result = ghApi(`repos/${repoPath}/subscription`, {
+    method: "PUT",
+    fields: { ignored: true },
+    check: false,
+  })
 
+  if (result.status === 0) {
+    console.log(`リポジトリ '${repoPath}' の通知を Ignore に設定しました。`)
+  } else {
+    console.error("注意: 通知設定に失敗しました。権限を確認してください。")
+  }
+}
 
-def main(argv: list[str]) -> int:
-    owner, repo_name = parse_args(argv)
-    repo_path = f"{owner}/{repo_name}"
+function setupDependabotSecurity(repoPath: string) {
+  console.log("Dependabot セキュリティ機能を設定中...")
 
-    print("=== GitHub リポジトリと ruleset の設定を開始します ===")
-    print(f"リポジトリ: {repo_path}")
-    print()
+  let success = true
 
-    is_private = ensure_repository_exists(repo_path)
+  if (
+    ghApi(`repos/${repoPath}/vulnerability-alerts`, {
+      method: "PUT",
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependabot alerts を有効化しました")
+  } else {
+    console.error("  - Dependabot alerts の有効化に失敗しました")
+    success = false
+  }
 
-    print("=== ステップ 1: リポジトリ設定の更新 ===")
-    update_repository_settings(repo_path)
-    print()
+  if (
+    ghApi(`repos/${repoPath}/automated-security-fixes`, {
+      method: "PUT",
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependabot security updates を有効化しました")
+  } else {
+    console.error("  - Dependabot security updates の有効化に失敗しました")
+    success = false
+  }
 
-    print("=== ステップ 2: ruleset の設定 ===")
-    if is_private:
-        print("プライベートリポジトリのため、ruleset 設定をスキップします（GitHub Pro が必要）。")
-    else:
-        setup_ruleset(repo_path)
-    print()
+  if (
+    ghApi(`repos/${repoPath}`, {
+      method: "PATCH",
+      fields: { has_vulnerability_alerts: true },
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependency graph を有効化しました")
+  } else {
+    console.error("  - Dependency graph の有効化に失敗しました")
+    success = false
+  }
 
-    print("=== ステップ 3: Dependabot セキュリティ機能の有効化 ===")
-    setup_dependabot_security(repo_path)
-    print()
+  console.log("  - Dependabot version updates の状態を確認中...")
 
-    print("=== ステップ 4: 通知設定 ===")
-    setup_notifications(repo_path)
+  if (
+    ghApi(`repos/${repoPath}/contents/.github/dependabot.yml`, {
+      check: false,
+    }).status === 0
+  ) {
+    console.log(
+      "  - Dependabot version updates が有効です（.github/dependabot.yml が存在）",
+    )
+    console.log(
+      "    無効化する場合は手動で .github/dependabot.yml を削除してください",
+    )
+  } else {
+    console.log("  - Dependabot version updates は無効です（.github/dependabot.yml なし）")
+  }
 
-    print("=== 完了: すべての設定が完了しました ===")
-    return 0
+  if (success) {
+    console.log("Dependabot セキュリティ機能の設定が完了しました。")
+  } else {
+    console.error(
+      "注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。",
+    )
+  }
+}
 
+function main() {
+  const { repoPath } = parseArgs(process.argv.slice(2))
 
-if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+  console.log("=== GitHub リポジトリと ruleset の設定を開始します ===")
+  console.log(`リポジトリ: ${repoPath}`)
+  console.log("")
+
+  const isPrivate = ensureRepositoryExists(repoPath)
+
+  console.log("=== ステップ 1: リポジトリ設定の更新 ===")
+  updateRepositorySettings(repoPath)
+  console.log("")
+
+  console.log("=== ステップ 2: ruleset の設定 ===")
+  if (isPrivate) {
+    console.log(
+      "プライベートリポジトリのため、ruleset 設定をスキップします（GitHub Pro が必要）。",
+    )
+  } else {
+    setupRuleset(repoPath)
+  }
+  console.log("")
+
+  console.log("=== ステップ 3: Dependabot セキュリティ機能の有効化 ===")
+  setupDependabotSecurity(repoPath)
+  console.log("")
+
+  console.log("=== ステップ 4: 通知設定 ===")
+  setupNotifications(repoPath)
+
+  console.log("=== 完了: すべての設定が完了しました ===")
+}
+
+main()

@@ -1,10 +1,11 @@
-# DOTFILE-66 GitHub ruleset の調査と ruleset-only 方針の Python 実装
+# DOTFILE-66 GitHub ruleset の調査と ruleset-only 方針の Bun/TypeScript 実装
 
 ## 概要
 
-- `dot_local/bin/executable_setup-github` を、default branch の保護を ruleset だけで表現する `uv run --script` の Python script として整理する。
+- `dot_local/bin/executable_setup-github` を、default branch の保護を ruleset だけで表現する単一ファイルの Bun/TypeScript script として整理する。
 - 対象リポジトリは `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の `main`。
-- 最新コメントを受け、classic branch protection の削除や更新はこの ticket の script スコープから外し、`Settings > Rules` / `Settings > Branches` の監査だけ継続する。
+- classic branch protection の削除や更新はこの ticket の script スコープから外し、`Settings > Rules` / `Settings > Branches` の監査だけ継続する。
+- 最新コメントで Python 版の可読性に再指摘が入ったため、repo 既存の Bun 運用に寄せて TypeScript 化する。
 
 ## 要件
 
@@ -22,13 +23,14 @@
 - default branch への direct push や review なし merge を非 bypass actor に許さないこと。
 - 単独管理 repo で owner/admin 自身が merge 条件を満たせない自己矛盾を作らないこと。
 - `gh api` ベースで再実行しても同じ ruleset 設定に収束しやすいこと。
+- repo 既存の Bun 利用と相性がよく、単一ファイルのまま読みやすいこと。
 
 ### 制約条件
 
 - 作業はこの repo copy のみで行う。
-- Plan 承認前に `dot_local/bin/executable_setup-github` の未承認差分へ追加実装しない。
 - `pull` skill はこのセッションにないため、同期確認は `git ls-remote` で代替記録する。
 - personal repo では classic branch protection の bypass list を使えない前提で設計する。
+- path は `dot_local/bin/executable_setup-github` のまま維持する。
 
 ## 調査結果
 
@@ -40,11 +42,12 @@
 - `dotfiles` には `master` 名の active ruleset (`id=3905723`) が残っているが、`conditions.ref_name.include=[]` のため `main` の effective rules には出ていない。
 - `lazychezmoi` と `dotfiles` の両方で `CODEOWNERS` は見当たらない。
 
-### ローカル script 差分の再現シグナル
+### ローカル実装方針の判断材料
 
-- 以前の bash 実装では ruleset JSON を文字列で組み立てており、レビューコメントの「宣言的に」「Bun の TypeScript か uv の Python も検討してほしい」に対してまだ読みやすさの改善余地が残っていた。
-- 既存 path を維持しつつ単一ファイルで運用できること、JSON payload と `gh api` の責務分離を素直に書けることから、今回は `uv run --script` の Python を採用する。
-- 置き換え後も classic branch protection の更新経路は追加せず、ruleset-only 方針と remote の保護条件を維持する必要がある。
+- 直近の人間コメントで「Python スクリプトも分かりづらいので bun などの typescript のスクリプトで実装して」と明示された。
+- repo には `bun` の導入実績があり、`dot_local/bin/executable_deepwiki` など Bun 実行の単一ファイル script も既に存在する。
+- `#!/usr/bin/env bun` の拡張子なし実行ファイルでも TypeScript 構文を解釈できることを `/tmp` の最小 script で確認した。
+- 既存 path を維持しつつ、GitHub API 向けの config を object literal でそのまま並べる形にすると、payload の意図が Python 版より追いやすい。
 
 ### GitHub 仕様上の判断材料
 
@@ -54,10 +57,11 @@
 
 ## 実装計画
 
-### 1. `setup-github` を ruleset-only の Python 実装へ置き換える
+### 1. `setup-github` を ruleset-only の Bun/TypeScript 実装へ置き換える
 
-- 既存 path `dot_local/bin/executable_setup-github` は維持したまま、shebang を `uv run --script` に切り替える。
-- repository settings と ruleset payload を Python の dict で宣言的に表現し、`gh api` 呼び出しだけを薄い helper にまとめる。
+- 既存 path `dot_local/bin/executable_setup-github` は維持したまま、shebang を `#!/usr/bin/env bun` に切り替える。
+- repository settings と ruleset config を GitHub API の field 名に寄せた object literal で宣言し、payload 変換を最小限にする。
+- `gh api` 呼び出しは薄い helper にまとめ、repository settings / ruleset / dependabot / notifications の責務を保つ。
 - `RepositoryRole(admin) + pull_request` bypass、`allowed_merge_methods=[merge,squash]`、optional required status checks の扱いは維持する。
 
 ### 2. remote 監査の観点を ruleset 中心に固定する
@@ -71,22 +75,20 @@
 - remote の `rulesets/<id>` と `rules/branches/main` を ruleset の証跡として残す。
 - `branches/main/protection` は「classic branch protection が並行で存在する監査結果」として扱い、script の変更対象ではないことを明記する。
 - `CODEOWNERS` 不在でも admin bypass を ruleset で設計する理由を、GitHub 仕様と現設定に結び付けて記録する。
-- sandbox では `uv` と `py_compile` の既定 cache 先が書けないため、検証コマンドでは `/tmp` 配下の cache override を使う。
+- draft PR #739 の head と Linear workpad を最新 commit に合わせて更新する。
 
 ## 変更対象ファイル
 
 - `dot_local/bin/executable_setup-github`
 - `plan/dotfile-66.md`
-- `setup.md`（ruleset-only 方針の説明が必要になった場合のみ）
 
 ## 検証方法
 
 - `git ls-remote origin refs/heads/main`
 - `git diff -- dot_local/bin/executable_setup-github`
-- `env PYTHONPYCACHEPREFIX=/tmp/python-pycache python3 -m py_compile dot_local/bin/executable_setup-github`
-- `env UV_CACHE_DIR=/tmp/uv-cache ./dot_local/bin/executable_setup-github --help`
-- `env UV_CACHE_DIR=/tmp/uv-cache ./dot_local/bin/executable_setup-github ryo246912/lazychezmoi`
-- `env UV_CACHE_DIR=/tmp/uv-cache ./dot_local/bin/executable_setup-github ryo246912/dotfiles`
+- `./dot_local/bin/executable_setup-github --help`
+- `./dot_local/bin/executable_setup-github ryo246912/lazychezmoi`
+- `./dot_local/bin/executable_setup-github ryo246912/dotfiles`
 - `gh api repos/ryo246912/lazychezmoi/rulesets/14373599`
 - `gh api repos/ryo246912/lazychezmoi/rules/branches/main`
 - `gh api repos/ryo246912/lazychezmoi/branches/main/protection`
@@ -94,14 +96,16 @@
 - `gh api repos/ryo246912/dotfiles/rulesets/3905723`
 - `gh api repos/ryo246912/dotfiles/rules/branches/main`
 - `gh api repos/ryo246912/dotfiles/branches/main/protection`
+- `gh pr view 739 --repo ryo246912/dotfiles --json url,isDraft,labels,headRefName,headRefOid,baseRefName,state,title`
+- `gh api repos/ryo246912/dotfiles/compare/main...DOTFILE-66`
 - 実装後の期待値:
-  - `setup-github` は Python 実装へ置き換わるが ruleset を更新するだけで classic branch protection API を叩かない
+  - `setup-github` は Bun/TypeScript 実装へ置き換わるが ruleset を更新するだけで classic branch protection API を叩かない
   - `rulesets/<id>` に admin `RepositoryRole` bypass と PR review 条件が残る
   - `rules/branches/main` に ruleset 由来の `pull_request` / `non_fast_forward` / `required_linear_history` / `required_signatures` が残る
   - `branches/main/protection` は監査対象としてのみ扱い、script の副作用で変化しない
 
 ## リスクと未解決点
 
-- `uv run --script` と `py_compile` は sandbox の既定 cache 先に書けないため、検証時に `/tmp` への環境変数 override を忘れると false negative が出る。
+- 拡張子なし TypeScript script のため、独立した型検査ジョブは置かず Bun 実行による runtime validation が主証跡になる。
 - `Settings > Branches` に classic branch protection が残り続けると、UI 上は ruleset と二重に見える。今回の script 変更はその状態を解消しないため、説明責任は監査ノート側に寄る。
 - `dotfiles` の `master` 残骸 ruleset をこの ticket で消すとスコープが広がるため、今回の plan では調査記録に留める。
