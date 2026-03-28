@@ -10,19 +10,23 @@
   },
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "GOOGLE_API_KEY": "${localEnv:GOOGLE_API_KEY}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
     "HOST_USER": "${localEnv:USER}"
   },
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges"
+  ],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
     // .config
     "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // devcontainer専用のSSH鍵（ホスト通知用）
@@ -33,17 +37,8 @@
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
     "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
-    // AI agent configs
-    "type=bind,source=${localEnv:HOME}/.claude,target=/home/vscode/.claude",
-    "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
-    "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
-    "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
-    "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
-    "type=bind,source=${localEnv:HOME}/.local/state/.copilot,target=/home/vscode/.local/state/.copilot",
-    "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
-    "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
-    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
+    "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly"
   ],
   "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
   "postStartCommand": "bash /home/vscode/.config/devcontainer/scripts/post-start.sh"
