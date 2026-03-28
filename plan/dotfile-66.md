@@ -1,75 +1,103 @@
-# DOTFILE-66 GitHub ruleset とデフォルトブランチ保護の見直し
+# DOTFILE-66 GitHub ruleset の調査と ruleset-only 方針の再計画
 
 ## 概要
 
-- `dot_local/bin/executable_setup-github` を、public な personal repository 向けに「非 admin には review を要求しつつ、admin 自身は PR 経由でセルフマージできる」default policy へ更新する。
-- 対象リポジトリは `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の default branch `main`。
-- GitHub の `Settings > Rules` だけでなく `Settings > Branches` の classic branch protection も整合させ、未解決会話を必須にしない要件まで含めて揃える。
+- `dot_local/bin/executable_setup-github` を、default branch の保護を ruleset だけで表現する script として整理する。
+- 対象リポジトリは `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の `main`。
+- 最新コメントを受け、classic branch protection の削除や更新はこの ticket の script スコープから外し、`Settings > Rules` / `Settings > Branches` の監査だけ継続する。
 
 ## 要件
 
 ### 機能要件
 
-- default branch ruleset を `active` で作成または更新できること。
-- ruleset の bypass actor に `RepositoryRole` の admin を `pull_request` モードで設定し、admin だけが PR 経由で自己責任セルフマージできること。
+- script は default branch ruleset を `active` で作成または更新できること。
+- ruleset の bypass actor に `RepositoryRole` の admin を `pull_request` モードで設定し、admin だけが PR 経由でセルフマージできること。
 - ruleset の pull request rule は `approval 1 / dismiss stale reviews / last push approval / code owner review false / review thread resolution false / allowed merge methods = merge,squash` を満たすこと。
-- classic branch protection でも `approval 1 / dismiss stale reviews / last push approval / conversation resolution false` を default branch に適用し、`Settings > Branches` の表示も意図と一致させること。
-- required status checks は default で空のままとし、always-on workflow がある場合のみ opt-in できる拡張点を残すこと。
-- `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の ruleset / branch protection / merge settings を監査し、現在値と最終判断を説明できること。
+- script は classic branch protection を新規作成・更新・削除しないこと。
+- `ryo246912/lazychezmoi` と `ryo246912/dotfiles` の `Settings > Rules` / `Settings > Branches` / effective rules を監査し、malicious collaborator を想定した妥当性を説明できること。
+- `CODEOWNERS` の有無に依存せず、admin bypass を ruleset で表現すること。
 
 ### 非機能要件
 
-- malicious collaborator を想定しても、default branch へ direct push や review なし merge を許さないこと。
+- default branch への direct push や review なし merge を非 bypass actor に許さないこと。
 - 単独管理 repo で owner/admin 自身が merge 条件を満たせない自己矛盾を作らないこと。
-- `gh api` ベースで再実行しても同じ設定に収束すること。
+- `gh api` ベースで再実行しても同じ ruleset 設定に収束しやすいこと。
 
 ### 制約条件
 
 - 作業はこの repo copy のみで行う。
-- sandbox 制約で `git fetch origin main` が失敗するため、pull 同期は `git ls-remote` と compare API で代替確認する。
-- personal repo では classic branch protection の bypass list ではなく、ruleset bypass actor を主軸に設計する。
+- Plan 承認前に `dot_local/bin/executable_setup-github` の未承認差分へ追加実装しない。
+- `pull` skill はこのセッションにないため、同期確認は `git ls-remote` で代替記録する。
+- personal repo では classic branch protection の bypass list を使えない前提で設計する。
 
-## 実装方針
+## 調査結果
 
-### 1. `setup-github` の default policy を見直す
+### 現在の remote 設定
 
-- `ENFORCEMENT` を `active` に変更する。
-- admin bypass actor を組み立てる JSON helper を追加し、`RepositoryRole` admin (`actor_id=5`) を `pull_request` モードで ruleset に含める。
-- `allowed_merge_methods` を repository settings に合わせて `merge` と `squash` のみに制限する。
-- required status checks の JSON helper を追加するが、既定値は空配列のままにして path-filtered workflow を default required check にしない。
+- `lazychezmoi` と `dotfiles` の `main` ruleset はどちらも `active` で、`bypass_actors=[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"pull_request"}]` を持つ。
+- effective rules API (`GET /repos/{owner}/{repo}/rules/branches/main`) では、両 repo とも `creation / deletion / non_fast_forward / required_linear_history / required_signatures / pull_request` が ruleset 由来で有効になっている。
+- `GET /repos/{owner}/{repo}/branches/main/protection` は両 repo で classic branch protection も返しており、`required_approving_review_count=1 / require_last_push_approval=true / dismiss_stale_reviews=true / required_conversation_resolution=false / enforce_admins=false` が並行して残っている。
+- `dotfiles` には `master` 名の active ruleset (`id=3905723`) が残っているが、`conditions.ref_name.include=[]` のため `main` の effective rules には出ていない。
+- `lazychezmoi` と `dotfiles` の両方で `CODEOWNERS` は見当たらない。
 
-### 2. classic branch protection を ruleset 方針に揃える
+### ローカル script 差分の再現シグナル
 
-- default branch 名を取得し、`gh api repos/<owner>/<repo>/branches/<default>/protection` へ PUT する。
-- `required_conversation_resolution=false` を反映し、ユーザー要望どおり「レビューソリューションは解決しなくてもよい」状態へ揃える。
-- `enforce_admins=false` と ruleset の PR-only bypass を組み合わせ、admin の direct push は ruleset で防ぎつつ、PR merge は自己責任で許可する。
+- 現在の `dot_local/bin/executable_setup-github` の未コミット差分には `build_branch_protection_json` / `update_branch_protection` と `main()` からの branch protection 更新呼び出しが追加されている。
+- 最新コメントの「classic branch protection の削除自体は不要、script は ruleset のみを扱う」に対して、この差分は scope から外れる。
+- したがって実装フェーズでは、既存差分を壊さずに読み解いた上で、ruleset-only 方針に合わせて branch protection 更新経路を除去または非実行化する必要がある。
 
-### 3. 実リポジトリへ再適用して最終監査する
+### GitHub 仕様上の判断材料
 
-- `lazychezmoi` と `dotfiles` の両方に対して updated script を実行し、ruleset と classic branch protection を再取得する。
-- `dotfiles` に残っている `master` ruleset は `conditions.ref_name.include=[]` を確認し、`main` には直接マッチしない残骸として扱う。
-- `CODEOWNERS` ではなく admin bypass を採用する理由を、GitHub の ruleset / branch protection の仕様に基づいて整理する。
+- classic branch protection は admin や bypass 権限を持つ role に対する説明が分かりにくく、personal repo で「admin だけ PR 経由でセルフマージ可能」を素直に表現しづらい。
+- ruleset は `RepositoryRole` を bypass actor にでき、`pull_request` モードなら direct push を許さず PR merge だけ例外にできる。
+- personal repo では classic branch protection の bypass list を使えないため、admin bypass の主表現は ruleset 側が適切。
+
+## 実装計画
+
+### 1. `setup-github` を ruleset-only に揃える
+
+- `build_branch_protection_json` / `update_branch_protection` とそれに紐づく help / log / step 表示を削除する。
+- repository settings と ruleset 生成に責務を限定し、「default branch 保護は ruleset が source of truth」であることを script 内の出力に揃える。
+- `RepositoryRole(admin) + pull_request` bypass、`allowed_merge_methods=[merge,squash]`、optional required status checks の扱いは維持する。
+
+### 2. remote 監査の観点を ruleset 中心に固定する
+
+- `lazychezmoi` と `dotfiles` の `main` について、ruleset と effective rules が期待値どおりであることを再確認する。
+- `Settings > Branches` に classic branch protection が残っていること自体は Notes に残すが、この ticket では script から触らない前提で整理する。
+- `dotfiles` の `master` 残骸 ruleset は `main` 保護へ効いていないことを証跡付きで記録する。
+
+### 3. 検証証跡を plan と workpad に残す
+
+- remote の `rulesets/<id>` と `rules/branches/main` を ruleset の証跡として残す。
+- `branches/main/protection` は「classic branch protection が並行で存在する監査結果」として扱い、script の変更対象ではないことを明記する。
+- `CODEOWNERS` 不在でも admin bypass を ruleset で設計する理由を、GitHub 仕様と現設定に結び付けて記録する。
 
 ## 変更対象ファイル
 
 - `dot_local/bin/executable_setup-github`
 - `plan/dotfile-66.md`
+- `setup.md`（ruleset-only 方針の説明が必要になった場合のみ）
 
 ## 検証方法
 
+- `git ls-remote origin refs/heads/main`
+- `git diff -- dot_local/bin/executable_setup-github`
 - `bash -n dot_local/bin/executable_setup-github`
-- `bash dot_local/bin/executable_setup-github ryo246912/lazychezmoi`
-- `bash dot_local/bin/executable_setup-github ryo246912/dotfiles`
 - `gh api repos/ryo246912/lazychezmoi/rulesets/14373599`
+- `gh api repos/ryo246912/lazychezmoi/rules/branches/main`
 - `gh api repos/ryo246912/lazychezmoi/branches/main/protection`
 - `gh api repos/ryo246912/dotfiles/rulesets/11535739`
 - `gh api repos/ryo246912/dotfiles/rulesets/3905723`
+- `gh api repos/ryo246912/dotfiles/rules/branches/main`
 - `gh api repos/ryo246912/dotfiles/branches/main/protection`
-- `gh api repos/ryo246912/lazychezmoi/contents/.github/workflows/lazychezmoi.yaml -q .content | base64 -d`
-- `sed -n '1,220p' .github/workflows/lint.yaml`
-- `sed -n '1,220p' .github/workflows/lint-action.yaml`
+- 実装後の期待値:
+  - `setup-github` は ruleset を更新するが classic branch protection API を叩かない
+  - `rulesets/<id>` に admin `RepositoryRole` bypass と PR review 条件が残る
+  - `rules/branches/main` に ruleset 由来の `pull_request` / `non_fast_forward` / `required_linear_history` / `required_signatures` が残る
+  - `branches/main/protection` は監査対象としてのみ扱い、script の副作用で変化しない
 
 ## リスクと未解決点
 
-- `dotfiles` の `master` ruleset は now-safe だが残骸ではあるため、UI 上のノイズとしては別途削除余地がある。
-- sandbox 制約で `.git/FETCH_HEAD` へ書き込めず、`git fetch` / `git merge origin/main` / commit / push 系の操作はこのセッションでは制限を受ける可能性がある。
+- 既存 working tree には branch protection 更新処理を追加する未承認差分が残っているため、実装時はユーザー差分との整合を慎重に確認する必要がある。
+- `Settings > Branches` に classic branch protection が残り続けると、UI 上は ruleset と二重に見える。今回の script 変更はその状態を解消しないため、説明責任は監査ノート側に寄る。
+- `dotfiles` の `master` 残骸 ruleset をこの ticket で消すとスコープが広がるため、今回の plan では調査記録に留める。

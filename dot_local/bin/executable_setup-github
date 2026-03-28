@@ -10,15 +10,10 @@ REPO_NAME=""
 OWNER=""
 REPO_FULL_NAME=""
 IS_PRIVATE=""
-DEFAULT_BRANCH=""
 
 # リポジトリ設定
 ALLOW_SQUASH_MERGE="true"
 ALLOW_MERGE_COMMIT="true"
-
-# ブランチプロテクション設定
-ENFORCE_ADMINS="false"
-REQUIRED_CONVERSATION_RESOLUTION="false"
 
 # ルールセット設定
 RULESET_NAME="main"
@@ -183,48 +178,6 @@ build_ruleset_json() {
 EOF
 }
 
-# ブランチプロテクションJSON構築共通関数
-build_branch_protection_json() {
-    local last_push_bool
-    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
-
-    local stale_reviews_bool
-    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
-
-    local code_owner_review_bool
-    code_owner_review_bool=$(bool_to_json "$REQUIRE_CODE_OWNER_REVIEW")
-
-    local conversation_resolution_bool
-    conversation_resolution_bool=$(bool_to_json "$REQUIRED_CONVERSATION_RESOLUTION")
-
-    local enforce_admins_bool
-    enforce_admins_bool=$(bool_to_json "$ENFORCE_ADMINS")
-
-    cat <<EOF
-{
-  "required_status_checks": {
-    "strict": true,
-    "checks": []
-  },
-  "enforce_admins": $enforce_admins_bool,
-  "required_pull_request_reviews": {
-    "dismiss_stale_reviews": $stale_reviews_bool,
-    "require_code_owner_reviews": $code_owner_review_bool,
-    "require_last_push_approval": $last_push_bool,
-    "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT
-  },
-  "restrictions": null,
-  "required_linear_history": false,
-  "allow_force_pushes": false,
-  "allow_deletions": false,
-  "block_creations": false,
-  "required_conversation_resolution": $conversation_resolution_bool,
-  "lock_branch": false,
-  "allow_fork_syncing": false
-}
-EOF
-}
-
 # ヘルプメッセージ
 show_help() {
     cat << EOF
@@ -245,15 +198,6 @@ show_help() {
   マージ後ブランチ削除: true
   Issues機能: true
 
-ブランチプロテクション設定（固定）:
-  対象ブランチ: デフォルトブランチ
-  admin適用: false（adminはclassic branch protectionをバイパス）
-  必要承認数: 1
-  最新プッシュ承認要求: true
-  古いレビュー却下: true
-  Code Owner review要求: false
-  会話解決要求: false
-
 Dependabotセキュリティ設定（固定）:
   Dependabot alerts: enabled
   Dependabot security updates: enabled
@@ -264,6 +208,7 @@ Dependabotセキュリティ設定（固定）:
   ルールセット名: main
   実行モード: active
   対象ブランチ: ~DEFAULT_BRANCH
+  classic branch protection: 扱わない
   bypass actor: admin role（pull_requestのみ）
   削除防止: true
   更新許可: false（PR経由のみ）
@@ -337,12 +282,6 @@ ensure_repository_exists() {
 
     # プライベートリポジトリかどうかを判定
     IS_PRIVATE=$(gh api "repos/$repo_path" --jq '.private' 2>/dev/null || echo "false")
-    DEFAULT_BRANCH=$(gh api "repos/$repo_path" --jq '.default_branch' 2>/dev/null || echo "")
-
-    if [[ -z "$DEFAULT_BRANCH" || "$DEFAULT_BRANCH" == "null" ]]; then
-        echo "エラー: リポジトリ '$repo_path' のデフォルトブランチを取得できません。" >&2
-        exit 1
-    fi
 
     if [ "$IS_PRIVATE" = "true" ]; then
         echo "注意: プライベートリポジトリです。一部の機能（ルールセット）はGitHub Proが必要なためスキップされます。"
@@ -373,28 +312,6 @@ update_repository_settings() {
     echo "  - ブランチ更新許可: true"
     echo "  - マージ後ブランチ削除: true"
     echo "  - Issues機能: true"
-}
-
-# デフォルトブランチのプロテクション設定更新
-update_branch_protection() {
-    local repo_path="$OWNER/$REPO_NAME"
-    echo "デフォルトブランチ '$DEFAULT_BRANCH' のブランチプロテクションを更新中..."
-
-    local branch_protection_json
-    branch_protection_json=$(build_branch_protection_json)
-
-    gh api "repos/$repo_path/branches/$DEFAULT_BRANCH/protection" \
-        --method PUT \
-        --input - > /dev/null <<< "$branch_protection_json"
-
-    echo "デフォルトブランチ '$DEFAULT_BRANCH' のブランチプロテクションを更新しました。"
-    echo "更新された設定:"
-    echo "  - admin適用: $ENFORCE_ADMINS"
-    echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
-    echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
-    echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
-    echo "  - Code Owner review要求: $REQUIRE_CODE_OWNER_REVIEW"
-    echo "  - 会話解決要求: $REQUIRED_CONVERSATION_RESOLUTION"
 }
 
 # 真偽値の変換
@@ -581,18 +498,13 @@ main() {
     fi
     echo
 
-    # ステップ3: デフォルトブランチのブランチプロテクション設定
-    echo "=== ステップ 3: デフォルトブランチのブランチプロテクション設定 ==="
-    update_branch_protection
-    echo
-
-    # ステップ4: Dependabotセキュリティ機能の有効化
-    echo "=== ステップ 4: Dependabotセキュリティ機能の有効化 ==="
+    # ステップ3: Dependabotセキュリティ機能の有効化
+    echo "=== ステップ 3: Dependabotセキュリティ機能の有効化 ==="
     setup_dependabot_security
     echo
 
-    # ステップ5: 通知設定
-    echo "=== ステップ 5: 通知設定 ==="
+    # ステップ4: 通知設定
+    echo "=== ステップ 4: 通知設定 ==="
     setup_notifications
 
     echo "=== 完了: すべての設定が完了しました ==="
