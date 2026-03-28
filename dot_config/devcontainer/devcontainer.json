@@ -18,10 +18,7 @@
     // ホストのユーザー名（SSH接続用）
     "HOST_USER": "${localEnv:USER}"
   },
-  "runArgs": [
-    "--cap-drop=ALL",
-    "--security-opt=no-new-privileges"
-  ],
+  "runArgs": ["--cap-drop=ALL", "--security-opt=no-new-privileges"],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
