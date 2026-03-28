@@ -10,18 +10,114 @@ REPO_NAME=""
 OWNER=""
 REPO_FULL_NAME=""
 IS_PRIVATE=""
+DEFAULT_BRANCH=""
 
 # リポジトリ設定
 ALLOW_SQUASH_MERGE="true"
 ALLOW_MERGE_COMMIT="true"
 
+# ブランチプロテクション設定
+ENFORCE_ADMINS="false"
+REQUIRED_CONVERSATION_RESOLUTION="false"
+
 # ルールセット設定
 RULESET_NAME="main"
-ENFORCEMENT="disabled"
+ENFORCEMENT="active"
 REF_INCLUDE=("~DEFAULT_BRANCH")
 REQUIRED_APPROVING_REVIEW_COUNT="1"
 REQUIRE_LAST_PUSH_APPROVAL="true"
 DISMISS_STALE_REVIEWS="true"
+REQUIRE_CODE_OWNER_REVIEW="false"
+REQUIRED_REVIEW_THREAD_RESOLUTION="false"
+ALLOWED_MERGE_METHODS=("merge" "squash")
+REQUIRED_STATUS_CHECK_CONTEXTS=()
+# GitHub の RepositoryRole で admin を表す固定 ID
+BYPASS_REPOSITORY_ROLE_IDS=("5")
+
+# JSON文字列のエスケープ
+escape_json_string() {
+    local value="$1"
+    value=${value//\\/\\\\}
+    value=${value//\"/\\\"}
+    printf '%s' "$value"
+}
+
+# 文字列配列をJSON配列に変換
+strings_to_json() {
+    local items=("$@")
+    local json="["
+    local index
+
+    for index in "${!items[@]}"; do
+        local escaped
+        escaped=$(escape_json_string "${items[$index]}")
+        json="${json}\"${escaped}\""
+        if [[ $index -lt $((${#items[@]} - 1)) ]]; then
+            json="${json},"
+        fi
+    done
+
+    json="${json}]"
+    echo "$json"
+}
+
+# required status checks配列をJSON配列に変換
+status_checks_to_json() {
+    local contexts=("$@")
+    local json="["
+    local index
+
+    for index in "${!contexts[@]}"; do
+        local escaped
+        escaped=$(escape_json_string "${contexts[$index]}")
+        json="${json}{\"context\":\"${escaped}\"}"
+        if [[ $index -lt $((${#contexts[@]} - 1)) ]]; then
+            json="${json},"
+        fi
+    done
+
+    json="${json}]"
+    echo "$json"
+}
+
+# bypass actor配列をJSON配列に変換
+build_bypass_actors_json() {
+    local role_ids=("$@")
+    local json="["
+    local index
+
+    for index in "${!role_ids[@]}"; do
+        json="${json}{\"actor_id\":${role_ids[$index]},\"actor_type\":\"RepositoryRole\",\"bypass_mode\":\"pull_request\"}"
+        if [[ $index -lt $((${#role_ids[@]} - 1)) ]]; then
+            json="${json},"
+        fi
+    done
+
+    json="${json}]"
+    echo "$json"
+}
+
+# optionalなrequired status checksルールを構築
+build_required_status_checks_rule_json() {
+    if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
+        echo ""
+        return
+    fi
+
+    local required_status_checks_json
+    required_status_checks_json=$(status_checks_to_json "${REQUIRED_STATUS_CHECK_CONTEXTS[@]}")
+
+    cat <<EOF
+,
+    { "type": "required_status_checks",
+      "parameters": {
+        "do_not_enforce_on_create": false,
+        "required_status_checks": $required_status_checks_json,
+        "strict_required_status_checks_policy": true
+      }
+    }
+EOF
+}
 
 # ルールセットJSON構築共通関数
 build_ruleset_json() {
@@ -34,11 +130,27 @@ build_ruleset_json() {
     local stale_reviews_bool
     stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
 
+    local code_owner_review_bool
+    code_owner_review_bool=$(bool_to_json "$REQUIRE_CODE_OWNER_REVIEW")
+
+    local review_thread_resolution_bool
+    review_thread_resolution_bool=$(bool_to_json "$REQUIRED_REVIEW_THREAD_RESOLUTION")
+
+    local allowed_merge_methods_json
+    allowed_merge_methods_json=$(strings_to_json "${ALLOWED_MERGE_METHODS[@]}")
+
+    local bypass_actors_json
+    bypass_actors_json=$(build_bypass_actors_json "${BYPASS_REPOSITORY_ROLE_IDS[@]}")
+
+    local status_checks_rule_json
+    status_checks_rule_json=$(build_required_status_checks_rule_json)
+
     cat <<EOF | grep -v '#'
 {
   "name": "$RULESET_NAME",
   "target": "branch",
   "enforcement": "$ENFORCEMENT",
+  "bypass_actors": $bypass_actors_json,
   "conditions": {
     "ref_name": {
       "include": $refs_json,
@@ -59,13 +171,56 @@ build_ruleset_json() {
     { "type": "pull_request",
       "parameters": {
         "dismiss_stale_reviews_on_push": $stale_reviews_bool,
-        "require_code_owner_review": false,
+        "require_code_owner_review": $code_owner_review_bool,
         "require_last_push_approval": $last_push_bool,
         "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": false
+        "required_review_thread_resolution": $review_thread_resolution_bool,
+        "allowed_merge_methods": $allowed_merge_methods_json
       }
-    }
+    }$status_checks_rule_json
   ]
+}
+EOF
+}
+
+# ブランチプロテクションJSON構築共通関数
+build_branch_protection_json() {
+    local last_push_bool
+    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
+
+    local stale_reviews_bool
+    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
+
+    local code_owner_review_bool
+    code_owner_review_bool=$(bool_to_json "$REQUIRE_CODE_OWNER_REVIEW")
+
+    local conversation_resolution_bool
+    conversation_resolution_bool=$(bool_to_json "$REQUIRED_CONVERSATION_RESOLUTION")
+
+    local enforce_admins_bool
+    enforce_admins_bool=$(bool_to_json "$ENFORCE_ADMINS")
+
+    cat <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "checks": []
+  },
+  "enforce_admins": $enforce_admins_bool,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": $stale_reviews_bool,
+    "require_code_owner_reviews": $code_owner_review_bool,
+    "require_last_push_approval": $last_push_bool,
+    "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT
+  },
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": $conversation_resolution_bool,
+  "lock_branch": false,
+  "allow_fork_syncing": false
 }
 EOF
 }
@@ -90,6 +245,15 @@ show_help() {
   マージ後ブランチ削除: true
   Issues機能: true
 
+ブランチプロテクション設定（固定）:
+  対象ブランチ: デフォルトブランチ
+  admin適用: false（adminはclassic branch protectionをバイパス）
+  必要承認数: 1
+  最新プッシュ承認要求: true
+  古いレビュー却下: true
+  Code Owner review要求: false
+  会話解決要求: false
+
 Dependabotセキュリティ設定（固定）:
   Dependabot alerts: enabled
   Dependabot security updates: enabled
@@ -98,13 +262,18 @@ Dependabotセキュリティ設定（固定）:
 
 ルールセット設定（固定）:
   ルールセット名: main
-  実行モード: disabled
+  実行モード: active
   対象ブランチ: ~DEFAULT_BRANCH
+  bypass actor: admin role（pull_requestのみ）
   削除防止: true
-  更新許可: false
+  更新許可: false（PR経由のみ）
   必要承認数: 1
   最新プッシュ承認要求: true
   古いレビュー却下: true
+  Code Owner review要求: false
+  会話解決要求: false
+  許可マージ方法: merge, squash
+  required status checks: 既定では未設定
 
 例:
   $0 username/my-repo
@@ -168,6 +337,12 @@ ensure_repository_exists() {
 
     # プライベートリポジトリかどうかを判定
     IS_PRIVATE=$(gh api "repos/$repo_path" --jq '.private' 2>/dev/null || echo "false")
+    DEFAULT_BRANCH=$(gh api "repos/$repo_path" --jq '.default_branch' 2>/dev/null || echo "")
+
+    if [[ -z "$DEFAULT_BRANCH" || "$DEFAULT_BRANCH" == "null" ]]; then
+        echo "エラー: リポジトリ '$repo_path' のデフォルトブランチを取得できません。" >&2
+        exit 1
+    fi
 
     if [ "$IS_PRIVATE" = "true" ]; then
         echo "注意: プライベートリポジトリです。一部の機能（ルールセット）はGitHub Proが必要なためスキップされます。"
@@ -187,6 +362,7 @@ update_repository_settings() {
         --field allow_update_branch=true \
         --field delete_branch_on_merge=true \
         --field has_issues=true \
+        > /dev/null \
         2>/dev/null || echo "注意: 一部の設定更新に失敗しました。権限を確認してください。"
 
     echo "リポジトリ '$repo_path' の設定を更新しました。"
@@ -197,6 +373,28 @@ update_repository_settings() {
     echo "  - ブランチ更新許可: true"
     echo "  - マージ後ブランチ削除: true"
     echo "  - Issues機能: true"
+}
+
+# デフォルトブランチのプロテクション設定更新
+update_branch_protection() {
+    local repo_path="$OWNER/$REPO_NAME"
+    echo "デフォルトブランチ '$DEFAULT_BRANCH' のブランチプロテクションを更新中..."
+
+    local branch_protection_json
+    branch_protection_json=$(build_branch_protection_json)
+
+    gh api "repos/$repo_path/branches/$DEFAULT_BRANCH/protection" \
+        --method PUT \
+        --input - > /dev/null <<< "$branch_protection_json"
+
+    echo "デフォルトブランチ '$DEFAULT_BRANCH' のブランチプロテクションを更新しました。"
+    echo "更新された設定:"
+    echo "  - admin適用: $ENFORCE_ADMINS"
+    echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
+    echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
+    echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
+    echo "  - Code Owner review要求: $REQUIRE_CODE_OWNER_REVIEW"
+    echo "  - 会話解決要求: $REQUIRED_CONVERSATION_RESOLUTION"
 }
 
 # 真偽値の変換
@@ -284,17 +482,26 @@ setup_ruleset() {
     echo "  - ルールセット名: $RULESET_NAME"
     echo "  - 実行モード: $ENFORCEMENT"
     echo "  - 対象ブランチ: ${REF_INCLUDE[*]}"
+    echo "  - bypass actor: admin role (pull_request only)"
     echo "  - 削除防止: true"
-    echo "  - 更新許可: true"
+    echo "  - 更新許可: false (PR経由のみ)"
     echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
     echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
     echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
+    echo "  - Code Owner review要求: $REQUIRE_CODE_OWNER_REVIEW"
+    echo "  - 会話解決要求: $REQUIRED_REVIEW_THREAD_RESOLUTION"
+    echo "  - 許可マージ方法: ${ALLOWED_MERGE_METHODS[*]}"
+    if [[ ${#REQUIRED_STATUS_CHECK_CONTEXTS[@]} -eq 0 ]]; then
+        echo "  - required status checks: 未設定"
+    else
+        echo "  - required status checks: ${REQUIRED_STATUS_CHECK_CONTEXTS[*]}"
+    fi
 }
 
 setup_notifications() {
     local repo_path="$OWNER/$REPO_NAME"
 
-    if gh api -X PUT "repos/$repo_path/subscription" -f ignored=true 2>/dev/null; then
+    if gh api -X PUT "repos/$repo_path/subscription" -f ignored=true > /dev/null 2>/dev/null; then
         echo "リポジトリ '$repo_path' の通知をIgnoreに設定しました。"
     else
         echo "注意: 通知設定に失敗しました。権限を確認してください。" >&2
@@ -326,7 +533,7 @@ setup_dependabot_security() {
 
     # Dependency graph を有効化（リポジトリ設定経由）
     if gh api "repos/$repo_path" --method PATCH \
-        --field has_vulnerability_alerts=true 2>/dev/null; then
+        --field has_vulnerability_alerts=true > /dev/null 2>/dev/null; then
         echo "  ✓ Dependency graph を有効化しました"
     else
         echo "  ✗ Dependency graph の有効化に失敗しました" >&2
@@ -374,13 +581,18 @@ main() {
     fi
     echo
 
-    # ステップ3: Dependabotセキュリティ機能の有効化
-    echo "=== ステップ 3: Dependabotセキュリティ機能の有効化 ==="
+    # ステップ3: デフォルトブランチのブランチプロテクション設定
+    echo "=== ステップ 3: デフォルトブランチのブランチプロテクション設定 ==="
+    update_branch_protection
+    echo
+
+    # ステップ4: Dependabotセキュリティ機能の有効化
+    echo "=== ステップ 4: Dependabotセキュリティ機能の有効化 ==="
     setup_dependabot_security
     echo
 
-    # ステップ4: 通知設定
-    echo "=== ステップ 4: 通知設定 ==="
+    # ステップ5: 通知設定
+    echo "=== ステップ 5: 通知設定 ==="
     setup_notifications
 
     echo "=== 完了: すべての設定が完了しました ==="
