@@ -75,6 +75,41 @@ snippet = "git gtr clean --merged"
 trigger = "gwgcl"
 
 [[snippets]]
+name    = "worktrunk"
+snippet = "wt"
+trigger = "gwt"
+
+[[snippets]]
+name    = "worktrunk switch"
+snippet = "wt switch"
+trigger = "gwts"
+
+[[snippets]]
+name    = "worktrunk switch --create"
+snippet = "wt switch --create"
+trigger = "gwtsc"
+
+[[snippets]]
+name    = "worktrunk switch (interactive)"
+snippet = "wt switch"
+trigger = "gwti"
+
+[[snippets]]
+name    = "worktrunk list"
+snippet = "wt list"
+trigger = "gwtl"
+
+[[snippets]]
+name    = "worktrunk remove"
+snippet = "wt remove"
+trigger = "gwtr"
+
+[[snippets]]
+name    = "worktrunk merge"
+snippet = "wt merge"
+trigger = "gwtm"
+
+[[snippets]]
 name    = "git worktree sync"
 snippet = "git -C \"$(git worktree list --porcelain | head -n 1 | sed -e 's/^worktree //')\" checkout --detach \"$(git rev-parse HEAD)\""
 trigger = "gws"
