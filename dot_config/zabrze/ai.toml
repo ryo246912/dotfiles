@@ -65,6 +65,13 @@ trigger = "coy"
 [[snippets]]
 context = ".*claude(2)?\\s"
 global  = true
+name    = "(ccmanager) --multi-project"
+snippet = "--multi-project"
+trigger = "mp"
+
+[[snippets]]
+context = ".*claude(2)?\\s"
+global  = true
 name    = "(claude*) --dangerously-skip-permissions"
 snippet = "--dangerously-skip-permissions"
 trigger = "yl"
