@@ -50,6 +50,13 @@ snippet = "copilot --yolo"
 trigger = "coy"
 
 [[snippets]]
+context = ".*ccmanager\\s"
+global  = true
+name    = "(ccmanager) --multi-project"
+snippet = "--multi-project"
+trigger = "mp"
+
+[[snippets]]
 context = ".*claude\\s"
 global  = true
 name    = "(claude) --dangerously-skip-permissions"

@@ -74,7 +74,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree sync feat/add-auth --all              # 全リポジトリをrsyncで完全同期
   multi-worktree sync feat/add-auth repo1 repo2        # 特定リポジトリのHEADをcheckout --detach
   multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
-  multi-worktree cd feat/add-auth
+  multi-worktree cd feat/add-auth                      # task root に移動
+  ccmc                                                 # root で ccmanager/ccmc を起動
   multi-worktree dev feat/add-auth ccmanager
   multi-worktree exec feat/add-auth npm install
   multi-worktree exec feat/add-auth repo1 npm install
@@ -240,6 +241,48 @@ expand_path() {
     echo "$path"
 }
 
+# 存在しないパスでも . / .. を解決して絶対パス化する
+normalize_path_lexically() {
+    local path="$1"
+
+    if [[ "$path" != /* ]]; then
+        path="$PWD/$path"
+    fi
+
+    local -a parts=()
+    local -a normalized=()
+    IFS='/' read -r -a parts <<< "$path"
+
+    local part
+    for part in "${parts[@]}"; do
+        case "$part" in
+            ""|".")
+                continue
+                ;;
+            "..")
+                if [[ ${#normalized[@]} -gt 0 ]]; then
+                    unset 'normalized[${#normalized[@]}-1]'
+                fi
+                ;;
+            *)
+                normalized+=("$part")
+                ;;
+        esac
+    done
+
+    if [[ ${#normalized[@]} -eq 0 ]]; then
+        echo "/"
+        return 0
+    fi
+
+    local result=""
+    for part in "${normalized[@]}"; do
+        result+="/${part}"
+    done
+
+    echo "$result"
+}
+
 # デフォルトグループの取得
 get_default_group() {
     local value=""
@@ -301,12 +344,9 @@ resolve_base_dir() {
             fi
         fi
 
-        # first_repoが存在しない、またはcdに失敗した場合でも絶対パスを返す
-        # realpath -m は存在しないパスでも正規化できる
-        if command -v realpath &>/dev/null; then
-            echo "$(realpath -m "$first_repo/$base_dir")"
-            return 0
-        fi
+        # base_dir 自体はまだ存在しない場合があるため、存在チェックなしで正規化する
+        echo "$(normalize_path_lexically "$first_repo/$base_dir")"
+        return 0
     fi
 
     # 解決できない場合は元のパスをそのまま返す
@@ -328,6 +368,96 @@ get_worktree_base_dir() {
     local dir_name=$(echo "$task_name" | sed 's/\//-/g')
 
     echo "${base_dir}/${prefix}-${dir_name}"
+}
+
+get_task_root_branch_name() {
+    local task_name="$1"
+    echo "multi-worktree-${task_name}"
+}
+
+get_task_name_from_dir() {
+    local task_root_dir="$1"
+    local current_branch=""
+
+    if [[ -d "$task_root_dir/.git" ]] && git -C "$task_root_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        current_branch=$(git -C "$task_root_dir" branch --show-current 2>/dev/null || true)
+        if [[ "$current_branch" == multi-worktree-* ]]; then
+            echo "${current_branch#multi-worktree-}"
+            return 0
+        fi
+    fi
+
+    local child_dir
+    for child_dir in "$task_root_dir"/*; do
+        if [[ ! -d "$child_dir" ]]; then
+            continue
+        fi
+
+        if git -C "$child_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            current_branch=$(git -C "$child_dir" branch --show-current 2>/dev/null || true)
+            if [[ -n "$current_branch" ]]; then
+                echo "$current_branch"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+ensure_task_root_git_project() {
+    local task_name="$1"
+    local task_root_dir="$2"
+    local branch_name
+    branch_name=$(get_task_root_branch_name "$task_name")
+    local created_repo=false
+
+    if [[ ! -d "$task_root_dir" ]]; then
+        log_error "task root が見つかりません: $task_root_dir"
+        return 1
+    fi
+
+    if [[ -e "$task_root_dir/.git" ]] && [[ ! -d "$task_root_dir/.git" ]]; then
+        log_error "task root の .git がディレクトリではありません: $task_root_dir/.git"
+        return 1
+    fi
+
+    if [[ ! -d "$task_root_dir/.git" ]]; then
+        git -C "$task_root_dir" init >/dev/null 2>&1
+        created_repo=true
+    fi
+
+    git -C "$task_root_dir" config status.showUntrackedFiles no
+    git -C "$task_root_dir" config advice.detachedHead false
+
+    if git -C "$task_root_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+        local current_branch
+        current_branch=$(git -C "$task_root_dir" branch --show-current 2>/dev/null || true)
+
+        if [[ "$current_branch" != "$branch_name" ]]; then
+            if git -C "$task_root_dir" show-ref --verify --quiet "refs/heads/$branch_name"; then
+                git -C "$task_root_dir" switch "$branch_name" >/dev/null 2>&1 || \
+                    git -C "$task_root_dir" checkout "$branch_name" >/dev/null 2>&1
+            else
+                git -C "$task_root_dir" switch -c "$branch_name" >/dev/null 2>&1 || \
+                    git -C "$task_root_dir" checkout -b "$branch_name" >/dev/null 2>&1
+            fi
+        fi
+    else
+        git -C "$task_root_dir" symbolic-ref HEAD "refs/heads/$branch_name"
+        git -C "$task_root_dir" \
+            -c user.name="multi-worktree" \
+            -c user.email="multi-worktree@local.invalid" \
+            commit --allow-empty -m "Initialize task root for ${task_name}" >/dev/null 2>&1
+    fi
+
+    if [[ "$created_repo" == true ]]; then
+        log_success "task root の synthetic git repository を初期化しました: $task_root_dir"
+    else
+        log_info "task root の synthetic git repository を確認しました: $task_root_dir"
+    fi
+
+    log_info "task root ブランチ: $branch_name"
 }
 
 # devcontainer up オプションの取得
@@ -708,6 +838,8 @@ cmd_create() {
     if [[ $success_count -gt 0 ]]; then
         log_info "devcontainer.json を生成中..."
         generate_devcontainer "$task_name" "$worktree_base_dir" "${repos[@]}"
+        log_info "task root の synthetic git repository を初期化中..."
+        ensure_task_root_git_project "$task_name" "$worktree_base_dir"
     fi
 
     if [[ $fail_count -eq 0 ]]; then
@@ -981,7 +1113,11 @@ cmd_list() {
 
             if [[ -d "$dir" ]]; then
                 local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
-                local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+                local task_name
+                task_name=$(get_task_name_from_dir "$dir" 2>/dev/null || true)
+                if [[ -z "$task_name" ]]; then
+                    task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+                fi
 
                 # リポジトリ数をカウント
                 local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
