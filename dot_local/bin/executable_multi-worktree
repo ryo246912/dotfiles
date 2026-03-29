@@ -1283,7 +1283,11 @@ cmd_list() {
                 fi
 
                 # TSV形式で出力: <task-name>\t<group>\t<path>\t<repo-count> repos\t[devcontainer]
-                echo -e "${task_name}\t${group}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
+                if [[ -n "$has_devcontainer" ]]; then
+                    echo -e "${task_name}\t${group}\t${dir}\t${repo_count} repos\t${has_devcontainer}"
+                else
+                    echo -e "${task_name}\t${group}\t${dir}\t${repo_count} repos"
+                fi
             fi
         done
     done
@@ -2044,7 +2048,28 @@ main() {
 
         list)
             check_config || return 1
-            cmd_list
+            cmd_list | awk -F'\t' '
+{
+    for (i=1; i<=NF; i++) {
+        key = NR "," i
+        data[key] = $i
+        if (length($i) > max[i]) max[i] = length($i)
+    }
+    cols[NR] = NF
+    nrows = NR
+}
+END {
+    for (r=1; r<=nrows; r++) {
+        for (c=1; c<=cols[r]; c++) {
+            key = r "," c
+            if (c < cols[r])
+                printf "%-*s  ", max[c], data[key]
+            else
+                printf "%s", data[key]
+        }
+        printf "\n"
+    }
+}'
             ;;
 
         status)
