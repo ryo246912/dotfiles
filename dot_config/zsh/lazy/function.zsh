@@ -164,6 +164,34 @@ zsh-profiler() {
   ZSHRC_PROFILE=1 zsh -i -c zprof
 }
 
+_claude_prepare_account2_dir() {
+  local config_dir="${HOME}/.claude-account2"
+  mkdir -p "$config_dir"
+
+  if [[ ! -e "$config_dir/projects" && ! -L "$config_dir/projects" && -d "${HOME}/.claude/projects" ]]; then
+    ln -s ../.claude/projects "$config_dir/projects"
+  fi
+
+  if [[ ! -e "$config_dir/settings.json" && ! -L "$config_dir/settings.json" && -f "${HOME}/.claude/settings.json" ]]; then
+    ln -s ../.claude/settings.json "$config_dir/settings.json"
+  fi
+}
+
+claude1() {
+  CLAUDE_CONFIG_DIR="${HOME}/.claude" command claude "$@"
+}
+
+claude2() {
+  _claude_prepare_account2_dir
+  CLAUDE_CONFIG_DIR="${HOME}/.claude-account2" command claude "$@"
+}
+
+claude-clear-cache() {
+  local config_dir="${1:-${CLAUDE_CONFIG_DIR:-${HOME}/.claude}}"
+  rm -rf "${config_dir}/statsig"
+  echo "Claude statsig cache cleared: ${config_dir}/statsig"
+}
+
 # historyの定期バックアップを起動
 zsh-history-backup
 

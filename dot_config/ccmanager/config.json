@@ -31,16 +31,32 @@
     "presets": [
       {
         "id": "1",
-        "name": "Main",
-        "command": "claude",
+        "name": "Claude A1 (resume)",
+        "command": "claude1",
         "args": ["--resume"],
         "fallbackArgs": []
       },
       {
         "id": "2",
-        "name": "claude(no resume)",
-        "command": "claude",
-        "args": [""]
+        "name": "Claude A2 (resume)",
+        "command": "claude2",
+        "args": ["--resume"],
+        "fallbackArgs": [],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "3",
+        "name": "Claude A1 (no resume)",
+        "command": "claude1",
+        "args": [""],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "4",
+        "name": "Claude A2 (no resume)",
+        "command": "claude2",
+        "args": [""],
+        "detectionStrategy": "claude"
       },
       {
         "id": "1752767057209",
