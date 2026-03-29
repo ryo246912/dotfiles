@@ -10,6 +10,7 @@ description = "Run all action linters"
 [tasks.lint-other]
 depends = [
     "lint-json",
+    "lint-secret",
     "lint-toml",
     "lint-yaml",
 ]
@@ -77,6 +78,12 @@ description = "Run fix json files"
 hide        = true
 run         = "prettier --write --list-different '**/*.json'"
 
+# secret
+[tasks.lint-secret]
+description = "Run secretlint"
+hide        = true
+run         = "secretlint '**/*'"
+
 [tasks.karabiner-apply]
 description = "build and apply karabiner.ts configuration"
 run = [
@@ -93,6 +100,8 @@ run = [
 
 [tools]
 actionlint                     = "1.7.7"
+"aqua:evilmartians/lefthook"   = "2.1.4"
+"aqua:secretlint/secretlint"   = "11.4.1"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"
 "npm:@taplo/cli"               = "0.7.0"
 "npm:prettier"                 = "3.8.1"
