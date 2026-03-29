@@ -32,7 +32,7 @@
       {
         "id": "1",
         "name": "Claude A1 (resume)",
-        "command": "claude1",
+        "command": "claude",
         "args": ["--resume"],
         "fallbackArgs": []
       },
@@ -47,7 +47,7 @@
       {
         "id": "3",
         "name": "Claude A1 (no resume)",
-        "command": "claude1",
+        "command": "claude",
         "args": [""],
         "detectionStrategy": "claude"
       },

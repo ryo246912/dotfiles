@@ -40,14 +40,8 @@ trigger = "cl"
 
 [[snippets]]
 global  = true
-name    = "claude-a1"
-snippet = "claude-a1"
-trigger = "cl1"
-
-[[snippets]]
-global  = true
-name    = "claude-a2"
-snippet = "claude-a2"
+name    = "claude2"
+snippet = "claude2"
 trigger = "cl2"
 
 [[snippets]]
@@ -69,7 +63,7 @@ snippet = "copilot --yolo"
 trigger = "coy"
 
 [[snippets]]
-context = ".*claude(-a[12])?\\s"
+context = ".*claude(2)?\\s"
 global  = true
 name    = "(claude*) --dangerously-skip-permissions"
 snippet = "--dangerously-skip-permissions"

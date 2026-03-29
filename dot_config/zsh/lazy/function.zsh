@@ -166,15 +166,14 @@ zsh-profiler() {
 
 _claude_prepare_account2_dir() {
   local config_dir="${HOME}/.claude-account2"
+  local shared_entry
   mkdir -p "$config_dir"
 
-  if [[ ! -e "$config_dir/projects" && ! -L "$config_dir/projects" && -d "${HOME}/.claude/projects" ]]; then
-    ln -s ../.claude/projects "$config_dir/projects"
-  fi
-
-  if [[ ! -e "$config_dir/settings.json" && ! -L "$config_dir/settings.json" && -f "${HOME}/.claude/settings.json" ]]; then
-    ln -s ../.claude/settings.json "$config_dir/settings.json"
-  fi
+  for shared_entry in projects settings.json agents skills plugins; do
+    if [[ ! -e "$config_dir/$shared_entry" && ! -L "$config_dir/$shared_entry" && -e "${HOME}/.claude/$shared_entry" ]]; then
+      ln -s "../.claude/$shared_entry" "$config_dir/$shared_entry"
+    fi
+  done
 }
 
 claude1() {
