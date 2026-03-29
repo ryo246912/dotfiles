@@ -126,6 +126,7 @@ check_config() {
         log_info ""
         log_info "[dev_commands]"
         log_info "claude = \"claude --dangerously-skip-permissions\""
+        log_info "claude_a2 = 'env CLAUDE_CONFIG_DIR=\$HOME/.claude-account2 claude --dangerously-skip-permissions'"
         log_info "copilot = \"copilot --yolo\""
         log_info "codex = \"codex --yolo\""
         log_info "TOML"
