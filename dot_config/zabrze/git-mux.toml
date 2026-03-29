@@ -1,0 +1,4 @@
+[[snippets]]
+name            = "git-mux"
+snippet         = "git-mux"
+trigger-pattern = "^gm$"

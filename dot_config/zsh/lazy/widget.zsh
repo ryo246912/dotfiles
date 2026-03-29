@@ -3,7 +3,7 @@ _select_tool() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
-      tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
+      tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi\ngit-mux" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
       if tmux has-session -t overlay 2>/dev/null; then \
         tmux new-window -t overlay -c "$current_path" "$tool" ; \
         tmux attach -t overlay ; \
@@ -13,7 +13,7 @@ _select_tool() {
     '
   else
     local tool
-    tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || return 0
+    tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi\ngit-mux" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || return 0
     BUFFER="$tool"
     zle accept-line
   fi
@@ -253,6 +253,30 @@ if [ "$(uname)" = "Darwin" ]; then
   bindkey "^Q^W" _git_worktree_manager
 else
   bindkey "^[Q^[W" _git_worktree_manager
+# ctrl + q → ctrl + m(alt + shift + q → alt + shift + m)でgit-muxを実行
+_git_mux() {
+  if [ -n "$TMUX" ]; then
+    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
+      current_path=$(tmux display -p -F "#{pane_current_path}") ; \
+      if tmux has-session -t popup 2>/dev/null; then \
+        tmux new-window -t popup -c "$current_path" "git-mux" ; \
+        tmux attach -t popup ; \
+      else \
+        tmux new-session -s popup -c "$current_path" "git-mux" \; set-option status off ; \
+      fi \
+    '
+  else
+    BUFFER='git-mux'
+    zle accept-line
+  fi
+}
+zle -N _git_mux
+if [ "$(uname)" = "Darwin" ]; then
+  bindkey "^Q^M" _git_mux
+else
+  bindkey "^[Q^[M" _git_mux
+fi
+
 fi
 
 # option + ↑で１つ上のディレクトリに移動
