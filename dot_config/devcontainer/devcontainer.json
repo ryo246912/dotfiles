@@ -22,11 +22,14 @@
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
-    // .config
+    // .config (Essential configs as Read-Only for identity sharing)
     "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/gh/config.yml,target=/home/vscode/.config/gh/config.yml,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
-    // devcontainer専用のSSH鍵（ホスト通知用）
+    // devcontainer専用のSSH鍵（ホスト通知用のみに使用。GitHub等へのアクセスはAgent Forwardingを推奨）
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer,target=/home/vscode/.ssh/id_ed25519,readonly",
     // devcontainer scripts
     "type=bind,source=${localEnv:HOME}/.config/devcontainer/scripts,target=/home/vscode/.config/devcontainer/scripts,readonly",
@@ -34,7 +37,9 @@
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
     "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
-    // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
+    // AI agent configs (Essential files as Read-Only to share login state/settings)
+    "type=bind,source=${localEnv:HOME}/.claude/config.json,target=/home/vscode/.claude/config.json,readonly",
+    "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly"
   ],
   "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
