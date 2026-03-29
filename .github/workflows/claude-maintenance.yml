@@ -1,0 +1,52 @@
+name: Claude Maintenance
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Research & Update Skills
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Research latest Claude practices
+          # Note: Using non-interactive mode for automation
+          claude -p "Search for the latest Claude Code operational practices and documentation. Summarize the best practices for project structure and automation." > research.md
+
+          # 2. Analyze recent PRs and update dot_claude/skills/
+          # Get recent PR context (last 5)
+          PR_CONTEXT=$(gh pr list --state merged --limit 5 --json number,title,body -q '.[] | "# PR #\(.number): \(.title)\n\(.body)"')
+          echo "$PR_CONTEXT" > pr_context.txt
+
+          claude -p "Based on the recent PR context in pr_context.txt and the research in research.md, identify any new coding patterns, rules, or skills applicable to this dotfiles repository. Update or create new Markdown files in dot_claude/skills/ to reflect these. Ensure they follow the format for Claude skills and use clear instructions. Output the changes directly to files."
+
+          # 3. Repository Health Check
+          claude -p "Perform a repository health check using the current skills in dot_claude/skills/. Report any inconsistencies, areas for improvement, or deviations from best practices in a new file HEALTH_CHECK_REPORT.md."
+
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add dot_claude/skills/ HEALTH_CHECK_REPORT.md
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update Claude skills and repository health check" && git push)
