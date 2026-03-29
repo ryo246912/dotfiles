@@ -1,390 +1,577 @@
-#!/bin/bash
+#!/usr/bin/env bun
 
-# GitHub リポジトリの設定更新とルールセット作成を行う統合スクリプト
-# 使用方法: setup-github <owner/repository_name>
+import { spawnSync } from "node:child_process"
 
-set -euo pipefail
+type FieldValue = string | number | boolean
 
-# 固定値設定
-REPO_NAME=""
-OWNER=""
-REPO_FULL_NAME=""
-IS_PRIVATE=""
+type CommandOptions = {
+  inputText?: string
+  check?: boolean
+}
 
-# リポジトリ設定
-ALLOW_SQUASH_MERGE="true"
-ALLOW_MERGE_COMMIT="true"
+type GhApiOptions = {
+  method?: string
+  fields?: Record<string, FieldValue>
+  inputJson?: string
+  check?: boolean
+}
 
-# ルールセット設定
-RULESET_NAME="main"
-ENFORCEMENT="disabled"
-REF_INCLUDE=("~DEFAULT_BRANCH")
-REQUIRED_APPROVING_REVIEW_COUNT="1"
-REQUIRE_LAST_PUSH_APPROVAL="true"
-DISMISS_STALE_REVIEWS="true"
+type RepositoryInfo = {
+  private?: boolean
+}
 
-# ルールセットJSON構築共通関数
-build_ruleset_json() {
-    local refs_json
-    refs_json=$(refs_to_json "${REF_INCLUDE[@]}")
+type RepositoryTarget = {
+  owner: string
+  repoName: string
+  repoPath: string
+  source: "argument" | "current git repository"
+}
 
-    local last_push_bool
-    last_push_bool=$(bool_to_json "$REQUIRE_LAST_PUSH_APPROVAL")
+type RulesetSummary = {
+  id?: number
+  name?: string
+}
 
-    local stale_reviews_bool
-    stale_reviews_bool=$(bool_to_json "$DISMISS_STALE_REVIEWS")
+const REPOSITORY_SETTINGS = {
+  allow_squash_merge: true,
+  allow_merge_commit: true,
+  allow_rebase_merge: false,
+  allow_update_branch: true,
+  delete_branch_on_merge: true,
+  has_issues: true,
+} as const
 
-    cat <<EOF | grep -v '#'
-{
-  "name": "$RULESET_NAME",
-  "target": "branch",
-  "enforcement": "$ENFORCEMENT",
-  "conditions": {
-    "ref_name": {
-      "include": $refs_json,
-      "exclude": []
-    }
+const RULESET_CONFIG = {
+  name: "main",
+  target: "branch",
+  enforcement: "active",
+  default_branch_ref: "~DEFAULT_BRANCH",
+  bypass_actors: [
+    {
+      actor_id: 5,
+      actor_type: "RepositoryRole",
+      bypass_mode: "pull_request",
+    },
+  ],
+  pull_request: {
+    dismiss_stale_reviews_on_push: true,
+    require_code_owner_review: false,
+    require_last_push_approval: true,
+    required_approving_review_count: 1,
+    required_review_thread_resolution: false,
+    allowed_merge_methods: ["merge", "squash"],
   },
-  "rules": [
-    # Restrict creations
-    { "type": "creation", "parameters": {} },
-    # Restrict deletions
-    { "type": "deletion", "parameters": {} },
-    # Require linear history
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" },
-    # Require signed commits
-    { "type": "required_signatures" },
-    # Require a pull request before merging
-    { "type": "pull_request",
-      "parameters": {
-        "dismiss_stale_reviews_on_push": $stale_reviews_bool,
-        "require_code_owner_review": false,
-        "require_last_push_approval": $last_push_bool,
-        "required_approving_review_count": $REQUIRED_APPROVING_REVIEW_COUNT,
-        "required_review_thread_resolution": false
-      }
+  required_status_check_contexts: [] as string[],
+} as const
+
+function runCommand(
+  command: string[],
+  { inputText, check = true }: CommandOptions = {},
+) {
+  const result = spawnSync(command[0], command.slice(1), {
+    input: inputText,
+    encoding: "utf-8",
+  })
+
+  if (result.error && check) {
+    throw result.error
+  }
+
+  if (check && result.status !== 0) {
+    const message =
+      result.stderr.trim() || result.stdout.trim() || "command failed"
+    throw new Error(message)
+  }
+
+  return result
+}
+
+function ghApi(
+  endpoint: string,
+  { method, fields, inputJson, check = true }: GhApiOptions = {},
+) {
+  const command = ["gh", "api", endpoint]
+
+  if (method) {
+    command.push("--method", method)
+  }
+
+  if (fields) {
+    for (const [name, value] of Object.entries(fields)) {
+      command.push("--field", `${name}=${String(value)}`)
     }
+  }
+
+  if (inputJson !== undefined) {
+    command.push("--input", "-")
+  }
+
+  return runCommand(command, { inputText: inputJson, check })
+}
+
+function ghApiJson<T>(
+  endpoint: string,
+  { method, fields, inputJson, check = true }: GhApiOptions = {},
+) {
+  const result = ghApi(endpoint, { method, fields, inputJson, check })
+  const output = result.stdout.trim()
+  return output ? (JSON.parse(output) as T) : null
+}
+
+function buildRulesetPayload() {
+  const rules = [
+    { type: "creation", parameters: {} },
+    { type: "deletion", parameters: {} },
+    { type: "non_fast_forward" },
+    { type: "required_linear_history" },
+    { type: "required_signatures" },
+    {
+      type: "pull_request",
+      parameters: RULESET_CONFIG.pull_request,
+    },
   ]
+
+  if (RULESET_CONFIG.required_status_check_contexts.length > 0) {
+    rules.push({
+      type: "required_status_checks",
+      parameters: {
+        do_not_enforce_on_create: false,
+        required_status_checks: RULESET_CONFIG.required_status_check_contexts.map(
+          (context) => ({ context }),
+        ),
+        strict_required_status_checks_policy: true,
+      },
+    })
+  }
+
+  return {
+    name: RULESET_CONFIG.name,
+    target: RULESET_CONFIG.target,
+    enforcement: RULESET_CONFIG.enforcement,
+    bypass_actors: RULESET_CONFIG.bypass_actors,
+    conditions: {
+      ref_name: {
+        include: [RULESET_CONFIG.default_branch_ref],
+        exclude: [],
+      },
+    },
+    rules,
+  }
 }
-EOF
+
+function parseGitHubRepoPath(remoteUrl: string) {
+  const match = remoteUrl
+    .trim()
+    .match(
+      /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([^/]+)\/([^/]+?)(?:\.git)?\/?$/,
+    )
+
+  if (!match) {
+    return null
+  }
+
+  return `${match[1]}/${match[2]}`
 }
 
-# ヘルプメッセージ
-show_help() {
-    cat << EOF
-使用方法: $0 <owner/repository_name>
+function resolveRepoFromCurrentDirectory(): RepositoryTarget {
+  const insideWorktree = runCommand(
+    ["git", "rev-parse", "--is-inside-work-tree"],
+    { check: false },
+  )
 
-リポジトリとルールセットを設定します。
+  if (insideWorktree.status !== 0 || insideWorktree.stdout.trim() !== "true") {
+    console.error(
+      "エラー: 引数が未指定で、カレントディレクトリは git repository として判定できませんでした。",
+    )
+    showHelp()
+    process.exit(1)
+  }
 
-必須引数:
-  owner/repository_name     設定を更新するリポジトリ（owner/repo形式）
+  const remoteUrlResult = runCommand(
+    ["git", "config", "--get", "remote.origin.url"],
+    {
+      check: false,
+    },
+  )
+  const remoteUrl = remoteUrlResult.stdout.trim()
 
-設定値を変更したい場合は、スクリプト内の設定値を編集してください。
+  if (remoteUrlResult.status !== 0 || remoteUrl === "") {
+    console.error(
+      "エラー: 引数が未指定ですが、current git repository に `origin` remote がありません。",
+    )
+    showHelp()
+    process.exit(1)
+  }
+
+  const repoPath = parseGitHubRepoPath(remoteUrl)
+
+  if (!repoPath) {
+    console.error(
+      `エラー: origin remote '${remoteUrl}' から GitHub の owner/repo を解決できません。`,
+    )
+    showHelp()
+    process.exit(1)
+  }
+
+  const [owner, repoName] = repoPath.split("/", 2)
+
+  return {
+    owner,
+    repoName,
+    repoPath,
+    source: "current git repository",
+  }
+}
+
+function showHelp() {
+  const scriptName = process.argv[1]
+
+  console.log(`使用方法: ${scriptName} [owner/repository_name]
+
+リポジトリと ruleset を設定します。
+
+引数:
+  owner/repository_name     省略可能。未指定時は current git repository の \`origin\` から解決
+
+設定値を変更したい場合は、スクリプト内の定数オブジェクトを編集してください。
 
 リポジトリ設定（固定）:
-  スカッシュマージ許可: true
-  マージコミット許可: true
-  リベースマージ許可: false
-  ブランチ更新許可: true
-  マージ後ブランチ削除: true
-  Issues機能: true
+  スカッシュマージ許可: ${String(REPOSITORY_SETTINGS.allow_squash_merge)}
+  マージコミット許可: ${String(REPOSITORY_SETTINGS.allow_merge_commit)}
+  リベースマージ許可: ${String(REPOSITORY_SETTINGS.allow_rebase_merge)}
+  ブランチ更新許可: ${String(REPOSITORY_SETTINGS.allow_update_branch)}
+  マージ後ブランチ削除: ${String(REPOSITORY_SETTINGS.delete_branch_on_merge)}
+  Issues機能: ${String(REPOSITORY_SETTINGS.has_issues)}
 
-Dependabotセキュリティ設定（固定）:
+Dependabot セキュリティ設定（固定）:
   Dependabot alerts: enabled
   Dependabot security updates: enabled
   Dependency graph: enabled
   Dependabot version updates: 状態確認のみ（手動で無効化が必要）
 
-ルールセット設定（固定）:
-  ルールセット名: main
-  実行モード: disabled
-  対象ブランチ: ~DEFAULT_BRANCH
+ruleset 設定（固定）:
+  ルールセット名: ${RULESET_CONFIG.name}
+  実行モード: ${RULESET_CONFIG.enforcement}
+  対象ブランチ: ${RULESET_CONFIG.default_branch_ref}
+  classic branch protection: 扱わない
+  bypass actor: admin role（pull_request のみ）
   削除防止: true
-  更新許可: false
-  必要承認数: 1
-  最新プッシュ承認要求: true
-  古いレビュー却下: true
+  更新許可: false（PR 経由のみ）
+  必要承認数: ${RULESET_CONFIG.pull_request.required_approving_review_count}
+  最新プッシュ承認要求: ${String(RULESET_CONFIG.pull_request.require_last_push_approval)}
+  古いレビュー却下: ${String(RULESET_CONFIG.pull_request.dismiss_stale_reviews_on_push)}
+  Code Owner review 要求: ${String(RULESET_CONFIG.pull_request.require_code_owner_review)}
+  会話解決要求: ${String(RULESET_CONFIG.pull_request.required_review_thread_resolution)}
+  許可マージ方法: ${RULESET_CONFIG.pull_request.allowed_merge_methods.join(", ")}
+  required status checks: ${
+    RULESET_CONFIG.required_status_check_contexts.length > 0
+      ? RULESET_CONFIG.required_status_check_contexts.join(", ")
+      : "未設定"
+  }
 
 例:
-  $0 username/my-repo
-  $0 organization/another-repo
-
-EOF
+  ${scriptName}
+  ${scriptName} username/my-repo
+  ${scriptName} organization/another-repo`)
 }
 
-# 引数解析
-parse_args() {
-    if [[ $# -eq 0 ]]; then
-        show_help
-        exit 1
-    fi
+function parseArgs(argv: string[]): RepositoryTarget {
+  if (argv.length === 0) {
+    return resolveRepoFromCurrentDirectory()
+  }
 
-    # ヘルプオプションの確認
-    if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-        show_help
-        exit 0
-    fi
+  if (argv[0] === "-h" || argv[0] === "--help") {
+    showHelp()
+    process.exit(0)
+  }
 
-    REPO_FULL_NAME="$1"
+  if (argv.length > 1) {
+    console.error(
+      `エラー: 余分な引数が指定されています: ${argv.slice(1).join(" ")}`,
+    )
+    console.error(
+      "このスクリプトは owner/repository 形式の引数のみを受け取ります。",
+    )
+    showHelp()
+    process.exit(1)
+  }
 
-    # 2番目以降の引数があった場合はエラー
-    if [[ $# -gt 1 ]]; then
-        echo "エラー: 余分な引数が指定されています: ${@:2}" >&2
-        echo "このスクリプトはowner/repository形式の引数のみを受け取ります。" >&2
-        show_help
-        exit 1
-    fi
+  const repoFullName = argv[0]
 
-    # owner/repository形式の検証と分割
-    if [[ ! "$REPO_FULL_NAME" =~ ^[^/]+/[^/]+$ ]]; then
-        echo "エラー: リポジトリ名は 'owner/repository' の形式で指定してください。" >&2
-        echo "例: username/my-repo" >&2
-        show_help
-        exit 1
-    fi
+  if (!/^[^/]+\/[^/]+$/.test(repoFullName)) {
+    console.error(
+      "エラー: リポジトリ名は 'owner/repository' の形式で指定してください。",
+    )
+    console.error("例: username/my-repo")
+    showHelp()
+    process.exit(1)
+  }
 
-    # ownerとrepository名を分割
-    OWNER="${REPO_FULL_NAME%%/*}"
-    REPO_NAME="${REPO_FULL_NAME##*/}"
+  const [owner, repoName] = repoFullName.split("/", 2)
 
-    # 空の値をチェック
-    if [[ -z "$OWNER" || -z "$REPO_NAME" ]]; then
-        echo "エラー: owner または repository 名が空です。" >&2
-        echo "正しい形式: owner/repository" >&2
-        show_help
-        exit 1
-    fi
+  if (!owner || !repoName) {
+    console.error("エラー: owner または repository 名が空です。")
+    console.error("正しい形式: owner/repository")
+    showHelp()
+    process.exit(1)
+  }
+
+  return {
+    owner,
+    repoName,
+    repoPath: `${owner}/${repoName}`,
+    source: "argument",
+  }
 }
 
-# リポジトリの存在確認（必須）
-ensure_repository_exists() {
-    local repo_path="$OWNER/$REPO_NAME"
-    if ! gh repo view "$repo_path" &>/dev/null; then
-        echo "エラー: リポジトリ '$repo_path' が見つかりません。" >&2
-        echo "リポジトリが存在することを確認してください。" >&2
-        exit 1
-    fi
+function ensureRepositoryExists(repoPath: string) {
+  const result = ghApi(`repos/${repoPath}`, { check: false })
 
-    # プライベートリポジトリかどうかを判定
-    IS_PRIVATE=$(gh api "repos/$repo_path" --jq '.private' 2>/dev/null || echo "false")
+  if (result.status !== 0) {
+    console.error(`エラー: リポジトリ '${repoPath}' が見つかりません。`)
+    console.error("リポジトリが存在することを確認してください。")
+    process.exit(1)
+  }
 
-    if [ "$IS_PRIVATE" = "true" ]; then
-        echo "注意: プライベートリポジトリです。一部の機能（ルールセット）はGitHub Proが必要なためスキップされます。"
-    fi
+  const repoInfo = JSON.parse(result.stdout) as RepositoryInfo
+  const isPrivate = Boolean(repoInfo.private)
+
+  if (isPrivate) {
+    console.log(
+      "注意: プライベートリポジトリです。一部の機能（ruleset）は GitHub Pro が必要なためスキップされます。",
+    )
+  }
+
+  return isPrivate
 }
 
-# リポジトリ設定更新
-update_repository_settings() {
-    local repo_path="$OWNER/$REPO_NAME"
+function updateRepositorySettings(repoPath: string) {
+  console.log("リポジトリ設定を更新中...")
 
-    # マージ設定とその他の設定をAPI経由で更新
-    echo "リポジトリ設定を更新中..."
-    gh api "repos/$repo_path" --method PATCH \
-        --field allow_squash_merge="$ALLOW_SQUASH_MERGE" \
-        --field allow_merge_commit="$ALLOW_MERGE_COMMIT" \
-        --field allow_rebase_merge=false \
-        --field allow_update_branch=true \
-        --field delete_branch_on_merge=true \
-        --field has_issues=true \
-        2>/dev/null || echo "注意: 一部の設定更新に失敗しました。権限を確認してください。"
+  const result = ghApi(`repos/${repoPath}`, {
+    method: "PATCH",
+    fields: REPOSITORY_SETTINGS,
+    check: false,
+  })
 
-    echo "リポジトリ '$repo_path' の設定を更新しました。"
-    echo "更新された設定:"
-    echo "  - スカッシュマージ許可: $ALLOW_SQUASH_MERGE"
-    echo "  - マージコミット許可: $ALLOW_MERGE_COMMIT"
-    echo "  - リベースマージ許可: false"
-    echo "  - ブランチ更新許可: true"
-    echo "  - マージ後ブランチ削除: true"
-    echo "  - Issues機能: true"
+  if (result.status !== 0) {
+    console.log("注意: 一部の設定更新に失敗しました。権限を確認してください。")
+  }
+
+  console.log(`リポジトリ '${repoPath}' の設定を更新しました。`)
+  console.log("更新された設定:")
+  console.log(
+    `  - スカッシュマージ許可: ${String(REPOSITORY_SETTINGS.allow_squash_merge)}`,
+  )
+  console.log(
+    `  - マージコミット許可: ${String(REPOSITORY_SETTINGS.allow_merge_commit)}`,
+  )
+  console.log(
+    `  - リベースマージ許可: ${String(REPOSITORY_SETTINGS.allow_rebase_merge)}`,
+  )
+  console.log(
+    `  - ブランチ更新許可: ${String(REPOSITORY_SETTINGS.allow_update_branch)}`,
+  )
+  console.log(
+    `  - マージ後ブランチ削除: ${String(REPOSITORY_SETTINGS.delete_branch_on_merge)}`,
+  )
+  console.log(`  - Issues機能: ${String(REPOSITORY_SETTINGS.has_issues)}`)
 }
 
-# 真偽値の変換
-bool_to_json() {
-    case "$1" in
-        true|True|TRUE) echo "true" ;;
-        false|False|FALSE) echo "false" ;;
-        *) echo "$1" ;;
-    esac
+function getExistingRulesetId(repoPath: string) {
+  const rulesets = ghApiJson<RulesetSummary[]>(`repos/${repoPath}/rulesets`)
+
+  if (!Array.isArray(rulesets)) {
+    return null
+  }
+
+  const current = rulesets.find(
+    (ruleset) => ruleset.name === RULESET_CONFIG.name,
+  )
+
+  return current?.id ?? null
 }
 
-# ref_include配列をJSON配列に変換
-refs_to_json() {
-    local refs=("$@")
-    local json="["
-    for i in "${!refs[@]}"; do
-        json="$json\"${refs[i]}\""
-        if [[ $i -lt $((${#refs[@]} - 1)) ]]; then
-            json="$json,"
-        fi
-    done
-    json="$json]"
-    echo "$json"
+function createRuleset(repoPath: string) {
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を作成しています...`)
+  ghApi(`repos/${repoPath}/rulesets`, {
+    method: "POST",
+    inputJson: JSON.stringify(buildRulesetPayload()),
+  })
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を作成しました。`)
 }
 
-# 既存ルールセットの確認
-get_existing_ruleset_id() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local ruleset_id
-
-    ruleset_id=$(gh api "repos/$repo_path/rulesets" --jq ".[] | select(.name == \"$RULESET_NAME\") | .id" 2>/dev/null || echo "")
-    echo "$ruleset_id"
+function updateRuleset(repoPath: string, rulesetId: number) {
+  console.log(
+    `ルールセット '${RULESET_CONFIG.name}' (ID: ${rulesetId}) を更新しています...`,
+  )
+  ghApi(`repos/${repoPath}/rulesets/${rulesetId}`, {
+    method: "PUT",
+    inputJson: JSON.stringify(buildRulesetPayload()),
+  })
+  console.log(`ルールセット '${RULESET_CONFIG.name}' を更新しました。`)
 }
 
-# ルールセット作成
-create_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
-    echo "ルールセット '$RULESET_NAME' を作成しています..."
+function setupRuleset(repoPath: string) {
+  const existingRulesetId = getExistingRulesetId(repoPath)
 
-    local ruleset_json
-    ruleset_json=$(build_ruleset_json)
+  if (existingRulesetId !== null) {
+    console.log("ルールセットが既に存在します。更新します。")
+    updateRuleset(repoPath, existingRulesetId)
+  } else {
+    createRuleset(repoPath)
+  }
 
-    gh api "repos/$repo_path/rulesets" \
-        --method POST \
-        --input - <<< "$ruleset_json" \
-        --jq '.id' > /dev/null
+  console.log("ルールセット設定が完了しました。")
+  console.log("設定されたルールセット:")
+  console.log(`  - ルールセット名: ${RULESET_CONFIG.name}`)
+  console.log(`  - 実行モード: ${RULESET_CONFIG.enforcement}`)
+  console.log(`  - 対象ブランチ: ${RULESET_CONFIG.default_branch_ref}`)
+  console.log("  - bypass actor: admin role (pull_request only)")
+  console.log("  - 削除防止: true")
+  console.log("  - 更新許可: false (PR 経由のみ)")
+  console.log(
+    `  - 必要承認数: ${RULESET_CONFIG.pull_request.required_approving_review_count}`,
+  )
+  console.log(
+    `  - 最新プッシュ承認要求: ${String(RULESET_CONFIG.pull_request.require_last_push_approval)}`,
+  )
+  console.log(
+    `  - 古いレビュー却下: ${String(RULESET_CONFIG.pull_request.dismiss_stale_reviews_on_push)}`,
+  )
+  console.log(
+    `  - Code Owner review要求: ${String(RULESET_CONFIG.pull_request.require_code_owner_review)}`,
+  )
+  console.log(
+    `  - 会話解決要求: ${String(RULESET_CONFIG.pull_request.required_review_thread_resolution)}`,
+  )
+  console.log(
+    `  - 許可マージ方法: ${RULESET_CONFIG.pull_request.allowed_merge_methods.join(", ")}`,
+  )
 
-    echo "ルールセット '$RULESET_NAME' を作成しました。"
+  if (RULESET_CONFIG.required_status_check_contexts.length > 0) {
+    console.log(
+      `  - required status checks: ${RULESET_CONFIG.required_status_check_contexts.join(", ")}`,
+    )
+  } else {
+    console.log("  - required status checks: 未設定")
+  }
 }
 
-# ルールセット更新
-update_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local ruleset_id="$1"
-    echo "ルールセット '$RULESET_NAME' (ID: $ruleset_id) を更新しています..."
+function setupNotifications(repoPath: string) {
+  const result = ghApi(`repos/${repoPath}/subscription`, {
+    method: "PUT",
+    fields: { ignored: true },
+    check: false,
+  })
 
-    local ruleset_json
-    ruleset_json=$(build_ruleset_json)
-
-    gh api "repos/$repo_path/rulesets/$ruleset_id" \
-        --method PUT \
-        --input - <<< "$ruleset_json" \
-        --jq '.id' > /dev/null
-
-    echo "ルールセット '$RULESET_NAME' を更新しました。"
+  if (result.status === 0) {
+    console.log(`リポジトリ '${repoPath}' の通知を Ignore に設定しました。`)
+  } else {
+    console.error("注意: 通知設定に失敗しました。権限を確認してください。")
+  }
 }
 
-# ルールセット設定処理
-setup_ruleset() {
-    local repo_path="$OWNER/$REPO_NAME"
+function setupDependabotSecurity(repoPath: string) {
+  console.log("Dependabot セキュリティ機能を設定中...")
 
-    # 既存ルールセットの確認
-    local existing_ruleset_id
-    existing_ruleset_id=$(get_existing_ruleset_id)
+  let success = true
 
-    if [[ -n "$existing_ruleset_id" ]]; then
-        echo "ルールセットが既に存在します。更新します。"
-        update_ruleset "$existing_ruleset_id"
-    else
-        create_ruleset
-    fi
+  if (
+    ghApi(`repos/${repoPath}/vulnerability-alerts`, {
+      method: "PUT",
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependabot alerts を有効化しました")
+  } else {
+    console.error("  - Dependabot alerts の有効化に失敗しました")
+    success = false
+  }
 
-    echo "ルールセット設定が完了しました。"
-    echo "設定されたルールセット:"
-    echo "  - ルールセット名: $RULESET_NAME"
-    echo "  - 実行モード: $ENFORCEMENT"
-    echo "  - 対象ブランチ: ${REF_INCLUDE[*]}"
-    echo "  - 削除防止: true"
-    echo "  - 更新許可: true"
-    echo "  - 必要承認数: $REQUIRED_APPROVING_REVIEW_COUNT"
-    echo "  - 最新プッシュ承認要求: $REQUIRE_LAST_PUSH_APPROVAL"
-    echo "  - 古いレビュー却下: $DISMISS_STALE_REVIEWS"
+  if (
+    ghApi(`repos/${repoPath}/automated-security-fixes`, {
+      method: "PUT",
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependabot security updates を有効化しました")
+  } else {
+    console.error("  - Dependabot security updates の有効化に失敗しました")
+    success = false
+  }
+
+  if (
+    ghApi(`repos/${repoPath}`, {
+      method: "PATCH",
+      fields: { has_vulnerability_alerts: true },
+      check: false,
+    }).status === 0
+  ) {
+    console.log("  - Dependency graph を有効化しました")
+  } else {
+    console.error("  - Dependency graph の有効化に失敗しました")
+    success = false
+  }
+
+  console.log("  - Dependabot version updates の状態を確認中...")
+
+  if (
+    ghApi(`repos/${repoPath}/contents/.github/dependabot.yml`, {
+      check: false,
+    }).status === 0
+  ) {
+    console.log(
+      "  - Dependabot version updates が有効です（.github/dependabot.yml が存在）",
+    )
+    console.log(
+      "    無効化する場合は手動で .github/dependabot.yml を削除してください",
+    )
+  } else {
+    console.log("  - Dependabot version updates は無効です（.github/dependabot.yml なし）")
+  }
+
+  if (success) {
+    console.log("Dependabot セキュリティ機能の設定が完了しました。")
+  } else {
+    console.error(
+      "注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。",
+    )
+  }
 }
 
-setup_notifications() {
-    local repo_path="$OWNER/$REPO_NAME"
+function main() {
+  const { repoPath, source } = parseArgs(process.argv.slice(2))
 
-    if gh api -X PUT "repos/$repo_path/subscription" -f ignored=true 2>/dev/null; then
-        echo "リポジトリ '$repo_path' の通知をIgnoreに設定しました。"
-    else
-        echo "注意: 通知設定に失敗しました。権限を確認してください。" >&2
-    fi
+  console.log("=== GitHub リポジトリと ruleset の設定を開始します ===")
+  console.log(`リポジトリ: ${repoPath}`)
+  console.log(`解決元: ${source === "argument" ? "引数" : "current git repository"}`)
+  console.log("")
+
+  const isPrivate = ensureRepositoryExists(repoPath)
+
+  console.log("=== ステップ 1: リポジトリ設定の更新 ===")
+  updateRepositorySettings(repoPath)
+  console.log("")
+
+  console.log("=== ステップ 2: ruleset の設定 ===")
+  if (isPrivate) {
+    console.log(
+      "プライベートリポジトリのため、ruleset 設定をスキップします（GitHub Pro が必要）。",
+    )
+  } else {
+    setupRuleset(repoPath)
+  }
+  console.log("")
+
+  console.log("=== ステップ 3: Dependabot セキュリティ機能の有効化 ===")
+  setupDependabotSecurity(repoPath)
+  console.log("")
+
+  console.log("=== ステップ 4: 通知設定 ===")
+  setupNotifications(repoPath)
+
+  console.log("=== 完了: すべての設定が完了しました ===")
 }
 
-# Dependabotセキュリティ機能の有効化
-setup_dependabot_security() {
-    local repo_path="$OWNER/$REPO_NAME"
-    local success=true
-
-    echo "Dependabotセキュリティ機能を設定中..."
-
-    # Dependabot alerts を有効化
-    if gh api -X PUT "repos/$repo_path/vulnerability-alerts" 2>/dev/null; then
-        echo "  ✓ Dependabot alerts を有効化しました"
-    else
-        echo "  ✗ Dependabot alerts の有効化に失敗しました" >&2
-        success=false
-    fi
-
-    # Dependabot security updates を有効化
-    if gh api -X PUT "repos/$repo_path/automated-security-fixes" 2>/dev/null; then
-        echo "  ✓ Dependabot security updates を有効化しました"
-    else
-        echo "  ✗ Dependabot security updates の有効化に失敗しました" >&2
-        success=false
-    fi
-
-    # Dependency graph を有効化（リポジトリ設定経由）
-    if gh api "repos/$repo_path" --method PATCH \
-        --field has_vulnerability_alerts=true 2>/dev/null; then
-        echo "  ✓ Dependency graph を有効化しました"
-    else
-        echo "  ✗ Dependency graph の有効化に失敗しました" >&2
-        success=false
-    fi
-
-    # Dependabot version updates の状態を確認（情報提供のみ）
-    echo "  ℹ Dependabot version updates の状態を確認中..."
-    if gh api "repos/$repo_path/contents/.github/dependabot.yml" 2>/dev/null >/dev/null; then
-        echo "  ⚠ Dependabot version updates が有効です（.github/dependabot.yml が存在）"
-        echo "    無効化する場合は手動で .github/dependabot.yml を削除してください"
-    else
-        echo "  ✓ Dependabot version updates は無効です（.github/dependabot.yml なし）"
-    fi
-
-    if [ "$success" = true ]; then
-        echo "Dependabotセキュリティ機能の設定が完了しました。"
-    else
-        echo "注意: 一部のセキュリティ機能の設定に失敗しました。権限を確認してください。" >&2
-    fi
-}
-
-# メイン処理
-main() {
-    parse_args "$@"
-
-    echo "=== GitHub リポジトリとルールセットの設定を開始します ==="
-    echo "リポジトリ: $OWNER/$REPO_NAME"
-    echo
-
-    # リポジトリの存在確認（必須）
-    ensure_repository_exists
-
-    # ステップ1: リポジトリ設定更新
-    echo "=== ステップ 1: リポジトリ設定の更新 ==="
-    update_repository_settings
-    echo
-
-    # ステップ2: ルールセット設定
-    echo "=== ステップ 2: ルールセットの設定 ==="
-    if [ "$IS_PRIVATE" = "true" ]; then
-        echo "プライベートリポジトリのため、ルールセット設定をスキップします（GitHub Pro が必要）。"
-    else
-        setup_ruleset
-    fi
-    echo
-
-    # ステップ3: Dependabotセキュリティ機能の有効化
-    echo "=== ステップ 3: Dependabotセキュリティ機能の有効化 ==="
-    setup_dependabot_security
-    echo
-
-    # ステップ4: 通知設定
-    echo "=== ステップ 4: 通知設定 ==="
-    setup_notifications
-
-    echo "=== 完了: すべての設定が完了しました ==="
-}
-
-# スクリプト実行
-main "$@"
+main()
