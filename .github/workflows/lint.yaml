@@ -77,3 +77,17 @@ jobs:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: taplo
         run: taplo format --check
+
+  lint-secret:
+    if: ${{ ! endsWith(github.actor, '[bot]')}}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 1
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: secretlint/secretlint-github-action@e89104082260773d2a71536b3602f37c768a1835 # v0.8.0
+        with:
+          secretlintrc: .secretlintrc.json
