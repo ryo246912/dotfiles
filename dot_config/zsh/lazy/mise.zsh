@@ -18,10 +18,6 @@ __generate_and_load_completion() {
             gh completion -s zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
-        "gwq")
-            gwq completion zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
-            ;;
         "mise")
             mise completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
@@ -69,9 +65,26 @@ if command -v gh >/dev/null 2>&1; then
     __generate_and_load_completion "gh"
 fi
 
-# gwq
-if command -v gwq >/dev/null 2>&1; then
-    __generate_and_load_completion "gwq"
+# wtp
+if command -v wtp >/dev/null 2>&1; then
+    eval "$(wtp shell-init zsh)"
+fi
+
+# worktrunk
+if command -v wt >/dev/null 2>&1; then
+    _wt_shell_init="$(wt config shell init zsh 2>/dev/null)"
+    if [ -z "$_wt_shell_init" ]; then
+        _wt_shell_init="$(wt config shell init 2>/dev/null)"
+    fi
+    if [ -n "$_wt_shell_init" ]; then
+        eval "$_wt_shell_init"
+    fi
+    unset _wt_shell_init
+fi
+
+# gtr (git-worktree-runner)
+if command -v git-gtr >/dev/null 2>&1; then
+    eval "$(git gtr init zsh)"
 fi
 
 # mise

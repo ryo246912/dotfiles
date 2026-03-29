@@ -26,6 +26,7 @@ install_package() {
 
     coreutils
     findutils
+    git-gtr
     gnu-sed
     grep
     tree
@@ -33,7 +34,12 @@ install_package() {
 
   for package in "${PACKAGES[@]}"; do
     if ! brew list "$package" &>/dev/null; then
-      brew install "$package"
+      if [[ "$package" == "git-gtr" ]]; then
+        brew tap coderabbitai/tap
+        brew install "$package"
+      else
+        brew install "$package"
+      fi
     else
       echo "$package is already installed"
     fi
