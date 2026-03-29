@@ -5,7 +5,7 @@ _multi_worktree() {
     local -a subcommands
     subcommands=(
         'create:マルチrepoのworktreeを一括作成'
-        'recreate:不足しているworktree/設定だけ補充'
+        'recreate:不足しているworktreeを補充し、task設定を再生成'
         'remove:worktreeを一括削除'
         'list:タスク一覧表示'
         'status:各repoの状態確認'

@@ -149,7 +149,7 @@ multi-worktree create feat/add-auth
     └── devcontainer.json     # 自動生成された設定
 ```
 
-設定を変えたあとや、一部ディレクトリ・設定ファイルだけ欠けたときは、既存 path を壊さず不足分だけ補充できます。
+設定を変えたあとや、一部ディレクトリ・設定ファイルだけ欠けたときは、既存 path を壊さず不足分を補充しつつ、task 設定を current config で再生成できます。
 
 ```bash
 multi-worktree recreate feat/add-auth
@@ -157,8 +157,8 @@ multi-worktree recreate feat/add-auth
 
 - 既存の repo worktree directory はそのまま残ります
 - まだ存在しない repo worktree だけ current config をもとに追加します
-- `.git/`、`.devcontainer/devcontainer.json`、`.claude/settings.local.json` が欠けていれば再作成します
-- 既に存在する file / directory は上書きしません
+- `.git/` が欠けていれば再作成します
+- `.devcontainer/devcontainer.json` と `.claude/settings.local.json` は current config で毎回再生成します
 
 2. **タスク一覧を表示**
 
@@ -245,13 +245,14 @@ multi-worktree create fix/login-bug --group=work
 
 ### `recreate <task-name> [--group=GROUP]`
 
-既存 task root を壊さず、現在の config をもとに不足している worktree / 設定だけ補充します。
+既存 task root を壊さず、現在の config をもとに不足している worktree を補充し、task 設定を再生成します。
 
 **動作:**
 1. 既存 task があればその group、なければ `--group` またはデフォルト group を使います
 2. 各リポジトリについて、存在しない worktree path だけを追加します
-3. task root の `.git/`、`.devcontainer/devcontainer.json`、`.claude/settings.local.json` が欠けていれば再作成します
-4. 既に存在する file / directory はそのまま保持します
+3. task root の `.git/` が欠けていれば再作成します
+4. `.devcontainer/devcontainer.json` と `.claude/settings.local.json` は current config で上書き再生成します
+5. 既存の repo worktree directory はそのまま保持します
 
 **例:**
 ```bash
@@ -260,8 +261,8 @@ multi-worktree recreate feat/add-auth --group=work
 ```
 
 **補足:**
-- `recreate` は既存ファイルを上書きしません
-- config を更新した内容で `devcontainer.json` なども作り直したい場合は、対象 file を削除してから `recreate` するか、`remove` -> `create` を使ってください
+- `recreate` は既存 repo worktree directory を上書きしません
+- `devcontainer.json` と `.claude/settings.local.json` は generated file として扱い、`recreate` のたびに current config で更新されます
 
 ### `list`
 
@@ -467,7 +468,7 @@ multi-worktree create feat/add-auth
 multi-worktree recreate feat/add-auth
 ```
 
-`recreate` は既存の `devcontainer.json` や `.claude/settings.local.json` を上書きしません。既存 file を current config に合わせて作り直したい場合は、対象 file を削除してから再実行してください。
+`recreate` は既存の repo worktree directory は保持したまま、`devcontainer.json` と `.claude/settings.local.json` を current config で上書き再生成します。`.git/` は欠けているときだけ補修されます。
 
 ### worktree の削除に失敗する
 

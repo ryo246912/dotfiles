@@ -243,11 +243,12 @@
 
 ### 目的と背景
 
-- 直近コメントで、`multi-worktree recreate <task>` を追加し、「現在の config 内容で不足している worktree / 設定だけを補充し、既に存在する folder / file は触らない」挙動が求められた。
+- 直近コメントで、`multi-worktree recreate <task>` を追加し、「現在の config 内容で不足している worktree は補充しつつ、`devcontainer.json` と `.claude/settings.local.json` は current config で上書き再生成する」挙動が求められた。
 - 想定ユースケースは以下:
   - group の `repos` に新しいリポジトリを追加したあと、既存 task にその repo worktree だけを足したい
-  - task root 配下の `.git/`、`.devcontainer/devcontainer.json`、`.claude/settings.local.json` などが欠けたので補修したい
-  - 既存の repo worktree や手編集済み設定ファイルを上書きしたくない
+  - task root 配下の `.git/` が欠けたので補修したい
+  - group の `repos` や `devcontainer` mount 対象を変えたあと、既存 task の generated settings を current config に合わせて更新したい
+  - 既存の repo worktree は保持したいが、generated settings は再出力したい
 
 ### 実装アプローチ
 
@@ -257,11 +258,10 @@
   - 未指定なら既存 task directory から group を推定
   - それも無ければ default group を使う
 - repo worktree は「path が存在しないものだけ」作成する
-- task root support files は以下を対象に「欠けているものだけ」作成する
-  - synthetic git repository (`.git/` と task root branch)
-  - `.devcontainer/devcontainer.json`
-  - `.claude/settings.local.json`
-- 既存 file / directory は保持するため、current config の内容で強制更新する用途には使わない
+- task root support files は以下の方針で扱う
+  - synthetic git repository (`.git/` と task root branch) は欠けているときだけ補修する
+  - `.devcontainer/devcontainer.json` は `recreate` のたびに current config で上書き再生成する
+  - `.claude/settings.local.json` は `recreate` のたびに current config で上書き再生成する
 
 ### 変更対象ファイル
 
@@ -279,8 +279,9 @@
 - fixture 確認:
   - 初期 config で task を作成する
   - config に repo を追加したうえで `recreate` を実行し、新規 repo worktree だけ増えることを確認する
-  - 既存 `devcontainer.json` を残したまま `recreate` し、上書きされないことを確認する
-  - `devcontainer.json` / `settings.local.json` を削除して `recreate` し、欠損分だけ再生成されることを確認する
+  - 既存 repo worktree path が残ったまま `recreate` し、削除・再作成されないことを確認する
+  - 既存 `devcontainer.json` / `settings.local.json` を変更した状態で `recreate` し、current config の内容で上書き再生成されることを確認する
+  - `task root` の `.git/` を削除して `recreate` し、synthetic git repository だけ補修されることを確認する
 - 回帰確認:
   - `multi-worktree help`
   - `multi-worktree list`
@@ -289,7 +290,7 @@
 
 ### リスクと対応策
 
-- リスク: `recreate` が既存 file を上書きしないため、config 変更を既存 `devcontainer.json` に自動反映できない
-  - 対応: README に「更新したい場合は対象 file を削除してから `recreate`、または `remove` -> `create`」と明記する
+- リスク: `recreate` が `devcontainer.json` / `.claude/settings.local.json` を上書きするため、手編集した内容が消える
+  - 対応: README に generated file であることを明記し、手編集を残したい場合は別 file / 別運用に逃がす前提にする
 - リスク: task 名だけで group を推定すると、複数 group に同名 task がある場合は曖昧になる
   - 対応: `--group` を優先し、README でも明示する

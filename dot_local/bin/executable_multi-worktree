@@ -42,7 +42,7 @@ Usage: multi-worktree <subcommand> [options]
 
 サブコマンド:
   create <task-name> [--from=FROM_BRANCH] [--group=GROUP]  マルチrepoのworktreeを一括作成
-  recreate <task-name> [--from=FROM_BRANCH] [--group=GROUP] 不足しているworktree/設定だけ補充
+  recreate <task-name> [--from=FROM_BRANCH] [--group=GROUP] 不足しているworktreeを補充し、task設定を再生成
   remove <task-name> [--force]          worktreeを一括削除
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
@@ -67,7 +67,7 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree create feat/add-auth --branch=main               # 全リポジトリで main ブランチを checkout
   multi-worktree create feat/add-auth --default-branch            # 各リポジトリのデフォルトブランチを checkout
   multi-worktree create feat/new-feature --group=work --branch=develop
-  multi-worktree recreate feat/add-auth                           # 欠けているrepo worktree/設定だけ再作成
+  multi-worktree recreate feat/add-auth                           # 欠けているrepo worktreeを補充し、task設定を再生成
   multi-worktree list
   multi-worktree status feat/add-auth
   multi-worktree status main                       # デフォルトグループの各repoのデフォルトブランチ状態確認
@@ -1160,7 +1160,7 @@ cmd_recreate() {
     local worktree_base_dir
     worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
 
-    log_info "タスク '$task_name' の欠損 worktree / 設定を補充します (グループ: $group)"
+    log_info "タスク '$task_name' の欠損 worktree を補充し、task 設定を再生成します (グループ: $group)"
     log_info "対象ディレクトリ: $worktree_base_dir"
 
     mkdir -p "$worktree_base_dir"
@@ -1213,7 +1213,7 @@ cmd_recreate() {
     done
 
     ensure_task_root_git_project "$task_name" "$worktree_base_dir"
-    ensure_task_support_files "$task_name" "$worktree_base_dir" false "${repos[@]}"
+    ensure_task_support_files "$task_name" "$worktree_base_dir" true "${repos[@]}"
 
     log_info "recreate 完了: 作成 $created_count / スキップ $skip_count / 失敗 $fail_count"
 
