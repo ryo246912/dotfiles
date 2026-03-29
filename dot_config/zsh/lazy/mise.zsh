@@ -69,6 +69,11 @@ if command -v gh >/dev/null 2>&1; then
     __generate_and_load_completion "gh"
 fi
 
+# worktrunk
+if command -v wt >/dev/null 2>&1; then
+    eval "$(wt config shell init zsh)"
+fi
+
 # gwq
 if command -v gwq >/dev/null 2>&1; then
     __generate_and_load_completion "gwq"
