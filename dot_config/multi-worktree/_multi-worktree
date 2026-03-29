@@ -5,6 +5,7 @@ _multi_worktree() {
     local -a subcommands
     subcommands=(
         'create:マルチrepoのworktreeを一括作成'
+        'recreate:不足しているworktree/設定だけ補充'
         'remove:worktreeを一括削除'
         'list:タスク一覧表示'
         'status:各repoの状態確認'
@@ -76,6 +77,13 @@ _multi_worktree() {
                     _arguments \
                         '1:task-name:' \
                         '--group=[グループ名]:group:'
+                    ;;
+                recreate)
+                    if [[ $CURRENT -eq 2 ]]; then
+                        _describe 'task name' task_names
+                    else
+                        _arguments '--group=[グループ名]:group:'
+                    fi
                     ;;
                 remove)
                     _arguments \

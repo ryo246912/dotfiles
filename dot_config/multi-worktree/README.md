@@ -149,6 +149,17 @@ multi-worktree create feat/add-auth
     └── devcontainer.json     # 自動生成された設定
 ```
 
+設定を変えたあとや、一部ディレクトリ・設定ファイルだけ欠けたときは、既存 path を壊さず不足分だけ補充できます。
+
+```bash
+multi-worktree recreate feat/add-auth
+```
+
+- 既存の repo worktree directory はそのまま残ります
+- まだ存在しない repo worktree だけ current config をもとに追加します
+- `.git/`、`.devcontainer/devcontainer.json`、`.claude/settings.local.json` が欠けていれば再作成します
+- 既に存在する file / directory は上書きしません
+
 2. **タスク一覧を表示**
 
 ```bash
@@ -231,6 +242,26 @@ multi-worktree remove feat/new-feature
 multi-worktree create feat/add-auth
 multi-worktree create fix/login-bug --group=work
 ```
+
+### `recreate <task-name> [--group=GROUP]`
+
+既存 task root を壊さず、現在の config をもとに不足している worktree / 設定だけ補充します。
+
+**動作:**
+1. 既存 task があればその group、なければ `--group` またはデフォルト group を使います
+2. 各リポジトリについて、存在しない worktree path だけを追加します
+3. task root の `.git/`、`.devcontainer/devcontainer.json`、`.claude/settings.local.json` が欠けていれば再作成します
+4. 既に存在する file / directory はそのまま保持します
+
+**例:**
+```bash
+multi-worktree recreate feat/add-auth
+multi-worktree recreate feat/add-auth --group=work
+```
+
+**補足:**
+- `recreate` は既存ファイルを上書きしません
+- config を更新した内容で `devcontainer.json` なども作り直したい場合は、対象 file を削除してから `recreate` するか、`remove` -> `create` を使ってください
 
 ### `list`
 
@@ -427,6 +458,16 @@ cp ~/.config/multi-worktree/config.toml.sample ~/.config/multi-worktree/config.t
 multi-worktree remove feat/add-auth
 multi-worktree create feat/add-auth
 ```
+
+### 設定変更後に不足分だけ補充したい
+
+たとえば group の `repos` に新しいリポジトリを追加したあと、既存 task にその repo の worktree だけ増やしたい場合は `recreate` を使います。
+
+```bash
+multi-worktree recreate feat/add-auth
+```
+
+`recreate` は既存の `devcontainer.json` や `.claude/settings.local.json` を上書きしません。既存 file を current config に合わせて作り直したい場合は、対象 file を削除してから再実行してください。
 
 ### worktree の削除に失敗する
 
