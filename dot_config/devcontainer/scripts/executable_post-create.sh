@@ -25,3 +25,16 @@ EOF
 else
 	echo "ℹ️ .gitconfig は既に存在します"
 fi
+
+# claude-account2 ディレクトリを作成
+account2_dir="${HOME}/.claude-account2"
+mkdir -p "${account2_dir}"
+
+for shared_entry in projects settings.json agents skills plugins; do
+	if [ ! -e "${account2_dir}/${shared_entry}" ] && [ ! -L "${account2_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
+		ln -s "../.claude/${shared_entry}" "${account2_dir}/${shared_entry}"
+		echo "✓ .claude-account2/${shared_entry} を共有しました"
+	else
+		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
+	fi
+done

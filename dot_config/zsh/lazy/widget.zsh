@@ -1,41 +1,28 @@
-# ctrl + d(alt + shift + d)でlazygit起動
-_lazygit() {
-  if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" lazygit
-  else
-    BUFFER='lazygit'
-    zle accept-line
-  fi
-}
-zle -N _lazygit
-if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^D" _lazygit
-else
-  bindkey "^[D" _lazygit
-fi
-
-# ctrl + x(alt + shift + x)でgh-dash起動
-_gh-dash() {
+# ctrl + d(alt + shift + d)でインタラクティブツール選択起動 (e1s / lazydocker / d4s / lazygit /lazychezmoi / gh-dash / yazi)
+_select_tool() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
-      if tmux has-session -t popup 2>/dev/null; then \
-        tmux new-window -t popup -c "$current_path" "gh-dash" ; \
-        tmux attach -t popup ; \
+      tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
+      if tmux has-session -t overlay 2>/dev/null; then \
+        tmux new-window -t overlay -c "$current_path" "$tool" ; \
+        tmux attach -t overlay ; \
       else \
-        tmux new-session -s popup -c "$current_path" "gh-dash" \; set-option status off ; \
+        tmux new-session -s overlay -c "$current_path" "$tool" \; set-option status off; \
       fi \
     '
   else
-    BUFFER='gh-dash'
+    local tool
+    tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || return 0
+    BUFFER="$tool"
     zle accept-line
   fi
 }
-zle -N _gh-dash
+zle -N _select_tool
 if [ "$(uname)" = "Darwin" ]; then
-  bindkey "^X" _gh-dash
+  bindkey "^D" _select_tool
 else
-  bindkey "^[X" _gh-dash
+  bindkey "^[D" _select_tool
 fi
 
 # ctrl + y(alt + shift + y)でyazi起動

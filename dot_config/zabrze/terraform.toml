@@ -14,9 +14,39 @@ snippet = "terraform plan"
 trigger = "tfp"
 
 [[snippets]]
+name    = "terraform plan (Debug: All)"
+snippet = "TF_LOG=DEBUG terraform plan"
+trigger = "tfpd"
+
+[[snippets]]
+name    = "terraform plan (Debug: Core)"
+snippet = "TF_LOG_CORE=DEBUG terraform plan"
+trigger = "tfpdc"
+
+[[snippets]]
+name    = "terraform plan (Debug: Provider)"
+snippet = "TF_LOG_PROVIDER=DEBUG terraform plan"
+trigger = "tfpdp"
+
+[[snippets]]
 name    = "terraform apply"
 snippet = "terraform apply"
 trigger = "tfa"
+
+[[snippets]]
+name    = "terraform apply (Debug: All)"
+snippet = "TF_LOG=DEBUG terraform apply"
+trigger = "tfad"
+
+[[snippets]]
+name    = "terraform apply (Debug: Core)"
+snippet = "TF_LOG_CORE=DEBUG terraform apply"
+trigger = "tfadc"
+
+[[snippets]]
+name    = "terraform apply (Debug: Provider)"
+snippet = "TF_LOG_PROVIDER=DEBUG terraform apply"
+trigger = "tfadp"
 
 [[snippets]]
 name    = "terraform fmt -recursive"
@@ -47,3 +77,60 @@ trigger = "tfw"
 name    = "terraform output"
 snippet = "terraform output"
 trigger = "tfo"
+
+# terraform-tools
+[[snippets]]
+name    = "tflint"
+snippet = "tflint"
+trigger = "tfl"
+
+[[snippets]]
+name    = "tflint --init"
+snippet = "tflint --init"
+trigger = "tfli"
+
+[[snippets]]
+name    = "tflint --recursive"
+snippet = "tflint --recursive"
+trigger = "tflr"
+
+[[snippets]]
+name    = "tflint --fix"
+snippet = "tflint --fix"
+trigger = "tflf"
+
+[[snippets]]
+name    = "tftui"
+snippet = "tftui"
+trigger = "tft"
+
+[[snippets]]
+name    = "pug (tetui2)"
+snippet = "pug"
+trigger = "tft2"
+
+# trivy
+[[snippets]]
+name    = "trivy"
+snippet = "trivy"
+trigger = "trv"
+
+[[snippets]]
+name    = "trivy image"
+snippet = "trivy image"
+trigger = "trvi"
+
+[[snippets]]
+name    = "trivy fs"
+snippet = "trivy fs ."
+trigger = "trvf"
+
+[[snippets]]
+name    = "trivy config"
+snippet = "trivy config ."
+trigger = "trvc"
+
+[[snippets]]
+name    = "trivy repo"
+snippet = "trivy repo"
+trigger = "trvr"
