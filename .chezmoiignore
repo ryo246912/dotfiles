@@ -10,6 +10,8 @@
 {{- end }}
 _*
 plan*
+tools/multi-worktree
+tools/multi-worktree/**
 
 .config/claude*
 .config/dbeaver*
@@ -24,6 +26,7 @@ flake*
 chezmoi.toml
 mise.toml
 taplo.toml
+go.work*
 rulesync.jsonc
 rulesync.lock
 
