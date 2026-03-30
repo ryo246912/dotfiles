@@ -15,4 +15,4 @@
 "pipx:awslogs"                              = "0.15.0"
 "pipx:tftui"                                = "0.13.4"
 "postgres"                                  = "14.19"
-terraform                                   = "1.14.7"
+terraform                                   = "1.14.8"
