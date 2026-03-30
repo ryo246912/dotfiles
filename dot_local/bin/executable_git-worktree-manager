@@ -63,6 +63,43 @@ append_candidate() {
 	CANDIDATES_DATA+="$candidate_line"
 }
 
+# fzf 表示用に候補列を整形する
+build_fzf_input() {
+	local display_rows=""
+
+	while IFS=$'\t' read -r target_type display_name target_path info raw_name; do
+		[[ -z "$target_type" ]] && continue
+
+		if [[ -n "$display_rows" ]]; then
+			display_rows+=$'\n'
+		fi
+		display_rows+="$(printf '%s\t%s\t%s' "$target_type" "$display_name" "$info")"
+	done <<< "$CANDIDATES_DATA"
+
+	local aligned_rows="$display_rows"
+	if command -v column &>/dev/null; then
+		aligned_rows=$(printf '%s\n' "$display_rows" | column -s $'\t' -t)
+	else
+		aligned_rows=$(while IFS=$'\t' read -r target_type display_name info; do
+			printf '%s | %s | %s\n' "$target_type" "$display_name" "$info"
+		done <<< "$display_rows")
+	fi
+
+	local fzf_input=""
+	exec 3<<< "$aligned_rows"
+	while IFS= read -r raw_line && IFS= read -r aligned_line <&3; do
+		[[ -z "$raw_line" ]] && continue
+
+		if [[ -n "$fzf_input" ]]; then
+			fzf_input+=$'\n'
+		fi
+		fzf_input+="$(printf '%s\t%s' "$raw_line" "$aligned_line")"
+	done <<< "$CANDIDATES_DATA"
+	exec 3<&-
+
+	printf '%s\n' "$fzf_input"
+}
+
 # git worktree を共通候補へ変換
 append_git_candidates() {
 	if ! is_git_repo; then
@@ -91,16 +128,16 @@ append_multi_worktree_candidates() {
 	while IFS=$'\t' read -r task_name group task_path repo_count devcontainer; do
 		[[ -z "$task_name" ]] && continue
 
-		local info
 		local group_name="${group:-default}"
+		local display_name="${task_name} group=${group_name}"
 		local repo_summary="${repo_count:-0 repos}"
-		info="group=${group_name} / ${repo_summary}"
+		local info="${repo_summary}"
 		if [[ -n "${devcontainer:-}" ]]; then
 			info="${info} / ${devcontainer}"
 		fi
 		info="${info} / ${task_path}"
 
-		append_candidate "$(printf 'multi\t%s\t%s\t%s\t%s' "$task_name" "$task_path" "$info" "$task_name")"
+		append_candidate "$(printf 'multi\t%s\t%s\t%s\t%s' "$display_name" "$task_path" "$info" "$task_name")"
 	done <<< "$tasks"
 
 	return 0
@@ -126,10 +163,10 @@ select_target() {
 	fi
 
 	local selected_display
-	selected_display=$(printf '%s\n' "$CANDIDATES_DATA" | fzf \
+	selected_display=$(build_fzf_input | fzf \
 		--header="対象を選択してください (git worktree / multi-worktree)" \
 		--delimiter=$'\t' \
-		--with-nth=1,2,4 \
+		--with-nth=6 \
 		--preview='bash -c '"'"'
 kind="$1"
 path="$2"
