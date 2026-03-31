@@ -15,9 +15,7 @@
     {
       "customType": "regex",
       "managerFilePatterns": ["dot_config/mise/**/*.toml"],
-      "matchStrings": [
-        "npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""
-      ],
+      "matchStrings": ["npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "devcontainers/cli",
       "datasourceTemplate": "github-tags"
     },

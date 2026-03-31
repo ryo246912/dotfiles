@@ -59,23 +59,23 @@ run         = "taplo format"
 [tasks.lint-yaml]
 description = "Run lint YAML files"
 hide        = true
-run         = "prettier --check '**/*.{yaml,yml}'"
+run         = "oxfmt --check '**/*.{yaml,yml}'"
 
 [tasks.fix-yaml]
 description = "Run fix YAML files"
 hide        = true
-run         = "prettier --write --list-different '**/*.{yaml,yml}'"
+run         = "oxfmt --write --list-different '**/*.{yaml,yml}'"
 
 # json
 [tasks.lint-json]
 description = "Run lint json files"
 hide        = true
-run         = "prettier --check '**/*.json'"
+run         = "oxfmt --check '**/*.json'"
 
 [tasks.fix-json]
 description = "Run fix json files"
 hide        = true
-run         = "prettier --write --list-different '**/*.json'"
+run         = "oxfmt --write --list-different '**/*.json'"
 
 [tasks.karabiner-apply]
 description = "build and apply karabiner.ts configuration"
@@ -88,12 +88,12 @@ run = [
 description = "build and dry-run karabiner.ts configuration"
 run = [
     "bun dot_config/karabiner-ts/karabiner.ts --dry-run > dot_config/karabiner-ts/karabiner.json",
-    "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
+    "oxfmt --write --list-different dot_config/karabiner-ts/karabiner.json",
 ]
 
 [tools]
 actionlint                     = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"
 "npm:@taplo/cli"               = "0.7.0"
-"npm:prettier"                 = "3.8.1"
+"npm:oxfmt"                    = "0.42.0"
 "pipx:zizmor"                  = "1.12.1"

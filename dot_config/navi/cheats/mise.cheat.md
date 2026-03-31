@@ -1,7 +1,7 @@
 ```sh
 % mise
 
-# install package[npx: npm:prettier,pipx: pipx:httpie]
+# install package[npx: npm:oxfmt,pipx: pipx:httpie]
 mise use -g <package>:<tool>
 
 # list installable list

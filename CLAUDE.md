@@ -629,8 +629,8 @@ unlock = "auto"
 
 1. **lint.yaml** - Multi-format linting
    - TOML files (taplo)
-   - JSON files (prettier)
-   - YAML files (prettier, actionlint)
+   - JSON files (oxfmt)
+   - YAML files (oxfmt, actionlint)
    - GitHub Actions workflow syntax
 
 2. **lint-action.yaml** - GitHub Actions-specific linting
