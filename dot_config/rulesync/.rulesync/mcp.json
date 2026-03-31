@@ -11,6 +11,10 @@
       "gallery": "https://api.mcp.github.com",
       "version": "0.13.0"
     },
+    "makenotion/notion-mcp-server": {
+      "url": "https://mcp.notion.com/mcp",
+      "type": "http"
+    },
     "AWS Billing and Cost Management MCP Server": {
       "command": "uvx",
       "args": ["awslabs.billing-cost-management-mcp-server@latest"],
@@ -34,6 +38,10 @@
       },
       "transportType": "stdio",
       "type": "stdio"
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
     },
     "context7": {
       "type": "stdio",
