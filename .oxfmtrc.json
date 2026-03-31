@@ -1,0 +1,3 @@
+{
+  "ignorePatterns": ["dot_config/sidebery/**", "dot_config/obsidian/**", "**/bun.lock"]
+}

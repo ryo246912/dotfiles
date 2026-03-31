@@ -35,11 +35,11 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "npm:prettier"
+          install_args: "npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: prettier
-        run: prettier --check '**/*.json'
+        run: oxfmt --check '**/*.json'
 
   lint-yaml:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
@@ -54,11 +54,11 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "npm:prettier"
+          install_args: "npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: prettier
-        run: prettier --check '**/*.{yaml,yml}'
+        run: oxfmt --check '**/*.{yaml,yml}'
 
   lint-toml:
     if: ${{ ! endsWith(github.actor, '[bot]')}}

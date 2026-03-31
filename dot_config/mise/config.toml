@@ -82,7 +82,7 @@ node                                                        = "22.19.0"
 "npm:macos-notify-mcp"                                      = "0.0.8"
 "npm:open-cli"                                              = "9.0.0"
 "npm:playwright"                                            = "1.56.0"
-"npm:prettier"                                              = "3.8.1"
+"npm:oxfmt"                                                 = "0.42.0"
 "npm:renovate"                                              = "43.84.0"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:fast-resume"                                          = "1.17.2"
@@ -199,17 +199,17 @@ run         = "taplo format"
 # yaml
 [tasks.lint-yaml]
 description = "Run lint YAML files"
-run         = "prettier --check '**/*.{yaml,yml}'"
+run         = "oxfmt --check '**/*.{yaml,yml}'"
 
 [tasks.fix-yaml]
 description = "Run fix YAML files"
-run         = "prettier --write '**/*.{yaml,yml}'"
+run         = "oxfmt --write --list-different '**/*.{yaml,yml}'"
 
 # json
 [tasks.lint-json]
 description = "Run lint json files"
-run         = "prettier --check '**/*.json'"
+run         = "oxfmt --check '**/*.json'"
 
 [tasks.fix-json]
 description = "Run fix json files"
-run         = "prettier --write '**/*.json'"
+run         = "oxfmt --write --list-different '**/*.json'"
