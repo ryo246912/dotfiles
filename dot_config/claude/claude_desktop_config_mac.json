@@ -1,12 +1,3 @@
 {
-  "globalShortcut": "",
-  "mcpServers": {
-    "deepwiki": {
-      "url": "https://mcp.deepwiki.com/sse"
-    },
-    "modular-mcp": {
-      "command": "npx",
-      "args": ["-y", "@kimuson/modular-mcp", "$HOME/.claude/modular-mcp.json"]
-    }
-  }
+  "globalShortcut": ""
 }

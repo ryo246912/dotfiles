@@ -17,6 +17,7 @@ node                             = "22.19.0"
 "npm:opencode-ai"                = "1.1.48"
 "npm:prettier"                   = "3.8.1"
 python                           = "3.14.3"
+"ubi:philschmid/mcp-cli"         = "0.3.0"
 
 [settings.npm]
 bun = true

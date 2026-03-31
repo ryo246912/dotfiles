@@ -13,3 +13,4 @@
 
 - [setup](setup.md)
 - [rulesync usage](dot_config/rulesync/README.md)
+- [copilot MCP and mcp-cli usage](dot_copilot/README.md)
