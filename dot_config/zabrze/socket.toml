@@ -1,0 +1,19 @@
+[[snippets]]
+name    = "sfw npm install"
+snippet = "sfw npm install"
+trigger = "sni"
+
+[[snippets]]
+name    = "sfw npm install (malicious check)"
+snippet = "sfw npm install lodahs"
+trigger = "snil"
+
+[[snippets]]
+name    = "sfw pip install"
+snippet = "sfw pip install"
+trigger = "spi"
+
+[[snippets]]
+name    = "sfw cargo install"
+snippet = "sfw cargo install"
+trigger = "sci"
