@@ -175,16 +175,12 @@ run         = "(cd ~/.config/rulesync && rulesync generate)"
 description = "Generate user-scope rules only for GitHub Copilot"
 run         = "(cd ~/.config/rulesync && rulesync generate --targets copilot --features rules --global)"
 
-[tasks.rulesync-generate-mcp-copilot]
-description = "Generate project-local MCP settings only for GitHub Copilot from .rulesync"
-run         = "rulesync generate --targets copilot --features mcp"
-
 [tasks.rulesync-generate-mcp-copilotcli]
 description = "Generate user-scope MCP settings only for GitHub Copilot CLI from ~/.config/rulesync"
 run         = "(cd ~/.config/rulesync && rulesync generate --targets copilotcli --features mcp --global)"
 
 [tasks.rulesync-generate]
-depends     = ["rulesync-generate-local", "rulesync-generate-user", "rulesync-generate-user-copilot", "rulesync-generate-mcp-copilot", "rulesync-generate-mcp-copilotcli"]
+depends     = ["rulesync-generate-local", "rulesync-generate-user", "rulesync-generate-user-copilot", "rulesync-generate-mcp-copilotcli"]
 description = "Generate all rulesync outputs (local + user-scope)"
 
 # actions

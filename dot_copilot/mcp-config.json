@@ -16,7 +16,7 @@
       ],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": "",
+        "AWS_PROFILE": "AppAdministratorAccess-Root",
         "AWS_REGION": "ap-northeast-1"
       }
     },
@@ -27,7 +27,7 @@
         "awslabs.cloudwatch-mcp-server@latest"
       ],
       "env": {
-        "AWS_PROFILE": "",
+        "AWS_PROFILE": "AppAdministratorAccess-Giho-Sea-Staging",
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },

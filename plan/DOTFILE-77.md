@@ -1,93 +1,52 @@
 # DOTFILE-77 mcpの設定
 
-## 概要
+## 目的とスコープ
 
-- `rulesync` を source of truth として GitHub Copilot 向け MCP と GitHub Copilot CLI 向け MCP を repo 内で管理する。
-- 他 CLI に残っている MCP 設定と modular MCP は repo から削除する。
-- remote MCP は project-local の GitHub Copilot (`.vscode/mcp.json`) に集約し、GitHub Copilot CLI (`~/.copilot/mcp-config.json`) には rulesync 7.23.0 で扱える stdio subset を持たせる。
-- `philschmid/mcp-cli` を repo の `mise` 管理下に追加し、今回追加した Copilot MCP 設定を点検する使い方を Markdown にまとめる。
-
-## 要件
-
-### 機能要件
-
-- repo root `.rulesync/mcp.json` から `.vscode/mcp.json` を生成し、issue 記載の既存 MCP に加えて `deepwiki` と `context7` を含める。
-- `dot_config/rulesync/.rulesync/mcp.json` から `dot_copilot/mcp-config.json` 相当を生成し、Copilot CLI 向け stdio MCP を管理する。
-- `dot_config/rulesync/.rulesync/rules/COPILOT.md` は `copilot` target に正規化し、既存の Copilot instructions generate を壊さない。
-- Claude / Gemini / modular MCP の repo 内設定は削除する。
-- `philschmid/mcp-cli` を `mise` から導入できるようにする。
-- Copilot 向け MCP 設定の確認手順を repo 内 Markdown で参照できるようにする。
-- `post_create` や repo 外 post-process は使わない。
-
-### 非機能要件
-
-- 変更は provided repository copy のみで完結する。
-- 検証は repo 内に閉じた generate / dry-run / diff で再現できる。
-- 秘密情報やローカル専用値は issue 記載の範囲を超えて増やさない。
+- 2026-03-31 の最新指示に合わせ、MCP の正本を `dot_config/rulesync/.rulesync/mcp.json` に一本化し、それを GitHub Copilot CLI 用 `dot_copilot/mcp-config.json` へ同期する形だけを残す。
+- repo root の GitHub Copilot 向け MCP source / generated file（`.rulesync/mcp.json`, `.vscode/mcp.json`）は削除する。
+- 他 CLI 向け MCP 設定と modular MCP の削除状態を維持しつつ、`mcp-cli` の導入と利用ドキュメントを更新する。
 
 ## 実装方針
 
-### 1. rulesync 設定の正規化
+### 1. rulesync の正本を Copilot CLI 側へ集約する
 
-- `dot_config/rulesync/rulesync.jsonc` から無効 target を除去し、Claude / Codex / Gemini の user-scope generate を安定化する。
-- `dot_config/mise/config.toml` に Copilot rules / Copilot MCP / Copilot CLI MCP の専用 task を追加する。
+- `dot_config/rulesync/.rulesync/mcp.json` を唯一の MCP source of truth とする。
+- `dot_copilot/mcp-config.json` を source に再同期し、現在の AWS profile 値を含む generated snapshot へ揃える。
+- repo root の `.rulesync/mcp.json` と `.vscode/mcp.json` は削除する。
 
-### 2. MCP source と generated file の追加
+### 2. generate 導線を整理する
 
-- repo root `.rulesync/mcp.json` を追加し、project-local GitHub Copilot 向けに remote MCP を含む完全な設定を管理する。
-- `dot_config/rulesync/.rulesync/mcp.json` を追加し、GitHub Copilot CLI が受理できる stdio subset を管理する。
-- generated snapshot として `.vscode/mcp.json` および `dot_copilot/mcp-config.json` を repo に保持する。
+- `dot_config/mise/config.toml` から project-local Copilot MCP task を削除し、`rulesync-generate-mcp-copilotcli` だけを残す。
+- `dot_config/rulesync/README.md` と `dot_copilot/README.md` を更新し、Copilot CLI への同期手順と `mcp-cli` の使い方を現行構成へ合わせる。
 
-### 3. 不要設定の削除
+### 3. 制約を blocker として明文化する
 
-- `dot_config/claude/claude_desktop_config_mac.json` と `dot_gemini/settings.json` から MCP を除去する。
-- `dot_claude/.mcp.json`、`dot_claude/.mcp-old.json`、`dot_claude/modular-mcp.json` を削除する。
-- `dot_local/bin/executable_setup-ai-tool` から Claude MCP 自動登録処理を削除する。
-
-### 4. README / plan の更新
-
-- `dot_config/rulesync/README.md` に source / task / generate 手順を追記する。
-- `plan/DOTFILE-77.md` を実装済み方針に合わせて更新する。
-
-### 5. mcp-cli の導入と利用ドキュメント
-
-- `dot_config/mise/config.toml` と `dot_config/devcontainer/mise.toml` に GitHub release 版 `mcp-cli` を追加する。
-- `dot_copilot/README.md` を新規追加し、`.vscode/mcp.json` と `dot_copilot/mcp-config.json` の使い分け、`mcp-cli` での一覧表示・schema 確認・call 手順を整理する。
-- repo root `README.md` から新規ドキュメントへ辿れるようにする。
+- GitHub Copilot CLI 自体は HTTP MCP を受け付けるが、`rulesync` の `copilotcli` target は現時点で `command` を持つ stdio server しか materialize できない。
+- `rulesync 7.23.0` と `rulesync 7.25.0` の両方でこの制約を確認し、`deepwiki` / `makenotion/notion-mcp-server` を repo 内の rulesync-only sync に乗せられないことを記録する。
 
 ## 変更対象ファイル
 
-- `.rulesync/mcp.json`
-- `.vscode/mcp.json`
-- `.gitignore`
+- `.rulesync/mcp.json`（削除）
+- `.vscode/mcp.json`（削除）
 - `dot_config/rulesync/.rulesync/mcp.json`
 - `dot_copilot/mcp-config.json`
-- `dot_config/rulesync/.rulesync/rules/COPILOT.md`
-- `dot_config/rulesync/rulesync.jsonc`
-- `dot_config/rulesync/README.md`
 - `dot_config/mise/config.toml`
-- `dot_config/devcontainer/mise.toml`
-- `dot_config/claude/claude_desktop_config_mac.json`
-- `dot_config/claude/claude_desktop_config_win.json`
-- `dot_gemini/settings.json`
-- `dot_claude/.mcp.json`
-- `dot_claude/.mcp-old.json`
-- `dot_claude/modular-mcp.json`
+- `dot_config/rulesync/README.md`
 - `dot_copilot/README.md`
-- `README.md`
-- `dot_local/bin/executable_setup-ai-tool`
+- `plan/DOTFILE-77.md`
 
 ## 検証方法
 
-- `"/Users/ryo./.local/share/mise/installs/github-dyoshikawa-rulesync/7.23.0/rulesync" generate --targets copilot --features mcp --dry-run`
-- `HOME="<repo 内 temp>" "/Users/ryo./.local/share/mise/installs/github-dyoshikawa-rulesync/7.23.0/rulesync" generate --targets copilotcli --features mcp --global`
+- `git fetch origin main`
+- `git merge origin/main`
+- `HOME="<repo 内 temp>" XDG_CONFIG_HOME="<repo 内 temp>/.config" "/Users/ryo./.local/share/mise/installs/github-dyoshikawa-rulesync/7.23.0/rulesync" generate --targets copilotcli --features mcp --global`
 - `diff -u <temp-home>/.copilot/mcp-config.json dot_copilot/mcp-config.json`
-- `rg -n "modular-mcp|\\.mcp\\.json|mcpServers" dot_claude dot_config/claude dot_gemini dot_copilot .vscode`
-- `rg -n "mcp-cli" README.md dot_copilot dot_config/mise/config.toml dot_config/devcontainer/mise.toml`
-- `taplo format --check dot_config/mise/config.toml dot_config/devcontainer/mise.toml`
+- `python3 -m json.tool dot_config/rulesync/.rulesync/mcp.json dot_copilot/mcp-config.json`
+- `rg -n "mcp|modular-mcp|mcpServers|\\.mcp\\.json" .`
+- `git diff --check`
 
 ## リスクと未解決事項
 
-- rulesync 7.23.0 の `copilotcli` MCP は `command` を持つ stdio server 前提のため、`deepwiki` / `notion` の remote MCP は `.vscode/mcp.json` 側にのみ載せる。
-- rulesync の MCP schema はトップレベル `inputs` を持たないため、issue 記載 JSON の `inputs: []` は repo 側の source / generated file に含めない。
-- `mcp-cli` 自体は設定閲覧・実行の補助であり、実際の tool call 成否はローカルの `npx` / `uvx` / ネットワーク到達性に依存する。
+- 2026-03-31 時点で `rulesync 7.23.0` と `7.25.0` はどちらも `copilotcli` target で HTTP MCP を出力できない。issue 要件の `deepwiki` / `notion` は repo-only / rulesync-only では同期できない。
+- `rulesync` の MCP schema はトップレベル `inputs` を持たないため、issue 記載 JSON の `inputs: []` は source / generated file に含めない。
+- `mcp-cli` は設定閲覧・実行の補助であり、実際の tool call 成否はローカルの `npx` / `uvx` / ネットワーク到達性に依存する。
