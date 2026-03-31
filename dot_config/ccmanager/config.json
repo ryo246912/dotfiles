@@ -64,6 +64,22 @@
         "command": "gemini",
         "detectionStrategy": "gemini",
         "args": ["-s"]
+      },
+      {
+        "id": "codex",
+        "name": "Codex",
+        "command": "codex",
+        "args": ["resume", "--yolo"],
+        "detectionStrategy": "codex",
+        "fallbackArgs": ["--yolo"]
+      },
+      {
+        "id": "copilot",
+        "name": "Copilot",
+        "command": "copilot",
+        "detectionStrategy": "github-copilot",
+        "args": ["--resume", "--yolo"],
+        "fallbackArgs": ["--yolo"]
       }
     ],
     "defaultPresetId": "1",
