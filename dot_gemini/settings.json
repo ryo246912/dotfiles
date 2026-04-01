@@ -8,7 +8,12 @@
     "theme": "GitHub"
   },
   "general": {
-    "previewFeatures": true
+    "previewFeatures": true,
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "36500d",
+      "maxCount": 10000
+    }
   },
   "privacy": {
     "usageStatisticsEnabled": false

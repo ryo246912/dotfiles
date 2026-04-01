@@ -19,7 +19,7 @@
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
     // .config
-    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.gitconfig,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/tmp/gitconfig-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
