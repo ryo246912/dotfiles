@@ -1,99 +1,99 @@
 # lint
 [tasks.lint-action]
 depends = [
-    "lint-actionlint",
-    "lint-ghalint",
-    "lint-zizmor",
+  "lint-actionlint",
+  "lint-ghalint",
+  "lint-zizmor",
 ]
 description = "Run all action linters"
 
 [tasks.lint-other]
 depends = [
-    "lint-json",
-    "lint-toml",
-    "lint-yaml",
+  "lint-json",
+  "lint-toml",
+  "lint-yaml",
 ]
 description = "Run other linters"
 
 # fix
 [tasks.fix-action]
 description = "Run fix actions files"
-run         = ["pinact run", "disable-checkout-persist-credentials"]
+run = ["pinact run", "disable-checkout-persist-credentials"]
 
 [tasks.fix-other]
 depends = [
-    "fix-json",
-    "fix-toml",
-    "fix-yaml",
+  "fix-json",
+  "fix-toml",
+  "fix-yaml",
 ]
 description = "Run other formatter"
 
 # actions
 [tasks.lint-actionlint]
 description = "Run actionlint"
-hide        = true
-run         = "actionlint -ignore 'SC2016:'"
+hide = true
+run = "actionlint -ignore 'SC2016:'"
 
 [tasks.lint-zizmor]
 description = "Run zizmor"
-hide        = true
-run         = "zizmor --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
+hide = true
+run = "zizmor --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
 
 [tasks.lint-ghalint]
 description = "Run ghalint"
-hide        = true
-run         = "ghalint run"
+hide = true
+run = "ghalint run"
 
 # toml
 [tasks.lint-toml]
 description = "Run lint TOML files"
-hide        = true
-run         = "taplo format --check"
+hide = true
+run = "tombi format --check"
 
 [tasks.fix-toml]
 description = "Run fix TOML files"
-hide        = true
-run         = "taplo format"
+hide = true
+run = "tombi format"
 
 # yaml
 [tasks.lint-yaml]
 description = "Run lint YAML files"
-hide        = true
-run         = "prettier --check '**/*.{yaml,yml}'"
+hide = true
+run = "prettier --check '**/*.{yaml,yml}'"
 
 [tasks.fix-yaml]
 description = "Run fix YAML files"
-hide        = true
-run         = "prettier --write --list-different '**/*.{yaml,yml}'"
+hide = true
+run = "prettier --write --list-different '**/*.{yaml,yml}'"
 
 # json
 [tasks.lint-json]
 description = "Run lint json files"
-hide        = true
-run         = "prettier --check '**/*.json'"
+hide = true
+run = "prettier --check '**/*.json'"
 
 [tasks.fix-json]
 description = "Run fix json files"
-hide        = true
-run         = "prettier --write --list-different '**/*.json'"
+hide = true
+run = "prettier --write --list-different '**/*.json'"
 
 [tasks.karabiner-apply]
 description = "build and apply karabiner.ts configuration"
 run = [
-    "mise run karabiner-dry-run",
-    "bun dot_config/karabiner-ts/karabiner.ts",
+  "mise run karabiner-dry-run",
+  "bun dot_config/karabiner-ts/karabiner.ts",
 ]
 
 [tasks.karabiner-dry-run]
 description = "build and dry-run karabiner.ts configuration"
 run = [
-    "bun dot_config/karabiner-ts/karabiner.ts --dry-run > dot_config/karabiner-ts/karabiner.json",
-    "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
+  "bun dot_config/karabiner-ts/karabiner.ts --dry-run > dot_config/karabiner-ts/karabiner.json",
+  "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
 ]
 
 [tools]
-actionlint                     = "1.7.7"
+actionlint = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"
-"npm:@taplo/cli"               = "0.7.0"
-"npm:prettier"                 = "3.8.1"
-"pipx:zizmor"                  = "1.12.1"
+"npm:tombi" = "0.9.12"
+"npm:prettier" = "3.8.1"
+"pipx:zizmor" = "1.12.1"
