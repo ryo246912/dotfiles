@@ -236,6 +236,69 @@ get_config_array() {
     fi
 }
 
+# 任意の TOML セクションから配列形式の設定値を読み込む
+# 引数: セクション名, キー名
+get_section_array() {
+    local section="$1"
+    local key="$2"
+    local in_section=false
+    local in_array=false
+    local result=()
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+        if [[ "$line" == "[$section]" ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            in_array=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]] && [[ "$line" =~ ^[[:space:]]*$key[[:space:]]*=[[:space:]]*\[ ]]; then
+            in_array=true
+            local content
+            content=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*\[//' | sed 's/\]//')
+            if [[ -n "$content" ]]; then
+                IFS=',' read -ra items <<< "$content"
+                for item in "${items[@]}"; do
+                    item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
+                    [[ -n "$item" ]] && result+=("$item")
+                done
+            fi
+            [[ "$line" =~ \] ]] && in_array=false
+            continue
+        fi
+
+        if [[ "$in_array" == true ]]; then
+            if [[ "$line" =~ \] ]]; then
+                in_array=false
+                local content
+                content=$(echo "$line" | sed 's/\]//')
+                if [[ -n "$content" ]]; then
+                    IFS=',' read -ra items <<< "$content"
+                    for item in "${items[@]}"; do
+                        item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
+                        [[ -n "$item" ]] && result+=("$item")
+                    done
+                fi
+            else
+                IFS=',' read -ra items <<< "$line"
+                for item in "${items[@]}"; do
+                    item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
+                    [[ -n "$item" ]] && result+=("$item")
+                done
+            fi
+        fi
+    done < "$CONFIG_FILE"
+
+    if [[ ${#result[@]} -gt 0 ]]; then
+        printf '%s\n' "${result[@]}"
+    fi
+}
+
 # パス展開（~ と $HOME）
 expand_path() {
     local path="$1"
@@ -544,32 +607,8 @@ resolve_task_group() {
 # devcontainer up オプションの取得
 get_devcontainer_up_opts() {
     local group="$1"
-    local in_group=false
-    local in_devcontainer=false
     local opts=""
-
-    while IFS= read -r line; do
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// /}" ]] && continue
-
-        if [[ "$line" =~ ^\[groups\.$group\] ]]; then
-            in_group=true
-            continue
-        elif [[ "$line" =~ ^\[groups\.$group\.devcontainer\] ]]; then
-            in_devcontainer=true
-            continue
-        elif [[ "$line" =~ ^\[.*\] ]]; then
-            in_group=false
-            in_devcontainer=false
-            continue
-        fi
-
-        if [[ "$in_devcontainer" == true ]] && [[ "$line" =~ ^[[:space:]]*up_opts[[:space:]]*= ]]; then
-            opts=$(echo "$line" | sed -E 's/^[[:space:]]*up_opts[[:space:]]*=[[:space:]]*//' | \
-                   sed 's/\[//g' | sed 's/\]//g' | sed 's/"//g' | sed "s/'//g" | sed 's/,/ /g')
-            break
-        fi
-    done < "$CONFIG_FILE"
+    opts=$(get_section_array "groups.${group}.devcontainer" "up_opts" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
 
     if [[ -z "$opts" ]]; then
         opts="--workspace-folder ."
@@ -581,33 +620,26 @@ get_devcontainer_up_opts() {
 # devcontainer exec オプションの取得
 get_devcontainer_exec_opts() {
     local group="$1"
-    local in_devcontainer=false
     local opts=""
-
-    while IFS= read -r line; do
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// /}" ]] && continue
-
-        if [[ "$line" =~ ^\[groups\.$group\.devcontainer\] ]]; then
-            in_devcontainer=true
-            continue
-        elif [[ "$line" =~ ^\[.*\] ]]; then
-            in_devcontainer=false
-            continue
-        fi
-
-        if [[ "$in_devcontainer" == true ]] && [[ "$line" =~ ^[[:space:]]*exec_opts[[:space:]]*= ]]; then
-            opts=$(echo "$line" | sed -E 's/^[[:space:]]*exec_opts[[:space:]]*=[[:space:]]*//' | \
-                   sed 's/\[//g' | sed 's/\]//g' | sed 's/"//g' | sed "s/'//g" | sed 's/,/ /g')
-            break
-        fi
-    done < "$CONFIG_FILE"
+    opts=$(get_section_array "groups.${group}.devcontainer" "exec_opts" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
 
     if [[ -z "$opts" ]]; then
         opts="--workspace-folder ."
     fi
 
     echo "$opts"
+}
+
+get_devcontainer_masked_file_patterns() {
+    local patterns=""
+    patterns=$(get_section_array "settings.devcontainer" "masked_file_patterns" || true)
+
+    if [[ -n "$patterns" ]]; then
+        printf '%s\n' "$patterns"
+        return 0
+    fi
+
+    printf '%s\n' ".env" ".env.*"
 }
 
 # skip_up_if_running 設定の取得
@@ -880,19 +912,138 @@ cmd_create() {
 }
 
 # devcontainer.json の生成
+append_unique_mount_entry() {
+    local entry="$1"
+    local existing=""
+
+    if declare -p WORKTREE_MOUNT_ENTRIES >/dev/null 2>&1; then
+        for existing in "${WORKTREE_MOUNT_ENTRIES[@]-}"; do
+            if [[ "$existing" == "$entry" ]]; then
+                return 0
+            fi
+        done
+    fi
+
+    WORKTREE_MOUNT_ENTRIES+=("$entry")
+}
+
+append_repo_git_metadata_mounts() {
+    local repo="$1"
+    local -a metadata_paths=()
+    local metadata_path=""
+
+    metadata_path=$(git -C "$repo" rev-parse --path-format=absolute --git-dir 2>/dev/null || true)
+    [[ -n "$metadata_path" ]] && metadata_paths+=("$metadata_path")
+
+    metadata_path=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)
+    [[ -n "$metadata_path" ]] && metadata_paths+=("$metadata_path")
+
+    for metadata_path in "${metadata_paths[@]}"; do
+        [[ ! -e "$metadata_path" ]] && continue
+        append_unique_mount_entry "type=bind,source=${metadata_path},target=${metadata_path}"
+    done
+}
+
+append_secret_mask_mounts() {
+    local source_dir="$1"
+    local target_prefix="$2"
+    local placeholder_root="$3"
+    local -a patterns=()
+    local -a find_name_args=()
+    local pattern=""
+    local secret_path=""
+    local relative_path=""
+    local placeholder_path=""
+
+    while IFS= read -r pattern; do
+        [[ -n "$pattern" ]] && patterns+=("$pattern")
+    done < <(get_devcontainer_masked_file_patterns)
+
+    if [[ ${#patterns[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    mkdir -p "$placeholder_root"
+
+    for pattern in "${patterns[@]}"; do
+        if [[ ${#find_name_args[@]} -gt 0 ]]; then
+            find_name_args+=(-o)
+        fi
+        find_name_args+=(-name "$pattern")
+    done
+
+    while IFS= read -r secret_path; do
+        [[ -z "$secret_path" ]] && continue
+
+        relative_path="${secret_path#$source_dir/}"
+        [[ "$relative_path" == "$secret_path" ]] && continue
+
+        placeholder_path="${placeholder_root}/${relative_path}"
+        mkdir -p "$(dirname "$placeholder_path")"
+        : > "$placeholder_path"
+
+        append_unique_mount_entry "type=bind,source=${placeholder_path},target=${target_prefix}/${relative_path}"
+    done < <(
+        find "$source_dir" \
+            \( -path "$source_dir/.git" -o -path "$source_dir/.git/*" \) -prune -o \
+            \( \( -type f -o -type l \) \( "${find_name_args[@]}" \) -print \) | LC_ALL=C sort
+    )
+}
+
+build_mounts_json() {
+    local mount_count=0
+    if declare -p WORKTREE_MOUNT_ENTRIES >/dev/null 2>&1; then
+        mount_count=${#WORKTREE_MOUNT_ENTRIES[@]}
+    fi
+
+    if [[ $mount_count -eq 0 ]]; then
+        echo "[]"
+        return 0
+    fi
+
+    jq -n '$ARGS.positional' --args "${WORKTREE_MOUNT_ENTRIES[@]}"
+}
+
+rewrite_devcontainer_args_with_config() {
+    local config_path="$1"
+    shift
+
+    DEVCONTAINER_ARGS_RESULT=()
+    local replaced=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --config)
+                DEVCONTAINER_ARGS_RESULT+=("--config" "$config_path")
+                replaced=true
+                shift 2
+                continue
+                ;;
+            --config=*)
+                DEVCONTAINER_ARGS_RESULT+=("--config" "$config_path")
+                replaced=true
+                shift
+                continue
+                ;;
+            *)
+                DEVCONTAINER_ARGS_RESULT+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    if [[ "$replaced" == false ]]; then
+        DEVCONTAINER_ARGS_RESULT+=("--config" "$config_path")
+    fi
+}
+
 generate_devcontainer() {
     local task_name="$1"
     local worktree_base_dir="$2"
     shift 2
     local repos=("$@")
 
-    # worktree_base_dir を絶対パスに変換
-    if command -v realpath &>/dev/null; then
-        worktree_base_dir=$(realpath "$worktree_base_dir")
-    else
-        # realpathが利用できない場合、cdで絶対パスを取得
-        worktree_base_dir=$(cd "$worktree_base_dir" && pwd)
-    fi
+    worktree_base_dir=$(cd "$worktree_base_dir" && pwd)
 
     local devcontainer_dir="${worktree_base_dir}/.devcontainer"
     mkdir -p "$devcontainer_dir"
@@ -912,9 +1063,11 @@ generate_devcontainer() {
         return 1
     fi
 
-    # マウント設定を生成（JSON配列形式）
-    local worktree_mounts="["
-    local first=true
+    local mask_root_dir="${devcontainer_dir}/.secret-masks"
+    rm -rf "$mask_root_dir"
+    mkdir -p "$mask_root_dir"
+
+    local -a WORKTREE_MOUNT_ENTRIES=()
 
     for repo in "${repos[@]}"; do
         # チルダ展開と環境変数展開
@@ -927,38 +1080,25 @@ generate_devcontainer() {
 
         [[ ! -d "$worktree_path" ]] && continue
 
-        # 絶対パスに変換（realpathが利用可能な場合はそれを使用）
-        if command -v realpath &>/dev/null; then
-            worktree_path=$(realpath "$worktree_path")
-        else
-            # realpathが利用できない場合、cdで絶対パスを取得
-            worktree_path=$(cd "$worktree_path" && pwd)
-        fi
+        worktree_path=$(cd "$worktree_path" && pwd)
 
-        if [[ "$first" == true ]]; then
-            first=false
-        else
-            worktree_mounts+=","
-        fi
-
-        # worktree のマウント
-        worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
-
-        # 実体リポジトリのマウント（.git アクセス用）
-        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
+        append_unique_mount_entry "type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}"
+        append_repo_git_metadata_mounts "$repo"
+        append_secret_mask_mounts "$worktree_path" "/workspaces/${worktree_name}/${repo_name}" "${mask_root_dir}/${repo_name}"
     done
 
-    worktree_mounts+="]"
+    local worktree_mounts_json=""
+    worktree_mounts_json=$(build_mounts_json)
 
     # jq を使ってベーステンプレートを読み込み、マウント設定を追加
     # JSONCのコメントを除去してからjqでパース
     if command -v jq &>/dev/null; then
         # // で始まる行コメントを除去（文字列内の // は保護）
         grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||' | \
-        jq --argjson new_mounts "$worktree_mounts" \
+        jq --argjson new_mounts "$worktree_mounts_json" \
            --arg workspace_folder "/workspaces/${worktree_name}" \
            --arg task_name "$task_name" \
-           '.mounts += $new_mounts |
+           '.mounts = ((.mounts // []) + $new_mounts) |
             .workspaceFolder = $workspace_folder |
             .name = "Multi-worktree: " + $task_name' \
            > "$devcontainer_file"
@@ -1498,6 +1638,13 @@ cmd_dev() {
     local up_opts=$(get_devcontainer_up_opts "$group")
     local exec_opts=$(get_devcontainer_exec_opts "$group")
     local skip_up=$(get_devcontainer_skip_up_if_running)
+    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
+
+    if [[ ! -f "$task_devcontainer_config" ]]; then
+        log_error "task 用の devcontainer 設定が見つかりません: $task_devcontainer_config"
+        log_info "multi-worktree recreate ${task_name} で再生成してください"
+        return 1
+    fi
 
     # worktree ディレクトリに移動
     cd "$worktree_base_dir" || return 1
@@ -1519,8 +1666,11 @@ cmd_dev() {
 
         # オプションを配列として解析して安全に実行
         local -a up_args
+        local -a rewritten_up_args
         read -ra up_args <<< "$up_opts"
-        devcontainer up "${up_args[@]}"
+        rewrite_devcontainer_args_with_config "$task_devcontainer_config" "${up_args[@]}"
+        rewritten_up_args=("${DEVCONTAINER_ARGS_RESULT[@]}")
+        devcontainer up "${rewritten_up_args[@]}"
 
         if [[ $? -ne 0 ]]; then
             log_error "devcontainer の起動に失敗しました"
@@ -1533,8 +1683,11 @@ cmd_dev() {
 
     # オプションを配列として解析して安全に実行
     local -a exec_args
+    local -a rewritten_exec_args
     read -ra exec_args <<< "$exec_opts"
-    devcontainer exec "${exec_args[@]}" "$@"
+    rewrite_devcontainer_args_with_config "$task_devcontainer_config" "${exec_args[@]}"
+    rewritten_exec_args=("${DEVCONTAINER_ARGS_RESULT[@]}")
+    devcontainer exec "${rewritten_exec_args[@]}" "$@"
 
     local exit_code=$?
 

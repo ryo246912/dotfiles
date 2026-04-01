@@ -108,8 +108,29 @@ repos = [
 base_dir = "../worktrees"
 worktree_prefix = "multi-worktree"
 
+[groups.default.devcontainer]
+up_opts = [
+  "--workspace-folder",
+  ".",
+  "--config",
+  ".devcontainer/devcontainer.json",
+]
+exec_opts = [
+  "--workspace-folder",
+  ".",
+  "--config",
+  ".devcontainer/devcontainer.json",
+]
+
 [settings]
 default_group = "default"
+
+[settings.devcontainer]
+skip_up_if_running = true
+masked_file_patterns = [
+  ".env",
+  ".env.*",
+]
 ```
 
 ### 設定項目
@@ -126,6 +147,19 @@ default_group = "default"
 #### `[settings]`
 
 - `default_group`: デフォルトで使用するグループ名
+
+#### `[groups.<グループ名>.devcontainer]`
+
+- `up_opts`: `multi-worktree dev` が `devcontainer up` に渡すオプション
+  - 生成済みの `.devcontainer/devcontainer.json` を `--config` に指定する
+- `exec_opts`: `multi-worktree dev` が `devcontainer exec` に渡すオプション
+  - `up_opts` と同じ config path を使い、既存コンテナを取り違えないようにする
+
+#### `[settings.devcontainer]`
+
+- `skip_up_if_running`: コンテナ起動済みの場合に `devcontainer up` をスキップ
+- `masked_file_patterns`: bind mount から空ファイルでマスクするパターン
+  - 既定値は `.env`, `.env.*`
 
 ## 使い方
 
@@ -159,6 +193,7 @@ multi-worktree recreate feat/add-auth
 - まだ存在しない repo worktree だけ current config をもとに追加します
 - `.git/` が欠けていれば再作成します
 - `.devcontainer/devcontainer.json` と `.claude/settings.local.json` は current config で毎回再生成します
+- generated `.devcontainer/devcontainer.json` には `.env` / `.env.*` を隠す mount mask が含まれます
 
 2. **タスク一覧を表示**
 
@@ -312,13 +347,15 @@ exit
 
 **動作:**
 1. worktree ディレクトリに移動
-2. コンテナが起動していない場合、`devcontainer up` を実行
-3. `devcontainer exec` でコマンドを実行
+2. generated `.devcontainer/devcontainer.json` を `--config` に固定
+3. コンテナが起動していない場合、`devcontainer up` を実行
+4. `devcontainer exec` でコマンドを実行
 
 **設定項目:**
 - `[groups.<group>.devcontainer].up_opts`: `devcontainer up` のオプション
 - `[groups.<group>.devcontainer].exec_opts`: `devcontainer exec` のオプション
 - `[settings.devcontainer].skip_up_if_running`: コンテナ起動済みの場合に `up` をスキップ（デフォルト: true）
+- `[settings.devcontainer].masked_file_patterns`: `.env` など bind mount から隠すパターン
 
 **例:**
 ```bash
@@ -326,6 +363,13 @@ multi-worktree dev feat/add-auth claude
 multi-worktree dev feat/add-auth ccmanager
 multi-worktree dev feat/add-auth bash
 ```
+
+### シークレットファイルのマスク
+
+- `multi-worktree create` / `recreate` は task ごとの `.devcontainer/devcontainer.json` を生成し、repo worktree mount のあとに file bind mount を重ねて `.env` / `.env.*` を空ファイルへ差し替えます
+- `.dockerignore` は build context しか制御できず bind mount には効かないため、このツールでは mount mask で対処します
+- git 用に追加する実体 repo mount は working tree 全体ではなく git metadata に絞ります
+- VS Code から generated `.devcontainer/devcontainer.json` を直接開く経路は、この README の対象外です
 
 ### `exec <task-name> [repo] <command> [args...]`
 
@@ -482,7 +526,7 @@ git worktree remove ../worktrees/multi-worktree-feat-add-auth/repo-a --force
 ## 関連ツール
 
 - `git-worktree-manager`: 単一リポジトリ内の worktree 対話操作ツール
-- `devc-up-wrapper`: devcontainer 起動ラッパー
+- `devc-up-wrapper`: 単一 workspace 用に派生 devcontainer config を生成し、`.env` / `.env.*` をマスクしたうえで `devcontainer up/exec` を呼ぶラッパー
 
 ## ライセンス
 
