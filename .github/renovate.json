@@ -11,6 +11,16 @@
   "devcontainer": {
     "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
   },
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "atuinsh/atuin",
+        "aqua:atuinsh/atuin",
+        "ghcr.io/atuinsh/atuin"
+      ],
+      "groupName": "atuin"
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
