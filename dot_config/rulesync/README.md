@@ -97,7 +97,6 @@ mise run rulesync-generate-user-copilot
 mise run rulesync-generate-mcp-copilotcli
 # または直接
 (cd ~/.config/rulesync && rulesync generate --targets copilotcli --features mcp --global)
-rulesync-sync-copilot-mcp
 ```
 
 ### まとめて実行する
@@ -183,5 +182,5 @@ import 後は以下の正規化を行ってください。
 
 - `dot_config/rulesync/` の user-scope generate は shared source です。`dot_claude/skills` と `dot_codex/skills` は同じ本文になります。
 - `geminicli` generate の結果は rulesync 側の都合で `# Additional Conventions Beyond the Built-in Functions` の導入文が先頭に付きます。
-- `copilotcli` の MCP は 2026-04-01 時点でも `rulesync 7.23.0` 単体では `command` を持つ stdio server しか materialize できません。repo では `dot_config/rulesync/.rulesync/mcp.json` を正本にし、`rulesync-sync-copilot-mcp` で HTTP server を含む Copilot CLI 用 JSON に正規化します。
-- そのため、Copilot CLI MCP は `rulesync generate` だけでなく `rulesync-sync-copilot-mcp` まで含めて同期完了です。直接コマンドを叩く場合も 2 段階で実行してください。
+- `copilotcli` の MCP は 2026-04-01 時点でも `rulesync 7.23.0` では `command` を持つ stdio server 前提です。そのため、この repo の remote MCP（Notion / deepwiki）は `npx -y mcp-remote@latest <url>` の stdio wrapper として `dot_config/rulesync/.rulesync/mcp.json` に定義しています。
+- これにより、Copilot CLI MCP は `rulesync generate --targets copilotcli --features mcp --global` だけで `dot_copilot/mcp-config.json` まで同期できます。独自の post-process は使いません。

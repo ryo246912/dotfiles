@@ -9,8 +9,13 @@
       ]
     },
     "makenotion/notion-mcp-server": {
-      "type": "http",
-      "url": "https://mcp.notion.com/mcp"
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://mcp.notion.com/mcp"
+      ]
     },
     "AWS Billing and Cost Management MCP Server": {
       "type": "stdio",
@@ -36,8 +41,13 @@
       }
     },
     "deepwiki": {
-      "type": "http",
-      "url": "https://mcp.deepwiki.com/mcp"
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://mcp.deepwiki.com/mcp"
+      ]
     },
     "context7": {
       "type": "stdio",
