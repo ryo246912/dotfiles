@@ -3,8 +3,6 @@
 # https://github.com/acj/asdf-ffmpeg
 ASDF_FFMPEG_ENABLE = "gpl libx264"
 
-include = ["tasks.toml"]
-
 [tools]
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
@@ -110,6 +108,7 @@ vim                                                         = "9.1.1006"
 auto_install = false
 experimental = true
 gpg_verify   = true
+include      = ["tasks.toml"]
 jobs         = 1
 lockfile     = true
 
