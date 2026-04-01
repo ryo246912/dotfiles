@@ -13,4 +13,4 @@ settings.local.json
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-!dot_config/rulesync/.rulesync/mcp.json
+!dot_config/rulesync/exact_dot_rulesync/mcp.json
