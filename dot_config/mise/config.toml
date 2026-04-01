@@ -3,6 +3,8 @@
 # https://github.com/acj/asdf-ffmpeg
 ASDF_FFMPEG_ENABLE = "gpl libx264"
 
+include = ["tasks.toml"]
+
 [tools]
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
@@ -116,100 +118,3 @@ bun = true
 
 [settings.pipx]
 uvx = true
-
-# lint
-[tasks.lint-action]
-depends = [
-    "lint-actionlint",
-    "lint-ghalint",
-    "lint-zizmor",
-]
-description = "Run all action linters"
-
-[tasks.lint-other]
-depends = [
-    "lint-json",
-    "lint-toml",
-    "lint-yaml",
-]
-description = "Run other linters"
-
-# fix
-[tasks.fix-action]
-depends = [
-    "fix-action-pinact",
-    "fix-action-disable-checkout-persist-credentials",
-]
-description = "Run fix actions files"
-
-[tasks.fix-action-pinact]
-description = "Run fix actions pinact"
-run         = ["pinact run"]
-
-[tasks.fix-action-disable-checkout-persist-credentials]
-description = "Run fix actions disable-checkout-persist-credentials"
-run         = ["disable-checkout-persist-credentials"]
-
-[tasks.fix-action-timeout-minutes]
-description = "Run fix actions timeout-minutes"
-run         = ["ghatm set -t 5"]
-
-[tasks.fix-other]
-depends = [
-    "fix-json",
-    "fix-toml",
-    "fix-yaml",
-]
-description = "Run other formatter"
-
-[tasks.rulesync-generate-local]
-description = "Generate repo root CLAUDE.md from .rulesync/ source"
-run         = "rulesync generate"
-
-[tasks.rulesync-generate-user]
-description = "Generate user-scope rules, skills, and commands from ~/.config/rulesync"
-run         = "(cd ~/.config/rulesync && rulesync generate)"
-
-[tasks.rulesync-generate]
-depends     = ["rulesync-generate-local", "rulesync-generate-user"]
-description = "Generate all rulesync outputs (local + user-scope)"
-
-# actions
-[tasks.lint-actionlint]
-description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:'"
-
-[tasks.lint-zizmor]
-description = "Run zizmor"
-run         = "zizmor --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
-
-[tasks.lint-ghalint]
-description = "Run ghalint"
-run         = "ghalint run"
-
-# toml
-[tasks.lint-toml]
-description = "Run lint TOML files"
-run         = "taplo format --check"
-
-[tasks.fix-toml]
-description = "Run fix TOML files"
-run         = "taplo format"
-
-# yaml
-[tasks.lint-yaml]
-description = "Run lint YAML files"
-run         = "prettier --check '**/*.{yaml,yml}'"
-
-[tasks.fix-yaml]
-description = "Run fix YAML files"
-run         = "prettier --write '**/*.{yaml,yml}'"
-
-# json
-[tasks.lint-json]
-description = "Run lint json files"
-run         = "prettier --check '**/*.json'"
-
-[tasks.fix-json]
-description = "Run fix json files"
-run         = "prettier --write '**/*.json'"

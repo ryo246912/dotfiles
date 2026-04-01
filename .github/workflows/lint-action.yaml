@@ -30,15 +30,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "actionlint"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: actionlint
         run: |
-          actionlint \
-          -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' \
-          -ignore 'SC2016:'
+          mise run lint-actionlint -- \
+          -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}'
   ghalint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
@@ -51,12 +48,10 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "aqua:suzuki-shunsuke/ghalint"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: ghalint
-        run: ghalint run
+        run: mise run lint-ghalint
         env:
           GHALINT_LOG_COLOR: always
   zizmor:
@@ -71,11 +66,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "pipx:zizmor"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: zizmor
-        run: zizmor --pedantic --format=github --min-severity=low .github/workflows
+        run: mise run lint-zizmor -- --format=github
         env:
           GH_TOKEN: ${{ github.token }}
