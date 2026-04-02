@@ -1,6 +1,7 @@
 {
   // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
+  "forwardPorts": [4966],
   "build": {
     "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile"
   },

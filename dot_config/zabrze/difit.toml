@@ -1,0 +1,24 @@
+[[snippets]]
+name    = "difit"
+snippet = "difit"
+trigger = "df"
+
+[[snippets]]
+name    = "difit staged"
+snippet = "difit staged"
+trigger = "dfs"
+
+[[snippets]]
+name    = "difit working"
+snippet = "difit working"
+trigger = "dfw"
+
+[[snippets]]
+name    = "difit main..HEAD"
+snippet = "difit main..HEAD"
+trigger = "dfm"
+
+[[snippets]]
+name    = "difit-review"
+snippet = "difit-review"
+trigger = "dfr"
