@@ -1,6 +1,6 @@
--- ghostty(Kitty graphics protocol) + tmux 環境で PDF/画像を nvim 内に表示する。
--- ・markdown 内の画像インライン表示
+-- ghostty(Kitty graphics protocol) + tmux 環境で PDF を nvim 内に表示する。
 -- ・.pdf を開くと utils.pdf の簡易ビューアでページ画像を描画（poppler + imagemagick）
+-- ・markdown 内の画像表示は snacks.nvim (plugins/markdown.lua) が担当する
 return {
   {
     "3rd/image.nvim",
@@ -8,7 +8,8 @@ return {
     cond = function()
       return #vim.api.nvim_list_uis() > 0
     end,
-    ft = { "markdown" },
+    -- utils.pdf が .pdf を開いたときに lazy.load する
+    lazy = true,
     init = function()
       if #vim.api.nvim_list_uis() == 0 then
         return
@@ -25,11 +26,9 @@ return {
     opts = {
       backend = "kitty", -- ghostty は Kitty graphics protocol 対応
       processor = "magick_cli", -- luarock 不要、imagemagick CLI を使用
+      -- markdown は snacks.nvim で描画するため、二重描画しないよう無効化
       integrations = {
-        markdown = {
-          enabled = true,
-          only_render_image_at_cursor = true,
-        },
+        markdown = { enabled = false },
       },
       -- tmux: 非アクティブpaneへの画像焼き付きを防ぐ
       tmux_show_only_in_active_window = true,
