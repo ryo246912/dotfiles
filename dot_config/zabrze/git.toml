@@ -370,8 +370,13 @@ snippet = "git stash list --pretty=format:\"%C(green)%gd %C(auto)%h%d %s\" --dat
 trigger = "gstl"
 
 [[snippets]]
+name    = "git stash apply"
+snippet = "git stash apply --index stash@{0}"
+trigger = "gsta"
+
+[[snippets]]
 name    = "git stash pop"
-snippet = "git stash pop stash@{0}"
+snippet = "git stash pop --index stash@{0}"
 trigger = "gstp"
 
 [[snippets]]
@@ -640,6 +645,20 @@ global          = true
 name            = "(git push) -f"
 snippet         = "-f"
 trigger-pattern = "(ff|fo)"
+
+[[snippets]]
+context = "git\\sstash\\s(pop|apply)\\s"
+global  = true
+name    = "(git stash pop|apply) --index"
+snippet = "--index"
+trigger = "i"
+
+[[snippets]]
+context = "git\\sstash\\s(push\\s)?"
+global  = true
+name    = "(git stash push) --keep-index"
+snippet = "--keep-index"
+trigger = "ki"
 
 [[snippets]]
 context = "^git\\sshow\\s"
