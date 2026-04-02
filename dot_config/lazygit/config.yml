@@ -2,8 +2,7 @@ os:
   edit: 'nvim {{filename}}'
   editAtLine: 'nvim +{{line}} {{filename}}'
   editAtLineAndWait: 'nvim +{{line}} {{filename}}'
-  editCommand: 'nvim'
-  editPreset: 'nvim'
+
 
 customCommands:
   - command: nvim {{ .SelectedFile.Name | quote }}
