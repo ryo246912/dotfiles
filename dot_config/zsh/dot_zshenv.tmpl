@@ -80,3 +80,7 @@ if command -v mise >/dev/null 2>&1; then
 {{ output "mise" "activate" "zsh" "--shims" | trim }}
 {{- end }}
 fi
+
+# Editor
+export EDITOR=nvim
+export VISUAL=nvim

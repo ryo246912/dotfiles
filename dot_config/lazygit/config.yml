@@ -19,10 +19,6 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
-  - command: nvim {{ .SelectedFile.Name | quote }}
-    context: "files"
-    output: terminal
-    key: e
   - command: $SHELL || zsh || bash
     context: "files, worktrees, localBranches, remotes, tags, commits"
     output: terminal
@@ -72,3 +68,6 @@ git:
   pagers:
     - colorArg: always
       pager: delta --paging=never --no-gitconfig
+
+os:
+  editCommand: 'nvim'
