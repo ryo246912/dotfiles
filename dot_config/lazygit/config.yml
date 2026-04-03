@@ -2,14 +2,7 @@ os:
   edit: 'nvim {{filename}}'
   editAtLine: 'nvim +{{line}} {{filename}}'
   editAtLineAndWait: 'nvim +{{line}} {{filename}}'
-
-
 customCommands:
-  - command: nvim {{ .SelectedFile.Name | quote }}
-    context: "files"
-    output: terminal
-    key: e
-
   - command: czg
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
