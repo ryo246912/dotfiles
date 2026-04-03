@@ -4,8 +4,8 @@ snippet = "gwq"
 trigger = "gw"
 
 [[snippets]]
-name    = "gwq add"
-snippet = "gwq add -i -b"
+name    = "wt switch -c -b"
+snippet = "wt switch -c -b"
 trigger = "gwa"
 
 [[snippets]]
@@ -75,31 +75,6 @@ snippet         = "multi-worktree sync"
 trigger-pattern = "^mws$"
 
 [[snippets]]
-name    = "wt"
-snippet = "wt"
-trigger = "wt"
-
-[[snippets]]
-name    = "wt switch"
-snippet = "wt switch"
-trigger = "wts"
-
-[[snippets]]
-name    = "wt switch -c"
-snippet = "wt switch -c"
-trigger = "wta"
-
-[[snippets]]
 name    = "wt list"
 snippet = "wt list"
 trigger = "wtl"
-
-[[snippets]]
-name    = "wt remove"
-snippet = "wt remove"
-trigger = "wtr"
-
-[[snippets]]
-name    = "wt merge"
-snippet = "wt merge"
-trigger = "wtm"
