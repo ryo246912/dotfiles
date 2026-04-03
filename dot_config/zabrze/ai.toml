@@ -6,26 +6,14 @@ trigger = "ccm"
 [[snippets]]
 cursor          = "👇"
 evaluate        = true
-name            = "ccmanager devcontainer(claude account1)"
+name            = "ccmanager devcontainer(claude)"
 snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json claude --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmc$|ccmcc)"
-
-[[snippets]]
-cursor          = "👇"
-evaluate        = true
-name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
-trigger-pattern = "(^ccmc2$|ccmcc2)"
 
 [[snippets]]
 name    = "ccmanager devcontainer(gemini)"
 snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gemini --yolo\""
 trigger = "ccmcg"
-
-[[snippets]]
-name    = "ccmanager devcontainer(codex)"
-snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json codex --yolo\""
-trigger = "ccmcx"
 
 [[snippets]]
 name    = "ccmanager devcontainer(opencode)"
@@ -38,27 +26,10 @@ snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --works
 trigger = "ccmcp"
 
 [[snippets]]
-name    = "devcontainer up"
-snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
-trigger = "dvu"
-
-[[snippets]]
-cursor  = "👇"
-name    = "devcontainer exec"
-snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
-trigger = "dve"
-
-[[snippets]]
 global  = true
 name    = "claude"
 snippet = "claude"
 trigger = "cl"
-
-[[snippets]]
-global  = true
-name    = "claude2"
-snippet = "claude2"
-trigger = "cl2"
 
 [[snippets]]
 global  = true
@@ -79,34 +50,15 @@ snippet = "copilot --yolo"
 trigger = "coy"
 
 [[snippets]]
+context = ".*claude\\s"
 global  = true
-name    = "codex"
-snippet = "codex"
-trigger = "cx"
-
-[[snippets]]
-global  = true
-name    = "codex --yolo"
-snippet = "codex --yolo"
-trigger = "cxy"
-
-[[snippets]]
-context = ".*claude(2)?\\s"
-global  = true
-name    = "(ccmanager) --multi-project"
-snippet = "--multi-project"
-trigger = "mp"
-
-[[snippets]]
-context = ".*claude(2)?\\s"
-global  = true
-name    = "(claude*) --dangerously-skip-permissions"
+name    = "(claude) --dangerously-skip-permissions"
 snippet = "--dangerously-skip-permissions"
 trigger = "yl"
 
 [[snippets]]
-context = ".*(copilot|codex|gemini)\\s"
+context = ".*(copilot|gemini)\\s"
 global  = true
-name    = "(copilot|codex|gemini) --yolo"
+name    = "(copilot|gemini) --yolo"
 snippet = "--yolo"
 trigger = "yl"

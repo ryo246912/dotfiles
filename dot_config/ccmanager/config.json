@@ -31,32 +31,16 @@
     "presets": [
       {
         "id": "1",
-        "name": "Claude A1 (resume)",
+        "name": "Main",
         "command": "claude",
         "args": ["--resume"],
         "fallbackArgs": []
       },
       {
         "id": "2",
-        "name": "Claude A2 (resume)",
-        "command": "claude2",
-        "args": ["--resume"],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "3",
-        "name": "Claude A1 (no resume)",
+        "name": "claude(no resume)",
         "command": "claude",
-        "args": [""],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "4",
-        "name": "Claude A2 (no resume)",
-        "command": "claude2",
-        "args": [""],
-        "detectionStrategy": "claude"
+        "args": [""]
       },
       {
         "id": "1752767057209",
@@ -64,22 +48,6 @@
         "command": "gemini",
         "detectionStrategy": "gemini",
         "args": ["-s"]
-      },
-      {
-        "id": "codex",
-        "name": "Codex",
-        "command": "codex",
-        "args": ["resume", "--yolo"],
-        "detectionStrategy": "codex",
-        "fallbackArgs": ["--yolo"]
-      },
-      {
-        "id": "copilot",
-        "name": "Copilot",
-        "command": "copilot",
-        "detectionStrategy": "github-copilot",
-        "args": ["--resume", "--yolo"],
-        "fallbackArgs": ["--yolo"]
       }
     ],
     "defaultPresetId": "1",

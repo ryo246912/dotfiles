@@ -13,8 +13,6 @@ readonly NC='\033[0m' # No Color
 
 # グローバル変数
 WORKTREES_DATA=""
-CANDIDATES_DATA=""
-SELECTED_TARGET_TYPE=""
 SELECTED_PATH=""
 SELECTED_BRANCH=""
 SELECTED_ACTION=""
@@ -52,141 +50,26 @@ get_worktrees() {
 	return 0
 }
 
-# 候補行をグローバル変数に追加
-append_candidate() {
-	local candidate_line="$1"
-
-	if [[ -n "$CANDIDATES_DATA" ]]; then
-		CANDIDATES_DATA+=$'\n'
-	fi
-
-	CANDIDATES_DATA+="$candidate_line"
-}
-
-# fzf 表示用に候補列を整形する
-build_fzf_input() {
-	local display_rows=""
-
-	while IFS=$'\t' read -r target_type display_name target_path info raw_name; do
-		[[ -z "$target_type" ]] && continue
-
-		if [[ -n "$display_rows" ]]; then
-			display_rows+=$'\n'
-		fi
-		display_rows+="$(printf '%s\t%s\t%s' "$target_type" "$display_name" "$info")"
-	done <<< "$CANDIDATES_DATA"
-
-	local aligned_rows="$display_rows"
-	if command -v column &>/dev/null; then
-		aligned_rows=$(printf '%s\n' "$display_rows" | column -s $'\t' -t)
-	else
-		aligned_rows=$(while IFS=$'\t' read -r target_type display_name info; do
-			printf '%s | %s | %s\n' "$target_type" "$display_name" "$info"
-		done <<< "$display_rows")
-	fi
-
-	local fzf_input=""
-	exec 3<<< "$aligned_rows"
-	while IFS= read -r raw_line && IFS= read -r aligned_line <&3; do
-		[[ -z "$raw_line" ]] && continue
-
-		if [[ -n "$fzf_input" ]]; then
-			fzf_input+=$'\n'
-		fi
-		fzf_input+="$(printf '%s\t%s' "$raw_line" "$aligned_line")"
-	done <<< "$CANDIDATES_DATA"
-	exec 3<&-
-
-	printf '%s\n' "$fzf_input"
-}
-
-# git worktree を共通候補へ変換
-append_git_candidates() {
-	if ! is_git_repo; then
-		return 1
-	fi
-
+# worktreeを選択してグローバル変数に格納
+select_worktree() {
 	if ! get_worktrees; then
-		return 1
+		error_exit "worktreeが見つかりません"
 	fi
 
-	while IFS=$'\t' read -r path branch; do
-		[[ -z "$path" ]] && continue
-		append_candidate "$(printf 'git\t%s\t%s\t%s\t%s' "$branch" "$path" "$path" "$branch")"
-	done <<< "$WORKTREES_DATA"
-
-	return 0
-}
-
-# multi-worktree タスクを共通候補へ変換
-append_multi_worktree_candidates() {
-	local tasks
-	if ! tasks=$(get_multi_worktree_tasks); then
-		return 1
-	fi
-
-	while IFS=$'\t' read -r task_name group task_path repo_count devcontainer; do
-		[[ -z "$task_name" ]] && continue
-
-		local group_name="${group:-default}"
-		local display_name="${task_name} group=${group_name}"
-		local repo_summary="${repo_count:-0 repos}"
-		local info="${repo_summary}"
-		if [[ -n "${devcontainer:-}" ]]; then
-			info="${info} / ${devcontainer}"
-		fi
-		info="${info} / ${task_path}"
-
-		append_candidate "$(printf 'multi\t%s\t%s\t%s\t%s' "$display_name" "$task_path" "$info" "$task_name")"
-	done <<< "$tasks"
-
-	return 0
-}
-
-# git worktree / multi-worktree の共通候補を選択
-select_target() {
-	CANDIDATES_DATA=""
-	append_git_candidates || true
-	append_multi_worktree_candidates || true
-
-	if [[ -z "$CANDIDATES_DATA" ]]; then
-		if is_git_repo; then
-			error_exit "git worktree も multi-worktree タスクも見つかりません"
-		fi
-		error_exit "multi-worktree のタスクが見つかりません（コマンドが存在しないかタスクが0件です）"
-	fi
-
+	# デバッグ用出力
 	if [[ "${DEBUG:-}" == "1" ]]; then
-		echo "${PURPLE}[DEBUG] 取得した候補:${NC}" >&2
-		echo "$CANDIDATES_DATA" | cat -A >&2
-		echo "${PURPLE}[DEBUG] 行数: $(echo "$CANDIDATES_DATA" | wc -l)${NC}" >&2
+		echo "${PURPLE}[DEBUG] 取得したworktrees:${NC}" >&2
+		echo "$WORKTREES_DATA" | cat -A >&2
+		echo "${PURPLE}[DEBUG] 行数: $(echo "$WORKTREES_DATA" | wc -l)${NC}" >&2
 	fi
 
+	# fzfで選択 (ブランチ名のみ表示)
 	local selected_display
-	selected_display=$(build_fzf_input | fzf \
-		--header="対象を選択してください (git worktree / multi-worktree)" \
-		--delimiter=$'\t' \
-		--with-nth=6 \
-		--preview='bash -c '"'"'
-kind="$1"
-path="$2"
-
-if [[ "$kind" == "git" ]]; then
-	git -C "$path" log --oneline -10 2>/dev/null || echo "ログ取得エラー"
-	exit 0
-fi
-
-for d in "$path"/*/; do
-	[ -d "$d" ] || continue
-	r=$(basename "$d")
-	case "$r" in
-		.*) continue ;;
-	esac
-	printf "▶ %s (%s)\n" "$r" "$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
-	git -C "$d" log --oneline -3 2>/dev/null
-	echo
-done
-'"'"' _ {1} {3}' \
+	selected_display=$(echo "$WORKTREES_DATA" | fzf \
+		--header="Worktreeを選択してください (Enterで確定, Escでキャンセル)" \
+		--delimiter='\t' \
+		--with-nth=2 \
+		--preview="git -C {1} log --oneline -10 2>/dev/null || echo 'ログ取得エラー'" \
 		--preview-window="right:50%")
 
 	if [ -z "$selected_display" ]; then
@@ -194,32 +77,20 @@ done
 		return 1
 	fi
 
-	SELECTED_TARGET_TYPE=$(echo "$selected_display" | cut -f1)
-	case "$SELECTED_TARGET_TYPE" in
-	"git")
-		SELECTED_PATH=$(echo "$selected_display" | cut -f3)
-		SELECTED_BRANCH=$(echo "$selected_display" | cut -f5)
-		SELECTED_TASK_PATH=""
-		SELECTED_TASK_NAME=""
-		;;
-	"multi")
-		SELECTED_TASK_PATH=$(echo "$selected_display" | cut -f3)
-		SELECTED_TASK_NAME=$(echo "$selected_display" | cut -f5)
-		SELECTED_PATH=""
-		SELECTED_BRANCH=""
-		;;
-	*)
-		return 1
-		;;
-	esac
+	# 選択結果から元の形式に戻す（タブ区切りデータから）
+	SELECTED_PATH=$(echo "$selected_display" | cut -f1)
+	SELECTED_BRANCH=$(echo "$selected_display" | cut -f2)
 
+	# デバッグ用出力
 	if [[ "${DEBUG:-}" == "1" ]]; then
 		echo "${PURPLE}[DEBUG] 選択結果:${NC}" >&2
-		echo "${PURPLE}[DEBUG] 種別: '$SELECTED_TARGET_TYPE'${NC}" >&2
-		echo "${PURPLE}[DEBUG] git path: '$SELECTED_PATH'${NC}" >&2
-		echo "${PURPLE}[DEBUG] git branch: '$SELECTED_BRANCH'${NC}" >&2
-		echo "${PURPLE}[DEBUG] multi path: '$SELECTED_TASK_PATH'${NC}" >&2
-		echo "${PURPLE}[DEBUG] multi task: '$SELECTED_TASK_NAME'${NC}" >&2
+		echo "${PURPLE}[DEBUG] パス: '$SELECTED_PATH'${NC}" >&2
+		echo "${PURPLE}[DEBUG] ブランチ: '$SELECTED_BRANCH'${NC}" >&2
+	fi
+
+	# 選択結果の検証
+	if [ -z "$SELECTED_PATH" ] || [ -z "$SELECTED_BRANCH" ]; then
+		return 1
 	fi
 
 	return 0
@@ -435,6 +306,33 @@ get_multi_worktree_tasks() {
 	echo "$tasks"
 }
 
+# fzf でタスクを選択しグローバル変数に格納
+select_multi_worktree_task() {
+	local tasks
+	if ! tasks=$(get_multi_worktree_tasks); then
+		echo "${RED}エラー: multi-worktree のタスクが見つかりません（コマンドが存在しないかタスクが0件です）${NC}" >&2
+		return 1
+	fi
+
+	local selected
+	selected=$(echo "$tasks" | fzf \
+		--header="multi-worktree タスクを選択 (Enter: tiled lazygit で開く)" \
+		--delimiter=$'\t' \
+		+m \
+		--with-nth=1,2,4,5 \
+		--preview='for d in {3}/*/; do [ -d "$d" ] || continue; r=$(basename "$d"); case "$r" in .*) continue;; esac; printf "▶ %s (%s)\n" "$r" "$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"; git -C "$d" log --oneline -3 2>/dev/null; echo; done' \
+		--preview-window="right:50%")
+
+	if [[ -z "$selected" ]]; then
+		echo "${YELLOW}選択がキャンセルされました${NC}" >&2
+		return 1
+	fi
+
+	SELECTED_TASK_PATH=$(echo "$selected" | cut -f3)
+	SELECTED_TASK_NAME=$(echo "$selected" | cut -f1)
+	return 0
+}
+
 # multi-worktree モードで実行するコマンドを選択
 select_multi_worktree_command() {
 	local actions
@@ -617,44 +515,20 @@ open_multi_worktree_tiled() {
 	return 0
 }
 
-# multi-worktree 用アクション実行
-execute_multi_action() {
-	local task_path="$1"
-	local task_name="$2"
-	local action="$3"
-
-	case "$action" in
-	"lazygit" | "code" | "nvim" | "cd" | "sync")
-		open_multi_worktree_tiled "$task_path" "$task_name" "$action"
-		;;
-	"czg" | "diff")
-		error_exit "アクション '$action' は multi-worktree では未対応です"
-		;;
-	*)
-		error_exit "不明なアクション: $action"
-		;;
-	esac
-}
-
-# 選択対象に応じてアクションを実行
-execute_selected_target() {
-	case "$SELECTED_TARGET_TYPE" in
-	"git")
-		execute_action "$SELECTED_PATH" "$SELECTED_BRANCH" "$SELECTED_ACTION"
-		;;
-	"multi")
-		execute_multi_action "$SELECTED_TASK_PATH" "$SELECTED_TASK_NAME" "$SELECTED_ACTION"
-		;;
-	*)
-		error_exit "不明な選択種別: $SELECTED_TARGET_TYPE"
-		;;
-	esac
+# multi-worktree フォールバックモード
+run_multi_worktree_mode() {
+	if ! select_multi_worktree_task; then
+		return 1
+	fi
+	local cmd
+	cmd=$(select_multi_worktree_command) || return 0
+	open_multi_worktree_tiled "$SELECTED_TASK_PATH" "$SELECTED_TASK_NAME" "$cmd"
 }
 
 # ヘルプを表示
 show_help() {
 	cat << 'EOF'
-Git Worktree Manager - git worktree / multi-worktree の管理とアクション実行
+Git Worktree Manager - git worktreeの管理とアクション実行
 
 使用方法:
   git-worktree-manager [オプション] [アクション]
@@ -671,16 +545,11 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
   diff            git diffを表示
   cd              ディレクトリに移動する（新しいシェル）
 
-補足:
-  - git 管理下でも git worktree と multi-worktree タスクをまとめて選択できます
-  - 直接アクション指定で multi-worktree に適用できるのは lazygit / code / nvim / cd のみです
-  - multi-worktree の sync はインタラクティブ選択時のみ利用できます
-
 実行例:
-  # インタラクティブ選択（対象選択 → アクション選択）
+  # インタラクティブ選択（worktree選択 → アクション選択）
   git-worktree-manager
 
-  # 直接アクション指定（対象選択のみ）
+  # 直接アクション指定（worktree選択のみ）
   git-worktree-manager lazygit
   git-worktree-manager code
   git-worktree-manager nvim
@@ -714,52 +583,39 @@ main() {
 		shift
 	fi
 
-	# 対象選択
-	if ! select_target; then
+	# gitリポジトリでなければ multi-worktree フォールバック
+	if ! is_git_repo; then
+		run_multi_worktree_mode
+		exit 0
+	fi
+
+	# worktree選択
+	if ! select_worktree; then
 		exit 0
 	fi
 
 	# アクション選択（直接指定されていない場合のみ）
 	if [ -z "$SELECTED_ACTION" ]; then
-		if [[ "$SELECTED_TARGET_TYPE" == "multi" ]]; then
-			SELECTED_ACTION=$(select_multi_worktree_command) || exit 0
-		else
-			if ! select_action; then
-				exit 0
-			fi
+		if ! select_action; then
+			exit 0
 		fi
 	fi
 
 	# デバッグ情報
 	if [[ "${DEBUG:-}" == "1" ]]; then
 		echo "${PURPLE}[DEBUG] 最終結果:${NC}"
-		echo "${PURPLE}[DEBUG] target_type: '$SELECTED_TARGET_TYPE'${NC}"
 		echo "${PURPLE}[DEBUG] worktree_path: '$SELECTED_PATH'${NC}"
 		echo "${PURPLE}[DEBUG] branch_name: '$SELECTED_BRANCH'${NC}"
-		echo "${PURPLE}[DEBUG] task_path: '$SELECTED_TASK_PATH'${NC}"
-		echo "${PURPLE}[DEBUG] task_name: '$SELECTED_TASK_NAME'${NC}"
 		echo "${PURPLE}[DEBUG] action: '$SELECTED_ACTION'${NC}"
 	fi
 
 	# 選択結果の最終検証
-	case "$SELECTED_TARGET_TYPE" in
-	"git")
-		if [ -z "$SELECTED_PATH" ] || [ -z "$SELECTED_BRANCH" ] || [ -z "$SELECTED_ACTION" ]; then
-			error_exit "選択に失敗しました (type='$SELECTED_TARGET_TYPE', path='$SELECTED_PATH', branch='$SELECTED_BRANCH', action='$SELECTED_ACTION')"
-		fi
-		;;
-	"multi")
-		if [ -z "$SELECTED_TASK_PATH" ] || [ -z "$SELECTED_TASK_NAME" ] || [ -z "$SELECTED_ACTION" ]; then
-			error_exit "選択に失敗しました (type='$SELECTED_TARGET_TYPE', task_path='$SELECTED_TASK_PATH', task_name='$SELECTED_TASK_NAME', action='$SELECTED_ACTION')"
-		fi
-		;;
-	*)
-		error_exit "選択に失敗しました (type='$SELECTED_TARGET_TYPE', action='$SELECTED_ACTION')"
-		;;
-	esac
+	if [ -z "$SELECTED_PATH" ] || [ -z "$SELECTED_BRANCH" ] || [ -z "$SELECTED_ACTION" ]; then
+		error_exit "選択に失敗しました (path='$SELECTED_PATH', branch='$SELECTED_BRANCH', action='$SELECTED_ACTION')"
+	fi
 
 	# アクション実行
-	execute_selected_target
+	execute_action "$SELECTED_PATH" "$SELECTED_BRANCH" "$SELECTED_ACTION"
 
 	return 0
 }

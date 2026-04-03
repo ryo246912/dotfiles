@@ -6,7 +6,7 @@ _multi_worktree_completion() {
     _init_completion || return
 
     # サブコマンドのリスト
-    local subcommands="create recreate remove list status sync cd dev exec open help"
+    local subcommands="create remove list status sync cd dev exec open help"
 
     # 最初の引数（サブコマンド）の補完
     if [[ $cword -eq 1 ]]; then
@@ -21,15 +21,6 @@ _multi_worktree_completion() {
         create)
             # create は --group= オプションのみ
             if [[ "$cur" == --* ]]; then
-                COMPREPLY=($(compgen -W "--group=" -- "$cur"))
-            fi
-            ;;
-
-        recreate)
-            if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ "$cur" == --* ]]; then
                 COMPREPLY=($(compgen -W "--group=" -- "$cur"))
             fi
             ;;

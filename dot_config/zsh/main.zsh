@@ -1,4 +1,5 @@
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
+export EDITOR=nvim
 
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000

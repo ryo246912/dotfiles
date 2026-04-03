@@ -1,7 +1,3 @@
-os:
-  edit: 'nvim {{filename}}'
-  editAtLine: 'nvim +{{line}} {{filename}}'
-  editAtLineAndWait: 'nvim +{{line}} {{filename}}'
 customCommands:
   - command: czg
     context: "files, worktrees, localBranches, remotes, tags"
@@ -23,18 +19,26 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
+  - command: nvim {{ .SelectedFile.Name | quote }}
+    context: "files"
+    output: terminal
+    key: e
   - command: $SHELL || zsh || bash
     context: "files, worktrees, localBranches, remotes, tags, commits"
     output: terminal
     key: t
     description: "Open temporary terminal"
-  - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c sequence.editor=true rebase -i --autostash --autosquash --quiet {{.SelectedLocalCommit.Hash}}~1"
+  - command: "git commit --fixup {{.SelectedLocalCommit.Hash}} && git -c
+      sequence.editor=true rebase -i --autostash --autosquash --quiet
+      {{.SelectedLocalCommit.Hash}}~1"
     key: F
     context: commits
     description: "Fixup and Auto-squash into selected commit"
   - command: >
-      git checkout -b {{.Form.newBranchName}} {{or .SelectedLocalBranch.Name .SelectedRemoteBranch.Name .SelectedTag.Name}} &&
-      git config "branch.$(git symbolic-ref --short HEAD).base-branch" {{or .SelectedLocalBranch.Name .SelectedRemoteBranch.Name .SelectedTag.Name}}
+      git checkout -b {{.Form.newBranchName}} {{or .SelectedLocalBranch.Name
+      .SelectedRemoteBranch.Name .SelectedTag.Name}} && git config "branch.$(git
+      symbolic-ref --short HEAD).base-branch" {{or .SelectedLocalBranch.Name
+      .SelectedRemoteBranch.Name .SelectedTag.Name}}
     key: n
     context: "localBranches, remotes, tags"
     prompts:
@@ -44,17 +48,15 @@ customCommands:
     loadingText: "Creating branch and setting config..."
     description: "Create new branch with base-branch config"
   - command: >-
-      bash -c '
-      target="$1";
-      current="$2";
-      wt=$(git worktree list --porcelain | awk -v b="refs/heads/$target" "/^worktree /{p=\$2} /^branch /{if(\$2==b) print p}");
-      if [ -n "$wt" ]; then
+      bash -c ' target="$1"; current="$2"; wt=$(git worktree list --porcelain |
+      awk -v b="refs/heads/$target" "/^worktree /{p=\$2} /^branch /{if(\$2==b)
+      print p}"); if [ -n "$wt" ]; then
         git -C "$wt" merge "$current";
       else
-        git checkout "$target" && git merge "$current" && git checkout "$current";
-      fi' --
-      {{ .SelectedLocalBranch.Name | quote }}
-      {{ .CheckedOutBranch.Name | quote }}
+        git checkout "$target" && git merge "$current" && git checkout
+      "$current";
+      fi' -- {{ .SelectedLocalBranch.Name | quote }} {{ .CheckedOutBranch.Name |
+      quote }}
     key: m
     context: localBranches
     prompts:
