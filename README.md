@@ -13,3 +13,4 @@
 
 - [setup](setup.md)
 - [rulesync usage](dot_config/rulesync/README.md)
+- [rtk usage](docs/rtk.md)
