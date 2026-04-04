@@ -20,6 +20,9 @@ return {
   {
     "rcarriga/nvim-notify",
     config = function()
+      if #vim.api.nvim_list_uis() == 0 then
+        return
+      end
       require("notify").setup({
         background_colour = "#000000",
       })
