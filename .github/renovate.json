@@ -17,7 +17,6 @@
         "ubi:superfly/flyctl",
         "aqua:stripe/stripe-cli",
         "usage",
-        "npm:ccusage",
         "ubi:render-oss/cli",
         "npm:renovate",
         "aqua:aws/aws-cli",
