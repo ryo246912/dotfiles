@@ -101,7 +101,7 @@ tmux                                                        = "3.6a"
 "ubi:seachicken/gh-poi"                                     = "0.16.2"
 "ubi:shazow/wifitui"                                        = "0.11.0"
 "ubi:skanehira/ghost"                                       = "0.3.0"
-usage                                                       = "3.0.0"
+usage                                                       = "3.2.0"
 vim                                                         = "9.1.1006"
 
 [settings]
