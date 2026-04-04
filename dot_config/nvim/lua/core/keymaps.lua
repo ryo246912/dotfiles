@@ -31,7 +31,7 @@ end
 local function ensure_current_word_search()
   local word = vim.fn.expand("<cword>")
   if word == nil or word == "" then
-    return
+    return false
   end
 
   local pattern = exact_word_pattern(word)
@@ -40,12 +40,22 @@ local function ensure_current_word_search()
   if vim.v.hlsearch == 0 or current == "" then
     vim.fn.setreg("/", pattern)
     vim.o.hlsearch = true
+    return true
   end
+
+  return false
 end
 
 local function jump_current_word(direction)
   return function()
-    ensure_current_word_search()
+    local initialized = ensure_current_word_search()
+    if initialized then
+      local flags = direction == "n" and "W" or "bW"
+      for _ = 1, vim.v.count1 do
+        vim.fn.search(vim.fn.getreg("/"), flags)
+      end
+      return
+    end
     vim.cmd(("normal! %d%s"):format(vim.v.count1, direction))
   end
 end
