@@ -1,75 +1,105 @@
 #!/bin/bash
 
-# Check for required binaries
-if ! command -v claude &> /dev/null; then
-  echo "✖ Error: 'claude' command not found. Please install Claude CLI first."
-  exit 1
-fi
-
-if ! command -v bun &> /dev/null; then
-  echo "✖ Error: 'bun' command not found. Please install bun first."
-  exit 1
-fi
-
 export DISABLE_AUTOUPDATER=1
 
-# Get MCP list once and reuse it
-MCP_LIST=$(claude mcp list 2>/dev/null)
+bootstrap_dirs=(
+  "$HOME/.cline"
+  "$HOME/.config/crush"
+  "$HOME/.config/crush/skills"
+  "$HOME/.config/goose"
+  "$HOME/.config/gptme"
+  "$HOME/.config/gptme/lessons"
+  "$HOME/.config/manicode"
+  "$HOME/.config/manicode/projects"
+  "$HOME/.config/nanocoder"
+  "$HOME/.local/share/crush"
+  "$HOME/.local/share/goose"
+  "$HOME/.local/share/gptme"
+  "$HOME/.local/share/nanocoder"
+  "$HOME/.neovate"
+  "$HOME/.qwen"
+)
 
-# Helper function to check if MCP is already registered
-mcp_exists() {
-  local name="$1"
-  echo "$MCP_LIST" | grep -q "\"$name\"" && return 0 || return 1
+ensure_dir() {
+  local dir="$1"
+
+  if [ ! -d "$dir" ]; then
+    mkdir -p "$dir"
+    echo "✓ created $dir"
+  fi
 }
 
-# MCPs to add
-MCP_NAMES=(
-  # "context7"
-  "deepwiki"
-  # "chrome-devtools"
-  "modular-mcp"
-)
-MCP_ARGS=(
-  # "-s user --transport http context7 https://mcp.context7.com/mcp"
-  "-s user -t http deepwiki https://mcp.deepwiki.com/mcp"
-  # "-s user chrome-devtools bunx chrome-devtools-mcp@latest"
-  "--transport stdio -s user modular-mcp -- npx -y @kimuson/modular-mcp $HOME/.claude/modular-mcp.json"
-)
+echo "[setup-ai-tool] Ensuring agent CLI directories exist..."
+for dir in "${bootstrap_dirs[@]}"; do
+  ensure_dir "$dir"
+done
 
-# Function to add or skip MCP
-add_or_skip_mcp() {
-  local name="$1"
-  local args="$2"
+configure_claude_mcp() {
+  local mcp_list
+  mcp_list=$(claude mcp list 2>/dev/null)
 
-  if ! mcp_exists "$name"; then
-    echo "Adding $name MCP..."
-    local output
-    output=$(eval "claude mcp add $args" 2>&1)
-    if [ $? -eq 0 ]; then
-      echo "✔ $name MCP added"
-      return 0
-    elif echo "$output" | grep -q "already exists"; then
+  mcp_exists() {
+    local name="$1"
+    grep -Fq "\"$name\"" <<<"$mcp_list"
+  }
+
+  local mcp_names=(
+    "deepwiki"
+    "modular-mcp"
+  )
+  local mcp_args=(
+    "-s user -t http deepwiki https://mcp.deepwiki.com/mcp"
+    "--transport stdio -s user modular-mcp -- npx -y @kimuson/modular-mcp $HOME/.claude/modular-mcp.json"
+  )
+
+  add_or_skip_mcp() {
+    local name="$1"
+    local args="$2"
+
+    if ! mcp_exists "$name"; then
+      echo "Adding $name MCP..."
+      local output
+      if output=$(eval "claude mcp add $args" 2>&1); then
+        echo "✔ $name MCP added"
+        return 0
+      elif grep -q "already exists" <<<"$output"; then
+        echo "✓ $name MCP already registered"
+        return 0
+      else
+        echo "✖ Failed to add $name MCP"
+        echo "$output"
+        return 1
+      fi
+    else
       echo "✓ $name MCP already registered"
       return 0
-    else
-      echo "✖ Failed to add $name MCP"
-      echo "$output"
+    fi
+  }
+
+  echo "[setup-ai-tool] Configuring Claude MCPs..."
+  for i in "${!mcp_names[@]}"; do
+    if ! add_or_skip_mcp "${mcp_names[$i]}" "${mcp_args[$i]}"; then
       return 1
     fi
-  else
-    echo "✓ $name MCP already registered"
-    return 0
-  fi
+  done
 }
 
-# Add MCPs if not already present
-echo "[setup-ai-tool] Configuring Claude MCPs..."
-
-for i in "${!MCP_NAMES[@]}"; do
-  if ! add_or_skip_mcp "${MCP_NAMES[$i]}" "${MCP_ARGS[$i]}"; then
+if command -v claude >/dev/null 2>&1; then
+  if ! configure_claude_mcp; then
     exit 1
   fi
-done
+else
+  echo "[setup-ai-tool] Skipping Claude MCP setup because 'claude' is not installed."
+fi
+
+if command -v neovate >/dev/null 2>&1; then
+  echo "[setup-ai-tool] Disabling Neovate auto-update..."
+  if neovate config set autoUpdate false -g >/dev/null 2>&1; then
+    echo "✓ Neovate auto-update disabled"
+  else
+    echo "ℹ️  Neovate auto-update could not be disabled automatically"
+  fi
+fi
 
 echo "[setup-ai-tool] Setup completed successfully!"
 # TODO: anthropics/skills plugin will be added once marketplace is stable

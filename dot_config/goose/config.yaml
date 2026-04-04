@@ -1,0 +1,23 @@
+GOOSE_MODE: "smart_approve"
+GOOSE_CLI_THEME: "dark"
+GOOSE_CLI_SHOW_COST: true
+GOOSE_CLI_MIN_PRIORITY: 0.2
+GOOSE_AUTO_COMPACT_THRESHOLD: 0.7
+GOOSE_TELEMETRY_ENABLED: false
+GOOSE_SEARCH_PATHS:
+  - "/opt/homebrew/bin"
+  - "/usr/local/bin"
+
+extensions:
+  developer:
+    bundled: true
+    enabled: true
+    name: developer
+    timeout: 300
+    type: builtin
+  memory:
+    bundled: true
+    enabled: true
+    name: memory
+    timeout: 300
+    type: builtin

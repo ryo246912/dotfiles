@@ -1,0 +1,13 @@
+dark-mode: true
+pretty: true
+stream: true
+gitignore: true
+subtree-only: true
+auto-commits: false
+dirty-commits: false
+restore-chat-history: true
+cache-prompts: true
+map-refresh: files
+show-model-warnings: false
+watch-files: true
+notifications: true

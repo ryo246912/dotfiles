@@ -1,5 +1,7 @@
 # Setup
 
+- [ ] [agent CLI の導入と使い方](agent-cli.md) を確認する
+
 ## Mac
 ### 初期設定
 - [ ] XCode CLIのインストール
@@ -37,6 +39,10 @@
   - [ ] 他ツールのインストール
     ```sh
     mise install --jobs=2
+    ```
+  - [ ] agent CLI 用の bootstrap
+    ```sh
+    setup-ai-tool
     ```
 
 - [ ] karabiner-elements

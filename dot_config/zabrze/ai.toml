@@ -23,14 +23,59 @@ snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --works
 trigger = "ccmcg"
 
 [[snippets]]
+name    = "ccmanager devcontainer(aider)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json aider\""
+trigger = "ccmad"
+
+[[snippets]]
+name    = "ccmanager devcontainer(cline)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json cline\""
+trigger = "ccmcl"
+
+[[snippets]]
+name    = "ccmanager devcontainer(codebuff)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json codebuff\""
+trigger = "ccmcb"
+
+[[snippets]]
 name    = "ccmanager devcontainer(codex)"
 snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json codex --yolo\""
 trigger = "ccmcx"
 
 [[snippets]]
+name    = "ccmanager devcontainer(crush)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json crush\""
+trigger = "ccmcr"
+
+[[snippets]]
+name    = "ccmanager devcontainer(goose)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json goose\""
+trigger = "ccmgo"
+
+[[snippets]]
+name    = "ccmanager devcontainer(gptme)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json gptme\""
+trigger = "ccmgm"
+
+[[snippets]]
+name    = "ccmanager devcontainer(nanocoder)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json nanocoder\""
+trigger = "ccmnc"
+
+[[snippets]]
+name    = "ccmanager devcontainer(neovate)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json neovate\""
+trigger = "ccmnv"
+
+[[snippets]]
 name    = "ccmanager devcontainer(opencode)"
 snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json opencode\""
 trigger = "ccmco"
+
+[[snippets]]
+name    = "ccmanager devcontainer(qwen)"
+snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json qwen\""
+trigger = "ccmqw"
 
 [[snippets]]
 name    = "ccmanager devcontainer(copilot)"
@@ -62,6 +107,24 @@ trigger = "cl2"
 
 [[snippets]]
 global  = true
+name    = "aider"
+snippet = "aider"
+trigger = "ad"
+
+[[snippets]]
+global  = true
+name    = "cline"
+snippet = "cline"
+trigger = "cn"
+
+[[snippets]]
+global  = true
+name    = "codebuff"
+snippet = "codebuff"
+trigger = "cbf"
+
+[[snippets]]
+global  = true
 name    = "claude --dangerously-skip-permissions"
 snippet = "claude --dangerously-skip-permissions"
 trigger = "cly"
@@ -89,6 +152,48 @@ global  = true
 name    = "codex --yolo"
 snippet = "codex --yolo"
 trigger = "cxy"
+
+[[snippets]]
+global  = true
+name    = "crush"
+snippet = "crush"
+trigger = "cru"
+
+[[snippets]]
+global  = true
+name    = "gemini"
+snippet = "gemini"
+trigger = "ge"
+
+[[snippets]]
+global  = true
+name    = "goose"
+snippet = "goose"
+trigger = "gos"
+
+[[snippets]]
+global  = true
+name    = "gptme"
+snippet = "gptme"
+trigger = "gm"
+
+[[snippets]]
+global  = true
+name    = "nanocoder"
+snippet = "nanocoder"
+trigger = "nc"
+
+[[snippets]]
+global  = true
+name    = "neovate"
+snippet = "neovate"
+trigger = "nv"
+
+[[snippets]]
+global  = true
+name    = "qwen"
+snippet = "qwen"
+trigger = "qw"
 
 [[snippets]]
 context = ".*claude(2)?\\s"

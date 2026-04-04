@@ -12,4 +12,5 @@
 # Setup
 
 - [setup](setup.md)
+- [agent CLI guide](agent-cli.md)
 - [rulesync usage](dot_config/rulesync/README.md)
