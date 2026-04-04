@@ -4,8 +4,8 @@ snippet = "gwq"
 trigger = "gw"
 
 [[snippets]]
-name    = "wt switch -c -b"
-snippet = "wt switch -c -b"
+name    = "wt switch --no-cd"
+snippet = "wt switch --no-cd $(git branch -r | fzf)"
 trigger = "gwa"
 
 [[snippets]]
@@ -33,6 +33,11 @@ trigger-pattern = "^(gwee|gwem)$"
 name    = "gwq list"
 snippet = "gwq list"
 trigger = "gwl"
+
+[[snippets]]
+name            = "wt list"
+snippet         = "wt list"
+trigger-pattern = "(wtl|gwll)"
 
 [[snippets]]
 name    = "git worktree sync"
@@ -73,8 +78,3 @@ trigger-pattern = "^mwr$"
 name            = "multi-worktree sync"
 snippet         = "multi-worktree sync"
 trigger-pattern = "^mws$"
-
-[[snippets]]
-name    = "wt list"
-snippet = "wt list"
-trigger = "wtl"
