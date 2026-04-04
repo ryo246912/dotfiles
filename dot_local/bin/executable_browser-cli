@@ -1,0 +1,386 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  browser-cli list
+  browser-cli show [slot]
+  browser-cli url [slot]
+  browser-cli status [slot]
+  browser-cli json-version [slot]
+  browser-cli start [slot]
+  browser-cli host-command start [slot]
+  browser-cli pages [slot]
+  browser-cli goto [slot] <url>
+  browser-cli screenshot [slot] <url> <output>
+  browser-cli click [slot] <url> <selector>
+
+Environment:
+  BROWSER_CLI_SLOTS_FILE   Override slot catalog path
+  BROWSER_CLI_BROWSER_HOST Override resolved browser host
+  BROWSER_CLI_TARGET       Force host resolution: host | container
+  BROWSER_CLI_CHROME_PATH  Override Chrome executable path
+  BROWSER_CLI_HOST_ALIAS   Override SSH alias used by `start` in container
+  BROWSER_CLI_NODE_BIN     Override Node binary used for Playwright helper
+  BROWSER_CLI_USER_DATA_ROOT Override user-data-dir root for local validation
+EOF
+}
+
+die() {
+  echo "browser-cli: $*" >&2
+  exit 1
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+source_repo_root() {
+  local candidate
+  candidate="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+  if [[ -f "${candidate}/dot_config/browser-cli/slots.json" ]]; then
+    printf '%s\n' "${candidate}"
+  fi
+}
+
+default_slots_file() {
+  local repo_root
+
+  if [[ -f "${HOME}/.config/browser-cli/slots.json" ]]; then
+    printf '%s\n' "${HOME}/.config/browser-cli/slots.json"
+    return
+  fi
+
+  repo_root="$(source_repo_root || true)"
+  if [[ -n "${repo_root}" ]]; then
+    printf '%s\n' "${repo_root}/dot_config/browser-cli/slots.json"
+    return
+  fi
+
+  die "slot catalog not found. Set BROWSER_CLI_SLOTS_FILE."
+}
+
+default_helper_path() {
+  local repo_root
+
+  if [[ -x "${SCRIPT_DIR}/browser-playwright" ]]; then
+    printf '%s\n' "${SCRIPT_DIR}/browser-playwright"
+    return
+  fi
+
+  if [[ -x "${SCRIPT_DIR}/executable_browser-playwright" ]]; then
+    printf '%s\n' "${SCRIPT_DIR}/executable_browser-playwright"
+    return
+  fi
+
+  repo_root="$(source_repo_root || true)"
+  if [[ -n "${repo_root}" && -x "${repo_root}/dot_local/bin/executable_browser-playwright" ]]; then
+    printf '%s\n' "${repo_root}/dot_local/bin/executable_browser-playwright"
+    return
+  fi
+
+  die "browser-playwright helper not found"
+}
+
+SLOTS_FILE="${BROWSER_CLI_SLOTS_FILE:-$(default_slots_file)}"
+PLAYWRIGHT_HELPER="${BROWSER_CLI_HELPER:-$(default_helper_path)}"
+
+[[ -f "${SLOTS_FILE}" ]] || die "slot catalog not found: ${SLOTS_FILE}"
+
+slot_arg() {
+  local requested="${1:-}"
+  if [[ -n "${requested}" ]]; then
+    printf '%s\n' "${requested}"
+    return
+  fi
+
+  jq -er '.defaultSlot' "${SLOTS_FILE}"
+}
+
+slot_json() {
+  local slot="$1"
+  jq -er --arg slot "${slot}" '.slots[$slot]' "${SLOTS_FILE}" >/dev/null || die "unknown slot: ${slot}"
+  jq -er --arg slot "${slot}" '.slots[$slot]' "${SLOTS_FILE}"
+}
+
+slot_field() {
+  local slot="$1"
+  local filter="$2"
+  slot_json "${slot}" | jq -er "${filter}"
+}
+
+expand_home() {
+  local value="$1"
+  value="${value/#\~/${HOME}}"
+  value="${value//\$HOME/${HOME}}"
+  printf '%s\n' "${value}"
+}
+
+slot_user_data_dir_raw() {
+  local slot="$1"
+  if [[ -n "${BROWSER_CLI_USER_DATA_ROOT:-}" ]]; then
+    printf '%s/%s\n' "${BROWSER_CLI_USER_DATA_ROOT%/}" "${slot}"
+    return
+  fi
+
+  slot_field "${slot}" '.userDataDir'
+}
+
+slot_user_data_dir_expanded() {
+  local slot="$1"
+  expand_home "$(slot_user_data_dir_raw "${slot}")"
+}
+
+resolved_target() {
+  if [[ -n "${BROWSER_CLI_TARGET:-}" ]]; then
+    case "${BROWSER_CLI_TARGET}" in
+      host|container)
+        printf '%s\n' "${BROWSER_CLI_TARGET}"
+        return
+        ;;
+      *)
+        die "BROWSER_CLI_TARGET must be host or container"
+        ;;
+    esac
+  fi
+
+  if [[ -f "/.dockerenv" ]]; then
+    printf 'container\n'
+  else
+    printf 'host\n'
+  fi
+}
+
+resolved_browser_host() {
+  local target="${1:-$(resolved_target)}"
+
+  if [[ -n "${BROWSER_CLI_BROWSER_HOST:-}" ]]; then
+    printf '%s\n' "${BROWSER_CLI_BROWSER_HOST}"
+    return
+  fi
+
+  jq -er --arg target "${target}" '.browserHosts[$target]' "${SLOTS_FILE}"
+}
+
+resolved_browser_url() {
+  local slot="$1"
+  local template host
+
+  template="$(slot_field "${slot}" '.browserUrl')"
+  host="$(resolved_browser_host)"
+  printf '%s\n' "${template//\{browserHost\}/${host}}"
+}
+
+resolved_chrome_path() {
+  if [[ -n "${BROWSER_CLI_CHROME_PATH:-}" ]]; then
+    printf '%s\n' "${BROWSER_CLI_CHROME_PATH}"
+    return
+  fi
+
+  jq -er '.chromePath' "${SLOTS_FILE}"
+}
+
+resolved_host_alias() {
+  if [[ -n "${BROWSER_CLI_HOST_ALIAS:-}" ]]; then
+    printf '%s\n' "${BROWSER_CLI_HOST_ALIAS}"
+    return
+  fi
+
+  jq -er '.hostAlias' "${SLOTS_FILE}"
+}
+
+render_host_start_command() {
+  local slot="$1"
+  local port user_data_dir chrome_path log_path
+
+  port="$(slot_field "${slot}" '.port')"
+  user_data_dir="$(slot_user_data_dir_raw "${slot}")"
+  chrome_path="$(resolved_chrome_path)"
+  log_path="/tmp/browser-cli-${slot}.log"
+
+  cat <<EOF
+mkdir -p "${user_data_dir}" && '${chrome_path}' --disable-breakpad --disable-crashpad-for-testing --remote-debugging-port=${port} --user-data-dir="${user_data_dir}" --no-first-run --no-default-browser-check about:blank >${log_path} 2>&1 &
+EOF
+}
+
+curl_json_version() {
+  local slot="$1"
+  local url
+
+  require_cmd curl
+  url="$(resolved_browser_url "${slot}")"
+  curl -fsS --max-time "${BROWSER_CLI_CURL_TIMEOUT:-3}" "${url}/json/version"
+}
+
+list_slots() {
+  local slot description port browser_url user_data_dir
+  printf 'slot\tport\tbrowserUrl\tuserDataDir\tdescription\n'
+  while IFS= read -r slot; do
+    description="$(slot_field "${slot}" '.description')"
+    port="$(slot_field "${slot}" '.port')"
+    browser_url="$(resolved_browser_url "${slot}")"
+    user_data_dir="$(slot_user_data_dir_expanded "${slot}")"
+    printf '%s\t%s\t%s\t%s\t%s\n' "${slot}" "${port}" "${browser_url}" "${user_data_dir}" "${description}"
+  done < <(jq -r '.slots | keys[]' "${SLOTS_FILE}")
+}
+
+show_slot() {
+  local slot="$1"
+  jq -n \
+    --arg slot "${slot}" \
+    --arg description "$(slot_field "${slot}" '.description')" \
+    --arg browserUrl "$(resolved_browser_url "${slot}")" \
+    --arg userDataDir "$(slot_user_data_dir_expanded "${slot}")" \
+    --arg hostAlias "$(resolved_host_alias)" \
+    --arg target "$(resolved_target)" \
+    --arg chromePath "$(resolved_chrome_path)" \
+    --argjson port "$(slot_field "${slot}" '.port')" \
+    '{
+      slot: $slot,
+      description: $description,
+      target: $target,
+      hostAlias: $hostAlias,
+      chromePath: $chromePath,
+      port: $port,
+      browserUrl: $browserUrl,
+      userDataDir: $userDataDir
+    }'
+}
+
+resolve_node_bin() {
+  local root version
+
+  if [[ -n "${BROWSER_CLI_NODE_BIN:-}" && -x "${BROWSER_CLI_NODE_BIN}" ]]; then
+    printf '%s\n' "${BROWSER_CLI_NODE_BIN}"
+    return
+  fi
+
+  for root in \
+    "${HOME}/.local/share/mise/installs/node" \
+    "${MISE_DATA_DIR:-}/installs/node" \
+    "/mise/data/installs/node" \
+    "/mise/installs/node"
+  do
+    [[ -n "${root}" && -d "${root}" ]] || continue
+    version="$(
+      find "${root}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; \
+        | grep -E '^[0-9]+(\.[0-9]+){1,2}$' \
+        | sort -t. -k1,1n -k2,2n -k3,3n \
+        | tail -n1
+    )"
+    if [[ -n "${version}" && -x "${root}/${version}/bin/node" ]]; then
+      printf '%s\n' "${root}/${version}/bin/node"
+      return
+    fi
+  done
+
+  if command -v node >/dev/null 2>&1; then
+    printf '%s\n' "$(command -v node)"
+    return
+  fi
+
+  die "Node binary not found for Playwright helper"
+}
+
+run_playwright_helper() {
+  local node_bin
+  node_bin="$(resolve_node_bin)"
+  "${node_bin}" "${PLAYWRIGHT_HELPER}" "$@"
+}
+
+start_slot() {
+  local slot="$1"
+  local command target alias
+
+  command="$(render_host_start_command "${slot}")"
+  target="$(resolved_target)"
+
+  if [[ "${target}" == "host" ]]; then
+    bash -lc "${command}"
+    return
+  fi
+
+  alias="$(resolved_host_alias)"
+  require_cmd ssh
+  ssh "${alias}" "${command}"
+}
+
+command_name="${1:-}"
+
+case "${command_name}" in
+  ""|-h|--help|help)
+    usage
+    ;;
+  list)
+    list_slots
+    ;;
+  show)
+    slot="$(slot_arg "${2:-}")"
+    show_slot "${slot}"
+    ;;
+  url)
+    slot="$(slot_arg "${2:-}")"
+    resolved_browser_url "${slot}"
+    ;;
+  status)
+    slot="$(slot_arg "${2:-}")"
+    json="$(curl_json_version "${slot}")"
+    jq -n \
+      --arg slot "${slot}" \
+      --arg browserUrl "$(resolved_browser_url "${slot}")" \
+      --arg browser "$(jq -r '.Browser // "unknown"' <<<"${json}")" \
+      --arg websocket "$(jq -r '.webSocketDebuggerUrl // ""' <<<"${json}")" \
+      '{
+        slot: $slot,
+        reachable: true,
+        browserUrl: $browserUrl,
+        browser: $browser,
+        webSocketDebuggerUrl: $websocket
+      }'
+    ;;
+  json-version)
+    slot="$(slot_arg "${2:-}")"
+    curl_json_version "${slot}"
+    ;;
+  start)
+    slot="$(slot_arg "${2:-}")"
+    start_slot "${slot}"
+    ;;
+  host-command)
+    subcommand="${2:-}"
+    slot="$(slot_arg "${3:-}")"
+    case "${subcommand}" in
+      start)
+        render_host_start_command "${slot}"
+        ;;
+      *)
+        die "unsupported host-command: ${subcommand:-<empty>}"
+        ;;
+    esac
+    ;;
+  pages)
+    slot="$(slot_arg "${2:-}")"
+    run_playwright_helper pages "$(resolved_browser_url "${slot}")"
+    ;;
+  goto)
+    slot="$(slot_arg "${2:-}")"
+    [[ $# -ge 3 ]] || die "goto requires <slot> <url>"
+    run_playwright_helper goto "$(resolved_browser_url "${slot}")" "${3}"
+    ;;
+  screenshot)
+    slot="$(slot_arg "${2:-}")"
+    [[ $# -ge 4 ]] || die "screenshot requires <slot> <url> <output>"
+    run_playwright_helper screenshot "$(resolved_browser_url "${slot}")" "${3}" "${4}"
+    ;;
+  click)
+    slot="$(slot_arg "${2:-}")"
+    [[ $# -ge 4 ]] || die "click requires <slot> <url> <selector>"
+    run_playwright_helper click "$(resolved_browser_url "${slot}")" "${3}" "${4}"
+    ;;
+  *)
+    die "unknown command: ${command_name}"
+    ;;
+esac

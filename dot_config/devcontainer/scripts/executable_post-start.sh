@@ -21,3 +21,8 @@ fi
 # mise trust を実行
 mise trust
 echo "✓ mise trust を実行しました"
+
+echo "ℹ️ Browser bridge の例:"
+echo "  - slot 一覧: ./dot_local/bin/executable_browser-cli list"
+echo "  - host 起動: ssh mac-host \"\$(./dot_local/bin/executable_browser-cli host-command start slot1)\""
+echo "  - 接続確認: ./dot_local/bin/executable_browser-cli status slot1"

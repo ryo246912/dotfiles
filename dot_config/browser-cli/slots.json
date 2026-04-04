@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "defaultSlot": "slot1",
+  "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "hostAlias": "mac-host",
+  "browserHosts": {
+    "host": "127.0.0.1",
+    "container": "host.docker.internal"
+  },
+  "slots": {
+    "slot1": {
+      "description": "Chrome remote debugging slot 1",
+      "port": 9222,
+      "browserUrl": "http://{browserHost}:9222",
+      "userDataDir": "$HOME/chrome-profiles/slot1"
+    },
+    "slot2": {
+      "description": "Chrome remote debugging slot 2",
+      "port": 9223,
+      "browserUrl": "http://{browserHost}:9223",
+      "userDataDir": "$HOME/chrome-profiles/slot2"
+    },
+    "slot3": {
+      "description": "Chrome remote debugging slot 3",
+      "port": 9224,
+      "browserUrl": "http://{browserHost}:9224",
+      "userDataDir": "$HOME/chrome-profiles/slot3"
+    }
+  }
+}
