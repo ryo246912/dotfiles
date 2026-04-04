@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); \"$ROOT\"/dot_local/bin/executable_ai-agent-notify-copilot --event session_end",
+        "timeoutSec": 10
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); \"$ROOT\"/dot_local/bin/executable_ai-agent-notify-copilot --event error",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
