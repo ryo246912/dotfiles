@@ -1,4 +1,5 @@
 [tools]
+"aqua:ByteNess/aws-vault"                   = "7.9.14"
 "aqua:Songmu/ecschedule"                    = "0.17.2"
 "aqua:aquasecurity/trivy"                   = "0.69.3"
 "aqua:ariga/atlas"                          = "0.37.0"
