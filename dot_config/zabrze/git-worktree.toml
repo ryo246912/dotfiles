@@ -16,7 +16,7 @@ trigger = "gwc"
 [[snippets]]
 name    = "gwq delete(remove)"
 snippet = "gwq remove"
-trigger = "gwd"
+trigger-pattern = "(gwd|gwr)"
 
 [[snippets]]
 cursor  = "👇"
@@ -27,7 +27,7 @@ trigger = "gwe"
 [[snippets]]
 name            = "gwq exec HEAD --"
 snippet         = "gwq exec HEAD --"
-trigger-pattern = "^(gweh|gwem)$"
+trigger-pattern = "^(gwee|gwem)$"
 
 [[snippets]]
 name    = "gwq list"
