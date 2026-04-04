@@ -9,7 +9,7 @@
 "aqua:leg100/pug"                           = "0.6.5"
 "aqua:rclone/rclone"                        = "1.72.0"
 "aqua:terraform-linters/tflint"             = "0.61.0"
-"go:github.com/99designs/gqlgen"            = "0.17.86"
+"go:github.com/99designs/gqlgen"            = "0.17.89"
 "go:github.com/lusingander/gotip/cmd/gotip" = "0.6.2"
 "go:gotest.tools/gotestsum"                 = "1.13.0"
 "pipx:awslogs"                              = "0.15.0"
