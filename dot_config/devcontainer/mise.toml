@@ -1,5 +1,5 @@
 [tools]
-"aqua:anthropics/claude-code"    = "2.1.81"
+"aqua:anthropics/claude-code"    = "2.1.89"
 "aqua:astral-sh/uv"              = "0.10.12"
 "aqua:cli/cli"                   = "2.89.0"
 "aqua:golangci/golangci-lint"    = "2.11.3"
