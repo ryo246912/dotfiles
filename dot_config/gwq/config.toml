@@ -3,3 +3,6 @@ basedir = "../worktrees"
 
 [naming]
 template = "{{.Repository}}-{{.Branch}}"
+
+[cd]
+launch_shell = false

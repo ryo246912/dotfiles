@@ -1,0 +1,4 @@
+{
+  "title": "gwq shell integration configuration",
+  "content": "To enable gwq shell integration (directory change in current shell for 'gwq cd'), the following steps are required:\n1. Update gwq config (dot_config/gwq/config.toml) to include [cd] launch_shell = false.\n2. Ensure the shell's completion script for gwq is sourced, as it contains the necessary 'cd' wrapper. In this repo, this was done in dot_config/zsh/lazy/mise.zsh by adding 'source \"$completion_file\"' after generating the completion script."
+}

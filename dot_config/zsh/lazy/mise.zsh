@@ -24,6 +24,7 @@ __generate_and_load_completion() {
             ;;
         "gwq")
             gwq completion zsh > "$completion_file" 2>/dev/null
+            [[ -f "$completion_file" ]] && source "$completion_file"
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "mise")
