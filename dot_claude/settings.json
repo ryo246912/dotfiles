@@ -54,7 +54,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "ccusage statusline --visual-burn-rate emoji"
+    "command": "claude-powerline --style=powerline"
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,

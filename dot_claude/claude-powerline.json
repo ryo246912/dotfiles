@@ -1,0 +1,27 @@
+{
+  "display": {
+    "lines": [
+      {
+        "segments": {
+          "git": {
+            "enabled": true,
+            "showSha": false,
+            "showWorkingTree": false,
+            "showOperation": false,
+            "showTag": false,
+            "showTimeSinceCommit": false,
+            "showStashCount": false,
+            "showUpstream": false,
+            "showRepoName": false
+          },
+          "block": {
+            "enabled": true,
+            "type": "time",
+            "burnType": "none",
+            "displayStyle": "text"
+          }
+        }
+      }
+    ]
+  }
+}
