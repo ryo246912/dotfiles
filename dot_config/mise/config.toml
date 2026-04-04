@@ -165,9 +165,13 @@ description = "Run other formatter"
 description = "Generate repo root CLAUDE.md from .rulesync/ source"
 run         = "rulesync generate"
 
+[tasks.rulesync-install-user]
+description = "Install curated user-scope skills declared in dot_config/rulesync/rulesync.jsonc"
+run         = "cd dot_config/rulesync && rulesync install"
+
 [tasks.rulesync-generate-user]
-description = "Generate user-scope rules, skills, and commands from ~/.config/rulesync"
-run         = "(cd ~/.config/rulesync && rulesync generate)"
+description = "Install curated skills and generate tracked user-scope outputs into dot_claude/dot_codex/dot_gemini/.github"
+run         = "bash dot_config/rulesync/scripts/executable_generate-user.sh"
 
 [tasks.rulesync-generate]
 depends     = ["rulesync-generate-local", "rulesync-generate-user"]

@@ -1,6 +1,17 @@
 {
-  "targets": ["claudecode", "codexcli", "geminicli", "copilotonvs"],
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/config-schema.json",
+  "targets": ["claudecode", "codexcli", "geminicli", "copilot"],
   "features": ["rules", "skills", "commands"],
+  "sources": [
+    {
+      "source": "anthropics/skills",
+      "skills": ["skill-creator"]
+    },
+    {
+      "source": "antoniocascais/claude-code-knowledge",
+      "skills": ["pr-review", "workflow-review", "test-quality"]
+    }
+  ],
   "delete": false,
   "verbose": false,
   "silent": false,
