@@ -20,6 +20,7 @@ install_package() {
     go
     gpg
     mise
+    nono
     pinentry-mac
     silicon
     ugrep
