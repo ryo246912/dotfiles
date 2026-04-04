@@ -726,3 +726,8 @@ This repository treats personal development environment as code:
 - **dot_config/zabrze/\*.toml** - All available command abbreviations
 - **dot_config/git/config.tmpl** - Git configuration and aliases
 - **.chezmoiignore** - Complete list of ignored files and patterns
+
+## difit-review の活用
+
+- コードレビューや変更内容の説明を求められた際は、 `/difit-review` スキルを積極的に活用してください。
+- エージェント自身が変更点に対して詳細なコメントを付与した状態で `difit` を起動することで、ユーザーが GitHub ライクな UI で意図を把握しやすくなります。
