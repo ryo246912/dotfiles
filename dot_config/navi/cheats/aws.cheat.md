@@ -19,6 +19,27 @@ aws sts get-caller-identity --profile <profile>
 # sso : login sso
 aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 
+# taws : open current profile in readonly mode
+taws --readonly
+
+# taws : open specified profile and region in readonly mode
+AWS_PROFILE=<profile> AWS_REGION=<region> taws --readonly
+
+# aws-vault : add credentials to secure storage
+aws-vault add <profile>
+
+# aws-vault : list profiles and sessions
+aws-vault list
+
+# aws-vault : run command with temporary credentials
+aws-vault exec <profile> -- aws sts get-caller-identity
+
+# aws-vault : login AWS console
+aws-vault login <profile>
+
+# aws-vault : clear cached sessions
+aws-vault clear <profile>
+
 # iam : display iam users
 aws iam list-users | fx
 
