@@ -42,6 +42,7 @@ Usage: multi-worktree <subcommand> [options]
 
 サブコマンド:
   create <task-name> [--from=FROM_BRANCH] [--group=GROUP]  マルチrepoのworktreeを一括作成
+  recreate <task-name> [--from=FROM_BRANCH] [--group=GROUP] 不足しているworktreeを補充し、task設定を再生成
   remove <task-name> [--force]          worktreeを一括削除
   list                                   タスク一覧表示（group列を含む）
   status <task-name>                     各repoの状態確認
@@ -66,6 +67,7 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree create feat/add-auth --branch=main               # 全リポジトリで main ブランチを checkout
   multi-worktree create feat/add-auth --default-branch            # 各リポジトリのデフォルトブランチを checkout
   multi-worktree create feat/new-feature --group=work --branch=develop
+  multi-worktree recreate feat/add-auth                           # 欠けているrepo worktreeを補充し、task設定を再生成
   multi-worktree list
   multi-worktree status feat/add-auth
   multi-worktree status main                       # デフォルトグループの各repoのデフォルトブランチ状態確認
@@ -74,7 +76,8 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree sync feat/add-auth --all              # 全リポジトリをrsyncで完全同期
   multi-worktree sync feat/add-auth repo1 repo2        # 特定リポジトリのHEADをcheckout --detach
   multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
-  multi-worktree cd feat/add-auth
+  multi-worktree cd feat/add-auth                      # task root に移動
+  ccmc                                                 # root で ccmanager/ccmc を起動
   multi-worktree dev feat/add-auth ccmanager
   multi-worktree exec feat/add-auth npm install
   multi-worktree exec feat/add-auth repo1 npm install
@@ -126,6 +129,7 @@ check_config() {
         log_info ""
         log_info "[dev_commands]"
         log_info "claude = \"claude --dangerously-skip-permissions\""
+        log_info "claude_a2 = 'env CLAUDE_CONFIG_DIR=\$HOME/.claude-account2 claude --dangerously-skip-permissions'"
         log_info "copilot = \"copilot --yolo\""
         log_info "codex = \"codex --yolo\""
         log_info "TOML"
@@ -240,6 +244,48 @@ expand_path() {
     echo "$path"
 }
 
+# 存在しないパスでも . / .. を解決して絶対パス化する
+normalize_path_lexically() {
+    local path="$1"
+
+    if [[ "$path" != /* ]]; then
+        path="$PWD/$path"
+    fi
+
+    local -a parts=()
+    local -a normalized=()
+    IFS='/' read -r -a parts <<< "$path"
+
+    local part
+    for part in "${parts[@]}"; do
+        case "$part" in
+            ""|".")
+                continue
+                ;;
+            "..")
+                if [[ ${#normalized[@]} -gt 0 ]]; then
+                    unset 'normalized[${#normalized[@]}-1]'
+                fi
+                ;;
+            *)
+                normalized+=("$part")
+                ;;
+        esac
+    done
+
+    if [[ ${#normalized[@]} -eq 0 ]]; then
+        echo "/"
+        return 0
+    fi
+
+    local result=""
+    for part in "${normalized[@]}"; do
+        result+="/${part}"
+    done
+
+    echo "$result"
+}
+
 # デフォルトグループの取得
 get_default_group() {
     local value=""
@@ -301,12 +347,9 @@ resolve_base_dir() {
             fi
         fi
 
-        # first_repoが存在しない、またはcdに失敗した場合でも絶対パスを返す
-        # realpath -m は存在しないパスでも正規化できる
-        if command -v realpath &>/dev/null; then
-            echo "$(realpath -m "$first_repo/$base_dir")"
-            return 0
-        fi
+        # base_dir 自体はまだ存在しない場合があるため、存在チェックなしで正規化する
+        echo "$(normalize_path_lexically "$first_repo/$base_dir")"
+        return 0
     fi
 
     # 解決できない場合は元のパスをそのまま返す
@@ -328,6 +371,174 @@ get_worktree_base_dir() {
     local dir_name=$(echo "$task_name" | sed 's/\//-/g')
 
     echo "${base_dir}/${prefix}-${dir_name}"
+}
+
+get_task_root_branch_name() {
+    local task_name="$1"
+    echo "multi-worktree-${task_name}"
+}
+
+get_task_name_from_dir() {
+    local task_root_dir="$1"
+    local current_branch=""
+
+    if [[ -d "$task_root_dir/.git" ]] && git -C "$task_root_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        current_branch=$(git -C "$task_root_dir" branch --show-current 2>/dev/null || true)
+        if [[ "$current_branch" == multi-worktree-* ]]; then
+            echo "${current_branch#multi-worktree-}"
+            return 0
+        fi
+    fi
+
+    local child_dir
+    for child_dir in "$task_root_dir"/*; do
+        if [[ ! -d "$child_dir" ]]; then
+            continue
+        fi
+
+        if git -C "$child_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            current_branch=$(git -C "$child_dir" branch --show-current 2>/dev/null || true)
+            if [[ -n "$current_branch" ]]; then
+                echo "$current_branch"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+ensure_task_root_git_project() {
+    local task_name="$1"
+    local task_root_dir="$2"
+    local branch_name
+    branch_name=$(get_task_root_branch_name "$task_name")
+    local created_repo=false
+
+    if [[ ! -d "$task_root_dir" ]]; then
+        log_error "task root が見つかりません: $task_root_dir"
+        return 1
+    fi
+
+    if [[ -e "$task_root_dir/.git" ]] && [[ ! -d "$task_root_dir/.git" ]]; then
+        log_error "task root の .git がディレクトリではありません: $task_root_dir/.git"
+        return 1
+    fi
+
+    if [[ ! -d "$task_root_dir/.git" ]]; then
+        git -C "$task_root_dir" init >/dev/null 2>&1
+        created_repo=true
+    fi
+
+    git -C "$task_root_dir" config status.showUntrackedFiles no
+    git -C "$task_root_dir" config advice.detachedHead false
+
+    if git -C "$task_root_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+        local current_branch
+        current_branch=$(git -C "$task_root_dir" branch --show-current 2>/dev/null || true)
+
+        if [[ "$current_branch" != "$branch_name" ]]; then
+            if git -C "$task_root_dir" show-ref --verify --quiet "refs/heads/$branch_name"; then
+                git -C "$task_root_dir" switch "$branch_name" >/dev/null 2>&1 || \
+                    git -C "$task_root_dir" checkout "$branch_name" >/dev/null 2>&1
+            else
+                git -C "$task_root_dir" switch -c "$branch_name" >/dev/null 2>&1 || \
+                    git -C "$task_root_dir" checkout -b "$branch_name" >/dev/null 2>&1
+            fi
+        fi
+    else
+        git -C "$task_root_dir" symbolic-ref HEAD "refs/heads/$branch_name"
+        git -C "$task_root_dir" \
+            -c user.name="multi-worktree" \
+            -c user.email="multi-worktree@local.invalid" \
+            commit --allow-empty -m "Initialize task root for ${task_name}" >/dev/null 2>&1
+    fi
+
+    if [[ "$created_repo" == true ]]; then
+        log_success "task root の synthetic git repository を初期化しました: $task_root_dir"
+    else
+        log_info "task root の synthetic git repository を確認しました: $task_root_dir"
+    fi
+
+    log_info "task root ブランチ: $branch_name"
+}
+
+create_repo_worktree() {
+    local repo="$1"
+    local worktree_path="$2"
+    local task_name="$3"
+    local from_branch="${4:-}"
+
+    local repo_name
+    repo_name=$(basename "$repo")
+
+    log_info "[$repo_name] worktree を作成中..."
+
+    local error_output
+    if error_output=$(
+        (
+            set +e
+            cd "$repo" || exit 1
+
+            local resolved_branch="$task_name"
+
+            # worktree を作成（ブランチ存在チェック）
+            # local ブランチ → remote のみ → ベースから新規作成 の順で確認
+            local add_args=()
+            if git show-ref --verify --quiet "refs/heads/$resolved_branch"; then
+                add_args=("$resolved_branch")
+            elif git show-ref --verify --quiet "refs/remotes/origin/$resolved_branch"; then
+                add_args=("-b" "$resolved_branch" "origin/$resolved_branch")
+            else
+                local base_branch
+                if [[ -n "$from_branch" ]]; then
+                    base_branch="$from_branch"
+                else
+                    base_branch=$(get_repo_default_branch "$repo")
+                fi
+                local base_ref
+                if git show-ref --verify --quiet "refs/remotes/origin/$base_branch"; then
+                    base_ref="origin/$base_branch"
+                elif git show-ref --verify --quiet "refs/heads/$base_branch"; then
+                    base_ref="$base_branch"
+                else
+                    log_warn "[$repo_name] ベースブランチ '$base_branch' が見つかりません。スキップします"
+                    exit 1
+                fi
+                add_args=("-b" "$resolved_branch" "$base_ref")
+            fi
+
+            git worktree add "$worktree_path" "${add_args[@]}"
+        ) 2>&1
+    ); then
+        log_success "[$repo_name] worktree を作成しました: $worktree_path (ブランチ: $task_name)"
+        return 0
+    fi
+
+    log_error "[$repo_name] worktree の作成に失敗しました"
+    if [[ -n "$error_output" ]]; then
+        echo "  エラー: $error_output"
+    fi
+    return 1
+}
+
+resolve_task_group() {
+    local task_name="$1"
+    local requested_group="${2:-}"
+
+    if [[ -n "$requested_group" ]]; then
+        echo "$requested_group"
+        return 0
+    fi
+
+    local detected_group=""
+    detected_group=$(find_group_by_task "$task_name" 2>/dev/null || true)
+    if [[ -n "$detected_group" ]]; then
+        echo "$detected_group"
+        return 0
+    fi
+
+    get_default_group
 }
 
 # devcontainer up オプションの取得
@@ -645,57 +856,7 @@ cmd_create() {
         repo_name=$(basename "$repo")
         local worktree_path="${worktree_base_dir}/${repo_name}"
 
-        log_info "[$repo_name] worktree を作成中..."
-
-        # リポジトリディレクトリに移動（サブシェルでエラーが発生しても継続）
-        (
-            set +e  # エラーで停止しない
-            cd "$repo" || exit 1
-
-            local resolved_branch="$task_name"
-
-            # worktree を作成（ブランチ存在チェック）
-            # local ブランチ → remote のみ → ベースから新規作成 の順で確認
-            local add_args=()
-            if git show-ref --verify --quiet "refs/heads/$resolved_branch"; then
-                # local ブランチが存在する
-                add_args=("$resolved_branch")
-            elif git show-ref --verify --quiet "refs/remotes/origin/$resolved_branch"; then
-                # remote にのみ存在 → tracking ブランチとして作成
-                add_args=("-b" "$resolved_branch" "origin/$resolved_branch")
-            else
-                # ブランチが存在しない → ベースブランチから新規作成
-                local base_branch
-                if [[ -n "$from_branch" ]]; then
-                    base_branch="$from_branch"
-                else
-                    base_branch=$(get_repo_default_branch "$repo")
-                fi
-                local base_ref
-                if git show-ref --verify --quiet "refs/remotes/origin/$base_branch"; then
-                    base_ref="origin/$base_branch"
-                elif git show-ref --verify --quiet "refs/heads/$base_branch"; then
-                    base_ref="$base_branch"
-                else
-                    log_warn "[$repo_name] ベースブランチ '$base_branch' が見つかりません。スキップします"
-                    exit 1
-                fi
-                add_args=("-b" "$resolved_branch" "$base_ref")
-            fi
-
-            local error_output
-            if error_output=$(git worktree add "$worktree_path" "${add_args[@]}" 2>&1); then
-                log_success "[$repo_name] worktree を作成しました: $worktree_path (ブランチ: $resolved_branch)"
-                exit 0
-            else
-                log_error "[$repo_name] worktree の作成に失敗しました"
-                echo "  エラー: $error_output"
-                exit 1
-            fi
-        )
-
-        # サブシェルの終了ステータスを確認
-        if [[ $? -eq 0 ]]; then
+        if create_repo_worktree "$repo" "$worktree_path" "$task_name" "$from_branch"; then
             ((++success_count))
         else
             ((++fail_count))
@@ -706,8 +867,9 @@ cmd_create() {
 
     # devcontainer.json の生成
     if [[ $success_count -gt 0 ]]; then
-        log_info "devcontainer.json を生成中..."
-        generate_devcontainer "$task_name" "$worktree_base_dir" "${repos[@]}"
+        log_info "task root の synthetic git repository を初期化中..."
+        ensure_task_root_git_project "$task_name" "$worktree_base_dir"
+        ensure_task_support_files "$task_name" "$worktree_base_dir" true "${repos[@]}"
     fi
 
     if [[ $fail_count -eq 0 ]]; then
@@ -806,9 +968,12 @@ generate_devcontainer() {
     fi
 
     log_success "devcontainer.json を生成しました: $devcontainer_file"
+}
 
-    # .claude/settings.local.json を生成
-    local claude_dir="${worktree_base_dir}/.claude"
+write_claude_settings_file() {
+    local task_root_dir="$1"
+
+    local claude_dir="${task_root_dir}/.claude"
     mkdir -p "$claude_dir"
 
     local claude_settings_file="${claude_dir}/settings.local.json"
@@ -869,6 +1034,30 @@ generate_local_project_ai_docs() {
         cp "$source_path" "$target_path"
         log_success "${target_name} を生成しました: $target_path"
     done
+}
+
+ensure_task_support_files() {
+    local task_name="$1"
+    local task_root_dir="$2"
+    local overwrite_existing="${3:-true}"
+    shift 3
+    local repos=("$@")
+
+    local devcontainer_file="${task_root_dir}/.devcontainer/devcontainer.json"
+    local claude_settings_file="${task_root_dir}/.claude/settings.local.json"
+
+    if [[ "$overwrite_existing" == "true" ]] || [[ ! -e "$devcontainer_file" ]]; then
+        log_info "devcontainer.json を生成中..."
+        generate_devcontainer "$task_name" "$task_root_dir" "${repos[@]}"
+    else
+        log_info "既存の devcontainer.json を保持します: $devcontainer_file"
+    fi
+
+    if [[ "$overwrite_existing" == "true" ]] || [[ ! -e "$claude_settings_file" ]]; then
+        write_claude_settings_file "$task_root_dir"
+    else
+        log_info "既存の .claude/settings.local.json を保持します: $claude_settings_file"
+    fi
 }
 
 # 全グループ名を取得する
@@ -967,6 +1156,103 @@ find_group_by_task() {
     return 1
 }
 
+cmd_recreate() {
+    local task_name="$1"
+    local requested_group="${2:-}"
+    local from_branch="${3:-}"
+
+    local group
+    group=$(resolve_task_group "$task_name" "$requested_group")
+
+    local base_dir
+    base_dir=$(get_config_value "$group" "base_dir")
+    local prefix
+    prefix=$(get_config_value "$group" "worktree_prefix")
+
+    if [[ -z "$base_dir" ]] || [[ -z "$prefix" ]]; then
+        log_error "グループ '$group' の設定が見つかりません"
+        return 1
+    fi
+
+    local repos=()
+    while IFS= read -r repo; do
+        repos+=("$repo")
+    done < <(get_config_array "$group" "repos")
+
+    if [[ ${#repos[@]} -eq 0 ]]; then
+        log_error "グループ '$group' にリポジトリが設定されていません"
+        return 1
+    fi
+
+    local worktree_base_dir
+    worktree_base_dir=$(get_worktree_base_dir "$task_name" "$group")
+
+    log_info "タスク '$task_name' の欠損 worktree を補充し、task 設定を再生成します (グループ: $group)"
+    log_info "対象ディレクトリ: $worktree_base_dir"
+
+    mkdir -p "$worktree_base_dir"
+
+    local missing_repos=()
+    local missing_paths=()
+    local skip_count=0
+    local fail_count=0
+
+    local repo
+    for repo in "${repos[@]}"; do
+        repo="${repo/#\~/$HOME}"
+        repo="${repo//\$HOME/$HOME}"
+
+        if [[ ! -d "$repo" ]]; then
+            log_warn "リポジトリが見つかりません: $repo"
+            ((++fail_count))
+            continue
+        fi
+
+        local repo_name
+        repo_name=$(basename "$repo")
+        local worktree_path="${worktree_base_dir}/${repo_name}"
+
+        if [[ -e "$worktree_path" ]]; then
+            log_info "[$repo_name] 既存の path を保持します: $worktree_path"
+            ((++skip_count))
+            continue
+        fi
+
+        missing_repos+=("$repo")
+        missing_paths+=("$worktree_path")
+    done
+
+    if [[ ${#missing_repos[@]} -gt 0 ]]; then
+        log_info "不足している repo worktree を作成するため fetch を実行します"
+        fetch_repos "${missing_repos[@]}"
+    else
+        log_info "不足している repo worktree はありません"
+    fi
+
+    local created_count=0
+    local idx
+    for idx in "${!missing_repos[@]}"; do
+        if create_repo_worktree "${missing_repos[$idx]}" "${missing_paths[$idx]}" "$task_name" "$from_branch"; then
+            ((++created_count))
+        else
+            ((++fail_count))
+        fi
+    done
+
+    ensure_task_root_git_project "$task_name" "$worktree_base_dir"
+    ensure_task_support_files "$task_name" "$worktree_base_dir" true "${repos[@]}"
+
+    log_info "recreate 完了: 作成 $created_count / スキップ $skip_count / 失敗 $fail_count"
+
+    if [[ $fail_count -eq 0 ]]; then
+        log_success "タスク '$task_name' の欠損補充が完了しました"
+        return 0
+    fi
+
+    log_warn "一部の補充に失敗しました"
+    return 1
+}
+
 # list サブコマンド
 cmd_list() {
     # 全グループを取得
@@ -1007,7 +1293,11 @@ cmd_list() {
 
             if [[ -d "$dir" ]]; then
                 local task_dir_name=$(basename "$dir" | sed "s/^${prefix}-//")
-                local task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+                local task_name
+                task_name=$(get_task_name_from_dir "$dir" 2>/dev/null || true)
+                if [[ -z "$task_name" ]]; then
+                    task_name=$(echo "$task_dir_name" | sed 's/-/\//g')
+                fi
 
                 # リポジトリ数をカウント
                 local repo_count=$(find "$dir" -mindepth 1 -maxdepth 1 -type d ! -name ".*" | wc -l | tr -d ' ')
@@ -1739,6 +2029,43 @@ main() {
             done
 
             cmd_create "$task_name" "$group" "$from_branch"
+            ;;
+
+        recreate)
+            check_config || return 1
+
+            if [[ $# -eq 0 ]]; then
+                log_error "タスク名を指定してください"
+                show_usage
+                return 1
+            fi
+
+            local task_name="$1"
+            local group=""
+            local from_branch=""
+
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --from=*)
+                        from_branch="${1#*=}"
+                        ;;
+                    --group=*)
+                        group="${1#*=}"
+                        ;;
+                    --*)
+                        log_error "不明なオプション: $1"
+                        return 1
+                        ;;
+                    *)
+                        log_error "不明な引数: $1"
+                        return 1
+                        ;;
+                esac
+                shift
+            done
+
+            cmd_recreate "$task_name" "$group" "$from_branch"
             ;;
 
         list)

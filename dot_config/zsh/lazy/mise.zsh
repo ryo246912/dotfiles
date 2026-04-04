@@ -18,6 +18,10 @@ __generate_and_load_completion() {
             gh completion -s zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
+        "wt")
+            wt completion zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
         "gwq")
             gwq completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
@@ -67,6 +71,12 @@ fi
 # GitHub CLI
 if command -v gh >/dev/null 2>&1; then
     __generate_and_load_completion "gh"
+fi
+
+# worktrunk
+if command -v wt >/dev/null 2>&1; then
+    eval "$(wt config shell init zsh)"
+    __generate_and_load_completion "wt"
 fi
 
 # gwq

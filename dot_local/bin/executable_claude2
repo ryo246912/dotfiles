@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+config_dir="${HOME}/.claude-account2"
+mkdir -p "${config_dir}"
+
+exec env CLAUDE_CONFIG_DIR="${config_dir}" claude "$@"

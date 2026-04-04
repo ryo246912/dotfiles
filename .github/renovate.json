@@ -11,6 +11,23 @@
   "devcontainer": {
     "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
   },
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "ubi:superfly/flyctl",
+        "aqua:stripe/stripe-cli",
+        "usage",
+        "ubi:render-oss/cli",
+        "npm:renovate",
+        "aqua:aws/aws-cli",
+        "cosign",
+        "rust",
+        "ubi:pdm-project/pdm"
+      ],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    }
+  ],
   "customManagers": [
     {
       "customType": "regex",
