@@ -34,6 +34,14 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 - **NEVER edit `~/.xxx` or `~/.config/xxx` files directly** - they will be overwritten by chezmoi
 - After editing source files, use `chezmoi diff` to preview changes before applying
 
+### Run CodeRabbit Before Final Handoff
+
+- After meaningful code or config changes, run a CodeRabbit review before handing work back.
+- Prefer the native Claude Code plugin command `/coderabbit:review` when it is available.
+- If the plugin is unavailable, run `coderabbit review --prompt-only --type uncommitted` in the background and wait for completion.
+- Fix critical or high-signal issues first, rerun once, and stop after 2 passes or when only nits remain.
+- Use `review-fix` only for PR review comments after a PR already exists.
+
 ## Repository Structure
 
 ```
@@ -140,7 +148,7 @@ Scoop (Windows/WSL2)
 
 **AI Integration:**
 
-- Claude Desktop with custom skills (deepwiki, article, review-fix, pr-review)
+- Claude Desktop with custom skills (deepwiki, article, coderabbit, review-fix)
 - Gemini API integration
 
 ### Abbreviations System
@@ -389,7 +397,8 @@ These scripts run when their content or dependencies change:
 - `kiro` - Spec-driven development
 - `deepwiki` - GitHub Wiki search using deepwiki tool
 - `article` - Technical article creation
-- `review-fix` / `pr-review` - PR review comment handling and code fixes
+- `coderabbit` - CodeRabbit CLI review loop for uncommitted changes
+- `review-fix` - PR review comment handling and code fixes
 
 ### Gemini API
 
