@@ -14,8 +14,8 @@ snippet = "gwq cd"
 trigger = "gwc"
 
 [[snippets]]
-name    = "gwq delete(remove)"
-snippet = "gwq remove"
+name            = "gwq delete(remove)"
+snippet         = "gwq remove"
 trigger-pattern = "(gwd|gwr)"
 
 [[snippets]]
