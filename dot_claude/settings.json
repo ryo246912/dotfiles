@@ -2,6 +2,7 @@
   "env": {
     "DISABLE_AUTOUPDATER": "1"
   },
+  "cleanupPeriodDays": 36500,
   "permissions": {
     "allow": [
       "Bash(mise list:*)",

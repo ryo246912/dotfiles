@@ -1,3 +1,7 @@
+os:
+  edit: "nvim {{filename}}"
+  editAtLine: "nvim +{{line}} {{filename}}"
+  editAtLineAndWait: "nvim +{{line}} {{filename}}"
 customCommands:
   - command: czg
     context: "files, worktrees, localBranches, remotes, tags"
@@ -7,7 +11,7 @@ customCommands:
     context: "files"
     output: terminal
     key: u
-  - command: chezmoi apply --interactive --exclude=scripts,templates
+  - command: lazychezmoi
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: C
@@ -19,10 +23,6 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
-  - command: nvim {{ .SelectedFile.Name | quote }}
-    context: "files"
-    output: terminal
-    key: e
   - command: $SHELL || zsh || bash
     context: "files, worktrees, localBranches, remotes, tags, commits"
     output: terminal
