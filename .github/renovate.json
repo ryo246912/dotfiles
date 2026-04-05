@@ -33,6 +33,10 @@
       "matchFileNames": ["dot_config/brew/brew.json"],
       "matchUpdateTypes": ["patch"],
       "enabled": false
+    },
+    {
+      "matchPackageNames": ["atuin", "/(^|\\/)atuinsh\\/atuin$/"],
+      "groupName": "atuin"
     }
   ],
   "customManagers": [
