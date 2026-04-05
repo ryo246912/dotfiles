@@ -30,6 +30,10 @@
     ```sh
     mise install --jobs=1 cosign slsa-verifier
     ```
+  - [ ] Socket Firewallのインストール
+    ```sh
+    mise install npm:sfw
+    ```
   - [ ] ランタイムのインストール
     ```sh
     mise install --jobs=1 node python rust
@@ -95,7 +99,7 @@
   - [ ] atuin login
     - atuin keyの内容を入力
   - [ ] atuin sync
-  - [ ] atuin historyをzsh_historyに反映
+  - [ ] atuin historyをzsh_history反映
     ```sh
     atuin history list --reverse --format "{command}" | uniq > ~/.local/state/zsh/restore_zsh_history
     cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
