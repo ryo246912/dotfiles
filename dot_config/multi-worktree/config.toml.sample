@@ -26,14 +26,14 @@ up_opts = [
     "--workspace-folder",
     ".",
     "--config",
-    "$HOME/.config/devcontainer/devcontainer.json",
+    ".devcontainer/devcontainer.json",
 ]
 # devcontainer exec コマンドのオプション（配列形式）
 exec_opts = [
     "--workspace-folder",
     ".",
     "--config",
-    "$HOME/.config/devcontainer/devcontainer.json",
+    ".devcontainer/devcontainer.json",
 ]
 
 [groups.work.devcontainer]
@@ -42,14 +42,14 @@ up_opts = [
     "--workspace-folder",
     ".",
     "--config",
-    "$HOME/.config/devcontainer/devcontainer.json",
+    ".devcontainer/devcontainer.json",
 ]
 # devcontainer exec コマンドのオプション（配列形式）
 exec_opts = [
     "--workspace-folder",
     ".",
     "--config",
-    "$HOME/.config/devcontainer/devcontainer.json",
+    ".devcontainer/devcontainer.json",
 ]
 
 # 全グループ共通の設定
@@ -61,6 +61,11 @@ default_group = "default"
 [settings.devcontainer]
 # コンテナが既に起動している場合、devcontainer up をスキップするか
 skip_up_if_running = true
+# bind mount からマスクするシークレットファイルの既定パターン
+masked_file_patterns = [
+    ".env",
+    ".env.*",
+]
 
 # dev サブコマンドで使用するコマンド一覧
 # `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる

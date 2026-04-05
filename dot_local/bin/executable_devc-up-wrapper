@@ -1,3 +1,278 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-exec "$@" # 元のコマンドを実行
+set -euo pipefail
+
+readonly WRAPPER_DIR_RELATIVE=".devcontainer/.devc-up-wrapper"
+readonly GENERATED_CONFIG_BASENAME="devcontainer.json"
+readonly MASK_DIR_BASENAME="secret-masks"
+
+log_error() {
+    echo "devc-up-wrapper: $*" >&2
+}
+
+normalize_path_lexically() {
+    local path="$1"
+
+    if [[ "$path" != /* ]]; then
+        path="$PWD/$path"
+    fi
+
+    local -a parts=()
+    local -a normalized=()
+    IFS='/' read -r -a parts <<< "$path"
+
+    local part
+    for part in "${parts[@]}"; do
+        case "$part" in
+            ""|".")
+                continue
+                ;;
+            "..")
+                if [[ ${#normalized[@]} -gt 0 ]]; then
+                    unset 'normalized[${#normalized[@]}-1]'
+                fi
+                ;;
+            *)
+                normalized+=("$part")
+                ;;
+        esac
+    done
+
+    if [[ ${#normalized[@]} -eq 0 ]]; then
+        echo "/"
+        return 0
+    fi
+
+    local result=""
+    for part in "${normalized[@]}"; do
+        result+="/${part}"
+    done
+
+    echo "$result"
+}
+
+resolve_path() {
+    local path="$1"
+    local base_dir="${2:-$PWD}"
+
+    path="${path/#\~/$HOME}"
+    path="${path//\$HOME/$HOME}"
+
+    if [[ "$path" != /* ]]; then
+        path="$base_dir/$path"
+    fi
+
+    normalize_path_lexically "$path"
+}
+
+strip_jsonc_comments() {
+    local file_path="$1"
+    grep -v '^[[:space:]]*//' "$file_path" | sed 's|^[[:space:]]*//.*||'
+}
+
+ensure_git_exclude() {
+    local workspace_folder="$1"
+    local exclude_path=""
+    local ignore_entry="/${WRAPPER_DIR_RELATIVE}/"
+
+    if ! git -C "$workspace_folder" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        return 0
+    fi
+
+    exclude_path=$(git -C "$workspace_folder" rev-parse --git-path info/exclude 2>/dev/null || true)
+    [[ -z "$exclude_path" ]] && return 0
+
+    exclude_path=$(resolve_path "$exclude_path" "$workspace_folder")
+    mkdir -p "$(dirname "$exclude_path")"
+    touch "$exclude_path"
+
+    if ! grep -Fqx "$ignore_entry" "$exclude_path"; then
+        printf '\n%s\n' "$ignore_entry" >> "$exclude_path"
+    fi
+}
+
+collect_secret_files() {
+    local workspace_folder="$1"
+    local wrapper_dir="${workspace_folder}/${WRAPPER_DIR_RELATIVE}"
+
+    find "$workspace_folder" \
+        \( \
+            -path "$wrapper_dir" -o \
+            -path "$wrapper_dir/*" -o \
+            -path "$workspace_folder/.git" -o \
+            -path "$workspace_folder/.git/*" \
+        \) -prune -o \
+        \( \
+            \( -type f -o -type l \) \
+            \( -name '.env' -o -name '.env.*' \) \
+            -print \
+        \) | LC_ALL=C sort
+}
+
+build_secret_mask_mounts_json() {
+    local workspace_folder="$1"
+    local mask_root_dir="$2"
+    local -a mask_mounts=()
+    local secret_path=""
+    local relative_path=""
+    local placeholder_path=""
+    local target_path=""
+
+    while IFS= read -r secret_path; do
+        [[ -z "$secret_path" ]] && continue
+
+        relative_path="${secret_path#$workspace_folder/}"
+        [[ "$relative_path" == "$secret_path" ]] && continue
+
+        placeholder_path="${mask_root_dir}/${relative_path}"
+        target_path="${workspace_folder}/${relative_path}"
+
+        mkdir -p "$(dirname "$placeholder_path")"
+        : > "$placeholder_path"
+
+        mask_mounts+=("type=bind,source=${placeholder_path},target=${target_path}")
+    done < <(collect_secret_files "$workspace_folder")
+
+    if ! command -v jq >/dev/null 2>&1; then
+        log_error "jq コマンドが見つかりません"
+        return 1
+    fi
+
+    if [[ ${#mask_mounts[@]} -eq 0 ]]; then
+        echo "[]"
+        return 0
+    fi
+
+    jq -n '$ARGS.positional' --args "${mask_mounts[@]}"
+}
+
+generate_masked_config() {
+    local workspace_folder="$1"
+    local base_config_path="$2"
+    local wrapper_dir="${workspace_folder}/${WRAPPER_DIR_RELATIVE}"
+    local generated_config_path="${wrapper_dir}/${GENERATED_CONFIG_BASENAME}"
+    local mask_root_dir="${wrapper_dir}/${MASK_DIR_BASENAME}"
+    local mask_mounts_json=""
+
+    if [[ ! -d "$workspace_folder" ]]; then
+        log_error "workspace-folder が見つかりません: $workspace_folder"
+        return 1
+    fi
+
+    if [[ ! -f "$base_config_path" ]]; then
+        log_error "base config が見つかりません: $base_config_path"
+        return 1
+    fi
+
+    mkdir -p "$wrapper_dir"
+    rm -rf "$mask_root_dir"
+    mkdir -p "$mask_root_dir"
+    ensure_git_exclude "$workspace_folder"
+
+    mask_mounts_json=$(build_secret_mask_mounts_json "$workspace_folder" "$mask_root_dir")
+
+    strip_jsonc_comments "$base_config_path" | \
+        jq --argjson mask_mounts "$mask_mounts_json" \
+           '.mounts = ((.mounts // []) + $mask_mounts)' \
+        > "$generated_config_path"
+
+    echo "$generated_config_path"
+}
+
+main() {
+    if [[ $# -lt 2 ]] || [[ "$1" != "devcontainer" ]]; then
+        exec "$@"
+    fi
+
+    local devcontainer_bin="$1"
+    shift
+
+    local subcommand="$1"
+    shift
+
+    case "$subcommand" in
+        up|exec)
+            ;;
+        *)
+            exec "$devcontainer_bin" "$subcommand" "$@"
+            ;;
+    esac
+
+    local -a original_args=("$@")
+    local workspace_folder=""
+    local config_path=""
+    local index=0
+
+    while [[ $index -lt ${#original_args[@]} ]]; do
+        case "${original_args[$index]}" in
+            --workspace-folder)
+                ((index += 1))
+                if [[ $index -ge ${#original_args[@]} ]]; then
+                    log_error "--workspace-folder の値がありません"
+                    return 1
+                fi
+                workspace_folder="${original_args[$index]}"
+                ;;
+            --workspace-folder=*)
+                workspace_folder="${original_args[$index]#*=}"
+                ;;
+            --config)
+                ((index += 1))
+                if [[ $index -ge ${#original_args[@]} ]]; then
+                    log_error "--config の値がありません"
+                    return 1
+                fi
+                config_path="${original_args[$index]}"
+                ;;
+            --config=*)
+                config_path="${original_args[$index]#*=}"
+                ;;
+        esac
+
+        ((index += 1))
+    done
+
+    if [[ -z "$workspace_folder" || -z "$config_path" ]]; then
+        exec "$devcontainer_bin" "$subcommand" "${original_args[@]}"
+    fi
+
+    local workspace_folder_abs
+    workspace_folder_abs=$(resolve_path "$workspace_folder" "$PWD")
+
+    local generated_config_path="${workspace_folder_abs}/${WRAPPER_DIR_RELATIVE}/${GENERATED_CONFIG_BASENAME}"
+
+    local config_path_abs
+    config_path_abs=$(resolve_path "$config_path" "$PWD")
+
+    if [[ "$config_path_abs" == "$generated_config_path" ]]; then
+        exec "$devcontainer_bin" "$subcommand" "${original_args[@]}"
+    fi
+
+    generated_config_path=$(generate_masked_config "$workspace_folder_abs" "$config_path_abs")
+
+    local -a rewritten_args=()
+    index=0
+    while [[ $index -lt ${#original_args[@]} ]]; do
+        case "${original_args[$index]}" in
+            --config)
+                rewritten_args+=("--config" "$generated_config_path")
+                ((index += 2))
+                continue
+                ;;
+            --config=*)
+                rewritten_args+=("--config" "$generated_config_path")
+                ((index += 1))
+                continue
+                ;;
+            *)
+                rewritten_args+=("${original_args[$index]}")
+                ;;
+        esac
+
+        ((index += 1))
+    done
+
+    exec "$devcontainer_bin" "$subcommand" "${rewritten_args[@]}"
+}
+
+main "$@"
