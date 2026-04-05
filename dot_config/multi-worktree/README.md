@@ -79,7 +79,8 @@ grep docker_devcontainer ~/.ssh/authorized_keys
 
 **設定後の動作:**
 - コンテナ起動時に自動的に SSH 設定が行われます
-- Claude Code の hooks（Notification、Stop）が macOS の通知センターに表示されます
+- Claude Code の hooks（Notification、Stop）は `~/.local/bin/ai-agent-notify` 経由で通知されます
+- devcontainer 内では helper が `mac-host` への SSH relay を自動で試行し、非 macOS や未設定環境では安全に no-op します
 - コンテナを再作成しても設定は永続化されます
 
 **注意事項:**
@@ -468,7 +469,7 @@ multi-worktree create feat/add-auth
 multi-worktree recreate feat/add-auth
 ```
 
-`recreate` は既存の repo worktree directory は保持したまま、`devcontainer.json` と `.claude/settings.local.json` を current config で上書き再生成します。`.git/` は欠けているときだけ補修されます。
+`recreate` は既存の repo worktree directory は保持したまま、`devcontainer.json` と `.claude/settings.local.json` を current config で上書き再生成します。通知 helper を差し替えた場合もここで再配布されます。`.git/` は欠けているときだけ補修されます。
 
 ### worktree の削除に失敗する
 

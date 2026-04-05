@@ -1,0 +1,4 @@
+notify = ["bash", "-lc", "$HOME/.local/bin/ai-agent-notify-codex"]
+
+[tui]
+notifications = true

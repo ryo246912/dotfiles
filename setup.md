@@ -217,6 +217,25 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+- [ ] AI code agent の追加設定
+  - [ ] Claude Code
+    - [ ] `cleanupPeriodDays` を長めに設定してローカル transcript を保持する
+      - この repo では `36500` を採用し、デフォルトの 30 日削除を避ける
+    - [ ] `Notification` / `Stop` hooks を `~/.local/bin/ai-agent-notify` に統一する
+      - tmux ではローカル通知、devcontainer ではホスト macOS への relay、その他環境では no-op に寄せる
+  - [ ] Codex
+    - [ ] `~/.codex/config.toml` に `notify` と `[tui].notifications = true` を入れる
+      - 外部通知と TUI の両方を有効にして、入力待ちを見落としにくくする
+    - [ ] `rulesync generate` で `AGENTS.md` / skills を repo source に反映する
+  - [ ] Copilot
+    - [ ] `.github/copilot-instructions.md` を repo で管理する
+      - repo 単位で挙動を揃えやすく、IDE / CLI / code review 側にも流用しやすい
+    - [ ] `.github/hooks/*.json` で `sessionEnd` / `errorOccurred` 通知を有効にする
+      - 完了と異常終了の両方を通知すると unattended 実行の把握がしやすい
+  - [ ] devcontainer / multi-worktree
+    - [ ] `~/.local/bin` と `~/.copilot` を mount し、コンテナ内でも同じ通知導線と設定を使う
+    - [ ] `multi-worktree recreate <task>` で `.claude/settings.local.json` を再生成し、最新 helper に追従させる
+
 ### プライベート設定
 - [ ] thunderbird
   - [ ] アカウントの設定
