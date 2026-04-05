@@ -95,6 +95,7 @@ tmux                                                        = "3.6a"
 "ubi:aquaproj/aqua"                                         = "2.57.1"
 "ubi:gpanders/ijq"                                          = "1.1.2"
 "ubi:jonas/tig"                                             = { version = "tig-2.6.0", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/ubi-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
+"ubi:philschmid/mcp-cli"                                    = "0.3.0"
 "ubi:ryo246912/gh-actions-dash"                             = "0.1.5"
 "ubi:ryo246912/gh-reassign-reviewer"                        = "0.0.6"
 "ubi:seachicken/gh-poi"                                     = "0.16.2"
@@ -166,11 +167,24 @@ description = "Generate repo root CLAUDE.md from .rulesync/ source"
 run         = "rulesync generate"
 
 [tasks.rulesync-generate-user]
-description = "Generate user-scope rules, skills, and commands from ~/.config/rulesync"
+description = "Generate user-scope rules, skills, and commands for Claude, Codex, and Gemini from ~/.config/rulesync"
 run         = "(cd ~/.config/rulesync && rulesync generate)"
 
+[tasks.rulesync-generate-user-copilot]
+description = "Generate user-scope rules only for GitHub Copilot"
+run         = "(cd ~/.config/rulesync && rulesync generate --targets copilot --features rules --global)"
+
+[tasks.rulesync-generate-mcp-copilotcli]
+description = "Generate user-scope MCP settings only for GitHub Copilot CLI from ~/.config/rulesync"
+run         = "(cd ~/.config/rulesync && rulesync generate --targets copilotcli --features mcp --global)"
+
 [tasks.rulesync-generate]
-depends     = ["rulesync-generate-local", "rulesync-generate-user"]
+depends = [
+    "rulesync-generate-local",
+    "rulesync-generate-user",
+    "rulesync-generate-user-copilot",
+    "rulesync-generate-mcp-copilotcli",
+]
 description = "Generate all rulesync outputs (local + user-scope)"
 
 # actions
