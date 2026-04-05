@@ -1,0 +1,256 @@
+#!/usr/bin/env node
+
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const { createRequire } = require("node:module");
+
+function usage() {
+  console.error(`Usage:
+  browser-playwright pages <browserUrl>
+  browser-playwright goto <browserUrl> <url>
+  browser-playwright screenshot <browserUrl> <url> <output>
+  browser-playwright click <browserUrl> <url> <selector>`);
+}
+
+function compareVersion(a, b) {
+  const left = a.split(".").map((part) => Number(part));
+  const right = b.split(".").map((part) => Number(part));
+  const length = Math.max(left.length, right.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const diff = (left[index] || 0) - (right[index] || 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+
+  return 0;
+}
+
+function candidateNodeModules() {
+  const envCandidates = [
+    process.env.PLAYWRIGHT_NODE_MODULES,
+    process.env.PLAYWRIGHT_CLI_NODE_MODULES,
+  ].filter(Boolean);
+
+  const roots = [
+    path.join(os.homedir(), ".local/share/mise/installs/npm-playwright"),
+    path.join(os.homedir(), ".local/share/mise/installs/npm-playwright-mcp"),
+    "/mise/data/installs/npm-playwright",
+    "/mise/data/installs/npm-playwright-mcp",
+    "/mise/installs/npm-playwright",
+    "/mise/installs/npm-playwright-mcp",
+  ];
+
+  const resolved = [...envCandidates];
+
+  for (const root of roots) {
+    if (!fs.existsSync(root)) {
+      continue;
+    }
+
+    const versions = fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && /^\d+(\.\d+){1,2}$/.test(entry.name))
+      .map((entry) => entry.name)
+      .sort(compareVersion)
+      .reverse();
+
+    for (const version of versions) {
+      resolved.push(path.join(root, version, "node_modules"));
+    }
+  }
+
+  return resolved;
+}
+
+function loadPlaywright() {
+  const errors = [];
+
+  for (const nodeModulesDir of candidateNodeModules()) {
+    const packageJsonPath = path.join(nodeModulesDir, "playwright", "package.json");
+    if (!fs.existsSync(packageJsonPath)) {
+      continue;
+    }
+
+    try {
+      return createRequire(packageJsonPath)("playwright");
+    } catch (error) {
+      errors.push(`${packageJsonPath}: ${error.message}`);
+    }
+  }
+
+  throw new Error(
+    [
+      "playwright package could not be resolved.",
+      "Set PLAYWRIGHT_NODE_MODULES if the default mise install paths differ.",
+      errors.length > 0 ? `Tried:\n- ${errors.join("\n- ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+}
+
+async function withPage(browserUrl, callback) {
+  const { chromium } = loadPlaywright();
+  const browser = await chromium.connectOverCDP(browserUrl);
+
+  try {
+    const context = browser.contexts()[0];
+    if (!context) {
+      throw new Error("default browser context was not found");
+    }
+
+    const page = context.pages()[0] || (await context.newPage());
+    return await callback(page, browser);
+  } finally {
+    await browser.close();
+  }
+}
+
+async function listPages(browserUrl) {
+  return withPage(browserUrl, async (_page, browser) => {
+    const payload = [];
+
+    for (const [contextIndex, context] of browser.contexts().entries()) {
+      for (const [pageIndex, page] of context.pages().entries()) {
+        let title = "";
+        try {
+          title = await page.title();
+        } catch (_error) {
+          title = "";
+        }
+
+        payload.push({
+          contextIndex,
+          pageIndex,
+          title,
+          url: page.url(),
+        });
+      }
+    }
+
+    console.log(JSON.stringify(payload, null, 2));
+  });
+}
+
+async function gotoPage(browserUrl, url) {
+  return withPage(browserUrl, async (page) => {
+    await page.goto(url, {
+      timeout: Number(process.env.BROWSER_CLI_TIMEOUT_MS || 15000),
+      waitUntil: "load",
+    });
+
+    console.log(
+      JSON.stringify(
+        {
+          title: await page.title(),
+          url: page.url(),
+        },
+        null,
+        2,
+      ),
+    );
+  });
+}
+
+async function screenshotPage(browserUrl, url, outputPath) {
+  return withPage(browserUrl, async (page) => {
+    await page.goto(url, {
+      timeout: Number(process.env.BROWSER_CLI_TIMEOUT_MS || 15000),
+      waitUntil: "load",
+    });
+
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    await page.screenshot({
+      path: outputPath,
+      fullPage: true,
+    });
+
+    console.log(
+      JSON.stringify(
+        {
+          path: outputPath,
+          title: await page.title(),
+          url: page.url(),
+        },
+        null,
+        2,
+      ),
+    );
+  });
+}
+
+async function clickSelector(browserUrl, url, selector) {
+  return withPage(browserUrl, async (page) => {
+    await page.goto(url, {
+      timeout: Number(process.env.BROWSER_CLI_TIMEOUT_MS || 15000),
+      waitUntil: "load",
+    });
+
+    await page.locator(selector).click({
+      timeout: Number(process.env.BROWSER_CLI_TIMEOUT_MS || 15000),
+    });
+    await page.waitForLoadState("load").catch(() => {});
+
+    console.log(
+      JSON.stringify(
+        {
+          selector,
+          title: await page.title(),
+          url: page.url(),
+        },
+        null,
+        2,
+      ),
+    );
+  });
+}
+
+async function main(argv) {
+  const [command, ...args] = argv;
+
+  switch (command) {
+    case "pages":
+      if (args.length !== 1) {
+        usage();
+        process.exitCode = 1;
+        return;
+      }
+      await listPages(args[0]);
+      return;
+    case "goto":
+      if (args.length !== 2) {
+        usage();
+        process.exitCode = 1;
+        return;
+      }
+      await gotoPage(args[0], args[1]);
+      return;
+    case "screenshot":
+      if (args.length !== 3) {
+        usage();
+        process.exitCode = 1;
+        return;
+      }
+      await screenshotPage(args[0], args[1], path.resolve(args[2]));
+      return;
+    case "click":
+      if (args.length !== 3) {
+        usage();
+        process.exitCode = 1;
+        return;
+      }
+      await clickSelector(args[0], args[1], args[2]);
+      return;
+    default:
+      usage();
+      process.exitCode = 1;
+  }
+}
+
+main(process.argv.slice(2)).catch((error) => {
+  console.error(error.stack || error.message);
+  process.exit(1);
+});

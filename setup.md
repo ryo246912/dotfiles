@@ -53,6 +53,22 @@
   - [ ] Vimium
     - [ ] 設定で`Vimium Options.json`をインポート
   - [ ] Tab Position Options
+  - [ ] browser-cli / Playwright bridge
+    - [ ] host で slot 一覧を確認
+      ```sh
+      browser-cli list
+      ```
+    - [ ] host Chrome の slot を起動
+      ```sh
+      browser-cli start slot1
+      ```
+    - [ ] devcontainer から host slot に接続
+      ```sh
+      ssh mac-host "$(browser-cli host-command start slot1)"
+      browser-cli status slot1
+      browser-cli screenshot slot1 https://example.com /tmp/browser-slot1.png
+      ```
+    - [ ] 成功した操作を `browser-gherkin` skill の形式で書き下す
 
 
 - [ ] Raycast
