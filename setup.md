@@ -38,6 +38,21 @@
     ```sh
     mise install --jobs=2
     ```
+  - [ ] secret / credential運用の初期化
+    - `bw`: 既存の `chezmoi` / login item 参照用。`BW_SESSION` 依存なので、アプリ用 env の自動注入には使わない
+    - `bws` + `fnox`: アプリ用 env の標準経路。`BWS_ACCESS_TOKEN` を machine account 用に発行し、平文ファイルではなく安全な bootstrap 手段で保持する
+    - `aws-vault`: AWS 認証専用。`fnox` の `aws-sm` provider と併用するときは `aws-vault exec <profile> -- fnox exec -- <command>` を標準にする
+    - `~/.config/zsh/work.zsh` は `fnox activate zsh` を読み込むので、`fnox.toml` があるディレクトリへ `cd` した後は `npm run` / `make test` / `mise run` が同じ shell の env をそのまま継承する
+    - 非対話実行や shell hook を使わない場面では `fnox exec -- <command>` を使う
+      ```sh
+      fnox exec -- npm run dev
+      fnox exec -- make test
+      fnox exec -- mise run lint-json
+      aws-vault exec <profile> -- fnox exec -- make test
+      ```
+    - `direnv` は併用のままでよいが、`.envrc` には secret を書かず、必要なら `FNOX_PROFILE` や非 secret な補助 env のみを置く
+    - project ごとの `fnox.toml` は `dot_config/fnox/fnox.toml.sample` を雛形にし、`default = "..."` で平文を残さない
+    - `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
