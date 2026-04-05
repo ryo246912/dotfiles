@@ -12,4 +12,6 @@
 # Setup
 
 - [setup](setup.md)
+- [AWS memo: taws](not_config/memo/taws.md)
+- [AWS memo: aws-vault](not_config/memo/aws-vault.md)
 - [rulesync usage](dot_config/rulesync/README.md)
