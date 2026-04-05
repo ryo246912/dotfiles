@@ -15,7 +15,10 @@
 このツールは chezmoi で管理されており、以下のファイルで構成されています：
 
 - `dot_local/bin/executable_multi-worktree` - メインスクリプト
+- `dot_local/bin/executable_devcontainer-host-gateway` - devcontainer からのホスト action を制御する forced-command gateway
 - `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
+- `dot_config/multi-worktree/templates/local-project-AGENTS.md` - local project 用 `AGENTS.md` テンプレート
+- `dot_config/multi-worktree/templates/local-project-CLAUDE.md` - local project 用 `CLAUDE.md` テンプレート
 - `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
 - `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
 
@@ -58,33 +61,90 @@ autoload -Uz compinit && compinit
 devcontainer 内から macOS ホストに通知を送る場合、SSH 経由で通知を行います。初回セットアップ時に以下の設定が必要です：
 
 ```bash
-# 1. devcontainer 専用の SSH 鍵を生成（既に存在する場合はスキップ）
+# 1. dotfiles を反映して gateway / wrapper を配置
+chezmoi apply
+
+# 2. devcontainer 専用の SSH 鍵を生成（既に存在する場合はスキップ）
 if [ ! -f ~/.ssh/id_docker_devcontainer ]; then
   ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_docker_devcontainer
 fi
 
-# 2. 公開鍵を authorized_keys に追加（重複チェック付き）
-if ! grep -q "$(cat ~/.ssh/id_docker_devcontainer.pub)" ~/.ssh/authorized_keys 2>/dev/null; then
-  cat ~/.ssh/id_docker_devcontainer.pub >> ~/.ssh/authorized_keys
-fi
+# 3. 既存の unrestricted entry を削除し、gateway 固定の restricted entry に置き換える
+mkdir -p ~/.ssh
+touch ~/.ssh/authorized_keys
 
-# 3. 権限設定
+pubkey="$(cut -d' ' -f2 ~/.ssh/id_docker_devcontainer.pub)"
+tmp_authorized_keys="$(mktemp)"
+grep -vF "$pubkey" ~/.ssh/authorized_keys > "$tmp_authorized_keys" || true
+~/.local/bin/devcontainer-host-gateway authorized-key-entry ~/.ssh/id_docker_devcontainer.pub >> "$tmp_authorized_keys"
+cat "$tmp_authorized_keys" > ~/.ssh/authorized_keys
+rm -f "$tmp_authorized_keys"
+
+# 4. 権限設定
 chmod 600 ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/id_docker_devcontainer
 
-# 4. 確認
+# 5. 確認
 ls -la ~/.ssh/id_docker_devcontainer*
-grep docker_devcontainer ~/.ssh/authorized_keys
+grep devcontainer-host-gateway ~/.ssh/authorized_keys
 ```
 
 **設定後の動作:**
 - コンテナ起動時に自動的に SSH 設定が行われます
-- Claude Code の hooks（Notification、Stop）が macOS の通知センターに表示されます
+- Claude Code の hooks（Notification、Stop）が allowlist 経由で macOS の通知センターに表示されます
+- 未定義コマンドや raw shell はホストで実行されず、「確認が必要」であることだけが通知されます
 - コンテナを再作成しても設定は永続化されます
 
 **注意事項:**
 - macOS の「システム設定 > 一般 > 共有 > リモートログイン」が有効になっている必要があります
-- `authorized_keys` へは公開鍵の追加のみで、既存の鍵は保持されます（rename 不要）
+- `authorized_keys` に同じ公開鍵の unrestricted entry が残っていると bypass できるため、上記手順で必ず置き換えてください
+- allowlist に含まれる host action は現在 `notify --event <pending|stop> --worktree <safe-name> --tmux <0|1>` のみです
+
+### local project に生成される AI ガイド
+
+`multi-worktree create <task>` は worktree ルートに以下を生成します。
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `.claude/settings.local.json`
+
+これらのファイルには、devcontainer からホストへ送れる action が allowlist 制御されていること、raw shell を直接 SSH しないこと、通知は `~/.config/devcontainer/scripts/devcontainer-host-action.sh` を経由することが明記されます。
+
+### 検証コマンド
+
+ホスト側 gateway の挙動は、通知コマンドを stub に差し替えてローカルでも確認できます。
+
+```bash
+stub_dir="$(mktemp -d)"
+cat > "${stub_dir}/macos-notify-cli" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${TMPDIR:-/tmp}/devcontainer-host-gateway.log"
+EOF
+chmod +x "${stub_dir}/macos-notify-cli"
+
+PATH="${stub_dir}:$PATH" \
+SSH_ORIGINAL_COMMAND='notify --event pending --worktree sample --tmux 0' \
+DEVCONTAINER_HOST_NOTIFY_BIN=macos-notify-cli \
+~/.local/bin/devcontainer-host-gateway
+
+PATH="${stub_dir}:$PATH" \
+SSH_ORIGINAL_COMMAND='/bin/echo blocked' \
+DEVCONTAINER_HOST_NOTIFY_BIN=macos-notify-cli \
+~/.local/bin/devcontainer-host-gateway || true
+
+PATH="${stub_dir}:$PATH" \
+SSH_ORIGINAL_COMMAND='unknown-action' \
+DEVCONTAINER_HOST_NOTIFY_BIN=macos-notify-cli \
+~/.local/bin/devcontainer-host-gateway || true
+```
+
+devcontainer 側 wrapper の実運用確認は、devcontainer 内で以下を実行します。
+
+```bash
+~/.config/devcontainer/scripts/devcontainer-host-action.sh notify --event pending --worktree sample --tmux 0
+ssh -F ~/.config/ssh/config mac-host /bin/echo blocked
+ssh -F ~/.config/ssh/config mac-host unknown-action
+```
 
 ## 設定ファイル
 
