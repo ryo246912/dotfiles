@@ -5,6 +5,7 @@ repos = [
   "~/dev/repo-b",
 ]
 # worktree を作成する基準ディレクトリ（リポジトリからの相対パス）
+# create / recreate では、ここに <worktree_prefix>-<task-name> が作られる
 base_dir = "../worktrees"
 # worktree ディレクトリ名のプレフィックス
 worktree_prefix = "multi-worktree"
@@ -63,7 +64,7 @@ default_group = "default"
 skip_up_if_running = true
 
 # dev サブコマンドで使用するコマンド一覧
-# `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
+# `multi-worktree dev <task>` でコマンドを省略した場合、内蔵 fuzzy picker で選択できる
 [dev_commands]
 claude1 = "claude --dangerously-skip-permissions"
 claude2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'
