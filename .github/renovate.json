@@ -50,10 +50,6 @@
       "enabled": false
     },
     {
-      "matchUpdateTypes": ["minor", "patch"],
-      "matchCurrentVersion": "!/^0/"
-    },
-    {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
     },
