@@ -1,7 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>ryo246912/renovate-config"],
-  "labels": ["renovate"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
