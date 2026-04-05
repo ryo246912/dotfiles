@@ -4,15 +4,7 @@
   "labels": ["renovate"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
-  "dependencyDashboard": true,
-  "timezone": "Asia/Tokyo",
-  "rebaseWhen": "conflicted",
-  "assignAutomerge": true,
   "minimumReleaseAge": "3 days",
-  "internalChecksFilter": "strict",
-  "vulnerabilityAlerts": {
-    "labels": ["security", "renovate"]
-  },
   "mise": {
     "managerFilePatterns": ["dot_config/mise/**/*.toml"]
   },
