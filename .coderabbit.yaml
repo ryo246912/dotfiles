@@ -28,7 +28,7 @@ reviews:
   suggested_reviewers: false
   in_progress_fortune: false
   poem: false
-  enable_prompt_for_ai_agents: false
+  enable_prompt_for_ai_agents: true
   path_filters:
     - "!not_config/**"
     - "!dot_config/sidebery/**"
