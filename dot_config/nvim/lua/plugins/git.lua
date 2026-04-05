@@ -160,6 +160,15 @@ return {
     end,
   },
   {
+    "linrongbin16/gitlinker.nvim",
+    cmd = "GitLink",
+    opts = {},
+    keys = {
+      { "<leader>gy", "<cmd>GitLink<cr>", mode = { "n", "v" }, desc = "Git の permalink をコピー" },
+      { "<leader>gY", "<cmd>GitLink!<cr>", mode = { "n", "v" }, desc = "Git の permalink を開く" },
+    },
+  },
+  {
     "tpope/vim-fugitive",
     config = function()
       local keymap = vim.keymap.set
