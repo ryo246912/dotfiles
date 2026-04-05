@@ -110,3 +110,33 @@ global  = true
 name    = "(copilot|codex|gemini) --yolo"
 snippet = "--yolo"
 trigger = "yl"
+
+[[snippets]]
+global  = true
+name    = "rudel"
+snippet = "rudel"
+trigger = "rdl"
+
+[[snippets]]
+global  = true
+name    = "rudel login"
+snippet = "rudel login"
+trigger = "rdll"
+
+[[snippets]]
+global  = true
+name    = "rudel enable"
+snippet = "rudel enable"
+trigger = "rdle"
+
+[[snippets]]
+global  = true
+name    = "rudel disable"
+snippet = "rudel disable"
+trigger = "rdld"
+
+[[snippets]]
+global  = true
+name    = "rudel upload"
+snippet = "rudel upload"
+trigger = "rdlu"
