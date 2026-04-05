@@ -13,7 +13,7 @@
   },
   "packageRules": [
     {
-      "matchPackageNames": [
+      "matchDepNames": [
         "ubi:superfly/flyctl",
         "aqua:stripe/stripe-cli",
         "usage",
