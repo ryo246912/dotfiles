@@ -403,7 +403,7 @@ Location: `dot_local/bin/` (8 utility scripts)
 2. **setup-github** - GitHub repository automation
    - Repository ruleset configuration
    - Dependabot setup
-   - Branch protection rules
+   - Repository security defaults
 
 3. **setup-ai-tool** - AI tool initialization
    - Claude/Gemini configuration
