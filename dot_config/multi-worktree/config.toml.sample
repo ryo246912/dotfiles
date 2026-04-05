@@ -65,8 +65,17 @@ skip_up_if_running = true
 # dev サブコマンドで使用するコマンド一覧
 # `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
 [dev_commands]
+aider = "aider"
+cline = "cline"
+codebuff = "codebuff"
 claude1 = "claude --dangerously-skip-permissions"
 claude2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'
 copilot = "copilot --yolo"
 codex = "codex --yolo"
+crush = "crush"
 gemini = "gemini --yolo"
+goose = "goose"
+gptme = "gptme"
+nanocoder = "nanocoder"
+neovate = "neovate"
+qwen = "qwen"

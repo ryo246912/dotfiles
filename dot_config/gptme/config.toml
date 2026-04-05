@@ -1,0 +1,14 @@
+[user]
+name = "ryo"
+response_preference = "日本語で簡潔に。変更内容・検証結果・残リスクを先に整理する。"
+
+[lessons]
+dirs = ["~/.config/gptme/lessons"]
+
+[mcp]
+enabled = true
+auto_start = true
+
+[env]
+GPTME_CHAT_HISTORY = "true"
+GPTME_COSTS = "true"

@@ -1,0 +1,39 @@
+{
+  "nanocoder": {
+    "providers": [
+      {
+        "name": "GitHub Models",
+        "baseUrl": "https://models.github.ai/inference",
+        "apiKey": "$GITHUB_TOKEN",
+        "models": ["openai/gpt-4o-mini", "openai/gpt-4.1-mini"]
+      },
+      {
+        "name": "Google Gemini",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "apiKey": "$GEMINI_API_KEY",
+        "models": ["gemini-2.5-flash", "gemini-2.5-pro"]
+      },
+      {
+        "name": "Local Ollama",
+        "baseUrl": "http://localhost:11434/v1",
+        "models": ["qwen2.5-coder:latest", "llama3.2:latest"]
+      }
+    ],
+    "autoCompact": {
+      "enabled": true,
+      "threshold": 60,
+      "mode": "conservative",
+      "notifyUser": true
+    },
+    "sessions": {
+      "autoSave": true,
+      "saveInterval": 30000,
+      "maxSessions": 100,
+      "maxMessages": 1000,
+      "retentionDays": 30
+    },
+    "nanocoderTools": {
+      "alwaysAllow": ["read_file", "find_files"]
+    }
+  }
+}

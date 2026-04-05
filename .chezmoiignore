@@ -30,5 +30,6 @@ rulesync.lock
 README.md
 CLAUDE.md
 setup.md
+agent-cli.md
 
 **/*karabiner-ts*
