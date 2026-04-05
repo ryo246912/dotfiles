@@ -14,16 +14,23 @@
   "packageRules": [
     {
       "matchPackageNames": [
-        "ubi:superfly/flyctl",
-        "aqua:stripe/stripe-cli",
-        "usage",
-        "ubi:render-oss/cli",
-        "npm:renovate",
-        "aqua:aws/aws-cli",
-        "cosign",
-        "rust",
-        "ubi:pdm-project/pdm"
+        "/(^|\\/)flyctl$/",
+        "/(^|\\/)stripe-cli$/",
+        "/(^|\\/)usage$/",
+        "render-oss/cli",
+        "renovate",
+        "/(^|\\/)aws-cli$/",
+        "/(^|\\/)cosign$/",
+        "/(^|\\/)rust$/",
+        "/(^|\\/)pdm$/"
       ],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "matchDepNames": ["cosign"],
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["dot_config/brew/brew.json"],
       "matchUpdateTypes": ["patch"],
       "enabled": false
     }
