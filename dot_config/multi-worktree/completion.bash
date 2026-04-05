@@ -101,19 +101,44 @@ _multi_worktree_completion() {
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
             elif [[ $cword -ge 3 ]]; then
-                # [dev_commands] セクションからコマンド名を補完
-                local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
-                if [[ -f "$config_file" ]]; then
-                    local dev_cmd_names
-                    dev_cmd_names=$(awk '
-                        /^\[dev_commands\]/ { in_section=1; next }
-                        /^\[/ { in_section=0 }
-                        in_section && /^[[:space:]]*[^[:space:]=]+[[:space:]]*=/ {
-                            match($0, /^[[:space:]]*([^[:space:]=]+)/, arr)
-                            print arr[1]
-                        }
-                    ' "$config_file")
-                    COMPREPLY=($(compgen -W "$dev_cmd_names" -- "$cur"))
+                local sandbox_mode=false word
+                for word in "${words[@]}"; do
+                    if [[ "$word" == "--sbx" || "$word" == --sbx=* ]]; then
+                        sandbox_mode=true
+                        break
+                    fi
+                done
+
+                if [[ "$sandbox_mode" == true ]]; then
+                    local sandbox_agents="claude codex copilot docker-agent gemini kiro opencode shell"
+                    if [[ "$prev" == "--sbx" ]]; then
+                        COMPREPLY=($(compgen -W "$sandbox_agents" -- "$cur"))
+                    elif [[ "$prev" == "--cli" ]]; then
+                        COMPREPLY=($(compgen -W "sbx docker" -- "$cur"))
+                    elif [[ "$cur" == --sbx=* ]]; then
+                        COMPREPLY=($(compgen -W "$sandbox_agents" -- "${cur#--sbx=}"))
+                        COMPREPLY=("${COMPREPLY[@]/#/--sbx=}")
+                    elif [[ "$cur" == --cli=* ]]; then
+                        COMPREPLY=($(compgen -W "sbx docker" -- "${cur#--cli=}"))
+                        COMPREPLY=("${COMPREPLY[@]/#/--cli=}")
+                    elif [[ "$cur" == --* ]]; then
+                        COMPREPLY=($(compgen -W "--name --name= --cli --cli= --" -- "$cur"))
+                    fi
+                else
+                    # [dev_commands] セクションからコマンド名を補完
+                    local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
+                    if [[ -f "$config_file" ]]; then
+                        local dev_cmd_names
+                        dev_cmd_names=$(awk '
+                            /^\[dev_commands\]/ { in_section=1; next }
+                            /^\[/ { in_section=0 }
+                            in_section && /^[[:space:]]*[^[:space:]=]+[[:space:]]*=/ {
+                                match($0, /^[[:space:]]*([^[:space:]=]+)/, arr)
+                                print arr[1]
+                            }
+                        ' "$config_file")
+                        COMPREPLY=($(compgen -W "$dev_cmd_names" -- "$cur"))
+                    fi
                 fi
             fi
             ;;
