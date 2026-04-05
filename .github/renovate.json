@@ -66,7 +66,12 @@
       "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
-      "matchPackageNames": ["atuin", "atuinsh/atuin", "aqua:atuinsh/atuin", "ghcr.io/atuinsh/atuin"],
+      "matchPackageNames": [
+        "atuin",
+        "atuinsh/atuin",
+        "aqua:atuinsh/atuin",
+        "ghcr.io/atuinsh/atuin"
+      ],
       "groupName": "atuin"
     }
   ],
