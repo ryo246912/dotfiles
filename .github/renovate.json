@@ -35,7 +35,7 @@
       "enabled": false
     },
     {
-      "matchPackageNames": ["atuin", "/(^|[:/])atuinsh\\/atuin$/"],
+      "matchPackageNames": ["atuin", "/atuinsh\\/atuin/"],
       "groupName": "atuin"
     }
   ],
