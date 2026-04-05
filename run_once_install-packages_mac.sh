@@ -43,6 +43,7 @@ install_package() {
 install_cask_package() {
   local PACKAGES=(
     alacritty
+    aqua-voice
     arc
     battery
     chatgpt
@@ -59,6 +60,7 @@ install_cask_package() {
     slack
     thock
     thebrowsercompany-dia
+    typeless
     visual-studio-code
     wezterm@nightly
     zoom
@@ -170,6 +172,12 @@ setup_settings() {
   fi
   if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "Raycast"; then
     osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/Raycast.app", hidden:false}'
+  fi
+  if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "Aqua Voice"; then
+    osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/Aqua Voice.app", hidden:false}'
+  fi
+  if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "Typeless"; then
+    osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/Typeless.app", hidden:false}'
   fi
 
   # ショートカットの設定
