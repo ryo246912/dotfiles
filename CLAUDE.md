@@ -43,8 +43,10 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 │   ├── devcontainer/       # Dev Container configuration
 │   ├── zabrze/             # Shell abbreviations system
 │   └── [40+ other tools]   # See "Configuration Files" section
-├── dot_claude/             # Claude AI tool settings and skills
-├── dot_gemini/             # Google Gemini API settings and commands
+├── dot_claude/             # Claude AI tool settings, skills, commands
+├── dot_codex/              # Codex AGENTS.md and simulated skills/commands
+├── dot_gemini/             # Google Gemini settings, skills, and commands
+├── dot_copilot/            # GitHub Copilot user-scope instructions
 ├── dot_local/bin/          # Custom utility scripts (8 scripts)
 ├── not_config/             # Non-chezmoi managed files (snippets, memos)
 ├── run_once_*.sh          # One-time setup scripts
@@ -53,6 +55,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 ├── setup.md               # Detailed setup instructions
 ├── README.md              # Repository description
 ├── CLAUDE.md              # This file
+├── plan/                  # Plan / spec / implementation memo artifacts
 ├── .chezmoiignore         # Platform-specific ignore patterns
 └── .github/               # GitHub Actions workflows
     └── workflows/         # lint.yaml, renovate.json
@@ -107,8 +110,9 @@ Scoop (Windows/WSL2)
 
 **Terminal:**
 
-- Alacritty, Ghostty, Rio, and WezTerm with tmux as terminal multiplexer
-- Auto-launch tmux in supported terminal emulators
+- Alacritty with tmux as terminal multiplexer
+- Rio terminal as alternative
+- Auto-launch tmux in Alacritty/Rio terminals
 
 **Shell:**
 
@@ -131,8 +135,10 @@ Scoop (Windows/WSL2)
 
 **AI Integration:**
 
-- Claude Desktop with custom skills (deepwiki, article, review-fix, pr-review)
-- Gemini API integration
+- rulesync-managed skill / command catalog for Claude Code, Codex, Gemini, and Copilot
+- Curated skills include `skill-creator`, `pr-review`, `workflow-review`, `test-quality`
+- Local skills include `deepwiki`, `article`, `review-fix`, `plan`
+- `mise run rulesync-generate` regenerates tracked outputs in `dot_claude/`, `dot_codex/`, `dot_gemini/`, and `dot_copilot/`
 
 ### Abbreviations System
 
@@ -196,12 +202,10 @@ The repository uses [zabrze](https://github.com/orhun/zabrze) for shell abbrevia
 
 This repository manages 46+ tool configurations in `dot_config/`:
 
-### Terminal & Shell (9 tools)
+### Terminal & Shell (7 tools)
 
 - `alacritty/` - Alacritty terminal emulator (TOML config with keybindings)
-- `ghostty/` - Ghostty terminal emulator
 - `rio/` - Rio terminal emulator
-- `wezterm/` - WezTerm terminal emulator (Lua config with tmux-oriented keybindings)
 - `tmux/` - tmux terminal multiplexer (custom keybindings, status bar)
 - `tig/` - Tig Git TUI
 - `zsh/` - Zsh shell (modularized with lazy loading)
@@ -225,7 +229,7 @@ This repository manages 46+ tool configurations in `dot_config/`:
 
 ### Development Tools (5 tools)
 
-- `mise/` - Tool version manager (100+ tools, task definitions, `config.<env>.toml` splits)
+- `mise/` - Tool version manager (100+ tools, task definitions, conf.d/ splits)
 - `aqua/` - YAML-based package manager
 - `nix/` - Nix package manager
 - `gotip/` - Go development configuration
@@ -276,7 +280,7 @@ This repository manages 46+ tool configurations in `dot_config/`:
 
 ## Template System
 
-Chezmoi templates (7 files with `.tmpl` extension) enable platform-specific configurations:
+Chezmoi templates (6 files with `.tmpl` extension) enable platform-specific configurations:
 
 **Template Features:**
 
@@ -290,10 +294,9 @@ Chezmoi templates (7 files with `.tmpl` extension) enable platform-specific conf
 1. `dot_config/zsh/dot_zshenv.tmpl` - Zsh environment variables (XDG, PATH)
 2. `dot_config/git/config.tmpl` - Git config (platform-specific, Delta integration)
 3. `dot_config/alacritty/alacritty.toml.tmpl` - Alacritty terminal config
-4. `dot_config/ghostty/config.tmpl` - Ghostty terminal config
-5. `dot_config/rio/private_config.toml.tmpl` - Rio terminal config
-6. `dot_config/zsh/lazy/work.zsh.tmpl` - Work-specific zsh config
-7. `dot_config/dot_czrc.tmpl` - commitizen configuration
+4. `dot_config/rio/private_config.toml.tmpl` - Rio terminal config
+5. `dot_config/zsh/lazy/work.zsh.tmpl` - Work-specific zsh config
+6. `dot_config/dot_czrc.tmpl` - commitizen configuration
 
 ## Platform Support
 
@@ -378,12 +381,14 @@ These scripts run when their content or dependencies change:
 - `dot_config/claude/claude_desktop_config_mac.json` - macOS config
 - `dot_config/claude/claude_desktop_config_win.json` - Windows config
 
-**Custom Skills:**
+**Custom Skills and Commands:**
 
-- `kiro` - Spec-driven development
-- `deepwiki` - GitHub Wiki search using deepwiki tool
-- `article` - Technical article creation
-- `review-fix` / `pr-review` - PR review comment handling and code fixes
+- `deepwiki` - ライブラリやフレームワークの根拠調査
+- `article` - 技術記事の構成設計と本文執筆
+- `review-fix` - GitHub PR のレビュー指摘対応
+- `skill-creator` - 公式 curated skill。skill 作成・改善・評価
+- `pr-review` / `workflow-review` / `test-quality` - curated review 系 skill
+- `/plan` `/plan:search` `/plan:implement` - `plan/` artifact を分けて扱う command 群
 
 ### Gemini API
 
@@ -659,7 +664,7 @@ This repository treats personal development environment as code:
 ### 2. Modularization
 
 - Zsh configuration split into `lazy/` modules
-- mise configuration split into `config.<env>.toml` files (`MISE_ENV` select)
+- mise configuration split into `conf.d/` files
 - Zabrze abbreviations split by category
 - Chezmoi scripts split by purpose
 

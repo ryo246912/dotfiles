@@ -51,8 +51,10 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 │   ├── devcontainer/       # Dev Container configuration
 │   ├── zabrze/             # Shell abbreviations system
 │   └── [40+ other tools]   # See "Configuration Files" section
-├── dot_claude/             # Claude AI tool settings and skills
-├── dot_gemini/             # Google Gemini API settings and commands
+├── dot_claude/             # Claude AI tool settings, skills, commands
+├── dot_codex/              # Codex AGENTS.md and simulated skills/commands
+├── dot_gemini/             # Google Gemini settings, skills, and commands
+├── dot_copilot/            # GitHub Copilot user-scope instructions
 ├── dot_local/bin/          # Custom utility scripts (8 scripts)
 ├── not_config/             # Non-chezmoi managed files (snippets, memos)
 ├── run_once_*.sh          # One-time setup scripts
@@ -61,6 +63,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 ├── setup.md               # Detailed setup instructions
 ├── README.md              # Repository description
 ├── CLAUDE.md              # This file
+├── plan/                  # Plan / spec / implementation memo artifacts
 ├── .chezmoiignore         # Platform-specific ignore patterns
 └── .github/               # GitHub Actions workflows
     └── workflows/         # lint.yaml, renovate.json
@@ -140,8 +143,10 @@ Scoop (Windows/WSL2)
 
 **AI Integration:**
 
-- Claude Desktop with custom skills (deepwiki, article, review-fix, pr-review)
-- Gemini API integration
+- rulesync-managed skill / command catalog for Claude Code, Codex, Gemini, and Copilot
+- Curated skills include `skill-creator`, `pr-review`, `workflow-review`, `test-quality`
+- Local skills include `deepwiki`, `article`, `review-fix`, `plan`
+- `mise run rulesync-generate` regenerates tracked outputs in `dot_claude/`, `dot_codex/`, `dot_gemini/`, and `dot_copilot/`
 
 ### Abbreviations System
 
@@ -384,12 +389,14 @@ These scripts run when their content or dependencies change:
 - `dot_config/claude/claude_desktop_config_mac.json` - macOS config
 - `dot_config/claude/claude_desktop_config_win.json` - Windows config
 
-**Custom Skills:**
+**Custom Skills and Commands:**
 
-- `kiro` - Spec-driven development
-- `deepwiki` - GitHub Wiki search using deepwiki tool
-- `article` - Technical article creation
-- `review-fix` / `pr-review` - PR review comment handling and code fixes
+- `deepwiki` - ライブラリやフレームワークの根拠調査
+- `article` - 技術記事の構成設計と本文執筆
+- `review-fix` - GitHub PR のレビュー指摘対応
+- `skill-creator` - 公式 curated skill。skill 作成・改善・評価
+- `pr-review` / `workflow-review` / `test-quality` - curated review 系 skill
+- `/plan` `/plan:search` `/plan:implement` - `plan/` artifact を分けて扱う command 群
 
 ### Gemini API
 
