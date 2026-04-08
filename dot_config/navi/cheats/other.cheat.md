@@ -16,8 +16,20 @@ act -l <event>
 # act : run workflows for a specific event[-n:dry-run]
 act<_-dry-run_><event> -W <workflow>
 
-# chrome : open with remote-debugging-port and user-data-dir
-chrome --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile1 > /dev/null 2>&1 &
+# browser-cli : list browser slots
+./dot_local/bin/executable_browser-cli list
+
+# browser-cli : show slot detail [slot]
+./dot_local/bin/executable_browser-cli show <slot>
+
+# browser-cli : print host chrome start command [slot]
+./dot_local/bin/executable_browser-cli host-command start <slot>
+
+# browser-cli : connect and capture screenshot [slot]
+./dot_local/bin/executable_browser-cli screenshot <slot> <url> <output>
+
+# browser-cli : connect and click selector [slot]
+./dot_local/bin/executable_browser-cli click <slot> <url> <selector>
 
 # claude : mcp add
 claude mcp add <name> -s <scope> -- <command>

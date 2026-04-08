@@ -2,7 +2,7 @@
   // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
   "build": {
-    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile"
+    "dockerfile": "Dockerfile"
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {
@@ -13,7 +13,11 @@
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
-    "HOST_USER": "${localEnv:USER}"
+    "HOST_USER": "${localEnv:USER}",
+    // host Chrome へ CDP 接続する browser-cli 向け
+    "BROWSER_CLI_TARGET": "container",
+    "BROWSER_CLI_BROWSER_HOST": "host.docker.internal",
+    "BROWSER_CLI_HOST_ALIAS": "mac-host"
   },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
