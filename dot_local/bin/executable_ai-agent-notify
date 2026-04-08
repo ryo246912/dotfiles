@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+agent=""
+event=""
+path_override=""
+branch=""
+title_override=""
+message_override=""
+sound_override=""
+transport="auto"
+
+while (($# > 0)); do
+	case "$1" in
+	--agent)
+		agent="${2:-}"
+		shift 2
+		;;
+	--event)
+		event="${2:-}"
+		shift 2
+		;;
+	--path)
+		path_override="${2:-}"
+		shift 2
+		;;
+	--branch)
+		branch="${2:-}"
+		shift 2
+		;;
+	--title)
+		title_override="${2:-}"
+		shift 2
+		;;
+	--message)
+		message_override="${2:-}"
+		shift 2
+		;;
+	--sound)
+		sound_override="${2:-}"
+		shift 2
+		;;
+	--transport)
+		transport="${2:-}"
+		shift 2
+		;;
+	*)
+		echo "unknown option: $1" >&2
+		exit 2
+		;;
+	esac
+done
+
+needs_payload=0
+case "$agent" in
+claude | codex | copilot)
+	needs_payload=1
+	;;
+esac
+
+payload=""
+if [[ "$needs_payload" -eq 1 && ! -t 0 ]]; then
+	payload="$(cat || true)"
+fi
+
+json_get() {
+	local query="$1"
+
+	if [[ -z "$payload" ]] || ! command -v jq >/dev/null 2>&1; then
+		return 1
+	fi
+
+	printf '%s' "$payload" | jq -er "$query // empty" 2>/dev/null
+}
+
+lower() {
+	printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+compact_text() {
+	printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g'
+}
+
+truncate_text() {
+	local text="$1"
+	local max_len="$2"
+
+	if ((${#text} > max_len)); then
+		printf '%s...' "${text:0:$((max_len - 3))}"
+	else
+		printf '%s' "$text"
+	fi
+}
+
+if [[ -z "$event" ]]; then
+	event="$(json_get '.hook_event_name' || true)"
+	if [[ -z "$event" && -n "$(json_get '.reason' || true)" ]]; then
+		event="session_end"
+	fi
+fi
+event="$(lower "$event")"
+
+repo_path="${path_override:-$(json_get '.cwd' || true)}"
+repo_path="${repo_path:-$PWD}"
+repo_name="$(basename "$repo_path")"
+display_path="${path_override:-$repo_path}"
+reason="$(json_get '.reason' || true)"
+notification_message="$(json_get '.message' || true)"
+error_message="$(json_get '.error.message' || true)"
+if [[ -z "$error_message" ]]; then
+	error_message="$(json_get '.error' || true)"
+fi
+
+title=""
+message=""
+sound=""
+
+case "${agent}:${event}" in
+claude:notification)
+	title="Claude Code"
+	message="${notification_message:-${repo_name}が確認待ちです}"
+	sound="Glass"
+	;;
+claude:stop | claude:session_end)
+	title="Claude Code"
+	message="${repo_name}で作業が完了しました"
+	if [[ -n "$reason" && "$reason" != "complete" ]]; then
+		message="${message} (${reason})"
+	fi
+	sound="Hero"
+	;;
+ccmanager:idle)
+	title="CCManager - Idle"
+	message="${display_path}の${branch:-current}がIdle状態です"
+	sound="Hero"
+	;;
+ccmanager:waiting_input)
+	title="CCManager - 入力待ち"
+	message="${display_path}の${branch:-current}が入力待ちです"
+	sound="Glass"
+	;;
+codex:turn_complete | codex:notification | codex:)
+	title="Codex"
+	message="${repo_name}のターンが完了しました"
+	sound="Glass"
+	;;
+copilot:error | copilot:error_occurred | copilot:erroroccurred)
+	title="Copilot"
+	message="${repo_name}でエラーが発生しました"
+	if [[ -n "$error_message" ]]; then
+		message="${message}: ${error_message}"
+	fi
+	sound="Glass"
+	;;
+copilot:session_end | copilot:sessionend | copilot:)
+	title="Copilot"
+	case "$reason" in
+	"" | complete)
+		message="${repo_name}のセッションが完了しました"
+		sound="Hero"
+		;;
+	error)
+		message="${repo_name}のセッションがエラー終了しました"
+		if [[ -n "$error_message" ]]; then
+			message="${message}: ${error_message}"
+		fi
+		sound="Glass"
+		;;
+	*)
+		message="${repo_name}のセッションが終了しました (${reason})"
+		sound="Glass"
+		;;
+	esac
+	;;
+*)
+	title="${title_override:-AI Agent}"
+	message="${message_override:-${repo_name}で通知が発生しました}"
+	sound="${sound_override:-Glass}"
+	;;
+esac
+
+if [[ -n "$title_override" ]]; then
+	title="$title_override"
+fi
+if [[ -n "$message_override" ]]; then
+	message="$message_override"
+fi
+if [[ -n "$sound_override" ]]; then
+	sound="$sound_override"
+fi
+
+title="$(truncate_text "$(compact_text "$title")" 80)"
+message="$(truncate_text "$(compact_text "$message")" 220)"
+
+send_local_notification() {
+	local args=(macos-notify-cli --title "$title" --message "$message")
+
+	if [[ -n "$sound" ]]; then
+		args+=(--sound "$sound")
+	fi
+
+	if [[ -n "${TMUX:-}" ]]; then
+		args+=(--current-tmux)
+	fi
+
+	"${args[@]}" >/dev/null 2>&1 || true
+}
+
+send_remote_notification() {
+	local ssh_config="${AI_AGENT_NOTIFY_REMOTE_SSH_CONFIG:-$HOME/.config/ssh/config}"
+	local ssh_host="${AI_AGENT_NOTIFY_REMOTE_HOST:-mac-host}"
+	local remote_cmd
+
+	if [[ ! -r "$ssh_config" ]]; then
+		return 0
+	fi
+
+	remote_cmd="$(printf 'if command -v macos-notify-cli >/dev/null 2>&1; then macos-notify-cli --title %q --message %q --sound %q; fi' "$title" "$message" "$sound")"
+	ssh -F "$ssh_config" -o BatchMode=yes -o ConnectTimeout=2 -o StrictHostKeyChecking=no "$ssh_host" "$remote_cmd" >/dev/null 2>&1 || true
+}
+
+case "$transport" in
+none)
+	exit 0
+	;;
+local)
+	if command -v macos-notify-cli >/dev/null 2>&1 && [[ "$(uname -s)" == "Darwin" ]]; then
+		send_local_notification
+	fi
+	;;
+remote)
+	send_remote_notification
+	;;
+auto)
+	if command -v macos-notify-cli >/dev/null 2>&1 && [[ "$(uname -s)" == "Darwin" ]]; then
+		send_local_notification
+	elif [[ -f /.dockerenv ]] && command -v ssh >/dev/null 2>&1; then
+		send_remote_notification
+	fi
+	;;
+*)
+	echo "unknown transport: $transport" >&2
+	exit 2
+	;;
+esac
