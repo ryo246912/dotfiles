@@ -1,5 +1,5 @@
 {
-  "targets": ["claudecode", "codexcli", "geminicli", "copilotonvs"],
+  "targets": ["claudecode", "codexcli", "geminicli", "copilotcli"],
   "features": ["rules", "skills", "commands"],
   "delete": false,
   "verbose": false,

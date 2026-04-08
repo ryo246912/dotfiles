@@ -1,0 +1,23 @@
+{
+  "skill_name": "autoharness",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/autoharness-init\n\nこのプロジェクトのAutoHarnessをセットアップしてください。",
+      "expected_output": ".claude/rules/harness.md（自然言語ルール）と .claude/rules/harness_check.py（検証スクリプト）が生成され、CLAUDE.mdに参照が追記される。harness_check.pyはpython .claude/rules/harness_check.py --helpで使い方が確認できる。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "/autoharness-update\n\nさっきTypeScriptのコードを生成してもらったんですが、実行したら型エラーが出ました。\n\nError: Type 'string' is not assignable to type 'number'.\n  at src/utils/calculate.ts:23:5\n\nこのパターンのミスが起きないようにハーネスを更新してください。",
+      "expected_output": ".claude/rules/harness.mdのルールが更新され、型安全性に関する具体的なルール（例：関数の戻り値型を明示する、暗黙のany型を避けるなど）が追加される。harness_check.pyも更新されてTypeScriptの型チェックコマンドが含まれる。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "このPythonプロジェクトにデータ処理の関数を追加してほしい。CSVファイルを読み込んで集計するやつ。\n\n（autoharnessが設定済みのプロジェクトで、pytestとruffが設定されている想定）",
+      "expected_output": "コード生成の際に .claude/rules/harness.md のルールを参照し、プロジェクトの命名規則・型アノテーション・テスト要件に従ったコードを生成する。生成後に python .claude/rules/harness_check.py で検証する流れが示される。",
+      "files": []
+    }
+  ]
+}
