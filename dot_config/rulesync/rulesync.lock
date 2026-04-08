@@ -1,0 +1,31 @@
+{
+  "lockfileVersion": 1,
+  "sources": {
+    "anthropics/skills": {
+      "requestedRef": "main",
+      "resolvedRef": "98669c11ca63e9c81c11501e1437e5c47b556621",
+      "resolvedAt": "2026-04-04T17:24:32.546Z",
+      "skills": {
+        "skill-creator": {
+          "integrity": "sha256-ad81b72a9ff60274948931e275390da899ad2bcde11baa32430dc2f738233cf3"
+        }
+      }
+    },
+    "antoniocascais/claude-code-knowledge": {
+      "requestedRef": "main",
+      "resolvedRef": "27085b669d583f5d1dd9d49f3a080826cbf4ce20",
+      "resolvedAt": "2026-04-04T17:24:39.600Z",
+      "skills": {
+        "pr-review": {
+          "integrity": "sha256-e1c3b26df875f425af218f42e5c73ff6d76d30b817a6f0e46913a144ca4f4cb7"
+        },
+        "test-quality": {
+          "integrity": "sha256-a6838550e900975311e579641198ec0501bb48a8881acc0f5d84f72c4a72c2a9"
+        },
+        "workflow-review": {
+          "integrity": "sha256-b470e368ea6db8cf46f0c5ecb1f724327541ce6e1ec41ac422df78441fe73c38"
+        }
+      }
+    }
+  }
+}

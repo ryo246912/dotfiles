@@ -1,0 +1,17 @@
+---
+description: 承認済み plan に基づいて実装し、02-implement.md と 03-test.md を更新する command。
+---
+`plan:implement` フェーズとして扱ってください。
+
+- `plan/00-spec.md` `plan/99-instrucemt.md` 最新の `plan/01-plan*.md` `plan/00-search.md` を確認してから作業する
+- 計画に沿って実装する
+- 実際に行った変更、判断、影響範囲を `plan/02-implement.md` に追記する
+- 実施した検証、未実施項目、再現手順を `plan/03-test.md` に追記する
+- 計画外の作業が必要になった場合は、先に `plan/01-plan*.md` を更新してから実装へ戻る
+
+禁止事項:
+
+- 仕様や計画が未確定なまま実装を始めること
+- 記録を残さずに変更だけ行うこと
+
+最後に、更新した artifact、実装サマリ、検証結果を簡潔に報告してください。
