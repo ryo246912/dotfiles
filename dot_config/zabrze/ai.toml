@@ -40,13 +40,18 @@ trigger = "ccmcp"
 [[snippets]]
 name    = "devcontainer up"
 snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
-trigger = "dvu"
+trigger = "dcu"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
 snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
-trigger = "dve"
+trigger = "dce"
+
+[[snippets]]
+name    = "mcp-cli"
+snippet = "mcp-cli -c ~/.copilot/mcp-config.json"
+trigger = "mcp"
 
 [[snippets]]
 global  = true
