@@ -31,16 +31,16 @@
     "presets": [
       {
         "id": "1",
-        "name": "Claude A1 (resume)",
+        "name": "Claude A1",
         "command": "claude",
-        "args": ["--resume"],
+        "args": ["--dangerously-skip-permissions"],
         "fallbackArgs": []
       },
       {
         "id": "2",
         "name": "Claude A2 (resume)",
         "command": "claude2",
-        "args": ["--resume"],
+        "args": ["--dangerously-skip-permissions"],
         "fallbackArgs": [],
         "detectionStrategy": "claude"
       },
@@ -48,14 +48,14 @@
         "id": "3",
         "name": "Claude A1 (no resume)",
         "command": "claude",
-        "args": [""],
+        "args": ["--dangerously-skip-permissions"],
         "detectionStrategy": "claude"
       },
       {
         "id": "4",
         "name": "Claude A2 (no resume)",
         "command": "claude2",
-        "args": [""],
+        "args": ["--dangerously-skip-permissions"],
         "detectionStrategy": "claude"
       },
       {
@@ -69,7 +69,7 @@
         "id": "codex",
         "name": "Codex",
         "command": "codex",
-        "args": ["resume", "--yolo"],
+        "args": ["--yolo"],
         "detectionStrategy": "codex",
         "fallbackArgs": ["--yolo"]
       },
@@ -78,7 +78,7 @@
         "name": "Copilot",
         "command": "copilot",
         "detectionStrategy": "github-copilot",
-        "args": ["--resume", "--yolo"],
+        "args": ["--yolo"],
         "fallbackArgs": ["--yolo"]
       }
     ],
