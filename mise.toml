@@ -91,6 +91,10 @@ run = [
     "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
 ]
 
+[tasks.zunda-pregenerate]
+description = "Pre-generate Zunda-mon voice clips"
+run         = "bash scripts/zunda-pregenerate.sh"
+
 [tools]
 actionlint                     = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"

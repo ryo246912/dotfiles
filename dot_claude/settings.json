@@ -12,7 +12,8 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(shfmt:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(bash $HOME/.claude/hooks/*.sh)"
     ],
     "deny": [
       "Bash(sudo:*)",
@@ -47,6 +48,48 @@
           {
             "type": "command",
             "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/zunda-speak.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/zunda-session-start.sh\"",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/zunda-session-end.sh\"",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/zunda-speak.sh\"",
+            "async": true
           }
         ]
       }
