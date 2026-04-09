@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "hooks": {},
+  "claudecode": {
+    "hooks": {
+      "sessionEnd": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
+      "preCompact": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
+      "postToolUse": [
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -r '.tool_input.file_path' | xargs -r sed -i -e 's/[[:space:]]*$//' -e '$a\\'"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -r '.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))' | xargs -r tsgo --noEmit"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -r '.tool_input.file_path | select(endswith(\".toml\"))' | xargs -r taplo format --check"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
+        }
+      ]
+    }
+  },
+  "geminicli": {
+    "hooks": {
+      "sessionEnd": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
+          "timeout": 30
+        }
+      ],
+      "preCompact": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
+          "timeout": 30
+        }
+      ]
+    }
+  },
+  "copilot": {
+    "hooks": {
+      "sessionEnd": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool copilot",
+          "timeout": 30
+        }
+      ]
+    }
+  }
+}

@@ -1,11 +1,37 @@
 #!/bin/bash
+# ai-rule-hook.sh
+#
+# 概要:
+#   AI ツール（Claude / Codex / Gemini / Copilot）のセッション終了やコンテキスト圧縮前に
+#   hook として呼び出され、会話履歴を分析して以下の候補を提案するスクリプト。
+#   - ルール追記候補: CLAUDE.md / agent.md 等への追記
+#   - スキル化候補: 定型ワークフローを /skill-name として呼び出せるスキルへ昇格
+#
+# 動作フロー:
+#   1. hook の JSON を stdin から受け取る（session_id / transcript_path / cwd など）
+#   2. 無限再帰チェック: AI_RULE_HOOK_RUNNING=1 なら即 exit（ループ防止）
+#   3. イベントと条件を判定し、実行不要なら skip
+#      - claude / gemini / copilot: session_end / pre_compact で実行
+#      - codex: /clear 等のコマンドか十分な行数増加で実行
+#   4. 会話履歴（末尾 24KB）・ルールファイル（末尾 12KB）・既存スキル一覧を読み込む
+#   5. ai-rule-hook.md の指示文 + メタデータ + ルール抜粋 + スキル一覧 + 履歴抜粋でプロンプトを組み立てる
+#   6. 対象 AI ツールにプロンプトを投げて候補を生成し suggestion.md に保存する
+#      - claude / copilot: claude -p
+#      - codex:            codex exec
+#      - gemini:           gemini
+#
+# 注意:
+#   - ルール・スキルを自動で書き換えることはしない。suggestion.md を確認して手動転記する。
+#   - ドライラン: AI_RULE_HOOK_DRY_RUN=1 でデバッグ用 JSON を出力（AI は呼ばない）
+#   - ステート保存先: ${XDG_STATE_HOME:-~/.local/state}/ai-rule-hook/<tool>/<session>/
+#
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_NAME
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_NAME SCRIPT_DIR
 readonly STATE_ROOT="${AI_RULE_HOOK_STATE_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/ai-rule-hook}"
-readonly RULESYNC_ROOT="${AI_RULE_HOOK_RULESYNC_ROOT:-$HOME/.config/rulesync}"
-readonly PROMPT_TEMPLATE="${AI_RULE_HOOK_PROMPT_TEMPLATE:-$RULESYNC_ROOT/hooks/ai-rule-hook.md}"
+readonly PROMPT_TEMPLATE="${AI_RULE_HOOK_PROMPT_TEMPLATE:-$SCRIPT_DIR/ai-rule-hook.md}"
 readonly MAX_RULE_BYTES="${AI_RULE_HOOK_MAX_RULE_BYTES:-12000}"
 readonly MAX_TRANSCRIPT_BYTES="${AI_RULE_HOOK_MAX_TRANSCRIPT_BYTES:-24000}"
 readonly CODEX_STOP_MIN_LINES="${AI_RULE_HOOK_CODEX_STOP_MIN_LINES:-80}"
@@ -17,7 +43,7 @@ log() {
 
 usage() {
 	cat <<'EOF'
-Usage: ai-rule-hook.sh --tool <claude|codex> [--dry-run]
+Usage: ai-rule-hook.sh --tool <claude|codex|gemini|copilot> [--dry-run]
 
 Reads hook JSON from stdin, normalizes the payload, and generates a rule-update
 suggestion with the current tool's CLI. Use --dry-run to emit normalized JSON
@@ -122,14 +148,24 @@ write_json() {
 tool_paths() {
 	case "$TOOL" in
 	claude)
-		RULE_SOURCE_PATH="$RULESYNC_ROOT/.rulesync/rules/CLAUDE.md"
-		RULE_OUTPUT_PATH="$HOME/.claude/CLAUDE.md"
+		RULE_SOURCE_PATH="$HOME/.claude/CLAUDE.md"
+		SKILLS_DIR="$HOME/.claude/skills"
 		ANALYZER_BIN="claude"
 		;;
 	codex)
-		RULE_SOURCE_PATH="$RULESYNC_ROOT/.rulesync/rules/CODEX.md"
-		RULE_OUTPUT_PATH="$HOME/.codex/AGENTS.md"
+		RULE_SOURCE_PATH="$HOME/.codex/AGENTS.md"
+		SKILLS_DIR=""
 		ANALYZER_BIN="codex"
+		;;
+	gemini)
+		RULE_SOURCE_PATH="$HOME/.gemini/GEMINI.md"
+		SKILLS_DIR=""
+		ANALYZER_BIN="gemini"
+		;;
+	copilot)
+		RULE_SOURCE_PATH="$HOME/.config/gh-copilot/COPILOTCLI.md"
+		SKILLS_DIR=""
+		ANALYZER_BIN="claude"
 		;;
 	*)
 		log "unsupported tool: $TOOL"
@@ -138,9 +174,33 @@ tool_paths() {
 	esac
 }
 
+list_skills() {
+	local skills_dir="${1:-}"
+	if [[ -z "$skills_dir" ]] || [[ ! -d "$skills_dir" ]]; then
+		printf '_スキルなし_\n'
+		return 0
+	fi
+	local found=0
+	while IFS= read -r -d '' skill_file; do
+		local skill_name desc
+		skill_name="$(basename "$(dirname "$skill_file")")"
+		desc="$(grep -m1 '^description:' "$skill_file" 2>/dev/null |
+			sed 's/^description:[[:space:]]*//' |
+			cut -c1-200 || true)"
+		if [[ -z "$desc" ]]; then
+			desc="(description なし)"
+		fi
+		printf -- '- %s: %s\n' "$skill_name" "$desc"
+		found=1
+	done < <(find "$skills_dir" -name "SKILL.md" -print0 2>/dev/null | sort -z)
+	if [[ $found -eq 0 ]]; then
+		printf '_スキルなし_\n'
+	fi
+}
+
 should_run_for_event() {
 	case "$TOOL:$CANONICAL_EVENT" in
-	claude:session_end | claude:pre_compact)
+	claude:session_end | claude:pre_compact | gemini:session_end | gemini:pre_compact | copilot:session_end)
 		return 0
 		;;
 	codex:user_prompt_submit)
@@ -190,6 +250,7 @@ build_prompt_file() {
 	local transcript_truncated="$5"
 	local rules_size="$6"
 	local rules_truncated="$7"
+	local skills_list="${8:-_スキルなし_}"
 
 	{
 		cat "$PROMPT_TEMPLATE"
@@ -204,13 +265,12 @@ build_prompt_file() {
 - cwd: ${CWD_PATH:-unknown}
 - transcript_path: ${TRANSCRIPT_PATH:-missing}
 - rule_source_path: ${RULE_SOURCE_PATH}
-- rule_output_path: ${RULE_OUTPUT_PATH}
 - source: ${EVENT_SOURCE:-}
 - reason: ${EVENT_REASON:-}
 - trigger: ${EVENT_TRIGGER:-}
 - prompt: ${PROMPT_TEXT:-}
 
-## 現在の rulesync source 抜粋
+## 現在のルールファイル抜粋
 
 - bytes: ${rules_size}
 - truncated: ${rules_truncated}
@@ -220,6 +280,10 @@ EOF
 		cat "$rules_excerpt_path"
 		cat <<EOF
 \`\`\`
+
+## 既存スキル一覧
+
+${skills_list}
 
 ## transcript 生データ抜粋
 
@@ -244,7 +308,7 @@ emit_dry_run() {
 		--arg cwd "$CWD_PATH" \
 		--arg transcript_path "$TRANSCRIPT_PATH" \
 		--arg rule_source_path "$RULE_SOURCE_PATH" \
-		--arg rule_output_path "$RULE_OUTPUT_PATH" \
+		--arg skills_dir "${SKILLS_DIR:-}" \
 		--arg analyzer "$ANALYZER_BIN" \
 		--arg output_dir "$SESSION_STATE_DIR" \
 		--arg prompt_file "$PROMPT_OUTPUT_PATH" \
@@ -261,7 +325,7 @@ emit_dry_run() {
 			cwd: (if $cwd == "" then null else $cwd end),
 			transcript_path: (if $transcript_path == "" then null else $transcript_path end),
 			rule_source_path: $rule_source_path,
-			rule_output_path: $rule_output_path,
+			skills_dir: (if $skills_dir == "" then null else $skills_dir end),
 			analyzer: $analyzer,
 			output_dir: $output_dir,
 			prompt_file: $prompt_file,
@@ -302,6 +366,15 @@ run_codex_analysis() {
 		<"$prompt_path" >/dev/null 2>"$stderr_path"
 }
 
+run_gemini_analysis() {
+	local prompt_path="$1"
+	local output_path="$2"
+	local stderr_path="$3"
+
+	gemini \
+		<"$prompt_path" >"$output_path" 2>"$stderr_path"
+}
+
 run_analysis() {
 	local prompt_path="$1"
 	local output_path="$2"
@@ -313,11 +386,14 @@ run_analysis() {
 	fi
 
 	case "$TOOL" in
-	claude)
+	claude | copilot)
 		run_claude_analysis "$prompt_path" "$output_path" "$stderr_path"
 		;;
 	codex)
 		run_codex_analysis "$prompt_path" "$output_path" "$stderr_path"
+		;;
+	gemini)
+		run_gemini_analysis "$prompt_path" "$output_path" "$stderr_path"
 		;;
 	esac
 }
@@ -437,8 +513,10 @@ read_tail_bytes "$TRANSCRIPT_PATH" "$MAX_TRANSCRIPT_BYTES" >"$TRANSCRIPT_EXCERPT
 if [[ -f "$RULE_SOURCE_RESOLVED" ]]; then
 	read_tail_bytes "$RULE_SOURCE_RESOLVED" "$MAX_RULE_BYTES" >"$RULE_EXCERPT_PATH"
 else
-	printf '_rulesync source not found: %s_\n' "$RULE_SOURCE_RESOLVED" >"$RULE_EXCERPT_PATH"
+	printf '_ルールファイルが見つかりません: %s_\n' "$RULE_SOURCE_RESOLVED" >"$RULE_EXCERPT_PATH"
 fi
+
+SKILLS_LIST="$(list_skills "${SKILLS_DIR:-}")"
 
 build_prompt_file \
 	"$PROMPT_OUTPUT_PATH" \
@@ -447,7 +525,8 @@ build_prompt_file \
 	"$TRANSCRIPT_SIZE" \
 	"$TRANSCRIPT_TRUNCATED" \
 	"$RULE_SIZE" \
-	"$RULE_TRUNCATED"
+	"$RULE_TRUNCATED" \
+	"$SKILLS_LIST"
 
 if ((DRY_RUN == 1)); then
 	emit_dry_run

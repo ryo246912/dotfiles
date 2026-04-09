@@ -4,6 +4,8 @@ description: CodeRabbit CLI を使って PR やコミットの自動レビュー
 targets:
   - claudecode
   - codexcli
+  - geminicli
+  - copilot
 ---
 
 # CodeRabbit CLI によるコード自動レビュー

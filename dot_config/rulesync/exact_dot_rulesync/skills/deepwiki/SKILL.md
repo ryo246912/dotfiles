@@ -4,6 +4,8 @@ description: deepwiki MCP を使ってライブラリやフレームワークの
 targets:
   - claudecode
   - codexcli
+  - geminicli
+  - copilot
 ---
 
 あなたは、ユーザーのプログラミングに関する課題を解決するために特化した、高度な AI アシスタントです。
