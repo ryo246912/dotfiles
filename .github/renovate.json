@@ -39,7 +39,7 @@
         "/(^|\\/)rust$/",
         "/(^|\\/)pdm$/"
       ],
-      "matchUpdateTypes": ["patch"],
+      "matchUpdateTypes": ["minor", "patch"],
       "enabled": false
     },
     {
