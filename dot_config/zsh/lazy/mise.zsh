@@ -82,6 +82,7 @@ fi
 # gwq
 if command -v gwq >/dev/null 2>&1; then
     __generate_and_load_completion "gwq"
+    source "$MISE_COMPLETIONS_DIR/_gwq"
 fi
 
 # mise
