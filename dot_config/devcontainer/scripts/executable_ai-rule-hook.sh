@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
 readonly SCRIPT_NAME
-readonly STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/ai-rule-hook"
+readonly STATE_ROOT="${AI_RULE_HOOK_STATE_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/ai-rule-hook}"
 readonly RULESYNC_ROOT="${AI_RULE_HOOK_RULESYNC_ROOT:-$HOME/.config/rulesync}"
 readonly PROMPT_TEMPLATE="${AI_RULE_HOOK_PROMPT_TEMPLATE:-$RULESYNC_ROOT/hooks/ai-rule-hook.md}"
 readonly MAX_RULE_BYTES="${AI_RULE_HOOK_MAX_RULE_BYTES:-12000}"
