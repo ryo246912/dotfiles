@@ -3,7 +3,6 @@
   "extends": ["github>ryo246912/renovate-config"],
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
-  "reviewers": ["ryo246912"],
   "minimumReleaseAge": "3 days",
   "mise": {
     "managerFilePatterns": ["dot_config/mise/**/*.toml"]
@@ -11,7 +10,92 @@
   "devcontainer": {
     "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
   },
+  "customDatasources": {
+    "brew-formula": {
+      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/formula/{{{packageName}}}.json",
+      "transformTemplates": [
+        "{ \"releases\": [ { \"version\": versions.stable, \"isDeprecated\": deprecated, \"digest\": urls.stable.checksum } ], \"homepage\": homepage, \"sourceUrl\": (urls.head.url ? urls.head.url : homepage), \"changelogUrl\": ($contains($string(urls.head.url ? urls.head.url : homepage), 'github.com') ? $join([$replace((urls.head.url ? urls.head.url : homepage), /\\.git$/, ''), '/releases'], '') : '') }"
+      ],
+      "format": "json"
+    },
+    "brew-cask": {
+      "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/cask/{{{packageName}}}.json",
+      "transformTemplates": [
+        "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage, \"changelogUrl\": ($contains($string(homepage), 'github.com') ? $join([$replace((homepage), /\\.git$/, ''), '/releases'], '') : '') }"
+      ],
+      "format": "json"
+    }
+  },
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "/(^|\\/)flyctl$/",
+        "/(^|\\/)stripe-cli$/",
+        "/(^|\\/)usage$/",
+        "render-oss/cli",
+        "renovate",
+        "/(^|\\/)aws-cli$/",
+        "/(^|\\/)cosign$/",
+        "/(^|\\/)rust$/",
+        "/(^|\\/)pdm$/"
+      ],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "matchDepNames": ["cosign"],
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["dot_config/brew/brew.json"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "Go modules"
+    },
+    {
+      "matchDepNames": ["ubi:jonas/tig"],
+      "versionCompatibility": "^(?<compatibility>tig-)(?<version>.*)$"
+    },
+    {
+      "matchDepNames": ["ubi:bitwarden/clients"],
+      "versionCompatibility": "^(?<compatibility>cli-v)(?<version>.*)$"
+    },
+    {
+      "matchPackageNames": ["ghcr.io/atuinsh/atuin"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "matchPackageNames": [
+        "atuin",
+        "atuinsh/atuin",
+        "aqua:atuinsh/atuin",
+        "ghcr.io/atuinsh/atuin"
+      ],
+      "groupName": "atuin"
+    }
+  ],
   "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/atuin/fly.toml"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/brew/brew.json"],
+      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "custom.brew-formula"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/brew/brew_cask.json"],
+      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
+      "datasourceTemplate": "custom.brew-cask"
+    },
     {
       "customType": "regex",
       "managerFilePatterns": ["dot_config/mise/**/*.toml"],
