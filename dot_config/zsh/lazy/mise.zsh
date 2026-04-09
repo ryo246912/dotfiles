@@ -3,34 +3,38 @@ eval "$(mise activate zsh)"
 # 補完ファイル生成用のディレクトリ
 MISE_COMPLETIONS_DIR="$HOME/.cache/mise/completions"
 mkdir -p "$MISE_COMPLETIONS_DIR"
+fpath=("$MISE_COMPLETIONS_DIR" $fpath)
 
 # 補完ファイル生成とロードの関数
 __generate_and_load_completion() {
     local tool="$1"
     local completion_file="$MISE_COMPLETIONS_DIR/_${tool}"
 
+    [[ -f "$completion_file" ]] && return
+
     case "$tool" in
         "atuin")
             atuin gen-completions --shell zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "gh")
             gh completion -s zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "wt")
             wt completion zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "gwq")
             gwq completion zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "mise")
             mise completion zsh > "$completion_file" 2>/dev/null
-            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
+        "bat")
+            # bat does not have a built-in completion generation command.
+            # This case is kept to avoid potential errors if called,
+            # but currently no action is needed as fpath is already updated.
             ;;
     esac
+    touch "$completion_file"
 }
 
 # atuin
