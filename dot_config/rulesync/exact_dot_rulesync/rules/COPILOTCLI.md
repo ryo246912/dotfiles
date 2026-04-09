@@ -1,7 +1,7 @@
 ---
 root: true
 targets:
-  - copilotonvs
+  - copilotcli
 globs:
   - "**/*"
 ---

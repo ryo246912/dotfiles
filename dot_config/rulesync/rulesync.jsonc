@@ -1,6 +1,12 @@
 {
-  "targets": ["claudecode", "codexcli", "geminicli", "copilotonvs"],
-  "features": ["rules", "skills", "commands"],
+  "targets": ["claudecode", "codexcli", "geminicli", "copilot", "copilotcli"],
+  "features": {
+    "claudecode": ["rules", "skills", "mcp"],
+    "codexcli": ["rules", "skills", "mcp"],
+    "geminicli": ["rules", "commands", "mcp"],
+    "copilot": ["rules"],
+    "copilotcli": ["rules", "mcp"]
+  },
   "delete": false,
   "verbose": false,
   "silent": false,

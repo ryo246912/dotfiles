@@ -42,7 +42,7 @@
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
-    "type=bind,source=${localEnv:HOME}/.local/state/.copilot,target=/home/vscode/.local/state/.copilot",
+    "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
     "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
     "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
