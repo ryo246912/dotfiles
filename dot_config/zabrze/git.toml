@@ -30,9 +30,9 @@ snippet = "git branch -a --sort=-committerdate👇 --format='%(HEAD) %(refname:s
 trigger = "gba"
 
 [[snippets]]
-name    = "git branch --show-current"
-snippet = "git branch --show-current"
-trigger = "gbc"
+name            = "git branch --show-current"
+snippet         = "git branch --show-current"
+trigger-pattern = "(gbc|gbs)"
 
 [[snippets]]
 name    = "git bisect"
