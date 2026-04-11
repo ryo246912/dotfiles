@@ -1,0 +1,3 @@
+Hello, this is a test file for Gemini CLI.
+Issue: DOTFILE-113
+Date: 2026-04-11
