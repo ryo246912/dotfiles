@@ -18,19 +18,19 @@
       "postToolUse": [
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -r '.tool_input.file_path' | xargs -r sed -i -e 's/[[:space:]]*$//' -e '$a\\'"
+          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- sed -i -e 's/[[:space:]]*$//' -e '$a\\\\' --"
         },
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -r '.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))' | xargs -r tsgo --noEmit"
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))) + \"\\u0000\"' | xargs -0 -r -- tsgo --noEmit --"
         },
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -r '.tool_input.file_path | select(endswith(\".toml\"))' | xargs -r taplo format --check"
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".toml\"))) + \"\\u0000\"' | xargs -0 -r -- taplo format --check --"
         },
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
         }
       ]
     }
