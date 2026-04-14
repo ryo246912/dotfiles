@@ -1,9 +1,9 @@
 {
   "targets": ["claudecode", "codexcli", "geminicli", "copilot", "copilotcli"],
   "features": {
-    "claudecode": ["rules", "skills", "mcp"],
-    "codexcli": ["rules", "skills", "mcp"],
-    "geminicli": ["rules", "commands", "mcp"],
+    "claudecode": ["rules", "skills", "hooks"],
+    "codexcli": ["rules", "skills"],
+    "geminicli": ["rules", "commands", "hooks"],
     "copilot": ["rules"],
     "copilotcli": ["rules", "mcp"]
   },

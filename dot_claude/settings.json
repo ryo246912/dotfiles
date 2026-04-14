@@ -27,31 +27,6 @@
       "Write(**/secrets/**)"
     ]
   },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs -r sed -i -e 's/[[:space:]]*$//' -e '$a\\'"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))' | xargs -r tsgo --noEmit"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".toml\"))' | xargs -r taplo format --check"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
-          }
-        ]
-      }
-    ]
-  },
   "statusLine": {
     "type": "command",
     "command": "ccusage statusline --visual-burn-rate emoji"

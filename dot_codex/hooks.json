@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30,
+            "statusMessage": "Checking rule update suggestions"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30,
+            "statusMessage": "Reviewing recent transcript for rule updates"
+          }
+        ]
+      }
+    ]
+  }
+}
