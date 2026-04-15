@@ -16,7 +16,7 @@ node                             = "22.19.0"
 "npm:@typescript/native-preview" = "7.0.0-dev.20260331.1"
 "npm:ccusage"                    = "18.0.10"
 "npm:prettier"                   = "3.8.1"
-python                           = "3.14.3"
+python                           = "3.14.4"
 
 [settings.npm]
 bun = true
