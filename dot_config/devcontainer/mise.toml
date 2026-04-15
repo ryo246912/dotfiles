@@ -9,7 +9,7 @@
 bun                              = "1.3.11"
 "github:github/copilot-cli"      = "1.0.18"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-go                               = "1.26.1"
+go                               = "1.26.2"
 node                             = "22.19.0"
 "npm:@google/gemini-cli"         = "0.36.0"
 "npm:@taplo/cli"                 = "0.7.0"
