@@ -25,7 +25,7 @@
       "postToolUse": [
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- sed -i -e 's/[[:space:]]*$//' -e '$a\\\\' --"
+          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
         },
         {
           "matcher": "Write|Edit|MultiEdit",
