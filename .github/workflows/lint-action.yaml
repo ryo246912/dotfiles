@@ -22,8 +22,8 @@ jobs:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
+      contents: read # To checkout the repository
+      pull-requests: read # To identify changed files
     timeout-minutes: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

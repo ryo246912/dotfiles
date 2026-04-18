@@ -92,9 +92,9 @@ run = [
 ]
 
 [tools]
-"aqua:rhysd/actionlint"         = "1.7.12"
-"aqua:suzuki-shunsuke/ghalint"  = "1.5.5"
-"aqua:suzuki-shunsuke/pinact"   = "3.9.0"
-"npm:@taplo/cli"                = "0.7.0"
-"npm:prettier"                  = "3.8.1"
-"pipx:zizmor"                   = "1.23.1"
+"aqua:rhysd/actionlint"        = "1.7.12"
+"aqua:suzuki-shunsuke/ghalint" = "1.5.5"
+"aqua:suzuki-shunsuke/pinact"  = "3.9.0"
+"npm:@taplo/cli"               = "0.7.0"
+"npm:prettier"                 = "3.8.1"
+"pipx:zizmor"                  = "1.23.1"
