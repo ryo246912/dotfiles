@@ -28,10 +28,8 @@ jobs:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
-      # To checkout the repository
       contents: read
-      # To identify changed files in PRs
-      pull-requests: read # To identify changed files
+      pull-requests: read
     timeout-minutes: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -62,9 +60,9 @@ jobs:
         run: npx prettier --check ${{ steps.changed-files.outputs.json_all_changed_files }}
 
       - name: prettier (yaml)
-        if: (success() || failure()) && steps.changed-files.outputs.yaml_any_changed == 'true'
+        if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
         run: npx prettier --check ${{ steps.changed-files.outputs.yaml_all_changed_files }}
 
       - name: taplo (toml)
-        if: (success() || failure()) && steps.changed-files.outputs.toml_any_changed == 'true'
+        if: always() && steps.changed-files.outputs.toml_any_changed == 'true'
         run: npx @taplo/cli format --check ${{ steps.changed-files.outputs.toml_all_changed_files }}

@@ -18,14 +18,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  actionlint:
+  lint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
-      # To checkout the repository
       contents: read
-      # To identify changed files in PRs
-      pull-requests: read # To identify changed files
+      pull-requests: read
     timeout-minutes: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -33,7 +31,7 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "aqua:rhysd/actionlint"
+          install_args: "aqua:rhysd/actionlint aqua:suzuki-shunsuke/ghalint pipx:zizmor"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: actionlint
@@ -41,47 +39,13 @@ jobs:
           actionlint \
           -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' \
           -ignore 'SC2016:'
-  ghalint:
-    if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
-    permissions:
-      # To checkout the repository
-      contents: read
-      # To identify changed files in PRs
-      pull-requests: read # To identify changed files
-    timeout-minutes: 1
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "aqua:suzuki-shunsuke/ghalint"
-        env:
-          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: ghalint
+        if: always()
         run: ghalint run
         env:
           GHALINT_LOG_COLOR: always
-  zizmor:
-    if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
-    permissions:
-      # To checkout the repository
-      contents: read
-      # To identify changed files in PRs
-      pull-requests: read # To identify changed files
-    timeout-minutes: 1
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "pipx:zizmor"
-        env:
-          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
       - name: zizmor
+        if: always()
         run: zizmor --pedantic --format=github --min-severity=low .github/workflows
         env:
           GH_TOKEN: ${{ github.token }}
