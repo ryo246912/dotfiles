@@ -225,3 +225,129 @@
   - [ ] google-driveの同期設定
 - [ ] Browser
   - [ ] obsidian-web-clipperの設定をインポート・ショートカットキーの設定
+
+## Windows
+### 初期セットアップ
+
+#### パッケージマネージャーのインストール
+- [ ] Scoop のインストール
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+  Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+  ```
+
+#### 基本ツールのインストール
+- [ ] Git
+  ```powershell
+  scoop install git
+  ```
+- [ ] Firefox / Chrome
+  ```powershell
+  scoop bucket add extras
+  scoop install firefox
+  scoop install chrome
+  ```
+- [ ] その他ユーティリティ
+  ```powershell
+  scoop install bitwarden
+  scoop install alacritty
+  scoop install autohotkey
+  scoop install powertoys
+  ```
+
+#### Windows PC設定
+- [ ] トラックパッドの設定
+  - [ ] スクロール方法を調整
+- [ ] クリップボード履歴を有効化
+  - [ ] 「Windows」+「V」で履歴共有を有効
+- [ ] バッテリー残量表示
+  - [ ] 「バッテリー表示」を％表示に変更
+- [ ] バッテリー充電設定（Lenovo）
+  - [ ] Lenovo Vantage を起動
+  - [ ] 「デバイス設定」→「バッテリー充電しきい値 / 保守モード」から充電上限を設定
+
+#### ブラウザの初期設定
+- [ ] Firefox でログイン
+  - [ ] Mozilla アカウントでログイン
+  - [ ] Twitter Container を設定
+- [ ] ブラウザの各種設定
+  - [ ] 拡張機能のインストール
+  - [ ] ホームページ設定
+
+#### その他アプリケーション
+- [ ] Google Drive のインストール
+  ```powershell
+  winget install --id Google.GoogleDrive -e
+  ```
+- [ ] ツール
+  ```powershell
+  winget install Anthropic.Claude
+  ```
+- [ ] Raycast のインストール
+  ```powershell
+  winget install --id 9PFXXSHC64H3 -e
+  ```
+- [ ] Thunderbird のセットアップ
+  - [ ] プロファイルを前の PC からコピー
+  - [ ] アドオンの再インストール
+- [ ] MusicBee のセットアップ
+  - [ ] MusicBee フォルダをコピー
+  - [ ] MusicBee アプリをコピーまたはインストール
+  - [ ] WiFi 接続を有効化
+  - [ ] ファイアウォール設定で MusicBee を許可
+    1. キーボードの「Windows キー + R」を押し、`control` と入力
+    2. 「システムとセキュリティ」→「Windows Defender ファイアウォール」を選択
+    3. 「Windows Defender ファイアウォールを介したアプリまたは機能を許可」をクリック
+    4. 右上の「設定の変更」を押す
+    5. リスト内の「MusicBee」の「プライベート」にチェックを入れる
+- [ ] EAC をセットアップ
+  - [ ] プロファイルをインストール
+  - [ ] エンコーダーを設定
+
+#### NAS の接続
+- [ ] QNAP Finder Pro のインストール
+  ```powershell
+  winget install QNAP.QfinderPro
+  ```
+- [ ] NAS にアクセス
+- [ ] ネットワークドライブを割り当て
+
+#### WSL のインストール
+- [ ] PowerShell を起動（管理者権限）
+- [ ] 実行ポリシーを設定
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+  ```
+- [ ] Ubuntu をインストール
+  ```powershell
+  wsl -d Ubuntu
+  ```
+- [ ] ユーザー名とパスワードを設定
+
+- [ ] chezmoiの実行
+  ```sh
+  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
+  ```
+
+- [ ] miseの実行
+  - [ ] [ghコマンドのインストール](https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian)
+  - [ ] ghコマンドのログイン
+    ```sh
+    gh auth login --scopes 'project'
+    ```
+  - [ ] GITHUB_TOKENを環境変数に設定
+    ```sh
+    export GITHUB_TOKEN=$(gh auth token)
+    ```
+  - [ ] 検証ツールのインストール
+    ```sh
+    mise install --jobs=1 cosign slsa-verifier
+    ```
+  - [ ] ランタイムのインストール
+    ```sh
+    mise install --jobs=1 node python rust
+    ```
+  - [ ] 他ツールのインストール
+    ```sh
+    mise install --jobs=2
+    ```
