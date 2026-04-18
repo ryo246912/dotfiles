@@ -59,16 +59,16 @@ jobs:
         if: steps.changed-files.outputs.json_any_changed == 'true'
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.json_all_changed_files }}
-        run: npx prettier --check $CHANGED_FILES
+        run: npx prettier --check "$CHANGED_FILES"
 
       - name: prettier (yaml)
         if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.yaml_all_changed_files }}
-        run: npx prettier --check $CHANGED_FILES
+        run: npx prettier --check "$CHANGED_FILES"
 
       - name: taplo (toml)
         if: always() && steps.changed-files.outputs.toml_any_changed == 'true'
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.toml_all_changed_files }}
-        run: npx @taplo/cli format --check $CHANGED_FILES
+        run: npx @taplo/cli format --check "$CHANGED_FILES"
