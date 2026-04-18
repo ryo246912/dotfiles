@@ -1,3 +1,4 @@
+// rulesync manages internal/custom rules and skills, while external skills are managed via the npx skills lockfile.
 {
   "targets": ["claudecode", "codexcli", "geminicli", "copilot", "copilotcli"],
   "features": {
@@ -5,7 +6,7 @@
     "codexcli": ["rules", "skills"],
     "geminicli": ["rules", "commands", "hooks"],
     "copilot": ["rules"],
-    "copilotcli": ["rules", "mcp"]
+    "copilotcli": ["rules", "mcp"],
   },
   "delete": false,
   "verbose": false,
