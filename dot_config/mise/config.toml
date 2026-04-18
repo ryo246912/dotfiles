@@ -69,7 +69,7 @@ cosign                                                      = "2.6.2"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.1"
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 node                                                        = "22.19.0"
-"npm:@devcontainers/cli"                                    = "0.85.0"
+"npm:@devcontainers/cli"                                    = "0.86.0"
 "npm:@google/gemini-cli"                                    = "0.36.0"
 "npm:@sasazame/ccresume"                                    = "1.0.0"
 "npm:@taplo/cli"                                            = "0.7.0"
