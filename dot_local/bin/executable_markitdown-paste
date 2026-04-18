@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title MarkItDown Paste
+# @raycast.mode silent
+
+# Optional parameters:
+# @raycast.icon 📝
+# @raycast.packageName Clipboard Utilities
+
+# Documentation:
+# @raycast.description Convert clipboard (Rich Text, PDF, Office, etc.) to Markdown using MarkItDown and paste it.
+
+# Check if markitdown is installed
+if ! command -v markitdown &> /dev/null; then
+  echo "Error: markitdown is not installed. Please install it with 'pip install markitdown'."
+  exit 1
+fi
+
+TEMP_FILE=$(mktemp /tmp/markitdown_XXXXXX)
+
+# Try to get file path from clipboard
+FILE_PATH=$(osascript -e '
+set theFiles to (clipboard info for (POSIX file "/"))
+if (theFiles contains «class furl») then
+    set theFile to (the clipboard as «class furl»)
+    return POSIX path of theFile
+else
+    return ""
+end if' 2>/dev/null)
+
+if [ -n "$FILE_PATH" ] && [ -f "$FILE_PATH" ]; then
+    # Convert file to markdown
+    RESULT=$(markitdown "$FILE_PATH" 2>/dev/null)
+else
+    # Try to get RTF content
+    osascript -e 'the clipboard as «class RTF »' &>/dev/null
+    if [ $? -eq 0 ]; then
+        osascript -e 'the clipboard as «class RTF »' > "${TEMP_FILE}.rtf"
+        RESULT=$(markitdown "${TEMP_FILE}.rtf" 2>/dev/null)
+        rm "${TEMP_FILE}.rtf"
+    else
+        # Fallback to plain text
+        PB_CONTENT=$(pbpaste)
+        if [ -n "$PB_CONTENT" ]; then
+            echo "$PB_CONTENT" > "$TEMP_FILE"
+            RESULT=$(markitdown "$TEMP_FILE" 2>/dev/null)
+        else
+            echo "Error: Clipboard is empty or contains unsupported format."
+            rm "$TEMP_FILE"
+            exit 1
+        fi
+    fi
+fi
+
+if [ -n "$RESULT" ]; then
+    echo "$RESULT" | pbcopy
+    # Paste the result
+    osascript -e 'tell application "System Events" to keystroke "v" using command down'
+    echo "Converted to Markdown and pasted."
+else
+    echo "Error: MarkItDown failed to convert the content."
+    rm "$TEMP_FILE"
+    exit 1
+fi
+
+rm "$TEMP_FILE"
