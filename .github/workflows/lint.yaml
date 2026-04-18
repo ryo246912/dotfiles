@@ -26,7 +26,7 @@ concurrency:
 jobs:
   lint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read # To checkout the repository
       pull-requests: read # To identify changed files in PRs
@@ -55,14 +55,14 @@ jobs:
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
-      - name: prettier (json)
+      - name: lint json
         if: steps.changed-files.outputs.json_any_changed == 'true'
         run: npx prettier --check ${{ steps.changed-files.outputs.json_all_changed_files }}
 
-      - name: prettier (yaml)
-        if: (success() || failure()) && steps.changed-files.outputs.yaml_any_changed == 'true'
+      - name: lint yaml
+        if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
         run: npx prettier --check ${{ steps.changed-files.outputs.yaml_all_changed_files }}
 
-      - name: taplo (toml)
-        if: (success() || failure()) && steps.changed-files.outputs.toml_any_changed == 'true'
+      - name: lint toml
+        if: always() && steps.changed-files.outputs.toml_any_changed == 'true'
         run: npx taplo format --check ${{ steps.changed-files.outputs.toml_all_changed_files }}
