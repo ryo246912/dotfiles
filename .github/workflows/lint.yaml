@@ -28,8 +28,10 @@ jobs:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-latest
     permissions:
-      contents: read # To checkout the repository
-      pull-requests: read # To identify changed files in PRs
+      # To checkout the repository
+      contents: read
+      # To identify changed files in PRs
+      pull-requests: read # To identify changed files
     timeout-minutes: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -65,4 +67,4 @@ jobs:
 
       - name: taplo (toml)
         if: (success() || failure()) && steps.changed-files.outputs.toml_any_changed == 'true'
-        run: npx taplo format --check ${{ steps.changed-files.outputs.toml_all_changed_files }}
+        run: npx @taplo/cli format --check ${{ steps.changed-files.outputs.toml_all_changed_files }}
