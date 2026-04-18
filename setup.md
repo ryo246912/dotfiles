@@ -274,17 +274,15 @@
   - [ ] 拡張機能のインストール
   - [ ] ホームページ設定
 
-#### クラウドストレージの設定
+#### その他アプリケーション
 - [ ] Google Drive のインストール
   ```powershell
   winget install --id Google.GoogleDrive -e
   ```
-- [ ] Obsidian と Google Drive の同期設定
+- [ ] ツール
   ```powershell
   winget install Anthropic.Claude
   ```
-
-#### その他アプリケーション
 - [ ] Raycast のインストール
   ```powershell
   winget install --id 9PFXXSHC64H3 -e

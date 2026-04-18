@@ -55,10 +55,11 @@ install_scoop_package() {
   fi
 
   for package in "${PACKAGES[@]}"; do
-    if ! scoop list | grep -q "$package"; then
+    package_name="${package##*/}"
+    if ! scoop list | awk '{print $1}' | grep -Fxq "$package_name"; then
       scoop install "$package"
     else
-      echo "$package is already installed"
+      echo "$package_name is already installed"
     fi
   done
 }
