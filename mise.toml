@@ -91,9 +91,14 @@ run = [
     "prettier --write --list-different dot_config/karabiner-ts/karabiner.json",
 ]
 
+[tasks.apm-compile]
+description = "Compile APM context into agent configuration files"
+run         = "apm compile --target all"
+
 [tools]
 actionlint                     = "1.7.7"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"
 "npm:@taplo/cli"               = "0.7.0"
 "npm:prettier"                 = "3.8.1"
+"pipx:apm-cli"                 = "0.8.11"
 "pipx:zizmor"                  = "1.12.1"
