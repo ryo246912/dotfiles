@@ -46,6 +46,6 @@ jobs:
           GHALINT_LOG_COLOR: always
       - name: zizmor
         if: always()
-        run: zizmor --pedantic --format=github --min-severity=low .github/workflows
+        run: zizmor --config zizmor.yml --pedantic --format=github --min-severity=low .github/workflows
         env:
           GH_TOKEN: ${{ github.token }}
