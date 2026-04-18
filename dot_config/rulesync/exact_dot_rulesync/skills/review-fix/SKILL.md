@@ -4,6 +4,8 @@ description: GitHub PR のレビューコメント（特にインラインコメ
 targets:
   - claudecode
   - codexcli
+  - geminicli
+  - copilot
 ---
 
 あなたは、GitHub の Pull Request のレビューコメント（インラインコメント含む）に対応するための高度な AI アシスタントです。

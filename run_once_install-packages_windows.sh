@@ -24,12 +24,18 @@ install_package() {
   )
 
   for package in "${PACKAGES[@]}"; do
-    if ! dpkg -l | grep -q "$package"; then
+    if [ "$package" = "mise" ] && ! command -v mise &> /dev/null; then
+      curl https://mise.run | sh
+      eval "$($HOME/.local/bin/mise activate zsh --shims)"
+    elif ! dpkg -l | grep -q "$package"; then
       apt install -y "$package"
     else
       echo "$package is already installed"
     fi
   done
+  if command -v zsh &>/dev/null; then
+    chsh -s "$(which zsh)"
+  fi
 }
 
 install_scoop_package() {
@@ -40,25 +46,27 @@ install_scoop_package() {
     obsidian
     thunderbird
     vscode
+    extras/unigetui
+    main/scoop-search
   )
 
+  if ! scoop bucket list | grep -q "extras"; then
+     scoop bucket add extras
+  fi
+
   for package in "${PACKAGES[@]}"; do
-    if ! scoop list | grep -q "$package"; then
-      if [[ "$package" == "alacritty" ]]; then
-        scoop install git
-        scoop bucket add extras
-        scoop install "$package"
-      else
-        scoop install "$package"
-      fi
+    package_name="${package##*/}"
+    if ! scoop list | awk '{print $1}' | grep -Fxq "$package_name"; then
+      scoop install "$package"
     else
-      echo "$package is already installed"
+      echo "$package_name is already installed"
     fi
   done
 }
 
 install_private_scoop_package() {
   local PACKAGES=(
+    musicbee
     NeeView
   )
 

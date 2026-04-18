@@ -164,33 +164,6 @@ zsh-profiler() {
   ZSHRC_PROFILE=1 zsh -i -c zprof
 }
 
-_claude_prepare_account2_dir() {
-  local config_dir="${HOME}/.claude-account2"
-  local shared_entry
-  mkdir -p "$config_dir"
-
-  for shared_entry in projects settings.json agents skills plugins; do
-    if [[ ! -e "$config_dir/$shared_entry" && ! -L "$config_dir/$shared_entry" && -e "${HOME}/.claude/$shared_entry" ]]; then
-      ln -s "../.claude/$shared_entry" "$config_dir/$shared_entry"
-    fi
-  done
-}
-
-claude1() {
-  CLAUDE_CONFIG_DIR="${HOME}/.claude" command claude "$@"
-}
-
-claude2() {
-  _claude_prepare_account2_dir
-  CLAUDE_CONFIG_DIR="${HOME}/.claude-account2" command claude "$@"
-}
-
-claude-clear-cache() {
-  local config_dir="${1:-${CLAUDE_CONFIG_DIR:-${HOME}/.claude}}"
-  rm -rf "${config_dir}/statsig"
-  echo "Claude statsig cache cleared: ${config_dir}/statsig"
-}
-
 # historyの定期バックアップを起動
 zsh-history-backup
 
