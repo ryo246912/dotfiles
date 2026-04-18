@@ -105,11 +105,12 @@ usage                                                       = "3.2.0"
 vim                                                         = "9.1.1006"
 
 [settings]
-auto_install = false
-experimental = true
-gpg_verify   = true
-jobs         = 1
-lockfile     = true
+auto_install   = false
+experimental   = true
+gpg_verify     = true
+install_before = "3d"
+jobs           = 1
+lockfile       = true
 
 [settings.npm]
 bun = true
