@@ -371,7 +371,7 @@ trigger = "gstl"
 
 [[snippets]]
 name    = "git stash pop"
-snippet = "git stash pop stash@{0}"
+snippet = "git stash pop --index stash@{0}"
 trigger = "gstp"
 
 [[snippets]]
