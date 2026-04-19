@@ -1,7 +1,7 @@
 [tools]
 "aqua:anthropics/claude-code"    = "2.1.92"
 "aqua:astral-sh/uv"              = "0.11.2"
-"aqua:cli/cli"                   = "2.89.0"
+"aqua:cli/cli"                   = "2.90.0"
 "aqua:golangci/golangci-lint"    = "2.11.4"
 "aqua:koalaman/shellcheck"       = "0.11.0"
 "aqua:mvdan/sh"                  = "3.13.0"
