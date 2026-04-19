@@ -217,6 +217,12 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+### AWS補助ツール
+- [ ] `taws` のメモを確認
+  - [taws の便利設定と使い方](not_config/memo/taws.md)
+- [ ] `aws-vault` のメモを確認
+  - [aws-vault の設定と使い方](not_config/memo/aws-vault.md)
+
 ### プライベート設定
 - [ ] thunderbird
   - [ ] アカウントの設定
