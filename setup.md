@@ -1,5 +1,7 @@
 # Setup
 
+- [補助ツールガイド](tool-guides.md)
+
 ## Mac
 ### 初期設定
 - [ ] XCode CLIのインストール
