@@ -80,6 +80,38 @@
         "detectionStrategy": "github-copilot",
         "args": ["--yolo"],
         "fallbackArgs": ["--yolo"]
+      },
+      {
+        "id": "sbx",
+        "name": "Claude (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["claude"],
+        "fallbackArgs": ["claude"],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-codex",
+        "name": "Codex (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["codex", "resume", "--yolo"],
+        "fallbackArgs": ["codex", "--yolo"],
+        "detectionStrategy": "codex"
+      },
+      {
+        "id": "sbx-copilot",
+        "name": "Copilot (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["copilot", "--resume", "--yolo"],
+        "fallbackArgs": ["copilot", "--yolo"],
+        "detectionStrategy": "github-copilot"
+      },
+      {
+        "id": "sbx-gemini",
+        "name": "Gemini (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["gemini", "-s"],
+        "fallbackArgs": ["gemini"],
+        "detectionStrategy": "gemini"
       }
     ],
     "defaultPresetId": "1",
