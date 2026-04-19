@@ -24,6 +24,42 @@ local function go_to_nth_tab(n)
   end
 end
 
+local function exact_word_pattern(word)
+  return string.format("\\V\\<%s\\>", vim.fn.escape(word, [[\]]))
+end
+
+local function ensure_current_word_search()
+  local word = vim.fn.expand("<cword>")
+  if word == nil or word == "" then
+    return false
+  end
+
+  local pattern = exact_word_pattern(word)
+  local current = vim.fn.getreg("/")
+
+  if vim.v.hlsearch == 0 or current == "" then
+    vim.fn.setreg("/", pattern)
+    vim.o.hlsearch = true
+    return true
+  end
+
+  return false
+end
+
+local function jump_current_word(direction)
+  return function()
+    local initialized = ensure_current_word_search()
+    if initialized then
+      local flags = direction == "n" and "W" or "bW"
+      for _ = 1, vim.v.count1 do
+        vim.fn.search(vim.fn.getreg("/"), flags)
+      end
+      return
+    end
+    vim.cmd(("normal! %d%s"):format(vim.v.count1, direction))
+  end
+end
+
 -- Key mappings
 -- {n,i,x,c...}[nore]map: [non-recursive] map (n:normal,i:insert,x:visual,c:command lineモード)
 -- xnoremap <key-sequence> <vim-command>
@@ -64,6 +100,8 @@ keymap({ "n", "x" }, "gy", '"+y', { noremap = true })
 
 -- ESC連打でハイライト解除
 keymap("n", "<Esc><Esc>", ":nohlsearch<CR><Esc>", { noremap = true, silent = true })
+keymap("n", "n", jump_current_word("n"), { noremap = true, silent = true, desc = "現在単語/検索結果の次へ移動" })
+keymap("n", "N", jump_current_word("N"), { noremap = true, silent = true, desc = "現在単語/検索結果の前へ移動" })
 
 -- Emacs-like movement in Insert/Command
 keymap({ "i", "c" }, "<C-a>", "<Home>", { noremap = true })
