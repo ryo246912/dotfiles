@@ -8,30 +8,30 @@ Inspired by [this tweet](https://x.com/RomanVDev/status/2044688769287106784), th
 
 ## Setup
 
-A wrapper function `keychain-cli` is provided in `dot_config/zsh/lazy/keychain.zsh`.
+Instead of a heavy wrapper, we use `navi` snippets for interactive management and raw `security` commands for scripting/direnv.
 
-### Commands
+### Interactive Management (via navi)
 
-- `keychain-cli set <account> [secret]`: Store a secret. If `secret` is omitted, you will be prompted.
-- `keychain-cli get <account>`: Retrieve a secret.
-- `keychain-cli delete <account>`: Remove a secret.
-- `keychain-cli list`: List all accounts stored under the `keychain-cli` service.
+Run `navi` and search for `keychain` to:
 
-## Integration with direnv
+- Store a secret
+- Retrieve a secret
+- Delete a secret
+- List accounts
 
-Instead of putting secrets in `.env`, use `.envrc` (via [direnv](https://direnv.net/)) to load them from the Keychain.
+### Integration with direnv
 
-Example `.envrc`:
+In your `.envrc` file, reference the Keychain using the `security` command:
 
 ```bash
 # Get secret from Keychain
-export STRIPE_API_KEY=$(keychain-cli get stripe_api_key)
-export GITHUB_TOKEN=$(keychain-cli get github_token)
+export STRIPE_API_KEY=$(security find-generic-password -s "keychain-cli" -a "stripe_api_key" -w)
+export GITHUB_TOKEN=$(security find-generic-password -s "keychain-cli" -a "github_token" -w)
 
 # Traditional env vars
 export APP_NAME="My Cool App"
 ```
 
-## Why not a dedicated tool?
+## Why this approach?
 
-As mentioned in the inspiration tweet, using the built-in Keychain works fine and provides native sync through iCloud without needing third-party extensions or cloud services specifically for environment variables.
+As mentioned in the inspiration tweet, the built-in Keychain works fine. By using `navi` snippets, we avoid adding more code to the shell startup (lazy loading) while still providing a convenient interface for managing the secrets.
