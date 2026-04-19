@@ -3,6 +3,7 @@ have_fun: false
 code_review:
   disable: false
   comment_severity_threshold: MEDIUM
+  auto_resolve_conversations: true
   max_review_comments: 20
   pull_request_opened:
     help: false
