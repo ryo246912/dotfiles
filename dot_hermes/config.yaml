@@ -1,0 +1,49 @@
+# Managed via chezmoi as ~/.hermes/config.yaml.
+# Keep secrets in ~/.hermes/.env or set them with `hermes config set`.
+
+terminal:
+  # local | docker | ssh | singularity | modal | daytona
+  backend: "local"
+  cwd: "."
+  timeout: 180
+  docker_mount_cwd_to_workspace: false
+
+approvals:
+  # manual | smart | off
+  mode: "manual"
+  timeout: 60
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+
+skills:
+  creation_nudge_interval: 15
+  # external_dirs:
+  #   - ~/.codex/skills
+  #   - ~/.claude/skills
+
+platform_toolsets:
+  cli: [hermes-cli]
+  telegram: [hermes-telegram]
+  discord: [hermes-discord]
+  whatsapp: [hermes-whatsapp]
+  slack: [hermes-slack]
+  signal: [hermes-signal]
+  homeassistant: [hermes-homeassistant]
+  qqbot: [hermes-qqbot]
+
+mcp_servers: {}
+# Example:
+# mcp_servers:
+#   filesystem:
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/yourname/projects"]
+
+# Example:
+# auxiliary:
+#   compression:
+#     provider: "auto"
+#     model: ""
