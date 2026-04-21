@@ -49,7 +49,7 @@ else
   bindkey -M viins -r "^J"
   bindkey -M viins -r "^K"
   bindkey -M viins -r "^L"
-  bindkey -M viins -r "^M"
+  # bindkey -M viins -r "^M"  # Enterキー - 削除しない
   bindkey -M viins -r "^N"
   bindkey -M viins -r "^O"
   bindkey -M viins -r "^P"
