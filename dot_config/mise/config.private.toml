@@ -1,6 +1,6 @@
 [tools]
 "aqua:Songmu/laminate" = "0.0.4"
 "aqua:k1LoW/deck"      = "1.23.1"
-"aqua:supabase/cli"    = "2.84.2"
+"aqua:supabase/cli"    = "2.90.0"
 "ubi:render-oss/cli"   = { version = "2.15.1", rename_exe = "render" }
 "ubi:superfly/flyctl"  = "0.4.29"
