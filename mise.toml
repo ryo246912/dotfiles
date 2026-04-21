@@ -37,7 +37,7 @@ run         = "actionlint -ignore 'SC2016:'"
 [tasks.lint-zizmor]
 description = "Run zizmor"
 hide        = true
-run         = "zizmor --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
+run         = "zizmor --config zizmor.yml --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
 
 [tasks.lint-ghalint]
 description = "Run ghalint"
@@ -92,8 +92,9 @@ run = [
 ]
 
 [tools]
-actionlint                     = "1.7.7"
+"aqua:rhysd/actionlint"        = "1.7.12"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.5"
+"aqua:suzuki-shunsuke/pinact"  = "3.9.0"
 "npm:@taplo/cli"               = "0.7.0"
 "npm:prettier"                 = "3.8.1"
-"pipx:zizmor"                  = "1.12.1"
+"pipx:zizmor"                  = "1.23.1"
