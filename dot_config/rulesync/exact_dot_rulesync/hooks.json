@@ -3,6 +3,13 @@
   "hooks": {},
   "claudecode": {
     "hooks": {
+      "sessionStart": [
+        {
+          "matcher": "clear",
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
@@ -18,7 +25,7 @@
       "postToolUse": [
         {
           "matcher": "Write|Edit|MultiEdit",
-          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- sed -i -e 's/[[:space:]]*$//' -e '$a\\\\' --"
+          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
         },
         {
           "matcher": "Write|Edit|MultiEdit",
@@ -37,6 +44,13 @@
   },
   "geminicli": {
     "hooks": {
+      "sessionStart": [
+        {
+          "matcher": "clear",
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
+          "timeout": 30
+        }
+      ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
@@ -53,6 +67,12 @@
   },
   "copilot": {
     "hooks": {
+      "sessionStart": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool copilot",
+          "timeout": 30
+        }
+      ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool copilot",

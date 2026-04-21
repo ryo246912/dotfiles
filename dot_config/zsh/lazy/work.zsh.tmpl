@@ -9,3 +9,5 @@ export JIRA_API_TOKEN="{{ (bitwarden "item" "Jira API Token").login.password | t
 if command -v ccmanager >/dev/null 2>&1; then
     export CCMANAGER_MULTI_PROJECT_ROOT=~/work/worktrees
 fi
+# terraform
+export TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
