@@ -9,6 +9,11 @@ snippet = "wt switch --no-cd $(git branch -r | fzf)"
 trigger = "gwa"
 
 [[snippets]]
+name    = "gwq add -b"
+snippet = "gwq add -b"
+trigger = "gwaa"
+
+[[snippets]]
 name    = "gwq cd"
 snippet = "gwq cd"
 trigger = "gwc"
