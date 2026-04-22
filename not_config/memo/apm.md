@@ -1,20 +1,24 @@
-# Agent Package Manager (APM) によるスキル管理
+# Agent Package Manager (APM) による外部スキル管理
 
-このプロジェクトでは、AIエージェント（Claude Code, Copilot CLI, Codex等）の設定やスキルを管理するために [APM](https://github.com/microsoft/apm) を導入しています。
+このプロジェクトでは、外部のAIエージェント用スキルやパッケージを効率的に導入・管理するために [APM](https://github.com/microsoft/apm) を導入しています。
 
-## ディレクトリ構成
+## コンセプト
 
-- `apm.yml`: プロジェクトのAPM構成ファイル。依存関係やスクリプトを定義します。
-- `.apm/`: ローカルのAPMプリミティブ（スキル、指示、プロンプト等）を格納するディレクトリ。
-  - `skills/`: 各スキルの定義 (`SKILL.md`)。バージョン管理の対象となります。
-  - `instructions/`: エージェントへの指示 (`.instructions.md`)。コンパイル対象です。
-  - `chatmodes/`: チャットモードの定義 (`.chatmode.md`)。
+- **カスタムスキル**: 既存の `rulesync` 等で管理を継続します（`.apm` 内には配置しません）。
+- **外部スキル**: APMを使用して `apm.yml` で依存関係を管理し、プロジェクトに導入します。
 
 ## 使い方
 
-### 1. スキルのコンパイル
+### 1. 外部パッケージの追加
 
-APMのプリミティブを各エージェントが読み込める形式（`CLAUDE.md`, `AGENTS.md` 等）にコンパイルします。
+```bash
+apm install <owner>/<repo>
+# 例: apm install microsoft/apm-sample-package
+```
+
+### 2. 設定のコンパイル
+
+インストールした外部スキルの指示などを、各エージェントが読み込める形式（`CLAUDE.md`, `AGENTS.md` 等）に反映させます。
 
 ```bash
 mise run apm-compile
@@ -22,35 +26,19 @@ mise run apm-compile
 apm compile --target all
 ```
 
-これにより、プロジェクト内のすべての指示とスキルがエージェントに共有されます。
+これにより、外部パッケージに含まれる指示が自動的に集約されます。
 
-### 2. 新しいスキルの追加
+## ディレクトリ構成
 
-1. `.apm/skills/スキル名/SKILL.md` を作成します。
-2. これをエージェントに読み込ませるには、`.apm/instructions/スキル名.instructions.md` に内容をコピー（またはリンク）し、フロントマターに `applyTo: "**"` を指定してください。
+- `apm.yml`: 外部パッケージのリストとバージョン管理。
+- `.apm/`: APMが使用するローカルプリミティブ格納用（通常は空で、外部パッケージのキャッシュ等は `apm_modules` に作成されます）。
 
-### 3. 依存関係のインストール
+## 各エージェントへの影響
 
-外部のAPMパッケージをインストールして、プロジェクトで共通のスキルや指示を利用できます。
-
-```bash
-apm install <owner>/<repo>
-```
-
-## rulesync との関係
-
-- **APM**: プロジェクト固有のスキル管理と、エージェント向け構成ファイルの生成を担当します。プロジェクトの `apm.yml` でバージョン管理が可能です。
-- **rulesync**: 複数のプロジェクト間でのグローバルなルール同期や、エージェントごとの詳細な設定（hooks, commands等）を担当します。
-
-基本的には、プロジェクト固有の「スキル」はAPMで管理し、マシン全体の「ルール」は rulesync で管理することを推奨します。
-
-## 各エージェントへの適用
-
-- **Claude Code**: `CLAUDE.md` を自動的に読み込みます。
-- **Copilot / VSCode**: `AGENTS.md` を自動的に読み込みます。
-- **Codex / Others**: `AGENTS.md` または `CLAUDE.md` を通じてプロジェクトの文脈を理解します。
+- **Claude Code**: `CLAUDE.md` に外部スキルの指示が追加されます。
+- **Copilot / Codex**: `AGENTS.md` に外部スキルの指示が追加されます。
 
 ## 注意事項
 
-- `CLAUDE.md` や `AGENTS.md` は `apm compile` によって上書きされます。
-- 元の `CLAUDE.md` の内容は `.apm/instructions/overview.instructions.md` に移行済みです。
+- `apm compile` は `CLAUDE.md` や `AGENTS.md` を自動生成するため、これらのファイルを手動で編集する場合は、APMによる上書きを考慮する必要があります。
+- 現在の運用では、プロジェクト独自の主要な指示は `CLAUDE.md` に直接記述されており、APMは主に追加の外部機能を「差し込む」ために利用します。

@@ -1,8 +1,6 @@
 name: app
 version: 1.0.0
-description: APM project for app
-author: google-labs-jules[bot]
+description: Agent Package Manager configuration for external skills
 dependencies:
   apm: []
   mcp: []
-scripts: {}
