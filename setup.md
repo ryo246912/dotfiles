@@ -217,6 +217,30 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+### カスタムアプリの作成手順
+- 手順
+1. **「スクリプトエディタ」**（Applications > Utilities > Script Editor.app）を起動
+2. 新規書類でapplescriptを作成
+
+```applescript
+do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
+```
+
+3. **保存設定**:
+   - メニューの「ファイル」→「書き出し...」を選択
+   - **ファイルフォーマット**: 「アプリケーション」を選択
+   - **名前**: 「Claude-Sub.app」など任意の名前に設定
+   - **場所**: 「アプリケーション」フォルダ等に保存
+
+- [ ] chrome
+```applescript
+do shell script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile3 > /dev/null 2>&1 &"
+```
+- [ ] Claude Desktop
+```applescript
+do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
+```
+
 ### プライベート設定
 - [ ] thunderbird
   - [ ] アカウントの設定
