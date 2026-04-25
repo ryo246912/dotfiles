@@ -98,3 +98,15 @@ run = [
 "npm:@taplo/cli"               = "0.7.0"
 "npm:prettier"                 = "3.8.1"
 "pipx:zizmor"                  = "1.23.1"
+
+[tasks.gh-infra-setup]
+description = "Install gh-infra extension"
+run         = "gh extension install babarot/gh-infra"
+
+[tasks.gh-infra-plan]
+description = "Run gh-infra plan"
+run         = "gh infra plan dot_config/gh-infra/"
+
+[tasks.gh-infra-apply]
+description = "Run gh-infra apply"
+run         = "gh infra apply dot_config/gh-infra/"

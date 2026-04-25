@@ -208,3 +208,15 @@ run         = "prettier --check '**/*.json'"
 [tasks.fix-json]
 description = "Run fix json files"
 run         = "prettier --write '**/*.json'"
+
+[tasks.gh-infra-setup]
+description = "Install gh-infra extension"
+run         = "gh extension install babarot/gh-infra"
+
+[tasks.gh-infra-plan]
+description = "Run gh-infra plan"
+run         = "gh infra plan dot_config/gh-infra/"
+
+[tasks.gh-infra-apply]
+description = "Run gh-infra apply"
+run         = "gh infra apply dot_config/gh-infra/"

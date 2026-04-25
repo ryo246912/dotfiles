@@ -1,0 +1,43 @@
+apiVersion: gh-infra/v1
+kind: Repository
+metadata:
+  name: ryo246912/dotfiles
+spec:
+  description: "ryo246912's dotfiles"
+  visibility: public
+  topics:
+    - dotfiles
+    - chezmoi
+    - mise
+    - zsh
+  homepage_url: https://github.com/ryo246912/dotfiles
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  allow_squash_merge: true
+  allow_merge_commit: true
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+  allow_update_branch: true
+  squash_merge_commit_title: PR_TITLE
+  squash_merge_commit_message: PR_BODY
+  rulesets:
+    - name: main
+      enforcement: active
+      target: branch
+      conditions:
+        ref_name:
+          include:
+            - "~DEFAULT_BRANCH"
+          exclude: []
+      rules:
+        - type: deletion
+        - type: non_fast_forward
+        - type: required_signatures
+        - type: pull_request
+          parameters:
+            required_approving_review_count: 1
+            dismiss_stale_reviews_on_push: true
+            require_code_owner_review: false
+            require_last_push_approval: true
+            required_review_thread_resolution: false
