@@ -37,6 +37,9 @@ aws iam list-groups-for-user --user-name $(aws sts get-caller-identity --query "
 # iam : display mfadevices
 aws iam list-mfa-devices
 
+# organization : display organization account list
+aws organizations list-accounts
+
 # organization : display organization account
 aws organizations describe-organization
 
