@@ -122,14 +122,4 @@ return {
       keymap("n", "<leader>gt", ":Neotree git_status<CR>", { noremap = true, silent = true, desc = "Git ステータスパネル" })
     end,
   },
-  {
-    "nanotee/zoxide.vim",
-    config = function()
-      -- cdの際にdirectoryのスコアを増やす
-      vim.g.zoxide_hook = "pwd"
-
-      -- zoxideを起動
-      vim.cmd("cnoremap zz :Zi<CR>")
-    end,
-  },
 }
