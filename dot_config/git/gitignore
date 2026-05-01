@@ -8,6 +8,9 @@ node_modules/
 __pycache__/
 *.pyc
 
+# terraform
+tftui.plan
+
 # git
 COMMIT_EDITMSG
 commondir
