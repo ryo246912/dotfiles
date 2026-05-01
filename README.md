@@ -13,3 +13,4 @@
 
 - [setup](setup.md)
 - [rulesync usage](dot_config/rulesync/README.md)
+- [AI agent tools](docs/ai-agent-tools.md)
