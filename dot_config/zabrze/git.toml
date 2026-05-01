@@ -662,6 +662,11 @@ snippet         = "ghui"
 trigger-pattern = "ghu"
 
 [[snippets]]
+name            = "gitpane"
+snippet         = "gitpane --root ~/work"
+trigger-pattern = "(gpa|glv)"
+
+[[snippets]]
 name            = "gitui"
 snippet         = "gitui"
 trigger-pattern = "^gu$"
