@@ -655,6 +655,17 @@ name            = "(git show) --stat"
 snippet         = "--stat"
 trigger-pattern = "(-s|-st)"
 
+# git tools
+[[snippets]]
+name            = "ghui"
+snippet         = "ghui"
+trigger-pattern = "ghu"
+
+[[snippets]]
+name            = "gitpane"
+snippet         = "gitpane --root ~/work"
+trigger-pattern = "(gpa|glv)"
+
 [[snippets]]
 name            = "gitui"
 snippet         = "gitui"
