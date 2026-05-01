@@ -1,5 +1,5 @@
 ---
-name: planing
+name: planning
 description: 実装計画を分析して `plan` ディレクトリにマークダウンとして作成する skill。要件整理、実装手順、課題対応、テスト方針を先に固めたいときに使う。
 targets:
   - claudecode
