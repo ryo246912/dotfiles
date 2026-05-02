@@ -14,6 +14,10 @@ __generate_and_load_completion() {
             atuin gen-completions --shell zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
+        "aws-vault")
+            curl -fs https://raw.githubusercontent.com/byteness/aws-vault/master/contrib/completions/zsh/aws-vault.zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
         "gh")
             gh completion -s zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
@@ -38,6 +42,11 @@ if command -v atuin >/dev/null 2>&1; then
     eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
     export ATUIN_CONFIG_DIR="$HOME/.config/atuin"
     __generate_and_load_completion "atuin"
+fi
+
+# aws-vault
+if command -v aws-vault >/dev/null 2>&1; then
+    __generate_and_load_completion "aws-vault"
 fi
 
 # aqua
