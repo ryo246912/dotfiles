@@ -11,7 +11,7 @@ __generate_and_load_completion() {
 
     case "$tool" in
         "atuin")
-            atuin gen-completions --shell zsh > "$completion_file" 2>/dev/null
+            [ ! -f "$completion_file" ] && atuin gen-completions --shell zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "aws-vault")
@@ -19,19 +19,19 @@ __generate_and_load_completion() {
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "gh")
-            gh completion -s zsh > "$completion_file" 2>/dev/null
+            [ ! -f "$completion_file" ] && gh completion -s zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "wt")
-            wt completion zsh > "$completion_file" 2>/dev/null
+            [ ! -f "$completion_file" ] && wt completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "gwq")
-            gwq completion zsh > "$completion_file" 2>/dev/null
+            [ ! -f "$completion_file" ] && gwq completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "mise")
-            mise completion zsh > "$completion_file" 2>/dev/null
+            [ ! -f "$completion_file" ] && mise completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
         "taws")
