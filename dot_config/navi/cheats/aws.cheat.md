@@ -62,7 +62,7 @@ aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]'
 LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && aws logs describe-log-streams --log-group-name "$LOG_GROUP"
 
 # awslogs : [--start=<time> ex.2m,5h,1d,2w,YYYY/MM/DD]
-LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && awslogs get "$LOG_GROUP" --timestamp --start=6h | lnav -c ':set-text-view-mode raw'
+LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && awslogs get "$LOG_GROUP" --timestamp --start=1h | lnav -c ':set-text-view-mode raw'
 
 # taws : taws in readonly mode
 aws-vault exec <profile> -- taws --readonly
