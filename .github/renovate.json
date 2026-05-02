@@ -77,7 +77,7 @@
     {  
       "matchDepNames": ["aqua:openai/codex","codex"],  
       "extractVersion": "^(?:rust-)?v?(?<version>.+)"  
-    },
+    }
   ],
   "customManagers": [
     {
