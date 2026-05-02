@@ -74,9 +74,9 @@
       ],
       "groupName": "atuin"
     },
-    {  
-      "matchDepNames": ["aqua:openai/codex","codex"],  
-      "extractVersion": "^(?:rust-)?v?(?<version>.+)"  
+    {
+      "matchDepNames": ["aqua:openai/codex", "codex"],
+      "extractVersion": "^(?:rust-)?v?(?<version>.+)"
     }
   ],
   "customManagers": [
