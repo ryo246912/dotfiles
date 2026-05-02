@@ -34,6 +34,10 @@ __generate_and_load_completion() {
             mise completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
+        "taws")
+            taws completion zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
     esac
 }
 
@@ -97,6 +101,11 @@ fi
 # mise
 if command -v mise >/dev/null 2>&1; then
     __generate_and_load_completion "mise"
+fi
+
+# taws
+if command -v taws >/dev/null 2>&1; then
+    __generate_and_load_completion "taws"
 fi
 
 # zabrze

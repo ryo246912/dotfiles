@@ -19,12 +19,6 @@ aws sts get-caller-identity --profile <profile>
 # sso : login sso
 aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 
-# taws : open current profile in readonly mode
-taws --readonly
-
-# taws : open specified profile and region in readonly mode
-AWS_PROFILE=<profile> AWS_REGION=<region> taws --readonly
-
 # aws-vault : run command with temporary credentials
 aws-vault exec <profile> -- aws sts get-caller-identity
 
@@ -69,6 +63,9 @@ LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq
 
 # awslogs : [--start=<time> ex.2m,5h,1d,2w,YYYY/MM/DD]
 LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && awslogs get "$LOG_GROUP" --timestamp --start=6h | lnav -c ':set-text-view-mode raw'
+
+# taws : open specified profile and region in readonly mode
+aws-vault exec <profile> -- taws --readonly
 
 # aws option : [--filter:filter by server][--query: filter by client(jq)][--output:text,json,table]
 <option>
