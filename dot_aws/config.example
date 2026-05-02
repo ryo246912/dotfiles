@@ -1,0 +1,18 @@
+# https://iret.media/188043
+# aws-vault用
+[profile XXX-source]
+sso_session = work
+sso_account_id = XXXXXXXXXXXXX
+sso_role_name = AppAdministratorAccess
+region = ap-northeast-1
+output = json
+
+# Terraform用
+[profile XXX]
+region = ap-northeast-1
+output = json
+credential_process = env -u AWS_VAULT -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_SECURITY_TOKEN aws-vault export --format=json XXX-source
+
+[sso-session work]
+sso_start_url = xxx
+sso_region = ap-northeast-1

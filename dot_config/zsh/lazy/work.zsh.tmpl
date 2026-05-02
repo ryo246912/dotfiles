@@ -5,6 +5,9 @@ export AWS_CLI_AUTO_PROMPT=on-partial
 # jira
 export JIRA_API_TOKEN="{{ (bitwarden "item" "Jira API Token").login.password | trim }}"
 {{- end }}
+# aws-vault
+export AWS_VAULT_BIOMETRICS=true
+export AWS_VAULT_BACKEND=keychain
 # ccmanager
 if command -v ccmanager >/dev/null 2>&1; then
     export CCMANAGER_MULTI_PROJECT_ROOT=~/work/worktrees

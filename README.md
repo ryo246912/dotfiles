@@ -12,4 +12,3 @@
 # Setup
 
 - [setup](setup.md)
-- [rulesync usage](dot_config/rulesync/README.md)

@@ -11,6 +11,7 @@
 _*
 plan*
 
+.aws/*
 .config/claude*
 .config/dbeaver*
 .config/memo*

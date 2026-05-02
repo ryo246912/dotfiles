@@ -14,6 +14,27 @@ snippet         = "aqua g"
 trigger-pattern = "(^as$|^ag$)"
 
 [[snippets]]
+name    = "aws-vault"
+snippet = "aws-vault"
+trigger = "awv"
+
+[[snippets]]
+cursor  = "👇"
+name    = "aws-vault exec <profile> -- "
+snippet = "aws-vault exec 👇 -- "
+trigger = "awe"
+
+[[snippets]]
+name    = "aws-vault list"
+snippet = "aws-vault list"
+trigger = "awl"
+
+[[snippets]]
+name    = "aws-vault login <login>"
+snippet = "aws-vault login "
+trigger = "awlo"
+
+[[snippets]]
 name            = "code ."
 snippet         = "code ."
 trigger-pattern = "^c\\.$"
