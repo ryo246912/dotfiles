@@ -73,6 +73,10 @@
         "ghcr.io/atuinsh/atuin"
       ],
       "groupName": "atuin"
+    },
+    {
+      "matchDepNames": ["aqua:openai/codex", "codex"],
+      "extractVersion": "^(?:rust-)?v?(?<version>.+)"
     }
   ],
   "customManagers": [
