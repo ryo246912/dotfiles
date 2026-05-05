@@ -97,4 +97,5 @@ run = [
 "aqua:suzuki-shunsuke/pinact"  = "3.9.2"
 "aqua:tamasfe/taplo"           = "0.10.0"
 "npm:prettier"                 = "3.8.1"
+"npm:@colbymchenry/codegraph" = "0.7.3"
 "pipx:zizmor"                  = "1.23.1"
