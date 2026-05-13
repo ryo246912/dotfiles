@@ -6,7 +6,7 @@
 "aqua:leg100/pug"                           = "0.6.5"
 "aqua:rclone/rclone"                        = "1.72.0"
 "aqua:terraform-linters/tflint"             = "0.62.0"
-"github:ByteNess/aws-vault"                 = "7.10.4"
+"github:ByteNess/aws-vault"                 = "7.10.7"
 "github:huseyinbabal/taws"                  = "1.3.0-rc.8"
 "go:github.com/lusingander/gotip/cmd/gotip" = "0.6.2"
 "go:gotest.tools/gotestsum"                 = "1.13.0"
