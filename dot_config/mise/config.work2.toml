@@ -12,4 +12,4 @@
 "go:gotest.tools/gotestsum"                 = "1.13.0"
 "pipx:awslogs"                              = "0.15.0"
 "pipx:tftui"                                = "0.13.4"
-terraform                                   = "1.14.9"
+terraform                                   = "1.15.2"
