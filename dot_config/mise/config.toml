@@ -111,7 +111,6 @@ vim                                                         = "9.1.1006"
 auto_install = false
 experimental = true
 gpg_verify   = true
-jobs         = 1
 lockfile     = true
 
 [settings.npm]
