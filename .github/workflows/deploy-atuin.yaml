@@ -1,0 +1,35 @@
+name: deploy-atuin
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - dot_config/atuin/fly.toml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy-atuin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy Atuin to Fly.io
+    runs-on: ubuntu-slim
+    environment: production
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          install_args: "github:superfly/flyctl"
+      - name: Deploy Atuin
+        run: flyctl deploy --app ryo-shellhistory -c dot_config/atuin/fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
