@@ -183,6 +183,11 @@ snippet         = "up --noinput"
 trigger-pattern = "^up$"
 
 [[snippets]]
+name            = "wifitui"
+snippet         = "wifitui"
+trigger-pattern = "(^wf$|^wi$)"
+
+[[snippets]]
 name            = "zinit"
 snippet         = "zinit"
 trigger-pattern = "^zi$"

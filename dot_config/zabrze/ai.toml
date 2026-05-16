@@ -93,3 +93,9 @@ global  = true
 name    = "(copilot|codex|gemini) --yolo"
 snippet = "--yolo"
 trigger = "yl"
+
+# ai tools
+[[snippets]]
+name            = "agentsview serve"
+snippet         = "agentsview serve"
+trigger-pattern = "(^ai$|ags)"
