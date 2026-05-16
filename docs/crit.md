@@ -7,13 +7,13 @@
 
 ## 構成
 
-| 項目         | 設定                                                        | 場所                                                      |
-| ------------ | ------------------------------------------------------------ | --------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                 | `dot_config/devcontainer/mise.toml`                       |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）  | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`) |
-| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `dot_config/devcontainer/devcontainer.json`               |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                    | `dot_config/devcontainer/devcontainer.json`               |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）     | `dot_config/devcontainer/scripts/post-create.sh`          |
+| 項目         | 設定                                                                      | 場所                                                                                  |
+| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                               | `dot_config/devcontainer/mise.toml`                                                   |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
+| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番）     | `dot_config/devcontainer/devcontainer.json`                                           |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                                  | `dot_config/devcontainer/devcontainer.json`                                           |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）                   | `dot_config/devcontainer/scripts/post-create.sh`                                      |
 | ポート通知   | 割り当てられた host port を `~/.crit-host-port` に記録し、mac-host へ通知 | `dot_config/devcontainer/scripts/executable_post-start.sh`（適用後: `post-start.sh`） |
 
 `~/.crit.config.json` の内容:

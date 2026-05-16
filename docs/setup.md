@@ -96,16 +96,17 @@
     gpg --export-secret-keys --armor <fingerprint> > ~/.secret_key.asc
     ```
 
-        - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
-        ```sh
-        gpg --list-secret-keys --keyid-format LONG
-        # ----------------------------------
-        # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
-        #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
-        # uid                 [ultimate] Your Name <your.email@example.com>
-        # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
-        ```
-        - パスフレーズは、パスワードマネージャーに保存しているものを参照
+    - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
+
+    ```sh
+    gpg --list-secret-keys --keyid-format LONG
+    # ----------------------------------
+    # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
+    #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    # uid                 [ultimate] Your Name <your.email@example.com>
+    # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
+    ```
+    - パスフレーズは、パスワードマネージャーに保存しているものを参照
 
     - 新規に秘密鍵を作成する場合は、以下のコマンドを実行
       - 基本そのままEnterを押していく

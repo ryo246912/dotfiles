@@ -1,0 +1,84 @@
+# fly.toml app configuration file for AgentsView PostgreSQL Sync.
+# See https://fly.io/docs/reference/configuration/
+
+app            = "ryo-agentsview"
+primary_region = "nrt"
+
+kill_signal  = "SIGINT"
+kill_timeout = "5s"
+
+[build]
+image = "ghcr.io/wesm/agentsview:0.29.0"
+
+[env]
+# 起動ログや health check 時に update check を走らせない。
+AGENTSVIEW_DISABLE_UPDATE_CHECK = "1"
+# PostgreSQL 内で AgentsView 用テーブルを置く schema 名。
+AGENTSVIEW_PG_SCHEMA = "agentsview"
+# 公式 image の entrypoint を `agentsview pg serve` モードに切り替える。
+PG_SERVE = "1"
+
+# AGENTSVIEW_CONFIG_TOML is written to /data/config.toml through Fly [[files]].
+# The secret value must be base64 encoded. It should contain public_url,
+# require_auth, auth_token, and cursor_secret:
+#   public_url = "https://ryo-agentsview.fly.dev"
+#   require_auth = true
+#   auth_token = "<openssl rand -base64 32>"
+#   cursor_secret = "<openssl rand -base64 32>"
+#
+#   [pg]
+#   allow_insecure = true
+#
+# AGENTSVIEW_PG_URL is a Fly secret, not a repo value. For the public viewer,
+# use a read-only PostgreSQL role against psgl.flycast with sslmode=disable and
+# allow_insecure=true. Local push uses a different DB role over Fly WireGuard.
+
+[[files]]
+# Fly secret の base64 値を展開して、AgentsView が読む config.toml として配置する。
+guest_path = "/data/config.toml"
+# `flyctl secrets set AGENTSVIEW_CONFIG_TOML=...` で渡す secret 名。
+secret_name = "AGENTSVIEW_CONFIG_TOML"
+
+[http_service]
+# リクエスト到着時に stopped machine を起動する。
+auto_start_machines = true
+# アイドル時は stopped に落として、常時稼働コストを抑える。
+auto_stop_machines = "stop"
+# http:// へのアクセスを https:// に寄せる。
+force_https = true
+# AgentsView の container 内 listen port。
+internal_port        = 8080
+min_machines_running = 0
+# default app process だけを HTTP service の対象にする。
+processes = ["app"]
+
+[http_service.http_options.response.headers]
+# ブラウザに referrer を送らせない。
+"Referrer-Policy" = "no-referrer"
+# HTTPS の利用をブラウザに記憶させる。
+"Strict-Transport-Security" = "max-age=31536000; includeSubDomains"
+# MIME sniffing を抑止する。
+"X-Content-Type-Options" = "nosniff"
+# iframe 埋め込みを拒否する。
+"X-Frame-Options" = "DENY"
+
+[http_service.tls_options]
+# TLS 1.2 以上のみ許可する。
+versions = ["TLSv1.2", "TLSv1.3"]
+
+[checks]
+[checks.agentsview_health]
+# 起動直後の migration / PG 接続待ちを許容する猶予時間。
+grace_period = "30s"
+method       = "GET"
+# read-only UI の root が返れば pg serve 自体は起動済みとみなす。
+path    = "/"
+port    = 8080
+timeout = "5s"
+type    = "http"
+
+[[vm]]
+# read-only UI 用なので shared CPU / 256MB に抑える。
+cpu_kind  = "shared"
+cpus      = 1
+memory_mb = 256
