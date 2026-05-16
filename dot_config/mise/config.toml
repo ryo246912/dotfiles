@@ -168,7 +168,7 @@ description = "Run other formatter"
 description = "Generate all rulesync outputs after chezmoi apply"
 run = [
     "rulesync generate",
-    "cd ~ && rulesync generate --config ~/.config/rulesync/rulesync.jsonc --global",
+    "cd ~ && rulesync generate --config ~/.rulesync/rulesync.jsonc --global",
 ]
 
 # actions
