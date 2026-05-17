@@ -38,3 +38,21 @@ for shared_entry in projects settings.json agents skills plugins; do
 		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
 	fi
 done
+
+# Playwright のインストール（ブラウザ操作自動化用）
+if ! command -v playwright &> /dev/null; then
+	echo "🚀 Playwright をインストールしています..."
+	npx playwright install --with-deps chromium
+	echo "✓ Playwright のインストールが完了しました"
+else
+	echo "ℹ️ Playwright は既にインストールされています"
+fi
+
+# Playwright MCP の設定（Claude Code 用）
+if ! claude mcp list | grep -q "playwright"; then
+	echo "🚀 Playwright MCP を Claude に追加しています..."
+	claude mcp add playwright npx @playwright/mcp@latest
+	echo "✓ Playwright MCP が追加されました"
+else
+	echo "ℹ️ Playwright MCP は既に設定されています"
+fi
