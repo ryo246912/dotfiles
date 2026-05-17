@@ -1,199 +1,167 @@
 #compdef multi-worktree
-# multi-worktree zsh completion
+
+_multi_worktree_task_names() {
+  reply=(${(f)"$(multi-worktree list 2>/dev/null | awk '{print $1}')"})
+}
+
+_multi_worktree_repo_names() {
+  local task_name="$1"
+  local task_path
+  task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
+  if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+    reply=(${(f)"$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -exec basename {} \; 2>/dev/null)"})
+  else
+    reply=()
+  fi
+}
+
+_multi_worktree_main_repo_names() {
+  local task_path
+  task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' 'NR==1 {print $3}')
+  if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+    reply=(${(f)"$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name '.*' -exec basename {} \; 2>/dev/null)"})
+  else
+    reply=()
+  fi
+}
 
 _multi_worktree() {
-    local -a subcommands
-    subcommands=(
-        'create:マルチrepoのworktreeを一括作成'
-        'recreate:不足しているworktreeを補充し、task設定を再生成'
-        'remove:worktreeを一括削除'
-        'list:タスク一覧表示'
-        'status:各repoの状態確認'
-        'sync:worktreeの内容をメインworktreeに同期（リポジトリ選択可）'
-        'cd:worktreeディレクトリに移動'
-        'dev:devcontainerでコマンド実行'
-        'exec:worktreeの指定リポジトリディレクトリでコマンド実行'
-        'open:VSCodeでworktreeを開く'
-        'help:ヘルプを表示'
-    )
+  local -a subcommands
+  subcommands=(
+    'create:マルチrepoのworktreeを一括作成'
+    'recreate:不足しているworktreeを補充し、task設定を再生成'
+    'remove:worktreeを一括削除'
+    'list:タスク一覧表示'
+    'status:各repoの状態確認'
+    'sync:worktreeの内容をメインworktreeに同期'
+    'cd:worktreeディレクトリに移動'
+    'dev:devcontainerでコマンド実行'
+    'exec:worktreeでコマンド実行'
+    'open:VSCodeでworktreeを開く'
+    'completion:補完スクリプト生成'
+    'help:ヘルプを表示'
+  )
 
-    local -a task_names
-    task_names=(${(f)"$(multi-worktree list 2>/dev/null | awk '{print $1}')"})
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
 
-    # リポジトリ名を補完する関数（git worktreeのみ対象）
-    _multi_worktree_repo_names() {
-        local task_name="$1"
-        if [[ -n "$task_name" ]]; then
-            local task_path
-            task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
-            if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-                local -a repo_names
-                local d name
-                for d in "$task_path"/*/; do
-                    [[ -d "$d" ]] || continue
-                    name=$(basename "$d")
-                    [[ "$name" == .* ]] && continue
-                    [[ -f "$d/.git" ]] || [[ -d "$d/.git" ]] || continue
-                    repo_names+=("$name:worktreeのディレクトリで実行")
-                done
-                _describe 'repository name' repo_names
+  _arguments -C \
+    '1:subcommand:->subcommand' \
+    '*::arg:->args' && return 0
+
+  case "$state" in
+    subcommand)
+      _describe 'subcommand' subcommands
+      ;;
+    args)
+      case "$line[1]" in
+        create)
+          _arguments \
+            '1:task-name:' \
+            '--group=[グループ名]:group:' \
+            '--from=[ベースブランチ]:branch:' \
+            '--branch=[ベースブランチ]:branch:' \
+            '--default-branch[各repoのデフォルトブランチを使用]'
+          ;;
+        recreate)
+          local -a tasks
+          _multi_worktree_task_names
+          tasks=(${reply[@]})
+          _arguments \
+            "1:task-name:(${tasks})" \
+            '--group=[グループ名]:group:' \
+            '--from=[ベースブランチ]:branch:' \
+            '--branch=[ベースブランチ]:branch:' \
+            '--default-branch[各repoのデフォルトブランチを使用]'
+          ;;
+        remove)
+          local -a tasks
+          _multi_worktree_task_names
+          tasks=(${reply[@]})
+          _arguments \
+            "1:task-name:(${tasks})" \
+            '--force[削除失敗時に強制削除を試行]'
+          ;;
+        status)
+          if [[ $CURRENT -eq 2 ]]; then
+            local -a tasks
+            _multi_worktree_task_names
+            tasks=('main' ${reply[@]})
+            _describe 'task name' tasks
+          elif [[ ${words[2]} == "main" ]]; then
+            _arguments '--group=[グループ名]:group:'
+          fi
+          ;;
+        sync)
+          if [[ $CURRENT -eq 2 ]]; then
+            local -a tasks
+            _multi_worktree_task_names
+            tasks=(${reply[@]})
+            _describe 'task name' tasks
+          else
+            local -a repos opts
+            _multi_worktree_repo_names "${words[2]}"
+            repos=(${reply[@]})
+            opts=('(--all)--all[rsyncで完全同期]')
+            _describe 'option' opts
+            _describe 'repo' repos
+          fi
+          ;;
+        cd)
+          if [[ $CURRENT -eq 2 ]]; then
+            local -a tasks
+            _multi_worktree_task_names
+            tasks=(${reply[@]})
+            _describe 'task name' tasks
+          elif [[ $CURRENT -eq 3 ]]; then
+            local -a repos
+            _multi_worktree_repo_names "${words[2]}"
+            repos=(${reply[@]})
+            _describe 'repo' repos
+          fi
+          ;;
+        dev)
+          if [[ $CURRENT -eq 2 ]]; then
+            local -a tasks
+            _multi_worktree_task_names
+            tasks=(${reply[@]})
+            _describe 'task name' tasks
+          fi
+          ;;
+        exec)
+          if [[ $CURRENT -eq 2 ]]; then
+            local -a tasks
+            _multi_worktree_task_names
+            tasks=('main' ${reply[@]})
+            _describe 'task name' tasks
+          elif [[ ${words[2]} == "main" ]]; then
+            if [[ "$PREFIX" == --* ]]; then
+              _arguments '--group=[グループ名]:group:'
+            elif [[ $CURRENT -le 4 ]]; then
+              local -a repos
+              _multi_worktree_main_repo_names
+              repos=(${reply[@]})
+              _describe 'repo' repos
             fi
-        fi
-    }
-
-    # メインworktreeのリポジトリ名を補完する関数（既存タスクのworktreeからrepo名を取得）
-    _multi_worktree_main_repo_names() {
-        local task_path
-        task_path=$(multi-worktree list 2>/dev/null | awk -F '\t' 'NR==1{print $3}')
-        if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-            local -a repo_names
-            local d name
-            for d in "$task_path"/*/; do
-                [[ -d "$d" ]] || continue
-                name=$(basename "$d")
-                [[ "$name" == .* ]] && continue
-                [[ -f "$d/.git" ]] || [[ -d "$d/.git" ]] || continue
-                repo_names+=("$name:メインworktreeのディレクトリで実行")
-            done
-            _describe 'repository name' repo_names
-        fi
-    }
-
-    local curcontext="$curcontext" state line
-    typeset -A opt_args
-
-    _arguments -C \
-        '1: :->subcommand' \
-        '*:: :->args' \
-        && return 0
-
-    case $state in
-        subcommand)
-            _describe -t subcommands 'multi-worktree subcommand' subcommands
-            ;;
-        args)
-            case $line[1] in
-                create)
-                    _arguments \
-                        '1:task-name:' \
-                        '--group=[グループ名]:group:'
-                    ;;
-                recreate)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        _describe 'task name' task_names
-                    else
-                        _arguments '--group=[グループ名]:group:'
-                    fi
-                    ;;
-                remove)
-                    _arguments \
-                        "1:task-name:(($task_names))" \
-                        '--force[git worktree remove失敗時も強制削除]'
-                    ;;
-                status)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        local -a main_args
-                        main_args=('main:各repoのデフォルトブランチ（メインworktree）の状態確認')
-                        _describe 'special' main_args
-                        _describe 'task name' task_names
-                    elif [[ "${words[2]}" == "main" ]]; then
-                        _arguments '--group=[グループ名]:group:'
-                    fi
-                    ;;
-                cd)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        _describe 'task name' task_names
-                    elif [[ $CURRENT -eq 3 ]]; then
-                        _multi_worktree_repo_names "${words[2]}"
-                    fi
-                    ;;
-                open)
-                    _arguments \
-                        "1:task-name:(($task_names))"
-                    ;;
-                sync)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        _describe 'task name' task_names
-                    else
-                        local task_name="${words[2]}"
-                        local -a sync_opts
-                        sync_opts=('--all:rsyncで完全同期（checkout --detach + rsync）')
-                        _describe 'options' sync_opts
-                        _multi_worktree_repo_names "$task_name"
-                    fi
-                    ;;
-                dev)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        _describe 'task name' task_names
-                    elif [[ $CURRENT -ge 3 ]]; then
-                        local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
-                        if [[ -f "$config_file" ]]; then
-                            local -a _dev_vals _dev_disp
-                            local _in_sec=false _ln
-                            while IFS= read -r _ln; do
-                                [[ "$_ln" =~ '^[[:space:]]*#' ]] && continue
-                                if [[ "$_ln" == '[dev_commands]' ]]; then
-                                    _in_sec=true; continue
-                                elif [[ "$_ln" =~ '^\[' ]]; then
-                                    _in_sec=false; continue
-                                fi
-                                if $_in_sec && [[ "$_ln" =~ '^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*"(.*)"[[:space:]]*$' ]]; then
-                                    _dev_vals+=("${match[2]}")
-                                    _dev_disp+=("${match[1]} -- ${match[2]}")
-                                fi
-                            done < "$config_file"
-                            [[ ${#_dev_vals[@]} -gt 0 ]] && compadd -d _dev_disp -a _dev_vals
-                        fi
-                    fi
-                    ;;
-                exec)
-                    if [[ $CURRENT -eq 2 ]]; then
-                        local -a main_args
-                        main_args=('main:メインworktreeのリポジトリでコマンド実行')
-                        _describe 'special' main_args
-                        _describe 'task name' task_names
-                    elif [[ "${words[2]}" == "main" ]]; then
-                        # exec main の場合
-                        if [[ $CURRENT -eq 3 ]]; then
-                            # --group か repo名
-                            local -a main_opts
-                            main_opts=('--group=[グループ名]:group:')
-                            _arguments "${main_opts[@]}"
-                            _multi_worktree_main_repo_names
-                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[3]}" == --group=* ]]; then
-                            # --group=GROUP の次はrepo名
-                            _multi_worktree_main_repo_names
-                        elif [[ "${words[-1]}" != "--" ]]; then
-                            local -a sep
-                            sep=('--:コマンドセパレータ')
-                            _describe 'separator' sep
-                        else
-                            _command_names -e
-                        fi
-                    else
-                        # exec <task> の場合
-                        if [[ $CURRENT -eq 3 ]]; then
-                            _multi_worktree_repo_names "${words[2]}"
-                        elif [[ $CURRENT -eq 4 ]] && [[ "${words[3]}" != "--" ]]; then
-                            local -a sep
-                            sep=('--:コマンドセパレータ')
-                            _describe 'separator' sep
-                        else
-                            _command_names -e
-                        fi
-                    fi
-                    ;;
-                list)
-                    # no arguments
-                    ;;
-                help)
-                    # no arguments
-                    ;;
-            esac
-            ;;
-    esac
-
-    return 0
+          elif [[ $CURRENT -eq 3 ]]; then
+            local -a repos
+            _multi_worktree_repo_names "${words[2]}"
+            repos=(${reply[@]})
+            _describe 'repo' repos
+          fi
+          ;;
+        open)
+          local -a tasks
+          _multi_worktree_task_names
+          tasks=(${reply[@]})
+          _arguments "1:task-name:(${tasks})"
+          ;;
+        completion)
+          _arguments "1:shell:(bash zsh fish powershell)"
+          ;;
+      esac
+      ;;
+  esac
 }
 
 _multi_worktree "$@"

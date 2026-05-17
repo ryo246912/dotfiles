@@ -10,6 +10,8 @@
 {{- end }}
 _*
 plan*
+tools/multi-worktree
+tools/multi-worktree/**
 
 .aws/*
 .config/claude*
@@ -25,6 +27,7 @@ flake*
 chezmoi.toml
 mise.toml
 taplo.toml
+go.work*
 rulesync.jsonc
 rulesync.lock
 

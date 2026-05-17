@@ -1,14 +1,38 @@
 #!/usr/bin/env bash
 # multi-worktree bash completion
 
+_multi_worktree_task_names() {
+    multi-worktree list 2>/dev/null | awk '{print $1}'
+}
+
+_multi_worktree_task_path() {
+    local task_name="$1"
+    multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1
+}
+
+_multi_worktree_repo_names() {
+    local task_name="$1"
+    local task_path
+    task_path="$(_multi_worktree_task_path "$task_name")"
+    if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+        find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null
+    fi
+}
+
+_multi_worktree_main_repo_names() {
+    local task_path
+    task_path="$(multi-worktree list 2>/dev/null | awk -F $'\t' 'NR==1 {print $3}')"
+    if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
+        find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null
+    fi
+}
+
 _multi_worktree_completion() {
     local cur prev words cword
     _init_completion || return
 
-    # サブコマンドのリスト
-    local subcommands="create recreate remove list status sync cd dev exec open help"
+    local subcommands="create recreate remove list status sync cd dev exec open help completion"
 
-    # 最初の引数（サブコマンド）の補完
     if [[ $cword -eq 1 ]]; then
         COMPREPLY=($(compgen -W "$subcommands" -- "$cur"))
         return 0
@@ -16,143 +40,80 @@ _multi_worktree_completion() {
 
     local subcommand="${words[1]}"
 
-    # サブコマンドごとの補完
     case "$subcommand" in
         create)
-            # create は --group= オプションのみ
             if [[ "$cur" == --* ]]; then
-                COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+                COMPREPLY=($(compgen -W "--group= --from= --branch= --default-branch" -- "$cur"))
             fi
             ;;
 
         recreate)
             if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+                COMPREPLY=($(compgen -W "$(_multi_worktree_task_names)" -- "$cur"))
             elif [[ "$cur" == --* ]]; then
-                COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+                COMPREPLY=($(compgen -W "--group= --from= --branch= --default-branch" -- "$cur"))
             fi
             ;;
 
         remove)
-            # removeサブコマンドはタスク名と--forceを補完
             if [[ $cword -eq 2 ]]; then
-                # タスク名の一覧を取得（multi-worktree list の出力をパース）
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ $cword -eq 3 ]]; then
+                COMPREPLY=($(compgen -W "$(_multi_worktree_task_names)" -- "$cur"))
+            elif [[ "$cur" == --* ]]; then
                 COMPREPLY=($(compgen -W "--force" -- "$cur"))
             fi
             ;;
 
         status)
             if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "main $task_names" -- "$cur"))
-            elif [[ $cword -eq 3 && "${words[2]}" == "main" ]]; then
+                COMPREPLY=($(compgen -W "main $(_multi_worktree_task_names)" -- "$cur"))
+            elif [[ ${words[2]} == "main" && "$cur" == --* ]]; then
                 COMPREPLY=($(compgen -W "--group=" -- "$cur"))
             fi
             ;;
 
-        cd)
-            if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ $cword -eq 3 ]]; then
-                local task_name="${words[2]}"
-                local task_path=$(multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
-                if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-                    local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
-                    COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
-                fi
-            fi
-            ;;
-
-        open)
-            if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            fi
-            ;;
-
         sync)
-            # syncコマンドはタスク名とリポジトリ名を補完
             if [[ $cword -eq 2 ]]; then
-                # タスク名の一覧を取得
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
+                COMPREPLY=($(compgen -W "$(_multi_worktree_task_names)" -- "$cur"))
             else
-                # タスク名以降は --all オプションとリポジトリ名を補完
                 local task_name="${words[2]}"
                 if [[ "$cur" == --* ]]; then
                     COMPREPLY=($(compgen -W "--all" -- "$cur"))
-                elif [[ -n "$task_name" ]]; then
-                    local task_path=$(multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
-                    if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-                        local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
-                        COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
-                    fi
+                else
+                    COMPREPLY=($(compgen -W "$(_multi_worktree_repo_names "$task_name")" -- "$cur"))
                 fi
             fi
             ;;
 
-        dev)
+        cd|open|dev)
             if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ $cword -ge 3 ]]; then
-                # [dev_commands] セクションからコマンド名を補完
-                local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
-                if [[ -f "$config_file" ]]; then
-                    local dev_cmd_names
-                    dev_cmd_names=$(awk '
-                        /^\[dev_commands\]/ { in_section=1; next }
-                        /^\[/ { in_section=0 }
-                        in_section && /^[[:space:]]*[^[:space:]=]+[[:space:]]*=/ {
-                            match($0, /^[[:space:]]*([^[:space:]=]+)/, arr)
-                            print arr[1]
-                        }
-                    ' "$config_file")
-                    COMPREPLY=($(compgen -W "$dev_cmd_names" -- "$cur"))
-                fi
+                COMPREPLY=($(compgen -W "$(_multi_worktree_task_names)" -- "$cur"))
+            elif [[ "$subcommand" == "cd" && $cword -eq 3 ]]; then
+                COMPREPLY=($(compgen -W "$(_multi_worktree_repo_names "${words[2]}")" -- "$cur"))
             fi
             ;;
 
         exec)
-            # execコマンドはタスク名・リポジトリ名を補完
             if [[ $cword -eq 2 ]]; then
-                local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
-                COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
-            elif [[ $cword -eq 3 ]]; then
-                local task_name="${words[2]}"
-                local task_path=$(multi-worktree list 2>/dev/null | awk -F $'\t' -v task="$task_name" '$1 == task {print $3}' | head -n 1)
-                if [[ -n "$task_path" ]] && [[ -d "$task_path" ]]; then
-                    local repo_names=$(find "$task_path" -mindepth 1 -maxdepth 1 -type d ! -name ".*" -exec basename {} \; 2>/dev/null)
-                    COMPREPLY=($(compgen -W "$repo_names" -- "$cur"))
+                COMPREPLY=($(compgen -W "main $(_multi_worktree_task_names)" -- "$cur"))
+            elif [[ ${words[2]} == "main" ]]; then
+                if [[ "$cur" == --* ]]; then
+                    COMPREPLY=($(compgen -W "--group=" -- "$cur"))
+                elif [[ $cword -le 4 ]]; then
+                    COMPREPLY=($(compgen -W "$(_multi_worktree_main_repo_names)" -- "$cur"))
                 fi
-            elif [[ "${words[$cword-1]}" != "--" ]] && ! printf '%s\n' "${words[@]}" | grep -q '^--$'; then
-                # -- が未入力なら -- を補完
-                COMPREPLY=($(compgen -W "--" -- "$cur"))
-            else
-                # -- 以降はファイル補完
-                COMPREPLY=($(compgen -f -- "$cur"))
+            elif [[ $cword -eq 3 ]]; then
+                COMPREPLY=($(compgen -W "$(_multi_worktree_repo_names "${words[2]}")" -- "$cur"))
             fi
             ;;
 
-        list)
-            # list は引数なし
-            ;;
-
-        help)
-            # help は引数なし
-            ;;
-
-        *)
+        completion)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "bash zsh fish powershell" -- "$cur"))
+            fi
             ;;
     esac
 
     return 0
 }
 
-# multi-worktree コマンドに対して補完関数を登録
 complete -F _multi_worktree_completion multi-worktree
