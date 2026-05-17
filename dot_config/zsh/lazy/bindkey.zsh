@@ -61,7 +61,7 @@ else
   bindkey -M viins -r "^Q^X"
   bindkey -M viins -r "^Q^Z"
   bindkey -M viins -r "^R"
-  bindkey -M viins -r "^S"
+#   bindkey -M viins -r "^S"
   bindkey -M viins -r "^T"
   bindkey -M viins -r "^U"
   bindkey -M viins -r "^V"
@@ -104,3 +104,7 @@ else
   bindkey "^[N" history-search-forward
   bindkey "^[P" history-search-backward
 fi
+
+# ctrl + sでhalfpipe起動
+bindkey "^S" halfpipe
+bindkey -M viins "^S" halfpipe
