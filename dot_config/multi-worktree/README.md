@@ -2,12 +2,13 @@
 
 マルチリポジトリ × git worktree 管理ツール
 
-複数のリポジトリに対して、タスク単位で git worktree を一括作成し、共通の親ディレクトリにまとめて devcontainer でマウントする仕組みを提供します。
+複数のリポジトリに対して、タスク単位で git worktree を一括作成し、共通の親ディレクトリにまとめて devcontainer または Docker Sandboxes で扱う仕組みを提供します。
 
 ## 特徴
 
 - **タスク単位でのマルチリポジトリ管理**: 複数のリポジトリに対して同じブランチ名で worktree を一括作成
 - **devcontainer 自動生成**: タスクごとに devcontainer.json を自動生成し、すべてのリポジトリを一括マウント
+- **Docker Sandboxes 対応**: `multi-worktree dev <task> --sbx ...` で sandbox backend を起動
 - **グループ管理**: 用途別にリポジトリをグループ化して管理可能
 
 ## インストール
@@ -18,6 +19,7 @@
 - `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
 - `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
 - `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
+- `docs/docker-sandboxes.md` - Docker Sandboxes 導入メモと devcontainer 比較
 
 ### 基本セットアップ
 
@@ -110,6 +112,11 @@ worktree_prefix = "multi-worktree"
 
 [settings]
 default_group = "default"
+
+[settings.sandbox]
+default_agent = "claude"
+default_name_prefix = "mw"
+preferred_cli = "sbx"
 ```
 
 ### 設定項目
@@ -126,6 +133,14 @@ default_group = "default"
 #### `[settings]`
 
 - `default_group`: デフォルトで使用するグループ名
+
+#### `[settings.sandbox]`
+
+- `default_agent`: `multi-worktree dev <task> --sbx` で agent を省略したときのデフォルト
+- `default_name_prefix`: sandbox 名の接頭辞
+- `preferred_cli`: 優先する Docker Sandboxes CLI
+  - `sbx` を推奨
+  - `sbx` が無い場合は `docker sandbox` に fallback
 
 ## 使い方
 
@@ -192,13 +207,14 @@ multi-worktree open feat/add-auth
 
 worktreeディレクトリをVSCodeで開きます。
 
-5. **devcontainer でコマンドを実行**
+5. **devcontainer または Docker Sandboxes でコマンドを実行**
 
 ```bash
-multi-worktree exec feat/add-auth ccmanager
+multi-worktree dev feat/add-auth claude
+multi-worktree dev feat/add-auth --sbx claude
 ```
 
-devcontainerを起動し、その中でコマンドを実行します。既にコンテナが起動している場合はスキップされます。
+devcontainer backend では既存挙動のまま `devcontainer up` / `devcontainer exec` を使います。sandbox backend を使う場合は `--sbx` を先頭に付けます。
 
 7. **各リポジトリのステータスを確認**
 
@@ -308,7 +324,7 @@ exit
 
 ### `dev <task-name> [command]`
 
-指定したタスクの devcontainer でコマンドを実行します。
+指定したタスクを devcontainer backend で実行します。
 
 **動作:**
 1. worktree ディレクトリに移動
@@ -326,6 +342,29 @@ multi-worktree dev feat/add-auth claude
 multi-worktree dev feat/add-auth ccmanager
 multi-worktree dev feat/add-auth bash
 ```
+
+### `dev <task-name> --sbx [agent] [--name <sandbox-name>] [--cli <sbx|docker>] [-- <agent-args...>]`
+
+指定したタスクを Docker Sandboxes backend で起動します。
+
+**動作:**
+1. task root を sandbox workspace に渡します
+2. `sbx` があれば `sbx`、なければ `docker sandbox` を使います
+3. `--name` を省略した場合は `mw-<task>-<agent>` 形式の名前を自動生成します
+4. `--` 以降は agent CLI にそのまま渡します
+
+**例:**
+```bash
+multi-worktree dev feat/add-auth --sbx claude
+multi-worktree dev feat/add-auth --sbx codex -- --continue
+multi-worktree dev feat/add-auth --sbx --name mw-feat-add-auth-claude claude
+multi-worktree dev feat/add-auth --sbx --cli docker claude
+```
+
+**補足:**
+- `docker sandbox` fallback は Docker Desktop の実装差分を吸収するため、古い `--workspace` 形式にも対応します
+- user-level config (`~/.claude`, `~/.codex`) は自動コピーしません
+- 詳細な比較と導入方針は [docs/docker-sandboxes.md](/Users/ryo./Programming/ai/DOTFILE-89/docs/docker-sandboxes.md) を参照してください
 
 ### `exec <task-name> [repo] <command> [args...]`
 
@@ -441,6 +480,14 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
+### Docker Sandboxes との統合
+
+- `multi-worktree dev <task> --sbx ...` で task root をそのまま sandbox workspace に渡します
+- `sbx` が利用可能なら `sbx run --name <name> <agent> <task-root>` を優先します
+- `sbx` が無い場合は `docker sandbox run` に fallback します
+- `.claude/settings.local.json` の通知 hook は `mac-host` が無い環境では no-op になるため、sandbox でも安全側で使えます
+- project-level config の扱いと devcontainer 比較は [docs/docker-sandboxes.md](/Users/ryo./Programming/ai/DOTFILE-89/docs/docker-sandboxes.md) を参照してください
+
 ## トラブルシューティング
 
 ### 設定ファイルが見つからない
@@ -469,6 +516,10 @@ multi-worktree recreate feat/add-auth
 ```
 
 `recreate` は既存の repo worktree directory は保持したまま、`devcontainer.json` と `.claude/settings.local.json` を current config で上書き再生成します。`.git/` は欠けているときだけ補修されます。
+
+### Docker Sandboxes CLI が見つからない
+
+`multi-worktree dev <task> --sbx ...` が失敗した場合は、まず `sbx version` を確認してください。`sbx` が無い場合でも `docker sandbox run --help` が通れば fallback できますが、agent 対応状況は `sbx` より限定される場合があります。
 
 ### worktree の削除に失敗する
 
