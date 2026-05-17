@@ -11,6 +11,7 @@ return {
           border = "curved",
         },
       })
+      require("core.file_actions").setup()
 
       local Terminal = require("toggleterm.terminal").Terminal
       local keymap = vim.keymap.set
