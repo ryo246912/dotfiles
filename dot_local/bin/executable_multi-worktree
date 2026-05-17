@@ -987,7 +987,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\""
+            "command": "~/.config/devcontainer/scripts/devcontainer-host-action.sh notify --event pending"
           }
         ]
       }
@@ -998,7 +998,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\""
+            "command": "~/.config/devcontainer/scripts/devcontainer-host-action.sh notify --event stop"
           }
         ]
       }
@@ -1008,6 +1008,32 @@ write_claude_settings_file() {
 EOF
 
     log_success ".claude/settings.local.json を生成しました: $claude_settings_file"
+
+    generate_local_project_ai_docs "$worktree_base_dir"
+}
+
+generate_local_project_ai_docs() {
+    local worktree_base_dir="$1"
+    local template_dir="$HOME/.config/multi-worktree/templates"
+    local templates=(
+        "local-project-AGENTS.md:AGENTS.md"
+        "local-project-CLAUDE.md:CLAUDE.md"
+    )
+
+    for template_mapping in "${templates[@]}"; do
+        local source_name="${template_mapping%%:*}"
+        local target_name="${template_mapping##*:}"
+        local source_path="${template_dir}/${source_name}"
+        local target_path="${worktree_base_dir}/${target_name}"
+
+        if [[ ! -f "$source_path" ]]; then
+            log_warn "AI ガイド用テンプレートが見つかりません: $source_path"
+            continue
+        fi
+
+        cp "$source_path" "$target_path"
+        log_success "${target_name} を生成しました: $target_path"
+    done
 }
 
 ensure_task_support_files() {
