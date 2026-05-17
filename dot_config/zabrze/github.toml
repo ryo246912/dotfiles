@@ -1,0 +1,14 @@
+[[snippets]]
+name    = "gh infra plan"
+snippet = "gh infra plan dot_config/gh-infra/"
+trigger = "ghip"
+
+[[snippets]]
+name    = "gh infra apply"
+snippet = "gh infra apply dot_config/gh-infra/"
+trigger = "ghia"
+
+[[snippets]]
+name    = "gh infra import"
+snippet = "gh infra import"
+trigger = "ghii"
