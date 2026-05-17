@@ -1,0 +1,15 @@
+{
+  "identities": [
+    {
+      "id": "personal",
+      "name": "Your Name",
+      "email": "personal@example.com"
+    },
+    {
+      "id": "work",
+      "name": "Your Name",
+      "email": "work@example.com"
+    }
+  ],
+  "bindings": []
+}
