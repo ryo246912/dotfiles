@@ -49,7 +49,7 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
 USER root
 
 # install tool via curl
-RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+# RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 
 USER vscode
 
