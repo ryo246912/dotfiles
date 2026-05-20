@@ -18,13 +18,13 @@ trigger-pattern = "(^ccmc2$|ccmcc2)"
 [[snippets]]
 name    = "devcontainer up"
 snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
-trigger = "dcu"
+trigger = "dcup"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
 snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
-trigger = "dce"
+trigger = "dcex"
 
 [[snippets]]
 name    = "mcp-cli"
