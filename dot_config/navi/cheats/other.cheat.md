@@ -65,10 +65,10 @@ rclone lsd <remote>:<folder-name>
 rclone copy <remote>:<folder-name> <remote2>:<folder-name2> -P
 
 # renovate: dry-run remote
-LOG_LEVEL=debug renovate --token "$(gh auth token)" --dry-run ryo246912/dotfiles
+RENOVATE_TOKEN=$(gh auth token) LOG_LEVEL=debug renovate --dry-run ryo246912/dotfiles
 
 # renovate: run local
-LOG_LEVEL=debug renovate --token "$(gh auth token)" --dry-run --platform=local
+RENOVATE_TOKEN=$(gh auth token) LOG_LEVEL=debug renovate --dry-run --platform=local
 
 # renovate: create renovate dependency dashboard
 RENOVATE_TOKEN=$(gh auth token) renovate --platform github ryo246912/dotfiles

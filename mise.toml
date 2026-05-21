@@ -40,7 +40,7 @@ run         = "actionlint -ignore 'SC2016:'"
 [tasks.lint-zizmor]
 description = "Run zizmor"
 hide        = true
-run         = "zizmor --config zizmor.yml --pedantic --gh-token=$(gh auth token) --min-severity=low .github/workflows"
+run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic --min-severity=low .github/workflows"
 
 [tasks.lint-ghalint]
 description = "Run ghalint"
