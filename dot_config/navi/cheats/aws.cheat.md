@@ -19,8 +19,8 @@ aws sts get-caller-identity --profile <profile>
 # sso : login sso
 aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 
-# aws-vault : run command with temporary credentials
-aws-vault exec <profile> -- aws sts get-caller-identity
+# aws-vault : run command with temporary credentials [ex.aws-vault exec <profile> -- aws sts get-caller-identity]
+aws-vault exec <profile> --
 
 # aws-vault : login AWS console
 aws-vault login <profile> && export AWS_PROFILE=<profile>
