@@ -87,7 +87,9 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 6. **Configure GitHub repositories:**
 
    ```bash
-   setup-github
+   # Initial setup (requires gh-infra extension)
+   mise run gh-infra-setup
+   mise run gh-infra-apply
    ```
 
 7. **Apply Karabiner key mappings (macOS only):**
@@ -186,6 +188,8 @@ This repository treats personal development environment as code:
 - The repository supports both personal and work environments with dedicated configuration files
 
 - All command-line tools are managed through mise for version consistency
+
+- GitHub repository settings and files are managed via gh-infra
 
 - Chezmoi templates use hash-based change detection for efficient updates
 
