@@ -210,3 +210,12 @@ run         = "prettier --check '**/*.json'"
 [tasks.fix-json]
 description = "Run fix json files"
 run         = "prettier --write '**/*.json'"
+
+# agent skills
+[tasks.skills-install]
+description = "Install agent skills from skills-lock.json"
+run         = "npx skills experimental_install"
+
+[tasks.skills-update]
+description = "Update agent skills to latest versions"
+run         = "npx skills update -y"

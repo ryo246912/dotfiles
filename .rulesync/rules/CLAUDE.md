@@ -205,3 +205,22 @@ This repository treats personal development environment as code:
 - **dot_config/zabrze/\*.toml** - All available command abbreviations
 - **dot_config/git/config.tmpl** - Git configuration and aliases
 - **.chezmoiignore** - Complete list of ignored files and patterns
+
+## Agent Skills Management
+
+This repository uses a two-tiered strategy for managing AI agent skills.
+
+### 1. Internal & Custom Skills (rulesync)
+
+- Managed via `rulesync` with source in `dot_config/rulesync/exact_dot_rulesync/skills/`.
+- Run `mise run rulesync-generate` to synchronize internal skills and rules.
+
+### 2. External & Community Skills (npx skills / gh skill)
+
+- Managed via `skills-lock.json` for version locking.
+- Use `npx skills add <source>` to add new external skills.
+- Use `mise run skills-install` to restore skills from the lockfile.
+- Use `mise run skills-update` to update external skills to their latest versions.
+- Use `gh skill search` and `gh skill preview` to discover community skills.
+
+Refer to `not_config/memo/agent-skills.md` for more detailed information on the management strategy.
