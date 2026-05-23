@@ -21,6 +21,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:dlvhdr/diffnav"                                       = "0.11.0"
 "aqua:dlvhdr/gh-dash"                                       = "4.24.1"
 "aqua:docker/cli"                                           = "29.4.3"
+"aqua:evilmartians/lefthook"                                = "2.1.4"
 "aqua:gitui-org/gitui"                                      = "0.22.1"
 "aqua:golangci/golangci-lint"                               = "2.12.2"
 "aqua:hadolint/hadolint"                                    = "2.14.0"
@@ -36,6 +37,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:pnpm/pnpm"                                            = "11.1.1"
 "aqua:rhysd/actionlint"                                     = "1.7.12"
 "aqua:samwho/spacer"                                        = "0.5.0"
+"aqua:secretlint/secretlint"                                = "11.4.1"
 "aqua:sharkdp/bat"                                          = "0.26.1"
 "aqua:sinclairtarget/git-who"                               = "1.3"
 "aqua:skanehira/rtty"                                       = "0.4.0"
@@ -113,100 +115,14 @@ experimental = true
 gpg_verify   = true
 lockfile     = true
 
+[task_config]
+includes = ["tasks/*.toml"]
+
 [settings.npm]
 bun = true
 
 [settings.pipx]
 uvx = true
 
-# lint
-[tasks.lint-action]
-depends = [
-    "lint-actionlint",
-    "lint-ghalint",
-    "lint-zizmor",
-]
-description = "Run all action linters"
-
-[tasks.lint-other]
-depends = [
-    "lint-json",
-    "lint-toml",
-    "lint-yaml",
-]
-description = "Run other linters"
-
-# fix
-[tasks.fix-action]
-depends = [
-    "fix-action-pinact",
-    "fix-action-disable-checkout-persist-credentials",
-]
-description = "Run fix actions files"
-
-[tasks.fix-action-pinact]
-description = "Run fix actions pinact"
-run         = ["pinact run"]
-
-[tasks.fix-action-disable-checkout-persist-credentials]
-description = "Run fix actions disable-checkout-persist-credentials"
-run         = ["disable-checkout-persist-credentials"]
-
-[tasks.fix-action-timeout-minutes]
-description = "Run fix actions timeout-minutes"
-run         = ["ghatm set -t 5"]
-
-[tasks.fix-other]
-depends = [
-    "fix-json",
-    "fix-toml",
-    "fix-yaml",
-]
-description = "Run other formatter"
-
-[tasks.rulesync-generate]
-description = "Generate all rulesync outputs after chezmoi apply"
-run = [
-    "rulesync generate",
-    "cd ~/.config/rulesync && rulesync generate",
-]
-
-# actions
-[tasks.lint-actionlint]
-description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:'"
-
-[tasks.lint-zizmor]
-description = "Run zizmor"
-run         = "GH_TOKEN=$(gh auth token) zizmor --pedantic --min-severity=low .github/workflows"
-
-[tasks.lint-ghalint]
-description = "Run ghalint"
-run         = "ghalint run"
-
-# toml
-[tasks.lint-toml]
-description = "Run lint TOML files"
-run         = "taplo format --check"
-
-[tasks.fix-toml]
-description = "Run fix TOML files"
-run         = "taplo format"
-
-# yaml
-[tasks.lint-yaml]
-description = "Run lint YAML files"
-run         = "prettier --check '**/*.{yaml,yml}'"
-
-[tasks.fix-yaml]
-description = "Run fix YAML files"
-run         = "prettier --write '**/*.{yaml,yml}'"
-
-# json
-[tasks.lint-json]
-description = "Run lint json files"
-run         = "prettier --check '**/*.json'"
-
-[tasks.fix-json]
-description = "Run fix json files"
-run         = "prettier --write '**/*.json'"
+[hooks]
+enter = "lefthook install -f"

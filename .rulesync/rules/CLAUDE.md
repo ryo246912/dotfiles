@@ -100,7 +100,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 
 7. **Apply Karabiner key mappings (macOS only):**
    ```bash
-   mise run karabiner-apply
+   mise run karabiner:apply
    ```
 
 ### Daily Workflow

@@ -3,19 +3,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "**.yaml"
-      - "**.yml"
-      - "**.toml"
-      - "**.json"
   pull_request:
     branches:
       - main
-    paths:
-      - "**.yaml"
-      - "**.yml"
-      - "**.toml"
-      - "**.json"
 
 permissions: {}
 
@@ -48,27 +38,49 @@ jobs:
               - "**/*.yml"
             toml:
               - "**/*.toml"
+            actions:
+              - ".github/workflows/*"
+            secret:
+              - "**/*"
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "npm:prettier npm:@taplo/cli"
+          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:prettier"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
       - name: prettier (json)
         if: steps.changed-files.outputs.json_any_changed == 'true'
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.json_all_changed_files }}
-        run: npx prettier --check "$CHANGED_FILES"
+        run: mise run lint:json
 
       - name: prettier (yaml)
         if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.yaml_all_changed_files }}
-        run: npx prettier --check "$CHANGED_FILES"
+        run: mise run lint:yaml
 
       - name: taplo (toml)
         if: always() && steps.changed-files.outputs.toml_any_changed == 'true'
+        run: mise run lint:toml
+
+      - name: actionlint
+        if: always() && steps.changed-files.outputs.actions_any_changed == 'true'
+        run: mise run lint:actionlint
+
+      - name: ghalint
+        if: always() && steps.changed-files.outputs.actions_any_changed == 'true'
+        run: mise run lint:ghalint
         env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.toml_all_changed_files }}
-        run: npx @taplo/cli format --check "$CHANGED_FILES"
+          GHALINT_LOG_COLOR: always
+
+      - name: zizmor
+        if: always() && steps.changed-files.outputs.actions_any_changed == 'true'
+        run: mise run lint:zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: pinact
+        if: always() && steps.changed-files.outputs.actions_any_changed == 'true'
+        run: mise run lint:pinact
+
+      - name: secretlint
+        if: always() && steps.changed-files.outputs.secret_any_changed == 'true'
+        run: mise run lint:secret
