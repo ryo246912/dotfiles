@@ -1,3 +1,7 @@
+[settings]
+auto_install = false
+experimental = true
+
 [tools]
 "aqua:BurntSushi/ripgrep"        = "15.1.0"
 "aqua:anthropics/claude-code"    = "2.1.139"
