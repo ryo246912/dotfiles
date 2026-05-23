@@ -51,24 +51,18 @@ jobs:
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "npm:prettier npm:@taplo/cli"
+          install_args: "npm:prettier aqua:tamasfe/taplo"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
       - name: prettier (json)
         if: steps.changed-files.outputs.json_any_changed == 'true'
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.json_all_changed_files }}
-        run: npx prettier --check "$CHANGED_FILES"
+        run: prettier --check ${{ steps.changed-files.outputs.json_all_changed_files }}
 
       - name: prettier (yaml)
         if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.yaml_all_changed_files }}
-        run: npx prettier --check "$CHANGED_FILES"
+        run: prettier --check ${{ steps.changed-files.outputs.yaml_all_changed_files }}
 
       - name: taplo (toml)
         if: always() && steps.changed-files.outputs.toml_any_changed == 'true'
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.toml_all_changed_files }}
-        run: npx @taplo/cli format --check "$CHANGED_FILES"
+        run: taplo format --check ${{ steps.changed-files.outputs.toml_all_changed_files }}
