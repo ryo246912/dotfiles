@@ -12,9 +12,9 @@ includes = ["tasks/*.toml"]
 "aqua:suzuki-shunsuke/ghalint" = "1.5.6"
 "aqua:suzuki-shunsuke/pinact"  = "3.9.2"
 "aqua:tamasfe/taplo"           = "0.10.0"
+"aqua:zizmorcore/zizmor"       = "1.24.1"
 "github:superfly/flyctl"       = "0.4.29"
 "npm:prettier"                 = "3.8.1"
-"pipx:zizmor"                  = "1.23.1"
 
 [hooks]
 enter = "lefthook install -f"
