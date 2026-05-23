@@ -8,7 +8,7 @@ includes = ["tasks/*.toml"]
 [tools]
 "aqua:evilmartians/lefthook"   = "2.1.4"
 "aqua:rhysd/actionlint"        = "1.7.12"
-"aqua:secretlint/secretlint"   = "11.4.1"
+"aqua:secretlint/secretlint"   = "11.7.1"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.6"
 "aqua:suzuki-shunsuke/pinact"  = "3.10.1"
 "aqua:tamasfe/taplo"           = "0.10.0"
