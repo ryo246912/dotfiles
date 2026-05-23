@@ -1,0 +1,21 @@
+post-commit:
+  commands:
+    coderabbit-review:
+      interactive: true
+      run: |
+        printf "Do you want to run CodeRabbit review? (y/n) "
+        read -r yn
+        case $yn in
+          [Yy]* )
+            mkdir -p tmp
+            (
+              echo "--- Review started at $(date) ---" >> tmp/xx
+              cr review --plain --type committed --base-commit origin/main >> tmp/xx 2>&1
+              osascript -e 'display notification "CodeRabbit review completed. Results appended to tmp/xx" with title "CodeRabbit CLI"'
+            ) &
+            echo "✅ CodeRabbit review started in background."
+            ;;
+          * )
+            echo "Skipping CodeRabbit review."
+            ;;
+        esac
