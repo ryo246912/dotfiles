@@ -4,9 +4,9 @@
 ASDF_FFMPEG_ENABLE = "gpl libx264"
 
 [tools]
-"ubi:rtk-ai/rtk" = "0.38.0"
-"pipx:code-review-graph" = "latest"
 "github:alexgreensh/token-optimizer" = "latest"
+"pipx:code-review-graph"             = "latest"
+"ubi:rtk-ai/rtk"                     = "0.38.0"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 

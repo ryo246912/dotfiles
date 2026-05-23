@@ -199,6 +199,7 @@ This repository treats personal development environment as code:
 - **.chezmoiignore** - Complete list of ignored files and patterns
 
 ## Token Efficiency Rules (claude-token-efficient)
+
 - Read existing files before writing. Don't re-read unless changed.
 - Thorough in reasoning, concise in output.
 - Skip files over 100KB unless required.
@@ -207,13 +208,16 @@ This repository treats personal development environment as code:
 - Do not guess APIs, versions, flags, commit SHAs, or package names. Verify by reading code or docs before asserting.
 
 ## Optional: Caveman Mode (Token Saving - Caveman Claude)
+
 When asked to "speak like a caveman", adhere to these rules:
+
 - Be extremely terse. Use fragments, not sentences.
 - Avoid all politeness and filler ("Sure", "I'd be happy to", "Let me know if").
 - Use technical terms accurately but surround them with simple grammar.
 - Goal: Reduce output tokens by 70% while maintaining technical correctness.
 
 ## Documentation Structure (Token Optimizer Setup)
+
 - Refer to .claude/ARCHITECTURE_MAP.md for codebase overview.
 - Refer to .claude/QUICK_START.md for common commands.
 - Refer to .claude/COMMON_MISTAKES.md for known pitfalls.
