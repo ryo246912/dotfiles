@@ -40,3 +40,7 @@ run         = "prettier --check '**/*.json'"
 ["lint:secret"]
 description = "Run secretlint"
 run         = "secretlint '**/*' --secretlintrc ~/.config/secretlint/secretlintrc.json"
+
+["lint:git-secrets"]
+description = "Run git-secrets scan"
+run         = "git secrets --scan"

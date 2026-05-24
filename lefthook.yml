@@ -43,6 +43,9 @@ pre-push:
           - name: lint:secret
             run: mise run lint:secret
             fail_text: "❌ [pre-push] secretlint failed. Check for secrets in files."
+          - name: lint:git-secrets
+            run: mise run lint:git-secrets
+            fail_text: "❌ [pre-push] git-secrets failed. Check for secrets in files."
     - name: stash pop
       run: |
         if git stash list | grep -q "lefthook-pre-push"; then
