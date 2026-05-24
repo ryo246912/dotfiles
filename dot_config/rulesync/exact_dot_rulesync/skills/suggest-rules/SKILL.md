@@ -25,14 +25,14 @@ targets:
 
 使用中の AI エージェントに応じたルールファイルを Read ツールで読み込む（存在する場合のみ）:
 
-| ツール | ルールファイル |
-|---|---|
-| Claude Code | `CLAUDE.md`（プロジェクトルート）、`~/.claude/CLAUDE.md`（グローバル） |
-| Cursor | `.cursorrules` または `.cursor/rules/*.mdc` |
-| GitHub Copilot | `.github/copilot-instructions.md` |
-| Gemini CLI | `GEMINI.md`（プロジェクトルート）、`~/.gemini/GEMINI.md`（グローバル） |
-| Codex CLI | `AGENTS.md`（プロジェクトルート）、`~/.codex/AGENTS.md`（グローバル） |
-| その他 | そのツール固有の指示ファイル |
+| ツール         | ルールファイル                                                         |
+| -------------- | ---------------------------------------------------------------------- |
+| Claude Code    | `CLAUDE.md`（プロジェクトルート）、`~/.claude/CLAUDE.md`（グローバル） |
+| Cursor         | `.cursorrules` または `.cursor/rules/*.mdc`                            |
+| GitHub Copilot | `.github/copilot-instructions.md`                                      |
+| Gemini CLI     | `GEMINI.md`（プロジェクトルート）、`~/.gemini/GEMINI.md`（グローバル） |
+| Codex CLI      | `AGENTS.md`（プロジェクトルート）、`~/.codex/AGENTS.md`（グローバル）  |
+| その他         | そのツール固有の指示ファイル                                           |
 
 ### 2. 既存スキルを確認する
 
@@ -44,14 +44,14 @@ targets:
 
 #### 3-1. セッション記録の保存場所を特定する
 
-| ツール | セッション記録の場所 |
-|---|---|
-| Claude Code | `~/.claude/projects/<slug>/*.jsonl`（1行1JSONの会話ログ）、メモリ: `~/.claude/projects/<slug>/memory/` |
-| Cursor | `~/.cursor/logs/` 配下（バージョンにより異なる） |
-| GitHub Copilot | VS Code の拡張ログ（`~/.vscode/extensions/` 配下）または Copilot Chat 履歴 |
-| Gemini CLI | `~/.gemini/logs/` または `~/.gemini/projects/<slug>/` 配下 |
-| Codex CLI | `~/.codex/projects/<slug>/` または `~/.codex/logs/` 配下 |
-| その他 | そのツールのドキュメントを参照 |
+| ツール         | セッション記録の場所                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| Claude Code    | `~/.claude/projects/<slug>/*.jsonl`（1行1JSONの会話ログ）、メモリ: `~/.claude/projects/<slug>/memory/` |
+| Cursor         | `~/.cursor/logs/` 配下（バージョンにより異なる）                                                       |
+| GitHub Copilot | VS Code の拡張ログ（`~/.vscode/extensions/` 配下）または Copilot Chat 履歴                             |
+| Gemini CLI     | `~/.gemini/logs/` または `~/.gemini/projects/<slug>/` 配下                                             |
+| Codex CLI      | `~/.codex/projects/<slug>/` または `~/.codex/logs/` 配下                                               |
+| その他         | そのツールのドキュメントを参照                                                                         |
 
 **Claude Code のスラッグ変換例**:
 カレントディレクトリ `/workspaces/my-project` → スラッグ `-workspaces-my-project`（`/` と `_` → `-`）
@@ -61,6 +61,7 @@ targets:
 各セッション記録から**ユーザーの発言**を抽出する。
 
 Claude Code（jsonl）の場合:
+
 - `role` が `"user"` のオブジェクトを対象にする
 - `content` が配列の場合は `type:"text"` の要素の `text` フィールドを取得する
 
@@ -80,12 +81,12 @@ Claude Code（jsonl）の場合:
 
 以下の観点で、**同一セッション内または複数セッションにまたがって繰り返されているもの**を抽出する:
 
-| 観点 | 具体例 |
-|---|---|
-| ユーザーの修正指示が繰り返されている | 「他のケースも全部確認して」「スコープが狭すぎる」 |
-| 同じスキルが複数回・複数セッションで呼ばれている | `/plan` を毎回実装前に呼んでいる |
-| 同じ種類の確認を毎回求めている | ドメインモデルの混同防止、設計方式の確認 |
-| 実装途中で同じ種類の手戻りが発生している | 事前確認不足、スコープ漏れ |
+| 観点                                             | 具体例                                             |
+| ------------------------------------------------ | -------------------------------------------------- |
+| ユーザーの修正指示が繰り返されている             | 「他のケースも全部確認して」「スコープが狭すぎる」 |
+| 同じスキルが複数回・複数セッションで呼ばれている | `/plan` を毎回実装前に呼んでいる                   |
+| 同じ種類の確認を毎回求めている                   | ドメインモデルの混同防止、設計方式の確認           |
+| 実装途中で同じ種類の手戻りが発生している         | 事前確認不足、スコープ漏れ                         |
 
 ### 6. 候補を出力する
 
@@ -95,14 +96,14 @@ Claude Code（jsonl）の場合:
 
 ## 追記先ファイルの判断基準
 
-| ツール | 追記先 |
-|---|---|
-| Claude Code | `CLAUDE.md`（プロジェクトルート or `~/.claude/CLAUDE.md`） |
-| Cursor | `.cursorrules` または `.cursor/rules/` 配下の `.mdc` |
-| GitHub Copilot | `.github/copilot-instructions.md` |
-| Gemini CLI | `GEMINI.md`（プロジェクトルート or `~/.gemini/GEMINI.md`） |
-| Codex CLI | `AGENTS.md`（プロジェクトルート or `~/.codex/AGENTS.md`） |
-| その他 | そのツール固有の指示ファイル |
+| ツール         | 追記先                                                     |
+| -------------- | ---------------------------------------------------------- |
+| Claude Code    | `CLAUDE.md`（プロジェクトルート or `~/.claude/CLAUDE.md`） |
+| Cursor         | `.cursorrules` または `.cursor/rules/` 配下の `.mdc`       |
+| GitHub Copilot | `.github/copilot-instructions.md`                          |
+| Gemini CLI     | `GEMINI.md`（プロジェクトルート or `~/.gemini/GEMINI.md`） |
+| Codex CLI      | `AGENTS.md`（プロジェクトルート or `~/.codex/AGENTS.md`）  |
+| その他         | そのツール固有の指示ファイル                               |
 
 ---
 

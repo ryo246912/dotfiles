@@ -1,9 +1,6 @@
 import { layer, map } from "karabiner.ts";
 
-export const Rules = layer(
-  "japanese_kana",
-  "japanese_kana mode"
-).manipulators([
+export const Rules = layer("japanese_kana", "japanese_kana mode").manipulators([
   // 基本のナビゲーションキー
   map("t").to("f2", "left_control"),
   map("y").to("close_bracket", ["left_shift", "left_command"]),

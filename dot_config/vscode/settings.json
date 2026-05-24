@@ -384,25 +384,12 @@
   "multiCommand.commands": [
     {
       "command": "multiCommand.closeEditorFocusLeft",
-      "sequence": [
-        "workbench.action.closeActiveEditor",
-        "workbench.action.previousEditor"
-      ]
+      "sequence": ["workbench.action.closeActiveEditor", "workbench.action.previousEditor"]
     }
   ],
   "projectManager.sortList": "Name",
   // (Todo Tree)
-  "todo-tree.general.tags": [
-    "BUG",
-    "HACK",
-    "FIXME",
-    "TODO",
-    "XXX",
-    "[ ]",
-    "[x]",
-    "NOTE",
-    "MEMO"
-  ],
+  "todo-tree.general.tags": ["BUG", "HACK", "FIXME", "TODO", "XXX", "[ ]", "[x]", "NOTE", "MEMO"],
   // (Status Bar)
   "statsBar.cpuLoad.format": "CPU:${percent}%",
   "statsBar.modules": ["cpuLoad", "memoUsage"],

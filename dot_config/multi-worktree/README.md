@@ -48,6 +48,7 @@ autoload -Uz compinit && compinit
 設定後、シェルを再起動するか `source ~/.zshrc` / `source ~/.bashrc` でリロードしてください。
 
 **補完の動作:**
+
 - サブコマンドの補完（`multi-worktree <Tab>` で `create`, `remove`, `list` などを表示）
 - タスク名の補完（`multi-worktree remove <Tab>` で既存のタスク名を表示）
 - オプションの補完（`--group=` の補完）
@@ -78,11 +79,13 @@ grep docker_devcontainer ~/.ssh/authorized_keys
 ```
 
 **設定後の動作:**
+
 - コンテナ起動時に自動的に SSH 設定が行われます
 - Claude Code の hooks（Notification、Stop）が macOS の通知センターに表示されます
 - コンテナを再作成しても設定は永続化されます
 
 **注意事項:**
+
 - macOS の「システム設定 > 一般 > 共有 > リモートログイン」が有効になっている必要があります
 - `authorized_keys` へは公開鍵の追加のみで、既存の鍵は保持されます（rename 不要）
 
@@ -233,11 +236,13 @@ multi-worktree remove feat/new-feature
 - `--group=GROUP`: 使用するグループ（省略時はデフォルトグループ）
 
 **動作:**
+
 1. 各リポジトリのデフォルトブランチを fetch
 2. 指定されたタスク名でブランチを作成し、worktree を追加
 3. タスクディレクトリに `devcontainer.json` を自動生成
 
 **例:**
+
 ```bash
 multi-worktree create feat/add-auth
 multi-worktree create fix/login-bug --group=work
@@ -248,6 +253,7 @@ multi-worktree create fix/login-bug --group=work
 既存 task root を壊さず、現在の config をもとに不足している worktree を補充し、task 設定を再生成します。
 
 **動作:**
+
 1. 既存 task があればその group、なければ `--group` またはデフォルト group を使います
 2. 各リポジトリについて、存在しない worktree path だけを追加します
 3. task root の `.git/` が欠けていれば再作成します
@@ -255,12 +261,14 @@ multi-worktree create fix/login-bug --group=work
 5. 既存の repo worktree directory はそのまま保持します
 
 **例:**
+
 ```bash
 multi-worktree recreate feat/add-auth
 multi-worktree recreate feat/add-auth --group=work
 ```
 
 **補足:**
+
 - `recreate` は既存 repo worktree directory を上書きしません
 - `devcontainer.json` と `.claude/settings.local.json` は generated file として扱い、`recreate` のたびに current config で更新されます
 
@@ -269,6 +277,7 @@ multi-worktree recreate feat/add-auth --group=work
 作成済みのタスク一覧を表示します。
 
 **例:**
+
 ```bash
 multi-worktree list
 ```
@@ -278,11 +287,13 @@ multi-worktree list
 指定したタスクの各リポジトリのステータスを表示します。
 
 **表示内容:**
+
 - ブランチ名
 - 変更状況
 - 最新のコミット（3件）
 
 **例:**
+
 ```bash
 multi-worktree status feat/add-auth
 ```
@@ -292,11 +303,13 @@ multi-worktree status feat/add-auth
 指定したタスクの worktree ディレクトリに移動します。
 
 **動作:**
+
 1. worktree ディレクトリに移動
 2. 新しいシェルを起動（`$SHELL`環境変数を使用）
 3. `exit` で元のディレクトリに戻る
 
 **例:**
+
 ```bash
 multi-worktree cd feat/add-auth
 # 新しいシェルが起動し、worktree ディレクトリに移動
@@ -311,16 +324,19 @@ exit
 指定したタスクの devcontainer でコマンドを実行します。
 
 **動作:**
+
 1. worktree ディレクトリに移動
 2. コンテナが起動していない場合、`devcontainer up` を実行
 3. `devcontainer exec` でコマンドを実行
 
 **設定項目:**
+
 - `[groups.<group>.devcontainer].up_opts`: `devcontainer up` のオプション
 - `[groups.<group>.devcontainer].exec_opts`: `devcontainer exec` のオプション
 - `[settings.devcontainer].skip_up_if_running`: コンテナ起動済みの場合に `up` をスキップ（デフォルト: true）
 
 **例:**
+
 ```bash
 multi-worktree dev feat/add-auth claude
 multi-worktree dev feat/add-auth ccmanager
@@ -332,10 +348,12 @@ multi-worktree dev feat/add-auth bash
 指定したタスクの task root、または指定リポジトリの worktree でコマンドを直接実行します。
 
 **動作:**
+
 1. task root、または指定したリポジトリの worktree ディレクトリに移動
 2. ホスト側でコマンドを直接実行
 
 **例:**
+
 ```bash
 multi-worktree exec feat/add-auth pwd
 multi-worktree exec feat/add-auth repo-a npm run dev
@@ -346,15 +364,18 @@ multi-worktree exec feat/add-auth repo-a npm run dev
 指定したタスクの worktree ディレクトリを VSCode で開きます。
 
 **動作:**
+
 1. worktree ディレクトリのパスを解決
 2. `code` コマンドを使用して VSCode で開く
 
 **例:**
+
 ```bash
 multi-worktree open feat/add-auth
 ```
 
 **前提条件:**
+
 - VSCode の `code` コマンドがインストールされている必要があります
 - VSCode で「Shell Command: Install 'code' command in PATH」を実行済みであること
 
@@ -363,10 +384,12 @@ multi-worktree open feat/add-auth
 指定したタスクの worktree を一括削除します。
 
 **動作:**
+
 1. 各リポジトリで `git worktree remove` を実行
 2. タスクディレクトリを削除
 
 **例:**
+
 ```bash
 multi-worktree remove feat/add-auth
 ```

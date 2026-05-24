@@ -1,9 +1,6 @@
 ["karabiner:apply"]
 description = "build and apply karabiner.ts configuration"
-run = [
-    "mise run karabiner:dry-run",
-    "bun dot_config/karabiner-ts/karabiner.ts",
-]
+run         = ["mise run karabiner:dry-run", "bun dot_config/karabiner-ts/karabiner.ts"]
 
 ["karabiner:dry-run"]
 description = "build and dry-run karabiner.ts configuration"

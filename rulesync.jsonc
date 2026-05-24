@@ -1,6 +1,6 @@
 {
   "features": {
-    "claudecode": ["rules"]
+    "claudecode": ["rules"],
   },
   "baseDirs": ["."],
   "delete": false,
