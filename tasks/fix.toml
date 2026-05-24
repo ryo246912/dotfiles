@@ -1,0 +1,26 @@
+["fix:all"]
+depends     = ["fix:*"]
+description = "Run all formatters"
+
+["fix:action"]
+description = "Run fix actions files"
+run         = ["pinact run", "disable-checkout-persist-credentials"]
+
+["fix:pinact"]
+description = "Run pinact (fix)"
+run         = "pinact run"
+
+["fix:toml"]
+description = "Run fix TOML files"
+hide        = true
+run         = "taplo format"
+
+["fix:yaml"]
+description = "Run fix YAML files"
+hide        = true
+run         = "prettier --write --list-different '**/*.{yaml,yml}'"
+
+["fix:json"]
+description = "Run fix JSON files"
+hide        = true
+run         = "prettier --write --list-different '**/*.json'"

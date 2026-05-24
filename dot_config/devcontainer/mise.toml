@@ -1,21 +1,25 @@
+[settings]
+auto_install = false
+experimental = true
+
 [tools]
 "aqua:BurntSushi/ripgrep"        = "15.1.0"
-"aqua:anthropics/claude-code"    = "2.1.139"
+"aqua:anthropics/claude-code"    = "2.1.146"
 "aqua:astral-sh/uv"              = "0.11.15"
 "aqua:cli/cli"                   = "2.90.0"
 "aqua:golangci/golangci-lint"    = "2.12.2"
 "aqua:koalaman/shellcheck"       = "0.11.0"
 "aqua:mvdan/sh"                  = "3.13.1"
 "aqua:openai/codex"              = "0.130.0"
+"aqua:tamasfe/taplo"             = "0.10.0"
 bun                              = "1.3.14"
-"github:github/copilot-cli"      = "1.0.45"
+"github:github/copilot-cli"      = "1.0.51"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 go                               = "1.26.3"
 node                             = "22.19.0"
 "npm:@google/gemini-cli"         = "0.42.0"
-"npm:@taplo/cli"                 = "0.7.0"
-"npm:@typescript/native-preview" = "7.0.0-dev.20260331.1"
-"npm:ccusage"                    = "19.0.3"
+"npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
+"npm:ccusage"                    = "20.0.1"
 "npm:prettier"                   = "3.8.1"
 python                           = "3.14.3"
 

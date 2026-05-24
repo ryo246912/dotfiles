@@ -1,0 +1,42 @@
+["lint:all"]
+depends     = ["lint:*"]
+description = "Run all linters"
+
+["lint:action"]
+depends     = ["lint:actionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
+description = "Run all action linters"
+
+["lint:actionlint"]
+description = "Run actionlint"
+run         = "actionlint -ignore 'SC2016:'"
+
+["lint:ghalint"]
+description = "Run ghalint"
+run         = "ghalint run"
+
+["lint:zizmor"]
+description = "Run zizmor"
+run         = "GH_TOKEN=$(gh auth token) zizmor --pedantic --min-severity=low .github/workflows"
+
+["lint:pinact"]
+description = "Run pinact --check"
+run         = "pinact run --check"
+
+["lint:toml"]
+description = "Run lint TOML files"
+hide        = true
+run         = "taplo format --check"
+
+["lint:yaml"]
+description = "Run lint YAML files"
+hide        = true
+run         = "prettier --check '**/*.{yaml,yml}'"
+
+["lint:json"]
+description = "Run lint JSON files"
+hide        = true
+run         = "prettier --check '**/*.json'"
+
+["lint:secret"]
+description = "Run secretlint"
+run         = "secretlint '**/*' --secretlintrc ~/.config/secretlint/secretlintrc.json"

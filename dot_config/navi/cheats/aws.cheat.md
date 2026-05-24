@@ -22,8 +22,8 @@ aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 # aws-vault : run command with temporary credentials [ex.aws-vault exec <profile> -- aws sts get-caller-identity]
 aws-vault exec <profile> --
 
-# aws-vault : login AWS console
-aws-vault login <profile> && export AWS_PROFILE=<profile>
+# aws-vault : login & export temporary credentials to environment variables
+eval $(aws-vault export <profile> --format=export-env)
 
 # aws-vault : clear cached sessions
 aws-vault clear <profile>

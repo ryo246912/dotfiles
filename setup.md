@@ -43,7 +43,7 @@
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
     ```sh
-    mise run karabiner-apply
+    mise run karabiner:apply
     ```
 
 - [ ] Clibor

@@ -1,0 +1,38 @@
+["fix:all"]
+depends     = ["fix:*"]
+description = "Run all formatters"
+
+["fix:action"]
+depends = [
+    "fix:pinact",
+    "fix:action-disable-checkout-persist-credentials",
+    "fix:action-timeout-minutes",
+]
+description = "Run fix actions files"
+
+["fix:pinact"]
+description = "Run pinact (fix)"
+run         = "pinact run"
+
+["fix:action-disable-checkout-persist-credentials"]
+description = "Run fix actions disable-checkout-persist-credentials"
+run         = ["disable-checkout-persist-credentials"]
+
+["fix:action-timeout-minutes"]
+description = "Run fix actions timeout-minutes"
+run         = ["ghatm set -t 5"]
+
+["fix:toml"]
+description = "Run fix TOML files"
+hide        = true
+run         = "taplo format"
+
+["fix:yaml"]
+description = "Run fix YAML files"
+hide        = true
+run         = "prettier --write --list-different '**/*.{yaml,yml}'"
+
+["fix:json"]
+description = "Run fix JSON files"
+hide        = true
+run         = "prettier --write --list-different '**/*.json'"
