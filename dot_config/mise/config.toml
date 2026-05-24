@@ -127,4 +127,4 @@ bun = true
 uvx = true
 
 [hooks]
-enter = "lefthook install -f --config dot_config/lefthook/lefthook.yml"
+enter = "lefthook install -f"

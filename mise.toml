@@ -19,4 +19,4 @@ includes = ["tasks/*.toml"]
 "npm:prettier"                   = "3.8.1"
 
 [hooks]
-enter = "lefthook install -f --config dot_config/lefthook/lefthook.yml"
+enter = "lefthook install -f"

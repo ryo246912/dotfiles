@@ -1,0 +1,59 @@
+pre-commit:
+  jobs:
+    - name: lint:secret
+      run: mise run lint:secret
+      fail_text: "❌ [pre-commit] secretlint failed. Check for secrets in files."
+    - name: lint:git-secrets
+      run: mise run lint:git-secrets
+      fail_text: "❌ [pre-commit] git-secrets failed. Check for secrets in files."
+    - name: lint:betterleaks
+      run: mise run lint:betterleaks
+      fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
+output:
+  - meta
+  - summary
+  - failure
+  - execution_out
+
+pre-push:
+  jobs:
+    - name: stash files
+      run: git stash --include-untracked -q -m "lefthook-pre-push"
+    - name: lint
+      group:
+        parallel: true
+        jobs:
+          - name: lint:toml
+            run: mise run lint:toml
+            glob: "**/*.toml"
+            fail_text: "❌ [pre-push] toml lint failed. Run: mise run fix:toml"
+          - name: lint:yaml
+            run: mise run lint:yaml
+            glob: "**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] yaml lint failed. Run: mise run fix:yaml"
+          - name: lint:json
+            run: mise run lint:json
+            glob: "**/*.json"
+            fail_text: "❌ [pre-push] json lint failed. Run: mise run fix:json"
+          - name: lint:actionlint
+            run: mise run lint:actionlint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] actionlint failed."
+          - name: lint:ghalint
+            run: mise run lint:ghalint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] ghalint failed."
+          - name: lint:zizmor
+            run: mise run lint:zizmor
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] zizmor failed."
+          - name: lint:pinact
+            run: mise run lint:pinact
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
+
+    - name: stash pop
+      run: |
+        if git stash list | grep -q "lefthook-pre-push"; then
+          git stash pop --index -q || true
+        fi
