@@ -18,9 +18,14 @@ run         = "taplo format"
 ["fix:yaml"]
 description = "Run fix YAML files"
 hide        = true
-run         = "prettier --write --list-different '**/*.{yaml,yml}'"
+run         = "oxfmt '**/*.{yaml,yml}'"
 
 ["fix:json"]
 description = "Run fix JSON files"
 hide        = true
-run         = "prettier --write --list-different '**/*.json'"
+run         = "oxfmt '**/*.json'"
+
+["fix:md"]
+description = "Run fix Markdown files"
+hide        = true
+run         = "oxfmt '**/*.md'"

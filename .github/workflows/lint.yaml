@@ -36,6 +36,8 @@ jobs:
             yaml:
               - "**/*.yaml"
               - "**/*.yml"
+            md:
+              - "**/*.md"
             toml:
               - "**/*.toml"
             actions:
@@ -45,17 +47,21 @@ jobs:
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:prettier"
+          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
-      - name: prettier (json)
+      - name: oxfmt (json)
         if: steps.changed-files.outputs.json_any_changed == 'true'
         run: mise run lint:json
 
-      - name: prettier (yaml)
+      - name: oxfmt (yaml)
         if: always() && steps.changed-files.outputs.yaml_any_changed == 'true'
         run: mise run lint:yaml
+
+      - name: oxfmt (markdown)
+        if: always() && steps.changed-files.outputs.md_any_changed == 'true'
+        run: mise run lint:md
 
       - name: taplo (toml)
         if: always() && steps.changed-files.outputs.toml_any_changed == 'true'

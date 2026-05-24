@@ -10,12 +10,12 @@
   },
   // json
   "[json][jsonc]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.formatOnSave": true
   },
   // yaml
   "[yaml]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.formatOnSave": true
   },
   // toml

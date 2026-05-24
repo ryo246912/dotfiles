@@ -37,6 +37,10 @@ pre-push:
             run: mise run lint:json
             glob: "**/*.json"
             fail_text: "❌ [pre-push] json lint failed. Run: mise run fix:json"
+          - name: lint:md
+            run: mise run lint:md
+            glob: "**/*.md"
+            fail_text: "❌ [pre-push] markdown lint failed. Run: mise run fix:md"
           - name: lint:actionlint
             run: mise run lint:actionlint
             glob: ".github/workflows/**/*.{yaml,yml}"
