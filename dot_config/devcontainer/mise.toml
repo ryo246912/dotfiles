@@ -13,7 +13,7 @@ experimental = true
 "aqua:openai/codex"              = "0.130.0"
 "aqua:tamasfe/taplo"             = "0.10.0"
 bun                              = "1.3.14"
-"github:github/copilot-cli"      = "1.0.45"
+"github:github/copilot-cli"      = "1.0.51"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 go                               = "1.26.3"
 node                             = "22.19.0"
