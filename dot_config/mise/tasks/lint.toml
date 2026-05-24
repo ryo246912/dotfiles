@@ -45,6 +45,14 @@ run         = "secretlint '**/*' --secretlintrc ~/.config/secretlint/secretlintr
 description = "Run git-secrets scan"
 run         = "git secrets --scan"
 
-["lint:betterleaks"]
-description = "Run betterleaks detect"
-run         = "betterleaks detect --source . -v"
+["lint:betterleaks:staged"]
+description = "Run betterleaks"
+run         = "betterleaks git --staged -v"
+
+["lint:betterleaks:head"]
+description = "Run betterleaks"
+run         = "betterleaks git -v --log-opts='HEAD'"
+
+["lint:betterleaks:all"]
+description = "Run betterleaks"
+run         = "betterleaks git -v"

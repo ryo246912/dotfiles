@@ -45,6 +45,6 @@ run         = "secretlint '**/*'"
 description = "Run git-secrets scan"
 run         = "git secrets --scan"
 
-["lint:betterleaks"]
+["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
-run         = "betterleaks detect --source . -v"
+run         = "betterleaks git --staged -v"

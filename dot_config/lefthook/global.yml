@@ -5,6 +5,7 @@ output:
   - execution_out
 
 pre-commit:
+  parallel: true
   jobs:
     - name: lint:secret
       run: mise run lint:secret
@@ -13,7 +14,7 @@ pre-commit:
       run: mise run lint:git-secrets
       fail_text: "❌ [pre-commit] git-secrets failed. Check for secrets in files."
     - name: lint:betterleaks
-      run: mise run lint:betterleaks
+      run: mise run lint:betterleaks:staged
       fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
 
 pre-push:
