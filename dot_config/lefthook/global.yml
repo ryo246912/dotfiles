@@ -1,3 +1,9 @@
+output:
+  - meta
+  - summary
+  - failure
+  - execution_out
+
 pre-commit:
   jobs:
     - name: lint:secret
@@ -9,11 +15,6 @@ pre-commit:
     - name: lint:betterleaks
       run: mise run lint:betterleaks
       fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
-output:
-  - meta
-  - summary
-  - failure
-  - execution_out
 
 pre-push:
   jobs:
