@@ -6,7 +6,7 @@ experimental = true
 includes = ["tasks/*.toml"]
 
 [tools]
-"aqua:evilmartians/lefthook"   = "2.1.4"
+"aqua:evilmartians/lefthook"   = "2.1.8"
 "aqua:rhysd/actionlint"        = "1.7.12"
 "aqua:secretlint/secretlint"   = "11.4.1"
 "aqua:suzuki-shunsuke/ghalint" = "1.5.6"
