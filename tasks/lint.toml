@@ -40,3 +40,11 @@ run         = "prettier --check '**/*.json'"
 ["lint:secret"]
 description = "Run secretlint"
 run         = "secretlint '**/*'"
+
+["lint:git-secrets"]
+description = "Run git-secrets scan"
+run         = "git secrets --scan"
+
+["lint:betterleaks:staged"]
+description = "Run betterleaks detect"
+run         = "betterleaks git --staged -v"

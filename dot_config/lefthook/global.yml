@@ -4,6 +4,19 @@ output:
   - failure
   - execution_out
 
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint:secret
+      run: mise run lint:secret
+      fail_text: "❌ [pre-commit] secretlint failed. Check for secrets in files."
+    - name: lint:git-secrets
+      run: mise run lint:git-secrets
+      fail_text: "❌ [pre-commit] git-secrets failed. Check for secrets in files."
+    - name: lint:betterleaks
+      run: mise run lint:betterleaks:staged
+      fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
+
 pre-push:
   jobs:
     - name: stash files
@@ -40,6 +53,7 @@ pre-push:
             run: mise run lint:pinact
             glob: ".github/workflows/**/*.{yaml,yml}"
             fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
+
     - name: stash pop
       run: |
         if git stash list | grep -q "lefthook-pre-push"; then
