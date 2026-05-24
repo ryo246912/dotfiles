@@ -38,6 +38,7 @@
 ## 追記候補
 
 ### 1. <短いタイトル>
+
 - 追記先: <ファイルパス（例: CLAUDE.md、~/.claude/CLAUDE.md、.cursorrules など）>
 - 追加案:
   ```md

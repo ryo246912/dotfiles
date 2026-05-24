@@ -4,7 +4,7 @@
     "codexcli": ["rules", "skills"],
     "geminicli": ["rules", "commands", "hooks"],
     "copilot": ["rules"],
-    "copilotcli": ["rules", "mcp"]
+    "copilotcli": ["rules", "mcp"],
   },
   "delete": false,
   "verbose": false,

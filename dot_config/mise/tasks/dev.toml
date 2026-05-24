@@ -1,6 +1,3 @@
 ["rulesync:generate"]
 description = "Generate all rulesync outputs after chezmoi apply"
-run = [
-    "rulesync generate",
-    "cd ~/.config/rulesync && rulesync generate",
-]
+run         = ["rulesync generate", "cd ~/.config/rulesync && rulesync generate"]

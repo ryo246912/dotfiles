@@ -39,9 +39,7 @@
   },
   "javascript : disable eslint": {
     "prefix": ["es", "di"],
-    "body": [
-      "${1|// eslint-disable-next-line,/* eslint-disable */,/* eslint-enable */|}",
-    ],
+    "body": ["${1|// eslint-disable-next-line,/* eslint-disable */,/* eslint-enable */|}"],
     "description": "disable eslint",
   },
   "javascript : optional chainning": {
@@ -89,10 +87,7 @@
   },
   "python2 : print(stout)": {
     "prefix": "pr",
-    "body": [
-      "import sys, codecs",
-      "sys.stdout = codecs.getwriter('utf-8')(sys.stdout)",
-    ],
+    "body": ["import sys, codecs", "sys.stdout = codecs.getwriter('utf-8')(sys.stdout)"],
     "description": "print(stout)",
   },
   "python2 : typehint": {
@@ -182,9 +177,7 @@
   // Vue
   "Vue : props type(1は|の代わり)": {
     "prefix": "ty",
-    "body": [
-      "${1|type: Array as PropType<string[]>,type: Number as PropType<number 1 null>|}",
-    ],
+    "body": ["${1|type: Array as PropType<string[]>,type: Number as PropType<number 1 null>|}"],
     "description": "Vue : props type(Array)",
   },
   // tips

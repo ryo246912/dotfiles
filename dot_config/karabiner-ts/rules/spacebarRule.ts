@@ -58,7 +58,10 @@ export const spacebarModeRules = rule("Spacebar Mode").manipulators([
 
 // Mirror-QWERTY - 基本（modifier status 0）
 export const mirrorQwertyBasicRules = rule("Mirror-QWERTY Basic").manipulators([
-  withCondition(toIfVariable("spacebar mode", 1), toUnlessVariable("modifier status", 1))([
+  withCondition(
+    toIfVariable("spacebar mode", 1),
+    toUnlessVariable("modifier status", 1),
+  )([
     // 数字行のミラー
     map("6").to("5").toVar("modifier status", 0),
     map("7").to("4").toVar("modifier status", 0),
@@ -86,8 +89,7 @@ export const mirrorQwertyBasicRules = rule("Mirror-QWERTY Basic").manipulators([
     map("comma").to("c").toVar("modifier status", 0),
     map("period").to("x").toVar("modifier status", 0),
     map("slash").to("z").toVar("modifier status", 0),
-    ]
-  )
+  ]),
 ]);
 
 // Spacebar Mode - Command キー（modifier status 1）

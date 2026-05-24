@@ -1,0 +1,10 @@
+{
+  "$schema": "https://oxc.rs/schemas/formatter/schema.json",
+  "ignorePatterns": [
+    "dot_config/sidebery/**",
+    "dot_config/obsidian/**",
+    "dot_config/navi/**",
+    "**/bun.lock",
+    "**/*.toml"
+  ]
+}

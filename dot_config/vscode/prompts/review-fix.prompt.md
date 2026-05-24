@@ -26,11 +26,14 @@ PRのレビューコメントを取得し、ユーザーと対話しながら指
 #### レビューコメント取得
 
 **1. 一般的なレビューコメント**:
+
 - `gh pr view <PR番号> --json reviews,comments` を使用してレビューコメントを取得
 - レビューコメントを整理して表示
 
 **2. インラインレビューコメント**:
+
 - 以下のコマンドでインラインコメントを取得（`created_at` 昇順でソート）：
+
 ```bash
 gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --jq 'sort_by(.created_at) | .[] | {author: .user.login, body: .body, path: .path, line: .original_line, created_at: .created_at}'
 ```
@@ -66,9 +69,9 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --jq 'sort_by(.
    作成日時: 2026-01-07T01:50:32Z
    指摘: エラーハンドリングが不足しています
    差分:
-   + if (error) {
-   +   handleError(error);
-   + }
+   - if (error) {
+   - handleError(error);
+   - }
 
 2. [対応する] src/utils.ts:15
    レビュアー: @reviewer2
@@ -76,7 +79,7 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --jq 'sort_by(.
    指摘: 変数名が不明瞭です
    差分:
    - const x = getValue();
-   + const result = getValue();
+   * const result = getValue();
 
 対応しない指摘がある場合は対応する番号を指定してください（例: 2）
 すべて対応する場合は 0 を押してください
@@ -125,6 +128,7 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --jq 'sort_by(.
 ユーザー: PR #123 のレビューに対応して
 
 アシスタント:
+
 1. gh pr view 123 でレビューコメントを取得
 2. インラインコメント取得コマンドで詳細コメントを取得
 3. レビュー指摘事項をリスト表示（作成日時順）
@@ -139,6 +143,7 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --jq 'sort_by(.
 ユーザー: PRのレビューに対応して
 
 アシスタント:
+
 1. git branch --show-current で現在のブランチ名を取得 (例: feature/add-login)
 2. gh pr list --head feature/add-login でPRを検索
 3. 見つかったPR番号でレビューコメントを取得

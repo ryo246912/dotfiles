@@ -30,12 +30,17 @@ run         = "taplo format --check"
 ["lint:yaml"]
 description = "Run lint YAML files"
 hide        = true
-run         = "prettier --check '**/*.{yaml,yml}'"
+run         = "oxfmt --check '**/*.{yaml,yml}'"
 
 ["lint:json"]
 description = "Run lint JSON files"
 hide        = true
-run         = "prettier --check '**/*.json'"
+run         = "oxfmt --check '**/*.json'"
+
+["lint:md"]
+description = "Run lint Markdown files"
+hide        = true
+run         = "oxfmt --check '**/*.md'"
 
 ["lint:secret"]
 description = "Run secretlint"
