@@ -20,7 +20,7 @@ node                             = "22.19.0"
 "npm:@google/gemini-cli"         = "0.42.0"
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
-"npm:prettier"                   = "3.8.1"
+"npm:prettier"                   = "3.8.3"
 python                           = "3.14.3"
 
 [settings.npm]
