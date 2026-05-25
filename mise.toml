@@ -25,4 +25,4 @@ includes = ["tasks/*.toml"]
 # oxlint = "github:oxc-project/oxc"
 
 [hooks]
-enter = "lefthook install -f"
+enter = "if [ -f lefthook.yml ]; then lefthook install -f; fi"
