@@ -133,4 +133,4 @@ bun = true
 uvx = true
 
 [hooks]
-enter = "if [ -f lefthook.yml ]; then lefthook install -f; fi"
+enter = "lefthook install -f --no-init"
