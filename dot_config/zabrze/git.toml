@@ -215,6 +215,11 @@ snippet = "git merge --abort"
 trigger = "gma"
 
 [[snippets]]
+name    = "git merge --continue"
+snippet = "git merge --continue"
+trigger = "gmc"
+
+[[snippets]]
 name    = "git merge --squash"
 snippet = "git merge --squash"
 trigger = "gms"
