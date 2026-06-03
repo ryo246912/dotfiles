@@ -94,7 +94,6 @@ node                                                        = "22.19.0"
 "npm:ulid"                                                  = "3.0.2"
 # oxfmt                                                       = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxfmt-*", bin = "oxfmt" }
 # oxlint                                                      = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxlint-*", bin = "oxlint" }
-"pipx:fast-resume"                   = "1.17.2"
 "pipx:grip"                          = "4.6.2"
 python                               = "3.14.3"
 rust                                 = "1.94.1"
