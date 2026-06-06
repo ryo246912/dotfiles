@@ -35,6 +35,7 @@ export COMPOSE_MENU=0
 # GitHub CLI
 if command -v gh >/dev/null 2>&1; then
   export GH_TOKEN=$(gh auth token)
+  export GH_TELEMETRY=false
 fi
 
 # .zshrc.secretの読込
