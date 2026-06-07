@@ -1,3 +1,6 @@
+-- 真の色（24bit）を有効化（DSR問い合わせ不要にしてnvim起動時の遅延を防ぐ）
+vim.opt.termguicolors = true
+
 -- バックアップファイルを作らない
 vim.opt.backup = false
 -- スワップファイルを作らない
