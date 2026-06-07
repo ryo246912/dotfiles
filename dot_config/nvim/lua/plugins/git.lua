@@ -79,7 +79,7 @@ return {
         end
       end
 
-      vim.keymap.set("n", "<leader>g",  open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>gd", open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
       vim.keymap.set("n", "<leader>gH", ":DiffviewFileHistory<CR>",      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
       vim.keymap.set("n", "<leader>gh", ":DiffviewFileHistory %<CR>",    { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
     end,
@@ -292,8 +292,6 @@ return {
 
       -- Gitステータス
       keymap("n", "<leader>gs", ":Git<CR>", { noremap = true })
-      -- Git差分
-      keymap("n", "<leader>gd", ":Git diff<CR>", { noremap = true })
       -- Git差分 (分割表示)
       keymap("n", "<leader>gv", ":Gdiffsplit<CR>", { noremap = true })
       -- Git show (最新コミットの詳細) ※ <leader>gh は diffview に移管
