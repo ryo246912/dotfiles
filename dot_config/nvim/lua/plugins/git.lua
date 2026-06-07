@@ -170,10 +170,11 @@ return {
           local function show_commit_with_pr()
             local lnum = vim.api.nvim_win_get_cursor(0)[1]
             local filename = vim.api.nvim_buf_get_name(bufnr)
+            local repo_dir = vim.fn.fnamemodify(filename, ":h")
 
             vim.system(
               { "git", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
-              { text = true },
+              { text = true, cwd = repo_dir },
               function(blame_result)
                 if blame_result.code ~= 0 then
                   vim.schedule(function()
@@ -192,8 +193,14 @@ return {
 
                 vim.system(
                   { "git", "show", "--format=%H%n%an%n%ai%n%s", "--no-patch", sha },
-                  { text = true },
+                  { text = true, cwd = repo_dir },
                   function(commit_result)
+                    if commit_result.code ~= 0 then
+                      vim.schedule(function()
+                        vim.notify("git show 失敗: " .. (commit_result.stderr or ""), vim.log.levels.ERROR)
+                      end)
+                      return
+                    end
                     local info = vim.split(commit_result.stdout or "", "\n")
                     local commit_sha = info[1] or sha
                     local author     = info[2] or "Unknown"
@@ -203,7 +210,7 @@ return {
                     vim.system(
                       { "gh", "pr", "list", "--search", sha, "--state", "merged",
                         "--json", "number,title,url", "--limit", "1" },
-                      { text = true },
+                      { text = true, cwd = repo_dir },
                       function(pr_result)
                         vim.schedule(function()
                           local display = {

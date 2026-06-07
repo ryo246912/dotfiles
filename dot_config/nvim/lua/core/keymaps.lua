@@ -50,7 +50,7 @@ local function jump_current_word(direction)
   return function()
     local initialized = ensure_current_word_search()
     if initialized then
-      local flags = direction == "n" and "W" or "bW"
+      local flags = direction == "n" and "" or "b"
       for _ = 1, vim.v.count1 do
         vim.fn.search(vim.fn.getreg("/"), flags)
       end
