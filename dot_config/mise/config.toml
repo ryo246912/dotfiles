@@ -96,7 +96,7 @@ node                                                        = "22.19.0"
 # oxlint                                                      = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxlint-*", bin = "oxlint" }
 "github:Ryooooooga/zabrze"              = "0.7.3"
 "github:akavel/up"                      = "0.4"
-"github:aquaproj/aqua"                  = "2.57.1"
+"github:aquaproj/aqua"                  = "2.59.1"
 "github:gpanders/ijq"                   = "1.1.2"
 "github:jonas/tig"                      = { version = "tig-2.6.0", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/github-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
 "github:ryo246912/gh-actions-dash"      = { version = "0.1.6", bin = "gh-actions-dash" }
