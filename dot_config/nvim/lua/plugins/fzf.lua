@@ -81,9 +81,9 @@ return {
       -- バッファを表示
       keymap("n", "<leader>b", fzf.buffers, { noremap = true, silent = true, desc = "バッファ検索" })
       -- コマンドを表示
-      keymap("n", "<leader>C", fzf.commands, { noremap = true, silent = true, desc = "コマンド検索" })
+      keymap("n", "<leader>c", fzf.commands, { noremap = true, silent = true, desc = "コマンド検索" })
       -- ヘルプを表示
-      keymap("n", "<leader>H", fzf.help_tags, { noremap = true, silent = true, desc = "ヘルプ検索" })
+      keymap("n", "<leader>?", fzf.help_tags, { noremap = true, silent = true, desc = "ヘルプ検索" })
       -- ファイル履歴を表示
       keymap("n", "<leader>r", fzf.oldfiles, { noremap = true, silent = true, desc = "ファイル履歴" })
       -- コマンド履歴を表示
