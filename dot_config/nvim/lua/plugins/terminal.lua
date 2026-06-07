@@ -139,6 +139,7 @@ return {
       end
 
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
+      keymap({ "n", "t" }, "<leader>h", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
       keymap("n", "<leader>cp", function() run_popup_command("chezmoi apply --interactive") end, { noremap = true, silent = true, desc = "chezmoi apply --interactive" })
       keymap("n", "<leader>C", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンドを選んでポップアップ実行" })
       keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })
