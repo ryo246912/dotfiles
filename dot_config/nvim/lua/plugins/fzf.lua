@@ -81,22 +81,42 @@ return {
       end, { noremap = true, silent = true, desc = "カーソル下の単語で検索" })
 
       -- バッファを表示
-      keymap("n", "<leader>b", fzf.buffers,         { noremap = true, silent = true, desc = "バッファ検索" })
+      keymap("n", "<leader>b", fzf.buffers, { noremap = true, silent = true, desc = "バッファ検索" })
       -- コマンドを表示
-      keymap("n", "<leader>C", fzf.commands,        { noremap = true, silent = true, desc = "コマンド検索" })
+      keymap("n", "<leader>C", fzf.commands, { noremap = true, silent = true, desc = "コマンド検索" })
       -- ヘルプを表示
-      keymap("n", "<leader>H", fzf.help_tags,       { noremap = true, silent = true, desc = "ヘルプ検索" })
+      keymap("n", "<leader>H", fzf.help_tags, { noremap = true, silent = true, desc = "ヘルプ検索" })
       -- ファイル履歴を表示
-      keymap("n", "<leader>r", fzf.oldfiles,        { noremap = true, silent = true, desc = "ファイル履歴" })
+      keymap("n", "<leader>r", fzf.oldfiles, { noremap = true, silent = true, desc = "ファイル履歴" })
       -- コマンド履歴を表示
       keymap("n", "<leader>R", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
       -- タブを選択して切り替え
-      keymap("n", "<leader>w", select_tabpage,      { noremap = true, silent = true, desc = "タブ選択" })
+      keymap("n", "<leader>w", select_tabpage, { noremap = true, silent = true, desc = "タブ選択" })
 
-      -- zoxideを使用してディレクトリ移動
-      keymap("n", "<leader>z", fzf.zoxide, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索" })
-      -- :zz で zoxide を起動
-      vim.cmd("cnoremap zz <Cmd>lua require('fzf-lua').zoxide()<CR>")
+      -- zoxideでディレクトリ選択後、現在タブのみtcdで移動
+      -- zoxide query --list で純粋なパス一覧を取得して fzf_exec に渡す
+      local function zoxide_tcd()
+        fzf.fzf_exec("zoxide query --list", {
+          prompt = "Zoxide> ",
+          actions = {
+            ["default"] = function(selected)
+              if not selected or not selected[1] then return end
+              local dir = vim.trim(selected[1])
+              if dir == "" then return end
+              vim.cmd("tcd " .. vim.fn.fnameescape(dir))
+              local ok, neo = pcall(require, "neo-tree.command")
+              if ok then
+                neo.execute({ action = "show", source = "filesystem", position = "left", dir = dir })
+              end
+            end,
+          },
+        })
+      end
+
+      keymap("n", "<leader>z", zoxide_tcd, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索（タブローカル）" })
+      -- :zz で zoxide を起動（タブローカルtcd版）
+      vim.api.nvim_create_user_command("Zz", zoxide_tcd, {})
+      vim.cmd("cabbr zz <Cmd>Zz<CR>")
     end,
   },
 }
