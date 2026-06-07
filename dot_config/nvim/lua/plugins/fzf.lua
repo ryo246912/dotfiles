@@ -87,7 +87,7 @@ return {
       -- ファイル履歴を表示
       keymap("n", "<leader>r", fzf.oldfiles, { noremap = true, silent = true, desc = "ファイル履歴" })
       -- コマンド履歴を表示
-      keymap("n", "<leader>H", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
+      keymap("n", "<leader>R", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
       -- タブを選択して切り替え
       keymap("n", "<leader>w", select_tabpage, { noremap = true, silent = true, desc = "タブ選択" })
 
