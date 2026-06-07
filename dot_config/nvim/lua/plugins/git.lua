@@ -18,12 +18,17 @@ return {
         },
         keymaps = {
           file_panel = {
-            { "n", "<CR>", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
-            { "n", "s",    "<Cmd>lua require('diffview.actions').toggle_stage_entry()<CR>", { desc = "ステージ/アンステージ切替" } },
-            { "n", "S",    "<Cmd>lua require('diffview.actions').stage_all()<CR>", { desc = "全てステージ" } },
-            { "n", "U",    "<Cmd>lua require('diffview.actions').unstage_all()<CR>", { desc = "全てアンステージ" } },
-            { "n", "q",    "<Cmd>DiffviewClose<CR>", { desc = "閉じる" } },
-            { "n", "?",    "<Cmd>lua require('diffview.actions').help('file_panel')<CR>", { desc = "ヘルプ" } },
+            { "n", "<CR>", "<Cmd>lua require('diffview.actions').select_entry()<CR>",  { desc = "差分を開く" } },
+            { "n", "O",    "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
+            { "n", "s",      "<Cmd>lua require('diffview.actions').toggle_stage_entry()<CR>", { desc = "ステージ/アンステージ切替" } },
+            { "n", "S",      "<Cmd>lua require('diffview.actions').stage_all()<CR>", { desc = "全てステージ" } },
+            { "n", "U",      "<Cmd>lua require('diffview.actions').unstage_all()<CR>", { desc = "全てアンステージ" } },
+            { "n", "q",      "<Cmd>DiffviewClose<CR>", { desc = "閉じる" } },
+            { "n", "?",      "<Cmd>lua require('diffview.actions').help('file_panel')<CR>", { desc = "ヘルプ" } },
+          },
+          file_history_panel = {
+            { "n", "O", "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
+            { "n", "q", "<Cmd>DiffviewClose<CR>", { desc = "閉じる" } },
           },
           view = {
             { "n", "q", "<Cmd>DiffviewClose<CR>", { desc = "閉じる" } },
@@ -80,8 +85,9 @@ return {
       end
 
       vim.keymap.set("n", "<leader>gd", open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
-      vim.keymap.set("n", "<leader>gH", ":DiffviewFileHistory<CR>",      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
-      vim.keymap.set("n", "<leader>gh", ":DiffviewFileHistory %<CR>",    { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
+      vim.keymap.set("n", "<leader>gl", ":DiffviewFileHistory<CR>",   { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
+      vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>", { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
+
     end,
   },
   {
@@ -158,6 +164,7 @@ return {
           -- Blame
           map("n", "<leader>hb", function() gs.blame_line({ full = true }) end, { desc = "行のBlame表示" })
           map("n", "<leader>hB", gs.toggle_current_line_blame, { desc = "行Blame仮想テキスト切り替え" })
+          map("n", "<leader>gb", gs.blame, { desc = "Blameウィンドウをトグル" })
 
           -- コミット + PR 情報ポップアップ
           local function show_commit_with_pr()
@@ -217,16 +224,16 @@ return {
                               table.insert(display, string.format("PR: #%d - %s", pr.number, pr.title))
                               table.insert(display, "URL: " .. pr.url)
                               table.insert(display, "")
-                              table.insert(display, "[o] ブラウザで開く  [q] 閉じる")
+                              table.insert(display, "[o] PRをブラウザで開く  [d] diffviewで開く  [q] 閉じる")
                             else
                               table.insert(display, "PR: 見つかりません")
                               table.insert(display, "")
-                              table.insert(display, "[q] 閉じる")
+                              table.insert(display, "[d] diffviewで開く  [q] 閉じる")
                             end
                           else
                             table.insert(display, "PR: 取得できません（gh CLI エラー）")
                             table.insert(display, "")
-                            table.insert(display, "[q] 閉じる")
+                            table.insert(display, "[d] diffviewで開く  [q] 閉じる")
                           end
 
                           local max_w = 0
@@ -264,6 +271,10 @@ return {
                               vim.ui.open(pr_url)
                             end, { buffer = float_buf, nowait = true, desc = "PRをブラウザで開く" })
                           end
+                          vim.keymap.set("n", "d", function()
+                            close()
+                            vim.cmd("DiffviewOpen " .. commit_sha .. "^.." .. commit_sha)
+                          end, { buffer = float_buf, nowait = true, desc = "diffviewでコミットを開く" })
                         end)
                       end
                     )
@@ -273,7 +284,7 @@ return {
             )
           end
 
-          map("n", "<leader>hm", show_commit_with_pr, { desc = "コミット＋PR情報を表示" })
+          map("n", "<leader>gp", show_commit_with_pr, { desc = "コミット＋PR情報を表示" })
 
           -- 差分表示
           map("n", "<leader>hd", gs.diffthis, { desc = "working directoryとの差分" })
@@ -290,38 +301,8 @@ return {
     config = function()
       local keymap = vim.keymap.set
 
-      -- Gitステータス
-      keymap("n", "<leader>gs", ":Git<CR>", { noremap = true })
-      -- Git差分 (分割表示)
-      keymap("n", "<leader>gv", ":Gdiffsplit<CR>", { noremap = true })
-      -- Git show (最新コミットの詳細) ※ <leader>gh は diffview に移管
-      keymap("n", "<leader>gS", ":Git show<CR>", { noremap = true, desc = "Git show（最新コミット詳細）" })
-      -- Git log -p
-      keymap("n", "<leader>gl", ':Git log -p --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"<CR>', { noremap = true })
-      -- Git log
-      keymap("n", "<leader>gL", ':Git log --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"<CR>', { noremap = true })
-      -- Git branch
-      keymap("n", "<leader>gb", ":Git branch<CR>", { noremap = true })
       -- Git current branch
       keymap("n", "<leader>gB", ":Git branch --show-current<CR>", { noremap = true })
-      -- コミットログ（fzf-lua + diffview）
-      keymap("n", "<leader>gc", function()
-        require("fzf-lua").git_commits({
-          actions = {
-            ["default"] = function(selected)
-              if not selected or not selected[1] then return end
-              local commit = selected[1]:match("^(%x+)")
-              if commit then
-                vim.cmd("DiffviewOpen " .. commit .. "^.." .. commit)
-              end
-            end,
-          },
-        })
-      end, { noremap = true, silent = true, desc = "Gitコミットログ（fzf-lua）" })
-      -- 現在ファイルのコミットログ（fzf-lua）
-      keymap("n", "<leader>gC", function()
-        require("fzf-lua").git_bcommits()
-      end, { noremap = true, silent = true, desc = "現在ファイルのGitコミットログ（fzf-lua）" })
     end,
   },
   {
@@ -355,10 +336,7 @@ return {
         vim.cmd("startinsert")
       end
 
-      -- lazygit をフローティングウィンドウで開く（cwd）
-      keymap("n", "<leader>lg", ":LazyGit<CR>",            { noremap = true, silent = true, desc = "lazygit を開く" })
-      -- 現在ファイルのリポジトリで lazygit を開く
-      keymap("n", "<leader>lf", ":LazyGitCurrentFile<CR>", { noremap = true, silent = true, desc = "lazygit（現在ファイル）" })
+      keymap("n", "<leader>lg", ":LazyGit<CR>", { noremap = true, silent = true, desc = "lazygit を開く" })
     end,
   },
 }
