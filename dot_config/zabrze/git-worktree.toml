@@ -20,7 +20,7 @@ trigger = "gwc"
 
 [[snippets]]
 name            = "gwq delete(remove)"
-snippet         = "gwq remove"
+snippet         = "gwq remove -b -f"
 trigger-pattern = "(gwd|gwr)"
 
 [[snippets]]
