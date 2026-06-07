@@ -10,7 +10,9 @@ return {
       -- カラースキーム設定
       vim.cmd.colorscheme("molokai")
 
+      vim.api.nvim_set_hl(0, "CursorLine",   { bg = "#3a3d41" })
       vim.api.nvim_set_hl(0, "CursorColumn", { ctermbg = 236, bg = "#3a3d41" })
+      vim.api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { fg = "#888888", italic = true })
 
       -- タブライン: molokaでfgが背景と同色になるため明示的に上書き
       vim.api.nvim_set_hl(0, "TabLine",     { fg = "#bcbcbc", bg = "#3a3d41", underline = false })

@@ -79,7 +79,9 @@ return {
         end
       end
 
-      vim.keymap.set("n", "<leader>g", open_diffview, { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>g",  open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>gH", ":DiffviewFileHistory<CR>",      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
+      vim.keymap.set("n", "<leader>gh", ":DiffviewFileHistory %<CR>",    { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
     end,
   },
   {
@@ -87,6 +89,14 @@ return {
     event = { "BufReadPre", "BufNewFile" },
     config = function()
       require("gitsigns").setup({
+        current_line_blame = true,
+        current_line_blame_opts = {
+          virt_text = true,
+          virt_text_pos = "eol",
+          delay = 500,
+          ignore_whitespace = true,
+        },
+        current_line_blame_formatter = "<author>, <author_time:%R> • <summary>",
         signs = {
           add          = { text = "│" },
           change       = { text = "│" },
@@ -149,6 +159,122 @@ return {
           map("n", "<leader>hb", function() gs.blame_line({ full = true }) end, { desc = "行のBlame表示" })
           map("n", "<leader>hB", gs.toggle_current_line_blame, { desc = "行Blame仮想テキスト切り替え" })
 
+          -- コミット + PR 情報ポップアップ
+          local function show_commit_with_pr()
+            local lnum = vim.api.nvim_win_get_cursor(0)[1]
+            local filename = vim.api.nvim_buf_get_name(bufnr)
+
+            vim.system(
+              { "git", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
+              { text = true },
+              function(blame_result)
+                if blame_result.code ~= 0 then
+                  vim.schedule(function()
+                    vim.notify("git blame 失敗: " .. (blame_result.stderr or ""), vim.log.levels.ERROR)
+                  end)
+                  return
+                end
+
+                local sha = blame_result.stdout:match("^(%x+)")
+                if not sha or sha:match("^0+$") then
+                  vim.schedule(function()
+                    vim.notify("コミット情報を取得できません（未コミットの行）", vim.log.levels.WARN)
+                  end)
+                  return
+                end
+
+                vim.system(
+                  { "git", "show", "--format=%H%n%an%n%ai%n%s", "--no-patch", sha },
+                  { text = true },
+                  function(commit_result)
+                    local info = vim.split(commit_result.stdout or "", "\n")
+                    local commit_sha = info[1] or sha
+                    local author     = info[2] or "Unknown"
+                    local date       = info[3] or ""
+                    local subject    = info[4] or ""
+
+                    vim.system(
+                      { "gh", "pr", "list", "--search", sha, "--state", "merged",
+                        "--json", "number,title,url", "--limit", "1" },
+                      { text = true },
+                      function(pr_result)
+                        vim.schedule(function()
+                          local display = {
+                            "Commit: " .. commit_sha:sub(1, 8),
+                            "Author: " .. author,
+                            "Date:   " .. date,
+                            "",
+                            subject,
+                            "",
+                          }
+
+                          local pr_url = nil
+                          if pr_result.code == 0 and pr_result.stdout and pr_result.stdout ~= "" then
+                            local ok, prs = pcall(vim.fn.json_decode, pr_result.stdout)
+                            if ok and prs and #prs > 0 then
+                              local pr = prs[1]
+                              pr_url = pr.url
+                              table.insert(display, string.format("PR: #%d - %s", pr.number, pr.title))
+                              table.insert(display, "URL: " .. pr.url)
+                              table.insert(display, "")
+                              table.insert(display, "[o] ブラウザで開く  [q] 閉じる")
+                            else
+                              table.insert(display, "PR: 見つかりません")
+                              table.insert(display, "")
+                              table.insert(display, "[q] 閉じる")
+                            end
+                          else
+                            table.insert(display, "PR: 取得できません（gh CLI エラー）")
+                            table.insert(display, "")
+                            table.insert(display, "[q] 閉じる")
+                          end
+
+                          local max_w = 0
+                          for _, line in ipairs(display) do
+                            max_w = math.max(max_w, vim.fn.strdisplaywidth(line))
+                          end
+                          local width  = math.max(50, math.min(max_w + 4, vim.o.columns - 4))
+                          local height = #display
+
+                          local float_buf = vim.api.nvim_create_buf(false, true)
+                          vim.api.nvim_buf_set_lines(float_buf, 0, -1, false, display)
+                          vim.bo[float_buf].modifiable = false
+
+                          local float_win = vim.api.nvim_open_win(float_buf, true, {
+                            relative = "cursor",
+                            row      = 1,
+                            col      = 0,
+                            width    = width,
+                            height   = height,
+                            style    = "minimal",
+                            border   = "rounded",
+                            title    = " Commit Info ",
+                            title_pos = "center",
+                          })
+
+                          local close = function()
+                            if vim.api.nvim_win_is_valid(float_win) then
+                              vim.api.nvim_win_close(float_win, true)
+                            end
+                          end
+                          vim.keymap.set("n", "q",     close, { buffer = float_buf, nowait = true })
+                          vim.keymap.set("n", "<Esc>", close, { buffer = float_buf, nowait = true })
+                          if pr_url then
+                            vim.keymap.set("n", "o", function()
+                              vim.ui.open(pr_url)
+                            end, { buffer = float_buf, nowait = true, desc = "PRをブラウザで開く" })
+                          end
+                        end)
+                      end
+                    )
+                  end
+                )
+              end
+            )
+          end
+
+          map("n", "<leader>hm", show_commit_with_pr, { desc = "コミット＋PR情報を表示" })
+
           -- 差分表示
           map("n", "<leader>hd", gs.diffthis, { desc = "working directoryとの差分" })
           map("n", "<leader>hD", function() gs.diffthis("~") end, { desc = "最後のコミットとの差分" })
@@ -170,8 +296,8 @@ return {
       keymap("n", "<leader>gd", ":Git diff<CR>", { noremap = true })
       -- Git差分 (分割表示)
       keymap("n", "<leader>gv", ":Gdiffsplit<CR>", { noremap = true })
-      -- Git show (最新コミットの詳細)
-      keymap("n", "<leader>gh", ":Git show<CR>", { noremap = true })
+      -- Git show (最新コミットの詳細) ※ <leader>gh は diffview に移管
+      keymap("n", "<leader>gS", ":Git show<CR>", { noremap = true, desc = "Git show（最新コミット詳細）" })
       -- Git log -p
       keymap("n", "<leader>gl", ':Git log -p --pretty=format:"%C(auto)%h (%C(blue)%cd%C(auto))%d %s %Cblue[%cn]" --date=format:"%Y/%m/%d %H:%M:%S"<CR>', { noremap = true })
       -- Git log
@@ -180,6 +306,24 @@ return {
       keymap("n", "<leader>gb", ":Git branch<CR>", { noremap = true })
       -- Git current branch
       keymap("n", "<leader>gB", ":Git branch --show-current<CR>", { noremap = true })
+      -- コミットログ（fzf-lua + diffview）
+      keymap("n", "<leader>gc", function()
+        require("fzf-lua").git_commits({
+          actions = {
+            ["default"] = function(selected)
+              if not selected or not selected[1] then return end
+              local commit = selected[1]:match("^(%x+)")
+              if commit then
+                vim.cmd("DiffviewOpen " .. commit .. "^.." .. commit)
+              end
+            end,
+          },
+        })
+      end, { noremap = true, silent = true, desc = "Gitコミットログ（fzf-lua）" })
+      -- 現在ファイルのコミットログ（fzf-lua）
+      keymap("n", "<leader>gC", function()
+        require("fzf-lua").git_bcommits()
+      end, { noremap = true, silent = true, desc = "現在ファイルのGitコミットログ（fzf-lua）" })
     end,
   },
   {
