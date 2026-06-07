@@ -54,4 +54,11 @@ return {
     "vim-jp/vimdoc-ja",
     lazy = true,
   },
+  {
+    "chrishrb/gx.nvim",
+    keys = { { "gx", "<cmd>Browse<cr>", mode = { "n", "x" } } },
+    opts = {
+      open_browser_app = vim.fn.has("mac") == 1 and "open" or vim.fn.has("wsl") == 1 and "wslview" or "xdg-open",
+    },
+  },
 }

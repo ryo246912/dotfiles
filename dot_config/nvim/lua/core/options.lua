@@ -9,6 +9,9 @@ vim.opt.history = 10000
 -- options/localoptions 以外は保存して、編集状態を広く復元する
 vim.opt.sessionoptions = { "blank", "buffers", "curdir", "folds", "help", "tabpages", "winsize", "terminal" }
 
+-- vim-markdown (vim-polyglot) のデフォルトキーマップを無効化
+vim.g.vim_markdown_no_default_key_mappings = 1
+
 -- ファイラー(netrw)
 -- ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
 vim.cmd("filetype plugin indent on")
