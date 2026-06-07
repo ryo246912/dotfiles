@@ -6,7 +6,7 @@ local state = {
 }
 
 local function joinpath(...)
-  return table.concat(vim.tbl_flatten({ ... }), "/")
+  return vim.fs.joinpath(...)
 end
 
 local function buf_path(bufnr)
@@ -92,7 +92,7 @@ end
 local function current_context(bufnr)
   local path = buf_path(bufnr)
   local dir = path and vim.fs.dirname(path) or vim.loop.cwd()
-  local git_root = path and root(path, { ".git" }) or vim.loop.cwd()
+  local git_root = path and root(path, { ".git" }) or nil
   local node_root = path and root(path, { "package.json", "pnpm-lock.yaml", "bun.lock", "bun.lockb", "yarn.lock", "package-lock.json" }) or nil
   local python_root = path and root(path, { "pyproject.toml", "uv.lock", "requirements.txt", ".venv", "setup.py" }) or nil
   local go_root = path and root(path, { "go.mod" }) or nil
@@ -258,10 +258,17 @@ local function run_cli_formatter(ctx, formatter, opts)
     end)
   end
 
-  local result = vim.system(vim.list_extend({ formatter.cmd }, formatter.args or {}), {
+  local obj = vim.system(vim.list_extend({ formatter.cmd }, formatter.args or {}), {
     cwd = formatter.cwd,
     text = true,
-  }):wait()
+  })
+  local result = obj:wait(3000)
+  if not result then
+    obj:kill(9)
+    state.formatting_buffers[ctx.bufnr] = previous_state
+    vim.notify("format がタイムアウトしました", vim.log.levels.ERROR)
+    return false
+  end
 
   if result.code ~= 0 then
     local stderr = (result.stderr or result.stdout or ""):gsub("%s+$", "")
@@ -503,7 +510,7 @@ local function save_hook_post(args)
   end
 
   state.formatting_buffers[args.buf] = true
-  M.format_buffer({ buf = args.buf, silent = true, from_save = true })
+  pcall(M.format_buffer, { buf = args.buf, silent = true, from_save = true })
   state.formatting_buffers[args.buf] = nil
 end
 

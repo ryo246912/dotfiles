@@ -181,7 +181,12 @@ return {
         end
         table.insert(cmd, root_dir)
 
-        local result = vim.system(cmd, { cwd = root_dir, text = true }):wait()
+        local rg_obj = vim.system(cmd, { cwd = root_dir, text = true })
+        local result = rg_obj:wait(1500)
+        if not result then
+          rg_obj:kill(9)
+          return false
+        end
         if result.code ~= 0 and (result.stdout == nil or result.stdout == "") then
           return false
         end
@@ -283,15 +288,18 @@ return {
               title = "Go to source definition",
               arguments = { params.textDocument.uri, params.position },
             }, { bufnr = bufnr }, function(err, result)
-              if err then
-                vim.notify("TypeScript source definition に失敗しました: " .. err.message, vim.log.levels.ERROR)
-                return
-              end
-              if result and result[1] then
-                vim.lsp.util.show_document(result[1], ts_client.offset_encoding, { focus = true })
-                return
-              end
-              vim.lsp.buf.definition()
+              vim.schedule(function()
+                if err then
+                  vim.notify("TypeScript source definition に失敗しました: " .. err.message, vim.log.levels.ERROR)
+                  vim.lsp.buf.definition()
+                  return
+                end
+                if result and result[1] then
+                  vim.lsp.util.show_document(result[1], ts_client.offset_encoding, { focus = true })
+                  return
+                end
+                vim.lsp.buf.definition()
+              end)
             end)
             return
           end
