@@ -1,2 +1,2 @@
 [tools]
-"github:hzqtc/taproom" = { version = "0.5.0", bin = "taproom" }
+"github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
