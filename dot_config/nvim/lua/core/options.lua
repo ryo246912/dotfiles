@@ -1,3 +1,6 @@
+-- 真の色（24bit）を有効化（DSR問い合わせ不要にしてnvim起動時の遅延を防ぐ）
+vim.opt.termguicolors = true
+
 -- バックアップファイルを作らない
 vim.opt.backup = false
 -- スワップファイルを作らない
@@ -8,6 +11,9 @@ vim.opt.mouse = "a"
 vim.opt.history = 10000
 -- options/localoptions 以外は保存して、編集状態を広く復元する
 vim.opt.sessionoptions = { "blank", "buffers", "curdir", "folds", "help", "tabpages", "winsize", "terminal" }
+
+-- vim-markdown (vim-polyglot) のデフォルトキーマップを無効化
+vim.g.vim_markdown_no_default_key_mappings = 1
 
 -- ファイラー(netrw)
 -- ファイルタイプの自動検出、ファイルタイプ用の プラグインとインデント設定 を自動読み込み
@@ -80,3 +86,26 @@ vim.opt.diffopt = "vertical"
 
 -- カーソル形状の変更
 vim.opt.guicursor = "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50"
+
+-- タブラインを常時表示し、各タブにタブローカルCWDのフォルダ名を表示
+vim.opt.showtabline = 2
+
+_G.MyTabline = function()
+  local s = ""
+  local current = vim.fn.tabpagenr()
+  for i = 1, vim.fn.tabpagenr("$") do
+    -- getcwd(-1, tabnr): tcdで設定したタブローカルCWD、未設定ならグローバルCWD
+    local cwd = vim.fn.getcwd(-1, i)
+    local dirname = vim.fn.fnamemodify(cwd, ":t")
+    if dirname == "" then dirname = cwd end
+    if i == current then
+      s = s .. "%#TabLineSel#"
+    else
+      s = s .. "%#TabLine#"
+    end
+    s = s .. " " .. i .. ":" .. dirname .. " "
+  end
+  return s .. "%#TabLineFill#"
+end
+
+vim.opt.tabline = "%!v:lua.MyTabline()"

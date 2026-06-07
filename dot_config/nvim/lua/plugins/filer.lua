@@ -44,6 +44,11 @@ return {
         },
 
         filesystem = {
+          cwd_target = {
+            -- サイドバーのルートをタブのtcdに追従させる
+            sidebar = "tab",
+            current = "window",
+          },
           filtered_items = {
             -- 隠しファイルを表示
             visible = true,
