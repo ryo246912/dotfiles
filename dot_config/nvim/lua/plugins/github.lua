@@ -11,22 +11,43 @@ return {
       {
         "<leader>gm",
         function()
+          local function admin_merge(squash)
+            local label = squash and "adminスカッシュマージ" or "adminマージ"
+            local flags = squash and "--squash" or "--merge"
+            vim.ui.select({ "はい", "いいえ" }, { prompt = label .. " しますか？" }, function(choice)
+              if choice ~= "はい" then return end
+              vim.system(
+                { "gh", "pr", "merge", "--admin", flags },
+                { text = true },
+                function(result)
+                  vim.schedule(function()
+                    if result.code == 0 then
+                      vim.notify(label .. " 完了", vim.log.levels.INFO)
+                    else
+                      vim.notify(label .. " 失敗: " .. (result.stderr or ""), vim.log.levels.ERROR)
+                    end
+                  end)
+                end
+              )
+            end)
+          end
+
           local items = {
-            { label = "PR一覧",               cmd = "Octo pr list" },
-            { label = "PR作成",               cmd = "Octo pr create" },
-            { label = "PR差分を見る",         cmd = "Octo review diff" },
-            { label = "チェックステータス",   cmd = "Octo pr checks" },
-            { label = "PRをブラウザで開く",   cmd = "Octo pr browser" },
-            { label = "コメント追加",         cmd = "Octo comment add" },
-            { label = "レビュー開始",         cmd = "Octo review start" },
-            { label = "レビュー送信（承認含む）", cmd = "Octo review submit" },
-            { label = "レビュアー追加",       cmd = "Octo reviewer add" },
-            { label = "マージ",               cmd = "Octo pr merge" },
-            { label = "スカッシュマージ",     cmd = "Octo pr merge squash" },
-            { label = "PRをクローズ",         cmd = "Octo pr close" },
-            { label = "URL をコピー",         cmd = "Octo pr url" },
-            { label = "レビュー準備完了",     cmd = "Octo pr ready" },
-            { label = "Issue一覧",            cmd = "Octo issue list" },
+            { label = "PR一覧",                    cmd = "Octo pr list" },
+            { label = "PR作成",                    cmd = "Octo pr create" },
+            { label = "PR差分を見る",              cmd = "Octo review diff" },
+            { label = "チェックステータス",        cmd = "Octo pr checks" },
+            { label = "PRをブラウザで開く",        cmd = "Octo pr browser" },
+            { label = "コメント追加",              cmd = "Octo comment add" },
+            { label = "レビュー開始",              cmd = "Octo review start" },
+            { label = "レビュー送信（承認含む）",  cmd = "Octo review submit" },
+            { label = "レビュアー追加",            cmd = "Octo reviewer add" },
+            { label = "マージ",                    cmd = "gh pr merge --admin --merge",  fn = function() admin_merge(false) end },
+            { label = "スカッシュマージ",          cmd = "gh pr merge --admin --squash", fn = function() admin_merge(true) end },
+            { label = "PRをクローズ",              cmd = "Octo pr close" },
+            { label = "URL をコピー",              cmd = "Octo pr url" },
+            { label = "レビュー準備完了",          cmd = "Octo pr ready" },
+            { label = "Issue一覧",                 cmd = "Octo issue list" },
           }
           local display = vim.tbl_map(function(i) return i.label .. "  (" .. i.cmd .. ")" end, items)
           require("fzf-lua").fzf_exec(display, {
@@ -36,7 +57,12 @@ return {
                 if not sel or not sel[1] then return end
                 for idx, d in ipairs(display) do
                   if d == sel[1] then
-                    vim.cmd(items[idx].cmd)
+                    local item = items[idx]
+                    if item.fn then
+                      item.fn()
+                    else
+                      vim.cmd(item.cmd)
+                    end
                     return
                   end
                 end
