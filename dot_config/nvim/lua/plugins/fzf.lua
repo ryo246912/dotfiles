@@ -92,6 +92,11 @@ return {
       keymap("n", "<leader>R", fzf.command_history, { noremap = true, silent = true, desc = "コマンド履歴" })
       -- タブを選択して切り替え
       keymap("n", "<leader>w", select_tabpage,      { noremap = true, silent = true, desc = "タブ選択" })
+
+      -- zoxideを使用してディレクトリ移動
+      keymap("n", "<leader>z", fzf.zoxide, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索" })
+      -- :zz で zoxide を起動
+      vim.cmd("cnoremap zz <Cmd>lua require('fzf-lua').zoxide()<CR>")
     end,
   },
 }
