@@ -86,3 +86,26 @@ vim.opt.diffopt = "vertical"
 
 -- カーソル形状の変更
 vim.opt.guicursor = "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50"
+
+-- タブラインを常時表示し、各タブにタブローカルCWDのフォルダ名を表示
+vim.opt.showtabline = 2
+
+_G.MyTabline = function()
+  local s = ""
+  local current = vim.fn.tabpagenr()
+  for i = 1, vim.fn.tabpagenr("$") do
+    -- getcwd(-1, tabnr): tcdで設定したタブローカルCWD、未設定ならグローバルCWD
+    local cwd = vim.fn.getcwd(-1, i)
+    local dirname = vim.fn.fnamemodify(cwd, ":t")
+    if dirname == "" then dirname = cwd end
+    if i == current then
+      s = s .. "%#TabLineSel#"
+    else
+      s = s .. "%#TabLine#"
+    end
+    s = s .. " " .. i .. ":" .. dirname .. " "
+  end
+  return s .. "%#TabLineFill#"
+end
+
+vim.opt.tabline = "%!v:lua.MyTabline()"

@@ -23,14 +23,12 @@ return {
         local items = {}
 
         for _, tab in ipairs(tabs) do
-          local wins = vim.api.nvim_tabpage_list_wins(tab)
-          local win = wins[1]
-          local buf = win and vim.api.nvim_win_get_buf(win) or nil
-          local name = buf and vim.api.nvim_buf_get_name(buf) or ""
-          local label = name ~= "" and vim.fn.fnamemodify(name, ":~:.") or "[No Name]"
           local tabnr = vim.api.nvim_tabpage_get_number(tab)
+          local cwd = vim.fn.getcwd(-1, tabnr)
+          local dirname = vim.fn.fnamemodify(cwd, ":t")
+          if dirname == "" then dirname = cwd end
           local current = tab == current_tab and "*" or " "
-          table.insert(items, string.format("%d\t%s %s", tabnr, current, label))
+          table.insert(items, string.format("%d\t%s %s", tabnr, current, dirname))
         end
 
         fzf.fzf_exec(items, {
