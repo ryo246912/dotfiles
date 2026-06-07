@@ -54,11 +54,11 @@
       "groupName": "Go modules"
     },
     {
-      "matchDepNames": ["ubi:jonas/tig"],
+      "matchDepNames": ["github:jonas/tig"],
       "versionCompatibility": "^(?<compatibility>tig-)(?<version>.*)$"
     },
     {
-      "matchDepNames": ["ubi:bitwarden/clients"],
+      "matchDepNames": ["github:bitwarden/clients"],
       "versionCompatibility": "^(?<compatibility>cli-v)(?<version>.*)$"
     },
     {
