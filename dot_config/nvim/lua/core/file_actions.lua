@@ -164,14 +164,14 @@ local function resolve_formatter(ctx)
     "yaml",
     "graphql",
   }, ft) then
-    local prettier = resolve_binary(ctx.node_root or ctx.project_root, { "prettier" })
-    if prettier then
+    local oxfmt = resolve_binary(ctx.project_root, { "oxfmt" })
+    if oxfmt then
       return {
         kind = "cli",
-        label = "Prettier で format",
-        cmd = prettier,
-        args = { "--write", ctx.path },
-        cwd = ctx.node_root or ctx.project_root or ctx.dir,
+        label = "oxfmt で format",
+        cmd = oxfmt,
+        args = { ctx.path },
+        cwd = ctx.project_root or ctx.dir,
       }
     end
   end
