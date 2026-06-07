@@ -103,7 +103,7 @@ node                                                        = "22.19.0"
 "github:ryo246912/gh-reassign-reviewer" = { version = "0.0.7", bin = "gh-reassign-reviewer" }
 "github:seachicken/gh-poi"              = { version = "0.18.0", bin = "gh-poi" }
 "github:shazow/wifitui"                 = "0.13.0"
-"github:skanehira/ghost"                = "0.3.0"
+"github:skanehira/ghost"                = "0.3.1"
 "pipx:grip"                             = "4.6.2"
 python                                  = "3.14.3"
 rust                                    = "1.94.1"
