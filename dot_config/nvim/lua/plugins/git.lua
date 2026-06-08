@@ -36,17 +36,16 @@ return {
         },
       })
 
-      -- リポジトリを選択して DiffviewOpen
-      local function open_diffview()
+      -- .git がディレクトリ（通常リポジトリ）またはファイル（worktree）か確認
+      local function is_git_root(dir)
+        local git = dir .. "/.git"
+        return vim.fn.isdirectory(git) == 1 or vim.fn.filereadable(git) == 1
+      end
+
+      -- cwd 配下のリポジトリ一覧を収集（cwd 自身 + 1〜2階層下）
+      local function find_repos()
         local cwd = vim.fn.getcwd()
         local repos = {}
-
-        -- .git がディレクトリ（通常リポジトリ）またはファイル（worktree）か確認
-        local function is_git_root(dir)
-          local git = dir .. "/.git"
-          return vim.fn.isdirectory(git) == 1 or vim.fn.filereadable(git) == 1
-        end
-
         if is_git_root(cwd) then
           table.insert(repos, cwd)
         end
@@ -58,18 +57,20 @@ return {
           local dir = vim.fn.fnamemodify(p, ":h")
           if is_git_root(dir) then table.insert(repos, dir) end
         end
+        return repos
+      end
 
+      -- リポジトリを選択して cmd を実行（単一なら即実行、複数なら fzf-lua で選択）
+      local function with_repo(cmd, fallback_cmd)
+        local repos = find_repos()
         local function launch(repo)
           local prev_cwd = vim.fn.getcwd()
           vim.fn.chdir(repo)
-          vim.cmd("DiffviewOpen")
-          vim.schedule(function()
-            vim.fn.chdir(prev_cwd)
-          end)
+          vim.cmd(cmd)
+          vim.schedule(function() vim.fn.chdir(prev_cwd) end)
         end
-
         if #repos == 0 then
-          vim.cmd("DiffviewOpen")
+          vim.cmd(fallback_cmd or cmd)
         elseif #repos == 1 then
           launch(repos[1])
         else
@@ -84,9 +85,42 @@ return {
         end
       end
 
-      vim.keymap.set("n", "<leader>gd", open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
-      vim.keymap.set("n", "<leader>gl", ":DiffviewFileHistory<CR>",   { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
-      vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>", { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
+      -- cwd 直下の全ディレクトリを列挙（.git 有無問わず）
+      local function find_dirs()
+        local cwd = vim.fn.getcwd()
+        local dirs = { cwd }
+        for _, p in ipairs(vim.fn.glob(cwd .. "/*", false, true)) do
+          if vim.fn.isdirectory(p) == 1 then
+            table.insert(dirs, p)
+          end
+        end
+        return dirs
+      end
+
+      -- 複数リポジトリのコミット履歴をタブで開く
+      local function open_file_history_multi()
+        local dirs = find_dirs()
+        require("fzf-lua").fzf_exec(dirs, {
+          prompt = "リポジトリ選択（Tab複数選択）> ",
+          fzf_opts = { ["--multi"] = true },
+          actions = {
+            ["default"] = function(selected)
+              if not selected or #selected == 0 then return end
+              local orig_cwd = vim.fn.getcwd()
+              for _, repo in ipairs(selected) do
+                vim.cmd("tabnew")
+                vim.fn.chdir(repo)
+                vim.cmd("DiffviewFileHistory")
+              end
+              vim.schedule(function() vim.fn.chdir(orig_cwd) end)
+            end,
+          },
+        })
+      end
+
+      vim.keymap.set("n", "<leader>gd", function() with_repo("DiffviewOpen") end,    { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>gl", open_file_history_multi,                      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（Tab複数選択・別タブ）" })
+      vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>",                { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
 
     end,
   },
