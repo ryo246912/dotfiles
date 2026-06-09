@@ -80,6 +80,8 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     @'azu/ni.zsh'
 
+zinit wait lucid light-mode for @'raimo/zsh-halfpipe'
+
 ### completion ###
 zinit wait lucid light-mode blockf for \
     as"completion" \
