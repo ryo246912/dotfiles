@@ -36,29 +36,8 @@ return {
         },
       })
 
-      -- .git がディレクトリ（通常リポジトリ）またはファイル（worktree）か確認
-      local function is_git_root(dir)
-        local git = dir .. "/.git"
-        return vim.fn.isdirectory(git) == 1 or vim.fn.filereadable(git) == 1
-      end
-
-      -- cwd 配下のリポジトリ一覧を収集（cwd 自身 + 1〜2階層下）
-      local function find_repos()
-        local cwd = vim.fn.getcwd()
-        local repos = {}
-        if is_git_root(cwd) then
-          table.insert(repos, cwd)
-        end
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*/.git", false, true)) do
-          local dir = vim.fn.fnamemodify(p, ":h")
-          if is_git_root(dir) then table.insert(repos, dir) end
-        end
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*/*/.git", false, true)) do
-          local dir = vim.fn.fnamemodify(p, ":h")
-          if is_git_root(dir) then table.insert(repos, dir) end
-        end
-        return repos
-      end
+      local git_utils = require("utils.git")
+      local find_repos = git_utils.find_repos
 
       -- リポジトリを選択して cmd を実行（単一なら即実行、複数なら fzf-lua で選択）
       local function with_repo(cmd, fallback_cmd)
@@ -85,22 +64,10 @@ return {
         end
       end
 
-      -- cwd 直下の全ディレクトリを列挙（.git 有無問わず）
-      local function find_dirs()
-        local cwd = vim.fn.getcwd()
-        local dirs = { cwd }
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*", false, true)) do
-          if vim.fn.isdirectory(p) == 1 then
-            table.insert(dirs, p)
-          end
-        end
-        return dirs
-      end
-
       -- 複数リポジトリのコミット履歴をタブで開く
       local function open_file_history_multi()
         local repos = find_repos()
-        local entries = #repos > 0 and repos or find_dirs()
+        local entries = repos
         require("fzf-lua").fzf_exec(entries, {
           prompt = "リポジトリ選択（Tab複数選択）> ",
           fzf_opts = { ["--multi"] = true },
@@ -515,16 +482,13 @@ return {
 
       local function open_lazygit_with_selection()
         local cwd = vim.fn.getcwd()
-        local dirs = { cwd }
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*", false, true)) do
-          if vim.fn.isdirectory(p) == 1 then
-            table.insert(dirs, p)
-          end
-        end
-        if #dirs == 1 then
-          open_lazygit(dirs[1])
+        local repos = require("utils.git").find_repos()
+        if #repos == 0 then
+          open_lazygit(cwd)
+        elseif #repos == 1 then
+          open_lazygit(repos[1])
         else
-          require("fzf-lua").fzf_exec(dirs, {
+          require("fzf-lua").fzf_exec(repos, {
             prompt = "lazygit ディレクトリ選択> ",
             actions = {
               ["default"] = function(selected)
