@@ -513,7 +513,29 @@ return {
         vim.cmd("startinsert")
       end
 
-      keymap("n", "<leader>lg", ":LazyGit<CR>", { noremap = true, silent = true, desc = "lazygit を開く" })
+      local function open_lazygit_with_selection()
+        local cwd = vim.fn.getcwd()
+        local dirs = { cwd }
+        for _, p in ipairs(vim.fn.glob(cwd .. "/*", false, true)) do
+          if vim.fn.isdirectory(p) == 1 then
+            table.insert(dirs, p)
+          end
+        end
+        if #dirs == 1 then
+          open_lazygit(dirs[1])
+        else
+          require("fzf-lua").fzf_exec(dirs, {
+            prompt = "lazygit ディレクトリ選択> ",
+            actions = {
+              ["default"] = function(selected)
+                if selected and selected[1] then open_lazygit(selected[1]) end
+              end,
+            },
+          })
+        end
+      end
+
+      keymap("n", "<leader>lg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開く（ディレクトリ選択）" })
     end,
   },
 }
