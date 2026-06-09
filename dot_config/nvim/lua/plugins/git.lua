@@ -128,6 +128,76 @@ return {
     "lewis6991/gitsigns.nvim",
     event = { "BufReadPre", "BufNewFile" },
     config = function()
+      local function get_github_base_url(repo_dir, callback)
+        vim.system({ "git", "remote", "get-url", "origin" }, { text = true, cwd = repo_dir }, function(r)
+          if r.code ~= 0 then callback(nil) return end
+          local raw = vim.trim(r.stdout or "")
+          local base = raw
+            :gsub("^git@github%.com:", "https://github.com/")
+            :gsub("%.git$", "")
+          if not base:match("^https://github%.com/") then
+            callback(nil) return
+          end
+          callback(base)
+        end)
+      end
+
+      local function get_repo_relative_path(repo_dir, filepath, callback)
+        vim.system({ "git", "rev-parse", "--show-toplevel" }, { text = true, cwd = repo_dir }, function(r)
+          if r.code ~= 0 then callback(nil) return end
+          local root = vim.trim(r.stdout or "")
+          local rel = filepath:sub(#root + 2)
+          callback(rel)
+        end)
+      end
+
+      local function build_github_url(base, sha, rel_path, lnum)
+        return string.format("%s/blob/%s/%s#L%d", base, sha, rel_path, lnum)
+      end
+
+      local function github_url_action(action)
+        local lnum     = vim.api.nvim_win_get_cursor(0)[1]
+        local filename = vim.api.nvim_buf_get_name(0)
+        local repo_dir = vim.fn.fnamemodify(filename, ":h")
+
+        get_github_base_url(repo_dir, function(base)
+          if not base then
+            vim.schedule(function()
+              vim.notify("GitHub リモートが見つかりません", vim.log.levels.WARN)
+            end)
+            return
+          end
+          get_repo_relative_path(repo_dir, filename, function(rel)
+            if not rel then return end
+            if action == "main" then
+              vim.system({ "git", "rev-parse", "--verify", "origin/main" },
+                { text = true, cwd = repo_dir },
+                function(rv)
+                  local branch = (rv.code == 0) and "main" or "master"
+                  local url = build_github_url(base, branch, rel, lnum)
+                  vim.schedule(function() vim.ui.open(url) end)
+                end)
+            else
+              vim.system({ "git", "rev-parse", "HEAD" },
+                { text = true, cwd = repo_dir },
+                function(rv)
+                  if rv.code ~= 0 then return end
+                  local head_sha = vim.trim(rv.stdout or "")
+                  local url = build_github_url(base, head_sha, rel, lnum)
+                  vim.schedule(function()
+                    if action == "copy" then
+                      vim.fn.setreg("+", url)
+                      vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
+                    else
+                      vim.ui.open(url)
+                    end
+                  end)
+                end)
+            end
+          end)
+        end)
+      end
+
       require("gitsigns").setup({
         current_line_blame = true,
         current_line_blame_opts = {
@@ -267,17 +337,27 @@ return {
                               table.insert(display, "")
                               table.insert(display, "[o] PRをブラウザで開く")
                               table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[y] パーマネントリンクをコピー")
+                              table.insert(display, "[b] ブラウザで開く（コミット）")
+                              table.insert(display, "[B] ブラウザで開く（main）")
                               table.insert(display, "[q] 閉じる")
                             else
                               table.insert(display, "PR: 見つかりません")
                               table.insert(display, "")
                               table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[y] パーマネントリンクをコピー")
+                              table.insert(display, "[b] ブラウザで開く（コミット）")
+                              table.insert(display, "[B] ブラウザで開く（main）")
                               table.insert(display, "[q] 閉じる")
                             end
                           else
                             table.insert(display, "PR: 取得できません（gh CLI エラー）")
                             table.insert(display, "")
-                            table.insert(display, "[d] diffviewで開く  [q] 閉じる")
+                            table.insert(display, "[d] diffviewで開く")
+                            table.insert(display, "[y] パーマネントリンクをコピー")
+                            table.insert(display, "[b] ブラウザで開く（コミット）")
+                            table.insert(display, "[B] ブラウザで開く（main）")
+                            table.insert(display, "[q] 閉じる")
                           end
 
                           local max_w = 0
@@ -319,6 +399,49 @@ return {
                             close()
                             vim.cmd("DiffviewOpen " .. commit_sha .. "^.." .. commit_sha)
                           end, { buffer = float_buf, nowait = true, desc = "diffviewでコミットを開く" })
+                          vim.keymap.set("n", "y", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then
+                                vim.schedule(function()
+                                  vim.notify("GitHub リモートが見つかりません", vim.log.levels.WARN)
+                                end)
+                                return
+                              end
+                              get_repo_relative_path(repo_dir, filename, function(rel)
+                                if not rel then return end
+                                local url = build_github_url(base, commit_sha, rel, lnum)
+                                vim.schedule(function()
+                                  vim.fn.setreg("+", url)
+                                  vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
+                                end)
+                              end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "パーマネントリンクをコピー" })
+                          vim.keymap.set("n", "b", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then return end
+                              get_repo_relative_path(repo_dir, filename, function(rel)
+                                if not rel then return end
+                                local url = build_github_url(base, commit_sha, rel, lnum)
+                                vim.schedule(function() vim.ui.open(url) end)
+                              end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（コミット）" })
+                          vim.keymap.set("n", "B", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then return end
+                              get_repo_relative_path(repo_dir, filename, function(rel)
+                                if not rel then return end
+                                vim.system({ "git", "rev-parse", "--verify", "origin/main" },
+                                  { text = true, cwd = repo_dir },
+                                  function(rv)
+                                    local branch = (rv.code == 0) and "main" or "master"
+                                    local url = build_github_url(base, branch, rel, lnum)
+                                    vim.schedule(function() vim.ui.open(url) end)
+                                  end)
+                              end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（main ブランチ）" })
                         end)
                       end
                     )
@@ -338,6 +461,13 @@ return {
           map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", { desc = "ハンクを選択" })
         end,
       })
+
+      vim.keymap.set("n", "<leader>gy", function() github_url_action("copy") end,
+        { noremap = true, silent = true, desc = "GitHub パーマネントリンクをコピー" })
+      vim.keymap.set("n", "<leader>go", function() github_url_action("open") end,
+        { noremap = true, silent = true, desc = "GitHub でファイルを開く（HEAD）" })
+      vim.keymap.set("n", "<leader>gO", function() github_url_action("main") end,
+        { noremap = true, silent = true, desc = "GitHub でファイルを開く（main）" })
     end,
   },
   {
