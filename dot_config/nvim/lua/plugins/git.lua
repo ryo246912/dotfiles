@@ -99,20 +99,19 @@ return {
 
       -- 複数リポジトリのコミット履歴をタブで開く
       local function open_file_history_multi()
-        local dirs = find_dirs()
-        require("fzf-lua").fzf_exec(dirs, {
+        local repos = find_repos()
+        local entries = #repos > 0 and repos or find_dirs()
+        require("fzf-lua").fzf_exec(entries, {
           prompt = "リポジトリ選択（Tab複数選択）> ",
           fzf_opts = { ["--multi"] = true },
           actions = {
             ["default"] = function(selected)
               if not selected or #selected == 0 then return end
-              local orig_cwd = vim.fn.getcwd()
               for _, repo in ipairs(selected) do
                 vim.cmd("tabnew")
-                vim.fn.chdir(repo)
+                vim.cmd("tcd " .. vim.fn.fnameescape(repo))
                 vim.cmd("DiffviewFileHistory")
               end
-              vim.schedule(function() vim.fn.chdir(orig_cwd) end)
             end,
           },
         })
@@ -158,6 +157,10 @@ return {
       local function github_url_action(action)
         local lnum     = vim.api.nvim_win_get_cursor(0)[1]
         local filename = vim.api.nvim_buf_get_name(0)
+        if filename == "" then
+          vim.notify("未保存のバッファには使用できません", vim.log.levels.WARN)
+          return
+        end
         local repo_dir = vim.fn.fnamemodify(filename, ":h")
 
         get_github_base_url(repo_dir, function(base)

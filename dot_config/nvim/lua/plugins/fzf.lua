@@ -25,10 +25,12 @@ return {
         for _, tab in ipairs(tabs) do
           local tabnr = vim.api.nvim_tabpage_get_number(tab)
           local cwd = vim.fn.getcwd(-1, tabnr)
+          local parent = vim.fn.fnamemodify(cwd, ":h:t")
           local dirname = vim.fn.fnamemodify(cwd, ":t")
-          if dirname == "" then dirname = cwd end
+          local display = (parent ~= "" and parent ~= ".") and (parent .. "/" .. dirname) or dirname
+          if display == "" then display = cwd end
           local current = tab == current_tab and "*" or " "
-          table.insert(items, string.format("%d\t%s %s", tabnr, current, dirname))
+          table.insert(items, string.format("%d\t%s %s", tabnr, current, display))
         end
 
         fzf.fzf_exec(items, {
@@ -111,7 +113,7 @@ return {
         })
       end
 
-      keymap("n", "<leader>z", zoxide_tcd, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索（タブローカル）" })
+      keymap("n", "<leader>Z", zoxide_tcd, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索（タブローカル）" })
       -- :zz で zoxide を起動（タブローカルtcd版）
       vim.api.nvim_create_user_command("Zz", zoxide_tcd, {})
       vim.cmd("cabbr zz <Cmd>Zz<CR>")
