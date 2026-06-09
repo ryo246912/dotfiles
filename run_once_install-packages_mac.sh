@@ -23,6 +23,7 @@ install_package() {
     pinentry-mac
     silicon
     ugrep
+    docker-credential-helper
 
     coreutils
     findutils
