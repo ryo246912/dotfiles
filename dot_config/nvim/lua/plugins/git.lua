@@ -265,11 +265,14 @@ return {
                               table.insert(display, string.format("PR: #%d - %s", pr.number, pr.title))
                               table.insert(display, "URL: " .. pr.url)
                               table.insert(display, "")
-                              table.insert(display, "[o] PRをブラウザで開く  [d] diffviewで開く  [q] 閉じる")
+                              table.insert(display, "[o] PRをブラウザで開く")
+                              table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[q] 閉じる")
                             else
                               table.insert(display, "PR: 見つかりません")
                               table.insert(display, "")
-                              table.insert(display, "[d] diffviewで開く  [q] 閉じる")
+                              table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[q] 閉じる")
                             end
                           else
                             table.insert(display, "PR: 取得できません（gh CLI エラー）")
