@@ -36,40 +36,20 @@ return {
         },
       })
 
-      -- リポジトリを選択して DiffviewOpen
-      local function open_diffview()
-        local cwd = vim.fn.getcwd()
-        local repos = {}
+      local git_utils = require("utils.git")
+      local find_repos = git_utils.find_repos
 
-        -- .git がディレクトリ（通常リポジトリ）またはファイル（worktree）か確認
-        local function is_git_root(dir)
-          local git = dir .. "/.git"
-          return vim.fn.isdirectory(git) == 1 or vim.fn.filereadable(git) == 1
-        end
-
-        if is_git_root(cwd) then
-          table.insert(repos, cwd)
-        end
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*/.git", false, true)) do
-          local dir = vim.fn.fnamemodify(p, ":h")
-          if is_git_root(dir) then table.insert(repos, dir) end
-        end
-        for _, p in ipairs(vim.fn.glob(cwd .. "/*/*/.git", false, true)) do
-          local dir = vim.fn.fnamemodify(p, ":h")
-          if is_git_root(dir) then table.insert(repos, dir) end
-        end
-
+      -- リポジトリを選択して cmd を実行（単一なら即実行、複数なら fzf-lua で選択）
+      local function with_repo(cmd, fallback_cmd)
+        local repos = find_repos()
         local function launch(repo)
           local prev_cwd = vim.fn.getcwd()
           vim.fn.chdir(repo)
-          vim.cmd("DiffviewOpen")
-          vim.schedule(function()
-            vim.fn.chdir(prev_cwd)
-          end)
+          vim.cmd(cmd)
+          vim.schedule(function() vim.fn.chdir(prev_cwd) end)
         end
-
         if #repos == 0 then
-          vim.cmd("DiffviewOpen")
+          vim.cmd(fallback_cmd or cmd)
         elseif #repos == 1 then
           launch(repos[1])
         else
@@ -84,9 +64,29 @@ return {
         end
       end
 
-      vim.keymap.set("n", "<leader>gd", open_diffview,                   { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
-      vim.keymap.set("n", "<leader>gl", ":DiffviewFileHistory<CR>",   { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（diffview）" })
-      vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>", { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
+      -- 複数リポジトリのコミット履歴をタブで開く
+      local function open_file_history_multi()
+        local repos = find_repos()
+        local entries = repos
+        require("fzf-lua").fzf_exec(entries, {
+          prompt = "リポジトリ選択（Tab複数選択）> ",
+          fzf_opts = { ["--multi"] = true },
+          actions = {
+            ["default"] = function(selected)
+              if not selected or #selected == 0 then return end
+              for _, repo in ipairs(selected) do
+                vim.cmd("tabnew")
+                vim.cmd("tcd " .. vim.fn.fnameescape(repo))
+                vim.cmd("DiffviewFileHistory")
+              end
+            end,
+          },
+        })
+      end
+
+      vim.keymap.set("n", "<leader>gd", function() with_repo("DiffviewOpen") end,    { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>gl", open_file_history_multi,                      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（Tab複数選択・別タブ）" })
+      vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>",                { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
 
     end,
   },
@@ -94,6 +94,115 @@ return {
     "lewis6991/gitsigns.nvim",
     event = { "BufReadPre", "BufNewFile" },
     config = function()
+      local function get_github_base_url(repo_dir, callback)
+        vim.system({ "git", "remote", "get-url", "origin" }, { text = true, cwd = repo_dir }, function(r)
+          if r.code ~= 0 then callback(nil) return end
+          local raw = vim.trim(r.stdout or "")
+          local base = raw
+            :gsub("^git@github%.com:", "https://github.com/")
+            :gsub("%.git$", "")
+          if not base:match("^https://github%.com/") then
+            callback(nil) return
+          end
+          callback(base)
+        end)
+      end
+
+      local function get_repo_relative_path(repo_dir, filepath, callback)
+        vim.system({ "git", "rev-parse", "--show-toplevel" }, { text = true, cwd = repo_dir }, function(r)
+          if r.code ~= 0 then callback(nil) return end
+          local root = vim.trim(r.stdout or "")
+          local rel = vim.fs.relpath(root, vim.fs.normalize(filepath))
+          callback(rel)
+        end)
+      end
+
+      local function get_default_branch(repo_dir, callback)
+        vim.system(
+          { "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD" },
+          { text = true, cwd = repo_dir },
+          function(r)
+            if r.code == 0 then
+              local branch = vim.trim(r.stdout or ""):gsub("^origin/", "")
+              if branch ~= "" then
+                callback(branch)
+                return
+              end
+            end
+
+            vim.system(
+              { "gh", "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name" },
+              { text = true, cwd = repo_dir },
+              function(gh_result)
+                if gh_result.code ~= 0 then callback(nil) return end
+                local branch = vim.trim(gh_result.stdout or "")
+                callback(branch ~= "" and branch or nil)
+              end
+            )
+          end
+        )
+      end
+
+      local function encode_url_path(path)
+        return path:gsub("[^%w%-%._~/]", function(char)
+          return string.format("%%%02X", string.byte(char))
+        end)
+      end
+
+      local function build_github_url(base, sha, rel_path, lnum)
+        return string.format("%s/blob/%s/%s#L%d", base, sha, encode_url_path(rel_path), lnum)
+      end
+
+      local function github_url_action(action)
+        local lnum     = vim.api.nvim_win_get_cursor(0)[1]
+        local filename = vim.api.nvim_buf_get_name(0)
+        if filename == "" then
+          vim.notify("未保存のバッファには使用できません", vim.log.levels.WARN)
+          return
+        end
+        local repo_dir = vim.fn.fnamemodify(filename, ":h")
+
+        get_github_base_url(repo_dir, function(base)
+          if not base then
+            vim.schedule(function()
+              vim.notify("GitHub リモートが見つかりません", vim.log.levels.WARN)
+            end)
+            return
+          end
+          get_repo_relative_path(repo_dir, filename, function(rel)
+            if not rel then return end
+            if action == "main" then
+              get_default_branch(repo_dir, function(branch)
+                if not branch then
+                  vim.schedule(function()
+                    vim.notify("既定ブランチを取得できません", vim.log.levels.WARN)
+                  end)
+                  return
+                end
+                local url = build_github_url(base, branch, rel, lnum)
+                vim.schedule(function() vim.ui.open(url) end)
+              end)
+            else
+              vim.system({ "git", "rev-parse", "HEAD" },
+                { text = true, cwd = repo_dir },
+                function(rv)
+                  if rv.code ~= 0 then return end
+                  local head_sha = vim.trim(rv.stdout or "")
+                  local url = build_github_url(base, head_sha, rel, lnum)
+                  vim.schedule(function()
+                    if action == "copy" then
+                      vim.fn.setreg("+", url)
+                      vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
+                    else
+                      vim.ui.open(url)
+                    end
+                  end)
+                end)
+            end
+          end)
+        end)
+      end
+
       require("gitsigns").setup({
         current_line_blame = true,
         current_line_blame_opts = {
@@ -173,7 +282,7 @@ return {
             local repo_dir = vim.fn.fnamemodify(filename, ":h")
 
             vim.system(
-              { "git", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
+              { "git", "-c", "core.quotePath=false", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
               { text = true, cwd = repo_dir },
               function(blame_result)
                 if blame_result.code ~= 0 then
@@ -183,7 +292,9 @@ return {
                   return
                 end
 
-                local sha = blame_result.stdout:match("^(%x+)")
+                local sha, blame_lnum = blame_result.stdout:match("^(%x+) (%d+)")
+                local blame_filename = blame_result.stdout:match("\nfilename ([^\n]+)")
+                blame_lnum = tonumber(blame_lnum) or lnum
                 if not sha or sha:match("^0+$") then
                   vim.schedule(function()
                     vim.notify("コミット情報を取得できません（未コミットの行）", vim.log.levels.WARN)
@@ -231,16 +342,29 @@ return {
                               table.insert(display, string.format("PR: #%d - %s", pr.number, pr.title))
                               table.insert(display, "URL: " .. pr.url)
                               table.insert(display, "")
-                              table.insert(display, "[o] PRをブラウザで開く  [d] diffviewで開く  [q] 閉じる")
+                              table.insert(display, "[o] PRをブラウザで開く")
+                              table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[y] パーマネントリンクをコピー")
+                              table.insert(display, "[b] ブラウザで開く（コミット）")
+                              table.insert(display, "[B] ブラウザで開く（main）")
+                              table.insert(display, "[q] 閉じる")
                             else
                               table.insert(display, "PR: 見つかりません")
                               table.insert(display, "")
-                              table.insert(display, "[d] diffviewで開く  [q] 閉じる")
+                              table.insert(display, "[d] diffviewで開く")
+                              table.insert(display, "[y] パーマネントリンクをコピー")
+                              table.insert(display, "[b] ブラウザで開く（コミット）")
+                              table.insert(display, "[B] ブラウザで開く（main）")
+                              table.insert(display, "[q] 閉じる")
                             end
                           else
                             table.insert(display, "PR: 取得できません（gh CLI エラー）")
                             table.insert(display, "")
-                            table.insert(display, "[d] diffviewで開く  [q] 閉じる")
+                            table.insert(display, "[d] diffviewで開く")
+                            table.insert(display, "[y] パーマネントリンクをコピー")
+                            table.insert(display, "[b] ブラウザで開く（コミット）")
+                            table.insert(display, "[B] ブラウザで開く（main）")
+                            table.insert(display, "[q] 閉じる")
                           end
 
                           local max_w = 0
@@ -282,6 +406,50 @@ return {
                             close()
                             vim.cmd("DiffviewOpen " .. commit_sha .. "^.." .. commit_sha)
                           end, { buffer = float_buf, nowait = true, desc = "diffviewでコミットを開く" })
+                          vim.keymap.set("n", "y", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then
+                                vim.schedule(function()
+                                  vim.notify("GitHub リモートが見つかりません", vim.log.levels.WARN)
+                                end)
+                                return
+                              end
+                              local rel = blame_filename
+                              if not rel then return end
+                              local url = build_github_url(base, commit_sha, rel, blame_lnum)
+                              vim.schedule(function()
+                                vim.fn.setreg("+", url)
+                                vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
+                              end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "パーマネントリンクをコピー" })
+                          vim.keymap.set("n", "b", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then return end
+                              local rel = blame_filename
+                              if not rel then return end
+                              local url = build_github_url(base, commit_sha, rel, blame_lnum)
+                              vim.schedule(function() vim.ui.open(url) end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（コミット）" })
+                          vim.keymap.set("n", "B", function()
+                            get_github_base_url(repo_dir, function(base)
+                              if not base then return end
+                              get_repo_relative_path(repo_dir, filename, function(rel)
+                                if not rel then return end
+                                get_default_branch(repo_dir, function(branch)
+                                  if not branch then
+                                    vim.schedule(function()
+                                      vim.notify("既定ブランチを取得できません", vim.log.levels.WARN)
+                                    end)
+                                    return
+                                  end
+                                  local url = build_github_url(base, branch, rel, lnum)
+                                  vim.schedule(function() vim.ui.open(url) end)
+                                end)
+                              end)
+                            end)
+                          end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（main ブランチ）" })
                         end)
                       end
                     )
@@ -301,6 +469,13 @@ return {
           map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", { desc = "ハンクを選択" })
         end,
       })
+
+      vim.keymap.set("n", "<leader>gy", function() github_url_action("copy") end,
+        { noremap = true, silent = true, desc = "GitHub パーマネントリンクをコピー" })
+      vim.keymap.set("n", "<leader>go", function() github_url_action("open") end,
+        { noremap = true, silent = true, desc = "GitHub でファイルを開く（HEAD）" })
+      vim.keymap.set("n", "<leader>gO", function() github_url_action("main") end,
+        { noremap = true, silent = true, desc = "GitHub でファイルを開く（main）" })
     end,
   },
   {
@@ -343,7 +518,26 @@ return {
         vim.cmd("startinsert")
       end
 
-      keymap("n", "<leader>lg", ":LazyGit<CR>", { noremap = true, silent = true, desc = "lazygit を開く" })
+      local function open_lazygit_with_selection()
+        local cwd = vim.fn.getcwd()
+        local repos = require("utils.git").find_repos()
+        if #repos == 0 then
+          open_lazygit(cwd)
+        elseif #repos == 1 then
+          open_lazygit(repos[1])
+        else
+          require("fzf-lua").fzf_exec(repos, {
+            prompt = "lazygit ディレクトリ選択> ",
+            actions = {
+              ["default"] = function(selected)
+                if selected and selected[1] then open_lazygit(selected[1]) end
+              end,
+            },
+          })
+        end
+      end
+
+      keymap("n", "<leader>lg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開く（ディレクトリ選択）" })
     end,
   },
 }

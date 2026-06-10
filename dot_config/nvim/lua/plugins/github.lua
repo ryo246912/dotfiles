@@ -84,7 +84,8 @@ return {
             add_review_comment    = { lhs = "c", desc = "コメント追加", mode = { "n", "x" } },
             add_review_suggestion = { lhs = "s", desc = "サジェスト追加", mode = { "n", "x" } },
             submit_review         = { lhs = "S", desc = "レビュー送信" },
-            goto_file             = { lhs = "o", desc = "ファイルを開く" },
+            goto_file             = { lhs = "O", desc = "ファイルを開く" },
+            close_review_tab      = { lhs = "q", desc = "diff viewを閉じる" },
           },
           review_thread = {
             add_reply      = { lhs = "r", desc = "返信追加" },

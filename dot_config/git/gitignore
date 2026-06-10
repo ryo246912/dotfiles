@@ -31,3 +31,7 @@ settings.local.json
 
 ## VSCode
 mcp.json
+
+## AI
+plan/**
+

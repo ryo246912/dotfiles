@@ -1,4 +1,5 @@
 vim.cmd([[
+cabbr cd tcd
 cabbr he help
 cabbr te terminal
 cabbr teh horizontal terminal

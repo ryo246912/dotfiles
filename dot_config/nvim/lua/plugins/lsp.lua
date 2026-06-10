@@ -21,6 +21,7 @@ return {
 
       vim.g.lsp_enabled = vim.g.lsp_enabled ~= false
       vim.g.inline_diagnostics_enabled = vim.g.inline_diagnostics_enabled ~= false
+      vim.g.inlay_hints_enabled = vim.g.inlay_hints_enabled ~= false
 
       local ts_server = has_lspconfig("ts_ls") and "ts_ls" or "tsserver"
       local python_server = has_lspconfig("pyright") and "pyright" or (has_lspconfig("basedpyright") and "basedpyright" or nil)
@@ -32,6 +33,15 @@ return {
               usePlaceholders = true,
               analyses = {
                 unusedparams = true,
+              },
+              hints = {
+                assignVariableTypes    = true,
+                compositeLiteralFields = true,
+                compositeLiteralTypes  = true,
+                constantValues         = true,
+                functionTypeParameters = true,
+                parameterNames         = true,
+                rangeVariableTypes     = true,
               },
             },
           },
@@ -55,11 +65,38 @@ return {
             },
           },
         },
-        [ts_server] = {},
+        [ts_server] = {
+          settings = {
+            typescript = {
+              inlayHints = {
+                includeInlayParameterNameHints              = "all",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints      = true,
+                includeInlayVariableTypeHints               = true,
+                includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+                includeInlayPropertyDeclarationTypeHints    = true,
+                includeInlayFunctionLikeReturnTypeHints     = true,
+                includeInlayEnumMemberValueHints            = true,
+              },
+            },
+            javascript = {
+              inlayHints = {
+                includeInlayParameterNameHints              = "all",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints      = true,
+                includeInlayVariableTypeHints               = true,
+                includeInlayVariableTypeHintsWhenTypeMatchesName = false,
+                includeInlayPropertyDeclarationTypeHints    = true,
+                includeInlayFunctionLikeReturnTypeHints     = true,
+                includeInlayEnumMemberValueHints            = true,
+              },
+            },
+          },
+        },
       }
 
       if python_server then
-        servers[python_server] = {
+        local python_settings = {
           settings = {
             python = {
               analysis = {
@@ -74,6 +111,20 @@ return {
             },
           },
         }
+        if python_server == "basedpyright" then
+          python_settings.settings.basedpyright = {
+            analysis = {
+              inlayHints = {
+                variableTypes       = true,
+                functionReturnTypes = true,
+                parameterTypes      = true,
+                callArgumentNames   = true,
+                genericTypes        = true,
+              },
+            },
+          }
+        end
+        servers[python_server] = python_settings
       end
 
       if has_lspconfig("ruff") then
@@ -273,6 +324,10 @@ return {
           return
         end
 
+        if vim.fn.has("nvim-0.10") == 1 and client.supports_method("textDocument/inlayHint") then
+          vim.lsp.inlay_hint.enable(vim.g.inlay_hints_enabled, { bufnr = bufnr })
+        end
+
         if vim.b[bufnr].vscode_like_lsp_maps then
           return
         end
@@ -414,6 +469,9 @@ return {
       pcall(vim.api.nvim_del_user_command, "InlineDiagnosticsEnable")
       pcall(vim.api.nvim_del_user_command, "InlineDiagnosticsDisable")
       pcall(vim.api.nvim_del_user_command, "InlineDiagnosticsToggle")
+      pcall(vim.api.nvim_del_user_command, "InlayHintsEnable")
+      pcall(vim.api.nvim_del_user_command, "InlayHintsDisable")
+      pcall(vim.api.nvim_del_user_command, "InlayHintsToggle")
 
       vim.api.nvim_create_user_command("LspEnable", enable_lsp, {})
       vim.api.nvim_create_user_command("LspDisable", disable_lsp, {})
@@ -445,6 +503,37 @@ return {
         noremap = true,
         silent = true,
         desc = "inline diagnostics を切り替え",
+      })
+
+      local function apply_inlay_hints(enabled)
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if vim.api.nvim_buf_is_loaded(buf) then
+            pcall(vim.lsp.inlay_hint.enable, enabled, { bufnr = buf })
+          end
+        end
+      end
+
+      vim.api.nvim_create_user_command("InlayHintsEnable", function()
+        vim.g.inlay_hints_enabled = true
+        apply_inlay_hints(true)
+        vim.notify("inlay hints を有効化しました", vim.log.levels.INFO)
+      end, {})
+      vim.api.nvim_create_user_command("InlayHintsDisable", function()
+        vim.g.inlay_hints_enabled = false
+        apply_inlay_hints(false)
+        vim.notify("inlay hints を無効化しました", vim.log.levels.INFO)
+      end, {})
+      vim.api.nvim_create_user_command("InlayHintsToggle", function()
+        vim.g.inlay_hints_enabled = not vim.g.inlay_hints_enabled
+        apply_inlay_hints(vim.g.inlay_hints_enabled)
+        local status = vim.g.inlay_hints_enabled and "有効" or "無効"
+        vim.notify("inlay hints を " .. status .. " にしました", vim.log.levels.INFO)
+      end, {})
+
+      vim.keymap.set("n", "<leader>xh", "<cmd>InlayHintsToggle<CR>", {
+        noremap = true,
+        silent = true,
+        desc = "inlay hints を切り替え",
       })
     end,
   },
