@@ -89,6 +89,8 @@ vim.opt.guicursor = "n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50"
 
 -- タブラインを常時表示し、各タブにタブローカルCWDのフォルダ名を表示
 vim.opt.showtabline = 2
+-- タブを閉じたら、その直前に表示していたタブへ戻る
+vim.opt.tabclose = "uselast"
 
 _G.MyTabline = function()
   local s = ""
