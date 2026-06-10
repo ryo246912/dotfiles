@@ -203,6 +203,8 @@
   "bookmarks.saveBookmarksInProject": true,
   // (Gemini Code Assist)
   // trusted workspace で Agent mode の操作確認を自動承認する
+  // 指摘内容に対してコード編集して解決している場合に自動で会話を解決する
+  "geminicodeassist.codeReview.autoResolveConversations": true,
   "geminicodeassist.agentYoloMode": true,
   // (CommitMessageEditor)
   "commit-message-editor.view.defaultView": "form",
