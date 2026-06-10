@@ -123,15 +123,6 @@ return {
               },
             },
           }
-        else
-          python_settings.settings.pyright = {
-            inlayHints = {
-              variableTypes       = true,
-              functionReturnTypes = true,
-              parameterTypes      = true,
-              callArgumentNames   = true,
-            },
-          }
         end
         servers[python_server] = python_settings
       end

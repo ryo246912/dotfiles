@@ -112,13 +112,45 @@ return {
         vim.system({ "git", "rev-parse", "--show-toplevel" }, { text = true, cwd = repo_dir }, function(r)
           if r.code ~= 0 then callback(nil) return end
           local root = vim.trim(r.stdout or "")
-          local rel = filepath:sub(#root + 2)
+          local rel = vim.fs.relpath(root, vim.fs.normalize(filepath))
           callback(rel)
         end)
       end
 
+      local function get_default_branch(repo_dir, callback)
+        vim.system(
+          { "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD" },
+          { text = true, cwd = repo_dir },
+          function(r)
+            if r.code == 0 then
+              local branch = vim.trim(r.stdout or ""):gsub("^origin/", "")
+              if branch ~= "" then
+                callback(branch)
+                return
+              end
+            end
+
+            vim.system(
+              { "gh", "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name" },
+              { text = true, cwd = repo_dir },
+              function(gh_result)
+                if gh_result.code ~= 0 then callback(nil) return end
+                local branch = vim.trim(gh_result.stdout or "")
+                callback(branch ~= "" and branch or nil)
+              end
+            )
+          end
+        )
+      end
+
+      local function encode_url_path(path)
+        return path:gsub("[^%w%-%._~/]", function(char)
+          return string.format("%%%02X", string.byte(char))
+        end)
+      end
+
       local function build_github_url(base, sha, rel_path, lnum)
-        return string.format("%s/blob/%s/%s#L%d", base, sha, rel_path, lnum)
+        return string.format("%s/blob/%s/%s#L%d", base, sha, encode_url_path(rel_path), lnum)
       end
 
       local function github_url_action(action)
@@ -140,13 +172,16 @@ return {
           get_repo_relative_path(repo_dir, filename, function(rel)
             if not rel then return end
             if action == "main" then
-              vim.system({ "git", "rev-parse", "--verify", "origin/main" },
-                { text = true, cwd = repo_dir },
-                function(rv)
-                  local branch = (rv.code == 0) and "main" or "master"
-                  local url = build_github_url(base, branch, rel, lnum)
-                  vim.schedule(function() vim.ui.open(url) end)
-                end)
+              get_default_branch(repo_dir, function(branch)
+                if not branch then
+                  vim.schedule(function()
+                    vim.notify("既定ブランチを取得できません", vim.log.levels.WARN)
+                  end)
+                  return
+                end
+                local url = build_github_url(base, branch, rel, lnum)
+                vim.schedule(function() vim.ui.open(url) end)
+              end)
             else
               vim.system({ "git", "rev-parse", "HEAD" },
                 { text = true, cwd = repo_dir },
@@ -247,7 +282,7 @@ return {
             local repo_dir = vim.fn.fnamemodify(filename, ":h")
 
             vim.system(
-              { "git", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
+              { "git", "-c", "core.quotePath=false", "blame", "-L", lnum .. "," .. lnum, "--porcelain", filename },
               { text = true, cwd = repo_dir },
               function(blame_result)
                 if blame_result.code ~= 0 then
@@ -257,7 +292,9 @@ return {
                   return
                 end
 
-                local sha = blame_result.stdout:match("^(%x+)")
+                local sha, blame_lnum = blame_result.stdout:match("^(%x+) (%d+)")
+                local blame_filename = blame_result.stdout:match("\nfilename ([^\n]+)")
+                blame_lnum = tonumber(blame_lnum) or lnum
                 if not sha or sha:match("^0+$") then
                   vim.schedule(function()
                     vim.notify("コミット情報を取得できません（未コミットの行）", vim.log.levels.WARN)
@@ -377,24 +414,22 @@ return {
                                 end)
                                 return
                               end
-                              get_repo_relative_path(repo_dir, filename, function(rel)
-                                if not rel then return end
-                                local url = build_github_url(base, commit_sha, rel, lnum)
-                                vim.schedule(function()
-                                  vim.fn.setreg("+", url)
-                                  vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
-                                end)
+                              local rel = blame_filename
+                              if not rel then return end
+                              local url = build_github_url(base, commit_sha, rel, blame_lnum)
+                              vim.schedule(function()
+                                vim.fn.setreg("+", url)
+                                vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
                               end)
                             end)
                           end, { buffer = float_buf, nowait = true, desc = "パーマネントリンクをコピー" })
                           vim.keymap.set("n", "b", function()
                             get_github_base_url(repo_dir, function(base)
                               if not base then return end
-                              get_repo_relative_path(repo_dir, filename, function(rel)
-                                if not rel then return end
-                                local url = build_github_url(base, commit_sha, rel, lnum)
-                                vim.schedule(function() vim.ui.open(url) end)
-                              end)
+                              local rel = blame_filename
+                              if not rel then return end
+                              local url = build_github_url(base, commit_sha, rel, blame_lnum)
+                              vim.schedule(function() vim.ui.open(url) end)
                             end)
                           end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（コミット）" })
                           vim.keymap.set("n", "B", function()
@@ -402,13 +437,16 @@ return {
                               if not base then return end
                               get_repo_relative_path(repo_dir, filename, function(rel)
                                 if not rel then return end
-                                vim.system({ "git", "rev-parse", "--verify", "origin/main" },
-                                  { text = true, cwd = repo_dir },
-                                  function(rv)
-                                    local branch = (rv.code == 0) and "main" or "master"
-                                    local url = build_github_url(base, branch, rel, lnum)
-                                    vim.schedule(function() vim.ui.open(url) end)
-                                  end)
+                                get_default_branch(repo_dir, function(branch)
+                                  if not branch then
+                                    vim.schedule(function()
+                                      vim.notify("既定ブランチを取得できません", vim.log.levels.WARN)
+                                    end)
+                                    return
+                                  end
+                                  local url = build_github_url(base, branch, rel, lnum)
+                                  vim.schedule(function() vim.ui.open(url) end)
+                                end)
                               end)
                             end)
                           end, { buffer = float_buf, nowait = true, desc = "ブラウザで開く（main ブランチ）" })
