@@ -493,9 +493,8 @@ return {
     config = function()
       local keymap = vim.keymap.set
 
-      -- lazygit -p <path> でフローティングターミナルを開く（cd 不要）
+      -- lazygitを指定したリポジトリをcwdとしてフローティングターミナルで開く
       local function open_lazygit(path)
-        local cmd = path and ("lazygit -p " .. vim.fn.shellescape(path)) or "lazygit"
         local buf = vim.api.nvim_create_buf(false, true)
         local width  = math.floor(vim.o.columns * 0.9)
         local height = math.floor(vim.o.lines   * 0.9)
@@ -508,7 +507,8 @@ return {
           style    = "minimal",
           border   = "rounded",
         })
-        vim.fn.termopen(cmd, {
+        vim.fn.termopen({ "lazygit" }, {
+          cwd = path,
           on_exit = function()
             if vim.api.nvim_win_is_valid(win) then
               vim.api.nvim_win_close(win, true)
