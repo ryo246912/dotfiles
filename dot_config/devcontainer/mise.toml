@@ -16,7 +16,7 @@ bun                              = "1.3.14"
 "github:github/copilot-cli"      = "1.0.59"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 go                               = "1.26.4"
-node                             = "22.19.0"
+node                             = "24.16.0"
 "npm:@google/gemini-cli"         = "0.45.2"
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
