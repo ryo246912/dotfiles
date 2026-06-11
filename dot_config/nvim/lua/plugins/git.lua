@@ -156,10 +156,8 @@ return {
         return string.format("%s/blob/%s/%s#L%d", base, sha, encode_url_path(rel_path), lnum)
       end
 
-      local function github_url_action_visual(action)
-        local start_lnum = vim.fn.line("'<")
-        local end_lnum   = vim.fn.line("'>")
-        local filename   = vim.api.nvim_buf_get_name(0)
+      local function execute_github_url_action(action, start_lnum, end_lnum)
+        local filename = vim.api.nvim_buf_get_name(0)
         if filename == "" then
           vim.notify("未保存のバッファには使用できません", vim.log.levels.WARN)
           return
@@ -207,54 +205,14 @@ return {
         end)
       end
 
-      local function github_url_action(action)
-        local lnum     = vim.api.nvim_win_get_cursor(0)[1]
-        local filename = vim.api.nvim_buf_get_name(0)
-        if filename == "" then
-          vim.notify("未保存のバッファには使用できません", vim.log.levels.WARN)
-          return
-        end
-        local repo_dir = vim.fn.fnamemodify(filename, ":h")
+      local function github_url_action_visual(action)
+        local anchor = vim.fn.line("v")
+        local cursor = vim.fn.line(".")
+        execute_github_url_action(action, math.min(anchor, cursor), math.max(anchor, cursor))
+      end
 
-        get_github_base_url(repo_dir, function(base)
-          if not base then
-            vim.schedule(function()
-              vim.notify("GitHub リモートが見つかりません", vim.log.levels.WARN)
-            end)
-            return
-          end
-          get_repo_relative_path(repo_dir, filename, function(rel)
-            if not rel then return end
-            if action == "main" then
-              get_default_branch(repo_dir, function(branch)
-                if not branch then
-                  vim.schedule(function()
-                    vim.notify("既定ブランチを取得できません", vim.log.levels.WARN)
-                  end)
-                  return
-                end
-                local url = build_github_url(base, branch, rel, lnum)
-                vim.schedule(function() vim.ui.open(url) end)
-              end)
-            else
-              vim.system({ "git", "rev-parse", "HEAD" },
-                { text = true, cwd = repo_dir },
-                function(rv)
-                  if rv.code ~= 0 then return end
-                  local head_sha = vim.trim(rv.stdout or "")
-                  local url = build_github_url(base, head_sha, rel, lnum)
-                  vim.schedule(function()
-                    if action == "copy" then
-                      vim.fn.setreg("+", url)
-                      vim.notify("コピーしました: " .. url, vim.log.levels.INFO)
-                    else
-                      vim.ui.open(url)
-                    end
-                  end)
-                end)
-            end
-          end)
-        end)
+      local function github_url_action(action)
+        execute_github_url_action(action, vim.api.nvim_win_get_cursor(0)[1])
       end
 
       require("gitsigns").setup({
