@@ -80,6 +80,8 @@ return {
         return auto_session_lib.get_latest_session(auto_session.get_root_dir())
       end
 
+      local TIMESTAMP_PATTERN = "_%d%d%d%d%d%d%d%d_%d%d%d%d%d%d$"
+
       local session_group = vim.api.nvim_create_augroup("AutoSessionCustom", { clear = true })
       vim.api.nvim_create_autocmd("VimEnter", {
         group = session_group,
@@ -94,7 +96,19 @@ return {
           vim.schedule(function()
             local latest = latest_session()
             if latest then
-              auto_session.restore_session(latest, { show_message = false })
+              local session_name = vim.fn.fnamemodify(latest, ":t:r")
+                :gsub(TIMESTAMP_PATTERN, "")
+              local choice = vim.fn.confirm(
+                "セッションを復元しますか？\n[" .. session_name .. "]",
+                "&Yes\n&No",
+                1
+              )
+              if choice == 1 then
+                local ok, err = pcall(auto_session.restore_session, latest, { show_message = false })
+                if not ok then
+                  vim.notify("セッションの復元に失敗しました: " .. tostring(err), vim.log.levels.ERROR)
+                end
+              end
             end
           end)
         end,
@@ -122,7 +136,7 @@ return {
         save_timer:start(5 * 60 * 1000, 5 * 60 * 1000, vim.schedule_wrap(function()
           if vim.v.this_session ~= "" and vim.fn.mode(1):sub(1, 1) == "n" and not has_floating_window() then
             local active_session = vim.v.this_session
-            local session_name = vim.fn.fnamemodify(active_session, ":t:r"):gsub("_%d%d%d%d%d%d%d%d_%d%d%d%d%d%d$", "")
+            local session_name = vim.fn.fnamemodify(active_session, ":t:r"):gsub(TIMESTAMP_PATTERN, "")
             local snapshot_name = session_name .. "_" .. os.date("%Y%m%d_%H%M%S")
             local ok = pcall(auto_session.save_session, snapshot_name, {
               show_message = false,

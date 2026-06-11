@@ -39,6 +39,22 @@ vim.api.nvim_create_autocmd('TabNewEntered', {
   end,
 })
 
+-- :qa時にterminalバッファのjobを停止してから終了する
+local quit_group = vim.api.nvim_create_augroup('QuitCleanup', { clear = true })
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  group = quit_group,
+  callback = function()
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == 'terminal' then
+        local job_id = vim.b[buf].terminal_job_id
+        if job_id then
+          vim.fn.jobstop(job_id)
+        end
+      end
+    end
+  end,
+})
+
 -- terminalを開いたら即入力できるようにする（:terminal, split terminal, toggleterm共通）
 local terminal_group = vim.api.nvim_create_augroup('TerminalInsert', { clear = true })
 vim.api.nvim_create_autocmd('TermOpen', {

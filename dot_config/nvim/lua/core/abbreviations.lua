@@ -1,6 +1,7 @@
 vim.cmd([[
 cabbr cd tcd
 cabbr he help
+cabbr <expr> tc getcmdtype() ==# ':' && getcmdline() ==# 'tc' ? (tabpagenr('$') ==# 1 ? 'qa' : 'tabclose') : 'tc'
 cabbr te terminal
 cabbr teh horizontal terminal
 cabbr tet horizontal terminal
