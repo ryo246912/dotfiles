@@ -20,7 +20,7 @@ node                             = "22.19.0"
 "npm:@google/gemini-cli"         = "0.45.2"
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
-"npm:oxfmt"                      = "0.53.0"
+"npm:oxfmt"                      = "0.54.0"
 # oxfmt                            = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxfmt-*", bin = "oxfmt" }
 # oxlint                           = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxlint-*", bin = "oxlint" }
 python = "3.14.3"
