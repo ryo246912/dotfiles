@@ -28,7 +28,8 @@ end
 
 vim.api.nvim_create_autocmd({ "WinNew", "WinClosed" }, {
   callback = function()
-    saved_window_layouts = {}
+    local tabid = vim.api.nvim_get_current_tabpage()
+    saved_window_layouts[tabid] = nil
   end,
 })
 
