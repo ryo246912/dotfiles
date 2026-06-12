@@ -117,6 +117,32 @@ return {
       -- :zz で zoxide を起動（タブローカルtcd版）
       vim.api.nvim_create_user_command("Zz", zoxide_tcd, {})
       vim.cmd("cabbr zz <Cmd>Zz<CR>")
+
+      -- 現在ディレクトリ配下のサブディレクトリをinteractiveに選択してtcd
+      local function local_tcd()
+        local cwd = vim.fn.getcwd()
+        local cmd = "find " .. vim.fn.shellescape(cwd) .. " -type d -not -path '*/.git/*'"
+        fzf.fzf_exec(cmd, {
+          prompt = "LocalDir> ",
+          actions = {
+            ["default"] = function(selected)
+              if not selected or not selected[1] then return end
+              local dir = vim.trim(selected[1])
+              if dir == "" then return end
+              vim.cmd("tcd " .. vim.fn.fnameescape(dir))
+              local ok, neo = pcall(require, "neo-tree.command")
+              if ok then
+                neo.execute({ action = "show", source = "filesystem", position = "left", dir = dir })
+              end
+            end,
+          },
+        })
+      end
+
+      keymap("n", "<leader>Z", local_tcd, { noremap = true, silent = true, desc = "ローカルディレクトリ選択（タブローカル）" })
+      -- :zd でローカルディレクトリ選択
+      vim.api.nvim_create_user_command("Zd", local_tcd, {})
+      vim.cmd("cabbr zd <Cmd>Zd<CR>")
     end,
   },
 }
