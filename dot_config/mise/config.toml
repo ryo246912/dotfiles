@@ -77,7 +77,7 @@ cosign                                                      = "2.6.2"
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 node                                                        = "22.19.0"
 "npm:@devcontainers/cli"                                    = "0.87.0"
-"npm:@google/gemini-cli"                                    = "0.45.2"
+"npm:@google/gemini-cli"                                    = "0.46.0"
 "npm:@kitlangton/ghui"                                      = "0.7.1"
 "npm:agentlytics"                                           = "0.2.13"
 "npm:ccmanager"                                             = "4.1.0"
