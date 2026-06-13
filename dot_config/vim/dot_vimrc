@@ -161,21 +161,6 @@ cabbr <leader>P :set paste!
 " :s で%s//(置換後)/gを呼び出し
 cabbr <expr> s getcmdtype() .. getcmdline() ==# ':s' ? [getchar(), ''][1] .. "%s//" : 's'
 
-" ウィンドウ最大化/もとに戻す関数
-let g:toggle_window_size = 0
-function! ToggleWindowSize()
-  if g:toggle_window_size == 1
-    exec "normal \<C-w>="
-    let g:toggle_window_size = 0
-  else
-    :resize
-    :vertical resize
-    let g:toggle_window_size = 1
-  endif
-endfunction
-nnoremap <leader>z :call ToggleWindowSize()<CR>
-nnoremap <A-z> :call ToggleWindowSize()<CR>
-
 " g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
 function! GoToNthTab(n)
   " 目的のタブ番号を計算

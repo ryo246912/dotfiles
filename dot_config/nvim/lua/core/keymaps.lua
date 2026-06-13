@@ -2,17 +2,36 @@
 vim.g.mapleader = ","
 
 -- ウィンドウ最大化/もとに戻す関数
-vim.g.toggle_window_size = 0
+local saved_window_layouts = {}
+
 local function toggle_window_size()
-  if vim.g.toggle_window_size == 1 then
-    vim.cmd("normal! \\<C-w>=")
-    vim.g.toggle_window_size = 0
-  else
-    vim.cmd("resize")
-    vim.cmd("vertical resize")
-    vim.g.toggle_window_size = 1
+  local tabid = vim.api.nvim_get_current_tabpage()
+  local saved_layout = saved_window_layouts[tabid]
+
+  if saved_layout then
+    saved_window_layouts[tabid] = nil
+
+    if vim.api.nvim_win_is_valid(saved_layout.current_win) then
+      vim.api.nvim_set_current_win(saved_layout.current_win)
+    end
+    vim.cmd(saved_layout.restore_cmd)
+    return
   end
+
+  saved_window_layouts[tabid] = {
+    current_win = vim.api.nvim_get_current_win(),
+    restore_cmd = vim.fn.winrestcmd(),
+  }
+  vim.cmd("resize")
+  vim.cmd("vertical resize")
 end
+
+vim.api.nvim_create_autocmd({ "WinNew", "WinClosed" }, {
+  callback = function()
+    local tabid = vim.api.nvim_get_current_tabpage()
+    saved_window_layouts[tabid] = nil
+  end,
+})
 
 -- g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
 local function go_to_nth_tab(n)
@@ -129,8 +148,8 @@ keymap("v", "/", [[<ESC>/\%V]], { noremap = true })
 keymap("v", "?", [[<ESC>?\%V]], { noremap = true })
 
 
-keymap("n", "<leader>z", toggle_window_size, { noremap = true })
-keymap("n", "<A-z>", toggle_window_size, { noremap = true })
+keymap("n", "<leader>z", toggle_window_size, { noremap = true, silent = true, desc = "ウィンドウ最大化/復元" })
+keymap("n", "<A-z>", toggle_window_size, { noremap = true, silent = true, desc = "ウィンドウ最大化/復元" })
 
 -- g1-g9 mappings
 for i = 1, 9 do

@@ -17,6 +17,20 @@ return {
 
       local fzf = require("fzf-lua")
       local keymap = vim.keymap.set
+
+      local function change_tab_directory(dir)
+        local ok, err = pcall(vim.cmd, "tcd " .. vim.fn.fnameescape(dir))
+        if not ok then
+          vim.notify("ディレクトリの移動に失敗しました: " .. err, vim.log.levels.ERROR)
+          return
+        end
+
+        local has_neo_tree, neo_tree = pcall(require, "neo-tree.command")
+        if has_neo_tree then
+          neo_tree.execute({ action = "show", source = "filesystem", position = "left", dir = dir })
+        end
+      end
+
       local function select_tabpage()
         local tabs = vim.api.nvim_list_tabpages()
         local current_tab = vim.api.nvim_get_current_tabpage()
@@ -103,20 +117,44 @@ return {
               if not selected or not selected[1] then return end
               local dir = vim.trim(selected[1])
               if dir == "" then return end
-              vim.cmd("tcd " .. vim.fn.fnameescape(dir))
-              local ok, neo = pcall(require, "neo-tree.command")
-              if ok then
-                neo.execute({ action = "show", source = "filesystem", position = "left", dir = dir })
-              end
+              change_tab_directory(dir)
             end,
           },
         })
       end
 
-      keymap("n", "<leader>Z", zoxide_tcd, { noremap = true, silent = true, desc = "Zoxide ディレクトリ検索（タブローカル）" })
       -- :zz で zoxide を起動（タブローカルtcd版）
       vim.api.nvim_create_user_command("Zz", zoxide_tcd, {})
       vim.cmd("cabbr zz <Cmd>Zz<CR>")
+
+      -- 現在ディレクトリ配下のサブディレクトリをinteractiveに選択してtcd
+      local function local_tcd()
+        local cwd = vim.fn.getcwd()
+        local dirs = { cwd }
+
+        for name, type in vim.fs.dir(cwd, { depth = 5 }) do
+          local in_git_dir = name == ".git" or name:match("^%.git/") or name:match("/%.git/")
+          if type == "directory" and not in_git_dir then
+            table.insert(dirs, vim.fs.joinpath(cwd, name))
+          end
+        end
+
+        fzf.fzf_exec(dirs, {
+          prompt = "LocalDir> ",
+          actions = {
+            ["default"] = function(selected)
+              if not selected or not selected[1] then return end
+              local dir = vim.trim(selected[1])
+              if dir == "" then return end
+              change_tab_directory(dir)
+            end,
+          },
+        })
+      end
+
+      -- :zd でローカルディレクトリ選択
+      vim.api.nvim_create_user_command("Zd", local_tcd, {})
+      vim.cmd("cabbr zd <Cmd>Zd<CR>")
     end,
   },
 }
