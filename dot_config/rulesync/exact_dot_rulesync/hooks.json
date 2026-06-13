@@ -80,5 +80,21 @@
         }
       ]
     }
+  },
+  "codexcli": {
+    "hooks": {
+      "beforeSubmitPrompt": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+          "timeout": 30
+        }
+      ],
+      "stop": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+          "timeout": 30
+        }
+      ]
+    }
   }
 }
