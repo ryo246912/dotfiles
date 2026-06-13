@@ -57,5 +57,5 @@
 [secrets]
 	providers = git secrets --aws-provider
 	patterns = (A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}
-	patterns = \"?aws_secret_access_key\"?[[:space:]]*[:=][[:space:]]*\"?[A-Za-z0-9/\+=]{40}\"?
-	patterns = \"?aws_session_token\"?[[:space:]]*[:=][[:space:]]*\"?[A-Za-z0-9/\+=]{16,}\"?
+	patterns = \"?aws_secret_access_key\"?[[:space:]]*[:=][[:space:]]*\"?[A-Za-z0-9/\\+=]{40}\"?
+	patterns = \"?aws_session_token\"?[[:space:]]*[:=][[:space:]]*\"?[A-Za-z0-9/\\+=]{16,}\"?
