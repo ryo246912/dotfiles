@@ -99,3 +99,23 @@ trigger = "yl"
 name            = "agentsview serve"
 snippet         = "agentsview serve"
 trigger-pattern = "(^ai$|ags)"
+
+[[snippets]]
+name            = "agentsview pg push"
+snippet         = "agentsview pg push"
+trigger-pattern = "(^agsp$|agspush)"
+
+[[snippets]]
+name            = "agentsview pg push projects"
+snippet         = "agentsview pg push --projects 👇"
+trigger-pattern = "(^agspj$|agspushp)"
+
+[[snippets]]
+name            = "agentsview pg status"
+snippet         = "agentsview pg status"
+trigger-pattern = "(^agst$|agsstatus)"
+
+[[snippets]]
+name            = "agentsview pg serve"
+snippet         = "agentsview pg serve --host 0.0.0.0 --no-browser"
+trigger-pattern = "(^agsps$|agspserve)"
