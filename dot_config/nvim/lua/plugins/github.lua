@@ -32,9 +32,138 @@ return {
             end)
           end
 
+          local function format_gh_datetime(value)
+            if type(value) ~= "string" then return "-" end
+            local year, month, day, hour, min, sec = value:match("^(%d+)%-(%d+)%-(%d+)T(%d+):(%d+):(%d+)Z$")
+            if not year then return value end
+            return string.format("%s/%s/%s %s:%s:%s", year, month, day, hour, min, sec)
+          end
+
+          local function truncate_display(value, width)
+            value = tostring(value or "")
+            local result = ""
+            for i = 0, vim.fn.strchars(value) - 1 do
+              local next_result = result .. vim.fn.strcharpart(value, i, 1)
+              if vim.fn.strdisplaywidth(next_result) > width then break end
+              result = next_result
+            end
+            return result
+          end
+
+          local function pad_display(value, width)
+            value = tostring(value or "")
+            return value .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(value), 0))
+          end
+
+          local function format_pr_rows(prs)
+            local rows = vim.tbl_map(function(pr)
+              local author = pr.author and pr.author.login or "-"
+              return {
+                tostring(pr.number),
+                truncate_display(pr.title or "", 50),
+                author,
+                pr.state or "-",
+                pr.isDraft and "◯" or "☓",
+                format_gh_datetime(pr.updatedAt),
+                format_gh_datetime(pr.createdAt),
+                pr.headRefName or "-",
+              }
+            end, prs)
+
+            local header = { "no", "title", "author", "state", "draft", "updatedAt", "createdAt", "branch" }
+            local widths = vim.tbl_map(function(value) return vim.fn.strdisplaywidth(value) end, header)
+            for _, row in ipairs(rows) do
+              for idx, value in ipairs(row) do
+                widths[idx] = math.max(widths[idx], vim.fn.strdisplaywidth(tostring(value)))
+              end
+            end
+
+            local function format_row(row)
+              local formatted = {}
+              for idx, value in ipairs(row) do
+                formatted[idx] = pad_display(value, widths[idx])
+              end
+              return table.concat(formatted, "  ")
+            end
+
+            return vim.tbl_map(format_row, rows), format_row(header)
+          end
+
+          local function checkout_and_open_pr()
+            vim.system(
+              {
+                "gh",
+                "pr",
+                "list",
+                "--search",
+                "user-review-requested:@me",
+                "--limit",
+                "100",
+                "--json",
+                "number,title,author,state,isDraft,updatedAt,createdAt,headRefName",
+              },
+              { text = true },
+              function(result)
+                vim.schedule(function()
+                  if result.code ~= 0 then
+                    vim.notify("PR一覧の取得に失敗: " .. (result.stderr or ""), vim.log.levels.ERROR)
+                    return
+                  end
+
+                  local ok, prs = pcall(vim.json.decode, result.stdout or "[]")
+                  if not ok or type(prs) ~= "table" then
+                    vim.notify("PR一覧の解析に失敗", vim.log.levels.ERROR)
+                    return
+                  end
+                  if #prs == 0 then
+                    vim.notify("レビュー依頼されたPRがありません", vim.log.levels.INFO)
+                    return
+                  end
+
+                  local display, header = format_pr_rows(prs)
+
+                  require("fzf-lua").fzf_exec(display, {
+                    prompt = "PR checkout + open> ",
+                    fzf_opts = {
+                      ["--no-sort"] = true,
+                      ["--header"] = header,
+                    },
+                    actions = {
+                      ["default"] = function(sel)
+                        if not sel or not sel[1] then return end
+                        for idx, d in ipairs(display) do
+                          if d == sel[1] then
+                            local pr = prs[idx]
+                            vim.system(
+                              { "gh", "pr", "checkout", tostring(pr.number) },
+                              { text = true },
+                              function(checkout_result)
+                                vim.schedule(function()
+                                  if checkout_result.code ~= 0 then
+                                    vim.notify("PR checkoutに失敗: " .. (checkout_result.stderr or ""), vim.log.levels.ERROR)
+                                    return
+                                  end
+                                  vim.notify("PR checkout完了: #" .. pr.number, vim.log.levels.INFO)
+                                  vim.cmd("Octo pr edit " .. pr.number)
+                                end)
+                              end
+                            )
+                            return
+                          end
+                        end
+                      end,
+                    },
+                  })
+                end)
+              end
+            )
+          end
+
           local items = {
             { label = "PR一覧",                    cmd = "Octo pr list" },
+            { label = "PRを開いてcheckout",        cmd = "gh pr checkout + Octo pr edit", fn = checkout_and_open_pr },
             { label = "PR作成",                    cmd = "Octo pr create" },
+            { label = "今開いているPRをcheckout",  cmd = "Octo pr checkout" },
             { label = "PR差分を見る",              cmd = "Octo review diff" },
             { label = "チェックステータス",        cmd = "Octo pr checks" },
             { label = "PRをブラウザで開く",        cmd = "Octo pr browser" },
