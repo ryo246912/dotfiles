@@ -155,6 +155,7 @@ keymap("n", "<A-z>", toggle_window_size, { noremap = true, silent = true, desc =
 for i = 1, 9 do
   keymap("n", "g" .. i, function() go_to_nth_tab(i) end, { noremap = true })
 end
+keymap("n", "gb", ":tabprevious<CR>", { noremap = true, silent = true, desc = "前のタブへ移動" })
 
 -- ジャンプリストを戻る (<C-o>の代替)
 keymap("n", "gh", "<C-o>", { noremap = true, desc = "ジャンプリストを戻る" })
