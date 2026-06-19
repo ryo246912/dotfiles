@@ -214,6 +214,8 @@ return {
             add_review_suggestion = { lhs = "s", desc = "サジェスト追加", mode = { "n", "x" } },
             submit_review         = { lhs = "S", desc = "レビュー送信" },
             goto_file             = { lhs = "O", desc = "ファイルを開く" },
+            select_next_entry     = { lhs = "gl", desc = "次の変更ファイルへ移動" },
+            select_prev_entry     = { lhs = "gh", desc = "前の変更ファイルへ移動" },
             close_review_tab      = { lhs = "q", desc = "diff viewを閉じる" },
           },
           review_thread = {
