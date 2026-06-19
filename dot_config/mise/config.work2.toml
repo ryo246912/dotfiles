@@ -13,3 +13,8 @@
 "go:gotest.tools/gotestsum"                 = "1.13.0"
 "pipx:awslogs"                              = "0.15.0"
 "pipx:tftui"                                = "0.13.4"
+
+[settings]
+trusted_config_paths = [
+    "~/work",
+]
