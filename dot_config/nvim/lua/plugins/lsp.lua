@@ -324,7 +324,7 @@ return {
           return
         end
 
-        if vim.fn.has("nvim-0.10") == 1 and client.supports_method("textDocument/inlayHint") then
+        if vim.fn.has("nvim-0.10") == 1 and client:supports_method("textDocument/inlayHint") then
           vim.lsp.inlay_hint.enable(vim.g.inlay_hints_enabled, { bufnr = bufnr })
         end
 

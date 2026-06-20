@@ -118,8 +118,12 @@ vim                                     = "9.1.1006"
 [settings]
 auto_install = false
 experimental = true
-gpg_verify   = true
-lockfile     = true
+gpg_verify = true
+lockfile = true
+trusted_config_paths = [
+    "~/.local/share/chezmoi",
+    "~/.local/share/worktrees",
+]
 
 [task_config]
 includes = ["tasks/*.toml"]
