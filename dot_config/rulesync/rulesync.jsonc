@@ -2,7 +2,6 @@
   "features": {
     "claudecode": ["rules", "skills", "hooks"],
     "codexcli": ["rules", "skills"],
-    "geminicli": ["rules", "commands", "hooks"],
     "copilot": ["rules"],
     "copilotcli": ["rules", "mcp"],
   },

@@ -4,7 +4,6 @@ description: PR レビューや設計調査の結果を `10-memo-*.md` に加筆
 targets:
   - claudecode
   - codexcli
-  - geminicli
   - copilot
 ---
 

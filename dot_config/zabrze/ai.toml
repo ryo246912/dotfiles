@@ -88,9 +88,9 @@ snippet = "--dangerously-skip-permissions"
 trigger = "yl"
 
 [[snippets]]
-context = ".*(copilot|codex|gemini)\\s"
+context = ".*(copilot|codex)\\s"
 global  = true
-name    = "(copilot|codex|gemini) --yolo"
+name    = "(copilot|codex) --yolo"
 snippet = "--yolo"
 trigger = "yl"
 

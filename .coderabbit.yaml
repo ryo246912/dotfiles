@@ -39,9 +39,6 @@ reviews:
       instructions: |
         コメント付き JSONC や既存キーの意図を尊重し、不要な整形だけの指摘は避けてください。
         ユーザー設定の意味が変わる変更や既存コメントの消失を優先して確認してください。
-    - path: "dot_gemini/settings.json"
-      instructions: |
-        OAuth、privacy、MCP 設定を壊さないことを優先し、認証方式や外部連携の退行を重点的に確認してください。
     - path: "dot_local/bin/**"
       instructions: |
         シェルスクリプトでは引用、冪等性、エラーハンドリング、macOS と Linux の差異による退行を重点的に確認してください。
