@@ -144,9 +144,9 @@ return {
           { path = cwd, depth = 0 },
         }
 
-        for name, type in vim.fs.dir(cwd, { depth = 2 }) do
+        for name, entry_type in vim.fs.dir(cwd, { depth = 2 }) do
           local in_git_dir = name == ".git" or name:match("^%.git/") or name:match("/%.git/")
-          if type == "directory" and not in_git_dir then
+          if entry_type == "directory" and not in_git_dir then
             local depth = select(2, name:gsub("/", "")) + 1
             table.insert(dirs, { path = vim.fs.joinpath(cwd, name), depth = depth })
           end
@@ -176,6 +176,8 @@ return {
           },
         })
       end
+
+      keymap("n", "<leader>Z", local_tcd, { noremap = true, silent = true, desc = "ローカルディレクトリ選択（タブローカル）" })
 
       -- :zd でローカルディレクトリ選択
       vim.api.nvim_create_user_command("Zd", local_tcd, {})

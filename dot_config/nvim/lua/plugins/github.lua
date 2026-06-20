@@ -131,9 +131,14 @@ return {
                     actions = {
                       ["default"] = function(sel)
                         if not sel or not sel[1] then return end
-                        for idx, d in ipairs(display) do
-                          if d == sel[1] then
-                            local pr = prs[idx]
+                        local selected_no = sel[1]:match("^%s*(%d+)")
+                        if not selected_no then
+                          vim.notify("選択したPR番号を解析できませんでした", vim.log.levels.ERROR)
+                          return
+                        end
+
+                        for _, pr in ipairs(prs) do
+                          if tostring(pr.number) == selected_no then
                             vim.system(
                               { "gh", "pr", "checkout", tostring(pr.number) },
                               { text = true },
@@ -151,6 +156,8 @@ return {
                             return
                           end
                         end
+
+                        vim.notify("対応するPRが見つかりませんでした", vim.log.levels.ERROR)
                       end,
                     },
                   })
