@@ -11,7 +11,8 @@
 #   1. hook の JSON を stdin から受け取る（session_id / transcript_path / cwd など）
 #   2. 無限再帰チェック: AI_RULE_HOOK_RUNNING=1 なら即 exit（ループ防止）
 #   3. イベントと条件を判定し、実行不要なら skip
-#      - claude / copilot: session_end / pre_compact で実行
+#      - claude: session_end / pre_compact で実行
+#      - copilot: session_end で実行
 #      - codex: /clear 等のコマンドか十分な行数増加で実行
 #   4. 会話履歴（末尾 24KB）・ルールファイル（末尾 12KB）・既存スキル一覧を読み込む
 #   5. ai-rule-hook.md の指示文 + メタデータ + ルール抜粋 + スキル一覧 + 履歴抜粋でプロンプトを組み立てる
