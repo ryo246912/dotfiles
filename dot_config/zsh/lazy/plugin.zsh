@@ -54,7 +54,6 @@ __zsh-auto-notify_atload() {
       "git log"
       "git show"
       "git rebase"
-      "gemini"
       "gh-dash"
       "gh-actions-dash"
       "lazygit"

@@ -59,13 +59,6 @@
         "detectionStrategy": "claude"
       },
       {
-        "id": "1752767057209",
-        "name": "Gemini",
-        "command": "gemini",
-        "detectionStrategy": "gemini",
-        "args": ["-s"]
-      },
-      {
         "id": "codex",
         "name": "Codex",
         "command": "codex",

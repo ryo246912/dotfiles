@@ -3,7 +3,6 @@ root: true
 targets:
   - claudecode
   - codexcli
-  - geminicli
   - copilot
   - copilotcli
 globs:

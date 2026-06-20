@@ -4,7 +4,6 @@ description: GitHub PR のレビューコメント（特にインラインコメ
 targets:
   - claudecode
   - codexcli
-  - geminicli
   - copilot
 ---
 

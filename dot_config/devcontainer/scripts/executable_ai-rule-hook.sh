@@ -2,7 +2,7 @@
 # ai-rule-hook.sh
 #
 # 概要:
-#   AI ツール（Claude / Codex / Gemini / Copilot）のセッション終了やコンテキスト圧縮前に
+#   AI ツール（Claude / Codex / Copilot）のセッション終了やコンテキスト圧縮前に
 #   hook として呼び出され、会話履歴を分析して以下の候補を提案するスクリプト。
 #   - ルール追記候補: CLAUDE.md / agent.md 等への追記
 #   - スキル化候補: 定型ワークフローを /skill-name として呼び出せるスキルへ昇格
@@ -11,14 +11,14 @@
 #   1. hook の JSON を stdin から受け取る（session_id / transcript_path / cwd など）
 #   2. 無限再帰チェック: AI_RULE_HOOK_RUNNING=1 なら即 exit（ループ防止）
 #   3. イベントと条件を判定し、実行不要なら skip
-#      - claude / gemini / copilot: session_end / pre_compact で実行
+#      - claude: session_end / pre_compact で実行
+#      - copilot: session_end で実行
 #      - codex: /clear 等のコマンドか十分な行数増加で実行
 #   4. 会話履歴（末尾 24KB）・ルールファイル（末尾 12KB）・既存スキル一覧を読み込む
 #   5. ai-rule-hook.md の指示文 + メタデータ + ルール抜粋 + スキル一覧 + 履歴抜粋でプロンプトを組み立てる
 #   6. 対象 AI ツールにプロンプトを投げて候補を生成し suggestion.md に保存する
 #      - claude / copilot: claude -p
 #      - codex:            codex exec
-#      - gemini:           gemini
 #
 # 注意:
 #   - ルール・スキルを自動で書き換えることはしない。suggestion.md を確認して手動転記する。
@@ -43,7 +43,7 @@ log() {
 
 usage() {
 	cat <<'EOF'
-Usage: ai-rule-hook.sh --tool <claude|codex|gemini|copilot> [--dry-run]
+Usage: ai-rule-hook.sh --tool <claude|codex|copilot> [--dry-run]
 
 Reads hook JSON from stdin, normalizes the payload, and generates a rule-update
 suggestion with the current tool's CLI. Use --dry-run to emit normalized JSON
@@ -157,11 +157,6 @@ tool_paths() {
 		SKILLS_DIR=""
 		ANALYZER_BIN="codex"
 		;;
-	gemini)
-		RULE_SOURCE_PATH="$HOME/.gemini/GEMINI.md"
-		SKILLS_DIR=""
-		ANALYZER_BIN="gemini"
-		;;
 	copilot)
 		RULE_SOURCE_PATH="$HOME/.config/gh-copilot/COPILOTCLI.md"
 		SKILLS_DIR=""
@@ -200,7 +195,7 @@ list_skills() {
 
 should_run_for_event() {
 	case "$TOOL:$CANONICAL_EVENT" in
-	claude:session_end | claude:pre_compact | gemini:session_end | gemini:pre_compact | copilot:session_end)
+	claude:session_end | claude:pre_compact | copilot:session_end)
 		return 0
 		;;
 	codex:user_prompt_submit)
@@ -366,15 +361,6 @@ run_codex_analysis() {
 		<"$prompt_path" >/dev/null 2>"$stderr_path"
 }
 
-run_gemini_analysis() {
-	local prompt_path="$1"
-	local output_path="$2"
-	local stderr_path="$3"
-
-	gemini \
-		<"$prompt_path" >"$output_path" 2>"$stderr_path"
-}
-
 run_analysis() {
 	local prompt_path="$1"
 	local output_path="$2"
@@ -391,9 +377,6 @@ run_analysis() {
 		;;
 	codex)
 		run_codex_analysis "$prompt_path" "$output_path" "$stderr_path"
-		;;
-	gemini)
-		run_gemini_analysis "$prompt_path" "$output_path" "$stderr_path"
 		;;
 	esac
 }

@@ -42,29 +42,6 @@
       ]
     }
   },
-  "geminicli": {
-    "hooks": {
-      "sessionStart": [
-        {
-          "matcher": "clear",
-          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
-          "timeout": 30
-        }
-      ],
-      "sessionEnd": [
-        {
-          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
-          "timeout": 30
-        }
-      ],
-      "preCompact": [
-        {
-          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool gemini",
-          "timeout": 30
-        }
-      ]
-    }
-  },
   "copilot": {
     "hooks": {
       "sessionStart": [

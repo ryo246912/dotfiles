@@ -4,7 +4,6 @@ description: deepwiki MCP を使ってライブラリやフレームワークの
 targets:
   - claudecode
   - codexcli
-  - geminicli
   - copilot
 ---
 
