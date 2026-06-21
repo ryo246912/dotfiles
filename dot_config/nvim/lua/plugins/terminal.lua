@@ -162,9 +162,11 @@ return {
             direction = "vertical",
             hidden = true,
             close_on_exit = true,
-            on_exit = function()
-              leaf_terminal = nil
-              leaf_terminal_file = nil
+            on_exit = function(t)
+              if leaf_terminal == t then
+                leaf_terminal = nil
+                leaf_terminal_file = nil
+              end
             end,
           })
           leaf_terminal_file = filepath
