@@ -42,6 +42,8 @@ jobs:
               - "**/*.toml"
             actions:
               - ".github/workflows/*"
+              - ".github/actionlint.yaml"
+              - ".github/actionlint.yml"
             secret:
               - "**/*"
 
