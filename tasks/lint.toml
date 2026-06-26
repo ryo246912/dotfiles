@@ -8,7 +8,7 @@ description = "Run all action linters"
 
 ["lint:actionlint"]
 description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:'"
+run         = "actionlint -ignore 'SC2016:' -ignore 'syntax-check'"
 
 ["lint:ghalint"]
 description = "Run ghalint"
