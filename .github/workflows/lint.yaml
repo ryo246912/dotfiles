@@ -56,55 +56,65 @@ jobs:
       - name: oxfmt (json)
         id: lint-json
         if: steps.changed-files.outputs.json_any_changed == 'true'
-        background: true        run: mise run lint:json
+        background: true
+        run: mise run lint:json
 
       - name: oxfmt (yaml)
         id: lint-yaml
         if: steps.changed-files.outputs.yaml_any_changed == 'true'
-        background: true        run: mise run lint:yaml
+        background: true
+        run: mise run lint:yaml
 
       - name: oxfmt (markdown)
         id: lint-md
         if: steps.changed-files.outputs.md_any_changed == 'true'
-        background: true        run: mise run lint:md
+        background: true
+        run: mise run lint:md
 
       - name: taplo (toml)
         id: lint-toml
         if: steps.changed-files.outputs.toml_any_changed == 'true'
-        background: true        run: mise run lint:toml
+        background: true
+        run: mise run lint:toml
 
       - name: actionlint
         id: lint-actionlint
         if: steps.changed-files.outputs.actions_any_changed == 'true'
-        background: true        run: mise run lint:actionlint
+        background: true
+        run: mise run lint:actionlint
 
       - name: ghalint
         id: lint-ghalint
         if: steps.changed-files.outputs.actions_any_changed == 'true'
-        background: true        run: mise run lint:ghalint
+        background: true
+        run: mise run lint:ghalint
         env:
           GHALINT_LOG_COLOR: always
 
       - name: zizmor
         id: lint-zizmor
         if: steps.changed-files.outputs.actions_any_changed == 'true'
-        background: true        run: mise run lint:zizmor
+        background: true
+        run: mise run lint:zizmor
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: pinact
         id: lint-pinact
         if: steps.changed-files.outputs.actions_any_changed == 'true'
-        background: true        run: mise run lint:pinact
+        background: true
+        run: mise run lint:pinact
 
       - name: secretlint
         id: lint-secret
         if: steps.changed-files.outputs.secret_any_changed == 'true'
-        background: true        run: mise run lint:secret
+        background: true
+        run: mise run lint:secret
 
       - name: wait for all lints
         if: always()
-        wait:          - lint-json
+        wait:
+          - lint-json
           - lint-yaml
           - lint-md
           - lint-toml
