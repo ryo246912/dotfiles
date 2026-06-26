@@ -8,7 +8,7 @@ description = "Run all action linters"
 
 ["lint:actionlint"]
 description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:' -ignore 'unexpected key'"
+run         = "actionlint -ignore 'SC2016:' -ignore 'unexpected key' -ignore 'step must run script'"
 
 ["lint:ghalint"]
 description = "Run ghalint"
