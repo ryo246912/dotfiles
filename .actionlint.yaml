@@ -1,0 +1,4 @@
+ignore:
+  - 'unexpected key "background"'
+  - 'unexpected key "wait"'
+  - 'step must run script .* "run"'
