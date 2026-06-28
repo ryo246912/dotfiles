@@ -1,6 +1,9 @@
-# tpmのインストール
+# tpackのインストール(tpmの後継プラグインマネージャー)
+if [ -e "$HOME/.config/tmux/plugins/tpm" ] && ! git -C "$HOME/.config/tmux/plugins/tpm" remote get-url origin 2>/dev/null | grep -q "tmuxpack/tpack"; then
+  rm -rf "$HOME/.config/tmux/plugins/tpm"
+fi
 if ! [ -e "$HOME/.config/tmux/plugins/tpm" ]; then
-  git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
+  git clone https://github.com/tmuxpack/tpack "$HOME/.config/tmux/plugins/tpm"
 fi
 
 # historyの保存先
