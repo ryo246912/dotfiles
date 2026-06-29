@@ -39,6 +39,98 @@ return {
       local git_utils = require("utils.git")
       local find_repos = git_utils.find_repos
 
+      local function open_float_term(cmd, cwd)
+        local buf = vim.api.nvim_create_buf(false, true)
+        local width = math.floor(vim.o.columns * 0.9)
+        local height = math.floor(vim.o.lines * 0.9)
+        local win = vim.api.nvim_open_win(buf, true, {
+          relative = "editor",
+          width = width,
+          height = height,
+          row = math.floor((vim.o.lines - height) / 2),
+          col = math.floor((vim.o.columns - width) / 2),
+          style = "minimal",
+          border = "rounded",
+        })
+
+        vim.fn.termopen(cmd, {
+          cwd = cwd,
+          on_exit = function()
+            if vim.api.nvim_win_is_valid(win) then
+              vim.api.nvim_win_close(win, true)
+            end
+          end,
+        })
+        vim.cmd("startinsert")
+      end
+
+      local function verify_git_ref(repo, ref, on_found, on_missing)
+        vim.system({ "git", "rev-parse", "--verify", "--quiet", ref .. "^{commit}" }, { cwd = repo }, function(r)
+          if r.code == 0 then
+            on_found(ref)
+          else
+            on_missing()
+          end
+        end)
+      end
+
+      local function resolve_base_ref(repo, callback)
+        local function fallback_to_origin_head()
+          vim.system(
+            { "git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD" },
+            { text = true, cwd = repo },
+            function(r)
+              local origin_head = r.code == 0 and vim.trim(r.stdout or "") or ""
+              if origin_head ~= "" then
+                verify_git_ref(repo, origin_head, callback, function()
+                  verify_git_ref(repo, "origin/main", callback, function() callback(nil) end)
+                end)
+                return
+              end
+              verify_git_ref(repo, "origin/main", callback, function() callback(nil) end)
+            end
+          )
+        end
+
+        if vim.fn.executable("gh") ~= 1 then
+          fallback_to_origin_head()
+          return
+        end
+
+        vim.system(
+          { "gh", "pr", "view", "--json", "baseRefName", "--jq", ".baseRefName" },
+          { text = true, cwd = repo },
+          function(r)
+            local base_branch = r.code == 0 and vim.trim(r.stdout or "") or ""
+            if base_branch ~= "" then
+              verify_git_ref(repo, "origin/" .. base_branch, callback, fallback_to_origin_head)
+              return
+            end
+            fallback_to_origin_head()
+          end
+        )
+      end
+
+      local function open_hunkdiff(repo)
+        local hunk_cmd = vim.fn.executable("hunk") == 1 and "hunk"
+          or vim.fn.executable("hunkdiff") == 1 and "hunkdiff"
+          or nil
+        if not hunk_cmd then
+          vim.notify("hunk コマンドが見つかりません。mise install で npm:hunkdiff を導入してください", vim.log.levels.WARN)
+          return
+        end
+
+        resolve_base_ref(repo, function(base_ref)
+          vim.schedule(function()
+            if not base_ref then
+              vim.notify("origin/main または base branch を取得できません", vim.log.levels.WARN)
+              return
+            end
+            open_float_term({ hunk_cmd, "diff", base_ref .. "...HEAD" }, repo)
+          end)
+        end)
+      end
+
       -- リポジトリを選択して cmd を実行（単一なら即実行、複数なら fzf-lua で選択）
       local function with_repo(cmd, fallback_cmd)
         local repos = find_repos()
@@ -58,6 +150,25 @@ return {
             actions = {
               ["default"] = function(selected)
                 if selected and selected[1] then launch(selected[1]) end
+              end,
+            },
+          })
+        end
+      end
+
+      local function with_repo_callback(callback)
+        local repos = find_repos()
+        local cwd = vim.fn.getcwd()
+        if #repos == 0 then
+          callback(cwd)
+        elseif #repos == 1 then
+          callback(repos[1])
+        else
+          require("fzf-lua").fzf_exec(repos, {
+            prompt = "リポジトリ選択> ",
+            actions = {
+              ["default"] = function(selected)
+                if selected and selected[1] then callback(selected[1]) end
               end,
             },
           })
@@ -85,6 +196,7 @@ return {
       end
 
       vim.keymap.set("n", "<leader>gd", function() with_repo("DiffviewOpen") end,    { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
+      vim.keymap.set("n", "<leader>gD", function() with_repo_callback(open_hunkdiff) end, { noremap = true, silent = true, desc = "base branchとの差分をhunkで表示" })
       vim.keymap.set("n", "<leader>gl", open_file_history_multi,                      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（Tab複数選択・別タブ）" })
       vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>",                { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
 

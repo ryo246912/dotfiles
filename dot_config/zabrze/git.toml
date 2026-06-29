@@ -132,6 +132,11 @@ snippet = "git diff --diff-filter=U"
 trigger = "gdc"
 
 [[snippets]]
+name    = "hunk diff origin/main"
+snippet = "hunk diff origin/main...HEAD"
+trigger = "gdom"
+
+[[snippets]]
 name            = "git diff --cached(staged)"
 snippet         = "git diff --cached"
 trigger-pattern = "(gds|gshs)"
