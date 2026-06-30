@@ -79,6 +79,9 @@ zinit wait lucid light-mode blockf for \
 zinit wait lucid light-mode blockf for \
     @'azu/ni.zsh'
 
+zinit wait lucid light-mode blockf for \
+    @'diverdale/colored-man-pages-plus'
+
 ### completion ###
 zinit wait lucid light-mode blockf for \
     as"completion" \
