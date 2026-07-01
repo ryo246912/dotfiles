@@ -1,4 +1,5 @@
 local git_panel_state = {}
+local git_panel_open_pending = false
 
 local function current_tab_wins()
   return vim.api.nvim_tabpage_list_wins(0)
@@ -150,15 +151,23 @@ local function git_panel_open_file(buf, path, open_cmd)
     return
   end
 
+  local target_win
   for _, win in ipairs(current_tab_wins()) do
     local win_buf = vim.api.nvim_win_get_buf(win)
     local filetype = vim.bo[win_buf].filetype
+    local buftype = vim.bo[win_buf].buftype
     local win_config = vim.api.nvim_win_get_config(win)
-    local win_width = vim.api.nvim_win_get_width(win)
-    if win_config.relative == "" and win_width > 45 and filetype ~= "neo-tree" and filetype ~= "chezmoi_git_panel" then
-      vim.api.nvim_set_current_win(win)
+    if win_config.relative == "" and buftype == "" and filetype ~= "neo-tree" and filetype ~= "chezmoi_git_panel" then
+      target_win = win
       break
     end
+  end
+
+  if target_win then
+    vim.api.nvim_set_current_win(target_win)
+  elseif open_cmd ~= "tabedit" then
+    vim.cmd("botright vertical new")
+    open_cmd = "edit"
   end
 
   vim.cmd((open_cmd or "edit") .. " " .. vim.fn.fnameescape(fullpath))
@@ -279,7 +288,19 @@ local function toggle_git_panel()
     return
   end
 
-  current_repo(open_git_panel)
+  if git_panel_open_pending then
+    return
+  end
+
+  git_panel_open_pending = true
+  current_repo(function(repo)
+    git_panel_open_pending = false
+    local existing_win = git_panel_find_window()
+    if existing_win and vim.api.nvim_win_is_valid(existing_win) then
+      return
+    end
+    open_git_panel(repo)
+  end)
 end
 
 return {
