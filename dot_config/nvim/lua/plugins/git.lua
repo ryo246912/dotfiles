@@ -16,9 +16,19 @@ return {
             width = 35,
           },
         },
+        file_history_panel = {
+          win_config = {
+            position = "left",
+            width = 35,
+          },
+        },
         keymaps = {
           file_panel = {
             { "n", "<CR>", "<Cmd>lua require('diffview.actions').select_entry()<CR>",  { desc = "差分を開く" } },
+            { "n", "o",    "<Cmd>lua require('diffview.actions').select_entry()<CR>",  { desc = "差分を開く" } },
+            { "n", "l",    "<Cmd>lua require('diffview.actions').select_entry()<CR>",  { desc = "差分を開く" } },
+            { "n", "<2-LeftMouse>", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
+            { "n", "gf",   "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
             { "n", "O",    "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
             { "n", "s",      "<Cmd>lua require('diffview.actions').toggle_stage_entry()<CR>", { desc = "ステージ/アンステージ切替" } },
             { "n", "S",      "<Cmd>lua require('diffview.actions').stage_all()<CR>", { desc = "全てステージ" } },
@@ -27,7 +37,13 @@ return {
             { "n", "?",      "<Cmd>lua require('diffview.actions').help('file_panel')<CR>", { desc = "ヘルプ" } },
           },
           file_history_panel = {
+            { "n", "<CR>", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
+            { "n", "o", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
+            { "n", "l", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
+            { "n", "<2-LeftMouse>", "<Cmd>lua require('diffview.actions').select_entry()<CR>", { desc = "差分を開く" } },
+            { "n", "gf", "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
             { "n", "O", "<Cmd>lua require('diffview.actions').goto_file_edit()<CR>", { desc = "現在のファイルを開く" } },
+            { "n", "L", "<Cmd>lua require('diffview.actions').open_commit_log()<CR>", { desc = "コミット詳細を開く" } },
             { "n", "q", "<Cmd>DiffviewClose<CR>", { desc = "閉じる" } },
           },
           view = {
