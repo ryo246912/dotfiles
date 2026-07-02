@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly NOTIFY_BIN="${DEVCONTAINER_HOST_NOTIFY_BIN:-macos-notify-cli}"
+readonly NOTIFY_TITLE="Claude Code"
+
+log_error() {
+    echo "devcontainer-host-gateway: $*" >&2
+}
+
+show_usage() {
+    cat <<'EOF'
+Usage:
+  devcontainer-host-gateway
+  devcontainer-host-gateway authorized-key-entry <public-key-file>
+EOF
+}
+
+is_safe_identifier() {
+    [[ "$1" =~ ^[A-Za-z0-9._-]+$ ]]
+}
+
+ensure_notify_bin() {
+    if ! command -v "$NOTIFY_BIN" >/dev/null 2>&1; then
+        log_error "通知コマンドが見つかりません: $NOTIFY_BIN"
+        return 1
+    fi
+}
+
+notify_confirmation_needed() {
+    local requested_action="${1:-unknown}"
+    local message_action="unknown"
+
+    if is_safe_identifier "$requested_action"; then
+        message_action="$requested_action"
+    fi
+
+    if command -v "$NOTIFY_BIN" >/dev/null 2>&1; then
+        "$NOTIFY_BIN" \
+            --title "$NOTIFY_TITLE" \
+            --message "未許可のホスト要求(${message_action})を拒否しました。確認が必要です" \
+            --sound Glass >/dev/null 2>&1 || true
+    fi
+}
+
+run_notify_action() {
+    local event="$1"
+    local worktree="$2"
+    local tmux_flag="$3"
+    local message=""
+    local sound=""
+    local notify_args=(
+        --title "$NOTIFY_TITLE"
+    )
+
+    case "$event" in
+        pending)
+            message="${worktree}が確認待ちです"
+            sound="Glass"
+            ;;
+        stop)
+            message="${worktree}で作業が完了しました"
+            sound="Hero"
+            ;;
+        *)
+            log_error "許可されていない notify event です: $event"
+            notify_confirmation_needed "notify"
+            return 1
+            ;;
+    esac
+
+    notify_args+=(
+        --message "$message"
+        --sound "$sound"
+    )
+
+    if [[ "$tmux_flag" == "1" ]]; then
+        notify_args+=(--current-tmux)
+    fi
+
+    ensure_notify_bin
+    "$NOTIFY_BIN" "${notify_args[@]}"
+}
+
+parse_notify_args() {
+    local event=""
+    local worktree=""
+    local tmux_flag=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --event)
+                [[ $# -ge 2 ]] || {
+                    log_error "--event の値が必要です"
+                    notify_confirmation_needed "notify"
+                    return 1
+                }
+                event="$2"
+                shift 2
+                ;;
+            --worktree)
+                [[ $# -ge 2 ]] || {
+                    log_error "--worktree の値が必要です"
+                    notify_confirmation_needed "notify"
+                    return 1
+                }
+                worktree="$2"
+                shift 2
+                ;;
+            --tmux)
+                [[ $# -ge 2 ]] || {
+                    log_error "--tmux の値が必要です"
+                    notify_confirmation_needed "notify"
+                    return 1
+                }
+                tmux_flag="$2"
+                shift 2
+                ;;
+            *)
+                log_error "許可されていない notify 引数です: $1"
+                notify_confirmation_needed "notify"
+                return 1
+                ;;
+        esac
+    done
+
+    if [[ "$event" != "pending" && "$event" != "stop" ]]; then
+        log_error "許可されていない event です: ${event:-<empty>}"
+        notify_confirmation_needed "notify"
+        return 1
+    fi
+
+    if ! is_safe_identifier "$worktree"; then
+        log_error "worktree 名が不正です: ${worktree:-<empty>}"
+        notify_confirmation_needed "notify"
+        return 1
+    fi
+
+    if [[ "$tmux_flag" != "0" && "$tmux_flag" != "1" ]]; then
+        log_error "tmux フラグが不正です: ${tmux_flag:-<empty>}"
+        notify_confirmation_needed "notify"
+        return 1
+    fi
+
+    run_notify_action "$event" "$worktree" "$tmux_flag"
+}
+
+handle_forced_command() {
+    local original_command="${SSH_ORIGINAL_COMMAND:-}"
+    local argv=()
+
+    if [[ -z "$original_command" ]]; then
+        log_error "SSH_ORIGINAL_COMMAND が空です"
+        return 1
+    fi
+
+    set -f
+    # shellcheck disable=SC2206
+    argv=($original_command)
+    set +f
+
+    if [[ ${#argv[@]} -eq 0 ]]; then
+        log_error "action が指定されていません"
+        return 1
+    fi
+
+    case "${argv[0]}" in
+        notify)
+            parse_notify_args "${argv[@]:1}"
+            ;;
+        *)
+            log_error "許可されていない action です: ${argv[0]}"
+            notify_confirmation_needed "${argv[0]}"
+            return 1
+            ;;
+    esac
+}
+
+print_authorized_key_entry() {
+    local public_key_file="$1"
+    local gateway_path="${HOME}/.local/bin/devcontainer-host-gateway"
+    local public_key=""
+
+    if [[ ! -f "$public_key_file" ]]; then
+        log_error "公開鍵が見つかりません: $public_key_file"
+        return 1
+    fi
+
+    public_key="$(<"$public_key_file")"
+    if [[ ! "$public_key" =~ ^ssh- ]]; then
+        log_error "公開鍵の形式が不正です: $public_key_file"
+        return 1
+    fi
+
+    printf '%s %s\n' \
+        "command=\"${gateway_path}\",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding" \
+        "$public_key"
+}
+
+main() {
+    case "${1:-}" in
+        "")
+            handle_forced_command
+            ;;
+        authorized-key-entry)
+            [[ $# -eq 2 ]] || {
+                show_usage
+                return 1
+            }
+            print_authorized_key_entry "$2"
+            ;;
+        -h|--help)
+            show_usage
+            ;;
+        *)
+            log_error "不明なサブコマンドです: $1"
+            show_usage
+            return 1
+            ;;
+    esac
+}
+
+main "$@"
