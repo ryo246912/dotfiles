@@ -78,6 +78,23 @@
   - [ ] settings syncの同期
   - [ ] 設定ファイルをコピー
 
+- [ ] Hermes Agent
+  - [ ] 公式 installer を実行
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+    source ~/.zshrc
+    ```
+  - [ ] provider / model を設定
+    ```sh
+    hermes model
+    ```
+  - [ ] CLI が動くことを確認
+    ```sh
+    hermes --tui
+    hermes doctor
+    ```
+  - [ ] 詳細な使い方は `not_config/memo/hermes-agent.md` を参照
+
 ### 追加設定
 
 - [ ] システム設定
@@ -329,6 +346,14 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] トラックパッドの設定
   - [ ] スクロール方法を調整
+
+- [ ] Hermes Agent
+  - [ ] Windows Native は非対応なので WSL2 をセットアップ
+  - [ ] WSL2 内で installer を実行
+    ```sh
+    curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+    ```
+  - [ ] 詳細な使い方は `not_config/memo/hermes-agent.md` を参照
 - [ ] クリップボード履歴を有効化
   - [ ] 「Windows」+「V」で履歴共有を有効
 - [ ] バッテリー残量表示
