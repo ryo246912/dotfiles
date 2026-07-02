@@ -1,6 +1,7 @@
 {
   "env": {
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_AUTOUPDATER": "1",
+    "CLAUDE_CODE_NO_FLICKER": "1"
   },
   "cleanupPeriodDays": 36500,
   "permissions": {
@@ -40,5 +41,7 @@
   },
   "git": {
     "includeCoAuthor": false
-  }
+  },
+  "prefersReducedMotion": true,
+  "language": "japanese"
 }
