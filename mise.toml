@@ -17,12 +17,9 @@ includes = ["tasks/*.toml"]
 "github:betterleaks/betterleaks" = "1.3.1"
 "github:superfly/flyctl"         = "0.4.29"
 "npm:oxfmt"                      = "0.54.0"
-# oxfmt                            = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxfmt-*", bin = "oxfmt" }
-# oxlint                           = { version = "1.66.0", version_prefix = "apps_v", asset_pattern = "oxlint-*", bin = "oxlint" }
+"npm:oxlint"                     = "0.54.0"
 
 # [tool_alias]
-# oxfmt  = "github:oxc-project/oxc"
-# oxlint = "github:oxc-project/oxc"
 
 [hooks]
 enter = "lefthook install -f"
