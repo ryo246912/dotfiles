@@ -19,7 +19,5 @@ includes = ["tasks/*.toml"]
 "npm:oxfmt"                      = "0.57.0"
 "npm:oxlint"                     = "1.72.0"
 
-# [tool_alias]
-
 [hooks]
 enter = "lefthook install -f"
