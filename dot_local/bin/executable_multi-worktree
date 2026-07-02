@@ -1228,6 +1228,16 @@ cmd_recreate() {
 }
 
 # list サブコマンド
+# fzf を使用してタスクを選択する
+select_task_via_fzf() {
+    local selected
+    selected=$(cmd_list | fzf --header "Select a task" --preview "multi-worktree status {1}" 2>/dev/null)
+    if [[ -z "$selected" ]]; then
+        return 1
+    fi
+    echo "$selected" | cut -f1
+}
+
 cmd_list() {
     # 全グループを取得
     local all_groups=()
@@ -2009,9 +2019,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             local task_name="$1"
@@ -2051,9 +2063,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             if [[ "$1" == "main" ]]; then
@@ -2082,9 +2096,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             local task_name="$1"
@@ -2115,9 +2131,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             cmd_cd "$1" "${2:-}"
@@ -2127,9 +2145,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             local task_name="$1"
@@ -2142,9 +2162,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             if [[ "$1" == "main" ]]; then
@@ -2189,9 +2211,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             cmd_open "$1"
@@ -2201,9 +2225,11 @@ main() {
             check_config || return 1
 
             if [[ $# -eq 0 ]]; then
-                log_error "タスク名を指定してください"
-                show_usage
-                return 1
+                local task_name
+                if ! task_name=$(select_task_via_fzf); then
+                    return 0
+                fi
+                set -- "$task_name" "$@"
             fi
 
             local task_name="$1"
