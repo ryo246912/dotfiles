@@ -68,6 +68,9 @@ return {
           mappings = {
             ["<space>"] = "toggle_node",
             ["<cr>"] = "open",
+            ["<C-h>"] = "open_split",
+            ["<C-v>"] = "open_vsplit",
+            ["<C-t>"] = "open_tabnew",
             ["s"] = "open_vsplit",
             ["S"] = "open_split",
             ["t"] = "open_tabnew",
@@ -103,6 +106,9 @@ return {
             mappings = {
               ["<cr>"] = "open",
               ["l"] = "open",
+              ["<C-h>"] = "open_split",
+              ["<C-v>"] = "open_vsplit",
+              ["<C-t>"] = "open_tabnew",
               ["s"] = "open_vsplit",
               ["S"] = "open_split",
               ["A"] = "git_add_all",
