@@ -1,2 +1,43 @@
 [tools]
 "github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
+
+[bootstrap.packages]
+"brew:blueutil"     = "latest"
+"brew:coreutils"    = "latest"
+"brew:ffmpeg"       = "latest"
+"brew:findutils"    = "latest"
+"brew:git"          = "latest"
+"brew:gnu-sed"      = "latest"
+"brew:gnupg"        = "latest"
+"brew:goaccess"     = "latest"
+"brew:grep"         = "latest"
+"brew:pinentry-mac" = "latest"
+"brew:silicon"      = "latest"
+"brew:tree"         = "latest"
+
+[bootstrap.brew.taps]
+"kamillobinski/thock" = {}
+
+[bootstrap.macos.defaults]
+"com.apple.finder" = { AppleShowAllFiles = true, AppleShowAllExtensions = true, ShowPathbar = true }
+"com.apple.Finder" = { QuitMenuItem = true }
+
+[tasks.bootstrap]
+description = "macOS post-install setup"
+run = """
+#!/bin/bash
+# キーボード設定
+defaults write -g KeyRepeat -int 2
+defaults write -g InitialKeyRepeat -int 15
+# トラックパッド: スクロール方向
+defaults write -g com.apple.swipescrolldirection -bool false
+# メニューバーのアイコン間隔
+defaults -currentHost write -globalDomain NSStatusItemSpacing -int 6
+defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 6
+
+# ログインアイテム登録
+for app in Clibor Docker Raycast; do
+  osascript -e "tell application \\"System Events\\" to get the name of every login item" | grep -q "$app" || \\
+    osascript -e "tell application \\"System Events\\" to make login item at end with properties {path:\\"/Applications/$app.app\\", hidden:false}"
+done
+"""
