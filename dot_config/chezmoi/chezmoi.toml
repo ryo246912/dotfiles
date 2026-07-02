@@ -7,3 +7,14 @@ APPDATA = "/mnt/c/Users/r-ksk/AppData"
 USERDIR = "/mnt/c/Users/r-ksk"
 [bitwarden]
 unlock = "auto"
+[hooks.apply.post]
+args = [
+    "-c",
+    """
+mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
+[ "$(cat /tmp/mise-config-hash 2>/dev/null)" = "$mise_hash" ] && exit 0
+echo "Running mise install..."
+GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 && echo "$mise_hash" > /tmp/mise-config-hash
+""",
+]
+command = "bash"
