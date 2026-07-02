@@ -14,11 +14,7 @@ args = [
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 [ "$(cat /tmp/mise-config-hash 2>/dev/null)" = "$mise_hash" ] && exit 0
 echo "Running mise install..."
-if gh auth token >/dev/null 2>&1; then
-  GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 && echo "$mise_hash" > /tmp/mise-config-hash
-else
-  mise install --jobs=2 && echo "$mise_hash" > /tmp/mise-config-hash
-fi
+GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 && echo "$mise_hash" > /tmp/mise-config-hash
 """,
 ]
 command = "bash"
