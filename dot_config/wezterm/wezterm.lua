@@ -116,10 +116,19 @@ if is_darwin then
     mods = "CMD",
     action = wezterm.action.PasteFrom("Clipboard"),
   })
+  -- overlayがmount中(popupにクライアントが接続中)ならoverlayを強制killし、
+  -- そうでなければWezTerm純正のCommand Paletteを開く
   table.insert(keys, {
     key = "p",
     mods = "CMD|SHIFT",
-    action = wezterm.action.ActivateCommandPalette,
+    action = wezterm.action_callback(function(window, pane)
+      local ok = wezterm.run_child_process({ "tmux", "list-clients", "-t", "overlay" })
+      if ok then
+        window:perform_action(wezterm.action.SendString("\x02P"), pane)
+      else
+        window:perform_action(wezterm.action.ActivateCommandPalette, pane)
+      end
+    end),
   })
   table.insert(keys, {
     key = "q",
