@@ -229,6 +229,7 @@ done
 select_action() {
 	# 利用可能なアクションとその説明
 	local actions="lazygit	Lazygitでリポジトリを開く
+livediff	livediffでファイル変更をリアルタイム表示
 code	VS Codeでディレクトリを開く
 nvim	Neovimでディレクトリを開く
 czg	czgでコミットを作成
@@ -283,6 +284,28 @@ open_lazygit() {
 
 	# lazygitを起動
 	lazygit
+
+	return 0
+}
+
+# livediffでファイル変更をリアルタイム表示
+open_livediff() {
+	local worktree_path="$1"
+	local branch_name="$2"
+
+	if [ ! -d "$worktree_path" ]; then
+		error_exit "worktreeディレクトリが存在しません: $worktree_path"
+	fi
+
+	if ! command -v livediff &>/dev/null; then
+		error_exit "livediff コマンドが見つかりません"
+	fi
+
+	# worktreeディレクトリに移動してlivediffを起動
+	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
+
+	# livediffを起動
+	livediff .
 
 	return 0
 }
@@ -395,6 +418,9 @@ execute_action() {
 	"lazygit")
 		open_lazygit "$worktree_path" "$branch_name"
 		;;
+	"livediff")
+		open_livediff "$worktree_path" "$branch_name"
+		;;
 	"code")
 		open_code "$worktree_path" "$branch_name"
 		;;
@@ -439,6 +465,7 @@ get_multi_worktree_tasks() {
 select_multi_worktree_command() {
 	local actions
 	actions="lazygit	lazygit でリポジトリを開く
+livediff	livediff でファイル変更をタイル表示
 cd	シェルでディレクトリを開く
 code	VS Code でルートディレクトリを開く
 nvim	Neovim でルートディレクトリを開く
@@ -513,15 +540,20 @@ open_multi_worktree_tiled() {
 		return 1
 	fi
 
-	# cd または lazygit の場合のみ、タスクルートディレクトリも別ペインとして追加
-	if [[ "$cmd" == "cd" ]] || [[ "$cmd" == "lazygit" ]]; then
+	# cd / lazygit / livediff の場合のみ、タスクルートディレクトリも別ペインとして追加
+	if [[ "$cmd" == "cd" ]] || [[ "$cmd" == "lazygit" ]] || [[ "$cmd" == "livediff" ]]; then
 		repos+=("$task_path")
 	fi
 
 	# tmux 環境外の場合は最初のリポジトリで直接起動
 	if [[ -z "${TMUX:-}" ]]; then
 		echo "${YELLOW}tmux 環境ではないため、最初のリポジトリで ${cmd} を起動します${NC}" >&2
-		cd "${repos[0]}" && [[ "$cmd" == "lazygit" ]] && lazygit || exec zsh
+		cd "${repos[0]}" || return 1
+		case "$cmd" in
+		lazygit) lazygit ;;
+		livediff) livediff . ;;
+		*) exec zsh ;;
+		esac
 		return 0
 	fi
 
@@ -599,6 +631,13 @@ open_multi_worktree_tiled() {
 		done
 	fi
 
+	# livediff の場合、git判定なしで全ペインにlivediffを送信
+	if [[ "$cmd" == "livediff" ]]; then
+		for pid in "${pane_ids[@]}"; do
+			tmux send-keys -t "$pid" "livediff ." Enter
+		done
+	fi
+
 	# cd の場合は各ペインにEnterを送信（zsh初期化完了後のプロンプト表示のため）
 	if [[ "$cmd" == "cd" ]]; then
 		for pid in "${pane_ids[@]}"; do
@@ -606,13 +645,9 @@ open_multi_worktree_tiled() {
 		done
 	fi
 
-	# overlay セッションのクライアントが detach したとき（Ctrl+B+D 等）に
-	# 作成した lazygit ウィンドウを自動で閉じる
-	if tmux has-session -t overlay 2>/dev/null; then
-		local win_spec="${session_name}:${win_idx}"
-		tmux set-hook -a -t overlay after-client-detached \
-			"kill-window -t '${win_spec}' 2>/dev/null; true"
-	fi
+	# 同一セッション内の他ウィンドウをすべて閉じ、overlayを常に単一windowに保つ
+	# (通常のdetachではkillしない。強制killはtmux.confのbind P/Cmd+Shift+Pから行う)
+	tmux kill-window -a -t "${session_name}:${win_idx}" 2>/dev/null || true
 
 	return 0
 }
@@ -624,7 +659,7 @@ execute_multi_action() {
 	local action="$3"
 
 	case "$action" in
-	"lazygit" | "code" | "nvim" | "cd" | "sync")
+	"lazygit" | "livediff" | "code" | "nvim" | "cd" | "sync")
 		open_multi_worktree_tiled "$task_path" "$task_name" "$action"
 		;;
 	"czg" | "diff")
@@ -665,6 +700,7 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
 
 アクション:
   lazygit         Lazygitでリポジトリを開く
+  livediff        livediffでファイル変更をリアルタイム表示
   code            VS Codeでディレクトリを開く
   nvim            Neovimでディレクトリを開く
   czg             czgでコミットを作成
@@ -673,7 +709,7 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
 
 補足:
   - git 管理下でも git worktree と multi-worktree タスクをまとめて選択できます
-  - 直接アクション指定で multi-worktree に適用できるのは lazygit / code / nvim / cd のみです
+  - 直接アクション指定で multi-worktree に適用できるのは lazygit / livediff / code / nvim / cd のみです
   - multi-worktree の sync はインタラクティブ選択時のみ利用できます
 
 実行例:
@@ -682,6 +718,7 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
 
   # 直接アクション指定（対象選択のみ）
   git-worktree-manager lazygit
+  git-worktree-manager livediff
   git-worktree-manager code
   git-worktree-manager nvim
   git-worktree-manager czg
@@ -709,7 +746,7 @@ main() {
 	fi
 
 	# 直接アクション指定の場合
-	if [[ "${1:-}" =~ ^(lazygit|code|nvim|czg|diff|cd)$ ]]; then
+	if [[ "${1:-}" =~ ^(lazygit|livediff|code|nvim|czg|diff|cd)$ ]]; then
 		SELECTED_ACTION="$1"
 		shift
 	fi
