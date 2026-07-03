@@ -7,6 +7,7 @@ require("core.options")
 require("core.keymaps")
 require("core.autocmds")
 require("core.abbreviations")
+require("core.terraform_docs").setup()
 
 -- bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
