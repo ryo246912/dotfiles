@@ -90,7 +90,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
 "go:github.com/go-delve/delve/cmd/dlv"                      = "1.27.0"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.2"
-"http:coderabbit"                                           = { version = "0.6.4", url = 'https://cli.coderabbit.ai/releases/{{version}}/coderabbit-{{os(macos="darwin")}}-{{arch()}}.zip' }
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 "npm:@devcontainers/cli"                                    = "0.87.0"
 "npm:@kitlangton/ghui"                                      = "0.7.1"
