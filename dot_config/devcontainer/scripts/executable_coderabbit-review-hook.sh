@@ -26,12 +26,8 @@ if command -v jq >/dev/null 2>&1; then
 	if [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ]; then
 		exit 0
 	fi
-else
-	case "$input" in
-	*'"stop_hook_active":true'* | *'"stop_hook_active": true'*)
-		exit 0
-		;;
-	esac
+elif printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+	exit 0
 fi
 
 command -v coderabbit >/dev/null 2>&1 || exit 0
