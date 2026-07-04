@@ -1,2 +1,2 @@
 [tools]
-"http:coderabbit" = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{version}}/coderabbit-linux-{{arch()}}.zip" }
+"http:coderabbit" = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip" }

@@ -19,7 +19,6 @@ install_package() {
     git
     go
     gpg
-    mise
     pinentry-mac
     silicon
     ugrep
@@ -38,6 +37,22 @@ install_package() {
       echo "$package is already installed"
     fi
   done
+}
+
+install_mise() {
+  # Homebrew の mise はデフォルト feature (native-tls = Secure Transport) ビルドで
+  # TLS 1.3 に接続できないため、rustls ビルドの公式バイナリをインストールする。
+  # (mise の http backend が TLS 1.3 必須のサーバーからダウンロードできるようにする)
+  # https://github.com/rust-native-tls/rust-native-tls/issues/305
+  # 以降の更新は mise self-update で行う
+  if [ -x "$HOME/.local/bin/mise" ]; then
+    echo "mise (official binary) is already installed"
+    return
+  fi
+  if brew list mise &>/dev/null; then
+    brew uninstall mise
+  fi
+  curl https://mise.run | sh
 }
 
 install_cask_package() {
@@ -241,6 +256,7 @@ install_nix() {
 commands=(
   "install_brew"
   "install_package"
+  "install_mise"
   "install_cask_package"
   "install_work_package"
   "setup_settings"
