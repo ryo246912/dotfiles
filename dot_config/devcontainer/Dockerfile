@@ -51,9 +51,6 @@ USER root
 # install tool via curl
 RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 
-# plannotator: AIエージェント(Claude Code等)向けのプラン/コードレビュー注釈ツール
-RUN curl -fsSL https://plannotator.ai/install.sh | bash
-
 USER vscode
 
 WORKDIR /workspace

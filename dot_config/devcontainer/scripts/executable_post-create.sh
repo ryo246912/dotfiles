@@ -39,12 +39,9 @@ for shared_entry in projects settings.json agents skills plugins; do
 	fi
 done
 
-# plannotator: Claude Codeプラグイン(marketplace/install)をセットアップ
-# プラン承認やコードレビュー時にブラウザで注釈・フィードバックできるようにする
-if command -v claude >/dev/null 2>&1 && command -v plannotator >/dev/null 2>&1; then
-	claude plugin marketplace add backnotprop/plannotator || true
-	claude plugin install plannotator@plannotator || true
-	echo "✓ plannotator プラグインのセットアップを実行しました"
-else
-	echo "ℹ️ claude または plannotator コマンドが見つからないため、プラグインのセットアップをスキップしました"
-fi
+# plannotator: プラン/コードレビュー用ブラウザ注釈ツール
+# ~/.codex, ~/.gemini 等のエージェント設定ディレクトリはコンテナ起動後にマウントされるため、
+# Dockerfileのbuild時ではなくここでインストールし、Codex/Gemini CLI等の自動検出・設定を効かせる。
+# Claude Code側の有効化は dot_claude/settings.json の enabledPlugins/extraKnownMarketplaces で宣言的に管理する。
+curl -fsSL https://plannotator.ai/install.sh | bash
+echo "✓ plannotator をインストール/設定しました"
