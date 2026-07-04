@@ -131,6 +131,15 @@
       ],
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/devcontainer/Dockerfile"],
+      "matchStrings": [
+        "ARG CODERABBIT_VERSION=(?<currentValue>[^\\s]+)"
+      ],
+      "depNameTemplate": "coderabbit",
+      "datasourceTemplate": "custom.brew-cask"
     }
   ]
 }

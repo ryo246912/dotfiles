@@ -49,13 +49,14 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
 
 USER root
 
-# Install CodeRabbit CLI. Version is pinned declaratively via mise.toml's
-# [env].CODERABBIT_VERSION (read here through `mise env`); unset = latest.
-# Installed to /usr/local/bin (not the default ~/.local/bin) so it's on
-# PATH and readable for the vscode user we switch back to below.
-RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
-    eval "$(/usr/local/bin/mise env -C /mise)" && \
-    curl -fsSL https://cli.coderabbit.ai/install.sh | CODERABBIT_INSTALL_DIR=/usr/local/bin sh
+# Install CodeRabbit CLI. Version is pinned via CODERABBIT_VERSION below and
+# kept up to date by Renovate (custom.brew-cask datasource, see
+# .github/renovate.json). Installed to /usr/local/bin (not the default
+# ~/.local/bin) so it's on PATH and readable for the vscode user we switch
+# back to below.
+ARG CODERABBIT_VERSION=0.6.4
+RUN curl -fsSL https://cli.coderabbit.ai/install.sh | \
+    CODERABBIT_VERSION=$CODERABBIT_VERSION CODERABBIT_INSTALL_DIR=/usr/local/bin sh
 
 USER vscode
 
