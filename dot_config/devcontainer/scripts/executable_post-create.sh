@@ -38,3 +38,13 @@ for shared_entry in projects settings.json agents skills plugins; do
 		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
 	fi
 done
+
+# plannotator: Claude Codeプラグイン(marketplace/install)をセットアップ
+# プラン承認やコードレビュー時にブラウザで注釈・フィードバックできるようにする
+if command -v claude >/dev/null 2>&1 && command -v plannotator >/dev/null 2>&1; then
+	claude plugin marketplace add backnotprop/plannotator || true
+	claude plugin install plannotator@plannotator || true
+	echo "✓ plannotator プラグインのセットアップを実行しました"
+else
+	echo "ℹ️ claude または plannotator コマンドが見つからないため、プラグインのセットアップをスキップしました"
+fi
