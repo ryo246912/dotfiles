@@ -2,6 +2,14 @@
 auto_install = false
 experimental = true
 
+# CodeRabbit CLI is installed in the Dockerfile via its official install
+# script (not through mise/aqua - it has no public GitHub releases to pin
+# against). To pin the version declaratively, uncomment [env] below; the
+# Dockerfile reads it via `mise env` before running the installer. Leave
+# it absent to always install the latest release.
+# [env]
+# CODERABBIT_VERSION = "1.2.3"
+
 [tools]
 "aqua:BurntSushi/ripgrep"        = "15.1.0"
 "aqua:anthropics/claude-code"    = "2.1.168"

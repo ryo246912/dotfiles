@@ -4,6 +4,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 
 RUN apt-get update && apt-get install -y \
     zsh \
+    unzip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV SHELL=/usr/bin/zsh
@@ -48,8 +49,13 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
 
 USER root
 
-# install tool via curl
-RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+# Install CodeRabbit CLI. Version is pinned declaratively via mise.toml's
+# [env].CODERABBIT_VERSION (read here through `mise env`); unset = latest.
+# Installed to /usr/local/bin (not the default ~/.local/bin) so it's on
+# PATH and readable for the vscode user we switch back to below.
+RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
+    eval "$(/usr/local/bin/mise env -C /mise)" && \
+    curl -fsSL https://cli.coderabbit.ai/install.sh | CODERABBIT_INSTALL_DIR=/usr/local/bin sh
 
 USER vscode
 
