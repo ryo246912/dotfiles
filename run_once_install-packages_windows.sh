@@ -45,7 +45,6 @@ install_mise() {
     return
   fi
   curl -fsSL https://mise.run | sh
-  eval "$($HOME/.local/bin/mise activate zsh --shims)"
 }
 
 install_scoop_package() {
