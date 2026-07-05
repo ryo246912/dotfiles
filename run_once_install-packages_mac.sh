@@ -49,9 +49,6 @@ install_mise() {
     echo "mise (official binary) is already installed"
     return
   fi
-  if brew list mise &>/dev/null; then
-    brew uninstall mise
-  fi
   curl https://mise.run | sh
 }
 
