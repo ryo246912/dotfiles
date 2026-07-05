@@ -1,0 +1,37 @@
+# gobang configuration
+# https://github.com/TaKO8Ki/gobang
+#
+# Read from ${XDG_CONFIG_HOME}/gobang/config.toml (~/.config/gobang).
+#
+# NOTE: gobang is in early alpha (last release v0.1.0-alpha.5, 2021) and is no
+# longer actively maintained. It is kept here only to compare against lazysql.
+# See dbeaver-comparison.md for the DBeaver feature mapping and recommendation.
+#
+# NEVER commit real credentials. Leave `password` out to be prompted at runtime,
+# or point at local development databases only.
+
+# [[conn]]
+# type = "mysql"
+# user = "root"
+# host = "localhost"
+# port = 3306
+# database = "app_development"
+
+# [[conn]]
+# type = "postgres"
+# user = "postgres"
+# host = "localhost"
+# port = 5432
+# database = "app_development"
+
+# [[conn]]
+# type = "sqlite"
+# path = "./app.db"
+
+# ---------------------------------------------------------------------------
+# Key bindings (optional) - defaults are already vim-style (h/j/k/l, g/G, y).
+# ---------------------------------------------------------------------------
+# [key_config]
+# scroll_up = "k"
+# scroll_down = "j"
+# copy = "y"

@@ -1,0 +1,62 @@
+# lazysql configuration
+# https://github.com/jorgerojas26/lazysql
+#
+# XDG_CONFIG_HOME is exported in dot_config/zsh/dot_zshenv.tmpl, so lazysql
+# reads this file from ${XDG_CONFIG_HOME}/lazysql/config.toml (~/.config/lazysql).
+#
+# Default keybindings are already vim-like (h/j/k/l, /, g/G, Ctrl-E editor).
+# See the DBeaver comparison table in dbeaver-comparison.md.
+
+[application]
+# Rows fetched per page when browsing a table.
+DefaultPageSize = 300
+# Show the left-hand tree/sidebar on startup.
+DisableSidebar = false
+# Overlay the sidebar on top of the result set instead of splitting the view.
+SidebarOverlay = false
+# Wrap long values in the JSON viewer (toggle at runtime with `w`).
+JSONViewerWordWrap = false
+# Press Enter on a cell to open the JSON viewer.
+EnterOpensJSONViewer = false
+# Ask for confirmation before quitting.
+ConfirmOnQuit = true
+
+# ---------------------------------------------------------------------------
+# Connections
+# ---------------------------------------------------------------------------
+# Define connections here, or add them interactively with `n` in the app.
+# NEVER commit real credentials: use ${env:VAR} placeholders and keep the
+# secrets in your shell environment / a private (chezmoi-ignored) file.
+#
+# [[database]]
+# Name     = 'local-postgres'
+# Provider = 'postgres'
+# DBName   = 'app_development'
+# URL      = 'postgres://${env:PGUSER}:${env:PGPASSWORD}@localhost:5432/app_development'
+#
+# [[database]]
+# Name     = 'local-mysql'
+# Provider = 'mysql'
+# URL      = '${env:MYSQL_USER}:${env:MYSQL_PASSWORD}@tcp(localhost:3306)/app_development'
+#
+# [[database]]
+# Name     = 'local-sqlite'
+# Provider = 'sqlite'
+# URL      = 'file:./app.db'
+# ReadOnly = true
+#
+# Run a command (e.g. an SSH tunnel) before connecting:
+# [[database]]
+# Name     = 'prod-via-bastion'
+# Provider = 'postgres'
+# URL      = 'postgres://${env:PGUSER}:${env:PGPASSWORD}@localhost:${port}/app'
+# ReadOnly = true
+# Commands = [
+#   { Command = 'ssh -tt bastion -L ${port}:db.internal:5432', WaitForPort = '${port}' },
+# ]
+
+# ---------------------------------------------------------------------------
+# Keymap overrides (optional) - defaults are already vim-style.
+# ---------------------------------------------------------------------------
+# [keymap.Home]
+# Quit = "q"
