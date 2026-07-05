@@ -49,7 +49,7 @@ install_mise() {
     echo "mise (official binary) is already installed"
     return
   fi
-  curl https://mise.run | sh
+  curl -fsSL https://mise.run | sh
 }
 
 install_cask_package() {

@@ -27,7 +27,7 @@ install_package() {
 
   for package in "${PACKAGES[@]}"; do
     if [ "$package" = "mise" ] && ! command -v mise &> /dev/null; then
-      curl https://mise.run | sh
+      curl -fsSL https://mise.run | sh
       eval "$($HOME/.local/bin/mise activate zsh --shims)"
     elif ! dpkg -l | grep -q "$package"; then
       apt install -y "$package"
