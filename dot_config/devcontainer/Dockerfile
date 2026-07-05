@@ -4,7 +4,6 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 
 RUN apt-get update && apt-get install -y \
     zsh \
-    unzip \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV SHELL=/usr/bin/zsh
@@ -46,18 +45,5 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
     GITHUB_TOKEN="$(gh auth token)" /usr/local/bin/mise install -C /mise && \
     /usr/local/bin/mise reshim -C /mise && \
     /usr/local/bin/mise trust /mise/config.toml
-
-USER root
-
-# Install CodeRabbit CLI. Version is pinned via CODERABBIT_VERSION below and
-# kept up to date by Renovate (custom.brew-cask datasource, see
-# .github/renovate.json). Installed to /usr/local/bin (not the default
-# ~/.local/bin) so it's on PATH and readable for the vscode user we switch
-# back to below.
-ARG CODERABBIT_VERSION=0.6.4
-RUN curl -fsSL https://cli.coderabbit.ai/install.sh | \
-    CODERABBIT_VERSION=$CODERABBIT_VERSION CODERABBIT_INSTALL_DIR=/usr/local/bin sh
-
-USER vscode
 
 WORKDIR /workspace

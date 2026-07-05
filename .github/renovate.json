@@ -134,16 +134,10 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/devcontainer/Dockerfile"],
-      "matchStrings": [
-        "ARG CODERABBIT_VERSION=(?<currentValue>[^\\s]+)"
+      "managerFilePatterns": [
+        "dot_config/mise/**/*.toml",
+        "dot_config/devcontainer/mise.toml"
       ],
-      "depNameTemplate": "coderabbit",
-      "datasourceTemplate": "custom.brew-cask"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
       "matchStrings": [
         "\"http:coderabbit\"\\s*=\\s*\\{\\s*version\\s*=\\s*\"(?<currentValue>[^\"]+)\""
       ],
