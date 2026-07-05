@@ -38,7 +38,9 @@ install_mise() {
   # TLS 1.3 必須のホストに接続できないため、rustls ビルドの公式バイナリを入れる。
   # (mise の http backend が TLS 1.3 必須のサーバーからダウンロードできるようにする)
   # https://github.com/rust-native-tls/rust-native-tls/issues/305
-  if command -v mise &>/dev/null; then
+  # ガードは公式インストール先のパスで判定する。apt 版(native-tls)が入っていても
+  # 早期 return せず、rustls ビルドの公式バイナリで確実に上書きする。
+  if [ -x "$HOME/.local/bin/mise" ]; then
     echo "mise (official binary) is already installed"
     return
   fi
