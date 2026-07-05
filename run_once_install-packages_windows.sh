@@ -17,19 +17,12 @@ install_package() {
     git
     gpg
     # go
-    # mise は下の特別処理で公式バイナリ(rustls ビルド)を入れる。
-    # apt / OS パッケージ版は native-tls ビルドで TLS 1.3 必須のホストに
-    # 接続できないため使わない。https://mise.run
-    # mise
     ugrep
     zsh
   )
 
   for package in "${PACKAGES[@]}"; do
-    if [ "$package" = "mise" ] && ! command -v mise &> /dev/null; then
-      curl -fsSL https://mise.run | sh
-      eval "$($HOME/.local/bin/mise activate zsh --shims)"
-    elif ! dpkg -l | grep -q "$package"; then
+    if ! dpkg -l | grep -q "$package"; then
       apt install -y "$package"
     else
       echo "$package is already installed"
@@ -38,6 +31,19 @@ install_package() {
   if command -v zsh &>/dev/null; then
     chsh -s "$(which zsh)"
   fi
+}
+
+install_mise() {
+  # apt / OS パッケージ版の mise はデフォルト feature (native-tls) ビルドで
+  # TLS 1.3 必須のホストに接続できないため、rustls ビルドの公式バイナリを入れる。
+  # (mise の http backend が TLS 1.3 必須のサーバーからダウンロードできるようにする)
+  # https://github.com/rust-native-tls/rust-native-tls/issues/305
+  if command -v mise &>/dev/null; then
+    echo "mise (official binary) is already installed"
+    return
+  fi
+  curl -fsSL https://mise.run | sh
+  eval "$($HOME/.local/bin/mise activate zsh --shims)"
 }
 
 install_scoop_package() {
@@ -95,6 +101,7 @@ install_nix() {
 commands=(
   "install_scoop"
   "install_package"
+  "install_mise"
   "install_scoop_package"
   "install_private_scoop_package"
   "install_nix"
