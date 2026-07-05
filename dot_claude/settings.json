@@ -33,16 +33,7 @@
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "expo-deployment@expo-plugins": true,
-    "plannotator@plannotator": true
-  },
-  "extraKnownMarketplaces": {
-    "plannotator": {
-      "source": {
-        "source": "github",
-        "repo": "backnotprop/plannotator"
-      }
-    }
+    "expo-deployment@expo-plugins": true
   },
   "bash": {
     "blockUnlistedCommands": true

@@ -40,8 +40,12 @@ for shared_entry in projects settings.json agents skills plugins; do
 done
 
 # plannotator: プラン/コードレビュー用ブラウザ注釈ツール
-# ~/.codex, ~/.gemini 等のエージェント設定ディレクトリはコンテナ起動後にマウントされるため、
-# Dockerfileのbuild時ではなくここでインストールし、Codex/Gemini CLI等の自動検出・設定を効かせる。
-# Claude Code側の有効化は dot_claude/settings.json の enabledPlugins/extraKnownMarketplaces で宣言的に管理する。
-curl -fsSL https://plannotator.ai/install.sh | bash
+# ~/.codex 等のエージェント設定ディレクトリはコンテナ起動後にマウントされるため、
+# Dockerfileのbuild時ではなくここでインストールし、Codexの自動検出・設定を効かせる。
+# - sem(semantic diff)はmiseで別途管理するため PLANNOTATOR_SKIP_SEM_INSTALL でスキップ
+# - annotateモード用のagent-terminal runtimeはコードレビュー用途では不要なためスキップ
+# - Claude Code側の /plannotator-review 等は ~/.claude/skills/ への配置だけで動くため
+#   marketplaceプラグインの有効化は行わない
+PLANNOTATOR_SKIP_SEM_INSTALL=1 PLANNOTATOR_SKIP_AGENT_TERMINAL_INSTALL=1 \
+	curl -fsSL https://plannotator.ai/install.sh | bash -s -- --non-interactive --no-extras
 echo "✓ plannotator をインストール/設定しました"

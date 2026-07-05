@@ -22,6 +22,9 @@ experimental = true
 "npm:ccusage"                    = "20.0.1"
 "npm:oxfmt"                      = "0.57.0"
 "npm:oxlint"                     = "1.72.0"
+# semantic diff (plannotatorのコードレビューが利用する補助バイナリ)
+# plannotatorのinstall.shが同梱インストールするのと同じバージョンに固定
+"ubi:Ataraxy-Labs/sem"           = { version = "v0.8.0", exe_name = "sem" }
 
 [settings.npm]
 bun = true
