@@ -17,7 +17,9 @@ install_package() {
     git
     gpg
     # go
-    # https://mise.jdx.dev/installing-mise.html#apt
+    # mise は下の特別処理で公式バイナリ(rustls ビルド)を入れる。
+    # apt / OS パッケージ版は native-tls ビルドで TLS 1.3 必須のホストに
+    # 接続できないため使わない。https://mise.run
     # mise
     ugrep
     zsh
