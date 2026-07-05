@@ -7,7 +7,7 @@
 #   でレビューする。指摘があれば stop をブロックしてエージェントに差し戻す。
 #   (Claude Code / Codex CLI とも、Stop hook で exit code 2 + stderr を返すと
 #    stderr の内容がエージェントに渡され、stop がブロックされる)
-#   手順の詳細は coderabbit skill の「4. コミット不要のローカル自動修正ループ」参照。
+#   手順の詳細は review-coderabbit skill の「4. コミット不要のローカル自動修正ループ」参照。
 #
 # 注意:
 #   - 無限ループ防止のため、stdin の stop_hook_active が true なら何もせず終了する
