@@ -1,5 +1,5 @@
 [tools]
-"aqua:aquasecurity/trivy"                   = "0.71.2"
+"aqua:aquasecurity/trivy"                   = "0.72.0"
 "aqua:aws/aws-cli"                          = "2.34.21"
 "aqua:hashicorp/terraform"                  = "1.15.4"
 "aqua:keidarcy/e1s"                         = "1.0.53"
