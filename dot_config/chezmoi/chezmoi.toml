@@ -12,15 +12,22 @@ args = [
     "-c",
     """
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
-[ "$(cat /tmp/mise-config-hash 2>/dev/null)" = "$mise_hash" ] && exit 0
-echo "Running mise install..."
-GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 || exit 1
-echo "$mise_hash" > /tmp/mise-config-hash
-# bootstrap.packages は非致命的に実行する。
-# WSL/Linux の apt は sudo が必要で、非対話フックでは認証できず失敗し得るため、
-# 失敗しても apply 全体は止めない（mac の brew bottle は sudo 不要で自動導入される）。
-# 未導入のままなら手動で `mise bootstrap packages apply` を実行する。
-mise bootstrap packages apply --yes || echo "warning: 'mise bootstrap packages apply' に失敗しました。tig/colordiff は手動で導入してください"
+if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
+  echo "Running mise install..."
+  GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 || exit 1
+  echo "$mise_hash" > /tmp/mise-config-hash
+fi
+# bootstrap.packages は install とは別のマーカーで管理し、成功時のみ記録する。
+# 失敗時はマーカーを書かないため次回 apply で再試行される。
+# WSL/Linux の apt は sudo が必要で非対話フックでは失敗し得るが、非致命的に扱い apply は止めない
+# （mac の brew bottle は sudo 不要で自動導入される）。
+if [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
+  if mise bootstrap packages apply --yes; then
+    echo "$mise_hash" > /tmp/mise-bootstrap-hash
+  else
+    echo "warning: 'mise bootstrap packages apply' に失敗しました。次回 apply で再試行します（手動導入も可）"
+  fi
+fi
 """,
 ]
 command = "bash"
