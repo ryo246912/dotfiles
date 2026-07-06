@@ -18,7 +18,7 @@ experimental = true
 "core:python"                    = "3.14.3"
 "github:github/copilot-cli"      = "1.0.63"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"http:coderabbit"                = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip" }
+"http:coderabbit"                = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip", postinstall = 'chmod +x "$MISE_TOOL_INSTALL_PATH/coderabbit"' }
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
 "npm:oxfmt"                      = "0.57.0"

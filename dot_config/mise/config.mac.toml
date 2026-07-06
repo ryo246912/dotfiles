@@ -1,3 +1,5 @@
 [tools]
 "github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
-"http:coderabbit"       = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-darwin-{{ arch() }}.zip" }
+# http backend が展開したバイナリに実行権限が付かない(zip に unix 実行ビットが
+# 無いため)ので、postinstall で +x してから reshim で shim を生成させる。
+"http:coderabbit"       = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-darwin-{{ arch() }}.zip", postinstall = 'chmod +x "$MISE_TOOL_INSTALL_PATH/coderabbit"' }
