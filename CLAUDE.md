@@ -34,6 +34,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 **Package Management:**
 
 - `mise install` - Install all tools defined in mise.toml
+- `mise bootstrap packages apply` - Install system packages from `[bootstrap.packages]` (e.g. tig, colordiff via prebuilt brew/apt)
 - `mise use <tool>@<version>` - Use specific tool version
 - `mise run <task>` - Run defined tasks (lint, format, etc.)
 

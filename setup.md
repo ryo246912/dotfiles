@@ -41,6 +41,10 @@
     ```sh
     mise install --jobs=2
     ```
+  - [ ] システムパッケージのインストール（tig / colordiff などの prebuilt）
+    ```sh
+    mise bootstrap packages apply
+    ```
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
@@ -426,4 +430,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   - [ ] 他ツールのインストール
     ```sh
     mise install --jobs=2
+    ```
+  - [ ] システムパッケージのインストール（tig / colordiff などの prebuilt）
+    ```sh
+    mise bootstrap packages apply
     ```

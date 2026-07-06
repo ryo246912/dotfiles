@@ -1,3 +1,7 @@
+# bootstrap.packages を使うため v2026.6.6 以上が必要
+# https://mise.jdx.dev/bootstrap/packages/brew.html
+min_version = "2026.6.6"
+
 [env]
 # https://evermeet.cx/ffmpeg/
 # https://github.com/acj/asdf-ffmpeg
@@ -72,7 +76,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:dyoshikawa/rulesync"                                = "8.21.0"
 "github:github/copilot-cli"                                 = "1.0.63"
 "github:gpanders/ijq"                                       = "1.1.2"
-"github:jonas/tig"                                          = { version = "tig-2.6.0", extract_all = true, postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/github-jonas-tig/tig-* | grep -v "latest" | sort -V | tail -n 1)" && make install' }
 "github:jr-k/d4s"                                           = "0.49.100"
 "github:max-sixty/worktrunk"                                = "0.65.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
@@ -91,7 +94,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
 "go:github.com/go-delve/delve/cmd/dlv"                      = "1.27.0"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.2"
-"http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 "npm:@devcontainers/cli"                                    = "0.87.0"
 "npm:@kitlangton/ghui"                                      = "0.7.1"
 "npm:agentlytics"                                           = "0.2.13"
@@ -110,6 +112,17 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:renovate"                                              = "43.103.0"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
+
+# prebuilt を使うツール（ソースビルド・sudo を避ける）
+# `mise bootstrap packages apply` で導入する
+# OS フィルタされるため mac は brew(bottle)、Ubuntu/WSL は apt が使われる
+# tig は upstream が prebuilt バイナリを配布していない（jonas/tig#757）ため brew/apt を利用
+# colordiff は Perl スクリプトで、従来は sudo make install していたため brew/apt に移行
+[bootstrap.packages]
+"brew:tig"      = "latest"
+"apt:tig"       = "latest"
+"brew:colordiff" = "latest"
+"apt:colordiff"  = "latest"
 
 [settings]
 auto_install = false
