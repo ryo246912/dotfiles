@@ -85,6 +85,8 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 
    ```bash
    mise install
+   # tig / colordiff などの [bootstrap.packages] を prebuilt で導入
+   mise bootstrap packages apply
    ```
 
 5. **Configure Git and GPG:**
