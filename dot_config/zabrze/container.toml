@@ -1,0 +1,54 @@
+# Apple container ecosystem abbreviations
+# docker / docker-compose の代替として利用する
+#   - apple/container            : container            (docker 相当のコンテナランタイム)
+#   - Mcrich23/Container-Compose : container-compose    (docker compose 相当 / docker-compose.yml を解釈)
+#   - andreybleme/lazycontainer  : lazycontainer        (lazydocker 相当の TUI)
+#   - andrew-waters/orchard      : Orchard.app          (GUI のため CLI abbreviation は無し)
+
+# --- container (runtime) ---
+[[snippets]]
+name            = "container"
+snippet         = "container"
+trigger-pattern = "^ct$"
+
+[[snippets]]
+name            = "container list --all"
+snippet         = "container list --all"
+trigger-pattern = "^ctl$"
+
+[[snippets]]
+name            = "container system start"
+snippet         = "container system start"
+trigger-pattern = "^css$"
+
+[[snippets]]
+name            = "container system stop"
+snippet         = "container system stop"
+trigger-pattern = "^csp$"
+
+# --- container-compose (docker compose 相当) ---
+[[snippets]]
+name            = "container-compose"
+snippet         = "container-compose"
+trigger-pattern = "^cc$"
+
+[[snippets]]
+name            = "container-compose up"
+snippet         = "container-compose up"
+trigger-pattern = "^ccu$"
+
+[[snippets]]
+name            = "container-compose down"
+snippet         = "container-compose down"
+trigger-pattern = "^ccd$"
+
+[[snippets]]
+name            = "container-compose build"
+snippet         = "container-compose build"
+trigger-pattern = "^ccb$"
+
+# --- lazycontainer (lazydocker 相当の TUI) ---
+[[snippets]]
+name            = "lazycontainer"
+snippet         = "lazycontainer"
+trigger-pattern = "^lct$"

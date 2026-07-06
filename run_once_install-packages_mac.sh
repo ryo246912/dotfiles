@@ -14,11 +14,13 @@ install_package() {
   local PACKAGES=(
     oven-sh/bun/bun
     blueutil
+    container-compose
     font-hackgen
     font-hackgen-nerd
     git
     go
     gpg
+    lazycontainer
     mise
     pinentry-mac
     silicon
@@ -47,8 +49,10 @@ install_cask_package() {
     battery
     chatgpt
     clibor
+    container
     dbeaver-community
     docker
+    orchard
     firefox
     ghostty
     google-chrome
