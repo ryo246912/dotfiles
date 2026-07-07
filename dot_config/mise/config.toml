@@ -83,7 +83,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:seachicken/gh-poi"                                  = { version = "0.18.1", bin = "gh-poi" }
 "github:shazow/wifitui"                                     = "0.13.0"
 "github:skanehira/ghost"                                    = "0.3.1"
-"github:rivolink/leaf"                                      = { version = "1.25.0", bin = "leaf" }
+"github:rivolink/leaf"                                      = { version = "1.26.0", bin = "leaf" }
 "github:trasta298/keifu"                                    = "0.3.0"
 "github:wesm/agentsview"                                    = "0.31.1"
 "go:github.com/air-verse/air"                               = "1.65.3"
