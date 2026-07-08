@@ -33,6 +33,10 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $*" >&2
 }
 
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 # 使用方法を表示
 show_usage() {
     cat <<EOF
@@ -50,7 +54,7 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
-  dev <task-name> [command]              devcontainerでコマンド実行（省略時は [dev_commands] からfzf選択）
+  dev <task-name> [command]              devcontainerで実行、または --sbx で Docker Sandboxes を起動
   exec <task-name> [<repo>] <command>   worktreeでコマンド実行（repo省略時はroot、指定時はそのリポジトリ）
   exec main [--group=GROUP] <repo> <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
@@ -61,6 +65,9 @@ Usage: multi-worktree <subcommand> [options]
   --default-branch   各リポジトリのデフォルトブランチを checkout（createコマンドのみ）
   --group=GROUP      使用するリポジトリグループ（create/status mainコマンド、デフォルト: default）
   --force            git worktree remove失敗時も強制削除（removeコマンドのみ）
+  --sbx[=AGENT]      dev サブコマンドで Docker Sandboxes backend を使う
+  --name NAME        sandbox 名を明示指定（dev --sbx のみ）
+  --cli=CLI          sandbox CLI を指定（sbx|docker, dev --sbx のみ）
 
 例:
   multi-worktree create feat/add-auth                              # fzf でブランチを選択して作成
@@ -79,6 +86,9 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree cd feat/add-auth                      # task root に移動
   ccmc                                                 # root で ccmanager/ccmc を起動
   multi-worktree dev feat/add-auth ccmanager
+  multi-worktree dev feat/add-auth --sbx claude
+  multi-worktree dev feat/add-auth --sbx codex -- --continue
+  multi-worktree dev feat/add-auth --sbx --name mw-feat-add-auth-claude
   multi-worktree exec feat/add-auth npm install
   multi-worktree exec feat/add-auth repo1 npm install
   multi-worktree exec feat/add-auth repo1 make build
@@ -127,6 +137,11 @@ check_config() {
         log_info "[settings]"
         log_info "default_group = \"default\""
         log_info ""
+        log_info "[settings.sandbox]"
+        log_info "default_agent = \"claude\""
+        log_info "default_name_prefix = \"mw\""
+        log_info "preferred_cli = \"sbx\""
+        log_info ""
         log_info "[dev_commands]"
         log_info "claude = \"claude --dangerously-skip-permissions\""
         log_info "claude_a2 = 'env CLAUDE_CONFIG_DIR=\$HOME/.claude-account2 claude --dangerously-skip-permissions'"
@@ -160,10 +175,14 @@ get_config_value() {
         fi
 
         # グループ内でキーを探す
-        if [[ "$in_group" == true ]] && [[ "$line" =~ ^[[:space:]]*$key[[:space:]]*= ]]; then
-            value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
-            echo "$value"
-            return 0
+        if [[ "$in_group" == true ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]]; then
+                value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
+                echo "$value"
+                return 0
+            fi
         fi
     done < "$CONFIG_FILE"
 
@@ -194,19 +213,24 @@ get_config_array() {
         fi
 
         # 配列の開始を検出
-        if [[ "$in_group" == true ]] && [[ "$line" =~ ^[[:space:]]*$key[[:space:]]*=[[:space:]]*\[ ]]; then
-            in_array=true
-            # 同じ行に要素がある場合
-            local content=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*\[//' | sed 's/\]//')
-            if [[ -n "$content" ]]; then
-                IFS=',' read -ra items <<< "$content"
-                for item in "${items[@]}"; do
-                    item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
-                    [[ -n "$item" ]] && result+=("$item")
-                done
+        if [[ "$in_group" == true ]] && [[ "$in_array" == false ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]] && [[ "$line" == *"["* ]]; then
+                local content=""
+                in_array=true
+                # 同じ行に要素がある場合
+                content=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*\[//' | sed 's/\]//')
+                if [[ -n "$content" ]]; then
+                    IFS=',' read -ra items <<< "$content"
+                    for item in "${items[@]}"; do
+                        item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
+                        [[ -n "$item" ]] && result+=("$item")
+                    done
+                fi
+                [[ "$line" =~ \] ]] && in_array=false
+                continue
             fi
-            [[ "$line" =~ \] ]] && in_array=false
-            continue
         fi
 
         # 配列要素の読み込み
@@ -314,6 +338,39 @@ get_default_group() {
     done < "$CONFIG_FILE"
 
     echo "default"
+}
+
+get_section_value() {
+    local section="$1"
+    local key="$2"
+    local default_value="${3:-}"
+    local in_section=false
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+
+        if [[ "$line" == "[$section]" ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]]; then
+                local value=""
+                value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
+                echo "$value"
+                return 0
+            fi
+        fi
+    done < "$CONFIG_FILE"
+
+    echo "$default_value"
 }
 
 # base_dirを絶対パスに解決する共通関数
@@ -639,6 +696,91 @@ get_devcontainer_skip_up_if_running() {
     else
         echo "$value"
     fi
+}
+
+get_sandbox_default_agent() {
+    get_section_value "settings.sandbox" "default_agent" "claude"
+}
+
+get_sandbox_default_name_prefix() {
+    get_section_value "settings.sandbox" "default_name_prefix" "mw"
+}
+
+get_sandbox_preferred_cli() {
+    get_section_value "settings.sandbox" "preferred_cli" "sbx"
+}
+
+sanitize_sandbox_name_component() {
+    local value="$1"
+
+    value=$(echo "$value" | sed -E 's#[[:space:]/]+#-#g; s#[^[:alnum:]_.+-]+#-#g; s#-+#-#g; s#^-+##; s#-+$##')
+
+    if [[ -z "$value" ]]; then
+        echo "sandbox"
+    else
+        echo "$value"
+    fi
+}
+
+build_sandbox_name() {
+    local task_name="$1"
+    local agent="$2"
+    local prefix
+    prefix=$(sanitize_sandbox_name_component "$(get_sandbox_default_name_prefix)")
+    local task_component
+    task_component=$(sanitize_sandbox_name_component "$task_name")
+    local agent_component
+    agent_component=$(sanitize_sandbox_name_component "$agent")
+    local name="${task_component}-${agent_component}"
+
+    if [[ -n "$prefix" ]]; then
+        name="${prefix}-${name}"
+    fi
+
+    echo "$name"
+}
+
+resolve_sandbox_cli() {
+    local requested_cli="${1:-}"
+    local preferred_cli="$requested_cli"
+
+    if [[ -z "$preferred_cli" ]]; then
+        preferred_cli=$(get_sandbox_preferred_cli)
+    fi
+
+    case "$preferred_cli" in
+        ""|sbx)
+            if command_exists sbx; then
+                echo "sbx"
+                return 0
+            fi
+            if command_exists docker && docker sandbox run --help >/dev/null 2>&1; then
+                echo "docker"
+                return 0
+            fi
+            ;;
+        docker|docker-sandbox)
+            if command_exists docker && docker sandbox run --help >/dev/null 2>&1; then
+                echo "docker"
+                return 0
+            fi
+            if command_exists sbx; then
+                echo "sbx"
+                return 0
+            fi
+            ;;
+        *)
+            log_error "未知の sandbox CLI です: $preferred_cli (sbx または docker を指定してください)"
+            return 1
+            ;;
+    esac
+
+    log_error "Docker Sandboxes CLI が見つかりません。'sbx' をインストールするか、Docker Desktop の 'docker sandbox' を利用可能にしてください"
+    return 1
+}
+
+docker_sandbox_uses_workspace_flag() {
+    command_exists docker && docker sandbox run --help 2>/dev/null | grep -q -- '--workspace'
 }
 
 # [dev_commands] セクションからコマンド一覧を読み込む
@@ -987,7 +1129,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\""
+            "command": "if command -v ssh >/dev/null 2>&1 && [ -f \"$HOME/.config/ssh/config\" ] && grep -Eq '^[[:space:]]*Host[[:space:]]+mac-host([[:space:]]|$)' \"$HOME/.config/ssh/config\" 2>/dev/null; then CURRENT_DIR=$(basename \"$PWD\"); ssh -F \"$HOME/.config/ssh/config\" -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\"; fi"
           }
         ]
       }
@@ -998,7 +1140,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\""
+            "command": "if command -v ssh >/dev/null 2>&1 && [ -f \"$HOME/.config/ssh/config\" ] && grep -Eq '^[[:space:]]*Host[[:space:]]+mac-host([[:space:]]|$)' \"$HOME/.config/ssh/config\" 2>/dev/null; then CURRENT_DIR=$(basename \"$PWD\"); ssh -F \"$HOME/.config/ssh/config\" -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\"; fi"
           }
         ]
       }
@@ -1440,10 +1582,147 @@ cmd_cd() {
     exec "$shell"
 }
 
+cmd_dev_sandbox() {
+    local task_name="$1"
+    local sandbox_agent="$2"
+    local sandbox_name="$3"
+    local requested_cli="$4"
+    shift 4
+    local sandbox_agent_args=("$@")
+
+    if [[ -z "$sandbox_agent" ]]; then
+        sandbox_agent=$(get_sandbox_default_agent)
+    fi
+
+    local worktree_base_dir
+    worktree_base_dir=$(find_worktree_dir "$task_name") || {
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    }
+
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    local sandbox_cli
+    sandbox_cli=$(resolve_sandbox_cli "$requested_cli") || return 1
+
+    if [[ -z "$sandbox_name" ]]; then
+        sandbox_name=$(build_sandbox_name "$task_name" "$sandbox_agent")
+    fi
+
+    if command_exists realpath; then
+        worktree_base_dir=$(realpath "$worktree_base_dir")
+    else
+        worktree_base_dir=$(cd "$worktree_base_dir" && pwd)
+    fi
+
+    log_info "タスク '$task_name' で Docker Sandboxes を起動します"
+    log_info "sandbox CLI: $sandbox_cli"
+    log_info "agent: $sandbox_agent"
+    log_info "sandbox 名: $sandbox_name"
+    log_info "workspace: $worktree_base_dir"
+    if [[ ${#sandbox_agent_args[@]} -gt 0 ]]; then
+        log_info "agent 引数を ${#sandbox_agent_args[@]} 個 pass-through します"
+    fi
+
+    local -a sandbox_cmd
+    case "$sandbox_cli" in
+        sbx)
+            sandbox_cmd=(sbx run --name "$sandbox_name" "$sandbox_agent" "$worktree_base_dir")
+            ;;
+        docker)
+            sandbox_cmd=(docker sandbox run --name "$sandbox_name")
+            if docker_sandbox_uses_workspace_flag; then
+                sandbox_cmd+=(--workspace "$worktree_base_dir" "$sandbox_agent")
+            else
+                sandbox_cmd+=("$sandbox_agent" "$worktree_base_dir")
+            fi
+            ;;
+        *)
+            log_error "未知の sandbox CLI です: $sandbox_cli"
+            return 1
+            ;;
+    esac
+
+    if [[ ${#sandbox_agent_args[@]} -gt 0 ]]; then
+        sandbox_cmd+=(-- "${sandbox_agent_args[@]}")
+    fi
+
+    cd "$worktree_base_dir" || return 1
+    "${sandbox_cmd[@]}"
+
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "Docker Sandboxes の起動に失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "Docker Sandboxes の起動が完了しました"
+}
+
 # dev サブコマンド
 cmd_dev() {
     local task_name="$1"
     shift
+
+    if [[ $# -gt 0 ]] && [[ "$1" == "--sbx" || "$1" == --sbx=* ]]; then
+        local sandbox_agent=""
+        local sandbox_name=""
+        local sandbox_cli=""
+        local -a sandbox_agent_args=()
+
+        if [[ "$1" == --sbx=* ]]; then
+            sandbox_agent="${1#*=}"
+            shift
+        else
+            shift
+            if [[ $# -gt 0 ]] && [[ "$1" != --* ]]; then
+                sandbox_agent="$1"
+                shift
+            fi
+        fi
+
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --name=*)
+                    sandbox_name="${1#*=}"
+                    ;;
+                --name)
+                    shift
+                    if [[ $# -eq 0 ]]; then
+                        log_error "--name には値が必要です"
+                        return 1
+                    fi
+                    sandbox_name="$1"
+                    ;;
+                --cli=*)
+                    sandbox_cli="${1#*=}"
+                    ;;
+                --cli)
+                    shift
+                    if [[ $# -eq 0 ]]; then
+                        log_error "--cli には値が必要です"
+                        return 1
+                    fi
+                    sandbox_cli="$1"
+                    ;;
+                --)
+                    shift
+                    sandbox_agent_args=("$@")
+                    break
+                    ;;
+                *)
+                    sandbox_agent_args+=("$1")
+                    ;;
+            esac
+            shift
+        done
+
+        cmd_dev_sandbox "$task_name" "$sandbox_agent" "$sandbox_name" "$sandbox_cli" "${sandbox_agent_args[@]+"${sandbox_agent_args[@]}"}"
+        return $?
+    fi
 
     if [[ $# -eq 0 ]]; then
         # 設定ファイルの [dev_commands] から fzf で選択

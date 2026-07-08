@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# sbx-agent <agent> [agent-args...]
+# Usage: sbx-agent claude
+#        sbx-agent codex resume --yolo
+AGENT="$1"
+shift
+
+# Agent ごとのセッションデータパスを解決
+case "$AGENT" in
+  claude)   SESSION_DIR="${HOME}/.claude" ;;
+  codex)    SESSION_DIR="${HOME}/.codex" ;;
+  copilot)  SESSION_DIR="${HOME}/.local/state/.copilot" ;;
+  gemini)   SESSION_DIR="${HOME}/.gemini" ;;
+  *)        SESSION_DIR="" ;;
+esac
+
+# サンドボックス名: {repo}-{branch}-{agent}
+# hostname制約に合わせて英数字とハイフンのみ、先頭末尾のハイフンを除去
+REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "repo")
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+SANDBOX_NAME=$(printf '%s-%s-%s' "$REPO" "$BRANCH" "$AGENT" \
+  | tr '[:upper:]' '[:lower:]' \
+  | tr -cs 'a-z0-9-' '-' \
+  | sed 's/^-//;s/-$//')
+
+# 既存サンドボックスがあれば再アタッチ
+if sbx ls 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$SANDBOX_NAME"; then
+  exec sbx run "$SANDBOX_NAME" -- "$@"
+fi
+
+# 新規作成: カレントディレクトリを主ワークスペース、セッションデータを追加マウント
+if [ -n "$SESSION_DIR" ]; then
+  exec sbx run --name "$SANDBOX_NAME" "$AGENT" "." "$SESSION_DIR" -- "$@"
+else
+  exec sbx run --name "$SANDBOX_NAME" "$AGENT" "." -- "$@"
+fi
