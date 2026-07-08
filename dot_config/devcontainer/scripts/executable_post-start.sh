@@ -10,6 +10,8 @@ cat >>"${SSH_CONFIG}" <<EOF
 Host mac-host
     HostName host.docker.internal
     User ${HOST_USER}
+    BatchMode yes
+    IdentitiesOnly yes
     IdentityFile ~/.ssh/id_ed25519
     StrictHostKeyChecking accept-new
 EOF
