@@ -5,6 +5,7 @@ export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 export ZDOTDIR="${XDG_CONFIG_HOME}/zsh"
+export DOCKER_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/docker"
 
 # zprofでプロファイリング
 if [ "$ZSHRC_PROFILE" != "" ]; then

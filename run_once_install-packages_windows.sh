@@ -21,6 +21,8 @@ install_package() {
     # mise
     ugrep
     zsh
+    pass
+    golang-docker-credential-helpers
   )
 
   for package in "${PACKAGES[@]}"; do
