@@ -22,6 +22,16 @@
             "statusMessage": "Reviewing recent transcript for rule updates"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/coderabbit-review-hook.sh\"",
+            "timeout": 180,
+            "statusMessage": "Running CodeRabbit review on pending changes"
+          }
+        ]
       }
     ]
   }

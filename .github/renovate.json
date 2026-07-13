@@ -131,6 +131,18 @@
       ],
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "dot_config/mise/**/*.toml",
+        "dot_config/devcontainer/mise.toml"
+      ],
+      "matchStrings": [
+        "\"http:coderabbit\"\\s*=\\s*\\{\\s*version\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "coderabbit",
+      "datasourceTemplate": "custom.brew-cask"
     }
   ]
 }

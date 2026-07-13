@@ -4,4 +4,4 @@
 # examples:
 ryo-mac-private=mac,private
 ryo-mac-work=mac,work2
-ryo-win=windows,private
+ryo-wsl=linux,private

@@ -1,6 +1,13 @@
 {
   "version": 1,
-  "hooks": {},
+  "hooks": {
+    "stop": [
+      {
+        "command": "\"$HOME/.config/devcontainer/scripts/coderabbit-review-hook.sh\"",
+        "timeout": 180
+      }
+    ]
+  },
   "claudecode": {
     "hooks": {
       "sessionStart": [

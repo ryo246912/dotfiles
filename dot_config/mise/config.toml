@@ -1,3 +1,10 @@
+# min_version: この設定が要求する mise の最小バージョン(下限のみ宣言)。
+# mise 公式は「特定バージョンに固定せず、下限だけ宣言せよ」という方針
+# (レジストリ/backend は時間とともに変わるため、ユーザーは mise を最新に保つべき、
+#  特定バージョンへのロックは推奨されない、という考え方)。
+# https://mise.jdx.dev/configuration.html#minimum-mise-version
+min_version = "2026.7.0"
+
 [env]
 # https://evermeet.cx/ffmpeg/
 # https://github.com/acj/asdf-ffmpeg
