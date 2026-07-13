@@ -47,6 +47,15 @@ vim.opt.ruler = true
 vim.opt.laststatus = 2
 -- 入力したコマンドが右下に表示
 vim.opt.showcmd = true
+
+-- ステータスラインの右側に文字数カウント（カーソル位置/全体）を表示
+_G.MyCharCount = function()
+  local wc = vim.fn.wordcount()
+  local cursor_pos = (wc.cursor_chars or wc.chars) + 1
+  return cursor_pos .. "/" .. wc.chars .. " chars"
+end
+
+vim.opt.statusline = "%f %h%m%r%=%{v:lua.MyCharCount()} %-14.(%l,%c%V%) %P"
 -- タイトルを表示
 vim.opt.title = true
 
