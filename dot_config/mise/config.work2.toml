@@ -1,7 +1,7 @@
 [tools]
 "aqua:aquasecurity/trivy"                   = "0.72.0"
 "aqua:aws/aws-cli"                          = "2.34.21"
-"aqua:hashicorp/terraform"                  = "1.15.4"
+"aqua:hashicorp/terraform"                  = "1.15.8"
 "aqua:keidarcy/e1s"                         = "1.0.53"
 "aqua:leg100/pug"                           = "0.6.5"
 "aqua:rclone/rclone"                        = "1.74.4"
