@@ -13,7 +13,10 @@
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
-    "HOST_USER": "${localEnv:USER}"
+    "HOST_USER": "${localEnv:USER}",
+    // plannotator: devcontainer内はリモート扱いにして固定ポートで待受させる
+    "PLANNOTATOR_REMOTE": "1",
+    "PLANNOTATOR_PORT": "19432"
   },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
