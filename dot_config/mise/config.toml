@@ -11,6 +11,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
+"aqua:Aloxaf/silicon"                                       = "0.5.3"
 "aqua:BurntSushi/ripgrep"                                   = "15.1.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
@@ -64,6 +65,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "cargo:filetree"                                            = "0.3.5"
 "cargo:fzf-make"                                            = "0.69.0"
 "core:bun"                                                  = "1.3.14"
+"core:go"                                                   = "1.26.5"
 "core:node"                                                 = "22.19.0"
 "core:python"                                               = "3.14.3"
 "core:rust"                                                 = "1.94.1"
@@ -114,13 +116,13 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "pipx:grip"                                                 = "4.6.2"
 
 # prebuilt を使うツール（ソースビルド・sudo を避ける）
-# `mise bootstrap packages apply` で導入する
-# OS フィルタされるため mac は brew(bottle)、Ubuntu/WSL は apt が使われる
-# tig は upstream が prebuilt バイナリを配布していない（jonas/tig#757）ため brew/apt を利用
-# colordiff は Perl スクリプトで、従来は sudo make install していたため brew/apt に移行
+# `mise bootstrap packages apply` で導入する。OS フィルタされる。
+# colordiff: Perl スクリプト。mac は mise の brew(bottle)、WSL は apt。
+# tig: pcre2 に依存し、mac では実 Homebrew が pcre2 を所有しているため mise brew では
+#   衝突する（pcre2 は cairo/git/glib/grep 等が共有し削除不可）。よって mac は実 brew
+#   （brew.json / run_once_install-packages_mac.sh）で導入し、ここでは WSL の apt のみ扱う。
 [bootstrap.packages]
-"brew:tig"      = "latest"
-"apt:tig"       = "latest"
+"apt:tig"        = "latest"
 "brew:colordiff" = "latest"
 "apt:colordiff"  = "latest"
 
