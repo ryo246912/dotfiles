@@ -93,7 +93,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "go:github.com/x-motemen/gore/cmd/gore"                     = "0.6.2"
 "http:colordiff"                                            = { version = "1.0.21", url = "https://www.colordiff.org/colordiff-{{version}}.tar.gz", postinstall = 'cd "$(ls -1d $HOME/.local/share/mise/installs/http-colordiff/* | grep -v "latest" | sort -V | tail -n 1)" && sudo make install' }
 "npm:@devcontainers/cli"                                    = "0.87.0"
-"npm:@kitlangton/ghui"                                      = "0.7.1"
+"npm:@kitlangton/ghui"                                      = "0.9.0"
 "npm:agentlytics"                                           = "0.2.13"
 "npm:ccmanager"                                             = "4.1.25"
 "npm:ccusage"                                               = "20.0.1"
