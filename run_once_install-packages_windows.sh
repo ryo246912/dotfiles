@@ -11,15 +11,11 @@ install_scoop() {
 }
 
 install_package() {
+  # CLI（gpg/ugrep/tig 等）は mise（[bootstrap.packages] の apt:）で管理する。
+  # git は chezmoi の初回 clone に必要なブートストラップ前提のため apt で残す。
+  # zsh はログインシェル（chsh）で早期に必要なため残す。
   local PACKAGES=(
-    # https://bun.com/docs/installation#macos-and-linux
-    # bun
     git
-    gpg
-    # go
-    # https://mise.jdx.dev/installing-mise.html#apt
-    # mise
-    ugrep
     zsh
   )
 

@@ -11,22 +11,13 @@ install_brew() {
 }
 
 install_package() {
+  # CLI formula は mise（[bootstrap.packages]）で管理する。
+  # ここでは mise 自身（ブートストラップ前提）とフォント（cask）のみ実 brew で導入する。
+  # git は初回 clone に必要だが Xcode Command Line Tools の system git が担うため不要。
   local PACKAGES=(
-    blueutil
     font-hackgen
     font-hackgen-nerd
-    git
-    gpg
     mise
-    pinentry-mac
-    tig
-    ugrep
-
-    coreutils
-    findutils
-    gnu-sed
-    grep
-    tree
   )
 
   for package in "${PACKAGES[@]}"; do

@@ -115,16 +115,37 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
 
-# prebuilt を使うツール（ソースビルド・sudo を避ける）
-# `mise bootstrap packages apply` で導入する。OS フィルタされる。
-# colordiff: Perl スクリプト。mac は mise の brew(bottle)、WSL は apt。
-# tig: pcre2 に依存し、mac では実 Homebrew が pcre2 を所有しているため mise brew では
-#   衝突する（pcre2 は cairo/git/glib/grep 等が共有し削除不可）。よって mac は実 brew
-#   （brew.json / run_once_install-packages_mac.sh）で導入し、ここでは WSL の apt のみ扱う。
+# CLI formula は mise がまとめて管理する（`mise bootstrap packages apply` で導入）。
+# mac は mise の brew(bottle) が全 formula とその依存（pcre2 等）を単一所有するため、
+# 実 Homebrew（cask 専用）とは所有が重ならず pcre2 衝突は起きない。WSL は apt。
+# 前提: git/mise はブートストラップ前提のため、初回 clone は mac=Xcode の system git、
+#   WSL=apt の git が担う。Homebrew 側では git を持たず、mise brew が git+pcre2 を所有する。
+# OS フィルタされるため、mac 専用（GNU 版・mac 限定）は brew: のみ記載する。
 [bootstrap.packages]
-"apt:tig"        = "latest"
-"brew:colordiff" = "latest"
-"apt:colordiff"  = "latest"
+# 共通（mac=brew bottle / WSL=apt）
+"brew:git"          = "latest"
+"apt:git"           = "latest"
+"brew:tig"          = "latest"
+"apt:tig"           = "latest"
+"brew:colordiff"    = "latest"
+"apt:colordiff"     = "latest"
+"brew:gnupg"        = "latest"
+"apt:gnupg"         = "latest"
+"brew:tree"         = "latest"
+"apt:tree"          = "latest"
+"brew:ffmpeg"       = "latest"
+"apt:ffmpeg"        = "latest"
+"brew:goaccess"     = "latest"
+"apt:goaccess"      = "latest"
+"brew:ugrep"        = "latest"
+"apt:ugrep"         = "latest"
+# mac のみ（GNU 版ユーティリティ / mac 専用ツール。Linux は標準で GNU）
+"brew:coreutils"    = "latest"
+"brew:findutils"    = "latest"
+"brew:gnu-sed"      = "latest"
+"brew:grep"         = "latest"
+"brew:blueutil"     = "latest"
+"brew:pinentry-mac" = "latest"
 
 [settings]
 auto_install = false
