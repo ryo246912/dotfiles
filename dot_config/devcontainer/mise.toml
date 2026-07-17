@@ -21,7 +21,7 @@ experimental = true
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
 "npm:oxfmt"                      = "0.57.0"
-"npm:oxlint"                     = "1.73.0"
+"npm:oxlint"                     = "1.74.0"
 
 [settings.npm]
 bun = true
