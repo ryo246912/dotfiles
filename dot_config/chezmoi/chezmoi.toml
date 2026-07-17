@@ -18,10 +18,10 @@ if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
   echo "$mise_hash" > /tmp/mise-config-hash
 fi
 # bootstrap.packages は install とは別のマーカーで管理し、成功時のみ記録する。
-# 失敗時はマーカーを書かないため次回 apply で再試行される。
-# WSL/Linux の apt は sudo が必要で非対話フックでは失敗し得るが、非致命的に扱い apply は止めない
-# （mac の brew bottle は sudo 不要で自動導入される）。
-if [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
+# 自動実行は sudo 不要な macOS(brew bottle) のみ。Linux/WSL の apt は sudo を要し、
+# 非対話フックでは認証できず失敗→毎回再試行になるため、ここでは実行せず
+# 手動（setup.md の `mise bootstrap packages apply`）に委ねる。
+if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
   if mise bootstrap packages apply --yes; then
     echo "$mise_hash" > /tmp/mise-bootstrap-hash
   else

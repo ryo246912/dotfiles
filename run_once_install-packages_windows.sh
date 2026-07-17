@@ -11,11 +11,14 @@ install_scoop() {
 }
 
 install_package() {
-  # CLI（gpg/ugrep/tig 等）は mise（[bootstrap.packages] の apt:）で管理する。
-  # git は chezmoi の初回 clone に必要なブートストラップ前提のため apt で残す。
-  # zsh はログインシェル（chsh）で早期に必要なため残す。
+  # CLI（ugrep/tig 等）は mise（[bootstrap.packages] の apt:）で管理する。
+  # ここにはブートストラップ前提のものだけ残す:
+  #   - git: chezmoi の初回 clone に必要
+  #   - gpg: mise の gpg_verify=true により `mise install` 前に必要
+  #   - zsh: ログインシェル（chsh）で早期に必要
   local PACKAGES=(
     git
+    gpg
     zsh
   )
 

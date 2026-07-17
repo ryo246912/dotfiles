@@ -118,34 +118,39 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # CLI formula は mise がまとめて管理する（`mise bootstrap packages apply` で導入）。
 # mac は mise の brew(bottle) が全 formula とその依存（pcre2 等）を単一所有するため、
 # 実 Homebrew（cask 専用）とは所有が重ならず pcre2 衝突は起きない。WSL は apt。
-# 前提: git/mise はブートストラップ前提のため、初回 clone は mac=Xcode の system git、
-#   WSL=apt の git が担う。Homebrew 側では git を持たず、mise brew が git+pcre2 を所有する。
+#
+# ブートストラップ前提（ここには置かず、早期の run_once インストーラで導入する）:
+#   - git : chezmoi 初回 clone に必要。mac=Xcode の system git / WSL=apt。
+#           Homebrew 側では git を持たず、mise brew が git+pcre2 を所有する。
+#   - mise: 本体（brew / curl で導入）。
+#   - gnupg/pinentry-mac: mise の gpg_verify=true により `mise install` 前に必要。
+#           gnupg は pcre2 非依存なので実 brew に置いても pcre2 衝突しない。
+#
+# 適用は sudo 不要な macOS(brew) のみ post-apply フックで自動実行し、
+# Linux/WSL(apt, 要 sudo) は手動（setup.md の手順）に委ねる。
 # OS フィルタされるため、mac 専用（GNU 版・mac 限定）は brew: のみ記載する。
 [bootstrap.packages]
 # 共通（mac=brew bottle / WSL=apt）
-"brew:git"          = "latest"
-"apt:git"           = "latest"
-"brew:tig"          = "latest"
-"apt:tig"           = "latest"
-"brew:colordiff"    = "latest"
-"apt:colordiff"     = "latest"
-"brew:gnupg"        = "latest"
-"apt:gnupg"         = "latest"
-"brew:tree"         = "latest"
-"apt:tree"          = "latest"
-"brew:ffmpeg"       = "latest"
-"apt:ffmpeg"        = "latest"
-"brew:goaccess"     = "latest"
-"apt:goaccess"      = "latest"
-"brew:ugrep"        = "latest"
-"apt:ugrep"         = "latest"
+"brew:git"        = "latest"
+"apt:git"         = "latest"
+"brew:tig"        = "latest"
+"apt:tig"         = "latest"
+"brew:colordiff"  = "latest"
+"apt:colordiff"   = "latest"
+"brew:tree"       = "latest"
+"apt:tree"        = "latest"
+"brew:ffmpeg"     = "latest"
+"apt:ffmpeg"      = "latest"
+"brew:goaccess"   = "latest"
+"apt:goaccess"    = "latest"
+"brew:ugrep"      = "latest"
+"apt:ugrep"       = "latest"
 # mac のみ（GNU 版ユーティリティ / mac 専用ツール。Linux は標準で GNU）
-"brew:coreutils"    = "latest"
-"brew:findutils"    = "latest"
-"brew:gnu-sed"      = "latest"
-"brew:grep"         = "latest"
-"brew:blueutil"     = "latest"
-"brew:pinentry-mac" = "latest"
+"brew:coreutils"  = "latest"
+"brew:findutils"  = "latest"
+"brew:gnu-sed"    = "latest"
+"brew:grep"       = "latest"
+"brew:blueutil"   = "latest"
 
 [settings]
 auto_install = false
