@@ -14,7 +14,7 @@ args = [
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
   echo "Running mise install..."
-  GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 || exit 1
+  GITHUB_TOKEN=$(gh auth token 2>/dev/null || true) mise install --jobs=2 || exit 1
   echo "$mise_hash" > /tmp/mise-config-hash
 fi
 # bootstrap.packages は install とは別のマーカーで管理し、成功時のみ記録する。
