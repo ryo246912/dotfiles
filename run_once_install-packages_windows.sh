@@ -25,11 +25,17 @@ install_package() {
   )
 
   for package in "${PACKAGES[@]}"; do
-    if [ "$package" = "mise" ] && ! command -v mise &> /dev/null; then
-      curl https://mise.run | sh
-      # 本スクリプトは bash/sh で実行されるため zsh 用出力を eval すると構文エラーになり得る。
-      # 後続で mise を使えるよう shims/bin に PATH を通すだけにする。
-      export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+    if [ "$package" = "mise" ]; then
+      # mise は apt ではなく公式スクリプトで導入する（apt パッケージが無いため
+      # elif の apt install へフォールスルーさせない）。
+      if ! command -v mise &> /dev/null; then
+        curl https://mise.run | sh
+        # 本スクリプトは bash/sh で実行されるため zsh 用出力を eval すると構文エラーになり得る。
+        # 後続で mise を使えるよう shims/bin に PATH を通すだけにする。
+        export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+      else
+        echo "mise is already installed"
+      fi
     elif ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
       apt install -y "$package"
     else
