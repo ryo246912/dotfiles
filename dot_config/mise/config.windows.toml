@@ -1,3 +1,9 @@
+[tools]
+# silicon は Linux では aqua の linux asset で導入する（v0.5.3 は asset 不完全のため 0.5.2 固定）。
+# mac は aqua darwin binary が /usr/local(Intel brew) の harfbuzz に動的リンクし arm64 で
+# 起動できないため、config.mac.toml の brew:silicon(native) を使う。
+"aqua:Aloxaf/silicon" = "0.5.2"
+
 # WSL(Windows) 専用の CLI パッケージ（apt で導入）。
 # mise の brew マネージャは Linux でも linuxbrew として動くため、brew: を base に置くと
 # 二重導入になる。よって apt: はこの WSL 専用 config に隔離する
