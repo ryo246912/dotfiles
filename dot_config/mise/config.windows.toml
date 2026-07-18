@@ -1,3 +1,8 @@
+[tools]
+# silicon は Linux では aqua の linux asset で導入する
+# （mac は darwin asset が無いため config.mac.toml の brew:silicon を使う）。
+"aqua:Aloxaf/silicon" = "0.5.3"
+
 # WSL(Windows) 専用の CLI パッケージ（apt で導入）。
 # mise の brew マネージャは Linux でも linuxbrew として動くため、brew: を base に置くと
 # 二重導入になる。よって apt: はこの WSL 専用 config に隔離する

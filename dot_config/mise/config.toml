@@ -11,7 +11,9 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-"aqua:Aloxaf/silicon"                                       = "0.5.3"
+# silicon は OS 別に隔離する（v0.5.3 に darwin asset が無く aqua が mac で失敗するため）:
+#   - mac  : config.mac.toml の brew:silicon（Homebrew bottle）
+#   - Linux: config.windows.toml の aqua:Aloxaf/silicon（linux asset を使用）
 "aqua:BurntSushi/ripgrep"                                   = "15.1.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"

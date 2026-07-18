@@ -21,5 +21,6 @@
 "brew:findutils"    = "latest"
 "brew:gnu-sed"      = "latest"
 "brew:grep"         = "latest"
+"brew:silicon"      = "latest"
 "brew:blueutil"     = "latest"
 "brew:pinentry-mac" = "latest"
