@@ -29,11 +29,9 @@
     ```sh
     MISE_ENV=mac mise bootstrap packages apply
     ```
-  - [ ] 検証ツールのインストール
-    ```sh
-    mise install --jobs=1 cosign slsa-verifier
-    ```
-  - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
+  - [ ] ツールのインストール
+    - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
+    - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
     ```sh
     mise install --jobs=2
     ```
@@ -415,11 +413,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     ```sh
     MISE_ENV=windows mise bootstrap packages apply
     ```
-  - [ ] 検証ツールのインストール
-    ```sh
-    mise install --jobs=1 cosign slsa-verifier
-    ```
-  - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
+  - [ ] ツールのインストール
+    - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
+    - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
     ```sh
     mise install --jobs=2
     ```
