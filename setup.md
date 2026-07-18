@@ -25,6 +25,10 @@
     ```sh
     export GITHUB_TOKEN=$(gh auth token)
     ```
+  - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
+    ```sh
+    mise bootstrap packages apply
+    ```
   - [ ] 検証ツールのインストール
     ```sh
     mise install --jobs=1 cosign slsa-verifier
@@ -32,10 +36,6 @@
   - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
     ```sh
     mise install --jobs=2
-    ```
-  - [ ] システムパッケージのインストール（tig / colordiff などの prebuilt）
-    ```sh
-    mise bootstrap packages apply
     ```
 
 - [ ] karabiner-elements
@@ -411,6 +411,10 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     ```sh
     export GITHUB_TOKEN=$(gh auth token)
     ```
+  - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
+    ```sh
+    mise bootstrap packages apply
+    ```
   - [ ] 検証ツールのインストール
     ```sh
     mise install --jobs=1 cosign slsa-verifier
@@ -418,8 +422,4 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
     ```sh
     mise install --jobs=2
-    ```
-  - [ ] システムパッケージのインストール（tig / colordiff などの prebuilt）
-    ```sh
-    mise bootstrap packages apply
     ```

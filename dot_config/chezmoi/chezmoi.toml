@@ -15,9 +15,11 @@ mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1
 # 1) bootstrap.packages を先に導入する（install とは別のマーカーで管理し成功時のみ記録）。
 #    bottle は sha256 検証で入る（gpg 不要）ため、gpg_verify=true の mise install より前に
 #    gnupg を用意でき、gnupg を mise 管理のまま扱える。
-#    自動実行は sudo 不要な macOS(brew bottle) のみ。Linux/WSL の apt は sudo を要し
-#    非対話フックで失敗→毎回再試行になるため、ここでは実行せず手動（setup.md）に委ねる。
-if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
+#    自動実行は sudo 不要かつ mise brew が対応する macOS arm64(Apple Silicon) のみ。
+#    - Linux/WSL(apt, 要 sudo): 非対話フックで失敗→再試行になるため手動（setup.md）に委ねる。
+#    - Intel mac(x86_64): mise brew 非対応。bootstrap はスキップし、gpg は run_once(実 brew)
+#      でフォールバック導入する（run_once_install-packages_mac.sh 参照）。
+if [ "$(uname)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
   # brew: は config.mac.toml に隔離しているので、初回 apply（MISE_ENV 未設定）でも
   # 確実に読み込ませるため MISE_ENV=mac を明示する。
   if MISE_ENV=mac mise bootstrap packages apply --yes; then
