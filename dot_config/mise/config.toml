@@ -11,9 +11,11 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-# silicon は OS 別に隔離する（v0.5.3 は release asset が不完全で aqua が失敗するため）:
-#   - mac  : config.mac.toml の brew:silicon（Homebrew bottle, native arm64）
-#   - Linux: config.windows.toml の aqua:Aloxaf/silicon@0.5.2（linux asset を使用）
+# silicon は v0.5.3 の release asset が不完全なため 0.5.2 を固定（全 OS 共通）。
+# mac(arm64) は native darwin asset が無く x86_64-apple-darwin を Rosetta2 で使う。
+# brew:silicon は harfbuzz/cairo/json-c 等の依存ツリーを引き込むため、
+# system framework だけで動く aqua(prebuilt) を採用する。
+"aqua:Aloxaf/silicon"                                       = "0.5.2"
 "aqua:BurntSushi/ripgrep"                                   = "15.1.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
