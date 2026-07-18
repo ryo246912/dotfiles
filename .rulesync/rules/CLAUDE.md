@@ -87,8 +87,11 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
    # gnupg/tig/colordiff などの [bootstrap.packages] を prebuilt で先に導入
    # （gpg_verify=true のため mise install より前に gnupg が必要）
    # brew:/apt: は OS 別 config に隔離しているため MISE_ENV を明示する
-   #   macOS: MISE_ENV=mac mise bootstrap packages apply
-   #   WSL:   MISE_ENV=windows mise bootstrap packages apply
+   if [ "$(uname)" = "Darwin" ]; then
+     MISE_ENV=mac mise bootstrap packages apply
+   else
+     MISE_ENV=windows mise bootstrap packages apply
+   fi
    mise install
    ```
 
