@@ -30,7 +30,7 @@ install_package() {
       # 本スクリプトは bash/sh で実行されるため zsh 用出力を eval すると構文エラーになり得る。
       # 後続で mise を使えるよう shims/bin に PATH を通すだけにする。
       export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
-    elif ! dpkg -l | grep -q "$package"; then
+    elif ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
       apt install -y "$package"
     else
       echo "$package is already installed"
