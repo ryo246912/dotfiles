@@ -27,7 +27,7 @@
     ```
   - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
     ```sh
-    mise bootstrap packages apply
+    MISE_ENV=mac mise bootstrap packages apply
     ```
   - [ ] 検証ツールのインストール
     ```sh
@@ -413,7 +413,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     ```
   - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
     ```sh
-    mise bootstrap packages apply
+    MISE_ENV=windows mise bootstrap packages apply
     ```
   - [ ] 検証ツールのインストール
     ```sh
