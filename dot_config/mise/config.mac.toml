@@ -1,2 +1,25 @@
 [tools]
 "github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
+
+# mac 専用の CLI formula（mise の brew マネージャ = bottle で導入）。
+# brew: を base config.toml に置くと Linux で linuxbrew として二重導入されるため、
+# mac 限定のこの config に隔離する（全 mac は host-env で os=mac を含み本ファイルを読む）。
+# 注意: mise の brew マネージャは Apple Silicon / linuxbrew 対応で、Intel mac は非対応。
+#       Intel mac を使う場合は実 Homebrew での導入にフォールバックすること。
+# git/gnupg も mac ではここ（mise brew）で持つ。post-apply フックが bootstrap を
+# mise install より先に走らせる（bottle は sha256 検証で gpg 不要）ので gpg_verify に間に合う。
+[bootstrap.packages]
+"brew:git"          = "latest"
+"brew:gnupg"        = "latest"
+"brew:tig"          = "latest"
+"brew:colordiff"    = "latest"
+"brew:tree"         = "latest"
+"brew:ffmpeg"       = "latest"
+"brew:goaccess"     = "latest"
+"brew:ugrep"        = "latest"
+"brew:coreutils"    = "latest"
+"brew:findutils"    = "latest"
+"brew:gnu-sed"      = "latest"
+"brew:grep"         = "latest"
+"brew:blueutil"     = "latest"
+"brew:pinentry-mac" = "latest"

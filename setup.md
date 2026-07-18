@@ -4,16 +4,12 @@
 
 ### 初期設定
 
-- [ ] XCode CLIのインストール
-
-  ```sh
-  xcode-select --install
-  ```
-
 - [ ] chezmoiの実行
+  - `--use-builtin-git=on` で clone するため、事前の `xcode-select --install`（system git）は不要
+  - Command Line Tools は直後の Homebrew インストーラが自動導入する
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
+  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply --use-builtin-git=on ryo246912
   ```
 
 - [ ] miseの実行
@@ -33,11 +29,7 @@
     ```sh
     mise install --jobs=1 cosign slsa-verifier
     ```
-  - [ ] ランタイムのインストール
-    ```sh
-    mise install --jobs=1 node python rust
-    ```
-  - [ ] 他ツールのインストール
+  - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
     ```sh
     mise install --jobs=2
     ```
@@ -423,11 +415,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     ```sh
     mise install --jobs=1 cosign slsa-verifier
     ```
-  - [ ] ランタイムのインストール
-    ```sh
-    mise install --jobs=1 node python rust
-    ```
-  - [ ] 他ツールのインストール
+  - [ ] 他ツールのインストール（node/python/rust 等のランタイムは mise が依存順で自動先行導入）
     ```sh
     mise install --jobs=2
     ```

@@ -12,21 +12,25 @@ args = [
     "-c",
     """
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
-if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
-  echo "Running mise install..."
-  GITHUB_TOKEN=$(gh auth token 2>/dev/null || true) mise install --jobs=2 || exit 1
-  echo "$mise_hash" > /tmp/mise-config-hash
-fi
-# bootstrap.packages は install とは別のマーカーで管理し、成功時のみ記録する。
-# 自動実行は sudo 不要な macOS(brew bottle) のみ。Linux/WSL の apt は sudo を要し、
-# 非対話フックでは認証できず失敗→毎回再試行になるため、ここでは実行せず
-# 手動（setup.md の `mise bootstrap packages apply`）に委ねる。
+# 1) bootstrap.packages を先に導入する（install とは別のマーカーで管理し成功時のみ記録）。
+#    bottle は sha256 検証で入る（gpg 不要）ため、gpg_verify=true の mise install より前に
+#    gnupg を用意でき、gnupg を mise 管理のまま扱える。
+#    自動実行は sudo 不要な macOS(brew bottle) のみ。Linux/WSL の apt は sudo を要し
+#    非対話フックで失敗→毎回再試行になるため、ここでは実行せず手動（setup.md）に委ねる。
 if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
-  if mise bootstrap packages apply --yes; then
+  # brew: は config.mac.toml に隔離しているので、初回 apply（MISE_ENV 未設定）でも
+  # 確実に読み込ませるため MISE_ENV=mac を明示する。
+  if MISE_ENV=mac mise bootstrap packages apply --yes; then
     echo "$mise_hash" > /tmp/mise-bootstrap-hash
   else
     echo "warning: 'mise bootstrap packages apply' に失敗しました。次回 apply で再試行します（手動導入も可）"
   fi
+fi
+# 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
+if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
+  echo "Running mise install..."
+  GITHUB_TOKEN=$(gh auth token 2>/dev/null || true) mise install --jobs=2 || exit 1
+  echo "$mise_hash" > /tmp/mise-config-hash
 fi
 """,
 ]

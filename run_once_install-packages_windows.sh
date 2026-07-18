@@ -11,15 +11,17 @@ install_scoop() {
 }
 
 install_package() {
-  # CLI（ugrep/tig 等）は mise（[bootstrap.packages] の apt:）で管理する。
+  # CLI（ugrep/tig 等）は mise（base config.toml の [bootstrap.packages] = apt:）で管理する。
   # ここにはブートストラップ前提のものだけ残す:
-  #   - git: chezmoi の初回 clone に必要
-  #   - gpg: mise の gpg_verify=true により `mise install` 前に必要
-  #   - zsh: ログインシェル（chsh）で早期に必要
+  #   - git : chezmoi の初回 clone に必要
+  #   - gpg : mise の gpg_verify=true により `mise install` 前に必要（WSL は bootstrap 手動のため早期に）
+  #   - zsh : ログインシェル（chsh）で早期に必要
+  #   - mise: 本体（ループ内で curl https://mise.run により導入）
   local PACKAGES=(
     git
     gpg
     zsh
+    mise
   )
 
   for package in "${PACKAGES[@]}"; do
