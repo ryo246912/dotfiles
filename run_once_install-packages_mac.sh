@@ -22,13 +22,6 @@ install_package() {
     mise
   )
 
-  # Intel mac(x86_64) は mise brew(bootstrap) 非対応のため、gpg_verify=true の mise install
-  # が gnupg 不在で失敗しないよう、gpg / pinentry-mac を実 brew で早期フォールバック導入する。
-  # Apple Silicon(arm64) では post-apply フックの mise brew(bootstrap) が導入するため不要。
-  if [ "$(uname -m)" != "arm64" ]; then
-    PACKAGES+=(gpg pinentry-mac)
-  fi
-
   for package in "${PACKAGES[@]}"; do
     if ! brew list "$package" &>/dev/null; then
       brew install "$package"
