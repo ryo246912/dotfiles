@@ -4,24 +4,24 @@ experimental = true
 
 [tools]
 "aqua:BurntSushi/ripgrep"        = "15.1.0"
-"aqua:anthropics/claude-code"    = "2.1.168"
-"aqua:astral-sh/uv"              = "0.11.23"
+"aqua:anthropics/claude-code"    = "2.1.209"
+"aqua:astral-sh/uv"              = "0.11.28"
 "aqua:cli/cli"                   = "2.96.0"
 "aqua:golangci/golangci-lint"    = "2.12.2"
 "aqua:koalaman/shellcheck"       = "0.11.0"
 "aqua:mvdan/sh"                  = "3.13.1"
-"aqua:openai/codex"              = "0.137.0"
+"aqua:openai/codex"              = "0.144.4"
 "aqua:tamasfe/taplo"             = "0.10.0"
 "core:bun"                       = "1.3.14"
 "core:go"                        = "1.26.5"
 "core:node"                      = "22.19.0"
-"core:python"                    = "3.14.3"
+"core:python"                    = "3.14.6"
 "github:github/copilot-cli"      = "1.0.63"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
 "npm:ccusage"                    = "20.0.1"
 "npm:oxfmt"                      = "0.57.0"
-"npm:oxlint"                     = "1.73.0"
+"npm:oxlint"                     = "1.74.0"
 
 [settings.npm]
 bun = true

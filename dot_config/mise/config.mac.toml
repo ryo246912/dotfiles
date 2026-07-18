@@ -1,5 +1,5 @@
 [tools]
-"github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
+"github:hzqtc/taproom" = { version = "0.6.2", bin = "taproom" }
 
 # mac 専用の CLI formula（mise の brew マネージャ = bottle で導入）。
 # brew: を base config.toml に置くと Linux で linuxbrew として二重導入されるため、
