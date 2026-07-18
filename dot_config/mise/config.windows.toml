@@ -1,7 +1,9 @@
 [tools]
-# silicon は Linux では aqua の linux asset で導入する
+# silicon は Linux では aqua の linux asset(x86_64-unknown-linux-gnu)で導入する。
+# v0.5.3 は release asset が不完全（linux/darwin バイナリ無し）で aqua が download 失敗するため、
+# aqua-registry がテスト対象にしている v0.5.2 を固定する。
 # （mac は darwin asset が無いため config.mac.toml の brew:silicon を使う）。
-"aqua:Aloxaf/silicon" = "0.5.3"
+"aqua:Aloxaf/silicon" = "0.5.2"
 
 # WSL(Windows) 専用の CLI パッケージ（apt で導入）。
 # mise の brew マネージャは Linux でも linuxbrew として動くため、brew: を base に置くと
