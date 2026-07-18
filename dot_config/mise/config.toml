@@ -115,19 +115,12 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
 
-# CLI formula は mise で管理する。ただし mise の brew マネージャは Linux でも
-# linuxbrew として動くため、brew: と apt: を併記すると Linux で二重導入になる。
-# よって brew: は mac 専用の config.mac.toml に置き、ここ（base）は Linux/WSL 用の
-# apt: のみを列挙する（apt は macOS では利用不可なので mac では無視される）。
-# 適用は Linux/WSL では手動（setup.md の `mise bootstrap packages apply`）。
-#   ※ git / gnupg は gpg_verify とブートストラップの都合で早期の run_once（apt）で導入。
-[bootstrap.packages]
-"apt:tig"       = "latest"
-"apt:colordiff" = "latest"
-"apt:tree"      = "latest"
-"apt:ffmpeg"    = "latest"
-"apt:goaccess"  = "latest"
-"apt:ugrep"     = "latest"
+# CLI formula は mise で管理する（bootstrap.packages）。ただし mise の brew マネージャは
+# Linux でも linuxbrew として動くため、brew: と apt: を併記すると Linux で二重導入になる。
+# よって OS 別に隔離する:
+#   - mac(Apple Silicon): config.mac.toml の brew:
+#   - Linux/WSL          : config.windows.toml の apt:
+# base（本ファイル）には bootstrap.packages を置かない。
 
 [settings]
 auto_install = false
