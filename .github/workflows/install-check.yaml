@@ -27,9 +27,8 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 20
-    env:
-      # 未認証だと GitHub の rate limit に当たるため read-only トークンだけ渡す（write 権限は無い）。
-      GITHUB_TOKEN: ${{ github.token }}
+    # PR コードに GITHUB_TOKEN を一切渡さない（read-only でも漏洩・private 開示の恐れがあるため）。
+    # aqua の DL は1ツールのみで未認証の rate limit で足りる。write トークンは comment ジョブだけが持つ。
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
