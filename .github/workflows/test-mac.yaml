@@ -1,9 +1,5 @@
 name: test-mac
 
-# `/test-mac` コメント、または Actions UI からの workflow_dispatch で発火する。
-# 現時点では最小限のスキャフォールドのみ（トリガー・権限分離・結果コメントの型を用意）。
-# 実際の検証内容（dot_config/mise/config.mac.toml の bootstrap.packages(brew) 検証等）は
-# それらの設定ファイルを追加する PR がマージされ次第、ここに実装する。
 on:
   issue_comment:
     types:
@@ -18,17 +14,12 @@ concurrency:
 
 jobs:
   test:
-    # workflow_dispatch は常に許可（Actions 実行権限で既にアクセス制御されているため）。
-    # issue_comment は PR への `/test-mac`（完全一致 or `/test-mac <args>`）コメントのみ、
-    # 権限のあるユーザーに限定する。
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.pull_request &&
       (github.event.comment.body == '/test-mac' || startsWith(github.event.comment.body, '/test-mac ')) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
-    # public repo なので macOS ランナーは無料・分数無制限。
     runs-on: macos-latest
-    # PR のコードを実行するため read-only 権限に絞る（write トークンを PR コードに晒さない）。
     permissions:
       contents: read
     timeout-minutes: 40
@@ -47,7 +38,6 @@ jobs:
         run: mise --version
 
   comment:
-    # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
     needs: test
     if: ${{ always() && github.event_name == 'issue_comment' }}
     runs-on: ubuntu-latest
