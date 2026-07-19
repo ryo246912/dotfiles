@@ -1,0 +1,115 @@
+name: install-check
+
+# PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages
+# の apt 導入 + mise install スモーク）が通るかを Linux で確認する。
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions: {}
+
+concurrency:
+  group: install-check-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  install-check:
+    # PR への `/test` コメントのみ。権限のあるユーザー（owner/member/collaborator）に限定する。
+    if: >-
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/test') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Resolve PR head sha
+        id: pr
+        run: |
+          set -euo pipefail
+          sha=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid -q .headRefOid)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          persist-credentials: false
+
+      - name: Validate configs
+        run: |
+          set -euo pipefail
+          for f in \
+            dot_config/mise/config.toml \
+            dot_config/mise/config.mac.toml \
+            dot_config/mise/config.windows.toml \
+            .chezmoi.toml.tmpl; do
+            python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
+          done
+          # post-apply hook の bash 構文チェック
+          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > /tmp/hook.sh
+          bash -n /tmp/hook.sh && echo "OK: hook bash syntax"
+          # 初回インストーラ（WSL）の構文チェック
+          bash -n run_once_install-packages_windows.sh && echo "OK: run_once windows syntax"
+
+      - name: Install mise (curl installer, WSL と同じ経路)
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mise.run | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+
+      - name: Deploy dotfiles mise config (windows/apt env)
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/mise"
+          cp dot_config/mise/config.toml "$HOME/.config/mise/config.toml"
+          cp dot_config/mise/config.windows.toml "$HOME/.config/mise/config.windows.toml"
+
+      - name: Bootstrap packages (apt) と導入確認
+        env:
+          MISE_ENV: windows
+          MISE_YES: "1"
+        run: |
+          set -euo pipefail
+          mise --version
+          mise bootstrap packages apply --yes
+          echo "=== assert migrated apt packages ==="
+          rc=0
+          for pkg in tig colordiff tree ffmpeg goaccess ugrep; do
+            if command -v "$pkg" >/dev/null 2>&1; then
+              echo "OK: $pkg"
+            else
+              echo "MISSING: $pkg"
+              rc=1
+            fi
+          done
+          exit "$rc"
+
+      - name: mise install スモーク（aqua バックエンド）
+        env:
+          MISE_ENV: windows
+          MISE_YES: "1"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mise install aqua:BurntSushi/ripgrep
+          mise exec aqua:BurntSushi/ripgrep -- rg --version
+
+      - name: Comment result
+        if: always()
+        run: |
+          set -euo pipefail
+          run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
+          if [ "${{ job.status }}" = "success" ]; then
+            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) + mise install スモークが通りました（[log](${run_url})）"
+          else
+            body="❌ \`/test\` install-check failed: [Actions のログ](${run_url}) を確認してください"
+          fi
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
