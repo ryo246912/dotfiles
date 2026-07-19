@@ -31,11 +31,14 @@ if [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
       echo "error: 'mise bootstrap packages apply' に失敗しました。パッケージ未導入のため中断します"
       exit 1
     fi
-  else
-    # 非対話端末（TTY 無し）: sudo プロンプトに答えられないので apt bootstrap はスキップし、
-    # 停止せず案内する（WSL は run_once で gpg 導入済みのため mise install は継続可能）。
-    echo "note: 非対話端末のため apt bootstrap をスキップ。対話端末で 'MISE_ENV=windows mise bootstrap packages apply' を実行してください（tig/colordiff 等）"
+  elif ! command -v tig >/dev/null 2>&1; then
+    # 非対話端末（TTY 無し）で sudo プロンプトに答えられず、かつ apt パッケージ未導入。
+    # 未導入のまま install に進むと tig/colordiff 等が欠けたまま完了するため、
+    # required preflight として中断する（対話端末で bootstrap 後に再 apply）。
+    echo "error: WSL の apt bootstrap が未適用です。対話端末で 'MISE_ENV=windows mise bootstrap packages apply' を実行してから再度 chezmoi apply してください（tig/colordiff 等）"
+    exit 1
   fi
+  # else（非対話端末だが tig 等が既に導入済み）: 収束済みとみなしそのまま継続する。
 fi
 # 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
