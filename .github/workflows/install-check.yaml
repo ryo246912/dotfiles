@@ -2,6 +2,8 @@ name: install-check
 
 # PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages
 # の apt 導入 + mise install スモーク）が通るかを Linux で確認する。
+# セキュリティ: PR のコード（mise install の install hook 等）を実行する test ジョブは
+# read-only 権限に絞り、write 権限トークンは PR コードを実行しない comment ジョブだけに与える。
 on:
   issue_comment:
     types:
@@ -14,32 +16,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  install-check:
-    # PR への `/test` コメントのみ。権限のあるユーザー（owner/member/collaborator）に限定する。
+  test:
+    # PR への `/test`（完全一致 or `/test <args>`）コメントのみ。権限のあるユーザーに限定する。
     if: >-
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/test') &&
+      (github.event.comment.body == '/test' || startsWith(github.event.comment.body, '/test ')) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
+    # PR のコードを実行するため read-only に絞る（write token を渡さない）。
     permissions:
       contents: read
-      pull-requests: write
     timeout-minutes: 20
     env:
-      GH_TOKEN: ${{ github.token }}
-      PR_NUMBER: ${{ github.event.issue.number }}
-      REPO: ${{ github.repository }}
+      # 未認証だと GitHub の rate limit に当たるため read-only トークンだけ渡す（write 権限は無い）。
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: Resolve PR head sha
-        id: pr
-        run: |
-          set -euo pipefail
-          sha=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid -q .headRefOid)
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ steps.pr.outputs.sha }}
+          ref: refs/pull/${{ github.event.issue.number }}/head
           persist-credentials: false
 
       - name: Validate configs
@@ -53,17 +47,15 @@ jobs:
             python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
           done
           # post-apply hook の bash 構文チェック
-          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > /tmp/hook.sh
-          bash -n /tmp/hook.sh && echo "OK: hook bash syntax"
+          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > "$RUNNER_TEMP/hook.sh"
+          bash -n "$RUNNER_TEMP/hook.sh" && echo "OK: hook bash syntax"
           # 初回インストーラ（WSL）の構文チェック
           bash -n run_once_install-packages_windows.sh && echo "OK: run_once windows syntax"
 
-      - name: Install mise (curl installer, WSL と同じ経路)
-        run: |
-          set -euo pipefail
-          curl -fsSL https://mise.run | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          version: "2026.7.0"
+          install: false
 
       - name: Deploy dotfiles mise config (windows/apt env)
         run: |
@@ -73,6 +65,8 @@ jobs:
           cp dot_config/mise/config.windows.toml "$HOME/.config/mise/config.windows.toml"
 
       - name: Bootstrap packages (apt) と導入確認
+        # repo root の mise.toml(開発用) を読まないよう、cwd を空ディレクトリにして global config だけ効かせる。
+        working-directory: ${{ runner.temp }}
         env:
           MISE_ENV: windows
           MISE_YES: "1"
@@ -93,21 +87,33 @@ jobs:
           exit "$rc"
 
       - name: mise install スモーク（aqua バックエンド）
+        working-directory: ${{ runner.temp }}
         env:
           MISE_ENV: windows
           MISE_YES: "1"
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mise install aqua:BurntSushi/ripgrep
           mise exec aqua:BurntSushi/ripgrep -- rg --version
 
+  comment:
+    # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
+    needs: test
+    if: ${{ always() && needs.test.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
       - name: Comment result
-        if: always()
         run: |
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
-          if [ "${{ job.status }}" = "success" ]; then
+          if [ "${{ needs.test.result }}" = "success" ]; then
             body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) + mise install スモークが通りました（[log](${run_url})）"
           else
             body="❌ \`/test\` install-check failed: [Actions のログ](${run_url}) を確認してください"
