@@ -10,11 +10,11 @@
   },
   "statusHooks": {
     "idle": {
-      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero --current-tmux; else macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero; fi",
+      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero --current-tmux; curl -s -X POST http://127.0.0.1:7391/set-status -H 'content-type: application/json' -d \"{\\\"session\\\":\\\"$(tmux display -p '#S')\\\", \\\"text\\\":\\\"Idle\\\", \\\"tone\\\":\\\"success\\\"}\"; else macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero; fi",
       "enabled": true
     },
     "waiting_input": {
-      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass --current-tmux; else macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass; fi",
+      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass --current-tmux; curl -s -X POST http://127.0.0.1:7391/set-status -H 'content-type: application/json' -d \"{\\\"session\\\":\\\"$(tmux display -p '#S')\\\", \\\"text\\\":\\\"Input\\\", \\\"tone\\\":\\\"warn\\\"}\"; else macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass; fi",
       "enabled": true
     }
   },
