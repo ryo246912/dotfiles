@@ -1,0 +1,68 @@
+name: test-linux
+
+# `/test-linux` コメント、または Actions UI からの workflow_dispatch で発火する。
+# 現時点では最小限のスキャフォールドのみ（トリガー・権限分離・結果コメントの型を用意）。
+# 実際の検証内容（dot_config/mise/config.linux.toml の bootstrap.packages(apt) 検証等）は
+# それらの設定ファイルを追加する PR がマージされ次第、ここに実装する。
+on:
+  issue_comment:
+    types:
+      - created
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: test-linux-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # workflow_dispatch は常に許可（Actions 実行権限で既にアクセス制御されているため）。
+    # issue_comment は PR への `/test-linux`（完全一致 or `/test-linux <args>`）コメントのみ、
+    # 権限のあるユーザーに限定する。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+      (github.event.comment.body == '/test-linux' || startsWith(github.event.comment.body, '/test-linux ')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    # PR のコードを実行するため read-only 権限に絞る（write トークンを PR コードに晒さない）。
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || '' }}
+          persist-credentials: false
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          version: "2026.7.0"
+          install: false
+
+      - name: mise sanity check
+        run: mise --version
+
+  comment:
+    # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
+    needs: test
+    if: ${{ always() && github.event_name == 'issue_comment' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      RESULT: ${{ needs.test.result }}
+    steps:
+      - name: Comment result
+        run: |
+          set -euo pipefail
+          run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
+          icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
+          body=$(printf '`/test-linux`（[log](%s)）: %s %s' "$run_url" "$(icon "$RESULT")" "$RESULT")
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
