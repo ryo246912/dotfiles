@@ -16,8 +16,9 @@ args = [
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
 mkdir -p "$state_dir" || exit 1
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
-# aqua 等で入れた gh を後続の bash コマンドから解決できるよう mise shims を PATH に通す。
-export PATH="$HOME/.local/share/mise/shims:$PATH"
+# post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体（WSL は
+# ~/.local/bin, mac(brew) は /opt/homebrew/bin）と aqua/gh 用の mise shims を PATH に通す。
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:$HOME/.local/share/mise/shims:$PATH"
 # 1) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
 #    `mise bootstrap packages status --missing`（未同期なら exit 1）で実際の導入状態を判定するので、
 #    パッケージ削除等のドリフトも検知して収束し、手動導入後も回復できる（マーカー不整合が起きない）。
