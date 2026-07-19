@@ -1,11 +1,11 @@
 name: install-check
 
-# PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages
-# の apt 導入）が通るかを Linux で確認する。GitHub 認証に依存しないよう apt bootstrap に絞る
-# （mise install の [tools] は本 PR の変更対象外。GitHub API を叩く aqua スモークは
-# 未認証 rate limit で不安定になるため設けない）。
-# セキュリティ: PR のコードを実行する test ジョブは read-only 権限かつトークン無しに絞り、
-# write 権限トークンは PR コードを実行しない comment ジョブだけに与える。
+# PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages の
+# apt 導入 + 認証不要な mise install スモーク）が通るかを Linux で確認する。
+# GitHub 認証に依存する処理（aqua/github backend の DL 等）は置かない（未認証 rate limit を避け、
+# かつ PR コードにトークンを晒さないため）。
+# セキュリティ: PR のコードを実行する test ジョブは read-only 権限に絞り、write トークンを
+# PR コードに晒さない。結果コメントの write 権限は PR コードを実行しない comment ジョブに限定する。
 on:
   issue_comment:
     types:
@@ -25,12 +25,12 @@ jobs:
       (github.event.comment.body == '/test' || startsWith(github.event.comment.body, '/test ')) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
-    # PR のコードを実行するため read-only に絞る（write token を渡さない）。
+    # PR のコードを実行するため read-only 権限に絞る（write トークンを PR コードに晒さない）。
     permissions:
       contents: read
     timeout-minutes: 20
-    # PR コードに GITHUB_TOKEN を一切渡さない（read-only でも漏洩・private 開示の恐れがあるため）。
-    # aqua の DL は1ツールのみで未認証の rate limit で足りる。write トークンは comment ジョブだけが持つ。
+    # read-scoped の GITHUB_TOKEN は run ステップ(PR コード)に env 注入せず、GitHub 認証に
+    # 依存する処理も置かない。write トークンは PR コードを実行しない comment ジョブだけが持つ。
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -87,6 +87,17 @@ jobs:
           done
           exit "$rc"
 
+      - name: mise install スモーク（認証不要な core backend）
+        # GitHub API に依存しない core:node(nodejs.org)で mise install 機構と config の
+        # [tools] バージョン解決を確認する（aqua/github backend は認証が要るので含めない）。
+        working-directory: ${{ runner.temp }}
+        env:
+          MISE_YES: "1"
+        run: |
+          set -euo pipefail
+          mise install core:node
+          mise exec core:node -- node --version
+
   comment:
     # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
     needs: test
@@ -105,7 +116,7 @@ jobs:
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
           if [ "${{ needs.test.result }}" = "success" ]; then
-            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) が通りました（[log](${run_url})）"
+            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) + mise install スモーク(core:node) が通りました（[log](${run_url})）"
           else
             body="❌ \`/test\` install-check failed: [Actions のログ](${run_url}) を確認してください"
           fi
