@@ -90,7 +90,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
    if [ "$(uname)" = "Darwin" ]; then
      MISE_ENV=mac mise bootstrap packages apply
    else
-     MISE_ENV=windows mise bootstrap packages apply
+     MISE_ENV=linux mise bootstrap packages apply
    fi
    mise install
    ```

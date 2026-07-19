@@ -1,7 +1,7 @@
-# WSL(Windows) 専用の CLI パッケージ（apt で導入）。
+# WSL(Linux) 専用の CLI パッケージ（apt で導入）。
 # mise の brew マネージャは Linux でも linuxbrew として動くため、brew: を base に置くと
 # 二重導入になる。よって apt: はこの WSL 専用 config に隔離する
-# （host-env で os=windows のとき本ファイルが読まれる。mac では読まれない）。
+# （host-env で os=linux のとき本ファイルが読まれる。mac では読まれない）。
 # 適用は手動（docs/setup.md の `mise bootstrap packages apply`）。post-apply フックの自動適用は
 # sudo 不要な macOS のみで、WSL の apt(要 sudo) は非対話フックでは実行しない。
 #   ※ git / gnupg は gpg_verify とブートストラップの都合で早期の run_once(apt) で導入する

@@ -30,7 +30,7 @@ fi
 #    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
 #    用意できる。mac(brew) は sudo 不要。WSL(apt) は sudo が要るため、sudo プロンプトに応答できる
 #    対話端末(TTY)があるときだけ apply する。非対話 WSL で未同期なら required preflight として中断する。
-if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=windows; fi
+if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=linux; fi
 if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null 2>&1; then
   if [ "$(uname)" = "Darwin" ] || [ -t 0 ]; then
     if ! MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
@@ -43,7 +43,7 @@ if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null
     # 非対話端末（TTY 無し）で sudo プロンプトに応答できず、かつ未同期（未導入分あり）。
     # 未導入のまま進むと tig/colordiff 等が欠けたまま完了するため required preflight として中断する。
     # 手動 bootstrap（sudo 可能な端末）で導入後は status が揃い、次回はここを通過できる。
-    echo "error: WSL の apt bootstrap が未適用です。対話端末で 'MISE_ENV=windows mise bootstrap packages apply' を実行してから再度 chezmoi apply してください（tig/colordiff 等）"
+    echo "error: WSL の apt bootstrap が未適用です。対話端末で 'MISE_ENV=linux mise bootstrap packages apply' を実行してから再度 chezmoi apply してください（tig/colordiff 等）"
     exit 1
   fi
 fi

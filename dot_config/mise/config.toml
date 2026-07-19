@@ -122,7 +122,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # Linux でも linuxbrew として動くため、brew: と apt: を併記すると Linux で二重導入になる。
 # よって OS 別に隔離する:
 #   - mac(Apple Silicon): config.mac.toml の brew:
-#   - Linux/WSL          : config.windows.toml の apt:
+#   - Linux/WSL          : config.linux.toml の apt:
 # base（本ファイル）には bootstrap.packages を置かない。
 
 [settings]

@@ -386,7 +386,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
   - hook が順に実行する:
-    1. `MISE_ENV=windows mise bootstrap packages apply`（tig/colordiff 等の apt。gpg_verify のため mise install より先に。**sudo のパスワード入力が要るので対話端末で実行すること**）
+    1. `MISE_ENV=linux mise bootstrap packages apply`（tig/colordiff 等の apt。gpg_verify のため mise install より先に。**sudo のパスワード入力が要るので対話端末で実行すること**）
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
        - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要

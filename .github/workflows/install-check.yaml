@@ -45,7 +45,7 @@ jobs:
           for f in \
             dot_config/mise/config.toml \
             dot_config/mise/config.mac.toml \
-            dot_config/mise/config.windows.toml \
+            dot_config/mise/config.linux.toml \
             .chezmoi.toml.tmpl; do
             python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
           done
@@ -60,18 +60,18 @@ jobs:
           version: "2026.7.0"
           install: false
 
-      - name: Deploy dotfiles mise config (windows/apt env)
+      - name: Deploy dotfiles mise config (linux/apt env)
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.config/mise"
           cp dot_config/mise/config.toml "$HOME/.config/mise/config.toml"
-          cp dot_config/mise/config.windows.toml "$HOME/.config/mise/config.windows.toml"
+          cp dot_config/mise/config.linux.toml "$HOME/.config/mise/config.linux.toml"
 
       - name: Bootstrap packages (apt) と導入確認
         # repo root の mise.toml(開発用) を読まないよう、cwd を空ディレクトリにして global config だけ効かせる。
         working-directory: ${{ runner.temp }}
         env:
-          MISE_ENV: windows
+          MISE_ENV: linux
           MISE_YES: "1"
         run: |
           set -euo pipefail
