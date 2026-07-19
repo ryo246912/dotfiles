@@ -10,7 +10,7 @@ trigger-pattern = "^mii$"
 
 [[snippets]]
 name            = "mise bootstrap packages apply"
-snippet         = "MISE_ENV=mac mise bootstrap packages apply"
+snippet         = "MISE_ENV=$([ \"$(uname)\" = Darwin ] && echo mac || echo windows) mise bootstrap packages apply"
 trigger-pattern = "^mba$"
 
 [[snippets]]

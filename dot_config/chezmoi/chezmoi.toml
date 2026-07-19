@@ -12,26 +12,24 @@ args = [
     "-c",
     """
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
+# aqua 等で入れた gh を後続の bash コマンドから解決できるよう mise shims を PATH に通す。
+export PATH="$HOME/.local/share/mise/shims:$PATH"
 # 1) bootstrap.packages を先に導入する（install とは別のマーカーで管理し成功時のみ記録）。
-#    bottle は sha256 検証で入る（gpg 不要）ため、gpg_verify=true の mise install より前に
+#    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に
 #    gnupg を用意でき、gnupg を mise 管理のまま扱える。
-#    自動実行は sudo 不要な macOS のみ（本 dotfiles は Apple Silicon 前提。Intel mac は非サポート）。
-#    Linux/WSL(apt, 要 sudo) は非対話フックで失敗→再試行になるため手動（setup.md）に委ねる。
-if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
-  # brew: は config.mac.toml に隔離しているので、初回 apply（MISE_ENV 未設定）でも
-  # 確実に読み込ませるため MISE_ENV=mac を明示する。
-  if MISE_ENV=mac mise bootstrap packages apply --yes; then
+#    mac(brew) は sudo 不要、WSL(apt) は sudo が要るが chezmoi は hook を TTY 接続のまま
+#    実行するので対話的にパスワードを入力できる。両 OS とも hook で適用し、失敗時は中断する
+#    （手動で導入し直したあとの再 apply は冪等に収束する）。
+if [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
+  if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=windows; fi
+  if MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
     echo "$mise_hash" > /tmp/mise-bootstrap-hash
   else
-    # bootstrap 失敗＝gnupg 等が未導入。gpg_verify=true の mise install が検証で失敗する
-    # ため、degraded 実行を避けてここで中断する（再度 chezmoi apply で再試行）。
-    echo "error: 'mise bootstrap packages apply' に失敗しました。gnupg 等が未導入のため中断します"
+    # 失敗＝gnupg/tig 等が未導入。gpg_verify=true の mise install が検証で失敗するため
+    # degraded 実行を避けて中断する（WSL は sudo のパスワード入力が要る点に注意）。
+    echo "error: 'mise bootstrap packages apply' に失敗しました。パッケージ未導入のため中断します"
     exit 1
   fi
-elif [ "$(uname)" = "Linux" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
-  # WSL の apt bootstrap は sudo が要り非対話フックで自動化できないため手動に委ねる。
-  # 未適用のまま進むと tig/colordiff 等が入らないので明示的に案内する（停止はしない）。
-  echo "note: WSL では 'MISE_ENV=windows mise bootstrap packages apply' を手動実行してください（tig/colordiff 等の apt を導入）"
 fi
 # 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
