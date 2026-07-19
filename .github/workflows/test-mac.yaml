@@ -39,7 +39,7 @@ jobs:
 
   comment:
     needs: test
-    if: ${{ always() && github.event_name == 'issue_comment' }}
+    if: ${{ always() && github.event_name == 'issue_comment' && needs.test.result != 'skipped' }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
