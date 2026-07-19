@@ -1,9 +1,11 @@
 name: install-check
 
 # PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages
-# の apt 導入 + mise install スモーク）が通るかを Linux で確認する。
-# セキュリティ: PR のコード（mise install の install hook 等）を実行する test ジョブは
-# read-only 権限に絞り、write 権限トークンは PR コードを実行しない comment ジョブだけに与える。
+# の apt 導入）が通るかを Linux で確認する。GitHub 認証に依存しないよう apt bootstrap に絞る
+# （mise install の [tools] は本 PR の変更対象外。GitHub API を叩く aqua スモークは
+# 未認証 rate limit で不安定になるため設けない）。
+# セキュリティ: PR のコードを実行する test ジョブは read-only 権限かつトークン無しに絞り、
+# write 権限トークンは PR コードを実行しない comment ジョブだけに与える。
 on:
   issue_comment:
     types:
@@ -85,16 +87,6 @@ jobs:
           done
           exit "$rc"
 
-      - name: mise install スモーク（aqua バックエンド）
-        working-directory: ${{ runner.temp }}
-        env:
-          MISE_ENV: windows
-          MISE_YES: "1"
-        run: |
-          set -euo pipefail
-          mise install aqua:BurntSushi/ripgrep
-          mise exec aqua:BurntSushi/ripgrep -- rg --version
-
   comment:
     # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
     needs: test
@@ -113,7 +105,7 @@ jobs:
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
           if [ "${{ needs.test.result }}" = "success" ]; then
-            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) + mise install スモークが通りました（[log](${run_url})）"
+            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) が通りました（[log](${run_url})）"
           else
             body="❌ \`/test\` install-check failed: [Actions のログ](${run_url}) を確認してください"
           fi
