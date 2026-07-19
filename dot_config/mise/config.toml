@@ -11,11 +11,10 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-# silicon は OS 別に隔離する（下記は実測に基づく）:
-#   - mac  : config.mac.toml の brew:silicon（native arm64。harfbuzz 等の依存も brew が解決）。
-#            aqua の darwin prebuilt は x86_64 で /usr/local(Intel brew) の libharfbuzz に
-#            動的リンクしており、arm64 mac では dyld で読めず起動不可のため使えない。
-#   - Linux: config.windows.toml の aqua:Aloxaf/silicon@0.5.2（v0.5.3 は release asset が不完全）。
+# silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
+# brew が解決）。aqua の darwin prebuilt は x86_64 で /usr/local(Intel brew) の libharfbuzz に
+# 動的リンクしており arm64 mac では dyld で読めず起動不可のため使わない。
+# WSL(Linux) では silicon は使わない（ヘッドレスで用途が無く harfbuzz 等の依存も重いため）。
 "aqua:BurntSushi/ripgrep"                                   = "15.1.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"

@@ -28,6 +28,10 @@ if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" 
     echo "error: 'mise bootstrap packages apply' に失敗しました。gnupg 等が未導入のため中断します"
     exit 1
   fi
+elif [ "$(uname)" = "Linux" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" != "$mise_hash" ]; then
+  # WSL の apt bootstrap は sudo が要り非対話フックで自動化できないため手動に委ねる。
+  # 未適用のまま進むと tig/colordiff 等が入らないので明示的に案内する（停止はしない）。
+  echo "note: WSL では 'MISE_ENV=windows mise bootstrap packages apply' を手動実行してください（tig/colordiff 等の apt を導入）"
 fi
 # 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
