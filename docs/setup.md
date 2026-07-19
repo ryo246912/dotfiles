@@ -12,29 +12,14 @@
   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply --use-builtin-git=on ryo246912
   ```
 
-- [ ] miseの実行
-  - [ ] ghコマンドのインストール
-    ```sh
-    brew install gh
-    ```
-  - [ ] ghコマンドのログイン
-    ```sh
-    gh auth login --scopes 'project'
-    ```
-  - [ ] GITHUB_TOKENを環境変数に設定
-    ```sh
-    export GITHUB_TOKEN=$(gh auth token)
-    ```
-  - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
-    ```sh
-    MISE_ENV=mac mise bootstrap packages apply
-    ```
-  - [ ] ツールのインストール
-    - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
-    - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
-    ```sh
-    mise install --jobs=2
-    ```
+- [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
+  - hook が順に実行する:
+    1. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
+    2. `MISE_ENV=mac mise bootstrap packages apply`（gnupg/tig/colordiff/silicon 等の brew formula。gpg_verify のため mise install より先に）
+    3. `GITHUB_TOKEN=$(gh auth token) mise install`
+       - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
+       - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
+  - 失敗時は `chezmoi apply` で再試行できる（手動でやる場合は上記コマンドを順に実行）
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
@@ -399,23 +384,11 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
   ```
 
-- [ ] miseの実行
-  - [ ] [ghコマンドのインストール](https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian)
-  - [ ] ghコマンドのログイン
-    ```sh
-    gh auth login --scopes 'project'
-    ```
-  - [ ] GITHUB_TOKENを環境変数に設定
-    ```sh
-    export GITHUB_TOKEN=$(gh auth token)
-    ```
-  - [ ] システムパッケージのインストール（gnupg/tig/colordiff 等。gpg_verify のため mise install より先に）
-    ```sh
-    MISE_ENV=windows mise bootstrap packages apply
-    ```
-  - [ ] ツールのインストール
-    - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
-    - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
-    ```sh
-    mise install --jobs=2
-    ```
+- [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
+  - hook が順に実行する:
+    1. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
+    2. `MISE_ENV=windows mise bootstrap packages apply`（tig/colordiff 等の apt。gpg_verify のため mise install より先に。**sudo のパスワード入力が要るので対話端末で実行すること**）
+    3. `GITHUB_TOKEN=$(gh auth token) mise install`
+       - cosign/slsa は mise が内蔵実装で検証するため事前導入は不要
+       - node/python/rust 等のランタイムは deps により依存順で自動先行導入される
+  - 非対話端末では apt bootstrap がスキップ/中断されるので、対話端末で `chezmoi apply` すること
