@@ -1,7 +1,9 @@
 name: install-check
 
-# PR に `/test` コメントで発火し、初回インストール相当（config 検証 + bootstrap.packages の
-# apt 導入 + 認証不要な mise install スモーク）が通るかを Linux で確認する。
+# PR に `/test` コメントで発火し、初回インストール相当が通るかを確認する。
+#   - Linux(test): config 検証 + bootstrap.packages(apt) + 認証不要な mise install スモーク(core:node)
+#   - macOS(test-mac): brew を空にしてから bootstrap.packages(brew) を実際に導入し silicon 起動まで確認
+#     （プリインスト brew との link 衝突＝実機の痛点を再現・検証する。public repo なので mac ランナーは無料）
 # GitHub 認証に依存する処理（aqua/github backend の DL 等）は置かない（未認証 rate limit を避け、
 # かつ PR コードにトークンを晒さないため）。
 # セキュリティ: PR のコードを実行する test ジョブは read-only 権限に絞り、write トークンを
@@ -98,10 +100,74 @@ jobs:
           mise install core:node
           mise exec core:node -- node --version
 
+  test-mac:
+    # test ジョブと同じトリガー。macOS ランナーは public repo では無料・分数無制限。
+    if: >-
+      github.event.issue.pull_request &&
+      (github.event.comment.body == '/test' || startsWith(github.event.comment.body, '/test ')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: macos-latest
+    # test ジョブ同様、PR コードを実行するため read-only・トークン非注入。
+    permissions:
+      contents: read
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          persist-credentials: false
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          version: "2026.7.0"
+          install: false
+
+      - name: Deploy dotfiles mise config (mac env)
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/mise"
+          cp dot_config/mise/config.toml "$HOME/.config/mise/config.toml"
+          cp dot_config/mise/config.mac.toml "$HOME/.config/mise/config.mac.toml"
+
+      - name: Clear preinstalled Homebrew formulae（mise brew の link 衝突回避）
+        run: |
+          set -uo pipefail
+          # ランナーのプリインスト formula が ca-certificates 等を所有していると mise brew が
+          # link できない（実機で踏んだ cannot link と同じ）。formula を全削除して /opt/homebrew を空にする。
+          brew list --formula -1 | xargs -I{} brew uninstall --force --ignore-dependencies {} || true
+          brew autoremove || true
+          rm -rf /opt/homebrew/etc/openssl@3 /opt/homebrew/etc/ca-certificates || true
+
+      - name: Bootstrap packages (brew) と silicon 起動確認
+        # repo root の mise.toml(開発用) を読まないよう cwd を空ディレクトリにして global config だけ効かせる。
+        working-directory: ${{ runner.temp }}
+        env:
+          MISE_ENV: mac
+          MISE_YES: "1"
+        run: |
+          set -euo pipefail
+          mise --version
+          mise bootstrap packages apply --yes
+          echo "=== assert mac formulae binaries ==="
+          rc=0
+          for b in tig colordiff silicon gpg; do
+            if [ -x "/opt/homebrew/bin/$b" ]; then
+              echo "OK: $b"
+            else
+              echo "MISSING: $b"
+              rc=1
+            fi
+          done
+          # silicon は harfbuzz 等を要するため、実際に起動できるかまで確認（実機の痛点）。
+          /opt/homebrew/bin/silicon --version || rc=1
+          exit "$rc"
+
   comment:
     # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
-    needs: test
-    if: ${{ always() && needs.test.result != 'skipped' }}
+    needs:
+      - test
+      - test-mac
+    if: ${{ always() && (needs.test.result != 'skipped' || needs.test-mac.result != 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -110,14 +176,16 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR_NUMBER: ${{ github.event.issue.number }}
       REPO: ${{ github.repository }}
+      LINUX_RESULT: ${{ needs.test.result }}
+      MAC_RESULT: ${{ needs.test-mac.result }}
     steps:
       - name: Comment result
         run: |
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
-          if [ "${{ needs.test.result }}" = "success" ]; then
-            body="✅ \`/test\` install-check passed: config 検証 + apt bootstrap(tig/colordiff 等) + mise install スモーク(core:node) が通りました（[log](${run_url})）"
-          else
-            body="❌ \`/test\` install-check failed: [Actions のログ](${run_url}) を確認してください"
-          fi
+          icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
+          body=$(printf '`/test` install-check（[log](%s)）\n- Linux (config+apt bootstrap+core:node): %s %s\n- macOS (config+brew bootstrap+silicon): %s %s' \
+            "$run_url" \
+            "$(icon "$LINUX_RESULT")" "$LINUX_RESULT" \
+            "$(icon "$MAC_RESULT")" "$MAC_RESULT")
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
