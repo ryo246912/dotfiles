@@ -136,13 +136,19 @@ jobs:
           set -euo pipefail
           # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
           ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
-          # macOS 標準に `timeout` は無い（GNU coreutils 由来）。bootstrap で入る coreutils は
-          # `gtimeout` を提供するためそれを優先し、無ければ timeout、どちらも無ければ無制限で実行する。
-          if command -v gtimeout >/dev/null 2>&1; then TIMEOUT="gtimeout 300"
-          elif command -v timeout >/dev/null 2>&1; then TIMEOUT="timeout 300"
-          else TIMEOUT=""; fi
+          # macOS 標準に `timeout` は無い（GNU coreutils 由来）。bootstrap で入る coreutils の
+          # `gtimeout` を優先する。どちらも無ければ 300 秒制限を張れず、hang が 90 分ジョブを食い潰す
+          # ため無制限では流さず明示的に fail させる（配列で持ち SC2086 も回避する）。
+          if command -v gtimeout >/dev/null 2>&1; then
+            timeout_cmd=(gtimeout 300)
+          elif command -v timeout >/dev/null 2>&1; then
+            timeout_cmd=(timeout 300)
+          else
+            echo "error: gtimeout/timeout が見つかりません（coreutils 未導入）。制限付きで zsh 起動確認を実行できません"
+            exit 1
+          fi
           # zshenv(brew shellenv/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
-          if ! out=$($TIMEOUT zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
+          if ! out=$("${timeout_cmd[@]}" zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
             echo "$out"
             echo "error: zsh 起動に失敗しました"
             exit 1
