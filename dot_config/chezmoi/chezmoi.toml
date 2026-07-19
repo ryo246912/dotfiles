@@ -11,33 +11,32 @@ unlock = "auto"
 args = [
     "-c",
     """
-# マーカーは再起動で消えないよう XDG state に永続化する（=bootstrap/install 成功の確証）。
+# install マーカー保存用の XDG state を用意（永続化）。作成できなければ partial setup を
+# 避けて即中断する。
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
-mkdir -p "$state_dir"
+mkdir -p "$state_dir" || exit 1
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # aqua 等で入れた gh を後続の bash コマンドから解決できるよう mise shims を PATH に通す。
 export PATH="$HOME/.local/share/mise/shims:$PATH"
-# 1) bootstrap.packages を先に導入する（install とは別のマーカーで管理し bootstrap 成功時のみ記録）。
-#    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に
-#    gnupg を用意でき、gnupg を mise 管理のまま扱える。
-#    mac(brew) は sudo 不要なので常に hook で適用。WSL(apt) は sudo が要るため、sudo プロンプトに
-#    応答できる対話端末(TTY)があるときだけ適用する。TTY 無しでマーカー未一致（=未適用）なら、
-#    未導入のまま install に進むのを避けて required preflight として中断する。
-if [ "$(cat "$state_dir/mise-bootstrap-hash" 2>/dev/null)" != "$mise_hash" ]; then
+# 1) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
+#    `mise bootstrap packages status --missing`（未同期なら exit 1）で実際の導入状態を判定するので、
+#    パッケージ削除等のドリフトも検知して収束し、手動導入後も回復できる（マーカー不整合が起きない）。
+#    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
+#    用意できる。mac(brew) は sudo 不要。WSL(apt) は sudo が要るため、sudo プロンプトに応答できる
+#    対話端末(TTY)があるときだけ apply する。非対話 WSL で未同期なら required preflight として中断する。
+if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=windows; fi
+if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null 2>&1; then
   if [ "$(uname)" = "Darwin" ] || [ -t 0 ]; then
-    if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=windows; fi
-    if MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
-      echo "$mise_hash" > "$state_dir/mise-bootstrap-hash"
-    else
+    if ! MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
       # 失敗＝gnupg/tig 等が未導入。gpg_verify=true の mise install が検証で失敗するため
       # degraded 実行を避けて中断する（WSL は sudo のパスワード入力が要る点に注意）。
       echo "error: 'mise bootstrap packages apply' に失敗しました。パッケージ未導入のため中断します"
       exit 1
     fi
   else
-    # 非対話端末（TTY 無し）で sudo プロンプトに応答できず、かつマーカー未一致＝bootstrap 未適用。
+    # 非対話端末（TTY 無し）で sudo プロンプトに応答できず、かつ未同期（未導入分あり）。
     # 未導入のまま進むと tig/colordiff 等が欠けたまま完了するため required preflight として中断する。
-    # （マーカーは成功時のみ書くので、旧 mise 導入の tig 残存等で誤って通過することはない）
+    # 手動 bootstrap（sudo 可能な端末）で導入後は status が揃い、次回はここを通過できる。
     echo "error: WSL の apt bootstrap が未適用です。対話端末で 'MISE_ENV=windows mise bootstrap packages apply' を実行してから再度 chezmoi apply してください（tig/colordiff 等）"
     exit 1
   fi
