@@ -37,7 +37,7 @@ install_package() {
         echo "mise is already installed"
       fi
     elif ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
-      apt install -y "$package"
+      sudo apt install -y "$package"
     else
       echo "$package is already installed"
     fi

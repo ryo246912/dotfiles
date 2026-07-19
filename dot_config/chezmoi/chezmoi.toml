@@ -23,13 +23,25 @@ if [ "$(uname)" = "Darwin" ] && [ "$(cat /tmp/mise-bootstrap-hash 2>/dev/null)" 
   if MISE_ENV=mac mise bootstrap packages apply --yes; then
     echo "$mise_hash" > /tmp/mise-bootstrap-hash
   else
-    echo "warning: 'mise bootstrap packages apply' に失敗しました。次回 apply で再試行します（手動導入も可）"
+    # bootstrap 失敗＝gnupg 等が未導入。gpg_verify=true の mise install が検証で失敗する
+    # ため、degraded 実行を避けてここで中断する（再度 chezmoi apply で再試行）。
+    echo "error: 'mise bootstrap packages apply' に失敗しました。gnupg 等が未導入のため中断します"
+    exit 1
   fi
 fi
 # 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
+  # GITHUB_TOKEN 取得のため gh を最優先で導入する（github: バックエンドの rate limit 回避）。
+  mise install --jobs=1 aqua:cli/cli || true
+  # gh 未ログインだと token が空になり degraded install になる。先に
+  # `gh auth login --scopes 'project'` を済ませる運用のため、未ログインなら案内して中断する。
+  github_token=$(gh auth token 2>/dev/null || true)
+  if [ -z "$github_token" ]; then
+    echo "error: gh が未ログインです。'gh auth login --scopes project' を実行してから再度 chezmoi apply してください"
+    exit 1
+  fi
   echo "Running mise install..."
-  GITHUB_TOKEN=$(gh auth token 2>/dev/null || true) mise install --jobs=2 || exit 1
+  GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
   echo "$mise_hash" > /tmp/mise-config-hash
 fi
 """,
