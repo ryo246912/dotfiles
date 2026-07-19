@@ -1,5 +1,14 @@
 name: test-linux
 
+# `/test-linux` コメント、または Actions UI からの workflow_dispatch で発火し、
+# 初回インストール相当（Linux/WSL 側）が通るかを確認する。
+#   - config 検証（toml構文 + post-apply hook の bash 構文 + run_once スクリプトの構文）
+#   - bootstrap.packages(apt) の実導入確認
+#   - 認証不要な mise install スモーク（core:node）
+# GitHub 認証に依存する処理（aqua/github backend の DL 等）は置かない（未認証 rate limit を避け、
+# かつ PR コードにトークンを晒さないため）。
+# セキュリティ: PR のコードを実行する test ジョブは read-only 権限に絞り、write トークンを
+# PR コードに晒さない。結果コメントの write 権限は PR コードを実行しない comment ジョブに限定する。
 on:
   issue_comment:
     types:
@@ -14,30 +23,90 @@ concurrency:
 
 jobs:
   test:
+    # workflow_dispatch は常に許可（Actions 実行権限で既にアクセス制御されているため）。
+    # issue_comment は PR への `/test-linux`（完全一致 or `/test-linux <args>`）コメントのみ、
+    # 権限のあるユーザーに限定する。
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.pull_request &&
       (github.event.comment.body == '/test-linux' || startsWith(github.event.comment.body, '/test-linux ')) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    # PR のコードを実行するため read-only 権限に絞る（write トークンを PR コードに晒さない）。
     permissions:
       contents: read
     timeout-minutes: 20
+    # read-scoped の GITHUB_TOKEN は run ステップ(PR コード)に env 注入せず、GitHub 認証に
+    # 依存する処理も置かない。write トークンは PR コードを実行しない comment ジョブだけが持つ。
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || '' }}
           persist-credentials: false
 
+      - name: Validate configs
+        run: |
+          set -euo pipefail
+          for f in \
+            dot_config/mise/config.toml \
+            dot_config/mise/config.mac.toml \
+            dot_config/mise/config.linux.toml \
+            .chezmoi.toml.tmpl; do
+            python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
+          done
+          # post-apply hook の bash 構文チェック
+          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > "$RUNNER_TEMP/hook.sh"
+          bash -n "$RUNNER_TEMP/hook.sh" && echo "OK: hook bash syntax"
+          # 初回インストーラ（WSL）の構文チェック
+          bash -n run_once_install-packages_windows.sh && echo "OK: run_once windows syntax"
+
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           version: "2026.7.0"
           install: false
 
-      - name: mise sanity check
-        run: mise --version
+      - name: Deploy dotfiles mise config (linux/apt env)
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/mise"
+          cp dot_config/mise/config.toml "$HOME/.config/mise/config.toml"
+          cp dot_config/mise/config.linux.toml "$HOME/.config/mise/config.linux.toml"
+
+      - name: Bootstrap packages (apt) と導入確認
+        # repo root の mise.toml(開発用) を読まないよう、cwd を空ディレクトリにして global config だけ効かせる。
+        working-directory: ${{ runner.temp }}
+        env:
+          MISE_ENV: linux
+          MISE_YES: "1"
+        run: |
+          set -euo pipefail
+          mise --version
+          mise bootstrap packages apply --yes
+          echo "=== assert migrated apt packages ==="
+          rc=0
+          for pkg in tig colordiff tree ffmpeg goaccess ugrep; do
+            if command -v "$pkg" >/dev/null 2>&1; then
+              echo "OK: $pkg"
+            else
+              echo "MISSING: $pkg"
+              rc=1
+            fi
+          done
+          exit "$rc"
+
+      - name: mise install スモーク（認証不要な core backend）
+        # GitHub API に依存しない core:node(nodejs.org)で mise install 機構と config の
+        # [tools] バージョン解決を確認する（aqua/github backend は認証が要るので含めない）。
+        working-directory: ${{ runner.temp }}
+        env:
+          MISE_YES: "1"
+        run: |
+          set -euo pipefail
+          mise install core:node
+          mise exec core:node -- node --version
 
   comment:
+    # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
     needs: test
     if: ${{ always() && github.event_name == 'issue_comment' && needs.test.result != 'skipped' }}
     runs-on: ubuntu-latest
@@ -55,5 +124,6 @@ jobs:
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
-          body=$(printf '`/test-linux`（[log](%s)）: %s %s' "$run_url" "$(icon "$RESULT")" "$RESULT")
+          body=$(printf '`/test-linux`（config+apt bootstrap+core:node、[log](%s)）: %s %s' \
+            "$run_url" "$(icon "$RESULT")" "$RESULT")
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
