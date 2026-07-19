@@ -136,8 +136,13 @@ jobs:
           set -euo pipefail
           # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
           ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
+          # macOS 標準に `timeout` は無い（GNU coreutils 由来）。bootstrap で入る coreutils は
+          # `gtimeout` を提供するためそれを優先し、無ければ timeout、どちらも無ければ無制限で実行する。
+          if command -v gtimeout >/dev/null 2>&1; then TIMEOUT="gtimeout 300"
+          elif command -v timeout >/dev/null 2>&1; then TIMEOUT="timeout 300"
+          else TIMEOUT=""; fi
           # zshenv(brew shellenv/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
-          if ! out=$(timeout 300 zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
+          if ! out=$($TIMEOUT zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
             echo "$out"
             echo "error: zsh 起動に失敗しました"
             exit 1
