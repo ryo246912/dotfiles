@@ -37,11 +37,16 @@ fi
 if [ "$(cat /tmp/mise-config-hash 2>/dev/null)" != "$mise_hash" ]; then
   # GITHUB_TOKEN 取得のため gh を最優先で導入する（github: バックエンドの rate limit 回避）。
   mise install --jobs=1 aqua:cli/cli || true
-  # gh 未ログインだと token が空になり degraded install になる。先に
-  # `gh auth login --scopes 'project'` を済ませる運用のため、未ログインなら案内して中断する。
+  # 未ログインなら対話ログインを実行する（chezmoi apply が対話端末で走る前提。
+  # chezmoi は hook を TTY 接続のまま実行するので device/web フローが使える）。
+  # 既ログインなら何もしない（apply 毎の再プロンプトを避ける）。
+  if ! gh auth token >/dev/null 2>&1; then
+    gh auth login --scopes 'project' || true
+  fi
+  # 非対話端末等でログインできず token が空なら degraded install を避けて中断する。
   github_token=$(gh auth token 2>/dev/null || true)
   if [ -z "$github_token" ]; then
-    echo "error: gh が未ログインです。'gh auth login --scopes project' を実行してから再度 chezmoi apply してください"
+    echo "error: gh 未ログインのため中断します。'gh auth login --scopes project' 後に再度 chezmoi apply してください"
     exit 1
   fi
   echo "Running mise install..."
