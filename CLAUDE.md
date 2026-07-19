@@ -200,7 +200,7 @@ This repository treats personal development environment as code:
 
 ## Useful References
 
-- **setup.md** - Detailed step-by-step setup instructions
+- **docs/setup.md** - Detailed step-by-step setup instructions
 - **README.md** - Repository overview and quick start
 - **mise.toml** - Complete list of managed tools and available tasks
 - **dot_config/zabrze/\*.toml** - All available command abbreviations
