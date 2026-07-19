@@ -131,12 +131,23 @@ jobs:
 
       - name: Clear preinstalled Homebrew formulae（mise brew の link 衝突回避）
         run: |
-          set -uo pipefail
+          set -euo pipefail
           # ランナーのプリインスト formula が ca-certificates 等を所有していると mise brew が
           # link できない（実機で踏んだ cannot link と同じ）。formula を全削除して /opt/homebrew を空にする。
-          brew list --formula -1 | xargs -I{} brew uninstall --force --ignore-dependencies {} || true
+          brew list --formula -1 | while read -r f; do
+            brew uninstall --force --ignore-dependencies "$f" || echo "warn: failed to uninstall $f"
+          done
           brew autoremove || true
           rm -rf /opt/homebrew/etc/openssl@3 /opt/homebrew/etc/ca-certificates || true
+          # clean 前提の検証: formula が残ると mise の link 経路を検証できないため fail させる
+          # （|| true で失敗を握り潰し、汚れた prefix のまま bootstrap が通るのを防ぐ）。
+          remaining=$(brew list --formula -1 | wc -l | tr -d ' ')
+          if [ "$remaining" != "0" ]; then
+            echo "error: cleanup 後も ${remaining} 個の formula が残存（clean 前提を満たせず）:"
+            brew list --formula
+            exit 1
+          fi
+          echo "OK: Homebrew prefix cleared"
 
       - name: Bootstrap packages (brew) と silicon 起動確認
         # repo root の mise.toml(開発用) を読まないよう cwd を空ディレクトリにして global config だけ効かせる。
