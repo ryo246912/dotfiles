@@ -4,43 +4,20 @@
 
 ### 初期設定
 
-- [ ] XCode CLIのインストール
-
-  ```sh
-  xcode-select --install
-  ```
-
 - [ ] chezmoiの実行
+  - `--use-builtin-git=on` で clone するため、事前の `xcode-select --install`（system git）は不要
+  - Command Line Tools は直後の Homebrew インストーラが自動導入する
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
+  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply --use-builtin-git=on ryo246912
   ```
 
-- [ ] miseの実行
-  - [ ] ghコマンドのインストール
-    ```sh
-    brew install gh
-    ```
-  - [ ] ghコマンドのログイン
-    ```sh
-    gh auth login --scopes 'project'
-    ```
-  - [ ] GITHUB_TOKENを環境変数に設定
-    ```sh
-    export GITHUB_TOKEN=$(gh auth token)
-    ```
-  - [ ] 検証ツールのインストール
-    ```sh
-    mise install --jobs=1 cosign slsa-verifier
-    ```
-  - [ ] ランタイムのインストール
-    ```sh
-    mise install --jobs=1 node python rust
-    ```
-  - [ ] 他ツールのインストール
-    ```sh
-    mise install --jobs=2
-    ```
+- [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
+  - hook が順に実行する:
+    1. `MISE_ENV=mac mise bootstrap packages apply`
+    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
+    3. `GITHUB_TOKEN=$(gh auth token) mise install`
+  - 失敗時は `chezmoi apply` で再試行
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
@@ -406,24 +383,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```
 
 - [ ] miseの実行
-  - [ ] [ghコマンドのインストール](https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian)
-  - [ ] ghコマンドのログイン
-    ```sh
-    gh auth login --scopes 'project'
-    ```
-  - [ ] GITHUB_TOKENを環境変数に設定
-    ```sh
-    export GITHUB_TOKEN=$(gh auth token)
-    ```
-  - [ ] 検証ツールのインストール
-    ```sh
-    mise install --jobs=1 cosign slsa-verifier
-    ```
-  - [ ] ランタイムのインストール
-    ```sh
-    mise install --jobs=1 node python rust
-    ```
-  - [ ] 他ツールのインストール
-    ```sh
-    mise install --jobs=2
-    ```
+  - hook が順に実行する:
+    1. `MISE_ENV=linux mise bootstrap packages apply`（**sudo のパスワード入力が要るので対話端末で実行すること**）
+    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
+    3. `GITHUB_TOKEN=$(gh auth token) mise install`
+  - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること

@@ -11,24 +11,28 @@ install_scoop() {
 }
 
 install_package() {
+  # ここにはブートストラップ前提のものだけ残す:
+  #   - gpg : mise の gpg_verify=true により `mise install` 前に必要（WSL は bootstrap 手動のため早期に）
+  #   - zsh : ログインシェル（chsh）で早期に必要
+  #   - mise: 本体（ループ内で curl https://mise.run により導入）
   local PACKAGES=(
-    # https://bun.com/docs/installation#macos-and-linux
-    # bun
-    git
     gpg
-    # go
-    # https://mise.jdx.dev/installing-mise.html#apt
-    # mise
-    ugrep
     zsh
+    mise
   )
 
   for package in "${PACKAGES[@]}"; do
-    if [ "$package" = "mise" ] && ! command -v mise &> /dev/null; then
-      curl https://mise.run | sh
-      eval "$($HOME/.local/bin/mise activate zsh --shims)"
-    elif ! dpkg -l | grep -q "$package"; then
-      apt install -y "$package"
+    if [ "$package" = "mise" ]; then
+      if ! command -v mise &> /dev/null; then
+        curl https://mise.run | sh
+        # 本スクリプトは bash/sh で実行されるため zsh 用出力を eval すると構文エラーになり得る。
+        # 後続で mise を使えるよう shims/bin に PATH を通すだけにする。
+        export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+      else
+        echo "mise is already installed"
+      fi
+    elif ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
+      sudo apt install -y "$package"
     else
       echo "$package is already installed"
     fi
