@@ -48,12 +48,21 @@ crit plan.md    # 特定ファイルをレビュー
 ホストのブラウザから `http://localhost:7842` を開いてレビュー・コメントできます。
 コメントを送るとエージェントへフィードバックされ、修正ループが回ります。
 
-### `/crit` スラッシュコマンド（任意）
+### `/crit` skill（rulesync で配布）
 
-Claude Code のプラグインを入れると `/crit` でレビューループを自動化できます。
-コンテナ内で一度だけ実行してください（`~/.claude/plugins` はホストと共有されます）。
+crit@crit プラグインが提供する 2 つの skill を、プラグイン導入ではなく **rulesync 経由で配布**しています。
+ソースは `dot_config/rulesync/exact_dot_rulesync/skills/` にあり、`chezmoi apply` 後に
+`mise run rulesync:generate` を実行すると各エージェント向けに生成されます。
 
-```bash
-claude plugin marketplace add tomasz-tomczyk/crit
-claude plugin install crit@crit
-```
+| skill      | 役割                                                               | 生成先                                                    |
+| ---------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`, `~/.codex/skills/crit/`         |
+| `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/`, `~/.codex/skills/crit-cli/` |
+
+生成された skill は devcontainer の `~/.claude` マウント経由でコンテナ内のエージェントからも利用できます。
+Claude Code では `/crit`、Codex では `$crit` で呼び出せます。
+
+> [!NOTE]
+> `crit` skill は `allowed-tools` に `Bash(crit:*)` を宣言しているため、`blockUnlistedCommands` 環境でも
+> skill 実行中は `crit` コマンドが許可されます。`user-invocable` / `argument-hint` は rulesync が
+> claudecode skill へ変換する際に落とされますが、動作には影響しません。
