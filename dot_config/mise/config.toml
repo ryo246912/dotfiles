@@ -9,7 +9,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-"aqua:BurntSushi/ripgrep"                                   = "15.1.0"
+"aqua:BurntSushi/ripgrep"                                   = "15.2.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
 "aqua:anthropics/claude-code"                               = "2.1.212"
