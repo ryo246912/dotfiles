@@ -19,7 +19,7 @@ AIエージェント（Claude Code / Codex / Copilot など）を隔離環境で
 | ------------ | ------------------------------------------------------- | --------------------------------- |
 | バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入             | `mise.toml`                       |
 | バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`                  | `devcontainer.json` (`remoteEnv`) |
-| ポート転送   | `forwardPorts: [7842]` でホストのブラウザへ転送         | `devcontainer.json`               |
+| ポート公開   | `appPort: 127.0.0.1:7842:7842` でホストへ publish       | `devcontainer.json`               |
 | 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                | `devcontainer.json`               |
 | 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`） | `scripts/post-create.sh`          |
 
@@ -44,9 +44,16 @@ crit            # git の変更を自動検出してレビュー
 crit plan.md    # 特定ファイルをレビュー
 ```
 
-起動すると `http://0.0.0.0:7842` で待ち受けます。ポート `7842` はホストへ転送されるため、
-ホストのブラウザから `http://localhost:7842` を開いてレビュー・コメントできます。
+起動すると `http://0.0.0.0:7842` で待ち受けます。`appPort` によりホストの `127.0.0.1:7842` へ
+publish されるため、ホストのブラウザから `http://localhost:7842` を開いてレビュー・コメントできます。
 コメントを送るとエージェントへフィードバックされ、修正ループが回ります。
+
+> [!IMPORTANT]
+> `forwardPorts` は VS Code 拡張専用で、`multi-worktree` の `devcontainer up`（devcontainer CLI）
+> では効きません。実際にホストへ publish するのは `appPort` です。
+> ホストポート `7842` を固定しているため、**devcontainer を同時に 2 つ以上起動するとポート衝突で
+> 2 つ目の `devcontainer up` が失敗**します。crit は 1 度に 1 レビューのため通常は単一コンテナ運用で問題ありません。
+> 並列でタスクを回す場合は、対象タスクのコンテナだけを起動してください。
 
 ### `/crit` skill（rulesync で配布）
 

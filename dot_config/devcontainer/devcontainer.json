@@ -20,7 +20,10 @@
     // crit: コンテナ内では更新チェック不要のため無効化
     "CRIT_NO_UPDATE_CHECK": "1"
   },
-  // crit のレビューUIをホストのブラウザへ転送する
+  // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
+  // devcontainer CLI (multi-worktree の `devcontainer up`) は forwardPorts を解釈しないため、
+  // 実際に publish する appPort (= docker run -p) を使う。ホストの loopback のみに束縛する。
+  "appPort": ["127.0.0.1:7842:7842"],
   "forwardPorts": [7842],
   "portsAttributes": {
     "7842": {
