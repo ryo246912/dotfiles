@@ -110,6 +110,15 @@
     {
       "customType": "regex",
       "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": ["min_version\\s*=\\s*\"(?<currentValue>.*?)\""],
+      "depNameTemplate": "jdx/mise",
+      "packageNameTemplate": "jdx/mise",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
       "matchStrings": [
         "\"go:github\\.com/atotto/clipboard/cmd/(?:gocopy|gopaste)\"\\s*=\\s*\"(?<currentValue>.*?)\""
       ],
