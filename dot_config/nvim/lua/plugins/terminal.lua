@@ -138,10 +138,53 @@ return {
         filetree:toggle()
       end
 
+      local leaf_terminal = nil
+      local leaf_terminal_file = nil
+
+      local function toggle_leaf()
+        local filepath = vim.fn.expand("%:p")
+        if filepath == "" or vim.bo.filetype ~= "markdown" then
+          vim.notify("Markdownファイルを開いている必要があります。", vim.log.levels.WARN)
+          return
+        end
+        if not command_exists("leaf") then
+          vim.notify("leaf が見つかりません。`mise install` を実行してください。", vim.log.levels.WARN)
+          return
+        end
+        if leaf_terminal and leaf_terminal_file ~= filepath then
+          leaf_terminal:shutdown()
+          leaf_terminal = nil
+          leaf_terminal_file = nil
+        end
+        if not leaf_terminal then
+          leaf_terminal = Terminal:new({
+            cmd = "leaf -w " .. vim.fn.shellescape(filepath),
+            direction = "vertical",
+            hidden = true,
+            close_on_exit = false,
+            on_exit = function(t)
+              if leaf_terminal == t then
+                leaf_terminal = nil
+                leaf_terminal_file = nil
+              end
+            end,
+          })
+          leaf_terminal_file = filepath
+        end
+        local prev_win = vim.api.nvim_get_current_win()
+        leaf_terminal:toggle()
+        vim.schedule(function()
+          if vim.api.nvim_win_is_valid(prev_win) then
+            vim.api.nvim_set_current_win(prev_win)
+          end
+        end)
+      end
+
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
       keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップ" })
 keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })
       keymap({ "n", "t" }, "<leader>E", toggle_filetree, { noremap = true, silent = true, desc = "filetree(ft) を開閉" })
+      keymap({ "n" }, "<leader>md", toggle_leaf, { noremap = true, silent = true, desc = "Markdownプレビュー(leaf)" })
     end,
   },
 }

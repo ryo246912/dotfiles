@@ -11,19 +11,17 @@ install_scoop() {
 }
 
 install_package() {
+  # ここにはブートストラップ前提のものだけ残す:
+  #   - gpg : mise の gpg_verify=true により `mise install` 前に必要（WSL は bootstrap 手動のため早期に）
+  #   - zsh : ログインシェル（chsh）で早期に必要
   local PACKAGES=(
-    # https://bun.com/docs/installation#macos-and-linux
-    # bun
-    git
     gpg
-    # go
-    ugrep
     zsh
   )
 
   for package in "${PACKAGES[@]}"; do
-    if ! dpkg -l | grep -q "$package"; then
-      apt install -y "$package"
+    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
+      sudo apt install -y "$package"
     else
       echo "$package is already installed"
     fi

@@ -21,8 +21,15 @@ vim.api.nvim_create_autocmd('VimEnter', {
     local is_no_arg = vim.fn.argc() == 0
     local is_dir_arg = vim.fn.argc() == 1 and vim.fn.isdirectory(argv0) == 1
     if is_no_arg or is_dir_arg then
-      vim.cmd('Neotree filesystem show left')
-      vim.cmd('wincmd l')
+      local ok, neo_tree = pcall(require, 'neo-tree.command')
+      if ok then
+        neo_tree.execute({
+          source = 'filesystem',
+          position = 'left',
+          action = 'show',
+        })
+        vim.cmd('wincmd l')
+      end
     end
   end,
 })

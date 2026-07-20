@@ -1,0 +1,138 @@
+name: test-linux
+
+#   chezmoi apply → post-apply hook（bootstrap(apt) → gh → mise install）→ zsh 起動
+# 方針:
+#   - run_once_*（scoop/powershell 前提・対話 read のインストーラ）は CI で実行不能なため
+#     `chezmoi apply --exclude=scripts` で除外し、setup.md が自動化している mise フロー本体
+#     （post-apply hook）だけを検証する。run_once_setup.sh 相当（~/.zshenv symlink）は手動で補う。
+#   - bitwarden を要する .czrc は CI で解決できないため .chezmoiignore に一時追記して除外する。
+#   - full mise install は aqua/github backend（GitHub API）を含むため read-only の github.token を
+#     注入する。/test-linux は OWNER/MEMBER/COLLABORATOR のみ発火。write 権限は PR コードを実行しない
+#     comment ジョブに限定する。
+on:
+  issue_comment:
+    types:
+      - created
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: test-linux-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+      (github.event.comment.body == '/test-linux' || startsWith(github.event.comment.body, '/test-linux ')) &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 45
+    env:
+      MISE_ENV: linux
+      MISE_YES: "1"
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
+          persist-credentials: false
+
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          version: "2026.7.0"
+          install: false
+
+      - name: Validate configs（apply 前の高速フィードバック）
+        run: |
+          set -euo pipefail
+          for f in \
+            dot_config/mise/config.toml \
+            dot_config/mise/config.mac.toml \
+            dot_config/mise/config.linux.toml \
+            .chezmoi.toml.tmpl; do
+            python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
+          done
+          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > "$RUNNER_TEMP/hook.sh"
+          bash -n "$RUNNER_TEMP/hook.sh" && echo "OK: hook bash syntax"
+          bash -n run_once_install-packages_windows.sh && echo "OK: run_once windows syntax"
+
+      - name: chezmoi apply（setup.md フロー / run_once 除外・post-apply hook 実行）
+        # repo root の dev 用 mise.toml を読み込まないよう cwd を runner.temp にし、
+        # PR チェックアウトを --source で指定して apply する。
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # chezmoi を pinned(aqua, checksum 検証)で用意する（curl|sh を避ける）。
+          mise install "aqua:twpayne/chezmoi@2.71.0"
+          # bitwarden を要する .czrc は CI で解決できないため apply 対象から一時除外する（ephemeral checkout）。
+          printf '\n.config/.czrc\n' >> "$GITHUB_WORKSPACE/.chezmoiignore"
+          # .chezmoi.toml.tmpl から config を生成（source が既存のため clone しない）。
+          mise exec "aqua:twpayne/chezmoi@2.71.0" -- chezmoi init --source="$GITHUB_WORKSPACE"
+          # apply 本体。Linux hook の apt bootstrap は `[ -t 0 ]`(TTY) を要するため PTY を割り当てる
+          # （runner の sudo は NOPASSWD なのでプロンプトは出ない）。--exclude=scripts で run_once を除外。
+          script -qe -c "mise exec aqua:twpayne/chezmoi@2.71.0 -- chezmoi apply --source=$GITHUB_WORKSPACE --exclude=scripts --verbose" /dev/null
+
+      - name: assert bootstrap.packages(apt) 導入確認
+        run: |
+          set -euo pipefail
+          rc=0
+          for pkg in tig colordiff tree ffmpeg goaccess ugrep; do
+            if command -v "$pkg" >/dev/null 2>&1; then echo "OK: $pkg"; else echo "MISSING: $pkg"; rc=1; fi
+          done
+          exit "$rc"
+
+      - name: assert mise install（代表ツール）
+        # repo root の dev 用 mise.toml で解決がぶれないよう neutral cwd で確認する（global config のみ）。
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          rc=0
+          # hook が `mise install` を完走していれば [tools] の代表ツールが解決できる。
+          for t in node go python bun cargo rg jq fzf gh chezmoi lazygit delta; do
+            if mise which "$t" >/dev/null 2>&1; then echo "OK: $t"; else echo "MISSING: $t"; rc=1; fi
+          done
+          exit "$rc"
+
+      - name: assert zsh 起動
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
+          ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
+          # zshenv(ZDOTDIR/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
+          if ! out=$(timeout 300 zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
+            echo "$out"
+            echo "error: zsh 起動に失敗しました"
+            exit 1
+          fi
+          echo "$out"
+          echo "$out" | grep -q ZSH_STARTED_OK || { echo "error: zsh 起動マーカーが出力されませんでした"; exit 1; }
+          echo "OK: zsh started"
+
+  comment:
+    needs: test
+    if: ${{ always() && github.event_name == 'issue_comment' && needs.test.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+      RESULT: ${{ needs.test.result }}
+    steps:
+      - name: Comment result
+        run: |
+          set -euo pipefail
+          run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
+          icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
+          body=$(printf '`/test-linux`（chezmoi apply→hook(apt bootstrap+mise install)→zsh 起動、[log](%s)）: %s %s' \
+            "$run_url" "$(icon "$RESULT")" "$RESULT")
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"

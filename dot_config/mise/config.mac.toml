@@ -1,5 +1,25 @@
 [tools]
-"github:hzqtc/taproom" = { version = "0.6.1", bin = "taproom" }
+"github:hzqtc/taproom" = { version = "0.6.2", bin = "taproom" }
 # http backend が展開したバイナリに実行権限が付かない(zip に unix 実行ビットが
 # 無いため)ので、postinstall で +x してから reshim で shim を生成させる。
 "http:coderabbit"       = { version = "0.6.4", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-darwin-{{ arch() }}.zip", postinstall = 'chmod +x "$MISE_TOOL_INSTALL_PATH/coderabbit"' }
+
+[bootstrap.packages]
+# silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
+# brew が解決）。aqua の darwin prebuilt は x86_64 で /usr/local(Intel brew) の libharfbuzz に
+# 動的リンクしており arm64 mac では dyld で読めず起動不可のため使わない。
+"brew:blueutil"     = "latest"
+"brew:colordiff"    = "latest"
+"brew:coreutils"    = "latest"
+"brew:ffmpeg"       = "latest"
+"brew:findutils"    = "latest"
+"brew:git"          = "latest"
+"brew:gnu-sed"      = "latest"
+"brew:gnupg"        = "latest"
+"brew:goaccess"     = "latest"
+"brew:grep"         = "latest"
+"brew:pinentry-mac" = "latest"
+"brew:silicon"      = "latest"
+"brew:tig"          = "latest"
+"brew:tree"         = "latest"
+"brew:ugrep"        = "latest"

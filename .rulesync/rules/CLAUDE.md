@@ -42,6 +42,7 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 **Package Management:**
 
 - `mise install` - Install all tools defined in mise.toml
+- `mise bootstrap packages apply` - Install system packages from `[bootstrap.packages]` (e.g. tig, colordiff via prebuilt brew/apt)
 - `mise use <tool>@<version>` - Use specific tool version
 - `mise run <task>` - Run defined tasks (lint, format, etc.)
 
@@ -83,6 +84,14 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 4. **Install development tools:**
 
    ```bash
+   # gnupg/tig/colordiff などの [bootstrap.packages] を prebuilt で先に導入
+   # （gpg_verify=true のため mise install より前に gnupg が必要）
+   # brew:/apt: は OS 別 config に隔離しているため MISE_ENV を明示する
+   if [ "$(uname)" = "Darwin" ]; then
+     MISE_ENV=mac mise bootstrap packages apply
+   else
+     MISE_ENV=linux mise bootstrap packages apply
+   fi
    mise install
    ```
 
@@ -199,7 +208,7 @@ This repository treats personal development environment as code:
 
 ## Useful References
 
-- **setup.md** - Detailed step-by-step setup instructions
+- **docs/setup.md** - Detailed step-by-step setup instructions
 - **README.md** - Repository overview and quick start
 - **mise.toml** - Complete list of managed tools and available tasks
 - **dot_config/zabrze/\*.toml** - All available command abbreviations

@@ -11,4 +11,4 @@
 
 # Setup
 
-- [setup](setup.md)
+- [setup](docs/setup.md)

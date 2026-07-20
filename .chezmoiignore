@@ -30,6 +30,6 @@ rulesync.lock
 
 README.md
 CLAUDE.md
-setup.md
+docs/**
 
 **/*karabiner-ts*

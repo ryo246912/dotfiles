@@ -12,22 +12,8 @@ install_brew() {
 
 install_package() {
   local PACKAGES=(
-    oven-sh/bun/bun
-    blueutil
     font-hackgen
     font-hackgen-nerd
-    git
-    go
-    gpg
-    pinentry-mac
-    silicon
-    ugrep
-
-    coreutils
-    findutils
-    gnu-sed
-    grep
-    tree
   )
 
   for package in "${PACKAGES[@]}"; do
