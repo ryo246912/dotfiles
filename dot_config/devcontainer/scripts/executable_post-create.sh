@@ -38,3 +38,20 @@ for shared_entry in projects settings.json agents skills plugins; do
 		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
 	fi
 done
+
+# crit (https://github.com/tomasz-tomczyk/crit) のグローバル設定を生成
+# AIエージェントは devcontainer 内で実行する前提のため、以下を設定する:
+# - no_open  : コンテナ内にブラウザがないため自動オープンを無効化（UIはホスト側で開く）
+# - agent_cmd: 「Send to agent」でコンテナ内の claude に権限スキップで処理を委譲
+# host/port は devcontainer.json の CRIT_HOST/CRIT_PORT で指定する
+if [ ! -f ~/.crit.config.json ]; then
+	cat >~/.crit.config.json <<'EOF'
+{
+  "no_open": true,
+  "agent_cmd": "claude --dangerously-skip-permissions -p"
+}
+EOF
+	echo "✓ ~/.crit.config.json を生成しました"
+else
+	echo "ℹ️ ~/.crit.config.json は既に存在します"
+fi
