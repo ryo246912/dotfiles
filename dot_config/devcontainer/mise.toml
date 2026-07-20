@@ -19,7 +19,7 @@ experimental = true
 "github:github/copilot-cli"      = "1.0.63"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"     = "0.18.1"
-"npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
+"npm:@typescript/native-preview" = "7.0.0-dev.20260707.2"
 "npm:ccusage"                    = "20.0.1"
 "npm:oxfmt"                      = "0.59.0"
 "npm:oxlint"                     = "1.74.0"
