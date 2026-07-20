@@ -1,5 +1,3 @@
-# bootstrap.packages を使うため v2026.6.6 以上が必要
-# https://mise.jdx.dev/bootstrap/packages/brew.html
 min_version = "2026.6.6"
 
 [env]
@@ -11,10 +9,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"
 
-# silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
-# brew が解決）。aqua の darwin prebuilt は x86_64 で /usr/local(Intel brew) の libharfbuzz に
-# 動的リンクしており arm64 mac では dyld で読めず起動不可のため使わない。
-# WSL(Linux) では silicon は使わない（ヘッドレスで用途が無く harfbuzz 等の依存も重いため）。
 "aqua:BurntSushi/ripgrep"                                   = "15.1.0"
 "aqua:Wilfred/difftastic"                                   = "0.69.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
@@ -84,6 +78,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:jr-k/d4s"                                           = "0.49.101"
 "github:max-sixty/worktrunk"                                = "0.65.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
+"github:rivolink/leaf"                                      = { version = "1.26.1", bin = "leaf" }
 "github:ryo246912/gh-actions-dash"                          = { version = "0.1.6", bin = "gh-actions-dash" }
 "github:ryo246912/gh-reassign-reviewer"                     = { version = "0.0.7", bin = "gh-reassign-reviewer" }
 "github:ryo246912/github-markdown-toc.go"                   = "2.0.1"
@@ -91,7 +86,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:seachicken/gh-poi"                                  = { version = "0.18.1", bin = "gh-poi" }
 "github:shazow/wifitui"                                     = "0.13.0"
 "github:skanehira/ghost"                                    = "0.3.1"
-"github:rivolink/leaf"                                      = { version = "1.26.1", bin = "leaf" }
 "github:trasta298/keifu"                                    = "0.3.0"
 "github:wesm/agentsview"                                    = "0.31.1"
 "go:github.com/air-verse/air"                               = "1.65.3"
@@ -112,18 +106,11 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:macos-notify-mcp"                                      = "0.0.8"
 "npm:open-cli"                                              = "9.0.0"
 "npm:oxfmt"                                                 = "0.57.0"
-"npm:oxlint"                                               = "1.74.0"
+"npm:oxlint"                                                = "1.74.0"
 "npm:playwright"                                            = "1.56.0"
 "npm:renovate"                                              = "43.103.0"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
-
-# CLI formula は mise で管理する（bootstrap.packages）。ただし mise の brew マネージャは
-# Linux でも linuxbrew として動くため、brew: と apt: を併記すると Linux で二重導入になる。
-# よって OS 別に隔離する:
-#   - mac(Apple Silicon): config.mac.toml の brew:
-#   - Linux/WSL          : config.linux.toml の apt:
-# base（本ファイル）には bootstrap.packages を置かない。
 
 [settings]
 auto_install = false

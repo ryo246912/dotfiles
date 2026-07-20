@@ -11,11 +11,6 @@ install_brew() {
 }
 
 install_package() {
-  # CLI formula は mise（config.mac.toml の [bootstrap.packages] = brew:）で管理する。
-  # ここではブートストラップ前提の mise 本体とフォント（cask）のみ実 brew で導入する。
-  #   - git は Homebrew インストーラが入れる Xcode CLT の system git が担うため不要
-  #   - gnupg/pinentry-mac は post-apply フックが bootstrap を mise install より先に
-  #     走らせて mise brew で導入する（bottle は sha256 検証で gpg 不要）ため不要
   local PACKAGES=(
     font-hackgen
     font-hackgen-nerd

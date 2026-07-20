@@ -1,7 +1,5 @@
 name: test-linux
 
-# `/test-linux` コメント、または Actions UI からの workflow_dispatch で発火し、
-# docs/setup.md の初回インストール・フロー（Linux/WSL 側）を end-to-end で再現・検証する:
 #   chezmoi apply → post-apply hook（bootstrap(apt) → gh → mise install）→ zsh 起動
 # 方針:
 #   - run_once_*（scoop/powershell 前提・対話 read のインストーラ）は CI で実行不能なため
@@ -25,25 +23,18 @@ concurrency:
 
 jobs:
   test:
-    # workflow_dispatch は常に許可（Actions 実行権限で既にアクセス制御されているため）。
-    # issue_comment は PR への `/test-linux`（完全一致 or `/test-linux <args>`）コメントのみ、
-    # 権限のあるユーザーに限定する。
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.issue.pull_request &&
       (github.event.comment.body == '/test-linux' || startsWith(github.event.comment.body, '/test-linux ')) &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
-    # PR のコードを実行するため read-only 権限に絞る（full mise install の rate limit 回避に
-    # github.token を渡すが contents:read のみ。write はしない）。
     permissions:
       contents: read
     timeout-minutes: 45
     env:
       MISE_ENV: linux
       MISE_YES: "1"
-      # full mise install(aqua/github backend の GitHub API)の rate limit 回避に read-only トークンを渡す。
-      # hook 内の `gh auth token` はこの環境変数を返すため対話 `gh auth login` はスキップされる。
       GH_TOKEN: ${{ github.token }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
@@ -125,7 +116,6 @@ jobs:
           echo "OK: zsh started"
 
   comment:
-    # PR コードを一切実行しない信頼ジョブ。ここだけ write 権限でコメントする。
     needs: test
     if: ${{ always() && github.event_name == 'issue_comment' && needs.test.result != 'skipped' }}
     runs-on: ubuntu-latest

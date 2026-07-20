@@ -11,8 +11,7 @@ unlock = "auto"
 args = [
     "-c",
     """
-# install マーカー保存用の XDG state を用意（永続化）。作成できなければ partial setup を
-# 避けて即中断する。
+# install マーカー保存用の XDG state を用意（永続化）。
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
 mkdir -p "$state_dir" || exit 1
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
@@ -47,17 +46,13 @@ if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null
     exit 1
   fi
 fi
-# 2) mise install（gpg_verify は上の bootstrap で入れた gnupg を使う）
+# 2) mise install
 if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
-  # GITHUB_TOKEN 取得のため gh を最優先で導入する（github: バックエンドの rate limit 回避）。
   mise install --jobs=1 aqua:cli/cli || true
-  # 未ログインなら対話ログインを実行する（chezmoi apply が対話端末で走る前提。
-  # chezmoi は hook を TTY 接続のまま実行するので device/web フローが使える）。
-  # 既ログインなら何もしない（apply 毎の再プロンプトを避ける）。
+  # 未ログインなら対話ログインを実行する
   if ! gh auth token >/dev/null 2>&1; then
     gh auth login --scopes 'project' || true
   fi
-  # 非対話端末等でログインできず token が空なら degraded install を避けて中断する。
   github_token=$(gh auth token 2>/dev/null || true)
   if [ -z "$github_token" ]; then
     echo "error: gh 未ログインのため中断します。'gh auth login --scopes project' 後に再度 chezmoi apply してください"
