@@ -331,7 +331,6 @@ return {
         {
           title = "Git",
           ft = "chezmoi_git_panel",
-          pinned = true,
           size = { height = 0.5 },
         },
         "neo-tree",
