@@ -38,3 +38,15 @@ for shared_entry in projects settings.json agents skills plugins; do
 		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
 	fi
 done
+
+if [ ! -f ~/.crit.config.json ]; then
+	cat >~/.crit.config.json <<'EOF'
+{
+  "no_open": true,
+  "agent_cmd": "claude --dangerously-skip-permissions -p"
+}
+EOF
+	echo "✓ ~/.crit.config.json を生成しました"
+else
+	echo "ℹ️ ~/.crit.config.json は既に存在します"
+fi

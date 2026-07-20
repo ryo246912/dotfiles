@@ -35,3 +35,6 @@ mcp.json
 ## AI
 plan/**
 
+## crit
+.crit/
+

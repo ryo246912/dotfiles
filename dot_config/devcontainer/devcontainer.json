@@ -13,8 +13,18 @@
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
-    "HOST_USER": "${localEnv:USER}"
+    "HOST_USER": "${localEnv:USER}",
+    // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
+    "CRIT_HOST": "0.0.0.0",
+    "CRIT_PORT": "7842",
+    // crit: コンテナ内では更新チェック不要のため無効化
+    "CRIT_NO_UPDATE_CHECK": "1"
   },
+  // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
+  // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
+  // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
+  // ホストの loopback のみに束縛する。
+  "appPort": ["127.0.0.1:7842:7842"],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
