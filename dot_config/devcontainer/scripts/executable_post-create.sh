@@ -39,11 +39,6 @@ for shared_entry in projects settings.json agents skills plugins; do
 	fi
 done
 
-# crit (https://github.com/tomasz-tomczyk/crit) のグローバル設定を生成
-# AIエージェントは devcontainer 内で実行する前提のため、以下を設定する:
-# - no_open  : コンテナ内にブラウザがないため自動オープンを無効化（UIはホスト側で開く）
-# - agent_cmd: 「Send to agent」でコンテナ内の claude に権限スキップで処理を委譲
-# host/port は devcontainer.json の CRIT_HOST/CRIT_PORT で指定する
 if [ ! -f ~/.crit.config.json ]; then
 	cat >~/.crit.config.json <<'EOF'
 {

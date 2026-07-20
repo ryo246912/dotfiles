@@ -23,7 +23,7 @@ Review and revise code changes, plans, live pages (running dev servers, staging 
 
 The CLI auto-detects the review mode from its arguments. **Do not ask the user which mode to use.** Pass `$ARGUMENTS` through:
 
-```
+```bash
 crit $ARGUMENTS               # file, dir, URL, .html — CLI auto-detects mode
 crit --pr <num|url>            # GitHub PR (range mode)
 crit --range <base>..<head>    # commit range (range mode)
