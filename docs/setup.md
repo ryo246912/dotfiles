@@ -19,6 +19,14 @@
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
+- [ ] macOS defaults の適用
+  - Finder（隠しファイル・拡張子・パスバー表示）、キーボードのキーリピート速度、
+    トラックパッドのスクロール方向は `dot_config/mise/config.mac.toml` の
+    `[bootstrap.macos.*]` で管理
+  ```sh
+  mise bootstrap macos defaults apply
+  ```
+
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
@@ -41,11 +49,8 @@
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
 
 - [ ] システム設定
-  - [ ] トラックパッド
-    - [ ] 「システム設定」→「トラックパッド」→「スクロールとズーム」→「ナチュラルなスクロール」をOFFにする
-  - [ ] キーボード
-    - [ ] 「システム設定」→「キーボード」→「キーのリピート速度」を「速い」にする
-    - [ ] 「システム設定」→「キーボード」→「リピート入力認識までの時間」を「短い」にする
+  - トラックパッドのスクロール方向・キーボードのキーリピート速度は上記の
+    `mise bootstrap macos defaults apply` で適用済み
   - [ ] キーボードショートカット
     - [ ] 「通知センターの表示」
     - [ ] ファンクションキーとして使用するをONにする

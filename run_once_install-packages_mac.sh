@@ -27,27 +27,15 @@ install_package() {
 }
 
 install_cask_package() {
+  # 他の cask は dot_config/mise/config.mac.toml の [bootstrap.packages]（brew-cask:）で管理。
+  # ここに残る3つは brew-cask では扱えないため手動インストールを維持する:
+  #   clibor              -> custom install option（--language=ja）
+  #   google-japanese-ime -> Rosetta が前提
+  #   thock               -> 独自 tap + postflight（thock --install）
   local PACKAGES=(
-    alacritty
-    arc
-    battery
-    chatgpt
     clibor
-    dbeaver-community
-    docker
-    firefox
-    ghostty
-    google-chrome
     google-japanese-ime
-    karabiner-elements
-    keyboardcleantool
-    raycast
-    slack
     thock
-    thebrowsercompany-dia
-    visual-studio-code
-    wezterm@nightly
-    zoom
   )
 
   for package in "${PACKAGES[@]}"; do
@@ -70,29 +58,8 @@ install_cask_package() {
   done
 }
 
-install_private_cask_package() {
-  local PACKAGES=(
-    bitwarden
-    claude
-    google-drive
-    obsidian
-    tailscale-app
-    termius
-    thunderbird
-  )
-
-  for package in "${PACKAGES[@]}"; do
-    if ! brew list --cask "$package" &>/dev/null; then
-        brew install --cask "$package"
-    else
-      echo "$package is already installed"
-    fi
-  done
-}
-
 install_work_package() {
   local PACKAGES=(
-    inkscape
     jira-cli
   )
 
@@ -111,40 +78,15 @@ install_work_package() {
 }
 
 setup_settings() {
-  # メニューバーのアイコンの間隔を狭くする
+  # 隠しファイル表示・拡張子表示・パスバー・KeyRepeat 等は
+  # dot_config/mise/config.mac.toml の [bootstrap.macos.*] へ移行済み
+  # （`mise bootstrap macos defaults apply` で適用）。
+  # メニューバーのアイコン間隔は `defaults -currentHost` 前提で mise 未対応のためここに残す。
   if ! defaults -currentHost read -globalDomain NSStatusItemSpacing &>/dev/null || [ "$(defaults -currentHost read -globalDomain NSStatusItemSpacing)" -ne 6 ]; then
     defaults -currentHost write -globalDomain NSStatusItemSpacing -int 6
   fi
   if ! defaults -currentHost read -globalDomain NSStatusItemSelectionPadding &>/dev/null || [ "$(defaults -currentHost read -globalDomain NSStatusItemSelectionPadding)" -ne 6 ]; then
     defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 6
-  fi
-  # Finder: 隠しファイルを表示する
-  if [ "${$(defaults read com.apple.finder AppleShowAllFiles 2>/dev/null):-0}" -ne 1 ]; then
-    defaults write com.apple.finder AppleShowAllFiles 1
-  fi
-  # Finder: 拡張子を表示する
-  if [ "${$(defaults read com.apple.finder AppleShowAllExtensions 2>/dev/null):-0}" -ne 1 ]; then
-    defaults write com.apple.finder AppleShowAllExtensions 1
-  fi
-  # Finder: パスのパンくずリストを表示する
-  if [ "${$(defaults read com.apple.finder ShowPathbar 2>/dev/null):-0}" -ne 1 ]; then
-    defaults write com.apple.finder ShowPathbar 1
-  fi
-  # Finder: Finderを終了するメニューを表示する
-  if [ "${$(defaults read com.apple.Finder QuitMenuItem 2>/dev/null):-0}" -ne 1 ]; then
-    defaults write com.apple.Finder QuitMenuItem 1
-  fi
-  # キーボード: キーのリピート速度(小さい数値ほど速い)
-  if [ "${$(defaults read -g KeyRepeat 2>/dev/null):-0}" -ne 2 ]; then
-    defaults write -g KeyRepeat 2
-  fi
-  # キーボード: リピート入力認識までの時間(15ms/step、15 = 225ms)
-  if [ "${$(defaults read -g InitialKeyRepeat 2>/dev/null):-0}" -ne 15 ]; then
-    defaults write -g InitialKeyRepeat 15
-  fi
-  # トラックパッド: スクロール方向を順方向にする(NOTE:なぜかOFFが自然な方向になる)
-  if [ "${$(defaults read -g com.apple.swipescrolldirection 2>/dev/null):-0}" -ne 0 ]; then
-    defaults write -g com.apple.swipescrolldirection 0
   fi
 
   # ログイン時に開くアプリケーションを追加

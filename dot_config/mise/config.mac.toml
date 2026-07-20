@@ -20,3 +20,58 @@
 "brew:tig"          = "latest"
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
+
+# casks（clibor/google-japanese-ime/thock は custom install option・Rosetta 前提・
+# 独自 tap の postflight を要し brew-cask では扱えないため run_once_install-packages_mac.sh
+# の手動インストールに残す）
+"brew-cask:alacritty"                = "latest"
+"brew-cask:arc"                      = "latest"
+"brew-cask:battery"                  = "latest"
+"brew-cask:bitwarden"                = "latest"
+"brew-cask:chatgpt"                  = "latest"
+"brew-cask:claude"                   = "latest"
+"brew-cask:codexbar"                 = "latest"
+"brew-cask:cursor"                   = "latest"
+"brew-cask:dbeaver-community"        = "latest"
+"brew-cask:docker-desktop"           = "latest"
+"brew-cask:firefox"                  = "latest"
+"brew-cask:font-hackgen"             = "latest"
+"brew-cask:font-hackgen-nerd"        = "latest"
+"brew-cask:ghostty"                  = "latest"
+"brew-cask:google-chrome"            = "latest"
+"brew-cask:google-drive"             = "latest"
+"brew-cask:inkscape"                 = "latest"
+"brew-cask:insomnia"                 = "latest"
+"brew-cask:karabiner-elements"       = "latest"
+"brew-cask:keyboardcleantool"        = "latest"
+"brew-cask:keycastr"                 = "latest"
+"brew-cask:memory-cleaner"           = "latest"
+"brew-cask:obsidian"                 = "latest"
+"brew-cask:opgginc/tap/opencode-bar" = "latest"
+"brew-cask:postman"                  = "latest"
+"brew-cask:raycast"                  = "latest"
+"brew-cask:sequel-ace"               = "latest"
+"brew-cask:slack"                    = "latest"
+"brew-cask:tailscale-app"            = "latest"
+"brew-cask:termius"                  = "latest"
+"brew-cask:thebrowsercompany-dia"    = "latest"
+"brew-cask:thunderbird"              = "latest"
+"brew-cask:visual-studio-code"       = "latest"
+"brew-cask:wezterm@nightly"          = "latest"
+"brew-cask:zoom"                     = "latest"
+
+# macOS defaults（`mise bootstrap macos defaults apply` で適用。menu bar spacing は
+# `defaults -currentHost` 前提で mise 未対応のため run_once_install-packages_mac.sh に残す。
+# ログイン項目・ショートカットのキー割り当ては plist が dict/array のため defaults 経由では
+# 表現できず、同様に run_once 側に残す）
+[bootstrap.macos.finder]
+show_all_files = true
+show_pathbar   = true
+
+[bootstrap.macos.keyboard]
+key_repeat         = 2
+initial_key_repeat = 15
+
+[bootstrap.macos.defaults]
+"com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
+"NSGlobalDomain"    = { "com.apple.swipescrolldirection" = false }
