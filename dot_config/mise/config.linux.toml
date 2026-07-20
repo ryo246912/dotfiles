@@ -1,0 +1,7 @@
+[bootstrap.packages]
+"apt:colordiff" = "latest"
+"apt:ffmpeg"    = "latest"
+"apt:goaccess"  = "latest"
+"apt:tig"       = "latest"
+"apt:tree"      = "latest"
+"apt:ugrep"     = "latest"

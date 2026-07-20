@@ -1,0 +1,67 @@
+pager = "delta"
+[edit]
+args    = ["--wait", "--new-window"]
+command = "code"
+[scriptEnv]
+APPDATA = "/mnt/c/Users/r-ksk/AppData"
+USERDIR = "/mnt/c/Users/r-ksk"
+[bitwarden]
+unlock = "auto"
+[hooks.apply.post]
+args = [
+    "-c",
+    """
+# install マーカー保存用の XDG state を用意（永続化）。
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
+mkdir -p "$state_dir" || exit 1
+mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
+# post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
+# mise shims を PATH に通す。mac は brew の mise を優先する（~/.local/bin に旧 official-install
+# が残っていると min_version 不足で bootstrap が失敗し得るため /opt/homebrew/bin を先頭に）。
+if [ "$(uname)" = "Darwin" ]; then
+  export PATH="/opt/homebrew/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+else
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
+# 1) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
+#    `mise bootstrap packages status --missing`（未同期なら exit 1）で実際の導入状態を判定するので、
+#    パッケージ削除等のドリフトも検知して収束し、手動導入後も回復できる（マーカー不整合が起きない）。
+#    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
+#    用意できる。mac(brew) は sudo 不要。WSL(apt) は sudo が要るため、sudo プロンプトに応答できる
+#    対話端末(TTY)があるときだけ apply する。非対話 WSL で未同期なら required preflight として中断する。
+if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=linux; fi
+if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null 2>&1; then
+  if [ "$(uname)" = "Darwin" ] || [ -t 0 ]; then
+    if ! MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
+      # 失敗＝gnupg/tig 等が未導入。gpg_verify=true の mise install が検証で失敗するため
+      # degraded 実行を避けて中断する（WSL は sudo のパスワード入力が要る点に注意）。
+      echo "error: 'mise bootstrap packages apply' に失敗しました。パッケージ未導入のため中断します"
+      exit 1
+    fi
+  else
+    # 非対話端末（TTY 無し）で sudo プロンプトに応答できず、かつ未同期（未導入分あり）。
+    # 未導入のまま進むと tig/colordiff 等が欠けたまま完了するため required preflight として中断する。
+    # 手動 bootstrap（sudo 可能な端末）で導入後は status が揃い、次回はここを通過できる。
+    echo "error: WSL の apt bootstrap が未適用です。対話端末で 'MISE_ENV=linux mise bootstrap packages apply' を実行してから再度 chezmoi apply してください（tig/colordiff 等）"
+    exit 1
+  fi
+fi
+# 2) mise install
+if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
+  mise install --jobs=1 aqua:cli/cli || true
+  # 未ログインなら対話ログインを実行する
+  if ! gh auth token >/dev/null 2>&1; then
+    gh auth login --scopes 'project' || true
+  fi
+  github_token=$(gh auth token 2>/dev/null || true)
+  if [ -z "$github_token" ]; then
+    echo "error: gh 未ログインのため中断します。'gh auth login --scopes project' 後に再度 chezmoi apply してください"
+    exit 1
+  fi
+  echo "Running mise install..."
+  GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
+  echo "$mise_hash" > "$state_dir/mise-config-hash"
+fi
+""",
+]
+command = "bash"

@@ -9,6 +9,11 @@ snippet         = "{ _a=($(mise ls --current | fzf -m | awk '{print $1}')); [[ $
 trigger-pattern = "^mii$"
 
 [[snippets]]
+name            = "mise bootstrap packages apply"
+snippet         = "MISE_ENV=$([ \"$(uname)\" = Darwin ] && echo mac || echo linux) mise bootstrap packages apply"
+trigger-pattern = "^mba$"
+
+[[snippets]]
 name    = "mise ls --current"
 snippet = "mise ls --current"
 trigger = "mls"

@@ -1,5 +1,15 @@
 name: test-mac
 
+#   （プリインスト brew を空にして実機の link 衝突を再現）
+#   → chezmoi apply → post-apply hook（bootstrap(brew) → gh → mise install）→ silicon 起動 → zsh 起動
+# 方針:
+#   - run_once_*（GUI cask/defaults/osascript/対話 read のインストーラ）は CI で実行不能なため
+#     `chezmoi apply --exclude=scripts` で除外し、setup.md が自動化している mise フロー本体
+#     （post-apply hook）だけを検証する。run_once_setup.sh 相当（~/.zshenv symlink）は手動で補う。
+#   - bitwarden を要する .czrc は CI で解決できないため .chezmoiignore に一時追記して除外する。
+#   - full mise install は aqua/github backend（GitHub API）を含むため read-only の github.token を
+#     注入する。/test-mac は OWNER/MEMBER/COLLABORATOR のみ発火。write 権限は PR コードを実行しない
+#     comment ジョブに限定する。public repo なので macOS ランナーは無料・分数無制限。
 on:
   issue_comment:
     types:
@@ -22,11 +32,16 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: read
-    timeout-minutes: 40
+    timeout-minutes: 90
+    env:
+      MISE_ENV: mac
+      MISE_YES: "1"
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || '' }}
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
           persist-credentials: false
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
@@ -34,12 +49,108 @@ jobs:
           version: "2026.7.0"
           install: false
 
-      - name: mise sanity check
-        run: mise --version
+      - name: Validate configs（apply 前の高速フィードバック）
+        run: |
+          set -euo pipefail
+          for f in \
+            dot_config/mise/config.toml \
+            dot_config/mise/config.mac.toml \
+            dot_config/mise/config.linux.toml \
+            .chezmoi.toml.tmpl; do
+            python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
+          done
+          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > "$RUNNER_TEMP/hook.sh"
+          bash -n "$RUNNER_TEMP/hook.sh" && echo "OK: hook bash syntax"
+
+      - name: Clear preinstalled Homebrew formulae（mise brew の link 衝突回避）
+        run: |
+          set -euo pipefail
+          # ランナーのプリインスト formula が ca-certificates 等を所有していると mise brew が
+          # link できない（実機で踏んだ cannot link と同じ）。formula を全削除して /opt/homebrew を空にする。
+          brew list --formula -1 | while read -r f; do
+            brew uninstall --force --ignore-dependencies "$f" || echo "warn: failed to uninstall $f"
+          done
+          brew autoremove || true
+          # 孤立した etc 配下（旧 formula の設定）が残ると再導入時の link 衝突を招くため掃除する。
+          rm -rf /opt/homebrew/etc/openssl@3 /opt/homebrew/etc/ca-certificates || true
+          # clean 前提の検証: formula が残ると mise の link 経路を検証できないため fail させる。
+          remaining=$(brew list --formula -1 | wc -l | tr -d ' ')
+          if [ "$remaining" != "0" ]; then
+            echo "error: cleanup 後も ${remaining} 個の formula が残存（clean 前提を満たせず）:"
+            brew list --formula
+            exit 1
+          fi
+          echo "OK: Homebrew prefix cleared"
+
+      - name: chezmoi apply（setup.md フロー / run_once 除外・post-apply hook 実行）
+        # repo root の dev 用 mise.toml を読み込まないよう cwd を runner.temp にし、
+        # PR チェックアウトを --source で指定して apply する。
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # chezmoi を pinned(aqua, checksum 検証)で用意する（curl|sh を避ける）。
+          mise install "aqua:twpayne/chezmoi@2.71.0"
+          # bitwarden を要する .czrc は CI で解決できないため apply 対象から一時除外する（ephemeral checkout）。
+          printf '\n.config/.czrc\n' >> "$GITHUB_WORKSPACE/.chezmoiignore"
+          # .chezmoi.toml.tmpl から config を生成（source が既存のため clone しない）。
+          mise exec "aqua:twpayne/chezmoi@2.71.0" -- chezmoi init --source="$GITHUB_WORKSPACE"
+          # apply 本体。macOS の hook は sudo 不要で brew bootstrap を直接実行するため PTY は不要。
+          # --exclude=scripts で run_once（GUI cask/defaults 等）を除外する。
+          mise exec "aqua:twpayne/chezmoi@2.71.0" -- chezmoi apply --source="$GITHUB_WORKSPACE" --exclude=scripts --verbose
+
+      - name: assert bootstrap.packages(brew) と silicon 起動確認
+        run: |
+          set -euo pipefail
+          rc=0
+          for b in tig colordiff silicon gpg; do
+            if [ -x "/opt/homebrew/bin/$b" ]; then echo "OK: $b"; else echo "MISSING: $b"; rc=1; fi
+          done
+          # silicon は harfbuzz 等を要するため、実際に起動できるかまで確認（実機の痛点）。
+          /opt/homebrew/bin/silicon --version || rc=1
+          exit "$rc"
+
+      - name: assert mise install（代表ツール）
+        # repo root の dev 用 mise.toml で解決がぶれないよう neutral cwd で確認する（global config のみ）。
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          rc=0
+          # hook が `mise install` を完走していれば [tools] の代表ツールが解決できる。
+          for t in node go python bun cargo rg jq fzf gh chezmoi lazygit delta; do
+            if mise which "$t" >/dev/null 2>&1; then echo "OK: $t"; else echo "MISSING: $t"; rc=1; fi
+          done
+          exit "$rc"
+
+      - name: assert zsh 起動
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
+          ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
+          # macOS 標準に `timeout` は無い（GNU coreutils 由来）。bootstrap で入る coreutils の
+          # `gtimeout` を優先する。どちらも無ければ 300 秒制限を張れず、hang が 90 分ジョブを食い潰す
+          # ため無制限では流さず明示的に fail させる（配列で持ち SC2086 も回避する）。
+          if command -v gtimeout >/dev/null 2>&1; then
+            timeout_cmd=(gtimeout 300)
+          elif command -v timeout >/dev/null 2>&1; then
+            timeout_cmd=(timeout 300)
+          else
+            echo "error: gtimeout/timeout が見つかりません（coreutils 未導入）。制限付きで zsh 起動確認を実行できません"
+            exit 1
+          fi
+          # zshenv(brew shellenv/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
+          if ! out=$("${timeout_cmd[@]}" zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
+            echo "$out"
+            echo "error: zsh 起動に失敗しました"
+            exit 1
+          fi
+          echo "$out"
+          echo "$out" | grep -q ZSH_STARTED_OK || { echo "error: zsh 起動マーカーが出力されませんでした"; exit 1; }
+          echo "OK: zsh started"
 
   comment:
     needs: test
-    if: ${{ always() && github.event_name == 'issue_comment' }}
+    if: ${{ always() && github.event_name == 'issue_comment' && needs.test.result != 'skipped' }}
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -55,5 +166,6 @@ jobs:
           set -euo pipefail
           run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
-          body=$(printf '`/test-mac`（[log](%s)）: %s %s' "$run_url" "$(icon "$RESULT")" "$RESULT")
+          body=$(printf '`/test-mac`（brew clear→chezmoi apply→hook(brew bootstrap+mise install)→silicon→zsh 起動、[log](%s)）: %s %s' \
+            "$run_url" "$(icon "$RESULT")" "$RESULT")
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
