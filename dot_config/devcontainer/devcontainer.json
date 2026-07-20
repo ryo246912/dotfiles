@@ -21,16 +21,10 @@
     "CRIT_NO_UPDATE_CHECK": "1"
   },
   // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
-  // devcontainer CLI (multi-worktree の `devcontainer up`) は forwardPorts を解釈しないため、
-  // 実際に publish する appPort (= docker run -p) を使う。ホストの loopback のみに束縛する。
+  // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
+  // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
+  // ホストの loopback のみに束縛する。
   "appPort": ["127.0.0.1:7842:7842"],
-  "forwardPorts": [7842],
-  "portsAttributes": {
-    "7842": {
-      "label": "crit",
-      "onAutoForward": "silent"
-    }
-  },
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [

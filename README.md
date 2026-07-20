@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [crit](docs/crit.md)
