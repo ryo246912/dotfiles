@@ -38,5 +38,6 @@ if [ -n "${CRIT_HOST_PORT:-}" ]; then
 		2>/dev/null || true
 	echo "✓ crit の host port (${CRIT_HOST_PORT}) を ${CRIT_HOST_PORT_FILE} に記録し、ホストへ通知しました"
 else
+	rm -f "$CRIT_HOST_PORT_FILE"
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
 fi
