@@ -66,3 +66,16 @@ Claude Code では `/crit`、Codex では `$crit` で呼び出せます。
 > `crit` skill は `allowed-tools` に `Bash(crit:*)` を宣言しているため、`blockUnlistedCommands` 環境でも
 > skill 実行中は `crit` コマンドが許可されます。`user-invocable` / `argument-hint` は rulesync が
 > claudecode skill へ変換する際に落とされますが、動作には影響しません。
+
+## 再レビュー待ち通知
+
+1 ラウンド分のレビューコメントにエージェントが対応し終え、次の `crit` 呼び出しで再レビュー待ち
+（次の "Finish Review" 待ち）に入る直前、devcontainer からホストへ SSH 経由で通知を送ります。
+
+- 通知コマンド: `ssh -F ~/.config/ssh/config ... mac-host "macos-notify-cli --title 'crit' --message '再レビュー待ちです' ..."`
+- 使う SSH 接続は `dot_config/devcontainer/scripts/post-start.sh` が生成する `mac-host`
+  （`multi-worktree` のホスト通知と同じ仕組み・同じ鍵 `~/.ssh/id_docker_devcontainer` を利用）
+- 手順は `crit` skill（`dot_config/rulesync/exact_dot_rulesync/skills/crit/SKILL.md` の Step 5）に
+  記載。`allowed-tools` に `Bash(ssh:*)` を追加してあるため `blockUnlistedCommands` 環境でも実行できる
+- devcontainer 外（ホスト上で直接 `crit` を実行した場合など）では `mac-host` に SSH できず失敗するが、
+  レビューループを止めないようエラーは無視する
