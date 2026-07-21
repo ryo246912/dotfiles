@@ -1,0 +1,4 @@
+# Exclude historical docs and completions from auto-loading
+.claude/completions/
+.claude/sessions/
+docs/archive/
