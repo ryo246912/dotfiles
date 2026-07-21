@@ -23,8 +23,11 @@
   // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
   // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
   // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
-  // ホストの loopback のみに束縛する。
-  "appPort": ["127.0.0.1:7842:7842"],
+  // ホストの loopback のみに束縛する。host port は固定せず Docker に自動採番させる
+  // (devcontainer を複数同時起動してもポート衝突が起きないようにするため)。
+  // 実際に割り当てられた host port は post-start.sh が ~/.crit-host-port に書き出し、
+  // ホストへ通知する（docs/crit.md 参照）。
+  "appPort": ["127.0.0.1::7842"],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [

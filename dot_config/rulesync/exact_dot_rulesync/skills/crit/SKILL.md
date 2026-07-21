@@ -49,7 +49,10 @@ crit               # git mode
 
 If a crit server is already running from earlier in this conversation, `crit` automatically connects to it. Starting from scratch, it spawns the daemon, opens the browser, and blocks until the user clicks "Finish Review".
 
-`crit` prints the review URL on startup (e.g. `Started crit daemon at http://localhost:<port>`). Relay it verbatim:
+`crit` prints the review URL on startup (e.g. `Started crit daemon at http://localhost:<port>`), but inside the devcontainer that port is the **container-internal** port — the host's Docker publishes it on a different, dynamically-assigned port (see `dot_config/devcontainer/devcontainer.json`'s `appPort`). Before relaying the URL, Read `~/.crit-host-port` (written by `post-start.sh`):
+
+- If it exists, use **that** port number instead of the one crit printed.
+- If it doesn't exist (not running in the devcontainer, or on the host directly), relay crit's printed URL as-is.
 
 > **"Crit is open at http://localhost:<port>. Leave inline comments, then click Finish Review."**
 
