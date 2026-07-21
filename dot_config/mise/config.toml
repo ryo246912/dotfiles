@@ -83,7 +83,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:ryo246912/gh-reassign-reviewer"                     = { version = "0.0.7", bin = "gh-reassign-reviewer" }
 "github:ryo246912/github-markdown-toc.go"                   = "2.0.1"
 "github:ryo246912/lazychezmoi"                              = "0.0.1"
-"github:seachicken/gh-poi"                                  = { version = "0.18.1", bin = "gh-poi" }
+"github:seachicken/gh-poi"                                  = { version = "0.18.2", bin = "gh-poi" }
 "github:shazow/wifitui"                                     = "0.13.0"
 "github:skanehira/ghost"                                    = "0.3.1"
 "github:trasta298/keifu"                                    = "0.3.0"
