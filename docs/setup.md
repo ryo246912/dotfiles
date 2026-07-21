@@ -24,7 +24,7 @@
     トラックパッドのスクロール方向は `dot_config/mise/config.mac.toml` の
     `[bootstrap.macos.*]` で管理
   ```sh
-  mise bootstrap macos defaults apply
+  MISE_ENV=mac mise bootstrap macos defaults apply
   ```
 
 - [ ] karabiner-elements

@@ -39,17 +39,20 @@ install_cask_package() {
   )
 
   for package in "${PACKAGES[@]}"; do
-    if ! brew list --cask "$package" &>/dev/null; then
-      if [[ "$package" == "clibor" ]]; then
-        HOMEBREW_CASK_OPTS="--language=ja" brew install --cask "$package"
-      elif [[ "$package" == "google-japanese-ime" ]]; then
-        sudo softwareupdate --install-rosetta
-        brew install --cask "$package"
-      elif [[ "$package" == "thock" ]]; then
+    if [[ "$package" == "thock" ]]; then
+      # thock は tap 経由の formula としてインストールされるため --cask では判定できない
+      if ! brew list "$package" &>/dev/null; then
         brew tap kamillobinski/thock
         brew install "$package"
         thock --install
       else
+        echo "$package is already installed"
+      fi
+    elif ! brew list --cask "$package" &>/dev/null; then
+      if [[ "$package" == "clibor" ]]; then
+        HOMEBREW_CASK_OPTS="--language=ja" brew install --cask "$package"
+      elif [[ "$package" == "google-japanese-ime" ]]; then
+        sudo softwareupdate --install-rosetta
         brew install --cask "$package"
       fi
     else
