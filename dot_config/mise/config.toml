@@ -132,4 +132,7 @@ bun = true
 uvx = true
 
 [hooks]
-enter = "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && lefthook install -f || true"
+enter = """
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+lefthook install
+"""
