@@ -879,6 +879,26 @@ cmd_create() {
     fi
 }
 
+# 指定ホスト・ポートから開始して、空いているポートを探す（crit の appPort 衝突回避用）
+find_free_host_port() {
+    local host_ip="$1"
+    local start_port="$2"
+    local max_port=$((start_port + 1000))
+
+    local port="$start_port"
+    while [[ $port -le $max_port ]]; do
+        # サブシェル内で開くので fd 3 は親シェルに残らない
+        if ! (exec 3<>"/dev/tcp/${host_ip}/${port}") 2>/dev/null; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+    done
+
+    log_error "空きポートが見つかりませんでした (${start_port}-${max_port})"
+    return 1
+}
+
 # devcontainer.json の生成
 generate_devcontainer() {
     local task_name="$1"
@@ -950,24 +970,45 @@ generate_devcontainer() {
 
     worktree_mounts+="]"
 
-    # jq を使ってベーステンプレートを読み込み、マウント設定を追加
-    # JSONCのコメントを除去してからjqでパース
-    if command -v jq &>/dev/null; then
-        # // で始まる行コメントを除去（文字列内の // は保護）
-        grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||' | \
-        jq --argjson new_mounts "$worktree_mounts" \
-           --arg workspace_folder "/workspaces/${worktree_name}" \
-           --arg task_name "$task_name" \
-           '.mounts += $new_mounts |
-            .workspaceFolder = $workspace_folder |
-            .name = "Multi-worktree: " + $task_name' \
-           > "$devcontainer_file"
-    else
+    if ! command -v jq &>/dev/null; then
         log_error "jq コマンドが見つかりません。インストールしてください: mise install jq"
         return 1
     fi
 
-    log_success "devcontainer.json を生成しました: $devcontainer_file"
+    # JSONCのコメントを除去してからjqでパース
+    local base_template_json
+    base_template_json=$(grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||')
+
+    # ベーステンプレートの appPort (例: "127.0.0.1:7842:7842") から host_ip と探索開始ポートを取得し、
+    # タスクごとに空いている port を割り当てる（複数 devcontainer 同時起動時のポート衝突を回避）。
+    # crit が出力する URL とホストからの接続先を一致させるため、host port と container port は
+    # 同じ値にそろえる（CRIT_PORT もこのポートに合わせて上書きする）。
+    local base_app_port
+    base_app_port=$(echo "$base_template_json" | jq -r '.appPort[0] // empty')
+    local host_ip="127.0.0.1"
+    local start_port="7842"
+    if [[ -n "$base_app_port" ]]; then
+        host_ip="${base_app_port%%:*}"
+        start_port="${base_app_port##*:}"
+    fi
+
+    local port
+    port=$(find_free_host_port "$host_ip" "$start_port") || return 1
+
+    echo "$base_template_json" | \
+    jq --argjson new_mounts "$worktree_mounts" \
+       --arg workspace_folder "/workspaces/${worktree_name}" \
+       --arg task_name "$task_name" \
+       --arg app_port "${host_ip}:${port}:${port}" \
+       --arg crit_port "$port" \
+       '.mounts += $new_mounts |
+        .workspaceFolder = $workspace_folder |
+        .name = "Multi-worktree: " + $task_name |
+        .appPort = [$app_port] |
+        .remoteEnv.CRIT_PORT = $crit_port' \
+       > "$devcontainer_file"
+
+    log_success "devcontainer.json を生成しました: $devcontainer_file (crit port: ${port})"
 }
 
 write_claude_settings_file() {

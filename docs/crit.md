@@ -7,13 +7,17 @@
 
 ## 構成
 
-| 項目         | 設定                                                    | 場所                                                      |
-| ------------ | ------------------------------------------------------- | --------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入             | `dot_config/devcontainer/mise.toml`                       |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`                  | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`) |
-| ポート公開   | `appPort: 127.0.0.1:7842:7842` でホストへ publish       | `dot_config/devcontainer/devcontainer.json`               |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                | `dot_config/devcontainer/devcontainer.json`               |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`） | `dot_config/devcontainer/scripts/post-create.sh`          |
+| 項目         | 設定                                                        | 場所                                                      |
+| ------------ | ------------------------------------------------------------ | --------------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                 | `dot_config/devcontainer/mise.toml`                       |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（デフォルト値）      | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`) |
+| ポート公開   | `appPort: 127.0.0.1:7842:7842` でホストへ publish（デフォルト値） | `dot_config/devcontainer/devcontainer.json`               |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                    | `dot_config/devcontainer/devcontainer.json`               |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）     | `dot_config/devcontainer/scripts/post-create.sh`          |
+
+`dot_config/devcontainer/devcontainer.json` はベーステンプレートで、`7842` は初期値。
+`multi-worktree create` / `recreate` でタスク用の devcontainer.json を生成する際は、
+このテンプレートをそのまま使わず、後述のとおり **タスクごとに空いているポートを動的に割り当てる**。
 
 `~/.crit.config.json` の内容:
 
@@ -36,17 +40,40 @@ crit            # git の変更を自動検出してレビュー
 crit plan.md    # 特定ファイルをレビュー
 ```
 
-起動すると `http://0.0.0.0:7842` で待ち受けます。`appPort` によりホストの `127.0.0.1:7842` へ
-publish されるため、ホストのブラウザから `http://localhost:7842` を開いてレビュー・コメントできます。
+起動すると `CRIT_PORT`（コンテナ内）で待ち受けます。`appPort` によりホストの同じポート番号へ
+publish されるため、ホストのブラウザから `http://localhost:<port>` を開いてレビュー・コメントできます。
 コメントを送るとエージェントへフィードバックされ、修正ループが回ります。
 
 > [!IMPORTANT]
 > ポート公開には **`appPort` を使う**。`forwardPorts` は VS Code 拡張専用で、`multi-worktree` の
 > `devcontainer up`（devcontainer CLI）では解釈されず publish されない（これが当初ホストから
 > 開けなかった原因）。
-> ホストポート `7842` を固定しているため、**devcontainer を同時に 2 つ以上起動するとポート衝突で
-> 2 つ目の `devcontainer up` が失敗**する。crit は 1 度に 1 レビューのため通常は単一コンテナ運用で問題ない。
-> 並列でタスクを回す場合は、対象タスクのコンテナだけを起動する。
+
+## タスクごとのポート割り当て（衝突回避）
+
+ホストポートを `7842` に固定していると、devcontainer を同時に2つ以上起動したときに
+`Bind for 127.0.0.1:7842 failed: port is already allocated` でぶつかる。これを避けるため、
+`multi-worktree create` / `recreate`（`generate_devcontainer` 関数）はタスクごとに
+**空いているポートを動的に探して割り当てる**。
+
+- `dot_config/devcontainer/devcontainer.json` の `appPort` (`127.0.0.1:7842:7842`) を
+  ベースに、`7842` から順に `/dev/tcp/<host>/<port>` で疎通確認しながら空きポートを探索する
+  （`find_free_host_port` 関数、`dot_local/bin/executable_multi-worktree`）
+- 見つかった port を **host 側・container 側の両方**、および `remoteEnv.CRIT_PORT` に反映する
+  （host port と container port を揃えることで、crit が出力する URL がそのままホストから開ける
+  ようにしている）
+- 生成時に `devcontainer.json を生成しました: ... (crit port: <port>)` とログ表示されるので、
+  タスクごとの実際のポートはそこ、または生成された `.devcontainer/devcontainer.json` の
+  `appPort` / `remoteEnv.CRIT_PORT` で確認できる
+- crit 単体を手動起動する場合（ベーステンプレートをそのまま使う単一コンテナ運用など）は、
+  従来どおり `7842` 固定のまま
+
+既存タスクが port 衝突で起動できない場合は、次のコマンドで devcontainer.json を再生成すれば
+新しい空きポートが割り当てられる。
+
+```bash
+multi-worktree recreate <task-name>
+```
 
 ## `/crit` skill（rulesync で配布）
 
