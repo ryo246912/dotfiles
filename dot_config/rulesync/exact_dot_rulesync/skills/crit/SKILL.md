@@ -9,6 +9,7 @@ claudecode:
   allowed-tools:
     - "Bash(crit:*)"
     - "Bash(command ls:*)"
+    - "Bash(ssh:*)"
     - Read
     - Edit
     - Glob
@@ -48,7 +49,10 @@ crit               # git mode
 
 If a crit server is already running from earlier in this conversation, `crit` automatically connects to it. Starting from scratch, it spawns the daemon, opens the browser, and blocks until the user clicks "Finish Review".
 
-`crit` prints the review URL on startup (e.g. `Started crit daemon at http://localhost:<port>`). Relay it verbatim:
+`crit` prints the review URL on startup (e.g. `Started crit daemon at http://localhost:<port>`), but inside the devcontainer that port is the **container-internal** port — the host's Docker publishes it on a different, dynamically-assigned port (see `dot_config/devcontainer/devcontainer.json`'s `appPort`). Before relaying the URL, Read `~/.crit-host-port` (written by `post-start.sh`):
+
+- If it exists, use **that** port number instead of the one crit printed.
+- If it doesn't exist (not running in the devcontainer, or on the host directly), relay crit's printed URL as-is.
 
 > **"Crit is open at http://localhost:<port>. Leave inline comments, then click Finish Review."**
 
@@ -95,6 +99,14 @@ echo '[
 **CRITICAL — you MUST run this step. Do NOT skip it. Do NOT proceed without it.**
 
 The finish prompt on stdout includes the command to run again — use it to start a new round.
+
+Before relaunching `crit`, notify the host that a re-review is waiting (crit runs inside a devcontainer, so the reviewer is on the host machine and won't otherwise see that the diff is ready again):
+
+```bash
+timeout 5 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=2 mac-host "macos-notify-cli --title 'crit' --message '再レビュー待ちです' --sound Glass" || true
+```
+
+This only works inside the devcontainer (it relies on the `mac-host` SSH entry from `~/.config/ssh/config`, set up by `post-start.sh`). If it fails — e.g. you're not running in the devcontainer, or the host isn't reachable — ignore the error and continue; it must never block the review loop. The outer `timeout` and `|| true` guard against a hung SSH session or remote command blocking the loop; `ConnectTimeout` alone only bounds the initial connection.
 
 On subsequent calls, `crit` automatically signals round-complete first, then blocks until the next "Finish Review" click.
 
