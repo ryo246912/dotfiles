@@ -103,10 +103,10 @@ The finish prompt on stdout includes the command to run again — use it to star
 Before relaunching `crit`, notify the host that a re-review is waiting (crit runs inside a devcontainer, so the reviewer is on the host machine and won't otherwise see that the diff is ready again):
 
 ```bash
-ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host "macos-notify-cli --title 'crit' --message '再レビュー待ちです' --sound Glass"
+timeout 5 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=2 mac-host "macos-notify-cli --title 'crit' --message '再レビュー待ちです' --sound Glass" || true
 ```
 
-This only works inside the devcontainer (it relies on the `mac-host` SSH entry from `~/.config/ssh/config`, set up by `post-start.sh`). If it fails — e.g. you're not running in the devcontainer, or the host isn't reachable — ignore the error and continue; it must never block the review loop.
+This only works inside the devcontainer (it relies on the `mac-host` SSH entry from `~/.config/ssh/config`, set up by `post-start.sh`). If it fails — e.g. you're not running in the devcontainer, or the host isn't reachable — ignore the error and continue; it must never block the review loop. The outer `timeout` and `|| true` guard against a hung SSH session or remote command blocking the loop; `ConnectTimeout` alone only bounds the initial connection.
 
 On subsequent calls, `crit` automatically signals round-complete first, then blocks until the next "Finish Review" click.
 

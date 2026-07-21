@@ -2,7 +2,7 @@
 description = "Generate all rulesync outputs after chezmoi apply"
 # rulesync generate はカレントディレクトリの rulesync.jsonc / .rulesync を見るため、
 # どこから `mise run` しても解決できるよう明示的に cd する。
-# - 1つ目: このリポジトリ自身の CLAUDE.md / AGENTS.md を再生成（chezmoi source-path で解決）
+# - 1つ目: このリポジトリ自身の CLAUDE.md を再生成（chezmoi source-path で解決）
 # - 2つ目: グローバル配布用（~/.claude, ~/.codex, ~/.copilot 等）を再生成
 run = [
     "cd \"$(chezmoi source-path)\" && rulesync generate",
