@@ -20,4 +20,4 @@ includes = ["tasks/*.toml"]
 "npm:oxlint"                     = "1.74.0"
 
 [hooks]
-enter = "lefthook install -f"
+enter = "git rev-parse --is-inside-work-tree >/dev/null 2>&1 && lefthook install -f || true"
