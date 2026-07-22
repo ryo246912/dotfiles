@@ -75,7 +75,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:dyoshikawa/rulesync"                                = "8.21.0"
 "github:github/copilot-cli"                                 = "1.0.63"
 "github:gpanders/ijq"                                       = "1.1.2"
-"github:jr-k/d4s"                                           = "0.49.101"
+"github:jr-k/d4s"                                           = "0.49.102"
 "github:max-sixty/worktrunk"                                = "0.68.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
 "github:rivolink/leaf"                                      = { version = "1.26.1", bin = "leaf" }
