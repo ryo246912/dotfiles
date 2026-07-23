@@ -68,21 +68,31 @@ fi
 #    apply 直後のこの位置で実行する。毎回の apply で無駄に generate しないよう、
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-#    hook は chezmoi を再帰呼び出しせず済むよう source ディレクトリは CHEZMOI_SOURCE_DIR を使う。
-source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+#    source ディレクトリは generate タスク（cd "$(chezmoi source-path)"）と同じ解決方法に
+#    そろえる。CHEZMOI_SOURCE_DIR と source-path が食い違う（例: apply --source）と、
+#    別チェックアウトのハッシュを保存して生成物が stale になり再試行も抑止されるため。
+source_dir=$(chezmoi source-path 2>/dev/null || echo "${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}")
+hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {
-    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null | sort | while IFS= read -r f; do
-      echo "$f"
-      cat "$f"
+    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
+    for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
+      [ -f "$f" ] && echo "$f"
     done
-    cat "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc" 2>/dev/null
-  } | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1)
+  } | sort | while IFS= read -r f; do
+    # 「パス + 内容ハッシュ」を1行にすることでファイル境界を曖昧にせず（連結衝突を防ぎ）、
+    # 追加/削除/リネーム/内容変更のいずれも検知する。
+    echo "$f $(hash_cmd < "$f")"
+  done | hash_cmd
 )
 if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
   echo "Running mise run rulesync:generate..."
   if mise run rulesync:generate; then
-    echo "$rulesync_hash" > "$state_dir/rulesync-hash"
+    # マーカー書き込み失敗（state_dir が書込み不可/容量不足）も検知して警告する。
+    # 未検知だと毎回の apply で無駄に再生成され続けるため。
+    if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then
+      echo "warning: rulesync-hash マーカーの書き込みに失敗しました（次回 apply で再生成されます）"
+    fi
   else
     # 再生成は必須ではないため apply は中断しない。マーカー未更新で次回 apply 時に再試行される。
     echo "warning: 'mise run rulesync:generate' に失敗しました。次回 chezmoi apply 時に再試行します"
