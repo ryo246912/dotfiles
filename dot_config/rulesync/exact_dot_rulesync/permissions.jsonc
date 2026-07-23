@@ -1,0 +1,23 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
+  // 共有 permission ブロック。permissions を targets に含むツール（現状は claudecode のみ）へ
+  // カテゴリごとにマージされる。codexcli / copilotcli の permissions を有効にすれば同じ内容が波及する。
+  //
+  // 方針: グローバル配布（全プロジェクトに効く）なので、ワークフローを壊さない
+  // 「シークレット/認証情報の読み取り拒否」に限定する。deny は allow より優先されるため、
+  // ここに挙げたパターンは常に読めなくなる点に注意（`.env.example` 等は対象外にしてある）。
+  // bash / edit は各ツールの既定に委ねる。必要になれば下に追記する。
+  "permission": {
+    "read": {
+      ".env": "deny",
+      ".env.local": "deny",
+      "**/.env": "deny",
+      "**/.env.local": "deny",
+      "**/.env.*.local": "deny",
+      "**/*.pem": "deny",
+      "**/id_rsa": "deny",
+      "**/id_ed25519": "deny",
+      "**/.aws/credentials": "deny"
+    }
+  }
+}
