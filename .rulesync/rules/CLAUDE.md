@@ -209,7 +209,7 @@ This repository treats personal development environment as code:
 ## Useful References
 
 - **docs/setup.md** - Detailed step-by-step setup instructions
-- **docs/rulesync.md** - How this repo's own `CLAUDE.md` and the global AI agent rules/skills (`~/.claude`, `~/.codex`, `~/.copilot`) are generated with rulesync
+- **docs/rulesync.md** - How this repo's own `CLAUDE.md` and the global AI agent rules/skills (`~/.claude`, `~/.codex`, `~/.agents`, `~/.copilot`) are generated with rulesync
 - **docs/crit.md** - crit-based code review workflow inside the devcontainer
 - **README.md** - Repository overview and quick start
 - **mise.toml** - Complete list of managed tools and available tasks

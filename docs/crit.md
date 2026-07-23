@@ -80,10 +80,12 @@ crit@crit プラグインが提供する 2 つの skill を、プラグイン導
 
 | skill      | 役割                                                               | 生成先                                                    |
 | ---------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
-| `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`, `~/.codex/skills/crit/`         |
-| `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/`, `~/.codex/skills/crit-cli/` |
+| `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`, `~/.agents/skills/crit/`         |
+| `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/`, `~/.agents/skills/crit-cli/` |
 
-生成された skill は devcontainer の `~/.claude` マウント経由でコンテナ内のエージェントからも利用できます。
+生成された skill は devcontainer の `~/.claude` / `~/.agents` マウント経由でコンテナ内のエージェントからも利用できます
+（rulesync v13+ では Codex skill の生成先が `~/.codex/skills` から `~/.agents/skills` へ移動したため、
+`devcontainer.json` で `~/.agents` もマウントしています）。
 Claude Code では `/crit`、Codex では `$crit` で呼び出せます。
 
 > [!NOTE]

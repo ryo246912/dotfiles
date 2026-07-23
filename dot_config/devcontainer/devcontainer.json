@@ -54,6 +54,8 @@
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
+    // rulesync v13+ で Codex skill の生成先が ~/.codex/skills から ~/.agents/skills へ移動したためマウント
+    "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
     "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
     "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
     "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
