@@ -50,7 +50,11 @@ mise run agentsview:setup:db-roles
 
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
-> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）は、`export` せずに `mise run` した場合、TTY があればその場で（入力を伏せて）1 つずつ尋ねられる。事前に `export` しておけばプロンプトは出ない。TTY が無い環境（CI 等）では従来どおり `Set <VAR>` でエラー停止する。この対話入力は `agentsview:setup:migrate` / `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。
+> このタスクは `flyctl proxy` を一時起動し、`psql`（libpq client）で接続する。admin password は `PGPASSWORD`（環境変数）で渡して process 引数には出さず、`psql -v ON_ERROR_STOP=1` で途中の DDL/GRANT 失敗も検出する。実行には `psql` が必要（無い場合は `mise use -g postgres` 等で導入する）。
+
+> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）は、`export` せずに `mise run` した場合、その場で（入力を伏せて）1 つずつ尋ねられる。事前に `export` しておけばプロンプトは出ない。値が無いまま（非 TTY の CI 等）は `Set <VAR>` でエラー停止する。この対話入力は `agentsview:setup:migrate` / `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。task 側で `shell = "bash -c"` と `interactive = true` を指定して端末に直結している。
+
+> 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
 実行される SQL の内容:
 
@@ -188,7 +192,8 @@ export AGENTSVIEW_PG_MACHINE="mac-work"
 
 ```sh
 # shell 初期化後に secret shell 側の値が読み込まれているか
-printenv AGENTSVIEW_PROXY_PG_URL
+# （URL には password が含まれるため、値そのものは表示せず有無だけ確認する）
+[ -n "${AGENTSVIEW_PROXY_PG_URL:-}" ] && echo "AGENTSVIEW_PROXY_PG_URL is set" || echo "AGENTSVIEW_PROXY_PG_URL is unset"
 
 # proxy 起動込みで URL の host/db/schema に接続できるか
 mise run agentsview:pg:status
