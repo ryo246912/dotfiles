@@ -273,6 +273,25 @@ mise run agentsview:serve
 
 恒久運用は、各 PC の secret shell に `AGENTSVIEW_PROXY_PG_URL` と `AGENTSVIEW_PG_MACHINE` を持たせ、必要なときに `mise run agentsview:pg:push` を実行する形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
 
+### push 時間について（初回が遅い理由）
+
+初回の全件 push は数時間かかることがある（例: 1353 セッション / 42894 メッセージで約 3h35m）。これは **帯域ではなく往復レイテンシ律速** で、この構成では想定内の挙動。
+
+- push は `flyctl proxy 15432:5432 -a psgl`（user-mode WireGuard）経由で `nrt` リージョンの PostgreSQL に接続するため、全クエリがトンネル越しに東京まで往復する。
+- 出力の `Connected to PostgreSQL in 2.89s` や、DDL 数本だけの `PostgreSQL schema ready in 21.122s` が、1 往復あたりのレイテンシが高いことを示すカナリア。行ごとの round-trip 回数 × RTT がそのまま積み上がる。
+- **重要: これは一度きりのコスト。** `pg push` は差分同期なので、2 回目以降は新規セッションぶんだけを push し、通常は数秒〜数十秒で終わる。
+
+初回のバルクロードを速くしたい場合の選択肢（任意）:
+
+```sh
+# 実 RTT を確認（自宅から遠いと WireGuard の RTT がそのまま効く）
+flyctl ping psgl
+
+# リージョン内から実行して RTT を減らす、あるいは初回だけ pg_dump / COPY で
+# バルク投入する方法もある。差分運用に入れば体感問題にはならないため、
+# 通常は初回の遅さは許容してよい。
+```
+
 ## データ管理
 
 `pg push` は一方向同期のため、リモート DB のデータは増加し続ける。
