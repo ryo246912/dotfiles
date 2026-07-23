@@ -62,15 +62,9 @@ if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
   echo "$mise_hash" > "$state_dir/mise-config-hash"
 fi
-# 3) rulesync generate: AI エージェント設定（このリポジトリの CLAUDE.md と
-#    ~/.claude, ~/.codex, ~/.copilot 等）を再生成する。グローバル側は
-#    ~/.config/rulesync/.rulesync/ が chezmoi apply 済みであることが前提のため、
-#    apply 直後のこの位置で実行する。毎回の apply で無駄に generate しないよう、
+# 3) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-#    source ディレクトリは generate タスク（cd "$(chezmoi source-path)"）と同じ解決方法に
-#    そろえる。CHEZMOI_SOURCE_DIR と source-path が食い違う（例: apply --source）と、
-#    別チェックアウトのハッシュを保存して生成物が stale になり再試行も抑止されるため。
 source_dir=$(chezmoi source-path 2>/dev/null || echo "${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}")
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
@@ -94,7 +88,6 @@ if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
       echo "warning: rulesync-hash マーカーの書き込みに失敗しました（次回 apply で再生成されます）"
     fi
   else
-    # 再生成は必須ではないため apply は中断しない。マーカー未更新で次回 apply 時に再試行される。
     echo "warning: 'mise run rulesync:generate' に失敗しました。次回 chezmoi apply 時に再試行します"
   fi
 fi
