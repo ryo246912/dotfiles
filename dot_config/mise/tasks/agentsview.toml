@@ -1,0 +1,379 @@
+["agentsview:setup:db-roles"]
+description = "Create/update AgentsView PostgreSQL roles for owner, local push, and read-only viewer"
+# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
+shell = "bash -c"
+interactive = true
+run = '''
+set -eu
+
+# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
+# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
+# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
+need() {
+  if [[ -z ${!1-} ]]; then
+    read -rsp "$1: " "$1"; echo
+  fi
+  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
+  export "$1"
+}
+
+need AGENTSVIEW_ADMIN_PG_PASSWORD
+need AGENTSVIEW_OWNER_PASSWORD
+need AGENTSVIEW_PUSH_PASSWORD
+need AGENTSVIEW_READ_PASSWORD
+
+pg_app="${AGENTSVIEW_PG_APP:-psgl}"
+pg_user="${AGENTSVIEW_ADMIN_PG_USER:-postgres}"
+pg_db="${AGENTSVIEW_ADMIN_PG_DATABASE:-ryo_shellhistory}"
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+proxy_log="$(mktemp)"
+
+sql_escape() {
+  printf "%s" "$1" | sed "s/'/''/g"
+}
+
+owner_pass=$(sql_escape "$AGENTSVIEW_OWNER_PASSWORD")
+push_pass=$(sql_escape "$AGENTSVIEW_PUSH_PASSWORD")
+read_pass=$(sql_escape "$AGENTSVIEW_READ_PASSWORD")
+
+# private network の PostgreSQL へ flyctl proxy 経由で接続する（他 task と同じ経路）。
+cleanup() {
+  if [ -n "${proxy_pid:-}" ]; then
+    kill "$proxy_pid" 2>/dev/null || true
+    wait "$proxy_pid" 2>/dev/null || true
+  fi
+  rm -f "$proxy_log"
+}
+
+if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
+  echo "127.0.0.1:${proxy_port} is already in use" >&2
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$pg_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+i=0
+while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
+  if ! kill -0 "$proxy_pid" 2>/dev/null; then
+    cat "$proxy_log" >&2
+    exit 1
+  fi
+  i=$((i + 1))
+  if [ "$i" -ge 40 ]; then
+    cat "$proxy_log" >&2
+    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+    exit 1
+  fi
+  sleep 0.25
+done
+
+# admin password は PGPASSWORD(env) 経由で渡し、argv（process table）に出さない。
+# ON_ERROR_STOP=1 で途中の DDL/GRANT 失敗も検出し、非ゼロで停止する。
+PGPASSWORD="$AGENTSVIEW_ADMIN_PG_PASSWORD" psql \
+  "postgres://${pg_user}@127.0.0.1:${proxy_port}/${pg_db}?sslmode=disable" \
+  -v ON_ERROR_STOP=1 -q <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_owner') THEN
+    CREATE ROLE agentsview_owner LOGIN PASSWORD '$owner_pass';
+  ELSE
+    ALTER ROLE agentsview_owner LOGIN PASSWORD '$owner_pass';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_push_mac') THEN
+    CREATE ROLE agentsview_push_mac LOGIN PASSWORD '$push_pass';
+  ELSE
+    ALTER ROLE agentsview_push_mac LOGIN PASSWORD '$push_pass';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_read') THEN
+    CREATE ROLE agentsview_read LOGIN PASSWORD '$read_pass';
+  ELSE
+    ALTER ROLE agentsview_read LOGIN PASSWORD '$read_pass';
+  END IF;
+END
+\$\$;
+
+-- 再実行時に昇格属性が残らないよう、role 属性を毎回意図した状態へ正規化する。
+ALTER ROLE agentsview_owner    NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE agentsview_push_mac NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+ALTER ROLE agentsview_read     NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+
+CREATE SCHEMA IF NOT EXISTS agentsview AUTHORIZATION agentsview_owner;
+ALTER SCHEMA agentsview OWNER TO agentsview_owner;
+
+GRANT USAGE ON SCHEMA agentsview TO agentsview_read;
+GRANT USAGE ON SCHEMA agentsview TO agentsview_push_mac;
+
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push_mac;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push_mac;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentsview_push_mac;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push_mac;
+SQL
+'''
+
+["agentsview:setup:migrate"]
+description = "Start flyctl proxy, run initial AgentsView schema migration with the owner PostgreSQL role, then stop proxy"
+# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
+shell = "bash -c"
+interactive = true
+run = '''
+set -eu
+
+# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
+# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
+# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
+need() {
+  if [[ -z ${!1-} ]]; then
+    read -rsp "$1: " "$1"; echo
+  fi
+  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
+  export "$1"
+}
+
+need AGENTSVIEW_OWNER_PROXY_PG_URL
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
+proxy_log="$(mktemp)"
+
+cleanup() {
+  if [ -n "${proxy_pid:-}" ]; then
+    kill "$proxy_pid" 2>/dev/null || true
+    wait "$proxy_pid" 2>/dev/null || true
+  fi
+  rm -f "$proxy_log"
+}
+
+if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
+  echo "127.0.0.1:${proxy_port} is already in use" >&2
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+i=0
+while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
+  if ! kill -0 "$proxy_pid" 2>/dev/null; then
+    cat "$proxy_log" >&2
+    exit 1
+  fi
+  i=$((i + 1))
+  if [ "$i" -ge 40 ]; then
+    cat "$proxy_log" >&2
+    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+    exit 1
+  fi
+  sleep 0.25
+done
+
+export AGENTSVIEW_PG_URL="$AGENTSVIEW_OWNER_PROXY_PG_URL"
+export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+
+if [ -n "${AGENTSVIEW_MIGRATION_PROJECTS:-}" ]; then
+  agentsview pg push --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+else
+  agentsview pg push
+fi
+'''
+
+["agentsview:fly:tokens"]
+description = "Generate AgentsView auth_token and cursor_secret values for secret manager storage"
+run = '''
+set -eu
+
+printf 'AGENTSVIEW_AUTH_TOKEN=%s\n' "$(openssl rand -base64 32)"
+printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
+'''
+
+["agentsview:fly:secrets"]
+description = "Set Fly secrets for the public AgentsView viewer with a read-only PostgreSQL role"
+# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
+shell = "bash -c"
+interactive = true
+run = '''
+set -eu
+
+# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
+# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
+# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
+need() {
+  if [[ -z ${!1-} ]]; then
+    read -rsp "$1: " "$1"; echo
+  fi
+  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
+  export "$1"
+}
+
+need AGENTSVIEW_READ_PG_URL
+need AGENTSVIEW_AUTH_TOKEN
+need AGENTSVIEW_CURSOR_SECRET
+
+CONFIG_B64=$(
+  printf 'public_url = "https://ryo-agentsview.fly.dev"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" \
+  | base64 | tr -d '\n'
+)
+
+# secret 値を argv（process table）に出さないよう、stdin 経由の import を使う。
+# import は各行を最初の '=' で KEY/VALUE に分割するため、値に含まれる '='
+# （URL の query や base64 の padding）はそのまま値として保持される。
+printf 'AGENTSVIEW_PG_URL=%s\nAGENTSVIEW_CONFIG_TOML=%s\n' \
+  "$AGENTSVIEW_READ_PG_URL" "$CONFIG_B64" \
+  | flyctl secrets import -a ryo-agentsview
+'''
+
+["agentsview:deploy"]
+description = "Deploy the AgentsView public viewer to Fly.io"
+run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml"
+
+["agentsview:pg:status"]
+description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
+# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
+shell = "bash -c"
+interactive = true
+run = '''
+set -eu
+
+# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
+# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
+# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
+need() {
+  if [[ -z ${!1-} ]]; then
+    read -rsp "$1: " "$1"; echo
+  fi
+  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
+  export "$1"
+}
+
+need AGENTSVIEW_PROXY_PG_URL
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
+proxy_log="$(mktemp)"
+
+cleanup() {
+  if [ -n "${proxy_pid:-}" ]; then
+    kill "$proxy_pid" 2>/dev/null || true
+    wait "$proxy_pid" 2>/dev/null || true
+  fi
+  rm -f "$proxy_log"
+}
+
+if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
+  echo "127.0.0.1:${proxy_port} is already in use" >&2
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+i=0
+while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
+  if ! kill -0 "$proxy_pid" 2>/dev/null; then
+    cat "$proxy_log" >&2
+    exit 1
+  fi
+  i=$((i + 1))
+  if [ "$i" -ge 40 ]; then
+    cat "$proxy_log" >&2
+    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+    exit 1
+  fi
+  sleep 0.25
+done
+
+export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
+export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+
+agentsview pg status
+'''
+
+["agentsview:pg:push"]
+description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
+# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
+shell = "bash -c"
+interactive = true
+run = '''
+set -eu
+
+# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
+# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
+# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
+need() {
+  if [[ -z ${!1-} ]]; then
+    read -rsp "$1: " "$1"; echo
+  fi
+  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
+  export "$1"
+}
+
+need AGENTSVIEW_PROXY_PG_URL
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
+proxy_log="$(mktemp)"
+
+cleanup() {
+  if [ -n "${proxy_pid:-}" ]; then
+    kill "$proxy_pid" 2>/dev/null || true
+    wait "$proxy_pid" 2>/dev/null || true
+  fi
+  rm -f "$proxy_log"
+}
+
+if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
+  echo "127.0.0.1:${proxy_port} is already in use" >&2
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+i=0
+while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
+  if ! kill -0 "$proxy_pid" 2>/dev/null; then
+    cat "$proxy_log" >&2
+    exit 1
+  fi
+  i=$((i + 1))
+  if [ "$i" -ge 40 ]; then
+    cat "$proxy_log" >&2
+    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+    exit 1
+  fi
+  sleep 0.25
+done
+
+export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
+export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+
+agentsview pg push "$@"
+'''
+
+["agentsview:serve"]
+description = "Start local AgentsView server"
+run         = "agentsview serve"
