@@ -8,18 +8,44 @@
           "matcher": "clear",
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude session-start 2>/dev/null || true"
         }
       ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude session-end 2>/dev/null || true"
         }
       ],
       "preCompact": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        }
+      ],
+      "beforeSubmitPrompt": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude user-prompt-submit 2>/dev/null || true"
+        }
+      ],
+      "notification": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude notification 2>/dev/null || true"
+        }
+      ],
+      "stop": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude stop 2>/dev/null || true"
+        }
+      ],
+      "subagentStop": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude subagent-stop 2>/dev/null || true"
         }
       ],
       "postToolUse": [
@@ -38,6 +64,44 @@
         {
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+        },
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude activity-log 2>/dev/null || true"
+        }
+      ],
+      "StopFailure": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude stop-failure 2>/dev/null || true"
+        }
+      ],
+      "PermissionDenied": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude permission-denied 2>/dev/null || true"
+        }
+      ],
+      "CwdChanged": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude cwd-changed 2>/dev/null || true"
+        }
+      ],
+      "SubagentStart": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude subagent-start 2>/dev/null || true"
+        }
+      ],
+      "TaskCreated": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude task-created 2>/dev/null || true"
+        }
+      ],
+      "TaskCompleted": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude task-completed 2>/dev/null || true"
+        }
+      ],
+      "TeammateIdle": [
+        {
+          "command": "bash \"$HOME/.config/tmux/plugins/tmux-agent-sidebar/hook.sh\" claude teammate-idle 2>/dev/null || true"
         }
       ]
     }
