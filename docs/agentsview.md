@@ -134,7 +134,7 @@ echo "Bearer token: $AUTH"  # 保管しておく
 > `cursor_secret` は起動時の自動生成・config 書き戻しを避けるため、初回から明示する。
 > `agentsview_read` role で schema migration が必要になった場合、`pg serve` は migration を skip して compatibility check に落ちる。AgentsView upgrade 後に migration が必要なときだけ、手元から `agentsview_owner` role で migration / push を実行し、完了後に app は read-only role のまま運用する。
 
-> **PG URL の確認方法:** `flyctl ssh console -a ryo-shellhistory -C 'printenv | grep -E "ATUIN|DATABASE|DB|POSTGRES"'` で Atuin が使っている DB 接続先を確認する。
+> **PG 接続先の確認方法:** password を端末履歴・記録・画面共有へ露出させないため、`printenv` で接続文字列そのものを表示しない。private network の host は `psgl.flycast:5432`、database 名は `flyctl postgres db list -a psgl`、role 名は本手順で作成する `agentsview_*` を使う。password は secret manager / secret shell 側にのみ保持し、URL を echo しない。
 > `psgl.flycast` の Fly private network 経由では `sslmode=disable` + `[pg] allow_insecure = true` を使う。外部公開 host で TLS 接続する場合は `sslmode=require` + `allow_insecure = false` に戻す。
 
 ### 4. デプロイ
@@ -331,7 +331,7 @@ AUTH="<existing-or-new-auth-token>"
 CURSOR="<existing-cursor-secret>"
 
 CONFIG_B64=$(
-  printf 'require_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AUTH" "$CURSOR" \
+  printf 'public_url = "https://ryo-agentsview.fly.dev"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AUTH" "$CURSOR" \
   | base64 | tr -d '\n'
 )
 
