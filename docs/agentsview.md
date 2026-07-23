@@ -50,6 +50,8 @@ mise run agentsview:setup:db-roles
 
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
+> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）は、`export` せずに `mise run` した場合、TTY があればその場で（入力を伏せて）1 つずつ尋ねられる。事前に `export` しておけばプロンプトは出ない。TTY が無い環境（CI 等）では従来どおり `Set <VAR>` でエラー停止する。この対話入力は `agentsview:setup:migrate` / `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。
+
 実行される SQL の内容:
 
 ```sql

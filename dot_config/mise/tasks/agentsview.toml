@@ -3,10 +3,28 @@ description = "Create/update AgentsView PostgreSQL roles for owner, local push, 
 run = '''
 set -eu
 
-: "${AGENTSVIEW_ADMIN_PG_PASSWORD:?Set AGENTSVIEW_ADMIN_PG_PASSWORD}"
-: "${AGENTSVIEW_OWNER_PASSWORD:?Set AGENTSVIEW_OWNER_PASSWORD}"
-: "${AGENTSVIEW_PUSH_PASSWORD:?Set AGENTSVIEW_PUSH_PASSWORD}"
-: "${AGENTSVIEW_READ_PASSWORD:?Set AGENTSVIEW_READ_PASSWORD}"
+# 必須の環境変数が未設定なら、TTY があればその場で（入力を伏せて）尋ねる。
+# TTY が無い（CI 等）場合は従来どおり "Set <VAR>" でエラー停止する。
+need() {
+  eval "_v=\${$1:-}"
+  [ -n "$_v" ] && return 0
+  # test -r は権限ビットしか見ず、制御端末が無くても真になる。exec は dash で
+  # リダイレクト失敗が致命的になるため、subshell で実際に open できるか判定する。
+  if (: </dev/tty) 2>/dev/null; then
+    printf '%s: ' "$1" >/dev/tty
+    stty -echo </dev/tty 2>/dev/null || true
+    read -r _v </dev/tty || true
+    stty echo </dev/tty 2>/dev/null || true
+    printf '\n' >/dev/tty
+  fi
+  [ -n "$_v" ] || { echo "Set $1" >&2; exit 1; }
+  eval "export $1=\$_v"
+}
+
+need AGENTSVIEW_ADMIN_PG_PASSWORD
+need AGENTSVIEW_OWNER_PASSWORD
+need AGENTSVIEW_PUSH_PASSWORD
+need AGENTSVIEW_READ_PASSWORD
 
 pg_app="${AGENTSVIEW_PG_APP:-psgl}"
 pg_user="${AGENTSVIEW_ADMIN_PG_USER:-postgres}"
@@ -67,7 +85,25 @@ description = "Start flyctl proxy, run initial AgentsView schema migration with 
 run = '''
 set -eu
 
-: "${AGENTSVIEW_OWNER_PROXY_PG_URL:?Set AGENTSVIEW_OWNER_PROXY_PG_URL}"
+# 必須の環境変数が未設定なら、TTY があればその場で（入力を伏せて）尋ねる。
+# TTY が無い（CI 等）場合は従来どおり "Set <VAR>" でエラー停止する。
+need() {
+  eval "_v=\${$1:-}"
+  [ -n "$_v" ] && return 0
+  # test -r は権限ビットしか見ず、制御端末が無くても真になる。exec は dash で
+  # リダイレクト失敗が致命的になるため、subshell で実際に open できるか判定する。
+  if (: </dev/tty) 2>/dev/null; then
+    printf '%s: ' "$1" >/dev/tty
+    stty -echo </dev/tty 2>/dev/null || true
+    read -r _v </dev/tty || true
+    stty echo </dev/tty 2>/dev/null || true
+    printf '\n' >/dev/tty
+  fi
+  [ -n "$_v" ] || { echo "Set $1" >&2; exit 1; }
+  eval "export $1=\$_v"
+}
+
+need AGENTSVIEW_OWNER_PROXY_PG_URL
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
@@ -132,9 +168,27 @@ description = "Set Fly secrets for the public AgentsView viewer with a read-only
 run = '''
 set -eu
 
-: "${AGENTSVIEW_READ_PG_URL:?Set AGENTSVIEW_READ_PG_URL}"
-: "${AGENTSVIEW_AUTH_TOKEN:?Set AGENTSVIEW_AUTH_TOKEN}"
-: "${AGENTSVIEW_CURSOR_SECRET:?Set AGENTSVIEW_CURSOR_SECRET}"
+# 必須の環境変数が未設定なら、TTY があればその場で（入力を伏せて）尋ねる。
+# TTY が無い（CI 等）場合は従来どおり "Set <VAR>" でエラー停止する。
+need() {
+  eval "_v=\${$1:-}"
+  [ -n "$_v" ] && return 0
+  # test -r は権限ビットしか見ず、制御端末が無くても真になる。exec は dash で
+  # リダイレクト失敗が致命的になるため、subshell で実際に open できるか判定する。
+  if (: </dev/tty) 2>/dev/null; then
+    printf '%s: ' "$1" >/dev/tty
+    stty -echo </dev/tty 2>/dev/null || true
+    read -r _v </dev/tty || true
+    stty echo </dev/tty 2>/dev/null || true
+    printf '\n' >/dev/tty
+  fi
+  [ -n "$_v" ] || { echo "Set $1" >&2; exit 1; }
+  eval "export $1=\$_v"
+}
+
+need AGENTSVIEW_READ_PG_URL
+need AGENTSVIEW_AUTH_TOKEN
+need AGENTSVIEW_CURSOR_SECRET
 
 CONFIG_B64=$(
   printf 'public_url = "https://ryo-agentsview.fly.dev"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" \
@@ -155,7 +209,25 @@ description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then 
 run = '''
 set -eu
 
-: "${AGENTSVIEW_PROXY_PG_URL:?Set AGENTSVIEW_PROXY_PG_URL}"
+# 必須の環境変数が未設定なら、TTY があればその場で（入力を伏せて）尋ねる。
+# TTY が無い（CI 等）場合は従来どおり "Set <VAR>" でエラー停止する。
+need() {
+  eval "_v=\${$1:-}"
+  [ -n "$_v" ] && return 0
+  # test -r は権限ビットしか見ず、制御端末が無くても真になる。exec は dash で
+  # リダイレクト失敗が致命的になるため、subshell で実際に open できるか判定する。
+  if (: </dev/tty) 2>/dev/null; then
+    printf '%s: ' "$1" >/dev/tty
+    stty -echo </dev/tty 2>/dev/null || true
+    read -r _v </dev/tty || true
+    stty echo </dev/tty 2>/dev/null || true
+    printf '\n' >/dev/tty
+  fi
+  [ -n "$_v" ] || { echo "Set $1" >&2; exit 1; }
+  eval "export $1=\$_v"
+}
+
+need AGENTSVIEW_PROXY_PG_URL
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
@@ -207,7 +279,25 @@ description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL,
 run = '''
 set -eu
 
-: "${AGENTSVIEW_PROXY_PG_URL:?Set AGENTSVIEW_PROXY_PG_URL}"
+# 必須の環境変数が未設定なら、TTY があればその場で（入力を伏せて）尋ねる。
+# TTY が無い（CI 等）場合は従来どおり "Set <VAR>" でエラー停止する。
+need() {
+  eval "_v=\${$1:-}"
+  [ -n "$_v" ] && return 0
+  # test -r は権限ビットしか見ず、制御端末が無くても真になる。exec は dash で
+  # リダイレクト失敗が致命的になるため、subshell で実際に open できるか判定する。
+  if (: </dev/tty) 2>/dev/null; then
+    printf '%s: ' "$1" >/dev/tty
+    stty -echo </dev/tty 2>/dev/null || true
+    read -r _v </dev/tty || true
+    stty echo </dev/tty 2>/dev/null || true
+    printf '\n' >/dev/tty
+  fi
+  [ -n "$_v" ] || { echo "Set $1" >&2; exit 1; }
+  eval "export $1=\$_v"
+}
+
+need AGENTSVIEW_PROXY_PG_URL
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
