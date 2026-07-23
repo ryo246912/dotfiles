@@ -66,6 +66,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "core:node"                                                 = "22.19.0"
 "core:python"                                               = "3.14.6"
 "core:rust"                                                 = "1.94.1"
+"github:Morantron/tmux-fingers"                             = { version = "2.7.1", bin = "tmux-fingers" }
 "github:Ryooooooga/zabrze"                                  = "0.7.3"
 "github:affromero/gitpane"                                  = "0.5.3"
 "github:akavel/up"                                          = "0.4"
