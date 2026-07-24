@@ -1,0 +1,80 @@
+# Fly のボリューム(fly Postgres の 1GB など)使用率を定期チェックし、
+# 閾値(既定 85%)を超えたら Slack に通知するワークフロー。
+#
+# 必要な設定 (environment: production 配下):
+#   - secret FLY_API_TOKEN     : `flyctl auth token` で取得 (deploy-atuin と共用)
+#   - secret SLACK_WEBHOOK_URL  : Slack Incoming Webhook の URL
+#   - variable FLY_ORG (任意)   : 組織 slug。未設定なら "personal"
+#
+# メモ: fly_volume_used_pct はボリューム容量に対する使用率(0-100)。
+#       org 内の全ボリュームを対象にするため、対象の Postgres が複数でも
+#       まとめて監視できる。特定アプリに絞る場合は下の query を
+#       `... (fly_volume_used_pct{app="<app>"}) ...` のように編集する。
+name: fly-volume-alert
+on:
+  schedule:
+    # 毎日 00:00 UTC (= 09:00 JST) にボリューム使用率をチェック
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: "Alert threshold in percent (default 85)"
+        required: false
+        default: "85"
+
+permissions: {}
+
+concurrency:
+  group: fly-volume-alert-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check Fly volume usage
+    runs-on: ubuntu-slim
+    environment: production
+    permissions: {}
+    timeout-minutes: 5
+    steps:
+      - name: Query Fly metrics and notify Slack
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # 個人アカウントの org slug は "personal"。組織を使う場合は
+          # リポジトリ変数 FLY_ORG に設定する。
+          FLY_ORG: ${{ vars.FLY_ORG || 'personal' }}
+          THRESHOLD: ${{ github.event.inputs.threshold || '85' }}
+        run: |
+          set -euo pipefail
+
+          # 全ボリュームの使用率(0-100)のうち閾値以上のものだけを取得する。
+          # fly Postgres のボリューム(1GB)は fly_volume_used_pct でパーセント表示される。
+          query="max by (app, region, id) (fly_volume_used_pct) >= ${THRESHOLD}"
+
+          response="$(curl -sS -G "https://api.fly.io/prometheus/${FLY_ORG}/api/v1/query" \
+            -H "Authorization: Bearer ${FLY_API_TOKEN}" \
+            --data-urlencode "query=${query}")"
+
+          status="$(printf '%s' "${response}" | jq -r '.status')"
+          if [ "${status}" != "success" ]; then
+            echo "::error::Prometheus query failed: ${response}"
+            exit 1
+          fi
+
+          count="$(printf '%s' "${response}" | jq '.data.result | length')"
+          if [ "${count}" -eq 0 ]; then
+            echo "All Fly volumes are below ${THRESHOLD}% usage."
+            exit 0
+          fi
+
+          # 閾値超過ボリュームを1行ずつ整形 (例: • *app* (nrt, vol_xxx): 87.3%)
+          lines="$(printf '%s' "${response}" | jq -r '
+            .data.result[]
+            | "• *\(.metric.app)* (\(.metric.region), \(.metric.id)): \(((.value[1] | tonumber) * 10 | round) / 10)%"')"
+
+          text="$(printf ':warning: *Fly volume usage alert* (>= %s%%)\n%s\n\n確認: flyctl volumes list -a <app>' "${THRESHOLD}" "${lines}")"
+          payload="$(jq -n --arg text "${text}" '{text: $text}')"
+
+          echo "${text}"
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data "${payload}" "${SLACK_WEBHOOK_URL}" > /dev/null
