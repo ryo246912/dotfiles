@@ -3,6 +3,7 @@
   "hooks": {},
   "claudecode": {
     "hooks": {
+      // セッション境界（開始/終了/コンパクト前）で最新の AI ルールを再読み込みさせる
       "sessionStart": [
         {
           "matcher": "clear",
@@ -22,20 +23,28 @@
           "timeout": 30
         }
       ],
+      // 編集直後に対象ファイルへ自動整形・チェックをかける。
+      // いずれも `jq` で編集ファイルのパスを NUL 区切りで取り出し、`xargs -0 -r`
+      // （空なら実行しない）で各ツールへ渡す。拡張子で対象を絞っているものは
+      // `jq ... select(endswith(...))` で非対象を空文字にして弾く。
       "postToolUse": [
         {
+          // 全ファイル: 行末の空白（半角スペース/タブ）を除去
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
         },
         {
+          // .ts/.tsx: tsgo で型チェック（出力は破棄、型エラーのみ報告）
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))) + \"\\u0000\"' | xargs -0 -r -- tsgo --noEmit --"
         },
         {
+          // .toml: taplo のフォーマット差分をチェック（未整形なら失敗）
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".toml\"))) + \"\\u0000\"' | xargs -0 -r -- taplo format --check --"
         },
         {
+          // .sh: shfmt で整形して書き戻す
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
         }

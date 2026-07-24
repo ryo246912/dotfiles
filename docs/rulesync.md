@@ -11,7 +11,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 | スコープ         | 設定ファイル                          | ソース (`.rulesync` 相当)                       | 生成先                                                                | 用途                                                       |
 | ---------------- | -------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
 | プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下）      | `.rulesync/`（リポジトリ直下）                    | リポジトリ直下（`outputRoots: ["."]`）                                  | **このリポジトリ自身**の `CLAUDE.md` を生成する自己参照的な設定 |
-| グローバル       | `dot_config/rulesync/rulesync.jsonc`   | `dot_config/rulesync/exact_dot_rulesync/`         | `~/.claude/`, `~/.codex/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks / MCP 設定の配布 |
+| グローバル       | `dot_config/rulesync/rulesync.jsonc`   | `dot_config/rulesync/exact_dot_rulesync/`         | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks / MCP 設定の配布 |
 
 - プロジェクト単位の設定が生成するのは、あなたが今読んでいる **この `CLAUDE.md` そのもの**です。
   ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` に反映されます。
@@ -24,7 +24,23 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
   - ここに `/crit` などの skill（`dot_config/rulesync/exact_dot_rulesync/skills/`）や
     共通ルール（`dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`）、hooks
-    （`dot_config/rulesync/exact_dot_rulesync/hooks.json`）が入っている
+    （`dot_config/rulesync/exact_dot_rulesync/hooks.jsonc`）、MCP 設定
+    （`dot_config/rulesync/exact_dot_rulesync/mcp.jsonc.tmpl`）、権限
+    （`dot_config/rulesync/exact_dot_rulesync/permissions.jsonc`）が入っている
+  - skill の生成先はツールごとに異なる: Claude Code は `~/.claude/skills/`、Codex CLI は
+    `~/.agents/skills/`（rulesync v13+ で `~/.codex/skills/` から移動）。Codex のルール本体は
+    引き続き `~/.codex/AGENTS.md` に生成される
+  - ソースは v10 以降で使える **JSONC 形式**（`hooks.jsonc` / `mcp.jsonc` / `permissions.jsonc`、
+    コメント・末尾カンマ可。`.jsonc` は同名 `.json` より優先）を採用している。`mcp.jsonc.tmpl` は
+    chezmoi テンプレートで `AWS_PROFILE` を注入しつつ `~/.config/rulesync/.rulesync/mcp.jsonc` へ配布される
+  - `permissions.jsonc` は共有 `permission` ブロックで秘匿ファイル（`.env` / `*.pem` / 各種鍵など）の
+    読み取りを `deny` する。`permissions` を targets に含むツール（現状 `claudecode` のみ）の
+    `~/.claude/settings.json` にマージされる。deny は allow より優先される点に注意
+
+> [!NOTE]
+> rulesync を v13 未満から上げた直後は、旧 `~/.codex/skills/` に生成済みの skill が
+> 残ることがあります（このリポジトリは `delete: false` のため rulesync は旧ファイルを消しません）。
+> 気になる場合は `~/.codex/skills/` を手動で削除してください。
 
 ## 生成コマンド
 
