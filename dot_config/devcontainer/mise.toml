@@ -16,7 +16,7 @@ experimental = true
 "core:go"                        = "1.26.5"
 "core:node"                      = "22.19.0"
 "core:python"                    = "3.14.6"
-"github:github/copilot-cli"      = "1.0.63"
+"github:github/copilot-cli"      = "1.0.73"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"     = "0.18.1"
 "npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
