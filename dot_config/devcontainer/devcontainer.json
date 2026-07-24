@@ -28,6 +28,11 @@
   // 実際に割り当てられた host port は post-start.sh が ~/.crit-host-port に書き出し、
   // ホストへ通知する（docs/crit.md 参照）。
   "appPort": ["127.0.0.1::7842"],
+  // ~/.agents は rulesync v13+ の generate でのみ作られるディレクトリ（.codex/.copilot と違い
+  // ツール導入では作られない）。未作成のまま devcontainer を起動すると Docker が root 所有の
+  // 空ディレクトリをホストに作ってしまい、後の rulesync 書き込みで権限エラーになる。
+  // マウント（container 作成）前にホスト側で存在を保証する。
+  "initializeCommand": "mkdir -p ${localEnv:HOME}/.agents",
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [

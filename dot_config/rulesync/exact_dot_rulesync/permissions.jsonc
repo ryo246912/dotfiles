@@ -14,9 +14,17 @@
       "**/.env": "deny",
       "**/.env.local": "deny",
       "**/.env.*.local": "deny",
+      "**/.env.production": "deny",
+      "**/.env.staging": "deny",
+      "**/.env.development": "deny",
+      "**/.env.test": "deny",
       "**/*.pem": "deny",
       "**/id_rsa": "deny",
       "**/id_ed25519": "deny",
+      "**/id_ecdsa": "deny",
+      "**/id_dsa": "deny",
+      "**/id_ecdsa_sk": "deny",
+      "**/id_ed25519_sk": "deny",
       "**/.aws/credentials": "deny"
     }
   }
