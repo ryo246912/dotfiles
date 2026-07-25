@@ -1,0 +1,15 @@
+[[snippets]]
+name    = "fnox activate zsh"
+snippet = "eval \"$(fnox activate zsh)\""
+trigger = "fna"
+
+[[snippets]]
+name    = "fnox exec -- "
+snippet = "fnox exec -- "
+trigger = "fne"
+
+[[snippets]]
+cursor  = "👇"
+name    = "aws-vault exec <profile> -- fnox exec -- "
+snippet = "aws-vault exec 👇 -- fnox exec -- "
+trigger = "fnv"
