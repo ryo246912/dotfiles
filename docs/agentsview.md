@@ -286,7 +286,7 @@ mise run agentsview:serve
 
 - push は `flyctl proxy 15432:5432 -a psgl`（user-mode WireGuard）経由で `nrt` リージョンの PostgreSQL に接続するため、全クエリがトンネル越しに東京まで往復する。
 - 出力の `Connected to PostgreSQL in 2.89s` や、DDL 数本だけの `PostgreSQL schema ready in 21.122s` が、1 往復あたりのレイテンシが高いことを示すカナリア。行ごとの round-trip 回数 × RTT がそのまま積み上がる。
-- **重要: これは一度きりのコスト。** `pg push` は差分同期なので、2 回目以降は新規セッションぶんだけを push し、通常は数秒〜数十秒で終わる。
+- **重要: 通常の差分 push では初回だけのコスト。** 2 回目以降は新規セッションや既存セッションの更新だけを push し、`--full` を指定した場合は全件再送のため同じ遅延が再発する。
 
 初回のバルクロードを速くしたい場合の選択肢（任意）:
 
@@ -326,7 +326,7 @@ PostgreSQL に全 PC のデータが集約されているため、1回の dump �
 
 ```sh
 pg_dump -n agentsview \
-  "postgres://<user>:<pass>@<host>/<db>" \
+  "postgres://<user>:<pass>@<host>/<db>?sslmode=require" \
   -F c -f ~/backup/agentsview-$(date +%Y%m%d).dump
 ```
 
