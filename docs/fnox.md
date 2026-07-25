@@ -161,6 +161,79 @@ zsh 側の abbreviation は `dot_config/zabrze/general.toml` の `aws-vault` 系
 `awlo`) と `dot_config/zabrze/fnox.toml` の `fnox` 系 (`fna` = activate, `fne` = exec, `fnv` = aws-vault
 exec + fnox exec) を参照してください。
 
+## セットアップ手順
+
+`fnox` / `bws` は `dot_config/mise/config.toml` に pin 済みなので、`mise install` すれば入ります。
+以下は各 provider を実際に有効化する手順です。
+
+### 1. Bitwarden Password Manager (`bitwarden` provider)
+
+追加のセットアップは不要です。`chezmoi` が `[bitwarden] unlock = "auto"` で `bw` を自動アンロックして
+おり、`fnox` の `bitwarden` provider（`dot_config/fnox/config.toml` の `[providers.bitwarden]`）は
+そのセッションをそのまま使い回します。動作確認:
+
+```sh
+bw status                 # "unlocked" になっていること
+fnox get CZ_OPENAI_API_KEY # bw から値が取れること
+```
+
+### 2. Bitwarden Secrets Manager (`bitwarden-sm` provider, `bws`)
+
+`BWS_ACCESS_TOKEN` は machine account の access token で、`bw` のようなセッション切れが無い代わりに
+「このトークン自体をどう安全に保管するか」という bootstrap 問題があります。fnox 公式の解決策は
+`age` でトークン自体を暗号化して git 管理下に置くことです。
+
+1. age keypair を作る（まだ無ければ）:
+   ```sh
+   age-keygen -o ~/.config/fnox/age-identity.txt
+   ```
+   出力される `age1...` から始まる公開鍵を `dot_config/fnox/config.toml` の
+   `[providers.age].recipients` に追加してコメントを外す。
+2. Bitwarden の Web Vault → **Secrets Manager** → **Machine accounts** で新規 machine account を
+   作成し、そこから access token を発行する（有効期限は要件に応じて設定。無期限も可）。
+3. 発行したトークンを age で暗号化して保存する（この1回だけ平文をターミナルに入力する）:
+   ```sh
+   fnox set BWS_ACCESS_TOKEN "<発行したトークン>" --provider age
+   ```
+4. 使う直前に環境変数へ展開する（`bws` provider 自体がこの環境変数を要求するため）:
+   ```sh
+   export BWS_ACCESS_TOKEN=$(fnox get BWS_ACCESS_TOKEN)
+   ```
+   毎回手動で打つのが面倒なら、`dot_config/zsh/lazy/mise.zsh` の `eval "$(fnox activate zsh)"` より
+   前に上記の `export` を足すと、shell 起動時に自動展開されます（`bws` を実際に使い始めるときに追加
+   すること。現状はまだ `[providers.bws]` 自体がコメントアウトのひな形なので未配線）。
+5. `dot_config/fnox/config.toml`（個人用）または `dot_config/fnox/config.work.toml`（会社用）の
+   `[providers.bws]` ブロックのコメントを外し、`project_id` を Secrets Manager の project ID に置き換える。
+6. 動作確認:
+   ```sh
+   fnox get OPENAI_API_KEY   # config.toml の場合
+   fnox exec --profile work -- env | rg '^SOME_APP_API_KEY='   # config.work.toml の場合
+   ```
+
+### 3. AWS Secrets Manager + `aws-vault` (`aws-sm` provider)
+
+1. `aws-vault` に AWS credential を登録する（IAM user の access key、または SSO 設定に応じた方法で）:
+   ```sh
+   aws-vault add <aws_profile>
+   aws-vault list
+   ```
+2. `dot_config/fnox/config.work.toml` の `[profiles.work.providers.aws]` ブロックのコメントを外し、
+   `region` / `prefix` を実際の値に置き換える。`profile` は書かない（`aws-vault` が渡す環境変数を
+   そのまま拾わせるため。詳しくは [「aws-vault との併用」](#aws-vault-との併用) を参照）。
+3. `[profiles.work.secrets]`（既に開いている単一テーブル）に secret 行を追加する。
+4. 動作確認:
+   ```sh
+   aws-vault exec <aws_profile> -- aws sts get-caller-identity   # AWS 認証自体の確認
+   aws-vault exec <aws_profile> -- fnox exec --profile work -- env | rg '^(AWS_|DATABASE_URL)'
+   ```
+5. `HOST_ENV` に work ロール（`work1`/`work2`）が含まれるホストでは、上記の `--profile work` を
+   明示しなくても shell 起動時に `FNOX_PROFILE=work` が自動で export されるので、
+   `fnox activate zsh` 経由の secret（`env = true` のもの）はそのまま使えます（`env = "exec"` に
+   した secret は引き続き `fnox exec` 経由が必要）。
+
+複数 AWS アカウント/ロールを個別に切り替えたい場合は、[「aws-vault との併用」](#aws-vault-との併用)
+に書いた `[profiles.<aws_profile>]` の複数プロファイル構成を使ってください。
+
 ## secret ファイル運用
 
 - `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない（`dot_claude/settings.json`
