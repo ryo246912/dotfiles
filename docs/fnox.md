@@ -197,12 +197,21 @@ fnox get CZ_OPENAI_API_KEY # bw から値が取れること
    age-keygen -o ~/.config/fnox/age-identity.txt
    ```
    出力される `age1...` から始まる公開鍵を `dot_config/fnox/config.toml` の
-   `[providers.age].recipients` に追加してコメントを外す。
+   `[providers.age].recipients` に追加してコメントを外す。`recipients` は暗号化に使う公開鍵であり、
+   復号には別途秘密鍵の場所を fnox に伝える必要があるため、同じ `[providers.age]` に `key_file` も
+   設定する（`FNOX_AGE_KEY_FILE` 環境変数で渡す方法もあるが、恒常的に使うならここに書く方が漏れない）:
+   ```toml
+   [providers.age]
+   type = "age"
+   recipients = ["age1..."]
+   key_file = "~/.config/fnox/age-identity.txt"
+   ```
 2. Bitwarden の Web Vault → **Secrets Manager** → **Machine accounts** で新規 machine account を
    作成し、そこから access token を発行する（有効期限は要件に応じて設定。無期限も可）。
-3. 発行したトークンを age で暗号化して保存する（この1回だけ平文をターミナルに入力する）:
+3. 発行したトークンを age で暗号化してグローバル設定に保存する（この1回だけ hidden prompt に平文を
+   入力する。トークンをコマンド引数にそのまま渡すと shell history や `ps` に残るため避ける）:
    ```sh
-   fnox set BWS_ACCESS_TOKEN "<発行したトークン>" --provider age
+   fnox set --global --provider age BWS_ACCESS_TOKEN
    ```
 4. 使う直前に環境変数へ展開する（`bws` provider 自体がこの環境変数を要求するため）:
    ```sh

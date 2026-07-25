@@ -27,9 +27,12 @@ type = "bitwarden"
 # recipients = [
 #   "xxx", # 自分の age/SSH 公開鍵
 # ]
+# key_file = "~/.config/fnox/age-identity.txt" # recipients は暗号化用の公開鍵。復号には
+#                                                # 秘密鍵の場所を別途これで指定する必要がある。
 #
-# ローカル専用の bootstrap 値（例: BWS_ACCESS_TOKEN 自体）を置く場合はこちらを使う:
-# fnox set BWS_ACCESS_TOKEN "xxx" --provider age
+# ローカル専用の bootstrap 値（例: BWS_ACCESS_TOKEN 自体）を置く場合はこちらを使う
+# （--global を付けてこのファイルに保存し、値はコマンド引数ではなく hidden prompt で入力する）:
+# fnox set --global --provider age BWS_ACCESS_TOKEN
 
 # 個人用の Bitwarden Secrets Manager project を持つ場合はこちら（会社用は config.work.toml）:
 # [providers.bws]
