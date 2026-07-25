@@ -1,7 +1,6 @@
 ["agentsview:setup:db-roles"]
 description = "Create/update AgentsView PostgreSQL roles for owner, local push, and read-only viewer"
 # 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-shell = "bash -c"
 interactive = true
 run = '''
 set -eu
@@ -122,11 +121,11 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
   GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push_mac;
 SQL
 '''
+shell = "bash -c"
 
 ["agentsview:setup:migrate"]
 description = "Start flyctl proxy, run initial AgentsView schema migration with the owner PostgreSQL role, then stop proxy"
 # 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-shell = "bash -c"
 interactive = true
 run = '''
 set -eu
@@ -192,6 +191,7 @@ else
   agentsview pg push
 fi
 '''
+shell = "bash -c"
 
 ["agentsview:fly:tokens"]
 description = "Generate AgentsView auth_token and cursor_secret values for secret manager storage"
@@ -205,7 +205,6 @@ printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 ["agentsview:fly:secrets"]
 description = "Set Fly secrets for the public AgentsView viewer with a read-only PostgreSQL role"
 # 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-shell = "bash -c"
 interactive = true
 run = '''
 set -eu
@@ -237,6 +236,7 @@ printf 'AGENTSVIEW_PG_URL=%s\nAGENTSVIEW_CONFIG_TOML=%s\n' \
   "$AGENTSVIEW_READ_PG_URL" "$CONFIG_B64" \
   | flyctl secrets import -a ryo-agentsview
 '''
+shell = "bash -c"
 
 ["agentsview:deploy"]
 description = "Deploy the AgentsView public viewer to Fly.io"
@@ -245,7 +245,6 @@ run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.t
 ["agentsview:pg:status"]
 description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
 # 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-shell = "bash -c"
 interactive = true
 run = '''
 set -eu
@@ -307,11 +306,11 @@ export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 
 agentsview pg status
 '''
+shell = "bash -c"
 
 ["agentsview:pg:push"]
 description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
 # 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-shell = "bash -c"
 interactive = true
 run = '''
 set -eu
@@ -373,6 +372,7 @@ export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 
 agentsview pg push "$@"
 '''
+shell = "bash -c"
 
 ["agentsview:serve"]
 description = "Start local AgentsView server"
