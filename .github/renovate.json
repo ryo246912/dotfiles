@@ -90,6 +90,14 @@
     },
     {
       "customType": "regex",
+      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["dot_config/brew/brew.json"],
       "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
       "datasourceTemplate": "custom.brew-formula"
