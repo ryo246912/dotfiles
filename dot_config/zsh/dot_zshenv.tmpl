@@ -75,6 +75,14 @@ if [ -z "${MISE_ENV:-}" ] && [ -n "${HOST_ENV:-}" ]; then
     export MISE_ENV="$HOST_ENV"
 fi
 
+# HOST_ENV に work ロール（work1/work2）が含まれるホストだけ FNOX_PROFILE=work を有効化する
+# （dot_config/fnox/config.toml が import する config.work.toml の [profiles.work.*] 用）
+if [ -z "${FNOX_PROFILE:-}" ]; then
+    case "${HOST_ENV:-}" in
+        *work*) export FNOX_PROFILE="work" ;;
+    esac
+fi
+
 if command -v mise >/dev/null 2>&1; then
 {{ if (lookPath "mise") -}}
 {{ output "mise" "activate" "zsh" "--shims" | trim }}

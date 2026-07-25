@@ -114,17 +114,38 @@ fnox exec -- mise run lint-json
 問題ありません。「使うときだけ必要な secret」は `env = "exec"` にして `fnox exec` 経由に倒す、が
 基本方針です。
 
+## グローバル設定と work profile の分割
+
+`dot_config/fnox/config.toml`（グローバル）と `dot_config/fnox/config.work.toml`（work profile）の
+2ファイルに分けています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
+分けているのと揃える狙いです。ただし fnox には `MISE_ENV` に相当する「ホスト種別で自動的にファイルを
+選ぶ」機能が無いため、次の2つを組み合わせて実現しています。
+
+- `config.toml` の先頭で `import = ["config.work.toml"]` を宣言し、同じディレクトリ
+  （`$FNOX_CONFIG_DIR`）にある `config.work.toml` を明示的に取り込む（fnox の `import` は
+  「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
+- `config.work.toml` 側は中身をすべて `[profiles.work.*]` の下に置く。これは
+  `FNOX_PROFILE=work` のときだけ有効になるので、import されているだけでは何も起きない。
+- `dot_config/zsh/dot_zshenv.tmpl` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
+  ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
+  同じ仕組み）。
+
+会社アカウント固有の provider（仕事用 `bws` project、`aws-sm` + `aws-vault` 併用など）は
+`config.work.toml` に置き、個人用途のもの（`age` bootstrap、個人の `bws` project、
+`czg` トークンなど）は `config.toml` に残します。
+
 ## aws-vault との併用
 
 `fnox` の `aws-sm` provider は AWS credential chain（環境変数 / `AWS_PROFILE` / IAM role）で認証するため、
-`aws-vault` と同居できます。標準パターンは `aws-vault exec <profile> -- fnox exec -- <command>` です。
-`aws-vault` が `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` を子プロセスの環境変数
-として渡すため、`fnox.toml` 側の `[providers.aws]` に `profile` を書かなければそのまま拾われます。
+`aws-vault` と同居できます。標準パターンは `aws-vault exec <profile> -- fnox exec --profile work -- <command>`
+です（`--profile work` は上記の work profile を有効化するため）。`aws-vault` が
+`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN` を子プロセスの環境変数として渡すため、
+`config.work.toml` 側の `[profiles.work.providers.aws]` に `profile` を書かなければそのまま拾われます。
 
 複数 AWS アカウント/ロールを切り替える場合は `[profiles.<aws_profile>]` で `aws-vault` のプロファイル名と
-揃えたプロファイルを `fnox.toml` に定義してください。テンプレートは
-`dot_config/fnox/config.toml` 末尾のコメントアウト済みブロック（`aws-vault の複数アカウント/ロール
-切り替えテンプレート`）を参照してください。
+揃えた独立した profile を追加で定義してください。テンプレートは `dot_config/fnox/config.work.toml`
+末尾のコメントアウト済みブロック（`aws-vault の複数アカウント/ロールをさらに細かく切り替えたい場合`）を
+参照してください。
 
 ```sh
 aws-vault list
