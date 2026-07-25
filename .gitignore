@@ -9,7 +9,10 @@ dot_zshrc.secret
 ## claude
 settings.local.json
 
-## rulesync-generated (source: .rulesync/rules/, see docs/rulesync.md)
+## rulesync 配布先（ソースは .rulesync/rules/ 配下。詳細は docs/rulesync.md）
+## このリポジトリ内で追跡されるのは現状 CLAUDE.md のみ。
+## グローバル設定 (dot_config/rulesync/) の配布先 (~/.claude, ~/.codex, ~/.copilot 等) は
+## リポジトリ外の実ホームディレクトリに書き出されるため、そもそも追跡対象外。
 /CLAUDE.md
 
 ## VSCode
