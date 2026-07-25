@@ -53,7 +53,7 @@ SSH 認証が通っても、macOS 側で通知の表示が許可されていな�
 - **システム設定 > 通知** で `macos-notify-mcp`（`macos-notify-cli` が通知配信に使うアプリ）の
   「通知を許可」を ON にし、スタイルを「バナー」または「通知パネル」にする
 - ホスト上で直接 `macos-notify-cli --title test --message hello` を実行し、`Notification sent
-  successfully` だけでなく**実際にバナーが表示される**ことを確認する
+successfully` だけでなく**実際にバナーが表示される**ことを確認する
 
 **設定後の動作:**
 
