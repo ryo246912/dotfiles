@@ -132,7 +132,8 @@ aws-vault exec <aws_profile> -- fnox exec --profile <aws_profile> -- <command>
 ```
 
 zsh 側の abbreviation は `dot_config/zabrze/general.toml` の `aws-vault` 系 (`awv` / `awe` / `awl` /
-`awlo`) と `fnox` 系 (`fna` = activate, `fne` = exec, `fnv` = aws-vault exec + fnox exec) を参照してください。
+`awlo`) と `dot_config/zabrze/fnox.toml` の `fnox` 系 (`fna` = activate, `fne` = exec, `fnv` = aws-vault
+exec + fnox exec) を参照してください。
 
 ## secret ファイル運用
 
