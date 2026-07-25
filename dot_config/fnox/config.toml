@@ -16,21 +16,9 @@ import = ["config.work.toml"]
 [providers.bitwarden]
 type = "bitwarden"
 
-[secrets]
-# czg (cz-git) の AI コミット生成用トークン。以前は dot_config/dot_czrc.tmpl 内で
-# `bitwarden "item" "GitHub PAT(cz-git)"` を使って ~/.config/.czrc に平文展開していたが、
-# czg は CZ_OPENAI_API_KEY 環境変数を読むため、fnox 経由の注入に置き換えた
-# （.czrc 側は apiEndpoint/apiModel のみの非 secret な静的ファイルにした）。
-# value はこの Bitwarden item に既に登録済みの値をそのまま参照するだけで、ここには平文を書かない。
-#
-# env = "exec" にしているのは、`fnox activate zsh` はプロンプト表示のたびに全 secret を再解決する
-# ため、デフォルト(env = true)だと bw のセッションが切れている時に毎回ログインを求められて煩わしい
-# から。"exec" にすると `fnox exec -- <command>` 経由でだけ解決される（shell には自動注入しない）。
-# 呼び出し側は `czg ai` ではなく `fnox exec -- czg ai` を使う（zabrze の `cza`/`czae` 参照）。
-CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)", env = "exec" }
-
 # --- 以下は未使用（個人用途でまだ実利用していない provider のひな形）--------------------------
-# 使う場合はコメントを外し、xxx を実際の値に置き換えること。
+# 使う場合はコメントを外し、xxx を実際の値に置き換えること。secret 側の対応する行は
+# 下の [secrets] テーブル内にまとめてあるので、そちらも一緒に有効化すること。
 # 会社/仕事アカウント固有の provider（aws-sm・aws-vault 併用・仕事用 bws project 等）は
 # config.work.toml 側に置くこと。
 
@@ -47,6 +35,20 @@ CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)", env 
 # [providers.bws]
 # type = "bitwarden-sm"
 # project_id = "xxx"
+
+# [secrets] はこのファイル内で1回だけにすること（TOML は同じテーブルを複数回宣言できない）。
+# 上の provider を有効化したら、対応する secret 行はここに追加する。
+[secrets]
+# czg (cz-git) の AI コミット生成用トークン。以前は dot_config/dot_czrc.tmpl 内で
+# `bitwarden "item" "GitHub PAT(cz-git)"` を使って ~/.config/.czrc に平文展開していたが、
+# czg は CZ_OPENAI_API_KEY 環境変数を読むため、fnox 経由の注入に置き換えた
+# （.czrc 側は apiEndpoint/apiModel のみの非 secret な静的ファイルにした）。
+# value はこの Bitwarden item に既に登録済みの値をそのまま参照するだけで、ここには平文を書かない。
 #
-# [secrets]
+# env = "exec" にしているのは、`fnox activate zsh` はプロンプト表示のたびに全 secret を再解決する
+# ため、デフォルト(env = true)だと bw のセッションが切れている時に毎回ログインを求められて煩わしい
+# から。"exec" にすると `fnox exec -- <command>` 経由でだけ解決される（shell には自動注入しない）。
+# 呼び出し側は `czg ai` ではなく `fnox exec -- czg ai` を使う（zabrze の `cza`/`czae` 参照）。
+CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)", env = "exec" }
+# 上の [providers.bws] を有効化した場合の secret 例:
 # OPENAI_API_KEY = { provider = "bws", value = "OPENAI_API_KEY" }

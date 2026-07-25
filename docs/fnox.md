@@ -134,6 +134,11 @@ fnox exec -- mise run lint-json
 `config.work.toml` に置き、個人用途のもの（`age` bootstrap、個人の `bws` project、
 `czg` トークンなど）は `config.toml` に残します。
 
+両ファイルとも未使用の provider/secret はコメントアウトしたひな形として置いていますが、
+TOML は同じテーブル（`[secrets]` や `[profiles.work.secrets]`）をファイル内で複数回宣言できません。
+有効化するときは、新しい `[secrets]` / `[profiles.work.secrets]` を追加で書かず、既存の1つの
+テーブルに `KEY = { ... }` の行を足す形にしてください（各ファイルのコメントにもその旨を明記しています）。
+
 ## aws-vault との併用
 
 `fnox` の `aws-sm` provider は AWS credential chain（環境変数 / `AWS_PROFILE` / IAM role）で認証するため、

@@ -154,7 +154,8 @@
     ```
   - [ ] （手動設定不要）git/Docker の credential helper は chezmoi 管理下（`chezmoi apply` で自動適用）
     - git: `credential.helper` は mac で `osxkeychain`、WSL2 でメモリキャッシュ
-      （`dot_config/git/config.tmpl`）。GitHub 自体は SSH に寄せているため、他の HTTPS git host用
+      （`dot_config/git/config.tmpl`）。GitHub 自体は SSH に寄せているため、これが要るのは他の
+      HTTPS git host（社内 GitLab 等）向け
     - Docker: mac のみ `~/.docker/config.json` の `credsStore` を `desktop`
       （Docker Desktop 同梱の `docker-credential-desktop`）にして `docker login` の認証情報を
       平文 base64 のまま置かないようにしている（`dot_docker/config.json`）

@@ -9,9 +9,6 @@
 # [profiles.work.providers.bws]
 # type       = "bitwarden-sm"
 # project_id = "xxx"
-#
-# [profiles.work.secrets]
-# SOME_APP_API_KEY = { provider = "bws", value = "SOME_APP_API_KEY" }
 
 # AWS Secrets Manager。profile は指定しない:
 # `aws-vault exec <profile> -- fnox exec --profile work -- <command>` で、
@@ -20,8 +17,12 @@
 # type   = "aws-sm"
 # region = "xxx"
 # prefix = "xxx/"
-#
+
+# 上のどちらか（または両方）を有効化したら、対応する secret をこの1つの
+# [profiles.work.secrets] テーブルにまとめて追加する。TOML は同じテーブルを
+# 複数回宣言できないため、[profiles.work.secrets] はファイル内で1回だけにすること。
 # [profiles.work.secrets]
+# SOME_APP_API_KEY = { provider = "bws", value = "SOME_APP_API_KEY" }
 # DATABASE_URL = { provider = "aws", value = "database-url" }
 
 # --- aws-vault の複数アカウント/ロールをさらに細かく切り替えたい場合 ---------------------------

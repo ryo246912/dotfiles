@@ -33,6 +33,8 @@
       "Read(~/.ssh/id_ed25519)",
       "Read(**/*token*)",
       "Read(**/*key*)",
+      "Read(~/**/*token*)",
+      "Read(~/**/*key*)",
       "Edit(**/.env)",
       "Edit(.env*)",
       "Edit(**/.env*)",
