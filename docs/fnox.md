@@ -57,14 +57,21 @@ Bitwarden は 2 系統あります。`chezmoi` は `[bitwarden] unlock = "auto"`
 使っており、既にこのセッションが有効になっています。**`fnox` の `bitwarden` provider は同じセッションを
 再利用するだけ**なので、chezmoi のテンプレート関数 `bitwarden "item" "..."` で値を静的ファイルに
 展開する代わりに、`fnox exec` / `fnox activate` で実行時に注入する形に置き換えられます
-（`dot_config/fnox/fnox.toml.sample` の `[providers.bitwarden]` 参照）。
+（`dot_config/fnox/config.toml` の `[providers.bitwarden]` 参照）。
 
-ただし chezmoi のテンプレート展開が必要な場面は残ります。例えば `dot_config/dot_czrc.tmpl` のように
-**サードパーティツールが読む静的な設定ファイルに値を直接書き込む必要がある**場合は、env var 注入では
-代替できないため、そこは今まで通り `bitwarden` テンプレート関数を使い続けます。判断基準:
+実例: `czg`（cz-git）の AI コミット生成トークンは、以前は `dot_config/dot_czrc.tmpl` が
+`bitwarden "item" "GitHub PAT(cz-git)"` で値を `~/.config/.czrc` に平文展開していました。
+`czg` は `openAIToken` の代わりに **`CZ_OPENAI_API_KEY` 環境変数**を読めるため、この secret は
+env var 注入で完全に代替できます。今は `.czrc`（`dot_config/dot_czrc`）から `openAIToken` を削除して
+`apiEndpoint`/`apiModel` のみの非 secret な静的ファイルにし、トークンは `dot_config/fnox/config.toml`
+の `CZ_OPENAI_API_KEY` secret（`bitwarden` provider）から注入しています。
 
-- 実行時に環境変数として渡せる（アプリ側が env を読む） → `fnox`
-- ツールが env を読まず、ファイルの中身として値が必要 → 引き続き chezmoi の `bitwarden` テンプレート
+判断基準:
+
+- ツールが env var を読める → `fnox`（デフォルトでこちらを検討する。plain な `KEY=VALUE` ならほぼ必ず
+  env 対応があるので、chezmoi テンプレートで平文展開する前に一度ツールのドキュメントを確認する）
+- ツールが env を一切読まず、ファイルの中身として値が必要（バイナリ形式の証明書など） →
+  chezmoi の `bitwarden` テンプレートを使う
 
 ## shell 統合
 
@@ -90,7 +97,8 @@ fnox exec -- mise run lint-json
 
 複数 AWS アカウント/ロールを切り替える場合は `[profiles.<aws_profile>]` で `aws-vault` のプロファイル名と
 揃えたプロファイルを `fnox.toml` に定義してください。テンプレートは
-`dot_config/fnox/fnox.toml.sample` の末尾（`aws-vault multi-account template`）を参照してください。
+`dot_config/fnox/config.toml` 末尾のコメントアウト済みブロック（`aws-vault の複数アカウント/ロール
+切り替えテンプレート`）を参照してください。
 
 ```sh
 aws-vault list
@@ -106,4 +114,17 @@ zsh 側の abbreviation は `dot_config/zabrze/general.toml` の `aws-vault` 系
   の deny でこれらの Read/Write は AI ツールからもブロックしている）。
 - `fnox.toml` は `provider = "age"` の暗号文か、リモート provider への参照キーのみを持つ
   （plain text default は使わない）。
-- プロジェクトごとの `fnox.toml` は `dot_config/fnox/fnox.toml.sample` を雛形にする。
+- このリポジトリ自身（dotfiles）が使う secret は `dot_config/fnox/config.toml`
+  （`~/.config/fnox/config.toml` にデプロイされる fnox のグローバル設定）で管理する。
+  cwd に関係なく全 shell にマージされるため、複数リポジトリを横断して使う secret
+  （例: `czg` の AI トークン）はここに置く。
+- 個別プロジェクト用の `fnox.toml` はそのプロジェクトのリポジトリ側に置く。最小構成は以下の形:
+
+  ```toml
+  [providers.bws]
+  type       = "bitwarden-sm"
+  project_id = "xxx"
+
+  [secrets]
+  DATABASE_URL = { provider = "bws", value = "DATABASE_URL" }
+  ```

@@ -1,0 +1,60 @@
+# fnox のグローバル設定ファイル（$FNOX_CONFIG_DIR/config.toml、既定では ~/.config/fnox/config.toml）。
+# ここに書いた [providers] / [secrets] は、cwd に fnox.toml が無いディレクトリも含めて
+# 常にマージされる（`fnox activate zsh` は dot_config/zsh/lazy/mise.zsh で全ホスト共通で有効化済み）。
+# 平文の secret 値はここに書かない。値は暗号文（age）かリモート secret ストアへの参照キーのみ。
+# provider の使い分け・age/fnox/dotenvx/sops の比較は docs/fnox.md を参照。
+
+# Bitwarden Password Manager (bw)。chezmoi が `[bitwarden] unlock = "auto"` で開いているセッション
+# (BW_SESSION) をそのまま使い回す。実 secret を追加でエクスポートする必要はない。
+[providers.bitwarden]
+type = "bitwarden"
+
+[secrets]
+# czg (cz-git) の AI コミット生成用トークン。以前は dot_config/dot_czrc.tmpl 内で
+# `bitwarden "item" "GitHub PAT(cz-git)"` を使って ~/.config/.czrc に平文展開していたが、
+# czg は CZ_OPENAI_API_KEY 環境変数を読むため、fnox 経由の注入に置き換えた
+# （.czrc 側は apiEndpoint/apiModel のみの非 secret な静的ファイルにした）。
+# value はこの Bitwarden item に既に登録済みの値をそのまま参照するだけで、ここには平文を書かない。
+CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)" }
+
+# --- 以下は未使用（このリポジトリではまだ実利用していない provider のひな形）---------------------
+# 使う場合はコメントを外し、xxx を実際の値に置き換えること。
+
+# [providers.age]
+# type = "age"
+# recipients = [
+#   "xxx", # 自分の age/SSH 公開鍵
+# ]
+#
+# ローカル専用の bootstrap 値（例: BWS_ACCESS_TOKEN 自体）を置く場合はこちらを使う:
+# fnox set BWS_ACCESS_TOKEN "xxx" --provider age
+
+# [providers.bws]
+# type = "bitwarden-sm"
+# project_id = "xxx"
+#
+# [secrets]
+# OPENAI_API_KEY = { provider = "bws", value = "OPENAI_API_KEY" }
+
+# [providers.aws]
+# type   = "aws-sm"
+# region = "xxx"
+# prefix = "xxx/"
+# # profile は指定しない: aws-vault exec <profile> -- fnox exec -- <command> で
+# # aws-vault が渡す AWS_ACCESS_KEY_ID 等の環境変数をそのまま拾わせるため。
+#
+# [secrets]
+# DATABASE_URL = { provider = "aws", value = "database-url" }
+
+# --- aws-vault の複数アカウント/ロール切り替えテンプレート ------------------------------------
+# aws-vault のプロファイル名(`aws-vault list`)と同名の fnox profile を定義する。
+# [profiles.xxx.providers.aws]
+# type   = "aws-sm"
+# region = "xxx"
+# prefix = "myapp/xxx/"
+#
+# [profiles.xxx.secrets]
+# DATABASE_URL = { provider = "aws", value = "database-url" }
+#
+# 使い方:
+#   aws-vault exec xxx -- fnox exec --profile xxx -- <command>

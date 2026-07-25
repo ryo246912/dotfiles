@@ -19,16 +19,6 @@
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
-- [ ] secret / credential 運用の初期化（詳細は [docs/fnox.md](./fnox.md)）
-  - `bw`: 既存の `chezmoi` 用（`[bitwarden] unlock = "auto"` で自動アンロック済み）
-  - `bws` + `fnox`: アプリ/サービス用 env の標準経路。`BWS_ACCESS_TOKEN` を machine account 用に発行する
-  - `aws-vault`: AWS 認証専用。`fnox` の `aws-sm` provider と併用するときは
-    `aws-vault exec <profile> -- fnox exec -- <command>` を使う
-  - `dot_config/zsh/lazy/mise.zsh`（全ホスト共通）が `fnox activate zsh` を読み込むので、`fnox.toml` が
-    あるディレクトリへ `cd` した後は `npm run` / `make test` / `mise run` が同じ shell の env をそのまま継承する
-  - project ごとの `fnox.toml` は `dot_config/fnox/fnox.toml.sample` を雛形にする
-  - `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない
-
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
@@ -399,5 +389,3 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること
-
-- [ ] secret / credential 運用の初期化（Mac 節の同項目・[docs/fnox.md](./fnox.md) と同じ）
