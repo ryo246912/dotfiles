@@ -8,12 +8,12 @@ fnox の provider 使い分け（`docs/fnox.md`）と合わせて読むこと。
 
 ## 1. 3つの概念の違い
 
-|                | Bitwarden **Password Manager** (`bw`)               | Bitwarden **Secrets Manager** (`bws`)                        | **Project**（SM の中の概念）                             |
-| -------------- | --------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
-| 何を入れる     | 人間が使う login / secure note / card 等のリッチな item | 機械が使うフラットな key→value（name・value・note だけ）      | SM の secret をグループ化する入れ物                      |
-| 使う主体       | 人間（マスターパスワード / SSO でログイン）          | アプリ・CI・スクリプト（**machine account**）                | —                                                        |
-| 認証           | `BW_SESSION`（`bw unlock` で発行、**期限切れあり**） | `BWS_ACCESS_TOKEN`（machine account のトークン、**期限切れしにくい / 無期限も可**） | machine account に「この project を read/write 可」と権限を割り当てる単位 |
-| 有効化条件     | 個人 vault でも使える                               | **Organization が必要**（無料枠あり）                        | SM 内でのみ存在                                          |
+|            | Bitwarden **Password Manager** (`bw`)                   | Bitwarden **Secrets Manager** (`bws`)                                               | **Project**（SM の中の概念）                                              |
+| ---------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 何を入れる | 人間が使う login / secure note / card 等のリッチな item | 機械が使うフラットな key→value（name・value・note だけ）                            | SM の secret をグループ化する入れ物                                       |
+| 使う主体   | 人間（マスターパスワード / SSO でログイン）             | アプリ・CI・スクリプト（**machine account**）                                       | —                                                                         |
+| 認証       | `BW_SESSION`（`bw unlock` で発行、**期限切れあり**）    | `BWS_ACCESS_TOKEN`（machine account のトークン、**期限切れしにくい / 無期限も可**） | machine account に「この project を read/write 可」と権限を割り当てる単位 |
+| 有効化条件 | 個人 vault でも使える                                   | **Organization が必要**（無料枠あり）                                               | SM 内でのみ存在                                                           |
 
 ざっくり言うと:
 
