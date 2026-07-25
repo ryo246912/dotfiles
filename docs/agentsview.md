@@ -241,7 +241,77 @@ mise run agentsview:serve
 
 恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
 `AGENTSVIEW_PG_MACHINE` を実行時に指定し、必要なときに `mise run agentsview:pg:push` を実行する
-形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
+形にする。手動運用に加えて、下記の「定期 push（15 分ごとの自動 push）」で mise bootstrap の
+LaunchAgent / systemd timer による自動 push も設定できる。いずれの場合も `~/.agentsview/config.toml`
+への DB URL 保存は採用せず、secret は fnox から解決する。
+
+## 定期 push（15 分ごとの自動 push）
+
+手動 `mise run agentsview:pg:push` を都度実行する代わりに、mise bootstrap の user service（macOS: LaunchAgent / Linux: systemd user timer）で 15 分ごとに自動 push する。設定手順は [docs/mise.md の「mise bootstrap で user service（定期 push 等）を設定する」](./mise.md#mise-bootstrap-で-user-service定期-push-等を設定する) にまとめている。ここでは agentsview 固有の設計だけ記す。
+
+AgentsView 本体には `agentsview pg push --watch --interval 5m` の常駐 watch もあるが、その watch は起動中ずっと PostgreSQL への接続（＝ `flyctl proxy` 常駐）を要求する。この repository は proxy を常駐させず task 内で都度起動・停止する構成なので、`--watch` ではなく「15 分間隔で `flyctl proxy` を一時起動して差分 push する task を叩く」形にしている。
+
+### 仕組み
+
+- 実体は非対話 task `agentsview:pg:push:daemon`（`dot_config/mise/tasks/agentsview.toml`）。
+  `flyctl proxy 15432:5432 -a psgl` を一時起動し、push 後に proxy を停止する `agentsview:pg:push` と同じフロー。
+- secret（`AGENTSVIEW_PROXY_PG_URL`）は他 task と同じく fnox（bws/age）から解決する。zsh を経ない
+  起動では env に無いため、task が `fnox exec -- mise run ...` で自身を再実行して補う。
+- `AGENTSVIEW_PG_MACHINE` は launchd/systemd が zsh 起動を経ないため env に無い。task 側で
+  `dot_zshenv.tmpl` と同じく `host-env.map` から導出し、対話 push と同じ machine 名に揃える
+  （導出できなければ `hostname` にフォールバック）。DB 上で同一 PC のセッションが別 machine に
+  分裂しないようにするため。
+- 前回 push がまだ動いている（proxy port が使用中）場合は多重起動せず今回はスキップする。
+  初回の全件 push は数時間かかりうるため、interval と重なっても安全に飛ばす。
+- macOS は `start_interval = 900`（秒）で 15 分ごと、Linux は timer の `on_unit_active_sec = "15min"` で 15 分ごとに起動する。
+
+### 前提
+
+- secret を fnox（bws/age）で解決できること。bws の `BWS_ACCESS_TOKEN` は age で解けるため、
+  `~/.config/fnox/age.txt`（age 秘密鍵）があれば daemon 起動時も非対話で解決できる。
+- 事前に `flyctl auth login` 済みであること（`flyctl proxy` に必要。auth は `~/.fly` に保存される）。
+- `fnox` / `flyctl` / `agentsview` は mise 管理ツールのため、`mise run` 実行時に自動で PATH に載る。
+- `mise` 本体が `~/.local/bin/mise` にあること（launchd/systemd は login shell の PATH を持たないため、
+  bootstrap 側は mise を絶対パスで叩く。別の場所なら下記 config の `program` / `exec_start` を合わせる）。
+
+### 定義と適用
+
+定義は `dot_config/mise/config.mac.toml`（`[bootstrap.macos.launchd.agents.agentsview-push]`）と
+`dot_config/mise/config.linux.toml`（`[bootstrap.linux.systemd.units.agentsview-push]`）。
+`chezmoi apply` で反映後、OS 別に bootstrap を適用する（詳細・オプションは docs/mise.md 参照）。
+
+```sh
+# 反映前に差分だけ確認する
+MISE_ENV=mac   mise bootstrap macos launchd-agents apply --dry-run
+MISE_ENV=linux mise bootstrap linux systemd-units apply --dry-run
+
+# 適用（macOS: launchctl に load / Linux: systemctl --user で .service + .timer を有効化）
+MISE_ENV=mac   mise bootstrap macos launchd-agents apply
+MISE_ENV=linux mise bootstrap linux systemd-units apply
+```
+
+Linux の headless / WSL では、ログインしていない間も timer を動かすため lingering を有効化する:
+
+```sh
+loginctl enable-linger "$USER"
+```
+
+### 動作確認
+
+```sh
+# ログ（macOS。stdout/stderr を ~/.local/state/agentsview/push.log に集約している）
+tail -f ~/.local/state/agentsview/push.log
+
+# 状態確認
+mise bootstrap macos launchd-agents status      # macOS
+mise bootstrap linux systemd-units status        # Linux
+systemctl --user list-timers 'agentsview-push*'  # Linux（次回発火時刻）
+journalctl --user -u agentsview-push -f          # Linux（ログ）
+
+# 手動で 1 回だけ叩いて確認（fnox 解決込み）
+mise run agentsview:pg:push:daemon
+mise run agentsview:pg:status
+```
 
 ### push 時間について（初回が遅い理由）
 

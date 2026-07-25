@@ -10,3 +10,17 @@
 "apt:tig"       = "latest"
 "apt:tree"      = "latest"
 "apt:ugrep"     = "latest"
+
+# AgentsView のセッションを 15 分ごとに PostgreSQL へ push する systemd user timer（詳細は docs/mise.md）。
+# timer 系フィールド（on_unit_active_sec 等）があると mise が .service と .timer を生成する。
+# 適用: MISE_ENV=linux mise bootstrap linux systemd-units apply
+# secret（AGENTSVIEW_PROXY_PG_URL）は task 側が fnox（bws/age）から解決する。
+# 事前に flyctl auth login 済みで、mise が %h/.local/bin/mise にあること。
+# headless / WSL では起動永続化に loginctl enable-linger "$USER" が必要。
+[bootstrap.linux.systemd.units.agentsview-push]
+description        = "Push AgentsView sessions to PostgreSQL every 15 minutes"
+exec_start         = "%h/.local/bin/mise run agentsview:pg:push:daemon"
+on_boot_sec        = "5min"
+on_unit_active_sec = "15min"
+persistent         = true
+type               = "oneshot"

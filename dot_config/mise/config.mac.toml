@@ -20,3 +20,16 @@
 "brew:tig"          = "latest"
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
+
+# AgentsView のセッションを 15 分ごとに PostgreSQL へ push する LaunchAgent（詳細は docs/mise.md）。
+# 適用: MISE_ENV=mac mise bootstrap macos launchd-agents apply
+# secret（AGENTSVIEW_PROXY_PG_URL）は task 側が fnox（bws/age）から解決する。
+# 事前に flyctl auth login 済みで、mise が ~/.local/bin/mise にあること。
+[bootstrap.macos.launchd.agents.agentsview-push]
+args           = ["run", "agentsview:pg:push:daemon"]
+keep_alive     = false
+program        = "~/.local/bin/mise"
+run_at_load    = true
+start_interval = 900                                  # 15 min
+stderr_path    = "~/.local/state/agentsview/push.log"
+stdout_path    = "~/.local/state/agentsview/push.log"
