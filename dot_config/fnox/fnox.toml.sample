@@ -1,0 +1,28 @@
+# Copy this file into each project as ./fnox.toml and replace placeholders.
+# Do not store plaintext secrets in `.env`, `.envrc`, `*.secret`, or `fnox.local.toml`.
+
+[providers.age]
+type = "age"
+recipients = [
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLE user@example.com",
+]
+
+[providers.bws]
+type = "bitwarden-sm"
+project_id = "00000000-0000-0000-0000-000000000000"
+
+[providers.aws]
+type = "aws-sm"
+region = "ap-northeast-1"
+profile = "my-aws-profile"
+prefix = "myapp/"
+
+[secrets]
+# Create encrypted local-only values with:
+# fnox set LOCAL_ONLY_TOKEN "..." --provider age
+# Example result:
+# LOCAL_ONLY_TOKEN = { provider = "age", value = "age-encrypted-ciphertext..." }
+
+# Remote references keep only the lookup key in git:
+OPENAI_API_KEY = { provider = "bws", value = "OPENAI_API_KEY" }
+DATABASE_URL = { provider = "aws", value = "database-url" }
