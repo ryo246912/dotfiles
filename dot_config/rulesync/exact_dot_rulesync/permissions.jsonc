@@ -28,11 +28,18 @@
       "domain:docs.anthropic.com": "allow"
     },
     "read": {
-      // env ファイル（.env.* は .env.local/.production 等の接尾辞付きを網羅。bare .env は別途）
+      // env ファイル: 秘匿の接尾辞のみを明示列挙する。`.env.*` のような広域 glob は
+      // `.env.example` / `.env.sample` / `.env.template` などの非機密テンプレートまで
+      // 読めなくしてしまうため使わない（テンプレは必要な env 変数を Claude が把握する用途で読める方が良い）。
       ".env": "deny",
-      ".env.*": "deny",
       "**/.env": "deny",
-      "**/.env.*": "deny",
+      ".env.local": "deny",
+      "**/.env.local": "deny",
+      "**/.env.*.local": "deny",
+      "**/.env.production": "deny",
+      "**/.env.staging": "deny",
+      "**/.env.development": "deny",
+      "**/.env.test": "deny",
       // 汎用の秘匿名・鍵・証明書
       "**/*token*": "deny",
       "**/*key*": "deny",
