@@ -66,6 +66,9 @@ env var 注入で完全に代替できます。今は `.czrc`（`dot_config/dot_
 `apiEndpoint`/`apiModel` のみの非 secret な静的ファイルにし、トークンは `dot_config/fnox/config.toml`
 の `CZ_OPENAI_API_KEY` secret（`bitwarden` provider）から注入しています。
 
+ただしこの secret は `env = "exec"` を付けており、後述の理由で `fnox activate` によるシェルへの
+自動注入はしていません。
+
 判断基準:
 
 - ツールが env var を読める → `fnox`（デフォルトでこちらを検討する。plain な `KEY=VALUE` ならほぼ必ず
@@ -87,6 +90,27 @@ fnox exec -- npm run dev
 fnox exec -- make test
 fnox exec -- mise run lint-json
 ```
+
+### 常時 shell に注入せず、使うときだけ解決したい secret
+
+`fnox activate` はプロンプト表示のたびに（`cd` 時に限らず）設定されている secret を再解決します。
+`bw`（Bitwarden Password Manager）のようにセッション (`BW_SESSION`) が定期的に切れる provider を
+デフォルトのまま使うと、セッション切れのたびにプロンプト側でログインを求められて煩わしくなります。
+
+これを避けるには、secret ごとに `env` フィールドを指定します:
+
+| `env` の値      | 挙動                                                                     |
+| ---------------- | -------------------------------------------------------------------------- |
+| `true`（既定）    | `fnox activate` によるシェルへの自動注入 + `fnox exec` の両方で解決される |
+| `"exec"`          | `fnox exec -- <command>` 実行時にだけ解決される。シェルには自動注入しない |
+| `false`           | 自動注入されない。`fnox get <NAME>` で明示的に取得した時だけ解決される     |
+
+`dot_config/fnox/config.toml` の `CZ_OPENAI_API_KEY` は `env = "exec"` にしているため、シェルを
+開いただけでは bw のログインを求められません。実際に `czg ai` を使うとき（zabrze の `cza`/`czae`、
+実体は `fnox exec -- czg ai`）にだけ、そのタイミングで bw セッションが必要になります。同様に
+`bws` / `aws-sm` のように機械向けで期限切れしにくい provider は `env = true`（既定）のままで
+問題ありません。「使うときだけ必要な secret」は `env = "exec"` にして `fnox exec` 経由に倒す、が
+基本方針です。
 
 ## aws-vault との併用
 

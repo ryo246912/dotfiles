@@ -15,7 +15,12 @@ type = "bitwarden"
 # czg は CZ_OPENAI_API_KEY 環境変数を読むため、fnox 経由の注入に置き換えた
 # （.czrc 側は apiEndpoint/apiModel のみの非 secret な静的ファイルにした）。
 # value はこの Bitwarden item に既に登録済みの値をそのまま参照するだけで、ここには平文を書かない。
-CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)" }
+#
+# env = "exec" にしているのは、`fnox activate zsh` はプロンプト表示のたびに全 secret を再解決する
+# ため、デフォルト(env = true)だと bw のセッションが切れている時に毎回ログインを求められて煩わしい
+# から。"exec" にすると `fnox exec -- <command>` 経由でだけ解決される（shell には自動注入しない）。
+# 呼び出し側は `czg ai` ではなく `fnox exec -- czg ai` を使う（zabrze の `cza`/`czae` 参照）。
+CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)", env = "exec" }
 
 # --- 以下は未使用（このリポジトリではまだ実利用していない provider のひな形）---------------------
 # 使う場合はコメントを外し、xxx を実際の値に置き換えること。
