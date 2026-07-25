@@ -40,6 +40,9 @@
       "**/.env.staging": "deny",
       "**/.env.development": "deny",
       "**/.env.test": "deny",
+      "**/.env.uat": "deny",
+      "**/.env.qa": "deny",
+      "**/.env.ci": "deny",
       // 汎用の秘匿名・鍵・証明書
       "**/*token*": "deny",
       "**/*key*": "deny",
