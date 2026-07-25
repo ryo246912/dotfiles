@@ -54,7 +54,12 @@
 - 既存 secret 連携は `dot_config/chezmoi/chezmoi.toml` の `[bitwarden] unlock = "auto"` と、`dot_config/zsh/dot_zprofile` / `dot_config/zsh/lazy/main.zsh` の `*.secret` source が中心。
 - `dot_config/zsh/work.zsh` では `direnv hook zsh` が有効だが、`fnox` は未導入。
 - `dot_claude/settings.json` の deny は `.env.*` のみで、`.env` / `.envrc` / `*.secret` / `fnox.local.toml` は未カバー。
-- `dot_config/mise/config.toml` には Bitwarden CLI はあるが、`fnox` / `bws` / `aws-vault` は未定義。
+- `dot_config/mise/config.toml` には Bitwarden CLI はあるが、`fnox` / `bws` は未定義（`aws-vault` は
+  `dot_config/mise/config.work2.toml` に既にある）。
+
+  > 実装後の補足: `fnox`（`github:jdx/fnox`）と `bws`（`aqua:bitwarden/sdk-sm`）は
+  > `dot_config/mise/config.toml` に追加済み。本節はこのチケット開始時点の調査結果であり、
+  > 実装計画の Step 1 はこの2つを新規追加する前提で書かれている。
 
 ## 実装計画
 

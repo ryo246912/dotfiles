@@ -93,9 +93,11 @@ fnox exec -- mise run lint-json
 
 ### 常時 shell に注入せず、使うときだけ解決したい secret
 
-`fnox activate` はプロンプト表示のたびに（`cd` 時に限らず）設定されている secret を再解決します。
+`fnox activate` は shell hook（`cd` での再評価、および fnox 自身のドキュメントによれば prompt 表示時の
+変更検知も含む）のたびに、設定されている secret を解決しにいきます。正確な再評価タイミングは fnox の
+バージョンやシェルにより変わり得ますが、実務上は「`cd` するたびに毎回」で十分起きうる頻度です。
 `bw`（Bitwarden Password Manager）のようにセッション (`BW_SESSION`) が定期的に切れる provider を
-デフォルトのまま使うと、セッション切れのたびにプロンプト側でログインを求められて煩わしくなります。
+デフォルトのまま使うと、セッション切れのたびに shell 側でログインを求められて煩わしくなります。
 
 これを避けるには、secret ごとに `env` フィールドを指定します:
 
