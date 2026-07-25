@@ -71,6 +71,13 @@ fi
 
 # fnox
 if command -v fnox >/dev/null 2>&1; then
+    # BWS_ACCESS_TOKEN は bws provider 自体が要求する bootstrap 値なので、fnox activate より前に
+    # 手動で export する。fnox set --global --provider age BWS_ACCESS_TOKEN で未設定のうちは
+    # `fnox get` が失敗するだけで、shell 起動自体は落とさない。
+    if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+        BWS_ACCESS_TOKEN="$(fnox get BWS_ACCESS_TOKEN 2>/dev/null)"
+        [ -n "$BWS_ACCESS_TOKEN" ] && export BWS_ACCESS_TOKEN
+    fi
     eval "$(fnox activate zsh)"
 fi
 

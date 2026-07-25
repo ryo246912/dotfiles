@@ -200,11 +200,13 @@ bw status # "unlocked" になっていること
    `aqua:FiloSottile/age` として pin してあるので `mise install` すれば使えます:
    ```sh
    age-keygen -o ~/.config/fnox/age-identity.txt
+   chmod 600 ~/.config/fnox/age-identity.txt
    ```
    出力される `age1...` から始まる公開鍵を `dot_config/fnox/config.toml` の
-   `[providers.age].recipients` に追加してコメントを外す。`recipients` は暗号化に使う公開鍵であり、
-   復号には別途秘密鍵の場所を fnox に伝える必要があるため、同じ `[providers.age]` に `key_file` も
-   設定する（`FNOX_AGE_KEY_FILE` 環境変数で渡す方法もあるが、恒常的に使うならここに書く方が漏れない）:
+   `[providers.age].recipients` に追加してコメントを外す。`recipients` は暗号化に使う公開鍵の
+   **リスト**です（後述の複数 PC 対応のため、複数指定できる）。復号には別途秘密鍵の場所を fnox に
+   伝える必要があるため、同じ `[providers.age]` に `key_file` も設定する（`FNOX_AGE_KEY_FILE`
+   環境変数で渡す方法もあるが、恒常的に使うならここに書く方が漏れない）:
    ```toml
    [providers.age]
    type = "age"
@@ -218,12 +220,15 @@ bw status # "unlocked" になっていること
    ```sh
    fnox set --global --provider age BWS_ACCESS_TOKEN
    ```
-4. 使う直前に環境変数へ展開する（`bws` provider 自体がこの環境変数を要求するため）:
-   ```sh
-   export BWS_ACCESS_TOKEN=$(fnox get BWS_ACCESS_TOKEN)
-   ```
-   毎回手動で打つのが面倒なら、`dot_config/zsh/lazy/mise.zsh` の `eval "$(fnox activate zsh)"` より
-   前に上記の `export` を足すと、shell 起動時に自動展開されます。
+   `--global` を付けると、この ciphertext は `~/.config/fnox/config.toml`
+   （＝このリポジトリの `dot_config/fnox/config.toml` がデプロイされたファイル）に直接書き込まれます。
+   暗号化済みなので、その差分をそのまま git commit して問題ありません（コミットし忘れると、次の
+   `chezmoi apply` でこのファイルがソース側の内容に戻され、せっかく設定した ciphertext が消える
+   ので注意）。
+4. `dot_config/zsh/lazy/mise.zsh` の `fnox` セクションが `eval "$(fnox activate zsh)"` の直前に
+   `fnox get BWS_ACCESS_TOKEN` の結果を export する処理を入れてあるため、一度上記の `fnox set` を
+   済ませれば、以降はシェルを開くたびに自動で環境変数へ展開されます。まだ `fnox set` していない
+   環境（初期セットアップ前）でも `fnox get` が黙って失敗するだけで、shell の起動自体は落ちません。
 5. `dot_config/fnox/config.toml`（個人用）の `[providers.bws]` は `CZ_OPENAI_API_KEY` 用に既に
    有効化済みです。`project_id` を自分の Secrets Manager project ID に置き換えてください。
    会社用の project を追加する場合は `dot_config/fnox/config.work.toml`（会社用）の
@@ -233,6 +238,38 @@ bw status # "unlocked" になっていること
    fnox get CZ_OPENAI_API_KEY   # config.toml の場合
    fnox exec --profile work -- env | rg '^SOME_APP_API_KEY='   # config.work.toml の場合
    ```
+
+#### 複数 PC で使う場合（2台目以降のセットアップ）
+
+age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ秘密鍵ファイルを複数マシンにコピーして
+使い回すことも技術的には可能ですが、鍵の運用が煩雑になるため非推奨）。`recipients` は複数の公開鍵を
+リストで持てるので、「新しい PC の公開鍵を追加してから、既存の ciphertext をその公開鍵向けに
+再暗号化する」という手順になります。
+
+1. 2台目の PC で新しい age keypair を作る（1台目とは別の鍵）:
+   ```sh
+   age-keygen -o ~/.config/fnox/age-identity.txt
+   chmod 600 ~/.config/fnox/age-identity.txt
+   ```
+2. 出力された公開鍵を、`dot_config/fnox/config.toml` の `[providers.age].recipients` に追記する
+   （1台目の公開鍵は消さず、リストに2つ目を足すだけ）。この編集自体は git を扱える側（1台目や
+   別の作業環境）で行って構いません。
+3. 1台目（今まで使っていた秘密鍵で既存 ciphertext を復号できる側）で、追加した recipient に
+   向けて既存の ciphertext を再暗号化する:
+   ```sh
+   fnox reencrypt --provider age
+   ```
+   これで `dot_config/fnox/config.toml` 内の `BWS_ACCESS_TOKEN` の ciphertext が、1台目・2台目
+   どちらの秘密鍵でも復号できる形に更新されます。
+4. `recipients` の追加と再暗号化後の `dot_config/fnox/config.toml` を commit して push する。
+5. 2台目で `chezmoi apply`（または `git pull` 後に `chezmoi apply`）すれば、2台目の
+   `age-identity.txt` でも `fnox get BWS_ACCESS_TOKEN` が復号できるようになります。
+
+> [!IMPORTANT]
+> 2台目の公開鍵を `recipients` に追加しただけで `fnox reencrypt` を忘れると、既存の ciphertext は
+> 古い recipients のまま変わらないため、2台目では復号できません。age の暗号文は暗号化した時点の
+> recipients がヘッダに埋め込まれる方式で、`recipients` の設定を後から書き換えても既存の ciphertext
+> には遡って反映されないためです。
 
 ### 3. AWS Secrets Manager + `aws-vault` (`aws-sm` provider)
 
