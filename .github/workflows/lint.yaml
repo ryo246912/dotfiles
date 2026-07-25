@@ -112,14 +112,4 @@ jobs:
         run: mise run lint:secret
 
       - name: wait for all lints
-        if: always()
-        wait:
-          - lint-json
-          - lint-yaml
-          - lint-md
-          - lint-toml
-          - lint-actionlint
-          - lint-ghalint
-          - lint-zizmor
-          - lint-pinact
-          - lint-secret
+        wait-all: true
