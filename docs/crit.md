@@ -78,8 +78,8 @@ crit@crit プラグインが提供する 2 つの skill を、プラグイン導
 ソースは `dot_config/rulesync/exact_dot_rulesync/skills/` にあり、`chezmoi apply` 後に
 `mise run rulesync:generate` を実行すると各エージェント向けに生成されます。
 
-| skill      | 役割                                                               | 生成先                                                    |
-| ---------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| skill      | 役割                                                               | 生成先                                                     |
+| ---------- | ------------------------------------------------------------------ | ---------------------------------------------------------- |
 | `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`, `~/.agents/skills/crit/`         |
 | `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/`, `~/.agents/skills/crit-cli/` |
 
