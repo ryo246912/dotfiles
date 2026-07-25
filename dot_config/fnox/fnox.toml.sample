@@ -1,5 +1,6 @@
 # Copy this file into each project as ./fnox.toml and replace placeholders.
 # Do not store plaintext secrets in `.env`, `.envrc`, `*.secret`, or `fnox.local.toml`.
+# Provider selection guide: docs/fnox.md
 
 [providers.age]
 type = "age"
@@ -7,14 +8,32 @@ recipients = [
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLE user@example.com",
 ]
 
+# Bitwarden Secrets Manager (bws / BWS_ACCESS_TOKEN). Machine-oriented, no session
+# expiry during a work session — first choice for app/service secrets.
 [providers.bws]
 type = "bitwarden-sm"
 project_id = "00000000-0000-0000-0000-000000000000"
 
+# Bitwarden Password Manager (bw / BW_SESSION). Same vault chezmoi already unlocks
+# (`[bitwarden] unlock = "auto"`), so this reuses that session instead of chezmoi
+# expanding the value into a deployed file. Prefer `bws` above for anything an app
+# reads repeatedly; reach for this only when the value already lives in a PM item
+# (e.g. shared team logins) and you don't want to duplicate it into Secrets Manager.
+# `bw unlock --raw` must have run in the current shell (chezmoi's auto-unlock covers
+# this in practice) before `fnox exec` / `fnox activate` can resolve these.
+[providers.bitwarden]
+type = "bitwarden"
+
+# AWS Secrets Manager. `profile` is optional — omit it to fall back to the standard
+# AWS credential chain (env vars / IAM role), which is what lets this combine with
+# aws-vault: run `aws-vault exec <profile> -- fnox exec -- <command>` and aws-vault's
+# exported AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_SESSION_TOKEN are picked up
+# automatically, so leave `profile` unset in that flow. Only set `profile` here if you
+# want this provider pinned to one profile regardless of the caller's AWS_PROFILE.
 [providers.aws]
 type = "aws-sm"
 region = "ap-northeast-1"
-profile = "my-aws-profile"
+# profile = "my-aws-profile" # optional: pin instead of inheriting aws-vault's env
 prefix = "myapp/"
 
 [secrets]
@@ -26,3 +45,22 @@ prefix = "myapp/"
 # Remote references keep only the lookup key in git:
 OPENAI_API_KEY = { provider = "bws", value = "OPENAI_API_KEY" }
 DATABASE_URL = { provider = "aws", value = "database-url" }
+# Bitwarden Password Manager: "value" looks up an item by name (fetches its
+# password field) — use "ItemName/fieldname" to target a custom field instead.
+SHARED_TEAM_LOGIN_PASSWORD = { provider = "bitwarden", value = "Shared Team Login" }
+
+# --- aws-vault multi-account template -------------------------------------------
+# One fnox profile per AWS account/role, matched to an aws-vault profile of the
+# same name. `profile` here is a placeholder — replace <aws_profile> with the real
+# aws-vault profile (see `aws-vault list`) for each environment you need.
+#
+# [profiles.<aws_profile>.providers.aws]
+# type   = "aws-sm"
+# region = "ap-northeast-1"
+# prefix = "myapp/<aws_profile>/"
+#
+# [profiles.<aws_profile>.secrets]
+# DATABASE_URL = { provider = "aws", value = "database-url" }
+#
+# Usage:
+#   aws-vault exec <aws_profile> -- fnox exec --profile <aws_profile> -- <command>
