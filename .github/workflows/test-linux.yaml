@@ -35,8 +35,6 @@ jobs:
     env:
       MISE_ENV: linux
       MISE_YES: "1"
-      GH_TOKEN: ${{ github.token }}
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -66,6 +64,11 @@ jobs:
         # repo root の dev 用 mise.toml を読み込まないよう cwd を runner.temp にし、
         # PR チェックアウトを --source で指定して apply する。
         working-directory: ${{ runner.temp }}
+        # full mise install（aqua/github backend）が GitHub API を使うため、read-only の
+        # github.token を install を行うこのステップに限定して注入する（ghalint: job env 禁止）。
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # chezmoi を pinned(aqua, checksum 検証)で用意する（curl|sh を避ける）。
@@ -123,15 +126,18 @@ jobs:
       pull-requests: write
     timeout-minutes: 5
     env:
-      GH_TOKEN: ${{ github.token }}
       PR_NUMBER: ${{ github.event.issue.number }}
       REPO: ${{ github.repository }}
       RESULT: ${{ needs.test.result }}
     steps:
       - name: Comment result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          run_url="${{ github.server_url }}/${REPO}/actions/runs/${{ github.run_id }}"
+          run_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
           body=$(printf '`/test-linux`（chezmoi apply→hook(apt bootstrap+mise install)→zsh 起動、[log](%s)）: %s %s' \
             "$run_url" "$(icon "$RESULT")" "$RESULT")
