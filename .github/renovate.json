@@ -92,7 +92,7 @@
       "customType": "regex",
       "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
       "matchStrings": [
-        "image\\s*=\\s*\"(?<depName>ghcr\\.io/wesm/agentsview):(?<currentValue>v?[^\"]+)\""
+        "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
       "datasourceTemplate": "docker"
     },
