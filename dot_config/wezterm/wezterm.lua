@@ -116,7 +116,7 @@ if is_darwin then
     mods = "CMD",
     action = wezterm.action.PasteFrom("Clipboard"),
   })
-  -- overlay/popupがmount中(popupにクライアントが接続中)ならoverlay/popupを強制killし、
+  -- overlayがmount中(popupにクライアントが接続中)ならoverlayを強制killし、
   -- そうでなければWezTerm純正のCommand Paletteを開く
   local function tmux_session_has_client(session_name)
     local ok, stdout = wezterm.run_child_process({ "tmux", "list-clients", "-t", session_name })
@@ -126,7 +126,7 @@ if is_darwin then
     key = "p",
     mods = "CMD|SHIFT",
     action = wezterm.action_callback(function(window, pane)
-      if tmux_session_has_client("overlay") or tmux_session_has_client("popup") then
+      if tmux_session_has_client("overlay") then
         window:perform_action(wezterm.action.SendString("\x02P"), pane)
       else
         window:perform_action(wezterm.action.ActivateCommandPalette, pane)
