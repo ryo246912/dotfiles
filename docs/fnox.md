@@ -53,7 +53,8 @@ provider だけ差し替えられるからです。`dotenvx` は「`.env` とい
 | `bitwarden` (bw)     | `BW_SESSION`（human, 期限あり） | 既存の Bitwarden Password Manager item をそのまま参照したい時 |
 | `aws-sm`             | AWS credential chain            | AWS 上で完結する secret、`aws-vault` との併用                 |
 
-Bitwarden は 2 系統あります。`chezmoi` は `[bitwarden] unlock = "auto"` で Password Manager (`bw`) を
+Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違い・project の概念・両者を
+連携できるか等は `docs/bitwarden.md` を参照）。`chezmoi` は `[bitwarden] unlock = "auto"` で Password Manager (`bw`) を
 使っており、既にこのセッションが有効になっています。**`fnox` の `bitwarden` provider は同じセッションを
 再利用するだけ**なので、chezmoi のテンプレート関数 `bitwarden "item" "..."` で値を静的ファイルに
 展開する代わりに、`fnox exec` / `fnox activate` で実行時に注入する形に置き換えられます
