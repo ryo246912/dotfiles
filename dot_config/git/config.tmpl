@@ -2,6 +2,17 @@
   ui = auto
 [commit]
   gpgsign = true
+[credential]
+{{ if eq .chezmoi.os "darwin" }}
+  # macOS Keychain。GitHub 自体は下の pushInsteadOf で SSH に寄せているため、これが要るのは
+  # GitHub の HTTPS clone や GitHub 以外の HTTPS git host（社内 GitLab 等）向け。
+  helper = osxkeychain
+{{- else }}
+  # WSL2 には osxkeychain 相当の OS keychain 連携が無いため、平文永続化はしない方針で
+  # メモリキャッシュのみにしている（プロセス終了・再起動で消える）。
+  # 長期間の永続化が要る場合は git-credential-manager の導入を検討する。
+  helper = cache --timeout=86400
+{{- end }}
 [core]
   editor = nvim
   excludesfile = ~/.config/git/gitignore
