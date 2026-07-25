@@ -191,7 +191,8 @@ fnox get CZ_OPENAI_API_KEY # bw から値が取れること
 「このトークン自体をどう安全に保管するか」という bootstrap 問題があります。fnox 公式の解決策は
 `age` でトークン自体を暗号化して git 管理下に置くことです。
 
-1. age keypair を作る（まだ無ければ）:
+1. age keypair を作る（まだ無ければ）。`age-keygen` は `dot_config/mise/config.toml` の
+   `aqua:FiloSottile/age` として pin してあるので `mise install` すれば使えます:
    ```sh
    age-keygen -o ~/.config/fnox/age-identity.txt
    ```
@@ -210,8 +211,9 @@ fnox get CZ_OPENAI_API_KEY # bw から値が取れること
    毎回手動で打つのが面倒なら、`dot_config/zsh/lazy/mise.zsh` の `eval "$(fnox activate zsh)"` より
    前に上記の `export` を足すと、shell 起動時に自動展開されます（`bws` を実際に使い始めるときに追加
    すること。現状はまだ `[providers.bws]` 自体がコメントアウトのひな形なので未配線）。
-5. `dot_config/fnox/config.toml`（個人用）または `dot_config/fnox/config.work.toml`（会社用）の
-   `[providers.bws]` ブロックのコメントを外し、`project_id` を Secrets Manager の project ID に置き換える。
+5. `dot_config/fnox/config.toml`（個人用）の `[providers.bws]`、または
+   `dot_config/fnox/config.work.toml`（会社用）の `[profiles.work.providers.bws]` ブロックの
+   コメントを外し、`project_id` を Secrets Manager の project ID に置き換える。
 6. 動作確認:
    ```sh
    fnox get OPENAI_API_KEY   # config.toml の場合
