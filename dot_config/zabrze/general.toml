@@ -106,12 +106,12 @@ trigger-pattern = "^cz$"
 
 [[snippets]]
 name    = "czg ai"
-snippet = "fnox exec -- czg ai"
+snippet = "czg ai"
 trigger = "cza"
 
 [[snippets]]
 name    = "czg ai(English)"
-snippet = "CZ_LANG=en fnox exec -- czg ai"
+snippet = "CZ_LANG=en czg ai"
 trigger = "czae"
 
 [[snippets]]

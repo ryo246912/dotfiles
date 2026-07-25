@@ -65,10 +65,12 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 `czg` は `openAIToken` の代わりに **`CZ_OPENAI_API_KEY` 環境変数**を読めるため、この secret は
 env var 注入で完全に代替できます。今は `.czrc`（`dot_config/dot_czrc`）から `openAIToken` を削除して
 `apiEndpoint`/`apiModel` のみの非 secret な静的ファイルにし、トークンは `dot_config/fnox/config.toml`
-の `CZ_OPENAI_API_KEY` secret（`bitwarden` provider）から注入しています。
+の `CZ_OPENAI_API_KEY` secret から注入しています。
 
-ただしこの secret は `env = "exec"` を付けており、後述の理由で `fnox activate` によるシェルへの
-自動注入はしていません。
+この secret は当初 `bitwarden` (bw) provider を使っていましたが、`BW_SESSION` のセッション切れを
+避けるため `bitwarden-sm` (bws) provider に切り替えました。bws の machine account token には
+セッション切れが無いため、`env = "exec"` にする必要がなくなり、`fnox activate` によるシェルへの
+自動注入（デフォルトの `env = true`）をそのまま使えます。
 
 判断基準:
 
@@ -116,12 +118,10 @@ fnox exec -- mise run lint-json
 > `github:jdx/fnox` を v1.30.0 以上（現在 1.31.1）に pin しているので、`mise install` で更新すれば
 > 解消します。古い fnox が残っている場合は `fnox --version` を確認してください。
 
-`dot_config/fnox/config.toml` の `CZ_OPENAI_API_KEY` は `env = "exec"` にしているため、シェルを
-開いただけでは bw のログインを求められません。実際に `czg ai` を使うとき（zabrze の `cza`/`czae`、
-実体は `fnox exec -- czg ai`）にだけ、そのタイミングで bw セッションが必要になります。同様に
 `bws` / `aws-sm` のように機械向けで期限切れしにくい provider は `env = true`（既定）のままで
-問題ありません。「使うときだけ必要な secret」は `env = "exec"` にして `fnox exec` 経由に倒す、が
-基本方針です。
+問題ありません（`dot_config/fnox/config.toml` の `CZ_OPENAI_API_KEY` も bws provider なのでこの
+既定のままです）。`bw` のようにセッションが切れる provider を使う secret を追加する場合にだけ、
+「使うときだけ必要な secret」として `env = "exec"` にして `fnox exec` 経由に倒すのが基本方針です。
 
 ## グローバル設定と work profile の分割
 
@@ -182,9 +182,13 @@ exec + fnox exec) を参照してください。
 そのセッションをそのまま使い回します。動作確認:
 
 ```sh
-bw status                 # "unlocked" になっていること
-fnox get CZ_OPENAI_API_KEY # bw から値が取れること
+bw status # "unlocked" になっていること
 ```
+
+現状このリポジトリで `bitwarden` (bw) provider を参照する secret は無く（`CZ_OPENAI_API_KEY` は
+下記の bws provider に移行済み）、`BW_SESSION` のセッション切れの影響を受けたくない secret を
+追加するときは基本的に bws を優先してください。既存の Password Manager item をそのまま参照したい
+場合にだけこの provider を使い、`fnox get <secret名>` で動作確認します。
 
 ### 2. Bitwarden Secrets Manager (`bitwarden-sm` provider, `bws`)
 
@@ -219,14 +223,14 @@ fnox get CZ_OPENAI_API_KEY # bw から値が取れること
    export BWS_ACCESS_TOKEN=$(fnox get BWS_ACCESS_TOKEN)
    ```
    毎回手動で打つのが面倒なら、`dot_config/zsh/lazy/mise.zsh` の `eval "$(fnox activate zsh)"` より
-   前に上記の `export` を足すと、shell 起動時に自動展開されます（`bws` を実際に使い始めるときに追加
-   すること。現状はまだ `[providers.bws]` 自体がコメントアウトのひな形なので未配線）。
-5. `dot_config/fnox/config.toml`（個人用）の `[providers.bws]`、または
-   `dot_config/fnox/config.work.toml`（会社用）の `[profiles.work.providers.bws]` ブロックの
-   コメントを外し、`project_id` を Secrets Manager の project ID に置き換える。
+   前に上記の `export` を足すと、shell 起動時に自動展開されます。
+5. `dot_config/fnox/config.toml`（個人用）の `[providers.bws]` は `CZ_OPENAI_API_KEY` 用に既に
+   有効化済みです。`project_id` を自分の Secrets Manager project ID に置き換えてください。
+   会社用の project を追加する場合は `dot_config/fnox/config.work.toml`（会社用）の
+   `[profiles.work.providers.bws]` ブロックのコメントを外し、同様に `project_id` を設定します。
 6. 動作確認:
    ```sh
-   fnox get OPENAI_API_KEY   # config.toml の場合
+   fnox get CZ_OPENAI_API_KEY   # config.toml の場合
    fnox exec --profile work -- env | rg '^SOME_APP_API_KEY='   # config.work.toml の場合
    ```
 
