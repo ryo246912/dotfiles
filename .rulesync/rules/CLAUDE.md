@@ -21,8 +21,4 @@ This is a personal dotfiles repository managed with [chezmoi](https://github.com
 
 ## More details
 
-- `docs/setup.md` - setup instructions
-- `docs/rulesync.md` - how CLAUDE.md / AGENTS.md / skills are generated
-- `docs/crit.md` - crit-based code review workflow
-- `README.md` - repository overview
-- `mise.toml` - managed tools and tasks
+See `docs/**` and `README.md`.
