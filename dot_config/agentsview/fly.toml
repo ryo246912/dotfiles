@@ -8,7 +8,7 @@ kill_signal  = "SIGINT"
 kill_timeout = "5s"
 
 [build]
-image = "ghcr.io/wesm/agentsview:0.29.0"
+image = "ghcr.io/wesm/agentsview:0.38.1"
 
 [env]
 # 起動ログや health check 時に update check を走らせない。
