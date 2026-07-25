@@ -9,6 +9,9 @@ dot_zshrc.secret
 ## claude
 settings.local.json
 
+## rulesync-generated (source: .rulesync/rules/, see docs/rulesync.md)
+/CLAUDE.md
+
 ## VSCode
 mcp.json
 !.rulesync/mcp.json
