@@ -3,30 +3,6 @@
     "DISABLE_AUTOUPDATER": "1"
   },
   "cleanupPeriodDays": 36500,
-  "permissions": {
-    "allow": [
-      "Bash(mise list:*)",
-      "Bash(ccmanager --help)",
-      "Bash(xcode-select:*)",
-      "Bash(claude mcp:*)",
-      "Bash(find:*)",
-      "Bash(ls:*)",
-      "Bash(shfmt:*)",
-      "WebFetch(domain:docs.anthropic.com)"
-    ],
-    "deny": [
-      "Bash(sudo:*)",
-      "Bash(rm -rf:*)",
-      "Read(**/.env.*)",
-      "Read(.env.*)",
-      "Read(id_rsa)",
-      "Read(id_ed25519)",
-      "Read(**/*token*)",
-      "Read(**/*key*)",
-      "Write(.env*)",
-      "Write(**/secrets/**)"
-    ]
-  },
   "statusLine": {
     "type": "command",
     "command": "ccusage statusline --visual-burn-rate emoji"

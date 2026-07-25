@@ -33,9 +33,15 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
   - ソースは v10 以降で使える **JSONC 形式**（`hooks.jsonc` / `mcp.jsonc` / `permissions.jsonc`、
     コメント・末尾カンマ可。`.jsonc` は同名 `.json` より優先）を採用している。`mcp.jsonc.tmpl` は
     chezmoi テンプレートで `AWS_PROFILE` を注入しつつ `~/.config/rulesync/.rulesync/mcp.jsonc` へ配布される
-  - `permissions.jsonc` は共有 `permission` ブロックで秘匿ファイル（`.env` / `*.pem` / 各種鍵など）の
-    読み取りを `deny` する。`permissions` を targets に含むツール（現状 `claudecode` のみ）の
-    `~/.claude/settings.json` にマージされる。deny は allow より優先される点に注意
+  - `permissions.jsonc` は **Claude Code の権限（allow/deny）の唯一のソース**。以前は
+    `dot_claude/settings.json` の `permissions` と二重管理だったが rulesync 側へ集約した。
+    category が Claude のツール別ルールへ変換される（`bash`→`Bash(...)` / `read`→`Read(...)` /
+    `write`→`Write(...)` / `webfetch`→`WebFetch(...)`）。`permissions` を targets に含むツール
+    （現状 `claudecode` のみ）の `~/.claude/settings.json` にマージされる。deny は allow より優先。
+    なお `~/.claude/settings.json` は chezmoi が `dot_claude/settings.json` から都度上書きするため、
+    この権限マージは hooks と同じく post-apply hook の `rulesync generate` 実行に依存する
+    （`.chezmoi.toml.tmpl` の `[hooks.apply.post]` が rulesync ソース差分時に再生成する）。
+    Read/Write の deny は Claude 組み込みツール向けで、Bash 経由や `~/` 直下まで塞ぐには sandbox が必要
 
 > [!NOTE]
 > rulesync を v13 未満から上げた直後は、旧 `~/.codex/skills/` に生成済みの skill が

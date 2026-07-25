@@ -1,31 +1,57 @@
 {
   "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
-  // 共有 permission ブロック。permissions を targets に含むツール（現状は claudecode のみ）へ
-  // カテゴリごとにマージされる。codexcli / copilotcli の permissions を有効にすれば同じ内容が波及する。
+  // Claude Code の権限（allow/deny）の唯一のソース。
+  // 以前は dot_claude/settings.json の "permissions" と二重管理になっていたため、rulesync 側へ集約した。
+  // rulesync generate が ~/.claude/settings.json へマージする（category→Claude のツール別ルールへ変換:
+  // bash→Bash(...) / read→Read(...) / write→Write(...) / webfetch→WebFetch(...)）。
+  // permissions を targets に含むツール（現状 claudecode のみ）へ共有される。
   //
-  // 方針: グローバル配布（全プロジェクトに効く）なので、ワークフローを壊さない
-  // 「シークレット/認証情報の読み取り拒否」に限定する。deny は allow より優先されるため、
-  // ここに挙げたパターンは常に読めなくなる点に注意（`.env.example` 等は対象外にしてある）。
-  // bash / edit は各ツールの既定に委ねる。必要になれば下に追記する。
+  // 注意:
+  // - deny は allow より優先される。
+  // - Read/Write deny は Claude の組み込みツール向けで、Bash 経由（`cat ~/.ssh/id_rsa` 等）までは
+  //   保証されない。ホーム直下や subprocess も塞ぐには sandbox（/sandbox）が必要（別途ハードニング）。
+  // - `~/.claude/settings.json` は chezmoi が dot_claude/settings.json から都度上書きするため、
+  //   このマージは post-apply hook の rulesync generate 実行に依存する（hooks と同じモデル）。
   "permission": {
+    "bash": {
+      "mise list:*": "allow",
+      "ccmanager --help": "allow",
+      "xcode-select:*": "allow",
+      "claude mcp:*": "allow",
+      "find:*": "allow",
+      "ls:*": "allow",
+      "shfmt:*": "allow",
+      "sudo:*": "deny",
+      "rm -rf:*": "deny"
+    },
+    "webfetch": {
+      "domain:docs.anthropic.com": "allow"
+    },
     "read": {
+      // env ファイル（.env.* は .env.local/.production 等の接尾辞付きを網羅。bare .env は別途）
       ".env": "deny",
-      ".env.local": "deny",
+      ".env.*": "deny",
       "**/.env": "deny",
-      "**/.env.local": "deny",
-      "**/.env.*.local": "deny",
-      "**/.env.production": "deny",
-      "**/.env.staging": "deny",
-      "**/.env.development": "deny",
-      "**/.env.test": "deny",
+      "**/.env.*": "deny",
+      // 汎用の秘匿名・鍵・証明書
+      "**/*token*": "deny",
+      "**/*key*": "deny",
       "**/*.pem": "deny",
+      // SSH 秘密鍵（root 直下は後方互換で残し、**/ で ~/.ssh 等ネストも網羅）
+      "id_rsa": "deny",
+      "id_ed25519": "deny",
       "**/id_rsa": "deny",
       "**/id_ed25519": "deny",
       "**/id_ecdsa": "deny",
       "**/id_dsa": "deny",
       "**/id_ecdsa_sk": "deny",
       "**/id_ed25519_sk": "deny",
+      // クラウド認証情報
       "**/.aws/credentials": "deny"
+    },
+    "write": {
+      ".env*": "deny",
+      "**/secrets/**": "deny"
     }
   }
 }
