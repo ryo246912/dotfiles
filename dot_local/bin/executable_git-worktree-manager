@@ -540,6 +540,12 @@ open_multi_worktree_tiled() {
 		return 1
 	fi
 
+	# livediff の場合はコマンドの存在を事前に確認する
+	if [[ "$cmd" == "livediff" ]] && ! command -v livediff &>/dev/null; then
+		echo "${RED}エラー: livediff コマンドが見つかりません${NC}" >&2
+		return 1
+	fi
+
 	# cd / lazygit / livediff の場合のみ、タスクルートディレクトリも別ペインとして追加
 	if [[ "$cmd" == "cd" ]] || [[ "$cmd" == "lazygit" ]] || [[ "$cmd" == "livediff" ]]; then
 		repos+=("$task_path")
@@ -551,7 +557,10 @@ open_multi_worktree_tiled() {
 		cd "${repos[0]}" || return 1
 		case "$cmd" in
 		lazygit) lazygit ;;
-		livediff) livediff . ;;
+		livediff)
+			livediff .
+			return $?
+			;;
 		*) exec zsh ;;
 		esac
 		return 0
