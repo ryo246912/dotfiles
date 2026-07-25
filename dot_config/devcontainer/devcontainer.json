@@ -18,7 +18,20 @@
     "CRIT_HOST": "0.0.0.0",
     "CRIT_PORT": "7842",
     // crit: コンテナ内では更新チェック不要のため無効化
-    "CRIT_NO_UPDATE_CHECK": "1"
+    "CRIT_NO_UPDATE_CHECK": "1",
+    // OneCLI: devc-up-wrapper がホストの設定ファイルから localEnv を読み込む。
+    // 未設定なら空文字となり、通常の（プロキシなしの）通信になる。
+    "ONECLI_URL": "${localEnv:ONECLI_URL}",
+    "ONECLI_PROXY_URL": "${localEnv:ONECLI_PROXY_URL}",
+    "HTTP_PROXY": "${localEnv:ONECLI_PROXY_URL}",
+    "HTTPS_PROXY": "${localEnv:ONECLI_PROXY_URL}",
+    "http_proxy": "${localEnv:ONECLI_PROXY_URL}",
+    "https_proxy": "${localEnv:ONECLI_PROXY_URL}",
+    "NO_PROXY": "localhost,127.0.0.1,host.docker.internal",
+    "no_proxy": "localhost,127.0.0.1,host.docker.internal",
+    "NODE_EXTRA_CA_CERTS": "/usr/local/share/ca-certificates/onecli-gateway.crt",
+    "NODE_USE_ENV_PROXY": "1",
+    "GIT_HTTP_PROXY_AUTHMETHOD": "basic"
   },
   // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
   // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
