@@ -645,9 +645,12 @@ open_multi_worktree_tiled() {
 		done
 	fi
 
-	# 同一セッション内の他ウィンドウをすべて閉じ、overlayを常に単一windowに保つ
+	# overlayセッション経由で呼ばれた場合のみ、他ウィンドウをすべて閉じてoverlayを単一windowに保つ
 	# (通常のdetachではkillしない。強制killはtmux.confのbind P/Cmd+Shift+Pから行う)
-	tmux kill-window -a -t "${session_name}:${win_idx}" 2>/dev/null || true
+	# 通常のtmuxセッションから直接起動された場合はユーザーの他windowを破壊しないよう何もしない
+	if [[ "$session_name" == "overlay" ]]; then
+		tmux kill-window -a -t "${session_name}:${win_idx}" 2>/dev/null || true
+	fi
 
 	return 0
 }

@@ -119,7 +119,8 @@ if is_darwin then
   -- overlay/popupがmount中(popupにクライアントが接続中)ならoverlay/popupを強制killし、
   -- そうでなければWezTerm純正のCommand Paletteを開く
   local function tmux_session_has_client(session_name)
-    return wezterm.run_child_process({ "tmux", "list-clients", "-t", session_name })
+    local ok, stdout = wezterm.run_child_process({ "tmux", "list-clients", "-t", session_name })
+    return ok and stdout ~= ""
   end
   table.insert(keys, {
     key = "p",
