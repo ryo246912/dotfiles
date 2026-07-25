@@ -49,6 +49,11 @@ type = "bitwarden"
 # ため、デフォルト(env = true)だと bw のセッションが切れている時に毎回ログインを求められて煩わしい
 # から。"exec" にすると `fnox exec -- <command>` 経由でだけ解決される（shell には自動注入しない）。
 # 呼び出し側は `czg ai` ではなく `fnox exec -- czg ai` を使う（zabrze の `cza`/`czae` 参照）。
+#
+# 注意: 文字列の env = "exec"（exec-only モード）は fnox v1.30.0 以降でのみ有効。それ未満の
+# バージョンでは `invalid type: string "exec", expected a boolean` で config 全体の読込に失敗する。
+# そのため dot_config/mise/config.toml では github:jdx/fnox を 1.30.0 以上（現在 1.31.1）に pin している。
+# 古い fnox しか無い環境では `mise install` で更新すること。
 CZ_OPENAI_API_KEY = { provider = "bitwarden", value = "GitHub PAT(cz-git)", env = "exec" }
 # 上の [providers.bws] を有効化した場合の secret 例:
 # OPENAI_API_KEY = { provider = "bws", value = "OPENAI_API_KEY" }

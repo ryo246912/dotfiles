@@ -107,6 +107,14 @@ fnox exec -- mise run lint-json
 | `"exec"`       | `fnox exec -- <command>` 実行時にだけ解決される。シェルには自動注入しない |
 | `false`        | 自動注入されない。`fnox get <NAME>` で明示的に取得した時だけ解決される    |
 
+> [!IMPORTANT]
+> 文字列の `env = "exec"`（exec-only モード）は **fnox v1.30.0 以降**で追加された機能です。
+> それ未満のバージョンでは config 読込時に
+> `invalid type: string "exec", expected a boolean` が出て**設定ファイル全体の読込に失敗**します
+> （`env` が boolean しか受け付けないため）。このリポジトリは `dot_config/mise/config.toml` で
+> `github:jdx/fnox` を v1.30.0 以上（現在 1.31.1）に pin しているので、`mise install` で更新すれば
+> 解消します。古い fnox が残っている場合は `fnox --version` を確認してください。
+
 `dot_config/fnox/config.toml` の `CZ_OPENAI_API_KEY` は `env = "exec"` にしているため、シェルを
 開いただけでは bw のログインを求められません。実際に `czg ai` を使うとき（zabrze の `cza`/`czae`、
 実体は `fnox exec -- czg ai`）にだけ、そのタイミングで bw セッションが必要になります。同様に
