@@ -24,8 +24,8 @@
   - `bws` + `fnox`: アプリ/サービス用 env の標準経路。`BWS_ACCESS_TOKEN` を machine account 用に発行する
   - `aws-vault`: AWS 認証専用。`fnox` の `aws-sm` provider と併用するときは
     `aws-vault exec <profile> -- fnox exec -- <command>` を使う
-  - `dot_config/zsh/work.zsh` は `fnox activate zsh` を読み込むので、`fnox.toml` があるディレクトリへ
-    `cd` した後は `npm run` / `make test` / `mise run` が同じ shell の env をそのまま継承する
+  - `dot_config/zsh/lazy/mise.zsh`（全ホスト共通）が `fnox activate zsh` を読み込むので、`fnox.toml` が
+    あるディレクトリへ `cd` した後は `npm run` / `make test` / `mise run` が同じ shell の env をそのまま継承する
   - project ごとの `fnox.toml` は `dot_config/fnox/fnox.toml.sample` を雛形にする
   - `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない
 

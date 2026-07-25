@@ -68,8 +68,10 @@ Bitwarden は 2 系統あります。`chezmoi` は `[bitwarden] unlock = "auto"`
 
 ## shell 統合
 
-`dot_config/zsh/work.zsh` で `fnox activate zsh` を有効化しています。`fnox.toml` があるディレクトリに
-`cd` すると、その shell で `npm run` / `make test` / `mise run` がそのまま secret を継承します。
+`dot_config/zsh/lazy/mise.zsh`（`HOST_ENV` に関係なく全ホストで読み込まれる）で `fnox activate zsh` を
+有効化しています。`work.zsh` 限定にしていないのは、fnox が work 用途に限らない汎用の secret 注入だから
+です。`fnox.toml` があるディレクトリに `cd` すると、その shell で `npm run` / `make test` / `mise run`
+がそのまま secret を継承します。
 
 非対話実行や shell hook を使わない場面では `fnox exec -- <command>` を使います。
 

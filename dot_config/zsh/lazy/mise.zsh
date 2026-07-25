@@ -69,6 +69,11 @@ if command -v delta >/dev/null 2>&1; then
     compdef _gnu_generic delta
 fi
 
+# fnox
+if command -v fnox >/dev/null 2>&1; then
+    eval "$(fnox activate zsh)"
+fi
+
 # fzf
 if command -v fzf >/dev/null 2>&1; then
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
