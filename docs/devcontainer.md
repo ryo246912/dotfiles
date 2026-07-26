@@ -6,6 +6,23 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## devcontainer 内での docker compose / DB コンテナ（DinD）
+
+base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
+`docker` / `docker compose` が使えます。DooD（ホストの `docker.sock` マウント）ではなく DinD を
+採用しているので、compose で建てたコンテナ群は dev container 内に隔離され、ホストの docker daemon
+には触れません。
+
+**docker データの永続化とコンテナ間の分離**
+
+- docker のイメージ等は named volume `devcontainer-dind-var-lib-docker-${devcontainerId}` に
+  永続化され、リビルド時の再 pull を回避します。
+- volume 名を `${devcontainerId}` でスコープしているため、multi-worktree で複数の devcontainer を
+  同時に起動しても、各コンテナはそれぞれ独立した `/var/lib/docker` を持ちます。共有した場合に起きる
+  DinD daemon の起動失敗やメタデータ破損、worktree 間での docker 状態の混入を防ぎます。
+- `${devcontainerId}` は同一 devcontainer のリビルドを跨いで安定する識別子のため、分離しつつ
+  永続化も維持されます。
+
 ## devcontainer からホストへの通知設定（macOS のみ）
 
 devcontainer 内から macOS ホストに通知を送る場合、SSH 経由で通知を行います。
