@@ -43,8 +43,6 @@ mise run agentsview:setup:db-roles
 
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
-> このタスクは `flyctl proxy` を一時起動し、`psql`（libpq client）で接続する。admin password は `PGPASSWORD`（環境変数）で渡して process 引数には出さず、`psql -v ON_ERROR_STOP=1` で途中の DDL/GRANT 失敗も検出する。実行には `psql` が必要（無い場合は `mise use -g postgres` 等で導入する）。
-
 > 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
 実行される SQL の内容:
@@ -153,20 +151,14 @@ curl -I https://ryo-agentsview.fly.dev
 
 ## 複数 PC からのデータ push
 
-各 PC から `mise run agentsview:pg:push` を実行するだけでよい。machine name は未設定なら `hostname` が自動使用され、セッションは PC ごとに区別されて PostgreSQL に蓄積される。
+各 PC から `mise run agentsview:pg:push` を実行するだけでよい。machine name（`AGENTSVIEW_PG_MACHINE`）は zsh 起動時に host-env.map の host-id から自動 export されるため（未設定なら `hostname` にフォールバック）、セッションは PC ごとに区別されて PostgreSQL に蓄積される。
 
 ### 各 PC での設定
 
 `AGENTSVIEW_PROXY_PG_URL` はどの PC でも同じ値（`agentsview_push_mac` role の URL）なので、
-fnox（bws、全 PC 共通）で管理する（task 側が未解決時に自動で `fnox exec --` 経由の再実行に
-切り替えるため、明示的に付ける必要はない）。`AGENTSVIEW_PG_MACHINE` だけは PC ごとに異なる値に
-したい場合のローカル設定だが、`~/.zshenv` は chezmoi が管理するデプロイ先ファイルなので直接編集
-すると次の `chezmoi apply` で消える。secret でもないので fnox にも置かず、変えたい時だけコマンドの
-直前に一時的に指定する:
-
-```sh
-AGENTSVIEW_PG_MACHINE="mac-work" mise run agentsview:pg:push
-```
+fnox（bws、全 PC 共通）で管理する。`AGENTSVIEW_PG_MACHINE` は `dot_config/zsh/host-env.map` の
+host-id（`HOST_ENV` と同じ解決元）から `dot_config/zsh/dot_zshenv.tmpl` がシェル起動時に自動で
+export するため、PC ごとに手動設定する必要はない。
 
 `agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
 
@@ -203,15 +195,6 @@ local PC
 ```
 
 この構成では、ローカル PC から Fly private network までの通信は flyctl の user-mode WireGuard で保護される。AgentsView から見た DB host は `127.0.0.1` なので、local `~/.agentsview/config.toml` に `[pg] allow_insecure = true` を入れなくてよい。
-
-`AGENTSVIEW_PROXY_PG_URL` は `env = "exec"` の secret だが、task 側が未解決時に自動で
-`fnox exec --` 経由の再実行に切り替えるため、明示的に付ける必要はない。
-`~/.zshenv` は chezmoi のデプロイ先で直接編集しても次の `chezmoi apply` で消えるため、
-`AGENTSVIEW_PG_MACHINE` を PC ごとに変えたい場合はコマンドの直前で一時的に指定する:
-
-```sh
-AGENTSVIEW_PG_MACHINE='mac-work' mise run agentsview:pg:push
-```
 
 `psgl.flycast` は Fly private network 用の host のため、WireGuard が有効でない通常のローカル DNS では名前解決できない。`lookup psgl.flycast: no such host` が出る場合は、DB URL や password ではなく private network への経路がないことが原因。
 この repository の通常運用では、WireGuard client 常駐や `~/.agentsview/config.toml` の dotfiles 管理は採用しない。`flyctl proxy` を task 内で起動するため、local の AgentsView config に `[pg] allow_insecure = true` を追加する必要はない。
