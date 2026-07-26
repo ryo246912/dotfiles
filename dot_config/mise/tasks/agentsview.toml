@@ -347,6 +347,10 @@ set -eu
 
 log() { printf '%s agentsview-push: %s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" "$*"; }
 
+# 127.0.0.1:<port> が接続可能か。bash 組み込みの /dev/tcp を使い nc 非依存にする
+# （nc が無い環境で readiness 待ちが timeout するのを避ける）。subshell で FD を閉じる。
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
 # AGENTSVIEW_PROXY_PG_URL 未解決なら fnox 経由で解決して自身を再実行する（他 task と同じ流儀）。
 # launchd/systemd の最小 PATH でも確実に mise を辿れるよう、mise は絶対パスで指定する。
 if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
@@ -369,32 +373,61 @@ fi
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
+proxy_log=""
+proxy_pid=""
+lock_dir="${XDG_STATE_HOME:-$HOME/.local/state}/agentsview/push.lock"
+lock_owned=""
 
 cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
+  if [ -n "$proxy_pid" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -f "$proxy_log"
+  [ -n "$proxy_log" ] && rm -f "$proxy_log"
+  [ -n "$lock_owned" ] && rm -rf "$lock_dir"
+  # EXIT trap の最後の評価が終了コードになるため、必ず 0 で返す（skip 経路が失敗扱いに
+  # ならないように）。
+  return 0
 }
-
-# 前回 push が長引いて proxy が生きている場合は多重起動せず今回はスキップする
-# （初回全件 push は数時間かかるため、次の interval と重なりうる）。
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  log "127.0.0.1:${proxy_port} is already in use (previous push still running?). Skipping."
-  exit 0
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
 
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# 多重起動防止（macOS/Linux 共通。macOS に無い flock は使わず mkdir で atomic に取る）。
+# 前回 push がまだ生きていれば skip（初回全件 push は数時間かかり interval と重なりうる）。
+# 異常終了で残ったロックは、記録した PID の生死で stale と判定して奪い直す。これにより
+# port 占有チェックだけの実装のように「同期が永久に止まる」ことを避ける。
+mkdir -p "$(dirname "$lock_dir")"
+if ! mkdir "$lock_dir" 2>/dev/null; then
+  old_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
+  if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+    log "another push (pid $old_pid) is still running. Skipping."
+    exit 0
+  fi
+  log "reclaiming stale lock (pid ${old_pid:-unknown})"
+  rm -rf "$lock_dir"
+  mkdir "$lock_dir" 2>/dev/null || { log "could not acquire lock. Skipping."; exit 0; }
+fi
+lock_owned=1
+printf '%s\n' "$$" >"$lock_dir/pid"
+
+proxy_log="$(mktemp)"
+
+# ロックで自分自身の多重起動は防いだうえで port がまだ埋まっている場合は、無関係な
+# サービスや異常終了で残った proxy が握っている状況。skip で握り潰さず失敗させて可視化する。
+if port_open "$proxy_port"; then
+  log "127.0.0.1:${proxy_port} is already in use by another process. Aborting."
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+# 自分が起動した flyctl proxy が listen し始めるまで待つ。proxy が bind に失敗すれば
+# （＝別プロセスが port を奪った等）flyctl は即終了するため、その死活で検出できる。
 i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
+while ! port_open "$proxy_port"; do
   if ! kill -0 "$proxy_pid" 2>/dev/null; then
     cat "$proxy_log" >&2
     log "flyctl proxy exited before it was ready"
@@ -408,6 +441,15 @@ while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
   fi
   sleep 0.25
 done
+
+# push 直前に自分の proxy が生きていることを最終確認する。pre-check 後〜bind 前の僅かな
+# 隙に別プロセスが port を握ると flyctl は bind 失敗で終了しているはずで、ここで捕まえる。
+# （credential を含む接続先を誤って別 listener に向けて push しないための保険。）
+if ! kill -0 "$proxy_pid" 2>/dev/null; then
+  cat "$proxy_log" >&2
+  log "flyctl proxy is no longer running just before push. Aborting."
+  exit 1
+fi
 
 export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
 export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"

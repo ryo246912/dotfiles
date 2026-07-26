@@ -281,6 +281,9 @@ AgentsView 本体には `agentsview pg push --watch --interval 5m` の常駐 wat
 `chezmoi apply` で反映後、OS 別に bootstrap を適用する（詳細・オプションは docs/mise.md 参照）。
 
 ```sh
+# macOS: LaunchAgent のログ出力先ディレクトリを先に作る（launchd は親ディレクトリを作らない）
+mkdir -p ~/.local/state/agentsview
+
 # 反映前に差分だけ確認する
 MISE_ENV=mac   mise bootstrap macos launchd-agents apply --dry-run
 MISE_ENV=linux mise bootstrap linux systemd-units apply --dry-run

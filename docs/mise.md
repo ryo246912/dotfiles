@@ -148,7 +148,6 @@ exec_start         = "%h/.local/bin/mise run agentsview:pg:push:daemon"  # %h �
 type               = "oneshot"
 on_boot_sec        = "5min"     # 起動 5 分後に初回
 on_unit_active_sec = "15min"    # 以後 15 分ごと
-persistent         = true       # 停止中に逃した分を次回起動時に補填
 ```
 
 timer 系フィールド（`on_unit_active_sec` / `on_boot_sec` / `on_calendar` / `persistent` など）を書くと、
@@ -156,9 +155,23 @@ mise が `.service` と `.timer` の両方を生成して timer を有効化す�
 なる（その場合は `restart = "on-failure"` 等を使う）。service 側の主なキー: `description` / `exec_start` /
 `type` / `restart` / `restart_sec` / `environment` / `working_directory` / `wanted_by`。
 
+> **`persistent` は monotonic timer には効かない**: `on_boot_sec` / `on_unit_active_sec` は
+> monotonic timer で、`persistent`（= `Persistent=`。停止中に逃した分を起動時に補填）は
+> `on_calendar`（`OnCalendar=`）のときだけ有効。上記のように 15 分間隔なら次回発火で自然に
+> 追いつくため付けていない。停止中の取りこぼしを必ず補填したい場合は、`on_calendar = "*:0/15"` の
+> ような calendar timer にしたうえで `persistent = true` を併用する。
+
 ## 適用
 
 `chezmoi apply` で config を反映してから、OS 別に bootstrap を適用する。まず `--dry-run` で差分を確認する。
+
+macOS の LaunchAgent は `stdout_path` / `stderr_path` の**ディレクトリが存在しないとログを書けない**
+（launchd は program 実行前にログファイルを開き、親ディレクトリは作らない）。ログ出力先を使う場合は
+先に作成しておく:
+
+```sh
+mkdir -p ~/.local/state/agentsview
+```
 
 ```sh
 # 差分だけ確認（何も触らない）
