@@ -18,6 +18,33 @@
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
+  - **brew で個別導入済みのパッケージがあると bootstrap が失敗する場合がある**（旧来のセットアップから
+    移行してきた環境や、`dot_config/mise/config.mac.toml` の `[bootstrap.packages]` に無い formula の
+    依存として過去に入っていた場合など）。`mise bootstrap packages apply` は宣言した brew パッケージの
+    導入・リンクを mise 管理下で行うが、対象パスに mise 管理外のファイルがすでに存在するとリンクを拒否
+    して以下のように失敗する:
+    ```
+    mise ERROR cannot link xz: these files already exist and were not
+     created by mise or brew:
+      /opt/homebrew/bin/unxz
+      ...
+    Remove or rename them, then re-run `mise bootstrap packages apply`
+    ```
+    対応手順:
+    1. エラーメッセージ冒頭に出ているパッケージ名（上記例では `xz`）を確認する
+    2. 依存関係を無視してアンインストールする（他の formula の依存として入っている場合は
+       `--ignore-dependencies` が必要）
+       ```sh
+       brew uninstall --ignore-dependencies xz
+       ```
+    3. 再度 bootstrap を実行する（mise 管理下でクリーンに再導入・リンクされる）
+       ```sh
+       MISE_ENV=mac mise bootstrap packages apply
+       ```
+    4. 別のパッケージで同様のエラーが出た場合は 1〜3 を繰り返す
+
+    エラーメッセージが指す各ファイルを直接 `rm` して解決することもできるが、消し残しが出やすいので
+    `brew uninstall` でパッケージごと外す方が確実。
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
