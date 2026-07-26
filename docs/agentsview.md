@@ -36,23 +36,25 @@ flyctl apps create ryo-agentsview
 - `agentsview_owner`: 初回 schema 作成・migration 用。通常の app / local push では使わない。
 
 `psgl` に接続して、secret 値は Bitwarden Secrets Manager（`dot_config/fnox/config.toml` の
-`[secrets]`、`AGENTSVIEW_*` の各 secret）に保管する。`fnox activate zsh` が自動でシェルに
-export するため、通常は手動で `export` する必要はない。
+`[secrets]`、`AGENTSVIEW_*` の各 secret）に保管する。admin/owner password や bearer token は
+強い権限を持つため `env = "exec"` にしており、`fnox activate zsh` によるシェルへの自動注入はしない
+（都度ログイン等のセッション切れは無いが、無関係な shell の子プロセスにまで export されるのを避ける
+ため）。そのため実行時は `fnox exec --` 経由にする（zabrze の `fne` abbreviation でも展開できる）。
 
 mise task で実行する場合:
 
 ```sh
-mise run agentsview:setup:db-roles
+fnox exec -- mise run agentsview:setup:db-roles
 ```
 
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
 > このタスクは `flyctl proxy` を一時起動し、`psql`（libpq client）で接続する。admin password は `PGPASSWORD`（環境変数）で渡して process 引数には出さず、`psql -v ON_ERROR_STOP=1` で途中の DDL/GRANT 失敗も検出する。実行には `psql` が必要（無い場合は `mise use -g postgres` 等で導入する）。
 
-> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）が fnox 側で未解決のまま実行すると、
-> `: "${VAR:?...}"` でエラーメッセージを出して即座に停止する（対話プロンプトへのフォールバックは
-> 廃止した）。この挙動は `agentsview:setup:migrate` / `agentsview:fly:secrets` /
-> `agentsview:pg:status` / `agentsview:pg:push` でも同様。
+> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）が `fnox exec --` を付け忘れる等で
+> 未解決のまま実行されると、`: "${VAR:?...}"` でエラーメッセージを出して即座に停止する（対話
+> プロンプトへのフォールバックは廃止した）。この挙動は `agentsview:setup:migrate` /
+> `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。
 
 > 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
@@ -85,13 +87,14 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
 初回 schema 作成と AgentsView upgrade 後の migration は `agentsview_owner` role で実行する。通常の app / local push では owner role を使わない。
 `agentsview:setup:migrate` task は `flyctl proxy` を一時起動し、migration 後に proxy を停止する。`AGENTSVIEW_MIGRATION_PROJECTS` を設定すると小さい project だけで初回 migration を通せる。
 
-`AGENTSVIEW_OWNER_PROXY_PG_URL` は fnox（bws）が自動 export する。`AGENTSVIEW_MIGRATION_PROJECTS`
-は secret ではなくその場限りのフィルタなので、必要な時だけ手動で export する:
+`AGENTSVIEW_OWNER_PROXY_PG_URL` は `env = "exec"` なので `fnox exec --` 経由で解決する。
+`AGENTSVIEW_MIGRATION_PROJECTS` は secret ではなくその場限りのフィルタなので、必要な時だけ手動で
+export する:
 
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
 
-mise run agentsview:setup:migrate
+fnox exec -- mise run agentsview:setup:migrate
 ```
 
 migration 後に `GRANT ... ON ALL TABLES` / `GRANT ... ON ALL SEQUENCES` を再実行してから、local push 用の URL を `agentsview_push_mac` role に戻す。
@@ -107,11 +110,11 @@ mise task で token を生成し、bws project に `AGENTSVIEW_AUTH_TOKEN` / `AG
 mise run agentsview:fly:tokens
 ```
 
-`AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET` / `AGENTSVIEW_READ_PG_URL` は fnox（bws）が
-自動 export するので、bws project に登録済みなら追加の `export` は不要:
+`AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET` / `AGENTSVIEW_READ_PG_URL` は
+`env = "exec"` なので、bws project に登録済みなら `fnox exec --` 経由で解決する:
 
 ```sh
-mise run agentsview:fly:secrets
+fnox exec -- mise run agentsview:fly:secrets
 ```
 
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:fly:tokens` / `agentsview:fly:secrets` で定義している。
@@ -175,16 +178,18 @@ curl -I https://ryo-agentsview.fly.dev
 
 ## 複数 PC からのデータ push
 
-各 PC から `mise run agentsview:pg:push` を実行するだけでよい。machine name は未設定なら `hostname` が自動使用され、セッションは PC ごとに区別されて PostgreSQL に蓄積される。
+各 PC から `fnox exec -- mise run agentsview:pg:push` を実行するだけでよい。machine name は未設定なら `hostname` が自動使用され、セッションは PC ごとに区別されて PostgreSQL に蓄積される。
 
 ### 各 PC での設定
 
 `AGENTSVIEW_PROXY_PG_URL` はどの PC でも同じ値（`agentsview_push_mac` role の URL）なので、
 fnox（bws、全 PC 共通）で管理する。`AGENTSVIEW_PG_MACHINE` だけは PC ごとに異なる値にしたい場合の
-ローカル設定なので、必要な PC のシェル設定（`~/.zshenv` 等、dotfiles には値を含めない）に追記する:
+ローカル設定だが、`~/.zshenv` は chezmoi が管理するデプロイ先ファイルなので直接編集すると次の
+`chezmoi apply` で消える。secret でもないので fnox にも置かず、変えたい時だけコマンドの直前に
+一時的に指定する:
 
 ```sh
-export AGENTSVIEW_PG_MACHINE="mac-work"
+AGENTSVIEW_PG_MACHINE="mac-work" fnox exec -- mise run agentsview:pg:push
 ```
 
 `agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
@@ -192,18 +197,18 @@ export AGENTSVIEW_PG_MACHINE="mac-work"
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
 ```sh
-# fnox 経由で値が読み込まれているか
+# fnox exec 経由で値が解決できるか
 # （URL には password が含まれるため、値そのものは表示せず有無だけ確認する）
-[ -n "${AGENTSVIEW_PROXY_PG_URL:-}" ] && echo "AGENTSVIEW_PROXY_PG_URL is set" || echo "AGENTSVIEW_PROXY_PG_URL is unset"
+fnox exec -- sh -c '[ -n "${AGENTSVIEW_PROXY_PG_URL:-}" ] && echo "AGENTSVIEW_PROXY_PG_URL is set" || echo "AGENTSVIEW_PROXY_PG_URL is unset"'
 
 # proxy 起動込みで URL の host/db/schema に接続できるか
-mise run agentsview:pg:status
+fnox exec -- mise run agentsview:pg:status
 ```
 
 push も proxy 起動込みで実行する。
 
 ```sh
-mise run agentsview:pg:push
+fnox exec -- mise run agentsview:pg:push
 ```
 
 #### secure な local push 構成
@@ -223,11 +228,12 @@ local PC
 
 この構成では、ローカル PC から Fly private network までの通信は flyctl の user-mode WireGuard で保護される。AgentsView から見た DB host は `127.0.0.1` なので、local `~/.agentsview/config.toml` に `[pg] allow_insecure = true` を入れなくてよい。
 
-`AGENTSVIEW_PROXY_PG_URL` は fnox（bws）が自動 export する。PC ごとに変えたい場合だけ
-`AGENTSVIEW_PG_MACHINE` をローカルのシェル設定に追記する:
+`AGENTSVIEW_PROXY_PG_URL` は `env = "exec"` の secret なので `fnox exec --` 経由で解決する。
+`~/.zshenv` は chezmoi のデプロイ先で直接編集しても次の `chezmoi apply` で消えるため、
+`AGENTSVIEW_PG_MACHINE` を PC ごとに変えたい場合はコマンドの直前で一時的に指定する:
 
 ```sh
-export AGENTSVIEW_PG_MACHINE='mac-work'
+AGENTSVIEW_PG_MACHINE='mac-work' fnox exec -- mise run agentsview:pg:push
 ```
 
 `psgl.flycast` は Fly private network 用の host のため、WireGuard が有効でない通常のローカル DNS では名前解決できない。`lookup psgl.flycast: no such host` が出る場合は、DB URL や password ではなく private network への経路がないことが原因。
@@ -236,8 +242,8 @@ export AGENTSVIEW_PG_MACHINE='mac-work'
 通常の push / status は proxy 起動と停止を task 内で行う。
 
 ```sh
-mise run agentsview:pg:status
-mise run agentsview:pg:push
+fnox exec -- mise run agentsview:pg:status
+fnox exec -- mise run agentsview:pg:push
 ```
 
 `127.0.0.1` は local host なので、AgentsView の plaintext guard には通常止められない。
@@ -251,23 +257,23 @@ mise run agentsview:pg:push
 
 public endpoint を使う場合だけ、PostgreSQL 側で TLS を有効にし、URL は `sslmode=require` または `sslmode=verify-full` にする。この場合は `[pg] allow_insecure = true` は不要。
 
-hostname が重複しているか確認したい場合は明示的に設定:
+hostname が重複しているか確認したい場合は明示的に指定:
 
 ```sh
-export AGENTSVIEW_PG_MACHINE="mac-work"   # PC ごとに異なる名前
+AGENTSVIEW_PG_MACHINE="mac-work" fnox exec -- mise run agentsview:pg:push   # PC ごとに異なる名前
 ```
 
 ### push 操作
 
 ```sh
 # 全プロジェクトを push
-mise run agentsview:pg:push
+fnox exec -- mise run agentsview:pg:push
 
 # プロジェクトを絞って push（推奨）
-mise run agentsview:pg:push -- --projects my-project,other-project
+fnox exec -- mise run agentsview:pg:push -- --projects my-project,other-project
 
 # 全 PC の同期状況確認（machine ごとの件数が表示される）
-mise run agentsview:pg:status
+fnox exec -- mise run agentsview:pg:status
 ```
 
 Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一覧できる。
@@ -279,7 +285,7 @@ mise run agentsview:serve
 ```
 
 恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
-`AGENTSVIEW_PG_MACHINE` をローカルに設定し、必要なときに `mise run agentsview:pg:push` を実行する
+`AGENTSVIEW_PG_MACHINE` を実行時に指定し、必要なときに `fnox exec -- mise run agentsview:pg:push` を実行する
 形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
 
 ### push 時間について（初回が遅い理由）
@@ -411,18 +417,18 @@ curl -i https://ryo-agentsview.fly.dev/api/v1/sessions
 curl -i -H "Authorization: Bearer <auth_token>" https://ryo-agentsview.fly.dev/api/v1/sessions
 ```
 
-各 PC の `AGENTSVIEW_PROXY_PG_URL` が shell に読み込まれていることと、AgentsView が proxy 経由で DB に接続できることを確認する。
+各 PC の `AGENTSVIEW_PROXY_PG_URL` が `fnox exec --` 経由で解決できることと、AgentsView が proxy 経由で DB に接続できることを確認する。
 
 ```sh
-printenv AGENTSVIEW_PROXY_PG_URL
-mise run agentsview:pg:status
+fnox exec -- sh -c '[ -n "${AGENTSVIEW_PROXY_PG_URL:-}" ] && echo set || echo unset'
+fnox exec -- mise run agentsview:pg:status
 ```
 
 1プロジェクトだけ先に push し、migration とデータ増加を確認する。
 
 ```sh
-mise run agentsview:pg:push -- --projects <project>
-mise run agentsview:pg:status
+fnox exec -- mise run agentsview:pg:push -- --projects <project>
+fnox exec -- mise run agentsview:pg:status
 ```
 
 最後に Web UI で push した session が表示されることを確認する。

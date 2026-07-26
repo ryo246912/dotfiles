@@ -24,12 +24,15 @@ CZ_OPENAI_API_KEY = { provider = "bws", value = "GitHub PAT(cz-git)" }
 # 以前は各 PC の secret shell（dotfiles 管理外の ~/.zshenv 等）に手動 export し、
 # 未設定なら mise task 側で対話プロンプトしていたが、bws provider の secret に統一した。
 # value は bws project に登録する secret 名の仮置き（実名に合わせて置き換えること）。
-AGENTSVIEW_ADMIN_PG_PASSWORD  = { provider = "bws", value = "AGENTSVIEW_ADMIN_PG_PASSWORD" }
-AGENTSVIEW_AUTH_TOKEN         = { provider = "bws", value = "AGENTSVIEW_AUTH_TOKEN" }
-AGENTSVIEW_CURSOR_SECRET      = { provider = "bws", value = "AGENTSVIEW_CURSOR_SECRET" }
-AGENTSVIEW_OWNER_PASSWORD     = { provider = "bws", value = "AGENTSVIEW_OWNER_PASSWORD" }
-AGENTSVIEW_OWNER_PROXY_PG_URL = { provider = "bws", value = "AGENTSVIEW_OWNER_PROXY_PG_URL" }
-AGENTSVIEW_PROXY_PG_URL       = { provider = "bws", value = "AGENTSVIEW_PROXY_PG_URL" }
-AGENTSVIEW_PUSH_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_PUSH_PASSWORD" }
-AGENTSVIEW_READ_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_READ_PASSWORD" }
-AGENTSVIEW_READ_PG_URL        = { provider = "bws", value = "AGENTSVIEW_READ_PG_URL" }
+# admin/owner password や bearer token のような強い権限の値を毎回のシェルへ自動注入したくない
+# ため、env = "exec" にしている（`fnox exec -- mise run agentsview:...` 経由でのみ解決される。
+# zabrze の `fne` abbreviation 参照）。
+AGENTSVIEW_ADMIN_PG_PASSWORD  = { provider = "bws", value = "AGENTSVIEW_ADMIN_PG_PASSWORD", env = "exec" }
+AGENTSVIEW_AUTH_TOKEN         = { provider = "bws", value = "AGENTSVIEW_AUTH_TOKEN", env = "exec" }
+AGENTSVIEW_CURSOR_SECRET      = { provider = "bws", value = "AGENTSVIEW_CURSOR_SECRET", env = "exec" }
+AGENTSVIEW_OWNER_PASSWORD     = { provider = "bws", value = "AGENTSVIEW_OWNER_PASSWORD", env = "exec" }
+AGENTSVIEW_OWNER_PROXY_PG_URL = { provider = "bws", value = "AGENTSVIEW_OWNER_PROXY_PG_URL", env = "exec" }
+AGENTSVIEW_PROXY_PG_URL       = { provider = "bws", value = "AGENTSVIEW_PROXY_PG_URL", env = "exec" }
+AGENTSVIEW_PUSH_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_PUSH_PASSWORD", env = "exec" }
+AGENTSVIEW_READ_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_READ_PASSWORD", env = "exec" }
+AGENTSVIEW_READ_PG_URL        = { provider = "bws", value = "AGENTSVIEW_READ_PG_URL", env = "exec" }

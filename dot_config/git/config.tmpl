@@ -7,6 +7,12 @@
   # macOS Keychain。GitHub 自体は下の pushInsteadOf で SSH に寄せているため、これが要るのは
   # GitHub の HTTPS clone や GitHub 以外の HTTPS git host（社内 GitLab 等）向け。
   helper = osxkeychain
+{{- else if eq .chezmoi.os "windows" }}
+  # このリポジトリでは chezmoi は常に WSL2（.chezmoi.os "linux"）側で適用しており、
+  # ネイティブ Windows で apply することは想定していないが、念のため GCM 既定の
+  # Windows Credential Manager を明示しておく（pass/gpg のセットアップは Linux 専用）。
+  helper = manager
+  credentialStore = wincredman
 {{- else }}
   # WSL2 には osxkeychain 相当の OS keychain 連携が無いため、git-credential-manager (GCM) +
   # pass(gpg) の credential store を使い、既存の GPG 鍵（下の user.signingkey）で暗号化して

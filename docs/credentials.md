@@ -11,20 +11,28 @@ HTTPS 経由で git を使うときに毎回 ID/パスワードを聞かれな�
 メモリキャッシュに保存する仕組み。`dot_config/git/config.tmpl` の `[credential]` ブロックで
 OS ごとに設定を分けている:
 
-```
+```text
 [credential]
 {{ if eq .chezmoi.os "darwin" }}
   helper = osxkeychain
+{{- else if eq .chezmoi.os "windows" }}
+  helper = manager
+  credentialStore = wincredman
 {{- else }}
   helper = manager
   credentialStore = gpg
 {{- end }}
 ```
 
-| OS         | helper                                                                                              | 保存先                             | 永続化                 |
-| ---------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------- |
-| macOS      | `osxkeychain`                                                                                       | macOS Keychain（暗号化）           | 永続（再起動後も残る） |
-| WSL2/Linux | `manager`（[git-credential-manager](https://github.com/git-ecosystem/git-credential-manager), GCM） | `pass`（GPG 暗号化されたファイル） | 永続（GPG 鍵で暗号化） |
+| OS                    | helper                                                                                              | 保存先                             | 永続化                 |
+| --------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------- |
+| macOS                 | `osxkeychain`                                                                                       | macOS Keychain（暗号化）           | 永続（再起動後も残る） |
+| WSL2/Linux            | `manager`（[git-credential-manager](https://github.com/git-ecosystem/git-credential-manager), GCM） | `pass`（GPG 暗号化されたファイル） | 永続（GPG 鍵で暗号化） |
+| Windows（未使用想定） | `manager`                                                                                           | Windows Credential Manager         | 永続                   |
+
+このリポジトリでは chezmoi は常に WSL2（`.chezmoi.os` が `"linux"`）側で適用しており、ネイティブ
+Windows で apply することは想定していない。Windows の分岐は、万一そちらで apply された場合に
+Linux 専用の `pass`/GPG セットアップへ誤って倒れないための保険で、pass のセットアップ手順は無い。
 
 WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無いため、GCM +
 `pass`（GPG ベースの credential store）を使い、コミット署名に使っている既存の GPG 鍵
@@ -39,9 +47,10 @@ WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無い�
    ```sh
    pass init "$(git config user.signingkey)"
    ```
-2. GCM を git の credential helper として登録する（`credential.helper` /
-   `credential.credentialStore` を GCM 自身が書き込む。上の `config.tmpl` の値と
-   一致するはずなので、次の `chezmoi apply` で上書きされても壊れない）:
+2. GCM を git の credential helper として登録する。`configure` が書くのは
+   `credential.helper = manager` のみで、`credential.credentialStore = gpg` は
+   `dot_config/git/config.tmpl`（chezmoi）側が既に設定済みの値を GCM が読むだけなので、
+   `configure` 実行後もそちらが上書きされることはない:
    ```sh
    git-credential-manager configure
    ```
@@ -58,8 +67,9 @@ git config credential.helper
 # macOS: osxkeychain
 # WSL2/Linux: manager
 
+# WSL2/Linux のみ（macOS では `credentialStore` は未設定で osxkeychain が直接使われる）
 git config credential.credentialStore
-# WSL2/Linux: gpg
+# gpg
 
 pass show git-credential-manager/<host> # GCM が保存したエントリを pass 側からも確認できる
 ```
@@ -105,8 +115,11 @@ cat ~/.docker/config.json
 # {"credsStore": "desktop"} になっていること（mac）
 
 docker login ghcr.io
-# ログイン後、~/.docker/config.json に "auths" キー（base64 の認証情報）が
-# 追加されていないこと（credsStore 経由で Keychain 側に保存されているため）
+# ログイン後、ghcr.io の entry が "auths" に追加されていないこと
+# （credsStore 経由で Keychain 側に保存されているため。他レジストリの
+# 既存 auths エントリは対象外なので、ghcr.io だけを見る）
+jq '.auths["ghcr.io"]' ~/.docker/config.json
+# null が返ればOK（credsStore 経由で保存されている証拠）
 ```
 
 ## まとめ
