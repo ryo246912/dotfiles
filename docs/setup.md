@@ -18,8 +18,6 @@
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
-  - brew で個別導入済みのパッケージと衝突して失敗する場合の対処は
-    [`docs/mise.md`](./mise.md) 参照
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
