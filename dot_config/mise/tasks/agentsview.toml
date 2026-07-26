@@ -3,6 +3,13 @@ description = "Create/update AgentsView PostgreSQL roles for owner, local push, 
 run = '''
 set -eu
 
+if { [ -z "${AGENTSVIEW_ADMIN_PG_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_OWNER_PASSWORD:-}" ] ||
+     [ -z "${AGENTSVIEW_PUSH_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_READ_PASSWORD:-}" ]; } &&
+   [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:setup:db-roles "$@"
+fi
+
 : "${AGENTSVIEW_ADMIN_PG_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 : "${AGENTSVIEW_OWNER_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 : "${AGENTSVIEW_PUSH_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
@@ -115,6 +122,11 @@ description = "Start flyctl proxy, run initial AgentsView schema migration with 
 run = '''
 set -eu
 
+if [ -z "${AGENTSVIEW_OWNER_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:setup:migrate "$@"
+fi
+
 : "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
@@ -181,6 +193,12 @@ description = "Set Fly secrets for the public AgentsView viewer with a read-only
 run = '''
 set -eu
 
+if { [ -z "${AGENTSVIEW_READ_PG_URL:-}" ] || [ -z "${AGENTSVIEW_AUTH_TOKEN:-}" ] ||
+     [ -z "${AGENTSVIEW_CURSOR_SECRET:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:fly:secrets "$@"
+fi
+
 : "${AGENTSVIEW_READ_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 : "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 : "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
@@ -208,7 +226,11 @@ description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then 
 run = '''
 set -eu
 
-# 必須の環境変数は fnox（dot_config/fnox/config.toml の bws secret）が自動注入する前提。
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:pg:status "$@"
+fi
+
 : "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
@@ -261,6 +283,11 @@ shell = "bash -c"
 description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
 run = '''
 set -eu
+
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:pg:push "$@"
+fi
 
 : "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
