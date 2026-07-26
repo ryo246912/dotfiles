@@ -119,7 +119,7 @@ exec + fnox exec) を参照してください。
    [providers.age]
    type = "age"
    recipients = ["age1..."]
-   key_file = "~/.config/fnox/age-identity.txt"
+   key_file = "~/.config/fnox/age.txt"
    ```
 2. Bitwarden の Web Vault → **Secrets Manager** → **Machine accounts** で新規 machine account を
    作成し、そこから access token を発行する（有効期限は要件に応じて設定。無期限も可）。
@@ -159,7 +159,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    どちらの秘密鍵でも復号できる形に更新されます。
 4. `recipients` の追加と再暗号化後の `dot_config/fnox/config.toml` を commit して push する。
 5. 2台目で `chezmoi apply`（または `git pull` 後に `chezmoi apply`）すれば、2台目の
-   `age-identity.txt` でも `fnox get BWS_ACCESS_TOKEN` が復号できるようになります。
+   `age.txt` でも `fnox get BWS_ACCESS_TOKEN` が復号できるようになります。
 
 > [!IMPORTANT]
 > 2台目の公開鍵を `recipients` に追加しただけで `fnox reencrypt` を忘れると、既存の ciphertext は
@@ -167,7 +167,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
 > recipients がヘッダに埋め込まれる方式で、`recipients` の設定を後から書き換えても既存の ciphertext
 > には遡って反映されないためです。
 
-### 3. AWS Secrets Manager + `aws-vault` (`aws-sm` provider)
+### 2. AWS Secrets Manager + `aws-vault` (`aws-sm` provider)
 
 1. `aws-vault` に AWS credential を登録する（IAM user の access key、または SSO 設定に応じた方法で）:
    ```sh
