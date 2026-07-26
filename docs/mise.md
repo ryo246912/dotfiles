@@ -78,26 +78,25 @@ brew autoremove
 
 `cocoapods` / `ttyd` は `[bootstrap.packages]` に含まれないため Phase 3 の bootstrap では
 復元されない。ここでは「もう使わない前提で手放す」ものとして削除している。まだ使う場合は
-`brew install cocoapods ttyd` で real brew に個別に戻すこと（その場合、これらが再び
-`openssl@3` 等の共有依存を掴んでブロッカーに戻る可能性がある）。
+必要な方だけ `brew install cocoapods` / `brew install ttyd` のように個別に real brew へ戻すこと
+（両方まとめて `brew install cocoapods ttyd` すると不要な方の依存関係まで復元してしまい、
+再びブロッカーに戻る可能性がある）。
 
 ### Phase 2. 受け入れテスト（ここが成否の分かれ目）
 
 ```sh
-brew uses --installed openssl@3      # ← ca-certificates を間接的に掴む全 formula
-brew list --formula                  # real brew に残った formula 一覧
+brew list --formula    # real brew に残った formula 一覧（本命の判定材料）
 ```
 
 判定:
 
-- `brew uses --installed openssl@3` が空（誰も掴んでいない）→ mise brew が `openssl@3` /
-  `ca-certificates` を link できる状態。Phase 3 へ進む
-- 何か残っていたら、その名前が真のブロッカー。formula 単位で「MacPorts/mise へ逃がす」か
-  「real brew 併存に戻す」かを判断する
-- `brew list --formula` は理想的には `mise` / `thock`（`dot_config/brew/brew.json` 経由で
-  意図的に real brew 管理のままにしている formula。`mise` 自体は self-hosting できないため）と
-  cask のみ残る状態が目標。それ以外の formula や cask は `brew uses` に出てこない＝共有依存を
-  掴んでいないので、そのまま real brew 管理で共存して問題ない
+- 残っているのが `mise` / `thock`（`dot_config/brew/brew.json` 経由で意図的に real brew 管理の
+  ままにしている formula。`mise` 自体は self-hosting できないため）だけなら、openssl@3 / json-c /
+  gettext / glib / cairo などの共有依存も含めて誰にも掴まれていない状態＝Phase 3 へ進んでよい
+- それ以外の formula が残っていたら、その名前（または `brew uses --installed <formula名>` で
+  辿れる依存元）が真のブロッカー。formula 単位で「MacPorts/mise へ逃がす」か「real brew 併存に
+  戻す」かを判断する（`openssl@3` はよくあるブロッカーなので `brew uses --installed openssl@3`
+  で当たりを付けてもよいが、これはあくまで一例で、判定の本体は上記の `brew list --formula`）
 
 後始末（★ここを飛ばすと bootstrap で再度 `cannot link` になる）:
 
