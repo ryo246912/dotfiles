@@ -1,8 +1,6 @@
 # mise bootstrap トラブルシューティング
 
-`mise bootstrap packages apply`（`dot_config/mise/config.mac.toml` の `[bootstrap.packages]`
-参照）は、宣言した brew パッケージの導入・リンクを mise が管理する仕組み。初回セットアップとは
-別に、既存環境で発生しうる衝突の対処法をまとめる。
+`mise bootstrap packages apply`は、宣言した brew パッケージの導入・リンクを mise が管理する仕組み。初回セットアップとは別に、既存環境で発生しうる衝突の対処法をまとめる。
 
 ## brew で個別導入済みのパッケージと衝突する場合
 
@@ -47,10 +45,6 @@ Remove or rename them, then re-run `mise bootstrap packages apply`
    ```
 5. 別のパッケージで同様のエラーが出た場合は 1〜4 を繰り返す
 
-エラーメッセージが指す各ファイルを直接 `rm` して解決することもできるが、消し残しが出やすいので
-`brew uninstall` でパッケージごと外す方が確実。openssl@3 / ca-certificates / json-c のような
-共有依存まで巻き込む場合は、下記の「real brew から mise bootstrap への本格移行」を参照。
-
 ## real brew から mise bootstrap への本格移行（共有依存の衝突対応）
 
 mise brew も real brew も同じ `/opt/homebrew` prefix を使う。`config.mac.toml` の
@@ -63,8 +57,7 @@ mise 側がリンクできず前述の `cannot link` エラーになる。real b
 ### Phase 1. ブロッカー・移行対象を real brew から抜く
 
 ```sh
-# ブロッカーになりがちな formula（cocoapods は ruby gem, ttyd は libwebsockets/libevent を
-# 道連れにする）と、mise(brew:) に持たせる formula（＝ config.mac.toml の
+# ブロッカーになりがちな formula と、mise(brew:) に持たせる formula（＝ config.mac.toml の
 # [bootstrap.packages] と同じ顔ぶれ）をまとめて real brew から外す
 brew uninstall cocoapods ttyd git gnupg tig colordiff tree ffmpeg goaccess ugrep \
   coreutils findutils gnu-sed grep blueutil pinentry-mac silicon
@@ -76,27 +69,11 @@ brew autoremove
 `brew uninstall` で `... is required by <X>` と出たら、`<X>` が「まだ real brew に残す何か」
 なのでメモしておく（後続の判定に使う）。
 
-`cocoapods` / `ttyd` は `[bootstrap.packages]` に含まれないため Phase 3 の bootstrap では
-復元されない。ここでは「もう使わない前提で手放す」ものとして削除している。まだ使う場合は
-必要な方だけ `brew install cocoapods` / `brew install ttyd` のように個別に real brew へ戻すこと
-（両方まとめて `brew install cocoapods ttyd` すると不要な方の依存関係まで復元してしまい、
-再びブロッカーに戻る可能性がある）。
-
-### Phase 2. 受け入れテスト（ここが成否の分かれ目）
+### Phase 2. 受け入れテスト
 
 ```sh
-brew list --formula    # real brew に残った formula 一覧（本命の判定材料）
+brew list --formula    # real brew に残った formula 一覧
 ```
-
-判定:
-
-- 残っているのが `mise` / `thock`（`dot_config/brew/brew.json` 経由で意図的に real brew 管理の
-  ままにしている formula。`mise` 自体は self-hosting できないため）だけなら、openssl@3 / json-c /
-  gettext / glib / cairo などの共有依存も含めて誰にも掴まれていない状態＝Phase 3 へ進んでよい
-- それ以外の formula が残っていたら、その名前（または `brew uses --installed <formula名>` で
-  辿れる依存元）が真のブロッカー。formula 単位で「MacPorts/mise へ逃がす」か「real brew 併存に
-  戻す」かを判断する（`openssl@3` はよくあるブロッカーなので `brew uses --installed openssl@3`
-  で当たりを付けてもよいが、これはあくまで一例で、判定の本体は上記の `brew list --formula`）
 
 後始末（★ここを飛ばすと bootstrap で再度 `cannot link` になる）:
 
