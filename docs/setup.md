@@ -152,13 +152,8 @@
     ```
     setup-git-gpg
     ```
-  - [ ] （手動設定不要）git/Docker の credential helper は chezmoi 管理下（`chezmoi apply` で自動適用）
-    - git: `credential.helper` は mac で `osxkeychain`、WSL2 でメモリキャッシュ
-      （`dot_config/git/config.tmpl`）。GitHub 自体は SSH に寄せているため、これが要るのは他の
-      HTTPS git host（社内 GitLab 等）向け
-    - Docker: mac のみ `~/.docker/config.json` の `credsStore` を `desktop`
-      （Docker Desktop 同梱の `docker-credential-desktop`）にして `docker login` の認証情報を
-      平文 base64 のまま置かないようにしている（`dot_docker/config.json`）
+  - [ ] （手動設定不要）git/Docker の credential helper は chezmoi 管理下（`chezmoi apply` で自動適用、
+        詳細は [`docs/credentials.md`](./credentials.md) を参照）
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
