@@ -1,6 +1,9 @@
 {
   "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/mcp-schema.json",
   "mcpServers": {
+    // chrome-devtools-mcp を 3 インスタンス起動し、それぞれ別ポートの
+    // Chrome (9222/9223/9224) に接続する。複数タブ/プロファイルを
+    // 並行してエージェントから操作するための多重化。
     "io.github.ChromeDevTools/chrome-devtools-mcp": {
       "type": "stdio",
       "command": "npx",
@@ -28,6 +31,7 @@
         "--browser-url=http://localhost:9224"
       ]
     },
+    // Notion: リモート MCP へ mcp-remote 経由で接続
     "makenotion/notion-mcp-server": {
       "type": "stdio",
       "command": "npx",
@@ -37,6 +41,7 @@
         "https://mcp.notion.com/mcp"
       ]
     },
+    // AWS 課金/コスト管理。AWS_PROFILE は chezmoi テンプレートで実行環境から注入
     "AWS Billing and Cost Management MCP Server": {
       "type": "stdio",
       "command": "uvx",
@@ -56,6 +61,7 @@
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },
+    // DeepWiki: リポジトリの Q&A 用リモート MCP
     "deepwiki": {
       "type": "stdio",
       "command": "npx",
@@ -65,6 +71,7 @@
         "https://mcp.deepwiki.com/mcp"
       ]
     },
+    // Context7: ライブラリドキュメント取得
     "context7": {
       "type": "stdio",
       "command": "npx",

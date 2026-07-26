@@ -1,0 +1,67 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
+  // Claude Code の権限（allow/deny）の唯一のソース。
+  // 以前は dot_claude/settings.json の "permissions" と二重管理になっていたため、rulesync 側へ集約した。
+  // rulesync generate が ~/.claude/settings.json へマージする（category→Claude のツール別ルールへ変換:
+  // bash→Bash(...) / read→Read(...) / write→Write(...) / webfetch→WebFetch(...)）。
+  // permissions を targets に含むツール（現状 claudecode のみ）へ共有される。
+  //
+  // 注意:
+  // - deny は allow より優先される。
+  // - Read/Write deny は Claude の組み込みツール向けで、Bash 経由（`cat ~/.ssh/id_rsa` 等）までは
+  //   保証されない。ホーム直下や subprocess も塞ぐには sandbox（/sandbox）が必要（別途ハードニング）。
+  // - `~/.claude/settings.json` は chezmoi が dot_claude/settings.json から都度上書きするため、
+  //   このマージは post-apply hook の rulesync generate 実行に依存する（hooks と同じモデル）。
+  "permission": {
+    "bash": {
+      "mise list:*": "allow",
+      "ccmanager --help": "allow",
+      "xcode-select:*": "allow",
+      "claude mcp:*": "allow",
+      "find:*": "allow",
+      "ls:*": "allow",
+      "shfmt:*": "allow",
+      "sudo:*": "deny",
+      "rm -rf:*": "deny"
+    },
+    "webfetch": {
+      "domain:docs.anthropic.com": "allow"
+    },
+    "read": {
+      // env ファイル: 秘匿の接尾辞のみを明示列挙する。`.env.*` のような広域 glob は
+      // `.env.example` / `.env.sample` / `.env.template` などの非機密テンプレートまで
+      // 読めなくしてしまうため使わない（テンプレは必要な env 変数を Claude が把握する用途で読める方が良い）。
+      ".env": "deny",
+      "**/.env": "deny",
+      ".env.local": "deny",
+      "**/.env.local": "deny",
+      "**/.env.*.local": "deny",
+      "**/.env.production": "deny",
+      "**/.env.staging": "deny",
+      "**/.env.development": "deny",
+      "**/.env.test": "deny",
+      "**/.env.uat": "deny",
+      "**/.env.qa": "deny",
+      "**/.env.ci": "deny",
+      // 汎用の秘匿名・鍵・証明書
+      "**/*token*": "deny",
+      "**/*key*": "deny",
+      "**/*.pem": "deny",
+      // SSH 秘密鍵（root 直下は後方互換で残し、**/ で ~/.ssh 等ネストも網羅）
+      "id_rsa": "deny",
+      "id_ed25519": "deny",
+      "**/id_rsa": "deny",
+      "**/id_ed25519": "deny",
+      "**/id_ecdsa": "deny",
+      "**/id_dsa": "deny",
+      "**/id_ecdsa_sk": "deny",
+      "**/id_ed25519_sk": "deny",
+      // クラウド認証情報
+      "**/.aws/credentials": "deny"
+    },
+    "write": {
+      ".env*": "deny",
+      "**/secrets/**": "deny"
+    }
+  }
+}
