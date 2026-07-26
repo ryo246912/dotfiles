@@ -124,7 +124,7 @@ OS 別 config に書く。`[bootstrap.packages]` と同じく、`MISE_ENV` で�
 
 ```toml
 [bootstrap.macos.launchd.agents.agentsview-push]
-program        = "~/.local/bin/mise"          # launchd の最小 PATH でも辿れるよう絶対パス
+program        = "~/.local/bin/mise"          # 最小 PATH でも辿れるフルパス。~ は mise が展開して plist に書き出す
 args           = ["run", "agentsview:pg:push:daemon"]
 run_at_load    = true                          # load 時にも 1 回走らせる
 start_interval = 900                           # 秒。15 分ごとに起動

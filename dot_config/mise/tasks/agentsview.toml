@@ -395,17 +395,28 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # 多重起動防止（macOS/Linux 共通。macOS に無い flock は使わず mkdir で atomic に取る）。
-# 前回 push がまだ生きていれば skip（初回全件 push は数時間かかり interval と重なりうる）。
-# 異常終了で残ったロックは、記録した PID の生死で stale と判定して奪い直す。これにより
-# port 占有チェックだけの実装のように「同期が永久に止まる」ことを避ける。
+# 判定は 2 段構え:
+#   1) lock の mtime が TTL 超過 → 無条件で stale とみなし奪う。異常終了で残った lock や、
+#      記録 PID が無関係プロセスに再利用されて kill -0 が誤って「生存」を返すケースでも、
+#      「同期が永久に止まる」ことを防ぐ backstop。TTL は通常 push（数分）や初回全件
+#      （~数時間）より十分大きく取る。
+#   2) TTL 内なら PID で判定。生存 or PID 未記録（取得直後で pid 書き込み前）は「実行中」
+#      とみなして skip（二重起動・取得直後の奪取レースを防ぐ）。記録 PID が既に死んでいる
+#      ときだけ「最近クラッシュ」として奪う。
+# なお最終的な二重 push は port(15432) を同時 bind できない flyctl 側でも弾かれる。
+lock_stale_min=360
 mkdir -p "$(dirname "$lock_dir")"
 if ! mkdir "$lock_dir" 2>/dev/null; then
-  old_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
-  if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
-    log "another push (pid $old_pid) is still running. Skipping."
-    exit 0
+  if [ -n "$(find "$lock_dir" -maxdepth 0 -mmin "+${lock_stale_min}" 2>/dev/null)" ]; then
+    log "reclaiming stale lock (older than ${lock_stale_min}min)"
+  else
+    old_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
+    if [ -z "$old_pid" ] || kill -0 "$old_pid" 2>/dev/null; then
+      log "another push (pid ${old_pid:-acquiring}) appears active. Skipping."
+      exit 0
+    fi
+    log "reclaiming stale lock (pid $old_pid not running)"
   fi
-  log "reclaiming stale lock (pid ${old_pid:-unknown})"
   rm -rf "$lock_dir"
   mkdir "$lock_dir" 2>/dev/null || { log "could not acquire lock. Skipping."; exit 0; }
 fi
