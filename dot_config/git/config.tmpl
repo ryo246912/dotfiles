@@ -62,14 +62,14 @@
   signingkey = 08BF9A27112516E5
 {{ if eq .chezmoi.os "darwin" }}
 [include]
-  path = ~/.gitconfig.secret-noreply
+  path = ~/.config/git/config.secret
 [includeIf "gitdir:~/work/"]
-  path = ~/.gitconfig.secret
+  path = ~/.config/git/config.work.secret
 [includeIf "gitdir:~/projects/"]
-  path = ~/.gitconfig.secret
+  path = ~/.config/git/config.work.secret
 {{ else }}
 [include]
-  path = ~/.gitconfig.secret
+  path = ~/.config/git/config.work.secret
 {{- end }}
 
 [secrets]
