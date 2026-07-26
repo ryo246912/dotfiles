@@ -90,6 +90,14 @@
     },
     {
       "customType": "regex",
+      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
+      "matchStrings": [
+        "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["dot_config/brew/brew.json"],
       "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
       "datasourceTemplate": "custom.brew-formula"
@@ -106,6 +114,15 @@
       "matchStrings": ["npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "devcontainers/cli",
       "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": ["min_version\\s*=\\s*\"(?<currentValue>.*?)\""],
+      "depNameTemplate": "jdx/mise",
+      "packageNameTemplate": "jdx/mise",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     },
     {
       "customType": "regex",
