@@ -12,7 +12,8 @@ type       = "bitwarden-sm"
 [providers.age]
 key_file = "~/.config/fnox/age.txt"
 recipients = [
-    "age1k9zxqxufy599csnlkfwq2efxnscju4ek3ftqpvx55r9re38akers6zrq2z", # 自分の age/SSH 公開鍵
+    "age1k9zxqxufy599csnlkfwq2efxnscju4ek3ftqpvx55r9re38akers6zrq2z", # mac-private
+    "age184vvj44q3x0jn8j5xlrzlecnd4ae8nw68e0mj3eq8uu0z22t5dvs3g4enu", # mac-work2
 ]
 type = "age"
 
