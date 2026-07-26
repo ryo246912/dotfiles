@@ -393,6 +393,6 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 - [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
       [`docs/credentials.md`](./credentials.md) 参照）
   ```sh
-  pass init 08BF9A27112516E5
+  pass init "$(git config user.signingkey)"
   git-credential-manager configure
   ```

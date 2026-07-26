@@ -33,10 +33,11 @@ WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無い�
 `pass` は `dot_config/mise/config.linux.toml` の `apt:pass` として pin 済みなので
 `mise install` すれば入るが、以下の**一度だけの手動セットアップ**が別途必要:
 
-1. `pass` の store を、コミット署名に使っている GPG 鍵で初期化する（鍵 ID は
-   `dot_config/git/config.tmpl` の `user.signingkey` と同じものを使う）:
+1. `pass` の store を、コミット署名に使っている GPG 鍵（`dot_config/git/config.tmpl` の
+   `user.signingkey`）で初期化する。ハードコードすると鍵ローテーション時に複数箇所を
+   更新することになるため、`git config` から直接参照する:
    ```sh
-   pass init 08BF9A27112516E5
+   pass init "$(git config user.signingkey)"
    ```
 2. GCM を git の credential helper として登録する（`credential.helper` /
    `credential.credentialStore` を GCM 自身が書き込む。上の `config.tmpl` の値と
