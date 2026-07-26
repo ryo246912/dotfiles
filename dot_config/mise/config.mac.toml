@@ -21,9 +21,9 @@
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
 
-# casks（clibor/google-japanese-ime/thock/jira-cli は custom install option・Rosetta 前提・
-# 独自 tap の postflight を要し brew-cask では扱えないため
-# `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
+# casks（clibor は custom install option、google-japanese-ime は Rosetta 前提、
+# thock は独自 tap + postflight、jira-cli は独自 tap を要し、いずれも brew-cask では
+# 扱えないため `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
 "brew-cask:alacritty"                = "latest"
 "brew-cask:arc"                      = "latest"
 "brew-cask:battery"                  = "latest"

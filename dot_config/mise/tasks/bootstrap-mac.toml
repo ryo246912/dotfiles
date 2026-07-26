@@ -8,6 +8,8 @@ run = '''
 #!/bin/bash
 set -euo pipefail
 [ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+# インストーラは shell rc に PATH 追記の案内を出すだけで、このプロセスの PATH は変えない
+export PATH="/opt/homebrew/bin:$PATH"
 
 if ! command -v brew &>/dev/null; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -29,6 +31,7 @@ run = '''
 #!/bin/bash
 set -euo pipefail
 [ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+export PATH="/opt/homebrew/bin:$PATH"
 
 # clibor: --language=ja オプションが必要で brew-cask では表現できない
 if ! brew list --cask clibor &>/dev/null; then
@@ -37,9 +40,10 @@ else
   echo "clibor is already installed"
 fi
 
-# google-japanese-ime: Rosetta が前提で brew-cask では表現できない
+# google-japanese-ime: Rosetta が前提で brew-cask では表現できない。
+# rosetta のインストール失敗（既に導入済み等）で後続の thock/jira-cli 導入を止めないよう || true にする
 if ! brew list --cask google-japanese-ime &>/dev/null; then
-  sudo softwareupdate --install-rosetta
+  sudo softwareupdate --install-rosetta || true
   brew install --cask google-japanese-ime
 else
   echo "google-japanese-ime is already installed"
@@ -122,8 +126,8 @@ defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 163 '
       <key>parameters</key>
       <array>
         <integer>65535</integer>
-        <integer>48</integer>
-        <integer>524288</integer>
+        <integer>125</integer>
+        <integer>262144</integer>
       </array>
       <key>type</key>
       <string>standard</string>
