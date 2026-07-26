@@ -27,6 +27,15 @@
   MISE_ENV=mac mise bootstrap macos defaults apply
   ```
 
+- [ ] mac 個別セットアップ
+  - Homebrew 本体・mise 自体のインストール、brew-cask では表現できない特殊パッケージ
+    （clibor・google-japanese-ime・thock・jira-cli）、メニューバーのアイコン間隔、
+    ログイン項目（Clibor / Docker / Raycast）をまとめて実行
+  - sudo（Rosetta インストール）を含むため対話端末で実行すること
+  ```sh
+  mise run bootstrap:mac
+  ```
+
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
@@ -52,7 +61,10 @@
   - トラックパッドのスクロール方向・キーボードのキーリピート速度は上記の
     `mise bootstrap macos defaults apply` で適用済み
   - [ ] キーボードショートカット
-    - [ ] 「通知センターの表示」
+    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
+      ```sh
+      mise run bootstrap:mac-hotkeys
+      ```
     - [ ] ファンクションキーとして使用するをONにする
     - [ ] 不要なショートカットはOFFにする
 

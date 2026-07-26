@@ -44,9 +44,14 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
 
 - **Karabiner Elements** - TypeScript-based key remapping
 - **Raycast** - Launcher and productivity tool
-- **Homebrew** - Package manager (brew.json, brew_cask.json)
-- **macOS system settings** - Automated via `run_once_install-packages_mac.sh`
-  - Menu bar spacing, hidden files, keyboard speed, login items
+- **Homebrew** - Package manager (brew.json, brew_cask.json). Most CLI/GUI packages are
+  declared in `dot_config/mise/config.mac.toml` `[bootstrap.packages]` (`brew:`/`brew-cask:`);
+  only packages `brew-cask` can't express stay in the `mise run bootstrap:mac*` tasks below
+- **macOS system settings** - Hidden files, keyboard speed, trackpad scroll direction are
+  declared in `dot_config/mise/config.mac.toml` `[bootstrap.macos.*]`
+  (`mise bootstrap macos defaults apply`). Menu bar spacing, login items, and keyboard
+  shortcuts aren't expressible via `defaults`/`[bootstrap.macos.*]` and are handled by
+  `mise run bootstrap:mac` / `bootstrap:mac-hotkeys` (`dot_config/mise/tasks/bootstrap-mac.toml`)
 - **pinentry-mac** - GPG passphrase input
 - **zsh-auto-notify** - Command completion notifications
 
@@ -67,7 +72,10 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
    ```
 
 2. **Install system packages:**
-   - macOS: `run_once_install-packages_mac.sh` runs automatically
+   - macOS: `MISE_ENV=mac mise bootstrap packages apply` runs automatically via the
+     post-apply hook; run `mise run bootstrap:mac` manually afterwards for the pieces
+     that can't be declarative (Homebrew/mise itself, custom-tap/option packages,
+     menu bar spacing, login items)
    - Windows/WSL2: `run_once_install-packages_windows.sh` runs automatically
 
 3. **Basic setup:**

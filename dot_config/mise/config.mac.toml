@@ -21,9 +21,9 @@
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
 
-# casks（clibor/google-japanese-ime/thock は custom install option・Rosetta 前提・
-# 独自 tap の postflight を要し brew-cask では扱えないため run_once_install-packages_mac.sh
-# の手動インストールに残す）
+# casks（clibor/google-japanese-ime/thock/jira-cli は custom install option・Rosetta 前提・
+# 独自 tap の postflight を要し brew-cask では扱えないため
+# `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
 "brew-cask:alacritty"                = "latest"
 "brew-cask:arc"                      = "latest"
 "brew-cask:battery"                  = "latest"
@@ -61,9 +61,10 @@
 "brew-cask:zoom"                     = "latest"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。menu bar spacing は
-# `defaults -currentHost` 前提で mise 未対応のため run_once_install-packages_mac.sh に残す。
-# ログイン項目・ショートカットのキー割り当ては plist が dict/array のため defaults 経由では
-# 表現できず、同様に run_once 側に残す）
+# `defaults -currentHost` 前提で mise 未対応のため `mise run bootstrap:mac-defaults` に残す。
+# ログイン項目は [bootstrap.macos.launchd.agents] が .app バンドル起動に非対応、
+# ショートカットのキー割り当ては plist が dict/array のため defaults 経由では表現できず、
+# 同様に `mise run bootstrap:mac-defaults` / `bootstrap:mac-hotkeys` に残す）
 [bootstrap.macos.finder]
 show_all_files = true
 show_pathbar   = true
