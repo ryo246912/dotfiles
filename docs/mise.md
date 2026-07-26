@@ -31,11 +31,12 @@ Remove or rename them, then re-run `mise bootstrap packages apply`
      brew uninstall xz
      ```
    - 何か出力される（例: `ffmpeg`）→ その formula を real brew に残す必要があるか確認する
-     - 残す必要が無い／その formula ごと mise 管理に移行してよいなら、依存元も含めて
-       アンインストールする（依存元を先に `brew uninstall <依存元>` で外してから対象を
-       アンインストールする。まとめて外す場合のみ `--ignore-dependencies` を使う）
+     - 残す必要が無い／その formula ごと mise 管理に移行してよいなら、依存元も対象も
+       まとめて指定してアンインストールする（`--ignore-dependencies` は依存チェックを
+       スキップして対象だけを消すフラグで、依存元は自動では消えない。依存元を残したまま
+       これを使うと依存元が壊れるので、依存元も一緒に指定すること）
        ```sh
-       brew uninstall --ignore-dependencies xz
+       brew uninstall ffmpeg xz
        ```
      - 残す必要がある（real brew 側で使い続けたい）なら、この formula は mise 化を見送り
        `[bootstrap.packages]` から外すか、下記「real brew から mise bootstrap への本格移行」の
@@ -75,6 +76,11 @@ brew autoremove
 `brew uninstall` で `... is required by <X>` と出たら、`<X>` が「まだ real brew に残す何か」
 なのでメモしておく（後続の判定に使う）。
 
+`cocoapods` / `ttyd` は `[bootstrap.packages]` に含まれないため Phase 3 の bootstrap では
+復元されない。ここでは「もう使わない前提で手放す」ものとして削除している。まだ使う場合は
+`brew install cocoapods ttyd` で real brew に個別に戻すこと（その場合、これらが再び
+`openssl@3` 等の共有依存を掴んでブロッカーに戻る可能性がある）。
+
 ### Phase 2. 受け入れテスト（ここが成否の分かれ目）
 
 ```sh
@@ -88,8 +94,10 @@ brew list --formula                  # real brew に残った formula 一覧
   `ca-certificates` を link できる状態。Phase 3 へ進む
 - 何か残っていたら、その名前が真のブロッカー。formula 単位で「MacPorts/mise へ逃がす」か
   「real brew 併存に戻す」かを判断する
-- `brew list --formula` は理想的には空（+ cask のみ残る）。cask は `brew uses` に出てこない
-  ＝共有依存を掴んでいないので、そのまま real brew 管理で共存して問題ない
+- `brew list --formula` は理想的には `mise` / `thock`（`dot_config/brew/brew.json` 経由で
+  意図的に real brew 管理のままにしている formula。`mise` 自体は self-hosting できないため）
+  + cask のみ残る状態が目標。それ以外の formula や cask は `brew uses` に出てこない＝共有依存を
+  掴んでいないので、そのまま real brew 管理で共存して問題ない
 
 後始末（★ここを飛ばすと bootstrap で再度 `cannot link` になる）:
 
