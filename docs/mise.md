@@ -95,8 +95,8 @@ brew list --formula                  # real brew に残った formula 一覧
 - 何か残っていたら、その名前が真のブロッカー。formula 単位で「MacPorts/mise へ逃がす」か
   「real brew 併存に戻す」かを判断する
 - `brew list --formula` は理想的には `mise` / `thock`（`dot_config/brew/brew.json` 経由で
-  意図的に real brew 管理のままにしている formula。`mise` 自体は self-hosting できないため）
-  + cask のみ残る状態が目標。それ以外の formula や cask は `brew uses` に出てこない＝共有依存を
+  意図的に real brew 管理のままにしている formula。`mise` 自体は self-hosting できないため）と
+  cask のみ残る状態が目標。それ以外の formula や cask は `brew uses` に出てこない＝共有依存を
   掴んでいないので、そのまま real brew 管理で共存して問題ない
 
 後始末（★ここを飛ばすと bootstrap で再度 `cannot link` になる）:
