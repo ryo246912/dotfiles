@@ -2,6 +2,18 @@
   ui = auto
 [commit]
   gpgsign = true
+[credential]
+{{ if eq .chezmoi.os "darwin" }}
+  # macOS Keychain。GitHub 自体は下の pushInsteadOf で SSH に寄せているため、これが要るのは
+  # GitHub の HTTPS clone や GitHub 以外の HTTPS git host（社内 GitLab 等）向け。
+  helper = osxkeychain
+{{- else }}
+  # WSL2 には osxkeychain 相当の OS keychain 連携が無いため、git-credential-manager (GCM) +
+  # pass(gpg) の credential store を使い、既存の GPG 鍵（下の user.signingkey）で暗号化して
+  # 永続化する。セットアップ手順は docs/credentials.md 参照。
+  helper = manager
+  credentialStore = gpg
+{{- end }}
 [core]
   editor = nvim
   excludesfile = ~/.config/git/gitignore
@@ -44,14 +56,12 @@
   signingkey = 08BF9A27112516E5
 {{ if eq .chezmoi.os "darwin" }}
 [include]
-  path = ~/.gitconfig.secret-noreply
+  path = ~/.config/git/config.secret
 [includeIf "gitdir:~/work/"]
-  path = ~/.gitconfig.secret
-[includeIf "gitdir:~/projects/"]
-  path = ~/.gitconfig.secret
+  path = ~/.config/git/config.work.secret
 {{ else }}
 [include]
-  path = ~/.gitconfig.secret
+  path = ~/.config/git/config.work.secret
 {{- end }}
 
 [secrets]
