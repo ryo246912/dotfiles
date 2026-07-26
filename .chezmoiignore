@@ -15,8 +15,6 @@ plan*
 .aws/*
 .config/claude*
 .config/dbeaver*
-.config/git/config.secret
-.config/git/config.work.secret
 .config/memo*
 .config/rclone*
 .config/sidebery*
