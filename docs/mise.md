@@ -11,15 +11,14 @@
 
 ## `mise bootstrap` のフェーズ
 
-`mise bootstrap`（フル実行）は以下を順に処理する。このリポジトリで実際に使っているのは
-太字の部分のみ（他は未設定/未使用）。
+`mise bootstrap`（フル実行）は以下を順に処理する。
 
 1. `[bootstrap.plugins]` — plugin インストール
-2. **`[bootstrap.packages]`** — システムパッケージ（brew/brew-cask/apt 等）
+2. `[bootstrap.packages]` — システムパッケージ（brew/brew-cask/apt 等）
 3. `[bootstrap.repos]` — リポジトリの clone/更新
 4. `[dotfiles]` — dotfile 配置（本リポジトリは chezmoi が担当）
 5. `[bootstrap.mise_shell_activate]` — シェル activation
-6. **`[bootstrap.macos.defaults]`**（および friendly section の `[bootstrap.macos.finder]` 等）— macOS defaults
+6. `[bootstrap.macos.defaults]`（および friendly section の `[bootstrap.macos.finder]` 等）— macOS defaults
 7. `[bootstrap.macos.launchd.agents]` — macOS LaunchAgent
 8. `[bootstrap.linux.systemd.units]` — Linux systemd user unit
 9. `[bootstrap.user]` — ログインシェル（`chsh`）
