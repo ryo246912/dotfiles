@@ -1,3 +1,7 @@
+[tools]
+# git credential.helper (dot_config/git/config.tmpl) 用。WSL2/Linux 専用（macOS は osxkeychain）。
+"github:git-ecosystem/git-credential-manager" = "2.9.1"
+
 [bootstrap.packages]
 "apt:colordiff" = "latest"
 "apt:ffmpeg"    = "latest"

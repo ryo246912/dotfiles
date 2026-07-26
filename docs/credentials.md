@@ -15,31 +15,26 @@ OS ごとに設定を分けている:
 [credential]
 {{ if eq .chezmoi.os "darwin" }}
   helper = osxkeychain
-{{- else if eq .chezmoi.os "windows" }}
-  helper = manager
-  credentialStore = wincredman
 {{- else }}
   helper = manager
   credentialStore = gpg
 {{- end }}
 ```
 
-| OS                    | helper                                                                                              | 保存先                             | 永続化                 |
-| --------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------- |
-| macOS                 | `osxkeychain`                                                                                       | macOS Keychain（暗号化）           | 永続（再起動後も残る） |
-| WSL2/Linux            | `manager`（[git-credential-manager](https://github.com/git-ecosystem/git-credential-manager), GCM） | `pass`（GPG 暗号化されたファイル） | 永続（GPG 鍵で暗号化） |
-| Windows（未使用想定） | `manager`                                                                                           | Windows Credential Manager         | 永続                   |
+| OS         | helper                                                                                              | 保存先                             | 永続化                 |
+| ---------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------- |
+| macOS      | `osxkeychain`                                                                                       | macOS Keychain（暗号化）           | 永続（再起動後も残る） |
+| WSL2/Linux | `manager`（[git-credential-manager](https://github.com/git-ecosystem/git-credential-manager), GCM） | `pass`（GPG 暗号化されたファイル） | 永続（GPG 鍵で暗号化） |
 
-このリポジトリでは chezmoi は常に WSL2（`.chezmoi.os` が `"linux"`）側で適用しており、ネイティブ
-Windows で apply することは想定していない。Windows の分岐は、万一そちらで apply された場合に
-Linux 専用の `pass`/GPG セットアップへ誤って倒れないための保険で、pass のセットアップ手順は無い。
+このリポジトリでは chezmoi は常に WSL2（`.chezmoi.os` が `"linux"`）側で適用している（ネイティブ
+Windows での apply は想定していない）ため、`.chezmoi.os` の分岐は darwin/else の2択にしている。
 
 WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無いため、GCM +
 `pass`（GPG ベースの credential store）を使い、コミット署名に使っている既存の GPG 鍵
-（`user.signingkey`）でそのまま暗号化して永続化している。GCM 本体は
-`dot_config/mise/config.toml` の `github:git-ecosystem/git-credential-manager` として、
-`pass` は `dot_config/mise/config.linux.toml` の `apt:pass` として pin 済みなので
-`mise install` すれば入るが、以下の**一度だけの手動セットアップ**が別途必要:
+（`user.signingkey`）でそのまま暗号化して永続化している。GCM 本体・`pass` はどちらも
+`dot_config/mise/config.linux.toml`（`github:git-ecosystem/git-credential-manager` /
+`apt:pass`、WSL2/Linux 専用）に pin 済みなので `mise install` すれば入るが、以下の
+**一度だけの手動セットアップ**が別途必要:
 
 1. `pass` の store を、コミット署名に使っている GPG 鍵（`dot_config/git/config.tmpl` の
    `user.signingkey`）で初期化する。ハードコードすると鍵ローテーション時に複数箇所を
