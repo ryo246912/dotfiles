@@ -13,20 +13,6 @@ base template で `docker-in-docker`（DinD）feature を有効化している�
 採用しているので、compose で建てたコンテナ群は dev container 内に隔離され、ホストの docker daemon
 には触れません。
 
-`dot_config/devcontainer/compose/db-postgres.yml` に PostgreSQL の再利用サンプルを同梱しています。
-devcontainer 内で以下のように起動します：
-
-```bash
-# 起動（healthy になるまで待つ）
-docker compose -f ~/.config/devcontainer/compose/db-postgres.yml up -d --wait --wait-timeout 60
-# 状態確認
-docker compose -f ~/.config/devcontainer/compose/db-postgres.yml ps
-# 接続例（パスワードは postgres）
-PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d app
-# 停止
-docker compose -f ~/.config/devcontainer/compose/db-postgres.yml down
-```
-
 **docker データの永続化とコンテナ間の分離**
 
 - docker のイメージ等は named volume `devcontainer-dind-var-lib-docker-${devcontainerId}` に
@@ -36,8 +22,6 @@ docker compose -f ~/.config/devcontainer/compose/db-postgres.yml down
   DinD daemon の起動失敗やメタデータ破損、worktree 間での docker 状態の混入を防ぎます。
 - `${devcontainerId}` は同一 devcontainer のリビルドを跨いで安定する識別子のため、分離しつつ
   永続化も維持されます。
-- プロジェクト固有の DB が必要な場合は、このサンプルをコピーして調整するか、各リポジトリの
-  `compose.yaml` を利用してください。
 
 ## devcontainer からホストへの通知設定（macOS のみ）
 
