@@ -123,13 +123,21 @@ exec + fnox exec) を参照してください。
    ```
 2. Bitwarden の Web Vault → **Secrets Manager** → **Machine accounts** で新規 machine account を
    作成し、そこから access token を発行する（有効期限は要件に応じて設定。無期限も可）。
-3. 発行したトークンを age で暗号化してグローバル設定に保存する（この1回だけ hidden prompt に平文を
-   入力する。トークンをコマンド引数にそのまま渡すと shell history や `ps` に残るため避ける）:
+3. 発行したトークンを age で暗号化して保存する（この1回だけ hidden prompt に平文を入力する。
+   トークンをコマンド引数にそのまま渡すと shell history や `ps` に残るため避ける）。
+
+   `--global` を付けると ciphertext は `~/.config/fnox/config.toml`（chezmoi の**デプロイ先**）に
+   直接書き込まれます。ここに書くと、次に `chezmoi apply` したときにまだ書き換えていない git 側の
+   ソース（`dot_config/fnox/config.toml`）の内容で上書きされて消えてしまうため、`FNOX_CONFIG_DIR`
+   を chezmoi のソースディレクトリに向けて、最初から git 管理下のファイルへ直接書き込みます:
+
    ```sh
-   fnox set --global --provider age BWS_ACCESS_TOKEN
+   FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
    ```
-   `--global` を付けると、この ciphertext は `~/.config/fnox/config.toml`
-   （＝このリポジトリの `dot_config/fnox/config.toml` がデプロイされたファイル）に直接書き込まれます。
+
+   書き込んだら `chezmoi diff` で追加された ciphertext 行だけの差分になっているか確認してから
+   `chezmoi apply` してください。
+
 4. 動作確認:
    ```sh
    fnox get CZ_OPENAI_API_KEY   # config.toml の場合
