@@ -90,7 +90,10 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
+      "managerFilePatterns": [
+        "dot_config/agentsview/fly.toml",
+        "dot_config/agentsview/fly.preview.toml"
+      ],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
