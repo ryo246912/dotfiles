@@ -1,9 +1,4 @@
 [[snippets]]
-name    = "fnox activate zsh"
-snippet = "eval \"$(fnox activate zsh)\""
-trigger = "fna"
-
-[[snippets]]
 name    = "fnox exec -- "
 snippet = "fnox exec -- "
 trigger = "fne"

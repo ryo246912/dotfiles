@@ -1,53 +1,21 @@
-# fnox のグローバル設定ファイル（$FNOX_CONFIG_DIR/config.toml、既定では ~/.config/fnox/config.toml）。
-# ここに書いた [providers] / [secrets] は、cwd に fnox.toml が無いディレクトリも含めて
-# 常にマージされる（`fnox activate zsh` は dot_config/zsh/lazy/mise.zsh で全ホスト共通で有効化済み）。
-# 平文の secret 値はここに書かない。値は暗号文（age）かリモート secret ストアへの参照キーのみ。
-# provider の使い分け・age/fnox/dotenvx/sops の比較は docs/fnox.md を参照。
-#
-# work 用の provider/secret は config.work.toml に分離し、[profiles.work] 配下に置いている
-# （mise が config.toml + config.work2.toml のように複数ファイルへ分けているのと揃える狙い）。
-# fnox には MISE_ENV 相当の「ホスト種別で自動的にファイルを選ぶ」機能が無いため、
 # import で明示的に取り込み、有効化は FNOX_PROFILE で行う。HOST_ENV に work ロールが
 # 含まれるホストだけ dot_zshenv.tmpl が FNOX_PROFILE=work を export する。
 import = ["config.work.toml"]
 
-# Bitwarden Password Manager (bw)。chezmoi が `[bitwarden] unlock = "auto"` で開いているセッション
-# (BW_SESSION) をそのまま使い回す。実 secret を追加でエクスポートする必要はない。
 [providers.bitwarden]
 type = "bitwarden"
 
-# 個人用の Bitwarden Secrets Manager project。CZ_OPENAI_API_KEY はここから取得する
-# （project_id は Bitwarden Web Vault → Secrets Manager → Projects で確認できる値に置き換えること）。
 [providers.bws]
-project_id = "xxx"
+project_id = "69a1a5eb-c245-4162-80f7-b49200dbebf3"
 type       = "bitwarden-sm"
 
-# --- 以下は未使用（個人用途でまだ実利用していない provider のひな形）--------------------------
-# 使う場合はコメントを外し、xxx を実際の値に置き換えること。secret 側の対応する行は
-# 下の [secrets] テーブル内にまとめてあるので、そちらも一緒に有効化すること。
-# 会社/仕事アカウント固有の provider（aws-sm・aws-vault 併用・仕事用 bws project 等）は
-# config.work.toml 側に置くこと。
+[providers.age]
+key_file = "~/.config/fnox/age.txt"
+recipients = [
+    "age1k9zxqxufy599csnlkfwq2efxnscju4ek3ftqpvx55r9re38akers6zrq2z", # 自分の age/SSH 公開鍵
+]
+type = "age"
 
-# [providers.age]
-# type = "age"
-# recipients = [
-#   "xxx", # 自分の age/SSH 公開鍵
-# ]
-# key_file = "~/.config/fnox/age-identity.txt" # recipients は暗号化用の公開鍵。復号には
-#                                                # 秘密鍵の場所を別途これで指定する必要がある。
-#
-# ローカル専用の bootstrap 値（例: BWS_ACCESS_TOKEN 自体）を置く場合はこちらを使う
-# （--global を付けてこのファイルに保存し、値はコマンド引数ではなく hidden prompt で入力する）:
-# fnox set --global --provider age BWS_ACCESS_TOKEN
-
-# [secrets] はこのファイル内で1回だけにすること（TOML は同じテーブルを複数回宣言できない）。
-# 上の provider を有効化したら、対応する secret 行はここに追加する。
 [secrets]
-# czg (cz-git) の AI コミット生成用トークン。以前は dot_config/dot_czrc.tmpl 内で
-# `bitwarden "item" "GitHub PAT(cz-git)"` を使って ~/.config/.czrc に平文展開し、その後
-# fnox の `bitwarden` (bw) provider 経由の注入に置き換えていたが、bw はセッション (BW_SESSION)
-# が定期的に切れるため env = "exec" にして都度ログインを避けていた。bws (Bitwarden Secrets
-# Manager) の machine account token にはセッション切れが無いため、bws provider に切り替えて
-# env はデフォルト（true）に戻した。value は上の [providers.bws] project に登録済みの secret
-# 名をそのまま参照するだけで、ここには平文を書かない。
-CZ_OPENAI_API_KEY = { provider = "bws", value = "CZ_OPENAI_API_KEY" }
+BWS_ACCESS_TOKEN  = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVbFAvWXFEa3NlL1REeDlLZjRiOHQrWXlFRWh2T1IvUEJ0cDVzeGwxakNzCjBVeDVhREFTTzMyWk4rTDJMS2VoN0g2UzVVdEJVWTZSNkFJMEJiZWNvTVUKLT4gSFolKT9VXy1ncmVhc2UgUSc0akQgfCBtIElcKl4KMFFtT0VsaXJnYXIrRWVubHYzL2FWRmFxc3JVNUE3T1llOUFmLzZnM3BJT2pMZEJBdTEzTElJRXdOay9nV3g5TgpFakd1Y0JlblRUNjRvcEdhU09MazQ5Y0VLNlc3NmhCN1VlL2U3QjJieFRrCi0tLSBGdDJMRkp5bVhBczVIQ2pOWGVPdmlvNFZWVjFaNnlSSmFJeHpiakFQbDMwCikMxDZ4rlcUM8FuAHbhQY2VV1GWehNGWXOpgQPMyj6eD8UHzM42woAIqz0oEbTD+hYJ09juu4i1dZPgfeaDchSsWNXvhNf8Os3GYpDfVL16pRVv2wTVMAFMVi1TKnhYsMZw9QzZjwwp/7YDTj4T5tBWb1iykpwoKoS1PnEqWw==" }
+CZ_OPENAI_API_KEY = { provider = "bws", value = "GitHub PAT(cz-git)" }

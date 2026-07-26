@@ -1,11 +1,3 @@
-# fnox の work profile 定義（config.toml の `import` で取り込まれる）。
-# HOST_ENV に work ロール（work1/work2）が含まれるホストだけ dot_zshenv.tmpl が
-# FNOX_PROFILE=work を export し、ここでの [profiles.work.*] が有効になる。
-# それ以外のホストではこのファイルが import されていても未使用のまま残るだけで害はない。
-#
-# 実際に使う場合はコメントを外し、xxx を実際の値に置き換えること。
-
-# 会社の Bitwarden Secrets Manager project:
 # [profiles.work.providers.bws]
 # type       = "bitwarden-sm"
 # project_id = "xxx"
@@ -18,16 +10,11 @@
 # region = "xxx"
 # prefix = "xxx/"
 
-# 上のどちらか（または両方）を有効化したら、対応する secret をこの1つの
-# [profiles.work.secrets] テーブルにまとめて追加する。TOML は同じテーブルを
-# 複数回宣言できないため、[profiles.work.secrets] はファイル内で1回だけにすること。
 # [profiles.work.secrets]
 # SOME_APP_API_KEY = { provider = "bws", value = "SOME_APP_API_KEY" }
 # DATABASE_URL = { provider = "aws", value = "database-url" }
 
-# --- aws-vault の複数アカウント/ロールをさらに細かく切り替えたい場合 ---------------------------
 # aws-vault のプロファイル名(`aws-vault list`)と同名の fnox profile を追加で定義できる
-# （[profiles.work] とは別の独立した profile として並べる）。
 # [profiles.xxx.providers.aws]
 # type   = "aws-sm"
 # region = "xxx"
@@ -35,6 +22,3 @@
 #
 # [profiles.xxx.secrets]
 # DATABASE_URL = { provider = "aws", value = "database-url" }
-#
-# 使い方:
-#   aws-vault exec xxx -- fnox exec --profile xxx -- <command>
