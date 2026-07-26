@@ -72,11 +72,13 @@ This is a comprehensive personal dotfiles repository managed with [chezmoi](http
    ```
 
 2. **Install system packages:**
-   - macOS: `MISE_ENV=mac mise bootstrap packages apply` runs automatically via the
-     post-apply hook; run `mise run bootstrap:mac` manually afterwards for the pieces
-     that can't be declarative (Homebrew/mise itself, custom-tap/option packages,
-     menu bar spacing, login items)
-   - Windows/WSL2: `run_once_install-packages_windows.sh` runs automatically
+   - macOS: `run_once_install-mise_mac.sh` installs mise itself (via https://mise.run, so it
+     doesn't depend on mise being present yet), then `MISE_ENV=mac mise bootstrap packages
+     apply` runs automatically via the post-apply hook; run `mise run bootstrap:mac` manually
+     afterwards for the pieces that can't be declarative (Homebrew itself, custom-tap/option
+     packages, menu bar spacing, login items)
+   - Windows/WSL2: `run_once_install-packages_windows.sh` runs automatically (also installs
+     mise the same mise-independent way)
 
 3. **Basic setup:**
    - `run_once_setup.sh` configures ZDOTDIR and symlinks
@@ -209,6 +211,8 @@ This repository treats personal development environment as code:
 ## Useful References
 
 - **docs/setup.md** - Detailed step-by-step setup instructions
+- **docs/mise-bootstrap.md** - `mise bootstrap` usage in this repo, and how to migrate
+  already brew-installed packages into `[bootstrap.packages]`
 - **README.md** - Repository overview and quick start
 - **mise.toml** - Complete list of managed tools and available tasks
 - **dot_config/zabrze/\*.toml** - All available command abbreviations

@@ -16,10 +16,11 @@ state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
 mkdir -p "$state_dir" || exit 1
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
-# mise shims を PATH に通す。mac は brew の mise を優先する（~/.local/bin に旧 official-install
-# が残っていると min_version 不足で bootstrap が失敗し得るため /opt/homebrew/bin を先頭に）。
+# mise shims を PATH に通す。mise 本体は mac/linux とも run_once（run_once_install-mise_mac.sh /
+# run_once_install-packages_windows.sh）が https://mise.run 経由で ~/.local/bin に導入するため
+# （mac の brew では mise を導入しない）、~/.local/bin を先頭にする。
 if [ "$(uname)" = "Darwin" ]; then
-  export PATH="/opt/homebrew/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  export PATH="$HOME/.local/bin:/opt/homebrew/bin:$HOME/.local/share/mise/shims:$PATH"
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi

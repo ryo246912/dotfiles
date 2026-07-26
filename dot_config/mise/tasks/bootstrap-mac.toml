@@ -3,7 +3,7 @@ description = "mac の個別セットアップをまとめて実行（対話操�
 depends     = ["bootstrap:mac-brew", "bootstrap:mac-packages", "bootstrap:mac-defaults"]
 
 ["bootstrap:mac-brew"]
-description = "Homebrew 本体と mise 自体を導入する（どちらも mise の宣言的管理では代替できない bootstrap 前提）"
+description = "Homebrew 本体を導入する（mise の宣言的管理では代替できない bootstrap 前提。mise 自体は run_once_install-mise_mac.sh が導入する）"
 run = '''
 #!/bin/bash
 set -euo pipefail
@@ -15,12 +15,6 @@ if ! command -v brew &>/dev/null; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 else
   echo "Homebrew is already installed"
-fi
-
-if ! brew list mise &>/dev/null; then
-  brew install mise
-else
-  echo "mise is already installed"
 fi
 '''
 
