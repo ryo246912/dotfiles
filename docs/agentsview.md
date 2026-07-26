@@ -35,12 +35,6 @@ flyctl apps create ryo-agentsview
 - `agentsview_push_mac`: ローカル PC からの `agentsview pg push` 用。`agentsview` schema だけに DML 権限を持つ。
 - `agentsview_owner`: 初回 schema 作成・migration 用。通常の app / local push では使わない。
 
-`psgl` に接続して、secret 値は Bitwarden Secrets Manager（`dot_config/fnox/config.toml` の
-`[secrets]`、`AGENTSVIEW_*` の各 secret）に保管する。admin/owner password や bearer token は
-強い権限を持つため `env = "exec"` にしており、`fnox activate zsh` によるシェルへの自動注入はしない
-（都度ログイン等のセッション切れは無いが、無関係な shell の子プロセスにまで export されるのを避ける
-ため）。そのため実行時は `fnox exec --` 経由にする（zabrze の `fne` abbreviation でも展開できる）。
-
 mise task で実行する場合:
 
 ```sh
@@ -50,11 +44,6 @@ fnox exec -- mise run agentsview:setup:db-roles
 task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
 > このタスクは `flyctl proxy` を一時起動し、`psql`（libpq client）で接続する。admin password は `PGPASSWORD`（環境変数）で渡して process 引数には出さず、`psql -v ON_ERROR_STOP=1` で途中の DDL/GRANT 失敗も検出する。実行には `psql` が必要（無い場合は `mise use -g postgres` 等で導入する）。
-
-> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）が `fnox exec --` を付け忘れる等で
-> 未解決のまま実行されると、`: "${VAR:?...}"` でエラーメッセージを出して即座に停止する（対話
-> プロンプトへのフォールバックは廃止した）。この挙動は `agentsview:setup:migrate` /
-> `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。
 
 > 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
@@ -87,10 +76,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
 初回 schema 作成と AgentsView upgrade 後の migration は `agentsview_owner` role で実行する。通常の app / local push では owner role を使わない。
 `agentsview:setup:migrate` task は `flyctl proxy` を一時起動し、migration 後に proxy を停止する。`AGENTSVIEW_MIGRATION_PROJECTS` を設定すると小さい project だけで初回 migration を通せる。
 
-`AGENTSVIEW_OWNER_PROXY_PG_URL` は `env = "exec"` なので `fnox exec --` 経由で解決する。
-`AGENTSVIEW_MIGRATION_PROJECTS` は secret ではなくその場限りのフィルタなので、必要な時だけ手動で
-export する:
-
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
 
@@ -103,21 +88,13 @@ migration 後に `GRANT ... ON ALL TABLES` / `GRANT ... ON ALL SEQUENCES` を再
 
 Fly app は公開 URL で参照されるが、`require_auth = true` と bearer token で API を閉じる。PostgreSQL 接続は `agentsview_read` role を使い、公開 viewer から DB へ書き込めないようにする。
 
-mise task で token を生成し、bws project に `AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET`
-として保存する。
-
 ```sh
 mise run agentsview:fly:tokens
 ```
 
-`AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET` / `AGENTSVIEW_READ_PG_URL` は
-`env = "exec"` なので、bws project に登録済みなら `fnox exec --` 経由で解決する:
-
 ```sh
 fnox exec -- mise run agentsview:fly:secrets
 ```
-
-task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:fly:tokens` / `agentsview:fly:secrets` で定義している。
 
 手動で実行する場合:
 
@@ -157,8 +134,6 @@ flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 ```sh
 mise run agentsview:deploy
 ```
-
-`dot_config/agentsview/fly.toml` または `.github/workflows/deploy-agentsview.yaml` を main branch に merge した場合は、GitHub Actions の `deploy-agentsview` workflow が `ryo-agentsview` へ deploy する。必要な GitHub secret は `FLY_API_TOKEN`。
 
 ### 5. 動作確認
 
