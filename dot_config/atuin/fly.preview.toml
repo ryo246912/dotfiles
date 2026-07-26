@@ -9,7 +9,7 @@
 # See https://fly.io/docs/reference/configuration/
 
 app            = "ryo-shellhistory-preview"
-primary_region = "nrt"                        # 東京リージョン
+primary_region = "nrt"                      # 東京リージョン
 
 [experimental]
 # v18.12.0 で server が独立 binary（atuin-server）に分離され、image の ENTRYPOINT が
