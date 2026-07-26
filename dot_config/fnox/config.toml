@@ -19,3 +19,17 @@ type = "age"
 [secrets]
 BWS_ACCESS_TOKEN  = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVbFAvWXFEa3NlL1REeDlLZjRiOHQrWXlFRWh2T1IvUEJ0cDVzeGwxakNzCjBVeDVhREFTTzMyWk4rTDJMS2VoN0g2UzVVdEJVWTZSNkFJMEJiZWNvTVUKLT4gSFolKT9VXy1ncmVhc2UgUSc0akQgfCBtIElcKl4KMFFtT0VsaXJnYXIrRWVubHYzL2FWRmFxc3JVNUE3T1llOUFmLzZnM3BJT2pMZEJBdTEzTElJRXdOay9nV3g5TgpFakd1Y0JlblRUNjRvcEdhU09MazQ5Y0VLNlc3NmhCN1VlL2U3QjJieFRrCi0tLSBGdDJMRkp5bVhBczVIQ2pOWGVPdmlvNFZWVjFaNnlSSmFJeHpiakFQbDMwCikMxDZ4rlcUM8FuAHbhQY2VV1GWehNGWXOpgQPMyj6eD8UHzM42woAIqz0oEbTD+hYJ09juu4i1dZPgfeaDchSsWNXvhNf8Os3GYpDfVL16pRVv2wTVMAFMVi1TKnhYsMZw9QzZjwwp/7YDTj4T5tBWb1iykpwoKoS1PnEqWw==" }
 CZ_OPENAI_API_KEY = { provider = "bws", value = "GitHub PAT(cz-git)" }
+
+# agentsview (docs/agentsview.md) の PostgreSQL role password / proxy URL / Fly app token。
+# 以前は各 PC の secret shell（dotfiles 管理外の ~/.zshenv 等）に手動 export し、
+# 未設定なら mise task 側で対話プロンプトしていたが、bws provider の secret に統一した。
+# value は bws project に登録する secret 名の仮置き（実名に合わせて置き換えること）。
+AGENTSVIEW_ADMIN_PG_PASSWORD  = { provider = "bws", value = "AGENTSVIEW_ADMIN_PG_PASSWORD" }
+AGENTSVIEW_AUTH_TOKEN         = { provider = "bws", value = "AGENTSVIEW_AUTH_TOKEN" }
+AGENTSVIEW_CURSOR_SECRET      = { provider = "bws", value = "AGENTSVIEW_CURSOR_SECRET" }
+AGENTSVIEW_OWNER_PASSWORD     = { provider = "bws", value = "AGENTSVIEW_OWNER_PASSWORD" }
+AGENTSVIEW_OWNER_PROXY_PG_URL = { provider = "bws", value = "AGENTSVIEW_OWNER_PROXY_PG_URL" }
+AGENTSVIEW_PROXY_PG_URL       = { provider = "bws", value = "AGENTSVIEW_PROXY_PG_URL" }
+AGENTSVIEW_PUSH_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_PUSH_PASSWORD" }
+AGENTSVIEW_READ_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_READ_PASSWORD" }
+AGENTSVIEW_READ_PG_URL        = { provider = "bws", value = "AGENTSVIEW_READ_PG_URL" }

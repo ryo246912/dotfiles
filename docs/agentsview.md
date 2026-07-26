@@ -35,16 +35,13 @@ flyctl apps create ryo-agentsview
 - `agentsview_push_mac`: ローカル PC からの `agentsview pg push` 用。`agentsview` schema だけに DML 権限を持つ。
 - `agentsview_owner`: 初回 schema 作成・migration 用。通常の app / local push では使わない。
 
-`psgl` に接続して、secret 値は手元の password manager に保管する。
+`psgl` に接続して、secret 値は Bitwarden Secrets Manager（`dot_config/fnox/config.toml` の
+`[secrets]`、`AGENTSVIEW_*` の各 secret）に保管する。`fnox activate zsh` が自動でシェルに
+export するため、通常は手動で `export` する必要はない。
 
 mise task で実行する場合:
 
 ```sh
-export AGENTSVIEW_ADMIN_PG_PASSWORD='<postgres-admin-pass>'
-export AGENTSVIEW_OWNER_PASSWORD='<owner-pass>'
-export AGENTSVIEW_PUSH_PASSWORD='<push-pass>'
-export AGENTSVIEW_READ_PASSWORD='<read-pass>'
-
 mise run agentsview:setup:db-roles
 ```
 
@@ -52,7 +49,10 @@ task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles`
 
 > このタスクは `flyctl proxy` を一時起動し、`psql`（libpq client）で接続する。admin password は `PGPASSWORD`（環境変数）で渡して process 引数には出さず、`psql -v ON_ERROR_STOP=1` で途中の DDL/GRANT 失敗も検出する。実行には `psql` が必要（無い場合は `mise use -g postgres` 等で導入する）。
 
-> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）は、`export` せずに `mise run` した場合、その場で（入力を伏せて）1 つずつ尋ねられる。事前に `export` しておけばプロンプトは出ない。値が無いまま（非 TTY の CI 等）は `Set <VAR>` でエラー停止する。この対話入力は `agentsview:setup:migrate` / `agentsview:fly:secrets` / `agentsview:pg:status` / `agentsview:pg:push` でも同様。task 側で `shell = "bash -c"` と `interactive = true` を指定して端末に直結している。
+> 上記の必須 env（`AGENTSVIEW_*_PASSWORD` や各 URL / token）が fnox 側で未解決のまま実行すると、
+> `: "${VAR:?...}"` でエラーメッセージを出して即座に停止する（対話プロンプトへのフォールバックは
+> 廃止した）。この挙動は `agentsview:setup:migrate` / `agentsview:fly:secrets` /
+> `agentsview:pg:status` / `agentsview:pg:push` でも同様。
 
 > 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
@@ -85,8 +85,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
 初回 schema 作成と AgentsView upgrade 後の migration は `agentsview_owner` role で実行する。通常の app / local push では owner role を使わない。
 `agentsview:setup:migrate` task は `flyctl proxy` を一時起動し、migration 後に proxy を停止する。`AGENTSVIEW_MIGRATION_PROJECTS` を設定すると小さい project だけで初回 migration を通せる。
 
+`AGENTSVIEW_OWNER_PROXY_PG_URL` は fnox（bws）が自動 export する。`AGENTSVIEW_MIGRATION_PROJECTS`
+は secret ではなくその場限りのフィルタなので、必要な時だけ手動で export する:
+
 ```sh
-export AGENTSVIEW_OWNER_PROXY_PG_URL='postgres://agentsview_owner:<owner-pass>@127.0.0.1:15432/ryo_shellhistory?sslmode=disable'
 export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
 
 mise run agentsview:setup:migrate
@@ -98,19 +100,17 @@ migration 後に `GRANT ... ON ALL TABLES` / `GRANT ... ON ALL SEQUENCES` を再
 
 Fly app は公開 URL で参照されるが、`require_auth = true` と bearer token で API を閉じる。PostgreSQL 接続は `agentsview_read` role を使い、公開 viewer から DB へ書き込めないようにする。
 
-mise task で token を生成し、password manager に保存する。
+mise task で token を生成し、bws project に `AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET`
+として保存する。
 
 ```sh
 mise run agentsview:fly:tokens
 ```
 
-保存済み token と read-only DB URL を使って Fly secrets を設定する。
+`AGENTSVIEW_AUTH_TOKEN` / `AGENTSVIEW_CURSOR_SECRET` / `AGENTSVIEW_READ_PG_URL` は fnox（bws）が
+自動 export するので、bws project に登録済みなら追加の `export` は不要:
 
 ```sh
-export AGENTSVIEW_AUTH_TOKEN='<saved-auth-token>'
-export AGENTSVIEW_CURSOR_SECRET='<saved-cursor-secret>'
-export AGENTSVIEW_READ_PG_URL='postgres://agentsview_read:<read-pass>@psgl.flycast:5432/ryo_shellhistory?sslmode=disable'
-
 mise run agentsview:fly:secrets
 ```
 
@@ -140,7 +140,7 @@ echo "Bearer token: $AUTH"  # 保管しておく
 > `cursor_secret` は起動時の自動生成・config 書き戻しを避けるため、初回から明示する。
 > `agentsview_read` role で schema migration が必要になった場合、`pg serve` は migration を skip して compatibility check に落ちる。AgentsView upgrade 後に migration が必要なときだけ、手元から `agentsview_owner` role で migration / push を実行し、完了後に app は read-only role のまま運用する。
 
-> **PG 接続先の確認方法:** password を端末履歴・記録・画面共有へ露出させないため、`printenv` で接続文字列そのものを表示しない。private network の host は `psgl.flycast:5432`、database 名は `flyctl postgres db list -a psgl`、role 名は本手順で作成する `agentsview_*` を使う。password は secret manager / secret shell 側にのみ保持し、URL を echo しない。
+> **PG 接続先の確認方法:** password を端末履歴・記録・画面共有へ露出させないため、`printenv` で接続文字列そのものを表示しない。private network の host は `psgl.flycast:5432`、database 名は `flyctl postgres db list -a psgl`、role 名は本手順で作成する `agentsview_*` を使う。password は fnox（bws）側にのみ保持し、URL を echo しない。
 > `psgl.flycast` の Fly private network 経由では `sslmode=disable` + `[pg] allow_insecure = true` を使う。外部公開 host で TLS 接続する場合は `sslmode=require` + `allow_insecure = false` に戻す。
 
 ### 4. デプロイ
@@ -179,10 +179,11 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-各 PC のシェル設定（`~/.zshenv` 等、dotfiles には値を含めない）に追記:
+`AGENTSVIEW_PROXY_PG_URL` はどの PC でも同じ値（`agentsview_push_mac` role の URL）なので、
+fnox（bws、全 PC 共通）で管理する。`AGENTSVIEW_PG_MACHINE` だけは PC ごとに異なる値にしたい場合の
+ローカル設定なので、必要な PC のシェル設定（`~/.zshenv` 等、dotfiles には値を含めない）に追記する:
 
 ```sh
-export AGENTSVIEW_PROXY_PG_URL="postgres://agentsview_push_mac:<push-pass>@127.0.0.1:15432/ryo_shellhistory?sslmode=disable"
 export AGENTSVIEW_PG_MACHINE="mac-work"
 ```
 
@@ -191,7 +192,7 @@ export AGENTSVIEW_PG_MACHINE="mac-work"
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
 ```sh
-# shell 初期化後に secret shell 側の値が読み込まれているか
+# fnox 経由で値が読み込まれているか
 # （URL には password が含まれるため、値そのものは表示せず有無だけ確認する）
 [ -n "${AGENTSVIEW_PROXY_PG_URL:-}" ] && echo "AGENTSVIEW_PROXY_PG_URL is set" || echo "AGENTSVIEW_PROXY_PG_URL is unset"
 
@@ -222,10 +223,10 @@ local PC
 
 この構成では、ローカル PC から Fly private network までの通信は flyctl の user-mode WireGuard で保護される。AgentsView から見た DB host は `127.0.0.1` なので、local `~/.agentsview/config.toml` に `[pg] allow_insecure = true` を入れなくてよい。
 
-各 PC の secret shell 側:
+`AGENTSVIEW_PROXY_PG_URL` は fnox（bws）が自動 export する。PC ごとに変えたい場合だけ
+`AGENTSVIEW_PG_MACHINE` をローカルのシェル設定に追記する:
 
 ```sh
-export AGENTSVIEW_PROXY_PG_URL='postgres://agentsview_push_mac:<push-pass>@127.0.0.1:15432/ryo_shellhistory?sslmode=disable'
 export AGENTSVIEW_PG_MACHINE='mac-work'
 ```
 
@@ -235,7 +236,6 @@ export AGENTSVIEW_PG_MACHINE='mac-work'
 通常の push / status は proxy 起動と停止を task 内で行う。
 
 ```sh
-export AGENTSVIEW_PROXY_PG_URL='postgres://agentsview_push_mac:<push-pass>@127.0.0.1:15432/ryo_shellhistory?sslmode=disable'
 mise run agentsview:pg:status
 mise run agentsview:pg:push
 ```
@@ -278,7 +278,9 @@ Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一�
 mise run agentsview:serve
 ```
 
-恒久運用は、各 PC の secret shell に `AGENTSVIEW_PROXY_PG_URL` と `AGENTSVIEW_PG_MACHINE` を持たせ、必要なときに `mise run agentsview:pg:push` を実行する形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
+恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
+`AGENTSVIEW_PG_MACHINE` をローカルに設定し、必要なときに `mise run agentsview:pg:push` を実行する
+形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
 
 ### push 時間について（初回が遅い理由）
 
