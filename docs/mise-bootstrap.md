@@ -35,12 +35,12 @@ macOS defaults は手動で `mise bootstrap macos defaults apply` を実行す�
 
 ## このリポジトリでの構成
 
-| 設定 | ファイル | 内容 |
-| --- | --- | --- |
-| `[bootstrap.packages]`（mac） | `dot_config/mise/config.mac.toml` | `brew:`（formula）/ `brew-cask:`（GUI アプリ） |
-| `[bootstrap.packages]`（linux/WSL） | `dot_config/mise/config.linux.toml` | `apt:` |
-| `[bootstrap.macos.*]` | `dot_config/mise/config.mac.toml` | Finder / キーボード / raw defaults |
-| mise では表現できない個別処理 | `dot_config/mise/tasks/bootstrap-mac.toml` | `mise run bootstrap:mac` 等（後述） |
+| 設定                                | ファイル                                   | 内容                                           |
+| ----------------------------------- | ------------------------------------------ | ---------------------------------------------- |
+| `[bootstrap.packages]`（mac）       | `dot_config/mise/config.mac.toml`          | `brew:`（formula）/ `brew-cask:`（GUI アプリ） |
+| `[bootstrap.packages]`（linux/WSL） | `dot_config/mise/config.linux.toml`        | `apt:`                                         |
+| `[bootstrap.macos.*]`               | `dot_config/mise/config.mac.toml`          | Finder / キーボード / raw defaults             |
+| mise では表現できない個別処理       | `dot_config/mise/tasks/bootstrap-mac.toml` | `mise run bootstrap:mac` 等（後述）            |
 
 `[bootstrap.packages]` はキーが `<manager>:<name>` 形式で、`MISE_ENV`（mac/linux）と
 ファイル名（`config.mac.toml`/`config.linux.toml`）で OS ごとに自動的に分離される。値は
@@ -138,12 +138,12 @@ initial_key_repeat = 15
 
 ### mise でも表現できないもの（`dot_config/mise/tasks/bootstrap-mac.toml`）
 
-| タスク | 内容 | mise で表現できない理由 |
-| --- | --- | --- |
-| `bootstrap:mac-brew` | Homebrew 本体の導入 | bootstrap 前提そのもの（mise 自体は別途 run_once で導入。後述） |
+| タスク                   | 内容                                                                                                                                   | mise で表現できない理由                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `bootstrap:mac-brew`     | Homebrew 本体の導入                                                                                                                    | bootstrap 前提そのもの（mise 自体は別途 run_once で導入。後述）                               |
 | `bootstrap:mac-packages` | clibor（`--language=ja`）/ google-japanese-ime（Rosetta 前提）/ thock（独自 tap + `thock --install` postflight）/ jira-cli（独自 tap） | custom install option・前提コマンド・postflight・（API メタデータ未確認の）サードパーティ tap |
-| `bootstrap:mac-defaults` | メニューバー間隔・ログイン項目 | 上記の `-currentHost` / login item 制約 |
-| `bootstrap:mac-hotkeys` | キーボードショートカット | plist が array/dict |
+| `bootstrap:mac-defaults` | メニューバー間隔・ログイン項目                                                                                                         | 上記の `-currentHost` / login item 制約                                                       |
+| `bootstrap:mac-hotkeys`  | キーボードショートカット                                                                                                               | plist が array/dict                                                                           |
 
 いずれも `if ! <条件> ; then <導入> ; fi` 形式の冪等処理で、何度実行しても安全。
 y/n の対話確認はあえて撤廃した（`mise run` を明示的に叩くこと自体が確認に相当する、という

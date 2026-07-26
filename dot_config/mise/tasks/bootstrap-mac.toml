@@ -1,6 +1,10 @@
 ["bootstrap:mac"]
+depends = [
+    "bootstrap:mac-brew",
+    "bootstrap:mac-packages",
+    "bootstrap:mac-defaults",
+]
 description = "mac の個別セットアップをまとめて実行（対話操作の bootstrap:mac-hotkeys は含まない）"
-depends     = ["bootstrap:mac-brew", "bootstrap:mac-packages", "bootstrap:mac-defaults"]
 
 ["bootstrap:mac-brew"]
 description = "Homebrew 本体を導入する（mise の宣言的管理では代替できない bootstrap 前提。mise 自体は run_once_install-mise_mac.sh が導入する）"
@@ -19,8 +23,8 @@ fi
 '''
 
 ["bootstrap:mac-packages"]
+depends = ["bootstrap:mac-brew"]
 description = "brew-cask/[bootstrap.packages] では扱えない特殊パッケージ（custom option・tap・postflight）を導入する"
-depends     = ["bootstrap:mac-brew"]
 run = '''
 #!/bin/bash
 set -euo pipefail

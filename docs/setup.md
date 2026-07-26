@@ -23,6 +23,7 @@
   - Finder（隠しファイル・拡張子・パスバー表示）、キーボードのキーリピート速度、
     トラックパッドのスクロール方向は `dot_config/mise/config.mac.toml` の
     `[bootstrap.macos.*]` で管理
+
   ```sh
   MISE_ENV=mac mise bootstrap macos defaults apply
   ```
@@ -32,6 +33,7 @@
     （clibor・google-japanese-ime・thock・jira-cli）、メニューバーのアイコン間隔、
     ログイン項目（Clibor / Docker / Raycast）をまとめて実行
   - sudo（Rosetta インストール）を含むため対話端末で実行すること
+
   ```sh
   mise run bootstrap:mac
   ```
