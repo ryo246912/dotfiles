@@ -62,6 +62,15 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 
 ### コマンド
 
+`status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
+動くので `MISE_ENV=mac` だけで良いが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
+`--path`（または `-g`）を指定しない限り**カレントディレクトリのローカル `mise.toml`**に書く
+（chezmoi のデプロイ先 `~/.config/mise/config.mac.toml` にも、まして chezmoi の source
+（`dot_config/mise/config.mac.toml`）にも自動では書かれない）。このリポジトリは
+「常に chezmoi の source を編集する」ルールなので、`use`/`import` を使うときは chezmoi の
+source ディレクトリで `--path dot_config/mise/config.mac.toml` を明示するか、素直に
+`dot_config/mise/config.mac.toml` を直接編集する方が確実。
+
 ```sh
 # 状態確認（read-only。何も変更しない）
 MISE_ENV=mac mise bootstrap packages status
@@ -72,8 +81,10 @@ MISE_ENV=mac mise bootstrap packages apply
 MISE_ENV=mac mise bootstrap packages apply --dry-run     # 何が実行されるかだけ確認
 MISE_ENV=mac mise bootstrap packages apply --yes         # 確認プロンプトなし
 
-# config に新しいパッケージを1個追加してすぐ導入
-MISE_ENV=mac mise bootstrap packages use brew-cask:slack
+# config に新しいパッケージを1個追加してすぐ導入（chezmoi source を明示）
+cd "$(chezmoi source-path)"
+MISE_ENV=mac mise bootstrap packages use brew-cask:slack --path dot_config/mise/config.mac.toml
+chezmoi diff && chezmoi apply
 
 # 更新
 MISE_ENV=mac mise bootstrap packages upgrade
@@ -176,21 +187,26 @@ mise 管理の formula に見える。逆に、**実 brew で先に入れてい�
 ### 手順1: formula（brew:）
 
 既にインストール済みの formula を丸ごと `[bootstrap.packages]` にインポートできる。
+`import` も書き込みコマンドなので、`use` と同様に `--path` で chezmoi の source を明示する
+（省略するとカレントディレクトリのローカル `mise.toml` に書かれてしまう）。
 
 ```sh
+cd "$(chezmoi source-path)"
 # 現在の(オンリクエストな)formulaをスキャンして [bootstrap.packages] に書き出す
-MISE_ENV=mac mise bootstrap packages import --manager brew
+MISE_ENV=mac mise bootstrap packages import --manager brew --path dot_config/mise/config.mac.toml
 # 依存関係で入った formula も含めたい場合
-MISE_ENV=mac mise bootstrap packages import --manager brew --all
+MISE_ENV=mac mise bootstrap packages import --manager brew --all --path dot_config/mise/config.mac.toml
 ```
 
 `import` は `brew bundle dump` 相当。サードパーティ tap の formula は fully-qualified な
 名前（`brew:owner/tap/formula`）で書き出され、GitHub の慣例的な tap URL が推測できる場合は
 `[bootstrap.brew.taps]` も自動で追記される。
 
-書き出し後:
+`import` は source ファイルを書き換えるだけなので、`chezmoi diff`/`chezmoi apply` で
+デプロイしてから確認する:
 
 ```sh
+chezmoi diff && chezmoi apply
 MISE_ENV=mac mise bootstrap packages status   # 差分がないことを確認（= 追加インストール不要）
 ```
 
@@ -210,8 +226,8 @@ MISE_ENV=mac mise bootstrap packages status   # 差分がないことを確認�
 brew list --cask --versions
 ```
 
-1. 上記の出力を見ながら `dot_config/mise/config.mac.toml` に `"brew-cask:<token>" = "latest"`
-   を追記する。
+1. 上記の出力を見ながら `dot_config/mise/config.mac.toml`（chezmoi source）に
+   `"brew-cask:<token>" = "latest"` を追記し、`chezmoi apply` でデプロイする。
 2. **read-only** で確認する（何も変更しない）:
    ```sh
    MISE_ENV=mac mise bootstrap packages status
