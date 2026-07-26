@@ -58,7 +58,8 @@ jobs:
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
        github.event.comment.author_association == 'OWNER' &&
-       startsWith(github.event.comment.body, '/deploy-agentsview'))
+       (github.event.comment.body == '/deploy-agentsview' ||
+        startsWith(github.event.comment.body, '/deploy-agentsview ')))
     # preview app は全 PR で共有するため、単一 group で直列化して同時 deploy を防ぐ。
     concurrency:
       group: deploy-agentsview-preview
