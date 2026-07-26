@@ -1,0 +1,35 @@
+# DinD環境でDBコンテナをすぐ試すための再利用サンプル
+#
+# devcontainer内(DinD有効)で以下のように起動する:
+#   docker compose -f ~/.config/devcontainer/compose/db-postgres.yml up -d --wait --wait-timeout 60
+#   docker compose -f ~/.config/devcontainer/compose/db-postgres.yml ps
+#   docker compose -f ~/.config/devcontainer/compose/db-postgres.yml down
+#
+# 接続例(devcontainer内から、既定パスワードは postgres):
+#   PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d app
+#
+# 資格情報はデフォルト値付きの環境変数で上書きできる(未指定なら postgres/postgres/app)。
+# コピー先の本番用途では POSTGRES_PASSWORD 等をホスト環境変数や secret で必ず上書きすること。
+# プロジェクト固有のDBが必要な場合は、このファイルをコピーして調整するか、
+# 各リポジトリの compose.yaml を使うこと。
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    ports:
+      # loopback限定で公開(手順は devcontainer 内の localhost 接続のみ)
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # $$ で compose の変数展開を避け、コンテナ内で POSTGRES_* を評価させる
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-postgres-data:

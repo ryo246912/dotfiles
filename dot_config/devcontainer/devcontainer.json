@@ -6,7 +6,13 @@
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {
-    // "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
+    // docker compose / DBコンテナをコンテナ内で建てられるようにする(DinD)
+    // DooD(ホストのdocker.sockマウント)ではなくDinDを採用し、
+    // compose で建てたコンテナ群を dev container 内に隔離する
+    "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
   },
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
@@ -42,6 +48,8 @@
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer,target=/home/vscode/.ssh/id_ed25519,readonly",
     // devcontainer scripts
     "type=bind,source=${localEnv:HOME}/.config/devcontainer/scripts,target=/home/vscode/.config/devcontainer/scripts,readonly",
+    // DBコンテナ用のcompose サンプル(DinDで docker compose 起動に使用)
+    "type=bind,source=${localEnv:HOME}/.config/devcontainer/compose,target=/home/vscode/.config/devcontainer/compose,readonly",
     // git - parent directory of workspace
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
@@ -55,7 +63,12 @@
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
     "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
-    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
+    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit",
+    // DinDのdockerデータ(イメージ等)をnamed volumeで永続化し、リビルド時のpullを回避。
+    // ${devcontainerId} でスコープし、multi-worktree で複数の devcontainer を同時起動しても
+    // 各コンテナが独立した /var/lib/docker を持つようにする(共有による daemon 起動失敗・破損を回避)。
+    // devcontainerId は同一 devcontainer のリビルドを跨いで安定するため、永続化も保たれる。
+    "source=devcontainer-dind-var-lib-docker-${devcontainerId},target=/var/lib/docker,type=volume"
   ],
   "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
   "postStartCommand": "bash /home/vscode/.config/devcontainer/scripts/post-start.sh"
