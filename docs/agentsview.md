@@ -155,11 +155,6 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-`AGENTSVIEW_PROXY_PG_URL` はどの PC でも同じ値（`agentsview_push_mac` role の URL）なので、
-fnox（bws、全 PC 共通）で管理する。`AGENTSVIEW_PG_MACHINE` は `dot_config/zsh/host-env.map` の
-host-id（`HOST_ENV` と同じ解決元）から `dot_config/zsh/dot_zshenv.tmpl` がシェル起動時に自動で
-export するため、PC ごとに手動設定する必要はない。
-
 `agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
 
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
