@@ -152,8 +152,6 @@
     ```
     setup-git-gpg
     ```
-  - [ ] （手動設定不要）git/Docker の credential helper は chezmoi 管理下（`chezmoi apply` で自動適用、
-        詳細は [`docs/credentials.md`](./credentials.md) を参照）
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
@@ -391,3 +389,10 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること
+
+- [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
+      [`docs/credentials.md`](./credentials.md) 参照）
+  ```sh
+  pass init 08BF9A27112516E5
+  git-credential-manager configure
+  ```
