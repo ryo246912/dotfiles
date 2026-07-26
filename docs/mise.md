@@ -18,19 +18,33 @@ mise ERROR cannot link xz: these files already exist and were not
 Remove or rename them, then re-run `mise bootstrap packages apply`
 ```
 
-対応手順:
+対応手順（以下は `xz` を例にしているだけで、実際は衝突したパッケージ名に読み替える）:
 
 1. エラーメッセージ冒頭に出ているパッケージ名（上記例では `xz`）を確認する
-2. 依存関係を無視してアンインストールする（他の formula の依存として入っている場合は
-   `--ignore-dependencies` が必要）
+2. そのパッケージに依存している他の formula がいないか確認する
    ```sh
-   brew uninstall --ignore-dependencies xz
+   brew uses --installed xz
    ```
-3. 再度 bootstrap を実行する（mise 管理下でクリーンに再導入・リンクされる）
+3. 出力を見てアンインストール可否を判断する
+   - 空（誰も依存していない）→ そのままアンインストールして問題ない
+     ```sh
+     brew uninstall xz
+     ```
+   - 何か出力される（例: `ffmpeg`）→ その formula を real brew に残す必要があるか確認する
+     - 残す必要が無い／その formula ごと mise 管理に移行してよいなら、依存元も含めて
+       アンインストールする（依存元を先に `brew uninstall <依存元>` で外してから対象を
+       アンインストールする。まとめて外す場合のみ `--ignore-dependencies` を使う）
+       ```sh
+       brew uninstall --ignore-dependencies xz
+       ```
+     - 残す必要がある（real brew 側で使い続けたい）なら、この formula は mise 化を見送り
+       `[bootstrap.packages]` から外すか、下記「real brew から mise bootstrap への本格移行」の
+       手順で依存元ごと退避するかを検討する
+4. アンインストールした場合は再度 bootstrap を実行する（mise 管理下でクリーンに再導入・リンクされる）
    ```sh
    MISE_ENV=mac mise bootstrap packages apply
    ```
-4. 別のパッケージで同様のエラーが出た場合は 1〜3 を繰り返す
+5. 別のパッケージで同様のエラーが出た場合は 1〜4 を繰り返す
 
 エラーメッセージが指す各ファイルを直接 `rm` して解決することもできるが、消し残しが出やすいので
 `brew uninstall` でパッケージごと外す方が確実。openssl@3 / ca-certificates / json-c のような
