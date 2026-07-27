@@ -399,33 +399,42 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # 多重起動防止（macOS/Linux 共通。macOS に無い flock は使わず mkdir で atomic に取る）。
-# ロックの正当性は PID + 起動時刻トークンで判定する:
-#   - token 未記録（mkdir 直後で書き込み前）→ 取得中とみなし skip（取得レース回避）。
-#   - PID 生存かつ token 一致 → 実行中の push。何時間かかっても skip（＝生きたロックを
-#     経過時間で奪わない。初回全件 push が数時間かかっても誤って奪取しない）。
-#   - PID 死亡、または token 不一致（PID が別プロセスに再利用された）→ stale として奪う。
-#     これで「異常終了後に PID が再利用されて永久に skip」も回避できる。
-# token を先、PID を後に書き、PID の有無を「取得完了」マーカーにする。
-# なお最終的な二重 push は port(15432) を同時 bind できない flyctl 側でも弾かれる。
+# owner 情報は "<pid> <lstart>" を 1 ファイル(info)に temp+rename で atomic に書く
+# （half-written を作らない）。既存ロックは以下で判定する:
+#   - info 無し → 取得直後(ms)の他プロセス、または info 書き込み前のクラッシュ跡。恒久
+#     orphan を避けるため奪う。まれな取得レースは flyctl の port 単一 bind で直列化される。
+#   - PID 生存かつ lstart 一致 → 実行中の push。経過時間では奪わない（初回全件 push が
+#     数時間かかっても誤奪取しない）。
+#   - PID 死亡 or lstart 不一致（PID 再利用）→ stale として奪う。
+#   - 上記で「生存」でも mtime が TTL 超過なら奪う。lstart は秒解像度のため、同一 PID が
+#     同秒に再起動する病的ケースの最後の backstop。TTL は実 push 最長（~数時間）を大きく
+#     上回る 24h とし、生きた push を経過時間で奪わない。
+# 最終的な二重 push は port(15432) を同時 bind できない flyctl 側でも弾かれる。
+lock_stale_min=1440
 mkdir -p "$(dirname "$lock_dir")"
 if ! mkdir "$lock_dir" 2>/dev/null; then
-  old_pid="$(cat "$lock_dir/pid" 2>/dev/null || true)"
-  old_tok="$(cat "$lock_dir/token" 2>/dev/null || true)"
-  if [ -z "$old_pid" ]; then
-    log "another push is acquiring the lock. Skipping."
-    exit 0
+  info="$(cat "$lock_dir/info" 2>/dev/null || true)"
+  old_pid="${info%% *}"
+  old_tok="${info#* }"
+  stale=""
+  if [ -z "$info" ]; then
+    stale="no owner recorded"
+  elif ! kill -0 "$old_pid" 2>/dev/null || [ "$(proc_token "$old_pid")" != "$old_tok" ]; then
+    stale="pid $old_pid no longer the owner"
+  elif [ -n "$(find "$lock_dir" -maxdepth 0 -mmin "+${lock_stale_min}" 2>/dev/null)" ]; then
+    stale="older than ${lock_stale_min}min"
   fi
-  if kill -0 "$old_pid" 2>/dev/null && [ "$(proc_token "$old_pid")" = "$old_tok" ]; then
+  if [ -z "$stale" ]; then
     log "another push (pid $old_pid) is still running. Skipping."
     exit 0
   fi
-  log "reclaiming stale lock (pid $old_pid no longer the owner)"
+  log "reclaiming stale lock ($stale)"
   rm -rf "$lock_dir"
   mkdir "$lock_dir" 2>/dev/null || { log "could not acquire lock. Skipping."; exit 0; }
 fi
 lock_owned=1
-proc_token "$$" >"$lock_dir/token"
-printf '%s\n' "$$" >"$lock_dir/pid"
+printf '%s %s\n' "$$" "$(proc_token "$$")" >"$lock_dir/.info.$$"
+mv -f "$lock_dir/.info.$$" "$lock_dir/info"
 
 proxy_log="$(mktemp)"
 
