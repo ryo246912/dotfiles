@@ -107,6 +107,14 @@ jobs:
         # AGENTSVIEW_PG_URL）で吸収するため、事前に preview app へ設定しておく。
         run: |
           flyctl apps create "$APP" 2>/dev/null || true
+          # 事前設定必須の secret が preview app に無いまま deploy すると、誤設定のまま
+          # 起動して気づきにくいので、deploy 前に存在を検証して無ければ early exit する。
+          for key in AGENTSVIEW_CONFIG_TOML AGENTSVIEW_PG_URL; do
+            if ! flyctl secrets list --app "$APP" | awk 'NR>1 {print $1}' | grep -qx "$key"; then
+              echo "Required secret $key is not set on $APP; set it before the preview deploy." >&2
+              exit 1
+            fi
+          done
           flyctl deploy --app "$APP" -c dot_config/agentsview/fly.toml --ha=false
           echo "url=https://$APP.fly.dev" >> "$GITHUB_OUTPUT"
         env:
