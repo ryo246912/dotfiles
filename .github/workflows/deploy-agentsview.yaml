@@ -49,7 +49,7 @@ jobs:
       issues: write
       pull-requests: write
     # workflow_dispatch は main 以外の branch から、issue_comment は PR コメントが
-    # `/deploy-agentsview` または `/agentsview` で始まるときだけ実行する（誤発火を避ける）。
+    # `/deploy-agentsview` または `/agentsview` に完全一致するときだけ実行する（誤発火を避ける）。
     # 誤操作防止のため comment 実行は repo owner に限定する。
     if: |
       (github.event_name == 'workflow_dispatch' &&
@@ -58,10 +58,7 @@ jobs:
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
        github.event.comment.author_association == 'OWNER' &&
-       (github.event.comment.body == '/deploy-agentsview' ||
-        startsWith(github.event.comment.body, '/deploy-agentsview ') ||
-        github.event.comment.body == '/agentsview' ||
-        startsWith(github.event.comment.body, '/agentsview ')))
+       contains(fromJSON('["/deploy-agentsview", "/agentsview"]'), github.event.comment.body))
     # preview app は全 PR で共有するため、単一 group で直列化して同時 deploy を防ぐ。
     concurrency:
       group: deploy-agentsview-preview
