@@ -5,7 +5,7 @@
 # 本番との違い:
 #   - app 名を分けて本番 machine に影響を与えない。
 #   - PostgreSQL（psgl 共用）ではなく ephemeral な SQLite を使い、本番データに触れない。
-#   - 使い捨て前提のため open registration を有効にして test user を作れるようにする。
+#   - registration は本番同様に閉じる（sync まで試すときだけ一時的に開放する）。
 # See https://fly.io/docs/reference/configuration/
 
 app            = "ryo-shellhistory-preview"
