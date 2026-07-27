@@ -73,6 +73,22 @@ jobs:
           REPO: ${{ github.repository }}
           COMMENT_ID: ${{ github.event.comment.id }}
 
+      # fork PR の head を prod token で deploy しないよう、同一 repo の PR に限定する。
+      - name: Block fork PRs
+        if: github.event_name == 'issue_comment'
+        run: |
+          head_repo=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json headRepositoryOwner,headRepository \
+            -q '.headRepositoryOwner.login + "/" + .headRepository.name')
+          if [ "$head_repo" != "$REPO" ]; then
+            echo "Refusing preview deploy: PR head '$head_repo' is a fork, not '$REPO'." >&2
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
