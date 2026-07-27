@@ -59,10 +59,36 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 "apt:tig" = "latest"
 ```
 
+### `MISE_ENV` について
+
+以下のコマンド例には `MISE_ENV` を付けていない。`dot_config/zsh/host-env.map` にホストを
+登録していれば（`ryo-mac-xxx=mac,xxx` のように）、`dot_zshenv.tmpl` が対話シェル起動時に
+`HOST_ENV`/`MISE_ENV` を自動 export するため、日常的なコマンド実行では明示不要。手元の
+`MISE_ENV` を明示的に上書きしたいとき（他 OS 向け設定を意図的に確認する、host-env.map 未登録の
+ホスト、`.chezmoi.toml.tmpl` の post-apply hook のように zsh を経由しない非対話コンテキストなど）
+だけ `MISE_ENV=mac mise bootstrap ...` のように付ける。
+
+### Homebrew 関連ツールの導入手順
+
+- `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
+  一切不要**。mise 自体（`run_once_install-mise_mac.sh`）さえ入っていれば `mise bootstrap
+packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
+- 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
+  tap を使う例外パッケージ（clibor / google-japanese-ime / thock / jira-cli。理由は後述の表）だけ。
+  この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
+  （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
+  そのものなので、mise の宣言的パッケージ管理の対象にできない）:
+  ```sh
+  mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
+  mise run bootstrap:mac-packages  # 上記4つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac           # まとめて実行
+  ```
+  実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
+
 ### コマンド
 
 `status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
-動くので `MISE_ENV=mac` だけで良いが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
+動くが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
 `--path`（または `-g`）を指定しない限り**カレントディレクトリのローカル `mise.toml`**に書く
 （chezmoi のデプロイ先 `~/.config/mise/config.mac.toml` にも、まして chezmoi の source
 （`dot_config/mise/config.mac.toml`）にも自動では書かれない）。このリポジトリは
@@ -72,35 +98,35 @@ source ディレクトリで `--path dot_config/mise/config.mac.toml` を明示�
 
 ```sh
 # 状態確認（read-only。何も変更しない）
-MISE_ENV=mac mise bootstrap packages status
-MISE_ENV=mac mise bootstrap packages status --missing   # 未同期なら exit 1（CI/hook 向け）
+mise bootstrap packages status
+mise bootstrap packages status --missing   # 未同期なら exit 1（CI/hook 向け）
 
 # 実際に導入する
-MISE_ENV=mac mise bootstrap packages apply
-MISE_ENV=mac mise bootstrap packages apply --dry-run     # 何が実行されるかだけ確認
-MISE_ENV=mac mise bootstrap packages apply --yes         # 確認プロンプトなし
+mise bootstrap packages apply
+mise bootstrap packages apply --dry-run     # 何が実行されるかだけ確認
+mise bootstrap packages apply --yes         # 確認プロンプトなし
 
 # config に新しいパッケージを1個追加してすぐ導入（chezmoi source を明示）
 cd "$(chezmoi source-path)"
-MISE_ENV=mac mise bootstrap packages use brew-cask:slack --path dot_config/mise/config.mac.toml
+mise bootstrap packages use brew-cask:slack --path dot_config/mise/config.mac.toml
 chezmoi diff && chezmoi apply
 
 # 更新
-MISE_ENV=mac mise bootstrap packages upgrade
+mise bootstrap packages upgrade
 
 # 設定にない・削除された formula を掃除（cask は未対応。後述）
-MISE_ENV=mac mise bootstrap packages prune --dry-run
+mise bootstrap packages prune --dry-run
 ```
 
 zabrze abbr（`dot_config/zabrze/mise.toml`）: `mba` = apply、`mbu` = use、`mbs` = status
-（いずれも `uname` で `MISE_ENV` を自動判定する）。
+（いずれも `uname` から `MISE_ENV` を自組み立てするため、host-env.map 未登録のホストでも動く）。
 
 macOS defaults:
 
 ```sh
-MISE_ENV=mac mise bootstrap macos defaults status
-MISE_ENV=mac mise bootstrap macos defaults apply
-MISE_ENV=mac mise bootstrap macos defaults apply --dry-run
+mise bootstrap macos defaults status
+mise bootstrap macos defaults apply
+mise bootstrap macos defaults apply --dry-run
 ```
 
 ### `[bootstrap.macos.*]` の書き方
@@ -192,9 +218,9 @@ mise 管理の formula に見える。逆に、**実 brew で先に入れてい�
 ```sh
 cd "$(chezmoi source-path)"
 # 現在の(オンリクエストな)formulaをスキャンして [bootstrap.packages] に書き出す
-MISE_ENV=mac mise bootstrap packages import --manager brew --path dot_config/mise/config.mac.toml
+mise bootstrap packages import --manager brew --path dot_config/mise/config.mac.toml
 # 依存関係で入った formula も含めたい場合
-MISE_ENV=mac mise bootstrap packages import --manager brew --all --path dot_config/mise/config.mac.toml
+mise bootstrap packages import --manager brew --all --path dot_config/mise/config.mac.toml
 ```
 
 `import` は `brew bundle dump` 相当。サードパーティ tap の formula は fully-qualified な
@@ -206,7 +232,7 @@ MISE_ENV=mac mise bootstrap packages import --manager brew --all --path dot_conf
 
 ```sh
 chezmoi diff && chezmoi apply
-MISE_ENV=mac mise bootstrap packages status   # 差分がないことを確認（= 追加インストール不要）
+mise bootstrap packages status   # 差分がないことを確認（= 追加インストール不要）
 ```
 
 差分なしのはず。もし差分が出る場合は、tap が Homebrew API メタデータ
@@ -229,13 +255,13 @@ brew list --cask --versions
    `"brew-cask:<token>" = "latest"` を追記し、`chezmoi apply` でデプロイする。
 2. **read-only** で確認する（何も変更しない）:
    ```sh
-   MISE_ENV=mac mise bootstrap packages status
+   mise bootstrap packages status
    ```
    すでに導入済みの cask が `installed`/`satisfied` として認識されれば **アンインストール不要**
    （mise が同じ `<prefix>/Caskroom` を直接見て認識している）。
 3. `--dry-run` で実際の挙動を確認する:
    ```sh
-   MISE_ENV=mac mise bootstrap packages apply --dry-run
+   mise bootstrap packages apply --dry-run
    ```
 4. 結果による判断:
    - **satisfied** → 何もしなくてよい。
@@ -249,7 +275,7 @@ brew list --cask --versions
      該当の cask だけ個別に対応する:
      ```sh
      brew uninstall --cask <name>   # --zap は付けない（設定ファイルまで消えることがある）
-     MISE_ENV=mac mise bootstrap packages apply
+     mise bootstrap packages apply
      ```
      全部まとめてアンインストールする必要はない。conflict が出たものだけでよい。
 
