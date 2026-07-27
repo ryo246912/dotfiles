@@ -27,6 +27,10 @@
 12. カスタム bootstrap task
 13. `[bootstrap.hooks.final]` — 最終フック
 
+上記に加えて、`packages`/`repos`/`dotfiles`/`defaults`/`user`/`tools` の各フェーズには
+`[bootstrap.hooks.pre-*]`/`[bootstrap.hooks.post-*]`（例: `pre-packages`、`post-defaults`）
+という前後フックもあるが、本リポジトリではどれも使っていない。
+
 このリポジトリでは `mise bootstrap`（フル）は呼んでいない。`.chezmoi.toml.tmpl` の
 post-apply hook が個別に `mise bootstrap packages apply` / `mise install` を呼び、
 macOS defaults は手動で `mise bootstrap macos defaults apply` を実行する運用にしている

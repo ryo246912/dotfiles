@@ -18,9 +18,11 @@ mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
 # mise shims を PATH に通す。mise 本体は mac/linux とも run_once（run_once_install-mise_mac.sh /
 # run_once_install-packages_windows.sh）が https://mise.run 経由で ~/.local/bin に導入するため
-# （mac の brew では mise を導入しない）、~/.local/bin を先頭にする。
+# （mac の brew では mise を導入しない）、~/.local/bin を先頭にする。mise shims は
+# /opt/homebrew/bin より前に置く（後ろだと実 Homebrew 版の gh 等が mise の aqua shim を
+# shadow し、後続の `gh auth token` 等が mise 管理外のバイナリを掴んでしまう）。
 if [ "$(uname)" = "Darwin" ]; then
-  export PATH="$HOME/.local/bin:/opt/homebrew/bin:$HOME/.local/share/mise/shims:$PATH"
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
