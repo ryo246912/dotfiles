@@ -1,0 +1,32 @@
+# import で明示的に取り込み、有効化は FNOX_PROFILE で行う。HOST_ENV に work ロールが
+# 含まれるホストだけ dot_zshenv.tmpl が FNOX_PROFILE=work を export する。
+import = ["config.work.toml"]
+
+[providers.bitwarden]
+type = "bitwarden"
+
+[providers.bws]
+project_id = "69a1a5eb-c245-4162-80f7-b49200dbebf3"
+type       = "bitwarden-sm"
+
+[providers.age]
+key_file = "~/.config/fnox/age.txt"
+recipients = [
+    "age1k9zxqxufy599csnlkfwq2efxnscju4ek3ftqpvx55r9re38akers6zrq2z", # mac-private
+    "age184vvj44q3x0jn8j5xlrzlecnd4ae8nw68e0mj3eq8uu0z22t5dvs3g4enu", # mac-work2
+]
+type = "age"
+
+[secrets]
+BWS_ACCESS_TOKEN  = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBXSTBOT3U1bm4vWExyVTFYWEVxa3VvOWphdDFFR29JUnFIeitjU3owMVVNCjlyV3haZFQ5Z20vRUo3b0lyai9hcklXcG5ScmhzdlVkY1N1TlMxT3RCMlUKLT4gWDI1NTE5IFJBcGpVWTJFQjg1T1l0TXBTNUg0NloxcU1LS0hVcUZ3c2VIRFhCbE5wQzAKVHJLVENPU0hSbzlSU3AvYzFHVXVFOXB2QTVYcGRHQmc3U0d5L1dSYTBNSQotPiBtP0YtZ3JlYXNlIGIkMXUrdUVnIFs7XyAwCmI0K0x5WWtTVFRNCi0tLSAzSlNDTUxoVWdSM241aTA5R3RTL2ltNVJFL3crVWFNd2c2bkVRdmFKQlYwCuUS6hKg5oHiz2GwsDRHTc/2mFXhqnJr1vXTqklhqe5NQv6RE6VQdItzkuJK1gEOn2ROULemR54g4daNeyb4roUONkqQ+PffaUsMYQFrIH63qdliK6Hpy1TrSIEooYRlr9QiRQ439rrSEsJC9sdSZc0klSgyhDnFzrE16RpuBA==" }
+CZ_OPENAI_API_KEY = { provider = "bws", value = "GitHub PAT(cz-git)" }
+
+AGENTSVIEW_ADMIN_PG_PASSWORD  = { provider = "bws", value = "AGENTSVIEW_ADMIN_PG_PASSWORD", env = "exec" }
+AGENTSVIEW_AUTH_TOKEN         = { provider = "bws", value = "AGENTSVIEW_AUTH_TOKEN", env = "exec" }
+AGENTSVIEW_CURSOR_SECRET      = { provider = "bws", value = "AGENTSVIEW_CURSOR_SECRET", env = "exec" }
+AGENTSVIEW_OWNER_PASSWORD     = { provider = "bws", value = "AGENTSVIEW_OWNER_PASSWORD", env = "exec" }
+AGENTSVIEW_OWNER_PROXY_PG_URL = { provider = "bws", value = "AGENTSVIEW_OWNER_PROXY_PG_URL", env = "exec" }
+AGENTSVIEW_PROXY_PG_URL       = { provider = "bws", value = "AGENTSVIEW_PROXY_PG_URL", env = "exec" }
+AGENTSVIEW_PUSH_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_PUSH_PASSWORD", env = "exec" }
+AGENTSVIEW_READ_PASSWORD      = { provider = "bws", value = "AGENTSVIEW_READ_PASSWORD", env = "exec" }
+AGENTSVIEW_READ_PG_URL        = { provider = "bws", value = "AGENTSVIEW_READ_PG_URL", env = "exec" }

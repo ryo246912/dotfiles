@@ -69,6 +69,18 @@ if command -v delta >/dev/null 2>&1; then
     compdef _gnu_generic delta
 fi
 
+# fnox
+if command -v fnox >/dev/null 2>&1; then
+    # BWS_ACCESS_TOKEN は bws provider 自体が要求する bootstrap 値なので、fnox activate より前に
+    # 手動で export する。fnox set --global --provider age BWS_ACCESS_TOKEN で未設定のうちは
+    # `fnox get` が失敗するだけで、shell 起動自体は落とさない。
+    if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+        BWS_ACCESS_TOKEN="$(fnox get BWS_ACCESS_TOKEN 2>/dev/null)"
+        [ -n "$BWS_ACCESS_TOKEN" ] && export BWS_ACCESS_TOKEN
+    fi
+    eval "$(fnox activate zsh)"
+fi
+
 # fzf
 if command -v fzf >/dev/null 2>&1; then
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'

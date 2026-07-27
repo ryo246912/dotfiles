@@ -408,3 +408,10 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること
+
+- [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
+      [`docs/credentials.md`](./credentials.md) 参照）
+  ```sh
+  pass init "$(git config user.signingkey)"
+  git-credential-manager configure
+  ```

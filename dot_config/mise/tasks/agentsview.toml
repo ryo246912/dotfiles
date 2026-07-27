@@ -1,25 +1,19 @@
 ["agentsview:setup:db-roles"]
 description = "Create/update AgentsView PostgreSQL roles for owner, local push, and read-only viewer"
-# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-interactive = true
 run = '''
 set -eu
 
-# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
-# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
-# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
-need() {
-  if [[ -z ${!1-} ]]; then
-    read -rsp "$1: " "$1"; echo
-  fi
-  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
-  export "$1"
-}
+if { [ -z "${AGENTSVIEW_ADMIN_PG_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_OWNER_PASSWORD:-}" ] ||
+     [ -z "${AGENTSVIEW_PUSH_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_READ_PASSWORD:-}" ]; } &&
+   [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:setup:db-roles "$@"
+fi
 
-need AGENTSVIEW_ADMIN_PG_PASSWORD
-need AGENTSVIEW_OWNER_PASSWORD
-need AGENTSVIEW_PUSH_PASSWORD
-need AGENTSVIEW_READ_PASSWORD
+: "${AGENTSVIEW_ADMIN_PG_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+: "${AGENTSVIEW_OWNER_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+: "${AGENTSVIEW_PUSH_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+: "${AGENTSVIEW_READ_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 pg_app="${AGENTSVIEW_PG_APP:-psgl}"
 pg_user="${AGENTSVIEW_ADMIN_PG_USER:-postgres}"
@@ -125,23 +119,15 @@ shell = "bash -c"
 
 ["agentsview:setup:migrate"]
 description = "Start flyctl proxy, run initial AgentsView schema migration with the owner PostgreSQL role, then stop proxy"
-# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-interactive = true
 run = '''
 set -eu
 
-# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
-# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
-# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
-need() {
-  if [[ -z ${!1-} ]]; then
-    read -rsp "$1: " "$1"; echo
-  fi
-  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
-  export "$1"
-}
+if [ -z "${AGENTSVIEW_OWNER_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:setup:migrate "$@"
+fi
 
-need AGENTSVIEW_OWNER_PROXY_PG_URL
+: "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
@@ -204,25 +190,18 @@ printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 
 ["agentsview:fly:secrets"]
 description = "Set Fly secrets for the public AgentsView viewer with a read-only PostgreSQL role"
-# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-interactive = true
 run = '''
 set -eu
 
-# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
-# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
-# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
-need() {
-  if [[ -z ${!1-} ]]; then
-    read -rsp "$1: " "$1"; echo
-  fi
-  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
-  export "$1"
-}
+if { [ -z "${AGENTSVIEW_READ_PG_URL:-}" ] || [ -z "${AGENTSVIEW_AUTH_TOKEN:-}" ] ||
+     [ -z "${AGENTSVIEW_CURSOR_SECRET:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:fly:secrets "$@"
+fi
 
-need AGENTSVIEW_READ_PG_URL
-need AGENTSVIEW_AUTH_TOKEN
-need AGENTSVIEW_CURSOR_SECRET
+: "${AGENTSVIEW_READ_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+: "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+: "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 CONFIG_B64=$(
   printf 'public_url = "https://ryo-agentsview.fly.dev"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" \
@@ -244,23 +223,15 @@ run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.t
 
 ["agentsview:pg:status"]
 description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
-# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-interactive = true
 run = '''
 set -eu
 
-# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
-# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
-# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
-need() {
-  if [[ -z ${!1-} ]]; then
-    read -rsp "$1: " "$1"; echo
-  fi
-  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
-  export "$1"
-}
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:pg:status "$@"
+fi
 
-need AGENTSVIEW_PROXY_PG_URL
+: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
@@ -310,23 +281,15 @@ shell = "bash -c"
 
 ["agentsview:pg:push"]
 description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
-# 未設定 env をその場で伏せ字入力できるよう、bash + 端末直結で実行する。
-interactive = true
 run = '''
 set -eu
 
-# 必須の環境変数が未設定なら、その場で（入力を伏せて）尋ねる。
-# task は shell="bash -c" / interactive=true で stdin が端末に直結するため、
-# read -s で受け取れる。値が無いまま（非 TTY の CI 等）なら "Set <VAR>" で停止。
-need() {
-  if [[ -z ${!1-} ]]; then
-    read -rsp "$1: " "$1"; echo
-  fi
-  [[ -n ${!1-} ]] || { echo "Set $1" >&2; exit 1; }
-  export "$1"
-}
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:pg:push "$@"
+fi
 
-need AGENTSVIEW_PROXY_PG_URL
+: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"

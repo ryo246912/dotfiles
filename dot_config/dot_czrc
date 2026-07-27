@@ -1,0 +1,4 @@
+{
+  "apiEndpoint": "https://models.inference.ai.azure.com",
+  "apiModel": "gpt-4o-mini"
+}

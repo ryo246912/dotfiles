@@ -1,0 +1,24 @@
+# [profiles.work.providers.bws]
+# type       = "bitwarden-sm"
+# project_id = "xxx"
+
+# AWS Secrets Manager。profile は指定しない:
+# `aws-vault exec <profile> -- fnox exec --profile work -- <command>` で、
+# aws-vault が渡す AWS_ACCESS_KEY_ID 等の環境変数をそのまま拾わせるため。
+# [profiles.work.providers.aws]
+# type   = "aws-sm"
+# region = "xxx"
+# prefix = "xxx/"
+
+# [profiles.work.secrets]
+# SOME_APP_API_KEY = { provider = "bws", value = "SOME_APP_API_KEY" }
+# DATABASE_URL = { provider = "aws", value = "database-url" }
+
+# aws-vault のプロファイル名(`aws-vault list`)と同名の fnox profile を追加で定義できる
+# [profiles.xxx.providers.aws]
+# type   = "aws-sm"
+# region = "xxx"
+# prefix = "myapp/xxx/"
+#
+# [profiles.xxx.secrets]
+# DATABASE_URL = { provider = "aws", value = "database-url" }
