@@ -82,7 +82,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/atuin/fly.toml", "dot_config/atuin/fly.preview.toml"],
+      "managerFilePatterns": ["dot_config/atuin/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
       ],
@@ -90,10 +90,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": [
-        "dot_config/agentsview/fly.toml",
-        "dot_config/agentsview/fly.preview.toml"
-      ],
+      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],

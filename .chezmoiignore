@@ -1,7 +1,6 @@
 {{- if eq .chezmoi.os "darwin" -}}
 **/*autohotkey*
 .config/atuin/fly.toml
-.config/atuin/fly.preview.toml
 **/*win*
 {{ else -}}
 **/*karabiner*
