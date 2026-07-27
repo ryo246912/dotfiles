@@ -22,8 +22,9 @@ image = "ghcr.io/atuinsh/atuin:18.17.1"
 [env]
 ATUIN_HOST = "0.0.0.0"
 ATUIN_PORT = "8888"
-# preview は使い捨てなので test user を登録できるよう registration を開放する。
-ATUIN_OPEN_REGISTRATION = "true"
+# 公開 URL での無認証登録を塞ぐため、本番同様に registration は閉じる。
+# sync まで試したいときだけ一時的に "true" にする。
+ATUIN_OPEN_REGISTRATION = "false"
 # 本番 PostgreSQL に触れないよう、container 内の ephemeral な SQLite を使う。
 # machine 停止・再作成で消えるが、お試し起動確認が目的なので許容する。
 ATUIN_DB_URI = "sqlite:///tmp/atuin-preview.db"
