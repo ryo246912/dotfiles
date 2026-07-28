@@ -1,0 +1,7 @@
+{
+  "theme": "default",
+  "sidebarWidth": 40,
+  "sidebarPosition": "right",
+  "mux": "tmux",
+  "plugins": []
+}
