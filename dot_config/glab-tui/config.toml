@@ -6,7 +6,7 @@
 theme_preset = "tokyo-night"
 
 [issues]
-columns = ["ID", "State", "Title", "Labels", "Assignees"]
+columns    = ["ID", "State", "Title", "Labels", "Assignees"]
 sort_order = "desc"
 
 [merge_requests]
