@@ -5,12 +5,13 @@
 # nvim と揃えて tokyonight 系にする
 theme_preset = "tokyo-night"
 
+# 各ペインで表示する列。v0.8.0 で有効な列名のみ指定可能（無効名は無視される）。
+# 並び順・ソートはファイルでは設定できず、TUI 内で対話的に操作する。
 [issues]
-columns    = ["ID", "State", "Title", "Labels", "Assignees"]
-sort_order = "desc"
+columns = ["ID", "State", "Title", "Labels", "Assignees"]
 
-[merge_requests]
+[mrs]
 columns = ["ID", "State", "Title", "Reviewers", "Labels"]
 
 [pipelines]
-columns = ["ID", "Status", "Branch", "Duration"]
+columns = ["ID", "Status", "Ref"]
