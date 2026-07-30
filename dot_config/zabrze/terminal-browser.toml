@@ -1,0 +1,19 @@
+[[snippets]]
+name    = "terminal-browser --split right"
+snippet = "terminal-browser --split right"
+trigger = "tbr"
+
+[[snippets]]
+name    = "terminal-browser --split down"
+snippet = "terminal-browser --split down"
+trigger = "tbb"
+
+[[snippets]]
+name    = "terminal-browser --split up"
+snippet = "terminal-browser --split up"
+trigger = "tbt"
+
+[[snippets]]
+name    = "terminal-browser --split left"
+snippet = "terminal-browser --split left"
+trigger = "tbl"
