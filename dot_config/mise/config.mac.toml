@@ -1,5 +1,5 @@
 [tools]
-"github:hzqtc/taproom" = { version = "0.6.2", bin = "taproom" }
+"github:hzqtc/taproom"  = { version = "0.6.2", bin = "taproom" }
 "http:terminal-browser" = { version = "0.3.2", platforms.macos-arm64 = { url = "https://terminal-browser.sh/dl/stable/v{{version}}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
