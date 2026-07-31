@@ -83,7 +83,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:kenn-io/agentsview"                                 = "0.38.1"
 "github:max-sixty/worktrunk"                                = "0.68.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
-"github:rivolink/leaf"                                      = { version = "1.26.1", bin = "leaf" }
+"github:rivolink/leaf"                                      = { version = "1.26.2", bin = "leaf" }
 "github:ryo246912/gh-actions-dash"                          = { version = "0.1.6", bin = "gh-actions-dash" }
 "github:ryo246912/gh-reassign-reviewer"                     = { version = "0.0.7", bin = "gh-reassign-reviewer" }
 "github:ryo246912/github-markdown-toc.go"                   = "2.0.1"
