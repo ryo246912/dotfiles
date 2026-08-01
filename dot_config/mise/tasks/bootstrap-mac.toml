@@ -64,12 +64,18 @@ else
   echo "jira-cli is already installed"
 fi
 
-# firefox: cask 定義が mise 未対応の command_wrapper artifact を使っており、
+# firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact を使っており、
 # brew-cask 経由だと `mise bootstrap packages apply` が ERROR で中断する
 if ! brew list --cask firefox &>/dev/null; then
   brew install --cask firefox
 else
   echo "firefox is already installed"
+fi
+
+if ! brew list --cask inkscape &>/dev/null; then
+  brew install --cask inkscape
+else
+  echo "inkscape is already installed"
 fi
 '''
 

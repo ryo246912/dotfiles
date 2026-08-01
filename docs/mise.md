@@ -70,14 +70,14 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
   tap・mise 未対応の cask artifact 種別を使う例外パッケージ
-  （clibor / google-japanese-ime / thock / jira-cli / firefox。理由は
+  （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape。理由は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記5つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記6つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -336,7 +336,7 @@ brew list --cask --versions
   `mise bootstrap packages apply` 全体を中断させる。該当パッケージは
   `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
-  例外パッケージとして扱う（本リポジトリでは firefox がこれに該当する。詳細は
+  例外パッケージとして扱う（本リポジトリでは firefox / inkscape がこれに該当する。詳細は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
 
 ### サードパーティ tap の注意
