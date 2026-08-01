@@ -23,9 +23,10 @@
 "brew:ugrep"        = "latest"
 
 # casks（clibor は custom install option、google-japanese-ime は Rosetta 前提、
-# thock/jira-cli は独自 tap、firefox/inkscape は cask 定義が mise 未対応の command_wrapper
-# artifact を使っており、opencode-bar は独自 tap（opgginc/tap）が Homebrew API メタデータ
-# 未公開で、いずれも brew-cask 経由だと `mise bootstrap packages apply` が中断するため
+# thock/jira-cli は独自 tap、firefox/inkscape/zoom は cask 定義が mise 未対応の artifact
+# 種別（command_wrapper/postflight_steps）を使っており、opencode-bar は独自 tap
+# （opgginc/tap）が Homebrew API メタデータ未公開で、いずれも brew-cask 経由だと
+# `mise bootstrap packages apply` が中断するため
 # `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
 "brew-cask:alacritty"             = "latest"
 "brew-cask:arc"                   = "latest"
@@ -58,7 +59,6 @@
 "brew-cask:thunderbird"           = "latest"
 "brew-cask:visual-studio-code"    = "latest"
 "brew-cask:wezterm@nightly"       = "latest"
-"brew-cask:zoom"                  = "latest"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。menu bar spacing は
 # `defaults -currentHost` 前提で mise 未対応のため `mise run bootstrap:mac-defaults` に残す。

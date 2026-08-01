@@ -70,14 +70,14 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
   tap・mise 未対応の cask artifact 種別を使う例外パッケージ
-  （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape / opencode-bar。
-  理由は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
+  （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape / zoom /
+  opencode-bar。理由は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記7つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記8つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -332,14 +332,15 @@ brew list --cask --versions
   バージョンディレクトリが1つしか無いことがある（= ディスク上は正常）。つまり mise 側の
   cask バージョン検出ロジックが誤検知している false positive の可能性が高い。ユーザー側で
   直せる問題ではなさそうなので、実害が無い限り（apply が止まらない限り）無視して構わない。
-- `ERROR brew-cask:<name>: unsupported artifact type <type>`（例: `command_wrapper`） →
+- `ERROR brew-cask:<name>: unsupported artifact type <type>`（例: `command_wrapper`、
+  `postflight_steps`） →
   その cask の定義が mise の brew-cask バックエンド未対応の artifact 種別（`app`/`pkg`/
   `binary` 等の主要な型以外）を使っている場合の**エラー**。これは他の cask の警告と違い
   `mise bootstrap packages apply` 全体を中断させる。該当パッケージは
   `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
-  例外パッケージとして扱う（本リポジトリでは firefox / inkscape がこれに該当する。詳細は
-  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
+  例外パッケージとして扱う（本リポジトリでは firefox / inkscape / zoom がこれに該当する。
+  詳細は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項

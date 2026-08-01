@@ -78,6 +78,14 @@ else
   echo "inkscape is already installed"
 fi
 
+# zoom: cask 定義が mise 未対応の postflight_steps artifact を使っており、
+# brew-cask 経由だと `mise bootstrap packages apply` が ERROR で中断する
+if ! brew list --cask zoom &>/dev/null; then
+  brew install --cask zoom
+else
+  echo "zoom is already installed"
+fi
+
 # opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
 # を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
 if ! brew list --cask opencode-bar &>/dev/null; then
