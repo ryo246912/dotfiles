@@ -110,6 +110,7 @@ fi
 '''
 
 ["bootstrap:mac-defaults"]
+depends = ["bootstrap:mac-packages"]
 description = "[bootstrap.macos.*] では表現できない設定（-currentHost なメニューバー間隔・ログイン項目）を適用する"
 run = '''
 #!/bin/bash
