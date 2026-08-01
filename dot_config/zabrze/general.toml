@@ -127,11 +127,6 @@ snippet         = "./..."
 trigger-pattern = "(\\.\\.\\.\\.|\\.4)"
 
 [[snippets]]
-name            = "glab-tui"
-snippet         = "glab-tui"
-trigger-pattern = "^gt$"
-
-[[snippets]]
 name            = "ghost"
 snippet         = "ghost"
 trigger-pattern = "^ght$"
