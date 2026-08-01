@@ -137,7 +137,8 @@ bun = true
 uvx = true
 
 [hooks]
-enter = """
+postinstall = """
 [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
+[ -f lefthook.yml ] || exit 0
 lefthook install
 """
