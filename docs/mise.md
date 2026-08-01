@@ -68,9 +68,9 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 - `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
   一切不要**。mise 自体（`run_once_install-mise_mac.sh`）さえ入っていれば `mise bootstrap
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
-- 実 Homebrew が要るのは、custom install option・postflight・sudo が要る pkg インストーラ・
+- 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
   API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う
-  例外パッケージ（clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape /
+  例外パッケージ（google-japanese-ime / thock / firefox / inkscape /
   zoom / docker-desktop / google-drive / opencode-bar。理由は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
@@ -78,7 +78,7 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記10個の例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記8つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -373,9 +373,8 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 古い/小規模な tap では未対応なことがあり、その場合 `mise bootstrap packages apply` は
 インストールできずに失敗する。
 
-このリポジトリでは `thock`（`kamillobinski/thock`）と `jira-cli`
-（`ankitpokhrel/jira-cli`）について API メタデータの公開有無を確認できなかったため、
-`[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
+このリポジトリでは `thock`（`kamillobinski/thock`）について API メタデータの公開有無を
+確認できなかったため、`[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
 （実 `brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
 実際に `mise bootstrap packages apply` を実行して `api/cask/opencode-bar.json` が
 404 になることを確認したため、同様に `bootstrap:mac-packages` 側に残した。

@@ -31,15 +31,8 @@ set -euo pipefail
 [ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
 export PATH="/opt/homebrew/bin:$PATH"
 
-# clibor: --language=ja オプションが必要で brew-cask では表現できない
-if ! brew list --cask clibor &>/dev/null; then
-  HOMEBREW_CASK_OPTS="--language=ja" brew install --cask clibor
-else
-  echo "clibor is already installed"
-fi
-
 # google-japanese-ime: Rosetta が前提で brew-cask では表現できない。
-# rosetta のインストール失敗（既に導入済み等）で後続の thock/jira-cli 導入を止めないよう || true にする
+# rosetta のインストール失敗（既に導入済み等）で後続の thock 導入を止めないよう || true にする
 if ! brew list --cask google-japanese-ime &>/dev/null; then
   sudo softwareupdate --install-rosetta || true
   brew install --cask google-japanese-ime
@@ -55,13 +48,6 @@ if ! brew list thock &>/dev/null; then
   thock --install
 else
   echo "thock is already installed"
-fi
-
-# jira-cli: 独自 tap の formula
-if ! brew list jira-cli &>/dev/null; then
-  brew install ankitpokhrel/jira-cli/jira-cli
-else
-  echo "jira-cli is already installed"
 fi
 
 # firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact を使っており、
