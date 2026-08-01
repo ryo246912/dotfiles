@@ -38,9 +38,6 @@
     mise run karabiner:apply
     ```
 
-- [ ] Clibor
-  - [ ] 定型文を設定
-
 - [ ] Browser
   - [ ] Vimium
     - [ ] 設定で`Vimium Options.json`をインポート
