@@ -41,8 +41,13 @@ end
 
 -- pdfinfo で総ページ数を取得。失敗時は 1 を返す。
 local function get_page_count(path)
+  if vim.fn.executable("pdfinfo") == 0 then
+    vim.notify("pdfinfo が見つかりません（ページ数を判定できず1ページとして表示します）", vim.log.levels.WARN)
+    return 1
+  end
   local out = vim.fn.systemlist({ "pdfinfo", path })
   if vim.v.shell_error ~= 0 then
+    vim.notify("pdfinfo の実行に失敗しました（1ページとして表示します）", vim.log.levels.WARN)
     return 1
   end
   for _, line in ipairs(out) do
@@ -51,6 +56,7 @@ local function get_page_count(path)
       return tonumber(n)
     end
   end
+  vim.notify("pdfinfo の出力からページ数を判定できませんでした（1ページとして表示します）", vim.log.levels.WARN)
   return 1
 end
 
@@ -255,6 +261,8 @@ function M.open(path, buf)
   map("K", function()
     M.prev_page(buf)
   end, "PDF: 前のページ")
+  -- ページ画像はウィンドウ高に合わせて全体表示され、スクロールする余地が無いため、
+  -- <C-d>/<C-u> は本来のハーフページスクロールではなくページ送りの別名として割り当てる。
   map("<C-d>", function()
     M.next_page(buf)
   end, "PDF: 次のページ")
@@ -268,8 +276,13 @@ function M.open(path, buf)
     goto_page(buf, state.pages)
   end, "PDF: 最終ページ")
 
+  -- 同一バッファを開き直すと autocmd が累積するため、バッファ専用の augroup にまとめ、
+  -- 再オープン時に clear=true で前回分を破棄してから貼り直す。
+  local group = vim.api.nvim_create_augroup("PdfView_buf_" .. buf, { clear = true })
+
   -- リサイズ時・新しいウィンドウ（split）表示時に再描画
   vim.api.nvim_create_autocmd({ "WinResized", "VimResized", "BufWinEnter" }, {
+    group = group,
     buffer = buf,
     callback = function()
       if states[buf] then
@@ -278,23 +291,27 @@ function M.open(path, buf)
     end,
   })
 
-  -- ウィンドウ離脱/バッファ切替時、PDFを表示しなくなった窓の画像/winbar を復元する。
-  -- 切替完了後の状態で判定するため schedule する。
-  vim.api.nvim_create_autocmd({ "BufWinLeave", "WinLeave" }, {
+  -- PDFバッファがウィンドウから外れる直前に、その窓の画像をクリアし winbar を同期的に元へ戻す。
+  -- schedule すると次バッファの winbar 設定後に走り、それを上書きしてしまうため同期実行する。
+  vim.api.nvim_create_autocmd("BufWinLeave", {
+    group = group,
     buffer = buf,
     callback = function()
-      if states[buf] then
-        vim.schedule(function()
-          if states[buf] then
-            reconcile(states[buf])
-          end
-        end)
+      local s = states[buf]
+      if not s then
+        return
+      end
+      local win = vim.api.nvim_get_current_win()
+      local entry = s.windows[win]
+      if entry then
+        clear_window(s, win, entry)
       end
     end,
   })
 
   -- バッファ破棄時に全ウィンドウの画像をクリアし winbar を復元、キャッシュPNGも削除する
   vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
+    group = group,
     buffer = buf,
     once = true,
     callback = function()
