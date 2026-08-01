@@ -6,7 +6,9 @@
 "github:superfly/flyctl" = "0.4.29"
 
 [bootstrap.packages]
-"brew-cask:keycastr"      = "latest"
-"brew-cask:tailscale-app" = "latest"
-"brew-cask:termius"       = "latest"
-"brew-cask:thunderbird"   = "latest"
+# tailscale-app は pkg インストーラが sudo を要求する（`mise run bootstrap:mac-packages`
+# の google-drive と同じ理由）ため、こちらではなく dot_config/mise/tasks/bootstrap-mac.toml
+# 側で real brew から導入する
+"brew-cask:keycastr"    = "latest"
+"brew-cask:termius"     = "latest"
+"brew-cask:thunderbird" = "latest"

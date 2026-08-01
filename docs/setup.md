@@ -29,15 +29,15 @@
   ```
 
 - [ ] mac 個別セットアップ
-  - Homebrew 本体・mise 自体のインストール、brew-cask では表現できない特殊パッケージ
-    （google-japanese-ime・thock・firefox・inkscape・zoom・
-    docker-desktop・google-drive・opencode-bar）、メニューバーのアイコン間隔、
+  - Homebrew 本体・mise 自体のインストール、brew-cask / `[bootstrap.packages]` の管理に
+    含めない特殊パッケージ（google-japanese-ime・thock・firefox・inkscape・zoom・
+    docker-desktop・google-drive・tailscale-app・opencode-bar）、メニューバーのアイコン間隔、
     ログイン項目（Clibor / Docker / Raycast）をまとめて実行
   - sudo（Rosetta インストール）を含むため対話端末で実行すること
-  - google-drive は private ホスト限定（`HOST_ENV` に `private` が含まれる場合のみ導入）。
-    このマシンが private 用なら、実行前に `dot_config/zsh/host-env.map` に
+  - google-drive/tailscale-app は private ホスト限定（`HOST_ENV` に `private` が含まれる
+    場合のみ導入）。このマシンが private 用なら、実行前に `dot_config/zsh/host-env.map` に
     `<ホスト名>=mac,private` を追記して `chezmoi apply` し、新しいシェルを開いて
-    `HOST_ENV` を反映させてから実行する（host-env.map 未登録のままだと google-drive は
+    `HOST_ENV` を反映させてから実行する（host-env.map 未登録のままだと両方とも
     スキップされる。ホスト名は `scutil --get LocalHostName` で確認できる）
 
   ```sh

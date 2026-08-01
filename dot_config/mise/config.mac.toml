@@ -22,8 +22,9 @@
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
 
-# casks: 以下はいずれも brew-cask 経由だと `mise bootstrap packages apply` が中断/ハングするため
-# `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残している。理由:
+# casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
+# が中断/ハングするため `mise run bootstrap:mac-packages`
+# （dot_config/mise/tasks/bootstrap-mac.toml）側で real brew から個別導入している。理由:
 # - google-japanese-ime: Rosetta が前提
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
@@ -31,7 +32,7 @@
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
 # - google-drive: pkg インストーラが sudo を要求し post-apply hook（非対話）を止めてしまう
 #   （private ホスト限定）
-# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
+# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開）
 "brew-cask:arc"                   = "latest"
 "brew-cask:battery"               = "latest"
 "brew-cask:bitwarden"             = "latest"

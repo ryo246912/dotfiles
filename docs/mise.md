@@ -71,14 +71,14 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 - 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
   API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う
   例外パッケージ（google-japanese-ime / thock / firefox / inkscape /
-  zoom / docker-desktop / google-drive / opencode-bar。理由は
+  zoom / docker-desktop / google-drive / tailscale-app / opencode-bar。理由は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記8つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記9つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -358,8 +358,8 @@ brew list --cask --versions
   完走させたい場合は該当パッケージを `[bootstrap.packages]` から外し
   `mise run bootstrap:mac-packages` 側の例外パッケージとして扱う（ユーザーが明示的に
   対話実行するタスクなので sudo プロンプトが出ても想定内になる。本リポジトリでは
-  google-drive がこれに該当する。private ホスト限定のため `HOST_ENV` で判定して
-  work ホストではスキップする）。
+  google-drive / tailscale-app がこれに該当する。いずれも private ホスト限定のため
+  `HOST_ENV` で判定して work ホストではスキップする）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項

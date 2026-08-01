@@ -81,7 +81,7 @@ else
   echo "docker-desktop is already installed"
 fi
 
-# google-drive: private ホストのみ。pkg インストーラが sudo を要求するため、
+# google-drive/tailscale-app: private ホストのみ。pkg インストーラが sudo を要求するため、
 # post-apply hook の `mise bootstrap packages apply`（非対話実行）に含めるとパスワード
 # 入力を待って止まってしまう
 case "${HOST_ENV:-}" in
@@ -91,9 +91,15 @@ case "${HOST_ENV:-}" in
   else
     echo "google-drive is already installed"
   fi
+
+  if ! brew list --cask tailscale-app &>/dev/null; then
+    brew install --cask tailscale-app
+  else
+    echo "tailscale-app is already installed"
+  fi
   ;;
 *)
-  echo "google-drive is private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  echo "google-drive/tailscale-app are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
   ;;
 esac
 
