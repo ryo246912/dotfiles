@@ -104,3 +104,10 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+## OpenCLI（コンテナの CLI からホストのブラウザを操作）
+
+AI をコンテナ内、ブラウザをホスト側で動かす OpenCLI 構成も、この `mac-host` SSH 経路を
+再利用しています。`post-start.sh` がコンテナの `localhost:19825` をホストの OpenCLI daemon へ
+SSH ローカルフォワードで橋渡しするため、コンテナ内の `opencli` はそのままホストのブラウザを
+操作できます。設定内容・ホスト側の前提・動作確認は [`docs/opencli.md`](./opencli.md) を参照。

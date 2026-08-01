@@ -58,3 +58,30 @@ else
 	rm -f "$CRIT_HOST_PORT_FILE"
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
 fi
+
+# OpenCLI: AI はコンテナ内で動かし、ブラウザはホスト側で動かす構成のためのトンネルを張る。
+# OpenCLI の daemon はホストの 127.0.0.1:19825 に固定バインドされ（ポート変更不可・認証なし）、
+# ホストの Chrome 拡張(Browser Bridge)とだけ通信する。コンテナ内の `opencli` も自分の
+# localhost:19825 に繋ぐ実装のため、SSH ローカルフォワードでコンテナの localhost:19825 を
+# ホストの daemon へ橋渡しする。これでコンテナ内の opencli はフラグ無しでホストのブラウザを
+# 操作できる（daemon は認証を持たないため直接ポート公開はせず、mac-host への SSH 経由に限定。
+# 詳細は docs/opencli.md 参照）。
+OPENCLI_DAEMON_PORT=19825
+OPENCLI_TUNNEL_MATCH="ssh.*-L 127.0.0.1:${OPENCLI_DAEMON_PORT}:127.0.0.1:${OPENCLI_DAEMON_PORT}.*mac-host"
+if pgrep -f "$OPENCLI_TUNNEL_MATCH" >/dev/null 2>&1; then
+	echo "ℹ️ OpenCLI daemon への SSH トンネルは既に起動済みです"
+elif timeout 5 ssh "${SSH_OPTS[@]}" mac-host true 2>/dev/null; then
+	# -N: リモートコマンドを実行せずフォワードのみ行う
+	# ExitOnForwardFailure=yes: ポートが既に使われている等でフォワードを張れなければ即失敗させる
+	# ServerAliveInterval/CountMax: 接続断を検知してトンネルプロセスを終了させる（stale なポートを残さない）
+	# setsid + disown: post-start 終了後もバックグラウンドで生かす
+	setsid ssh "${SSH_OPTS[@]}" -N \
+		-o ExitOnForwardFailure=yes \
+		-o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+		-L "127.0.0.1:${OPENCLI_DAEMON_PORT}:127.0.0.1:${OPENCLI_DAEMON_PORT}" \
+		mac-host >/dev/null 2>&1 &
+	disown
+	echo "✓ OpenCLI daemon への SSH トンネル (localhost:${OPENCLI_DAEMON_PORT} → mac-host) を起動しました"
+else
+	echo "ℹ️ OpenCLI の SSH トンネルをスキップしました（devcontainer 外、または mac-host に接続できない環境）"
+fi
