@@ -32,7 +32,16 @@ fi
 #    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
 #    用意できる。mac(brew) は sudo 不要。WSL(apt) は sudo が要るため、sudo プロンプトに応答できる
 #    対話端末(TTY)があるときだけ apply する。非対話 WSL で未同期なら required preflight として中断する。
-if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=linux; fi
+#    HOST_ENV（dot_zshenv.tmpl が host-env.map から解決する "<os>,<role>"）が対話シェルから
+#    引き継がれていればそれを使う。config.private.toml/config.work*.toml の [bootstrap.packages]
+#    も収束対象に含めるため（未登録ホスト・非対話コンテキストでは OS 単体にフォールバック）。
+if [ -n "${HOST_ENV:-}" ]; then
+  bootstrap_env="$HOST_ENV"
+elif [ "$(uname)" = "Darwin" ]; then
+  bootstrap_env=mac
+else
+  bootstrap_env=linux
+fi
 if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null 2>&1; then
   if [ "$(uname)" = "Darwin" ] || [ -t 0 ]; then
     if ! MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
