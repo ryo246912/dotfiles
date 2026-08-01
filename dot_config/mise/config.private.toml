@@ -6,6 +6,7 @@
 "github:superfly/flyctl" = "0.4.29"
 
 [bootstrap.packages]
+# insomnia: config.mac.toml（全ホスト共通）からは意図的に外しているが、private ホストでは使うため再掲
 "brew-cask:android-studio"  = "latest"
 "brew-cask:insomnia"        = "latest"
 "brew-cask:linear"          = "latest"

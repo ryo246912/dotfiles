@@ -10,17 +10,17 @@ trigger-pattern = "^mii$"
 
 [[snippets]]
 name            = "mise bootstrap packages apply"
-snippet         = "MISE_ENV=$([ \"$(uname)\" = Darwin ] && echo mac || echo linux) mise bootstrap packages apply"
+snippet         = "mise bootstrap packages apply"
 trigger-pattern = "^mba$"
 
 [[snippets]]
 name            = "mise bootstrap packages use"
-snippet         = "MISE_ENV=$([ \"$(uname)\" = Darwin ] && echo mac || echo linux) mise bootstrap packages use"
+snippet         = "mise bootstrap packages use"
 trigger-pattern = "^mbu$"
 
 [[snippets]]
 name            = "mise bootstrap packages status"
-snippet         = "MISE_ENV=$([ \"$(uname)\" = Darwin ] && echo mac || echo linux) mise bootstrap packages status"
+snippet         = "mise bootstrap packages status"
 trigger-pattern = "^mbs$"
 
 [[snippets]]

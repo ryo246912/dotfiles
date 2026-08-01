@@ -78,8 +78,7 @@ mise bootstrap packages upgrade
 mise bootstrap packages prune --dry-run
 ```
 
-zabrze abbr（`dot_config/zabrze/mise.toml`）: `mba` = apply、`mbu` = use、`mbs` = status
-（いずれも `uname` から `MISE_ENV` を自組み立てするため、host-env.map 未登録のホストでも動く）。
+zabrze abbr（`dot_config/zabrze/mise.toml`）: `mba` = apply、`mbu` = use、`mbs` = status。
 
 macOS defaults:
 
