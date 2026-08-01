@@ -71,15 +71,15 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 - 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
   API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う
   例外パッケージ（google-japanese-ime / thock / firefox / inkscape /
-  zoom / docker-desktop / google-drive / tailscale-app / keycastr / termius /
-  thunderbird / opencode-bar。理由は
+  zoom / docker-desktop / raycast / google-drive / tailscale-app / keycastr /
+  termius / thunderbird / opencode-bar。理由は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記12個の例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記13個の例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -362,6 +362,12 @@ brew list --cask --versions
   対話実行するタスクなので sudo プロンプトが出ても想定内になる。本リポジトリでは
   google-drive / tailscale-app がこれに該当する。いずれも private ホスト限定のため
   `HOST_ENV` で判定して work ホストではスキップする）。
+- `ERROR brew-cask: app artifact '<Name>.app' was not found` →
+  ダウンロード/展開した中に期待する `.app` が見つからない場合の**エラー**（根本原因未確認）。
+  これも `mise bootstrap packages apply` 全体を中断させる。他の unsupported artifact type
+  と同様に `[bootstrap.packages]` から外し `mise run bootstrap:mac-packages` 側の例外
+  パッケージとして扱う（本リポジトリでは raycast がこれに該当する。実 brew では問題なく
+  インストールできることを確認済み）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
