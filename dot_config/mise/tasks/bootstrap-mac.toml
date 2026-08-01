@@ -77,6 +77,15 @@ if ! brew list --cask inkscape &>/dev/null; then
 else
   echo "inkscape is already installed"
 fi
+
+# opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
+# を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
+if ! brew list --cask opencode-bar &>/dev/null; then
+  brew tap opgginc/tap
+  brew install --cask opencode-bar
+else
+  echo "opencode-bar is already installed"
+fi
 '''
 
 ["bootstrap:mac-defaults"]

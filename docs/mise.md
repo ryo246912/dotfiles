@@ -70,14 +70,14 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
   tap・mise 未対応の cask artifact 種別を使う例外パッケージ
-  （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape。理由は
-  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
+  （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape / opencode-bar。
+  理由は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記6つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記7つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -327,9 +327,11 @@ brew list --cask --versions
 
 - `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
   `<prefix>/Caskroom/<name>/` に旧バージョンが複数残っていて mise がどれが「現行版」か
-  一意に決められないだけの**警告**（apply 自体は続行される）。気になる場合は
-  `brew cleanup <name>` で古いバージョンを削除するか、`brew reinstall --cask <name>` で
-  1バージョンに揃えてから再実行する。
+  一意に決められないだけの**警告**（apply 自体は続行される）。`brew reinstall --cask <name>`
+  で直近の1バージョンには揃うが、`brew upgrade`/`brew cleanup` が長期間走らずに溜まった
+  「さらに古い」バージョンディレクトリまでは掃除しないことがある。それでも警告が消えない場合は
+  `ls <prefix>/Caskroom/<name>/` で残っているバージョンを確認し、使っていない古いものを
+  `rm -rf <prefix>/Caskroom/<name>/<古いバージョン>` で個別に削除する。
 - `ERROR brew-cask:<name>: unsupported artifact type <type>`（例: `command_wrapper`） →
   その cask の定義が mise の brew-cask バックエンド未対応の artifact 種別（`app`/`pkg`/
   `binary` 等の主要な型以外）を使っている場合の**エラー**。これは他の cask の警告と違い
@@ -338,6 +340,10 @@ brew list --cask --versions
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
   例外パッケージとして扱う（本リポジトリでは firefox / inkscape がこれに該当する。詳細は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
+- `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
+error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
+  （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
+  「サードパーティ tap の注意」参照（本リポジトリでは opencode-bar がこれに該当する）。
 
 ### サードパーティ tap の注意
 
@@ -350,10 +356,13 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 このリポジトリでは `thock`（`kamillobinski/thock`）と `jira-cli`
 （`ankitpokhrel/jira-cli`）について API メタデータの公開有無を確認できなかったため、
 `[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
-（実 `brew tap`/`brew install`）のまま残している。**`.chezmoi.toml.tmpl` の post-apply
-hook は `mise bootstrap packages apply` の失敗を fatal 扱いする**ため、未確認の tap を
-安易に `[bootstrap.packages]` に入れると、hook 全体を壊すリスクがある。追加する場合は
-先に `mise bootstrap packages apply --dry-run` で個別に検証してから。
+（実 `brew tap`/`brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
+実際に `mise bootstrap packages apply` を実行して `api/cask/opencode-bar.json` が
+404 になることを確認したため、同様に `bootstrap:mac-packages` 側に残した。
+**`.chezmoi.toml.tmpl` の post-apply hook は `mise bootstrap packages apply` の失敗を
+fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
+壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に
+検証してから。
 
 ### mise 自体を brew から乗り換える場合
 
