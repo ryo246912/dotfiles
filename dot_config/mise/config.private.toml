@@ -4,3 +4,9 @@
 "aqua:supabase/cli"      = "2.100.1"
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
+
+[bootstrap.packages]
+"brew-cask:keycastr"      = "latest"
+"brew-cask:tailscale-app" = "latest"
+"brew-cask:termius"       = "latest"
+"brew-cask:thunderbird"   = "latest"

@@ -357,7 +357,8 @@ unsupported artifact type と同様に`[bootstrap.packages]`から外し`mise ru
   完走させたい場合は該当パッケージを `[bootstrap.packages]` から外し
   `mise run bootstrap:mac-packages` 側の例外パッケージとして扱う（ユーザーが明示的に
   対話実行するタスクなので sudo プロンプトが出ても想定内になる。本リポジトリでは
-  google-drive がこれに該当する）。
+  google-drive がこれに該当する。private ホスト限定のため `HOST_ENV` で判定して
+  work ホストではスキップする）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
