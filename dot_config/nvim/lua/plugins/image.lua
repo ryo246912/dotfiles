@@ -13,10 +13,10 @@ return {
       if #vim.api.nvim_list_uis() == 0 then
         return
       end
-      -- .pdf はバイナリを読み込まず、そのままビューアへ引き渡す
+      -- .pdf はバイナリを読み込まず、そのままビューアへ引き渡す（拡張子の大文字/小文字を問わない）
       vim.api.nvim_create_autocmd("BufReadCmd", {
         group = vim.api.nvim_create_augroup("PdfView", { clear = true }),
-        pattern = "*.pdf",
+        pattern = "*.[pP][dD][fF]",
         callback = function(args)
           require("utils.pdf").open(args.file, args.buf)
         end,

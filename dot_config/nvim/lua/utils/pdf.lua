@@ -1,6 +1,6 @@
 -- ghostty + tmux 環境で PDF をページ画像として nvim 内に表示する簡易ビューア。
 -- poppler の pdftoppm でページ単位に PNG 化し、image.nvim の描画APIで
--- 現在ウィンドウにレンダリングする。pdfinfo でページ数を取得しページ送りに対応する。
+-- バッファを表示する各ウィンドウにレンダリングする。pdfinfo でページ数を取得しページ送りに対応する。
 
 local M = {}
 
@@ -12,6 +12,17 @@ local function tmp_dir()
   local dir = vim.fn.stdpath("cache") .. "/pdfview"
   vim.fn.mkdir(dir, "p")
   return dir
+end
+
+-- パス + 更新時刻 + サイズからキャッシュキーを生成する。
+-- ファイル内容が更新されると mtime/size が変わるため、同名パスでも古いPNGを再利用しない。
+local function cache_key(path)
+  local st = vim.loop.fs_stat(path)
+  local seed = path
+  if st then
+    seed = string.format("%s:%d:%d", path, st.mtime.sec, st.size)
+  end
+  return vim.fn.sha256(seed):sub(1, 16)
 end
 
 -- pdfinfo で総ページ数を取得。失敗時は 1 を返す。
@@ -54,7 +65,22 @@ local function render_to_png(state)
   return png
 end
 
--- 現在ページを描画する。
+-- 1つのウィンドウの画像をクリアし、winbar を元に戻す。
+local function clear_window(state, win, entry)
+  if entry.image then
+    pcall(function()
+      entry.image:clear()
+    end)
+  end
+  if vim.api.nvim_win_is_valid(win) then
+    pcall(function()
+      vim.api.nvim_set_option_value("winbar", entry.saved_winbar or "", { win = win })
+    end)
+  end
+  state.windows[win] = nil
+end
+
+-- 現在ページを、バッファを表示している全ウィンドウに描画する。
 local function draw(state)
   local ok, image_api = pcall(require, "image")
   if not ok then
@@ -62,8 +88,8 @@ local function draw(state)
     return
   end
 
-  local win = vim.fn.bufwinid(state.buf)
-  if win == -1 then
+  local wins = vim.fn.win_findbuf(state.buf)
+  if vim.tbl_isempty(wins) then
     return
   end
 
@@ -73,41 +99,55 @@ local function draw(state)
     return
   end
 
-  -- 既存画像をクリアしてから再描画
-  if state.image then
-    pcall(function()
-      state.image:clear()
-    end)
-    state.image = nil
+  -- 既にバッファを表示していないウィンドウの画像/winbar を後始末する
+  for win, entry in pairs(state.windows) do
+    if not vim.tbl_contains(wins, win) then
+      clear_window(state, win, entry)
+    end
   end
 
-  -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
-  local height = vim.api.nvim_win_get_height(win)
+  for _, win in ipairs(wins) do
+    -- ウィンドウ初出時のみ、上書き前の winbar を退避しておく
+    local entry = state.windows[win]
+    if not entry then
+      entry = { saved_winbar = vim.wo[win].winbar }
+      state.windows[win] = entry
+    end
 
-  local img = image_api.from_file(png, {
-    id = "pdfview-" .. state.buf,
-    window = win,
-    buffer = state.buf,
-    with_virtual_padding = true,
-    x = 0,
-    y = 0,
-    height = height,
-  })
-  if img then
-    img:render()
-    state.image = img
+    -- 既存画像をクリアしてから再描画
+    if entry.image then
+      pcall(function()
+        entry.image:clear()
+      end)
+      entry.image = nil
+    end
+
+    -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
+    local img = image_api.from_file(png, {
+      id = string.format("pdfview-%d-%d", state.buf, win),
+      window = win,
+      buffer = state.buf,
+      with_virtual_padding = true,
+      x = 0,
+      y = 0,
+      height = vim.api.nvim_win_get_height(win),
+    })
+    if img then
+      img:render()
+      entry.image = img
+    end
+
+    vim.api.nvim_set_option_value(
+      "winbar",
+      string.format(
+        "PDF: %s  [%d/%d]  (J/K:ページ gg/G:先頭/末尾)",
+        vim.fn.fnamemodify(state.path, ":t"),
+        state.page,
+        state.pages
+      ),
+      { win = win }
+    )
   end
-
-  vim.api.nvim_set_option_value(
-    "winbar",
-    string.format(
-      "PDF: %s  [%d/%d]  (J/K:ページ gg/G:先頭/末尾)",
-      vim.fn.fnamemodify(state.path, ":t"),
-      state.page,
-      state.pages
-    ),
-    { win = win }
-  )
 end
 
 -- ページ移動（範囲外はクランプ）
@@ -117,7 +157,7 @@ local function goto_page(buf, page)
     return
   end
   page = math.max(1, math.min(state.pages, page))
-  if page == state.page and state.image then
+  if page == state.page and not vim.tbl_isempty(state.windows) then
     return
   end
   state.page = page
@@ -161,8 +201,8 @@ function M.open(path, buf)
     page = 1,
     pages = get_page_count(path),
     dpi = 150,
-    hash = vim.fn.sha256(path):sub(1, 16),
-    image = nil,
+    hash = cache_key(path),
+    windows = {}, -- win -> { image = <image>, saved_winbar = <string> }
   }
   states[buf] = state
 
@@ -196,8 +236,8 @@ function M.open(path, buf)
     goto_page(buf, state.pages)
   end, "PDF: 最終ページ")
 
-  -- ウィンドウ/画面リサイズ時に再描画
-  vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
+  -- リサイズ時・新しいウィンドウ（split）表示時に再描画
+  vim.api.nvim_create_autocmd({ "WinResized", "VimResized", "BufWinEnter" }, {
     buffer = buf,
     callback = function()
       if states[buf] then
@@ -206,16 +246,16 @@ function M.open(path, buf)
     end,
   })
 
-  -- バッファ破棄時に画像をクリーンアップ
+  -- バッファ破棄時に全ウィンドウの画像をクリアし winbar を復元する
   vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
     buffer = buf,
     once = true,
     callback = function()
       local s = states[buf]
-      if s and s.image then
-        pcall(function()
-          s.image:clear()
-        end)
+      if s then
+        for win, entry in pairs(s.windows) do
+          clear_window(s, win, entry)
+        end
       end
       states[buf] = nil
     end,
