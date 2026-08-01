@@ -11,4 +11,5 @@
 "brew-cask:insomnia"        = "latest"
 "brew-cask:linear"          = "latest"
 "brew-cask:omnidisksweeper" = "latest"
-"brew:ffmpeg"               = "latest"
+# ffmpeg: private ホストでのみ使用するため config.mac.toml（全ホスト共通）から外し、こちらに寄せている
+"brew:ffmpeg" = "latest"

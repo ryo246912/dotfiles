@@ -295,7 +295,8 @@ brew list --cask --versions
   `mise bootstrap packages apply` 全体を中断させる。該当パッケージは
   `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
-  例外パッケージとして扱う（本リポジトリでは firefox / inkscape / zoom がこれに該当する。
+  例外パッケージとして扱う（本リポジトリでは firefox / inkscape がこれに該当する。
+  zoom は cask artifact 種別の問題ではなく private ホスト限定で使うための例外。
   詳細は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
 - `ERROR brew-cask:<name>: failed to run postflight`
   （``Error: cask uses `auto_updates`, which mise's cask shim does not support``） →
