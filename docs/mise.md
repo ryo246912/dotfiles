@@ -252,7 +252,7 @@ mise bootstrap packages status   # 差分がないことを確認（= 追加イ�
 `[bootstrap.packages]` に無い formula の依存として過去に入っていた場合など）だと、mise が
 管理していないファイルがそのパスに既に存在するためリンクに失敗する。
 
-```
+```text
 mise ERROR cannot link xz: these files already exist and were not
  created by mise or brew:
   /opt/homebrew/bin/unxz
