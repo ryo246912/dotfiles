@@ -7,7 +7,6 @@
 
 [bootstrap.packages]
 "brew-cask:android-studio"  = "latest"
-"brew-cask:codex-app"       = "latest"
 "brew-cask:insomnia"        = "latest"
 "brew-cask:linear"          = "latest"
 "brew-cask:omnidisksweeper" = "latest"
