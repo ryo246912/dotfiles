@@ -14,6 +14,7 @@
 "pipx:tftui"                                = "0.13.4"
 
 [bootstrap.packages]
+"brew-cask:figma"      = "latest"
 "brew-cask:sequel-ace" = "latest"
 
 [settings]

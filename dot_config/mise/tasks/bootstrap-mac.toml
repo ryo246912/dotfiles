@@ -64,14 +64,6 @@ else
   echo "inkscape is already installed"
 fi
 
-# zoom: cask 定義が mise 未対応の postflight_steps artifact を使っており、
-# brew-cask 経由だと `mise bootstrap packages apply` が ERROR で中断する
-if ! brew list --cask zoom &>/dev/null; then
-  brew install --cask zoom
-else
-  echo "zoom is already installed"
-fi
-
 # docker-desktop: cask 定義が `auto_updates` を使っており、mise の brew-cask シムが
 # postflight 実行時に「cask uses auto_updates, which mise's cask shim does not support」で
 # 失敗し `mise bootstrap packages apply` が中断する
@@ -81,13 +73,13 @@ else
   echo "docker-desktop is already installed"
 fi
 
-# google-drive/tailscale-app: private ホストのみ。pkg インストーラが sudo を要求するため、
-# post-apply hook の `mise bootstrap packages apply`（非対話実行）に含めるとパスワード
-# 入力を待って止まってしまう。keycastr/termius/thunderbird は auto_updates を使っており
-# mise の brew-cask シムが未対応なため、こちらも private ホストの real brew に寄せる
+# private ホスト限定パッケージ。google-drive/tailscale-app は pkg インストーラが sudo を
+# 要求するため post-apply hook（非対話実行）に含めるとパスワード入力を待って止まってしまう。
+# keycastr/termius/thunderbird は auto_updates を使っており mise の brew-cask シムが未対応。
+# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている
 case "${HOST_ENV:-}" in
 *private*)
-  for cask in google-drive tailscale-app keycastr termius thunderbird; do
+  for cask in google-drive tailscale-app keycastr termius thunderbird zoom; do
     if ! brew list --cask "$cask" &>/dev/null; then
       brew install --cask "$cask"
     else
@@ -96,7 +88,7 @@ case "${HOST_ENV:-}" in
   done
   ;;
 *)
-  echo "google-drive/tailscale-app/keycastr/termius/thunderbird are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
   ;;
 esac
 

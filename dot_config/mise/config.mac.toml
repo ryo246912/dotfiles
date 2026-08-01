@@ -27,13 +27,14 @@
 # - google-japanese-ime: Rosetta が前提
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
-# - zoom: cask 定義が mise 未対応の postflight_steps artifact
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
-# - google-drive: pkg インストーラが sudo を要求し post-apply hook（非対話）を止めてしまう
-#   （private ホスト限定）
 # - raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
 #   ERROR になる（根本原因未確認。実 brew では問題なくインストールできることを確認済み）
-# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開）
+# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
+# - google-drive/tailscale-app: pkg インストーラが sudo を要求し post-apply hook（非対話）を
+#   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
+#   brew-cask シムが未対応。zoom は private ホストでしか使わない。
+#   いずれも private ホスト限定で bootstrap-mac.toml 側から導入する）
 "brew-cask:arc"                   = "latest"
 "brew-cask:battery"               = "latest"
 "brew-cask:bitwarden"             = "latest"
@@ -50,7 +51,9 @@
 "brew-cask:keyboardcleantool"     = "latest"
 "brew-cask:memory-cleaner"        = "latest"
 "brew-cask:obsidian"              = "latest"
+"brew-cask:overview"              = "latest"
 "brew-cask:slack"                 = "latest"
+"brew-cask:syncthing-app"         = "latest"
 "brew-cask:thebrowsercompany-dia" = "latest"
 "brew-cask:visual-studio-code"    = "latest"
 "brew-cask:wezterm@nightly"       = "latest"

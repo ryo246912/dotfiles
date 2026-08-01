@@ -6,4 +6,9 @@
 "github:superfly/flyctl" = "0.4.29"
 
 [bootstrap.packages]
-"brew:ffmpeg" = "latest"
+"brew-cask:android-studio"  = "latest"
+"brew-cask:codex-app"       = "latest"
+"brew-cask:insomnia"        = "latest"
+"brew-cask:linear"          = "latest"
+"brew-cask:omnidisksweeper" = "latest"
+"brew:ffmpeg"               = "latest"
