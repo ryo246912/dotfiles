@@ -63,15 +63,6 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 "apt:tig" = "latest"
 ```
 
-### `MISE_ENV` について
-
-以下のコマンド例には `MISE_ENV` を付けていない。`dot_config/zsh/host-env.map` にホストを
-登録していれば（`ryo-mac-xxx=mac,xxx` のように）、`dot_zshenv.tmpl` が対話シェル起動時に
-`HOST_ENV`/`MISE_ENV` を自動 export するため、日常的なコマンド実行では明示不要。手元の
-`MISE_ENV` を明示的に上書きしたいとき（他 OS 向け設定を意図的に確認する、host-env.map 未登録の
-ホスト、`.chezmoi.toml.tmpl` の post-apply hook のように zsh を経由しない非対話コンテキストなど）
-だけ `MISE_ENV=mac mise bootstrap ...` のように付ける。
-
 ### Homebrew 関連ツールの導入手順
 
 - `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
@@ -79,7 +70,8 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
   tap・mise 未対応の cask artifact 種別を使う例外パッケージ
-  （clibor / google-japanese-ime / thock / jira-cli / firefox。理由は後述の表）だけ。
+  （clibor / google-japanese-ime / thock / jira-cli / firefox。理由は
+  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
@@ -166,36 +158,6 @@ initial_key_repeat = 15
 これらは `mise run bootstrap:mac-defaults` / `bootstrap:mac-hotkeys`
 （`dot_config/mise/tasks/bootstrap-mac.toml`）に残している。
 
-### mise でも表現できないもの（`dot_config/mise/tasks/bootstrap-mac.toml`）
-
-| タスク                   | 内容                                                                                                                                                                                                    | mise で表現できない理由                                                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `bootstrap:mac-brew`     | Homebrew 本体の導入                                                                                                                                                                                     | bootstrap 前提そのもの（mise 自体は別途 run_once で導入。後述）                                                                 |
-| `bootstrap:mac-packages` | clibor（`--language=ja`）/ google-japanese-ime（Rosetta 前提）/ thock（独自 tap + `thock --install` postflight）/ jira-cli（独自 tap）/ firefox（cask 定義が mise 未対応の `command_wrapper` artifact） | custom install option・前提コマンド・postflight・（API メタデータ未確認の）サードパーティ tap・mise 未対応の cask artifact 種別 |
-| `bootstrap:mac-defaults` | メニューバー間隔・ログイン項目                                                                                                                                                                          | 上記の `-currentHost` / login item 制約                                                                                         |
-| `bootstrap:mac-hotkeys`  | キーボードショートカット                                                                                                                                                                                | plist が array/dict                                                                                                             |
-
-いずれも `if ! <条件> ; then <導入> ; fi` 形式の冪等処理で、何度実行しても安全。
-y/n の対話確認はあえて撤廃した（`mise run` を明示的に叩くこと自体が確認に相当する、という
-mise bootstrap の思想に合わせた）。
-
-## mise 自体のインストールについて
-
-mise 自身は **mise task にできない**（`mise run` を使うには mise が既にインストール済みで
-なければならず、循環してしまう）。そのため mise 本体は mise 非依存な方法で導入する:
-
-- mac: `run_once_install-mise_mac.sh`（chezmoi の run_once スクリプト。mise が無ければ
-  `curl https://mise.run | sh` を実行するだけ）
-- Windows/WSL: `run_once_install-packages_windows.sh` 内で同じ方式（`curl https://mise.run | sh`）
-
-どちらも `~/.local/bin/mise` に入る（`MISE_INSTALL_PATH` 未指定時のデフォルト）。
-`.chezmoi.toml.tmpl` の post-apply hook はこの `~/.local/bin` を PATH の先頭に通してから
-`mise bootstrap packages apply` 等を呼ぶ。
-
-以前は mac だけ `brew install mise` で導入していたが、Homebrew と違い mise は
-`[bootstrap.packages]` の `brew:` では"自分自身"を導入できない（同じ循環問題）ため、
-Windows/WSL 側と方式を揃えて `https://mise.run` のインストールスクリプトに統一した。
-
 ## 既に brew で導入済みの状態からのマイグレーション手順
 
 このリポジトリは元々 `run_once_install-packages_mac.sh` から `brew install` /
@@ -215,36 +177,6 @@ mise 管理の formula に見える。逆に、**実 brew で先に入れてい�
 ような共有依存を real brew が既に掴んでいる場合は `cannot link` で失敗することがある
 （「brew で個別導入済みのパッケージと衝突する場合」参照）。cask は import/prune が未実装な
 ため少し手順が異なる（後述）。
-
-### 手順1: formula（brew:）
-
-既にインストール済みの formula を丸ごと `[bootstrap.packages]` にインポートできる。
-`import` も書き込みコマンドなので、`use` と同様に `--path` で chezmoi の source を明示する
-（省略するとカレントディレクトリのローカル `mise.toml` に書かれてしまう）。
-
-```sh
-cd "$(chezmoi source-path)"
-# 現在の(オンリクエストな)formulaをスキャンして [bootstrap.packages] に書き出す
-mise bootstrap packages import --manager brew --path dot_config/mise/config.mac.toml
-# 依存関係で入った formula も含めたい場合
-mise bootstrap packages import --manager brew --all --path dot_config/mise/config.mac.toml
-```
-
-`import` は `brew bundle dump` 相当。サードパーティ tap の formula は fully-qualified な
-名前（`brew:owner/tap/formula`）で書き出され、GitHub の慣例的な tap URL が推測できる場合は
-`[bootstrap.brew.taps]` も自動で追記される。
-
-`import` は source ファイルを書き換えるだけなので、`chezmoi diff`/`chezmoi apply` で
-デプロイしてから確認する:
-
-```sh
-chezmoi diff && chezmoi apply
-mise bootstrap packages status   # 差分がないことを確認（= 追加インストール不要）
-```
-
-差分なしのはず。もし差分が出る場合は、tap が Homebrew API メタデータ
-（`api/formula/<name>.json`）を公開していない可能性がある（下記「サードパーティ tap の注意」
-参照）。
 
 ### brew で個別導入済みのパッケージと衝突する場合
 
@@ -348,7 +280,7 @@ mise brew も real brew も同じ `/opt/homebrew` prefix を使うため、Phase
 リンクを「見知らぬリンク」とみなして触ってしまう可能性がある。real brew は cask（GUI アプリ）用途
 に限定して使い、`brew cleanup` は慎重に実行すること。
 
-### 手順2: cask（brew-cask:）
+### cask（brew-cask:）
 
 **`mise bootstrap packages import` は cask に対応していない**
 （"Cask import/prune is not implemented" — cask のアンインストール手順が app/pkg
@@ -405,7 +337,7 @@ brew list --cask --versions
   `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
   例外パッケージとして扱う（本リポジトリでは firefox がこれに該当する。詳細は
-  「mise でも表現できないもの」参照）。
+  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
 
 ### サードパーティ tap の注意
 
