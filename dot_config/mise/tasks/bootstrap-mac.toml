@@ -95,6 +95,14 @@ else
   echo "docker-desktop is already installed"
 fi
 
+# google-drive: pkg インストーラが sudo を要求する。post-apply hook の
+# `mise bootstrap packages apply` は非対話実行のためパスワード入力を待って止まってしまう
+if ! brew list --cask google-drive &>/dev/null; then
+  brew install --cask google-drive
+else
+  echo "google-drive is already installed"
+fi
+
 # opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
 # を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
 if ! brew list --cask opencode-bar &>/dev/null; then

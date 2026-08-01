@@ -25,9 +25,10 @@
 # casks（clibor は custom install option、google-japanese-ime は Rosetta 前提、
 # thock/jira-cli は独自 tap、firefox/inkscape/zoom は cask 定義が mise 未対応の artifact
 # 種別（command_wrapper/postflight_steps）を使っており、docker-desktop は cask 定義が
-# `auto_updates` を使っており mise の brew-cask シムが未対応、opencode-bar は独自 tap
-# （opgginc/tap）が Homebrew API メタデータ未公開で、いずれも brew-cask 経由だと
-# `mise bootstrap packages apply` が中断するため
+# `auto_updates` を使っており mise の brew-cask シムが未対応、google-drive は pkg
+# インストーラが sudo を要求し post-apply hook（非対話）を止めてしまうため、
+# opencode-bar は独自 tap（opgginc/tap）が Homebrew API メタデータ未公開で、
+# いずれも brew-cask 経由だと `mise bootstrap packages apply` が中断/ハングするため
 # `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
 "brew-cask:alacritty"             = "latest"
 "brew-cask:arc"                   = "latest"
@@ -42,7 +43,6 @@
 "brew-cask:font-hackgen-nerd"     = "latest"
 "brew-cask:ghostty"               = "latest"
 "brew-cask:google-chrome"         = "latest"
-"brew-cask:google-drive"          = "latest"
 "brew-cask:insomnia"              = "latest"
 "brew-cask:karabiner-elements"    = "latest"
 "brew-cask:keyboardcleantool"     = "latest"
