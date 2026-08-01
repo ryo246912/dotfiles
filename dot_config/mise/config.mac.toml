@@ -22,14 +22,18 @@
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
 
-# casks（clibor は custom install option、google-japanese-ime は Rosetta 前提、
-# thock/jira-cli は独自 tap、firefox/inkscape/zoom は cask 定義が mise 未対応の artifact
-# 種別（command_wrapper/postflight_steps）を使っており、docker-desktop は cask 定義が
-# `auto_updates` を使っており mise の brew-cask シムが未対応、google-drive は pkg
-# インストーラが sudo を要求し post-apply hook（非対話）を止めてしまうため、
-# opencode-bar は独自 tap（opgginc/tap）が Homebrew API メタデータ未公開で、
-# いずれも brew-cask 経由だと `mise bootstrap packages apply` が中断/ハングするため
-# `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
+# casks: 以下はいずれも brew-cask 経由だと `mise bootstrap packages apply` が中断/ハングするため
+# `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残している。理由:
+# - clibor: custom install option（--language=ja）
+# - google-japanese-ime: Rosetta が前提
+# - thock: 独自 tap + postflight（thock --install）
+# - jira-cli: 独自 tap
+# - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
+# - zoom: cask 定義が mise 未対応の postflight_steps artifact
+# - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
+# - google-drive: pkg インストーラが sudo を要求し post-apply hook（非対話）を止めてしまう
+#   （private ホスト限定）
+# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
 "brew-cask:arc"                   = "latest"
 "brew-cask:battery"               = "latest"
 "brew-cask:bitwarden"             = "latest"
