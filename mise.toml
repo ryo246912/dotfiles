@@ -20,8 +20,12 @@ includes = ["tasks/*.toml"]
 "npm:oxlint"                     = "1.76.0"
 
 [hooks]
-postinstall = "lefthook install"
+postinstall = """
+command -v lefthook >/dev/null 2>&1 || exit 0
+[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
+lefthook install
+"""
 
 [[watch_files]]
 patterns = ["lefthook.yml"]
-run = "lefthook install"
+run      = "lefthook install"

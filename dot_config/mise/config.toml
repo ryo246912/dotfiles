@@ -138,7 +138,9 @@ uvx = true
 
 [hooks]
 postinstall = """
-[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
-[ -f lefthook.yml ] || exit 0
+command -v lefthook >/dev/null 2>&1 || exit 0
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -f "$root/lefthook.yml" ] || exit 0
+cd "$root"
 lefthook install
 """
