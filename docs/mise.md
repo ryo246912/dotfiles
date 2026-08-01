@@ -71,14 +71,15 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 - 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
   API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う
   例外パッケージ（google-japanese-ime / thock / firefox / inkscape /
-  zoom / docker-desktop / google-drive / tailscale-app / opencode-bar。理由は
+  zoom / docker-desktop / google-drive / tailscale-app / keycastr / termius /
+  thunderbird / opencode-bar。理由は
   `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記9つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記12個の例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -349,7 +350,8 @@ brew list --cask --versions
   これも `mise bootstrap packages apply` 全体を中断させる**エラー**。上記の
   unsupported artifact type と同様に `[bootstrap.packages]` から外し
   `mise run bootstrap:mac-packages` 側の例外パッケージとして扱う
-  （本リポジトリでは docker-desktop がこれに該当する）。
+  （本リポジトリでは docker-desktop / keycastr / termius / thunderbird がこれに該当する。
+  後者3つは private ホスト限定のため `HOST_ENV` で判定して work ホストではスキップする）。
 - パスワードプロンプトで**止まって見える**（エラーは出ない） →
   cask のインストーラが `pkg`（Apple 標準の installer 形式）で、システムレベルの
   コンポーネント導入に sudo を要求する場合、`.chezmoi.toml.tmpl` の post-apply hook

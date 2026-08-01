@@ -5,10 +5,6 @@
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
 
-[bootstrap.packages]
-# tailscale-app は pkg インストーラが sudo を要求する（`mise run bootstrap:mac-packages`
-# の google-drive と同じ理由）ため、こちらではなく dot_config/mise/tasks/bootstrap-mac.toml
-# 側で real brew から導入する
-"brew-cask:keycastr"    = "latest"
-"brew-cask:termius"     = "latest"
-"brew-cask:thunderbird" = "latest"
+# keycastr/tailscale-app/termius/thunderbird は auto_updates（tailscale-app は
+# pkg インストーラの sudo も）を使っており mise の brew-cask シムが未対応/hang するため、
+# ここではなく dot_config/mise/tasks/bootstrap-mac.toml 側で real brew から導入する
