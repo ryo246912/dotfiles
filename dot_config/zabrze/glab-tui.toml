@@ -1,4 +1,0 @@
-[[snippets]]
-name            = "glab-tui"
-snippet         = "glab-tui"
-trigger-pattern = "^gt$"
