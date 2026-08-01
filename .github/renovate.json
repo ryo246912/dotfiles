@@ -142,6 +142,15 @@
     },
     {
       "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"http:tmux-[a-z]+\"\\s*=\\s*\\{ version = \"(?<currentValue>[^\"]+)\", url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/refs/tags/"
+      ],
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
       "matchStrings": [
         "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
