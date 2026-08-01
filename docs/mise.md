@@ -342,12 +342,13 @@ brew list --cask --versions
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
   例外パッケージとして扱う（本リポジトリでは firefox / inkscape / zoom がこれに該当する。
   詳細は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
-- `ERROR brew-cask:<name>: failed to run postflight` /
-  `Error: cask uses \`auto_updates\`, which mise's cask shim does not support` →
-cask が自前の自動更新機能（`auto_updates true`）を宣言している場合、mise の cask シム
-（postflight を実行する portable-ruby スクリプト）がそれを未対応としてエラーになる。
-これも `mise bootstrap packages apply`全体を中断させる**エラー**。上記の
-unsupported artifact type と同様に`[bootstrap.packages]`から外し`mise run bootstrap:mac-packages` 側の例外パッケージとして扱う
+- `ERROR brew-cask:<name>: failed to run postflight`
+  （``Error: cask uses `auto_updates`, which mise's cask shim does not support``） →
+  cask が自前の自動更新機能（`auto_updates true`）を宣言している場合、mise の cask シム
+  （postflight を実行する portable-ruby スクリプト）がそれを未対応としてエラーになる。
+  これも `mise bootstrap packages apply` 全体を中断させる**エラー**。上記の
+  unsupported artifact type と同様に `[bootstrap.packages]` から外し
+  `mise run bootstrap:mac-packages` 側の例外パッケージとして扱う
   （本リポジトリでは docker-desktop がこれに該当する）。
 - パスワードプロンプトで**止まって見える**（エラーは出ない） →
   cask のインストーラが `pkg`（Apple 標準の installer 形式）で、システムレベルの
