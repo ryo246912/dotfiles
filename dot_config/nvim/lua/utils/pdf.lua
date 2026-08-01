@@ -1,6 +1,7 @@
 -- ghostty + tmux 環境で PDF をページ画像として nvim 内に表示する簡易ビューア。
 -- poppler の pdftoppm でページ単位に PNG 化し、image.nvim の描画APIで
 -- バッファを表示する各ウィンドウにレンダリングする。pdfinfo でページ数を取得しページ送りに対応する。
+-- 外部コマンド(pdftoppm/pdfinfo)は vim.system で非同期実行し、UIをブロックしない。
 
 local M = {}
 
@@ -39,60 +40,89 @@ local function delete_cached_pngs(hash)
   end
 end
 
--- pdfinfo で総ページ数を取得。失敗時は 1 を返す。
-local function get_page_count(path)
-  if vim.fn.executable("pdfinfo") == 0 then
-    vim.notify("pdfinfo が見つかりません（ページ数を判定できず1ページとして表示します）", vim.log.levels.WARN)
-    return 1
+-- 外部コマンドを非同期実行し、完了後に（メインループ上で）cb(code, stdout_lines) を呼ぶ。
+-- vim.system が使えない古い環境では同期実行にフォールバックする。
+local function run_async(cmd, cb)
+  if vim.system then
+    vim.system(cmd, { text = true }, function(res)
+      local lines = {}
+      if res.stdout and res.stdout ~= "" then
+        lines = vim.split(res.stdout, "\n", { trimempty = true })
+      end
+      vim.schedule(function()
+        cb(res.code, lines)
+      end)
+    end)
+  else
+    local out = vim.fn.systemlist(cmd)
+    cb(vim.v.shell_error, out)
   end
-  local out = vim.fn.systemlist({ "pdfinfo", path })
-  if vim.v.shell_error ~= 0 then
-    vim.notify("pdfinfo の実行に失敗しました（1ページとして表示します）", vim.log.levels.WARN)
-    return 1
-  end
-  for _, line in ipairs(out) do
-    local n = line:match("^Pages:%s+(%d+)")
-    if n then
-      return tonumber(n)
-    end
-  end
-  vim.notify("pdfinfo の出力からページ数を判定できませんでした（1ページとして表示します）", vim.log.levels.WARN)
-  return 1
 end
 
--- 指定ページを PNG 化し、そのパスを返す。失敗時は nil。
-local function render_to_png(state)
+-- pdfinfo で総ページ数を非同期取得し cb(pages) を呼ぶ。取得できない場合は失敗を通知しつつ 1 を返す。
+local function get_page_count_async(path, cb)
+  if vim.fn.executable("pdfinfo") == 0 then
+    vim.notify("pdfinfo が見つかりません（ページ数を判定できず1ページとして表示します）", vim.log.levels.WARN)
+    cb(1)
+    return
+  end
+  run_async({ "pdfinfo", path }, function(code, lines)
+    if code ~= 0 then
+      vim.notify("pdfinfo の実行に失敗しました（1ページとして表示します）", vim.log.levels.WARN)
+      cb(1)
+      return
+    end
+    for _, line in ipairs(lines) do
+      local n = line:match("^Pages:%s+(%d+)")
+      if n then
+        cb(tonumber(n))
+        return
+      end
+    end
+    vim.notify("pdfinfo の出力からページ数を判定できませんでした（1ページとして表示します）", vim.log.levels.WARN)
+    cb(1)
+  end)
+end
+
+-- 現在ページを非同期に PNG 化し、完了後に cb(png|nil) を呼ぶ。既存キャッシュがあれば即時。
+local function render_to_png_async(state, cb)
   local prefix = string.format("%s/%s-%d", tmp_dir(), state.hash, state.page)
   local png = prefix .. ".png"
-  if vim.fn.filereadable(png) == 0 then
-    vim.fn.system({
-      "pdftoppm",
-      "-png",
-      "-singlefile",
-      "-r",
-      tostring(state.dpi),
-      "-f",
-      tostring(state.page),
-      "-l",
-      tostring(state.page),
-      state.path,
-      prefix,
-    })
-    if vim.v.shell_error ~= 0 or vim.fn.filereadable(png) == 0 then
-      return nil
-    end
+  if vim.fn.filereadable(png) == 1 then
+    cb(png)
+    return
   end
-  return png
+  run_async({
+    "pdftoppm",
+    "-png",
+    "-singlefile",
+    "-r",
+    tostring(state.dpi),
+    "-f",
+    tostring(state.page),
+    "-l",
+    tostring(state.page),
+    state.path,
+    prefix,
+  }, function(code, _)
+    if code == 0 and vim.fn.filereadable(png) == 1 then
+      cb(png)
+    else
+      cb(nil)
+    end
+  end)
 end
 
 -- 1つのウィンドウの画像をクリアし、winbar を元の値へ戻す。
+-- ただし winbar は「自分が設定した値のまま」の場合のみ復元し、別バッファが上書き済みなら触らない
+-- （複数ウィンドウで片方だけ別バッファに切替わった等で、新バッファの winbar を消さないため）。
 local function clear_window(state, win, entry)
   if entry.image then
     pcall(function()
       entry.image:clear()
     end)
   end
-  if vim.api.nvim_win_is_valid(win) then
+  if vim.api.nvim_win_is_valid(win) and vim.wo[win].winbar == entry.pdf_winbar then
     pcall(function()
       vim.api.nvim_set_option_value("winbar", entry.saved_winbar or "", { win = win })
     end)
@@ -110,7 +140,7 @@ local function reconcile(state)
   end
 end
 
--- 現在ページを、バッファを表示している全ウィンドウに描画する。
+-- 現在ページを、バッファを表示している全ウィンドウに描画する（レンダリングは非同期）。
 local function draw(state)
   local ok, image_api = pcall(require, "image")
   if not ok then
@@ -121,59 +151,65 @@ local function draw(state)
   -- 表示しなくなったウィンドウを先に後始末する
   reconcile(state)
 
-  local wins = vim.fn.win_findbuf(state.buf)
-  if vim.tbl_isempty(wins) then
+  if vim.tbl_isempty(vim.fn.win_findbuf(state.buf)) then
     return
   end
 
-  local png = render_to_png(state)
-  if not png then
-    vim.notify("PDFのレンダリングに失敗しました (pdftoppm)", vim.log.levels.ERROR)
-    return
-  end
+  -- 非同期完了までに状態が変わりうるため、要求時点のページを控えておく
+  local target_page = state.page
 
-  for _, win in ipairs(wins) do
-    -- ウィンドウ初出時のみ、上書き前の winbar を退避しておく
-    local entry = state.windows[win]
-    if not entry then
-      entry = { saved_winbar = vim.wo[win].winbar }
-      state.windows[win] = entry
+  render_to_png_async(state, function(png)
+    -- バッファが閉じられた/別状態に差し替わった/より新しいページ送りに追い越された場合は破棄
+    if states[state.buf] ~= state or state.page ~= target_page then
+      return
+    end
+    if not png then
+      vim.notify("PDFのレンダリングに失敗しました (pdftoppm)", vim.log.levels.ERROR)
+      return
     end
 
-    -- 既存画像をクリアしてから再描画
-    if entry.image then
-      pcall(function()
-        entry.image:clear()
-      end)
-      entry.image = nil
-    end
+    for _, win in ipairs(vim.fn.win_findbuf(state.buf)) do
+      -- ウィンドウ初出時のみ、上書き前の winbar を退避しておく
+      local entry = state.windows[win]
+      if not entry then
+        entry = { saved_winbar = vim.wo[win].winbar }
+        state.windows[win] = entry
+      end
 
-    -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
-    local img = image_api.from_file(png, {
-      id = string.format("pdfview-%d-%d", state.buf, win),
-      window = win,
-      buffer = state.buf,
-      with_virtual_padding = true,
-      x = 0,
-      y = 0,
-      height = vim.api.nvim_win_get_height(win),
-    })
-    if img then
-      img:render()
-      entry.image = img
-    end
+      -- 既存画像をクリアしてから再描画
+      if entry.image then
+        pcall(function()
+          entry.image:clear()
+        end)
+        entry.image = nil
+      end
 
-    vim.api.nvim_set_option_value(
-      "winbar",
-      string.format(
+      -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
+      local img = image_api.from_file(png, {
+        id = string.format("pdfview-%d-%d", state.buf, win),
+        window = win,
+        buffer = state.buf,
+        with_virtual_padding = true,
+        x = 0,
+        y = 0,
+        height = vim.api.nvim_win_get_height(win),
+      })
+      if img then
+        img:render()
+        entry.image = img
+      end
+
+      local winbar = string.format(
         "PDF: %s  [%d/%d]  (J/K:ページ gg/G:先頭/末尾)",
         vim.fn.fnamemodify(state.path, ":t"),
         state.page,
         state.pages
-      ),
-      { win = win }
-    )
-  end
+      )
+      vim.api.nvim_set_option_value("winbar", winbar, { win = win })
+      -- 後片付け時に「自分が設定した値のまま」か判定するため控えておく
+      entry.pdf_winbar = winbar
+    end
+  end)
 end
 
 -- ページ移動（範囲外はクランプ）
@@ -237,10 +273,10 @@ function M.open(path, buf)
     path = path,
     buf = buf,
     page = 1,
-    pages = get_page_count(path),
+    pages = 1, -- 実際のページ数は pdfinfo から非同期で更新する
     dpi = 150,
     hash = hash,
-    windows = {}, -- win -> { image = <image>, saved_winbar = <string> }
+    windows = {}, -- win -> { image = <image>, saved_winbar = <string>, pdf_winbar = <string> }
   }
   states[buf] = state
 
@@ -280,8 +316,9 @@ function M.open(path, buf)
   -- 再オープン時に clear=true で前回分を破棄してから貼り直す。
   local group = vim.api.nvim_create_augroup("PdfView_buf_" .. buf, { clear = true })
 
-  -- リサイズ時・新しいウィンドウ（split）表示時に再描画
-  vim.api.nvim_create_autocmd({ "WinResized", "VimResized", "BufWinEnter" }, {
+  -- 新しいウィンドウ（split）にこのバッファが表示されたら即再描画する。
+  -- リサイズはモジュール全体のグローバルハンドラ側でまとめて扱う（非フォーカスの split も確実に再描画するため）。
+  vim.api.nvim_create_autocmd("BufWinEnter", {
     group = group,
     buffer = buf,
     callback = function()
@@ -326,12 +363,36 @@ function M.open(path, buf)
     end,
   })
 
-  -- ウィンドウ確定後に初回描画
-  vim.schedule(function()
-    if states[buf] then
-      draw(states[buf])
+  -- 総ページ数を非同期取得し、判明後に初回描画する（winbar の [n/N] を正しく表示するため）。
+  get_page_count_async(path, function(n)
+    if states[buf] ~= state then
+      return
     end
+    state.pages = n
+    vim.schedule(function()
+      if states[buf] == state then
+        draw(state)
+      end
+    end)
   end)
 end
+
+-- リサイズはグローバルに1回だけ登録する。バッファローカルな WinResized/VimResized は
+-- 非フォーカスの split に確実に発火しないため、全 states をまとめて（デバウンスして）再描画する。
+local resize_timer
+vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+  group = vim.api.nvim_create_augroup("PdfViewGlobalResize", { clear = true }),
+  callback = function()
+    if resize_timer then
+      resize_timer:stop()
+    end
+    resize_timer = vim.defer_fn(function()
+      resize_timer = nil
+      for _, state in pairs(states) do
+        draw(state)
+      end
+    end, 80)
+  end,
+})
 
 return M
