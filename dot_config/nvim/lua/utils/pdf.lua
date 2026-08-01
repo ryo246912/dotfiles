@@ -40,11 +40,24 @@ local function delete_cached_pngs(hash)
   end
 end
 
+-- except_buf 以外の生存中バッファが同じキャッシュハッシュを使っているか。
+-- 同一PDFを別バッファ（split等）で開いた場合にキャッシュPNGを共有するため、
+-- 片方の破棄時に他方が表示中のPNGを消さないよう判定に使う。
+local function hash_in_use(hash, except_buf)
+  for b, st in pairs(states) do
+    if b ~= except_buf and st.hash == hash then
+      return true
+    end
+  end
+  return false
+end
+
 -- 外部コマンドを非同期実行し、完了後に（メインループ上で）cb(code, stdout_lines) を呼ぶ。
--- vim.system が使えない古い環境では同期実行にフォールバックする。
+-- 途中でキャンセルできるようプロセスハンドル（vim.system の戻り値）を返す。
+-- vim.system が使えない古い環境では同期実行にフォールバックする（この場合ハンドルは nil）。
 local function run_async(cmd, cb)
   if vim.system then
-    vim.system(cmd, { text = true }, function(res)
+    return vim.system(cmd, { text = true }, function(res)
       local lines = {}
       if res.stdout and res.stdout ~= "" then
         lines = vim.split(res.stdout, "\n", { trimempty = true })
@@ -56,6 +69,7 @@ local function run_async(cmd, cb)
   else
     local out = vim.fn.systemlist(cmd)
     cb(vim.v.shell_error, out)
+    return nil
   end
 end
 
@@ -90,9 +104,9 @@ local function render_to_png_async(state, cb)
   local png = prefix .. ".png"
   if vim.fn.filereadable(png) == 1 then
     cb(png)
-    return
+    return nil
   end
-  run_async({
+  return run_async({
     "pdftoppm",
     "-png",
     "-singlefile",
@@ -155,59 +169,79 @@ local function draw(state)
     return
   end
 
+  -- 既にレンダリング中なら、pdftoppm を多重起動せず「後でもう一度描画する」印だけ付けて戻る。
+  -- 高速ページ送り中に必要なのは常に最新ページの1枚だけなので、in-flight は1本に抑える。
+  if state.rendering then
+    state.dirty = true
+    return
+  end
+  state.rendering = true
+
   -- 非同期完了までに状態が変わりうるため、要求時点のページを控えておく
   local target_page = state.page
 
-  render_to_png_async(state, function(png)
-    -- バッファが閉じられた/別状態に差し替わった/より新しいページ送りに追い越された場合は破棄
-    if states[state.buf] ~= state or state.page ~= target_page then
+  state.job = render_to_png_async(state, function(png)
+    state.rendering = false
+    state.job = nil
+
+    -- バッファが閉じられた/別状態に差し替わった場合は破棄
+    if states[state.buf] ~= state then
       return
     end
-    if not png then
+
+    -- 要求時点のページのままレンダリングできた場合のみ描画する（追い越されていたら後段で再描画）
+    if png and state.page == target_page then
+      for _, win in ipairs(vim.fn.win_findbuf(state.buf)) do
+        -- ウィンドウ初出時のみ、上書き前の winbar を退避しておく
+        local entry = state.windows[win]
+        if not entry then
+          entry = { saved_winbar = vim.wo[win].winbar }
+          state.windows[win] = entry
+        end
+
+        -- 既存画像をクリアしてから再描画
+        if entry.image then
+          pcall(function()
+            entry.image:clear()
+          end)
+          entry.image = nil
+        end
+
+        -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
+        local img = image_api.from_file(png, {
+          id = string.format("pdfview-%d-%d", state.buf, win),
+          window = win,
+          buffer = state.buf,
+          with_virtual_padding = true,
+          x = 0,
+          y = 0,
+          height = vim.api.nvim_win_get_height(win),
+        })
+        if img then
+          img:render()
+          entry.image = img
+        end
+
+        -- winbar は %{...} を式として評価するため、ファイル名中の % をエスケープしてから埋め込む
+        local name = (vim.fn.fnamemodify(state.path, ":t"):gsub("%%", "%%%%"))
+        local winbar = string.format(
+          "PDF: %s  [%d/%d]  (J/K:ページ gg/G:先頭/末尾)",
+          name,
+          state.page,
+          state.pages
+        )
+        vim.api.nvim_set_option_value("winbar", winbar, { win = win })
+        -- 後片付け時に「自分が設定した値のまま」か判定するため控えておく
+        entry.pdf_winbar = winbar
+      end
+    elseif not png and state.page == target_page then
       vim.notify("PDFのレンダリングに失敗しました (pdftoppm)", vim.log.levels.ERROR)
-      return
     end
 
-    for _, win in ipairs(vim.fn.win_findbuf(state.buf)) do
-      -- ウィンドウ初出時のみ、上書き前の winbar を退避しておく
-      local entry = state.windows[win]
-      if not entry then
-        entry = { saved_winbar = vim.wo[win].winbar }
-        state.windows[win] = entry
-      end
-
-      -- 既存画像をクリアしてから再描画
-      if entry.image then
-        pcall(function()
-          entry.image:clear()
-        end)
-        entry.image = nil
-      end
-
-      -- ページ全体が見えるようウィンドウ高さに合わせる（アスペクト比は image.nvim が維持）
-      local img = image_api.from_file(png, {
-        id = string.format("pdfview-%d-%d", state.buf, win),
-        window = win,
-        buffer = state.buf,
-        with_virtual_padding = true,
-        x = 0,
-        y = 0,
-        height = vim.api.nvim_win_get_height(win),
-      })
-      if img then
-        img:render()
-        entry.image = img
-      end
-
-      local winbar = string.format(
-        "PDF: %s  [%d/%d]  (J/K:ページ gg/G:先頭/末尾)",
-        vim.fn.fnamemodify(state.path, ":t"),
-        state.page,
-        state.pages
-      )
-      vim.api.nvim_set_option_value("winbar", winbar, { win = win })
-      -- 後片付け時に「自分が設定した値のまま」か判定するため控えておく
-      entry.pdf_winbar = winbar
+    -- レンダリング中に更なる要求があった/ページが進んでいた場合は、最新状態で一度だけ再描画する
+    if state.dirty or state.page ~= target_page then
+      state.dirty = false
+      draw(state)
     end
   end)
 end
@@ -257,14 +291,20 @@ function M.open(path, buf)
     require("lazy").load({ plugins = { "image.nvim" } })
   end)
 
-  -- 同じバッファを開き直す場合、内容が変わってハッシュが変われば旧キャッシュを掃除する
+  -- 同じバッファを開き直す場合、進行中のレンダリングを止め、内容が変わってハッシュが
+  -- 変わっていれば旧キャッシュを掃除する（他バッファが同ハッシュを使用中なら残す）
   local hash = cache_key(path)
   local prev = states[buf]
   if prev then
+    if prev.job then
+      pcall(function()
+        prev.job:kill(15)
+      end)
+    end
     for win, entry in pairs(prev.windows) do
       clear_window(prev, win, entry)
     end
-    if prev.hash and prev.hash ~= hash then
+    if prev.hash and prev.hash ~= hash and not hash_in_use(prev.hash, buf) then
       delete_cached_pngs(prev.hash)
     end
   end
@@ -287,6 +327,9 @@ function M.open(path, buf)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "pdf"
+  -- 最後のウィンドウが閉じられた時点でバッファを破棄し、後片付け(BufWipeout)を確実に走らせる。
+  -- （:q で split を閉じただけでは通常バッファは hidden で残り、状態やキャッシュPNGが残留するため）
+  vim.bo[buf].bufhidden = "wipe"
 
   local map = function(lhs, fn, desc)
     vim.keymap.set("n", lhs, fn, { buffer = buf, silent = true, desc = desc })
@@ -357,7 +400,16 @@ function M.open(path, buf)
         for win, entry in pairs(s.windows) do
           clear_window(s, win, entry)
         end
-        delete_cached_pngs(s.hash)
+        -- 別バッファ（同一PDF）が同じキャッシュを使用中なら、進行中のレンダリングは
+        -- 完了させ（有効なキャッシュとして残る）、PNGも削除しない。
+        if not hash_in_use(s.hash, buf) then
+          if s.job then
+            pcall(function()
+              s.job:kill(15)
+            end)
+          end
+          delete_cached_pngs(s.hash)
+        end
       end
       states[buf] = nil
     end,
