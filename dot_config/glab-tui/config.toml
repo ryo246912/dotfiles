@@ -1,12 +1,6 @@
-# glab-tui: GitLab/GitHub の TUI (https://github.com/rcieri/glab-tui)
-# 認証は `gh auth login` (GitHub) / `glab auth login` (GitLab) を利用する。
-# 設定は任意。TUI 内で `s` を押すと現在のビューをこのファイルに保存できる。
-
 # nvim と揃えて tokyonight 系にする
 theme_preset = "tokyo-night"
 
-# 各ペインで表示する列。v0.8.0 で有効な列名のみ指定可能（無効名は無視される）。
-# 並び順・ソートはファイルでは設定できず、TUI 内で対話的に操作する。
 [issues]
 columns = ["ID", "State", "Title", "Labels", "Assignees"]
 
