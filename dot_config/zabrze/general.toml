@@ -137,31 +137,6 @@ snippet         = "ghost run"
 trigger-pattern = "^gtr$"
 
 [[snippets]]
-name    = "jira copy title"
-snippet = "jira issue list -a$(jira me) -s~Done --plain | column -ts $'\\t' | fzf | awk '{s=$3; for(i=4;i<=NF-1;i++) s=s \" \"$i; print \"[\"$2\"]\"s}' | sed 's/ /\\\\ /g; s/\\[/\\\\\\[/g' | cb"
-trigger = "jct"
-
-[[snippets]]
-name            = "jira issue list -a$(jira me) -s~Done"
-snippet         = "jira issue list -a$(jira me) -s~Done"
-trigger-pattern = "^jl$"
-
-[[snippets]]
-name            = "jira issue list -a$(jira me) all"
-snippet         = "jira issue list -a$(jira me)"
-trigger-pattern = "^jla$"
-
-[[snippets]]
-name    = "jira issue list -s~Done"
-snippet = "jira issue list -s~Done"
-trigger = "jll"
-
-[[snippets]]
-name    = "jira issue list all"
-snippet = "jira issue list"
-trigger = "jlla"
-
-[[snippets]]
 name            = "koji --config ~/.config/koji/config.toml"
 snippet         = "koji --config ~/.config/koji/config.toml"
 trigger-pattern = "^ko$"
