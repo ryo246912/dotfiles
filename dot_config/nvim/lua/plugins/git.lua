@@ -685,7 +685,7 @@ return {
         end
       end
 
-      keymap("n", "<leader>lg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開く（ディレクトリ選択）" })
+      keymap("n", "<leader>gg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開く（ディレクトリ選択）" })
     end,
   },
 }
