@@ -134,7 +134,9 @@ fi
 '''
 
 ["bootstrap:mac-defaults"]
-depends = ["bootstrap:mac-packages"]
+# depends ではなく wait_for: bootstrap:mac 経由では mac-packages 完了後に実行させたいが、
+# bootstrap:mac-defaults を単体実行したときに（sudo/Rosetta を要求しうる）
+# mac-packages まで巻き込みたくない
 description = "[bootstrap.macos.*] では表現できない設定（-currentHost なメニューバー間隔・ログイン項目）を適用する"
 run = '''
 #!/bin/bash
@@ -157,6 +159,7 @@ for app in Docker Raycast; do
   fi
 done
 '''
+wait_for = ["bootstrap:mac-packages"]
 
 ["bootstrap:mac-hotkeys"]
 description = "キーボードショートカットを設定する（option+tab でアプリ切替、ctrl+down で通知センター表示）"
