@@ -34,6 +34,11 @@
     docker-desktop・google-drive・opencode-bar）、メニューバーのアイコン間隔、
     ログイン項目（Clibor / Docker / Raycast）をまとめて実行
   - sudo（Rosetta インストール）を含むため対話端末で実行すること
+  - google-drive は private ホスト限定（`HOST_ENV` に `private` が含まれる場合のみ導入）。
+    このマシンが private 用なら、実行前に `dot_config/zsh/host-env.map` に
+    `<ホスト名>=mac,private` を追記して `chezmoi apply` し、新しいシェルを開いて
+    `HOST_ENV` を反映させてから実行する（host-env.map 未登録のままだと google-drive は
+    スキップされる。ホスト名は `scutil --get LocalHostName` で確認できる）
 
   ```sh
   mise run bootstrap:mac
