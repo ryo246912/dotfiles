@@ -326,12 +326,13 @@ brew list --cask --versions
 実行時に遭遇しうる代表的なメッセージ:
 
 - `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
-  `<prefix>/Caskroom/<name>/` に旧バージョンが複数残っていて mise がどれが「現行版」か
-  一意に決められないだけの**警告**（apply 自体は続行される）。`brew reinstall --cask <name>`
-  で直近の1バージョンには揃うが、`brew upgrade`/`brew cleanup` が長期間走らずに溜まった
-  「さらに古い」バージョンディレクトリまでは掃除しないことがある。それでも警告が消えない場合は
-  `ls <prefix>/Caskroom/<name>/` で残っているバージョンを確認し、使っていない古いものを
-  `rm -rf <prefix>/Caskroom/<name>/<古いバージョン>` で個別に削除する。
+  `<prefix>/Caskroom/<name>/` 配下に mise がどれを「現行版」か一意に決められない状態がある
+  場合の**警告**（apply 自体は続行される）。`brew cleanup <name>` や `brew reinstall --cask
+<name>` を試しても消えないことがある（実機で確認済み）。`.metadata/<version>/<timestamp>/`
+  のようにインストールのたびに増える履歴ディレクトリを mise 側が「複数バージョン」と
+  拾っている可能性があるが未確認。実害はなく apply も止まらないため、原因を追わずに
+  無視して構わない。追うなら `ls -la <prefix>/Caskroom/<name>/` /
+  `ls -la <prefix>/Caskroom/<name>/.metadata/` で実際のディレクトリ構成を確認してから。
 - `ERROR brew-cask:<name>: unsupported artifact type <type>`（例: `command_wrapper`） →
   その cask の定義が mise の brew-cask バックエンド未対応の artifact 種別（`app`/`pkg`/
   `binary` 等の主要な型以外）を使っている場合の**エラー**。これは他の cask の警告と違い
