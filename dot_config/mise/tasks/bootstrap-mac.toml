@@ -76,19 +76,43 @@ fi
 # private ホスト限定パッケージ。google-drive/tailscale-app は pkg インストーラが sudo を
 # 要求するため post-apply hook（非対話実行）に含めるとパスワード入力を待って止まってしまう。
 # keycastr/termius/thunderbird は auto_updates を使っており mise の brew-cask シムが未対応。
-# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている
+# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている。
+# android-studio/insomnia/linear/omnidisksweeper/ffmpeg は mise 的には問題ないが、
+# private ロールは linux ホスト（ryo-win, WSL）とも共有されており、
+# config.private.toml の [bootstrap.packages] に書くと WSL 側でも brew/brew-cask が
+# 実行されてしまうため、こちらに寄せている
 case "${HOST_ENV:-}" in
 *private*)
-  for cask in google-drive tailscale-app keycastr termius thunderbird zoom; do
+  for cask in google-drive tailscale-app keycastr termius thunderbird zoom android-studio insomnia linear omnidisksweeper; do
     if ! brew list --cask "$cask" &>/dev/null; then
       brew install --cask "$cask"
     else
       echo "$cask is already installed"
     fi
   done
+  if ! brew list ffmpeg &>/dev/null; then
+    brew install ffmpeg
+  else
+    echo "ffmpeg is already installed"
+  fi
   ;;
 *)
-  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom/android-studio/insomnia/linear/omnidisksweeper/ffmpeg are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  ;;
+esac
+
+# figma: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応。
+# work ホスト限定のため config.work2.toml の [bootstrap.packages] には置かず、こちらに寄せている
+case "${HOST_ENV:-}" in
+*work*)
+  if ! brew list --cask figma &>/dev/null; then
+    brew install --cask figma
+  else
+    echo "figma is already installed"
+  fi
+  ;;
+*)
+  echo "figma is work-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
   ;;
 esac
 
