@@ -33,7 +33,7 @@
     含めない特殊パッケージ（google-japanese-ime・thock・firefox・inkscape・zoom・
     docker-desktop・raycast・opencode-bar、private ホストのみ
     google-drive・tailscale-app・keycastr・termius・thunderbird）、
-    メニューバーのアイコン間隔、ログイン項目（Clibor / Docker / Raycast）をまとめて実行
+    メニューバーのアイコン間隔、ログイン項目（Docker / Raycast）をまとめて実行
   - sudo（Rosetta インストール）を含むため対話端末で実行すること
   - google-drive/tailscale-app/keycastr/termius/thunderbird は private ホスト限定
     （`HOST_ENV` に `private` が含まれる場合のみ導入）。このマシンが private 用なら、

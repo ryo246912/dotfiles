@@ -134,7 +134,7 @@ fi
 
 # ログイン項目: mise の [bootstrap.macos.launchd.agents] は実行ファイル起動用で
 # .app バンドルの Login Item 相当にはならないため osascript で設定する
-for app in Clibor Docker Raycast; do
+for app in Docker Raycast; do
   if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "$app"; then
     osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/${app}.app\", hidden:false}"
   fi
