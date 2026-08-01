@@ -78,13 +78,14 @@ mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.js
   一切不要**。mise 自体（`run_once_install-mise_mac.sh`）さえ入っていれば `mise bootstrap
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
-  tap を使う例外パッケージ（clibor / google-japanese-ime / thock / jira-cli。理由は後述の表）だけ。
+  tap・mise 未対応の cask artifact 種別を使う例外パッケージ
+  （clibor / google-japanese-ime / thock / jira-cli / firefox。理由は後述の表）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記4つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記5つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -167,12 +168,12 @@ initial_key_repeat = 15
 
 ### mise でも表現できないもの（`dot_config/mise/tasks/bootstrap-mac.toml`）
 
-| タスク                   | 内容                                                                                                                                   | mise で表現できない理由                                                                       |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `bootstrap:mac-brew`     | Homebrew 本体の導入                                                                                                                    | bootstrap 前提そのもの（mise 自体は別途 run_once で導入。後述）                               |
-| `bootstrap:mac-packages` | clibor（`--language=ja`）/ google-japanese-ime（Rosetta 前提）/ thock（独自 tap + `thock --install` postflight）/ jira-cli（独自 tap） | custom install option・前提コマンド・postflight・（API メタデータ未確認の）サードパーティ tap |
-| `bootstrap:mac-defaults` | メニューバー間隔・ログイン項目                                                                                                         | 上記の `-currentHost` / login item 制約                                                       |
-| `bootstrap:mac-hotkeys`  | キーボードショートカット                                                                                                               | plist が array/dict                                                                           |
+| タスク                   | 内容                                                                                                                                                                                                    | mise で表現できない理由                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `bootstrap:mac-brew`     | Homebrew 本体の導入                                                                                                                                                                                     | bootstrap 前提そのもの（mise 自体は別途 run_once で導入。後述）                                                                 |
+| `bootstrap:mac-packages` | clibor（`--language=ja`）/ google-japanese-ime（Rosetta 前提）/ thock（独自 tap + `thock --install` postflight）/ jira-cli（独自 tap）/ firefox（cask 定義が mise 未対応の `command_wrapper` artifact） | custom install option・前提コマンド・postflight・（API メタデータ未確認の）サードパーティ tap・mise 未対応の cask artifact 種別 |
+| `bootstrap:mac-defaults` | メニューバー間隔・ログイン項目                                                                                                                                                                          | 上記の `-currentHost` / login item 制約                                                                                         |
+| `bootstrap:mac-hotkeys`  | キーボードショートカット                                                                                                                                                                                | plist が array/dict                                                                                                             |
 
 いずれも `if ! <条件> ; then <導入> ; fi` 形式の冪等処理で、何度実行しても安全。
 y/n の対話確認はあえて撤廃した（`mise run` を明示的に叩くこと自体が確認に相当する、という
@@ -389,6 +390,22 @@ brew list --cask --versions
 
 まとめて32個試すよりも、まずリスクの低いアプリ1〜2個で `apply` して挙動を確認してから
 残りに広げるのが安全。
+
+実行時に遭遇しうる代表的なメッセージ:
+
+- `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
+  `<prefix>/Caskroom/<name>/` に旧バージョンが複数残っていて mise がどれが「現行版」か
+  一意に決められないだけの**警告**（apply 自体は続行される）。気になる場合は
+  `brew cleanup <name>` で古いバージョンを削除するか、`brew reinstall --cask <name>` で
+  1バージョンに揃えてから再実行する。
+- `ERROR brew-cask:<name>: unsupported artifact type <type>`（例: `command_wrapper`） →
+  その cask の定義が mise の brew-cask バックエンド未対応の artifact 種別（`app`/`pkg`/
+  `binary` 等の主要な型以外）を使っている場合の**エラー**。これは他の cask の警告と違い
+  `mise bootstrap packages apply` 全体を中断させる。該当パッケージは
+  `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
+  （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
+  例外パッケージとして扱う（本リポジトリでは firefox がこれに該当する。詳細は
+  「mise でも表現できないもの」参照）。
 
 ### サードパーティ tap の注意
 
