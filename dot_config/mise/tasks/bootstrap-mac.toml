@@ -7,7 +7,7 @@ depends = [
 description = "mac の個別セットアップをまとめて実行（対話操作の bootstrap:mac-hotkeys は含まない）"
 
 ["bootstrap:mac-brew"]
-description = "Homebrew 本体を導入する（mise の宣言的管理では代替できない bootstrap 前提。mise 自体は run_once_install-mise_mac.sh が導入する）"
+description = "Homebrew 本体を導入する"
 run = '''
 #!/bin/bash
 set -euo pipefail

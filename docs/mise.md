@@ -1,9 +1,7 @@
 # mise bootstrap
 
 `mise bootstrap` は mise の宣言的マシンセットアップ機能。`[bootstrap.*]` に書いた設定と
-実際のマシンの状態を比較し、差分だけを収束させる。chezmoi の `run_once_*` スクリプト
-（内容ハッシュが変わるとリスト全体の対話プロンプトが再生される、リストから項目を消しても
-何も起きない）と違い、**何度実行しても安全**で、**設定ファイルの差分だけが適用される**。
+実際のマシンの状態を比較し、差分だけを収束させる。**何度実行しても安全**で、**設定ファイルの差分だけが適用される**。
 
 参考: [Bootstrap | mise-en-place](https://mise.jdx.dev/bootstrap.html)、
 [brew | mise-en-place](https://mise.jdx.dev/bootstrap/packages/brew.html)、
@@ -29,60 +27,23 @@
 
 上記に加えて、`packages`/`repos`/`dotfiles`/`defaults`/`user`/`tools` の各フェーズには
 `[bootstrap.hooks.pre-*]`/`[bootstrap.hooks.post-*]`（例: `pre-packages`、`post-defaults`）
-という前後フックもあるが、本リポジトリではどれも使っていない。
+という前後フックもある。
 
-このリポジトリでは `mise bootstrap`（フル）は呼んでいない。`.chezmoi.toml.tmpl` の
-post-apply hook が個別に `mise bootstrap packages apply` / `mise install` を呼び、
+`mise bootstrap packages apply` / `mise install` を呼び、
 macOS defaults は手動で `mise bootstrap macos defaults apply` を実行する運用にしている
-（`sudo` を要する操作を非対話フックに含めたくないため。詳細は後述）。
-
-## このリポジトリでの構成
-
-| 設定                                | ファイル                                   | 内容                                           |
-| ----------------------------------- | ------------------------------------------ | ---------------------------------------------- |
-| `[bootstrap.packages]`（mac）       | `dot_config/mise/config.mac.toml`          | `brew:`（formula）/ `brew-cask:`（GUI アプリ） |
-| `[bootstrap.packages]`（linux/WSL） | `dot_config/mise/config.linux.toml`        | `apt:`                                         |
-| `[bootstrap.macos.*]`               | `dot_config/mise/config.mac.toml`          | Finder / キーボード / raw defaults             |
-| mise では表現できない個別処理       | `dot_config/mise/tasks/bootstrap-mac.toml` | `mise run bootstrap:mac` 等（後述）            |
-
-`[bootstrap.packages]` はキーが `<manager>:<name>` 形式で、`MISE_ENV`（mac/linux）と
-ファイル名（`config.mac.toml`/`config.linux.toml`）で OS ごとに自動的に分離される。値は
-基本 `"latest"` で固定バージョン運用はしていない（renovate による個別バージョン追従は
-mise 管理外のパッケージ ＝ `dot_config/brew/brew.json` / `brew_cask.json` に限定）。
-
-```toml
-# dot_config/mise/config.mac.toml
-[bootstrap.packages]
-"brew:git"            = "latest"       # CLI（formula）
-"brew-cask:firefox"   = "latest"       # GUI アプリ（cask）
-```
-
-```toml
-# dot_config/mise/config.linux.toml
-[bootstrap.packages]
-"apt:tig" = "latest"
-```
 
 ### Homebrew 関連ツールの導入手順
 
 - `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
-  一切不要**。mise 自体（`run_once_install-mise_mac.sh`）さえ入っていれば `mise bootstrap
+  一切不要**。mise 自体さえ入っていれば `mise bootstrap
 packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
-  API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う
-  例外パッケージ（google-japanese-ime / thock / firefox / inkscape /
-  zoom / docker-desktop / raycast / google-drive / tailscale-app / keycastr /
-  termius / thunderbird / opencode-bar。理由は
-  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
-  この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
-  （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
-  そのものなので、mise の宣言的パッケージ管理の対象にできない）:
+  API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う例外パッケージ:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記13個の例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
-  実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
 
 ### コマンド
 
@@ -157,12 +118,9 @@ initial_key_repeat = 15
   実行ファイル起動用の LaunchAgent 定義で、`.app` バンドルを「ログイン項目」として登録する
   ものではない（システム設定の「ログイン項目」一覧にも出てこない）。
 
-これらは `mise run bootstrap:mac-defaults` / `bootstrap:mac-hotkeys`
-（`dot_config/mise/tasks/bootstrap-mac.toml`）に残している。
-
 ## 既に brew で導入済みの状態からのマイグレーション手順
 
-このリポジトリは元々 `run_once_install-packages_mac.sh` から `brew install` /
+`brew install` /
 `brew install --cask` で直接インストールしていた。`[bootstrap.packages]` に移した後、
 **同じマシンに既にインストール済みのものをどう扱うか** の手順。
 
@@ -322,9 +280,6 @@ brew list --cask --versions
      ```
      全部まとめてアンインストールする必要はない。conflict が出たものだけでよい。
 
-まとめて32個試すよりも、まずリスクの低いアプリ1〜2個で `apply` して挙動を確認してから
-残りに広げるのが安全。
-
 実行時に遭遇しうる代表的なメッセージ:
 
 - `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
@@ -393,15 +348,3 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
 壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に
 検証してから。
-
-### mise 自体を brew から乗り換える場合
-
-`brew install mise` で導入していた mise を `https://mise.run` 方式に統一する場合:
-
-```sh
-brew uninstall mise
-curl https://mise.run | sh
-```
-
-設定・shims（`~/.local/share/mise`）はどちらのインストール方法でも共通なので、
-入れ替えても `[tools]`/`[bootstrap.packages]` の状態は失われない。

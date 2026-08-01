@@ -9,7 +9,6 @@
 "brew:blueutil"     = "latest"
 "brew:colordiff"    = "latest"
 "brew:coreutils"    = "latest"
-"brew:ffmpeg"       = "latest"
 "brew:findutils"    = "latest"
 "brew:git"          = "latest"
 "brew:gnu-sed"      = "latest"
@@ -56,11 +55,7 @@
 "brew-cask:visual-studio-code"    = "latest"
 "brew-cask:wezterm@nightly"       = "latest"
 
-# macOS defaults（`mise bootstrap macos defaults apply` で適用。menu bar spacing は
-# `defaults -currentHost` 前提で mise 未対応のため `mise run bootstrap:mac-defaults` に残す。
-# ログイン項目は [bootstrap.macos.launchd.agents] が .app バンドル起動に非対応、
-# ショートカットのキー割り当ては plist が dict/array のため defaults 経由では表現できず、
-# 同様に `mise run bootstrap:mac-defaults` / `bootstrap:mac-hotkeys` に残す）
+# macOS defaults（`mise bootstrap macos defaults apply` で適用。）
 [bootstrap.macos.finder]
 show_all_files = true
 show_pathbar   = true
