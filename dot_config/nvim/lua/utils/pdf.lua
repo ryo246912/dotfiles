@@ -14,15 +14,29 @@ local function tmp_dir()
   return dir
 end
 
--- パス + 更新時刻 + サイズからキャッシュキーを生成する。
+-- パス + 更新時刻(秒+ナノ秒) + サイズからキャッシュキーを生成する。
 -- ファイル内容が更新されると mtime/size が変わるため、同名パスでも古いPNGを再利用しない。
+-- 同一サイズのファイルを1秒以内に差し替えるケースに備え、mtime のナノ秒も含める。
 local function cache_key(path)
   local st = vim.loop.fs_stat(path)
   local seed = path
   if st then
-    seed = string.format("%s:%d:%d", path, st.mtime.sec, st.size)
+    seed = string.format("%s:%d:%d:%d", path, st.mtime.sec, st.mtime.nsec, st.size)
   end
   return vim.fn.sha256(seed):sub(1, 16)
+end
+
+-- 指定ハッシュのキャッシュPNG（<hash>-<page>.png）をすべて削除する。
+-- バッファ破棄時や、内容が変わって別ハッシュで再レンダリングする際に呼び、
+-- キャッシュディレクトリが無制限に肥大化するのを防ぐ。
+local function delete_cached_pngs(hash)
+  if not hash then
+    return
+  end
+  local pattern = string.format("%s/%s-*.png", tmp_dir(), hash)
+  for _, f in ipairs(vim.fn.glob(pattern, true, true)) do
+    pcall(os.remove, f)
+  end
 end
 
 -- pdfinfo で総ページ数を取得。失敗時は 1 を返す。
@@ -65,7 +79,7 @@ local function render_to_png(state)
   return png
 end
 
--- 1つのウィンドウの画像をクリアし、winbar を元に戻す。
+-- 1つのウィンドウの画像をクリアし、winbar を元の値へ戻す。
 local function clear_window(state, win, entry)
   if entry.image then
     pcall(function()
@@ -80,6 +94,16 @@ local function clear_window(state, win, entry)
   state.windows[win] = nil
 end
 
+-- 追跡中のウィンドウのうち、既にこのPDFバッファを表示していない（閉じられた/別バッファに切替わった）
+-- ものを後始末する。winbar の残留と、別バッファの winbar 上書きを防ぐ。
+local function reconcile(state)
+  for win, entry in pairs(state.windows) do
+    if not (vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == state.buf) then
+      clear_window(state, win, entry)
+    end
+  end
+end
+
 -- 現在ページを、バッファを表示している全ウィンドウに描画する。
 local function draw(state)
   local ok, image_api = pcall(require, "image")
@@ -87,6 +111,9 @@ local function draw(state)
     vim.notify("image.nvim が読み込めませんでした", vim.log.levels.ERROR)
     return
   end
+
+  -- 表示しなくなったウィンドウを先に後始末する
+  reconcile(state)
 
   local wins = vim.fn.win_findbuf(state.buf)
   if vim.tbl_isempty(wins) then
@@ -97,13 +124,6 @@ local function draw(state)
   if not png then
     vim.notify("PDFのレンダリングに失敗しました (pdftoppm)", vim.log.levels.ERROR)
     return
-  end
-
-  -- 既にバッファを表示していないウィンドウの画像/winbar を後始末する
-  for win, entry in pairs(state.windows) do
-    if not vim.tbl_contains(wins, win) then
-      clear_window(state, win, entry)
-    end
   end
 
   for _, win in ipairs(wins) do
@@ -195,13 +215,25 @@ function M.open(path, buf)
     require("lazy").load({ plugins = { "image.nvim" } })
   end)
 
+  -- 同じバッファを開き直す場合、内容が変わってハッシュが変われば旧キャッシュを掃除する
+  local hash = cache_key(path)
+  local prev = states[buf]
+  if prev then
+    for win, entry in pairs(prev.windows) do
+      clear_window(prev, win, entry)
+    end
+    if prev.hash and prev.hash ~= hash then
+      delete_cached_pngs(prev.hash)
+    end
+  end
+
   local state = {
     path = path,
     buf = buf,
     page = 1,
     pages = get_page_count(path),
     dpi = 150,
-    hash = cache_key(path),
+    hash = hash,
     windows = {}, -- win -> { image = <image>, saved_winbar = <string> }
   }
   states[buf] = state
@@ -246,7 +278,22 @@ function M.open(path, buf)
     end,
   })
 
-  -- バッファ破棄時に全ウィンドウの画像をクリアし winbar を復元する
+  -- ウィンドウ離脱/バッファ切替時、PDFを表示しなくなった窓の画像/winbar を復元する。
+  -- 切替完了後の状態で判定するため schedule する。
+  vim.api.nvim_create_autocmd({ "BufWinLeave", "WinLeave" }, {
+    buffer = buf,
+    callback = function()
+      if states[buf] then
+        vim.schedule(function()
+          if states[buf] then
+            reconcile(states[buf])
+          end
+        end)
+      end
+    end,
+  })
+
+  -- バッファ破棄時に全ウィンドウの画像をクリアし winbar を復元、キャッシュPNGも削除する
   vim.api.nvim_create_autocmd({ "BufWipeout", "BufDelete" }, {
     buffer = buf,
     once = true,
@@ -256,6 +303,7 @@ function M.open(path, buf)
         for win, entry in pairs(s.windows) do
           clear_window(s, win, entry)
         end
+        delete_cached_pngs(s.hash)
       end
       states[buf] = nil
     end,
