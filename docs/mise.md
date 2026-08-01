@@ -29,8 +29,8 @@
 `[bootstrap.hooks.pre-*]`/`[bootstrap.hooks.post-*]`（例: `pre-packages`、`post-defaults`）
 という前後フックもある。
 
-`mise bootstrap packages apply` / `mise install` を呼び、
-macOS defaults は手動で `mise bootstrap macos defaults apply` を実行する運用にしている
+post-apply hook が `mise bootstrap packages apply` / `mise install` を呼び、
+macOS defaults は手動で `mise bootstrap macos defaults apply` を実行する運用にしている。
 
 ### Homebrew 関連ツールの導入手順
 
@@ -120,7 +120,7 @@ initial_key_repeat = 15
 
 ## 既に brew で導入済みの状態からのマイグレーション手順
 
-`brew install` /
+元々は `brew install` /
 `brew install --cask` で直接インストールしていた。`[bootstrap.packages]` に移した後、
 **同じマシンに既にインストール済みのものをどう扱うか** の手順。
 
