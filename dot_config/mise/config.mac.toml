@@ -24,7 +24,8 @@
 
 # casks（clibor は custom install option、google-japanese-ime は Rosetta 前提、
 # thock/jira-cli は独自 tap、firefox/inkscape/zoom は cask 定義が mise 未対応の artifact
-# 種別（command_wrapper/postflight_steps）を使っており、opencode-bar は独自 tap
+# 種別（command_wrapper/postflight_steps）を使っており、docker-desktop は cask 定義が
+# `auto_updates` を使っており mise の brew-cask シムが未対応、opencode-bar は独自 tap
 # （opgginc/tap）が Homebrew API メタデータ未公開で、いずれも brew-cask 経由だと
 # `mise bootstrap packages apply` が中断するため
 # `mise run bootstrap:mac-packages`（dot_config/mise/tasks/bootstrap-mac.toml）に残す）
@@ -37,7 +38,6 @@
 "brew-cask:codexbar"              = "latest"
 "brew-cask:cursor"                = "latest"
 "brew-cask:dbeaver-community"     = "latest"
-"brew-cask:docker-desktop"        = "latest"
 "brew-cask:font-hackgen"          = "latest"
 "brew-cask:font-hackgen-nerd"     = "latest"
 "brew-cask:ghostty"               = "latest"

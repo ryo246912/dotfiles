@@ -86,6 +86,15 @@ else
   echo "zoom is already installed"
 fi
 
+# docker-desktop: cask 定義が `auto_updates` を使っており、mise の brew-cask シムが
+# postflight 実行時に「cask uses auto_updates, which mise's cask shim does not support」で
+# 失敗し `mise bootstrap packages apply` が中断する
+if ! brew list --cask docker-desktop &>/dev/null; then
+  brew install --cask docker-desktop
+else
+  echo "docker-desktop is already installed"
+fi
+
 # opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
 # を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
 if ! brew list --cask opencode-bar &>/dev/null; then

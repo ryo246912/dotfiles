@@ -31,7 +31,7 @@
 - [ ] mac 個別セットアップ
   - Homebrew 本体・mise 自体のインストール、brew-cask では表現できない特殊パッケージ
     （clibor・google-japanese-ime・thock・jira-cli・firefox・inkscape・zoom・
-    opencode-bar）、メニューバーのアイコン間隔、
+    docker-desktop・opencode-bar）、メニューバーのアイコン間隔、
     ログイン項目（Clibor / Docker / Raycast）をまとめて実行
   - sudo（Rosetta インストール）を含むため対話端末で実行すること
 

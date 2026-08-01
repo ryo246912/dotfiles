@@ -71,13 +71,14 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 - 実 Homebrew が要るのは、custom install option・postflight・API メタデータ未確認のサードパーティ
   tap・mise 未対応の cask artifact 種別を使う例外パッケージ
   （clibor / google-japanese-ime / thock / jira-cli / firefox / inkscape / zoom /
-  opencode-bar。理由は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
+  docker-desktop / opencode-bar。理由は
+  `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）だけ。
   この実 Homebrew 自体も curl スクリプトを直接叩くのではなく mise task として導入している
   （`[bootstrap.packages]` には載せられない — Homebrew は formula/cask ではなくパッケージマネージャ
   そのものなので、mise の宣言的パッケージ管理の対象にできない）:
   ```sh
   mise run bootstrap:mac-brew      # 実 Homebrew 本体（このタスクでのみ導入）
-  mise run bootstrap:mac-packages  # 上記8つの例外パッケージ（bootstrap:mac-brew に依存）
+  mise run bootstrap:mac-packages  # 上記9つの例外パッケージ（bootstrap:mac-brew に依存）
   mise run bootstrap:mac           # まとめて実行
   ```
   実 Homebrew の導入を後回しにしても mise 管理下の `[bootstrap.packages]` には一切影響しない。
@@ -341,6 +342,13 @@ brew list --cask --versions
   （`dot_config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
   例外パッケージとして扱う（本リポジトリでは firefox / inkscape / zoom がこれに該当する。
   詳細は `dot_config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
+- `ERROR brew-cask:<name>: failed to run postflight` /
+  `Error: cask uses \`auto_updates\`, which mise's cask shim does not support` →
+cask が自前の自動更新機能（`auto_updates true`）を宣言している場合、mise の cask シム
+（postflight を実行する portable-ruby スクリプト）がそれを未対応としてエラーになる。
+これも `mise bootstrap packages apply`全体を中断させる**エラー**。上記の
+unsupported artifact type と同様に`[bootstrap.packages]`から外し`mise run bootstrap:mac-packages` 側の例外パッケージとして扱う
+  （本リポジトリでは docker-desktop がこれに該当する）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
