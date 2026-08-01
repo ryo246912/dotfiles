@@ -129,12 +129,12 @@ trigger-pattern = "(\\.\\.\\.\\.|\\.4)"
 [[snippets]]
 name            = "ghost"
 snippet         = "ghost"
-trigger-pattern = "^gt$"
+trigger-pattern = "^ght$"
 
 [[snippets]]
 name            = "ghost run"
 snippet         = "ghost run"
-trigger-pattern = "^gtr$"
+trigger-pattern = "^ghtr$"
 
 [[snippets]]
 name    = "jira copy title"

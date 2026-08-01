@@ -687,6 +687,11 @@ snippet         = "lazygit"
 trigger-pattern = "^lg$"
 
 [[snippets]]
+name            = "glab-tui"
+snippet         = "glab-tui"
+trigger-pattern = "^gt$"
+
+[[snippets]]
 name            = "tig"
 snippet         = "tig"
 trigger-pattern = "^t$"
