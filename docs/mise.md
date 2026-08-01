@@ -357,9 +357,12 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 このリポジトリでは `thock`（`kamillobinski/thock`）と `jira-cli`
 （`ankitpokhrel/jira-cli`）について API メタデータの公開有無を確認できなかったため、
 `[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
-（実 `brew tap`/`brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
+（実 `brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
 実際に `mise bootstrap packages apply` を実行して `api/cask/opencode-bar.json` が
 404 になることを確認したため、同様に `bootstrap:mac-packages` 側に残した。
+いずれも `brew tap` を先に打たず `brew install owner/tap/<name>` の完全修飾名で
+インストールしている（Homebrew の tap trust: `brew tap` 後の短縮名インストールは
+未信頼 tap で失敗しうるが、完全修飾名はその項目単体を暗黙に信任するため安全）。
 **`.chezmoi.toml.tmpl` の post-apply hook は `mise bootstrap packages apply` の失敗を
 fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
 壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に

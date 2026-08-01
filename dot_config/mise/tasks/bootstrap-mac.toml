@@ -47,10 +47,11 @@ else
   echo "google-japanese-ime is already installed"
 fi
 
-# thock: 独自 tap の formula。インストール後に thock --install という postflight が要る
+# thock: 独自 tap の formula。インストール後に thock --install という postflight が要る。
+# 完全修飾名でインストールすることで tap 全体ではなくこの formula だけを信任する
+# （Homebrew の tap trust: `brew tap` 後の短縮名インストールは未信頼 tap で失敗しうる）
 if ! brew list thock &>/dev/null; then
-  brew tap kamillobinski/thock
-  brew install thock
+  brew install kamillobinski/thock/thock
   thock --install
 else
   echo "thock is already installed"
@@ -58,8 +59,7 @@ fi
 
 # jira-cli: 独自 tap の formula
 if ! brew list jira-cli &>/dev/null; then
-  brew tap ankitpokhrel/jira-cli
-  brew install jira-cli
+  brew install ankitpokhrel/jira-cli/jira-cli
 else
   echo "jira-cli is already installed"
 fi
@@ -89,8 +89,7 @@ fi
 # opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
 # を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
 if ! brew list --cask opencode-bar &>/dev/null; then
-  brew tap opgginc/tap
-  brew install --cask opencode-bar
+  brew install --cask opgginc/tap/opencode-bar
 else
   echo "opencode-bar is already installed"
 fi
