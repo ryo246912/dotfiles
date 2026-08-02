@@ -13,6 +13,9 @@
 "pipx:awslogs"                              = "0.15.0"
 "pipx:tftui"                                = "0.13.4"
 
+[bootstrap.packages]
+"brew-cask:sequel-ace" = "latest"
+
 [settings]
 trusted_config_paths = [
     "~/work",

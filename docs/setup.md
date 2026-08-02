@@ -19,15 +19,24 @@
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
+- [ ] macOS defaults の適用
+
+  ```sh
+  MISE_ENV=mac mise bootstrap macos defaults apply
+  ```
+
+- [ ] mac 個別セットアップ
+
+  ```sh
+  mise run bootstrap:mac
+  ```
+
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
     ```sh
     mise run karabiner:apply
     ```
-
-- [ ] Clibor
-  - [ ] 定型文を設定
 
 - [ ] Browser
   - [ ] Vimium
@@ -41,13 +50,11 @@
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
 
 - [ ] システム設定
-  - [ ] トラックパッド
-    - [ ] 「システム設定」→「トラックパッド」→「スクロールとズーム」→「ナチュラルなスクロール」をOFFにする
-  - [ ] キーボード
-    - [ ] 「システム設定」→「キーボード」→「キーのリピート速度」を「速い」にする
-    - [ ] 「システム設定」→「キーボード」→「リピート入力認識までの時間」を「短い」にする
   - [ ] キーボードショートカット
-    - [ ] 「通知センターの表示」
+    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
+      ```sh
+      mise run bootstrap:mac-hotkeys
+      ```
     - [ ] ファンクションキーとして使用するをONにする
     - [ ] 不要なショートカットはOFFにする
 

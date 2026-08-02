@@ -9,7 +9,6 @@
 "brew:blueutil"     = "latest"
 "brew:colordiff"    = "latest"
 "brew:coreutils"    = "latest"
-"brew:ffmpeg"       = "latest"
 "brew:findutils"    = "latest"
 "brew:git"          = "latest"
 "brew:gnu-sed"      = "latest"
@@ -21,3 +20,53 @@
 "brew:tig"          = "latest"
 "brew:tree"         = "latest"
 "brew:ugrep"        = "latest"
+
+# casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
+# が中断/ハングするため `mise run bootstrap:mac-packages`
+# （dot_config/mise/tasks/bootstrap-mac.toml）側で real brew から個別導入している。理由:
+# - google-japanese-ime: Rosetta が前提
+# - thock: 独自 tap + postflight（thock --install）
+# - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
+# - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
+# - raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
+#   ERROR になる（根本原因未確認。実 brew では問題なくインストールできることを確認済み）
+# - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
+# - google-drive/tailscale-app: pkg インストーラが sudo を要求し post-apply hook（非対話）を
+#   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
+#   brew-cask シムが未対応。zoom は private ホストでしか使わない。
+#   いずれも private ホスト限定で bootstrap-mac.toml 側から導入する）
+"brew-cask:arc"                   = "latest"
+"brew-cask:battery"               = "latest"
+"brew-cask:bitwarden"             = "latest"
+"brew-cask:chatgpt"               = "latest"
+"brew-cask:claude"                = "latest"
+"brew-cask:codexbar"              = "latest"
+"brew-cask:cursor"                = "latest"
+"brew-cask:dbeaver-community"     = "latest"
+"brew-cask:font-hackgen"          = "latest"
+"brew-cask:font-hackgen-nerd"     = "latest"
+"brew-cask:ghostty"               = "latest"
+"brew-cask:google-chrome"         = "latest"
+"brew-cask:karabiner-elements"    = "latest"
+"brew-cask:keyboardcleantool"     = "latest"
+"brew-cask:memory-cleaner"        = "latest"
+"brew-cask:obsidian"              = "latest"
+"brew-cask:overview"              = "latest"
+"brew-cask:slack"                 = "latest"
+"brew-cask:syncthing-app"         = "latest"
+"brew-cask:thebrowsercompany-dia" = "latest"
+"brew-cask:visual-studio-code"    = "latest"
+"brew-cask:wezterm@nightly"       = "latest"
+
+# macOS defaults（`mise bootstrap macos defaults apply` で適用。）
+[bootstrap.macos.finder]
+show_all_files = true
+show_pathbar   = true
+
+[bootstrap.macos.keyboard]
+initial_key_repeat = 15
+key_repeat         = 2
+
+[bootstrap.macos.defaults]
+"NSGlobalDomain"   = { "com.apple.swipescrolldirection" = false }
+"com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }

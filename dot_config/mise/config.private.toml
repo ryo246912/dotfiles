@@ -4,3 +4,11 @@
 "aqua:supabase/cli"      = "2.100.1"
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
+
+[bootstrap.packages]
+# 実際に WSL を使い始めたら bootstrap-mac.toml 側への切り出しを検討する
+"brew-cask:android-studio"  = "latest"
+"brew-cask:insomnia"        = "latest"
+"brew-cask:linear"          = "latest"
+"brew-cask:omnidisksweeper" = "latest"
+"brew:ffmpeg"               = "latest"
