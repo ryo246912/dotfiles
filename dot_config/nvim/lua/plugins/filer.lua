@@ -11,12 +11,19 @@ return {
     config = function()
       -- yazi の "open with" のように、開き方を選択して開く
       local function open_with_picker(state)
-        local node = state.tree:get_node()
+        local ok, node = pcall(function()
+          return state.tree:get_node()
+        end)
+        if not ok or not node then
+          return
+        end
+
         if node.type == "directory" then
           require("neo-tree.sources.filesystem.commands").open(state)
           return
         end
 
+        local path = node:get_id()
         local commands = require("neo-tree.sources.common.commands")
         local options = {
           { label = "現在のウィンドウで開く", fn = commands.open },
@@ -25,17 +32,28 @@ return {
           { label = "新規タブで開く", fn = commands.open_tabnew },
           {
             label = "システムのデフォルトアプリで開く",
-            fn = function(s)
-              vim.ui.open(s.tree:get_node():get_id())
+            fn = function()
+              local obj, err = vim.ui.open(path)
+              if not obj then
+                vim.notify("開けませんでした: " .. (err or "不明なエラー"), vim.log.levels.ERROR)
+              end
             end,
           },
           {
             label = "コマンドを指定して開く...",
-            fn = function(s)
-              local path = s.tree:get_node():get_id()
+            fn = function()
               vim.ui.input({ prompt = "Open with command: " }, function(cmd)
-                if cmd and cmd ~= "" then
-                  vim.fn.jobstart({ cmd, path }, { detach = true })
+                if not cmd or cmd:match("^%s*$") then
+                  return
+                end
+                local argv = {}
+                for token in cmd:gmatch("%S+") do
+                  table.insert(argv, token)
+                end
+                table.insert(argv, path)
+                local job_id = vim.fn.jobstart(argv, { detach = true })
+                if job_id <= 0 then
+                  vim.notify("コマンドの起動に失敗しました: " .. cmd, vim.log.levels.ERROR)
                 end
               end)
             end,
