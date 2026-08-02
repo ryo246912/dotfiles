@@ -34,10 +34,11 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 tsumiki は例外的に、APM が取得した plugin package の `commands/` を
 `mise run apm:sync-commands` で `~/.config/rulesync/.rulesync/commands/` へ同期します。APM は
-command namespace と Codex commands に対応しないためです。各ファイルは `tsumiki-<name>.md` に変換され、
-Claude Code では `/tsumiki-<name>`、Codex では `/prompts:tsumiki-<name>` として利用できます。
-同期対象はmise taskの`APM_COMMAND_SOURCES`で宣言するため、他の外部packageもmodule path・namespace・
-APMが生成したnamespaceなしcommandの削除先を1行追加して配布できます。sourceの同期とcommand生成は
+command namespace と Codex commands に対応しないためです。Claude Code向けには各ファイルを
+`tsumiki-<name>.md`へ変換し、`/tsumiki-<name>`として利用できるようにします。Codex向けには同じ内容を
+Agent Skillへ変換するため、`$tsumiki-<name>`として利用できます。deprecatedなCodex custom promptの
+`/prompts:...`形式には依存しません。同期対象はmise task内のPython `command_sources`で宣言し、他の外部packageも
+module path・namespace・APMが生成したnamespaceなしcommandの削除先を追加して配布できます。sourceの同期と生成は
 `mise run apm:install` がまとめて実行します。
 
 ## 生成コマンド

@@ -31,18 +31,22 @@ from pathlib import Path, PurePosixPath
 # module_path: ~/.apm/apm_modules からの相対path
 # namespace: Rulesyncへ渡すcommand名のprefix
 # cleanup_dirs: APMがnamespaceなしで生成したcommandを削除するdirectory（HOMEからの相対path）
+# codex_skills: commandをCodexから呼び出せるskillとしても生成するか
 command_sources = [
     {
         "module_path": "classmethod/tsumiki/commands",
         "namespace": "tsumiki",
         "cleanup_dirs": [".claude/commands", ".cursor/commands"],
+        "codex_skills": True,
     },
 ]
 
 home = Path.home()
 modules_dir = home / ".apm" / "apm_modules"
 rulesync_dir = home / ".config" / "rulesync" / ".rulesync" / "commands"
+rulesync_skills_dir = home / ".config" / "rulesync" / ".rulesync" / "skills"
 rulesync_dir.mkdir(parents=True, exist_ok=True)
+rulesync_skills_dir.mkdir(parents=True, exist_ok=True)
 
 for command_source in command_sources:
     module_path = command_source["module_path"]
@@ -59,11 +63,29 @@ for command_source in command_sources:
 
     for old_command in rulesync_dir.glob(f"{namespace}-*.md"):
         old_command.unlink()
+    for old_skill in rulesync_skills_dir.glob(f"{namespace}-*"):
+        if old_skill.is_dir():
+            shutil.rmtree(old_skill)
 
     source_files = sorted(source_dir.rglob("*.md"))
     for source_file in source_files:
         command_name = "-".join(source_file.relative_to(source_dir).parts)
         shutil.copy2(source_file, rulesync_dir / f"{namespace}-{command_name}")
+
+        if command_source["codex_skills"]:
+            skill_name = f"{namespace}-{command_name.removesuffix('.md')}"
+            skill_dir = rulesync_skills_dir / skill_name
+            skill_dir.mkdir(parents=True)
+            command_body = source_file.read_text()
+            if command_body.startswith("---\n"):
+                _, separator, command_body = command_body[4:].partition("\n---\n")
+                if not separator:
+                    command_body = source_file.read_text()
+            description = f"Run the {namespace} {command_name.removesuffix('.md')} workflow."
+            (skill_dir / "SKILL.md").write_text(
+                f'---\nname: {skill_name}\ndescription: "{description}"\n---\n\n'
+                f"{command_body.lstrip()}"
+            )
 
     for cleanup_dir in command_source["cleanup_dirs"]:
         relative_cleanup = PurePosixPath(cleanup_dir)
@@ -76,5 +98,8 @@ PY
 '''
 
 ["rulesync:generate-commands"]
-description = "Generate global commands for Claude Code and Codex"
-run         = "cd ~/.config/rulesync && rulesync generate --targets claudecode,codexcli --features commands --simulate-commands"
+description = "Generate Claude commands and Codex skills from external commands"
+run = [
+    "cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands",
+    "cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills",
+]

@@ -73,13 +73,18 @@ apm install -g
 
 `apm install -g` は cwd に依存せず `~/.apm/apm.yml` を読み、`targets` に応じた各エージェントの user scope
 ディレクトリ（`claude` なら `~/.claude/skills/`、その他は `~/.agents/skills/`）へスキルを配置します。
-`mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Code と Codexへ
-配布します。Claude Code では `/tsumiki-init-tech-stack`、Codex では
-`/prompts:tsumiki-init-tech-stack` のように呼び出します。
+`mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Codeにはcommand、
+Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech-stack`、Codexでは新しいセッションから
+`$tsumiki-init-tech-stack` のように呼び出します。Codexのcustom prompt（`/prompts:...`）には依存しません。
 
 commandを持つ外部packageを追加する場合は、`dot_config/mise/tasks/dev.toml` の
 `apm:sync-commands` task内にあるPythonの `command_sources` へ、`module_path`、`namespace`、
-`cleanup_dirs` を追加します。同期処理自体はpackage固有ではなく、任意のAPM moduleとnamespaceを扱います。
+`cleanup_dirs`、`codex_skills` を追加します。同期処理自体はpackage固有ではなく、任意のAPM moduleとnamespaceを
+扱います。
+
+生成後にCodexでskillが見つからない場合は、`~/.codex/skills/tsumiki-init-tech-stack/SKILL.md` が存在することを
+確認してからCodexを再起動し、新しいセッションを開始します。Codexのリモート環境はローカルの`$HOME`を共有しない
+ため、その環境のsetup処理でも`chezmoi apply`と`mise run apm:install`を実行する必要があります。
 
 > [!IMPORTANT]
 > `~/.apm/` は chezmoi が生成するディレクトリなので、**先に `chezmoi apply` 済みであること**が前提です。
