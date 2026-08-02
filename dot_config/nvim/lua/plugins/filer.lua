@@ -9,7 +9,6 @@ return {
     },
     lazy = false,
     config = function()
-      -- yazi の "open with" のように、開き方を選択して開く
       local function open_with_picker(state)
         local ok, node = pcall(function()
           return state.tree:get_node()
