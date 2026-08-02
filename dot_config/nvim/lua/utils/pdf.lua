@@ -74,13 +74,14 @@ local function run_async(cmd, cb)
 end
 
 -- pdfinfo で総ページ数を非同期取得し cb(pages) を呼ぶ。取得できない場合は失敗を通知しつつ 1 を返す。
+-- 途中でキャンセルできるよう pdfinfo のプロセスハンドルを返す。
 local function get_page_count_async(path, cb)
   if vim.fn.executable("pdfinfo") == 0 then
     vim.notify("pdfinfo が見つかりません（ページ数を判定できず1ページとして表示します）", vim.log.levels.WARN)
     cb(1)
-    return
+    return nil
   end
-  run_async({ "pdfinfo", path }, function(code, lines)
+  return run_async({ "pdfinfo", path }, function(code, lines)
     if code ~= 0 then
       vim.notify("pdfinfo の実行に失敗しました（1ページとして表示します）", vim.log.levels.WARN)
       cb(1)
@@ -89,8 +90,13 @@ local function get_page_count_async(path, cb)
     for _, line in ipairs(lines) do
       local n = line:match("^Pages:%s+(%d+)")
       if n then
-        cb(tonumber(n))
-        return
+        -- Pages: 0 のような 1 未満は無効として警告フォールバックへ回す（winbar [1/0] や描画失敗を防ぐ）
+        local pages = tonumber(n)
+        if pages and pages >= 1 then
+          cb(pages)
+          return
+        end
+        break
       end
     end
     vim.notify("pdfinfo の出力からページ数を判定できませんでした（1ページとして表示します）", vim.log.levels.WARN)
@@ -128,6 +134,13 @@ local function render_to_png_async(state, cb)
     tmp_prefix,
   }, function(code, _)
     if code == 0 and vim.fn.filereadable(tmp_png) == 1 then
+      -- 完了までにバッファが破棄/差し替えされていたら、削除済みキャッシュを復活させないよう
+      -- rename せず一時ファイルを捨てる
+      if states[state.buf] ~= state then
+        pcall(os.remove, tmp_png)
+        cb(nil)
+        return
+      end
       -- 別ビューが先に生成済みでも rename で上書きして問題ない（内容は同一）
       os.rename(tmp_png, png)
       if vim.fn.filereadable(png) == 1 then
@@ -316,6 +329,11 @@ function M.open(path, buf)
         prev.job:kill(15)
       end)
     end
+    if prev.info_job then
+      pcall(function()
+        prev.info_job:kill(15)
+      end)
+    end
     for win, entry in pairs(prev.windows) do
       clear_window(prev, win, entry)
     end
@@ -331,6 +349,8 @@ function M.open(path, buf)
     pages = 1, -- 実際のページ数は pdfinfo から非同期で更新する
     dpi = 150,
     hash = hash,
+    job = nil, -- 進行中の pdftoppm ハンドル
+    info_job = nil, -- 進行中の pdfinfo ハンドル
     windows = {}, -- win -> { image = <image>, saved_winbar = <string>, pdf_winbar = <string> }
   }
   states[buf] = state
@@ -417,6 +437,12 @@ function M.open(path, buf)
         for win, entry in pairs(s.windows) do
           clear_window(s, win, entry)
         end
+        -- pdfinfo はキャッシュを書かないので、共有の有無に関わらず常に停止してよい
+        if s.info_job then
+          pcall(function()
+            s.info_job:kill(15)
+          end)
+        end
         -- 別バッファ（同一PDF）が同じキャッシュを使用中なら、進行中のレンダリングは
         -- 完了させ（有効なキャッシュとして残る）、PNGも削除しない。
         if not hash_in_use(s.hash, buf) then
@@ -433,10 +459,11 @@ function M.open(path, buf)
   })
 
   -- 総ページ数を非同期取得し、判明後に初回描画する（winbar の [n/N] を正しく表示するため）。
-  get_page_count_async(path, function(n)
+  state.info_job = get_page_count_async(path, function(n)
     if states[buf] ~= state then
       return
     end
+    state.info_job = nil
     state.pages = n
     vim.schedule(function()
       if states[buf] == state then
