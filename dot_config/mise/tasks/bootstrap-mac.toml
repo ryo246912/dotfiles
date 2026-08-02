@@ -76,10 +76,12 @@ fi
 # private ホスト限定パッケージ。google-drive/tailscale-app は pkg インストーラが sudo を
 # 要求するため post-apply hook（非対話実行）に含めるとパスワード入力を待って止まってしまう。
 # keycastr/termius/thunderbird は auto_updates を使っており mise の brew-cask シムが未対応。
-# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている
+# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている。
+# omnidisksweeper はインストール時に EULA 同意プロンプトが出て
+# `mise bootstrap packages apply` が止まるため、対話実行のこちらに寄せている
 case "${HOST_ENV:-}" in
 *private*)
-  for cask in google-drive tailscale-app keycastr termius thunderbird zoom; do
+  for cask in google-drive tailscale-app keycastr termius thunderbird zoom omnidisksweeper; do
     if ! brew list --cask "$cask" &>/dev/null; then
       brew install --cask "$cask"
     else
@@ -88,7 +90,7 @@ case "${HOST_ENV:-}" in
   done
   ;;
 *)
-  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom/omnidisksweeper are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
   ;;
 esac
 

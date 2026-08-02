@@ -7,8 +7,9 @@
 
 [bootstrap.packages]
 # 実際に WSL を使い始めたら bootstrap-mac.toml 側への切り出しを検討する
-"brew-cask:android-studio"  = "latest"
-"brew-cask:insomnia"        = "latest"
-"brew-cask:linear"          = "latest"
-"brew-cask:omnidisksweeper" = "latest"
-"brew:ffmpeg"               = "latest"
+# omnidisksweeper: インストール時に EULA 同意プロンプトが出て `mise bootstrap packages apply`
+# が止まるため、対話実行の bootstrap-mac.toml 側に移している
+"brew-cask:android-studio" = "latest"
+"brew-cask:insomnia"       = "latest"
+"brew-cask:linear"         = "latest"
+"brew:ffmpeg"              = "latest"
