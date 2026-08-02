@@ -9,6 +9,51 @@ return {
     },
     lazy = false,
     config = function()
+      -- yazi の "open with" のように、開き方を選択して開く
+      local function open_with_picker(state)
+        local node = state.tree:get_node()
+        if node.type == "directory" then
+          require("neo-tree.sources.filesystem.commands").open(state)
+          return
+        end
+
+        local commands = require("neo-tree.sources.common.commands")
+        local options = {
+          { label = "現在のウィンドウで開く", fn = commands.open },
+          { label = "水平分割で開く", fn = commands.open_split },
+          { label = "垂直分割で開く", fn = commands.open_vsplit },
+          { label = "新規タブで開く", fn = commands.open_tabnew },
+          {
+            label = "システムのデフォルトアプリで開く",
+            fn = function(s)
+              vim.ui.open(s.tree:get_node():get_id())
+            end,
+          },
+          {
+            label = "コマンドを指定して開く...",
+            fn = function(s)
+              local path = s.tree:get_node():get_id()
+              vim.ui.input({ prompt = "Open with command: " }, function(cmd)
+                if cmd and cmd ~= "" then
+                  vim.fn.jobstart({ cmd, path }, { detach = true })
+                end
+              end)
+            end,
+          },
+        }
+
+        vim.ui.select(options, {
+          prompt = "Open with...",
+          format_item = function(item)
+            return item.label
+          end,
+        }, function(choice)
+          if choice then
+            choice.fn(state)
+          end
+        end)
+      end
+
       require("neo-tree").setup({
         close_if_last_window = false,
         popup_border_style = "rounded",
@@ -76,6 +121,7 @@ return {
             ["t"] = "open_tabnew",
             ["P"] = { "toggle_preview", config = { use_float = true } },
             ["l"] = "open",
+            ["O"] = open_with_picker,
             ["h"] = "close_node",
             ["z"] = "close_all_nodes",
             ["a"] = "add",
