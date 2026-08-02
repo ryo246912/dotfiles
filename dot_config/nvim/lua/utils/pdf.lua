@@ -98,7 +98,12 @@ local function get_page_count_async(path, cb)
   end)
 end
 
+-- 一時ファイル名を一意にするための連番（プロセス内）
+local render_seq = 0
+
 -- 現在ページを非同期に PNG 化し、完了後に cb(png|nil) を呼ぶ。既存キャッシュがあれば即時。
+-- pdftoppm は一意な一時ファイルへ出力し、成功後に最終パスへ atomic rename する。
+-- これにより、書き込み途中の部分的なPNGを別ビューが読み込んでしまうのを防ぐ。
 local function render_to_png_async(state, cb)
   local prefix = string.format("%s/%s-%d", tmp_dir(), state.hash, state.page)
   local png = prefix .. ".png"
@@ -106,6 +111,9 @@ local function render_to_png_async(state, cb)
     cb(png)
     return nil
   end
+  render_seq = render_seq + 1
+  local tmp_prefix = string.format("%s.%d.%d.tmp", prefix, vim.fn.getpid(), render_seq)
+  local tmp_png = tmp_prefix .. ".png"
   return run_async({
     "pdftoppm",
     "-png",
@@ -117,11 +125,18 @@ local function render_to_png_async(state, cb)
     "-l",
     tostring(state.page),
     state.path,
-    prefix,
+    tmp_prefix,
   }, function(code, _)
-    if code == 0 and vim.fn.filereadable(png) == 1 then
-      cb(png)
+    if code == 0 and vim.fn.filereadable(tmp_png) == 1 then
+      -- 別ビューが先に生成済みでも rename で上書きして問題ない（内容は同一）
+      os.rename(tmp_png, png)
+      if vim.fn.filereadable(png) == 1 then
+        cb(png)
+      else
+        cb(nil)
+      end
     else
+      pcall(os.remove, tmp_png)
       cb(nil)
     end
   end)
@@ -324,6 +339,8 @@ function M.open(path, buf)
   vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
   vim.bo[buf].modifiable = false
+  -- 生成しただけの読み取り専用ビューアなので、modified を落として保存/終了プロンプトを出さない
+  vim.bo[buf].modified = false
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "pdf"
@@ -435,8 +452,14 @@ local resize_timer
 vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
   group = vim.api.nvim_create_augroup("PdfViewGlobalResize", { clear = true }),
   callback = function()
+    -- 直前のタイマーを止めたまま放置すると defer_fn の後始末が走らずハンドルがリークするため、
+    -- 差し替える前に停止＆クローズする。
     if resize_timer then
       resize_timer:stop()
+      if not resize_timer:is_closing() then
+        resize_timer:close()
+      end
+      resize_timer = nil
     end
     resize_timer = vim.defer_fn(function()
       resize_timer = nil
