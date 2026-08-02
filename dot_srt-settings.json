@@ -1,0 +1,16 @@
+{
+  "network": {
+    "allowedDomains": [
+      "github.com",
+      "*.github.com",
+      "*.githubusercontent.com",
+      "objects.githubusercontent.com",
+      "registry.npmjs.org",
+      "*.npmjs.org"
+    ]
+  },
+  "filesystem": {
+    "allowWrite": [".", "~/.local"],
+    "denyRead": ["~/.ssh", "~/.aws", "~/.config/gh"]
+  }
+}
