@@ -79,6 +79,8 @@ apm install -g
 > `~/.apm/` は chezmoi が生成するディレクトリなので、**先に `chezmoi apply` 済みであること**が前提です。
 > 新しいマシンや `dot_apm/` を編集した直後は、`chezmoi apply` してから `mise run apm:install` を実行してください。
 
+<!-- -->
+
 > [!NOTE]
 > 導入した skill の `description` は各エージェントの skill 索引に**常時ロード**されます。
 > スキル数が多いほどコンテキスト（トークン）を消費するため、不要なものは

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # crit wrapper: devcontainer glue around the pristine `crit` CLI.
 #
-# The crit skill itself (dot_apm/exact_skills/crit) is kept pristine/upstream.
+# The crit skill itself is a pristine upstream APM dependency (see dot_apm/apm.yml).
 # This wrapper injects the two repo-specific behaviors so they live in code
 # (zero agent-context cost) instead of in the skill body:
 #
@@ -62,11 +62,11 @@ if is_review_launch "${1-}"; then
 		notify_host '再レビュー待ちです'
 	fi
 	# Relay the host-published URL if we know it. The crit skill is pristine
-	# upstream and just says "relay the printed URL", so make this line
-	# self-explanatory: it is the one the reviewer opens on the host.
+	# upstream and just says "relay the printed URL"; this extra line is the
+	# host-openable one (crit's own URL is container-internal). Keep the label
+	# in sync with docs/crit.md.
 	if [ -s "${host_port_file}" ]; then
-		printf 'crit UI (open THIS on the host; the URL crit printed above is container-internal): http://localhost:%s\n' \
-			"$(cat "${host_port_file}")"
+		printf 'crit UI (host): http://localhost:%s\n' "$(cat "${host_port_file}")"
 	fi
 fi
 
