@@ -7,21 +7,9 @@ Anthropic製のOSS。macOS では追加依存なしで `sandbox-exec` (Seatbelt)
 
 ## 導入
 
-`dot_config/mise/config.toml` の `[tools]` に `npm:@anthropic-ai/sandbox-runtime` を
-追加済み。`chezmoi apply` 後、`mise install` で `srt` コマンドが使えるようになる
-（shim経由）。
-
-Linux/WSL では実行時に `bubblewrap` と `socat` が追加で必要（macOS は不要）。
-`dot_config/mise/config.linux.toml` の `[bootstrap.packages]` に `apt:bubblewrap` /
-`apt:socat` を追加済みなので、`MISE_ENV=linux mise bootstrap packages apply` で入る。
+Linux/WSL では実行時に `bubblewrap` と `socat` が追加で必要。
 
 ## 設定ファイル
-
-srt は `~/.srt-settings.json`（`--settings` 未指定時）を読む。デフォルトは
-**書き込み全拒否・ネットワーク全拒否**（allowlistで明示的に許可する方式）。
-
-このリポジトリでは `dot_srt-settings.json`（`~/.srt-settings.json` にデプロイ）に
-汎用的なベースラインを用意している。
 
 ```json
 {
