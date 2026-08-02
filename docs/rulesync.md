@@ -22,9 +22,15 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     （`exact_` のため、chezmoi 管理外のファイルは `apply` 時に削除される）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに `/crit` などの skill（`dot_config/rulesync/exact_dot_rulesync/skills/`）や
+  - ここに自作 skill（`article` / `memo` / `planning` 等、`dot_config/rulesync/exact_dot_rulesync/skills/`）や
     共通ルール（`dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`）、hooks
     （`dot_config/rulesync/exact_dot_rulesync/hooks.json`）が入っている
+
+> [!NOTE]
+> サードパーティ由来の**外部スキル**（独自カスタマイズを含まないもの）は rulesync ではなく
+> APM で管理します。vendor せず `dot_apm/apm.yml` の `dependencies.apm` に upstream 依存として
+> （コミット SHA pin 付きで）宣言し、`apm install -g` で `~/.claude/skills/` 等へ配布します。
+> 詳細は `docs/apm.md` を参照。
 
 ## 生成コマンド
 

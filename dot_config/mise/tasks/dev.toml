@@ -8,3 +8,21 @@ run = [
     "cd \"$(chezmoi source-path)\" && rulesync generate",
     "cd ~/.config/rulesync && rulesync generate",
 ]
+
+["apm:install"]
+description = "Deploy user-scope external skills and commands to agent dirs"
+# apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
+# ~/.apm は chezmoi が生成するため、事前に `chezmoi apply` 済みであること。
+run = [
+    "apm install -g",
+    # APM は plugin の commands をフラットに配布するため、Claude Code の
+    # `/tsumiki:<command>` 用 namespace にも upstream の commands を複製する。
+    '''
+tsumiki_commands="$HOME/.apm/apm_modules/classmethod/tsumiki/commands"
+if [ -d "$tsumiki_commands" ]; then
+  rm -rf "$HOME/.claude/commands/tsumiki"
+  mkdir -p "$HOME/.claude/commands/tsumiki"
+  cp -R "$tsumiki_commands/." "$HOME/.claude/commands/tsumiki/"
+fi
+''',
+]

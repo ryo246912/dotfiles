@@ -20,6 +20,10 @@ ENV MISE_STATE_DIR=/mise/state
 ENV MISE_CACHE_DIR=/mise/cache
 # MEMO : postStartCommandではPATHが通らないためこちらで直接PATH(/mise/data/shims)を指定
 ENV PATH=/mise/data/shims:/mise/shims:/mise/installs:$PATH
+# crit ラッパー（~/.config/devcontainer/scripts/crit, bind-mount）を mise shim より
+# 前に置き、pristine な crit skill の `crit` 呼び出しがラッパー経由になるようにする。
+# 詳細は docs/crit.md 参照。
+ENV PATH=/home/vscode/.config/devcontainer/scripts:$PATH
 
 RUN install -d -o vscode -g vscode \
     /mise \

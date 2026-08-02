@@ -68,38 +68,44 @@ devcontainer を複数同時に起動してもポート衝突は起きません�
 起動する devcontainer であればどの経路（devcontainer CLI 直接、VS Code など）でも同じ仕組みが働く。
 devcontainer 外（`mac-host` に SSH できない環境）では静かにスキップされる。
 
-`/crit` skill（Step 2）は crit 自身が出力する URL をそのまま relay せず、`~/.crit-host-port` が
-あればそちらの port を優先して使う（crit が出力するのはコンテナ内固定の `7842` であり、ホストから
-実際に開ける port とは異なるため）。
+ホストのブラウザで実際に開ける URL の relay は、`crit` ラッパー（後述）が `~/.crit-host-port` を
+読んで `crit UI (host): http://localhost:<port>` を追加出力することで行う（crit が出力するのは
+コンテナ内固定の `7842` であり、ホストから実際に開ける port とは異なるため）。
 
-## `/crit` skill（rulesync で配布）
+## `/crit` skill（APM で upstream 依存として配布）
 
-crit@crit プラグインが提供する 2 つの skill を、プラグイン導入ではなく **rulesync 経由で配布**しています。
-ソースは `dot_config/rulesync/exact_dot_rulesync/skills/` にあり、`chezmoi apply` 後に
-`mise run rulesync:generate` を実行すると各エージェント向けに生成されます。
+crit@crit プラグインが提供する 2 つの skill を、**APM の外部依存として upstream から取得**しています。
+`dot_apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
+をコミット SHA 付きで宣言しており、`chezmoi apply` → `mise run apm:install`（= `apm install -g`）で各エージェント
+向けに配置されます（`docs/apm.md` 参照）。skill 本文はこのリポジトリに vendor せず、pristine な upstream を使います。
 
-| skill      | 役割                                                               | 生成先                                                    |
-| ---------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
-| `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`, `~/.codex/skills/crit/`         |
-| `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/`, `~/.codex/skills/crit-cli/` |
+| skill      | 役割                                                               | 配布先                       |
+| ---------- | ------------------------------------------------------------------ | ---------------------------- |
+| `crit`     | レビューループ（起動 → レビュー → 反映）を自動化する `/crit`       | `~/.claude/skills/crit/`     |
+| `crit-cli` | `crit comment` / `share` / `pull` / `push` など CLI のリファレンス | `~/.claude/skills/crit-cli/` |
 
-生成された skill は devcontainer の `~/.claude` マウント経由でコンテナ内のエージェントからも利用できます。
-Claude Code では `/crit`、Codex では `$crit` で呼び出せます。
+配置された skill は devcontainer の `~/.claude` マウント経由でコンテナ内のエージェントからも利用できます。
 
 > [!NOTE]
-> `crit` skill は `allowed-tools` に `Bash(crit:*)` を宣言しているため、`blockUnlistedCommands` 環境でも
-> skill 実行中は `crit` コマンドが許可されます。`user-invocable` / `argument-hint` は rulesync が
-> claudecode skill へ変換する際に落とされますが、動作には影響しません。
+> このリポジトリ固有の devcontainer グルー（host port の URL 差し替え・再レビュー通知）は skill 本文には
+> 埋め込まず、`crit` ラッパー（次節）へ分離しています。そのため skill は pristine な upstream をそのまま
+> 依存として使えます。
 
-## 再レビュー待ち通知
+## `crit` ラッパー（devcontainer グルー）
 
-1 ラウンド分のレビューコメントにエージェントが対応し終え、次の `crit` 呼び出しで再レビュー待ち
-（次の "Finish Review" 待ち）に入る直前、devcontainer からホストへ SSH 経由で通知を送ります。
+pristine な skill に代わって、`~/.config/devcontainer/scripts/crit`
+（ソース: `dot_config/devcontainer/scripts/executable_crit`）が devcontainer 固有の副作用を
+コードとして担います。エージェントのコンテキストを消費しない利点があります。
 
-- 通知コマンド: `ssh -F ~/.config/ssh/config ... mac-host "macos-notify-cli --title 'crit' --message '再レビュー待ちです' ..."`
-- 使う SSH 接続は `dot_config/devcontainer/scripts/post-start.sh` が生成する `mac-host`
-  （`multi-worktree` のホスト通知と同じ仕組み・同じ鍵 `~/.ssh/id_docker_devcontainer` を利用）
-- 手順は `crit` skill（`dot_config/rulesync/exact_dot_rulesync/skills/crit/SKILL.md` の Step 5）に
-  記載。`allowed-tools` に `Bash(ssh:*)` を追加してあるため `blockUnlistedCommands` 環境でも実行できる
-- devcontainer 外（ホスト上で直接 `crit` を実行した場合など）では `mac-host` に SSH できず失敗するが、
-  レビューループを止めないようエラーは無視する
+- **配置**: スクリプトディレクトリは devcontainer に bind-mount 済み（`devcontainer.json` の `mounts`）。
+  `~/.local/bin` はコンテナにマウントされないため、ここに置く。
+- **mise 管理の実体を解決**: `mise which crit` で実バイナリの絶対パスを取得して exec する
+  （ラッパー自身を再帰呼び出ししない）。
+  ラッパーが `crit` として呼ばれるよう、`Dockerfile` の `ENV PATH` で
+  `~/.config/devcontainer/scripts` を mise shims より前に置いている（衝突するのは意図した `crit` のみ）。
+- **host URL の relay**: `~/.crit-host-port` があれば `crit UI (host): http://localhost:<port>` を
+  crit 本体の出力とは別に 1 行追加する（crit の出力自体は改変しない）。
+- **再レビュー待ち通知**: 既に crit daemon が `:7842` で待ち受けている状態でレビューを起動した
+  （＝再レビューラウンド）場合に、`mac-host` へ SSH して `macos-notify-cli` で「再レビュー待ちです」を通知。
+  `comments` / `share` / `comment` 等のサブコマンド呼び出しでは通知しない。
+- devcontainer 外（`mac-host` に SSH できない環境）では通知は静かにスキップされ、レビューループは止まらない。
