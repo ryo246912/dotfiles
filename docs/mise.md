@@ -151,7 +151,35 @@ mise ERROR cannot link xz: these files already exist and were not
 Remove or rename them, then re-run `mise bootstrap packages apply`
 ```
 
-対応手順（以下は `xz` を例にしているだけで、実際は衝突したパッケージ名に読み替える）:
+#### まず衝突ファイルの正体を確認する
+
+対応を決める前に、衝突しているパスが**シンボリックリンクか実体か**を見る。エラーに出て
+いるパスを `ls -la` すればよい。
+
+```sh
+ls -la /opt/homebrew/lib/lib<...>.dylib   # 例: エラーに出た衝突パス
+brew list --versions <pkg>                 # その formula が real brew に入っているか
+```
+
+- **`../Cellar/<pkg>/<ver>/...` を指すシンボリックリンク**だった場合（＝ formula 自体は
+  real brew が正常に導入・リンク済みで、`brew list --versions` にも出る）は、**アンインストール
+  不要**。real brew と mise の両方が同じパスを link しようとして衝突しているだけなので、
+  real brew のリンクだけを外して mise に link を委ねれば済む。**Cellar（実体）は残るので完全に
+  可逆**（戻すなら `brew link <pkg>`）。
+  ```sh
+  brew unlink <pkg>                 # 例: brew unlink glib（シンボリックリンクだけ外す。実体は消えない）
+  mise bootstrap packages apply     # 今度は mise が link できる。または chezmoi apply
+  ```
+  これは下記のアンインストール手順より軽く安全なので、シンボリックリンク衝突ならこちらを優先する。
+  （`brew:imagemagick` / `brew:poppler` を入れた際に、それらが依存する `glib` の
+  `libglib-2.0.dylib` などで実際に踏んだケース。real brew 側で glib がリンク済みだったため
+  `brew unlink glib` → 再実行で解消した。）
+
+- **mise/brew どちらの管理でもない実体ファイル**（`brew list` に出ない、リンク先が Cellar で
+  ない残骸など）だった場合は、下記の手順でアンインストール／退避してから再実行する。
+
+対応手順（衝突ファイルが実体で、アンインストールして mise 管理へ寄せる場合。以下は `xz` を
+例にしているだけで、実際は衝突したパッケージ名に読み替える）:
 
 1. エラーメッセージ冒頭に出ているパッケージ名（上記例では `xz`）を確認する
 2. そのパッケージに依存している他の formula がいないか確認する
