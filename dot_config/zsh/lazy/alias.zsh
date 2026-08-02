@@ -1,6 +1,6 @@
 alias vim="nvim"
 alias fly="flyctl"
-alias restore_tmux="~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh"
+alias restore_tmux='"$(mise where http:tmux-resurrect)/scripts/restore.sh"'
 
 claude_check_version() {
   local desired_version="1.0.48"

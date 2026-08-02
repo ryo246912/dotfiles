@@ -1,8 +1,3 @@
-# tpmのインストール
-if ! [ -e "$HOME/.config/tmux/plugins/tpm" ]; then
-  git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
-fi
-
 # historyの保存先
 mkdir -p "$XDG_STATE_HOME/node" 2>/dev/null
 export NODE_REPL_HISTORY="$XDG_STATE_HOME/node/.node_repl_history"
