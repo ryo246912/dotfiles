@@ -9,6 +9,64 @@ return {
     },
     lazy = false,
     config = function()
+      local function open_with_picker(state)
+        local ok, node = pcall(function()
+          return state.tree:get_node()
+        end)
+        if not ok or not node then
+          return
+        end
+
+        if node.type == "directory" then
+          require("neo-tree.sources.filesystem.commands").open(state)
+          return
+        end
+
+        local path = node:get_id()
+        local commands = require("neo-tree.sources.common.commands")
+        local options = {
+          { label = "現在のウィンドウで開く", fn = commands.open },
+          { label = "水平分割で開く", fn = commands.open_split },
+          { label = "垂直分割で開く", fn = commands.open_vsplit },
+          { label = "新規タブで開く", fn = commands.open_tabnew },
+          {
+            label = "システムのデフォルトアプリで開く",
+            fn = function()
+              local obj, err = vim.ui.open(path)
+              if not obj then
+                vim.notify("開けませんでした: " .. (err or "不明なエラー"), vim.log.levels.ERROR)
+              end
+            end,
+          },
+          {
+            label = "コマンドを指定して開く...",
+            fn = function()
+              vim.ui.input({ prompt = "Open with command: " }, function(cmd)
+                if not cmd or cmd:match("^%s*$") then
+                  return
+                end
+                -- シェル経由で実行することで、cmd 内の引用符付き引数を維持しつつ path を安全にエスケープする
+                local job_id = vim.fn.jobstart(cmd .. " " .. vim.fn.shellescape(path), { detach = true })
+                if job_id <= 0 then
+                  vim.notify("コマンドの起動に失敗しました: " .. cmd, vim.log.levels.ERROR)
+                end
+              end)
+            end,
+          },
+        }
+
+        vim.ui.select(options, {
+          prompt = "Open with...",
+          format_item = function(item)
+            return item.label
+          end,
+        }, function(choice)
+          if choice then
+            choice.fn(state)
+          end
+        end)
+      end
+
       require("neo-tree").setup({
         close_if_last_window = false,
         popup_border_style = "rounded",
@@ -76,6 +134,7 @@ return {
             ["t"] = "open_tabnew",
             ["P"] = { "toggle_preview", config = { use_float = true } },
             ["l"] = "open",
+            ["O"] = open_with_picker,
             ["h"] = "close_node",
             ["z"] = "close_all_nodes",
             ["a"] = "add",
