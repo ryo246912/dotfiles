@@ -7,7 +7,10 @@ Anthropic製のOSS。macOS では追加依存なしで `sandbox-exec` (Seatbelt)
 
 ## 導入
 
-Linux/WSL では実行時に `bubblewrap` と `socat` が追加で必要。
+Linux/WSL では実行時に `bubblewrap` / `socat` / `ripgrep` が追加で必要（`ripgrep` はこのリポジトリでは aqua 管理下で導入済み）。
+なお Ubuntu 24.04 以降で `kernel.apparmor_restrict_unprivileged_userns=1` の場合、
+`bubblewrap` 経由の起動に失敗するため、必要に応じて
+`sysctl kernel.apparmor_restrict_unprivileged_userns=0` を設定すること。
 
 ## 設定ファイル
 
@@ -20,21 +23,39 @@ Linux/WSL では実行時に `bubblewrap` と `socat` が追加で必要。
       "*.githubusercontent.com",
       "objects.githubusercontent.com",
       "registry.npmjs.org",
-      "*.npmjs.org"
+      "*.npmjs.org",
+      "mise.run",
+      "mise.jdx.dev"
     ]
   },
   "filesystem": {
-    "allowWrite": [".", "~/.local"],
-    "denyRead": ["~/.ssh", "~/.aws", "~/.config/gh"]
+    "allowWrite": [".", "~/.local/bin", "~/.local/share/mise", "~/.local/state"],
+    "denyRead": [
+      "~/.ssh",
+      "~/.aws",
+      "~/.config/gh",
+      "~/.npmrc",
+      "~/.netrc",
+      "~/.git-credentials",
+      "~/.config/git/credentials",
+      "~/.docker/config.json",
+      "~/.kube/config",
+      "~/.gnupg"
+    ]
   }
 }
 ```
 
-- ネットワークは GitHub / npm レジストリのみ許可（大半の dev tool インストーラの配布元）。
-- 書き込みはカレントディレクトリと `~/.local` のみ許可（mise/uv など多くのモダンな
-  インストーラの標準インストール先）。
-- `~/.ssh` / `~/.aws` / `~/.config/gh` は読み取りも明示的に拒否（インストーラが
-  誤って/意図的にトークン等を参照するのを防ぐ）。
+- ネットワークは GitHub / npm レジストリ / mise の配布ホストのみ許可
+  （`mise.run` / `mise.jdx.dev` を含めていないと、下記の使い方の基本例自体が動かない）。
+- 書き込みはカレントディレクトリと mise が実際に使う `~/.local/bin`（バイナリ）/
+  `~/.local/share/mise`（ツール本体・キャッシュ）/ `~/.local/state`（状態ファイル）
+  のみ許可。`~/.local` を丸ごと許可すると PATH 上の `~/.local/bin` や既存の mise
+  管理ツールまで書き換え可能になってしまうため、必要な subpath だけに絞っている。
+- srt の読み取りはデフォルト全許可（deny-then-allow）なので、資格情報ファイルは
+  `denyRead` で明示的に拒否している（`~/.ssh` / `~/.aws` / `~/.config/gh` / `~/.npmrc` /
+  `~/.netrc` / `~/.git-credentials` / `~/.config/git/credentials` / `~/.docker/config.json` /
+  `~/.kube/config` / `~/.gnupg`）。
 
 この baseline でカバーできない（例: `~/.cargo` に書く rustup、GitHub/npm 以外の
 ドメインから落とす）場合は、その場だけ `--settings` で別ファイルを指定するか、
@@ -50,14 +71,24 @@ srt "curl -fsSL https://mise.run | sh"
 srt --debug "curl -fsSL https://mise.run | sh"
 
 # baselineでカバーしない書き込み先/ドメインが必要な場合は一時的な設定ファイルを使う
-cat > /tmp/srt-rustup.json <<'EOF'
+# (固定パスへの書き込みはシンボリックリンク差し替え等の影響を受けるため mktemp を使う)
+set -eu
+umask 077
+settings="$(mktemp)"
+trap 'rm -f "$settings"' EXIT
+
+cat > "$settings" <<'EOF'
 {
   "network": { "allowedDomains": ["sh.rustup.rs", "static.rust-lang.org"] },
   "filesystem": { "allowWrite": [".", "~/.cargo", "~/.rustup"] }
 }
 EOF
-srt --settings /tmp/srt-rustup.json "curl https://sh.rustup.rs -sSf | sh"
+srt --settings "$settings" "curl https://sh.rustup.rs -sSf | sh"
 ```
+
+上の例は `latest` を取得するが、レビュー層の原則（バージョン/コミット固定）に従うなら
+`MISE_VERSION=v<固定版> sh` のように環境変数でバージョンを固定するのが望ましい
+（例: `srt "curl -fsSL https://mise.run | MISE_VERSION=v<固定版> sh"`）。
 
 ネットワーク/書き込み許可が足りないと、srt がその呼び出しをブロックしてエラーを
 出す（サイレントに通ることはない）ので、エラーメッセージに出てきたドメイン/パスを
@@ -78,10 +109,13 @@ mise の `install.sh` はダウンロードしたバイナリを埋め込みチ�
 展開している。つまり「バイナリ自体の改ざん」は既にスクリプト内で担保されている。
 
 残るリスクは **install.sh 自体が本物か**（配信元サーバの乗っ取り・MITM・DNS ハイジャック
-で別物にすり替わっていないか）の1点。TLS はサーバの真正性は保証しても、運用主体の
-乗っ取りまではカバーしない。加えて、**攻撃基盤は訪問者ごとに異なるペイロードを
-返せる**ため、「一度目視で確認した内容」と「実際に `sh` に流れる内容」が一致するとは
-限らない（ストリーミング実行だとそもそも目視の余地がない）。
+で別物にすり替わっていないか）、そして **`sh` が実行する任意のシェル処理自体が信頼できるか**
+の2点。埋め込みチェックサムはスクリプトが選んだバイナリの完全性しか検証せず、スクリプト
+自体の真正性や、バイナリ展開以外にスクリプトが行う処理までは保証しない。TLS はサーバの
+真正性は保証しても、運用主体の乗っ取りまではカバーしない。加えて、**攻撃基盤は訪問者ごとに
+異なるペイロードを返せる**ため、「一度目視で確認した内容」と「実際に `sh` に流れる内容」が
+一致するとは限らない（ストリーミング実行だとそもそも目視の余地がない）。これらは下記の
+レビュー層・暗号検証層・サンドボックス実行層で個別に補う必要がある。
 
 ### 対応策（層ごとの整理）
 
@@ -97,14 +131,19 @@ mise の `install.sh` はダウンロードしたバイナリを埋め込みチ�
 
 公開されていれば最優先で使う。
 
-- **GPG署名検証**: mise は公式に手順を提供している。
+- **GPG署名検証**: mise は公式に手順を提供している。署名検証に失敗した場合に
+  `sh` を実行してしまわないよう、`set -euo pipefail` で検証失敗時に停止させる。
   ```sh
+  set -euo pipefail
   gpg --keyserver hkps://keys.openpgp.org --recv-keys 24853EC9F655CE80B48E6C3A8B81C9D17413A06D
   curl https://mise.jdx.dev/install.sh.sig | gpg --decrypt > install.sh
   sh ./install.sh
   ```
 - **`gh attestation verify`**（GitHub CLI 標準機能）: GitHub Actions でビルドされた
   成果物の Sigstore ベース build provenance を検証。個別バイナリにも使える。
+  `--owner <org>` または `--repo <owner>/<repo>` のいずれかと、検証対象の
+  GitHub artifact attestation が実際に公開されていることが前提
+  （例: `gh attestation verify ./mise --repo jdx/mise`）。
 - **`cosign verify-blob`**（sigstore）: keyless 署名検証。
 - **[aqua](https://aquaproj.github.io/)**: このリポジトリでも mise の aqua backend
   経由で `gh` 等を導入済み。対応ツールなら checksum / cosign+SLSA provenance /
