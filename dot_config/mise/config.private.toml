@@ -5,8 +5,14 @@
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
 
+[bootstrap.packages]
 # private ロールは mac（ryo-mac-private）と linux（ryo-win, WSL）の両ホストで共有される
-# （dot_config/zsh/host-env.map 参照）。[bootstrap.packages] に brew/brew-cask のエントリを
-# 置くと WSL ホストでも読み込まれてしまうため、mac 専用パッケージは置かず
-# dot_config/mise/tasks/bootstrap-mac.toml の private ホスト限定 case ブロックに寄せている
-# （android-studio/insomnia/linear/omnidisksweeper/ffmpeg）
+# （dot_config/zsh/host-env.map 参照）。WSL ホストは現状未使用のため、ひとまず宣言的に書く。
+# 実際に WSL を使い始めたら bootstrap-mac.toml 側への切り出しを検討する
+# insomnia: config.mac.toml（全ホスト共通）からは意図的に外しているが、private ホストでは使うため再掲
+"brew-cask:android-studio"  = "latest"
+"brew-cask:insomnia"        = "latest"
+"brew-cask:linear"          = "latest"
+"brew-cask:omnidisksweeper" = "latest"
+# ffmpeg: private ホストでのみ使用するため config.mac.toml（全ホスト共通）から外し、こちらに寄せている
+"brew:ffmpeg" = "latest"
