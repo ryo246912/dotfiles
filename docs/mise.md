@@ -317,6 +317,12 @@ brew list --cask --versions
   対話実行するタスクなので sudo プロンプトが出ても想定内になる。本リポジトリでは
   google-drive / tailscale-app がこれに該当する。いずれも private ホスト限定のため
   `HOST_ENV` で判定して work ホストではスキップする）。
+- EULA 同意プロンプトで**止まって見える**（エラーは出ない） →
+  cask のインストーラが利用許諾（EULA）への同意を求めるページャー表示を挟む場合、
+  上記のパスワードプロンプトと同様に非対話実行の post-apply hook で気づかれにくく止まる。
+  該当パッケージは `[bootstrap.packages]` から外し `mise run bootstrap:mac-packages`
+  側の例外パッケージとして扱う（本リポジトリでは omnidisksweeper がこれに該当する。
+  private ホスト限定のため `HOST_ENV` で判定して work ホストではスキップする）。
 - `ERROR brew-cask: app artifact '<Name>.app' was not found` →
   ダウンロード/展開した中に期待する `.app` が見つからない場合の**エラー**（根本原因未確認）。
   これも `mise bootstrap packages apply` 全体を中断させる。他の unsupported artifact type

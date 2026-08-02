@@ -7,8 +7,7 @@
 
 [bootstrap.packages]
 # 実際に WSL を使い始めたら bootstrap-mac.toml 側への切り出しを検討する
-"brew-cask:android-studio"  = "latest"
-"brew-cask:insomnia"        = "latest"
-"brew-cask:linear"          = "latest"
-"brew-cask:omnidisksweeper" = "latest"
-"brew:ffmpeg"               = "latest"
+"brew-cask:android-studio" = "latest"
+"brew-cask:insomnia"       = "latest"
+"brew-cask:linear"         = "latest"
+"brew:ffmpeg"              = "latest"
