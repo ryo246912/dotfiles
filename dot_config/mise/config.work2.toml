@@ -14,8 +14,6 @@
 "pipx:tftui"                                = "0.13.4"
 
 [bootstrap.packages]
-# figma: cask 定義が auto_updates を使っており mise 未対応のため
-# dot_config/mise/tasks/bootstrap-mac.toml の work ホスト限定 case ブロック側で real brew から導入する
 "brew-cask:sequel-ace" = "latest"
 
 [settings]
