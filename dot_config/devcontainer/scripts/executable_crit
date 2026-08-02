@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# crit wrapper: devcontainer glue around the pristine `crit` CLI.
+#
+# The crit skill itself (dot_apm/exact_skills/crit) is kept pristine/upstream.
+# This wrapper injects the two repo-specific behaviors so they live in code
+# (zero agent-context cost) instead of in the skill body:
+#
+#   1. Relay the host-published URL. Inside the devcontainer crit prints a
+#      container-internal port; the actual host port is recorded in
+#      ~/.crit-host-port by post-start.sh. We print the host URL as an extra
+#      line WITHOUT touching crit's own output.
+#   2. Notify the host (mac-host) when a re-review round is waiting, i.e. when a
+#      crit daemon is already running and we're launching another review.
+#
+# Both behaviors are best-effort and must never block or fail the review loop.
+set -uo pipefail
+
+# This wrapper lives in ~/.config/devcontainer/scripts (bind-mounted into the
+# devcontainer) and is put ahead of the mise shims on PATH by the Dockerfile
+# (ENV PATH), so an agent running the pristine `crit` skill invokes it. Resolve
+# the real crit binary via `mise which` (returns the installed tool's absolute
+# path), bypassing this wrapper — no recursion.
+real_crit="$(mise which crit 2>/dev/null || true)"
+if [ -z "${real_crit}" ]; then
+	echo "crit: real binary not found (is crit installed via mise?)" >&2
+	exit 127
+fi
+
+host_port_file="${HOME}/.crit-host-port"
+ssh_config="${HOME}/.config/ssh/config"
+
+# Is this invocation launching/continuing a review (vs. a side subcommand like
+# `crit comments` / `crit share` / `crit comment` that shouldn't notify)?
+is_review_launch() {
+	case "${1-}" in
+	comment | comments | share | unpublish | pull | push | status | help | -h | --help) return 1 ;;
+	*) return 0 ;;
+	esac
+}
+
+# A crit daemon already listening on :7842 means a review is in progress, so
+# this launch is a re-review round.
+daemon_running() {
+	if command -v ss >/dev/null 2>&1; then
+		ss -ltn 2>/dev/null | grep -q ':7842[[:space:]]'
+	elif command -v lsof >/dev/null 2>&1; then
+		lsof -iTCP:7842 -sTCP:LISTEN >/dev/null 2>&1
+	else
+		return 1
+	fi
+}
+
+notify_host() { # $1 = message
+	[ -f "${ssh_config}" ] || return 0
+	timeout 5 ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=2 mac-host \
+		"macos-notify-cli --title 'crit' --message '$1' --sound Glass" >/dev/null 2>&1 || true
+}
+
+if is_review_launch "${1-}"; then
+	# Re-review round: tell the host the diff is ready again.
+	if daemon_running; then
+		notify_host '再レビュー待ちです'
+	fi
+	# Relay the host-published URL if we know it. The crit skill is pristine
+	# upstream and just says "relay the printed URL", so make this line
+	# self-explanatory: it is the one the reviewer opens on the host.
+	if [ -s "${host_port_file}" ]; then
+		printf 'crit UI (open THIS on the host; the URL crit printed above is container-internal): http://localhost:%s\n' \
+			"$(cat "${host_port_file}")"
+	fi
+fi
+
+exec "${real_crit}" "$@"
