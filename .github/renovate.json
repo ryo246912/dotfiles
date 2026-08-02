@@ -183,7 +183,7 @@
       "managerFilePatterns": ["dot_apm/apm.yml"],
       "matchStrings": [
         "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#(?<currentDigest>[0-9a-f]{40})",
-        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)[\\s\\S]*?ref:\\s(?<currentDigest>[0-9a-f]{40})"
+        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s(?<currentDigest>[0-9a-f]{40})"
       ],
       "packageNameTemplate": "https://github.com/{{{depName}}}",
       "currentValueTemplate": "main",
