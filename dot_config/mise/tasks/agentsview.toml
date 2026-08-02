@@ -337,6 +337,153 @@ agentsview pg push "$@"
 '''
 shell = "bash -c"
 
+["agentsview:pg:push:daemon"]
+description = "Non-interactive AgentsView push for launchd/systemd timers (resolve secret via fnox, start flyctl proxy, push, stop proxy)"
+# launchd / systemd timer から定期起動される想定の非対話 push。
+# secret（AGENTSVIEW_PROXY_PG_URL）は他 task と同じく fnox（bws/age）から解決する。
+# launchd/systemd は zsh 起動を経ないため、AGENTSVIEW_PG_MACHINE も dot_zshenv と同じ導出で補う。
+run = '''
+set -eu
+
+log() { printf '%s agentsview-push: %s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" "$*"; }
+
+# 127.0.0.1:<port> が接続可能か。bash 組み込みの /dev/tcp を使い nc 非依存にする
+# （nc が無い環境で readiness 待ちが timeout するのを避ける）。subshell で FD を閉じる。
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+# PID $1 の起動時刻トークン（PID 再利用の識別用）。同一 PID でも再利用後は別値になる。
+# macOS/Linux とも ps -o lstart で取得でき、死んだ PID では空になる。
+proc_token() { ps -o lstart= -p "$1" 2>/dev/null | tr -s ' ' | sed 's/^ *//;s/ *$//'; }
+
+# AGENTSVIEW_PROXY_PG_URL 未解決なら fnox 経由で解決して自身を再実行する（他 task と同じ流儀）。
+# launchd/systemd の最小 PATH でも確実に mise を辿れるよう、mise は絶対パスで指定する。
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  mise_bin="$(command -v mise 2>/dev/null || printf '%s' "$HOME/.local/bin/mise")"
+  exec fnox exec -- "$mise_bin" run agentsview:pg:push:daemon "$@"
+fi
+
+: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
+
+# machine 名は dot_zshenv.tmpl と同じく host-env.map から導出し、対話 push と同じ名前に揃える。
+# zsh を経ない起動でも DB 上の machine 名が分裂しないようにする（未解決なら hostname にフォールバック）。
+if [ -z "${AGENTSVIEW_PG_MACHINE:-}" ]; then
+  _host_id="${MISE_HOST_ID:-$(scutil --get LocalHostName 2>/dev/null || hostname -s 2>/dev/null)}"
+  _host_env="$(awk -F'[[:space:]]*=[[:space:]]*' -v h="$_host_id" \
+      '!/^[[:space:]]*(#|$)/ && $1 == h {print $2; exit}' \
+      "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/host-env.map" 2>/dev/null || true)"
+  [ -n "$_host_env" ] && AGENTSVIEW_PG_MACHINE="$(printf '%s' "$_host_env" | tr ',' '-')"
+fi
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
+proxy_log=""
+proxy_pid=""
+lock_dir="${XDG_STATE_HOME:-$HOME/.local/state}/agentsview/push.lock"
+lock_owned=""
+
+cleanup() {
+  if [ -n "$proxy_pid" ]; then
+    kill "$proxy_pid" 2>/dev/null || true
+    wait "$proxy_pid" 2>/dev/null || true
+  fi
+  [ -n "$proxy_log" ] && rm -f "$proxy_log"
+  [ -n "$lock_owned" ] && rm -rf "$lock_dir"
+  # EXIT trap の最後の評価が終了コードになるため、必ず 0 で返す（skip 経路が失敗扱いに
+  # ならないように）。
+  return 0
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# 多重起動防止（macOS/Linux 共通。macOS に無い flock は使わず mkdir で atomic に取る）。
+# owner 情報は "<pid> <lstart>" を 1 ファイル(info)に temp+rename で atomic に書く
+# （half-written を作らない）。既存ロックは以下で判定する:
+#   - info 無し → 取得直後(ms)の他プロセス、または info 書き込み前のクラッシュ跡。恒久
+#     orphan を避けるため奪う。まれな取得レースは flyctl の port 単一 bind で直列化される。
+#   - PID 生存かつ lstart 一致 → 実行中の push。経過時間では奪わない（初回全件 push が
+#     数時間かかっても誤奪取しない）。
+#   - PID 死亡 or lstart 不一致（PID 再利用）→ stale として奪う。
+#   - 上記で「生存」でも mtime が TTL 超過なら奪う。lstart は秒解像度のため、同一 PID が
+#     同秒に再起動する病的ケースの最後の backstop。TTL は実 push 最長（~数時間）を大きく
+#     上回る 24h とし、生きた push を経過時間で奪わない。
+# 最終的な二重 push は port(15432) を同時 bind できない flyctl 側でも弾かれる。
+lock_stale_min=1440
+mkdir -p "$(dirname "$lock_dir")"
+if ! mkdir "$lock_dir" 2>/dev/null; then
+  info="$(cat "$lock_dir/info" 2>/dev/null || true)"
+  old_pid="${info%% *}"
+  old_tok="${info#* }"
+  stale=""
+  if [ -z "$info" ]; then
+    stale="no owner recorded"
+  elif ! kill -0 "$old_pid" 2>/dev/null || [ "$(proc_token "$old_pid")" != "$old_tok" ]; then
+    stale="pid $old_pid no longer the owner"
+  elif [ -n "$(find "$lock_dir" -maxdepth 0 -mmin "+${lock_stale_min}" 2>/dev/null)" ]; then
+    stale="older than ${lock_stale_min}min"
+  fi
+  if [ -z "$stale" ]; then
+    log "another push (pid $old_pid) is still running. Skipping."
+    exit 0
+  fi
+  log "reclaiming stale lock ($stale)"
+  rm -rf "$lock_dir"
+  mkdir "$lock_dir" 2>/dev/null || { log "could not acquire lock. Skipping."; exit 0; }
+fi
+lock_owned=1
+printf '%s %s\n' "$$" "$(proc_token "$$")" >"$lock_dir/.info.$$"
+mv -f "$lock_dir/.info.$$" "$lock_dir/info"
+
+proxy_log="$(mktemp)"
+
+# ロックで自分自身の多重起動は防いだうえで port がまだ埋まっている場合は、無関係な
+# サービスや異常終了で残った proxy が握っている状況。skip で握り潰さず失敗させて可視化する。
+if port_open "$proxy_port"; then
+  log "127.0.0.1:${proxy_port} is already in use by another process. Aborting."
+  exit 1
+fi
+
+flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+proxy_pid=$!
+
+# 自分が起動した flyctl proxy が listen し始めるまで待つ。proxy が bind に失敗すれば
+# （＝別プロセスが port を奪った等）flyctl は即終了するため、その死活で検出できる。
+i=0
+while ! port_open "$proxy_port"; do
+  if ! kill -0 "$proxy_pid" 2>/dev/null; then
+    cat "$proxy_log" >&2
+    log "flyctl proxy exited before it was ready"
+    exit 1
+  fi
+  i=$((i + 1))
+  if [ "$i" -ge 40 ]; then
+    cat "$proxy_log" >&2
+    log "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}"
+    exit 1
+  fi
+  sleep 0.25
+done
+
+# push 直前に自分の proxy が生きていることを最終確認する。pre-check 後〜bind 前の僅かな
+# 隙に別プロセスが port を握ると flyctl は bind 失敗で終了しているはずで、ここで捕まえる。
+# （credential を含む接続先を誤って別 listener に向けて push しないための保険。）
+if ! kill -0 "$proxy_pid" 2>/dev/null; then
+  cat "$proxy_log" >&2
+  log "flyctl proxy is no longer running just before push. Aborting."
+  exit 1
+fi
+
+export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
+export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+
+log "pushing (machine=${AGENTSVIEW_PG_MACHINE})"
+agentsview pg push "$@"
+log "done"
+'''
+shell = "bash -c"
+
 ["agentsview:serve"]
 description = "Start local AgentsView server"
 run         = "agentsview serve"
