@@ -46,12 +46,8 @@ return {
                 if not cmd or cmd:match("^%s*$") then
                   return
                 end
-                local argv = {}
-                for token in cmd:gmatch("%S+") do
-                  table.insert(argv, token)
-                end
-                table.insert(argv, path)
-                local job_id = vim.fn.jobstart(argv, { detach = true })
+                -- シェル経由で実行することで、cmd 内の引用符付き引数を維持しつつ path を安全にエスケープする
+                local job_id = vim.fn.jobstart(cmd .. " " .. vim.fn.shellescape(path), { detach = true })
                 if job_id <= 0 then
                   vim.notify("コマンドの起動に失敗しました: " .. cmd, vim.log.levels.ERROR)
                 end
