@@ -108,6 +108,8 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 
 まとめると、標準機能だけでは直近数件しか追えないので、履歴からインタラクティブに選びたいなら `yanky.nvim` か `nvim-neoclip.lua` を telescope/fzf-lua と組み合わせるのが定番。
 
+このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開き、選択したエントリをその場にペーストできる。
+
 ## help
 
 tagsファイルがあると以下が使える
