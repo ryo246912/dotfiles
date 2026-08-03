@@ -93,7 +93,8 @@ VSCode の Ctrl+F 検索→マッチ箇所ごとに確認しながら置換、�
 
 - `:reg` / `:registers` : 現在のレジスタの中身を一覧表示(確認用。選択してペーストはできない)
 - `"0p` : 直前のヤンク(delete/change では上書きされない専用レジスタ)
-- `"1p`〜`"9p` : 直近の delete/change 履歴(ヤンクではなく削除系)
+- `"1p`〜`"9p` : 行単位の直近の delete/change 履歴
+- `"-p` : 1行未満の小さな削除(`x`, 途中までの `dw` など)
 - 挿入モード/コマンドラインモードで `<C-r>{register}` : レジスタの内容をその場に挿入(例 `<C-r>0`)
 
 ### fzf 的にインタラクティブに選ぶ
@@ -103,12 +104,12 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 - `telescope.nvim` : ビルトインの `registers` picker → `:Telescope registers` でレジスタ一覧をあいまい検索して選択・ペースト
 - `fzf-lua` : 同様に `registers` picker → `:FzfLua registers`
 - ただしどちらも対象は「レジスタ」止まりで、何回も前のヤンクまでは遡れない。ヤンクの全履歴を保持してインタラクティブに選びたい場合は
-  - `gbprod/yanky.nvim` : ヤンク履歴を保持するプラグイン。telescope/fzf-lua と連携してヒストリーから選択してペーストできる
-  - `AckslD/nvim-neoclip.lua` : クリップボード(ヤンク)履歴管理プラグイン。同様に telescope/fzf-lua の picker 経由でインタラクティブに選択・ペースト可能
+  - `gbprod/yanky.nvim` : ヤンク履歴を保持するプラグイン。telescope/Snacks.picker/vim.ui.select と連携してヒストリーから選択してペーストできる(fzf-lua と組み合わせるには `vim.ui.select` を fzf-lua に登録する必要がある)
+  - `AckslD/nvim-neoclip.lua` : クリップボード(ヤンク)履歴管理プラグイン。telescope/fzf-lua の picker 経由でインタラクティブに選択・ペースト可能
 
 まとめると、標準機能だけでは直近数件しか追えないので、履歴からインタラクティブに選びたいなら `yanky.nvim` か `nvim-neoclip.lua` を telescope/fzf-lua と組み合わせるのが定番。
 
-このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開き、選択したエントリをその場にペーストできる。
+このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
 
 ## help
 
