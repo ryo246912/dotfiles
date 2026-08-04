@@ -183,9 +183,9 @@ snippet         = "wifitui"
 trigger-pattern = "(^wf$|^wi$)"
 
 [[snippets]]
-name            = "zinit"
-snippet         = "zinit"
-trigger-pattern = "^zi$"
+name            = "sheldon"
+snippet         = "sheldon"
+trigger-pattern = "^shl$"
 
 [[snippets]]
 name            = "ji"

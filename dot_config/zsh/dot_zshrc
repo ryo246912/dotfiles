@@ -29,26 +29,37 @@ for file in $XDG_CONFIG_HOME/zsh/*.zsh; do
   source "$file"
 done
 
-### Added by Zinit's installer
-if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
-    print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})…%f"
-    command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
-    command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
-        print -P "%F{33} %F{34}Installation successful.%f%b" || \
-        print -P "%F{160} The clone has failed.%f%b"
+### sheldon (zsh プラグインマネージャ) ###
+# プラグインは dot_config/sheldon/plugins.toml で管理し、romkatv/zsh-defer により
+# zinit の turbo mode 相当の遅延ロードを行う。sheldon 本体は mise で導入する。
+
+# macOS 限定プラグイン（zsh-auto-notify 等）を有効化する profile
+if [ "$(uname)" = "Darwin" ]; then
+  export SHELDON_PROFILE="macos"
 fi
 
-source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
+if command -v sheldon >/dev/null 2>&1; then
+  # `sheldon source` の出力をキャッシュして起動を高速化する
+  # （plugins.toml がキャッシュより新しい場合のみ再生成する）
+  _sheldon_conf="${XDG_CONFIG_HOME}/sheldon/plugins.toml"
+  _sheldon_cache="${XDG_CACHE_HOME}/sheldon/plugins.zsh"
+  if [[ ! -r "$_sheldon_cache" || "$_sheldon_conf" -nt "$_sheldon_cache" ]]; then
+    command mkdir -p "${_sheldon_cache:h}"
+    # 生成に失敗した場合は壊れたキャッシュを source しないよう一時ファイル経由で置き換える
+    if sheldon source > "${_sheldon_cache}.tmp" 2>/dev/null; then
+      command mv "${_sheldon_cache}.tmp" "$_sheldon_cache"
+    else
+      command rm -f "${_sheldon_cache}.tmp"
+    fi
+  fi
+  [[ -r "$_sheldon_cache" ]] && source "$_sheldon_cache"
+  unset _sheldon_conf _sheldon_cache
+fi
 
-# Load a few important annexes, without Turbo
-# (this is currently required for annexes)
-zinit light-mode for \
-    '@zdharma-continuum/zinit-annex-as-monitor' \
-    '@zdharma-continuum/zinit-annex-bin-gem-node' \
-    '@zdharma-continuum/zinit-annex-patch-dl' \
-    '@zdharma-continuum/zinit-annex-rust'
-
-# lazy.zshを遅延読み込み
-zinit wait lucid light-mode as'null' \
-    atinit'source "${HOME}/.config/zsh/lazy.zsh"' \
-    for @'zdharma-continuum/null'
+# lazy.zshを遅延読み込み（zinit の null プラグイン + atinit 相当）。
+# zsh-defer が読み込めていれば遅延ロード、無ければ同期で読み込む。
+if (( $+functions[zsh-defer] )); then
+  zsh-defer source "${HOME}/.config/zsh/lazy.zsh"
+else
+  source "${HOME}/.config/zsh/lazy.zsh"
+fi

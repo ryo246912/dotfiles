@@ -1,0 +1,58 @@
+# cSpell:disable
+# zsh プラグインマネージャ sheldon の設定
+# https://sheldon.cli.rs/
+#
+# 方針:
+# - zinit の `wait lucid`（turbo mode / 遅延ロード）相当を romkatv/zsh-defer で再現する。
+#   `apply = ["defer"]` を付けたプラグインは `zsh-defer source ...` として出力され、
+#   最初のプロンプト表示後に非同期でロードされる。
+# - renovate が更新を検知できるよう各プラグインを tag もしくは rev(コミットハッシュ) で固定する。
+#   タグがあるものは tag、タグが無いものは rev で固定する（.github/renovate.json のカスタムマネージャ参照）。
+# - macOS 限定のプラグインは profiles = ["macos"] で切り替える（.zshrc で SHELDON_PROFILE を設定）。
+#
+# 読込後の設定（zinit の atload 相当）は dot_config/zsh/lazy/plugin.zsh で行う。
+
+shell = "zsh"
+
+[templates]
+# zsh-defer による遅延 source（zinit の turbo mode 相当）
+defer = """{% for file in files %}zsh-defer source "{{ file }}"
+{% endfor %}"""
+
+# zsh-defer 本体は他プラグインの遅延に必要なため即ロードする（defer を付けない）。
+# タグが無いため rev(コミットハッシュ) で固定する。
+[plugins.zsh-defer]
+github = "romkatv/zsh-defer"
+rev = "53a26e287fbbe2dcebb3aa1801546c6de32416fa"
+
+[plugins.zsh-autosuggestions]
+github = "zsh-users/zsh-autosuggestions"
+tag = "v0.7.1"
+apply = ["defer"]
+
+[plugins.zsh-autopair]
+github = "hlissner/zsh-autopair"
+tag = "v1.0"
+apply = ["defer"]
+
+[plugins.fast-syntax-highlighting]
+github = "zdharma-continuum/fast-syntax-highlighting"
+tag = "v1.56"
+apply = ["defer"]
+
+[plugins.zsh-auto-notify]
+github = "MichaelAquilina/zsh-auto-notify"
+tag = "0.11.1"
+profiles = ["macos"]
+apply = ["defer"]
+
+[plugins.ni-zsh]
+github = "azu/ni.zsh"
+tag = "v1.11.0"
+apply = ["defer"]
+
+# タグが無いため rev(コミットハッシュ) で固定する。
+[plugins.colored-man-pages-plus]
+github = "diverdale/colored-man-pages-plus"
+rev = "e866ae557b71398ba61e19725220163eabba486f"
+apply = ["defer"]

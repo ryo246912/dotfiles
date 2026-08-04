@@ -97,20 +97,20 @@ code --list-extensions | xargs -L 1 echo code --install-extension > dot_config/v
 # weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
 curl -s "<version>wttr.in/<location_or_help>"
 
-# zinit : report plugin
-zi report
+# sheldon : プラグインを更新(lock file 再生成)
+sheldon lock --update
 
-# zinit : report plugin loading time
-zi times
+# sheldon : 設定ファイル(plugins.toml)を編集
+sheldon edit
 
-# zinit : update plugin [ex:zinit update sharkdp/bat]
-zi update <plugin>
+# sheldon : source スクリプトを出力
+sheldon source
 
-# zinit : edit plugin [ex:zinit edit sharkdp/bat]
-zi edit <plugin>
+# sheldon : プラグインを追加 [ex:sheldon add bat --github sharkdp/bat]
+sheldon add <name> --github <plugin>
 
-# zinit : delete plugin [ex:zinit delete sharkdp/bat]
-zi delete <plugin>
+# sheldon : プラグインを削除 [ex:sheldon remove bat]
+sheldon remove <name>
 ```
 ; act
 $ event: echo -e "push\npull_request\nissues"
