@@ -6,22 +6,24 @@
 # silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
 # brew が解決）。aqua の darwin prebuilt は x86_64 で /usr/local(Intel brew) の libharfbuzz に
 # 動的リンクしており arm64 mac では dyld で読めず起動不可のため使わない。
-"brew:blueutil"     = "latest"
-"brew:colordiff"    = "latest"
-"brew:coreutils"    = "latest"
-"brew:findutils"    = "latest"
-"brew:git"          = "latest"
-"brew:gnu-sed"      = "latest"
-"brew:gnupg"        = "latest"
-"brew:goaccess"     = "latest"
-"brew:grep"         = "latest"
-"brew:imagemagick"  = "latest"
-"brew:pinentry-mac" = "latest"
-"brew:poppler"      = "latest"
-"brew:silicon"      = "latest"
-"brew:tig"          = "latest"
-"brew:tree"         = "latest"
-"brew:ugrep"        = "latest"
+# バージョン部分のコメントは実インストールには使われず、renovate が新バージョンを検知して
+# PR を作成するためのマーカー。実際のアップグレードは "latest" 指定によりツール自身に任せる。
+"brew:blueutil"     = "latest" # 2.13.0
+"brew:colordiff"    = "latest" # 1.0.22
+"brew:coreutils"    = "latest" # 9.11
+"brew:findutils"    = "latest" # 4.11.0
+"brew:git"          = "latest" # 2.55.0
+"brew:gnu-sed"      = "latest" # 4.10
+"brew:gnupg"        = "latest" # 2.5.21
+"brew:goaccess"     = "latest" # 1.11
+"brew:grep"         = "latest" # 3.12
+"brew:imagemagick"  = "latest" # 7.1.2-29
+"brew:pinentry-mac" = "latest" # 1.3.1.1
+"brew:poppler"      = "latest" # 26.08.0
+"brew:silicon"      = "latest" # 0.5.3
+"brew:tig"          = "latest" # 2.6.1
+"brew:tree"         = "latest" # 2.3.2
+"brew:ugrep"        = "latest" # 7.8.3
 
 # casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
 # が中断/ハングするため `mise run bootstrap:mac-packages`
@@ -37,27 +39,27 @@
 #   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
 #   brew-cask シムが未対応。zoom は private ホストでしか使わない。
 #   いずれも private ホスト限定で bootstrap-mac.toml 側から導入する）
-"brew-cask:arc"                   = "latest"
-"brew-cask:battery"               = "latest"
-"brew-cask:bitwarden"             = "latest"
-"brew-cask:chatgpt"               = "latest"
-"brew-cask:claude"                = "latest"
-"brew-cask:codexbar"              = "latest"
-"brew-cask:cursor"                = "latest"
-"brew-cask:dbeaver-community"     = "latest"
-"brew-cask:font-hackgen"          = "latest"
-"brew-cask:font-hackgen-nerd"     = "latest"
-"brew-cask:ghostty"               = "latest"
-"brew-cask:google-chrome"         = "latest"
-"brew-cask:karabiner-elements"    = "latest"
-"brew-cask:keyboardcleantool"     = "latest"
-"brew-cask:memory-cleaner"        = "latest"
-"brew-cask:obsidian"              = "latest"
-"brew-cask:overview"              = "latest"
-"brew-cask:slack"                 = "latest"
-"brew-cask:syncthing-app"         = "latest"
-"brew-cask:thebrowsercompany-dia" = "latest"
-"brew-cask:visual-studio-code"    = "latest"
+"brew-cask:arc"                   = "latest" # 1.158.1,84367
+"brew-cask:battery"               = "latest" # 1.4.0
+"brew-cask:bitwarden"             = "latest" # 2026.7.0
+"brew-cask:chatgpt"               = "latest" # 26.727.51351
+"brew-cask:claude"                = "latest" # 1.24012.11,09114b681f6f333d10cf1a08df130fe7080ddc9b
+"brew-cask:codexbar"              = "latest" # 0.47.0
+"brew-cask:cursor"                = "latest" # 3.14.7,a758f2241ca99fecf380180b6cbdbbce0f1f42cf
+"brew-cask:dbeaver-community"     = "latest" # 26.1.4
+"brew-cask:font-hackgen"          = "latest" # 2.10.0
+"brew-cask:font-hackgen-nerd"     = "latest" # 2.10.0
+"brew-cask:ghostty"               = "latest" # 1.3.1
+"brew-cask:google-chrome"         = "latest" # 151.0.7922.72
+"brew-cask:karabiner-elements"    = "latest" # 13.7.0
+"brew-cask:keyboardcleantool"     = "latest" # 7
+"brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
+"brew-cask:obsidian"              = "latest" # 1.13.4
+"brew-cask:overview"              = "latest" # 1.2.3-beta
+"brew-cask:slack"                 = "latest" # 4.45.69
+"brew-cask:syncthing-app"         = "latest" # 2.1.2-1
+"brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:visual-studio-code"    = "latest" # 1.106.3
 "brew-cask:wezterm@nightly"       = "latest"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）

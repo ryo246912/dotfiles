@@ -43,13 +43,6 @@
       "enabled": false
     },
     {
-      "matchDepNames": ["cosign"],
-      "matchManagers": ["custom.regex"],
-      "matchFileNames": ["dot_config/brew/brew.json"],
-      "matchUpdateTypes": ["patch"],
-      "enabled": false
-    },
-    {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
     },
@@ -95,18 +88,6 @@
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
       "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/brew/brew.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-formula"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/brew/brew_cask.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-cask"
     },
     {
       "customType": "regex",
@@ -168,6 +149,23 @@
       "currentValueTemplate": "main",
       "datasourceTemplate": "git-refs",
       "packageNameTemplate": "https://github.com/{{{depName}}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-formula"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-cask",
+      "versioningTemplate": "loose"
     },
     {
       "customType": "regex",
