@@ -8,3 +8,183 @@ run = [
     "cd \"$(chezmoi source-path)\" && rulesync generate",
     "cd ~/.config/rulesync && rulesync generate",
 ]
+
+["apm:install"]
+description = "Deploy user-scope external skills and commands to agent dirs"
+# apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
+# ~/.apm は chezmoi が生成するため、事前に `chezmoi apply` 済みであること。
+run = [
+    "apm install -g",
+    "mise run apm:sync-commands",
+    "mise run rulesync:generate-commands",
+]
+
+["apm:sync-commands"]
+description = "Sync namespaced commands from APM modules into Rulesync sources"
+run = '''
+python3 - <<'PY'
+import json
+import re
+import shutil
+from pathlib import Path, PurePosixPath
+
+# commandを持つ外部packageを追加するときは、この一覧へ設定を追加する。
+# module_path: ~/.apm/apm_modules からの相対path
+# namespace: Rulesyncへ渡すcommand名のprefix
+# generated_outputs: Rulesyncの生成先と成果物の種類（command fileまたはskill directory）
+# codex_skills: commandをCodexから呼び出せるskillとしても生成するか
+command_sources = [
+    {
+        "module_path": "classmethod/tsumiki/commands",
+        "namespace": "tsumiki",
+        "generated_outputs": [
+            {"directory": ".claude/commands", "type": "command"},
+            {"directory": ".codex/skills", "type": "skill"},
+        ],
+        "codex_skills": True,
+    },
+]
+
+home = Path.home()
+modules_dir = home / ".apm" / "apm_modules"
+rulesync_dir = home / ".config" / "rulesync" / ".rulesync" / "commands"
+rulesync_skills_dir = home / ".config" / "rulesync" / ".rulesync" / "skills"
+rulesync_dir.mkdir(parents=True, exist_ok=True)
+rulesync_skills_dir.mkdir(parents=True, exist_ok=True)
+
+# 前回このtaskが所有したpathだけを記録する。prefix一致では削除せず、同名のユーザー作成物を保護する。
+state_dir = home / ".local" / "state" / "apm-command-sync"
+state_file = state_dir / "generated-paths.json"
+previous_paths = json.loads(state_file.read_text()) if state_file.exists() else []
+if not isinstance(previous_paths, list) or not all(isinstance(path, str) for path in previous_paths):
+    raise ValueError(f"Invalid command sync state: {state_file}")
+
+# 全packageを先に検証し、package間の出力名衝突でも成果物を変更する前に停止する。
+prepared_sources = []
+generated_command_owners = {}
+managed_roots = {
+    PurePosixPath(rulesync_dir.relative_to(home).as_posix()),
+    PurePosixPath(rulesync_skills_dir.relative_to(home).as_posix()),
+}
+for command_source in command_sources:
+    # 設定値を取り出し、HOME外のpathを参照できないよう相対pathとnamespaceを検証する。
+    module_path = command_source["module_path"]
+    namespace = command_source["namespace"]
+    relative_module = PurePosixPath(module_path)
+    if relative_module.is_absolute() or ".." in relative_module.parts:
+        raise ValueError(f"Invalid APM module path: {module_path}")
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", namespace):
+        raise ValueError(f"Invalid command namespace: {namespace}")
+
+    # APMが取得したpackage内のcommands directoryが存在することを確認する。
+    source_dir = modules_dir.joinpath(*relative_module.parts)
+    if not source_dir.is_dir():
+        raise FileNotFoundError(f"APM command source not found: {source_dir}")
+
+    # nested pathの区切りを`-`へ変換して出力名を決める。
+    # `foo-bar.md`と`foo/bar.md`のように同名へ変換される場合は、既存成果物を消す前に停止する。
+    generated_commands = {}
+    for source_file in sorted(source_dir.rglob("*.md")):
+        command_name = "-".join(source_file.relative_to(source_dir).parts)
+        destination_name = f"{namespace}-{command_name}"
+        if destination_name in generated_command_owners:
+            previous_source = generated_command_owners[destination_name]
+            raise ValueError(
+                f"Duplicate generated command name {destination_name}: "
+                f"{previous_source} and {source_file}"
+            )
+        generated_command_owners[destination_name] = source_file
+        generated_commands[destination_name] = source_file
+
+    generated_outputs = command_source.get("generated_outputs", [])
+    for generated_output in generated_outputs:
+        generated_dir = generated_output["directory"]
+        output_type = generated_output["type"]
+        relative_generated = PurePosixPath(generated_dir)
+        if relative_generated.is_absolute() or ".." in relative_generated.parts:
+            raise ValueError(f"Invalid generated directory: {generated_dir}")
+        if output_type not in {"command", "skill"}:
+            raise ValueError(f"Invalid generated output type: {output_type}")
+        managed_roots.add(relative_generated)
+
+    prepared_sources.append(
+        (command_source, namespace, source_dir, generated_commands, generated_outputs)
+    )
+
+# validation完了後に、state manifestへ記録された前回成果物だけを削除する。
+for previous_path in previous_paths:
+    relative_previous = PurePosixPath(previous_path)
+    matching_roots = [
+        managed_root
+        for managed_root in managed_roots
+        if relative_previous != managed_root and relative_previous.is_relative_to(managed_root)
+    ]
+    is_managed_path = bool(matching_roots)
+    if (
+        not previous_path
+        or relative_previous.is_absolute()
+        or ".." in relative_previous.parts
+        or not is_managed_path
+    ):
+        raise ValueError(f"Invalid generated path in state: {previous_path}")
+    old_output = home.joinpath(*relative_previous.parts)
+    managed_root_path = home.joinpath(*matching_roots[0].parts)
+    if not old_output.resolve(strict=False).is_relative_to(managed_root_path.resolve(strict=False)):
+        raise ValueError(f"Generated path escapes managed root: {previous_path}")
+    if old_output.is_dir():
+        shutil.rmtree(old_output)
+    else:
+        old_output.unlink(missing_ok=True)
+
+owned_paths = set()
+for command_source, namespace, source_dir, generated_commands, generated_outputs in prepared_sources:
+
+    # upstream commandをnamespace付きのRulesync command sourceとしてコピーする。
+    for destination_name, source_file in generated_commands.items():
+        command_name = destination_name.removeprefix(f"{namespace}-")
+        destination_file = rulesync_dir / destination_name
+        shutil.copy2(source_file, destination_file)
+        owned_paths.add(destination_file.relative_to(home).as_posix())
+
+        # Codexはcommandを扱わないため、指定されたpackageでは同じ本文をAgent Skillへ変換する。
+        if command_source["codex_skills"]:
+            skill_name = f"{namespace}-{command_name.removesuffix('.md')}"
+            skill_dir = rulesync_skills_dir / skill_name
+            # state導入前に生成されたdirectoryが残っていても、初回migrationを継続できるよう再利用する。
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            command_body = source_file.read_text()
+            # command固有のfrontmatterはskillで使えないため除去し、skill用frontmatterへ置き換える。
+            if command_body.startswith("---\n"):
+                _, separator, command_body = command_body[4:].partition("\n---\n")
+                if not separator:
+                    command_body = source_file.read_text()
+            description = f"Run the {namespace} {command_name.removesuffix('.md')} workflow."
+            (skill_dir / "SKILL.md").write_text(
+                f'---\nname: {skill_name}\ndescription: "{description}"\n---\n\n'
+                f"{command_body.lstrip()}"
+            )
+            owned_paths.add(skill_dir.relative_to(home).as_posix())
+
+        # 次回削除できるよう、Rulesyncが生成するagent側のpathも所有manifestへ記録する。
+        for generated_output in generated_outputs:
+            destination = home.joinpath(*PurePosixPath(generated_output["directory"]).parts)
+            if generated_output["type"] == "skill":
+                generated_path = destination / f"{namespace}-{command_name.removesuffix('.md')}"
+            else:
+                generated_path = destination / destination_name
+            owned_paths.add(generated_path.relative_to(home).as_posix())
+
+# source作成がすべて成功した後にmanifestをatomicに更新する。
+state_dir.mkdir(parents=True, exist_ok=True)
+temporary_state = state_file.with_suffix(".tmp")
+temporary_state.write_text(json.dumps(sorted(owned_paths), indent=2) + "\n")
+temporary_state.replace(state_file)
+PY
+'''
+
+["rulesync:generate-commands"]
+description = "Generate Claude commands and Codex skills from external commands"
+run = [
+    "cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands",
+    "cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills",
+]

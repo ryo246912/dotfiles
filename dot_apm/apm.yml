@@ -1,0 +1,31 @@
+name: apm-global
+version: 1.0.0
+description: User-scope APM manifest for external agent skills (deployed via `apm install -g`)
+author: ryo246912
+# Deploy skills to these agent platforms under the user scope.
+# claude -> ~/.claude/skills/, codex/copilot/cursor -> ~/.agents/skills/ (共通の universal dir)。
+targets:
+  - claude
+  - codex
+  - copilot
+  - cursor
+dependencies:
+  # 外部スキルはすべて upstream リポジトリから依存として取得する（vendor しない）。
+  # 再現性のため各依存は immutable なコミット SHA に pin する（`#<sha>`）。
+  # SHA 更新は `git ls-remote <repo> HEAD` 等で取得して差し替える。
+  apm:
+    # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#2c180fee6cb030fe0a2a2dc402053fbe7152512b
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#2c180fee6cb030fe0a2a2dc402053fbe7152512b
+    # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
+    - git: zenbu-labs/terminal-browser
+      path: skill
+      ref: 5e4f4745cc2214f646eed37666567317561efef0
+      alias: terminal-browser
+    # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する。
+    - git: classmethod/tsumiki
+      ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
+      alias: tsumiki
+  mcp: []
+includes: auto
+scripts: {}
