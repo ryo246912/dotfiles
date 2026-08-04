@@ -31,12 +31,14 @@ from pathlib import Path, PurePosixPath
 # module_path: ~/.apm/apm_modules からの相対path
 # namespace: Rulesyncへ渡すcommand名のprefix
 # cleanup_dirs: APMがnamespaceなしで生成したcommandを削除するdirectory（HOMEからの相対path）
+# generated_dirs: 前回Rulesyncが生成したnamespace付き成果物を削除するdirectory（HOMEからの相対path）
 # codex_skills: commandをCodexから呼び出せるskillとしても生成するか
 command_sources = [
     {
         "module_path": "classmethod/tsumiki/commands",
         "namespace": "tsumiki",
         "cleanup_dirs": [".claude/commands", ".cursor/commands"],
+        "generated_dirs": [".claude/commands", ".codex/skills"],
         "codex_skills": True,
     },
 ]
@@ -61,16 +63,39 @@ for command_source in command_sources:
     if not source_dir.is_dir():
         raise FileNotFoundError(f"APM command source not found: {source_dir}")
 
+    generated_commands = {}
+    for source_file in sorted(source_dir.rglob("*.md")):
+        command_name = "-".join(source_file.relative_to(source_dir).parts)
+        destination_name = f"{namespace}-{command_name}"
+        if destination_name in generated_commands:
+            previous_source = generated_commands[destination_name]
+            raise ValueError(
+                f"Duplicate generated command name {destination_name}: "
+                f"{previous_source} and {source_file}"
+            )
+        generated_commands[destination_name] = source_file
+
     for old_command in rulesync_dir.glob(f"{namespace}-*.md"):
         old_command.unlink()
     for old_skill in rulesync_skills_dir.glob(f"{namespace}-*"):
         if old_skill.is_dir():
             shutil.rmtree(old_skill)
 
-    source_files = sorted(source_dir.rglob("*.md"))
-    for source_file in source_files:
-        command_name = "-".join(source_file.relative_to(source_dir).parts)
-        shutil.copy2(source_file, rulesync_dir / f"{namespace}-{command_name}")
+    for generated_dir in command_source["generated_dirs"]:
+        relative_generated = PurePosixPath(generated_dir)
+        if relative_generated.is_absolute() or ".." in relative_generated.parts:
+            raise ValueError(f"Invalid generated directory: {generated_dir}")
+        destination = home.joinpath(*relative_generated.parts)
+        for old_output in destination.glob(f"{namespace}-*"):
+            if old_output.is_dir():
+                shutil.rmtree(old_output)
+            else:
+                old_output.unlink()
+
+    for destination_name, source_file in generated_commands.items():
+        command_name = destination_name.removeprefix(f"{namespace}-")
+        destination_file = rulesync_dir / destination_name
+        shutil.copy2(source_file, destination_file)
 
         if command_source["codex_skills"]:
             skill_name = f"{namespace}-{command_name.removesuffix('.md')}"
@@ -92,7 +117,7 @@ for command_source in command_sources:
         if relative_cleanup.is_absolute() or ".." in relative_cleanup.parts:
             raise ValueError(f"Invalid cleanup directory: {cleanup_dir}")
         destination = home.joinpath(*relative_cleanup.parts)
-        for source_file in source_dir.glob("*.md"):
+        for source_file in source_dir.rglob("*.md"):
             (destination / source_file.name).unlink(missing_ok=True)
 PY
 '''

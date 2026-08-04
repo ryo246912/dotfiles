@@ -1,7 +1,7 @@
 {
   "targets": {
     "claudecode": ["rules", "skills", "commands", "hooks"],
-    "codexcli": ["rules", "skills", "commands"],
+    "codexcli": ["rules", "skills"],
     "copilot": ["rules"],
     "copilotcli": ["rules", "mcp"],
   },
