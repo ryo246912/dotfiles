@@ -23,6 +23,7 @@ run = [
 description = "Sync namespaced commands from APM modules into Rulesync sources"
 run = '''
 python3 - <<'PY'
+import json
 import re
 import shutil
 from pathlib import Path, PurePosixPath
@@ -31,14 +32,17 @@ from pathlib import Path, PurePosixPath
 # module_path: ~/.apm/apm_modules からの相対path
 # namespace: Rulesyncへ渡すcommand名のprefix
 # cleanup_dirs: APMがnamespaceなしで生成したcommandを削除するdirectory（HOMEからの相対path）
-# generated_dirs: 前回Rulesyncが生成したnamespace付き成果物を削除するdirectory（HOMEからの相対path）
+# generated_outputs: Rulesyncの生成先と成果物の種類（command fileまたはskill directory）
 # codex_skills: commandをCodexから呼び出せるskillとしても生成するか
 command_sources = [
     {
         "module_path": "classmethod/tsumiki/commands",
         "namespace": "tsumiki",
         "cleanup_dirs": [".claude/commands", ".cursor/commands"],
-        "generated_dirs": [".claude/commands", ".codex/skills"],
+        "generated_outputs": [
+            {"directory": ".claude/commands", "type": "command"},
+            {"directory": ".codex/skills", "type": "skill"},
+        ],
         "codex_skills": True,
     },
 ]
@@ -50,6 +54,16 @@ rulesync_skills_dir = home / ".config" / "rulesync" / ".rulesync" / "skills"
 rulesync_dir.mkdir(parents=True, exist_ok=True)
 rulesync_skills_dir.mkdir(parents=True, exist_ok=True)
 
+# 前回このtaskが所有したpathだけを記録する。prefix一致では削除せず、同名のユーザー作成物を保護する。
+state_dir = home / ".local" / "state" / "apm-command-sync"
+state_file = state_dir / "generated-paths.json"
+previous_paths = json.loads(state_file.read_text()) if state_file.exists() else []
+if not isinstance(previous_paths, list) or not all(isinstance(path, str) for path in previous_paths):
+    raise ValueError(f"Invalid command sync state: {state_file}")
+
+# 全packageを先に検証し、package間の出力名衝突でも成果物を変更する前に停止する。
+prepared_sources = []
+generated_command_owners = {}
 for command_source in command_sources:
     # 設定値を取り出し、HOME外のpathを参照できないよう相対pathとnamespaceを検証する。
     module_path = command_source["module_path"]
@@ -71,38 +85,49 @@ for command_source in command_sources:
     for source_file in sorted(source_dir.rglob("*.md")):
         command_name = "-".join(source_file.relative_to(source_dir).parts)
         destination_name = f"{namespace}-{command_name}"
-        if destination_name in generated_commands:
-            previous_source = generated_commands[destination_name]
+        if destination_name in generated_command_owners:
+            previous_source = generated_command_owners[destination_name]
             raise ValueError(
                 f"Duplicate generated command name {destination_name}: "
                 f"{previous_source} and {source_file}"
             )
+        generated_command_owners[destination_name] = source_file
         generated_commands[destination_name] = source_file
 
-    # 前回同期したRulesync sourceをnamespace単位で削除し、upstreamの削除・renameを反映する。
-    for old_command in rulesync_dir.glob(f"{namespace}-*.md"):
-        old_command.unlink()
-    for old_skill in rulesync_skills_dir.glob(f"{namespace}-*"):
-        if old_skill.is_dir():
-            shutil.rmtree(old_skill)
-
-    # Rulesyncが前回agent directoryへ生成したcommand/skillも削除し、孤立した成果物を残さない。
-    for generated_dir in command_source["generated_dirs"]:
+    generated_outputs = command_source.get("generated_outputs", [])
+    for generated_output in generated_outputs:
+        generated_dir = generated_output["directory"]
+        output_type = generated_output["type"]
         relative_generated = PurePosixPath(generated_dir)
         if relative_generated.is_absolute() or ".." in relative_generated.parts:
             raise ValueError(f"Invalid generated directory: {generated_dir}")
-        destination = home.joinpath(*relative_generated.parts)
-        for old_output in destination.glob(f"{namespace}-*"):
-            if old_output.is_dir():
-                shutil.rmtree(old_output)
-            else:
-                old_output.unlink()
+        if output_type not in {"command", "skill"}:
+            raise ValueError(f"Invalid generated output type: {output_type}")
+
+    prepared_sources.append(
+        (command_source, namespace, source_dir, generated_commands, generated_outputs)
+    )
+
+# validation完了後に、state manifestへ記録された前回成果物だけを削除する。
+for previous_path in previous_paths:
+    relative_previous = PurePosixPath(previous_path)
+    if relative_previous.is_absolute() or ".." in relative_previous.parts:
+        raise ValueError(f"Invalid generated path in state: {previous_path}")
+    old_output = home.joinpath(*relative_previous.parts)
+    if old_output.is_dir():
+        shutil.rmtree(old_output)
+    else:
+        old_output.unlink(missing_ok=True)
+
+owned_paths = set()
+for command_source, namespace, source_dir, generated_commands, generated_outputs in prepared_sources:
 
     # upstream commandをnamespace付きのRulesync command sourceとしてコピーする。
     for destination_name, source_file in generated_commands.items():
         command_name = destination_name.removeprefix(f"{namespace}-")
         destination_file = rulesync_dir / destination_name
         shutil.copy2(source_file, destination_file)
+        owned_paths.add(destination_file.relative_to(home).as_posix())
 
         # Codexはcommandを扱わないため、指定されたpackageでは同じ本文をAgent Skillへ変換する。
         if command_source["codex_skills"]:
@@ -120,6 +145,16 @@ for command_source in command_sources:
                 f'---\nname: {skill_name}\ndescription: "{description}"\n---\n\n'
                 f"{command_body.lstrip()}"
             )
+            owned_paths.add(skill_dir.relative_to(home).as_posix())
+
+        # 次回削除できるよう、Rulesyncが生成するagent側のpathも所有manifestへ記録する。
+        for generated_output in generated_outputs:
+            destination = home.joinpath(*PurePosixPath(generated_output["directory"]).parts)
+            if generated_output["type"] == "skill":
+                generated_path = destination / f"{namespace}-{command_name.removesuffix('.md')}"
+            else:
+                generated_path = destination / destination_name
+            owned_paths.add(generated_path.relative_to(home).as_posix())
 
     # APMがClaude/Cursorへ直接配置したnamespaceなしcommandを再帰的に削除し、重複表示を防ぐ。
     for cleanup_dir in command_source["cleanup_dirs"]:
@@ -129,6 +164,12 @@ for command_source in command_sources:
         destination = home.joinpath(*relative_cleanup.parts)
         for source_file in source_dir.rglob("*.md"):
             (destination / source_file.name).unlink(missing_ok=True)
+
+# source作成がすべて成功した後にmanifestをatomicに更新する。
+state_dir.mkdir(parents=True, exist_ok=True)
+temporary_state = state_file.with_suffix(".tmp")
+temporary_state.write_text(json.dumps(sorted(owned_paths), indent=2) + "\n")
+temporary_state.replace(state_file)
 PY
 '''
 
