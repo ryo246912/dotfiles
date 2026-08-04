@@ -31,14 +31,12 @@ from pathlib import Path, PurePosixPath
 # commandを持つ外部packageを追加するときは、この一覧へ設定を追加する。
 # module_path: ~/.apm/apm_modules からの相対path
 # namespace: Rulesyncへ渡すcommand名のprefix
-# cleanup_dirs: APMがnamespaceなしで生成したcommandを削除するdirectory（HOMEからの相対path）
 # generated_outputs: Rulesyncの生成先と成果物の種類（command fileまたはskill directory）
 # codex_skills: commandをCodexから呼び出せるskillとしても生成するか
 command_sources = [
     {
         "module_path": "classmethod/tsumiki/commands",
         "namespace": "tsumiki",
-        "cleanup_dirs": [".claude/commands", ".cursor/commands"],
         "generated_outputs": [
             {"directory": ".claude/commands", "type": "command"},
             {"directory": ".codex/skills", "type": "skill"},
@@ -155,15 +153,6 @@ for command_source, namespace, source_dir, generated_commands, generated_outputs
             else:
                 generated_path = destination / destination_name
             owned_paths.add(generated_path.relative_to(home).as_posix())
-
-    # APMがClaude/Cursorへ直接配置したnamespaceなしcommandを再帰的に削除し、重複表示を防ぐ。
-    for cleanup_dir in command_source["cleanup_dirs"]:
-        relative_cleanup = PurePosixPath(cleanup_dir)
-        if relative_cleanup.is_absolute() or ".." in relative_cleanup.parts:
-            raise ValueError(f"Invalid cleanup directory: {cleanup_dir}")
-        destination = home.joinpath(*relative_cleanup.parts)
-        for source_file in source_dir.rglob("*.md"):
-            (destination / source_file.name).unlink(missing_ok=True)
 
 # source作成がすべて成功した後にmanifestをatomicに更新する。
 state_dir.mkdir(parents=True, exist_ok=True)
