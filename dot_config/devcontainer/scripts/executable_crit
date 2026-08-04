@@ -54,8 +54,7 @@ if is_review_launch "${1-}"; then
 	fi
 	# host側の公開portが分かる場合は、reviewerが開くURLを追加出力する。
 	if [ -s "${host_port_file}" ]; then
-		printf 'crit UI (open THIS on the host; the URL crit printed above is container-internal): http://localhost:%s\n' \
-			"$(cat "${host_port_file}")"
+		printf 'crit UI (host): http://localhost:%s\n' "$(cat "${host_port_file}")"
 	fi
 fi
 
