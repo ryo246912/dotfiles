@@ -183,7 +183,8 @@
       "matchStrings": [
         "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
-      "datasourceTemplate": "custom.brew-cask"
+      "datasourceTemplate": "custom.brew-cask",
+      "versioningTemplate": "loose"
     },
     {
       "customType": "regex",

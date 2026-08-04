@@ -60,7 +60,6 @@
 "brew-cask:syncthing-app"         = "latest" # 2.1.2-1
 "brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
 "brew-cask:visual-studio-code"    = "latest" # 1.106.3
-# wezterm@nightly は discrete version を持たないため version コメントによる追跡対象外
 "brew-cask:wezterm@nightly"       = "latest"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）
