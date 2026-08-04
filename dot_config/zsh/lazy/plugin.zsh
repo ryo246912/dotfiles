@@ -1,111 +1,52 @@
 # cSpell:disable
-# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#ice-modifiers
-# wait = 遅延読み込み wait"0"と同義
-# lucid = プラグイン読込時の表示をOFF
-# blockf = プラグインによる$pathの変更を禁止する
-# light-mode = for構文におけるzinit light(light-modeがない場合はzinit snippet相当)
-# as"program" = zshプラグインでないものを読込(ソースを$pathに追加)
-# as"completion" = 補完プラグインとして追加
-# from = clone先を指定 [from"github"(デフォルト)/from"gh-r"(Github Release)]
-# bpick= gh-rするファイル名を指定 [例.bpick"nnn-v*"]
-# mv = ファイルをmv
-# cp = ファイルをcp
-# atclone= clone後に実行する関数を指定
-# atpull= pull後(upgrade)に実行する関数を指定 [atpull"%atclone" = atcloneの内容を実行]
-# configure=./configureを実行、make前に実行の場合はconfigure'!'
-# make= make install、インストール先を指定するにはmake PREFIX=$ZPFX
-# rustup = rust installer
-# cargo = rust builder and package manager
-# (plugin script loading)
-# src = 読込完了時に指定ファイル読込
-# atload = 読込完了時に実行する関数を指定
-# pick = 引数に与えられたものを$pathに追加
-# sbin = 引数に与えられたものを$pathに追加
+# プラグイン本体は sheldon(dot_config/sheldon/plugins.toml)で管理し、zsh-defer で遅延ロードする。
+# このファイルは各プラグインの「読込後設定」（zinit の atload 相当）を担う。
+#
+# 実行タイミング:
+#   .zshrc が `zsh-defer source lazy.zsh` で本ファイル群を遅延ロードする。sheldon が
+#   キューした各プラグインの source より後に本ファイルが実行されるため、ここでの設定は
+#   プラグイン本体のロード後に適用される（zinit の turbo + atload と同じ順序）。
 
-# 実行順:atinit -> atpull! -> make'!!' -> mv -> cp -> make! -> atclone/atpull -> make -> (plugin script loading) -> src -> multisrc -> atload.
-# https://github.com/zdharma-continuum/zinit?tab=readme-ov-file#order-of-execution
+# --- zsh-autosuggestions ---
+# 補完候補のハイライト色。表示時に参照されるためロード順に依存せず設定できる。
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
+# 遅延ロード時は自動起動が次プロンプトまで遅れるため明示的に起動する。
+(( $+functions[_zsh_autosuggest_start] )) && _zsh_autosuggest_start
 
-### plugin ###
-zinit wait lucid blockf for \
-    "https://github.com/junegunn/fzf/blob/master/shell/key-bindings.zsh" \
-    "https://github.com/junegunn/fzf/blob/master/shell/completion.zsh"
-
-__zsh-autosuggestions_atload() {
-    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=100"
-    _zsh_autosuggest_start
-}
-zinit wait lucid light-mode blockf for \
-    atload"__zsh-autosuggestions_atload" \
-    @'zsh-users/zsh-autosuggestions'
-
-zinit wait lucid light-mode blockf for \
-    atload"source autopair.zsh && autopair-init" \
-    @'hlissner/zsh-autopair'
-
+# --- zsh-auto-notify（macOS のみ / sheldon の macos profile でロード）---
 if [ "$(uname)" = "Darwin" ]; then
-__zsh-auto-notify_atload() {
-    export AUTO_NOTIFY_THRESHOLD=20
-    AUTO_NOTIFY_IGNORE+=(
-      "ccmanager"
-      "claude"
-      "czg"
-      "chezmoi apply"
-      "git branch"
-      "git log"
-      "git show"
-      "git rebase"
-      "gh-dash"
-      "gh-actions-dash"
-      "lazygit"
-      "gitui"
-      "gh pr create"
-      "gh pr diff"
-      "gh pr edit"
-      "yazi"
-    )
-}
-zinit wait lucid light-mode blockf for \
-    atload"__zsh-auto-notify_atload" \
-    @'MichaelAquilina/zsh-auto-notify'
+  export AUTO_NOTIFY_THRESHOLD=20
+  AUTO_NOTIFY_IGNORE+=(
+    "ccmanager"
+    "claude"
+    "czg"
+    "chezmoi apply"
+    "git branch"
+    "git log"
+    "git show"
+    "git rebase"
+    "gh-dash"
+    "gh-actions-dash"
+    "lazygit"
+    "gitui"
+    "gh pr create"
+    "gh pr diff"
+    "gh pr edit"
+    "yazi"
+  )
 fi
 
-__fast-syntax-highlighting_atload() {
-    FAST_HIGHLIGHT_STYLES[comment]=white
-}
-zinit wait lucid light-mode blockf for \
-    atload"__fast-syntax-highlighting_atload" \
-    @'zdharma/fast-syntax-highlighting'
+# --- fast-syntax-highlighting ---
+# コメントの配色。FAST_HIGHLIGHT_STYLES はプラグインロード時に生成されるため存在確認する。
+(( ${+FAST_HIGHLIGHT_STYLES} )) && FAST_HIGHLIGHT_STYLES[comment]=white
 
-zinit wait lucid light-mode blockf for \
-    @'azu/ni.zsh'
+# --- hlissner/zsh-autopair ---
+# autopair.zsh は source 時に autopair-init を自動実行するため、追加の初期化は不要。
 
-zinit wait lucid light-mode for \
-    @'diverdale/colored-man-pages-plus'
-
-### completion ###
-zinit wait lucid light-mode blockf for \
-    as"completion" \
-    atload"zicompinit; zicdreplay" cp"git-completion.zsh -> _git" \
-    "https://github.com/git/git/blob/master/contrib/completion/git-completion.zsh"
-
-zinit wait lucid light-mode blockf for \
-    silent \
-    atclone"zstyle ':completion:*:*:git:*' script git-completion.bash" atpull"%atclone" \
-    "https://github.com/git/git/blob/master/contrib/completion/git-completion.bash"
-
-zinit wait lucid light-mode blockf for \
-    as"completion" "https://github.com/docker/cli/blob/master/contrib/completion/zsh/_docker"
-
-zinit wait lucid light-mode blockf for \
-    as"completion" "https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/zsh/_docker-compose"
-
-zinit wait lucid light-mode blockf for \
-    as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew"
-
-zinit wait lucid light-mode blockf for \
-    src"tmux" \
-    as"completion" "https://github.com/imomaliev/tmux-bash-completion/blob/master/completions/tmux"
-
-zinit wait lucid light-mode blockf for \
-    mv"chezmoi.zsh -> _chezmoi" \
-    as"completion" "https://github.com/twpayne/chezmoi/blob/master/completions/chezmoi.zsh"
+# NOTE: 補完(completion)について
+#   zinit 時代に snippet で取得していた各種補完は以下に移行した:
+#     - fzf(key-bindings/completion) ... lazy/mise.zsh で `source <(fzf --zsh)`
+#     - docker / chezmoi             ... lazy/mise.zsh で `<tool> completion zsh` を生成
+#     - git / tmux                   ... zsh 同梱の _git / _tmux を使用
+#     - brew                         ... Homebrew 同梱の補完(FPATH)を使用
+#   これらは mise で管理するツール本体のバージョンに追従する。

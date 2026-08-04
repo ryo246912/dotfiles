@@ -32,8 +32,6 @@ fi
 
 # 補完の読込
 autoload -Uz compinit
-autoload -Uz _zinit
-(( ${+_comps} )) && _comps[zinit]=_zinit
 
 if [ "$(uname)" = "Darwin" ]; then
   if [ -e "$HOME/.zcompdump" ] && [ $(date +'%j') != $(/usr/bin/stat -f '%Sm' -t '%j' "$HOME/.zcompdump") ]; then

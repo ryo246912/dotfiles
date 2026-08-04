@@ -175,8 +175,28 @@
       "matchStrings": [
         "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
       ],
-      "datasourceTemplate": "github-releases",
+      "datasourceTemplate": "github-tags",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
+      "matchStrings": [
+        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+rev\\s*=\\s*\"(?<currentDigest>[0-9a-f]{40})\""
+      ],
+      "currentValueTemplate": "master",
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{{packageName}}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
+      "matchStrings": [
+        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+rev\\s*=\\s*\"(?<currentDigest>[0-9a-f]{40})\""
+      ],
+      "currentValueTemplate": "main",
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{{packageName}}}"
     }
   ]
 }

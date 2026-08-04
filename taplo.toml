@@ -5,3 +5,13 @@ allowed_blank_lines = 1
 array_auto_collapse = false
 indent_string       = "    "
 reorder_keys        = true
+
+# sheldon のプラグイン設定はキー順が意味を持つため reorder_keys を無効化する。
+# renovate のカスタムマネージャ(.github/renovate.json)が
+# `[plugins.<name>]` 直後の github → tag/rev の並びを前提にパースするため、
+# アルファベット順に並び替えられると更新検知が壊れる。
+[[rule]]
+include = ["dot_config/sheldon/plugins.toml"]
+
+[rule.formatting]
+reorder_keys = false

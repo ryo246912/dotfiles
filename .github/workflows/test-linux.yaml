@@ -108,7 +108,7 @@ jobs:
           set -euo pipefail
           # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
           ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
-          # zshenv(ZDOTDIR/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
+          # zshenv(ZDOTDIR/mise activate) → .zshrc(sheldon 等) が致命エラー無く起動することを確認する。
           if ! out=$(timeout 300 zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
             echo "$out"
             echo "error: zsh 起動に失敗しました"

@@ -141,7 +141,7 @@ jobs:
             echo "error: gtimeout/timeout が見つかりません（coreutils 未導入）。制限付きで zsh 起動確認を実行できません"
             exit 1
           fi
-          # zshenv(brew shellenv/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
+          # zshenv(brew shellenv/mise activate) → .zshrc(sheldon 等) が致命エラー無く起動することを確認する。
           if ! out=$("${timeout_cmd[@]}" zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
             echo "$out"
             echo "error: zsh 起動に失敗しました"

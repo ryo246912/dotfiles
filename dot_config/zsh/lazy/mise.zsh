@@ -34,6 +34,14 @@ __generate_and_load_completion() {
             [ ! -f "$completion_file" ] && mise completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
+        "docker")
+            [ ! -f "$completion_file" ] && docker completion zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
+        "chezmoi")
+            [ ! -f "$completion_file" ] && chezmoi completion zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
         "taws")
             taws completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
@@ -64,9 +72,19 @@ if command -v bat >/dev/null 2>&1; then
     __generate_and_load_completion "bat"
 fi
 
+# chezmoi
+if command -v chezmoi >/dev/null 2>&1; then
+    __generate_and_load_completion "chezmoi"
+fi
+
 # delta
 if command -v delta >/dev/null 2>&1; then
     compdef _gnu_generic delta
+fi
+
+# docker
+if command -v docker >/dev/null 2>&1; then
+    __generate_and_load_completion "docker"
 fi
 
 # fnox
@@ -83,6 +101,8 @@ fi
 
 # fzf
 if command -v fzf >/dev/null 2>&1; then
+    # キーバインド・補完（zinit 時代の key-bindings.zsh / completion.zsh 相当）
+    source <(fzf --zsh)
     export FZF_DEFAULT_COMMAND='find $PWD -type d -path "$PWD/.*" -prune -o -not -name ".*" -type f -name "*" -print'
     if [ "$(uname)" = "Darwin" ]; then
         export FZF_DEFAULT_OPTS='-m --height 40% --layout=reverse --border --bind ctrl-k:kill-line,alt-right:forward-word,alt-left:backward-word'
