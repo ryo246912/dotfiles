@@ -23,36 +23,36 @@ defer = """{% for file in files %}zsh-defer source "{{ file }}"
 # タグが無いため rev(コミットハッシュ) で固定する。
 [plugins.zsh-defer]
 github = "romkatv/zsh-defer"
-rev = "53a26e287fbbe2dcebb3aa1801546c6de32416fa"
+rev    = "53a26e287fbbe2dcebb3aa1801546c6de32416fa"
 
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
-tag = "v0.7.1"
-apply = ["defer"]
+tag    = "v0.7.1"
+apply  = ["defer"]
 
 [plugins.zsh-autopair]
 github = "hlissner/zsh-autopair"
-tag = "v1.0"
-apply = ["defer"]
+tag    = "v1.0"
+apply  = ["defer"]
 
 [plugins.fast-syntax-highlighting]
 github = "zdharma-continuum/fast-syntax-highlighting"
-tag = "v1.56"
-apply = ["defer"]
+tag    = "v1.56"
+apply  = ["defer"]
 
 [plugins.zsh-auto-notify]
-github = "MichaelAquilina/zsh-auto-notify"
-tag = "0.11.1"
+github   = "MichaelAquilina/zsh-auto-notify"
+tag      = "0.11.1"
 profiles = ["macos"]
-apply = ["defer"]
+apply    = ["defer"]
 
 [plugins.ni-zsh]
 github = "azu/ni.zsh"
-tag = "v1.11.0"
-apply = ["defer"]
+tag    = "v1.11.0"
+apply  = ["defer"]
 
 # タグが無いため rev(コミットハッシュ) で固定する。
 [plugins.colored-man-pages-plus]
 github = "diverdale/colored-man-pages-plus"
-rev = "e866ae557b71398ba61e19725220163eabba486f"
-apply = ["defer"]
+rev    = "e866ae557b71398ba61e19725220163eabba486f"
+apply  = ["defer"]
