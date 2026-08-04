@@ -56,7 +56,7 @@
 "brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
 "brew-cask:obsidian"              = "latest" # 1.13.4
 "brew-cask:overview"              = "latest" # 1.2.3-beta
-"brew-cask:slack"                 = "latest" # 4.45.69
+"brew-cask:slack"                 = "latest" # 4.51.180
 "brew-cask:syncthing-app"         = "latest" # 2.1.2-1
 "brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
 "brew-cask:visual-studio-code"    = "latest" # 1.106.3
