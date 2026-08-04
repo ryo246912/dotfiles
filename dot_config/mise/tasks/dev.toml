@@ -51,6 +51,7 @@ rulesync_dir.mkdir(parents=True, exist_ok=True)
 rulesync_skills_dir.mkdir(parents=True, exist_ok=True)
 
 for command_source in command_sources:
+    # 設定値を取り出し、HOME外のpathを参照できないよう相対pathとnamespaceを検証する。
     module_path = command_source["module_path"]
     namespace = command_source["namespace"]
     relative_module = PurePosixPath(module_path)
@@ -59,10 +60,13 @@ for command_source in command_sources:
     if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", namespace):
         raise ValueError(f"Invalid command namespace: {namespace}")
 
+    # APMが取得したpackage内のcommands directoryが存在することを確認する。
     source_dir = modules_dir.joinpath(*relative_module.parts)
     if not source_dir.is_dir():
         raise FileNotFoundError(f"APM command source not found: {source_dir}")
 
+    # nested pathの区切りを`-`へ変換して出力名を決める。
+    # `foo-bar.md`と`foo/bar.md`のように同名へ変換される場合は、既存成果物を消す前に停止する。
     generated_commands = {}
     for source_file in sorted(source_dir.rglob("*.md")):
         command_name = "-".join(source_file.relative_to(source_dir).parts)
@@ -75,12 +79,14 @@ for command_source in command_sources:
             )
         generated_commands[destination_name] = source_file
 
+    # 前回同期したRulesync sourceをnamespace単位で削除し、upstreamの削除・renameを反映する。
     for old_command in rulesync_dir.glob(f"{namespace}-*.md"):
         old_command.unlink()
     for old_skill in rulesync_skills_dir.glob(f"{namespace}-*"):
         if old_skill.is_dir():
             shutil.rmtree(old_skill)
 
+    # Rulesyncが前回agent directoryへ生成したcommand/skillも削除し、孤立した成果物を残さない。
     for generated_dir in command_source["generated_dirs"]:
         relative_generated = PurePosixPath(generated_dir)
         if relative_generated.is_absolute() or ".." in relative_generated.parts:
@@ -92,16 +98,19 @@ for command_source in command_sources:
             else:
                 old_output.unlink()
 
+    # upstream commandをnamespace付きのRulesync command sourceとしてコピーする。
     for destination_name, source_file in generated_commands.items():
         command_name = destination_name.removeprefix(f"{namespace}-")
         destination_file = rulesync_dir / destination_name
         shutil.copy2(source_file, destination_file)
 
+        # Codexはcommandを扱わないため、指定されたpackageでは同じ本文をAgent Skillへ変換する。
         if command_source["codex_skills"]:
             skill_name = f"{namespace}-{command_name.removesuffix('.md')}"
             skill_dir = rulesync_skills_dir / skill_name
             skill_dir.mkdir(parents=True)
             command_body = source_file.read_text()
+            # command固有のfrontmatterはskillで使えないため除去し、skill用frontmatterへ置き換える。
             if command_body.startswith("---\n"):
                 _, separator, command_body = command_body[4:].partition("\n---\n")
                 if not separator:
@@ -112,6 +121,7 @@ for command_source in command_sources:
                 f"{command_body.lstrip()}"
             )
 
+    # APMがClaude/Cursorへ直接配置したnamespaceなしcommandを再帰的に削除し、重複表示を防ぐ。
     for cleanup_dir in command_source["cleanup_dirs"]:
         relative_cleanup = PurePosixPath(cleanup_dir)
         if relative_cleanup.is_absolute() or ".." in relative_cleanup.parts:
