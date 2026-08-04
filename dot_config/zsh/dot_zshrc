@@ -42,7 +42,9 @@ if command -v sheldon >/dev/null 2>&1; then
   # `sheldon source` の出力をキャッシュして起動を高速化する
   # （plugins.toml がキャッシュより新しい場合のみ再生成する）
   _sheldon_conf="${XDG_CONFIG_HOME}/sheldon/plugins.toml"
-  _sheldon_cache="${XDG_CACHE_HOME}/sheldon/plugins.zsh"
+  # profile ごとにロードするプラグインが異なるためキャッシュも profile 別に分ける
+  # （例: macOS は plugins.macos.zsh、profile 無しは plugins.zsh）
+  _sheldon_cache="${XDG_CACHE_HOME}/sheldon/plugins${SHELDON_PROFILE:+.${SHELDON_PROFILE}}.zsh"
   if [[ ! -r "$_sheldon_cache" || "$_sheldon_conf" -nt "$_sheldon_cache" ]]; then
     command mkdir -p "${_sheldon_cache:h}"
     # 生成に失敗した場合は壊れたキャッシュを source しないよう一時ファイル経由で置き換える

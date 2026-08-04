@@ -15,8 +15,9 @@
 shell = "zsh"
 
 [templates]
-# zsh-defer による遅延 source（zinit の turbo mode 相当）
-defer = """{% for file in files %}zsh-defer source "{{ file }}"
+# zsh-defer による遅延 source（zinit の turbo mode 相当）。
+# zsh-defer が読み込めなかった場合（clone 失敗等）は同期 source にフォールバックする。
+defer = """{% for file in files %}if (( $+functions[zsh-defer] )); then zsh-defer source "{{ file }}"; else source "{{ file }}"; fi
 {% endfor %}"""
 
 # zsh-defer 本体は他プラグインの遅延に必要なため即ロードする（defer を付けない）。
