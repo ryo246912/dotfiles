@@ -51,6 +51,11 @@ USER root
 # install tool via curl
 RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 
+# Tailscale をインストール（yepanywhere を tailnet 経由でスマホ/タブレットから参照するため）。
+# devcontainer 内では userspace networking モードで起動するので TUN/NET_ADMIN 権限は不要。
+# coderabbit と同様に公式インストールスクリプトを使う（最新 stable の tailscale/tailscaled が入る）。
+RUN curl -fsSL https://tailscale.com/install.sh | sh
+
 USER vscode
 
 WORKDIR /workspace

@@ -24,7 +24,10 @@
     "CRIT_HOST": "0.0.0.0",
     "CRIT_PORT": "7842",
     // crit: コンテナ内では更新チェック不要のため無効化
-    "CRIT_NO_UPDATE_CHECK": "1"
+    "CRIT_NO_UPDATE_CHECK": "1",
+    // yepanywhere: Tailscale 認証キー（任意）。ephemeral + reusable キーを推奨。
+    // 未設定なら起動時に対話ログインする。詳細は docs/yepanywhere.md 参照。
+    "TS_AUTHKEY": "${localEnv:TS_AUTHKEY}"
   },
   // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
   // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
