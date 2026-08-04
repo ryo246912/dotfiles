@@ -18,37 +18,67 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 | **外部スキル（グローバル）**        | **APM**    | `dot_apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）       |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
-- **カスタムスキル**（`article` / `memo` / `planning` / `review-fix` / `suggest-rules` など、
-  このリポジトリ独自の内容を含むもの）は引き続き rulesync（`dot_config/rulesync/`）で管理します。
-- **外部スキル**（`crit` / `crit-cli` / `terminal-browser` / tsumiki 14種と commands）は upstream 依存として
-  `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、pristine な upstream をそのまま使います。
+- **カスタムスキル**は引き続き rulesync（`dot_config/rulesync/`）で管理します。
+- **外部スキル**は upstream 依存として `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、
+  pristine な upstream をそのまま使います。
 
 ## 依存の宣言と pin
 
-`dot_apm/apm.yml` の `dependencies.apm` に `owner/repo/<skill への相対パス>#<コミット SHA>` 形式で
-宣言します。パスは `SKILL.md` を含むディレクトリを指します。
+APMは依存先を取得した後、対象pathの構成からpackageを判別します。追加するときは、まずupstreamを確認して
+次のどちらとして取り込むかを決めます。
+
+- リポジトリ内の1つの`SKILL.md`だけが必要なら、**skill（virtual package）**としてそのdirectoryを`path`に指定する。
+- リポジトリに`apm.yml`、またはClaude Code plugin形式のskills・commandsなどがあり、複数primitiveをまとめて
+  取り込みたいなら、**plugin/package**としてリポジトリ全体を指定する。
+
+### 1つのskillをインストールする
+
+`path`には`SKILL.md`が置かれたdirectoryを指定します。短縮形でも書けますが、インストール名を明示する場合は
+object formを使います。
 
 ```yaml
 dependencies:
   apm:
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#<sha>
-    - git: zenbu-labs/terminal-browser
-      path: skill
+    - git: owner/repository
+      path: path/to/skill
       ref: <sha>
-      alias: terminal-browser
-    - git: classmethod/tsumiki
-      ref: <sha>
-      alias: tsumiki
+      alias: installed-skill-name
 ```
+
+`alias`がローカルでのpackage名になり、skillの配置名を明示できます。`alias`を省略するとAPMがリポジトリ名と
+subdirectory名から既定名を決めるため、期待するskill名と異なる場合だけ指定します。
+
+### plugin/package全体をインストールする
+
+複数のskillsやcommandsを含むplugin/packageは`path`を指定せず、リポジトリ全体を依存にします。
+
+```yaml
+dependencies:
+  apm:
+    - git: owner/plugin-repository
+      ref: <sha>
+      alias: plugin-name
+```
+
+pluginが選択可能なskillsを公開しており、その一部だけが必要な場合はobject formへ`skills`を追加します。
+
+```yaml
+dependencies:
+  apm:
+    - git: owner/plugin-repository
+      ref: <sha>
+      alias: plugin-name
+      skills:
+        - selected-skill
+```
+
+`skills`を省略するとpackage全体を取り込みます。`skills: ["*"]`は公開されたskillsをすべて選択します。
+`alias`はpackageのローカル名であり、plugin内の個々のskill名を書き換える設定ではありません。
 
 - **再現性**: 各依存を immutable なコミット SHA に pin することで、新しいマシンでも同じ内容が install
   されます（pin しないと HEAD 追従になり、upstream の変更が commit/レビュー無しに挙動を変えてしまう）。
 - **SHA の取得・更新**: `git ls-remote https://github.com/<owner>/<repo> HEAD` で最新コミットを取得して差し替えます。
-- subdirectory 依存の既定名は `<repo>-<directory>` になるため、terminal-browser は object form の
-  `alias: terminal-browser` を指定して `skills/terminal-browser/` に配置します。
-- tsumiki は個別 skill ではなく plugin package 全体を依存にすることで、14 skills に加えて commands も
-  取得します。APM は command namespace と Codex commands に対応しないため、commands に限って
-  `mise run apm:sync-commands` が rulesync source へ `tsumiki-<name>` の名前で同期し、rulesync が配布します。
+- 詳細なfieldと判別規則はAPM公式の[Manifest Schema](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/manifest-schema.md#41-dependenciesapm----listapmdependency)を参照してください。
 - `apm install -g` は解決結果を `~/.apm/apm.lock.yaml` にも記録します（integrity hash 付き）。より厳密な
   再現性が必要なら、生成された `~/.apm/apm.lock.yaml` を `chezmoi add` して commit してください
   （npm の `package-lock.json` に相当）。
@@ -76,19 +106,6 @@ apm install -g
 `mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Codeにはcommand、
 Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech-stack`、Codexでは新しいセッションから
 `$tsumiki-init-tech-stack` のように呼び出します。Codexのcustom prompt（`/prompts:...`）には依存しません。
-
-commandを持つ外部packageを追加する場合は、`dot_config/mise/tasks/dev.toml` の
-`apm:sync-commands` task内にあるPythonの `command_sources` へ、`module_path`、`namespace`、
-`cleanup_dirs`、`codex_skills` を追加します。同期処理自体はpackage固有ではなく、任意のAPM moduleとnamespaceを
-扱います。
-
-生成後にCodexでskillが見つからない場合は、`~/.codex/skills/tsumiki-init-tech-stack/SKILL.md` が存在することを
-確認してからCodexを再起動し、新しいセッションを開始します。Codexのリモート環境はローカルの`$HOME`を共有しない
-ため、その環境のsetup処理でも`chezmoi apply`と`mise run apm:install`を実行する必要があります。
-
-> [!IMPORTANT]
-> `~/.apm/` は chezmoi が生成するディレクトリなので、**先に `chezmoi apply` 済みであること**が前提です。
-> 新しいマシンや `dot_apm/` を編集した直後は、`chezmoi apply` してから `mise run apm:install` を実行してください。
 
 > [!NOTE]
 > 導入した skill の `description` は各エージェントの skill 索引に**常時ロード**されます。

@@ -93,19 +93,8 @@ crit@crit プラグインが提供する 2 つの skill を、**APM の外部依
 
 ## `crit` ラッパー（devcontainer グルー）
 
-pristine な skill に代わって、`~/.config/devcontainer/scripts/crit`
-（ソース: `dot_config/devcontainer/scripts/executable_crit`）が devcontainer 固有の副作用を
-コードとして担います。エージェントのコンテキストを消費しない利点があります。
-
-- **配置**: スクリプトディレクトリは devcontainer に bind-mount 済み（`devcontainer.json` の `mounts`）。
-  `~/.local/bin` はコンテナにマウントされないため、ここに置く。
-- **mise 管理の実体を解決**: `mise which crit` で実バイナリの絶対パスを取得して exec する
-  （ラッパー自身を再帰呼び出ししない）。
-  ラッパーが `crit` として呼ばれるよう、`Dockerfile` の `ENV PATH` で
-  `~/.config/devcontainer/scripts` を mise shims より前に置いている（衝突するのは意図した `crit` のみ）。
 - **host URL の relay**: `~/.crit-host-port` があれば `crit UI (host): http://localhost:<port>` を
   crit 本体の出力とは別に 1 行追加する（crit の出力自体は改変しない）。
 - **再レビュー待ち通知**: 既に crit daemon が `:7842` で待ち受けている状態でレビューを起動した
   （＝再レビューラウンド）場合に、`mac-host` へ SSH して `macos-notify-cli` で「再レビュー待ちです」を通知。
   `comments` / `share` / `comment` 等のサブコマンド呼び出しでは通知しない。
-- devcontainer 外（`mac-host` に SSH できない環境）では通知は静かにスキップされ、レビューループは止まらない。
