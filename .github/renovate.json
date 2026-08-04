@@ -171,6 +171,22 @@
     },
     {
       "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-formula"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-cask"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
       "matchStrings": [
         "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
