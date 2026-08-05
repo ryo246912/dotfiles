@@ -134,19 +134,8 @@
       "customType": "regex",
       "managerFilePatterns": ["dot_config/mise/**/*.toml"],
       "matchStrings": [
-        "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/"
+        "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/[^\n#]+[ \t]*#[ \t]*renovate: branch=(?<currentValue>main|master)"
       ],
-      "currentValueTemplate": "master",
-      "datasourceTemplate": "git-refs",
-      "packageNameTemplate": "https://github.com/{{{depName}}}"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
-      "matchStrings": [
-        "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/"
-      ],
-      "currentValueTemplate": "main",
       "datasourceTemplate": "git-refs",
       "packageNameTemplate": "https://github.com/{{{depName}}}"
     },
