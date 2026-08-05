@@ -26,6 +26,12 @@ dependencies:
     - git: classmethod/tsumiki
       ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
       alias: tsumiki
+
+    # ctx CLI と同じ release tag に pin して、Renovate では同一PRで更新する。
+    - git: ctxrs/ctx
+      path: skills/ctx-agent-history-search
+      ref: v0.25.0
+      alias: ctx-agent-history-search
   mcp: []
 includes: auto
 scripts: {}

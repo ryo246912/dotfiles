@@ -1,0 +1,54 @@
+lockfile_version: '1'
+generated_at: '2026-08-05T15:53:13.351541+00:00'
+apm_version: 0.26.0
+dependencies:
+- repo_url: classmethod/tsumiki
+  name: tsumiki
+  host: github.com
+  resolved_commit: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
+  resolved_ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
+  version: 1.4.2
+  package_type: marketplace_plugin
+  content_hash: sha256:1ae0afc37f2baba6918a249de57c7c626fb166f3d5306b48de9dcd7b36726862
+  declared_license: MIT
+- repo_url: ctxrs/ctx
+  name: ctx-agent-history-search
+  host: github.com
+  resolved_commit: 8ee759ab1efc0cad4d7b6d05027a7fe7e7f0d0a7
+  resolved_ref: v0.25.0
+  version: unknown
+  virtual_path: skills/ctx-agent-history-search
+  is_virtual: true
+  package_type: claude_skill
+  content_hash: sha256:b9ee8ae28832c0058d21c16f1dc1cad4e72ad70597359033d18b6b7e556c40ce
+- repo_url: tomasz-tomczyk/crit
+  name: crit
+  host: github.com
+  resolved_commit: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  resolved_ref: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  version: unknown
+  virtual_path: integrations/claude-code/skills/crit
+  is_virtual: true
+  package_type: claude_skill
+  content_hash: sha256:3da57731dbdf2846ad3b3d214b6a6ecd69d4bfaa08eb74cdaad1af8f1359b2b8
+- repo_url: tomasz-tomczyk/crit
+  name: crit-cli
+  host: github.com
+  resolved_commit: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  resolved_ref: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  version: unknown
+  virtual_path: integrations/claude-code/skills/crit-cli
+  is_virtual: true
+  package_type: claude_skill
+  content_hash: sha256:420cf38f07094fa638f3225acd392e7b47f839202e99b572a0a59924ce775bde
+- repo_url: zenbu-labs/terminal-browser
+  name: terminal-browser
+  host: github.com
+  resolved_commit: 5e4f4745cc2214f646eed37666567317561efef0
+  resolved_ref: 5e4f4745cc2214f646eed37666567317561efef0
+  version: unknown
+  virtual_path: skill
+  is_virtual: true
+  package_type: claude_skill
+  content_hash: sha256:ed3bc98ffc87d95320c8ec6064e53e4e27f8737d622cfd76d7645a53b725b396
+deployments: []

@@ -70,6 +70,10 @@
     {
       "matchDepNames": ["aqua:openai/codex", "codex"],
       "extractVersion": "^(?:rust-)?v?(?<version>.+)"
+    },
+    {
+      "matchPackageNames": ["github:ctxrs/ctx", "ctxrs/ctx"],
+      "groupName": "ctx"
     }
   ],
   "customManagers": [
@@ -175,6 +179,17 @@
       "packageNameTemplate": "https://github.com/{{{depName}}}",
       "currentValueTemplate": "main",
       "datasourceTemplate": "git-refs"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_apm/apm.yml", "dot_apm/apm.lock.yaml"],
+      "matchStrings": [
+        "git:\\sctxrs/ctx\\s+path:\\s+skills/ctx-agent-history-search\\s+ref:\\s+v?(?<currentValue>[^\\s]+)",
+        "repo_url:\\sctxrs/ctx\\s+name:\\sctx-agent-history-search\\s+host:\\sgithub.com\\s+resolved_commit:\\s(?<currentDigest>[0-9a-f]{40})\\s+resolved_ref:\\s+v?(?<currentValue>[^\\s]+)"
+      ],
+      "depNameTemplate": "ctxrs/ctx",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]
 }
