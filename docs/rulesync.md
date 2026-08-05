@@ -41,21 +41,20 @@ Agent Skillへ変換するため、`$tsumiki-<name>`として利用できます�
 module path・namespace・APMが生成したnamespaceなしcommandの削除先を追加して配布できます。sourceの同期と生成は
 `mise run apm:install` がまとめて実行します。
 
-
 ## `rulesync init` で生成されるファイルの扱い
 
 このリポジトリでは **rulesync のソースは git 管理し、rulesync の出力先は原則 git 管理しません**。
 ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
 例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
 
-| 種類                            | 例                                                                                  | git 管理 | 理由                                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
-| プロジェクト単位の rulesync 設定 | `rulesync.jsonc`                                                                     | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                       |
-| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`                                                        | する     | `CLAUDE.md` を生成するための正本だから                                                     |
-| プロジェクト単位の生成物        | `CLAUDE.md`                                                                         | しない   | `rulesync generate` で再生成される出力だから                                               |
-| グローバル配布用の rulesync 設定 | `dot_config/rulesync/rulesync.jsonc`                                                | する     | chezmoi で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                       |
-| グローバル配布用の rulesync source | `dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | chezmoi で `~/.config/rulesync/.rulesync/` へ配布する正本だから                           |
-| グローバル生成物                | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル                   | しない   | `rulesync generate` で実ホームへ再生成される出力だから                                   |
+| 種類                               | 例                                                                                | git 管理 | 理由                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                  | する     | generate の入力であり、リポジトリ固有の target / output 設定だから  |
+| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`                                                       | する     | `CLAUDE.md` を生成するための正本だから                              |
+| プロジェクト単位の生成物           | `CLAUDE.md`                                                                       | しない   | `rulesync generate` で再生成される出力だから                        |
+| グローバル配布用の rulesync 設定   | `dot_config/rulesync/rulesync.jsonc`                                              | する     | chezmoi で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから |
+| グローバル配布用の rulesync source | `dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | chezmoi で `~/.config/rulesync/.rulesync/` へ配布する正本だから     |
+| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル                 | しない   | `rulesync generate` で実ホームへ再生成される出力だから              |
 
 ### 既存ファイルと `rulesync init` のバッティングについて
 
