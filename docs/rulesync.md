@@ -41,6 +41,48 @@ Agent Skillへ変換するため、`$tsumiki-<name>`として利用できます�
 module path・namespace・APMが生成したnamespaceなしcommandの削除先を追加して配布できます。sourceの同期と生成は
 `mise run apm:install` がまとめて実行します。
 
+## `rulesync init` で生成されるファイルの扱い
+
+このリポジトリでは **rulesync のソースは git 管理し、rulesync の出力先は原則 git 管理しません**。
+ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
+例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
+
+| 種類                               | 例                                                                                | git 管理 | 理由                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                  | する     | generate の入力であり、リポジトリ固有の target / output 設定だから  |
+| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`                                                       | する     | `CLAUDE.md` を生成するための正本だから                              |
+| プロジェクト単位の生成物           | `CLAUDE.md`                                                                       | しない   | `rulesync generate` で再生成される出力だから                        |
+| グローバル配布用の rulesync 設定   | `dot_config/rulesync/rulesync.jsonc`                                              | する     | chezmoi で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから |
+| グローバル配布用の rulesync source | `dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | chezmoi で `~/.config/rulesync/.rulesync/` へ配布する正本だから     |
+| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル                 | しない   | `rulesync generate` で実ホームへ再生成される出力だから              |
+
+### 初回 clone と `rulesync init` の関係
+
+Rulesync では、`rulesync init` が作る `rulesync.jsonc` と `.rulesync/` が **初期化済みかどうかの実体**です。
+追加のローカル DB や hidden state を作って「初期化済み」と記録する仕組みではありません。そのため、初回
+`git clone` 直後でも、git 管理された `rulesync.jsonc` と `.rulesync/rules/CLAUDE.md` が存在していれば、
+その clone は rulesync 的にはすでに初期化済みです。
+
+この状態で `mise run rulesync:generate` を実行しても、`.rulesync/rules/CLAUDE.md` は **入力 source**、
+リポジトリ直下の `CLAUDE.md` は **生成 output** なので、パスが異なりバッティングしません。output の
+`CLAUDE.md` は `.gitignore` で git 管理から外しているため、初回生成で作られるローカル生成物として扱います。
+
+### 既存ファイルと `rulesync init` のバッティングについて
+
+`rulesync init` は、新規プロジェクトに `rulesync.jsonc` と `.rulesync/` の雛形を作るためのコマンドです。
+このリポジトリにはすでに `rulesync.jsonc` と `.rulesync/rules/CLAUDE.md` があるため、
+**リポジトリ直下で `rulesync init` を再実行する必要はありません**。既存の `.rulesync/rules/CLAUDE.md` と
+init が作ろうとする雛形がぶつかる場合は、init ではなく既存の source を編集してください。
+
+もし別リポジトリで、すでに手書きの `CLAUDE.md` や他ツール用 rule ファイルがある状態から rulesync へ移行するなら、
+`rulesync init` で上書き方向に進めるのではなく、既存 output を `.rulesync/` 側へ取り込む `rulesync import` 系の
+ワークフローを使うか、手で `.rulesync/rules/` に移してから生成 output を `.gitignore` に入れてください。
+
+グローバル側も同様に、source の正本は `dot_config/rulesync/exact_dot_rulesync/` 配下で git 管理し、
+chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側の `~/.config/rulesync/.rulesync/` で
+直接 `rulesync init` して作ったファイルは、正本ではないため git 管理しません。必要な内容だけ
+`dot_config/rulesync/exact_dot_rulesync/` へ移してください。
+
 ## 生成コマンド
 
 ```bash
@@ -49,23 +91,16 @@ mise run rulesync:generate
 
 `dot_config/mise/tasks/dev.toml` で以下の2ステップを実行します。
 
-```toml
-run = [
-    "cd \"$(chezmoi source-path)\" && rulesync generate",
-    "cd ~/.config/rulesync && rulesync generate",
-]
-```
+1. **プロジェクト単位**: `chezmoi apply` の post hook からは、テンプレート変数 `.chezmoi.sourceDir` で
+   解決した実行中の chezmoi source directory を `CHEZMOI_SOURCE_DIR` として `mise run rulesync:generate` へ渡す。
+   そのため、`sourceDir = ...` や `chezmoi apply --source ...` で非既定の source directory を使う場合も同じ
+   source directory を参照できる。task 側は `CHEZMOI_SOURCE_DIR` 配下に `rulesync.jsonc` と `.rulesync/` が
+   両方ある場合だけ `cd` して実行する。
+   `chezmoi apply` の post hook 中は chezmoi が persistent state lock を保持しうるため、ここでは
+   `chezmoi source-path` を呼ばない。
+2. **グローバル**: `~/.config/rulesync` に `rulesync.jsonc` と `.rulesync/` が両方ある場合だけ `cd` して実行する。
 
-1. **プロジェクト単位**: `chezmoi source-path`（= このリポジトリのソースディレクトリ）へ `cd` してから実行。
-   `mise run` をどのディレクトリから叩いても解決できるよう明示的に `cd` している。
-2. **グローバル**: `~/.config/rulesync` へ `cd` してから実行。
-
-> [!IMPORTANT]
-> グローバル側は **`chezmoi apply` 済みであること**が前提です。`~/.config/rulesync/.rulesync/`
-> は chezmoi が生成するディレクトリなので、`chezmoi apply` 前は存在せず
-> `.rulesync directory not found. Run 'rulesync init' first.` で失敗します。
-> 新しいマシンや `dot_config/rulesync/` を編集した直後は、先に `chezmoi apply` してから
-> `mise run rulesync:generate` を実行してください。
+どちらかのスコープが未初期化でも、もう片方の生成を止めないように warning を出して skip します。
 
 ## トラブルシューティング
 

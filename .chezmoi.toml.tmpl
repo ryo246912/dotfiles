@@ -75,7 +75,7 @@ fi
 # 3) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-source_dir=$(chezmoi source-path 2>/dev/null || echo "${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}")
+source_dir={{ .chezmoi.sourceDir | quote }}
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {
@@ -91,7 +91,7 @@ rulesync_hash=$(
 )
 if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
   echo "Running mise run rulesync:generate..."
-  if mise run rulesync:generate; then
+  if CHEZMOI_SOURCE_DIR=$source_dir mise run rulesync:generate; then
     # マーカー書き込み失敗（state_dir が書込み不可/容量不足）も検知して警告する。
     # 未検知だと毎回の apply で無駄に再生成され続けるため。
     if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then
