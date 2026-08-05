@@ -74,6 +74,26 @@
     {
       "matchPackageNames": ["github:ctxrs/ctx", "ctxrs/ctx"],
       "groupName": "ctx"
+    },
+    {
+      "matchPackageNames": [
+        "github:tomasz-tomczyk/crit",
+        "tomasz-tomczyk/crit",
+        "https://github.com/tomasz-tomczyk/crit"
+      ],
+      "groupName": "crit"
+    },
+    {
+      "matchPackageNames": [
+        "http:terminal-browser",
+        "zenbu-labs/terminal-browser",
+        "https://github.com/zenbu-labs/terminal-browser"
+      ],
+      "groupName": "terminal-browser"
+    },
+    {
+      "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
+      "groupName": "tsumiki"
     }
   ],
   "customManagers": [
@@ -124,6 +144,17 @@
       "matchStrings": ["pipx:awslogs\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "awslogs",
       "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/config.mac.toml"],
+      "matchStrings": [
+        "\"http:terminal-browser\"\\s*=\\s*\\{\\s*version = \"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "http:terminal-browser",
+      "packageNameTemplate": "zenbu-labs/terminal-browser",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     },
     {
       "customType": "regex",
