@@ -1,0 +1,58 @@
+["gh:skill-install-all"]
+description = "Install a GitHub Skill for Copilot/Cursor/Codex/Claude Code at user scope with pinning"
+run = '''
+python3 -c '
+import shutil
+import subprocess
+import sys
+
+AGENTS = ["github-copilot", "cursor", "codex", "claude-code"]
+
+if shutil.which("gh") is None:
+    print("Error: gh command is required.", file=sys.stderr)
+    sys.exit(127)
+
+if len(sys.argv) < 2:
+    print("Usage: mise run gh:skill-install-all OWNER/REPO [SKILL_OR_PATH[@VERSION]] [extra gh skill install flags...]", file=sys.stderr)
+    sys.exit(2)
+
+repo = sys.argv[1]
+install_args = sys.argv[2:]
+has_pin = any(arg == "--pin" or arg.startswith("--pin=") for arg in install_args)
+pin_args = []
+
+if not has_pin:
+    resolved_ref = ""
+    release = subprocess.run(
+        ["gh", "release", "view", repo, "--json", "tagName", "--jq", ".tagName"],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    resolved_ref = release.stdout.strip()
+
+    if not resolved_ref:
+        default_branch = subprocess.run(
+            ["gh", "repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.target.oid"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        resolved_ref = default_branch.stdout.strip()
+
+    if not resolved_ref:
+        print(f"Error: could not resolve latest release tag or default branch SHA for {repo}.", file=sys.stderr)
+        print("Pass an explicit --pin <tag-or-sha> if this is a private or unusual repository.", file=sys.stderr)
+        sys.exit(1)
+
+    pin_args = ["--pin", resolved_ref]
+
+for agent in AGENTS:
+    subprocess.run(
+        ["gh", "skill", "install", repo, *install_args, "--agent", agent, "--scope", "user", *pin_args],
+        check=True,
+    )
+' "$@"
+'''
