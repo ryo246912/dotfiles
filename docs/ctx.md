@@ -12,7 +12,7 @@ mise install github:ctxrs/ctx@0.25.0
 mise run apm:install
 ```
 
-`mise run apm:install` は `apm install -g` で生成された `~/.apm/apm.lock.yaml` を chezmoi source directory の `dot_apm/apm.lock.yaml` へコピーします。lockfile だけを反映したい場合は次の task を使います。
+`mise run apm:install` は `apm install -g` で生成された `~/.apm/apm.lock.yaml` を chezmoi source directory の `dot_apm/apm.lock.yaml` へコピーします。lockfile どおりに再現インストールする npm ci 相当の task は `mise run apm:ci` です。lockfile だけを反映したい場合は次の task を使います。
 
 ```bash
 mise run apm:sync-lock
