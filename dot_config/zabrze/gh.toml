@@ -341,3 +341,18 @@ global          = true
 name            = "(gh pr ready) --undo"
 snippet         = "--undo"
 trigger-pattern = "(d|u)"
+
+[[snippets]]
+name    = "gh skill preview"
+snippet = "gh skill preview"
+trigger = "ghsp"
+
+[[snippets]]
+name    = "gh skill search"
+snippet = "gh skill search"
+trigger = "ghss"
+
+[[snippets]]
+name    = "gh skill install user scope for Copilot/Cursor/Codex/Claude Code with pin"
+snippet = "mise run gh:skill-install-all"
+trigger = "ghsi"
