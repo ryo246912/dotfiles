@@ -5,6 +5,7 @@ python3 -c '
 import shutil
 import subprocess
 import sys
+import urllib.parse
 
 AGENTS = ["github-copilot", "cursor", "codex", "claude-code"]
 
@@ -14,7 +15,7 @@ if shutil.which("gh") is None:
 
 if len(sys.argv) < 2:
     print("Usage: mise run gh:skill-install-all OWNER/REPO [SKILL_OR_PATH[@VERSION]] [extra gh skill install flags...]", file=sys.stderr)
-    sys.exit(2)
+    sys.exit(0)
 
 repo = sys.argv[1]
 install_args = sys.argv[2:]
@@ -33,14 +34,27 @@ if not has_pin:
     resolved_ref = release.stdout.strip()
 
     if not resolved_ref:
-        default_branch = subprocess.run(
-            ["gh", "repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.target.oid"],
+        default_branch_ref = subprocess.run(
+            ["gh", "repo", "view", repo, "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.target.oid // .defaultBranchRef.name // empty"],
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
         )
-        resolved_ref = default_branch.stdout.strip()
+        default_branch_ref = default_branch_ref.stdout.strip()
+
+        if default_branch_ref and len(default_branch_ref) == 40 and all(c in "0123456789abcdefABCDEF" for c in default_branch_ref):
+            resolved_ref = default_branch_ref
+        elif default_branch_ref:
+            branch = urllib.parse.quote(default_branch_ref, safe="")
+            commit = subprocess.run(
+                ["gh", "api", f"repos/{repo}/commits/{branch}", "--jq", ".sha"],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            resolved_ref = commit.stdout.strip()
 
     if not resolved_ref:
         print(f"Error: could not resolve latest release tag or default branch SHA for {repo}.", file=sys.stderr)
