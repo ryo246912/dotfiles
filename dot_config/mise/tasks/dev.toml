@@ -4,10 +4,25 @@ description = "Generate all rulesync outputs after chezmoi apply"
 # どこから `mise run` しても解決できるよう明示的に cd する。
 # - 1つ目: このリポジトリ自身の CLAUDE.md を再生成（chezmoi source-path で解決）
 # - 2つ目: グローバル配布用（~/.claude, ~/.codex, ~/.copilot 等）を再生成
-run = [
-    "cd \"$(chezmoi source-path)\" && rulesync generate",
-    "cd ~/.config/rulesync && rulesync generate",
-]
+run = '''
+set -eu
+
+source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+global_dir="$HOME/.config/rulesync"
+
+if [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
+  (cd "$source_dir" && rulesync generate)
+else
+  echo "warning: project rulesync source not found under $source_dir; skipping project generation" >&2
+fi
+
+if [ -f "$global_dir/rulesync.jsonc" ] && [ -d "$global_dir/.rulesync" ]; then
+  (cd "$global_dir" && rulesync generate)
+else
+  echo "warning: global rulesync source not found under $global_dir; skipping global generation" >&2
+fi
+'''
+shell = "bash -c"
 
 ["apm:install"]
 description = "Deploy user-scope external skills and commands to agent dirs"
