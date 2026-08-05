@@ -20,13 +20,13 @@ mise run gh:skill-install-all github/awesome-copilot git-commit --pin v2.0.0
 
 基本方針は **試し使いは gh skill、常時使用したいものは APM 管理へ昇格**です。
 
-| 観点 | gh skill | APM |
-| ---- | -------- | --- |
-| 主目的 | skill 単体の検索・preview・install | 標準セットを manifest で再現可能にする |
-| この repo での位置付け | 個人の試用導線 | 常時使用する外部 skill の正式管理 |
-| 管理単位 | `gh skill install` で agent ごとに配置 | `dot_apm/apm.yml` の `dependencies.apm` に宣言 |
-| 再現性 | `--pin <tag-or-sha>` で個別に固定 | commit SHA と lock file で管理しやすい |
-| 運用 | `gh skill preview` / `gh skill search` / `mise run gh:skill-install-all` で軽く試す | `dot_apm/apm.yml` に SHA pin 付きで追加し、`mise run apm:install` |
+| 観点                   | gh skill                                                                            | APM                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 主目的                 | skill 単体の検索・preview・install                                                  | 標準セットを manifest で再現可能にする                            |
+| この repo での位置付け | 個人の試用導線                                                                      | 常時使用する外部 skill の正式管理                                 |
+| 管理単位               | `gh skill install` で agent ごとに配置                                              | `dot_apm/apm.yml` の `dependencies.apm` に宣言                    |
+| 再現性                 | `--pin <tag-or-sha>` で個別に固定                                                   | commit SHA と lock file で管理しやすい                            |
+| 運用                   | `gh skill preview` / `gh skill search` / `mise run gh:skill-install-all` で軽く試す | `dot_apm/apm.yml` に SHA pin 付きで追加し、`mise run apm:install` |
 
 ### 昇格フロー
 

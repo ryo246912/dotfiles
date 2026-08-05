@@ -353,6 +353,6 @@ snippet = "gh skill search"
 trigger = "ghss"
 
 [[snippets]]
-name = "gh skill install user scope for Copilot/Cursor/Codex/Claude Code with pin"
+name    = "gh skill install user scope for Copilot/Cursor/Codex/Claude Code with pin"
 snippet = "mise run gh:skill-install-all"
 trigger = "ghsi"
