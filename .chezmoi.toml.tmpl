@@ -75,7 +75,7 @@ fi
 # 3) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+source_dir={{ .chezmoi.sourceDir | quote }}
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {

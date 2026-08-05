@@ -76,8 +76,11 @@ mise run rulesync:generate
 
 `dot_config/mise/tasks/dev.toml` で以下の2ステップを実行します。
 
-1. **プロジェクト単位**: `CHEZMOI_SOURCE_DIR`（未設定なら `~/.local/share/chezmoi`）をこのリポジトリの
-   source directory とみなし、`rulesync.jsonc` と `.rulesync/` が両方ある場合だけ `cd` して実行する。
+1. **プロジェクト単位**: `chezmoi apply` の post hook からは、テンプレート変数 `.chezmoi.sourceDir` で
+   解決した実行中の chezmoi source directory を `CHEZMOI_SOURCE_DIR` として `mise run rulesync:generate` へ渡す。
+   そのため、`sourceDir = ...` や `chezmoi apply --source ...` で非既定の source directory を使う場合も同じ
+   source directory を参照できる。task 側は `CHEZMOI_SOURCE_DIR` 配下に `rulesync.jsonc` と `.rulesync/` が
+   両方ある場合だけ `cd` して実行する。
    `chezmoi apply` の post hook 中は chezmoi が persistent state lock を保持しうるため、ここでは
    `chezmoi source-path` を呼ばない。
 2. **グローバル**: `~/.config/rulesync` に `rulesync.jsonc` と `.rulesync/` が両方ある場合だけ `cd` して実行する。
