@@ -56,12 +56,27 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 | グローバル配布用の rulesync source | `dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | chezmoi で `~/.config/rulesync/.rulesync/` へ配布する正本だから     |
 | グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル                 | しない   | `rulesync generate` で実ホームへ再生成される出力だから              |
 
+### 初回 clone と `rulesync init` の関係
+
+Rulesync では、`rulesync init` が作る `rulesync.jsonc` と `.rulesync/` が **初期化済みかどうかの実体**です。
+追加のローカル DB や hidden state を作って「初期化済み」と記録する仕組みではありません。そのため、初回
+`git clone` 直後でも、git 管理された `rulesync.jsonc` と `.rulesync/rules/CLAUDE.md` が存在していれば、
+その clone は rulesync 的にはすでに初期化済みです。
+
+この状態で `mise run rulesync:generate` を実行しても、`.rulesync/rules/CLAUDE.md` は **入力 source**、
+リポジトリ直下の `CLAUDE.md` は **生成 output** なので、パスが異なりバッティングしません。output の
+`CLAUDE.md` は `.gitignore` で git 管理から外しているため、初回生成で作られるローカル生成物として扱います。
+
 ### 既存ファイルと `rulesync init` のバッティングについて
 
 `rulesync init` は、新規プロジェクトに `rulesync.jsonc` と `.rulesync/` の雛形を作るためのコマンドです。
 このリポジトリにはすでに `rulesync.jsonc` と `.rulesync/rules/CLAUDE.md` があるため、
 **リポジトリ直下で `rulesync init` を再実行する必要はありません**。既存の `.rulesync/rules/CLAUDE.md` と
 init が作ろうとする雛形がぶつかる場合は、init ではなく既存の source を編集してください。
+
+もし別リポジトリで、すでに手書きの `CLAUDE.md` や他ツール用 rule ファイルがある状態から rulesync へ移行するなら、
+`rulesync init` で上書き方向に進めるのではなく、既存 output を `.rulesync/` 側へ取り込む `rulesync import` 系の
+ワークフローを使うか、手で `.rulesync/rules/` に移してから生成 output を `.gitignore` に入れてください。
 
 グローバル側も同様に、source の正本は `dot_config/rulesync/exact_dot_rulesync/` 配下で git 管理し、
 chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側の `~/.config/rulesync/.rulesync/` で
