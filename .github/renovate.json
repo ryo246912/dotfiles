@@ -213,10 +213,9 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_apm/apm.yml", "dot_apm/apm.lock.yaml"],
+      "managerFilePatterns": ["dot_apm/apm.yml"],
       "matchStrings": [
-        "git:\\sctxrs/ctx\\s+path:\\s+skills/ctx-agent-history-search\\s+ref:\\s+v?(?<currentValue>[^\\s]+)",
-        "repo_url:\\sctxrs/ctx\\s+name:\\sctx-agent-history-search\\s+host:\\sgithub.com\\s+resolved_commit:\\s(?<currentDigest>[0-9a-f]{40})\\s+resolved_ref:\\s+v?(?<currentValue>[^\\s]+)"
+        "git:\\sctxrs/ctx\\s+path:\\s+skills/ctx-agent-history-search\\s+ref:\\s+v?(?<currentValue>[^\\s]+)"
       ],
       "depNameTemplate": "ctxrs/ctx",
       "datasourceTemplate": "github-releases",

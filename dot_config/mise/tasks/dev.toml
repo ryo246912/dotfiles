@@ -7,7 +7,7 @@ description = "Generate all rulesync outputs after chezmoi apply"
 run = '''
 set -eu
 
-source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+source_dir="${CHEZMOI_SOURCE_DIR:-$(chezmoi source-path)}"
 global_dir="$HOME/.config/rulesync"
 
 if [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
@@ -35,8 +35,6 @@ run = [
     "mise run rulesync:generate-commands",
 ]
 
-
-
 ["apm:ci"]
 description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
@@ -54,7 +52,7 @@ description = "Copy the user-scope APM lockfile into the chezmoi source tree"
 run = '''
 set -eu
 
-source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+source_dir="${CHEZMOI_SOURCE_DIR:-$(chezmoi source-path)}"
 source_lock="$HOME/.apm/apm.lock.yaml"
 destination_dir="$source_dir/dot_apm"
 destination_lock="$destination_dir/apm.lock.yaml"

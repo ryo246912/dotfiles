@@ -8,7 +8,7 @@ chezmoi で dotfiles を反映した後、ctx CLI と APM 管理の skills を�
 
 ```bash
 chezmoi apply
-mise install github:ctxrs/ctx@0.25.0
+mise install github:ctxrs/ctx
 mise run apm:install
 ```
 
