@@ -7,7 +7,7 @@ description = "Generate all rulesync outputs after chezmoi apply"
 run = '''
 set -eu
 
-source_dir="${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}"
+source_dir="${CHEZMOI_SOURCE_DIR:-$(chezmoi source-path)}"
 global_dir="$HOME/.config/rulesync"
 
 if [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
@@ -30,9 +30,42 @@ description = "Deploy user-scope external skills and commands to agent dirs"
 # ~/.apm は chezmoi が生成するため、事前に `chezmoi apply` 済みであること。
 run = [
     "apm install -g",
+    "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
+
+["apm:ci"]
+description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
+# npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
+run = [
+    "apm install -g --frozen",
+    "mise run apm:sync-lock",
+    "mise run apm:sync-commands",
+    "mise run rulesync:generate-commands",
+]
+
+["apm:sync-lock"]
+description = "Copy the user-scope APM lockfile into the chezmoi source tree"
+# apm install -g で生成された ~/.apm/apm.lock.yaml を SOT とし、
+# git 管理する chezmoi source directory 側（dot_apm/apm.lock.yaml）へ反映する。
+run = '''
+set -eu
+
+source_dir="${CHEZMOI_SOURCE_DIR:-$(chezmoi source-path)}"
+source_lock="$HOME/.apm/apm.lock.yaml"
+destination_dir="$source_dir/dot_apm"
+destination_lock="$destination_dir/apm.lock.yaml"
+
+if [ ! -f "$source_lock" ]; then
+  echo "APM lockfile not found: $source_lock" >&2
+  exit 1
+fi
+
+mkdir -p "$destination_dir"
+cp "$source_lock" "$destination_lock"
+'''
+shell = "bash -c"
 
 ["apm:sync-commands"]
 description = "Sync namespaced commands from APM modules into Rulesync sources"
