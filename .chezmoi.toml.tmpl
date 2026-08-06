@@ -16,10 +16,11 @@ state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
 mkdir -p "$state_dir" || exit 1
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
-# mise shims を PATH に通す。mac は brew の mise を優先する（~/.local/bin に旧 official-install
-# が残っていると min_version 不足で bootstrap が失敗し得るため /opt/homebrew/bin を先頭に）。
+# mise shims を PATH に通す。mise 本体は mac/linux とも https://mise.run 経由で ~/.local/bin に導入するため、~/.local/bin を先頭にする。mise shims は
+# /opt/homebrew/bin より前に置く（後ろだと実 Homebrew 版の gh 等が mise の aqua shim を
+# shadow し、後続の `gh auth token` 等が mise 管理外のバイナリを掴んでしまう）。
 if [ "$(uname)" = "Darwin" ]; then
-  export PATH="/opt/homebrew/bin:$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
@@ -29,7 +30,16 @@ fi
 #    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
 #    用意できる。mac(brew) は sudo 不要。WSL(apt) は sudo が要るため、sudo プロンプトに応答できる
 #    対話端末(TTY)があるときだけ apply する。非対話 WSL で未同期なら required preflight として中断する。
-if [ "$(uname)" = "Darwin" ]; then bootstrap_env=mac; else bootstrap_env=linux; fi
+#    HOST_ENV（dot_zshenv.tmpl が host-env.map から解決する "<os>,<role>"）が対話シェルから
+#    引き継がれていればそれを使う。config.private.toml/config.work*.toml の [bootstrap.packages]
+#    も収束対象に含めるため（未登録ホスト・非対話コンテキストでは OS 単体にフォールバック）。
+if [ -n "${HOST_ENV:-}" ]; then
+  bootstrap_env="$HOST_ENV"
+elif [ "$(uname)" = "Darwin" ]; then
+  bootstrap_env=mac
+else
+  bootstrap_env=linux
+fi
 if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null 2>&1; then
   if [ "$(uname)" = "Darwin" ] || [ -t 0 ]; then
     if ! MISE_ENV=$bootstrap_env mise bootstrap packages apply --yes; then
@@ -65,7 +75,7 @@ fi
 # 3) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-source_dir=$(chezmoi source-path 2>/dev/null || echo "${CHEZMOI_SOURCE_DIR:-$HOME/.local/share/chezmoi}")
+source_dir={{ .chezmoi.sourceDir | quote }}
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {
@@ -81,7 +91,7 @@ rulesync_hash=$(
 )
 if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
   echo "Running mise run rulesync:generate..."
-  if mise run rulesync:generate; then
+  if CHEZMOI_SOURCE_DIR=$source_dir mise run rulesync:generate; then
     # マーカー書き込み失敗（state_dir が書込み不可/容量不足）も検知して警告する。
     # 未検知だと毎回の apply で無駄に再生成され続けるため。
     if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then

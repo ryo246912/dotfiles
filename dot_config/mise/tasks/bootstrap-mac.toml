@@ -1,0 +1,200 @@
+["bootstrap:mac"]
+depends = [
+    "bootstrap:mac-brew",
+    "bootstrap:mac-packages",
+    "bootstrap:mac-defaults",
+]
+description = "mac の個別セットアップをまとめて実行（対話操作の bootstrap:mac-hotkeys は含まない）"
+
+["bootstrap:mac-brew"]
+description = "Homebrew 本体を導入する"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+# インストーラは shell rc に PATH 追記の案内を出すだけで、このプロセスの PATH は変えない
+export PATH="/opt/homebrew/bin:$PATH"
+
+if ! command -v brew &>/dev/null; then
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+else
+  echo "Homebrew is already installed"
+fi
+'''
+
+["bootstrap:mac-packages"]
+depends = ["bootstrap:mac-brew"]
+description = "brew-cask/[bootstrap.packages] では扱えない特殊パッケージ（custom option・tap・postflight）を導入する"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+export PATH="/opt/homebrew/bin:$PATH"
+
+# google-japanese-ime: Rosetta が前提で brew-cask では表現できない。
+# rosetta のインストール失敗（既に導入済み等）で後続の thock 導入を止めないよう || true にする
+if ! brew list --cask google-japanese-ime &>/dev/null; then
+  sudo softwareupdate --install-rosetta || true
+  brew install --cask google-japanese-ime
+else
+  echo "google-japanese-ime is already installed"
+fi
+
+# thock: 独自 tap の formula。インストール後に thock --install という postflight が要る。
+# 完全修飾名でインストールすることで tap 全体ではなくこの formula だけを信任する
+# （Homebrew の tap trust: `brew tap` 後の短縮名インストールは未信頼 tap で失敗しうる）
+if ! brew list thock &>/dev/null; then
+  brew install kamillobinski/thock/thock
+  thock --install
+else
+  echo "thock is already installed"
+fi
+
+# firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact を使っており、
+# brew-cask 経由だと `mise bootstrap packages apply` が ERROR で中断する
+if ! brew list --cask firefox &>/dev/null; then
+  brew install --cask firefox
+else
+  echo "firefox is already installed"
+fi
+
+if ! brew list --cask inkscape &>/dev/null; then
+  brew install --cask inkscape
+else
+  echo "inkscape is already installed"
+fi
+
+# docker-desktop: cask 定義が `auto_updates` を使っており、mise の brew-cask シムが
+# postflight 実行時に「cask uses auto_updates, which mise's cask shim does not support」で
+# 失敗し `mise bootstrap packages apply` が中断する
+if ! brew list --cask docker-desktop &>/dev/null; then
+  brew install --cask docker-desktop
+else
+  echo "docker-desktop is already installed"
+fi
+
+# private ホスト限定パッケージ。google-drive/tailscale-app は pkg インストーラが sudo を
+# 要求するため post-apply hook（非対話実行）に含めるとパスワード入力を待って止まってしまう。
+# keycastr/termius/thunderbird は auto_updates を使っており mise の brew-cask シムが未対応。
+# zoom はユーザーの用途が private ホストのみのため、こちらに寄せている。
+# omnidisksweeper はインストール時に EULA 同意プロンプトが出て
+# `mise bootstrap packages apply` が止まるため、対話実行のこちらに寄せている
+case "${HOST_ENV:-}" in
+*private*)
+  for cask in google-drive tailscale-app keycastr termius thunderbird zoom omnidisksweeper; do
+    if ! brew list --cask "$cask" &>/dev/null; then
+      brew install --cask "$cask"
+    else
+      echo "$cask is already installed"
+    fi
+  done
+  ;;
+*)
+  echo "google-drive/tailscale-app/keycastr/termius/thunderbird/zoom/omnidisksweeper are private-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  ;;
+esac
+
+# figma: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応。
+# work ホスト限定のため config.work2.toml の [bootstrap.packages] には置かず、こちらに寄せている
+case "${HOST_ENV:-}" in
+*work*)
+  if ! brew list --cask figma &>/dev/null; then
+    brew install --cask figma
+  else
+    echo "figma is already installed"
+  fi
+  ;;
+*)
+  echo "figma is work-only; skipping (HOST_ENV=${HOST_ENV:-unset})"
+  ;;
+esac
+
+# raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
+# `mise bootstrap packages apply` が ERROR で中断する（根本原因未確認）
+if ! brew list --cask raycast &>/dev/null; then
+  brew install --cask raycast
+else
+  echo "raycast is already installed"
+fi
+
+# opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
+# を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
+if ! brew list --cask opencode-bar &>/dev/null; then
+  brew install --cask opgginc/tap/opencode-bar
+else
+  echo "opencode-bar is already installed"
+fi
+'''
+
+["bootstrap:mac-defaults"]
+# depends ではなく wait_for: bootstrap:mac 経由では mac-packages 完了後に実行させたいが、
+# bootstrap:mac-defaults を単体実行したときに（sudo/Rosetta を要求しうる）
+# mac-packages まで巻き込みたくない
+description = "[bootstrap.macos.*] では表現できない設定（-currentHost なメニューバー間隔・ログイン項目）を適用する"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+
+# メニューバーのアイコン間隔: `defaults -currentHost` 前提のため [bootstrap.macos.defaults] では扱えない
+if ! defaults -currentHost read -globalDomain NSStatusItemSpacing &>/dev/null || [ "$(defaults -currentHost read -globalDomain NSStatusItemSpacing)" -ne 6 ]; then
+  defaults -currentHost write -globalDomain NSStatusItemSpacing -int 6
+fi
+if ! defaults -currentHost read -globalDomain NSStatusItemSelectionPadding &>/dev/null || [ "$(defaults -currentHost read -globalDomain NSStatusItemSelectionPadding)" -ne 6 ]; then
+  defaults -currentHost write -globalDomain NSStatusItemSelectionPadding -int 6
+fi
+
+# ログイン項目: mise の [bootstrap.macos.launchd.agents] は実行ファイル起動用で
+# .app バンドルの Login Item 相当にはならないため osascript で設定する
+for app in Docker Raycast; do
+  if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "$app"; then
+    osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/${app}.app\", hidden:false}"
+  fi
+done
+'''
+wait_for = ["bootstrap:mac-packages"]
+
+["bootstrap:mac-hotkeys"]
+description = "キーボードショートカットを設定する（option+tab でアプリ切替、ctrl+down で通知センター表示）"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
+
+# option + tabでアプリケーションの切り替え
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 27 '
+  <dict>
+    <key>enabled</key>
+    <true/>
+    <key>value</key>
+    <dict>
+      <key>parameters</key>
+      <array>
+        <integer>65535</integer>
+        <integer>48</integer>
+        <integer>524288</integer>
+      </array>
+      <key>type</key>
+      <string>standard</string>
+    </dict>
+  </dict>
+'
+# ctrl + ↓で通知センターを表示
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 163 '
+  <dict>
+    <key>enabled</key>
+    <true/>
+    <key>value</key>
+    <dict>
+      <key>parameters</key>
+      <array>
+        <integer>65535</integer>
+        <integer>125</integer>
+        <integer>262144</integer>
+      </array>
+      <key>type</key>
+      <string>standard</string>
+    </dict>
+  </dict>
+'
+'''

@@ -43,13 +43,6 @@
       "enabled": false
     },
     {
-      "matchDepNames": ["cosign"],
-      "matchManagers": ["custom.regex"],
-      "matchFileNames": ["dot_config/brew/brew.json"],
-      "matchUpdateTypes": ["patch"],
-      "enabled": false
-    },
-    {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
     },
@@ -77,6 +70,30 @@
     {
       "matchDepNames": ["aqua:openai/codex", "codex"],
       "extractVersion": "^(?:rust-)?v?(?<version>.+)"
+    },
+    {
+      "matchPackageNames": ["github:ctxrs/ctx", "ctxrs/ctx"],
+      "groupName": "ctx"
+    },
+    {
+      "matchPackageNames": [
+        "github:tomasz-tomczyk/crit",
+        "tomasz-tomczyk/crit",
+        "https://github.com/tomasz-tomczyk/crit"
+      ],
+      "groupName": "crit"
+    },
+    {
+      "matchPackageNames": [
+        "http:terminal-browser",
+        "zenbu-labs/terminal-browser",
+        "https://github.com/zenbu-labs/terminal-browser"
+      ],
+      "groupName": "terminal-browser"
+    },
+    {
+      "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
+      "groupName": "tsumiki"
     }
   ],
   "customManagers": [
@@ -95,18 +112,6 @@
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
       "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/brew/brew.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-formula"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/brew/brew_cask.json"],
-      "matchStrings": ["\"(?<depName>[^\"]+)\": \"(?<currentValue>[^\"]+)\""],
-      "datasourceTemplate": "custom.brew-cask"
     },
     {
       "customType": "regex",
@@ -142,12 +147,79 @@
     },
     {
       "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/config.mac.toml"],
+      "matchStrings": [
+        "\"http:terminal-browser\"\\s*=\\s*\\{\\s*version = \"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "http:terminal-browser",
+      "packageNameTemplate": "zenbu-labs/terminal-browser",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentValue>[^\"]+)\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/refs/tags/"
+      ],
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/[^\n#]+[ \t]*#[ \t]*renovate: branch=(?<currentValue>main|master)"
+      ],
+      "datasourceTemplate": "git-refs",
+      "packageNameTemplate": "https://github.com/{{{depName}}}"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-formula"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "custom.brew-cask",
+      "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
       "matchStrings": [
         "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
       ],
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_apm/apm.yml"],
+      "matchStrings": [
+        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#(?<currentDigest>[0-9a-f]{40})",
+        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s(?<currentDigest>[0-9a-f]{40})"
+      ],
+      "packageNameTemplate": "https://github.com/{{{depName}}}",
+      "currentValueTemplate": "main",
+      "datasourceTemplate": "git-refs"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["dot_apm/apm.yml"],
+      "matchStrings": [
+        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#v?(?<currentValue>[^\\s]+)",
+        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s+v?(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]
 }

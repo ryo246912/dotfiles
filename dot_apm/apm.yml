@@ -1,0 +1,37 @@
+name: apm-global
+version: 1.0.0
+description: User-scope APM manifest for external agent skills (deployed via `apm install -g`)
+author: ryo246912
+# Deploy skills to these agent platforms under the user scope.
+# claude -> ~/.claude/skills/, codex/copilot/cursor -> ~/.agents/skills/ (共通の universal dir)。
+targets:
+  - claude
+  - codex
+  - copilot
+  - cursor
+dependencies:
+  # 外部スキルはすべて upstream リポジトリから依存として取得する（vendor しない）。
+  # 再現性のため各依存をコミット SHA または release tag に pin する。
+  # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
+  apm:
+    # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
+    # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
+    - git: zenbu-labs/terminal-browser
+      path: skill
+      ref: v0.3.2
+      alias: terminal-browser
+    # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する。
+    - git: classmethod/tsumiki
+      ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
+      alias: tsumiki
+
+    # ctx CLI と同じ release tag に pin して、Renovate では同一PRで更新する。
+    - git: ctxrs/ctx
+      path: skills/ctx-agent-history-search
+      ref: v0.25.0
+      alias: ctx-agent-history-search
+  mcp: []
+includes: auto
+scripts: {}
