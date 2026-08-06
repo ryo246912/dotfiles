@@ -70,6 +70,9 @@ if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   fi
   echo "Running mise install..."
   GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
+  # mise は apply 先の ~/.config/mise/mise*.lock を更新するため、同じ apply 中に
+  # chezmoi source directory へ戻して source/apply 間の drift を残さない。
+  CHEZMOI_SOURCE_DIR={{ .chezmoi.sourceDir | quote }} mise run mise:sync-locks || exit 1
   echo "$mise_hash" > "$state_dir/mise-config-hash"
 fi
 # 3) rulesync generate:

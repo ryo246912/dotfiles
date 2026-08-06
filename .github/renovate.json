@@ -4,6 +4,9 @@
   "prHourlyLimit": 2,
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
+  "customEnvVariables": {
+    "MISE_TRUSTED_CONFIG_PATHS": "."
+  },
   "mise": {
     "managerFilePatterns": ["dot_config/mise/**/*.toml"]
   },
