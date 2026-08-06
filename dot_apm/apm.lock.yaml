@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-06T13:52:58.521552+00:00'
+generated_at: '2026-08-06T14:08:17.412221+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: classmethod/tsumiki
@@ -584,8 +584,8 @@ dependencies:
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
-  resolved_commit: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
-  resolved_ref: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  resolved_commit: bb6a8bcd9020c2de7a522c264bd859155915139f
+  resolved_ref: v0.18.2
   version: unknown
   virtual_path: integrations/claude-code/skills/crit
   is_virtual: true
@@ -598,12 +598,12 @@ dependencies:
   deployed_file_hashes:
     .agents/skills/crit/SKILL.md: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
     .claude/skills/crit/SKILL.md: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
-  content_hash: sha256:3da57731dbdf2846ad3b3d214b6a6ecd69d4bfaa08eb74cdaad1af8f1359b2b8
+  content_hash: sha256:fe83a4e68c02e2c77eed71ced3e519acf7a5d41ea404cbb1ba1776d45113357f
 - repo_url: tomasz-tomczyk/crit
   name: crit-cli
   host: github.com
-  resolved_commit: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
-  resolved_ref: 2c180fee6cb030fe0a2a2dc402053fbe7152512b
+  resolved_commit: bb6a8bcd9020c2de7a522c264bd859155915139f
+  resolved_ref: v0.18.2
   version: unknown
   virtual_path: integrations/claude-code/skills/crit-cli
   is_virtual: true
@@ -616,12 +616,12 @@ dependencies:
   deployed_file_hashes:
     .agents/skills/crit-cli/SKILL.md: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
     .claude/skills/crit-cli/SKILL.md: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
-  content_hash: sha256:420cf38f07094fa638f3225acd392e7b47f839202e99b572a0a59924ce775bde
+  content_hash: sha256:c62c3b4d93667eb2f8046f5ee7f8a51a3a2c5ac574faad108501e05747bf0f7a
 - repo_url: zenbu-labs/terminal-browser
   name: terminal-browser
   host: github.com
-  resolved_commit: 5e4f4745cc2214f646eed37666567317561efef0
-  resolved_ref: 5e4f4745cc2214f646eed37666567317561efef0
+  resolved_commit: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
+  resolved_ref: v0.3.2
   version: unknown
   virtual_path: skill
   is_virtual: true
