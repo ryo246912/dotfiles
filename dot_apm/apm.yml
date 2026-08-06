@@ -11,16 +11,16 @@ targets:
   - cursor
 dependencies:
   # 外部スキルはすべて upstream リポジトリから依存として取得する（vendor しない）。
-  # 再現性のため各依存は immutable なコミット SHA に pin する（`#<sha>`）。
-  # SHA 更新は `git ls-remote <repo> HEAD` 等で取得して差し替える。
+  # 再現性のため各依存をコミット SHA または release tag に pin する。
+  # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
     # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#2c180fee6cb030fe0a2a2dc402053fbe7152512b
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#2c180fee6cb030fe0a2a2dc402053fbe7152512b
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
     # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
     - git: zenbu-labs/terminal-browser
       path: skill
-      ref: 5e4f4745cc2214f646eed37666567317561efef0
+      ref: v0.3.2
       alias: terminal-browser
     # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する。
     - git: classmethod/tsumiki
