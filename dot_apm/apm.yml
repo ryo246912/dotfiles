@@ -26,6 +26,14 @@ dependencies:
     - git: classmethod/tsumiki
       ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
       alias: tsumiki
+    - git: mattpocock/skills
+      path: skills/engineering/resolving-merge-conflicts
+      ref: 2ab958093e83e0ec752e6c1c5932da465bf23e0c
+      alias: resolving-merge-conflicts
+    - git: mattpocock/skills
+      path: skills/productivity/grill-me
+      ref: 2ab958093e83e0ec752e6c1c5932da465bf23e0c
+      alias: grill-me
   mcp: []
 includes: auto
 scripts: {}
