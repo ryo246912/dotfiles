@@ -14,24 +14,57 @@ open() {
   fi
 }
 
-# 個別に install / lock を実行した場合も、生成された lockfile を chezmoi source に戻す。
-# `command` で同名 function の再帰を避け、元コマンドが成功した場合だけ同期する。
-mise() {
-  command mise "$@"
-  local status=$?
-  if (( status == 0 )) && [[ " $* " == *" install "* || " $* " == *" lock "* ]]; then
-    sync-dotfile-locks mise || return $?
+# install後にapply先のlockfileをchezmoi sourceへ戻す。
+# 同期はbest-effortとし、install自体の終了statusは変更しない。
+_sync_dotfile_lock() {
+  local source_file="$1"
+  local destination_file="$2"
+  [[ -f "$source_file" ]] || return 0
+  mkdir -p "${destination_file:h}" || return 0
+  if ! cmp -s "$source_file" "$destination_file"; then
+    cp "$source_file" "$destination_file" || return 0
+    echo "Updated chezmoi source lockfile: $destination_file"
   fi
-  return $status
+}
+
+_sync_mise_dotfile_locks() {
+  local source_dir
+  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  local source_lock
+  for source_lock in "$HOME/.config/mise"/mise*.lock(N); do
+    _sync_dotfile_lock "$source_lock" "$source_dir/dot_config/mise/${source_lock:t}"
+  done
+}
+
+_sync_apm_dotfile_lock() {
+  local source_dir
+  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  _sync_dotfile_lock "$HOME/.apm/apm.lock.yaml" "$source_dir/dot_apm/apm.lock.yaml"
+}
+
+mise() {
+  local subcommand="${1:-}"
+  command mise "$@"
+  local exit_status=$?
+  if (( exit_status == 0 )) && [[ "$subcommand" == install || "$subcommand" == i || "$subcommand" == in || "$subcommand" == lock ]]; then
+    _sync_mise_dotfile_locks
+  fi
+  return $exit_status
 }
 
 apm() {
+  local subcommand="${1:-}"
+  local is_global=false
+  local argument
+  for argument in "$@"; do
+    [[ "$argument" == -g || "$argument" == --global ]] && is_global=true
+  done
   command apm "$@"
-  local status=$?
-  if (( status == 0 )) && [[ " $* " == *" install "* ]]; then
-    sync-dotfile-locks apm || return $?
+  local exit_status=$?
+  if (( exit_status == 0 )) && [[ "$subcommand" == install && "$is_global" == true ]]; then
+    _sync_apm_dotfile_lock
   fi
-  return $status
+  return $exit_status
 }
 
 #

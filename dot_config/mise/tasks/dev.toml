@@ -24,10 +24,6 @@ fi
 '''
 shell = "bash -c"
 
-["mise:sync-locks"]
-description = "Copy generated mise lockfiles into the chezmoi source tree"
-run         = "sync-dotfile-locks mise"
-
 ["apm:install"]
 description = "Deploy user-scope external skills and commands to agent dirs"
 # apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
