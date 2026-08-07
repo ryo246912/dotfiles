@@ -26,33 +26,7 @@ shell = "bash -c"
 
 ["mise:sync-locks"]
 description = "Copy generated mise lockfiles into the chezmoi source tree"
-# mise install / mise lock は apply 先（~/.config/mise）の lockfile を更新する。
-# basename を mise*.lock に限定して、chezmoi 管理外のファイルを source に持ち込まない。
-run = '''
-set -eu
-
-source_dir="${CHEZMOI_SOURCE_DIR:-$(chezmoi source-path)}"
-applied_dir="${MISE_CONFIG_DIR:-$HOME/.config/mise}"
-destination_dir="$source_dir/dot_config/mise"
-found=false
-
-mkdir -p "$destination_dir"
-for source_lock in "$applied_dir"/mise*.lock; do
-  [ -f "$source_lock" ] || continue
-  found=true
-  destination_lock="$destination_dir/${source_lock##*/}"
-  if ! cmp -s "$source_lock" "$destination_lock"; then
-    cp "$source_lock" "$destination_lock"
-    echo "Updated chezmoi source lockfile: $destination_lock"
-  fi
-done
-
-if [ "$found" = false ]; then
-  echo "mise lockfile not found under $applied_dir" >&2
-  exit 1
-fi
-'''
-shell = "bash -c"
+run = "sync-dotfile-locks mise"
 
 ["apm:install"]
 description = "Deploy user-scope external skills and commands to agent dirs"

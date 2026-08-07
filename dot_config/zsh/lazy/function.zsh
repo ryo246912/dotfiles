@@ -14,6 +14,26 @@ open() {
   fi
 }
 
+# 個別に install / lock を実行した場合も、生成された lockfile を chezmoi source に戻す。
+# `command` で同名 function の再帰を避け、元コマンドが成功した場合だけ同期する。
+mise() {
+  command mise "$@"
+  local status=$?
+  if (( status == 0 )) && [[ " $* " == *" install "* || " $* " == *" lock "* ]]; then
+    sync-dotfile-locks mise || return $?
+  fi
+  return $status
+}
+
+apm() {
+  command apm "$@"
+  local status=$?
+  if (( status == 0 )) && [[ " $* " == *" install "* ]]; then
+    sync-dotfile-locks apm || return $?
+  fi
+  return $status
+}
+
 #
 # 引数として受け取ったコマンドを指定回数繰り返す関数
 #
