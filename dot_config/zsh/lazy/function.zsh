@@ -22,7 +22,12 @@ _sync_dotfile_lock() {
   [[ -f "$source_file" ]] || return 0
   mkdir -p "${destination_file:h}" || return 0
   if ! cmp -s "$source_file" "$destination_file"; then
-    cp "$source_file" "$destination_file" || return 0
+    local temporary_file
+    temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
+    if ! cp "$source_file" "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
+      rm -f "$temporary_file"
+      return 0
+    fi
     echo "Updated chezmoi source lockfile: $destination_file"
   fi
 }
@@ -30,8 +35,9 @@ _sync_dotfile_lock() {
 _sync_mise_dotfile_locks() {
   local source_dir
   source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  local mise_config_dir="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}"
   local source_lock
-  for source_lock in "$HOME/.config/mise"/mise*.lock(N); do
+  for source_lock in "$mise_config_dir"/mise*.lock(N); do
     _sync_dotfile_lock "$source_lock" "$source_dir/dot_config/mise/${source_lock:t}"
   done
 }
@@ -40,16 +46,6 @@ _sync_apm_dotfile_lock() {
   local source_dir
   source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
   _sync_dotfile_lock "$HOME/.apm/apm.lock.yaml" "$source_dir/dot_apm/apm.lock.yaml"
-}
-
-mise() {
-  local subcommand="${1:-}"
-  command mise "$@"
-  local exit_status=$?
-  if (( exit_status == 0 )) && [[ "$subcommand" == install || "$subcommand" == i || "$subcommand" == in || "$subcommand" == lock ]]; then
-    _sync_mise_dotfile_locks
-  fi
-  return $exit_status
 }
 
 apm() {
