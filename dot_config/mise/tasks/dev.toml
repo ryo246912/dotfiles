@@ -26,7 +26,7 @@ shell = "bash -c"
 
 ["mise:sync-locks"]
 description = "Copy generated mise lockfiles into the chezmoi source tree"
-run = "sync-dotfile-locks mise"
+run         = "sync-dotfile-locks mise"
 
 ["apm:install"]
 description = "Deploy user-scope external skills and commands to agent dirs"
