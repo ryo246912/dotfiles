@@ -250,9 +250,9 @@ pip install playwright
 playwright install chromium
 ```
 
-SVG は Google Fonts を外部参照するため、font を取得しないoffline viewerなどでは代替fontで表示される可能性が
-あります。pixel-perfectな持ち運びが必要な場合はPNGを使用してください。diagram生成時は、要素を詰め込みすぎず、
-複雑な場合はoverviewとdetailに分割してください。
+SVG は Google Fonts を外部参照するため、font を取得しない offline viewer などでは代替 font で表示される可能性が
+あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
+複雑な場合は overview と detail に分割してください。
 
 ## `find-skills`
 
