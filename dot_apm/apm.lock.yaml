@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T08:11:55.852076+00:00'
+generated_at: '2026-08-08T11:15:32.205710+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -1341,6 +1341,24 @@ dependencies:
     .agents/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
     .claude/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
   content_hash: sha256:c62c3b4d93667eb2f8046f5ee7f8a51a3a2c5ac574faad108501e05747bf0f7a
+- repo_url: vercel-labs/skills
+  name: find-skills
+  host: github.com
+  resolved_commit: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+  resolved_ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+  version: unknown
+  virtual_path: skills/find-skills
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/find-skills
+  - .agents/skills/find-skills/SKILL.md
+  - .claude/skills/find-skills
+  - .claude/skills/find-skills/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/find-skills/SKILL.md: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
+    .claude/skills/find-skills/SKILL.md: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
+  content_hash: sha256:913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396
 - repo_url: zenbu-labs/terminal-browser
   name: terminal-browser
   host: github.com
@@ -3452,6 +3470,24 @@ deployments:
   - cathrynlavery/diagram-design/skills/diagram-design
   active_owner: cathrynlavery/diagram-design/skills/diagram-design
   content_hash: sha256:f8d5d4f0506160e0502f932140306b12d25adea1d1f6f319fb38c2345b0c6b42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/find-skills
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/skills/skills/find-skills
+  active_owner: vercel-labs/skills/skills/find-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/find-skills/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/skills/skills/find-skills
+  active_owner: vercel-labs/skills/skills/find-skills
+  content_hash: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
 - kind: project-relative
   target: claude
   value: .claude/skills/grill-me
@@ -5954,6 +5990,24 @@ deployments:
   - cathrynlavery/diagram-design/skills/diagram-design
   active_owner: cathrynlavery/diagram-design/skills/diagram-design
   content_hash: sha256:f8d5d4f0506160e0502f932140306b12d25adea1d1f6f319fb38c2345b0c6b42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/find-skills
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/skills/skills/find-skills
+  active_owner: vercel-labs/skills/skills/find-skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/find-skills/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/skills/skills/find-skills
+  active_owner: vercel-labs/skills/skills/find-skills
+  content_hash: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
 - kind: project-relative
   target: codex
   value: .agents/skills/grill-me

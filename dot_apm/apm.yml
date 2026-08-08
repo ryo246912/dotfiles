@@ -49,6 +49,10 @@ dependencies:
       path: skills/diagram-design
       ref: a157f7616473d966d6f433cf0b4d4f1880603504
       alias: diagram-design
+    - git: vercel-labs/skills
+      path: skills/find-skills
+      ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+      alias: find-skills
   mcp: []
 includes: auto
 scripts: {}

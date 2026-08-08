@@ -5,6 +5,7 @@
 - `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
+- `find-skills`
 
 ## インストール
 
@@ -140,3 +141,39 @@ docs/architecture.html の図を SVG と PNG に export してください。
 
 SVG は standalone file として生成されます。PNG export には Python 版 Playwright と Chromium が必要です。
 diagram 生成時は、要素を詰め込みすぎず、複雑な場合は overview と detail に分割してください。
+
+## `find-skills`
+
+### 用途
+
+実現したい作業に利用できる既存のagent skillを検索し、候補の品質を確認して提案するskillです。「この作業に使える
+skillはあるか」「エージェントへ特定分野の能力を追加したい」といった依頼で使用します。
+
+検索結果をそのまま勧めるのではなく、install数、配布元の信頼性、GitHub starsなどを確認してから候補を提示します。
+適切なskillが見つからなかった場合は、通常のエージェント機能で作業を続けるか、独自skillを作る方法を提案します。
+
+### 使い方
+
+skillは該当する依頼から自動的に選択されます。明示的に指定する場合は、Claude Codeでは`/find-skills`、Codexでは
+`$find-skills`を使用し、探したい分野と具体的な作業を伝えます。
+
+```text
+/find-skills
+Playwrightを使ったE2E testの設計と実装を支援するskillを探してください。
+```
+
+```text
+$find-skills を使って、Pull Requestのreviewに利用できるskillを探してください。
+```
+
+skillは最初に[skills.sh](https://skills.sh/)のleaderboardを確認し、必要に応じてSkills CLIで検索します。
+
+```bash
+npx skills find "react performance"
+npx skills find "pr review"
+npx skills find testing --owner vercel-labs
+```
+
+候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
+dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
+`dot_apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
