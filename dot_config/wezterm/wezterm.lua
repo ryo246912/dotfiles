@@ -72,6 +72,8 @@ if is_darwin then
   send_string_binding("c", "CMD", "\x02[")
   send_string_binding("e", "CMD", "\x02 ")
   send_string_binding("e", "CMD|SHIFT", "\x02Q")
+  -- ctrl + b → A(tmux-agent-sidebarのトグル、カスタム)
+  send_string_binding("e", "CTRL|SHIFT", "\x02A")
   send_string_binding("f", "CMD", "\x02\x06")
   send_string_binding("l", "CMD", "\x02s")
   send_string_binding("l", "CMD|SHIFT", "\x02w")
