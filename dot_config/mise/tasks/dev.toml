@@ -30,8 +30,8 @@ description = "Deploy user-scope packages and mcpc MCP config"
 # ~/.apm は chezmoi が生成するため、事前に `chezmoi apply` 済みであること。
 run = [
     "apm install -g --only apm",
-    # MCPをagentへ直接登録せず、mcpc用のCopilot CLI configだけを生成する。
-    "apm install -g --only mcp --target copilot",
+    # HOMEを隔離し、実際のCopilot CLI configへ登録せずmcpc専用configを生成する。
+    '''bash -c 'set -eu; real_home="$HOME"; isolated_home="$HOME/.config/mcpc/apm-home"; mkdir -p "$isolated_home/.apm"; cp "$real_home/.apm/apm.yml" "$isolated_home/.apm/apm.yml"; cp "$real_home/.apm/apm.lock.yaml" "$isolated_home/.apm/apm.lock.yaml"; HOME="$isolated_home" apm install -g --only mcp --target copilot; cp "$isolated_home/.apm/apm.lock.yaml" "$real_home/.apm/apm.lock.yaml"' ''',
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
@@ -42,7 +42,7 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
 run = [
     "apm install -g --only apm --frozen",
-    "apm install -g --only mcp --target copilot --frozen",
+    '''bash -c 'set -eu; real_home="$HOME"; isolated_home="$HOME/.config/mcpc/apm-home"; mkdir -p "$isolated_home/.apm"; cp "$real_home/.apm/apm.yml" "$isolated_home/.apm/apm.yml"; cp "$real_home/.apm/apm.lock.yaml" "$isolated_home/.apm/apm.lock.yaml"; HOME="$isolated_home" apm install -g --only mcp --target copilot --frozen; cp "$isolated_home/.apm/apm.lock.yaml" "$real_home/.apm/apm.lock.yaml"' ''',
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",

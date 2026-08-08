@@ -63,26 +63,22 @@ dependencies:
     - name: aws-billing
       registry: false
       transport: stdio
-      command: env
+      command: sh
       args:
-        - FASTMCP_LOG_LEVEL=ERROR
-        - uvx
-        - awslabs.billing-cost-management-mcp-server@0.0.31
+        - -c
+        - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx awslabs.billing-cost-management-mcp-server@0.0.31
       version: 0.0.31
       env:
-        AWS_PROFILE: "${AWS_PROFILE}"
-        AWS_REGION: "${AWS_REGION}"
+        AWS_VAULT_PROFILE: "${AWS_VAULT_PROFILE}"
     - name: aws-cloudwatch
       registry: false
       transport: stdio
-      command: env
+      command: sh
       args:
-        - FASTMCP_LOG_LEVEL=ERROR
-        - uvx
-        - awslabs.cloudwatch-mcp-server@0.1.7
+        - -c
+        - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx awslabs.cloudwatch-mcp-server@0.1.7
       version: 0.1.7
       env:
-        AWS_PROFILE: "${AWS_PROFILE}"
-        AWS_REGION: "${AWS_REGION}"
+        AWS_VAULT_PROFILE: "${AWS_VAULT_PROFILE}"
 includes: auto
 scripts: {}

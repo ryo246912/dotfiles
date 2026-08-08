@@ -28,7 +28,7 @@ trigger = "dcex"
 
 [[snippets]]
 name    = "mcpc"
-snippet = "mcpc connect ~/.copilot/mcp-config.json --stdio"
+snippet = "mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json --stdio"
 trigger = "mcp"
 
 [[snippets]]

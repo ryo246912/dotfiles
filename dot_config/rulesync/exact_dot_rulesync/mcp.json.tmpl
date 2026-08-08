@@ -37,25 +37,6 @@
         "https://mcp.notion.com/mcp"
       ]
     },
-    "AWS Billing and Cost Management MCP Server": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["awslabs.billing-cost-management-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": {{ quote (env "AWS_PROFILE") }},
-        "AWS_REGION": "ap-northeast-1"
-      }
-    },
-    "CloudWatch MCP Server": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["awslabs.cloudwatch-mcp-server@latest"],
-      "env": {
-        "AWS_PROFILE": {{ quote (env "AWS_PROFILE") }},
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
     "deepwiki": {
       "type": "stdio",
       "command": "npx",

@@ -11,12 +11,12 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                                | 管理ツール | ソース                                    | 配布先                                           |
-| ----------------------------------- | ---------- | ----------------------------------------- | ------------------------------------------------ |
-| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）        |
-| グローバルな自作 skill / rule / MCP | rulesync   | `dot_config/rulesync/exact_dot_rulesync/` | `~/.claude/` 等（chezmoi + `rulesync generate`） |
-| **外部スキル（グローバル）**        | **APM**    | `dot_apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）       |
-| **mcpc 用 MCP server**              | **APM**    | `dot_apm/apm.yml` の `dependencies.mcp`   | `~/.copilot/mcp-config.json`                     |
+| 対象                                | 管理ツール | ソース                                    | 配布先                                             |
+| ----------------------------------- | ---------- | ----------------------------------------- | -------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）          |
+| グローバルな自作 skill / rule / MCP | rulesync   | `dot_config/rulesync/exact_dot_rulesync/` | `~/.claude/` 等（chezmoi + `rulesync generate`）   |
+| **外部スキル（グローバル）**        | **APM**    | `dot_apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）         |
+| **mcpc 用 MCP server**              | **APM**    | `dot_apm/apm.yml` の `dependencies.mcp`   | `~/.config/mcpc/apm-home/.copilot/mcp-config.json` |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`dot_config/rulesync/`）で管理します。

@@ -17,25 +17,23 @@ mcpc の version は mise の設定で固定しています。global npm install
 
 ## AWS MCP の設定
 
-AWS Billing and Cost Management MCP Server と CloudWatch MCP Server は `dot_apm/apm.yml` の `dependencies.mcp` で version を pin しています。APM が install と lockfile 管理を担当し、mcpc は APM が生成した `~/.copilot/mcp-config.json` を MCP client として読みます。
+AWS Billing and Cost Management MCP Server と CloudWatch MCP Server は `dot_apm/apm.yml` の `dependencies.mcp` で version を pin しています。APM が install と lockfile 管理を担当し、mcpc は APM が専用 HOME に生成した `~/.config/mcpc/apm-home/.copilot/mcp-config.json` を MCP client として読みます。
 
 ```bash
-export AWS_PROFILE=my-profile
-export AWS_REGION=ap-northeast-1
-aws sso login --profile "$AWS_PROFILE" # SSO profile の場合
-aws sts get-caller-identity
+export AWS_VAULT_PROFILE=my-profile
+aws-vault exec "$AWS_VAULT_PROFILE" -- aws sts get-caller-identity
 mise run apm:install
 ```
 
 `mise run apm:install` は次のように役割を分けています。
 
 - APM package は既存の agent target へ install する。
-- MCP は `--only mcp --target copilot` で mcpc 用の `~/.copilot/mcp-config.json` だけを生成する。
+- MCP は隔離した HOME で `--only mcp --target copilot` を実行し、mcpc 専用の `~/.config/mcpc/apm-home/.copilot/mcp-config.json` だけを生成する。
 - `~/.apm/apm.lock.yaml` を `dot_apm/apm.lock.yaml` へ同期する。
 
-これにより AWS MCP の定義を各 agent の native MCP 設定へ常時登録せず、必要なときだけ mcpc から load できます。server を更新するときは `dot_apm/apm.yml` の `version` と、`args` にある uvx の `package@version` を同じ version に更新して `mise run apm:install` を実行し、manifest と lockfile を一緒に commit します。
+隔離先は実際の `~/.copilot/mcp-config.json` とは異なるため、Copilot CLI や他の agent には AWS MCP が登録されません。必要なときだけ mcpc から load できます。server を更新するときは `dot_apm/apm.yml` の `version` と、`args` にある uvx の `package@version` を同じ version に更新して `mise run apm:install` を実行し、manifest と lockfile を一緒に commit します。
 
-APM は install 時の `${AWS_PROFILE}` と `${AWS_REGION}` を Copilot CLI config に渡します。mcpc は stdio server に shell の環境変数をすべて自動継承させないため、manifest の `env` で両方を明示しています。アクセスキーを設定へ直接書かず、AWS profile、SSO、または標準の credential provider chain を使用してください。また、profile には利用する MCP tool に必要な最小権限だけを付与してください。
+APM は `${AWS_VAULT_PROFILE}` を生成する config に渡します。mcpc が server を起動すると `aws-vault exec "$AWS_VAULT_PROFILE" -- ...` が一時 credential を払い出し、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、region などを子 process に直接渡します。`aws-vault exec` は `AWS_PROFILE` を使わず `AWS_VAULT` を設定するため、manifest から `AWS_PROFILE` を渡す必要はありません。アクセスキーを設定ファイルへ直接書かず、aws-vault の profile には必要な最小権限だけを付与してください。
 
 ## 必要な MCP を動的に load する
 
@@ -44,14 +42,14 @@ APM は install 時の `${AWS_PROFILE}` と `${AWS_REGION}` を Copilot CLI conf
 設定ファイルの `:server-name` を指定すると、必要な server だけを named session として起動できます。AWS MCP はローカルの stdio server なので、信頼できる設定だけを起動してください。
 
 ```bash
-mcpc connect ~/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
-mcpc connect ~/.copilot/mcp-config.json:aws-billing @aws-billing
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-billing @aws-billing
 ```
 
 設定内の全 server をまとめて接続する場合、stdio server は既定では除外されるため `--stdio` が必要です。
 
 ```bash
-mcpc connect ~/.copilot/mcp-config.json --stdio
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json --stdio
 ```
 
 引数なしの `mcpc connect` は current directory と home directory にある標準的な MCP 設定ファイルを自動検出します。この場合もローカル server を含めるときだけ `--stdio` を付けます。
@@ -66,7 +64,7 @@ mcpc connect --stdio
 
 ```bash
 mcpc
-mcpc grep 'log|query'
+mcpc grep -E 'log|query'
 mcpc @aws-cloudwatch tools-get <tool-name>
 mcpc @aws-cloudwatch tools-call <tool-name> key:=value
 ```
@@ -101,7 +99,7 @@ MCP が必要なときは `mcpc help --skill` を確認する。
 ## トラブルシューティング
 
 - `mcpc connect` が失敗したら `~/.mcpc/logs/bridge-<session>.log` を確認します。
-- AWS の認証エラーでは `aws sts get-caller-identity`、`AWS_PROFILE`、`AWS_REGION`、SSO session の有効期限を確認します。
+- AWS の認証エラーでは `aws-vault exec "$AWS_VAULT_PROFILE" -- aws sts get-caller-identity`、`AWS_VAULT_PROFILE`、aws-vault session の有効期限を確認します。
 - 起動中の session が不調なら `mcpc restart @<session>`、不要な状態を消す場合は `mcpc clean` を使います。
 - command や引数が変わった可能性がある場合は `mcpc help <command>` と `mcpc help --skill` を正としてください。
 

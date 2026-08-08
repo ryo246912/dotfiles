@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T12:15:22.485395+00:00'
+generated_at: '2026-08-08T22:52:56.652013+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -7929,6 +7929,24 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:7f6bee86702a488d29ef0dcaabf424bbe2aca345a6a642319d43a1fe0276792e
+- kind: uri
+  target: mcp
+  value: aws-billing
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: aws-cloudwatch
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
 mcp_servers:
 - aws-billing
 - aws-cloudwatch
@@ -7937,25 +7955,27 @@ mcp_configs:
     name: aws-billing
     transport: stdio
     env:
-      AWS_PROFILE: ${AWS_PROFILE}
-      AWS_REGION: ${AWS_REGION}
+      AWS_VAULT_PROFILE: ${AWS_VAULT_PROFILE}
     args:
-    - FASTMCP_LOG_LEVEL=ERROR
-    - uvx
-    - awslabs.billing-cost-management-mcp-server@0.0.31
+    - -c
+    - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx
+      awslabs.billing-cost-management-mcp-server@0.0.31
     version: 0.0.31
     registry: false
-    command: env
+    command: sh
   aws-cloudwatch:
     name: aws-cloudwatch
     transport: stdio
     env:
-      AWS_PROFILE: ${AWS_PROFILE}
-      AWS_REGION: ${AWS_REGION}
+      AWS_VAULT_PROFILE: ${AWS_VAULT_PROFILE}
     args:
-    - FASTMCP_LOG_LEVEL=ERROR
-    - uvx
-    - awslabs.cloudwatch-mcp-server@0.1.7
+    - -c
+    - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx
+      awslabs.cloudwatch-mcp-server@0.1.7
     version: 0.1.7
     registry: false
-    command: env
+    command: sh
+mcp_target_servers:
+  copilot:
+  - aws-billing
+  - aws-cloudwatch
