@@ -1,5 +1,18 @@
 eval "$(mise activate zsh)"
 
+# `mise activate zsh` が生成したshell/deactivate対応functionを保持し、その外側で
+# install/lock後のlockfile同期を行う。直接`command mise`を呼ぶとactivate固有処理が失われる。
+functions[_mise_activated]="$functions[mise]"
+mise() {
+    # activateが生成したfunctionへ全引数をそのまま渡し、shell/deactivateを含む
+    # mise本来の挙動を維持する。成功後は毎回lockfileの差分だけを確認することで、
+    # 増減するglobal optionやinstall aliasを独自に解析せず保守できるようにする。
+    _mise_activated "$@"
+    local exit_status=$?
+    (( exit_status == 0 )) && _sync_mise_dotfile_locks
+    return $exit_status
+}
+
 # 補完ファイル生成用のディレクトリ
 MISE_COMPLETIONS_DIR="$HOME/.cache/mise/completions"
 mkdir -p "$MISE_COMPLETIONS_DIR"
