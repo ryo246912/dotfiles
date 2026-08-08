@@ -1,0 +1,29 @@
+{
+  "network": {
+    "allowedDomains": [
+      "github.com",
+      "*.github.com",
+      "*.githubusercontent.com",
+      "objects.githubusercontent.com",
+      "registry.npmjs.org",
+      "*.npmjs.org",
+      "mise.run",
+      "mise.jdx.dev"
+    ]
+  },
+  "filesystem": {
+    "allowWrite": [".", "~/.local/bin", "~/.local/share/mise", "~/.local/state"],
+    "denyRead": [
+      "~/.ssh",
+      "~/.aws",
+      "~/.config/gh",
+      "~/.npmrc",
+      "~/.netrc",
+      "~/.git-credentials",
+      "~/.config/git/credentials",
+      "~/.docker/config.json",
+      "~/.kube/config",
+      "~/.gnupg"
+    ]
+  }
+}
