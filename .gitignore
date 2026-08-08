@@ -1,5 +1,9 @@
 .venv/*
 
+## mise lockfiles（Renovate の artifact 更新では生成しない）
+/mise.lock
+/dot_config/mise/mise*.lock
+
 *temp*
 dot_config/git/config.secret
 dot_config/git/config.work.secret
