@@ -57,6 +57,33 @@ dependencies:
     - git: DietrichGebert/ponytail
       ref: v4.9.0
       alias: ponytail
-  mcp: []
+  # mcpc が読む ~/.copilot/mcp-config.json へ APM が生成する AWS MCP server。
+  # version と uvx の package specifier を同時に pin し、lockfile にも解決結果を記録する。
+  mcp:
+    - name: aws-billing
+      registry: false
+      transport: stdio
+      command: env
+      args:
+        - FASTMCP_LOG_LEVEL=ERROR
+        - uvx
+        - awslabs.billing-cost-management-mcp-server@0.0.31
+      version: 0.0.31
+      env:
+        AWS_PROFILE: "${AWS_PROFILE}"
+        AWS_REGION: "${AWS_REGION}"
+    - name: aws-cloudwatch
+      registry: false
+      transport: stdio
+      command: env
+      args:
+        - FASTMCP_LOG_LEVEL=ERROR
+        - uvx
+        - awslabs.cloudwatch-mcp-server@0.1.7
+      version: 0.1.7
+      env:
+        AWS_PROFILE: "${AWS_PROFILE}"
+        AWS_REGION: "${AWS_REGION}"
+includes: auto
 includes: auto
 scripts: {}

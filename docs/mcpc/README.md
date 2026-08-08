@@ -4,11 +4,11 @@
 
 ## セットアップ
 
-chezmoi を反映し、mise で mcpc と AWS MCP server の起動に使う uv をインストールします。
+chezmoi を反映し、mise で mcpc、APM、AWS MCP server の起動に使う uv をインストールします。
 
 ```bash
 chezmoi apply
-mise install npm:@apify/mcpc aqua:astral-sh/uv
+mise install npm:@apify/mcpc github:microsoft/apm aqua:astral-sh/uv
 mcpc --version
 uvx --version
 ```
@@ -17,25 +17,25 @@ mcpc の version は mise の設定で固定しています。global npm install
 
 ## AWS MCP の設定
 
-同梱の [`aws-mcp.json`](./aws-mcp.json) は AWS Billing and Cost Management MCP Server と CloudWatch MCP Server の stdio 設定テンプレートです。AWS の profile と region を shell で指定してから利用します。
+AWS Billing and Cost Management MCP Server と CloudWatch MCP Server は `dot_apm/apm.yml` の `dependencies.mcp` で version を pin しています。APM が install と lockfile 管理を担当し、mcpc は APM が生成した `~/.copilot/mcp-config.json` を MCP client として読みます。
 
 ```bash
 export AWS_PROFILE=my-profile
 export AWS_REGION=ap-northeast-1
 aws sso login --profile "$AWS_PROFILE" # SSO profile の場合
 aws sts get-caller-identity
+mise run apm:install
 ```
 
-mcpc は stdio server に shell の環境変数をすべて自動継承させないため、テンプレートの `env` で `AWS_PROFILE` と `AWS_REGION` を明示的に渡しています。アクセスキーを JSON に直接書かず、AWS profile、SSO、または標準の credential provider chain を使用してください。また、profile には利用する MCP tool に必要な最小権限だけを付与してください。
+`mise run apm:install` は次のように役割を分けています。
 
-自分用に server を追加・削除する場合は、このファイルをコピーして編集できます。
+- APM package は既存の agent target へ install する。
+- MCP は `--only mcp --target copilot` で mcpc 用の `~/.copilot/mcp-config.json` だけを生成する。
+- `~/.apm/apm.lock.yaml` を `dot_apm/apm.lock.yaml` へ同期する。
 
-```bash
-mkdir -p ~/.config/mcpc
-cp docs/mcpc/aws-mcp.json ~/.config/mcpc/aws-mcp.json
-```
+これにより AWS MCP の定義を各 agent の native MCP 設定へ常時登録せず、必要なときだけ mcpc から load できます。server を更新するときは `dot_apm/apm.yml` の `version` と、`args` にある uvx の `package@version` を同じ version に更新して `mise run apm:install` を実行し、manifest と lockfile を一緒に commit します。
 
-`${AWS_PROFILE}` と `${AWS_REGION}` は接続時に mcpc が環境変数で置換します。
+APM は install 時の `${AWS_PROFILE}` と `${AWS_REGION}` を Copilot CLI config に渡します。mcpc は stdio server に shell の環境変数をすべて自動継承させないため、manifest の `env` で両方を明示しています。アクセスキーを設定へ直接書かず、AWS profile、SSO、または標準の credential provider chain を使用してください。また、profile には利用する MCP tool に必要な最小権限だけを付与してください。
 
 ## 必要な MCP を動的に load する
 
@@ -44,14 +44,14 @@ cp docs/mcpc/aws-mcp.json ~/.config/mcpc/aws-mcp.json
 設定ファイルの `:server-name` を指定すると、必要な server だけを named session として起動できます。AWS MCP はローカルの stdio server なので、信頼できる設定だけを起動してください。
 
 ```bash
-mcpc connect ~/.config/mcpc/aws-mcp.json:aws-cloudwatch @aws-cloudwatch
-mcpc connect ~/.config/mcpc/aws-mcp.json:aws-billing @aws-billing
+mcpc connect ~/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc connect ~/.copilot/mcp-config.json:aws-billing @aws-billing
 ```
 
 設定内の全 server をまとめて接続する場合、stdio server は既定では除外されるため `--stdio` が必要です。
 
 ```bash
-mcpc connect ~/.config/mcpc/aws-mcp.json --stdio
+mcpc connect ~/.copilot/mcp-config.json --stdio
 ```
 
 引数なしの `mcpc connect` は current directory と home directory にある標準的な MCP 設定ファイルを自動検出します。この場合もローカル server を含めるときだけ `--stdio` を付けます。
