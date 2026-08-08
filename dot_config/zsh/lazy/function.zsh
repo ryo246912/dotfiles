@@ -14,6 +14,56 @@ open() {
   fi
 }
 
+# install後にapply先のlockfileをchezmoi sourceへ戻す。
+# 同期はbest-effortとし、install自体の終了statusは変更しない。
+_sync_dotfile_lock() {
+  local source_file="$1"
+  local destination_file="$2"
+  [[ -f "$source_file" ]] || return 0
+  mkdir -p "${destination_file:h}" || return 0
+  if ! cmp -s "$source_file" "$destination_file"; then
+    local temporary_file
+    temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
+    if ! cp -p "$source_file" "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
+      rm -f "$temporary_file"
+      return 0
+    fi
+    echo "Updated chezmoi source lockfile: $destination_file"
+  fi
+}
+
+_sync_mise_dotfile_locks() {
+  local source_dir
+  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  local mise_config_dir="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}"
+  local source_lock
+  for source_lock in "$mise_config_dir"/mise*.lock(N); do
+    _sync_dotfile_lock "$source_lock" "$source_dir/dot_config/mise/${source_lock:t}"
+  done
+}
+
+_sync_apm_dotfile_lock() {
+  local source_dir
+  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  _sync_dotfile_lock "$HOME/.apm/apm.lock.yaml" "$source_dir/dot_apm/apm.lock.yaml"
+}
+
+apm() {
+  local is_global=false
+  local argument
+  for argument in "$@"; do
+    [[ "$argument" == -g || "$argument" == --global ]] && is_global=true
+  done
+  command apm "$@"
+  local exit_status=$?
+  # optionの順序や将来のsubcommand追加を独自解析せず、global command成功後は
+  # lockfileに差分がある場合だけchezmoi sourceへ反映する。
+  if (( exit_status == 0 )) && [[ "$is_global" == true ]]; then
+    _sync_apm_dotfile_lock
+  fi
+  return $exit_status
+}
+
 #
 # 引数として受け取ったコマンドを指定回数繰り返す関数
 #

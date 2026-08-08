@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-06T14:08:17.412221+00:00'
+generated_at: '2026-08-07T15:45:36.867413+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: classmethod/tsumiki
@@ -596,8 +596,8 @@ dependencies:
   - .claude/skills/crit
   - .claude/skills/crit/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit/SKILL.md: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
-    .claude/skills/crit/SKILL.md: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
+    .agents/skills/crit/SKILL.md: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
+    .claude/skills/crit/SKILL.md: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
   content_hash: sha256:fe83a4e68c02e2c77eed71ced3e519acf7a5d41ea404cbb1ba1776d45113357f
 - repo_url: tomasz-tomczyk/crit
   name: crit-cli
@@ -614,8 +614,8 @@ dependencies:
   - .claude/skills/crit-cli
   - .claude/skills/crit-cli/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit-cli/SKILL.md: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
-    .claude/skills/crit-cli/SKILL.md: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
+    .agents/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
+    .claude/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
   content_hash: sha256:c62c3b4d93667eb2f8046f5ee7f8a51a3a2c5ac574faad108501e05747bf0f7a
 - repo_url: zenbu-labs/terminal-browser
   name: terminal-browser
@@ -666,7 +666,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
+  content_hash: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
 - kind: project-relative
   target: claude
   value: .claude/skills/crit/SKILL.md
@@ -675,7 +675,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
+  content_hash: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
 - kind: project-relative
   target: claude
   value: .claude/skills/ctx-agent-history-search
@@ -1908,7 +1908,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:0e4dfa41c0fbf1a540bc97d78876da8bf59ebf6de753c0ae3763f847052851e8
+  content_hash: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
 - kind: project-relative
   target: codex
   value: .agents/skills/crit/SKILL.md
@@ -1917,7 +1917,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:8edde24a92b58bc8dba5d5c002f7a846264a7c95ead69ad62fe5fc09ef0f6b0b
+  content_hash: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
 - kind: project-relative
   target: codex
   value: .agents/skills/ctx-agent-history-search
