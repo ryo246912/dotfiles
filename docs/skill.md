@@ -5,6 +5,7 @@
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumikiの14 skill
+- Ponytailの6 skill
 - `ctx-agent-history-search`
 - `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
@@ -106,6 +107,45 @@ $dev-plan checkout "決済providerを追加し、失敗時に安全にretryで�
 既存projectで一連のworkflowを始める場合は、通常`dev-context` → `dev-plan` → `dev-impl`または`dev-run` →
 `dev-verify`の順で使用します。Web UIを含む場合は`dev-webtest-plan`と`dev-webtest`、security確認が必要な場合は
 `ipa-security-check`と`ipa-security-guide`を組み合わせます。
+
+## Ponytail skills
+
+Ponytailは、YAGNI、standard library、native platform機能、既存dependencyの順に検討し、要件を満たす最小の実装を
+選ぶcoding workflowです。短いcodeを目的化するのではなく、security、accessibility、trust boundaryのvalidation、
+data lossを防ぐerror handlingは省略しません。
+
+| skill             | 用途                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| `ponytail`        | 最小の正しい実装を選ぶmode。`lite`、`full`、`ultra`の3段階を切り替えられる          |
+| `ponytail-review` | 現在のdiffから過剰なabstraction、不要なdependency、再実装されたstdlibなどを探す     |
+| `ponytail-audit`  | repository全体を対象に、削除・単純化できる箇所を優先順位付きで報告する              |
+| `ponytail-debt`   | source内の`ponytail:` commentを収集し、意図的に先送りした制約と改善条件を一覧化する |
+| `ponytail-gain`   | 公開benchmarkに基づくcode量、cost、処理時間への影響をscoreboardで表示する           |
+| `ponytail-help`   | mode、skill、command、無効化方法をquick referenceとして表示する                     |
+
+### 使い方
+
+通常modeは`full`です。Claude Codeでは`/ponytail`、Codexでは`$ponytail`を使い、必要に応じてlevelを指定します。
+
+```text
+/ponytail lite
+このAPI clientへretryを追加してください。
+```
+
+```text
+$ponytail ultra を使って、この変更を実現する最小のdiffを作ってください。
+```
+
+過剰実装だけをreviewするときは`ponytail-review`、repository全体を調べるときは`ponytail-audit`を使用します。これらは
+correctness、security、performanceのreviewを置き換えないため、必要に応じて通常のcode reviewと併用してください。
+
+```text
+$ponytail-review を使って、現在のdiffから削除できるabstractionを探してください。
+```
+
+Ponytailを止めるときは「stop ponytail」または「normal mode」と伝えます。default levelを変える場合は
+`PONYTAIL_DEFAULT_MODE`へ`lite`、`full`、`ultra`、`off`のいずれかを設定します。pluginのalways-on activationには
+Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`から`node`を実行できる必要があります。
 
 ## `ctx-agent-history-search`
 
