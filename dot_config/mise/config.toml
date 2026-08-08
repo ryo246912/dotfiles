@@ -108,6 +108,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "http:tmux-fzf"                                             = { version = "4cbbbbde54e1b63712d77483b83075fd712d3bb5", url = "https://github.com/sainnhe/tmux-fzf/archive/{{ version }}.tar.gz", strip_components = 1 }         # renovate: branch=master
 "http:tmux-resurrect"                                       = { version = "d05fd6696716bd2434c25155374dc36d21347db4", url = "https://github.com/ryo246912/tmux-resurrect/archive/{{ version }}.tar.gz", strip_components = 1 } # renovate: branch=master
 "http:tmux-yank"                                            = { version = "2.3.0", url = "https://github.com/tmux-plugins/tmux-yank/archive/refs/tags/v{{ version }}.tar.gz", strip_components = 1 }
+"npm:@apify/mcpc"                                           = "0.6.0"
 "npm:@devcontainers/cli"                                    = "0.88.0"
 "npm:@kitlangton/ghui"                                      = "0.9.0"
 "npm:agentlytics"                                           = "0.2.13"
