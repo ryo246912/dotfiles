@@ -94,6 +94,10 @@
     {
       "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
       "groupName": "tsumiki"
+    },
+    {
+      "matchPackageNames": ["github:hiroppy/tmux-agent-sidebar", "hiroppy/tmux-agent-sidebar"],
+      "groupName": "tmux-agent-sidebar"
     }
   ],
   "customManagers": [

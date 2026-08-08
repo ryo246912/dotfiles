@@ -8,18 +8,44 @@
           "matcher": "clear",
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "tmux-agent-sidebar hook claude session-start 2>/dev/null || true"
         }
       ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "tmux-agent-sidebar hook claude session-end 2>/dev/null || true"
         }
       ],
       "preCompact": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        }
+      ],
+      "beforeSubmitPrompt": [
+        {
+          "command": "tmux-agent-sidebar hook claude user-prompt-submit 2>/dev/null || true"
+        }
+      ],
+      "notification": [
+        {
+          "command": "tmux-agent-sidebar hook claude notification 2>/dev/null || true"
+        }
+      ],
+      "stop": [
+        {
+          "command": "tmux-agent-sidebar hook claude stop 2>/dev/null || true"
+        }
+      ],
+      "subagentStop": [
+        {
+          "command": "tmux-agent-sidebar hook claude subagent-stop 2>/dev/null || true"
         }
       ],
       "postToolUse": [
@@ -38,6 +64,44 @@
         {
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+        },
+        {
+          "command": "tmux-agent-sidebar hook claude activity-log 2>/dev/null || true"
+        }
+      ],
+      "StopFailure": [
+        {
+          "command": "tmux-agent-sidebar hook claude stop-failure 2>/dev/null || true"
+        }
+      ],
+      "PermissionDenied": [
+        {
+          "command": "tmux-agent-sidebar hook claude permission-denied 2>/dev/null || true"
+        }
+      ],
+      "CwdChanged": [
+        {
+          "command": "tmux-agent-sidebar hook claude cwd-changed 2>/dev/null || true"
+        }
+      ],
+      "SubagentStart": [
+        {
+          "command": "tmux-agent-sidebar hook claude subagent-start 2>/dev/null || true"
+        }
+      ],
+      "TaskCreated": [
+        {
+          "command": "tmux-agent-sidebar hook claude task-created 2>/dev/null || true"
+        }
+      ],
+      "TaskCompleted": [
+        {
+          "command": "tmux-agent-sidebar hook claude task-completed 2>/dev/null || true"
+        }
+      ],
+      "TeammateIdle": [
+        {
+          "command": "tmux-agent-sidebar hook claude teammate-idle 2>/dev/null || true"
         }
       ]
     }
