@@ -49,7 +49,6 @@ _sync_apm_dotfile_lock() {
 }
 
 apm() {
-  local subcommand="${1:-}"
   local is_global=false
   local argument
   for argument in "$@"; do
@@ -57,7 +56,9 @@ apm() {
   done
   command apm "$@"
   local exit_status=$?
-  if (( exit_status == 0 )) && [[ "$subcommand" == install && "$is_global" == true ]]; then
+  # optionの順序や将来のsubcommand追加を独自解析せず、global command成功後は
+  # lockfileに差分がある場合だけchezmoi sourceへ反映する。
+  if (( exit_status == 0 )) && [[ "$is_global" == true ]]; then
     _sync_apm_dotfile_lock
   fi
   return $exit_status
