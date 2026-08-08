@@ -4,6 +4,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 
 RUN apt-get update && apt-get install -y \
     zsh \
+    sqlite3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV SHELL=/usr/bin/zsh

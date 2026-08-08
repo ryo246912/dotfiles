@@ -14,6 +14,10 @@ dependencies:
   # 再現性のため各依存は immutable なコミット SHA に pin する（`#<sha>`）。
   # SHA 更新は `git ls-remote <repo> HEAD` 等で取得して差し替える。
   apm:
+    # agmsg（Claude Code / Codex 間のSQLiteベースメッセージング skill）。
+    - git: fujibee/agmsg
+      ref: e684ad9a36df20e614cd379d71239f7c655e52ee
+      alias: agmsg
     # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#2c180fee6cb030fe0a2a2dc402053fbe7152512b
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#2c180fee6cb030fe0a2a2dc402053fbe7152512b
