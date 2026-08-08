@@ -357,7 +357,6 @@ checksum = "sha256:7b241c80204538cbb210c94514dc7cdff86430938bd7d5b6e289207959530
 url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_linux_x64.tar.gz"
 url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212674"
 provenance = "github-attestations"
-provenance_verified = true
 
 [tools."github:betterleaks/betterleaks"."platforms.linux-x64-musl"]
 checksum = "sha256:7b241c80204538cbb210c94514dc7cdff86430938bd7d5b6e289207959530849"

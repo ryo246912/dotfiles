@@ -4,6 +4,22 @@
 version = "0.6.2"
 backend = "github:hzqtc/taproom"
 
+[tools."github:hzqtc/taproom"."platforms.macos-arm64"]
+checksum = "sha256:1d29d93afea2437b0c761cec0cc8b0f353683815b02f839dd5d2b8a0b5e383cc"
+url = "https://github.com/hzqtc/taproom/releases/download/v0.6.2/taproom-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/hzqtc/taproom/releases/assets/474980509"
+
+[tools."github:hzqtc/taproom"."platforms.macos-x64"]
+checksum = "sha256:f4098e73191d87da7c3ea5ec242a42f4174397f1a0f5459d8274279d3a35eed1"
+url = "https://github.com/hzqtc/taproom/releases/download/v0.6.2/taproom-darwin-amd64.tar.gz"
+url_api = "https://api.github.com/repos/hzqtc/taproom/releases/assets/474980502"
+
 [[tools."http:terminal-browser"]]
 version = "0.3.2"
 backend = "http:terminal-browser"
+
+[tools."http:terminal-browser".options]
+strip_components = "1"
+
+[tools."http:terminal-browser"."platforms.macos-arm64"]
+url = "https://terminal-browser.sh/install/dl/stable/v0.3.2/terminal-browser-darwin-arm64.tar.gz"
