@@ -20,7 +20,7 @@ dependencies:
     # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
     - git: zenbu-labs/terminal-browser
       path: skill
-      ref: v0.3.2
+      ref: v0.4.2
       alias: terminal-browser
     # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する。
     - git: classmethod/tsumiki
