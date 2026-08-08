@@ -72,7 +72,7 @@ mcpc @aws-cloudwatch tools-call <tool-name> key:=value
 複雑な引数は JSON を標準入力から渡すと shell quoting の事故を避けられます。
 
 ```bash
-jq -n --arg region "$AWS_REGION" '{region: $region}' |
+jq -n --arg log_group '/aws/lambda/example' '{logGroupName: $log_group}' |
   mcpc --json @aws-cloudwatch tools-call <tool-name>
 ```
 
