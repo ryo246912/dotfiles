@@ -54,6 +54,8 @@
 "brew-cask:karabiner-elements"    = "latest" # 13.7.0
 "brew-cask:keyboardcleantool"     = "latest" # 7
 "brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
+# Obsidian CLI は 1.12.7+ のデスクトップアプリに同梱。導入後にアプリの
+# Settings > General > Command line interface から一度だけ登録する（docs/obsidian.md）。
 "brew-cask:obsidian"              = "latest" # 1.13.4
 "brew-cask:overview"              = "latest" # 1.2.3-beta
 "brew-cask:slack"                 = "latest" # 4.51.180
