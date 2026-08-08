@@ -140,7 +140,16 @@ docs/architecture.html の図を SVG と PNG に export してください。
 ```
 
 SVG は standalone file として生成されます。PNG export には Python 版 Playwright と Chromium が必要です。
-diagram 生成時は、要素を詰め込みすぎず、複雑な場合は overview と detail に分割してください。
+未導入の場合は、export を依頼する前に次のコマンドを実行します。
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+SVG は Google Fonts を外部参照するため、font を取得しないoffline viewerなどでは代替fontで表示される可能性が
+あります。pixel-perfectな持ち運びが必要な場合はPNGを使用してください。diagram生成時は、要素を詰め込みすぎず、
+複雑な場合はoverviewとdetailに分割してください。
 
 ## `find-skills`
 
