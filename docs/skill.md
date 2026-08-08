@@ -2,6 +2,10 @@
 
 このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
 
+- `crit` / `crit-cli`
+- `terminal-browser`
+- Tsumikiの14 skill
+- `ctx-agent-history-search`
 - `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
@@ -22,6 +26,105 @@ mise run apm:install
 
 依存先は再現性のため `dot_apm/apm.yml` で commit SHA に pin しています。更新時は upstream の内容を確認して
 `ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
+
+## `crit` / `crit-cli`
+
+### 用途
+
+`crit`はcode diff、plan、ローカルHTML、実行中のWeb applicationをbrowser UIで確認し、行や要素へcommentを付けて
+エージェントへ戻すreview skillです。`crit-cli`はcommentの作成・返信、reviewの共有、GitHub PRとの同期などを
+エージェントがCLIから操作するための補助skillであり、通常は直接起動しません。
+
+### 使い方
+
+`crit`はユーザーが明示的に起動します。Claude Codeでは`/crit`、Codexでは`$crit`を使い、必要に応じてreview対象を
+指定します。
+
+```text
+/crit docs/plan.md
+```
+
+```text
+$crit を使って、現在のgit diffをreviewできるようにしてください。
+```
+
+devcontainerでは`crit`を起動した後、表示されたhost側URLをbrowserで開きます。commentを送信するとエージェントが
+修正し、再reviewできます。CLIの構成やhost portの確認方法は[`docs/crit.md`](crit.md)を参照してください。
+
+## `terminal-browser`
+
+### 用途
+
+terminal pane内に実browserを表示し、エージェントが同じtabに対してsnapshot、click、入力、JavaScript評価を行うskillです。
+Web applicationの動作確認、生成したHTMLの可視化、browser上でしか確認できない状態の調査に使用します。
+
+### 使い方
+
+browserで確認したいURLと操作内容を自然言語で伝えます。明示的に指定する場合は、Claude Codeでは
+`/terminal-browser`、Codexでは`$terminal-browser`を使用します。
+
+```text
+$terminal-browser を使って http://localhost:3000 を開き、login formを操作してerrorがないか確認してください。
+```
+
+skillは必要に応じてterminalを分割し、`terminal-browser action`で開いているtabを操作します。認証情報や個人情報を
+入力させる場合は、実行する操作と送信先を事前に確認してください。
+
+## Tsumiki skills
+
+Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
+依頼内容に応じて自動選択されますが、Claude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`で明示できます。
+
+| skill                | 用途                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `dev-context`        | projectの技術stack、test framework、規約、architectureを分析し、context fileを生成・更新する |
+| `dev-debug`          | test失敗、build・compile error、環境問題を分類し、原因を絞って修正する                       |
+| `dev-impl`           | plan内のtaskまたは直接指定した小規模変更を、TDDをguardrailとして実装する                     |
+| `dev-init`           | 対話で新規projectの技術stackを決め、承認後にscaffoldとcontextを生成する                      |
+| `dev-navigate`       | 目的を聞き取り、使用するTsumiki skillと実行順序を案内する                                    |
+| `dev-plan`           | 要件をinterface-firstの設計とtest可能なtaskへ分解し、`docs/dev/plans/`へ保存する             |
+| `dev-run`            | plan内のtask範囲を`dev-impl`、`dev-verify`、`dev-debug`のflowで連続実行する                  |
+| `dev-screen-spec`    | source codeまたはplanから画面仕様を生成し、既存仕様を差分更新する                            |
+| `dev-verify`         | planの完了状態とtest・build・lintの整合性を検証し、reportを出力する                          |
+| `dev-webtest-plan`   | dev planや画面仕様からPlaywright用のWeb test planを生成・更新する                            |
+| `dev-webtest`        | Playwrightで画面動作、visual、accessibility、responsive、formをtestする                      |
+| `ipa-security-check` | IPAの公開資料に基づいてsource codeを静的検査し、出典付きで脆弱性候補を報告する               |
+| `ipa-security-guide` | security診断reportを読み、優先順位付きの`dev-debug`依頼リストへ変換する                      |
+| `kairo-implement`    | 分割済みtaskを指定順に実装し、TDD commandを使って完了まで検証する                            |
+
+最初にどのskillを使うべきか分からない場合は、次のように`dev-navigate`へ相談します。
+
+```text
+/dev-navigate
+既存Web applicationへ決済機能を追加したいです。どの順番で進めるべきですか。
+```
+
+```text
+$dev-plan checkout "決済providerを追加し、失敗時に安全にretryできるようにする"
+```
+
+既存projectで一連のworkflowを始める場合は、通常`dev-context` → `dev-plan` → `dev-impl`または`dev-run` →
+`dev-verify`の順で使用します。Web UIを含む場合は`dev-webtest-plan`と`dev-webtest`、security確認が必要な場合は
+`ipa-security-check`と`ipa-security-guide`を組み合わせます。
+
+## `ctx-agent-history-search`
+
+### 用途
+
+ローカルに保存された過去のcoding-agent sessionを`ctx` CLIで検索し、以前の判断、試行、失敗理由、関連する会話を
+現在の作業前に確認するskillです。同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。
+
+### 使い方
+
+初回だけ`ctx setup`でindexを作成します。明示的に使う場合は、Claude Codeでは`/ctx-agent-history-search`、Codexでは
+`$ctx-agent-history-search`を指定します。
+
+```text
+$ctx-agent-history-search を使って、以前database migrationに失敗したsessionとその原因を調べてください。
+```
+
+手動検索では`ctx search "query"`、詳細表示では`ctx show session <session-id>`などを使用します。setup、主要command、
+local historyに含まれる秘密情報の注意点は[`docs/ctx.md`](ctx.md)を参照してください。
 
 ## `resolving-merge-conflicts`
 
