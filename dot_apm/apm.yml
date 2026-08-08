@@ -85,5 +85,4 @@ dependencies:
         AWS_PROFILE: "${AWS_PROFILE}"
         AWS_REGION: "${AWS_REGION}"
 includes: auto
-includes: auto
 scripts: {}
