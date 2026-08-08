@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T11:46:29.311602+00:00'
+generated_at: '2026-08-08T12:15:22.485395+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -7929,3 +7929,33 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:7f6bee86702a488d29ef0dcaabf424bbe2aca345a6a642319d43a1fe0276792e
+mcp_servers:
+- aws-billing
+- aws-cloudwatch
+mcp_configs:
+  aws-billing:
+    name: aws-billing
+    transport: stdio
+    env:
+      AWS_PROFILE: ${AWS_PROFILE}
+      AWS_REGION: ${AWS_REGION}
+    args:
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.billing-cost-management-mcp-server@0.0.31
+    version: 0.0.31
+    registry: false
+    command: env
+  aws-cloudwatch:
+    name: aws-cloudwatch
+    transport: stdio
+    env:
+      AWS_PROFILE: ${AWS_PROFILE}
+      AWS_REGION: ${AWS_REGION}
+    args:
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.cloudwatch-mcp-server@0.1.7
+    version: 0.1.7
+    registry: false
+    command: env
