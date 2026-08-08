@@ -15,8 +15,8 @@ dependencies:
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
     # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.4
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.4
     # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
     - git: zenbu-labs/terminal-browser
       path: skill
