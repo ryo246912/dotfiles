@@ -24,7 +24,7 @@ _sync_dotfile_lock() {
   if ! cmp -s "$source_file" "$destination_file"; then
     local temporary_file
     temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
-    if ! cp "$source_file" "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
+    if ! cp -p "$source_file" "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
       rm -f "$temporary_file"
       return 0
     fi
