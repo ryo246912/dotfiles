@@ -28,9 +28,27 @@
   },
   "packageRules": [
     {
-      "description": "mise lock updates require trusting the repository's root mise config",
+      "description": "Trust the root mise config and regenerate every mise lockfile after mise updates",
       "matchManagers": ["mise"],
-      "skipArtifactsUpdate": true
+      "postUpgradeTasks": {
+        "commands": [
+          "mise trust mise.toml",
+          "mise trust dot_config/mise/config.toml",
+          "mise trust dot_config/mise/config.linux.toml",
+          "mise trust dot_config/mise/config.mac.toml",
+          "mise trust dot_config/mise/config.private.toml",
+          "mise trust dot_config/mise/config.work1.toml",
+          "mise trust dot_config/mise/config.work2.toml",
+          "mise -C dot_config/mise lock",
+          "mise -C dot_config/mise -E linux lock",
+          "mise -C dot_config/mise -E mac lock",
+          "mise -C dot_config/mise -E private lock",
+          "mise -C dot_config/mise -E work1 lock",
+          "mise -C dot_config/mise -E work2 lock"
+        ],
+        "fileFilters": ["dot_config/mise/mise*.lock"],
+        "executionMode": "branch"
+      }
     },
     {
       "matchPackageNames": [
