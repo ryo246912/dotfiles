@@ -64,6 +64,7 @@ fi
 
 mkdir -p "$destination_dir"
 cp "$source_lock" "$destination_lock"
+chmod 0644 "$destination_lock"
 '''
 shell = "bash -c"
 
