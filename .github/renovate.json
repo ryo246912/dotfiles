@@ -28,6 +28,11 @@
   },
   "packageRules": [
     {
+      "description": "mise lock updates require trusting the repository's root mise config",
+      "matchManagers": ["mise"],
+      "skipArtifactsUpdate": true
+    },
+    {
       "matchPackageNames": [
         "/(^|\\/)flyctl$/",
         "/(^|\\/)stripe-cli$/",
