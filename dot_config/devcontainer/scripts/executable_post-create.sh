@@ -1,6 +1,22 @@
 #!/bin/bash
 set -e
 
+# OneCLI が有効な場合は、HTTPS MITM gateway の公開 CA をシステム trust store に追加する。
+# CA 自体は secret ではないため公開 endpoint から取得する。失敗時に不完全な proxy 設定で
+# AI agent を起動しないよう、ONECLI_PROXY_URL 設定時はエラーを明示して停止する。
+if [ -n "${ONECLI_PROXY_URL:-}" ]; then
+	onecli_url="${ONECLI_URL:-http://host.docker.internal:10254}"
+	tmp_ca="$(mktemp)"
+	trap 'rm -f "$tmp_ca"' EXIT
+	curl --fail --silent --show-error --noproxy '*' \
+		"${onecli_url%/}/v1/gateway/ca" >"$tmp_ca"
+	sudo install -m 0644 "$tmp_ca" /usr/local/share/ca-certificates/onecli-gateway.crt
+	sudo update-ca-certificates
+	rm -f "$tmp_ca"
+	trap - EXIT
+	echo "✓ OneCLI gateway CA を登録しました"
+fi
+
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
 	cp /tmp/claude-config-host.json ~/.claude.json

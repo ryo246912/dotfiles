@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [OneCLI（devcontainer 内の AI エージェント向け secret gateway）](docs/onecli.md)
