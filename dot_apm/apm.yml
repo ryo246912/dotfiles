@@ -32,6 +32,31 @@ dependencies:
       path: skills/ctx-agent-history-search
       ref: v0.25.0
       alias: ctx-agent-history-search
+    - git: mattpocock/skills
+      path: skills/engineering/resolving-merge-conflicts
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: resolving-merge-conflicts
+    - git: mattpocock/skills
+      path: skills/productivity/grill-me
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: grill-me
+    # grill-me が呼び出す interview loop。本体と同じ commit に pin する。
+    - git: mattpocock/skills
+      path: skills/productivity/grilling
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: grilling
+    - git: cathrynlavery/diagram-design
+      path: skills/diagram-design
+      ref: a157f7616473d966d6f433cf0b4d4f1880603504
+      alias: diagram-design
+    - git: vercel-labs/skills
+      path: skills/find-skills
+      ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+      alias: find-skills
+    # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
+    - git: DietrichGebert/ponytail
+      ref: v4.9.0
+      alias: ponytail
   mcp: []
 includes: auto
 scripts: {}
