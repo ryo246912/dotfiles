@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T22:52:56.652013+00:00'
+generated_at: '2026-08-09T15:03:42.220799+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -7955,26 +7955,34 @@ mcp_configs:
     name: aws-billing
     transport: stdio
     env:
-      AWS_VAULT_PROFILE: ${AWS_VAULT_PROFILE}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     args:
-    - -c
-    - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx
-      awslabs.billing-cost-management-mcp-server@0.0.31
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.billing-cost-management-mcp-server@0.0.31
     version: 0.0.31
     registry: false
-    command: sh
+    command: env
   aws-cloudwatch:
     name: aws-cloudwatch
     transport: stdio
     env:
-      AWS_VAULT_PROFILE: ${AWS_VAULT_PROFILE}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     args:
-    - -c
-    - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx
-      awslabs.cloudwatch-mcp-server@0.1.7
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.cloudwatch-mcp-server@0.1.7
     version: 0.1.7
     registry: false
-    command: sh
+    command: env
 mcp_target_servers:
   copilot:
   - aws-billing

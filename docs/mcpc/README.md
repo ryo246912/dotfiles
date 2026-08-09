@@ -20,8 +20,6 @@ mcpc の version は mise の設定で固定しています。global npm install
 AWS Billing and Cost Management MCP Server と CloudWatch MCP Server は `dot_apm/apm.yml` の `dependencies.mcp` で version を pin しています。APM が install と lockfile 管理を担当し、mcpc は APM が専用 HOME に生成した `~/.config/mcpc/apm-home/.copilot/mcp-config.json` を MCP client として読みます。
 
 ```bash
-export AWS_VAULT_PROFILE=my-profile
-aws-vault exec "$AWS_VAULT_PROFILE" -- aws sts get-caller-identity
 mise run apm:install
 ```
 
@@ -33,7 +31,35 @@ mise run apm:install
 
 隔離先は実際の `~/.copilot/mcp-config.json` とは異なるため、Copilot CLI や他の agent には AWS MCP が登録されません。必要なときだけ mcpc から load できます。server を更新するときは `dot_apm/apm.yml` の `version` と、`args` にある uvx の `package@version` を同じ version に更新して `mise run apm:install` を実行し、manifest と lockfile を一緒に commit します。
 
-APM は `${AWS_VAULT_PROFILE}` を生成する config に渡します。mcpc が server を起動すると `aws-vault exec "$AWS_VAULT_PROFILE" -- ...` が一時 credential を払い出し、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、region などを子 process に直接渡します。`aws-vault exec` は `AWS_PROFILE` を使わず `AWS_VAULT` を設定するため、manifest から `AWS_PROFILE` を渡す必要はありません。アクセスキーを設定ファイルへ直接書かず、aws-vault の profile には必要な最小権限だけを付与してください。
+生成される config は、`AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、`AWS_REGION`、`AWS_DEFAULT_REGION` を mcpc の起動環境から MCP server へ転送します。credential の値や profile 名は config に保存しません。
+
+## aws-vault profile の切り替え
+
+`AWS_VAULT_PROFILE` を手動で export する必要はありません。利用する profile は mcpc の起動時に `aws-vault exec` で選択します。aws-vault が一時 credential と region を設定した環境内で mcpc を起動するため、その profile が自動的に AWS MCP server へ引き継がれます。
+
+```bash
+aws-vault exec my-profile -- aws sts get-caller-identity
+aws-vault exec my-profile -- \
+  mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+```
+
+別 profile へ切り替える場合、既存 session は接続時の credential を保持しているため一度閉じ、新しい `aws-vault exec` から再接続します。
+
+```bash
+mcpc close @aws-cloudwatch
+aws-vault exec another-profile -- \
+  mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+```
+
+同じ profile で複数の mcpc command を実行する場合は、aws-vault 配下の shell に入る方法もあります。この shell 内では plain `mcpc` が現在の `AWS_VAULT` の credential を自動利用します。
+
+```bash
+aws-vault exec my-profile -- zsh
+echo "$AWS_VAULT"
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+```
+
+アクセスキーを設定ファイルへ直接書かず、aws-vault の profile には必要な最小権限だけを付与してください。
 
 ## 必要な MCP を動的に load する
 
@@ -99,7 +125,7 @@ MCP が必要なときは `mcpc help --skill` を確認する。
 ## トラブルシューティング
 
 - `mcpc connect` が失敗したら `~/.mcpc/logs/bridge-<session>.log` を確認します。
-- AWS の認証エラーでは `aws-vault exec "$AWS_VAULT_PROFILE" -- aws sts get-caller-identity`、`AWS_VAULT_PROFILE`、aws-vault session の有効期限を確認します。
+- AWS の認証エラーでは `aws-vault exec <profile> -- aws sts get-caller-identity` と aws-vault session の有効期限を確認します。session の接続後に profile を変えた場合は、対象 session を `close` してから再接続します。
 - 起動中の session が不調なら `mcpc restart @<session>`、不要な状態を消す場合は `mcpc clean` を使います。
 - command や引数が変わった可能性がある場合は `mcpc help <command>` と `mcpc help --skill` を正としてください。
 

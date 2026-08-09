@@ -63,22 +63,32 @@ dependencies:
     - name: aws-billing
       registry: false
       transport: stdio
-      command: sh
+      command: env
       args:
-        - -c
-        - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx awslabs.billing-cost-management-mcp-server@0.0.31
+        - FASTMCP_LOG_LEVEL=ERROR
+        - uvx
+        - awslabs.billing-cost-management-mcp-server@0.0.31
       version: 0.0.31
       env:
-        AWS_VAULT_PROFILE: "${AWS_VAULT_PROFILE}"
+        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+        AWS_REGION: "${AWS_REGION}"
+        AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
     - name: aws-cloudwatch
       registry: false
       transport: stdio
-      command: sh
+      command: env
       args:
-        - -c
-        - exec aws-vault exec "$AWS_VAULT_PROFILE" -- env FASTMCP_LOG_LEVEL=ERROR uvx awslabs.cloudwatch-mcp-server@0.1.7
+        - FASTMCP_LOG_LEVEL=ERROR
+        - uvx
+        - awslabs.cloudwatch-mcp-server@0.1.7
       version: 0.1.7
       env:
-        AWS_VAULT_PROFILE: "${AWS_VAULT_PROFILE}"
+        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+        AWS_REGION: "${AWS_REGION}"
+        AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
 includes: auto
 scripts: {}
