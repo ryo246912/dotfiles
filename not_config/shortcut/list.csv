@@ -176,6 +176,8 @@ Slack,F6/shift + F6,-,次/前のセクションにフォーカス
 Thunderbird,-,shift + c,メールを全て既読にする
 Thunderbird,-,shift + F5,全てのアカウントの新着メールを受信
 tig,J/K,J/K,(main view)で左側にdiff viewを表示しながら、コミットログを上下移動
+Tmux,ctrl + b → A [ctrl + shift + e],ctrl + b → A [ctrl + shift + e],tmux-agent-sidebarの表示/非表示 ※カスタム
+Tmux,ctrl + b → E,ctrl + b → E,tmux-agent-sidebarを全windowで表示/非表示
 Tmux,ctrl + b → c [cmd + t],ctrl + b → c,ウィンドウの作成
 Tmux,ctrl + b → d [cmd + shift + w],ctrl + b → d,ウィンドウのデタッチ
 Tmux,ctrl + b → e [cmd + e],ctrl + b → e,synchronize-panesのON/OFF ※カスタム
