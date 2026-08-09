@@ -35,7 +35,7 @@ mise run apm:install
 
 ## aws-vault profile の切り替え
 
-`AWS_VAULT_PROFILE` を手動で export する必要はありません。利用する profile は mcpc の起動時に `aws-vault exec` で選択します。aws-vault が一時 credential と region を設定した環境内で mcpc を起動するため、その profile が自動的に AWS MCP server へ引き継がれます。
+`AWS_VAULT_PROFILE` を手動で export する必要はありません。利用する profile は mcpc の起動時に `aws-vault exec` で選択します。aws-vault が一時 credential と region を設定した環境内で mcpc を起動するため、その profile が自動的に AWS MCP server へ引き継がれます。`aws-vault exec` は親 shell の環境を書き換えないため、認証コマンドを先に単独実行するのではなく、mcpc をその子 process または配下の shell として起動するのが意図した使い方です。
 
 ```bash
 aws-vault exec my-profile -- aws sts get-caller-identity
@@ -65,7 +65,7 @@ mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aw
 
 ### 1 server だけ接続する
 
-設定ファイルの `:server-name` を指定すると、必要な server だけを named session として起動できます。AWS MCP はローカルの stdio server なので、信頼できる設定だけを起動してください。
+設定ファイルの `:server-name` を指定すると、必要な server だけを named session として起動できます。以下の plain `mcpc` コマンドは `aws-vault exec <profile> -- zsh` で開始した shell 内で実行します。AWS MCP はローカルの stdio server なので、信頼できる設定だけを起動してください。
 
 ```bash
 mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
