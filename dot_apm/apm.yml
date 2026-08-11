@@ -14,6 +14,10 @@ dependencies:
   # 再現性のため各依存をコミット SHA または release tag に pin する。
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
+    # agmsg（Claude Code / Codex 間のSQLiteベースメッセージング skill）。
+    - git: fujibee/agmsg
+      ref: e684ad9a36df20e614cd379d71239f7c655e52ee
+      alias: agmsg
     # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
