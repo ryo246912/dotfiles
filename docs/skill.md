@@ -51,6 +51,7 @@ $crit を使って、現在のgit diffをreviewできるようにしてくださ
 
 devcontainerでは`crit`を起動した後、表示されたhost側URLをbrowserで開きます。commentを送信するとエージェントが
 修正し、再reviewできます。CLIの構成やhost portの確認方法は[`docs/crit.md`](crit.md)を参照してください。
+difit・crit・Plannotatorの機能差と選定理由は[`docs/review-tools-comparison.md`](review-tools-comparison.md)を参照してください。
 
 ## `terminal-browser`
 
