@@ -11,7 +11,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 
 "aqua:BurntSushi/ripgrep"                                   = "15.2.0"
 "aqua:FiloSottile/age"                                      = "1.3.1"
-"aqua:Wilfred/difftastic"                                   = "0.69.0"
+"aqua:Wilfred/difftastic"                                   = "0.70.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
 "aqua:anthropics/claude-code"                               = "2.1.218"
 "aqua:antonmedv/fx"                                         = "39.2.0"
