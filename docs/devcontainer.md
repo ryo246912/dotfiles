@@ -3,7 +3,7 @@
 AI エージェントを devcontainer 内で実行するための共通基盤に関する設定をまとめます。
 devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 
-`multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
+`multi-worktree`、`crit`（docs/crit.md）、`difit`（docs/difit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）

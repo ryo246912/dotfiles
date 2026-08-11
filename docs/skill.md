@@ -3,6 +3,7 @@
 このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
 
 - `crit` / `crit-cli`
+- `difit` / `difit-review`
 - `terminal-browser`
 - Tsumikiの14 skill
 - Ponytailの6 skill
@@ -51,6 +52,19 @@ $crit を使って、現在のgit diffをreviewできるようにしてくださ
 
 devcontainerでは`crit`を起動した後、表示されたhost側URLをbrowserで開きます。commentを送信するとエージェントが
 修正し、再reviewできます。CLIの構成やhost portの確認方法は[`docs/crit.md`](crit.md)を参照してください。
+
+## `difit` / `difit-review`
+
+`difit`は変更後にhuman reviewを依頼するskillです。browserで入力したcommentはserver終了時に標準出力へ返るため、
+clipboardへのprompt copyなしで、起動元のagentが指摘を受け取り修正を続けます。`difit-review`はagent側のreview結果を
+commentとしてUIへ事前投入し、人間へ提示するskillです。
+
+```text
+$difit を使って、現在の未コミット変更をレビューできるようにしてください。
+```
+
+devcontainerではagentが表示するhost側URLを開き、commentを追加してreviewを終了します。foreground processを待っていた
+agentがcommentを受け取ります。構成とcritとの違いは[`docs/difit.md`](difit.md)を参照してください。
 
 ## `terminal-browser`
 

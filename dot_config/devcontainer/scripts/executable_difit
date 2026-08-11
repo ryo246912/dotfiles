@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# difit の upstream skill を変更せず、devcontainer 固有の bind / URL 設定を追加する。
+set -uo pipefail
+
+real_difit="$(mise which difit 2>/dev/null || true)"
+if [ -z "${real_difit}" ]; then
+	echo "difit: real binary not found (is difit installed via mise?)" >&2
+	exit 127
+fi
+
+# Docker が自動採番した host port をエージェントとユーザーへ知らせる。
+host_port_file="${HOME}/.difit-host-port"
+if [ -s "${host_port_file}" ]; then
+	printf 'difit UI (host): http://localhost:%s\n' "$(cat "${host_port_file}")"
+fi
+
+# コンテナ内では browser を開かず、appPort が公開する全 interface で待ち受ける。
+# foreground のまま実行することで、終了時に difit が出力する review comments を
+# 呼び出し元の AI agent が直接受け取り、そのまま修正へ進める。
+exec "${real_difit}" "$@" --host 0.0.0.0 --port 4966 --no-open

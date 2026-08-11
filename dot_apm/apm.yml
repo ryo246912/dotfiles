@@ -17,6 +17,15 @@ dependencies:
     # crit（tomasz-tomczyk/crit プラグイン）。devcontainer 固有のグルーは crit ラッパーに分離済み。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
+    # difit: browser review comments are returned directly to the waiting agent process.
+    - git: yoshiko-pg/difit
+      path: skills/difit
+      ref: v5.0.11
+      alias: difit
+    - git: yoshiko-pg/difit
+      path: skills/difit-review
+      ref: v5.0.11
+      alias: difit-review
     # virtual package の既定名 terminal-browser-skill ではなく、skill 名と同じ配置名にする。
     - git: zenbu-labs/terminal-browser
       path: skill
