@@ -61,6 +61,11 @@ mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aw
 
 アクセスキーを設定ファイルへ直接書かず、aws-vault の profile には必要な最小権限だけを付与してください。
 
+devcontainer 内の AI agent から利用する場合は、host で `aws-vault exec <profile> -- devcontainer up ...`
+として短期 credential を container の起動環境へ渡します。セットアップ、account 切り替え、期限切れ時の
+再起動手順は [`docs/devcontainer.md`](../devcontainer.md#aws-vault-の認証を-container-内の-ai-agent-で使う)
+を参照してください。
+
 ## 必要な MCP を動的に load する
 
 ### 1 server だけ接続する
