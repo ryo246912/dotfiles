@@ -6,7 +6,7 @@
 `gh skill`、常時使う外部 skill は APM で管理する方針にします。
 
 `gh:skill-install-all` は GitHub Copilot / Cursor / Codex / Claude Code に user scope でまとめて install する
-mise task です。
+mise task です。複数の `--agent` を 1 回の `gh skill install` に渡すため、skill の対話選択も 1 回だけで済みます。
 
 ```bash
 mise run gh:skill-install-all github/awesome-copilot git-commit

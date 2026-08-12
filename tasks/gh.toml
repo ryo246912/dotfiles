@@ -63,10 +63,10 @@ if not has_pin:
 
     pin_args = ["--pin", resolved_ref]
 
-for agent in AGENTS:
-    subprocess.run(
-        ["gh", "skill", "install", repo, *install_args, "--agent", agent, "--scope", "user", *pin_args],
-        check=True,
-    )
+agent_args = [arg for agent in AGENTS for arg in ("--agent", agent)]
+subprocess.run(
+    ["gh", "skill", "install", repo, *install_args, *agent_args, "--scope", "user", *pin_args],
+    check=True,
+)
 ' "$@"
 '''
