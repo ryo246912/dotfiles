@@ -4,6 +4,11 @@ snippet         = "git"
 trigger-pattern = "^g$"
 
 [[snippets]]
+name    = "fuzzy change git root directory"
+snippet = "() { local dir; dir=$(roots | fzf) && [[ -n $dir ]] && cd -- \"$dir\" }"
+trigger = "zd"
+
+[[snippets]]
 name            = "git add"
 snippet         = "git add"
 trigger-pattern = "^ga$"
