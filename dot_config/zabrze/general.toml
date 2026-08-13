@@ -194,7 +194,7 @@ trigger-pattern = "^zz$"
 
 [[snippets]]
 name    = "fuzzy change git root directory"
-snippet = "() { local dir; dir=$(roots | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
+snippet = "() { local dir; dir=$(roots --parent 0 --depth 5 | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
 trigger = "zd"
 
 [[snippets]]
