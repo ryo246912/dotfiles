@@ -19,6 +19,18 @@
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
+- [ ] Markdownファイルのデフォルトアプリ設定
+  - `chezmoi apply`により`~/Applications/md-preview-launcher.app`がAppleScriptから自動生成される
+  - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
+  - 「このアプリケーションで開く」から`md-preview-launcher`を選択する
+  - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
+  - ランチャーが見つからない場合は、次のコマンドで再生成してからFinderを再起動する
+
+  ```sh
+  chezmoi apply
+  killall Finder
+  ```
+
 - [ ] macOS defaults の適用
 
   ```sh

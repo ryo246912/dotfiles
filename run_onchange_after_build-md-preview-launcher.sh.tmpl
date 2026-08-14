@@ -1,0 +1,34 @@
+#!/bin/bash
+# Rebuild when the managed AppleScript changes.
+# {{ include "not_config/md-preview-launcher.applescript" | sha256sum }}
+
+set -euo pipefail
+
+[ "$(uname)" = "Darwin" ] || exit 0
+
+source_script="{{ .chezmoi.sourceDir }}/not_config/md-preview-launcher.applescript"
+app_dir="{{ .chezmoi.homeDir }}/Applications/md-preview-launcher.app"
+plist="$app_dir/Contents/Info.plist"
+plist_buddy=/usr/libexec/PlistBuddy
+
+mkdir -p "$(dirname "$app_dir")"
+rm -rf "$app_dir"
+osacompile -o "$app_dir" "$source_script"
+
+# Register the bundle as an editor for Markdown documents.
+"$plist_buddy" -c "Set :CFBundleIdentifier com.ryo246912.md-preview-launcher" "$plist"
+"$plist_buddy" -c "Delete :CFBundleDocumentTypes" "$plist" 2>/dev/null || true
+"$plist_buddy" -c "Add :CFBundleDocumentTypes array" "$plist"
+"$plist_buddy" -c "Add :CFBundleDocumentTypes:0 dict" "$plist"
+"$plist_buddy" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeName string Markdown" "$plist"
+"$plist_buddy" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeRole string Editor" "$plist"
+"$plist_buddy" -c "Add :CFBundleDocumentTypes:0:LSHandlerRank string Owner" "$plist"
+"$plist_buddy" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeExtensions array" "$plist"
+index=0
+for extension in md markdown mdown mkd; do
+  "$plist_buddy" -c "Add :CFBundleDocumentTypes:0:CFBundleTypeExtensions:$index string $extension" "$plist"
+  index=$((index + 1))
+done
+
+codesign --force --deep --sign - "$app_dir"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$app_dir"

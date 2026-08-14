@@ -85,6 +85,14 @@
     },
     {
       "matchPackageNames": [
+        "github:vorojar/md-preview",
+        "https://github.com/vorojar/md-preview",
+        "cargo:https://github.com/vorojar/md-preview"
+      ],
+      "groupName": "md-preview"
+    },
+    {
+      "matchPackageNames": [
         "http:terminal-browser",
         "zenbu-labs/terminal-browser",
         "https://github.com/zenbu-labs/terminal-browser"
