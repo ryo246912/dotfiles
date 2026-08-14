@@ -100,6 +100,11 @@
       "groupName": "terminal-browser"
     },
     {
+      "matchPackageNames": ["https://github.com/zenbu-labs/terminal-browser"],
+      "matchDatasources": ["git-refs"],
+      "enabled": false
+    },
+    {
       "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
       "groupName": "tsumiki"
     }
