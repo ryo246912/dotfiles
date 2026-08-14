@@ -193,6 +193,16 @@ snippet         = "ji"
 trigger-pattern = "^zz$"
 
 [[snippets]]
+name    = "fuzzy change git root directory"
+snippet = "() { local dir; dir=$(roots --depth 2 | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
+trigger = "zD"
+
+[[snippets]]
+name    = "fuzzy change directory under git roots"
+snippet = "() { local dir; dir=$(roots --depth 2 | while IFS= read -r root; do find \"$root\" -mindepth 1 -maxdepth 3 \\( -name .git -o -name node_modules -o -name vendor -o -name testdata \\) -prune -o -type d -print 2>/dev/null; done | sort -u | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
+trigger = "zd"
+
+[[snippets]]
 global          = true
 name            = "|"
 snippet         = "|"
