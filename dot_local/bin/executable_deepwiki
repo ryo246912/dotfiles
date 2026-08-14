@@ -1,130 +1,78 @@
-#!/usr/bin/env bun
+#!/bin/bash
 
-// Required parameters:
-// @raycast.schemaVersion 1
-// @raycast.title deepwiki
-// @raycast.mode silent
-//fullOutput
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title deepwiki
+# @raycast.mode silent
 
-// Optional parameters:
-// @raycast.icon 🤖
-// @raycast.description GitHubのURLをDeepWikiで開く
+# Optional parameters:
+# @raycast.icon 🤖
+# @raycast.description GitHubのURLをDeepWikiで開く
 
-// 対応ブラウザのバンドルID定数
-const BUNDLE_ID = {
-  CHROME: "com.google.Chrome",
-  ARC: "company.thebrowser.Browser",
-};
+set -euo pipefail
 
-const { exec } = require("child_process");
+app_info=$(/usr/bin/osascript <<'APPLESCRIPT'
+tell application "System Events"
+  set frontmostProcess to first process whose frontmost is true
+  return (name of frontmostProcess) & "|" & (bundle identifier of frontmostProcess)
+end tell
+APPLESCRIPT
+)
 
-// AppleScriptを実行するヘルパー関数
-async function runAppleScript(script) {
-  return new Promise((resolve, reject) => {
-    // osascriptコマンドを使ってAppleScriptを実行
-    exec(`osascript -e '${script}'`, (error, stdout, stderr) => {
-      if (error) {
-        // stderrもエラーメッセージに含める
-        reject(new Error(`${error.message}\nStderr: ${stderr}`));
-        return;
-      }
-      resolve(stdout.trim()); // 結果の空白を削除して返す
-    });
-  });
-}
+browser_name=${app_info%%|*}
+bundle_id=${app_info#*|}
 
-async function main() {
-  let currentURL = "";
-  let browserName = "";
-  let targetBundleID = "";
+case "$bundle_id" in
+  com.google.Chrome)
+    browser_name="Google Chrome"
+    current_url=$(/usr/bin/osascript -e \
+      'tell application "Google Chrome" to return URL of active tab of front window as string')
+    ;;
+  company.thebrowser.Browser)
+    browser_name="Arc"
+    current_url=$(/usr/bin/osascript -e \
+      'tell application "Arc" to get the URL of the active tab of front window')
+    ;;
+  *)
+    echo "${browser_name}は非対応ブラウザです。ChromeまたはArcを使用してください。" >&2
+    exit 1
+    ;;
+esac
 
-  // 1. 最前面のアプリケーションのバンドルIDを取得 (AppleScript経由)
-  try {
-    const appInfo = await runAppleScript(`
-      tell application "System Events"
-        set frontmostProcess to first process whose frontmost is true
-        set appName to name of frontmostProcess
-        set bundleId to bundle identifier of frontmostProcess
-        return appName & "|" & bundleId
-      end tell
-    `);
-    [browserName, targetBundleID] = appInfo.split("|");
-  } catch (error) {
-    console.error("最前面アプリ取得エラー:", error);
-    return;
-  }
+case "$current_url" in
+  https://github.com/*)
+    deepwiki_url="https://deepwiki.com/${current_url#https://github.com/}"
+    ;;
+  *)
+    echo "GitHubのURLではありません。現在開いているタブがGitHubのURLであることを確認してください。" >&2
+    exit 1
+    ;;
+esac
 
-  let appleScriptToGetUrl = "";
+case "$bundle_id" in
+  com.google.Chrome)
+    /usr/bin/osascript - "$deepwiki_url" <<'APPLESCRIPT'
+on run argv
+  tell application "Google Chrome"
+    tell front window
+      set newTab to make new tab with properties {URL:item 1 of argv}
+      set active tab index to index of newTab
+    end tell
+    activate
+  end tell
+end run
+APPLESCRIPT
+    ;;
+  company.thebrowser.Browser)
+    /usr/bin/osascript - "$deepwiki_url" <<'APPLESCRIPT'
+on run argv
+  tell application "Arc"
+    tell front window to make new tab with properties {URL:item 1 of argv}
+    activate
+  end tell
+end run
+APPLESCRIPT
+    ;;
+esac
 
-  // 2. ブラウザに応じてURL取得用のAppleScriptを構築
-  if (targetBundleID === BUNDLE_ID.CHROME) {
-    browserName = "Google Chrome";
-    appleScriptToGetUrl =
-      'tell application "Google Chrome" to return URL of active tab of front window as string';
-  } else if (targetBundleID === BUNDLE_ID.ARC) {
-    appleScriptToGetUrl =
-      'tell application "Arc" to get the URL of the active tab of front window';
-  } else {
-    // その他のブラウザの場合
-    console.error(
-      `${browserName}は非対応ブラウザです。Chrome, Arc, Safari, Edgeを使用してください。`,
-    );
-    return;
-  }
-
-  // 3. AppleScriptを実行してURLを取得
-  try {
-    if (appleScriptToGetUrl) {
-      currentURL = await runAppleScript(appleScriptToGetUrl);
-    }
-  } catch (error) {
-    console.error(
-      `URLの取得に失敗しました: ${browserName}からURLを取得できませんでした。`,
-      error,
-    );
-    return;
-  }
-
-  // 4. URLの妥当性チェックと変換
-  if (!currentURL || !currentURL.includes("https://github.com/")) {
-    console.error(
-      "GitHubのURLではありません。現在開いているタブがGitHubのURLであることを確認してください。",
-    );
-    return;
-  }
-
-  const newURL = currentURL.replace(
-    "https://github.com/",
-    "https://deepwiki.com/",
-  );
-
-  // 5. 新しいURLを別タブで開く (AppleScript経由)
-  try {
-    let openTabScript = "";
-    if (targetBundleID === BUNDLE_ID.CHROME) {
-      openTabScript = `tell application \"Google Chrome\"
-        tell front window
-          set newTab to make new tab with properties {URL: \"${newURL}\"}
-          set active tab index to (index of newTab)
-        end tell
-        activate
-      end tell`;
-    } else if (targetBundleID === BUNDLE_ID.ARC) {
-      // Arc
-      openTabScript = `tell application \"Arc\"
-        tell front window
-          make new tab with properties {URL: \"${newURL}\"}
-        end tell
-        activate
-      end tell`;
-    } else {
-      openTabScript = `tell application \"${browserName}\" to open location \"${newURL}\"`;
-    }
-    await runAppleScript(openTabScript);
-    console.log("DeepWikiで別タブで開きました: ", newURL);
-  } catch (error) {
-    console.error(`新しいURLを開けませんでした: ${error.message}`);
-  }
-}
-
-main(); // スクリプトの実行を開始
+echo "DeepWikiで別タブで開きました: ${deepwiki_url}"
