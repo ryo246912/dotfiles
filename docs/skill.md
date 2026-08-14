@@ -10,6 +10,7 @@
 - `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
+- `wireframe-spec`
 - `find-skills`
 
 ## インストール
@@ -455,6 +456,26 @@ playwright install chromium
 SVG は Google Fonts を外部参照するため、font を取得しない offline viewer などでは代替 font で表示される可能性が
 あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
 複雑な場合は overview と detail に分割してください。
+
+## `wireframe-spec`
+
+### 用途
+
+visual designへ進む前に、contentの優先順位、component配置、interaction、responsive、accessibilityを含む注釈付き
+wireframe仕様を作るskillです。色や装飾ではなく情報構造と画面状態の合意に使います。
+
+### 使い方
+
+対象要件、必要なbreakpoint、empty / loading / errorなどの状態、保存先を指定します。
+
+```text
+$wireframe-spec を使って、FR-001〜FR-008のdesktop/mobile用low-fi wireframeを作ってください。
+empty、loading、error状態とkeyboard操作を注記し、docs/design/checkout/wireframe.mdへ保存してください。
+```
+
+このskill単体は画像を生成しません。注釈付き仕様からHTML prototypeを作ってbrowserで確認する、または実装後の
+screenshotをreviewするところまで別途依頼してください。要件の壁打ちから実装後の漏れ監査までを含む推奨手順は
+[`仕様駆動開発 workflow の選定と運用`](spec-driven-development.md)を参照してください。
 
 ## `find-skills`
 
