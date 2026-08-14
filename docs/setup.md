@@ -19,24 +19,6 @@
     3. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
-- [ ] Markdownファイルのデフォルトアプリ設定
-  - `chezmoi apply`で`~/.local/bin/md-preview-launcher`を配置する
-  - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
-  - 「シェルスクリプトを実行」をワークフローへ追加し、以下のように設定する
-    - シェル: `/bin/zsh`
-    - 入力の引き渡し方法: 「引数として」
-    - スクリプト:
-
-      ```sh
-      "$HOME/.local/bin/md-preview-launcher" "$@"
-      ```
-
-  - `md-preview-launcher.app`という名前で`~/Applications`へ保存する
-  - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
-  - 「このアプリケーションで開く」から`md-preview-launcher`を選択する
-  - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
-  - Automatorアプリ本体はMac上で手動作成し、起動処理はdotfiles管理のラッパーへ集約する。miseのインストール先や環境変数を変更した場合はラッパーだけを更新すればよい
-
 - [ ] macOS defaults の適用
 
   ```sh
@@ -285,6 +267,23 @@ do shell script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrom
 ```applescript
 do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
 ```
+
+- [ ] Markdownファイルのデフォルトアプリ設定
+  - `chezmoi apply`で`~/.local/bin/md-preview-launcher`を配置する
+  - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
+  - 「シェルスクリプトを実行」をワークフローへ追加し、以下のように設定する
+    - シェル: `/bin/zsh`
+    - 入力の引き渡し方法: 「引数として」
+    - スクリプト:
+
+      ```sh
+      "$HOME/.local/bin/md-preview-launcher" "$@"
+      ```
+
+  - `md-preview-launcher.app`という名前で`~/Applications`へ保存する
+  - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
+  - 「このアプリケーションで開く」から`md-preview-launcher`を選択する
+  - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
 
 ### プライベート設定
 
