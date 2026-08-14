@@ -14,7 +14,7 @@ args = [
 # install マーカー保存用の XDG state を用意（永続化）。
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
 mkdir -p "$state_dir" || exit 1
-source_dir={{ .chezmoi.sourceDir | quote }}
+source_dir={{ .chezmoi.sourceDir | shellQuote }}
 mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
 # mise shims を PATH に通す。mise 本体は mac/linux とも https://mise.run 経由で ~/.local/bin に導入するため、~/.local/bin を先頭にする。mise shims は
