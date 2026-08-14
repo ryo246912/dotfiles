@@ -29,10 +29,6 @@
 `[bootstrap.hooks.pre-*]`/`[bootstrap.hooks.post-*]`（例: `pre-packages`、`post-defaults`）
 という前後フックもある。
 
-post-apply hook が `mise bootstrap packages apply` / `mise install` / `mise run apm:install`
-（`apm install -g` と lockfile・command の同期）を呼び、
-macOS defaults は手動で `mise bootstrap macos defaults apply` を実行する運用にしている。
-
 ### Homebrew 関連ツールの導入手順
 
 - `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
