@@ -1484,7 +1484,7 @@ dependencies:
   name: terminal-browser
   host: github.com
   resolved_commit: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
-  resolved_ref: v0.3.2
+  resolved_ref: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
   version: unknown
   virtual_path: skill
   is_virtual: true
