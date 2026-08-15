@@ -12,15 +12,15 @@ pre-commit:
       glob: "**/*.go"
       only: &ai-only
         - run: test "${AI_AGENT:-}" = "1"
-      run: mise run lint:ai:go -- {staged_files}
+      run: mise run lint:go
       fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
     - name: python (ai-only)
       glob: "**/*.py"
       only: *ai-only
-      run: mise run lint:ai:python -- {staged_files}
+      run: mise run lint:python
       fail_text: "❌ [ai-only] Python lint or format check failed."
     - name: typescript (ai-only)
       glob: "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
       only: *ai-only
-      run: mise run lint:ai:typescript -- {staged_files}
+      run: mise run lint:typescript
       fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."

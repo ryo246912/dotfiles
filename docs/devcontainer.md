@@ -114,9 +114,8 @@ Lefthookをインストールする。コミット対象に応じて次の厳格
 - Python: `uvx ruff check`、`uvx ruff format --check`
 - TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsgo --noEmit`
 
-同じチェックは`mise run lint:ai:go -- <files...>`、
-`mise run lint:ai:python -- <files...>`、
-`mise run lint:ai:typescript -- <files...>`で個別にも実行できる。
+同じチェックは`mise run lint:go`、`mise run lint:python`、
+`mise run lint:typescript`で個別にも実行できる。
 リポジトリ固有のpre-commit/pre-pushが必要な場合は、
 `~/.config/lefthook/lefthook.local.yml`をリポジトリへコピーして編集し、
 `LEFTHOOK_CONFIG`をそのファイルへ切り替える。

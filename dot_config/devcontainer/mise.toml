@@ -31,14 +31,33 @@ bun = true
 [settings.pipx]
 uvx = true
 
-[tasks."lint:ai:go"]
-description = "Strict Go checks for AI-authored staged changes"
-run         = '"${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/lint-ai.sh" go "$@"'
+[tasks."lint:go"]
+description = "Run strict Go lint, test, vet, and build checks"
+run = '''
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
+golangci-lint run --config "$config" ./...
+go test ./...
+go vet ./...
+go build ./...
+'''
 
-[tasks."lint:ai:python"]
-description = "Strict Python checks for AI-authored staged changes"
-run         = '"${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/lint-ai.sh" python "$@"'
+[tasks."lint:python"]
+description = "Run strict Python lint and format checks"
+run = '''
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml"
+uvx ruff check --config "$config" .
+uvx ruff format --check --config "$config" .
+'''
 
-[tasks."lint:ai:typescript"]
-description = "Strict TypeScript/JavaScript checks for AI-authored staged changes"
-run         = '"${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/lint-ai.sh" typescript "$@"'
+[tasks."lint:typescript"]
+description = "Run strict TypeScript/JavaScript lint, format, and type checks"
+run = '''
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint"
+oxlint --config "$config_dir/oxlint.json" .
+oxfmt --check --config "$config_dir/oxfmt.json" .
+if [ -f tsconfig.json ]; then
+  tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
+    --exactOptionalPropertyTypes --noImplicitReturns \
+    --noFallthroughCasesInSwitch --noImplicitOverride -p tsconfig.json
+fi
+'''

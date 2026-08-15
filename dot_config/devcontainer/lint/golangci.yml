@@ -43,3 +43,4 @@ formatters:
     - gofmt
     - gofumpt
     - goimports
+    - golines
