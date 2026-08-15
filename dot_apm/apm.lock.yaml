@@ -1502,6 +1502,60 @@ dependencies:
     .claude/skills/terminal-browser/SKILL.md: sha256:7ed3df98ee157d39d488423df2c842b113ad03b04d3a920a49d123fb5d4b6b2c
     .claude/skills/terminal-browser/SKILL.template.md: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
   content_hash: sha256:ed3bc98ffc87d95320c8ec6064e53e4e27f8737d622cfd76d7645a53b725b396
+- repo_url: owl-listener/designer-skills
+  name: wireframe-spec
+  host: github.com
+  resolved_commit: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  resolved_ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  version: unknown
+  virtual_path: prototyping-testing/skills/wireframe-spec
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/wireframe-spec
+  - .agents/skills/wireframe-spec/SKILL.md
+  - .claude/skills/wireframe-spec
+  - .claude/skills/wireframe-spec/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/wireframe-spec/SKILL.md: sha256:2c7ac5463c7bedff0c3f94807718bf1bd02585a62d49d49941ac70e9e6b0c616
+    .claude/skills/wireframe-spec/SKILL.md: sha256:2c7ac5463c7bedff0c3f94807718bf1bd02585a62d49d49941ac70e9e6b0c616
+  content_hash: sha256:24b80fc2bfd1afd461bb10498128bba4b15acfc8796da79fe357d90cbdaec0c6
+- repo_url: owl-listener/designer-skills
+  name: color-system
+  host: github.com
+  resolved_commit: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  resolved_ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  version: unknown
+  virtual_path: ui-design/skills/color-system
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/color-system
+  - .agents/skills/color-system/SKILL.md
+  - .claude/skills/color-system
+  - .claude/skills/color-system/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/color-system/SKILL.md: sha256:f2ccf30567be1bb7743134d7f54578da18b560db613ba7781a7314ccfab04890
+    .claude/skills/color-system/SKILL.md: sha256:f2ccf30567be1bb7743134d7f54578da18b560db613ba7781a7314ccfab04890
+  content_hash: sha256:00668079fe31fd68331a8d51122cab722b7e3722d4464a2c8885a7fccdd0d2d0
+- repo_url: owl-listener/designer-skills
+  name: dark-mode-design
+  host: github.com
+  resolved_commit: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  resolved_ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+  version: unknown
+  virtual_path: ui-design/skills/dark-mode-design
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/dark-mode-design
+  - .agents/skills/dark-mode-design/SKILL.md
+  - .claude/skills/dark-mode-design
+  - .claude/skills/dark-mode-design/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/dark-mode-design/SKILL.md: sha256:19b2c71b0b462be7601f84b8795ab66b5e7c7635cc71c5f8420c1c58ae1197a8
+    .claude/skills/dark-mode-design/SKILL.md: sha256:19b2c71b0b462be7601f84b8795ab66b5e7c7635cc71c5f8420c1c58ae1197a8
+  content_hash: sha256:1389e4e63cfd7ffcc7bd363d9ab3556935c76107f9cf595451a4730438e701cf
 deployments:
 - kind: project-relative
   target: claude
@@ -7929,3 +7983,111 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:7f6bee86702a488d29ef0dcaabf424bbe2aca345a6a642319d43a1fe0276792e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/wireframe-spec
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  active_owner: owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/wireframe-spec/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  active_owner: owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  content_hash: sha256:2c7ac5463c7bedff0c3f94807718bf1bd02585a62d49d49941ac70e9e6b0c616
+- kind: project-relative
+  target: codex
+  value: .agents/skills/wireframe-spec
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  active_owner: owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/wireframe-spec/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  active_owner: owl-listener/designer-skills/prototyping-testing/skills/wireframe-spec
+  content_hash: sha256:2c7ac5463c7bedff0c3f94807718bf1bd02585a62d49d49941ac70e9e6b0c616
+- kind: project-relative
+  target: claude
+  value: .claude/skills/color-system
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/color-system
+  active_owner: owl-listener/designer-skills/ui-design/skills/color-system
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/color-system/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/color-system
+  active_owner: owl-listener/designer-skills/ui-design/skills/color-system
+  content_hash: sha256:f2ccf30567be1bb7743134d7f54578da18b560db613ba7781a7314ccfab04890
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dark-mode-design
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  active_owner: owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dark-mode-design/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  active_owner: owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  content_hash: sha256:19b2c71b0b462be7601f84b8795ab66b5e7c7635cc71c5f8420c1c58ae1197a8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/color-system
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/color-system
+  active_owner: owl-listener/designer-skills/ui-design/skills/color-system
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/color-system/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/color-system
+  active_owner: owl-listener/designer-skills/ui-design/skills/color-system
+  content_hash: sha256:f2ccf30567be1bb7743134d7f54578da18b560db613ba7781a7314ccfab04890
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dark-mode-design
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  active_owner: owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dark-mode-design/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  active_owner: owl-listener/designer-skills/ui-design/skills/dark-mode-design
+  content_hash: sha256:19b2c71b0b462be7601f84b8795ab66b5e7c7635cc71c5f8420c1c58ae1197a8

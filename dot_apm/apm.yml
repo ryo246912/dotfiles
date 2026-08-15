@@ -47,6 +47,20 @@ dependencies:
       path: skills/diagram-design
       ref: a157f7616473d966d6f433cf0b4d4f1880603504
       alias: diagram-design
+    # 画面の見た目を作り込む前に、状態・responsive・accessibilityを含む注釈付きwireframeを定義する。
+    - git: owl-listener/designer-skills
+      path: prototyping-testing/skills/wireframe-spec
+      ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+      alias: wireframe-spec
+    # wireframe承認後にlight color tokenを定義し、そのsystemをdark modeへ適応する。
+    - git: owl-listener/designer-skills
+      path: ui-design/skills/color-system
+      ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+      alias: color-system
+    - git: owl-listener/designer-skills
+      path: ui-design/skills/dark-mode-design
+      ref: 20e34c4a587e5eb09fcdf8351fa97b3ad761b31e
+      alias: dark-mode-design
     - git: vercel-labs/skills
       path: skills/find-skills
       ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c

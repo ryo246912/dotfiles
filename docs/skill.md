@@ -10,6 +10,9 @@
 - `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
+- `wireframe-spec`
+- `color-system`
+- `dark-mode-design`
 - `find-skills`
 
 ## インストール
@@ -456,6 +459,43 @@ SVG は Google Fonts を外部参照するため、font を取得しない offli
 あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
 複雑な場合は overview と detail に分割してください。
 
+## `wireframe-spec`
+
+### 用途
+
+visual designへ進む前に、contentの優先順位、component配置、interaction、responsive、accessibilityを含む注釈付き
+wireframe仕様を作るskillです。色や装飾ではなく情報構造と画面状態の合意に使います。
+
+### 使い方
+
+対象要件、必要なbreakpoint、empty / loading / errorなどの状態、保存先を指定します。Claude Codeでは
+`/wireframe-spec`、Codexでは`$wireframe-spec`で明示的に指定できます。
+
+```text
+$wireframe-spec を使って、FR-001〜FR-008のdesktop/mobile用low-fi wireframeを作ってください。
+empty、loading、error状態とkeyboard操作を注記し、docs/design/checkout/wireframe.mdへ保存してください。
+```
+
+このskill単体は画像を生成しません。注釈付き仕様からHTML prototypeを作ってbrowserで確認する、または実装後の
+screenshotをreviewするところまで別途依頼してください。要件の壁打ちから実装後の漏れ監査までを含む推奨手順は、
+このページ後半の[「軽量な仕様駆動開発 workflow の選定と運用」](#軽量な仕様駆動開発-workflow-の選定と運用)を参照してください。
+
+## `color-system` / `dark-mode-design`
+
+### 用途
+
+`color-system`はwireframe承認後に、brand / neutralのtonal scale、semantic role、component state、contrast規則を含む
+light modeの配色systemを定義します。`dark-mode-design`は承認済みlight paletteを、surface elevation、彩度、contrastを
+再調整しながらdark modeへ適応します。dark modeを単純な色反転や独立した別paletteとして作らないため、必ずこの順で使います。
+
+### 使い方
+
+Claude Codeでは`/color-system`・`/dark-mode-design`、Codexでは`$color-system`・`$dark-mode-design`で明示できます。
+配色候補が複数ある場合は、まず`color-system`へproduct原則と候補を渡して比較・承認してからtokenへ展開します。dark modeが
+MVPのscope外なら`dark-mode-design`は実行せず、後続changeへ分けます。具体的なprompt、review gate、OpenSpecへの戻し方は、
+このページ後半の[`wireframeからcolor system・dark modeを決め、判断を戻す`](#e-wireframeからcolor-systemdark-modeを決め判断を戻す)
+を参照してください。
+
 ## `find-skills`
 
 ### 用途
@@ -491,3 +531,643 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `dot_apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## 軽量な仕様駆動開発 workflow の選定と運用
+
+この文書は、最初の仕様案を作った後に壁打ちで穴を見つけ、仕様へ戻してから画面設計・task分解・AI実装へ進むための
+比較・運用ガイドです。
+
+結論は、**まず[OpenSpec](https://github.com/Fission-AI/OpenSpec)を主軸として試す**ことです。Spec Kitはcoverage検査が
+充実する一方、今回重視する「文書量を抑え、作った仕様へ後から判断を反映する」用途には重めです。OpenSpecは
+proposal・delta spec・design・tasksという小さなartifactを任意の時点で更新でき、`update`が既存artifact間の整合を
+取り直し、`verify`が実装との差を検査します。
+
+> [!IMPORTANT]
+> framework名よりgateの設計が重要です。「taskがすべてchecked」だけを完了条件にせず、要件・scenario → task → test →
+> codeのtraceabilityと、実装後の独立検証を必須にします。
+
+### 調査した候補
+
+2026-08-15時点の各公式repositoryと同梱workflowを確認しました。star数ではなく、artifact量、仕様を後から直せるか、
+実装・検証の仕組み、導入負荷で比較しています。
+
+#### 有力候補
+
+| 候補                                               | 特徴                                                                                            | 実装漏れへの防御                                      | 分量・導入負荷                                   | 判断                                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | proposal・delta spec・design・tasksを変更単位で管理。`update`で既存artifactを相互に再整合できる | requirement / scenarioとtaskを`verify`で実装に照合    | **軽い**。Node CLI、30以上のagentに対応          | **第一候補**。今回の「仕様案 → grill → 仕様へ反映」に最も素直             |
+| [Superpowers](https://github.com/obra/superpowers) | brainstorming → design承認 → plan → taskごとのsubagent実装。TDDと2段階reviewを強制              | taskごとにspec compliance reviewとcode quality review | **軽〜中**。skill中心で自動発火                  | 実装品質の補助に有力。ただし要件台帳の差分管理はOpenSpecほど明示的でない  |
+| [cc-sdd](https://github.com/gotalab/cc-sdd)        | Kiro風のrequirements → design → tasksと、taskごとのfresh implementer / independent reviewer     | EARS、task boundary、TDD、独立review、auto-debug      | **中**。17 skillsとphase gate                    | 長時間の自律実装と漏れ防止を優先する場合の第二候補                        |
+| [GSD Core](https://github.com/open-gsd/gsd-core)   | Discuss → Plan → Execute → Verify → Shipをphaseごとに繰り返す                                   | fresh contextのexecutorと完了前verify、fix plan       | **中〜重**。subagent orchestrationと状態artifact | 大規模・長時間実装向け。小機能には過剰になりやすい                        |
+| [Tsumiki](https://github.com/classmethod/tsumiki)  | EARS要件、設計、task、TDD、Web test / UATまで一式                                               | `task-breakdown`、TDD、`dev-verify`、UAT              | **中〜重**。導入skill数と成果物が多い            | test-firstを最優先する場合。task自体の欠落には別のtraceability gateを足す |
+
+#### 用途が合えば候補になるもの
+
+| 候補                                                              | 得意なこと                                                                    | 今回の主軸にしない理由                                                        |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Conductor](https://github.com/gemini-cli-extensions/conductor)   | project context、featureごとのspec / plan、実装後reviewと修正task追加         | setup時のproduct・guideline・tech stack等のartifactが増える                   |
+| [Agent OS](https://github.com/buildermethods/agent-os)            | codebase標準をagentへ注入し、product planとspecをshapeする                    | 仕様策定には良いが、公開workflow上の実装後coverage監査は薄い                  |
+| [LeanSpec](https://github.com/codervisor/leanspec)                | 2K token未満を目安にした小さいspec、Markdown / GitHub Issues / ADO等のbackend | spec管理・検索・dashboardが中心で、厳格な実装loopは利用側で設計する必要がある |
+| [Spec Workflow MCP](https://github.com/Pimzino/spec-workflow-mcp) | requirements → design → tasksの承認、dashboard、進捗・implementation log      | MCP serverと別processのdashboardを運用する必要がある                          |
+| [Spec Kitty](https://github.com/Priivacy-ai/spec-kitty)           | work package、worktree、review / accept / merge、audit trail                  | team向けgovernanceが強く、個人の軽量flowには重い                              |
+| [BMad Method](https://github.com/bmad-code-org/BMAD-METHOD)       | Analyst、PM、UX、Architect等の専門roleを含むproduct discovery                 | 小〜中規模機能にはroleと成果物が過剰になりやすい                              |
+| [GitHub Spec Kit](https://github.com/github/spec-kit)             | constitution、clarify、checklist、artifact間analyze、実装後converge           | 漏れ検査は強いが、厳格なphaseとMarkdown量が今回の希望より多い                 |
+
+Pimzinoの旧[Claude Code Spec Workflow](https://github.com/Pimzino/claude-code-spec-workflow)は開発の中心がMCP版へ移行済みのため、
+新規採用候補から外します。また、単にprompt templateを複製する小規模projectは候補が多いものの、更新・検証・複数agent対応の
+いずれかが弱いものはpilot対象に含めません。
+
+### 選定方針
+
+1. **OpenSpecを2〜3機能でpilot**し、同程度のTsumiki利用実績と比較する。
+2. 実装の自律性を上げたい場合だけ、cc-sddまたはSuperpowersを別pilotにする。同一featureで複数frameworkのartifactを
+   二重生成しない。
+3. 次を計測する: artifact総行数、要件からtaskへのcoverage、受け入れscenarioのtest化率、実装後に見つかった漏れ、
+   人間のreview時間、仕様変更の反映時間。
+4. OpenSpecの`verify`はcode検索を含むheuristicな検査なので、test実行と人間の受け入れ確認を置き換えない。
+
+### 推奨 workflow: OpenSpec → grill → update
+
+```mermaid
+flowchart LR
+    A[依頼・制約] --> B[OpenSpec propose: 仕様案]
+    B --> C[人間が一次review]
+    C --> D[grill-me: 仕様案を反証]
+    D --> E[decision logを承認]
+    E --> F[OpenSpec update: 既存仕様へ反映]
+    F --> G[validate・人間が再承認]
+    G --> H[wireframe-spec]
+    H --> HC[color-system]
+    HC --> HD{dark modeもMVP対象?}
+    HD -->|Yes| HE[dark-mode-design]
+    HD -->|No| I[画面上の新判断をupdate]
+    HE --> I
+    I --> J[task coverage gate]
+    J --> K[apply: 小batch実装]
+    K --> L[test・browser確認]
+    L --> M[verify: 実装差分監査]
+    M -->|仕様の残差| F
+    M -->|実装の残差| K
+    M -->|合格| N[archive・PR]
+```
+
+#### 0. OpenSpecをprojectへ導入する
+
+OpenSpec CLIはmiseでversionをpinし、hostのglobal環境とdevcontainer imageの両方へ導入します。
+
+| 実行環境     | mise設定                            | installされるタイミング                             |
+| ------------ | ----------------------------------- | --------------------------------------------------- |
+| host global  | `dot_config/mise/config.toml`       | `chezmoi apply`後のglobal `mise install`            |
+| devcontainer | `dot_config/devcontainer/mise.toml` | devcontainer image build中の`mise install -C /mise` |
+
+hostですぐ反映する場合は次を実行します。devcontainer側は設定変更後にimageをrebuildします。
+
+```bash
+node --version # 20.19.0以上であることを確認する
+chezmoi apply
+mise install npm:@fission-ai/openspec
+mise exec -- openspec --version
+```
+
+OpenSpecにはNode.js 20.19.0以上が必要です。このdotfilesではhost globalとdevcontainerのどちらも要件を満たすNode.jsをmiseで
+pinしています。個別環境でversionが要件未満なら、利用中のversion managerでNode.jsを更新してからinstallします。
+
+CLIを導入した後、対象repositoryごとに初期化します。APMからskillだけを抜き出さず、CLIが対象agent用のcommand / skillを
+生成する公式手順を使います。
+
+```bash
+cd <project>
+openspec init
+```
+
+このguideで使用する`/opsx:continue`と`/opsx:verify`を利用できるよう、初期化後にexpanded workflowを選択してprojectへ
+反映します。
+
+```bash
+openspec config profile # wizardでexpanded workflowを選択する
+cd <project>
+openspec update
+```
+
+以下ではClaude Codeのcanonical表記`/opsx:<command>`を使います。Codexでは生成された`$openspec-<command>`を使います。
+
+#### 1. まず仕様案を作る
+
+最初から質問だけを始めるのではなく、現在分かっている範囲をreview可能なartifactへ固定します。
+
+```text
+/opsx:propose <feature-name>
+目的: <達成したい結果>
+対象user: <user>
+既決事項: <変更しない判断>
+制約: <期限・互換性・security・運用>
+```
+
+`propose`は通常、proposal、delta spec、design、tasksを一度にdraftします。この時点のtaskは実装許可ではなく、仕様の穴を
+探す材料です。生成後に、最低限、scope、requirement / scenario、仮定、未決事項を人間が一次reviewします。
+
+artifactを1つずつ承認したい場合だけexpanded profileを有効にし、`/opsx:new`と`/opsx:continue`を使います。分量削減が
+目的なら`propose`はdefaultのcore profileのまま利用できます。ただし、最終gateで`/opsx:verify`を使うため、上記の手順で
+expanded workflow自体は有効にしておきます。
+
+##### 4項目へどの粒度で書くか
+
+`propose`の入力は完成した要件定義書ではなく、agentが最初の仕様案を作るための**境界線**です。通常は1項目につき1〜5 bullet、
+全体で15〜30行程度にします。画面、API、database tableをすべて確定させる必要はありません。
+
+| 項目           | 書く内容                                                                     | 書かない内容                                            |
+| -------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `feature-name` | 1つのreleaseまたは検証可能なchange。kebab-caseで結果が分かる名前             | app全体を無条件に`build-app`へ詰め込むこと              |
+| 目的           | 誰のどのproblemを、どの状態へ変えたいか。可能なら成功を観測する指標          | 画面やlibraryの羅列。「AIを使う」のような手段だけの説明 |
+| 対象user       | 最初に最適化するprimary userと利用状況。secondary userは分けて書く           | 「すべての人」のように優先順位が決まらない表現          |
+| 既決事項       | review済みで、このchange中には比較し直さないproduct / technical判断とscope外 | 候補にすぎないframeworkや、まだ迷っている二択           |
+| 制約           | 違反するとreleaseできない期限、platform、privacy、互換性、予算、運用条件     | 単なる好みや、数値・判定方法のない「高速・安全」        |
+
+粒度は次の3段階から選びます。
+
+1. **短いspike（5〜10行）**: feasibility調査や捨てる前提のprototype。目的、primary user、最大の制約だけを書く。
+2. **通常のfeature / MVP（15〜30行、推奨）**: 目的とMVP境界、primary user、確定事項、scope外、hard constraintを書く。
+   画面案や技術候補は補足として渡すが、未決なら明確に「候補」とする。
+3. **高risk change（30〜60行）**: 個人情報、課金、migration、外部連携、既存互換性がある場合。data flow、保持・削除、failure、
+   rollback、運用責任まで入力する。それ以上なら1つのchangeを分割する。
+
+次の情報は最初から渡すと良い一方、決め切る必要はありません。
+
+- **渡す**: app concept、primary user、MVPで完了させたいuser journey、必須画面、明確なscope外、確定済み技術、privacy上の前提。
+- **未決として渡す**: 比較中のstorage / state管理、calendarかlistか、AI provider、通知頻度など。候補を既決事項へ混ぜない。
+- **grillへ残す**: data送信への同意、AI失敗時の保存、録音時間上限、音声削除、offline、感情分析の誤判定表示など、
+  product ownerの判断が必要な点。agentがrepositoryや公式資料から調査できる事実は質問事項にしない。
+
+##### VoiceDiary AIの場合
+
+提示されたconceptをそのまま1 changeへ入れると、録音、文字起こし、AI enrichment、CRUD、振り返り、通知、themeまで含むため
+taskが大きくなります。次の例では「録音 → 文字起こし確認・修正 → AI enrichment → 保存 → 一覧・詳細・編集・削除」を
+1つのMVPに含める一方、週次・月次のAI振り返り通知とthemeは次のchangeに分けます。さらに小さく始めたい場合は、後述する
+録音spikeを先に実行するか、AI enrichmentも別changeへ分割します。
+
+次が**通常のMVPとして推奨する入力例**です。
+
+```text
+/opsx:propose ai-voice-diary-mvp
+
+目的:
+- 日記を書きたいがtypingが負担で続かない人が、音声から日記を短時間で作成・保存できるようにする。
+- 最初のMVPでは「録音開始 → 文字起こし確認・修正 → 保存 → 一覧・詳細から再閲覧」を完結させる。
+- 成功は、初回userが説明なしで3分以内に1件を保存できることと、保存済み日記を再度開けることで確認する。
+
+対象user:
+- primary: 日本語で日記を残したいが、mobileで長文をtypingするのが負担なiOS / Android user。
+- 利用状況: 1人で過ごす時間に、数分話してその日の考えや感情をprivateに記録する。
+- secondary: typingや細かい操作が苦手なuser。accessibility要件は落とさないが、MVPの主対象はprimary userとする。
+
+既決事項:
+- Expo / React NativeでiOS・Android向けに作る。
+- 日記の本文、生成metadata、音声fileはdevice-localをsource of truthとして保存する。
+- 保存前に文字起こし結果を表示し、userが修正・保存cancelできる。
+- MVPには録音、文字起こし、AIによるtitle・summary・感情・tag、一覧、詳細、編集、削除を含める。
+- account、cloud sync、共有・SNS、複数device同期、週次・月次のAI振り返り通知はMVPのscope外とする。
+
+制約:
+- microphone permissionを拒否した場合と、録音・文字起こし・AI生成が失敗した場合に、dataを失わずretryまたは本文手入力へ進める。
+- 外部AIへ送るdata、送信目的、保存有無をuserへ説明し、明示的な同意なしにprivateな日記を送信しない。
+- AI生成結果は事実や診断として扱わず、userが編集または削除できる補助情報として表示する。
+- offline時も保存済み日記の閲覧・編集・削除ができる。networkが必要な処理は再実行可能にする。
+- 日記削除時に本文・生成metadata・対応する音声fileを一貫して削除する。
+
+未決事項（仕様案で選択肢を比較し、grill-meで決める）:
+- 文字起こしとAI enrichmentへGemini APIを使う範囲。音声を直接送るか、別の文字起こし手段からtextだけを送るか。
+- 外部provider側のdata retention、user同意の再確認方法、AI処理前に匿名化できる情報。
+- 録音時間・file容量の上限、AI失敗時に生成metadataなしで先に保存するか。
+- local storageはSQLite、FileSystem、secure storageをdata種別ごとにどう分けるか。
+```
+
+この例で重要なのは、`Gemini`、state管理library、storage実装を「技術仕様案に書かれていたから」という理由だけで既決事項に
+しないことです。特に「device内に保存する」と「処理のため外部AIへ送信する」は両立し得ますが、**local-onlyではありません**。
+送信data、同意、provider側の保持、削除要求を仕様として決める必要があります。
+
+個人の日記をproductionで扱う**高risk change**として策定する段階では、上のMVP例へ少なくとも次を追記します。
+
+```text
+追加する制約:
+- data flow: 音声・文字起こし・生成metadataごとに、device、app backend、外部providerのどこを通るかを明記する。
+- retention: deviceと外部providerの保持期間、backupの有無、削除操作が各copyへ反映される期限を決める。
+- consent: 初回送信前に送信dataと目的を提示し、拒否後もAIなしで日記を保存できるようにする。
+- access: device紛失、OS backup、lock screen通知からprivateな本文が露出しない方針を決める。
+- safety: 感情分析を医療判断・危機判定に使わず、誤生成の報告・編集・削除手段を用意する。
+- operations: provider障害、quota超過、API key漏えい時の停止手順、retry上限、userへの表示を決める。
+- release gate: privacy review、実機permission test、削除test、offline testがpassするまでreleaseしない。
+```
+
+この情報を含めても60行を大きく超える場合は、録音・保存、AI enrichment、振り返り通知を別changeに分割します。
+
+AI振り返りを次のchangeにする場合は、次のように短く始めます。
+
+```text
+/opsx:propose voice-diary-reflection
+目的: userが過去1週間または1か月の日記から、自分で振り返るきっかけを得られるようにする。
+対象user: VoiceDiary MVPで複数の日記を保存し、振り返り通知を明示的に有効化したuser。
+既決事項: 通知はopt-inで初期値OFF。関連日記を確認できる。医療・心理診断を行わない。
+制約: privateな日記の送信範囲と保持を説明する。通知本文をlock screenへ表示するかuserが選べる。OFF時は生成しない。
+```
+
+逆に、録音APIが要件を満たすかだけを調べるspikeなら、次の粒度で十分です。
+
+```text
+/opsx:propose voice-recording-spike
+目的: ExpoでiOS・Androidの録音、pause、停止、再生、file削除が実現可能か検証する。
+対象user: 本実装を判断する開発者。
+既決事項: production UIと永続的な日記保存は作らない。検証codeは破棄可能とする。
+制約: microphone permission拒否、app background移行、実機での録音file形式と容量を確認し、結果を文書化する。
+```
+
+##### `propose`実行後の段取り
+
+`/opsx:propose ai-voice-diary-mvp`を実行して、たとえば次が生成された時点では、**まだ実装を始めません**。
+
+```text
+openspec/changes/ai-voice-diary-mvp/
+├── proposal.md
+├── specs/
+│   └── <capability-name>/
+│       └── spec.md
+├── design.md
+└── tasks.md
+```
+
+`<capability-name>`はchange名の繰り返しではなく、仕様を所有する機能領域です。たとえば`voice-entry`、`diary-library`、
+`ai-enrichment`のようになります。1 changeに複数capabilityがあれば`spec.md`も複数生成されます。実際のpathはschemaにより
+異なる可能性があるため、file名を決め打ちせず`status`で確認します。
+
+各artifactの役割は次のとおりです。
+
+| artifact                     | 答える問い                                        | 注意点                                                             |
+| ---------------------------- | ------------------------------------------------- | ------------------------------------------------------------------ |
+| `proposal.md`                | なぜ行うか、何を変えるか、scopeはどこまでか       | product intentとscopeのsource。実装詳細を詰め込みすぎない          |
+| `specs/<capability>/spec.md` | systemが外部から観測可能な何を満たすか            | changeによる**delta spec**。requirementとscenarioをreviewする      |
+| `design.md`                  | どのarchitecture・data flow・技術判断で実現するか | alternative、failure、privacy、migrationも確認する                 |
+| `tasks.md`                   | どの順序で何を実装・testするか                    | checkboxが実装状態になる。requirement / scenarioとの対応を確認する |
+
+`openspec/changes/.../specs/.../spec.md`は、このchangeが既存仕様へ加える・変える・削除する内容です。この時点で
+`openspec/specs/.../spec.md`へ手動copyしません。完了時の`sync`または`archive`でmain specへmergeされ、change directoryは
+履歴としてarchiveされます。
+
+###### A. changeとartifactの状態を確認する
+
+terminalで次を実行します。`/opsx:...`はAI assistantのchatへ、`openspec ...`はterminalへ入力する点に注意してください。
+
+```bash
+openspec list
+openspec status --change ai-voice-diary-mvp
+openspec show ai-voice-diary-mvp
+openspec validate ai-voice-diary-mvp --strict
+```
+
+- `list`: active change名を確認する。
+- `status`: 使用schema、artifactの有無・依存関係、planningが完了しているかを確認する。
+- `show`: changeの内容をまとめて読む。
+- `validate --strict`: delta specの構造、requirement、scenarioなどの形式不備を検出する。
+
+validation成功は「仕様がproductとして正しい」という意味ではありません。形式が正しくても、scope漏れ、曖昧な判断、scenario不足は
+残り得ます。
+
+###### B. artifactを順番にreviewする
+
+次の順で読み、気になる点をreview noteへまとめます。まだ直接直しても構いませんが、複数artifactへ波及する変更は後述の
+`/opsx:update`を使う方が安全です。
+
+1. **`proposal.md`**
+   - primary userと解決するproblemが1つに絞られているか。
+   - MVPのin scope / out of scopeが明記されているか。
+   - 「voice diaryを作る」のように成功判定不能な目的になっていないか。
+2. **各`spec.md`**
+   - requirementが画面部品ではなく、userまたはsystemから観測できる振る舞いになっているか。
+   - happy pathだけでなく、permission拒否、offline、AI失敗、retry、削除などのscenarioがあるか。
+   - `GIVEN / WHEN / THEN`の結果がtest可能か。`適切に`、`高速に`など判定不能な表現が残っていないか。
+3. **`design.md`**
+   - 音声、文字起こし、日記本文、生成metadataがどこを通り、どこへ保存されるか。
+   - device-localと外部AI送信の境界、同意、retention、削除、API key管理が説明されているか。
+   - 採用案だけでなく、主要alternativeと採用理由、failure時のfallbackがあるか。
+4. **`tasks.md`**
+   - 全requirement / scenarioを実装またはtestするtaskがあるか。
+   - permission、error、offline、data削除、accessibilityが最後の「その他」へ埋もれていないか。
+   - taskが大きすぎず、依存順、完了条件、実行するtestが分かるか。
+   - specにない機能を実装するtaskが紛れ込んでいないか。
+
+VoiceDiaryの場合、最初のreviewで最低限次の表を作ると漏れを見つけやすくなります。
+
+| 確認対象      | 対応artifact                         | 最初に確認するscenario例                                    |
+| ------------- | ------------------------------------ | ----------------------------------------------------------- |
+| 録音          | voice entryのspec / design / tasks   | permission拒否、中断、background、時間上限、file削除        |
+| 文字起こし    | voice entryまたはtranscriptionのspec | 失敗、timeout、空結果、修正、再試行、AIなし保存             |
+| AI enrichment | AI capabilityのspec / design         | provider障害、誤生成、同意拒否、再生成、metadata編集・削除  |
+| local diary   | diary libraryのspec / tasks          | CRUD、app再起動、offline、音声と本文の一貫削除              |
+| privacy       | proposal / spec / design             | 送信前説明、送信data、retention、OS backup、lock screen露出 |
+
+###### C. 作成済み仕様を`grill-me`へ渡す
+
+一次review後、次のpromptで壁打ちします。change名を明示すると、別changeを誤って読むのを防げます。
+
+```text
+/grill-me
+`openspec/changes/ai-voice-diary-mvp` のproposal、全delta spec、design、tasksを読んでください。
+artifact間の矛盾と、未決定・曖昧・test不能・task未対応の要件をdecision treeで質問してください。
+repositoryや公式資料から調査できる事実は自分で確認し、product判断だけを私へ質問してください。
+終了時は、決定事項、変更するrequirement、追加scenario、design変更、task変更、scope外、未決事項、riskに整理し、
+artifactをまだ編集せず私の承認を待ってください。
+```
+
+質問への回答が終わったら、agentが出したdecision logをそのまま採用せず、自分が同意した項目だけを承認済みとして残します。
+
+###### D. 承認した判断を全artifactへ反映する
+
+同じAI chat、またはartifactを読み直せる新しいsessionで次を実行します。
+
+```text
+/opsx:update ai-voice-diary-mvp
+以下の承認済みdecision logを既存artifactへ反映してください。
+proposal → 全spec → design → tasksの整合を確認し、変更案と理由をartifactごとに提示してください。
+私が各変更を承認してからfileを更新し、未決事項は勝手に決めず明記してください。
+
+<承認済みdecision log>
+```
+
+`update`は既存artifactを整合させますが、未作成artifactを新規作成しません。`status`にmissing / blockedがある場合は、expanded
+workflowの`/opsx:continue ai-voice-diary-mvp`で次のartifactを作ってから、もう一度`update`します。
+
+反映後にもう一度確認します。
+
+```bash
+openspec status --change ai-voice-diary-mvp
+openspec validate ai-voice-diary-mvp --strict
+git diff -- openspec/changes/ai-voice-diary-mvp
+```
+
+このdiffを人間が承認するまでは`/opsx:apply`を実行しません。承認済みplanning artifactだけを先にcommitすると、実装後の
+code diffと仕様変更を分けてreviewしやすくなります。
+
+```bash
+git add openspec/changes/ai-voice-diary-mvp
+git commit -m "docs: define AI voice diary MVP"
+```
+
+###### E. wireframeからcolor system・dark modeを決め、判断を戻す
+
+`wireframe-spec`へchange directoryと対象scenarioを渡します。empty / loading / error / permission denied、mobile viewport、
+keyboard・screen reader操作を含めてreviewします。wireframeは情報構造を決める段階なので、ここでは色を決めません。
+
+wireframeを承認した後、候補の配色案から1つを採用し、`color-system`でlight modeの本番用color systemへ仕上げます。単色の
+hex一覧ではなく、brand / neutralのtonal scale、semantic role、component state、foreground / background pair、contrast規則を
+成果物にします。
+
+```text
+/color-system
+`docs/design/ai-voice-diary-mvp/wireframe.md`と承認済みOpenSpec artifactを読み、提示済みの配色候補4案を比較してください。
+VoiceDiaryのprivate・calm・trustworthyというproduct原則、長文可読性、感情表示で色だけに依存しないことを評価軸に、
+推奨案とtrade-offを示して私の承認を待ってください。承認後、その案を50〜950のbrand / neutral scale、
+primary / secondary / accent / success / warning / danger / info、background / surface / border / text、
+default / hover / pressed / disabled / focusへ展開し、WCAG contrast結果と利用禁止例を含めて
+`docs/design/ai-voice-diary-mvp/color-system.md`へ保存してください。
+```
+
+dark modeをMVPに含めるかはここで明示的に選びます。
+
+- **MVP対象外**: light color systemだけを確定し、dark modeは後続OpenSpec changeへ分ける。未検証のdark tokenを先に作らない。
+- **MVP対象**: light color systemを承認してから`dark-mode-design`を実行する。light / darkを別々のbrand案として作らず、同じ
+  semantic tokenのmode別valueとして対応させる。
+
+```text
+/dark-mode-design
+承認済み`docs/design/ai-voice-diary-mvp/color-system.md`をdark modeへ適応してください。単純反転はせず、
+backgroundからmodalまでのsurface elevation、text / icon / border、brand colorの彩度、semantic color、
+image・waveform・focus ringを再調整してください。全foreground / background pairのcontrast、
+system preference / manual toggle / persistence / first launch、切替時のflicker、各画面のempty / loading / error状態を定義し、
+lightと同じsemantic token名に対するdark valueを`docs/design/ai-voice-diary-mvp/dark-mode.md`へ保存してください。
+```
+
+color systemとdark modeをreviewしたら、最低限次を確認します。
+
+1. body textは4.5:1以上、large textとUI component境界は3:1以上を満たすか。
+2. error、感情、録音状態を色だけで伝えず、label・icon・shapeも併用しているか。
+3. light / dark両方でdefault、pressed、disabled、focus、empty、loading、errorを確認したか。
+4. token名が見た目の色名ではなく`text-primary`、`surface-raised`、`status-danger`のようなroleになっているか。
+5. 実装へ渡すtoken、theme切替の挙動、test taskがOpenSpecのdesign / tasksに反映されているか。
+
+wireframe、color、dark modeのreviewで新しいproduct判断が出た場合は、design documentだけに残さず、
+`/opsx:update ai-voice-diary-mvp`をもう一度実行してspec・design・tasksへ反映します。dark modeを後続changeへ分ける判断も、
+現在のproposalのscope外とroadmapへ明記します。
+
+###### F. task coverageを承認してから実装する
+
+OpenSpec 1.9.0には、**実装前のtraceability表だけを生成する専用skill / commandはありません**。`openspec validate`はartifactの
+形式検査、`/opsx:verify`は実装後のcode照合です。このgateでは通常のagentへ次のread-only promptを渡します。Claude Code・
+Codexのどちらでもslash commandではなく、通常のchat requestとして実行します。
+
+```text
+OpenSpec change `ai-voice-diary-mvp` の実装前traceability auditをread-onlyで行ってください。
+code実装、artifact編集、task checkbox更新、/opsx:applyは行わないでください。
+
+入力:
+- `openspec/changes/ai-voice-diary-mvp/proposal.md`
+- `openspec/changes/ai-voice-diary-mvp/specs/**/*.md` の全requirement / scenario
+- `openspec/changes/ai-voice-diary-mvp/design.md`
+- `openspec/changes/ai-voice-diary-mvp/tasks.md`
+- 関連するwireframe、color system、dark mode仕様
+
+手順:
+1. capability、requirement、scenarioを漏れなく列挙する。明示IDがなければ
+   `<capability>/<requirement heading>/<scenario heading>`を一時的なtrace keyにする。
+2. 各scenarioへ、実装taskとtest / verification taskを対応付ける。task本文に明示された対応と、文言から推測した対応を区別する。
+3. functionalだけでなく、permission、error、offline、privacy、retention、削除、accessibility、performanceも確認する。
+4. requirement / scenarioに対応しないtaskをscope creep候補として検出する。
+5. 次の表を出す。
+
+| Capability | Requirement | Scenario | Implementation task | Test / verification task | Mapping | Status | Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+`Mapping`はEXPLICITまたはINFERRED、`Status`はCOVERED / PARTIAL / UNCOVEREDとする。
+実装前なのでtest fileの存在ではなく、tasks.mdにtest種別、期待結果、実行commandまたは手動確認方法が計画されているかを判定する。
+
+最後に次を出す。
+- requirement数、scenario数、COVERED / PARTIAL / UNCOVERED数
+- taskへ対応しないscenario
+- test / verification計画がないscenario
+- requirementへ対応しないorphan task
+- 修正すべきartifactとtask案（まだ編集しない）
+
+推測でCOVEREDにせず、曖昧ならPARTIALにしてください。
+```
+
+このauditでいう`test`は、実装済みtest fileではなく**予定している検証**です。unit / integration / E2E / accessibility test、または
+必要なmanual verificationが`tasks.md`に具体化されていれば対応ありとします。「testする」だけで期待結果や方法がなければ
+`PARTIAL`です。
+
+`UNCOVERED`、`PARTIAL`、orphan taskが見つかったら、reportを承認したうえで次のように`/opsx:update`へ渡します。
+
+```text
+/opsx:update ai-voice-diary-mvp
+以下のtraceability auditで承認したgapだけを修正してください。
+requirement / scenarioの追加・明確化とtasks.mdの実装task・test taskを整合させ、
+変更案をartifactごとに示して私の承認を待ってください。
+
+<承認済みaudit report>
+```
+
+update後に`openspec validate ai-voice-diary-mvp --strict`と同じread-only auditを再実行します。`UNCOVERED`とorphan taskが0、
+`PARTIAL`がすべて人間の明示承認済みになるまで実装へ進みません。その後、chatでchange名を明示して実装します。
+
+```text
+/opsx:apply ai-voice-diary-mvp
+```
+
+`apply`は`tasks.md`の未完了checkboxを読み、codeとtestを実装して`[x]`へ更新します。中断した場合は同じcommandを再実行すると
+最初の未完了taskから再開できます。長いtask listでは、最初のphaseだけ実装してtest結果とdiffを提示し、承認を待つよう
+追加指示して小batchにします。checkboxが`[x]`でも、test成功やrequirement適合を自動的に証明するものではありません。
+
+各batchでproject固有のtest、typecheck、lintを実行し、次も確認します。
+
+```bash
+openspec status --change ai-voice-diary-mvp
+git diff
+```
+
+###### G. 実装を検証して完了する
+
+全taskの実装後、chatで次を実行します。
+
+```text
+/opsx:verify ai-voice-diary-mvp
+```
+
+`verify`はcompleteness、correctness、coherenceを確認し、CRITICAL / WARNING / SUGGESTIONを報告します。CRITICAL、未完了task、
+scenario未対応、失敗testが0になるまで、仕様の問題は`update`、実装の問題は`apply`へ戻します。さらに実browserで主要scenarioと
+wireframeとの差を人間が確認します。
+
+問題がなくなったら、必要に応じてdelta specのmain specへのmergeを先にreviewできます。
+
+```text
+/opsx:sync ai-voice-diary-mvp
+```
+
+`sync`は任意です。changeをactiveのまま`openspec/specs/`へdeltaをmergeします。通常は省略し、次のarchive時に表示される
+sync確認へ同意すれば十分です。
+
+```text
+/opsx:archive ai-voice-diary-mvp
+```
+
+`archive`はartifactとtaskの状態を確認し、未syncならmain specへのmergeを提案してから、changeを
+`openspec/changes/archive/<date>-ai-voice-diary-mvp/`へ移します。未完了taskがあってもwarningだけでarchiveできるため、実行前に
+必ず自分で`tasks.md`、test結果、`verify`結果を確認します。archive後のmain specとarchive diffをcommitし、PRを作成します。
+
+###### 最短の実行順
+
+迷った場合は、次の順を守れば実装開始を急ぎすぎません。
+
+1. `/opsx:propose ai-voice-diary-mvp`
+2. `openspec status` / `show` / `validate`と4 artifactの人間review
+3. `/grill-me`で作成済みartifactを壁打ち
+4. `/opsx:update ai-voice-diary-mvp`で承認済みdecisionを反映
+5. 再validate・diff review・planning artifactをcommit
+6. `wireframe-spec`で構造を承認し、`color-system`でlight配色を確定する
+7. dark modeがMVP対象なら`dark-mode-design`を実行し、対象外なら後続changeへ分ける
+8. 画面・配色の新判断を`update`でartifactへ反映する
+9. task coverage承認後に`/opsx:apply ai-voice-diary-mvp`
+10. test・browser確認・`/opsx:verify ai-voice-diary-mvp`
+11. 残差を`update`または`apply`で解消
+12. test・browser確認・`/opsx:verify ai-voice-diary-mvp`を再実行し、残差が0であることを確認
+13. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
+
+#### 2. 作成済み仕様を`grill-me`で詰める
+
+`grill-me`には一般的なアイデアではなく、OpenSpec changeのproposal・spec・design・tasksを読ませます。事実調査はagentに任せ、
+userにしか決められないproduct判断だけをdecision treeの順に質問させます。
+
+```text
+/grill-me
+OpenSpec change `<feature-name>` の既存artifactをすべて読んでから、仕様を反証してください。
+特に対象user、scope外、権限、data lifecycle、失敗・retry、競合、互換性、migration / rollback、
+accessibility、観測性、成功指標、各scenarioのtest可能性を確認してください。
+repositoryから調査できる事実は質問せず自分で確認してください。
+終了時は「決定事項」「変更する要件」「追加scenario」「scope外」「未決事項」「risk」に整理し、
+まだartifactやcodeを編集せず、私の承認を待ってください。
+```
+
+この順序なら、質問が抽象論にならず、既存仕様の具体的な文言・欠落を対象にできます。`grill-me`の会話ログ自体はsource of
+truthにせず、次のstepで必ずartifactへ反映します。
+
+#### 3. grillの結果を`update`で仕様へ戻す
+
+承認したdecision logを`/opsx:update`へ渡します。`update`はplanning artifactだけを対象に、変更点を1 artifactずつ提示して
+承認を取り、proposal・spec・design・tasksの前後方向の不整合を直します。未作成artifactを勝手に作らず、codeも変更しません。
+
+```text
+/opsx:update <feature-name>
+以下はgrill-me後に承認したdecision logです。既存artifactへ反映してください。
+要件には安定したID、各requirementには観測可能なscenarioを付け、削除・scope外も明記してください。
+taskには対応する要件ID、test、依存関係、完了条件を持たせてください。
+各artifactの変更案と理由を先に示し、私の承認後に1つずつ更新してください。
+
+<承認済みdecision log>
+```
+
+反映後は`openspec validate <feature-name> --strict`を実行し、`git diff -- openspec/changes/<feature-name>`を人間がreviewします。
+ここが**仕様承認gate**です。grillで決まった事項がchatにしか残っていない、または古いtaskが残る場合は先へ進みません。
+
+#### 4. `wireframe-spec`で画面を固め、判断を再反映する
+
+更新済みspecを入力に、happy pathだけでなくempty、loading、partial、error、permission denied、offline、長文、mobileを対象に
+annotated wireframeを作ります。
+
+```text
+/wireframe-spec
+OpenSpec change `<feature-name>` の承認済みrequirement / scenarioに対応するdesktop・mobileのlow-fi wireframeを
+docs/design/<feature-name>/wireframe.mdへ作ってください。各要素へ要件ID、content priority、interaction、data source、
+keyboard操作、focus順を注記し、empty / loading / error / permission denied状態を含めてください。
+```
+
+`wireframe-spec`は画像生成ではなく注釈付きlayout仕様です。必要ならそこからHTML prototypeを作りbrowserで確認します。
+wireframe承認後は`color-system`でlight配色をtoken化し、dark modeもscope内なら`dark-mode-design`で同じsemantic tokenを
+dark surfaceへ適応します。画面reviewで新しい仕様判断が出たら、design成果物だけへ書き足さず、もう一度`/opsx:update`で
+spec・design・tasksへ戻します。
+
+#### 5. 実装前にtask coverageを確認する
+
+OpenSpecのartifact検証に加え、通常のagentへ上記「F. task coverageを承認してから実装する」のread-only promptを渡して
+traceability表を作らせます。専用OpenSpec skillではなく、gap修正だけを`/opsx:update`で行います。次が0件になるまで
+`apply`しません。
+
+- taskへmapされないrequirement / scenarioと非機能要件
+- requirementへmapされないtask（scope creep）
+- test taskのないerror、permission、concurrency、migration / rollback
+- spec・design・wireframe・tasks間の用語や状態の不一致
+- dependencyまたは完了条件のないtask
+
+#### 6. 小batchで実装し、`verify`する
+
+`/opsx:apply <feature-name>`を使いますが、全件一括の完了表示を信用せず、依存関係に沿った小batchごとにtest、typecheck、lint、
+diff reviewを行います。画面は実browserでdesktop / mobileと主要状態を確認します。
+
+実装後はexpanded profileの`/opsx:verify <feature-name>`で、task完了、requirement実装、scenarioのtest coverage、design準拠を
+再検査します。指摘が仕様変更なら`update`、実装漏れなら`apply`へ戻し、critical issueと未完了taskが0になってから
+`/opsx:archive`とPRへ進みます。
+
+### 最小成果物とgate
+
+| 段階     | 必須成果物                                             | 次へ進む条件                                               |
+| -------- | ------------------------------------------------------ | ---------------------------------------------------------- |
+| 仕様案   | proposal、delta spec、design、tasks                    | 人間が一次review済み                                       |
+| grill    | 承認済みdecision log、未決事項、scope外、risk          | userがdecisionを明示承認                                   |
+| 仕様反映 | 更新済みartifactとdiff                                 | strict validation成功、chatだけの決定が0                   |
+| 画面     | 状態別wireframe、light color token、必要ならdark token | 全要素・tokenが要件へtraceでき、contrast確認とspec反映済み |
+| task     | 要件ID・依存・test・完了条件付きtask                   | uncovered requirement / scenarioが0                        |
+| 実装     | code、test、command結果、画面確認                      | batchごとのcheckがpass                                     |
+| 完了     | `verify`結果、最終traceability表、PR                   | critical、未完了task、未反映reviewが0                      |
+
+### 導入したdesign skill
+
+`owl-listener/designer-skills`から、このworkflowで使う[`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/prototyping-testing/skills/wireframe-spec)、
+[`color-system`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/ui-design/skills/color-system)、
+[`dark-mode-design`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/ui-design/skills/dark-mode-design)の
+3 skillだけを同じcommit SHA pinでAPMへ追加しています。suite全体を入れないのは、常時読み込まれるskill descriptionと
+更新対象を必要最小限にするためです。必要になった時点で`user-flow-diagram`、`state-machine`、visual critique、
+design handoffを責務ごとに個別評価します。
