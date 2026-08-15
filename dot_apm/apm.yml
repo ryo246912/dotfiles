@@ -15,8 +15,8 @@ dependencies:
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
     # crit（tomasz-tomczyk/crit プラグイン）。
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.2
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.2
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.4
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.4
     # v0.4.0 以降の skill/ は生成前の SKILL.template.md のみで APM package として無効なため、
     # SKILL.md を含む最後の release commit に固定する。配置名は skill 名と揃える。
     - git: zenbu-labs/terminal-browser
