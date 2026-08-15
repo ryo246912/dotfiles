@@ -584,7 +584,8 @@ flowchart LR
     J --> K[apply: 小batch実装]
     K --> L[test・browser確認]
     L --> M[verify: 実装差分監査]
-    M -->|残差あり| F
+    M -->|仕様の残差| F
+    M -->|実装の残差| K
     M -->|合格| N[archive・PR]
 ```
 
@@ -594,9 +595,20 @@ OpenSpecは対象repositoryごとに初期化します。APMからskillだけを
 公式手順を使います。
 
 ```bash
+node --version # 20.19.0以上であることを確認する
 npm install -g @fission-ai/openspec@latest
 cd <project>
 openspec init
+```
+
+OpenSpecにはNode.js 20.19.0以上が必要です。versionが要件未満なら、利用中のversion managerでNode.jsを更新してから
+installします。また、このguideで使用する`/opsx:continue`と`/opsx:verify`を利用できるよう、初期化後にexpanded workflowを
+選択してprojectへ反映します。
+
+```bash
+openspec config profile # wizardでexpanded workflowを選択する
+cd <project>
+openspec update
 ```
 
 以下ではClaude Codeのcanonical表記`/opsx:<command>`を使います。Codexでは生成された`$openspec-<command>`を使います。
@@ -617,7 +629,117 @@ openspec init
 探す材料です。生成後に、最低限、scope、requirement / scenario、仮定、未決事項を人間が一次reviewします。
 
 artifactを1つずつ承認したい場合だけexpanded profileを有効にし、`/opsx:new`と`/opsx:continue`を使います。分量削減が
-目的なら、まずdefaultのcore profileで十分です。
+目的なら`propose`はdefaultのcore profileのまま利用できます。ただし、最終gateで`/opsx:verify`を使うため、上記の手順で
+expanded workflow自体は有効にしておきます。
+
+##### 4項目へどの粒度で書くか
+
+`propose`の入力は完成した要件定義書ではなく、agentが最初の仕様案を作るための**境界線**です。通常は1項目につき1〜5 bullet、
+全体で15〜30行程度にします。画面、API、database tableをすべて確定させる必要はありません。
+
+| 項目           | 書く内容                                                                     | 書かない内容                                            |
+| -------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `feature-name` | 1つのreleaseまたは検証可能なchange。kebab-caseで結果が分かる名前             | app全体を無条件に`build-app`へ詰め込むこと              |
+| 目的           | 誰のどのproblemを、どの状態へ変えたいか。可能なら成功を観測する指標          | 画面やlibraryの羅列。「AIを使う」のような手段だけの説明 |
+| 対象user       | 最初に最適化するprimary userと利用状況。secondary userは分けて書く           | 「すべての人」のように優先順位が決まらない表現          |
+| 既決事項       | review済みで、このchange中には比較し直さないproduct / technical判断とscope外 | 候補にすぎないframeworkや、まだ迷っている二択           |
+| 制約           | 違反するとreleaseできない期限、platform、privacy、互換性、予算、運用条件     | 単なる好みや、数値・判定方法のない「高速・安全」        |
+
+粒度は次の3段階から選びます。
+
+1. **短いspike（5〜10行）**: feasibility調査や捨てる前提のprototype。目的、primary user、最大の制約だけを書く。
+2. **通常のfeature / MVP（15〜30行、推奨）**: 目的とMVP境界、primary user、確定事項、scope外、hard constraintを書く。
+   画面案や技術候補は補足として渡すが、未決なら明確に「候補」とする。
+3. **高risk change（30〜60行）**: 個人情報、課金、migration、外部連携、既存互換性がある場合。data flow、保持・削除、failure、
+   rollback、運用責任まで入力する。それ以上なら1つのchangeを分割する。
+
+次の情報は最初から渡すと良い一方、決め切る必要はありません。
+
+- **渡す**: app concept、primary user、MVPで完了させたいuser journey、必須画面、明確なscope外、確定済み技術、privacy上の前提。
+- **未決として渡す**: 比較中のstorage / state管理、calendarかlistか、AI provider、通知頻度など。候補を既決事項へ混ぜない。
+- **grillへ残す**: data送信への同意、AI失敗時の保存、録音時間上限、音声削除、offline、感情分析の誤判定表示など、
+  product ownerの判断が必要な点。agentがrepositoryや公式資料から調査できる事実は質問事項にしない。
+
+##### VoiceDiary AIの場合
+
+提示されたconceptをそのまま1 changeへ入れると、録音、文字起こし、AI enrichment、CRUD、振り返り、通知、themeまで含むため
+taskが大きくなります。最初は「録音して、確認した本文をdeviceへ保存し、後から読める」というMVPへ絞り、AI振り返り通知は
+次のchangeに分けるのがおすすめです。
+
+次が**通常のMVPとして推奨する入力例**です。
+
+```text
+/opsx:propose voice-diary-mvp
+
+目的:
+- 日記を書きたいがtypingが負担で続かない人が、音声から日記を短時間で作成・保存できるようにする。
+- 最初のMVPでは「録音開始 → 文字起こし確認・修正 → 保存 → 一覧・詳細から再閲覧」を完結させる。
+- 成功は、初回userが説明なしで3分以内に1件を保存できることと、保存済み日記を再度開けることで確認する。
+
+対象user:
+- primary: 日本語で日記を残したいが、mobileで長文をtypingするのが負担なiOS / Android user。
+- 利用状況: 1人で過ごす時間に、数分話してその日の考えや感情をprivateに記録する。
+- secondary: typingや細かい操作が苦手なuser。accessibility要件は落とさないが、MVPの主対象はprimary userとする。
+
+既決事項:
+- Expo / React NativeでiOS・Android向けに作る。
+- 日記の本文、生成metadata、音声fileはdevice-localをsource of truthとして保存する。
+- 保存前に文字起こし結果を表示し、userが修正・保存cancelできる。
+- MVPには録音、文字起こし、AIによるtitle・summary・感情・tag、一覧、詳細、編集、削除を含める。
+- account、cloud sync、共有・SNS、複数device同期、週次・月次のAI振り返り通知はMVPのscope外とする。
+
+制約:
+- microphone permissionを拒否した場合と、録音・文字起こし・AI生成が失敗した場合に、dataを失わずretryまたは本文手入力へ進める。
+- 外部AIへ送るdata、送信目的、保存有無をuserへ説明し、明示的な同意なしにprivateな日記を送信しない。
+- AI生成結果は事実や診断として扱わず、userが編集または削除できる補助情報として表示する。
+- offline時も保存済み日記の閲覧・編集・削除ができる。networkが必要な処理は再実行可能にする。
+- 日記削除時に本文・生成metadata・対応する音声fileを一貫して削除する。
+
+未決事項（仕様案で選択肢を比較し、grill-meで決める）:
+- 文字起こしとAI enrichmentへGemini APIを使う範囲。音声を直接送るか、別の文字起こし手段からtextだけを送るか。
+- 外部provider側のdata retention、user同意の再確認方法、AI処理前に匿名化できる情報。
+- 録音時間・file容量の上限、AI失敗時に生成metadataなしで先に保存するか。
+- local storageはSQLite、FileSystem、secure storageをdata種別ごとにどう分けるか。
+```
+
+この例で重要なのは、`Gemini`、state管理library、storage実装を「技術仕様案に書かれていたから」という理由だけで既決事項に
+しないことです。特に「device内に保存する」と「処理のため外部AIへ送信する」は両立し得ますが、**local-onlyではありません**。
+送信data、同意、provider側の保持、削除要求を仕様として決める必要があります。
+
+個人の日記をproductionで扱う**高risk change**として策定する段階では、上のMVP例へ少なくとも次を追記します。
+
+```text
+追加する制約:
+- data flow: 音声・文字起こし・生成metadataごとに、device、app backend、外部providerのどこを通るかを明記する。
+- retention: deviceと外部providerの保持期間、backupの有無、削除操作が各copyへ反映される期限を決める。
+- consent: 初回送信前に送信dataと目的を提示し、拒否後もAIなしで日記を保存できるようにする。
+- access: device紛失、OS backup、lock screen通知からprivateな本文が露出しない方針を決める。
+- safety: 感情分析を医療判断・危機判定に使わず、誤生成の報告・編集・削除手段を用意する。
+- operations: provider障害、quota超過、API key漏えい時の停止手順、retry上限、userへの表示を決める。
+- release gate: privacy review、実機permission test、削除test、offline testがpassするまでreleaseしない。
+```
+
+この情報を含めても60行を大きく超える場合は、録音・保存、AI enrichment、振り返り通知を別changeに分割します。
+
+AI振り返りを次のchangeにする場合は、次のように短く始めます。
+
+```text
+/opsx:propose voice-diary-reflection
+目的: userが過去1週間または1か月の日記から、自分で振り返るきっかけを得られるようにする。
+対象user: VoiceDiary MVPで複数の日記を保存し、振り返り通知を明示的に有効化したuser。
+既決事項: 通知はopt-inで初期値OFF。関連日記を確認できる。医療・心理診断を行わない。
+制約: privateな日記の送信範囲と保持を説明する。通知本文をlock screenへ表示するかuserが選べる。OFF時は生成しない。
+```
+
+逆に、録音APIが要件を満たすかだけを調べるspikeなら、次の粒度で十分です。
+
+```text
+/opsx:propose voice-recording-spike
+目的: ExpoでiOS・Androidの録音、pause、停止、再生、file削除が実現可能か検証する。
+対象user: 本実装を判断する開発者。
+既決事項: production UIと永続的な日記保存は作らない。検証codeは破棄可能とする。
+制約: microphone permission拒否、app background移行、実機での録音file形式と容量を確認し、結果を文書化する。
+```
 
 #### 2. 作成済み仕様を`grill-me`で詰める
 
@@ -703,7 +825,7 @@ diff reviewを行います。画面は実browserでdesktop / mobileと主要状�
 
 ### 導入したdesign skill
 
-[`owl-listener/designer-skills`の`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/main/prototyping-testing/skills/wireframe-spec)
+[`owl-listener/designer-skills`の`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/prototyping-testing/skills/wireframe-spec)
 だけをAPMへcommit SHA pinで追加しています。suite全体を入れないのは、常時読み込まれるskill descriptionと更新対象を
 必要最小限にするためです。必要になった時点で`user-flow-diagram`、`state-machine`、visual critique、design handoffを
 責務ごとに個別評価します。
