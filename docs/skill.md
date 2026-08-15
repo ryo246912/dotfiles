@@ -741,6 +741,206 @@ AI振り返りを次のchangeにする場合は、次のように短く始めま
 制約: microphone permission拒否、app background移行、実機での録音file形式と容量を確認し、結果を文書化する。
 ```
 
+##### `propose`実行後の段取り
+
+`/opsx:propose ai-voice-diary-mvp`を実行して、たとえば次が生成された時点では、**まだ実装を始めません**。
+
+```text
+openspec/changes/ai-voice-diary-mvp/
+├── proposal.md
+├── specs/
+│   └── <capability-name>/
+│       └── spec.md
+├── design.md
+└── tasks.md
+```
+
+`<capability-name>`はchange名の繰り返しではなく、仕様を所有する機能領域です。たとえば`voice-entry`、`diary-library`、
+`ai-enrichment`のようになります。1 changeに複数capabilityがあれば`spec.md`も複数生成されます。実際のpathはschemaにより
+異なる可能性があるため、file名を決め打ちせず`status`で確認します。
+
+各artifactの役割は次のとおりです。
+
+| artifact                     | 答える問い                                        | 注意点                                                             |
+| ---------------------------- | ------------------------------------------------- | ------------------------------------------------------------------ |
+| `proposal.md`                | なぜ行うか、何を変えるか、scopeはどこまでか       | product intentとscopeのsource。実装詳細を詰め込みすぎない          |
+| `specs/<capability>/spec.md` | systemが外部から観測可能な何を満たすか            | changeによる**delta spec**。requirementとscenarioをreviewする      |
+| `design.md`                  | どのarchitecture・data flow・技術判断で実現するか | alternative、failure、privacy、migrationも確認する                 |
+| `tasks.md`                   | どの順序で何を実装・testするか                    | checkboxが実装状態になる。requirement / scenarioとの対応を確認する |
+
+`openspec/changes/.../specs/.../spec.md`は、このchangeが既存仕様へ加える・変える・削除する内容です。この時点で
+`openspec/specs/.../spec.md`へ手動copyしません。完了時の`sync`または`archive`でmain specへmergeされ、change directoryは
+履歴としてarchiveされます。
+
+###### A. changeとartifactの状態を確認する
+
+terminalで次を実行します。`/opsx:...`はAI assistantのchatへ、`openspec ...`はterminalへ入力する点に注意してください。
+
+```bash
+openspec list
+openspec status --change ai-voice-diary-mvp
+openspec show ai-voice-diary-mvp
+openspec validate ai-voice-diary-mvp --strict
+```
+
+- `list`: active change名を確認する。
+- `status`: 使用schema、artifactの有無・依存関係、planningが完了しているかを確認する。
+- `show`: changeの内容をまとめて読む。
+- `validate --strict`: delta specの構造、requirement、scenarioなどの形式不備を検出する。
+
+validation成功は「仕様がproductとして正しい」という意味ではありません。形式が正しくても、scope漏れ、曖昧な判断、scenario不足は
+残り得ます。
+
+###### B. artifactを順番にreviewする
+
+次の順で読み、気になる点をreview noteへまとめます。まだ直接直しても構いませんが、複数artifactへ波及する変更は後述の
+`/opsx:update`を使う方が安全です。
+
+1. **`proposal.md`**
+   - primary userと解決するproblemが1つに絞られているか。
+   - MVPのin scope / out of scopeが明記されているか。
+   - 「voice diaryを作る」のように成功判定不能な目的になっていないか。
+2. **各`spec.md`**
+   - requirementが画面部品ではなく、userまたはsystemから観測できる振る舞いになっているか。
+   - happy pathだけでなく、permission拒否、offline、AI失敗、retry、削除などのscenarioがあるか。
+   - `GIVEN / WHEN / THEN`の結果がtest可能か。`適切に`、`高速に`など判定不能な表現が残っていないか。
+3. **`design.md`**
+   - 音声、文字起こし、日記本文、生成metadataがどこを通り、どこへ保存されるか。
+   - device-localと外部AI送信の境界、同意、retention、削除、API key管理が説明されているか。
+   - 採用案だけでなく、主要alternativeと採用理由、failure時のfallbackがあるか。
+4. **`tasks.md`**
+   - 全requirement / scenarioを実装またはtestするtaskがあるか。
+   - permission、error、offline、data削除、accessibilityが最後の「その他」へ埋もれていないか。
+   - taskが大きすぎず、依存順、完了条件、実行するtestが分かるか。
+   - specにない機能を実装するtaskが紛れ込んでいないか。
+
+VoiceDiaryの場合、最初のreviewで最低限次の表を作ると漏れを見つけやすくなります。
+
+| 確認対象      | 対応artifact                         | 最初に確認するscenario例                                    |
+| ------------- | ------------------------------------ | ----------------------------------------------------------- |
+| 録音          | voice entryのspec / design / tasks   | permission拒否、中断、background、時間上限、file削除        |
+| 文字起こし    | voice entryまたはtranscriptionのspec | 失敗、timeout、空結果、修正、再試行、AIなし保存             |
+| AI enrichment | AI capabilityのspec / design         | provider障害、誤生成、同意拒否、再生成、metadata編集・削除  |
+| local diary   | diary libraryのspec / tasks          | CRUD、app再起動、offline、音声と本文の一貫削除              |
+| privacy       | proposal / spec / design             | 送信前説明、送信data、retention、OS backup、lock screen露出 |
+
+###### C. 作成済み仕様を`grill-me`へ渡す
+
+一次review後、次のpromptで壁打ちします。change名を明示すると、別changeを誤って読むのを防げます。
+
+```text
+/grill-me
+`openspec/changes/ai-voice-diary-mvp` のproposal、全delta spec、design、tasksを読んでください。
+artifact間の矛盾と、未決定・曖昧・test不能・task未対応の要件をdecision treeで質問してください。
+repositoryや公式資料から調査できる事実は自分で確認し、product判断だけを私へ質問してください。
+終了時は、決定事項、変更するrequirement、追加scenario、design変更、task変更、scope外、未決事項、riskに整理し、
+artifactをまだ編集せず私の承認を待ってください。
+```
+
+質問への回答が終わったら、agentが出したdecision logをそのまま採用せず、自分が同意した項目だけを承認済みとして残します。
+
+###### D. 承認した判断を全artifactへ反映する
+
+同じAI chat、またはartifactを読み直せる新しいsessionで次を実行します。
+
+```text
+/opsx:update ai-voice-diary-mvp
+以下の承認済みdecision logを既存artifactへ反映してください。
+proposal → 全spec → design → tasksの整合を確認し、変更案と理由をartifactごとに提示してください。
+私が各変更を承認してからfileを更新し、未決事項は勝手に決めず明記してください。
+
+<承認済みdecision log>
+```
+
+`update`は既存artifactを整合させますが、未作成artifactを新規作成しません。`status`にmissing / blockedがある場合は、expanded
+workflowの`/opsx:continue ai-voice-diary-mvp`で次のartifactを作ってから、もう一度`update`します。
+
+反映後にもう一度確認します。
+
+```bash
+openspec status --change ai-voice-diary-mvp
+openspec validate ai-voice-diary-mvp --strict
+git diff -- openspec/changes/ai-voice-diary-mvp
+```
+
+このdiffを人間が承認するまでは`/opsx:apply`を実行しません。承認済みplanning artifactだけを先にcommitすると、実装後の
+code diffと仕様変更を分けてreviewしやすくなります。
+
+```bash
+git add openspec/changes/ai-voice-diary-mvp
+git commit -m "docs: define AI voice diary MVP"
+```
+
+###### E. wireframeを作り、画面由来の判断を戻す
+
+`wireframe-spec`へchange directoryと対象scenarioを渡します。empty / loading / error / permission denied、mobile viewport、
+keyboard・screen reader操作を含めてreviewします。画面reviewで新しいproduct判断が出た場合は、wireframeだけに残さず、
+`/opsx:update ai-voice-diary-mvp`をもう一度実行してspec・design・tasksへ反映します。
+
+###### F. task coverageを承認してから実装する
+
+実装直前に、requirement / scenario → task → testの対応表をagentへ作らせ、未対応が0であることを確認します。その後、chatで
+change名を明示して実装します。
+
+```text
+/opsx:apply ai-voice-diary-mvp
+```
+
+`apply`は`tasks.md`の未完了checkboxを読み、codeとtestを実装して`[x]`へ更新します。中断した場合は同じcommandを再実行すると
+最初の未完了taskから再開できます。長いtask listでは、最初のphaseだけ実装してtest結果とdiffを提示し、承認を待つよう
+追加指示して小batchにします。checkboxが`[x]`でも、test成功やrequirement適合を自動的に証明するものではありません。
+
+各batchでproject固有のtest、typecheck、lintを実行し、次も確認します。
+
+```bash
+openspec status --change ai-voice-diary-mvp
+git diff
+```
+
+###### G. 実装を検証して完了する
+
+全taskの実装後、chatで次を実行します。
+
+```text
+/opsx:verify ai-voice-diary-mvp
+```
+
+`verify`はcompleteness、correctness、coherenceを確認し、CRITICAL / WARNING / SUGGESTIONを報告します。CRITICAL、未完了task、
+scenario未対応、失敗testが0になるまで、仕様の問題は`update`、実装の問題は`apply`へ戻します。さらに実browserで主要scenarioと
+wireframeとの差を人間が確認します。
+
+問題がなくなったら、必要に応じてdelta specのmain specへのmergeを先にreviewできます。
+
+```text
+/opsx:sync ai-voice-diary-mvp
+```
+
+`sync`は任意です。changeをactiveのまま`openspec/specs/`へdeltaをmergeします。通常は省略し、次のarchive時に表示される
+sync確認へ同意すれば十分です。
+
+```text
+/opsx:archive ai-voice-diary-mvp
+```
+
+`archive`はartifactとtaskの状態を確認し、未syncならmain specへのmergeを提案してから、changeを
+`openspec/changes/archive/<date>-ai-voice-diary-mvp/`へ移します。未完了taskがあってもwarningだけでarchiveできるため、実行前に
+必ず自分で`tasks.md`、test結果、`verify`結果を確認します。archive後のmain specとarchive diffをcommitし、PRを作成します。
+
+###### 最短の実行順
+
+迷った場合は、次の順を守れば実装開始を急ぎすぎません。
+
+1. `/opsx:propose ai-voice-diary-mvp`
+2. `openspec status` / `show` / `validate`と4 artifactの人間review
+3. `/grill-me`で作成済みartifactを壁打ち
+4. `/opsx:update ai-voice-diary-mvp`で承認済みdecisionを反映
+5. 再validate・diff review・planning artifactをcommit
+6. `wireframe-spec`で画面reviewし、新判断があれば再度`update`
+7. task coverage承認後に`/opsx:apply ai-voice-diary-mvp`
+8. test・browser確認・`/opsx:verify ai-voice-diary-mvp`
+9. 残差を`update`または`apply`で解消
+10. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
+
 #### 2. 作成済み仕様を`grill-me`で詰める
 
 `grill-me`には一般的なアイデアではなく、OpenSpec changeのproposal・spec・design・tasksを読ませます。事実調査はagentに任せ、
