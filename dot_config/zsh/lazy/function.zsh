@@ -24,7 +24,9 @@ _sync_dotfile_lock() {
   if ! cmp -s "$source_file" "$destination_file"; then
     local temporary_file
     temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
-    if ! cp -p "$source_file" "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
+    # mktemp と APM の lockfile は 0600 で作られることがある。chezmoi source
+    # では通常ファイルとして管理し、apply のたびに mode 差分が出ないよう正規化する。
+    if ! cp -p "$source_file" "$temporary_file" || ! chmod 0644 "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
       rm -f "$temporary_file"
       return 0
     fi

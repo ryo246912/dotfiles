@@ -106,6 +106,8 @@ apm install -g
 `mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Codeにはcommand、
 Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech-stack`、Codexでは新しいセッションから
 `$tsumiki-init-tech-stack` のように呼び出します。Codexのcustom prompt（`/prompts:...`）には依存しません。
+同期時は source directory 側の `dot_apm/apm.lock.yaml` を `0644` に正規化するため、APM が user scope の
+lockfile を `0600` で生成しても、その後の `chezmoi apply` で mode 差分は表示されません。
 
 > [!NOTE]
 > 導入した skill の `description` は各エージェントの skill 索引に**常時ロード**されます。
