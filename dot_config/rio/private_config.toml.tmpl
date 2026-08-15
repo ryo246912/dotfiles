@@ -151,8 +151,8 @@ keys = [
   { key = "p",        with = "super | shift",         esc = "\u0002P"}       , # ctrl + b → P(overlay強制kill、カスタム)
   { key = "r",        with = "super",                 esc = "\u0002r"}       , # ctrl + b → r(.tmux.confの再読込、カスタム)
   { key = "s",        with = "super",                 esc = "\u0002e"}       , # ctrl + b → e(synchronize-panesのON/OFF、カスタム)
-  { key = "r",        with = "super | shift",         esc = "\u0002\u0012"}  , # ctrl + b → ctrl + r(tmux-resurrect 復元)
-  { key = "s",        with = "super | shift",         esc = "\u0002\u0013"}  , # ctrl + b → ctrl + s(tmux-resurrect 保存)
+  { key = "r",        with = "super | shift",         esc = "\u0002\u0052"}  , # ctrl + b → R(lazy-tmux picker復元)
+  { key = "s",        with = "super | shift",         esc = "\u0002\u0053"}  , # ctrl + b → S(lazy-tmux 全セッション保存)
   { key = "t",        with = "super",                 action = "None"}       , # 既存 cmd + t を無効にする
   { key = "t",        with = "super",                 esc = "\u0002c"}       , # ctrl + b → c(ウィンドウの作成)
   { key = "t",        with = "super | shift",         action = "None"}       , # cmd + shift + t(タブ作成)を無効にする
@@ -204,8 +204,8 @@ keys = [
   { key = "p",        with = "control | shift",       esc = "\u0002P"}       , # ctrl + b → P(overlay強制kill、カスタム)
   { key = "r",        with = "control",               esc = "\u0002r"}       , # ctrl + b → r(.tmux.confの再読込、カスタム)
   { key = "s",        with = "control",               esc = "\u0002e"}       , # ctrl + b → e(synchronize-panesのON/OFF、カスタム)
-  { key = "r",        with = "control | shift",       esc = "\u0002\u0012"}  , # ctrl + b → ctrl + r(tmux-resurrect 復元)
-  { key = "s",        with = "control | shift",       esc = "\u0002\u0013"}  , # ctrl + b → ctrl + s(tmux-resurrect 保存)
+  { key = "r",        with = "control | shift",       esc = "\u0002\u0052"}  , # ctrl + b → R(lazy-tmux picker復元)
+  { key = "s",        with = "control | shift",       esc = "\u0002\u0053"}  , # ctrl + b → S(lazy-tmux 全セッション保存)
   { key = "t",        with = "control",               action = "None"}       , # 既存 ctrl + t を無効にする
   { key = "t",        with = "control",               esc = "\u0002c"}       , # ctrl + b → c(ウィンドウの作成)
   { key = "t",        with = "control | shift",       action = "None"}       , # ctrl + shift + t(タブ作成)を無効にする

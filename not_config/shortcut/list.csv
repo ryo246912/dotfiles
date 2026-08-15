@@ -192,8 +192,8 @@ Tmux,ctrl + b → % [cmd + shift + d],ctrl + b → %,ペインを上下に分割
 Tmux,ctrl + b → [ [cmd + c],ctrl + b → [,コピーモード
 Tmux,ctrl + b → ctrl + hjkl [cmd + shift + ←↓↑→],ctrl + b → ctrl + hjkl,上下左右にペインを広げる ※カスタム
 Tmux,ctrl + b → ctrl + p [cmd + p],ctrl + b → ctrl + p,popup windowの起動 ※カスタム
-Tmux,ctrl + b → ctrl + r [cmd + r],ctrl + b → ctrl + r,tmux-resurrect、ウィンドウの復元
-Tmux,ctrl + b → ctrl + s [cmd + s],ctrl + b → ctrl + s,tmux-resurrect、ウィンドウの保存
+Tmux,ctrl + b → R [cmd + shift + r],ctrl + b → R,lazy-tmux、pickerからセッションの復元
+Tmux,ctrl + b → S [cmd + shift + s],ctrl + b → S,lazy-tmux、全セッションの保存
 Vim,a,a,カーソル直後からインサートモード[add]
 Vim,cc,cc,カーソルのある行を削除してインサートモード
 Vim,d,d,選択範囲を切り取り

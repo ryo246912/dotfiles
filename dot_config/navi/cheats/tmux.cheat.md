@@ -36,14 +36,20 @@ tmux capture-pane -p -S -100 -t <pane_from>
 # arrange layout
 tmux select-layout tiled
 
-# restore resurrect file
-ln -sf <resurrect_file> ~/.local/share/tmux/resurrect/last && tmux run-shell "$(mise where http:tmux-resurrect)/scripts/restore.sh"
+# list saved sessions(lazy-tmux)
+lazy-tmux list | column -t
 
-# relink resurrect file
-ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last
+# restore saved session(lazy-tmux)
+lazy-tmux wakeup --session <saved_session>
+
+# save & close running session(lazy-tmux)
+lazy-tmux sleep --session <saved_session> --scrollback --scrollback-lines 5000
+
+# show effective config(lazy-tmux)
+lazy-tmux config show
 ```
 $ hv: echo -e "v\nh"
-$ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f | head -n 10
+$ saved_session: lazy-tmux list | column -t --- --column 1
 $ pane_from: echo "." && \
   tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \

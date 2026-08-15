@@ -1,0 +1,18 @@
+# lazy-tmuxの設定
+# 参照順は $LAZY_TMUX_CONFIG → $XDG_CONFIG_HOME/lazy-tmux/lazy-tmux.toml → ~/.config/lazy-tmux/lazy-tmux.toml
+# 全キーが任意で、省略時はビルトインのデフォルトが使われる。CLIのflagがこのファイルより優先される
+# 実際に読まれている設定は `lazy-tmux config show` で確認できる
+# https://lazy-tmux.xyz/
+
+# 復元時に再実行を許可するコマンド（コマンドライン全体に完全一致する正規表現）
+# 未設定だと全コマンドが再実行されるため、旧 @resurrect-processes 相当のコマンドのみに絞る
+restore_allowlist = [
+    "nvim( .*)?",
+    "make( .*)?",
+    "docker( .*)?",
+    "mise( .*)?",
+    "pnpm( .*)?",
+]
+
+# 復元したペインのコマンドが起動するまでの最大待ち時間（0で無効）
+restore_timeout = "5s"
