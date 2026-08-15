@@ -35,11 +35,18 @@ uvx = true
 description = "Run strict Go lint, test, vet, and build checks"
 run = '''
 config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
-golangci-lint run --config "$config" ./...
-go test ./...
-go vet ./...
-go build ./...
+find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+  module_dir="$(dirname "$module")"
+  (
+    cd "$module_dir"
+    golangci-lint run --config "$config" ./...
+    go test ./...
+    go vet ./...
+    go build ./...
+  )
+done
 '''
+shell = "bash -c"
 
 [tasks."lint:python"]
 description = "Run strict Python lint and format checks"
@@ -55,9 +62,12 @@ run = '''
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint"
 oxlint --config "$config_dir/oxlint.json" .
 oxfmt --check --config "$config_dir/oxfmt.json" .
-if [ -f tsconfig.json ]; then
+find . -name tsconfig.json -not -path '*/node_modules/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' tsconfig; do
   tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
-    --exactOptionalPropertyTypes --noImplicitReturns \
-    --noFallthroughCasesInSwitch --noImplicitOverride -p tsconfig.json
-fi
+    --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
+    --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
+    --allowUnreachableCode false --allowUnusedLabels false \
+    --forceConsistentCasingInFileNames --useUnknownInCatchVariables -p "$tsconfig"
+done
 '''
+shell = "bash -c"
