@@ -11,6 +11,8 @@
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `wireframe-spec`
+- `color-system`
+- `dark-mode-design`
 - `find-skills`
 
 ## インストール
@@ -478,6 +480,22 @@ empty、loading、error状態とkeyboard操作を注記し、docs/design/checkou
 screenshotをreviewするところまで別途依頼してください。要件の壁打ちから実装後の漏れ監査までを含む推奨手順は、
 このページ後半の[「軽量な仕様駆動開発 workflow の選定と運用」](#軽量な仕様駆動開発-workflow-の選定と運用)を参照してください。
 
+## `color-system` / `dark-mode-design`
+
+### 用途
+
+`color-system`はwireframe承認後に、brand / neutralのtonal scale、semantic role、component state、contrast規則を含む
+light modeの配色systemを定義します。`dark-mode-design`は承認済みlight paletteを、surface elevation、彩度、contrastを
+再調整しながらdark modeへ適応します。dark modeを単純な色反転や独立した別paletteとして作らないため、必ずこの順で使います。
+
+### 使い方
+
+Claude Codeでは`/color-system`・`/dark-mode-design`、Codexでは`$color-system`・`$dark-mode-design`で明示できます。
+配色候補が複数ある場合は、まず`color-system`へproduct原則と候補を渡して比較・承認してからtokenへ展開します。dark modeが
+MVPのscope外なら`dark-mode-design`は実行せず、後続changeへ分けます。具体的なprompt、review gate、OpenSpecへの戻し方は、
+このページ後半の[`wireframeからcolor system・dark modeを決め、判断を戻す`](#e-wireframeからcolor-systemdark-modeを決め判断を戻す)
+を参照してください。
+
 ## `find-skills`
 
 ### 用途
@@ -579,7 +597,11 @@ flowchart LR
     E --> F[OpenSpec update: 既存仕様へ反映]
     F --> G[validate・人間が再承認]
     G --> H[wireframe-spec]
-    H --> I[画面上の新判断をupdate]
+    H --> HC[color-system]
+    HC --> HD{dark modeもMVP対象?}
+    HD -->|Yes| HE[dark-mode-design]
+    HD -->|No| I[画面上の新判断をupdate]
+    HE --> I
     I --> J[task coverage gate]
     J --> K[apply: 小batch実装]
     K --> L[test・browser確認]
@@ -888,11 +910,51 @@ git add openspec/changes/ai-voice-diary-mvp
 git commit -m "docs: define AI voice diary MVP"
 ```
 
-###### E. wireframeを作り、画面由来の判断を戻す
+###### E. wireframeからcolor system・dark modeを決め、判断を戻す
 
 `wireframe-spec`へchange directoryと対象scenarioを渡します。empty / loading / error / permission denied、mobile viewport、
-keyboard・screen reader操作を含めてreviewします。画面reviewで新しいproduct判断が出た場合は、wireframeだけに残さず、
-`/opsx:update ai-voice-diary-mvp`をもう一度実行してspec・design・tasksへ反映します。
+keyboard・screen reader操作を含めてreviewします。wireframeは情報構造を決める段階なので、ここでは色を決めません。
+
+wireframeを承認した後、候補の配色案から1つを採用し、`color-system`でlight modeの本番用color systemへ仕上げます。単色の
+hex一覧ではなく、brand / neutralのtonal scale、semantic role、component state、foreground / background pair、contrast規則を
+成果物にします。
+
+```text
+/color-system
+`docs/design/ai-voice-diary-mvp/wireframe.md`と承認済みOpenSpec artifactを読み、提示済みの配色候補4案を比較してください。
+VoiceDiaryのprivate・calm・trustworthyというproduct原則、長文可読性、感情表示で色だけに依存しないことを評価軸に、
+推奨案とtrade-offを示して私の承認を待ってください。承認後、その案を50〜950のbrand / neutral scale、
+primary / secondary / accent / success / warning / danger / info、background / surface / border / text、
+default / hover / pressed / disabled / focusへ展開し、WCAG contrast結果と利用禁止例を含めて
+`docs/design/ai-voice-diary-mvp/color-system.md`へ保存してください。
+```
+
+dark modeをMVPに含めるかはここで明示的に選びます。
+
+- **MVP対象外**: light color systemだけを確定し、dark modeは後続OpenSpec changeへ分ける。未検証のdark tokenを先に作らない。
+- **MVP対象**: light color systemを承認してから`dark-mode-design`を実行する。light / darkを別々のbrand案として作らず、同じ
+  semantic tokenのmode別valueとして対応させる。
+
+```text
+/dark-mode-design
+承認済み`docs/design/ai-voice-diary-mvp/color-system.md`をdark modeへ適応してください。単純反転はせず、
+backgroundからmodalまでのsurface elevation、text / icon / border、brand colorの彩度、semantic color、
+image・waveform・focus ringを再調整してください。全foreground / background pairのcontrast、
+system preference / manual toggle / persistence / first launch、切替時のflicker、各画面のempty / loading / error状態を定義し、
+lightと同じsemantic token名に対するdark valueを`docs/design/ai-voice-diary-mvp/dark-mode.md`へ保存してください。
+```
+
+color systemとdark modeをreviewしたら、最低限次を確認します。
+
+1. body textは4.5:1以上、large textとUI component境界は3:1以上を満たすか。
+2. error、感情、録音状態を色だけで伝えず、label・icon・shapeも併用しているか。
+3. light / dark両方でdefault、pressed、disabled、focus、empty、loading、errorを確認したか。
+4. token名が見た目の色名ではなく`text-primary`、`surface-raised`、`status-danger`のようなroleになっているか。
+5. 実装へ渡すtoken、theme切替の挙動、test taskがOpenSpecのdesign / tasksに反映されているか。
+
+wireframe、color、dark modeのreviewで新しいproduct判断が出た場合は、design documentだけに残さず、
+`/opsx:update ai-voice-diary-mvp`をもう一度実行してspec・design・tasksへ反映します。dark modeを後続changeへ分ける判断も、
+現在のproposalのscope外とroadmapへ明記します。
 
 ###### F. task coverageを承認してから実装する
 
@@ -952,11 +1014,13 @@ sync確認へ同意すれば十分です。
 3. `/grill-me`で作成済みartifactを壁打ち
 4. `/opsx:update ai-voice-diary-mvp`で承認済みdecisionを反映
 5. 再validate・diff review・planning artifactをcommit
-6. `wireframe-spec`で画面reviewし、新判断があれば再度`update`
-7. task coverage承認後に`/opsx:apply ai-voice-diary-mvp`
-8. test・browser確認・`/opsx:verify ai-voice-diary-mvp`
-9. 残差を`update`または`apply`で解消
-10. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
+6. `wireframe-spec`で構造を承認し、`color-system`でlight配色を確定する
+7. dark modeがMVP対象なら`dark-mode-design`を実行し、対象外なら後続changeへ分ける
+8. 画面・配色の新判断を`update`でartifactへ反映する
+9. task coverage承認後に`/opsx:apply ai-voice-diary-mvp`
+10. test・browser確認・`/opsx:verify ai-voice-diary-mvp`
+11. 残差を`update`または`apply`で解消
+12. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
 
 #### 2. 作成済み仕様を`grill-me`で詰める
 
@@ -1007,7 +1071,9 @@ keyboard操作、focus順を注記し、empty / loading / error / permission den
 ```
 
 `wireframe-spec`は画像生成ではなく注釈付きlayout仕様です。必要ならそこからHTML prototypeを作りbrowserで確認します。
-画面reviewで新しい仕様判断が出たら、wireframeだけへ書き足さず、もう一度`/opsx:update`でspec・design・tasksへ戻します。
+wireframe承認後は`color-system`でlight配色をtoken化し、dark modeもscope内なら`dark-mode-design`で同じsemantic tokenを
+dark surfaceへ適応します。画面reviewで新しい仕様判断が出たら、design成果物だけへ書き足さず、もう一度`/opsx:update`で
+spec・design・tasksへ戻します。
 
 #### 5. 実装前にtask coverageを確認する
 
@@ -1030,19 +1096,21 @@ diff reviewを行います。画面は実browserでdesktop / mobileと主要状�
 
 ### 最小成果物とgate
 
-| 段階     | 必須成果物                                    | 次へ進む条件                                              |
-| -------- | --------------------------------------------- | --------------------------------------------------------- |
-| 仕様案   | proposal、delta spec、design、tasks           | 人間が一次review済み                                      |
-| grill    | 承認済みdecision log、未決事項、scope外、risk | userがdecisionを明示承認                                  |
-| 仕様反映 | 更新済みartifactとdiff                        | strict validation成功、chatだけの決定が0                  |
-| 画面     | 状態別・breakpoint別wireframe                 | 全要素が要件IDへtraceでき、画面由来の判断もspecへ反映済み |
-| task     | 要件ID・依存・test・完了条件付きtask          | uncovered requirement / scenarioが0                       |
-| 実装     | code、test、command結果、画面確認             | batchごとのcheckがpass                                    |
-| 完了     | `verify`結果、最終traceability表、PR          | critical、未完了task、未反映reviewが0                     |
+| 段階     | 必須成果物                                             | 次へ進む条件                                               |
+| -------- | ------------------------------------------------------ | ---------------------------------------------------------- |
+| 仕様案   | proposal、delta spec、design、tasks                    | 人間が一次review済み                                       |
+| grill    | 承認済みdecision log、未決事項、scope外、risk          | userがdecisionを明示承認                                   |
+| 仕様反映 | 更新済みartifactとdiff                                 | strict validation成功、chatだけの決定が0                   |
+| 画面     | 状態別wireframe、light color token、必要ならdark token | 全要素・tokenが要件へtraceでき、contrast確認とspec反映済み |
+| task     | 要件ID・依存・test・完了条件付きtask                   | uncovered requirement / scenarioが0                        |
+| 実装     | code、test、command結果、画面確認                      | batchごとのcheckがpass                                     |
+| 完了     | `verify`結果、最終traceability表、PR                   | critical、未完了task、未反映reviewが0                      |
 
 ### 導入したdesign skill
 
-[`owl-listener/designer-skills`の`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/prototyping-testing/skills/wireframe-spec)
-だけをAPMへcommit SHA pinで追加しています。suite全体を入れないのは、常時読み込まれるskill descriptionと更新対象を
-必要最小限にするためです。必要になった時点で`user-flow-diagram`、`state-machine`、visual critique、design handoffを
-責務ごとに個別評価します。
+`owl-listener/designer-skills`から、このworkflowで使う[`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/prototyping-testing/skills/wireframe-spec)、
+[`color-system`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/ui-design/skills/color-system)、
+[`dark-mode-design`](https://github.com/owl-listener/designer-skills/tree/20e34c4a587e5eb09fcdf8351fa97b3ad761b31e/ui-design/skills/dark-mode-design)の
+3 skillだけを同じcommit SHA pinでAPMへ追加しています。suite全体を入れないのは、常時読み込まれるskill descriptionと
+更新対象を必要最小限にするためです。必要になった時点で`user-flow-diagram`、`state-machine`、visual critique、
+design handoffを責務ごとに個別評価します。
