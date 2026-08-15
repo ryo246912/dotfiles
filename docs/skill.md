@@ -626,7 +626,7 @@ hostですぐ反映する場合は次を実行します。devcontainer側は設�
 node --version # 20.19.0以上であることを確認する
 chezmoi apply
 mise install npm:@fission-ai/openspec
-openspec --version
+mise exec -- openspec --version
 ```
 
 OpenSpecにはNode.js 20.19.0以上が必要です。このdotfilesではhost globalとdevcontainerのどちらも要件を満たすNode.jsをmiseで
@@ -708,7 +708,7 @@ taskが大きくなります。次の例では「録音 → 文字起こし確�
 次が**通常のMVPとして推奨する入力例**です。
 
 ```text
-/opsx:propose voice-diary-mvp
+/opsx:propose ai-voice-diary-mvp
 
 目的:
 - 日記を書きたいがtypingが負担で続かない人が、音声から日記を短時間で作成・保存できるようにする。
@@ -1074,7 +1074,8 @@ sync確認へ同意すれば十分です。
 9. task coverage承認後に`/opsx:apply ai-voice-diary-mvp`
 10. test・browser確認・`/opsx:verify ai-voice-diary-mvp`
 11. 残差を`update`または`apply`で解消
-12. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
+12. test・browser確認・`/opsx:verify ai-voice-diary-mvp`を再実行し、残差が0であることを確認
+13. `/opsx:archive ai-voice-diary-mvp`でspecをmerge・archiveし、PR作成
 
 #### 2. 作成済み仕様を`grill-me`で詰める
 
