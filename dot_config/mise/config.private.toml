@@ -1,7 +1,7 @@
 [tools]
 "aqua:Songmu/laminate"   = "0.0.4"
 "aqua:k1LoW/deck"        = "1.24.1"
-"aqua:supabase/cli"      = "2.111.0"
+"aqua:supabase/cli"      = "2.114.0"
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
 
