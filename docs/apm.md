@@ -2,7 +2,7 @@
 
 [APM](https://github.com/microsoft/apm) は、AI エージェント用のスキル・プロンプト・MCP サーバ等の
 プリミティブを `apm.yml` で宣言し、`apm install` で各エージェントの設定ディレクトリへ配布する
-パッケージマネージャです。このリポジトリでは **外部スキルの管理** にのみ APM を利用します。
+パッケージマネージャです。このリポジトリでは **外部スキルと mcpc 用 MCP server の管理** に APM を利用します。
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
 `apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は immutable なコミット
@@ -11,16 +11,19 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                                | 管理ツール | ソース                                    | 配布先                                           |
-| ----------------------------------- | ---------- | ----------------------------------------- | ------------------------------------------------ |
-| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）        |
-| グローバルな自作 skill / rule / MCP | rulesync   | `dot_config/rulesync/exact_dot_rulesync/` | `~/.claude/` 等（chezmoi + `rulesync generate`） |
-| **外部スキル（グローバル）**        | **APM**    | `dot_apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）       |
+| 対象                                | 管理ツール | ソース                                    | 配布先                                             |
+| ----------------------------------- | ---------- | ----------------------------------------- | -------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）          |
+| グローバルな自作 skill / rule / MCP | rulesync   | `dot_config/rulesync/exact_dot_rulesync/` | `~/.claude/` 等（chezmoi + `rulesync generate`）   |
+| **外部スキル（グローバル）**        | **APM**    | `dot_apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）         |
+| **mcpc 用 MCP server**              | **APM**    | `dot_apm/apm.yml` の `dependencies.mcp`   | `~/.config/mcpc/apm-home/.copilot/mcp-config.json` |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`dot_config/rulesync/`）で管理します。
 - **外部スキル**は upstream 依存として `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、
   pristine な upstream をそのまま使います。
+- **MCP server** は `dependencies.mcp` で定義と version を管理します。agent の native MCP として常時 load
+  させず、Copilot CLI 形式の設定を mcpc が必要時に読み込みます（`docs/mcpc/README.md` 参照）。
 
 ## 依存の宣言と pin
 

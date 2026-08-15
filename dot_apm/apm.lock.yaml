@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-08T11:46:29.311602+00:00'
+generated_at: '2026-08-09T15:03:42.220799+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -7929,3 +7929,61 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:7f6bee86702a488d29ef0dcaabf424bbe2aca345a6a642319d43a1fe0276792e
+- kind: uri
+  target: mcp
+  value: aws-billing
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: aws-cloudwatch
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+mcp_servers:
+- aws-billing
+- aws-cloudwatch
+mcp_configs:
+  aws-billing:
+    name: aws-billing
+    transport: stdio
+    env:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+    args:
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.billing-cost-management-mcp-server@0.0.31
+    version: 0.0.31
+    registry: false
+    command: env
+  aws-cloudwatch:
+    name: aws-cloudwatch
+    transport: stdio
+    env:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+    args:
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.cloudwatch-mcp-server@0.1.7
+    version: 0.1.7
+    registry: false
+    command: env
+mcp_target_servers:
+  copilot:
+  - aws-billing
+  - aws-cloudwatch

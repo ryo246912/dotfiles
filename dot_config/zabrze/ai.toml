@@ -27,8 +27,9 @@ snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcont
 trigger = "dcex"
 
 [[snippets]]
-name    = "mcp-cli"
-snippet = "mcp-cli -c ~/.copilot/mcp-config.json"
+cursor  = "👇"
+name    = "mcpc with aws-vault"
+snippet = "aws-vault exec 👇 -- mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json --stdio"
 trigger = "mcp"
 
 [[snippets]]

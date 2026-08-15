@@ -6,6 +6,82 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## aws-vault の認証を container 内の AI agent で使う
+
+macOS host の Keychain を container へ mount するのではなく、host の `aws-vault exec` が発行した
+短期 credential を devcontainer の起動時に渡します。これにより container 内の AWS CLI、SDK、mcpc
+経由の AWS MCP を同じ AWS account と role で利用できます。
+
+### 初回セットアップ
+
+host で mcpc 用 MCP config を生成します。この config に credential は含まれません。
+
+```bash
+chezmoi apply
+mise run apm:install
+test -f ~/.config/mcpc/apm-home/.copilot/mcp-config.json
+```
+
+次に、利用する aws-vault profile の子 process として devcontainer を起動します。
+
+```bash
+aws-vault exec my-profile -- \
+  devc-up-wrapper devcontainer up \
+  --workspace-folder . \
+  --config "$HOME/.config/devcontainer/devcontainer.json" \
+  --remove-existing-container
+```
+
+`aws-vault exec` が設定する `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`、region、
+expiration、`AWS_VAULT` を `remoteEnv` が container へ転送します。profile 名を独自の環境変数で管理する
+必要はありません。
+
+起動後は container 内で認証先を確認します。秘密値そのものは表示しないでください。
+
+```bash
+aws sts get-caller-identity
+printf 'profile=%s expires=%s\n' "$AWS_VAULT" "$AWS_CREDENTIAL_EXPIRATION"
+```
+
+AI agent も同じ環境を継承するため、container 内では plain `mcpc` で接続できます。
+
+```bash
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc @aws-cloudwatch tools-list
+```
+
+### account・role の切り替えと credential の更新
+
+credential は container 起動時点のものです。別 profile への切り替えや期限切れ後の更新では、既存の mcpc
+session を閉じ、devcontainer を停止して、新しい profile の `aws-vault exec` 配下から再度起動します。
+
+```bash
+# container内
+mcpc close @aws-cloudwatch
+exit
+
+# host（既存containerを削除して新しいcredentialで作り直す）
+aws-vault exec another-profile -- \
+  devc-up-wrapper devcontainer up \
+  --workspace-folder . \
+  --config "$HOME/.config/devcontainer/devcontainer.json" \
+  --remove-existing-container
+```
+
+使用中の devcontainer へ後から `aws-vault exec` だけを実行しても、既存 process の環境は更新されません。
+account/role を混同しないため、credential 更新時は container の再起動と MCP session の再接続をセットで
+行います。
+
+### セキュリティ上の注意
+
+- container 内の process と AI agent は一時 credential を読めます。信頼できる repository と MCP server
+  だけを起動し、AWS側では最小権限の roleを使用してください。
+- `env`、debug log、agent の会話へ秘密値を出力しないでください。確認には
+  `aws sts get-caller-identity` と `AWS_CREDENTIAL_EXPIRATION` を使います。
+- credential は dotfiles、APM manifest、MCP config には書き込まれませんが、container runtime の環境として
+  保持されます。共有hostでは Docker inspect 権限を持つ利用者も秘密値を参照できる前提で運用してください。
+- 長時間稼働させず、作業終了後は container と mcpc session を停止してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から

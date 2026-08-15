@@ -16,6 +16,15 @@
   },
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    // `aws-vault exec <profile> -- devcontainer up ...` が発行した短期credentialを
+    // container内のagentとmcpcへ渡す。値はdotfilesやMCP configには保存しない。
+    "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
+    "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
+    "AWS_SESSION_TOKEN": "${localEnv:AWS_SESSION_TOKEN}",
+    "AWS_CREDENTIAL_EXPIRATION": "${localEnv:AWS_CREDENTIAL_EXPIRATION}",
+    "AWS_REGION": "${localEnv:AWS_REGION}",
+    "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION}",
+    "AWS_VAULT": "${localEnv:AWS_VAULT}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
@@ -62,6 +71,8 @@
     "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
     "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
+    // APMが隔離HOMEへ生成したmcpc専用MCP config。credentialを含まないためreadonlyで共有する。
+    "type=bind,source=${localEnv:HOME}/.config/mcpc/apm-home/.copilot,target=/home/vscode/.config/mcpc/apm-home/.copilot,readonly",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit",
     // DinDのdockerデータ(イメージ等)をnamed volumeで永続化し、リビルド時のpullを回避。
     // ${devcontainerId} でスコープし、multi-worktree で複数の devcontainer を同時起動しても
