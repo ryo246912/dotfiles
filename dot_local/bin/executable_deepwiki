@@ -9,8 +9,11 @@
 # @raycast.icon 🤖
 # @raycast.description GitHubのURLをDeepWikiで開く
 
+# コマンドの失敗、未定義変数、パイプ途中の失敗を検知して即座に終了する。
 set -euo pipefail
 
+# System Eventsから最前面アプリの表示名とバンドルIDをまとめて取得する。
+# 「表示名|バンドルID」の形式にすることで、後続のBash処理で分割できる。
 app_info=$(/usr/bin/osascript <<'APPLESCRIPT'
 tell application "System Events"
   set frontmostProcess to first process whose frontmost is true
@@ -19,38 +22,50 @@ end tell
 APPLESCRIPT
 )
 
+# 最初の「|」を境に、エラー表示用のアプリ名と判定用のバンドルIDへ分割する。
 browser_name=${app_info%%|*}
 bundle_id=${app_info#*|}
 
+# ブラウザ固有のAppleScriptを使い、現在表示中のタブのURLを取得する。
+# 対応外のアプリが最前面の場合は、誤動作を避けるためここで終了する。
 case "$bundle_id" in
   com.google.Chrome)
+    # Chromeはactive tabのURLプロパティから現在のURLを取得する。
     browser_name="Google Chrome"
     current_url=$(/usr/bin/osascript -e \
       'tell application "Google Chrome" to return URL of active tab of front window as string')
     ;;
   company.thebrowser.Browser)
+    # Arcはactive tabに対してURLを問い合わせる。
     browser_name="Arc"
     current_url=$(/usr/bin/osascript -e \
       'tell application "Arc" to get the URL of the active tab of front window')
     ;;
   *)
+    # バンドルIDが既知のブラウザと一致しない場合は利用者へ対応ブラウザを案内する。
     echo "${browser_name}は非対応ブラウザです。ChromeまたはArcを使用してください。" >&2
     exit 1
     ;;
 esac
 
+# GitHubのURLだけを受け付け、ホスト部分をDeepWikiへ置き換える。
+# パスやクエリはそのまま維持されるため、開いていたリポジトリ内の位置を引き継げる。
 case "$current_url" in
   https://github.com/*)
     deepwiki_url="https://deepwiki.com/${current_url#https://github.com/}"
     ;;
   *)
+    # GitHub以外のページを誤ってDeepWikiへ送らないように処理を中止する。
     echo "GitHubのURLではありません。現在開いているタブがGitHubのURLであることを確認してください。" >&2
     exit 1
     ;;
 esac
 
+# 元のブラウザと同じブラウザにDeepWiki用の新規タブを作成する。
+# URLはAppleScriptへ直接埋め込まずargvで渡し、引用符などを含むURLでも安全に扱う。
 case "$bundle_id" in
   com.google.Chrome)
+    # Chromeでは作成したタブをactive tabに切り替え、ウィンドウを前面へ戻す。
     /usr/bin/osascript - "$deepwiki_url" <<'APPLESCRIPT'
 on run argv
   tell application "Google Chrome"
@@ -64,6 +79,7 @@ end run
 APPLESCRIPT
     ;;
   company.thebrowser.Browser)
+    # Arcではfront windowに新規タブを作成し、アプリを前面へ戻す。
     /usr/bin/osascript - "$deepwiki_url" <<'APPLESCRIPT'
 on run argv
   tell application "Arc"
@@ -75,4 +91,5 @@ APPLESCRIPT
     ;;
 esac
 
+# Raycastの実行結果として、実際に開いたDeepWiki URLを通知する。
 echo "DeepWikiで別タブで開きました: ${deepwiki_url}"
