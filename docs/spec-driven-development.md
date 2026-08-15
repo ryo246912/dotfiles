@@ -1,150 +1,193 @@
-# 仕様駆動開発 workflow の選定と運用
+# 軽量な仕様駆動開発 workflow の選定と運用
 
-この文書は、要件の壁打ちから画面設計、task分解、AI実装、完了監査までをつなぐための比較・運用ガイドです。
-結論として、**新規機能では Spec Kit を主軸に小さく試し、`grill-me` と `wireframe-spec` を前段へ、
-`speckit.analyze` と `speckit.converge` を実装の前後へ置く**構成を第一候補にします。TsumikiはTDDを強制したい案件、
-OpenSpecは既存projectで軽量にspecを継続管理したい案件、BMad Methodはproduct・UX・architectureの専門roleまで含む
-大規模な企画に向きます。
+この文書は、最初の仕様案を作った後に壁打ちで穴を見つけ、仕様へ戻してから画面設計・task分解・AI実装へ進むための
+比較・運用ガイドです。
+
+結論は、**まず[OpenSpec](https://github.com/Fission-AI/OpenSpec)を主軸として試す**ことです。Spec Kitはcoverage検査が
+充実する一方、今回重視する「文書量を抑え、作った仕様へ後から判断を反映する」用途には重めです。OpenSpecは
+proposal・delta spec・design・tasksという小さなartifactを任意の時点で更新でき、`update`が既存artifact間の整合を
+取り直し、`verify`が実装との差を検査します。
 
 > [!IMPORTANT]
-> どのframeworkも「全taskを自動実装した」と表示しただけでは完了の証明になりません。要件IDとtask・testのcoverage、
-> 実装後の差分監査を独立したgateにします。
+> framework名よりgateの設計が重要です。「taskがすべてchecked」だけを完了条件にせず、要件・scenario → task → test →
+> codeのtraceabilityと、実装後の独立検証を必須にします。
 
-## 比較対象
+## 調査した候補
 
-公式repositoryと同梱workflowを基準に比較します。GitHub star数のような変動値ではなく、成果物、検査gate、導入単位を
-判断材料にしています。
+2026-08-15時点の各公式repositoryと同梱workflowを確認しました。star数ではなく、artifact量、仕様を後から直せるか、
+実装・検証の仕組み、導入負荷で比較しています。
 
-| 候補                                                        | 要件 → task → 実装                                     | 仕様を詰める仕組み                            | 実装漏れへの防御                                                                             | 向く状況 / 注意点                                                                                                     |
-| ----------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| [GitHub Spec Kit](https://github.com/github/spec-kit)       | `specify` → `plan` → `tasks` → `implement`             | `constitution`、`clarify`、要件checklist      | 実装前の`analyze`がspec・plan・tasksのcoverageを検査し、実装後の`converge`が残差をtaskへ戻す | **第一候補**。phase gateと文書量は多いが、漏れ対策をworkflowとして説明しやすい                                        |
-| [Tsumiki](https://github.com/classmethod/tsumiki)           | Kairo / `dev-plan` → `dev-run`、taskごとのTDD          | EARS要件、設計、screen spec                   | `task-breakdown`、TDD、`dev-verify`、UAT / Web test                                          | test-first実装を重視する時。現在の不満が「task自体の欠落」なら、同じ実装loopの再実行だけでなく外部coverage gateを足す |
-| [OpenSpec](https://github.com/Fission-AI/OpenSpec)          | proposal・spec・design・tasks → `apply` → archive      | `explore`で検討し、artifactを任意順で反復可能 | `verify`でartifactと実装の一致を確認                                                         | 軽量でbrownfieldや小さな変更に導入しやすい。厳密なphase gateより反復性を優先                                          |
-| [BMad Method](https://github.com/bmad-code-org/BMAD-METHOD) | product brief / PRD → UX・architecture → stories → dev | Analyst、PM、UX、Architect等の専門workflow    | story単位のreviewとtest workflow                                                             | 大きなproduct discoveryや複数専門観点が必要な時。小機能には役割・成果物が過剰になりやすい                             |
+### 有力候補
 
-### 選定方針
+| 候補                                               | 特徴                                                                                            | 実装漏れへの防御                                      | 分量・導入負荷                                   | 判断                                                                      |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | proposal・delta spec・design・tasksを変更単位で管理。`update`で既存artifactを相互に再整合できる | requirement / scenarioとtaskを`verify`で実装に照合    | **軽い**。Node CLI、30以上のagentに対応          | **第一候補**。今回の「仕様案 → grill → 仕様へ反映」に最も素直             |
+| [Superpowers](https://github.com/obra/superpowers) | brainstorming → design承認 → plan → taskごとのsubagent実装。TDDと2段階reviewを強制              | taskごとにspec compliance reviewとcode quality review | **軽〜中**。skill中心で自動発火                  | 実装品質の補助に有力。ただし要件台帳の差分管理はOpenSpecほど明示的でない  |
+| [cc-sdd](https://github.com/gotalab/cc-sdd)        | Kiro風のrequirements → design → tasksと、taskごとのfresh implementer / independent reviewer     | EARS、task boundary、TDD、独立review、auto-debug      | **中**。17 skillsとphase gate                    | 長時間の自律実装と漏れ防止を優先する場合の第二候補                        |
+| [GSD Core](https://github.com/open-gsd/gsd-core)   | Discuss → Plan → Execute → Verify → Shipをphaseごとに繰り返す                                   | fresh contextのexecutorと完了前verify、fix plan       | **中〜重**。subagent orchestrationと状態artifact | 大規模・長時間実装向け。小機能には過剰になりやすい                        |
+| [Tsumiki](https://github.com/classmethod/tsumiki)  | EARS要件、設計、task、TDD、Web test / UATまで一式                                               | `task-breakdown`、TDD、`dev-verify`、UAT              | **中〜重**。導入skill数と成果物が多い            | test-firstを最優先する場合。task自体の欠落には別のtraceability gateを足す |
 
-1. まず実案件1機能で**Spec KitとTsumikiを同じ評価表でpilot**する。
-2. task実装漏れを最重要課題とするため、`analyze`（事前coverage）と`converge`（事後残差）の両方を持つSpec Kitを
-   暫定の第一候補にする。
-3. TDDの細かさが最優先、またはTsumiki固有のWeb test / IPA security flowが必要ならTsumikiを残す。
-4. frameworkを混ぜて同じartifactを二重生成しない。主軸は1つにし、`grill-me`とdesign skillは補助として組み込む。
+### 用途が合えば候補になるもの
 
-pilotでは、(a)要件からtaskへのcoverage、(b)受け入れ条件のtest化率、(c)実装後に見つかった漏れ数、
-(d)人間のreview時間、(e)生成文書の保守時間を記録します。2〜3機能で比較しないと、機能規模やmodel出力の偶然を
-frameworkの差と誤認しやすいためです。
+| 候補                                                              | 得意なこと                                                                    | 今回の主軸にしない理由                                                        |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Conductor](https://github.com/gemini-cli-extensions/conductor)   | project context、featureごとのspec / plan、実装後reviewと修正task追加         | setup時のproduct・guideline・tech stack等のartifactが増える                   |
+| [Agent OS](https://github.com/buildermethods/agent-os)            | codebase標準をagentへ注入し、product planとspecをshapeする                    | 仕様策定には良いが、公開workflow上の実装後coverage監査は薄い                  |
+| [LeanSpec](https://github.com/codervisor/leanspec)                | 2K token未満を目安にした小さいspec、Markdown / GitHub Issues / ADO等のbackend | spec管理・検索・dashboardが中心で、厳格な実装loopは利用側で設計する必要がある |
+| [Spec Workflow MCP](https://github.com/Pimzino/spec-workflow-mcp) | requirements → design → tasksの承認、dashboard、進捗・implementation log      | MCP serverと別processのdashboardを運用する必要がある                          |
+| [Spec Kitty](https://github.com/Priivacy-ai/spec-kitty)           | work package、worktree、review / accept / merge、audit trail                  | team向けgovernanceが強く、個人の軽量flowには重い                              |
+| [BMad Method](https://github.com/bmad-code-org/BMAD-METHOD)       | Analyst、PM、UX、Architect等の専門roleを含むproduct discovery                 | 小〜中規模機能にはroleと成果物が過剰になりやすい                              |
+| [GitHub Spec Kit](https://github.com/github/spec-kit)             | constitution、clarify、checklist、artifact間analyze、実装後converge           | 漏れ検査は強いが、厳格なphaseとMarkdown量が今回の希望より多い                 |
 
-## 推奨 workflow
+Pimzinoの旧[Claude Code Spec Workflow](https://github.com/Pimzino/claude-code-spec-workflow)は開発の中心がMCP版へ移行済みのため、
+新規採用候補から外します。また、単にprompt templateを複製する小規模projectは候補が多いものの、更新・検証・複数agent対応の
+いずれかが弱いものはpilot対象に含めません。
+
+## 選定方針
+
+1. **OpenSpecを2〜3機能でpilot**し、同程度のTsumiki利用実績と比較する。
+2. 実装の自律性を上げたい場合だけ、cc-sddまたはSuperpowersを別pilotにする。同一featureで複数frameworkのartifactを
+   二重生成しない。
+3. 次を計測する: artifact総行数、要件からtaskへのcoverage、受け入れscenarioのtest化率、実装後に見つかった漏れ、
+   人間のreview時間、仕様変更の反映時間。
+4. OpenSpecの`verify`はcode検索を含むheuristicな検査なので、test実行と人間の受け入れ確認を置き換えない。
+
+## 推奨 workflow: OpenSpec → grill → update
 
 ```mermaid
 flowchart LR
-    A[依頼・制約] --> B[grill-me]
-    B --> C[合意した要件 draft]
-    C --> D[Spec Kit specify / clarify]
-    D --> E[画面・状態一覧]
-    E --> F[wireframe-spec]
-    F --> G[人間がwireframe承認]
-    G --> H[Spec Kit plan / tasks]
-    H --> I[analyze: coverage gate]
-    I -->|指摘あり| D
-    I -->|合格| J[implement]
-    J --> K[test・build・画面確認]
-    K --> L[converge: 実装残差監査]
-    L -->|残taskあり| J
-    L -->|残差なし| M[PR review]
+    A[依頼・制約] --> B[OpenSpec propose: 仕様案]
+    B --> C[人間が一次review]
+    C --> D[grill-me: 仕様案を反証]
+    D --> E[decision logを承認]
+    E --> F[OpenSpec update: 既存仕様へ反映]
+    F --> G[validate・人間が再承認]
+    G --> H[wireframe-spec]
+    H --> I[画面上の新判断をupdate]
+    I --> J[task coverage gate]
+    J --> K[apply: 小batch実装]
+    K --> L[test・browser確認]
+    L --> M[verify: 実装差分監査]
+    M -->|残差あり| F
+    M -->|合格| N[archive・PR]
 ```
 
-### 0. projectの原則を一度だけ決める
+### 0. OpenSpecをprojectへ導入する
 
-Spec Kitをprojectへ導入し、`speckit.constitution`でtest、accessibility、security、browser support、
-「要件IDをtaskとtestから参照する」ことを非交渉の原則にします。CLIやtemplateはproject側に生成されるため、
-このdotfilesのAPM依存としては導入せず、[Spec Kit公式手順](https://github.com/github/spec-kit#-get-started)で
-対象repositoryごとに初期化します。
+OpenSpecは対象repositoryごとに初期化します。APMからskillだけを抜き出さず、CLIが対象agent用の最新command / skillを生成する
+公式手順を使います。
 
-### 1. `grill-me`で問題と判断を固める
+```bash
+npm install -g @fission-ai/openspec@latest
+cd <project>
+openspec init
+```
 
-実装案ではなく、対象user、解決したいproblem、scope外、成功指標、権限、data、failure、運用、移行、互換性の順に
-decision treeを掘ります。
+以下ではClaude Codeのcanonical表記`/opsx:<command>`を使います。Codexでは生成された`$openspec-<command>`を使います。
+
+### 1. まず仕様案を作る
+
+最初から質問だけを始めるのではなく、現在分かっている範囲をreview可能なartifactへ固定します。
 
 ```text
-$grill-me を使って次の機能を仕様化する前に壁打ちしてください。
+/opsx:propose <feature-name>
 目的: <達成したい結果>
 対象user: <user>
 既決事項: <変更しない判断>
-制約: <期限・予算・互換性>
-不安: <特に反証してほしい前提>
-質問が尽きたら、決定事項・未決事項・scope外・riskをまとめ、私の承認を待ってください。
+制約: <期限・互換性・security・運用>
 ```
 
-`grill-me`は意思決定の探索に使い、最終的な要件台帳にはしません。終了後に合意事項をspecへ転記し、未決事項を
-勝手にdefault値で埋めず明示的に残します。
+`propose`は通常、proposal、delta spec、design、tasksを一度にdraftします。この時点のtaskは実装許可ではなく、仕様の穴を
+探す材料です。生成後に、最低限、scope、requirement / scenario、仮定、未決事項を人間が一次reviewします。
 
-### 2. specを作り、曖昧さを除く
+artifactを1つずつ承認したい場合だけexpanded profileを有効にし、`/opsx:new`と`/opsx:continue`を使います。分量削減が
+目的なら、まずdefaultのcore profileで十分です。
 
-`speckit.specify`でuser story、機能要件、成功条件、edge caseへ整形し、`speckit.clarify`を実行します。
-各機能要件に`FR-###`、実装可能な非機能要件に`NFR-###`を付け、受け入れ条件を観測可能なGiven / When / Thenで
-記述します。文言が「高速」「直感的」「適切に」のままなら先へ進みません。
+### 2. 作成済み仕様を`grill-me`で詰める
 
-### 3. `wireframe-spec`で画面を固める
-
-画面ごとにhappy pathだけでなく、empty、loading、partial、error、permission denied、offline、長文、mobileを対象にします。
-`wireframe-spec`は画像生成skillではなく、content priority、配置、interaction、responsive、accessibilityを含む**注釈付き
-layout仕様**です。必要ならその仕様からHTML prototypeを実装させ、browser screenshotを人間がreviewします。
+`grill-me`には一般的なアイデアではなく、OpenSpec changeのproposal・spec・design・tasksを読ませます。事実調査はagentに任せ、
+userにしか決められないproduct判断だけをdecision treeの順に質問させます。
 
 ```text
-$wireframe-spec を使い、承認済みspecのFR-001〜FR-008に対応するannotated low-fi wireframeを作ってください。
-desktopとmobile、empty/loading/error/permission deniedを含め、各要素へ要件ID、interaction、data source、
-keyboard操作、focus順を注記し、docs/design/<feature>/wireframe.mdへ保存してください。
+/grill-me
+OpenSpec change `<feature-name>` の既存artifactをすべて読んでから、仕様を反証してください。
+特に対象user、scope外、権限、data lifecycle、失敗・retry、競合、互換性、migration / rollback、
+accessibility、観測性、成功指標、各scenarioのtest可能性を確認してください。
+repositoryから調査できる事実は質問せず自分で確認してください。
+終了時は「決定事項」「変更する要件」「追加scenario」「scope外」「未決事項」「risk」に整理し、
+まだartifactやcodeを編集せず、私の承認を待ってください。
 ```
 
-reviewで画面要件が変わったら、先にspecへ反映してからwireframeを更新します。wireframeだけに存在する仕様を作らないことが
-traceabilityを保つ鍵です。視覚的なflow図が必要なら`diagram-design`、実装画面のコメントloopには`crit`を併用できます。
+この順序なら、質問が抽象論にならず、既存仕様の具体的な文言・欠落を対象にできます。`grill-me`の会話ログ自体はsource of
+truthにせず、次のstepで必ずartifactへ反映します。
 
-### 4. planとtaskへ分解し、実装前にcoverageを検査する
+### 3. grillの結果を`update`で仕様へ戻す
 
-承認済みspecとwireframeを入力として`plan`、`tasks`を実行します。各taskには対象要件ID、変更予定file、完了条件、test、
-依存taskを必須とします。UI taskには全状態とresponsive / accessibility確認を列挙します。
+承認したdecision logを`/opsx:update`へ渡します。`update`はplanning artifactだけを対象に、変更点を1 artifactずつ提示して
+承認を取り、proposal・spec・design・tasksの前後方向の不整合を直します。未作成artifactを勝手に作らず、codeも変更しません。
 
-次に`analyze`を実行し、少なくとも次が0件になるまで実装しません。
+```text
+/opsx:update <feature-name>
+以下はgrill-me後に承認したdecision logです。既存artifactへ反映してください。
+要件には安定したID、各requirementには観測可能なscenarioを付け、削除・scope外も明記してください。
+taskには対応する要件ID、test、依存関係、完了条件を持たせてください。
+各artifactの変更案と理由を先に示し、私の承認後に1つずつ更新してください。
 
-- taskへmapされない`FR` / `NFR`と受け入れ条件
-- 要件へmapされないtask（scope creep）
-- test taskのない振る舞い、error path、migration / rollback
-- spec・plan・wireframe間の用語や状態の不一致
-- 依存関係が欠落したtask
+<承認済みdecision log>
+```
 
-### 5. AI実装は小さいbatchと独立検証で進める
+反映後は`openspec validate <feature-name> --strict`を実行し、`git diff -- openspec/changes/<feature-name>`を人間がreviewします。
+ここが**仕様承認gate**です。grillで決まった事項がchatにしか残っていない、または古いtaskが残る場合は先へ進みません。
 
-`implement`を全件一括で信用せず、依存関係に沿った小さいbatchで実行します。各batchでtest、typecheck、lintを通し、
-task checkboxを更新する前にdiffと受け入れ条件を照合します。画面は実browserでdesktop / mobileと主要状態を撮影し、
-wireframeとの差分をreviewします。
+### 4. `wireframe-spec`で画面を固め、判断を再反映する
 
-### 6. `converge`とPR reviewで完了を証明する
+更新済みspecを入力に、happy pathだけでなくempty、loading、partial、error、permission denied、offline、長文、mobileを対象に
+annotated wireframeを作ります。
 
-全task実装後に`converge`でcodebaseをspec・plan・tasksと再照合し、残差を新しいtaskとして戻します。その後、要件IDごとの
-最終traceability表（要件 → task → code / test → 結果）をPRへ載せます。「agentが完了と言った」ではなく、coverage表、
-自動test、画面確認、review指摘0件を終了条件にします。
+```text
+/wireframe-spec
+OpenSpec change `<feature-name>` の承認済みrequirement / scenarioに対応するdesktop・mobileのlow-fi wireframeを
+docs/design/<feature-name>/wireframe.mdへ作ってください。各要素へ要件ID、content priority、interaction、data source、
+keyboard操作、focus順を注記し、empty / loading / error / permission denied状態を含めてください。
+```
+
+`wireframe-spec`は画像生成ではなく注釈付きlayout仕様です。必要ならそこからHTML prototypeを作りbrowserで確認します。
+画面reviewで新しい仕様判断が出たら、wireframeだけへ書き足さず、もう一度`/opsx:update`でspec・design・tasksへ戻します。
+
+### 5. 実装前にtask coverageを確認する
+
+OpenSpecのartifact検証に加え、AIへtraceability表を作らせます。次が0件になるまで`apply`しません。
+
+- taskへmapされないrequirement / scenarioと非機能要件
+- requirementへmapされないtask（scope creep）
+- test taskのないerror、permission、concurrency、migration / rollback
+- spec・design・wireframe・tasks間の用語や状態の不一致
+- dependencyまたは完了条件のないtask
+
+### 6. 小batchで実装し、`verify`する
+
+`/opsx:apply <feature-name>`を使いますが、全件一括の完了表示を信用せず、依存関係に沿った小batchごとにtest、typecheck、lint、
+diff reviewを行います。画面は実browserでdesktop / mobileと主要状態を確認します。
+
+実装後はexpanded profileの`/opsx:verify <feature-name>`で、task完了、requirement実装、scenarioのtest coverage、design準拠を
+再検査します。指摘が仕様変更なら`update`、実装漏れなら`apply`へ戻し、critical issueと未完了taskが0になってから
+`/opsx:archive`とPRへ進みます。
 
 ## 最小成果物とgate
 
-| 段階   | 必須成果物                                | 次へ進む条件                                   |
-| ------ | ----------------------------------------- | ---------------------------------------------- |
-| 壁打ち | 決定事項、未決事項、scope外、risk         | ownerが明示承認                                |
-| 要件   | ID付き要件、受け入れ条件、非機能要件      | placeholderと重大な曖昧さが0                   |
-| 画面   | 状態別・breakpoint別のannotated wireframe | 要件IDへ全要素がtraceでき、人間が承認          |
-| task   | 要件ID・依存・test・完了条件付きtask      | `analyze`のcritical / uncovered requirementが0 |
-| 実装   | code、test、実行結果、画面capture         | batchごとのcheckがpass                         |
-| 完了   | traceability表、`converge`結果、PR        | uncovered requirementと残taskが0               |
+| 段階     | 必須成果物                                    | 次へ進む条件                                              |
+| -------- | --------------------------------------------- | --------------------------------------------------------- |
+| 仕様案   | proposal、delta spec、design、tasks           | 人間が一次review済み                                      |
+| grill    | 承認済みdecision log、未決事項、scope外、risk | userがdecisionを明示承認                                  |
+| 仕様反映 | 更新済みartifactとdiff                        | strict validation成功、chatだけの決定が0                  |
+| 画面     | 状態別・breakpoint別wireframe                 | 全要素が要件IDへtraceでき、画面由来の判断もspecへ反映済み |
+| task     | 要件ID・依存・test・完了条件付きtask          | uncovered requirement / scenarioが0                       |
+| 実装     | code、test、command結果、画面確認             | batchごとのcheckがpass                                    |
+| 完了     | `verify`結果、最終traceability表、PR          | critical、未完了task、未反映reviewが0                     |
 
 ## 導入したdesign skill
 
 [`owl-listener/designer-skills`の`wireframe-spec`](https://github.com/owl-listener/designer-skills/tree/main/prototyping-testing/skills/wireframe-spec)
 だけをAPMへcommit SHA pinで追加しています。suite全体を入れないのは、常時読み込まれるskill descriptionと更新対象を
-必要最小限にするためです。必要になった時点で次を個別評価します。
-
-- `user-flow-diagram`: 複数画面の遷移と分岐を先に確認したい場合
-- `state-machine`: 複雑なcomponent状態とtransitionがある場合
-- `critique-visual-hierarchy`等: 実装後のvisual polishを体系的にreviewしたい場合
-- `design-ops:handoff`: designerとimplementerが分かれ、measurementやasset仕様まで必要な場合
-
-これらは`wireframe-spec`の代替ではなく、flow、interaction、visual polish、handoffという別の責務です。
+必要最小限にするためです。必要になった時点で`user-flow-diagram`、`state-machine`、visual critique、design handoffを
+責務ごとに個別評価します。

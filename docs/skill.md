@@ -466,7 +466,8 @@ wireframe仕様を作るskillです。色や装飾ではなく情報構造と画
 
 ### 使い方
 
-対象要件、必要なbreakpoint、empty / loading / errorなどの状態、保存先を指定します。
+対象要件、必要なbreakpoint、empty / loading / errorなどの状態、保存先を指定します。Claude Codeでは
+`/wireframe-spec`、Codexでは`$wireframe-spec`で明示的に指定できます。
 
 ```text
 $wireframe-spec を使って、FR-001〜FR-008のdesktop/mobile用low-fi wireframeを作ってください。
