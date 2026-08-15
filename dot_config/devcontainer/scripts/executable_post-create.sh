@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# AI devcontainers enforce the shared strict pre-commit checks. LEFTHOOK_CONFIG
+# is supplied explicitly because a checked-out repository need not carry any
+# lefthook configuration of its own.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+	LEFTHOOK_CONFIG="${HOME}/.config/lefthook/global.yml" lefthook install -f
+	echo "✓ AI用のglobal lefthookをインストールしました"
+fi
+
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
 	cp /tmp/claude-config-host.json ~/.claude.json

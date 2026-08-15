@@ -104,3 +104,19 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+# AIエージェント向けpre-commit
+
+devcontainerでは`AI_AGENT=1`とグローバルな`LEFTHOOK_CONFIG`を設定し、作成時に
+Lefthookをインストールする。コミット対象に応じて次の厳格なチェックを実行する。
+
+- Go: `golangci-lint`、`go test`、`go vet`、`go build`
+- Python: `uvx ruff check`、`uvx ruff format --check`
+- TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsgo --noEmit`
+
+同じチェックは`mise run lint:ai:go -- <files...>`、
+`mise run lint:ai:python -- <files...>`、
+`mise run lint:ai:typescript -- <files...>`で個別にも実行できる。
+リポジトリ固有のpre-commit/pre-pushが必要な場合は、
+`~/.config/lefthook/lefthook.local.yml`をリポジトリへコピーして編集し、
+`LEFTHOOK_CONFIG`をそのファイルへ切り替える。
