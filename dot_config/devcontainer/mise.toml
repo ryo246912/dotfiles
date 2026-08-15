@@ -44,8 +44,9 @@ description = "Run all strict Go checks"
 [tasks."lint:go:lint"]
 description = "Run golangci-lint for every Go module"
 run = '''
+set -euo pipefail
 config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
-find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
   (cd "$(dirname "$module")" && golangci-lint run --config "$config" ./...)
 done
 '''
@@ -54,8 +55,9 @@ shell = "bash -c"
 [tasks."lint:go:format"]
 description = "Check Go formatting for every Go module"
 run = '''
+set -euo pipefail
 config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
-find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
   (cd "$(dirname "$module")" && golangci-lint fmt --config "$config" --diff)
 done
 '''
@@ -64,7 +66,8 @@ shell = "bash -c"
 [tasks."lint:go:test"]
 description = "Run tests for every Go module"
 run = '''
-find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+set -euo pipefail
+find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
   (cd "$(dirname "$module")" && go test ./...)
 done
 '''
@@ -73,7 +76,8 @@ shell = "bash -c"
 [tasks."lint:go:vet"]
 description = "Run go vet for every Go module"
 run = '''
-find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+set -euo pipefail
+find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
   (cd "$(dirname "$module")" && go vet ./...)
 done
 '''
@@ -82,7 +86,8 @@ shell = "bash -c"
 [tasks."lint:go:build"]
 description = "Build every Go module"
 run = '''
-find . -name go.mod -not -path '*/vendor/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' module; do
+set -euo pipefail
+find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
   (cd "$(dirname "$module")" && go build ./...)
 done
 '''
@@ -119,7 +124,8 @@ run         = 'oxfmt --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcont
 [tasks."lint:typescript:typecheck"]
 description = "Run strict tsgo type checks for every TypeScript project"
 run = '''
-find . -name tsconfig.json -not -path '*/node_modules/*' -not -path '*/.git/*' -print0 | while IFS= read -r -d '' tsconfig; do
+set -euo pipefail
+find . -type d \( -name node_modules -o -name .git \) -prune -o -name tsconfig.json -print0 | while IFS= read -r -d '' tsconfig; do
   tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
     --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
     --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
