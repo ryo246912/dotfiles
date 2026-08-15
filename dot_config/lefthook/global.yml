@@ -5,29 +5,51 @@ output:
   - execution_out
 
 pre-commit:
-  parallel: true
   jobs:
-    - name: lint:secret
-      only: &ai-only
+    - name: lint (ai-only)
+      only:
         - run: test "${AI_AGENT:-}" = "1"
-      run: mise run lint:secret
-      fail_text: "❌ [pre-commit] secretlint failed. Check for secrets in files."
-    - name: lint:git-secrets
-      only: *ai-only
-      run: mise run lint:git-secrets
-      fail_text: "❌ [pre-commit] git-secrets failed. Check for secrets in files."
-    - name: lint:betterleaks
-      only: *ai-only
-      run: mise run lint:betterleaks:staged
-      fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
+      group:
+        parallel: true
+        jobs:
+          - name: lint:toml
+            run: mise run lint:toml
+            glob: "**/*.toml"
+            fail_text: "❌ [pre-commit] toml lint failed. Run: mise run fix:toml"
+          - name: lint:yaml
+            run: mise run lint:yaml
+            glob: "**/*.{yaml,yml}"
+            fail_text: "❌ [pre-commit] yaml lint failed. Run: mise run fix:yaml"
+          - name: lint:json
+            run: mise run lint:json
+            glob: "**/*.json"
+            fail_text: "❌ [pre-commit] json lint failed. Run: mise run fix:json"
+          - name: lint:md
+            run: mise run lint:md
+            glob: "**/*.md"
+            fail_text: "❌ [pre-commit] markdown lint failed. Run: mise run fix:md"
+          - name: lint:actionlint
+            run: mise run lint:actionlint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-commit] actionlint failed."
+          - name: lint:ghalint
+            run: mise run lint:ghalint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-commit] ghalint failed."
+          - name: lint:zizmor
+            run: mise run lint:zizmor
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-commit] zizmor failed."
+          - name: lint:pinact
+            run: mise run lint:pinact
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-commit] pinact check failed. Run: mise run fix:pinact"
 
 pre-push:
   jobs:
     - name: stash files
-      only: *ai-only
       run: git stash --include-untracked -q -m "lefthook-pre-push"
     - name: lint
-      only: *ai-only
       group:
         parallel: true
         jobs:
@@ -65,7 +87,6 @@ pre-push:
             fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
 
     - name: stash pop
-      only: *ai-only
       run: |
         if git stash list | grep -q "lefthook-pre-push"; then
           git stash pop --index -q || true
