@@ -41,14 +41,14 @@ bundle_id=${app_info#*|}
 # 対応ブラウザを追加するときの判定箇所を集約し、片方だけの更新漏れを防ぐ。
 case "$bundle_id" in
   com.google.Chrome)
-    # Chromeはactive tabのURLを取得し、作成後のタブを明示的に選択する。
+    # Chromeはactive tabのURLを取得し、作成後は末尾のタブを明示的に選択する。
     browser_name="Google Chrome"
     get_url_script='tell application "Google Chrome" to return URL of active tab of front window as string'
     open_tab_script='on run argv
   tell application "Google Chrome"
     tell front window
-      set newTab to make new tab with properties {URL:item 1 of argv}
-      set active tab index to index of newTab
+      make new tab with properties {URL:item 1 of argv}
+      set active tab index to (count of tabs)
     end tell
     activate
   end tell
