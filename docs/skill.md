@@ -958,8 +958,62 @@ wireframe、color、dark modeのreviewで新しいproduct判断が出た場合�
 
 ###### F. task coverageを承認してから実装する
 
-実装直前に、requirement / scenario → task → testの対応表をagentへ作らせ、未対応が0であることを確認します。その後、chatで
-change名を明示して実装します。
+OpenSpec 1.9.0には、**実装前のtraceability表だけを生成する専用skill / commandはありません**。`openspec validate`はartifactの
+形式検査、`/opsx:verify`は実装後のcode照合です。このgateでは通常のagentへ次のread-only promptを渡します。Claude Code・
+Codexのどちらでもslash commandではなく、通常のchat requestとして実行します。
+
+```text
+OpenSpec change `ai-voice-diary-mvp` の実装前traceability auditをread-onlyで行ってください。
+code実装、artifact編集、task checkbox更新、/opsx:applyは行わないでください。
+
+入力:
+- `openspec/changes/ai-voice-diary-mvp/proposal.md`
+- `openspec/changes/ai-voice-diary-mvp/specs/**/*.md` の全requirement / scenario
+- `openspec/changes/ai-voice-diary-mvp/design.md`
+- `openspec/changes/ai-voice-diary-mvp/tasks.md`
+- 関連するwireframe、color system、dark mode仕様
+
+手順:
+1. capability、requirement、scenarioを漏れなく列挙する。明示IDがなければ
+   `<capability>/<requirement heading>/<scenario heading>`を一時的なtrace keyにする。
+2. 各scenarioへ、実装taskとtest / verification taskを対応付ける。task本文に明示された対応と、文言から推測した対応を区別する。
+3. functionalだけでなく、permission、error、offline、privacy、retention、削除、accessibility、performanceも確認する。
+4. requirement / scenarioに対応しないtaskをscope creep候補として検出する。
+5. 次の表を出す。
+
+| Capability | Requirement | Scenario | Implementation task | Test / verification task | Mapping | Status | Gap |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+`Mapping`はEXPLICITまたはINFERRED、`Status`はCOVERED / PARTIAL / UNCOVEREDとする。
+実装前なのでtest fileの存在ではなく、tasks.mdにtest種別、期待結果、実行commandまたは手動確認方法が計画されているかを判定する。
+
+最後に次を出す。
+- requirement数、scenario数、COVERED / PARTIAL / UNCOVERED数
+- taskへ対応しないscenario
+- test / verification計画がないscenario
+- requirementへ対応しないorphan task
+- 修正すべきartifactとtask案（まだ編集しない）
+
+推測でCOVEREDにせず、曖昧ならPARTIALにしてください。
+```
+
+このauditでいう`test`は、実装済みtest fileではなく**予定している検証**です。unit / integration / E2E / accessibility test、または
+必要なmanual verificationが`tasks.md`に具体化されていれば対応ありとします。「testする」だけで期待結果や方法がなければ
+`PARTIAL`です。
+
+`UNCOVERED`、`PARTIAL`、orphan taskが見つかったら、reportを承認したうえで次のように`/opsx:update`へ渡します。
+
+```text
+/opsx:update ai-voice-diary-mvp
+以下のtraceability auditで承認したgapだけを修正してください。
+requirement / scenarioの追加・明確化とtasks.mdの実装task・test taskを整合させ、
+変更案をartifactごとに示して私の承認を待ってください。
+
+<承認済みaudit report>
+```
+
+update後に`openspec validate ai-voice-diary-mvp --strict`と同じread-only auditを再実行します。`UNCOVERED`とorphan taskが0、
+`PARTIAL`がすべて人間の明示承認済みになるまで実装へ進みません。その後、chatでchange名を明示して実装します。
 
 ```text
 /opsx:apply ai-voice-diary-mvp
@@ -1077,7 +1131,9 @@ spec・design・tasksへ戻します。
 
 #### 5. 実装前にtask coverageを確認する
 
-OpenSpecのartifact検証に加え、AIへtraceability表を作らせます。次が0件になるまで`apply`しません。
+OpenSpecのartifact検証に加え、通常のagentへ上記「F. task coverageを承認してから実装する」のread-only promptを渡して
+traceability表を作らせます。専用OpenSpec skillではなく、gap修正だけを`/opsx:update`で行います。次が0件になるまで
+`apply`しません。
 
 - taskへmapされないrequirement / scenarioと非機能要件
 - requirementへmapされないtask（scope creep）
