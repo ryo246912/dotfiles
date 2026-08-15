@@ -78,18 +78,17 @@ if ! current_url=$(/usr/bin/osascript -e "$get_url_script"); then
   exit 1
 fi
 
-# GitHubのURLだけを受け付け、ホスト部分をDeepWikiへ置き換える。
-# パスやクエリはそのまま維持されるため、開いていたリポジトリ内の位置を引き継げる。
-case "$current_url" in
-  https://github.com/*)
-    deepwiki_url="https://deepwiki.com/${current_url#https://github.com/}"
-    ;;
-  *)
-    # GitHub以外のページを誤ってDeepWikiへ送らないように処理を中止する。
-    echo "GitHubのURLではありません。現在開いているタブがGitHubのURLであることを確認してください。" >&2
-    exit 1
-    ;;
-esac
+# GitHub URLからownerとrepositoryの2セグメントだけを抽出する。
+# pull requestなどのサブパス、クエリ、フラグメントはDeepWikiでは不要なため除外する。
+if [[ "$current_url" =~ ^https://github\.com/([^/?#]+)/([^/?#]+) ]]; then
+  owner=${BASH_REMATCH[1]}
+  repository=${BASH_REMATCH[2]}
+  deepwiki_url="https://deepwiki.com/${owner}/${repository}"
+else
+  # GitHub以外のページやownerだけのURLを誤ってDeepWikiへ送らないように処理を中止する。
+  echo "GitHubのリポジトリURLではありません。owner/repository形式のページを開いてください。" >&2
+  exit 1
+fi
 
 # 選択済みのAppleScriptで、元のブラウザにDeepWiki用の新規タブを作成する。
 # URLはスクリプトへ埋め込まずargvで渡し、引用符などを含むURLでも安全に扱う。
