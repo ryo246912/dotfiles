@@ -663,8 +663,9 @@ expanded workflow自体は有効にしておきます。
 ##### VoiceDiary AIの場合
 
 提示されたconceptをそのまま1 changeへ入れると、録音、文字起こし、AI enrichment、CRUD、振り返り、通知、themeまで含むため
-taskが大きくなります。最初は「録音して、確認した本文をdeviceへ保存し、後から読める」というMVPへ絞り、AI振り返り通知は
-次のchangeに分けるのがおすすめです。
+taskが大きくなります。次の例では「録音 → 文字起こし確認・修正 → AI enrichment → 保存 → 一覧・詳細・編集・削除」を
+1つのMVPに含める一方、週次・月次のAI振り返り通知とthemeは次のchangeに分けます。さらに小さく始めたい場合は、後述する
+録音spikeを先に実行するか、AI enrichmentも別changeへ分割します。
 
 次が**通常のMVPとして推奨する入力例**です。
 
