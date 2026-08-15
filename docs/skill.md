@@ -591,19 +591,35 @@ flowchart LR
 
 #### 0. OpenSpecをprojectへ導入する
 
-OpenSpecは対象repositoryごとに初期化します。APMからskillだけを抜き出さず、CLIが対象agent用の最新command / skillを生成する
-公式手順を使います。
+OpenSpec CLIはmiseでversionをpinし、hostのglobal環境とdevcontainer imageの両方へ導入します。
+
+| 実行環境     | mise設定                            | installされるタイミング                             |
+| ------------ | ----------------------------------- | --------------------------------------------------- |
+| host global  | `dot_config/mise/config.toml`       | `chezmoi apply`後のglobal `mise install`            |
+| devcontainer | `dot_config/devcontainer/mise.toml` | devcontainer image build中の`mise install -C /mise` |
+
+hostですぐ反映する場合は次を実行します。devcontainer側は設定変更後にimageをrebuildします。
 
 ```bash
 node --version # 20.19.0以上であることを確認する
-npm install -g @fission-ai/openspec@latest
+chezmoi apply
+mise install npm:@fission-ai/openspec
+openspec --version
+```
+
+OpenSpecにはNode.js 20.19.0以上が必要です。このdotfilesではhost globalとdevcontainerのどちらも要件を満たすNode.jsをmiseで
+pinしています。個別環境でversionが要件未満なら、利用中のversion managerでNode.jsを更新してからinstallします。
+
+CLIを導入した後、対象repositoryごとに初期化します。APMからskillだけを抜き出さず、CLIが対象agent用のcommand / skillを
+生成する公式手順を使います。
+
+```bash
 cd <project>
 openspec init
 ```
 
-OpenSpecにはNode.js 20.19.0以上が必要です。versionが要件未満なら、利用中のversion managerでNode.jsを更新してから
-installします。また、このguideで使用する`/opsx:continue`と`/opsx:verify`を利用できるよう、初期化後にexpanded workflowを
-選択してprojectへ反映します。
+このguideで使用する`/opsx:continue`と`/opsx:verify`を利用できるよう、初期化後にexpanded workflowを選択してprojectへ
+反映します。
 
 ```bash
 openspec config profile # wizardでexpanded workflowを選択する
