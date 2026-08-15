@@ -105,7 +105,7 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
 
-# AIエージェント向けpre-commit
+## AIエージェント向けpre-commit
 
 devcontainerでは`AI_AGENT=1`とグローバルな`LEFTHOOK_CONFIG`を設定し、作成時に
 Lefthookをインストールする。コミット対象に応じて次の厳格なチェックを実行する。
