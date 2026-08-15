@@ -1,6 +1,7 @@
 {
   "env": {
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_AUTOUPDATER": "1",
+    "AI_AGENT": "1"
   },
   "cleanupPeriodDays": 36500,
   "permissions": {

@@ -7,8 +7,11 @@ output:
 pre-push:
   jobs:
     - name: stash files
+      only: &ai-only
+        - run: test "${AI_AGENT:-}" = "1"
       run: git stash --include-untracked -q -m "lefthook-pre-push"
     - name: lint
+      only: *ai-only
       group:
         parallel: true
         jobs:
@@ -45,6 +48,7 @@ pre-push:
             glob: ".github/workflows/**/*.{yaml,yml}"
             fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
     - name: stash pop
+      only: *ai-only
       run: |
         if git stash list | grep -q "lefthook-pre-push"; then
           git stash pop --index -q || true
