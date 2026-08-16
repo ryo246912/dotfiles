@@ -57,6 +57,10 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
 
 USER root
 
+# The official typescript-go archive ships the executable as `tsc`. Expose it
+# as `tsgo` without depending on an npm wrapper package.
+RUN ln -s "$(mise which tsc)" /usr/local/bin/tsgo
+
 # install tool via curl
 RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 

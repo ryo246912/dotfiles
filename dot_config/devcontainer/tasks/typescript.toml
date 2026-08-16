@@ -15,9 +15,9 @@ description = "Check TypeScript/JavaScript formatting with Oxfmt"
 run         = 'oxfmt --check .'
 
 ["lint:typescript:typecheck"]
-description = "Run strict TypeScript type checks"
+description = "Run strict TypeScript type checks with tsgo"
 run = """
-tsc --noEmit --pretty false --strict --noUncheckedIndexedAccess \
+tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
   --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
   --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
   --allowUnreachableCode false --allowUnusedLabels false \

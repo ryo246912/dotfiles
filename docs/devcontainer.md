@@ -112,7 +112,7 @@ Lefthookをインストールする。コミット対象に応じて次の厳格
 
 - Go: `golangci-lint`（govetを含む）、`go test`、`go build`
 - Python: `ruff check`、`ruff format --check`
-- TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsc --noEmit`
+- TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsgo --noEmit`
 
 同じチェックは`mise run lint:go`、`mise run lint:python`、
 `mise run lint:typescript`で個別にも実行できる。
