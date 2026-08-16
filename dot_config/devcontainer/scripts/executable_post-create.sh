@@ -15,11 +15,21 @@ if [ ! -f "$local_lefthook_config" ]; then
 	exit 1
 fi
 
-# Refuse a customized file that dropped the shared AI checks.
-if ! LEFTHOOK_CONFIG="$local_lefthook_config" lefthook dump | grep -Fq "go (ai-only)"; then
-	echo "✗ lefthook.local.yml must extend ~/.config/lefthook/global.yml" >&2
+# Refuse an invalid customized file or one that dropped shared AI checks.
+lefthook_dump="$(mktemp)"
+if ! LEFTHOOK_CONFIG="$local_lefthook_config" lefthook dump >"$lefthook_dump"; then
+	rm -f "$lefthook_dump"
+	echo "✗ lefthook dump failed for ${local_lefthook_config}" >&2
 	exit 1
 fi
+for job in "go (ai-only)" "python (ai-only)" "typescript (ai-only)"; do
+	if ! grep -Fq "$job" "$lefthook_dump"; then
+		rm -f "$lefthook_dump"
+		echo "✗ lefthook.local.yml is missing shared job: ${job}" >&2
+		exit 1
+	fi
+done
+rm -f "$lefthook_dump"
 
 # Force the Lefthook package install so mise's postinstall hook always runs,
 # even though the image already contains the requested version.

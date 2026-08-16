@@ -48,15 +48,14 @@ LEFTHOOK_CONFIG="$config" lefthook install -f
 # Lefthook's generated script does not preserve LEFTHOOK_CONFIG. Embed the
 # repository-local path so commits use the same merged global/local config.
 hooks_dir="$(git rev-parse --git-path hooks)"
-escaped_config="$(printf '%s' "$config" | sed 's/[\\/&]/\\&/g')"
 
 # Lefthook does not install hook groups inherited only through `extends`, so
 # create the shared pre-commit entry point explicitly.
 pre_commit_hook="$hooks_dir/pre-commit"
-cat >"$pre_commit_hook" <<EOF
+cat >"$pre_commit_hook" <<'EOF'
 #!/bin/sh
-export LEFTHOOK_CONFIG="$config"
-exec lefthook run pre-commit "\$@"
+export LEFTHOOK_CONFIG="$(git rev-parse --show-toplevel)/lefthook.local.yml"
+exec lefthook run pre-commit "$@"
 EOF
 chmod +x "$pre_commit_hook"
 
@@ -64,6 +63,6 @@ for hook in "$hooks_dir"/*; do
   [ -f "$hook" ] || continue
   grep -Fq 'call_lefthook run' "$hook" || continue
   grep -Fq 'LEFTHOOK_CONFIG=' "$hook" && continue
-  sed -i "1a export LEFTHOOK_CONFIG=\"$escaped_config\"" "$hook"
+  sed -i '1a export LEFTHOOK_CONFIG="$(git rev-parse --show-toplevel)/lefthook.local.yml"' "$hook"
 done
 '''
