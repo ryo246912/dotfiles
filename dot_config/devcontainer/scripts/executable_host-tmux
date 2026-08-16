@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# devcontainer から SSH 経由でホスト側 tmux の pane を参照する。
+set -euo pipefail
+
+usage() {
+	cat <<'EOF'
+Usage:
+  host-tmux list
+  host-tmux capture <pane> [lines]
+
+Examples:
+  host-tmux list
+  host-tmux capture %3 200
+EOF
+}
+
+case "${1-}" in
+list)
+	[ "$#" -eq 1 ] || { usage >&2; exit 2; }
+	;;
+capture)
+	[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { usage >&2; exit 2; }
+	case "$2" in
+	%[0-9]*) ;;
+	*) echo "host-tmux: pane must be an ID such as %3 (run: host-tmux list)" >&2; exit 2 ;;
+	esac
+	case "${2#%}" in
+	'' | *[!0-9]*) echo "host-tmux: pane must be an ID such as %3 (run: host-tmux list)" >&2; exit 2 ;;
+	esac
+	lines="${3:-200}"
+	case "${lines}" in
+	'' | *[!0-9]*) echo "host-tmux: lines must be a positive integer" >&2; exit 2 ;;
+	esac
+	[ "${lines}" -gt 0 ] || { echo "host-tmux: lines must be a positive integer" >&2; exit 2; }
+	set -- "$1" "$2" "$lines"
+	;;
+-h | --help)
+	usage
+	exit 0
+	;;
+*)
+	usage >&2
+	exit 2
+	;;
+esac
+
+ssh_config="${HOME}/.config/ssh/config"
+[ -f "${ssh_config}" ] || {
+	echo "host-tmux: SSH config not found: ${ssh_config}" >&2
+	exit 1
+}
+
+# リモートへ渡す pane ID と行数は上で安全な文字だけに制限する。
+# 非対話 SSH では Homebrew/mise の PATH が通らない場合があるため、代表的な配置も探索する。
+ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5 mac-host \
+	bash -s -- "$@" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+if command -v tmux >/dev/null 2>&1; then
+	tmux_bin="$(command -v tmux)"
+elif [ -x "${HOME}/.local/share/mise/shims/tmux" ]; then
+	tmux_bin="${HOME}/.local/share/mise/shims/tmux"
+elif [ -x /opt/homebrew/bin/tmux ]; then
+	tmux_bin=/opt/homebrew/bin/tmux
+else
+	echo "host-tmux: tmux was not found on the host" >&2
+	exit 127
+fi
+
+case "$1" in
+list)
+	"${tmux_bin}" list-panes -a \
+		-F '#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_width}x#{pane_height}'
+	;;
+capture)
+	"${tmux_bin}" capture-pane -p -J -S "-$3" -t "$2"
+	;;
+esac
+REMOTE_SCRIPT
