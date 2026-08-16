@@ -10,14 +10,20 @@ if [ ! -e "$local_lefthook_config" ] && [ -f "$lefthook_template" ]; then
 	cp "$lefthook_template" "$local_lefthook_config"
 fi
 
-lefthook_config="$local_lefthook_config"
-if [ ! -f "$lefthook_config" ]; then
-	lefthook_config="${HOME}/.config/lefthook/global.yml"
+if [ ! -f "$local_lefthook_config" ]; then
+	echo "✗ lefthook.local.yml template is unavailable" >&2
+	exit 1
+fi
+
+# Refuse a customized file that dropped the shared AI checks.
+if ! LEFTHOOK_CONFIG="$local_lefthook_config" lefthook dump | grep -Fq "go (ai-only)"; then
+	echo "✗ lefthook.local.yml must extend ~/.config/lefthook/global.yml" >&2
+	exit 1
 fi
 
 # Force the Lefthook package install so mise's postinstall hook always runs,
 # even though the image already contains the requested version.
-LEFTHOOK_CONFIG="$lefthook_config" mise install --force aqua:evilmartians/lefthook
+LEFTHOOK_CONFIG="$local_lefthook_config" mise install --force aqua:evilmartians/lefthook
 
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
