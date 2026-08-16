@@ -23,6 +23,8 @@
     // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
     "CRIT_HOST": "0.0.0.0",
     "CRIT_PORT": "7842",
+    // crit: 非loopback bindを許可する。Docker側は127.0.0.1だけにpublishするため外部公開されない
+    "CRIT_ALLOW_UNAUTHENTICATED_NETWORK": "1",
     // crit: コンテナ内では更新チェック不要のため無効化
     "CRIT_NO_UPDATE_CHECK": "1"
   },
