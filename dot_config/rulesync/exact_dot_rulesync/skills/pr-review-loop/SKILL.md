@@ -21,7 +21,8 @@ PRを作成したターン、またはユーザーがPRの自律対応を依頼�
 
 ## 1 roundの処理
 
-1. `gh pr checks <PR番号> --json name,state,bucket,link,workflow`でcheckを取得する。
+1. `gh pr checks <PR番号> --json name,state,bucket,link,workflow`でcheckを取得する。使用中の`gh`が`--json`に未対応なら、
+   `gh pr checks <PR番号>`と`gh pr view <PR番号> --json statusCheckRollup`へfallbackする。
 2. GitHub Actionsの失敗は`gh-fix-ci`のscriptまたは`gh run view <run-id> --log-failed`で原因を調べる。
    外部providerのcheckはURLと状態だけを報告し、そのproviderを操作しない。
 3. 次をすべて取得する。前round以前に処理済みのID・更新時刻は再処理しない。
