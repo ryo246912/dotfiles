@@ -45,7 +45,6 @@
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     "type=bind,source=${localEnv:HOME}/.config/lefthook,target=/home/vscode/.config/lefthook,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/devcontainer/lint,target=/home/vscode/.config/devcontainer/lint,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // devcontainer専用のSSH鍵（ホスト通知用）

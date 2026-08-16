@@ -36,6 +36,10 @@ RUN install -d -o vscode -g vscode \
     /home/vscode/.config/gh
 COPY --chown=vscode:vscode mise.toml /mise/config.toml
 COPY --chown=vscode:vscode tasks /mise/tasks
+COPY golangci.yml /.golangci.yml
+COPY ruff.toml /ruff.toml
+COPY oxlint.json /.oxlintrc.json
+COPY oxfmt.json /.oxfmtrc.json
 
 USER vscode
 

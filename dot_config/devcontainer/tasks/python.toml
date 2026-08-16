@@ -4,11 +4,11 @@ description = "Run all strict Python checks"
 
 ["lint:python:check"]
 description = "Run Ruff lint checks"
-run         = 'ruff check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
+run         = 'ruff check .'
 
 ["lint:python:format"]
 description = "Check Python formatting with Ruff"
-run         = 'ruff format --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
+run         = 'ruff format --check .'
 
 ["fix:python"]
 depends     = ["fix:python:format"]
@@ -16,9 +16,9 @@ description = "Apply all safe Python lint and formatting fixes"
 
 ["fix:python:check"]
 description = "Apply Ruff lint fixes"
-run         = 'ruff check --fix --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
+run         = 'ruff check --fix .'
 
 ["fix:python:format"]
 depends     = ["fix:python:check"]
 description = "Format Python files with Ruff"
-run         = 'ruff format --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
+run         = 'ruff format .'

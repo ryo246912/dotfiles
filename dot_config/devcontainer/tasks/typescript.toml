@@ -8,27 +8,21 @@ description = "Run all strict TypeScript/JavaScript checks"
 
 ["lint:typescript:check"]
 description = "Run Oxlint checks"
-run         = 'oxlint --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxlint.json" .'
+run         = 'oxlint .'
 
 ["lint:typescript:format"]
 description = "Check TypeScript/JavaScript formatting with Oxfmt"
-run         = 'oxfmt --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxfmt.json" .'
+run         = 'oxfmt --check .'
 
 ["lint:typescript:typecheck"]
-description = "Run strict tsgo type checks for every TypeScript project"
-run = '''
-set -euo pipefail
-strict_config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/tsconfig.strict.json"
-find . -name tsconfig.json -print0 | while IFS= read -r -d '' project_config; do
-  (
-    merged_config="$(mktemp --suffix=.json)"
-    trap 'rm -f "$merged_config"' EXIT
-    printf '{"extends":["%s","%s"]}\n' "$(realpath "$project_config")" "$strict_config" >"$merged_config"
-    tsgo --noEmit --pretty false -p "$merged_config"
-  )
-done
-'''
-shell = "bash -c"
+description = "Run strict TypeScript type checks"
+run = """
+tsc --noEmit --pretty false --strict --noUncheckedIndexedAccess \
+  --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
+  --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
+  --allowUnreachableCode false --allowUnusedLabels false \
+  --forceConsistentCasingInFileNames --useUnknownInCatchVariables
+"""
 
 ["fix:typescript"]
 depends     = ["fix:typescript:format"]
@@ -36,9 +30,9 @@ description = "Apply all safe TypeScript/JavaScript lint and formatting fixes"
 
 ["fix:typescript:check"]
 description = "Apply Oxlint fixes"
-run         = 'oxlint --fix --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxlint.json" .'
+run         = 'oxlint --fix .'
 
 ["fix:typescript:format"]
 depends     = ["fix:typescript:check"]
 description = "Format TypeScript/JavaScript files with Oxfmt"
-run         = 'oxfmt --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxfmt.json" .'
+run         = 'oxfmt .'
