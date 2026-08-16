@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-# Run mise's postinstall hook, which installs the global Lefthook configuration
-# when the workspace is a Git worktree.
-mise install
+# Force the Lefthook package install so mise's postinstall hook always runs,
+# even though the image already contains the requested version.
+mise install --force aqua:evilmartians/lefthook
 
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
