@@ -9,10 +9,10 @@ if [ ! -e "$local_lefthook_config" ]; then
 	cp "$lefthook_template" "$local_lefthook_config"
 fi
 
-# Force installation so mise runs Lefthook's postinstall hook for this checkout.
+# Install the devcontainer-specific hooks for this checkout.
 (
 	cd "$repo_root"
-	LEFTHOOK_CONFIG=lefthook.local.yml mise install --force aqua:evilmartians/lefthook
+	lefthook install
 )
 
 # .claude.json のコピー（既存の処理）
