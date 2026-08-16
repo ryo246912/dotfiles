@@ -16,13 +16,15 @@ PRを作成したターン、またはユーザーがPRの自律対応を依頼�
 
 1. `gh auth status`を実行する。未認証なら勝手にtokenを生成せず、認証が必要なことを報告する。
 2. `git status --short --branch`で作業treeと現在branchを確認する。
-3. `gh pr view --json number,url,headRefName,headRepositoryOwner,baseRefName,state`で現在branchのopen PRを特定する。
-4. PRのhead branchと現在branchが違う場合はpushせず停止する。
+3. `gh pr view --json number,url,headRefName,headRepository,headRepositoryOwner,baseRefName,state`で現在branchのopen PRを特定する。
+4. PRのhead branchと現在branchが違う場合はpushせず停止する。さらに各remoteを`gh repo view`で正規化し、
+   head repositoryと一致するpush remoteを特定する。一致するremoteがなければ停止する。
 
 ## 1 roundの処理
 
 1. `gh pr checks <PR番号> --json name,state,bucket,link,workflow`でcheckを取得する。使用中の`gh`が`--json`に未対応なら、
-   `gh pr checks <PR番号>`と`gh pr view <PR番号> --json statusCheckRollup`へfallbackする。
+   全checkの診断には`gh pr checks <PR番号>`と`gh pr view <PR番号> --json statusCheckRollup`、完了判定には
+   required判定を保持する`gh pr checks <PR番号> --required`を使用する。
 2. GitHub Actionsの失敗は`gh-fix-ci`のscriptまたは`gh run view <run-id> --log-failed`で原因を調べる。
    外部providerのcheckはURLと状態だけを報告し、そのproviderを操作しない。
 3. 次をすべて取得する。前round以前に処理済みのID・更新時刻は再処理しない。
@@ -32,7 +34,7 @@ PRを作成したターン、またはユーザーがPRの自律対応を依頼�
 4. CI失敗と未解決指摘を、再現性、安全性、repository規約との整合性を確認して修正する。単なる質問や通知はcode変更と区別する。
 5. 関連するtest・lintを実行し、失敗したままpushしない。環境要因なら内容を記録する。
 6. `git status --short`、`git diff`、`git diff --check`を確認し、今回の対応だけをstageしてcommitする。
-7. `git push origin HEAD`で同じbranchへpushする。force pushは禁止する。
+7. 前提確認でhead repositoryとの一致を確認したremoteへ`git push <remote> HEAD:<headRefName>`でpushする。force pushは禁止する。
 8. 対応した会話には、修正内容とcommit SHAを簡潔に返信する。inline threadは返信後、指摘が解消したことを確認できる場合だけresolveする。
 
 ## ポーリング
