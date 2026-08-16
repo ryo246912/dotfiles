@@ -11,6 +11,7 @@
 | ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                               | `dot_config/devcontainer/mise.toml`                                                   |
 | バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
+| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                    | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
 | ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番）     | `dot_config/devcontainer/devcontainer.json`                                           |
 | 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                                  | `dot_config/devcontainer/devcontainer.json`                                           |
 | 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）                   | `dot_config/devcontainer/scripts/post-create.sh`                                      |
@@ -42,6 +43,11 @@ publish されますが、host port は **`127.0.0.1::7842` として Docker に
 devcontainer を複数同時に起動してもポート衝突は起きません。実際に割り当てられた host port は
 `~/.crit-host-port` に記録されるので、ホストのブラウザではその番号で `http://localhost:<port>` を
 開いてレビュー・コメントします。コメントを送るとエージェントへフィードバックされ、修正ループが回ります。
+
+crit は認証機能を持たないため、非 loopback の `CRIT_HOST` を指定すると、明示的な許可がない限り起動を
+拒否します。この構成では `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1` を設定して確認を省略していますが、
+Docker がコンテナのポートをホストの `127.0.0.1` にだけ publish するため、LAN やインターネットへは
+公開されません。`appPort` を変更する場合は、ホスト側の bind address を `0.0.0.0` にしないでください。
 
 > [!IMPORTANT]
 > ポート公開には **`appPort` を使う**。`forwardPorts` は VS Code 拡張専用で、`multi-worktree` の
