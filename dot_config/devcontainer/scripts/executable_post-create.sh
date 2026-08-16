@@ -15,11 +15,25 @@ if [ ! -f "$local_lefthook_config" ]; then
 	exit 1
 fi
 
-# Refuse an invalid customized file or one that dropped shared AI checks.
+# Refuse an invalid customized file or one that dropped the shared global config.
 lefthook_dump="$(mktemp)"
 if ! LEFTHOOK_CONFIG="$local_lefthook_config" lefthook dump >"$lefthook_dump"; then
 	rm -f "$lefthook_dump"
 	echo "✗ lefthook dump failed for ${local_lefthook_config}" >&2
+	exit 1
+fi
+if ! grep -Fxq "  - ~/.config/lefthook/global.yml" "$local_lefthook_config"; then
+	rm -f "$lefthook_dump"
+	echo "✗ lefthook.local.yml must extend ~/.config/lefthook/global.yml" >&2
+	exit 1
+fi
+rm -f "$lefthook_dump"
+
+global_lefthook_config="${HOME}/.config/lefthook/global.yml"
+lefthook_dump="$(mktemp)"
+if ! LEFTHOOK_CONFIG="$global_lefthook_config" lefthook dump >"$lefthook_dump"; then
+	rm -f "$lefthook_dump"
+	echo "✗ lefthook dump failed for ${global_lefthook_config}" >&2
 	exit 1
 fi
 for job in "go (ai-only)" "python (ai-only)" "typescript (ai-only)"; do

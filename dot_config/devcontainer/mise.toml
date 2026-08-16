@@ -54,7 +54,12 @@ hooks_dir="$(git rev-parse --git-path hooks)"
 pre_commit_hook="$hooks_dir/pre-commit"
 cat >"$pre_commit_hook" <<'EOF'
 #!/bin/sh
-export LEFTHOOK_CONFIG="$(git rev-parse --show-toplevel)/lefthook.local.yml"
+repo_config="$(git rev-parse --show-toplevel)/lefthook.local.yml"
+if [ -f "$repo_config" ]; then
+  export LEFTHOOK_CONFIG="$repo_config"
+else
+  export LEFTHOOK_CONFIG="$HOME/.config/lefthook/global.yml"
+fi
 exec lefthook run pre-commit "$@"
 EOF
 chmod +x "$pre_commit_hook"
@@ -63,6 +68,6 @@ for hook in "$hooks_dir"/*; do
   [ -f "$hook" ] || continue
   grep -Fq 'call_lefthook run' "$hook" || continue
   grep -Fq 'LEFTHOOK_CONFIG=' "$hook" && continue
-  sed -i '1a export LEFTHOOK_CONFIG="$(git rev-parse --show-toplevel)/lefthook.local.yml"' "$hook"
+  sed -i '1a repo_config="$(git rev-parse --show-toplevel)/lefthook.local.yml"; if [ -f "$repo_config" ]; then export LEFTHOOK_CONFIG="$repo_config"; else export LEFTHOOK_CONFIG="$HOME/.config/lefthook/global.yml"; fi' "$hook"
 done
 '''
