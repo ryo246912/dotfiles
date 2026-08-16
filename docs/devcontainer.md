@@ -24,7 +24,44 @@ volume 名には `${devcontainerId}` を含めるため、ホストとは共有�
 
 対象はワークスペース直下のディレクトリです。monorepo でサブディレクトリごとに `node_modules` などを
 作る構成では、依存関係をルートへ集約するか、プロジェクト固有の devcontainer 設定に追加の volume mount
-を定義してください。
+を定義してください。devcontainer の `mounts` はコンテナ作成前に確定し、target に glob を指定できないため、
+共通設定だけで任意の深さにある同名ディレクトリを安全に自動マウントすることはできません。
+
+例えば `apps/web` と `packages/ui` に依存関係を置く monorepo では、プロジェクト側の
+`.devcontainer/devcontainer.json` に次のような mount を追加します。
+
+```jsonc
+{
+  "mounts": [
+    "source=web-node-modules-${devcontainerId},target=${localWorkspaceFolder}/apps/web/node_modules,type=volume",
+    "source=ui-node-modules-${devcontainerId},target=${localWorkspaceFolder}/packages/ui/node_modules,type=volume",
+  ],
+}
+```
+
+追加した mount が初回作成時に `root` 所有となる環境では、プロジェクトの `postCreateCommand` でも各 target に
+`sudo chown "$(id -u):$(id -g)" <target>` を実行してください。任意階層の検出・マウントと lifecycle command の
+安全な合成を共通設定だけで行うと複雑になるため、自動化はワークスペース直下に限定しています。
+
+### 不要になった volume の削除
+
+named volume は devcontainer を削除しても自動削除されません。使わなくなった worktree / devcontainer の
+volume がディスクを占有し続けないよう、関連するコンテナを停止・削除した後、ホスト側で定期的に次を実行します。
+
+```bash
+# 対象を確認
+docker volume ls --filter 'name=^devcontainer-(node-modules|python-venv|rust-target|gradle-project-cache|terraform-data)-'
+
+# この設定が作成した未使用 volume だけを削除
+docker volume ls --quiet \
+  --filter 'name=^devcontainer-(node-modules|python-venv|rust-target|gradle-project-cache|terraform-data)-' \
+  | while IFS= read -r volume; do
+      [ -z "$volume" ] || docker volume rm "$volume"
+    done
+```
+
+使用中の volume は Docker が削除を拒否します。`devcontainer-dind-var-lib-docker-*` は Docker image などの
+永続化用途なので、上記の削除対象には含めていません。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
