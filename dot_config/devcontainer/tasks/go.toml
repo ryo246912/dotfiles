@@ -1,0 +1,72 @@
+["lint:go"]
+depends     = ["lint:go:lint", "lint:go:format", "lint:go:test", "lint:go:build"]
+description = "Run all strict Go checks"
+
+["lint:go:lint"]
+description = "Run golangci-lint for every Go module (includes govet)"
+run = '''
+set -euo pipefail
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && golangci-lint run --config "$config" ./...)
+done
+'''
+shell = "bash -c"
+
+["lint:go:format"]
+description = "Check Go formatting for every Go module"
+run = '''
+set -euo pipefail
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && golangci-lint fmt --config "$config" --diff)
+done
+'''
+shell = "bash -c"
+
+["lint:go:test"]
+description = "Run tests for every Go module"
+run = '''
+set -euo pipefail
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && go test ./...)
+done
+'''
+shell = "bash -c"
+
+["lint:go:build"]
+description = "Build every Go module"
+run = '''
+set -euo pipefail
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && go build ./...)
+done
+'''
+shell = "bash -c"
+
+["fix:go"]
+depends     = ["fix:go:format"]
+description = "Apply all safe Go lint and formatting fixes"
+
+["fix:go:lint"]
+description = "Apply golangci-lint fixes for every Go module"
+run = '''
+set -euo pipefail
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && golangci-lint run --fix --config "$config" ./...)
+done
+'''
+shell = "bash -c"
+
+["fix:go:format"]
+depends = ["fix:go:lint"]
+description = "Format every Go module"
+run = '''
+set -euo pipefail
+config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
+find . -name go.mod -print0 | while IFS= read -r -d '' module; do
+  (cd "$(dirname "$module")" && golangci-lint fmt --config "$config")
+done
+'''
+shell = "bash -c"

@@ -5,6 +5,7 @@ experimental = true
 [tools]
 "aqua:BurntSushi/ripgrep"        = "15.2.0"
 "aqua:anthropics/claude-code"    = "2.1.218"
+"aqua:astral-sh/ruff"            = "0.16.3"
 "aqua:astral-sh/uv"              = "0.12.1"
 "aqua:cli/cli"                   = "2.97.0"
 "aqua:evilmartians/lefthook"     = "2.1.10"
@@ -31,106 +32,14 @@ bun = true
 [settings.pipx]
 uvx = true
 
-[tasks."lint:go"]
-depends = [
-    "lint:go:lint",
-    "lint:go:format",
-    "lint:go:test",
-    "lint:go:vet",
-    "lint:go:build",
-]
-description = "Run all strict Go checks"
+[task_config]
+dir      = "{{cwd}}"
+includes = ["/mise/tasks/*.toml"]
 
-[tasks."lint:go:lint"]
-description = "Run golangci-lint for every Go module"
-run = '''
-set -euo pipefail
-config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
-find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
-  (cd "$(dirname "$module")" && golangci-lint run --config "$config" ./...)
-done
+[hooks]
+postinstall = '''
+[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
+config="${LEFTHOOK_CONFIG:-$HOME/.config/lefthook/global.yml}"
+[ -f "$config" ] || exit 0
+LEFTHOOK_CONFIG="$config" lefthook install -f
 '''
-shell = "bash -c"
-
-[tasks."lint:go:format"]
-description = "Check Go formatting for every Go module"
-run = '''
-set -euo pipefail
-config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"
-find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
-  (cd "$(dirname "$module")" && golangci-lint fmt --config "$config" --diff)
-done
-'''
-shell = "bash -c"
-
-[tasks."lint:go:test"]
-description = "Run tests for every Go module"
-run = '''
-set -euo pipefail
-find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
-  (cd "$(dirname "$module")" && go test ./...)
-done
-'''
-shell = "bash -c"
-
-[tasks."lint:go:vet"]
-description = "Run go vet for every Go module"
-run = '''
-set -euo pipefail
-find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
-  (cd "$(dirname "$module")" && go vet ./...)
-done
-'''
-shell = "bash -c"
-
-[tasks."lint:go:build"]
-description = "Build every Go module"
-run = '''
-set -euo pipefail
-find . -type d \( -name vendor -o -name .git \) -prune -o -name go.mod -print0 | while IFS= read -r -d '' module; do
-  (cd "$(dirname "$module")" && go build ./...)
-done
-'''
-shell = "bash -c"
-
-[tasks."lint:python"]
-depends     = ["lint:python:check", "lint:python:format"]
-description = "Run all strict Python checks"
-
-[tasks."lint:python:check"]
-description = "Run Ruff lint checks"
-run         = 'uvx ruff check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
-
-[tasks."lint:python:format"]
-description = "Check Python formatting with Ruff"
-run         = 'uvx ruff format --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/ruff.toml" .'
-
-[tasks."lint:typescript"]
-depends = [
-    "lint:typescript:check",
-    "lint:typescript:format",
-    "lint:typescript:typecheck",
-]
-description = "Run all strict TypeScript/JavaScript checks"
-
-[tasks."lint:typescript:check"]
-description = "Run Oxlint checks"
-run         = 'oxlint --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxlint.json" .'
-
-[tasks."lint:typescript:format"]
-description = "Check TypeScript/JavaScript formatting with Oxfmt"
-run         = 'oxfmt --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxfmt.json" .'
-
-[tasks."lint:typescript:typecheck"]
-description = "Run strict tsgo type checks for every TypeScript project"
-run = '''
-set -euo pipefail
-find . -type d \( -name node_modules -o -name .git \) -prune -o -name tsconfig.json -print0 | while IFS= read -r -d '' tsconfig; do
-  tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
-    --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
-    --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
-    --allowUnreachableCode false --allowUnusedLabels false \
-    --forceConsistentCasingInFileNames --useUnknownInCatchVariables -p "$tsconfig"
-done
-'''
-shell = "bash -c"

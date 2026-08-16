@@ -110,16 +110,20 @@ ssh -F ~/.config/ssh/config mac-host \
 devcontainerでは`AI_AGENT=1`とグローバルな`LEFTHOOK_CONFIG`を設定し、作成時に
 Lefthookをインストールする。コミット対象に応じて次の厳格なチェックを実行する。
 
-- Go: `golangci-lint`、`go test`、`go vet`、`go build`
-- Python: `uvx ruff check`、`uvx ruff format --check`
+- Go: `golangci-lint`（govetを含む）、`go test`、`go build`
+- Python: `ruff check`、`ruff format --check`
 - TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsgo --noEmit`
 
 同じチェックは`mise run lint:go`、`mise run lint:python`、
 `mise run lint:typescript`で個別にも実行できる。
 各言語の集約タスクは`depends`で個別タスクを呼び出す。たとえばGoは
-`lint:go:lint`、`lint:go:format`、`lint:go:test`、`lint:go:vet`、
-`lint:go:build`を必要に応じて単独実行できる。Pythonは`check`と`format`、
+`lint:go:lint`、`lint:go:format`、`lint:go:test`、`lint:go:build`を
+必要に応じて単独実行できる。Pythonは`check`と`format`、
 TypeScript/JavaScriptは`check`、`format`、`typecheck`に分割している。
+自動修正は、言語単位の`mise run fix:go`、`mise run fix:python`、
+`mise run fix:typescript`、または配下の個別fixタスクで実行できる。
+タスク定義は`~/.config/devcontainer/tasks/`で言語別に管理し、devcontainerの
+`/mise/tasks/`へ配置する。
 リポジトリ固有のpre-commit/pre-pushが必要な場合は、
 `~/.config/lefthook/lefthook.local.yml`をリポジトリへコピーして編集し、
 `LEFTHOOK_CONFIG`をそのファイルへ切り替える。
