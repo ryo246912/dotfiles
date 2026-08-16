@@ -19,7 +19,7 @@ while IFS= read -r -d '' directory; do
 done < <(
 	find "${workspace}" -xdev \
 		\( -name .git -type d -prune \) -o \
-		\( -type d \( -name node_modules -o -name .venv -o -name target -o -name .gradle -o -name .terraform \) -print0 -prune \)
+		\( -type d \( -name node_modules -o -name .venv -o -name .gradle -o -name .terraform \) -print0 -prune \)
 )
 
 # まだ生成物ディレクトリがない場合も、プロジェクト定義から mount point を先に作る。
@@ -45,6 +45,9 @@ for target in "${!targets[@]}"; do
 	mountpoint -q "${target}" && continue
 	key=$(printf '%s' "${target}" | sha256sum | cut -d ' ' -f 1)
 	backing_dir="${storage_root}/${key}"
+	if [ -d "${target}" ] && [ -n "$(find "${target}" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+		echo "ℹ️ ホスト側の既存内容を移行せず隠します: ${target}" >&2
+	fi
 	sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}" "${backing_dir}"
 	sudo mount --bind "${backing_dir}" "${target}"
 done
