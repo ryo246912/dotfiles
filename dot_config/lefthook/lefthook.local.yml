@@ -1,15 +1,24 @@
-# This template is copied to the mounted repository root as lefthook.local.yml.
-# Uncomment and customize repository-specific hooks as needed. The shared AI
-# checks continue to come from global.yml.
-extends:
-  - ~/.config/lefthook/global.yml
-#
-# pre-commit:
-#   jobs:
-#     - name: repository pre-commit
-#       run: mise run lint -- {staged_files}
-#
-# pre-push:
-#   jobs:
-#     - name: repository pre-push
-#       run: mise run test
+output:
+  - meta
+  - summary
+  - failure
+  - execution_out
+
+pre-commit:
+  jobs:
+    - name: go (ai-only)
+      glob: "**/*.go"
+      only: &ai-only
+        - run: test "${AI_AGENT:-}" = "1"
+      run: mise run lint:go
+      fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
+    - name: python (ai-only)
+      glob: "**/*.py"
+      only: *ai-only
+      run: mise run lint:python
+      fail_text: "❌ [ai-only] Python lint or format check failed."
+    - name: typescript (ai-only)
+      glob: "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
+      only: *ai-only
+      run: mise run lint:typescript
+      fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."

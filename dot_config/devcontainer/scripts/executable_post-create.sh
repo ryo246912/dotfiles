@@ -1,53 +1,19 @@
 #!/bin/bash
 set -e
 
-# Put the repository-local template in the mounted workspace. The file is
-# globally ignored, so each devcontainer can customize it without Git noise.
+# Put the devcontainer-specific Lefthook config in the repository root.
 repo_root="$(git rev-parse --show-toplevel)"
 local_lefthook_config="${repo_root}/lefthook.local.yml"
 lefthook_template="${HOME}/.config/lefthook/lefthook.local.yml"
-if [ ! -e "$local_lefthook_config" ] && [ -f "$lefthook_template" ]; then
+if [ ! -e "$local_lefthook_config" ]; then
 	cp "$lefthook_template" "$local_lefthook_config"
 fi
 
-if [ ! -f "$local_lefthook_config" ]; then
-	echo "✗ lefthook.local.yml template is unavailable" >&2
-	exit 1
-fi
-
-# Refuse an invalid customized file or one that dropped the shared global config.
-lefthook_dump="$(mktemp)"
-if ! LEFTHOOK_CONFIG="$local_lefthook_config" lefthook dump >"$lefthook_dump"; then
-	rm -f "$lefthook_dump"
-	echo "✗ lefthook dump failed for ${local_lefthook_config}" >&2
-	exit 1
-fi
-if ! grep -Fxq "  - ~/.config/lefthook/global.yml" "$local_lefthook_config"; then
-	rm -f "$lefthook_dump"
-	echo "✗ lefthook.local.yml must extend ~/.config/lefthook/global.yml" >&2
-	exit 1
-fi
-rm -f "$lefthook_dump"
-
-global_lefthook_config="${HOME}/.config/lefthook/global.yml"
-lefthook_dump="$(mktemp)"
-if ! LEFTHOOK_CONFIG="$global_lefthook_config" lefthook dump >"$lefthook_dump"; then
-	rm -f "$lefthook_dump"
-	echo "✗ lefthook dump failed for ${global_lefthook_config}" >&2
-	exit 1
-fi
-for job in "go (ai-only)" "python (ai-only)" "typescript (ai-only)"; do
-	if ! grep -Fq "$job" "$lefthook_dump"; then
-		rm -f "$lefthook_dump"
-		echo "✗ lefthook.local.yml is missing shared job: ${job}" >&2
-		exit 1
-	fi
-done
-rm -f "$lefthook_dump"
-
-# Force the Lefthook package install so mise's postinstall hook always runs,
-# even though the image already contains the requested version.
-LEFTHOOK_CONFIG="$local_lefthook_config" mise install --force aqua:evilmartians/lefthook
+# Force installation so mise runs Lefthook's postinstall hook for this checkout.
+(
+	cd "$repo_root"
+	LEFTHOOK_CONFIG=lefthook.local.yml mise install --force aqua:evilmartians/lefthook
+)
 
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then

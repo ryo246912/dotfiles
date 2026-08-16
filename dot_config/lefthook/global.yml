@@ -4,23 +4,62 @@ output:
   - failure
   - execution_out
 
-# This file is installed globally in the devcontainer. Keep repository-specific
-# hooks in ~/.config/lefthook/lefthook.local.yml instead.
 pre-commit:
+  parallel: true
   jobs:
-    - name: go (ai-only)
-      glob: "**/*.go"
-      only: &ai-only
-        - run: test "${AI_AGENT:-}" = "1"
-      run: mise run lint:go
-      fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
-    - name: python (ai-only)
-      glob: "**/*.py"
-      only: *ai-only
-      run: mise run lint:python
-      fail_text: "❌ [ai-only] Python lint or format check failed."
-    - name: typescript (ai-only)
-      glob: "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
-      only: *ai-only
-      run: mise run lint:typescript
-      fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."
+    - name: lint:secret
+      run: mise run lint:secret
+      fail_text: "❌ [pre-commit] secretlint failed. Check for secrets in files."
+    - name: lint:git-secrets
+      run: mise run lint:git-secrets
+      fail_text: "❌ [pre-commit] git-secrets failed. Check for secrets in files."
+    - name: lint:betterleaks
+      run: mise run lint:betterleaks:staged
+      fail_text: "❌ [pre-commit] betterleaks failed. Check for secrets in files."
+
+pre-push:
+  jobs:
+    - name: stash files
+      run: git stash --include-untracked -q -m "lefthook-pre-push"
+    - name: lint
+      group:
+        parallel: true
+        jobs:
+          - name: lint:toml
+            run: mise run lint:toml
+            glob: "**/*.toml"
+            fail_text: "❌ [pre-push] toml lint failed. Run: mise run fix:toml"
+          - name: lint:yaml
+            run: mise run lint:yaml
+            glob: "**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] yaml lint failed. Run: mise run fix:yaml"
+          - name: lint:json
+            run: mise run lint:json
+            glob: "**/*.json"
+            fail_text: "❌ [pre-push] json lint failed. Run: mise run fix:json"
+          - name: lint:md
+            run: mise run lint:md
+            glob: "**/*.md"
+            fail_text: "❌ [pre-push] markdown lint failed. Run: mise run fix:md"
+          - name: lint:actionlint
+            run: mise run lint:actionlint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] actionlint failed."
+          - name: lint:ghalint
+            run: mise run lint:ghalint
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] ghalint failed."
+          - name: lint:zizmor
+            run: mise run lint:zizmor
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] zizmor failed."
+          - name: lint:pinact
+            run: mise run lint:pinact
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
+
+    - name: stash pop
+      run: |
+        if git stash list | grep -q "lefthook-pre-push"; then
+          git stash pop --index -q || true
+        fi
