@@ -14,6 +14,16 @@ dependencies:
   # 再現性のため各依存をコミット SHA または release tag に pin する。
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
+    # GitHub PR のレビューコメント取得と Actions の失敗解析。自律的な反復処理は
+    # rulesync で配布する pr-review-loop skill がこの2 skillを組み合わせて行う。
+    - git: openai/skills
+      path: skills/.curated/gh-address-comments
+      ref: 49f948faa9258a0c61caceaf225e179651397431
+      alias: gh-address-comments
+    - git: openai/skills
+      path: skills/.curated/gh-fix-ci
+      ref: 49f948faa9258a0c61caceaf225e179651397431
+      alias: gh-fix-ci
     # crit（tomasz-tomczyk/crit プラグイン）。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.4
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.4
