@@ -8,60 +8,31 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 
 ## ホストと共有しないプロジェクト生成物
 
-ワークスペース自体はホストから bind mount しますが、次のルートディレクトリには devcontainer ごとの
-named volume を重ねてマウントします。macOS ホストと Linux コンテナでネイティブバイナリや実行環境を
-共有することによる衝突を防ぎます。
+ワークスペース自体はホストから bind mount しますが、次のディレクトリは起動時に検出し、コンテナの
+writable layer (`/var/lib/devcontainer-project-artifacts`) を bind mount してホスト側の内容を隠します。
+macOS ホストと Linux コンテナでネイティブバイナリや実行環境を共有することによる衝突を防ぎます。
 
-- `node_modules`: Node.js の依存パッケージ（native addon やパッケージマネージャーが生成するリンクを含む）
-- `.venv`: Python 仮想環境（OS 固有の実行ファイルやパスを含む）
+- `node_modules`: Node.js の依存パッケージ
+- `.venv`: Python 仮想環境
 - `target`: Rust / Maven などのビルド成果物
 - `.gradle`: Gradle のプロジェクトキャッシュ
 - `.terraform`: Terraform provider の実行ファイルと初期化データ
 
-volume 名には `${devcontainerId}` を含めるため、ホストとは共有せず、同時に起動した別の devcontainer
-とも共有しません。同じ devcontainer のリビルド時には volume が再利用されます。ホスト側に同名の
-ディレクトリが存在してもコンテナ内からは見えず、コンテナ内で作成した内容もホスト側には書き込まれません。
+ワークスペース直下だけでなく、既存の対象ディレクトリを任意の深さから検出します。また、まだ対象が
+作られていなくても `package.json`、`pyproject.toml`、`Cargo.toml`、`pom.xml`、Gradle 設定、Terraform
+ファイルなどの場所から mount point を作るため、monorepo の `apps/*` や `packages/*` も分離されます。
+`.git` と検出済みの生成物以下は走査しません。
 
-対象はワークスペース直下のディレクトリです。monorepo でサブディレクトリごとに `node_modules` などを
-作る構成では、依存関係をルートへ集約するか、プロジェクト固有の devcontainer 設定に追加の volume mount
-を定義してください。devcontainer の `mounts` はコンテナ作成前に確定し、target に glob を指定できないため、
-共通設定だけで任意の深さにある同名ディレクトリを安全に自動マウントすることはできません。
+格納先は Docker named volume ではなくコンテナ自身の writable layer です。ホストや別のコンテナとは共有されず、
+コンテナを削除すれば生成物も一緒に削除されるため、volume の手動削除は不要です。コンテナの停止・再起動時には
+`postStartCommand` が bind mount を張り直すので、同じコンテナ内の生成物は引き続き利用できます。
 
-例えば `apps/web` と `packages/ui` に依存関係を置く monorepo では、プロジェクト側の
-`.devcontainer/devcontainer.json` に次のような mount を追加します。
-
-```jsonc
-{
-  "mounts": [
-    "source=web-node-modules-${devcontainerId},target=${localWorkspaceFolder}/apps/web/node_modules,type=volume",
-    "source=ui-node-modules-${devcontainerId},target=${localWorkspaceFolder}/packages/ui/node_modules,type=volume",
-  ],
-}
-```
-
-追加した mount が初回作成時に `root` 所有となる環境では、プロジェクトの `postCreateCommand` でも各 target に
-`sudo chown "$(id -u):$(id -g)" <target>` を実行してください。任意階層の検出・マウントと lifecycle command の
-安全な合成を共通設定だけで行うと複雑になるため、自動化はワークスペース直下に限定しています。
-
-### 不要になった volume の削除
-
-named volume は devcontainer を削除しても自動削除されません。使わなくなった worktree / devcontainer の
-volume がディスクを占有し続けないよう、関連するコンテナを停止・削除した後、ホスト側で定期的に次を実行します。
+プロジェクト定義ファイルを追加した直後など、コンテナ起動後に新しい対象パスが生じた場合は、次を実行するか
+コンテナを再起動してください。
 
 ```bash
-# 対象を確認
-docker volume ls --filter 'name=^devcontainer-(node-modules|python-venv|rust-target|gradle-project-cache|terraform-data)-'
-
-# この設定が作成した未使用 volume だけを削除
-docker volume ls --quiet \
-  --filter 'name=^devcontainer-(node-modules|python-venv|rust-target|gradle-project-cache|terraform-data)-' \
-  | while IFS= read -r volume; do
-      [ -z "$volume" ] || docker volume rm "$volume"
-    done
+bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 ```
-
-使用中の volume は Docker が削除を拒否します。`devcontainer-dind-var-lib-docker-*` は Docker image などの
-永続化用途なので、上記の削除対象には含めていません。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 

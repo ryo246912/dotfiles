@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# コンテナ再起動時には bind mount を張り直す必要がある。
+bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
+
 # SSH configを生成（~/.config/ssh/configに配置）
 mkdir -p ~/.config/ssh
 SSH_CONFIG=~/.config/ssh/config

@@ -1,11 +1,8 @@
 #!/bin/bash
 set -e
 
-# named volume は初回マウント時に root 所有で作られることがあるため、
-# コンテナユーザーが依存関係やビルド成果物を書き込めるようにする。
-for container_only_dir in node_modules .venv target .gradle .terraform; do
-	sudo chown "$(id -u):$(id -g)" "${PWD}/${container_only_dir}"
-done
+# OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
+bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
 
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
