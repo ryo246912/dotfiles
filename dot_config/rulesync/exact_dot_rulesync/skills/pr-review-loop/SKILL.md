@@ -5,6 +5,14 @@ targets:
   - claudecode
   - codexcli
   - copilot
+claudecode:
+  allowed-tools:
+    - Bash
+    - Read
+    - Write
+    - Edit
+    - Grep
+    - Glob
 ---
 
 # PR review loop
@@ -17,9 +25,9 @@ PRを作成したターン、またはユーザーがPRの自律対応を依頼�
 すべてのgit、gh、test commandは対象repositoryをmountしたdevcontainer内で実行する。ホストでの実行へ切り替えない。
 
 1. `gh auth status`を実行する。未認証なら勝手にtokenを生成せず、認証が必要なことを報告する。
-2. `git status --short --branch`で作業treeと現在branchを確認する。
+2. `git status --short --branch`で作業treeと現在branchを確認する。未commitの変更があれば、既存作業との混在を避けるためloopを開始せず停止する。
 3. `gh pr view --json number,url,headRefName,headRepository,headRepositoryOwner,baseRefName,state`で現在branchのopen PRを特定する。
-4. PRのhead branchと現在branchが違う場合はpushせず停止する。さらに`origin`を`gh repo view`で正規化し、
+4. PRのhead branchと現在branchが違う場合はpushせず停止する。さらに`git remote get-url origin`で取得したURLを`gh repo view <origin-url> --json nameWithOwner`で正規化し、
    head repositoryと一致することを確認する。一致しない場合はpushせず停止する。
 
 ## 1 roundの処理
