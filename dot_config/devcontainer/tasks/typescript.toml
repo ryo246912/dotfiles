@@ -16,13 +16,18 @@ run         = 'oxfmt --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcont
 
 ["lint:typescript:typecheck"]
 description = "Run strict TypeScript type checks with tsgo"
-run = """
-tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
-  --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
-  --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
-  --allowUnreachableCode false --allowUnusedLabels false \
-  --forceConsistentCasingInFileNames --useUnknownInCatchVariables
-"""
+run = '''
+set -euo pipefail
+[ -f tsconfig.json ] || exit 0
+strict_config="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/tsconfig.strict.json"
+merged_config="$(mktemp --suffix=.json)"
+trap 'rm -f "$merged_config"' EXIT
+printf '{"extends":[%s,%s]}\n' \
+  "$(jq -Rn --arg path "$(realpath tsconfig.json)" '$path')" \
+  "$(jq -Rn --arg path "$strict_config" '$path')" >"$merged_config"
+tsgo --project "$merged_config"
+'''
+shell = "bash -c"
 
 ["fix:typescript"]
 depends     = ["fix:typescript:format"]

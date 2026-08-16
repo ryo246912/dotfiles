@@ -39,9 +39,10 @@ COPY --chown=vscode:vscode tasks /mise/tasks
 
 USER vscode
 
-# First, install gh so the authenticated install can read the mounted token config
+# Install Go before Go-backed tools, and gh before the authenticated install can
+# read the mounted token config.
 RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
-    /usr/local/bin/mise install -C /mise aqua:cli/cli && \
+    /usr/local/bin/mise install -C /mise aqua:cli/cli core:go && \
     /usr/local/bin/mise reshim -C /mise
 
 # Install all tools via mise with GitHub auth available
@@ -51,13 +52,8 @@ RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,u
     /usr/local/bin/mise reshim -C /mise && \
     /usr/local/bin/mise trust /mise/config.toml
 
-USER root
-
-# The official typescript-go archive ships the executable as `tsc`. Expose it
-# as `tsgo` without depending on an npm wrapper package.
-RUN ln -s "$(mise which tsc)" /usr/local/bin/tsgo
-
 # install tool via curl
+USER root
 RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 
 USER vscode

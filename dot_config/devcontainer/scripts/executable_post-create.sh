@@ -5,13 +5,19 @@ set -e
 # globally ignored, so each devcontainer can customize it without Git noise.
 repo_root="$(git rev-parse --show-toplevel)"
 local_lefthook_config="${repo_root}/lefthook.local.yml"
-if [ ! -e "$local_lefthook_config" ]; then
-	cp "${HOME}/.config/lefthook/lefthook.local.yml" "$local_lefthook_config"
+lefthook_template="${HOME}/.config/lefthook/lefthook.local.yml"
+if [ ! -e "$local_lefthook_config" ] && [ -f "$lefthook_template" ]; then
+	cp "$lefthook_template" "$local_lefthook_config"
+fi
+
+lefthook_config="$local_lefthook_config"
+if [ ! -f "$lefthook_config" ]; then
+	lefthook_config="${HOME}/.config/lefthook/global.yml"
 fi
 
 # Force the Lefthook package install so mise's postinstall hook always runs,
 # even though the image already contains the requested version.
-mise install --force aqua:evilmartians/lefthook
+LEFTHOOK_CONFIG="$lefthook_config" mise install --force aqua:evilmartians/lefthook
 
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then

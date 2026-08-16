@@ -107,24 +107,5 @@ ssh -F ~/.config/ssh/config mac-host \
 
 ## AIエージェント向けpre-commit
 
-devcontainerでは`AI_AGENT=1`とグローバルな`LEFTHOOK_CONFIG`を設定し、作成時に
-Lefthookをインストールする。コミット対象に応じて次の厳格なチェックを実行する。
-
-- Go: `golangci-lint`（govetを含む）、`go test`、`go build`
-- Python: `ruff check`、`ruff format --check`
-- TypeScript/JavaScript: `oxlint`、`oxfmt --check`、`tsgo --noEmit`
-
-同じチェックは`mise run lint:go`、`mise run lint:python`、
-`mise run lint:typescript`で個別にも実行できる。
-各言語の集約タスクは`depends`で個別タスクを呼び出す。たとえばGoは
-`lint:go:lint`、`lint:go:format`、`lint:go:test`、`lint:go:build`を
-必要に応じて単独実行できる。Pythonは`check`と`format`、
-TypeScript/JavaScriptは`check`、`format`、`typecheck`に分割している。
-自動修正は、言語単位の`mise run fix:go`、`mise run fix:python`、
-`mise run fix:typescript`、または配下の個別fixタスクで実行できる。
-タスク定義は`~/.config/devcontainer/tasks/`で言語別に管理し、devcontainerの
-`/mise/tasks/`へ配置する。
-各lint設定は`~/.config/devcontainer/lint/`から明示的に読み込む。
-リポジトリ固有のpre-commit/pre-push用テンプレートは、post-create時にマウントした
-リポジトリのルートへ`lefthook.local.yml`としてコピーされる。このファイルと
-`lefthook-local.yml`はグローバルgitignoreの対象となる。
+devcontainerでは`AI_AGENT=1`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。

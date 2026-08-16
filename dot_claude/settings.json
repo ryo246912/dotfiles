@@ -5,16 +5,7 @@
   },
   "cleanupPeriodDays": 36500,
   "permissions": {
-    "allow": [
-      "Bash(mise list:*)",
-      "Bash(ccmanager --help)",
-      "Bash(xcode-select:*)",
-      "Bash(claude mcp:*)",
-      "Bash(find:*)",
-      "Bash(ls:*)",
-      "Bash(shfmt:*)",
-      "WebFetch(domain:docs.anthropic.com)"
-    ],
+    "allow": [],
     "deny": [
       "Bash(sudo:*)",
       "Bash(rm -rf:*)",
