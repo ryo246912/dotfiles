@@ -124,8 +124,7 @@ TypeScript/JavaScriptは`check`、`format`、`typecheck`に分割している。
 `mise run fix:typescript`、または配下の個別fixタスクで実行できる。
 タスク定義は`~/.config/devcontainer/tasks/`で言語別に管理し、devcontainerの
 `/mise/tasks/`へ配置する。
-各lint設定はdevcontainerのルートへ標準ファイル名で配置するため、タスク側の
-`--config`指定は不要となる。
-リポジトリ固有のpre-commit/pre-pushが必要な場合は、
-`~/.config/lefthook/lefthook.local.yml`をリポジトリへコピーして編集し、
-`LEFTHOOK_CONFIG`をそのファイルへ切り替える。
+各lint設定は`~/.config/devcontainer/lint/`から明示的に読み込む。
+リポジトリ固有のpre-commit/pre-push用テンプレートは、post-create時にマウントした
+リポジトリのルートへ`lefthook.local.yml`としてコピーされる。このファイルと
+`lefthook-local.yml`はグローバルgitignoreの対象となる。

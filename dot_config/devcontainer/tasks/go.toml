@@ -4,11 +4,11 @@ description = "Run all strict Go checks"
 
 ["lint:go:lint"]
 description = "Run golangci-lint (includes govet)"
-run         = "golangci-lint run ./..."
+run         = 'golangci-lint run --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml" ./...'
 
 ["lint:go:format"]
 description = "Check Go formatting"
-run         = "golangci-lint fmt --diff"
+run         = 'golangci-lint fmt --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml" --diff'
 
 ["lint:go:test"]
 description = "Run Go tests"
@@ -24,9 +24,9 @@ description = "Apply all safe Go lint and formatting fixes"
 
 ["fix:go:lint"]
 description = "Apply golangci-lint fixes"
-run         = "golangci-lint run --fix ./..."
+run         = 'golangci-lint run --fix --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml" ./...'
 
 ["fix:go:format"]
 depends     = ["fix:go:lint"]
 description = "Format Go files"
-run         = "golangci-lint fmt"
+run         = 'golangci-lint fmt --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/golangci.yml"'

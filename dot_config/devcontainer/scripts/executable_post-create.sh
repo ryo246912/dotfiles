@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# Put the repository-local template in the mounted workspace. The file is
+# globally ignored, so each devcontainer can customize it without Git noise.
+repo_root="$(git rev-parse --show-toplevel)"
+local_lefthook_config="${repo_root}/lefthook.local.yml"
+if [ ! -e "$local_lefthook_config" ]; then
+	cp "${HOME}/.config/lefthook/lefthook.local.yml" "$local_lefthook_config"
+fi
+
 # Force the Lefthook package install so mise's postinstall hook always runs,
 # even though the image already contains the requested version.
 mise install --force aqua:evilmartians/lefthook
