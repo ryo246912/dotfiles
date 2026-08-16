@@ -30,7 +30,8 @@ PRを作成したターン、またはユーザーがPRの自律対応を依頼�
 3. 次をすべて取得する。前round以前に処理済みのID・更新時刻は再処理しない。
    - `gh pr view <PR番号> --json reviews,comments,reviewDecision`
    - `gh api repos/{owner}/{repo}/pulls/<PR番号>/comments --paginate`
-   - GraphQLの`reviewThreads(first: 100)`（`isResolved == false`のthreadを未解決として扱う）
+   - GraphQLの`reviewThreads(first: 100, after: $cursor)`（`isResolved == false`のthreadを未解決として扱う）。
+     `pageInfo.hasNextPage`がtrueの間は`endCursor`を次の`after`へ渡し、全pageを取得する。
 4. CI失敗と未解決指摘を、再現性、安全性、repository規約との整合性を確認して修正する。単なる質問や通知はcode変更と区別する。
 5. 関連するtest・lintを実行し、失敗したままpushしない。環境要因なら内容を記録する。
 6. `git status --short`、`git diff`、`git diff --check`を確認し、今回の対応だけをstageしてcommitする。
