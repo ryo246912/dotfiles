@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [jitpass (`jit`)](docs/jit.md)

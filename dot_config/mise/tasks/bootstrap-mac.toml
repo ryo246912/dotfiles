@@ -31,6 +31,18 @@ set -euo pipefail
 [ "$(uname)" = "Darwin" ] || { echo "mac 専用タスクです"; exit 1; }
 export PATH="/opt/homebrew/bin:$PATH"
 
+# jitpass: Gatekeeper が notarization ticket を検証できる公式 Homebrew formula を使う。
+# mise の GitHub backend で binary を直接配置せず、公式推奨の導入経路にそろえる。
+if [ "$(uname -m)" = "arm64" ]; then
+  if ! brew list jitpass &>/dev/null; then
+    brew install jitpass/tap/jitpass
+  else
+    echo "jitpass is already installed"
+  fi
+else
+  echo "jitpass prebuilt release is Apple Silicon only; skipping"
+fi
+
 # google-japanese-ime: Rosetta が前提で brew-cask では表現できない。
 # rosetta のインストール失敗（既に導入済み等）で後続の thock 導入を止めないよう || true にする
 if ! brew list --cask google-japanese-ime &>/dev/null; then
