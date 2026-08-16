@@ -21,8 +21,8 @@ host-tmux list
 host-tmux capture %3 200
 ```
 
-AI エージェントには、例えば「`host-tmux list` で server の pane を探し、
-`host-tmux capture <pane-id> 300` の出力をもとにエラーを修正して」と指示します。継続的なログ監視が
+AI エージェントには `/tmux %3`（Codex では `$tmux %3`）と指示すると、追加した tmux skill が
+`host-tmux capture` を呼び出してログを分析します。継続的なログ監視が
 必要なら、同じ capture コマンドを一定間隔で再実行させます。pane ID は tmux の session/window 構成を
 変えると変わり得るため、固定値を設定へ埋め込まず、その都度 `list` で確認してください。
 

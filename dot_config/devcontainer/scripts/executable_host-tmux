@@ -52,7 +52,7 @@ ssh_config="${HOME}/.config/ssh/config"
 
 # リモートへ渡す pane ID と行数は上で安全な文字だけに制限する。
 # 非対話 SSH では Homebrew/mise の PATH が通らない場合があるため、代表的な配置も探索する。
-ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5 mac-host \
+timeout 15 ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5 mac-host \
 	bash -s -- "$@" <<'REMOTE_SCRIPT'
 set -euo pipefail
 
@@ -62,6 +62,8 @@ elif [ -x "${HOME}/.local/share/mise/shims/tmux" ]; then
 	tmux_bin="${HOME}/.local/share/mise/shims/tmux"
 elif [ -x /opt/homebrew/bin/tmux ]; then
 	tmux_bin=/opt/homebrew/bin/tmux
+elif [ -x /usr/local/bin/tmux ]; then
+	tmux_bin=/usr/local/bin/tmux
 else
 	echo "host-tmux: tmux was not found on the host" >&2
 	exit 127
@@ -69,11 +71,12 @@ fi
 
 case "$1" in
 list)
+	separator="$(printf '\t')"
 	"${tmux_bin}" list-panes -a \
-		-F '#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_width}x#{pane_height}'
+		-F "#{pane_id}${separator}#{session_name}:#{window_index}.#{pane_index}${separator}#{pane_current_command}${separator}#{pane_current_path}${separator}#{pane_width}x#{pane_height}"
 	;;
 capture)
-	"${tmux_bin}" capture-pane -p -J -S "-$3" -t "$2"
+	"${tmux_bin}" capture-pane -p -J -S "-$3" -t "$2" | tail -n "$3"
 	;;
 esac
 REMOTE_SCRIPT
