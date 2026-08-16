@@ -6,6 +6,26 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## ホストと共有しないプロジェクト生成物
+
+ワークスペース自体はホストから bind mount しますが、次のルートディレクトリには devcontainer ごとの
+named volume を重ねてマウントします。macOS ホストと Linux コンテナでネイティブバイナリや実行環境を
+共有することによる衝突を防ぎます。
+
+- `node_modules`: Node.js の依存パッケージ（native addon やパッケージマネージャーが生成するリンクを含む）
+- `.venv`: Python 仮想環境（OS 固有の実行ファイルやパスを含む）
+- `target`: Rust / Maven などのビルド成果物
+- `.gradle`: Gradle のプロジェクトキャッシュ
+- `.terraform`: Terraform provider の実行ファイルと初期化データ
+
+volume 名には `${devcontainerId}` を含めるため、ホストとは共有せず、同時に起動した別の devcontainer
+とも共有しません。同じ devcontainer のリビルド時には volume が再利用されます。ホスト側に同名の
+ディレクトリが存在してもコンテナ内からは見えず、コンテナ内で作成した内容もホスト側には書き込まれません。
+
+対象はワークスペース直下のディレクトリです。monorepo でサブディレクトリごとに `node_modules` などを
+作る構成では、依存関係をルートへ集約するか、プロジェクト固有の devcontainer 設定に追加の volume mount
+を定義してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
