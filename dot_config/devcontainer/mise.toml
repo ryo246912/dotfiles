@@ -15,7 +15,7 @@ experimental = true
 "core:bun"                       = "1.3.14"
 "core:go"                        = "1.26.5"
 "core:node"                      = "22.19.0"
-"core:python"                    = "3.14.6"
+"core:python"                    = "3.14.7"
 "github:github/copilot-cli"      = "1.0.73"
 "github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"     = "0.18.4"
