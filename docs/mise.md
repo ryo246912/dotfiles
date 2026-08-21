@@ -61,6 +61,14 @@ mise bootstrap packages apply brew-cask:slack
 mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:slack
 ```
 
+`brew-cask:` の app artifact はデフォルトで `/Applications` に配置される。書き込み権限がない
+環境では、絶対パスの `MISE_BREW_CASK_OPT_APPDIR` でユーザー用ディレクトリへ変更できる。
+
+```sh
+MISE_BREW_CASK_OPT_APPDIR="$HOME/Applications" \
+  mise bootstrap packages apply brew-cask:slack
+```
+
 設定にも残して直ちに導入するなら、`mise use` に相当する system package 用コマンドを使う。
 
 ```sh
