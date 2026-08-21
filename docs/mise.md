@@ -386,6 +386,42 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 古い/小規模な tap では未対応なことがあり、その場合 `mise bootstrap packages apply` は
 インストールできずに失敗する。
 
+#### Arto（`arto-app/tap/arto`）の場合
+
+[Arto](https://github.com/arto-app/Arto) の公式 cask は `arto-app/homebrew-tap` の
+`Casks/arto.rb` には存在するが、mise がサードパーティ cask の取得に必要とする
+`api/cask/arto.json` は公開されていない。そのため、現時点では次のコマンドでは導入できず
+404 エラーになる（mise 2026.8.10 で確認）。
+
+```sh
+# 現時点では失敗する: このまま実行しない
+mise bootstrap packages apply brew-cask:arto-app/tap/arto
+```
+
+```text
+failed to fetch Homebrew cask 'arto-app/tap/arto' directly.
+Tapped casks must publish API metadata at api/cask/<token>.json
+```
+
+`mise bootstrap packages brew tap arto-app/tap` を先に実行しても、これは mise の設定へ tap URL を
+登録するだけで API metadata を生成しないため回避策にはならない。tap 側で
+`api/cask/arto.json` が公開されるまでは、Arto 公式 README のとおり実 Homebrew で導入する。
+
+```sh
+brew install --cask arto-app/tap/arto
+
+# Arto は未署名・未 notarize のため、公式手順どおり quarantine 属性を除去する
+xattr -dr com.apple.quarantine /Applications/Arto.app
+```
+
+将来 tap が API metadata を公開した後は、次の `mise` コマンドへ切り替えられる見込み。ただし
+quarantine 属性の除去は cask の caveat に書かれた別作業なので、その後も必要になる。
+
+```sh
+mise bootstrap packages apply brew-cask:arto-app/tap/arto
+xattr -dr com.apple.quarantine /Applications/Arto.app
+```
+
 このリポジトリでは `thock`（`kamillobinski/thock`）について API メタデータの公開有無を
 確認できなかったため、`[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
 （実 `brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
