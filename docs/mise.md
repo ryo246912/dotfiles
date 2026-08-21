@@ -44,6 +44,45 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 
 ### コマンド
 
+#### CLI から formula/cask を1件だけ直接導入する
+
+調査結果として、`brew:`/`brew-cask:` は `[tools]` 用の tool backend ではなく
+`[bootstrap.packages]` 用の system package manager なので、`mise install brew:jq` や
+`mise use brew-cask:firefox` という形では導入できない。`mise install` は `[tools]` に宣言した
+開発ツールを対象にするため、最も近い one-shot コマンドは
+`mise bootstrap packages apply <manager>:<package>` になる。
+
+```sh
+# 今すぐ導入するだけ（mise.toml には書き込まない）
+mise bootstrap packages apply brew:jq
+mise bootstrap packages apply brew-cask:firefox
+
+# 複数をまとめて導入することもできる
+mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:firefox
+```
+
+設定にも残して直ちに導入するなら、`mise use` に相当する system package 用コマンドを使う。
+
+```sh
+# ローカル mise.toml の [bootstrap.packages] に追記し、未導入ならそのまま導入する
+mise bootstrap packages use brew:jq
+mise bootstrap packages use brew-cask:firefox
+
+# グローバル設定 ~/.config/mise/config.toml に追記して導入する
+mise bootstrap packages use -g brew:jq
+```
+
+`apply` は引数で明示した未設定パッケージも導入するが設定を変更しない。一方、`use` は
+`"brew:jq" = "latest"` のようなエントリを `[bootstrap.packages]` に書いてから導入する。
+どちらも実 `brew` コマンドを呼ばず、mise が Homebrew API からメタデータを取得して formula の
+bottle または cask artifact を直接ダウンロードする。ただし canonical Homebrew prefix の作成に
+限って、権限がなければ最初の1回だけ sudo が必要になる場合がある。
+
+formula/cask の `@` は mise のバージョン指定ではなく Homebrew のパッケージ名の一部なので、
+バージョン付き formula/cask は `brew:postgresql@17` / `brew-cask:temurin@17` のように指定する。
+`apply` には `install`（短縮形 `i`）、`use` には `u` の alias もあるが、ドキュメントでは意味が
+明確な正式名を使う。
+
 `status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
 動くが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
 `--path`（または `-g`）を指定しない限り**カレントディレクトリのローカル `mise.toml`**に書く
