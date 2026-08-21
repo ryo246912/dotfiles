@@ -17,7 +17,7 @@ includes = ["tasks/*.toml"]
 "github:betterleaks/betterleaks" = "1.3.1"
 "github:superfly/flyctl"         = "0.4.29"
 "npm:oxfmt"                      = "0.59.0"
-"npm:oxlint"                     = "1.76.0"
+"npm:oxlint"                     = "1.79.0"
 
 [hooks]
 postinstall = """
