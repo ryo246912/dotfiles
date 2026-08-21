@@ -55,10 +55,10 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 ```sh
 # 今すぐ導入するだけ（mise.toml には書き込まない）
 mise bootstrap packages apply brew:jq
-mise bootstrap packages apply brew-cask:firefox
+mise bootstrap packages apply brew-cask:slack
 
 # 複数をまとめて導入することもできる
-mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:firefox
+mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:slack
 ```
 
 設定にも残して直ちに導入するなら、`mise use` に相当する system package 用コマンドを使う。
@@ -66,7 +66,7 @@ mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:firefox
 ```sh
 # ローカル mise.toml の [bootstrap.packages] に追記し、未導入ならそのまま導入する
 mise bootstrap packages use brew:jq
-mise bootstrap packages use brew-cask:firefox
+mise bootstrap packages use brew-cask:slack
 
 # グローバル設定 ~/.config/mise/config.toml に追記して導入する
 mise bootstrap packages use -g brew:jq
