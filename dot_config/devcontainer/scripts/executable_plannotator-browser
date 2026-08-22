@@ -5,8 +5,8 @@ url=${1:?"Plannotator URL is required"}
 port_file=${HOME}/.plannotator-host-port
 
 if [ ! -s "$port_file" ]; then
-	printf 'ホスト側portを取得できません。次のURLをbrowserで開いてください: %s\n' "$url" >&2
-	exit 0
+	printf 'ホスト側portを取得できません。post-start処理を再実行してください。\n' >&2
+	exit 1
 fi
 
 host_port=$(cat "$port_file")

@@ -45,5 +45,5 @@ loopbackにだけ公開し、host portは複数containerで衝突しないよう
 `post-start.sh`は採番されたportを`~/.plannotator-host-port`へ記録します。
 
 review起動時は`plannotator-browser`がcontainer URLをhost URLへ変換し、SSH経由で
-macOSのbrowserを開きます。自動openに失敗した場合はterminalに表示されるURLを
-hostのbrowserで開いてください。
+macOSのbrowserを開きます。host portが未取得の場合は`post-start.sh`を再実行してください。
+変換後のURLの自動openに失敗した場合は、terminalに表示されるURLをhostのbrowserで開きます。
