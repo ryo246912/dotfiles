@@ -1,49 +1,39 @@
 # Plannotator / Effective HTML
 
-devcontainerでPlannotatorのannotation UIとEffective HTML skillsを使うための設定です。
+## HTML artifactを作成してreviewする
 
-## 導入
+Codexで`$html`、`$html-wireframe`、`$html-prototype`などのskillを指定して
+HTML artifactを作成します。
 
-devcontainerの初回作成時に`post-create.sh`が固定版のPlannotatorを検証して導入します。
+作成したHTMLはPlannotator skillからreviewできます。Plannotatorはskill実行時に起動するため、
+container起動時にPlannotatorを常駐起動する必要はありません。
 
-- Plannotator CLI
-- Codex / Claude Code用のreview・annotate skillsとagent連携
-
-Effective HTMLの6 skills（HTML、wireframe、prototype、plan、diagram、design artifact）は
-`dot_apm/apm.yml`でupstream commitに固定し、通常の`mise run apm:install`で配布します。
-
-既存containerに反映する場合はrebuildするか、次を実行します。
-
-```bash
-bash ~/.config/devcontainer/scripts/post-create.sh
-mise run apm:install
+```text
+$plannotator-annotate path/to/artifact.html --render-html
 ```
 
-## HTMLを作成してreviewする
-
-Codexでは`$html`、`$html-wireframe`、`$html-prototype`などを指定して、
-self-containedなHTML artifactを作成します。作成後は次のcommandでrenderしたHTMLを
-Plannotatorで開き、要素を直接指してfeedbackできます。
+CLIを直接実行する場合は次を使います。
 
 ```bash
 plannotator annotate path/to/artifact.html --render-html
 ```
 
-Codexへfeedbackを戻す連続的なworkflowでは次の形も使えます。
+## code diffをreviewする
+
+current branchの変更は次のskillでreviewします。
 
 ```text
-!plannotator annotate path/to/artifact.html --render-html
+$plannotator-review
 ```
 
-local diffのcode reviewは`!plannotator review`、agentの最後の返答のannotationは
-`!plannotator last`で開きます。
+GitHub PRをreviewする場合はPR URLを渡します。
 
-## devcontainerからbrowserを開く仕組み
+```text
+$plannotator-review https://github.com/owner/repository/pull/123
+```
 
-Plannotatorはcontainer内の`19432`portで待ち受けます。Dockerはこれをhostの
-loopbackにだけ公開し、host portは複数containerで衝突しないよう自動採番します。
-`post-start.sh`は採番されたportを`~/.plannotator-host-port`へ記録します。
+## agentの最後の返答をreviewする
 
-review起動時は`plannotator-browser`がcontainer URLをhost URLへ変換し、SSH経由で
-macOSのbrowserを開きます。host portが未取得の場合は`post-start.sh`を再実行してください。
-変換後のURLの自動openに失敗した場合は、terminalに表示されるURLをhostのbrowserで開きます。
+```text
+$plannotator-last
+```

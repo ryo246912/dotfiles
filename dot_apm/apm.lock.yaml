@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-22T03:01:32.190165+00:00'
+generated_at: '2026-08-08T11:46:29.311602+00:00'
 apm_version: 0.26.0
 dependencies:
 - repo_url: cathrynlavery/diagram-design
@@ -1426,163 +1426,11 @@ dependencies:
     .claude/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
     .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
   content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
-- repo_url: plannotator/effective-html
-  name: design-artifact
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/design-artifact
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/design-artifact
-  - .agents/skills/design-artifact/SKILL.md
-  - .agents/skills/design-artifact/agents/openai.yaml
-  - .claude/skills/design-artifact
-  - .claude/skills/design-artifact/SKILL.md
-  - .claude/skills/design-artifact/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/design-artifact/SKILL.md: sha256:c8314b66fb907a5acd3aa10efe4b5adb86d352808f5b84824cadfa6e6c9d38bb
-    .agents/skills/design-artifact/agents/openai.yaml: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
-    .claude/skills/design-artifact/SKILL.md: sha256:c8314b66fb907a5acd3aa10efe4b5adb86d352808f5b84824cadfa6e6c9d38bb
-    .claude/skills/design-artifact/agents/openai.yaml: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
-  content_hash: sha256:50894cbcca4d43d3e3d1cadeb361b71fe618097158666f935125962356f738b2
-- repo_url: plannotator/effective-html
-  name: html
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/html
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/html
-  - .agents/skills/html/SKILL.md
-  - .agents/skills/html/agents/openai.yaml
-  - .agents/skills/html/references/charts-and-data.md
-  - .agents/skills/html/references/creative-direction.md
-  - .agents/skills/html/references/diagrams.md
-  - .agents/skills/html/references/documents-and-presentations.md
-  - .agents/skills/html/references/interfaces.md
-  - .claude/skills/html
-  - .claude/skills/html/SKILL.md
-  - .claude/skills/html/agents/openai.yaml
-  - .claude/skills/html/references/charts-and-data.md
-  - .claude/skills/html/references/creative-direction.md
-  - .claude/skills/html/references/diagrams.md
-  - .claude/skills/html/references/documents-and-presentations.md
-  - .claude/skills/html/references/interfaces.md
-  deployed_file_hashes:
-    .agents/skills/html/SKILL.md: sha256:d99612ae158cd9c18574eb4f3cd11b79475311d27bb3d4c79d68088b1e96d875
-    .agents/skills/html/agents/openai.yaml: sha256:2ff14167e222e63017342fb000ef73f6e92121f6467dc6432759cf7a84f28238
-    .agents/skills/html/references/charts-and-data.md: sha256:c9bc9e002d2fc6f2a31b3698e6d828e755b4673fbf2ab0e036eb6c7ffbd5a4f3
-    .agents/skills/html/references/creative-direction.md: sha256:47b82ae5ccd58ef685bd69143b29ba1ac35e6b133695749a9e31b3454c773d21
-    .agents/skills/html/references/diagrams.md: sha256:5139d248ec08b7501c6aeeec7586c664dbbf6de4a5f2e6d792dc1c6b452948a3
-    .agents/skills/html/references/documents-and-presentations.md: sha256:b62a4d6a93ed2abe0b7eb49d93f6cc9a00379512268a186a1927d072926d5a54
-    .agents/skills/html/references/interfaces.md: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
-    .claude/skills/html/SKILL.md: sha256:d99612ae158cd9c18574eb4f3cd11b79475311d27bb3d4c79d68088b1e96d875
-    .claude/skills/html/agents/openai.yaml: sha256:2ff14167e222e63017342fb000ef73f6e92121f6467dc6432759cf7a84f28238
-    .claude/skills/html/references/charts-and-data.md: sha256:c9bc9e002d2fc6f2a31b3698e6d828e755b4673fbf2ab0e036eb6c7ffbd5a4f3
-    .claude/skills/html/references/creative-direction.md: sha256:47b82ae5ccd58ef685bd69143b29ba1ac35e6b133695749a9e31b3454c773d21
-    .claude/skills/html/references/diagrams.md: sha256:5139d248ec08b7501c6aeeec7586c664dbbf6de4a5f2e6d792dc1c6b452948a3
-    .claude/skills/html/references/documents-and-presentations.md: sha256:b62a4d6a93ed2abe0b7eb49d93f6cc9a00379512268a186a1927d072926d5a54
-    .claude/skills/html/references/interfaces.md: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
-  content_hash: sha256:fcc378531c364b52dd9bf94f5029a4ed17c6d7624927e1a7355996cabbf798e5
-- repo_url: plannotator/effective-html
-  name: html-diagram
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/html-diagram
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/html-diagram
-  - .agents/skills/html-diagram/SKILL.md
-  - .agents/skills/html-diagram/agents/openai.yaml
-  - .claude/skills/html-diagram
-  - .claude/skills/html-diagram/SKILL.md
-  - .claude/skills/html-diagram/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/html-diagram/SKILL.md: sha256:a3641a37be2f50df620cda273fe4c97295df93e6c6b3c9ba44f566945ed4f532
-    .agents/skills/html-diagram/agents/openai.yaml: sha256:ff40d59b2ec85ffbd34432672000ad88350e38fe6efc20cf1811be9a1a656ce0
-    .claude/skills/html-diagram/SKILL.md: sha256:a3641a37be2f50df620cda273fe4c97295df93e6c6b3c9ba44f566945ed4f532
-    .claude/skills/html-diagram/agents/openai.yaml: sha256:ff40d59b2ec85ffbd34432672000ad88350e38fe6efc20cf1811be9a1a656ce0
-  content_hash: sha256:ae9012713423f5e239b1d910ae7225becc8d720db665ee37301344086dc28fbf
-- repo_url: plannotator/effective-html
-  name: html-plan
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/html-plan
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/html-plan
-  - .agents/skills/html-plan/SKILL.md
-  - .agents/skills/html-plan/agents/openai.yaml
-  - .claude/skills/html-plan
-  - .claude/skills/html-plan/SKILL.md
-  - .claude/skills/html-plan/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/html-plan/SKILL.md: sha256:8e315b5f775d4fe3233cf593b9ba6103845a43c6d6b4b34f56d6bf3535cb9ee2
-    .agents/skills/html-plan/agents/openai.yaml: sha256:25cff822f6a3c53601914a1b7c2584e7352d4e33f75e5485511b52ccedc82129
-    .claude/skills/html-plan/SKILL.md: sha256:8e315b5f775d4fe3233cf593b9ba6103845a43c6d6b4b34f56d6bf3535cb9ee2
-    .claude/skills/html-plan/agents/openai.yaml: sha256:25cff822f6a3c53601914a1b7c2584e7352d4e33f75e5485511b52ccedc82129
-  content_hash: sha256:5363b9679337b62889d56ca9f3c9fb351f56cb2b1a577d07d53d1fddd8ad4e90
-- repo_url: plannotator/effective-html
-  name: html-prototype
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/html-prototype
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/html-prototype
-  - .agents/skills/html-prototype/SKILL.md
-  - .agents/skills/html-prototype/agents/openai.yaml
-  - .claude/skills/html-prototype
-  - .claude/skills/html-prototype/SKILL.md
-  - .claude/skills/html-prototype/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/html-prototype/SKILL.md: sha256:8987dda45224350254af30cafa72e721c6d91e1972e794e8e839406f77814368
-    .agents/skills/html-prototype/agents/openai.yaml: sha256:d102a3bddbde9ec6456f543453f9fcdd3db2ca73997457c8de81af18a3328318
-    .claude/skills/html-prototype/SKILL.md: sha256:8987dda45224350254af30cafa72e721c6d91e1972e794e8e839406f77814368
-    .claude/skills/html-prototype/agents/openai.yaml: sha256:d102a3bddbde9ec6456f543453f9fcdd3db2ca73997457c8de81af18a3328318
-  content_hash: sha256:4d11c5da2cc52887ea56db5511d1a5e5be3771255d55ab47a074318cd15a8529
-- repo_url: plannotator/effective-html
-  name: html-wireframe
-  host: github.com
-  resolved_commit: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  resolved_ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-  version: unknown
-  virtual_path: skills/html-wireframe
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/html-wireframe
-  - .agents/skills/html-wireframe/SKILL.md
-  - .agents/skills/html-wireframe/agents/openai.yaml
-  - .claude/skills/html-wireframe
-  - .claude/skills/html-wireframe/SKILL.md
-  - .claude/skills/html-wireframe/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/html-wireframe/SKILL.md: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
-    .agents/skills/html-wireframe/agents/openai.yaml: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
-    .claude/skills/html-wireframe/SKILL.md: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
-    .claude/skills/html-wireframe/agents/openai.yaml: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
-  content_hash: sha256:97cdf1d6abaef20857992e0841cfe5a19bbda1144d8de0d2bcdc0bca80952983
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
-  resolved_commit: 0b9c5461de2d0e6fd1a4a342947874d20b4c7c74
-  resolved_ref: v0.18.4
+  resolved_commit: bb6a8bcd9020c2de7a522c264bd859155915139f
+  resolved_ref: v0.18.2
   version: unknown
   virtual_path: integrations/claude-code/skills/crit
   is_virtual: true
@@ -1593,14 +1441,14 @@ dependencies:
   - .claude/skills/crit
   - .claude/skills/crit/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit/SKILL.md: sha256:290e499caac535463330ddac608e2a52183f67ee8e44b7994eb6777f1b857695
-    .claude/skills/crit/SKILL.md: sha256:290e499caac535463330ddac608e2a52183f67ee8e44b7994eb6777f1b857695
-  content_hash: sha256:e96dda6a8936ff4f92e1ce8a938fc5678c7e03b0adef62412d53f572d1d81e6c
+    .agents/skills/crit/SKILL.md: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
+    .claude/skills/crit/SKILL.md: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
+  content_hash: sha256:fe83a4e68c02e2c77eed71ced3e519acf7a5d41ea404cbb1ba1776d45113357f
 - repo_url: tomasz-tomczyk/crit
   name: crit-cli
   host: github.com
-  resolved_commit: 0b9c5461de2d0e6fd1a4a342947874d20b4c7c74
-  resolved_ref: v0.18.4
+  resolved_commit: bb6a8bcd9020c2de7a522c264bd859155915139f
+  resolved_ref: v0.18.2
   version: unknown
   virtual_path: integrations/claude-code/skills/crit-cli
   is_virtual: true
@@ -1611,9 +1459,9 @@ dependencies:
   - .claude/skills/crit-cli
   - .claude/skills/crit-cli/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit-cli/SKILL.md: sha256:e91de39ea64c89700bc26b81e591f59d91682f9ca7cc188b2c2f37252d60df25
-    .claude/skills/crit-cli/SKILL.md: sha256:e91de39ea64c89700bc26b81e591f59d91682f9ca7cc188b2c2f37252d60df25
-  content_hash: sha256:5cf00d92557c1ad95ae5c8c80e59a3c342186d9fd16e6282c87d52514aa6036f
+    .agents/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
+    .claude/skills/crit-cli/SKILL.md: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
+  content_hash: sha256:c62c3b4d93667eb2f8046f5ee7f8a51a3a2c5ac574faad108501e05747bf0f7a
 - repo_url: vercel-labs/skills
   name: find-skills
   host: github.com
@@ -2041,7 +1889,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:e91de39ea64c89700bc26b81e591f59d91682f9ca7cc188b2c2f37252d60df25
+  content_hash: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
 - kind: project-relative
   target: claude
   value: .claude/skills/crit/SKILL.md
@@ -2050,7 +1898,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:290e499caac535463330ddac608e2a52183f67ee8e44b7994eb6777f1b857695
+  content_hash: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
 - kind: project-relative
   target: claude
   value: .claude/skills/ctx-agent-history-search
@@ -2069,33 +1917,6 @@ deployments:
   - ctxrs/ctx/skills/ctx-agent-history-search
   active_owner: ctxrs/ctx/skills/ctx-agent-history-search
   content_hash: sha256:d76cd55f506f6d8605f2fed933a16e4ab995b3a4ab8e6d96bfd84d469872b3d6
-- kind: project-relative
-  target: claude
-  value: .claude/skills/design-artifact
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/design-artifact/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: sha256:c8314b66fb907a5acd3aa10efe4b5adb86d352808f5b84824cadfa6e6c9d38bb
-- kind: project-relative
-  target: claude
-  value: .claude/skills/design-artifact/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
 - kind: project-relative
   target: claude
   value: .claude/skills/dev-context
@@ -3925,186 +3746,6 @@ deployments:
   content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
 - kind: project-relative
   target: claude
-  value: .claude/skills/html
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-diagram
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-diagram/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: sha256:a3641a37be2f50df620cda273fe4c97295df93e6c6b3c9ba44f566945ed4f532
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-diagram/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: sha256:ff40d59b2ec85ffbd34432672000ad88350e38fe6efc20cf1811be9a1a656ce0
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-plan
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-plan/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: sha256:8e315b5f775d4fe3233cf593b9ba6103845a43c6d6b4b34f56d6bf3535cb9ee2
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-plan/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: sha256:25cff822f6a3c53601914a1b7c2584e7352d4e33f75e5485511b52ccedc82129
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-prototype
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-prototype/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: sha256:8987dda45224350254af30cafa72e721c6d91e1972e794e8e839406f77814368
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-prototype/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: sha256:d102a3bddbde9ec6456f543453f9fcdd3db2ca73997457c8de81af18a3328318
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-wireframe
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-wireframe/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html-wireframe/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:d99612ae158cd9c18574eb4f3cd11b79475311d27bb3d4c79d68088b1e96d875
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:2ff14167e222e63017342fb000ef73f6e92121f6467dc6432759cf7a84f28238
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/references/charts-and-data.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:c9bc9e002d2fc6f2a31b3698e6d828e755b4673fbf2ab0e036eb6c7ffbd5a4f3
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/references/creative-direction.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:47b82ae5ccd58ef685bd69143b29ba1ac35e6b133695749a9e31b3454c773d21
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/references/diagrams.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:5139d248ec08b7501c6aeeec7586c664dbbf6de4a5f2e6d792dc1c6b452948a3
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/references/documents-and-presentations.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:b62a4d6a93ed2abe0b7eb49d93f6cc9a00379512268a186a1927d072926d5a54
-- kind: project-relative
-  target: claude
-  value: .claude/skills/html/references/interfaces.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
-- kind: project-relative
-  target: claude
   value: .claude/skills/ipa-security-check
   runtime: null
   scope: project
@@ -4876,7 +4517,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:e91de39ea64c89700bc26b81e591f59d91682f9ca7cc188b2c2f37252d60df25
+  content_hash: sha256:3e6bf2be5eb2e441b85329e5d8ab44ccaac50220d5f51ed6a7af7c650d7e272f
 - kind: project-relative
   target: codex
   value: .agents/skills/crit/SKILL.md
@@ -4885,7 +4526,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:290e499caac535463330ddac608e2a52183f67ee8e44b7994eb6777f1b857695
+  content_hash: sha256:24809f89560d3a1969fa5798876b4d986aa165daa2abbaf787941156a1900830
 - kind: project-relative
   target: codex
   value: .agents/skills/ctx-agent-history-search
@@ -4904,33 +4545,6 @@ deployments:
   - ctxrs/ctx/skills/ctx-agent-history-search
   active_owner: ctxrs/ctx/skills/ctx-agent-history-search
   content_hash: sha256:d76cd55f506f6d8605f2fed933a16e4ab995b3a4ab8e6d96bfd84d469872b3d6
-- kind: project-relative
-  target: codex
-  value: .agents/skills/design-artifact
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/design-artifact/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: sha256:c8314b66fb907a5acd3aa10efe4b5adb86d352808f5b84824cadfa6e6c9d38bb
-- kind: project-relative
-  target: codex
-  value: .agents/skills/design-artifact/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/design-artifact
-  active_owner: plannotator/effective-html/skills/design-artifact
-  content_hash: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
 - kind: project-relative
   target: codex
   value: .agents/skills/dev-context
@@ -6758,186 +6372,6 @@ deployments:
   - mattpocock/skills/skills/productivity/grilling
   active_owner: mattpocock/skills/skills/productivity/grilling
   content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-diagram
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-diagram/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: sha256:a3641a37be2f50df620cda273fe4c97295df93e6c6b3c9ba44f566945ed4f532
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-diagram/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-diagram
-  active_owner: plannotator/effective-html/skills/html-diagram
-  content_hash: sha256:ff40d59b2ec85ffbd34432672000ad88350e38fe6efc20cf1811be9a1a656ce0
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-plan
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-plan/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: sha256:8e315b5f775d4fe3233cf593b9ba6103845a43c6d6b4b34f56d6bf3535cb9ee2
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-plan/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-plan
-  active_owner: plannotator/effective-html/skills/html-plan
-  content_hash: sha256:25cff822f6a3c53601914a1b7c2584e7352d4e33f75e5485511b52ccedc82129
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-prototype
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-prototype/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: sha256:8987dda45224350254af30cafa72e721c6d91e1972e794e8e839406f77814368
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-prototype/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-prototype
-  active_owner: plannotator/effective-html/skills/html-prototype
-  content_hash: sha256:d102a3bddbde9ec6456f543453f9fcdd3db2ca73997457c8de81af18a3328318
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-wireframe
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-wireframe/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html-wireframe/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html-wireframe
-  active_owner: plannotator/effective-html/skills/html-wireframe
-  content_hash: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:d99612ae158cd9c18574eb4f3cd11b79475311d27bb3d4c79d68088b1e96d875
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:2ff14167e222e63017342fb000ef73f6e92121f6467dc6432759cf7a84f28238
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/references/charts-and-data.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:c9bc9e002d2fc6f2a31b3698e6d828e755b4673fbf2ab0e036eb6c7ffbd5a4f3
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/references/creative-direction.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:47b82ae5ccd58ef685bd69143b29ba1ac35e6b133695749a9e31b3454c773d21
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/references/diagrams.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:5139d248ec08b7501c6aeeec7586c664dbbf6de4a5f2e6d792dc1c6b452948a3
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/references/documents-and-presentations.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:b62a4d6a93ed2abe0b7eb49d93f6cc9a00379512268a186a1927d072926d5a54
-- kind: project-relative
-  target: codex
-  value: .agents/skills/html/references/interfaces.md
-  runtime: null
-  scope: project
-  owners:
-  - plannotator/effective-html/skills/html
-  active_owner: plannotator/effective-html/skills/html
-  content_hash: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
 - kind: project-relative
   target: codex
   value: .agents/skills/ipa-security-check

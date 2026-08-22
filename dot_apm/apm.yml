@@ -14,31 +14,6 @@ dependencies:
   # 再現性のため各依存をコミット SHA または release tag に pin する。
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
-    # Effective HTMLのartifact作成skills。各skillを同一commitに固定して配布する。
-    - git: plannotator/effective-html
-      path: skills/html
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: html
-    - git: plannotator/effective-html
-      path: skills/design-artifact
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: design-artifact
-    - git: plannotator/effective-html
-      path: skills/html-wireframe
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: html-wireframe
-    - git: plannotator/effective-html
-      path: skills/html-prototype
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: html-prototype
-    - git: plannotator/effective-html
-      path: skills/html-plan
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: html-plan
-    - git: plannotator/effective-html
-      path: skills/html-diagram
-      ref: d95debbaef15af1d201fc6c10c77cf92b524a0d6
-      alias: html-diagram
     # crit（tomasz-tomczyk/crit プラグイン）。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.4
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.4
