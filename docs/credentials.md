@@ -1,7 +1,8 @@
-# git credential の管理
+# git / Docker credential
 
 fnox で管理しているのはアプリ・API用のsecretで、git自身の認証情報はgitのcredential helper
-機構に任せる方が自然なため、fnoxとは別にchezmoiで管理している。
+機構に任せる方が自然なため、fnoxとは別にchezmoiで管理している。Dockerのcredential設定は
+Docker Desktopや利用環境が更新するローカル状態として扱い、dotfilesでは管理しない。
 
 ## git: `credential.helper`
 
@@ -65,3 +66,36 @@ pass show git-credential-manager/<host> # GCM が保存したエントリを pas
 ```
 
 実際に HTTPS 認証が必要なホストへ一度アクセスし、2回目以降パスワードを聞かれなければ有効。
+
+## Docker credential
+
+`docker login`の認証情報は`~/.docker/config.json`から参照される。credential storeが設定されて
+いない場合、認証情報は同ファイルの`auths`へbase64エンコードされるだけで保存されるため、暗号化
+されたsecretとしては扱えない。
+
+`credsStore`を設定すると、認証情報の保存を`docker-credential-<値>`という外部credential helperへ
+委譲できる。たとえば`"credsStore": "desktop"`はDocker Desktop付属の
+`docker-credential-desktop`を使用する。Docker DesktopではOSのkeychainと連携するcredential
+storeがインストール・設定されるため、通常はDocker Desktopが生成した設定をそのまま利用する。
+
+`credHelpers`はレジストリごとに使用するhelperを指定する設定であり、対象レジストリでは
+`credsStore`より優先される。helperバイナリはDocker CLIを実行する環境の`PATH`に必要となる。
+Docker Desktopを使わないLinux環境では、環境に応じて`docker-credential-pass`や
+`docker-credential-secretservice`などを用意する。
+
+### このリポジトリでの扱い
+
+`~/.docker/config.json`にはcredential設定だけでなく、`auths`、`currentContext`、`plugins`、
+`features`などDocker DesktopやCLIが更新するマシン固有の状態も含まれる。そのため、
+`dot_docker/config.json`などのchezmoi sourceは置かず、ファイル全体をdotfiles管理の対象外とする。
+
+設定内容は次のコマンドで確認する。`auths`の各要素に`auth`が直接含まれている場合は、credential
+storeへ移行するため、利用環境に適したhelperを用意してから`docker logout`と`docker login`を
+やり直す。
+
+```sh
+jq '{credsStore, credHelpers, auths}' ~/.docker/config.json
+
+docker logout <registry>
+docker login <registry>
+```
