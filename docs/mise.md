@@ -44,52 +44,19 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 
 ### コマンド
 
-#### CLI から formula/cask を1件だけ直接導入する
+#### CLI から formula/cask を直接導入する
 
-調査結果として、`brew:`/`brew-cask:` は `[tools]` 用の tool backend ではなく
-`[bootstrap.packages]` 用の system package manager なので、`mise install brew:jq` や
-`mise use brew-cask:firefox` という形では導入できない。`mise install` は `[tools]` に宣言した
-開発ツールを対象にするため、最も近い one-shot コマンドは
-`mise bootstrap packages apply <manager>:<package>` になる。
+ワンショットで導入するだけなら `apply`、設定にも残して導入するなら `use` を使う。
 
 ```sh
-# 今すぐ導入するだけ（mise.toml には書き込まない）
+# 導入するだけ（mise.toml には書き込まない）
 mise bootstrap packages apply brew:jq
 mise bootstrap packages apply brew-cask:slack
 
-# 複数をまとめて導入することもできる
-mise bootstrap packages apply brew:jq brew:ffmpeg brew-cask:slack
-```
-
-`brew-cask:` の app artifact はデフォルトで `/Applications` に配置される。書き込み権限がない
-環境では、絶対パスの `MISE_BREW_CASK_OPT_APPDIR` でユーザー用ディレクトリへ変更できる。
-
-```sh
-MISE_BREW_CASK_OPT_APPDIR="$HOME/Applications" \
-  mise bootstrap packages apply brew-cask:slack
-```
-
-設定にも残して直ちに導入するなら、`mise use` に相当する system package 用コマンドを使う。
-
-```sh
-# ローカル mise.toml の [bootstrap.packages] に追記し、未導入ならそのまま導入する
+# [bootstrap.packages] に追加して導入する
 mise bootstrap packages use brew:jq
 mise bootstrap packages use brew-cask:slack
-
-# グローバル設定 ~/.config/mise/config.toml に追記して導入する
-mise bootstrap packages use -g brew:jq
 ```
-
-`apply` は引数で明示した未設定パッケージも導入するが設定を変更しない。一方、`use` は
-`"brew:jq" = "latest"` のようなエントリを `[bootstrap.packages]` に書いてから導入する。
-どちらも実 `brew` コマンドを呼ばず、mise が Homebrew API からメタデータを取得して formula の
-bottle または cask artifact を直接ダウンロードする。ただし canonical Homebrew prefix の作成に
-限って、権限がなければ最初の1回だけ sudo が必要になる場合がある。
-
-formula/cask の `@` は mise のバージョン指定ではなく Homebrew のパッケージ名の一部なので、
-バージョン付き formula/cask は `brew:postgresql@17` / `brew-cask:temurin@17` のように指定する。
-`apply` には `install`（短縮形 `i`）、`use` には `u` の alias もあるが、ドキュメントでは意味が
-明確な正式名を使う。
 
 `status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
 動くが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
@@ -385,42 +352,6 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 公開している必要がある（`brew tap-new` が生成する GitHub Actions で自動生成されるのが典型）。
 古い/小規模な tap では未対応なことがあり、その場合 `mise bootstrap packages apply` は
 インストールできずに失敗する。
-
-#### Arto（`arto-app/tap/arto`）の場合
-
-[Arto](https://github.com/arto-app/Arto) の公式 cask は `arto-app/homebrew-tap` の
-`Casks/arto.rb` には存在するが、mise がサードパーティ cask の取得に必要とする
-`api/cask/arto.json` は公開されていない。そのため、現時点では次のコマンドでは導入できず
-404 エラーになる（mise 2026.8.10 で確認）。
-
-```sh
-# 現時点では失敗する: このまま実行しない
-mise bootstrap packages apply brew-cask:arto-app/tap/arto
-```
-
-```text
-failed to fetch Homebrew cask 'arto-app/tap/arto' directly.
-Tapped casks must publish API metadata at api/cask/<token>.json
-```
-
-`mise bootstrap packages brew tap arto-app/tap` を先に実行しても、これは mise の設定へ tap URL を
-登録するだけで API metadata を生成しないため回避策にはならない。tap 側で
-`api/cask/arto.json` が公開されるまでは、Arto 公式 README のとおり実 Homebrew で導入する。
-
-```sh
-brew install --cask arto-app/tap/arto
-
-# Arto は未署名・未 notarize のため、公式手順どおり quarantine 属性を除去する
-xattr -dr com.apple.quarantine /Applications/Arto.app
-```
-
-将来 tap が API metadata を公開した後は、次の `mise` コマンドへ切り替えられる見込み。ただし
-quarantine 属性の除去は cask の caveat に書かれた別作業なので、その後も必要になる。
-
-```sh
-mise bootstrap packages apply brew-cask:arto-app/tap/arto
-xattr -dr com.apple.quarantine /Applications/Arto.app
-```
 
 このリポジトリでは `thock`（`kamillobinski/thock`）について API メタデータの公開有無を
 確認できなかったため、`[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
