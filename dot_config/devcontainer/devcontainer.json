@@ -27,7 +27,8 @@
     "CRIT_ALLOW_UNAUTHENTICATED_NETWORK": "1",
     // crit: コンテナ内では更新チェック不要のため無効化
     "CRIT_NO_UPDATE_CHECK": "1",
-    // Plannotator: 固定したコンテナ側portを動的なhost portへ中継してHTML reviewを開く
+    // Plannotator: 固定したcontainer側portを動的なhost portへ中継する。
+    // appPortとpost-start.shもこのportを参照するため、変更時は3か所を同期する。
     "PLANNOTATOR_REMOTE": "1",
     "PLANNOTATOR_PORT": "19432",
     "PLANNOTATOR_BROWSER": "/home/vscode/.config/devcontainer/scripts/plannotator-browser"
