@@ -363,3 +363,36 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
 壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に
 検証してから。
+
+## Atat のインストール
+
+Atat（<https://atatapp.com/features>）は、現時点では Homebrew Cask に登録されておらず、
+公開された固定バージョンの配布 URL や公式 Homebrew tap も確認できないため、
+`brew install --cask atat` や mise の `brew-cask:atat` では導入できない。
+配布元サイトからダウンロードして手動でインストールする。
+
+```bash
+open https://atatapp.com/features
+```
+
+Homebrew Cask への登録後は、次のコマンドで利用可否を確認できる。
+
+```bash
+brew search --cask atat
+brew info --cask atat
+```
+
+公式 cask が利用可能になった場合は、`dot_config/mise/config.mac.toml` の
+`[bootstrap.packages]` に以下を追加し、通常の macOS パッケージ適用手順で管理する。
+
+```toml
+"brew-cask:atat" = "latest"
+```
+
+```bash
+chezmoi apply
+MISE_ENV=mac mise bootstrap packages apply
+```
+
+配布元が固定 URL とチェックサムを公開していない状態で、HTML から最新のダウンロード URL を
+スクレイピングする独自 task は作らない。サイト変更で壊れやすく、取得物の検証もできないためである。
