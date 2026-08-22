@@ -50,12 +50,10 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 
 ```sh
 # 導入するだけ（mise.toml には書き込まない）
-mise bootstrap packages apply brew:jq
-mise bootstrap packages apply brew-cask:slack
+mise bootstrap packages apply <manager>:<package>
 
 # [bootstrap.packages] に追加して導入する
-mise bootstrap packages use brew:jq
-mise bootstrap packages use brew-cask:slack
+mise bootstrap packages use <manager>:<package>
 ```
 
 `status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
