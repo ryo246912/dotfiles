@@ -14,11 +14,13 @@ if ! [[ $host_port =~ ^[0-9]+$ ]]; then
 	printf '保存されたhost portが不正です。post-start処理を再実行してください。\n' >&2
 	exit 1
 fi
-host_url=$(printf '%s\n' "$url" | sed -E "s#(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${PLANNOTATOR_PORT:-19432}#localhost:${host_port}#")
-if [ "$host_url" = "$url" ]; then
+container_port=${PLANNOTATOR_PORT:-19432}
+url_pattern="^https?://(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${container_port}([/?#]|$)"
+if ! [[ $url =~ $url_pattern ]]; then
 	printf 'Plannotator URLのportをhost用に変換できませんでした: %s\n' "$url" >&2
 	exit 1
 fi
+host_url=$(printf '%s\n' "$url" | sed -E "s#(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${container_port}#localhost:${host_port}#")
 printf -v host_url_escaped '%q' "$host_url"
 
 # devcontainerからmacOS hostの既存browserへreview URLを渡す。
