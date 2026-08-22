@@ -4,16 +4,19 @@ devcontainerでPlannotatorのannotation UIとEffective HTML skillsを使うた�
 
 ## 導入
 
-devcontainerの初回作成時に`post-create.sh`が次を自動導入します。
+devcontainerの初回作成時に`post-create.sh`が固定版のPlannotatorを検証して導入します。
 
 - Plannotator CLI
 - Codex / Claude Code用のreview・annotate skillsとagent連携
-- Effective HTMLの6 skills（HTML、wireframe、prototype、plan、diagram、design artifact）
+
+Effective HTMLの6 skills（HTML、wireframe、prototype、plan、diagram、design artifact）は
+`dot_apm/apm.yml`でupstream commitに固定し、通常の`mise run apm:install`で配布します。
 
 既存containerに反映する場合はrebuildするか、次を実行します。
 
 ```bash
 bash ~/.config/devcontainer/scripts/post-create.sh
+mise run apm:install
 ```
 
 ## HTMLを作成してreviewする
