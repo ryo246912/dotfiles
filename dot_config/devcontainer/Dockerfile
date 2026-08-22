@@ -39,10 +39,9 @@ COPY --chown=vscode:vscode tasks /mise/tasks
 
 USER vscode
 
-# Install Go before Go-backed tools, and gh before the authenticated install can
-# read the mounted token config.
+# First, install gh so the authenticated install can read the mounted token config
 RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
-    /usr/local/bin/mise install -C /mise aqua:cli/cli core:go && \
+    /usr/local/bin/mise install -C /mise aqua:cli/cli && \
     /usr/local/bin/mise reshim -C /mise
 
 # Install all tools via mise with GitHub auth available

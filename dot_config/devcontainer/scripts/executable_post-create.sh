@@ -4,7 +4,7 @@ set -e
 # Put the devcontainer-specific Lefthook config in the repository root.
 repo_root="$(git rev-parse --show-toplevel)"
 local_lefthook_config="${repo_root}/lefthook.local.yml"
-lefthook_template="${HOME}/.config/lefthook/lefthook.local.yml"
+lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
 if [ ! -e "$local_lefthook_config" ]; then
 	cp "$lefthook_template" "$local_lefthook_config"
 fi

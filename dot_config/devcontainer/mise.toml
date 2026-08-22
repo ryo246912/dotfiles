@@ -20,7 +20,7 @@ experimental = true
 "core:python"                                    = "3.14.6"
 "github:github/copilot-cli"                      = "1.0.73"
 "github:philschmid/mcp-cli"                      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"github:tomasz-tomczyk/crit"                     = "0.18.2"
+"github:tomasz-tomczyk/crit"                     = "0.19.0"
 "go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 "npm:ccusage"                                    = "20.0.1"
 "npm:oxfmt"                                      = "0.59.0"
@@ -35,10 +35,3 @@ uvx = true
 [task_config]
 dir      = "{{cwd}}"
 includes = ["/mise/tasks/*.toml"]
-
-[hooks]
-postinstall = '''
-if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
-  lefthook install -f
-fi
-'''

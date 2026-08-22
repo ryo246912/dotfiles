@@ -44,6 +44,18 @@ packages apply` だけで導入できる。実 Homebrew の有無・導入順序
 
 ### コマンド
 
+#### CLI から formula/cask を直接導入する
+
+ワンショットで導入するだけなら `apply`、設定にも残して導入するなら `use` を使う。
+
+```sh
+# 導入するだけ（mise.toml には書き込まない）
+mise bootstrap packages apply <manager>:<package>
+
+# [bootstrap.packages] に追加して導入する
+mise bootstrap packages use <manager>:<package>
+```
+
 `status`/`apply`/`upgrade`/`prune` は既に読み込まれている `[bootstrap.packages]` に対して
 動くが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
 `--path`（または `-g`）を指定しない限り**カレントディレクトリのローカル `mise.toml`**に書く
