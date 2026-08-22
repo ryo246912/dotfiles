@@ -86,7 +86,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:kenn-io/agentsview"                                 = "0.39.0"
 "github:kyu08/fzf-make"                                     = "0.73.0"
 "github:max-sixty/worktrunk"                                = "0.74.0"
-"github:microsoft/apm"                                      = "0.26.0"
+"github:microsoft/apm"                                      = "0.28.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
 "github:rcieri/glab-tui"                                    = "0.8.0"
 "github:rivolink/leaf"                                      = { version = "1.28.0", bin = "leaf" }
