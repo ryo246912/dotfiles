@@ -6,6 +6,68 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## ホストと共有しないプロジェクト生成物
+
+ワークスペース自体はホストから bind mount しますが、次のディレクトリは起動時に検出し、コンテナの
+writable layer (`/var/lib/devcontainer-project-artifacts`) を bind mount してホスト側の内容を隠します。
+macOS ホストと Linux コンテナでネイティブバイナリや実行環境を共有することによる衝突を防ぎます。
+
+- `node_modules`: Node.js の依存パッケージ
+- `.venv`: Python 仮想環境
+- `target`: Rust / Maven などのビルド成果物
+- `.gradle`: Gradle のプロジェクトキャッシュ
+- `.terraform`: Terraform provider の実行ファイルと初期化データ
+
+### writable layer と bind mount を使う理由
+
+通常、`${localWorkspaceFolder}/node_modules` はワークスペースの bind mount に含まれるため、コンテナから
+書いた内容がそのまま macOS 側にも現れます。この設定では、同じパスへコンテナ内の別ディレクトリを
+bind mount して、次のように見える場所と実際の保存先を差し替えます。
+
+| コンテナから見えるパス              | 実際の保存先（コンテナ内）                       | ホストから見える内容          |
+| ----------------------------------- | ------------------------------------------------ | ----------------------------- |
+| `<workspace>/apps/web/node_modules` | `/var/lib/devcontainer-project-artifacts/<hash>` | mount point用の空ディレクトリ |
+| `<workspace>/packages/api/.venv`    | `/var/lib/devcontainer-project-artifacts/<hash>` | mount point用の空ディレクトリ |
+
+Dockerコンテナのwritable layerは、そのコンテナだけが持つ書き込み領域です。ここを保存先にすることで、
+
+- Linux用native addonや実行ファイルがmacOS側へ書き込まれない
+- ホストに既にあるmacOS用生成物はmountの下に隠れ、コンテナから誤って利用されない
+- 別のdevcontainerとも生成物を共有しない
+- named volumeと違い、コンテナ削除時にDockerがwritable layerも削除するため手動掃除が不要
+
+という状態になります。ソースコードなど他のファイルは従来のworkspace bind mount上にあるため、コンテナでの
+編集は引き続きホストへ反映されます。生成物ディレクトリだけを局所的に差し替えるのがこの方式のポイントです。
+
+ワークスペース直下だけでなく、既存の対象ディレクトリを任意の深さから検出します。また、まだ対象が
+作られていなくても `package.json`、`pyproject.toml`、`Cargo.toml`、`pom.xml`、Gradle 設定、Terraform
+ファイルなどの場所から mount point を作るため、monorepo の `apps/*` や `packages/*` も分離されます。
+`.git` と検出済みの生成物以下は走査しません。
+
+`target` は一般的なディレクトリ名でもあるため、名前だけでは検出しません。同じ階層に`Cargo.toml`または
+`pom.xml`がある場合に限り、Rust/Mavenの生成物として分離します。
+
+格納先は Docker named volume ではなくコンテナ自身の writable layer です。ホストや別のコンテナとは共有されず、
+コンテナを削除すれば生成物も一緒に削除されるため、volume の手動削除は不要です。コンテナの停止・再起動時には
+`postStartCommand` が bind mount を張り直すので、同じコンテナ内の生成物は引き続き利用できます。
+
+bind mountのtargetにはLinuxの仕様上ディレクトリが必要です。対象が未作成の場合はworkspace（ホスト）側にも
+空のmount pointが作られますが、依存パッケージやビルド成果物の実体はそこへ書かれません。この空ディレクトリは
+通常それぞれのツール向け`.gitignore`の対象です。
+
+検出は`postCreateCommand` / `postStartCommand`を実行した時点のスナップショットです。manifestのない場所で
+起動中に`python -m venv .venv`などを新規実行すると、その回はホスト側へ作成されます。また、後からスクリプトを
+実行しても既存内容はコンテナ側へコピーせず、mountの下に隠します。これはmacOS用生成物をLinux環境へコピーして
+再利用しないための意図的な動作です。その場合はホスト側の生成物を削除し、下記コマンドでmountした後にコンテナ内で
+依存関係を作り直してください。
+
+プロジェクト定義ファイルを追加した直後など、コンテナ起動後に新しい対象パスが生じた場合は、次を実行するか
+コンテナを再起動してください。
+
+```bash
+bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
+```
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
