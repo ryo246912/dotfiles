@@ -50,3 +50,12 @@ EOF
 else
 	echo "ℹ️ ~/.crit.config.json は既に存在します"
 fi
+
+# Plannotator本体とagent連携（review/annotate skills、Codex Stop hook）を導入する。
+# HTML artifact作成用のEffective HTML skillsもCodex/Claude Codeへglobal installする。
+# どちらもnon-interactiveで再実行できるため、devcontainer rebuild時に最新版へ追従する。
+curl -fsSL https://plannotator.ai/install.sh | \
+	PLANNOTATOR_SKIP_AGENT_TERMINAL_INSTALL=1 bash -s -- --non-interactive --no-extras
+npx --yes skills add plannotator/effective-html \
+	--global --agent codex --agent claude-code --skill '*' --yes
+echo "✓ PlannotatorとEffective HTML skillsをインストールしました"

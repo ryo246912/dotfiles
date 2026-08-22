@@ -58,3 +58,22 @@ else
 	rm -f "$CRIT_HOST_PORT_FILE"
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
 fi
+
+# Plannotatorもhost portを自動採番する。plannotator-browserがこのfileを読み、
+# container内のURLをhostのURLへ置き換えてbrowserを開く。
+PLANNOTATOR_HOST_PORT_FILE=~/.plannotator-host-port
+PLANNOTATOR_HOST_PORT=""
+for _ in 1 2; do
+	PLANNOTATOR_HOST_PORT=$(timeout 5 ssh "${SSH_OPTS[@]}" mac-host \
+		"docker port '${HOSTNAME}' 19432/tcp" 2>/dev/null | tail -n1 | sed -E 's/.*://') || true
+	[ -n "$PLANNOTATOR_HOST_PORT" ] && break
+	sleep 1
+done
+
+if [ -n "$PLANNOTATOR_HOST_PORT" ]; then
+	echo "$PLANNOTATOR_HOST_PORT" >"$PLANNOTATOR_HOST_PORT_FILE"
+	echo "✓ Plannotator の host port (${PLANNOTATOR_HOST_PORT}) を ${PLANNOTATOR_HOST_PORT_FILE} に記録しました"
+else
+	rm -f "$PLANNOTATOR_HOST_PORT_FILE"
+	echo "ℹ️ Plannotator の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
+fi
