@@ -14,7 +14,10 @@
       "dockerDashComposeVersion": "v2"
     }
   },
+  "initializeCommand": "mkdir -p ${localEnv:HOME}/.config/git ${localEnv:HOME}/.config/gh ${localEnv:HOME}/.config/ccusage ${localEnv:HOME}/.config/mise ${localEnv:HOME}/.config/devcontainer ${localEnv:HOME}/.ssh ${localEnv:HOME}/.claude ${localEnv:HOME}/.claude-account2 ${localEnv:HOME}/.agents ${localEnv:HOME}/.codex ${localEnv:HOME}/.copilot ${localEnv:HOME}/.coderabbit",
   "remoteEnv": {
+    "AI_AGENT": "1",
+    "LEFTHOOK_CONFIG": "lefthook.local.yml",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
@@ -44,12 +47,11 @@
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // devcontainer専用のSSH鍵（ホスト通知用）
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer,target=/home/vscode/.ssh/id_ed25519,readonly",
-    // devcontainer scripts
-    "type=bind,source=${localEnv:HOME}/.config/devcontainer/scripts,target=/home/vscode/.config/devcontainer/scripts,readonly",
     // git - parent directory of workspace
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",

@@ -3,29 +3,35 @@ auto_install = false
 experimental = true
 
 [tools]
-"aqua:BurntSushi/ripgrep"        = "15.2.0"
-"aqua:anthropics/claude-code"    = "2.1.218"
-"aqua:astral-sh/uv"              = "0.12.1"
-"aqua:cli/cli"                   = "2.97.0"
-"aqua:golangci/golangci-lint"    = "2.12.2"
-"aqua:koalaman/shellcheck"       = "0.11.0"
-"aqua:mvdan/sh"                  = "3.13.1"
-"aqua:openai/codex"              = "0.146.0"
-"aqua:tamasfe/taplo"             = "0.10.0"
-"core:bun"                       = "1.3.14"
-"core:go"                        = "1.26.5"
-"core:node"                      = "22.19.0"
-"core:python"                    = "3.14.6"
-"github:github/copilot-cli"      = "1.0.73"
-"github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"github:tomasz-tomczyk/crit"     = "0.19.0"
-"npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
-"npm:ccusage"                    = "20.0.1"
-"npm:oxfmt"                      = "0.59.0"
-"npm:oxlint"                     = "1.76.0"
+"aqua:BurntSushi/ripgrep"                        = "15.2.0"
+"aqua:anthropics/claude-code"                    = "2.1.218"
+"aqua:astral-sh/ruff"                            = "0.16.3"
+"aqua:astral-sh/uv"                              = "0.12.1"
+"aqua:cli/cli"                                   = "2.97.0"
+"aqua:evilmartians/lefthook"                     = "2.1.10"
+"aqua:golangci/golangci-lint"                    = "2.12.2"
+"aqua:koalaman/shellcheck"                       = "0.11.0"
+"aqua:mvdan/sh"                                  = "3.13.1"
+"aqua:openai/codex"                              = "0.146.0"
+"aqua:tamasfe/taplo"                             = "0.10.0"
+"core:bun"                                       = "1.3.14"
+"core:go"                                        = "1.26.5"
+"core:node"                                      = "22.19.0"
+"core:python"                                    = "3.14.6"
+"github:github/copilot-cli"                      = "1.0.73"
+"github:philschmid/mcp-cli"                      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
+"github:tomasz-tomczyk/crit"                     = "0.19.0"
+"go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+"npm:ccusage"                                    = "20.0.1"
+"npm:oxfmt"                                      = "0.59.0"
+"npm:oxlint"                                     = "1.76.0"
 
 [settings.npm]
 bun = true
 
 [settings.pipx]
 uvx = true
+
+[task_config]
+dir      = "{{cwd}}"
+includes = ["/mise/tasks/*.toml"]

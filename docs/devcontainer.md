@@ -104,3 +104,8 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+## AIエージェント向けpre-commit
+
+devcontainerでは`AI_AGENT=1`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。

@@ -1,6 +1,20 @@
 #!/bin/bash
 set -e
 
+# Put the devcontainer-specific Lefthook config in the repository root.
+repo_root="$(git rev-parse --show-toplevel)"
+local_lefthook_config="${repo_root}/lefthook.local.yml"
+lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
+if [ ! -e "$local_lefthook_config" ]; then
+	cp "$lefthook_template" "$local_lefthook_config"
+fi
+
+# Install the devcontainer-specific hooks for this checkout.
+(
+	cd "$repo_root"
+	lefthook install
+)
+
 # .claude.json のコピー（既存の処理）
 if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
 	cp /tmp/claude-config-host.json ~/.claude.json

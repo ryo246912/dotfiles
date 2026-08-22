@@ -1,0 +1,38 @@
+["lint:typescript"]
+depends = [
+    "lint:typescript:check",
+    "lint:typescript:format",
+    "lint:typescript:typecheck",
+]
+description = "Run all strict TypeScript/JavaScript checks"
+
+["lint:typescript:check"]
+description = "Run Oxlint checks"
+run         = 'oxlint --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxlint.json" .'
+
+["lint:typescript:format"]
+description = "Check TypeScript/JavaScript formatting with Oxfmt"
+run         = 'oxfmt --check --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxfmt.json" .'
+
+["lint:typescript:typecheck"]
+description = "Run strict TypeScript type checks with tsgo"
+run = """
+tsgo --noEmit --pretty false --strict --noUncheckedIndexedAccess \
+  --exactOptionalPropertyTypes --noImplicitReturns --noUnusedLocals \
+  --noUnusedParameters --noFallthroughCasesInSwitch --noImplicitOverride \
+  --allowUnreachableCode false --allowUnusedLabels false \
+  --forceConsistentCasingInFileNames --useUnknownInCatchVariables
+"""
+
+["fix:typescript"]
+depends     = ["fix:typescript:format"]
+description = "Apply all safe TypeScript/JavaScript lint and formatting fixes"
+
+["fix:typescript:check"]
+description = "Apply Oxlint fixes"
+run         = 'oxlint --fix --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxlint.json" .'
+
+["fix:typescript:format"]
+depends     = ["fix:typescript:check"]
+description = "Format TypeScript/JavaScript files with Oxfmt"
+run         = 'oxfmt --config "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/oxfmt.json" .'

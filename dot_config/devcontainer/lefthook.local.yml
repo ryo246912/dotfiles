@@ -1,0 +1,26 @@
+output:
+  - meta
+  - summary
+  - failure
+  - execution_out
+
+glob_matcher: doublestar
+
+pre-commit:
+  jobs:
+    - name: go (ai-only)
+      glob: "**/*.go"
+      only: &ai-only
+        - run: test "${AI_AGENT:-}" = "1"
+      run: mise run lint:go
+      fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
+    - name: python (ai-only)
+      glob: "**/*.py"
+      only: *ai-only
+      run: mise run lint:python
+      fail_text: "❌ [ai-only] Python lint or format check failed."
+    - name: typescript (ai-only)
+      glob: "**/{*.{js,jsx,ts,tsx,mjs,cjs,mts,cts},package.json,tsconfig*.json,oxlint.json,oxfmt.json}"
+      only: *ai-only
+      run: mise run lint:typescript
+      fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."
