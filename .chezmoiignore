@@ -7,7 +7,6 @@
 **/*raycast*
 **/*mac*
 **/*brew*
-.docker/config.json
 {{- end }}
 _*
 plan*
