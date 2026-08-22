@@ -230,10 +230,8 @@ select_action() {
 	# 利用可能なアクションとその説明
 	local actions="lazygit	Lazygitでリポジトリを開く
 livediff	livediffでファイル変更をリアルタイム表示
-code	VS Codeでディレクトリを開く
 nvim	Neovimでディレクトリを開く
-czg	czgでコミットを作成
-diff	git diffを表示
+hunk	hunkでブランチの差分を表示
 cd	ディレクトリに移動する（新しいシェル）"
 
 	# fzfでアクション選択
@@ -310,25 +308,6 @@ open_livediff() {
 	return 0
 }
 
-# VS Codeで開く
-open_code() {
-	local worktree_path="$1"
-	local branch_name="$2"
-
-	if [ ! -d "$worktree_path" ]; then
-		error_exit "worktreeディレクトリが存在しません: $worktree_path"
-	fi
-
-	if ! command -v code &>/dev/null; then
-		error_exit "VS Code (code コマンド) が見つかりません"
-	fi
-
-	# VS Codeでディレクトリを開く
-	code "$worktree_path"
-
-	return 0
-}
-
 # Neovimで開く
 open_nvim() {
 	local worktree_path="$1"
@@ -351,8 +330,8 @@ open_nvim() {
 	return 0
 }
 
-# czgでコミットを作成
-open_czg() {
+# hunkでブランチの差分を表示
+open_hunk() {
 	local worktree_path="$1"
 	local branch_name="$2"
 
@@ -360,35 +339,17 @@ open_czg() {
 		error_exit "worktreeディレクトリが存在しません: $worktree_path"
 	fi
 
-	if ! command -v czg &> /dev/null; then
-		error_exit "czg コマンドが見つかりません"
+	local hunk_cmd
+	if command -v hunk &>/dev/null; then
+		hunk_cmd="hunk"
+	elif command -v hunkdiff &>/dev/null; then
+		hunk_cmd="hunkdiff"
+	else
+		error_exit "hunk コマンドが見つかりません"
 	fi
 
-	# worktreeディレクトリに移動してczgを起動
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
-
-	# czgを起動
-	czg
-
-	return 0
-}
-
-# git diffを表示
-show_diff() {
-	local worktree_path="$1"
-	local branch_name="$2"
-
-	if [ ! -d "$worktree_path" ]; then
-		error_exit "worktreeディレクトリが存在しません: $worktree_path"
-	fi
-
-	# worktreeディレクトリに移動してczgを起動
-	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
-
-	# git diffを表示
-	git diff main "$branch_name" | delta --no-gitconfig
-
-	return 0
+	"$hunk_cmd" diff "main...$branch_name"
 }
 
 # ディレクトリに移動（新しいシェル）
@@ -421,17 +382,11 @@ execute_action() {
 	"livediff")
 		open_livediff "$worktree_path" "$branch_name"
 		;;
-	"code")
-		open_code "$worktree_path" "$branch_name"
-		;;
 	"nvim")
 		open_nvim "$worktree_path" "$branch_name"
 		;;
-	"czg")
-		open_czg "$worktree_path" "$branch_name"
-		;;
-	"diff")
-		show_diff "$worktree_path" "$branch_name"
+	"hunk")
+		open_hunk "$worktree_path" "$branch_name"
 		;;
 	"cd")
 		change_directory "$worktree_path" "$branch_name"
@@ -467,7 +422,6 @@ select_multi_worktree_command() {
 	actions="lazygit	lazygit でリポジトリを開く
 livediff	livediff でファイル変更をタイル表示
 cd	シェルでディレクトリを開く
-code	VS Code でルートディレクトリを開く
 nvim	Neovim でルートディレクトリを開く
 sync	multi-worktree sync でworktreeを同期する"
 
@@ -491,16 +445,6 @@ open_multi_worktree_tiled() {
 	local task_path="$1"
 	local task_name="$2"
 	local cmd="${3:-lazygit}"
-
-	# code の場合はルートディレクトリを直接開く
-	if [[ "$cmd" == "code" ]] || [[ "$cmd" == "vscode" ]]; then
-		if ! command -v code &>/dev/null; then
-			echo "${RED}エラー: VS Code (code コマンド) が見つかりません${NC}" >&2
-			return 1
-		fi
-		code "$task_path"
-		return 0
-	fi
 
 	# nvim の場合はルートディレクトリを直接開く
 	if [[ "$cmd" == "nvim" ]]; then
@@ -671,10 +615,10 @@ execute_multi_action() {
 	local action="$3"
 
 	case "$action" in
-	"lazygit" | "livediff" | "code" | "nvim" | "cd" | "sync")
+	"lazygit" | "livediff" | "nvim" | "cd" | "sync")
 		open_multi_worktree_tiled "$task_path" "$task_name" "$action"
 		;;
-	"czg" | "diff")
+	"hunk")
 		error_exit "アクション '$action' は multi-worktree では未対応です"
 		;;
 	*)
@@ -713,15 +657,13 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
 アクション:
   lazygit         Lazygitでリポジトリを開く
   livediff        livediffでファイル変更をリアルタイム表示
-  code            VS Codeでディレクトリを開く
   nvim            Neovimでディレクトリを開く
-  czg             czgでコミットを作成
-  diff            git diffを表示
+  hunk            hunkでブランチの差分を表示
   cd              ディレクトリに移動する（新しいシェル）
 
 補足:
   - git 管理下でも git worktree と multi-worktree タスクをまとめて選択できます
-  - 直接アクション指定で multi-worktree に適用できるのは lazygit / livediff / code / nvim / cd のみです
+  - 直接アクション指定で multi-worktree に適用できるのは lazygit / livediff / nvim / cd のみです
   - multi-worktree の sync はインタラクティブ選択時のみ利用できます
 
 実行例:
@@ -731,10 +673,8 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
   # 直接アクション指定（対象選択のみ）
   git-worktree-manager lazygit
   git-worktree-manager livediff
-  git-worktree-manager code
   git-worktree-manager nvim
-  git-worktree-manager czg
-  git-worktree-manager diff
+  git-worktree-manager hunk
   git-worktree-manager cd
 
   # その他
@@ -758,7 +698,7 @@ main() {
 	fi
 
 	# 直接アクション指定の場合
-	if [[ "${1:-}" =~ ^(lazygit|livediff|code|nvim|czg|diff|cd)$ ]]; then
+	if [[ "${1:-}" =~ ^(lazygit|livediff|nvim|hunk|cd)$ ]]; then
 		SELECTED_ACTION="$1"
 		shift
 	fi
