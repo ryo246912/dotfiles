@@ -47,7 +47,7 @@ ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 gh-md-toc <markdown_file> --insert --no-backup
 
 # grip : preview a Markdown file in the browser [-b:open in browser]
-grip -b <file>
+grip -b <markdown_file>
 
 # inkscape : convert from svg file to png file
 inkscape --export-filename="<output_file>.png" --export-width=<width> --export-height=<width> <input_file>
