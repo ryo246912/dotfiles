@@ -1,0 +1,34 @@
+["fnox:sync"]
+description = "Cache remote project secrets locally with age encryption"
+run = '''
+set -eu
+
+if [ ! -f fnox.toml ] && [ ! -f .fnox.toml ]; then
+  echo "fnox.toml または .fnox.toml がありません。先に remote provider と secrets を定義してください。" >&2
+  exit 1
+fi
+
+# fnox.local.toml は暗号化済みでも個人用 cache なので、誤って commit しない。
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && ! git check-ignore -q fnox.local.toml; then
+  printf '\n# fnox personal encrypted cache\nfnox.local.toml\n' >> .gitignore
+  echo ".gitignore に fnox.local.toml を追加しました。"
+fi
+
+if ! command -v op >/dev/null 2>&1; then
+  echo "1Password CLI (op) がありません。mise install を実行してください。" >&2
+  exit 1
+fi
+
+if ! command -v fnox >/dev/null 2>&1; then
+  echo "fnox がありません。mise install を実行してください。" >&2
+  exit 1
+fi
+
+if ! op whoami >/dev/null 2>&1; then
+  echo "1Password CLI にサインインしてください（例: eval \"$(op signin)\"）。" >&2
+  exit 1
+fi
+
+fnox sync --provider sync-age --local-file "$@"
+'''
+shell = "bash -c"

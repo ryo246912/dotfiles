@@ -219,3 +219,42 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
   [secrets]
   DATABASE_URL = { provider = "bws", value = "DATABASE_URL" }
   ```
+
+## 1Password の値を age でローカルキャッシュする
+
+これは `.env.local` を生成する仕組みではありません。commit する `fnox.toml` には 1Password の
+参照先だけを書き、`fnox sync` が取得した値を age で暗号化して、個人用の
+`fnox.local.toml` に保存します。`fnox.local.toml` は暗号化済みですが、端末ごとの cache であり
+source of truth ではないため **gitignore したまま運用**します。GitHub に同期したい暗号文は、team/CI
+全員を recipient に含めた別の age provider で `fnox.toml` に保存してください。
+
+この dotfiles では 1Password CLI (`op`) と個人用の `sync-age` provider をセットアップし、次の
+global mise task を用意しています。初回実行時は `fnox.local.toml` を project の `.gitignore` に
+自動追加します。
+
+```toml
+# project の fnox.toml（commit する）
+[providers.op]
+type  = "1password"
+vault = "Development" # project ごとに別 vault を指定できる
+
+[secrets]
+DATABASE_URL = { provider = "op", value = "Database/url" }
+```
+
+```sh
+# 1Password app 連携または service account で op を認証してから実行
+eval "$(op signin)"
+mise run fnox:sync
+
+# 1Password 側で値をローテーションした後は cache を強制更新
+mise run fnox:sync -- --force
+
+# cache された値を環境変数として対象 process だけに渡す
+fnox exec -- your-command
+```
+
+新しい secret は、まず 1Password app / `op item create` で対象 vault に保存し、その参照を
+`fnox.toml` の `[secrets]` に追加してから task を実行します。secret をコマンド引数へ直書きすると
+shell history や process list に残るため、`op item create` の対話入力または JSON template を使って
+ください。
