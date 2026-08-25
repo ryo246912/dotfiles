@@ -20,6 +20,11 @@
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
     "HOST_USER": "${localEnv:USER}",
+    // git の global 設定を post-create.sh が生成する ~/.gitconfig に固定する。
+    // これを指定しないと read-only マウントした ~/.config/git/config が
+    // global 設定として暗黙に読まれ、GPG 署名や osxkeychain、push の SSH 書き換えなど
+    // コンテナでは成立しない設定まで効いて commit / push が失敗する。
+    "GIT_CONFIG_GLOBAL": "/home/vscode/.gitconfig",
     // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
     "CRIT_HOST": "0.0.0.0",
     "CRIT_PORT": "7842",
@@ -40,7 +45,14 @@
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
     // .config
-    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/tmp/gitconfig-host,readonly",
+    // git: ホストと同じパス(~/.config/git)にディレクトリごとマウントする。
+    // config 単体ではなくディレクトリを渡すことで、ホスト設定内の
+    // `~/.config/git/config.secret` の include や `core.excludesfile` の ~ 参照が
+    // コンテナ内でもそのまま解決できる。
+    // なお git 本体は GIT_CONFIG_GLOBAL(remoteEnv)で ~/.gitconfig を見るため、
+    // このファイルが暗黙に global 設定として読まれることはない。
+    // 取り込みは post-create.sh が行う（コンテナで壊れる設定を除外するため）。
+    "type=bind,source=${localEnv:HOME}/.config/git,target=/home/vscode/.config/git,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",

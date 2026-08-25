@@ -6,6 +6,74 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## git 設定（user / email / 署名 / 認証）
+
+コンテナ内の git 設定は **`post-create.sh` が `~/.gitconfig` を生成する**ことで揃えます。
+ホストの `~/.config/git` は同じパスに read-only で bind mount していますが、
+git 本体には `GIT_CONFIG_GLOBAL=/home/vscode/.gitconfig`（`devcontainer.json` の `remoteEnv`）を
+渡しているため、**ホストの設定がそのまま global 設定として読まれることはありません**。
+
+ホスト設定をそのまま使う（＝丸ごと `include` する）と、macOS 前提の設定がコンテナでも有効になり
+commit / push が失敗します。とくに `commit.gpgsign = true` は、GPG 鍵と gpg-agent の無い
+コンテナでは署名に失敗して **commit 自体ができなくなります**。
+
+そのため `post-create.sh` は次の手順で `~/.gitconfig` を作り直します（コンテナ作成のたびに再生成）。
+
+1. ホスト設定を `include` 解決した状態（`config.secret` の上書きも反映）で読み出す
+2. コンテナで壊れるキーを除外して取り込む
+3. コンテナ固有の設定を追記する
+
+**取り込まないキー**
+
+- `include.*` / `includeIf.*`
+  - 解決済み。再 include するとホスト設定が丸ごと復活してしまう
+- `commit.gpgsign` / `tag.gpgsign` / `user.signingkey` / `gpg.*`
+  - GPG 鍵・gpg-agent が無く、署名付き commit が必ず失敗する
+- `credential.*`
+  - `osxkeychain` / git-credential-manager がコンテナに存在しない
+- `core.editor` / `core.pager` / `pager.*` / `delta.*` / `interactive.diffFilter`
+  - nvim / delta を devcontainer には入れていない
+- `url.*`
+  - push を `git@github.com:` に書き換えるが、GitHub 用の SSH 鍵がコンテナに無く push できない
+
+`user.name` / `user.email` / alias / `pull.ff` などその他の設定はホストの値をそのまま引き継ぎます。
+
+**コンテナ固有の設定**
+
+- `commit.gpgsign` / `tag.gpgsign` = `false`（署名しない）
+- `core.editor` = コンテナに実在するエディタ（`nvim` → `vim` → `nano` → `vi` の順で検出）
+- `credential."https://github.com".helper` = `!gh auth git-credential`（gh のトークンで認証）
+- `url."https://github.com/".insteadOf` = `git@github.com:` / `ssh://git@github.com/`
+  （SSH 形式の remote も HTTPS に寄せ、gh のトークンで push できるようにする）
+- `safe.directory` = `*`（workspace は bind mount のため uid 差で "dubious ownership" になり得る）
+
+`user.name` / `user.email` がホスト設定から取得できなかった場合は `gh api user` の結果
+（`<id>+<login>@users.noreply.github.com`）で補完し、それも失敗した場合は post-create のログに
+警告を出します。**コンテナ作成時のログに `⚠️` が出ていないか確認してください。**
+
+## git 設定が効いていないときの確認
+
+```bash
+# 実際に使われている値と、その出所（ファイル）を確認する
+git config --show-origin --get user.name
+git config --show-origin --get user.email
+git config --get commit.gpgsign          # → false（true だと署名に失敗して commit できない）
+git config --get-all credential.helper   # → !gh auth git-credential のみ
+
+# remote が SSH に書き換えられていないか（push 側も https であること）
+git remote -v
+
+# ~/.gitconfig を作り直す
+bash ~/.config/devcontainer/scripts/post-create.sh
+```
+
+- `user.email` が空 → ホストの `~/.config/git/config` に `[user]` が無いか、マウントされていない
+- `commit.gpgsign` が `true` → `~/.gitconfig` が再生成されていない（上のコマンドで作り直す）
+- push だけ `git@github.com:` になる → 同上。`url.*` を取り込んでしまっている
+- フック（`.git/hooks`）で失敗する → hooks はホスト側の内容がそのまま見えるため、ホストにしか
+  無いツール（lefthook / git-secrets 等）を呼ぶフックはコンテナ内では失敗する。プロジェクト側で
+  `mise install` して同じツールを入れるか、`git commit --no-verify` で回避する
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
