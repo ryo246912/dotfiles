@@ -220,41 +220,42 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
   DATABASE_URL = { provider = "bws", value = "DATABASE_URL" }
   ```
 
-## 1Password の値を age でローカルキャッシュする
+## Bitwarden の値を age でローカルキャッシュする
 
-これは `.env.local` を生成する仕組みではありません。commit する `fnox.toml` には 1Password の
+これは `.env.local` を生成する仕組みではありません。commit する `fnox.toml` には Bitwarden の
 参照先だけを書き、`fnox sync` が取得した値を age で暗号化して、個人用の
-`fnox.local.toml` に保存します。`fnox.local.toml` は暗号化済みですが、端末ごとの cache であり
+`fnox.local.toml`（`.fnox.toml` を使う場合は `.fnox.local.toml`）に保存します。つまり、値は
+local override の `sync` フィールドに暗号文として書き出され、以後は Bitwarden へ接続せずに
+ローカルで復号できます。local override は暗号化済みですが、端末ごとの cache であり
 source of truth ではないため **gitignore したまま運用**します。GitHub に同期したい暗号文は、team/CI
 全員を recipient に含めた別の age provider で `fnox.toml` に保存してください。
 
-この dotfiles では 1Password CLI (`op`) と個人用の `sync-age` provider をセットアップし、次の
-global mise task を用意しています。初回実行時は `fnox.local.toml` を project の `.gitignore` に
-自動追加します。
+この dotfiles では既存の Bitwarden Secrets Manager (`bws`) provider と個人用の `sync-age` providerを
+使う global mise task を用意しています。初回実行時は両方の local override 名を project の
+`.gitignore` に自動追加します。既に git 管理されている場合は、安全のため同期前に停止します。
 
 ```toml
 # project の fnox.toml（commit する）
-[providers.op]
-type  = "1password"
-vault = "Development" # project ごとに別 vault を指定できる
+[providers.bws]
+type       = "bitwarden-sm"
+project_id = "xxx" # repository/environment ごとに Secrets Manager project を分けられる
 
 [secrets]
-DATABASE_URL = { provider = "op", value = "Database/url" }
+DATABASE_URL = { provider = "bws", value = "DATABASE_URL" }
 ```
 
 ```sh
-# 1Password app 連携または service account で op を認証してから実行
-eval "$(op signin)"
+# BWS_ACCESS_TOKEN は global fnox config の age 暗号文から shell 起動時に設定される
 mise run fnox:sync
 
-# 1Password 側で値をローテーションした後は cache を強制更新
+# Bitwarden 側で値をローテーションした後は cache を強制更新
 mise run fnox:sync -- --force
 
 # cache された値を環境変数として対象 process だけに渡す
 fnox exec -- your-command
 ```
 
-新しい secret は、まず 1Password app / `op item create` で対象 vault に保存し、その参照を
-`fnox.toml` の `[secrets]` に追加してから task を実行します。secret をコマンド引数へ直書きすると
-shell history や process list に残るため、`op item create` の対話入力または JSON template を使って
-ください。
+新しい secret は、まず Bitwarden Secrets Manager の対象 project に保存し、その secret 名または ID の
+参照を `fnox.toml` の `[secrets]` に追加してから task を実行します。Password Manager の vault を使う
+`bitwarden` (`bw`) provider ではなく、セッション切れのない machine account 向けの
+`bitwarden-sm` (`bws`) provider をこの task の対象にしています。

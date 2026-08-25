@@ -19,6 +19,7 @@ type = "age"
 
 # リモート provider の値を fnox.local.toml へキャッシュするための個人用 provider。
 # project が定義する age provider と名前を分け、設定 merge 時の上書きを避ける。
+# age provider と同じ端末一覧を意図しているため、端末追加時は両方の recipients を更新する。
 [providers.sync-age]
 key_file = "~/.config/fnox/age.txt"
 recipients = [
