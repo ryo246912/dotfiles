@@ -230,7 +230,7 @@ local override の `sync` フィールドに暗号文として書き出され、
 source of truth ではないため **gitignore したまま運用**します。GitHub に同期したい暗号文は、team/CI
 全員を recipient に含めた別の age provider で `fnox.toml` に保存してください。
 
-この dotfiles では既存の Bitwarden Secrets Manager (`bws`) provider と個人用の `sync-age` providerを
+この dotfiles では既存の Bitwarden Secrets Manager (`bws`) provider と個人用の `sync-age` provider を
 使う global mise task を用意しています。初回実行時は両方の local override 名を project の
 `.gitignore` に自動追加します。既に git 管理されている場合は、安全のため同期前に停止します。
 
