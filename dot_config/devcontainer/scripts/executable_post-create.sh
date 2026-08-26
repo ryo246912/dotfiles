@@ -9,22 +9,15 @@ else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
-# コンテナ用の書き込み可能な .gitconfig を生成
+# コンテナ用の書き込み可能な .gitconfig にホスト設定を追加
 # ホストの gitconfig は /tmp/gitconfig-host に読み取り専用でマウントされているため、
-# コンテナ内に書き込み可能な .gitconfig を作成し、ホスト設定をインクルードする
-if [ ! -f ~/.gitconfig ]; then
-	cat >~/.gitconfig <<'EOF'
-[include]
-    path = /tmp/gitconfig-host
-[credential "https://github.com"]
-    helper = !gh auth git-credential
-[url "https://github.com/"]
-    insteadOf = git@github.com:
-EOF
-	echo "✓ .gitconfig を生成しました"
-else
-	echo "ℹ️ .gitconfig は既に存在します"
+# 既存の ~/.gitconfig があっても user.name / user.email を確実に継承する。
+if ! git config --global --get-all include.path | grep -Fxq /tmp/gitconfig-host; then
+	git config --global --add include.path /tmp/gitconfig-host
 fi
+git config --global credential.https://github.com.helper '!gh auth git-credential'
+git config --global url.https://github.com/.insteadOf git@github.com:
+echo "✓ ホストの git config を設定しました"
 
 # claude-account2 ディレクトリを作成
 account2_dir="${HOME}/.claude-account2"

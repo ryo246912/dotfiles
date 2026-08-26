@@ -6,6 +6,17 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## GitHub 認証と Git のユーザー設定
+
+イメージ build 時の `mise install` は GitHub API を利用するため、ホストの
+`~/.config/gh/hosts.yml` を BuildKit secret として一時的にマウントします。認証情報は
+イメージや build context には保存されません。`gh auth login` 済みであることを確認してから
+`devcontainer up` を実行してください。
+
+コンテナ作成後は、読み取り専用で `/tmp/gitconfig-host` にマウントしたホストの
+`~/.config/git/config` をコンテナの global git config から include します。既存の
+`~/.gitconfig` がある場合にも include を追加するため、`user.name` と `user.email` を継承できます。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から

@@ -2,7 +2,13 @@
   // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
   "build": {
-    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile"
+    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile",
+    // gh の認証情報は build context にコピーせず、mise install の間だけ secret mount する。
+    // gh がトークンを保存するのは config.yml ではなく hosts.yml。
+    "options": [
+      "--secret",
+      "id=gh_hosts,src=${localEnv:HOME}/.config/gh/hosts.yml"
+    ]
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {

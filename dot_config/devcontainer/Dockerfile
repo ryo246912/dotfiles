@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
     /usr/local/bin/mise reshim -C /mise
 
 # Install all tools via mise with GitHub auth available
-RUN --mount=type=secret,id=gh_config,target=/home/vscode/.config/gh/config.yml,uid=1000,gid=1000,mode=0400 \
+RUN --mount=type=secret,id=gh_hosts,target=/home/vscode/.config/gh/hosts.yml,uid=1000,gid=1000,mode=0400 \
     --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
     GITHUB_TOKEN="$(gh auth token)" /usr/local/bin/mise install -C /mise && \
     /usr/local/bin/mise reshim -C /mise && \
