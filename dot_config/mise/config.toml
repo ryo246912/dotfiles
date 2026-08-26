@@ -1,4 +1,4 @@
-min_version = "2026.8.12"
+min_version = "2026.7.0"
 
 [env]
 # https://evermeet.cx/ffmpeg/
@@ -131,14 +131,11 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 
 [settings]
 auto_install = false
-auto_update = true
-auto_update_check_duration = "7d"
 disable_default_registry = true
 experimental = true
 gpg_verify = true
 lockfile = true
 minimum_release_age = "7d"
-not_found_system_fallback = false
 trusted_config_paths = [
     "~/.local/share/chezmoi",
     "~/.local/share/worktrees",
