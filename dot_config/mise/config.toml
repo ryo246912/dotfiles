@@ -88,7 +88,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:max-sixty/worktrunk"                                = "0.74.0"
 "github:microsoft/apm"                                      = "0.26.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
-"github:rcieri/glab-tui"                                    = "0.8.0"
+"github:rcieri/glab-tui"                                    = "0.9.0"
 "github:rivolink/leaf"                                      = { version = "1.28.0", bin = "leaf" }
 "github:ryo246912/gh-actions-dash"                          = { version = "0.1.6", bin = "gh-actions-dash" }
 "github:ryo246912/gh-reassign-reviewer"                     = { version = "0.0.7", bin = "gh-reassign-reviewer" }
