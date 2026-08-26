@@ -13,6 +13,11 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 イメージや build context には保存されません。`gh auth login` 済みであることを確認してから
 `devcontainer up` を実行してください。
 
+最初の `gh` 自体をmiseで導入する段階では、まだ `gh auth token` を実行できません。そのため
+`hosts.yml` の `oauth_token` を直接 `GITHUB_TOKEN` に設定して、bootstrap時のGitHub APIアクセスも
+認証済みにします。`GH_TOKEN` が設定されたホストで `gh auth status` が成功していても、このbootstrap
+処理にトークンを渡さなければmiseは未認証（`github auth: no`、上限60リクエスト）になる点に注意してください。
+
 コンテナ作成後は、読み取り専用で `/tmp/gitconfig-host` にマウントしたホストの
 `~/.config/git/config` をコンテナの global git config から include します。既存の
 `~/.gitconfig` がある場合にも include を追加するため、`user.name` と `user.email` を継承できます。

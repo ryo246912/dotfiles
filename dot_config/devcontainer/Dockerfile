@@ -38,8 +38,11 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 
 USER vscode
 
-# First, install gh so the authenticated install can read the mounted token config
-RUN --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
+# First, install gh with a token read directly from hosts.yml. gh is not installed
+# yet, so `gh auth token` cannot be used for this bootstrap request.
+RUN --mount=type=secret,id=gh_hosts,target=/home/vscode/.config/gh/hosts.yml,uid=1000,gid=1000,mode=0400 \
+    --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
+    GITHUB_TOKEN="$(sed -n 's/^[[:space:]]*oauth_token:[[:space:]]*//p' /home/vscode/.config/gh/hosts.yml | head -n 1)" \
     /usr/local/bin/mise install -C /mise aqua:cli/cli && \
     /usr/local/bin/mise reshim -C /mise
 
