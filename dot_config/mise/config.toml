@@ -78,7 +78,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:cesarferreira/rip"                                  = { version = "0.7.0", bin = "rip" }
 "github:ctxrs/ctx"                                          = "0.25.0"
 "github:d-kuro/gwq"                                         = "0.1.1"
-"github:dyoshikawa/rulesync"                                = "8.21.0"
+"github:dyoshikawa/rulesync"                                = "8.32.0"
 "github:github/copilot-cli"                                 = "1.0.73"
 "github:gpanders/ijq"                                       = "1.1.2"
 "github:jdx/fnox"                                           = "1.33.1"
