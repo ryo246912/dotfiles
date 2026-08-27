@@ -1,0 +1,36 @@
+# tuicr - Terminal Code Review Tool
+# https://github.com/agavra/tuicr
+# config: ~/.config/tuicr/config.toml
+
+# 端末のライト/ダークに追従する ("system" / "dark" / "light")
+appearance = "system"
+# theme = "catppuccin-mocha"   # 明示的にテーマを指定する場合
+
+# 差分表示 ("side-by-side" / "unified")
+diff_view = "side-by-side"
+# 空白差分を無視するか
+ignore_whitespace = false
+# マウス操作を有効にするか
+mouse = true
+# 相対行番号を表示するか
+relative_line_numbers = false
+# leaderキー
+leader = ";"
+# `tuicr -w` などのwatchモードでのポーリング間隔(ミリ秒)
+review_watch_interval_ms = 1000
+
+# コメント種別 (レビューコメントに付与するラベル)
+[[comment_types]]
+color      = "yellow"
+definition = "細かい指摘 (任意対応)"
+id         = "nit"
+
+[[comment_types]]
+color      = "red"
+definition = "マージ前に修正が必要"
+id         = "issue"
+
+[[comment_types]]
+color      = "blue"
+definition = "確認・質問"
+id         = "question"
