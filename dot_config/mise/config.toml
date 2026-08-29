@@ -65,7 +65,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "cargo:filetree"                                            = "0.3.5"
 "core:bun"                                                  = "1.4.0"
 "core:go"                                                   = "1.27.0"
-"core:node"                                                 = "22.19.0"
+"core:node"                                                 = "24.20.0"
 "core:python"                                               = "3.14.6"
 "core:rust"                                                 = "1.94.1"
 "github:Morantron/tmux-fingers"                             = { version = "2.7.1", bin = "tmux-fingers" }
