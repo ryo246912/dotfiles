@@ -344,6 +344,11 @@ snippet = "git show"
 trigger = "gsh"
 
 [[snippets]]
+name    = "git show signature and identities"
+snippet = "git show --no-patch --show-signature --format=fuller HEAD"
+trigger = "gshf"
+
+[[snippets]]
 name    = "git show HEAD~1"
 snippet = "git show HEAD~1"
 trigger = "gshh"
