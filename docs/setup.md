@@ -94,16 +94,15 @@
     - `~/.config/git/config.secret`はchezmoi管理外のため、秘密情報をリポジトリにコミットしないこと
 
     ```sh
-    mkdir -p ~/.config/git
     cp "$(chezmoi source-path)/dot_config/git/config.secret.sample" ~/.config/git/config.secret
-    ${EDITOR:-vi} ~/.config/git/config.secret
+    nvim ~/.config/git/config.secret
     ```
 
     - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
     ```sh
     cp "$(chezmoi source-path)/dot_config/git/config.work.secret.sample" ~/.config/git/config.work.secret
-    ${EDITOR:-vi} ~/.config/git/config.work.secret
+    nvim ~/.config/git/config.work.secret
     ```
 
     - 編集後、設定ファイルが読み込まれていることを確認する
