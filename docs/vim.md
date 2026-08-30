@@ -124,3 +124,15 @@ tagsファイルがあると以下が使える
   - VimEnterやVimLeaveイベントを使用して、Vimのセッション開始時や終了時に特定のアクションを実行
     autocmd VimEnter _ NERDTree
     autocmd VimEnter _ source ~/.local/state/vim/Session.vim | Obsession ~/.local/state/vim/Session.vim
+
+## Neovim の設定を再読み込みする
+
+`dot_config/nvim/` 以下の Lua 設定を変更した場合は、変更した内容に応じて次の方法で再読み込みする。
+
+- 現在開いている Lua ファイルだけを再実行する: `:luafile %`
+- `init.lua` を再実行する: `:source $MYVIMRC`
+- プラグインの設定を再読み込みする: `:Lazy reload <プラグイン名>`
+
+`require()` で読み込み済みの Lua モジュールはキャッシュされるため、`:source $MYVIMRC` だけでは `lua/core/` や `lua/plugins/` 以下の変更が反映されない場合がある。また、autocmd、キーマップ、プラグインの初期化処理によっては、同じ設定を再実行すると処理が重複する場合がある。
+
+確実にすべての変更を反映するには、`:qa` で Neovim を終了してから再起動する。編集中のファイルがある場合は、先に `:wa` ですべて保存してから `:qa` を実行する。
