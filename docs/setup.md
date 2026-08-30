@@ -190,7 +190,14 @@
     ```
 
     - `Good signature`と表示されれば署名自体の検証は成功している
+    - コミットのauthor・committerと、署名に使用したGPG鍵のUIDは別の情報である。`git verify-commit`が表示する名前とメールアドレスはGPG鍵のUIDであり、commit authorとの一致を検証しているわけではない
     - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
+    - author・committerと署名をまとめて確認する場合は、以下を実行する
+
+    ```sh
+    git show --no-patch --show-signature --format=fuller HEAD
+    ```
+
     - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
 
     ```sh
