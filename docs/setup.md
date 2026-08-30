@@ -90,7 +90,7 @@
     ```
 - [ ] git
   - [ ] secret設定ファイルの作成
-    - サンプルをコピーし、`email`や`machineId`を自分の値に編集する
+    - サンプルをコピーし、`machineId`を自分の値に編集する
     - `~/.config/git/config.secret`はchezmoi管理外のため、秘密情報をリポジトリにコミットしないこと
 
     ```sh
