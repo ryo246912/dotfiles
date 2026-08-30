@@ -89,6 +89,29 @@
     mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
 - [ ] git
+  - [ ] secret設定ファイルの作成
+    - サンプルをコピーし、`email`や`machineId`を自分の値に編集する
+    - `~/.config/git/config.secret`はchezmoi管理外のため、秘密情報をリポジトリにコミットしないこと
+
+    ```sh
+    mkdir -p ~/.config/git
+    cp "$(chezmoi source-path)/dot_config/git/config.secret.sample" ~/.config/git/config.secret
+    ${EDITOR:-vi} ~/.config/git/config.secret
+    ```
+
+    - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
+
+    ```sh
+    cp "$(chezmoi source-path)/dot_config/git/config.work.secret.sample" ~/.config/git/config.work.secret
+    ${EDITOR:-vi} ~/.config/git/config.work.secret
+    ```
+
+    - 編集後、設定ファイルが読み込まれていることを確認する
+
+    ```sh
+    git config --global --show-origin --get-regexp '^user\.(email|signingkey)$'
+    ```
+
   - [ ] 秘密鍵の設定
     - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
       export済みの`secret_key.asc`を`.gnupg`にコピーしてきて、importする
