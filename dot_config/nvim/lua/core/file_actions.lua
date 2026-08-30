@@ -278,9 +278,15 @@ local function run_cli_formatter(ctx, formatter, opts)
   end
 
   if vim.api.nvim_buf_is_valid(ctx.bufnr) then
+    local treesitter_was_active = vim.treesitter.highlighter.active[ctx.bufnr] ~= nil
     vim.api.nvim_buf_call(ctx.bufnr, function()
       vim.cmd("silent noautocmd edit")
     end)
+    -- :edit detaches the existing parser. BufRead autocmds are intentionally
+    -- skipped above, so restore Treesitter explicitly after reloading the file.
+    if treesitter_was_active then
+      pcall(vim.treesitter.start, ctx.bufnr)
+    end
   end
 
   if not opts.silent then
