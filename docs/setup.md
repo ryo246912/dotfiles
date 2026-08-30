@@ -109,7 +109,7 @@
     - 編集後、設定ファイルが読み込まれていることを確認する
 
     ```sh
-    git config --global --show-origin --get-regexp '^user\.(email|signingkey)$'
+    git config --show-origin --get-regexp '^user\.(email|signingkey)$'
     ```
 
   - [ ] 秘密鍵の設定
@@ -182,6 +182,26 @@
     ```
     setup-git-gpg
     ```
+  - [ ] GPG署名の確認
+    - ローカルでは、署名済みコミットを検証する
+
+    ```sh
+    git verify-commit HEAD
+    ```
+
+    - `Good signature`と表示されれば署名自体の検証は成功している
+    - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
+    - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
+
+    ```sh
+    git push origin HEAD
+    gh api "repos/{owner}/{repo}/commits/$(git rev-parse HEAD)" \
+      --jq '.commit.verification | {verified, reason, verified_at}'
+    ```
+
+    - `verified`が`true`ならGitHubでも署名が正しく認識されている
+    - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
+
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
