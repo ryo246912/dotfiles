@@ -22,8 +22,15 @@ else
 fi
 # 1) 新しい config を mise に読ませる前に、mise 本体を最新化する。
 #    self-update は既に最新なら何も変更しないため、min_version の抽出・比較は不要。
+#    apply 済み config の min_version が古い mise を拒否しないよう、この呼び出しだけは
+#    config を読まない。パッケージマネージャー版で self-update できない場合は、
+#    公式インストーラーで ~/.local/bin/mise を導入して後続処理に使う。
 echo "Checking for mise updates..."
-mise self-update --yes || exit 1
+if ! MISE_NO_CONFIG=1 mise self-update --yes; then
+  echo "mise self-update is unavailable; installing the latest mise in ~/.local/bin..."
+  curl -fsSL https://mise.run | sh || exit 1
+  hash -r
+fi
 
 # install マーカー保存用の XDG state を用意（永続化）。
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
