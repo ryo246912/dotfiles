@@ -11,11 +11,6 @@ unlock = "auto"
 args = [
     "-c",
     """
-# install マーカー保存用の XDG state を用意（永続化）。
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
-mkdir -p "$state_dir" || exit 1
-source_dir=$CHEZMOI_SOURCE_DIR
-mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
 # mise shims を PATH に通す。mise 本体は mac/linux とも https://mise.run 経由で ~/.local/bin に導入するため、~/.local/bin を先頭にする。mise shims は
 # /opt/homebrew/bin より前に置く（後ろだと実 Homebrew 版の gh 等が mise の aqua shim を
@@ -25,7 +20,37 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
-# 1) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
+# 1) 新しい config を mise に読ませる前に min_version を確認する。
+#    現在の mise が要求より古い場合は、後続コマンドが min_version エラーで
+#    中断する前に、要求バージョンへ非対話で更新する。
+mise_config="$HOME/.config/mise/config.toml"
+required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
+current_mise_version=$(mise --version 2>/dev/null | awk '{ print $1 }')
+version_lt() {
+  awk -v current="$1" -v required="$2" 'BEGIN {
+    sub(/^v/, "", current); sub(/^v/, "", required)
+    current_count = split(current, current_parts, ".")
+    required_count = split(required, required_parts, ".")
+    count = current_count > required_count ? current_count : required_count
+    for (i = 1; i <= count; i++) {
+      if ((current_parts[i] + 0) < (required_parts[i] + 0)) exit 0
+      if ((current_parts[i] + 0) > (required_parts[i] + 0)) exit 1
+    }
+    exit 1
+  }'
+}
+if [ -n "$required_mise_version" ] && version_lt "$current_mise_version" "$required_mise_version"; then
+  echo "Updating mise from $current_mise_version to satisfy min_version $required_mise_version..."
+  mise self-update --yes "$required_mise_version" || exit 1
+fi
+
+# install マーカー保存用の XDG state を用意（永続化）。
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
+mkdir -p "$state_dir" || exit 1
+source_dir=$CHEZMOI_SOURCE_DIR
+mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
+
+# 2) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
 #    `mise bootstrap packages status --missing`（未同期なら exit 1）で実際の導入状態を判定するので、
 #    パッケージ削除等のドリフトも検知して収束し、手動導入後も回復できる（マーカー不整合が起きない）。
 #    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
@@ -57,7 +82,7 @@ if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null
     exit 1
   fi
 fi
-# 2) mise install
+# 3) mise install
 if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   mise install --jobs=1 aqua:cli/cli || true
   # 未ログインなら対話ログインを実行する
@@ -73,11 +98,11 @@ if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
   echo "$mise_hash" > "$state_dir/mise-config-hash"
 fi
-# 3) APM の user-scope dependencies を各エージェントへ反映する。
+# 4) APM の user-scope dependencies を各エージェントへ反映する。
 #    mise install で apm 自体を導入した後に実行し、lockfile/commands の同期も既存 task に委ねる。
 echo "Running mise run apm:install..."
 CHEZMOI_SOURCE_DIR=$source_dir mise run apm:install || exit 1
-# 4) rulesync generate:
+# 5) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
