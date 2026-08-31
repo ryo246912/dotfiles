@@ -22,9 +22,13 @@ else
 fi
 # 1) 新しい config を mise に読ませる前に、mise 本体を min_version へ更新する。
 #    min_version は mise 自身で config をロードせず、テキストとして抽出する。
+#    run_once_install-mise_mac.sh（WSL は run_once_install-packages_windows.sh）はこの
+#    post-apply hook より先に実行され、mise 未導入時の初回インストールだけを担う。
+#    run_once は min_version 変更時に再実行されないため、更新は毎回この hook で行う。
 #    apply 済み config の min_version が古い mise を拒否しないよう、この呼び出しだけは
 #    config を読まない。パッケージマネージャー版で self-update できない場合は、
-#    公式インストーラーで ~/.local/bin/mise を導入して後続処理に使う。
+#    run_once も「導入済み」として何もしないため、公式インストーラーで
+#    ~/.local/bin/mise を導入して後続処理に使う。
 mise_config="$HOME/.config/mise/config.toml"
 required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
 if [ -z "$required_mise_version" ]; then

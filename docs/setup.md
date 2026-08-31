@@ -13,6 +13,7 @@
   ```
 
 - [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
+  - `run_once_install-mise_mac.sh` による未導入時の初回インストールが先に実行され、その後 post-apply hook が実行される。run_once は `min_version` 変更時に再実行されないため、バージョン更新は hook が担う
   - hook が順に実行する:
     1. config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし。パッケージマネージャー版などで失敗した場合は同バージョンを公式インストーラーで導入）
     2. `MISE_ENV=mac mise bootstrap packages apply`
@@ -409,6 +410,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```
 
 - [ ] miseの実行
+  - `run_once_install-packages_windows.sh` による未導入時の初回インストールが先に実行され、その後 post-apply hook が実行される。run_once は `min_version` 変更時に再実行されないため、バージョン更新は hook が担う
   - hook が順に実行する:
     1. config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし。パッケージマネージャー版などで失敗した場合は同バージョンを公式インストーラーで導入）
     2. `MISE_ENV=linux mise bootstrap packages apply`（**sudo のパスワード入力が要るので対話端末で実行すること**）
