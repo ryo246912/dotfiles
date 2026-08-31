@@ -13,10 +13,12 @@
   ```
 
 - [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
+  - `run_once_install-mise_mac.sh` による未導入時の初回インストールが先に実行され、その後 post-apply hook が実行される
   - hook が順に実行する:
-    1. `MISE_ENV=mac mise bootstrap packages apply`
-    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
-    3. `GITHUB_TOKEN=$(gh auth token) mise install`
+    1. config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし）
+    2. `MISE_ENV=mac mise bootstrap packages apply`
+    3. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
+    4. `GITHUB_TOKEN=$(gh auth token) mise install`
   - 失敗時は `chezmoi apply` で再試行
 
 - [ ] macOS defaults の適用
