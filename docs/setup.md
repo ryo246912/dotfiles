@@ -14,7 +14,7 @@
 
 - [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
   - hook が順に実行する:
-    1. 現在の mise が `min_version` より古ければ `mise self-update --yes <min_version>`
+    1. `mise self-update --yes`（既に最新なら変更なし）
     2. `MISE_ENV=mac mise bootstrap packages apply`
     3. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     4. `GITHUB_TOKEN=$(gh auth token) mise install`
@@ -410,7 +410,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] miseの実行
   - hook が順に実行する:
-    1. 現在の mise が `min_version` より古ければ `mise self-update --yes <min_version>`
+    1. `mise self-update --yes`（既に最新なら変更なし）
     2. `MISE_ENV=linux mise bootstrap packages apply`（**sudo のパスワード入力が要るので対話端末で実行すること**）
     3. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
     4. `GITHUB_TOKEN=$(gh auth token) mise install`

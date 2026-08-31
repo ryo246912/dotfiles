@@ -20,29 +20,10 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
-# 1) 新しい config を mise に読ませる前に min_version を確認する。
-#    現在の mise が要求より古い場合は、後続コマンドが min_version エラーで
-#    中断する前に、要求バージョンへ非対話で更新する。
-mise_config="$HOME/.config/mise/config.toml"
-required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
-current_mise_version=$(mise --version 2>/dev/null | awk '{ print $1 }')
-version_lt() {
-  awk -v current="$1" -v required="$2" 'BEGIN {
-    sub(/^v/, "", current); sub(/^v/, "", required)
-    current_count = split(current, current_parts, ".")
-    required_count = split(required, required_parts, ".")
-    count = current_count > required_count ? current_count : required_count
-    for (i = 1; i <= count; i++) {
-      if ((current_parts[i] + 0) < (required_parts[i] + 0)) exit 0
-      if ((current_parts[i] + 0) > (required_parts[i] + 0)) exit 1
-    }
-    exit 1
-  }'
-}
-if [ -n "$required_mise_version" ] && version_lt "$current_mise_version" "$required_mise_version"; then
-  echo "Updating mise from $current_mise_version to satisfy min_version $required_mise_version..."
-  mise self-update --yes "$required_mise_version" || exit 1
-fi
+# 1) 新しい config を mise に読ませる前に、mise 本体を最新化する。
+#    self-update は既に最新なら何も変更しないため、min_version の抽出・比較は不要。
+echo "Checking for mise updates..."
+mise self-update --yes || exit 1
 
 # install マーカー保存用の XDG state を用意（永続化）。
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
