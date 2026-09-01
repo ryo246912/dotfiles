@@ -51,6 +51,10 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 個人用のAtuin syncと、必要時だけ開くAgentsViewであれば50時間のbillable CPU枠には通常余裕がある。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
 
+したがって、**現在のようにAtuinは同期時だけ、AgentsViewは閲覧時だけ起動する個人利用なら、月1万requests・平均5秒（約13.9 vCPU-hours）程度までは、cold startを加えても50 vCPU-hoursに対して約36時間の余裕がある**。月10万requests・平均1秒でも約22時間の余裕がある。一方、画面の常時接続、`min-instances=1`、instance-based billingのいずれかを使うと、この見積もりは適用できない。
+
+これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、2アプリ合計のrequest数、平均／p95 duration、egressを上表へ代入する。
+
 ### アプリごとの配置条件
 
 #### Atuin
@@ -75,6 +79,15 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 注意点は、CockroachDBにpgvectorがないためAgentsViewのvector pushが自動的にskipされ、session contentの同期だけが継続されること。現在semantic／hybrid searchにpgvectorを使っている場合、その機能を失ってよいか確認する。
 
+[CockroachDB Cloud Basicの公式料金表](https://www.cockroachlabs.com/pricing/)では、毎月最初の**10 GiB storageと5,000万 Request Units**が無料範囲となる。現在のFly Volume全体が約0.9 GiBでも、AgentsView schemaはそれ以下なので、storageだけなら移行直後に少なくとも約9.1 GiB、現状の10倍超の余裕がある。ただしFly Volumeの0.9 GiBにはAtuin、WAL、ログも含まれるため、正確な余裕は次で計算する。
+
+```text
+CockroachDB storage余裕 [GiB] = 10 - pg_schema_size('agentsview') / 1024^3
+概算の成長可能月数 = storage余裕 / AgentsView schemaの月間増加量
+```
+
+Request Unitsは保存容量と別の上限であり、repositoryから実際のquery回数は確定できない。無料を厳守する場合はCockroachDB Consoleで月次RU使用量とstorage alertを設定し、検証push後に増分を測る。Basicで無料分を超えた際の課金・停止設定は、cluster作成時の現行画面で確認する。
+
 #### Atuin 18.8.0: 採用しない
 
 [Atuin 18.8.0のPostgreSQL migration](https://github.com/atuinsh/atuin/tree/v18.8.0/crates/atuin-server-postgres/migrations)には、`CREATE OR REPLACE FUNCTION ... RETURNS trigger`、`LANGUAGE plpgsql VOLATILE COST 100`、`TG_OP`、`CREATE TRIGGER ... EXECUTE PROCEDURE`が含まれる。CockroachDBの一般的なwire compatibilityだけでは、このmigrationと将来のAtuin upgradeを保証できない。upstreamにもCockroachDBをsupported backendとする記載やtestを確認できなかったため、**Atuin DBはCockroachDBへ移さない**。
@@ -90,6 +103,8 @@ upstreamの対応表があっても、実アカウント／実schemaの検証な
 5. schema単位のexportと、空の検証DBへのrestoreが成功する。
 
 この5項目が通れば、AgentsView DBのCockroachDB移行を進めてよい。実際のcredentialがないため本調査ではlive clusterへの書き込み試験は実行しておらず、これはcutover直前の必須作業として残る。
+
+**現時点の判定は「ソースとupstreamの対応表では適合、live cluster試験は未実施」**である。CockroachDB accountと接続secretを作らずに本番相当migrationを確認することはできないため、「確認済み」を静的互換性と実接続互換性に分ける。上記5項目をlive clusterで通すまではDB接続先を切り替えない。
 
 ## 1 GB を超える有力候補
 
