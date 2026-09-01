@@ -320,7 +320,7 @@ brew list --cask --versions
   ```
 
   参考: [mise #12346](https://github.com/jdx/mise/pull/12346),
-  [Homebrew の Ghostty 1.3.1 更新](https://github.com/Homebrew/homebrew-cask/commit/2fbbe9b98337c2d66ccf0947d9dbbb413fc80296)
+  [Homebrew の Ghostty 1.3.1 更新](https://github.com/Homebrew/homebrew-cask/commit/2fbbe9b9838c50e6a7640b4f7cfb892479f5303b)
 
 - `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
   mise の**警告**（apply 自体は続行される）。`brew cleanup <name>` や
