@@ -338,13 +338,6 @@ brew list --cask --versions
   と同様に `[bootstrap.packages]` から外し `mise run bootstrap:mac-packages` 側の例外
   パッケージとして扱う（本リポジトリでは raycast がこれに該当する。実 brew では問題なく
   インストールできることを確認済み）。
-- `Homebrew metadata exists, but no installed Caskroom version was found` →
-  `/Applications` に app bundle だけが残り、Caskroom の管理情報が失われた状態。
-  Ghostty は `[bootstrap.packages]` では管理せず、次のタスクが既存 app を上書きして
-  Homebrew の管理情報を復元する（アプリ設定を消す `--zap` は使用しない）。
-  ```sh
-  mise run bootstrap:mac-packages
-  ```
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
 error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
