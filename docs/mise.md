@@ -290,6 +290,38 @@ brew list --cask --versions
 
 実行時に遭遇しうる代表的なメッセージ:
 
+- `ERROR brew-cask:<name>: Homebrew metadata exists, but no installed Caskroom version was found` →
+  mise 2026.8.14 が追加した Homebrew 管理 cask の健全性チェックで、
+  `<prefix>/Caskroom/<name>/.metadata` は存在するが、同じディレクトリにバージョン
+  ディレクトリが1つもない場合に出る。`/Applications/<Name>.app` の有無はこの判定条件に
+  含まれないため、このメッセージだけから「アプリが Caskroom を消した」とは判断できない。
+  まず削除せずに実体を確認する:
+
+  ```sh
+  caskroom="$(brew --prefix)/Caskroom/ghostty"
+  find "$caskroom" -maxdepth 2 -print
+  ls -ld /Applications/Ghostty.app
+  brew list --cask --versions ghostty
+  ```
+
+  Ghostty 1.3.1 の cask は従来どおり `Ghostty.dmg` の `Ghostty.app` を配置する定義で、
+  1.3.1 更新時にも Caskroom を削除する変更はない。したがって現時点では Ghostty 固有の
+  変更ではなく、過去の Homebrew 管理から mise 管理への移行、途中で中断した Homebrew
+  操作、または手動 cleanup のいずれかで管理情報だけが不整合になり、mise の新しい検査で
+  顕在化した可能性が高い。本リポジトリでは Ghostty を引き続き mise で管理する。
+
+  Ghostty だけを修復して mise 管理へ揃えるには、いったん Homebrew の管理情報を復元して
+  通常 uninstall した後、mise から再導入する。`--zap` は設定も削除するため使わない:
+
+  ```sh
+  brew install --cask --force ghostty
+  brew uninstall --cask ghostty
+  MISE_ENV=mac mise bootstrap packages apply brew-cask:ghostty
+  ```
+
+  参考: [mise #12346](https://github.com/jdx/mise/pull/12346),
+  [Homebrew の Ghostty 1.3.1 更新](https://github.com/Homebrew/homebrew-cask/commit/2fbbe9b98337c2d66ccf0947d9dbbb413fc80296)
+
 - `WARN brew-cask:<name>: multiple Caskroom versions found; reinstall to reconcile` →
   mise の**警告**（apply 自体は続行される）。`brew cleanup <name>` や
   `brew reinstall --cask <name>` を試しても消えないことがあり（実機で確認済み）、
