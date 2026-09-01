@@ -21,15 +21,15 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 ### 推奨順
 
-|  順位 | アプリ                                                                         | DB                                                     | 月額 0 円にする条件                                          | 選ぶ理由                                                                     |
-| ----: | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| **1** | **Atuin と AgentsView は Fly.io に残す**                                       | **AgentsView は CockroachDB、Atuin は既存 PostgreSQL** | 現在の Fly app compute が無料 allowance／credit 内であること | app を変えず、増え続ける AgentsView data を10 GiB枠へ分離できる              |
-| **2** | **AgentsViewだけ[Google Cloud Run](https://cloud.google.com/run/pricing)**     | **AgentsViewはCockroachDB、Atuin app／DBはFly**        | Cloud RunとFly appが各無料枠内。billing accountは必要        | Fly DBを非公開のままAgentsView dataを10 GiB枠へ分離できる                    |
-| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **AgentsViewはCockroachDB、Atuinは別のPostgreSQL**     | 現行Sandboxが2サービスを許容し、compute／egress上限内        | appはまとめられるが、Atuin DBにはCockroachDBを使わない                       |
-| **4** | **Atuin は Koyeb、AgentsView は Render（PoC／個人用途のみ）**                  | **AgentsViewはCockroachDB、AtuinはPostgreSQL**         | 各社のfree web serviceと通信枠内                             | 低いCPU／RAM、休止、月間instance-hoursの制約があり、本番の可用性は期待しない |
-| **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL                                       | Always Free compute／block volume 内                         | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任        |
+|  順位 | アプリ                                                                         | DB                                                  | 月額 0 円にする条件                                      | 選ぶ理由                                                                     |
+| ----: | ------------------------------------------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **1** | **AgentsViewだけ[Google Cloud Run](https://cloud.google.com/run/pricing)**     | **AgentsViewはCockroachDB、Atuin app／DBはFly**     | Cloud RunとFly appが各無料枠内。billing accountは必要    | 採用構成。Fly DBを非公開のままAgentsView dataを10 GiB枠へ分離できる          |
+| **2** | **Atuin と AgentsView は Fly.io に残す**                                       | **AgentsView はCockroachDB、Atuinは既存PostgreSQL** | 現在のFly app computeが無料allowance／credit内であること | Cloud Runで問題が起きた場合のrollback／暫定構成                              |
+| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **AgentsViewはCockroachDB、Atuinは別のPostgreSQL**  | 現行Sandboxが2サービスを許容し、compute／egress上限内    | appはまとめられるが、Atuin DBにはCockroachDBを使わない                       |
+| **4** | **Atuin は Koyeb、AgentsView は Render（PoC／個人用途のみ）**                  | **AgentsViewはCockroachDB、AtuinはPostgreSQL**      | 各社のfree web serviceと通信枠内                         | 低いCPU／RAM、休止、月間instance-hoursの制約があり、本番の可用性は期待しない |
+| **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL                                    | Always Free compute／block volume 内                     | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任        |
 
-**確定案は「Fly app 2個を維持 + AgentsView DBだけCockroachDBへ分離」**である。ただし、先に後述の`pg_total_relation_size`合計を測り、AgentsViewが容量の主因であることを確認する。既存 app は `auto_stop_machines = "stop"`、`min_machines_running = 0` なので、compute の実請求が無料範囲なら app 移転から得られる利点は小さい。Fly.io の Billing 画面で直近2か月の app compute、IPv4、egress が本当に0円か確認し、0円でなければCloud Runへ移す。
+**確定案は「Atuin app／DBはFly.ioを維持 + AgentsView appはCloud Run + AgentsView DBはCockroachDB」**である。Fly AgentsView appはrollback期間だけ残し、Cloud Runのsmoke testと観察期間が終わってから削除する。移行前に後述の`pg_total_relation_size`合計を測り、AgentsViewが容量の主因であることも確認する。
 
 ### Cloud Run はどの程度まで無料か
 
