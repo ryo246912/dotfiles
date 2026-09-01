@@ -25,11 +25,11 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 | ----: | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **1** | **Atuin と AgentsView は Fly.io に残す**                                       | **AgentsView は CockroachDB、Atuin は既存 PostgreSQL** | 現在の Fly app compute が無料 allowance／credit 内であること                 | app を変えず、増え続ける AgentsView data を10 GiB枠へ分離できる              |
 | **2** | **[Google Cloud Run](https://cloud.google.com/run/pricing) に2サービス**       | **AgentsView は CockroachDB、Atuin は PostgreSQL**     | Cloud Run の request、CPU、memory、egress の無料枠内。billing account は必要 | appもFlyから出せる。DBは互換性に応じて分ける                                 |
-| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **CockroachDB Cloud Basic**                            | 現行 Sandbox が2サービスを許容し、compute／egress 上限内                     | Docker image をほぼそのまま使え、アプリを一事業者にまとめられる              |
+| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **AgentsViewはCockroachDB、Atuinは別のPostgreSQL**     | 現行Sandboxが2サービスを許容し、compute／egress上限内                        | appはまとめられるが、Atuin DBにはCockroachDBを使わない                       |
 | **4** | **Atuin は Koyeb、AgentsView は Render（PoC／個人用途のみ）**                  | **AgentsViewはCockroachDB、AtuinはPostgreSQL**         | 各社のfree web serviceと通信枠内                                             | 低いCPU／RAM、休止、月間instance-hoursの制約があり、本番の可用性は期待しない |
 | **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL                                       | Always Free compute／block volume 内                                         | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任        |
 
-**確定案は「Fly app 2個を維持 + AgentsView DBだけCockroachDBへ分離」**である。ただし、先に `pg_schema_size('agentsview')` を測り、AgentsView が容量の主因であることを確認する。既存 app は `auto_stop_machines = "stop"`、`min_machines_running = 0` なので、compute の実請求が無料範囲なら app 移転から得られる利点は小さい。Fly.io の Billing 画面で直近2か月の app compute、IPv4、egress が本当に0円か確認し、0円でなければCloud Runへ移す。
+**確定案は「Fly app 2個を維持 + AgentsView DBだけCockroachDBへ分離」**である。ただし、先に後述の`pg_total_relation_size`合計を測り、AgentsViewが容量の主因であることを確認する。既存 app は `auto_stop_machines = "stop"`、`min_machines_running = 0` なので、compute の実請求が無料範囲なら app 移転から得られる利点は小さい。Fly.io の Billing 画面で直近2か月の app compute、IPv4、egress が本当に0円か確認し、0円でなければCloud Runへ移す。
 
 ### Cloud Run はどの程度まで無料か
 
@@ -133,9 +133,15 @@ Internet
 
 [CockroachDB Cloud Basicの公式料金表](https://www.cockroachlabs.com/pricing/)では、毎月最初の**10 GiB storageと5,000万 Request Units**が無料範囲となる。現在のFly Volume全体が約0.9 GiBでも、AgentsView schemaはそれ以下なので、storageだけなら移行直後に少なくとも約9.1 GiB、現状の10倍超の余裕がある。ただしFly Volumeの0.9 GiBにはAtuin、WAL、ログも含まれるため、正確な余裕は次で計算する。
 
+```sql
+SELECT COALESCE(sum(pg_total_relation_size(relid)), 0) AS agentsview_bytes
+FROM pg_statio_user_tables
+WHERE schemaname = 'agentsview';
+```
+
 ```text
-CockroachDB storage余裕 [GiB] = 10 - pg_schema_size('agentsview') / 1024^3
-概算の成長可能月数 = storage余裕 / AgentsView schemaの月間増加量
+CockroachDB storage余裕 [GiB] = 10 - agentsview_bytes / 1024^3
+概算の成長可能月数 = storage余裕 / AgentsView schemaの月間増加量 [GiB/月]
 ```
 
 Request Unitsは保存容量と別の上限であり、repositoryから実際のquery回数は確定できない。無料を厳守する場合はCockroachDB Consoleで月次RU使用量とstorage alertを設定し、検証push後に増分を測る。Basicで無料分を超えた際の課金・停止設定は、cluster作成時の現行画面で確認する。

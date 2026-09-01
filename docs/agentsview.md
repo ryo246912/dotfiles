@@ -273,7 +273,9 @@ flyctl postgres connect -a psgl
 ```
 
 ```sql
-SELECT pg_size_pretty(pg_schema_size('agentsview'));
+SELECT pg_size_pretty(COALESCE(sum(pg_total_relation_size(relid)), 0))
+FROM pg_statio_user_tables
+WHERE schemaname = 'agentsview';
 ```
 
 ### 古いデータの削除
