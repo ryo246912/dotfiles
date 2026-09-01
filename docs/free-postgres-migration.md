@@ -55,6 +55,58 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、2アプリ合計のrequest数、平均／p95 duration、egressを上表へ代入する。
 
+### 採用可能: Cloud Run 2サービス + AgentsViewはCockroachDB + AtuinはGCE PostgreSQL
+
+質問の構成は**実現できる**。Google Cloud Free Programに無料のmanaged PostgreSQLがあるわけではなく、Compute EngineのAlways Free `e2-micro` VMへ自分でPostgreSQLをインストールする構成になる。
+
+```text
+Internet
+  ├─ Cloud Run: atuin
+  │    └─ Direct VPC egress（private ranges only）
+  │         └─ GCE e2-micro private IP:5432
+  │              └─ PostgreSQL（Atuin専用）
+  └─ Cloud Run: agentsview
+       └─ public TLS
+            └─ CockroachDB Cloud Basic（AgentsView専用）
+```
+
+この構成を**appも含めてFly.ioから出す場合の推奨案**とする。Atuinは本物のPostgreSQLを維持でき、AgentsViewはupstreamが対応を明記するCockroachDBへ分離できる。
+
+#### 無料に収める必須条件
+
+1. GCE VMはFree Tier対象の`e2-micro`を1台だけ使い、対象リージョンの`us-west1`、`us-central1`、`us-east1`のいずれかに置く。
+2. Standard Persistent DiskはbootとPostgreSQL dataを含めて合計30 GB-month以内にする。30 GBすべてをDB dataに使えるわけではない。
+3. Cloud RunもVMと同じリージョン、推奨は`us-central1`に置き、AtuinからPostgreSQLへのlatencyとリージョン間network料金を避ける。
+4. VMにはexternal IPv4を付けない。PostgreSQLはprivate IPだけでlistenし、Cloud Runのservice accountからDirect VPC egress経由で到達させる。
+5. Direct VPC egressは`private-ranges-only`にする。`all-traffic`ではAgentsViewからCockroachDBへの通信にもCloud NAT等が必要となり、無料構成を崩しやすい。
+6. Cloud Runは両サービスとも`min-instances=0`、request-based billingを使い、前節の合計50 vCPU-hours／月の範囲に収める。
+7. PostgreSQLのfirewall ingressはCloud Runが使うsubnet rangeからTCP 5432だけを許可する。`0.0.0.0/0`へ5432を公開しない。
+8. VM管理はexternal IPを常設せず、IAP TCP forwardingでSSHする。
+
+[Cloud Run Direct VPC egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc)はServerless VPC Access connectorなしでVPC private addressへ接続できる。このため、常時稼働connectorの追加費用を避けながらAtuinからprivate PostgreSQLへ接続できる。ただしVPC networkのdata transfer料金は別なので、同一リージョンに置いてbilling reportを監視する。
+
+#### この構成の制約
+
+- `e2-micro`は約1 GB RAMなので、Atuin PostgreSQL専用にする。AgentsView DBや両app containerを同じVMへ追加しない。
+- PostgreSQLは`max_connections`を小さくし、Cloud Runの最大instance数と1instanceあたりconnection poolを制限する。無制限scale-outはDB connectionを枯渇させる。
+- VM、PostgreSQL、OS patch、監視、vacuum、backup、restoreは自己管理となり、Cloud SQLのPITR／HAは利用できない。
+- 30 GB diskはbackupではない。無料を厳守するなら、暗号化したdumpの保管先とretentionを別途決め、その保存容量／egressも無料枠に収まるか確認する。
+- external IPなしのVMは一般Internetへ直接出られない。OS updateにCloud NATを常設すると課金され得るため、patch取得方法または短時間だけ使う有料egressを運用設計に含める。「厳密に毎月0円」とsecurity patchの容易さにはtrade-offがある。
+- 単一VM／単一diskでHAではない。個人用syncでは許容できても、停止を許容できないproductionには推奨しない。
+
+#### 採用判定
+
+| 要件                                    | 判定                                                                              |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| Atuinが本物のPostgreSQLを使う           | ✅ GCE VM上のPostgreSQL                                                           |
+| AgentsViewが1 GB超のmanaged無料DBを使う | ✅ CockroachDB Cloud Basic 10 GiB                                                 |
+| app 2個をscale-to-zeroで無料運用する    | ✅ Cloud Run無料枠内なら可能                                                      |
+| DBをInternetへ公開しない                | ✅ Atuin DBはDirect VPC、AgentsView DBはproviderのTLS endpoint                    |
+| DB運用もmanaged                         | ⚠️ AgentsViewのみmanaged。Atuin PostgreSQLは自己管理                              |
+| 無条件で必ず0円                         | ⚠️ 対象region、disk、Cloud Run compute、RU、network、backupの全上限を守る必要あり |
+
+結論として、**個人用Atuin／AgentsViewで停止を許容でき、PostgreSQLを自分で保守できるなら、この構成を採用してよい**。完全managedを優先する場合はAtuin用DBだけ有料PostgreSQLにする必要がある。
+
 ### アプリごとの配置条件
 
 #### Atuin
