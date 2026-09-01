@@ -342,4 +342,4 @@ DROP SCHEMA agentsview CASCADE;
 flyctl apps destroy ryo-agentsview
 ```
 
-削除前にCloud Run URL、GitHub Actions deploy、各PCからのpushがすべて正常であることを再確認する。
+削除前にCloud Run URL、`mise run agentsview:cloudrun:deploy`（および任意で有効化したGitHub Actions deploy）、各PCからのpushがすべて正常であることを再確認する。
