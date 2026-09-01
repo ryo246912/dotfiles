@@ -64,6 +64,19 @@ else
   echo "inkscape is already installed"
 fi
 
+# ghostty: mise の Caskroom メタデータが消え、/Applications/Ghostty.app だけが残ると
+# brew-cask は missing と判定する一方、`brew reinstall` も既存 app と衝突して失敗する。
+# Homebrew に直接管理させ、孤立した app がある場合は --force で Caskroom を復元する。
+if ! brew list --cask ghostty &>/dev/null; then
+  if [ -d /Applications/Ghostty.app ]; then
+    brew install --cask --force ghostty
+  else
+    brew install --cask ghostty
+  fi
+else
+  echo "ghostty is already installed"
+fi
+
 # docker-desktop: cask 定義が `auto_updates` を使っており、mise の brew-cask シムが
 # postflight 実行時に「cask uses auto_updates, which mise's cask shim does not support」で
 # 失敗し `mise bootstrap packages apply` が中断する

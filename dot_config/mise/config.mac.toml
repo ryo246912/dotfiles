@@ -32,6 +32,7 @@
 # - google-japanese-ime: Rosetta が前提
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
+# - ghostty: app bundle だけが残った場合に mise では Caskroom を修復できない
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
 # - raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
 #   ERROR になる（根本原因未確認。実 brew では問題なくインストールできることを確認済み）
@@ -50,7 +51,6 @@
 "brew-cask:dbeaver-community"     = "latest" # 26.1.4
 "brew-cask:font-hackgen"          = "latest" # 2.10.0
 "brew-cask:font-hackgen-nerd"     = "latest" # 2.10.0
-"brew-cask:ghostty"               = "latest" # 1.3.1
 "brew-cask:google-chrome"         = "latest" # 151.0.7922.72
 "brew-cask:karabiner-elements"    = "latest" # 13.7.0
 "brew-cask:keyboardcleantool"     = "latest" # 7
