@@ -396,7 +396,7 @@ ready_timeout="${AGENTSVIEW_PG_READY_TIMEOUT:-120}"
 
 is_positive_integer() {
   case "$1" in
-    ''|*[!0-9]*|0) return 1 ;;
+    ''|*[!0-9]*|0|0[0-9]*) return 1 ;;
     *) return 0 ;;
   esac
 }
@@ -424,7 +424,12 @@ push_with_retry() {
         stop_proxy
         return 0
       else
-        status=${PIPESTATUS[0]}
+        pipeline_status=("${PIPESTATUS[@]}")
+        status=${pipeline_status[0]}
+        if [ "${pipeline_status[1]}" -ne 0 ]; then
+          echo "tee failed while recording agentsview pg push output" >&2
+          return "${pipeline_status[1]}"
+        fi
         if ! is_transient_push_error; then
           echo "agentsview pg push failed with a non-transient error; not retrying" >&2
           return "$status"
