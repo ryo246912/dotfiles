@@ -371,10 +371,16 @@ command -v pg_isready >/dev/null 2>&1 || {
   echo "pg_isready is required (install PostgreSQL client tools)" >&2
   exit 1
 }
+command -v psql >/dev/null 2>&1 || {
+  echo "psql is required (install PostgreSQL client tools)" >&2
+  exit 1
+}
 
 wait_for_postgres() {
   deadline=$((SECONDS + ready_timeout))
-  while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
+  while ! PGCONNECT_TIMEOUT=1 PGDATABASE="$AGENTSVIEW_PROXY_PG_URL" \
+    psql -XAtqc "SELECT NOT pg_is_in_recovery() AND current_setting('transaction_read_only') = 'off'" 2>/dev/null \
+    | grep -qx t; do
     if ! kill -0 "$proxy_pid" 2>/dev/null; then
       echo "flyctl proxy exited before PostgreSQL became ready" >&2
       return 1
@@ -412,7 +418,7 @@ fi
 
 is_transient_push_error() {
   grep -Eiq \
-    'unexpected EOF|failed to connect|connection reset by peer|server closed the connection unexpectedly|terminating connection due to administrator command|timeout expired|no response|broken pipe' \
+    'unexpected EOF|failed to connect|connection reset by peer|server closed the connection unexpectedly|terminating connection due to administrator command|timeout expired|no response|broken pipe|read-only transaction|SQLSTATE 25006' \
     "$push_log"
 }
 
