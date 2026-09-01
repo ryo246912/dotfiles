@@ -355,6 +355,7 @@ fi
 : "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です}"
 : "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?fnox が未解決です}"
 : "${AGENTSVIEW_MIGRATION_PROJECTS:?小さい project を1つ指定してください}"
+: "${AGENTSVIEW_MIGRATION_WRITES_PAUSED:?全PCのAgentsView pushを停止してyesを設定してください}"
 
 bash dot_config/agentsview/scripts/migrate-to-cockroach.sh
 '''
@@ -435,22 +436,6 @@ shell = "bash -c"
 description = "Deploy the read-only AgentsView viewer to Cloud Run"
 run = '''
 set -eu
-: "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
-: "${GCP_RUNTIME_SERVICE_ACCOUNT:?GCP_RUNTIME_SERVICE_ACCOUNTを設定してください}"
-region="${GCP_REGION:-us-central1}"
-image="${region}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:0.38.1"
-gcloud builds submit dot_config/agentsview \
-  --project="$GCP_PROJECT_ID" \
-  --tag="$image"
-gcloud run deploy ryo-agentsview \
-  --project="$GCP_PROJECT_ID" \
-  --region="$region" \
-  --image="$image" \
-  --service-account="$GCP_RUNTIME_SERVICE_ACCOUNT" \
-  --env-vars-file=dot_config/agentsview/cloudrun.env.yaml \
-  --update-secrets=AGENTSVIEW_PG_URL=agentsview-pg-url:latest,/data/config.toml=agentsview-config-toml:latest \
-  --port=8080 --cpu=1 --memory=512Mi --concurrency=20 \
-  --min=0 --max=2 --timeout=60 --cpu-throttling \
-  --allow-unauthenticated
+bash dot_config/agentsview/scripts/deploy-cloud-run.sh
 '''
 shell = "bash -c"

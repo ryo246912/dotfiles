@@ -5,6 +5,16 @@ set -euo pipefail
 : "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?Set the CockroachDB owner URL}"
 : "${AGENTSVIEW_MIGRATION_PROJECTS:?Set one small project for the target schema bootstrap}"
 
+if [[ "${AGENTSVIEW_MIGRATION_WRITES_PAUSED:-}" != "yes" ]]; then
+  cat >&2 <<'EOF'
+Refusing to copy while writes might still be running.
+Stop every AgentsView pg push/watch process, then set:
+  AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+Atuin does not need to be stopped because it does not write the agentsview schema.
+EOF
+  exit 1
+fi
+
 export AGENTSVIEW_PG_SCHEMA="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"

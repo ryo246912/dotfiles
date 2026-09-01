@@ -14,6 +14,7 @@
 | ------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `dot_config/agentsview/Dockerfile`                      | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context |
 | `dot_config/agentsview/cloudrun.env.yaml`               | Cloud Runの非secret環境変数                                                 |
+| `dot_config/agentsview/scripts/deploy-cloud-run.sh`     | 同じ設定でbuild／Cloud Run deployを行う共通script                           |
 | `dot_config/agentsview/scripts/migrate-to-cockroach.sh` | Flyからdata-only dumpを取得し、CockroachDBへ冪等restoreして件数比較         |
 | `dot_config/mise/tasks/agentsview.toml`                 | secret登録、deploy、migration、status、push task                            |
 
@@ -196,8 +197,11 @@ service-account key JSONは作らない。GitHub ActionsはOIDCの短命credenti
 
 `AGENTSVIEW_MIGRATION_PROJECTS`には、最初に試す小さいprojectを1つ指定する。
 
+dump後の件数比較を決定的にし、copy中の更新を落とさないため、全PCの`agentsview pg push`、`agentsview pg watch`、定期実行を一時停止する。Atuinは別schemaへ書くため停止不要。停止を確認したoperatorだけが確認変数を設定する。
+
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
 fnox exec -- mise run agentsview:cockroach:migrate
 ```
 
@@ -209,6 +213,8 @@ taskは次を順に行う。
 4. `ON CONFLICT DO NOTHING`付きでCockroachDBへrestoreする。
 5. source／targetのtable一覧と正確な`count(*)`を比較する。
 6. 不一致なら非zero終了し、Flyをsource of truthのまま維持する。
+
+`AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`がなければscriptはcopy前に停止する。これは自動的にwrite processを検出した印ではなく、operatorが全端末の停止を確認したという明示的な承認である。検証copy後は旧Flyへのpushを再開してよいが、cutover時には再度停止して最終copyする。
 
 dumpは`~/backup/agentsview-fly-<UTC timestamp>.sql`へmode 0600で残る。このfileにはsession内容が含まれるためcommit、共有、cloud uploadをしない。
 
@@ -298,7 +304,7 @@ Google Cloud Consoleで次も確認する。
 1. 全PCで旧`mise run agentsview:pg:push`の実行を止める。
 2. Fly AgentsView appを停止し、旧viewerからのreadを止める。
 3. cutover UTC timestampを記録する。
-4. `agentsview:cockroach:migrate`を再実行して最終差分をcopyする。
+4. `AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`を設定し、`agentsview:cockroach:migrate`を再実行して最終差分をcopyする。
 5. 厳密row countと主要sessionの内容を比較する。
 6. 各PCの通常taskを`agentsview:cockroach:push`へ切り替える。
 7. Cloud Run viewerで認証、session一覧、detail、analytics、usageをsmoke testする。
