@@ -33,27 +33,27 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 ### Cloud Run はどの程度まで無料か
 
-- Atuin は `ghcr.io/atuinsh/atuin`、AgentsView は `ghcr.io/kenn-io/agentsview` の既存 OCI image を利用できる。
-- 2サービスを独立して scale-to-zero でき、Koyeb + Render のように運用画面や secret 管理を二社へ分割しなくてよい。
-- AtuinはCloud Runの汎用`PORT`を読まず`ATUIN_PORT`で待受portを決めるため、現在の8888から`ATUIN_PORT=8080`へ明示的に変更する。AgentsViewは現在と同じ8080を利用できる。
+- AgentsViewは`ghcr.io/kenn-io/agentsview`の既存OCI imageを利用できる。
+- AgentsViewだけを1サービスとしてscale-to-zeroでき、Atuinは現在のFly app設定を維持する。
+- AgentsViewは現在と同じ8080を利用できる。
 - CockroachDB Cloud へは public TLS endpoint で接続する。Fly private hostname の `psgl.flycast` と `sslmode=disable` は移行後に使用しない。
 
-一方、Atuin sync と AgentsView viewer を合わせた Cloud Run の compute は無料枠に収まりやすいものの、**Cloud Run と CockroachDB Cloud 間の DB traffic は external egress になり得る**。無料枠は保存容量だけでなく egress も監視する。CockroachDB Cloud と同じ／近いリージョンが選べない場合は latency も実測する。
+AgentsView viewerのCloud Run computeは無料枠に収まりやすいものの、**Cloud RunとCockroachDB Cloud間のDB trafficはexternal egressになり得る**。無料枠は保存容量だけでなくegressも監視する。CockroachDB Cloudと同じ／近いリージョンが選べない場合はlatencyも実測する。CockroachDB BasicはInternetから到達できるpublic TLS endpointであり、TLSと認証は通信を保護するがendpoint自体をprivateにはしない。
 
-[Cloud Run の公式料金表](https://cloud.google.com/run/pricing)で request-based billing に毎月付く無料枠は、billing account 全体で **180,000 vCPU-seconds、360,000 GiB-seconds、200万requests**。1 vCPU／512 MiBならCPU枠が先に尽き、**2アプリ合計で約50 vCPU-hours／月**が目安となる。
+[Cloud Run の公式料金表](https://cloud.google.com/run/pricing)で request-based billing に毎月付く無料枠は、billing account 全体で **180,000 vCPU-seconds、360,000 GiB-seconds、200万requests**。1 vCPU／512 MiBならCPU枠が先に尽き、**billing account全体で約50 vCPU-hours／月**が目安となる。
 
-| 使い方（2アプリ合計）     |             概算CPU時間 | 判定             |
+| AgentsViewの使い方        |             概算CPU時間 | 判定             |
 | ------------------------- | ----------------------: | ---------------- |
 | 1万requests／月、平均1秒  |  約2.8時間 + cold start | 十分余裕あり     |
 | 10万requests／月、平均1秒 | 約27.8時間 + cold start | 無料枠内の見込み |
 | 1万requests／月、平均5秒  | 約13.9時間 + cold start | 無料枠内の見込み |
 | 常時接続requestが1本      |           月730時間相当 | 無料にならない   |
 
-個人用のAtuin syncと、必要時だけ開くAgentsViewであれば50時間のbillable CPU枠には通常余裕がある。最終推奨ではCloud Runへ移すのはAgentsViewだけなので、表の「2アプリ合計」よりさらに余裕が大きい。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
+必要時だけ開く個人用AgentsViewであれば、50時間のbillable CPU枠には通常余裕がある。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
 
 したがって、**現在のようにAtuinは同期時だけ、AgentsViewは閲覧時だけ起動する個人利用なら、月1万requests・平均5秒（約13.9 vCPU-hours）程度までは、cold startを加えても50 vCPU-hoursに対して約36時間の余裕がある**。月10万requests・平均1秒でも約22時間の余裕がある。一方、画面の常時接続、`min-instances=1`、instance-based billingのいずれかを使うと、この見積もりは適用できない。
 
-これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、2アプリ合計のrequest数、平均／p95 duration、egressを上表へ代入する。
+これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、AgentsViewのrequest数、平均／p95 duration、egressを上表へ代入する。
 
 ### 希望構成: Cloud Run 2サービス + AgentsViewはCockroachDB + Atuin DBだけFly.io
 
@@ -152,10 +152,11 @@ upstreamの対応表があっても、実アカウント／実schemaの検証な
 3. read-only app userとread/write push userを分けられる。owner/default privilegesはCockroachDBの権限モデルに合わせ、同一SQLの再現を要件にしない。
 4. local PCとFly／Cloud Runの両方からTLS接続でき、connection／request unit上限内である。
 5. schema単位のexportと、空の検証DBへのrestoreが成功する。
+6. semantic／hybrid searchを利用しないなら、CockroachDBではvector phaseがskipされ検索が`501 Not Available`になる機能喪失を承認する。利用するならCockroachDBを採用せず、pgvector対応PostgreSQLで検索結果までtestする。
 
-この5項目が通れば、AgentsView DBのCockroachDB移行を進めてよい。実際のcredentialがないため本調査ではlive clusterへの書き込み試験は実行しておらず、これはcutover直前の必須作業として残る。
+この6項目が通れば、AgentsView DBのCockroachDB移行を進めてよい。実際のcredentialがないため本調査ではlive clusterへの書き込み試験は実行しておらず、これはcutover直前の必須作業として残る。
 
-**現時点の判定は「ソースとupstreamの対応表では適合、live cluster試験は未実施」**である。CockroachDB accountと接続secretを作らずに本番相当migrationを確認することはできないため、「確認済み」を静的互換性と実接続互換性に分ける。上記5項目をlive clusterで通すまではDB接続先を切り替えない。
+**現時点の判定は「ソースとupstreamの対応表では適合、live cluster試験は未実施」**である。CockroachDB accountと接続secretを作らずに本番相当migrationを確認することはできないため、「確認済み」を静的互換性と実接続互換性に分ける。上記6項目をlive clusterで通すまではDB接続先を切り替えない。
 
 ## 1 GB を超える有力候補
 
@@ -248,8 +249,10 @@ LIMIT 30;
 3. **CockroachDB に schema を投入** — `pg_dump --schema-only` から始め、DDL error を一覧化する。
 4. **匿名化した production 相当データで試験** — 容量だけでなく query latency、index、transaction、migration、connection pooling を測る。
 5. **restore rehearsal** — backup を「取れた」ではなく、新しい空 DB に restore して件数と checksum を照合する。
-6. **短時間の書き込み停止で cutover** — 標準手順は Atuin sync／AgentsView push を止め、最終 dump／restore、row count と主要値の照合、接続先変更、smoke test の順とする。dual-write は採用しない。
-7. **rollback window を確保** — Fly.io 側を即削除せず、規約と費用が許す期間 read-only で保持する。
+6. **短時間の書き込み停止で cutover** — 標準手順はAgentsView pushを止め、最終dump／restore、row countと主要値の照合、接続先変更、smoke testの順とする。dual-writeは採用しない。
+7. **書き込み再開前にrollback判断** — smoke testが失敗したら、新DBへのpushを一度も再開せず接続先を旧Fly DBへ戻す。この時点なら逆同期は不要。
+8. **書き込み再開後のrollback手順を準備** — cutover timestampを記録する。新DBへのpush再開後に戻す場合は再度pushを止め、timestamp以降のsession／messageを新DBからexportして旧DBへimportし、row count、主key、最大更新時刻を照合してから旧DBへ戻す。この差分export／importをrehearsalできない限り、書き込み再開後のrollbackは実施しない。
+9. **rollback windowを確保** — Fly.io側を即削除せず、規約と費用が許す期間read-onlyで保持する。
 
 dual-write が不可避なら、両 DB への書き込みを冪等にし、片側失敗の retry queue、再同期、遅延監視を実装する。cutover 時点を記録して行単位の key／更新時刻／checksum を照合し、rollback 時は新 DB で発生した書き込みを旧 DB へ逆同期してから戻す。これらを rehearsal で検証できない場合は dual-write を行わない。
 
