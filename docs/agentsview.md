@@ -165,8 +165,6 @@ mise install github:theseus-rs/postgresql-binaries
 pg_isready --version
 ```
 
-単純な TCP port の確認では local の proxy listener までしか検査できない。Fly private network や PostgreSQL まで接続できない状態で fingerprint 処理を始めないよう、task の readiness check には PostgreSQL protocol を使っている。push が失敗した場合は、原因を確認できるよう task が `flyctl proxy` の log も表示する。
-
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
 ```sh
