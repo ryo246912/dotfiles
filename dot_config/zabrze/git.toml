@@ -76,6 +76,11 @@ snippet = "git checkout"
 trigger = "gch"
 
 [[snippets]]
+name    = "git checkout origin"
+snippet = "git checkout origin/"
+trigger = "gcho"
+
+[[snippets]]
 evaluate = true
 name     = "git checkout master"
 snippet  = "git checkout $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
