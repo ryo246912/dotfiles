@@ -307,7 +307,7 @@ VACUUM agentsview.sessions;
 
 PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
 通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
-`~/.local/state/agentsview/`にtimestamp付きで保存する。
+`${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
 `pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
 接続URLは権限を制限した一時service fileでcontainerへ渡し、passwordをprocess argvへ含めない。
 
