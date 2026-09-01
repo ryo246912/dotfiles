@@ -76,8 +76,9 @@ snippet = "git checkout"
 trigger = "gch"
 
 [[snippets]]
+cursor  = "👇"
 name    = "git checkout origin"
-snippet = "git checkout origin/"
+snippet = "git checkout origin/👇~0"
 trigger = "gcho"
 
 [[snippets]]
