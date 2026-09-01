@@ -235,6 +235,10 @@ mise run agentsview:pg:push
 # プロジェクトを絞って push（推奨）
 mise run agentsview:pg:push -- --projects my-project,other-project
 
+# 初回は負荷を抑えるため、プロジェクトを1つずつ push
+agentsview projects
+mise run agentsview:pg:push -- --projects my-project
+
 # 全 PC の同期状況確認（machine ごとの件数が表示される）
 mise run agentsview:pg:status
 ```
@@ -284,12 +288,7 @@ flyctl postgres connect -a psgl
 SELECT pg_size_pretty(pg_schema_size('agentsview'));
 ```
 
-大量の初回 push 中に PostgreSQL の checkpoint が頻発して health check が落ちる場合は、`psgl` の volume を拡張してから push を再実行する。
-
-```sh
-flyctl volumes list -a psgl
-flyctl volumes extend <volume-id> -a psgl -s 10
-```
+Fly.io のvolumeは[確保済み容量に対して課金](https://fly.io/docs/about/pricing/#volumes)され、現行planに一律のfree tierはない。[Legacy plan の無料 allowance](https://fly.io/docs/about/discontinued-plans/#legacy-free-allowances)が適用される場合もorganization全体で3GBまでなので、無料運用では10GBへ拡張しない。初回は `--projects` でプロジェクトを1つずつpushして負荷を分割する。volumeを変更する場合は、先にFly.io dashboardのplan、当月利用額、organization全体のvolume使用量を確認する。
 
 push 中に PostgreSQL が一時的に切断された場合、task は30秒待って最大10回再試行する。回数と待機時間は `AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS`、`AGENTSVIEW_PG_PUSH_RETRY_DELAY` で変更できる。
 
