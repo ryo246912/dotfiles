@@ -304,13 +304,7 @@ brew list --cask --versions
   brew list --cask --versions ghostty
   ```
 
-  Ghostty 1.3.1 の cask は従来どおり `Ghostty.dmg` の `Ghostty.app` を配置する定義で、
-  1.3.1 更新時にも Caskroom を削除する変更はない。したがって現時点では Ghostty 固有の
-  変更ではなく、過去の Homebrew 管理から mise 管理への移行、途中で中断した Homebrew
-  操作、または手動 cleanup のいずれかで管理情報だけが不整合になり、mise の新しい検査で
-  顕在化した可能性が高い。本リポジトリでは Ghostty を引き続き mise で管理する。
-
-  Ghostty だけを修復して mise 管理へ揃えるには、いったん Homebrew の管理情報を復元して
+  修復して mise 管理へ揃えるには、いったん Homebrew の管理情報を復元して
   通常 uninstall した後、mise から再導入する。`--zap` は設定も削除するため使わない:
 
   ```sh
