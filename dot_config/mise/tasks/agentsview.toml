@@ -328,6 +328,7 @@ proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 proxy_log="$(mktemp)"
 push_log="$(mktemp)"
+projects_file="$(mktemp)"
 
 stop_proxy() {
   if [ -n "${proxy_pid:-}" ]; then
@@ -346,6 +347,7 @@ cleanup() {
   fi
   rm -f "$proxy_log"
   rm -f "$push_log"
+  rm -f "$projects_file"
   return "$status"
 }
 
@@ -412,35 +414,58 @@ is_transient_push_error() {
     "$push_log"
 }
 
-attempt=1
-while :; do
-  start_proxy
-  if wait_for_postgres; then
-    : >"$push_log"
-    if agentsview pg push "$@" 2>&1 | tee "$push_log"; then
-      break
-    else
-      status=${PIPESTATUS[0]}
-      if ! is_transient_push_error; then
-        echo "agentsview pg push failed with a non-transient error; not retrying" >&2
-        exit "$status"
+push_with_retry() {
+  attempt=1
+  while :; do
+    start_proxy
+    if wait_for_postgres; then
+      : >"$push_log"
+      if agentsview pg push "$@" 2>&1 | tee "$push_log"; then
+        stop_proxy
+        return 0
+      else
+        status=${PIPESTATUS[0]}
+        if ! is_transient_push_error; then
+          echo "agentsview pg push failed with a non-transient error; not retrying" >&2
+          return "$status"
+        fi
       fi
+    else
+      status=$?
     fi
-  else
-    status=$?
+
+    stop_proxy
+
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "agentsview pg push failed after ${attempt} attempt(s)" >&2
+      return "$status"
+    fi
+
+    attempt=$((attempt + 1))
+    echo "PostgreSQL push interrupted; restarting flyctl proxy for attempt ${attempt}/${max_attempts} in ${retry_delay}s..." >&2
+    sleep "$retry_delay"
+  done
+}
+
+if [ "$#" -gt 0 ]; then
+  push_with_retry "$@"
+else
+  command -v jq >/dev/null 2>&1 || {
+    echo "jq is required for project-by-project push" >&2
+    exit 1
+  }
+  agentsview projects --format json \
+    | jq -r 'sort_by(.session_count)[] | .name | select(length > 0)' \
+    >"$projects_file"
+  if [ ! -s "$projects_file" ]; then
+    echo "No projects found." >&2
+    exit 1
   fi
-
-  stop_proxy
-
-  if [ "$attempt" -ge "$max_attempts" ]; then
-    echo "agentsview pg push failed after ${attempt} attempt(s)" >&2
-    exit "$status"
-  fi
-
-  attempt=$((attempt + 1))
-  echo "PostgreSQL push interrupted; restarting flyctl proxy for attempt ${attempt}/${max_attempts} in ${retry_delay}s..." >&2
-  sleep "$retry_delay"
-done
+  while IFS= read -r project; do
+    echo "Pushing project: $project"
+    push_with_retry --projects "$project"
+  done <"$projects_file"
+fi
 '''
 shell = "bash -c"
 

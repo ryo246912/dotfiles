@@ -229,15 +229,11 @@ AGENTSVIEW_PG_MACHINE="mac-work" mise run agentsview:pg:push   # PC ごとに異
 ### push 操作
 
 ```sh
-# 全プロジェクトを push
+# 全プロジェクトをセッション数の少ない順に1つずつ push
 mise run agentsview:pg:push
 
 # プロジェクトを絞って push（推奨）
 mise run agentsview:pg:push -- --projects my-project,other-project
-
-# 初回は負荷を抑えるため、プロジェクトを1つずつ push
-agentsview projects
-mise run agentsview:pg:push -- --projects my-project
 
 # 全 PC の同期状況確認（machine ごとの件数が表示される）
 mise run agentsview:pg:status
@@ -287,10 +283,6 @@ flyctl postgres connect -a psgl
 ```sql
 SELECT pg_size_pretty(pg_schema_size('agentsview'));
 ```
-
-Fly.io のvolumeは[確保済み容量に対して課金](https://fly.io/docs/about/pricing/#volumes)され、現行planに一律のfree tierはない。[Legacy plan の無料 allowance](https://fly.io/docs/about/discontinued-plans/#legacy-free-allowances)が適用される場合もorganization全体で3GBまでなので、無料運用では10GBへ拡張しない。初回は `--projects` でプロジェクトを1つずつpushして負荷を分割する。volumeを変更する場合は、先にFly.io dashboardのplan、当月利用額、organization全体のvolume使用量を確認する。
-
-push 中に PostgreSQL が一時的に切断された場合、task は古い `flyctl proxy` を停止し、30秒後に新しいproxyを起動して最大10回再試行する。再接続時はPostgreSQLの復旧を最大120秒待つ。接続切断以外のエラーは再試行しない。回数、再試行間隔、復旧待機時間は `AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS`、`AGENTSVIEW_PG_PUSH_RETRY_DELAY`、`AGENTSVIEW_PG_READY_TIMEOUT` で変更できる。
 
 ### 古いデータの削除
 
