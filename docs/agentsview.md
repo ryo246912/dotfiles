@@ -290,7 +290,7 @@ SELECT pg_size_pretty(pg_schema_size('agentsview'));
 
 Fly.io のvolumeは[確保済み容量に対して課金](https://fly.io/docs/about/pricing/#volumes)され、現行planに一律のfree tierはない。[Legacy plan の無料 allowance](https://fly.io/docs/about/discontinued-plans/#legacy-free-allowances)が適用される場合もorganization全体で3GBまでなので、無料運用では10GBへ拡張しない。初回は `--projects` でプロジェクトを1つずつpushして負荷を分割する。volumeを変更する場合は、先にFly.io dashboardのplan、当月利用額、organization全体のvolume使用量を確認する。
 
-push 中に PostgreSQL が一時的に切断された場合、task は30秒待って最大10回再試行する。回数と待機時間は `AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS`、`AGENTSVIEW_PG_PUSH_RETRY_DELAY` で変更できる。
+push 中に PostgreSQL が一時的に切断された場合、task は古い `flyctl proxy` を停止し、30秒後に新しいproxyを起動して最大10回再試行する。再接続時はPostgreSQLの復旧を最大120秒待つ。回数、再試行間隔、復旧待機時間は `AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS`、`AGENTSVIEW_PG_PUSH_RETRY_DELAY`、`AGENTSVIEW_PG_READY_TIMEOUT` で変更できる。
 
 ### 古いデータの削除
 
