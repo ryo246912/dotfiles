@@ -27,6 +27,9 @@ CZ_OPENAI_API_KEY = { provider = "bws", value = "GitHub PAT(cz-git)" }
 
 AGENTSVIEW_ADMIN_PG_PASSWORD  = { provider = "bws", value = "AGENTSVIEW_ADMIN_PG_PASSWORD", env = "exec" }
 AGENTSVIEW_AUTH_TOKEN         = { provider = "bws", value = "AGENTSVIEW_AUTH_TOKEN", env = "exec" }
+AGENTSVIEW_COCKROACH_OWNER_PG_URL = { provider = "bws", value = "AGENTSVIEW_COCKROACH_OWNER_PG_URL", env = "exec" }
+AGENTSVIEW_COCKROACH_PUSH_PG_URL  = { provider = "bws", value = "AGENTSVIEW_COCKROACH_PUSH_PG_URL", env = "exec" }
+AGENTSVIEW_COCKROACH_READ_PG_URL  = { provider = "bws", value = "AGENTSVIEW_COCKROACH_READ_PG_URL", env = "exec" }
 AGENTSVIEW_CURSOR_SECRET      = { provider = "bws", value = "AGENTSVIEW_CURSOR_SECRET", env = "exec" }
 AGENTSVIEW_OWNER_PASSWORD     = { provider = "bws", value = "AGENTSVIEW_OWNER_PASSWORD", env = "exec" }
 AGENTSVIEW_OWNER_PROXY_PG_URL = { provider = "bws", value = "AGENTSVIEW_OWNER_PROXY_PG_URL", env = "exec" }

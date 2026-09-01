@@ -2,6 +2,9 @@
 
 複数端末のセッション情報を Fly.io 上の PostgreSQL に集約し、read-only Web UI で参照する構成。
 
+> [!IMPORTANT]
+> この文書のFly構成はmigration元として残している。移行先は「Atuin app／DBはFlyのまま、AgentsView appはCloud Run、AgentsView DBはCockroachDB」である。Cloud Runへのdeployはmise taskで行い、既存Fly deploy workflowはrollback期間中だけ残す。新規setup、data copy、cutover、rollback、Fly schema削除は[AgentsViewをCloud Run／CockroachDBへ移行する手順](agentsview-cloud-run-migration.md)に従う。
+
 ## 構成
 
 ```
