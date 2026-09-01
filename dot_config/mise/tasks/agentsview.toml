@@ -393,6 +393,7 @@ export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 max_attempts="${AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS:-10}"
 retry_delay="${AGENTSVIEW_PG_PUSH_RETRY_DELAY:-30}"
 ready_timeout="${AGENTSVIEW_PG_READY_TIMEOUT:-120}"
+project_batch_sessions="${AGENTSVIEW_PG_PROJECT_BATCH_SESSIONS:-25}"
 
 is_positive_integer() {
   case "$1" in
@@ -403,8 +404,9 @@ is_positive_integer() {
 
 if ! is_positive_integer "$max_attempts" ||
    ! is_positive_integer "$retry_delay" ||
-   ! is_positive_integer "$ready_timeout"; then
-    echo "AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS, AGENTSVIEW_PG_PUSH_RETRY_DELAY, and AGENTSVIEW_PG_READY_TIMEOUT must be positive integers" >&2
+   ! is_positive_integer "$ready_timeout" ||
+   ! is_positive_integer "$project_batch_sessions"; then
+    echo "AgentsView PostgreSQL retry and batch settings must be positive integers without leading zeros" >&2
     exit 1
 fi
 
@@ -460,15 +462,29 @@ else
     exit 1
   }
   agentsview projects --format json \
-    | jq -r 'sort_by(.session_count)[] | .name | select(length > 0)' \
+    | jq -r --argjson limit "$project_batch_sessions" '
+        reduce (sort_by(.session_count)[] | select(.name | length > 0)) as $project
+          ({ batches: [], names: [], sessions: 0 };
+            if (.names | length) > 0 and .sessions + $project.session_count > $limit then
+              .batches += [(.names | join(","))]
+              | .names = [$project.name]
+              | .sessions = $project.session_count
+            else
+              .names += [$project.name]
+              | .sessions += $project.session_count
+            end
+          )
+        | .batches + (if (.names | length) > 0 then [(.names | join(","))] else [] end)
+        | .[]
+      ' \
     >"$projects_file"
   if [ ! -s "$projects_file" ]; then
     echo "No projects found." >&2
     exit 1
   fi
-  while IFS= read -r project; do
-    echo "Pushing project: $project"
-    push_with_retry --projects "$project"
+  while IFS= read -r projects; do
+    echo "Pushing project batch: $projects"
+    push_with_retry --projects "$projects"
   done <"$projects_file"
 fi
 '''

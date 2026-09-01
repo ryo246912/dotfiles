@@ -229,7 +229,7 @@ AGENTSVIEW_PG_MACHINE="mac-work" mise run agentsview:pg:push   # PC ごとに異
 ### push 操作
 
 ```sh
-# 全プロジェクトをセッション数の少ない順に1つずつ push
+# 全プロジェクトを合計25セッションを目安にしたbatchにまとめて順番にpush
 mise run agentsview:pg:push
 
 # プロジェクトを絞って push（推奨）
