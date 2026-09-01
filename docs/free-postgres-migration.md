@@ -35,7 +35,7 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 - Atuin は `ghcr.io/atuinsh/atuin`、AgentsView は `ghcr.io/kenn-io/agentsview` の既存 OCI image を利用できる。
 - 2サービスを独立して scale-to-zero でき、Koyeb + Render のように運用画面や secret 管理を二社へ分割しなくてよい。
-- Atuin の待受を Cloud Run が渡す `PORT`（通常 8080）に合わせ、AgentsView は現在と同じ 8080 を利用できる。
+- AtuinはCloud Runの汎用`PORT`を読まず`ATUIN_PORT`で待受portを決めるため、現在の8888から`ATUIN_PORT=8080`へ明示的に変更する。AgentsViewは現在と同じ8080を利用できる。
 - CockroachDB Cloud へは public TLS endpoint で接続する。Fly private hostname の `psgl.flycast` と `sslmode=disable` は移行後に使用しない。
 
 一方、Atuin sync と AgentsView viewer を合わせた Cloud Run の compute は無料枠に収まりやすいものの、**Cloud Run と CockroachDB Cloud 間の DB traffic は external egress になり得る**。無料枠は保存容量だけでなく egress も監視する。CockroachDB Cloud と同じ／近いリージョンが選べない場合は latency も実測する。
