@@ -240,9 +240,11 @@ Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一�
 | `agentsview pg serve` | PostgreSQL   | 複数PCからpushしたsession、またはdumpからrestoreしたsession | **通常のlocal / Fly viewer**     |
 | `agentsview serve`    | local SQLite | そのPCがlocal sourceから収集したsession                     | SQLite固有の調査が必要な場合のみ |
 
-`agentsview pg serve` は設定されたPostgreSQLを直接読み取るread-only viewerであり、PostgreSQLの内容を
-`~/.agentsview/*.sqlite`へpullするcommandではない。反対に、`agentsview serve` はlocal SQLiteを読み、
-PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
+`agentsview pg serve` は設定されたPostgreSQLを直接読むviewerであり、PostgreSQLの内容を
+`~/.agentsview/*.sqlite`へpullするcommandではない。session APIはread-onlyだが、接続roleにDDL権限が
+ある場合は起動時にschema migrationを実行する。Fly viewerはread-only roleなのでmigrationをskipし、
+local viewerはdatabase ownerで接続するため必要なmigrationを適用できる。反対に、`agentsview serve` は
+local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
 
 このrepositoryでは表示経路を揃えるため、localでも原則としてDocker PostgreSQLと
 `agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動してから
@@ -305,7 +307,9 @@ VACUUM agentsview.sessions;
 
 PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
 通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
-`~/.local/share/agentsview/backups/`にtimestamp付きで保存する。
+`~/.local/state/agentsview/backups/`にtimestamp付きで保存する。
+`pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
+接続URLは権限を制限した一時service fileでcontainerへ渡し、passwordをprocess argvへ含めない。
 
 ```sh
 # default pathへ保存

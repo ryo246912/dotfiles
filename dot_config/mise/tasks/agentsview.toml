@@ -351,16 +351,17 @@ fi
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-backup_dir="${AGENTSVIEW_BACKUP_DIR:-${HOME}/.local/share/agentsview/backups}"
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${HOME}/.local/state/agentsview/backups}"
 dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
 proxy_log="$(mktemp)"
+pg_service_file="$(mktemp)"
 
 cleanup() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -f "$proxy_log"
+  rm -f "$proxy_log" "$pg_service_file"
 }
 
 if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
@@ -369,6 +370,8 @@ if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
 fi
 
 mkdir -p "$(dirname "$dump_path")"
+dump_dir="$(cd "$(dirname "$dump_path")" && pwd -P)"
+dump_name="$(basename "$dump_path")"
 flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
 proxy_pid=$!
 
@@ -391,7 +394,26 @@ while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
   sleep 0.25
 done
 
-pg_dump --schema=agentsview --format=custom --file="$dump_path" "$AGENTSVIEW_PROXY_PG_URL"
+pg_url="$AGENTSVIEW_PROXY_PG_URL"
+docker_network_args=""
+if [ "$(uname -s)" = "Darwin" ]; then
+  pg_url="$(printf '%s' "$pg_url" | sed 's/@127\.0\.0\.1:/@host.docker.internal:/')"
+else
+  docker_network_args="--network host"
+fi
+
+chmod 600 "$pg_service_file"
+printf '[agentsview_dump]\ndbname=%s\n' "$pg_url" >"$pg_service_file"
+
+# Connection credentials stay in the short-lived service file instead of the
+# pg_dump argv. The pinned container also removes the host pg_dump dependency.
+# shellcheck disable=SC2086
+docker run --rm $docker_network_args \
+  --volume "$pg_service_file:/run/agentsview-pg-service.conf:ro" \
+  --volume "$dump_dir:/backup" \
+  --env PGSERVICEFILE=/run/agentsview-pg-service.conf \
+  postgres:17 \
+  pg_dump --dbname=service=agentsview_dump --schema=agentsview --format=custom --file="/backup/$dump_name"
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
