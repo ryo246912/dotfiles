@@ -233,10 +233,28 @@ mise run agentsview:pg:status
 
 Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一覧できる。
 
-ローカルで `agentsview serve` を起動したい場合:
+### `agentsview pg serve` と `agentsview serve` の違い
+
+| command               | backend      | 表示するsession                                             | このrepositoryでの用途           |
+| --------------------- | ------------ | ----------------------------------------------------------- | -------------------------------- |
+| `agentsview pg serve` | PostgreSQL   | 複数PCからpushしたsession、またはdumpからrestoreしたsession | **通常のlocal / Fly viewer**     |
+| `agentsview serve`    | local SQLite | そのPCがlocal sourceから収集したsession                     | SQLite固有の調査が必要な場合のみ |
+
+`agentsview pg serve` は設定されたPostgreSQLを直接読み取るread-only viewerであり、PostgreSQLの内容を
+`~/.agentsview/*.sqlite`へpullするcommandではない。反対に、`agentsview serve` はlocal SQLiteを読み、
+PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
+
+このrepositoryでは表示経路を揃えるため、localでも原則としてDocker PostgreSQLと
+`agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動してから
+`agentsview pg serve`を実行する。従来のSQLite viewerが必要な場合だけ、明示的に
+`mise run agentsview:serve:sqlite`を使う。
 
 ```sh
+# 推奨: local Docker PostgreSQLをbackendにする
 mise run agentsview:serve
+
+# 例外: そのPCのlocal SQLiteだけを見る
+mise run agentsview:serve:sqlite
 ```
 
 恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
@@ -283,9 +301,54 @@ DELETE FROM agentsview.sessions WHERE created_at < NOW() - INTERVAL '6 months';
 VACUUM agentsview.sessions;
 ```
 
-### バックアップ（削除前）
+### バックアップとlocal viewerへのrestore
 
 PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
+通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
+`~/.local/share/agentsview/backups/`にtimestamp付きで保存する。
+
+```sh
+# default pathへ保存
+mise run agentsview:pg:dump
+
+# 出力先を指定
+mise run agentsview:pg:dump -- ~/backup/agentsview.dump
+```
+
+localで確認するときは、dumpをSQLiteへ変換せず、Dockerで起動したlocal PostgreSQLへrestoreして
+`agentsview pg serve`で表示する。これによりFly.ioとlocalのbackend・表示経路が同じになる。
+
+```sh
+# PostgreSQL 17 containerを起動し、dumpをrestore
+mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
+
+# machineごとのsession件数を確認
+mise run agentsview:pg:local:status
+
+# local PostgreSQLを使って agentsview pg serve を起動
+mise run agentsview:serve
+# open http://127.0.0.1:8080
+```
+
+local PostgreSQLは`127.0.0.1:15433`だけに公開し、dataはDocker named volume
+`agentsview-postgres`へ永続化する。Fly proxyのdefault port `15432`とは重複しない。
+portを変更する場合は各commandで同じ値を指定する。
+
+```sh
+AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
+AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:serve
+```
+
+停止してもnamed volumeは残る。containerとnetworkだけを停止・削除する場合:
+
+```sh
+mise run agentsview:pg:local:down
+```
+
+> `docker compose down -v`はlocal restore済みdataも削除する。このrepositoryのtaskは誤削除を避けるため
+> `-v`を指定しない。
+
+手動でdumpする場合は次の形式にする。通常運用ではcredentialをcommand historyへ残さないtaskを使う。
 
 ```sh
 pg_dump -n agentsview \
