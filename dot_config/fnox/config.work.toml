@@ -1,7 +1,3 @@
-# fnox 1.34.0 以降は、選択した profile のテーブルが存在しない場合にエラーになる。
-# provider や secret が未設定でも work profile 自体は有効にしておく。
-[profiles.work]
-
 # [profiles.work.providers.bws]
 # type       = "bitwarden-sm"
 # project_id = "xxx"

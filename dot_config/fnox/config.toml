@@ -2,6 +2,10 @@
 # 含まれるホストだけ dot_zshenv.tmpl が FNOX_PROFILE=work を export する。
 import = ["config.work.toml"]
 
+# fnox 1.34.0 以降は、選択した profile のテーブルが存在しない場合にエラーになる。
+# グローバル設定では import が読み込まれないため、work profile 自体はここで定義する。
+[profiles.work]
+
 [providers.bitwarden]
 type = "bitwarden"
 
