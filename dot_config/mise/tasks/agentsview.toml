@@ -442,7 +442,10 @@ shell = "bash -c"
 depends = ["agentsview:pg:local:up"]
 description = "Start AgentsView with the local Docker PostgreSQL backend"
 run = '''
-export AGENTSVIEW_PG_URL="postgres://agentsview:agentsview-local@127.0.0.1:${AGENTSVIEW_LOCAL_PG_PORT:-15433}/agentsview?sslmode=disable"
+local_pg_user="agentsview"
+local_pg_password="agentsview-local"
+local_pg_port="${AGENTSVIEW_LOCAL_PG_PORT:-15433}"
+export AGENTSVIEW_PG_URL="postgres://${local_pg_user}:${local_pg_password}@127.0.0.1:${local_pg_port}/agentsview?sslmode=disable"
 export AGENTSVIEW_PG_SCHEMA="agentsview"
 exec agentsview pg serve "$@"
 '''
