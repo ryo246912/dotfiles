@@ -36,7 +36,7 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 - AgentsViewは`ghcr.io/kenn-io/agentsview`の既存OCI imageを利用できる。
 - AgentsViewだけを1サービスとしてscale-to-zeroでき、Atuinは現在のFly app設定を維持する。
 - AgentsViewは現在と同じ8080を利用できる。
-- CockroachDB Cloud へは public TLS endpoint で接続する。Fly private hostname の `psgl.flycast` と `sslmode=disable` は移行後に使用しない。
+- AgentsViewのDB接続だけCockroachDB Cloudのpublic TLS endpointへ変更する。Atuinは引き続きFly private hostnameの`psgl.flycast`とprivate network用設定を使う。
 
 AgentsView viewerのCloud Run computeは無料枠に収まりやすいものの、**Cloud RunとCockroachDB Cloud間のDB trafficはexternal egressになり得る**。無料枠は保存容量だけでなくegressも監視する。CockroachDB Cloudと同じ／近いリージョンが選べない場合はlatencyも実測する。CockroachDB BasicはInternetから到達できるpublic TLS endpointであり、TLSと認証は通信を保護するがendpoint自体をprivateにはしない。
 
@@ -51,7 +51,7 @@ AgentsView viewerのCloud Run computeは無料枠に収まりやすいものの�
 
 必要時だけ開く個人用AgentsViewであれば、50時間のbillable CPU枠には通常余裕がある。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
 
-したがって、**現在のようにAtuinは同期時だけ、AgentsViewは閲覧時だけ起動する個人利用なら、月1万requests・平均5秒（約13.9 vCPU-hours）程度までは、cold startを加えても50 vCPU-hoursに対して約36時間の余裕がある**。月10万requests・平均1秒でも約22時間の余裕がある。一方、画面の常時接続、`min-instances=1`、instance-based billingのいずれかを使うと、この見積もりは適用できない。
+したがって、**AgentsViewを閲覧時だけ起動する個人利用なら、月1万requests・平均5秒（約13.9 vCPU-hours）程度までは、cold startを加えても50 vCPU-hoursに対して約36時間の余裕がある**。月10万requests・平均1秒でも約22時間の余裕がある。一方、画面の常時接続、`min-instances=1`、instance-based billingのいずれかを使うと、この見積もりは適用できない。
 
 これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、AgentsViewのrequest数、平均／p95 duration、egressを上表へ代入する。
 
