@@ -16,6 +16,60 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 「完全な PostgreSQL」「managed」「1 GB 超」「期限なし」「カード不要」「アプリも同じ事業者で無料」をすべて同時に満たす大手 PaaS は、今回確認できなかった。DB を Xata、アプリを Koyeb／Render／Cloudflare Workers 等に分ける構成が、無料と運用負荷のバランスを取りやすい。
 
+## Atuin／AgentsView に対する具体的な推奨
+
+この repository の実構成では、Atuin と AgentsView はどちらも 256 MB のコンテナで、HTTP request がないと Fly Machine を停止する設定になっている。両アプリはすでに一つの PostgreSQL database を共有し、AgentsView だけを `agentsview` schema と read／push／owner role で分離している。このため、**アプリを無理に移すより、まず容量を消費している DB だけを移す**のが最小リスクとなる。
+
+### 推奨順
+
+|  順位 | アプリ                                                                         | DB               | 月額 0 円にする条件                                                          | 選ぶ理由                                                                                   |
+| ----: | ------------------------------------------------------------------------------ | ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **1** | **Atuin と AgentsView は Fly.io に残す**                                       | **Xata Free**    | 現在の Fly app compute が無料 allowance／credit 内であること                 | app の URL、Docker image、scale-to-zero、東京リージョンを変えず、容量だけ 15 GB に増やせる |
+| **2** | **[Google Cloud Run](https://cloud.google.com/run/pricing) に2サービス**       | **Xata Free**    | Cloud Run の request、CPU、memory、egress の無料枠内。billing account は必要 | 任意の OCI image、HTTPS、scale-to-zero に対応し、2アプリを別サービスとして置ける           |
+| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **Xata Free**    | 現行 Sandbox が2サービスを許容し、compute／egress 上限内                     | Docker image をほぼそのまま使え、アプリを一事業者にまとめられる                            |
+| **4** | **Atuin は Koyeb、AgentsView は Render**                                       | **Xata Free**    | 各社の free web service と通信枠内                                           | 1社あたり1個／月間 instance-hours 等の制約を、2社に分けて回避しやすい                      |
+| **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL | Always Free compute／block volume 内                                         | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任                      |
+
+**第一案は「Fly app 2個 + Xata DB 1個」**である。今回逼迫しているのは PostgreSQL volume であり、既存 app は `auto_stop_machines = "stop"`、`min_machines_running = 0` なので、compute の実請求が無料範囲なら app 移転から得られる利点は小さい。Fly.io は一般向けの恒久無料プランを保証するサービスではないため、Billing 画面で直近2か月の app compute、IPv4、egress が本当に 0 円か確認し、0 円でなければ第二案へ進む。
+
+### なぜ Cloud Run + Xata が app も移す場合の第一候補か
+
+- Atuin は `ghcr.io/atuinsh/atuin`、AgentsView は `ghcr.io/kenn-io/agentsview` の既存 OCI image を利用できる。
+- 2サービスを独立して scale-to-zero でき、Koyeb + Render のように運用画面や secret 管理を二社へ分割しなくてよい。
+- Atuin の待受を Cloud Run が渡す `PORT`（通常 8080）に合わせ、AgentsView は現在と同じ 8080 を利用できる。
+- Xata へは public TLS endpoint で接続する。Fly private hostname の `psgl.flycast` と `sslmode=disable` は移行後に使用しない。
+
+一方、Atuin sync と AgentsView viewer を合わせた Cloud Run の compute は無料枠に収まりやすいものの、**Cloud Run と Xata 間の DB traffic は external egress になり得る**。無料枠は保存容量だけでなく egress も監視する。Xata と同じ／近いリージョンが選べない場合は latency も実測する。
+
+### アプリごとの配置条件
+
+#### Atuin
+
+- container command は現在と同じ `server start`。
+- `ATUIN_HOST=0.0.0.0`、`ATUIN_PORT=8080`、`ATUIN_OPEN_REGISTRATION=false` を設定する。
+- Atuin が要求する database URL secret を Xata の pooled／direct connection の適切な方へ変更する。
+- history sync は cold start を許容しやすいが、client timeout 内に起動できることを実機で確認する。
+
+#### AgentsView
+
+- `PG_SERVE=1`、`AGENTSVIEW_DISABLE_UPDATE_CHECK=1`、`AGENTSVIEW_PG_SCHEMA=agentsview` を維持する。
+- `AGENTSVIEW_PG_URL` は Xata 上の **read-only role** にする。local PC の `pg push` は別の **read/write role**、migration だけ owner role を使用する。
+- Fly の `[[files]]` は他 PaaS でそのまま使えない。`AGENTSVIEW_CONFIG_TOML` から `/data/config.toml` を作る entrypoint、secret file 機能、または各 PaaS の volume／mount 機能へ置き換える。
+- local PC からの push は `flyctl proxy` を廃止し、Xata の TLS endpoint へ直接接続する。接続 URL を shell history や CI log に出さない。
+
+### Xata 採用前に必ず通す互換性ゲート
+
+Atuin と AgentsView は単に SELECT／INSERT するだけでなく、それぞれ schema migration を実行する。無料容量だけを見て本番を移してはいけない。次が一つでも満たせなければ、Xata 案を止めて Oracle VM 上の PostgreSQL、または小額の managed PostgreSQL を選ぶ。
+
+1. Atuin の空 DB migration が最後まで成功する。
+2. AgentsView の `agentsview` schema 作成と migration が成功する。
+3. `CREATE ROLE`、schema ownership、default privileges、read-only role が現在と同じように設定できる。
+4. Atuin と AgentsView が必要とする PostgreSQL extension／型／index が利用できる。
+5. local PC、Fly／Cloud Run の両方から TLS 接続でき、connection 上限内である。
+6. `pg_dump` と、空の検証 DB への restore が成功する。
+
+Xata Free が role や migration 要件を満たさない場合、**容量は大きくてもこの2アプリには不適合**である。CockroachDB も PostgreSQL そのものではないため、Atuin の本番 DB としては同じ互換性試験を通るまで推奨しない。
+
 ## 1 GB を超える有力候補
 
 | 候補                                                                                                          |                                     無料 DB 容量 | PostgreSQL 互換性                             | アプリも無料         | 重要な制約                                                                                 | 判定                       |
@@ -49,7 +103,7 @@ DB とアプリを別事業者にするとネットワーク遅延と egress が
 | Oracle Always Free VM                                                             | VM 内にアプリと PostgreSQL を同居     | localhost                      | 単一障害点。最低でも外部 object storage へ暗号化 backup                |
 | Google Cloud `e2-micro`                                                           | VM 内に軽量アプリと PostgreSQL を同居 | localhost                      | メモリ不足対策が必須。Docker 多段構成は特に厳しい                      |
 
-推奨構成は、低運用負荷なら **Koyeb Free + Xata Free**、PostgreSQL の完全互換が必須で自己運用可能なら **Oracle Always Free VM + PostgreSQL + アプリ同居**。
+汎用的な候補一覧としては上表のとおりだが、Atuin／AgentsView については **既存 Fly app + Xata**、app も移すなら **Cloud Run 2サービス + Xata**を先に検証する。PostgreSQL の完全互換が必須で自己運用可能なら **Oracle Always Free VM + PostgreSQL + アプリ同居**を選ぶ。
 
 ## 候補にはなるが「1 GB 超の恒久無料」を満たさないサービス
 
@@ -132,5 +186,6 @@ LIMIT 30;
 - **最小の変更で managed を維持:** Xata を PoC。だめなら Neon／有料最小プランも含めて再比較する。
 - **PostgreSQL 互換差をアプリ側で吸収可能:** CockroachDB Cloud Basic。
 - **月額 0 円と容量を最優先し、Linux／DB を運用可能:** Oracle Cloud Always Free VM。
-- **アプリも完全無料で簡単に:** Xata + Koyeb を第一案、Xata + Render を第二案。ただし双方の休止・egress・商用条件を確認する。
+- **Atuin／AgentsView の DB だけ移す:** Fly app 2個 + Xata を第一案とし、Fly compute の実請求が 0 円か毎月確認する。
+- **Atuin／AgentsView の app も移す:** Cloud Run 2サービス + Xata。billing account、egress、cold start、Xata の role／migration 互換性を先に検証する。
 - **本番データが重要:** 無料枠だけで決めない。安価な paid PostgreSQL は、バックアップ、PITR、SLA、サポート、突然の無料枠変更リスクを含めると総コストが低い場合が多い。
