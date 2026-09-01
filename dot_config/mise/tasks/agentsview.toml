@@ -361,23 +361,53 @@ command -v pg_isready >/dev/null 2>&1 || {
   exit 1
 }
 
-deadline=$((SECONDS + 30))
-while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    echo "flyctl proxy exited before PostgreSQL became ready" >&2
-    exit 1
-  fi
-  if [ "$SECONDS" -ge "$deadline" ]; then
-    echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
+wait_for_postgres() {
+  deadline=$((SECONDS + 30))
+  while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
+    if ! kill -0 "$proxy_pid" 2>/dev/null; then
+      echo "flyctl proxy exited before PostgreSQL became ready" >&2
+      return 1
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+      return 1
+    fi
+    sleep 0.25
+  done
+}
+
+wait_for_postgres
 
 export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
 export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 
-agentsview pg push "$@"
+max_attempts="${AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS:-10}"
+retry_delay="${AGENTSVIEW_PG_PUSH_RETRY_DELAY:-30}"
+case "$max_attempts:$retry_delay" in
+  *[!0-9:]*|0:*|*:0)
+    echo "AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS and AGENTSVIEW_PG_PUSH_RETRY_DELAY must be positive integers" >&2
+    exit 1
+    ;;
+esac
+
+attempt=1
+while :; do
+  if agentsview pg push "$@"; then
+    break
+  else
+    status=$?
+  fi
+
+  if [ "$attempt" -ge "$max_attempts" ]; then
+    echo "agentsview pg push failed after ${attempt} attempt(s)" >&2
+    exit "$status"
+  fi
+
+  attempt=$((attempt + 1))
+  echo "PostgreSQL push interrupted; retrying attempt ${attempt}/${max_attempts} in ${retry_delay}s..." >&2
+  sleep "$retry_delay"
+  wait_for_postgres
+done
 '''
 shell = "bash -c"
 

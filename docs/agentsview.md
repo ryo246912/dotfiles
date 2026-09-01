@@ -284,6 +284,15 @@ flyctl postgres connect -a psgl
 SELECT pg_size_pretty(pg_schema_size('agentsview'));
 ```
 
+大量の初回 push 中に PostgreSQL の checkpoint が頻発して health check が落ちる場合は、`psgl` の volume を拡張してから push を再実行する。
+
+```sh
+flyctl volumes list -a psgl
+flyctl volumes extend <volume-id> -a psgl -s 10
+```
+
+push 中に PostgreSQL が一時的に切断された場合、task は30秒待って最大10回再試行する。回数と待機時間は `AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS`、`AGENTSVIEW_PG_PUSH_RETRY_DELAY` で変更できる。
+
 ### 古いデータの削除
 
 ```sql
