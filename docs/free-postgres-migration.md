@@ -21,13 +21,13 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 
 ### 推奨順
 
-|  順位 | アプリ                                                                         | DB                                                     | 月額 0 円にする条件                                                          | 選ぶ理由                                                                     |
-| ----: | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **1** | **Atuin と AgentsView は Fly.io に残す**                                       | **AgentsView は CockroachDB、Atuin は既存 PostgreSQL** | 現在の Fly app compute が無料 allowance／credit 内であること                 | app を変えず、増え続ける AgentsView data を10 GiB枠へ分離できる              |
-| **2** | **[Google Cloud Run](https://cloud.google.com/run/pricing) に2サービス**       | **AgentsView は CockroachDB、Atuin は PostgreSQL**     | Cloud Run の request、CPU、memory、egress の無料枠内。billing account は必要 | appもFlyから出せる。DBは互換性に応じて分ける                                 |
-| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **AgentsViewはCockroachDB、Atuinは別のPostgreSQL**     | 現行Sandboxが2サービスを許容し、compute／egress上限内                        | appはまとめられるが、Atuin DBにはCockroachDBを使わない                       |
-| **4** | **Atuin は Koyeb、AgentsView は Render（PoC／個人用途のみ）**                  | **AgentsViewはCockroachDB、AtuinはPostgreSQL**         | 各社のfree web serviceと通信枠内                                             | 低いCPU／RAM、休止、月間instance-hoursの制約があり、本番の可用性は期待しない |
-| **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL                                       | Always Free compute／block volume 内                                         | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任        |
+|  順位 | アプリ                                                                         | DB                                                     | 月額 0 円にする条件                                          | 選ぶ理由                                                                     |
+| ----: | ------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **1** | **Atuin と AgentsView は Fly.io に残す**                                       | **AgentsView は CockroachDB、Atuin は既存 PostgreSQL** | 現在の Fly app compute が無料 allowance／credit 内であること | app を変えず、増え続ける AgentsView data を10 GiB枠へ分離できる              |
+| **2** | **AgentsViewだけ[Google Cloud Run](https://cloud.google.com/run/pricing)**     | **AgentsViewはCockroachDB、Atuin app／DBはFly**        | Cloud RunとFly appが各無料枠内。billing accountは必要        | Fly DBを非公開のままAgentsView dataを10 GiB枠へ分離できる                    |
+| **3** | **[Northflank Developer Sandbox](https://northflank.com/pricing) に2サービス** | **AgentsViewはCockroachDB、Atuinは別のPostgreSQL**     | 現行Sandboxが2サービスを許容し、compute／egress上限内        | appはまとめられるが、Atuin DBにはCockroachDBを使わない                       |
+| **4** | **Atuin は Koyeb、AgentsView は Render（PoC／個人用途のみ）**                  | **AgentsViewはCockroachDB、AtuinはPostgreSQL**         | 各社のfree web serviceと通信枠内                             | 低いCPU／RAM、休止、月間instance-hoursの制約があり、本番の可用性は期待しない |
+| **5** | **Oracle Always Free VM に両アプリと PostgreSQL**                              | VM 内 PostgreSQL                                       | Always Free compute／block volume 内                         | 最大容量。ただし managed ではなく、単一 VM の保守と backup は自己責任        |
 
 **確定案は「Fly app 2個を維持 + AgentsView DBだけCockroachDBへ分離」**である。ただし、先に後述の`pg_total_relation_size`合計を測り、AgentsViewが容量の主因であることを確認する。既存 app は `auto_stop_machines = "stop"`、`min_machines_running = 0` なので、compute の実請求が無料範囲なら app 移転から得られる利点は小さい。Fly.io の Billing 画面で直近2か月の app compute、IPv4、egress が本当に0円か確認し、0円でなければCloud Runへ移す。
 
@@ -49,72 +49,65 @@ Fly.io の 1 GB を明確に超えたい場合、現実的な順序は次のと�
 | 1万requests／月、平均5秒  | 約13.9時間 + cold start | 無料枠内の見込み |
 | 常時接続requestが1本      |           月730時間相当 | 無料にならない   |
 
-個人用のAtuin syncと、必要時だけ開くAgentsViewであれば50時間のbillable CPU枠には通常余裕がある。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
+個人用のAtuin syncと、必要時だけ開くAgentsViewであれば50時間のbillable CPU枠には通常余裕がある。最終推奨ではCloud Runへ移すのはAgentsViewだけなので、表の「2アプリ合計」よりさらに余裕が大きい。ただしrepositoryだけから実trafficは確定できない。Cloud Run移行後は `container/billable_instance_time`、request count、outbound data transferにbudget alertを設定する。AgentsViewの画面やSSEを常時開く運用は避け、`min-instances=0`、request-based billingを維持する。外向き通信の無料条件はcompute枠とは別で、公式料金表はNorth America内のdata transferについて月1 GiBの無料枠を記載しているため、東京から外部DBへのegressが必ず無料とはみなさない。
 
 したがって、**現在のようにAtuinは同期時だけ、AgentsViewは閲覧時だけ起動する個人利用なら、月1万requests・平均5秒（約13.9 vCPU-hours）程度までは、cold startを加えても50 vCPU-hoursに対して約36時間の余裕がある**。月10万requests・平均1秒でも約22時間の余裕がある。一方、画面の常時接続、`min-instances=1`、instance-based billingのいずれかを使うと、この見積もりは適用できない。
 
 これはrequest数と処理時間から出した上限見積もりであり、現在のFly Metricsを取得した実測値ではない。この実行環境には`flyctl`と利用者のFly／Google Cloud credentialがないため、現行trafficとの照合やCloud Runへの実deployは実行していない。移行判断前にFly Metricsの直近30日について、2アプリ合計のrequest数、平均／p95 duration、egressを上表へ代入する。
 
-### 採用可能: Cloud Run 2サービス + AgentsViewはCockroachDB + AtuinはGCE PostgreSQL
+### 希望構成: Cloud Run 2サービス + AgentsViewはCockroachDB + Atuin DBだけFly.io
 
-質問の構成は**実現できる**。Google Cloud Free Programに無料のmanaged PostgreSQLがあるわけではなく、Compute EngineのAlways Free `e2-micro` VMへ自分でPostgreSQLをインストールする構成になる。
+Atuin DBだけをFly.ioに残し、Atuin appをCloud Runへ移す構成は、**現在の`psgl.flycast`を使うままでは接続できない**。`*.flycast`はFly private network内のaddressであり、Google Cloud Runから直接routeできないためである。
 
 ```text
 Internet
-  ├─ Cloud Run: atuin
-  │    └─ Direct VPC egress（private ranges only）
-  │         └─ GCE e2-micro private IP:5432
-  │              └─ PostgreSQL（Atuin専用）
-  └─ Cloud Run: agentsview
-       └─ public TLS
-            └─ CockroachDB Cloud Basic（AgentsView専用）
+  ├─ Cloud Run: agentsview
+  │    └─ public TLS → CockroachDB Cloud Basic
+  └─ Cloud Run: atuin
+       └─ 到達不可 → psgl.flycast:5432（Fly private network）
 ```
 
-この構成を**appも含めてFly.ioから出す場合の推奨案**とする。Atuinは本物のPostgreSQLを維持でき、AgentsViewはupstreamが対応を明記するCockroachDBへ分離できる。
+#### 実現方法と判定
 
-#### 無料に収める必須条件
+| 方法                                                  | 月額0円                                                       | security／運用                                              | 判定               |
+| ----------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------- | ------------------ |
+| Fly PostgreSQLをpublic TCP/TLSで公開                  | public IPv4、egress等が課金され得る                           | Cloud Runの送信元IPは標準では固定されず、広い公開範囲が必要 | **非推奨**         |
+| Cloud Runにstatic outbound IPを付け、Fly側でallowlist | Cloud NAT等の費用が発生                                       | public TLSとfirewallを適切に構成可能                        | 有料なら可能       |
+| Cloud RunからFly WireGuardへ接続                      | Cloud Runの実行制約とephemeral instance上でのtunnel運用が複雑 | reconnect、key、health check、scale-outを自己管理           | **本番非推奨**     |
+| Fly上にTCP proxy／tunnel appを追加                    | Fly app computeとnetwork費用次第                              | proxyが新たな単一障害点                                     | 移行の利点が小さい |
+| Atuin appもFlyに残す                                  | 現在のFly allowance内なら0円                                  | `psgl.flycast`をprivateのまま利用可能                       | **推奨**           |
 
-1. GCE VMはFree Tier対象の`e2-micro`を1台だけ使い、対象リージョンの`us-west1`、`us-central1`、`us-east1`のいずれかに置く。
-2. Standard Persistent DiskはbootとPostgreSQL dataを含めて合計30 GB-month以内にする。30 GBすべてをDB dataに使えるわけではない。
-3. Cloud RunもVMと同じリージョン、推奨は`us-central1`に置き、AtuinからPostgreSQLへのlatencyとリージョン間network料金を避ける。
-4. VMにはexternal IPv4を付けない。PostgreSQLはprivate IPだけでlistenし、Cloud Runのservice accountからDirect VPC egress経由で到達させる。
-5. Direct VPC egressは`private-ranges-only`にする。`all-traffic`ではAgentsViewからCockroachDBへの通信にもCloud NAT等が必要となり、無料構成を崩しやすい。
-6. Cloud Runは両サービスとも`min-instances=0`、request-based billingを使い、前節の合計50 vCPU-hours／月の範囲に収める。
-7. PostgreSQLのfirewall ingressはCloud Runが使うsubnet rangeからTCP 5432だけを許可する。`0.0.0.0/0`へ5432を公開しない。
-8. VM管理はexternal IPを常設せず、IAP TCP forwardingでSSHする。
+Cloud Runの送信元IPを固定する標準構成は、Direct VPC egressの`all-traffic`とCloud NAT／static external IPを組み合わせる。これは「無料だけ」という要件には適さない。送信元を固定せずFly PostgreSQLの5432をInternet全体へ公開する方法も技術的には可能だが、databaseを直接攻撃対象にするため採用しない。
 
-[Cloud Run Direct VPC egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc)はServerless VPC Access connectorなしでVPC private addressへ接続できる。このため、常時稼働connectorの追加費用を避けながらAtuinからprivate PostgreSQLへ接続できる。ただしVPC networkのdata transfer料金は別なので、同一リージョンに置いてbilling reportを監視する。
+#### 無料を優先する確定構成
 
-#### この構成の制約
+```text
+Fly.io
+  └─ Atuin app
+       └─ psgl.flycast（既存Fly PostgreSQL／Atuin dataのみ）
 
-- `e2-micro`は約1 GB RAMなので、Atuin PostgreSQL専用にする。AgentsView DBや両app containerを同じVMへ追加しない。
-- PostgreSQLは`max_connections`を小さくし、Cloud Runの最大instance数と1instanceあたりconnection poolを制限する。無制限scale-outはDB connectionを枯渇させる。
-- VM、PostgreSQL、OS patch、監視、vacuum、backup、restoreは自己管理となり、Cloud SQLのPITR／HAは利用できない。
-- 30 GB diskはbackupではない。無料を厳守するなら、暗号化したdumpの保管先とretentionを別途決め、その保存容量／egressも無料枠に収まるか確認する。
-- external IPなしのVMは一般Internetへ直接出られない。OS updateにCloud NATを常設すると課金され得るため、patch取得方法または短時間だけ使う有料egressを運用設計に含める。「厳密に毎月0円」とsecurity patchの容易さにはtrade-offがある。
-- 単一VM／単一diskでHAではない。個人用syncでは許容できても、停止を許容できないproductionには推奨しない。
+Google Cloud Run
+  └─ AgentsView app
+       └─ public TLS → CockroachDB Cloud Basic（AgentsView data）
+```
 
-#### 採用判定
+この構成ならAgentsView dataをCockroachDBへ移すことでFly volumeを空けながら、Atuinのapp／DB間通信はprivateのまま維持できる。Fly側に残るのはAtuin appとAtuin DBであり、「Atuin DBだけFlyに残す」構成にはならないが、**無料・security・運用の単純さを同時に満たす最も近い構成**である。
 
-| 要件                                    | 判定                                                                              |
-| --------------------------------------- | --------------------------------------------------------------------------------- |
-| Atuinが本物のPostgreSQLを使う           | ✅ GCE VM上のPostgreSQL                                                           |
-| AgentsViewが1 GB超のmanaged無料DBを使う | ✅ CockroachDB Cloud Basic 10 GiB                                                 |
-| app 2個をscale-to-zeroで無料運用する    | ✅ Cloud Run無料枠内なら可能                                                      |
-| DBをInternetへ公開しない                | ✅ Atuin DBはDirect VPC、AgentsView DBはproviderのTLS endpoint                    |
-| DB運用もmanaged                         | ⚠️ AgentsViewのみmanaged。Atuin PostgreSQLは自己管理                              |
-| 無条件で必ず0円                         | ⚠️ 対象region、disk、Cloud Run compute、RU、network、backupの全上限を守る必要あり |
+どうしてもAtuin appもCloud Runへ移す場合は、次のどちらかを選ぶ。
 
-結論として、**個人用Atuin／AgentsViewで停止を許容でき、PostgreSQLを自分で保守できるなら、この構成を採用してよい**。完全managedを優先する場合はAtuin用DBだけ有料PostgreSQLにする必要がある。
+1. Atuin DBをGCE Always Free `e2-micro`上のPostgreSQLへ移し、Direct VPC egressでprivate接続する。
+2. Cloud NAT／static IP等の少額課金を許容し、Fly PostgreSQLをTLS、固定送信元allowlist、最小権限role付きで公開する。
+
+したがって、月額0円を絶対条件とする本稿の最終推奨は、**Atuin app + Atuin DBはFly.io、AgentsView appはCloud Run、AgentsView DBはCockroachDB Cloud Basic**とする。
 
 ### アプリごとの配置条件
 
 #### Atuin
 
-- container command は現在と同じ `server start`。
-- `ATUIN_HOST=0.0.0.0`、`ATUIN_PORT=8080`、`ATUIN_OPEN_REGISTRATION=false` を設定する。
-- database URLはCockroachDBへ変更せず、既存の本物のPostgreSQLを使う。appをCloud Runへ移す場合も、Atuin用PostgreSQLは別途必要となる。
-- history sync は cold start を許容しやすいが、client timeout 内に起動できることを実機で確認する。
+- appもFly.ioに残し、現在のcontainer command `server start`を維持する。
+- `ATUIN_HOST=0.0.0.0`、`ATUIN_PORT=8888`、`ATUIN_OPEN_REGISTRATION=false`を変更しない。
+- database URLは現在の`psgl.flycast`を使い、Atuin専用database／roleへ接続する。AgentsView schemaを移行・検証後にFly側から削除して容量を空ける。
+- `auto_stop_machines="stop"`と`min_machines_running=0`を維持し、app computeがFly allowance内か毎月確認する。
 
 #### AgentsView
 
@@ -188,7 +181,7 @@ DB とアプリを別事業者にするとネットワーク遅延と egress が
 | Oracle Always Free VM                                                             | VM 内にアプリと PostgreSQL を同居     | localhost                      | 単一障害点。最低でも外部 object storage へ暗号化 backup                |
 | Google Cloud `e2-micro`                                                           | VM 内に軽量アプリと PostgreSQL を同居 | localhost                      | メモリ不足対策が必須。Docker 多段構成は特に厳しい                      |
 
-汎用的な候補一覧としては上表のとおりだが、この構成では **Fly appを維持し、AgentsViewだけCockroachDBへ分離**を先に検証する。appも移すならCloud Runを利用するが、DBはAgentsView用CockroachDBとAtuin用PostgreSQLに分ける。PostgreSQLの完全互換が必須で自己運用可能なら **Oracle Always Free VM + PostgreSQL**を選ぶ。
+汎用的な候補一覧としては上表のとおりだが、この構成では **Fly appを維持し、AgentsViewだけCockroachDBへ分離**を先に検証する。AgentsView appも移すならCloud Runを利用し、Atuin app／DBはFly private network内に残す。PostgreSQLの完全互換が必須で自己運用可能なら **Oracle Always Free VM + PostgreSQL**を選ぶ。
 
 ## 候補にはなるが「1 GB 超の恒久無料」を満たさないサービス
 
@@ -276,5 +269,5 @@ dual-write が不可避なら、両 DB への書き込みを冪等にし、片�
 - **CockroachDBの対象:** upstreamが対応を明記するAgentsViewだけ。Atuinには使用しない。
 - **月額 0 円と容量を最優先し、Linux／DB を運用可能:** Oracle Cloud Always Free VM。
 - **DBだけ移す:** Fly app 2個は維持し、AgentsView DBだけCockroachDBへ移す。Fly computeの実請求が0円か毎月確認する。
-- **appも移す:** Cloud Runに2サービスを置き、AgentsViewはCockroachDB、Atuinは本物のPostgreSQLへ接続する。billing account、egress、cold startを監視する。
+- **appも移す:** AgentsView appだけCloud Runへ移し、AgentsView DBはCockroachDB、Atuin app／DBはFlyに残す。Atuin appもCloud Runへ移す場合は無料のprivate接続を維持できないため、GCE PostgreSQLへの移行またはnetwork課金を許容する。
 - **本番データが重要:** 無料枠だけで決めない。安価な paid PostgreSQL は、バックアップ、PITR、SLA、サポート、突然の無料枠変更リスクを含めると総コストが低い場合が多い。
