@@ -63,14 +63,13 @@ command -v pg_isready >/dev/null 2>&1 || {
   exit 1
 }
 
-i=0
+deadline=$((SECONDS + 30))
 while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
   if ! kill -0 "$proxy_pid" 2>/dev/null; then
     echo "flyctl proxy exited before PostgreSQL became ready" >&2
     exit 1
   fi
-  i=$((i + 1))
-  if [ "$i" -ge 120 ]; then
+  if [ "$SECONDS" -ge "$deadline" ]; then
     echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
     exit 1
   fi
@@ -178,14 +177,13 @@ command -v pg_isready >/dev/null 2>&1 || {
   exit 1
 }
 
-i=0
+deadline=$((SECONDS + 30))
 while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
   if ! kill -0 "$proxy_pid" 2>/dev/null; then
     echo "flyctl proxy exited before PostgreSQL became ready" >&2
     exit 1
   fi
-  i=$((i + 1))
-  if [ "$i" -ge 120 ]; then
+  if [ "$SECONDS" -ge "$deadline" ]; then
     echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
     exit 1
   fi
@@ -294,14 +292,13 @@ command -v pg_isready >/dev/null 2>&1 || {
   exit 1
 }
 
-i=0
+deadline=$((SECONDS + 30))
 while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
   if ! kill -0 "$proxy_pid" 2>/dev/null; then
     echo "flyctl proxy exited before PostgreSQL became ready" >&2
     exit 1
   fi
-  i=$((i + 1))
-  if [ "$i" -ge 120 ]; then
+  if [ "$SECONDS" -ge "$deadline" ]; then
     echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
     exit 1
   fi
@@ -364,14 +361,13 @@ command -v pg_isready >/dev/null 2>&1 || {
   exit 1
 }
 
-i=0
+deadline=$((SECONDS + 30))
 while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
   if ! kill -0 "$proxy_pid" 2>/dev/null; then
     echo "flyctl proxy exited before PostgreSQL became ready" >&2
     exit 1
   fi
-  i=$((i + 1))
-  if [ "$i" -ge 120 ]; then
+  if [ "$SECONDS" -ge "$deadline" ]; then
     echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
     exit 1
   fi

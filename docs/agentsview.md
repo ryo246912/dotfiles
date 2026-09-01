@@ -157,6 +157,14 @@ curl -I https://ryo-agentsview.fly.dev
 
 `agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`pg_isready` で PostgreSQL から応答が返るまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使う。実行後に proxy を停止するため、PostgreSQL client tools（`pg_isready` を含む）が必要になる。
 
+PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
+
+```sh
+chezmoi apply
+mise install github:theseus-rs/postgresql-binaries
+pg_isready --version
+```
+
 単純な TCP port の確認では local の proxy listener までしか検査できない。Fly private network や PostgreSQL まで接続できない状態で fingerprint 処理を始めないよう、task の readiness check には PostgreSQL protocol を使っている。push が失敗した場合は、原因を確認できるよう task が `flyctl proxy` の log も表示する。
 
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
