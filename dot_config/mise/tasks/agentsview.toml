@@ -351,7 +351,7 @@ fi
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-backup_dir="${AGENTSVIEW_BACKUP_DIR:-${HOME}/.local/state/agentsview/backups}"
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${HOME}/.local/state/agentsview}"
 dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
 proxy_log="$(mktemp)"
 pg_service_file="$(mktemp)"
