@@ -400,41 +400,76 @@ while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
   sleep 0.25
 done
 
-pg_url="$AGENTSVIEW_PROXY_PG_URL"
-docker_network_args=()
-if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
-  pg_url="$(printf '%s' "$pg_url" | sed 's/@127\.0\.0\.1:/@host.docker.internal:/')"
-  docker_network_args=(--add-host host.docker.internal:host-gateway)
-else
-  docker_network_args=(--network host)
-fi
-
 # libpq は PGDATABASE の値を connection URI として展開せず database 名として扱うため、
 # URI は pg_dump の --dbname へ渡す必要がある（PGDATABASE 経由だと host が既定の
 # local Unix socket になり "connection to server on socket ... failed" で失敗する）。
 # その --dbname へ password 付き URI を渡すと credential が process table へ出るので、
-# URI からは password を外し、password だけを stdin 経由で container の .pgpass へ渡す。
+# URI を分解して password を外し、password だけを stdin 経由で container の .pgpass へ渡す。
+# 分解できない形式は password を除去できないため fail closed で拒否する。
+pg_url="$AGENTSVIEW_PROXY_PG_URL"
+case "$pg_url" in
+  postgres://*|postgresql://*) ;;
+  *)
+    echo "AGENTSVIEW_PROXY_PG_URL must be a postgres:// or postgresql:// URI" >&2
+    exit 1
+    ;;
+esac
+
 # libpq は URI 内の password を percent-decode するため、.pgpass 用にここで decode する。
 url_decode() {
   local encoded="${1//\\/\\\\}"
   printf '%b' "${encoded//%/\\x}"
 }
 
-pg_password=""
 url_scheme="${pg_url%%://*}"
 url_rest="${pg_url#*://}"
 url_authority="${url_rest%%/*}"
 url_authority="${url_authority%%\?*}"
 url_tail="${url_rest#"$url_authority"}"
+url_path="${url_tail%%\?*}"
+url_query="${url_tail#"$url_path"}"
+url_query="${url_query#\?}"
+
 # authority の最後の @ より前が userinfo。password 内の @ は percent-encode されている。
+pg_password=""
+url_userinfo=""
+url_hostport="$url_authority"
 if [[ "$url_authority" == *@* ]]; then
   url_userinfo="${url_authority%@*}"
   url_hostport="${url_authority##*@}"
   if [[ "$url_userinfo" == *:* ]]; then
     pg_password="$(url_decode "${url_userinfo#*:}")"
-    pg_url="${url_scheme}://${url_userinfo%%:*}@${url_hostport}${url_tail}"
+    url_userinfo="${url_userinfo%%:*}"
   fi
 fi
+
+# libpq は query の password= も接続 parameter として解釈し、userinfo より後に評価する。
+# こちらも URI から外さないと --dbname 経由で argv へ出るため、同じく .pgpass へ移す。
+url_kept_query=""
+if [ -n "$url_query" ]; then
+  IFS='&' read -r -a url_params <<<"$url_query"
+  for url_param in "${url_params[@]}"; do
+    case "$url_param" in
+      "") ;;
+      password=*) pg_password="$(url_decode "${url_param#password=}")" ;;
+      *) url_kept_query="${url_kept_query:+${url_kept_query}&}${url_param}" ;;
+    esac
+  done
+fi
+
+# container から Fly proxy(127.0.0.1) へ届く host 名へ書き換える。
+docker_network_args=()
+if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
+  url_host="${url_hostport%%:*}"
+  case "$url_host" in
+    127.0.0.1|localhost) url_hostport="host.docker.internal${url_hostport#"$url_host"}" ;;
+  esac
+  docker_network_args=(--add-host host.docker.internal:host-gateway)
+else
+  docker_network_args=(--network host)
+fi
+
+pg_url="${url_scheme}://${url_userinfo:+${url_userinfo}@}${url_hostport}${url_path}${url_kept_query:+?${url_kept_query}}"
 
 # .pgpass の field 区切りである : と escape 文字の \ を escape する。
 pgpass_line=""
