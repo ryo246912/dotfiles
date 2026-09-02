@@ -66,7 +66,6 @@
     // Claude account2 config for independent quota/auth
     "type=bind,source=${localEnv:HOME}/.claude-account2,target=/home/vscode/.claude-account2",
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
-    // target は /tmp 配下にしない(上の gitconfig-host の注記参照)
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.config/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
