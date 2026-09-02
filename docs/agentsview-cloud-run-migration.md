@@ -134,22 +134,11 @@ fnox exec -- sh -c '
 
 4. backupを空の検証PostgreSQLへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
 
-## 1. CockroachDB Cloud Basicを作成
+## 1. CockroachDBの権限設計を決める
 
-1. CockroachDB CloudでBasic clusterを作る。
-2. Cloud Runから近いregionを選ぶ。
-3. monthly usage limit／alertを設定し、10 GiB storageと5,000万RUの無料枠を監視する。
-4. SQL consoleでowner、push、read用userを分けて作る。passwordはそれぞれ異なるrandom valueにする。
+Basic cluster、database、owner／push／read userは次節のTerraformで作成する。Terraformは10 GiB storage／5,000万RUのusage limitも設定し、意図しない有料利用を防ぐ。passwordはuserごとに異なるrandom valueを用意する。
 
-```sql
-CREATE USER agentsview_owner WITH PASSWORD '<owner-password>';
-CREATE USER agentsview_push WITH PASSWORD '<push-password>';
-CREATE USER agentsview_read WITH PASSWORD '<read-password>';
-
-GRANT CREATE ON DATABASE defaultdb TO agentsview_owner;
-```
-
-schema bootstrap後に次を実行する。CockroachDB versionによって`ALL TABLES IN SCHEMA`／default privilegeの対応が異なる場合は、Consoleが示す現行syntaxに合わせる。
+CockroachDB Terraform providerはdatabase内のschema／table権限を管理しないため、AgentsViewのschema bootstrap後に次だけSQL consoleまたはowner接続で実行する。CockroachDB versionによって`ALL TABLES IN SCHEMA`／default privilegeの対応が異なる場合は、Consoleが示す現行syntaxに合わせる。
 
 ```sql
 GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
@@ -158,7 +147,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agent
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
 ```
 
-5. `sslmode=verify-full`を含む3本のconnection URLをBitwarden Secrets Managerへ登録する。
+`terraform apply`後、`sslmode=verify-full`を含む3本のconnection URLをBitwarden Secrets Managerへ登録する。
 
 | secret名                            | user               | 用途                            |
 | ----------------------------------- | ------------------ | ------------------------------- |
@@ -166,112 +155,149 @@ GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_
 | `AGENTSVIEW_COCKROACH_PUSH_PG_URL`  | `agentsview_push`  | 各PCの`pg push`                 |
 | `AGENTSVIEW_COCKROACH_READ_PG_URL`  | `agentsview_read`  | Cloud Run viewer                |
 
-## 2. Google Cloudを準備
+## 2. TerraformでGoogle Cloud／CockroachDBを準備
 
-以下は一度だけ実行する。値は自分のprojectへ置き換える。
+`terraform/agentsview`が次を一括管理する。
+
+- Google Cloud API、Artifact Registry repository
+- Cloud Run runtime／GitHub deploy service account
+- Secret Managerのsecret containerとruntime IAM（secret value／versionはstateへ保存しない）
+- Cloud Run v2 service、resource上限、secret mount、public invoker IAM
+- GitHub Actions用Workload Identity Pool／Providerとproject IAM
+- CockroachDB Cloud Basic cluster、database、owner／push／read SQL user
+
+CockroachDB user passwordはTerraform 1.11以降のwrite-only `password_wo`を使うためstateへ保存されない。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
+
+### 2.1 state bucketと初回認証
+
+state bucketそのものは自身のstateで管理できないため、一度だけ手元のowner権限で作成する。bucket名は全世界で一意にする。
 
 ```sh
 export GCP_PROJECT_ID='<project-id>'
 export GCP_REGION='us-central1'
-export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
 
 gcloud config set project "$GCP_PROJECT_ID"
-gcloud services enable \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  secretmanager.googleapis.com \
-  iamcredentials.googleapis.com
+gcloud storage buckets create "gs://${TF_STATE_BUCKET}" \
+  --project="$GCP_PROJECT_ID" --location="$GCP_REGION" --uniform-bucket-level-access
+gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
 
-gcloud artifacts repositories create agentsview \
-  --repository-format=docker \
-  --location="$GCP_REGION"
-
-gcloud iam service-accounts create agentsview-runtime \
-  --display-name='AgentsView Cloud Run runtime'
+gcloud auth application-default login
 ```
 
-Secret Managerから読めるのはruntime service accountだけにする。
+stateにはpassword本体を入れないが、resource IDや構成情報は入る。public access prevention、versioning、最小権限IAMを設定し、state fileをcommitしない。
+
+### 2.2 Terraformを初期化
 
 ```sh
-for secret in agentsview-pg-url agentsview-config-toml; do
-  gcloud secrets create "$secret" --replication-policy=automatic 2>/dev/null || true
-  gcloud secrets add-iam-policy-binding "$secret" \
-    --member="serviceAccount:${GCP_RUNTIME_SERVICE_ACCOUNT}" \
-    --role=roles/secretmanager.secretAccessor
-done
+cd terraform/agentsview
+cp terraform.tfvars.example terraform.tfvars
+# project、region、最初にbuildするimage URIを編集する。
+
+terraform init \
+  -backend-config="bucket=${TF_STATE_BUCKET}" \
+  -backend-config='prefix=agentsview'
+terraform fmt -check -recursive
+terraform validate
 ```
 
-任意でGitHub Actionsからdeployする場合は、Workload Identity Federationを作り、deploy service accountへ最低限次の権限を付ける。現在の`.github/workflows/deploy-agentsview.yaml`は移行完了までFly rollback用として残すため、自動deployは有効化せず、まず`mise run agentsview:cloudrun:deploy`を使う。
-
-- `roles/run.admin`
-- runtime accountに対する`roles/iam.serviceAccountUser`
-- `roles/cloudbuild.builds.editor`
-- Artifact Registryへimageを書ける権限
-
-以下はこのrepository専用providerを作る例。既存poolがある場合は再利用し、名前を読み替える。
+CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
 
 ```sh
-export GITHUB_REPOSITORY='ryo246912/dotfiles'
-export WIF_POOL='github'
-export WIF_PROVIDER='dotfiles'
-export GCP_PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
-export GCP_DEPLOY_SERVICE_ACCOUNT="agentsview-deploy@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
-
-gcloud iam service-accounts create agentsview-deploy \
-  --display-name='AgentsView GitHub deploy'
-
-gcloud iam workload-identity-pools create "$WIF_POOL" \
-  --location=global \
-  --display-name='GitHub Actions'
-
-gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER" \
-  --location=global \
-  --workload-identity-pool="$WIF_POOL" \
-  --issuer-uri='https://token.actions.githubusercontent.com' \
-  --attribute-mapping='google.subject=assertion.sub,attribute.repository=assertion.repository' \
-  --attribute-condition="assertion.repository == '${GITHUB_REPOSITORY}'"
-
-gcloud iam service-accounts add-iam-policy-binding "$GCP_DEPLOY_SERVICE_ACCOUNT" \
-  --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL}/attribute.repository/${GITHUB_REPOSITORY}"
-
-for role in roles/run.admin roles/cloudbuild.builds.editor; do
-  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-    --member="serviceAccount:${GCP_DEPLOY_SERVICE_ACCOUNT}" \
-    --role="$role"
-done
-
-gcloud iam service-accounts add-iam-policy-binding "$GCP_RUNTIME_SERVICE_ACCOUNT" \
-  --member="serviceAccount:${GCP_DEPLOY_SERVICE_ACCOUNT}" \
-  --role=roles/iam.serviceAccountUser
-
-build_sa=$(gcloud builds get-default-service-account)
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${build_sa}" \
-  --role=roles/artifactregistry.writer
-
-export GCP_WORKLOAD_IDENTITY_PROVIDER=$(
-  gcloud iam workload-identity-pools providers describe "$WIF_PROVIDER" \
-    --location=global \
-    --workload-identity-pool="$WIF_POOL" \
-    --format='value(name)'
-)
+export COCKROACH_API_KEY='<CockroachDB organization API key>'
+export TF_VAR_cockroach_owner_password='<random owner password>'
+export TF_VAR_cockroach_push_password='<random push password>'
+export TF_VAR_cockroach_read_password='<random read password>'
 ```
 
-後からCloud Run用workflowを有効化する場合は、GitHub repositoryのproduction environmentへ次を登録する。
+### 2.3 bootstrap apply
 
-| 種別     | 名前                             | 内容                          |
-| -------- | -------------------------------- | ----------------------------- |
-| variable | `GCP_PROJECT_ID`                 | Google Cloud project ID       |
-| variable | `GCP_REGION`                     | 例: `us-central1`             |
-| variable | `GCP_RUNTIME_SERVICE_ACCOUNT`    | runtime service account email |
-| secret   | `GCP_WORKLOAD_IDENTITY_PROVIDER` | WIF provider resource name    |
-| secret   | `GCP_SERVICE_ACCOUNT`            | deploy service account email  |
+最初はArtifact Registryにimageがなく、Secret Managerにversionもないため、依存resourceだけtarget applyする。
 
-上の例では`GCP_WORKLOAD_IDENTITY_PROVIDER`の出力と`GCP_DEPLOY_SERVICE_ACCOUNT`を、それぞれ同名のGitHub secretへ登録する。
+```sh
+terraform apply \
+  -target=google_project_service.required \
+  -target=google_artifact_registry_repository.agentsview \
+  -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
+  -target=google_secret_manager_secret.pg_url \
+  -target=google_secret_manager_secret.config \
+  -target=google_service_account.runtime \
+  -target=google_service_account.deploy \
+  -target=google_iam_workload_identity_pool.github \
+  -target=google_iam_workload_identity_pool_provider.github \
+  -target=google_service_account_iam_member.github_deploy \
+  -target=google_project_iam_member.deploy \
+  -target=google_service_account_iam_member.deploy_uses_runtime
+```
 
-service-account key JSONは作らない。GitHub ActionsはOIDCの短命credentialを使う。
+続いて最初のimageをbuildする。
+
+```sh
+image="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
+gcloud builds submit ../../dot_config/agentsview --project="$GCP_PROJECT_ID" --tag="$image"
+```
+
+repository rootへ戻り、CockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。初回だけ`AGENTSVIEW_CLOUD_RUN_URL=https://invalid.example`を使い、service作成後に実URLへ更新する。
+
+```sh
+cd ../..
+export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+fnox exec -- mise run agentsview:cloudrun:secrets
+```
+
+`terraform/agentsview`へ戻り、secret version番号を確認してfull applyする。
+
+```sh
+export TF_VAR_agentsview_image="$image"
+export TF_VAR_pg_url_secret_version=$(gcloud secrets versions list agentsview-pg-url \
+  --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)')
+export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
+  --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)')
+
+cd terraform/agentsview
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+planで`cockroach_cluster`が`plan = "BASIC"`、Cloud Runがmin 0／max 2、1 vCPU／512 MiBであることを確認する。`terraform apply`後に出る`cloud_run_service_url`を`AGENTSVIEW_CLOUD_RUN_URL`へ設定し、config secretを更新して新version番号で再applyする。
+
+### 2.4 GitHub Actionsを設定
+
+`.github/workflows/deploy-agentsview-cloud-run.yaml`はmainへの関連変更と手動実行で、次を行う。
+
+1. GitHub OIDCからWIFでGoogle Cloudへkeyless認証する。
+2. Terraformをinit／validateし、API、Artifact Registry、Secret Managerをbootstrapする。
+3. commit SHA tagのimmutable imageをCloud Buildでbuildする。
+4. GitHub secretからSecret Managerへ新versionを追加し、version番号をTerraformへ渡す。
+5. Google CloudとCockroachDBを`terraform apply`し、Cloud Run revisionを更新する。
+
+GitHub repositoryの`production` environmentへ次を登録する。
+
+| 種別     | 名前                                  | 内容                                                      |
+| -------- | ------------------------------------- | --------------------------------------------------------- |
+| variable | `GCP_PROJECT_ID`                      | Google Cloud project ID                                   |
+| variable | `GCP_REGION`                          | `us-central1`等                                           |
+| variable | `COCKROACH_REGION`                    | CockroachDB region                                        |
+| variable | `TF_STATE_BUCKET`                     | state bucket名                                            |
+| secret   | `GCP_WORKLOAD_IDENTITY_PROVIDER`      | `terraform output -raw github_workload_identity_provider` |
+| secret   | `GCP_SERVICE_ACCOUNT`                 | `terraform output -raw deploy_service_account`            |
+| secret   | `COCKROACH_API_KEY`                   | CockroachDB organization API key                          |
+| secret   | `AGENTSVIEW_COCKROACH_OWNER_PASSWORD` | owner SQL user password                                   |
+| secret   | `AGENTSVIEW_COCKROACH_PUSH_PASSWORD`  | push SQL user password                                    |
+| secret   | `AGENTSVIEW_COCKROACH_READ_PASSWORD`  | read SQL user password                                    |
+| secret   | `AGENTSVIEW_COCKROACH_READ_PG_URL`    | `sslmode=verify-full`のread-only URL                      |
+| secret   | `AGENTSVIEW_CONFIG_TOML`              | 実Cloud Run URL、auth token、cursor secretを含むTOML      |
+
+deploy service accountにはstate bucketの`roles/storage.objectAdmin`もbucket単位で一度付与する。
+
+```sh
+gcloud storage buckets add-iam-policy-binding "gs://${TF_STATE_BUCKET}" \
+  --member="serviceAccount:$(terraform -chdir=terraform/agentsview output -raw deploy_service_account)" \
+  --role=roles/storage.objectAdmin
+```
+
+初回bootstrapが終わるまではActionsが認証できない。手元で2.1〜2.3を一度実行してWIFを作り、environment valuesを登録してからworkflowを実行する。service-account key JSONは作らない。
 
 ## 3. CockroachDB schemaをbootstrapしてデータをcopy
 
