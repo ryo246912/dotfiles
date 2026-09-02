@@ -407,27 +407,62 @@ fi
 # libpq は PGDATABASE の値を connection URI として展開せず database 名として扱うため、
 # URI は pg_dump の --dbname へ渡す必要がある（PGDATABASE 経由だと host が既定の
 # local Unix socket になり "connection to server on socket ... failed" で失敗する）。
-# password を host の command line と Docker の container 設定へ残さないよう、URI は
-# stdin で container へ渡し、container 内でだけ --dbname として展開する。
+# その --dbname へ password 付き URI を渡すと credential が process table へ出るので、
+# URI からは password を外し、password だけを stdin 経由で container の .pgpass へ渡す。
+# libpq は URI 内の password を percent-decode するため、.pgpass 用にここで decode する。
+url_decode() {
+  local encoded="${1//\\/\\\\}"
+  printf '%b' "${encoded//%/\\x}"
+}
+
+pg_password=""
+url_scheme="${pg_url%%://*}"
+url_rest="${pg_url#*://}"
+url_authority="${url_rest%%/*}"
+url_authority="${url_authority%%\?*}"
+url_tail="${url_rest#"$url_authority"}"
+# authority の最後の @ より前が userinfo。password 内の @ は percent-encode されている。
+if [[ "$url_authority" == *@* ]]; then
+  url_userinfo="${url_authority%@*}"
+  url_hostport="${url_authority##*@}"
+  if [[ "$url_userinfo" == *:* ]]; then
+    pg_password="$(url_decode "${url_userinfo#*:}")"
+    pg_url="${url_scheme}://${url_userinfo%%:*}@${url_hostport}${url_tail}"
+  fi
+fi
+
+# .pgpass の field 区切りである : と escape 文字の \ を escape する。
+pgpass_line=""
+if [ -n "$pg_password" ]; then
+  pgpass_escaped="${pg_password//\\/\\\\}"
+  pgpass_escaped="${pgpass_escaped//:/\\:}"
+  pgpass_line="*:*:*:*:${pgpass_escaped}"
+fi
+
+# password は host / container のどちらの argv にも Docker の container 設定にも出さず、
+# container 内で mode 600 の .pgpass を作って libpq に読ませる。
 # HOST_UID の passwd entry は macOS の host UID を Linux image で解決するための最小 entry。
-printf '%s\n' "$pg_url" | docker run --rm --interactive "${docker_network_args[@]}" \
+printf '%s\n' "$pgpass_line" | docker run --rm --interactive "${docker_network_args[@]}" \
   --volume "$dump_dir:/backup" \
   --env HOST_GID="$(id -g)" \
   --env HOST_UID="$(id -u)" \
   postgres:17 \
   sh -c '
 set -eu
-IFS= read -r conninfo || true
-if [ -z "${conninfo:-}" ]; then
-  echo "connection URI was not provided on stdin" >&2
-  exit 1
-fi
+IFS= read -r pgpass_line || true
 getent passwd "$HOST_UID" >/dev/null ||
   printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
 umask 077
-exec gosu "$HOST_UID:$HOST_GID" pg_dump --dbname="$conninfo" "$@"
+if [ -n "${pgpass_line:-}" ]; then
+  PGPASSFILE=/tmp/agentsview.pgpass
+  export PGPASSFILE
+  printf "%s\n" "$pgpass_line" >"$PGPASSFILE"
+  chmod 600 "$PGPASSFILE"
+  chown "$HOST_UID:$HOST_GID" "$PGPASSFILE"
+fi
+exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 ' -- \
-  --schema=agentsview --format=custom --file="/backup/$dump_name"
+  --dbname="$pg_url" --schema=agentsview --format=custom --file="/backup/$dump_name"
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
