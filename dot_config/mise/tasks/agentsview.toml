@@ -442,10 +442,11 @@ fi
 
 docker compose -f "$compose_file" up -d --wait postgres
 docker compose -f "$compose_file" exec -T postgres \
-  psql --username=agentsview --dbname=agentsview --set=ON_ERROR_STOP=1 \
-  --command='DROP SCHEMA IF EXISTS agentsview CASCADE;'
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --command="DROP SCHEMA IF EXISTS agentsview CASCADE;"'
 docker compose -f "$compose_file" exec -T postgres \
-  pg_restore --username=agentsview --dbname=agentsview --no-owner --no-privileges --exit-on-error \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+    --no-owner --no-privileges --exit-on-error' \
   <"$dump_path"
 
 echo "Restored AgentsView backup: $dump_path"
@@ -456,8 +457,8 @@ shell = "bash -c"
 description = "Show session counts in the local AgentsView PostgreSQL container"
 run = '''
 docker compose -f dot_config/agentsview/compose.yaml exec -T postgres \
-  psql --username=agentsview --dbname=agentsview --set=ON_ERROR_STOP=1 \
-  --command='SELECT machine, COUNT(*) AS sessions FROM agentsview.sessions GROUP BY machine ORDER BY machine;'
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --command="SELECT machine, COUNT(*) AS sessions FROM agentsview.sessions GROUP BY machine ORDER BY machine;"'
 '''
 shell = "bash -c"
 
