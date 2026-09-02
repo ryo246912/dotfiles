@@ -6,36 +6,6 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
-## GitHub 認証と Git のユーザー設定
-
-イメージ build 時の `mise install` は GitHub API を利用するため、ホスト環境の `GH_TOKEN` を
-BuildKit secret として一時的にマウントします。認証情報はイメージや build context には保存されません。
-`GH_TOKEN="$(gh auth token)" devcontainer up ...` のように、トークンをexportして実行してください。
-
-最初の `gh` 自体をmiseで導入する段階では、まだ `gh auth token` を実行できません。そのため
-BuildKit secretの値を直接 `GITHUB_TOKEN` に設定して、bootstrap時のGitHub APIアクセスも認証済みにします。
-`gh` のkeyringはDocker buildから参照できず、`hosts.yml` にもtokenが保存されない場合があります。そのため
-`gh auth status` が成功していても、`GH_TOKEN` をbuildに渡さなければmiseは未認証
-（`github auth: no`、上限60リクエスト）になる点に注意してください。
-
-コンテナ作成後は、読み取り専用で `/home/vscode/.config/gitconfig-host` にマウントしたホストの
-`~/.config/git/config` をコンテナの global git config から include します。既存の
-`~/.gitconfig` がある場合にも include を追加するため、`user.name` と `user.email` を継承できます。
-
-**注意:** この mount の target を `/tmp` 配下にしてはいけません。コンテナ内の `/tmp` は
-tmpfs としてマウントされており（Docker Desktop の Enhanced Container Isolation や DinD
-側のサンドボックス化などが原因）、`mounts` で `/tmp` 配下を target にした bind mount は
-コンテナ起動時にこの tmpfs の下敷きになって見えなくなります（`mount | grep ' /tmp '` で
-`tmpfs` が確認できます）。`/home/vscode/...` 配下の他のマウントは正常なのに `/tmp/xxx` を
-target にしたものだけファイルごと消えている場合は、まずこれを疑ってください
-（`~/.claude.json` も同じ理由で `/home/vscode/.config/claude-config-host.json` に
-マウントしています）。target は Dockerfile で作成済みの実ディレクトリ（`/home/vscode/.config`
-配下など）にしてください。
-
-なお `mounts` はコンテナ**作成時**にしか評価されません。`mounts` を追加・変更した後や
-`chezmoi apply` で `~/.config/devcontainer/devcontainer.json` を更新した後は、
-`devcontainer up --remove-existing-container` などでコンテナを明示的に作り直してください。
-
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
