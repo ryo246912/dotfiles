@@ -219,7 +219,7 @@ shell = "bash -c"
 
 ["agentsview:deploy"]
 description = "Deploy the AgentsView public viewer to Fly.io"
-run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml"
+run         = 'flyctl deploy --app ryo-agentsview -c "${AGENTSVIEW_FLY_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/fly.toml}"'
 
 ["agentsview:pg:status"]
 description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"

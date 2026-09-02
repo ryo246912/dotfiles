@@ -124,6 +124,7 @@ echo "Bearer token: $AUTH"  # 保管しておく
 ### 4. デプロイ
 
 ```sh
+# chezmoi source directory から実行する場合
 flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 ```
 
@@ -132,6 +133,10 @@ flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 ```sh
 mise run agentsview:deploy
 ```
+
+taskはmiseのconfig root（global config経由なら`$HOME`）で実行されるため、chezmoiが配置した
+`${XDG_CONFIG_HOME:-~/.config}/agentsview/fly.toml`を参照する。source treeのfileを使いたい場合は
+`AGENTSVIEW_FLY_CONFIG`で上書きする。
 
 ### 5. 動作確認
 
