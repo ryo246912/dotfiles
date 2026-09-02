@@ -15,12 +15,8 @@ fi
 # 読み取り専用でマウントされているため（/tmp 配下は使わない。docs/devcontainer.md 参照）、
 # 既存の ~/.gitconfig があっても include を追加する。
 gitconfig_host=~/.config/gitconfig-host
-if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
-	git config --global --add include.path "$gitconfig_host"
-	echo "✓ ホストの git config を設定しました"
-else
-	echo "ℹ️ ホストの git config は既に設定済みです"
-fi
+git config --global --add include.path "$gitconfig_host"
+echo "✓ ホストの git config を設定しました"
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 
