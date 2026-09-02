@@ -40,10 +40,10 @@ USER vscode
 
 # First, install gh with the token secret. gh is not installed yet, so
 # `gh auth token` cannot be used for this bootstrap request.
-# /run/secrets/github_token is where BuildKit exposes the file mounted by
-# `--mount=type=secret,id=github_token`: readable only inside this RUN step
-# (not written to any image layer), containing the token passed as the
-# `github_token` build secret (see devcontainer.json's build.options).
+# /run/secrets/github_token は、この RUN の --mount=type=secret,id=github_token によって
+# BuildKit が作るファイル。devcontainer.json の build.options (--secret id=github_token,env=GH_TOKEN)
+# でホストの GH_TOKEN の値がこの secret として渡され、BuildKit がこの RUN ステップの実行中だけ
+# /run/secrets/github_token として展開する。イメージの layer には残らず、この RUN が終われば消える。
 RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
     --mount=type=cache,target=/mise/cache,uid=1000,gid=1000 \
     GITHUB_TOKEN="$(cat /run/secrets/github_token)" \

@@ -14,21 +14,12 @@ fi
 # ホストの gitconfig（user.name / user.email を含む）は /home/vscode/.config/gitconfig-host に
 # 読み取り専用でマウントされているため（/tmp 配下は使わない。docs/devcontainer.md 参照）、
 # 既存の ~/.gitconfig があっても include を追加する。
-#
-# gitconfig-host が無い場合、include先を書いてしまうと以降すべての git コマンドが
-# `fatal: bad config line ...: No such file or directory` で失敗するため、その場合は
-# include を足さずに警告する。
 gitconfig_host=~/.config/gitconfig-host
-if [ ! -f "$gitconfig_host" ]; then
-	echo "⚠️ ${gitconfig_host} が見つかりません。コンテナを rebuild してください（docs/devcontainer.md 参照）"
-	echo "⚠️ user.name / user.email の継承をスキップしました"
+if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
+	git config --global --add include.path "$gitconfig_host"
+	echo "✓ ホストの git config を設定しました"
 else
-	if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
-		git config --global --add include.path "$gitconfig_host"
-		echo "✓ ホストの git config を設定しました"
-	else
-		echo "ℹ️ ホストの git config は既に設定済みです"
-	fi
+	echo "ℹ️ ホストの git config は既に設定済みです"
 fi
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
