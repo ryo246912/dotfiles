@@ -342,9 +342,10 @@ description = "Dump the remote AgentsView PostgreSQL schema through a temporary 
 run = '''
 set -eu
 
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:dump "$@"
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ]; then
+  AGENTSVIEW_PROXY_PG_URL="$(fnox get AGENTSVIEW_PROXY_PG_URL)"
+  export AGENTSVIEW_PROXY_PG_URL
+  exec mise run agentsview:pg:dump "$@"
 fi
 
 : "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
@@ -413,9 +414,10 @@ docker run --rm "${docker_network_args[@]}" \
   --volume "$dump_dir:/backup" \
   --env HOST_GID="$(id -g)" \
   --env HOST_UID="$(id -u)" \
-  --env PGSERVICEFILE=/run/agentsview-pg-service.conf \
+  --env PGSERVICEFILE=/tmp/agentsview-pg-service.conf \
+  --env PGSERVICE_SOURCE=/run/agentsview-pg-service.conf \
   postgres:17 \
-  sh -c 'getent passwd "$HOST_UID" >/dev/null || printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd; umask 077; exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"' -- \
+  sh -c 'getent passwd "$HOST_UID" >/dev/null || printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd; cp "$PGSERVICE_SOURCE" "$PGSERVICEFILE"; chown "$HOST_UID:$HOST_GID" "$PGSERVICEFILE"; chmod 600 "$PGSERVICEFILE"; umask 077; exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"' -- \
   --dbname=service=agentsview_dump --schema=agentsview --format=custom --file="/backup/$dump_name"
 echo "AgentsView backup: $dump_path"
 '''

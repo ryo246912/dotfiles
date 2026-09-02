@@ -310,6 +310,8 @@ PostgreSQL に全 PC のデータが集約されているため、1回の dump �
 `${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
 `pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
 接続URLは権限を制限した一時service fileでcontainerへ渡し、passwordをprocess argvへ含めない。
+taskは`fnox get AGENTSVIEW_PROXY_PG_URL`で必要なsecretだけを解決するため、他の未設定な
+AgentsView secretについて警告を出さない。
 
 ```sh
 # default pathへ保存
