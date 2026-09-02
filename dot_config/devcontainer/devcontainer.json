@@ -42,7 +42,11 @@
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
     // .config
-    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/tmp/gitconfig-host,readonly",
+    // 注意: target は /tmp 配下にしないこと。/tmp はコンテナ内で tmpfs にマウントされるため
+    // (Enhanced Container Isolation 等)、/tmp 配下を target にした bind mount は
+    // その tmpfs にシャドウされて消える。/home/vscode/.config は Dockerfile で作成済みの
+    // 実ディレクトリなので、ここを target にする。
+    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.config/gitconfig-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
@@ -62,7 +66,8 @@
     // Claude account2 config for independent quota/auth
     "type=bind,source=${localEnv:HOME}/.claude-account2,target=/home/vscode/.claude-account2",
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
-    "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
+    // target は /tmp 配下にしない(上の gitconfig-host の注記参照)
+    "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.config/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
     "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
