@@ -12,7 +12,16 @@ fi
 # コンテナ用の書き込み可能な .gitconfig を生成
 # ホストの gitconfig は /tmp/gitconfig-host に読み取り専用でマウントされているため、
 # コンテナ内に書き込み可能な .gitconfig を作成し、ホスト設定をインクルードする
-if [ ! -f ~/.gitconfig ]; then
+#
+# /tmp/gitconfig-host が無い場合、include先を書いてしまうと以降すべての git コマンドが
+# `fatal: bad config line ...: No such file or directory` で失敗する。devcontainer.json の
+# mounts はコンテナ作成時にしか適用されないため、mounts を追加/変更した後に古いコンテナを
+# 再利用（起動のみ）すると、このファイルが存在しないまま起動することがある。
+# その場合は include を足さずに警告し、`devcontainer up --remove-existing-container` 等で
+# コンテナを作り直すよう促す（詳細は docs/devcontainer.md 参照）。
+if [ ! -f /tmp/gitconfig-host ]; then
+	echo "⚠️ /tmp/gitconfig-host が見つかりません。mounts 追加後にコンテナを再作成していない可能性があります。コンテナを rebuild してください"
+elif [ ! -f ~/.gitconfig ]; then
 	cat >~/.gitconfig <<'EOF'
 [include]
     path = /tmp/gitconfig-host

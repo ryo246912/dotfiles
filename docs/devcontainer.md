@@ -6,6 +6,33 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## `/tmp/gitconfig-host` が見つからないとき
+
+`dot_config/devcontainer/devcontainer.json` の `mounts` は、ホストの
+`~/.config/git/config` を読み取り専用で `/tmp/gitconfig-host` にマウントし、
+`post-create.sh` がコンテナの `~/.gitconfig` からそれを include することで
+ホストの `user.name` / `user.email` を継承しています。
+
+`mounts` はコンテナ**作成時**にしか評価されません。devcontainer CLI は
+`mounts` だけの変更ではイメージのハッシュが変わらず、既存コンテナを
+リビルドせずそのまま起動（reuse）することがあります。そのため、
+
+- `mounts` を追加・変更した後
+- `chezmoi apply` で `~/.config/devcontainer/devcontainer.json` を
+  更新した後
+
+に古いコンテナを起動し直しただけだと、新しい mount は反映されず
+`/tmp/gitconfig-host` が存在しないままになります（`post-create.sh` は
+このケースを検出すると警告を出し、存在しないファイルを include しようと
+して以降の git コマンドが壊れるのを防ぎます）。
+
+**対処:** コンテナを再作成してください。
+
+```bash
+devcontainer up --remove-existing-container --workspace-folder .
+# もしくは docker rm -f <container> してから multi-worktree / devcontainer up をやり直す
+```
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
