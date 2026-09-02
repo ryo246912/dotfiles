@@ -464,15 +464,17 @@ shell = "bash -c"
 ["agentsview:serve"]
 depends = ["agentsview:pg:local:up"]
 description = "Start AgentsView with the local Docker PostgreSQL backend"
-env.AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
-env.AGENTSVIEW_LOCAL_PG_PORT = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
-env.AGENTSVIEW_LOCAL_PG_USER = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
-env.AGENTSVIEW_PG_SCHEMA = "agentsview"
-env.AGENTSVIEW_PG_URL = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 run = '''
 exec agentsview pg serve "$@"
 '''
 shell = "bash -c"
+
+["agentsview:serve".env]
+AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
+AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
+AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
+AGENTSVIEW_PG_SCHEMA         = "agentsview"
+AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 
 ["agentsview:serve:sqlite"]
 description = "Start AgentsView with its local SQLite backend"
