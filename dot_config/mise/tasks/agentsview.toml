@@ -445,14 +445,25 @@ fi
 
 # libpq は query の password= も接続 parameter として解釈し、userinfo より後に評価する。
 # こちらも URI から外さないと --dbname 経由で argv へ出るため、同じく .pgpass へ移す。
+# libpq は key 側も percent-decode する（?%70assword= も password として扱われる）ため、
+# key を decode してから比較する。keyword は case-sensitive なので lowercase 化はしない。
 url_kept_query=""
 if [ -n "$url_query" ]; then
   IFS='&' read -r -a url_params <<<"$url_query"
   for url_param in "${url_params[@]}"; do
+    url_param_key=""
+    if [[ "$url_param" == *=* ]]; then
+      url_param_key="$(url_decode "${url_param%%=*}")"
+    fi
     case "$url_param" in
       "") ;;
-      password=*) pg_password="$(url_decode "${url_param#password=}")" ;;
-      *) url_kept_query="${url_kept_query:+${url_kept_query}&}${url_param}" ;;
+      *)
+        if [ "$url_param_key" = "password" ]; then
+          pg_password="$(url_decode "${url_param#*=}")"
+        else
+          url_kept_query="${url_kept_query:+${url_kept_query}&}${url_param}"
+        fi
+        ;;
     esac
   done
 fi
