@@ -355,13 +355,14 @@ backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/age
 dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
 proxy_log="$(mktemp)"
 pg_service_file="$(mktemp)"
+pg_passwd_file="$(mktemp)"
 
 cleanup() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -f "$proxy_log" "$pg_service_file"
+  rm -f "$proxy_log" "$pg_service_file" "$pg_passwd_file"
 }
 
 trap cleanup EXIT
@@ -406,9 +407,17 @@ fi
 chmod 600 "$pg_service_file"
 printf '[agentsview_dump]\ndbname=%s\n' "$pg_url" >"$pg_service_file"
 
+# PostgreSQL clients resolve the current UID through /etc/passwd. macOS user
+# IDs such as 501 do not exist in the Linux image, so provide a minimal entry
+# while keeping pg_dump unprivileged and its output owned by the host user.
+chmod 600 "$pg_passwd_file"
+printf 'agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n' \
+  "$(id -u)" "$(id -g)" >"$pg_passwd_file"
+
 # Connection credentials stay in the short-lived service file instead of the
 # pg_dump argv. The pinned container also removes the host pg_dump dependency.
 docker run --rm --user "$(id -u):$(id -g)" "${docker_network_args[@]}" \
+  --volume "$pg_passwd_file:/etc/passwd:ro" \
   --volume "$pg_service_file:/run/agentsview-pg-service.conf:ro" \
   --volume "$dump_dir:/backup" \
   --env PGSERVICEFILE=/run/agentsview-pg-service.conf \
