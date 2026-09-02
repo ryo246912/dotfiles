@@ -309,8 +309,10 @@ PostgreSQL に全 PC のデータが集約されているため、1回の dump �
 通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
 `${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
 `pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
-接続URLはmode `600`の一時fileでcontainerへ渡し、container内で`PGDATABASE`へ読み込むため、
-passwordを`pg_dump`のprocess argvやDockerの永続的なcontainer設定へ含めない。
+接続URLはstdin経由でcontainerへ渡し、container内でだけ`pg_dump --dbname`へ展開するため、
+hostのcommand line（process table・shell history）やDockerのcontainer設定（`docker inspect`のenv）に
+passwordを残さない。libpqは`PGDATABASE`に与えたURIを展開せずdatabase名として扱い、hostが既定の
+local Unix socketになるため、URIは`--dbname`へ渡す必要がある。
 taskは`fnox get AGENTSVIEW_PROXY_PG_URL`で必要なsecretだけを解決するため、他の未設定な
 AgentsView secretについて警告を出さない。
 

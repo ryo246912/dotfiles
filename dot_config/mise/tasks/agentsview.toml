@@ -342,10 +342,11 @@ description = "Dump the remote AgentsView PostgreSQL schema through a temporary 
 run = '''
 set -eu
 
+# fnox で必要な secret だけを解決する。task を exec で再実行すると mise の task 出力と
+# 失敗時の ERROR 行が二重になるため、この process のまま環境変数へ入れる。
 if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ]; then
   AGENTSVIEW_PROXY_PG_URL="$(fnox get AGENTSVIEW_PROXY_PG_URL)"
   export AGENTSVIEW_PROXY_PG_URL
-  exec mise run agentsview:pg:dump "$@"
 fi
 
 : "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
@@ -355,14 +356,13 @@ proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
 dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
 proxy_log="$(mktemp)"
-pg_database_file="$(mktemp)"
 
 cleanup() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -f "$proxy_log" "$pg_database_file"
+  rm -f "$proxy_log"
 }
 
 trap cleanup EXIT
@@ -404,20 +404,29 @@ else
   docker_network_args=(--network host)
 fi
 
-chmod 600 "$pg_database_file"
-printf '%s' "$pg_url" >"$pg_database_file"
-
-# Read the URI into PGDATABASE inside the short-lived container. libpq expands
-# PostgreSQL URIs supplied through PGDATABASE, while the password stays out of
-# the pg_dump argv and Docker's persistent container configuration.
-docker run --rm "${docker_network_args[@]}" \
-  --volume "$pg_database_file:/run/agentsview-pg-database:ro" \
+# libpq は PGDATABASE の値を connection URI として展開せず database 名として扱うため、
+# URI は pg_dump の --dbname へ渡す必要がある（PGDATABASE 経由だと host が既定の
+# local Unix socket になり "connection to server on socket ... failed" で失敗する）。
+# password を host の command line と Docker の container 設定へ残さないよう、URI は
+# stdin で container へ渡し、container 内でだけ --dbname として展開する。
+# HOST_UID の passwd entry は macOS の host UID を Linux image で解決するための最小 entry。
+printf '%s\n' "$pg_url" | docker run --rm --interactive "${docker_network_args[@]}" \
   --volume "$dump_dir:/backup" \
   --env HOST_GID="$(id -g)" \
   --env HOST_UID="$(id -u)" \
-  --env PGDATABASE_FILE=/run/agentsview-pg-database \
   postgres:17 \
-  sh -c 'getent passwd "$HOST_UID" >/dev/null || printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd; PGDATABASE="$(cat "$PGDATABASE_FILE")"; export PGDATABASE; umask 077; exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"' -- \
+  sh -c '
+set -eu
+IFS= read -r conninfo || true
+if [ -z "${conninfo:-}" ]; then
+  echo "connection URI was not provided on stdin" >&2
+  exit 1
+fi
+getent passwd "$HOST_UID" >/dev/null ||
+  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
+umask 077
+exec gosu "$HOST_UID:$HOST_GID" pg_dump --dbname="$conninfo" "$@"
+' -- \
   --schema=agentsview --format=custom --file="/backup/$dump_name"
 echo "AgentsView backup: $dump_path"
 '''
