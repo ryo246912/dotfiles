@@ -53,9 +53,15 @@ dependencies:
       ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
       alias: find-skills
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
+    # hooks は claude / codex 向けの `claude-codex-hooks.json` と copilot 向けの
+    # `copilot-hooks.json` に分かれており、targets を省略すると copilot 用の camelCase event
+    # （sessionStart 等）が cursor の `~/.cursor/hooks.json` にも配布されて認識されない。
+    # APM 公式の object form で配布先を claude / codex に限定する。skills は codex 経由で
+    # `~/.agents/skills/` にも入るため、この指定で失われる skill はない。
     - git: DietrichGebert/ponytail
       ref: v4.9.0
       alias: ponytail
+      targets: [claude, codex]
   mcp: []
 includes: auto
 scripts: {}

@@ -75,6 +75,22 @@ dependencies:
 `skills`を省略するとpackage全体を取り込みます。`skills: ["*"]`は公開されたskillsをすべて選択します。
 `alias`はpackageのローカル名であり、plugin内の個々のskill名を書き換える設定ではありません。
 
+pluginがtarget別のhook定義（`hooks/claude-codex-hooks.json`・`hooks/copilot-hooks.json`など）を持つ場合は、
+`targets`で配布先を明示します。省略するとmanifest全体の`targets`がそのまま使われ、対象外のagentにも
+別targetのhookがfallback配布されてしまいます（例: copilot向けのcamelCase event `sessionStart`が
+`~/.cursor/hooks.json`へ入り、Cursorが認識できない）。
+
+```yaml
+dependencies:
+  apm:
+    - git: owner/plugin-repository
+      ref: <sha>
+      alias: plugin-name
+      targets: [claude, codex]
+```
+
+`targets`はmanifest全体の`targets`との積集合になるため、ここに書いていないagentが増えることはありません。
+
 - **再現性**: 各依存を immutable なコミット SHA に pin することで、新しいマシンでも同じ内容が install
   されます（pin しないと HEAD 追従になり、upstream の変更が commit/レビュー無しに挙動を変えてしまう）。
 - **SHA の取得・更新**: `git ls-remote https://github.com/<owner>/<repo> HEAD` で最新コミットを取得して差し替えます。
@@ -123,5 +139,11 @@ lockfile を `0600` で生成しても、その後の `chezmoi apply` で mode �
   場合は upstream を fork するか、`dependencies.apm` の pin を差し替えます。
 - `apm` 本体はグローバルの mise（`dot_config/mise/config.toml`）の `github:microsoft/apm`
   バックエンド（GitHub リリースのバイナリ）で管理しています。
+- **既知の問題**: home directoryが`.`で終わる場合（例: `/Users/ryo.`）、`apm install -g`が
+  `Hook script not found: ~/.apm/apm_modules/<pkg>/.claude/hooks/...`という警告を出します。
+  これはAPM側のbugで、`${CLAUDE_PLUGIN_ROOT}`をuser scopeの絶対pathへ展開した後、その絶対path中の
+  `ryo./.claude/...`を相対path参照`./...`として二重に解決してしまうためです（apm 0.29.0時点で未修正）。
+  警告だけでなく、生成されるhook commandも`/Users/ryo/Users/ryo./.apm/...`という存在しないpathになり、
+  ponytailのhook（mode自動activate等）はこのマシンでは動作しません。skillの配布には影響ありません。
 - `targets` は `claude` / `codex` / `copilot` / `cursor`。`claude` は `~/.claude/skills/`、
   それ以外は共通の `~/.agents/skills/` へ配布されます。
