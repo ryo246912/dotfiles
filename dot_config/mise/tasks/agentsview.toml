@@ -355,8 +355,8 @@ proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
 # mise は task の引数を位置引数として渡さず script 末尾へ連結するため、$1 では受け取れない。
-# usage template の arg() で受け取る（値は mise 側で shell escape 済みなので quote しない）。
-dump_path={{arg(name='output', default='')}}
+# usage spec で定義し、mise が設定する $usage_* から受け取る。
+dump_path="${usage_output:-}"
 if [ -z "$dump_path" ]; then
   dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump"
 fi
@@ -517,14 +517,15 @@ exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
+usage = 'arg "[output]" help="Dump file path (defaults to a timestamped file under the backup dir)"'
 
 ["agentsview:pg:local:up"]
 description = "Start the local AgentsView PostgreSQL container"
-run         = "docker compose -f dot_config/agentsview/compose.yaml up -d --wait postgres"
+run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" up -d --wait postgres'
 
 ["agentsview:pg:local:down"]
 description = "Stop the local AgentsView PostgreSQL container"
-run         = "docker compose -f dot_config/agentsview/compose.yaml down"
+run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" down'
 
 ["agentsview:pg:local:restore"]
 description = "Restore an AgentsView PostgreSQL dump into the local Docker database"
@@ -532,9 +533,11 @@ run = '''
 set -eu
 
 # mise は task の引数を位置引数として渡さず script 末尾へ連結するため、$1 では受け取れない。
-# usage template の arg() で受け取る（値は mise 側で shell escape 済みなので quote しない）。
-dump_path={{arg(name='dump')}}
-compose_file="dot_config/agentsview/compose.yaml"
+# usage spec で定義し、mise が設定する $usage_* から受け取る。
+dump_path="$usage_dump"
+# task は mise の config root（global config 経由なら $HOME）で実行されるため、
+# repository 内の相対 path では解決できない。chezmoi が配置した path を既定にする。
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
 
 if [ ! -f "$dump_path" ]; then
   echo "Dump file not found: $dump_path" >&2
@@ -553,11 +556,12 @@ docker compose -f "$compose_file" exec -T postgres \
 echo "Restored AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
+usage = 'arg "<dump>" help="Dump file to restore"'
 
 ["agentsview:pg:local:status"]
 description = "Show session counts in the local AgentsView PostgreSQL container"
 run = '''
-docker compose -f dot_config/agentsview/compose.yaml exec -T postgres \
+docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" exec -T postgres \
   sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
     --command="SELECT machine, COUNT(*) AS sessions FROM agentsview.sessions GROUP BY machine ORDER BY machine;"'
 '''

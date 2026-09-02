@@ -344,6 +344,10 @@ local PostgreSQLは`127.0.0.1:15433`だけに公開し、dataはDocker named vol
 `agentsview-postgres`へ永続化する。Fly proxyのdefault port `15432`とは重複しない。
 portを変更する場合は各commandで同じ値を指定する。
 
+taskはmiseのconfig root（global config経由なら`$HOME`）で実行されるため、Compose fileは
+chezmoiが配置した`${XDG_CONFIG_HOME:-~/.config}/agentsview/compose.yaml`を参照する。
+source treeのfileを使うなど別のpathを指したい場合は`AGENTSVIEW_COMPOSE_FILE`で上書きする。
+
 ```sh
 AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
 AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:serve
