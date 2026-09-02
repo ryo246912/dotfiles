@@ -23,12 +23,15 @@ fi
 gitconfig_host=~/.config/gitconfig-host
 if [ ! -f "$gitconfig_host" ]; then
 	echo "⚠️ ${gitconfig_host} が見つかりません。コンテナを rebuild してください（docs/devcontainer.md 参照）"
-elif ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
-	git config --global --add include.path "$gitconfig_host"
+	echo "⚠️ user.name / user.email の継承をスキップしました"
+else
+	if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
+		git config --global --add include.path "$gitconfig_host"
+	fi
+	echo "✓ ホストの git config を設定しました"
 fi
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
-echo "✓ ホストの git config を設定しました"
 
 # claude-account2 ディレクトリを作成
 account2_dir="${HOME}/.claude-account2"
