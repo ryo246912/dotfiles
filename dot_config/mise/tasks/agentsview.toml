@@ -354,7 +354,12 @@ fi
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
+# mise は task の引数を位置引数として渡さず script 末尾へ連結するため、$1 では受け取れない。
+# usage template の arg() で受け取る（値は mise 側で shell escape 済みなので quote しない）。
+dump_path={{arg(name='output', default='')}}
+if [ -z "$dump_path" ]; then
+  dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump"
+fi
 proxy_log="$(mktemp)"
 
 cleanup() {
@@ -480,7 +485,9 @@ description = "Restore an AgentsView PostgreSQL dump into the local Docker datab
 run = '''
 set -eu
 
-dump_path="${1:?Usage: mise run agentsview:pg:local:restore -- <dump-file>}"
+# mise は task の引数を位置引数として渡さず script 末尾へ連結するため、$1 では受け取れない。
+# usage template の arg() で受け取る（値は mise 側で shell escape 済みなので quote しない）。
+dump_path={{arg(name='dump')}}
 compose_file="dot_config/agentsview/compose.yaml"
 
 if [ ! -f "$dump_path" ]; then
