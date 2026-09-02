@@ -356,3 +356,9 @@ trigger = "ghss"
 name    = "gh skill install user scope for Copilot/Cursor/Codex/Claude Code with pin"
 snippet = "mise run gh:skill-install-all"
 trigger = "ghsi"
+
+[[snippets]]
+global  = true
+name    = "GITHUB_TOKEN=$(gh auth token)"
+snippet = "GITHUB_TOKEN=$(gh auth token)"
+trigger = "ghat"
