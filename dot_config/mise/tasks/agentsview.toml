@@ -355,14 +355,14 @@ proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
 dump_path="${1:-${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump}"
 proxy_log="$(mktemp)"
-pg_service_file="$(mktemp)"
+pg_database_file="$(mktemp)"
 
 cleanup() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -f "$proxy_log" "$pg_service_file"
+  rm -f "$proxy_log" "$pg_database_file"
 }
 
 trap cleanup EXIT
@@ -404,21 +404,21 @@ else
   docker_network_args=(--network host)
 fi
 
-chmod 600 "$pg_service_file"
-printf '[agentsview_dump]\ndbname=%s\n' "$pg_url" >"$pg_service_file"
+chmod 600 "$pg_database_file"
+printf '%s' "$pg_url" >"$pg_database_file"
 
-# Connection credentials stay in the short-lived service file instead of the
-# pg_dump argv. The pinned container also removes the host pg_dump dependency.
+# Read the URI into PGDATABASE inside the short-lived container. libpq expands
+# PostgreSQL URIs supplied through PGDATABASE, while the password stays out of
+# the pg_dump argv and Docker's persistent container configuration.
 docker run --rm "${docker_network_args[@]}" \
-  --volume "$pg_service_file:/run/agentsview-pg-service.conf:ro" \
+  --volume "$pg_database_file:/run/agentsview-pg-database:ro" \
   --volume "$dump_dir:/backup" \
   --env HOST_GID="$(id -g)" \
   --env HOST_UID="$(id -u)" \
-  --env PGSERVICEFILE=/tmp/agentsview-pg-service.conf \
-  --env PGSERVICE_SOURCE=/run/agentsview-pg-service.conf \
+  --env PGDATABASE_FILE=/run/agentsview-pg-database \
   postgres:17 \
-  sh -c 'getent passwd "$HOST_UID" >/dev/null || printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd; cp "$PGSERVICE_SOURCE" "$PGSERVICEFILE"; chown "$HOST_UID:$HOST_GID" "$PGSERVICEFILE"; chmod 600 "$PGSERVICEFILE"; umask 077; exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"' -- \
-  --dbname=service=agentsview_dump --schema=agentsview --format=custom --file="/backup/$dump_name"
+  sh -c 'getent passwd "$HOST_UID" >/dev/null || printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd; PGDATABASE="$(cat "$PGDATABASE_FILE")"; export PGDATABASE; umask 077; exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"' -- \
+  --schema=agentsview --format=custom --file="/backup/$dump_name"
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
