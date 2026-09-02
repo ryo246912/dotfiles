@@ -2,29 +2,32 @@
 set -e
 
 # .claude.json のコピー（既存の処理）
-if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
-	cp /tmp/claude-config-host.json ~/.claude.json
+# ホストの .claude.json は /home/vscode/.config/claude-config-host.json に読み取り専用でマウント
+# されている（/tmp 配下は tmpfs にシャドウされるため使わない。docs/devcontainer.md 参照）
+claude_config_host=~/.config/claude-config-host.json
+if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then
+	cp "$claude_config_host" ~/.claude.json
 	echo "✓ .claude.json をコピーしました"
 else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
 # コンテナ用の書き込み可能な .gitconfig を生成
-# ホストの gitconfig は /tmp/gitconfig-host に読み取り専用でマウントされているため、
-# コンテナ内に書き込み可能な .gitconfig を作成し、ホスト設定をインクルードする
+# ホストの gitconfig は /home/vscode/.config/gitconfig-host に読み取り専用でマウントされて
+# いるため（/tmp 配下は使わない。docs/devcontainer.md 参照）、コンテナ内に書き込み可能な
+# .gitconfig を作成し、ホスト設定をインクルードする
 #
-# /tmp/gitconfig-host が無い場合、include先を書いてしまうと以降すべての git コマンドが
-# `fatal: bad config line ...: No such file or directory` で失敗する。devcontainer.json の
-# mounts はコンテナ作成時にしか適用されないため、mounts を追加/変更した後に古いコンテナを
-# 再利用（起動のみ）すると、このファイルが存在しないまま起動することがある。
-# その場合は include を足さずに警告し、`devcontainer up --remove-existing-container` 等で
-# コンテナを作り直すよう促す（詳細は docs/devcontainer.md 参照）。
-if [ ! -f /tmp/gitconfig-host ]; then
-	echo "⚠️ /tmp/gitconfig-host が見つかりません。mounts 追加後にコンテナを再作成していない可能性があります。コンテナを rebuild してください"
+# gitconfig-host が無い場合、include先を書いてしまうと以降すべての git コマンドが
+# `fatal: bad config line ...: No such file or directory` で失敗する。mounts の変更が
+# 反映されないまま古いコンテナを再利用した場合などにこの状態になり得るため、その場合は
+# include を足さずに警告する（詳細は docs/devcontainer.md 参照）。
+gitconfig_host=~/.config/gitconfig-host
+if [ ! -f "$gitconfig_host" ]; then
+	echo "⚠️ ${gitconfig_host} が見つかりません。コンテナを rebuild してください（docs/devcontainer.md 参照）"
 elif [ ! -f ~/.gitconfig ]; then
-	cat >~/.gitconfig <<'EOF'
+	cat >~/.gitconfig <<EOF
 [include]
-    path = /tmp/gitconfig-host
+    path = ${gitconfig_host}
 [credential "https://github.com"]
     helper = !gh auth git-credential
 [url "https://github.com/"]

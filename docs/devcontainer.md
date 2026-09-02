@@ -6,27 +6,35 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
-## `/tmp/gitconfig-host` が見つからないとき
+## マウントの target を `/tmp` 配下にしてはいけない
 
 `dot_config/devcontainer/devcontainer.json` の `mounts` は、ホストの
-`~/.config/git/config` を読み取り専用で `/tmp/gitconfig-host` にマウントし、
-`post-create.sh` がコンテナの `~/.gitconfig` からそれを include することで
-ホストの `user.name` / `user.email` を継承しています。
+`~/.config/git/config` を読み取り専用で `/home/vscode/.config/gitconfig-host`
+にマウントし、`post-create.sh` がコンテナの `~/.gitconfig` からそれを include
+することでホストの `user.name` / `user.email` を継承しています
+（`~/.claude.json` も同様に `/home/vscode/.config/claude-config-host.json`
+へマウントしています）。
 
-`mounts` はコンテナ**作成時**にしか評価されません。devcontainer CLI は
-`mounts` だけの変更ではイメージのハッシュが変わらず、既存コンテナを
-リビルドせずそのまま起動（reuse）することがあります。そのため、
+以前はこれらの target を `/tmp/gitconfig-host` ・ `/tmp/claude-config-host.json`
+にしていましたが、これは誤りでした。コンテナ内の `/tmp` は tmpfs としてマウント
+されており（Docker Desktop の Enhanced Container Isolation や、DinD 側のサンド
+ボックス化などが原因）、`mounts` で `/tmp` 配下を target にした bind mount は、
+コンテナ起動時にこの tmpfs の下敷きになって**見えなくなります**
+（`mount | grep ' /tmp '` で `tmpfs` が確認できます）。他の
+`/home/vscode/...` 配下のマウントは正常に見えるのに、`/tmp/xxx` を target に
+したものだけファイルごと消えているように見える場合は、まずこれを疑ってくだ
+さい。
 
-- `mounts` を追加・変更した後
-- `chezmoi apply` で `~/.config/devcontainer/devcontainer.json` を
-  更新した後
+**対処:** マウントの target を `/tmp` 配下ではなく、Dockerfile で作成済みの
+実ディレクトリ（例: `/home/vscode/.config`）配下にしてください。`/tmp` は
+一時ファイルの置き場としてコンテナ内から書き込む分には問題ありませんが、
+ホストからの bind mount の受け口には使えません。
 
-に古いコンテナを起動し直しただけだと、新しい mount は反映されず
-`/tmp/gitconfig-host` が存在しないままになります（`post-create.sh` は
-このケースを検出すると警告を出し、存在しないファイルを include しようと
-して以降の git コマンドが壊れるのを防ぎます）。
-
-**対処:** コンテナを再作成してください。
+なお、`mounts` はコンテナ**作成時**にしか評価されません。devcontainer CLI は
+`mounts` だけの変更ではイメージのハッシュが変わらず、既存コンテナをリビルド
+せずそのまま起動（reuse）することがあるため、`mounts` を追加・変更した後や
+`chezmoi apply` で `~/.config/devcontainer/devcontainer.json` を更新した後は、
+コンテナを明示的に作り直してください。
 
 ```bash
 devcontainer up --remove-existing-container --workspace-folder .
