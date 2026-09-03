@@ -313,13 +313,13 @@ VACUUM agentsview.sessions;
 ### バックアップとlocal viewerへのrestore
 
 PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
-通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
+通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。dumpは
 `${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
 `pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
 接続先はtaskが起動したFly proxyのloopback endpointに限定し、host（`127.0.0.1`/`localhost`）と
 port（`AGENTSVIEW_PG_PROXY_PORT`、既定`15432`）が一致しないURLはdump前に拒否する。
-接続URLはpassword部分を外して`pg_dump --dbname`へ渡し、passwordだけをstdin経由でcontainerへ渡して
-mode `600`の`.pgpass`から読ませる。hostのcommand line（process table・shell history）、container内の
+接続URLはPython標準のURI parserで検証してpassword部分を外し、passwordはmode `600`の一時file経由で
+container内の`.pgpass`へ渡す。hostのcommand line（process table・shell history）、container内の
 `pg_dump` argv、Dockerのcontainer設定（`docker inspect`のenv）のいずれにもpasswordを残さない。
 なおlibpqは`PGDATABASE`に与えたURIを展開せずdatabase名として扱い、hostが既定のlocal Unix socketに
 なるため、URIは`--dbname`へ渡す必要がある。
