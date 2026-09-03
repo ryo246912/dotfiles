@@ -532,6 +532,18 @@ run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-
 description = "Stop the local AgentsView PostgreSQL container"
 run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" down'
 
+["agentsview:pg:local:push"]
+depends     = ["agentsview:pg:local:up"]
+description = "Incrementally push local AgentsView sessions into the local Docker PostgreSQL database"
+run         = 'agentsview pg push'
+
+["agentsview:pg:local:push".env]
+AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
+AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
+AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
+AGENTSVIEW_PG_SCHEMA         = "agentsview"
+AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
+
 ["agentsview:pg:local:restore"]
 description = "Restore an AgentsView PostgreSQL dump into the local Docker database"
 run = '''
@@ -550,30 +562,52 @@ if [ ! -f "$dump_path" ]; then
 fi
 
 docker compose -f "$compose_file" up -d --wait postgres
+# Initialize/migrate the destination schema and preserve sessions already
+# collected on this machine before importing the backup.
+mise run agentsview:pg:local:push
+
+restore_db="agentsview_restore_$$"
+cleanup_restore_db() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$restore_db" \
+    >/dev/null 2>&1 || true
+}
+trap cleanup_restore_db EXIT
+
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-    --command="DROP EXTENSION IF EXISTS pg_trgm CASCADE; DROP SCHEMA IF EXISTS agentsview CASCADE;"'
+  sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$restore_db"
 
 # The schema-only dump does not include pg_trgm itself, but its post-data GIN
 # indexes reference operator classes installed into the agentsview schema.
 # Restore pre-data first, install the extension, then load data and indexes.
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
-    --no-owner --no-privileges --exit-on-error --section=pre-data' \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=pre-data' -- "$restore_db" \
   <"$dump_path"
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-    --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"'
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 \
+    --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"' -- "$restore_db"
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
-    --no-owner --no-privileges --exit-on-error --section=data' \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=data' -- "$restore_db" \
   <"$dump_path"
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
-    --no-owner --no-privileges --exit-on-error --section=post-data' \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
   <"$dump_path"
 
-echo "Restored AgentsView backup: $dump_path"
+# Convert the staged snapshot to INSERT statements and ignore rows whose keys
+# already exist locally. Sequence setval calls are omitted so an older backup
+# cannot move a live local sequence backwards.
+docker compose -f "$compose_file" exec -T postgres \
+  bash -o pipefail -c '
+    pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
+      --data-only --inserts --on-conflict-do-nothing |
+      sed "/^SELECT pg_catalog.setval/d" |
+      psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1
+  ' -- "$restore_db"
+
+echo "Merged missing rows from AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 usage = 'arg "<dump>" help="Dump file to restore"'
@@ -588,10 +622,24 @@ docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/
 shell = "bash -c"
 
 ["agentsview:serve"]
-depends = ["agentsview:pg:local:up"]
-description = "Start AgentsView with the local Docker PostgreSQL backend"
+depends = ["agentsview:pg:local:push"]
+description = "Continuously push local sessions and serve AgentsView from local Docker PostgreSQL"
 run = '''
-exec agentsview pg serve "$@"
+set -eu
+
+agentsview pg push --watch &
+watch_pid=$!
+
+cleanup() {
+  kill "$watch_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+agentsview pg serve "$@"
 '''
 shell = "bash -c"
 

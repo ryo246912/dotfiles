@@ -252,8 +252,10 @@ local viewerはdatabase ownerで接続するため必要なmigrationを適用で
 local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
 
 このrepositoryでは表示経路を揃えるため、localでも原則としてDocker PostgreSQLと
-`agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動してから
-`agentsview pg serve`を実行する。従来のSQLite viewerが必要な場合だけ、明示的に
+`agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動し、
+local sourceをSQLiteへsyncしてPostgreSQLへ差分pushしてから`agentsview pg serve`を実行する。
+serve中は`agentsview pg push --watch`も並行実行するため、起動時だけでなく新規・更新sessionが継続的に
+local PostgreSQLへ差分反映される。serve終了時にはwatcherも停止する。従来のSQLite viewerが必要な場合だけ、明示的に
 `mise run agentsview:serve:sqlite`を使う。
 
 ```sh
@@ -334,6 +336,10 @@ localで確認するときは、dumpをSQLiteへ変換せず、Dockerで起動�
 `agentsview pg serve`で表示する。これによりFly.ioとlocalのbackend・表示経路が同じになる。
 restore taskはpre-dataを復元した後、trigram indexが必要とする`pg_trgm` extensionを`agentsview`
 schemaへ作成してから、dataとpost-data（index・constraint）を順に復元する。
+restore taskは最初にlocal sessionを差分pushして既存データを維持し、dumpを一時databaseへ復元する。
+その一時databaseから、local PostgreSQLにまだ存在しないprimary/unique keyの行だけを
+`ON CONFLICT DO NOTHING`で追加する。既存行はlocal側を優先して上書きせず、古いbackupのsequence値も適用しない。
+一時databaseは成功・失敗にかかわらずtask終了時に削除する。
 
 ```sh
 # PostgreSQL 17 containerを起動し、dumpをrestore
@@ -341,6 +347,9 @@ mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
 
 # machineごとのsession件数を確認
 mise run agentsview:pg:local:status
+
+# serveを起動せずlocal sessionだけを差分push
+mise run agentsview:pg:local:push
 
 # local PostgreSQLを使って agentsview pg serve を起動
 mise run agentsview:serve
