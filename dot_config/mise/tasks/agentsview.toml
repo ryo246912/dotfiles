@@ -460,6 +460,11 @@ if [ -n "$url_query" ]; then
       *)
         if [ "$url_param_key" = "password" ]; then
           pg_password="$(url_decode "${url_param#*=}")"
+        elif [ "$url_param_key" = "sslpassword" ]; then
+          # client key の passphrase。libpq は connection parameter でしか受け取らず、
+          # .pgpass のような argv 以外の経路がないため、安全に渡せない。fail closed で拒否する。
+          echo "AGENTSVIEW_PROXY_PG_URL must not contain sslpassword: it cannot be kept out of the pg_dump argv" >&2
+          exit 1
         else
           url_kept_query="${url_kept_query:+${url_kept_query}&}${url_param}"
         fi
