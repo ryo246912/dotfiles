@@ -415,10 +415,18 @@ source = urllib.parse.urlsplit(os.environ["AGENTSVIEW_PROXY_PG_URL"])
 proxy_port = int(os.environ.get("AGENTSVIEW_PG_PROXY_PORT", "15432"))
 if source.scheme not in {"postgres", "postgresql"}:
     raise SystemExit("AGENTSVIEW_PROXY_PG_URL must be a PostgreSQL URI")
-if source.hostname not in {"127.0.0.1", "localhost"} or source.port != proxy_port:
+try:
+    source_port = source.port
+except ValueError:
+    raise SystemExit("AGENTSVIEW_PROXY_PG_URL has an invalid port")
+if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_port:
     raise SystemExit("AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy")
 
-password = source.password or ""
+# urlsplit は userinfo を percent-decode せずに返す。libpq は URI の userinfo を
+# decode して使うので、.pgpass や再構成 URI へ載せる前にこちらで decode する。
+# query 側は parse_qsl が decode 済みなので二重 decode しない。
+password = urllib.parse.unquote(source.password) if source.password else ""
+username_raw = urllib.parse.unquote(source.username) if source.username else ""
 query = []
 for key, value in urllib.parse.parse_qsl(source.query, keep_blank_values=True):
     if key == "password":
@@ -428,11 +436,19 @@ for key, value in urllib.parse.parse_qsl(source.query, keep_blank_values=True):
     else:
         query.append((key, value))
 
-username = urllib.parse.quote(source.username or "", safe="")
+username = urllib.parse.quote(username_raw, safe="")
 host = os.environ["AGENTSVIEW_DUMP_CONTAINER_HOST"]
 netloc = f"{username + '@' if username else ''}{host}:{proxy_port}"
+# urlencode の既定は空白を "+" にするが、libpq の URI query は RFC 3986 なので
+# "+" は空白として解釈されない。percent-encoding を使う。
 safe_url = urllib.parse.urlunsplit(
-    (source.scheme, netloc, source.path, urllib.parse.urlencode(query), "")
+    (
+        source.scheme,
+        netloc,
+        source.path,
+        urllib.parse.urlencode(query, quote_via=urllib.parse.quote),
+        "",
+    )
 )
 pgpass = password.replace("\\", "\\\\").replace(":", "\\:")
 
