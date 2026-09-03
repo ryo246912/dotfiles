@@ -354,7 +354,8 @@ fi
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S).dump"
+# 同じ秒に2つ dump が走っても上書きしないよう PID を付ける。
+dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S)-$$.dump"
 proxy_log="$(mktemp)"
 auth_dir="$(mktemp -d)"
 
@@ -428,7 +429,11 @@ if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_por
 password = urllib.parse.unquote(source.password) if source.password else ""
 username_raw = urllib.parse.unquote(source.username) if source.username else ""
 query = []
-for key, value in urllib.parse.parse_qsl(source.query, keep_blank_values=True):
+# parse_qsl は form-encoding として "+" を空白に変換するが、URI の query では
+# "+" はそのままの文字。先に %2B へ置換して literal な "+" を保つ。
+for key, value in urllib.parse.parse_qsl(
+    source.query.replace("+", "%2B"), keep_blank_values=True
+):
     if key == "password":
         password = value
     elif key == "sslpassword":
