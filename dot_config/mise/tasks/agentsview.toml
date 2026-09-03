@@ -474,12 +474,18 @@ if [ -n "$url_query" ]; then
 fi
 
 # container から Fly proxy(127.0.0.1) へ届く host 名へ書き換える。
+url_host="${url_hostport%%:*}"
+case "$url_host" in
+  127.0.0.1|localhost) ;;
+  *)
+    echo "AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy, got host: $url_host" >&2
+    exit 1
+    ;;
+esac
+
 docker_network_args=()
 if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
-  url_host="${url_hostport%%:*}"
-  case "$url_host" in
-    127.0.0.1|localhost) url_hostport="host.docker.internal${url_hostport#"$url_host"}" ;;
-  esac
+  url_hostport="host.docker.internal${url_hostport#"$url_host"}"
   docker_network_args=(--add-host host.docker.internal:host-gateway)
 else
   docker_network_args=(--network host)

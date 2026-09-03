@@ -323,6 +323,8 @@ mode `600`の`.pgpass`から読ませる。hostのcommand line（process table�
 なるため、URIは`--dbname`へ渡す必要がある。
 taskは`fnox get AGENTSVIEW_PROXY_PG_URL`で必要なsecretだけを解決するため、他の未設定な
 AgentsView secretについて警告を出さない。
+このtaskはFly WireGuard proxy専用であり、接続URLのhostが`127.0.0.1`または`localhost`以外なら
+remoteへの意図しない平文接続を防ぐためfail closedにする。
 
 ```sh
 # default pathへ保存
