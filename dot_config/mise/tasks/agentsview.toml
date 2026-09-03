@@ -473,8 +473,12 @@ if [ -n "$url_query" ]; then
   done
 fi
 
-# container から Fly proxy(127.0.0.1) へ届く host 名へ書き換える。
+# 接続先を、この task が起動した Fly proxy の loopback endpoint だけに限定する。
+# host だけの確認では、同じ 127.0.0.1 の別 PostgreSQL（例: 5432 の local 開発 DB）を
+# dump してしまうため、port も proxy_port と一致することを要求する。
 url_host="${url_hostport%%:*}"
+url_port="${url_hostport#"$url_host"}"
+url_port="${url_port#:}"
 case "$url_host" in
   127.0.0.1|localhost) ;;
   *)
@@ -482,6 +486,12 @@ case "$url_host" in
     exit 1
     ;;
 esac
+if [ "$url_port" != "$proxy_port" ]; then
+  echo "AGENTSVIEW_PROXY_PG_URL must use the local Fly proxy port ${proxy_port}, got port: ${url_port:-5432 (unspecified)}" >&2
+  exit 1
+fi
+
+# container から Fly proxy(127.0.0.1) へ届く host 名へ書き換える。
 
 docker_network_args=()
 if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
@@ -613,6 +623,39 @@ docker compose -f "$compose_file" exec -T postgres \
       psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1
   ' -- "$restore_db"
 
+# 取り込んだ行は明示 id を持つため、sequence は取り残される。dump の setval を
+# そのまま適用すると古い backup で live な sequence を巻き戻してしまうので、
+# 代わりに「格納済みの最大値より手前なら進める」だけを行う（後退はさせない）。
+# これを行わないと、次の local insert が duplicate key で落ちる。
+# SQL は quote をそのまま渡すため heredoc で stdin から流す。
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
+DO $$
+DECLARE
+  seq record;
+  max_id bigint;
+  cur_val bigint;
+BEGIN
+  FOR seq IN
+    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
+    FROM pg_class s
+    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
+    JOIN pg_class t ON t.oid = d.refobjid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+    JOIN pg_namespace n ON n.oid = s.relnamespace
+    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
+  LOOP
+    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
+      INTO max_id;
+    EXECUTE format('SELECT last_value FROM %s', seq.seq_name) INTO cur_val;
+    IF max_id > cur_val THEN
+      PERFORM setval(seq.seq_name, max_id);
+    END IF;
+  END LOOP;
+END
+$$;
+SQL
+
 echo "Merged missing rows from AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
@@ -636,16 +679,38 @@ set -eu
 agentsview pg push --watch &
 watch_pid=$!
 
+agentsview pg serve "$@" &
+serve_pid=$!
+
 cleanup() {
-  kill "$watch_pid" 2>/dev/null || true
+  kill "$watch_pid" "$serve_pid" 2>/dev/null || true
   wait "$watch_pid" 2>/dev/null || true
+  wait "$serve_pid" 2>/dev/null || true
 }
 
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-agentsview pg serve "$@"
+# watcher が落ちたまま serve を続けると、session の収集が黙って止まる。
+# どちらかが終了したらもう一方も停止し、終了 status を引き継ぐ。
+# macOS 既定の bash 3.2 には `wait -n` がないため、poll で監視する。
+while :; do
+  if ! kill -0 "$watch_pid" 2>/dev/null; then
+    watch_status=0
+    wait "$watch_pid" || watch_status=$?
+    echo "agentsview pg push --watch exited with status ${watch_status}; stopping serve" >&2
+    kill "$serve_pid" 2>/dev/null || true
+    wait "$serve_pid" 2>/dev/null || true
+    exit "$watch_status"
+  fi
+  if ! kill -0 "$serve_pid" 2>/dev/null; then
+    serve_status=0
+    wait "$serve_pid" || serve_status=$?
+    exit "$serve_status"
+  fi
+  sleep 1
+done
 '''
 shell = "bash -c"
 

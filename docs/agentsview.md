@@ -316,6 +316,8 @@ PostgreSQL に全 PC のデータが集約されているため、1回の dump �
 通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。出力先を省略すると
 `${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
 `pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
+接続先はtaskが起動したFly proxyのloopback endpointに限定し、host（`127.0.0.1`/`localhost`）と
+port（`AGENTSVIEW_PG_PROXY_PORT`、既定`15432`）が一致しないURLはdump前に拒否する。
 接続URLはpassword部分を外して`pg_dump --dbname`へ渡し、passwordだけをstdin経由でcontainerへ渡して
 mode `600`の`.pgpass`から読ませる。hostのcommand line（process table・shell history）、container内の
 `pg_dump` argv、Dockerのcontainer設定（`docker inspect`のenv）のいずれにもpasswordを残さない。
@@ -341,6 +343,9 @@ schemaへ作成してから、dataとpost-data（index・constraint）を順に�
 restore taskは最初にlocal sessionを差分pushして既存データを維持し、dumpを一時databaseへ復元する。
 その一時databaseから、local PostgreSQLにまだ存在しないprimary/unique keyの行だけを
 `ON CONFLICT DO NOTHING`で追加する。既存行はlocal側を優先して上書きせず、古いbackupのsequence値も適用しない。
+取り込んだ行は明示的なidを持つためsequenceが取り残される。merge後に`agentsview` schemaの各sequenceを
+格納済みの最大値まで**前方向にだけ**進めるため、次のlocal insertがduplicate keyで落ちない
+（既にそれより先へ進んでいるsequenceは後退させない）。
 一時databaseは成功・失敗にかかわらずtask終了時に削除する。
 
 ```sh
