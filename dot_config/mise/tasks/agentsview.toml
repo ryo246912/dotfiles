@@ -635,6 +635,7 @@ DECLARE
   seq record;
   max_id bigint;
   cur_val bigint;
+  cur_called boolean;
 BEGIN
   FOR seq IN
     SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
@@ -647,9 +648,12 @@ BEGIN
   LOOP
     EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
       INTO max_id;
-    EXECUTE format('SELECT last_value FROM %s', seq.seq_name) INTO cur_val;
-    IF max_id > cur_val THEN
-      PERFORM setval(seq.seq_name, max_id);
+    -- 未使用のsequenceは last_value=1 / is_called=false で、次のnextvalが last_value を返す。
+    -- max_id = last_value でも「未使用」なら採番済みidと衝突するため、is_called も見る。
+    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
+      INTO cur_val, cur_called;
+    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
+      PERFORM setval(seq.seq_name, max_id, true);
     END IF;
   END LOOP;
 END
