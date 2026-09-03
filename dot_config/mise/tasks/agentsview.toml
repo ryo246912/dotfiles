@@ -547,10 +547,25 @@ fi
 docker compose -f "$compose_file" up -d --wait postgres
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-    --command="DROP SCHEMA IF EXISTS agentsview CASCADE;"'
+    --command="DROP EXTENSION IF EXISTS pg_trgm CASCADE; DROP SCHEMA IF EXISTS agentsview CASCADE;"'
+
+# The schema-only dump does not include pg_trgm itself, but its post-data GIN
+# indexes reference operator classes installed into the agentsview schema.
+# Restore pre-data first, install the extension, then load data and indexes.
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
-    --no-owner --no-privileges --exit-on-error' \
+    --no-owner --no-privileges --exit-on-error --section=pre-data' \
+  <"$dump_path"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"'
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+    --no-owner --no-privileges --exit-on-error --section=data' \
+  <"$dump_path"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+    --no-owner --no-privileges --exit-on-error --section=post-data' \
   <"$dump_path"
 
 echo "Restored AgentsView backup: $dump_path"

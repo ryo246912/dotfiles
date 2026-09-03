@@ -332,6 +332,8 @@ mise run agentsview:pg:dump -- ~/backup/agentsview.dump
 
 localで確認するときは、dumpをSQLiteへ変換せず、Dockerで起動したlocal PostgreSQLへrestoreして
 `agentsview pg serve`で表示する。これによりFly.ioとlocalのbackend・表示経路が同じになる。
+restore taskはpre-dataを復元した後、trigram indexが必要とする`pg_trgm` extensionを`agentsview`
+schemaへ作成してから、dataとpost-data（index・constraint）を順に復元する。
 
 ```sh
 # PostgreSQL 17 containerを起動し、dumpをrestore
