@@ -329,11 +329,8 @@ AgentsView secretについて警告を出さない。
 remoteへの意図しない平文接続を防ぐためfail closedにする。
 
 ```sh
-# default pathへ保存
+# timestamp付きのdefault pathへ保存
 mise run agentsview:pg:dump
-
-# 出力先を指定
-mise run agentsview:pg:dump -- ~/backup/agentsview.dump
 ```
 
 localで確認するときは、dumpをSQLiteへ変換せず、Dockerで起動したlocal PostgreSQLへrestoreして
@@ -349,8 +346,8 @@ restore taskは最初にlocal sessionを差分pushして既存データを維持
 一時databaseは成功・失敗にかかわらずtask終了時に削除する。
 
 ```sh
-# PostgreSQL 17 containerを起動し、dumpをrestore
-mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
+# backup directoryのdumpをfzfで選択し、PostgreSQL 17 containerへrestore
+mise run agentsview:pg:local:restore
 
 # machineごとのsession件数を確認
 mise run agentsview:pg:local:status
@@ -372,7 +369,7 @@ chezmoiが配置した`${XDG_CONFIG_HOME:-~/.config}/agentsview/compose.yaml`を
 source treeのfileを使うなど別のpathを指したい場合は`AGENTSVIEW_COMPOSE_FILE`で上書きする。
 
 ```sh
-AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:pg:local:restore -- ~/backup/agentsview.dump
+AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:pg:local:restore
 AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:serve
 ```
 
