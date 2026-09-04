@@ -222,128 +222,24 @@ description = "Deploy the AgentsView public viewer to Fly.io"
 run         = 'flyctl deploy --app ryo-agentsview -c "${AGENTSVIEW_FLY_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/fly.toml}"'
 
 ["agentsview:pg:status"]
-description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
-run = '''
-set -eu
-
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:status "$@"
-fi
-
-: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
-
-agentsview pg status
-'''
-shell = "bash -c"
+description = "Show AgentsView PostgreSQL sync status through a temporary Fly proxy"
+run         = "mise run agentsview:pg:proxy -- status"
 
 ["agentsview:pg:push"]
-description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
-run = '''
-set -eu
-
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:push "$@"
-fi
-
-: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
-
-agentsview pg push "$@"
-'''
-shell = "bash -c"
+description = "Push local AgentsView sessions through a temporary Fly proxy"
+run         = 'mise run agentsview:pg:proxy -- push "$@"'
+shell       = "bash -c"
 
 ["agentsview:pg:dump"]
 description = "Dump the remote AgentsView PostgreSQL schema through a temporary Fly proxy"
+run         = "mise run agentsview:pg:proxy -- dump"
+
+["agentsview:pg:proxy"]
+description = "Run an AgentsView PostgreSQL operation through a temporary Fly proxy"
+hide = true
 run = '''
 set -eu
 
-# fnox で必要な secret だけを解決する。task を exec で再実行すると mise の task 出力と
-# 失敗時の ERROR 行が二重になるため、この process のまま環境変数へ入れる。
 if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ]; then
   AGENTSVIEW_PROXY_PG_URL="$(fnox get AGENTSVIEW_PROXY_PG_URL)"
   export AGENTSVIEW_PROXY_PG_URL
@@ -353,18 +249,14 @@ fi
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-# 同じ秒に2つ dump が走っても上書きしないよう PID を付ける。
-dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S)-$$.dump"
 proxy_log="$(mktemp)"
-auth_dir="$(mktemp -d)"
 
 cleanup() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
   fi
-  rm -rf "$proxy_log" "$auth_dir"
+  rm -f "$proxy_log"
 }
 
 trap cleanup EXIT
@@ -376,9 +268,6 @@ if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p "$(dirname "$dump_path")"
-dump_dir="$(cd "$(dirname "$dump_path")" && pwd -P)"
-dump_name="$(basename "$dump_path")"
 flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
 proxy_pid=$!
 
@@ -397,8 +286,40 @@ while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
   sleep 0.25
 done
 
-# Pythonの標準URI parserで接続情報を検証し、passwordを.pgpassへ分離する。
-# URIとpasswordはmode 600のfileで受け渡し、host/containerのargvには載せない。
+export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
+export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+
+eval "operation_args=(${usage_args:-})"
+case "$usage_operation" in
+  status) agentsview pg status ;;
+  push) agentsview pg push "${operation_args[@]}" ;;
+  dump) mise run agentsview:pg:dump:run ;;
+esac
+'''
+shell = "bash -c"
+usage = '''
+arg "<operation>" { choices "status" "push" "dump" }
+arg "[args]..."
+'''
+
+["agentsview:pg:dump:run"]
+description = "Create an AgentsView PostgreSQL dump while the Fly proxy is active"
+hide = true
+run = '''
+set -eu
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+# 同じ秒に2つdumpが走っても上書きしないようPIDを付ける。
+dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S)-$$.dump"
+auth_dir="$(mktemp -d)"
+trap 'rm -rf "$auth_dir"' EXIT
+
+mkdir -p "$backup_dir"
+dump_dir="$(cd "$backup_dir" && pwd -P)"
+dump_name="$(basename "$dump_path")"
+
+# 接続情報の検証とpasswordの分離は専用commandへ委譲する。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
 export AGENTSVIEW_DUMP_CONTAINER_HOST="127.0.0.1"
 docker_network_args=(--network host)
@@ -407,62 +328,7 @@ if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease
   docker_network_args=(--add-host host.docker.internal:host-gateway)
 fi
 
-python3 <<'PYTHON'
-import os
-import pathlib
-import urllib.parse
-
-source = urllib.parse.urlsplit(os.environ["AGENTSVIEW_PROXY_PG_URL"])
-proxy_port = int(os.environ.get("AGENTSVIEW_PG_PROXY_PORT", "15432"))
-if source.scheme not in {"postgres", "postgresql"}:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL must be a PostgreSQL URI")
-try:
-    source_port = source.port
-except ValueError:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL has an invalid port")
-if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_port:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy")
-
-# urlsplit は userinfo を percent-decode せずに返す。libpq は URI の userinfo を
-# decode して使うので、.pgpass や再構成 URI へ載せる前にこちらで decode する。
-# query 側は parse_qsl が decode 済みなので二重 decode しない。
-password = urllib.parse.unquote(source.password) if source.password else ""
-username_raw = urllib.parse.unquote(source.username) if source.username else ""
-query = []
-# parse_qsl は form-encoding として "+" を空白に変換するが、URI の query では
-# "+" はそのままの文字。先に %2B へ置換して literal な "+" を保つ。
-for key, value in urllib.parse.parse_qsl(
-    source.query.replace("+", "%2B"), keep_blank_values=True
-):
-    if key == "password":
-        password = value
-    elif key == "sslpassword":
-        raise SystemExit("AGENTSVIEW_PROXY_PG_URL must not contain sslpassword")
-    else:
-        query.append((key, value))
-
-username = urllib.parse.quote(username_raw, safe="")
-host = os.environ["AGENTSVIEW_DUMP_CONTAINER_HOST"]
-netloc = f"{username + '@' if username else ''}{host}:{proxy_port}"
-# urlencode の既定は空白を "+" にするが、libpq の URI query は RFC 3986 なので
-# "+" は空白として解釈されない。percent-encoding を使う。
-safe_url = urllib.parse.urlunsplit(
-    (
-        source.scheme,
-        netloc,
-        source.path,
-        urllib.parse.urlencode(query, quote_via=urllib.parse.quote),
-        "",
-    )
-)
-pgpass = password.replace("\\", "\\\\").replace(":", "\\:")
-
-auth_dir = pathlib.Path(os.environ["AGENTSVIEW_DUMP_AUTH_DIR"])
-for name, value in {"url": safe_url, "pgpass": f"*:*:*:*:{pgpass}\n"}.items():
-    path = auth_dir / name
-    path.write_text(value)
-    path.chmod(0o600)
-PYTHON
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
 
 pg_url="$(cat "$auth_dir/url")"
 docker run --rm "${docker_network_args[@]}" \
@@ -484,6 +350,7 @@ exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
+
 ["agentsview:pg:local:up"]
 description = "Start the local AgentsView PostgreSQL container"
 run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" up -d --wait postgres'
@@ -527,8 +394,8 @@ if [ ! -f "$dump_path" ]; then
 fi
 
 docker compose -f "$compose_file" up -d --wait postgres
-# Initialize/migrate the destination schema and preserve sessions already
-# collected on this machine before importing the backup.
+# backupを取り込む前に、移行先schemaを初期化・migrationし、
+# このmachineですでに収集したsessionを保持する。
 mise run agentsview:pg:local:push
 
 restore_db="agentsview_restore_$$"
@@ -542,9 +409,9 @@ trap cleanup_restore_db EXIT
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$restore_db"
 
-# The schema-only dump does not include pg_trgm itself, but its post-data GIN
-# indexes reference operator classes installed into the agentsview schema.
-# Restore pre-data first, install the extension, then load data and indexes.
+# schema指定のdumpにはpg_trgm自体が含まれないが、post-dataのGIN indexは
+# agentsview schemaへinstallされたoperator classを参照する。先にpre-dataをrestoreし、
+# extensionをinstallしてからdataとindexをrestoreする。
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
     --no-owner --no-privileges --exit-on-error --section=pre-data' -- "$restore_db" \
@@ -561,9 +428,8 @@ docker compose -f "$compose_file" exec -T postgres \
     --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
   <"$dump_path"
 
-# Convert the staged snapshot to INSERT statements and ignore rows whose keys
-# already exist locally. Sequence setval calls are omitted so an older backup
-# cannot move a live local sequence backwards.
+# 一時databaseのsnapshotをINSERTへ変換し、localに同じkeyがある行は無視する。
+# 古いbackupでlocalのsequenceを巻き戻さないよう、setvalは除外する。
 docker compose -f "$compose_file" exec -T postgres \
   bash -o pipefail -c '
     pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
@@ -672,7 +538,3 @@ AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value=
 AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
 AGENTSVIEW_PG_SCHEMA         = "agentsview"
 AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
-
-["agentsview:serve:sqlite"]
-description = "Start AgentsView with its local SQLite backend"
-run         = "agentsview serve"

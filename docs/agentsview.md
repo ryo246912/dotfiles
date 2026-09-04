@@ -134,10 +134,6 @@ flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 mise run agentsview:deploy
 ```
 
-taskはmiseのconfig root（global config経由なら`$HOME`）で実行されるため、chezmoiが配置した
-`${XDG_CONFIG_HOME:-~/.config}/agentsview/fly.toml`を参照する。source treeのfileを使いたい場合は
-`AGENTSVIEW_FLY_CONFIG`で上書きする。
-
 ### 5. 動作確認
 
 ```sh
@@ -255,15 +251,12 @@ local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL d
 `agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動し、
 local sourceをSQLiteへsyncしてPostgreSQLへ差分pushしてから`agentsview pg serve`を実行する。
 serve中は`agentsview pg push --watch`も並行実行するため、起動時だけでなく新規・更新sessionが継続的に
-local PostgreSQLへ差分反映される。serve終了時にはwatcherも停止する。従来のSQLite viewerが必要な場合だけ、明示的に
-`mise run agentsview:serve:sqlite`を使う。
+local PostgreSQLへ差分反映される。serve終了時にはwatcherも停止する。
 
 ```sh
 # 推奨: local Docker PostgreSQLをbackendにする
 mise run agentsview:serve
 
-# 例外: そのPCのlocal SQLiteだけを見る
-mise run agentsview:serve:sqlite
 ```
 
 恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
@@ -312,41 +305,11 @@ VACUUM agentsview.sessions;
 
 ### バックアップとlocal viewerへのrestore
 
-PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
-通常はtaskを使い、Fly proxy経由で`agentsview` schemaをcustom formatへdumpする。dumpは
-`${XDG_STATE_HOME:-~/.local/state}/agentsview/`にtimestamp付きで保存する。
-`pg_dump`もComposeと同じ`postgres:17` containerで実行するため、hostへのPostgreSQL clientのinstallは不要。
-接続先はtaskが起動したFly proxyのloopback endpointに限定し、host（`127.0.0.1`/`localhost`）と
-port（`AGENTSVIEW_PG_PROXY_PORT`、既定`15432`）が一致しないURLはdump前に拒否する。
-接続URLはPython標準のURI parserで検証してpassword部分を外し、passwordはmode `600`の一時file経由で
-container内の`.pgpass`へ渡す。hostのcommand line（process table・shell history）、container内の
-`pg_dump` argv、Dockerのcontainer設定（`docker inspect`のenv）のいずれにもpasswordを残さない。
-なおlibpqは`PGDATABASE`に与えたURIを展開せずdatabase名として扱い、hostが既定のlocal Unix socketに
-なるため、URIは`--dbname`へ渡す必要がある。
-taskは`fnox get AGENTSVIEW_PROXY_PG_URL`で必要なsecretだけを解決するため、他の未設定な
-AgentsView secretについて警告を出さない。
-このtaskはFly WireGuard proxy専用であり、接続URLのhostが`127.0.0.1`または`localhost`以外なら
-remoteへの意図しない平文接続を防ぐためfail closedにする。
-
 ```sh
-# timestamp付きのdefault pathへ保存
+# Fly PostgreSQLをbackup
 mise run agentsview:pg:dump
-```
 
-localで確認するときは、dumpをSQLiteへ変換せず、Dockerで起動したlocal PostgreSQLへrestoreして
-`agentsview pg serve`で表示する。これによりFly.ioとlocalのbackend・表示経路が同じになる。
-restore taskはpre-dataを復元した後、trigram indexが必要とする`pg_trgm` extensionを`agentsview`
-schemaへ作成してから、dataとpost-data（index・constraint）を順に復元する。
-restore taskは最初にlocal sessionを差分pushして既存データを維持し、dumpを一時databaseへ復元する。
-その一時databaseから、local PostgreSQLにまだ存在しないprimary/unique keyの行だけを
-`ON CONFLICT DO NOTHING`で追加する。既存行はlocal側を優先して上書きせず、古いbackupのsequence値も適用しない。
-取り込んだ行は明示的なidを持つためsequenceが取り残される。merge後に`agentsview` schemaの各sequenceを
-格納済みの最大値まで**前方向にだけ**進めるため、次のlocal insertがduplicate keyで落ちない
-（既にそれより先へ進んでいるsequenceは後退させない）。
-一時databaseは成功・失敗にかかわらずtask終了時に削除する。
-
-```sh
-# backup directoryのdumpをfzfで選択し、PostgreSQL 17 containerへrestore
+# backupをfzfで選択してlocal PostgreSQLへrestore
 mise run agentsview:pg:local:restore
 
 # machineごとのsession件数を確認
@@ -360,41 +323,17 @@ mise run agentsview:serve
 # open http://127.0.0.1:8080
 ```
 
-local PostgreSQLは`127.0.0.1:15433`だけに公開し、dataはDocker named volume
-`agentsview-postgres`へ永続化する。Fly proxyのdefault port `15432`とは重複しない。
-portを変更する場合は各commandで同じ値を指定する。
+# local PostgreSQLを停止
 
-taskはmiseのconfig root（global config経由なら`$HOME`）で実行されるため、Compose fileは
-chezmoiが配置した`${XDG_CONFIG_HOME:-~/.config}/agentsview/compose.yaml`を参照する。
-source treeのfileを使うなど別のpathを指したい場合は`AGENTSVIEW_COMPOSE_FILE`で上書きする。
-
-```sh
-AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:pg:local:restore
-AGENTSVIEW_LOCAL_PG_PORT=25433 mise run agentsview:serve
-```
-
-停止してもnamed volumeは残る。containerとnetworkだけを停止・削除する場合:
-
-```sh
 mise run agentsview:pg:local:down
-```
 
-> `docker compose down -v`はlocal restore済みdataも削除する。このrepositoryのtaskは誤削除を避けるため
-> `-v`を指定しない。
-
-手動でdumpする場合は次の形式にする。通常運用ではcredentialをcommand historyへ残さないtaskを使う。
-
-```sh
-pg_dump -n agentsview \
-  "postgres://<user>:<pass>@<host>/<db>?sslmode=require" \
-  -F c -f ~/backup/agentsview-$(date +%Y%m%d).dump
-```
+````
 
 特定 PC のデータのみ削除したい場合:
 
 ```sql
 DELETE FROM agentsview.sessions WHERE machine = 'mac-old';
-```
+````
 
 ## GitHub Actions でのデプロイ
 
