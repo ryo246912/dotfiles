@@ -730,13 +730,16 @@ row_counts >"$counts_before"
 # --column-inserts（column名つき）で流し込む。
 # 行ごとの `INSERT 0 1` が取り込み行数だけ出ると読めないため、psqlはquietにして
 # 出力も捨てる。error はそのまま stderr に出る。結果は後段の増分で報告する。
+# schemaがずれていると途中のINSERTで停止するが、autocommitのままだとそこまでの行が
+# commit済みで残り、後段のsequence補正も走らない。single transactionにして
+# 「全部入るか、何も入らないか」にする。
 docker compose -f "$compose_file" exec -T postgres \
   bash -o pipefail -c '
     pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
       --data-only --column-inserts --on-conflict-do-nothing |
       sed "/^SELECT pg_catalog.setval/d" |
       psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-        --quiet --output=/dev/null
+        --quiet --output=/dev/null --single-transaction
   ' -- "$restore_db"
 
 # 取り込んだ行は明示 id を持つため、sequence は取り残される。dump の setval を
