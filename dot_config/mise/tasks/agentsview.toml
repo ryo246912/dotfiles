@@ -638,12 +638,33 @@ docker compose -f "$compose_file" up -d --wait postgres
 mise run agentsview:pg:local:push
 
 restore_db="agentsview_restore_$$"
+counts_before="$(mktemp)"
+counts_after="$(mktemp)"
 cleanup_restore_db() {
   docker compose -f "$compose_file" exec -T postgres \
     sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$restore_db" \
     >/dev/null 2>&1 || true
+  rm -f "$counts_before" "$counts_after"
 }
 trap cleanup_restore_db EXIT
+
+# 取り込み結果は「どのtableが何行増えたか」で確認したいので、merge前後の行数を測る。
+# table一覧はschemaから引き、count(*)はquery_to_xmlで1 queryにまとめる。
+row_counts() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+      --no-align --tuples-only --quiet' <<'SQL'
+SELECT c.relname || ' ' ||
+  (xpath(
+    '/row/c/text()',
+    query_to_xml(format('SELECT count(*) AS c FROM agentsview.%I', c.relname), false, true, '')
+  ))[1]::text
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'agentsview' AND c.relkind = 'r'
+ORDER BY c.relname;
+SQL
+}
 
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$restore_db"
@@ -656,7 +677,7 @@ docker compose -f "$compose_file" exec -T postgres \
     --no-owner --no-privileges --exit-on-error --section=pre-data' -- "$restore_db" \
   <"$dump_path"
 docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 --quiet \
     --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"' -- "$restore_db"
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
@@ -667,17 +688,22 @@ docker compose -f "$compose_file" exec -T postgres \
     --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
   <"$dump_path"
 
+row_counts >"$counts_before"
+
 # 一時databaseのsnapshotをINSERTへ変換し、localに同じkeyがある行は無視する。
 # 古いbackupでlocalのsequenceを巻き戻さないよう、setvalは除外する。
 # backup側のschemaはdumpを取った時点のもので、localのschemaはAgentsViewのmigrationが
 # 作る。column順が一致する保証がないため、--inserts（位置指定）ではなく
 # --column-inserts（column名つき）で流し込む。
+# 行ごとの `INSERT 0 1` が取り込み行数だけ出ると読めないため、psqlはquietにして
+# 出力も捨てる。error はそのまま stderr に出る。結果は後段の増分で報告する。
 docker compose -f "$compose_file" exec -T postgres \
   bash -o pipefail -c '
     pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
       --data-only --column-inserts --on-conflict-do-nothing |
       sed "/^SELECT pg_catalog.setval/d" |
-      psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1
+      psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+        --quiet --output=/dev/null
   ' -- "$restore_db"
 
 # 取り込んだ行は明示 id を持つため、sequence は取り残される。dump の setval を
@@ -717,7 +743,12 @@ END
 $$;
 SQL
 
+row_counts >"$counts_after"
+
 echo "Merged missing rows from AgentsView backup: $dump_path"
+awk 'NR == FNR { before[$1] = $2; next }
+  { printf "  agentsview.%s: %d -> %d (%+d rows)\n", $1, before[$1], $2, $2 - before[$1] }' \
+  "$counts_before" "$counts_after"
 '''
 shell = "bash -c"
 
