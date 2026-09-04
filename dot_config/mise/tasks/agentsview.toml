@@ -670,10 +670,13 @@ docker compose -f "$compose_file" exec -T postgres \
 
 # 一時databaseのsnapshotをINSERTへ変換し、localに同じkeyがある行は無視する。
 # 古いbackupでlocalのsequenceを巻き戻さないよう、setvalは除外する。
+# backup側のschemaはdumpを取った時点のもので、localのschemaはAgentsViewのmigrationが
+# 作る。column順が一致する保証がないため、--inserts（位置指定）ではなく
+# --column-inserts（column名つき）で流し込む。
 docker compose -f "$compose_file" exec -T postgres \
   bash -o pipefail -c '
     pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
-      --data-only --inserts --on-conflict-do-nothing |
+      --data-only --column-inserts --on-conflict-do-nothing |
       sed "/^SELECT pg_catalog.setval/d" |
       psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1
   ' -- "$restore_db"
