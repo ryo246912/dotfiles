@@ -156,7 +156,9 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-`agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`pg_isready` で PostgreSQL から応答が返るまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使う。実行後に proxy を停止するため、PostgreSQL client tools（`pg_isready` を含む）が必要になる。
+`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`pg_isready` で PostgreSQL から応答が返るまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使う。実行後に proxy を停止するため、PostgreSQL client tools（`pg_isready` を含む）が必要になる。
+
+`pg:push` は書き込みを伴うため、`psql` で standby / read-only transaction でないことも確認してから push する。push 中に一時的な切断が起きた場合は proxy を張り直して再試行し、read-only が続く場合は `fly checks list -a psgl` での確認を案内して終了する（Fly Postgres は `/data` 使用率が90%を超えると read-only になる）。project 単位で batch にまとめる既定の push では `jq` も使う。
 
 PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
 
