@@ -640,11 +640,13 @@ mise run agentsview:pg:local:push
 restore_db="agentsview_restore_$$"
 counts_before="$(mktemp)"
 counts_after="$(mktemp)"
+columns_backup="$(mktemp)"
+columns_local="$(mktemp)"
 cleanup_restore_db() {
   docker compose -f "$compose_file" exec -T postgres \
     sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$restore_db" \
     >/dev/null 2>&1 || true
-  rm -f "$counts_before" "$counts_after"
+  rm -f "$counts_before" "$counts_after" "$columns_backup" "$columns_local"
 }
 trap cleanup_restore_db EXIT
 
@@ -663,6 +665,18 @@ FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'agentsview' AND c.relkind = 'r'
 ORDER BY c.relname;
+SQL
+}
+
+# 引数が空なら local database を見る。schema差はmerge失敗の主因なので比較できるようにする。
+schema_columns() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'psql --username="$POSTGRES_USER" --dbname="${1:-$POSTGRES_DB}" --set=ON_ERROR_STOP=1 \
+      --no-align --tuples-only --quiet' -- "$1" <<'SQL'
+SELECT table_name || '.' || column_name || ' ' || data_type
+FROM information_schema.columns
+WHERE table_schema = 'agentsview'
+ORDER BY 1;
 SQL
 }
 
@@ -687,6 +701,25 @@ docker compose -f "$compose_file" exec -T postgres \
   sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
     --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
   <"$dump_path"
+
+# backupのschemaはdumpを取った時点のAgentsViewのもので、localのschemaは現在の
+# AgentsViewが作る。remoteがread-onlyだとremoteへmigrationが当たらないため両者がずれ、
+# 同じ列名でも型が違う状態になりうる。取り込む前に一時databaseを現在のAgentsViewで
+# migrationして、localと同じschemaへ揃える。
+echo "Migrating the restored backup to the current AgentsView schema..."
+AGENTSVIEW_PG_SCHEMA=agentsview \
+AGENTSVIEW_PG_URL="postgres://${AGENTSVIEW_LOCAL_PG_USER:-agentsview}:${AGENTSVIEW_LOCAL_PG_PASSWORD:-agentsview-local}@127.0.0.1:${AGENTSVIEW_LOCAL_PG_PORT:-15433}/${restore_db}?sslmode=disable" \
+  agentsview pg push
+
+# migrationしても残る差はAgentsViewのversion差なので、merge前に見えるようにする。
+# psqlの型エラーだけでは、どのcolumnがずれているのか分からない。
+schema_columns "$restore_db" | sort >"$columns_backup"
+schema_columns "" | sort >"$columns_local"
+backup_only="$(comm -23 "$columns_backup" "$columns_local")"
+if [ -n "$backup_only" ]; then
+  echo "Backup columns that the local schema does not have (name and type):" >&2
+  printf '%s\n' "$backup_only" | sed 's/^/  /' >&2
+fi
 
 row_counts >"$counts_before"
 
