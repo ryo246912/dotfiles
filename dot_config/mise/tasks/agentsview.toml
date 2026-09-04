@@ -349,6 +349,7 @@ umask 077
 exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 ' -- \
   --dbname="$pg_url" --schema=agentsview --format=custom --file="/backup/$dump_name"
+pg_restore --list "$dump_path" >/dev/null
 echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
@@ -499,6 +500,7 @@ trap 'status=$?; [ "$status" -eq 0 ] || rm -f "$dump_path"; exit "$status"' EXIT
 docker compose -f "$compose_file" exec -T postgres \
   sh -c 'exec pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --schema=agentsview --format=custom' \
   >"$dump_path"
+pg_restore --list "$dump_path" >/dev/null
 echo "Consolidated AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
