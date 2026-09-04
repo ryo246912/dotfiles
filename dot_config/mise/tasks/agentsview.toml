@@ -292,7 +292,9 @@ export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 eval "operation_args=(${usage_args:-})"
 case "$usage_operation" in
   status) agentsview pg status ;;
-  push) agentsview pg push "${operation_args[@]}" ;;
+  # macOS 既定の bash 3.2 では set -u 下の "${arr[@]}" が空 array で unbound variable に
+  # なるため（4.4 で解消）、引数なしの push でも落ちないよう ${arr[@]+...} で展開する。
+  push) agentsview pg push ${operation_args[@]+"${operation_args[@]}"} ;;
   dump) mise run agentsview:pg:dump:run ;;
 esac
 '''
