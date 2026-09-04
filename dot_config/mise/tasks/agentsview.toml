@@ -272,6 +272,7 @@ command -v pg_isready >/dev/null 2>&1 || {
 }
 
 proxy_log="$(mktemp)"
+probe_log="$(mktemp)"
 push_log="$(mktemp)"
 projects_file="$(mktemp)"
 
@@ -292,7 +293,7 @@ cleanup() {
     echo "flyctl proxy log:" >&2
     cat "$proxy_log" >&2
   fi
-  rm -f "$proxy_log" "$push_log" "$projects_file"
+  rm -f "$proxy_log" "$probe_log" "$push_log" "$projects_file"
   return "$status"
 }
 
@@ -330,14 +331,35 @@ wait_for_response() {
 # push は書き込むため、standby/recovery と read-only transaction を除外する。
 # URL は argv（process table）に出さないよう PGDATABASE 経由で渡す。
 # pg_is_in_recovery() は boolean なので、text へ cast してから連結する。
+# PGCONNECT_TIMEOUT は接続確立までしか縛らないため、proxy が接続だけ受け付けて
+# 応答を返さない場合に psql が待ち続ける。server 側は statement_timeout、
+# client 側は watchdog で 5 秒に打ち切り、readiness の deadline を必ず効かせる。
+# 出力を pipe ではなく file で受けるのは、psql を kill しても command substitution が
+# 子 process の fd を待ち続けて閉じないため。
+probe_writable() {
+  : >"$probe_log"
+  PGCONNECT_TIMEOUT=1 PGOPTIONS='-c statement_timeout=1000' PGDATABASE="$AGENTSVIEW_PROXY_PG_URL" \
+    psql -XAtqc "SELECT pg_is_in_recovery()::text || '|' || current_setting('transaction_read_only')" \
+    >"$probe_log" 2>/dev/null &
+  probe_pid=$!
+  waited=0
+  while kill -0 "$probe_pid" 2>/dev/null; do
+    if [ "$waited" -ge 20 ]; then
+      kill "$probe_pid" 2>/dev/null || true
+      wait "$probe_pid" 2>/dev/null || true
+      return 1
+    fi
+    waited=$((waited + 1))
+    sleep 0.25
+  done
+  wait "$probe_pid" || return 1
+  cat "$probe_log"
+}
+
 wait_for_writable() {
   deadline=$((SECONDS + ready_timeout))
   while :; do
-    postgres_state="$(
-      PGCONNECT_TIMEOUT=1 PGDATABASE="$AGENTSVIEW_PROXY_PG_URL" \
-        psql -XAtqc "SELECT pg_is_in_recovery()::text || '|' || current_setting('transaction_read_only')" \
-        2>/dev/null || true
-    )"
+    postgres_state="$(probe_writable || true)"
     if [ "$postgres_state" = "f|off" ]; then
       return 0
     fi
