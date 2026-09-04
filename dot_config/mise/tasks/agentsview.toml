@@ -129,52 +129,14 @@ fi
 
 : "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_OWNER_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+# proxy の起動・readiness 確認・後始末・再試行は agentsview:pg:proxy に集約している。
+# migration は owner role で実行するため、URL だけ差し替えて同じ経路へ委譲する。
+export AGENTSVIEW_PROXY_PG_URL="$AGENTSVIEW_OWNER_PROXY_PG_URL"
 
 if [ -n "${AGENTSVIEW_MIGRATION_PROJECTS:-}" ]; then
-  agentsview pg push --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+  mise run agentsview:pg:proxy -- migrate --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 else
-  agentsview pg push
+  mise run agentsview:pg:proxy -- migrate
 fi
 '''
 shell = "bash -c"
@@ -219,127 +181,696 @@ shell = "bash -c"
 
 ["agentsview:deploy"]
 description = "Deploy the AgentsView public viewer to Fly.io"
-run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml"
+run         = 'flyctl deploy --app ryo-agentsview -c "${AGENTSVIEW_FLY_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/fly.toml}"'
 
 ["agentsview:pg:status"]
-description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
-run = '''
-set -eu
+description = "Show AgentsView PostgreSQL sync status through a temporary Fly proxy"
+run         = "mise run agentsview:pg:proxy -- status"
 
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:status "$@"
+["agentsview:pg:push"]
+description = "Push local AgentsView sessions through a temporary Fly proxy"
+run         = 'mise run agentsview:pg:proxy -- push "$@"'
+shell       = "bash -c"
+
+["agentsview:pg:dump"]
+description = "Dump the remote AgentsView PostgreSQL schema through a temporary Fly proxy"
+run         = "mise run agentsview:pg:proxy -- dump"
+
+["agentsview:pg:proxy"]
+description = "Run an AgentsView PostgreSQL operation through a temporary Fly proxy"
+hide = true
+run = '''
+set -euo pipefail
+
+if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ]; then
+  AGENTSVIEW_PROXY_PG_URL="$(fnox get AGENTSVIEW_PROXY_PG_URL)"
+  export AGENTSVIEW_PROXY_PG_URL
 fi
 
 : "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
 
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
 
-cleanup() {
+# nc では local listener の起動しか確認できない。PostgreSQL protocol の応答を
+# 待ち、Fly private network から DB まで接続できてから処理を始める。
+command -v pg_isready >/dev/null 2>&1 || {
+  echo "pg_isready is required (install PostgreSQL client tools)" >&2
+  exit 1
+}
+
+proxy_log="$(mktemp)"
+probe_log="$(mktemp)"
+push_log="$(mktemp)"
+projects_file="$(mktemp)"
+auth_dir="$(mktemp -d)"
+
+stop_proxy() {
   if [ -n "${proxy_pid:-}" ]; then
     kill "$proxy_pid" 2>/dev/null || true
     wait "$proxy_pid" 2>/dev/null || true
+    proxy_pid=""
   fi
-  rm -f "$proxy_log"
 }
 
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
+stop_probe() {
+  if [ -n "${probe_pid:-}" ]; then
+    kill "$probe_pid" 2>/dev/null || true
+    wait "$probe_pid" 2>/dev/null || true
+    probe_pid=""
+  fi
+}
 
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
+cleanup() {
+  status=$?
+  stop_probe
+  stop_proxy
+  # proxy 側の失敗理由（WireGuard 切断など）は log にしか残らないため、
+  # task が失敗したときだけ出力する。
+  if [ "$status" -ne 0 ] && [ -s "$proxy_log" ]; then
+    echo "flyctl proxy log:" >&2
+    cat "$proxy_log" >&2
+  fi
+  rm -f "$proxy_log" "$probe_log" "$push_log" "$projects_file"
+  rm -rf "$auth_dir"
+  return "$status"
+}
 
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
+# 接続先の検証と password の分離は dump と同じ command へ委譲する。readiness は
+# proxy の listen endpoint を見るため、URL の接続先が proxy と違うと「確認した
+# 接続先」と「実際に push する接続先」がずれる。command 側で scheme と
+# 127.0.0.1:${proxy_port} を検証し、password を除いた URL と .pgpass を書き出す。
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+probe_url="$(cat "$auth_dir/url")"
+
+start_proxy() {
+  if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
+    echo "127.0.0.1:${proxy_port} is already in use" >&2
+    return 1
   fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
+  : >"$proxy_log"
+  flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
+  proxy_pid=$!
+}
+
+# status / dump は read-only の primary でも実行できるため、PostgreSQL が
+# protocol 応答を返すところまでを待つ。
+wait_for_response() {
+  deadline=$((SECONDS + ready_timeout))
+  while ! pg_isready -h 127.0.0.1 -p "$proxy_port" -t 1 >/dev/null 2>&1; do
+    if ! kill -0 "${proxy_pid:-}" 2>/dev/null; then
+      echo "flyctl proxy exited before PostgreSQL became ready" >&2
+      return 1
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+      return 1
+    fi
+    sleep 0.25
+  done
+}
+
+# push は書き込むため、standby/recovery と read-only transaction を除外する。
+# psql は PGDATABASE の値を URI として展開せず database 名として扱うので、接続先は
+# -d で渡す。password は URL から分離済みで、PGPASSFILE から読ませて argv
+# （process table）へ出さない。
+# PGCONNECT_TIMEOUT は接続確立までしか縛らないため、proxy が接続だけ受け付けて
+# 応答を返さない場合に psql が待ち続ける。server 側は statement_timeout、
+# client 側は watchdog で 5 秒に打ち切り、readiness の deadline を必ず効かせる。
+# 出力を command substitution ではなく file で受ける。subshell で走らせると
+# probe_pid が cleanup から見えず、psql を kill しても substitution が子 process の
+# fd を待って閉じないため、interrupt 時に probe だけ残る。
+probe_writable() {
+  : >"$probe_log"
+  PGPASSFILE="$auth_dir/pgpass" PGCONNECT_TIMEOUT=1 PGOPTIONS='-c statement_timeout=1000' \
+    psql -XAtq -d "$probe_url" \
+    -c "SELECT CASE WHEN pg_is_in_recovery() THEN 'recovery' WHEN current_setting('transaction_read_only') = 'on' THEN 'readonly' ELSE 'writable' END" \
+    >"$probe_log" 2>/dev/null &
+  probe_pid=$!
+  waited=0
+  while kill -0 "$probe_pid" 2>/dev/null; do
+    if [ "$waited" -ge 20 ]; then
+      stop_probe
+      return 1
+    fi
+    waited=$((waited + 1))
+    sleep 0.25
+  done
+  probe_status=0
+  wait "$probe_pid" || probe_status=$?
+  probe_pid=""
+  return "$probe_status"
+}
+
+wait_for_writable() {
+  deadline=$((SECONDS + ready_timeout))
+  while :; do
+    if probe_writable; then
+      postgres_state="$(tr -d '[:space:]' <"$probe_log")"
+    else
+      postgres_state=""
+    fi
+    if [ "$postgres_state" = "writable" ]; then
+      return 0
+    fi
+    if ! kill -0 "${proxy_pid:-}" 2>/dev/null; then
+      echo "flyctl proxy exited before PostgreSQL became ready" >&2
+      return 1
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      if [ "$postgres_state" = "readonly" ]; then
+        echo "PostgreSQL primary is read-only. Fly Postgres enables read-only mode when /data usage exceeds 90%; check 'fly checks list -a ${proxy_app}' and free disk space." >&2
+        return 78
+      fi
+      echo "Timed out waiting for PostgreSQL through flyctl proxy on 127.0.0.1:${proxy_port}" >&2
+      return 1
+    fi
+    sleep 0.25
+  done
+}
+
+is_transient_push_error() {
+  grep -Eiq \
+    'unexpected EOF|failed to connect|connection reset by peer|server closed the connection unexpectedly|terminating connection due to administrator command|timeout expired|no response|broken pipe|read-only transaction|SQLSTATE 25006' \
+    "$push_log"
+}
+
+# 一時的な切断では proxy/WireGuard 経路ごと作り直さないと復帰しないため、
+# attempt ごとに proxy を停止してから張り直す。
+push_with_retry() {
+  attempt=1
+  while :; do
+    start_proxy
+    if wait_for_writable; then
+      : >"$push_log"
+      if agentsview pg push "$@" 2>&1 | tee "$push_log"; then
+        stop_proxy
+        return 0
+      else
+        pipeline_status=("${PIPESTATUS[@]}")
+        status=${pipeline_status[0]}
+        if [ "${pipeline_status[1]}" -ne 0 ]; then
+          echo "tee failed while recording agentsview pg push output" >&2
+          return "${pipeline_status[1]}"
+        fi
+        if ! is_transient_push_error; then
+          echo "agentsview pg push failed with a non-transient error; not retrying" >&2
+          return "$status"
+        fi
+      fi
+    else
+      status=$?
+      # read-only が続く場合は retry しても解消しないため、診断を出して終了する。
+      if [ "$status" -eq 78 ]; then
+        stop_proxy
+        return "$status"
+      fi
+    fi
+
+    stop_proxy
+
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "agentsview pg push failed after ${attempt} attempt(s)" >&2
+      return "$status"
+    fi
+    attempt=$((attempt + 1))
+    echo "PostgreSQL push interrupted; restarting flyctl proxy for attempt ${attempt}/${max_attempts} in ${retry_delay}s..." >&2
+    sleep "$retry_delay"
+  done
+}
 
 export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
 export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
 
-agentsview pg status
+eval "operation_args=(${usage_args:-})"
+case "$usage_operation" in
+  status | dump)
+    ready_timeout=30
+    start_proxy
+    wait_for_response
+    case "$usage_operation" in
+      status) agentsview pg status ;;
+      dump) mise run agentsview:pg:dump:run ;;
+    esac
+    ;;
+  push | migrate)
+    command -v psql >/dev/null 2>&1 || {
+      echo "psql is required (install PostgreSQL client tools)" >&2
+      exit 1
+    }
+    max_attempts="${AGENTSVIEW_PG_PUSH_MAX_ATTEMPTS:-10}"
+    retry_delay="${AGENTSVIEW_PG_PUSH_RETRY_DELAY:-30}"
+    ready_timeout="${AGENTSVIEW_PG_READY_TIMEOUT:-120}"
+    project_batch_sessions="${AGENTSVIEW_PG_PROJECT_BATCH_SESSIONS:-25}"
+    # migration は schema を作るのが目的で、push する session が 1 件も無くても
+    # 実行できる必要がある。batch 分割は project 一覧に依存するため通さない。
+    # macOS 既定の bash 3.2 では、set -u 下で空 array を "${arr[@]}" や要素数で
+    # 展開すると unbound variable になる（4.4 で解消）。空判定は usage_args の
+    # 文字列で行い、展開は ${arr[@]+...} を使う。
+    # mise は run script を Tera で render するため、script 中に Tera の
+    # comment 開始（brace + hash）を書くと render 自体が失敗する。
+    if [ "$usage_operation" = "migrate" ] || [ -n "${usage_args:-}" ]; then
+      push_with_retry ${operation_args[@]+"${operation_args[@]}"}
+    else
+      # 全 project を一度に push すると WAL/checkpoint が集中して backend が落ちる。
+      # session 数の少ない project から batch にまとめ、直列に push する。
+      command -v jq >/dev/null 2>&1 || {
+        echo "jq is required for project-by-project push" >&2
+        exit 1
+      }
+      agentsview projects --format json |
+        jq -r --argjson limit "$project_batch_sessions" '
+          reduce (sort_by(.session_count)[] | select(.name | length > 0)) as $project
+            ({ batches: [], names: [], sessions: 0 };
+              if (.names | length) > 0 and .sessions + $project.session_count > $limit then
+                .batches += [(.names | join(","))]
+                | .names = [$project.name]
+                | .sessions = $project.session_count
+              else
+                .names += [$project.name]
+                | .sessions += $project.session_count
+              end
+            )
+          | .batches + (if (.names | length) > 0 then [(.names | join(","))] else [] end)
+          | .[]
+        ' \
+          >"$projects_file"
+      if [ ! -s "$projects_file" ]; then
+        echo "No projects found." >&2
+        exit 1
+      fi
+      while IFS= read -r projects; do
+        echo "Pushing project batch: $projects"
+        push_with_retry --projects "$projects"
+      done <"$projects_file"
+    fi
+    ;;
+esac
+'''
+shell = "bash -c"
+usage = '''
+arg "<operation>" { choices "status" "push" "dump" "migrate" }
+arg "[args]..."
+'''
+
+["agentsview:pg:proxy".env]
+AGENTSVIEW_DUMP_CONTAINER_HOST = "127.0.0.1"
+
+["agentsview:pg:dump:run"]
+description = "Create an AgentsView PostgreSQL dump while the Fly proxy is active"
+hide = true
+run = '''
+set -eu
+
+proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+# 同じ秒に2つdumpが走っても上書きしないようPIDを付ける。
+dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S)-$$.dump"
+auth_dir="$(mktemp -d)"
+cleanup_dump() {
+  status=$?
+  rm -rf "$auth_dir"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$dump_path"
+  fi
+  return "$status"
+}
+trap cleanup_dump EXIT
+
+mkdir -p "$backup_dir"
+dump_dir="$(cd "$backup_dir" && pwd -P)"
+dump_name="$(basename "$dump_path")"
+
+# 接続情報の検証とpasswordの分離は専用commandへ委譲する。
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+export AGENTSVIEW_DUMP_CONTAINER_HOST="127.0.0.1"
+docker_network_args=(--network host)
+if [ "$(uname -s)" = "Darwin" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
+  export AGENTSVIEW_DUMP_CONTAINER_HOST="host.docker.internal"
+  docker_network_args=(--add-host host.docker.internal:host-gateway)
+fi
+
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+
+pg_url="$(cat "$auth_dir/url")"
+docker run --rm "${docker_network_args[@]}" \
+  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
+  --volume "$dump_dir:/backup" \
+  --env HOST_GID="$(id -g)" \
+  --env HOST_UID="$(id -u)" \
+  postgres:17 \
+  sh -c '
+set -eu
+getent passwd "$HOST_UID" >/dev/null ||
+  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
+install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
+export PGPASSFILE=/tmp/agentsview.pgpass
+umask 077
+exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
+' -- \
+  --dbname="$pg_url" --schema=agentsview --format=custom --file="/backup/$dump_name"
+pg_restore --list "$dump_path" >/dev/null
+echo "AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 
-["agentsview:pg:push"]
-description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
+["agentsview:pg:local:up"]
+description = "Start the local AgentsView PostgreSQL container"
+run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" up -d --wait postgres'
+
+["agentsview:pg:local:down"]
+description = "Stop the local AgentsView PostgreSQL container"
+run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" down'
+
+["agentsview:pg:local:push"]
+depends     = ["agentsview:pg:local:up"]
+description = "Incrementally push local AgentsView sessions into the local Docker PostgreSQL database"
+run         = 'agentsview pg push'
+
+["agentsview:pg:local:push".env]
+AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
+AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
+AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
+AGENTSVIEW_PG_SCHEMA         = "agentsview"
+AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
+
+["agentsview:pg:local:restore"]
+description = "Restore an AgentsView PostgreSQL dump into the local Docker database"
 run = '''
 set -eu
 
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:push "$@"
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+dump_path="${AGENTSVIEW_RESTORE_DUMP:-}"
+if [ -z "$dump_path" ]; then
+  dump_path="$({ find "$backup_dir" -maxdepth 1 -type f -name '*.dump' -print 2>/dev/null || true; } |
+    sort -r |
+    fzf --prompt='AgentsView dump> ' --height=40% --reverse || true)"
 fi
+if [ -z "$dump_path" ]; then
+  echo "No dump selected from: $backup_dir" >&2
+  exit 1
+fi
+# task は mise の config root（global config 経由なら $HOME）で実行されるため、
+# repository 内の相対 path では解決できない。chezmoi が配置した path を既定にする。
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
 
-: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
+if [ ! -f "$dump_path" ]; then
+  echo "Dump file not found: $dump_path" >&2
   exit 1
 fi
 
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
+docker compose -f "$compose_file" up -d --wait postgres
+# backupを取り込む前に、移行先schemaを初期化・migrationし、
+# このmachineですでに収集したsessionを保持する。
+mise run agentsview:pg:local:push
 
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+restore_db="agentsview_restore_$$"
+counts_before="$(mktemp)"
+counts_after="$(mktemp)"
+columns_backup="$(mktemp)"
+columns_local="$(mktemp)"
+cleanup_restore_db() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$restore_db" \
+    >/dev/null 2>&1 || true
+  rm -f "$counts_before" "$counts_after" "$columns_backup" "$columns_local"
+}
+trap cleanup_restore_db EXIT
 
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
+# 取り込み結果は「どのtableが何行増えたか」で確認したいので、merge前後の行数を測る。
+# table一覧はschemaから引き、count(*)はquery_to_xmlで1 queryにまとめる。
+row_counts() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+      --no-align --tuples-only --quiet' <<'SQL'
+SELECT c.relname || ' ' ||
+  (xpath(
+    '/row/c/text()',
+    query_to_xml(format('SELECT count(*) AS c FROM agentsview.%I', c.relname), false, true, '')
+  ))[1]::text
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'agentsview' AND c.relkind = 'r'
+ORDER BY c.relname;
+SQL
+}
 
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
+# 引数が空なら local database を見る。schema差はmerge失敗の主因なので比較できるようにする。
+schema_columns() {
+  docker compose -f "$compose_file" exec -T postgres \
+    sh -c 'psql --username="$POSTGRES_USER" --dbname="${1:-$POSTGRES_DB}" --set=ON_ERROR_STOP=1 \
+      --no-align --tuples-only --quiet' -- "$1" <<'SQL'
+SELECT table_name || '.' || column_name || ' ' || data_type
+FROM information_schema.columns
+WHERE table_schema = 'agentsview'
+ORDER BY 1;
+SQL
+}
 
-agentsview pg push "$@"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$restore_db"
+
+# schema指定のdumpにはpg_trgm自体が含まれないが、post-dataのGIN indexは
+# agentsview schemaへinstallされたoperator classを参照する。先にpre-dataをrestoreし、
+# extensionをinstallしてからdataとindexをrestoreする。
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=pre-data' -- "$restore_db" \
+  <"$dump_path"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 --quiet \
+    --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"' -- "$restore_db"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=data' -- "$restore_db" \
+  <"$dump_path"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
+    --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
+  <"$dump_path"
+
+# backupのschemaはdumpを取った時点のAgentsViewのもので、localのschemaは現在の
+# AgentsViewが作る。remoteがread-onlyだとremoteへmigrationが当たらないため両者がずれ、
+# 同じ列名でも型が違う状態になりうる。取り込む前に一時databaseを現在のAgentsViewで
+# migrationして、localと同じschemaへ揃える。
+echo "Migrating the restored backup to the current AgentsView schema..."
+AGENTSVIEW_PG_SCHEMA=agentsview \
+AGENTSVIEW_PG_URL="postgres://${AGENTSVIEW_LOCAL_PG_USER:-agentsview}:${AGENTSVIEW_LOCAL_PG_PASSWORD:-agentsview-local}@127.0.0.1:${AGENTSVIEW_LOCAL_PG_PORT:-15433}/${restore_db}?sslmode=disable" \
+  agentsview pg push
+
+# migrationしても残る差はAgentsViewのversion差なので、merge前に見えるようにする。
+# psqlの型エラーだけでは、どのcolumnがずれているのか分からない。
+schema_columns "$restore_db" | sort >"$columns_backup"
+schema_columns "" | sort >"$columns_local"
+backup_only="$(comm -23 "$columns_backup" "$columns_local")"
+if [ -n "$backup_only" ]; then
+  echo "Backup columns that the local schema does not have (name and type):" >&2
+  printf '%s\n' "$backup_only" | sed 's/^/  /' >&2
+fi
+
+row_counts >"$counts_before"
+
+# 一時databaseのsnapshotをINSERTへ変換し、localに同じkeyがある行は無視する。
+# 古いbackupでlocalのsequenceを巻き戻さないよう、setvalは除外する。
+# backup側のschemaはdumpを取った時点のもので、localのschemaはAgentsViewのmigrationが
+# 作る。column順が一致する保証がないため、--inserts（位置指定）ではなく
+# --column-inserts（column名つき）で流し込む。
+# 行ごとの `INSERT 0 1` が取り込み行数だけ出ると読めないため、psqlはquietにして
+# 出力も捨てる。error はそのまま stderr に出る。結果は後段の増分で報告する。
+# schemaがずれていると途中のINSERTで停止するが、autocommitのままだとそこまでの行が
+# commit済みで残り、後段のsequence補正も走らない。transactionで囲み
+# 「全部入るか、何も入らないか」にする。
+# psqlの--single-transactionは入力のEOFでcommitするため、pg_dumpが途中で落ちても
+# そこまでの行がcommitされる。COMMITはpg_dumpの成功時だけ送り、失敗時はROLLBACKして
+# 元のstatusを返す。
+docker compose -f "$compose_file" exec -T postgres \
+  bash -o pipefail -c '
+    {
+      echo "BEGIN;"
+      pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
+        --data-only --column-inserts --on-conflict-do-nothing |
+        sed "/^SELECT pg_catalog.setval/d"
+      dump_status=$?
+      if [ "$dump_status" -ne 0 ]; then
+        echo "ROLLBACK;"
+        exit "$dump_status"
+      fi
+      echo "COMMIT;"
+    } |
+      psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+        --quiet --output=/dev/null
+  ' -- "$restore_db"
+
+# 取り込んだ行は明示 id を持つため、sequence は取り残される。dump の setval を
+# そのまま適用すると古い backup で live な sequence を巻き戻してしまうので、
+# 代わりに「格納済みの最大値より手前なら進める」だけを行う（後退はさせない）。
+# これを行わないと、次の local insert が duplicate key で落ちる。
+# SQL は quote をそのまま渡すため heredoc で stdin から流す。
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
+DO $$
+DECLARE
+  seq record;
+  max_id bigint;
+  cur_val bigint;
+  cur_called boolean;
+BEGIN
+  FOR seq IN
+    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
+    FROM pg_class s
+    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
+    JOIN pg_class t ON t.oid = d.refobjid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+    JOIN pg_namespace n ON n.oid = s.relnamespace
+    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
+  LOOP
+    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
+      INTO max_id;
+    -- 未使用のsequenceは last_value=1 / is_called=false で、次のnextvalが last_value を返す。
+    -- max_id = last_value でも「未使用」なら採番済みidと衝突するため、is_called も見る。
+    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
+      INTO cur_val, cur_called;
+    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
+      PERFORM setval(seq.seq_name, max_id, true);
+    END IF;
+  END LOOP;
+END
+$$;
+SQL
+
+row_counts >"$counts_after"
+
+echo "Merged missing rows from AgentsView backup: $dump_path"
+awk 'NR == FNR { before[$1] = $2; next }
+  { printf "  agentsview.%s: %d -> %d (%+d rows)\n", $1, before[$1], $2, $2 - before[$1] }' \
+  "$counts_before" "$counts_after"
+'''
+shell = "bash -c"
+
+["agentsview:pg:local:dump"]
+depends = ["agentsview:pg:local:push"]
+description = "Dump the consolidated local AgentsView PostgreSQL database"
+run = '''
+set -eu
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.dump"
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
+
+# schema が無いまま pg_dump すると "no matching schemas were found" としか出ず、
+# local database が未初期化なのか dump 対象の指定違いなのか区別できない。
+# 事前に schema の有無を確認し、次に実行すべき task を案内する。
+# query 自体が失敗した場合に schema 未作成と誤って案内しないよう、
+# pipeline を挟まず command substitution の status をそのまま見る。
+if ! schema_count="$(docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --no-align --tuples-only --quiet' <<'SQL'
+SELECT count(*) FROM pg_namespace WHERE nspname = 'agentsview';
+SQL
+)"; then
+  echo "local PostgreSQL へ問い合わせできませんでした: $compose_file" >&2
+  exit 1
+fi
+if [ "$(printf '%s' "$schema_count" | tr -d '[:space:]')" != "1" ]; then
+  echo "local PostgreSQL に agentsview schema がありません: $compose_file" >&2
+  echo "このmachineのsessionを収集するか、backupをrestoreしてから再実行してください:" >&2
+  echo "  mise run agentsview:pg:local:push" >&2
+  echo "  mise run agentsview:pg:local:restore" >&2
+  exit 1
+fi
+
+mkdir -p "$backup_dir"
+umask 077
+trap 'status=$?; [ "$status" -eq 0 ] || rm -f "$dump_path"; exit "$status"' EXIT
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'exec pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --schema=agentsview --format=custom' \
+  >"$dump_path"
+pg_restore --list "$dump_path" >/dev/null
+echo "Consolidated AgentsView backup: $dump_path"
+'''
+shell = "bash -c"
+
+["agentsview:pg:remote-local:dump"]
+description = "Merge the remote dump and this machine's sessions locally, then create a consolidated backup"
+run = '''
+set -eu
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+mise run agentsview:pg:dump
+dump_path="$({ find "$backup_dir" -maxdepth 1 -type f -name 'agentsview-*.dump' ! -name 'agentsview-local-*' -print 2>/dev/null || true; } | sort -r | head -n 1)"
+if [ -z "$dump_path" ]; then
+  echo "Remote AgentsView dump was not created" >&2
+  exit 1
+fi
+AGENTSVIEW_RESTORE_DUMP="$dump_path" mise run agentsview:pg:local:restore
+mise run agentsview:pg:local:dump
+'''
+shell = "bash -c"
+
+["agentsview:pg:local:status"]
+description = "Show session counts in the local AgentsView PostgreSQL container"
+run = '''
+docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --command="SELECT machine, COUNT(*) AS sessions FROM agentsview.sessions GROUP BY machine ORDER BY machine;"'
 '''
 shell = "bash -c"
 
 ["agentsview:serve"]
-description = "Start local AgentsView server"
-run         = "agentsview serve"
+depends = ["agentsview:pg:local:push"]
+description = "Continuously push local sessions and serve AgentsView from local Docker PostgreSQL"
+run = '''
+set -eu
+
+agentsview pg push --watch &
+watch_pid=$!
+
+agentsview pg serve "$@" &
+serve_pid=$!
+
+cleanup() {
+  kill "$watch_pid" "$serve_pid" 2>/dev/null || true
+  wait "$watch_pid" 2>/dev/null || true
+  wait "$serve_pid" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# watcher が落ちたまま serve を続けると、session の収集が黙って止まる。
+# どちらかが終了したらもう一方も停止し、終了 status を引き継ぐ。
+# macOS 既定の bash 3.2 には `wait -n` がないため、poll で監視する。
+while :; do
+  if ! kill -0 "$watch_pid" 2>/dev/null; then
+    watch_status=0
+    wait "$watch_pid" || watch_status=$?
+    echo "agentsview pg push --watch exited with status ${watch_status}; stopping serve" >&2
+    kill "$serve_pid" 2>/dev/null || true
+    wait "$serve_pid" 2>/dev/null || true
+    exit "$watch_status"
+  fi
+  if ! kill -0 "$serve_pid" 2>/dev/null; then
+    serve_status=0
+    wait "$serve_pid" || serve_status=$?
+    exit "$serve_status"
+  fi
+  sleep 1
+done
+'''
+shell = "bash -c"
+
+["agentsview:serve".env]
+AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
+AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
+AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
+AGENTSVIEW_PG_SCHEMA         = "agentsview"
+AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 
 ["agentsview:cockroach:migrate"]
 description = "Copy the Fly AgentsView schema data to CockroachDB and compare table counts"

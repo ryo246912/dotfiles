@@ -1520,7 +1520,12 @@ cmd_dev() {
         # オプションを配列として解析して安全に実行
         local -a up_args
         read -ra up_args <<< "$up_opts"
-        devcontainer up "${up_args[@]}"
+
+        # devcontainer.json の remoteEnv.GH_TOKEN (${localEnv:GH_TOKEN}) 用に
+        # このコマンドの実行時だけ GH_TOKEN を渡す（シェル起動時に常時exportはしない）
+        local gh_token=""
+        command -v gh >/dev/null 2>&1 && gh_token=$(gh auth token 2>/dev/null)
+        GH_TOKEN="$gh_token" devcontainer up "${up_args[@]}"
 
         if [[ $? -ne 0 ]]; then
             log_error "devcontainer の起動に失敗しました"

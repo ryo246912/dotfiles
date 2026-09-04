@@ -127,6 +127,7 @@ echo "Bearer token: $AUTH"  # 保管しておく
 ### 4. デプロイ
 
 ```sh
+# chezmoi source directory から実行する場合
 flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 ```
 
@@ -158,7 +159,15 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-`agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+
+PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
+
+```sh
+chezmoi apply
+mise install github:theseus-rs/postgresql-binaries
+pg_isready --version
+```
 
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
@@ -236,7 +245,16 @@ mise run agentsview:pg:status
 
 Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一覧できる。
 
-ローカルで `agentsview serve` を起動したい場合:
+### `agentsview pg serve` と `agentsview serve` の違い
+
+| command               | backend      | 表示するsession                                             | このrepositoryでの用途           |
+| --------------------- | ------------ | ----------------------------------------------------------- | -------------------------------- |
+| `agentsview pg serve` | PostgreSQL   | 複数PCからpushしたsession、またはdumpからrestoreしたsession | **通常のlocal / Fly viewer**     |
+| `agentsview serve`    | local SQLite | そのPCがlocal sourceから収集したsession                     | SQLite固有の調査が必要な場合のみ |
+
+`agentsview pg serve` は設定されたPostgreSQLを直接読むviewerであり、PostgreSQLの内容を
+`~/.agentsview/*.sqlite`へpullするcommandではない。反対に、`agentsview serve` は
+local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
 
 ```sh
 mise run agentsview:serve
@@ -288,15 +306,47 @@ DELETE FROM agentsview.sessions WHERE created_at < NOW() - INTERVAL '6 months';
 VACUUM agentsview.sessions;
 ```
 
-### バックアップ（削除前）
+### バックアップとlocal viewerへのrestore
 
-PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
+Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:remote-local:dump`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
 
 ```sh
-pg_dump -n agentsview \
-  "postgres://<user>:<pass>@<host>/<db>?sslmode=require" \
-  -F c -f ~/backup/agentsview-$(date +%Y%m%d).dump
+# Fly PostgreSQL上の既存データと、このmachineの未pushデータをlocal PostgreSQLへ
+# mergeし、まとめたdumpを作成
+mise run agentsview:pg:remote-local:dump
+
+# Fly PostgreSQLをbackup
+mise run agentsview:pg:dump
+
+# backupをfzfで選択してlocal PostgreSQLへrestore
+mise run agentsview:pg:local:restore
+
+# machineごとのsession件数を確認
+mise run agentsview:pg:local:status
+
+# serveを起動せずlocal sessionだけを差分push
+mise run agentsview:pg:local:push
+
+# merge済みのlocal PostgreSQLをbackup（このmachineのsessionを差分pushしてからdumpする）
+mise run agentsview:pg:local:dump
+
+# local PostgreSQLを使って agentsview pg serve を起動
+mise run agentsview:serve
+# open http://127.0.0.1:8080
+
+# local PostgreSQLを停止
+mise run agentsview:pg:local:down
 ```
+
+ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:dump`を実行し（差分pushを含む）、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
+
+```sh
+AGENTSVIEW_RESTORE_DUMP=/path/to/agentsview-local-other-machine.dump \
+  mise run agentsview:pg:local:restore
+mise run agentsview:pg:local:dump
+```
+
+`agentsview:pg:local:dump`は、local PostgreSQLに`agentsview` schemaが無い場合はdumpせずに終了し、先に実行すべきtaskを表示する。schemaはlocal pushかrestoreで作成される。
 
 特定 PC のデータのみ削除したい場合:
 
