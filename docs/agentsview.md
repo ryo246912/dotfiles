@@ -321,19 +321,16 @@ mise run agentsview:pg:local:push
 # local PostgreSQLを使って agentsview pg serve を起動
 mise run agentsview:serve
 # open http://127.0.0.1:8080
-```
 
 # local PostgreSQLを停止
-
 mise run agentsview:pg:local:down
-
-````
+```
 
 特定 PC のデータのみ削除したい場合:
 
 ```sql
 DELETE FROM agentsview.sessions WHERE machine = 'mac-old';
-````
+```
 
 ## GitHub Actions でのデプロイ
 
