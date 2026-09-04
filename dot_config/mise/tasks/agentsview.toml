@@ -494,7 +494,7 @@ echo "Merged missing rows from AgentsView backup: $dump_path"
 shell = "bash -c"
 
 ["agentsview:pg:local:dump"]
-depends = ["agentsview:pg:local:up"]
+depends = ["agentsview:pg:local:push"]
 description = "Dump the consolidated local AgentsView PostgreSQL database"
 run = '''
 set -eu
@@ -502,6 +502,24 @@ set -eu
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
 dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.dump"
 compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
+
+# schema が無いまま pg_dump すると "no matching schemas were found" としか出ず、
+# local database が未初期化なのか dump 対象の指定違いなのか区別できない。
+# 事前に schema の有無を確認し、次に実行すべき task を案内する。
+schema_count="$(docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
+    --no-align --tuples-only --quiet' <<'SQL' | tr -d '[:space:]'
+SELECT count(*) FROM pg_namespace WHERE nspname = 'agentsview';
+SQL
+)"
+if [ "$schema_count" != "1" ]; then
+  echo "local PostgreSQL に agentsview schema がありません: $compose_file" >&2
+  echo "このmachineのsessionを収集するか、backupをrestoreしてから再実行してください:" >&2
+  echo "  mise run agentsview:pg:local:push" >&2
+  echo "  mise run agentsview:pg:local:restore" >&2
+  exit 1
+fi
+
 mkdir -p "$backup_dir"
 umask 077
 trap 'status=$?; [ "$status" -eq 0 ] || rm -f "$dump_path"; exit "$status"' EXIT

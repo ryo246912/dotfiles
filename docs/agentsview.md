@@ -322,7 +322,7 @@ mise run agentsview:pg:local:status
 # serveを起動せずlocal sessionだけを差分push
 mise run agentsview:pg:local:push
 
-# merge済みのlocal PostgreSQLをbackup
+# merge済みのlocal PostgreSQLをbackup（このmachineのsessionを差分pushしてからdumpする）
 mise run agentsview:pg:local:dump
 
 # local PostgreSQLを使って agentsview pg serve を起動
@@ -333,13 +333,15 @@ mise run agentsview:serve
 mise run agentsview:pg:local:down
 ```
 
-ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:push`と`agentsview:pg:local:dump`を実行し、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
+ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:dump`を実行し（差分pushを含む）、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
 
 ```sh
 AGENTSVIEW_RESTORE_DUMP=/path/to/agentsview-local-other-machine.dump \
   mise run agentsview:pg:local:restore
 mise run agentsview:pg:local:dump
 ```
+
+`agentsview:pg:local:dump`は、local PostgreSQLに`agentsview` schemaが無い場合はdumpせずに終了し、先に実行すべきtaskを表示する。schemaはlocal pushかrestoreで作成される。
 
 特定 PC のデータのみ削除したい場合:
 
