@@ -156,7 +156,15 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-`agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+
+PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
+
+```sh
+chezmoi apply
+mise install github:theseus-rs/postgresql-binaries
+pg_isready --version
+```
 
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
@@ -295,7 +303,13 @@ VACUUM agentsview.sessions;
 
 ### バックアップとlocal viewerへのrestore
 
+Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:remote-local:dump`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
+
 ```sh
+# Fly PostgreSQL上の既存データと、このmachineの未pushデータをlocal PostgreSQLへ
+# mergeし、まとめたdumpを作成
+mise run agentsview:pg:remote-local:dump
+
 # Fly PostgreSQLをbackup
 mise run agentsview:pg:dump
 
@@ -308,6 +322,9 @@ mise run agentsview:pg:local:status
 # serveを起動せずlocal sessionだけを差分push
 mise run agentsview:pg:local:push
 
+# merge済みのlocal PostgreSQLをbackup（このmachineのsessionを差分pushしてからdumpする）
+mise run agentsview:pg:local:dump
+
 # local PostgreSQLを使って agentsview pg serve を起動
 mise run agentsview:serve
 # open http://127.0.0.1:8080
@@ -315,6 +332,16 @@ mise run agentsview:serve
 # local PostgreSQLを停止
 mise run agentsview:pg:local:down
 ```
+
+ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:dump`を実行し（差分pushを含む）、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
+
+```sh
+AGENTSVIEW_RESTORE_DUMP=/path/to/agentsview-local-other-machine.dump \
+  mise run agentsview:pg:local:restore
+mise run agentsview:pg:local:dump
+```
+
+`agentsview:pg:local:dump`は、local PostgreSQLに`agentsview` schemaが無い場合はdumpせずに終了し、先に実行すべきtaskを表示する。schemaはlocal pushかrestoreで作成される。
 
 特定 PC のデータのみ削除したい場合:
 
