@@ -250,20 +250,6 @@ fi
 proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
 proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
 
-# readiness は proxy の listen endpoint を見るため、URL の接続先が proxy と違うと
-# 「確認した接続先」と「実際に push する接続先」がずれる。password を出さないよう
-# host:port だけを取り出して照合する。
-url_authority="${AGENTSVIEW_PROXY_PG_URL#*://}"
-url_authority="${url_authority%%/*}"
-url_endpoint="${url_authority##*@}"
-case "$url_endpoint" in
-  "127.0.0.1:${proxy_port}" | "localhost:${proxy_port}") ;;
-  *)
-    echo "AGENTSVIEW_PROXY_PG_URL must connect through the flyctl proxy on 127.0.0.1:${proxy_port} (found ${url_endpoint})" >&2
-    exit 1
-    ;;
-esac
-
 # nc では local listener の起動しか確認できない。PostgreSQL protocol の応答を
 # 待ち、Fly private network から DB まで接続できてから処理を始める。
 command -v pg_isready >/dev/null 2>&1 || {
@@ -275,6 +261,7 @@ proxy_log="$(mktemp)"
 probe_log="$(mktemp)"
 push_log="$(mktemp)"
 projects_file="$(mktemp)"
+auth_dir="$(mktemp -d)"
 
 stop_proxy() {
   if [ -n "${proxy_pid:-}" ]; then
@@ -303,12 +290,22 @@ cleanup() {
     cat "$proxy_log" >&2
   fi
   rm -f "$proxy_log" "$probe_log" "$push_log" "$projects_file"
+  rm -rf "$auth_dir"
   return "$status"
 }
 
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# 接続先の検証と password の分離は dump と同じ command へ委譲する。readiness は
+# proxy の listen endpoint を見るため、URL の接続先が proxy と違うと「確認した
+# 接続先」と「実際に push する接続先」がずれる。command 側で scheme と
+# 127.0.0.1:${proxy_port} を検証し、password を除いた URL と .pgpass を書き出す。
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+export AGENTSVIEW_DUMP_CONTAINER_HOST="127.0.0.1"
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+probe_url="$(cat "$auth_dir/url")"
 
 start_proxy() {
   if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
@@ -338,8 +335,9 @@ wait_for_response() {
 }
 
 # push は書き込むため、standby/recovery と read-only transaction を除外する。
-# URL は argv（process table）に出さないよう PGDATABASE 経由で渡す。
-# pg_is_in_recovery() は boolean なので、text へ cast してから連結する。
+# psql は PGDATABASE の値を URI として展開せず database 名として扱うので、接続先は
+# -d で渡す。password は URL から分離済みで、PGPASSFILE から読ませて argv
+# （process table）へ出さない。
 # PGCONNECT_TIMEOUT は接続確立までしか縛らないため、proxy が接続だけ受け付けて
 # 応答を返さない場合に psql が待ち続ける。server 側は statement_timeout、
 # client 側は watchdog で 5 秒に打ち切り、readiness の deadline を必ず効かせる。
@@ -348,8 +346,9 @@ wait_for_response() {
 # fd を待って閉じないため、interrupt 時に probe だけ残る。
 probe_writable() {
   : >"$probe_log"
-  PGCONNECT_TIMEOUT=1 PGOPTIONS='-c statement_timeout=1000' PGDATABASE="$AGENTSVIEW_PROXY_PG_URL" \
-    psql -XAtqc "SELECT pg_is_in_recovery()::text || '|' || current_setting('transaction_read_only')" \
+  PGPASSFILE="$auth_dir/pgpass" PGCONNECT_TIMEOUT=1 PGOPTIONS='-c statement_timeout=1000' \
+    psql -XAtq -d "$probe_url" \
+    -c "SELECT CASE WHEN pg_is_in_recovery() THEN 'recovery' WHEN current_setting('transaction_read_only') = 'on' THEN 'readonly' ELSE 'writable' END" \
     >"$probe_log" 2>/dev/null &
   probe_pid=$!
   waited=0
@@ -375,7 +374,7 @@ wait_for_writable() {
     else
       postgres_state=""
     fi
-    if [ "$postgres_state" = "f|off" ]; then
+    if [ "$postgres_state" = "writable" ]; then
       return 0
     fi
     if ! kill -0 "${proxy_pid:-}" 2>/dev/null; then
@@ -383,7 +382,7 @@ wait_for_writable() {
       return 1
     fi
     if [ "$SECONDS" -ge "$deadline" ]; then
-      if [ "$postgres_state" = "f|on" ]; then
+      if [ "$postgres_state" = "readonly" ]; then
         echo "PostgreSQL primary is read-only. Fly Postgres enables read-only mode when /data usage exceeds 90%; check 'fly checks list -a ${proxy_app}' and free disk space." >&2
         return 78
       fi
