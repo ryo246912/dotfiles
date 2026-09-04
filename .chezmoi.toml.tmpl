@@ -91,13 +91,29 @@ if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   echo "$mise_hash" > "$state_dir/mise-config-hash"
 fi
 # 4) APM の user-scope dependencies を各エージェントへ反映する。
-#    mise install で apm 自体を導入した後に実行し、lockfile/commands の同期も既存 task に委ねる。
-echo "Running mise run apm:install..."
-CHEZMOI_SOURCE_DIR=$source_dir mise run apm:install || exit 1
+#    manifest/lockfile の内容が前回の成功時から変わった場合だけ実行し、毎回の apply で
+#    スキルの install・command 同期・rulesync generate-commands が走るのを避ける。
+hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
+calculate_apm_hash() {
+  for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
+    [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
+  done | hash_cmd
+}
+apm_hash=$(calculate_apm_hash)
+if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
+  echo "Running mise run apm:install..."
+  if CHEZMOI_SOURCE_DIR=$source_dir mise run apm:install; then
+    # install が lockfile を更新する場合があるため、完了後の内容をマーカーへ保存する。
+    calculate_apm_hash > "$state_dir/apm-hash" || exit 1
+  else
+    exit 1
+  fi
+else
+  echo "APM manifest and lockfile are unchanged; skipping skill installation."
+fi
 # 5) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {
     find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
