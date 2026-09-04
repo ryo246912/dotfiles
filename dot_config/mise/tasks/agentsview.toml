@@ -284,8 +284,17 @@ stop_proxy() {
   fi
 }
 
+stop_probe() {
+  if [ -n "${probe_pid:-}" ]; then
+    kill "$probe_pid" 2>/dev/null || true
+    wait "$probe_pid" 2>/dev/null || true
+    probe_pid=""
+  fi
+}
+
 cleanup() {
   status=$?
+  stop_probe
   stop_proxy
   # proxy 側の失敗理由（WireGuard 切断など）は log にしか残らないため、
   # task が失敗したときだけ出力する。
@@ -334,8 +343,9 @@ wait_for_response() {
 # PGCONNECT_TIMEOUT は接続確立までしか縛らないため、proxy が接続だけ受け付けて
 # 応答を返さない場合に psql が待ち続ける。server 側は statement_timeout、
 # client 側は watchdog で 5 秒に打ち切り、readiness の deadline を必ず効かせる。
-# 出力を pipe ではなく file で受けるのは、psql を kill しても command substitution が
-# 子 process の fd を待ち続けて閉じないため。
+# 出力を command substitution ではなく file で受ける。subshell で走らせると
+# probe_pid が cleanup から見えず、psql を kill しても substitution が子 process の
+# fd を待って閉じないため、interrupt 時に probe だけ残る。
 probe_writable() {
   : >"$probe_log"
   PGCONNECT_TIMEOUT=1 PGOPTIONS='-c statement_timeout=1000' PGDATABASE="$AGENTSVIEW_PROXY_PG_URL" \
@@ -345,21 +355,26 @@ probe_writable() {
   waited=0
   while kill -0 "$probe_pid" 2>/dev/null; do
     if [ "$waited" -ge 20 ]; then
-      kill "$probe_pid" 2>/dev/null || true
-      wait "$probe_pid" 2>/dev/null || true
+      stop_probe
       return 1
     fi
     waited=$((waited + 1))
     sleep 0.25
   done
-  wait "$probe_pid" || return 1
-  cat "$probe_log"
+  probe_status=0
+  wait "$probe_pid" || probe_status=$?
+  probe_pid=""
+  return "$probe_status"
 }
 
 wait_for_writable() {
   deadline=$((SECONDS + ready_timeout))
   while :; do
-    postgres_state="$(probe_writable || true)"
+    if probe_writable; then
+      postgres_state="$(tr -d '[:space:]' <"$probe_log")"
+    else
+      postgres_state=""
+    fi
     if [ "$postgres_state" = "f|off" ]; then
       return 0
     fi
