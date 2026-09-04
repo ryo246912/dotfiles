@@ -481,9 +481,11 @@ case "$usage_operation" in
       echo "AgentsView PostgreSQL retry and batch settings must be positive integers without leading zeros" >&2
       exit 1
     fi
-    # macOS 既定の bash 3.2 では set -u 下の "${arr[@]}" / "${#arr[@]}" が空 array で
-    # unbound variable になるため（4.4 で解消）、空判定は usage_args の文字列で行い、
-    # 展開は ${arr[@]+...} を使う。
+    # macOS 既定の bash 3.2 では、set -u 下で空 array を "${arr[@]}" や要素数で
+    # 展開すると unbound variable になる（4.4 で解消）。空判定は usage_args の
+    # 文字列で行い、展開は ${arr[@]+...} を使う。
+    # mise は run script を Tera で render するため、script 中に Tera の
+    # comment 開始（brace + hash）を書くと render 自体が失敗する。
     if [ -n "${usage_args:-}" ]; then
       push_with_retry ${operation_args[@]+"${operation_args[@]}"}
     else
