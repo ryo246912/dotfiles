@@ -389,7 +389,7 @@ fnox exec -- mise run agentsview:cockroach:push
 fnox exec -- mise run agentsview:cockroach:push -- --full --no-vectors
 ```
 
-CockroachDBにはpgvectorがないため、`--no-vectors`を付けなくてもvector phaseはskipされる。明示する場合は「session contentだけを送る」という運用意図が分かりやすくなる。incremental watermarkは接続target／project filterごとにlocal保存されるため、Fly PostgreSQL用watermarkとCockroachDB用watermarkは共有されない。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
+`agentsview:cockroach:push` taskは常に`--no-vectors`を追加し、CockroachDBに送る対象をsession contentへ限定する。AgentsViewはDB vendorだけを見てvector phaseを自動停止しないため、taskを介さず直接実行するときも`--no-vectors`または`push_vectors=false`を必ず指定する。incremental watermarkは接続target／project filterごとにlocal保存されるため、Fly PostgreSQL用watermarkとCockroachDB用watermarkは共有されない。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
 
 ### 「pull」の代わりに何を使うか
 

@@ -72,7 +72,7 @@ nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1 || {
 
 echo "[1/6] Bootstrapping the CockroachDB schema with AgentsView..."
 AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
-  agentsview pg push --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+  agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 
 echo "[2/6] Creating a private, data-only Fly backup: $dump_file"
 PGDATABASE="$AGENTSVIEW_OWNER_PROXY_PG_URL" pg_dump \

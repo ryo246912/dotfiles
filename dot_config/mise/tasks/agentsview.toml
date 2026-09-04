@@ -920,7 +920,7 @@ if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ];
 fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 AGENTSVIEW_PG_SCHEMA="${AGENTSVIEW_PG_SCHEMA:-agentsview}" \
-  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push "$@"
+  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push --no-vectors "$@"
 '''
 shell = "bash -c"
 
