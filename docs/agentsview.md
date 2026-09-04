@@ -156,7 +156,7 @@ curl -I https://ryo-agentsview.fly.dev
 
 ### 各 PC での設定
 
-`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。PostgreSQL client tools（`pg_isready`、`psql`）が必要で、`agentsview:pg:push` を引数なしで実行する場合は `jq` も使う。
+`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
 
 PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
 
@@ -303,12 +303,12 @@ VACUUM agentsview.sessions;
 
 ### バックアップとlocal viewerへのrestore
 
-Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:backup:local`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
+Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:backup:local:dump`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
 
 ```sh
 # Fly PostgreSQL上の既存データと、このmachineの未pushデータをlocal PostgreSQLへ
 # mergeし、まとめたdumpを作成
-mise run agentsview:pg:backup:local
+mise run agentsview:pg:backup:local:dump
 
 # Fly PostgreSQLをbackup
 mise run agentsview:pg:dump

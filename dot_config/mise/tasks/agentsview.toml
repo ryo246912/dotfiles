@@ -567,7 +567,7 @@ set -eu
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
 dump_path="${AGENTSVIEW_RESTORE_DUMP:-}"
 if [ -z "$dump_path" ]; then
-  dump_path="$({ find "$backup_dir" -maxdepth 1 -type f -name '*.dump' ! -name 'agentsview-local-*' -print 2>/dev/null || true; } |
+  dump_path="$({ find "$backup_dir" -maxdepth 1 -type f -name '*.dump' -print 2>/dev/null || true; } |
     sort -r |
     fzf --prompt='AgentsView dump> ' --height=40% --reverse || true)"
 fi
@@ -795,7 +795,7 @@ echo "Consolidated AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 
-["agentsview:pg:backup:local"]
+["agentsview:pg:backup:local:dump"]
 description = "Merge the remote dump and this machine's sessions locally, then create a consolidated backup"
 run = '''
 set -eu
