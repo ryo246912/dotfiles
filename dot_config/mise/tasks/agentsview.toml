@@ -134,9 +134,9 @@ fi
 export AGENTSVIEW_PROXY_PG_URL="$AGENTSVIEW_OWNER_PROXY_PG_URL"
 
 if [ -n "${AGENTSVIEW_MIGRATION_PROJECTS:-}" ]; then
-  mise run agentsview:pg:proxy -- push --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+  mise run agentsview:pg:proxy -- migrate --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 else
-  mise run agentsview:pg:proxy -- push
+  mise run agentsview:pg:proxy -- migrate
 fi
 '''
 shell = "bash -c"
@@ -418,7 +418,7 @@ case "$usage_operation" in
       dump) mise run agentsview:pg:dump:run ;;
     esac
     ;;
-  push)
+  push | migrate)
     command -v psql >/dev/null 2>&1 || {
       echo "psql is required (install PostgreSQL client tools)" >&2
       exit 1
@@ -427,12 +427,14 @@ case "$usage_operation" in
     retry_delay="${AGENTSVIEW_PG_PUSH_RETRY_DELAY:-30}"
     ready_timeout="${AGENTSVIEW_PG_READY_TIMEOUT:-120}"
     project_batch_sessions="${AGENTSVIEW_PG_PROJECT_BATCH_SESSIONS:-25}"
+    # migration は schema を作るのが目的で、push する session が 1 件も無くても
+    # 実行できる必要がある。batch 分割は project 一覧に依存するため通さない。
     # macOS 既定の bash 3.2 では、set -u 下で空 array を "${arr[@]}" や要素数で
     # 展開すると unbound variable になる（4.4 で解消）。空判定は usage_args の
     # 文字列で行い、展開は ${arr[@]+...} を使う。
     # mise は run script を Tera で render するため、script 中に Tera の
     # comment 開始（brace + hash）を書くと render 自体が失敗する。
-    if [ -n "${usage_args:-}" ]; then
+    if [ "$usage_operation" = "migrate" ] || [ -n "${usage_args:-}" ]; then
       push_with_retry ${operation_args[@]+"${operation_args[@]}"}
     else
       # 全 project を一度に push すると WAL/checkpoint が集中して backend が落ちる。
@@ -472,7 +474,7 @@ esac
 '''
 shell = "bash -c"
 usage = '''
-arg "<operation>" { choices "status" "push" "dump" }
+arg "<operation>" { choices "status" "push" "dump" "migrate" }
 arg "[args]..."
 '''
 
