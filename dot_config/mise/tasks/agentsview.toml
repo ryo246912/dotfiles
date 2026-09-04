@@ -795,7 +795,7 @@ echo "Consolidated AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 
-["agentsview:pg:backup:local:dump"]
+["agentsview:pg:remote-local:dump"]
 description = "Merge the remote dump and this machine's sessions locally, then create a consolidated backup"
 run = '''
 set -eu
