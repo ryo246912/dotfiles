@@ -256,7 +256,6 @@ local PostgreSQLへ差分反映される。serve終了時にはwatcherも停止�
 ```sh
 # 推奨: local Docker PostgreSQLをbackendにする
 mise run agentsview:serve
-
 ```
 
 恒久運用は、`AGENTSVIEW_PROXY_PG_URL` を fnox（bws）に持たせ、PC ごとに変えたい場合だけ
