@@ -315,7 +315,15 @@ backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/age
 # 同じ秒に2つdumpが走っても上書きしないようPIDを付ける。
 dump_path="${backup_dir}/agentsview-$(date +%Y%m%d-%H%M%S)-$$.dump"
 auth_dir="$(mktemp -d)"
-trap 'rm -rf "$auth_dir"' EXIT
+cleanup_dump() {
+  status=$?
+  rm -rf "$auth_dir"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$dump_path"
+  fi
+  return "$status"
+}
+trap cleanup_dump EXIT
 
 mkdir -p "$backup_dir"
 dump_dir="$(cd "$backup_dir" && pwd -P)"
