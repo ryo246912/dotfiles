@@ -303,6 +303,8 @@ VACUUM agentsview.sessions;
 
 ### バックアップとlocal viewerへのrestore
 
+Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:backup:local`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
+
 ```sh
 # Fly PostgreSQL上の既存データと、このmachineの未pushデータをlocal PostgreSQLへ
 # mergeし、まとめたdumpを作成
@@ -329,6 +331,14 @@ mise run agentsview:serve
 
 # local PostgreSQLを停止
 mise run agentsview:pg:local:down
+```
+
+ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:push`と`agentsview:pg:local:dump`を実行し、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
+
+```sh
+AGENTSVIEW_RESTORE_DUMP=/path/to/agentsview-local-other-machine.dump \
+  mise run agentsview:pg:local:restore
+mise run agentsview:pg:local:dump
 ```
 
 特定 PC のデータのみ削除したい場合:
