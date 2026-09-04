@@ -242,19 +242,10 @@ Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一�
 | `agentsview serve`    | local SQLite | そのPCがlocal sourceから収集したsession                     | SQLite固有の調査が必要な場合のみ |
 
 `agentsview pg serve` は設定されたPostgreSQLを直接読むviewerであり、PostgreSQLの内容を
-`~/.agentsview/*.sqlite`へpullするcommandではない。session APIはread-onlyだが、接続roleにDDL権限が
-ある場合は起動時にschema migrationを実行する。Fly viewerはread-only roleなのでmigrationをskipし、
-local viewerはdatabase ownerで接続するため必要なmigrationを適用できる。反対に、`agentsview serve` は
+`~/.agentsview/*.sqlite`へpullするcommandではない。反対に、`agentsview serve` は
 local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
 
-このrepositoryでは表示経路を揃えるため、localでも原則としてDocker PostgreSQLと
-`agentsview pg serve`を使う。`mise run agentsview:serve`はlocal PostgreSQL containerを起動し、
-local sourceをSQLiteへsyncしてPostgreSQLへ差分pushしてから`agentsview pg serve`を実行する。
-serve中は`agentsview pg push --watch`も並行実行するため、起動時だけでなく新規・更新sessionが継続的に
-local PostgreSQLへ差分反映される。serve終了時にはwatcherも停止する。
-
 ```sh
-# 推奨: local Docker PostgreSQLをbackendにする
 mise run agentsview:serve
 ```
 
