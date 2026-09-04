@@ -58,6 +58,8 @@ safe_url = urllib.parse.urlunsplit(
         "",
     )
 )
+
+
 def escape_pgpass(value: str) -> str:
     """Escape one libpq password-file field."""
 
