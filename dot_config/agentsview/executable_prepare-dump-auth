@@ -1,20 +1,37 @@
 #!/usr/bin/env python3
-"""AgentsViewの接続URIを検証し、安全なURIと.pgpassへ分離する。"""
+"""Fly proxyまたは明示許可したremote URIを安全なURIと.pgpassへ分離する。"""
 
 import os
 import pathlib
 import urllib.parse
 
-source = urllib.parse.urlsplit(os.environ["AGENTSVIEW_PROXY_PG_URL"])
+source_name = (
+    "AGENTSVIEW_DUMP_PG_URL"
+    if os.environ.get("AGENTSVIEW_DUMP_PG_URL")
+    else "AGENTSVIEW_PROXY_PG_URL"
+)
+source = urllib.parse.urlsplit(os.environ[source_name])
 proxy_port = int(os.environ.get("AGENTSVIEW_PG_PROXY_PORT", "15432"))
 if source.scheme not in {"postgres", "postgresql"}:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL must be a PostgreSQL URI")
+    raise SystemExit(f"{source_name} must be a PostgreSQL URI")
 try:
     source_port = source.port
 except ValueError:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL has an invalid port") from None
-if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_port:
-    raise SystemExit("AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy")
+    raise SystemExit(f"{source_name} has an invalid port") from None
+
+allow_remote = os.environ.get("AGENTSVIEW_DUMP_ALLOW_REMOTE") == "yes"
+if allow_remote:
+    if source_name != "AGENTSVIEW_DUMP_PG_URL":
+        raise SystemExit("remote dump requires AGENTSVIEW_DUMP_PG_URL")
+    if not source.hostname:
+        raise SystemExit("AGENTSVIEW_DUMP_PG_URL must contain a hostname")
+    container_host = source.hostname
+    container_port = source_port or 5432
+else:
+    if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_port:
+        raise SystemExit("AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy")
+    container_host = os.environ["AGENTSVIEW_DUMP_CONTAINER_HOST"]
+    container_port = proxy_port
 
 password = urllib.parse.unquote(source.password) if source.password else ""
 username = urllib.parse.unquote(source.username) if source.username else ""
@@ -25,13 +42,13 @@ for key, value in urllib.parse.parse_qsl(
     if key == "password":
         password = value
     elif key == "sslpassword":
-        raise SystemExit("AGENTSVIEW_PROXY_PG_URL must not contain sslpassword")
+        raise SystemExit(f"{source_name} must not contain sslpassword")
     else:
         query.append((key, value))
 
-host = os.environ["AGENTSVIEW_DUMP_CONTAINER_HOST"]
 quoted_user = urllib.parse.quote(username, safe="")
-netloc = f"{quoted_user + '@' if quoted_user else ''}{host}:{proxy_port}"
+url_host = f"[{container_host}]" if ":" in container_host else container_host
+netloc = f"{quoted_user + '@' if quoted_user else ''}{url_host}:{container_port}"
 safe_url = urllib.parse.urlunsplit(
     (
         source.scheme,
@@ -41,10 +58,20 @@ safe_url = urllib.parse.urlunsplit(
         "",
     )
 )
-pgpass = password.replace("\\", "\\\\").replace(":", "\\:")
+def escape_pgpass(value: str) -> str:
+    """Escape one libpq password-file field."""
+
+    return value.replace("\\", "\\\\").replace(":", "\\:")
+
+
+database = urllib.parse.unquote(source.path.lstrip("/")) or "*"
+pgpass = ":".join(
+    escape_pgpass(value)
+    for value in (container_host, str(container_port), database, username or "*", password)
+)
 
 auth_dir = pathlib.Path(os.environ["AGENTSVIEW_DUMP_AUTH_DIR"])
-for name, value in {"url": safe_url, "pgpass": f"*:*:*:*:{pgpass}\n"}.items():
+for name, value in {"url": safe_url, "pgpass": f"{pgpass}\n"}.items():
     path = auth_dir / name
     path.write_text(value)
     path.chmod(0o600)

@@ -393,15 +393,15 @@ CockroachDBにはpgvectorがないため、`--no-vectors`を付けなくてもve
 
 ### 「pull」の代わりに何を使うか
 
-| 目的                                      | 方法                                                                                                              |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                   |
-| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする         |
-| CockroachDB障害に備える                   | CockroachDB Cloudのbackup／exportとrestore rehearsalを使う。local PostgreSQLを自動replicaとはみなさない           |
-| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない |
-| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない     |
+| 目的                                      | 方法                                                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                           |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                 |
+| CockroachDB障害に備える                   | `agentsview:pg:remote-local:dump`でdataをlocal PostgreSQLへmergeし、custom-format backupを作る。自動replicaとはみなさない |
+| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない         |
+| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない             |
 
-CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのため`pg_dump`／`pg_restore`を「pull」として定期往復させる設計は採用しない。必要ならtableごとにcolumnを明示したapplication-level export/importを作り、upsert、削除、競合時のsource of truthを定義する。
+CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのためCockroachDBのschema dumpをPostgreSQLへそのままrestoreする設計は採用しない。このrepositoryの`agentsview:pg:remote-local:dump`はdata-only／column INSERTとしてexportし、現在のAgentsViewがlocal PostgreSQLへ作ったschemaに不足rowだけをtransaction内でmergeする。
 
 ### PR #1376のlocal PostgreSQL変更との関係
 
@@ -411,7 +411,20 @@ CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、�
 2. Fly proxyが実際にPostgreSQL protocolへ応答するまで待ってから旧DBをdumpする。
 3. rollback rehearsal用に「Fly PostgreSQLから取得したPostgreSQL dump」をlocal PostgreSQLへrestoreする。
 
-一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。PR #1376のbackup／restore taskをCockroachDBでも使いたい場合は、Fly proxy部分だけを接続URLへ置換するのではなく、CockroachDB用exportとPostgreSQL用importの互換性試験、型変換、件数・checksum照合を別taskとして実装する。
+一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。backupが必要なときだけ`mise run agentsview:pg:remote-local:dump`を実行し、CockroachDB data export、local merge、このmachineのlocal push、custom-format dumpを順に行う。
+
+```sh
+# CockroachDB data + このmachineのsessionを統合したlocal PostgreSQL dump
+fnox exec -- mise run agentsview:pg:remote-local:dump
+
+# 旧Fly PostgreSQLをsourceにするrollback期間中のcommand
+fnox exec -- mise run agentsview:pg:fly:remote-local:dump
+
+# remoteへ接続せず、現在のlocal PostgreSQLだけをdump
+mise run agentsview:pg:local:dump
+```
+
+CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。importはtransaction内で行い、schema／型が合わなければ全体をrollbackする。
 
 移行期間に同じlocal sessionをFly PostgreSQLとCockroachDBの両方へpushすること自体は可能だが、これはpull／replicationではなく2回の独立したpushである。長期dual-writeは削除、curation metadata、migration versionの差異を発見しにくいため、rehearsal期間だけに限定し、cutover後はCockroachDBを唯一のshared AgentsView databaseにする。
 

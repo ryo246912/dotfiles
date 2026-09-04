@@ -795,8 +795,8 @@ echo "Consolidated AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 
-["agentsview:pg:remote-local:dump"]
-description = "Merge the remote dump and this machine's sessions locally, then create a consolidated backup"
+["agentsview:pg:fly:remote-local:dump"]
+description = "Merge the Fly PostgreSQL dump and this machine's sessions locally, then create a consolidated backup"
 run = '''
 set -eu
 
@@ -811,6 +811,10 @@ AGENTSVIEW_RESTORE_DUMP="$dump_path" mise run agentsview:pg:local:restore
 mise run agentsview:pg:local:dump
 '''
 shell = "bash -c"
+
+["agentsview:pg:remote-local:dump"]
+description = "Merge CockroachDB data and this machine's sessions locally, then create a PostgreSQL backup"
+run         = "mise run agentsview:cockroach:remote-local:dump"
 
 ["agentsview:pg:local:status"]
 description = "Show session counts in the local AgentsView PostgreSQL container"
@@ -917,6 +921,93 @@ fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 AGENTSVIEW_PG_SCHEMA="${AGENTSVIEW_PG_SCHEMA:-agentsview}" \
   AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:dump:data"]
+description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
+hide = true
+run = '''
+set -eu
+
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:dump:data "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+dump_path="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+auth_dir="$(mktemp -d)"
+cleanup_dump() {
+  status=$?
+  rm -rf "$auth_dir"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$dump_path"
+  fi
+  return "$status"
+}
+trap cleanup_dump EXIT
+
+mkdir -p "$backup_dir"
+dump_dir="$(cd "$backup_dir" && pwd -P)"
+dump_name="$(basename "$dump_path")"
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+export AGENTSVIEW_DUMP_ALLOW_REMOTE=yes
+export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+pg_url="$(cat "$auth_dir/url")"
+
+docker run --rm \
+  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
+  --volume "$dump_dir:/backup" \
+  --env HOST_GID="$(id -g)" \
+  --env HOST_UID="$(id -u)" \
+  postgres:17 \
+  sh -c '
+set -eu
+getent passwd "$HOST_UID" >/dev/null ||
+  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
+install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
+export PGPASSFILE=/tmp/agentsview.pgpass
+umask 077
+exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
+' -- \
+    --dbname="$pg_url" --schema=agentsview --data-only --column-inserts \
+    --on-conflict-do-nothing --no-owner --no-privileges --file="/backup/$dump_name"
+
+test -s "$dump_path"
+echo "CockroachDB AgentsView data export: $dump_path"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:remote-local:dump"]
+description = "Merge CockroachDB rows into local PostgreSQL and create a consolidated custom-format backup"
+run = '''
+set -euo pipefail
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+mise run agentsview:cockroach:dump:data
+data_dump="$({ find "$backup_dir" -maxdepth 1 -type f -name 'agentsview-cockroach-data-*.sql' -print 2>/dev/null || true; } |
+  sort -r | head -n 1)"
+if [ -z "$data_dump" ]; then
+  echo "CockroachDB AgentsView data export was not created" >&2
+  exit 1
+fi
+
+# local schemaを現在のAgentsView versionへ揃えた後、remoteにだけ存在するrowをmergeする。
+# column名付きINSERTを使うため、CockroachDBのDDL／権限／sequenceはPostgreSQLへ持ち込まない。
+mise run agentsview:pg:local:push
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
+{
+  echo 'BEGIN;'
+  sed '/^SELECT pg_catalog.setval/d' "$data_dump"
+  echo 'COMMIT;'
+} | docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+    --set=ON_ERROR_STOP=1 --quiet --output=/dev/null'
+
+mise run agentsview:pg:local:dump
 '''
 shell = "bash -c"
 

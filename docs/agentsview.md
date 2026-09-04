@@ -308,12 +308,17 @@ VACUUM agentsview.sessions;
 
 ### バックアップとlocal viewerへのrestore
 
-Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。remoteへのpushを先に完了させる必要はなく、`agentsview:pg:remote-local:dump`がremoteの既存データをdumpした後、このmachineの未pushデータをlocal PostgreSQLへmergeして統合dumpを作成する。
+CockroachDB移行後は`agentsview:pg:remote-local:dump`がCockroachDBの**dataだけ**をcolumn名付きINSERTとしてexportし、現在versionのschemaを持つlocal PostgreSQLへ不足rowをmergeする。その後、このmachineのsessionをlocal PostgreSQLへpushしてcustom-formatの統合dumpを作成する。CockroachDB固有のDDL、role、sequenceはPostgreSQLへrestoreしない。
+
+旧Fly PostgreSQL用の同じ処理は`agentsview:pg:fly:remote-local:dump`として残す。Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。
 
 ```sh
-# Fly PostgreSQL上の既存データと、このmachineの未pushデータをlocal PostgreSQLへ
-# mergeし、まとめたdumpを作成
+# CockroachDB上の既存データと、このmachineのsessionをlocal PostgreSQLへ
+# mergeし、PostgreSQL custom-formatの統合dumpを作成
 mise run agentsview:pg:remote-local:dump
+
+# migration前／rollback用: Fly PostgreSQLをsourceとして同じ処理を行う
+mise run agentsview:pg:fly:remote-local:dump
 
 # Fly PostgreSQLをbackup
 mise run agentsview:pg:dump
@@ -347,6 +352,8 @@ mise run agentsview:pg:local:dump
 ```
 
 `agentsview:pg:local:dump`は、local PostgreSQLに`agentsview` schemaが無い場合はdumpせずに終了し、先に実行すべきtaskを表示する。schemaはlocal pushかrestoreで作成される。
+
+CockroachDB exportは`agentsview-cockroach-data-*.sql`、最終的なlocal PostgreSQL backupは`agentsview-local-*.dump`として`AGENTSVIEW_BACKUP_DIR`へ保存される。data importはtransaction内で実行され、schema／型の非互換や途中のINSERT失敗があればlocal PostgreSQLへのmerge全体をrollbackする。同じprimary keyがlocalにある場合はlocal rowを維持するため、これはCockroachDBの完全replicaではなく、disaster recovery／閲覧用の統合backupである。
 
 特定 PC のデータのみ削除したい場合:
 
