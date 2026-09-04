@@ -353,7 +353,69 @@ fnox exec -- mise run agentsview:cockroach:push -- --projects '<small-project>'
 
 semantic／hybrid searchを利用している場合、CockroachDBではpgvectorが使えないためここで中止する。利用しない場合は、vector searchが`501 Not Available`になる機能差を受け入れて先へ進む。
 
-## 4. Cloud Run secretとserviceを作成
+## 4. local dataとCockroachDBのpush／pull
+
+### 結論: pushは可能、DBからlocalへのpullは提供されない
+
+AgentsViewの同期元はlocal PostgreSQLではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、PostgreSQL serverからlocal SQLite／session fileへ戻す`pg pull` commandはない。
+
+CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCockroachDBをshared databaseとして扱える。このrepositoryでは次の経路を採用する。
+
+```text
+各PCのsession file + local SQLite
+    │
+    │ agentsview pg push（public TLS、push role）
+    ▼
+CockroachDB Cloud Basic
+    │
+    │ SELECTのみ（read role）
+    ▼
+Cloud Run上のagentsview pg serve
+```
+
+通常の差分pushはFly proxyを使わず、各PCからCockroachDBのTLS endpointへ直接送る。
+
+```sh
+# 接続とwatermarkを確認
+fnox exec -- mise run agentsview:cockroach:status
+
+# まず1 projectだけ
+fnox exec -- mise run agentsview:cockroach:push -- --projects '<project>'
+
+# 差分を全projectへ反映
+fnox exec -- mise run agentsview:cockroach:push
+
+# schema resetや内容修復後に限り全件を再送
+fnox exec -- mise run agentsview:cockroach:push -- --full --no-vectors
+```
+
+CockroachDBにはpgvectorがないため、`--no-vectors`を付けなくてもvector phaseはskipされる。明示する場合は「session contentだけを送る」という運用意図が分かりやすくなる。incremental watermarkは接続target／project filterごとにlocal保存されるため、Fly PostgreSQL用watermarkとCockroachDB用watermarkは共有されない。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
+
+### 「pull」の代わりに何を使うか
+
+| 目的                                      | 方法                                                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                   |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする         |
+| CockroachDB障害に備える                   | CockroachDB Cloudのbackup／exportとrestore rehearsalを使う。local PostgreSQLを自動replicaとはみなさない           |
+| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない |
+| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない     |
+
+CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのため`pg_dump`／`pg_restore`を「pull」として定期往復させる設計は採用しない。必要ならtableごとにcolumnを明示したapplication-level export/importを作り、upsert、削除、競合時のsource of truthを定義する。
+
+### PR #1376のlocal PostgreSQL変更との関係
+
+[PR #1376](https://github.com/ryo246912/dotfiles/pull/1376)で検討しているproxy readiness、Fly PostgreSQL backup、local PostgreSQL restoreは、次の用途では引き続き有効である。
+
+1. CockroachDB cutover前のFly PostgreSQL snapshotをlocalへ退避する。
+2. Fly proxyが実際にPostgreSQL protocolへ応答するまで待ってから旧DBをdumpする。
+3. rollback rehearsal用に「Fly PostgreSQLから取得したPostgreSQL dump」をlocal PostgreSQLへrestoreする。
+
+一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。PR #1376のbackup／restore taskをCockroachDBでも使いたい場合は、Fly proxy部分だけを接続URLへ置換するのではなく、CockroachDB用exportとPostgreSQL用importの互換性試験、型変換、件数・checksum照合を別taskとして実装する。
+
+移行期間に同じlocal sessionをFly PostgreSQLとCockroachDBの両方へpushすること自体は可能だが、これはpull／replicationではなく2回の独立したpushである。長期dual-writeは削除、curation metadata、migration versionの差異を発見しにくいため、rehearsal期間だけに限定し、cutover後はCockroachDBを唯一のshared AgentsView databaseにする。
+
+## 5. Cloud Run secretとserviceを作成
 
 初回はCloud Run URLがまだないため、config作成用に一時URLを指定する。
 
@@ -386,7 +448,7 @@ Cloud Runでは次のようにsecretを注入する。
 
 `--allow-unauthenticated`はCloud Run URLへの到達だけを許可する。AgentsView自身の`require_auth=true`とbearer tokenは維持する。
 
-## 5. Cloud Runを検証
+## 6. Cloud Runを検証
 
 ```sh
 url=$(gcloud run services describe ryo-agentsview \
@@ -407,7 +469,7 @@ Google Cloud Consoleで次も確認する。
 - secretの値がlogへ出ていない
 - CockroachDB RU、storage、connection数が無料枠内
 
-## 6. Cutover
+## 7. Cutover
 
 1. 全PCで旧`mise run agentsview:pg:push`の実行を止める。
 2. Fly AgentsView appを停止し、旧viewerからのreadを止める。
@@ -420,7 +482,7 @@ Google Cloud Consoleで次も確認する。
 
 旧Fly schemaはこの時点で削除しない。
 
-## 7. Rollback
+## 8. Rollback
 
 ### 新DBへのpush再開前
 
@@ -436,7 +498,7 @@ Cloud Run smoke testに失敗したら、pushを再開せず、各PCの接続先
 
 この差分export／importを事前rehearsalできない場合、新DBへのwrite再開後のrollbackは実施せず、CockroachDB側を修復する。
 
-## 8. Flyの容量を解放
+## 9. Flyの容量を解放
 
 最低1〜2週間の観察期間を置き、全PCがCockroachDBへpushし、backup／restore rehearsalも成功してから実施する。
 
