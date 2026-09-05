@@ -172,14 +172,30 @@ sed -i.bak \
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
 
-secret storeから値を注入する。使用しているsecret storeがTerraform用passwordをfnoxへ公開していない場合だけ、password managerから現在のterminalへ手動exportする。command lineへliteralを書かない。
+CockroachDB API keyと3つのpasswordは、現在のshellへ手動`export`せずfnoxからTerraform processへ渡す。Bitwarden Secrets Managerに次の名前で登録し、`dot_config/fnox/config.toml`のmappingと一致させる。
+
+```text
+COCKROACH_API_KEY
+TF_VAR_cockroach_owner_password
+TF_VAR_cockroach_push_password
+TF_VAR_cockroach_read_password
+```
+
+値を表示せず、fnoxが4つすべて解決できることを確認する。
 
 ```sh
-export COCKROACH_API_KEY='<secret storeから注入>'
-export TF_VAR_cockroach_owner_password='<secret storeから注入>'
-export TF_VAR_cockroach_push_password='<secret storeから注入>'
-export TF_VAR_cockroach_read_password='<secret storeから注入>'
+fnox exec -- sh -c '
+  for name in COCKROACH_API_KEY \
+    TF_VAR_cockroach_owner_password \
+    TF_VAR_cockroach_push_password \
+    TF_VAR_cockroach_read_password; do
+    eval "test -n \"\${$name:-}\"" || { echo "$name=missing" >&2; exit 1; }
+    echo "$name=set"
+  done
+'
 ```
+
+以後、CockroachDB providerまたはSQL user resourceを読む`terraform plan`／`apply`は必ず`fnox exec --`経由で実行する。`fnox exec -- terraform ...`の後ろへ`-var`でpasswordを重ねて渡さない。
 
 初期化と静的確認を行う。
 
@@ -194,7 +210,7 @@ terraform -chdir=terraform/agentsview validate
 初回だけ、Cloud Run service以外の土台をtarget applyする。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
 
 ```sh
-terraform -chdir=terraform/agentsview apply \
+fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_secret_manager_secret.pg_url \
@@ -221,14 +237,19 @@ terraform -chdir=terraform/agentsview output cockroach_sql_host
 
 ##### 作業5. CockroachDB接続URL、schema、最小権限を作る
 
-Terraform outputと作業2のpasswordから3本のURLを組み立てる。16進passwordを使っているため追加のURL encodeは不要。
+Terraform outputでhostとdatabaseを確認する。passwordはfnoxの子processだけへ渡すため、現在のshellへ`export`しない。
 
 ```sh
-export COCKROACH_HOST=$(terraform -chdir=terraform/agentsview output -raw cockroach_sql_host)
-export COCKROACH_DATABASE=$(terraform -chdir=terraform/agentsview output -raw cockroach_database)
-export AGENTSVIEW_COCKROACH_OWNER_PG_URL="postgresql://agentsview_owner:${TF_VAR_cockroach_owner_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
-export AGENTSVIEW_COCKROACH_PUSH_PG_URL="postgresql://agentsview_push:${TF_VAR_cockroach_push_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
-export AGENTSVIEW_COCKROACH_READ_PG_URL="postgresql://agentsview_read:${TF_VAR_cockroach_read_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
+terraform -chdir=terraform/agentsview output -raw cockroach_sql_host
+terraform -chdir=terraform/agentsview output -raw cockroach_database
+```
+
+Bitwarden Secrets ManagerのUIで、作業2に保存した各passwordと上記outputを使い、次のtemplateから3本のURLを作成する。16進passwordなので追加のURL encodeは不要である。
+
+```text
+postgresql://agentsview_owner:<owner password>@<SQL host>:26257/<database>?sslmode=verify-full
+postgresql://agentsview_push:<push password>@<SQL host>:26257/<database>?sslmode=verify-full
+postgresql://agentsview_read:<read password>@<SQL host>:26257/<database>?sslmode=verify-full
 ```
 
 3本をBitwarden Secrets Managerへ同名で登録する。CockroachDB Consoleの**Connect**画面が別port、database、CA指定を案内した場合は、手作業で組み立てた値よりConsoleの接続文字列を優先し、usernameとpasswordだけ各role用に差し替える。
@@ -237,15 +258,17 @@ export AGENTSVIEW_COCKROACH_READ_PG_URL="postgresql://agentsview_read:${TF_VAR_c
 
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
-AGENTSVIEW_PG_SCHEMA=agentsview \
-AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
-  agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+fnox exec -- sh -c '
+  AGENTSVIEW_PG_SCHEMA=agentsview \
+  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
+    agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+'
 ```
 
 続いてowner接続で最小権限を設定する。
 
 ```sh
-psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
 GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
 GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
@@ -256,15 +279,17 @@ SQL
 read userで書き込みができないことも確認する。2番目のcommandは失敗が正解である。
 
 ```sh
-psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
-  -c 'SELECT count(*) FROM agentsview.sessions;'
-if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
-  -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
-  echo 'ERROR: read user can write' >&2
-  exit 1
-else
-  echo 'OK: read user is read-only'
-fi
+fnox exec -- sh -c '
+  psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "SELECT count(*) FROM agentsview.sessions;"
+  if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
+    echo "ERROR: read user can write" >&2
+    exit 1
+  else
+    echo "OK: read user is read-only"
+  fi
+'
 ```
 
 **完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
@@ -315,9 +340,9 @@ Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enab
 
 ```sh
 export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
-terraform -chdir=terraform/agentsview plan -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview plan -out=tfplan
 terraform -chdir=terraform/agentsview show tfplan
-terraform -chdir=terraform/agentsview apply tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
 Cloud Run URLを取得し、placeholder configを実URLへ置き換える。
@@ -328,7 +353,7 @@ fnox exec -- mise run agentsview:cloudrun:secrets
 export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
   --format='value(name)' | sed 's#.*/##')
-terraform -chdir=terraform/agentsview apply
+fnox exec -- terraform -chdir=terraform/agentsview apply
 ```
 
 Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。
@@ -594,10 +619,13 @@ terraform validate
 CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
 
 ```sh
-export COCKROACH_API_KEY='<CockroachDB organization API key>'
-export TF_VAR_cockroach_owner_password='<random owner password>'
-export TF_VAR_cockroach_push_password='<random push password>'
-export TF_VAR_cockroach_read_password='<random read password>'
+fnox exec -- sh -c '
+  test -n "$COCKROACH_API_KEY"
+  test -n "$TF_VAR_cockroach_owner_password"
+  test -n "$TF_VAR_cockroach_push_password"
+  test -n "$TF_VAR_cockroach_read_password"
+  echo "CockroachDB Terraform secrets: set"
+'
 ```
 
 #### 2.3 bootstrap apply
@@ -605,7 +633,7 @@ export TF_VAR_cockroach_read_password='<random read password>'
 最初はArtifact Registryにimageがなく、Secret Managerにversionもないため、依存resourceだけtarget applyする。
 
 ```sh
-terraform apply \
+fnox exec -- terraform apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
@@ -646,8 +674,8 @@ export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-co
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)' | sed 's#.*/##')
 
 cd terraform/agentsview
-terraform plan -out=tfplan
-terraform apply tfplan
+fnox exec -- terraform plan -out=tfplan
+fnox exec -- terraform apply tfplan
 ```
 
 planで`cockroach_cluster`が`plan = "BASIC"`、Cloud Runがmin 0／max 2、1 vCPU／512 MiBであることを確認する。`terraform apply`後に出る`cloud_run_service_url`を`AGENTSVIEW_CLOUD_RUN_URL`へ設定し、config secretを更新して新version番号で再applyする。
