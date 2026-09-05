@@ -75,11 +75,28 @@ flyctl auth login
 
 Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDBのcluster作成画面で選択可能なregion名を確認してから値を決める。
 
+###### 選択するregion
+
+**日本から個人利用する現在の構成では、CockroachDBとCloud Runを両方`us-west2`にする。** CockroachDB Consoleで表示されるCaliforniaは`us-west2`、Google Cloudのregion表記ではLos Angelesである。利用者から北米西海岸までの経路が、Iowa／South Carolinaより短くなりやすく、Cloud RunとDBを同一region名に揃えられるためである。[Cloud Runの公式region一覧](https://cloud.google.com/run/docs/locations)でも`us-west2`、`us-central1`、`us-east1`、`asia-south1`を利用できる。
+
+候補の優先順位は次のとおり。
+
+| 優先 | CockroachDBの表示 | region ID     | Cloud Runも置く場所 | この構成での判断                                                        |
+| ---: | ----------------- | ------------- | ------------------- | ----------------------------------------------------------------------- |
+|    1 | California        | `us-west2`    | `us-west2`          | **採用**。日本からの対話的なviewer利用と、app／DB間の近さを両立しやすい |
+|    2 | Iowa              | `us-central1` | `us-central1`       | 西海岸が利用できない場合。`us-centralq`ではなく`us-central1`            |
+|    3 | Mumbai            | `asia-south1` | `asia-south1`       | 主な利用者がインド／南アジアにいる場合だけ優先                          |
+|    4 | South Carolina    | `us-east1`    | `us-east1`          | 主な利用者が北米東海岸にいる場合向け。日本中心では優先しない            |
+
+重要なのは、Cloud Runだけ東京など別regionへ置かず、**選んだCockroachDB regionとCloud Runのregion IDを一致させること**である。CockroachDBはGoogle Cloudとは別serviceなので同一region名でも無料通信を保証するものではないが、異なる大陸／米国内regionへ分離するよりappとDB間のlatencyを抑えやすい。Atuin app／DBはFly.io内に残るため、この選択の影響を受けない。
+
+本番決定前に4候補を作り比べる必要はない。まず`us-west2`でrehearsalし、各PCからCloud Runへのp95、Cloud Run logのDB query時間、CockroachDB ConsoleのSQL latencyを記録する。許容できない場合だけ`us-central1`を短期間PoCし、低い方へ作り直す。CockroachDB cluster作成後のregion変更を前提にせず、Fly schemaを削除する前に決定する。
+
 ```sh
 export GCP_PROJECT_ID='<google-cloud-project-id>'
-export GCP_REGION='us-central1'
+export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
-export COCKROACH_REGION='us-central1'
+export COCKROACH_REGION='us-west2'
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
 export TF_VAR_gcp_region="$GCP_REGION"
 export TF_VAR_cockroach_region="$COCKROACH_REGION"
@@ -150,7 +167,7 @@ Terraform変数fileを作る。このfileにpasswordやAPI keyを記載しない
 cp terraform/agentsview/terraform.tfvars.example terraform/agentsview/terraform.tfvars
 sed -i.bak \
   -e "s/replace-with-project-id/${GCP_PROJECT_ID}/g" \
-  -e "s/us-central1/${GCP_REGION}/g" \
+  -e "s/us-west2/${GCP_REGION}/g" \
   terraform/agentsview/terraform.tfvars
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
@@ -547,7 +564,7 @@ state bucketそのものは自身のstateで管理できないため、一度だ
 
 ```sh
 export GCP_PROJECT_ID='<project-id>'
-export GCP_REGION='us-central1'
+export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
 
 gcloud config set project "$GCP_PROJECT_ID"
@@ -793,7 +810,7 @@ CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary
 
 ```sh
 export GCP_PROJECT_ID='<project-id>'
-export GCP_REGION='us-central1'
+export GCP_REGION='us-west2'
 export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
 export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
 

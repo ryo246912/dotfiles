@@ -4,7 +4,7 @@ set -euo pipefail
 : "${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}"
 : "${GCP_RUNTIME_SERVICE_ACCOUNT:?Set GCP_RUNTIME_SERVICE_ACCOUNT}"
 
-region="${GCP_REGION:-us-central1}"
+region="${GCP_REGION:-us-west2}"
 service="${AGENTSVIEW_CLOUD_RUN_SERVICE:-ryo-agentsview}"
 image="${region}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:0.38.1"
 

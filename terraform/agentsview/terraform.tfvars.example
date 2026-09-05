@@ -1,6 +1,6 @@
 gcp_project_id   = "replace-with-project-id"
-gcp_region       = "us-central1"
-cockroach_region = "us-central1"
+gcp_region       = "us-west2"
+cockroach_region = "us-west2"
 
 # GitHub Actions replaces this with an immutable commit SHA tag.
-agentsview_image = "us-central1-docker.pkg.dev/replace-with-project-id/agentsview/agentsview:bootstrap"
+agentsview_image = "us-west2-docker.pkg.dev/replace-with-project-id/agentsview/agentsview:bootstrap"

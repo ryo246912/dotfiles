@@ -6,7 +6,7 @@ variable "gcp_project_id" {
 variable "gcp_region" {
   description = "Cloud Run and Artifact Registry region."
   type        = string
-  default     = "us-central1"
+  default     = "us-west2"
 }
 
 variable "agentsview_image" {
@@ -53,7 +53,7 @@ variable "cockroach_cluster_name" {
 variable "cockroach_region" {
   description = "CockroachDB GCP region near Cloud Run."
   type        = string
-  default     = "us-central1"
+  default     = "us-west2"
 }
 
 variable "cockroach_database_name" {
