@@ -236,9 +236,9 @@ WHERE schemaname = 'agentsview';
 umask 077
 mkdir -p ~/backup
 fnox exec -- sh -c '
-  PGDATABASE="$AGENTSVIEW_OWNER_PROXY_PG_URL" pg_dump -Fc \
+  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc \
     -f "$HOME/backup/fly-all-$(date -u +%Y%m%dT%H%M%SZ).dump"
-  PGDATABASE="$AGENTSVIEW_OWNER_PROXY_PG_URL" pg_dump -Fc -n agentsview \
+  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc -n agentsview \
     -f "$HOME/backup/agentsview-$(date -u +%Y%m%dT%H%M%SZ).dump"
 '
 ```
