@@ -34,3 +34,11 @@ resource "google_artifact_registry_repository_iam_member" "cloud_build_writer" {
   role       = "roles/artifactregistry.writer"
   member     = "serviceAccount:${each.value}"
 }
+
+resource "google_artifact_registry_repository_iam_member" "deploy_writer" {
+  project    = var.gcp_project_id
+  location   = google_artifact_registry_repository.agentsview.location
+  repository = google_artifact_registry_repository.agentsview.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.deploy.email}"
+}

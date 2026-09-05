@@ -18,6 +18,8 @@ try:
     source_port = source.port
 except ValueError:
     raise SystemExit(f"{source_name} has an invalid port") from None
+if source_port is not None and not 1 <= source_port <= 65535:
+    raise SystemExit(f"{source_name} has an invalid port")
 
 allow_remote = os.environ.get("AGENTSVIEW_DUMP_ALLOW_REMOTE") == "yes"
 if allow_remote:
@@ -26,7 +28,7 @@ if allow_remote:
     if not source.hostname:
         raise SystemExit("AGENTSVIEW_DUMP_PG_URL must contain a hostname")
     container_host = source.hostname
-    container_port = source_port or 5432
+    container_port = 5432 if source_port is None else source_port
 else:
     if source.hostname not in {"127.0.0.1", "localhost"} or source_port != proxy_port:
         raise SystemExit("AGENTSVIEW_PROXY_PG_URL must point to the local Fly proxy")

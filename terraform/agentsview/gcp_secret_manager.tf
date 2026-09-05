@@ -33,3 +33,17 @@ resource "google_secret_manager_secret_iam_member" "runtime_config" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
+
+resource "google_secret_manager_secret_iam_member" "deploy_pg_url_version_adder" {
+  project   = var.gcp_project_id
+  secret_id = google_secret_manager_secret.pg_url.secret_id
+  role      = "roles/secretmanager.secretVersionAdder"
+  member    = "serviceAccount:${google_service_account.deploy.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "deploy_config_version_adder" {
+  project   = var.gcp_project_id
+  secret_id = google_secret_manager_secret.config.secret_id
+  role      = "roles/secretmanager.secretVersionAdder"
+  member    = "serviceAccount:${google_service_account.deploy.email}"
+}

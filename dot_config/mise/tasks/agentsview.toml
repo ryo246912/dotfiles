@@ -1007,6 +1007,38 @@ compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agent
   sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
     --set=ON_ERROR_STOP=1 --quiet --output=/dev/null'
 
+# Explicit IDs from CockroachDB do not advance PostgreSQL sequences. Move each
+# owned sequence forward only; never rewind a sequence to an older snapshot.
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
+DO $$
+DECLARE
+  seq record;
+  max_id bigint;
+  cur_val bigint;
+  cur_called boolean;
+BEGIN
+  FOR seq IN
+    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
+    FROM pg_class s
+    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
+    JOIN pg_class t ON t.oid = d.refobjid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+    JOIN pg_namespace n ON n.oid = s.relnamespace
+    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
+  LOOP
+    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
+      INTO max_id;
+    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
+      INTO cur_val, cur_called;
+    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
+      PERFORM setval(seq.seq_name, max_id, true);
+    END IF;
+  END LOOP;
+END
+$$;
+SQL
+
 mise run agentsview:pg:local:dump
 '''
 shell = "bash -c"

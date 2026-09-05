@@ -508,7 +508,7 @@ CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、�
 2. Fly proxyが実際にPostgreSQL protocolへ応答するまで待ってから旧DBをdumpする。
 3. rollback rehearsal用に「Fly PostgreSQLから取得したPostgreSQL dump」をlocal PostgreSQLへrestoreする。
 
-一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。backupが必要なときだけ`mise run agentsview:pg:remote-local:dump`を実行し、CockroachDB data export、local merge、このmachineのlocal push、custom-format dumpを順に行う。
+一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。backupが必要なときだけ`mise run agentsview:pg:remote-local:dump`を実行し、このmachineのlocal push、CockroachDB data export、local merge、sequence補正、custom-format dumpを順に行う。
 
 ```sh
 # CockroachDB data + このmachineのsessionを統合したlocal PostgreSQL dump

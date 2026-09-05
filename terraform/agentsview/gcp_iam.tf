@@ -2,24 +2,26 @@ resource "google_service_account" "runtime" {
   project      = var.gcp_project_id
   account_id   = "agentsview-runtime"
   display_name = "AgentsView Cloud Run runtime"
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_service_account" "deploy" {
   project      = var.gcp_project_id
   account_id   = "agentsview-deploy"
   display_name = "AgentsView GitHub Actions deploy"
+
+  depends_on = [google_project_service.required]
 }
 
+# IAM, WIF, API enablement, and project policy remain operator-managed. CI gets
+# only the permissions required to start builds, update Cloud Run, and consume
+# enabled services; it cannot rewrite project IAM or administer secrets.
 locals {
   deploy_project_roles = toset([
-    "roles/artifactregistry.admin",
     "roles/cloudbuild.builds.editor",
-    "roles/iam.serviceAccountAdmin",
-    "roles/iam.workloadIdentityPoolAdmin",
-    "roles/resourcemanager.projectIamAdmin",
     "roles/run.admin",
-    "roles/secretmanager.admin",
-    "roles/serviceusage.serviceUsageAdmin",
+    "roles/serviceusage.serviceUsageConsumer",
   ])
 }
 
