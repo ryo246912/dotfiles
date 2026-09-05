@@ -29,7 +29,7 @@ dependencies:
       alias: tsumiki
     - git: ctxrs/ctx
       path: skills/ctx-agent-history-search
-      ref: v0.25.0
+      ref: v1.2.4
       alias: ctx-agent-history-search
     - git: mattpocock/skills
       path: skills/engineering/resolving-merge-conflicts
