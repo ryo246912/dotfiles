@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [session-migrate（Claude Code / Codex のセッション引き継ぎ）](docs/session-migrate.md)
