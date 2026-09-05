@@ -21,38 +21,35 @@
 
 #### A. 完了条件と作業順序
 
-次の順序を崩さない。
+以下の**作業1〜10を番号順に実行する**。各作業末尾の「完了確認」が通るまで次へ進まない。Google Cloud／CockroachDBのconsole表記は変更されることがあるため、表記が異なる場合は併記した公式documentへのlinkから同じ機能を開く。
 
-1. 必要なaccount、CLI、課金alertを準備する。
-2. 作業変数とpasswordを決め、secret storeへ保存する。
-3. Terraform state bucketを手動で作る。
-4. TerraformでCockroachDB、Google Cloudの土台を作る。
-5. CockroachDBへschemaを作成し、roleへ最小権限を付与する。
-6. Artifact Registryへ最初のimageをbuildする。
-7. Secret Managerへ接続URLとconfigの最初のversionを登録する。
-8. Terraformの通常applyでCloud Runを作る。
-9. 小規模データで移行rehearsalを行い、Cloud Runを検証する。
-10. 書き込み停止を確認して本番cutoverし、観察期間後にFly側のAgentsViewだけを削除する。
+##### 作業1. account、CLI、課金alertを準備する
 
-完了時の構成は次のとおり。
+###### Google CloudのUI操作
 
-```text
-Fly.io: Atuin app ──private──> 既存Fly PostgreSQL（Atuinのみ）
-Google Cloud Run: AgentsView app ──TLS──> CockroachDB Cloud Basic
-各PC: session files ──agentsview pg push/TLS──> CockroachDB Cloud Basic
-```
+1. [Google Cloud Console](https://console.cloud.google.com/)へloginする。
+2. 上部のproject selectorを開き、**NEW PROJECT／新しいプロジェクト**を押す。
+3. Project nameに`agentsview`等を入力し、Organization／Locationを選択して**CREATE**を押す。
+4. 作成したprojectを選び、**Billing > Link a billing account**からbilling accountを紐付ける。無料枠を使う場合もbillingの有効化は必要。
+5. **Billing > Budgets & alerts > CREATE BUDGET**を開き、scopeをこのprojectだけに限定する。
+6. 月額予算を自分が許容する最小額にし、50%／90%／100%通知を有効化する。budgetは課金を自動停止しないため、通知先emailも確認する。
 
-#### B. accountと権限を準備する
+###### CockroachDB CloudのUI操作
 
-- Google Cloudでbillingを有効にしたprojectを1つ用意する。無料枠を使う場合もbilling accountは必要。
-- CockroachDB Cloud organizationを作り、Terraform用organization API keyを発行する。
-- GitHub Actionsを後で使う場合はrepositoryのEnvironment `production`を作る。初回bootstrapはlocalで行う。
-- Fly.ioの`psgl` appへ接続できるaccountを維持する。Atuin app／databaseは変更しない。
-- Google Cloud Billing budget、Cloud Run、CockroachDB RU／storageのalertを、データ投入前に作る。
+1. [CockroachDB Cloud Console](https://cockroachlabs.cloud/)へloginし、organizationを作成または選択する。
+2. 左navigationの**Access Management > API Keys**を開く。
+3. **Create API key**を押し、Terraform専用名を入力する。
+4. cluster／SQL userを作成できるorganization権限だけを選び、keyを作成する。
+5. 表示されたsecretは再表示できないため、直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。画面やterminalへ貼ったままにしない。
 
-最低限必要なcommandを確認する。
+###### CLI準備
+
+repository rootでtoolをinstallし、versionを確認する。
 
 ```sh
+mise trust
+mise install
+
 git --version
 mise --version
 fnox --version
@@ -64,60 +61,325 @@ pg_dump --version
 docker version
 ```
 
-不足するtoolはこのrepositoryのmise設定に従ってinstallする。
+Google CloudとFly.ioへloginする。
 
 ```sh
-mise trust
-mise install
+gcloud auth login
+gcloud auth application-default login
+flyctl auth login
 ```
 
-#### C. 固定値とsecretを準備する
+**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB API keyがsecret storeに保存され、上記commandがすべてversionを返す。
 
-同じterminalで以後使う非secret値を設定する。Cloud RunとCockroachDBは可能な限り近いregionを選ぶ。
+##### 作業2. 固定値、password、ローカルsecretを準備する
+
+Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDBのcluster作成画面で選択可能なregion名を確認してから値を決める。
 
 ```sh
 export GCP_PROJECT_ID='<google-cloud-project-id>'
 export GCP_REGION='us-central1'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
-export COCKROACH_REGION='<cockroach-supported-gcp-region>'
+export COCKROACH_REGION='us-central1'
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
 export TF_VAR_gcp_region="$GCP_REGION"
 export TF_VAR_cockroach_region="$COCKROACH_REGION"
 export TF_VAR_github_repository='ryo246912/dotfiles'
+
+gcloud config set project "$GCP_PROJECT_ID"
+gcloud config set run/region "$GCP_REGION"
+gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectId)'
 ```
 
-owner／push／readごとに別passwordを生成して、先にBitwarden Secrets Manager等へ保存する。値をshell history、`terraform.tfvars`、Git、CI logへ書かない。
+URLへ安全に埋め込める16進passwordとAgentsView tokenを生成する。各出力をそれぞれ別のBitwarden secretへ保存し、terminalのscrollbackを消す。
 
 ```sh
-openssl rand -base64 32
-openssl rand -base64 32
-openssl rand -base64 32
+openssl rand -hex 32 # TF_VAR_cockroach_owner_password
+openssl rand -hex 32 # TF_VAR_cockroach_push_password
+openssl rand -hex 32 # TF_VAR_cockroach_read_password
+openssl rand -hex 32 # AGENTSVIEW_AUTH_TOKEN
+openssl rand -hex 32 # AGENTSVIEW_CURSOR_SECRET
 ```
 
-secret storeから次を環境変数として注入できる状態にする。
+Bitwarden Secrets ManagerのUIでprojectを開き、**New secret**から次の5件を作る。CockroachDB URL 3件はcluster作成後の作業4で追加する。
 
 ```text
-COCKROACH_API_KEY
 TF_VAR_cockroach_owner_password
 TF_VAR_cockroach_push_password
 TF_VAR_cockroach_read_password
-AGENTSVIEW_COCKROACH_OWNER_PG_URL   # cluster作成後に登録
-AGENTSVIEW_COCKROACH_PUSH_PG_URL    # cluster作成後に登録
-AGENTSVIEW_COCKROACH_READ_PG_URL    # cluster作成後に登録
-AGENTSVIEW_CONFIG_TOML              # Cloud Run URL確定後に更新
+AGENTSVIEW_AUTH_TOKEN
+AGENTSVIEW_CURSOR_SECRET
 ```
 
-#### D. 実行前チェックポイント
+`dot_config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
 
-次へ進む前に、次をすべて確認する。
+**完了確認:** 次は値を表示せず、すべて`set`を返す。
 
-- `git status --short`が想定どおりで、secret fileが追跡対象になっていない。
-- Fly PostgreSQLの完全backupと`agentsview` schema backupを取得し、空のPostgreSQLへrestoreできた。
-- 全PCで定期`pg push`／`pg watch`を止める方法が分かっている。
-- rollback担当者、cutover時刻、旧Fly appを残す観察期間を決めた。
-- semantic／hybrid searchを使用していないか、CockroachDBでvector検索を失うことを了承した。
+```sh
+fnox exec -- sh -c '
+  for name in AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
+    eval "test -n \"\${$name:-}\"" && echo "$name=set" || exit 1
+  done
+'
+```
 
-以降は「1. CockroachDBの権限設計」から「9. Flyの容量を解放」まで順番に進める。初回構築では、Terraformのtarget applyだけで完了扱いにせず、最終的に通常の`terraform plan`／`terraform apply`を必ず実行する。
+##### 作業3. Terraform state bucketを手動作成する
+
+state bucketはそのstate自身で作成できないため、operatorが一度だけ作る。
+
+```sh
+gcloud storage buckets create "gs://${TF_STATE_BUCKET}" \
+  --project="$GCP_PROJECT_ID" \
+  --location="$GCP_REGION" \
+  --uniform-bucket-level-access \
+  --public-access-prevention
+
+gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
+gcloud storage buckets describe "gs://${TF_STATE_BUCKET}" \
+  --format='yaml(name,location,uniformBucketLevelAccess,publicAccessPrevention,versioning_enabled)'
+```
+
+Google Cloud Consoleでは**Cloud Storage > Buckets > bucket名**を開き、**Protection**でObject versioningが有効、**Permissions**でPublic accessがPreventedになっていることを確認する。state fileをlocalやGitへcommitしない。
+
+**完了確認:** `gcloud storage buckets describe`が対象bucketを返し、versioningとpublic access preventionが有効になっている。
+
+##### 作業4. TerraformでCockroachDBとGoogle Cloudの土台を作る
+
+Terraform変数fileを作る。このfileにpasswordやAPI keyを記載しない。
+
+```sh
+cp terraform/agentsview/terraform.tfvars.example terraform/agentsview/terraform.tfvars
+sed -i.bak \
+  -e "s/replace-with-project-id/${GCP_PROJECT_ID}/g" \
+  -e "s/us-central1/${GCP_REGION}/g" \
+  terraform/agentsview/terraform.tfvars
+rm -f terraform/agentsview/terraform.tfvars.bak
+```
+
+secret storeから値を注入する。使用しているsecret storeがTerraform用passwordをfnoxへ公開していない場合だけ、password managerから現在のterminalへ手動exportする。command lineへliteralを書かない。
+
+```sh
+export COCKROACH_API_KEY='<secret storeから注入>'
+export TF_VAR_cockroach_owner_password='<secret storeから注入>'
+export TF_VAR_cockroach_push_password='<secret storeから注入>'
+export TF_VAR_cockroach_read_password='<secret storeから注入>'
+```
+
+初期化と静的確認を行う。
+
+```sh
+terraform -chdir=terraform/agentsview init \
+  -backend-config="bucket=${TF_STATE_BUCKET}" \
+  -backend-config='prefix=agentsview'
+terraform -chdir=terraform/agentsview fmt -check -recursive
+terraform -chdir=terraform/agentsview validate
+```
+
+初回だけ、Cloud Run service以外の土台をtarget applyする。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
+
+```sh
+terraform -chdir=terraform/agentsview apply \
+  -target=google_project_service.required \
+  -target=google_artifact_registry_repository.agentsview \
+  -target=google_secret_manager_secret.pg_url \
+  -target=google_secret_manager_secret.config \
+  -target=google_service_account.runtime \
+  -target=google_service_account.deploy \
+  -target=google_iam_workload_identity_pool.github \
+  -target=cockroach_cluster.agentsview \
+  -target=cockroach_database.agentsview \
+  -target=cockroach_sql_user.owner \
+  -target=cockroach_sql_user.push \
+  -target=cockroach_sql_user.read
+```
+
+CockroachDB Consoleの**Clusters**で`agentsview` clusterが`Basic`としてReadyになり、**SQL Users**にowner／push／readが表示されることを確認する。Google Cloud ConsoleではArtifact Registry repository、2つのSecret Manager secret container、service accountが作成されていることを確認する。
+
+**完了確認:** 次がID、database名、SQL hostを返す。
+
+```sh
+terraform -chdir=terraform/agentsview output cockroach_cluster_id
+terraform -chdir=terraform/agentsview output cockroach_database
+terraform -chdir=terraform/agentsview output cockroach_sql_host
+```
+
+##### 作業5. CockroachDB接続URL、schema、最小権限を作る
+
+Terraform outputと作業2のpasswordから3本のURLを組み立てる。16進passwordを使っているため追加のURL encodeは不要。
+
+```sh
+export COCKROACH_HOST=$(terraform -chdir=terraform/agentsview output -raw cockroach_sql_host)
+export COCKROACH_DATABASE=$(terraform -chdir=terraform/agentsview output -raw cockroach_database)
+export AGENTSVIEW_COCKROACH_OWNER_PG_URL="postgresql://agentsview_owner:${TF_VAR_cockroach_owner_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
+export AGENTSVIEW_COCKROACH_PUSH_PG_URL="postgresql://agentsview_push:${TF_VAR_cockroach_push_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
+export AGENTSVIEW_COCKROACH_READ_PG_URL="postgresql://agentsview_read:${TF_VAR_cockroach_read_password}@${COCKROACH_HOST}:26257/${COCKROACH_DATABASE}?sslmode=verify-full"
+```
+
+3本をBitwarden Secrets Managerへ同名で登録する。CockroachDB Consoleの**Connect**画面が別port、database、CA指定を案内した場合は、手作業で組み立てた値よりConsoleの接続文字列を優先し、usernameとpasswordだけ各role用に差し替える。
+
+まず小さいproject名を確認し、owner URLでAgentsView schema migrationを実行する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+AGENTSVIEW_PG_SCHEMA=agentsview \
+AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
+  agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+```
+
+続いてowner接続で最小権限を設定する。
+
+```sh
+psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+SQL
+```
+
+read userで書き込みができないことも確認する。2番目のcommandは失敗が正解である。
+
+```sh
+psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  -c 'SELECT count(*) FROM agentsview.sessions;'
+if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
+  echo 'ERROR: read user can write' >&2
+  exit 1
+else
+  echo 'OK: read user is read-only'
+fi
+```
+
+**完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
+
+##### 作業6. Artifact Registryへ最初のimageをbuildする
+
+Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimmutableなbootstrap tagをbuildする。
+
+```sh
+export AGENTSVIEW_IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
+gcloud builds submit dot_config/agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --tag="$AGENTSVIEW_IMAGE"
+gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
+  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+```
+
+Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**で`bootstrap` imageとdigestが表示されることを確認する。
+
+**完了確認:** 最後のcommandが`sha256:...`を返す。
+
+##### 作業7. Secret Managerへ最初のsecret versionを登録する
+
+Cloud Run URLはまだ存在しないため、初回configだけplaceholderを使う。URL確定後の作業8で必ず置き換える。
+
+```sh
+export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+fnox exec -- mise run agentsview:cloudrun:secrets
+
+export TF_VAR_pg_url_secret_version=$(gcloud secrets versions list agentsview-pg-url \
+  --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
+  --format='value(name)' | sed 's#.*/##')
+export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
+  --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
+  --format='value(name)' | sed 's#.*/##')
+printf 'pg_url version=%s\nconfig version=%s\n' \
+  "$TF_VAR_pg_url_secret_version" "$TF_VAR_config_secret_version"
+```
+
+Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enabledなversionが1つあることを確認する。値そのものを表示する必要はない。
+
+**完了確認:** 両version変数が空でなく、Secret Manager UIでEnabledになっている。
+
+##### 作業8. 通常のTerraform applyでCloud Runを作る
+
+初回target applyのあとに必ず通常planを実行し、構成全体の依存関係とIAMを収束させる。
+
+```sh
+export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
+terraform -chdir=terraform/agentsview plan -out=tfplan
+terraform -chdir=terraform/agentsview show tfplan
+terraform -chdir=terraform/agentsview apply tfplan
+```
+
+Cloud Run URLを取得し、placeholder configを実URLへ置き換える。
+
+```sh
+export AGENTSVIEW_CLOUD_RUN_URL=$(terraform -chdir=terraform/agentsview output -raw cloud_run_service_url)
+fnox exec -- mise run agentsview:cloudrun:secrets
+export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
+  --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
+  --format='value(name)' | sed 's#.*/##')
+terraform -chdir=terraform/agentsview apply
+```
+
+Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。
+
+**完了確認:** 次がHTTPS URLを返し、未認証APIが401を返す。
+
+```sh
+gcloud run services describe ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
+  --format='value(status.url)'
+curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions"
+```
+
+##### 作業9. 小規模データでmigration rehearsalとCloud Run検証を行う
+
+全PCの`agentsview pg push`、`pg watch`、cron／launchd／systemd timerを一時停止する。FlyのAtuinは別schemaなので停止しない。停止確認後だけ次を実行する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+```
+
+認証と画面を確認する。
+
+```sh
+curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions" # 401を期待
+fnox exec -- sh -c 'curl -fsS \
+  -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
+  "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/sessions" >/dev/null'
+```
+
+UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、resource typeをCloud Run Revision、service nameを`ryo-agentsview`に絞る。startup error、CockroachDB接続error、secret値、`token=`付きURLが記録されていないことを確認する。CockroachDB Consoleのcluster Metrics／Usageでstorage、RU、connection数を記録する。
+
+**完了確認:** migration taskの全table件数比較が一致し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
+
+##### 作業10. 本番cutoverし、観察後にFly側AgentsViewを削除する
+
+1. 全PCのpush／watch／timerを停止し、停止した端末一覧とUTC時刻を記録する。
+2. `flyctl scale count 0 -a ryo-agentsview`で旧viewerを停止する。Atuinと`psgl`は停止しない。
+3. 作業9と同じmigration commandを再実行して最終差分をcopyする。
+4. table count、主要session本文、最大更新時刻をFly／CockroachDBで比較する。
+5. 各PCの通常taskを`agentsview:cockroach:push`へ切り替え、小さいprojectから再開する。
+6. Cloud Runを再度smoke testする。失敗した場合は新DBへのpushを再開せずFlyへrollbackする。
+7. 旧Fly schemaとappを最低1〜2週間保持し、毎日Cloud Run error、CockroachDB RU／storage、backupを確認する。
+8. 観察期間後に最新backupとrestore rehearsalを行い、承認してからFlyの`agentsview` schemaとappだけを削除する。
+
+```sh
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:pg:remote-local:dump
+```
+
+削除直前にFly owner接続で件数を確認し、明示承認後だけ実行する。
+
+```sql
+SELECT count(*) FROM agentsview.sessions;
+DROP SCHEMA agentsview CASCADE;
+```
+
+```sh
+flyctl apps destroy ryo-agentsview
+```
+
+**完了確認:** Atuin syncがFly private PostgreSQLで継続し、全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功し、Flyから削除したのがAgentsView app／schemaだけである。
 
 ### AgentsView appの実行基盤はどれを選ぶか
 
