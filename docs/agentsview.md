@@ -181,32 +181,49 @@ TF_VAR_cockroach_push_password
 TF_VAR_cockroach_read_password
 ```
 
-`fnox exec`はglobal設定の全secretを解決するため、まだ作成していないAgentsView URLや旧Fly用secretについてwarningが出る。このbootstrapでは`fnox exec`を直接使わず、必要な4件だけを`fnox get`する`agentsview:terraform` taskを使う。
-
-最初にrepositoryの変更を実ファイルへ反映する。`fnox list`に4件が出ない場合は、Bitwarden側だけでなくchezmoi適用前の古い`~/.config/fnox/config.toml`を読んでいる。
+`fnox list`の結果に上の4件がない場合、原因はsecretの解決方法ではなく、**現在の`~/.config/fnox/config.toml`に新しいmappingが未反映**である。`fnox list`はBitwardenに値がなくてもmapping自体は表示するため、まずchezmoi sourceと適用先を確認する。
 
 ```sh
+chezmoi source-path ~/.config/fnox/config.toml
+chezmoi diff ~/.config/fnox/config.toml
 chezmoi apply ~/.config/fnox/config.toml
-fnox list | rg '^( COCKROACH_API_KEY| TF_VAR_cockroach_)'
+fnox list | rg 'COCKROACH_API_KEY|TF_VAR_cockroach_'
 ```
 
-続いて、値を表示せず4件だけを個別に解決する。成功時は何も表示せず`terraform version`だけが表示される。ここで`secret ... not found`になる名前は、Bitwarden Secrets Managerへ同名で作成してから再実行する。
+適用後は`fnox list`に次の4行が表示される必要がある。表示されなければ、`chezmoi source-path`がこのrepositoryの`dot_config/fnox/config.toml`を指しているか、別の`FNOX_CONFIG_FILE`を設定していないかを確認する。
+
+```text
+COCKROACH_API_KEY
+TF_VAR_cockroach_owner_password
+TF_VAR_cockroach_push_password
+TF_VAR_cockroach_read_password
+```
+
+次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
+
+| Secret name                       | Value                                           |
+| --------------------------------- | ----------------------------------------------- |
+| `COCKROACH_API_KEY`               | CockroachDB Cloudで発行したorganization API key |
+| `TF_VAR_cockroach_owner_password` | 作業2で生成したowner用16進password              |
+| `TF_VAR_cockroach_push_password`  | 作業2で生成したpush用16進password               |
+| `TF_VAR_cockroach_read_password`  | 作業2で生成したread用16進password               |
+
+Bitwarden Secrets Managerの**Machine accounts**で、`BWS_ACCESS_TOKEN`を発行したmachine accountを開き、上記projectへのread accessがあることも確認する。別projectへsecretを作った場合や、machine accountにproject accessがない場合、mappingが表示されても`secret ... not found`になる。
+
+4件を個別に取得できるか確認する。値をterminalへ表示しない。
 
 ```sh
-mise run agentsview:terraform -- version
+for name in \
+  COCKROACH_API_KEY \
+  TF_VAR_cockroach_owner_password \
+  TF_VAR_cockroach_push_password \
+  TF_VAR_cockroach_read_password; do
+  test -n "$(fnox get "$name")" || { echo "$name=missing" >&2; exit 1; }
+  echo "$name=set"
+done
 ```
 
-`agentsview:terraform`は内部で次の処理を行い、取得値を現在のterminalには残さずTerraform processだけへ渡す。
-
-```sh
-export COCKROACH_API_KEY="$(fnox get COCKROACH_API_KEY)"
-export TF_VAR_cockroach_owner_password="$(fnox get TF_VAR_cockroach_owner_password)"
-export TF_VAR_cockroach_push_password="$(fnox get TF_VAR_cockroach_push_password)"
-export TF_VAR_cockroach_read_password="$(fnox get TF_VAR_cockroach_read_password)"
-exec terraform "$@"
-```
-
-以後、CockroachDB providerまたはSQL user resourceを読む`terraform plan`／`apply`は必ず`mise run agentsview:terraform --`経由で実行する。passwordを`-var`で重ねて渡さない。
+ここまで成功したら、通常どおり`fnox exec -- terraform ...`を使う。`AGENTSVIEW_COCKROACH_*_PG_URL`など後の作業で作成するsecretについてwarningが出ても、この4変数が`set`なら初回Terraform planに必要な値は渡る。warningをなくしたい場合は、後続の作業5でURL secretを作成する。
 
 初期化と静的確認を行う。
 
@@ -221,7 +238,7 @@ terraform -chdir=terraform/agentsview validate
 初回だけ、Cloud Run service以外の土台をtarget applyする。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
 
 ```sh
-mise run agentsview:terraform -- -chdir=terraform/agentsview apply \
+fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_secret_manager_secret.pg_url \
@@ -351,9 +368,9 @@ Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enab
 
 ```sh
 export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
-mise run agentsview:terraform -- -chdir=terraform/agentsview plan -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview plan -out=tfplan
 terraform -chdir=terraform/agentsview show tfplan
-mise run agentsview:terraform -- -chdir=terraform/agentsview apply tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
 Cloud Run URLを取得し、placeholder configを実URLへ置き換える。
@@ -364,7 +381,7 @@ fnox exec -- mise run agentsview:cloudrun:secrets
 export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
   --format='value(name)' | sed 's#.*/##')
-mise run agentsview:terraform -- -chdir=terraform/agentsview apply
+fnox exec -- terraform -chdir=terraform/agentsview apply
 ```
 
 Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。
@@ -631,7 +648,8 @@ CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のra
 
 ```sh
 chezmoi apply ~/.config/fnox/config.toml
-mise run agentsview:terraform -- version
+fnox get COCKROACH_API_KEY >/dev/null
+fnox exec -- terraform version
 ```
 
 #### 2.3 bootstrap apply
@@ -639,7 +657,7 @@ mise run agentsview:terraform -- version
 最初はArtifact Registryにimageがなく、Secret Managerにversionもないため、依存resourceだけtarget applyする。
 
 ```sh
-mise run agentsview:terraform -- apply \
+fnox exec -- terraform apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
@@ -680,8 +698,8 @@ export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-co
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)' | sed 's#.*/##')
 
 cd terraform/agentsview
-mise run agentsview:terraform -- plan -out=tfplan
-mise run agentsview:terraform -- apply tfplan
+fnox exec -- terraform plan -out=tfplan
+fnox exec -- terraform apply tfplan
 ```
 
 planで`cockroach_cluster`が`plan = "BASIC"`、Cloud Runがmin 0／max 2、1 vCPU／512 MiBであることを確認する。`terraform apply`後に出る`cloud_run_service_url`を`AGENTSVIEW_CLOUD_RUN_URL`へ設定し、config secretを更新して新version番号で再applyする。
