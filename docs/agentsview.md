@@ -55,7 +55,7 @@ mise --version
 fnox --version
 flyctl version
 gcloud version
-terraform version
+fnox exec -- terraform version
 psql --version
 pg_dump --version
 docker version
@@ -225,14 +225,34 @@ done
 
 ここまで成功したら、通常どおり`fnox exec -- terraform ...`を使う。`AGENTSVIEW_COCKROACH_*_PG_URL`など後の作業で作成するsecretについてwarningが出ても、この4変数が`set`なら初回Terraform planに必要な値は渡る。warningをなくしたい場合は、後続の作業5でURL secretを作成する。
 
+###### `Error acquiring the state lock`が出た場合
+
+`googleapi: Error 412: ... conditionNotMet`は認証失敗やCockroachDB secret不足ではない。GCS backendの`agentsview/default.tflock`が既に存在し、別のTerraform processが同じstateを操作中、または以前中断したprocessのlockが残っていることを示す。提示されたlockは`Who: ryo.@Mac`、`Created: 2026-09-05 08:50:00 UTC`なので、同じMacで先に実行したplanが異常終了または中断され、lockだけが残った可能性が高い。`gcloud auth application-default login`は正常に完了しており、このlock errorの原因ではない。
+
+まず同じstateを操作しているprocessがないことを確認する。別terminal、IDE task、CIのTerraform applyが実行中なら、force unlockせず完了を待つ。
+
+```sh
+ps aux | rg '[t]erraform.*agentsview' || true
+gh run list --limit 10
+```
+
+実行中processがなく、Lock Infoの`Who`と`Created`が自分の中断した実行に一致すると確認できた場合だけ、表示されたIDでlockを解除する。提示された例のIDは`1788598201425938`だが、実行時は必ず最新errorに表示されたIDを使う。確認promptには内容を確認して`yes`と答える。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview force-unlock 1788598201425938
+fnox exec -- terraform -chdir=terraform/agentsview plan
+```
+
+別processが実行中のままforce unlockすると、同じstateへ同時書き込みして破損させる可能性がある。GCS上の`.tflock`を手動削除せず、通常運用で`-lock=false`も使用しない。解除後も直ちに同じlockが作られる場合は、別processが動いているため停止して調査する。
+
 初期化と静的確認を行う。
 
 ```sh
-terraform -chdir=terraform/agentsview init \
+fnox exec -- terraform -chdir=terraform/agentsview init \
   -backend-config="bucket=${TF_STATE_BUCKET}" \
   -backend-config='prefix=agentsview'
-terraform -chdir=terraform/agentsview fmt -check -recursive
-terraform -chdir=terraform/agentsview validate
+fnox exec -- terraform -chdir=terraform/agentsview fmt -check -recursive
+fnox exec -- terraform -chdir=terraform/agentsview validate
 ```
 
 初回だけ、Cloud Run service以外の土台をtarget applyする。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
@@ -258,9 +278,9 @@ CockroachDB Consoleの**Clusters**で`agentsview` clusterが`Basic`としてRead
 **完了確認:** 次がID、database名、SQL hostを返す。
 
 ```sh
-terraform -chdir=terraform/agentsview output cockroach_cluster_id
-terraform -chdir=terraform/agentsview output cockroach_database
-terraform -chdir=terraform/agentsview output cockroach_sql_host
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_cluster_id
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_database
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 ```
 
 ##### 作業5. CockroachDB接続URL、schema、最小権限を作る
@@ -268,8 +288,8 @@ terraform -chdir=terraform/agentsview output cockroach_sql_host
 Terraform outputでhostとdatabaseを確認する。passwordはfnoxの子processだけへ渡すため、現在のshellへ`export`しない。
 
 ```sh
-terraform -chdir=terraform/agentsview output -raw cockroach_sql_host
-terraform -chdir=terraform/agentsview output -raw cockroach_database
+fnox exec -- terraform -chdir=terraform/agentsview output -raw cockroach_sql_host
+fnox exec -- terraform -chdir=terraform/agentsview output -raw cockroach_database
 ```
 
 Bitwarden Secrets ManagerのUIで、作業2に保存した各passwordと上記outputを使い、次のtemplateから3本のURLを作成する。16進passwordなので追加のURL encodeは不要である。
@@ -369,7 +389,7 @@ Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enab
 ```sh
 export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
 fnox exec -- terraform -chdir=terraform/agentsview plan -out=tfplan
-terraform -chdir=terraform/agentsview show tfplan
+fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
@@ -637,11 +657,11 @@ cd terraform/agentsview
 cp terraform.tfvars.example terraform.tfvars
 # project、region、最初にbuildするimage URIを編集する。
 
-terraform init \
+fnox exec -- terraform init \
   -backend-config="bucket=${TF_STATE_BUCKET}" \
   -backend-config='prefix=agentsview'
-terraform fmt -check -recursive
-terraform validate
+fnox exec -- terraform fmt -check -recursive
+fnox exec -- terraform validate
 ```
 
 CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
@@ -715,8 +735,8 @@ mise run agentsview:cloudrun:deploy
 このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを後から追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
 
 ```sh
-terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider
-terraform -chdir=terraform/agentsview output -raw deploy_service_account
+fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider
+fnox exec -- terraform -chdir=terraform/agentsview output -raw deploy_service_account
 ```
 
 state bucketをCIから操作する場合は、deploy service accountへbucket単位の権限を一度だけ付与する。service-account key JSONは作らず、GitHub OIDC／WIFを使う。
