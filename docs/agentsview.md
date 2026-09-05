@@ -225,6 +225,41 @@ done
 
 ここまで成功したら、通常どおり`fnox exec -- terraform ...`を使う。`AGENTSVIEW_COCKROACH_*_PG_URL`など後の作業で作成するsecretについてwarningが出ても、この4変数が`set`なら初回Terraform planに必要な値は渡る。warningをなくしたい場合は、後続の作業5でURL secretを作成する。
 
+###### Terraformが`Enter a value`を表示する場合
+
+`fnox get`が成功してもTerraformが`var.cockroach_owner_password (ephemeral)`の入力を求める場合、`TF_VAR_*`が`fnox exec`の子processへ環境変数として注入されていない。passwordをpromptへ入力せず`Ctrl-C`で中止し、次を実行する。
+
+```sh
+fnox --version
+fnox exec -- sh -c '
+  for name in \
+    TF_VAR_cockroach_owner_password \
+    TF_VAR_cockroach_push_password \
+    TF_VAR_cockroach_read_password; do
+    printenv "$name" >/dev/null || { echo "$name=not-exported" >&2; exit 1; }
+    test -n "$(printenv "$name")" || { echo "$name=empty" >&2; exit 1; }
+    echo "$name=exported"
+  done
+'
+```
+
+3件すべてが`exported`にならない場合は、次を順に実行する。repositoryがpinするfnoxをinstallし直し、chezmoi適用先の各mappingが`env = "exec"`になっていることを確認する。
+
+```sh
+mise install 'github:jdx/fnox@1.34.1'
+chezmoi apply ~/.config/fnox/config.toml
+rg 'TF_VAR_cockroach_.*env = "exec"' ~/.config/fnox/config.toml
+fnox exec -- sh -c 'test -n "$TF_VAR_cockroach_owner_password"'
+```
+
+最後のcommandが成功してから、対話入力を無効化したplanを再実行する。`-input=false`を付けることで、secret注入に失敗した場合はpromptでpasswordを手入力させず明示的なerrorにする。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false
+```
+
+3件が`exported`なのにTerraformが入力を求める場合は、別directoryのTerraform rootを実行していないか確認する。repository rootから上記`-chdir=terraform/agentsview`付きcommandをそのまま使い、`type -a terraform fnox`と`fnox config-files`の結果を記録して調査する。
+
 ###### `Error acquiring the state lock`が出た場合
 
 `googleapi: Error 412: ... conditionNotMet`は認証失敗やCockroachDB secret不足ではない。GCS backendの`agentsview/default.tflock`が既に存在し、別のTerraform processが同じstateを操作中、または以前中断したprocessのlockが残っていることを示す。提示されたlockは`Who: ryo.@Mac`、`Created: 2026-09-05 08:50:00 UTC`なので、同じMacで先に実行したplanが異常終了または中断され、lockだけが残った可能性が高い。`gcloud auth application-default login`は正常に完了しており、このlock errorの原因ではない。
@@ -240,7 +275,7 @@ gh run list --limit 10
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview force-unlock 1788598201425938
-fnox exec -- terraform -chdir=terraform/agentsview plan
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false
 ```
 
 別processが実行中のままforce unlockすると、同じstateへ同時書き込みして破損させる可能性がある。GCS上の`.tflock`を手動削除せず、通常運用で`-lock=false`も使用しない。解除後も直ちに同じlockが作られる場合は、別processが動いているため停止して調査する。
@@ -388,7 +423,7 @@ Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enab
 
 ```sh
 export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
-fnox exec -- terraform -chdir=terraform/agentsview plan -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
 fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
@@ -718,7 +753,7 @@ export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-co
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)' | sed 's#.*/##')
 
 cd terraform/agentsview
-fnox exec -- terraform plan -out=tfplan
+fnox exec -- terraform plan -input=false -out=tfplan
 fnox exec -- terraform apply tfplan
 ```
 
