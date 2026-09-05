@@ -181,21 +181,32 @@ TF_VAR_cockroach_push_password
 TF_VAR_cockroach_read_password
 ```
 
-値を表示せず、fnoxが4つすべて解決できることを確認する。
+`fnox exec`はglobal設定の全secretを解決するため、まだ作成していないAgentsView URLや旧Fly用secretについてwarningが出る。このbootstrapでは`fnox exec`を直接使わず、必要な4件だけを`fnox get`する`agentsview:terraform` taskを使う。
+
+最初にrepositoryの変更を実ファイルへ反映する。`fnox list`に4件が出ない場合は、Bitwarden側だけでなくchezmoi適用前の古い`~/.config/fnox/config.toml`を読んでいる。
 
 ```sh
-fnox exec -- sh -c '
-  for name in COCKROACH_API_KEY \
-    TF_VAR_cockroach_owner_password \
-    TF_VAR_cockroach_push_password \
-    TF_VAR_cockroach_read_password; do
-    eval "test -n \"\${$name:-}\"" || { echo "$name=missing" >&2; exit 1; }
-    echo "$name=set"
-  done
-'
+chezmoi apply ~/.config/fnox/config.toml
+fnox list | rg '^( COCKROACH_API_KEY| TF_VAR_cockroach_)'
 ```
 
-以後、CockroachDB providerまたはSQL user resourceを読む`terraform plan`／`apply`は必ず`fnox exec --`経由で実行する。`fnox exec -- terraform ...`の後ろへ`-var`でpasswordを重ねて渡さない。
+続いて、値を表示せず4件だけを個別に解決する。成功時は何も表示せず`terraform version`だけが表示される。ここで`secret ... not found`になる名前は、Bitwarden Secrets Managerへ同名で作成してから再実行する。
+
+```sh
+mise run agentsview:terraform -- version
+```
+
+`agentsview:terraform`は内部で次の処理を行い、取得値を現在のterminalには残さずTerraform processだけへ渡す。
+
+```sh
+export COCKROACH_API_KEY="$(fnox get COCKROACH_API_KEY)"
+export TF_VAR_cockroach_owner_password="$(fnox get TF_VAR_cockroach_owner_password)"
+export TF_VAR_cockroach_push_password="$(fnox get TF_VAR_cockroach_push_password)"
+export TF_VAR_cockroach_read_password="$(fnox get TF_VAR_cockroach_read_password)"
+exec terraform "$@"
+```
+
+以後、CockroachDB providerまたはSQL user resourceを読む`terraform plan`／`apply`は必ず`mise run agentsview:terraform --`経由で実行する。passwordを`-var`で重ねて渡さない。
 
 初期化と静的確認を行う。
 
@@ -210,7 +221,7 @@ terraform -chdir=terraform/agentsview validate
 初回だけ、Cloud Run service以外の土台をtarget applyする。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
 
 ```sh
-fnox exec -- terraform -chdir=terraform/agentsview apply \
+mise run agentsview:terraform -- -chdir=terraform/agentsview apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_secret_manager_secret.pg_url \
@@ -340,9 +351,9 @@ Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enab
 
 ```sh
 export TF_VAR_agentsview_image="$AGENTSVIEW_IMAGE"
-fnox exec -- terraform -chdir=terraform/agentsview plan -out=tfplan
+mise run agentsview:terraform -- -chdir=terraform/agentsview plan -out=tfplan
 terraform -chdir=terraform/agentsview show tfplan
-fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
+mise run agentsview:terraform -- -chdir=terraform/agentsview apply tfplan
 ```
 
 Cloud Run URLを取得し、placeholder configを実URLへ置き換える。
@@ -353,7 +364,7 @@ fnox exec -- mise run agentsview:cloudrun:secrets
 export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-config-toml \
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' \
   --format='value(name)' | sed 's#.*/##')
-fnox exec -- terraform -chdir=terraform/agentsview apply
+mise run agentsview:terraform -- -chdir=terraform/agentsview apply
 ```
 
 Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。
@@ -619,13 +630,8 @@ terraform validate
 CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
 
 ```sh
-fnox exec -- sh -c '
-  test -n "$COCKROACH_API_KEY"
-  test -n "$TF_VAR_cockroach_owner_password"
-  test -n "$TF_VAR_cockroach_push_password"
-  test -n "$TF_VAR_cockroach_read_password"
-  echo "CockroachDB Terraform secrets: set"
-'
+chezmoi apply ~/.config/fnox/config.toml
+mise run agentsview:terraform -- version
 ```
 
 #### 2.3 bootstrap apply
@@ -633,7 +639,7 @@ fnox exec -- sh -c '
 最初はArtifact Registryにimageがなく、Secret Managerにversionもないため、依存resourceだけtarget applyする。
 
 ```sh
-fnox exec -- terraform apply \
+mise run agentsview:terraform -- apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
@@ -674,8 +680,8 @@ export TF_VAR_config_secret_version=$(gcloud secrets versions list agentsview-co
   --project="$GCP_PROJECT_ID" --limit=1 --sort-by='~createTime' --format='value(name)' | sed 's#.*/##')
 
 cd terraform/agentsview
-fnox exec -- terraform plan -out=tfplan
-fnox exec -- terraform apply tfplan
+mise run agentsview:terraform -- plan -out=tfplan
+mise run agentsview:terraform -- apply tfplan
 ```
 
 planで`cockroach_cluster`が`plan = "BASIC"`、Cloud Runがmin 0／max 2、1 vCPU／512 MiBであることを確認する。`terraform apply`後に出る`cloud_run_service_url`を`AGENTSVIEW_CLOUD_RUN_URL`へ設定し、config secretを更新して新version番号で再applyする。

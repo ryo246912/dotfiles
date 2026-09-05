@@ -1067,3 +1067,15 @@ set -eu
 bash dot_config/agentsview/scripts/deploy-cloud-run.sh
 '''
 shell = "bash -c"
+
+["agentsview:terraform"]
+description = "Run Terraform with only the required CockroachDB secrets resolved by fnox"
+run = '''
+set -eu
+script="${AGENTSVIEW_TERRAFORM_WRAPPER:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/terraform-with-secrets.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/terraform-with-secrets.sh ]; then
+  script=dot_config/agentsview/scripts/terraform-with-secrets.sh
+fi
+bash "$script" "$@"
+'''
+shell = "bash -c"
