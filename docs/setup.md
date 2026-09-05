@@ -33,6 +33,9 @@
   mise run bootstrap:mac
   ```
 
+  - Apple Silicon では jitpass も導入される。vault の初期化と credential の migration は
+    [`jitpass (jit)`](./jit.md) を参照する
+
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
   - [ ] `karabiner.ts`を実行
