@@ -1,0 +1,35 @@
+["fnox:sync"]
+description = "Cache Bitwarden project secrets locally with age encryption"
+dir = "{{cwd}}"
+interactive = true
+run = '''
+set -eu
+
+if [ ! -f fnox.toml ] && [ ! -f .fnox.toml ]; then
+  echo "fnox.toml または .fnox.toml がありません。先に remote provider と secrets を定義してください。" >&2
+  exit 1
+fi
+
+if ! command -v fnox >/dev/null 2>&1; then
+  echo "fnox がありません。mise install を実行してください。" >&2
+  exit 1
+fi
+
+# local override は暗号化済みでも個人用 cache なので、誤って commit しない。
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  for cache_file in fnox.local.toml .fnox.local.toml; do
+    if git ls-files --error-unmatch -- "$cache_file" >/dev/null 2>&1; then
+      echo "$cache_file は既に git 管理されています。git rm --cached -- $cache_file を実行してから再実行してください。" >&2
+      exit 1
+    fi
+    if ! git check-ignore -q -- "$cache_file"; then
+      printf '%s\n' "$cache_file" >> .gitignore
+      echo ".gitignore に $cache_file を追加しました。"
+    fi
+  done
+fi
+
+# bws provider から取得した値だけを個人用 age provider で暗号化する。
+fnox sync --source bws --provider sync-age --local-file "$@"
+'''
+shell = "bash -c"
