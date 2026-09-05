@@ -8,7 +8,7 @@ and bearer tokens are not persisted in state.
 Terraform 1.11+ is required because CockroachDB SQL user passwords use the
 write-only `password_wo` attribute.
 
-See [`../../docs/agentsview-cloud-run-migration.md`](../../docs/agentsview-cloud-run-migration.md)
+See [`../../docs/agentsview.md`](../../docs/agentsview.md)
 for bootstrap, credentials, GitHub Actions, migration, and rollback steps.
 
 Resources are split by provider and service: `gcp_*.tf` contains Google Cloud
