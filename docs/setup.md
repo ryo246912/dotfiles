@@ -91,6 +91,28 @@
     mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
 - [ ] git
+  - [ ] secret設定ファイルの作成
+    - サンプルをコピーし、`machineId`を自分の値に編集する
+    - `~/.config/git/config.secret`はchezmoi管理外のため、秘密情報をリポジトリにコミットしないこと
+
+    ```sh
+    cp "$(chezmoi source-path)/dot_config/git/config.secret.sample" ~/.config/git/config.secret
+    nvim ~/.config/git/config.secret
+    ```
+
+    - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
+
+    ```sh
+    cp "$(chezmoi source-path)/dot_config/git/config.work.secret.sample" ~/.config/git/config.work.secret
+    nvim ~/.config/git/config.work.secret
+    ```
+
+    - 編集後、設定ファイルが読み込まれていることを確認する
+
+    ```sh
+    git config --show-origin --get-regexp '^user\.(email|signingkey)$'
+    ```
+
   - [ ] 秘密鍵の設定
     - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
       export済みの`secret_key.asc`を`.gnupg`にコピーしてきて、importする
@@ -161,6 +183,33 @@
     ```
     setup-git-gpg
     ```
+  - [ ] GPG署名の確認
+    - ローカルでは、署名済みコミットを検証する
+
+    ```sh
+    git verify-commit HEAD
+    ```
+
+    - `Good signature`と表示されれば署名自体の検証は成功している
+    - コミットのauthor・committerと、署名に使用したGPG鍵のUIDは別の情報である。`git verify-commit`が表示する名前とメールアドレスはGPG鍵のUIDであり、commit authorとの一致を検証しているわけではない
+    - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
+    - author・committerと署名をまとめて確認する場合は、以下を実行する
+
+    ```sh
+    git show --no-patch --show-signature --format=fuller HEAD
+    ```
+
+    - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
+
+    ```sh
+    git push origin HEAD
+    gh api "repos/{owner}/{repo}/commits/$(git rev-parse HEAD)" \
+      --jq '.commit.verification | {verified, reason, verified_at}'
+    ```
+
+    - `verified`が`true`ならGitHubでも署名が正しく認識されている
+    - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
+
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
