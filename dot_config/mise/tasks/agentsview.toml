@@ -559,6 +559,43 @@ AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value=
 AGENTSVIEW_PG_SCHEMA         = "agentsview"
 AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 
+["agentsview:pg:local:repair-sequences"]
+description = "Advance local AgentsView PostgreSQL sequences without rewinding them"
+run = '''
+set -euo pipefail
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
+docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
+DO $$
+DECLARE
+  seq record;
+  max_id bigint;
+  cur_val bigint;
+  cur_called boolean;
+BEGIN
+  FOR seq IN
+    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
+    FROM pg_class s
+    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
+    JOIN pg_class t ON t.oid = d.refobjid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+    JOIN pg_namespace n ON n.oid = s.relnamespace
+    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
+  LOOP
+    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
+      INTO max_id;
+    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
+      INTO cur_val, cur_called;
+    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
+      PERFORM setval(seq.seq_name, max_id, true);
+    END IF;
+  END LOOP;
+END
+$$;
+SQL
+'''
+shell = "bash -c"
+
 ["agentsview:pg:local:restore"]
 description = "Restore an AgentsView PostgreSQL dump into the local Docker database"
 run = '''
@@ -706,42 +743,8 @@ docker compose -f "$compose_file" exec -T postgres \
         --quiet --output=/dev/null
   ' -- "$restore_db"
 
-# 取り込んだ行は明示 id を持つため、sequence は取り残される。dump の setval を
-# そのまま適用すると古い backup で live な sequence を巻き戻してしまうので、
-# 代わりに「格納済みの最大値より手前なら進める」だけを行う（後退はさせない）。
-# これを行わないと、次の local insert が duplicate key で落ちる。
-# SQL は quote をそのまま渡すため heredoc で stdin から流す。
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
-DO $$
-DECLARE
-  seq record;
-  max_id bigint;
-  cur_val bigint;
-  cur_called boolean;
-BEGIN
-  FOR seq IN
-    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
-    FROM pg_class s
-    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
-    JOIN pg_class t ON t.oid = d.refobjid
-    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
-    JOIN pg_namespace n ON n.oid = s.relnamespace
-    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
-  LOOP
-    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
-      INTO max_id;
-    -- 未使用のsequenceは last_value=1 / is_called=false で、次のnextvalが last_value を返す。
-    -- max_id = last_value でも「未使用」なら採番済みidと衝突するため、is_called も見る。
-    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
-      INTO cur_val, cur_called;
-    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
-      PERFORM setval(seq.seq_name, max_id, true);
-    END IF;
-  END LOOP;
-END
-$$;
-SQL
+# 明示idのimport後は、共通taskでsequenceを前進だけさせる。
+mise run agentsview:pg:local:repair-sequences
 
 row_counts >"$counts_after"
 
@@ -795,8 +798,8 @@ echo "Consolidated AgentsView backup: $dump_path"
 '''
 shell = "bash -c"
 
-["agentsview:pg:remote-local:dump"]
-description = "Merge the remote dump and this machine's sessions locally, then create a consolidated backup"
+["agentsview:pg:fly:remote-local:dump"]
+description = "Merge the Fly PostgreSQL dump and this machine's sessions locally, then create a consolidated backup"
 run = '''
 set -eu
 
@@ -811,6 +814,10 @@ AGENTSVIEW_RESTORE_DUMP="$dump_path" mise run agentsview:pg:local:restore
 mise run agentsview:pg:local:dump
 '''
 shell = "bash -c"
+
+["agentsview:pg:remote-local:dump"]
+description = "Merge CockroachDB data and this machine's sessions locally, then create a PostgreSQL backup"
+run         = "mise run agentsview:cockroach:remote-local:dump"
 
 ["agentsview:pg:local:status"]
 description = "Show session counts in the local AgentsView PostgreSQL container"
@@ -871,3 +878,192 @@ AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value=
 AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
 AGENTSVIEW_PG_SCHEMA         = "agentsview"
 AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
+
+["agentsview:cockroach:migrate"]
+description = "Copy the Fly AgentsView schema data to CockroachDB and compare table counts"
+run = '''
+set -eu
+
+if { [ -z "${AGENTSVIEW_OWNER_PROXY_PG_URL:-}" ] ||
+     [ -z "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:migrate "$@"
+fi
+
+: "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です}"
+: "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?fnox が未解決です}"
+: "${AGENTSVIEW_MIGRATION_PROJECTS:?小さい project を1つ指定してください}"
+: "${AGENTSVIEW_MIGRATION_WRITES_PAUSED:?全PCのAgentsView pushを停止してyesを設定してください}"
+
+bash dot_config/agentsview/scripts/migrate-to-cockroach.sh
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:status"]
+description = "Show sync status against CockroachDB without a Fly proxy"
+run = '''
+set -eu
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:status "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+AGENTSVIEW_PG_SCHEMA="${AGENTSVIEW_PG_SCHEMA:-agentsview}" \
+  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg status
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:push"]
+description = "Push local sessions directly to CockroachDB"
+run = '''
+set -eu
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:push -- "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+AGENTSVIEW_PG_SCHEMA="${AGENTSVIEW_PG_SCHEMA:-agentsview}" \
+  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push --no-vectors "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:dump:data"]
+description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
+hide = true
+run = '''
+set -eu
+
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:dump:data "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+dump_path="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+auth_dir="$(mktemp -d)"
+cleanup_dump() {
+  status=$?
+  rm -rf "$auth_dir"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$dump_path"
+  fi
+  return "$status"
+}
+trap cleanup_dump EXIT
+
+mkdir -p "$backup_dir"
+dump_dir="$(cd "$backup_dir" && pwd -P)"
+dump_name="$(basename "$dump_path")"
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+export AGENTSVIEW_DUMP_ALLOW_REMOTE=yes
+export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
+"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+pg_url="$(cat "$auth_dir/url")"
+
+docker run --rm \
+  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
+  --volume "$dump_dir:/backup" \
+  --env HOST_GID="$(id -g)" \
+  --env HOST_UID="$(id -u)" \
+  postgres:17 \
+  sh -c '
+set -eu
+getent passwd "$HOST_UID" >/dev/null ||
+  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
+install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
+export PGPASSFILE=/tmp/agentsview.pgpass
+umask 077
+exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
+' -- \
+    --dbname="$pg_url" --schema=agentsview --data-only --column-inserts \
+    --on-conflict-do-nothing --no-owner --no-privileges --file="/backup/$dump_name"
+
+test -s "$dump_path"
+echo "CockroachDB AgentsView data export: $dump_path"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:remote-local:dump"]
+description = "Merge CockroachDB rows into local PostgreSQL and create a consolidated custom-format backup"
+run = '''
+set -euo pipefail
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+mise run agentsview:cockroach:dump:data
+data_dump="$({ find "$backup_dir" -maxdepth 1 -type f -name 'agentsview-cockroach-data-*.sql' -print 2>/dev/null || true; } |
+  sort -r | head -n 1)"
+if [ -z "$data_dump" ]; then
+  echo "CockroachDB AgentsView data export was not created" >&2
+  exit 1
+fi
+
+# local schemaを現在のAgentsView versionへ揃えた後、remoteにだけ存在するrowをmergeする。
+# column名付きINSERTを使うため、CockroachDBのDDL／権限／sequenceはPostgreSQLへ持ち込まない。
+mise run agentsview:pg:local:push
+compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
+{
+  echo 'BEGIN;'
+  sed '/^SELECT pg_catalog.setval/d' "$data_dump"
+  echo 'COMMIT;'
+} | docker compose -f "$compose_file" exec -T postgres \
+  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
+    --set=ON_ERROR_STOP=1 --quiet --output=/dev/null'
+
+# CockroachDBの明示idをimportしたので、同じ共通taskでsequenceを補正する。
+mise run agentsview:pg:local:repair-sequences
+
+mise run agentsview:pg:local:dump
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:secrets"]
+description = "Create new Secret Manager versions for the Cloud Run viewer"
+run = '''
+set -eu
+if { [ -z "${AGENTSVIEW_COCKROACH_READ_PG_URL:-}" ] || [ -z "${AGENTSVIEW_AUTH_TOKEN:-}" ] ||
+     [ -z "${AGENTSVIEW_CURSOR_SECRET:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cloudrun:secrets "$@"
+fi
+
+: "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
+: "${AGENTSVIEW_COCKROACH_READ_PG_URL:?fnox が未解決です}"
+: "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です}"
+: "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です}"
+
+region="${GCP_REGION:-us-central1}"
+public_url="${AGENTSVIEW_CLOUD_RUN_URL:-}"
+if [ -z "$public_url" ]; then
+  public_url=$(gcloud run services describe ryo-agentsview \
+    --project="$GCP_PROJECT_ID" --region="$region" --format='value(status.url)' 2>/dev/null || true)
+fi
+: "${public_url:?初回だけAGENTSVIEW_CLOUD_RUN_URLに公開URLを指定してください}"
+
+ensure_secret() {
+  if ! gcloud secrets describe "$1" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+    gcloud secrets create "$1" --project="$GCP_PROJECT_ID" --replication-policy=automatic >/dev/null
+  fi
+}
+
+ensure_secret agentsview-pg-url
+ensure_secret agentsview-config-toml
+
+printf '%s' "$AGENTSVIEW_COCKROACH_READ_PG_URL" |
+  gcloud secrets versions add agentsview-pg-url --project="$GCP_PROJECT_ID" --data-file=- >/dev/null
+
+printf 'public_url = "%s"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n' \
+  "$public_url" "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" |
+  gcloud secrets versions add agentsview-config-toml --project="$GCP_PROJECT_ID" --data-file=- >/dev/null
+
+echo "Cloud Run secret versions added. Secret values were not printed."
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:deploy"]
+description = "Deploy the read-only AgentsView viewer to Cloud Run"
+run = '''
+set -eu
+bash dot_config/agentsview/scripts/deploy-cloud-run.sh
+'''
+shell = "bash -c"
