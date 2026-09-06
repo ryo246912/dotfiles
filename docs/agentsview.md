@@ -382,17 +382,27 @@ fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_
 fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public
 ```
 
-`us-central1`のimageで作られた失敗revisionは、正しい`us-west2` imageでclrnd deployすれば置き換わる。CockroachDB clusterはpersistent dataを持つため`delete_protection = true`を維持する。
+CockroachDB clusterはpersistent dataを持つため`delete_protection = true`を維持する。
 
-その後、保存planを作り直す。失敗前に作った`tfplan`は再利用しない。planに`google_cloud_run_v2_service`の行が一切残っておらず、Cloud Run関連は`google_cloud_run_v2_service_iam_member.public`の作成だけであることを確認してからapplyする。
+state整理のあとは、**この段階で通常applyを実行しない。** Cloud Run Serviceはまだclrndが作っていないため、通常applyに含まれる`google_cloud_run_v2_service_iam_member.public`が「service not found」で失敗する。作業4の`-target=`付きapplyをそのまま再実行して、失敗したCockroachDB clusterと土台resourceだけを収束させる。
 
 ```sh
-fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
-fnox exec -- terraform -chdir=terraform/agentsview show tfplan
-fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply \
+  -target=google_project_service.required \
+  -target=google_artifact_registry_repository.agentsview \
+  -target=google_secret_manager_secret.pg_url \
+  -target=google_secret_manager_secret.config \
+  -target=google_service_account.runtime \
+  -target=google_service_account.deploy \
+  -target=google_iam_workload_identity_pool.github \
+  -target=cockroach_cluster.agentsview \
+  -target=cockroach_database.agentsview \
+  -target=cockroach_sql_user.owner \
+  -target=cockroach_sql_user.push \
+  -target=cockroach_sql_user.read
 ```
 
-invoker bindingのapplyは、clrndがserviceを作った後に行う（作業6〜8）。serviceがまだ存在しない段階では、この1件だけ失敗するため、その順序を守る。
+失敗前に作った`tfplan`は再利用しない。通常のplan／applyは作業8で、clrndがserviceを作った後に実行する。そこで初めてCloud Run関連の変更が`google_cloud_run_v2_service_iam_member.public`の作成1件だけになる。`us-central1`のimageで作られた失敗revisionは、正しい`us-west2` imageでclrnd deployすれば置き換わる。
 
 ##### 作業5. CockroachDB接続URL、schema、最小権限を作る
 
