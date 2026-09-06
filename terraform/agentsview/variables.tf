@@ -63,28 +63,19 @@ variable "cockroach_database_name" {
 }
 
 variable "cockroach_owner_password" {
-  description = "Write-only password for the migration owner."
+  description = "Password for the migration owner. Stored as a sensitive value in Terraform state."
   type        = string
   sensitive   = true
-  ephemeral   = true
 }
 
 variable "cockroach_push_password" {
-  description = "Write-only password for local pg push clients."
+  description = "Password for local pg push clients. Stored as a sensitive value in Terraform state."
   type        = string
   sensitive   = true
-  ephemeral   = true
 }
 
 variable "cockroach_read_password" {
-  description = "Write-only password for the Cloud Run read-only viewer."
+  description = "Password for the Cloud Run read-only viewer. Stored as a sensitive value in Terraform state."
   type        = string
   sensitive   = true
-  ephemeral   = true
-}
-
-variable "cockroach_password_version" {
-  description = "Increment together with all three password rotations."
-  type        = number
-  default     = 1
 }

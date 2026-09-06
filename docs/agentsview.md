@@ -227,7 +227,7 @@ done
 
 ###### Terraformが`Enter a value`を表示する場合
 
-`fnox get`が成功してもTerraformが`var.cockroach_owner_password (ephemeral)`の入力を求める場合、`TF_VAR_*`が`fnox exec`の子processへ環境変数として注入されていない。passwordをpromptへ入力せず`Ctrl-C`で中止し、次を実行する。
+`fnox get`が成功してもTerraformが`var.cockroach_owner_password`の入力を求める場合、`TF_VAR_*`が`fnox exec`の子processへ環境変数として注入されていない。passwordをpromptへ入力せず`Ctrl-C`で中止し、次を実行する。
 
 ```sh
 fnox --version
@@ -664,7 +664,7 @@ GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_
 - GitHub Actions用Workload Identity Pool／Providerとproject IAM
 - CockroachDB Cloud Basic cluster、database、owner／push／read SQL user
 
-CockroachDB user passwordはTerraform 1.11以降のwrite-only `password_wo`を使うためstateへ保存されない。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
+CockroachDB provider v1.22の`cockroach_sql_user`は`sensitive`な`password`を受け取るが、Terraformのwrite-only `password_wo`／`password_wo_version`には対応していない。そのため3つのSQL user passwordはplan出力では伏せられる一方、Terraform stateには保存される。GCS state bucketへのIAMをoperatorだけに制限し、stateをdownload／commitせず、Object VersioningとPublic Access Preventionを維持する。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
 
 #### 2.1 state bucketと初回認証
 
@@ -683,7 +683,7 @@ gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
 gcloud auth application-default login
 ```
 
-stateにはpassword本体を入れないが、resource IDや構成情報は入る。public access prevention、versioning、最小権限IAMを設定し、state fileをcommitしない。
+stateにはCockroachDB SQL user password、resource ID、構成情報が入る。public access prevention、versioning、最小権限IAMを設定し、state fileをdownload／commitしない。
 
 #### 2.2 Terraformを初期化
 

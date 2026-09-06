@@ -3,10 +3,11 @@
 This root manages the production CockroachDB Basic cluster, SQL users,
 Artifact Registry, Secret Manager containers/IAM, runtime service account, and
 Cloud Run service. Secret **versions** stay outside Terraform so connection URLs
-and bearer tokens are not persisted in state.
+and bearer tokens are not persisted in state. The CockroachDB provider's SQL
+user resource only supports its sensitive `password` attribute, so the three SQL
+user passwords are stored in the encrypted, access-controlled GCS state.
 
-Terraform 1.11+ is required because CockroachDB SQL user passwords use the
-write-only `password_wo` attribute.
+Do not download or commit state, and restrict access to the state bucket.
 
 See [`../../docs/agentsview.md`](../../docs/agentsview.md)
 for bootstrap, credentials, GitHub Actions, migration, and rollback steps.
