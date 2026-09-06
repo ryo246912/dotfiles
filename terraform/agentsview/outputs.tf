@@ -2,8 +2,15 @@ output "artifact_registry_repository" {
   value = google_artifact_registry_repository.agentsview.name
 }
 
-output "cloud_run_service_url" {
-  value = google_cloud_run_v2_service.agentsview.uri
+# The service URL comes from clrnd (`clrnd status`) or gcloud, because Terraform
+# no longer owns the Cloud Run service. Name and region are published here so
+# the deploy scripts and CI agree with Terraform on where it lives.
+output "cloud_run_service_name" {
+  value = var.cloud_run_service_name
+}
+
+output "cloud_run_region" {
+  value = local.region
 }
 
 output "cockroach_cluster_id" {

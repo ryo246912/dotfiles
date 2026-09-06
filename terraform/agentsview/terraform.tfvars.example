@@ -1,4 +1,4 @@
 gcp_project_id = "replace-with-project-id"
 
-# GitHub Actions replaces this with an immutable commit SHA tag.
-agentsview_image = "us-west2-docker.pkg.dev/replace-with-project-id/agentsview/agentsview:bootstrap"
+# The Cloud Run image is not a Terraform input: clrnd deploys it from
+# dot_config/agentsview/cloudrun-service.yaml.

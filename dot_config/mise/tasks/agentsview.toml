@@ -1061,9 +1061,63 @@ echo "Cloud Run secret versions added. Secret values were not printed."
 shell = "bash -c"
 
 ["agentsview:cloudrun:deploy"]
-description = "Deploy the read-only AgentsView viewer to Cloud Run"
+description = "Build the image and deploy the Cloud Run service with clrnd"
 run = '''
 set -eu
-bash dot_config/agentsview/scripts/deploy-cloud-run.sh
+script_dir="${AGENTSVIEW_SCRIPT_DIR:-dot_config/agentsview/scripts}"
+if [ ! -f "${script_dir}/deploy-cloud-run.sh" ]; then
+  script_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts"
+fi
+bash "${script_dir}/deploy-cloud-run.sh" "$@"
 '''
 shell = "bash -c"
+
+["agentsview:cloudrun:clrnd"]
+description = "Run a clrnd subcommand against the AgentsView Cloud Run service"
+hide = true
+run = '''
+set -eu
+# repository root から実行した場合はsource treeのscriptを、それ以外では
+# chezmoi apply 済みの ~/.config/agentsview を使う。
+script_dir="${AGENTSVIEW_SCRIPT_DIR:-dot_config/agentsview/scripts}"
+if [ ! -f "${script_dir}/clrnd.sh" ]; then
+  script_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts"
+fi
+bash "${script_dir}/clrnd.sh" "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:verify"]
+description = "Validate the clrnd manifest and the resources it references"
+run         = 'mise run agentsview:cloudrun:clrnd -- verify "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:render"]
+description = "Print the clrnd manifest with its templates expanded"
+run         = 'mise run agentsview:cloudrun:clrnd -- render "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:diff"]
+description = "Show the diff between the live Cloud Run service and the manifest"
+run         = 'mise run agentsview:cloudrun:clrnd -- diff "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:status"]
+description = "Show the Cloud Run service state, traffic split, and URL"
+run         = 'mise run agentsview:cloudrun:clrnd -- status "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:revisions"]
+description = "List Cloud Run revisions with their traffic share"
+run         = 'mise run agentsview:cloudrun:clrnd -- revisions "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:refresh"]
+description = "Roll a new Cloud Run revision without changing the definition"
+run         = 'mise run agentsview:cloudrun:clrnd -- refresh "$@"'
+shell       = "bash -c"
+
+["agentsview:cloudrun:rollback"]
+description = "Send Cloud Run traffic back to the previous revision"
+run         = 'mise run agentsview:cloudrun:clrnd -- rollback "$@"'
+shell       = "bash -c"

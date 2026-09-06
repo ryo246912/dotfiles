@@ -3,30 +3,11 @@ variable "gcp_project_id" {
   type        = string
 }
 
-variable "agentsview_image" {
-  description = "Immutable Artifact Registry image URI deployed to Cloud Run."
-  type        = string
-
-  validation {
-    condition     = startswith(var.agentsview_image, "us-west2-docker.pkg.dev/")
-    error_message = "agentsview_image must be hosted in the us-west2 Artifact Registry."
-  }
-}
-
-variable "pg_url_secret_version" {
-  description = "Numeric Secret Manager version containing the read-only CockroachDB URL."
-  type        = string
-  default     = "latest"
-}
-
-variable "config_secret_version" {
-  description = "Numeric Secret Manager version containing the AgentsView config.toml."
-  type        = string
-  default     = "latest"
-}
-
+# The image URI and the Secret Manager versions the service reads live in the
+# clrnd manifest, not here. Terraform only needs the service name to attach the
+# public invoker binding.
 variable "cloud_run_service_name" {
-  description = "Cloud Run service name."
+  description = "Cloud Run service name. Must match metadata.name in the clrnd manifest."
   type        = string
   default     = "ryo-agentsview"
 }

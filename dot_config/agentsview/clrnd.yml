@@ -1,0 +1,11 @@
+# clrnd configuration for the AgentsView Cloud Run service.
+#
+# `project` is deliberately absent: clrnd falls back to $CLOUDSDK_CORE_PROJECT /
+# $GOOGLE_CLOUD_PROJECT, which scripts/clrnd.sh sets from $GCP_PROJECT_ID, so no
+# account identifier is committed here.
+#
+# `manifest` is resolved relative to this file, so the commands work from any
+# working directory.
+region: us-west2
+service: ryo-agentsview
+manifest: cloudrun-service.yaml
