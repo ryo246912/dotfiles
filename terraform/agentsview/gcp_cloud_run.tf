@@ -1,6 +1,6 @@
 resource "google_cloud_run_v2_service" "agentsview" {
   project             = var.gcp_project_id
-  location            = var.gcp_region
+  location            = local.region
   name                = var.cloud_run_service_name
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = true

@@ -96,10 +96,7 @@ Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDB
 export GCP_PROJECT_ID='<google-cloud-project-id>'
 export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
-export COCKROACH_REGION='us-west2'
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
-export TF_VAR_gcp_region="$GCP_REGION"
-export TF_VAR_cockroach_region="$COCKROACH_REGION"
 export TF_VAR_github_repository='ryo246912/dotfiles'
 
 gcloud config set project "$GCP_PROJECT_ID"
@@ -167,10 +164,11 @@ Terraform変数fileを作る。このfileにpasswordやAPI keyを記載しない
 cp terraform/agentsview/terraform.tfvars.example terraform/agentsview/terraform.tfvars
 sed -i.bak \
   -e "s/replace-with-project-id/${GCP_PROJECT_ID}/g" \
-  -e "s/us-west2/${GCP_REGION}/g" \
   terraform/agentsview/terraform.tfvars
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
+
+regionは入力変数ではなくTerraformの`local.region = "us-west2"`に固定している。以前作成した`terraform.tfvars`に`gcp_region = "us-central1"`または`cockroach_region = "us-central1"`が残っている場合は、その2行を削除する。planの`cockroach_cluster.agentsview.regions[0].name`、Cloud Run、Artifact Registryがすべて`us-west2`になることを確認する。
 
 CockroachDB API keyと3つのpasswordは、現在のshellへ手動`export`せずfnoxからTerraform processへ渡す。Bitwarden Secrets Managerに次の名前で登録し、`dot_config/fnox/config.toml`のmappingと一致させる。
 

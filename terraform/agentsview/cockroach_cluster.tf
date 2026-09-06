@@ -9,7 +9,7 @@ resource "cockroach_cluster" "agentsview" {
     }
   }
   regions = [{
-    name = var.cockroach_region
+    name = local.region
   }]
 
   delete_protection = true

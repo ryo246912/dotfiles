@@ -1,6 +1,6 @@
 resource "google_artifact_registry_repository" "agentsview" {
   project       = var.gcp_project_id
-  location      = var.gcp_region
+  location      = local.region
   repository_id = "agentsview"
   description   = "AgentsView Cloud Run images"
   format        = "DOCKER"

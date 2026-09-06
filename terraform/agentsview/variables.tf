@@ -3,12 +3,6 @@ variable "gcp_project_id" {
   type        = string
 }
 
-variable "gcp_region" {
-  description = "Cloud Run and Artifact Registry region."
-  type        = string
-  default     = "us-west2"
-}
-
 variable "agentsview_image" {
   description = "Immutable Artifact Registry image URI deployed to Cloud Run."
   type        = string
@@ -48,12 +42,6 @@ variable "cockroach_cluster_name" {
   description = "CockroachDB Cloud Basic cluster name."
   type        = string
   default     = "ryo-agentsview"
-}
-
-variable "cockroach_region" {
-  description = "CockroachDB GCP region near Cloud Run."
-  type        = string
-  default     = "us-west2"
 }
 
 variable "cockroach_database_name" {
