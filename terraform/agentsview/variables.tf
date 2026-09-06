@@ -3,15 +3,6 @@ variable "gcp_project_id" {
   type        = string
 }
 
-# The image URI and the Secret Manager versions the service reads live in the
-# clrnd manifest, not here. Terraform only needs the service name to attach the
-# public invoker binding.
-variable "cloud_run_service_name" {
-  description = "Cloud Run service name. Must match metadata.name in the clrnd manifest."
-  type        = string
-  default     = "ryo-agentsview"
-}
-
 variable "github_repository" {
   description = "GitHub owner/repository allowed to impersonate the deploy service account."
   type        = string

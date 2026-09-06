@@ -12,7 +12,7 @@
 resource "google_cloud_run_v2_service_iam_member" "public" {
   project  = var.gcp_project_id
   location = local.region
-  name     = var.cloud_run_service_name
+  name     = local.cloud_run_service_name
   role     = "roles/run.invoker"
   member   = "allUsers"
 

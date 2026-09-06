@@ -10,9 +10,11 @@
 
 AGENTSVIEW_SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 AGENTSVIEW_CONFIG_DIR=$(cd -- "${AGENTSVIEW_SCRIPT_DIR}/.." && pwd)
-AGENTSVIEW_CLOUD_RUN_REGION="${AGENTSVIEW_CLOUD_RUN_REGION:-us-west2}"
-# Fixed, not configurable: clrnd requires metadata.name in the manifest, the
-# service in clrnd.yml, and the deployed service to be the same name.
+# Both are fixed rather than overridable, because each is written down in more
+# than one place: the region in clrnd.yml and Terraform's local.region, the name
+# in the manifest's metadata.name, clrnd.yml, and local.cloud_run_service_name.
+# An override here would build and query one service while clrnd deploys another.
+AGENTSVIEW_CLOUD_RUN_REGION="us-west2"
 AGENTSVIEW_CLOUD_RUN_SERVICE="ryo-agentsview"
 
 # clrnd falls back to these when clrnd.yml does not set project/region, which is
@@ -51,6 +53,17 @@ agentsview_newest_secret_version() {
     --format='value(name)' | sed 's#.*/##'
 }
 
+# Secret Manager numbers versions from 1, so anything else - "latest" above all -
+# is a mistake rather than a version.
+agentsview_require_version_number() {
+  case "$2" in
+    '' | *[!0-9]* | 0*)
+      echo "$1 must be a Secret Manager version number, got: $2" >&2
+      exit 1
+      ;;
+  esac
+}
+
 # Only the subcommands that render the manifest need these, so the lookup stays
 # out of the read-only paths (status, revisions, rollback).
 agentsview_export_secret_versions() {
@@ -70,6 +83,11 @@ agentsview_export_secret_versions() {
 
   : "${AGENTSVIEW_PG_URL_SECRET_VERSION:?No enabled version of agentsview-pg-url. Run: mise run agentsview:cloudrun:secrets}"
   : "${AGENTSVIEW_CONFIG_SECRET_VERSION:?No enabled version of agentsview-config-toml. Run: mise run agentsview:cloudrun:secrets}"
+
+  # An explicitly set value goes into the manifest as written, so "latest" here
+  # would quietly undo the pinning this function exists for.
+  agentsview_require_version_number AGENTSVIEW_PG_URL_SECRET_VERSION "$AGENTSVIEW_PG_URL_SECRET_VERSION"
+  agentsview_require_version_number AGENTSVIEW_CONFIG_SECRET_VERSION "$AGENTSVIEW_CONFIG_SECRET_VERSION"
 
   export AGENTSVIEW_PG_URL_SECRET_VERSION AGENTSVIEW_CONFIG_SECRET_VERSION
 }

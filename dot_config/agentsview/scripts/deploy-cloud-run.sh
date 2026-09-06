@@ -25,6 +25,11 @@ if [ "${AGENTSVIEW_SKIP_BUILD:-0}" != "1" ]; then
     --tag="$AGENTSVIEW_IMAGE"
 fi
 
+# Resolve the secret versions here, once, and export them: clrnd.sh would
+# otherwise look them up separately for verify and for deploy, and a version
+# added in between would be deployed without having been verified.
+agentsview_export_secret_versions
+
 # verify checks the manifest locally and confirms the service account, secret
 # versions, and image it references exist before anything is applied.
 bash "${script_dir}/clrnd.sh" verify

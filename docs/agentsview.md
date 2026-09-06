@@ -788,7 +788,7 @@ GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_
 
 **Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
 
-`variables.tf`はproject ID、service名、GitHub repository、CockroachDB passwordなどのoperator入力を宣言する。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続command／CIが必要とするhost、service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
+`variables.tf`はproject ID、GitHub repository、CockroachDB passwordなどのoperator入力を宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続command／CIが必要とするhost、service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
 
 #### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
 
@@ -855,7 +855,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 
 | manifestの位置                                                          | 値                                                                        | 意味／旧Terraform属性                                                                            |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `metadata.name`                                                         | `ryo-agentsview`                                                          | service名。`clrnd.yml`の`service`とvar `cloud_run_service_name`に一致させる                      |
+| `metadata.name`                                                         | `ryo-agentsview`                                                          | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
 | `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                     | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
 | `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                       | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
 | 同`maxScale`                                                            | `2`                                                                       | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |

@@ -6,7 +6,7 @@ output "artifact_registry_repository" {
 # no longer owns the Cloud Run service. Name and region are published here so
 # the deploy scripts and CI agree with Terraform on where it lives.
 output "cloud_run_service_name" {
-  value = var.cloud_run_service_name
+  value = local.cloud_run_service_name
 }
 
 output "cloud_run_region" {
