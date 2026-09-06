@@ -330,7 +330,7 @@ fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 
 ###### 途中までapplyされた場合の復旧
 
-`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。失敗したCloud Run serviceはstate上でtaintedになることがあるが、`deletion_protection = true`なので、そのままapplyして置換しようとすると`cannot destroy service`で停止する。
+`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。失敗したCloud Run serviceはstate上でtaintedになることがある。旧revisionが`deletion_protection = true`の状態でtaintedになった場合、そのままapplyして置換しようとすると`cannot destroy service`で停止する。
 
 まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region` warningと`us-central1` imageを除去する。次に、作成済みの`us-west2` repositoryへbootstrap imageをbuildする。
 
@@ -358,13 +358,15 @@ fnox exec -- sh -c '
 
 このGETが200でも、認証だけが成功し、cluster作成の認可が不足している場合がある。今回のようにcreateだけが`unauthorized`になる場合はkeyを闇雲に再発行せず、CockroachDB Cloud Consoleの**Access Management > Service Accounts**で、そのkeyを所有するservice accountにorganization scopeの**Cluster Creator**または**Cluster Admin**が付いているか確認する。`Organization Member`だけでは不足する。roleを付与した後は同じ`CCDB1_...` keyを継続利用できる。401の場合、またはSecret keyを紛失した場合だけ**Service Account Details > Create API Key**で再発行し、Bitwardenの`COCKROACH_API_KEY`を更新する。
 
-image digestとCockroachDBのroleを確認したら、削除保護を弱めずに失敗したCloud Run resourceのtaintだけを解除する。これはserviceを正常とみなす操作ではなく、次のplanで存在済みserviceのimageを正しい`us-west2` URIへin-place更新させるために行う。
+image digestとCockroachDBのroleを確認したら、**次のplanを実行する前に**失敗したCloud Run resourceのtaintを解除する。今回表示されたplanに`is tainted, so must be replaced`が残っているのは、このcommandをまだ実行していないためである。これはserviceを正常とみなす操作ではなく、次のplanで存在済みserviceのimageを正しい`us-west2` URIへin-place更新させるために行う。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_service.agentsview
 ```
 
-その後、保存planを作り直す。失敗前に作った`tfplan`は再利用しない。`plan`にCloud Runの`destroy`または`-/+`が残っておらず、container imageが`us-west2-docker.pkg.dev/...`へ更新されることを確認してからapplyする。
+`Resource instance google_cloud_run_v2_service.agentsview has been successfully untainted.`と表示されたことを確認する。現在の構成ではstatelessなCloud Run serviceの`deletion_protection`を`false`にし、失敗revisionの安全な再作成を妨げない。persistent dataを持つCockroachDB clusterの`delete_protection = true`は維持する。
+
+その後、保存planを作り直す。失敗前に作った`tfplan`は再利用しない。`plan`に`is tainted`、Cloud Runの`destroy`、`-/+`が残っておらず、container imageが`us-west2-docker.pkg.dev/...`へ更新されることを確認してからapplyする。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan

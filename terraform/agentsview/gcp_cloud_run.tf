@@ -3,7 +3,9 @@ resource "google_cloud_run_v2_service" "agentsview" {
   location            = local.region
   name                = var.cloud_run_service_name
   ingress             = "INGRESS_TRAFFIC_ALL"
-  deletion_protection = true
+  # The service is stateless and may need replacement after a failed revision.
+  # CockroachDB retains deletion protection because it owns persistent data.
+  deletion_protection = false
 
   template {
     service_account = google_service_account.runtime.email
