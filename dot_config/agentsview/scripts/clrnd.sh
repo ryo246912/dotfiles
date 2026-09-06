@@ -19,4 +19,13 @@ for command in clrnd; do
   }
 done
 
+# verify, render, diff and deploy expand the manifest, so they need the numeric
+# secret versions. status, revisions, rollback and traffic read the live service
+# and do not, which keeps a Secret Manager lookup off those paths.
+case "${1:-}" in
+  verify | render | diff | deploy)
+    agentsview_export_secret_versions
+    ;;
+esac
+
 exec clrnd "$@" --config "${AGENTSVIEW_CONFIG_DIR}/clrnd.yml"

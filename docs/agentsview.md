@@ -480,7 +480,7 @@ export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
 fnox exec -- mise run agentsview:cloudrun:secrets
 ```
 
-Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enabledなversionが1つあることを確認する。値そのものを表示する必要はない。manifestは`latest`を参照するので、version番号を控える必要はない。
+Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enabledなversionが1つあることを確認する。値そのものを表示する必要はない。deploy時にscriptが最新のENABLED versionを引いてnumeric versionとしてrevisionへ焼き込むため、version番号を手で控える必要はない。
 
 **完了確認:** 両secretにEnabledなversionが1つある。
 
@@ -512,13 +512,13 @@ fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
-Cloud Run URLを取得し、placeholder configを実URLへ置き換えて新revisionを作る。secretは`latest`参照なので、新versionを追加しただけでは動作中のrevisionは切り替わらない。`refresh`が定義を変えずに新revisionを作る。
+Cloud Run URLを取得し、placeholder configを実URLへ置き換えて新revisionを作る。revisionにはsecretのnumeric versionが焼き込まれているため、新versionを追加しただけでは切り替わらない。`deploy`が新しいversion番号でmanifestをrenderし、新revisionを作る（imageは変わらないので`AGENTSVIEW_SKIP_BUILD=1`でbuildを省く）。
 
 ```sh
 export AGENTSVIEW_CLOUD_RUN_URL=$(gcloud run services describe ryo-agentsview \
   --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --format='value(status.url)')
 fnox exec -- mise run agentsview:cloudrun:secrets
-mise run agentsview:cloudrun:refresh
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
 
 Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
@@ -828,7 +828,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 | `agentsview:cloudrun:deploy`    | build → verify → deploy → rollout待ち                                    |
 | `agentsview:cloudrun:status`    | Ready状態、traffic split、URL                                            |
 | `agentsview:cloudrun:revisions` | revision一覧とtraffic share                                              |
-| `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（secretの新versionを読み直す）            |
+| `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
 | `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
 
 採用にあたって前提にした制約は次のとおり。
@@ -836,31 +836,31 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 - **IAMはclrnd管理外。** `allUsers`のinvoker bindingはTerraformに残す。clrndが作るserviceは常にprivateなので、初回は「clrnd deployでserviceを作る → Terraform applyでinvoker bindingを付ける」の順序になる。
 - **manifestはGo templateであり、実行可能な入力として扱う。** 任意の環境変数を読めるため、fork PRのmanifestをproduction credentialでrender／deployしない。今回のmanifestは`must_env`で`GCP_RUNTIME_SERVICE_ACCOUNT`と`AGENTSVIEW_IMAGE`だけを読み、secret値は展開せずSecret Manager参照だけを書く。
 - **`diff`はserver defaultの解決にdry-run updateを使うため、read-only権限では動かない。** read-only credentialで確認する場合だけ`--no-server-defaults`を付ける。
-- **secret参照は`latest`。** Secret Managerに新versionを追加しただけでは動作中のrevisionは切り替わらない。`agentsview:cloudrun:refresh`（または通常deploy）で新revisionを作る。
+- **secret versionはnumericへpinする。** Cloud Runはsecret参照をinstance起動時に解決するため、`latest`のままだと同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。`clrnd.sh`はmanifestをrenderするsubcommand（`verify`／`render`／`diff`／`deploy`）でだけ最新のENABLED versionをSecret Managerから引き、その番号をrevisionへ焼き込む。古いversionを意図的に使う場合は`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`を明示する。**新しいsecret versionを反映するのは`deploy`であり、`refresh`ではない**（`refresh`はliveの定義をそのまま再適用するため、pinされた古い番号を持ち回る）。
 - **v0系のthird-party tool。** version pinを必ず維持し、bumpするときは`verify`→`diff`→`deploy`→`rollback`をrehearsalしてから上げる。
 
 #### 2.0.3 clrnd manifestの各設定
 
 `dot_config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
 
-| manifestの位置                                                          | 値                                                                    | 意味／旧Terraform属性                                                                            |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `metadata.name`                                                         | `ryo-agentsview`                                                      | service名。`clrnd.yml`の`service`とvar `cloud_run_service_name`に一致させる                      |
-| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                 | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
-| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                   | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
-| 同`maxScale`                                                            | `2`                                                                   | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
-| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                | 旧`resources.cpu_idle = true`                                                                    |
-| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                | 旧`resources.startup_cpu_boost = true`                                                           |
-| `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                        | Terraform outputのruntime service account。deploy権限は持たない                                  |
-| `spec.template.spec.containerConcurrency`                               | `20`                                                                  | 旧`max_instance_request_concurrency`                                                             |
-| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                  | 旧`timeout = "60s"`                                                                              |
-| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                   | 旧`var.agentsview_image`。既定値はDockerfileのpinned tagから組み立て、CIはcommit SHA tagを渡す   |
-| `containers[].ports`                                                    | `http1` / `8080`                                                      | 旧`ports.container_port`                                                                         |
-| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                          | 旧`resources.limits`                                                                             |
-| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA` | 旧`env`ブロックと同じ非secret値                                                                  |
-| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `latest`                                        | 旧`value_source.secret_key_ref`。read-only CockroachDB URL                                       |
-| `volumes[].secret`                                                      | `agentsview-config-toml` → `/data/config.toml`                        | 旧`volumes.secret` + `volume_mounts`                                                             |
-| `spec.traffic`                                                          | `latestRevision: true` / 100%                                         | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
+| manifestの位置                                                          | 値                                                                        | 意味／旧Terraform属性                                                                            |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `metadata.name`                                                         | `ryo-agentsview`                                                          | service名。`clrnd.yml`の`service`とvar `cloud_run_service_name`に一致させる                      |
+| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                     | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
+| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                       | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
+| 同`maxScale`                                                            | `2`                                                                       | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
+| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                    | 旧`resources.cpu_idle = true`                                                                    |
+| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                    | 旧`resources.startup_cpu_boost = true`                                                           |
+| `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                            | Terraform outputのruntime service account。deploy権限は持たない                                  |
+| `spec.template.spec.containerConcurrency`                               | `20`                                                                      | 旧`max_instance_request_concurrency`                                                             |
+| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                      | 旧`timeout = "60s"`                                                                              |
+| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                       | 旧`var.agentsview_image`。既定値はDockerfileのpinned tagから組み立て、CIはcommit SHA tagを渡す   |
+| `containers[].ports`                                                    | `http1` / `8080`                                                          | 旧`ports.container_port`                                                                         |
+| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                              | 旧`resources.limits`                                                                             |
+| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`     | 旧`env`ブロックと同じ非secret値                                                                  |
+| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}` | 旧`value_source.secret_key_ref` + `var.pg_url_secret_version`。read-only CockroachDB URL         |
+| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/data/config.toml`          | 旧`volumes.secret` + `volume_mounts` + `var.config_secret_version`                               |
+| `spec.traffic`                                                          | `latestRevision: true` / 100%                                             | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
 
 manifestはGo templateとして必ずrenderされるため、上記2箇所以外に`{`を2つ並べた表記を書かない。書く必要がある場合はclrnd READMEのescape記法を使う。
 
@@ -987,7 +987,7 @@ mise run agentsview:cloudrun:verify
 mise run agentsview:cloudrun:deploy
 ```
 
-Serviceができたら`terraform/agentsview`へ戻り、残りのresource（`allUsers`のinvoker bindingを含む）をapplyする。secret versionはmanifestが`latest`を参照するため、Terraform変数として渡す必要はない。
+Serviceができたら`terraform/agentsview`へ戻り、残りのresource（`allUsers`のinvoker bindingを含む）をapplyする。secret versionはclrndがdeploy時に解決してrevisionへ焼き込むため、Terraform変数として渡す必要はない。
 
 ```sh
 cd terraform/agentsview
@@ -995,7 +995,7 @@ fnox exec -- terraform plan -input=false -out=tfplan
 fnox exec -- terraform apply tfplan
 ```
 
-planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 2、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に実URLを`AGENTSVIEW_CLOUD_RUN_URL`へ設定してconfig secretを更新し、`mise run agentsview:cloudrun:refresh`で新revisionへ反映する。
+planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 2、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に実URLを`AGENTSVIEW_CLOUD_RUN_URL`へ設定してconfig secretを更新し、`AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy`で新revisionへ反映する。
 
 #### 2.4 deploy方法を確認する
 
@@ -1188,15 +1188,15 @@ export AGENTSVIEW_CLOUD_RUN_URL=$(
     --format='value(status.url)'
 )
 fnox exec -- mise run agentsview:cloudrun:secrets
-mise run agentsview:cloudrun:refresh
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
 
 Cloud Runでは次のようにsecretを注入する。どちらもmanifestには参照だけを書き、値はSecret Managerに残る。
 
-- `AGENTSVIEW_PG_URL`: `agentsview-pg-url`の`latest`を環境変数として参照
-- `/data/config.toml`: `agentsview-config-toml`の`latest`をread-only secret volumeとしてmount
+- `AGENTSVIEW_PG_URL`: `agentsview-pg-url`のnumeric versionを環境変数として参照
+- `/data/config.toml`: `agentsview-config-toml`のnumeric versionをread-only secret volumeとしてmount
 
-secretは`latest`参照なので、**新versionを追加しただけでは動作中のrevisionは切り替わらない。** `agentsview:cloudrun:refresh`（定義を変えずに新revisionを作る）か通常deployで反映する。
+versionは`latest`ではなく番号で固定する。Cloud Runはsecret参照をinstance起動時に解決するため、`latest`では同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。deploy scriptが最新のENABLED versionを引いてrevisionへ焼き込むので、**新versionを追加しただけでは動作中のrevisionは切り替わらない。** 反映するのは`deploy`であり、`refresh`（liveの定義をそのまま再適用する）ではない。
 
 Terraformのinvoker bindingはCloud Run URLへの到達だけを許可する。AgentsView自身の`require_auth=true`とbearer tokenは維持する。
 

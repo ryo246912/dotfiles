@@ -57,7 +57,10 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: agentsview-pg-url
-                  key: latest
+                  # A number, never "latest": Cloud Run resolves the reference per
+                  # instance at startup, so "latest" makes a revision's values
+                  # depend on when each instance happened to start.
+                  key: '{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}'
           volumeMounts:
             - name: config
               mountPath: /data
@@ -66,7 +69,7 @@ spec:
           secret:
             secretName: agentsview-config-toml
             items:
-              - key: latest
+              - key: '{{ must_env "AGENTSVIEW_CONFIG_SECRET_VERSION" }}'
                 path: config.toml
   traffic:
     # Follow the newest revision. `clrnd rollback` pins this to a revision name

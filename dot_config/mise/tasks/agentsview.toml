@@ -1113,7 +1113,7 @@ run         = 'mise run agentsview:cloudrun:clrnd -- revisions "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:refresh"]
-description = "Roll a new Cloud Run revision without changing the definition"
+description = "Roll a new Cloud Run revision without changing the definition (restart containers)"
 run         = 'mise run agentsview:cloudrun:clrnd -- refresh "$@"'
 shell       = "bash -c"
 

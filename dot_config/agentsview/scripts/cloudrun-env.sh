@@ -34,3 +34,42 @@ if [ -z "${AGENTSVIEW_IMAGE:-}" ]; then
   AGENTSVIEW_IMAGE="${AGENTSVIEW_CLOUD_RUN_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:${agentsview_image_tag}"
 fi
 export AGENTSVIEW_IMAGE
+
+# Secret versions are pinned to a number, never "latest". Cloud Run resolves a
+# secret reference per instance at startup, so "latest" can hand two instances of
+# the same revision different values while a version is being added, and a
+# rollback would read today's value instead of the one the old revision ran with.
+# The newest ENABLED version is resolved at render time and baked into the
+# revision; set AGENTSVIEW_PG_URL_SECRET_VERSION / AGENTSVIEW_CONFIG_SECRET_VERSION
+# to deploy an older one deliberately.
+agentsview_newest_secret_version() {
+  gcloud secrets versions list "$1" \
+    --project="$GCP_PROJECT_ID" \
+    --filter='state=ENABLED' \
+    --sort-by='~createTime' \
+    --limit=1 \
+    --format='value(name)' | sed 's#.*/##'
+}
+
+# Only the subcommands that render the manifest need these, so the lookup stays
+# out of the read-only paths (status, revisions, rollback).
+agentsview_export_secret_versions() {
+  if [ -z "${AGENTSVIEW_PG_URL_SECRET_VERSION:-}" ] || [ -z "${AGENTSVIEW_CONFIG_SECRET_VERSION:-}" ]; then
+    command -v gcloud >/dev/null || {
+      echo "Missing required command: gcloud (or set AGENTSVIEW_PG_URL_SECRET_VERSION and AGENTSVIEW_CONFIG_SECRET_VERSION)" >&2
+      exit 1
+    }
+  fi
+
+  if [ -z "${AGENTSVIEW_PG_URL_SECRET_VERSION:-}" ]; then
+    AGENTSVIEW_PG_URL_SECRET_VERSION=$(agentsview_newest_secret_version agentsview-pg-url)
+  fi
+  if [ -z "${AGENTSVIEW_CONFIG_SECRET_VERSION:-}" ]; then
+    AGENTSVIEW_CONFIG_SECRET_VERSION=$(agentsview_newest_secret_version agentsview-config-toml)
+  fi
+
+  : "${AGENTSVIEW_PG_URL_SECRET_VERSION:?No enabled version of agentsview-pg-url. Run: mise run agentsview:cloudrun:secrets}"
+  : "${AGENTSVIEW_CONFIG_SECRET_VERSION:?No enabled version of agentsview-config-toml. Run: mise run agentsview:cloudrun:secrets}"
+
+  export AGENTSVIEW_PG_URL_SECRET_VERSION AGENTSVIEW_CONFIG_SECRET_VERSION
+}
