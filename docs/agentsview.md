@@ -37,10 +37,11 @@
 ###### CockroachDB CloudのUI操作
 
 1. [CockroachDB Cloud Console](https://cockroachlabs.cloud/)へloginし、organizationを作成または選択する。
-2. 左navigationの**Access Management > API Keys**を開く。
-3. **Create API key**を押し、Terraform専用名を入力する。
-4. cluster／SQL userを作成できるorganization権限だけを選び、keyを作成する。
-5. 表示されたsecretは再表示できないため、直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。画面やterminalへ貼ったままにしない。
+2. 左navigationの**Access Management**を開き、**Service Accounts** tabを選ぶ。
+3. **Create**を押し、Terraform専用service accountのname／descriptionを入力して作成する。作成直後は`Organization Member`だけでcluster作成権限がない。
+4. 作成したservice accountの**Actions > Edit Roles**を開き、organization scopeで**Cluster Creator**を付与する。既存clusterも含めて管理させる必要がある場合だけ**Cluster Admin**を使う。
+5. service accountの詳細を開き、**Create API Key**からTerraform専用keyを作成する。
+6. 表示された`CCDB1_...`形式の**Secret key**全体をcopyする。画面を閉じると再表示できないため、直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。API keyのnameやUUIDを保存しない。
 
 ###### CLI準備
 
@@ -69,7 +70,7 @@ gcloud auth application-default login
 flyctl auth login
 ```
 
-**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB API keyがsecret storeに保存され、上記commandがすべてversionを返す。
+**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記commandがすべてversionを返す。
 
 ##### 作業2. 固定値、password、ローカルsecretを準備する
 
@@ -210,12 +211,12 @@ TF_VAR_cockroach_read_password
 
 次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
 
-| Secret name                       | Value                                           |
-| --------------------------------- | ----------------------------------------------- |
-| `COCKROACH_API_KEY`               | CockroachDB Cloudで発行したorganization API key |
-| `TF_VAR_cockroach_owner_password` | 作業2で生成したowner用16進password              |
-| `TF_VAR_cockroach_push_password`  | 作業2で生成したpush用16進password               |
-| `TF_VAR_cockroach_read_password`  | 作業2で生成したread用16進password               |
+| Secret name                       | Value                                                      |
+| --------------------------------- | ---------------------------------------------------------- |
+| `COCKROACH_API_KEY`               | Terraform用service accountで発行した`CCDB1_...` Secret key |
+| `TF_VAR_cockroach_owner_password` | 作業2で生成したowner用16進password                         |
+| `TF_VAR_cockroach_push_password`  | 作業2で生成したpush用16進password                          |
+| `TF_VAR_cockroach_read_password`  | 作業2で生成したread用16進password                          |
 
 Bitwarden Secrets Managerの**Machine accounts**で、`BWS_ACCESS_TOKEN`を発行したmachine accountを開き、上記projectへのread accessがあることも確認する。別projectへsecretを作った場合や、machine accountにproject accessがない場合、mappingが表示されても`secret ... not found`になる。
 
@@ -329,7 +330,7 @@ fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 
 ###### 途中までapplyされた場合の復旧
 
-`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。Cloud Run resourceがtaintedになった場合も、正しいimageをbuildした後のapplyでTerraformが置き換える。
+`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。失敗したCloud Run serviceはstate上でtaintedになることがあるが、`deletion_protection = true`なので、そのままapplyして置換しようとすると`cannot destroy service`で停止する。
 
 まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region` warningと`us-central1` imageを除去する。次に、作成済みの`us-west2` repositoryへbootstrap imageをbuildする。
 
@@ -342,7 +343,7 @@ gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
   --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
 ```
 
-CockroachDBの`unauthorized`はGCP認証とは無関係で、`COCKROACH_API_KEY`が無効、失効済み、別organization用、またはcluster作成権限を持たない場合に発生する。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
+CockroachDBの`unauthorized`はGCP認証とは無関係である。`COCKROACH_API_KEY`にはservice accountのAPI key作成時に一度だけ表示される`CCDB1_...`形式の**Secret key全体**を登録する。API keyの表示名やUUIDではない。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
 
 ```sh
 fnox exec -- sh -c '
@@ -351,14 +352,23 @@ fnox exec -- sh -c '
     -H "Authorization: Bearer $COCKROACH_API_KEY" \
     https://cockroachlabs.cloud/api/v1/clusters)
   test "$status" = 200 || { echo "CockroachDB API HTTP $status" >&2; exit 1; }
-  echo "CockroachDB API authentication=ok"
+  echo "CockroachDB API authentication=ok (authorization not checked)"
 '
 ```
 
-401／403の場合はCockroachDB Cloud Consoleの**Access Management**でTerraform用API keyを再発行し、clusterを作成できるorganization roleを付与してからBitwarden Secrets Managerの`COCKROACH_API_KEY`を更新する。API確認とimage digest確認が成功した後に、保存planを作り直してapplyする。失敗前に作った`tfplan`は再利用しない。
+このGETが200でも、認証だけが成功し、cluster作成の認可が不足している場合がある。今回のようにcreateだけが`unauthorized`になる場合はkeyを闇雲に再発行せず、CockroachDB Cloud Consoleの**Access Management > Service Accounts**で、そのkeyを所有するservice accountにorganization scopeの**Cluster Creator**または**Cluster Admin**が付いているか確認する。`Organization Member`だけでは不足する。roleを付与した後は同じ`CCDB1_...` keyを継続利用できる。401の場合、またはSecret keyを紛失した場合だけ**Service Account Details > Create API Key**で再発行し、Bitwardenの`COCKROACH_API_KEY`を更新する。
+
+image digestとCockroachDBのroleを確認したら、削除保護を弱めずに失敗したCloud Run resourceのtaintだけを解除する。これはserviceを正常とみなす操作ではなく、次のplanで存在済みserviceのimageを正しい`us-west2` URIへin-place更新させるために行う。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_service.agentsview
+```
+
+その後、保存planを作り直す。失敗前に作った`tfplan`は再利用しない。`plan`にCloud Runの`destroy`または`-/+`が残っておらず、container imageが`us-west2-docker.pkg.dev/...`へ更新されることを確認してからapplyする。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
@@ -743,7 +753,7 @@ fnox exec -- terraform fmt -check -recursive
 fnox exec -- terraform validate
 ```
 
-CockroachDB Cloudでorganization API keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
+CockroachDB Cloudでorganization scopeの`Cluster Creator`を持つTerraform用service accountから`CCDB1_...` API Secret keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
 
 ```sh
 chezmoi apply ~/.config/fnox/config.toml
