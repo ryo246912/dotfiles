@@ -6,6 +6,11 @@ variable "gcp_project_id" {
 variable "agentsview_image" {
   description = "Immutable Artifact Registry image URI deployed to Cloud Run."
   type        = string
+
+  validation {
+    condition     = startswith(var.agentsview_image, "us-west2-docker.pkg.dev/")
+    error_message = "agentsview_image must be hosted in the us-west2 Artifact Registry."
+  }
 }
 
 variable "pg_url_secret_version" {

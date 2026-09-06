@@ -170,6 +170,17 @@ rm -f terraform/agentsview/terraform.tfvars.bak
 
 regionは入力変数ではなくTerraformの`local.region = "us-west2"`に固定している。以前作成した`terraform.tfvars`に`gcp_region = "us-central1"`または`cockroach_region = "us-central1"`が残っている場合は、その2行を削除する。planの`cockroach_cluster.agentsview.regions[0].name`、Cloud Run、Artifact Registryがすべて`us-west2`になることを確認する。
 
+既存の`terraform.tfvars`を引き継ぐ場合は、初回plan／applyの前に次を実行する。廃止したregion変数を削除し、Cloud Run imageも`us-west2`のArtifact Registryへ修正する。
+
+```sh
+sed -i.bak \
+  -e '/^[[:space:]]*gcp_region[[:space:]]*=/d' \
+  -e '/^[[:space:]]*cockroach_region[[:space:]]*=/d' \
+  -e "s#^agentsview_image[[:space:]]*=.*#agentsview_image = \"us-west2-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap\"#" \
+  terraform/agentsview/terraform.tfvars
+rm -f terraform/agentsview/terraform.tfvars.bak
+```
+
 CockroachDB API keyと3つのpasswordは、現在のshellへ手動`export`せずfnoxからTerraform processへ渡す。Bitwarden Secrets Managerに次の名前で登録し、`dot_config/fnox/config.toml`のmappingと一致させる。
 
 ```text
@@ -314,6 +325,41 @@ CockroachDB Consoleの**Clusters**で`agentsview` clusterが`Basic`としてRead
 fnox exec -- terraform -chdir=terraform/agentsview output cockroach_cluster_id
 fnox exec -- terraform -chdir=terraform/agentsview output cockroach_database
 fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
+```
+
+###### 途中までapplyされた場合の復旧
+
+`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。Cloud Run resourceがtaintedになった場合も、正しいimageをbuildした後のapplyでTerraformが置き換える。
+
+まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region` warningと`us-central1` imageを除去する。次に、作成済みの`us-west2` repositoryへbootstrap imageをbuildする。
+
+```sh
+export AGENTSVIEW_IMAGE="us-west2-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
+gcloud builds submit dot_config/agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --tag="$AGENTSVIEW_IMAGE"
+gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
+  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+```
+
+CockroachDBの`unauthorized`はGCP認証とは無関係で、`COCKROACH_API_KEY`が無効、失効済み、別organization用、またはcluster作成権限を持たない場合に発生する。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
+
+```sh
+fnox exec -- sh -c '
+  test -n "${COCKROACH_API_KEY:-}" || { echo "COCKROACH_API_KEY=missing" >&2; exit 1; }
+  status=$(curl -sS -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $COCKROACH_API_KEY" \
+    https://cockroachlabs.cloud/api/v1/clusters)
+  test "$status" = 200 || { echo "CockroachDB API HTTP $status" >&2; exit 1; }
+  echo "CockroachDB API authentication=ok"
+'
+```
+
+401／403の場合はCockroachDB Cloud Consoleの**Access Management**でTerraform用API keyを再発行し、clusterを作成できるorganization roleを付与してからBitwarden Secrets Managerの`COCKROACH_API_KEY`を更新する。API確認とimage digest確認が成功した後に、保存planを作り直してapplyする。失敗前に作った`tfplan`は再利用しない。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
 ##### 作業5. CockroachDB接続URL、schema、最小権限を作る
