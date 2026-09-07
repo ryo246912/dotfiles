@@ -334,13 +334,10 @@ fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 
 `Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。
 
-まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。次に、作成済みの`us-west2` repositoryへbootstrap imageをbuildする。
+まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。次に、作成済みの`us-west2` repositoryへimageをbuildする。
 
 ```sh
-export AGENTSVIEW_IMAGE="us-west2-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
-gcloud builds submit dot_config/agentsview \
-  --project="$GCP_PROJECT_ID" \
-  --tag="$AGENTSVIEW_IMAGE"
+AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
 gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
   --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
 ```
@@ -465,18 +462,17 @@ fnox exec -- sh -c '
 
 ##### 作業6. Artifact Registryへ最初のimageをbuildする
 
-Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimmutableなbootstrap tagをbuildする。
+Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimageをbuildする。
 
 ```sh
-export AGENTSVIEW_IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
-gcloud builds submit dot_config/agentsview \
-  --project="$GCP_PROJECT_ID" \
-  --tag="$AGENTSVIEW_IMAGE"
+AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
 gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
   --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
 ```
 
-Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**で`bootstrap` imageとdigestが表示されることを確認する。
+tagは`<upstream version>-<commit>`（例: `0.38.1-e310d8af1f32`）になる。commitが変われば別tagになるため、別のcommitのimageで同じURIを上書きすることがない（同一commitでのrebuildは同じtagを作り直す）。build contextに未commitの変更がある場合はtagへ`-dirty`が付き、警告が出る。
+
+Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそのtagとdigestが表示されることを確認する。
 
 **完了確認:** 最後のcommandが`sha256:...`を返す。
 
@@ -506,11 +502,12 @@ done
 Cloud Run ServiceはTerraformではなくclrndが作る。まずmanifestとその参照先を検証する。`verify`はschemaをlocalで検証したうえで、runtime service account、secretとそのversion、Artifact Registry imageの実在をAPIで確認する。
 
 ```sh
-export AGENTSVIEW_IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
 mise run agentsview:cloudrun:verify
 mise run agentsview:cloudrun:diff     # 初回はすべてが追加として表示される
 mise run agentsview:cloudrun:deploy
 ```
+
+image URIは作業6と同じ規則でcommitから組み立てられるため、`AGENTSVIEW_IMAGE`を手で設定する必要はない。digestなど別のURIをdeployする場合だけ明示する。
 
 `deploy`はdiffを表示して確認を求め、適用後はrevisionがReadyになるまで待つ。rollout失敗時はnon-zeroで終了するため、失敗に気づかず次へ進むことはない。
 
@@ -827,6 +824,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 
 | task                            | 内容                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
+| `agentsview:cloudrun:build`     | commitでtagを固定してArtifact Registryへimageをbuild                     |
 | `agentsview:cloudrun:verify`    | manifestのschema検証と、service account／secret version／imageの実在確認 |
 | `agentsview:cloudrun:render`    | templateを展開したmanifestを表示（APIへ接続しない）                      |
 | `agentsview:cloudrun:diff`      | live serviceとmanifestの差分                                             |
@@ -844,6 +842,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 - **manifestはGo templateであり、実行可能な入力として扱う。** 任意の環境変数を読めるため、fork PRのmanifestをproduction credentialでrender／deployしない。今回のmanifestは`must_env`で`GCP_RUNTIME_SERVICE_ACCOUNT`と`AGENTSVIEW_IMAGE`だけを読み、secret値は展開せずSecret Manager参照だけを書く。
 - **`diff`はserver defaultの解決にdry-run updateを使うため、read-only権限では動かない。** read-only credentialで確認する場合だけ`--no-server-defaults`を付ける。
 - **secret versionはnumericへpinする。** Cloud Runはsecret参照をinstance起動時に解決するため、`latest`のままだと同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。mise taskはmanifestをrenderするmode（`verify`／`render`／`diff`／`deploy`）でだけ最新のENABLED versionをSecret Managerから引き、その番号をrevisionへ焼き込む。古いversionを意図的に使う場合は`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`を明示する。**新しいsecret versionを反映するのは`deploy`であり、`refresh`ではない**（`refresh`はliveの定義をそのまま再適用するため、pinされた古い番号を持ち回る）。
+- **image tagはcommitで固定する。** `gcloud builds submit --tag`は同じtagを上書きするため、`agentsview:0.38.1`のような可変tagのままだと、同じURIが時期によって別のartifactを指し、CIが検証したimageと手元deployのimageがずれ得る。taskは`<upstream version>-<commit>`をtagにし、CIでは`GITHUB_SHA`を使う。digestを直接指定する場合は`AGENTSVIEW_IMAGE`で上書きする。
 - **v0系のthird-party tool。** version pinを必ず維持し、bumpするときは`verify`→`diff`→`deploy`→`rollback`をrehearsalしてから上げる。
 
 #### 2.0.3 clrnd manifestの各設定
@@ -861,7 +860,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 | `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                            | Terraform outputのruntime service account。deploy権限は持たない                                  |
 | `spec.template.spec.containerConcurrency`                               | `20`                                                                      | 旧`max_instance_request_concurrency`                                                             |
 | `spec.template.spec.timeoutSeconds`                                     | `60`                                                                      | 旧`timeout = "60s"`                                                                              |
-| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                       | 旧`var.agentsview_image`。既定値はDockerfileのpinned tagから組み立て、CIはcommit SHA tagを渡す   |
+| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                       | 旧`var.agentsview_image`。既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）       |
 | `containers[].ports`                                                    | `http1` / `8080`                                                          | 旧`ports.container_port`                                                                         |
 | `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                              | 旧`resources.limits`                                                                             |
 | `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`     | 旧`env`ブロックと同じ非secret値                                                                  |
@@ -973,14 +972,13 @@ fnox exec -- terraform apply \
 続いて最初のimageをbuildする。
 
 ```sh
-image="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:bootstrap"
-gcloud builds submit ../../dot_config/agentsview --project="$GCP_PROJECT_ID" --tag="$image"
+cd ../..
+mise run agentsview:cloudrun:build
 ```
 
-repository rootへ戻り、CockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。初回だけ`AGENTSVIEW_CLOUD_RUN_URL=https://invalid.example`を使い、service作成後に実URLへ更新する。
+続いてCockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。初回だけ`AGENTSVIEW_CLOUD_RUN_URL=https://invalid.example`を使い、service作成後に実URLへ更新する。
 
 ```sh
-cd ../..
 export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
 export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
 fnox exec -- mise run agentsview:cloudrun:secrets
@@ -989,7 +987,6 @@ fnox exec -- mise run agentsview:cloudrun:secrets
 次にrepository rootでclrndからCloud Run Serviceを作る。Terraformはこの時点でServiceを作らない。
 
 ```sh
-export AGENTSVIEW_IMAGE="$image"
 mise run agentsview:cloudrun:verify
 mise run agentsview:cloudrun:deploy
 ```
@@ -1022,14 +1019,16 @@ mise run agentsview:cloudrun:rollback              # 直前のrevisionへ戻す
 mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 ```
 
-このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は、`AGENTSVIEW_IMAGE`にcommit SHA tagを設定して`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。
+このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。image tagはGitHub Actionsが渡す`GITHUB_SHA`から組み立てられるので、workflow側でimage URIを組み立てる必要はない。
 
 このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。Terraformがdeploy service accountへ与えているのは`secretVersionAdder`だけなので、その identity ではversionを追加できても一覧できない。CIでは次のどちらかを選ぶ。
 
 - secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す（追加の権限が不要で、deployするversionをCI側が確定できる）。
 - 2つのsecretに対してdeploy service accountへ`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
 
-権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
+権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。
+
+TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider

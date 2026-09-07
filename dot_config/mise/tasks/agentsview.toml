@@ -1060,6 +1060,11 @@ echo "Cloud Run secret versions added. Secret values were not printed."
 '''
 shell = "bash -c"
 
+["agentsview:cloudrun:build"]
+description = "Build the AgentsView image into Artifact Registry with a commit-pinned tag"
+run         = 'mise run agentsview:cloudrun:run -- build "$@"'
+shell       = "bash -c"
+
 ["agentsview:cloudrun:deploy"]
 description = "Build the image and deploy the Cloud Run service with clrnd"
 run         = 'mise run agentsview:cloudrun:run -- deploy "$@"'
@@ -1135,14 +1140,36 @@ export CLOUDSDK_RUN_REGION="$region"
 # manifestが must_env で読む値。未設定ならrender時にerrorになる。
 export GCP_RUNTIME_SERVICE_ACCOUNT="${GCP_RUNTIME_SERVICE_ACCOUNT:-agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com}"
 
-if [ -z "${AGENTSVIEW_IMAGE:-}" ]; then
-  # Dockerfileがpinしているupstream versionをtagにし、buildするimageと
-  # deployするimageがずれないようにする。CIはcommit SHA tagを渡す。
-  image_tag=$(sed -n 's#^FROM .*:\([^:[:space:]]*\)[[:space:]]*$#\1#p' "${config_dir}/Dockerfile" | head -n 1)
-  : "${image_tag:?${config_dir}/Dockerfile からimage tagを読み取れません}"
-  AGENTSVIEW_IMAGE="${region}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:${image_tag}"
-fi
-export AGENTSVIEW_IMAGE
+# imageのtagは commit で固定する。upstream versionだけをtagにすると同じtagを
+# buildのたびに上書きすることになり、同じURIが時期によって別のartifactを指す。
+# tagは <upstream version>-<commit> の形にして、Cloud Run consoleからAgentsView
+# のversionとdotfilesのcommitの両方を辿れるようにする。
+# imageを読むmode（build／verify／render／diff／deploy）でだけ解決する。
+export_image() {
+  if [ -n "${AGENTSVIEW_IMAGE:-}" ]; then
+    export AGENTSVIEW_IMAGE
+    return
+  fi
+
+  upstream_version=$(sed -n 's#^FROM .*:\([^:[:space:]]*\)[[:space:]]*$#\1#p' "${config_dir}/Dockerfile" | head -n 1)
+  : "${upstream_version:?${config_dir}/Dockerfile からupstream versionを読み取れません}"
+
+  commit="${GITHUB_SHA:-$(git -C "$config_dir" rev-parse HEAD 2>/dev/null || true)}"
+  if [ -z "$commit" ]; then
+    echo "commitを特定できません。git管理外から実行する場合はAGENTSVIEW_IMAGEを指定してください" >&2
+    exit 1
+  fi
+  commit=$(printf '%s' "$commit" | cut -c1-12)
+
+  # 未commitの変更があるとtagはbuildする内容を表さない。deployを止めはしないが、
+  # revision一覧から後で判別できるようにtagへ残す。
+  if [ -n "$(git -C "$config_dir" status --porcelain -- . 2>/dev/null || true)" ]; then
+    echo "警告: ${config_dir} に未commitの変更があります。tagへ -dirty を付けます" >&2
+    commit="${commit}-dirty"
+  fi
+
+  export AGENTSVIEW_IMAGE="${region}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:${upstream_version}-${commit}"
+}
 
 newest_secret_version() {
   gcloud secrets versions list "$1" \
@@ -1206,12 +1233,24 @@ run_clrnd() {
   clrnd "$@" --config "${config_dir}/clrnd.yml"
 }
 
+build_image() {
+  command -v gcloud >/dev/null || {
+    echo "gcloudが必要です" >&2
+    exit 1
+  }
+  gcloud builds submit "$config_dir" \
+    --project="$GCP_PROJECT_ID" \
+    --tag="$AGENTSVIEW_IMAGE"
+}
+
 case "$mode" in
+  build)
+    export_image
+    build_image
+    printf '%s\n' "$AGENTSVIEW_IMAGE"
+    ;;
   deploy)
-    command -v gcloud >/dev/null || {
-      echo "gcloudが必要です" >&2
-      exit 1
-    }
+    export_image
 
     # verifyとdeployで同じversionをpinするため、ここで一度だけ解決する。
     # 別々に引くと、その間に追加されたversionが未検証のままdeployされる。
@@ -1219,9 +1258,7 @@ case "$mode" in
 
     # AGENTSVIEW_SKIP_BUILD=1 でbuild済みtagの再deployだけを行う。
     if [ "${AGENTSVIEW_SKIP_BUILD:-0}" != "1" ]; then
-      gcloud builds submit "$config_dir" \
-        --project="$GCP_PROJECT_ID" \
-        --tag="$AGENTSVIEW_IMAGE"
+      build_image
     fi
 
     # verifyはmanifestをlocalで検証し、参照するservice account、secret version、
@@ -1238,12 +1275,13 @@ case "$mode" in
       --format='value(status.url)'
     ;;
   verify | render | diff)
+    export_image
     export_secret_versions
     run_clrnd "$mode" "$@"
     ;;
   *)
     # status／revisions／rollback／traffic はmanifestをrenderしないため、
-    # Secret Managerへの問い合わせを行わない。
+    # imageもsecret versionも解決しない（git管理外からも実行できる）。
     run_clrnd "$mode" "$@"
     ;;
 esac
