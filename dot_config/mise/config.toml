@@ -100,7 +100,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:superfly/flyctl"                                    = "0.4.29"
 "github:theseus-rs/postgresql-binaries"                     = { version = "18.6.0", bin_path = "bin", strip_components = 1 }
 "github:trasta298/keifu"                                    = "0.3.0"
-"go:github.com/air-verse/air"                               = "1.67.3"
+"go:github.com/air-verse/air"                               = "1.67.4"
 "go:github.com/atotto/clipboard/cmd/gocopy"                 = "0.1.4"
 "go:github.com/atotto/clipboard/cmd/gopaste"                = "0.1.4"
 "go:github.com/go-delve/delve/cmd/dlv"                      = "1.27.1"
