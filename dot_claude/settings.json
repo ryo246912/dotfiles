@@ -1,6 +1,12 @@
 {
   "env": {
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_AUTOUPDATER": "1",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000"
+  },
+  "model": "claude-3-7-sonnet-20250219",
+  "thinking": {
+    "enabled": false,
+    "effort": "low"
   },
   "cleanupPeriodDays": 36500,
   "permissions": {
