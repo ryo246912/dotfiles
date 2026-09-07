@@ -1,27 +1,32 @@
 name: deploy-atuin
+
 on:
   push:
     branches:
       - main
     paths:
       - dot_config/atuin/fly.toml
+      - .github/workflows/deploy-atuin.yaml
+  issue_comment:
+    types:
+      - created
   workflow_dispatch:
 
 permissions: {}
 
-concurrency:
-  group: deploy-atuin-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  deploy:
+  production:
     name: Deploy Atuin to Fly.io
     runs-on: ubuntu-slim
     environment: production
     permissions:
       contents: read
     timeout-minutes: 10
-    if: github.ref == 'refs/heads/main'
+    # main への push か、main での workflow_dispatch のときだけ本番 deploy する。
+    if: github.ref == 'refs/heads/main' && github.event_name != 'issue_comment'
+    concurrency:
+      group: deploy-atuin-production
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,3 +38,112 @@ jobs:
         run: flyctl deploy --app ryo-shellhistory -c dot_config/atuin/fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  preview:
+    name: Deploy Atuin preview to Fly.io
+    runs-on: ubuntu-slim
+    environment: preview
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    # workflow_dispatch は main 以外の branch から、issue_comment は PR コメントが
+    # `/deploy-atuin` または `/atuin` に完全一致するときだけ実行する（誤発火を避ける）。
+    # 誤操作防止のため comment 実行は repo owner に限定する。
+    if: |
+      (github.event_name == 'workflow_dispatch' &&
+       startsWith(github.ref, 'refs/heads/') &&
+       github.ref != 'refs/heads/main') ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       github.event.comment.author_association == 'OWNER' &&
+       contains(fromJSON('["/deploy-atuin", "/atuin"]'), github.event.comment.body))
+    # preview app は全 PR で共有するため、単一 group で直列化して同時 deploy を防ぐ。
+    concurrency:
+      group: deploy-atuin-preview
+      cancel-in-progress: false
+    steps:
+      # slim runner には gh が無い場合があるため、flyctl と一緒に mise で入れておく。
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install_args: "github:superfly/flyctl aqua:cli/cli"
+
+      - name: Add eyes reaction to comment
+        if: github.event_name == 'issue_comment'
+        run: gh api "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+
+      # fork PR の head を prod token で deploy しないよう、同一 repo の PR に限定する。
+      - name: Block fork PRs
+        if: github.event_name == 'issue_comment'
+        run: |
+          head_repo=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json headRepositoryOwner,headRepository \
+            -q '.headRepositoryOwner.login + "/" + .headRepository.name')
+          if [ "$head_repo" != "$REPO" ]; then
+            echo "Refusing preview deploy: PR head '$head_repo' is a fork, not '$REPO'." >&2
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # comment 実行時は対象 PR の head を、それ以外は起動 ref を checkout する。
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
+          persist-credentials: false
+
+      - name: Deploy Atuin preview
+        id: deploy
+        # 本番と同じ fly.toml を preview app 名で deploy する（設定ファイルは 1 つだけ管理する）。
+        # preview app は本番と同じ PostgreSQL に接続する。preview app には ATUIN_DB_URI が
+        # 無いため、preview environment の secret から本番 DB URI を staged secret で渡し、
+        # 続く deploy で適用する（URI は認証情報を含むため --env ではなく secret で渡す）。
+        run: |
+          if [ -z "$ATUIN_DB_URI" ]; then
+            echo "ATUIN_DB_URI secret is not set in the preview environment." >&2
+            exit 1
+          fi
+          flyctl apps create "$APP" 2>/dev/null || true
+          flyctl secrets set ATUIN_DB_URI="$ATUIN_DB_URI" --app "$APP" --stage
+          flyctl deploy --app "$APP" -c dot_config/atuin/fly.toml --ha=false
+          echo "url=https://$APP.fly.dev" >> "$GITHUB_OUTPUT"
+        env:
+          APP: ryo-shellhistory-preview
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          ATUIN_DB_URI: ${{ secrets.ATUIN_DB_URI }}
+
+      - name: Create comment file
+        if: github.event_name == 'issue_comment'
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          cat << EOF > comment.md
+          ## 🚀 Deployed atuin preview to Fly.io
+          <table>
+            <tr>
+              <th scope="row">Preview URL</th>
+              <td><a href="$DEPLOYMENT_URL" target="_blank" rel="noopener noreferrer">$DEPLOYMENT_URL</a></td>
+            </tr>
+          </table>
+
+          > 本番 fly.toml をそのまま preview app に deploy した使い捨て環境です
+          > （DB は本番 PostgreSQL に接続）。確認が終わったら app を削除してください。
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_
+          EOF
+
+      - name: Create PR comment
+        if: github.event_name == 'issue_comment'
+        run: gh pr comment "$PR_NUMBER" --body-file comment.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
