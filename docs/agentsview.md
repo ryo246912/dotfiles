@@ -302,20 +302,36 @@ fnox exec -- terraform -chdir=terraform/agentsview fmt -check -recursive
 fnox exec -- terraform -chdir=terraform/agentsview validate
 ```
 
-初回だけ、Cloud Run関連IAM以外の土台をtarget applyする（invoker bindingはclrndがserviceを作った後に付ける）。**runtime service accountのsecret accessorとArtifact Registry readerはここに含める。** Cloud Runはrevision作成時にruntime service accountがsecretを読めることを検証し、revision起動時にimageをpullするため、これらが無いと作業8の初回clrnd deployが失敗する。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
+初回だけ、`google_cloud_run_v2_service_iam_member.public`**以外のすべて**をtarget applyする。invoker bindingだけは、clrndがCloud Run Serviceを作った後（作業8）でないと「service not found」で失敗するため外す。
+
+この一覧はこのrunbookで唯一のbootstrap target一覧で、2.3節と復旧手順もこれを参照する。特に次は作業6・作業8より前に必要なので落とさない。
+
+- `google_artifact_registry_repository_iam_member.cloud_build_writer`: 作業6の`gcloud builds submit`がbuildしたimageをpushできない。
+- `google_secret_manager_secret_iam_member.runtime_*`: Cloud Runはrevision作成時にruntime service accountがsecretを読めることを検証する。
+- `google_artifact_registry_repository_iam_member.runtime_reader`: revision起動時のimage pullに必要。
+
+planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
+  -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
+  -target=google_artifact_registry_repository_iam_member.deploy_writer \
+  -target=google_artifact_registry_repository_iam_member.runtime_reader \
   -target=google_secret_manager_secret.pg_url \
   -target=google_secret_manager_secret.config \
-  -target=google_service_account.runtime \
-  -target=google_service_account.deploy \
   -target=google_secret_manager_secret_iam_member.runtime_pg_url \
   -target=google_secret_manager_secret_iam_member.runtime_config \
-  -target=google_artifact_registry_repository_iam_member.runtime_reader \
+  -target=google_secret_manager_secret_iam_member.deploy_pg_url_version_adder \
+  -target=google_secret_manager_secret_iam_member.deploy_config_version_adder \
+  -target=google_service_account.runtime \
+  -target=google_service_account.deploy \
+  -target=google_project_iam_member.deploy \
+  -target=google_service_account_iam_member.deploy_uses_runtime \
   -target=google_iam_workload_identity_pool.github \
+  -target=google_iam_workload_identity_pool_provider.github \
+  -target=google_service_account_iam_member.github_deploy \
   -target=cockroach_cluster.agentsview \
   -target=cockroach_database.agentsview \
   -target=cockroach_sql_user.owner \
@@ -337,13 +353,7 @@ fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 
 `Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。
 
-まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。次に、作成済みの`us-west2` repositoryへimageをbuildする。
-
-```sh
-AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
-gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
-  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
-```
+まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。imageはこの段階でbuildしない。Cloud RunはTerraformの管理外になったため、applyはimageの有無に依存しない。buildは作業6でまとめて行う。
 
 CockroachDBの`unauthorized`はGCP認証とは無関係である。`COCKROACH_API_KEY`にはservice accountのAPI key作成時に一度だけ表示される`CCDB1_...`形式の**Secret key全体**を登録する。API keyの表示名やUUIDではない。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
 
@@ -386,24 +396,7 @@ CockroachDB clusterはpersistent dataを持つため`delete_protection = true`�
 
 state整理のあとは、**この段階で通常applyを実行しない。** Cloud Run Serviceはまだclrndが作っていないため、通常applyに含まれる`google_cloud_run_v2_service_iam_member.public`が「service not found」で失敗する。作業4の`-target=`付きapplyをそのまま再実行して、失敗したCockroachDB clusterと土台resourceだけを収束させる。
 
-```sh
-fnox exec -- terraform -chdir=terraform/agentsview apply \
-  -target=google_project_service.required \
-  -target=google_artifact_registry_repository.agentsview \
-  -target=google_secret_manager_secret.pg_url \
-  -target=google_secret_manager_secret.config \
-  -target=google_service_account.runtime \
-  -target=google_service_account.deploy \
-  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
-  -target=google_secret_manager_secret_iam_member.runtime_config \
-  -target=google_artifact_registry_repository_iam_member.runtime_reader \
-  -target=google_iam_workload_identity_pool.github \
-  -target=cockroach_cluster.agentsview \
-  -target=cockroach_database.agentsview \
-  -target=cockroach_sql_user.owner \
-  -target=cockroach_sql_user.push \
-  -target=cockroach_sql_user.read
-```
+作業4と同じ`-target=`一覧をそのまま使う（Cloud Runのinvoker bindingだけを除いた全resource）。
 
 失敗前に作った`tfplan`は再利用しない。通常のplan／applyは作業8で、clrndがserviceを作った後に実行する。そこで初めてCloud Run関連の変更が`google_cloud_run_v2_service_iam_member.public`の作成1件だけになる。`us-central1`のimageで作られた失敗revisionは、正しい`us-west2` imageでclrnd deployすれば置き換わる。
 
@@ -957,26 +950,9 @@ fnox exec -- terraform version
 
 #### 2.3 bootstrap apply
 
-Cloud Run Serviceはclrndが作るため、Terraformの`google_cloud_run_v2_service_iam_member.public`はserviceが存在するまでapplyできない。初回はそれ以外の土台だけをtarget applyする。runtime service accountのsecret accessorとArtifact Registry readerは、clrnd deployより前に必要なのでここに含める。
+Cloud Run Serviceはclrndが作るため、Terraformの`google_cloud_run_v2_service_iam_member.public`はserviceが存在するまでapplyできない。初回はそれ以外のresourceをすべてtarget applyする。
 
-```sh
-fnox exec -- terraform apply \
-  -target=google_project_service.required \
-  -target=google_artifact_registry_repository.agentsview \
-  -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
-  -target=google_secret_manager_secret.pg_url \
-  -target=google_secret_manager_secret.config \
-  -target=google_service_account.runtime \
-  -target=google_service_account.deploy \
-  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
-  -target=google_secret_manager_secret_iam_member.runtime_config \
-  -target=google_artifact_registry_repository_iam_member.runtime_reader \
-  -target=google_iam_workload_identity_pool.github \
-  -target=google_iam_workload_identity_pool_provider.github \
-  -target=google_service_account_iam_member.github_deploy \
-  -target=google_project_iam_member.deploy \
-  -target=google_service_account_iam_member.deploy_uses_runtime
-```
+target一覧は作業4に置いてある。2箇所で別々に管理すると片方に不足が出るため、ここでは繰り返さない。
 
 続いて最初のimageをbuildする。
 

@@ -1154,17 +1154,38 @@ export_image() {
   upstream_version=$(sed -n 's#^FROM .*:\([^:[:space:]]*\)[[:space:]]*$#\1#p' "${config_dir}/Dockerfile" | head -n 1)
   : "${upstream_version:?${config_dir}/Dockerfile からupstream versionを読み取れません}"
 
-  commit="${GITHUB_SHA:-$(git -C "$config_dir" rev-parse HEAD 2>/dev/null || true)}"
+  # commitはbuild contextを持つgit worktreeから取る。chezmoi apply済みの
+  # ~/.config/agentsview から実行した場合、そこはworktreeではないので
+  # chezmoi source側のpathを引く。
+  source_dir=""
+  if git -C "$config_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
+    source_dir="$config_dir"
+  elif command -v chezmoi >/dev/null; then
+    source_dir=$(chezmoi source-path "$config_dir" 2>/dev/null || true)
+  fi
+
+  commit="${GITHUB_SHA:-}"
+  if [ -z "$commit" ] && [ -n "$source_dir" ]; then
+    commit=$(git -C "$source_dir" rev-parse HEAD 2>/dev/null || true)
+  fi
   if [ -z "$commit" ]; then
-    echo "commitを特定できません。git管理外から実行する場合はAGENTSVIEW_IMAGEを指定してください" >&2
+    echo "commitを特定できません（chezmoi sourceもgit worktreeも見つかりません）。AGENTSVIEW_IMAGEを指定してください" >&2
     exit 1
   fi
   commit=$(printf '%s' "$commit" | cut -c1-12)
 
-  # 未commitの変更があるとtagはbuildする内容を表さない。deployを止めはしないが、
-  # revision一覧から後で判別できるようにtagへ残す。
-  if [ -n "$(git -C "$config_dir" status --porcelain -- . 2>/dev/null || true)" ]; then
-    echo "警告: ${config_dir} に未commitの変更があります。tagへ -dirty を付けます" >&2
+  # tagがbuildする内容を表さない状態を -dirty として残す。deployは止めない。
+  # 1) source側に未commitの変更がある
+  # 2) apply済みのbuild contextがchezmoi sourceと一致していない
+  dirty=""
+  if [ -n "$source_dir" ]; then
+    dirty=$(git -C "$source_dir" status --porcelain -- . 2>/dev/null || true)
+  fi
+  if [ -z "$dirty" ] && [ "$source_dir" != "$config_dir" ] && command -v chezmoi >/dev/null; then
+    dirty=$(chezmoi status "$config_dir" 2>/dev/null || true)
+  fi
+  if [ -n "$dirty" ]; then
+    echo "警告: build contextがcommitと一致していません。tagへ -dirty を付けます" >&2
     commit="${commit}-dirty"
   fi
 
