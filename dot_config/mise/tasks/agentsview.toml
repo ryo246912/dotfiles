@@ -1062,62 +1062,175 @@ shell = "bash -c"
 
 ["agentsview:cloudrun:deploy"]
 description = "Build the image and deploy the Cloud Run service with clrnd"
-run = '''
-set -eu
-script_dir="${AGENTSVIEW_SCRIPT_DIR:-dot_config/agentsview/scripts}"
-if [ ! -f "${script_dir}/deploy-cloud-run.sh" ]; then
-  script_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts"
-fi
-bash "${script_dir}/deploy-cloud-run.sh" "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cloudrun:clrnd"]
-description = "Run a clrnd subcommand against the AgentsView Cloud Run service"
-hide = true
-run = '''
-set -eu
-# repository root から実行した場合はsource treeのscriptを、それ以外では
-# chezmoi apply 済みの ~/.config/agentsview を使う。
-script_dir="${AGENTSVIEW_SCRIPT_DIR:-dot_config/agentsview/scripts}"
-if [ ! -f "${script_dir}/clrnd.sh" ]; then
-  script_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts"
-fi
-bash "${script_dir}/clrnd.sh" "$@"
-'''
-shell = "bash -c"
+run         = 'mise run agentsview:cloudrun:run -- deploy "$@"'
+shell       = "bash -c"
 
 ["agentsview:cloudrun:verify"]
 description = "Validate the clrnd manifest and the resources it references"
-run         = 'mise run agentsview:cloudrun:clrnd -- verify "$@"'
+run         = 'mise run agentsview:cloudrun:run -- verify "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:render"]
 description = "Print the clrnd manifest with its templates expanded"
-run         = 'mise run agentsview:cloudrun:clrnd -- render "$@"'
+run         = 'mise run agentsview:cloudrun:run -- render "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:diff"]
 description = "Show the diff between the live Cloud Run service and the manifest"
-run         = 'mise run agentsview:cloudrun:clrnd -- diff "$@"'
+run         = 'mise run agentsview:cloudrun:run -- diff "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:status"]
 description = "Show the Cloud Run service state, traffic split, and URL"
-run         = 'mise run agentsview:cloudrun:clrnd -- status "$@"'
+run         = 'mise run agentsview:cloudrun:run -- status "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:revisions"]
 description = "List Cloud Run revisions with their traffic share"
-run         = 'mise run agentsview:cloudrun:clrnd -- revisions "$@"'
+run         = 'mise run agentsview:cloudrun:run -- revisions "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:refresh"]
 description = "Roll a new Cloud Run revision without changing the definition (restart containers)"
-run         = 'mise run agentsview:cloudrun:clrnd -- refresh "$@"'
+run         = 'mise run agentsview:cloudrun:run -- refresh "$@"'
 shell       = "bash -c"
 
 ["agentsview:cloudrun:rollback"]
 description = "Send Cloud Run traffic back to the previous revision"
-run         = 'mise run agentsview:cloudrun:clrnd -- rollback "$@"'
+run         = 'mise run agentsview:cloudrun:run -- rollback "$@"'
 shell       = "bash -c"
+
+["agentsview:cloudrun:run"]
+description = "Run a Cloud Run deploy operation with the settings clrnd needs"
+hide = true
+run = '''
+set -euo pipefail
+
+: "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
+
+mode="${1:?deploy／verify／diff などのmodeを指定してください}"
+shift
+
+# region と service 名は固定。clrnd.yml、manifestの metadata.name、Terraformの
+# local.region ／ local.cloud_run_service_name と一致している必要があり、ここだけ
+# 上書きできるとbuild先・IAM付与先・deploy先がずれる。
+region="us-west2"
+service="ryo-agentsview"
+
+# repository rootから実行した場合はsource treeのmanifestを、それ以外では
+# chezmoi apply済みの ~/.config/agentsview を使う。
+config_dir="${AGENTSVIEW_CONFIG_DIR:-dot_config/agentsview}"
+if [ ! -f "${config_dir}/clrnd.yml" ]; then
+  config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview"
+fi
+if [ ! -f "${config_dir}/clrnd.yml" ]; then
+  echo "clrnd.yml が見つかりません: ${config_dir}" >&2
+  exit 1
+fi
+
+# clrnd.ymlにproject IDを書かないため、projectとregionはここから解決させる。
+export CLOUDSDK_CORE_PROJECT="$GCP_PROJECT_ID"
+export CLOUDSDK_RUN_REGION="$region"
+
+# manifestが must_env で読む値。未設定ならrender時にerrorになる。
+export GCP_RUNTIME_SERVICE_ACCOUNT="${GCP_RUNTIME_SERVICE_ACCOUNT:-agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com}"
+
+if [ -z "${AGENTSVIEW_IMAGE:-}" ]; then
+  # Dockerfileがpinしているupstream versionをtagにし、buildするimageと
+  # deployするimageがずれないようにする。CIはcommit SHA tagを渡す。
+  image_tag=$(sed -n 's#^FROM .*:\([^:[:space:]]*\)[[:space:]]*$#\1#p' "${config_dir}/Dockerfile" | head -n 1)
+  : "${image_tag:?${config_dir}/Dockerfile からimage tagを読み取れません}"
+  AGENTSVIEW_IMAGE="${region}-docker.pkg.dev/${GCP_PROJECT_ID}/agentsview/agentsview:${image_tag}"
+fi
+export AGENTSVIEW_IMAGE
+
+newest_secret_version() {
+  gcloud secrets versions list "$1" \
+    --project="$GCP_PROJECT_ID" \
+    --filter='state=ENABLED' \
+    --sort-by='~createTime' \
+    --limit=1 \
+    --format='value(name)' | sed 's#.*/##'
+}
+
+# Secret Managerのversionは1から始まるので、それ以外（特に latest）は指定ミス。
+require_version_number() {
+  case "$2" in
+    '' | *[!0-9]* | 0*)
+      echo "$1 にはSecret Managerのversion番号を指定してください: $2" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# Cloud Runはsecret参照をinstance起動時に解決するため、latestのままだと同じ
+# revisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。
+# manifestをrenderするmodeでだけ最新のENABLED versionを引き、revisionへ焼き込む。
+export_secret_versions() {
+  if [ -z "${AGENTSVIEW_PG_URL_SECRET_VERSION:-}" ] || [ -z "${AGENTSVIEW_CONFIG_SECRET_VERSION:-}" ]; then
+    command -v gcloud >/dev/null || {
+      echo "gcloudが必要です（またはAGENTSVIEW_PG_URL_SECRET_VERSIONとAGENTSVIEW_CONFIG_SECRET_VERSIONを指定してください）" >&2
+      exit 1
+    }
+  fi
+
+  AGENTSVIEW_PG_URL_SECRET_VERSION="${AGENTSVIEW_PG_URL_SECRET_VERSION:-$(newest_secret_version agentsview-pg-url)}"
+  AGENTSVIEW_CONFIG_SECRET_VERSION="${AGENTSVIEW_CONFIG_SECRET_VERSION:-$(newest_secret_version agentsview-config-toml)}"
+
+  require_version_number AGENTSVIEW_PG_URL_SECRET_VERSION "$AGENTSVIEW_PG_URL_SECRET_VERSION"
+  require_version_number AGENTSVIEW_CONFIG_SECRET_VERSION "$AGENTSVIEW_CONFIG_SECRET_VERSION"
+
+  export AGENTSVIEW_PG_URL_SECRET_VERSION AGENTSVIEW_CONFIG_SECRET_VERSION
+}
+
+run_clrnd() {
+  command -v clrnd >/dev/null || {
+    echo "clrndが見つかりません。mise install を実行してください" >&2
+    exit 1
+  }
+  clrnd "$@" --config "${config_dir}/clrnd.yml"
+}
+
+case "$mode" in
+  deploy)
+    command -v gcloud >/dev/null || {
+      echo "gcloudが必要です" >&2
+      exit 1
+    }
+
+    # verifyとdeployで同じversionをpinするため、ここで一度だけ解決する。
+    # 別々に引くと、その間に追加されたversionが未検証のままdeployされる。
+    export_secret_versions
+
+    # AGENTSVIEW_SKIP_BUILD=1 でbuild済みtagの再deployだけを行う。
+    if [ "${AGENTSVIEW_SKIP_BUILD:-0}" != "1" ]; then
+      gcloud builds submit "$config_dir" \
+        --project="$GCP_PROJECT_ID" \
+        --tag="$AGENTSVIEW_IMAGE"
+    fi
+
+    # verifyはmanifestをlocalで検証し、参照するservice account、secret version、
+    # imageの実在をAPIで確認する。
+    run_clrnd verify
+
+    # deployは差分を表示し、新revisionがReadyになるまで待ち、rollout失敗時に
+    # non-zeroで終了する。secret値はSecret Managerに残るのでlogへ出ない。
+    run_clrnd deploy "$@"
+
+    gcloud run services describe "$service" \
+      --project="$GCP_PROJECT_ID" \
+      --region="$region" \
+      --format='value(status.url)'
+    ;;
+  verify | render | diff)
+    export_secret_versions
+    run_clrnd "$mode" "$@"
+    ;;
+  *)
+    # status／revisions／rollback／traffic はmanifestをrenderしないため、
+    # Secret Managerへの問い合わせを行わない。
+    run_clrnd "$mode" "$@"
+    ;;
+esac
+'''
+shell = "bash -c"

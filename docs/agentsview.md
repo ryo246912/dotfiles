@@ -685,11 +685,8 @@ NorthflankはUIの分かりやすさでは魅力があるが、今回の目的�
 | `dot_config/agentsview/Dockerfile`                      | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context               |
 | `dot_config/agentsview/cloudrun-service.yaml`           | clrndが所有するCloud Run Service manifest                                                 |
 | `dot_config/agentsview/clrnd.yml`                       | clrndのregion／service／manifest設定                                                      |
-| `dot_config/agentsview/scripts/cloudrun-env.sh`         | project、region、runtime service account、image URIを解決する共通処理                     |
-| `dot_config/agentsview/scripts/clrnd.sh`                | 上記envを与えてclrnd subcommandを実行するwrapper                                          |
-| `dot_config/agentsview/scripts/deploy-cloud-run.sh`     | Cloud Buildでbuildし、`clrnd verify`／`clrnd deploy`でCloud Runへ反映する共通script       |
 | `dot_config/agentsview/scripts/migrate-to-cockroach.sh` | Flyからdata-only dumpを取得し、CockroachDBへ冪等restoreして件数比較                       |
-| `dot_config/mise/tasks/agentsview.toml`                 | secret登録、clrnd deploy／diff／status／rollback、migration、push task                    |
+| `dot_config/mise/tasks/agentsview.toml`                 | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task             |
 | `terraform/agentsview/*.tf`                             | CockroachDB、Artifact Registry、IAM、Secret Manager container、WIF、Cloud Run invoker IAM |
 
 ### 0. 変更前の安全確認
@@ -819,14 +816,12 @@ ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼその
 
 追加したファイルは次のとおり。
 
-| ファイル                                            | 役割                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `dot_config/agentsview/cloudrun-service.yaml`       | Cloud Run Service manifest（Knative形式）。clrndのsource of truth                 |
-| `dot_config/agentsview/clrnd.yml`                   | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない   |
-| `dot_config/agentsview/scripts/cloudrun-env.sh`     | project、region、runtime service account、image URIを解決する共通処理             |
-| `dot_config/agentsview/scripts/clrnd.sh`            | 上記envを与えてclrnd subcommandを実行する薄いwrapper                              |
-| `dot_config/agentsview/scripts/deploy-cloud-run.sh` | Cloud Buildでimageをbuildし、`clrnd verify`のあと`clrnd deploy`する通常deploy経路 |
-| `mise.toml`                                         | `github:masasuzu/clrnd = "0.5.0"`のversion pin                                    |
+| ファイル                                      | 役割                                                                                                        |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/cloudrun-service.yaml` | Cloud Run Service manifest（Knative形式）。clrndのsource of truth                                           |
+| `dot_config/agentsview/clrnd.yml`             | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                             |
+| `dot_config/mise/tasks/agentsview.toml`       | `agentsview:cloudrun:*` task。設定解決・build・clrnd実行をmise taskとして持ち、shell scriptは追加していない |
+| `mise.toml`／`dot_config/mise/config.toml`    | `github:masasuzu/clrnd = "0.5.0"`のversion pin                                                              |
 
 mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
@@ -841,12 +836,14 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 | `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
 | `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
 
+共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）はshell scriptではなく、hidden taskの`agentsview:cloudrun:run`に置いている。各taskは`mise run agentsview:cloudrun:run -- <mode>`へ委譲するだけなので、設定の解決は1箇所にしかない。
+
 採用にあたって前提にした制約は次のとおり。
 
 - **IAMはclrnd管理外。** `allUsers`のinvoker bindingはTerraformに残す。clrndが作るserviceは常にprivateなので、初回は「clrnd deployでserviceを作る → Terraform applyでinvoker bindingを付ける」の順序になる。
 - **manifestはGo templateであり、実行可能な入力として扱う。** 任意の環境変数を読めるため、fork PRのmanifestをproduction credentialでrender／deployしない。今回のmanifestは`must_env`で`GCP_RUNTIME_SERVICE_ACCOUNT`と`AGENTSVIEW_IMAGE`だけを読み、secret値は展開せずSecret Manager参照だけを書く。
 - **`diff`はserver defaultの解決にdry-run updateを使うため、read-only権限では動かない。** read-only credentialで確認する場合だけ`--no-server-defaults`を付ける。
-- **secret versionはnumericへpinする。** Cloud Runはsecret参照をinstance起動時に解決するため、`latest`のままだと同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。`clrnd.sh`はmanifestをrenderするsubcommand（`verify`／`render`／`diff`／`deploy`）でだけ最新のENABLED versionをSecret Managerから引き、その番号をrevisionへ焼き込む。古いversionを意図的に使う場合は`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`を明示する。**新しいsecret versionを反映するのは`deploy`であり、`refresh`ではない**（`refresh`はliveの定義をそのまま再適用するため、pinされた古い番号を持ち回る）。
+- **secret versionはnumericへpinする。** Cloud Runはsecret参照をinstance起動時に解決するため、`latest`のままだと同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。mise taskはmanifestをrenderするmode（`verify`／`render`／`diff`／`deploy`）でだけ最新のENABLED versionをSecret Managerから引き、その番号をrevisionへ焼き込む。古いversionを意図的に使う場合は`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`を明示する。**新しいsecret versionを反映するのは`deploy`であり、`refresh`ではない**（`refresh`はliveの定義をそのまま再適用するため、pinされた古い番号を持ち回る）。
 - **v0系のthird-party tool。** version pinを必ず維持し、bumpするときは`verify`→`diff`→`deploy`→`rollback`をrehearsalしてから上げる。
 
 #### 2.0.3 clrnd manifestの各設定
@@ -1025,7 +1022,7 @@ mise run agentsview:cloudrun:rollback              # 直前のrevisionへ戻す
 mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 ```
 
-このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は、`AGENTSVIEW_IMAGE`にcommit SHA tagを設定して`clrnd deploy --auto-approve`を実行する形になる（`deploy-cloud-run.sh`に渡した引数はそのまま`clrnd deploy`へ渡る）。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
+このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は、`AGENTSVIEW_IMAGE`にcommit SHA tagを設定して`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider
