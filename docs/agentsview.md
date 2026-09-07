@@ -1022,7 +1022,14 @@ mise run agentsview:cloudrun:rollback              # 直前のrevisionへ戻す
 mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 ```
 
-このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は、`AGENTSVIEW_IMAGE`にcommit SHA tagを設定して`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
+このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は、`AGENTSVIEW_IMAGE`にcommit SHA tagを設定して`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。
+
+このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。Terraformがdeploy service accountへ与えているのは`secretVersionAdder`だけなので、その identity ではversionを追加できても一覧できない。CIでは次のどちらかを選ぶ。
+
+- secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す（追加の権限が不要で、deployするversionをCI側が確定できる）。
+- 2つのsecretに対してdeploy service accountへ`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
+
+権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider

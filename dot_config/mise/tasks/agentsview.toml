@@ -1163,6 +1163,17 @@ require_version_number() {
   esac
 }
 
+# version一覧には secretmanager.versions.list が要る。Terraformがdeploy service
+# accountへ与えているのは secretVersionAdder だけなので、CIのようにその identity で
+# 実行する場合はversionを追加できても一覧はできない。その構成では、secretを登録した
+# 手順が返した番号をそのまま環境変数で渡す。
+secret_version_lookup_failed() {
+  echo "Secret Managerのversionを一覧できません。" >&2
+  echo "identityに secretmanager.versions.list（例: roles/secretmanager.viewer）を付けるか、" >&2
+  echo "AGENTSVIEW_PG_URL_SECRET_VERSION と AGENTSVIEW_CONFIG_SECRET_VERSION にversion番号を指定してください。" >&2
+  exit 1
+}
+
 # Cloud Runはsecret参照をinstance起動時に解決するため、latestのままだと同じ
 # revisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。
 # manifestをrenderするmodeでだけ最新のENABLED versionを引き、revisionへ焼き込む。
@@ -1174,8 +1185,12 @@ export_secret_versions() {
     }
   fi
 
-  AGENTSVIEW_PG_URL_SECRET_VERSION="${AGENTSVIEW_PG_URL_SECRET_VERSION:-$(newest_secret_version agentsview-pg-url)}"
-  AGENTSVIEW_CONFIG_SECRET_VERSION="${AGENTSVIEW_CONFIG_SECRET_VERSION:-$(newest_secret_version agentsview-config-toml)}"
+  if [ -z "${AGENTSVIEW_PG_URL_SECRET_VERSION:-}" ]; then
+    AGENTSVIEW_PG_URL_SECRET_VERSION=$(newest_secret_version agentsview-pg-url) || secret_version_lookup_failed
+  fi
+  if [ -z "${AGENTSVIEW_CONFIG_SECRET_VERSION:-}" ]; then
+    AGENTSVIEW_CONFIG_SECRET_VERSION=$(newest_secret_version agentsview-config-toml) || secret_version_lookup_failed
+  fi
 
   require_version_number AGENTSVIEW_PG_URL_SECRET_VERSION "$AGENTSVIEW_PG_URL_SECRET_VERSION"
   require_version_number AGENTSVIEW_CONFIG_SECRET_VERSION "$AGENTSVIEW_CONFIG_SECRET_VERSION"
