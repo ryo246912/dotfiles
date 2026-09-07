@@ -302,7 +302,7 @@ fnox exec -- terraform -chdir=terraform/agentsview fmt -check -recursive
 fnox exec -- terraform -chdir=terraform/agentsview validate
 ```
 
-初回だけ、Cloud Run関連IAM以外の土台をtarget applyする（invoker bindingはclrndがserviceを作った後に付ける）。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
+初回だけ、Cloud Run関連IAM以外の土台をtarget applyする（invoker bindingはclrndがserviceを作った後に付ける）。**runtime service accountのsecret accessorとArtifact Registry readerはここに含める。** Cloud Runはrevision作成時にruntime service accountがsecretを読めることを検証し、revision起動時にimageをpullするため、これらが無いと作業8の初回clrnd deployが失敗する。planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview apply \
@@ -312,6 +312,9 @@ fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_secret_manager_secret.config \
   -target=google_service_account.runtime \
   -target=google_service_account.deploy \
+  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
+  -target=google_secret_manager_secret_iam_member.runtime_config \
+  -target=google_artifact_registry_repository_iam_member.runtime_reader \
   -target=google_iam_workload_identity_pool.github \
   -target=cockroach_cluster.agentsview \
   -target=cockroach_database.agentsview \
@@ -391,6 +394,9 @@ fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_secret_manager_secret.config \
   -target=google_service_account.runtime \
   -target=google_service_account.deploy \
+  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
+  -target=google_secret_manager_secret_iam_member.runtime_config \
+  -target=google_artifact_registry_repository_iam_member.runtime_reader \
   -target=google_iam_workload_identity_pool.github \
   -target=cockroach_cluster.agentsview \
   -target=cockroach_database.agentsview \
@@ -951,7 +957,7 @@ fnox exec -- terraform version
 
 #### 2.3 bootstrap apply
 
-Cloud Run Serviceはclrndが作るため、Terraformの`google_cloud_run_v2_service_iam_member.public`はserviceが存在するまでapplyできない。初回はそれ以外の土台だけをtarget applyする。
+Cloud Run Serviceはclrndが作るため、Terraformの`google_cloud_run_v2_service_iam_member.public`はserviceが存在するまでapplyできない。初回はそれ以外の土台だけをtarget applyする。runtime service accountのsecret accessorとArtifact Registry readerは、clrnd deployより前に必要なのでここに含める。
 
 ```sh
 fnox exec -- terraform apply \
@@ -962,6 +968,9 @@ fnox exec -- terraform apply \
   -target=google_secret_manager_secret.config \
   -target=google_service_account.runtime \
   -target=google_service_account.deploy \
+  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
+  -target=google_secret_manager_secret_iam_member.runtime_config \
+  -target=google_artifact_registry_repository_iam_member.runtime_reader \
   -target=google_iam_workload_identity_pool.github \
   -target=google_iam_workload_identity_pool_provider.github \
   -target=google_service_account_iam_member.github_deploy \
