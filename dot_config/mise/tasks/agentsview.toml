@@ -466,8 +466,9 @@ mise run agentsview:pg:local:dump
 shell = "bash -c"
 
 ["agentsview:cloudrun:secrets"]
-# 1回きりの操作ではないためtaskとして残す。初回登録のほか、Cloud Run URLの確定後、
-# CockroachDBのpassword rotation、auth token更新のたびに新versionを登録する。
+# 1回きりの操作ではないためtaskとして残す。初回登録のほか、CockroachDBの
+# password rotation、auth token更新のたびに新versionを登録する。public_urlは
+# deterministic URLで確定しているため、URL確定待ちの再登録は不要になった。
 description = "Create new Secret Manager versions for the Cloud Run viewer"
 run = '''
 set -eu
@@ -482,13 +483,19 @@ fi
 : "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です}"
 : "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です}"
 
-region="us-west2"
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+
+# public_urlはCloud Runのdeterministic URLへ固定する。service名・project number・
+# regionだけで決まるためserviceの作成前から確定していて、serviceを作り直しても
+# 同じ値へ戻る。初回にplaceholderを入れて後から差し替える必要はない。
 public_url="${AGENTSVIEW_CLOUD_RUN_URL:-}"
 if [ -z "$public_url" ]; then
-  public_url=$(gcloud run services describe ryo-agentsview \
-    --project="$GCP_PROJECT_ID" --region="$region" --format='value(status.url)' 2>/dev/null || true)
+  public_url=$(bash "$script" url --check)
 fi
-: "${public_url:?初回だけAGENTSVIEW_CLOUD_RUN_URLに公開URLを指定してください}"
+: "${public_url:?Cloud RunのURLを解決できませんでした}"
 
 ensure_secret() {
   if ! gcloud secrets describe "$1" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
@@ -507,6 +514,18 @@ printf 'public_url = "%s"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret
   gcloud secrets versions add agentsview-config-toml --project="$GCP_PROJECT_ID" --data-file=- >/dev/null
 
 echo "Cloud Run secret versions added. Secret values were not printed."
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:url"]
+description = "Print the deterministic Cloud Run URL (works before the service exists)"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" url "$@"
 '''
 shell = "bash -c"
 

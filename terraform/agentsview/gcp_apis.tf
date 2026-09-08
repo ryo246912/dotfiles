@@ -1,14 +1,16 @@
 locals {
-  # AgentsViewの運用に必要なAPIだけを有効化する。GitHub Actionsからの
-  # Workload Identity連携は行わないため、sts／iamcredentialsは含めない。
+  # AgentsViewの運用に必要なAPIだけを有効化する。sts／iamcredentialsは
+  # GitHub ActionsのWorkload Identity連携（gcp_github_actions.tf）が使う。
   required_apis = toset([
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "iam.googleapis.com",
+    "iamcredentials.googleapis.com",
     "logging.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
+    "sts.googleapis.com",
   ])
 }
 

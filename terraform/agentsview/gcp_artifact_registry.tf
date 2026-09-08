@@ -5,6 +5,35 @@ resource "google_artifact_registry_repository" "agentsview" {
   description   = "AgentsView Cloud Run images"
   format        = "DOCKER"
 
+  # Artifact Registryの無料枠はproject／月あたり0.5 GBしかない。imageのtagは
+  # commitごとに変わるので、deployを重ねるほどversionが積み上がり、mergeごとに
+  # deployするGitHub Actionsを足すとその速度が上がる。
+  #
+  # KEEPはDELETEより優先されるので、直近10 versionはolder_thanに関係なく残る。
+  # この10という数はrollbackの上限でもある。Cloud Runはmin 0でscale-to-zeroする
+  # ため、cold startのたびにimageをpullし直す。稼働中またはrollback先のrevisionが
+  # 参照するimageを消すと、そのrevisionはinstanceを起動できなくなる。deployより
+  # 10世代前まで戻せれば足りるという判断で、それより古いものだけを消す。
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-recent-versions"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 10
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-old-versions"
+    action = "DELETE"
+
+    condition {
+      older_than = "2592000s" # 30日
+    }
+  }
+
   depends_on = [google_project_service.required]
 }
 

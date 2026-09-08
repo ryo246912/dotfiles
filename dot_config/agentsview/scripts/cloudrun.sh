@@ -50,6 +50,34 @@ export CLOUDSDK_RUN_REGION="$region"
 # manifestが must_env で読む値。未設定ならrender時にerrorになる。
 export GCP_RUNTIME_SERVICE_ACCOUNT="${GCP_RUNTIME_SERVICE_ACCOUNT:-agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com}"
 
+# Cloud Runはserviceへ2種類のURLを割り当てる。hash入りのnon-deterministic URLと、
+# service名・project number・regionだけで決まるdeterministic URLである。後者は
+# serviceを作る前から確定し、deleteして作り直しても同じ値へ戻るので、AgentsViewの
+# config.tomlのpublic_urlはこちらへ固定する。Terraformの output cloud_run_url と
+# 同じ値を、Terraform stateを読まずに組み立てる。
+project_number() {
+  if [ -n "${GCP_PROJECT_NUMBER:-}" ]; then
+    printf '%s' "$GCP_PROJECT_NUMBER"
+    return
+  fi
+  command -v gcloud >/dev/null || {
+    echo "gcloudが必要です（またはGCP_PROJECT_NUMBERを指定してください）" >&2
+    exit 1
+  }
+  number=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
+  case "$number" in
+    '' | *[!0-9]*)
+      echo "project numberを取得できません: ${GCP_PROJECT_ID}" >&2
+      exit 1
+      ;;
+  esac
+  printf '%s' "$number"
+}
+
+deterministic_url() {
+  printf 'https://%s-%s.%s.run.app' "$service" "$(project_number)" "$region"
+}
+
 # imageのtagは commit で固定する。upstream versionだけをtagにすると同じtagを
 # buildのたびに上書きすることになり、同じURIが時期によって別のartifactを指す。
 # tagは <upstream version>-<commit> の形にして、Cloud Run consoleからAgentsView
@@ -121,10 +149,10 @@ require_version_number() {
   esac
 }
 
-# version一覧には secretmanager.versions.list が要る。Terraformがdeploy service
-# accountへ与えているのは secretVersionAdder だけなので、CIのようにその identity で
-# 実行する場合はversionを追加できても一覧はできない。その構成では、secretを登録した
-# 手順が返した番号をそのまま環境変数で渡す。
+# version一覧には secretmanager.versions.list が要る。Terraformはdeploy service
+# accountへ2つのsecretに限って roles/secretmanager.viewer を与えているので、CIでも
+# 引ける（metadataだけのroleなので値は読めない）。この権限を持たないidentityで
+# 実行する場合は、secretを登録した手順が返した番号をそのまま環境変数で渡す。
 secret_version_lookup_failed() {
   echo "Secret Managerのversionを一覧できません。" >&2
   echo "identityに secretmanager.versions.list（例: roles/secretmanager.viewer）を付けるか、" >&2
@@ -206,6 +234,24 @@ case "$mode" in
       --project="$GCP_PROJECT_ID" \
       --region="$region" \
       --format='value(status.url)'
+    ;;
+  url)
+    # serviceが存在しない段階でも動く。--checkを付けたときだけ、liveなserviceが
+    # 報告するURLと突き合わせる。
+    target=$(deterministic_url)
+    if [ "${1:-}" = "--check" ]; then
+      live=$(gcloud run services describe "$service" \
+        --project="$GCP_PROJECT_ID" \
+        --region="$region" \
+        --format='value(status.url)' 2>/dev/null || true)
+      if [ -n "$live" ] && [ "$live" != "$target" ]; then
+        echo "警告: Cloud Runが報告するURLがdeterministic URLと一致しません" >&2
+        echo "  live:          ${live}" >&2
+        echo "  deterministic: ${target}" >&2
+        echo "どちらも同じserviceへ届くが、public_urlにはdeterministic URLを使うこと。" >&2
+      fi
+    fi
+    printf '%s\n' "$target"
     ;;
   verify | render | diff)
     check_config_current

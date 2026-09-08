@@ -2,3 +2,7 @@ gcp_project_id = "replace-with-project-id"
 
 # Cloud Runのimageは Terraform の入力ではない。clrndが
 # dot_config/agentsview/cloudrun-service.yaml からdeployする。
+
+# GitHub ActionsのWorkload Identity連携。既定値のままなら指定は不要。
+# github_repository = "ryo246912/dotfiles"
+# github_deploy_ref = "main"

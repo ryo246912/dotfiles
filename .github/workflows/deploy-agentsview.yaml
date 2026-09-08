@@ -1,0 +1,63 @@
+name: deploy-agentsview
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/deploy-agentsview.yaml
+      - dot_config/agentsview/Dockerfile
+      - dot_config/agentsview/clrnd.yml
+      - dot_config/agentsview/cloudrun-service.yaml
+      - dot_config/agentsview/scripts/cloudrun.sh
+  workflow_dispatch:
+
+permissions: {}
+
+# deployは途中で止めると、buildだけ済んでrolloutが未完了のrevisionが残る。
+# lintと違い後発のrunで前のrunをcancelしない。
+concurrency:
+  group: deploy-agentsview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy AgentsView to Cloud Run
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      # GitHubのOIDC tokenを発行してGoogle CloudのWorkload Identity Federationへ
+      # 渡すために必要。service account keyのJSONは保存しない。
+      id-token: write
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # clrndとgcloudのversionは dot_config/mise/config.toml に合わせる。root の
+      # mise.toml へ足すとlintなど他のjobまでgcloud一式をinstallすることになるため、
+      # このworkflowでだけ入れる。
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install_args: "aqua:twistedpair/google-cloud-sdk@561.0.0 github:masasuzu/clrnd@0.5.0"
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      # cloudrun.shがbuild → verify → deploy → rollout待ちまで行い、rolloutに
+      # 失敗したらnon-zeroで終了する。image tagは GITHUB_SHA から組み立てられる。
+      # secret値はSecret Managerに残るのでjob logへは出ない。
+      - name: Deploy AgentsView
+        run: bash dot_config/agentsview/scripts/cloudrun.sh deploy --auto-approve
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Show Cloud Run status
+        run: bash dot_config/agentsview/scripts/cloudrun.sh status
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
