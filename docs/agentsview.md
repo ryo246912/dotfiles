@@ -1558,6 +1558,8 @@ fnox exec -- sh -c 'psql "$AGENTSVIEW_PROXY_PG_URL" -X -Atc \
 
 `AGENTSVIEW_PROXY_PG_URL`が未解決の場合は、fnoxのWARNに出ているsecret名をBitwarden Secrets Managerで確認する。空のまま進めると上記のsocket errorになる。
 
+なおAgentsViewの`agentsview` schemaは、Atuinと共用の**`ryo_shellhistory` database**の中にある。`psql`で手動接続するときは database名を必ず指定する。`postgres` databaseに繋ぐと、schemaが最初から無いように見える。
+
 #### 9.2 最終backupを取得し、restoreできることを確認する
 
 **backup fileを作っただけでは合格にしない。** 空の検証用PostgreSQLへrestoreできるところまで確認する。
@@ -1589,9 +1591,14 @@ flyctl status -a ryo-agentsview
 
 `psgl`のvolume使用量が減るのはこの手順である。`DROP SCHEMA`はschema ownerかsuperuserでないと実行できないため、Fly Postgresのsuperuserでpsqlを開く。proxyもsecretも要らない。
 
+> [!IMPORTANT]
+> `flyctl postgres connect`は既定で**`postgres` databaseへ繋ぐ**。AgentsViewの`agentsview` schemaがあるのはAtuinと共用の`ryo_shellhistory` databaseである。接続先を間違えると、schemaが最初から無いように見えて「削除済み」と誤判定する。
+
 ```sh
-flyctl postgres connect -a psgl
+flyctl postgres connect -a psgl -d ryo_shellhistory
 ```
+
+`-d`が使えない版のflyctlでは、接続後に`\c ryo_shellhistory`で切り替える。現在の接続先は`SELECT current_database();`で確認できる。
 
 削除前に対象を必ず目視する。以降のSQLはこのpsql内で実行する。
 
@@ -1641,13 +1648,35 @@ fly ssh console -a psgl -C 'df -h /data'
 
 `DROP SCHEMA`はtable fileごと削除するので、AgentsViewが使っていた分は**即座に**返る。`VACUUM`は要らない。それでも`df`が動かない場合、空きを食っているのはAgentsViewのtableではない。順に切り分ける。
 
-**1. schemaが本当に消えているか。**
+**1. primaryがread-onlyになっていないか。** Fly Postgresは使用率が閾値を超えると`/data/readonly.lock`を作り、primaryをread-onlyへ落とす。この状態では`DROP SCHEMA`が実行できずに失敗するため、**「削除したのに減らない」の正体がこれであることが多い**。
 
-```sql
-SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\_%' ORDER BY nspname;
+```sh
+fly ssh console -a psgl -C 'ls -l /data/readonly.lock'   # 存在すればread-only
 ```
 
-**2. どこが容量を食っているか。** database単位とdirectory単位の両方で見る。
+```sql
+SHOW default_transaction_read_only;   -- on なら書き込めない
+```
+
+read-onlyなら、まずvolumeを拡張して余裕を作り、restartして解除する。解除できてから削除をやり直す。
+
+```sh
+fly volumes list -a psgl
+fly volumes extend <volume_id> -s 3   # GB単位。縮小はできない
+fly pg restart -a psgl
+```
+
+**2. schemaが本当に消えているか。** **`ryo_shellhistory` databaseで確認する**（`postgres` databaseには最初から無い）。
+
+```sql
+\c ryo_shellhistory
+SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\_%' ORDER BY nspname;
+
+SELECT schemaname, pg_size_pretty(sum(pg_total_relation_size(relid))) AS size
+FROM pg_statio_user_tables GROUP BY schemaname ORDER BY sum(pg_total_relation_size(relid)) DESC;
+```
+
+**3. どこが容量を食っているか。** database単位とdirectory単位の両方で見る。
 
 ```sql
 SELECT datname, pg_size_pretty(pg_database_size(datname)) AS size
@@ -1661,10 +1690,10 @@ FROM pg_statio_user_tables GROUP BY schemaname ORDER BY sum(pg_total_relation_si
 fly ssh console -a psgl
 # machine内で
 du -sh /data/* 2>/dev/null | sort -h
-du -sh /data/postgres/* 2>/dev/null | sort -h
+du -sh /data/postgresql/* 2>/dev/null | sort -h   # data directoryは postgresql
 ```
 
-**3. `pg_wal`が大きい場合（Fly Postgresで最も多い原因）。** WALは、それを必要とするreplication slotがある限り消えない。停止済みreplicaや作りかけのslotが残っていると、WALが無限に溜まってvolumeを埋める。
+**4. `pg_wal`が大きい場合。** WALは、それを必要とするreplication slotがある限り消えない。停止済みreplicaや作りかけのslotが残っていると、WALが無限に溜まってvolumeを埋める。
 
 ```sql
 SELECT slot_name, active, wal_status,
@@ -1679,17 +1708,14 @@ SELECT pg_drop_replication_slot('<slot_name>');
 CHECKPOINT;
 ```
 
-**4. Atuin側が大きい場合。** これはAgentsViewの移行では減らない。Atuinのhistory整理か、volumeの拡張を検討する。
+**5. Atuin側が大きい場合。** これはAgentsViewの移行では減らない。Atuinのhistory整理か、volumeの拡張を検討する。
 
 ```sh
 fly volumes list -a psgl
 fly volumes extend <volume_id> -s 3   # GB単位。拡張は縮小できない
 ```
 
-**5. table自体のbloatが疑わしい場合だけ`VACUUM FULL`。** `VACUUM FULL`は対象tableと同じだけの空き容量とexclusive lockを必要とするため、**空きが10%しかない状態では実行しない**。先に上記でvolumeを空けるか拡張し、Atuinの書き込みを止められるmaintenance windowを設けてから行う。
-
-> [!NOTE]
-> Fly Postgresはvolume使用率が90%を超えるとprimaryをread-onlyへ落とす。`df`が90%前後のまま張り付いている場合、AgentsViewのschemaを消したかどうかに関わらず、**まずこの状態から抜ける**必要がある。`fly checks list -a psgl`で状態を確認する。
+**6. table自体のbloatが疑わしい場合だけ`VACUUM FULL`。** `VACUUM FULL`は対象tableと同じだけの空き容量とexclusive lockを必要とするため、**空きが10%しかない状態では実行しない**。先に上記でvolumeを空けるか拡張し、Atuinの書き込みを止められるmaintenance windowを設けてから行う。
 
 #### 9.7 Fly AgentsView appを削除する
 
