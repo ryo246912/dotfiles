@@ -620,11 +620,7 @@ gcloud run services logs read ryo-agentsview \
 logの最初のerror行に応じて対処する。
 
 - **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
-- **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — 件数の問題ではない。まず事実として、`limit=500`はfrontendの`SESSION_PAGE_SIZE`定数（`frontend/src/lib/stores/sessions.svelte.ts`）でimageにcompile済みであり、設定では変えられない。さらに**下げても効かない**。`GetSidebarSessionIndex`は`limit > 0`だと`WITH RECURSIVE`でsession treeを辿るpageng経路に入り、その中の`COUNT(*)`はlimitと無関係に全体を走査するためである（`internal/postgres/sessions.go`）。
-
-  実際のcostはCockroachDB側にある。sidebarのORDER BYとdate filterはどちらも`COALESCE(ended_at, started_at, created_at)`という**式**を使うが、AgentsViewが作るindexにこの式を支えるものが無い（`sessions`のindexは`parent_session_id`、`termination_status`、`cwd`、`project, git_branch`、`secret_leak_count`だけ）。PostgreSQLのlocal diskでは問題にならなくても、CockroachDBでは全走査と分散sortになる。
-
-  先に計測してから対処する。owner接続で実行する。
+- **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
 
   ```sh
   fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
@@ -634,14 +630,41 @@ logの最初のerror行に応じて対処する。
     AND COALESCE(ended_at, started_at, created_at) >= now() - INTERVAL '"'"'7 days'"'"';"'
   ```
 
-  全走査（`full scan`）が出て実行時間が秒単位なら、式indexを足す。AgentsViewは自分のindexを`CREATE INDEX IF NOT EXISTS`で作るだけなので、追加したindexが消されることはない。
+  出力の`cumulative time spent due to contention`と`sql cpu time`を比べる。
 
-  ```sql
-  CREATE INDEX IF NOT EXISTS idx_sessions_activity
-    ON agentsview.sessions ((COALESCE(ended_at, started_at, created_at)) DESC, id DESC);
+  **contentionがexecution timeのほとんどを占める場合（lock待ち）。** これが実際に起きたcaseである。`sql cpu time: 4ms`／`KV rows decoded: 4,367`に対して`KV contention time: 1m22s`だった。表が小さく全走査自体は一瞬なので、indexを足しても直らない。`sessions`へ書き込みintentを残したまま終わっていないtransactionが原因である。中断した`agentsview pg push`や`pg watch`が典型。
+
+  ```sh
+  # 実行中transactionを古い順に見る。startが極端に古いものが原因。
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
+  SELECT id, session_id, start, application_name, num_stmts
+  FROM crdb_internal.cluster_transactions ORDER BY start;"'
+
+  # sessions表で待たされているlockを見る
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
+  SELECT table_name, txn_id, ts, lock_strength, granted, contended
+  FROM crdb_internal.cluster_locks WHERE table_name = '"'"'sessions'"'"' LIMIT 20;"'
   ```
 
-  それでも遅い場合はCockroachDB Cloud Consoleの**Metrics > Request Units**と**SQL Activity > Statements**を見る。Basic planはburst RUを使い切ると強くthrottleされ、同じqueryが桁違いに遅くなる。`terraform/agentsview/cockroach_cluster.tf`の`request_unit_limit`に対して消費が張り付いていないか確認する。
+  原因のsessionを止める。まず各PCで`agentsview pg push`／`pg watch`／daemonが残っていないかを確認し、残っていなければCockroachDB側でcancelする。
+
+  ```sh
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "CANCEL SESSION '"'"'<session_id>'"'"';"'
+  ```
+
+  cancel後にもう一度`EXPLAIN ANALYZE`を実行し、`contention`が消えていることを確認する。
+
+  **contentionがほぼ0で、scanに時間がかかっている場合（本当に遅いquery）。** そのときだけindexを検討する。sidebarのORDER BYとdate filterは`COALESCE(ended_at, started_at, created_at)`という式を使うが、AgentsViewが作る`sessions`のindexにこの式を支えるものは無い（`parent_session_id`、`termination_status`、`cwd`、`(project, git_branch)`、`secret_leak_count`だけ）。AgentsViewは自分のindexを`CREATE INDEX IF NOT EXISTS`で作るだけなので、追加したindexが消されることはない。
+
+  ```sh
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 -c "
+  CREATE INDEX IF NOT EXISTS idx_sessions_activity
+    ON agentsview.sessions ((COALESCE(ended_at, started_at, created_at)) DESC, id DESC);"'
+  ```
+
+  なお`limit`を下げても解決しない。`limit=500`はfrontendの`SESSION_PAGE_SIZE`定数（`frontend/src/lib/stores/sessions.svelte.ts`）でimageにcompile済みで設定から変えられず、かつ`GetSidebarSessionIndex`は`limit > 0`だと`WITH RECURSIVE`のpaging経路に入り、その中の`COUNT(*)`はlimitと無関係に全体を走査する（`internal/postgres/sessions.go`）。
+
+  どちらでもない場合はCockroachDB Cloud Consoleの**Metrics > Request Units**を見る。Basic planはburst RUを使い切ると強くthrottleされる。
 
 - **画面に`request timed out`が出る／logに`status 503`と`latency 30.0秒`が並ぶ** — Cloud Runではなく**AgentsView自身のwrite timeout**である。既定は30秒で、超えると`http.TimeoutHandler`が503と`{"error":"request timed out"}`を返す（`internal/server/middleware.go`）。dashboardはanalytics APIを同時に複数叩くため、`maxScale: 1`／1 CPUの上でCockroachDBへの集計が重なると30秒に収まらない。`cloudrun-service.yaml`で`--write-timeout`を延ばし、Cloud Run側の`timeoutSeconds`をそれより長くする（先に切れるとCloud Runが504を返し、appのJSONが届かない）。延ばしても解消しない場合はCPUを2にするか、期間を短くして切り分ける。
 
