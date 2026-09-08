@@ -983,7 +983,16 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 | `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
 | `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
 
-共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）は`~/.config/agentsview/scripts/cloudrun.sh`に置く。各mise taskはこのscriptへ固定のmodeと追加引数を渡すだけなので、設定の解決は1箇所にしかない。以前のhidden taskへの多段`mise run ... -- <mode>`は使用しない。miseのinline `bash -c` taskは追加引数をscript末尾へ連結するため、長いinline scriptを多段呼び出しすると`esac build`のような不正なshellになり得るためである。
+共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）はhidden taskの`agentsview:cloudrun:_lib`が持つ。このtaskは関数定義を標準出力へ出すだけで、各taskが先頭で`eval "$(mise run agentsview:cloudrun:_lib)"`して読み込む。設定の解決は1箇所にしかない。
+
+この形にしているのは、**miseがtaskへ渡した追加引数をscript末尾へ文字列として連結する**ためである。`"$@"`は常に空になり、子taskへ引数を渡す方式は成立しない。
+
+```console
+$ mise run t -- --projects resume     # run = 'printf "ARGS>"; printf " [%s]" "$@"'
+ARGS> []--projects resume
+```
+
+そのため引数は`usage` fieldで受け取る。miseはshell quote済みの1行を`usage_args`に入れるので、`eval "set -- ${usage_args:-}"`で元のargvへ戻す。空白や引用符を含む引数も保持される。tera の`{{arg()}}`でも同じことはできるが、mise 2027.5.0で削除予定の警告が出るため使わない。
 
 採用にあたって前提にした制約は次のとおり。
 
@@ -1430,6 +1439,98 @@ flyctl apps destroy ryo-agentsview
 ```
 
 削除前にCloud Run URL、`mise run agentsview:cloudrun:deploy`（および任意で有効化したGitHub Actions deploy）、各PCからのpushがすべて正常であることを再確認する。
+
+---
+
+## 運用: インフラ設定を変更したあとの適用手順
+
+**この構成に自動適用は無い。** `.github/workflows/`にあるのはFly.ioへのdeployだけで、Cloud RunもTerraformもCIからは触らない。したがってPRをmainへmergeしても、Google Cloud側は何も変わらない。**mergeは「変更が承認された」だけを意味し、適用はoperatorが手で行う。**
+
+適用は変更したfileによって経路が違う。まず次で判断する。
+
+| 変更したfile                                  | 適用に必要なこと                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `dot_config/agentsview/cloudrun-service.yaml` | `chezmoi apply` → `agentsview:cloudrun:deploy`（新revisionが作られる）            |
+| `dot_config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない） |
+| `dot_config/agentsview/clrnd.yml`             | `chezmoi apply` のみ（次回のclrnd実行から反映）                                   |
+| `dot_config/mise/tasks/agentsview.toml`       | `chezmoi apply` のみ                                                              |
+| `terraform/agentsview/*.tf`                   | `terraform plan` → 内容確認 → `terraform apply`                                   |
+| `dot_config/mise/config.toml`（tool version） | `chezmoi apply` → `mise install`                                                  |
+
+### 手順1. mainを取り込み、applyする
+
+Cloud Run関連のfileは`~/.config/agentsview`へchezmoiが配置したものが使われる。**source treeを更新しただけでは反映されない。**
+
+```sh
+git -C ~/dotfiles switch main
+git -C ~/dotfiles pull
+chezmoi apply
+```
+
+`chezmoi apply`を忘れると古いmanifestがそのままdeployされる。`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止するので気づけるが、`chezmoi status`で先に確認しておくとよい。
+
+```sh
+chezmoi status ~/.config/agentsview   # 何も出なければ最新
+```
+
+### 手順2. Terraformの変更を適用する
+
+Terraformの変更が無いPRなら飛ばしてよい。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview show tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
+```
+
+**planに`destroy`が含まれていたら、その1件ずつを説明できるまでapplyしない。** とくにCloud Run serviceがdestroy対象に出た場合は、clrndが所有するserviceをTerraformが消そうとしている（2.0.4の状態移譲が未実施）。そのままapplyしてはいけない。
+
+`tftui`を使うとplanの中身をtree表示で追える。
+
+```sh
+fnox exec -- tftui
+```
+
+### 手順3. Cloud Runの変更を適用する
+
+manifestやDockerfileを変えた場合だけ実行する。まず差分を確認する。
+
+```sh
+mise run agentsview:cloudrun:diff
+```
+
+出た差分が意図したものだけであることを確認してからdeployする。
+
+```sh
+# manifestだけを変えた場合（imageは変わらないのでbuildを省ける）
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+
+# Dockerfile（AgentsViewのversion）を変えた場合はbuildから
+unset AGENTSVIEW_IMAGE
+mise run agentsview:cloudrun:deploy
+```
+
+`AGENTSVIEW_IMAGE`を過去にexportしたshellをそのまま使うと、古いimageが固定されたままdeployされる。Dockerfileを変えたときは必ず`unset`する。
+
+`deploy`は差分を表示して確認を求め、新revisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了する。
+
+### 手順4. 適用結果を確認する
+
+```sh
+mise run agentsview:cloudrun:status                    # 最新revisionが100% traffic
+mise run agentsview:cloudrun:diff                      # 差分が無いこと
+curl -i "$(mise run agentsview:cloudrun:status | rg -o 'https://\S+' | head -1)/api/v1/sessions"  # 401
+```
+
+失敗した場合は作業6のtroubleshootingへ戻る。revisionが起動しない原因はrevision logにしか出ない。
+
+### 適用順序に依存関係がある場合
+
+Terraformとmanifestの両方を変えたPRでは、**権限を足す変更はTerraformが先、権限を外す変更はCloud Runが先**である。runtime service accountに新しいsecretへのaccessorを足してからそのsecretを参照するmanifestをdeployしないと、revisionは起動時にsecretを解決できずに失敗する。逆に参照をやめる場合は、先にmanifestから外してからIAMを削る。
+
+### 複数PCで運用している場合
+
+Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`chezmoi apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
 
 ---
 

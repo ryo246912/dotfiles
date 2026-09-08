@@ -1,46 +1,46 @@
-# Cloud Run service definition deployed with clrnd (https://github.com/masasuzu/clrnd).
+# clrnd（https://github.com/masasuzu/clrnd）がdeployするCloud Run service定義。
 #
-# clrnd owns this file: image, resources, scaling, environment, and Secret
-# Manager references. Terraform owns everything around it—the runtime service
-# account, the Secret Manager containers and their IAM, Artifact Registry, and
-# the allUsers invoker binding—so no resource has two owners.
+# このfileはclrndが所有する。image、resource、scaling、環境変数、Secret Manager
+# 参照がその範囲である。周辺のresource（runtime service account、Secret Manager
+# のcontainerとIAM、Artifact Registry、allUsers invoker binding）はTerraformが
+# 所有する。同じresourceを2つのtoolが持たないようにしている。
 #
-# The file is rendered as a Go template before it is parsed. Only the template
-# calls below are expanded; a literal double open brace anywhere else in the
-# file would start an action and has to be escaped (see the clrnd README).
+# このfileはparseされる前にGo templateとしてrenderされる。展開されるのは下の
+# template呼び出しだけで、それ以外の場所にある波括弧2つはactionの開始と解釈される
+# ためescapeが必要である（clrndのREADMEを参照）。
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: ryo-agentsview
   annotations:
-    # Public viewer: Cloud Run accepts traffic from the internet, and AgentsView
-    # still requires its own bearer token (require_auth in config.toml).
+    # 公開viewer。Cloud Runはinternetからのtrafficを受けるが、AgentsView自身の
+    # bearer token（config.tomlのrequire_auth）は引き続き必要である。
     run.googleapis.com/ingress: all
 spec:
   template:
     metadata:
       annotations:
-        # Scale to zero when idle; cap the fan-out so a crawler cannot run up
-        # the bill on a read-only viewer.
+        # idle時は0まで縮める。read-only viewerがcrawlerに叩かれて課金が伸びない
+        # よう、上限も抑える。
         autoscaling.knative.dev/minScale: "0"
         autoscaling.knative.dev/maxScale: "2"
-        # Throttle CPU outside requests (cpu_idle) and boost it during startup,
-        # which is when the PostgreSQL connection and migrations happen.
+        # request外ではCPUを絞り（cpu_idle）、起動時はboostする。起動時に
+        # PostgreSQL接続とschema checkが走るためである。
         run.googleapis.com/cpu-throttling: "true"
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
-      # Terraform output: runtime_service_account. It may read the two secrets
-      # below and pull images; it cannot deploy.
+      # Terraformのoutput runtime_service_account。下の2つのsecretを読み、
+      # imageをpullできる。deployはできない。
       serviceAccountName: '{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}'
       containerConcurrency: 20
       timeoutSeconds: 60
       containers:
         - image: '{{ must_env "AGENTSVIEW_IMAGE" }}'
-          # AGENTSVIEW_DATA_DIR (/data in the image) must be WRITABLE: loading
-          # the config takes a lock file next to it, and that happens before
-          # AgentsView even checks whether the config exists. A Secret Manager
-          # volume is read-only, so the secret is mounted outside the data dir
-          # and copied in here, which is what Fly's [[files]] did as well.
+          # AGENTSVIEW_DATA_DIR（imageでは/data）は書き込み可能でなければならない。
+          # AgentsViewはconfigを読む前に同じdirectoryへlock fileを作り、それは
+          # configの存在確認よりも前に起きる。Secret Managerのvolumeはread-onlyな
+          # ので、secretはdata dirの外へmountし、ここでcopyする。Flyの[[files]]も
+          # 書き込み可能な場所へconfigを置いていた。
           command:
             - /bin/sh
             - -c
@@ -48,21 +48,20 @@ spec:
               set -e
               data_dir="${AGENTSVIEW_DATA_DIR:-/data}"
               mkdir -p "$data_dir"
-              # cp/install compare the source's metadata before and after the
-              # copy and abort with "replaced while being copied" when it moves.
-              # The secret mount is FUSE-backed and does not report stable
-              # metadata, so use a plain read/write, which makes no such check.
+              # cp／installはcopy前後でsourceのmetadataを比較し、変化していると
+              # "replaced while being copied" で中断する。secretのmountはFUSE
+              # ベースでmetadataが安定しないため誤検知する。この検査を持たない
+              # 素のread/writeを使う。
               umask 077
               cat /etc/agentsview/config.toml > "$data_dir/config.toml"
               chmod 600 "$data_dir/config.toml"
               exec /usr/local/bin/docker-entrypoint.sh "$@"
             - agentsview-cloudrun
-          # `pg serve` resets the bind address to 127.0.0.1 and honours only
-          # explicit flags, so the listener depends entirely on the arguments
-          # the entrypoint receives. Upstream ships them as the image CMD
-          # (--host 0.0.0.0 --no-browser); pin them here so a future image
-          # cannot silently move the listener off the interface Cloud Run
-          # probes. These args replace that CMD, so keep them a superset of it.
+          # `pg serve` はbind先を127.0.0.1へ戻し、明示flagだけを見る。つまり
+          # listen先はentrypointが受け取る引数で決まる。upstreamはそれをimageの
+          # CMD（--host 0.0.0.0 --no-browser）として渡している。将来imageのCMDが
+          # 変わってCloud Runがprobeするinterfaceから外れないよう、ここで固定する。
+          # このargsはCMDを置き換えるので、CMDのsupersetを保つこと。
           args:
             - --host
             - 0.0.0.0
@@ -77,25 +76,26 @@ spec:
               cpu: "1"
               memory: 512Mi
           env:
-            # Switch the upstream entrypoint to `agentsview pg serve`.
+            # upstreamのentrypointを `agentsview pg serve` に切り替える。
             - name: PG_SERVE
               value: "1"
             - name: AGENTSVIEW_DISABLE_UPDATE_CHECK
               value: "1"
             - name: AGENTSVIEW_PG_SCHEMA
               value: agentsview
-            # Read-only CockroachDB URL. The value stays in Secret Manager and
-            # never appears in this file or in a clrnd diff.
+            # read-onlyのCockroachDB URL。値はSecret Managerに置いたままで、
+            # このfileにもclrndのdiffにも出ない。
             - name: AGENTSVIEW_PG_URL
               valueFrom:
                 secretKeyRef:
                   name: agentsview-pg-url
-                  # A number, never "latest": Cloud Run resolves the reference per
-                  # instance at startup, so "latest" makes a revision's values
-                  # depend on when each instance happened to start.
+                  # "latest" ではなく数字を使う。Cloud Runはsecret参照をinstance
+                  # 起動時に解決するため、"latest" だとrevisionの値がinstanceの
+                  # 起動時刻に依存してしまう。
                   key: '{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}'
           volumeMounts:
-            # Never /data: that is AGENTSVIEW_DATA_DIR and has to stay writable.
+            # /data にしてはいけない。そこはAGENTSVIEW_DATA_DIRで、書き込み可能
+            # なままにしておく必要がある。
             - name: config
               mountPath: /etc/agentsview
       volumes:
@@ -106,7 +106,7 @@ spec:
               - key: '{{ must_env "AGENTSVIEW_CONFIG_SECRET_VERSION" }}'
                 path: config.toml
   traffic:
-    # Follow the newest revision. `clrnd rollback` pins this to a revision name
-    # and `clrnd traffic --to-latest` puts it back.
+    # 最新revisionへ追従する。`clrnd rollback` がここをrevision名へ固定し、
+    # `clrnd traffic --to-latest` が戻す。
     - percent: 100
       latestRevision: true
