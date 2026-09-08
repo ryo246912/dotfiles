@@ -1526,7 +1526,15 @@ fnox exec -- mise run agentsview:cockroach:status
 
 Fly側にしか無いsessionが残っていないことも確認する。件数がCockroachDB側を上回る場合は、まだ削除しない。
 
+Fly PostgreSQLはprivate network上にあるため、**以降9.6までのFly側操作は`flyctl proxy`を張った別terminalが必要**である。`AGENTSVIEW_OWNER_PROXY_PG_URL`は`127.0.0.1:15432`を指しているので、port番号を合わせる。作業が終わるまでこのterminalは閉じない。
+
 ```sh
+# terminal A（張りっぱなしにする）
+flyctl proxy 15432:5432 -a psgl
+```
+
+```sh
+# terminal B
 fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -Atc \
   "SELECT count(*) FROM agentsview.sessions;"'
 ```
@@ -1560,10 +1568,10 @@ flyctl status -a ryo-agentsview
 
 #### 9.4 `agentsview` schemaを削除する
 
-`psgl`のvolume使用量が減るのはこの手順である。owner接続で実行する。
+`psgl`のvolume使用量が減るのはこの手順である。9.1で張った`flyctl proxy`を使い、owner接続で実行する。
 
 ```sh
-mise run agentsview:pg:proxy   # 別terminalでflyctl proxyを張る場合
+fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -v ON_ERROR_STOP=1'
 ```
 
 削除前に対象を必ず目視する。
