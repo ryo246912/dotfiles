@@ -681,6 +681,14 @@ curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions"
 
 ##### 作業9. 小規模データでmigration rehearsalとCloud Run検証を行う
 
+> **`AGENTSVIEW_OWNER_PROXY_PG_URL`について:** これは**移行元**、つまりFly PostgreSQL（app `psgl`）へowner roleで繋ぐURLである。Fly側DBはprivate network上にあり直接繋がらないため、`flyctl proxy`がlocalに張るtunnel（既定`127.0.0.1:15432`）を指す形にする。Fly時代から使っている値で、作業2の新規登録リストには含まれない。Bitwarden Secrets Managerに無い場合は`secret ... not found`で停止する。
+>
+> ```text
+> postgresql://agentsview_owner:<owner password>@127.0.0.1:15432/agentsview?sslmode=disable
+> ```
+>
+> Flyのデータを引き継がず、各PCから`agentsview pg push`で入れ直す方針なら、このtaskごと不要である。その場合はCockroachDBが空であることを確認してから`agentsview:cockroach:push`へ進む。
+
 全PCの`agentsview pg push`、`pg watch`、cron／launchd／systemd timerを一時停止する。FlyのAtuinは別schemaなので停止しない。停止確認後だけ次を実行する。
 
 ```sh
