@@ -419,16 +419,54 @@ postgresql://agentsview_read:<read password>@<SQL host>:26257/<database>?sslmode
 
 3本をBitwarden Secrets Managerへ同名で登録する。CockroachDB Consoleの**Connect**画面が別port、database、CA指定を案内した場合は、手作業で組み立てた値よりConsoleの接続文字列を優先し、usernameとpasswordだけ各role用に差し替える。
 
-まず小さいproject名を確認し、owner URLでAgentsView schema migrationを実行する。
+ここでいうprojectはGoogle Cloud project、CockroachDB project、Bitwarden projectではない。**このPCでAgentsViewがlocal sessionをworkspace単位に分類した既存のAgentsView project名**であり、任意の新しい名前を入力するものではない。`small-project`は説明用placeholderなので、そのまま指定しない。
+
+まずlocal AgentsViewに存在するprojectをsession数の少ない順に表示する。
 
 ```sh
-export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+agentsview projects --format json |
+  jq -r 'sort_by(.session_count)[] | select(.name != "" and .session_count > 0) | [.session_count, .name] | @tsv'
+```
+
+出力の1列目はsession数、2列目が`--projects`へ渡すproject名である。最初はsession数が少なく、内容を確認できるprojectを1つ選ぶ。例えば実際の一覧に`dotfiles`があれば次のように設定する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='dotfiles'
 fnox exec -- sh -c '
   AGENTSVIEW_PG_SCHEMA=agentsview \
   AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
     agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 '
 ```
+
+`failed SASL auth: password authentication failed for user agentsview_owner`はproject名とは無関係で、project filterを処理する前のCockroachDB loginに失敗している。接続URLのusernameとdatabaseを確認し、まずAgentsViewを介さず認証だけを試す。
+
+```sh
+fnox exec -- sh -c '
+  psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "SELECT current_user, current_database();"
+'
+```
+
+このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
+
+passwordを推測して試さず、次の手順でowner passwordをrotationする。
+
+1. `openssl rand -hex 32`で新しいowner passwordを作る。
+2. Bitwarden Secrets Managerの`TF_VAR_cockroach_owner_password`をその値へ更新する。
+3. 同じ値を使い、`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を`postgresql://agentsview_owner:<同じ値>@<SQL host>:26257/agentsview?sslmode=verify-full`として更新する。push／read passwordを混ぜない。
+4. TerraformでSQL userへ新passwordを反映する。保存planにはpassword自体は表示されない。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false \
+  -target=cockroach_sql_user.owner -out=owner-password.tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply owner-password.tfplan
+rm -f terraform/agentsview/owner-password.tfplan
+```
+
+5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
+
+CockroachDB Console等でpasswordを別途変更していない前提で、planが`No changes`なのにURLだけが28P01になる場合、URL secretだけが誤っている可能性が高い。`TF_VAR_cockroach_owner_password`と同じ値で`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を作り直し、Terraform applyは行わず`psql`を再試行する。Consoleで変更した履歴がある場合は、planの有無にかかわらず上記rotationを実施してTerraformをsource of truthへ戻す。
 
 続いてowner接続で最小権限を設定する。
 
@@ -1032,12 +1070,12 @@ gcloud storage buckets add-iam-policy-binding "gs://${TF_STATE_BUCKET}" \
 
 #### 3.1 小さいprojectでbootstrap
 
-`AGENTSVIEW_MIGRATION_PROJECTS`には、最初に試す小さいprojectを1つ指定する。
+`AGENTSVIEW_MIGRATION_PROJECTS`には、Google Cloud等のproject名ではなく`agentsview projects --format json`に表示される既存のAgentsView projectから、最初に試すsession数の少ないものを1つ指定する。任意の`small-project`という名前を新規作成する意味ではない。候補一覧、選び方、owner URLの28P01解消は作業5の手順を参照する。
 
 dump後の件数比較を決定的にし、copy中の更新を落とさないため、全PCの`agentsview pg push`、`agentsview pg watch`、定期実行を一時停止する。Atuinは別schemaへ書くため停止不要。停止を確認したoperatorだけが確認変数を設定する。
 
 ```sh
-export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
 export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
 fnox exec -- mise run agentsview:cockroach:migrate
 ```
