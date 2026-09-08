@@ -31,15 +31,15 @@ reviews:
   enable_prompt_for_ai_agents: false
   path_filters:
     - "!not_config/**"
-    - "!dot_config/sidebery/**"
-    - "!dot_config/dbeaver/**"
-    - "!dot_config/raycast/**"
+    - "!config/sidebery/**"
+    - "!config/dbeaver/**"
+    - "!config/raycast/**"
   path_instructions:
-    - path: "dot_config/**/*.json"
+    - path: "config/**/*.json"
       instructions: |
         コメント付き JSONC や既存キーの意図を尊重し、不要な整形だけの指摘は避けてください。
         ユーザー設定の意味が変わる変更や既存コメントの消失を優先して確認してください。
-    - path: "dot_local/bin/**"
+    - path: "local/bin/**"
       instructions: |
         シェルスクリプトでは引用、冪等性、エラーハンドリング、macOS と Linux の差異による退行を重点的に確認してください。
     - path: ".github/workflows/**"

@@ -41,7 +41,7 @@ mise task で実行する場合:
 mise run agentsview:setup:db-roles
 ```
 
-task は `dot_config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
+task は `config/mise/tasks/agentsview.toml` の `agentsview:setup:db-roles` で定義している。`AGENTSVIEW_ADMIN_PG_USER`、`AGENTSVIEW_ADMIN_PG_DATABASE`、`AGENTSVIEW_PG_APP` は必要に応じて上書きできる。
 
 > 下記の SQL は概念的な内容の抜粋。実際の task は `CREATE ROLE ... / ALTER ROLE ...` を存在チェック付きで冪等に実行し、role 属性（`NOSUPERUSER` 等）も毎回正規化するため、再セットアップや password rotation でも重複エラーにならない。
 
@@ -125,7 +125,7 @@ echo "Bearer token: $AUTH"  # 保管しておく
 
 ```sh
 # chezmoi source directory から実行する場合
-flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
+flyctl deploy --app ryo-agentsview -c config/agentsview/fly.toml
 ```
 
 または mise task:
@@ -351,11 +351,11 @@ DELETE FROM agentsview.sessions WHERE machine = 'mac-old';
 
 ## GitHub Actions でのデプロイ
 
-`dot_config/agentsview/fly.toml` または workflow 自体を main branch に merge すると `deploy-agentsview` workflow が実行される。
+`config/agentsview/fly.toml` または workflow 自体を main branch に merge すると `deploy-agentsview` workflow が実行される。
 
 ```yaml
 - name: Deploy AgentsView
-  run: flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
+  run: flyctl deploy --app ryo-agentsview -c config/agentsview/fly.toml
   env:
     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 ```
@@ -399,14 +399,14 @@ echo "Bearer token: $AUTH"
 
 ### 現状（2026-06-10）
 
-- `dot_config/agentsview/fly.toml` は作成済み。
+- `config/agentsview/fly.toml` は作成済み。
 - 公式 image `ghcr.io/wesm/agentsview:0.29.0` を使用し、`PG_SERVE=1` で `agentsview pg serve` を起動する。
 - `[[files]]` で `/data/config.toml` を base64 encoded secret から注入する。
 - Fly.io app `ryo-agentsview` は作成済み。
 - secrets は `AGENTSVIEW_CONFIG_TOML` と `AGENTSVIEW_PG_URL` を使う。
 - security headers と HTTPS 強制は `fly.toml` に設定済み。
-- setup / deploy / local push は `dot_config/mise/tasks/agentsview.toml` の `agentsview:*` task に集約済み。
-- `dot_config/agentsview/fly.toml` の main merge 時 deploy は `.github/workflows/deploy-agentsview.yaml` で自動化済み。
+- setup / deploy / local push は `config/mise/tasks/agentsview.toml` の `agentsview:*` task に集約済み。
+- `config/agentsview/fly.toml` の main merge 時 deploy は `.github/workflows/deploy-agentsview.yaml` で自動化済み。
 
 ### 次の確認
 

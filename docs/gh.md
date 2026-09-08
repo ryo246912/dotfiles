@@ -25,16 +25,16 @@ mise run gh:skill-install-all github/awesome-copilot git-commit --pin v2.0.0
 | ---------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | 主目的                 | skill 単体の検索・preview・install                                                  | 標準セットを manifest で再現可能にする                            |
 | この repo での位置付け | 個人の試用導線                                                                      | 常時使用する外部 skill の正式管理                                 |
-| 管理単位               | `gh skill install` で agent ごとに配置                                              | `dot_apm/apm.yml` の `dependencies.apm` に宣言                    |
+| 管理単位               | `gh skill install` で agent ごとに配置                                              | `apm/apm.yml` の `dependencies.apm` に宣言                    |
 | 再現性                 | `--pin <tag-or-sha>` で個別に固定                                                   | commit SHA と lock file で管理しやすい                            |
-| 運用                   | `gh skill preview` / `gh skill search` / `mise run gh:skill-install-all` で軽く試す | `dot_apm/apm.yml` に SHA pin 付きで追加し、`mise run apm:install` |
+| 運用                   | `gh skill preview` / `gh skill search` / `mise run gh:skill-install-all` で軽く試す | `apm/apm.yml` に SHA pin 付きで追加し、`mise run apm:install` |
 
 ### 昇格フロー
 
 1. `gh skill search <keyword>` で候補を探す。
 2. `gh skill preview <owner>/<repo> [skill]` で内容を読む。
 3. `mise run gh:skill-install-all <owner>/<repo> [skill]` で user scope に pin install して試す。
-4. 常時使いたいと判断したら、`dot_apm/apm.yml` の `dependencies.apm` に upstream 依存として追加する。
+4. 常時使いたいと判断したら、`apm/apm.yml` の `dependencies.apm` に upstream 依存として追加する。
 5. `git ls-remote https://github.com/<owner>/<repo> HEAD` などで immutable な commit SHA に pin する。
 6. `mise run apm:install` で APM 管理の標準セットとして再配布する。
 

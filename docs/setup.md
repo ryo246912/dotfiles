@@ -4,22 +4,38 @@
 
 ### 初期設定
 
-- [ ] chezmoiの実行
-  - `--use-builtin-git=on` で clone するため、事前の `xcode-select --install`（system git）は不要
-  - Command Line Tools は直後の Homebrew インストーラが自動導入する
+- [ ] mise本体のインストール（未導入時のみ）
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply --use-builtin-git=on ryo246912
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
   ```
 
-- [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
-  - `run_once_install-mise_mac.sh` による未導入時の初回インストールが先に実行され、その後 post-apply hook が実行される
-  - hook が順に実行する:
-    1. config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし）
-    2. `MISE_ENV=mac mise bootstrap packages apply`
-    3. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
-    4. `GITHUB_TOKEN=$(gh auth token) mise install`
-  - 失敗時は `chezmoi apply` で再試行
+- [ ] リポジトリの clone
+
+  ```sh
+  git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
+  cd ~/dotfiles
+  mise trust
+  ```
+
+- [ ] mise bootstrap の実行（`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
+      `mise.toml`/`mise.mac.toml` 自身が持つため、必ず `~/dotfiles` 直下で実行する）
+  - `mise bootstrap` が順に実行する（詳細フェーズ順は [docs/mise.md](./mise.md) 参照）:
+    1. `[bootstrap.hooks.pre-packages]`: config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし）
+    2. `[bootstrap.packages]` の導入（`MISE_ENV=mac` を暗黙に使う packages フェーズ）
+    3. `[dotfiles]` の配置（このリポジトリの `config/`・`local/` 等から `$HOME` へコピー/テンプレート展開）
+    4. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    5. `[tools]` の導入（4 で完了しているため通常は即座に終わる）
+    6. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+
+  ```sh
+  mise bootstrap
+  ```
+
+  - 失敗時は `mise bootstrap` を再実行する（各フェーズは収束的なので再実行して安全）
+  - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
+    手動シンボリックリンク作成は不要
 
 - [ ] macOS defaults の適用
 
@@ -93,17 +109,17 @@
 - [ ] git
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
-    - `~/.config/git/config.secret`はchezmoi管理外のため、秘密情報をリポジトリにコミットしないこと
+    - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
 
     ```sh
-    cp "$(chezmoi source-path)/dot_config/git/config.secret.sample" ~/.config/git/config.secret
+    cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
     nvim ~/.config/git/config.secret
     ```
 
     - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
     ```sh
-    cp "$(chezmoi source-path)/dot_config/git/config.work.secret.sample" ~/.config/git/config.work.secret
+    cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
     nvim ~/.config/git/config.work.secret
     ```
 
@@ -320,7 +336,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 ```
 
 - [ ] Markdownファイルのデフォルトアプリ設定
-  - `chezmoi apply`で`~/.local/bin/md-preview-launcher`を配置する
+  - `mise bootstrap dotfiles apply`で`~/.local/bin/md-preview-launcher`を配置する
   - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
   - 「シェルスクリプトを実行」をワークフローへ追加し、以下のように設定する
     - シェル: `/bin/zsh`
@@ -452,18 +468,37 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```
 - [ ] ユーザー名とパスワードを設定
 
-- [ ] chezmoiの実行
+- [ ] mise本体のインストール（未導入時のみ）
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
   ```
 
-- [ ] miseの実行
-  - hook が順に実行する:
-    1. `MISE_ENV=linux mise bootstrap packages apply`（**sudo のパスワード入力が要るので対話端末で実行すること**）
-    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
-    3. `GITHUB_TOKEN=$(gh auth token) mise install`
-  - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること
+- [ ] リポジトリの clone
+
+  ```sh
+  git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
+  cd ~/dotfiles
+  mise trust
+  ```
+
+- [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
+      `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
+      自身が持つため、必ず `~/dotfiles` 直下で実行する）
+  - `mise bootstrap` が順に実行する:
+    1. `[bootstrap.packages]` の導入（`MISE_ENV=linux` を暗黙に使う packages フェーズ。apt の sudo プロンプトが出る）
+    2. `[dotfiles]` の配置
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    4. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+
+  ```sh
+  mise bootstrap
+  ```
+
+  - 元の chezmoi hook にあった「非対話端末なら apt bootstrap で中断する」ガードは
+    native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
+    プロンプトでハングしうる。対話端末（TTY）から実行すること
 
 - [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
       [`docs/credentials.md`](./credentials.md) 参照）

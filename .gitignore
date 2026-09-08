@@ -4,10 +4,10 @@
 mise*.lock
 
 *temp*
-dot_config/git/config.secret
-dot_config/git/config.work.secret
-dot_zprofile.secret
-dot_zshrc.secret
+config/git/config.secret
+config/git/config.work.secret
+config/zsh/.zprofile.secret
+config/zsh/.zshrc.secret
 
 ## claude
 settings.local.json
@@ -19,4 +19,5 @@ settings.local.json
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-!dot_config/rulesync/exact_dot_rulesync/mcp.json
+# config/rulesync/.rulesync/mcp.json.tera は拡張子が .tera のため上の `mcp.json` ignore に
+# そもそもマッチしない（旧 dot_config/.../mcp.json.tmpl 時代の !negation は不要になった）

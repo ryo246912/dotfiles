@@ -62,7 +62,7 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 
 ## グローバル設定と work profile の分割
 
-`dot_config/fnox/config.toml`（グローバル）と `dot_config/fnox/config.work.toml`（work profile）の
+`config/fnox/config.toml`（グローバル）と `config/fnox/config.work.toml`（work profile）の
 2ファイルに分けています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
 分けているのと揃える狙いです。ただし fnox には `MISE_ENV` に相当する「ホスト種別で自動的にファイルを
 選ぶ」機能が無いため、次の2つを組み合わせて実現しています。
@@ -72,7 +72,7 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
 - `config.work.toml` 側は中身をすべて `[profiles.work.*]` の下に置く。これは
   `FNOX_PROFILE=work` のときだけ有効になるので、import されているだけでは何も起きない。
-- `dot_config/zsh/dot_zshenv.tmpl` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
+- `config/zsh/.zshenv.tera` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
   ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
   同じ仕組み）。
 
@@ -85,7 +85,7 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 `config.work.toml` 側の `[profiles.work.providers.aws]` に `profile` を書かなければそのまま拾われます。
 
 複数 AWS アカウント/ロールを切り替える場合は `[profiles.<aws_profile>]` で `aws-vault` のプロファイル名と
-揃えた独立した profile を追加で定義してください。テンプレートは `dot_config/fnox/config.work.toml`
+揃えた独立した profile を追加で定義してください。テンプレートは `config/fnox/config.work.toml`
 末尾のコメントアウト済みブロック（`aws-vault の複数アカウント/ロールをさらに細かく切り替えたい場合`）を
 参照してください。
 
@@ -94,8 +94,8 @@ aws-vault list
 aws-vault exec <aws_profile> -- fnox exec --profile <aws_profile> -- <command>
 ```
 
-zsh 側の abbreviation は `dot_config/zabrze/general.toml` の `aws-vault` 系 (`awv` / `awe` / `awl` /
-`awlo`) と `dot_config/zabrze/fnox.toml` の `fnox` 系 (`fna` = activate, `fne` = exec, `fnv` = aws-vault
+zsh 側の abbreviation は `config/zabrze/general.toml` の `aws-vault` 系 (`awv` / `awe` / `awl` /
+`awlo`) と `config/zabrze/fnox.toml` の `fnox` 系 (`fna` = activate, `fne` = exec, `fnv` = aws-vault
 exec + fnox exec) を参照してください。
 
 ## セットアップ手順
@@ -110,7 +110,7 @@ exec + fnox exec) を参照してください。
    ```sh
    age-keygen -o ~/.config/fnox/age.txt
    ```
-   出力される `age1...` から始まる公開鍵を `dot_config/fnox/config.toml` の
+   出力される `age1...` から始まる公開鍵を `config/fnox/config.toml` の
    `[providers.age].recipients` に追加してコメントを外す。`recipients` は暗号化に使う公開鍵の
    **リスト**です（後述の複数 PC 対応のため、複数指定できる）。復号には別途秘密鍵の場所を fnox に
    伝える必要があるため、同じ `[providers.age]` に `key_file` も設定する（`FNOX_AGE_KEY_FILE`
@@ -128,11 +128,11 @@ exec + fnox exec) を参照してください。
 
    `--global` を付けると ciphertext は `~/.config/fnox/config.toml`（chezmoi の**デプロイ先**）に
    直接書き込まれます。ここに書くと、次に `chezmoi apply` したときにまだ書き換えていない git 側の
-   ソース（`dot_config/fnox/config.toml`）の内容で上書きされて消えてしまうため、`FNOX_CONFIG_DIR`
+   ソース（`config/fnox/config.toml`）の内容で上書きされて消えてしまうため、`FNOX_CONFIG_DIR`
    を chezmoi のソースディレクトリに向けて、最初から git 管理下のファイルへ直接書き込みます:
 
    ```sh
-   FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
+   FNOX_CONFIG_DIR="$(chezmoi source-path)/config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
    ```
 
    書き込んだら `chezmoi diff` で追加された ciphertext 行だけの差分になっているか確認してから
@@ -155,7 +155,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    ```sh
    age-keygen -o ~/.config/fnox/age.txt
    ```
-2. 出力された公開鍵を、`dot_config/fnox/config.toml` の `[providers.age].recipients` に追記する
+2. 出力された公開鍵を、`config/fnox/config.toml` の `[providers.age].recipients` に追記する
    （1台目の公開鍵は消さず、リストに2つ目を足すだけ）。この編集自体は git を扱える側（1台目や
    別の作業環境）で行って構いません。
 3. 1台目（今まで使っていた秘密鍵で既存 ciphertext を復号できる側）で、追加した recipient に
@@ -163,9 +163,9 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    ```sh
    fnox reencrypt --provider age
    ```
-   これで `dot_config/fnox/config.toml` 内の `BWS_ACCESS_TOKEN` の ciphertext が、1台目・2台目
+   これで `config/fnox/config.toml` 内の `BWS_ACCESS_TOKEN` の ciphertext が、1台目・2台目
    どちらの秘密鍵でも復号できる形に更新されます。
-4. `recipients` の追加と再暗号化後の `dot_config/fnox/config.toml` を commit して push する。
+4. `recipients` の追加と再暗号化後の `config/fnox/config.toml` を commit して push する。
 5. 2台目で `chezmoi apply`（または `git pull` 後に `chezmoi apply`）すれば、2台目の
    `age.txt` でも `fnox get BWS_ACCESS_TOKEN` が復号できるようになります。
 
@@ -182,7 +182,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    aws-vault add <aws_profile>
    aws-vault list
    ```
-2. `dot_config/fnox/config.work.toml` の `[profiles.work.providers.aws]` ブロックのコメントを外し、
+2. `config/fnox/config.work.toml` の `[profiles.work.providers.aws]` ブロックのコメントを外し、
    `region` / `prefix` を実際の値に置き換える。`profile` は書かない（`aws-vault` が渡す環境変数を
    そのまま拾わせるため。詳しくは [「aws-vault との併用」](#aws-vault-との併用) を参照）。
 3. `[profiles.work.secrets]`（既に開いている単一テーブル）に secret 行を追加する。
@@ -201,11 +201,11 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
 
 ## secret ファイル運用
 
-- `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない（`dot_claude/settings.json`
+- `.env`, `.envrc`, `*.secret`, `fnox.local.toml` には secret を保存しない（`claude/settings.json`
   の deny でこれらの Read/Write は AI ツールからもブロックしている）。
 - `fnox.toml` は `provider = "age"` の暗号文か、リモート provider への参照キーのみを持つ
   （plain text default は使わない）。
-- このリポジトリ自身（dotfiles）が使う secret は `dot_config/fnox/config.toml`
+- このリポジトリ自身（dotfiles）が使う secret は `config/fnox/config.toml`
   （`~/.config/fnox/config.toml` にデプロイされる fnox のグローバル設定）で管理する。
   cwd に関係なく全 shell にマージされるため、複数リポジトリを横断して使う secret
   （例: `czg` の AI トークン）はここに置く。

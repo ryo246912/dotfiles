@@ -1,11 +1,11 @@
 name: test-linux
 
-#   chezmoi apply → post-apply hook（bootstrap(apt) → gh → mise install）→ zsh 起動
+#   mise bootstrap（pre-packages hook → packages(apt) → dotfiles → pre-tools hook(gh) → tools →
+#   final hook(apm/rulesync)）→ zsh 起動
 # 方針:
-#   - run_once_*（scoop/powershell 前提・対話 read のインストーラ）は CI で実行不能なため
-#     `chezmoi apply --exclude=scripts` で除外し、setup.md が自動化している mise フロー本体
-#     （post-apply hook）だけを検証する。run_once_setup.sh 相当（~/.zshenv symlink）は手動で補う。
-#   - bitwarden を要する .czrc は CI で解決できないため .chezmoiignore に一時追記して除外する。
+#   - GUI/対話系の手動スクリプト（scripts/install-*.sh、tasks/dotfiles-sync.toml の
+#     dotfiles:sync-* task）は CI で実行不能なため呼ばない。setup.md が自動化している
+#     `mise bootstrap` 本体（[bootstrap.hooks.*] 込み）だけを検証する。
 #   - full mise install は aqua/github backend（GitHub API）を含むため read-only の github.token を
 #     注入する。/test-linux は OWNER/MEMBER/COLLABORATOR のみ発火。write 権限は PR コードを実行しない
 #     comment ジョブに限定する。
@@ -43,43 +43,44 @@ jobs:
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          version: "2026.7.0"
+          version: "2026.9.2"
           install: false
 
-      - name: Validate configs（apply 前の高速フィードバック）
+      - name: Validate configs（bootstrap 前の高速フィードバック）
         run: |
           set -euo pipefail
           for f in \
-            dot_config/mise/config.toml \
-            dot_config/mise/config.mac.toml \
-            dot_config/mise/config.linux.toml \
-            .chezmoi.toml.tmpl; do
+            mise.toml \
+            mise.mac.toml \
+            mise.linux.toml \
+            config/mise/config.toml \
+            config/mise/config.mac.toml \
+            config/mise/config.linux.toml; do
             python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
           done
-          python3 -c "import tomllib; print(tomllib.load(open('.chezmoi.toml.tmpl','rb'))['hooks']['apply']['post']['args'][1])" > "$RUNNER_TEMP/hook.sh"
-          bash -n "$RUNNER_TEMP/hook.sh" && echo "OK: hook bash syntax"
-          bash -n run_once_install-packages_windows.sh && echo "OK: run_once windows syntax"
+          python3 -c "
+          import tomllib
+          d = tomllib.load(open('mise.toml', 'rb'))
+          for name, hook in d['bootstrap']['hooks'].items():
+              print(hook['run'])
+          " > "$RUNNER_TEMP/hooks.sh"
+          bash -n "$RUNNER_TEMP/hooks.sh" && echo "OK: bootstrap hooks bash syntax"
+          bash -n scripts/install-packages-windows.sh && echo "OK: install-packages-windows syntax"
 
-      - name: chezmoi apply（setup.md フロー / run_once 除外・post-apply hook 実行）
-        # repo root の dev 用 mise.toml を読み込まないよう cwd を runner.temp にし、
-        # PR チェックアウトを --source で指定して apply する。
-        working-directory: ${{ runner.temp }}
+      - name: mise bootstrap（[dotfiles] 配置・[bootstrap.hooks.*] 実行）
+        # [dotfiles]・[bootstrap.hooks.*] は checkout したこのリポジトリの mise.toml/mise.linux.toml
+        # 自身が持つため、cwd をリポジトリ直下に保ったまま実行する（chezmoi の --source 相当の
+        # 外部指定は不要）。
         # full mise install（aqua/github backend）が GitHub API を使うため、read-only の
-        # github.token を install を行うこのステップに限定して注入する（ghalint: job env 禁止）。
+        # github.token を実行するこのステップに限定して注入する（ghalint: job env 禁止）。
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # chezmoi を pinned(aqua, checksum 検証)で用意する（curl|sh を避ける）。
-          mise install "aqua:twpayne/chezmoi@2.71.0"
-          # bitwarden を要する .czrc は CI で解決できないため apply 対象から一時除外する（ephemeral checkout）。
-          printf '\n.config/.czrc\n' >> "$GITHUB_WORKSPACE/.chezmoiignore"
-          # .chezmoi.toml.tmpl から config を生成（source が既存のため clone しない）。
-          mise exec "aqua:twpayne/chezmoi@2.71.0" -- chezmoi init --source="$GITHUB_WORKSPACE"
-          # apply 本体。Linux hook の apt bootstrap は `[ -t 0 ]`(TTY) を要するため PTY を割り当てる
-          # （runner の sudo は NOPASSWD なのでプロンプトは出ない）。--exclude=scripts で run_once を除外。
-          script -qe -c "mise exec aqua:twpayne/chezmoi@2.71.0 -- chezmoi apply --source=$GITHUB_WORKSPACE --exclude=scripts --verbose" /dev/null
+          # packages フェーズ(apt)の sudo は `[ -t 0 ]`(TTY) を要するため PTY を割り当てる
+          # （runner の sudo は NOPASSWD なのでプロンプトは出ない）。
+          script -qe -c "mise bootstrap --yes" /dev/null
 
       - name: assert bootstrap.packages(apt) 導入確認
         run: |
@@ -96,18 +97,26 @@ jobs:
         run: |
           set -euo pipefail
           rc=0
-          # hook が `mise install` を完走していれば [tools] の代表ツールが解決できる。
+          # bootstrap が完走していれば [tools] の代表ツールが解決できる。
           for t in node go python bun cargo rg jq fzf gh chezmoi lazygit delta; do
             if mise which "$t" >/dev/null 2>&1; then echo "OK: $t"; else echo "MISSING: $t"; rc=1; fi
           done
+          exit "$rc"
+
+      - name: assert [dotfiles] 配置確認
+        run: |
+          set -euo pipefail
+          rc=0
+          for f in "$HOME/.zshenv" "$HOME/.config/zsh/.zshrc" "$HOME/.config/git/config" "$HOME/.local/bin/multi-worktree"; do
+            if [ -e "$f" ]; then echo "OK: $f"; else echo "MISSING: $f"; rc=1; fi
+          done
+          [ -x "$HOME/.local/bin/multi-worktree" ] || { echo "MISSING exec bit: multi-worktree"; rc=1; }
           exit "$rc"
 
       - name: assert zsh 起動
         working-directory: ${{ runner.temp }}
         run: |
           set -euo pipefail
-          # run_once_setup.sh 相当（scripts 除外のため手動で ~/.zshenv symlink を張る）。
-          ln -sfv "$HOME/.config/zsh/.zshenv" "$HOME/.zshenv"
           # zshenv(ZDOTDIR/mise activate) → .zshrc(zinit 等) が致命エラー無く起動することを確認する。
           if ! out=$(timeout 300 zsh -i -c 'echo ZSH_STARTED_OK' 2>&1); then
             echo "$out"
@@ -139,6 +148,6 @@ jobs:
           set -euo pipefail
           run_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️";; *) echo "❌";; esac; }
-          body=$(printf '`/test-linux`（chezmoi apply→hook(apt bootstrap+mise install)→zsh 起動、[log](%s)）: %s %s' \
+          body=$(printf '`/test-linux`（mise bootstrap(apt+dotfiles+gh+tools+apm/rulesync)→zsh 起動、[log](%s)）: %s %s' \
             "$run_url" "$(icon "$RESULT")" "$RESULT")
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"

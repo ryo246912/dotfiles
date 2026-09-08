@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - dot_config/agentsview/fly.toml
+      - config/agentsview/fly.toml
       - .github/workflows/deploy-agentsview.yaml
   workflow_dispatch:
 
@@ -31,6 +31,6 @@ jobs:
         with:
           install_args: "github:superfly/flyctl"
       - name: Deploy AgentsView
-        run: flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
+        run: flyctl deploy --app ryo-agentsview -c config/agentsview/fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
