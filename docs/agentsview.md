@@ -561,9 +561,38 @@ Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそ�
 
 ##### `HealthCheckContainerError`で初回revisionが起動しない場合
 
-AgentsView 0.38.1の`pg serve`は、portを省略すると`8080`を使うが、hostは`127.0.0.1`へbindする。Cloud Runが注入する`PORT=8080`だけではbind addressは変わらず、Cloud Runのcontainer proxyはloopback listenerへ到達できない。この場合、application processが動いていても「PORT=8080でlistenしなかった」と判定される。
+このerrorは「containerがPORT=8080でlistenしなかった」という結果だけを示す。`agentsview pg serve`はlistenを開始する**前**に一連のcheckを実行し、どれか1つでも失敗するとprocessがexitする。したがって原因はほぼ常にlisten以前の失敗であり、bind addressやstartup probeのtimeoutではない。
 
-`cloudrun-service.yaml`ではentrypointへ`--host 0.0.0.0 --port 8080`を渡す。最新変更を適用し、成功済みbuildと同じimageを明示して再deployする。
+`pg serve`がlistenするまでに通る、失敗するとexitする処理は次の順である（v0.38.1）。
+
+| 順  | 処理                                  | 失敗時のlog                           |
+| --- | ------------------------------------- | ------------------------------------- |
+| 1   | `/data/config.toml`の読み込み         | `loading config file:`                |
+| 2   | `cursor_secret`の生成（未設定時のみ） | `ensuring cursor secret:`             |
+| 3   | `auth_token`の生成（未設定時のみ）    | `pg serve: generating auth token:`    |
+| 4   | CockroachDBへの接続                   | `pg serve:`（`28P01`／TLS errorなど） |
+| 5   | schema互換check                       | `pg serve: schema incompatible:`      |
+| 6   | data version互換check                 | `pg serve:`                           |
+
+**最初にrevision logを読む。** 原因はここにしか出ない。
+
+```sh
+gcloud run services logs read ryo-agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --region=us-west2 \
+  --limit=100
+```
+
+logの最初のerror行に応じて対処する。
+
+- **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9のmigrationが未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:migrate`と最初の`push`を済ませてから再deployする。
+- **`28P01` / `password authentication failed`** — `agentsview-pg-url` secretのpasswordが誤っている。CockroachDB Cloud consoleでread-only roleのpasswordを再発行し、`agentsview:cloudrun:secrets`で新versionを登録してから再deployする。
+- **`ensuring cursor secret` / `generating auth token`** — `/data`はSecret Managerのvolume mountであり**read-only**である。Flyの`[[files]]`と違い書き戻しができないため、`auth_token`と`cursor_secret`はconfigに必ず含まれていなければならない。`agentsview:cloudrun:secrets`は常に両方を書き込むので、このerrorが出た場合はsecretの中身が古い。同taskで作り直す。
+- **TLS / certificate error** — imageは`ca-certificates`入りのdebian-slimなので、通常はCockroachDB Cloudのcertを検証できる。出る場合はDB URLのhostとsslmodeを確認する。
+
+bind addressは原因ではない。upstream imageの`CMD`は`--host 0.0.0.0 --no-browser`であり、entrypointは`agentsview pg serve "$@"`としてこれを渡す。`cloudrun-service.yaml`の`args`はこのCMDを明示的に固定しているだけで、listen先を変えるものではない。同じimageはFlyでも同じ引数で動いていた。
+
+修正後は成功済みbuildと同じimageを明示して再deployする。
 
 ```sh
 chezmoi apply ~/.config/agentsview
@@ -571,19 +600,9 @@ export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsvie
 AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
 
-`AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。今回は成功済みの`0.38.1-bac4d72dc567`を再利用するので、imageの再buildは不要である。
+`AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。
 
-再deploy後、render結果とrevision logを確認する。
-
-```sh
-mise run agentsview:cloudrun:render | rg -A6 'args:'
-gcloud run services logs read ryo-agentsview \
-  --project="$GCP_PROJECT_ID" \
-  --region=us-west2 \
-  --limit=100
-```
-
-render結果に`--host`、`0.0.0.0`、`--port`、`8080`があり、revisionがReadyになれば修復完了である。引き続き起動しない場合は、上記logに出るCockroachDB認証、TLS、schema compatibility、Secret Manager mountの最初のerrorを調査する。startup probeのtimeoutを延ばす前に、processが正しいinterfaceでlistenしていることを確認する。
+**完了確認:** revisionがReadyになり、`mise run agentsview:cloudrun:status`が最新revisionに100% trafficを示す。
 
 ##### 作業7. Secret Managerへ最初のsecret versionを登録する
 
@@ -607,6 +626,8 @@ done
 ```
 
 ##### 作業8. clrndでCloud Run serviceを作り、Terraformでinvoker IAMを付ける
+
+> **前提:** `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9のmigrationを先に済ませる。
 
 Cloud Run ServiceはTerraformではなくclrndが作る。まずmanifestとその参照先を検証する。`verify`はschemaをlocalで検証したうえで、runtime service account、secretとそのversion、Artifact Registry imageの実在をAPIで確認する。
 
