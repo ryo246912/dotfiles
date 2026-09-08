@@ -493,32 +493,21 @@ rm -f terraform/agentsview/owner-password.tfplan
 
 CockroachDB Console等でpasswordを別途変更していない前提で、planが`No changes`なのにURLだけが28P01になる場合、URL secretだけが誤っている可能性が高い。`TF_VAR_cockroach_owner_password`と同じ値で`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を作り直し、Terraform applyは行わず`psql`を再試行する。Consoleで変更した履歴がある場合は、planの有無にかかわらず上記rotationを実施してTerraformをsource of truthへ戻す。
 
-続いてowner接続で最小権限を設定する。
+続いて最小権限を設定する。CockroachDB CloudのConsole／APIで作成したSQL userは初期状態で`admin` roleに所属する。そのため、`GRANT SELECT`だけを追加しても既存の`admin`権限は消えず、read userは書き込み可能なままである。最初にpush／read userから`admin`を`REVOKE`する必要がある。
 
 ```sh
-fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
-GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
-GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
-GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
-SQL
+mise run agentsview:cockroach:configure-roles
 ```
 
-read userで書き込みができないことも確認する。2番目のcommandは失敗が正解である。
+このtaskはpasswordをprocess引数へ出さず、一時`.pgpass`を使って次をまとめて行う。
 
-```sh
-fnox exec -- sh -c '
-  psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
-    -c "SELECT count(*) FROM agentsview.sessions;"
-  if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
-    -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
-    echo "ERROR: read user can write" >&2
-    exit 1
-  else
-    echo "OK: read user is read-only"
-  fi
-'
-```
+1. `agentsview_push`と`agentsview_read`から`admin` roleを取り除く。
+2. schema／table／sequenceの必要な権限と、schema syncに必要なpush userの`CREATE`だけを付与する。
+3. owner／push userが将来作るtableにも同じ最小権限が適用されるようdefault privilegeを設定する。
+4. read userの`SELECT`が成功することを確認する。
+5. read userの`DELETE`がSQLSTATE `42501`（insufficient privilege）で失敗することを確認する。`SELECT`自体の失敗やnetwork／TLS errorを成功扱いにしない。
+
+提示された`DELETE 0`は、対象rowが0件だっただけで、権限検査には成功している。`admin`を`REVOKE`した後は同じstatementが`permission denied`になり、taskの最後に`OK: agentsview_read can SELECT and cannot DELETE`と表示される。
 
 **完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
 
@@ -789,11 +778,23 @@ Basic cluster、database、owner／push／read userは次節のTerraformで作�
 CockroachDB Terraform providerはdatabase内のschema／table権限を管理しないため、AgentsViewのschema bootstrap後に次だけSQL consoleまたはowner接続で実行する。CockroachDB versionによって`ALL TABLES IN SCHEMA`／default privilegeの対応が異なる場合は、Consoleが示す現行syntaxに合わせる。
 
 ```sql
-GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
+REVOKE admin FROM agentsview_push, agentsview_read;
+GRANT USAGE ON SCHEMA agentsview TO agentsview_read;
+GRANT CREATE, USAGE ON SCHEMA agentsview TO agentsview_push;
 GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_push IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
 ```
+
+CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin` roleを持つため、上記の`REVOKE`は省略しない。`GRANT`は権限を追加するだけで、`admin`から継承した全権限を縮小しない。実際の適用とread-only検証には`mise run agentsview:cockroach:configure-roles`を使う。
 
 `terraform apply`後、`sslmode=verify-full`を含む3本のconnection URLをBitwarden Secrets Managerへ登録する。
 

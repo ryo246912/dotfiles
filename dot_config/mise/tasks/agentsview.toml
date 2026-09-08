@@ -900,6 +900,85 @@ bash dot_config/agentsview/scripts/migrate-to-cockroach.sh
 '''
 shell = "bash -c"
 
+["agentsview:cockroach:configure-roles"]
+description = "Remove Cockroach Cloud default admin membership and grant least privileges"
+run = '''
+set -euo pipefail
+
+if { [ -z "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:-}" ] ||
+     [ -z "${AGENTSVIEW_COCKROACH_READ_PG_URL:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:configure-roles
+fi
+
+: "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?fnox が未解決です}"
+: "${AGENTSVIEW_COCKROACH_READ_PG_URL:?fnox が未解決です}"
+: "${PGSSLROOTCERT:?CA bundleを指定してください}"
+test -r "$PGSSLROOTCERT"
+
+auth_root="$(mktemp -d)"
+trap 'rm -rf "$auth_root"' EXIT
+
+prepare_auth_bin="${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+if [ ! -x "$prepare_auth_bin" ] && [ -x dot_config/agentsview/executable_prepare-dump-auth ]; then
+  prepare_auth_bin=dot_config/agentsview/executable_prepare-dump-auth
+fi
+
+prepare_auth() {
+  name="$1"
+  url="$2"
+  mkdir "$auth_root/$name"
+  AGENTSVIEW_DUMP_ALLOW_REMOTE=yes \
+    AGENTSVIEW_DUMP_AUTH_DIR="$auth_root/$name" \
+    AGENTSVIEW_DUMP_PG_URL="$url" \
+    "$prepare_auth_bin"
+}
+
+prepare_auth owner "$AGENTSVIEW_COCKROACH_OWNER_PG_URL"
+prepare_auth read "$AGENTSVIEW_COCKROACH_READ_PG_URL"
+
+PGPASSFILE="$auth_root/owner/pgpass" \
+  psql "$(cat "$auth_root/owner/url")" -X -v ON_ERROR_STOP=1 <<'SQL'
+-- CockroachDB Cloud creates Console/API SQL users as admin members. Remove
+-- broad inherited privileges before granting the application permissions.
+REVOKE admin FROM agentsview_push, agentsview_read;
+GRANT USAGE ON SCHEMA agentsview TO agentsview_read;
+GRANT CREATE, USAGE ON SCHEMA agentsview TO agentsview_push;
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_push IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+SQL
+
+read_url="$(cat "$auth_root/read/url")"
+read_pgpass="$auth_root/read/pgpass"
+PGPASSFILE="$read_pgpass" psql "$read_url" -X -v ON_ERROR_STOP=1 \
+  -c 'SELECT count(*) FROM agentsview.sessions;'
+
+delete_error="$auth_root/delete-error"
+if PGPASSFILE="$read_pgpass" psql "$read_url" -X -v ON_ERROR_STOP=1 \
+  --set=VERBOSITY=verbose -c 'DELETE FROM agentsview.sessions WHERE 1=0' \
+  2>"$delete_error"; then
+  echo "ERROR: agentsview_read still has write access" >&2
+  exit 1
+fi
+if ! grep -Eq '42501|permission denied' "$delete_error"; then
+  cat "$delete_error" >&2
+  echo "ERROR: DELETE failed for a reason other than insufficient privilege" >&2
+  exit 1
+fi
+
+echo "OK: agentsview_read can SELECT and cannot DELETE"
+'''
+shell = "bash -c"
+
 ["agentsview:cockroach:status"]
 description = "Show sync status against CockroachDB without a Fly proxy"
 run = '''
