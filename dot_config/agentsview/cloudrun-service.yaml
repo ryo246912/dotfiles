@@ -36,6 +36,20 @@ spec:
       timeoutSeconds: 60
       containers:
         - image: '{{ must_env "AGENTSVIEW_IMAGE" }}'
+          # AGENTSVIEW_DATA_DIR (/data in the image) must be WRITABLE: loading
+          # the config takes a lock file next to it, and that happens before
+          # AgentsView even checks whether the config exists. A Secret Manager
+          # volume is read-only, so the secret is mounted outside the data dir
+          # and copied in here, which is what Fly's [[files]] did as well.
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              data_dir="${AGENTSVIEW_DATA_DIR:-/data}"
+              install -D -m 600 /etc/agentsview/config.toml "$data_dir/config.toml"
+              exec /usr/local/bin/docker-entrypoint.sh "$@"
+            - agentsview-cloudrun
           # `pg serve` resets the bind address to 127.0.0.1 and honours only
           # explicit flags, so the listener depends entirely on the arguments
           # the entrypoint receives. Upstream ships them as the image CMD
@@ -74,8 +88,9 @@ spec:
                   # depend on when each instance happened to start.
                   key: '{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}'
           volumeMounts:
+            # Never /data: that is AGENTSVIEW_DATA_DIR and has to stay writable.
             - name: config
-              mountPath: /data
+              mountPath: /etc/agentsview
       volumes:
         - name: config
           secret:

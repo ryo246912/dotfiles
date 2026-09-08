@@ -567,7 +567,7 @@ Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそ�
 
 | 順  | 処理                                  | 失敗時のlog                           |
 | --- | ------------------------------------- | ------------------------------------- |
-| 1   | `/data/config.toml`の読み込み         | `loading config file:`                |
+| 1   | configの読み込み（lock取得を伴う）    | `loading config file:`                |
 | 2   | `cursor_secret`の生成（未設定時のみ） | `ensuring cursor secret:`             |
 | 3   | `auth_token`の生成（未設定時のみ）    | `pg serve: generating auth token:`    |
 | 4   | CockroachDBへの接続                   | `pg serve:`（`28P01`／TLS errorなど） |
@@ -585,9 +585,9 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
+- **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9のmigrationが未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:migrate`と最初の`push`を済ませてから再deployする。
 - **`28P01` / `password authentication failed`** — `agentsview-pg-url` secretのpasswordが誤っている。CockroachDB Cloud consoleでread-only roleのpasswordを再発行し、`agentsview:cloudrun:secrets`で新versionを登録してから再deployする。
-- **`ensuring cursor secret` / `generating auth token`** — `/data`はSecret Managerのvolume mountであり**read-only**である。Flyの`[[files]]`と違い書き戻しができないため、`auth_token`と`cursor_secret`はconfigに必ず含まれていなければならない。`agentsview:cloudrun:secrets`は常に両方を書き込むので、このerrorが出た場合はsecretの中身が古い。同taskで作り直す。
 - **TLS / certificate error** — imageは`ca-certificates`入りのdebian-slimなので、通常はCockroachDB Cloudのcertを検証できる。出る場合はDB URLのhostとsslmodeを確認する。
 
 bind addressは原因ではない。upstream imageの`CMD`は`--host 0.0.0.0 --no-browser`であり、entrypointは`agentsview pg serve "$@"`としてこれを渡す。`cloudrun-service.yaml`の`args`はこのCMDを明示的に固定しているだけで、listen先を変えるものではない。同じimageはFlyでも同じ引数で動いていた。
@@ -909,7 +909,7 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 | `google_project_iam_member.deploy`                      | Cloud Build editor、Cloud Run admin等           | deploy service accountにproject側のdeploy権限を付ける                                                                                                       |
 | `google_service_account_iam_member.deploy_uses_runtime` | `roles/iam.serviceAccountUser`                  | deploy主体がCloud Run serviceへruntime service accountを指定するための`actAs`権限                                                                           |
 | `google_secret_manager_secret.pg_url`                   | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
-| `google_secret_manager_secret.config`                   | secret containerのみ                            | `/data/config.toml`としてmountするAgentsView configの入れ物                                                                                                 |
+| `google_secret_manager_secret.config`                   | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                       |
 | `google_secret_manager_secret_iam_member.runtime_*`     | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
 | `google_secret_manager_secret_iam_member.deploy_*`      | `secretVersionAdder`                            | deploy主体はsecret containerの削除／IAM変更をせず、新versionだけ追加できるようにする                                                                        |
 | `google_iam_workload_identity_pool.github`              | pool ID `github`                                | GitHub OIDC tokenをGoogle Cloud credentialへ交換するためのtrust domain                                                                                      |
@@ -991,24 +991,24 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 
 `dot_config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
 
-| manifestの位置                                                          | 値                                                                        | 意味／旧Terraform属性                                                                            |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `metadata.name`                                                         | `ryo-agentsview`                                                          | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
-| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                     | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
-| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                       | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
-| 同`maxScale`                                                            | `2`                                                                       | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
-| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                    | 旧`resources.cpu_idle = true`                                                                    |
-| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                    | 旧`resources.startup_cpu_boost = true`                                                           |
-| `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                            | Terraform outputのruntime service account。deploy権限は持たない                                  |
-| `spec.template.spec.containerConcurrency`                               | `20`                                                                      | 旧`max_instance_request_concurrency`                                                             |
-| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                      | 旧`timeout = "60s"`                                                                              |
-| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                       | 旧`var.agentsview_image`。既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）       |
-| `containers[].ports`                                                    | `http1` / `8080`                                                          | 旧`ports.container_port`                                                                         |
-| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                              | 旧`resources.limits`                                                                             |
-| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`     | 旧`env`ブロックと同じ非secret値                                                                  |
-| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}` | 旧`value_source.secret_key_ref` + `var.pg_url_secret_version`。read-only CockroachDB URL         |
-| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/data/config.toml`          | 旧`volumes.secret` + `volume_mounts` + `var.config_secret_version`                               |
-| `spec.traffic`                                                          | `latestRevision: true` / 100%                                             | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
+| manifestの位置                                                          | 値                                                                         | 意味／旧Terraform属性                                                                            |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `metadata.name`                                                         | `ryo-agentsview`                                                           | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
+| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                      | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
+| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                        | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
+| 同`maxScale`                                                            | `2`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
+| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                     | 旧`resources.cpu_idle = true`                                                                    |
+| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                     | 旧`resources.startup_cpu_boost = true`                                                           |
+| `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                             | Terraform outputのruntime service account。deploy権限は持たない                                  |
+| `spec.template.spec.containerConcurrency`                               | `20`                                                                       | 旧`max_instance_request_concurrency`                                                             |
+| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                       | 旧`timeout = "60s"`                                                                              |
+| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                        | 旧`var.agentsview_image`。既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）       |
+| `containers[].ports`                                                    | `http1` / `8080`                                                           | 旧`ports.container_port`                                                                         |
+| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                               | 旧`resources.limits`                                                                             |
+| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`      | 旧`env`ブロックと同じ非secret値                                                                  |
+| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}`  | 旧`value_source.secret_key_ref` + `var.pg_url_secret_version`。read-only CockroachDB URL         |
+| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/etc/agentsview/config.toml` | 旧`volumes.secret` + `volume_mounts` + `var.config_secret_version`                               |
+| `spec.traffic`                                                          | `latestRevision: true` / 100%                                              | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
 
 manifestはGo templateとして必ずrenderされるため、上記2箇所以外に`{`を2つ並べた表記を書かない。書く必要がある場合はclrnd READMEのescape記法を使う。
 
@@ -1335,7 +1335,7 @@ AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 Cloud Runでは次のようにsecretを注入する。どちらもmanifestには参照だけを書き、値はSecret Managerに残る。
 
 - `AGENTSVIEW_PG_URL`: `agentsview-pg-url`のnumeric versionを環境変数として参照
-- `/data/config.toml`: `agentsview-config-toml`のnumeric versionをread-only secret volumeとしてmount
+- `/etc/agentsview/config.toml`: `agentsview-config-toml`のnumeric versionをread-only secret volumeとしてmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（data dirは書き込み可能でなければならない）
 
 versionは`latest`ではなく番号で固定する。Cloud Runはsecret参照をinstance起動時に解決するため、`latest`では同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。deploy scriptが最新のENABLED versionを引いてrevisionへ焼き込むので、**新versionを追加しただけでは動作中のrevisionは切り替わらない。** 反映するのは`deploy`であり、`refresh`（liveの定義をそのまま再適用する）ではない。
 
