@@ -23,7 +23,7 @@ spec:
         # idle時は0まで縮める。read-only viewerがcrawlerに叩かれて課金が伸びない
         # よう、上限も抑える。
         autoscaling.knative.dev/minScale: "0"
-        autoscaling.knative.dev/maxScale: "2"
+        autoscaling.knative.dev/maxScale: "1"
         # request外ではCPUを絞り（cpu_idle）、起動時はboostする。起動時に
         # PostgreSQL接続とschema checkが走るためである。
         run.googleapis.com/cpu-throttling: "true"
@@ -33,7 +33,9 @@ spec:
       # imageをpullできる。deployはできない。
       serviceAccountName: '{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}'
       containerConcurrency: 20
-      timeoutSeconds: 60
+      # AgentsViewの--write-timeoutより長くしておく。ここが先に切れるとCloud Runが
+      # 504を返し、appが返す「request timed out」のJSONが届かなくなる。
+      timeoutSeconds: 120
       containers:
         - image: '{{ must_env "AGENTSVIEW_IMAGE" }}'
           # AGENTSVIEW_DATA_DIR（imageでは/data）は書き込み可能でなければならない。
@@ -68,6 +70,11 @@ spec:
             - --port
             - "8080"
             - --no-browser
+            # 既定のwrite timeoutは30秒。dashboardは複数のanalytics APIを同時に
+            # 叩くため、CockroachDB上の集計がこの中で終わらず 503 "request timed
+            # out" になる。上のtimeoutSecondsより短い値にしておく。
+            - --write-timeout
+            - 100s
           ports:
             - name: http1
               containerPort: 8080

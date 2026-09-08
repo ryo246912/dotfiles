@@ -1,7 +1,7 @@
 [env]
-# libpq builds on macOS do not always bridge OpenSSL's default trust store to
-# Keychain. Use the system CA bundle explicitly so CockroachDB verify-full
-# connections work for psql, AgentsView, and fnox child processes.
+# macOSのlibpqは、OpenSSLの既定trust storeをKeychainへ必ずしも橋渡ししない。
+# CockroachDBへのverify-full接続がpsql、AgentsView、fnoxの子processで動くよう、
+# system CA bundleを明示する。
 PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [tools]

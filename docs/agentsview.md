@@ -36,12 +36,27 @@
 
 ###### CockroachDB CloudのUI操作
 
+Terraformはservice accountのAPI keyでCockroachDB Cloud APIを呼ぶ。**1. service accountを作成**し、**2. そのservice accountでAPI keyを発行**する、という2段階である。
+
+**1. サービスアカウントを作成する（未作成の場合）**
+
 1. [CockroachDB Cloud Console](https://cockroachlabs.cloud/)へloginし、organizationを作成または選択する。
-2. 左navigationの**Access Management**を開き、**Service Accounts** tabを選ぶ。
-3. **Create**を押し、Terraform専用service accountのname／descriptionを入力して作成する。作成直後は`Organization Member`だけでcluster作成権限がない。
-4. 作成したservice accountの**Actions > Edit Roles**を開き、organization scopeで**Cluster Creator**を付与する。既存clusterも含めて管理させる必要がある場合だけ**Cluster Admin**を使う。
-5. service accountの詳細を開き、**Create API Key**からTerraform専用keyを作成する。
-6. 表示された`CCDB1_...`形式の**Secret key**全体をcopyする。画面を閉じると再表示できないため、直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。API keyのnameやUUIDを保存しない。
+2. 左navigationの**Access Management**ページを開く。
+3. **Service Accounts** tabを選択する。
+4. **Create**をクリックする。
+5. **Account name**と**Description**を入力して作成する。
+
+作成直後のservice accountは`Organization Member`だけを持ち、cluster作成権限がない。**Actions > Edit Roles**を開き、organization scopeで**Cluster Creator**を付与する。既存clusterも含めて管理させる必要がある場合だけ**Cluster Admin**を使う。
+
+**2. API Key を発行する**
+
+1. **Access Management**ページの**Service Accounts** tabを開く。
+2. API Keyを作成したいservice accountをクリックし、**Service Account Details**ページを開く。
+3. **Create API Key**をクリックする。
+4. **API key name**を入力し、**Create**をクリックする。
+5. 表示された**Secret key**をコピーして安全な場所に保存する。
+
+Secret keyは`CCDB1_...`形式で、**画面を閉じると二度と表示できない**。直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。保存するのはSecret key全体であり、API keyのnameやUUIDではない。
 
 ###### CLI準備
 
@@ -485,19 +500,48 @@ CockroachDB Console等でpasswordを別途変更していない前提で、plan�
 
 続いて最小権限を設定する。CockroachDB CloudのConsole／APIで作成したSQL userは初期状態で`admin` roleに所属する。そのため、`GRANT SELECT`だけを追加しても既存の`admin`権限は消えず、read userは書き込み可能なままである。最初にpush／read userから`admin`を`REVOKE`する必要がある。
 
+bootstrap時に一度だけ行う操作なのでmise taskにはしない。owner接続の`psql`で次を実行する。passwordをcommand historyやprocess引数へ出さないよう、URLはfnox経由で渡す。
+
 ```sh
-mise run agentsview:cockroach:configure-roles
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
+-- CockroachDB CloudはConsole／APIで作ったSQL userをadminのmemberにする。
+-- 応用側の権限を付ける前に、継承された広い権限を外す。
+REVOKE admin FROM agentsview_push, agentsview_read;
+
+-- schemaとtableの最小権限。push userにだけ、schema syncに必要なCREATEを与える。
+GRANT USAGE ON SCHEMA agentsview TO agentsview_read;
+GRANT CREATE, USAGE ON SCHEMA agentsview TO agentsview_push;
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+
+-- owner／push userが今後作るtableにも同じ最小権限が適用されるようにする。
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push;
+ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_push IN SCHEMA agentsview
+  GRANT SELECT ON TABLES TO agentsview_read;
+SQL
 ```
 
-このtaskはpasswordをprocess引数へ出さず、一時`.pgpass`を使って次をまとめて行う。
+read userが読めて書けないことを必ず検証する。`SELECT`の失敗やnetwork／TLS errorを成功扱いにしないこと。
 
-1. `agentsview_push`と`agentsview_read`から`admin` roleを取り除く。
-2. schema／table／sequenceの必要な権限と、schema syncに必要なpush userの`CREATE`だけを付与する。
-3. owner／push userが将来作るtableにも同じ最小権限が適用されるようdefault privilegeを設定する。
-4. read userの`SELECT`が成功することを確認する。
-5. read userの`DELETE`がSQLSTATE `42501`（insufficient privilege）で失敗することを確認する。`SELECT`自体の失敗やnetwork／TLS errorを成功扱いにしない。
+```sh
+# SELECTは成功する
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  -c "SELECT count(*) FROM agentsview.sessions;"'
 
-提示された`DELETE 0`は、対象rowが0件だっただけで、権限検査には成功している。`admin`を`REVOKE`した後は同じstatementが`permission denied`になり、taskの最後に`OK: agentsview_read can SELECT and cannot DELETE`と表示される。
+# DELETEは SQLSTATE 42501（permission denied）で失敗する
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  --set=VERBOSITY=verbose -c "DELETE FROM agentsview.sessions WHERE 1=0"'
+```
+
+`REVOKE`前に`DELETE 0`が返るのは、対象rowが0件だっただけで権限検査には成功している状態である。`REVOKE`後は同じstatementが`permission denied`になる。ここで`DELETE 0`が返る場合は`REVOKE`が効いていない。
+
+macOSでは`PGSSLROOTCERT`が必要になる（`dot_config/mise/config.mac.toml`が`/etc/ssl/cert.pem`を設定する）。TLS errorが出る場合は`echo $PGSSLROOTCERT`で読めるpathになっているか確認する。
 
 **完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
 
@@ -576,6 +620,8 @@ gcloud run services logs read ryo-agentsview \
 logの最初のerror行に応じて対処する。
 
 - **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
+- **画面に`request timed out`が出る／logに`status 503`と`latency 30.0秒`が並ぶ** — Cloud Runではなく**AgentsView自身のwrite timeout**である。既定は30秒で、超えると`http.TimeoutHandler`が503と`{"error":"request timed out"}`を返す（`internal/server/middleware.go`）。dashboardはanalytics APIを同時に複数叩くため、`maxScale: 1`／1 CPUの上でCockroachDBへの集計が重なると30秒に収まらない。`cloudrun-service.yaml`で`--write-timeout`を延ばし、Cloud Run側の`timeoutSeconds`をそれより長くする（先に切れるとCloud Runが504を返し、appのJSONが届かない）。延ばしても解消しない場合はCPUを2にするか、期間を短くして切り分ける。
+
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
 - **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9の最初の`push`が未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:push`を済ませてから再deployする。
@@ -624,7 +670,7 @@ done
 
 > **前提:**
 >
-> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push`を先に済ませる。
+> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の権限設定と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push`を先に済ませる。
 > - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
 >
 > ```sh
@@ -885,7 +931,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_push IN SCHEMA agentsview
   GRANT SELECT ON TABLES TO agentsview_read;
 ```
 
-CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin` roleを持つため、上記の`REVOKE`は省略しない。`GRANT`は権限を追加するだけで、`admin`から継承した全権限を縮小しない。実際の適用とread-only検証には`mise run agentsview:cockroach:configure-roles`を使う。
+CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin` roleを持つため、上記の`REVOKE`は省略しない。`GRANT`は権限を追加するだけで、`admin`から継承した全権限を縮小しない。実際の適用とread-only検証の手順は作業5に記載している。
 
 `terraform apply`後、`sslmode=verify-full`を含む3本のconnection URLをBitwarden Secrets Managerへ登録する。
 
