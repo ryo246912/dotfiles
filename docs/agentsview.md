@@ -441,9 +441,19 @@ fnox exec -- sh -c '
 
 `failed SASL auth: password authentication failed for user agentsview_owner`はproject名とは無関係で、project filterを処理する前のCockroachDB loginに失敗している。接続URLのusernameとdatabaseを確認し、まずAgentsViewを介さず認証だけを試す。
 
+macOSではこのrepositoryの`config.mac.toml`が`PGSSLROOTCERT=/etc/ssl/cert.pem`を恒久設定する。最新の設定を適用してshellを再起動し、fnoxの子processまで引き継がれることを確認する。
+
 ```sh
-export PGSSLROOTCERT='/etc/ssl/cert.pem'
+chezmoi apply ~/.config/mise/config.mac.toml
+exec zsh
+test "$PGSSLROOTCERT" = /etc/ssl/cert.pem
 test -r "$PGSSLROOTCERT"
+fnox exec -- sh -c 'test -r "$PGSSLROOTCERT"'
+```
+
+その後、接続を確認する。
+
+```sh
 fnox exec -- sh -c '
   psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 \
     -c "SELECT current_user, current_database();"
@@ -452,7 +462,9 @@ fnox exec -- sh -c '
 
 `root certificate file "~/.postgresql/root.crt" does not exist`は、password認証へ到達する前にlibpqがCA bundleを見つけられていない状態である。`PGSSLROOTCERT=system`の後に`SSL error: certificate verify failed`へ変わる場合、使用中の`psql`がlinkするOpenSSLのdefault trust storeが空またはmacOS Keychainと連携していない。`system`を続けて使わず、上記のように実在するCA bundleを明示する。
 
-macOSでは最初に`/etc/ssl/cert.pem`を使う。存在しない場合はHomebrew OpenSSLのbundleを確認する。
+macOSでは最初に`/etc/ssl/cert.pem`を使う。これは`MISE_ENV`に`mac`を含むhostで読み込まれるため、mise shell activation後の`fnox exec`、`psql`、AgentsViewに共通して適用される。既に開いているshellには遡って反映されないので、chezmoi適用後に新しいshellを開くか上記の`exec zsh`を実行する。
+
+`/etc/ssl/cert.pem`が存在しないmacOS hostでは、`dot_config/mise/config.mac.toml`の値を次のHomebrew OpenSSL bundleへ変更し、chezmoiを再適用する。
 
 ```sh
 export PGSSLROOTCERT="$(brew --prefix openssl@3)/etc/openssl@3/cert.pem"
