@@ -1620,6 +1620,8 @@ FROM pg_statio_user_tables WHERE schemaname = 'agentsview';
 DROP SCHEMA agentsview CASCADE;
 ```
 
+`cannot execute DROP SCHEMA in a read-only transaction`で失敗する場合は、volume使用率が90%を超えてread-onlyへ落ちている。9.6の1番目の手順で解除してからやり直す。
+
 Atuinのschemaが無傷であることを確認する。
 
 ```sql
@@ -1648,22 +1650,43 @@ fly ssh console -a psgl -C 'df -h /data'
 
 `DROP SCHEMA`はtable fileごと削除するので、AgentsViewが使っていた分は**即座に**返る。`VACUUM`は要らない。それでも`df`が動かない場合、空きを食っているのはAgentsViewのtableではない。順に切り分ける。
 
-**1. primaryがread-onlyになっていないか。** Fly Postgresは使用率が閾値を超えると`/data/readonly.lock`を作り、primaryをread-onlyへ落とす。この状態では`DROP SCHEMA`が実行できずに失敗するため、**「削除したのに減らない」の正体がこれであることが多い**。
+**1. primaryがread-onlyになっていないか。** これが「削除したのに減らない」の正体であることが多い。read-onlyでは`DROP SCHEMA`が`cannot execute DROP SCHEMA in a read-only transaction`で失敗する。
+
+Fly Postgres（postgres-flex）は`/data`の使用率が**90%**を超えると、health checkが`/data/readonly.lock`を作り、各databaseへ`ALTER DATABASE ... SET default_transaction_read_only=true`を実行する。**`postgres`と`repmgr` databaseは除外される**ため、`postgres`へ繋いでいる間はこの状態に気づけない。
 
 ```sh
 fly ssh console -a psgl -C 'ls -l /data/readonly.lock'   # 存在すればread-only
+fly checks list -a psgl                                   # disk-capacity と cluster-locks
 ```
 
 ```sql
+-- 対象database（ryo_shellhistory）で確認する
 SHOW default_transaction_read_only;   -- on なら書き込めない
 ```
 
-read-onlyなら、まずvolumeを拡張して余裕を作り、restartして解除する。解除できてから削除をやり直す。
+解除方法は2つある。使用率を下げるのが目的なので、**先にschemaを消して容量を空ける**のが素直である。
+
+```sql
+-- A. このsessionだけ解除する。default_transaction_read_onlyはUSERSETなので上書きできる。
+SET default_transaction_read_only = off;
+DROP SCHEMA agentsview CASCADE;
+```
+
+```sh
+# B. cluster全体で解除する（flypgのadmin APIはport 5500）
+fly ssh console -a psgl -C 'curl -s http://localhost:5500/commands/admin/readonly/state'
+fly ssh console -a psgl -C 'curl -s http://localhost:5500/commands/admin/readonly/disable'
+```
+
+Bは`ALTER DATABASE`で設定するため、**解除後に接続し直さないと効かない**。またどちらの方法でも、使用率が90%を超えたままなら次のhealth checkで再びread-onlyへ落ちる。容量を空けるまでは一時的な解除である。
+
+削除で使用率が90%以下になれば、health checkが`readonly.lock`を消して自動的に書き込み可へ戻す。手で消す必要はない。
+
+容量を空けられない場合はvolumeを拡張する。
 
 ```sh
 fly volumes list -a psgl
 fly volumes extend <volume_id> -s 3   # GB単位。縮小はできない
-fly pg restart -a psgl
 ```
 
 **2. schemaが本当に消えているか。** **`ryo_shellhistory` databaseで確認する**（`postgres` databaseには最初から無い）。
