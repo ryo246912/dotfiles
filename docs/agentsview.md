@@ -540,13 +540,17 @@ rm -f terraform.tfvars.bak
 次にimageをbuildする。build logは標準エラーへ出し、成功時のimage URIだけを標準出力へ返すため、`tail -1`を使わず直接代入する。これによりCloud Buildが失敗した場合に`tail`が終了コードを隠さない。
 
 ```sh
-AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build)
-test -n "$AGENTSVIEW_IMAGE"
-printf 'AGENTSVIEW_IMAGE=%s\n' "$AGENTSVIEW_IMAGE"
-
-gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
-  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+if AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build) &&
+  test -n "$AGENTSVIEW_IMAGE"; then
+  printf 'AGENTSVIEW_IMAGE=%s\n' "$AGENTSVIEW_IMAGE"
+  gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
+    --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+else
+  echo 'Cloud Build failed; Artifact Registryの確認を中止します' >&2
+fi
 ```
+
+interactive shellはcommandが失敗しても次の行を実行し続ける。したがって、代入、`test`、`gcloud artifacts ... describe`を独立したcommandとして貼らない。上記の`if`を使えばbuild失敗時に空の`AGENTSVIEW_IMAGE`を`gcloud`へ渡さない。
 
 tagは`<upstream version>-<commit>`（例: `0.38.1-e310d8af1f32`）になる。commitが変われば別tagになるため、別のcommitのimageで同じURIを上書きすることがない（同一commitでのrebuildは同じtagを作り直す）。build contextに未commitの変更がある場合はtagへ`-dirty`が付き、警告が出る。
 
