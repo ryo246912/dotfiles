@@ -921,7 +921,7 @@ mise taskは次を追加した。いずれもrepository rootでも、chezmoi適�
 | `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
 | `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
 
-共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）はshell scriptではなく、hidden taskの`agentsview:cloudrun:run`に置いている。各taskは`mise run agentsview:cloudrun:run -- <mode>`へ委譲するだけなので、設定の解決は1箇所にしかない。
+共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）は`~/.config/agentsview/scripts/cloudrun.sh`に置く。各mise taskはこのscriptへ固定のmodeと追加引数を渡すだけなので、設定の解決は1箇所にしかない。以前のhidden taskへの多段`mise run ... -- <mode>`は使用しない。miseのinline `bash -c` taskは追加引数をscript末尾へ連結するため、長いinline scriptを多段呼び出しすると`esac build`のような不正なshellになり得るためである。
 
 採用にあたって前提にした制約は次のとおり。
 
