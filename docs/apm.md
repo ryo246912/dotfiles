@@ -11,11 +11,11 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                                | 管理ツール | ソース                                    | 配布先                                           |
-| ----------------------------------- | ---------- | ----------------------------------------- | ------------------------------------------------ |
-| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）        |
-| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/` | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`） |
-| **外部スキル（グローバル）**        | **APM**    | `apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）       |
+| 対象                                | 管理ツール | ソース                              | 配布先                                                     |
+| ----------------------------------- | ---------- | ----------------------------------- | ---------------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`         | リポジトリ直下の `CLAUDE.md`（gitignore）                  |
+| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/`        | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`） |
+| **外部スキル（グローバル）**        | **APM**    | `apm/apm.yml` の `dependencies.apm` | `~/.claude/skills/` 等（`apm install -g`）                 |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`config/rulesync/`）で管理します。

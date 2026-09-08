@@ -125,14 +125,14 @@ fi
 """
 
 [dotfiles]
-"~/.apm" = { source = "apm", mode = "copy" }
-"~/.claude" = { source = "claude", mode = "copy" }
-"~/.codex" = { source = "codex", mode = "copy" }
-"~/.config" = { source = "config", mode = "copy" }
-"~/.local" = { source = "local", mode = "copy" }
-"~/.zshenv" = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
-"~/.config/git/config" = { source = "templates/git/config.tera", mode = "template", template = "tera" }
-"~/.config/ghostty/config" = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
-"~/.config/rio/config.toml" = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
-"~/.config/alacritty/alacritty.toml" = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
+"~/.apm"                                = { source = "apm", mode = "copy" }
+"~/.claude"                             = { source = "claude", mode = "copy" }
+"~/.codex"                              = { source = "codex", mode = "copy" }
+"~/.config"                             = { source = "config", mode = "copy" }
+"~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
+"~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
+"~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
+"~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
+"~/.local"                              = { source = "local", mode = "copy" }
+"~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }

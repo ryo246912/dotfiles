@@ -7,14 +7,14 @@
 
 ## 構成
 
-| 項目         | 設定                                                                      | 場所                                                                                  |
-| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                               | `config/devcontainer/mise.toml`                                                   |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）                | `config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                    | `config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番）     | `config/devcontainer/devcontainer.json`                                           |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                                  | `config/devcontainer/devcontainer.json`                                           |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）                   | `config/devcontainer/scripts/post-create.sh`                                      |
+| 項目         | 設定                                                                      | 場所                                                                   |
+| ------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                               | `config/devcontainer/mise.toml`                                        |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）                | `config/devcontainer/devcontainer.json` (`remoteEnv`)                  |
+| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                    | `config/devcontainer/devcontainer.json` (`remoteEnv`)                  |
+| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番）     | `config/devcontainer/devcontainer.json`                                |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                                  | `config/devcontainer/devcontainer.json`                                |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）                   | `config/devcontainer/scripts/post-create.sh`                           |
 | ポート通知   | 割り当てられた host port を `~/.crit-host-port` に記録し、mac-host へ通知 | `config/devcontainer/scripts/post-start.sh`（適用後: `post-start.sh`） |
 
 `~/.crit.config.json` の内容:

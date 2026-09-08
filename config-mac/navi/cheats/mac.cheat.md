@@ -26,6 +26,7 @@ brew home <app_name>
 # chrome : list user profile
 cat ~/Library/Application\ Support/Google/Chrome/Local\ State | jq -r '.profile.info_cache | to_entries[] | "\(.key): \(.value.name)"'
 ```
+
 $ app_name: brew list -1 | grep -v "==>"
 $ _--filter: echo -e "\n --formula\n --cask"
 $ _--dry-run: echo -e "\n --dry-run"
@@ -47,15 +48,16 @@ blueutil --disconnect <connected_device> && blueutil --power 0
 # connect/disconnect device
 blueutil --paired --format json-pretty
 ```
+
 $ on_off: echo -e "1\n0"
 $ device: blueutil --paired --format json-pretty \
-  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-  | column -ts $'\t' \
+| jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+| column -ts $'\t' \
   --- --headers 1 --column 1
 $ connected_device: blueutil --paired --format json-pretty \
-  | jq -r '["address","name","connected"] , (.[] | select(.connected == true) | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-  | column -ts $'\t' \
-  --- --headers 1 --column 1
+| jq -r '["address","name","connected"] , (.[] | select(.connected == true) | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+| column -ts $'\t' \
+--- --headers 1 --column 1
 
 ```sh
 % mac
@@ -116,14 +118,15 @@ open-cli <url_or_file> -- <app>
 # t-rec : record to gif [-q:quiet][-w:rec window]
 t-rec -q -w <window> -o ~/private/gif/$(date "+%y%m%d-%H%M%S")_<name>
 ```
+
 $ datatype : system_profiler -listDataTypes \
   --- --multi --expand
 $ load_unload: echo -e "unload\nload"
 $ app : system_profiler "SPApplicationsDataType" -json \
   | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
   | column -ts $'\t' \
-  --- --headers 1 --column 2
+--- --headers 1 --column 2
 $ window: t-rec --ls-win \
   | column -ts $'|' \
-  --- --headers 1 --column 2
+--- --headers 1 --column 2
 ;$

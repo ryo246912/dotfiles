@@ -426,7 +426,7 @@ mise には `[dotfiles]` セクションと `mise bootstrap dotfiles` サブコ�
   に相当する分岐を、テンプレートの中ではなく設定の外側で表現するイメージ）。
 - **テンプレートエンジンは Tera**（chezmoi の Go template とは別物。書き直しが必要）。
   `os()` / `arch()` / `os_family()` で OS 判定、`env.HOME` / `get_env(name=..,
-  default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` でキャッシュ可）
+default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` でキャッシュ可）
   でシェルアウト、`path is file` / `is dir` / `is exists` でパス存在判定ができる。
   `status`/`diff`/`apply` はテンプレート出力（`exec()` 呼び出し含む）を評価して差分検知する。
   `--dry-run` は何も実行しない代わりに `exec()` を評価せず `(if changed)` 扱いになる。
@@ -458,42 +458,42 @@ mise には `[dotfiles]` セクションと `mise bootstrap dotfiles` サブコ�
 
 ## 全体比較表
 
-| 観点                         | chezmoi                                                                 | mise `[dotfiles]`                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| データモデル                 | source dir が唯一の真実。`apply` で片方向にデプロイ                     | source（`dotfiles.root`）＋ 独自の履歴/チェックポイントストア。`track`/`add --changed` で配置先→source の逆流も可 |
-| ファイル属性の宣言方法       | ファイル名プレフィックス（`dot_`/`private_`/`executable_`/`exact_`等）  | TOML キー＋`mode`。パーミッション/実行属性の明示的な宣言は未確認（ドキュメントに記載なし）    |
-| テンプレートエンジン         | Go template（`text/template` 拡張）。`.tmpl` サフィックスで判定          | Tera（Jinja2 系）。`template = "tera"` で明示指定。**別言語なので既存 `.tmpl` は書き直し**   |
-| OS/ホスト分岐                | テンプレート内 `{{ if eq .chezmoi.os "darwin" }}` 等 + `.chezmoiignore` の条件付き glob | `os()`/`arch()`/`os_family()` 関数 + エントリ単位の `variants`（`os`/`arch`/`profile`）セレクタ |
-| ディレクトリ丸ごと除外       | `.chezmoiignore` に glob パターンで一括記述可能                          | エントリ単位の設定になる想定（glob 一括除外の仕組みは未確認）                                |
-| フック                       | `run_once_*`/`run_onchange_*`（コンテンツハッシュで再実行判定）+ `hooks.apply.pre/post`（任意の複雑な bash） | `[bootstrap.hooks.pre-dotfiles]`/`post-dotfiles`（dotfiles フェーズ全体を挟む粒度）           |
-| 差分プレビュー               | `chezmoi diff`                                                          | `mise bootstrap dotfiles diff`                                                              |
-| 適用の安全性                 | `apply` で決定的に収束。衝突時は対話 or `--force`                       | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles` で上書き           |
-| 逆方向同期（配置先→source）  | 無し（source を直接編集するのが正）。ただし `chezmoi edit` で source を開いて即座に反映は可能 | あり（`track`/`add --changed`/`history`）。ブログの主眼と推測される新機能                    |
-| バージョン履歴               | git（source dir 自体が git repo）                                        | git（source dir）に加え、mise 独自の checkpoint/history ストアが並走する模様                 |
-| 暗号化・秘密情報             | 組み込みテンプレート関数でパスワードマネージャー多数連携（bitwarden/1Password/pass/keyring等） + 外部ツール（本リポジトリは `fnox`）併用 | エントリに `encrypt = true` + `[history.encryption].recipients`（age 系）。パスワードマネージャー連携の組み込み関数は未確認 |
-| 外部ファイル取得             | `.chezmoiexternal.toml`（URL/アーカイブから取得・展開）                  | 相当機能は未確認                                                                              |
-| CI 再現性・実績              | 10年以上の実績、本リポジトリで GitHub Actions 上の apply 検証が既に確立済み | dotfiles 機能自体がここ最近の新機能。実績・エコシステム記事は少数（今回参照できたブログ2本のみ） |
-| ネイティブ Windows 対応      | Go 製、Windows ネイティブで動作。symlink 権限問題は同様に発生            | Rust 製、Windows ネイティブで動作。Developer Mode 時のみ real symlink、それ以外は copy フォールバック |
-| bootstrap 全体との統合       | chezmoi 単体はパッケージ管理等を持たず、本リポジトリでは mise の `[bootstrap.packages]` 等と併用（post-apply hook で連携） | `[dotfiles]` は `mise bootstrap` の1フェーズとして最初から統合済み（`[tools]`/`[bootstrap.packages]` と同じ設定ファイル内） |
-| 学習コスト                   | 独自の命名規則・テンプレート関数を新規に覚える必要                       | 本リポジトリは既に mise 濃度が高い（`[bootstrap.*]` を多用）ため、設定ファイルの置き場所という意味では親和性が高い |
+| 観点                        | chezmoi                                                                                                                                  | mise `[dotfiles]`                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| データモデル                | source dir が唯一の真実。`apply` で片方向にデプロイ                                                                                      | source（`dotfiles.root`）＋ 独自の履歴/チェックポイントストア。`track`/`add --changed` で配置先→source の逆流も可           |
+| ファイル属性の宣言方法      | ファイル名プレフィックス（`dot_`/`private_`/`executable_`/`exact_`等）                                                                   | TOML キー＋`mode`。パーミッション/実行属性の明示的な宣言は未確認（ドキュメントに記載なし）                                  |
+| テンプレートエンジン        | Go template（`text/template` 拡張）。`.tmpl` サフィックスで判定                                                                          | Tera（Jinja2 系）。`template = "tera"` で明示指定。**別言語なので既存 `.tmpl` は書き直し**                                  |
+| OS/ホスト分岐               | テンプレート内 `{{ if eq .chezmoi.os "darwin" }}` 等 + `.chezmoiignore` の条件付き glob                                                  | `os()`/`arch()`/`os_family()` 関数 + エントリ単位の `variants`（`os`/`arch`/`profile`）セレクタ                             |
+| ディレクトリ丸ごと除外      | `.chezmoiignore` に glob パターンで一括記述可能                                                                                          | エントリ単位の設定になる想定（glob 一括除外の仕組みは未確認）                                                               |
+| フック                      | `run_once_*`/`run_onchange_*`（コンテンツハッシュで再実行判定）+ `hooks.apply.pre/post`（任意の複雑な bash）                             | `[bootstrap.hooks.pre-dotfiles]`/`post-dotfiles`（dotfiles フェーズ全体を挟む粒度）                                         |
+| 差分プレビュー              | `chezmoi diff`                                                                                                                           | `mise bootstrap dotfiles diff`                                                                                              |
+| 適用の安全性                | `apply` で決定的に収束。衝突時は対話 or `--force`                                                                                        | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles` で上書き                                          |
+| 逆方向同期（配置先→source） | 無し（source を直接編集するのが正）。ただし `chezmoi edit` で source を開いて即座に反映は可能                                            | あり（`track`/`add --changed`/`history`）。ブログの主眼と推測される新機能                                                   |
+| バージョン履歴              | git（source dir 自体が git repo）                                                                                                        | git（source dir）に加え、mise 独自の checkpoint/history ストアが並走する模様                                                |
+| 暗号化・秘密情報            | 組み込みテンプレート関数でパスワードマネージャー多数連携（bitwarden/1Password/pass/keyring等） + 外部ツール（本リポジトリは `fnox`）併用 | エントリに `encrypt = true` + `[history.encryption].recipients`（age 系）。パスワードマネージャー連携の組み込み関数は未確認 |
+| 外部ファイル取得            | `.chezmoiexternal.toml`（URL/アーカイブから取得・展開）                                                                                  | 相当機能は未確認                                                                                                            |
+| CI 再現性・実績             | 10年以上の実績、本リポジトリで GitHub Actions 上の apply 検証が既に確立済み                                                              | dotfiles 機能自体がここ最近の新機能。実績・エコシステム記事は少数（今回参照できたブログ2本のみ）                            |
+| ネイティブ Windows 対応     | Go 製、Windows ネイティブで動作。symlink 権限問題は同様に発生                                                                            | Rust 製、Windows ネイティブで動作。Developer Mode 時のみ real symlink、それ以外は copy フォールバック                       |
+| bootstrap 全体との統合      | chezmoi 単体はパッケージ管理等を持たず、本リポジトリでは mise の `[bootstrap.packages]` 等と併用（post-apply hook で連携）               | `[dotfiles]` は `mise bootstrap` の1フェーズとして最初から統合済み（`[tools]`/`[bootstrap.packages]` と同じ設定ファイル内） |
+| 学習コスト                  | 独自の命名規則・テンプレート関数を新規に覚える必要                                                                                       | 本リポジトリは既に mise 濃度が高い（`[bootstrap.*]` を多用）ため、設定ファイルの置き場所という意味では親和性が高い          |
 
 ## 本リポジトリの chezmoi 利用機能の棚卸しと mise 代替可否
 
 実際にこのリポジトリが使っている chezmoi の機能を1つずつ洗い出し、mise `[dotfiles]` で
 代替できそうかを評価する。
 
-| 機能                                                                 | 本リポジトリでの実例                                                                                  | mise `[dotfiles]` で代替できるか                                                                                                                                     |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dot_`/`private_`/`executable_`/`exact_` 命名規則                    | `local/bin/executable_*`（実行属性）、`config/rio/private_config.toml.tmpl`（0600相当）、`exact_dot_rulesync`（ディレクトリを厳密同期） | ⚠️ ドキュメント上パーミッション/実行属性の宣言方法が確認できず。`exact`（管理外ファイルを削除して厳密一致させる）挙動も未確認。要検証                                    |
-| `.tmpl`（Go template）による OS 分岐・シェルアウト                   | `dot_zshenv.tmpl`（`{{ if (lookPath "brew") }}`、`{{ output "mise" "activate" "zsh" "--shims" }}`）、`config.tmpl`（git/ghostty/alacritty 等）、計11ファイル | ⚠️ Tera で同等のことは可能（`os()`、`exec()`）だが **Go template → Tera の全面書き換えが必須**。`lookPath` は `exec("command -v brew")` 相当で代替、`output` は `exec()` で代替 |
-| `.chezmoiignore` の OS 条件付き glob 除外（`**/*mac*`/`**/*win*` 等） | ファイル種別・プラットフォームごとの一括除外                                                              | ⚠️ variants（`os` セレクタ）はエントリ単位。glob で一括除外する仕組みは未確認。エントリ数が多いこのリポジトリでは冗長になる可能性                                       |
-| `run_once_install-mise_mac.sh` / `run_once_setup.sh`                  | 初回のみ実行するセットアップスクリプト                                                                    | ⚠️ `pre-dotfiles`/`post-dotfiles` フックは毎回走る前提。「初回だけ」を表現するには自前でマーカーファイル判定を書く必要があり、chezmoi の組み込み挙動より一段複雑になる  |
-| `run_onchange_*.sh.tmpl`（内容ハッシュをコメントに埋め込み変更検知） | `run_onchange_mac.sh.tmpl`/`run_onchange_windows.sh.tmpl`/`run_onchange_copy.sh.tmpl`                     | ✅/⚠️ `copy` モードの dotfiles エントリ自体が「内容が変わったときだけ書き込む」収束的な動きをするため、**単純なファイルコピーの用途はむしろ mise 側がシンプルになりうる**。ただし「WSL→Windows ネイティブパスへコピー」のような複雑な条件分岐ロジックは自前の hook スクリプトとして残る |
-| `hooks.apply.post` の複雑なオーケストレーション                       | PATH 設定、mise 自己更新、`bootstrap packages status/apply` の HOST_ENV 分岐、gh auth フロー、APM/rulesync のハッシュマーカー制御（約140行の bash） | ✅ `[bootstrap.hooks.post-dotfiles]`（または `[bootstrap.hooks.final]`）に同等の bash をほぼそのまま移植可能。任意コマンドを実行できる点は chezmoi の hook と本質的に同じ |
-| WSL 上で Windows ネイティブアプリの設定を `$APPDATA` 配下へ複写       | `run_onchange_windows.sh.tmpl`（AutoHotkey/Alacritty/Rio/VSCode/Claude Desktop 設定を `/mnt/c/...` へ複写） | ⚠️ mise の `os()` は WSL 上でも `"linux"` を返すと推測され、chezmoi 同様「OS 判定だけでは WSL 特有の複写要件を表現できない」制約は変わらない。dotfiles エントリのターゲットに `/mnt/c/...` の絶対パスを直接指定すればモード自体は動きそうだが、"変更があったときだけ" の判定や WSL 検出ロジックは結局 hook 側に自前で残ることになり、根本的な簡素化にはならない |
-| `[bitwarden] unlock = "auto"`、editor/pager/scriptEnv 設定            | chezmoi CLI 自体の UX 設定（`chezmoi edit` の挙動、delta pager 等）                                       | ❌ mise dotfiles は別 UX（`track`/`apply`/`history`）のため直接の対応物なし。実質的に不要になる（またはワークフローが変わる）                                          |
-| GitHub Actions での `chezmoi apply` の CI 検証（test-linux/test-mac） | `.chezmoiignore` に一時追記して bitwarden 依存の `.czrc` を除外しつつ apply を検証                        | ⚠️ `mise bootstrap dotfiles apply --dry-run`/`status` で同種の CI 検証は組めそうだが、実績のある chezmoi 版ワークフローを丸ごと作り直すコストが発生                     |
-| secret 解決（実体は fnox が担っている）                               | `config/fnox/config*.toml` + `bitwarden-sm`/`bitwarden` provider                                      | ✅ ここは chezmoi 固有の機能ではなく fnox 側の責務なので、mise 化しても **無関係でそのまま使い続けられる**                                                              |
+| 機能                                                                  | 本リポジトリでの実例                                                                                                                                         | mise `[dotfiles]` で代替できるか                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dot_`/`private_`/`executable_`/`exact_` 命名規則                     | `local/bin/executable_*`（実行属性）、`config/rio/private_config.toml.tmpl`（0600相当）、`exact_dot_rulesync`（ディレクトリを厳密同期）                      | ⚠️ ドキュメント上パーミッション/実行属性の宣言方法が確認できず。`exact`（管理外ファイルを削除して厳密一致させる）挙動も未確認。要検証                                                                                                                                                                                                                           |
+| `.tmpl`（Go template）による OS 分岐・シェルアウト                    | `dot_zshenv.tmpl`（`{{ if (lookPath "brew") }}`、`{{ output "mise" "activate" "zsh" "--shims" }}`）、`config.tmpl`（git/ghostty/alacritty 等）、計11ファイル | ⚠️ Tera で同等のことは可能（`os()`、`exec()`）だが **Go template → Tera の全面書き換えが必須**。`lookPath` は `exec("command -v brew")` 相当で代替、`output` は `exec()` で代替                                                                                                                                                                                 |
+| `.chezmoiignore` の OS 条件付き glob 除外（`**/*mac*`/`**/*win*` 等） | ファイル種別・プラットフォームごとの一括除外                                                                                                                 | ⚠️ variants（`os` セレクタ）はエントリ単位。glob で一括除外する仕組みは未確認。エントリ数が多いこのリポジトリでは冗長になる可能性                                                                                                                                                                                                                               |
+| `run_once_install-mise_mac.sh` / `run_once_setup.sh`                  | 初回のみ実行するセットアップスクリプト                                                                                                                       | ⚠️ `pre-dotfiles`/`post-dotfiles` フックは毎回走る前提。「初回だけ」を表現するには自前でマーカーファイル判定を書く必要があり、chezmoi の組み込み挙動より一段複雑になる                                                                                                                                                                                          |
+| `run_onchange_*.sh.tmpl`（内容ハッシュをコメントに埋め込み変更検知）  | `run_onchange_mac.sh.tmpl`/`run_onchange_windows.sh.tmpl`/`run_onchange_copy.sh.tmpl`                                                                        | ✅/⚠️ `copy` モードの dotfiles エントリ自体が「内容が変わったときだけ書き込む」収束的な動きをするため、**単純なファイルコピーの用途はむしろ mise 側がシンプルになりうる**。ただし「WSL→Windows ネイティブパスへコピー」のような複雑な条件分岐ロジックは自前の hook スクリプトとして残る                                                                         |
+| `hooks.apply.post` の複雑なオーケストレーション                       | PATH 設定、mise 自己更新、`bootstrap packages status/apply` の HOST_ENV 分岐、gh auth フロー、APM/rulesync のハッシュマーカー制御（約140行の bash）          | ✅ `[bootstrap.hooks.post-dotfiles]`（または `[bootstrap.hooks.final]`）に同等の bash をほぼそのまま移植可能。任意コマンドを実行できる点は chezmoi の hook と本質的に同じ                                                                                                                                                                                       |
+| WSL 上で Windows ネイティブアプリの設定を `$APPDATA` 配下へ複写       | `run_onchange_windows.sh.tmpl`（AutoHotkey/Alacritty/Rio/VSCode/Claude Desktop 設定を `/mnt/c/...` へ複写）                                                  | ⚠️ mise の `os()` は WSL 上でも `"linux"` を返すと推測され、chezmoi 同様「OS 判定だけでは WSL 特有の複写要件を表現できない」制約は変わらない。dotfiles エントリのターゲットに `/mnt/c/...` の絶対パスを直接指定すればモード自体は動きそうだが、"変更があったときだけ" の判定や WSL 検出ロジックは結局 hook 側に自前で残ることになり、根本的な簡素化にはならない |
+| `[bitwarden] unlock = "auto"`、editor/pager/scriptEnv 設定            | chezmoi CLI 自体の UX 設定（`chezmoi edit` の挙動、delta pager 等）                                                                                          | ❌ mise dotfiles は別 UX（`track`/`apply`/`history`）のため直接の対応物なし。実質的に不要になる（またはワークフローが変わる）                                                                                                                                                                                                                                   |
+| GitHub Actions での `chezmoi apply` の CI 検証（test-linux/test-mac） | `.chezmoiignore` に一時追記して bitwarden 依存の `.czrc` を除外しつつ apply を検証                                                                           | ⚠️ `mise bootstrap dotfiles apply --dry-run`/`status` で同種の CI 検証は組めそうだが、実績のある chezmoi 版ワークフローを丸ごと作り直すコストが発生                                                                                                                                                                                                             |
+| secret 解決（実体は fnox が担っている）                               | `config/fnox/config*.toml` + `bitwarden-sm`/`bitwarden` provider                                                                                             | ✅ ここは chezmoi 固有の機能ではなく fnox 側の責務なので、mise 化しても **無関係でそのまま使い続けられる**                                                                                                                                                                                                                                                      |
 
 凡例: ✅ 代替可能・影響小　⚠️ 代替は可能そうだが書き直しコスト/未検証点あり　❌ 直接の対応物なし
 
@@ -560,7 +560,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   `|| true` で必ずガードする点だけが実質的なハマりどころだった）。
 - **WSL→Windows ネイティブアプリへの配置**: これは想定通り `[dotfiles]` の対象外
   （`$HOME` 配下の宣言的配置という設計の範囲外）のままだったため、`mise run
-  dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）という
+dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）という
   **対話式タスク**として持ち越した。元の chezmoi `run_onchange_*.sh.tmpl` が持っていた
   y/n/d の対話プロンプトはそのまま踏襲している。
 
@@ -614,12 +614,12 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
 
 ## 4つの配置モード
 
-| モード         | 動作                                                                 |
-| -------------- | ---------------------------------------------------------------------- |
-| `symlink`      | source へのシンボリックリンクを作成（デフォルト）。ディレクトリ全体も可 |
-| `symlink-each` | ディレクトリ内の各ファイルを個別に symlink（対象ディレクトリの他ファイルは触らない） |
+| モード         | 動作                                                                                               |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `symlink`      | source へのシンボリックリンクを作成（デフォルト）。ディレクトリ全体も可                            |
+| `symlink-each` | ディレクトリ内の各ファイルを個別に symlink（対象ディレクトリの他ファイルは触らない）               |
 | `copy`         | source の内容をコピー。**パーミッションビット（実行属性・0600 等）も source からそのまま引き継ぐ** |
-| `template`     | `template = "tera"` を付けてテンプレートエンジンでレンダリング         |
+| `template`     | `template = "tera"` を付けてテンプレートエンジンでレンダリング                                     |
 
 パーミッションを変えたい実行可能スクリプトや秘密ファイルは、TOML 側に特別なキーを
 書く必要はなく、**source ファイル自体に `chmod` しておけば `copy`/`template` が
