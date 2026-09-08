@@ -1,1 +1,1 @@
-FROM ghcr.io/kenn-io/agentsview:0.38.1
+FROM ghcr.io/kenn-io/agentsview:0.39.0

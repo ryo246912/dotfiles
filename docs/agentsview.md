@@ -563,7 +563,7 @@ Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそ�
 
 このerrorは「containerがPORT=8080でlistenしなかった」という結果だけを示す。`agentsview pg serve`はlistenを開始する**前**に一連のcheckを実行し、どれか1つでも失敗するとprocessがexitする。したがって原因はほぼ常にlisten以前の失敗であり、bind addressやstartup probeのtimeoutではない。
 
-`pg serve`がlistenするまでに通る、失敗するとexitする処理は次の順である（v0.38.1）。
+`pg serve`がlistenするまでに通る、失敗するとexitする処理は次の順である。
 
 | 順  | 処理                                  | 失敗時のlog                           |
 | --- | ------------------------------------- | ------------------------------------- |
@@ -585,6 +585,7 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
+- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
 - **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9のmigrationが未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:migrate`と最初の`push`を済ませてから再deployする。
@@ -631,7 +632,14 @@ done
 
 ##### 作業8. clrndでCloud Run serviceを作り、Terraformでinvoker IAMを付ける
 
-> **前提:** `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9のmigrationを先に済ませる。
+> **前提:**
+>
+> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9のmigrationを先に済ませる。
+> - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
+>
+> ```sh
+> agentsview --version   # push側のbinary
+> ```
 
 Cloud Run ServiceはTerraformではなくclrndが作る。まずmanifestとその参照先を検証する。`verify`はschemaをlocalで検証したうえで、runtime service account、secretとそのversion、Artifact Registry imageの実在をAPIで確認する。
 
