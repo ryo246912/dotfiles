@@ -937,17 +937,23 @@ WHERE schemaname = 'agentsview';
 
 3. Fly PostgreSQL全体とAgentsView schemaのbackupを別々に取得する。passwordをcommand historyへ直接書かない。
 
-> データ移行はしない方針（3節）でも、この backup は取る。CockroachDBへはlocal archiveからpushし直すため、**local archiveに無くFlyにだけあるsession**があれば、Fly schemaを消した時点で失われるからである。`AGENTSVIEW_OWNER_PROXY_PG_URL`はFly owner roleを`flyctl proxy`経由で指すURLで、Bitwarden Secrets Managerに無い場合はここで用意する。Flyにだけあるデータが無いと確認済みなら、この手順は省略してよい。
+> データ移行はしない方針（3節）でも、この backup は取る。CockroachDBへはlocal archiveからpushし直すため、**local archiveに無くFlyにだけあるsession**があれば、Fly schemaを消した時点で失われるからである。Flyにだけあるデータが無いと確認済みなら、この手順は省略してよい。
+
+`AGENTSVIEW_PROXY_PG_URL`（push role）で`agentsview` schemaを読み出せる。別terminalで`flyctl proxy 15432:5432 -a psgl`を張ってから実行する。
 
 ```sh
 umask 077
 mkdir -p ~/backup
 fnox exec -- sh -c '
-  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc \
-    -f "$HOME/backup/fly-all-$(date -u +%Y%m%dT%H%M%SZ).dump"
-  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc -n agentsview \
+  pg_dump --dbname="$AGENTSVIEW_PROXY_PG_URL" -Fc -n agentsview \
     -f "$HOME/backup/agentsview-$(date -u +%Y%m%dT%H%M%SZ).dump"
 '
+```
+
+Atuinを含むcluster全体のbackupも取る場合はsuperuserが要る。`AGENTSVIEW_OWNER_PROXY_PG_URL`をBitwarden Secrets Managerに登録していない環境では、Fly Postgres側の機能を使う。
+
+```sh
+flyctl postgres backup list -a psgl   # 自動backupの有無を確認する
 ```
 
 4. backupを空の検証PostgreSQLへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
@@ -1526,7 +1532,18 @@ fnox exec -- mise run agentsview:cockroach:status
 
 Fly側にしか無いsessionが残っていないことも確認する。件数がCockroachDB側を上回る場合は、まだ削除しない。
 
-Fly PostgreSQLはprivate network上にあるため、**以降9.6までのFly側操作は`flyctl proxy`を張った別terminalが必要**である。`AGENTSVIEW_OWNER_PROXY_PG_URL`は`127.0.0.1:15432`を指しているので、port番号を合わせる。作業が終わるまでこのterminalは閉じない。
+Fly側の操作には2つの経路を使い分ける。**owner roleのURL（`AGENTSVIEW_OWNER_PROXY_PG_URL`）には依存しない。** この値をBitwarden Secrets Managerへ登録していない環境が多く、未登録だとfnoxが空文字を渡すため、`psql`がlocalのUnix socketへ繋ぎにいって次のように失敗する。
+
+```text
+psql: error: connection to server on socket "/tmp/.s.PGSQL.5432" failed: No such file or directory
+```
+
+| 用途                            | 経路                                                    |
+| ------------------------------- | ------------------------------------------------------- |
+| 件数確認、`pg_dump`（読むだけ） | `flyctl proxy` + `AGENTSVIEW_PROXY_PG_URL`（push role） |
+| `DROP SCHEMA`／`DROP ROLE`      | `flyctl postgres connect -a psgl`（postgres superuser） |
+
+読み取り用のproxyを張る。Fly PostgreSQLはprivate network上にあるため、**9.2までのFly側操作はこのterminalを開いたまま**行う。`AGENTSVIEW_PROXY_PG_URL`は`127.0.0.1:15432`を指しているのでport番号を合わせる。
 
 ```sh
 # terminal A（張りっぱなしにする）
@@ -1535,9 +1552,11 @@ flyctl proxy 15432:5432 -a psgl
 
 ```sh
 # terminal B
-fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -Atc \
+fnox exec -- sh -c 'psql "$AGENTSVIEW_PROXY_PG_URL" -X -Atc \
   "SELECT count(*) FROM agentsview.sessions;"'
 ```
+
+`AGENTSVIEW_PROXY_PG_URL`が未解決の場合は、fnoxのWARNに出ているsecret名をBitwarden Secrets Managerで確認する。空のまま進めると上記のsocket errorになる。
 
 #### 9.2 最終backupを取得し、restoreできることを確認する
 
@@ -1547,7 +1566,7 @@ fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -Atc \
 umask 077
 mkdir -p ~/backup
 fnox exec -- sh -c '
-  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc -n agentsview \
+  pg_dump --dbname="$AGENTSVIEW_PROXY_PG_URL" -Fc -n agentsview \
     -f "$HOME/backup/agentsview-final-$(date -u +%Y%m%dT%H%M%SZ).dump"
 '
 ls -lh ~/backup/agentsview-final-*.dump
@@ -1568,13 +1587,13 @@ flyctl status -a ryo-agentsview
 
 #### 9.4 `agentsview` schemaを削除する
 
-`psgl`のvolume使用量が減るのはこの手順である。9.1で張った`flyctl proxy`を使い、owner接続で実行する。
+`psgl`のvolume使用量が減るのはこの手順である。`DROP SCHEMA`はschema ownerかsuperuserでないと実行できないため、Fly Postgresのsuperuserでpsqlを開く。proxyもsecretも要らない。
 
 ```sh
-fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -v ON_ERROR_STOP=1'
+flyctl postgres connect -a psgl
 ```
 
-削除前に対象を必ず目視する。
+削除前に対象を必ず目視する。以降のSQLはこのpsql内で実行する。
 
 ```sql
 -- 削除対象のtable一覧と件数
@@ -1591,7 +1610,6 @@ FROM pg_statio_user_tables WHERE schemaname = 'agentsview';
 `CASCADE`が消すobjectを表示させてから承認する。
 
 ```sql
--- owner接続で実行する
 DROP SCHEMA agentsview CASCADE;
 ```
 
@@ -1603,7 +1621,7 @@ SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\_%' ORDER BY nspname
 
 #### 9.5 AgentsView用roleを削除する
 
-schemaを消してもroleは残る。`psgl`はAtuinと共用なので、AgentsView用roleだけを名指しで削除する。
+schemaを消してもroleは残る。9.4と同じ`flyctl postgres connect -a psgl`のpsql内で実行する。`psgl`はAtuinと共用なので、AgentsView用roleだけを名指しで削除する。
 
 ```sql
 -- 残存依存があると DROP ROLE は失敗する。先に確認する。
@@ -1655,7 +1673,7 @@ app削除後も設定が残っていると、次のmain mergeでdeployが走っ�
 | `.github/workflows/deploy-agentsview.yaml`                     | 削除する。Fly appが無いのでdeployは必ず失敗する                    |
 | `dot_config/agentsview/fly.toml`                               | 削除する（rollback用に残すなら削除しない）                         |
 | GitHub Actions secret `FLY_API_TOKEN`                          | Atuin deployでも使う場合は残す。使っていなければrepositoryから削除 |
-| fnoxの`AGENTSVIEW_OWNER_PROXY_PG_URL`ほかFly用secret           | Bitwarden Secrets Managerから削除する                              |
+| fnoxの`AGENTSVIEW_PROXY_PG_URL`ほかFly用secret                 | Bitwarden Secrets Managerから削除する（未登録のものは対応不要）    |
 | `dot_config/fnox/config.toml`のFly用entry                      | 上記に合わせて削除する                                             |
 | `agentsview:setup:migrate`／`agentsview:pg:proxy`などFly用task | 使わなくなったものを削除する                                       |
 
