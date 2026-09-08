@@ -4,6 +4,11 @@
 mise*.lock
 
 *temp*
+# "templates/" は "*temp*" に部分一致してしまうため明示的に復帰させる
+# （mise dotfiles のテンプレート source を置くディレクトリ。以後ここに新規ファイルを
+# 追加しても git add で無視されないようにするため）。
+!templates/
+!templates/**
 config/git/config.secret
 config/git/config.work.secret
 config/zsh/.zprofile.secret
