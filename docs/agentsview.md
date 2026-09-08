@@ -626,7 +626,7 @@ fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
-作業7でconfig.tomlに書いたdeterministic URLが、いま作ったserviceのURLと一致していることを確認する。`--check`はliveなserviceが報告するURLと突き合わせ、食い違う場合だけstderrへ警告する。
+作業7でconfig.tomlに書いたdeterministic URLが、いま作ったserviceのURLと一致していることを確認する。`--check`はliveなserviceが報告するURLと突き合わせ、食い違う場合だけstderrへ警告する。**この確認は初回だけでよい。** URLはservice単位の値で、deployしてrevisionが増えても変わらない（[Cloud Run URLは固定である](#cloud-run-urlは固定である)）。
 
 ```sh
 export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
@@ -1247,7 +1247,7 @@ clrndが作るserviceはprivateなので、Terraformで`allUsers`のinvoker bind
 fnox exec -- terraform -chdir=terraform/agentsview apply
 ```
 
-serviceが出来たら、config.tomlに書いたURLがliveなserviceのURLと一致することを確認する。
+serviceが出来たら、config.tomlに書いたURLがliveなserviceのURLと一致することを**一度だけ**確認する。URLはdeployのたびに変わるものではないので、以後のdeployでこれを実行する必要はない（[Cloud Run URLは固定である](#cloud-run-urlは固定である)を参照）。
 
 ```sh
 export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
@@ -1284,6 +1284,34 @@ Google Cloud Consoleで次も確認する。
 - runtime service accountが`agentsview-runtime`
 - secretの値がlogへ出ていない
 - CockroachDB RU、storage、connection数が無料枠内
+
+## Cloud Run URLは固定である
+
+**deployを何回繰り返しても、AgentsViewのURLは変わらない。** 追加費用もかからない。
+
+Cloud Runは1つのserviceに対して2種類のURLを割り当てる。
+
+| 種類                  | 形                                                    | 性質                                                                       |
+| --------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
+| deterministic URL     | `https://<service>-<project number>.<region>.run.app` | service名・project number・regionだけで決まる。**作成前から計算できる**    |
+| non-deterministic URL | `https://<service識別子>.run.app`                     | 作成時に割り当てられる不透明な識別子。以後は安定するが、事前には分からない |
+
+どちらも同じserviceへ届き、`gcloud run services describe`はdeterministic URLを優先して表示する。この構成では`ryo-agentsview` + project numberでDNS segmentが63文字に収まるため、deterministic URLが必ず割り当てられる。
+
+URLが変わるのは次の3つを変えたときだけである。
+
+- Cloud Run service名（`ryo-agentsview`）
+- region（`us-west2`）
+- Google Cloud project
+
+**deployは含まれない。** URLはserviceに紐づく値で、`clrnd deploy`が作るのはその下のrevisionだからである。imageを変えても、manifestを書き換えても、GitHub Actionsが自動deployしても、traffic splitを動かしても、URLは同じままになる。revisionごとに別のURLが生えるのはtraffic tagを付けた場合だけで（`https://<tag>---<service>-<project number>...`）、このmanifestはtagを使っていない。
+
+deterministic URLを採用したのは、hash入りURLに対する次の2点のためである。
+
+1. **service作成前から確定している。** config.tomlの`public_url`をserviceより先に書ける。placeholderを入れて後から差し替える往復が要らない。
+2. **serviceを作り直しても同じ値に戻る。** `clrnd delete`して再作成すると、hash入りURLのhashは変わるがdeterministic URLは変わらない。
+
+`.run.app`ではない独自ドメインにしたい場合だけ、Cloud Runの[domain mapping](https://cloud.google.com/run/docs/mapping-custom-domains)（mappingとmanaged TLS証明書自体に課金は無いが、対応regionが限られる。ドメインの購入・更新費も別）か、external Application Load Balancer（**こちらは有料**）が要る。今の用途では`.run.app`のdeterministic URLで足りるので、どちらも使っていない。
 
 ## 無料枠の内訳と使い切ったときの調べ方
 

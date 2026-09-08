@@ -233,13 +233,6 @@
       ],
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [".github/workflows/deploy-agentsview.yaml"],
-      "matchStrings": ["(?:aqua|github):(?<depName>[^@\\s\"]+)@(?<currentValue>[^\\s\"]+)"],
-      "datasourceTemplate": "github-tags",
-      "extractVersionTemplate": "^v?(?<version>.*)$"
     }
   ]
 }

@@ -36,12 +36,11 @@ jobs:
         with:
           persist-credentials: false
 
-      # clrndとgcloudのversionは dot_config/mise/config.toml に合わせる。root の
-      # mise.toml へ足すとlintなど他のjobまでgcloud一式をinstallすることになるため、
-      # このworkflowでだけ入れる。
+      # versionはrootのmise.tomlがpinしている（dot_config/mise/config.tomlと同じ値）。
+      # install_argsはtool名だけを並べ、この2つに限ってinstallする。
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          install_args: "aqua:twistedpair/google-cloud-sdk@561.0.0 github:masasuzu/clrnd@0.5.0"
+          install_args: "aqua:twistedpair/google-cloud-sdk github:masasuzu/clrnd"
 
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
