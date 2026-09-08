@@ -14,10 +14,10 @@ set -euo pipefail
 [ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
 
 file_mappings=(
-  "$MISE_PROJECT_ROOT/config/claude/claude_desktop_config_mac.json" "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-  "$MISE_PROJECT_ROOT/config/vscode/keybindings_mac.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/global.code-snippets" "$HOME/Library/Application Support/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/not_config/claude-desktop/claude_desktop_config_mac.json" "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_mac.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$HOME/Library/Application Support/Code/User/snippets/global.code-snippets"
   "$MISE_PROJECT_ROOT/config/navi/config.yaml" "$HOME/Library/Application Support/navi/config.yaml"
 )
 
@@ -58,16 +58,16 @@ set -euo pipefail
 : "${USERDIR:?USERDIR が未設定です}"
 
 file_mappings=(
-  "$MISE_PROJECT_ROOT/config/claude/claude_desktop_config_win.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
-  "$MISE_PROJECT_ROOT/config/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
+  "$MISE_PROJECT_ROOT/not_config/claude-desktop/claude_desktop_config_win.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/config-linux/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
   "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
   "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
-  "$MISE_PROJECT_ROOT/config/vscode/keybindings_linux.json" "$APPDATA/Roaming/Code/User/keybindings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
-  "$MISE_PROJECT_ROOT/config/vscode/global.code-snippets" "$APPDATA/Roaming/Code/User/snippets/global.code-snippets"
-  "$MISE_PROJECT_ROOT/config/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_linux.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$APPDATA/Roaming/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
 )
 
 for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do

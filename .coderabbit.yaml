@@ -31,9 +31,9 @@ reviews:
   enable_prompt_for_ai_agents: false
   path_filters:
     - "!not_config/**"
-    - "!config/sidebery/**"
-    - "!config/dbeaver/**"
-    - "!config/raycast/**"
+    - "!not_config/sidebery/**"
+    - "!not_config/dbeaver/**"
+    - "!config-mac/raycast/**"
   path_instructions:
     - path: "config/**/*.json"
       instructions: |

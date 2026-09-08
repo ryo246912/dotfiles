@@ -63,8 +63,8 @@ mise bootstrap packages use <manager>:<package>
 （`~/dotfiles/config/mise/config.mac.toml`）にも自動では書かれない）。このリポジトリは
 「常に dotfiles リポジトリ（`~/dotfiles`）側の source を編集し、`[dotfiles]` で配る」
 ルールなので、`use`/`import` を使うときは `~/dotfiles` で
-`--path config/mise/config.mac.toml` を明示するか、素直に
-`~/dotfiles/config/mise/config.mac.toml` を直接編集する方が確実。
+`--path config-mac/mise/config.mac.toml` を明示するか、素直に
+`~/dotfiles/config-mac/mise/config.mac.toml` を直接編集する方が確実。
 
 ```sh
 # 状態確認（read-only。何も変更しない）
@@ -78,7 +78,7 @@ mise bootstrap packages apply --yes         # 確認プロンプトなし
 
 # config に新しいパッケージを1個追加してすぐ導入（dotfiles リポジトリを明示）
 cd ~/dotfiles
-mise bootstrap packages use brew-cask:slack --path config/mise/config.mac.toml
+mise bootstrap packages use brew-cask:slack --path config-mac/mise/config.mac.toml
 mise bootstrap dotfiles diff && mise bootstrap dotfiles apply
 
 # 更新
@@ -261,7 +261,7 @@ mise brew も real brew も同じ `/opt/homebrew` prefix を使うため、Phase
 brew list --cask --versions
 ```
 
-1. 上記の出力を見ながら `config/mise/config.mac.toml`（chezmoi source）に
+1. 上記の出力を見ながら `config-mac/mise/config.mac.toml`（dotfiles リポジトリの source）に
    `"brew-cask:<token>" = "latest"` を追記し、`chezmoi apply` でデプロイする。
 2. **read-only** で確認する（何も変更しない）:
    ```sh
@@ -330,10 +330,10 @@ brew list --cask --versions
   `binary` 等の主要な型以外）を使っている場合の**エラー**。これは他の cask の警告と違い
   `mise bootstrap packages apply` 全体を中断させる。該当パッケージは
   `[bootstrap.packages]` から外し、`mise run bootstrap:mac-packages`
-  （`config/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
+  （`config-mac/mise/tasks/bootstrap-mac.toml`）側で `brew install --cask <name>` する
   例外パッケージとして扱う（本リポジトリでは firefox / inkscape がこれに該当する。
   zoom は cask artifact 種別の問題ではなく private ホスト限定で使うための例外。
-  詳細は `config/mise/tasks/bootstrap-mac.toml` のコメント参照）。
+  詳細は `config-mac/mise/tasks/bootstrap-mac.toml` のコメント参照）。
 - `ERROR brew-cask:<name>: failed to run postflight`
   （``Error: cask uses `auto_updates`, which mise's cask shim does not support``） →
   cask が自前の自動更新機能（`auto_updates true`）を宣言している場合、mise の cask シム
@@ -605,7 +605,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
 [dotfiles]
 "~/.zshrc" = { source = "config/zsh/.zshrc", mode = "copy" }
 "~/.config/starship.toml" = { source = "config/starship.toml", mode = "copy" }
-"~/.zshenv" = { source = "config/zsh/.zshenv.tera", mode = "template", template = "tera" }
+"~/.zshenv" = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 ```
 
 `source` は相対パスの場合、**その `[dotfiles]` を定義している設定ファイル自身のディレクトリ**
@@ -626,39 +626,68 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
 そのまま反映する**（これは実機で `chmod 755`/`chmod 600` した source を copy させて
 確認済み）。
 
-### ディレクトリ単位で宣言する
+### ディレクトリ単位で宣言する（ブランケットコピー）
 
-`target` はファイルだけでなく**ディレクトリ**も指定できる。`copy`/`symlink` は
-ディレクトリを渡すと中身ごと再帰的に配置するので、1ファイルずつ列挙しなくてよい
-（本リポジトリでは実際にこれで `mise.toml` の `[dotfiles]` を194行→131行に圧縮した）。
+`target` はファイルだけでなく**ディレクトリ**も指定でき、`copy`/`symlink` は
+ディレクトリを渡すと中身ごと再帰的に配置する。**mise には chezmoi の `.chezmoiignore`
+に相当する「ディレクトリ丸ごと配りつつ一部だけ除外する」機能は無い**（`ignore`/
+`exclude` のようなフィールドを試したが実機で無視されるだけだった）。
+`"~/.config" = { source = "config", mode = "copy" }` のように宣言すると、
+**source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
+全部コピーされる**。
 
-```toml
-"~/.config/nvim" = { source = "config/nvim", mode = "copy" }
+本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
+「ブランケットコピーしてよい形」に揃えた:
+
+- **`config/` は「常にどの環境でも配ってよい」ファイルだけを置く場所**と決め、
+  `mise.toml`（共通）から `"~/.config" = { source = "config", mode = "copy" }` の
+  1行でまとめて配る（同様に `~/.apm`・`~/.claude`・`~/.codex`・`~/.local` も
+  それぞれ1行）。これで `[dotfiles]` は194行→11行まで縮んだ。
+- **テンプレート**（Tera）が要るファイルは `config/` の外、`templates/` に隔離する
+  （`config/` 配下に置いたままだと、ブランケット copy が未レンダリングの `.tera` を
+  そのまま巻き込んでコピーしてしまう不具合を実機で確認したため。`mode` が違う
+  ファイルは同じディレクトリに同居させられない）。
+- **OS 限定ファイル**は `config-mac/`・`config-linux/` という別ツリーに隔離し、
+  `mise.mac.toml`/`mise.linux.toml` 側から `~/.config/<相対パス>` を個別に
+  `mode = "copy"` で宣言する（例: `config-mac/raycast/` → `"~/.config/raycast"`）。
+  **`mise.mac.toml` 側で `"~/.config"` というブランケットキーを再宣言してはいけない**
+  ——「共通ブランケットのマージ」ではなく完全な**上書き**になり、mac では共通の
+  `~/.config` 配下が一切配置されなくなる（同じキーが複数の merge される config
+  ファイルに出てきたときの挙動として実機で確認済み。詳細は下記コラム参照）。
+  OS 限定ファイル自体の個数は少ないので、通常どおり1ファイルずつ宣言してよい。
+- **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
+  もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`）は `config/` の外、
+  `not_config/` に置く（このリポジトリではもともとこの用途の慣習的なディレクトリ名
+  だったので流用した）。
+
+> **同一キーの merge は上書き、別キーは並存する（実機で確認済みの挙動）**
+>
+> `mise.toml` に `"~/.config" = {...}` を書き、`mise.mac.toml` に**同じキー**
+> `"~/.config" = {...}` を書くと、`MISE_ENV=mac` で読み込んだときは mac 側の
+> 定義だけが有効になり、共通側は消える（片方が勝つ、足し算にならない）。
+> 一方、`mise.toml` に `"~/.config" = {...}`（ブランケット）と
+> `"~/.config/git/config" = {..., mode="template"}`（specific、別キー）を
+> **同じファイル**に書いた場合はどちらも適用される（ブランケットが丸ごとコピーした後、
+> specific なキーが該当ファイルだけレンダリングし直す）。ただし前述のとおり、
+> ブランケット側の source に `.tera` の生ファイルが物理的に存在していれば、それも
+> 未レンダリングのまま一緒にコピーされてしまう点は変わらない。だからテンプレートは
+> 物理的に隔離するのが結局いちばん安全。
+
+`~/.config` 配下の全体像は次のとおり:
+
+```text
+mise.toml         [dotfiles] "~/.config" = { source = "config", mode = "copy" }  # 共通
+mise.mac.toml      [dotfiles] "~/.config/raycast" = { source = "config-mac/raycast", ... }   # mac だけ追加
+mise.linux.toml    [dotfiles] "~/.config/autohotkey" = { source = "config-linux/autohotkey", ... } # linux だけ追加
+（テンプレートは config/ の外の templates/ から個別に "~/.config/git/config" 等として宣言）
 ```
 
-ただし **ディレクトリ丸ごと宣言すると、そのディレクトリの中に物理的に存在する
-ファイルは何であれ全部コピーされる**（TOML に書いていない・別の環境専用のファイルが
-混ざっていても関知しない）。そのため、ディレクトリ単位で宣言してよいのは
-**そのディレクトリ配下が完全に均質**（全ファイルが同じ `mode = "copy"` で、
-かつ全プラットフォーム共通、テンプレートを含まない）なときだけに限る。以下のような
-ディレクトリは1個の dotfiles エントリにまとめられない:
-
-- テンプレート（`.tera`）ファイルが混在しているディレクトリ → そのファイルだけ
-  `mode = "template"` の個別エントリとして残し、ディレクトリ側からは除外する
-  （chezmoi の一部だけを個別扱いするのと同じ発想）
-- `mise.mac.toml`/`mise.linux.toml` にしか出てこない OS 限定ファイルが同じ
-  ディレクトリに同居している場合（例: `config/zsh/lazy/` は共通ファイルと
-  mac 専用の `mac.zsh` が同居しているため、ディレクトリ丸ごとではなく個別ファイルの
-  ままにしてある。逆に `config/raycast/`・`config/autohotkey/` のように中身が
-  丸ごと1環境専用ならその環境の `mise.<ENV>.toml` 側でディレクトリごと宣言してよい）
-
-実装時、いったん「バケットに含まれる宣言済みエントリだけ」を見て `~/.config` 丸ごとを
-1エントリに潰せてしまうミスを実際に踏んだ（`mise.mac.toml`側は6ファイルしか
-宣言していないが、それらが偶然 `~/.config` 配下に散らばっていただけで、
-`~/.config` 全体を mac 専用ディレクトリとして丸ごとコピーするのは全く別の意味になる）。
-**判定は「宣言」ではなく「そのディレクトリに実際に存在する全ファイル」を基準にする**こと。
-`mise bootstrap dotfiles apply` 後に `find ~/.config -iname '*除外したいツール名*'` 等で
-除外ディレクトリが紛れ込んでいないか確認するのが安全。
+このパターンが使えるのはリポジトリの物理レイアウトを「配ってよいものと配ってはいけない
+ものが同じディレクトリに混在しない」ように整理できるときに限る。既存の chezmoi リポジトリを
+移行する場合、最初から完全に整理された状態にはならないことが多いので、
+「まずは1ファイルずつ個別宣言 → 均質なディレクトリだけ集約 → 最終的に例外を
+物理的に追い出してブランケット化」の順で段階的に進めるのが安全（このリポジトリも
+実際にその3段階を踏んだ）。
 
 ## テンプレート（Tera）
 

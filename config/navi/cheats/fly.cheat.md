@@ -8,7 +8,7 @@ flyctl auth signup
 flyctl apps list
 
 # deploy app
-flyctl deploy --app ryo-shellhistory -c config/atuin/fly.toml
+flyctl deploy --app ryo-shellhistory -c config-linux/atuin/fly.toml
 
 # status
 flyctl status -a "<app>"

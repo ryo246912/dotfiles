@@ -92,7 +92,7 @@ q/
 :echo mapleader
 
 # vscode : display installed extensions
-code --list-extensions | xargs -L 1 echo code --install-extension > config/vscode/extensions.sh
+code --list-extensions | xargs -L 1 echo code --install-extension > not_config/vscode/extensions.sh
 
 # weather [version: v1=default output,v2=rich output] [location_or_help: ex)Tokyo]
 curl -s "<version>wttr.in/<location_or_help>"

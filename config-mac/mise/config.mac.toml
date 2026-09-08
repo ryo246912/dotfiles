@@ -28,7 +28,7 @@
 
 # casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
 # が中断/ハングするため `mise run bootstrap:mac-packages`
-# （config/mise/tasks/bootstrap-mac.toml）側で real brew から個別導入している。理由:
+# （config-mac/mise/tasks/bootstrap-mac.toml）側で real brew から個別導入している。理由:
 # - google-japanese-ime: Rosetta が前提
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact

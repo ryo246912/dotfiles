@@ -7,7 +7,7 @@ Docker Desktopや利用環境が更新するローカル状態として扱い、
 ## git: `credential.helper`
 
 HTTPS 経由で git を使うときに毎回 ID/パスワードを聞かれないよう、認証情報を OS の keychain や
-メモリキャッシュに保存する仕組み。`config/git/config.tera` の `[credential]` ブロックで
+メモリキャッシュに保存する仕組み。`templates/git/config.tera` の `[credential]` ブロックで
 OS ごとに設定を分けている:
 
 ```text
@@ -32,7 +32,7 @@ WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無い�
 `pass`（GPG ベースの credential store）を使い、コミット署名に使っている既存の GPG 鍵
 （`user.signingkey`）でそのまま暗号化して永続化している。
 
-1. `pass` の store を、コミット署名に使っている GPG 鍵（`config/git/config.tera` の
+1. `pass` の store を、コミット署名に使っている GPG 鍵（`templates/git/config.tera` の
    `user.signingkey`）で初期化する。ハードコードすると鍵ローテーション時に複数箇所を
    更新することになるため、`git config` から直接参照する:
    ```sh
@@ -40,7 +40,7 @@ WSL2/Linux には `osxkeychain` 相当の OS keychain 連携が標準に無い�
    ```
 2. GCM を git の credential helper として登録する。`configure` が書くのは
    `credential.helper = manager` のみで、`credential.credentialStore = gpg` は
-   `config/git/config.tera`（chezmoi）側が既に設定済みの値を GCM が読むだけなので、
+   `templates/git/config.tera`（chezmoi）側が既に設定済みの値を GCM が読むだけなので、
    `configure` 実行後もそちらが上書きされることはない:
    ```sh
    git-credential-manager configure

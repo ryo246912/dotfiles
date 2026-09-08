@@ -55,7 +55,7 @@ jobs:
             mise.mac.toml \
             mise.linux.toml \
             config/mise/config.toml \
-            config/mise/config.mac.toml \
+            config-mac/mise/config.mac.toml \
             config/mise/config.linux.toml; do
             python3 -c "import tomllib; tomllib.load(open('$f','rb'))" && echo "OK toml: $f"
           done

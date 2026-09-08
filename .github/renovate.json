@@ -112,7 +112,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/atuin/fly.toml"],
+      "managerFilePatterns": ["config-linux/atuin/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
       ],
@@ -160,7 +160,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/mise/config.mac.toml"],
+      "managerFilePatterns": ["config-mac/mise/config.mac.toml"],
       "matchStrings": [
         "\"http:terminal-browser\"\\s*=\\s*\\{\\s*version = \"(?<currentValue>[^\"]+)\""
       ],

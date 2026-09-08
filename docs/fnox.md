@@ -72,7 +72,7 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
 - `config.work.toml` 側は中身をすべて `[profiles.work.*]` の下に置く。これは
   `FNOX_PROFILE=work` のときだけ有効になるので、import されているだけでは何も起きない。
-- `config/zsh/.zshenv.tera` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
+- `templates/zsh/.zshenv.tera` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
   ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
   同じ仕組み）。
 
