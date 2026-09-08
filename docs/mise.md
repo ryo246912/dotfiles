@@ -60,7 +60,7 @@ mise bootstrap packages use <manager>:<package>
 動くが、`use`/`import` は設定ファイルへの**書き込み**コマンドで、
 `--path`（または `-g`）を指定しない限り**カレントディレクトリのローカル `mise.toml`**に書く
 （デプロイ先 `~/.config/mise/config.mac.toml` にも、まして dotfiles リポジトリ側の source
-（`~/dotfiles/config/mise/config.mac.toml`）にも自動では書かれない）。このリポジトリは
+（`~/dotfiles/config-mac/mise/config.mac.toml`）にも自動では書かれない）。このリポジトリは
 「常に dotfiles リポジトリ（`~/dotfiles`）側の source を編集し、`[dotfiles]` で配る」
 ルールなので、`use`/`import` を使うときは `~/dotfiles` で
 `--path config-mac/mise/config.mac.toml` を明示するか、素直に
@@ -262,7 +262,7 @@ brew list --cask --versions
 ```
 
 1. 上記の出力を見ながら `config-mac/mise/config.mac.toml`（dotfiles リポジトリの source）に
-   `"brew-cask:<token>" = "latest"` を追記し、`chezmoi apply` でデプロイする。
+   `"brew-cask:<token>" = "latest"` を追記し、`mise bootstrap dotfiles apply` でデプロイする。
 2. **read-only** で確認する（何も変更しない）:
    ```sh
    mise bootstrap packages status

@@ -126,17 +126,17 @@ exec + fnox exec) を参照してください。
 3. 発行したトークンを age で暗号化して保存する（この1回だけ hidden prompt に平文を入力する。
    トークンをコマンド引数にそのまま渡すと shell history や `ps` に残るため避ける）。
 
-   `--global` を付けると ciphertext は `~/.config/fnox/config.toml`（chezmoi の**デプロイ先**）に
-   直接書き込まれます。ここに書くと、次に `chezmoi apply` したときにまだ書き換えていない git 側の
-   ソース（`config/fnox/config.toml`）の内容で上書きされて消えてしまうため、`FNOX_CONFIG_DIR`
-   を chezmoi のソースディレクトリに向けて、最初から git 管理下のファイルへ直接書き込みます:
+   `--global` を付けると ciphertext は `~/.config/fnox/config.toml`（mise dotfiles の**デプロイ先**）に
+   直接書き込まれます。ここに書くと、次に `mise bootstrap dotfiles apply` したときにまだ書き換えていない
+   git 側のソース（`config/fnox/config.toml`）の内容で上書きされて消えてしまうため、`FNOX_CONFIG_DIR`
+   を dotfiles リポジトリのソースディレクトリに向けて、最初から git 管理下のファイルへ直接書き込みます:
 
    ```sh
-   FNOX_CONFIG_DIR="$(chezmoi source-path)/config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
+   FNOX_CONFIG_DIR="$HOME/dotfiles/config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
    ```
 
-   書き込んだら `chezmoi diff` で追加された ciphertext 行だけの差分になっているか確認してから
-   `chezmoi apply` してください。
+   書き込んだら `git diff` で追加された ciphertext 行だけの差分になっているか確認してから
+   commit・push し、`mise bootstrap dotfiles apply` してください。
 
 4. 動作確認:
    ```sh
@@ -166,7 +166,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    これで `config/fnox/config.toml` 内の `BWS_ACCESS_TOKEN` の ciphertext が、1台目・2台目
    どちらの秘密鍵でも復号できる形に更新されます。
 4. `recipients` の追加と再暗号化後の `config/fnox/config.toml` を commit して push する。
-5. 2台目で `chezmoi apply`（または `git pull` 後に `chezmoi apply`）すれば、2台目の
+5. 2台目で `git pull` 後に `mise bootstrap dotfiles apply` すれば、2台目の
    `age.txt` でも `fnox get BWS_ACCESS_TOKEN` が復号できるようになります。
 
 > [!IMPORTANT]

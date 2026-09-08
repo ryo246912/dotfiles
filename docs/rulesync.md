@@ -19,7 +19,8 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 - グローバル設定は chezmoi で `~/.config/rulesync/` 配下に配布されます。
   - `config/rulesync/rulesync.jsonc` → `~/.config/rulesync/rulesync.jsonc`
   - `config/rulesync/.rulesync/` → `~/.config/rulesync/.rulesync/`
-    （`exact_` のため、chezmoi 管理外のファイルは `apply` 時に削除される）
+    （mise の `[dotfiles]` は copy モードのため、リポジトリ管理外のファイルが
+    `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
   - ここに自作 skill（`article` / `memo` / `planning` 等、`config/rulesync/.rulesync/skills/`）や
@@ -52,8 +53,8 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 | プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                  | する     | generate の入力であり、リポジトリ固有の target / output 設定だから  |
 | プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`                                                       | する     | `CLAUDE.md` を生成するための正本だから                              |
 | プロジェクト単位の生成物           | `CLAUDE.md`                                                                       | しない   | `rulesync generate` で再生成される出力だから                        |
-| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                              | する     | chezmoi で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから |
-| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | chezmoi で `~/.config/rulesync/.rulesync/` へ配布する正本だから     |
+| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                              | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから |
+| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから |
 | グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル                 | しない   | `rulesync generate` で実ホームへ再生成される出力だから              |
 
 ### 初回 clone と `rulesync init` の関係
@@ -91,13 +92,10 @@ mise run rulesync:generate
 
 `config/mise/tasks/dev.toml` で以下の2ステップを実行します。
 
-1. **プロジェクト単位**: `chezmoi apply` の post hook からは、テンプレート変数 `.chezmoi.sourceDir` で
-   解決した実行中の chezmoi source directory を `CHEZMOI_SOURCE_DIR` として `mise run rulesync:generate` へ渡す。
-   そのため、`sourceDir = ...` や `chezmoi apply --source ...` で非既定の source directory を使う場合も同じ
-   source directory を参照できる。task 側は `CHEZMOI_SOURCE_DIR` 配下に `rulesync.jsonc` と `.rulesync/` が
-   両方ある場合だけ `cd` して実行する。
-   `chezmoi apply` の post hook 中は chezmoi が persistent state lock を保持しうるため、ここでは
-   `chezmoi source-path` を呼ばない。
+1. **プロジェクト単位**: dotfiles リポジトリの checkout を `DOTFILES_DIR`（既定 `~/dotfiles`。
+   別の場所に clone している場合は export で上書きする）として解決する。task 側は
+   `$DOTFILES_DIR/mise.toml` の有無で本物の checkout か検証したうえで、`rulesync.jsonc` と
+   `.rulesync/` が両方ある場合だけ `cd` して実行する。
 2. **グローバル**: `~/.config/rulesync` に `rulesync.jsonc` と `.rulesync/` が両方ある場合だけ `cd` して実行する。
 
 どちらかのスコープが未初期化でも、もう片方の生成を止めないように warning を出して skip します。
@@ -109,12 +107,13 @@ mise run rulesync:generate
 `rulesync generate` は **カレントディレクトリ**の `rulesync.jsonc` / `.rulesync/` しか見ません。
 以下のいずれかが原因です。
 
-- `~/.config/rulesync/.rulesync/` が存在しない → `chezmoi apply` を実行する
+- `~/.config/rulesync/.rulesync/` が存在しない → `mise bootstrap dotfiles apply` を実行する
 - `mise run rulesync:generate` 以外の方法（直接 `rulesync generate` をどこかのディレクトリで実行）で
-  呼び出した → プロジェクト単位なら `chezmoi cd`、グローバルなら `cd ~/.config/rulesync` してから実行する
+  呼び出した → プロジェクト単位なら `cd ~/dotfiles`（`DOTFILES_DIR`）、グローバルなら
+  `cd ~/.config/rulesync` してから実行する
 
 ### `'baseDirs' config field is deprecated; use 'outputRoots' instead.`
 
 `rulesync.jsonc` に古い `baseDirs` フィールドが残っている場合に出る警告です。このリポジトリの
 `rulesync.jsonc` / `config/rulesync/rulesync.jsonc` は `outputRoots` へ移行済みなので、
-この警告が出る場合はリポジトリが最新でない（`chezmoi apply` 前、または `git pull` 前）可能性が高いです。
+この警告が出る場合はリポジトリが最新でない（`mise bootstrap dotfiles apply` 前、または `git pull` 前）可能性が高いです。

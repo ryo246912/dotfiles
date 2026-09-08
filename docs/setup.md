@@ -19,23 +19,46 @@
   mise trust
   ```
 
-- [ ] mise bootstrap の実行（`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
-      `mise.toml`/`mise.mac.toml` 自身が持つため、必ず `~/dotfiles` 直下で実行する）
-  - `mise bootstrap` が順に実行する（詳細フェーズ順は [docs/mise.md](./mise.md) 参照）:
-    1. `[bootstrap.hooks.pre-packages]`: config を読まず `mise self-update --yes <min_version>`（要求バージョン済みなら変更なし）
-    2. `[bootstrap.packages]` の導入（`MISE_ENV=mac` を暗黙に使う packages フェーズ）
-    3. `[dotfiles]` の配置（このリポジトリの `config/`・`local/` 等から `$HOME` へコピー/テンプレート展開）
-    4. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
-    5. `[tools]` の導入（4 で完了しているため通常は即座に終わる）
-    6. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+- [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
+      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる）
 
   ```sh
-  mise bootstrap
+  bash scripts/ensure-mise-version.sh
   ```
 
-  - 失敗時は `mise bootstrap` を再実行する（各フェーズは収束的なので再実行して安全）
+- [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
+      実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
+      `mise.toml`/`mise.mac.toml` 自身が持つ。`MISE_ENV` は通常シェル起動時に
+      `templates/zsh/.zshenv.tera` が `HOST_ENV`（`config/zsh/host-env.map` 由来）から
+      自動導出するが、その `.zshenv` 自体がまだ配置されていない最初の bootstrap では
+      未設定なので、ここでは明示指定が必須）
+  - **最初に `[dotfiles]` だけを適用する**（`[bootstrap.packages]` は
+    `config-mac/mise/config.mac.toml` という dotfile の中身なので、他のフェーズより
+    先に一度実体化しておく必要がある。`mise bootstrap` 内の packages フェーズは
+    プロセス起動時に読み込んだ config しか見ないため、同一プロセス内で
+    dotfiles 配置 → packages フェーズの順に反映されることはない）:
+    ```sh
+    MISE_ENV=mac mise bootstrap dotfiles apply --yes
+    mise trust ~/.config/mise/config.mac.toml
+    ```
+  - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
+    [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
+    `~/.config/mise/config.mac.toml` を正しく読める:
+    1. `[bootstrap.packages]` の導入（brew/brew-cask）
+    2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    4. `[tools]` の導入（3 で完了しているため通常は即座に終わる）
+    5. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+
+    ```sh
+    MISE_ENV=mac mise bootstrap
+    ```
+
+  - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要
+  - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
+    は `MISE_ENV=mac` の明示を省略してよい
 
 - [ ] macOS defaults の適用
 
@@ -483,22 +506,41 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   mise trust
   ```
 
+- [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
+      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる）
+
+  ```sh
+  bash scripts/ensure-mise-version.sh
+  ```
+
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
+      **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
-  - `mise bootstrap` が順に実行する:
-    1. `[bootstrap.packages]` の導入（`MISE_ENV=linux` を暗黙に使う packages フェーズ。apt の sudo プロンプトが出る）
-    2. `[dotfiles]` の配置
+  - **最初に `[dotfiles]` だけを適用する**（apt 用の `[bootstrap.packages]` は
+    `config/mise/config.linux.toml` という dotfile の中身なので、他のフェーズより
+    先に一度実体化しておく必要がある。packages フェーズは `mise bootstrap`
+    プロセス起動時に読み込んだ config しか見ないため、同一プロセス内で
+    dotfiles 配置 → packages フェーズの順に反映されることはない）:
+    ```sh
+    MISE_ENV=linux mise bootstrap dotfiles apply --yes
+    mise trust ~/.config/mise/config.linux.toml
+    ```
+  - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
+    `~/.config/mise/config.linux.toml` を正しく読める:
+    1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
+    2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
     3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
     4. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
-  ```sh
-  mise bootstrap
-  ```
+    ```sh
+    MISE_ENV=linux mise bootstrap
+    ```
 
   - 元の chezmoi hook にあった「非対話端末なら apt bootstrap で中断する」ガードは
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
+  - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
 
 - [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
       [`docs/credentials.md`](./credentials.md) 参照）

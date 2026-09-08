@@ -36,22 +36,20 @@ run      = "lefthook install"
 # `mise bootstrap` は必ずこのリポジトリの checkout ルートで実行すること
 # （hook 内は相対パス・$(pwd) 前提。$MISE_PROJECT_ROOT はフックの中では未設定）。
 #
-# 1) pre-packages: min_version を満たすよう mise 本体を self-update する（mac のみ。
-#    config を読まず実行するのは、[bootstrap.packages] 等の後続フェーズが新しい mise の
-#    機能に依存する場合があるため、packages フェーズより前に済ませたい）。
-[bootstrap.hooks.pre-packages]
-run = """
-[ "$(uname)" = "Darwin" ] || exit 0
-required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' mise.toml)
-if [ -z "$required_mise_version" ]; then
-  echo "error: mise.toml から min_version を取得できません" >&2
-  exit 1
-fi
-echo "Ensuring mise $required_mise_version is installed..."
-MISE_NO_CONFIG=1 mise self-update --yes "$required_mise_version"
-"""
-
-# 2) pre-tools: [tools] フェーズ（mise install 相当）の前に gh を導入・認証し、
+# min_version を満たす self-update は hook にはできない。mise は min_version 未満だと
+# config の読み込み自体を拒否するため、hook（config の一部）まで到達できない。
+# 代わりに `mise bootstrap` を呼ぶ前に `scripts/ensure-mise-version.sh` を独立して
+# 実行する運用にしている（docs/setup.md 参照）。
+#
+# 同様の理由で、[bootstrap.packages] は dotfiles フェーズで初めて
+# `~/.config/mise/config.mac.toml` 等として配置されるが、packages フェーズは
+# `mise bootstrap` プロセス起動時に一度だけ読み込んだ config を使うため、
+# 同一プロセス内で dotfiles → packages の順に反映されることはない（実機で確認済み）。
+# そのため `mise bootstrap dotfiles apply` を独立した先行コマンドとして実行し、
+# 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
+# 2段階の運用にしている（docs/setup.md 参照）。
+#
+# 1) pre-tools: [tools] フェーズ（mise install 相当）の前に gh を導入・認証し、
 #    GITHUB_TOKEN 付きで明示的に mise install する。native の tools フェーズは
 #    通常サブプロセスへ環境変数を持ち越せないため、GITHUB_TOKEN が要る
 #    aqua/github backend のツールはここで先に入れておく（後続の native tools

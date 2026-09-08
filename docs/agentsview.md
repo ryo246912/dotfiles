@@ -158,10 +158,10 @@ curl -I https://ryo-agentsview.fly.dev
 
 `agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
 
-PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
+PostgreSQL client tools は mise で管理している。dotfiles の変更を反映してから install する。
 
 ```sh
-chezmoi apply
+mise bootstrap dotfiles apply
 mise install github:theseus-rs/postgresql-binaries
 pg_isready --version
 ```

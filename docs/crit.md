@@ -82,7 +82,7 @@ devcontainer 外（`mac-host` に SSH できない環境）では静かにスキ
 
 crit@crit プラグインが提供する 2 つの skill を、**APM の外部依存として upstream から取得**しています。
 `apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
-をコミット SHA 付きで宣言しており、`chezmoi apply` → `mise run apm:install`（= `apm install -g`）で各エージェント
+をコミット SHA 付きで宣言しており、`mise bootstrap` → `mise run apm:install`（= `apm install -g`）で各エージェント
 向けに配置されます（`docs/apm.md` 参照）。skill 本文はこのリポジトリに vendor せず、pristine な upstream を使います。
 
 | skill      | 役割                                                               | 配布先                       |

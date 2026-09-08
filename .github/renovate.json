@@ -5,7 +5,7 @@
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
   "mise": {
-    "managerFilePatterns": ["config/mise/**/*.toml"]
+    "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml", "config-mac/mise/**/*.toml"]
   },
   "devcontainer": {
     "managerFilePatterns": ["config/devcontainer/**/devcontainer.json"]
@@ -203,15 +203,6 @@
       ],
       "datasourceTemplate": "custom.brew-cask",
       "versioningTemplate": "loose"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["config/sheldon/**/*.toml"],
-      "matchStrings": [
-        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
     },
     {
       "customType": "regex",

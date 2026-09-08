@@ -78,6 +78,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # packages フェーズは mise bootstrap プロセス起動時に読み込んだ config しか見ないため、
+          # [bootstrap.packages]（config/mise/config.linux.toml という dotfile）を
+          # 同一プロセス内で先に配置しても反映されない。dotfiles を先に別プロセスで適用してから
+          # 本体を実行する（docs/setup.md 参照）。
+          mise bootstrap dotfiles apply --yes
+          mise trust ~/.config/mise/config.linux.toml
           # packages フェーズ(apt)の sudo は `[ -t 0 ]`(TTY) を要するため PTY を割り当てる
           # （runner の sudo は NOPASSWD なのでプロンプトは出ない）。
           script -qe -c "mise bootstrap --yes" /dev/null

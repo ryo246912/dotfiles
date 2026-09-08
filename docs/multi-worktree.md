@@ -21,7 +21,7 @@
 
 ### 基本セットアップ
 
-chezmoi apply 後、設定ファイルを作成してください：
+`mise bootstrap dotfiles apply` 後、設定ファイルを作成してください：
 
 ```bash
 # 設定ディレクトリの作成

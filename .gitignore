@@ -19,5 +19,7 @@ settings.local.json
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-# templates/rulesync/mcp.json.tera は拡張子が .tera のため上の `mcp.json` ignore に
-# そもそもマッチしない（旧 dot_config/.../mcp.json.tmpl 時代の !negation は不要になった）
+# rulesync が生成する mcp.json は ~/.config/rulesync/.rulesync/mcp.json（実ホーム側）に
+# 出力されるだけで、このリポジトリには非テンプレートの mcp.json 自体が存在しない
+# （source は templates/rulesync/mcp.json.tera）。そのため上の `mcp.json` ignore に対する
+# !negation はもう不要（旧 dot_config/.../mcp.json.tmpl 時代の名残）。

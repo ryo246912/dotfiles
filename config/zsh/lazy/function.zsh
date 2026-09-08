@@ -14,7 +14,7 @@ open() {
   fi
 }
 
-# install後にapply先のlockfileをchezmoi sourceへ戻す。
+# install後にapply先のlockfileをdotfilesリポジトリへ戻す。
 # 同期はbest-effortとし、install自体の終了statusは変更しない。
 _sync_dotfile_lock() {
   local source_file="$1"
@@ -24,19 +24,27 @@ _sync_dotfile_lock() {
   if ! cmp -s "$source_file" "$destination_file"; then
     local temporary_file
     temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
-    # mktemp と APM の lockfile は 0600 で作られることがある。chezmoi source
+    # mktemp と APM の lockfile は 0600 で作られることがある。dotfiles リポジトリ側
     # では通常ファイルとして管理し、apply のたびに mode 差分が出ないよう正規化する。
     if ! cp -p "$source_file" "$temporary_file" || ! chmod 0644 "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
       rm -f "$temporary_file"
       return 0
     fi
-    echo "Updated chezmoi source lockfile: $destination_file"
+    echo "Updated dotfiles repo lockfile: $destination_file"
   fi
+}
+
+# DOTFILES_DIR（既定 ~/dotfiles）が実際の checkout かどうかを mise.toml の有無で判定する。
+# 別の場所に clone している場合は DOTFILES_DIR を export しておくこと。
+_dotfiles_repo_dir() {
+  local dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+  [[ -f "$dir/mise.toml" ]] || return 1
+  print -r -- "$dir"
 }
 
 _sync_mise_dotfile_locks() {
   local source_dir
-  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  source_dir="$(_dotfiles_repo_dir)" || return 0
   local mise_config_dir="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}"
   local source_lock
   for source_lock in "$mise_config_dir"/mise*.lock(N); do
@@ -46,7 +54,7 @@ _sync_mise_dotfile_locks() {
 
 _sync_apm_dotfile_lock() {
   local source_dir
-  source_dir="$(chezmoi source-path 2>/dev/null)" || return 0
+  source_dir="$(_dotfiles_repo_dir)" || return 0
   _sync_dotfile_lock "$HOME/.apm/apm.lock.yaml" "$source_dir/apm/apm.lock.yaml"
 }
 

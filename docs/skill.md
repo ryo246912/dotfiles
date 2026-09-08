@@ -17,7 +17,7 @@
 設定を反映してから APM を実行します。
 
 ```bash
-chezmoi apply
+mise bootstrap dotfiles apply
 mise run apm:install
 ```
 
@@ -26,7 +26,7 @@ mise run apm:install
 インストール後は、エージェントを新しいセッションで起動してください。
 
 依存先は再現性のため `apm/apm.yml` で commit SHA に pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
+`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise run apm:install` を実行します。
 
 ## `crit` / `crit-cli`
 

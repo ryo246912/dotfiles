@@ -14,7 +14,7 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 | 対象                                | 管理ツール | ソース                                    | 配布先                                           |
 | ----------------------------------- | ---------- | ----------------------------------------- | ------------------------------------------------ |
 | このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`               | リポジトリ直下の `CLAUDE.md`（gitignore）        |
-| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/` | `~/.claude/` 等（chezmoi + `rulesync generate`） |
+| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/` | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`） |
 | **外部スキル（グローバル）**        | **APM**    | `apm/apm.yml` の `dependencies.apm`   | `~/.claude/skills/` 等（`apm install -g`）       |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
@@ -92,7 +92,7 @@ dependencies:
 
 ### 外部スキルを追加・更新する（依存として取り込む）
 
-`apm/apm.yml` の `dependencies.apm` を編集し（SHA pin 付き）、`chezmoi apply` → `mise run apm:install`
+`apm/apm.yml` の `dependencies.apm` を編集し（SHA pin 付き）、`mise bootstrap dotfiles apply` → `mise run apm:install`
 を実行します。
 
 ```bash
@@ -106,11 +106,11 @@ apm install -g
 `mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Codeにはcommand、
 Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech-stack`、Codexでは新しいセッションから
 `$tsumiki-init-tech-stack` のように呼び出します。Codexのcustom prompt（`/prompts:...`）には依存しません。
-`chezmoi apply` の post hook は `~/.apm/apm.yml` と `~/.apm/apm.lock.yaml` の内容を前回の成功時と比較し、
-変更がない場合はこの install・command 同期・command生成をスキップします。手動の `mise run apm:install` は
-この判定に関係なく常に実行できます。
+`mise bootstrap` の `[bootstrap.hooks.final]` は `~/.apm/apm.yml` と `~/.apm/apm.lock.yaml` の内容を
+前回の成功時と比較し、変更がない場合はこの install・command 同期・command生成をスキップします。
+手動の `mise run apm:install` はこの判定に関係なく常に実行できます。
 同期時は source directory 側の `apm/apm.lock.yaml` を `0644` に正規化するため、APM が user scope の
-lockfile を `0600` で生成しても、その後の `chezmoi apply` で mode 差分は表示されません。
+lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles apply` で mode 差分は表示されません。
 
 > [!NOTE]
 > 導入した skill の `description` は各エージェントの skill 索引に**常時ロード**されます。

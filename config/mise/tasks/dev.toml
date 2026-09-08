@@ -10,7 +10,9 @@ set -eu
 source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
 global_dir="$HOME/.config/rulesync"
 
-if [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
+if [ ! -f "$source_dir/mise.toml" ]; then
+  echo "warning: $source_dir does not look like the dotfiles repo checkout (no mise.toml); set DOTFILES_DIR if it's cloned elsewhere. Skipping project generation." >&2
+elif [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
   (cd "$source_dir" && rulesync generate)
 else
   echo "warning: project rulesync source not found under $source_dir; skipping project generation" >&2
@@ -56,6 +58,11 @@ source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
 source_lock="$HOME/.apm/apm.lock.yaml"
 destination_dir="$source_dir/apm"
 destination_lock="$destination_dir/apm.lock.yaml"
+
+if [ ! -f "$source_dir/mise.toml" ]; then
+  echo "error: $source_dir does not look like the dotfiles repo checkout (no mise.toml); set DOTFILES_DIR if it's cloned elsewhere." >&2
+  exit 1
+fi
 
 if [ ! -f "$source_lock" ]; then
   echo "APM lockfile not found: $source_lock" >&2
