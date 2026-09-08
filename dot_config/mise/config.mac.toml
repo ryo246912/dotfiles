@@ -1,3 +1,9 @@
+[env]
+# macOSのlibpqは、OpenSSLの既定trust storeをKeychainへ必ずしも橋渡ししない。
+# CockroachDBへのverify-full接続がpsql、AgentsView、fnoxの子processで動くよう、
+# system CA bundleを明示する。
+PGSSLROOTCERT = "/etc/ssl/cert.pem"
+
 [tools]
 "cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
 "github:hzqtc/taproom"                        = { version = "0.6.2", bin = "taproom" }
