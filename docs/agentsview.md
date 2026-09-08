@@ -563,19 +563,15 @@ Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそ�
 
 AgentsView 0.38.1の`pg serve`は、portを省略すると`8080`を使うが、hostは`127.0.0.1`へbindする。Cloud Runが注入する`PORT=8080`だけではbind addressは変わらず、Cloud Runのcontainer proxyはloopback listenerへ到達できない。この場合、application processが動いていても「PORT=8080でlistenしなかった」と判定される。
 
-`cloudrun-service.yaml`ではentrypointへ`--host 0.0.0.0 --port 8080`を渡す。最新変更を適用して同じimageを再deployする。
+`cloudrun-service.yaml`ではentrypointへ`--host 0.0.0.0 --port 8080`を渡す。最新変更を適用し、成功済みbuildと同じimageを明示して再deployする。
 
 ```sh
 chezmoi apply ~/.config/agentsview
-AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
-```
-
-既にbuildが成功している場合、imageの再buildは不要である。deploy前と同じ`AGENTSVIEW_IMAGE`を明示する必要がある場合は、成功したbuild結果のURIを設定してから実行する。
-
-```sh
 export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsview:0.38.1-bac4d72dc567'
 AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
+
+`AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。今回は成功済みの`0.38.1-bac4d72dc567`を再利用するので、imageの再buildは不要である。
 
 再deploy後、render結果とrevision logを確認する。
 
