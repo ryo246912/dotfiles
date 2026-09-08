@@ -1193,8 +1193,9 @@ set -euo pipefail
 
 : "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
 
-mode="${1:?deploy／verify／diff などのmodeを指定してください}"
-shift
+# miseの`bash -c` runnerは、taskへ渡した最初の引数をshellの`$0`へ置く。
+# `$1`から読むと`mise run ... -- build`でmodeが空になる。
+mode="${0:?deploy／verify／diff などのmodeを指定してください}"
 
 # region と service 名は固定。clrnd.yml、manifestの metadata.name、Terraformの
 # local.region ／ local.cloud_run_service_name と一致している必要があり、ここだけ

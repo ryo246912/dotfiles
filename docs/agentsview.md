@@ -513,7 +513,31 @@ mise run agentsview:cockroach:configure-roles
 
 ##### 作業6. Artifact Registryへ最初のimageをbuildする
 
-Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimageをbuildする。
+Cloud Buildのdefault build service accountと、Artifact Registry repositoryに付与されたwriter権限をCLIで確認する。**Cloud Build > Settings**はbuild service accountが別serviceの権限を持つかを確認する画面ではなく、repository-level IAMは表示されない。Terraform applyのlogにある`google_artifact_registry_repository_iam_member.cloud_build_writer`の`Refresh complete`／`No changes`は、候補となる両方のservice accountへのwriter bindingが既にstateと実環境に存在することを示す。
+
+```sh
+BUILD_SA=$(gcloud builds get-default-service-account \
+  --project="$GCP_PROJECT_ID")
+printf 'Cloud Build default service account: %s\n' "$BUILD_SA"
+
+gcloud artifacts repositories get-iam-policy agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --location=us-west2 \
+  --flatten='bindings[].members' \
+  --filter="bindings.role:roles/artifactregistry.writer AND bindings.members:serviceAccount:${BUILD_SA}" \
+  --format='table(bindings.role,bindings.members)'
+```
+
+結果にdefault service accountと`roles/artifactregistry.writer`が1行表示されれば付与済みである。Consoleで見る場合は**Artifact Registry > Repositories > agentsview > Permissions**を開く。何も表示されない場合だけ、最新Terraformを通常の`plan`／`apply`で反映し直す。日常運用で長い`-target` applyを繰り返さない。
+
+`terraform.tfvars`に廃止済みの`agentsview_image`が残っている場合は、build前に削除する。これはwriter権限とは無関係だが、Terraformのundeclared variable warningを解消する。
+
+```sh
+sed -i.bak '/^[[:space:]]*agentsview_image[[:space:]]*=/d' terraform.tfvars
+rm -f terraform.tfvars.bak
+```
+
+次に、現在のdirectoryにかかわらずmise taskでimageをbuildする。task wrapperは`bash -c`の最初のtask引数が`$0`に渡される仕様に対応しているため、`build` modeを正しく共通taskへ渡す。
 
 ```sh
 AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
