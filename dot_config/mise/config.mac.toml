@@ -1,7 +1,7 @@
 [tools]
 "cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
 "github:hzqtc/taproom"                        = { version = "0.6.2", bin = "taproom" }
-"http:terminal-browser"                       = { version = "0.6.0", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
+"http:terminal-browser"                       = { version = "0.7.5", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
 # silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も

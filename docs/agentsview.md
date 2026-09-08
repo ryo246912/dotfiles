@@ -2,9 +2,1350 @@
 
 複数端末のセッション情報を Fly.io 上の PostgreSQL に集約し、read-only Web UI で参照する構成。
 
-## 構成
+> [!IMPORTANT]
+> 後半のFly構成はmigration元とrollback用に残している。移行先は「Atuin app／DBはFlyのまま、AgentsView appはCloud Run、AgentsView DBはCockroachDB」である。新規構築は以下の[Cloud Run／CockroachDBへの移行手順](#cloud-runcockroachdbへの移行手順)を上から順に実行する。
 
+## Cloud Run／CockroachDBへの移行手順
+
+対象構成:
+
+- Atuin app／PostgreSQL: Fly.ioに残す
+- AgentsView app: Google Cloud Runへ移す
+- AgentsView DB: Fly PostgreSQLの`agentsview` schemaからCockroachDB Cloud Basicへ移す
+
+この手順は、旧Fly DBを保持したまま検証し、最後にAgentsViewの書き込み先とviewerを切り替える。Atuinのdatabase／role／appには触れない。
+
+### ゼロから構築する場合の全体手順
+
+この節から順番に実行すれば、空のGoogle Cloud projectとCockroachDB Cloud accountから、検証用Cloud Runを起動できる。**Fly側の削除は最後まで行わない。** コマンドはrepository rootから開始し、`<...>`は自分の値へ置き換える。
+
+#### A. 完了条件と作業順序
+
+以下の**作業1〜10を番号順に実行する**。各作業末尾の「完了確認」が通るまで次へ進まない。Google Cloud／CockroachDBのconsole表記は変更されることがあるため、表記が異なる場合は併記した公式documentへのlinkから同じ機能を開く。
+
+##### 作業1. account、CLI、課金alertを準備する
+
+###### Google CloudのUI操作
+
+1. [Google Cloud Console](https://console.cloud.google.com/)へloginする。
+2. 上部のproject selectorを開き、**NEW PROJECT／新しいプロジェクト**を押す。
+3. Project nameに`agentsview`等を入力し、Organization／Locationを選択して**CREATE**を押す。
+4. 作成したprojectを選び、**Billing > Link a billing account**からbilling accountを紐付ける。無料枠を使う場合もbillingの有効化は必要。
+5. **Billing > Budgets & alerts > CREATE BUDGET**を開き、scopeをこのprojectだけに限定する。
+6. 月額予算を自分が許容する最小額にし、50%／90%／100%通知を有効化する。budgetは課金を自動停止しないため、通知先emailも確認する。
+
+###### CockroachDB CloudのUI操作
+
+1. [CockroachDB Cloud Console](https://cockroachlabs.cloud/)へloginし、organizationを作成または選択する。
+2. 左navigationの**Access Management**を開き、**Service Accounts** tabを選ぶ。
+3. **Create**を押し、Terraform専用service accountのname／descriptionを入力して作成する。作成直後は`Organization Member`だけでcluster作成権限がない。
+4. 作成したservice accountの**Actions > Edit Roles**を開き、organization scopeで**Cluster Creator**を付与する。既存clusterも含めて管理させる必要がある場合だけ**Cluster Admin**を使う。
+5. service accountの詳細を開き、**Create API Key**からTerraform専用keyを作成する。
+6. 表示された`CCDB1_...`形式の**Secret key**全体をcopyする。画面を閉じると再表示できないため、直ちにBitwarden Secrets Managerへ`COCKROACH_API_KEY`として保存する。API keyのnameやUUIDを保存しない。
+
+###### CLI準備
+
+repository rootでtoolをinstallし、versionを確認する。
+
+```sh
+mise trust
+mise install
+
+git --version
+mise --version
+fnox --version
+flyctl version
+gcloud version
+fnox exec -- terraform version
+psql --version
+pg_dump --version
+docker version
 ```
+
+Google CloudとFly.ioへloginする。
+
+```sh
+gcloud auth login
+gcloud auth application-default login
+flyctl auth login
+```
+
+**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記commandがすべてversionを返す。
+
+##### 作業2. 固定値、password、ローカルsecretを準備する
+
+Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDBのcluster作成画面で選択可能なregion名を確認してから値を決める。
+
+###### 選択するregion
+
+**日本から個人利用する現在の構成では、CockroachDBとCloud Runを両方`us-west2`にする。** CockroachDB Consoleで表示されるCaliforniaは`us-west2`、Google Cloudのregion表記ではLos Angelesである。利用者から北米西海岸までの経路が、Iowa／South Carolinaより短くなりやすく、Cloud RunとDBを同一region名に揃えられるためである。[Cloud Runの公式region一覧](https://cloud.google.com/run/docs/locations)でも`us-west2`、`us-central1`、`us-east1`、`asia-south1`を利用できる。
+
+候補の優先順位は次のとおり。
+
+| 優先 | CockroachDBの表示 | region ID     | Cloud Runも置く場所 | この構成での判断                                                        |
+| ---: | ----------------- | ------------- | ------------------- | ----------------------------------------------------------------------- |
+|    1 | California        | `us-west2`    | `us-west2`          | **採用**。日本からの対話的なviewer利用と、app／DB間の近さを両立しやすい |
+|    2 | Iowa              | `us-central1` | `us-central1`       | 西海岸が利用できない場合。`us-centralq`ではなく`us-central1`            |
+|    3 | Mumbai            | `asia-south1` | `asia-south1`       | 主な利用者がインド／南アジアにいる場合だけ優先                          |
+|    4 | South Carolina    | `us-east1`    | `us-east1`          | 主な利用者が北米東海岸にいる場合向け。日本中心では優先しない            |
+
+重要なのは、Cloud Runだけ東京など別regionへ置かず、**選んだCockroachDB regionとCloud Runのregion IDを一致させること**である。CockroachDBはGoogle Cloudとは別serviceなので同一region名でも無料通信を保証するものではないが、異なる大陸／米国内regionへ分離するよりappとDB間のlatencyを抑えやすい。Atuin app／DBはFly.io内に残るため、この選択の影響を受けない。
+
+本番決定前に4候補を作り比べる必要はない。まず`us-west2`でrehearsalし、各PCからCloud Runへのp95、Cloud Run logのDB query時間、CockroachDB ConsoleのSQL latencyを記録する。許容できない場合だけ`us-central1`を短期間PoCし、低い方へ作り直す。CockroachDB cluster作成後のregion変更を前提にせず、Fly schemaを削除する前に決定する。
+
+```sh
+export GCP_PROJECT_ID='<google-cloud-project-id>'
+export GCP_REGION='us-west2'
+export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
+export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
+export TF_VAR_github_repository='ryo246912/dotfiles'
+
+gcloud config set project "$GCP_PROJECT_ID"
+gcloud config set run/region "$GCP_REGION"
+gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectId)'
+```
+
+URLへ安全に埋め込める16進passwordとAgentsView tokenを生成する。各出力をそれぞれ別のBitwarden secretへ保存し、terminalのscrollbackを消す。
+
+```sh
+openssl rand -hex 32 # TF_VAR_cockroach_owner_password
+openssl rand -hex 32 # TF_VAR_cockroach_push_password
+openssl rand -hex 32 # TF_VAR_cockroach_read_password
+openssl rand -hex 32 # AGENTSVIEW_AUTH_TOKEN
+openssl rand -hex 32 # AGENTSVIEW_CURSOR_SECRET
+```
+
+Bitwarden Secrets ManagerのUIでprojectを開き、**New secret**から次の5件を作る。CockroachDB URL 3件はcluster作成後の作業4で追加する。
+
+```text
+TF_VAR_cockroach_owner_password
+TF_VAR_cockroach_push_password
+TF_VAR_cockroach_read_password
+AGENTSVIEW_AUTH_TOKEN
+AGENTSVIEW_CURSOR_SECRET
+```
+
+`dot_config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
+
+**完了確認:** 次は値を表示せず、すべて`set`を返す。
+
+```sh
+fnox exec -- sh -c '
+  for name in AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
+    eval "test -n \"\${$name:-}\"" && echo "$name=set" || exit 1
+  done
+'
+```
+
+##### 作業3. Terraform state bucketを手動作成する
+
+state bucketはそのstate自身で作成できないため、operatorが一度だけ作る。
+
+```sh
+gcloud storage buckets create "gs://${TF_STATE_BUCKET}" \
+  --project="$GCP_PROJECT_ID" \
+  --location="$GCP_REGION" \
+  --uniform-bucket-level-access \
+  --public-access-prevention
+
+gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
+gcloud storage buckets describe "gs://${TF_STATE_BUCKET}" \
+  --format='yaml(name,location,uniformBucketLevelAccess,publicAccessPrevention,versioning_enabled)'
+```
+
+Google Cloud Consoleでは**Cloud Storage > Buckets > bucket名**を開き、**Protection**でObject versioningが有効、**Permissions**でPublic accessがPreventedになっていることを確認する。state fileをlocalやGitへcommitしない。
+
+**完了確認:** `gcloud storage buckets describe`が対象bucketを返し、versioningとpublic access preventionが有効になっている。
+
+##### 作業4. TerraformでCockroachDBとGoogle Cloudの土台を作る
+
+Terraform変数fileを作る。このfileにpasswordやAPI keyを記載しない。
+
+```sh
+cp terraform/agentsview/terraform.tfvars.example terraform/agentsview/terraform.tfvars
+sed -i.bak \
+  -e "s/replace-with-project-id/${GCP_PROJECT_ID}/g" \
+  terraform/agentsview/terraform.tfvars
+rm -f terraform/agentsview/terraform.tfvars.bak
+```
+
+regionは入力変数ではなくTerraformの`local.region = "us-west2"`に固定している。以前作成した`terraform.tfvars`に`gcp_region = "us-central1"`または`cockroach_region = "us-central1"`が残っている場合は、その2行を削除する。planの`cockroach_cluster.agentsview.regions[0].name`とArtifact Registryが`us-west2`になることを確認する。Cloud RunのregionはTerraformではなく`dot_config/agentsview/clrnd.yml`の`region: us-west2`が決める。
+
+既存の`terraform.tfvars`を引き継ぐ場合は、初回plan／applyの前に次を実行する。廃止したregion変数に加えて、clrnd manifestへ移した`agentsview_image`と2つのsecret version変数も削除する（宣言のない変数が残っているとplanごとにwarningになる）。
+
+```sh
+sed -i.bak \
+  -e '/^[[:space:]]*gcp_region[[:space:]]*=/d' \
+  -e '/^[[:space:]]*cockroach_region[[:space:]]*=/d' \
+  -e '/^[[:space:]]*agentsview_image[[:space:]]*=/d' \
+  -e '/^[[:space:]]*pg_url_secret_version[[:space:]]*=/d' \
+  -e '/^[[:space:]]*config_secret_version[[:space:]]*=/d' \
+  terraform/agentsview/terraform.tfvars
+rm -f terraform/agentsview/terraform.tfvars.bak
+```
+
+CockroachDB API keyと3つのpasswordは、現在のshellへ手動`export`せずfnoxからTerraform processへ渡す。Bitwarden Secrets Managerに次の名前で登録し、`dot_config/fnox/config.toml`のmappingと一致させる。
+
+```text
+COCKROACH_API_KEY
+TF_VAR_cockroach_owner_password
+TF_VAR_cockroach_push_password
+TF_VAR_cockroach_read_password
+```
+
+`fnox list`の結果に上の4件がない場合、原因はsecretの解決方法ではなく、**現在の`~/.config/fnox/config.toml`に新しいmappingが未反映**である。`fnox list`はBitwardenに値がなくてもmapping自体は表示するため、まずchezmoi sourceと適用先を確認する。
+
+```sh
+chezmoi source-path ~/.config/fnox/config.toml
+chezmoi diff ~/.config/fnox/config.toml
+chezmoi apply ~/.config/fnox/config.toml
+fnox list | rg 'COCKROACH_API_KEY|TF_VAR_cockroach_'
+```
+
+適用後は`fnox list`に次の4行が表示される必要がある。表示されなければ、`chezmoi source-path`がこのrepositoryの`dot_config/fnox/config.toml`を指しているか、別の`FNOX_CONFIG_FILE`を設定していないかを確認する。
+
+```text
+COCKROACH_API_KEY
+TF_VAR_cockroach_owner_password
+TF_VAR_cockroach_push_password
+TF_VAR_cockroach_read_password
+```
+
+次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
+
+| Secret name                       | Value                                                      |
+| --------------------------------- | ---------------------------------------------------------- |
+| `COCKROACH_API_KEY`               | Terraform用service accountで発行した`CCDB1_...` Secret key |
+| `TF_VAR_cockroach_owner_password` | 作業2で生成したowner用16進password                         |
+| `TF_VAR_cockroach_push_password`  | 作業2で生成したpush用16進password                          |
+| `TF_VAR_cockroach_read_password`  | 作業2で生成したread用16進password                          |
+
+Bitwarden Secrets Managerの**Machine accounts**で、`BWS_ACCESS_TOKEN`を発行したmachine accountを開き、上記projectへのread accessがあることも確認する。別projectへsecretを作った場合や、machine accountにproject accessがない場合、mappingが表示されても`secret ... not found`になる。
+
+4件を個別に取得できるか確認する。値をterminalへ表示しない。
+
+```sh
+for name in \
+  COCKROACH_API_KEY \
+  TF_VAR_cockroach_owner_password \
+  TF_VAR_cockroach_push_password \
+  TF_VAR_cockroach_read_password; do
+  test -n "$(fnox get "$name")" || { echo "$name=missing" >&2; exit 1; }
+  echo "$name=set"
+done
+```
+
+ここまで成功したら、通常どおり`fnox exec -- terraform ...`を使う。`AGENTSVIEW_COCKROACH_*_PG_URL`など後の作業で作成するsecretについてwarningが出ても、この4変数が`set`なら初回Terraform planに必要な値は渡る。warningをなくしたい場合は、後続の作業5でURL secretを作成する。
+
+###### Terraformが`Enter a value`を表示する場合
+
+`fnox get`が成功してもTerraformが`var.cockroach_owner_password`の入力を求める場合、`TF_VAR_*`が`fnox exec`の子processへ環境変数として注入されていない。passwordをpromptへ入力せず`Ctrl-C`で中止し、次を実行する。
+
+```sh
+fnox --version
+fnox exec -- sh -c '
+  for name in \
+    TF_VAR_cockroach_owner_password \
+    TF_VAR_cockroach_push_password \
+    TF_VAR_cockroach_read_password; do
+    printenv "$name" >/dev/null || { echo "$name=not-exported" >&2; exit 1; }
+    test -n "$(printenv "$name")" || { echo "$name=empty" >&2; exit 1; }
+    echo "$name=exported"
+  done
+'
+```
+
+3件すべてが`exported`にならない場合は、次を順に実行する。repositoryがpinするfnoxをinstallし直し、chezmoi適用先の各mappingが`env = "exec"`になっていることを確認する。
+
+```sh
+mise install 'github:jdx/fnox@1.34.1'
+chezmoi apply ~/.config/fnox/config.toml
+rg 'TF_VAR_cockroach_.*env = "exec"' ~/.config/fnox/config.toml
+fnox exec -- sh -c 'test -n "$TF_VAR_cockroach_owner_password"'
+```
+
+最後のcommandが成功してから、対話入力を無効化したplanを再実行する。`-input=false`を付けることで、secret注入に失敗した場合はpromptでpasswordを手入力させず明示的なerrorにする。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false
+```
+
+3件が`exported`なのにTerraformが入力を求める場合は、別directoryのTerraform rootを実行していないか確認する。repository rootから上記`-chdir=terraform/agentsview`付きcommandをそのまま使い、`type -a terraform fnox`と`fnox config-files`の結果を記録して調査する。
+
+###### `Error acquiring the state lock`が出た場合
+
+`googleapi: Error 412: ... conditionNotMet`は認証失敗やCockroachDB secret不足ではない。GCS backendの`agentsview/default.tflock`が既に存在し、別のTerraform processが同じstateを操作中、または以前中断したprocessのlockが残っていることを示す。提示されたlockは`Who: ryo.@Mac`、`Created: 2026-09-05 08:50:00 UTC`なので、同じMacで先に実行したplanが異常終了または中断され、lockだけが残った可能性が高い。`gcloud auth application-default login`は正常に完了しており、このlock errorの原因ではない。
+
+まず同じstateを操作しているprocessがないことを確認する。別terminal、IDE task、CIのTerraform applyが実行中なら、force unlockせず完了を待つ。
+
+```sh
+ps aux | rg '[t]erraform.*agentsview' || true
+gh run list --limit 10
+```
+
+実行中processがなく、Lock Infoの`Who`と`Created`が自分の中断した実行に一致すると確認できた場合だけ、表示されたIDでlockを解除する。提示された例のIDは`1788598201425938`だが、実行時は必ず最新errorに表示されたIDを使う。確認promptには内容を確認して`yes`と答える。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview force-unlock 1788598201425938
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false
+```
+
+別processが実行中のままforce unlockすると、同じstateへ同時書き込みして破損させる可能性がある。GCS上の`.tflock`を手動削除せず、通常運用で`-lock=false`も使用しない。解除後も直ちに同じlockが作られる場合は、別processが動いているため停止して調査する。
+
+初期化と静的確認を行う。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview init \
+  -backend-config="bucket=${TF_STATE_BUCKET}" \
+  -backend-config='prefix=agentsview'
+fnox exec -- terraform -chdir=terraform/agentsview fmt -check -recursive
+fnox exec -- terraform -chdir=terraform/agentsview validate
+```
+
+初回だけ、`google_cloud_run_v2_service_iam_member.public`**以外のすべて**をtarget applyする。invoker bindingだけは、clrndがCloud Run Serviceを作った後（作業8）でないと「service not found」で失敗するため外す。
+
+この一覧はこのrunbookで唯一のbootstrap target一覧で、2.3節と復旧手順もこれを参照する。特に次は作業6・作業8より前に必要なので落とさない。
+
+- `google_artifact_registry_repository_iam_member.cloud_build_writer`: 作業6の`gcloud builds submit`がbuildしたimageをpushできない。
+- `google_secret_manager_secret_iam_member.runtime_*`: Cloud Runはrevision作成時にruntime service accountがsecretを読めることを検証する。
+- `google_artifact_registry_repository_iam_member.runtime_reader`: revision起動時のimage pullに必要。
+
+planを読み、別projectや既存resourceを変更しないことを確認して`yes`を入力する。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview apply \
+  -target=google_project_service.required \
+  -target=google_artifact_registry_repository.agentsview \
+  -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
+  -target=google_artifact_registry_repository_iam_member.deploy_writer \
+  -target=google_artifact_registry_repository_iam_member.runtime_reader \
+  -target=google_secret_manager_secret.pg_url \
+  -target=google_secret_manager_secret.config \
+  -target=google_secret_manager_secret_iam_member.runtime_pg_url \
+  -target=google_secret_manager_secret_iam_member.runtime_config \
+  -target=google_secret_manager_secret_iam_member.deploy_pg_url_version_adder \
+  -target=google_secret_manager_secret_iam_member.deploy_config_version_adder \
+  -target=google_service_account.runtime \
+  -target=google_service_account.deploy \
+  -target=google_project_iam_member.deploy \
+  -target=google_service_account_iam_member.deploy_uses_runtime \
+  -target=google_iam_workload_identity_pool.github \
+  -target=google_iam_workload_identity_pool_provider.github \
+  -target=google_service_account_iam_member.github_deploy \
+  -target=cockroach_cluster.agentsview \
+  -target=cockroach_database.agentsview \
+  -target=cockroach_sql_user.owner \
+  -target=cockroach_sql_user.push \
+  -target=cockroach_sql_user.read
+```
+
+CockroachDB Consoleの**Clusters**で`agentsview` clusterが`Basic`としてReadyになり、**SQL Users**にowner／push／readが表示されることを確認する。Google Cloud ConsoleではArtifact Registry repository、2つのSecret Manager secret container、service accountが作成されていることを確認する。
+
+**完了確認:** 次がID、database名、SQL hostを返す。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_cluster_id
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_database
+fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
+```
+
+###### 途中までapplyされた場合の復旧
+
+`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。
+
+まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。imageはこの段階でbuildしない。Cloud RunはTerraformの管理外になったため、applyはimageの有無に依存しない。buildは作業6でまとめて行う。
+
+CockroachDBの`unauthorized`はGCP認証とは無関係である。`COCKROACH_API_KEY`にはservice accountのAPI key作成時に一度だけ表示される`CCDB1_...`形式の**Secret key全体**を登録する。API keyの表示名やUUIDではない。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
+
+```sh
+fnox exec -- sh -c '
+  test -n "${COCKROACH_API_KEY:-}" || { echo "COCKROACH_API_KEY=missing" >&2; exit 1; }
+  status=$(curl -sS -o /dev/null -w "%{http_code}" \
+    -H "Authorization: Bearer $COCKROACH_API_KEY" \
+    https://cockroachlabs.cloud/api/v1/clusters)
+  test "$status" = 200 || { echo "CockroachDB API HTTP $status" >&2; exit 1; }
+  echo "CockroachDB API authentication=ok (authorization not checked)"
+'
+```
+
+このGETが200でも、認証だけが成功し、cluster作成の認可が不足している場合がある。今回のようにcreateだけが`unauthorized`になる場合はkeyを闇雲に再発行せず、CockroachDB Cloud Consoleの**Access Management > Service Accounts**で、そのkeyを所有するservice accountにorganization scopeの**Cluster Creator**または**Cluster Admin**が付いているか確認する。`Organization Member`だけでは不足する。roleを付与した後は同じ`CCDB1_...` keyを継続利用できる。401の場合、またはSecret keyを紛失した場合だけ**Service Account Details > Create API Key**で再発行し、Bitwardenの`COCKROACH_API_KEY`を更新する。
+
+###### Cloud Run serviceがtaintedのまま残っている場合
+
+以前のTerraform構成でCloud Run Serviceを作った環境では、失敗したserviceがstate上でtaintedとして残っていることがある。planに次が出るのがその状態である。
+
+```text
+# google_cloud_run_v2_service.agentsview is tainted, so must be replaced
+```
+
+現在のコードはCloud Run Serviceを管理しないため、この状態のままapplyすると「削除」計画になり、旧stateの`deletion_protection = true`によって次のerrorで止まる。
+
+```text
+Error: cannot destroy service without setting deletion_protection=false and running `terraform apply`
+```
+
+**taintを解除してTerraformで作り直すのではなく、2.0.4の手順でstateからownershipを外す。** 実serviceはGoogle Cloud上に残り、以降はclrndが所有する。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_service.agentsview || true
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service.agentsview
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public
+```
+
+CockroachDB clusterはpersistent dataを持つため`delete_protection = true`を維持する。
+
+state整理のあとは、**この段階で通常applyを実行しない。** Cloud Run Serviceはまだclrndが作っていないため、通常applyに含まれる`google_cloud_run_v2_service_iam_member.public`が「service not found」で失敗する。作業4の`-target=`付きapplyをそのまま再実行して、失敗したCockroachDB clusterと土台resourceだけを収束させる。
+
+作業4と同じ`-target=`一覧をそのまま使う（Cloud Runのinvoker bindingだけを除いた全resource）。
+
+失敗前に作った`tfplan`は再利用しない。通常のplan／applyは作業8で、clrndがserviceを作った後に実行する。そこで初めてCloud Run関連の変更が`google_cloud_run_v2_service_iam_member.public`の作成1件だけになる。`us-central1`のimageで作られた失敗revisionは、正しい`us-west2` imageでclrnd deployすれば置き換わる。
+
+##### 作業5. CockroachDB接続URL、schema、最小権限を作る
+
+Terraform outputでhostとdatabaseを確認する。passwordはfnoxの子processだけへ渡すため、現在のshellへ`export`しない。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview output -raw cockroach_sql_host
+fnox exec -- terraform -chdir=terraform/agentsview output -raw cockroach_database
+```
+
+Bitwarden Secrets ManagerのUIで、作業2に保存した各passwordと上記outputを使い、次のtemplateから3本のURLを作成する。16進passwordなので追加のURL encodeは不要である。
+
+```text
+postgresql://agentsview_owner:<owner password>@<SQL host>:26257/<database>?sslmode=verify-full
+postgresql://agentsview_push:<push password>@<SQL host>:26257/<database>?sslmode=verify-full
+postgresql://agentsview_read:<read password>@<SQL host>:26257/<database>?sslmode=verify-full
+```
+
+3本をBitwarden Secrets Managerへ同名で登録する。CockroachDB Consoleの**Connect**画面が別port、database、CA指定を案内した場合は、手作業で組み立てた値よりConsoleの接続文字列を優先し、usernameとpasswordだけ各role用に差し替える。
+
+ここでいうprojectはGoogle Cloud project、CockroachDB project、Bitwarden projectではない。**このPCでAgentsViewがlocal sessionをworkspace単位に分類した既存のAgentsView project名**であり、任意の新しい名前を入力するものではない。`small-project`は説明用placeholderなので、そのまま指定しない。
+
+まずlocal AgentsViewに存在するprojectをsession数の少ない順に表示する。
+
+```sh
+agentsview projects --format json |
+  jq -r 'sort_by(.session_count)[] | select(.name != "" and .session_count > 0) | [.session_count, .name] | @tsv'
+```
+
+出力の1列目はsession数、2列目が`--projects`へ渡すproject名である。最初はsession数が少なく、内容を確認できるprojectを1つ選ぶ。例えば実際の一覧に`dotfiles`があれば次のように設定する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='dotfiles'
+fnox exec -- sh -c '
+  AGENTSVIEW_PG_SCHEMA=agentsview \
+  AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_OWNER_PG_URL" \
+    agentsview pg push --no-vectors --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+'
+```
+
+`failed SASL auth: password authentication failed for user agentsview_owner`はproject名とは無関係で、project filterを処理する前のCockroachDB loginに失敗している。接続URLのusernameとdatabaseを確認し、まずAgentsViewを介さず認証だけを試す。
+
+```sh
+export PGSSLROOTCERT='/etc/ssl/cert.pem'
+test -r "$PGSSLROOTCERT"
+fnox exec -- sh -c '
+  psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "SELECT current_user, current_database();"
+'
+```
+
+`root certificate file "~/.postgresql/root.crt" does not exist`は、password認証へ到達する前にlibpqがCA bundleを見つけられていない状態である。`PGSSLROOTCERT=system`の後に`SSL error: certificate verify failed`へ変わる場合、使用中の`psql`がlinkするOpenSSLのdefault trust storeが空またはmacOS Keychainと連携していない。`system`を続けて使わず、上記のように実在するCA bundleを明示する。
+
+macOSでは最初に`/etc/ssl/cert.pem`を使う。存在しない場合はHomebrew OpenSSLのbundleを確認する。
+
+```sh
+export PGSSLROOTCERT="$(brew --prefix openssl@3)/etc/openssl@3/cert.pem"
+test -r "$PGSSLROOTCERT"
+```
+
+Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
+
+このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
+
+passwordを推測して試さず、次の手順でowner passwordをrotationする。
+
+1. `openssl rand -hex 32`で新しいowner passwordを作る。
+2. Bitwarden Secrets Managerの`TF_VAR_cockroach_owner_password`をその値へ更新する。
+3. 同じ値を使い、`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を`postgresql://agentsview_owner:<同じ値>@<SQL host>:26257/agentsview?sslmode=verify-full`として更新する。push／read passwordを混ぜない。
+4. TerraformでSQL userへ新passwordを反映する。保存planにはpassword自体は表示されない。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false \
+  -target=cockroach_sql_user.owner -out=owner-password.tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply owner-password.tfplan
+rm -f terraform/agentsview/owner-password.tfplan
+```
+
+5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
+
+CockroachDB Console等でpasswordを別途変更していない前提で、planが`No changes`なのにURLだけが28P01になる場合、URL secretだけが誤っている可能性が高い。`TF_VAR_cockroach_owner_password`と同じ値で`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を作り直し、Terraform applyは行わず`psql`を再試行する。Consoleで変更した履歴がある場合は、planの有無にかかわらず上記rotationを実施してTerraformをsource of truthへ戻す。
+
+続いてowner接続で最小権限を設定する。
+
+```sh
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
+GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+SQL
+```
+
+read userで書き込みができないことも確認する。2番目のcommandは失敗が正解である。
+
+```sh
+fnox exec -- sh -c '
+  psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "SELECT count(*) FROM agentsview.sessions;"
+  if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+    -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
+    echo "ERROR: read user can write" >&2
+    exit 1
+  else
+    echo "OK: read user is read-only"
+  fi
+'
+```
+
+**完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
+
+##### 作業6. Artifact Registryへ最初のimageをbuildする
+
+Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimageをbuildする。
+
+```sh
+AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
+gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
+  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+```
+
+tagは`<upstream version>-<commit>`（例: `0.38.1-e310d8af1f32`）になる。commitが変われば別tagになるため、別のcommitのimageで同じURIを上書きすることがない（同一commitでのrebuildは同じtagを作り直す）。build contextに未commitの変更がある場合はtagへ`-dirty`が付き、警告が出る。
+
+Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそのtagとdigestが表示されることを確認する。
+
+**完了確認:** 最後のcommandが`sha256:...`を返す。
+
+##### 作業7. Secret Managerへ最初のsecret versionを登録する
+
+Cloud Run URLはまだ存在しないため、初回configだけplaceholderを使う。URL確定後の作業8で必ず置き換える。
+
+```sh
+export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+fnox exec -- mise run agentsview:cloudrun:secrets
+```
+
+Google Cloud Consoleの**Security > Secret Manager**で両secretを開き、Enabledなversionが1つあることを確認する。値そのものを表示する必要はない。deploy時にscriptが最新のENABLED versionを引いてnumeric versionとしてrevisionへ焼き込むため、version番号を手で控える必要はない。
+
+**完了確認:** 両secretにEnabledなversionが1つある。
+
+```sh
+for secret in agentsview-pg-url agentsview-config-toml; do
+  gcloud secrets versions list "$secret" --project="$GCP_PROJECT_ID" \
+    --filter='state=ENABLED' --format='value(name)' | head -1
+done
+```
+
+##### 作業8. clrndでCloud Run serviceを作り、Terraformでinvoker IAMを付ける
+
+Cloud Run ServiceはTerraformではなくclrndが作る。まずmanifestとその参照先を検証する。`verify`はschemaをlocalで検証したうえで、runtime service account、secretとそのversion、Artifact Registry imageの実在をAPIで確認する。
+
+```sh
+mise run agentsview:cloudrun:verify
+mise run agentsview:cloudrun:diff     # 初回はすべてが追加として表示される
+mise run agentsview:cloudrun:deploy
+```
+
+image URIは作業6と同じ規則でcommitから組み立てられるため、`AGENTSVIEW_IMAGE`を手で設定する必要はない。digestなど別のURIをdeployする場合だけ明示する。
+
+`deploy`はdiffを表示して確認を求め、適用後はrevisionがReadyになるまで待つ。rollout失敗時はnon-zeroで終了するため、失敗に気づかず次へ進むことはない。
+
+clrndが作るserviceは**private**である。公開はTerraformのinvoker bindingで行う。serviceが存在した状態で通常applyを実行する。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview show tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
+```
+
+Cloud Run URLを取得し、placeholder configを実URLへ置き換えて新revisionを作る。revisionにはsecretのnumeric versionが焼き込まれているため、新versionを追加しただけでは切り替わらない。`deploy`が新しいversion番号でmanifestをrenderし、新revisionを作る（imageは変わらないので`AGENTSVIEW_SKIP_BUILD=1`でbuildを省く）。
+
+```sh
+export AGENTSVIEW_CLOUD_RUN_URL=$(gcloud run services describe ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --format='value(status.url)')
+fnox exec -- mise run agentsview:cloudrun:secrets
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+```
+
+Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
+
+**完了確認:** 次がHTTPS URLを返し、未認証APIが401を返す。
+
+```sh
+mise run agentsview:cloudrun:status
+curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions"
+```
+
+##### 作業9. 小規模データでmigration rehearsalとCloud Run検証を行う
+
+全PCの`agentsview pg push`、`pg watch`、cron／launchd／systemd timerを一時停止する。FlyのAtuinは別schemaなので停止しない。停止確認後だけ次を実行する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+```
+
+認証と画面を確認する。
+
+```sh
+curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions" # 401を期待
+fnox exec -- sh -c 'curl -fsS \
+  -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
+  "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/sessions" >/dev/null'
+```
+
+UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、resource typeをCloud Run Revision、service nameを`ryo-agentsview`に絞る。startup error、CockroachDB接続error、secret値、`token=`付きURLが記録されていないことを確認する。CockroachDB Consoleのcluster Metrics／Usageでstorage、RU、connection数を記録する。
+
+**完了確認:** migration taskの全table件数比較が一致し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
+
+##### 作業10. 本番cutoverし、観察後にFly側AgentsViewを削除する
+
+1. 全PCのpush／watch／timerを停止し、停止した端末一覧とUTC時刻を記録する。
+2. `flyctl scale count 0 -a ryo-agentsview`で旧viewerを停止する。Atuinと`psgl`は停止しない。
+3. 作業9と同じmigration commandを再実行して最終差分をcopyする。
+4. table count、主要session本文、最大更新時刻をFly／CockroachDBで比較する。
+5. 各PCの通常taskを`agentsview:cockroach:push`へ切り替え、小さいprojectから再開する。
+6. Cloud Runを再度smoke testする。失敗した場合は新DBへのpushを再開せずFlyへrollbackする。
+7. 旧Fly schemaとappを最低1〜2週間保持し、毎日Cloud Run error、CockroachDB RU／storage、backupを確認する。
+8. 観察期間後に最新backupとrestore rehearsalを行い、承認してからFlyの`agentsview` schemaとappだけを削除する。
+
+```sh
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:pg:remote-local:dump
+```
+
+削除直前にFly owner接続で件数を確認し、明示承認後だけ実行する。
+
+```sql
+SELECT count(*) FROM agentsview.sessions;
+DROP SCHEMA agentsview CASCADE;
+```
+
+```sh
+flyctl apps destroy ryo-agentsview
+```
+
+**完了確認:** Atuin syncがFly private PostgreSQLで継続し、全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功し、Flyから削除したのがAgentsView app／schemaだけである。
+
+### AgentsView appの実行基盤はどれを選ぶか
+
+調査日: **2026-09-02**
+
+#### 結論
+
+この用途では、**Cloud Runを継続するのが第一候補**。Fly.ioよりログの検索・絞り込み・保持が扱いやすく、現在の実装をそのまま利用できる。個人用AgentsViewは常時接続を必要とせず、閲覧時だけ起動できるため、Cloud Runのscale-to-zeroと相性がよい。
+
+「管理画面の分かりやすさ」を最優先してGoogle Cloud自体を避けたいなら、**Northflank Developer Sandboxを第二候補としてPoC**する。ただしDeveloper Sandboxは本番SLAを期待する基盤ではなく、無料枠やresource planの変更リスクがCloud Runより高い。単純なスペック表だけでNorthflankへ即移行せず、cold start、ログ保持期間、CockroachDBへのlatencyを実測してから決める。
+
+#### 比較表
+
+無料枠は予告なく変わる。契約・移行直前に各公式Pricingを再確認する。ここでいう「スペック」は無料quotaまたは選択可能resourceの上限であり、専有CPU性能を保証しない。
+
+|  順位 | 基盤                                                                                            | 無料computeの目安                                                                  | ログの使いやすさ                                                                            | AgentsViewとの相性                                                          | 判定                    |
+| ----: | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
+| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 2 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
+| **2** | [Northflank Developer Sandbox](https://northflank.com/pricing)                                  | Sandbox内のservice／CPU／memory quota。現行consoleで利用可能resource planを要確認  | app、build、deployment、logが一つのproject UIにまとまる                                     | OCI imageとsecretを登録しやすい。無料Sandboxの継続性・SLAは弱い             | **UI重視のPoC候補**     |
+| **3** | [Azure Container Apps Consumption](https://azure.microsoft.com/pricing/details/container-apps/) | Consumptionの月次無料grantは公式Pricingで移行直前に確認                            | Portal／CLIでsystem logとconsole logを分離してlive stream可能                               | scale-to-zeroとsecret対応。Cloud Runから移す利益が小さく、Azure構築が増える | 既にAzureを使う場合のみ |
+| **4** | [Koyeb Free](https://www.koyeb.com/pricing)                                                     | Free instanceは小さいCPU／memory枠。現行instance表を要確認                         | service画面でruntime logを見やすい                                                          | deployは簡単だが、CPU余裕とcold startはCloud Runより不利                    | hobby／検証用           |
+| **5** | [Render Free](https://render.com/docs/free)                                                     | Free web service。idle時のspin-downや月間利用条件あり                              | dashboardからdeploy／runtime logを確認しやすい                                              | 操作は簡単だが、cold startと無料resourceが弱い                              | hobby／fallback         |
+| **6** | Oracle Always Free VM                                                                           | VM quota内ならPaaSより大きいCPU／RAMを取れる場合がある                             | journald、rotation、検索、alertをすべて自分で構築                                           | raw specは強いが、今回避けたい運用・ログ監視負担が最大                      | **不採用**              |
+
+#### Cloud Runを選ぶ理由
+
+1. **ログ監視がFly.ioより明確**: containerのstdout／stderrはCloud Loggingへ自動送信される。Cloud Run service画面で直近ログ、Logs Explorerで期間・severity・revision・文字列を絞り込める。
+2. **CLIでも読める**: browserを開かず、次のcommandで直近ログと追従表示を使える。
+
+   ```sh
+   gcloud run services logs read ryo-agentsview \
+     --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --limit=100
+
+   gcloud beta run services logs tail ryo-agentsview \
+     --project="$GCP_PROJECT_ID" --region="$GCP_REGION"
+   ```
+
+   `logs tail`がcomponent不足を返す場合は、gcloudが案内するlog-streaming componentを追加する。CIでは追従表示を使わず、終了する`logs read`だけを使う。
+
+3. **無料ログ枠に余裕がある**: [Cloud Logging pricing](https://cloud.google.com/logging/pricing)は通常log storageについて最初の50 GiB／project／月を無料とし、30日までの保存をingestion料金に含める。個人用AgentsViewのapp logは通常この規模を大幅に下回る。ただしaudit／network logや同一projectの他serviceも合算して監視する。
+4. **必要時だけ高いresourceを使える**: 無料枠は固定の低spec VMを1か月占有する方式ではなく、request処理中のvCPU秒／GiB秒に充当される。現在の1 vCPU／512 MiBで不足したら、memoryを1 GiBへ上げて実測できる。ただし1 GiBは無料memory秒を2倍消費する。
+5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 2、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
+
+#### Cloud Runの弱点と対策
+
+| 弱点                                               | 対策                                                                                                      |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Google Cloud Consoleは機能が多く、最初は画面が複雑 | 日常操作を`gcloud run services logs read`、`logs tail`、`mise run agentsview:cloudrun:deploy`へ限定する   |
+| scale-to-zero後にcold startがある                  | 個人viewerでは許容する。常時`min=1`にはせず無料を維持する                                                 |
+| CockroachDBへの通信はexternal egress               | 同一または近いregionを選び、Cloud BillingとCockroachDB Consoleの転送量を監視する                          |
+| `--allow-unauthenticated`でURL自体は公開           | AgentsViewの`require_auth=true`と長いbearer tokenを維持し、未認証APIが401になることをdeployごとに確認する |
+| Logs Explorerのqueryに慣れが必要                   | service名とseverityを固定したsaved queryを作り、error alertだけ先に設定する                               |
+
+推奨saved query:
+
+```text
+resource.type="cloud_run_revision"
+resource.labels.service_name="ryo-agentsview"
+severity>=ERROR
+```
+
+最低限、次をalert／budget対象にする。
+
+- Cloud Run revisionの5xx response
+- container startup失敗とCockroachDB接続失敗
+- request latencyのp95
+- instance countとbillable instance time
+- Cloud Logging ingestion量
+- CockroachDB RU、storage、connection数
+
+#### Northflankへ変更する判断基準
+
+次をすべて満たす場合だけ、Cloud RunからNorthflankへ移す価値がある。
+
+1. 現行Developer SandboxでAgentsView containerに512 MiB以上を割り当てられる。
+2. idle／sleep後の起動時間がCloud Runより短い、または許容範囲である。
+3. runtime logの保持期間、検索、downloadが必要条件を満たす。
+4. CockroachDB regionへのp95 latencyとegress条件がCloud Run以下である。
+5. 無料枠超過時が自動課金、停止、削除のどれになるか確認した。
+6. `require_auth`、secret file mount相当、read-only DB URL、rollback用旧revisionを再現できる。
+
+NorthflankはUIの分かりやすさでは魅力があるが、今回の目的は「無料・ログ改善・十分なspec・安全な移行」を同時に満たすこと。**現状ではCloud Runのままログ操作をCLI／saved queryへ整備する方が、再移行より低リスク**である。
+
+### 実装済みファイル
+
+| ファイル                                                | 目的                                                                                      |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`                      | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context               |
+| `dot_config/agentsview/cloudrun-service.yaml`           | clrndが所有するCloud Run Service manifest                                                 |
+| `dot_config/agentsview/clrnd.yml`                       | clrndのregion／service／manifest設定                                                      |
+| `dot_config/agentsview/scripts/migrate-to-cockroach.sh` | Flyからdata-only dumpを取得し、CockroachDBへ冪等restoreして件数比較                       |
+| `dot_config/mise/tasks/agentsview.toml`                 | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task             |
+| `terraform/agentsview/*.tf`                             | CockroachDB、Artifact Registry、IAM、Secret Manager container、WIF、Cloud Run invoker IAM |
+
+### 0. 変更前の安全確認
+
+1. Atuin／AgentsViewへの書き込みはまだ止めない。
+2. Fly volumeとschema容量を記録する。
+
+```sh
+fly ssh console -a psgl -C 'df -h /data'
+flyctl proxy 15432:5432 -a psgl
+```
+
+別terminalで、ownerまたはread可能なroleを使用する。
+
+```sql
+SELECT pg_size_pretty(pg_database_size(current_database()));
+SELECT pg_size_pretty(COALESCE(sum(pg_total_relation_size(relid)), 0))
+FROM pg_statio_user_tables
+WHERE schemaname = 'agentsview';
+```
+
+3. Fly PostgreSQL全体とAgentsView schemaのbackupを別々に取得する。passwordをcommand historyへ直接書かない。
+
+```sh
+umask 077
+mkdir -p ~/backup
+fnox exec -- sh -c '
+  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc \
+    -f "$HOME/backup/fly-all-$(date -u +%Y%m%dT%H%M%SZ).dump"
+  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc -n agentsview \
+    -f "$HOME/backup/agentsview-$(date -u +%Y%m%dT%H%M%SZ).dump"
+'
+```
+
+4. backupを空の検証PostgreSQLへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
+
+### 1. CockroachDBの権限設計を決める
+
+Basic cluster、database、owner／push／read userは次節のTerraformで作成する。Terraformは10 GiB storage／5,000万RUのusage limitも設定し、意図しない有料利用を防ぐ。passwordはuserごとに異なるrandom valueを用意する。
+
+CockroachDB Terraform providerはdatabase内のschema／table権限を管理しないため、AgentsViewのschema bootstrap後に次だけSQL consoleまたはowner接続で実行する。CockroachDB versionによって`ALL TABLES IN SCHEMA`／default privilegeの対応が異なる場合は、Consoleが示す現行syntaxに合わせる。
+
+```sql
+GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push;
+```
+
+`terraform apply`後、`sslmode=verify-full`を含む3本のconnection URLをBitwarden Secrets Managerへ登録する。
+
+| secret名                            | user               | 用途                            |
+| ----------------------------------- | ------------------ | ------------------------------- |
+| `AGENTSVIEW_COCKROACH_OWNER_PG_URL` | `agentsview_owner` | schema bootstrap／migrationのみ |
+| `AGENTSVIEW_COCKROACH_PUSH_PG_URL`  | `agentsview_push`  | 各PCの`pg push`                 |
+| `AGENTSVIEW_COCKROACH_READ_PG_URL`  | `agentsview_read`  | Cloud Run viewer                |
+
+### 2. TerraformでGoogle Cloud／CockroachDBを準備
+
+`terraform/agentsview`が次を一括管理する。
+
+- Google Cloud API、Artifact Registry repository
+- Cloud Run runtime／GitHub deploy service account
+- Secret Managerのsecret containerとruntime IAM（secret value／versionはstateへ保存しない）
+- Cloud Run v2 service、resource上限、secret mount、public invoker IAM
+- GitHub Actions用Workload Identity Pool／Providerとproject IAM
+- CockroachDB Cloud Basic cluster、database、owner／push／read SQL user
+
+#### 2.0 Terraform resourceの意味
+
+現在のTerraformは「永続的な基盤」と「Cloud Runへのapp deploy」の両方を管理している。各resourceの役割は次のとおり。
+
+| Terraform resource                                      | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                  |
+| ------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google_project_service.required`                       | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない |
+| `data.google_project.current`                           | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                            |
+| `google_artifact_registry_repository.agentsview`        | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する                                                                                    |
+| `google_artifact_registry_repository_iam_member.*`      | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                |
+| `google_service_account.runtime`                        | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                        |
+| `google_service_account.deploy`                         | `agentsview-deploy`                             | CI／operatorがbuild、Cloud Run更新、secret version追加を行うidentity。runtime identityとは分離する                                                          |
+| `google_project_iam_member.deploy`                      | Cloud Build editor、Cloud Run admin等           | deploy service accountにproject側のdeploy権限を付ける                                                                                                       |
+| `google_service_account_iam_member.deploy_uses_runtime` | `roles/iam.serviceAccountUser`                  | deploy主体がCloud Run serviceへruntime service accountを指定するための`actAs`権限                                                                           |
+| `google_secret_manager_secret.pg_url`                   | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
+| `google_secret_manager_secret.config`                   | secret containerのみ                            | `/data/config.toml`としてmountするAgentsView configの入れ物                                                                                                 |
+| `google_secret_manager_secret_iam_member.runtime_*`     | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
+| `google_secret_manager_secret_iam_member.deploy_*`      | `secretVersionAdder`                            | deploy主体はsecret containerの削除／IAM変更をせず、新versionだけ追加できるようにする                                                                        |
+| `google_iam_workload_identity_pool.github`              | pool ID `github`                                | GitHub OIDC tokenをGoogle Cloud credentialへ交換するためのtrust domain                                                                                      |
+| `google_iam_workload_identity_pool_provider.github`     | repository claim条件                            | 指定GitHub repository以外からのimpersonationを拒否する                                                                                                      |
+| `google_service_account_iam_member.github_deploy`       | WIF principal → deploy SA                       | service-account JSON keyを作らずGitHub Actionsがdeploy SAを利用できるようにする                                                                             |
+| `cockroach_cluster.agentsview`                          | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
+| `cockroach_database.agentsview`                         | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
+| `cockroach_sql_user.owner`                              | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
+| `cockroach_sql_user.push`                               | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
+| `cockroach_sql_user.read`                               | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
+| `google_cloud_run_v2_service_iam_member.public`         | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
+
+**Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
+
+`variables.tf`はproject ID、GitHub repository、CockroachDB passwordなどのoperator入力を宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続command／CIが必要とするhost、service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
+
+#### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
+
+Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがない。Google管理のregional control plane上に**Service**を作成し、templateを更新するたびにimmutableな**Revision**が作られる。
+
+| AWS                        | Cloud Runで近いもの                                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| ECS cluster                | 直接の相当物なし。project、region、API有効化が実行基盤の境界                           |
+| ECR repository             | Artifact Registry repository                                                           |
+| task role／execution role  | Cloud Run runtime service accountとdeploy service account                              |
+| task definition            | Cloud Run Service内のrevision template                                                 |
+| ECS Service                | Cloud Run Service                                                                      |
+| ALB／target group          | Cloud Run管理のHTTPS endpointとtraffic split                                           |
+| ecspresso deploy／rollback | `clrnd deploy`／`clrnd rollback`、または`gcloud run services replace`／traffic command |
+
+したがって採用した分離は、**TerraformがAPI、Artifact Registry、IAM、service account、Secret Manager、WIF、CockroachDBを管理し、clrndがCloud Run Service／Revision／trafficを管理する**形である。Cloud Run Serviceを空の「cluster」としてTerraformで先に作り、後から別toolが同じService templateを管理する構成にはしない。同じresourceをTerraformとclrndの両方が所有すると、次回`terraform apply`がclrndのdeployを差し戻し、今回のようなtaint／replacement競合を起こす。
+
+#### 2.0.2 `clrnd`によるdeploy分離（採用済み）
+
+[`masasuzu/clrnd`](https://github.com/masasuzu/clrnd)をv0.5.0でpinして採用し、Cloud Run Serviceのownershipをclrndへ移した。TerraformコードからCloud Run Service resourceを削除済みで、**同じresourceを2つのtoolが所有する状態は作らない**。
+
+| 所有者    | 対象                                                                                                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terraform | Google Cloud API有効化、Artifact Registry、runtime／deploy service account、project IAM、Secret Manager container／IAM、GitHub WIF、CockroachDB、Cloud Run invoker IAM |
+| clrnd     | Cloud Run Service定義（image、CPU／memory、concurrency、timeout、scaling、環境変数、Secret Manager参照）、Revision、traffic、rollback                                  |
+
+ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
+
+追加したファイルは次のとおり。
+
+| ファイル                                      | 役割                                                                                                        |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/cloudrun-service.yaml` | Cloud Run Service manifest（Knative形式）。clrndのsource of truth                                           |
+| `dot_config/agentsview/clrnd.yml`             | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                             |
+| `dot_config/mise/tasks/agentsview.toml`       | `agentsview:cloudrun:*` task。設定解決・build・clrnd実行をmise taskとして持ち、shell scriptは追加していない |
+| `mise.toml`／`dot_config/mise/config.toml`    | `github:masasuzu/clrnd = "0.5.0"`のversion pin                                                              |
+
+mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
+
+| task                            | 内容                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| `agentsview:cloudrun:build`     | commitでtagを固定してArtifact Registryへimageをbuild                     |
+| `agentsview:cloudrun:verify`    | manifestのschema検証と、service account／secret version／imageの実在確認 |
+| `agentsview:cloudrun:render`    | templateを展開したmanifestを表示（APIへ接続しない）                      |
+| `agentsview:cloudrun:diff`      | live serviceとmanifestの差分                                             |
+| `agentsview:cloudrun:deploy`    | build → verify → deploy → rollout待ち                                    |
+| `agentsview:cloudrun:status`    | Ready状態、traffic split、URL                                            |
+| `agentsview:cloudrun:revisions` | revision一覧とtraffic share                                              |
+| `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
+| `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
+
+共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）はshell scriptではなく、hidden taskの`agentsview:cloudrun:run`に置いている。各taskは`mise run agentsview:cloudrun:run -- <mode>`へ委譲するだけなので、設定の解決は1箇所にしかない。
+
+採用にあたって前提にした制約は次のとおり。
+
+- **IAMはclrnd管理外。** `allUsers`のinvoker bindingはTerraformに残す。clrndが作るserviceは常にprivateなので、初回は「clrnd deployでserviceを作る → Terraform applyでinvoker bindingを付ける」の順序になる。
+- **manifestはGo templateであり、実行可能な入力として扱う。** 任意の環境変数を読めるため、fork PRのmanifestをproduction credentialでrender／deployしない。今回のmanifestは`must_env`で`GCP_RUNTIME_SERVICE_ACCOUNT`と`AGENTSVIEW_IMAGE`だけを読み、secret値は展開せずSecret Manager参照だけを書く。
+- **`diff`はserver defaultの解決にdry-run updateを使うため、read-only権限では動かない。** read-only credentialで確認する場合だけ`--no-server-defaults`を付ける。
+- **secret versionはnumericへpinする。** Cloud Runはsecret参照をinstance起動時に解決するため、`latest`のままだと同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。mise taskはmanifestをrenderするmode（`verify`／`render`／`diff`／`deploy`）でだけ最新のENABLED versionをSecret Managerから引き、その番号をrevisionへ焼き込む。古いversionを意図的に使う場合は`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`を明示する。**新しいsecret versionを反映するのは`deploy`であり、`refresh`ではない**（`refresh`はliveの定義をそのまま再適用するため、pinされた古い番号を持ち回る）。
+- **image tagはcommitで固定する。** `gcloud builds submit --tag`は同じtagを上書きするため、`agentsview:0.38.1`のような可変tagのままだと、同じURIが時期によって別のartifactを指し、CIが検証したimageと手元deployのimageがずれ得る。taskは`<upstream version>-<commit>`をtagにし、CIでは`GITHUB_SHA`を使う。digestを直接指定する場合は`AGENTSVIEW_IMAGE`で上書きする。
+- **v0系のthird-party tool。** version pinを必ず維持し、bumpするときは`verify`→`diff`→`deploy`→`rollback`をrehearsalしてから上げる。
+
+#### 2.0.3 clrnd manifestの各設定
+
+`dot_config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
+
+| manifestの位置                                                          | 値                                                                        | 意味／旧Terraform属性                                                                            |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `metadata.name`                                                         | `ryo-agentsview`                                                          | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
+| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                     | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
+| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                       | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
+| 同`maxScale`                                                            | `2`                                                                       | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
+| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                    | 旧`resources.cpu_idle = true`                                                                    |
+| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                    | 旧`resources.startup_cpu_boost = true`                                                           |
+| `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                            | Terraform outputのruntime service account。deploy権限は持たない                                  |
+| `spec.template.spec.containerConcurrency`                               | `20`                                                                      | 旧`max_instance_request_concurrency`                                                             |
+| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                      | 旧`timeout = "60s"`                                                                              |
+| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                       | 旧`var.agentsview_image`。既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）       |
+| `containers[].ports`                                                    | `http1` / `8080`                                                          | 旧`ports.container_port`                                                                         |
+| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                              | 旧`resources.limits`                                                                             |
+| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`     | 旧`env`ブロックと同じ非secret値                                                                  |
+| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}` | 旧`value_source.secret_key_ref` + `var.pg_url_secret_version`。read-only CockroachDB URL         |
+| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/data/config.toml`          | 旧`volumes.secret` + `volume_mounts` + `var.config_secret_version`                               |
+| `spec.traffic`                                                          | `latestRevision: true` / 100%                                             | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
+
+manifestはGo templateとして必ずrenderされるため、上記2箇所以外に`{`を2つ並べた表記を書かない。書く必要がある場合はclrnd READMEのescape記法を使う。
+
+#### 2.0.4 既存Terraform stateからownershipを移す
+
+すでに`terraform apply`でCloud Run Serviceを作った環境（今回のbootstrap中の状態を含む）では、コードから削除するだけでは不十分である。stateにresourceが残っているため、次のplanがserviceを**destroy**しようとする。さらに旧stateの`deletion_protection = true`が残っている場合は`cannot destroy service without setting deletion_protection=false`で停止する。
+
+apply前に、stateからownershipだけを外す。実serviceは削除されない。
+
+```sh
+# 1. stateに残っているか確認する
+fnox exec -- terraform -chdir=terraform/agentsview state list | rg google_cloud_run_v2_service
+
+# 2. taintが残っている場合は先に解除する（destroy計画のまま次へ進まない）
+fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_service.agentsview || true
+
+# 3. serviceとinvoker bindingをstateから外す（Google Cloud上のresourceは残る）
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service.agentsview
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public
+
+# 4. 実serviceが残っていることを確認する
+gcloud run services describe ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region=us-west2 --format='value(status.url)'
+```
+
+invoker bindingも一度外すのは、resource addressは同じでも参照元がCloud Run resourceからservice名へ変わり、再importした方が単純なためである。手順3のあと、planに`google_cloud_run_v2_service_iam_member.public`の作成だけが出ることを確認してapplyする（既存bindingは同じ内容で再作成されるため、公開状態は途切れない）。
+
+移行後の確認:
+
+```sh
+# Terraform側に残るCloud Run関連はinvoker bindingだけ
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false | rg google_cloud_run
+
+# clrnd側が差分を持たない
+mise run agentsview:cloudrun:diff
+```
+
+`clrnd diff`が空になれば、live serviceとmanifestが一致している。差分が出る場合は、manifestを実状に合わせるか（`clrnd init`で現行定義を書き出して比較する）、意図した変更としてdeployする。
+
+CockroachDB provider v1.22の`cockroach_sql_user`は`sensitive`な`password`を受け取るが、Terraformのwrite-only `password_wo`／`password_wo_version`には対応していない。そのため3つのSQL user passwordはplan出力では伏せられる一方、Terraform stateには保存される。GCS state bucketへのIAMをoperatorだけに制限し、stateをdownload／commitせず、Object VersioningとPublic Access Preventionを維持する。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
+
+#### 2.1 state bucketと初回認証
+
+state bucketそのものは自身のstateで管理できないため、一度だけ手元のowner権限で作成する。bucket名は全世界で一意にする。
+
+```sh
+export GCP_PROJECT_ID='<project-id>'
+export GCP_REGION='us-west2'
+export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
+
+gcloud config set project "$GCP_PROJECT_ID"
+gcloud storage buckets create "gs://${TF_STATE_BUCKET}" \
+  --project="$GCP_PROJECT_ID" --location="$GCP_REGION" --uniform-bucket-level-access
+gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
+
+gcloud auth application-default login
+```
+
+stateにはCockroachDB SQL user password、resource ID、構成情報が入る。public access prevention、versioning、最小権限IAMを設定し、state fileをdownload／commitしない。
+
+#### 2.2 Terraformを初期化
+
+```sh
+cd terraform/agentsview
+cp terraform.tfvars.example terraform.tfvars
+# project、region、最初にbuildするimage URIを編集する。
+
+fnox exec -- terraform init \
+  -backend-config="bucket=${TF_STATE_BUCKET}" \
+  -backend-config='prefix=agentsview'
+fnox exec -- terraform fmt -check -recursive
+fnox exec -- terraform validate
+```
+
+CockroachDB Cloudでorganization scopeの`Cluster Creator`を持つTerraform用service accountから`CCDB1_...` API Secret keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
+
+```sh
+chezmoi apply ~/.config/fnox/config.toml
+fnox get COCKROACH_API_KEY >/dev/null
+fnox exec -- terraform version
+```
+
+#### 2.3 bootstrap apply
+
+Cloud Run Serviceはclrndが作るため、Terraformの`google_cloud_run_v2_service_iam_member.public`はserviceが存在するまでapplyできない。初回はそれ以外のresourceをすべてtarget applyする。
+
+target一覧は作業4に置いてある。2箇所で別々に管理すると片方に不足が出るため、ここでは繰り返さない。
+
+続いて最初のimageをbuildする。
+
+```sh
+cd ../..
+mise run agentsview:cloudrun:build
+```
+
+続いてCockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。初回だけ`AGENTSVIEW_CLOUD_RUN_URL=https://invalid.example`を使い、service作成後に実URLへ更新する。
+
+```sh
+export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+fnox exec -- mise run agentsview:cloudrun:secrets
+```
+
+次にrepository rootでclrndからCloud Run Serviceを作る。Terraformはこの時点でServiceを作らない。
+
+```sh
+mise run agentsview:cloudrun:verify
+mise run agentsview:cloudrun:deploy
+```
+
+Serviceができたら`terraform/agentsview`へ戻り、残りのresource（`allUsers`のinvoker bindingを含む）をapplyする。secret versionはclrndがdeploy時に解決してrevisionへ焼き込むため、Terraform変数として渡す必要はない。
+
+```sh
+cd terraform/agentsview
+fnox exec -- terraform plan -input=false -out=tfplan
+fnox exec -- terraform apply tfplan
+```
+
+planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 2、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に実URLを`AGENTSVIEW_CLOUD_RUN_URL`へ設定してconfig secretを更新し、`AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy`で新revisionへ反映する。
+
+#### 2.4 deploy方法を確認する
+
+初回構築とsecret version追加は手元で行い、通常のapp deployはrepository rootから次を実行する。Terraformは基盤変更のときだけ実行する。
+
+```sh
+mise run agentsview:cloudrun:diff     # 適用前に差分を読む
+mise run agentsview:cloudrun:deploy   # build → verify → deploy → rollout待ち
+mise run agentsview:cloudrun:status
+```
+
+rollbackとtraffic操作もclrnd側で行う。`rollback`はtemplateを変えずtrafficだけを戻すため、新revisionは作られない。
+
+```sh
+mise run agentsview:cloudrun:revisions
+mise run agentsview:cloudrun:rollback              # 直前のrevisionへ戻す
+mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
+```
+
+このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。image tagはGitHub Actionsが渡す`GITHUB_SHA`から組み立てられるので、workflow側でimage URIを組み立てる必要はない。
+
+このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。Terraformがdeploy service accountへ与えているのは`secretVersionAdder`だけなので、その identity ではversionを追加できても一覧できない。CIでは次のどちらかを選ぶ。
+
+- secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す（追加の権限が不要で、deployするversionをCI側が確定できる）。
+- 2つのsecretに対してdeploy service accountへ`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
+
+権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。
+
+TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider
+fnox exec -- terraform -chdir=terraform/agentsview output -raw deploy_service_account
+```
+
+state bucketをCIから操作する場合は、deploy service accountへbucket単位の権限を一度だけ付与する。service-account key JSONは作らず、GitHub OIDC／WIFを使う。
+
+```sh
+gcloud storage buckets add-iam-policy-binding "gs://${TF_STATE_BUCKET}" \
+  --member="serviceAccount:$(terraform -chdir=terraform/agentsview output -raw deploy_service_account)" \
+  --role=roles/storage.objectAdmin
+```
+
+### 3. CockroachDB schemaをbootstrapしてデータをcopy
+
+#### 3.1 小さいprojectでbootstrap
+
+`AGENTSVIEW_MIGRATION_PROJECTS`には、Google Cloud等のproject名ではなく`agentsview projects --format json`に表示される既存のAgentsView projectから、最初に試すsession数の少ないものを1つ指定する。任意の`small-project`という名前を新規作成する意味ではない。候補一覧、選び方、owner URLの28P01解消は作業5の手順を参照する。
+
+dump後の件数比較を決定的にし、copy中の更新を落とさないため、全PCの`agentsview pg push`、`agentsview pg watch`、定期実行を一時停止する。Atuinは別schemaへ書くため停止不要。停止を確認したoperatorだけが確認変数を設定する。
+
+```sh
+export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
+export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
+fnox exec -- mise run agentsview:cockroach:migrate
+```
+
+taskは次を順に行う。
+
+1. `flyctl proxy`で旧Fly PostgreSQLへ接続する。
+2. AgentsView自身の`pg push`でCockroachDB用schemaを作成する。
+3. Flyの`agentsview` schemaをdata-only／column insert形式でprivate backupへ保存する。
+4. `ON CONFLICT DO NOTHING`付きでCockroachDBへrestoreする。
+5. source／targetのtable一覧と正確な`count(*)`を比較する。
+6. 不一致なら非zero終了し、Flyをsource of truthのまま維持する。
+
+`AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`がなければscriptはcopy前に停止する。これは自動的にwrite processを検出した印ではなく、operatorが全端末の停止を確認したという明示的な承認である。検証copy後は旧Flyへのpushを再開してよいが、cutover時には再度停止して最終copyする。
+
+dumpは`~/backup/agentsview-fly-<UTC timestamp>.sql`へmode 0600で残る。このfileにはsession内容が含まれるためcommit、共有、cloud uploadをしない。
+
+#### 3.2 内容も照合
+
+taskは全tableの`count(*)`を比較する。最終判断では、主要tableの最大更新時刻と代表sessionの内容もsource／targetで比較する。
+
+```sql
+SELECT count(*) FROM agentsview.sessions;
+SELECT count(*) FROM agentsview.messages;
+```
+
+実際のtable名は次で確認する。
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'agentsview'
+ORDER BY table_name;
+```
+
+さらに各PCからCockroachDBへ直接接続できることを確認する。
+
+```sh
+fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:cockroach:push -- --projects '<small-project>'
+```
+
+semantic／hybrid searchを利用している場合、CockroachDBではpgvectorが使えないためここで中止する。利用しない場合は、vector searchが`501 Not Available`になる機能差を受け入れて先へ進む。
+
+### 4. local dataとCockroachDBのpush／pull
+
+#### 結論: pushは可能、DBからlocalへのpullは提供されない
+
+AgentsViewの同期元はlocal PostgreSQLではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、PostgreSQL serverからlocal SQLite／session fileへ戻す`pg pull` commandはない。
+
+CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCockroachDBをshared databaseとして扱える。このrepositoryでは次の経路を採用する。
+
+```text
+各PCのsession file + local SQLite
+    │
+    │ agentsview pg push（public TLS、push role）
+    ▼
+CockroachDB Cloud Basic
+    │
+    │ SELECTのみ（read role）
+    ▼
+Cloud Run上のagentsview pg serve
+```
+
+通常の差分pushはFly proxyを使わず、各PCからCockroachDBのTLS endpointへ直接送る。
+
+```sh
+# 接続とwatermarkを確認
+fnox exec -- mise run agentsview:cockroach:status
+
+# まず1 projectだけ
+fnox exec -- mise run agentsview:cockroach:push -- --projects '<project>'
+
+# 差分を全projectへ反映
+fnox exec -- mise run agentsview:cockroach:push
+
+# schema resetや内容修復後に限り全件を再送
+fnox exec -- mise run agentsview:cockroach:push -- --full --no-vectors
+```
+
+`agentsview:cockroach:push` taskは常に`--no-vectors`を追加し、CockroachDBに送る対象をsession contentへ限定する。AgentsViewはDB vendorだけを見てvector phaseを自動停止しないため、taskを介さず直接実行するときも`--no-vectors`または`push_vectors=false`を必ず指定する。incremental watermarkは接続target／project filterごとにlocal保存されるため、Fly PostgreSQL用watermarkとCockroachDB用watermarkは共有されない。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
+
+#### 「pull」の代わりに何を使うか
+
+| 目的                                      | 方法                                                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                           |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                 |
+| CockroachDB障害に備える                   | `agentsview:pg:remote-local:dump`でdataをlocal PostgreSQLへmergeし、custom-format backupを作る。自動replicaとはみなさない |
+| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない         |
+| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない             |
+
+CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのためCockroachDBのschema dumpをPostgreSQLへそのままrestoreする設計は採用しない。このrepositoryの`agentsview:pg:remote-local:dump`はdata-only／column INSERTとしてexportし、現在のAgentsViewがlocal PostgreSQLへ作ったschemaに不足rowだけをtransaction内でmergeする。
+
+#### PR #1376のlocal PostgreSQL変更との関係
+
+[PR #1376](https://github.com/ryo246912/dotfiles/pull/1376)で検討しているproxy readiness、Fly PostgreSQL backup、local PostgreSQL restoreは、次の用途では引き続き有効である。
+
+1. CockroachDB cutover前のFly PostgreSQL snapshotをlocalへ退避する。
+2. Fly proxyが実際にPostgreSQL protocolへ応答するまで待ってから旧DBをdumpする。
+3. rollback rehearsal用に「Fly PostgreSQLから取得したPostgreSQL dump」をlocal PostgreSQLへrestoreする。
+
+一方、PR #1376のlocal PostgreSQLをCockroachDBの自動pull先にはしない。cutover後の日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。backupが必要なときだけ`mise run agentsview:pg:remote-local:dump`を実行し、このmachineのlocal push、CockroachDB data export、local merge、sequence補正、custom-format dumpを順に行う。
+
+```sh
+# CockroachDB data + このmachineのsessionを統合したlocal PostgreSQL dump
+fnox exec -- mise run agentsview:pg:remote-local:dump
+
+# 旧Fly PostgreSQLをsourceにするrollback期間中のcommand
+fnox exec -- mise run agentsview:pg:fly:remote-local:dump
+
+# remoteへ接続せず、現在のlocal PostgreSQLだけをdump
+mise run agentsview:pg:local:dump
+```
+
+CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。importはtransaction内で行い、schema／型が合わなければ全体をrollbackする。
+
+移行期間に同じlocal sessionをFly PostgreSQLとCockroachDBの両方へpushすること自体は可能だが、これはpull／replicationではなく2回の独立したpushである。長期dual-writeは削除、curation metadata、migration versionの差異を発見しにくいため、rehearsal期間だけに限定し、cutover後はCockroachDBを唯一のshared AgentsView databaseにする。
+
+### 5. Cloud Run secretとserviceを作成
+
+初回はCloud Run URLがまだないため、config作成用に一時URLを指定する。ServiceはclrndがKnative manifestから作る。
+
+```sh
+export GCP_PROJECT_ID='<project-id>'
+export GCP_REGION='us-west2'
+export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+
+fnox exec -- mise run agentsview:cloudrun:secrets
+mise run agentsview:cloudrun:deploy
+```
+
+clrndが作るserviceはprivateなので、Terraformで`allUsers`のinvoker bindingを付ける（2回目以降は差分なし）。
+
+```sh
+fnox exec -- terraform -chdir=terraform/agentsview apply
+```
+
+実URLを取得し、config secretを更新して新revisionを作る。
+
+```sh
+export AGENTSVIEW_CLOUD_RUN_URL=$(
+  gcloud run services describe ryo-agentsview \
+    --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
+    --format='value(status.url)'
+)
+fnox exec -- mise run agentsview:cloudrun:secrets
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+```
+
+Cloud Runでは次のようにsecretを注入する。どちらもmanifestには参照だけを書き、値はSecret Managerに残る。
+
+- `AGENTSVIEW_PG_URL`: `agentsview-pg-url`のnumeric versionを環境変数として参照
+- `/data/config.toml`: `agentsview-config-toml`のnumeric versionをread-only secret volumeとしてmount
+
+versionは`latest`ではなく番号で固定する。Cloud Runはsecret参照をinstance起動時に解決するため、`latest`では同じrevisionのinstance同士が別の値を読み、rollbackしても当時の値を再現できない。deploy scriptが最新のENABLED versionを引いてrevisionへ焼き込むので、**新versionを追加しただけでは動作中のrevisionは切り替わらない。** 反映するのは`deploy`であり、`refresh`（liveの定義をそのまま再適用する）ではない。
+
+Terraformのinvoker bindingはCloud Run URLへの到達だけを許可する。AgentsView自身の`require_auth=true`とbearer tokenは維持する。
+
+### 6. Cloud Runを検証
+
+```sh
+mise run agentsview:cloudrun:status
+
+url=$(gcloud run services describe ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
+  --format='value(status.url)')
+
+curl -i "$url/api/v1/sessions"                    # 401を期待
+fnox exec -- sh -c 'curl -fsS -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
+  "'"$url"'/api/v1/sessions" >/dev/null'
+curl -I "$url"                                    # UI応答を確認
+```
+
+`clrnd status`はReady条件、latest ready revision、traffic split、URLを表示する。`mise run agentsview:cloudrun:diff`が空であれば、live serviceとmanifestが一致している。
+
+Google Cloud Consoleで次も確認する。
+
+- `min instances = 0`、`max instances = 2`
+- memory 512 MiB、CPU 1、request-based billing
+- runtime service accountが`agentsview-runtime`
+- secretの値がlogへ出ていない
+- CockroachDB RU、storage、connection数が無料枠内
+
+### 7. Cutover
+
+1. 全PCで旧`mise run agentsview:pg:push`の実行を止める。
+2. Fly AgentsView appを停止し、旧viewerからのreadを止める。
+3. cutover UTC timestampを記録する。
+4. `AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`を設定し、`agentsview:cockroach:migrate`を再実行して最終差分をcopyする。
+5. 厳密row countと主要sessionの内容を比較する。
+6. 各PCの通常taskを`agentsview:cockroach:push`へ切り替える。
+7. Cloud Run viewerで認証、session一覧、detail、analytics、usageをsmoke testする。
+8. smoke test合格後だけCockroachDBへのpushを再開する。
+
+旧Fly schemaはこの時点で削除しない。
+
+### 8. Rollback
+
+#### 新DBへのpush再開前
+
+Cloud Run smoke testに失敗したら、pushを再開せず、各PCの接続先を旧`AGENTSVIEW_PROXY_PG_URL`へ戻してFly viewerを再起動する。新規writeがないため逆同期は不要。
+
+Cloud Run側のapp revisionだけを戻す場合は、DB移行のrollbackとは切り離してclrndで行う。trafficだけが変わり、新revisionは作られない。
+
+```sh
+mise run agentsview:cloudrun:revisions
+mise run agentsview:cloudrun:rollback                       # 直前のrevisionへ
+mise run agentsview:cloudrun:rollback -- --revision <name>  # revisionを指定する
+```
+
+rollback後はtrafficがrevision名にpinされる。最新revisionを追う状態へ戻すまで`refresh`は動かない（新revisionがtrafficを受け取れないため）。戻すには次を実行する。
+
+```sh
+mise run agentsview:cloudrun:clrnd -- traffic --to-latest
+```
+
+#### 新DBへのpush再開後
+
+1. 全PCのCockroachDB pushを停止する。
+2. cutover timestamp以降のsession／messageをCockroachDBからexportする。
+3. Fly schemaへimportする。
+4. row count、primary key、最大更新時刻、代表session本文を照合する。
+5. 合格後だけ旧Flyへのpushとviewerを再開する。
+
+この差分export／importを事前rehearsalできない場合、新DBへのwrite再開後のrollbackは実施せず、CockroachDB側を修復する。
+
+### 9. Flyの容量を解放
+
+最低1〜2週間の観察期間を置き、全PCがCockroachDBへpushし、backup／restore rehearsalも成功してから実施する。
+
+```sql
+-- 最終確認。実行前に必ず最新backupを作る。
+SELECT count(*) FROM agentsview.sessions;
+
+-- owner接続で実行。CASCADE対象を表示・確認してから承認する。
+DROP SCHEMA agentsview CASCADE;
+```
+
+通常の`VACUUM`はOSへdiskを返さない。Fly volumeの物理使用量をすぐ減らすための`VACUUM FULL`はlockと追加空き容量を必要とするため、空き10%の状態では実行しない。schema削除後の`df`、Fly Metrics、Atuin syncを確認し、必要ならmaintenance windowを別途設ける。
+
+最後にFly AgentsView appを削除する。Atuin appと`psgl`は削除しない。
+
+```sh
+flyctl apps destroy ryo-agentsview
+```
+
+削除前にCloud Run URL、`mise run agentsview:cloudrun:deploy`（および任意で有効化したGitHub Actions deploy）、各PCからのpushがすべて正常であることを再確認する。
+
+---
+
+## Fly.io旧構成（migration元／rollback用）
+
+### 構成
+
+```text
 PC-A (hostname: mac-work)          PC-B (hostname: mac-home)
 └── ~/.agentsview/*.sqlite          └── ~/.agentsview/*.sqlite
         ↓ mise run agentsview:pg:push       ↓ mise run agentsview:pg:push
@@ -19,15 +1360,15 @@ PC-A (hostname: mac-work)          PC-B (hostname: mac-home)
         └── agentsview pg serve  →  https://ryo-agentsview.fly.dev
 ```
 
-## 初回セットアップ
+### 初回セットアップ
 
-### 1. Fly app を作成
+#### 1. Fly app を作成
 
 ```sh
 flyctl apps create ryo-agentsview
 ```
 
-### 2. PostgreSQL role を分ける
+#### 2. PostgreSQL role を分ける
 
 公開 viewer と local push は別の DB role を使う。
 
@@ -82,7 +1423,7 @@ mise run agentsview:setup:migrate
 
 migration 後に `GRANT ... ON ALL TABLES` / `GRANT ... ON ALL SEQUENCES` を再実行してから、local push 用の URL を `agentsview_push_mac` role に戻す。
 
-### 3. app secrets を設定
+#### 3. app secrets を設定
 
 Fly app は公開 URL で参照されるが、`require_auth = true` と bearer token で API を閉じる。PostgreSQL 接続は `agentsview_read` role を使い、公開 viewer から DB へ書き込めないようにする。
 
@@ -121,9 +1462,10 @@ echo "Bearer token: $AUTH"  # 保管しておく
 > **PG 接続先の確認方法:** password を端末履歴・記録・画面共有へ露出させないため、`printenv` で接続文字列そのものを表示しない。private network の host は `psgl.flycast:5432`、database 名は `flyctl postgres db list -a psgl`、role 名は本手順で作成する `agentsview_*` を使う。password は fnox（bws）側にのみ保持し、URL を echo しない。
 > `psgl.flycast` の Fly private network 経由では `sslmode=disable` + `[pg] allow_insecure = true` を使う。外部公開 host で TLS 接続する場合は `sslmode=require` + `allow_insecure = false` に戻す。
 
-### 4. デプロイ
+#### 4. デプロイ
 
 ```sh
+# chezmoi source directory から実行する場合
 flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 ```
 
@@ -133,7 +1475,7 @@ flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml
 mise run agentsview:deploy
 ```
 
-### 5. 動作確認
+#### 5. 動作確認
 
 ```sh
 # API が 401 を返すこと（認証必須）
@@ -149,13 +1491,21 @@ curl -I https://ryo-agentsview.fly.dev
 `curl -I` では少なくとも `Strict-Transport-Security`、`X-Content-Type-Options`、`X-Frame-Options`、`Referrer-Policy` が返ることを確認する。
 `Content-Security-Policy` は AgentsView 本体も返すが、実行時の local/private origin が含まれることがあるため、Fly 側で追加した基本ヘッダーとは分けて見る。
 
-## 複数 PC からのデータ push
+### 複数 PC からのデータ push
 
 各 PC から `mise run agentsview:pg:push` を実行するだけでよい。machine name（`AGENTSVIEW_PG_MACHINE`）は zsh 起動時に host-env.map の host-id から自動 export されるため（未設定なら `hostname` にフォールバック）、セッションは PC ごとに区別されて PostgreSQL に蓄積される。
 
-### 各 PC での設定
+#### 各 PC での設定
 
-`agentsview:pg:status` / `agentsview:pg:push` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、`AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+`agentsview:pg:status` / `agentsview:pg:push` / `agentsview:pg:dump` task は `flyctl proxy 15432:5432 -a psgl` を一時起動し、PostgreSQL が応答するまで待ってから `AGENTSVIEW_PROXY_PG_URL` を `AGENTSVIEW_PG_URL` として使い、実行後に proxy を停止する。
+
+PostgreSQL client tools は mise で管理している。chezmoi の変更を反映してから install する。
+
+```sh
+chezmoi apply
+mise install github:theseus-rs/postgresql-binaries
+pg_isready --version
+```
 
 設定値は、shell に読み込まれているかと、AgentsView が実際に PostgreSQL へ接続できるかを分けて確認する。
 
@@ -174,7 +1524,7 @@ push も proxy 起動込みで実行する。
 mise run agentsview:pg:push
 ```
 
-#### secure な local push 構成
+##### secure な local push 構成
 
 目的は、`ryo-agentsview` app は Fly.io 上で起動したまま、ローカル PC から `agentsview pg push` だけを安全に実行すること。
 
@@ -218,7 +1568,7 @@ hostname が重複しているか確認したい場合は明示的に指定:
 AGENTSVIEW_PG_MACHINE="mac-work" mise run agentsview:pg:push   # PC ごとに異なる名前
 ```
 
-### push 操作
+#### push 操作
 
 ```sh
 # 全プロジェクトを push
@@ -233,7 +1583,16 @@ mise run agentsview:pg:status
 
 Web UI（`https://ryo-agentsview.fly.dev`）で全 PC のセッションを一覧できる。
 
-ローカルで `agentsview serve` を起動したい場合:
+#### `agentsview pg serve` と `agentsview serve` の違い
+
+| command               | backend      | 表示するsession                                             | このrepositoryでの用途           |
+| --------------------- | ------------ | ----------------------------------------------------------- | -------------------------------- |
+| `agentsview pg serve` | PostgreSQL   | 複数PCからpushしたsession、またはdumpからrestoreしたsession | **通常のlocal / Fly viewer**     |
+| `agentsview serve`    | local SQLite | そのPCがlocal sourceから収集したsession                     | SQLite固有の調査が必要な場合のみ |
+
+`agentsview pg serve` は設定されたPostgreSQLを直接読むviewerであり、PostgreSQLの内容を
+`~/.agentsview/*.sqlite`へpullするcommandではない。反対に、`agentsview serve` は
+local SQLiteを読み、PostgreSQLへpush済みの他PCのsessionやPostgreSQL dumpを自動的には表示しない。
 
 ```sh
 mise run agentsview:serve
@@ -243,7 +1602,7 @@ mise run agentsview:serve
 `AGENTSVIEW_PG_MACHINE` を実行時に指定し、必要なときに `mise run agentsview:pg:push` を実行する
 形にする。自動常駐 push や `~/.agentsview/config.toml` への DB URL 保存は、この repository では採用しない。
 
-### push 時間について（初回が遅い理由）
+#### push 時間について（初回が遅い理由）
 
 初回の全件 push は数時間かかることがある（例: 1353 セッション / 42894 メッセージで約 3h35m）。これは **帯域ではなく往復レイテンシ律速** で、この構成では想定内の挙動。
 
@@ -262,36 +1621,77 @@ flyctl ping psgl
 # 通常は初回の遅さは許容してよい。
 ```
 
-## データ管理
+### データ管理
 
 `pg push` は一方向同期のため、リモート DB のデータは増加し続ける。
 
-### 容量確認
+#### 容量確認
 
 ```sh
 flyctl postgres connect -a psgl
 ```
 
 ```sql
-SELECT pg_size_pretty(pg_schema_size('agentsview'));
+SELECT pg_size_pretty(COALESCE(sum(pg_total_relation_size(relid)), 0))
+FROM pg_statio_user_tables
+WHERE schemaname = 'agentsview';
 ```
 
-### 古いデータの削除
+#### 古いデータの削除
 
 ```sql
 DELETE FROM agentsview.sessions WHERE created_at < NOW() - INTERVAL '6 months';
 VACUUM agentsview.sessions;
 ```
 
-### バックアップ（削除前）
+#### バックアップとlocal viewerへのrestore
 
-PostgreSQL に全 PC のデータが集約されているため、1回の dump で全端末分がバックアップされる。
+CockroachDB移行後は`agentsview:pg:remote-local:dump`がCockroachDBの**dataだけ**をcolumn名付きINSERTとしてexportし、現在versionのschemaを持つlocal PostgreSQLへ不足rowをmergeする。その後、このmachineのsessionをlocal PostgreSQLへpushしてcustom-formatの統合dumpを作成する。CockroachDB固有のDDL、role、sequenceはPostgreSQLへrestoreしない。
+
+旧Fly PostgreSQL用の同じ処理は`agentsview:pg:fly:remote-local:dump`として残す。Fly PostgreSQLが容量保護でread-onlyになっていてもdumpは取得できる。
 
 ```sh
-pg_dump -n agentsview \
-  "postgres://<user>:<pass>@<host>/<db>?sslmode=require" \
-  -F c -f ~/backup/agentsview-$(date +%Y%m%d).dump
+# CockroachDB上の既存データと、このmachineのsessionをlocal PostgreSQLへ
+# mergeし、PostgreSQL custom-formatの統合dumpを作成
+mise run agentsview:pg:remote-local:dump
+
+# migration前／rollback用: Fly PostgreSQLをsourceとして同じ処理を行う
+mise run agentsview:pg:fly:remote-local:dump
+
+# Fly PostgreSQLをbackup
+mise run agentsview:pg:dump
+
+# backupをfzfで選択してlocal PostgreSQLへrestore
+mise run agentsview:pg:local:restore
+
+# machineごとのsession件数を確認
+mise run agentsview:pg:local:status
+
+# serveを起動せずlocal sessionだけを差分push
+mise run agentsview:pg:local:push
+
+# merge済みのlocal PostgreSQLをbackup（このmachineのsessionを差分pushしてからdumpする）
+mise run agentsview:pg:local:dump
+
+# local PostgreSQLを使って agentsview pg serve を起動
+mise run agentsview:serve
+# open http://127.0.0.1:8080
+
+# local PostgreSQLを停止
+mise run agentsview:pg:local:down
 ```
+
+ほかのmachineにも未pushデータがある場合は、各machineで`agentsview:pg:local:dump`を実行し（差分pushを含む）、作成された`agentsview-local-*.dump`を集約先へコピーする。集約先でdumpごとに次を実行し、最後にもう一度`agentsview:pg:local:dump`を実行する。
+
+```sh
+AGENTSVIEW_RESTORE_DUMP=/path/to/agentsview-local-other-machine.dump \
+  mise run agentsview:pg:local:restore
+mise run agentsview:pg:local:dump
+```
+
+`agentsview:pg:local:dump`は、local PostgreSQLに`agentsview` schemaが無い場合はdumpせずに終了し、先に実行すべきtaskを表示する。schemaはlocal pushかrestoreで作成される。
+
+CockroachDB exportは`agentsview-cockroach-data-*.sql`、最終的なlocal PostgreSQL backupは`agentsview-local-*.dump`として`AGENTSVIEW_BACKUP_DIR`へ保存される。data importはtransaction内で実行され、schema／型の非互換や途中のINSERT失敗があればlocal PostgreSQLへのmerge全体をrollbackする。同じprimary keyがlocalにある場合はlocal rowを維持するため、これはCockroachDBの完全replicaではなく、disaster recovery／閲覧用の統合backupである。
 
 特定 PC のデータのみ削除したい場合:
 
@@ -299,7 +1699,7 @@ pg_dump -n agentsview \
 DELETE FROM agentsview.sessions WHERE machine = 'mac-old';
 ```
 
-## GitHub Actions でのデプロイ
+### GitHub Actions でのデプロイ
 
 `dot_config/agentsview/fly.toml` または workflow 自体を main branch に merge すると `deploy-agentsview` workflow が実行される。
 
@@ -310,7 +1710,7 @@ DELETE FROM agentsview.sessions WHERE machine = 'mac-old';
     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 ```
 
-## token の更新
+### token の更新
 
 通常は `AUTH` と `CURSOR` を再生成しない。Bearer token をローテーションしたい場合だけ `AUTH` を更新し、`CURSOR` は既存値を維持する。
 既存値を保存していない場合は両方を再生成してよいが、Bearer token は変わる。
@@ -330,9 +1730,9 @@ flyctl secrets set -a ryo-agentsview \
 echo "Bearer token: $AUTH"
 ```
 
-## デプロイ状況メモ
+### デプロイ状況メモ
 
-### 根本原因（2026-06-10 特定）
+#### 根本原因（2026-06-10 特定）
 
 最終的に必要だった修正は以下。
 
@@ -347,7 +1747,7 @@ echo "Bearer token: $AUTH"
 
 `psgl.flycast` に `sslmode=require` で接続すると、private network 側の PostgreSQL 接続では TLS startup に失敗することがある。Fly app 側は private network 内接続として `sslmode=disable` を使い、AgentsView の plaintext guard は `/data/config.toml` の `[pg] allow_insecure = true` で明示的に許可する。
 
-### 現状（2026-06-10）
+#### 現状（2026-06-10）
 
 - `dot_config/agentsview/fly.toml` は作成済み。
 - 公式 image `ghcr.io/wesm/agentsview:0.29.0` を使用し、`PG_SERVE=1` で `agentsview pg serve` を起動する。
@@ -358,7 +1758,7 @@ echo "Bearer token: $AUTH"
 - setup / deploy / local push は `dot_config/mise/tasks/agentsview.toml` の `agentsview:*` task に集約済み。
 - `dot_config/agentsview/fly.toml` の main merge 時 deploy は `.github/workflows/deploy-agentsview.yaml` で自動化済み。
 
-### 次の確認
+#### 次の確認
 
 Bearer token なし API が `401` を返すことを確認する。
 

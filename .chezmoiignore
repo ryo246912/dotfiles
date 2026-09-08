@@ -31,5 +31,6 @@ rulesync.lock
 README.md
 CLAUDE.md
 docs/**
+terraform/**
 
 **/*karabiner-ts*

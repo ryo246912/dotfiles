@@ -2,29 +2,25 @@
 set -e
 
 # .claude.json のコピー（既存の処理）
-if [ ! -f ~/.claude.json ] && [ -f /tmp/claude-config-host.json ]; then
-	cp /tmp/claude-config-host.json ~/.claude.json
+claude_config_host=~/.config/claude-config-host.json
+if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then
+	cp "$claude_config_host" ~/.claude.json
 	echo "✓ .claude.json をコピーしました"
 else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
-# コンテナ用の書き込み可能な .gitconfig を生成
-# ホストの gitconfig は /tmp/gitconfig-host に読み取り専用でマウントされているため、
-# コンテナ内に書き込み可能な .gitconfig を作成し、ホスト設定をインクルードする
-if [ ! -f ~/.gitconfig ]; then
-	cat >~/.gitconfig <<'EOF'
-[include]
-    path = /tmp/gitconfig-host
-[credential "https://github.com"]
-    helper = !gh auth git-credential
-[url "https://github.com/"]
-    insteadOf = git@github.com:
-EOF
-	echo "✓ .gitconfig を生成しました"
-else
-	echo "ℹ️ .gitconfig は既に存在します"
+# コンテナ用の書き込み可能な .gitconfig にホスト設定を追加
+# ホストの gitconfig（user.name / user.email を含む）は /home/vscode/.config/gitconfig-host に
+# 読み取り専用でマウントされているため（/tmp 配下は使わない。docs/devcontainer.md 参照）、
+# 既存の ~/.gitconfig があっても include を追加する。
+gitconfig_host=~/.config/gitconfig-host
+if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
+	git config --global --add include.path "$gitconfig_host"
 fi
+echo "✓ ホストの git config を設定しました"
+git config --global credential.https://github.com.helper '!gh auth git-credential'
+git config --global url.https://github.com/.insteadOf git@github.com:
 
 # claude-account2 ディレクトリを作成
 account2_dir="${HOME}/.claude-account2"

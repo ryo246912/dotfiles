@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: agentsview
+      POSTGRES_PASSWORD: ${AGENTSVIEW_LOCAL_PG_PASSWORD:-agentsview-local}
+      POSTGRES_USER: ${AGENTSVIEW_LOCAL_PG_USER:-agentsview}
+    ports:
+      - "127.0.0.1:${AGENTSVIEW_LOCAL_PG_PORT:-15433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    volumes:
+      - agentsview-postgres:/var/lib/postgresql/data
+
+volumes:
+  agentsview-postgres:
+    name: agentsview-postgres
