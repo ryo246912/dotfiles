@@ -1635,13 +1635,61 @@ DROP ROLE agentsview_owner, agentsview_push_mac, agentsview_read;
 
 #### 9.6 diskが解放されたことを確認する
 
-通常の`VACUUM`はOSへdiskを返さない。`DROP SCHEMA`はtable fileごと削除するため、通常はこれだけで空く。
-
 ```sh
 fly ssh console -a psgl -C 'df -h /data'
 ```
 
-期待どおり減っていない場合だけ`VACUUM FULL`を検討する。`VACUUM FULL`は対象tableと同じだけの空き容量とexclusive lockを必要とするため、**空き10%の状態では実行しない**。Atuinの書き込みを止められるmaintenance windowを別途設ける。
+`DROP SCHEMA`はtable fileごと削除するので、AgentsViewが使っていた分は**即座に**返る。`VACUUM`は要らない。それでも`df`が動かない場合、空きを食っているのはAgentsViewのtableではない。順に切り分ける。
+
+**1. schemaが本当に消えているか。**
+
+```sql
+SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\_%' ORDER BY nspname;
+```
+
+**2. どこが容量を食っているか。** database単位とdirectory単位の両方で見る。
+
+```sql
+SELECT datname, pg_size_pretty(pg_database_size(datname)) AS size
+FROM pg_database ORDER BY pg_database_size(datname) DESC;
+
+SELECT schemaname, pg_size_pretty(sum(pg_total_relation_size(relid))) AS size
+FROM pg_statio_user_tables GROUP BY schemaname ORDER BY sum(pg_total_relation_size(relid)) DESC;
+```
+
+```sh
+fly ssh console -a psgl
+# machine内で
+du -sh /data/* 2>/dev/null | sort -h
+du -sh /data/postgres/* 2>/dev/null | sort -h
+```
+
+**3. `pg_wal`が大きい場合（Fly Postgresで最も多い原因）。** WALは、それを必要とするreplication slotがある限り消えない。停止済みreplicaや作りかけのslotが残っていると、WALが無限に溜まってvolumeを埋める。
+
+```sql
+SELECT slot_name, active, wal_status,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained
+FROM pg_replication_slots ORDER BY retained DESC;
+```
+
+`active = f`（誰も使っていない）で`retained`が大きいslotが原因である。**使っていないことを確認してから**削除すると、次のcheckpointでWALが回収される。activeなslotを消すとreplicaが壊れるので、`active = t`のものには触れない。
+
+```sql
+SELECT pg_drop_replication_slot('<slot_name>');
+CHECKPOINT;
+```
+
+**4. Atuin側が大きい場合。** これはAgentsViewの移行では減らない。Atuinのhistory整理か、volumeの拡張を検討する。
+
+```sh
+fly volumes list -a psgl
+fly volumes extend <volume_id> -s 3   # GB単位。拡張は縮小できない
+```
+
+**5. table自体のbloatが疑わしい場合だけ`VACUUM FULL`。** `VACUUM FULL`は対象tableと同じだけの空き容量とexclusive lockを必要とするため、**空きが10%しかない状態では実行しない**。先に上記でvolumeを空けるか拡張し、Atuinの書き込みを止められるmaintenance windowを設けてから行う。
+
+> [!NOTE]
+> Fly Postgresはvolume使用率が90%を超えるとprimaryをread-onlyへ落とす。`df`が90%前後のまま張り付いている場合、AgentsViewのschemaを消したかどうかに関わらず、**まずこの状態から抜ける**必要がある。`fly checks list -a psgl`で状態を確認する。
 
 #### 9.7 Fly AgentsView appを削除する
 
