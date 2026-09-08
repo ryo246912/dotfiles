@@ -389,7 +389,7 @@ Error: cannot destroy service without setting deletion_protection=false and runn
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_service.agentsview || true
 fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service.agentsview
-fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public || true
 ```
 
 CockroachDB clusterはpersistent dataを持つため`delete_protection = true`を維持する。
@@ -1039,14 +1039,14 @@ fnox exec -- terraform -chdir=terraform/agentsview untaint google_cloud_run_v2_s
 
 # 3. serviceとinvoker bindingをstateから外す（Google Cloud上のresourceは残る）
 fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service.agentsview
-fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public
+fnox exec -- terraform -chdir=terraform/agentsview state rm google_cloud_run_v2_service_iam_member.public || true
 
 # 4. 実serviceが残っていることを確認する
 gcloud run services describe ryo-agentsview \
   --project="$GCP_PROJECT_ID" --region=us-west2 --format='value(status.url)'
 ```
 
-invoker bindingも一度外すのは、resource addressは同じでも参照元がCloud Run resourceからservice名へ変わり、再importした方が単純なためである。手順3のあと、planに`google_cloud_run_v2_service_iam_member.public`の作成だけが出ることを確認してapplyする（既存bindingは同じ内容で再作成されるため、公開状態は途切れない）。
+invoker bindingも一度外すのは、resource addressは同じでも参照元がCloud Run resourceからservice名へ変わり、再importした方が単純なためである。planに`google_cloud_run_v2_service_iam_member.public`が`+ create`と出ている場合はstateに無いので、手順3の2つ目は`does not exist`で終わる（`|| true`で流す）。手順3のあと、planに`google_cloud_run_v2_service_iam_member.public`の作成だけが出ることを確認してapplyする（既存bindingは同じ内容で再作成されるため、公開状態は途切れない）。
 
 移行後の確認:
 
