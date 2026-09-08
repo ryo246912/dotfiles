@@ -47,7 +47,14 @@ spec:
             - |
               set -e
               data_dir="${AGENTSVIEW_DATA_DIR:-/data}"
-              install -D -m 600 /etc/agentsview/config.toml "$data_dir/config.toml"
+              mkdir -p "$data_dir"
+              # cp/install compare the source's metadata before and after the
+              # copy and abort with "replaced while being copied" when it moves.
+              # The secret mount is FUSE-backed and does not report stable
+              # metadata, so use a plain read/write, which makes no such check.
+              umask 077
+              cat /etc/agentsview/config.toml > "$data_dir/config.toml"
+              chmod 600 "$data_dir/config.toml"
               exec /usr/local/bin/docker-entrypoint.sh "$@"
             - agentsview-cloudrun
           # `pg serve` resets the bind address to 127.0.0.1 and honours only
