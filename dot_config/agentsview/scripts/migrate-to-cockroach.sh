@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# CockroachDB Cloud uses a publicly trusted server certificate. Recent libpq
+# clients need this explicit opt-in when ~/.postgresql/root.crt is absent.
+export PGSSLROOTCERT="${PGSSLROOTCERT:-system}"
+
 : "${AGENTSVIEW_OWNER_PROXY_PG_URL:?Set the Fly owner URL pointing at the local flyctl proxy}"
 : "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?Set the CockroachDB owner URL}"
 : "${AGENTSVIEW_MIGRATION_PROJECTS:?Set one small project for the target schema bootstrap}"
