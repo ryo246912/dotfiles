@@ -588,7 +588,7 @@ logの最初のerror行に応じて対処する。
 - **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
-- **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9のmigrationが未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:migrate`と最初の`push`を済ませてから再deployする。
+- **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9の最初の`push`が未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:push`を済ませてから再deployする。
 - **`28P01` / `password authentication failed`** — `agentsview-pg-url` secretのpasswordが誤っている。CockroachDB Cloud consoleでread-only roleのpasswordを再発行し、`agentsview:cloudrun:secrets`で新versionを登録してから再deployする。
 - **TLS / certificate error** — imageは`ca-certificates`入りのdebian-slimなので、通常はCockroachDB Cloudのcertを検証できる。出る場合はDB URLのhostとsslmodeを確認する。
 
@@ -634,7 +634,7 @@ done
 
 > **前提:**
 >
-> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9のmigrationを先に済ませる。
+> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の`configure-roles`と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push`を先に済ませる。
 > - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
 >
 > ```sh
@@ -679,25 +679,27 @@ mise run agentsview:cloudrun:status
 curl -i "${AGENTSVIEW_CLOUD_RUN_URL}/api/v1/sessions"
 ```
 
-##### 作業9. 小規模データでmigration rehearsalとCloud Run検証を行う
+##### 作業9. 小規模projectでpushとCloud Run検証を行う
 
-> **`AGENTSVIEW_OWNER_PROXY_PG_URL`について:** これは**移行元**、つまりFly PostgreSQL（app `psgl`）へowner roleで繋ぐURLである。Fly側DBはprivate network上にあり直接繋がらないため、`flyctl proxy`がlocalに張るtunnel（既定`127.0.0.1:15432`）を指す形にする。Fly時代から使っている値で、作業2の新規登録リストには含まれない。Bitwarden Secrets Managerに無い場合は`secret ... not found`で停止する。
->
-> ```text
-> postgresql://agentsview_owner:<owner password>@127.0.0.1:15432/agentsview?sslmode=disable
-> ```
->
-> Flyのデータを引き継がず、各PCから`agentsview pg push`で入れ直す方針なら、このtaskごと不要である。その場合はCockroachDBが空であることを確認してから`agentsview:cockroach:push`へ進む。
+**Flyのデータは移行しない。** 各PCのlocal SQLite archiveがsource of truthなので、CockroachDBへは`agentsview pg push`で入れ直す。Flyからのdump／restoreは行わない。
+
+まず対象projectを決める。`AGENTSVIEW_MIGRATION_PROJECTS`にはGoogle Cloud等のproject名ではなく、`agentsview projects --format json`に表示される既存のAgentsView projectから、session数の少ないものを1つ指定する。
+
+```sh
+agentsview projects --format json | jq -r '.[].name'
+```
 
 全PCの`agentsview pg push`、`pg watch`、cron／launchd／systemd timerを一時停止する。FlyのAtuinは別schemaなので停止しない。停止確認後だけ次を実行する。
 
 ```sh
-export AGENTSVIEW_MIGRATION_PROJECTS='<small-project>'
-export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
-fnox exec -- mise run agentsview:cockroach:migrate
-fnox exec -- mise run agentsview:cockroach:status
+export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
 fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+fnox exec -- mise run agentsview:cockroach:status
 ```
+
+最初の`push`がCockroachDBの`agentsview` schemaにtableを作る。push userには`CREATE`があるため、この経路でだけschemaが作られる。read roleで動くCloud Run viewerは自分でschemaを作れないので、**viewerより先にpushを済ませる**。
+
+`push`が`Pushing to PostgreSQL via the local daemon...`と表示するのは正常である。local daemonがSQLite archiveを保持しているため、CLIはpushをdaemonへ委譲する。接続先URLはCLI側で解決してdaemonへ渡すので、CockroachDBへ書かれる。daemonを介さず直接書きたい場合だけ`agentsview daemon stop`のうえ`AGENTSVIEW_NO_DAEMON=1`を使う。
 
 認証と画面を確認する。
 
@@ -710,22 +712,21 @@ fnox exec -- sh -c 'curl -fsS \
 
 UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、resource typeをCloud Run Revision、service nameを`ryo-agentsview`に絞る。startup error、CockroachDB接続error、secret値、`token=`付きURLが記録されていないことを確認する。CockroachDB Consoleのcluster Metrics／Usageでstorage、RU、connection数を記録する。
 
-**完了確認:** migration taskの全table件数比較が一致し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
+**完了確認:** `agentsview:cockroach:status`が対象projectのsessionを報告し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
 
 ##### 作業10. 本番cutoverし、観察後にFly側AgentsViewを削除する
 
 1. 全PCのpush／watch／timerを停止し、停止した端末一覧とUTC時刻を記録する。
 2. `flyctl scale count 0 -a ryo-agentsview`で旧viewerを停止する。Atuinと`psgl`は停止しない。
-3. 作業9と同じmigration commandを再実行して最終差分をcopyする。
-4. table count、主要session本文、最大更新時刻をFly／CockroachDBで比較する。
+3. 各PCで残りの全projectを`agentsview:cockroach:push`する（`--projects`を付けなければ全project）。
+4. `agentsview:cockroach:status`とCloud Run viewerで、想定するsessionが揃っていることを確認する。
 5. 各PCの通常taskを`agentsview:cockroach:push`へ切り替え、小さいprojectから再開する。
 6. Cloud Runを再度smoke testする。失敗した場合は新DBへのpushを再開せずFlyへrollbackする。
 7. 旧Fly schemaとappを最低1〜2週間保持し、毎日Cloud Run error、CockroachDB RU／storage、backupを確認する。
 8. 観察期間後に最新backupとrestore rehearsalを行い、承認してからFlyの`agentsview` schemaとappだけを削除する。
 
 ```sh
-export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
-fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:push
 fnox exec -- mise run agentsview:cockroach:status
 fnox exec -- mise run agentsview:pg:remote-local:dump
 ```
@@ -827,14 +828,13 @@ NorthflankはUIの分かりやすさでは魅力があるが、今回の目的�
 
 ### 実装済みファイル
 
-| ファイル                                                | 目的                                                                                      |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                      | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context               |
-| `dot_config/agentsview/cloudrun-service.yaml`           | clrndが所有するCloud Run Service manifest                                                 |
-| `dot_config/agentsview/clrnd.yml`                       | clrndのregion／service／manifest設定                                                      |
-| `dot_config/agentsview/scripts/migrate-to-cockroach.sh` | Flyからdata-only dumpを取得し、CockroachDBへ冪等restoreして件数比較                       |
-| `dot_config/mise/tasks/agentsview.toml`                 | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task             |
-| `terraform/agentsview/*.tf`                             | CockroachDB、Artifact Registry、IAM、Secret Manager container、WIF、Cloud Run invoker IAM |
+| ファイル                                      | 目的                                                                                      |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context               |
+| `dot_config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest                                                 |
+| `dot_config/agentsview/clrnd.yml`             | clrndのregion／service／manifest設定                                                      |
+| `dot_config/mise/tasks/agentsview.toml`       | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task             |
+| `terraform/agentsview/*.tf`                   | CockroachDB、Artifact Registry、IAM、Secret Manager container、WIF、Cloud Run invoker IAM |
 
 ### 0. 変更前の安全確認
 
@@ -856,6 +856,8 @@ WHERE schemaname = 'agentsview';
 ```
 
 3. Fly PostgreSQL全体とAgentsView schemaのbackupを別々に取得する。passwordをcommand historyへ直接書かない。
+
+> データ移行はしない方針（3節）でも、この backup は取る。CockroachDBへはlocal archiveからpushし直すため、**local archiveに無くFlyにだけあるsession**があれば、Fly schemaを消した時点で失われるからである。`AGENTSVIEW_OWNER_PROXY_PG_URL`はFly owner roleを`flyctl proxy`経由で指すURLで、Bitwarden Secrets Managerに無い場合はここで用意する。Flyにだけあるデータが無いと確認済みなら、この手順は省略してよい。
 
 ```sh
 umask 077
@@ -1191,36 +1193,47 @@ gcloud storage buckets add-iam-policy-binding "gs://${TF_STATE_BUCKET}" \
   --role=roles/storage.objectAdmin
 ```
 
-### 3. CockroachDB schemaをbootstrapしてデータをcopy
+### 3. CockroachDB schemaをbootstrapしてlocalからpush
+
+**方針: Flyのデータは移行しない。** AgentsViewのlocal SQLite archiveが各PCのsource of truthであり、CockroachDBはそこからの派生である。したがってFlyの`agentsview` schemaをdump／restoreするのではなく、各PCから`agentsview pg push`で入れ直す。Fly側のdumpに依存しないぶん、`flyctl proxy`もowner roleの接続情報も不要になる。
 
 #### 3.1 小さいprojectでbootstrap
 
-`AGENTSVIEW_MIGRATION_PROJECTS`には、Google Cloud等のproject名ではなく`agentsview projects --format json`に表示される既存のAgentsView projectから、最初に試すsession数の少ないものを1つ指定する。任意の`small-project`という名前を新規作成する意味ではない。候補一覧、選び方、owner URLの28P01解消は作業5の手順を参照する。
-
-dump後の件数比較を決定的にし、copy中の更新を落とさないため、全PCの`agentsview pg push`、`agentsview pg watch`、定期実行を一時停止する。Atuinは別schemaへ書くため停止不要。停止を確認したoperatorだけが確認変数を設定する。
+`AGENTSVIEW_MIGRATION_PROJECTS`には、Google Cloud等のproject名ではなく`agentsview projects --format json`に表示される既存のAgentsView projectから、最初に試すsession数の少ないものを1つ指定する。任意の`small-project`という名前を新規作成する意味ではない。候補一覧と選び方は作業5の手順を参照する。
 
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
-export AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes
-fnox exec -- mise run agentsview:cockroach:migrate
+fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 ```
 
-taskは次を順に行う。
+最初の`push`が次を行う。
 
-1. `flyctl proxy`で旧Fly PostgreSQLへ接続する。
-2. AgentsView自身の`pg push`でCockroachDB用schemaを作成する。
-3. Flyの`agentsview` schemaをdata-only／column insert形式でprivate backupへ保存する。
-4. `ON CONFLICT DO NOTHING`付きでCockroachDBへrestoreする。
-5. source／targetのtable一覧と正確な`count(*)`を比較する。
-6. 不一致なら非zero終了し、Flyをsource of truthのまま維持する。
+1. `agentsview` schemaとtableをCockroachDBに作成する（push userの`CREATE`が必要）。
+2. 指定projectのsessionをlocal archiveからCockroachDBへ書き込む。
+3. data versionを記録する。以降のviewer imageはこのversion以上でなければ起動しない。
 
-`AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`がなければscriptはcopy前に停止する。これは自動的にwrite processを検出した印ではなく、operatorが全端末の停止を確認したという明示的な承認である。検証copy後は旧Flyへのpushを再開してよいが、cutover時には再度停止して最終copyする。
+`--no-vectors`はtaskが常に付ける。CockroachDBはpgvectorを持たないため、vectorは押し込まない。
 
-dumpは`~/backup/agentsview-fly-<UTC timestamp>.sql`へmode 0600で残る。このfileにはsession内容が含まれるためcommit、共有、cloud uploadをしない。
+#### 3.2 pushがdaemon経由になることについて
 
-#### 3.2 内容も照合
+`push`は`Pushing to PostgreSQL via the local daemon...`と表示する。これは異常ではない。local daemon（背景で動くAgentsView server）がSQLite archiveを排他的に保持しているため、CLIは自分で書かずdaemonへ`POST /api/v1/push/pg`で委譲し、進捗をstreamで受け取る。
 
-taskは全tableの`count(*)`を比較する。最終判断では、主要tableの最大更新時刻と代表sessionの内容もsource／targetで比較する。
+接続先はCLI側で解決してrequest bodyでdaemonへ渡すため、`AGENTSVIEW_PG_URL`に指定したCockroachDBへ書かれる。daemonが別のDBへ書くことはない。
+
+daemonを介さず直接書きたい場合だけ次を使う。
+
+```sh
+agentsview daemon stop
+AGENTSVIEW_NO_DAEMON=1 fnox exec -- mise run agentsview:cockroach:push -- --projects '<project>'
+```
+
+#### 3.3 内容を照合
+
+```sh
+fnox exec -- mise run agentsview:cockroach:status
+```
+
+CockroachDB側の件数はowner／read接続で直接確認できる。
 
 ```sql
 SELECT count(*) FROM agentsview.sessions;
@@ -1236,12 +1249,7 @@ WHERE table_schema = 'agentsview'
 ORDER BY table_name;
 ```
 
-さらに各PCからCockroachDBへ直接接続できることを確認する。
-
-```sh
-fnox exec -- mise run agentsview:cockroach:status
-fnox exec -- mise run agentsview:cockroach:push -- --projects '<small-project>'
-```
+比較対象はFlyではなくlocal archiveである。`agentsview projects --format json`のsession数と、Cloud Run viewerに表示される件数が一致することを確認する。
 
 semantic／hybrid searchを利用している場合、CockroachDBではpgvectorが使えないためここで中止する。利用しない場合は、vector searchが`501 Not Available`になる機能差を受け入れて先へ進む。
 
@@ -1391,8 +1399,8 @@ Google Cloud Consoleで次も確認する。
 1. 全PCで旧`mise run agentsview:pg:push`の実行を止める。
 2. Fly AgentsView appを停止し、旧viewerからのreadを止める。
 3. cutover UTC timestampを記録する。
-4. `AGENTSVIEW_MIGRATION_WRITES_PAUSED=yes`を設定し、`agentsview:cockroach:migrate`を再実行して最終差分をcopyする。
-5. 厳密row countと主要sessionの内容を比較する。
+4. 各PCで`agentsview:cockroach:push`を`--projects`なしで実行し、全projectを入れる。
+5. `agentsview:cockroach:status`とCloud Run viewerで、local archiveのsessionが揃っていることを比較する。
 6. 各PCの通常taskを`agentsview:cockroach:push`へ切り替える。
 7. Cloud Run viewerで認証、session一覧、detail、analytics、usageをsmoke testする。
 8. smoke test合格後だけCockroachDBへのpushを再開する。

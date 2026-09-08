@@ -880,26 +880,6 @@ AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value=
 AGENTSVIEW_PG_SCHEMA         = "agentsview"
 AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 
-["agentsview:cockroach:migrate"]
-description = "Copy the Fly AgentsView schema data to CockroachDB and compare table counts"
-run = '''
-set -eu
-
-if { [ -z "${AGENTSVIEW_OWNER_PROXY_PG_URL:-}" ] ||
-     [ -z "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:cockroach:migrate "$@"
-fi
-
-: "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です}"
-: "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?fnox が未解決です}"
-: "${AGENTSVIEW_MIGRATION_PROJECTS:?小さい project を1つ指定してください}"
-: "${AGENTSVIEW_MIGRATION_WRITES_PAUSED:?全PCのAgentsView pushを停止してyesを設定してください}"
-
-bash dot_config/agentsview/scripts/migrate-to-cockroach.sh
-'''
-shell = "bash -c"
-
 ["agentsview:cockroach:configure-roles"]
 description = "Remove Cockroach Cloud default admin membership and grant least privileges"
 run = '''
