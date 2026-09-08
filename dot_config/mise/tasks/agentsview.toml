@@ -1114,8 +1114,9 @@ set -euo pipefail
 
 : "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
 
-mode="${1:?deploy／verify／diff などのmodeを指定してください}"
-shift
+# miseのbash -c runnerは、`--`以降の最初の引数を`$0`へ渡す。
+# `$1`を読むと`mise run agentsview:cloudrun:build`でもmodeが空になる。
+mode="${0:?deploy／verify／diff などのmodeを指定してください}"
 
 # region と service 名は固定。clrnd.yml、manifestの metadata.name、Terraformの
 # local.region ／ local.cloud_run_service_name と一致している必要があり、ここだけ
@@ -1262,7 +1263,7 @@ build_image() {
   }
   gcloud builds submit "$config_dir" \
     --project="$GCP_PROJECT_ID" \
-    --tag="$AGENTSVIEW_IMAGE"
+    --tag="$AGENTSVIEW_IMAGE" >&2
 }
 
 case "$mode" in

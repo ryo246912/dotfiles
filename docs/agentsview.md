@@ -512,10 +512,38 @@ fnox exec -- sh -c '
 
 ##### 作業6. Artifact Registryへ最初のimageをbuildする
 
-Google Cloud Consoleの**Cloud Build > Settings**でbuild service accountを確認し、Artifact Registry writer権限がTerraformで付与されていることを確認する。次にrepository rootからimageをbuildする。
+Cloud Buildのdefault build service accountと、Artifact Registry repositoryに付与されたwriter権限を確認する。**Cloud Build > Settings**にはrepository-level IAMが表示されないため、Consoleでは**Artifact Registry > Repositories > agentsview > Permissions**を開く。Terraformのapply結果で2つの`google_artifact_registry_repository_iam_member.cloud_build_writer`がrefreshされて`No changes`なら、legacy Cloud Build service accountとCompute Engine default service accountの両方にwriter bindingが存在する。
+
+実際に選択されるdefault service accountをCLIで確認する。
 
 ```sh
-AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
+BUILD_SA=$(gcloud builds get-default-service-account --project="$GCP_PROJECT_ID")
+printf 'Cloud Build default service account: %s\n' "$BUILD_SA"
+
+gcloud artifacts repositories get-iam-policy agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --location=us-west2 \
+  --flatten='bindings[].members' \
+  --filter="bindings.role:roles/artifactregistry.writer AND bindings.members:serviceAccount:${BUILD_SA}" \
+  --format='table(bindings.role,bindings.members)'
+```
+
+`roles/artifactregistry.writer`と`BUILD_SA`が1行表示されれば付与済みである。何も表示されない場合だけTerraformの通常のplan／applyを実行する。長い`-target` applyは初回bootstrap／障害復旧専用であり、日常確認には使用しない。
+
+`terraform.tfvars`に廃止済みの`agentsview_image`が残っている場合は削除する。これはIAMとは無関係だが、Terraformのundeclared variable warningを解消する。
+
+```sh
+sed -i.bak '/^[[:space:]]*agentsview_image[[:space:]]*=/d' terraform.tfvars
+rm -f terraform.tfvars.bak
+```
+
+次にimageをbuildする。build logは標準エラーへ出し、成功時のimage URIだけを標準出力へ返すため、`tail -1`を使わず直接代入する。これによりCloud Buildが失敗した場合に`tail`が終了コードを隠さない。
+
+```sh
+AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build)
+test -n "$AGENTSVIEW_IMAGE"
+printf 'AGENTSVIEW_IMAGE=%s\n' "$AGENTSVIEW_IMAGE"
+
 gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
   --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
 ```
