@@ -135,7 +135,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/mise/**/*.toml"],
+      "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml"],
       "matchStrings": ["min_version\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "jdx/mise",
       "packageNameTemplate": "jdx/mise",
@@ -189,7 +189,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
@@ -197,7 +197,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],

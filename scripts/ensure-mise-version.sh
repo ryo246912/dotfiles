@@ -13,4 +13,13 @@ if [ -z "$required_mise_version" ]; then
   exit 1
 fi
 echo "Ensuring mise $required_mise_version is installed..."
-MISE_NO_CONFIG=1 mise self-update --yes "$required_mise_version"
+if ! MISE_NO_CONFIG=1 mise self-update --yes "$required_mise_version"; then
+  cat >&2 <<EOF
+error: 'mise self-update' に失敗しました。
+brew/apt/scoop 等のパッケージマネージャーで導入した mise は self-update を拒否するため
+これが原因の可能性があります。その場合はパッケージマネージャー側で更新してください
+（例: brew upgrade mise / sudo apt update && sudo apt upgrade mise）。
+更新後、このスクリプトを再実行して min_version ($required_mise_version) 以上になったことを確認してください。
+EOF
+  exit 1
+fi

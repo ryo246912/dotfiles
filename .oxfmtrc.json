@@ -5,6 +5,8 @@
     "not_config/sidebery/**",
     "config/obsidian/**",
     "config/navi/**",
+    "config-mac/navi/**",
+    "config-linux/navi/**",
     "**/bun.lock",
     "**/*.toml"
   ]

@@ -51,13 +51,13 @@ blueutil --paired --format json-pretty
 
 $ on_off: echo -e "1\n0"
 $ device: blueutil --paired --format json-pretty \
-| jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-| column -ts $'\t' \
+  | jq -r '["address","name","connected"] , (.[] | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
   --- --headers 1 --column 1
 $ connected_device: blueutil --paired --format json-pretty \
-| jq -r '["address","name","connected"] , (.[] | select(.connected == true) | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
-| column -ts $'\t' \
---- --headers 1 --column 1
+  | jq -r '["address","name","connected"] , (.[] | select(.connected == true) | [.address , .name , (if .connected then "◯" else "☓" end)]) | @tsv' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
 
 ```sh
 % mac
@@ -125,8 +125,8 @@ $ load_unload: echo -e "unload\nload"
 $ app : system_profiler "SPApplicationsDataType" -json \
   | jq -r '["app","path"] ,(.SPApplicationsDataType[] | [._name , .path]) | @tsv' \
   | column -ts $'\t' \
---- --headers 1 --column 2
+  --- --headers 1 --column 2
 $ window: t-rec --ls-win \
   | column -ts $'|' \
---- --headers 1 --column 2
+  --- --headers 1 --column 2
 ;$

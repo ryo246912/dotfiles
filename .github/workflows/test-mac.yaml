@@ -96,6 +96,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
+          # apm:sync-lock 等のタスクは既定で ~/dotfiles を checkout とみなすため、
+          # $HOME 外の GITHUB_WORKSPACE に checkout される CI ではここで明示する。
+          DOTFILES_DIR: ${{ github.workspace }}
         run: |
           set -euo pipefail
           # packages フェーズは mise bootstrap プロセス起動時に読み込んだ config しか見ないため、
