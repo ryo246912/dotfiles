@@ -1,0 +1,4 @@
+gcp_project_id = "replace-with-project-id"
+
+# Cloud Runのimageは Terraform の入力ではない。clrndが
+# dot_config/agentsview/cloudrun-service.yaml からdeployする。

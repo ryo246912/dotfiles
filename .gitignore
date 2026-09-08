@@ -28,3 +28,9 @@ mcp.json
 # 出力されるだけで、このリポジトリには非テンプレートの mcp.json 自体が存在しない
 # （source は templates/rulesync/mcp.json.tera）。そのため上の `mcp.json` ignore に対する
 # !negation はもう不要（旧 dot_config/.../mcp.json.tmpl 時代の名残）。
+
+# Terraform local state and plans (the dependency lock file remains tracked).
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
