@@ -7,17 +7,19 @@
 
 ## 実装済みファイル
 
-| ファイル                                             | 目的                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
-| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                              |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
+| ファイル                                             | 目的                                                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version        |
+| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照              |
+| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                               |
+| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                             |
+| `dot_config/agentsview/compose.yaml`                 | local CockroachDBのDocker Compose定義。client tool（psql／pg_dump）のimage pinと、旧PostgreSQL dumpを読むlegacy serviceも持つ |
+| `dot_config/agentsview/scripts/localdb.sh`           | local CockroachDB系taskの実体。container起動、push／serve、dump、restore、sequence補正、旧PostgreSQL dumpの取り込み           |
+| `dot_config/agentsview/executable_batch-insert-dump` | pg_dumpのplain dumpからINSERT statementだけを取り出し、CockroachDBへ流せるtransaction chunkへ分けるfilter                     |
+| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                                |
+| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDB、CockroachDBへのpush                |
+| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                                |
+| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM                 |
 
 各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
 
@@ -690,7 +692,7 @@ UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、reso
 ```sh
 fnox exec -- mise run agentsview:cockroach:push
 fnox exec -- mise run agentsview:cockroach:status
-fnox exec -- mise run agentsview:pg:remote-local:dump
+fnox exec -- mise run agentsview:cockroach:remote-local:dump
 ```
 
 **完了確認:** 全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功する。
@@ -791,13 +793,17 @@ agentsview projects --format json | jq -r '.[] | "\(.name)\t\(.session_count // 
 fnox exec -- mise run agentsview:cockroach:status
 ```
 
-3. local PostgreSQLへ統合backupを作れる状態にしておく。CockroachDBとlocal archiveの両方をまとめたdumpが手元に残る。
+3. local CockroachDBへ統合backupを作れる状態にしておく。CockroachDBとlocal archiveの両方をまとめたdumpが手元に残る。
 
 ```sh
-fnox exec -- mise run agentsview:pg:remote-local:dump
+fnox exec -- mise run agentsview:cockroach:remote-local:dump
 ```
 
-4. backupを空の検証PostgreSQLへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
+4. そのbackupをlocal CockroachDBへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
+
+```sh
+mise run agentsview:cockroach:local:restore
+```
 
 ### 1. CockroachDBの権限設計を決める
 
@@ -1166,7 +1172,7 @@ semantic／hybrid searchを利用している場合、CockroachDBではpgvector�
 
 #### 結論: pushは可能、DBからlocalへのpullは提供されない
 
-AgentsViewの同期元はlocal PostgreSQLではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、PostgreSQL serverからlocal SQLite／session fileへ戻す`pg pull` commandはない。
+AgentsViewの同期元はlocal databaseではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、shared databaseからlocal SQLite／session fileへ戻す`pg pull` commandはない。
 
 CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCockroachDBをshared databaseとして扱える。このrepositoryでは次の経路を採用する。
 
@@ -1176,10 +1182,14 @@ CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCock
     │ agentsview pg push（public TLS、push role）
     ▼
 CockroachDB Cloud Basic
-    │
-    │ SELECTのみ（read role）
-    ▼
-Cloud Run上のagentsview pg serve
+    │                                │
+    │ SELECTのみ（read role）        │ pg_dump（data-only／column INSERT、push role）
+    ▼                                ▼
+Cloud Run上のagentsview pg serve     local CockroachDB（single-nodeのcontainer）
+                                     │
+                                     │ agentsview pg serve（mise run agentsview:serve）
+                                     ▼
+                                     手元のviewer／SQL
 ```
 
 差分pushは各PCからCockroachDBのTLS endpointへ直接送る。proxyは介さない。
@@ -1202,31 +1212,101 @@ fnox exec -- mise run agentsview:cockroach:push -- --full --no-vectors
 
 #### 「pull」の代わりに何を使うか
 
-| 目的                                      | 方法                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                           |
-| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                 |
-| CockroachDB障害に備える                   | `agentsview:pg:remote-local:dump`でdataをlocal PostgreSQLへmergeし、custom-format backupを作る。自動replicaとはみなさない |
-| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない         |
-| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない             |
+| 目的                                      | 方法                                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                 |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                       |
+| remoteのdataをlocalで参照する             | `agentsview:cockroach:remote-local:restore`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                  |
+| CockroachDB障害に備える                   | `agentsview:cockroach:remote-local:dump`でdataをlocal CockroachDBへmergeし、そのlocal dumpを保存する。自動replicaとはみなさない |
+| localでSQL分析する                        | `agentsview:cockroach:local:sql`でlocal CockroachDBへ接続する。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない     |
 
-CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのためCockroachDBのschema dumpをPostgreSQLへそのままrestoreする設計は採用しない。このrepositoryの`agentsview:pg:remote-local:dump`はdata-only／column INSERTとしてexportし、現在のAgentsViewがlocal PostgreSQLへ作ったschemaに不足rowだけをtransaction内でmergeする。
+`agentsview pg pull`が無い以上、remoteのdataをlocalで扱う経路は「dumpして取り込む」しかない。localもCockroachDBにしているのは、この取り込みでengine差を跨がないようにするためである。dumpはdata-only／column INSERTでexportし、現在のAgentsViewがlocal CockroachDBへ作ったschemaへ、不足rowだけをmergeする。schema DDL・権限・sequenceはdumpから持ち込まない（schemaは常にAgentsViewのmigrationが作る）。
 
-#### local PostgreSQLの位置づけ
+#### local CockroachDBの位置づけ
 
-local PostgreSQL（`dot_config/agentsview/compose.yaml`）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。
-
-local PostgreSQLを使うのはbackupのときだけである。`agentsview:pg:remote-local:dump`が、このmachineのlocal push、CockroachDBからのdata export、local merge、sequence補正、custom-format dumpを順に行う。
+local CockroachDB（`dot_config/agentsview/compose.yaml`の`cockroach` service）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。localを使うのは、remote dataの取り込み・backup・手元での閲覧のときだけである。
 
 ```sh
-# CockroachDB data + このmachineのsessionを統合したlocal PostgreSQL dump
-fnox exec -- mise run agentsview:pg:remote-local:dump
+# remoteのdataをlocalへ取り込む（dump → merge）
+fnox exec -- mise run agentsview:cockroach:remote-local:restore
 
-# remoteへ接続せず、現在のlocal PostgreSQLだけをdump
-mise run agentsview:pg:local:dump
+# 取り込んだうえで統合dumpも作る（remote data + このmachineのsession）
+fnox exec -- mise run agentsview:cockroach:remote-local:dump
+
+# remoteへ接続せず、現在のlocal CockroachDBだけをdump
+mise run agentsview:cockroach:local:dump
+
+# 手元のdumpを選んでlocalへmergeする（remote／localどちらのdumpでもよい）
+mise run agentsview:cockroach:local:restore
+
+# 取り込んだ内容をlocalのviewerで見る
+mise run agentsview:serve
 ```
 
-CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。importはtransaction内で行い、schema／型が合わなければ全体をrollbackする。
+CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
+
+importはINSERTを一定件数ごとのtransactionへ分けて流す。CockroachDBは1 transactionで書ける量に上限があり、dump全体を1 transactionにすると大きなbackupで失敗するためである。件数は`AGENTSVIEW_IMPORT_CHUNK_ROWS`（既定500）で変えられる。途中で失敗した場合、そこまでのchunkはcommit済みで残るが、すべてのINSERTが`ON CONFLICT DO NOTHING`なので、原因を直して同じfileを再実行すればよい。
+
+#### localをCockroachDBに揃える理由と制約
+
+| 項目       | local（`compose.yaml`）                            | remote（CockroachDB Cloud Basic）         |
+| ---------- | -------------------------------------------------- | ----------------------------------------- |
+| engine     | `cockroachdb/cockroach`のsingle-node               | Basic cluster（複数node）                 |
+| 認証       | `--insecure`（TLSなし・passwordなし、`root`接続）  | `sslmode=verify-full`＋role別password     |
+| port       | `127.0.0.1:26257`（DB consoleは`127.0.0.1:18080`） | 公開SQL endpointの`26257`                 |
+| schema作成 | `agentsview pg push`（`root`）                     | `agentsview pg push`（`agentsview_push`） |
+| vector     | 使わない（`--no-vectors`）                         | 使わない（`--no-vectors`）                |
+
+localをPostgreSQLにしていると、取り込みのたびにDDL・sequence・型・transaction semanticsの差を迂回する必要があり、「remoteで動くがlocalで再現できない」状態が生まれる。engineを揃えると、AgentsViewのmigrationとqueryがlocalでも本番と同じcode pathを通り、remoteのdumpをそのまま取り込める。
+
+代償として、localでもpgvectorが無くなる。`agentsview:cockroach:local:push`は常に`--no-vectors`を付け、semantic／hybrid searchは`501 Not Available`になる（remoteと同じ制約）。vector searchをlocalで試したい場合だけ、別途PostgreSQLを立てて`AGENTSVIEW_PG_URL`を手で指定する。
+
+versionは`compose.yaml`の`image` tagで固定し、renovateが更新する。Basic clusterは自動upgradeされるため、localと厳密に一致はしない。差が問題になったときは両者を見比べる。
+
+```sh
+# local側のversion（machineごとのsession数も出る）
+mise run agentsview:cockroach:local:status
+
+# remote側のversion
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -Atc "SELECT version()"'
+```
+
+#### 旧構成（local PostgreSQL）からの移行
+
+`agentsview-postgres` volumeと、`.dump`（custom-format）のbackupは残してある。custom-format dumpはPostgreSQLでしか開けないため、CockroachDBへ直接restoreはしない。legacy profileのPostgreSQLでdumpを開き、data-only INSERTへ変換してから取り込む。
+
+```sh
+# 旧backupを選んでlocal CockroachDBへ取り込む（変換後の.sqlもbackup dirへ残る）
+mise run agentsview:cockroach:local:import-pg-dump
+
+# 取り込み結果を確認する
+mise run agentsview:cockroach:local:status
+```
+
+取り込みが終わり、`agentsview:cockroach:local:dump`で新しいdumpを作れたら、旧volumeは削除してよい。
+
+```sh
+mise run agentsview:cockroach:local:down
+docker volume rm agentsview-postgres
+```
+
+#### 切り替え後の確認
+
+localのengineが変わるため、各PCで初回だけ次を順に確認する。上から順に実行し、失敗したところで止める。
+
+1. `mise run agentsview:cockroach:local:up` — containerがhealthyになり、`agentsview` databaseができる
+2. `mise run agentsview:cockroach:local:push` — AgentsViewのmigrationがCockroachDB上でschemaとtableを作る（PostgreSQL専用のindexやvectorを要求して失敗しないこと）
+3. `mise run agentsview:cockroach:local:status` — engine versionと、machineごとのsession数が出る
+4. `fnox exec -- mise run agentsview:cockroach:remote-local:restore` — remoteのrowが取り込まれ、tableごとの増分が出る。続けてもう一度実行すると増分が`+0 rows`になる（冪等）
+5. `mise run agentsview:cockroach:local:dump` → `mise run agentsview:cockroach:local:restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
+6. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
+7. 旧backupを持ち込む場合だけ`mise run agentsview:cockroach:local:import-pg-dump`
+
+sequence補正はrestore／importの中で自動的に走る。単体で実行しても副作用はない（sequenceを持たないschemaでは何もしない）。
+
+```sh
+mise run agentsview:cockroach:local:repair-sequences
+```
 
 ### 5. Cloud Run secretとserviceを作成
 

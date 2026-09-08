@@ -1,6 +1,60 @@
 services:
+  # 本番（CockroachDB Cloud Basic）と同じengineをsingle-nodeで動かす。localも
+  # CockroachDBにしているのは、remoteのdumpをlocalへそのままrestoreできるように
+  # し、AgentsViewのmigrationとqueryが本番と同じcode pathを通るようにするため
+  # である。PostgreSQLをlocalに置くと、DDL・sequence・型の非互換をimportのたび
+  # に迂回しなければならない。
+  cockroach:
+    image: cockroachdb/cockroach:v26.2.6
+    # local専用なので--insecure（TLSなし・password認証なし）で動かす。remoteは
+    # sslmode=verify-fullとrole別passwordを使うため、認証方式だけが本番と異なる。
+    command:
+      - start-single-node
+      - --insecure
+      - --listen-addr=0.0.0.0:26257
+      - --http-addr=0.0.0.0:8080
+      - --store=/cockroach/cockroach-data
+    environment:
+      # imageのentrypointが対応していれば、volumeが空の初回起動でdatabaseを作る。
+      # databaseの存在を保証するのはこちらではなく、起動ごとに
+      # CREATE DATABASE IF NOT EXISTS を実行する scripts/localdb.sh の up である。
+      COCKROACH_DATABASE: ${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}
+      # local検証clusterの利用統計をCockroach Labsへ送らない。
+      COCKROACH_SKIP_ENABLING_DIAGNOSTIC_REPORTING: "true"
+    ports:
+      # 左がhostへpublishするport、右がcontainer内のport。container netnsを共有
+      # するpgtoolsからは常に26257で見えるので、この値を変えても影響しない。
+      - "127.0.0.1:${AGENTSVIEW_LOCAL_CRDB_PORT:-26257}:26257"
+      - "127.0.0.1:${AGENTSVIEW_LOCAL_CRDB_HTTP_PORT:-18080}:8080"
+    healthcheck:
+      # imageにcurlは入っていないが、cockroach binaryは必ずある。
+      test: ["CMD", "cockroach", "sql", "--insecure", "--execute", "SELECT 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
+    volumes:
+      - agentsview-cockroach:/cockroach/cockroach-data
+
+  # psql／pg_dumpの供給元。CockroachDBのimageにはclient toolが入っていない。
+  # scripts/localdb.sh はこのserviceを起動せず、imageとnetworkの指定だけを借りて
+  # docker runで実行する（compose runの進捗表示がquery結果のparseを壊さないように
+  # するため）。network_modeがcockroach containerのnetnsを指すので、client側からは
+  # 127.0.0.1:26257がlocal clusterになる（hostへpublishしたportではない）。
+  pgtools:
+    image: postgres:17
+    entrypoint: ["true"]
+    network_mode: "service:cockroach"
+    profiles:
+      - tools
+
+  # 旧構成（local PostgreSQL）で作ったcustom-format dumpを読むためだけに残す。
+  # `agentsview:cockroach:local:import-pg-dump` がこのserviceでdumpを開き、
+  # data-only INSERTへ変換してからCockroachDBへ流す。日常運用では起動しない。
   postgres:
     image: postgres:17
+    profiles:
+      - legacy
     environment:
       POSTGRES_DB: agentsview
       POSTGRES_PASSWORD: ${AGENTSVIEW_LOCAL_PG_PASSWORD:-agentsview-local}
@@ -16,5 +70,8 @@ services:
       - agentsview-postgres:/var/lib/postgresql/data
 
 volumes:
+  agentsview-cockroach:
+    name: agentsview-cockroach
+  # 旧構成のdataを残す。import-pg-dumpで取り込み終えたら手で削除する。
   agentsview-postgres:
     name: agentsview-postgres
