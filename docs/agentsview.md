@@ -559,6 +559,36 @@ Google Cloud Consoleの**Artifact Registry > Repositories > agentsview**でそ�
 
 **完了確認:** 最後のcommandが`sha256:...`を返す。
 
+##### `HealthCheckContainerError`で初回revisionが起動しない場合
+
+AgentsView 0.38.1の`pg serve`は、portを省略すると`8080`を使うが、hostは`127.0.0.1`へbindする。Cloud Runが注入する`PORT=8080`だけではbind addressは変わらず、Cloud Runのcontainer proxyはloopback listenerへ到達できない。この場合、application processが動いていても「PORT=8080でlistenしなかった」と判定される。
+
+`cloudrun-service.yaml`ではentrypointへ`--host 0.0.0.0 --port 8080`を渡す。最新変更を適用して同じimageを再deployする。
+
+```sh
+chezmoi apply ~/.config/agentsview
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+```
+
+既にbuildが成功している場合、imageの再buildは不要である。deploy前と同じ`AGENTSVIEW_IMAGE`を明示する必要がある場合は、成功したbuild結果のURIを設定してから実行する。
+
+```sh
+export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsview:0.38.1-bac4d72dc567'
+AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+```
+
+再deploy後、render結果とrevision logを確認する。
+
+```sh
+mise run agentsview:cloudrun:render | rg -A6 'args:'
+gcloud run services logs read ryo-agentsview \
+  --project="$GCP_PROJECT_ID" \
+  --region=us-west2 \
+  --limit=100
+```
+
+render結果に`--host`、`0.0.0.0`、`--port`、`8080`があり、revisionがReadyになれば修復完了である。引き続き起動しない場合は、上記logに出るCockroachDB認証、TLS、schema compatibility、Secret Manager mountの最初のerrorを調査する。startup probeのtimeoutを延ばす前に、processが正しいinterfaceでlistenしていることを確認する。
+
 ##### 作業7. Secret Managerへ最初のsecret versionを登録する
 
 Cloud Run URLはまだ存在しないため、初回configだけplaceholderを使う。URL確定後の作業8で必ず置き換える。
