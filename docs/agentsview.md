@@ -5,6 +5,23 @@
 > [!IMPORTANT]
 > 後半のFly構成はmigration元とrollback用に残している。移行先は「Atuin app／DBはFlyのまま、AgentsView appはCloud Run、AgentsView DBはCockroachDB」である。新規構築は以下の[Cloud Run／CockroachDBへの移行手順](#cloud-runcockroachdbへの移行手順)を上から順に実行する。
 
+## 実装済みファイル
+
+| ファイル                                             | 目的                                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
+| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
+| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
+| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
+| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                              |
+| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
+| `dot_config/agentsview/fly.toml`                     | Fly.io旧構成。migration元とrollback用に残す                                                                            |
+| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
+| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
+| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
+
+各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
+
 ## Cloud Run／CockroachDBへの移行手順
 
 対象構成:
@@ -813,18 +830,9 @@ fnox exec -- mise run agentsview:cockroach:status
 fnox exec -- mise run agentsview:pg:remote-local:dump
 ```
 
-削除直前にFly owner接続で件数を確認し、明示承認後だけ実行する。
+Fly側の削除（schema、role、app）は手順が長く、`psgl`をAtuinと共用しているため間違えると影響が大きい。**[9. Flyの容量を解放](#9-flyの容量を解放agentsview-appschemaroleの削除)の手順に従う。** ここでは繰り返さない。
 
-```sql
-SELECT count(*) FROM agentsview.sessions;
-DROP SCHEMA agentsview CASCADE;
-```
-
-```sh
-flyctl apps destroy ryo-agentsview
-```
-
-**完了確認:** Atuin syncがFly private PostgreSQLで継続し、全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功し、Flyから削除したのがAgentsView app／schemaだけである。
+**完了確認:** Atuin syncがFly private PostgreSQLで継続し、全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功し、Flyから削除したのがAgentsView app／schema／roleだけである。
 
 ### AgentsView appの実行基盤はどれを選ぶか
 
@@ -907,16 +915,6 @@ severity>=ERROR
 6. `require_auth`、secret file mount相当、read-only DB URL、rollback用旧revisionを再現できる。
 
 NorthflankはUIの分かりやすさでは魅力があるが、今回の目的は「無料・ログ改善・十分なspec・安全な移行」を同時に満たすこと。**現状ではCloud Runのままログ操作をCLI／saved queryへ整備する方が、再移行より低リスク**である。
-
-### 実装済みファイル
-
-| ファイル                                      | 目的                                                                                         |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context                  |
-| `dot_config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest                                                    |
-| `dot_config/agentsview/clrnd.yml`             | clrndのregion／service／manifest設定                                                         |
-| `dot_config/mise/tasks/agentsview.toml`       | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task                |
-| `terraform/agentsview/*.tf`                   | CockroachDB、Artifact Registry、runtime IAM、Secret Manager container、Cloud Run invoker IAM |
 
 ### 0. 変更前の安全確認
 
@@ -1051,15 +1049,6 @@ Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがな�
 | clrnd     | Cloud Run Service定義（image、CPU／memory、concurrency、timeout、scaling、環境変数、Secret Manager参照）、Revision、traffic、rollback |
 
 ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
-
-追加したファイルは次のとおり。
-
-| ファイル                                      | 役割                                                                                                        |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/cloudrun-service.yaml` | Cloud Run Service manifest（Knative形式）。clrndのsource of truth                                           |
-| `dot_config/agentsview/clrnd.yml`             | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                             |
-| `dot_config/mise/tasks/agentsview.toml`       | `agentsview:cloudrun:*` task。設定解決・build・clrnd実行をmise taskとして持ち、shell scriptは追加していない |
-| `mise.toml`／`dot_config/mise/config.toml`    | `github:masasuzu/clrnd = "0.5.0"`のversion pin                                                              |
 
 mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
@@ -1510,27 +1499,165 @@ mise run agentsview:cloudrun:clrnd -- traffic --to-latest
 
 この差分export／importを事前rehearsalできない場合、新DBへのwrite再開後のrollbackは実施せず、CockroachDB側を修復する。
 
-### 9. Flyの容量を解放
+### 9. Flyの容量を解放（AgentsView app／schema／roleの削除）
 
 最低1〜2週間の観察期間を置き、全PCがCockroachDBへpushし、backup／restore rehearsalも成功してから実施する。
 
+> [!WARNING]
+> `psgl`はAtuinと共用のPostgreSQL appである。**`psgl` appそのものは絶対に削除しない。** 削除するのはAgentsView app（`ryo-agentsview`）と、`psgl`内の`agentsview` schema／AgentsView用roleだけである。Atuin appにも触れない。
+
+#### 9.1 前提条件を確認する
+
+すべて満たすまで先へ進まない。
+
+```sh
+# 1. Cloud Run viewerが動作している
+mise run agentsview:cloudrun:status
+curl -i "$(gcloud run services describe ryo-agentsview --project="$GCP_PROJECT_ID" \
+  --region=us-west2 --format='value(status.url)')/api/v1/sessions"   # 401を期待
+
+# 2. CockroachDB側にsessionが入っている
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -Atc \
+  "SELECT count(*) FROM agentsview.sessions;"'
+
+# 3. 全PCの通常taskがCockroachDBへ向いている（各PCで実行）
+fnox exec -- mise run agentsview:cockroach:status
+```
+
+Fly側にしか無いsessionが残っていないことも確認する。件数がCockroachDB側を上回る場合は、まだ削除しない。
+
+```sh
+fnox exec -- sh -c 'psql "$AGENTSVIEW_OWNER_PROXY_PG_URL" -X -Atc \
+  "SELECT count(*) FROM agentsview.sessions;"'
+```
+
+#### 9.2 最終backupを取得し、restoreできることを確認する
+
+**backup fileを作っただけでは合格にしない。** 空の検証用PostgreSQLへrestoreできるところまで確認する。
+
+```sh
+umask 077
+mkdir -p ~/backup
+fnox exec -- sh -c '
+  pg_dump --dbname="$AGENTSVIEW_OWNER_PROXY_PG_URL" -Fc -n agentsview \
+    -f "$HOME/backup/agentsview-final-$(date -u +%Y%m%dT%H%M%SZ).dump"
+'
+ls -lh ~/backup/agentsview-final-*.dump
+```
+
+このdumpにはsession本文が含まれる。commit、共有、cloud uploadをしない。
+
+#### 9.3 Fly AgentsView appを停止して観察する
+
+削除の前に停止だけを行い、Cloud Runだけで問題が出ないことを確認する。ここで問題が出たら`flyctl scale count 1`で戻せる。
+
+```sh
+flyctl scale count 0 -a ryo-agentsview
+flyctl status -a ryo-agentsview
+```
+
+数日〜1週間動かし、Cloud Run viewerとCockroachDBへのpushに影響が無いことを確認してから次へ進む。
+
+#### 9.4 `agentsview` schemaを削除する
+
+`psgl`のvolume使用量が減るのはこの手順である。owner接続で実行する。
+
+```sh
+mise run agentsview:pg:proxy   # 別terminalでflyctl proxyを張る場合
+```
+
+削除前に対象を必ず目視する。
+
 ```sql
--- 最終確認。実行前に必ず最新backupを作る。
+-- 削除対象のtable一覧と件数
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'agentsview' ORDER BY table_name;
+
 SELECT count(*) FROM agentsview.sessions;
 
--- owner接続で実行。CASCADE対象を表示・確認してから承認する。
+-- schemaの物理サイズ（削除でこれだけ空く見込み）
+SELECT pg_size_pretty(COALESCE(sum(pg_total_relation_size(relid)), 0))
+FROM pg_statio_user_tables WHERE schemaname = 'agentsview';
+```
+
+`CASCADE`が消すobjectを表示させてから承認する。
+
+```sql
+-- owner接続で実行する
 DROP SCHEMA agentsview CASCADE;
 ```
 
-通常の`VACUUM`はOSへdiskを返さない。Fly volumeの物理使用量をすぐ減らすための`VACUUM FULL`はlockと追加空き容量を必要とするため、空き10%の状態では実行しない。schema削除後の`df`、Fly Metrics、Atuin syncを確認し、必要ならmaintenance windowを別途設ける。
+Atuinのschemaが無傷であることを確認する。
 
-最後にFly AgentsView appを削除する。Atuin appと`psgl`は削除しない。
+```sql
+SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg\_%' ORDER BY nspname;
+```
+
+#### 9.5 AgentsView用roleを削除する
+
+schemaを消してもroleは残る。`psgl`はAtuinと共用なので、AgentsView用roleだけを名指しで削除する。
+
+```sql
+-- 残存依存があると DROP ROLE は失敗する。先に確認する。
+SELECT rolname FROM pg_roles WHERE rolname LIKE 'agentsview%' ORDER BY rolname;
+
+DROP OWNED BY agentsview_owner, agentsview_push_mac, agentsview_read;
+DROP ROLE agentsview_owner, agentsview_push_mac, agentsview_read;
+```
+
+`DROP OWNED BY`は指定roleが所有するobjectと権限だけを消す。Atuinのroleを列挙に含めないこと。
+
+#### 9.6 diskが解放されたことを確認する
+
+通常の`VACUUM`はOSへdiskを返さない。`DROP SCHEMA`はtable fileごと削除するため、通常はこれだけで空く。
 
 ```sh
+fly ssh console -a psgl -C 'df -h /data'
+```
+
+期待どおり減っていない場合だけ`VACUUM FULL`を検討する。`VACUUM FULL`は対象tableと同じだけの空き容量とexclusive lockを必要とするため、**空き10%の状態では実行しない**。Atuinの書き込みを止められるmaintenance windowを別途設ける。
+
+#### 9.7 Fly AgentsView appを削除する
+
+app本体にvolumeは無く、DBは`psgl`側にある。ここで消えるのはmachineとsecretだけである。
+
+```sh
+# 削除前に、このappが持つsecret名を記録しておく（値は表示されない）
+flyctl secrets list -a ryo-agentsview
+
+# machineとvolumeが残っていないことを確認
+flyctl status -a ryo-agentsview
+flyctl volumes list -a ryo-agentsview
+
 flyctl apps destroy ryo-agentsview
 ```
 
-削除前にCloud Run URL、`mise run agentsview:cloudrun:deploy`（および任意で有効化したGitHub Actions deploy）、各PCからのpushがすべて正常であることを再確認する。
+`flyctl apps list`に`ryo-agentsview`が無く、Atuin appと`psgl`が残っていることを確認する。
+
+```sh
+flyctl apps list
+```
+
+#### 9.8 repositoryとsecretの後片付け
+
+app削除後も設定が残っていると、次のmain mergeでdeployが走って失敗する。
+
+| 対象                                                           | 対応                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `.github/workflows/deploy-agentsview.yaml`                     | 削除する。Fly appが無いのでdeployは必ず失敗する                    |
+| `dot_config/agentsview/fly.toml`                               | 削除する（rollback用に残すなら削除しない）                         |
+| GitHub Actions secret `FLY_API_TOKEN`                          | Atuin deployでも使う場合は残す。使っていなければrepositoryから削除 |
+| fnoxの`AGENTSVIEW_OWNER_PROXY_PG_URL`ほかFly用secret           | Bitwarden Secrets Managerから削除する                              |
+| `dot_config/fnox/config.toml`のFly用entry                      | 上記に合わせて削除する                                             |
+| `agentsview:setup:migrate`／`agentsview:pg:proxy`などFly用task | 使わなくなったものを削除する                                       |
+
+**完了確認:** Atuin syncがFly PostgreSQLで継続し、全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功し、Flyから消えたのがAgentsView app／schema／roleだけである。
+
+```sh
+flyctl apps list                       # ryo-agentsview が無い／psglとAtuinはある
+fly ssh console -a psgl -C 'df -h /data'
+mise run agentsview:cloudrun:status
+```
 
 ---
 
