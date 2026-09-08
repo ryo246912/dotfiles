@@ -6,6 +6,6 @@
 "~/.config/mise/config.mac.toml" = { source = "config/mise/config.mac.toml", mode = "copy" }
 "~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config/mise/tasks/bootstrap-mac.toml", mode = "copy" }
 "~/.config/navi/cheats/mac.cheat.md" = { source = "config/navi/cheats/mac.cheat.md", mode = "copy" }
-"~/.config/raycast/Raycast.rayconfig" = { source = "config/raycast/Raycast.rayconfig", mode = "copy" }
+"~/.config/raycast" = { source = "config/raycast", mode = "copy" }
 "~/.config/zabrze/mac.toml" = { source = "config/zabrze/mac.toml", mode = "copy" }
 "~/.config/zsh/lazy/mac.zsh" = { source = "config/zsh/lazy/mac.zsh", mode = "copy" }

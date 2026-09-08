@@ -4,5 +4,5 @@
 
 [dotfiles]
 "~/.config/atuin/fly.toml" = { source = "config/atuin/fly.toml", mode = "copy" }
-"~/.config/autohotkey/AutoHotkey.ahk" = { source = "config/autohotkey/AutoHotkey.ahk", mode = "copy" }
+"~/.config/autohotkey" = { source = "config/autohotkey", mode = "copy" }
 "~/.config/navi/cheats/windows.cheat.md" = { source = "config/navi/cheats/windows.cheat.md", mode = "copy" }
