@@ -537,13 +537,21 @@ sed -i.bak '/^[[:space:]]*agentsview_image[[:space:]]*=/d' terraform.tfvars
 rm -f terraform.tfvars.bak
 ```
 
-次に、現在のdirectoryにかかわらずmise taskでimageをbuildする。task wrapperは`bash -c`の最初のtask引数が`$0`に渡される仕様に対応しているため、`build` modeを正しく共通taskへ渡す。
+次に、現在のdirectoryにかかわらずmise taskでimageをbuildする。task wrapperは`build` modeを通常のshell script引数として渡すため、inline `bash -c`の末尾へmodeが連結されない。
 
 ```sh
-AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build | tail -1)
-gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
-  --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+if AGENTSVIEW_IMAGE=$(mise run agentsview:cloudrun:build) &&
+  test -n "$AGENTSVIEW_IMAGE"; then
+  printf 'AGENTSVIEW_IMAGE=%s\n' "$AGENTSVIEW_IMAGE"
+  gcloud artifacts docker images describe "$AGENTSVIEW_IMAGE" \
+    --project="$GCP_PROJECT_ID" --format='value(image_summary.digest)'
+else
+  echo 'Cloud Build failed; Artifact Registryの確認を中止します' >&2
+fi
+
 ```
+
+interactive shellはcommandが失敗しても次の行を実行し続ける。したがって、代入、`test`、`gcloud artifacts ... describe`を独立したcommandとして貼らない。上記の`if`を使えばbuild失敗時に空の`AGENTSVIEW_IMAGE`を`gcloud`へ渡さない。
 
 tagは`<upstream version>-<commit>`（例: `0.38.1-e310d8af1f32`）になる。commitが変われば別tagになるため、別のcommitのimageで同じURIを上書きすることがない（同一commitでのrebuildは同じtagを作り直す）。build contextに未commitの変更がある場合はtagへ`-dirty`が付き、警告が出る。
 
