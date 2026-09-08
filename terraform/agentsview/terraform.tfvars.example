@@ -1,4 +1,4 @@
 gcp_project_id = "replace-with-project-id"
 
-# The Cloud Run image is not a Terraform input: clrnd deploys it from
-# dot_config/agentsview/cloudrun-service.yaml.
+# Cloud Runのimageは Terraform の入力ではない。clrndが
+# dot_config/agentsview/cloudrun-service.yaml からdeployする。

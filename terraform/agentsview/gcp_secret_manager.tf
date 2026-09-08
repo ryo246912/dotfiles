@@ -1,3 +1,6 @@
+# secret containerだけをTerraformが持ち、値（version）は
+# `mise run agentsview:cloudrun:secrets` が追加する。値をTerraform stateへ
+# 持ち込まないため、versionはこのrootで管理しない。
 resource "google_secret_manager_secret" "pg_url" {
   project   = var.gcp_project_id
   secret_id = "agentsview-pg-url"
@@ -20,6 +23,7 @@ resource "google_secret_manager_secret" "config" {
   depends_on = [google_project_service.required]
 }
 
+# Cloud Runのrevisionがsecretを解決するために必要。値の追加権限は与えない。
 resource "google_secret_manager_secret_iam_member" "runtime_pg_url" {
   project   = var.gcp_project_id
   secret_id = google_secret_manager_secret.pg_url.secret_id
@@ -32,18 +36,4 @@ resource "google_secret_manager_secret_iam_member" "runtime_config" {
   secret_id = google_secret_manager_secret.config.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "deploy_pg_url_version_adder" {
-  project   = var.gcp_project_id
-  secret_id = google_secret_manager_secret.pg_url.secret_id
-  role      = "roles/secretmanager.secretVersionAdder"
-  member    = "serviceAccount:${google_service_account.deploy.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "deploy_config_version_adder" {
-  project   = var.gcp_project_id
-  secret_id = google_secret_manager_secret.config.secret_id
-  role      = "roles/secretmanager.secretVersionAdder"
-  member    = "serviceAccount:${google_service_account.deploy.email}"
 }

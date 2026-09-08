@@ -1,14 +1,14 @@
-# The Cloud Run service itself is NOT managed here: clrnd owns it, from the
-# manifest at dot_config/agentsview/cloudrun-service.yaml. Terraform would
-# otherwise revert every clrnd deploy as drift, and a failed revision would turn
-# into the taint/replacement conflict this root hit during bootstrap.
+# Cloud Run service本体はここで管理しない。clrndが
+# dot_config/agentsview/cloudrun-service.yaml から所有する。Terraformに持たせると
+# clrndのdeployをすべてdriftとして戻してしまい、revisionが失敗したときには
+# bootstrap中に実際に踏んだtaint／replaceの詰みに繋がる。
 #
-# IAM is outside what clrnd manages, so the public invoker binding stays in
-# Terraform. It refers to the service by name and region rather than to a
-# Terraform resource, so nothing here depends on Cloud Run state.
+# IAMはclrndの管理範囲外なので、公開用のinvoker bindingだけTerraformに残す。
+# Cloud Run resourceではなくservice名とregionで指すため、このrootはCloud Runの
+# stateに依存しない。
 #
-# Ordering: clrnd creates the service (private) before this binding can be
-# applied. See docs/agentsview.md.
+# 順序: clrndがserviceを作ってからでないとこのbindingは付けられない。
+# 詳細は docs/agentsview.md を参照。
 resource "google_cloud_run_v2_service_iam_member" "public" {
   project  = var.gcp_project_id
   location = local.region

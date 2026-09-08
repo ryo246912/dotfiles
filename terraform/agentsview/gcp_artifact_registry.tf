@@ -8,6 +8,7 @@ resource "google_artifact_registry_repository" "agentsview" {
   depends_on = [google_project_service.required]
 }
 
+# Cloud Runのrevisionがimageをpullするために必要。
 resource "google_artifact_registry_repository_iam_member" "runtime_reader" {
   project    = var.gcp_project_id
   location   = google_artifact_registry_repository.agentsview.location
@@ -23,8 +24,9 @@ locals {
   ])
 }
 
-# Google Cloud projects can use either the legacy Cloud Build identity or the
-# Compute Engine default identity for builds, depending on project age/policy.
+# `gcloud builds submit` が使うidentityは、projectの作成時期とpolicyによって
+# 旧Cloud Build用とCompute Engine既定のどちらになるか変わる。どちらでもbuild結果を
+# push できるよう両方へ権限を付ける。
 resource "google_artifact_registry_repository_iam_member" "cloud_build_writer" {
   for_each = local.cloud_build_service_accounts
 
@@ -33,12 +35,4 @@ resource "google_artifact_registry_repository_iam_member" "cloud_build_writer" {
   repository = google_artifact_registry_repository.agentsview.name
   role       = "roles/artifactregistry.writer"
   member     = "serviceAccount:${each.value}"
-}
-
-resource "google_artifact_registry_repository_iam_member" "deploy_writer" {
-  project    = var.gcp_project_id
-  location   = google_artifact_registry_repository.agentsview.location
-  repository = google_artifact_registry_repository.agentsview.name
-  role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:${google_service_account.deploy.email}"
 }

@@ -12,7 +12,7 @@ terraform {
     }
   }
 
-  # Pass bucket/prefix at init time so this directory contains no account IDs:
+  # bucket／prefixはinit時に渡す。このdirectoryにaccount IDを残さないためである。
   # terraform init -backend-config="bucket=..." -backend-config="prefix=agentsview"
   backend "gcs" {}
 }

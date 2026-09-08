@@ -3,6 +3,6 @@ provider "google" {
   region  = local.region
 }
 
-# Authentication is read from COCKROACH_API_KEY. Do not put the API key in a
-# tfvars file or Terraform state.
+# 認証情報は COCKROACH_API_KEY から読む。API keyをtfvarsやTerraform stateへ
+# 書かないこと。
 provider "cockroach" {}

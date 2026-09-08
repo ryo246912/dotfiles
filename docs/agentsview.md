@@ -98,7 +98,6 @@ export GCP_PROJECT_ID='<google-cloud-project-id>'
 export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
-export TF_VAR_github_repository='ryo246912/dotfiles'
 
 gcloud config set project "$GCP_PROJECT_ID"
 gcloud config set run/region "$GCP_REGION"
@@ -317,21 +316,12 @@ fnox exec -- terraform -chdir=terraform/agentsview apply \
   -target=google_project_service.required \
   -target=google_artifact_registry_repository.agentsview \
   -target=google_artifact_registry_repository_iam_member.cloud_build_writer \
-  -target=google_artifact_registry_repository_iam_member.deploy_writer \
   -target=google_artifact_registry_repository_iam_member.runtime_reader \
   -target=google_secret_manager_secret.pg_url \
   -target=google_secret_manager_secret.config \
   -target=google_secret_manager_secret_iam_member.runtime_pg_url \
   -target=google_secret_manager_secret_iam_member.runtime_config \
-  -target=google_secret_manager_secret_iam_member.deploy_pg_url_version_adder \
-  -target=google_secret_manager_secret_iam_member.deploy_config_version_adder \
   -target=google_service_account.runtime \
-  -target=google_service_account.deploy \
-  -target=google_project_iam_member.deploy \
-  -target=google_service_account_iam_member.deploy_uses_runtime \
-  -target=google_iam_workload_identity_pool.github \
-  -target=google_iam_workload_identity_pool_provider.github \
-  -target=google_service_account_iam_member.github_deploy \
   -target=cockroach_cluster.agentsview \
   -target=cockroach_database.agentsview \
   -target=cockroach_sql_user.owner \
@@ -828,13 +818,13 @@ NorthflankはUIの分かりやすさでは魅力があるが、今回の目的�
 
 ### 実装済みファイル
 
-| ファイル                                      | 目的                                                                                      |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context               |
-| `dot_config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest                                                 |
-| `dot_config/agentsview/clrnd.yml`             | clrndのregion／service／manifest設定                                                      |
-| `dot_config/mise/tasks/agentsview.toml`       | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task             |
-| `terraform/agentsview/*.tf`                   | CockroachDB、Artifact Registry、IAM、Secret Manager container、WIF、Cloud Run invoker IAM |
+| ファイル                                      | 目的                                                                                         |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context                  |
+| `dot_config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest                                                    |
+| `dot_config/agentsview/clrnd.yml`             | clrndのregion／service／manifest設定                                                         |
+| `dot_config/mise/tasks/agentsview.toml`       | secret登録、build／clrnd deploy／diff／status／rollback、migration、push task                |
+| `terraform/agentsview/*.tf`                   | CockroachDB、Artifact Registry、runtime IAM、Secret Manager container、Cloud Run invoker IAM |
 
 ### 0. 変更前の安全確認
 
@@ -920,33 +910,28 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 
 現在のTerraformは「永続的な基盤」と「Cloud Runへのapp deploy」の両方を管理している。各resourceの役割は次のとおり。
 
-| Terraform resource                                      | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                  |
-| ------------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `google_project_service.required`                       | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない |
-| `data.google_project.current`                           | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                            |
-| `google_artifact_registry_repository.agentsview`        | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する                                                                                    |
-| `google_artifact_registry_repository_iam_member.*`      | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                |
-| `google_service_account.runtime`                        | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                        |
-| `google_service_account.deploy`                         | `agentsview-deploy`                             | CI／operatorがbuild、Cloud Run更新、secret version追加を行うidentity。runtime identityとは分離する                                                          |
-| `google_project_iam_member.deploy`                      | Cloud Build editor、Cloud Run admin等           | deploy service accountにproject側のdeploy権限を付ける                                                                                                       |
-| `google_service_account_iam_member.deploy_uses_runtime` | `roles/iam.serviceAccountUser`                  | deploy主体がCloud Run serviceへruntime service accountを指定するための`actAs`権限                                                                           |
-| `google_secret_manager_secret.pg_url`                   | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
-| `google_secret_manager_secret.config`                   | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                       |
-| `google_secret_manager_secret_iam_member.runtime_*`     | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
-| `google_secret_manager_secret_iam_member.deploy_*`      | `secretVersionAdder`                            | deploy主体はsecret containerの削除／IAM変更をせず、新versionだけ追加できるようにする                                                                        |
-| `google_iam_workload_identity_pool.github`              | pool ID `github`                                | GitHub OIDC tokenをGoogle Cloud credentialへ交換するためのtrust domain                                                                                      |
-| `google_iam_workload_identity_pool_provider.github`     | repository claim条件                            | 指定GitHub repository以外からのimpersonationを拒否する                                                                                                      |
-| `google_service_account_iam_member.github_deploy`       | WIF principal → deploy SA                       | service-account JSON keyを作らずGitHub Actionsがdeploy SAを利用できるようにする                                                                             |
-| `cockroach_cluster.agentsview`                          | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
-| `cockroach_database.agentsview`                         | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
-| `cockroach_sql_user.owner`                              | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
-| `cockroach_sql_user.push`                               | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
-| `cockroach_sql_user.read`                               | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
-| `google_cloud_run_v2_service_iam_member.public`         | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
+| Terraform resource                                  | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                  |
+| --------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google_project_service.required`                   | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない |
+| `data.google_project.current`                       | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                            |
+| `google_artifact_registry_repository.agentsview`    | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する                                                                                    |
+| `google_artifact_registry_repository_iam_member.*`  | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                |
+| `google_service_account.runtime`                    | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                        |
+| `google_secret_manager_secret.pg_url`               | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
+| `google_secret_manager_secret.config`               | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                       |
+| `google_secret_manager_secret_iam_member.runtime_*` | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
+| `cockroach_cluster.agentsview`                      | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
+| `cockroach_database.agentsview`                     | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
+| `cockroach_sql_user.owner`                          | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
+| `cockroach_sql_user.push`                           | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
+| `cockroach_sql_user.read`                           | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
+| `google_cloud_run_v2_service_iam_member.public`     | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
+
+**deploy用service accountとGitHub Workload Identity連携もこの表にない。** GitHub ActionsからTerraformやCloud Run deployを行っていない（`.github/workflows/`はFly.ioへのdeployだけを持つ）ため、`agentsview-deploy` service account、そのproject IAM、`secretVersionAdder`、Workload Identity Pool／Providerはいずれも使われていなかった。使わないidentityを置くと権限の棚卸し対象が増えるだけなので削除した。build・deploy・secret登録はoperator自身の認証情報（`gcloud auth login`）で実行する。将来CIから実行する場合はWIFごと作り直す。
 
 **Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
 
-`variables.tf`はproject ID、GitHub repository、CockroachDB passwordなどのoperator入力を宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続command／CIが必要とするhost、service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
+`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続commandが必要とするhost、runtime service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
 
 #### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
 
@@ -962,16 +947,16 @@ Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがな�
 | ALB／target group          | Cloud Run管理のHTTPS endpointとtraffic split                                           |
 | ecspresso deploy／rollback | `clrnd deploy`／`clrnd rollback`、または`gcloud run services replace`／traffic command |
 
-したがって採用した分離は、**TerraformがAPI、Artifact Registry、IAM、service account、Secret Manager、WIF、CockroachDBを管理し、clrndがCloud Run Service／Revision／trafficを管理する**形である。Cloud Run Serviceを空の「cluster」としてTerraformで先に作り、後から別toolが同じService templateを管理する構成にはしない。同じresourceをTerraformとclrndの両方が所有すると、次回`terraform apply`がclrndのdeployを差し戻し、今回のようなtaint／replacement競合を起こす。
+したがって採用した分離は、**TerraformがAPI、Artifact Registry、runtime service account、Secret Manager、CockroachDBを管理し、clrndがCloud Run Service／Revision／trafficを管理する**形である。Cloud Run Serviceを空の「cluster」としてTerraformで先に作り、後から別toolが同じService templateを管理する構成にはしない。同じresourceをTerraformとclrndの両方が所有すると、次回`terraform apply`がclrndのdeployを差し戻し、今回のようなtaint／replacement競合を起こす。
 
 #### 2.0.2 `clrnd`によるdeploy分離（採用済み）
 
 [`masasuzu/clrnd`](https://github.com/masasuzu/clrnd)をv0.5.0でpinして採用し、Cloud Run Serviceのownershipをclrndへ移した。TerraformコードからCloud Run Service resourceを削除済みで、**同じresourceを2つのtoolが所有する状態は作らない**。
 
-| 所有者    | 対象                                                                                                                                                                   |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terraform | Google Cloud API有効化、Artifact Registry、runtime／deploy service account、project IAM、Secret Manager container／IAM、GitHub WIF、CockroachDB、Cloud Run invoker IAM |
-| clrnd     | Cloud Run Service定義（image、CPU／memory、concurrency、timeout、scaling、環境変数、Secret Manager参照）、Revision、traffic、rollback                                  |
+| 所有者    | 対象                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Terraform | Google Cloud API有効化、Artifact Registry、runtime service account、Secret Manager container／IAM、CockroachDB、Cloud Run invoker IAM |
+| clrnd     | Cloud Run Service定義（image、CPU／memory、concurrency、timeout、scaling、環境変数、Secret Manager参照）、Revision、traffic、rollback |
 
 ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
 
@@ -1171,27 +1156,14 @@ mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 
 このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。image tagはGitHub Actionsが渡す`GITHUB_SHA`から組み立てられるので、workflow側でimage URIを組み立てる必要はない。
 
-このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。Terraformがdeploy service accountへ与えているのは`secretVersionAdder`だけなので、その identity ではversionを追加できても一覧できない。CIでは次のどちらかを選ぶ。
+このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。CI用のidentityへ`secretVersionAdder`だけを与えた場合、versionを追加できても一覧できない。次のどちらかを選ぶ。
 
 - secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す（追加の権限が不要で、deployするversionをCI側が確定できる）。
-- 2つのsecretに対してdeploy service accountへ`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
+- 2つのsecretに対して`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
 
 権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。
 
-TerraformはGitHub Actions用Workload Identityを作成するが、CI deployを追加する場合にだけ、repositoryのEnvironment `production`へTerraform outputとGoogle Cloud／CockroachDBの値を登録する。初回bootstrapより先にCIを実行しない。
-
-```sh
-fnox exec -- terraform -chdir=terraform/agentsview output -raw github_workload_identity_provider
-fnox exec -- terraform -chdir=terraform/agentsview output -raw deploy_service_account
-```
-
-state bucketをCIから操作する場合は、deploy service accountへbucket単位の権限を一度だけ付与する。service-account key JSONは作らず、GitHub OIDC／WIFを使う。
-
-```sh
-gcloud storage buckets add-iam-policy-binding "gs://${TF_STATE_BUCKET}" \
-  --member="serviceAccount:$(terraform -chdir=terraform/agentsview output -raw deploy_service_account)" \
-  --role=roles/storage.objectAdmin
-```
+**現時点ではdeploy用service accountもWorkload Identity連携もTerraformに存在しない。** CIから実行していないためである（2.0節参照）。CIへ載せるときは、deploy service account、そのproject IAM、Workload Identity Pool／Provider、state bucketへの`roles/storage.objectAdmin`をまとめて作り直す。service-account key JSONは作らずGitHub OIDC／WIFを使う。
 
 ### 3. CockroachDB schemaをbootstrapしてlocalからpush
 

@@ -1,3 +1,5 @@
+# 無料枠内に収めるためusage limitを明示する。上限に達すると課金ではなく
+# throttleされる。delete_protection は誤destroyでsessionを失わないための保険。
 resource "cockroach_cluster" "agentsview" {
   name           = var.cockroach_cluster_name
   cloud_provider = "GCP"

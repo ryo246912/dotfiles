@@ -2,9 +2,9 @@ output "artifact_registry_repository" {
   value = google_artifact_registry_repository.agentsview.name
 }
 
-# The service URL comes from clrnd (`clrnd status`) or gcloud, because Terraform
-# no longer owns the Cloud Run service. Name and region are published here so
-# the deploy scripts and CI agree with Terraform on where it lives.
+# service URLはclrnd（`clrnd status`）かgcloudから取る。Cloud Run serviceは
+# Terraformの管理外だからである。名前とregionだけをここから出し、deploy scriptと
+# Terraformが同じ場所を指していることを保証する。
 output "cloud_run_service_name" {
   value = local.cloud_run_service_name
 }
@@ -27,14 +27,6 @@ output "cockroach_sql_host" {
 
 output "runtime_service_account" {
   value = google_service_account.runtime.email
-}
-
-output "deploy_service_account" {
-  value = google_service_account.deploy.email
-}
-
-output "github_workload_identity_provider" {
-  value = google_iam_workload_identity_pool_provider.github.name
 }
 
 output "secret_names" {
