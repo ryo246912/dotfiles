@@ -442,13 +442,24 @@ fnox exec -- sh -c '
 `failed SASL auth: password authentication failed for user agentsview_owner`はproject名とは無関係で、project filterを処理する前のCockroachDB loginに失敗している。接続URLのusernameとdatabaseを確認し、まずAgentsViewを介さず認証だけを試す。
 
 ```sh
+export PGSSLROOTCERT='/etc/ssl/cert.pem'
+test -r "$PGSSLROOTCERT"
 fnox exec -- sh -c '
-  PGSSLROOTCERT=system psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 \
+  psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 \
     -c "SELECT current_user, current_database();"
 '
 ```
 
-`root certificate file "~/.postgresql/root.crt" does not exist`が出る場合、password認証へ到達する前にlibpqがCA trust storeを見つけられていない。CockroachDB Cloudはpublic CAのserver certificateを使うため、PostgreSQL 17以降の`psql`／`pg_dump`では上記の`PGSSLROOTCERT=system`でOSのtrusted rootsを使う。`sslmode=disable`や`sslmode=require`へ弱めない。古いclientが`system`を認識しない場合は、このrepositoryがpinするPostgreSQL clientを`mise install`で更新する。
+`root certificate file "~/.postgresql/root.crt" does not exist`は、password認証へ到達する前にlibpqがCA bundleを見つけられていない状態である。`PGSSLROOTCERT=system`の後に`SSL error: certificate verify failed`へ変わる場合、使用中の`psql`がlinkするOpenSSLのdefault trust storeが空またはmacOS Keychainと連携していない。`system`を続けて使わず、上記のように実在するCA bundleを明示する。
+
+macOSでは最初に`/etc/ssl/cert.pem`を使う。存在しない場合はHomebrew OpenSSLのbundleを確認する。
+
+```sh
+export PGSSLROOTCERT="$(brew --prefix openssl@3)/etc/openssl@3/cert.pem"
+test -r "$PGSSLROOTCERT"
+```
+
+Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
 
@@ -473,7 +484,7 @@ CockroachDB Console等でpasswordを別途変更していない前提で、plan�
 続いてowner接続で最小権限を設定する。
 
 ```sh
-fnox exec -- sh -c 'PGSSLROOTCERT=system psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1' <<'SQL'
 GRANT USAGE ON SCHEMA agentsview TO agentsview_push, agentsview_read;
 GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push;
@@ -485,9 +496,9 @@ read userで書き込みができないことも確認する。2番目のcommand
 
 ```sh
 fnox exec -- sh -c '
-  PGSSLROOTCERT=system psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
     -c "SELECT count(*) FROM agentsview.sessions;"
-  if PGSSLROOTCERT=system psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
+  if psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP=1 \
     -c "DELETE FROM agentsview.sessions WHERE 1=0"; then
     echo "ERROR: read user can write" >&2
     exit 1

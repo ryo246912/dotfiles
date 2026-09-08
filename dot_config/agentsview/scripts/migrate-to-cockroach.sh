@@ -1,9 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CockroachDB Cloud uses a publicly trusted server certificate. Recent libpq
-# clients need this explicit opt-in when ~/.postgresql/root.crt is absent.
-export PGSSLROOTCERT="${PGSSLROOTCERT:-system}"
+# CockroachDB Cloud uses a publicly trusted server certificate. Point libpq at
+# an actual CA bundle because sslrootcert=system can resolve to an empty OpenSSL
+# trust store on macOS, depending on how psql was packaged.
+if [[ -z "${PGSSLROOTCERT:-}" ]]; then
+  ca_candidates=(
+    /etc/ssl/cert.pem
+    /etc/ssl/certs/ca-certificates.crt
+    /etc/pki/tls/certs/ca-bundle.crt
+  )
+  if command -v brew >/dev/null 2>&1; then
+    brew_openssl_prefix="$(brew --prefix openssl@3 2>/dev/null || true)"
+    if [[ -n "$brew_openssl_prefix" ]]; then
+      ca_candidates+=("$brew_openssl_prefix/etc/openssl@3/cert.pem")
+    fi
+  fi
+  for ca_file in "${ca_candidates[@]}"; do
+    if [[ -r "$ca_file" ]]; then
+      export PGSSLROOTCERT="$ca_file"
+      break
+    fi
+  done
+fi
+: "${PGSSLROOTCERT:?Set PGSSLROOTCERT to a readable system CA bundle}"
+[[ -r "$PGSSLROOTCERT" ]] || {
+  echo "PGSSLROOTCERT is not readable: $PGSSLROOTCERT" >&2
+  exit 1
+}
 
 : "${AGENTSVIEW_OWNER_PROXY_PG_URL:?Set the Fly owner URL pointing at the local flyctl proxy}"
 : "${AGENTSVIEW_COCKROACH_OWNER_PG_URL:?Set the CockroachDB owner URL}"

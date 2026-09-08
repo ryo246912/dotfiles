@@ -530,6 +530,7 @@ getent passwd "$HOST_UID" >/dev/null ||
   printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
 install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
 export PGPASSFILE=/tmp/agentsview.pgpass
+export PGSSLROOTCERT=/etc/ssl/certs/ca-certificates.crt
 umask 077
 exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 ' -- \
