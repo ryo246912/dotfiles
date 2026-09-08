@@ -118,10 +118,6 @@ Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDB
 |    3 | Mumbai            | `asia-south1` | `asia-south1`       | 主な利用者がインド／南アジアにいる場合だけ優先                          |
 |    4 | South Carolina    | `us-east1`    | `us-east1`          | 主な利用者が北米東海岸にいる場合向け。日本中心では優先しない            |
 
-重要なのは、Cloud Runだけ東京など別regionへ置かず、**選んだCockroachDB regionとCloud Runのregion IDを一致させること**である。CockroachDBはGoogle Cloudとは別serviceなので同一region名でも無料通信を保証するものではないが、異なる大陸／米国内regionへ分離するよりappとDB間のlatencyを抑えやすい。Atuin app／DBはFly.io内に残るため、この選択の影響を受けない。
-
-本番決定前に4候補を作り比べる必要はない。まず`us-west2`でrehearsalし、各PCからCloud Runへのp95、Cloud Run logのDB query時間、CockroachDB ConsoleのSQL latencyを記録する。許容できない場合だけ`us-central1`を短期間PoCし、低い方へ作り直す。CockroachDB cluster作成後のregion変更を前提にせず、本番データを入れる前に決定する。
-
 ```sh
 export GCP_PROJECT_ID='<google-cloud-project-id>'
 export GCP_REGION='us-west2'
@@ -197,48 +193,6 @@ sed -i.bak \
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
 
-regionは入力変数ではなくTerraformの`local.region = "us-west2"`に固定している。以前作成した`terraform.tfvars`に`gcp_region = "us-central1"`または`cockroach_region = "us-central1"`が残っている場合は、その2行を削除する。planの`cockroach_cluster.agentsview.regions[0].name`とArtifact Registryが`us-west2`になることを確認する。Cloud RunのregionはTerraformではなく`dot_config/agentsview/clrnd.yml`の`region: us-west2`が決める。
-
-既存の`terraform.tfvars`を引き継ぐ場合は、初回plan／applyの前に次を実行する。廃止したregion変数に加えて、clrnd manifestへ移した`agentsview_image`と2つのsecret version変数も削除する（宣言のない変数が残っているとplanごとにwarningになる）。
-
-```sh
-sed -i.bak \
-  -e '/^[[:space:]]*gcp_region[[:space:]]*=/d' \
-  -e '/^[[:space:]]*cockroach_region[[:space:]]*=/d' \
-  -e '/^[[:space:]]*agentsview_image[[:space:]]*=/d' \
-  -e '/^[[:space:]]*pg_url_secret_version[[:space:]]*=/d' \
-  -e '/^[[:space:]]*config_secret_version[[:space:]]*=/d' \
-  terraform/agentsview/terraform.tfvars
-rm -f terraform/agentsview/terraform.tfvars.bak
-```
-
-CockroachDB API keyと3つのpasswordは、現在のshellへ手動`export`せずfnoxからTerraform processへ渡す。Bitwarden Secrets Managerに次の名前で登録し、`dot_config/fnox/config.toml`のmappingと一致させる。
-
-```text
-COCKROACH_API_KEY
-TF_VAR_cockroach_owner_password
-TF_VAR_cockroach_push_password
-TF_VAR_cockroach_read_password
-```
-
-`fnox list`の結果に上の4件がない場合、原因はsecretの解決方法ではなく、**現在の`~/.config/fnox/config.toml`に新しいmappingが未反映**である。`fnox list`はBitwardenに値がなくてもmapping自体は表示するため、まずchezmoi sourceと適用先を確認する。
-
-```sh
-chezmoi source-path ~/.config/fnox/config.toml
-chezmoi diff ~/.config/fnox/config.toml
-chezmoi apply ~/.config/fnox/config.toml
-fnox list | rg 'COCKROACH_API_KEY|TF_VAR_cockroach_'
-```
-
-適用後は`fnox list`に次の4行が表示される必要がある。表示されなければ、`chezmoi source-path`がこのrepositoryの`dot_config/fnox/config.toml`を指しているか、別の`FNOX_CONFIG_FILE`を設定していないかを確認する。
-
-```text
-COCKROACH_API_KEY
-TF_VAR_cockroach_owner_password
-TF_VAR_cockroach_push_password
-TF_VAR_cockroach_read_password
-```
-
 次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
 
 | Secret name                       | Value                                                      |
@@ -262,43 +216,6 @@ for name in \
   echo "$name=set"
 done
 ```
-
-ここまで成功したら、通常どおり`fnox exec -- terraform ...`を使う。`AGENTSVIEW_COCKROACH_*_PG_URL`など後の作業で作成するsecretについてwarningが出ても、この4変数が`set`なら初回Terraform planに必要な値は渡る。warningをなくしたい場合は、後続の作業5でURL secretを作成する。
-
-###### Terraformが`Enter a value`を表示する場合
-
-`fnox get`が成功してもTerraformが`var.cockroach_owner_password`の入力を求める場合、`TF_VAR_*`が`fnox exec`の子processへ環境変数として注入されていない。passwordをpromptへ入力せず`Ctrl-C`で中止し、次を実行する。
-
-```sh
-fnox --version
-fnox exec -- sh -c '
-  for name in \
-    TF_VAR_cockroach_owner_password \
-    TF_VAR_cockroach_push_password \
-    TF_VAR_cockroach_read_password; do
-    printenv "$name" >/dev/null || { echo "$name=not-exported" >&2; exit 1; }
-    test -n "$(printenv "$name")" || { echo "$name=empty" >&2; exit 1; }
-    echo "$name=exported"
-  done
-'
-```
-
-3件すべてが`exported`にならない場合は、次を順に実行する。repositoryがpinするfnoxをinstallし直し、chezmoi適用先の各mappingが`env = "exec"`になっていることを確認する。
-
-```sh
-mise install 'github:jdx/fnox@1.34.1'
-chezmoi apply ~/.config/fnox/config.toml
-rg 'TF_VAR_cockroach_.*env = "exec"' ~/.config/fnox/config.toml
-fnox exec -- sh -c 'test -n "$TF_VAR_cockroach_owner_password"'
-```
-
-最後のcommandが成功してから、対話入力を無効化したplanを再実行する。`-input=false`を付けることで、secret注入に失敗した場合はpromptでpasswordを手入力させず明示的なerrorにする。
-
-```sh
-fnox exec -- terraform -chdir=terraform/agentsview plan -input=false
-```
-
-3件が`exported`なのにTerraformが入力を求める場合は、別directoryのTerraform rootを実行していないか確認する。repository rootから上記`-chdir=terraform/agentsview`付きcommandをそのまま使い、`type -a terraform fnox`と`fnox config-files`の結果を記録して調査する。
 
 ###### `Error acquiring the state lock`が出た場合
 
@@ -368,27 +285,6 @@ fnox exec -- terraform -chdir=terraform/agentsview output cockroach_database
 fnox exec -- terraform -chdir=terraform/agentsview output cockroach_sql_host
 ```
 
-###### 途中までapplyされた場合の復旧
-
-`Error creating cluster: unauthorized`と`Image 'us-central1-docker.pkg.dev/...:bootstrap' not found`が同時に出ても、作成済みのGCP API、service account、Artifact Registry、Secret Managerを削除する必要はない。
-
-まず上記の`sed`を実行し、廃止済みの`gcp_region`／`cockroach_region`と、clrndへ移した`agentsview_image`／secret version変数をtfvarsから除去する。imageはこの段階でbuildしない。Cloud RunはTerraformの管理外になったため、applyはimageの有無に依存しない。buildは作業6でまとめて行う。
-
-CockroachDBの`unauthorized`はGCP認証とは無関係である。`COCKROACH_API_KEY`にはservice accountのAPI key作成時に一度だけ表示される`CCDB1_...`形式の**Secret key全体**を登録する。API keyの表示名やUUIDではない。値を表示せず、fnoxの子processへ渡っていることとCockroachDB Cloud APIで認証できることを確認する。
-
-```sh
-fnox exec -- sh -c '
-  test -n "${COCKROACH_API_KEY:-}" || { echo "COCKROACH_API_KEY=missing" >&2; exit 1; }
-  status=$(curl -sS -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer $COCKROACH_API_KEY" \
-    https://cockroachlabs.cloud/api/v1/clusters)
-  test "$status" = 200 || { echo "CockroachDB API HTTP $status" >&2; exit 1; }
-  echo "CockroachDB API authentication=ok (authorization not checked)"
-'
-```
-
-このGETが200でも、認証だけが成功し、cluster作成の認可が不足している場合がある。今回のようにcreateだけが`unauthorized`になる場合はkeyを闇雲に再発行せず、CockroachDB Cloud Consoleの**Access Management > Service Accounts**で、そのkeyを所有するservice accountにorganization scopeの**Cluster Creator**または**Cluster Admin**が付いているか確認する。`Organization Member`だけでは不足する。roleを付与した後は同じ`CCDB1_...` keyを継続利用できる。401の場合、またはSecret keyを紛失した場合だけ**Service Account Details > Create API Key**で再発行し、Bitwardenの`COCKROACH_API_KEY`を更新する。
-
 ###### Cloud Run serviceがtaintedのまま残っている場合
 
 以前のTerraform構成でCloud Run Serviceを作った環境では、失敗したserviceがstate上でtaintedとして残っていることがある。planに次が出るのがその状態である。
@@ -438,8 +334,6 @@ postgresql://agentsview_read:<read password>@<SQL host>:26257/<database>?sslmode
 
 3本をBitwarden Secrets Managerへ同名で登録する。CockroachDB Consoleの**Connect**画面が別port、database、CA指定を案内した場合は、手作業で組み立てた値よりConsoleの接続文字列を優先し、usernameとpasswordだけ各role用に差し替える。
 
-ここでいうprojectはGoogle Cloud project、CockroachDB project、Bitwarden projectではない。**このPCでAgentsViewがlocal sessionをworkspace単位に分類した既存のAgentsView project名**であり、任意の新しい名前を入力するものではない。`small-project`は説明用placeholderなので、そのまま指定しない。
-
 まずlocal AgentsViewに存在するprojectをsession数の少ない順に表示する。
 
 ```sh
@@ -458,19 +352,7 @@ fnox exec -- sh -c '
 '
 ```
 
-`failed SASL auth: password authentication failed for user agentsview_owner`はproject名とは無関係で、project filterを処理する前のCockroachDB loginに失敗している。接続URLのusernameとdatabaseを確認し、まずAgentsViewを介さず認証だけを試す。
-
-macOSではこのrepositoryの`config.mac.toml`が`PGSSLROOTCERT=/etc/ssl/cert.pem`を恒久設定する。最新の設定を適用してshellを再起動し、fnoxの子processまで引き継がれることを確認する。
-
-```sh
-chezmoi apply ~/.config/mise/config.mac.toml
-exec zsh
-test "$PGSSLROOTCERT" = /etc/ssl/cert.pem
-test -r "$PGSSLROOTCERT"
-fnox exec -- sh -c 'test -r "$PGSSLROOTCERT"'
-```
-
-その後、接続を確認する。
+もしエラーが出た場合は、接続を確認する。
 
 ```sh
 fnox exec -- sh -c '
@@ -493,20 +375,6 @@ test -r "$PGSSLROOTCERT"
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
-
-passwordを推測して試さず、次の手順でowner passwordをrotationする。
-
-1. `openssl rand -hex 32`で新しいowner passwordを作る。
-2. Bitwarden Secrets Managerの`TF_VAR_cockroach_owner_password`をその値へ更新する。
-3. 同じ値を使い、`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を`postgresql://agentsview_owner:<同じ値>@<SQL host>:26257/agentsview?sslmode=verify-full`として更新する。push／read passwordを混ぜない。
-4. TerraformでSQL userへ新passwordを反映する。保存planにはpassword自体は表示されない。
-
-```sh
-fnox exec -- terraform -chdir=terraform/agentsview plan -input=false \
-  -target=cockroach_sql_user.owner -out=owner-password.tfplan
-fnox exec -- terraform -chdir=terraform/agentsview apply owner-password.tfplan
-rm -f terraform/agentsview/owner-password.tfplan
-```
 
 5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
 
