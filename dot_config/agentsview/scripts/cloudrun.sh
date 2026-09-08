@@ -23,6 +23,26 @@ if [ ! -f "${config_dir}/clrnd.yml" ]; then
   exit 1
 fi
 
+# apply済みの ~/.config/agentsview を使う場合、chezmoi sourceを更新しただけでは
+# ここのmanifestは古いままである。image tagのdirty判定は AGENTSVIEW_IMAGE を明示
+# すると走らないため、それに頼ると古いmanifestが黙ってdeployされる。manifestを
+# 読むmodeでは必ず検査して止める。
+check_config_current() {
+  [ "${AGENTSVIEW_SKIP_CONFIG_CHECK:-0}" = "1" ] && return 0
+  # source treeから直接実行している場合はapplyの概念がない。
+  git -C "$config_dir" rev-parse --show-toplevel >/dev/null 2>&1 && return 0
+  command -v chezmoi >/dev/null || return 0
+
+  pending=$(chezmoi status "$config_dir" 2>/dev/null || true)
+  [ -z "$pending" ] && return 0
+
+  echo "${config_dir} がchezmoi sourceと一致していません:" >&2
+  printf '%s\n' "$pending" >&2
+  echo "chezmoi apply ${config_dir} を実行してから再度deployしてください。" >&2
+  echo "（意図的に古いmanifestを使う場合のみ AGENTSVIEW_SKIP_CONFIG_CHECK=1）" >&2
+  exit 1
+}
+
 # clrnd.ymlにproject IDを書かないため、projectとregionはここから解決させる。
 export CLOUDSDK_CORE_PROJECT="$GCP_PROJECT_ID"
 export CLOUDSDK_RUN_REGION="$region"
@@ -156,11 +176,13 @@ build_image() {
 
 case "$mode" in
   build)
+    check_config_current
     export_image
     build_image
     printf '%s\n' "$AGENTSVIEW_IMAGE"
     ;;
   deploy)
+    check_config_current
     export_image
 
     # verifyとdeployで同じversionをpinするため、ここで一度だけ解決する。
@@ -186,6 +208,7 @@ case "$mode" in
       --format='value(status.url)'
     ;;
   verify | render | diff)
+    check_config_current
     export_image
     export_secret_versions
     run_clrnd "$mode" "$@"

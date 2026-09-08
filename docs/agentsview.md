@@ -595,10 +595,13 @@ bind addressは原因ではない。upstream imageの`CMD`は`--host 0.0.0.0 --n
 修正後は成功済みbuildと同じimageを明示して再deployする。
 
 ```sh
+git -C ~/dotfiles pull
 chezmoi apply ~/.config/agentsview
 export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsview:0.38.1-bac4d72dc567'
 AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
+
+repository root以外から実行すると、taskはsource treeではなくapply済みの`~/.config/agentsview`のmanifestを使う。`chezmoi apply`を忘れると古いmanifestがdeployされるため、`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止する。`clrnd`のdiffに期待した変更が出ていない場合は、まずapply漏れを疑う。
 
 `AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。
 
