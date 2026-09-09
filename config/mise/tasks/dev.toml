@@ -1,3 +1,60 @@
+["sync:agents"]
+description = "APM/rulesync を manifest/lockfile やソースの変更時だけ同期する"
+# [bootstrap.hooks.post-tools]（フル `mise bootstrap`）と [bootstrap.hooks.post-dotfiles]
+# （`mise bootstrap dotfiles apply` 単体実行時にも発火する。git pull 後の日常的な再適用で
+# chezmoi の run_onchange 相当として使う）の両方から呼ばれる共通ロジック。
+# apm/rulesync 自体は mise の [tools] 管理ツールなので、呼び出し側で両方とも導入済みで
+# あることを保証してから呼ぶこと（未導入のまま呼ぶと apm/rulesync コマンドが見つからず
+# 失敗する。mise.toml の該当 hook のコメント参照）。
+# 毎回の呼び出しで skill install・generate-commands が走るのを避けるため、
+# XDG_STATE_HOME 配下のハッシュマーカーで「前回実行時から変更が無ければ skip」を判定する。
+run = '''
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
+mkdir -p "$state_dir"
+source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+
+hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
+
+calculate_apm_hash() {
+  for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
+    [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
+  done | hash_cmd
+}
+apm_hash=$(calculate_apm_hash)
+if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
+  echo "Running mise run apm:install..."
+  if mise run apm:install; then
+    calculate_apm_hash > "$state_dir/apm-hash" || exit 1
+  else
+    exit 1
+  fi
+else
+  echo "APM manifest and lockfile are unchanged; skipping skill installation."
+fi
+
+rulesync_hash=$(
+  {
+    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
+    for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
+      [ -f "$f" ] && echo "$f"
+    done
+  } | sort | while IFS= read -r f; do
+    echo "$f $(hash_cmd < "$f")"
+  done | hash_cmd
+)
+if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
+  echo "Running mise run rulesync:generate..."
+  if mise run rulesync:generate; then
+    if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then
+      echo "warning: rulesync-hash マーカーの書き込みに失敗しました（次回実行時に再生成されます）"
+    fi
+  else
+    echo "warning: 'mise run rulesync:generate' に失敗しました。次回実行時に再試行します"
+  fi
+fi
+'''
+shell = "bash -c"
+
 ["rulesync:generate"]
 description = "Generate all rulesync outputs after mise bootstrap"
 # rulesync generate はカレントディレクトリの rulesync.jsonc / .rulesync を見るため、

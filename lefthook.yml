@@ -46,6 +46,12 @@ post-merge:
         EOF
           exit 1
         fi
+    - name: dotfiles-apply
+      # chezmoi の git 連携（pull 後の自動 apply）相当。`mise bootstrap dotfiles apply`
+      # は pre-dotfiles/post-dotfiles フックも伴って実行されるため、apm/rulesync の同期
+      # （[bootstrap.hooks.post-dotfiles] 参照）も git pull のたびに自動で走る。
+      # ensure-mise-version の後に実行する（min_version を満たした mise で実行するため）。
+      run: mise bootstrap dotfiles apply --yes
 
 pre-push:
   jobs:

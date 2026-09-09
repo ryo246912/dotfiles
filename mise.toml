@@ -107,7 +107,37 @@ else
 fi
 """
 
-# 1) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
+# 1) post-dotfiles: `mise bootstrap dotfiles apply` の直後に発火する（フル bootstrap
+#    だけでなく、`mise bootstrap dotfiles apply` 単体実行時にも発火することを実機確認済み。
+#    docs/mise.md 参照）。git pull → `mise bootstrap dotfiles apply`（lefthook の
+#    post-merge で自動実行。lefthook.yml 参照）という日常的な更新フローで、chezmoi の
+#    run_onchange 相当として apm/rulesync を自動同期させたいのはここ。
+#    ただし apm/rulesync 自体は mise の [tools] 管理ツールで、フルの `mise bootstrap`
+#    （真新しいマシン等）ではこの時点ではまだ導入されていない可能性がある
+#    （[tools] フェーズはこの後の pre-tools/tools/post-tools）。そのため両方とも
+#    既に導入済み（`mise which` で解決できる）場合だけ実行し、未導入なら黙ってスキップする
+#    （その場合は後続の post-tools 側で改めて実行される）。
+#
+#    `sync:agents`/`apm:install`/`rulesync:generate` は config/mise/tasks/dev.toml
+#    （deploy先: ~/.config/mise/tasks/dev.toml、global scope）で定義したタスクだが、
+#    この hook は必ずこのリポジトリの checkout ルート（project config root）で実行される
+#    ため、素の `mise run sync:agents` では見つからない（実機確認済み）。mise の
+#    `[task_config].includes` は config root ごとのスコープで、project 側が自分の
+#    `includes = ["tasks/*.toml"]` を宣言していると、global 側の includes は
+#    継承されない（cascade しても descendant 側の同名フィールドで上書きされるため。
+#    tasks/task-configuration.html#task_config.cascade 参照）。
+#    `mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に切り替えることで
+#    回避する（nested な `mise run apm:install`/`mise run rulesync:generate` 呼び出しは
+#    タスクスクリプト自身の実行コンテキストを引き継ぐため、そちら側で改めて --cd し直す
+#    必要はないことを実機確認済み）。
+[bootstrap.hooks.post-dotfiles]
+run = """
+if mise which apm >/dev/null 2>&1 && mise which rulesync >/dev/null 2>&1; then
+  mise --cd "$HOME" run sync:agents
+fi
+"""
+
+# 2) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
 #    gh を導入・認証し、GITHUB_TOKEN 付きで明示的に mise install する。
 #
 #    - なぜ `mise install` 単体では pre-tools が動かないのか:
@@ -149,58 +179,13 @@ echo "Running mise install..."
 GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
-# 2) post-tools: APM の user-scope dependencies と rulesync generate を、manifest/lockfile
-#    やソースに変更があったときだけ実行する（毎回の bootstrap で skill install・
-#    generate-commands が走るのを避けるため、XDG_STATE_HOME 配下のハッシュマーカーで判定）。
-#    [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に実行すれば
-#    十分なので、以降のフェーズ（plugin パッケージマネージャ・カスタム bootstrap task）を
-#    待つ必要がある final ではなく post-tools で発火する。
+# 3) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
+#    確実に同期する。post-dotfiles 側で未導入のためスキップされた場合（真新しいマシン等）
+#    はここで初めて実行される。post-dotfiles で既に実行済みの場合はハッシュマーカーが
+#    更新済みなので、ここでの再実行は差分ゼロの no-op になる（sync:agents 参照）。
+#    `--cd "$HOME"` が必要な理由は post-dotfiles のコメント参照。
 [bootstrap.hooks.post-tools]
-run = """
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
-mkdir -p "$state_dir"
-source_dir=$(pwd)
-
-hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
-
-calculate_apm_hash() {
-  for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
-    [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
-  done | hash_cmd
-}
-apm_hash=$(calculate_apm_hash)
-if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
-  echo "Running mise run apm:install..."
-  if mise run apm:install; then
-    calculate_apm_hash > "$state_dir/apm-hash" || exit 1
-  else
-    exit 1
-  fi
-else
-  echo "APM manifest and lockfile are unchanged; skipping skill installation."
-fi
-
-rulesync_hash=$(
-  {
-    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
-    for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
-      [ -f "$f" ] && echo "$f"
-    done
-  } | sort | while IFS= read -r f; do
-    echo "$f $(hash_cmd < "$f")"
-  done | hash_cmd
-)
-if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
-  echo "Running mise run rulesync:generate..."
-  if mise run rulesync:generate; then
-    if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then
-      echo "warning: rulesync-hash マーカーの書き込みに失敗しました（次回 bootstrap で再生成されます）"
-    fi
-  else
-    echo "warning: 'mise run rulesync:generate' に失敗しました。次回 'mise bootstrap' 実行時に再試行します"
-  fi
-fi
-"""
+run = 'mise --cd "$HOME" run sync:agents'
 
 # "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
 # config からしか有効にならない実機仕様のため）。"~/.config/mise" だけは常に git 側の
