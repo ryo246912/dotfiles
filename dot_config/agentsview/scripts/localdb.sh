@@ -184,32 +184,43 @@ repair_sequences() {
 ${rows}
 EOF
 
+  # serial側のsequence名はcolumn defaultそのものなので実在が保証される。まとめて
+  # 流し、失敗は本当の異常として扱う。
+  if [ -n "$statements" ]; then
+    printf '%s' "$statements" | psql_local --quiet --output=/dev/null
+  fi
+
   # identity column（GENERATED ... AS IDENTITY）はdefaultがnextvalにならないため、
-  # 上のqueryに出てこない。sequence名はpg_get_serial_sequenceから引く。ここが
-  # 引けない場合でもserial側の補正は続けたいので、失敗は警告にとどめる。
-  if rows="$(query_local --command="SELECT table_name, column_name,
+  # 上のqueryには出てこない。sequence名はpg_get_serial_sequenceから引く。列挙自体が
+  # できない環境ではserial側の補正だけで終える（警告のみ）。
+  if ! rows="$(query_local --command="SELECT table_name, column_name,
       COALESCE(pg_get_serial_sequence(
         quote_ident(table_schema) || '.' || quote_ident(table_name), column_name), '')
     FROM information_schema.columns
     WHERE table_schema = '${schema}' AND is_identity = 'YES'
     ORDER BY table_name, column_name")"; then
-    while IFS='|' read -r table column sequence; do
-      [ -n "$table" ] || continue
-      if [ -z "$sequence" ]; then
-        echo "identity columnのsequenceを解決できません: ${table}.${column}" >&2
-        echo "  このcolumnのsequenceは補正されない。idの衝突が出る場合は手で setval する。" >&2
-        continue
-      fi
-      statements="${statements}$(setval_statement "$table" "$column" "$sequence")"$'\n'
-    done <<EOF
-${rows}
-EOF
-  else
     echo "identity columnを列挙できませんでした。nextval defaultのcolumnだけ補正します。" >&2
+    return 0
   fi
 
-  [ -n "$statements" ] || return 0
-  printf '%s' "$statements" | psql_local --quiet --output=/dev/null
+  # identity側は1件ずつ流す。resolveした名前が実sequenceに解決しない実装差が
+  # ありうるため、1件の失敗でrestore全体を失敗扱いにしないためである（dataの
+  # 取り込みは既にcommit済みで、やり直しても同じrowは入らない）。
+  while IFS='|' read -r table column sequence; do
+    [ -n "$table" ] || continue
+    if [ -z "$sequence" ]; then
+      echo "identity columnのsequenceを解決できません: ${table}.${column}" >&2
+      echo "  このcolumnのsequenceは補正されない。idの衝突が出る場合は手で setval する。" >&2
+      continue
+    fi
+    if ! setval_statement "$table" "$column" "$sequence" |
+      psql_local --quiet --output=/dev/null; then
+      echo "identity columnのsequenceを補正できません: ${table}.${column} -> ${sequence}" >&2
+      echo "  取り込んだrowはcommit済み。idの衝突が出る場合は手で setval する。" >&2
+    fi
+  done <<EOF
+${rows}
+EOF
 }
 
 # 取り込み結果は「どのtableが何行増えたか」で確認したい。table一覧をschemaから

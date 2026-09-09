@@ -217,10 +217,11 @@ def main() -> int:
                 in_chunk = 0
     if in_chunk:
         out.write("COMMIT;\n")
-    # pendingが残るのは、文字列literal・dollar quote・block commentの途中でfileが
-    # 終わった場合だけである（行commentは行末で閉じる）。切り詰められたdumpを
-    # 取り込み済みのchunkだけで成功扱いにしないよう、ここで必ず止める。
-    if splitter.pending:
+    # 文字列literal・dollar quote・block commentの途中でfileが終わっていたら、
+    # 切り詰められたdumpである。取り込み済みのchunkだけで成功扱いにしないよう止める。
+    # 行comment（pendingが改行）は除く。dataを持たないうえ、最後の行がちょうど
+    # `--` で改行なしに終わるdumpは正常であり、閉じ待ちのまま残るためである。
+    if splitter.pending and splitter.pending != "\n":
         print(
             f"dump ends inside a string literal or comment: {splitter.tail()[-80:]}",
             file=sys.stderr,
