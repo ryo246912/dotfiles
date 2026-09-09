@@ -57,18 +57,28 @@ run      = "lefthook install"
 #    2回目以降は対象ファイルが既に存在するため実質no-opになる。
 [bootstrap.hooks.pre-dotfiles]
 run = """
+set -eu
+
 seed_tree() {
   src_dir="$1"
   dest_dir="$2"
   [ -d "$src_dir" ] || return 0
-  find "$src_dir" -type f | while IFS= read -r src_file; do
+  # `find | while read` はループ本体がサブシェルで動くため、hook を実行する
+  # sh（bash ではなく dash 等）では cp/mkdir の失敗をここで検知できても呼び出し元へ
+  # 伝播できない（実機確認済み。process substitution `<(...)` も同様に sh では
+  # syntax error になり使えない）。一覧を一時ファイルに落として `< file` で読ませる
+  # ことでサブシェルを回避し、set -eu が失敗をそのまま hook 全体の中断として扱う。
+  file_list=$(mktemp)
+  find "$src_dir" -type f > "$file_list"
+  while IFS= read -r src_file; do
     rel_path="${src_file#"$src_dir"/}"
     dest_file="$dest_dir/$rel_path"
     if [ ! -e "$dest_file" ]; then
       mkdir -p "$(dirname "$dest_file")"
       cp -p "$src_file" "$dest_file"
     fi
-  done
+  done < "$file_list"
+  rm -f "$file_list"
 }
 
 seed_tree "$(pwd)/config" "$HOME/.config"
