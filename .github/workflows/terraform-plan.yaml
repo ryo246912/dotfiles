@@ -22,7 +22,13 @@ concurrency:
 
 jobs:
   plan:
-    if: ${{ ! endsWith(github.actor, '[bot]') }}
+    # forkからのPRはrepository secrets(GitHub App秘密鍵等)にアクセスできないため、
+    # 認証が必要なplanはskipする(fmt/validate/tflint/trivyはterraform-ci.yaml側で
+    # secretsなしに実行されるので、fork PRでもそちらは動く)。
+    # bot actorでの除外はしない: tfactionはGitHub App tokenでlock file更新等を
+    # 自らpushすることがあり、そのpushのactorはApp(...[bot])になる。ここを
+    # skipすると更新後のrerunが止まってしまう。
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
@@ -118,4 +124,4 @@ jobs:
           action: hide-comment
           github_token: ${{ steps.app-token.outputs.token }}
           if: |
-            Comment.HasMeta && Comment.Meta.SHA1 != Commit.SHA1 && !(has(Comment.Meta.Program) && Comment.Meta.Program == "tfcmt")
+            Comment.HasMeta && Comment.Meta.SHA1 != Commit.SHA1 && has(Comment.Meta.Program) && Comment.Meta.Program == "tfcmt"

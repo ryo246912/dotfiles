@@ -19,9 +19,10 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-slim
-    # Manual Approval via Issueが承認待ちでjobを止める分だけ、他のstepより長く取っている。
-    # 承認がこの時間内に行われないとjobは失敗するので、その場合はworkflowをre-runする。
-    timeout-minutes: 30
+    # Manual Approval via Issueの承認待ちと、CockroachDB cluster作成/GCP API有効化などで
+    # 時間のかかりうるapplyの両方を許容するため、他のstepより長く取っている。
+    # この時間内に承認・applyが終わらないとjobは失敗するので、その場合はworkflowをre-runする。
+    timeout-minutes: 60
     environment: production
     permissions:
       contents: write
@@ -113,7 +114,7 @@ jobs:
 
           PRS_JSON=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" || echo "[]")
+            "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
           PR_NUMBER=$(jq -r '.[0].number // ""' <<< "$PRS_JSON")
 
           {
@@ -153,7 +154,9 @@ jobs:
 
       - name: Apply
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
-        timeout-minutes: 5
+        # CockroachDB clusterの作成やGCP APIの有効化は5分を超えることがあるため、
+        # 他のstepより長く取っている。
+        timeout-minutes: 20
         with:
           action: apply
           github_token: ${{ steps.app-token.outputs.token }}
