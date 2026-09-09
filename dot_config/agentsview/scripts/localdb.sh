@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# local AgentsView databaseの操作をまとめたscript。localもCockroachDBにしている
-# 理由と各serviceの役割は compose.yaml のcommentにある。
+# local AgentsView databaseの操作をまとめたscript。container定義は compose.yaml、
+# localをCockroachDBにしている理由は docs/agentsview.md にある。
 #
 # 使えるmode:
 #   up                   local CockroachDBを起動し、databaseの存在を確認する
@@ -14,7 +14,6 @@ set -euo pipefail
 #   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
 #   restore [file]       dump（remote／local）の不足rowをlocal CockroachDBへmergeする
 #   repair-sequences     sequenceを実dataのidまで前進させる（巻き戻さない）
-#   import-pg-dump [f]   旧構成のPostgreSQL custom-format dumpを取り込む
 #
 # macOS既定のbash 3.2でも動く範囲で書く（空arrayやwait -nを使わない）。
 
@@ -70,9 +69,6 @@ container_url="postgres://${db_user}@127.0.0.1:26257/${database}?sslmode=disable
 # import中に張り直したtrapが外側の後片付けを消してしまう。
 temp_counts_before=""
 temp_counts_after=""
-temp_legacy_columns=""
-temp_local_columns=""
-legacy_restore_db=""
 
 remove_temp() {
   [ -n "$1" ] || return 0
@@ -84,16 +80,8 @@ compose() {
 }
 
 on_exit() {
-  if [ -n "$legacy_restore_db" ]; then
-    compose --profile legacy exec -T postgres \
-      sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$legacy_restore_db" \
-      >/dev/null 2>&1 || true
-    compose --profile legacy stop postgres >/dev/null 2>&1 || true
-  fi
   remove_temp "$temp_counts_before"
   remove_temp "$temp_counts_after"
-  remove_temp "$temp_legacy_columns"
-  remove_temp "$temp_local_columns"
 }
 trap on_exit EXIT
 
@@ -242,11 +230,10 @@ import_sql_file() {
 }
 
 select_dump() {
-  local pattern path
-  pattern="$1"
-  path="$2"
+  local path
+  path="$1"
   if [ -z "$path" ]; then
-    path="$({ find "$backup_dir" -maxdepth 1 -type f -name "$pattern" -print 2>/dev/null || true; } |
+    path="$({ find "$backup_dir" -maxdepth 1 -type f -name '*.sql' -print 2>/dev/null || true; } |
       sort -r |
       fzf --prompt='AgentsView dump> ' --height=40% --reverse || true)"
   fi
@@ -267,7 +254,7 @@ case "$mode" in
     ;;
   down)
     # profileつきserviceは明示しないと止まらない。volumeは残す。
-    compose --profile tools --profile legacy down "$@"
+    compose --profile tools down "$@"
     ;;
   sql)
     ensure_up
@@ -346,7 +333,7 @@ case "$mode" in
     echo "Local CockroachDB AgentsView backup: ${dump_path}"
     ;;
   restore)
-    dump_path="$(select_dump '*.sql' "${1:-${AGENTSVIEW_RESTORE_DUMP:-}}")"
+    dump_path="$(select_dump "${1:-${AGENTSVIEW_RESTORE_DUMP:-}}")"
     # 取り込む前にschemaを現在のAgentsView versionへ揃え、このmachineですでに
     # 収集したsessionも保持する。
     push_local
@@ -357,62 +344,6 @@ case "$mode" in
     ensure_up
     require_schema
     repair_sequences
-    ;;
-  import-pg-dump)
-    # 旧構成（local PostgreSQL）のcustom-format dumpはPostgreSQLでしか開けない。
-    # legacy profileのPostgreSQLで開き、data-only INSERTへ変換してからCockroachDBへ
-    # 流す。CockroachDBへ直接restoreできないのはDDL／型／sequenceの非互換のため。
-    legacy_dump="$(select_dump '*.dump' "${1:-${AGENTSVIEW_RESTORE_DUMP:-}}")"
-    converted="${backup_dir}/agentsview-legacy-$(date +%Y%m%d-%H%M%S)-$$.sql"
-    temp_legacy_columns="$(mktemp)"
-    temp_local_columns="$(mktemp)"
-
-    compose --profile legacy up -d --wait postgres
-    legacy_restore_db="agentsview_legacy_$$"
-    compose --profile legacy exec -T postgres \
-      sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$legacy_restore_db"
-
-    # 必要なのはtable定義とdataだけである。index／constraintを作るpost-dataは
-    # pg_trgmなどのextensionを要求するので復元しない。
-    for section in pre-data data; do
-      compose --profile legacy exec -T postgres \
-        sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
-          --no-owner --no-privileges --exit-on-error --section="$2"' \
-        -- "$legacy_restore_db" "$section" <"$legacy_dump"
-    done
-
-    push_local
-
-    # dump時点のAgentsView versionが古いと、取り込み先に無いcolumnが出る。型名は
-    # engineで表記が違うため、名前だけを比べて先に見えるようにする。
-    compose --profile legacy exec -T postgres \
-      sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 \
-        --no-align --tuples-only --quiet' -- "$legacy_restore_db" >"$temp_legacy_columns" <<SQL
-SELECT table_name || '.' || column_name
-FROM information_schema.columns
-WHERE table_schema = '${schema}'
-ORDER BY 1;
-SQL
-    query_local >"$temp_local_columns" <<SQL
-SELECT table_name || '.' || column_name
-FROM information_schema.columns
-WHERE table_schema = '${schema}'
-ORDER BY 1;
-SQL
-    backup_only="$(comm -23 <(sort "$temp_legacy_columns") <(sort "$temp_local_columns"))"
-    if [ -n "$backup_only" ]; then
-      echo "取り込み先のschemaに無いcolumn（AgentsView versionの差）:" >&2
-      printf '%s\n' "$backup_only" | sed 's/^/  /' >&2
-    fi
-
-    compose --profile legacy exec -T postgres \
-      sh -c 'exec pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema="$2" \
-        --data-only --column-inserts --on-conflict-do-nothing \
-        --no-owner --no-privileges' -- "$legacy_restore_db" "$schema" >"$converted"
-
-    import_sql_file "$converted"
-    echo "Converted legacy PostgreSQL dump: ${converted}"
-    echo "Merged missing rows from legacy dump: ${legacy_dump}"
     ;;
   *)
     echo "不明なmode: ${mode}" >&2

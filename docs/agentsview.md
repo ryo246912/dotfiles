@@ -7,19 +7,19 @@
 
 ## 実装済みファイル
 
-| ファイル                                             | 目的                                                                                                                          |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version        |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照              |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                               |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                             |
-| `dot_config/agentsview/compose.yaml`                 | local CockroachDBのDocker Compose定義。client tool（psql／pg_dump）のimage pinと、旧PostgreSQL dumpを読むlegacy serviceも持つ |
-| `dot_config/agentsview/scripts/localdb.sh`           | local CockroachDB系taskの実体。container起動、push／serve、dump、restore、sequence補正、旧PostgreSQL dumpの取り込み           |
-| `dot_config/agentsview/executable_batch-insert-dump` | pg_dumpのplain dumpからINSERT statementだけを取り出し、CockroachDBへ流せるtransaction chunkへ分けるfilter                     |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                                |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDB、CockroachDBへのpush                |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                                |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM                 |
+| ファイル                                             | 目的                                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
+| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
+| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
+| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
+| `dot_config/agentsview/compose.yaml`                 | local CockroachDBのDocker Compose定義。client tool（psql／pg_dump）のimage pinも持つ                                   |
+| `dot_config/agentsview/scripts/localdb.sh`           | local CockroachDB系taskの実体。container起動、push／serve、dump、restore、sequence補正                                 |
+| `dot_config/agentsview/executable_batch-insert-dump` | pg_dumpのplain dumpからINSERT statementだけを取り出し、CockroachDBへ流せるtransaction chunkへ分けるfilter              |
+| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
+| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDB、CockroachDBへのpush         |
+| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
+| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
 
 各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
 
@@ -1271,25 +1271,6 @@ mise run agentsview:cockroach:local:status
 fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -Atc "SELECT version()"'
 ```
 
-#### 旧構成（local PostgreSQL）からの移行
-
-`agentsview-postgres` volumeと、`.dump`（custom-format）のbackupは残してある。custom-format dumpはPostgreSQLでしか開けないため、CockroachDBへ直接restoreはしない。legacy profileのPostgreSQLでdumpを開き、data-only INSERTへ変換してから取り込む。
-
-```sh
-# 旧backupを選んでlocal CockroachDBへ取り込む（変換後の.sqlもbackup dirへ残る）
-mise run agentsview:cockroach:local:import-pg-dump
-
-# 取り込み結果を確認する
-mise run agentsview:cockroach:local:status
-```
-
-取り込みが終わり、`agentsview:cockroach:local:dump`で新しいdumpを作れたら、旧volumeは削除してよい。
-
-```sh
-mise run agentsview:cockroach:local:down
-docker volume rm agentsview-postgres
-```
-
 #### 切り替え後の確認
 
 localのengineが変わるため、各PCで初回だけ次を順に確認する。上から順に実行し、失敗したところで止める。
@@ -1300,7 +1281,6 @@ localのengineが変わるため、各PCで初回だけ次を順に確認する�
 4. `fnox exec -- mise run agentsview:cockroach:remote-local:restore` — remoteのrowが取り込まれ、tableごとの増分が出る。続けてもう一度実行すると増分が`+0 rows`になる（冪等）
 5. `mise run agentsview:cockroach:local:dump` → `mise run agentsview:cockroach:local:restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
 6. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
-7. 旧backupを持ち込む場合だけ`mise run agentsview:cockroach:local:import-pg-dump`
 
 sequence補正はrestore／importの中で自動的に走る。単体で実行しても副作用はない（sequenceを持たないschemaでは何もしない）。
 

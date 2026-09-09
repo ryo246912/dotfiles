@@ -7,8 +7,8 @@ printf 'AGENTSVIEW_AUTH_TOKEN=%s\n' "$(openssl rand -base64 32)"
 printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 '''
 
-# local databaseもCockroachDBである（旧構成のPostgreSQLではない）。理由と
-# service構成は dot_config/agentsview/compose.yaml のcommentにある。task本体は
+# local databaseもCockroachDBである。container定義は
+# dot_config/agentsview/compose.yaml、task本体は
 # dot_config/agentsview/scripts/localdb.sh で、ここはmode指定だけを行う。
 ["agentsview:cockroach:local:up"]
 description = "Start the local AgentsView CockroachDB container"
@@ -87,19 +87,6 @@ set -euo pipefail
 script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
 [ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
 exec bash "$script" repair-sequences "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:import-pg-dump"]
-# 旧構成のlocal PostgreSQLで作ったcustom-format backupを取り込むためだけのtask。
-# 移行が終われば使わないのでhideする。
-description = "Import a legacy PostgreSQL custom-format dump into the local CockroachDB container"
-hide = true
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" import-pg-dump "$@"
 '''
 shell = "bash -c"
 
