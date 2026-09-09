@@ -1,10 +1,10 @@
 # MISE_ENV=mac のときだけ読み込まれる、macOS 専用の [dotfiles] エントリ。
-# 元の .chezmoiignore で `{{ else }}` 分岐（darwin 以外）に *mac*/*brew*/*karabiner*/*raycast* として
-# 除外されていたファイル群（= macOS でのみ配置されていたもの）。
+# mise 自体のtool/config管理（config-mac/mise/ 配下）だけが copy として残る。
+# それ以外の macOS 専用ファイル（navi cheat・zabrze・zsh lazy）は共通 config/ へ、
+# raycast は config-mac/raycast のまま [bootstrap.hooks.pre-dotfiles] の seed 対象へ
+# 移し、~/.config 全体を対象にした track mode entry（config/mise/config.toml 参照）に
+# 吸収したため、個別宣言は不要になった。
 
 [dotfiles]
-"~/.config/mise"        = { source = "config-mac/mise", mode = "copy" }
-"~/.config/navi/cheats" = { source = "config-mac/navi/cheats", mode = "copy" }
-"~/.config/raycast"     = { source = "config-mac/raycast", mode = "copy" }
-"~/.config/zabrze"      = { source = "config-mac/zabrze", mode = "copy" }
-"~/.config/zsh/lazy"    = { source = "config-mac/zsh/lazy", mode = "copy" }
+"~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "copy" }
+"~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "copy" }

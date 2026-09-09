@@ -52,7 +52,6 @@ jobs:
           for f in \
             mise.toml \
             mise.mac.toml \
-            mise.linux.toml \
             config/mise/config.toml \
             config-mac/mise/config.mac.toml \
             config/mise/config.linux.toml; do
@@ -68,9 +67,11 @@ jobs:
           bash -n scripts/install-packages-windows.sh && echo "OK: install-packages-windows syntax"
 
       - name: mise bootstrap（[dotfiles] 配置・[bootstrap.hooks.*] 実行）
-        # [dotfiles]・[bootstrap.hooks.*] は checkout したこのリポジトリの mise.toml/mise.linux.toml
+        # [dotfiles]・[bootstrap.hooks.*] は checkout したこのリポジトリの mise.toml
         # 自身が持つため、cwd をリポジトリ直下に保ったまま実行する（chezmoi の --source 相当の
-        # 外部指定は不要）。
+        # 外部指定は不要）。Linux 専用の mise.<ENV>.toml overlay は不要になった
+        # （~/.config は共通の track mode entry・OS 限定分は config-linux/autohotkey のみ
+        # で pre-dotfiles hook が seed する）。
         # full mise install（aqua/github backend）が GitHub API を使うため、read-only の
         # github.token を実行するこのステップに限定して注入する（ghalint: job env 禁止）。
         env:

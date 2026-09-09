@@ -49,6 +49,36 @@ run      = "lefthook install"
 # 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
 # 2段階の運用にしている（docs/setup.md 参照）。
 #
+# 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
+#    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
+#    （OS限定で残った raycast・autohotkey のみ）から ~/.config へ「無いものだけ」コピーする
+#    一度きりの seed をここで行う。rsync 等の外部ツールに依存せず find+cp のみで書く
+#    （最初の bootstrap 時点ではまだ何もインストールされていない前提のため）。
+#    2回目以降は対象ファイルが既に存在するため実質no-opになる。
+[bootstrap.hooks.pre-dotfiles]
+run = """
+seed_tree() {
+  src_dir="$1"
+  dest_dir="$2"
+  [ -d "$src_dir" ] || return 0
+  find "$src_dir" -type f | while IFS= read -r src_file; do
+    rel_path="${src_file#"$src_dir"/}"
+    dest_file="$dest_dir/$rel_path"
+    if [ ! -e "$dest_file" ]; then
+      mkdir -p "$(dirname "$dest_file")"
+      cp -p "$src_file" "$dest_file"
+    fi
+  done
+}
+
+seed_tree "$(pwd)/config" "$HOME/.config"
+if [ "$(uname)" = "Darwin" ]; then
+  seed_tree "$(pwd)/config-mac/raycast" "$HOME/.config/raycast"
+else
+  seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
+fi
+"""
+
 # 1) pre-tools: [tools] フェーズ（mise install 相当）の前に gh を導入・認証し、
 #    GITHUB_TOKEN 付きで明示的に mise install する。native の tools フェーズは
 #    通常サブプロセスへ環境変数を持ち越せないため、GITHUB_TOKEN が要る
@@ -127,15 +157,28 @@ if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
 fi
 """
 
+# "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
+# config からしか有効にならない実機仕様のため）。"~/.config/mise" だけは常に git 側の
+# 内容へ収束させたいツール設定なので、ここで個別に copy として残す
+# （"~/.config" と "~/.config/mise" はキーが異なるため上書きし合わず共存できる。
+# 実機で「track の対象木の中に、より具体的なキーの copy entry が入れ子になっても
+# 破壊的な干渉なく共存する」ことを確認済み）。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "copy" }
 "~/.claude"                             = { source = "claude", mode = "copy" }
 "~/.codex"                              = { source = "codex", mode = "copy" }
-"~/.config"                             = { source = "config", mode = "copy" }
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
 "~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
+"~/.config/mise"                        = { source = "config/mise", mode = "copy" }
 "~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
 "~/.local"                              = { source = "local", mode = "copy" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
+
+# ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は
+# config/mise/config.toml（deploy先: ~/.config/mise/config.toml）側で宣言する
+# （mise の track mode は project config ではなく global config からのみ有効になる
+# 実機仕様のため）。
+[bootstrap.services.mise-history]
+builtin = "history-watch"

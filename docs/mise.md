@@ -397,15 +397,6 @@ fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]
 がきっかけで、本リポジトリの dotfiles 管理を chezmoi から mise の `[dotfiles]`
 （`mise bootstrap dotfiles`）に寄せられないかを検討した記録。
 
-**注記（情報源について）**: このセッションのネットワーク egress は `jdx.dev` /
-`mise.jdx.dev` / `blog.verybadfrags.com` / `v5.chriskrycho.com` への直接アクセスが
-プロキシでブロックされており、ブログ本文そのものは読めていない。以下は
-`raw.githubusercontent.com/jdx/mise`（`mise.jdx.dev` の公開元リポジトリ、内容は
-サイトと同一）から取得した `docs/dotfiles.md`・`docs/bootstrap.md`・`docs/templates.md`
-の一次情報と、Web 検索で得られたブログ記事のスニペット（二次情報、鍵括弧内は原文引用）を
-突き合わせて書いている。ブログ記事固有の主張（見出しの付け方や布教トーン等）は二次情報の
-比率が高く、確度がやや落ちる点は留意。
-
 ## mise dotfiles 機能の概要（今回分かった範囲）
 
 mise には `[dotfiles]` セクションと `mise bootstrap dotfiles` サブコマンド群があり、
@@ -550,10 +541,13 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   特別な宣言は不要（むしろ chezmoi の命名規則より単純）。
 - **`.chezmoiignore` 相当の一括除外**: `[dotfiles]` は完全な明示的許可リスト方式なので、
   そもそも「除外」という概念が要らない。配りたいファイルだけを列挙すればよい。
-  OS 限定のファイル（chezmoi で `{{ else }}` 分岐により除外されていたもの）は、mise の
-  ネイティブな `mise.<ENV>.toml` オーバーレイ機構（本リポジトリでは `mise.mac.toml`/
-  `mise.linux.toml`。`MISE_ENV` に応じて自動マージされる、`config.mac.toml`/
-  `config.linux.toml` と同じ仕組み）に振り分けることで表現した。
+  OS 限定のファイル（chezmoi で `{{ else }}` 分岐により除外されていたもの）は、当初は
+  mise のネイティブな `mise.<ENV>.toml` オーバーレイ機構（`MISE_ENV` に応じて自動マージ
+  される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
+  `mise.linux.toml` に振り分けていたが、後に `~/.config` を track mode へ移行した際に
+  ほとんどが共通 `config/` へ吸収され、OS 限定で今も copy として残るのは
+  mise 自体の tool/config pin（`mise.mac.toml`）と raycast・autohotkey の
+  seed 元（`config-mac/`・`config-linux/`。詳細は後述の track/history の節）だけになった。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
   → `{% if os() == "macos" %}` のような機械的な置換がほとんどで、11 ファイルの書き換えは
   数十分で完了した（`exec()` が `set -e` 相当で動くため、失敗しうるシェルコマンドは
@@ -568,10 +562,10 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
 
 - dotfiles リポジトリ（`~/dotfiles`）を clone し、その中で `mise bootstrap` を実行する
   運用に変更（旧: `chezmoi init --apply <repo>`）。
-- 全 dotfiles は repo 直下の `mise.toml`（共通）・`mise.mac.toml`・`mise.linux.toml`
-  （`MISE_ENV` 別）の `[dotfiles]` に列挙し、`config/`・`local/` 等のプレーンな
-  ディレクトリ構成（`dot_`/`private_`/`executable_`/`exact_` の命名規則は廃止）から
-  `$HOME` へ配布する。
+- 全 dotfiles は repo 直下の `mise.toml`（共通）・`mise.mac.toml`（`MISE_ENV` 別。
+  当時は `mise.linux.toml` もあったが、後の track mode 移行で不要になり削除した）の
+  `[dotfiles]` に列挙し、`config/`・`local/` 等のプレーンなディレクトリ構成
+  （`dot_`/`private_`/`executable_`/`exact_` の命名規則は廃止）から `$HOME` へ配布する。
 - 旧 `.chezmoi.toml.tmpl` の `hooks.apply.post`（約140行の bash）は、mise 自体が
   `[bootstrap.packages]`/`[tools]` フェーズをネイティブに処理するようになった分だけ
   大幅に縮小し、`[bootstrap.hooks.pre-tools]`（gh 認証・GITHUB_TOKEN 付き mise install）・
@@ -638,58 +632,45 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
 全部コピーされる**。
 
 本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
-「ブランケットコピーしてよい形」に揃えた:
+「ブランケットコピーしてよい形」に揃えた（`~/.apm`・`~/.claude`・`~/.codex`・`~/.local` に
+現在も採用中。**`~/.config` 自体は後に track mode へ移行しており、この節のパターンでは
+なくなった**。track の詳細・具体的な現在の `~/.config` 内訳は前節「target → source
+の逆方向ワークフロー」参照）:
 
-- **`config/` は「常にどの環境でも配ってよい」ファイルだけを置く場所**と決め、
-  `mise.toml`（共通）から `"~/.config" = { source = "config", mode = "copy" }` の
-  1行でまとめて配る（同様に `~/.apm`・`~/.claude`・`~/.codex`・`~/.local` も
-  それぞれ1行）。これで `[dotfiles]` は194行→11行まで縮んだ。
-- **テンプレート**（Tera）が要るファイルは `config/` の外、`templates/` に隔離する
-  （`config/` 配下に置いたままだと、ブランケット copy が未レンダリングの `.tera` を
-  そのまま巻き込んでコピーしてしまう不具合を実機で確認したため。`mode` が違う
-  ファイルは同じディレクトリに同居させられない）。
-- **OS 限定ファイル**は `config-mac/`・`config-linux/` という別ツリーに隔離し、
-  `mise.mac.toml`/`mise.linux.toml` 側から `~/.config/<相対パス>` を個別に
-  `mode = "copy"` で宣言する（例: `config-mac/raycast/` → `"~/.config/raycast"`）。
-  **`mise.mac.toml` 側で `"~/.config"` というブランケットキーを再宣言してはいけない**
-  ——「共通ブランケットのマージ」ではなく完全な**上書き**になり、mac では共通の
-  `~/.config` 配下が一切配置されなくなる（同じキーが複数の merge される config
-  ファイルに出てきたときの挙動として実機で確認済み。詳細は下記コラム参照）。
-  ただし「同一キー = 上書き」に抵触するのはあくまで `"~/.config"` そのものを
-  再宣言した場合の話で、**`"~/.config/mise"` のような別キーなら、共通ブランケットの
-  target ディレクトリ（`~/.config/mise` 配下）と物理的に重なっていても、両方の
-  `mode = "copy"` エントリの出力が破壊的な削除なしにそのまま共存する**ことを実機で
-  確認済み。そのため OS 限定ファイルは 1 ファイルずつではなく、`config-mac/`・
-  `config-linux/` 側のディレクトリ単位（例: `"~/.config/mise" = { source =
-"config-mac/mise", mode = "copy" }`）でまとめて宣言してよい。今後そのディレクトリに
+- **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から
+  `"~/.apm" = { source = "apm", mode = "copy" }` のように1行でまとめて配る。
+  これで `[dotfiles]` は194行→11行（当時の `~/.config` 込みの数字）まで縮んだ。
+- **テンプレート**（Tera）が要るファイルは配布元ディレクトリの外、`templates/` に隔離する
+  （配布元ディレクトリ配下に置いたままだと、ブランケット copy が未レンダリングの
+  `.tera` をそのまま巻き込んでコピーしてしまう不具合を実機で確認したため。`mode` が
+  違うファイルは同じディレクトリに同居させられない）。
+- **OS 限定ファイル**は別ツリー（本リポジトリでは `config-mac/`・`config-linux/`）に
+  隔離し、`mise.mac.toml`/`mise.linux.toml` 側から個別に `mode = "copy"` で宣言する。
+  **共通ブランケット側と同じキーを OS 側で再宣言してはいけない**——「共通ブランケットの
+  マージ」ではなく完全な**上書き**になり、共通側が一切配置されなくなる（同じキーが
+  複数の merge される config ファイルに出てきたときの挙動として実機で確認済み。詳細は
+  下記コラム参照）。ただし「同一キー = 上書き」に抵触するのはあくまで**全く同じキー**を
+  再宣言した場合の話で、**より具体的な別キーなら、共通ブランケットの target
+  ディレクトリと物理的に重なっていても、両方の `mode = "copy"` エントリの出力が
+  破壊的な削除なしにそのまま共存する**ことを実機で確認済み。そのため OS 限定ファイルは
+  1 ファイルずつではなく、ディレクトリ単位でまとめて宣言してよい。今後そのディレクトリに
   ファイルを追加しても `[dotfiles]` 側の追記が不要になる。
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
-  もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`）は `config/` の外、
-  `not_config/` に置く（このリポジトリではもともとこの用途の慣習的なディレクトリ名
-  だったので流用した）。
+  もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`）は `not_config/`
+  に置く（このリポジトリではもともとこの用途の慣習的なディレクトリ名だったので流用した）。
 
 > **同一キーの merge は上書き、別キーは並存する（実機で確認済みの挙動）**
 >
-> `mise.toml` に `"~/.config" = {...}` を書き、`mise.mac.toml` に**同じキー**
-> `"~/.config" = {...}` を書くと、`MISE_ENV=mac` で読み込んだときは mac 側の
-> 定義だけが有効になり、共通側は消える（片方が勝つ、足し算にならない）。
-> 一方、`mise.toml` に `"~/.config" = {...}`（ブランケット）と
-> `"~/.config/git/config" = {..., mode="template"}`（specific、別キー）を
-> **同じファイル**に書いた場合はどちらも適用される（ブランケットが丸ごとコピーした後、
-> specific なキーが該当ファイルだけレンダリングし直す）。ただし前述のとおり、
-> ブランケット側の source に `.tera` の生ファイルが物理的に存在していれば、それも
-> 未レンダリングのまま一緒にコピーされてしまう点は変わらない。だからテンプレートは
-> 物理的に隔離するのが結局いちばん安全。
-
-`~/.config` 配下の全体像は次のとおり:
-
-```text
-mise.toml         [dotfiles] "~/.config" = { source = "config", mode = "copy" }  # 共通
-mise.mac.toml      [dotfiles] "~/.config/raycast" = { source = "config-mac/raycast", ... }   # mac だけ追加
-                              "~/.config/mise" = { source = "config-mac/mise", ... }          # ディレクトリ単位で追加
-mise.linux.toml    [dotfiles] "~/.config/autohotkey" = { source = "config-linux/autohotkey", ... } # linux だけ追加
-（テンプレートは config/ の外の templates/ から個別に "~/.config/git/config" 等として宣言）
-```
+> ある config ファイルに `"~/.foo" = {...}` を書き、別の merge される config ファイルに
+> **同じキー** `"~/.foo" = {...}` を書くと、後者だけが有効になり前者は消える
+> （片方が勝つ、足し算にならない）。一方、`"~/.foo" = {...}`（ブランケット）と
+> `"~/.foo/bar" = {..., mode="template"}`（specific、別キー）を**同じファイル**に
+> 書いた場合はどちらも適用される（ブランケットが丸ごとコピーした後、specific な
+> キーが該当ファイルだけレンダリングし直す）。ただし前述のとおり、ブランケット側の
+> source に `.tera` の生ファイルが物理的に存在していれば、それも未レンダリングのまま
+> 一緒にコピーされてしまう点は変わらない。だからテンプレートは物理的に隔離するのが
+> 結局いちばん安全（この規則は copy 同士に限らず、track と copy が入れ子になる場合にも
+> 同様に成り立つ。前節参照）。
 
 このパターンが使えるのはリポジトリの物理レイアウトを「配ってよいものと配ってはいけない
 ものが同じディレクトリに混在しない」ように整理できるときに限る。既存の chezmoi リポジトリを
@@ -734,7 +715,8 @@ chezmoi の `.chezmoiignore` OS 条件分岐に相当する「このファイル
 ```sh
 mise.toml        # 共通（全 OS で配る）
 mise.mac.toml     # MISE_ENV に "mac" を含むときだけ追加で読まれる
-mise.linux.toml   # MISE_ENV に "linux" を含むときだけ追加で読まれる
+mise.linux.toml   # 存在すれば MISE_ENV に "linux" を含むときだけ追加で読まれる
+                  # （本リポジトリでは現在 linux 固有の [dotfiles] entry が無いため未使用）
 ```
 
 同一ファイル内で OS ごとに**内容の一部だけ**変えたい場合（1ファイルは常に配るが
@@ -772,34 +754,80 @@ mise bootstrap dotfiles unapply "~/.zshrc"
 
 `[dotfiles]` の whole-file エントリ（symlink/copy/template）は「source を編集して
 apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれとは別に **配置済みファイルを
-直接編集し、その変更を自動で記録・source へ吸い上げる**運用（`mode = "track"`）もある。
-本リポジトリでは今回このモードは採用していない（whole-file モードのみで
-chezmoi の既存挙動を再現する方針にした）が、ブログ記事の "self-saving" の核心はこちら。
+直接編集し、その変更を自動で記録する**運用（`mode = "track"`）もある。ブログ記事の
+"self-saving" の核心はこちら。本リポジトリでは `~/.config`（apm/claude/codex/local は
+主に tool 管理で history の恩恵が薄いため対象外）に採用した。
+
+### 実機で判明した制約
+
+- **track エントリは global config（`~/.config/mise/config.toml` 等）でしか有効にならない。**
+  project config（このリポジトリの `mise.toml`）に書くと
+  `tracking is enrolled from the global configuration only, ignoring entry`
+  という warning とともに無視される（実機確認済み）。本リポジトリでは
+  `config/mise/config.toml`（`~/.config/mise/config.toml` へ deploy される git source）に
+  `"~/.config" = { mode = "track" }` を書くことで、通常の `[dotfiles]` copy と同じ
+  「git で編集 → deploy」の流儀を保ったまま track を宣言している。
+- **track には source からの初回配置（seeding）が無い。** 追跡対象が存在しない場合は
+  「存在するようになったら追跡する」だけで待機し、内容を生成してはくれない
+  （`mise bootstrap dotfiles track` を実行しても同様）。そのため、真新しいマシンでは
+  何もデプロイされない。本リポジトリでは `[bootstrap.hooks.pre-dotfiles]`
+  （`mise.toml` 参照）で `config/`（共通）と、OS 限定で残った
+  `config-mac/raycast`・`config-linux/autohotkey` から `~/.config` へ
+  「無いものだけ」を find+cp で seed してから track フェーズに入るようにしている。
+- **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
+  `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
+  `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
+  track 側が管理する（実機確認済み）。逆に、**同じ target path を track と copy の
+  両方でカバーすると、copy 側の再適用が track 側のライブ編集を無言で消す**
+  （実機で確認済みの破壊的挙動）。本リポジトリで `~/.config/mise`
+  （mise 自体の tool/config pin。git 側を正として常に収束させたい）だけを
+  copy のまま残し、それ以外を track にしているのはこのため。
+- **`status`/`diff`/`apply` は track エントリに対してはほぼ no-op**（state は常に
+  `applied` ではなく `tracked` になる）。差分レビューは `dotfiles:diff`
+  （`tasks/dotfiles.toml`）ではなく次項の `history diff` を使うこと。
+
+### 使い方
 
 ```sh
-# 既存の生ファイルを「配置済みのまま」追跡対象にする（symlink/copy はしない）
-mise bootstrap dotfiles track ~/.some-app/state.json
-
-# OS ごとに別の履歴ストリームを持たせる
-mise bootstrap dotfiles track ~/.zshrc --os macos
-
-# 自動保存を無効化し、明示的に保存したいときだけ
-mise bootstrap dotfiles track ~/.config/app/state.json --no-autosave
-
-# 変更を今すぐチェックポイントとして保存する
+# 変更を今すぐチェックポイントとして保存する（mise run dotfiles:history-save）
 mise bootstrap dotfiles save
 
-# 変更履歴を辿る
+# 変更履歴を辿る（mise run dotfiles:history-log）
 mise bootstrap dotfiles history
 
-# 既存の copy モードエントリで、target 側の変更を source へ書き戻す
-mise bootstrap dotfiles add --changed
+# working tree と最新 checkpoint の差分（行単位、mise run dotfiles:history-diff で delta へ pipe）
+mise bootstrap dotfiles history diff --patch
+
+# 2つの checkpoint 間の差分
+mise bootstrap dotfiles history diff 11 12 --patch
+
+# 巻き戻す
+mise bootstrap dotfiles rollback ~/.config/some/file
+mise bootstrap dotfiles undo
 ```
 
-自動保存（変更のたびに自動でチェックポイントを取る）を有効にするには、
-`[bootstrap.services.mise-history] builtin = "history-watch"` を宣言してバックグラウンド
-サービスとして `mise bootstrap` を実行する必要がある。宣言していない状態では
-`mise bootstrap dotfiles save`（または `watch --once`）を手動実行するまで記録されない。
+自動保存（変更のたびに自動でチェックポイントを取る）は
+`[bootstrap.services.mise-history] builtin = "history-watch"`（`mise.toml` 参照）で
+宣言済みで、`mise bootstrap` の一部として自動的に有効化を試みる
+（内部的には `mise bootstrap services apply` 相当。systemd user manager が無い環境
+（一部のコンテナ等）では skip されるだけで bootstrap 全体は失敗しない）。
+有効化されていない状態では `mise bootstrap dotfiles save` を手動実行するまで
+記録されない。
+
+### 複数マシン間での history 同期（origin）
+
+checkpoint の実体はデフォルトでは各マシンのローカルにしか無い。複数マシンで
+共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは**別の**専用 git
+リポジトリを用意し、各マシンで一度だけ接続する（`[history.origin]` として
+machine-local に書き込まれる設定で、git 管理される `mise.toml`/`config/mise/config.toml`
+側には残らない。マシンごとに実行が必要）。
+
+```sh
+mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
+```
+
+未接続の場合は `mise bootstrap dotfiles status` の末尾に
+`Setup repository: none` と表示される。
 
 ## ハマりどころ
 

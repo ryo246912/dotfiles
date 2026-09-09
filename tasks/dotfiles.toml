@@ -25,7 +25,9 @@ description = "差分がある entry を1つずつ delta で確認しながら�
 # status --json の state は "applied"（同期済み）以外なら差分ありとみなす
 # （"differs"/"missing"/"source missing" 等）。entry 単位（宣言した target 単位）の
 # 粒度であり、ディレクトリ entry 内の1ファイルだけを選ぶことはできない
-# （dotfiles:diff のコメント参照）。
+# （dotfiles:diff のコメント参照）。track mode の entry（"~/.config"）は
+# state が常に "applied" 以外（"tracked"）になり、diff/apply も何もしない
+# no-op なので対象から除外する（履歴レビューは dotfiles:history-diff を使う）。
 run = '''
 set -eu
 set -o pipefail
@@ -34,7 +36,7 @@ targets=$(mise bootstrap dotfiles status --json | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 for f in data['files']:
-    if f['state'] != 'applied':
+    if f['mode'] != 'track' and f['state'] != 'applied':
         print(f['target'])
 ")
 
@@ -63,3 +65,17 @@ $targets
 EOF
 '''
 shell = "bash -c"
+
+# track mode（"~/.config"）の history 操作。config/mise/config.toml 参照。
+["dotfiles:history-log"]
+description = "track mode の checkpoint 履歴を確認する"
+run         = "mise bootstrap dotfiles history"
+
+["dotfiles:history-save"]
+description = "track mode の変更を今すぐ checkpoint として保存する"
+run         = "mise bootstrap dotfiles save"
+
+["dotfiles:history-diff"]
+description = "track mode の working tree と最新 checkpoint の差分を delta で表示する"
+run         = "set -o pipefail; mise bootstrap dotfiles history diff --patch | delta"
+shell       = "bash -c"

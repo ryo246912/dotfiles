@@ -112,7 +112,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["config-linux/atuin/fly.toml"],
+      "managerFilePatterns": ["config/atuin/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
       ],

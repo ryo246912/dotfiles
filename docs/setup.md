@@ -40,6 +40,9 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
+    このコマンドの `[bootstrap.hooks.pre-dotfiles]` で、`~/.config`（track mode）が
+    まだ何も無い初回だけ `config/` 等から中身を seed する（詳細は
+    [docs/mise.md](./mise.md) の track/history の節参照）。
   - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
     [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
     `~/.config/mise/config.mac.toml` を正しく読める:
@@ -58,6 +61,17 @@
     手動シンボリックリンク作成は不要
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
     は `MISE_ENV=mac` の明示を省略してよい
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
+  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
+    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
+    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
+  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
+    **別の**専用 git リポジトリを用意し、マシンごとに一度だけ接続する
+    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
+    ```sh
+    mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
+    ```
 
 - [ ] macOS defaults の適用
 
@@ -524,6 +538,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     MISE_ENV=linux mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.linux.toml
     ```
+    このコマンドの `[bootstrap.hooks.pre-dotfiles]` で、`~/.config`（track mode）が
+    まだ何も無い初回だけ `config/` 等から中身を seed する（詳細は
+    [docs/mise.md](./mise.md) の track/history の節参照）。
   - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
     `~/.config/mise/config.linux.toml` を正しく読める:
     1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
@@ -539,6 +556,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）
 
 - [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
       [`docs/credentials.md`](./credentials.md) 参照）

@@ -1,4 +1,4 @@
-min_version = "2026.8.12"
+min_version = "2026.9.2"
 
 [env]
 # https://evermeet.cx/ffmpeg/
@@ -166,3 +166,13 @@ root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$root"
 lefthook install
 """
+
+# track mode は project config ではなく global config からのみ有効になる実機仕様のため、
+# ここ（deploy先: ~/.config/mise/config.toml）で宣言する。"~/.config/mise" 自体は
+# mise.toml 側で個別の copy entry として除外されているため、この track の対象には
+# 含まれない（別キーとして共存し、mise.toml 側の copy が優先される）。
+# 初回配置は [bootstrap.hooks.pre-dotfiles]（mise.toml 参照）が config/ から
+# 「無いものだけ」seed する。以後は `mise bootstrap dotfiles save`（または
+# [bootstrap.services.mise-history] による自動保存）が checkpoint を記録する。
+[dotfiles]
+"~/.config" = { mode = "track" }

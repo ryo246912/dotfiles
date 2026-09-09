@@ -1,8 +1,0 @@
-# MISE_ENV=linux のときだけ読み込まれる、Linux/WSL 専用の [dotfiles] エントリ。
-# 元の .chezmoiignore で darwin 分岐に *win*/*autohotkey*/atuin fly.toml として
-# 除外されていたファイル群（= macOS では配置されていなかったもの）。
-
-[dotfiles]
-"~/.config/atuin"       = { source = "config-linux/atuin", mode = "copy" }
-"~/.config/autohotkey"  = { source = "config-linux/autohotkey", mode = "copy" }
-"~/.config/navi/cheats" = { source = "config-linux/navi/cheats", mode = "copy" }
