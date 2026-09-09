@@ -183,10 +183,10 @@ lefthook install
 # apm/claude/codex/local/zshenv は ~/.config 配下ではないため、個別に track を
 # 追加宣言しないと history の対象にならない。
 [dotfiles]
-"~/.config"                             = { mode = "track" }
 "~/.apm"                                = { mode = "track" }
 "~/.claude"                             = { mode = "track" }
 "~/.codex"                              = { mode = "track" }
+"~/.config"                             = { mode = "track" }
 "~/.config/alacritty/alacritty.toml"    = { mode = "track" }
 "~/.config/ghostty/config"              = { mode = "track" }
 "~/.config/git/config"                  = { mode = "track" }
