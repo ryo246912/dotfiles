@@ -1,0 +1,38 @@
+name: schedule-create-drift-issues
+
+# tfactionのDrift Detection: 有効になっているroot module分のGitHub Issueを
+# 作成/整理する（既に存在するものはそのまま、対象外になったものはclose）。
+# https://suzuki-shunsuke.github.io/tfaction/docs/drift-detection
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 09:00 JST = 00:00 UTC
+    - cron: "0 0 * * *"
+
+permissions: {}
+
+jobs:
+  create-drift-issues:
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Create drift issues
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: create-drift-issues
+          github_token: ${{ steps.app-token.outputs.token }}

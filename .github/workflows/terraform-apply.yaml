@@ -2,6 +2,7 @@ name: terraform-apply
 
 # tfaction (https://suzuki-shunsuke.github.io/tfaction/) によるmain merge後のterraform apply。
 # terraform-plan.yamlがGitHub Artifactsへ保存したplan fileをそのまま適用する(safe apply)。
+# 実際にapplyする前に、trstringer/manual-approvalでGitHub Issueベースの承認を挟む。
 on:
   push:
     branches:
@@ -18,11 +19,15 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-slim
-    timeout-minutes: 15
+    # trstringer/manual-approvalが承認待ちでjobを止めるため、GitHub Hosted runnerの
+    # job上限(360分)に合わせておく。承認がこの時間内に行われないとjobは失敗するので、
+    # その場合はworkflowをre-runして承認をやり直す。
+    timeout-minutes: 360
     environment: production
     permissions:
       contents: write
       pull-requests: write
+      issues: write
       actions: read
       id-token: write
     env:
@@ -35,11 +40,31 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-actions: read
+
       - name: tfaction setup
         id: setup
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: setup
+          github_token: ${{ steps.app-token.outputs.token }}
+
+      # Drift Detection: このrun専用のapplyを始める前に、agentsviewのdrift issueを
+      # 取得(なければ作成)しておく。結果は最後のupdate-drift-issueで反映する。
+      - name: Get or create drift issue
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: get-or-create-drift-issue
+          github_token: ${{ steps.app-token.outputs.token }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -58,10 +83,67 @@ jobs:
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: terraform-init
+          github_token: ${{ steps.app-token.outputs.token }}
           secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Resolve apply context
+        id: apply-context
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          PRS_JSON=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" || echo "[]")
+          PR_NUMBER=$(jq -r '.[0].number // ""' <<< "$PRS_JSON")
+
+          {
+            echo "pr_number=${PR_NUMBER}"
+            echo "merge_commit=[${GITHUB_SHA}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})"
+          } >> "$GITHUB_OUTPUT"
+
+      # Issue経由の手動承認ゲート。dotfilesは個人repoなので承認者はowner本人のみで、
+      # 自分がmergeしたPRも自分でapproveできるようexclude-workflow-initiator-as-approverはfalseにする。
+      - name: Manual Approval via Issue
+        uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
+        with:
+          secret: ${{ steps.app-token.outputs.token }}
+          approvers: ryo246912
+          minimum-approvals: 1
+          exclude-workflow-initiator-as-approver: false
+          issue-labels: "terraform,agentsview"
+          issue-title: "[Terraform Apply承認] agentsview PR#${{ steps.apply-context.outputs.pr_number }}"
+          issue-body: |
+            ## Terraform Apply 承認
+
+            - **root module**: `terraform/agentsview`
+            - **Merged PR**: #${{ steps.apply-context.outputs.pr_number }}
+            - **Merge commit**: ${{ steps.apply-context.outputs.merge_commit }}
+            - **Plan**: MergeされたPRの `Plan Result` コメントを確認してください。
+            - **Workflow**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            この apply は、上記 plan で確認済みの plan file (GitHub Artifacts) をそのまま適用します。
+
+            承認する場合は `approve` ・キャンセルする場合は `deny` とこの Issue にコメントしてください。
+            ```
+            approve
+            ```
+            ```
+            deny
+            ```
 
       - name: Apply
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: apply
+          github_token: ${{ steps.app-token.outputs.token }}
           secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Update drift issue
+        if: always()
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: update-drift-issue
+          status: ${{ job.status }}
+          github_token: ${{ steps.app-token.outputs.token }}

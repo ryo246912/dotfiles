@@ -25,8 +25,7 @@ jobs:
     runs-on: ubuntu-slim
     timeout-minutes: 15
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       id-token: write
     env:
       TFACTION_JOB_TYPE: terraform
@@ -38,11 +37,26 @@ jobs:
         with:
           persist-credentials: false
 
+      # tfactionはPRへのcommit push(fmt/lock file更新)やlabel付与、issueコメントを行うため、
+      # GITHUB_TOKENではなくGitHub App tokenを使う。App tokenのpushはGITHUB_TOKENと違い
+      # 新しいworkflow runを再トリガーするので、初回planでlock fileが自動commitされた場合も
+      # 手動re-runが不要になる。
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
       - name: tfaction setup
         id: setup
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: setup
+          github_token: ${{ steps.app-token.outputs.token }}
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -61,15 +75,18 @@ jobs:
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: terraform-init
+          github_token: ${{ steps.app-token.outputs.token }}
           secrets: ${{ steps.github-secrets.outputs.secrets }}
 
       - name: Lint
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: test
+          github_token: ${{ steps.app-token.outputs.token }}
 
       - name: Plan
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: plan
+          github_token: ${{ steps.app-token.outputs.token }}
           secrets: ${{ steps.github-secrets.outputs.secrets }}
