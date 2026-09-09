@@ -353,7 +353,16 @@ PY
 
 ["rulesync:generate-commands"]
 description = "Generate Claude commands and Codex skills from external commands"
-run = [
-    "cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands",
-    "cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills",
-]
+# apm:install/apm:ci から呼ばれる。apm と rulesync は独立に導入されうる
+# （[bootstrap.hooks.post-dotfiles] 参照）ため、rulesync 未導入でも apm:install
+# 自体は完了できるよう、ここで黙ってスキップする（rulesync 導入後の apm:sync/
+# post-tools で改めて呼ばれた際に実行される）。
+run = '''
+if ! command -v rulesync >/dev/null 2>&1; then
+  echo "rulesync not found; skipping command/skill generation" >&2
+  exit 0
+fi
+cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands
+cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills
+'''
+shell = "bash -c"

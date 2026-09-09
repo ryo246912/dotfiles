@@ -173,19 +173,21 @@ lefthook install
 # 「無いものだけ」seed する。以後は `mise bootstrap dotfiles save`（または
 # [bootstrap.services.mise-history] による自動保存）が checkpoint を記録する。
 #
-# "~/.config" 以下の個別エントリ（mise.toml の [dotfiles] 参照）は copy/template mode
-# のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
-# 「ownership」パターン。dotfiles.html#ownership 参照。実機で「同じ target を
+# "~/.config" 配下の単一ファイル管理エントリ（mise.toml の [dotfiles] 参照）は
+# copy/template mode のまま維持しつつ、ここで同じ target に track を追加宣言している
+# （mise の「ownership」パターン。dotfiles.html#ownership 参照。実機で「同じ target を
 # copy/template と track の両方でカバーしても衝突しない」ことを確認済み）。
 # copy/template 側が source へ収束させる主挙動は変わらないが、apply でライブ編集が
 # 上書きされる直前に history checkpoint が自動記録されるため、`mise bootstrap
 # dotfiles rollback <path>` で復元できるようになる（実機確認済み）。
-# apm/claude/codex/local/zshenv は ~/.config 配下ではないため、個別に track を
-# 追加宣言しないと history の対象にならない。
+#
+# "~/.apm"・"~/.claude"・"~/.codex"・"~/.local" はここに含めていない。
+# これらは単一ファイルではなくディレクトリ全体の copy 管理で、実際には git 管理外の
+# ランタイム状態（セッションログ・キャッシュ・認証情報等）も同じディレクトリに
+# 混在する。track はディレクトリ配下を丸ごと history（ローカル git）へ記録するため、
+# 巻き込むと機密情報が history に残る・origin 同期時に流出しうる・大量ファイルで
+# checkpoint が重くなるおそれがある。narrow に保つため意図的に対象外にしている。
 [dotfiles]
-"~/.apm"                                = { mode = "track" }
-"~/.claude"                             = { mode = "track" }
-"~/.codex"                              = { mode = "track" }
 "~/.config"                             = { mode = "track" }
 "~/.config/alacritty/alacritty.toml"    = { mode = "track" }
 "~/.config/ghostty/config"              = { mode = "track" }
@@ -193,5 +195,4 @@ lefthook install
 "~/.config/mise"                        = { mode = "track" }
 "~/.config/rio/config.toml"             = { mode = "track" }
 "~/.config/rulesync/.rulesync/mcp.json" = { mode = "track" }
-"~/.local"                              = { mode = "track" }
 "~/.zshenv"                             = { mode = "track" }
