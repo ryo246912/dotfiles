@@ -37,8 +37,9 @@ run      = "lefthook install"
 #
 # min_version を満たす self-update は hook にはできない。mise は min_version 未満だと
 # config の読み込み自体を拒否するため、hook（config の一部）まで到達できない。
-# 代わりに `mise bootstrap` を呼ぶ前に `scripts/ensure-mise-version.sh` を独立して
-# 実行する運用にしている（docs/setup.md 参照）。
+# 初回は `mise.run` インストーラが常に最新版を入れるため問題にならず、2回目以降は
+# `lefthook.yml` の `post-merge` フック（mise.toml 変更時のみ発火）が self-update する
+# ので、`mise bootstrap` の外側で明示的に済ませる手順は不要になった（docs/setup.md 参照）。
 #
 # 同様の理由で、[bootstrap.packages] は dotfiles フェーズで初めて
 # `~/.config/mise/config.mac.toml` 等として配置されるが、packages フェーズは
@@ -73,10 +74,13 @@ echo "Running mise install..."
 GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
-# 3) final: APM の user-scope dependencies と rulesync generate を、manifest/lockfile や
-#    ソースに変更があったときだけ実行する（毎回の bootstrap で skill install・
+# 2) post-tools: APM の user-scope dependencies と rulesync generate を、manifest/lockfile
+#    やソースに変更があったときだけ実行する（毎回の bootstrap で skill install・
 #    generate-commands が走るのを避けるため、XDG_STATE_HOME 配下のハッシュマーカーで判定）。
-[bootstrap.hooks.final]
+#    [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に実行すれば
+#    十分なので、以降のフェーズ（plugin パッケージマネージャ・カスタム bootstrap task）を
+#    待つ必要がある final ではなく post-tools で発火する。
+[bootstrap.hooks.post-tools]
 run = """
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
 mkdir -p "$state_dir"

@@ -1,8 +1,8 @@
 name: test-mac
 
 #   （プリインスト brew を空にして実機の link 衝突を再現）
-#   → mise bootstrap（pre-packages hook(self-update) → packages(brew) → dotfiles →
-#   pre-tools hook(gh) → tools → final hook(apm/rulesync)）→ silicon 起動 → zsh 起動
+#   → mise bootstrap（packages(brew) → dotfiles →
+#   pre-tools hook(gh) → tools → post-tools hook(apm/rulesync)）→ silicon 起動 → zsh 起動
 # 方針:
 #   - GUI/対話系の手動スクリプト（scripts/install-mise-mac.sh、macos defaults、
 #     tasks/dotfiles-sync.toml の dotfiles:sync-* task）は CI で実行不能なため呼ばない。

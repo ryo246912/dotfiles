@@ -1,7 +1,7 @@
 name: test-linux
 
-#   mise bootstrap（pre-packages hook → packages(apt) → dotfiles → pre-tools hook(gh) → tools →
-#   final hook(apm/rulesync)）→ zsh 起動
+#   mise bootstrap（packages(apt) → dotfiles → pre-tools hook(gh) → tools →
+#   post-tools hook(apm/rulesync)）→ zsh 起動
 # 方針:
 #   - GUI/対話系の手動スクリプト（scripts/install-*.sh、tasks/dotfiles-sync.toml の
 #     dotfiles:sync-* task）は CI で実行不能なため呼ばない。setup.md が自動化している

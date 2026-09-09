@@ -19,14 +19,11 @@
   mise trust
   ```
 
-- [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
-      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる。
-      初回はまだ lefthook が未導入のため手動実行が必要だが、後述の `mise bootstrap`
-      完了後は `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動実行する）
-
-  ```sh
-  bash scripts/ensure-mise-version.sh
-  ```
+  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
+  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
+  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
+  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
+  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
 - [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
       実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
@@ -508,14 +505,11 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   mise trust
   ```
 
-- [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
-      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる。
-      初回はまだ lefthook が未導入のため手動実行が必要だが、後述の `mise bootstrap`
-      完了後は `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動実行する）
-
-  ```sh
-  bash scripts/ensure-mise-version.sh
-  ```
+  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
+  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
+  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
+  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
+  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
       **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。

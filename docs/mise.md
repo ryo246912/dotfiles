@@ -574,9 +574,10 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
   `$HOME` へ配布する。
 - 旧 `.chezmoi.toml.tmpl` の `hooks.apply.post`（約140行の bash）は、mise 自体が
   `[bootstrap.packages]`/`[tools]` フェーズをネイティブに処理するようになった分だけ
-  大幅に縮小し、`[bootstrap.hooks.pre-packages]`（mac の mise self-update）・
-  `[bootstrap.hooks.pre-tools]`（gh 認証・GITHUB_TOKEN 付き mise install）・
-  `[bootstrap.hooks.final]`（APM/rulesync のハッシュマーカー制御）の3フックに整理した。
+  大幅に縮小し、`[bootstrap.hooks.pre-tools]`（gh 認証・GITHUB_TOKEN 付き mise install）・
+  `[bootstrap.hooks.post-tools]`（APM/rulesync のハッシュマーカー制御）の2フックに整理した。
+  mise 自体の self-update は `mise bootstrap` の外（`lefthook.yml` の `post-merge`）に切り出したため、
+  bootstrap hook 側には残していない。
 - `run_once_setup.sh`（`~/.zshenv` シンボリックリンク作成）は不要になった。
   `~/.zshenv` 自体を `[dotfiles]` の1エントリとして直接配置している。
 
