@@ -69,6 +69,9 @@ seed_tree() {
   # syntax error になり使えない）。一覧を一時ファイルに落として `< file` で読ませる
   # ことでサブシェルを回避し、set -eu が失敗をそのまま hook 全体の中断として扱う。
   file_list=$(mktemp)
+  # set -eu であっても、mkdir/cp が失敗した場合は下の明示的な rm まで到達しないため
+  # trap で確実に一時ファイルを消す（成功時は明示的な rm + trap 解除の両方が効く）。
+  trap 'rm -f "$file_list"' EXIT
   find "$src_dir" -type f > "$file_list"
   while IFS= read -r src_file; do
     rel_path="${src_file#"$src_dir"/}"
@@ -79,6 +82,7 @@ seed_tree() {
     fi
   done < "$file_list"
   rm -f "$file_list"
+  trap - EXIT
 }
 
 seed_tree "$(pwd)/config" "$HOME/.config"
