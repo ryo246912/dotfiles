@@ -588,9 +588,9 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
     実処理としての無駄（再ダウンロード等）は発生しない。
   - **git pull 後の日常的な再適用でも APM/rulesync を同期したい**（chezmoi の
     `run_onchange_*` 相当）。`pre-dotfiles`/`post-dotfiles` は `mise bootstrap
-    dotfiles apply` 単体実行時にも発火する（実機確認済み。前掲の「target →
+dotfiles apply` 単体実行時にも発火する（実機確認済み。前掲の「target →
     source」節参照）ので、`lefthook.yml` の `post-merge` に `mise bootstrap
-    dotfiles apply --yes` を追加し、`post-dotfiles` フックから APM/rulesync 同期
+dotfiles apply --yes` を追加し、`post-dotfiles` フックから APM/rulesync 同期
     タスク（`sync:agents`）を呼ぶようにした。ただし apm/rulesync 自体が mise の
     `[tools]` 管理ツールなので、フルの `mise bootstrap`（真新しいマシン等）では
     `post-dotfiles` の時点でまだ未導入の可能性があり、その場合は `mise which`
@@ -606,7 +606,7 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
     同名フィールドで上書きされる。tasks/task-configuration.html#task_config.cascade
     参照）ため、素の `mise run sync:agents` はこの hook から呼ぶと
     `no task sync:agents found` になる（実機確認済み）。`mise --cd "$HOME"
-    run sync:agents` のように呼び出し時の config root を global 側に切り替える
+run sync:agents` のように呼び出し時の config root を global 側に切り替える
     ことで解決する。nested な `mise run apm:install`/`mise run rulesync:generate`
     呼び出し（タスク本体の中から呼ぶ分）はタスクの実行コンテキストを引き継ぐため
     改めて `--cd` し直す必要はない（実機確認済み）。
