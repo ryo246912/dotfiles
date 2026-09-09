@@ -74,6 +74,7 @@ project_number() {
   printf '%s' "$number"
 }
 
+# 上のURLを組み立てて標準出力へ出す。serviceの存在は問わない。
 deterministic_url() {
   printf 'https://%s-%s.%s.run.app' "$service" "$(project_number)" "$region"
 }

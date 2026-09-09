@@ -632,7 +632,7 @@ fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
 ```
 
-Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
+Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 1、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
 
 **完了確認:** 次がHTTPS URLを返し、未認証APIが401を返す。
 
@@ -709,7 +709,7 @@ fnox exec -- mise run agentsview:pg:remote-local:dump
 
 |  順位 | 基盤                                                                                            | 無料computeの目安                                                                  | ログの使いやすさ                                                                            | AgentsViewとの相性                                                          | 判定                    |
 | ----: | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
-| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 2 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
+| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 1 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
 | **2** | [Northflank Developer Sandbox](https://northflank.com/pricing)                                  | Sandbox内のservice／CPU／memory quota。現行consoleで利用可能resource planを要確認  | app、build、deployment、logが一つのproject UIにまとまる                                     | OCI imageとsecretを登録しやすい。無料Sandboxの継続性・SLAは弱い             | **UI重視のPoC候補**     |
 | **3** | [Azure Container Apps Consumption](https://azure.microsoft.com/pricing/details/container-apps/) | Consumptionの月次無料grantは公式Pricingで移行直前に確認                            | Portal／CLIでsystem logとconsole logを分離してlive stream可能                               | scale-to-zeroとsecret対応。Cloud Runから移す利益が小さく、Azure構築が増える | 既にAzureを使う場合のみ |
 | **4** | [Koyeb Free](https://www.koyeb.com/pricing)                                                     | Free instanceは小さいCPU／memory枠。現行instance表を要確認                         | service画面でruntime logを見やすい                                                          | deployは簡単だが、CPU余裕とcold startはCloud Runより不利                    | hobby／検証用           |
@@ -733,7 +733,7 @@ fnox exec -- mise run agentsview:pg:remote-local:dump
 
 3. **無料ログ枠に余裕がある**: [Cloud Logging pricing](https://cloud.google.com/logging/pricing)は通常log storageについて最初の50 GiB／project／月を無料とし、30日までの保存をingestion料金に含める。個人用AgentsViewのapp logは通常この規模を大幅に下回る。ただしaudit／network logや同一projectの他serviceも合算して監視する。
 4. **必要時だけ高いresourceを使える**: 無料枠は固定の低spec VMを1か月占有する方式ではなく、request処理中のvCPU秒／GiB秒に充当される。現在の1 vCPU／512 MiBで不足したら、memoryを1 GiBへ上げて実測できる。ただし1 GiBは無料memory秒を2倍消費する。
-5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 2、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
+5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 1、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
 
 #### Cloud Runの弱点と対策
 
@@ -946,7 +946,7 @@ captureする場合は`mise run --quiet`を使う。miseがtask名などの付�
 | `metadata.name`                                                         | `ryo-agentsview`                                                           | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
 | `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                      | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
 | `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                        | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
-| 同`maxScale`                                                            | `2`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
+| 同`maxScale`                                                            | `1`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
 | 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                     | 旧`resources.cpu_idle = true`                                                                    |
 | 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                     | 旧`resources.startup_cpu_boost = true`                                                           |
 | `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                             | Terraform outputのruntime service account。deploy権限は持たない                                  |
@@ -1077,7 +1077,7 @@ fnox exec -- terraform plan -input=false -out=tfplan
 fnox exec -- terraform apply tfplan
 ```
 
-planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 2、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に`mise run --quiet agentsview:cloudrun:url -- --check`で、config.tomlへ書いたdeterministic URLがliveなserviceのURLと一致していることを確認する。
+planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 1、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に`mise run --quiet agentsview:cloudrun:url -- --check`で、config.tomlへ書いたdeterministic URLがliveなserviceのURLと一致していることを確認する。
 
 #### 2.4 deploy方法を確認する
 
@@ -1279,7 +1279,7 @@ curl -I "$url"                                    # UI応答を確認
 
 Google Cloud Consoleで次も確認する。
 
-- `min instances = 0`、`max instances = 2`
+- `min instances = 0`、`max instances = 1`
 - memory 512 MiB、CPU 1、request-based billing
 - runtime service accountが`agentsview-runtime`
 - secretの値がlogへ出ていない
