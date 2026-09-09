@@ -158,20 +158,24 @@ def strip_leading_noise(text: str) -> str:
             continue
         if text.startswith("/*"):
             # block commentは入れ子になれるので、深さを数えて閉じ位置を探す。
+            # 閉じていない場合は捨てずにそのまま返す。空を返すと、fileが
+            # comment途中で切れたdumpを「残りは無い」と誤って扱ってしまう。
             depth = 1
             index = 2
             while depth and index < len(text):
                 opening = text.find("/*", index)
                 closing = text.find("*/", index)
                 if closing < 0:
-                    return ""
+                    return text
                 if 0 <= opening < closing:
                     depth += 1
                     index = opening + 2
                     continue
                 depth -= 1
                 index = closing + 2
-            text = "" if depth else text[index:]
+            if depth:
+                return text
+            text = text[index:]
             continue
         return text
 
@@ -213,6 +217,15 @@ def main() -> int:
                 in_chunk = 0
     if in_chunk:
         out.write("COMMIT;\n")
+    # pendingが残るのは、文字列literal・dollar quote・block commentの途中でfileが
+    # 終わった場合だけである（行commentは行末で閉じる）。切り詰められたdumpを
+    # 取り込み済みのchunkだけで成功扱いにしないよう、ここで必ず止める。
+    if splitter.pending:
+        print(
+            f"dump ends inside a string literal or comment: {splitter.tail()[-80:]}",
+            file=sys.stderr,
+        )
+        return 1
     leftover = strip_leading_noise(splitter.tail()).strip()
     if leftover:
         print(f"unterminated statement at end of dump: {leftover[:80]}", file=sys.stderr)

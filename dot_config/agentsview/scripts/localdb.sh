@@ -151,20 +151,27 @@ require_schema() {
   return 1
 }
 
+# 対象columnとsequenceの組から、前進だけさせるsetvalを1文組み立てる。GREATESTで
+# 包むので、実dataより進んでいるsequenceは巻き戻さない。
+setval_statement() {
+  printf "SELECT setval('%s', GREATEST(
+  (SELECT COALESCE(max(\"%s\"), 0) FROM \"%s\".\"%s\"),
+  (SELECT last_value FROM %s), 1), true);\n" \
+    "$3" "$2" "$schema" "$1" "$3"
+}
+
 # restore／importは明示idのINSERTを流すので、そのあとsequenceが実dataより遅れる。
-# 放置すると次のINSERTがduplicate keyで落ちる。GREATESTで包むことで、進んでいる
-# sequenceを巻き戻さずに前進だけさせる。CockroachDBのSERIALはunique_rowid()が
-# 既定でsequenceを持たないため、その場合は対象0件で何もしない。
+# 放置すると次のINSERTがduplicate keyで落ちる。CockroachDBのSERIALはunique_rowid()が
+# 既定でsequenceを持たないため、対象0件なら何もしない。
 repair_sequences() {
-  local rows statements table column column_default sequence
+  local statements rows table column column_default sequence
+  statements=""
+
+  # serial／bigserial: defaultが nextval('...') になっているcolumn。
   rows="$(query_local --command="SELECT table_name, column_name, column_default
     FROM information_schema.columns
     WHERE table_schema = '${schema}' AND column_default LIKE 'nextval(%'
     ORDER BY table_name, column_name")"
-  if [ -z "$rows" ]; then
-    return 0
-  fi
-  statements=""
   while IFS='|' read -r table column column_default; do
     [ -n "$table" ] || continue
     sequence="$(printf '%s' "$column_default" | sed -n "s/^nextval('\([^']*\)'.*/\1/p")"
@@ -172,13 +179,36 @@ repair_sequences() {
       echo "sequence名を読み取れません: ${table}.${column} = ${column_default}" >&2
       return 1
     fi
-    statements="${statements}SELECT setval('${sequence}', GREATEST(
-      (SELECT COALESCE(max(\"${column}\"), 0) FROM \"${schema}\".\"${table}\"),
-      (SELECT last_value FROM ${sequence}), 1), true);
-"
+    statements="${statements}$(setval_statement "$table" "$column" "$sequence")"$'\n'
   done <<EOF
 ${rows}
 EOF
+
+  # identity column（GENERATED ... AS IDENTITY）はdefaultがnextvalにならないため、
+  # 上のqueryに出てこない。sequence名はpg_get_serial_sequenceから引く。ここが
+  # 引けない場合でもserial側の補正は続けたいので、失敗は警告にとどめる。
+  if rows="$(query_local --command="SELECT table_name, column_name,
+      COALESCE(pg_get_serial_sequence(
+        quote_ident(table_schema) || '.' || quote_ident(table_name), column_name), '')
+    FROM information_schema.columns
+    WHERE table_schema = '${schema}' AND is_identity = 'YES'
+    ORDER BY table_name, column_name")"; then
+    while IFS='|' read -r table column sequence; do
+      [ -n "$table" ] || continue
+      if [ -z "$sequence" ]; then
+        echo "identity columnのsequenceを解決できません: ${table}.${column}" >&2
+        echo "  このcolumnのsequenceは補正されない。idの衝突が出る場合は手で setval する。" >&2
+        continue
+      fi
+      statements="${statements}$(setval_statement "$table" "$column" "$sequence")"$'\n'
+    done <<EOF
+${rows}
+EOF
+  else
+    echo "identity columnを列挙できませんでした。nextval defaultのcolumnだけ補正します。" >&2
+  fi
+
+  [ -n "$statements" ] || return 0
   printf '%s' "$statements" | psql_local --quiet --output=/dev/null
 }
 
