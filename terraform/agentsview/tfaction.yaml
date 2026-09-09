@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/tfaction/refs/tags/v2.1.1/schema/tfaction.json
+#
+# このfileの存在自体がtfactionへ「ここはroot module」であることを伝える。
+# root module固有の設定は今のところ無い（共通設定はtfaction-root.yamlのtarget_groups側）。
+{}

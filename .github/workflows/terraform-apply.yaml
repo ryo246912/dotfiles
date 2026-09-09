@@ -1,0 +1,67 @@
+name: terraform-apply
+
+# tfaction (https://suzuki-shunsuke.github.io/tfaction/) によるmain merge後のterraform apply。
+# terraform-plan.yamlがGitHub Artifactsへ保存したplan fileをそのまま適用する(safe apply)。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/agentsview/**"
+
+permissions: {}
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-slim
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+      id-token: write
+    env:
+      TFACTION_JOB_TYPE: terraform
+      TFACTION_TARGET: terraform/agentsview
+      TFACTION_WORKING_DIR: terraform/agentsview
+      TFACTION_IS_APPLY: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: tfaction setup
+        id: setup
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: setup
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ steps.setup.outputs.gcp_workload_identity_provider }}
+          service_account: ${{ steps.setup.outputs.gcp_service_account }}
+
+      - name: Output secrets
+        id: github-secrets
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: output-github-secrets
+          github_secrets: ${{ toJSON(secrets) }}
+
+      - name: terraform init
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: terraform-init
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Apply
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: apply
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
