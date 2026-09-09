@@ -28,10 +28,22 @@ resource "google_storage_bucket" "build_staging" {
 }
 
 # `gcloud builds submit` はsource tarballのuploadに先立ってbucketの存在確認
-# （storage.buckets.get）も行うため、objectAdminではなくadminをこのbucketに限って
-# 与える。project全体のstorage権限を与えるとTerraform state bucketまで読めてしまう。
+# （storage.buckets.get）も行う。objectAdminだけではその1件が足りないが、
+# storage.adminまで渡すとbucketのIAM・lifecycle・public access設定まで
+# 変更できてしまう。必要な2つのroleを組み合わせ、bucket自体の設定はTerraformだけが
+# 持つ状態を保つ。
+#
+#   roles/storage.objectAdmin        objectの作成・取得・削除
+#   roles/storage.legacyBucketReader storage.buckets.get と storage.objects.list
+#
+# project全体のstorage権限は与えない。与えるとTerraform state bucketまで読めてしまう。
 resource "google_storage_bucket_iam_member" "deploy_build_staging" {
+  for_each = toset([
+    "roles/storage.legacyBucketReader",
+    "roles/storage.objectAdmin",
+  ])
+
   bucket = google_storage_bucket.build_staging.name
-  role   = "roles/storage.admin"
+  role   = each.value
   member = "serviceAccount:${google_service_account.deploy.email}"
 }
