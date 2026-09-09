@@ -21,7 +21,16 @@ calculate_apm_hash() {
   done | hash_cmd
 }
 apm_hash=$(calculate_apm_hash)
+apm_needs_install=0
 if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
+  apm_needs_install=1
+elif [ ! -d "$HOME/.apm/apm_modules" ]; then
+  # マニフェスト/ロックファイルは前回から変わっていなくても、`apm install -g` の
+  # 生成物（~/.apm/apm_modules。docs/apm.md 参照）が手動削除等で消えている場合は
+  # マーカーだけを信用せず再インストールする。
+  apm_needs_install=1
+fi
+if [ "$apm_needs_install" = "1" ]; then
   echo "Running mise run apm:install..."
   if mise run apm:install; then
     calculate_apm_hash > "$state_dir/apm-hash" || exit 1
@@ -42,7 +51,17 @@ rulesync_hash=$(
     echo "$f $(hash_cmd < "$f")"
   done | hash_cmd
 )
+rulesync_needs_generate=0
 if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
+  rulesync_needs_generate=1
+elif [ -f "$source_dir/rulesync.jsonc" ] && [ ! -f "$source_dir/CLAUDE.md" ]; then
+  # source（rulesync.jsonc/.rulesync）は前回から変わっていなくても、生成物
+  # （プロジェクト単位の CLAUDE.md。docs/rulesync.md 参照）が手動削除等で消えている
+  # 場合はマーカーだけを信用せず再生成する（rulesync:generate はプロジェクト/
+  # グローバル双方をまとめて再生成するため、この canary 1つで両方を復旧できる）。
+  rulesync_needs_generate=1
+fi
+if [ "$rulesync_needs_generate" = "1" ]; then
   echo "Running mise run rulesync:generate..."
   if mise run rulesync:generate; then
     if ! printf '%s' "$rulesync_hash" > "$state_dir/rulesync-hash" 2>/dev/null; then
