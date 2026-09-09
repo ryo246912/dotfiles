@@ -1,3 +1,5 @@
+min_version = "2026.9.2"
+
 [settings]
 auto_install = false
 experimental = true
@@ -29,3 +31,160 @@ lefthook install
 [[watch_files]]
 patterns = ["lefthook.yml"]
 run      = "lefthook install"
+
+# `mise bootstrap` は必ずこのリポジトリの checkout ルートで実行すること
+# （hook 内は相対パス・$(pwd) 前提。$MISE_PROJECT_ROOT はフックの中では未設定）。
+#
+# 同様の理由で、[bootstrap.packages] は dotfiles フェーズで初めて
+# `~/.config/mise/config.mac.toml` 等として配置されるが、packages フェーズは
+# `mise bootstrap` プロセス起動時に一度だけ読み込んだ config を使うため、
+# 同一プロセス内で dotfiles → packages の順に反映されることはない（実機で確認済み）。
+# そのため `mise bootstrap dotfiles apply` を独立した先行コマンドとして実行し、
+# 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
+# 2段階の運用にしている（docs/setup.md 参照）。
+#
+# 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
+#    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
+#    （OS限定で残った raycast・autohotkey のみ）から ~/.config へ「無いものだけ」コピーする
+#    一度きりの seed をここで行う。2回目以降は対象ファイルが既に存在するため実質no-opになる。
+#
+#    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
+#    - [dotfiles] の track mode は "Track entries cannot contain source, content,
+#      exclude, or manifest." （dotfiles.html）と明記されており、source からの
+#      初回配置手段を一切持たない設計。
+#    - [dotfiles] の copy/template/symlink mode は1ターゲットパス=1ソースの宣言で、
+#      「無ければ配置・あれば触らない」という条件分岐を持たない
+#      （apply は既存ターゲットを常に source へ収束＝上書きする。
+#      dotfiles.html#start-with-one-managed-file 参照）。
+#    - [bootstrap.files]/[bootstrap.directories] は絶対パスをファイル単位で宣言する
+#      root 権限向けの仕組みで、ディレクトリツリー一括かつ「無ければ作る」ではなく
+#      常に内容を収束（=上書き）させる（bootstrap/files.html 参照）ため、
+#      「一度だけ seed して以降は track に委ねる」用途には不向き。
+#    以上より、この一度きりの seed は hook 以外に宣言的な書き方が無い。
+[bootstrap.hooks.pre-dotfiles]
+run = """
+set -eu
+
+seed_tree() {
+  src_dir="$1"
+  dest_dir="$2"
+  [ -d "$src_dir" ] || return 0
+  mkdir -p "$dest_dir"
+  rsync -a --ignore-existing "$src_dir"/ "$dest_dir"/
+}
+
+seed_tree "$(pwd)/config" "$HOME/.config"
+if [ "$(uname)" = "Darwin" ]; then
+  seed_tree "$(pwd)/config-mac/raycast" "$HOME/.config/raycast"
+else
+  seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
+fi
+"""
+
+# 1) post-dotfiles: `mise bootstrap dotfiles apply` の直後に発火する（`mise bootstrap
+#    dotfiles apply` 単体実行時にも発火する。docs/mise.md 参照）。apm/rulesync は
+#    それぞれ独立に、導入済み（`mise which` で解決できる）場合だけ同期する。未導入なら
+#    黙ってスキップし、後続の post-tools 側で改めて実行する。
+#
+#    `apm:sync`/`rulesync:sync` は config/mise/tasks/dev.toml（deploy先:
+#    ~/.config/mise/tasks/dev.toml、global scope）で定義したタスクだが、この hook は
+#    必ずこのリポジトリの checkout ルート（project config root）で実行されるため、素の
+#    `mise run apm:sync` では見つからない（実機確認済み）。mise の `[task_config].includes`
+#    は config root ごとのスコープで、project 側が自分の `includes = ["tasks/*.toml"]` を
+#    宣言していると、global 側の includes は継承されない（cascade しても descendant 側の
+#    同名フィールドで上書きされるため。tasks/task-configuration.html#task_config.cascade
+#    参照）。`mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に
+#    切り替えることで回避する。
+[bootstrap.hooks.post-dotfiles]
+run = """
+if mise which apm >/dev/null 2>&1; then
+  mise --cd "$HOME" run apm:sync
+fi
+if mise which rulesync >/dev/null 2>&1; then
+  mise --cd "$HOME" run rulesync:sync
+fi
+"""
+
+# 2) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
+#    gh を導入・認証し、GITHUB_TOKEN 付きで明示的に mise install する。
+#
+#    - なぜ `mise install` 単体では pre-tools が動かないのか:
+#      hook は "Hooks run only during explicit `mise bootstrap` invocations."
+#      （bootstrap.html#hooks）と明記されており、`mise install` 単体・`mise bootstrap
+#      packages` は dotfiles/hooks を一切経由しない別コマンド。これは仕様通りで
+#      バグではない。gh 認証や GITHUB_TOKEN 付き install が必要な場合は必ず
+#      `mise bootstrap` 経由で実行すること（docs/setup.md 参照）。
+#    - なぜ native の tools フェーズに素通しできないのか（`mise install` を2回
+#      呼んでいる理由）: hook は "Hooks run in the current process environment"
+#      （bootstrap.html#hooks）だが、これは hook 自身が親プロセスの env を引き継ぐ
+#      という意味であり、hook 内で export した変数が親（native の tools フェーズ）
+#      へ逆伝播するわけではない（hook は子シェルプロセスであり、POSIX の
+#      プロセスモデル上、子から親の環境変数は書き換えられない）。そのため
+#      GITHUB_TOKEN を必要な install に確実に渡すには、この hook 内で明示的に
+#      `GITHUB_TOKEN=... mise install` を呼ぶ以外の方法が無い。
+#      結果として native の step 15（`mise install installs missing [tools]`、
+#      bootstrap.html 参照）がこの直後にもう一度走り、`mise install` は
+#      1 bootstrap あたり実質2回実行されるが、その時点では全ツール導入済みなので
+#      2回目は差分ゼロの冪等チェックのみで即座に完了する（ダウンロード等の
+#      実処理は発生しない）。これは意図した挙動であり、削減する手段は無い。
+[bootstrap.hooks.pre-tools]
+run = """
+if [ "$(uname)" = "Darwin" ]; then
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
+else
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
+mise install --jobs=1 aqua:cli/cli || true
+if ! gh auth token >/dev/null 2>&1; then
+  gh auth login --scopes 'project' || true
+fi
+github_token=$(gh auth token 2>/dev/null || true)
+if [ -z "$github_token" ]; then
+  echo "error: gh 未ログインのため中断します。'gh auth login --scopes project' 後に再度 'mise bootstrap' を実行してください" >&2
+  exit 1
+fi
+echo "Running mise install..."
+GITHUB_TOKEN=$github_token mise install --jobs=2
+"""
+
+# 3) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
+#    確実に同期する。post-dotfiles 側で未導入のためスキップされた場合（真新しいマシン等）
+#    はここで初めて実行される。post-dotfiles で既に実行済みの場合はハッシュマーカーが
+#    更新済みなので、ここでの再実行は差分ゼロの no-op になる（apm:sync/rulesync:sync 参照）。
+#    `--cd "$HOME"` が必要な理由は post-dotfiles のコメント参照。
+[bootstrap.hooks.post-tools]
+run = """
+mise --cd "$HOME" run apm:sync
+mise --cd "$HOME" run rulesync:sync
+"""
+
+# "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
+# config からしか有効にならない実機仕様のため）。以下のエントリは常に git 側の内容へ
+# 収束させたい copy/template のまま維持している。このうち "~/.config" 配下の
+# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）と
+# "~/.zshenv" は、config/mise/config.toml 側で同じ target に track も追加宣言して
+# いる（mise の「ownership」パターン。dotfiles.html#ownership 参照）。ライブ編集は
+# 依然として次の apply で上書きされるが、上書き直前に history checkpoint が自動で
+# 記録されるため、`mise bootstrap dotfiles rollback <path>` で復元できるようになる
+# （実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex"・"~/.local" はディレクトリ
+# 全体が対象で、git 管理外のランタイム状態（認証情報等）も混在するため、意図的に
+# track の対象外にしている（config/mise/config.toml のコメント参照）。
+[dotfiles]
+"~/.apm"                                = { source = "apm", mode = "copy" }
+"~/.claude"                             = { source = "claude", mode = "copy" }
+"~/.codex"                              = { source = "codex", mode = "copy" }
+"~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
+"~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
+"~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
+"~/.config/mise"                        = { source = "config/mise", mode = "copy" }
+"~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
+"~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
+"~/.local"                              = { source = "local", mode = "copy" }
+"~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
+
+# ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は
+# config/mise/config.toml（deploy先: ~/.config/mise/config.toml）側で宣言する
+# （mise の track mode は project config ではなく global config からのみ有効になる
+# 実機仕様のため）。
+[bootstrap.services.mise-history]
+builtin = "history-watch"

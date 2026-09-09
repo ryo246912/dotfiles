@@ -1,0 +1,81 @@
+# `mise bootstrap dotfiles` のラッパー task。
+# 常に `~/dotfiles` 直下（このリポジトリの checkout ルート）で実行する前提
+# （`mise bootstrap` 全般と同じ制約。docs/mise.md 参照）。
+
+["dotfiles:status"]
+description = "[dotfiles] の現在の状態を確認する（read-only）"
+run         = "mise bootstrap dotfiles status"
+
+["dotfiles:diff"]
+description = "[dotfiles] の差分を delta で表示する"
+# 単一ファイルの entry（template 等）は行単位の unified diff が出るが、
+# ディレクトリ単位の entry（"~/.config" 等のブランケット copy）は
+# 「内容が異なる」旨の1行のみで、ファイル単位の中身までは出ない
+# （mise 2026.9.3 で実機確認済み）。ディレクトリ entry の中身まで見たい場合は
+# `diff -ru <source> <target> | delta` のように直接比較すること。
+run   = "set -o pipefail; mise bootstrap dotfiles diff | delta"
+shell = "bash -c"
+
+["dotfiles:apply"]
+description = "[dotfiles] を適用する"
+run         = "mise bootstrap dotfiles apply"
+
+["dotfiles:apply-interactive"]
+description = "差分がある entry を1つずつ delta で確認しながら適用する"
+# status --json の state は "applied"（同期済み）以外なら差分ありとみなす
+# （"differs"/"missing"/"source missing" 等）。entry 単位（宣言した target 単位）の
+# 粒度であり、ディレクトリ entry 内の1ファイルだけを選ぶことはできない
+# （dotfiles:diff のコメント参照）。track mode の entry（"~/.config"）は
+# state が常に "applied" 以外（"tracked"）になり、diff/apply も何もしない
+# no-op なので対象から除外する（履歴レビューは dotfiles:history-diff を使う）。
+run = '''
+set -eu
+set -o pipefail
+
+targets=$(mise bootstrap dotfiles status --json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data['files']:
+    if f['mode'] != 'track' and f['state'] != 'applied':
+        print(f['target'])
+")
+
+if [ -z "$targets" ]; then
+  echo "全て最新です"
+  exit 0
+fi
+
+# target 一覧は fd 3 経由で読む（stdin/fd 0 は下の `read -r answer < /dev/tty` 用に
+# 空けておく。while の stdin をそのまま使うと、ループ内の read が target 一覧の
+# 次の行を answer として食ってしまう）。
+while IFS= read -r target <&3; do
+  echo "=== $target ==="
+  if ! mise bootstrap dotfiles diff "$target" | delta; then
+    echo "warning: diff に失敗したため skip します: $target" >&2
+    continue
+  fi
+  printf '%s を適用しますか? (y/N) ' "$target"
+  read -r answer < /dev/tty
+  case "$answer" in
+    y | Y) mise bootstrap dotfiles apply --yes "$target" ;;
+    *) echo "skip: $target" ;;
+  esac
+done 3<<EOF
+$targets
+EOF
+'''
+shell = "bash -c"
+
+# track mode（"~/.config"）の history 操作。config/mise/config.toml 参照。
+["dotfiles:history-log"]
+description = "track mode の checkpoint 履歴を確認する"
+run         = "mise bootstrap dotfiles history"
+
+["dotfiles:history-save"]
+description = "track mode の変更を今すぐ checkpoint として保存する"
+run         = "mise bootstrap dotfiles save"
+
+["dotfiles:history-diff"]
+description = "track mode の working tree と最新 checkpoint の差分を delta で表示する"
+run         = "set -o pipefail; mise bootstrap dotfiles history diff --patch | delta"
+shell       = "bash -c"

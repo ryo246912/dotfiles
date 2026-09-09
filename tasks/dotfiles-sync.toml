@@ -1,0 +1,140 @@
+# chezmoi の run_onchange_*.sh.tmpl（interactive y/n/d コピー）を移植したタスク群。
+# mise の [dotfiles] は $HOME 配下の宣言的な配置のみを扱うため、$HOME の外側
+# （macOS の ~/Library/Application Support、WSL から見た Windows 側 $APPDATA 等）への
+# 対話式コピーは [dotfiles] エントリではなくタスクとして実装する。
+# 実行はリポジトリを checkout した状態で `mise run dotfiles:sync-mac` のように行う
+# （$MISE_PROJECT_ROOT はこのタスクを読み込んだ mise.toml があるディレクトリ、
+# つまりこのリポジトリのルートを指す）。
+
+["dotfiles:sync-mac"]
+description = "macOS ネイティブアプリの設定ファイルを ~/Library/Application Support 配下へ対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
+
+file_mappings=(
+  "$MISE_PROJECT_ROOT/not_config/claude-desktop/claude_desktop_config_mac.json" "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_mac.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$HOME/Library/Application Support/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/config/navi/config.yaml" "$HOME/Library/Application Support/navi/config.yaml"
+)
+
+for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
+  source_file="${file_mappings[i]}"
+  dest_dir="${file_mappings[i + 1]}"
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''
+
+["dotfiles:sync-windows"]
+description = "WSL から Windows ネイティブアプリ($APPDATA 等)へ設定ファイルを対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Linux" ] && { echo "WSL(Linux) 専用のタスクです"; exit 1; }
+: "${APPDATA:?APPDATA が未設定です。Windows 標準の %APPDATA%（.../AppData/Roaming）ではなく、
+AppData の親ディレクトリ（例: /mnt/c/Users/<user>/AppData）を export してください
+（下のマッピングが Roaming/Local を自分で付け足すため）}"
+: "${USERDIR:?USERDIR が未設定です（例: /mnt/c/Users/<user>）}"
+
+file_mappings=(
+  "$MISE_PROJECT_ROOT/not_config/claude-desktop/claude_desktop_config_win.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/config-linux/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
+  "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
+  "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_linux.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$APPDATA/Roaming/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/not_config/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
+)
+
+for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
+  source_file="${file_mappings[i]}"
+  dest_dir="${file_mappings[i + 1]}"
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''
+
+["dotfiles:sync-commitizen"]
+description = "commitizen 導入済みのときだけ .commitlintrc.js を対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+
+file_mappings=(
+  "commitizen" "$MISE_PROJECT_ROOT/config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
+)
+
+for ((i = 0; i < ${#file_mappings[@]}; i += 3)); do
+  command="${file_mappings[i]}"
+  source_file="${file_mappings[i + 1]}"
+  dest_dir="${file_mappings[i + 2]}"
+
+  command -v "$command" >/dev/null 2>&1 || continue
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''

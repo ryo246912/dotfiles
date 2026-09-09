@@ -5,10 +5,10 @@
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
   "mise": {
-    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
+    "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml", "config-mac/mise/**/*.toml"]
   },
   "devcontainer": {
-    "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
+    "managerFilePatterns": ["config/devcontainer/**/devcontainer.json"]
   },
   "customDatasources": {
     "brew-formula": {
@@ -112,7 +112,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/atuin/fly.toml"],
+      "managerFilePatterns": ["config/atuin/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
       ],
@@ -120,7 +120,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
+      "managerFilePatterns": ["config/agentsview/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
@@ -128,14 +128,14 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": ["npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "devcontainers/cli",
       "datasourceTemplate": "github-tags"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml"],
       "matchStrings": ["min_version\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "jdx/mise",
       "packageNameTemplate": "jdx/mise",
@@ -144,7 +144,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"go:github\\.com/atotto/clipboard/cmd/(?:gocopy|gopaste)\"\\s*=\\s*\"(?<currentValue>.*?)\""
       ],
@@ -153,14 +153,14 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": ["pipx:awslogs\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "awslogs",
       "datasourceTemplate": "pypi"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/config.mac.toml"],
+      "managerFilePatterns": ["config-mac/mise/config.mac.toml"],
       "matchStrings": [
         "\"http:terminal-browser\"\\s*=\\s*\\{\\s*version = \"(?<currentValue>[^\"]+)\""
       ],
@@ -171,7 +171,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentValue>[^\"]+)\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/refs/tags/"
       ],
@@ -180,7 +180,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/[^\n#]+[ \t]*#[ \t]*renovate: branch=(?<currentValue>main|master)"
       ],
@@ -189,7 +189,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
@@ -197,7 +197,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
@@ -206,16 +206,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
-      "matchStrings": [
-        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_apm/apm.yml"],
+      "managerFilePatterns": ["apm/apm.yml"],
       "matchStrings": [
         "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#(?<currentDigest>[0-9a-f]{40})",
         "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s(?<currentDigest>[0-9a-f]{40})"
@@ -226,7 +217,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_apm/apm.yml"],
+      "managerFilePatterns": ["apm/apm.yml"],
       "matchStrings": [
         "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#v?(?<currentValue>[^\\s]+)",
         "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s+v?(?<currentValue>[^\\s]+)"

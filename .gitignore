@@ -4,10 +4,15 @@
 mise*.lock
 
 *temp*
-dot_config/git/config.secret
-dot_config/git/config.work.secret
-dot_zprofile.secret
-dot_zshrc.secret
+# "templates/" は "*temp*" に部分一致してしまうため明示的に復帰させる
+# （mise dotfiles のテンプレート source を置くディレクトリ。以後ここに新規ファイルを
+# 追加しても git add で無視されないようにするため）。
+!templates/
+!templates/**
+config/git/config.secret
+config/git/config.work.secret
+config/zsh/.zprofile.secret
+config/zsh/.zshrc.secret
 
 ## claude
 settings.local.json
@@ -19,7 +24,11 @@ settings.local.json
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-!dot_config/rulesync/exact_dot_rulesync/mcp.json
+# rulesync が生成する mcp.json は ~/.config/rulesync/.rulesync/mcp.json（実ホーム側）に
+# 出力されるだけで、このリポジトリには非テンプレートの mcp.json 自体が存在しない
+# （source は templates/rulesync/mcp.json.tera）。そのため上の `mcp.json` ignore に対する
+# !negation はもう不要（旧 dot_config/.../mcp.json.tmpl 時代の名残）。
+
 # Terraform local state and plans (the dependency lock file remains tracked).
 **/.terraform/*
 *.tfstate

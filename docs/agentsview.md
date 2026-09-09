@@ -7,17 +7,17 @@
 
 ## 実装済みファイル
 
-| ファイル                                             | 目的                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
-| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                              |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
+| ファイル                                  | 目的                                                                                                                   |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
+| `config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
+| `config/agentsview/clrnd.yml`             | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
+| `config/agentsview/scripts/cloudrun.sh`   | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
+| `config/agentsview/compose.yaml`          | local検証用PostgreSQLのDocker Compose定義                                                                              |
+| `config/agentsview/prepare-dump-auth`     | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
+| `config/mise/tasks/agentsview.toml`       | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
+| `config/mise/config.toml`                 | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
+| `terraform/agentsview/*.tf`               | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
 
 各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
 
@@ -149,7 +149,7 @@ AGENTSVIEW_AUTH_TOKEN
 AGENTSVIEW_CURSOR_SECRET
 ```
 
-`dot_config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
+`config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
 
 **完了確認:** 次は値を表示せず、すべて`set`を返す。
 
@@ -193,7 +193,7 @@ sed -i.bak \
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
 
-次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
+次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
 
 | Secret name                       | Value                                                      |
 | --------------------------------- | ---------------------------------------------------------- |
@@ -363,9 +363,9 @@ fnox exec -- sh -c '
 
 `root certificate file "~/.postgresql/root.crt" does not exist`は、password認証へ到達する前にlibpqがCA bundleを見つけられていない状態である。`PGSSLROOTCERT=system`の後に`SSL error: certificate verify failed`へ変わる場合、使用中の`psql`がlinkするOpenSSLのdefault trust storeが空またはmacOS Keychainと連携していない。`system`を続けて使わず、上記のように実在するCA bundleを明示する。
 
-macOSでは最初に`/etc/ssl/cert.pem`を使う。これは`MISE_ENV`に`mac`を含むhostで読み込まれるため、mise shell activation後の`fnox exec`、`psql`、AgentsViewに共通して適用される。既に開いているshellには遡って反映されないので、chezmoi適用後に新しいshellを開くか上記の`exec zsh`を実行する。
+macOSでは最初に`/etc/ssl/cert.pem`を使う。これは`MISE_ENV`に`mac`を含むhostで読み込まれるため、mise shell activation後の`fnox exec`、`psql`、AgentsViewに共通して適用される。既に開いているshellには遡って反映されないので、mise bootstrap dotfiles apply 後に新しいshellを開くか上記の`exec zsh`を実行する。
 
-`/etc/ssl/cert.pem`が存在しないmacOS hostでは、`dot_config/mise/config.mac.toml`の値を次のHomebrew OpenSSL bundleへ変更し、chezmoiを再適用する。
+`/etc/ssl/cert.pem`が存在しないmacOS hostでは、`config/mise/config.mac.toml`の値を次のHomebrew OpenSSL bundleへ変更し、`mise bootstrap dotfiles apply`を再実行する。
 
 ```sh
 export PGSSLROOTCERT="$(brew --prefix openssl@3)/etc/openssl@3/cert.pem"
@@ -423,7 +423,7 @@ fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP
 
 `REVOKE`前に`DELETE 0`が返るのは、対象rowが0件だっただけで権限検査には成功している状態である。`REVOKE`後は同じstatementが`permission denied`になる。ここで`DELETE 0`が返る場合は`REVOKE`が効いていない。
 
-macOSでは`PGSSLROOTCERT`が必要になる（`dot_config/mise/config.mac.toml`が`/etc/ssl/cert.pem`を設定する）。TLS errorが出る場合は`echo $PGSSLROOTCERT`で読めるpathになっているか確認する。
+macOSでは`PGSSLROOTCERT`が必要になる（`config/mise/config.mac.toml`が`/etc/ssl/cert.pem`を設定する）。TLS errorが出る場合は`echo $PGSSLROOTCERT`で読めるpathになっているか確認する。
 
 **完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
 
@@ -501,7 +501,7 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
-- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
+- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
 - **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
 
   ```sh
@@ -562,12 +562,12 @@ bind addressは原因ではない。upstream imageの`CMD`は`--host 0.0.0.0 --n
 
 ```sh
 git -C ~/dotfiles pull
-chezmoi apply ~/.config/agentsview
+mise bootstrap dotfiles apply ~/.config/agentsview
 export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsview:0.38.1-bac4d72dc567'
 AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
 
-repository root以外から実行すると、taskはsource treeではなくapply済みの`~/.config/agentsview`のmanifestを使う。`chezmoi apply`を忘れると古いmanifestがdeployされるため、`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止する。`clrnd`のdiffに期待した変更が出ていない場合は、まずapply漏れを疑う。
+repository root以外から実行すると、taskはsource treeではなくapply済みの`~/.config/agentsview`のmanifestを使う。`mise bootstrap dotfiles apply`を忘れると古いmanifestがdeployされるため、`build`／`deploy`／`verify`／`render`／`diff`はdotfiles sourceとの差分があると停止する。`clrnd`のdiffに期待した変更が出ていない場合は、まずapply漏れを疑う。
 
 `AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。
 
@@ -599,7 +599,7 @@ done
 > **前提:**
 >
 > - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の権限設定と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push`を先に済ませる。
-> - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
+> - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
 >
 > ```sh
 > agentsview --version   # push側のbinary
@@ -897,7 +897,7 @@ Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがな�
 
 ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
 
-mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
+mise taskは次を追加した。いずれもrepository rootでも、mise dotfiles適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
 | task                            | 内容                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
@@ -933,7 +933,7 @@ ARGS> []--projects resume
 
 #### 2.0.3 clrnd manifestの各設定
 
-`dot_config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
+`config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
 
 | manifestの位置                                                          | 値                                                                         | 意味／旧Terraform属性                                                                            |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -1030,7 +1030,7 @@ fnox exec -- terraform validate
 CockroachDB Cloudでorganization scopeの`Cluster Creator`を持つTerraform用service accountから`CCDB1_...` API Secret keyを発行し、SQL user用に別々のrandom passwordを用意する。shell historyへ直接値を書かず、fnox等からexportする。
 
 ```sh
-chezmoi apply ~/.config/fnox/config.toml
+mise bootstrap dotfiles apply ~/.config/fnox/config.toml
 fnox get COCKROACH_API_KEY >/dev/null
 fnox exec -- terraform version
 ```
@@ -1214,7 +1214,7 @@ CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、�
 
 #### local PostgreSQLの位置づけ
 
-local PostgreSQL（`dot_config/agentsview/compose.yaml`）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。
+local PostgreSQL（`config/agentsview/compose.yaml`）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。
 
 local PostgreSQLを使うのはbackupのときだけである。`agentsview:pg:remote-local:dump`が、このmachineのlocal push、CockroachDBからのdata export、local merge、sequence補正、custom-format dumpを順に行う。
 
@@ -1300,29 +1300,29 @@ Google Cloud Consoleで次も確認する。
 
 適用は変更したfileによって経路が違う。まず次で判断する。
 
-| 変更したfile                                  | 適用に必要なこと                                                                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `dot_config/agentsview/cloudrun-service.yaml` | `chezmoi apply` → `agentsview:cloudrun:deploy`（新revisionが作られる）            |
-| `dot_config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない） |
-| `dot_config/agentsview/clrnd.yml`             | `chezmoi apply` のみ（次回のclrnd実行から反映）                                   |
-| `dot_config/mise/tasks/agentsview.toml`       | `chezmoi apply` のみ                                                              |
-| `terraform/agentsview/*.tf`                   | `terraform plan` → 内容確認 → `terraform apply`                                   |
-| `dot_config/mise/config.toml`（tool version） | `chezmoi apply` → `mise install`                                                  |
+| 変更したfile                              | 適用に必要なこと                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `config/agentsview/cloudrun-service.yaml` | `mise bootstrap dotfiles apply` → `agentsview:cloudrun:deploy`（新revisionが作られる） |
+| `config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない）      |
+| `config/agentsview/clrnd.yml`             | `mise bootstrap dotfiles apply` のみ（次回のclrnd実行から反映）                        |
+| `config/mise/tasks/agentsview.toml`       | `mise bootstrap dotfiles apply` のみ                                                   |
+| `terraform/agentsview/*.tf`               | `terraform plan` → 内容確認 → `terraform apply`                                        |
+| `config/mise/config.toml`（tool version） | `mise bootstrap dotfiles apply` → `mise install`                                       |
 
 ### 手順1. mainを取り込み、applyする
 
-Cloud Run関連のfileは`~/.config/agentsview`へchezmoiが配置したものが使われる。**source treeを更新しただけでは反映されない。**
+Cloud Run関連のfileは`~/.config/agentsview`へmiseの`[dotfiles]`が配置したものが使われる。**source treeを更新しただけでは反映されない。**
 
 ```sh
 git -C ~/dotfiles switch main
 git -C ~/dotfiles pull
-chezmoi apply
+mise bootstrap dotfiles apply
 ```
 
-`chezmoi apply`を忘れると古いmanifestがそのままdeployされる。`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止するので気づけるが、`chezmoi status`で先に確認しておくとよい。
+`mise bootstrap dotfiles apply`を忘れると古いmanifestがそのままdeployされる。`build`／`deploy`／`verify`／`render`／`diff`はdotfiles sourceとの差分があると停止するので気づけるが、`mise bootstrap dotfiles diff`で先に確認しておくとよい。
 
 ```sh
-chezmoi status ~/.config/agentsview   # 何も出なければ最新
+mise bootstrap dotfiles diff ~/.config/agentsview   # 何も出なければ最新
 ```
 
 ### 手順2. Terraformの変更を適用する
@@ -1400,6 +1400,6 @@ mise run agentsview:cloudrun:clrnd -- traffic --to-latest
 
 ### 複数PCで運用している場合
 
-Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`chezmoi apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
+Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`mise bootstrap dotfiles apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
 
 ---

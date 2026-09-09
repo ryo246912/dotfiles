@@ -1,0 +1,236 @@
+cb() {
+  if command -v pbcopy &> /dev/null; then
+    command pbcopy
+  elif command -v clip.exe &> /dev/null; then
+    command clip.exe
+  fi
+}
+
+open() {
+  if command -v open &> /dev/null; then
+    command open
+  elif command -v xdg-open &> /dev/null; then
+    command xdg-open
+  fi
+}
+
+# install後にapply先のlockfileをdotfilesリポジトリへ戻す。
+# 同期はbest-effortとし、install自体の終了statusは変更しない。
+_sync_dotfile_lock() {
+  local source_file="$1"
+  local destination_file="$2"
+  [[ -f "$source_file" ]] || return 0
+  mkdir -p "${destination_file:h}" || return 0
+  if ! cmp -s "$source_file" "$destination_file"; then
+    local temporary_file
+    temporary_file="$(mktemp "${destination_file}.XXXXXX")" || return 0
+    # mktemp と APM の lockfile は 0600 で作られることがある。dotfiles リポジトリ側
+    # では通常ファイルとして管理し、apply のたびに mode 差分が出ないよう正規化する。
+    if ! cp -p "$source_file" "$temporary_file" || ! chmod 0644 "$temporary_file" || ! mv "$temporary_file" "$destination_file"; then
+      rm -f "$temporary_file"
+      return 0
+    fi
+    echo "Updated dotfiles repo lockfile: $destination_file"
+  fi
+}
+
+# DOTFILES_DIR（既定 ~/dotfiles）が実際の checkout かどうかを mise.toml の有無で判定する。
+# 別の場所に clone している場合は DOTFILES_DIR を export しておくこと。
+_dotfiles_repo_dir() {
+  local dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+  # DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と
+  # `~` が展開されないため、ここで正規化する（実機で確認済みの不具合）。
+  [[ "$dir" == "~" ]] && dir="$HOME"
+  [[ "$dir" == "~/"* ]] && dir="$HOME/${dir#\~/}"
+  [[ -f "$dir/mise.toml" ]] || return 1
+  print -r -- "$dir"
+}
+
+_sync_mise_dotfile_locks() {
+  local source_dir
+  source_dir="$(_dotfiles_repo_dir)" || return 0
+  local mise_config_dir="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}"
+  local source_lock
+  for source_lock in "$mise_config_dir"/mise*.lock(N); do
+    _sync_dotfile_lock "$source_lock" "$source_dir/config/mise/${source_lock:t}"
+  done
+}
+
+_sync_apm_dotfile_lock() {
+  local source_dir
+  source_dir="$(_dotfiles_repo_dir)" || return 0
+  _sync_dotfile_lock "$HOME/.apm/apm.lock.yaml" "$source_dir/apm/apm.lock.yaml"
+}
+
+apm() {
+  local is_global=false
+  local argument
+  for argument in "$@"; do
+    [[ "$argument" == -g || "$argument" == --global ]] && is_global=true
+  done
+  command apm "$@"
+  local exit_status=$?
+  # optionの順序や将来のsubcommand追加を独自解析せず、global command成功後は
+  # lockfileに差分がある場合だけchezmoi sourceへ反映する。
+  if (( exit_status == 0 )) && [[ "$is_global" == true ]]; then
+    _sync_apm_dotfile_lock
+  fi
+  return $exit_status
+}
+
+#
+# 引数として受け取ったコマンドを指定回数繰り返す関数
+#
+# 使用方法: loop -n <回数> <コマンド...>
+# 例: loop -n 3 echo "こんにちは"
+#
+loop() {
+  local count=0
+  local cmd=""
+
+  # オプションから回数を解析
+  OPTIND=1
+  while getopts "n:" opt; do
+    case "$opt" in
+      n)
+        count="$OPTARG"
+        ;;
+      \?)
+        echo "エラー: 無効なオプションです。" >&2
+        echo "使用方法: loop -n <回数> <コマンド...>" >&2
+        return 1
+        ;;
+    esac
+  done
+
+  # オプション部分を引数リストから削除
+  shift $((OPTIND-1))
+
+  # 残りの引数を実行するコマンドとして取得
+  cmd="$@"
+
+  # 回数が指定されていない、または0以下の場合はエラーを表示
+  if [[ -z "$count" || "$count" -le 0 ]]; then
+    echo "エラー: 繰り返しの回数を正の整数で指定してください (-n <回数>)。" >&2
+    echo "使用方法: loop -n <回数> <コマンド...>" >&2
+    return 1
+  fi
+
+  # コマンドが指定されていない場合はエラーを表示
+  if [[ -z "$cmd" ]]; then
+    echo "エラー: 実行するコマンドを指定してください。" >&2
+    echo "使用方法: loop -n <回数> <コマンド...>" >&2
+    return 1
+  fi
+
+  for i in $(seq 1 "$count"); do
+    eval "$cmd"
+  done
+}
+
+measure_time(){
+  # 開始時刻を記録
+  start_time=$(date +%s.%N)
+
+  # 実行したいコマンド
+  # コマンドラインから渡されたすべての引数を実行
+  "$@"
+
+  # 終了時刻を記録
+  end_time=$(date +%s.%N)
+
+  # 経過時間を計算し四捨五入して小数第1位まで表示 (bcで差を計算→awkのprintfで丸め)
+  elapsed_time=$(echo "$end_time - $start_time" | bc -l | awk '{printf "%.1f", $0}')
+
+  echo "Execution time: $elapsed_time seconds"
+}
+
+ssh() {
+  # tmux起動時
+  if [[ -n $(printenv TMUX) ]] ; then
+    # locale対応
+    export LC_CTYPE=en_US.UTF-8
+    # 接続先ホスト名に応じて背景色切り替え
+    if [[ `echo "$1" | grep 'audit'` ]] ; then
+      tmux set -p window-active-style 'bg=#400000'
+      tmux set -p window-style 'bg=#400000'
+    else
+      tmux set -p window-active-style 'bg=#002800'
+      tmux set -p window-style 'bg=#002800'
+    fi
+
+    command ssh $@
+    # 色設定を戻す
+    tmux set -p window-style 'bg=#303030'
+    tmux set -p window-active-style 'bg=#000000'
+  else
+    command ssh $@
+  fi
+}
+
+_zsh-history-backup() {
+  local backup_dir="$HOME/.local/state/zsh"
+  while sleep $((60 * 15)) ; do
+    if [[ $(wc -l "$backup_dir/.zsh_history" | awk '{print $1}') -gt 1000 ]] ; then
+      cp -f "$backup_dir/.zsh_history" "$backup_dir/zsh_history_backup_$(date '+%y%m')$(printf '%02d' $(( $(date '+%d') / 10 * 10 )))"
+    else
+      osascript -e 'display notification "Backup Error!" with title "zsh"'
+    fi
+  done
+}
+
+zsh-history-backup() {
+  # ロックディレクトリを作成して排他制御
+  local lock_file="$HOME/.zsh_history_backup.lock"
+  local pid_file="$HOME/.zsh_history_backup_process.pid"
+  local cmd="_zsh-history-backup"
+
+  if ! mkdir "$lock_file" 2>/dev/null; then
+    return 0
+  fi
+  # ターミナル終了時にロックを解除するトラップを設定
+  trap "rmdir \"$lock_file\" 2>/dev/null" EXIT
+
+  # すでにプロセスが実行中かチェック
+  if [[ -f "$pid_file" ]]; then
+    local existing_pid=$(cat "$pid_file")
+    if ps -p "$existing_pid" > /dev/null 2>&1; then
+      return 0
+    else
+      echo "pidファイルはあるがプロセスがないので削除"
+      rm -f "$pid_file"
+    fi
+  fi
+
+  # バックアップコマンドをバックグラウンド実行 & PID を保存
+  $cmd &
+  echo $! > "$pid_file"
+  echo "バックアッププロセスを開始しました (PID: $(cat "$pid_file"))"
+  rmdir "$lock_file" 2>/dev/null
+}
+
+zsh-startuptime() {
+  local time_rc
+  local total_msec=0
+  local msec
+  for i in $(seq 1 10); do
+    msec=$((TIMEFMT='%mE'; time zsh -i -c exit) 2>/dev/stdout >/dev/null | tr -d "ms")
+    echo "${(l:2:)i}: ${msec} [ms]"
+    total_msec=$(( $total_msec + $msec ))
+  done
+  time_rc=$(( ${total_msec} / 10 ))
+  local time_norc
+  time_norc=$((TIMEFMT="%mE"; time zsh -df -i -c "autoload -Uz compinit && compinit -C; exit") &> /dev/stdout)
+  echo "my zshrc: ${time_rc}ms\ndefault zsh: ${time_norc}\n"
+}
+
+zsh-profiler() {
+  ZSHRC_PROFILE=1 zsh -i -c zprof
+}
+
+# historyの定期バックアップを起動
+zsh-history-backup
+
+if command -v multi-worktree >/dev/null 2>&1; then
+    fpath=(~/.config/multi-worktree $fpath)
+fi

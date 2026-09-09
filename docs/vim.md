@@ -109,7 +109,7 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 
 まとめると、標準機能だけでは直近数件しか追えないので、履歴からインタラクティブに選びたいなら `yanky.nvim` か `nvim-neoclip.lua` を telescope/fzf-lua と組み合わせるのが定番。
 
-このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
+このdotfilesでは `nvim-neoclip.lua` を導入済み(`config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
 
 ## help
 
@@ -127,7 +127,7 @@ tagsファイルがあると以下が使える
 
 ## Neovim の設定を再読み込みする
 
-`dot_config/nvim/` 以下の Lua 設定を変更した場合は、変更した内容に応じて次の方法で再読み込みする。
+`config/nvim/` 以下の Lua 設定を変更した場合は、変更した内容に応じて次の方法で再読み込みする。
 
 - 現在開いている Lua ファイルだけを再実行する: `:luafile %`
 - `init.lua` を再実行する: `:source $MYVIMRC`

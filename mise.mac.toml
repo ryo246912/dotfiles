@@ -1,0 +1,10 @@
+# MISE_ENV=mac のときだけ読み込まれる、macOS 専用の [dotfiles] エントリ。
+# mise 自体のtool/config管理（config-mac/mise/ 配下）だけが copy として残る。
+# それ以外の macOS 専用ファイル（navi cheat・zabrze・zsh lazy）は共通 config/ へ、
+# raycast は config-mac/raycast のまま [bootstrap.hooks.pre-dotfiles] の seed 対象へ
+# 移し、~/.config 全体を対象にした track mode entry（config/mise/config.toml 参照）に
+# 吸収したため、個別宣言は不要になった。
+
+[dotfiles]
+"~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "copy" }
+"~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "copy" }

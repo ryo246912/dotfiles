@@ -4,6 +4,55 @@ output:
   - failure
   - execution_out
 
+post-merge:
+  jobs:
+    - name: ensure-mise-version
+      glob: "mise.toml"
+      run: |
+        required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' mise.toml)
+        if [ -z "$required_mise_version" ]; then
+          echo "error: mise.toml から min_version を取得できません" >&2
+          exit 1
+        fi
+
+        current_mise_version=$(MISE_NO_CONFIG=1 mise --version | awk '{print $1}')
+        # CalVer（YYYY.M.P）を . 区切りで数値比較する（文字列比較だと "9" > "10" 扱いになり誤判定するため）。
+        already_satisfied=$(awk -v cur="$current_mise_version" -v req="$required_mise_version" '
+          BEGIN {
+            split(cur, c, ".")
+            split(req, r, ".")
+            for (i = 1; i <= 3; i++) {
+              x = (c[i] == "" ? 0 : c[i]) + 0
+              y = (r[i] == "" ? 0 : r[i]) + 0
+              if (x > y) { print "1"; exit }
+              if (x < y) { print "0"; exit }
+            }
+            print "1"
+          }
+        ')
+        if [ "$already_satisfied" = "1" ]; then
+          echo "mise $current_mise_version は min_version $required_mise_version を既に満たしています"
+          exit 0
+        fi
+
+        echo "Ensuring mise $required_mise_version is installed..."
+        if ! MISE_NO_CONFIG=1 mise self-update --yes "$required_mise_version"; then
+          cat >&2 <<EOF
+        error: 'mise self-update' に失敗しました。
+        brew/apt/scoop 等のパッケージマネージャーで導入した mise は self-update を拒否するため
+        これが原因の可能性があります。その場合はパッケージマネージャー側で更新してください
+        （例: brew upgrade mise / sudo apt update && sudo apt upgrade mise）。
+        更新後、min_version ($required_mise_version) 以上になったことを確認してください。
+        EOF
+          exit 1
+        fi
+    - name: dotfiles-apply
+      # chezmoi の git 連携（pull 後の自動 apply）相当。`mise bootstrap dotfiles apply`
+      # は pre-dotfiles/post-dotfiles フックも伴って実行されるため、apm/rulesync の同期
+      # （[bootstrap.hooks.post-dotfiles] 参照）も git pull のたびに自動で走る。
+      # ensure-mise-version の後に実行する（min_version を満たした mise で実行するため）。
+      run: mise bootstrap dotfiles apply --yes
+
 pre-push:
   jobs:
     - name: stash files

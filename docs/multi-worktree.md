@@ -14,14 +14,14 @@
 
 このツールは chezmoi で管理されており、以下のファイルで構成されています：
 
-- `dot_local/bin/executable_multi-worktree` - メインスクリプト
-- `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
-- `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
-- `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
+- `local/bin/multi-worktree` - メインスクリプト
+- `config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
+- `config/multi-worktree/completion.bash` - Bash 補完スクリプト
+- `config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
 
 ### 基本セットアップ
 
-chezmoi apply 後、設定ファイルを作成してください：
+`mise bootstrap dotfiles apply` 後、設定ファイルを作成してください：
 
 ```bash
 # 設定ディレクトリの作成
