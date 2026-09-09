@@ -94,7 +94,7 @@ jobs:
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
         with:
           action: output-github-secrets
-          github_secrets: ${{ toJSON(secrets) }}
+          github_secrets: ${{ toJSON(secrets) }} # zizmor: ignore[overprovisioned-secrets] tfaction's official secrets pattern requires the full context here; the action filters it down to tfaction.yaml's declared secrets.
 
       - name: terraform init
         uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1

@@ -11,6 +11,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: schedule-create-drift-issues
+  cancel-in-progress: false
+
 jobs:
   create-drift-issues:
     runs-on: ubuntu-slim
