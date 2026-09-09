@@ -1,5 +1,26 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/tfaction/refs/tags/v2.1.1/schema/tfaction.json
 #
-# このfileの存在自体がtfactionへ「ここはroot module」であることを伝える。
-# root module固有の設定は今のところ無い（共通設定はtfaction-root.yamlのtarget_groups側）。
-{}
+# terraform/agentsview固有の設定。tfaction-root.yamlはrepo全体で共通の設定のみを
+# 持つ方針にしているため、GCP認証・backendへ渡すenv・secretsはすべてこちら側に置く。
+
+# GCP Workload Identity連携。実際の値はGCP側でpool/provider/service accountを
+# 作成した後に置き換えること（値は秘密情報ではない）。
+gcp_service_account: terraform-agentsview@REPLACE_WITH_GCP_PROJECT_ID.iam.gserviceaccount.com
+gcp_workload_identity_provider: projects/REPLACE_WITH_GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/providers/dotfiles
+
+env:
+  # GCSバックエンドの設定。versions.tfのbackend "gcs" {}が空なのは、
+  # ここでbucket名を渡すため（account IDをcodeに残さないため）。
+  TF_CLI_ARGS_init: "-backend-config=bucket=REPLACE_WITH_GCS_BUCKET -backend-config=prefix=agentsview"
+
+secrets:
+  - env_name: TF_VAR_gcp_project_id
+    secret_name: GCP_PROJECT_ID
+  - env_name: COCKROACH_API_KEY
+    secret_name: COCKROACH_API_KEY
+  - env_name: TF_VAR_cockroach_owner_password
+    secret_name: COCKROACH_OWNER_PASSWORD
+  - env_name: TF_VAR_cockroach_push_password
+    secret_name: COCKROACH_PUSH_PASSWORD
+  - env_name: TF_VAR_cockroach_read_password
+    secret_name: COCKROACH_READ_PASSWORD

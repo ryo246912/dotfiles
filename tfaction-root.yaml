@@ -1,7 +1,9 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/tfaction/refs/tags/v2.1.1/schema/tfaction-root.json
 #
 # tfaction (https://suzuki-shunsuke.github.io/tfaction/) の設定。
-# terraform/agentsview 以外にroot moduleを追加する場合は、そのdirectoryに
+# root module固有の設定(GCP認証, secrets等)はここではなく各root moduleの
+# tfaction.yaml側に置く。ここにはrepo全体で共通の設定のみを書く。
+# terraform/agentsview以外にroot moduleを追加する場合は、そのdirectoryに
 # tfaction.yamlを置き、このtarget_groupsへ追記する。
 
 plan_workflow_name: terraform-plan.yaml
@@ -20,23 +22,7 @@ drift_detection:
 
 target_groups:
   - working_directory: terraform/agentsview
+    # runs_onはlist-targets/pick-out-drift-issuesのmatrix出力にのみ使われる
+    # (schedule-detect-drifts.yamlのdetect job)。plan/apply workflow自体は
+    # working_directoryを固定しているため、runs-onは各workflow側で直接指定する。
     runs_on: ubuntu-slim
-    # GCP Workload Identity連携。実際の値はGCP側でpool/provider/service accountを
-    # 作成した後に置き換えること（値は秘密情報ではない）。
-    gcp_service_account: terraform-agentsview@REPLACE_WITH_GCP_PROJECT_ID.iam.gserviceaccount.com
-    gcp_workload_identity_provider: projects/REPLACE_WITH_GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/providers/dotfiles
-    env:
-      # GCSバックエンドの設定。terraform/agentsview/versions.tfのbackend "gcs" {}が
-      # 空なのは、ここでbucket名を渡すため（account IDをcodeに残さないため）。
-      TF_CLI_ARGS_init: "-backend-config=bucket=REPLACE_WITH_GCS_BUCKET -backend-config=prefix=agentsview"
-    secrets:
-      - env_name: TF_VAR_gcp_project_id
-        secret_name: GCP_PROJECT_ID
-      - env_name: COCKROACH_API_KEY
-        secret_name: COCKROACH_API_KEY
-      - env_name: TF_VAR_cockroach_owner_password
-        secret_name: COCKROACH_OWNER_PASSWORD
-      - env_name: TF_VAR_cockroach_push_password
-        secret_name: COCKROACH_PUSH_PASSWORD
-      - env_name: TF_VAR_cockroach_read_password
-        secret_name: COCKROACH_READ_PASSWORD

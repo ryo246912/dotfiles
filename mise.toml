@@ -18,6 +18,13 @@ includes = ["tasks/*.toml"]
 "github:superfly/flyctl"         = "0.4.29"
 "npm:oxfmt"                      = "0.59.0"
 "npm:oxlint"                     = "1.76.0"
+"aqua:hashicorp/terraform"       = "1.15.6"
+"aqua:terraform-linters/tflint"  = "0.61.0"
+"aqua:aquasecurity/trivy"        = "0.69.3"
+
+[env]
+# terraform/agentsviewとtfaction workflow双方で使うprovider plugin cache。
+TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.terraform.d/plugin-cache"
 
 [hooks]
 postinstall = """
