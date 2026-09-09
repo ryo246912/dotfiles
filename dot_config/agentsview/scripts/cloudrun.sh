@@ -55,28 +55,76 @@ export GCP_RUNTIME_SERVICE_ACCOUNT="${GCP_RUNTIME_SERVICE_ACCOUNT:-agentsview-ru
 # serviceを作る前から確定し、deleteして作り直しても同じ値へ戻るので、AgentsViewの
 # config.tomlのpublic_urlはこちらへ固定する。Terraformの output cloud_run_url と
 # 同じ値を、Terraform stateを読まずに組み立てる。
+# exitではなくreturnで失敗を返す。この関数は $(...) で呼ばれるため、exitでは
+# subshellが終わるだけで呼び出し元は止まらない。
 project_number() {
-  if [ -n "${GCP_PROJECT_NUMBER:-}" ]; then
-    printf '%s' "$GCP_PROJECT_NUMBER"
-    return
+  number="${GCP_PROJECT_NUMBER:-}"
+
+  if [ -z "$number" ]; then
+    command -v gcloud >/dev/null || {
+      echo "gcloudが必要です（またはGCP_PROJECT_NUMBERを指定してください）" >&2
+      return 1
+    }
+    number=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)') || {
+      echo "project numberを取得できません: ${GCP_PROJECT_ID}" >&2
+      return 1
+    }
   fi
-  command -v gcloud >/dev/null || {
-    echo "gcloudが必要です（またはGCP_PROJECT_NUMBERを指定してください）" >&2
-    exit 1
-  }
-  number=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
+
+  # GCP_PROJECT_NUMBERで渡された値もgcloudの出力と同じ検査にかける。数字以外が
+  # 混じったままhost名へ入ると、URLとしては成立するのに誰も居ない先を指す。
   case "$number" in
     '' | *[!0-9]*)
-      echo "project numberを取得できません: ${GCP_PROJECT_ID}" >&2
-      exit 1
+      echo "project numberが数字ではありません: ${number}" >&2
+      return 1
       ;;
   esac
+
   printf '%s' "$number"
 }
 
 # 上のURLを組み立てて標準出力へ出す。serviceの存在は問わない。
+# project_numberを $(...) のままprintfの引数へ埋めると、失敗しても printf 自体は
+# 成功するため set -e が働かず、"https://ryo-agentsview-.us-west2.run.app" のような
+# URLをexit 0で出してしまう。一度変数へ受けて失敗を明示的に伝播させる。
 deterministic_url() {
-  printf 'https://%s-%s.%s.run.app' "$service" "$(project_number)" "$region"
+  number=$(project_number) || return 1
+  printf 'https://%s-%s.%s.run.app' "$service" "$number" "$region"
+}
+
+# --check用。deterministic URLがliveなserviceのURLと一致するか確かめる。
+# serviceが未作成のNOT_FOUNDだけは正常系として扱う。認証・権限・API無効といった
+# 他のerrorまで握り潰すと、何も確認できていないのに確認済みとして通してしまう。
+check_live_url() {
+  expected="$1"
+  err_file=$(mktemp)
+  live=""
+  status=0
+  live=$(gcloud run services describe "$service" \
+    --project="$GCP_PROJECT_ID" \
+    --region="$region" \
+    --format='value(status.url)' 2>"$err_file") || status=$?
+  err=$(cat "$err_file")
+  rm -f "$err_file"
+
+  if [ "$status" -ne 0 ]; then
+    case "$err" in
+      *NOT_FOUND* | *"could not be found"* | *"does not exist"*)
+        # serviceをまだ作っていない。突き合わせる相手が居ないだけなので通す。
+        return 0
+        ;;
+    esac
+    printf '%s\n' "$err" >&2
+    echo "Cloud Run serviceの状態を確認できませんでした。--checkは失敗として扱います。" >&2
+    return "$status"
+  fi
+
+  if [ -n "$live" ] && [ "$live" != "$expected" ]; then
+    echo "警告: Cloud Runが報告するURLがdeterministic URLと一致しません" >&2
+    echo "  live:          ${live}" >&2
+    echo "  deterministic: ${expected}" >&2
+    echo "どちらも同じserviceへ届くが、public_urlにはdeterministic URLを使うこと。" >&2
+  fi
 }
 
 # imageのtagは commit で固定する。upstream versionだけをtagにすると同じtagを
@@ -239,18 +287,9 @@ case "$mode" in
   url)
     # serviceが存在しない段階でも動く。--checkを付けたときだけ、liveなserviceが
     # 報告するURLと突き合わせる。
-    target=$(deterministic_url)
+    target=$(deterministic_url) || exit 1
     if [ "${1:-}" = "--check" ]; then
-      live=$(gcloud run services describe "$service" \
-        --project="$GCP_PROJECT_ID" \
-        --region="$region" \
-        --format='value(status.url)' 2>/dev/null || true)
-      if [ -n "$live" ] && [ "$live" != "$target" ]; then
-        echo "警告: Cloud Runが報告するURLがdeterministic URLと一致しません" >&2
-        echo "  live:          ${live}" >&2
-        echo "  deterministic: ${target}" >&2
-        echo "どちらも同じserviceへ届くが、public_urlにはdeterministic URLを使うこと。" >&2
-      fi
+      check_live_url "$target"
     fi
     printf '%s\n' "$target"
     ;;

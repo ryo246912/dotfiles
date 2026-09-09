@@ -9,11 +9,19 @@ resource "google_artifact_registry_repository" "agentsview" {
   # commitごとに変わるので、deployを重ねるほどversionが積み上がり、mergeごとに
   # deployするGitHub Actionsを足すとその速度が上がる。
   #
-  # KEEPはDELETEより優先されるので、直近10 versionはolder_thanに関係なく残る。
-  # この10という数はrollbackの上限でもある。Cloud Runはmin 0でscale-to-zeroする
-  # ため、cold startのたびにimageをpullし直す。稼働中またはrollback先のrevisionが
-  # 参照するimageを消すと、そのrevisionはinstanceを起動できなくなる。deployより
-  # 10世代前まで戻せれば足りるという判断で、それより古いものだけを消す。
+  # 2つのpolicyの合成なので、実際に残るのは「直近10 version **または** 30日以内、
+  # のいずれかに当てはまるもの」である（KEEPがDELETEより優先されるため、11番目
+  # 以降でも30日以内なら残る）。10 versionちょうどには絞られない。
+  #
+  # その緩さを許容できるのは、Dockerfileがupstream imageのmirror（FROM 1行）だから
+  # である。同じupstream versionをbuildし直してもlayerは同一で、Artifact Registry
+  # 側で共有される。storageが実際に増えるのはupstream versionが上がったときで、
+  # deployの回数ではない。
+  #
+  # 一方でKEEPの10は下限として効かせたい。Cloud Runはmin 0でscale-to-zeroするため
+  # cold startのたびにimageをpullし直す。稼働中またはrollback先のrevisionが参照する
+  # imageを消すとinstanceが起動できなくなるので、deployが30日以内に10回を超えても
+  # 直近10世代は必ず残す。この10がrollbackで戻れる世代数の下限でもある。
   cleanup_policy_dry_run = false
 
   cleanup_policies {

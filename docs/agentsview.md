@@ -1325,7 +1325,7 @@ Cloud Runの無料枠が覆うのはcompute（vCPU秒／GiB秒）とrequest数�
 | [Cloud Logging](https://cloud.google.com/logging/pricing)               | 50 GiB／project／月                                | revisionのstdout／stderr。個人利用では通常余裕がある                                  |
 | [Cloud Run networking](https://cloud.google.com/run/pricing)            | compute枠とは別                                    | CockroachDB Cloudへのegress                                                           |
 
-Artifact Registryはこの中でいちばん詰まりやすい。image tagがcommitごとに変わり、GitHub Actionsがmergeのたびにdeployするようになってさらに増えるため、Terraformで**直近10 versionを残し、30日より古いversionを消すcleanup policy**を入れてある（`gcp_artifact_registry.tf`）。min 0でscale-to-zeroする構成ではcold startのたびにimageをpullし直すため、稼働中やrollback先のrevisionが参照するimageは消さない。この10がrollbackで戻れる世代数の上限でもある。
+Artifact Registryはこの中でいちばん詰まりやすい。image tagがcommitごとに変わり、GitHub Actionsがmergeのたびにdeployするようになってさらに増えるため、Terraformでcleanup policyを入れてある（`gcp_artifact_registry.tf`）。残るのは**直近10 versionまたは30日以内、のいずれかに当てはまるもの**で、10ちょうどには絞られない。Dockerfileがupstream imageのmirror（`FROM`1行）なので、同じupstream versionを何度buildしてもlayerは共有され、storageが実際に増えるのはupstream versionが上がったときだけである。min 0でscale-to-zeroする構成ではcold startのたびにimageをpullし直すため、直近10世代は必ず残して稼働中・rollback先のrevisionが参照するimageを消さないようにしている。
 
 Secret Managerのversionは自動では消えない。rotationを重ねると6件の枠を超えるので、rollback先として要らなくなった古いversionは手で無効化・破棄する。**動作中のrevisionが参照しているversionは消さない**（revisionはinstance起動時に番号で解決するため、消すとinstanceが起動できなくなる）。
 
