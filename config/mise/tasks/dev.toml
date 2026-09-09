@@ -16,21 +16,19 @@ source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 
 calculate_apm_hash() {
-  for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
-    [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
-  done | hash_cmd
+  {
+    for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
+      [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
+    done
+    # マニフェスト/ロックファイルが前回から変わっていなくても、`apm install -g` の
+    # 生成物（~/.apm/apm_modules、1依存1ディレクトリ。docs/apm.md 参照）が手動削除等で
+    # 一部でも消えていれば検知できるよう、トップレベルの一覧もハッシュ対象に含める
+    # （ルートディレクトリの存在チェックだけだと、他の依存が残っていると見逃す）。
+    find "$HOME/.apm/apm_modules" -mindepth 1 -maxdepth 1 2>/dev/null | sort
+  } | hash_cmd
 }
 apm_hash=$(calculate_apm_hash)
-apm_needs_install=0
 if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
-  apm_needs_install=1
-elif [ ! -d "$HOME/.apm/apm_modules" ]; then
-  # マニフェスト/ロックファイルは前回から変わっていなくても、`apm install -g` の
-  # 生成物（~/.apm/apm_modules。docs/apm.md 参照）が手動削除等で消えている場合は
-  # マーカーだけを信用せず再インストールする。
-  apm_needs_install=1
-fi
-if [ "$apm_needs_install" = "1" ]; then
   echo "Running mise run apm:install..."
   if mise run apm:install; then
     calculate_apm_hash > "$state_dir/apm-hash" || exit 1
@@ -59,6 +57,13 @@ elif [ -f "$source_dir/rulesync.jsonc" ] && [ ! -f "$source_dir/CLAUDE.md" ]; th
   # （プロジェクト単位の CLAUDE.md。docs/rulesync.md 参照）が手動削除等で消えている
   # 場合はマーカーだけを信用せず再生成する（rulesync:generate はプロジェクト/
   # グローバル双方をまとめて再生成するため、この canary 1つで両方を復旧できる）。
+  rulesync_needs_generate=1
+elif [ -f "$HOME/.config/rulesync/rulesync.jsonc" ] && [ ! -f "$HOME/.claude/CLAUDE.md" ]; then
+  # グローバル scope の rules 出力（~/.claude/CLAUDE.md。プロジェクト scope と同じ
+  # 命名規則で生成されると仮定。global config の claudecode target は rules を含む）
+  # が手動削除等で消えている場合も同様に再生成する。skills/commands/hooks 等の
+  # 他の生成物までは canary で追跡していない（rulesync の正確な出力パス規約を
+  # このリポジトリ側では未確認のため。既知の限界）。
   rulesync_needs_generate=1
 fi
 if [ "$rulesync_needs_generate" = "1" ]; then
