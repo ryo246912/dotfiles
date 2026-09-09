@@ -572,6 +572,19 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
   `[bootstrap.hooks.post-tools]`（APM/rulesync のハッシュマーカー制御）の2フックに整理した。
   mise 自体の self-update は `mise bootstrap` の外（`lefthook.yml` の `post-merge`）に切り出したため、
   bootstrap hook 側には残していない。
+  - hook は `mise bootstrap` の実行時にしか発火しない（公式ドキュメント
+    "Hooks run only during explicit `mise bootstrap` invocations." の通り）。
+    `mise install` を単体で実行しても `pre-tools`/`post-tools` は一切走らない
+    ——これは仕様通りで、gh 認証等が必要な場合は必ず `mise bootstrap` から
+    実行する必要がある。
+  - `pre-tools` は GITHUB_TOKEN 付きで `mise install` を明示的に呼ぶため、
+    その直後に native の tools フェーズ（`mise install installs missing [tools]`）が
+    もう一度走り、1 bootstrap あたり `mise install` は実質2回実行される。
+    hook は子シェルプロセスであり、hook 内で export した環境変数は親プロセス
+    （native フェーズ）へ伝播しないため、GITHUB_TOKEN を確実に渡すにはこの
+    二重実行が唯一の手段（詳細は `mise.toml` の `pre-tools` コメント参照）。
+    2回目は全ツール導入済みの冪等チェックのみで即座に完了するため、
+    実処理としての無駄（再ダウンロード等）は発生しない。
 - `run_once_setup.sh`（`~/.zshenv` シンボリックリンク作成）は不要になった。
   `~/.zshenv` 自体を `[dotfiles]` の1エントリとして直接配置している。
 
@@ -782,6 +795,12 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   （`mise.toml` 参照）で `config/`（共通）と、OS 限定で残った
   `config-mac/raycast`・`config-linux/autohotkey` から `~/.config` へ
   「無いものだけ」を find+cp で seed してから track フェーズに入るようにしている。
+  より宣言的な代替（`[dotfiles]` の copy/template mode、`[bootstrap.files]`/
+  `[bootstrap.directories]`）は無いか公式ドキュメントで確認したが、いずれも
+  「ディレクトリツリー一括・無ければ配置してあれば触らない」という条件を満たす
+  仕組みは持たない（copy/template は常に source へ収束＝上書き、
+  `[bootstrap.files]` はファイル単位の絶対パス宣言かつ常に内容収束）ため、
+  hook 以外の書き方は無いという結論に至った（詳細は `mise.toml` のコメント参照）。
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は

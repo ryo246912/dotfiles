@@ -55,6 +55,20 @@ run      = "lefthook install"
 #    一度きりの seed をここで行う。rsync 等の外部ツールに依存せず find+cp のみで書く
 #    （最初の bootstrap 時点ではまだ何もインストールされていない前提のため）。
 #    2回目以降は対象ファイルが既に存在するため実質no-opになる。
+#
+#    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
+#    - [dotfiles] の track mode は "Track entries cannot contain source, content,
+#      exclude, or manifest." （dotfiles.html）と明記されており、source からの
+#      初回配置手段を一切持たない設計。
+#    - [dotfiles] の copy/template/symlink mode は1ターゲットパス=1ソースの宣言で、
+#      「無ければ配置・あれば触らない」という条件分岐を持たない
+#      （apply は既存ターゲットを常に source へ収束＝上書きする。
+#      dotfiles.html#start-with-one-managed-file 参照）。
+#    - [bootstrap.files]/[bootstrap.directories] は絶対パスをファイル単位で宣言する
+#      root 権限向けの仕組みで、ディレクトリツリー一括かつ「無ければ作る」ではなく
+#      常に内容を収束（=上書き）させる（bootstrap/files.html 参照）ため、
+#      「一度だけ seed して以降は track に委ねる」用途には不向き。
+#    以上より、この一度きりの seed は hook 以外に宣言的な書き方が無い。
 [bootstrap.hooks.pre-dotfiles]
 run = """
 set -eu
@@ -93,11 +107,28 @@ else
 fi
 """
 
-# 1) pre-tools: [tools] フェーズ（mise install 相当）の前に gh を導入・認証し、
-#    GITHUB_TOKEN 付きで明示的に mise install する。native の tools フェーズは
-#    通常サブプロセスへ環境変数を持ち越せないため、GITHUB_TOKEN が要る
-#    aqua/github backend のツールはここで先に入れておく（後続の native tools
-#    フェーズは全て導入済みとして即座に完了する）。
+# 1) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
+#    gh を導入・認証し、GITHUB_TOKEN 付きで明示的に mise install する。
+#
+#    - なぜ `mise install` 単体では pre-tools が動かないのか:
+#      hook は "Hooks run only during explicit `mise bootstrap` invocations."
+#      （bootstrap.html#hooks）と明記されており、`mise install` 単体・`mise bootstrap
+#      packages` は dotfiles/hooks を一切経由しない別コマンド。これは仕様通りで
+#      バグではない。gh 認証や GITHUB_TOKEN 付き install が必要な場合は必ず
+#      `mise bootstrap` 経由で実行すること（docs/setup.md 参照）。
+#    - なぜ native の tools フェーズに素通しできないのか（`mise install` を2回
+#      呼んでいる理由）: hook は "Hooks run in the current process environment"
+#      （bootstrap.html#hooks）だが、これは hook 自身が親プロセスの env を引き継ぐ
+#      という意味であり、hook 内で export した変数が親（native の tools フェーズ）
+#      へ逆伝播するわけではない（hook は子シェルプロセスであり、POSIX の
+#      プロセスモデル上、子から親の環境変数は書き換えられない）。そのため
+#      GITHUB_TOKEN を必要な install に確実に渡すには、この hook 内で明示的に
+#      `GITHUB_TOKEN=... mise install` を呼ぶ以外の方法が無い。
+#      結果として native の step 15（`mise install installs missing [tools]`、
+#      bootstrap.html 参照）がこの直後にもう一度走り、`mise install` は
+#      1 bootstrap あたり実質2回実行されるが、その時点では全ツール導入済みなので
+#      2回目は差分ゼロの冪等チェックのみで即座に完了する（ダウンロード等の
+#      実処理は発生しない）。これは意図した挙動であり、削減する手段は無い。
 [bootstrap.hooks.pre-tools]
 run = """
 if [ "$(uname)" = "Darwin" ]; then
