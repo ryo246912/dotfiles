@@ -47,7 +47,7 @@
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
     3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
     4. `[tools]` の導入（3 で完了しているため通常は即座に終わる）
-    5. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+    5. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
     ```sh
     MISE_ENV=mac mise bootstrap
@@ -529,7 +529,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
     3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
-    4. `[bootstrap.hooks.final]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+    4. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
     ```sh
     MISE_ENV=linux mise bootstrap

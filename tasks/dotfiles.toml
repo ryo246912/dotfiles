@@ -13,7 +13,8 @@ description = "[dotfiles] の差分を delta で表示する"
 # 「内容が異なる」旨の1行のみで、ファイル単位の中身までは出ない
 # （mise 2026.9.3 で実機確認済み）。ディレクトリ entry の中身まで見たい場合は
 # `diff -ru <source> <target> | delta` のように直接比較すること。
-run = "mise bootstrap dotfiles diff | delta"
+run   = "set -o pipefail; mise bootstrap dotfiles diff | delta"
+shell = "bash -c"
 
 ["dotfiles:apply"]
 description = "[dotfiles] を適用する"
@@ -27,6 +28,7 @@ description = "差分がある entry を1つずつ delta で確認しながら�
 # （dotfiles:diff のコメント参照）。
 run = '''
 set -eu
+set -o pipefail
 
 targets=$(mise bootstrap dotfiles status --json | python3 -c "
 import json, sys
@@ -41,15 +43,23 @@ if [ -z "$targets" ]; then
   exit 0
 fi
 
-echo "$targets" | while IFS= read -r target; do
+# target 一覧は fd 3 経由で読む（stdin/fd 0 は下の `read -r answer < /dev/tty` 用に
+# 空けておく。while の stdin をそのまま使うと、ループ内の read が target 一覧の
+# 次の行を answer として食ってしまう）。
+while IFS= read -r target <&3; do
   echo "=== $target ==="
-  mise bootstrap dotfiles diff "$target" | delta || true
+  if ! mise bootstrap dotfiles diff "$target" | delta; then
+    echo "warning: diff に失敗したため skip します: $target" >&2
+    continue
+  fi
   printf '%s を適用しますか? (y/N) ' "$target"
-  read -r answer
+  read -r answer < /dev/tty
   case "$answer" in
     y | Y) mise bootstrap dotfiles apply --yes "$target" ;;
     *) echo "skip: $target" ;;
   esac
-done
+done 3<<EOF
+$targets
+EOF
 '''
 shell = "bash -c"
