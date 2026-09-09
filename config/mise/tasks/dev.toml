@@ -31,7 +31,10 @@ calculate_apm_hash() {
     # 生成物（~/.apm/apm_modules、1依存1ディレクトリ。docs/apm.md 参照）が手動削除等で
     # 一部でも消えていれば検知できるよう、トップレベルの一覧もハッシュ対象に含める
     # （ルートディレクトリの存在チェックだけだと、他の依存が残っていると見逃す）。
-    find "$HOME/.apm/apm_modules" -mindepth 1 -maxdepth 1 2>/dev/null | sort
+    # find の -mindepth/-maxdepth に依存せず、glob で直下のエントリだけを列挙する。
+    for module in "$HOME/.apm/apm_modules"/*; do
+      [ -e "$module" ] && printf '%s\n' "$module"
+    done | sort
   } | hash_cmd
 }
 apm_hash=$(calculate_apm_hash)
