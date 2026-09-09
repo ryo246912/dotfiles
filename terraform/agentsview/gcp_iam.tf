@@ -87,16 +87,6 @@ resource "google_project_iam_member" "deploy_cloud_build" {
   member  = "serviceAccount:${google_service_account.deploy.email}"
 }
 
-# `gcloud builds submit` はbuild contextをこのbucketへuploadしてからCloud Buildを
-# 呼ぶ。bucketは初回のbuildがgcloud側で作るため、Terraformは所有せずIAMだけを足す。
-# project全体のstorage権限を与えるとTerraform state bucketまで読めてしまうので、
-# 範囲はこのbucket1つに限る。
-resource "google_storage_bucket_iam_member" "deploy_build_staging" {
-  bucket = "${var.gcp_project_id}_cloudbuild"
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.deploy.email}"
-}
-
 # clrnd verifyはmanifestが指すimageの実在を artifactregistry.tags.get ／
 # artifactregistry.dockerimages.get で確認する。deploy前の検証に必要。
 resource "google_artifact_registry_repository_iam_member" "deploy_reader" {

@@ -1415,10 +1415,27 @@ gh secret set GCP_DEPLOY_SERVICE_ACCOUNT --env production
 gh workflow run deploy-agentsview.yaml
 ```
 
-> [!NOTE]
-> `google_storage_bucket_iam_member.deploy_build_staging`は`<project-id>_cloudbuild` bucketにIAMを足すだけで、bucket自体は作らない。このbucketは最初の`gcloud builds submit`がgcloud側で作るため、**手元から一度buildしてからapplyする**。まだ無い状態でapplyすると404で止まる。
+> [!IMPORTANT]
+> `gcp_storage.tf`の`google_storage_bucket.build_staging`は、`gcloud builds submit`がbuild contextを置く`<project-id>_cloudbuild` bucketをTerraformの管理下に置く。**このbucketが既にある場合（手元で一度でも`agentsview:cloudrun:build`を実行していれば作られている）、applyの前にimportする。** import せずにapplyすると409（already exists）で止まる。
+>
+> ```sh
+> cd terraform/agentsview
+> fnox exec -- terraform import google_storage_bucket.build_staging \
+>   "${GCP_PROJECT_ID}/${GCP_PROJECT_ID}_cloudbuild"
+> fnox exec -- terraform plan -input=false
+> ```
+>
+> import後のplanが**置き換え（destroy → create）**を出す場合は、`location`が実際のbucketと違っている。そのままapplyするとbucketが消えるので、実値へ合わせてからapplyする。
+>
+> ```sh
+> gcloud storage buckets describe "gs://${GCP_PROJECT_ID}_cloudbuild" --format='value(location)'
+> ```
+>
+> bucketがまだ無い（新規project）場合はimportは不要で、そのままapplyすれば作られる。
 
 deploy identityに与えているのは、Cloud Runの更新（`roles/run.developer`）、buildの投入（`roles/cloudbuild.builds.editor`）、runtime service accountへの`actAs`、build staging bucket、Artifact Registryのread、2つのsecretのmetadata読みだけである。**secretの値は読めず、versionも追加できない。** secret rotationは従来どおり手元の`agentsview:cloudrun:secrets`で行う。
+
+`actAs`はruntime service accountの1件に絞ってあり、Cloud Build側のservice accountには付けていない。buildを走らせるidentityはprojectの作成時期で変わり（旧`<num>@cloudbuild.gserviceaccount.com`かCompute Engine既定の`<num>-compute@developer.gserviceaccount.com`）、存在しない方へ`google_service_account_iam_member`を書くとapplyが404で落ちるためである。実際に不足していた場合だけ下の1行を足す運用にしている。
 
 token交換はrepositoryとbranchの両方で絞っている（`terraform/agentsview/gcp_iam.tf`の`attribute_condition`）。forkやpull requestからのworkflowはaccess tokenを取得できない。別branchから試したい場合は`locals.tf`の`github_deploy_ref`を一時的に変えてapplyし、確認後にmainへ戻す。
 
