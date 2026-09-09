@@ -12,6 +12,13 @@ run = '''
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
 mkdir -p "$state_dir"
 source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
+# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
+# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
 
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 
@@ -89,6 +96,13 @@ run = '''
 set -eu
 
 source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
+# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
+# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
 global_dir="$HOME/.config/rulesync"
 
 if [ ! -f "$source_dir/mise.toml" ]; then
@@ -136,6 +150,13 @@ run = '''
 set -eu
 
 source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
+# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
+# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
 source_lock="$HOME/.apm/apm.lock.yaml"
 destination_dir="$source_dir/apm"
 destination_lock="$destination_dir/apm.lock.yaml"

@@ -38,6 +38,10 @@ _sync_dotfile_lock() {
 # 別の場所に clone している場合は DOTFILES_DIR を export しておくこと。
 _dotfiles_repo_dir() {
   local dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+  # DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と
+  # `~` が展開されないため、ここで正規化する（実機で確認済みの不具合）。
+  [[ "$dir" == "~" ]] && dir="$HOME"
+  [[ "$dir" == "~/"* ]] && dir="$HOME/${dir#\~/}"
   [[ -f "$dir/mise.toml" ]] || return 1
   print -r -- "$dir"
 }
