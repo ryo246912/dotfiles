@@ -5,7 +5,7 @@
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
   "mise": {
-    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
+    "managerFilePatterns": ["mise.toml", "dot_config/mise/**/*.toml"]
   },
   "devcontainer": {
     "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]

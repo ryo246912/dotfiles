@@ -21,4 +21,11 @@ locals {
   # DNS segment（service名 + "-" + project number）が63文字以内のときだけ割り当て
   # られる。ryo-agentsview（14）+ 1 + project number（12前後）で余裕がある。
   cloud_run_url = "https://${local.cloud_run_service_name}-${data.google_project.current.number}.${local.region}.run.app"
+
+  # Cloud Runへdeployできるrepositoryとbranch。cloud_run_service_nameと同じく
+  # 変数にしない。ここを上書きできると、別のrepositoryやbranchのworkflowが
+  # deploy service accountを名乗れてしまう。別branchから試すときだけ一時的に
+  # この値を変えてapplyし、確認後に戻す。
+  github_repository = "ryo246912/dotfiles"
+  github_deploy_ref = "main"
 }

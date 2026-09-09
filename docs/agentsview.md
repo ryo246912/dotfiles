@@ -626,7 +626,7 @@ fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
-作業7でconfig.tomlに書いたdeterministic URLが、いま作ったserviceのURLと一致していることを確認する。`--check`はliveなserviceが報告するURLと突き合わせ、食い違う場合だけstderrへ警告する。**この確認は初回だけでよい。** URLはservice単位の値で、deployしてrevisionが増えても変わらない（[Cloud Run URLは固定である](#cloud-run-urlは固定である)）。
+作業7でconfig.tomlに書いたdeterministic URLが、いま作ったserviceのURLと一致していることを確認する。`--check`はliveなserviceが報告するURLと突き合わせ、食い違う場合だけstderrへ警告する。**この確認は初回だけでよい。** URLはserviceに紐づく値で、`clrnd deploy`が作るのはその下のrevisionなので、deployを繰り返してもURLは変わらない。変わるのはservice名・region・projectを変えたときだけである。
 
 ```sh
 export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
@@ -873,7 +873,7 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 
 **Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
 
-`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`github_repository`／`github_deploy_ref`はWorkload Identity Federationのattribute conditionが見る値で、既定は`ryo246912/dotfiles`と`main`である。`locals.tf`は全regional resourceで共有する`us-west2`と、project numberから組み立てるdeterministic URL（`local.cloud_run_url`）を一箇所に固定する。`outputs.tf`は後続commandが必要とするhost、service account名、Cloud Run service名／region／URL、GitHub Actions secretへ入れる2つの値を公開する。稼働中のrevisionやtraffic splitはTerraformではなく`clrnd status`から取る。
+`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は変数にしない値を一箇所に固定する。全regional resourceで共有する`us-west2`、service名、project numberから組み立てるdeterministic URL（`local.cloud_run_url`）、そしてWorkload Identity Federationのattribute conditionが見る`github_repository`／`github_deploy_ref`である。後者を入力変数にすると、別のrepositoryやbranchのworkflowがdeploy service accountを名乗れる設定を外から渡せてしまう。`outputs.tf`は後続commandが必要とするhost、service account名、Cloud Run service名／region／URL、GitHub Actions secretへ入れる2つの値を公開する。稼働中のrevisionやtraffic splitはTerraformではなく`clrnd status`から取る。
 
 #### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
 
@@ -1247,7 +1247,7 @@ clrndが作るserviceはprivateなので、Terraformで`allUsers`のinvoker bind
 fnox exec -- terraform -chdir=terraform/agentsview apply
 ```
 
-serviceが出来たら、config.tomlに書いたURLがliveなserviceのURLと一致することを**一度だけ**確認する。URLはdeployのたびに変わるものではないので、以後のdeployでこれを実行する必要はない（[Cloud Run URLは固定である](#cloud-run-urlは固定である)を参照）。
+serviceが出来たら、config.tomlに書いたURLがliveなserviceのURLと一致することを**一度だけ**確認する。URLはserviceに紐づく値なので、以後deployを繰り返しても変わらない。
 
 ```sh
 export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
@@ -1284,34 +1284,6 @@ Google Cloud Consoleで次も確認する。
 - runtime service accountが`agentsview-runtime`
 - secretの値がlogへ出ていない
 - CockroachDB RU、storage、connection数が無料枠内
-
-## Cloud Run URLは固定である
-
-**deployを何回繰り返しても、AgentsViewのURLは変わらない。** 追加費用もかからない。
-
-Cloud Runは1つのserviceに対して2種類のURLを割り当てる。
-
-| 種類                  | 形                                                    | 性質                                                                       |
-| --------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------- |
-| deterministic URL     | `https://<service>-<project number>.<region>.run.app` | service名・project number・regionだけで決まる。**作成前から計算できる**    |
-| non-deterministic URL | `https://<service識別子>.run.app`                     | 作成時に割り当てられる不透明な識別子。以後は安定するが、事前には分からない |
-
-どちらも同じserviceへ届き、`gcloud run services describe`はdeterministic URLを優先して表示する。この構成では`ryo-agentsview` + project numberでDNS segmentが63文字に収まるため、deterministic URLが必ず割り当てられる。
-
-URLが変わるのは次の3つを変えたときだけである。
-
-- Cloud Run service名（`ryo-agentsview`）
-- region（`us-west2`）
-- Google Cloud project
-
-**deployは含まれない。** URLはserviceに紐づく値で、`clrnd deploy`が作るのはその下のrevisionだからである。imageを変えても、manifestを書き換えても、GitHub Actionsが自動deployしても、traffic splitを動かしても、URLは同じままになる。revisionごとに別のURLが生えるのはtraffic tagを付けた場合だけで（`https://<tag>---<service>-<project number>...`）、このmanifestはtagを使っていない。
-
-deterministic URLを採用したのは、hash入りURLに対する次の2点のためである。
-
-1. **service作成前から確定している。** config.tomlの`public_url`をserviceより先に書ける。placeholderを入れて後から差し替える往復が要らない。
-2. **serviceを作り直しても同じ値に戻る。** `clrnd delete`して再作成すると、hash入りURLのhashは変わるがdeterministic URLは変わらない。
-
-`.run.app`ではない独自ドメインにしたい場合だけ、Cloud Runの[domain mapping](https://cloud.google.com/run/docs/mapping-custom-domains)（mappingとmanaged TLS証明書自体に課金は無いが、対応regionが限られる。ドメインの購入・更新費も別）か、external Application Load Balancer（**こちらは有料**）が要る。今の用途では`.run.app`のdeterministic URLで足りるので、どちらも使っていない。
 
 ## 無料枠の内訳と使い切ったときの調べ方
 
@@ -1448,7 +1420,7 @@ gh workflow run deploy-agentsview.yaml
 
 deploy identityに与えているのは、Cloud Runの更新（`roles/run.developer`）、buildの投入（`roles/cloudbuild.builds.editor`）、runtime service accountへの`actAs`、build staging bucket、Artifact Registryのread、2つのsecretのmetadata読みだけである。**secretの値は読めず、versionも追加できない。** secret rotationは従来どおり手元の`agentsview:cloudrun:secrets`で行う。
 
-token交換はrepositoryとbranchの両方で絞っている（`terraform/agentsview/gcp_github_actions.tf`の`attribute_condition`）。forkやpull requestからのworkflowはaccess tokenを取得できない。別branchから試したい場合は`github_deploy_ref`を一時的に変えてapplyし、確認後にmainへ戻す。
+token交換はrepositoryとbranchの両方で絞っている（`terraform/agentsview/gcp_iam.tf`の`attribute_condition`）。forkやpull requestからのworkflowはaccess tokenを取得できない。別branchから試したい場合は`locals.tf`の`github_deploy_ref`を一時的に変えてapplyし、確認後にmainへ戻す。
 
 buildがCloud Build service accountの`actAs`不足で落ちる場合（projectの作成時期によってbuildを走らせるidentityが変わる）、errorが名指ししたservice accountへ次を足す。
 
@@ -1459,7 +1431,7 @@ gcloud iam service-accounts add-iam-policy-binding <error-that-named-this-sa> \
   --role=roles/iam.serviceAccountUser
 ```
 
-自動deployを止めたいときはGitHubのUIでworkflowをdisableする。Google Cloud側の権限を落とすなら`terraform destroy -target=google_service_account.deploy`ではなく、`gcp_github_actions.tf`ごと消してapplyする（poolとproviderは論理削除されるまで同じIDで作り直せない点に注意する）。
+自動deployを止めたいときはGitHubのUIでworkflowをdisableする。Google Cloud側の権限を落とすなら`terraform destroy -target=google_service_account.deploy`ではなく、`gcp_iam.tf`のGitHub Actions分をまとめて消してapplyする（poolとproviderは論理削除されるまで同じIDで作り直せない点に注意する）。
 
 ### 手順1. mainを取り込み、applyする
 
