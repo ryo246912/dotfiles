@@ -35,12 +35,6 @@ run      = "lefthook install"
 # `mise bootstrap` は必ずこのリポジトリの checkout ルートで実行すること
 # （hook 内は相対パス・$(pwd) 前提。$MISE_PROJECT_ROOT はフックの中では未設定）。
 #
-# min_version を満たす self-update は hook にはできない。mise は min_version 未満だと
-# config の読み込み自体を拒否するため、hook（config の一部）まで到達できない。
-# 初回は `mise.run` インストーラが常に最新版を入れるため問題にならず、2回目以降は
-# `lefthook.yml` の `post-merge` フック（mise.toml 変更時のみ発火）が self-update する
-# ので、`mise bootstrap` の外側で明示的に済ませる手順は不要になった（docs/setup.md 参照）。
-#
 # 同様の理由で、[bootstrap.packages] は dotfiles フェーズで初めて
 # `~/.config/mise/config.mac.toml` 等として配置されるが、packages フェーズは
 # `mise bootstrap` プロセス起動時に一度だけ読み込んだ config を使うため、
@@ -52,9 +46,7 @@ run      = "lefthook install"
 # 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
 #    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
 #    （OS限定で残った raycast・autohotkey のみ）から ~/.config へ「無いものだけ」コピーする
-#    一度きりの seed をここで行う。rsync 等の外部ツールに依存せず find+cp のみで書く
-#    （最初の bootstrap 時点ではまだ何もインストールされていない前提のため）。
-#    2回目以降は対象ファイルが既に存在するため実質no-opになる。
+#    一度きりの seed をここで行う。2回目以降は対象ファイルが既に存在するため実質no-opになる。
 #
 #    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
 #    - [dotfiles] の track mode は "Track entries cannot contain source, content,
@@ -77,26 +69,8 @@ seed_tree() {
   src_dir="$1"
   dest_dir="$2"
   [ -d "$src_dir" ] || return 0
-  # `find | while read` はループ本体がサブシェルで動くため、hook を実行する
-  # sh（bash ではなく dash 等）では cp/mkdir の失敗をここで検知できても呼び出し元へ
-  # 伝播できない（実機確認済み。process substitution `<(...)` も同様に sh では
-  # syntax error になり使えない）。一覧を一時ファイルに落として `< file` で読ませる
-  # ことでサブシェルを回避し、set -eu が失敗をそのまま hook 全体の中断として扱う。
-  file_list=$(mktemp)
-  # set -eu であっても、mkdir/cp が失敗した場合は下の明示的な rm まで到達しないため
-  # trap で確実に一時ファイルを消す（成功時は明示的な rm + trap 解除の両方が効く）。
-  trap 'rm -f "$file_list"' EXIT
-  find "$src_dir" -type f > "$file_list"
-  while IFS= read -r src_file; do
-    rel_path="${src_file#"$src_dir"/}"
-    dest_file="$dest_dir/$rel_path"
-    if [ ! -e "$dest_file" ]; then
-      mkdir -p "$(dirname "$dest_file")"
-      cp -p "$src_file" "$dest_file"
-    fi
-  done < "$file_list"
-  rm -f "$file_list"
-  trap - EXIT
+  mkdir -p "$dest_dir"
+  rsync -a --ignore-existing "$src_dir"/ "$dest_dir"/
 }
 
 seed_tree "$(pwd)/config" "$HOME/.config"
@@ -107,33 +81,27 @@ else
 fi
 """
 
-# 1) post-dotfiles: `mise bootstrap dotfiles apply` の直後に発火する（フル bootstrap
-#    だけでなく、`mise bootstrap dotfiles apply` 単体実行時にも発火することを実機確認済み。
-#    docs/mise.md 参照）。git pull → `mise bootstrap dotfiles apply`（lefthook の
-#    post-merge で自動実行。lefthook.yml 参照）という日常的な更新フローで、chezmoi の
-#    run_onchange 相当として apm/rulesync を自動同期させたいのはここ。
-#    ただし apm/rulesync 自体は mise の [tools] 管理ツールで、フルの `mise bootstrap`
-#    （真新しいマシン等）ではこの時点ではまだ導入されていない可能性がある
-#    （[tools] フェーズはこの後の pre-tools/tools/post-tools）。そのため両方とも
-#    既に導入済み（`mise which` で解決できる）場合だけ実行し、未導入なら黙ってスキップする
-#    （その場合は後続の post-tools 側で改めて実行される）。
+# 1) post-dotfiles: `mise bootstrap dotfiles apply` の直後に発火する（`mise bootstrap
+#    dotfiles apply` 単体実行時にも発火する。docs/mise.md 参照）。apm/rulesync は
+#    それぞれ独立に、導入済み（`mise which` で解決できる）場合だけ同期する。未導入なら
+#    黙ってスキップし、後続の post-tools 側で改めて実行する。
 #
-#    `sync:agents`/`apm:install`/`rulesync:generate` は config/mise/tasks/dev.toml
-#    （deploy先: ~/.config/mise/tasks/dev.toml、global scope）で定義したタスクだが、
-#    この hook は必ずこのリポジトリの checkout ルート（project config root）で実行される
-#    ため、素の `mise run sync:agents` では見つからない（実機確認済み）。mise の
-#    `[task_config].includes` は config root ごとのスコープで、project 側が自分の
-#    `includes = ["tasks/*.toml"]` を宣言していると、global 側の includes は
-#    継承されない（cascade しても descendant 側の同名フィールドで上書きされるため。
-#    tasks/task-configuration.html#task_config.cascade 参照）。
-#    `mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に切り替えることで
-#    回避する（nested な `mise run apm:install`/`mise run rulesync:generate` 呼び出しは
-#    タスクスクリプト自身の実行コンテキストを引き継ぐため、そちら側で改めて --cd し直す
-#    必要はないことを実機確認済み）。
+#    `apm:sync`/`rulesync:sync` は config/mise/tasks/dev.toml（deploy先:
+#    ~/.config/mise/tasks/dev.toml、global scope）で定義したタスクだが、この hook は
+#    必ずこのリポジトリの checkout ルート（project config root）で実行されるため、素の
+#    `mise run apm:sync` では見つからない（実機確認済み）。mise の `[task_config].includes`
+#    は config root ごとのスコープで、project 側が自分の `includes = ["tasks/*.toml"]` を
+#    宣言していると、global 側の includes は継承されない（cascade しても descendant 側の
+#    同名フィールドで上書きされるため。tasks/task-configuration.html#task_config.cascade
+#    参照）。`mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に
+#    切り替えることで回避する。
 [bootstrap.hooks.post-dotfiles]
 run = """
-if mise which apm >/dev/null 2>&1 && mise which rulesync >/dev/null 2>&1; then
-  mise --cd "$HOME" run sync:agents
+if mise which apm >/dev/null 2>&1; then
+  mise --cd "$HOME" run apm:sync
+fi
+if mise which rulesync >/dev/null 2>&1; then
+  mise --cd "$HOME" run rulesync:sync
 fi
 """
 
@@ -182,17 +150,21 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 # 3) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
 #    確実に同期する。post-dotfiles 側で未導入のためスキップされた場合（真新しいマシン等）
 #    はここで初めて実行される。post-dotfiles で既に実行済みの場合はハッシュマーカーが
-#    更新済みなので、ここでの再実行は差分ゼロの no-op になる（sync:agents 参照）。
+#    更新済みなので、ここでの再実行は差分ゼロの no-op になる（apm:sync/rulesync:sync 参照）。
 #    `--cd "$HOME"` が必要な理由は post-dotfiles のコメント参照。
 [bootstrap.hooks.post-tools]
-run = 'mise --cd "$HOME" run sync:agents'
+run = """
+mise --cd "$HOME" run apm:sync
+mise --cd "$HOME" run rulesync:sync
+"""
 
 # "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
-# config からしか有効にならない実機仕様のため）。"~/.config/mise" だけは常に git 側の
-# 内容へ収束させたいツール設定なので、ここで個別に copy として残す
-# （"~/.config" と "~/.config/mise" はキーが異なるため上書きし合わず共存できる。
-# 実機で「track の対象木の中に、より具体的なキーの copy entry が入れ子になっても
-# 破壊的な干渉なく共存する」ことを確認済み）。
+# config からしか有効にならない実機仕様のため）。以下のエントリは常に git 側の内容へ
+# 収束させたいので copy/template のまま維持しつつ、config/mise/config.toml 側で同じ
+# target に対して track も追加宣言している（mise の「ownership」パターン。
+# dotfiles.html#ownership 参照）。ライブ編集は依然として次の apply で上書きされるが、
+# 上書き直前に history checkpoint が自動で記録されるため、`mise bootstrap dotfiles
+# rollback <path>` で復元できるようになる（実機確認済み）。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "copy" }
 "~/.claude"                             = { source = "claude", mode = "copy" }

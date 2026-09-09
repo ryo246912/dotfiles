@@ -1,24 +1,13 @@
-["sync:agents"]
-description = "APM/rulesync を manifest/lockfile やソースの変更時だけ同期する"
+["apm:sync"]
+description = "APM を manifest/lockfile の変更時、または生成物の欠落時だけ同期する"
 # [bootstrap.hooks.post-tools]（フル `mise bootstrap`）と [bootstrap.hooks.post-dotfiles]
 # （`mise bootstrap dotfiles apply` 単体実行時にも発火する。git pull 後の日常的な再適用で
-# chezmoi の run_onchange 相当として使う）の両方から呼ばれる共通ロジック。
-# apm/rulesync 自体は mise の [tools] 管理ツールなので、呼び出し側で両方とも導入済みで
-# あることを保証してから呼ぶこと（未導入のまま呼ぶと apm/rulesync コマンドが見つからず
-# 失敗する。mise.toml の該当 hook のコメント参照）。
-# 毎回の呼び出しで skill install・generate-commands が走るのを避けるため、
-# XDG_STATE_HOME 配下のハッシュマーカーで「前回実行時から変更が無ければ skip」を判定する。
+# chezmoi の run_onchange 相当として使う）の両方から、apm が導入済みの場合だけ呼ばれる。
+# 毎回の呼び出しで skill install が走るのを避けるため、XDG_STATE_HOME 配下の
+# ハッシュマーカーで「前回実行時から変更が無ければ skip」を判定する。
 run = '''
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
 mkdir -p "$state_dir"
-source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
-# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
-# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
-# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
-case "$source_dir" in
-  "~") source_dir="$HOME" ;;
-  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
-esac
 
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 
@@ -48,6 +37,25 @@ if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
 else
   echo "APM manifest and lockfile are unchanged; skipping skill installation."
 fi
+'''
+shell = "bash -c"
+
+["rulesync:sync"]
+description = "rulesync を source の変更時、または生成物の欠落時だけ同期する"
+# apm:sync と対になるタスク。rulesync が導入済みの場合だけ呼ばれる（mise.toml 参照）。
+run = '''
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mise-dotfiles"
+mkdir -p "$state_dir"
+source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
+# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
+# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
+
+hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 
 rulesync_hash=$(
   {

@@ -168,11 +168,30 @@ lefthook install
 """
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
-# ここ（deploy先: ~/.config/mise/config.toml）で宣言する。"~/.config/mise" 自体は
-# mise.toml 側で個別の copy entry として除外されているため、この track の対象には
-# 含まれない（別キーとして共存し、mise.toml 側の copy が優先される）。
+# ここ（deploy先: ~/.config/mise/config.toml）で宣言する。
 # 初回配置は [bootstrap.hooks.pre-dotfiles]（mise.toml 参照）が config/ から
 # 「無いものだけ」seed する。以後は `mise bootstrap dotfiles save`（または
 # [bootstrap.services.mise-history] による自動保存）が checkpoint を記録する。
+#
+# "~/.config" 以下の個別エントリ（mise.toml の [dotfiles] 参照）は copy/template mode
+# のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
+# 「ownership」パターン。dotfiles.html#ownership 参照。実機で「同じ target を
+# copy/template と track の両方でカバーしても衝突しない」ことを確認済み）。
+# copy/template 側が source へ収束させる主挙動は変わらないが、apply でライブ編集が
+# 上書きされる直前に history checkpoint が自動記録されるため、`mise bootstrap
+# dotfiles rollback <path>` で復元できるようになる（実機確認済み）。
+# apm/claude/codex/local/zshenv は ~/.config 配下ではないため、個別に track を
+# 追加宣言しないと history の対象にならない。
 [dotfiles]
-"~/.config" = { mode = "track" }
+"~/.config"                             = { mode = "track" }
+"~/.apm"                                = { mode = "track" }
+"~/.claude"                             = { mode = "track" }
+"~/.codex"                              = { mode = "track" }
+"~/.config/alacritty/alacritty.toml"    = { mode = "track" }
+"~/.config/ghostty/config"              = { mode = "track" }
+"~/.config/git/config"                  = { mode = "track" }
+"~/.config/mise"                        = { mode = "track" }
+"~/.config/rio/config.toml"             = { mode = "track" }
+"~/.config/rulesync/.rulesync/mcp.json" = { mode = "track" }
+"~/.local"                              = { mode = "track" }
+"~/.zshenv"                             = { mode = "track" }
