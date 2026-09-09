@@ -98,28 +98,36 @@ deterministic_url() {
 check_live_url() {
   expected="$1"
   err_file=$(mktemp)
+  # どこでreturnしてもscratch fileを残さない。
+  trap 'rm -f "$err_file"' RETURN
+
   live=""
   status=0
   live=$(gcloud run services describe "$service" \
     --project="$GCP_PROJECT_ID" \
     --region="$region" \
     --format='value(status.url)' 2>"$err_file") || status=$?
-  err=$(cat "$err_file")
-  rm -f "$err_file"
 
   if [ "$status" -ne 0 ]; then
-    case "$err" in
+    case "$(cat "$err_file")" in
       *NOT_FOUND* | *"could not be found"* | *"does not exist"*)
         # serviceをまだ作っていない。突き合わせる相手が居ないだけなので通す。
         return 0
         ;;
     esac
-    printf '%s\n' "$err" >&2
+    cat "$err_file" >&2
     echo "Cloud Run serviceの状態を確認できませんでした。--checkは失敗として扱います。" >&2
     return "$status"
   fi
 
-  if [ -n "$live" ] && [ "$live" != "$expected" ]; then
+  # serviceはあるのにURLが空なのは、まだprovisioning中か、gcloudの出力形式が
+  # 変わったかのどちらか。突き合わせができていないので確認済みとして通さない。
+  if [ -z "$live" ]; then
+    echo "Cloud Run serviceのURLを取得できませんでした。--checkは失敗として扱います。" >&2
+    return 1
+  fi
+
+  if [ "$live" != "$expected" ]; then
     echo "警告: Cloud Runが報告するURLがdeterministic URLと一致しません" >&2
     echo "  live:          ${live}" >&2
     echo "  deterministic: ${expected}" >&2

@@ -30,14 +30,11 @@ jobs:
       # 渡すために必要。service account keyのJSONは保存しない。
       id-token: write
     timeout-minutes: 20
-    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # versionはrootのmise.tomlがpinしている（dot_config/mise/config.tomlと同じ値）。
-      # install_argsはtool名だけを並べ、この2つに限ってinstallする。
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
           install_args: "aqua:twistedpair/google-cloud-sdk github:masasuzu/clrnd"
