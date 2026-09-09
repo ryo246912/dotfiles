@@ -2,32 +2,10 @@
 
 複数端末のセッション情報をCockroachDB Cloudに集約し、Cloud Run上のread-only Web UIで参照する構成。
 
-> [!IMPORTANT]
-> Fly.ioからの移行は完了している。Fly上のAgentsView app（`ryo-agentsview`）と`agentsview` schema／roleは削除済みで、rollback先は存在しない。Atuinは引き続きFly.io（`psgl`／`ryo-shellhistory`）を使う。新規構築は[Cloud Run／CockroachDBへの移行手順](#cloud-runcockroachdbへの移行手順)を上から順に実行する。
-
-## 実装済みファイル
-
-| ファイル                                             | 目的                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
-| `dot_config/agentsview/compose.yaml`                 | local CockroachDBのDocker Compose定義。client tool（psql／pg_dump）のimage pinも持つ                                   |
-| `dot_config/agentsview/scripts/localdb.sh`           | local CockroachDB系taskの実体。container起動、push／serve、dump、restore、sequence補正                                 |
-| `dot_config/agentsview/executable_batch-insert-dump` | pg_dumpのplain dumpからINSERT statementだけを取り出し、CockroachDBへ流せるtransaction chunkへ分けるfilter              |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDB、CockroachDBへのpush         |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
-
-各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
-
 ## Cloud Run／CockroachDBへの移行手順
 
 対象構成:
 
-- Atuin app／PostgreSQL: Fly.ioに残す（`psgl`／`ryo-shellhistory`）
 - AgentsView app: Google Cloud Run
 - AgentsView DB: CockroachDB Cloud Basic
 
@@ -35,11 +13,7 @@ AgentsViewのsource of truthは各PCのlocal SQLite archiveであり、Cockroach
 
 ### ゼロから構築する場合の全体手順
 
-この節から順番に実行すれば、空のGoogle Cloud projectとCockroachDB Cloud accountから、Cloud Run viewerを起動できる。コマンドはrepository rootから開始し、`<...>`は自分の値へ置き換える。
-
 #### A. 完了条件と作業順序
-
-以下の**作業1〜10を番号順に実行する**。各作業末尾の「完了確認」が通るまで次へ進まない。Google Cloud／CockroachDBのconsole表記は変更されることがあるため、表記が異なる場合は併記した公式documentへのlinkから同じ機能を開く。
 
 ##### 作業1. account、CLI、課金alertを準備する
 
@@ -78,22 +52,6 @@ Secret keyは`CCDB1_...`形式で、**画面を閉じると二度と表示でき
 
 ###### CLI準備
 
-repository rootでtoolをinstallし、versionを確認する。
-
-```sh
-mise trust
-mise install
-
-git --version
-mise --version
-fnox --version
-gcloud version
-fnox exec -- terraform version
-psql --version
-pg_dump --version
-docker version
-```
-
 Google Cloudへloginする。
 
 ```sh
@@ -121,7 +79,7 @@ Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDB
 |    4 | South Carolina    | `us-east1`    | `us-east1`          | 主な利用者が北米東海岸にいる場合向け。日本中心では優先しない            |
 
 ```sh
-export GCP_PROJECT_ID='<google-cloud-project-id>'
+export GCP_PROJECT_ID='agentsview'
 export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
@@ -150,8 +108,6 @@ TF_VAR_cockroach_read_password
 AGENTSVIEW_AUTH_TOKEN
 AGENTSVIEW_CURSOR_SECRET
 ```
-
-`dot_config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
 
 **完了確認:** 次は値を表示せず、すべて`set`を返す。
 
@@ -502,55 +458,6 @@ gcloud run services logs read ryo-agentsview \
 ```
 
 logの最初のerror行に応じて対処する。
-
-- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
-- **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  EXPLAIN ANALYZE
-  SELECT count(*) FROM agentsview.sessions
-  WHERE deleted_at IS NULL
-    AND COALESCE(ended_at, started_at, created_at) >= now() - INTERVAL '"'"'7 days'"'"';"'
-  ```
-
-  出力の`cumulative time spent due to contention`と`sql cpu time`を比べる。
-
-  **contentionがexecution timeのほとんどを占める場合（lock待ち）。** これが実際に起きたcaseである。`sql cpu time: 4ms`／`KV rows decoded: 4,367`に対して`KV contention time: 1m22s`だった。表が小さく全走査自体は一瞬なので、indexを足しても直らない。`sessions`へ書き込みintentを残したまま終わっていないtransactionが原因である。中断した`agentsview pg push`や`pg watch`が典型。
-
-  ```sh
-  # 実行中transactionを古い順に見る。startが極端に古いものが原因。
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  SELECT id, session_id, start, application_name, num_stmts
-  FROM crdb_internal.cluster_transactions ORDER BY start;"'
-
-  # sessions表で待たされているlockを見る
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  SELECT table_name, txn_id, ts, lock_strength, granted, contended
-  FROM crdb_internal.cluster_locks WHERE table_name = '"'"'sessions'"'"' LIMIT 20;"'
-  ```
-
-  原因のsessionを止める。まず各PCで`agentsview pg push`／`pg watch`／daemonが残っていないかを確認し、残っていなければCockroachDB側でcancelする。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "CANCEL SESSION '"'"'<session_id>'"'"';"'
-  ```
-
-  cancel後にもう一度`EXPLAIN ANALYZE`を実行し、`contention`が消えていることを確認する。
-
-  **contentionがほぼ0で、scanに時間がかかっている場合（本当に遅いquery）。** そのときだけindexを検討する。sidebarのORDER BYとdate filterは`COALESCE(ended_at, started_at, created_at)`という式を使うが、AgentsViewが作る`sessions`のindexにこの式を支えるものは無い（`parent_session_id`、`termination_status`、`cwd`、`(project, git_branch)`、`secret_leak_count`だけ）。AgentsViewは自分のindexを`CREATE INDEX IF NOT EXISTS`で作るだけなので、追加したindexが消されることはない。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 -c "
-  CREATE INDEX IF NOT EXISTS idx_sessions_activity
-    ON agentsview.sessions ((COALESCE(ended_at, started_at, created_at)) DESC, id DESC);"'
-  ```
-
-  なお`limit`を下げても解決しない。`limit=500`はfrontendの`SESSION_PAGE_SIZE`定数（`frontend/src/lib/stores/sessions.svelte.ts`）でimageにcompile済みで設定から変えられず、かつ`GetSidebarSessionIndex`は`limit > 0`だと`WITH RECURSIVE`のpaging経路に入り、その中の`COUNT(*)`はlimitと無関係に全体を走査する（`internal/postgres/sessions.go`）。
-
-  どちらでもない場合はCockroachDB Cloud Consoleの**Metrics > Request Units**を見る。Basic planはburst RUを使い切ると強くthrottleされる。
-
-- **画面に`request timed out`が出る／logに`status 503`と`latency 30.0秒`が並ぶ** — Cloud Runではなく**AgentsView自身のwrite timeout**である。既定は30秒で、超えると`http.TimeoutHandler`が503と`{"error":"request timed out"}`を返す（`internal/server/middleware.go`）。dashboardはanalytics APIを同時に複数叩くため、`maxScale: 1`／1 CPUの上でCockroachDBへの集計が重なると30秒に収まらない。`cloudrun-service.yaml`で`--write-timeout`を延ばし、Cloud Run側の`timeoutSeconds`をそれより長くする（先に切れるとCloud Runが504を返し、appのJSONが届かない）。延ばしても解消しない場合はCPUを2にするか、期間を短くして切り分ける。
 
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
@@ -1457,9 +1364,3 @@ rollback後はtrafficがrevision名にpinされる。最新revisionを追う状�
 ```sh
 mise run agentsview:cloudrun:clrnd -- traffic --to-latest
 ```
-
-### 複数PCで運用している場合
-
-Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`chezmoi apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
-
----
