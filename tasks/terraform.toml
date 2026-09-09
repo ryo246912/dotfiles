@@ -4,7 +4,7 @@ run         = "cd terraform/agentsview && terraform fmt -check -recursive"
 
 ["tf:validate"]
 description = "terraform/agentsviewのinit(backendなし)とvalidate"
-run         = "cd terraform/agentsview && terraform init -backend=false -input=false && terraform validate"
+run         = "mkdir -p \"$TF_PLUGIN_CACHE_DIR\" && cd terraform/agentsview && terraform init -backend=false -input=false && terraform validate"
 
 ["tf:tflint"]
 description = "terraform/agentsviewのtflint"
@@ -12,4 +12,4 @@ run         = "cd terraform/agentsview && tflint --init && tflint"
 
 ["tf:trivy"]
 description = "terraform/agentsviewのtrivy設定スキャン"
-run         = "trivy config terraform/agentsview"
+run         = "trivy config --exit-code 1 terraform/agentsview"
