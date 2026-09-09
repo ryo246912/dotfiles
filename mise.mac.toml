@@ -3,9 +3,8 @@
 # 除外されていたファイル群（= macOS でのみ配置されていたもの）。
 
 [dotfiles]
-"~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "copy" }
-"~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "copy" }
-"~/.config/navi/cheats/mac.cheat.md"      = { source = "config-mac/navi/cheats/mac.cheat.md", mode = "copy" }
-"~/.config/raycast"                       = { source = "config-mac/raycast", mode = "copy" }
-"~/.config/zabrze/mac.toml"               = { source = "config-mac/zabrze/mac.toml", mode = "copy" }
-"~/.config/zsh/lazy/mac.zsh"              = { source = "config-mac/zsh/lazy/mac.zsh", mode = "copy" }
+"~/.config/mise"        = { source = "config-mac/mise", mode = "copy" }
+"~/.config/navi/cheats" = { source = "config-mac/navi/cheats", mode = "copy" }
+"~/.config/raycast"     = { source = "config-mac/raycast", mode = "copy" }
+"~/.config/zabrze"      = { source = "config-mac/zabrze", mode = "copy" }
+"~/.config/zsh/lazy"    = { source = "config-mac/zsh/lazy", mode = "copy" }

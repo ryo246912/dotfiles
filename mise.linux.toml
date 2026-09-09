@@ -3,6 +3,6 @@
 # 除外されていたファイル群（= macOS では配置されていなかったもの）。
 
 [dotfiles]
-"~/.config/atuin/fly.toml"               = { source = "config-linux/atuin/fly.toml", mode = "copy" }
-"~/.config/autohotkey"                   = { source = "config-linux/autohotkey", mode = "copy" }
-"~/.config/navi/cheats/windows.cheat.md" = { source = "config-linux/navi/cheats/windows.cheat.md", mode = "copy" }
+"~/.config/atuin"       = { source = "config-linux/atuin", mode = "copy" }
+"~/.config/autohotkey"  = { source = "config-linux/autohotkey", mode = "copy" }
+"~/.config/navi/cheats" = { source = "config-linux/navi/cheats", mode = "copy" }

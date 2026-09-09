@@ -654,7 +654,14 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
   ——「共通ブランケットのマージ」ではなく完全な**上書き**になり、mac では共通の
   `~/.config` 配下が一切配置されなくなる（同じキーが複数の merge される config
   ファイルに出てきたときの挙動として実機で確認済み。詳細は下記コラム参照）。
-  OS 限定ファイル自体の個数は少ないので、通常どおり1ファイルずつ宣言してよい。
+  ただし「同一キー = 上書き」に抵触するのはあくまで `"~/.config"` そのものを
+  再宣言した場合の話で、**`"~/.config/mise"` のような別キーなら、共通ブランケットの
+  target ディレクトリ（`~/.config/mise` 配下）と物理的に重なっていても、両方の
+  `mode = "copy"` エントリの出力が破壊的な削除なしにそのまま共存する**ことを実機で
+  確認済み。そのため OS 限定ファイルは 1 ファイルずつではなく、`config-mac/`・
+  `config-linux/` 側のディレクトリ単位（例: `"~/.config/mise" = { source =
+"config-mac/mise", mode = "copy" }`）でまとめて宣言してよい。今後そのディレクトリに
+  ファイルを追加しても `[dotfiles]` 側の追記が不要になる。
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
   もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`）は `config/` の外、
   `not_config/` に置く（このリポジトリではもともとこの用途の慣習的なディレクトリ名
@@ -678,6 +685,7 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
 ```text
 mise.toml         [dotfiles] "~/.config" = { source = "config", mode = "copy" }  # 共通
 mise.mac.toml      [dotfiles] "~/.config/raycast" = { source = "config-mac/raycast", ... }   # mac だけ追加
+                              "~/.config/mise" = { source = "config-mac/mise", ... }          # ディレクトリ単位で追加
 mise.linux.toml    [dotfiles] "~/.config/autohotkey" = { source = "config-linux/autohotkey", ... } # linux だけ追加
 （テンプレートは config/ の外の templates/ から個別に "~/.config/git/config" 等として宣言）
 ```

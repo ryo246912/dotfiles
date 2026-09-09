@@ -4,6 +4,11 @@ output:
   - failure
   - execution_out
 
+post-merge:
+  jobs:
+    - name: ensure-mise-version
+      run: bash scripts/ensure-mise-version.sh
+
 pre-push:
   jobs:
     - name: stash files

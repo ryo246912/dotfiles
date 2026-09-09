@@ -20,7 +20,9 @@
   ```
 
 - [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
-      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる）
+      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる。
+      初回はまだ lefthook が未導入のため手動実行が必要だが、後述の `mise bootstrap`
+      完了後は `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動実行する）
 
   ```sh
   bash scripts/ensure-mise-version.sh
@@ -507,7 +509,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```
 
 - [ ] mise 本体を `min_version` まで更新する（`mise bootstrap` は config を読む際に
-      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる）
+      `min_version` 未満だと実行を拒否するため、bootstrap の外で先に済ませる。
+      初回はまだ lefthook が未導入のため手動実行が必要だが、後述の `mise bootstrap`
+      完了後は `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動実行する）
 
   ```sh
   bash scripts/ensure-mise-version.sh
