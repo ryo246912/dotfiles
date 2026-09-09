@@ -362,6 +362,7 @@ if ! command -v rulesync >/dev/null 2>&1; then
   echo "rulesync not found; skipping command/skill generation" >&2
   exit 0
 fi
+set -e
 cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands
 cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills
 '''
