@@ -20,6 +20,8 @@ TOKEN = re.compile(r"'|\"|--|/\*|;|\$[A-Za-z_][A-Za-z_0-9]*\$|\$\$")
 
 
 def chunk_size() -> int:
+    """1 transactionへ入れるINSERTの件数を環境変数から読む。"""
+
     raw = os.environ.get(CHUNK_ENV, "500")
     try:
         value = int(raw)
@@ -34,6 +36,8 @@ class Splitter:
     """dumpをstatementへ切り分ける。stateは行をまたいで持続する。"""
 
     def __init__(self) -> None:
+        """まだ何も読んでいない状態を作る。"""
+
         self.buffer: list[str] = []
         # None以外のときは、その閉じtokenまでliteral／comment内にいる。
         self.pending = ""
@@ -144,6 +148,8 @@ class Splitter:
         return -1
 
     def tail(self) -> str:
+        """statementとして閉じきらずに残っている文字列を返す。"""
+
         return "".join(self.buffer)
 
 
@@ -181,6 +187,8 @@ def strip_leading_noise(text: str) -> str:
 
 
 def main() -> int:
+    """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
+
     limit = chunk_size()
     splitter = Splitter()
     out = sys.stdout
