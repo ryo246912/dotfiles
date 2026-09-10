@@ -162,9 +162,14 @@ cleanup_dump() {
 }
 trap cleanup_dump EXIT
 
-mkdir -p "$backup_dir"
-dump_dir="$(cd "$backup_dir" && pwd -P)"
+# bind mountするdirectoryはbackup_dirではなくdump_path自身から取る。
+# AGENTSVIEW_DUMP_PATHがbackup_dirの外を指した場合に、basenameだけを
+# backup_dirへ書いて「作られなかった」と報告してしまうためである。
+mkdir -p "$(dirname "$dump_path")"
+dump_dir="$(cd "$(dirname "$dump_path")" && pwd -P)"
 dump_name="$(basename "$dump_path")"
+# 以降のtest -sとcleanupが、containerの書き先と同じfileを指すようにする。
+dump_path="${dump_dir}/${dump_name}"
 # auth_dirとPG URLはこのtask内で決まる値なのでexportする。静的な
 # AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:remote:dump".env] にある。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
