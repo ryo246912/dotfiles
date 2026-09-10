@@ -59,7 +59,7 @@ gcloud auth login
 gcloud auth application-default login
 ```
 
-**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記commandがすべてversionを返す。
+**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記の`gcloud auth login`と`gcloud auth application-default login`がどちらもerrorなく完了している。
 
 ##### 作業2. 固定値、password、ローカルsecretを準備する
 
