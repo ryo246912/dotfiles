@@ -186,6 +186,18 @@ def strip_leading_noise(text: str) -> str:
         return text
 
 
+def pending_kind(pending: str) -> str:
+    """閉じ待ちのtokenを、dump本文を晒さない呼び名へ変える。"""
+
+    if pending == "'":
+        return "string literal"
+    if pending == '"':
+        return "quoted identifier"
+    if pending == "*/":
+        return "block comment"
+    return "dollar-quoted string"
+
+
 def main() -> int:
     """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
 
@@ -195,8 +207,9 @@ def main() -> int:
     kept = 0
     skipped = 0
     in_chunk = 0
+    lineno = 0
     out.write("SET client_encoding = 'UTF8';\n")
-    for line in sys.stdin:
+    for lineno, line in enumerate(sys.stdin, start=1):
         # psqlのmeta-command（`\restrict`）はSQLではないので、statement扱いしない。
         # 直前のstatementを閉じた後のcommentだけが溜まっている状態でも捨てられるよう、
         # bufferはcommentを除いて空かどうかで判定する。
@@ -229,15 +242,23 @@ def main() -> int:
     # 切り詰められたdumpである。取り込み済みのchunkだけで成功扱いにしないよう止める。
     # 行comment（pendingが改行）は除く。dataを持たないうえ、最後の行がちょうど
     # `--` で改行なしに終わるdumpは正常であり、閉じ待ちのまま残るためである。
+    #
+    # error messageにdump本文は入れない。dumpにはsession本文が入るため、terminalや
+    # 収集logへ漏らさないよう、出すのはparserの状態と位置だけにする。
     if splitter.pending and splitter.pending != "\n":
         print(
-            f"dump ends inside a string literal or comment: {splitter.tail()[-80:]}",
+            f"dump ends inside an unterminated {pending_kind(splitter.pending)}"
+            f" (after line {lineno})",
             file=sys.stderr,
         )
         return 1
     leftover = strip_leading_noise(splitter.tail()).strip()
     if leftover:
-        print(f"unterminated statement at end of dump: {leftover[:80]}", file=sys.stderr)
+        print(
+            f"unterminated statement at end of dump: {len(leftover)} characters"
+            f" after the last ';' (after line {lineno})",
+            file=sys.stderr,
+        )
         return 1
     print(f"INSERT statements: {kept} (skipped {skipped} non-INSERT statements)", file=sys.stderr)
     return 0

@@ -148,7 +148,9 @@ fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+# 呼び出し元がpathを決めた場合はそれに書く。remote-local:restoreが、この実行で
+# 作ったdumpを名前のsortではなく確実に指せるようにするためである。
+dump_path="${AGENTSVIEW_DUMP_PATH:-${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql}"
 auth_dir="$(mktemp -d)"
 cleanup_dump() {
   status=$?
@@ -202,12 +204,15 @@ run = '''
 set -euo pipefail
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-mise run agentsview:cockroach:remote:dump
-# dump fileの名前にはtimestampが入るので、名前のsortで最新を選べる。
-data_dump="$({ find "$backup_dir" -maxdepth 1 -type f -name 'agentsview-cockroach-data-*.sql' -print 2>/dev/null || true; } |
-  sort -r | head -n 1)"
-if [ -z "$data_dump" ]; then
-  echo "CockroachDB AgentsView data export was not created" >&2
+# 書き先をこちらで決めてからdumpさせる。backup directoryを名前でsortして最新を
+# 選ぶと、時計のずれた既存fileや同時に走る別の実行のfileを掴みうる。そのdumpを
+# 取り込んだうえで、remote-local:dumpが「remoteの現在のrowを含むbackup」として
+# 正常終了してしまう。
+mkdir -p "$backup_dir"
+data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:remote:dump
+if [ ! -s "$data_dump" ]; then
+  echo "CockroachDB AgentsView data export was not created: ${data_dump}" >&2
   exit 1
 fi
 
