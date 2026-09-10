@@ -3,15 +3,19 @@ services:
     image: cockroachdb/cockroach:v26.2.6
     # local専用なので--insecure（TLSなし・password認証なし）で動かす。remoteは
     # sslmode=verify-fullとrole別passwordを使うため、認証方式だけが本番と異なる。
+    #
+    # listen-addr・http-addr・storeは指定しない。imageのentrypoint
+    # （/cockroach/cockroach.sh）はstart-single-nodeのとき--listen-addrのhostを
+    # 127.0.0.1かlocalhostに限っており、0.0.0.0を渡すとerrorでexit 1になる。
+    # 既定値は :26257 と :8080 で全interfaceにbindするため、下のports指定だけで
+    # hostから届く。storeも既定が/cockroach/cockroach-dataで、entrypointは
+    # このpathの中身で初回起動かを判定する。
     command:
       - start-single-node
       - --insecure
-      - --listen-addr=0.0.0.0:26257
-      - --http-addr=0.0.0.0:8080
-      - --store=/cockroach/cockroach-data
     environment:
-      # imageのentrypointが対応していれば、volumeが空の初回起動でdatabaseを作る。
-      # databaseの存在を保証するのはこちらではなく、起動ごとに
+      # entrypointがvolumeの空な初回起動でだけこのdatabaseを作る。
+      # 既存volumeやdatabase名を変えた場合は効かないので、保証するのは起動ごとに
       # CREATE DATABASE IF NOT EXISTS を実行する scripts/localdb.sh の up である。
       COCKROACH_DATABASE: ${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}
       # local検証clusterの利用統計をCockroach Labsへ送らない。

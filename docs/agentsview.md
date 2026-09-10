@@ -1189,6 +1189,8 @@ localのengineが変わるため、各PCで初回だけ次を順に確認する�
 5. `mise run agentsview:cockroach:local:dump` → `mise run agentsview:cockroach:local:restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
 6. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
 
+1でcontainerが即`exited (1)`になる場合は、`up`が自動で出すcontainer logを読む。CockroachDB imageのentrypointは`start-single-node`に渡せるflagを制限しており、`--listen-addr`のhostが`127.0.0.1`／`localhost`以外だとそこで止まる。
+
 sequence補正はrestore／importの中で自動的に走る。単体で実行しても副作用はない（sequenceを持たないschemaでは何もしない）。
 
 ```sh

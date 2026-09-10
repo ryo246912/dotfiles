@@ -128,7 +128,14 @@ require_agentsview() {
 }
 
 ensure_up() {
-  compose up -d --wait cockroach
+  # --remove-orphansは、compose.yamlから消したservice（旧local PostgreSQL）の
+  # containerを片付ける。残っているとcomposeが毎回warningを出す。
+  if ! compose up -d --wait --remove-orphans cockroach; then
+    # --waitはcontainerがexitしたことしか言わないので、原因はlogにしかない。
+    echo "local CockroachDBが起動しませんでした。containerのlogは以下です:" >&2
+    compose logs --no-color --tail=50 cockroach >&2 || true
+    exit 1
+  fi
   # COCKROACH_DATABASEはvolumeが空の初回起動時だけ効く。既存volumeやdatabase名を
   # 変えた場合に備え、起動ごとに存在を確認する（あれば何もしない）。
   compose exec -T cockroach cockroach sql --insecure \
@@ -295,7 +302,7 @@ case "$mode" in
     ;;
   down)
     # profileつきserviceは明示しないと止まらない。volumeは残す。
-    compose --profile tools down "$@"
+    compose --profile tools down --remove-orphans "$@"
     ;;
   sql)
     ensure_up
