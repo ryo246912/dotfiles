@@ -132,7 +132,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:renovate"                                              = "44.0.1"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
-"pipx:tftui"                                                = "0.13.4"
+"pipx:tftui"                                                = "0.14.1"
 
 [settings]
 auto_install = false
