@@ -33,18 +33,28 @@ case "$number" in
     ;;
 esac
 
-# $1 の clone が対象の PR と同じリポジトリを指しているか判定する。
+# 解決結果。コマンド置換(サブシェル)で受け取ると代入が親に伝わらないため、
+# resolve 系の関数は戻り値だけを返し、結果はこのグローバルへ書く。
+repo_dir=""
+# PR のリポジトリを指していた remote 名。fetch 先として使う。
+pr_remote=""
+
+# $1 の clone が対象の PR と同じリポジトリを指す remote を持つか調べ、
+# 見つかった remote 名を pr_remote に入れる。
 # origin だけでなく全 remote を見るのは、fork を clone している場合に
 # origin が自分の fork を指し、upstream 側が PR のリポジトリになるため。
 # owner/repo に正規表現メタ文字が入りうるので glob で比較する。
-remote_matches() {
+match_remote() {
   local dir=$1 name url
   for name in $(git -C "$dir" remote 2>/dev/null); do
     url=$(git -C "$dir" remote get-url "$name" 2>/dev/null) || continue
     url=${url%.git}
     url=${url%/}
     case "$url" in
-      *"/$repo" | *":$repo") return 0 ;;
+      *"/$repo" | *":$repo")
+        pr_remote=$name
+        return 0
+        ;;
     esac
   done
   return 1
@@ -61,31 +71,27 @@ resolve_repo_path() {
   for candidate in "$repo_path" "$PWD"; do
     [ -n "$candidate" ] || continue
     top=$(git -C "$candidate" rev-parse --show-toplevel 2>/dev/null) || continue
-    remote_matches "$top" || continue
-    printf '%s\n' "$top"
+    match_remote "$top" || continue
+    repo_dir=$top
     return 0
   done
   return 1
 }
 
-# 解決できた場合だけ repo_dir に入れる。コマンド置換の中で exit しても
-# サブシェルが終わるだけでスクリプトは止まらないため、呼び出し側で `|| exit 1` する。
-repo_dir=""
 require_repo_path() {
-  if ! repo_dir=$(resolve_repo_path); then
+  if ! resolve_repo_path; then
     printf 'error: %s のローカルクローンが見つかりません。\n' "$repo" >&2
     printf '       ~/.config/ghui/config.json の repoPaths を設定するか、該当リポジトリ内から ghui を起動してください。\n' >&2
     return 1
   fi
 }
 
-# ブランチ名は gh 経由で取得する(上記の理由によりテンプレートからは渡さない)。
+# base ブランチ名は gh 経由で取得する(上記の理由によりテンプレートからは渡さない)。
 # 取得した値はシェル変数としてクォートして使い、eval には一切通さない。
+# head 側は refs/ghui/head-<番号> と pull/<番号>/head で足りるので取得しない。
 base_ref=""
-head_ref=""
-load_refs() {
+load_base_ref() {
   base_ref=$(gh pr view "$number" --repo "$repo" --json baseRefName --jq .baseRefName)
-  head_ref=$(gh pr view "$number" --repo "$repo" --json headRefName --jq .headRefName)
 }
 
 action=$(
@@ -101,10 +107,12 @@ action=${action%% *}
 case "$action" in
   diff)
     require_repo_path || exit 1
-    load_refs
+    load_base_ref
     # 作業ツリーとブランチを一切触らずに差分だけ見たいので、checkout せず
     # refs/ghui/ 配下の専用 ref へ fetch して、その2点間を Diffview で開く。
-    git -C "$repo_dir" fetch --no-tags --force origin \
+    # fetch 先は origin 固定にしない。fork の clone では origin が自分の fork を
+    # 指しており、対象の base も pull/<番号>/head も取得できないため。
+    git -C "$repo_dir" fetch --no-tags --force "$pr_remote" \
       "$base_ref:refs/ghui/base-$number" \
       "pull/$number/head:refs/ghui/head-$number"
     # nvim の -c に渡す文字列にはブランチ名を入れない。`|` はブランチ名にも
@@ -113,10 +121,10 @@ case "$action" in
     ;;
   checkout)
     require_repo_path || exit 1
-    load_refs
+    load_base_ref
     # base も専用 ref へ取り込み、checkout 後の HEAD と比較する。
     # 未コミットの変更があると gh pr checkout が失敗するが、set -e で止まってよい。
-    git -C "$repo_dir" fetch --no-tags --force origin "$base_ref:refs/ghui/base-$number"
+    git -C "$repo_dir" fetch --no-tags --force "$pr_remote" "$base_ref:refs/ghui/base-$number"
     (
       cd "$repo_dir"
       gh pr checkout "$number" --repo "$repo"
