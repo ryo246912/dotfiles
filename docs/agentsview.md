@@ -2,9 +2,6 @@
 
 複数端末のセッション情報をCockroachDB Cloudに集約し、Cloud Run上のread-only Web UIで参照する構成。
 
-> [!IMPORTANT]
-> Fly.ioからの移行は完了している。Fly上のAgentsView app（`ryo-agentsview`）と`agentsview` schema／roleは削除済みで、rollback先は存在しない。Atuinは引き続きFly.io（`psgl`／`ryo-shellhistory`）を使う。新規構築は[Cloud Run／CockroachDBへの移行手順](#cloud-runcockroachdbへの移行手順)を上から順に実行する。
-
 ## 実装済みファイル
 
 | ファイル                                             | 目的                                                                                                                   |
