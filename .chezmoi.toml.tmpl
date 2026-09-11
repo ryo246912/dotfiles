@@ -1,3 +1,9 @@
+# chezmoi は既定で「実行時の process umask」から target の mode を決める
+# （通常ファイル = 0o666 &^ umask、ディレクトリ = 0o777 &^ umask）。
+# そのため apply を実行したシェルの umask が 077 から 022 へ変わると、
+# 既存ファイルとの間に mode 0600 ⟶ 0644 の差分が全ファイルで発生する。
+# 実行環境に依存させないよう umask を明示して固定する。
+umask = 0o077
 pager = "delta"
 [edit]
 args    = ["--wait", "--new-window"]
