@@ -16,13 +16,20 @@
 */ -}}
 {{- $lb := "{{" -}}
 {{- $rb := "}}" -}}
+{{- /*
+  ghui は {{...}} を素の文字列置換で埋めるだけでシェルのクォートをせず、
+  結果を $SHELL -c に丸ごと渡す(EditorOpener.ts)。git のブランチ名は
+  `;` `$( )` `|` `&` バッククォート `'` を含められるため、{{headRef}} /
+  {{baseRef}} をここへ展開すると、細工したブランチ名の PR で `e` を押しただけで
+  任意コマンドが実行される。ブランチ名は渡さず、pr-action.sh 側で gh から取得する。
+  残る owner/repo は GitHub の文字種制限によりメタ文字を含みえず、PR番号は数値、
+  repoPath は自分の config.json 由来。念のため単一引用符で囲っておく。
+*/ -}}
 {{- $editorCommand := list
       "~/.config/ghui/pr-action.sh"
-      (printf "%srepo%s" $lb $rb)
-      (printf "%snumber%s" $lb $rb)
-      (printf "%sbaseRef%s" $lb $rb)
-      (printf "%sheadRef%s" $lb $rb)
-      (printf "%srepoPath%s" $lb $rb)
+      (printf "'%srepo%s'" $lb $rb)
+      (printf "'%snumber%s'" $lb $rb)
+      (printf "'%srepoPath%s'" $lb $rb)
     | join " " -}}
 {{- /*
   editorCommand が {{repoPath}} を含むと、repoPaths がどれにもマッチしない場合に
