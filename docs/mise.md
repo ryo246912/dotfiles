@@ -389,3 +389,106 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
 壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に
 検証してから。
+
+## `[dotfiles]` フェーズと chezmoi `modify_` の対応関係
+
+本リポジトリの dotfile 配置は chezmoi が担当しているが、mise 側にも
+`[dotfiles]` フェーズ（`mise bootstrap dotfiles`）がある。両者が重なる領域と、
+**mise では代替できない機能**を調査した結果を記録する。
+
+調査対象は mise **v2026.9.5**（2026-09-10 リリース。本リポジトリの
+`min_version` は `2026.8.12` で、`bootstrap dotfiles` はそれ以前から存在する）。
+
+参考: [Dotfiles | mise-en-place](https://mise.jdx.dev/dotfiles.html)
+
+### mode 一覧
+
+`[dotfiles]` の各エントリは target のパスをキーにし、`mode` で配置方法を選ぶ。
+
+| mode           | 挙動                                                       |
+| -------------- | ---------------------------------------------------------- |
+| `symlink`      | ファイル/ディレクトリへのリンクを作る（既定）              |
+| `symlink-each` | ディレクトリを作り、中の各ファイルを個別にリンク           |
+| `copy`         | コピーする。一致するファイルは**上書き**                   |
+| `template`     | Tera テンプレートをレンダリングして**書き出す**            |
+| `track`        | 中身は管理せず、その場でバージョン履歴（checkpoint）を保存 |
+
+```toml
+[dotfiles]
+"~/.config/nvim" = { source = "dotfiles/nvim", mode = "symlink" }
+"~/.gitconfig"   = { source = "dotfiles/gitconfig.tera", mode = "template" }
+"~/.zshrc"       = { mode = "track" }
+```
+
+`template` は「ソースから生成して target を上書きする」であって、既存の target を
+読み込んでマージする機能ではない。
+
+### chezmoi `modify_` に相当する機能は無い
+
+chezmoi の `modify_` は **target の現在の内容を stdin で受け取り、任意の変換結果を
+stdout に書く**（`chezmoi:modify-template` マーカーを使えばテンプレートとして
+`.chezmoi.stdin` を参照できる）。mise にこれに相当する mode は無い。
+
+思想的に最も近いのは **edit entries**（`block` / `line`）で、ファイル全体ではなく
+一部分だけを管理する。
+
+```toml
+[dotfiles]
+"~/.zshrc/activate" = { block = 'eval "$(mise activate zsh)"' }
+"/etc/hosts/dev"    = { line = "127.0.0.1 dev.local" }
+```
+
+`block` はマーカーコメントで囲んだ範囲だけを置換し、それ以外はそのまま残す。
+
+```sh
+# >>> mise:activate >>> managed by mise - do not edit between markers
+eval "$(mise activate zsh)"
+# <<< mise:activate <<<
+```
+
+ただし**マーカーが行コメントである以上、行コメントを書けない形式には使えない**。
+上流ドキュメントが明示している。
+
+> Files that can't hold line comments at all (strict JSON, XML) aren't a fit
+> for blocks — use a whole-file entry instead.
+
+マーカーのコメント接頭辞は拡張子から推定され（shell/config は `#`、Lua は `--`、
+C 系は `//`、INI は `;`、vim は `"`）、`comment = "..."` で上書きもできるが、
+strict JSON にはそもそも置き場所が無い。代替として案内されている whole-file entry
+（`copy`/`template`）は全体上書きなので、部分マージにはならない。
+
+### 「アプリが自分で書き換える設定ファイル」への mise 側の答え
+
+mise のアプローチは、内容を強制するのをやめて**履歴として保存する**こと。
+上流ドキュメントの例がまさにこのケースを想定している。
+
+```sh
+mise bootstrap dotfiles track ~/.config/app/state.json --no-autosave
+mise bootstrap dotfiles save ~/.config/app/state.json
+```
+
+`autosave = false` にすると history watcher による自動保存を止め、明示的に
+`save` したときだけ checkpoint を作る。mise が copy/link/template/edit で管理して
+いるファイルを同時に track することもできる（tracking entry は
+`conf.d/dotfiles-tracking.toml` に追加される）。
+
+ただしこれは「共有したいキーを宣言的に注入する」のとは目的が異なる。
+**バージョン履歴は残るが、他マシンへ設定内容を配る用途には使えない。**
+
+### 本リポジトリでの結論
+
+`dot_config/ghui/modify_config.json` は、ghui が自分でテーマを書き戻す
+`~/.config/ghui/config.json` に対して、共有したいキー（`editorCommand`）だけを
+`fromJson` / `mergeOverwrite` でマージしている。
+
+|                              | chezmoi `modify_`            | mise `[dotfiles]`       |
+| ---------------------------- | ---------------------------- | ----------------------- |
+| 既存内容を受け取る           | ○ stdin で渡る               | ×                       |
+| 任意の変換ロジック           | ○ スクリプト or テンプレート | ×                       |
+| 部分管理                     | ○                            | △ `block` / `line` のみ |
+| **strict JSON への部分適用** | ○                            | × 明示的に非対応        |
+| アプリの書き戻しへの対処     | マージして共存               | `track` で履歴保存      |
+
+**この構成は mise `[dotfiles]` には移せない。** chezmoi 固有の機能に依存するため、
+ghui の config は chezmoi 管理のまま維持する。`mise bootstrap` のフェーズ一覧で
+`[dotfiles]` を chezmoi に委ねているのは、この点でも妥当。
