@@ -2,7 +2,7 @@
 "aqua:aquasecurity/trivy"                   = "0.72.0"
 "aqua:aws/aws-cli"                          = "2.34.21"
 "aqua:hashicorp/terraform"                  = "1.16.0"
-"aqua:keidarcy/e1s"                         = "1.0.53"
+"aqua:keidarcy/e1s"                         = "2.0.0"
 "aqua:leg100/pug"                           = "0.6.5"
 "aqua:rclone/rclone"                        = "1.74.4"
 "aqua:terraform-linters/tflint"             = "0.64.0"
@@ -11,7 +11,7 @@
 "go:github.com/lusingander/gotip/cmd/gotip" = "0.9.0"
 "go:gotest.tools/gotestsum"                 = "1.13.0"
 "pipx:awslogs"                              = "0.15.0"
-"pipx:tftui"                                = "0.13.4"
+"pipx:tftui"                                = "0.14.1"
 
 [bootstrap.packages]
 "brew-cask:sequel-ace" = "latest"

@@ -1,0 +1,51 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  ghui はテーマ変更時に自分で config.json を書き換える(themeStore.ts の
+  writeStoredConfig)。ファイル全体を chezmoi で管理すると、テーマを変えるたびに
+  apply で元に戻ってしまうため、modify_ で「共有したいキーだけ」を既存の内容へ
+  マージし、theme などの端末ごとの状態はそのまま残す。
+*/ -}}
+{{- $config := dict -}}
+{{- if .chezmoi.stdin -}}
+{{-   $config = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- /*
+  editorCommand の値に含める {{...}} は ghui 自身が展開するプレースホルダで、
+  chezmoi のテンプレート構文と衝突する。そのまま書くと chezmoi が先に解釈して
+  しまうため、波括弧を変数経由で組み立ててリテラルとして出力する。
+*/ -}}
+{{- $lb := "{{" -}}
+{{- $rb := "}}" -}}
+{{- $repo := printf "%srepo%s" $lb $rb -}}
+{{- $number := printf "%snumber%s" $lb $rb -}}
+{{- /*
+  ghui はキーバインドを増やせず、任意のシェルコマンドを実行できるフックは
+  editorCommand ただ一つ。そこに fzf のアクションメニューを直接書き、`e` から
+  選んで実行する。ghui は TUI を suspend して端末に接続した状態で
+  `$SHELL -c` に渡すため(EditorOpener.ts)、fzf も read も対話的に動く。
+
+  【ブランチ名を渡していない理由】
+  ghui の renderEditorCommand は {{...}} を素の文字列置換で埋めるだけで、
+  シェルのクォートを一切しない。git のブランチ名は `;` `$( )` `|` `&`
+  バッククォート `'` を含められるため、{{headRef}} / {{baseRef}} をここへ
+  展開すると、細工したブランチ名の PR で `e` を押しただけで任意コマンドが
+  実行されてしまう。owner/repo は GitHub 側の文字種制限によりメタ文字を
+  含みえず、PR番号は数値なので、この2つだけを単一引用符で囲って渡す。
+
+  アクションを増やすときは fzf に渡す行と case の分岐を足す。
+*/ -}}
+{{- $editorCommand := list
+      `set -e; action=$(echo 'merge : gh pr merge --admin でマージする' | fzf --header='`
+      $repo ` #` $number
+      `' --layout=reverse --border) || exit 0; case "${action%% *}" in merge) printf '`
+      $repo ` #` $number
+      ` を --admin でマージします。よろしいですか? [y/N] '; read -r reply; case "$reply" in [yY]|[yY][eE][sS]) gh pr merge '`
+      $number `' --repo '` $repo
+      `' --admin;; *) echo '中止しました';; esac;; esac`
+    | join "" -}}
+{{- /*
+  repoPaths は置かない。editorCommand が {{repoPath}} を参照しなければ ghui は
+  ローカルクローンの解決を要求しない(EditorOpener.ts の commandNeedsRepoPath)。
+*/ -}}
+{{- $managed := dict "editorCommand" $editorCommand -}}
+{{ mergeOverwrite $config $managed | toPrettyJson }}
