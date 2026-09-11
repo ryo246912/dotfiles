@@ -11,7 +11,7 @@
 "go:github.com/lusingander/gotip/cmd/gotip" = "0.9.0"
 "go:gotest.tools/gotestsum"                 = "1.13.0"
 "pipx:awslogs"                              = "0.15.0"
-"pipx:tftui"                                = "0.13.4"
+"pipx:tftui"                                = "0.14.1"
 
 [bootstrap.packages]
 "brew-cask:sequel-ace" = "latest"
