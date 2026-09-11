@@ -2,6 +2,7 @@
   "$schema": "https://oxc.rs/schemas/formatter/schema.json",
   "ignorePatterns": [
     "dot_apm/apm.lock.yaml",
+    "dot_config/ghui/modify_config.json",
     "dot_config/sidebery/**",
     "dot_config/obsidian/**",
     "dot_config/navi/**",

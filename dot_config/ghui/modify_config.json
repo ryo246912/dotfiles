@@ -1,0 +1,36 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /*
+  ghui はテーマ変更時に自分で config.json を書き換える(themeStore.ts の
+  writeStoredConfig)。ファイル全体を chezmoi で管理すると、テーマを変えるたびに
+  apply で元に戻ってしまうため、modify_ で「共有したいキーだけ」を既存の内容へ
+  マージし、theme などの端末ごとの状態はそのまま残す。
+*/ -}}
+{{- $config := dict -}}
+{{- if .chezmoi.stdin -}}
+{{-   $config = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- /*
+  editorCommand の値に含める {{...}} は ghui 自身が展開するプレースホルダで、
+  chezmoi のテンプレート構文と衝突する。そのまま書くと chezmoi が先に解釈して
+  しまうため、波括弧を変数経由で組み立ててリテラルとして出力する。
+*/ -}}
+{{- $lb := "{{" -}}
+{{- $rb := "}}" -}}
+{{- $editorCommand := list
+      "~/.config/ghui/pr-action.sh"
+      (printf "%srepo%s" $lb $rb)
+      (printf "%snumber%s" $lb $rb)
+      (printf "%sbaseRef%s" $lb $rb)
+      (printf "%sheadRef%s" $lb $rb)
+      (printf "%srepoPath%s" $lb $rb)
+    | join " " -}}
+{{- /*
+  editorCommand が {{repoPath}} を含むと、repoPaths がどれにもマッチしない場合に
+  ghui 側で実行前にエラーになる(EditorOpener.ts の commandNeedsRepoPath)。
+  総称パターンを1つ置いて必ず解決されるようにする。clone 先が違う場合はここを直す。
+  パスが実在しないときは pr-action.sh 側が cwd へフォールバックする。
+*/ -}}
+{{- $managed := dict
+      "editorCommand" $editorCommand
+      "repoPaths" (dict ":owner/:repo" "~/repos/:owner/:repo") -}}
+{{ mergeOverwrite $config $managed | toPrettyJson }}
