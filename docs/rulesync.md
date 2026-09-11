@@ -102,6 +102,46 @@ mise run rulesync:generate
 
 どちらかのスコープが未初期化でも、もう片方の生成を止めないように warning を出して skip します。
 
+## 会話のフィードバックからルール候補を作る hook
+
+[Claude Code の Hooks でフィードバックを残す仕組み](https://zenn.dev/nozomi720/articles/claude_code_hooks_feedback)
+を参考に、会話履歴から再利用可能なルール追記候補・スキル化候補を作る hook をグローバル設定に含めています。
+既存ルールを直接増やし続ける方式ではなく、候補を一度確認してから rulesync の正本へ反映する方式です。
+
+### 配布と devcontainer 内での実行
+
+1. `dot_config/rulesync/exact_dot_rulesync/hooks.json` を rulesync の hook source とする。
+2. `chezmoi apply` と `mise run rulesync:generate` により Claude Code の user scope へ hook を生成する。
+3. devcontainer はホストの `~/.claude` と `~/.config/devcontainer/scripts` を bind mount するため、コンテナ内で
+   起動した Claude Code も同じ hook 設定と runner を使用する。
+4. `SessionEnd` / `PreCompact` で runner が transcript の末尾を読み、別の非対話 Claude プロセスで候補を生成する。
+   再帰実行は `AI_RULE_HOOK_RUNNING` で防止する。
+
+候補は自動でルールへ追記しません。セッション別の結果は
+`${XDG_STATE_HOME:-$HOME/.local/state}/ai-rule-hook/claude/<session>/`、最新の結果は
+`${XDG_STATE_HOME:-$HOME/.local/state}/ai-rule-hook/claude/latest.md` で確認できます。採用する場合は、グローバル
+ルールなら `dot_config/rulesync/exact_dot_rulesync/rules/COMMON.md`、定型作業なら同ディレクトリ配下の
+`skills/<name>/SKILL.md` に反映し、再度 `chezmoi apply` と `mise run rulesync:generate` を実行してください。
+
+hook runner は transcript とルールの読み込み量に上限を設け、秘密情報・個人情報・一時的な事情を候補から除外する
+prompt を使用します。それでも transcript を外部の AI CLI へ渡す処理であるため、無効化したい場合は
+rulesync source の `sessionEnd` / `preCompact` を削除して再生成してください。
+
+### 動作確認
+
+AI を呼び出さず payload の解釈と生成対象を確認できます。
+
+```bash
+transcript=$(mktemp)
+printf '%s\n' '{"type":"user","message":{"role":"user","content":"test"}}' >"$transcript"
+jq -nc --arg transcript "$transcript" \
+  '{hook_event_name:"SessionEnd",session_id:"smoke-test",transcript_path:$transcript}' \
+  | AI_RULE_HOOK_DRY_RUN=1 ~/.config/devcontainer/scripts/ai-rule-hook.sh --tool claude
+rm -f "$transcript"
+```
+
+`should_run` が `true` になり、`canonical_event` が `session_end` なら hook payload は認識されています。
+
 ## トラブルシューティング
 
 ### `.rulesync directory not found. Run 'rulesync init' first.`
