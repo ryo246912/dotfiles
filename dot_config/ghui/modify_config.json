@@ -16,28 +16,36 @@
 */ -}}
 {{- $lb := "{{" -}}
 {{- $rb := "}}" -}}
+{{- $repo := printf "%srepo%s" $lb $rb -}}
+{{- $number := printf "%snumber%s" $lb $rb -}}
 {{- /*
-  ghui は {{...}} を素の文字列置換で埋めるだけでシェルのクォートをせず、
-  結果を $SHELL -c に丸ごと渡す(EditorOpener.ts)。git のブランチ名は
-  `;` `$( )` `|` `&` バッククォート `'` を含められるため、{{headRef}} /
-  {{baseRef}} をここへ展開すると、細工したブランチ名の PR で `e` を押しただけで
-  任意コマンドが実行される。ブランチ名は渡さず、pr-action.sh 側で gh から取得する。
-  残る owner/repo は GitHub の文字種制限によりメタ文字を含みえず、PR番号は数値、
-  repoPath は自分の config.json 由来。念のため単一引用符で囲っておく。
+  ghui はキーバインドを増やせず、任意のシェルコマンドを実行できるフックは
+  editorCommand ただ一つ。そこに fzf のアクションメニューを直接書き、`e` から
+  選んで実行する。ghui は TUI を suspend して端末に接続した状態で
+  `$SHELL -c` に渡すため(EditorOpener.ts)、fzf も read も対話的に動く。
+
+  【ブランチ名を渡していない理由】
+  ghui の renderEditorCommand は {{...}} を素の文字列置換で埋めるだけで、
+  シェルのクォートを一切しない。git のブランチ名は `;` `$( )` `|` `&`
+  バッククォート `'` を含められるため、{{headRef}} / {{baseRef}} をここへ
+  展開すると、細工したブランチ名の PR で `e` を押しただけで任意コマンドが
+  実行されてしまう。owner/repo は GitHub 側の文字種制限によりメタ文字を
+  含みえず、PR番号は数値なので、この2つだけを単一引用符で囲って渡す。
+
+  アクションを増やすときは fzf に渡す行と case の分岐を足す。
 */ -}}
 {{- $editorCommand := list
-      "~/.config/ghui/pr-action.sh"
-      (printf "'%srepo%s'" $lb $rb)
-      (printf "'%snumber%s'" $lb $rb)
-      (printf "'%srepoPath%s'" $lb $rb)
-    | join " " -}}
+      `set -e; action=$(echo 'merge : gh pr merge --admin でマージする' | fzf --header='`
+      $repo ` #` $number
+      `' --layout=reverse --border) || exit 0; case "${action%% *}" in merge) printf '`
+      $repo ` #` $number
+      ` を --admin でマージします。よろしいですか? [y/N] '; read -r reply; case "$reply" in [yY]|[yY][eE][sS]) gh pr merge '`
+      $number `' --repo '` $repo
+      `' --admin;; *) echo '中止しました';; esac;; esac`
+    | join "" -}}
 {{- /*
-  editorCommand が {{repoPath}} を含むと、repoPaths がどれにもマッチしない場合に
-  ghui 側で実行前にエラーになる(EditorOpener.ts の commandNeedsRepoPath)。
-  総称パターンを1つ置いて必ず解決されるようにする。clone 先が違う場合はここを直す。
-  パスが実在しないときは pr-action.sh 側が cwd へフォールバックする。
+  repoPaths は置かない。editorCommand が {{repoPath}} を参照しなければ ghui は
+  ローカルクローンの解決を要求しない(EditorOpener.ts の commandNeedsRepoPath)。
 */ -}}
-{{- $managed := dict
-      "editorCommand" $editorCommand
-      "repoPaths" (dict ":owner/:repo" "~/repos/:owner/:repo") -}}
+{{- $managed := dict "editorCommand" $editorCommand -}}
 {{ mergeOverwrite $config $managed | toPrettyJson }}
