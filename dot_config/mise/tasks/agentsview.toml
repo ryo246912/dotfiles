@@ -182,7 +182,15 @@ pg_url="$(cat "$auth_dir/url")"
 # remote URLはsslmode=verify-fullなので、hostが既に信頼しているCA bundleを渡す。
 # CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで足りる。
 ca_bundle=""
-if [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$PGSSLROOTCERT" ]; then
+# URLがsslrootcertでCAを指定していた場合は、それを最優先で使う。system trust
+# storeに無いprivate CAのclusterはこれでしか検証できない。
+if [ -s "$auth_dir/sslrootcert" ]; then
+  ca_bundle="$(cat "$auth_dir/sslrootcert")"
+  if [ ! -r "$ca_bundle" ]; then
+    echo "URLのsslrootcertが読めません: ${ca_bundle}" >&2
+    exit 1
+  fi
+elif [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$PGSSLROOTCERT" ]; then
   ca_bundle="$PGSSLROOTCERT"
 else
   # docs/agentsview.mdがhost側の候補として挙げているpathと同じ順で探す。

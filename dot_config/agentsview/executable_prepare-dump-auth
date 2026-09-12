@@ -37,6 +37,7 @@ else:
 
 password = urllib.parse.unquote(source.password) if source.password else ""
 username = urllib.parse.unquote(source.username) if source.username else ""
+sslrootcert = ""
 query = []
 for key, value in urllib.parse.parse_qsl(
     source.query.replace("+", "%2B"), keep_blank_values=True
@@ -46,9 +47,11 @@ for key, value in urllib.parse.parse_qsl(
     elif key == "sslpassword":
         raise SystemExit(f"{source_name} must not contain sslpassword")
     elif key == "sslrootcert":
-        # このURLを使うpg_dumpはcontainerの中で動く。URLのpathはhost側のCA bundle
-        # （macOSなら/etc/ssl/cert.pem）を指しており、containerには存在しない。
-        # CA bundleはcontainerがPGSSLROOTCERTで選ぶので、ここでは落とす。
+        # このURLを使うpg_dumpはcontainerの中で動くので、host側のpathをURLに
+        # 残しても解決できない。pathは別fileへ出し、呼び出し元がcontainerへ
+        # mountしてPGSSLROOTCERTで指す。`system`はpathではないので渡さない。
+        if value != "system":
+            sslrootcert = value
         continue
     else:
         query.append((key, value))
@@ -80,7 +83,12 @@ pgpass = ":".join(
 )
 
 auth_dir = pathlib.Path(os.environ["AGENTSVIEW_DUMP_AUTH_DIR"])
-for name, value in {"url": safe_url, "pgpass": f"{pgpass}\n"}.items():
+outputs = {"url": safe_url, "pgpass": f"{pgpass}\n"}
+if sslrootcert:
+    # URLがCAを明示している場合だけ書く。fileが無ければ呼び出し元が既定のCA
+    # bundleを選ぶ。
+    outputs["sslrootcert"] = f"{sslrootcert}\n"
+for name, value in outputs.items():
     path = auth_dir / name
     path.write_text(value)
     path.chmod(0o600)

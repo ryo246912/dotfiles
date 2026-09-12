@@ -80,6 +80,12 @@ class Splitter:
                 self.block_depth = 1
                 self.pending = "*/"
             else:
+                # PostgreSQLは識別子の続きにある$を識別子の一部として読む。
+                # pg_dumpは$を含む識別子をquoteするので実際のdumpには出ないが、
+                # public.foo$bar$bazの$bar$をdollar quoteの開始にはしない。
+                prefix = "".join(self.buffer)[: -len(token)]
+                if re.search(r"[A-Za-z0-9_]$", prefix):
+                    continue
                 self.escape = False
                 self.pending = token
 
