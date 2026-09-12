@@ -17,10 +17,15 @@
 BEGIN;
 
 -- 各tableについて「INSERT文を1行ずつ返すSELECT」を組み立て、\gexecで実行する。
--- 列一覧と値一覧は同じ ORDER BY ordinal_position で畳むので、必ず対応が取れる。
 -- 値は col::text をquote_literalした文字列literalにする。挿入先の列型へ
 -- coerceされるので、pg_dumpの--column-insertsと同じ往復になる。NULLは
 -- quote_literalがNULLを返すため、COALESCEでSQLのNULLへ落とす。
+--
+-- 列一覧と値一覧は、集約の中ではORDER BYを使わずに畳む。INSERTは列名を明示するので、
+-- 必要なのは「2つの並びが互いに一致すること」だけで、ordinal_positionそのものでは
+-- ない。同じqueryの同じgroupを畳む2つのstring_aggは同じ入力順を見るため、順序が
+-- 何であれ対応は崩れない。集約の中のORDER BYはengineによって扱いが違うので使わず、
+-- 読みやすさのための並びだけを内側のsubqueryへ置く。
 --
 -- tableの順はforeign keyに従う（参照される側を先に出す）。取り込みは
 -- ON CONFLICT DO NOTHING のINSERTなので重複には強いが、参照先の行が無い状態の
@@ -56,20 +61,24 @@ depth AS (
   WHERE d.depth < 10
 ),
 tbl AS (
-  SELECT c.table_schema,
-    c.table_name,
-    string_agg(quote_ident(c.column_name), ', ' ORDER BY c.ordinal_position) AS cols,
-    string_agg(
-      'COALESCE(quote_literal(' || quote_ident(c.column_name) || '::text), ''NULL'')',
-      ' || '', '' || ' ORDER BY c.ordinal_position
-    ) AS vals
-  FROM information_schema.columns c
-    JOIN information_schema.tables t
-      ON t.table_schema = c.table_schema
-     AND t.table_name = c.table_name
-  WHERE c.table_schema = :'schema'
-    AND t.table_type = 'BASE TABLE'
-  GROUP BY c.table_schema, c.table_name
+  SELECT col.table_schema,
+    col.table_name,
+    string_agg(col.name, ', ') AS cols,
+    string_agg(col.value, ' || '', '' || ') AS vals
+  FROM (
+    SELECT c.table_schema,
+      c.table_name,
+      quote_ident(c.column_name) AS name,
+      'COALESCE(quote_literal(' || quote_ident(c.column_name) || '::text), ''NULL'')' AS value
+    FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON t.table_schema = c.table_schema
+       AND t.table_name = c.table_name
+    WHERE c.table_schema = :'schema'
+      AND t.table_type = 'BASE TABLE'
+    ORDER BY c.table_schema, c.table_name, c.ordinal_position
+  ) col
+  GROUP BY col.table_schema, col.table_name
 )
 SELECT 'SELECT '
     || quote_literal(
