@@ -224,8 +224,8 @@ getent passwd "$HOST_UID" >/dev/null ||
   printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
 install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
 export PGPASSFILE=/tmp/agentsview.pgpass
-# hostから渡したCA bundle。これが無いとlibpqは$HOME/.postgresql/root.crtを探し、
-# containerのsystem trust storeも空なので、接続前かverify時に失敗する。
+# hostが選んだCA bundle。postgres imageはca-certificatesを含まずsystem trust
+# storeが空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
 install -m 644 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview-ca.crt /tmp/agentsview-ca.crt
 export PGSSLROOTCERT=/tmp/agentsview-ca.crt
 umask 077
