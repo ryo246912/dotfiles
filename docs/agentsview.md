@@ -334,7 +334,7 @@ Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`
 
 `agentsview:cockroach:remote:dump`は`pg_dump`をcontainerの中で動かすため、host側の`PGSSLROOTCERT`はそのままでは効かない。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
 
-このtaskで`root certificate file "/tmp/.postgresql/root.crt" does not exist`または`SSL error: certificate verify failed`が出る場合は、hostで選ばれたCA bundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`と`test -r`で読めるpathかを確認する。
+CAの選択順は、URLの`sslrootcert`（private CAのcluster向け）→ `PGSSLROOTCERT` → 上記の既知のpathである。どれも読めない場合はdumpを始める前に止まり、何を設定すべきかを表示する。このtaskで`SSL error: certificate verify failed`が出る場合は、選ばれたbundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`でhost側の値を確認し、同じbundleで`psql`が通るかを試す。
 
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
 
