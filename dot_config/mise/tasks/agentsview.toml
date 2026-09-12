@@ -167,7 +167,13 @@ umask 077
 mkdir -p "$(dirname "$dump_path")"
 # dataをINSERT列へ書き出すSQL。local側（localdb.sh dump）と共通で、出力の形も
 # 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
-dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql}"
+# 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
+# repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
+dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-}"
+if [ -z "$dump_sql" ]; then
+  dump_sql="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql"
+  [ -r "$dump_sql" ] || dump_sql=dot_config/agentsview/dump-inserts.sql
+fi
 if [ ! -r "$dump_sql" ]; then
   echo "dump-inserts.sql が読めません: ${dump_sql}" >&2
   exit 1
@@ -176,7 +182,17 @@ fi
 # AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:remote:dump".env] にある。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
 export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
-"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+# source treeではexecutable_ prefixが付いたままなので、両方の名前を見る。
+prepare_auth="${AGENTSVIEW_PREPARE_DUMP_AUTH:-}"
+if [ -z "$prepare_auth" ]; then
+  prepare_auth="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth"
+  [ -f "$prepare_auth" ] || prepare_auth=dot_config/agentsview/executable_prepare-dump-auth
+fi
+if [ ! -f "$prepare_auth" ]; then
+  echo "prepare-dump-auth が見つかりません: ${prepare_auth}" >&2
+  exit 1
+fi
+"$prepare_auth"
 pg_url="$(cat "$auth_dir/url")"
 
 # postgres imageはca-certificatesを含まないため、container内のsystem trust storeも

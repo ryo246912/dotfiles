@@ -50,7 +50,7 @@ fi
 # serverに任せる。理由と仕組みは dump-inserts.sql のcommentと docs/agentsview.md にある。
 dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${config_dir}/dump-inserts.sql}"
 if [ ! -f "$dump_sql" ]; then
-  echo "dump-inserts.sql が見つかりません: ${config_dir}" >&2
+  echo "dump-inserts.sql が見つかりません: ${dump_sql}" >&2
   exit 1
 fi
 

@@ -306,7 +306,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    if not tables.isdigit():
+    # isdigitは全角などASCII以外の数字も真になり、tables == "0" の判定を
+    # すり抜ける。markerはcount(*)の出力なので、ASCIIの10進数だけを認める。
+    if re.fullmatch(r"[0-9]+", tables) is None:
         print(f"dump has a malformed completion marker: {tables[:40]}", file=sys.stderr)
         return 1
     if tables == "0":
