@@ -60,7 +60,7 @@ depth AS (
   FROM information_schema.tables t
   WHERE t.table_schema = :'schema' AND t.table_type = 'BASE TABLE'
   UNION ALL
-  SELECT e.child, d.depth + 1, d.path || e.child
+  SELECT e.child, d.depth + 1, array_append(d.path, e.child)
   FROM depth d
     JOIN edge e ON e.parent = d.table_name
   WHERE NOT (e.child = ANY (d.path))
