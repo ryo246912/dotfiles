@@ -1,2 +1,7 @@
+# Host 上でも commit / push / PR 操作と、その後の CI・レビュー対応を中断せず行えるようにする。
+# 信頼できないリポジトリでは Codex を起動しないこと。詳細は docs/codex.md を参照。
+approval_policy = "never"
+sandbox_mode    = "danger-full-access"
+
 [features]
 codex_hooks = true
