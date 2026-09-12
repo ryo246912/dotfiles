@@ -8,7 +8,9 @@ SQL文字列そのものを含みうるので、行のpatternではなく文字�
 追跡して区切る。
 
 dumpが途中で切れていないこと、schemaを実際に読めていることは完了markerで確認する。
-生成側は行が無くてもerrorにならないため、markerが唯一の手掛かりである。
+生成側は行が無くてもerrorにならないため、markerが唯一の手掛かりである。markerが無く、
+かつ非INSERT statementを含むdumpは旧いpg_dump形式のbackupとみなして通す（その形式は
+必ずSETやsetvalを含み、dump-inserts.sqlの出力はINSERTだけなので区別できる）。
 
 出力はBEGIN/COMMITで包んだ固定件数のchunkにする。CockroachDBは1 transactionで
 書ける量に上限があり、dump全体を1 transactionにすると失敗しうる。
@@ -89,10 +91,11 @@ class Splitter:
                 # PostgreSQLは識別子の続きにある$を識別子の一部として読む。
                 # pg_dumpは$を含む識別子をquoteするので実際のdumpには出ないが、
                 # public.foo$bar$bazの$bar$をdollar quoteの開始にはしない。
-                # $自身も識別子の続きなので文字classへ入れる。a$$$b$のように
-                # 直前が$だと、そこから先を誤ってdollar quoteとして読んでしまう。
+                # $自身も識別子の続きなので含める。a$$$b$のように直前が$だと、
+                # そこから先を誤ってdollar quoteとして読んでしまう。非ASCIIの
+                # 文字もquoteなしの識別子に使えるので、ASCIIに限定せずisalnumで見る。
                 prefix = "".join(self.buffer)[: -len(token)]
-                if re.search(r"[A-Za-z0-9_$]$", prefix):
+                if prefix and (prefix[-1].isalnum() or prefix[-1] in "_$"):
                     continue
                 self.escape = False
                 self.pending = token
@@ -281,6 +284,21 @@ def main() -> int:
         return 1
     # dumpが途中で切れていないこと、schemaを読めていることを確認する。dump生成は
     # 行が無くてもerrorにならないので、markerが唯一の手掛かりである。
+    #
+    # ただしmarkerが無いdumpをすべて拒むと、以前のplain pg_dump形式のbackupが
+    # 取り込めなくなる。その形式は必ずSETやsetvalのような非INSERT statementを含み、
+    # dump-inserts.sqlの出力はINSERTだけなので、skipしたstatementの有無で見分ける。
+    if tables is None and skipped:
+        print(
+            f"INSERT statements: {kept}"
+            f" (skipped {skipped} non-INSERT statements)",
+            file=sys.stderr,
+        )
+        print(
+            "note: no completion marker; read as a legacy plain pg_dump backup",
+            file=sys.stderr,
+        )
+        return 0
     if tables is None:
         print(
             "dump is missing the completion marker; it was truncated or not produced"

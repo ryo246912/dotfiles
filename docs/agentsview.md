@@ -1172,7 +1172,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 
 - 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
 - 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
-- tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、そこは名前順に落ちる。
+- tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、その分はbest effortである。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。
@@ -1181,7 +1181,9 @@ dumpの最後には完了markerが付く。
 -- agentsview-dump-complete tables=2
 ```
 
-schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:remote:dump`とimport filter（`dot_config/agentsview/batch-insert-dump`）の両方がerrorにして、空のbackupを残さない。
+schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:remote:dump`とimport filter（`dot_config/agentsview/executable_batch-insert-dump`、install後は`~/.config/agentsview/batch-insert-dump`）の両方がerrorにして、空のbackupを残さない。
+
+markerを持たないdumpのうち、`SET`や`setval`のような非INSERT statementを含むものは、以前のplain `pg_dump`形式のbackupとみなして取り込む（新しいdumpの出力はINSERTだけなので区別できる）。この経路ではtable数の確認ができないため、filterは注意書きを出す。
 
 #### localをCockroachDBに揃える理由と制約
 

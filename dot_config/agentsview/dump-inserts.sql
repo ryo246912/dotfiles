@@ -21,11 +21,12 @@ BEGIN;
 -- coerceされるので、pg_dumpの--column-insertsと同じ往復になる。NULLは
 -- quote_literalがNULLを返すため、COALESCEでSQLのNULLへ落とす。
 --
--- 列一覧と値一覧は、集約の中ではORDER BYを使わずに畳む。INSERTは列名を明示するので、
--- 必要なのは「2つの並びが互いに一致すること」だけで、ordinal_positionそのものでは
--- ない。同じqueryの同じgroupを畳む2つのstring_aggは同じ入力順を見るため、順序が
--- 何であれ対応は崩れない。集約の中のORDER BYはengineによって扱いが違うので使わず、
--- 読みやすさのための並びだけを内側のsubqueryへ置く。
+-- 列名はarray_aggで1度だけ畳み、列一覧と値一覧はどちらもその同じarrayから作る。
+-- INSERTは列名を明示するので、必要なのは「2つの並びが互いに一致すること」だけで、
+-- ordinal_positionそのものではない。集約を1つにすれば、集約の並びが何であっても
+-- 2つの並びは同じarrayに由来するため必ず一致する（集約が2つあると、SQLは両者が
+-- 同じ順で行を読むことを保証しない）。集約の中のORDER BYはengineによって扱いが
+-- 違うので使わず、読みやすさのための並びだけを内側のsubqueryへ置く。
 --
 -- tableの順はforeign keyに従う（参照される側を先に出す）。取り込みは
 -- ON CONFLICT DO NOTHING のINSERTなので重複には強いが、参照先の行が無い状態の
@@ -48,28 +49,30 @@ WITH RECURSIVE edge AS (
     AND child.relname <> parent.relname
 ),
 -- 参照先を持たないtableを深さ0とし、参照する側を1つ深くする。最長の経路を採るので
--- 親は必ず子より浅くなる。循環しているschemaでも止まるよう深さに上限を置く
--- （循環はどの順序でも解けないため、そこは名前順に落ちる）。
+-- 親は必ず子より浅くなる。深さに固定の上限は置かない（長い連鎖でchildが先に出て
+-- しまうため）。代わりに通ったtableをpathへ積み、既に通ったtableへは進まないことで
+-- 循環を止める。pathのtableは重複しないので、再帰はschemaのtable数で必ず終わる。
+-- 循環しているschemaはどの順序でも解けないので、その分はbest effortである。
 depth AS (
-  SELECT t.table_name::text AS table_name, 0 AS depth
+  SELECT t.table_name::text AS table_name,
+    0 AS depth,
+    ARRAY[t.table_name::text] AS path
   FROM information_schema.tables t
   WHERE t.table_schema = :'schema' AND t.table_type = 'BASE TABLE'
   UNION ALL
-  SELECT e.child, d.depth + 1
+  SELECT e.child, d.depth + 1, d.path || e.child
   FROM depth d
     JOIN edge e ON e.parent = d.table_name
-  WHERE d.depth < 10
+  WHERE NOT (e.child = ANY (d.path))
 ),
 tbl AS (
   SELECT col.table_schema,
     col.table_name,
-    string_agg(col.name, ', ') AS cols,
-    string_agg(col.value, ' || '', '' || ') AS vals
+    array_agg(col.name) AS names
   FROM (
     SELECT c.table_schema,
       c.table_name,
-      quote_ident(c.column_name) AS name,
-      'COALESCE(quote_literal(' || quote_ident(c.column_name) || '::text), ''NULL'')' AS value
+      quote_ident(c.column_name) AS name
     FROM information_schema.columns c
       JOIN information_schema.tables t
         ON t.table_schema = c.table_schema
@@ -80,12 +83,17 @@ tbl AS (
   ) col
   GROUP BY col.table_schema, col.table_name
 )
+-- 値一覧は、列名のarrayを「1つ前の値を閉じて次の値を開く」文字列で繋いで作る。
+-- 列名a, bなら次のようになる:
+--   || COALESCE(quote_literal(a::text), 'NULL') || ', ' || COALESCE(quote_literal(b::text), 'NULL')
 SELECT 'SELECT '
     || quote_literal(
          'INSERT INTO ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
-         || ' (' || tbl.cols || ') VALUES ('
+         || ' (' || array_to_string(tbl.names, ', ') || ') VALUES ('
        )
-    || ' || ' || tbl.vals
+    || ' || COALESCE(quote_literal('
+    || array_to_string(tbl.names, '::text), ''NULL'') || '', '' || COALESCE(quote_literal(')
+    || '::text), ''NULL'')'
     || ' || ' || quote_literal(') ON CONFLICT DO NOTHING;')
     || ' FROM ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
 FROM tbl
