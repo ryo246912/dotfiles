@@ -36,14 +36,35 @@
   gh pr merge は merge method を明示しないと対話プロンプトを出すため、
   選択肢ごとに --squash / --merge を決めてから渡す。
 */ -}}
+{{- /* fzf の header と確認プロンプトの両方で使う "owner/repo #番号"。 */ -}}
+{{- $target := printf "%s #%s" $repo $number -}}
+{{- /*
+  以下は「1行のシェルコマンド」を、シェルの文単位で分割して組み立てている。
+  バッククォートで囲われた行がリテラル、それ以外($target / $repo / $number)が
+  ghui のプレースホルダ({{repo}} / {{number}})へ展開される箇所。
+  行末の空白は連結時の区切りになるので消さないこと。
+*/ -}}
 {{- $editorCommand := list
-      `set -e; action=$(printf '%s\n' 'squash : squash して1コミットにまとめる (--squash --admin)' 'merge  : merge commit を作る (--merge --admin)' | fzf --header='`
-      $repo ` #` $number
-      `' --layout=reverse --border) || exit 0; case "${action%% *}" in squash) method=--squash;; merge) method=--merge;; *) exit 0;; esac; printf '`
-      $repo ` #` $number
-      ` を %s --admin でマージします。よろしいですか? [y/N] ' "$method"; read -r reply; case "$reply" in [yY]|[yY][eE][sS]) gh pr merge '`
-      $number `' --repo '` $repo
-      `' "$method" --admin;; *) echo '中止しました';; esac`
+      `set -e; `
+
+      `action=$(printf '%s\n' `
+      `'squash : squash して1コミットにまとめる (--squash --admin)' `
+      `'merge  : merge commit を作る (--merge --admin)' `
+      `| fzf --header='` $target `' --layout=reverse --border) || exit 0; `
+
+      `case "${action%% *}" in `
+      `squash) method=--squash;; `
+      `merge) method=--merge;; `
+      `*) exit 0;; `
+      `esac; `
+
+      `printf '` $target ` を %s --admin でマージします。よろしいですか? [y/N] ' "$method"; `
+      `read -r reply; `
+
+      `case "$reply" in `
+      `[yY]|[yY][eE][sS]) gh pr merge '` $number `' --repo '` $repo `' "$method" --admin;; `
+      `*) echo '中止しました';; `
+      `esac`
     | join "" -}}
 {{- /*
   repoPaths は置かない。editorCommand が {{repoPath}} を参照しなければ ghui は
