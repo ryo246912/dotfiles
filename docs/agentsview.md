@@ -332,7 +332,7 @@ test -r "$PGSSLROOTCERT"
 
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
-`agentsview:cockroach:remote:dump`は`pg_dump`をcontainerの中で動かすため、host側の`PGSSLROOTCERT`はそのままでは効かない。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
+`agentsview:cockroach:remote:dump`は`psql`をcontainerの中で動かすため、host側の`PGSSLROOTCERT`はそのままでは効かない。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
 
 CAの選択順は、URLの`sslrootcert`（private CAのcluster向け）→ `PGSSLROOTCERT` → 上記の既知のpathである。どれも読めない場合はdumpを始める前に止まり、何を設定すべきかを表示する。このtaskで`SSL error: certificate verify failed`が出る場合は、選ばれたbundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`でhost側の値を確認し、同じbundleで`psql`が通るかを試す。
 
@@ -1094,7 +1094,7 @@ CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCock
     ▼
 CockroachDB Cloud Basic
     │                                │
-    │ SELECTのみ（read role）        │ pg_dump（data-only／column INSERT、push role）
+    │ SELECTのみ（read role）        │ psql（data-only／column INSERT、push role）
     ▼                                ▼
 Cloud Run上のagentsview pg serve     local CockroachDB（single-nodeのcontainer）
                                      │
@@ -1157,6 +1157,31 @@ mise run agentsview:serve
 CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
 
 importはINSERTを一定件数ごとのtransactionへ分けて流す。CockroachDBは1 transactionで書ける量に上限があり、dump全体を1 transactionにすると大きなbackupで失敗するためである。件数は`AGENTSVIEW_IMPORT_CHUNK_ROWS`（既定500）で変えられる。途中で失敗した場合、そこまでのchunkはcommit済みで残るが、すべてのINSERTが`ON CONFLICT DO NOTHING`なので、原因を直して同じfileを再実行すればよい。
+
+#### dumpの作り方（`pg_dump`を使わない理由）
+
+`pg_dump`はCockroachDBをsupportしない（[cockroachdb/cockroach#20296](https://github.com/cockroachdb/cockroach/issues/20296)）。`--schema`を渡すと`pg_dump`はschemaを絞るために次のqueryを送るが、CockroachDBは修飾付きのcollation名を解釈できず`at or near ".": syntax error`になる。
+
+```text
+WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.default
+```
+
+この`COLLATE pg_catalog.default`は、`pg_dump` 12以降がserver versionを12以上と見たときに必ず付ける（PostgreSQLの`src/fe_utils/string_utils.c`）。optionでは外せないため、remote／localのどちらのdumpでも`pg_dump`は使えない。
+
+代わりに、行の組み立てはserver側に任せる。`dot_config/agentsview/dump-inserts.sql`が`information_schema`と`quote_ident`／`quote_literal`から「INSERT文を返すSELECT」を作り、`psql`の`\gexec`で実行する。同じfileをremote（`agentsview:cockroach:remote:dump`）とlocal（`agentsview:cockroach:local:dump`）の両方が読むので、出力の形も一致する。
+
+- 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
+- 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
+- tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、そこは名前順に落ちる。
+- schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
+
+dumpの最後には完了markerが付く。
+
+```text
+-- agentsview-dump-complete tables=2
+```
+
+schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:remote:dump`とimport filter（`dot_config/agentsview/batch-insert-dump`）の両方がerrorにして、空のbackupを残さない。
 
 #### localをCockroachDBに揃える理由と制約
 
