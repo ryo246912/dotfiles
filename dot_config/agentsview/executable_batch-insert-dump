@@ -83,8 +83,10 @@ class Splitter:
                 # PostgreSQLは識別子の続きにある$を識別子の一部として読む。
                 # pg_dumpは$を含む識別子をquoteするので実際のdumpには出ないが、
                 # public.foo$bar$bazの$bar$をdollar quoteの開始にはしない。
+                # $自身も識別子の続きなので文字classへ入れる。a$$$b$のように
+                # 直前が$だと、そこから先を誤ってdollar quoteとして読んでしまう。
                 prefix = "".join(self.buffer)[: -len(token)]
-                if re.search(r"[A-Za-z0-9_]$", prefix):
+                if re.search(r"[A-Za-z0-9_$]$", prefix):
                     continue
                 self.escape = False
                 self.pending = token
