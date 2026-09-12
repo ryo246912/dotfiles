@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# コンテナ再起動時には bind mount を張り直す必要がある。
+if ! bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"; then
+	echo "⚠️ プロジェクト生成物の分離に失敗しましたが、残りの起動処理を続行します" >&2
+fi
+
 # SSH configを生成（~/.config/ssh/configに配置）
 mkdir -p ~/.config/ssh
 SSH_CONFIG=~/.config/ssh/config
