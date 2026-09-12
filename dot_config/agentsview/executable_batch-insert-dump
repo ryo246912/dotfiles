@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-r"""pg_dumpのplain dumpから、CockroachDBへ流せるINSERT列だけを取り出す。
+r"""dumpから、CockroachDBへ流せるINSERT列だけを取り出す。
 
-`--data-only --column-inserts` のdumpには、INSERT以外にpsqlのmeta-command
-（`\restrict`）、`SET`、`SELECT pg_catalog.setval(...)` が混ざる。CockroachDBは
-これらを解釈できない、または対象のsequenceを持たないため、statement単位で
-INSERTだけを残す。dump中のsession本文はSQL文字列そのものを含みうるので、
-行のpatternではなく文字列literalとcommentを追跡して区切る。
+入力は dump-inserts.sql が作るINSERTの列で、末尾に完了markerが付く。過去の
+pg_dump形式（psqlのmeta-command `\restrict`、`SET`、`SELECT pg_catalog.setval(...)`
+が混ざる）も読めるよう、statement単位でINSERTだけを残す。dump中のsession本文は
+SQL文字列そのものを含みうるので、行のpatternではなく文字列literalとcommentを
+追跡して区切る。
+
+dumpが途中で切れていないこと、schemaを実際に読めていることは完了markerで確認する。
+生成側は行が無くてもerrorにならないため、markerが唯一の手掛かりである。
 
 出力はBEGIN/COMMITで包んだ固定件数のchunkにする。CockroachDBは1 transactionで
 書ける量に上限があり、dump全体を1 transactionにすると失敗しうる。
@@ -16,6 +19,9 @@ import re
 import sys
 
 CHUNK_ENV = "AGENTSVIEW_IMPORT_CHUNK_ROWS"
+# dump-inserts.sql が最後に置くmarker。dumpが最後まで書かれたことと、schemaを
+# 実際に読めたことを示す。
+MARKER = "-- agentsview-dump-complete tables="
 TOKEN = re.compile(r"'|\"|--|/\*|;|\$[A-Za-z_][A-Za-z_0-9]*\$|\$\$")
 
 
@@ -216,8 +222,13 @@ def main() -> int:
     skipped = 0
     in_chunk = 0
     lineno = 0
+    tables = None
     out.write("SET client_encoding = 'UTF8';\n")
     for lineno, line in enumerate(sys.stdin, start=1):
+        # 完了markerはstatementではないので、statementへ渡さず値だけ覚える。
+        if not splitter.pending and line.startswith(MARKER):
+            tables = line[len(MARKER) :].strip()
+            continue
         # psqlのmeta-command（`\restrict`）はSQLではないので、statement扱いしない。
         # 直前のstatementを閉じた後のcommentだけが溜まっている状態でも捨てられるよう、
         # bufferはcommentを除いて空かどうかで判定する。
@@ -268,7 +279,29 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    print(f"INSERT statements: {kept} (skipped {skipped} non-INSERT statements)", file=sys.stderr)
+    # dumpが途中で切れていないこと、schemaを読めていることを確認する。dump生成は
+    # 行が無くてもerrorにならないので、markerが唯一の手掛かりである。
+    if tables is None:
+        print(
+            "dump is missing the completion marker; it was truncated or not produced"
+            " by dump-inserts.sql",
+            file=sys.stderr,
+        )
+        return 1
+    if not tables.isdigit():
+        print(f"dump has a malformed completion marker: {tables[:40]}", file=sys.stderr)
+        return 1
+    if tables == "0":
+        print(
+            "dump covered 0 tables; check the schema name and that the role can read it",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"INSERT statements: {kept} from {tables} tables"
+        f" (skipped {skipped} non-INSERT statements)",
+        file=sys.stderr,
+    )
     return 0
 
 

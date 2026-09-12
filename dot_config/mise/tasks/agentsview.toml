@@ -162,14 +162,16 @@ cleanup_dump() {
 }
 trap cleanup_dump EXIT
 
-# bind mountするdirectoryはbackup_dirではなくdump_path自身から取る。
-# AGENTSVIEW_DUMP_PATHがbackup_dirの外を指した場合に、basenameだけを
-# backup_dirへ書いて「作られなかった」と報告してしまうためである。
+# dumpにはsession本文が入るので、所有者だけが読めるようにする（localdb.shと同じ）。
+umask 077
 mkdir -p "$(dirname "$dump_path")"
-dump_dir="$(cd "$(dirname "$dump_path")" && pwd -P)"
-dump_name="$(basename "$dump_path")"
-# 以降のtest -sとcleanupが、containerの書き先と同じfileを指すようにする。
-dump_path="${dump_dir}/${dump_name}"
+# dataをINSERT列へ書き出すSQL。local側（localdb.sh dump）と共通で、出力の形も
+# 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
+dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql}"
+if [ ! -r "$dump_sql" ]; then
+  echo "dump-inserts.sql が読めません: ${dump_sql}" >&2
+  exit 1
+fi
 # auth_dirとPG URLはこのtask内で決まる値なのでexportする。静的な
 # AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:remote:dump".env] にある。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
@@ -211,31 +213,39 @@ fi
 # pgpassのmountで既に使えている。
 cp "$ca_bundle" "$auth_dir/ca.crt"
 
-docker run --rm \
+# psqlはstdoutへ書くので、fileはhost側のredirectで作る。containerへ出力先を
+# mountしないため、uidを合わせる必要もない。PGSSLROOTCERTが指すのはmountした
+# CA bundleで、postgres imageはca-certificatesを含まずsystem trust storeが
+# 空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
+docker run --rm --interactive \
   --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
   --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
-  --volume "$dump_dir:/backup" \
-  --env HOST_GID="$(id -g)" \
-  --env HOST_UID="$(id -u)" \
+  --env PGPASSFILE=/run/agentsview.pgpass \
+  --env PGSSLROOTCERT=/run/agentsview-ca.crt \
   postgres:17 \
-  sh -c '
-set -eu
-getent passwd "$HOST_UID" >/dev/null ||
-  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
-install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
-export PGPASSFILE=/tmp/agentsview.pgpass
-# hostが選んだCA bundle。postgres imageはca-certificatesを含まずsystem trust
-# storeが空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
-install -m 644 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview-ca.crt /tmp/agentsview-ca.crt
-export PGSSLROOTCERT=/tmp/agentsview-ca.crt
-umask 077
-exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
-' -- \
-    --dbname="$pg_url" --schema=agentsview --data-only --column-inserts \
-    --on-conflict-do-nothing --no-owner --no-privileges --file="/backup/$dump_name"
+  psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
+    --tuples-only --no-align --quiet --file=- \
+  <"$dump_sql" >"$dump_path"
 
-test -s "$dump_path"
-echo "CockroachDB AgentsView data export: $dump_path"
+# dumpが最後まで書けたこと、schemaを実際に読めたことを末尾のmarkerで確認する。
+# 生成SQLは対象tableが0件でもerrorにならないので（information_schemaは権限で
+# filterされる）、markerだけが手掛かりである。restoreはfilterが同じmarkerを見るが、
+# このtaskを単体で実行した場合はここで気付けないと空のbackupが残る。
+marker="$(tail -n 1 "$dump_path")"
+tables="${marker#-- agentsview-dump-complete tables=}"
+case "$tables" in
+  "$marker" | '' | *[!0-9]*)
+    echo "dumpが完了markerで終わっていません: ${dump_path}" >&2
+    exit 1
+    ;;
+  0)
+    echo "dumpに1つもtableが入っていません: ${dump_path}" >&2
+    echo "  schema名（agentsview）と、roleがtableを読めることを確認してください。" >&2
+    exit 1
+    ;;
+esac
+
+echo "CockroachDB AgentsView data export: $dump_path (${tables} tables)"
 '''
 shell = "bash -c"
 

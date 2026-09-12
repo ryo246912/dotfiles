@@ -35,7 +35,7 @@ services:
     volumes:
       - agentsview-cockroach:/cockroach/cockroach-data
 
-  # psql／pg_dumpの供給元。CockroachDBのimageにはclient toolが入っていない。
+  # psqlの供給元。CockroachDBのimageにはclient toolが入っていない。
   # scripts/localdb.sh はこのserviceを起動せず、imageとnetworkの指定だけを借りて
   # docker runで実行する（compose runの進捗表示がquery結果のparseを壊さないように
   # するため）。network_modeがcockroach containerのnetnsを指すので、client側からは

@@ -46,6 +46,14 @@ if [ ! -f "$filter" ]; then
   exit 1
 fi
 
+# dataをINSERT列へ書き出すSQL。pg_dumpはCockroachDBを扱えないので、行の組み立ては
+# serverに任せる。理由と仕組みは dump-inserts.sql のcommentと docs/agentsview.md にある。
+dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${config_dir}/dump-inserts.sql}"
+if [ ! -f "$dump_sql" ]; then
+  echo "dump-inserts.sql が見つかりません: ${config_dir}" >&2
+  exit 1
+fi
+
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
 database="${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}"
 db_user="${AGENTSVIEW_LOCAL_CRDB_USER:-root}"
@@ -60,7 +68,7 @@ export AGENTSVIEW_LOCAL_CRDB_HTTP_PORT="${AGENTSVIEW_LOCAL_CRDB_HTTP_PORT:-18080
 mkdir -p "$backup_dir"
 
 # hostから見たURL（composeがpublishしたport）と、container netnsから見たURL
-# （container内のport）は別物である。agentsview CLIはhost側、psql／pg_dumpは
+# （container内のport）は別物である。agentsview CLIはhost側、psqlは
 # container側を使う。ここを混同すると、portを既定から変えたときだけ壊れる。
 host_url="postgres://${db_user}@127.0.0.1:${host_port}/${database}?sslmode=disable"
 container_url="postgres://${db_user}@127.0.0.1:26257/${database}?sslmode=disable"
@@ -85,7 +93,7 @@ on_exit() {
 }
 trap on_exit EXIT
 
-# psql／pg_dumpのimage pinはcompose.yamlのpgtools serviceにある（renovateが更新
+# psqlのimage pinはcompose.yamlのpgtools serviceにある（renovateが更新
 # する）。値の解決だけを借りて、起動は docker run で行う。`config --images pgtools`
 # は依存service（network_mode先のcockroach）のimageも並べて返し、順序も保証され
 # ないため、service名で引けるJSONから読む。
@@ -99,7 +107,7 @@ if [ -z "$pgtools_image" ]; then
   exit 1
 fi
 
-# CockroachDBのimageにclient toolが無いため、pgtools imageをcockroach containerの
+# CockroachDBのimageにpsqlが無いため、pgtools imageをcockroach containerの
 # netnsで動かす。docker composeのrunは進捗をstdoutへ出しうるため、query結果を
 # parseする用途では docker run を使う。
 pgtools() {
@@ -119,6 +127,12 @@ psql_local() {
 # 値をparseするquery用。header・整列・行数表示を外す。
 query_local() {
   psql_local --no-align --tuples-only --quiet --field-separator='|' "$@"
+}
+
+# local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
+# （agentsview:cockroach:remote:dump）と共通で、出力の形も同じである。
+dump_inserts_local() {
+  psql_local --tuples-only --no-align --quiet --set=schema="$schema" --file=- <"$dump_sql"
 }
 
 require_agentsview() {
@@ -367,9 +381,7 @@ case "$mode" in
     dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.sql"
     # schema DDLは持ち出さない。CockroachDBのDDL／権限／sequenceをそのまま別の
     # databaseへ流せる保証はなく、schemaは常に現在のAgentsViewが作るためである。
-    if ! pgtools pg_dump --dbname="$container_url" --schema="$schema" \
-      --data-only --column-inserts --on-conflict-do-nothing \
-      --no-owner --no-privileges >"$dump_path"; then
+    if ! dump_inserts_local >"$dump_path"; then
       rm -f "$dump_path"
       exit 1
     fi
