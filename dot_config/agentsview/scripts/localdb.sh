@@ -55,6 +55,9 @@ if [ ! -f "$dump_sql" ]; then
 fi
 
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
+# psqlにcursorで結果を取らせる件数。0にするとcursorを使わず全件をclient memoryへ
+# 溜めるため、dumpの生成では0にしない（sessionの本文が入るので大きくなる）。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
 database="${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}"
 db_user="${AGENTSVIEW_LOCAL_CRDB_USER:-root}"
 host_port="${AGENTSVIEW_LOCAL_CRDB_PORT:-26257}"
@@ -132,7 +135,8 @@ query_local() {
 # local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
 # （agentsview:cockroach:remote:dump）と共通で、出力の形も同じである。
 dump_inserts_local() {
-  psql_local --tuples-only --no-align --quiet --set=schema="$schema" --file=- <"$dump_sql"
+  psql_local --tuples-only --no-align --quiet --set=schema="$schema" \
+    --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
 }
 
 require_agentsview() {
@@ -277,6 +281,16 @@ import_sql_file() {
   temp_counts_after="$(mktemp)"
 
   row_counts >"$temp_counts_before"
+
+  # 先に1度読み切って、markerと切り詰めを確認する。filterの出力を直接psqlへ繋ぐと、
+  # 最後まで読んでから出るerror（markerが無い等）の時点で、既に手前のchunkが
+  # commit済みになってしまう。読むだけなのでDBへは触らない。成功時の要約は
+  # 取り込み時にも出るので、失敗したときだけ表示する。
+  local check
+  if ! check="$("$filter" <"$1" 2>&1 >/dev/null)"; then
+    printf '%s\n' "$check" >&2
+    return 1
+  fi
 
   # CockroachDBは1 transactionで書ける量に上限があるため、filterがBEGIN/COMMITで
   # chunkへ割る。途中で失敗するとそこまでのchunkはcommit済みで残るが、INSERTは

@@ -1158,6 +1158,8 @@ CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary
 
 importはINSERTを一定件数ごとのtransactionへ分けて流す。CockroachDBは1 transactionで書ける量に上限があり、dump全体を1 transactionにすると大きなbackupで失敗するためである。件数は`AGENTSVIEW_IMPORT_CHUNK_ROWS`（既定500）で変えられる。途中で失敗した場合、そこまでのchunkはcommit済みで残るが、すべてのINSERTが`ON CONFLICT DO NOTHING`なので、原因を直して同じfileを再実行すればよい。
 
+取り込みの前に、同じfilterで読み切るだけのpassを1度走らせる。dumpが途中で切れている場合、filterの出力をそのままpsqlへ繋ぐと、切れていると分かる時点では手前のchunkが既にcommit済みになってしまうためである。この検証passはDBへ触らないので、壊れたdumpでは1行も書き込まれない。
+
 #### dumpの作り方（`pg_dump`を使わない理由）
 
 `pg_dump`はCockroachDBをsupportしない（[cockroachdb/cockroach#20296](https://github.com/cockroachdb/cockroach/issues/20296)）。`--schema`を渡すと`pg_dump`はschemaを絞るために次のqueryを送るが、CockroachDBは修飾付きのcollation名を解釈できず`at or near ".": syntax error`になる。
@@ -1173,6 +1175,8 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
 - 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
 - tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、その分はbest effortである。
+- 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。
+- `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられる。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。

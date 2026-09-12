@@ -11,7 +11,12 @@
 -- 列を増やしても古いdumpが壊れない。
 --
 -- 呼び出し方（psqlの:'schema'はclient側で置換される）:
---   psql --set=schema=agentsview --tuples-only --no-align --quiet --file=- < このfile
+--   psql --set=schema=agentsview --set=FETCH_COUNT=1000 \
+--     --tuples-only --no-align --quiet --file=- < このfile
+--
+-- FETCH_COUNTはpsqlにcursorで取らせる設定で、これが無いと生成したINSERT文を
+-- すべてclient memoryへ溜めてから書き出す。session本文を含む大きなtableでは
+-- psqlが先に音を上げるため、呼び出し側で必ず渡す。
 --
 -- 単一のtransactionで読むので、tableをまたいで一貫したsnapshotになる。
 BEGIN;
@@ -79,6 +84,10 @@ tbl AS (
        AND t.table_name = c.table_name
     WHERE c.table_schema = :'schema'
       AND t.table_type = 'BASE TABLE'
+      -- 生成列（GENERATED ALWAYS AS ... STORED）へ値を入れるINSERTはerrorになる。
+      -- NULLを除外に含めないのは、is_generatedを埋めないengineで全列が消えて
+      -- 空のdumpになるのを避けるためである。
+      AND COALESCE(c.is_generated, 'NEVER') <> 'ALWAYS'
     ORDER BY c.table_schema, c.table_name, c.ordinal_position
   ) col
   GROUP BY col.table_schema, col.table_name
