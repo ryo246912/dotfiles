@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+r"""dumpから、CockroachDBへ流せるINSERT列だけを取り出す。
+
+入力は dump-inserts.sql が作るINSERTの列で、末尾に完了markerが付く。過去の
+pg_dump形式（psqlのmeta-command `\restrict`、`SET`、`SELECT pg_catalog.setval(...)`
+が混ざる）も読めるよう、statement単位でINSERTだけを残す。dump中のsession本文は
+SQL文字列そのものを含みうるので、行のpatternではなく文字列literalとcommentを
+追跡して区切る。
+
+dumpが途中で切れていないこと、schemaを実際に読めていることは完了markerで確認する。
+生成側は行が無くてもerrorにならないため、markerが唯一の手掛かりである。markerが無く、
+かつ非INSERT statementを含むdumpは旧いpg_dump形式のbackupとみなして通す（その形式は
+必ずSETやsetvalを含み、dump-inserts.sqlの出力はINSERTだけなので区別できる）。
+
+出力はBEGIN/COMMITで包んだ固定件数のchunkにする。CockroachDBは1 transactionで
+書ける量に上限があり、dump全体を1 transactionにすると失敗しうる。
+"""
+
+import os
+import re
+import sys
+
+CHUNK_ENV = "AGENTSVIEW_IMPORT_CHUNK_ROWS"
+# dump-inserts.sql が最後に置くmarker。dumpが最後まで書かれたことと、schemaを
+# 実際に読めたことを示す。
+MARKER = "-- agentsview-dump-complete tables="
+TOKEN = re.compile(r"'|\"|--|/\*|;|\$[A-Za-z_][A-Za-z_0-9]*\$|\$\$")
+
+
+def chunk_size() -> int:
+    """1 transactionへ入れるINSERTの件数を環境変数から読む。"""
+
+    raw = os.environ.get(CHUNK_ENV, "500")
+    try:
+        value = int(raw)
+    except ValueError:
+        raise SystemExit(f"{CHUNK_ENV} must be a positive integer: {raw}") from None
+    if value < 1:
+        raise SystemExit(f"{CHUNK_ENV} must be a positive integer: {raw}")
+    return value
+
+
+class Splitter:
+    """dumpをstatementへ切り分ける。stateは行をまたいで持続する。"""
+
+    def __init__(self) -> None:
+        """まだ何も読んでいない状態を作る。"""
+
+        self.buffer: list[str] = []
+        # None以外のときは、その閉じtokenまでliteral／comment内にいる。
+        self.pending = ""
+        self.escape = False
+        self.block_depth = 0
+
+    def feed(self, line: str):
+        """1行を読み、完成したstatementをyieldする。"""
+
+        pos = 0
+        while pos < len(line):
+            if self.pending:
+                pos = self._consume_pending(line, pos)
+                continue
+            match = TOKEN.search(line, pos)
+            if match is None:
+                self.buffer.append(line[pos:])
+                return
+            self.buffer.append(line[pos : match.start()])
+            token = match.group(0)
+            pos = match.end()
+            if token == ";":
+                self.buffer.append(";")
+                statement = "".join(self.buffer)
+                self.buffer = []
+                yield statement
+                continue
+            self.buffer.append(token)
+            if token == "'":
+                # 直前がE（識別子の一部ではない）なら、backslash escapeが有効になる。
+                prefix = "".join(self.buffer)[:-1]
+                self.escape = bool(re.search(r"(?:^|[^A-Za-z_0-9$])[eE]$", prefix))
+                self.pending = "'"
+            elif token == '"':
+                self.escape = False
+                self.pending = '"'
+            elif token == "--":
+                self.pending = "\n"
+            elif token == "/*":
+                self.block_depth = 1
+                self.pending = "*/"
+            else:
+                # PostgreSQLは識別子の続きにある$を識別子の一部として読む。
+                # pg_dumpは$を含む識別子をquoteするので実際のdumpには出ないが、
+                # public.foo$bar$bazの$bar$をdollar quoteの開始にはしない。
+                # $自身も識別子の続きなので含める。a$$$b$のように直前が$だと、
+                # そこから先を誤ってdollar quoteとして読んでしまう。非ASCIIの
+                # 文字もquoteなしの識別子に使えるので、ASCIIに限定せずisalnumで見る。
+                prefix = "".join(self.buffer)[: -len(token)]
+                if prefix and (prefix[-1].isalnum() or prefix[-1] in "_$"):
+                    continue
+                self.escape = False
+                self.pending = token
+
+    def _consume_pending(self, line: str, pos: int) -> int:
+        """literal／comment内を、閉じtokenまで読み進める。"""
+
+        if self.pending == "\n":
+            self.buffer.append(line[pos:])
+            self.pending = ""
+            return len(line)
+        if self.pending == "*/":
+            return self._consume_block_comment(line, pos)
+        closer = self.pending
+        index = pos
+        while True:
+            if self.escape and closer == "'":
+                found = self._find_quote_with_escapes(line, index)
+            else:
+                found = line.find(closer, index)
+            if found < 0:
+                self.buffer.append(line[pos:])
+                return len(line)
+            end = found + len(closer)
+            if closer in {"'", '"'} and line.startswith(closer * 2, found):
+                # '' と "" はliteral内のescapeなので、閉じtokenではない。
+                index = found + 2
+                continue
+            self.buffer.append(line[pos:end])
+            self.pending = ""
+            self.escape = False
+            return end
+
+    def _consume_block_comment(self, line: str, pos: int) -> int:
+        """入れ子を数えながらblock commentを読む。"""
+
+        index = pos
+        while self.block_depth:
+            opening = line.find("/*", index)
+            closing = line.find("*/", index)
+            if closing < 0 and opening < 0:
+                self.buffer.append(line[pos:])
+                return len(line)
+            if opening >= 0 and (closing < 0 or opening < closing):
+                self.block_depth += 1
+                index = opening + 2
+                continue
+            self.block_depth -= 1
+            index = closing + 2
+        self.buffer.append(line[pos:index])
+        self.pending = ""
+        return index
+
+    @staticmethod
+    def _find_quote_with_escapes(line: str, start: int) -> int:
+        """E'...' 内で、backslash escapeを飛ばして次の ' を探す。"""
+
+        index = start
+        while index < len(line):
+            char = line[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == "'":
+                return index
+            index += 1
+        return -1
+
+    def tail(self) -> str:
+        """statementとして閉じきらずに残っている文字列を返す。"""
+
+        return "".join(self.buffer)
+
+
+def strip_leading_noise(text: str) -> str:
+    """先頭のcommentと空白を落として、statement本体の先頭を返す。"""
+
+    while True:
+        text = text.lstrip()
+        if text.startswith("--"):
+            newline = text.find("\n")
+            text = "" if newline < 0 else text[newline + 1 :]
+            continue
+        if text.startswith("/*"):
+            # block commentは入れ子になれるので、深さを数えて閉じ位置を探す。
+            # 閉じていない場合は捨てずにそのまま返す。空を返すと、fileが
+            # comment途中で切れたdumpを「残りは無い」と誤って扱ってしまう。
+            depth = 1
+            index = 2
+            while depth and index < len(text):
+                opening = text.find("/*", index)
+                closing = text.find("*/", index)
+                if closing < 0:
+                    return text
+                if 0 <= opening < closing:
+                    depth += 1
+                    index = opening + 2
+                    continue
+                depth -= 1
+                index = closing + 2
+            if depth:
+                return text
+            text = text[index:]
+            continue
+        return text
+
+
+def pending_kind(pending: str) -> str:
+    """閉じ待ちのtokenを、dump本文を晒さない呼び名へ変える。"""
+
+    if pending == "'":
+        return "string literal"
+    if pending == '"':
+        return "quoted identifier"
+    if pending == "*/":
+        return "block comment"
+    return "dollar-quoted string"
+
+
+def main() -> int:
+    """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
+
+    limit = chunk_size()
+    splitter = Splitter()
+    out = sys.stdout
+    kept = 0
+    skipped = 0
+    # meta-commandを除いた、SQL statementとしてskipした数。旧形式の判定に使う。
+    skipped_statements = 0
+    in_chunk = 0
+    lineno = 0
+    tables = None
+    out.write("SET client_encoding = 'UTF8';\n")
+    for lineno, line in enumerate(sys.stdin, start=1):
+        # 完了markerはstatementではないので、statementへ渡さず値だけ覚える。
+        if not splitter.pending and line.startswith(MARKER):
+            tables = line[len(MARKER) :].strip()
+            continue
+        # psqlのmeta-command（`\restrict`）はSQLではないので、statement扱いしない。
+        # 直前のstatementを閉じた後のcommentだけが溜まっている状態でも捨てられるよう、
+        # bufferはcommentを除いて空かどうかで判定する。
+        if (
+            not splitter.pending
+            and line.startswith("\\")
+            and not strip_leading_noise(splitter.tail())
+        ):
+            splitter.buffer = []
+            skipped += 1
+            continue
+
+        for statement in splitter.feed(line):
+            body = strip_leading_noise(statement)
+            if body[:6].upper() != "INSERT":
+                if body:
+                    skipped += 1
+                    skipped_statements += 1
+                continue
+            if in_chunk == 0:
+                out.write("BEGIN;\n")
+            out.write(body.strip())
+            out.write("\n")
+            kept += 1
+            in_chunk += 1
+            if in_chunk >= limit:
+                out.write("COMMIT;\n")
+                in_chunk = 0
+    if in_chunk:
+        out.write("COMMIT;\n")
+    # 文字列literal・dollar quote・block commentの途中でfileが終わっていたら、
+    # 切り詰められたdumpである。取り込み済みのchunkだけで成功扱いにしないよう止める。
+    # 行comment（pendingが改行）は除く。dataを持たないうえ、最後の行がちょうど
+    # `--` で改行なしに終わるdumpは正常であり、閉じ待ちのまま残るためである。
+    #
+    # error messageにdump本文は入れない。dumpにはsession本文が入るため、terminalや
+    # 収集logへ漏らさないよう、出すのはparserの状態と位置だけにする。
+    if splitter.pending and splitter.pending != "\n":
+        print(
+            f"dump ends inside an unterminated {pending_kind(splitter.pending)}"
+            f" (after line {lineno})",
+            file=sys.stderr,
+        )
+        return 1
+    leftover = strip_leading_noise(splitter.tail()).strip()
+    if leftover:
+        print(
+            f"unterminated statement at end of dump: {len(leftover)} characters"
+            f" after the last ';' (after line {lineno})",
+            file=sys.stderr,
+        )
+        return 1
+    # dumpが途中で切れていないこと、schemaを読めていることを確認する。dump生成は
+    # 行が無くてもerrorにならないので、markerが唯一の手掛かりである。
+    #
+    # ただしmarkerが無いdumpをすべて拒むと、以前のplain pg_dump形式のbackupが
+    # 取り込めなくなる。その形式は必ずSETやsetvalのような非INSERT statementを含み、
+    # dump-inserts.sqlの出力はINSERTだけなので、skipしたstatementの有無で見分ける。
+    # 数えるのはSQL statementだけにする。psqlのmeta-command（\restrict）はSQLでは
+    # なく、それだけを根拠にすると切り詰められた新形式のdumpを旧形式と誤認しうる。
+    if tables is None and skipped_statements:
+        print(
+            f"INSERT statements: {kept}"
+            f" (skipped {skipped} non-INSERT statements)",
+            file=sys.stderr,
+        )
+        print(
+            "note: no completion marker; read as a legacy plain pg_dump backup",
+            file=sys.stderr,
+        )
+        return 0
+    if tables is None:
+        print(
+            "dump is missing the completion marker; it was truncated or not produced"
+            " by dump-inserts.sql",
+            file=sys.stderr,
+        )
+        return 1
+    # isdigitは全角などASCII以外の数字も真になり、tables == "0" の判定を
+    # すり抜ける。markerはcount(*)の出力なので、ASCIIの10進数だけを認める。
+    if re.fullmatch(r"[0-9]+", tables) is None:
+        print(f"dump has a malformed completion marker: {tables[:40]}", file=sys.stderr)
+        return 1
+    if tables == "0":
+        print(
+            "dump covered 0 tables; check the schema name and that the role can read it",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"INSERT statements: {kept} from {tables} tables"
+        f" (skipped {skipped} non-INSERT statements)",
+        file=sys.stderr,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -7,333 +7,98 @@ printf 'AGENTSVIEW_AUTH_TOKEN=%s\n' "$(openssl rand -base64 32)"
 printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 '''
 
-["agentsview:pg:local:up"]
-description = "Start the local AgentsView PostgreSQL container"
-run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" up -d --wait postgres'
-
-["agentsview:pg:local:down"]
-description = "Stop the local AgentsView PostgreSQL container"
-run         = 'docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" down'
-
-["agentsview:pg:local:push"]
-depends     = ["agentsview:pg:local:up"]
-description = "Incrementally push local AgentsView sessions into the local Docker PostgreSQL database"
-run         = 'agentsview pg push'
-
-["agentsview:pg:local:push".env]
-AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
-AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
-AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
-AGENTSVIEW_PG_SCHEMA         = "agentsview"
-AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
-
-["agentsview:pg:local:repair-sequences"]
-# restore／merge系のtaskは、dump内の `SELECT pg_catalog.setval` を削って
-# 明示id付きINSERTだけを流す。他machineのdumpのsequence値でlocalのsequenceを
-# 巻き戻さないためである。その結果sequenceが実データのidより遅れるので、
-# import後にここで前進だけさせる。放置すると次のINSERTがduplicate keyで落ちる。
-# pg:local:restore と cockroach:remote-local:dump の2箇所から呼ぶ共通処理。
-description = "Advance local AgentsView PostgreSQL sequences without rewinding them"
+# local databaseもCockroachDBである。container定義は
+# dot_config/agentsview/compose.yaml、task本体は
+# dot_config/agentsview/scripts/localdb.sh で、ここはmode指定だけを行う。
+["agentsview:cockroach:local:up"]
+description = "Start the local AgentsView CockroachDB container"
 run = '''
 set -euo pipefail
-compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 --quiet' <<'SQL'
-DO $$
-DECLARE
-  seq record;
-  max_id bigint;
-  cur_val bigint;
-  cur_called boolean;
-BEGIN
-  FOR seq IN
-    SELECT s.oid::regclass AS seq_name, t.relname AS table_name, a.attname AS column_name
-    FROM pg_class s
-    JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a', 'i')
-    JOIN pg_class t ON t.oid = d.refobjid
-    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
-    JOIN pg_namespace n ON n.oid = s.relnamespace
-    WHERE s.relkind = 'S' AND n.nspname = 'agentsview'
-  LOOP
-    EXECUTE format('SELECT COALESCE(max(%I), 0) FROM agentsview.%I', seq.column_name, seq.table_name)
-      INTO max_id;
-    EXECUTE format('SELECT last_value, is_called FROM %s', seq.seq_name)
-      INTO cur_val, cur_called;
-    IF max_id > cur_val OR (max_id = cur_val AND NOT cur_called) THEN
-      PERFORM setval(seq.seq_name, max_id, true);
-    END IF;
-  END LOOP;
-END
-$$;
-SQL
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" up "$@"
 '''
 shell = "bash -c"
 
-["agentsview:pg:local:restore"]
-description = "Restore an AgentsView PostgreSQL dump into the local Docker database"
+["agentsview:cockroach:local:down"]
+description = "Stop the local AgentsView CockroachDB container"
 run = '''
-set -eu
-
-backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${AGENTSVIEW_RESTORE_DUMP:-}"
-if [ -z "$dump_path" ]; then
-  dump_path="$({ find "$backup_dir" -maxdepth 1 -type f -name '*.dump' -print 2>/dev/null || true; } |
-    sort -r |
-    fzf --prompt='AgentsView dump> ' --height=40% --reverse || true)"
-fi
-if [ -z "$dump_path" ]; then
-  echo "No dump selected from: $backup_dir" >&2
-  exit 1
-fi
-# task は mise の config root（global config 経由なら $HOME）で実行されるため、
-# repository 内の相対 path では解決できない。chezmoi が配置した path を既定にする。
-compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
-
-if [ ! -f "$dump_path" ]; then
-  echo "Dump file not found: $dump_path" >&2
-  exit 1
-fi
-
-docker compose -f "$compose_file" up -d --wait postgres
-# backupを取り込む前に、移行先schemaを初期化・migrationし、
-# このmachineですでに収集したsessionを保持する。
-mise run agentsview:pg:local:push
-
-restore_db="agentsview_restore_$$"
-counts_before="$(mktemp)"
-counts_after="$(mktemp)"
-columns_backup="$(mktemp)"
-columns_local="$(mktemp)"
-cleanup_restore_db() {
-  docker compose -f "$compose_file" exec -T postgres \
-    sh -c 'dropdb --username="$POSTGRES_USER" --if-exists --force "$1"' -- "$restore_db" \
-    >/dev/null 2>&1 || true
-  rm -f "$counts_before" "$counts_after" "$columns_backup" "$columns_local"
-}
-trap cleanup_restore_db EXIT
-
-# 取り込み結果は「どのtableが何行増えたか」で確認したいので、merge前後の行数を測る。
-# table一覧はschemaから引き、count(*)はquery_to_xmlで1 queryにまとめる。
-row_counts() {
-  docker compose -f "$compose_file" exec -T postgres \
-    sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-      --no-align --tuples-only --quiet' <<'SQL'
-SELECT c.relname || ' ' ||
-  (xpath(
-    '/row/c/text()',
-    query_to_xml(format('SELECT count(*) AS c FROM agentsview.%I', c.relname), false, true, '')
-  ))[1]::text
-FROM pg_class c
-JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = 'agentsview' AND c.relkind = 'r'
-ORDER BY c.relname;
-SQL
-}
-
-# 引数が空なら local database を見る。schema差はmerge失敗の主因なので比較できるようにする。
-schema_columns() {
-  docker compose -f "$compose_file" exec -T postgres \
-    sh -c 'psql --username="$POSTGRES_USER" --dbname="${1:-$POSTGRES_DB}" --set=ON_ERROR_STOP=1 \
-      --no-align --tuples-only --quiet' -- "$1" <<'SQL'
-SELECT table_name || '.' || column_name || ' ' || data_type
-FROM information_schema.columns
-WHERE table_schema = 'agentsview'
-ORDER BY 1;
-SQL
-}
-
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'createdb --username="$POSTGRES_USER" "$1"' -- "$restore_db"
-
-# schema指定のdumpにはpg_trgm自体が含まれないが、post-dataのGIN indexは
-# agentsview schemaへinstallされたoperator classを参照する。先にpre-dataをrestoreし、
-# extensionをinstallしてからdataとindexをrestoreする。
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
-    --no-owner --no-privileges --exit-on-error --section=pre-data' -- "$restore_db" \
-  <"$dump_path"
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 --quiet \
-    --command="CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA agentsview;"' -- "$restore_db"
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
-    --no-owner --no-privileges --exit-on-error --section=data' -- "$restore_db" \
-  <"$dump_path"
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'pg_restore --username="$POSTGRES_USER" --dbname="$1" \
-    --no-owner --no-privileges --exit-on-error --section=post-data' -- "$restore_db" \
-  <"$dump_path"
-
-# backupのschemaはdumpを取った時点のAgentsViewのもので、localのschemaは現在の
-# AgentsViewが作る。remoteがread-onlyだとremoteへmigrationが当たらないため両者がずれ、
-# 同じ列名でも型が違う状態になりうる。取り込む前に一時databaseを現在のAgentsViewで
-# migrationして、localと同じschemaへ揃える。
-echo "Migrating the restored backup to the current AgentsView schema..."
-AGENTSVIEW_PG_SCHEMA=agentsview \
-AGENTSVIEW_PG_URL="postgres://${AGENTSVIEW_LOCAL_PG_USER:-agentsview}:${AGENTSVIEW_LOCAL_PG_PASSWORD:-agentsview-local}@127.0.0.1:${AGENTSVIEW_LOCAL_PG_PORT:-15433}/${restore_db}?sslmode=disable" \
-  agentsview pg push
-
-# migrationしても残る差はAgentsViewのversion差なので、merge前に見えるようにする。
-# psqlの型エラーだけでは、どのcolumnがずれているのか分からない。
-schema_columns "$restore_db" | sort >"$columns_backup"
-schema_columns "" | sort >"$columns_local"
-backup_only="$(comm -23 "$columns_backup" "$columns_local")"
-if [ -n "$backup_only" ]; then
-  echo "Backup columns that the local schema does not have (name and type):" >&2
-  printf '%s\n' "$backup_only" | sed 's/^/  /' >&2
-fi
-
-row_counts >"$counts_before"
-
-# 一時databaseのsnapshotをINSERTへ変換し、localに同じkeyがある行は無視する。
-# 古いbackupでlocalのsequenceを巻き戻さないよう、setvalは除外する。
-# backup側のschemaはdumpを取った時点のもので、localのschemaはAgentsViewのmigrationが
-# 作る。column順が一致する保証がないため、--inserts（位置指定）ではなく
-# --column-inserts（column名つき）で流し込む。
-# 行ごとの `INSERT 0 1` が取り込み行数だけ出ると読めないため、psqlはquietにして
-# 出力も捨てる。error はそのまま stderr に出る。結果は後段の増分で報告する。
-# schemaがずれていると途中のINSERTで停止するが、autocommitのままだとそこまでの行が
-# commit済みで残り、後段のsequence補正も走らない。transactionで囲み
-# 「全部入るか、何も入らないか」にする。
-# psqlの--single-transactionは入力のEOFでcommitするため、pg_dumpが途中で落ちても
-# そこまでの行がcommitされる。COMMITはpg_dumpの成功時だけ送り、失敗時はROLLBACKして
-# 元のstatusを返す。
-docker compose -f "$compose_file" exec -T postgres \
-  bash -o pipefail -c '
-    {
-      echo "BEGIN;"
-      pg_dump --username="$POSTGRES_USER" --dbname="$1" --schema=agentsview \
-        --data-only --column-inserts --on-conflict-do-nothing |
-        sed "/^SELECT pg_catalog.setval/d"
-      dump_status=$?
-      if [ "$dump_status" -ne 0 ]; then
-        echo "ROLLBACK;"
-        exit "$dump_status"
-      fi
-      echo "COMMIT;"
-    } |
-      psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-        --quiet --output=/dev/null
-  ' -- "$restore_db"
-
-# 明示idのimport後は、共通taskでsequenceを前進だけさせる。
-mise run agentsview:pg:local:repair-sequences
-
-row_counts >"$counts_after"
-
-echo "Merged missing rows from AgentsView backup: $dump_path"
-awk 'NR == FNR { before[$1] = $2; next }
-  { printf "  agentsview.%s: %d -> %d (%+d rows)\n", $1, before[$1], $2, $2 - before[$1] }' \
-  "$counts_before" "$counts_after"
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" down "$@"
 '''
 shell = "bash -c"
 
-["agentsview:pg:local:dump"]
-depends = ["agentsview:pg:local:push"]
-description = "Dump the consolidated local AgentsView PostgreSQL database"
+["agentsview:cockroach:local:sql"]
+description = "Open a SQL shell against the local AgentsView CockroachDB container"
 run = '''
-set -eu
-
-backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.dump"
-compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
-
-# schema が無いまま pg_dump すると "no matching schemas were found" としか出ず、
-# local database が未初期化なのか dump 対象の指定違いなのか区別できない。
-# 事前に schema の有無を確認し、次に実行すべき task を案内する。
-# query 自体が失敗した場合に schema 未作成と誤って案内しないよう、
-# pipeline を挟まず command substitution の status をそのまま見る。
-if ! schema_count="$(docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-    --no-align --tuples-only --quiet' <<'SQL'
-SELECT count(*) FROM pg_namespace WHERE nspname = 'agentsview';
-SQL
-)"; then
-  echo "local PostgreSQL へ問い合わせできませんでした: $compose_file" >&2
-  exit 1
-fi
-if [ "$(printf '%s' "$schema_count" | tr -d '[:space:]')" != "1" ]; then
-  echo "local PostgreSQL に agentsview schema がありません: $compose_file" >&2
-  echo "このmachineのsessionを収集するか、backupをrestoreしてから再実行してください:" >&2
-  echo "  mise run agentsview:pg:local:push" >&2
-  echo "  mise run agentsview:pg:local:restore" >&2
-  exit 1
-fi
-
-mkdir -p "$backup_dir"
-umask 077
-trap 'status=$?; [ "$status" -eq 0 ] || rm -f "$dump_path"; exit "$status"' EXIT
-docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'exec pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --schema=agentsview --format=custom' \
-  >"$dump_path"
-pg_restore --list "$dump_path" >/dev/null
-echo "Consolidated AgentsView backup: $dump_path"
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" sql "$@"
 '''
 shell = "bash -c"
 
-["agentsview:pg:remote-local:dump"]
-description = "Merge CockroachDB data and this machine's sessions locally, then create a PostgreSQL backup"
-run         = "mise run agentsview:cockroach:remote-local:dump"
-
-["agentsview:pg:local:status"]
-description = "Show session counts in the local AgentsView PostgreSQL container"
+["agentsview:cockroach:local:status"]
+description = "Show the local CockroachDB version and session counts per machine"
 run = '''
-docker compose -f "${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --set=ON_ERROR_STOP=1 \
-    --command="SELECT machine, COUNT(*) AS sessions FROM agentsview.sessions GROUP BY machine ORDER BY machine;"'
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" status "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:local:push"]
+description = "Incrementally push local AgentsView sessions into the local CockroachDB container"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" push "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:local:dump"]
+description = "Dump the consolidated local AgentsView CockroachDB database"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" dump "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:local:restore"]
+description = "Merge an AgentsView dump into the local CockroachDB container"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" restore "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:local:repair-sequences"]
+description = "Advance local AgentsView CockroachDB sequences without rewinding them"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" repair-sequences "$@"
 '''
 shell = "bash -c"
 
 ["agentsview:serve"]
-depends = ["agentsview:pg:local:push"]
-description = "Continuously push local sessions and serve AgentsView from local Docker PostgreSQL"
+description = "Continuously push local sessions and serve AgentsView from the local CockroachDB container"
 run = '''
-set -eu
-
-agentsview pg push --watch &
-watch_pid=$!
-
-agentsview pg serve "$@" &
-serve_pid=$!
-
-cleanup() {
-  kill "$watch_pid" "$serve_pid" 2>/dev/null || true
-  wait "$watch_pid" 2>/dev/null || true
-  wait "$serve_pid" 2>/dev/null || true
-}
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-# watcher が落ちたまま serve を続けると、session の収集が黙って止まる。
-# どちらかが終了したらもう一方も停止し、終了 status を引き継ぐ。
-# macOS 既定の bash 3.2 には `wait -n` がないため、poll で監視する。
-while :; do
-  if ! kill -0 "$watch_pid" 2>/dev/null; then
-    watch_status=0
-    wait "$watch_pid" || watch_status=$?
-    echo "agentsview pg push --watch exited with status ${watch_status}; stopping serve" >&2
-    kill "$serve_pid" 2>/dev/null || true
-    wait "$serve_pid" 2>/dev/null || true
-    exit "$watch_status"
-  fi
-  if ! kill -0 "$serve_pid" 2>/dev/null; then
-    serve_status=0
-    wait "$serve_pid" || serve_status=$?
-    exit "$serve_status"
-  fi
-  sleep 1
-done
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" serve "$@"
 '''
 shell = "bash -c"
-
-["agentsview:serve".env]
-AGENTSVIEW_LOCAL_PG_PASSWORD = "{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD | default(value='agentsview-local') }}"
-AGENTSVIEW_LOCAL_PG_PORT     = "{{ env.AGENTSVIEW_LOCAL_PG_PORT | default(value='15433') }}"
-AGENTSVIEW_LOCAL_PG_USER     = "{{ env.AGENTSVIEW_LOCAL_PG_USER | default(value='agentsview') }}"
-AGENTSVIEW_PG_SCHEMA         = "agentsview"
-AGENTSVIEW_PG_URL            = "postgres://{{ env.AGENTSVIEW_LOCAL_PG_USER }}:{{ env.AGENTSVIEW_LOCAL_PG_PASSWORD }}@127.0.0.1:{{ env.AGENTSVIEW_LOCAL_PG_PORT }}/agentsview?sslmode=disable"
 
 ["agentsview:cockroach:status"]
 description = "Show sync status against CockroachDB without a Fly proxy"
@@ -371,20 +136,21 @@ shell = "bash -c"
 ["agentsview:cockroach:push".env]
 AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview') }}"
 
-["agentsview:cockroach:dump:data"]
+["agentsview:cockroach:remote:dump"]
 description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
-hide = true
 run = '''
 set -eu
 
 if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
   export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:cockroach:dump:data "$@"
+  exec fnox exec -- mise run agentsview:cockroach:remote:dump "$@"
 fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-dump_path="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+# 呼び出し元がpathを決めた場合はそれに書く。remote-local:restoreが、この実行で
+# 作ったdumpを名前のsortではなく確実に指せるようにするためである。
+dump_path="${AGENTSVIEW_DUMP_PATH:-${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql}"
 auth_dir="$(mktemp -d)"
 cleanup_dump() {
   status=$?
@@ -396,72 +162,163 @@ cleanup_dump() {
 }
 trap cleanup_dump EXIT
 
-mkdir -p "$backup_dir"
-dump_dir="$(cd "$backup_dir" && pwd -P)"
-dump_name="$(basename "$dump_path")"
+# dumpにはsession本文が入るので、所有者だけが読めるようにする（localdb.shと同じ）。
+umask 077
+mkdir -p "$(dirname "$dump_path")"
+# dataをINSERT列へ書き出すSQL。local側（localdb.sh dump）と共通で、出力の形も
+# 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
+# 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
+# repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
+# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定で、cursorを扱えない
+# engineに当たったときの逃げ道として残す（大きなtableではpsqlがmemoryを使い切る）。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+case "$fetch_rows" in
+  '' | *[!0-9]*)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
+    exit 1
+    ;;
+  0)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2
+    echo "  大きなtableではpsqlがclient memoryを使い切ります。" >&2
+    ;;
+esac
+
+dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-}"
+if [ -z "$dump_sql" ]; then
+  dump_sql="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql"
+  [ -r "$dump_sql" ] || dump_sql=dot_config/agentsview/dump-inserts.sql
+fi
+if [ ! -r "$dump_sql" ]; then
+  echo "dump-inserts.sql が読めません: ${dump_sql}" >&2
+  exit 1
+fi
 # auth_dirとPG URLはこのtask内で決まる値なのでexportする。静的な
-# AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:dump:data".env] にある。
+# AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:remote:dump".env] にある。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
 export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
-"${AGENTSVIEW_PREPARE_DUMP_AUTH:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth}"
+# source treeではexecutable_ prefixが付いたままなので、両方の名前を見る。
+prepare_auth="${AGENTSVIEW_PREPARE_DUMP_AUTH:-}"
+if [ -z "$prepare_auth" ]; then
+  prepare_auth="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth"
+  [ -f "$prepare_auth" ] || prepare_auth=dot_config/agentsview/executable_prepare-dump-auth
+fi
+if [ ! -f "$prepare_auth" ]; then
+  echo "prepare-dump-auth が見つかりません: ${prepare_auth}" >&2
+  exit 1
+fi
+"$prepare_auth"
 pg_url="$(cat "$auth_dir/url")"
 
-docker run --rm \
-  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
-  --volume "$dump_dir:/backup" \
-  --env HOST_GID="$(id -g)" \
-  --env HOST_UID="$(id -u)" \
-  postgres:17 \
-  sh -c '
-set -eu
-getent passwd "$HOST_UID" >/dev/null ||
-  printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
-install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
-export PGPASSFILE=/tmp/agentsview.pgpass
-umask 077
-exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
-' -- \
-    --dbname="$pg_url" --schema=agentsview --data-only --column-inserts \
-    --on-conflict-do-nothing --no-owner --no-privileges --file="/backup/$dump_name"
+# postgres imageはca-certificatesを含まないため、container内のsystem trust storeも
+# /etc/ssl/certs/ca-certificates.crtも空である（docker-library/postgres#1331）。
+# remote URLはsslmode=verify-fullなので、hostが既に信頼しているCA bundleを渡す。
+# CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで足りる。
+ca_bundle=""
+# URLがsslrootcertでCAを指定していた場合は、それを最優先で使う。system trust
+# storeに無いprivate CAのclusterはこれでしか検証できない。
+if [ -s "$auth_dir/sslrootcert" ]; then
+  ca_bundle="$(cat "$auth_dir/sslrootcert")"
+  if [ ! -r "$ca_bundle" ]; then
+    echo "URLのsslrootcertが読めません: ${ca_bundle}" >&2
+    exit 1
+  fi
+elif [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$PGSSLROOTCERT" ]; then
+  ca_bundle="$PGSSLROOTCERT"
+else
+  # docs/agentsview.mdがhost側の候補として挙げているpathと同じ順で探す。
+  for candidate in /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt \
+    /opt/homebrew/etc/openssl@3/cert.pem /usr/local/etc/openssl@3/cert.pem; do
+    if [ -r "$candidate" ]; then
+      ca_bundle="$candidate"
+      break
+    fi
+  done
+fi
+if [ -z "$ca_bundle" ]; then
+  echo "読めるCA bundleが見つかりません。PGSSLROOTCERTに設定してください" >&2
+  exit 1
+fi
+# mount元はauth_dirへcopyしたfileにする。hostのCA bundleは/etcにあることが多く、
+# macOSのDocker Desktopが既定で共有するpathの外だが、auth_dir（$TMPDIR配下）は
+# pgpassのmountで既に使えている。
+cp "$ca_bundle" "$auth_dir/ca.crt"
 
-test -s "$dump_path"
-echo "CockroachDB AgentsView data export: $dump_path"
+# psqlはstdoutへ書くので、fileはhost側のredirectで作る。containerへ出力先を
+# mountしないため、uidを合わせる必要もない。PGSSLROOTCERTが指すのはmountした
+# CA bundleで、postgres imageはca-certificatesを含まずsystem trust storeが
+# 空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
+# umaskは新しく作るfileにしか効かない。AGENTSVIEW_DUMP_PATHが既にあるfileを
+# 指していると、他userから読める状態のままsession本文を書き込むことになる。
+# 先に作って明示的に600へ落とす。
+touch "$dump_path"
+chmod 600 "$dump_path"
+docker run --rm --interactive \
+  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
+  --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
+  --env PGPASSFILE=/run/agentsview.pgpass \
+  --env PGSSLROOTCERT=/run/agentsview-ca.crt \
+  postgres:17 \
+  psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
+    --set=FETCH_COUNT="$fetch_rows" \
+    --tuples-only --no-align --quiet --file=- \
+  <"$dump_sql" >"$dump_path"
+
+# dumpが最後まで書けたこと、schemaを実際に読めたことを末尾のmarkerで確認する。
+# 生成SQLは対象tableが0件でもerrorにならないので（information_schemaは権限で
+# filterされる）、markerだけが手掛かりである。restoreはfilterが同じmarkerを見るが、
+# このtaskを単体で実行した場合はここで気付けないと空のbackupが残る。
+marker="$(tail -n 1 "$dump_path")"
+tables="${marker#-- agentsview-dump-complete tables=}"
+case "$tables" in
+  "$marker" | '' | *[!0-9]*)
+    echo "dumpが完了markerで終わっていません: ${dump_path}" >&2
+    exit 1
+    ;;
+  0)
+    echo "dumpに1つもtableが入っていません: ${dump_path}" >&2
+    echo "  schema名（agentsview）と、roleがtableを読めることを確認してください。" >&2
+    exit 1
+    ;;
+esac
+
+echo "CockroachDB AgentsView data export: $dump_path (${tables} tables)"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:dump:data".env]
+["agentsview:cockroach:remote:dump".env]
 AGENTSVIEW_DUMP_ALLOW_REMOTE = "yes"
 
-["agentsview:cockroach:remote-local:dump"]
-description = "Merge CockroachDB rows into local PostgreSQL and create a consolidated custom-format backup"
+["agentsview:cockroach:remote-local:restore"]
+description = "Export CockroachDB rows and merge the missing ones into the local CockroachDB container"
 run = '''
 set -euo pipefail
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-mise run agentsview:cockroach:dump:data
-data_dump="$({ find "$backup_dir" -maxdepth 1 -type f -name 'agentsview-cockroach-data-*.sql' -print 2>/dev/null || true; } |
-  sort -r | head -n 1)"
-if [ -z "$data_dump" ]; then
-  echo "CockroachDB AgentsView data export was not created" >&2
+# 書き先をこちらで決めてからdumpさせる。backup directoryを名前でsortして最新を
+# 選ぶと、時計のずれた既存fileや同時に走る別の実行のfileを掴みうる。そのdumpを
+# 取り込んだうえで、remote-local:dumpが「remoteの現在のrowを含むbackup」として
+# 正常終了してしまう。
+mkdir -p "$backup_dir"
+data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:remote:dump
+if [ ! -s "$data_dump" ]; then
+  echo "CockroachDB AgentsView data export was not created: ${data_dump}" >&2
   exit 1
 fi
 
-# local schemaを現在のAgentsView versionへ揃えた後、remoteにだけ存在するrowをmergeする。
-# column名付きINSERTを使うため、CockroachDBのDDL／権限／sequenceはPostgreSQLへ持ち込まない。
-mise run agentsview:pg:local:push
-compose_file="${AGENTSVIEW_COMPOSE_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/compose.yaml}"
-{
-  echo 'BEGIN;'
-  sed '/^SELECT pg_catalog.setval/d' "$data_dump"
-  echo 'COMMIT;'
-} | docker compose -f "$compose_file" exec -T postgres \
-  sh -c 'psql --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" \
-    --set=ON_ERROR_STOP=1 --quiet --output=/dev/null'
+# remoteとlocalが同じengineでも、schemaは現在のAgentsViewがlocalへ作ったものを
+# 使い、dumpからはdataだけを取り込む。remoteのDDL／権限／sequenceは持ち込まない。
+mise run agentsview:cockroach:local:restore -- "$data_dump"
+'''
+shell = "bash -c"
 
-# CockroachDBの明示idをimportしたので、同じ共通taskでsequenceを補正する。
-mise run agentsview:pg:local:repair-sequences
+["agentsview:cockroach:remote-local:dump"]
+description = "Merge CockroachDB rows into the local CockroachDB container and create a consolidated backup"
+run = '''
+set -euo pipefail
 
-mise run agentsview:pg:local:dump
+mise run agentsview:cockroach:remote-local:restore
+mise run agentsview:cockroach:local:dump
 '''
 shell = "bash -c"
 
