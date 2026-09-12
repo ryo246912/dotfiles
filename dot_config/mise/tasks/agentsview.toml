@@ -189,6 +189,20 @@ getent passwd "$HOST_UID" >/dev/null ||
   printf "agentsview-host:x:%s:%s:AgentsView dump user:/tmp:/bin/sh\n" "$HOST_UID" "$HOST_GID" >>/etc/passwd
 install -m 600 -o "$HOST_UID" -g "$HOST_GID" /run/agentsview.pgpass /tmp/agentsview.pgpass
 export PGPASSFILE=/tmp/agentsview.pgpass
+# hostのPGSSLROOTCERT（macOSなら/etc/ssl/cert.pem）はcontainerに存在しないので、
+# containerのCA bundleを選ぶ。remote URLはsslmode=verify-fullなので、これが無いと
+# libpqは$HOME/.postgresql/root.crtを探して接続前に失敗する。
+if [ -z "${PGSSLROOTCERT:-}" ]; then
+  for candidate in /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem; do
+    if [ -r "$candidate" ]; then
+      PGSSLROOTCERT="$candidate"
+      break
+    fi
+  done
+  # 既知のpathが無い場合だけ、libpqにOpenSSLの既定trust storeを使わせる。
+  PGSSLROOTCERT="${PGSSLROOTCERT:-system}"
+fi
+export PGSSLROOTCERT
 umask 077
 exec gosu "$HOST_UID:$HOST_GID" pg_dump "$@"
 ' -- \

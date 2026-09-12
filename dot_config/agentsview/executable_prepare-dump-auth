@@ -45,6 +45,11 @@ for key, value in urllib.parse.parse_qsl(
         password = value
     elif key == "sslpassword":
         raise SystemExit(f"{source_name} must not contain sslpassword")
+    elif key == "sslrootcert":
+        # このURLを使うpg_dumpはcontainerの中で動く。URLのpathはhost側のCA bundle
+        # （macOSなら/etc/ssl/cert.pem）を指しており、containerには存在しない。
+        # CA bundleはcontainerがPGSSLROOTCERTで選ぶので、ここでは落とす。
+        continue
     else:
         query.append((key, value))
 

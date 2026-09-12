@@ -332,6 +332,8 @@ test -r "$PGSSLROOTCERT"
 
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
+`agentsview:cockroach:remote:dump`は`pg_dump`をcontainerの中で動かすため、host側の`PGSSLROOTCERT`は効かない（macOSの`/etc/ssl/cert.pem`はcontainerに存在しない）。containerが自分のCA bundleを選ぶので追加の設定は要らない。`root certificate file "/tmp/.postgresql/root.crt" does not exist`が出る場合は、それが効いていない状態である。
+
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
 
 5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
