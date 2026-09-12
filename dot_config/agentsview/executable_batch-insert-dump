@@ -223,6 +223,8 @@ def main() -> int:
     out = sys.stdout
     kept = 0
     skipped = 0
+    # meta-commandを除いた、SQL statementとしてskipした数。旧形式の判定に使う。
+    skipped_statements = 0
     in_chunk = 0
     lineno = 0
     tables = None
@@ -243,11 +245,13 @@ def main() -> int:
             splitter.buffer = []
             skipped += 1
             continue
+
         for statement in splitter.feed(line):
             body = strip_leading_noise(statement)
             if body[:6].upper() != "INSERT":
                 if body:
                     skipped += 1
+                    skipped_statements += 1
                 continue
             if in_chunk == 0:
                 out.write("BEGIN;\n")
@@ -288,7 +292,9 @@ def main() -> int:
     # ただしmarkerが無いdumpをすべて拒むと、以前のplain pg_dump形式のbackupが
     # 取り込めなくなる。その形式は必ずSETやsetvalのような非INSERT statementを含み、
     # dump-inserts.sqlの出力はINSERTだけなので、skipしたstatementの有無で見分ける。
-    if tables is None and skipped:
+    # 数えるのはSQL statementだけにする。psqlのmeta-command（\restrict）はSQLでは
+    # なく、それだけを根拠にすると切り詰められた新形式のdumpを旧形式と誤認しうる。
+    if tables is None and skipped_statements:
         print(
             f"INSERT statements: {kept}"
             f" (skipped {skipped} non-INSERT statements)",

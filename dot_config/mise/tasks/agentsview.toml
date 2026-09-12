@@ -169,6 +169,20 @@ mkdir -p "$(dirname "$dump_path")"
 # 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
 # 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
 # repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
+# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定で、cursorを扱えない
+# engineに当たったときの逃げ道として残す（大きなtableではpsqlがmemoryを使い切る）。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+case "$fetch_rows" in
+  '' | *[!0-9]*)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
+    exit 1
+    ;;
+  0)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2
+    echo "  大きなtableではpsqlがclient memoryを使い切ります。" >&2
+    ;;
+esac
+
 dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-}"
 if [ -z "$dump_sql" ]; then
   dump_sql="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql"
@@ -233,6 +247,11 @@ cp "$ca_bundle" "$auth_dir/ca.crt"
 # mountしないため、uidを合わせる必要もない。PGSSLROOTCERTが指すのはmountした
 # CA bundleで、postgres imageはca-certificatesを含まずsystem trust storeが
 # 空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
+# umaskは新しく作るfileにしか効かない。AGENTSVIEW_DUMP_PATHが既にあるfileを
+# 指していると、他userから読める状態のままsession本文を書き込むことになる。
+# 先に作って明示的に600へ落とす。
+touch "$dump_path"
+chmod 600 "$dump_path"
 docker run --rm --interactive \
   --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
   --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
@@ -240,7 +259,7 @@ docker run --rm --interactive \
   --env PGSSLROOTCERT=/run/agentsview-ca.crt \
   postgres:17 \
   psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
-    --set=FETCH_COUNT="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}" \
+    --set=FETCH_COUNT="$fetch_rows" \
     --tuples-only --no-align --quiet --file=- \
   <"$dump_sql" >"$dump_path"
 

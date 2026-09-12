@@ -55,9 +55,15 @@ if [ ! -f "$dump_sql" ]; then
 fi
 
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
-# psqlにcursorで結果を取らせる件数。0にするとcursorを使わず全件をclient memoryへ
-# 溜めるため、dumpの生成では0にしない（sessionの本文が入るので大きくなる）。
+# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定で、cursorを扱えない
+# engineに当たったときの逃げ道として残す（大きなtableではpsqlがmemoryを使い切る）。
 fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+case "$fetch_rows" in
+  '' | *[!0-9]*)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
+    exit 1
+    ;;
+esac
 database="${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}"
 db_user="${AGENTSVIEW_LOCAL_CRDB_USER:-root}"
 host_port="${AGENTSVIEW_LOCAL_CRDB_PORT:-26257}"
@@ -135,6 +141,10 @@ query_local() {
 # local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
 # （agentsview:cockroach:remote:dump）と共通で、出力の形も同じである。
 dump_inserts_local() {
+  if [ "$fetch_rows" = 0 ]; then
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2
+    echo "  大きなtableではpsqlがclient memoryを使い切ります。" >&2
+  fi
   psql_local --tuples-only --no-align --quiet --set=schema="$schema" \
     --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
 }
