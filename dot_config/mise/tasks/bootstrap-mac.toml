@@ -117,6 +117,16 @@ else
   echo "raycast is already installed"
 fi
 
+# tinycast: 公式のサードパーティ tap は Homebrew API メタデータを公開していないため、
+# mise の brew-cask バックエンドではなく、この mise task から実 Homebrew を呼び出す。
+# third-party tap の利用には明示的な trust が必要。
+if ! brew list --cask tinycast &>/dev/null; then
+  brew trust --tap abue-ammar/tinycast
+  brew install --cask abue-ammar/tinycast/tinycast
+else
+  echo "tinycast is already installed"
+fi
+
 # opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ（api/cask/opencode-bar.json）
 # を公開しておらず、brew-cask 経由だと `mise bootstrap packages apply` が 404 で中断する
 if ! brew list --cask opencode-bar &>/dev/null; then
