@@ -1,0 +1,171 @@
+name: terraform-apply
+
+# tfaction (https://suzuki-shunsuke.github.io/tfaction/) によるmain merge後のterraform apply。
+# terraform-plan.yamlがGitHub Artifactsへ保存したplan fileをそのまま適用する(safe apply)。
+# 実際にapplyする前に、trstringer/manual-approvalでGitHub Issueベースの承認を挟む。
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/agentsview/**"
+
+permissions: {}
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-slim
+    # Manual Approval via Issueの承認待ちと、CockroachDB cluster作成/GCP API有効化などで
+    # 時間のかかりうるapplyの両方を許容するため、他のstepより長く取っている。
+    # この時間内に承認・applyが終わらないとjobは失敗するので、その場合はworkflowをre-runする。
+    timeout-minutes: 60
+    environment: production
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
+    env:
+      TFACTION_JOB_TYPE: terraform
+      TFACTION_TARGET: terraform/agentsview
+      TFACTION_WORKING_DIR: terraform/agentsview
+      TFACTION_IS_APPLY: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 5
+        with:
+          persist-credentials: false
+
+      - name: Setup Tools
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        timeout-minutes: 5
+        with:
+          install_args: "aqua:hashicorp/terraform"
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        timeout-minutes: 5
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-actions: read
+
+      - name: tfaction setup
+        id: setup
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        timeout-minutes: 5
+        with:
+          action: setup
+          github_token: ${{ steps.app-token.outputs.token }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        timeout-minutes: 5
+        with:
+          workload_identity_provider: ${{ steps.setup.outputs.gcp_workload_identity_provider }}
+          service_account: ${{ steps.setup.outputs.gcp_service_account }}
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        timeout-minutes: 5
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-plugins-${{ runner.os }}-
+
+      - name: Create Terraform plugin cache dir
+        run: mkdir -p ~/.terraform.d/plugin-cache
+
+      # secrets contextの値はGitHub Actions側で自動的にlogからmaskされる。
+      # tfaction公式のsecrets運用方法: https://suzuki-shunsuke.github.io/tfaction/docs/secret
+      - name: Output secrets
+        id: github-secrets
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        timeout-minutes: 5
+        with:
+          action: output-github-secrets
+          github_secrets: ${{ toJSON(secrets) }} # zizmor: ignore[overprovisioned-secrets] tfaction's official secrets pattern requires the full context here; the action filters it down to tfaction.yaml's declared secrets.
+
+      - name: terraform init
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        timeout-minutes: 5
+        with:
+          action: terraform-init
+          github_token: ${{ steps.app-token.outputs.token }}
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Resolve apply context
+        id: apply-context
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          PRS_JSON=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
+          PR_NUMBER=$(jq -r '.[0].number // ""' <<< "$PRS_JSON")
+
+          {
+            echo "pr_number=${PR_NUMBER}"
+            echo "merge_commit=[${GITHUB_SHA}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})"
+          } >> "$GITHUB_OUTPUT"
+
+      # Issue経由の手動承認ゲート。dotfilesは個人repoなので承認者はowner本人のみで、
+      # 自分がmergeしたPRも自分でapproveできるようexclude-workflow-initiator-as-approverはfalseにする。
+      - name: Manual Approval via Issue
+        uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
+        with:
+          secret: ${{ steps.app-token.outputs.token }}
+          approvers: ryo246912
+          minimum-approvals: 1
+          exclude-workflow-initiator-as-approver: false
+          issue-labels: "terraform,agentsview"
+          issue-title: "[Terraform Apply承認] agentsview PR#${{ steps.apply-context.outputs.pr_number }}"
+          issue-body: |
+            ## Terraform Apply 承認
+
+            - **root module**: `terraform/agentsview`
+            - **Merged PR**: #${{ steps.apply-context.outputs.pr_number }}
+            - **Merge commit**: ${{ steps.apply-context.outputs.merge_commit }}
+            - **Plan**: MergeされたPRの `Plan Result` コメントを確認してください。
+            - **Workflow**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            この apply は、上記 plan で確認済みの plan file (GitHub Artifacts) をそのまま適用します。
+
+            承認する場合は `approve` ・キャンセルする場合は `deny` とこの Issue にコメントしてください。
+            ```
+            approve
+            ```
+            ```
+            deny
+            ```
+
+      - name: Apply
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        # CockroachDB clusterの作成やGCP APIの有効化は5分を超えることがあるため、
+        # 他のstepより長く取っている。
+        timeout-minutes: 20
+        with:
+          action: apply
+          github_token: ${{ steps.app-token.outputs.token }}
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Create follow-up PR on failure
+        if: failure()
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        timeout-minutes: 5
+        with:
+          action: create-follow-up-pr
+          github_token: ${{ steps.app-token.outputs.token }}

@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/tfaction/refs/tags/v2.1.1/schema/tfaction-root.json
+#
+# tfaction (https://suzuki-shunsuke.github.io/tfaction/) の設定。
+# root module固有の設定(GCP認証, secrets等)はここではなく各root moduleの
+# tfaction.yaml側に置く。ここにはrepo全体で共通の設定のみを書く。
+# terraform/agentsview以外にroot moduleを追加する場合は、そのdirectoryに
+# tfaction.yamlを置き、このtarget_groupsへ追記する。
+
+plan_workflow_name: terraform-plan.yaml
+
+available_providers:
+  - name: registry.terraform.io/hashicorp/google
+  - name: registry.terraform.io/cockroachdb/cockroach
+
+# Drift Detection: root moduleのcodeと実際のGCP/CockroachDB上のresourceの差分を
+# 定期的に検知し、GitHub Issueで管理する。
+# https://suzuki-shunsuke.github.io/tfaction/docs/drift-detection
+drift_detection:
+  enabled: true
+  num_of_issues: 1
+  minimum_detection_interval: 168 # 7日。同じroot moduleを1週間以内に再チェックしない
+
+target_groups:
+  - working_directory: terraform/agentsview
+    # runs_onはlist-targets/pick-out-drift-issuesのmatrix出力にのみ使われる
+    # (schedule-detect-drifts.yamlのdetect job)。plan/apply workflow自体は
+    # working_directoryを固定しているため、runs-onは各workflow側で直接指定する。
+    runs_on: ubuntu-slim
