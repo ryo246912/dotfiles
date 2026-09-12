@@ -4,17 +4,18 @@
 
 ## 実装済みファイル
 
-| ファイル                                             | 目的                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
-| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                              |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
+| ファイル                                             | 目的                                                                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version                                       |
+| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照                                             |
+| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                                                              |
+| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                                                            |
+| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                                                                    |
+| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                                                               |
+| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush                                                |
+| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                                                               |
+| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime／deploy service account、Secret Manager container／IAM、Cloud Run invoker IAM、GitHub ActionsのWorkload Identity連携 |
+| `.github/workflows/deploy-agentsview.yaml`           | mainへのmergeでCloud Run関連fileに差分があったときだけbuild → deployを実行するworkflow                                                                       |
 
 各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
 
@@ -572,11 +573,11 @@ repository root以外から実行すると、taskはsource treeではなくapply
 
 ##### 作業7. Secret Managerへ最初のsecret versionを登録する
 
-Cloud Run URLはまだ存在しないため、初回configだけplaceholderを使う。URL確定後の作業8で必ず置き換える。
+config.tomlの`public_url`にはCloud Runの**deterministic URL**（`https://<service>-<project number>.<region>.run.app`）を書く。この形のURLはservice名・project number・regionだけで決まるため、serviceを作る前から確定している。placeholderを入れて後から差し替える必要はない。
 
 ```sh
 export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
-export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+mise run agentsview:cloudrun:url    # 書き込まれるpublic_urlを先に確認する
 fnox exec -- mise run agentsview:cloudrun:secrets
 ```
 
@@ -622,16 +623,13 @@ fnox exec -- terraform -chdir=terraform/agentsview show tfplan
 fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
 ```
 
-Cloud Run URLを取得し、placeholder configを実URLへ置き換えて新revisionを作る。revisionにはsecretのnumeric versionが焼き込まれているため、新versionを追加しただけでは切り替わらない。`deploy`が新しいversion番号でmanifestをrenderし、新revisionを作る（imageは変わらないので`AGENTSVIEW_SKIP_BUILD=1`でbuildを省く）。
+作業7でconfig.tomlに書いたdeterministic URLが、いま作ったserviceのURLと一致していることを確認する。`--check`はliveなserviceが報告するURLと突き合わせ、食い違う場合だけstderrへ警告する。**この確認は初回だけでよい。** URLはserviceに紐づく値で、`clrnd deploy`が作るのはその下のrevisionなので、deployを繰り返してもURLは変わらない。変わるのはservice名・region・projectを変えたときだけである。
 
 ```sh
-export AGENTSVIEW_CLOUD_RUN_URL=$(gcloud run services describe ryo-agentsview \
-  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --format='value(status.url)')
-fnox exec -- mise run agentsview:cloudrun:secrets
-AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
 ```
 
-Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 2、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
+Google Cloud Consoleの**Cloud Run > ryo-agentsview**で、region、1 CPU、512 MiB、min 0、max 1、runtime service account、Secret Manager参照を確認する。**Revisions**で最新revisionが100% trafficになっていることも確認する。同じ内容は`mise run agentsview:cloudrun:status`でも確認できる。
 
 **完了確認:** 次がHTTPS URLを返し、未認証APIが401を返す。
 
@@ -708,7 +706,7 @@ fnox exec -- mise run agentsview:pg:remote-local:dump
 
 |  順位 | 基盤                                                                                            | 無料computeの目安                                                                  | ログの使いやすさ                                                                            | AgentsViewとの相性                                                          | 判定                    |
 | ----: | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
-| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 2 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
+| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 1 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
 | **2** | [Northflank Developer Sandbox](https://northflank.com/pricing)                                  | Sandbox内のservice／CPU／memory quota。現行consoleで利用可能resource planを要確認  | app、build、deployment、logが一つのproject UIにまとまる                                     | OCI imageとsecretを登録しやすい。無料Sandboxの継続性・SLAは弱い             | **UI重視のPoC候補**     |
 | **3** | [Azure Container Apps Consumption](https://azure.microsoft.com/pricing/details/container-apps/) | Consumptionの月次無料grantは公式Pricingで移行直前に確認                            | Portal／CLIでsystem logとconsole logを分離してlive stream可能                               | scale-to-zeroとsecret対応。Cloud Runから移す利益が小さく、Azure構築が増える | 既にAzureを使う場合のみ |
 | **4** | [Koyeb Free](https://www.koyeb.com/pricing)                                                     | Free instanceは小さいCPU／memory枠。現行instance表を要確認                         | service画面でruntime logを見やすい                                                          | deployは簡単だが、CPU余裕とcold startはCloud Runより不利                    | hobby／検証用           |
@@ -732,7 +730,7 @@ fnox exec -- mise run agentsview:pg:remote-local:dump
 
 3. **無料ログ枠に余裕がある**: [Cloud Logging pricing](https://cloud.google.com/logging/pricing)は通常log storageについて最初の50 GiB／project／月を無料とし、30日までの保存をingestion料金に含める。個人用AgentsViewのapp logは通常この規模を大幅に下回る。ただしaudit／network logや同一projectの他serviceも合算して監視する。
 4. **必要時だけ高いresourceを使える**: 無料枠は固定の低spec VMを1か月占有する方式ではなく、request処理中のvCPU秒／GiB秒に充当される。現在の1 vCPU／512 MiBで不足したら、memoryを1 GiBへ上げて実測できる。ただし1 GiBは無料memory秒を2倍消費する。
-5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 2、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
+5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 1、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
 
 #### Cloud Runの弱点と対策
 
@@ -844,28 +842,35 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 
 現在のTerraformは「永続的な基盤」と「Cloud Runへのapp deploy」の両方を管理している。各resourceの役割は次のとおり。
 
-| Terraform resource                                  | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                  |
-| --------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `google_project_service.required`                   | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない |
-| `data.google_project.current`                       | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                            |
-| `google_artifact_registry_repository.agentsview`    | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する                                                                                    |
-| `google_artifact_registry_repository_iam_member.*`  | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                |
-| `google_service_account.runtime`                    | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                        |
-| `google_secret_manager_secret.pg_url`               | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
-| `google_secret_manager_secret.config`               | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                       |
-| `google_secret_manager_secret_iam_member.runtime_*` | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
-| `cockroach_cluster.agentsview`                      | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
-| `cockroach_database.agentsview`                     | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
-| `cockroach_sql_user.owner`                          | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
-| `cockroach_sql_user.push`                           | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
-| `cockroach_sql_user.read`                           | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
-| `google_cloud_run_v2_service_iam_member.public`     | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
+| Terraform resource                                      | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                                                                                              |
+| ------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google_project_service.required`                       | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない                                                                             |
+| `data.google_project.current`                           | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                                                                                                        |
+| `google_artifact_registry_repository.agentsview`        | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する。cleanup policyのKEEPはDELETEより優先されるため、残るのは「直近10 version **または** 30日以内」のいずれかに当てはまるもの（無料枠0.5 GB対策）                  |
+| `google_artifact_registry_repository_iam_member.*`      | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                                                                                            |
+| `google_service_account.runtime`                        | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                                                                                                    |
+| `google_secret_manager_secret.pg_url`                   | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                                                                                                       |
+| `google_secret_manager_secret.config`                   | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                                                                                                   |
+| `google_secret_manager_secret_iam_member.runtime_*`     | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                                                                                                           |
+| `cockroach_cluster.agentsview`                          | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                                                                                             |
+| `cockroach_database.agentsview`                         | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                                                                                                    |
+| `cockroach_sql_user.owner`                              | owner password                                  | schema bootstrap／migration専用user                                                                                                                                                                                                     |
+| `cockroach_sql_user.push`                               | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                                                                                                       |
+| `cockroach_sql_user.read`                               | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                                                                                                   |
+| `google_cloud_run_v2_service_iam_member.public`         | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                                                                                                 |
+| `google_service_account.deploy`                         | `agentsview-deploy`                             | GitHub ActionsがCloud Runへdeployするときのidentity。key JSONは作らず、OIDC tokenの交換でしか名乗れない                                                                                                                                 |
+| `google_iam_workload_identity_pool.github`              | pool `github-actions`                           | GitHubのOIDC tokenを受け入れる入口                                                                                                                                                                                                      |
+| `google_iam_workload_identity_pool_provider.github`     | issuer、attribute mapping／condition            | `assertion.repository`と`assertion.ref`で、指定repositoryの指定branchのworkflowだけにtoken交換を許す                                                                                                                                    |
+| `google_service_account_iam_member.deploy_*`            | `workloadIdentityUser`、`serviceAccountUser`    | 前者がGitHub側principalSetへdeploy SAの借用を許し、後者がCloud Runの要求するruntime SAへの`actAs`を与える                                                                                                                               |
+| `google_project_iam_member.deploy_*`                    | `run.developer`、`cloudbuild.builds.editor`     | clrndがserviceを更新し、`gcloud builds submit`がimageをbuildするための最小権限。IAM policyは触れない                                                                                                                                    |
+| `google_storage_bucket_iam_member.deploy_build_staging` | `objectAdmin` + `legacyBucketReader`            | `gcloud builds submit`がbuild contextを置くbucket1つに限定する。objectの読み書きと`storage.buckets.get`だけを与え、bucketのIAM・lifecycle設定は変更させない。projectレベルのstorage権限を与えるとTerraform state bucketまで読めてしまう |
+| `google_secret_manager_secret_iam_member.deploy_*`      | `secretmanager.viewer`（2 secret）              | revisionへ焼き込むversion番号を引くためのmetadata権限。値そのものは読めない                                                                                                                                                             |
 
-**deploy用service accountとGitHub Workload Identity連携もこの表にない。** GitHub ActionsからTerraformやCloud Run deployを行っていない（`.github/workflows/`に残るのはAtuinのFly.io deployだけ）ため、`agentsview-deploy` service account、そのproject IAM、`secretVersionAdder`、Workload Identity Pool／Providerはいずれも使われていなかった。使わないidentityを置くと権限の棚卸し対象が増えるだけなので削除した。build・deploy・secret登録はoperator自身の認証情報（`gcloud auth login`）で実行する。将来CIから実行する場合はWIFごと作り直す。
+**deploy service accountとWorkload Identity連携はGitHub Actions専用である。** operatorが手元から`build`／`deploy`／secret登録を実行するときは、従来どおり自分の認証情報（`gcloud auth login`）を使う。CIのidentityへは値を読める権限（`secretAccessor`）も、versionを追加する権限（`secretVersionAdder`）も与えていない。secretの登録は手元の`agentsview:cloudrun:secrets`だけが行う。
 
 **Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
 
-`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続commandが必要とするhost、runtime service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
+`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は変数にしない値を一箇所に固定する。全regional resourceで共有する`us-west2`、service名、project numberから組み立てるdeterministic URL（`local.cloud_run_url`）、そしてWorkload Identity Federationのattribute conditionが見る`github_repository`／`github_deploy_ref`である。後者を入力変数にすると、別のrepositoryやbranchのworkflowがdeploy service accountを名乗れる設定を外から渡せてしまう。`outputs.tf`は後続commandが必要とするhost、service account名、Cloud Run service名／region／URL、GitHub Actions secretへ入れる2つの値を公開する。稼働中のrevisionやtraffic splitはTerraformではなく`clrnd status`から取る。
 
 #### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
 
@@ -896,28 +901,29 @@ ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼその
 
 mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
-| task                            | 内容                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| `agentsview:cloudrun:build`     | commitでtagを固定してArtifact Registryへimageをbuild                     |
-| `agentsview:cloudrun:verify`    | manifestのschema検証と、service account／secret version／imageの実在確認 |
-| `agentsview:cloudrun:render`    | templateを展開したmanifestを表示（APIへ接続しない）                      |
-| `agentsview:cloudrun:diff`      | live serviceとmanifestの差分                                             |
-| `agentsview:cloudrun:deploy`    | build → verify → deploy → rollout待ち                                    |
-| `agentsview:cloudrun:status`    | Ready状態、traffic split、URL                                            |
-| `agentsview:cloudrun:revisions` | revision一覧とtraffic share                                              |
-| `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                      |
-| `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                            |
+| task                            | 内容                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `agentsview:cloudrun:build`     | commitでtagを固定してArtifact Registryへimageをbuild                             |
+| `agentsview:cloudrun:verify`    | manifestのschema検証と、service account／secret version／imageの実在確認         |
+| `agentsview:cloudrun:render`    | templateを展開したmanifestを表示（APIへ接続しない）                              |
+| `agentsview:cloudrun:diff`      | live serviceとmanifestの差分                                                     |
+| `agentsview:cloudrun:deploy`    | build → verify → deploy → rollout待ち                                            |
+| `agentsview:cloudrun:status`    | Ready状態、traffic split、URL                                                    |
+| `agentsview:cloudrun:revisions` | revision一覧とtraffic share                                                      |
+| `agentsview:cloudrun:refresh`   | 定義を変えずに新revisionを作る（containerの再起動）                              |
+| `agentsview:cloudrun:rollback`  | 直前のrevisionへtrafficを戻す                                                    |
+| `agentsview:cloudrun:url`       | deterministic URLを表示（serviceが無くても動く。`-- --check`でliveと突き合わせ） |
 
-共通処理（project／region／service名の解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）はhidden taskの`agentsview:cloudrun:_lib`が持つ。このtaskは関数定義を標準出力へ出すだけで、各taskが先頭で`eval "$(mise run agentsview:cloudrun:_lib)"`して読み込む。設定の解決は1箇所にしかない。
+共通処理（project／region／service名の解決、deterministic URLの組み立て、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行）は`dot_config/agentsview/scripts/cloudrun.sh`が持つ。各mise taskはscriptのpathを解決して第1引数にmodeを渡すだけの薄いwrapperで、設定の解決は1箇所にしかない。GitHub Actionsも同じscriptを直接呼ぶので、CIと手元でdeploy経路が分岐しない。
 
-この形にしているのは、**miseがtaskへ渡した追加引数をscript末尾へ文字列として連結する**ためである。`"$@"`は常に空になり、子taskへ引数を渡す方式は成立しない。
+各taskは`shell = "bash -c"`を指定しているため、`mise run <task> -- <args>`の`<args>`はscriptの`"$@"`へそのまま届く。wrapperはそれを`exec bash "$script" <mode> "$@"`で下へ渡す。
 
-```console
-$ mise run t -- --projects resume     # run = 'printf "ARGS>"; printf " [%s]" "$@"'
-ARGS> []--projects resume
+```sh
+mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
+mise run agentsview:cloudrun:url -- --check
 ```
 
-そのため引数は`usage` fieldで受け取る。miseはshell quote済みの1行を`usage_args`に入れるので、`eval "set -- ${usage_args:-}"`で元のargvへ戻す。空白や引用符を含む引数も保持される。tera の`{{arg()}}`でも同じことはできるが、mise 2027.5.0で削除予定の警告が出るため使わない。
+captureする場合は`mise run --quiet`を使う。miseがtask名などの付随出力を混ぜないようにするためである。
 
 採用にあたって前提にした制約は次のとおり。
 
@@ -937,7 +943,7 @@ ARGS> []--projects resume
 | `metadata.name`                                                         | `ryo-agentsview`                                                           | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
 | `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                      | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
 | `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                        | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
-| 同`maxScale`                                                            | `2`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
+| 同`maxScale`                                                            | `1`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
 | 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                     | 旧`resources.cpu_idle = true`                                                                    |
 | 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                     | 旧`resources.startup_cpu_boost = true`                                                           |
 | `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                             | Terraform outputのruntime service account。deploy権限は持たない                                  |
@@ -1045,11 +1051,11 @@ cd ../..
 mise run agentsview:cloudrun:build
 ```
 
-続いてCockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。初回だけ`AGENTSVIEW_CLOUD_RUN_URL=https://invalid.example`を使い、service作成後に実URLへ更新する。
+続いてCockroachDBのread-only URLとAgentsView configをSecret Managerへ登録する。config.tomlの`public_url`にはdeterministic URLが入るため、serviceが未作成でもここで確定する。
 
 ```sh
 export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
-export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
+mise run agentsview:cloudrun:url
 fnox exec -- mise run agentsview:cloudrun:secrets
 ```
 
@@ -1068,7 +1074,7 @@ fnox exec -- terraform plan -input=false -out=tfplan
 fnox exec -- terraform apply tfplan
 ```
 
-planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 2、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に実URLを`AGENTSVIEW_CLOUD_RUN_URL`へ設定してconfig secretを更新し、`AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy`で新revisionへ反映する。
+planで`cockroach_cluster`が`plan = "BASIC"`であること、`google_cloud_run_v2_service_iam_member.public`だけがCloud Run関連の変更であることを確認する。Cloud Runのmin 0／max 1、1 vCPU／512 MiBは`mise run agentsview:cloudrun:diff`と`clrnd status`で確認する。最後に`mise run --quiet agentsview:cloudrun:url -- --check`で、config.tomlへ書いたdeterministic URLがliveなserviceのURLと一致していることを確認する。
 
 #### 2.4 deploy方法を確認する
 
@@ -1088,16 +1094,9 @@ mise run agentsview:cloudrun:rollback              # 直前のrevisionへ戻す
 mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 ```
 
-このrepositoryには現時点でCloud Run用GitHub Actions workflowを含めていない。CIへ載せる場合は`mise run agentsview:cloudrun:deploy -- --auto-approve`を実行する形になる（taskへ渡した引数はそのまま`clrnd deploy`へ渡る）。image tagはGitHub Actionsが渡す`GITHUB_SHA`から組み立てられるので、workflow側でimage URIを組み立てる必要はない。
+mainへmergeしたときのdeployは`.github/workflows/deploy-agentsview.yaml`が行う。手元の操作と同じ`dot_config/agentsview/scripts/cloudrun.sh deploy`を`--auto-approve`付きで実行するだけなので、CIと手元でdeploy経路は分岐しない。image tagはGitHub Actionsが渡す`GITHUB_SHA`から組み立てられるため、workflow側でimage URIを組み立てる必要もない。設定は[GitHub ActionsからのCloud Run deploy](#github-actionsからのcloud-run-deploy)にまとめてある。
 
-このときsecret versionの解決に注意する。taskは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。CI用のidentityへ`secretVersionAdder`だけを与えた場合、versionを追加できても一覧できない。次のどちらかを選ぶ。
-
-- secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す（追加の権限が不要で、deployするversionをCI側が確定できる）。
-- 2つのsecretに対して`roles/secretmanager.viewer`を追加し、taskに引かせる。metadataのみのroleなのでsecret値は読めない。
-
-権限不足のまま実行した場合、taskはgcloudのerrorに続けてこの2択を表示して停止する。
-
-**現時点ではdeploy用service accountもWorkload Identity連携もTerraformに存在しない。** CIから実行していないためである（2.0節参照）。CIへ載せるときは、deploy service account、そのproject IAM、Workload Identity Pool／Provider、state bucketへの`roles/storage.objectAdmin`をまとめて作り直す。service-account key JSONは作らずGitHub OIDC／WIFを使う。
+secret versionの解決だけ注意する。scriptは既定で最新のENABLED versionをSecret Managerから引くが、それには`secretmanager.versions.list`が要る。Terraformはdeploy service accountへ2つのsecretに限って`roles/secretmanager.viewer`（metadataのみ。値は読めない）を与えているので、CIでも引ける。この権限を持たないidentityで動かす場合は、secret登録stepが返したversion番号を`AGENTSVIEW_PG_URL_SECRET_VERSION`／`AGENTSVIEW_CONFIG_SECRET_VERSION`としてdeploy stepへ渡す。権限不足のまま実行した場合、scriptはgcloudのerrorに続けてこの2択を表示して停止する。
 
 ### 3. CockroachDB schemaをbootstrapしてlocalからpush
 
@@ -1227,14 +1226,14 @@ CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary
 
 ### 5. Cloud Run secretとserviceを作成
 
-初回はCloud Run URLがまだないため、config作成用に一時URLを指定する。ServiceはclrndがKnative manifestから作る。
+config.tomlの`public_url`はCloud Runのdeterministic URLへ固定する。serviceを作る前から確定しているので、URL待ちのplaceholderは要らない。ServiceはclrndがKnative manifestから作る。
 
 ```sh
 export GCP_PROJECT_ID='<project-id>'
 export GCP_REGION='us-west2'
 export GCP_RUNTIME_SERVICE_ACCOUNT="agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
-export AGENTSVIEW_CLOUD_RUN_URL='https://invalid.example'
 
+mise run agentsview:cloudrun:url        # public_urlに入る値
 fnox exec -- mise run agentsview:cloudrun:secrets
 mise run agentsview:cloudrun:deploy
 ```
@@ -1245,16 +1244,10 @@ clrndが作るserviceはprivateなので、Terraformで`allUsers`のinvoker bind
 fnox exec -- terraform -chdir=terraform/agentsview apply
 ```
 
-実URLを取得し、config secretを更新して新revisionを作る。
+serviceが出来たら、config.tomlに書いたURLがliveなserviceのURLと一致することを**一度だけ**確認する。URLはserviceに紐づく値なので、以後deployを繰り返しても変わらない。
 
 ```sh
-export AGENTSVIEW_CLOUD_RUN_URL=$(
-  gcloud run services describe ryo-agentsview \
-    --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
-    --format='value(status.url)'
-)
-fnox exec -- mise run agentsview:cloudrun:secrets
-AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
+export AGENTSVIEW_CLOUD_RUN_URL=$(mise run --quiet agentsview:cloudrun:url -- --check)
 ```
 
 Cloud Runでは次のようにsecretを注入する。どちらもmanifestには参照だけを書き、値はSecret Managerに残る。
@@ -1271,9 +1264,7 @@ Terraformのinvoker bindingはCloud Run URLへの到達だけを許可する。A
 ```sh
 mise run agentsview:cloudrun:status
 
-url=$(gcloud run services describe ryo-agentsview \
-  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
-  --format='value(status.url)')
+url=$(mise run --quiet agentsview:cloudrun:url -- --check)
 
 curl -i "$url/api/v1/sessions"                    # 401を期待
 fnox exec -- sh -c 'curl -fsS -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
@@ -1285,26 +1276,176 @@ curl -I "$url"                                    # UI応答を確認
 
 Google Cloud Consoleで次も確認する。
 
-- `min instances = 0`、`max instances = 2`
+- `min instances = 0`、`max instances = 1`
 - memory 512 MiB、CPU 1、request-based billing
 - runtime service accountが`agentsview-runtime`
 - secretの値がlogへ出ていない
 - CockroachDB RU、storage、connection数が無料枠内
 
+## 無料枠の内訳と使い切ったときの調べ方
+
+調査日: **2026-09-08**。無料枠は予告なく変わるので、判断の前に各公式Pricingを開き直す。
+
+### Cloud Run本体
+
+[Cloud Run pricing](https://cloud.google.com/run/pricing)のrequest-based billingに対する月次無料枠は次の3本である。**billing accountごと**の枠で、同じbilling accountに紐づく全projectの使用量を合算し、毎月resetされる。instance-based billingを選ぶとこの枠は当たらない。
+
+| 項目      | 月次無料枠     |
+| --------- | -------------- |
+| vCPU      | 180,000 vCPU秒 |
+| memory    | 360,000 GiB秒  |
+| request数 | 200万request   |
+
+現在のmanifestは1 vCPU／512 MiB（`cloudrun-service.yaml`の`resources.limits`）なので、この3本を実時間へ直すと**vCPUが最初に尽きる**。
+
+- vCPU: 180,000 ÷ 1 vCPU = **50時間／月**のcontainer稼働
+- memory: 360,000 ÷ 0.5 GiB = 200時間／月
+- request: 個人viewerでは200万requestに届かない
+
+つまり実質的な上限は「containerが動いている合計時間が50時間／月」である。memoryを1 GiBへ上げるとmemory側が100時間へ縮むが、依然としてvCPUが先に尽きる。逆にCPUを0.5へ落とせばvCPU側は100時間まで伸びる（cold startは遅くなる）。
+
+枠を減らさないための設定はすでに入っている。
+
+- `autoscaling.knative.dev/minScale: "0"` — idle時にinstanceを0にする。`min > 0`にすると無通信でも課金対象になる
+- `run.googleapis.com/cpu-throttling: "true"` — request処理中とstartup中だけCPUを使う（request-based billing）
+- `autoscaling.knative.dev/maxScale: "1"` — crawlerに叩かれてもinstanceが増えない
+
+### Cloud Run以外の枠
+
+Cloud Runの無料枠が覆うのはcompute（vCPU秒／GiB秒）とrequest数だけである。**networking egressと、buildや保管に使う周辺serviceは別枠**で、この構成ではそちらが先に尽きることがある。
+
+| service                                                                 | 無料枠の目安                                       | この構成での消費源                                                                    |
+| ----------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [Artifact Registry](https://cloud.google.com/artifact-registry/pricing) | storage 0.5 GB／月                                 | deployごとに新しいimage tagが増える。**数世代で超えやすい**                           |
+| [Cloud Build](https://cloud.google.com/build/pricing)                   | 2,500 build分／月（既定poolのe2-standard-2）       | `gcloud builds submit`。1回のmirror buildは短い                                       |
+| [Secret Manager](https://cloud.google.com/secret-manager/pricing)       | active secret version 6件／月、access操作 10,000件 | `agentsview:cloudrun:secrets`のたびにversionが1つずつ増え、無効化しない限り残り続ける |
+| [Cloud Logging](https://cloud.google.com/logging/pricing)               | 50 GiB／project／月                                | revisionのstdout／stderr。個人利用では通常余裕がある                                  |
+| [Cloud Run networking](https://cloud.google.com/run/pricing)            | compute枠とは別                                    | CockroachDB Cloudへのegress                                                           |
+
+Artifact Registryはこの中でいちばん詰まりやすい。image tagがcommitごとに変わり、GitHub Actionsがmergeのたびにdeployするようになってさらに増えるため、Terraformでcleanup policyを入れてある（`gcp_artifact_registry.tf`）。残るのは**直近10 versionまたは30日以内、のいずれかに当てはまるもの**で、10ちょうどには絞られない。Dockerfileがupstream imageのmirror（`FROM`1行）なので、同じupstream versionを何度buildしてもlayerは共有され、storageが実際に増えるのはupstream versionが上がったときだけである。min 0でscale-to-zeroする構成ではcold startのたびにimageをpullし直すため、直近10世代は必ず残して稼働中・rollback先のrevisionが参照するimageを消さないようにしている。
+
+Secret Managerのversionは自動では消えない。rotationを重ねると6件の枠を超えるので、rollback先として要らなくなった古いversionは手で無効化・破棄する。**動作中のrevisionが参照しているversionは消さない**（revisionはinstance起動時に番号で解決するため、消すとinstanceが起動できなくなる）。
+
+```sh
+# 参照中のversionを先に確認する
+mise run agentsview:cloudrun:render | rg 'agentsview-(pg-url|config-toml)' -A2
+
+gcloud secrets versions list agentsview-config-toml --project="$GCP_PROJECT_ID"
+gcloud secrets versions destroy <古い番号> --secret=agentsview-config-toml --project="$GCP_PROJECT_ID"
+```
+
+### 使い切ったときにどこで確認するか
+
+無料枠の残量を直接表示するUIは無い。**Billingのreportで、無料枠適用後の課金額がどのSKUに出ているか**を見るのが最短である。
+
+1. Google Cloud Consoleの**Billing > Reports**を開く。
+2. Group byを**SKU**にし、projectをAgentsViewのものへ絞る。
+3. 期間を当月にして、金額が乗っているSKUを見る。`Cloud Run CPU Allocation Time`／`Memory Allocation Time`なら50時間を超えており、`Artifact Registry Storage`ならimageの積み上がりである。
+
+Cloud Run側の実消費は、Cloud Monitoringの`run.googleapis.com/container/billable_instance_time`でも追える。Cloud Run画面の**Metrics**タブから同じ値を見られる。
+
+50時間／月を超えているなら、原因は「instanceが動きっぱなしになる何か」である。次を順に確認する。
+
+- `min-scale`が0のままか（`mise run agentsview:cloudrun:diff`で差分が出ないか）
+- 未認証のcrawlerがURLを叩いていないか。Cloud Run画面のRequest countとLogs Explorerの`httpRequest.userAgent`で見る
+- uptime check、health check、監視botなど、定期的にHTTPを投げるものを自分で足していないか
+- `--write-timeout 100s`に張り付くほど重いanalytics queryが繰り返されていないか（1 requestあたりのCPU秒が伸びる）
+
+課金を止める仕組みはbudget alertには無い（alertは通知だけで、自動停止はしない）。止めるならinvoker bindingを外して到達できないようにするか、`clrnd delete`でserviceごと消す。deterministic URLはservice名・project number・regionから決まるので、消して作り直しても同じURLへ戻る。
+
 ## 運用: インフラ設定を変更したあとの適用手順
 
-**この構成に自動適用は無い。** `.github/workflows/`に残るのはAtuinのFly.io deployだけで、Cloud RunもTerraformもCIからは触らない。したがってPRをmainへmergeしても、Google Cloud側は何も変わらない。**mergeは「変更が承認された」だけを意味し、適用はoperatorが手で行う。**
+**Cloud Runへのdeployだけがmerge時に自動で走る。Terraformは自動適用しない。** mainへのmergeでCloud Run関連fileに差分があると`.github/workflows/deploy-agentsview.yaml`がbuild → deployを実行する。それ以外（Terraform、tool version、mise task）は従来どおりoperatorが手で適用する。
 
 適用は変更したfileによって経路が違う。まず次で判断する。
 
-| 変更したfile                                  | 適用に必要なこと                                                                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `dot_config/agentsview/cloudrun-service.yaml` | `chezmoi apply` → `agentsview:cloudrun:deploy`（新revisionが作られる）            |
-| `dot_config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない） |
-| `dot_config/agentsview/clrnd.yml`             | `chezmoi apply` のみ（次回のclrnd実行から反映）                                   |
-| `dot_config/mise/tasks/agentsview.toml`       | `chezmoi apply` のみ                                                              |
-| `terraform/agentsview/*.tf`                   | `terraform plan` → 内容確認 → `terraform apply`                                   |
-| `dot_config/mise/config.toml`（tool version） | `chezmoi apply` → `mise install`                                                  |
+| 変更したfile                                  | 適用に必要なこと                                                                                          |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `dot_config/agentsview/cloudrun-service.yaml` | **merge時にActionsがdeployする。** 手元で先に出したい場合は`chezmoi apply` → `agentsview:cloudrun:deploy` |
+| `dot_config/agentsview/Dockerfile`            | 同上。image tagが変わるため再buildが要る（手元でやる場合は`AGENTSVIEW_SKIP_BUILD`を使えない）             |
+| `dot_config/agentsview/clrnd.yml`             | merge時にActionsがdeployする。手元で使うには`chezmoi apply`も要る                                         |
+| `dot_config/agentsview/scripts/cloudrun.sh`   | 同上                                                                                                      |
+| `dot_config/mise/tasks/agentsview.toml`       | `chezmoi apply` のみ（deployは走らない）                                                                  |
+| `terraform/agentsview/*.tf`                   | `terraform plan` → 内容確認 → `terraform apply`（**自動適用しない**）                                     |
+| `dot_config/mise/config.toml`（tool version） | `chezmoi apply` → `mise install`                                                                          |
+
+手元からのdeployとActionsからのdeployは同じ`cloudrun.sh deploy`を呼ぶので、どちらで出しても結果は同じrevisionになる。緊急時に手元から先に出しても、後続のmergeで同じ内容が再deployされるだけである（差分が無ければclrndは新revisionを作らない）。
+
+### GitHub ActionsからのCloud Run deploy
+
+`.github/workflows/deploy-agentsview.yaml`は、mainへのpushで次のいずれかに差分があるときだけ動く。`workflow_dispatch`で手動起動もできる。
+
+- `dot_config/agentsview/Dockerfile`（AgentsViewのversion）
+- `dot_config/agentsview/cloudrun-service.yaml`
+- `dot_config/agentsview/clrnd.yml`
+- `dot_config/agentsview/scripts/cloudrun.sh`
+- workflow自身
+
+Dockerfileが対象に入っているため、**RenovateのAgentsView version bump PRをmergeすると、そのままCloud Runまで反映される。**
+
+認証はservice account keyではなくGitHub OIDC ＋ Workload Identity Federationで行う。repositoryに置く3つのActions secretはいずれも鍵ではなく、識別子である。
+
+| secret                           | 値                                                                |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `GCP_PROJECT_ID`                 | Google Cloud project ID                                           |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `terraform output -raw github_actions_workload_identity_provider` |
+| `GCP_DEPLOY_SERVICE_ACCOUNT`     | `terraform output -raw github_actions_deploy_service_account`     |
+
+初回設定の手順は次のとおり。
+
+```sh
+# 1. WIFとdeploy service accountを作る
+fnox exec -- terraform -chdir=terraform/agentsview plan -input=false -out=tfplan
+fnox exec -- terraform -chdir=terraform/agentsview show tfplan
+fnox exec -- terraform -chdir=terraform/agentsview apply tfplan
+
+# 2. workflowへ渡す値を取り出す
+terraform -chdir=terraform/agentsview output -raw github_actions_workload_identity_provider
+terraform -chdir=terraform/agentsview output -raw github_actions_deploy_service_account
+
+# 3. production environmentのsecretとして登録する
+gh secret set GCP_PROJECT_ID --env production
+gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER --env production
+gh secret set GCP_DEPLOY_SERVICE_ACCOUNT --env production
+
+# 4. workflow_dispatchで一度流して確認する
+gh workflow run deploy-agentsview.yaml
+```
+
+> [!IMPORTANT]
+> `gcp_storage.tf`の`google_storage_bucket.build_staging`は、`gcloud builds submit`がbuild contextを置く`<project-id>_cloudbuild` bucketをTerraformの管理下に置く。**このbucketが既にある場合（手元で一度でも`agentsview:cloudrun:build`を実行していれば作られている）、applyの前にimportする。** import せずにapplyすると409（already exists）で止まる。
+>
+> ```sh
+> cd terraform/agentsview
+> fnox exec -- terraform import google_storage_bucket.build_staging \
+>   "${GCP_PROJECT_ID}/${GCP_PROJECT_ID}_cloudbuild"
+> fnox exec -- terraform plan -input=false
+> ```
+>
+> import後のplanが**置き換え（destroy → create）**を出す場合は、`location`が実際のbucketと違っている。そのままapplyするとbucketが消えるので、実値へ合わせてからapplyする。
+>
+> ```sh
+> gcloud storage buckets describe "gs://${GCP_PROJECT_ID}_cloudbuild" --format='value(location)'
+> ```
+>
+> bucketがまだ無い（新規project）場合はimportは不要で、そのままapplyすれば作られる。
+
+deploy identityに与えているのは、Cloud Runの更新（`roles/run.developer`）、buildの投入（`roles/cloudbuild.builds.editor`）、runtime service accountへの`actAs`、build staging bucketのobject読み書き（`objectAdmin` + `legacyBucketReader`。bucket自体の設定は変更できない）、Artifact Registryのread、2つのsecretのmetadata読みだけである。**secretの値は読めず、versionも追加できない。** secret rotationは従来どおり手元の`agentsview:cloudrun:secrets`で行う。
+
+`actAs`はruntime service accountの1件に絞ってあり、Cloud Build側のservice accountには付けていない。buildを走らせるidentityはprojectの作成時期で変わり（旧`<num>@cloudbuild.gserviceaccount.com`かCompute Engine既定の`<num>-compute@developer.gserviceaccount.com`）、存在しない方へ`google_service_account_iam_member`を書くとapplyが404で落ちるためである。実際に不足していた場合だけ下の1行を足す運用にしている。
+
+token交換はrepositoryとbranchの両方で絞っている（`terraform/agentsview/gcp_iam.tf`の`attribute_condition`）。forkやpull requestからのworkflowはaccess tokenを取得できない。別branchから試したい場合は`locals.tf`の`github_deploy_ref`を一時的に変えてapplyし、確認後にmainへ戻す。
+
+buildがCloud Build service accountの`actAs`不足で落ちる場合（projectの作成時期によってbuildを走らせるidentityが変わる）、errorが名指ししたservice accountへ次を足す。
+
+```sh
+gcloud iam service-accounts add-iam-policy-binding <error-that-named-this-sa> \
+  --project="$GCP_PROJECT_ID" \
+  --member="serviceAccount:$(terraform -chdir=terraform/agentsview output -raw github_actions_deploy_service_account)" \
+  --role=roles/iam.serviceAccountUser
+```
+
+自動deployを止めたいときはGitHubのUIでworkflowをdisableする。Google Cloud側の権限を落とすなら`terraform destroy -target=google_service_account.deploy`ではなく、`gcp_iam.tf`のGitHub Actions分をまとめて消してapplyする（poolとproviderは論理削除されるまで同じIDで作り直せない点に注意する）。
 
 ### 手順1. mainを取り込み、applyする
 

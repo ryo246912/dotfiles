@@ -50,6 +50,91 @@ export CLOUDSDK_RUN_REGION="$region"
 # manifestが must_env で読む値。未設定ならrender時にerrorになる。
 export GCP_RUNTIME_SERVICE_ACCOUNT="${GCP_RUNTIME_SERVICE_ACCOUNT:-agentsview-runtime@${GCP_PROJECT_ID}.iam.gserviceaccount.com}"
 
+# Cloud Runはserviceへ2種類のURLを割り当てる。hash入りのnon-deterministic URLと、
+# service名・project number・regionだけで決まるdeterministic URLである。後者は
+# serviceを作る前から確定し、deleteして作り直しても同じ値へ戻るので、AgentsViewの
+# config.tomlのpublic_urlはこちらへ固定する。Terraformの output cloud_run_url と
+# 同じ値を、Terraform stateを読まずに組み立てる。
+# exitではなくreturnで失敗を返す。この関数は $(...) で呼ばれるため、exitでは
+# subshellが終わるだけで呼び出し元は止まらない。
+project_number() {
+  number="${GCP_PROJECT_NUMBER:-}"
+
+  if [ -z "$number" ]; then
+    command -v gcloud >/dev/null || {
+      echo "gcloudが必要です（またはGCP_PROJECT_NUMBERを指定してください）" >&2
+      return 1
+    }
+    number=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)') || {
+      echo "project numberを取得できません: ${GCP_PROJECT_ID}" >&2
+      return 1
+    }
+  fi
+
+  # GCP_PROJECT_NUMBERで渡された値もgcloudの出力と同じ検査にかける。数字以外が
+  # 混じったままhost名へ入ると、URLとしては成立するのに誰も居ない先を指す。
+  case "$number" in
+    '' | *[!0-9]*)
+      echo "project numberが数字ではありません: ${number}" >&2
+      return 1
+      ;;
+  esac
+
+  printf '%s' "$number"
+}
+
+# 上のURLを組み立てて標準出力へ出す。serviceの存在は問わない。
+# project_numberを $(...) のままprintfの引数へ埋めると、失敗しても printf 自体は
+# 成功するため set -e が働かず、"https://ryo-agentsview-.us-west2.run.app" のような
+# URLをexit 0で出してしまう。一度変数へ受けて失敗を明示的に伝播させる。
+deterministic_url() {
+  number=$(project_number) || return 1
+  printf 'https://%s-%s.%s.run.app' "$service" "$number" "$region"
+}
+
+# --check用。deterministic URLがliveなserviceのURLと一致するか確かめる。
+# serviceが未作成のNOT_FOUNDだけは正常系として扱う。認証・権限・API無効といった
+# 他のerrorまで握り潰すと、何も確認できていないのに確認済みとして通してしまう。
+check_live_url() {
+  expected="$1"
+  err_file=$(mktemp)
+  # どこでreturnしてもscratch fileを残さない。
+  trap 'rm -f "$err_file"' RETURN
+
+  live=""
+  status=0
+  live=$(gcloud run services describe "$service" \
+    --project="$GCP_PROJECT_ID" \
+    --region="$region" \
+    --format='value(status.url)' 2>"$err_file") || status=$?
+
+  if [ "$status" -ne 0 ]; then
+    case "$(cat "$err_file")" in
+      *NOT_FOUND* | *"could not be found"* | *"does not exist"*)
+        # serviceをまだ作っていない。突き合わせる相手が居ないだけなので通す。
+        return 0
+        ;;
+    esac
+    cat "$err_file" >&2
+    echo "Cloud Run serviceの状態を確認できませんでした。--checkは失敗として扱います。" >&2
+    return "$status"
+  fi
+
+  # serviceはあるのにURLが空なのは、まだprovisioning中か、gcloudの出力形式が
+  # 変わったかのどちらか。突き合わせができていないので確認済みとして通さない。
+  if [ -z "$live" ]; then
+    echo "Cloud Run serviceのURLを取得できませんでした。--checkは失敗として扱います。" >&2
+    return 1
+  fi
+
+  if [ "$live" != "$expected" ]; then
+    echo "警告: Cloud Runが報告するURLがdeterministic URLと一致しません" >&2
+    echo "  live:          ${live}" >&2
+    echo "  deterministic: ${expected}" >&2
+    echo "どちらも同じserviceへ届くが、public_urlにはdeterministic URLを使うこと。" >&2
+  fi
+}
+
 # imageのtagは commit で固定する。upstream versionだけをtagにすると同じtagを
 # buildのたびに上書きすることになり、同じURIが時期によって別のartifactを指す。
 # tagは <upstream version>-<commit> の形にして、Cloud Run consoleからAgentsView
@@ -121,10 +206,10 @@ require_version_number() {
   esac
 }
 
-# version一覧には secretmanager.versions.list が要る。Terraformがdeploy service
-# accountへ与えているのは secretVersionAdder だけなので、CIのようにその identity で
-# 実行する場合はversionを追加できても一覧はできない。その構成では、secretを登録した
-# 手順が返した番号をそのまま環境変数で渡す。
+# version一覧には secretmanager.versions.list が要る。Terraformはdeploy service
+# accountへ2つのsecretに限って roles/secretmanager.viewer を与えているので、CIでも
+# 引ける（metadataだけのroleなので値は読めない）。この権限を持たないidentityで
+# 実行する場合は、secretを登録した手順が返した番号をそのまま環境変数で渡す。
 secret_version_lookup_failed() {
   echo "Secret Managerのversionを一覧できません。" >&2
   echo "identityに secretmanager.versions.list（例: roles/secretmanager.viewer）を付けるか、" >&2
@@ -206,6 +291,15 @@ case "$mode" in
       --project="$GCP_PROJECT_ID" \
       --region="$region" \
       --format='value(status.url)'
+    ;;
+  url)
+    # serviceが存在しない段階でも動く。--checkを付けたときだけ、liveなserviceが
+    # 報告するURLと突き合わせる。
+    target=$(deterministic_url) || exit 1
+    if [ "${1:-}" = "--check" ]; then
+      check_live_url "$target"
+    fi
+    printf '%s\n' "$target"
     ;;
   verify | render | diff)
     check_config_current
