@@ -17,6 +17,8 @@ import threading
 import time
 
 INTERVAL_ENV = "AGENTSVIEW_DUMP_PROGRESS_SECONDS"
+# 報告間隔の下限。これより短くしても、報告が並ぶだけで進捗は読めない。
+MIN_INTERVAL = 0.1
 
 
 def interval() -> float:
@@ -24,15 +26,19 @@ def interval() -> float:
 
     raw = os.environ.get(INTERVAL_ENV, "15")
     limit = threading.TIMEOUT_MAX
-    bad = f"{INTERVAL_ENV} must be a number between 0 and {limit:.0f} (0 disables it): {raw}"
+    bad = (
+        f"{INTERVAL_ENV} must be 0 (disables it) or between {MIN_INTERVAL}"
+        f" and {limit:.0f} seconds: {raw}"
+    )
     try:
         value = float(raw)
     except ValueError:
         raise SystemExit(bad) from None
     # 範囲で弾く。nanは比較がすべて偽になるので「0以上」だけでは弾けず、Event.waitへ
     # 渡すと即座に返って報告のloopが空回りしstderrを埋める。TIMEOUT_MAXを超える値は
-    # Event.waitがOverflowErrorにするので、報告threadが起きる前にここで止める。
-    if not 0 <= value <= limit:
+    # Event.waitがOverflowErrorにする。1e-300のようなtimerの分解能より小さい正の値も
+    # 待たずに返るので同じ空回りになる。どれも報告threadが起きる前にここで止める。
+    if value != 0 and not MIN_INTERVAL <= value <= limit:
         raise SystemExit(bad)
     return value
 

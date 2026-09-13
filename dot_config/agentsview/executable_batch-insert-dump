@@ -260,22 +260,29 @@ def ensure_on_conflict(body: str, code: str) -> str | None:
     text = body.rstrip()
     if not text.endswith(";"):
         return None
-    head = text[:-1].rstrip()
     # 判定はcode側（literal／commentの中身を空白にしたもの）で行う。dataの中の
     # ON CONFLICTという文字列や、commentに書かれた句をSQLと誤認しないためである。
     # codeはbodyと同じ長さなので、同じ位置で切れる。
     code_head = code[: len(body.rstrip())].rstrip()[:-1].rstrip()
+    # codeはcommentの中身を空白にするが開始tokenは残すので、`--` と `/*` も同じ長さの
+    # 空白へ寄せる。これでcomment部分はすべて空白になり、位置はbodyと対応したままに
+    # なる（長さの変わる大文字化は判定にだけ使い、位置には使わない）。
+    masked = re.sub(r"--|/\*", "  ", code_head)
     # 既にconflict句があるstatementには足さない。`ON CONFLICT ... DO UPDATE SET x = f(y)`
     # のように括弧で終わる形もあるので、括弧の判定より先に見る。句はSQLとして正しい
     # 限り改行やcommentを挟めるため（`ON\nCONFLICT`、`ON /* c */ CONFLICT`）、
-    # 単純な部分文字列では見落とす。codeはcommentの中身を空白にするが開始tokenは
-    # 残すので、`--` と `/*` も空白へ寄せてから空白跨ぎで探す。
-    normalized = re.sub(r"--|/\*", "  ", code_head.upper())
-    if re.search(r"\bON\s+CONFLICT\b", normalized):
+    # 単純な部分文字列では見落とす。
+    if re.search(r"\bON\s+CONFLICT\b", masked.upper()):
         return body
-    if code_head.endswith(")"):
-        return head + " ON CONFLICT DO NOTHING;"
-    return None
+    # VALUESの閉じ括弧で終わるstatementにだけ足せる。`INSERT INTO t (a) SELECT ...` の
+    # ように括弧が途中にあるだけの形へ足すと、別のSQLになってしまう。
+    tail = masked.rstrip()
+    if not tail.endswith(")"):
+        return None
+    # 足すのは最後の括弧の直後にする。末尾にcommentがある形（`VALUES (...) -- note`）で
+    # bodyの末尾へ足すと、句と後続の `;` まで行commentの中に入ってしまう。
+    pos = len(tail) - 1
+    return body[: pos + 1] + " ON CONFLICT DO NOTHING" + body[pos + 1 :]
 
 
 def main() -> int:

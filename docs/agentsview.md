@@ -1182,7 +1182,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。
 - identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
 - `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。
-- dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、まだserverが最初の行を返していない（接続やTLSは通っている）。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
+- dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、まだserverが最初の行を返していない（接続やTLSは通っている）。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。
@@ -1197,7 +1197,7 @@ markerを持たないdumpのうち、`SET`や`setval`のような非INSERT state
 
 markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
 
-`ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
+`ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
 
 #### localをCockroachDBに揃える理由と制約
 
