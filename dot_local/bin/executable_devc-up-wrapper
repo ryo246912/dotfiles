@@ -1,3 +1,13 @@
 #!/bin/bash
 
+# OneCLI のセットアップで生成した値を devcontainer CLI の localEnv として渡す。
+# ファイルがない環境では従来どおりそのまま起動する。
+onecli_env="${XDG_CONFIG_HOME:-$HOME/.config}/onecli/devcontainer.env"
+if [ -f "$onecli_env" ]; then
+	set -a
+	# shellcheck disable=SC1090
+	. "$onecli_env"
+	set +a
+fi
+
 exec "$@" # 元のコマンドを実行
