@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""標準入力をfileへ書きながら、進捗をstderrへ出す。
+"""標準入力をfileへbyteのまま書きながら、進捗をstderrへ出す。
 
 psqlはdumpを書き出している間なにも言わない。remote（CockroachDB Cloud）のように
 時間のかかる相手では、止まっているのか進んでいるのか分からなくなる。報告は別threadで
@@ -26,9 +26,11 @@ def interval() -> float:
     try:
         value = float(raw)
     except ValueError:
-        raise SystemExit(f"{INTERVAL_ENV} must be a non-negative number: {raw}") from None
-    if value < 0:
-        raise SystemExit(f"{INTERVAL_ENV} must be a non-negative number: {raw}")
+        raise SystemExit(f"{INTERVAL_ENV} must be a finite non-negative number: {raw}") from None
+    # nanは比較がすべて偽になるので「0以上」だけでは弾けない。Event.waitへ渡すと
+    # 即座に返り、報告のloopが空回りしてstderrを埋める。infも同様に範囲で弾く。
+    if not 0 <= value < float("inf"):
+        raise SystemExit(f"{INTERVAL_ENV} must be a finite non-negative number: {raw}")
     return value
 
 
@@ -68,15 +70,15 @@ def main() -> int:
         return 2
     path = sys.argv[1]
     every = interval()
-    # dumpにはsession本文が入る。decodeできないbyteでも落とさず素通しする。
-    sys.stdin.reconfigure(errors="surrogateescape")
     counter = Counter()
     done = threading.Event()
     if every:
         threading.Thread(target=ticker, args=(counter, every, done), daemon=True).start()
+    # byteのまま写す。dumpにはsession本文が入るので、hostのlocaleでdecode／encodeし
+    # 直すと非ASCIIが壊れうる。行数はbyte列を改行で切って数える。
     # modeは変えない。呼び出し元が0600で作ったfileへ書く。
-    with open(path, "w", encoding="utf-8", errors="surrogateescape", newline="") as out:
-        for line in sys.stdin:
+    with open(path, "wb") as out:
+        for line in sys.stdin.buffer:
             out.write(line)
             counter.lines += 1
             counter.written += len(line)

@@ -46,35 +46,7 @@ if [ ! -f "$filter" ]; then
   exit 1
 fi
 
-# dataをINSERT列へ書き出すSQL。pg_dumpはCockroachDBを扱えないので、行の組み立ては
-# serverに任せる。理由と仕組みは dump-inserts.sql のcommentと docs/agentsview.md にある。
-dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${config_dir}/dump-inserts.sql}"
-if [ ! -f "$dump_sql" ]; then
-  echo "dump-inserts.sql が見つかりません: ${dump_sql}" >&2
-  exit 1
-fi
-
-# dumpの進捗をstderrへ出すhelper。source treeでは executable_ prefixが付く。
-progress="${AGENTSVIEW_DUMP_PROGRESS:-${config_dir}/dump-progress}"
-if [ ! -x "$progress" ]; then
-  progress="${config_dir}/executable_dump-progress"
-fi
-if [ ! -x "$progress" ]; then
-  echo "dump-progress が実行できません: ${config_dir}" >&2
-  exit 1
-fi
-
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
-# psqlにcursorで結果を取らせる件数。これが無いと生成したINSERT文を全件client
-# memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。0にするとcursorを
-# 使わない（cursorを扱えないengineに当たったときの逃げ道）。
-fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
-case "$fetch_rows" in
-  '' | *[!0-9]*)
-    echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
-    exit 1
-    ;;
-esac
 database="${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}"
 db_user="${AGENTSVIEW_LOCAL_CRDB_USER:-root}"
 host_port="${AGENTSVIEW_LOCAL_CRDB_PORT:-26257}"
@@ -147,6 +119,41 @@ psql_local() {
 # 値をparseするquery用。header・整列・行数表示を外す。
 query_local() {
   psql_local --no-align --tuples-only --quiet --field-separator='|' "$@"
+}
+
+# dump専用のhelperを解決する。dumpしか使わないので、ここで初めて要求する
+# （helperが無いmachineでも up／down／sql／status／restore は動かせるようにする）。
+dump_sql=""
+progress=""
+require_dump_tools() {
+  # dataをINSERT列へ書き出すSQL。pg_dumpはCockroachDBを扱えないので、行の組み立ては
+  # serverに任せる。理由と仕組みは dump-inserts.sql のcommentと docs/agentsview.md にある。
+  dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-${config_dir}/dump-inserts.sql}"
+  if [ ! -f "$dump_sql" ]; then
+    echo "dump-inserts.sql が見つかりません: ${dump_sql}" >&2
+    exit 1
+  fi
+
+  # dumpの進捗をstderrへ出すhelper。source treeでは executable_ prefixが付く。
+  progress="${AGENTSVIEW_DUMP_PROGRESS:-${config_dir}/dump-progress}"
+  if [ ! -x "$progress" ]; then
+    progress="${config_dir}/executable_dump-progress"
+  fi
+  if [ ! -x "$progress" ]; then
+    echo "dump-progress が実行できません: ${config_dir}" >&2
+    exit 1
+  fi
+
+  # psqlにcursorで結果を取らせる件数。これが無いと生成したINSERT文を全件client
+  # memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。0にするとcursorを
+  # 使わない（cursorを扱えないengineに当たったときの逃げ道）。
+  fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+  case "$fetch_rows" in
+    '' | *[!0-9]*)
+      echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
+      exit 1
+      ;;
+  esac
 }
 
 # local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
@@ -449,6 +456,7 @@ case "$mode" in
     done
     ;;
   dump)
+    require_dump_tools
     push_local
     require_schema
     dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.sql"
