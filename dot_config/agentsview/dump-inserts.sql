@@ -121,6 +121,10 @@ FROM tbl
   JOIN (SELECT table_name, max(depth) AS depth FROM depth GROUP BY table_name) o
     ON o.table_name = tbl.table_name::text
 ORDER BY o.depth, tbl.table_name
+-- \gexecは返ってきた各行をqueryとして実行し、その結果を表示する。ここで返るのは
+-- 「INSERT文を1行ずつ返すSELECT」なので、実行結果の行がそのままINSERT文になり、
+-- それがdumpの中身である。生成したqueryそのものは出力されない（--echo-queriesは
+-- 付けない。付けるとこの生成SQL自体がdumpへ混ざる）。
 \gexec
 
 -- 最後に完了markerを置く。information_schemaは権限でfilterされるので、schema名を
