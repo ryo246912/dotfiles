@@ -20,6 +20,8 @@ from decimal import Decimal, InvalidOperation
 INTERVAL_ENV = "AGENTSVIEW_DUMP_PROGRESS_SECONDS"
 # 報告間隔の下限。これより短くしても、報告が並ぶだけで進捗は読めない。
 MIN_INTERVAL = 0.1
+# 1度に読むbyte数。行の長さに関係なく、この量しかmemoryへ載せない。
+CHUNK_BYTES = 1 << 20
 
 
 def interval() -> float:
@@ -90,13 +92,20 @@ def main() -> int:
     if every:
         threading.Thread(target=ticker, args=(counter, every, done), daemon=True).start()
     # byteのまま写す。dumpにはsession本文が入るので、hostのlocaleでdecode／encodeし
-    # 直すと非ASCIIが壊れうる。行数はbyte列を改行で切って数える。
+    # 直すと非ASCIIが壊れうる。
+    #
+    # 行ではなく固定長で読む。dumpは1 rowが1行なので、session本文の大きなrowでは
+    # 1行がそのままmemoryへ載る。ここで使う量をchunk sizeで抑える（行数は読んだ
+    # byte列の改行を数える）。
     # modeは変えない。呼び出し元が0600で作ったfileへ書く。
     with open(path, "wb") as out:
-        for line in sys.stdin.buffer:
-            out.write(line)
-            counter.lines += 1
-            counter.written += len(line)
+        while True:
+            chunk = sys.stdin.buffer.read(CHUNK_BYTES)
+            if not chunk:
+                break
+            out.write(chunk)
+            counter.lines += chunk.count(b"\n")
+            counter.written += len(chunk)
     done.set()
     counter.report(" (done)")
     return 0
