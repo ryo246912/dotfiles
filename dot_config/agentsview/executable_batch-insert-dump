@@ -215,6 +215,26 @@ def pending_kind(pending: str) -> str:
     return "dollar-quoted string"
 
 
+def ensure_on_conflict(body: str) -> str | None:
+    """INSERTへ ON CONFLICT DO NOTHING を補う。補えない形ならNoneを返す。
+
+    dump-inserts.sqlの出力は既に指定済みなので変わらない。旧いplain pg_dumpの
+    dumpは指定なしのINSERTを含みうるため、同じfileを再実行するとduplicate keyで
+    止まる。VALUESの閉じ括弧で終わるstatementには安全に足せる（conflict句が
+    ある場合、statementは括弧では終わらない）。
+    """
+
+    text = body.rstrip()
+    if not text.endswith(";"):
+        return None
+    head = text[:-1].rstrip()
+    if head.endswith(")"):
+        return head + " ON CONFLICT DO NOTHING;"
+    if "ON CONFLICT" in head.upper()[-40:]:
+        return body
+    return None
+
+
 def main() -> int:
     """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
 
@@ -228,10 +248,20 @@ def main() -> int:
     in_chunk = 0
     lineno = 0
     tables = None
+    # ON CONFLICT DO NOTHING を補えなかったINSERTの数。再実行が安全でない印である。
+    unsafe = 0
     out.write("SET client_encoding = 'UTF8';\n")
     for lineno, line in enumerate(sys.stdin, start=1):
         # 完了markerはstatementではないので、statementへ渡さず値だけ覚える。
         if not splitter.pending and line.startswith(MARKER):
+            # markerは1つだけ。2つあるのはdumpを連結した状態で、どちらの範囲が
+            # 完全なのか分からない。
+            if tables is not None:
+                print(
+                    f"dump has more than one completion marker (after line {lineno})",
+                    file=sys.stderr,
+                )
+                return 1
             tables = line[len(MARKER) :].strip()
             continue
         # psqlのmeta-command（`\restrict`）はSQLではないので、statement扱いしない。
@@ -242,12 +272,26 @@ def main() -> int:
             and line.startswith("\\")
             and not strip_leading_noise(splitter.tail())
         ):
+            if tables is not None:
+                print(
+                    f"dump has SQL after the completion marker (after line {lineno})",
+                    file=sys.stderr,
+                )
+                return 1
             splitter.buffer = []
             skipped += 1
             continue
 
         for statement in splitter.feed(line):
             body = strip_leading_noise(statement)
+            # markerはdumpの終端の印なので、その後にSQLがあってはならない。dumpを
+            # 連結した場合、marker以降のrowまで取り込んでしまうためである。
+            if body and tables is not None:
+                print(
+                    f"dump has SQL after the completion marker (after line {lineno})",
+                    file=sys.stderr,
+                )
+                return 1
             if body[:6].upper() != "INSERT":
                 if body:
                     skipped += 1
@@ -255,7 +299,11 @@ def main() -> int:
                 continue
             if in_chunk == 0:
                 out.write("BEGIN;\n")
-            out.write(body.strip())
+            fixed = ensure_on_conflict(body)
+            if fixed is None:
+                unsafe += 1
+                fixed = body
+            out.write(fixed.strip())
             out.write("\n")
             kept += 1
             in_chunk += 1
@@ -294,6 +342,14 @@ def main() -> int:
     # dump-inserts.sqlの出力はINSERTだけなので、skipしたstatementの有無で見分ける。
     # 数えるのはSQL statementだけにする。psqlのmeta-command（\restrict）はSQLでは
     # なく、それだけを根拠にすると切り詰められた新形式のdumpを旧形式と誤認しうる。
+    # 再実行できない形のINSERTが残った場合は伝える。docsは「同じfileを再実行できる」
+    # と書いているが、それは ON CONFLICT DO NOTHING が付いている前提である。
+    if unsafe:
+        print(
+            f"warning: {unsafe} INSERT statements have no ON CONFLICT clause;"
+            " re-running this dump can stop on duplicate keys",
+            file=sys.stderr,
+        )
     if tables is None and skipped_statements:
         print(
             f"INSERT statements: {kept}"
