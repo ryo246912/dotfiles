@@ -21,6 +21,7 @@ import re
 import sys
 
 CHUNK_ENV = "AGENTSVIEW_IMPORT_CHUNK_ROWS"
+PROGRESS_ENV = "AGENTSVIEW_IMPORT_PROGRESS_ROWS"
 # dump-inserts.sql が最後に置くmarker。dumpが最後まで書かれたことと、schemaを
 # 実際に読めたことを示す。
 MARKER = "-- agentsview-dump-complete tables="
@@ -37,6 +38,19 @@ def chunk_size() -> int:
         raise SystemExit(f"{CHUNK_ENV} must be a positive integer: {raw}") from None
     if value < 1:
         raise SystemExit(f"{CHUNK_ENV} must be a positive integer: {raw}")
+    return value
+
+
+def progress_rows() -> int:
+    """進捗を出す間隔（INSERT件数）を環境変数から読む。0で無効。"""
+
+    raw = os.environ.get(PROGRESS_ENV, "2000")
+    try:
+        value = int(raw)
+    except ValueError:
+        raise SystemExit(f"{PROGRESS_ENV} must be a non-negative integer: {raw}") from None
+    if value < 0:
+        raise SystemExit(f"{PROGRESS_ENV} must be a non-negative integer: {raw}")
     return value
 
 
@@ -264,6 +278,9 @@ def main() -> int:
     """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
 
     limit = chunk_size()
+    # 大きなdumpでは取り込みに時間がかかる。件数を時々出して、止まっているのか
+    # 進んでいるのか分かるようにする。
+    step = progress_rows()
     splitter = Splitter()
     out = sys.stdout
     kept = 0
@@ -334,6 +351,8 @@ def main() -> int:
             out.write("\n")
             kept += 1
             in_chunk += 1
+            if step and kept % step == 0:
+                print(f"  {kept} INSERT statements...", file=sys.stderr, flush=True)
             if in_chunk >= limit:
                 out.write("COMMIT;\n")
                 in_chunk = 0

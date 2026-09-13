@@ -54,10 +54,22 @@ if [ ! -f "$dump_sql" ]; then
   exit 1
 fi
 
+# dumpの進捗をstderrへ出すhelper。source treeでは executable_ prefixが付く。
+progress="${AGENTSVIEW_DUMP_PROGRESS:-${config_dir}/dump-progress}"
+if [ ! -x "$progress" ]; then
+  progress="${config_dir}/executable_dump-progress"
+fi
+if [ ! -x "$progress" ]; then
+  echo "dump-progress が実行できません: ${config_dir}" >&2
+  exit 1
+fi
+
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
-# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定で、cursorを扱えない
-# engineに当たったときの逃げ道として残す（大きなtableではpsqlがmemoryを使い切る）。
-fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定である。既定を0にして
+# いる理由は remote:dump task（dot_config/mise/tasks/agentsview.toml）と同じで、
+# CockroachDBのcursorでdumpが進まなかったためである。cursorを使うとpsqlのmemoryを
+# 抑えられるので、実績のある相手では AGENTSVIEW_DUMP_FETCH_ROWS=1000 で有効にできる。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-0}"
 case "$fetch_rows" in
   '' | *[!0-9]*)
     echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
@@ -145,10 +157,6 @@ query_local() {
 # 「INSERT文を1行ずつ返すSELECT」なので、その結果行がそのままINSERT文になる。
 # --echo-queriesは付けない（生成SQL自体がdumpへ混ざる）。
 dump_inserts_local() {
-  if [ "$fetch_rows" = 0 ]; then
-    echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2
-    echo "  大きなtableではpsqlがclient memoryを使い切ります。" >&2
-  fi
   psql_local --tuples-only --no-align --quiet --set=schema="$schema" \
     --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
 }
@@ -409,7 +417,8 @@ case "$mode" in
     dump_path="${backup_dir}/agentsview-local-$(date +%Y%m%d-%H%M%S)-$$.sql"
     # schema DDLは持ち出さない。CockroachDBのDDL／権限／sequenceをそのまま別の
     # databaseへ流せる保証はなく、schemaは常に現在のAgentsViewが作るためである。
-    if ! dump_inserts_local >"$dump_path"; then
+    echo "local CockroachDBからdumpを書き出します: ${dump_path}" >&2
+    if ! dump_inserts_local | "$progress" "$dump_path"; then
       rm -f "$dump_path"
       exit 1
     fi

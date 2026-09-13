@@ -139,7 +139,8 @@ AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview'
 ["agentsview:cockroach:remote:dump"]
 description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
 run = '''
-set -eu
+# psqlの終了statusを進捗表示のpipeで隠さないよう pipefail を付ける。
+set -euo pipefail
 
 if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
   export _FNOX_REEXEC=1
@@ -169,19 +170,31 @@ mkdir -p "$(dirname "$dump_path")"
 # 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
 # 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
 # repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
-# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定で、cursorを扱えない
-# engineに当たったときの逃げ道として残す（大きなtableではpsqlがmemoryを使い切る）。
-fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定である。
+#
+# 既定は0にしている。CockroachDBのcursor（DECLARE ... FETCH）でこのdumpは1時間
+# 経っても1行も返らなかったが、cursorなしでは同じclusterから17 tableを書き出せて
+# いる。cursorを使うとpsqlのmemoryは抑えられるので、PostgreSQLのように実績のある
+# 相手では AGENTSVIEW_DUMP_FETCH_ROWS=1000 のように指定して有効にできる。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-0}"
 case "$fetch_rows" in
   '' | *[!0-9]*)
     echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
     exit 1
     ;;
-  0)
-    echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2
-    echo "  大きなtableではpsqlがclient memoryを使い切ります。" >&2
-    ;;
 esac
+
+# 進捗をstderrへ出すhelper。psqlは書き出し中なにも言わないため、remoteのように
+# 時間のかかる相手では止まっているのか進んでいるのか分からない。
+progress="${AGENTSVIEW_DUMP_PROGRESS:-}"
+if [ -z "$progress" ]; then
+  progress="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-progress"
+  [ -x "$progress" ] || progress=dot_config/agentsview/executable_dump-progress
+fi
+if [ ! -x "$progress" ]; then
+  echo "dump-progress が実行できません: ${progress}" >&2
+  exit 1
+fi
 
 dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-}"
 if [ -z "$dump_sql" ]; then
@@ -259,6 +272,8 @@ cp "$ca_bundle" "$auth_dir/ca.crt"
 # 先に作って明示的に600へ落とす。
 touch "$dump_path"
 chmod 600 "$dump_path"
+echo "remote CockroachDBからdumpを書き出します: ${dump_path}" >&2
+echo "  進捗は${AGENTSVIEW_DUMP_PROGRESS_SECONDS:-15}秒ごとに出ます（0 linesのままなら、まだserverが最初の行を返していません）" >&2
 docker run --rm --interactive \
   --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
   --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
@@ -268,7 +283,7 @@ docker run --rm --interactive \
   psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
     --set=FETCH_COUNT="$fetch_rows" \
     --tuples-only --no-align --quiet --file=- \
-  <"$dump_sql" >"$dump_path"
+  <"$dump_sql" | "$progress" "$dump_path"
 
 # dumpが最後まで書けたこと、schemaを実際に読めたことを末尾のmarkerで確認する。
 # 生成SQLは対象tableが0件でもerrorにならないので（information_schemaは権限で

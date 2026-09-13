@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""標準入力をfileへ書きながら、進捗をstderrへ出す。
+
+psqlはdumpを書き出している間なにも言わない。remote（CockroachDB Cloud）のように
+時間のかかる相手では、止まっているのか進んでいるのか分からなくなる。報告は別threadで
+時間ごとに出すので、serverが最初の行を返すまで待っている間も「まだ0行」と分かる。
+
+使い方:
+  <psqlの出力> | dump-progress <出力file>
+
+間隔は AGENTSVIEW_DUMP_PROGRESS_SECONDS（既定15秒、0で無効）で変えられる。
+"""
+
+import os
+import sys
+import threading
+import time
+
+INTERVAL_ENV = "AGENTSVIEW_DUMP_PROGRESS_SECONDS"
+
+
+def interval() -> float:
+    """進捗を出す間隔を環境変数から読む。"""
+
+    raw = os.environ.get(INTERVAL_ENV, "15")
+    try:
+        value = float(raw)
+    except ValueError:
+        raise SystemExit(f"{INTERVAL_ENV} must be a non-negative number: {raw}") from None
+    if value < 0:
+        raise SystemExit(f"{INTERVAL_ENV} must be a non-negative number: {raw}")
+    return value
+
+
+class Counter:
+    """書き出した行数とbyte数。報告threadと共有する。"""
+
+    def __init__(self) -> None:
+        """まだ何も書いていない状態を作る。"""
+
+        self.lines = 0
+        self.written = 0
+        self.started = time.monotonic()
+
+    def report(self, note: str = "") -> None:
+        """今の値を1行でstderrへ出す。"""
+
+        elapsed = time.monotonic() - self.started
+        print(
+            f"  {elapsed:.0f}s: {self.lines} lines, {self.written / 1048576:.1f} MiB{note}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+def ticker(counter: Counter, every: float, done: threading.Event) -> None:
+    """終わるまで、一定時間ごとに進捗を出す。"""
+
+    while not done.wait(every):
+        counter.report()
+
+
+def main() -> int:
+    """標準入力をfileへ写しながら、進捗を報告する。"""
+
+    if len(sys.argv) != 2:
+        print("usage: dump-progress <file>", file=sys.stderr)
+        return 2
+    path = sys.argv[1]
+    every = interval()
+    # dumpにはsession本文が入る。decodeできないbyteでも落とさず素通しする。
+    sys.stdin.reconfigure(errors="surrogateescape")
+    counter = Counter()
+    done = threading.Event()
+    if every:
+        threading.Thread(target=ticker, args=(counter, every, done), daemon=True).start()
+    # modeは変えない。呼び出し元が0600で作ったfileへ書く。
+    with open(path, "w", encoding="utf-8", errors="surrogateescape", newline="") as out:
+        for line in sys.stdin:
+            out.write(line)
+            counter.lines += 1
+            counter.written += len(line)
+    done.set()
+    counter.report(" (done)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
