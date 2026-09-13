@@ -266,8 +266,12 @@ def ensure_on_conflict(body: str, code: str) -> str | None:
     # codeはbodyと同じ長さなので、同じ位置で切れる。
     code_head = code[: len(body.rstrip())].rstrip()[:-1].rstrip()
     # 既にconflict句があるstatementには足さない。`ON CONFLICT ... DO UPDATE SET x = f(y)`
-    # のように括弧で終わる形もあるので、括弧の判定より先に見る。
-    if "ON CONFLICT" in code_head.upper():
+    # のように括弧で終わる形もあるので、括弧の判定より先に見る。句はSQLとして正しい
+    # 限り改行やcommentを挟めるため（`ON\nCONFLICT`、`ON /* c */ CONFLICT`）、
+    # 単純な部分文字列では見落とす。codeはcommentの中身を空白にするが開始tokenは
+    # 残すので、`--` と `/*` も空白へ寄せてから空白跨ぎで探す。
+    normalized = re.sub(r"--|/\*", "  ", code_head.upper())
+    if re.search(r"\bON\s+CONFLICT\b", normalized):
         return body
     if code_head.endswith(")"):
         return head + " ON CONFLICT DO NOTHING;"
