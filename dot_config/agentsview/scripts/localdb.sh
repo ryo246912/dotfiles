@@ -284,7 +284,8 @@ EOF
 # 緩めたまま戻さない。localは鏡であり、AgentsView自身のINSERTはidを指定しないので
 # BY DEFAULTでも挙動は変わらない。remoteのschemaには触らない。
 relax_identity_columns() {
-  local rows table column
+  local rows table column relaxed
+  relaxed=""
   # 列挙できない場合は中止する。「識別できないので緩めない」で進めると、明示idの
   # INSERTがchunkの途中で `cannot insert into column` に当たり、手前のchunkだけが
   # commit済みで残る。取り込み後の repair_sequences とは違い、ここはまだ1行も
@@ -307,8 +308,13 @@ relax_identity_columns() {
       echo "identity columnをBY DEFAULTへ変更できません: ${table}.${column}" >&2
       echo "  この列へ明示idを入れるINSERTはこのengineでは通らないため、" >&2
       echo "  1行も取り込まずに中止します。" >&2
+      # 手前で緩めた列はBY DEFAULTのまま残る。戻さないのは、成功したrestoreが残す
+      # 状態と同じであり（この関数は緩めたまま戻さない）、戻すにはいま失敗した
+      # ALTERと同じ権限が要るためである。どこまで変えたかは明示する。
+      [ -z "$relaxed" ] || echo "  BY DEFAULTのまま残る列: ${relaxed}" >&2
       return 1
     fi
+    relaxed="${relaxed}${relaxed:+, }${schema}.${table}.${column}"
     echo "  ${schema}.${table}.${column}: identityをBY DEFAULTへ変更しました" >&2
   done <<EOF
 ${rows}
