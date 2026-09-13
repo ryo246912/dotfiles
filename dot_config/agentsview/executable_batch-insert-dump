@@ -400,7 +400,9 @@ def main() -> int:
     if re.fullmatch(r"[0-9]+", tables) is None:
         print(f"dump has a malformed completion marker: {tables[:40]}", file=sys.stderr)
         return 1
-    if tables == "0":
+    # 数として見る。count(*)は 00 のような形を出さないが、手で書き換えたmarkerでも
+    # 0件を通さないようにする。
+    if int(tables) == 0:
         print(
             "dump covered 0 tables; check the schema name and that the role can read it",
             file=sys.stderr,
