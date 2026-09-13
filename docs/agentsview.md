@@ -332,7 +332,7 @@ test -r "$PGSSLROOTCERT"
 
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
-dumpが長時間戻らない場合、まず進捗の行を見る。`0 lines`のままならserverがまだ最初の行を返していない。行数が増えているなら単に遅い。1度だけ1時間戻らなかったことがあるが、同じ設定で前後の実行は通っており原因は特定できていない。再発する場合は`AGENTSVIEW_DUMP_FETCH_ROWS=0`でcursorを切って切り分ける。
+dumpが長時間戻らない場合、まず進捗の行を見る。行数が増えているなら単に遅い。`0 lines`のままなら、まだ行を受け取っていない状態（接続・TLS・最初のqueryのいずれか）なので、`psql`のstderrにerrorが出ていないかを見る。1度だけ1時間戻らなかったことがあるが、同じ設定で前後の実行は通っており原因は特定できていない。再発する場合は`AGENTSVIEW_DUMP_FETCH_ROWS=0`でcursorを切って切り分ける。
 
 `agentsview:cockroach:remote:dump`は`psql`をcontainerの中で動かすため、container内のlibpqはhost側の`PGSSLROOTCERT`を読めない（値が指すfileがcontainerに無い）。taskはhost側でその値も候補として見て、読めればそのbundleをcontainerへmountし、container内の`PGSSLROOTCERT`を指し直す。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
 
@@ -1182,7 +1182,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。外した結果dumpできる列が1つも残らないtable（全列が生成列、列が無い）があれば、dumpは`has no dumpable column`で止まる。markerはschemaのtableを数えるので、黙って落とすとrowだけ失われたdumpが成功扱いになる。
 - identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
 - `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。
-- dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、まだserverが最初の行を返していない（接続やTLSは通っている）。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
+- dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、dumpの行をまだ1つも受け取っていない。進捗は`psql`の接続と並行して動くので、DNS・TCP・TLS・最初のqueryのどこで待っていても`0 lines`になる。接続とTLSの成否は`psql`のstderrで見る。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。
