@@ -47,13 +47,28 @@ class Splitter:
         """まだ何も読んでいない状態を作る。"""
 
         self.buffer: list[str] = []
+        # bufferと同じ長さで、literal／commentの中身を空白へ置き換えたもの。SQLの句を
+        # dataの中の同じ文字列と区別したいときに使う（ON CONFLICTの判定）。
+        self.code: list[str] = []
         # None以外のときは、その閉じtokenまでliteral／comment内にいる。
         self.pending = ""
         self.escape = False
         self.block_depth = 0
 
+    def reset(self) -> None:
+        """溜まっているstatementを捨てる。"""
+
+        self.buffer = []
+        self.code = []
+
+    def _hide(self, text: str) -> None:
+        """literal／commentの中身として、bufferへ足しcode側は空白にする。"""
+
+        self.buffer.append(text)
+        self.code.append(" " * len(text))
+
     def feed(self, line: str):
-        """1行を読み、完成したstatementをyieldする。"""
+        """1行を読み、完成したstatementとそのcode部分をyieldする。"""
 
         pos = 0
         while pos < len(line):
@@ -63,17 +78,22 @@ class Splitter:
             match = TOKEN.search(line, pos)
             if match is None:
                 self.buffer.append(line[pos:])
+                self.code.append(line[pos:])
                 return
             self.buffer.append(line[pos : match.start()])
+            self.code.append(line[pos : match.start()])
             token = match.group(0)
             pos = match.end()
             if token == ";":
                 self.buffer.append(";")
+                self.code.append(";")
                 statement = "".join(self.buffer)
-                self.buffer = []
-                yield statement
+                code = "".join(self.code)
+                self.reset()
+                yield statement, code
                 continue
             self.buffer.append(token)
+            self.code.append(token)
             if token == "'":
                 # 直前がE（識別子の一部ではない）なら、backslash escapeが有効になる。
                 prefix = "".join(self.buffer)[:-1]
@@ -104,7 +124,7 @@ class Splitter:
         """literal／comment内を、閉じtokenまで読み進める。"""
 
         if self.pending == "\n":
-            self.buffer.append(line[pos:])
+            self._hide(line[pos:])
             self.pending = ""
             return len(line)
         if self.pending == "*/":
@@ -117,14 +137,14 @@ class Splitter:
             else:
                 found = line.find(closer, index)
             if found < 0:
-                self.buffer.append(line[pos:])
+                self._hide(line[pos:])
                 return len(line)
             end = found + len(closer)
             if closer in {"'", '"'} and line.startswith(closer * 2, found):
                 # '' と "" はliteral内のescapeなので、閉じtokenではない。
                 index = found + 2
                 continue
-            self.buffer.append(line[pos:end])
+            self._hide(line[pos:end])
             self.pending = ""
             self.escape = False
             return end
@@ -137,7 +157,7 @@ class Splitter:
             opening = line.find("/*", index)
             closing = line.find("*/", index)
             if closing < 0 and opening < 0:
-                self.buffer.append(line[pos:])
+                self._hide(line[pos:])
                 return len(line)
             if opening >= 0 and (closing < 0 or opening < closing):
                 self.block_depth += 1
@@ -145,7 +165,7 @@ class Splitter:
                 continue
             self.block_depth -= 1
             index = closing + 2
-        self.buffer.append(line[pos:index])
+        self._hide(line[pos:index])
         self.pending = ""
         return index
 
@@ -215,7 +235,7 @@ def pending_kind(pending: str) -> str:
     return "dollar-quoted string"
 
 
-def ensure_on_conflict(body: str) -> str | None:
+def ensure_on_conflict(body: str, code: str) -> str | None:
     """INSERTへ ON CONFLICT DO NOTHING を補う。補えない形ならNoneを返す。
 
     dump-inserts.sqlの出力は既に指定済みなので変わらない。旧いplain pg_dumpの
@@ -227,13 +247,15 @@ def ensure_on_conflict(body: str) -> str | None:
     if not text.endswith(";"):
         return None
     head = text[:-1].rstrip()
+    # 判定はcode側（literal／commentの中身を空白にしたもの）で行う。dataの中の
+    # ON CONFLICTという文字列や、commentに書かれた句をSQLと誤認しないためである。
+    # codeはbodyと同じ長さなので、同じ位置で切れる。
+    code_head = code[: len(body.rstrip())].rstrip()[:-1].rstrip()
     # 既にconflict句があるstatementには足さない。`ON CONFLICT ... DO UPDATE SET x = f(y)`
-    # のように括弧で終わる形もあるので、括弧の判定より先に見る。dataの中に
-    # ON CONFLICTという文字列を含むdumpはこの判定に引っかかるが、余計な句を足して
-    # syntax errorにするより、触らない側へ倒す。
-    if "ON CONFLICT" in head.upper():
+    # のように括弧で終わる形もあるので、括弧の判定より先に見る。
+    if "ON CONFLICT" in code_head.upper():
         return body
-    if head.endswith(")"):
+    if code_head.endswith(")"):
         return head + " ON CONFLICT DO NOTHING;"
     return None
 
@@ -281,12 +303,14 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 1
-            splitter.buffer = []
+            splitter.reset()
             skipped += 1
             continue
 
-        for statement in splitter.feed(line):
+        for statement, code in splitter.feed(line):
             body = strip_leading_noise(statement)
+            # bodyはstatementの末尾側なので、codeも同じ長さだけ末尾から採る。
+            code_body = code[len(statement) - len(body) :]
             # markerはdumpの終端の印なので、その後にSQLがあってはならない。dumpを
             # 連結した場合、marker以降のrowまで取り込んでしまうためである。
             if body and tables is not None:
@@ -302,7 +326,7 @@ def main() -> int:
                 continue
             if in_chunk == 0:
                 out.write("BEGIN;\n")
-            fixed = ensure_on_conflict(body)
+            fixed = ensure_on_conflict(body, code_body)
             if fixed is None:
                 unsafe += 1
                 fixed = body
