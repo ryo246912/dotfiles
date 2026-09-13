@@ -332,4 +332,13 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        # 取り込み先のpsqlがerrorで先に終了すると、こちらの書き込みがpipeで切れる。
+        # 原因はpsqlが出したSQLのerrorなので、ここではpipeが閉じたことだけを伝える。
+        # 終了時のflushでも同じerrorが出るため、stdoutをdevnullへ差し替えてから抜ける
+        # （さもないとPythonのtracebackがpsqlのerrorを埋めてしまう）。
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        print("stopped: psql closed the pipe (see its error above)", file=sys.stderr)
+        sys.exit(1)

@@ -73,11 +73,21 @@ depth AS (
 tbl AS (
   SELECT col.table_schema,
     col.table_name,
-    array_agg(col.name) AS names
+    array_agg(col.name) AS names,
+    -- identity列へ明示値を入れるINSERTには OVERRIDING SYSTEM VALUE が必要になる。
+    -- 並びに関係しない集約なので、列一覧のarrayとは独立に取って良い。
+    COALESCE(bool_or(col.identity), false) AS overriding
   FROM (
     SELECT c.table_schema,
       c.table_name,
-      quote_ident(c.column_name) AS name
+      quote_ident(c.column_name) AS name,
+      -- GENERATED ALWAYS AS IDENTITY の列は、値を指定すると
+      -- `cannot insert into column` でrestoreが止まる。identity_generationを
+      -- 埋めないengineでは、付けても無害な側（必要とみなす）へ倒す。
+      (
+        c.is_identity = 'YES'
+        AND COALESCE(c.identity_generation, 'ALWAYS') <> 'BY DEFAULT'
+      ) AS identity
     FROM information_schema.columns c
       JOIN information_schema.tables t
         ON t.table_schema = c.table_schema
@@ -98,7 +108,9 @@ tbl AS (
 SELECT 'SELECT '
     || quote_literal(
          'INSERT INTO ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
-         || ' (' || array_to_string(tbl.names, ', ') || ') VALUES ('
+         || ' (' || array_to_string(tbl.names, ', ') || ')'
+         || CASE WHEN tbl.overriding THEN ' OVERRIDING SYSTEM VALUE' ELSE '' END
+         || ' VALUES ('
        )
     || ' || COALESCE(quote_literal('
     || array_to_string(tbl.names, '::text), ''NULL'') || '', '' || COALESCE(quote_literal(')
