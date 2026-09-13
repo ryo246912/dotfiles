@@ -10,6 +10,12 @@
 -- そこで、行を組み立てるのはserverに任せる。列名を明示するので、AgentsViewが
 -- 列を増やしても古いdumpが壊れない。
 --
+-- identity列（GENERATED ALWAYS AS IDENTITY）にも値を入れる。idは他tableから参照
+-- されうるので、採番し直すわけにはいかない。SQL標準の OVERRIDING SYSTEM VALUE は
+-- 付けない。CockroachDBが解釈せず `at or near "overriding": syntax error` になる
+-- ためである。代わりに取り込み側（localdb.shのrestore）が、取り込み前にidentity列を
+-- BY DEFAULTへ緩める。
+--
 -- 呼び出し方（psqlの:'schema'はclient側で置換される）:
 --   psql --set=schema=agentsview --set=FETCH_COUNT=1000 \
 --     --tuples-only --no-align --quiet --file=- < このfile
@@ -73,21 +79,11 @@ depth AS (
 tbl AS (
   SELECT col.table_schema,
     col.table_name,
-    array_agg(col.name) AS names,
-    -- identity列へ明示値を入れるINSERTには OVERRIDING SYSTEM VALUE が必要になる。
-    -- 並びに関係しない集約なので、列一覧のarrayとは独立に取って良い。
-    COALESCE(bool_or(col.identity), false) AS overriding
+    array_agg(col.name) AS names
   FROM (
     SELECT c.table_schema,
       c.table_name,
-      quote_ident(c.column_name) AS name,
-      -- GENERATED ALWAYS AS IDENTITY の列は、値を指定すると
-      -- `cannot insert into column` でrestoreが止まる。identity_generationを
-      -- 埋めないengineでは、付けても無害な側（必要とみなす）へ倒す。
-      (
-        c.is_identity = 'YES'
-        AND COALESCE(c.identity_generation, 'ALWAYS') <> 'BY DEFAULT'
-      ) AS identity
+      quote_ident(c.column_name) AS name
     FROM information_schema.columns c
       JOIN information_schema.tables t
         ON t.table_schema = c.table_schema
@@ -108,9 +104,7 @@ tbl AS (
 SELECT 'SELECT '
     || quote_literal(
          'INSERT INTO ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
-         || ' (' || array_to_string(tbl.names, ', ') || ')'
-         || CASE WHEN tbl.overriding THEN ' OVERRIDING SYSTEM VALUE' ELSE '' END
-         || ' VALUES ('
+         || ' (' || array_to_string(tbl.names, ', ') || ') VALUES ('
        )
     || ' || COALESCE(quote_literal('
     || array_to_string(tbl.names, '::text), ''NULL'') || '', '' || COALESCE(quote_literal(')

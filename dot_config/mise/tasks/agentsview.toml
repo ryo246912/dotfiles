@@ -170,13 +170,10 @@ mkdir -p "$(dirname "$dump_path")"
 # 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
 # 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
 # repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
-# psqlにcursorで結果を取らせる件数。0はcursorを使わない指定である。
-#
-# 既定は0にしている。CockroachDBのcursor（DECLARE ... FETCH）でこのdumpは1時間
-# 経っても1行も返らなかったが、cursorなしでは同じclusterから17 tableを書き出せて
-# いる。cursorを使うとpsqlのmemoryは抑えられるので、PostgreSQLのように実績のある
-# 相手では AGENTSVIEW_DUMP_FETCH_ROWS=1000 のように指定して有効にできる。
-fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-0}"
+# psqlにcursorで結果を取らせる件数。これが無いと生成したINSERT文を全件client
+# memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。0にするとcursorを
+# 使わない（cursorを扱えないengineに当たったときの逃げ道）。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
 case "$fetch_rows" in
   '' | *[!0-9]*)
     echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
