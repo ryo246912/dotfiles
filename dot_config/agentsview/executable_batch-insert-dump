@@ -220,18 +220,21 @@ def ensure_on_conflict(body: str) -> str | None:
 
     dump-inserts.sqlの出力は既に指定済みなので変わらない。旧いplain pg_dumpの
     dumpは指定なしのINSERTを含みうるため、同じfileを再実行するとduplicate keyで
-    止まる。VALUESの閉じ括弧で終わるstatementには安全に足せる（conflict句が
-    ある場合、statementは括弧では終わらない）。
+    止まる。VALUESの閉じ括弧で終わるstatementには安全に足せる。
     """
 
     text = body.rstrip()
     if not text.endswith(";"):
         return None
     head = text[:-1].rstrip()
+    # 既にconflict句があるstatementには足さない。`ON CONFLICT ... DO UPDATE SET x = f(y)`
+    # のように括弧で終わる形もあるので、括弧の判定より先に見る。dataの中に
+    # ON CONFLICTという文字列を含むdumpはこの判定に引っかかるが、余計な句を足して
+    # syntax errorにするより、触らない側へ倒す。
+    if "ON CONFLICT" in head.upper():
+        return body
     if head.endswith(")"):
         return head + " ON CONFLICT DO NOTHING;"
-    if "ON CONFLICT" in head.upper()[-40:]:
-        return body
     return None
 
 
