@@ -285,14 +285,18 @@ EOF
 # BY DEFAULTでも挙動は変わらない。remoteのschemaには触らない。
 relax_identity_columns() {
   local rows table column
-  # 列挙できない環境ではそのまま進む（identity列が無ければ何もしないのと同じ）。
+  # 列挙できない場合は中止する。「識別できないので緩めない」で進めると、明示idの
+  # INSERTがchunkの途中で `cannot insert into column` に当たり、手前のchunkだけが
+  # commit済みで残る。取り込み後の repair_sequences とは違い、ここはまだ1行も
+  # 書いていないので、止めるほうが安い。
   if ! rows="$(query_local --command="SELECT table_name, column_name
     FROM information_schema.columns
     WHERE table_schema = '${schema}' AND is_identity = 'YES'
       AND COALESCE(identity_generation, '') <> 'BY DEFAULT'
     ORDER BY table_name, column_name")"; then
-    echo "identity columnを列挙できませんでした。そのまま取り込みを続けます。" >&2
-    return 0
+    echo "identity columnを列挙できません: ${schema}" >&2
+    echo "  緩めるべき列が分からないため、1行も取り込まずに中止します。" >&2
+    return 1
   fi
   [ -n "$rows" ] || return 0
   while IFS='|' read -r table column; do
@@ -343,11 +347,6 @@ import_sql_file() {
   temp_counts_before="$(mktemp)"
   temp_counts_after="$(mktemp)"
 
-  # dumpは identity列にも値を持つ。取り込めるようにschemaを緩めてから始める。
-  relax_identity_columns
-
-  row_counts >"$temp_counts_before"
-
   # 先に1度読み切って、markerと切り詰めを確認する。filterの出力を直接psqlへ繋ぐと、
   # 最後まで読んでから出るerror（markerが無い等）の時点で、既に手前のchunkが
   # commit済みになってしまう。読むだけなのでDBへは触らない。成功時の要約は
@@ -357,6 +356,12 @@ import_sql_file() {
     printf '%s\n' "$check" >&2
     return 1
   fi
+
+  # dumpは identity列にも値を持つ。取り込めるようにschemaを緩める。緩めたままには
+  # するので、受け付けないdumpでschemaを変えないよう、確認のあとに行う。
+  relax_identity_columns || return 1
+
+  row_counts >"$temp_counts_before"
 
   # CockroachDBは1 transactionで書ける量に上限があるため、filterがBEGIN/COMMITで
   # chunkへ割る。途中で失敗するとそこまでのchunkはcommit済みで残るが、INSERTは
