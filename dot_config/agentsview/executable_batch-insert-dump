@@ -389,7 +389,12 @@ def main() -> int:
 
 if __name__ == "__main__":
     try:
-        sys.exit(main())
+        status = main()
+        # 出力が小さいとbufferに残ったまま終わり、interpreterの終了時のflushで
+        # pipeのerrorになる。そこは下のexceptの外なので、tracebackが出て終了statusも
+        # 120になる。ここでflushして、この場合も同じ扱いにする。
+        sys.stdout.flush()
+        sys.exit(status)
     except BrokenPipeError:
         # 取り込み先のpsqlがerrorで先に終了すると、こちらの書き込みがpipeで切れる。
         # 原因はpsqlが出したSQLのerrorなので、ここではpipeが閉じたことだけを伝える。
