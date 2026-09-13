@@ -23,14 +23,17 @@ def interval() -> float:
     """進捗を出す間隔を環境変数から読む。"""
 
     raw = os.environ.get(INTERVAL_ENV, "15")
+    limit = threading.TIMEOUT_MAX
+    bad = f"{INTERVAL_ENV} must be a number between 0 and {limit:.0f} (0 disables it): {raw}"
     try:
         value = float(raw)
     except ValueError:
-        raise SystemExit(f"{INTERVAL_ENV} must be a finite non-negative number: {raw}") from None
-    # nanは比較がすべて偽になるので「0以上」だけでは弾けない。Event.waitへ渡すと
-    # 即座に返り、報告のloopが空回りしてstderrを埋める。infも同様に範囲で弾く。
-    if not 0 <= value < float("inf"):
-        raise SystemExit(f"{INTERVAL_ENV} must be a finite non-negative number: {raw}")
+        raise SystemExit(bad) from None
+    # 範囲で弾く。nanは比較がすべて偽になるので「0以上」だけでは弾けず、Event.waitへ
+    # 渡すと即座に返って報告のloopが空回りしstderrを埋める。TIMEOUT_MAXを超える値は
+    # Event.waitがOverflowErrorにするので、報告threadが起きる前にここで止める。
+    if not 0 <= value <= limit:
+        raise SystemExit(bad)
     return value
 
 
