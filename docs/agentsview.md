@@ -334,9 +334,9 @@ Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`
 
 dumpが長時間戻らない場合、まず進捗の行を見る。`0 lines`のままならserverがまだ最初の行を返していない。行数が増えているなら単に遅い。1度だけ1時間戻らなかったことがあるが、同じ設定で前後の実行は通っており原因は特定できていない。再発する場合は`AGENTSVIEW_DUMP_FETCH_ROWS=0`でcursorを切って切り分ける。
 
-`agentsview:cockroach:remote:dump`は`psql`をcontainerの中で動かすため、host側の`PGSSLROOTCERT`はそのままでは効かない。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
+`agentsview:cockroach:remote:dump`は`psql`をcontainerの中で動かすため、container内のlibpqはhost側の`PGSSLROOTCERT`を読めない（値が指すfileがcontainerに無い）。taskはhost側でその値も候補として見て、読めればそのbundleをcontainerへmountし、container内の`PGSSLROOTCERT`を指し直す。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
 
-CAの選択順は、URLの`sslrootcert`（private CAのcluster向け）→ `PGSSLROOTCERT` → 上記の既知のpathである。どれも読めない場合はdumpを始める前に止まり、何を設定すべきかを表示する。このtaskで`SSL error: certificate verify failed`が出る場合は、選ばれたbundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`でhost側の値を確認し、同じbundleで`psql`が通るかを試す。
+CAの選択順は、URLの`sslrootcert`（private CAのcluster向け）→ host側の`PGSSLROOTCERT` → 上記の既知のpathである。`system`のようなfileを指さない値や読めないpathは候補から外し、次の候補へ進む（URLの`sslrootcert`だけは例外で、読めなければ止まる。private CAを指しているのに公開bundleへ落ちると、検証が通ったように見えて別のCAで通してしまうためである）。どれも読めない場合はdumpを始める前に止まり、何を設定すべきかを表示する。このtaskで`SSL error: certificate verify failed`が出る場合は、選ばれたbundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`でhost側の値を確認し、同じbundleで`psql`が通るかを試す。
 
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
 
@@ -1179,7 +1179,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
 - 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
 - tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、その分はbest effortである。
-- 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。
+- 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。外した結果dumpできる列が1つも残らないtable（全列が生成列、列が無い）があれば、dumpは`has no dumpable column`で止まる。markerはschemaのtableを数えるので、黙って落とすとrowだけ失われたdumpが成功扱いになる。
 - identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
 - `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。
 - dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、まだserverが最初の行を返していない（接続やTLSは通っている）。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。

@@ -15,6 +15,7 @@ import os
 import sys
 import threading
 import time
+from decimal import Decimal, InvalidOperation
 
 INTERVAL_ENV = "AGENTSVIEW_DUMP_PROGRESS_SECONDS"
 # 報告間隔の下限。これより短くしても、報告が並ぶだけで進捗は読めない。
@@ -30,17 +31,22 @@ def interval() -> float:
         f"{INTERVAL_ENV} must be 0 (disables it) or between {MIN_INTERVAL}"
         f" and {limit:.0f} seconds: {raw}"
     )
+    # 検査はDecimalで行う。floatにすると 1e-400 のような値が 0.0 へ丸められ、
+    # 「0＝無効」と区別できなくなる（黙って進捗が出なくなる）。
     try:
-        value = float(raw)
-    except ValueError:
+        value = Decimal(raw)
+    except InvalidOperation:
         raise SystemExit(bad) from None
-    # 範囲で弾く。nanは比較がすべて偽になるので「0以上」だけでは弾けず、Event.waitへ
-    # 渡すと即座に返って報告のloopが空回りしstderrを埋める。TIMEOUT_MAXを超える値は
-    # Event.waitがOverflowErrorにする。1e-300のようなtimerの分解能より小さい正の値も
-    # 待たずに返るので同じ空回りになる。どれも報告threadが起きる前にここで止める。
-    if value != 0 and not MIN_INTERVAL <= value <= limit:
+    # nanとinfは範囲比較の前に落とす（Decimalのnanは順序比較でerrorになる）。
+    # Event.waitへ渡すと、nanは即座に返って報告のloopが空回りしstderrを埋め、
+    # TIMEOUT_MAXを超える値はOverflowErrorになる。1e-300のようなtimerの分解能より
+    # 小さい正の値も待たずに返るので同じ空回りになる。どれも報告threadが起きる前に
+    # ここで止める。
+    if not value.is_finite():
         raise SystemExit(bad)
-    return value
+    if value != 0 and not Decimal(str(MIN_INTERVAL)) <= value <= Decimal(limit):
+        raise SystemExit(bad)
+    return float(value)
 
 
 class Counter:

@@ -27,6 +27,25 @@
 -- 単一のtransactionで読むので、tableをまたいで一貫したsnapshotになる。
 BEGIN;
 
+-- dumpできる列が1つも無いtable（全列が生成列、または列が無い）はtblに出てこないため、
+-- INSERTが1文も作られない。一方で完了markerはschemaのtableを数えるので、黙って
+-- 落ちるとrestoreは成功したように見えてrowだけ失われる。1件でもあれば止める。
+-- DO／RAISEはCockroachDBに無いので、読めるmessageを持つcastのerrorで止める。
+SELECT 'SELECT ' || quote_literal(
+      'agentsview-dump: ' || quote_ident(t.table_schema) || '.' || quote_ident(t.table_name)
+      || ' has no dumpable column (generated columns are skipped)'
+    ) || '::int'
+FROM information_schema.tables t
+WHERE t.table_schema = :'schema' AND t.table_type = 'BASE TABLE'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns c
+    WHERE c.table_schema = t.table_schema
+      AND c.table_name = t.table_name
+      AND COALESCE(c.is_generated, 'NEVER') <> 'ALWAYS'
+  )
+\gexec
+
 -- 各tableについて「INSERT文を1行ずつ返すSELECT」を組み立て、\gexecで実行する。
 -- 値は col::text をquote_literalした文字列literalにする。挿入先の列型へ
 -- coerceされるので、pg_dumpの--column-insertsと同じ往復になる。NULLは
