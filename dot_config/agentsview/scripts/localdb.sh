@@ -140,6 +140,10 @@ query_local() {
 
 # local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
 # （agentsview:cockroach:remote:dump）と共通で、出力の形も同じである。
+#
+# dumpの中身は\gexecが実行したqueryの結果である。dump-inserts.sqlが組み立てるのは
+# 「INSERT文を1行ずつ返すSELECT」なので、その結果行がそのままINSERT文になる。
+# --echo-queriesは付けない（生成SQL自体がdumpへ混ざる）。
 dump_inserts_local() {
   if [ "$fetch_rows" = 0 ]; then
     echo "AGENTSVIEW_DUMP_FETCH_ROWS=0 のためcursorを使いません。" >&2

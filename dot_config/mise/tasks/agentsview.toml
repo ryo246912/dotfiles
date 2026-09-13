@@ -220,6 +220,13 @@ if [ -s "$auth_dir/sslrootcert" ]; then
   ca_bundle="$(cat "$auth_dir/sslrootcert")"
   if [ ! -r "$ca_bundle" ]; then
     echo "URLのsslrootcertが読めません: ${ca_bundle}" >&2
+    # libpqは~を展開しないので、psqlで直接繋いでも同じpathで失敗する。ここで
+    # 展開すると、このtaskだけ通ってpsqlでは通らない状態になるため展開しない。
+    case "$ca_bundle" in
+      "~"*)
+        echo "  libpqは~を展開しません。絶対pathで指定してください。" >&2
+        ;;
+    esac
     exit 1
   fi
 elif [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$PGSSLROOTCERT" ]; then
