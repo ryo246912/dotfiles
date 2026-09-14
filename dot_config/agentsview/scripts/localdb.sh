@@ -4,17 +4,21 @@ set -euo pipefail
 # local AgentsView databaseの操作をまとめたscript。container定義は compose.yaml、
 # localをCockroachDBにしている理由は docs/agentsview.md にある。
 #
-# 使えるmode:
+# 使えるmode（miseのtaskがあるものは併記する。無いものは日常では使わないので、
+# 必要なときにこのscriptを直接呼ぶ）:
+#   status               engine versionとmachineごとのsession数（agentsview:cockroach:status）
+#   push [args]          このmachineのsessionをlocalへpushする（agentsview:cockroach:push:local）
+#   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
+#                        （agentsview:cockroach:dump:local）
+#   serve [args]         pushし続けながらlocalからAgentsViewを配信する（agentsview:serve）
+#   restore [file]       dump（remote／local）の不足rowをlocalへmergeする
+#                        （agentsview:cockroach:merge がremote dumpのあとに呼ぶ）
+#   since                remote差分dumpの起点をstdoutへ出す（無ければ空。mergeが使う）
 #   up                   local CockroachDBを起動し、databaseの存在を確認する
+#                        （他のmodeが先頭で呼ぶので、単体で使うことはない）
 #   down                 local containerを止める（volumeは残す）
 #   sql                  local CockroachDBへ対話SQL shellで接続する
-#   status               engine versionとmachineごとのsession数を表示する
-#   push [args]          このmachineのsessionをlocal CockroachDBへpushする
-#   serve [args]         pushし続けながらlocal CockroachDBからAgentsViewを配信する
-#   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
-#   restore [file]       dump（remote／local）の不足rowをlocal CockroachDBへmergeする
-#   repair-sequences     sequenceを実dataのidまで前進させる（巻き戻さない）
-#   since                remote差分dumpの起点をstdoutへ出す（無ければ空）
+#   repair-sequences     sequenceを実dataのidまで前進させる（巻き戻さない。restoreが呼ぶ）
 #
 # macOS既定のbash 3.2でも動く範囲で書く（空arrayやwait -nを使わない）。
 
@@ -163,7 +167,7 @@ require_dump_tools() {
 }
 
 # local CockroachDBのschemaをINSERT列へ書き出す。生成SQLはremote側
-# （agentsview:cockroach:remote:dump）と共通で、出力の形も同じである。
+# （agentsview:cockroach:dump:remote）と共通で、出力の形も同じである。
 #
 # dumpの中身は\gexecが実行したqueryの結果である。dump-inserts.sqlが組み立てるのは
 # 「INSERT文を1行ずつ返すSELECT」なので、その結果行がそのままINSERT文になる。
@@ -207,8 +211,8 @@ require_schema() {
   schema_exists && return 0
   echo "local CockroachDBに ${schema} schemaがありません: ${compose_file}" >&2
   echo "このmachineのsessionを収集するか、dumpをrestoreしてから再実行してください:" >&2
-  echo "  mise run agentsview:cockroach:local:push" >&2
-  echo "  mise run agentsview:cockroach:remote-local:restore" >&2
+  echo "  mise run agentsview:cockroach:push:local" >&2
+  echo "  mise run agentsview:cockroach:merge" >&2
   return 1
 }
 
@@ -536,7 +540,7 @@ case "$mode" in
     repair_sequences
     ;;
   since)
-    # remote-local:restoreがremote dumpへ渡す起点。containerが落ちていると何も
+    # mergeがremote dumpへ渡す起点。containerが落ちていると何も
     # 出せないので、ここでも起動しておく（このあとrestoreで使う）。
     # このmodeのstdoutは呼び出し元が値として読むので、composeの進捗を混ぜない。
     ensure_up >/dev/null

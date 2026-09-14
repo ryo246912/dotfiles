@@ -10,37 +10,7 @@ printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 # local databaseもCockroachDBである。container定義は
 # dot_config/agentsview/compose.yaml、task本体は
 # dot_config/agentsview/scripts/localdb.sh で、ここはmode指定だけを行う。
-["agentsview:cockroach:local:up"]
-description = "Start the local AgentsView CockroachDB container"
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" up "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:down"]
-description = "Stop the local AgentsView CockroachDB container"
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" down "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:sql"]
-description = "Open a SQL shell against the local AgentsView CockroachDB container"
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" sql "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:status"]
+["agentsview:cockroach:status"]
 description = "Show the local CockroachDB version and session counts per machine"
 run = '''
 set -euo pipefail
@@ -50,7 +20,7 @@ exec bash "$script" status "$@"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:local:push"]
+["agentsview:cockroach:push:local"]
 description = "Incrementally push local AgentsView sessions into the local CockroachDB container"
 run = '''
 set -euo pipefail
@@ -60,33 +30,13 @@ exec bash "$script" push "$@"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:local:dump"]
+["agentsview:cockroach:dump:local"]
 description = "Dump the consolidated local AgentsView CockroachDB database"
 run = '''
 set -euo pipefail
 script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
 [ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
 exec bash "$script" dump "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:restore"]
-description = "Merge an AgentsView dump into the local CockroachDB container"
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" restore "$@"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:local:repair-sequences"]
-description = "Advance local AgentsView CockroachDB sequences without rewinding them"
-run = '''
-set -euo pipefail
-script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
-[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-exec bash "$script" repair-sequences "$@"
 '''
 shell = "bash -c"
 
@@ -100,43 +50,25 @@ exec bash "$script" serve "$@"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:status"]
-description = "Show sync status against CockroachDB without a Fly proxy"
-run = '''
-set -eu
-if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:cockroach:status "$@"
-fi
-: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
-# AGENTSVIEW_PG_URL だけはfnoxが解決したsecretなのでここで渡す。schemaは
-# ["agentsview:cockroach:status".env] に置いている。
-AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg status
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:status".env]
-AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview') }}"
-
-["agentsview:cockroach:push"]
+["agentsview:cockroach:push:remote"]
 description = "Push local sessions directly to CockroachDB"
 run = '''
 set -eu
 if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
   export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:cockroach:push -- "$@"
+  exec fnox exec -- mise run agentsview:cockroach:push:remote -- "$@"
 fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 # AGENTSVIEW_PG_URL だけはfnoxが解決したsecretなのでここで渡す。schemaは
-# ["agentsview:cockroach:push".env] に置いている。
+# ["agentsview:cockroach:push:remote".env] に置いている。
 AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push --no-vectors "$@"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:push".env]
+["agentsview:cockroach:push:remote".env]
 AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview') }}"
 
-["agentsview:cockroach:remote:dump"]
+["agentsview:cockroach:dump:remote"]
 description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
 run = '''
 # psqlの終了statusを進捗表示のpipeで隠さないよう pipefail を付ける。
@@ -144,12 +76,12 @@ set -euo pipefail
 
 if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
   export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:cockroach:remote:dump "$@"
+  exec fnox exec -- mise run agentsview:cockroach:dump:remote "$@"
 fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-# 呼び出し元がpathを決めた場合はそれに書く。remote-local:restoreが、この実行で
+# 呼び出し元がpathを決めた場合はそれに書く。mergeが、この実行で
 # 作ったdumpを名前のsortではなく確実に指せるようにするためである。
 dump_path="${AGENTSVIEW_DUMP_PATH:-${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql}"
 auth_dir="$(mktemp -d)"
@@ -203,7 +135,7 @@ if [ ! -r "$dump_sql" ]; then
   exit 1
 fi
 # auth_dirとPG URLはこのtask内で決まる値なのでexportする。静的な
-# AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:remote:dump".env] にある。
+# AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:dump:remote".env] にある。
 export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
 export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
 # source treeではexecutable_ prefixが付いたままなので、両方の名前を見る。
@@ -278,7 +210,7 @@ chmod 600 "$dump_path"
 # 差分dumpの起点。空なら全件。AGENTSVIEW_DUMP_SINCE には次を渡せる:
 #   all         全件（既定。単体実行はbackupを作る用途なので全件にする）
 #   30d         今から30日前
-#   時刻の文字列 そのまま使う（remote-local:restoreはlocalの状態から計算して渡す）
+#   時刻の文字列 そのまま使う（mergeはlocalの状態から計算して渡す）
 since="${AGENTSVIEW_DUMP_SINCE:-all}"
 case "$since" in
   all) since="" ;;
@@ -331,19 +263,17 @@ echo "CockroachDB AgentsView data export: $dump_path (${tables} tables)"
 '''
 shell = "bash -c"
 
-["agentsview:cockroach:remote:dump".env]
+["agentsview:cockroach:dump:remote".env]
 AGENTSVIEW_DUMP_ALLOW_REMOTE = "yes"
 
-["agentsview:cockroach:remote-local:restore"]
-description = "Export CockroachDB rows and merge the missing ones into the local CockroachDB container"
+["agentsview:cockroach:merge"]
+description = "Pull CockroachDB rows and merge the missing ones into the local CockroachDB container"
 run = '''
 set -euo pipefail
 
 backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
-# 書き先をこちらで決めてからdumpさせる。backup directoryを名前でsortして最新を
-# 選ぶと、時計のずれた既存fileや同時に走る別の実行のfileを掴みうる。そのdumpを
-# 取り込んだうえで、remote-local:dumpが「remoteの現在のrowを含むbackup」として
-# 正常終了してしまう。
+# 書き先をこちらで決めてからdumpさせる。backup directoryを名前でsortして最新を選ぶと、
+# 時計のずれた既存fileや同時に走る別の実行のfileを掴みうる。
 mkdir -p "$backup_dir"
 data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
 
@@ -358,25 +288,15 @@ if [ -z "${AGENTSVIEW_DUMP_SINCE:-}" ]; then
   export AGENTSVIEW_DUMP_SINCE
 fi
 
-AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:remote:dump
+AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:dump:remote
 if [ ! -s "$data_dump" ]; then
   echo "CockroachDB AgentsView data export was not created: ${data_dump}" >&2
   exit 1
 fi
 
-# remoteとlocalが同じengineでも、schemaは現在のAgentsViewがlocalへ作ったものを
-# 使い、dumpからはdataだけを取り込む。remoteのDDL／権限／sequenceは持ち込まない。
-mise run agentsview:cockroach:local:restore -- "$data_dump"
-'''
-shell = "bash -c"
-
-["agentsview:cockroach:remote-local:dump"]
-description = "Merge CockroachDB rows into the local CockroachDB container and create a consolidated backup"
-run = '''
-set -euo pipefail
-
-mise run agentsview:cockroach:remote-local:restore
-mise run agentsview:cockroach:local:dump
+# remoteとlocalが同じengineでも、schemaは現在のAgentsViewがlocalへ作ったものを使い、
+# dumpからはdataだけを取り込む。remoteのDDL／権限／sequenceは持ち込まない。
+exec bash "$script" restore "$data_dump"
 '''
 shell = "bash -c"
 
