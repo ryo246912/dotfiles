@@ -127,11 +127,28 @@ test("converts a headerless Raycast 1.x export", () => {
               raycastPreferredWindowMode: "compact",
             },
           },
+          builtin_package_navigation: {
+            pinnedMenuItems: ["com.apple.Safari"],
+          },
+          builtin_package_rootSearch: {
+            rootSearch: [
+              { type: "systemApp", key: "com.apple.Safari", hotkey: "Command-1" },
+              {
+                type: "command",
+                key: "builtin_command_clipboardHistory",
+                hotkey: "Shift-Command-9",
+              },
+            ],
+          },
+          builtin_package_snippets: {
+            snippets: [{ name: "Greeting", text: "Hello!", keyword: "!hello" }],
+          },
         },
         "legacy-passphrase",
       ),
     );
-    const result = spawnSync(process.execPath, [converter, input, output], {
+    const dataDir = path.join(directory, "data");
+    const result = spawnSync(process.execPath, [converter, "--data-dir", dataDir, input, output], {
       encoding: "utf8",
       env: { ...process.env, RAYCAST_EXPORT_PASSPHRASE: "legacy-passphrase" },
     });
@@ -139,7 +156,29 @@ test("converts a headerless Raycast 1.x export", () => {
     assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), {
       tray: { enabled: true },
       launcher_window: { compact_mode: { enabled: true } },
+      favorites: ["applications:com.apple.Safari"],
+      providers: {
+        applications: { entrypoints: { "com.apple.Safari": { shortcut: "super+S" } } },
+        clipboard: { entrypoints: { history: { shortcut: "shift+super+V" } } },
+      },
     });
+    const snippets = JSON.parse(
+      fs.readFileSync(path.join(dataDir, "snippets/snippets.json"), "utf8"),
+    );
+    assert.equal(snippets.length, 1);
+    assert.equal(snippets[0].name, "Greeting");
+    assert.deepEqual(snippets[0].data, { text: "Hello!" });
+    assert.deepEqual(snippets[0].expansion, { keyword: "!hello", apps: [], word: true });
+    const second = spawnSync(process.execPath, [converter, "--data-dir", dataDir, input, output], {
+      encoding: "utf8",
+      env: { ...process.env, RAYCAST_EXPORT_PASSPHRASE: "legacy-passphrase" },
+    });
+    assert.equal(second.status, 0, second.stderr);
+    assert.match(second.stderr, /0\/1 snippets added/);
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(dataDir, "snippets/snippets.json"), "utf8")).length,
+      1,
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }

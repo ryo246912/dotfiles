@@ -138,8 +138,11 @@ fi
 installed_tinycasts="$(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true)"
 conflicting_tinycasts="$(printf '%s\n' "$installed_tinycasts" | grep -Fxv "$tinycast_cask" || true)"
 if [ -n "$conflicting_tinycasts" ]; then
-  echo "Tinycast variant '$conflicting_tinycasts' is still installed; refusing to remove a working app automatically." >&2
-  echo "Run 'brew uninstall --cask $conflicting_tinycasts', then rerun this task to install ${tinycast_cask}." >&2
+  echo "Conflicting Tinycast variants are installed; refusing to remove a working app automatically." >&2
+  for conflicting_tinycast in $conflicting_tinycasts; do
+    echo "Run 'brew uninstall --cask ${conflicting_tinycast}'" >&2
+  done
+  echo "Then rerun this task to install ${tinycast_cask}." >&2
   exit 1
 fi
 if ! brew list --cask "$tinycast_cask" &>/dev/null; then

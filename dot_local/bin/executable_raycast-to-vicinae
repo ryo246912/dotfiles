@@ -14,10 +14,11 @@ const MAX_HEADER_LENGTH = 1024 * 1024;
 const MAX_PAYLOAD_LENGTH = 512 * 1024 * 1024;
 
 function usage() {
-  console.error(`Usage: raycast-to-vicinae [--passphrase-file FILE] RAYCONFIG [OUTPUT]
+  console.error(`Usage: raycast-to-vicinae [--passphrase-file FILE] [--data-dir DIR] RAYCONFIG [OUTPUT]
 
 Convert settings with safe Vicinae equivalents from a Raycast .rayconfig.
 OUTPUT defaults to ~/.config/vicinae/raycast-import.json.
+DIR defaults to ~/.local/share/vicinae and receives migrated snippets.
 
 The passphrase is read from --passphrase-file, or from Raycast's macOS Keychain item.
 RAYCAST_EXPORT_PASSPHRASE is accepted for automated tests, but is discouraged interactively.`);
@@ -25,11 +26,16 @@ RAYCAST_EXPORT_PASSPHRASE is accepted for automated tests, but is discouraged in
 
 function parseArguments(argv) {
   let passphraseFile;
+  let dataDir;
   const positional = [];
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--passphrase-file") {
       passphraseFile = argv[index + 1];
       if (!passphraseFile) throw new Error("--passphrase-file requires a path");
+      index += 1;
+    } else if (argv[index] === "--data-dir") {
+      dataDir = argv[index + 1];
+      if (!dataDir) throw new Error("--data-dir requires a path");
       index += 1;
     } else if (argv[index] === "--help" || argv[index] === "-h") {
       usage();
@@ -45,6 +51,7 @@ function parseArguments(argv) {
     input: positional[0],
     output: positional[1] || path.join(process.env.HOME, ".config/vicinae/raycast-import.json"),
     passphraseFile,
+    dataDir: dataDir || path.join(process.env.HOME, ".local/share/vicinae"),
   };
 }
 
@@ -143,6 +150,138 @@ function mapShortcut(hotkey) {
   return [...modifiers, key].join("+");
 }
 
+function mapLegacyShortcut(hotkey) {
+  if (typeof hotkey !== "string") return undefined;
+  const parts = hotkey.split("-");
+  const key = KEYCODES.get(Number(parts.pop()));
+  if (!key) return undefined;
+  const modifiers = [];
+  for (const part of parts) {
+    const modifier = {
+      command: "super",
+      cmd: "super",
+      control: "control",
+      ctrl: "control",
+      option: "alt",
+      alt: "alt",
+      shift: "shift",
+    }[part.toLowerCase()];
+    if (!modifier) return undefined;
+    if (!modifiers.includes(modifier)) modifiers.push(modifier);
+  }
+  return [...modifiers, key].join("+");
+}
+
+function setEntrypoint(output, provider, entrypoint, field, value) {
+  output.providers ||= {};
+  output.providers[provider] ||= { entrypoints: {} };
+  output.providers[provider].entrypoints[entrypoint] ||= {};
+  output.providers[provider].entrypoints[entrypoint][field] = value;
+}
+
+function bundleIdAtPath(appPath) {
+  if (typeof appPath !== "string" || !appPath) return undefined;
+  try {
+    const value = execFileSync("mdls", ["-raw", "-name", "kMDItemCFBundleIdentifier", appPath], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return value && value !== "(null)" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function looksLikeBundleId(value) {
+  return typeof value === "string" && value.includes(".") && !value.includes("/") && !value.includes(" ");
+}
+
+function legacyApplications(payload, output) {
+  const favorites = [];
+  const pinned = payload.builtin_package_navigation?.pinnedMenuItems || [];
+  for (const item of pinned) {
+    const candidate = typeof item === "string" ? item : item?.key;
+    const bundleId = looksLikeBundleId(candidate) ? candidate : bundleIdAtPath(item?.path);
+    if (bundleId) favorites.push(`applications:${bundleId}`);
+  }
+  if (favorites.length) output.favorites = favorites;
+
+  for (const item of payload.builtin_package_rootSearch?.rootSearch || []) {
+    const shortcut = mapLegacyShortcut(item.hotkey);
+    if (!shortcut || typeof item.key !== "string") continue;
+    if (item.type === "systemApp") setEntrypoint(output, "applications", item.key, "shortcut", shortcut);
+    if (item.type === "command" && item.key === "builtin_command_clipboardHistory") {
+      setEntrypoint(output, "clipboard", "history", "shortcut", shortcut);
+    }
+    if (item.type === "command" && item.key.toLowerCase().includes("emoji")) {
+      setEntrypoint(output, "core", "search-emojis", "shortcut", shortcut);
+    }
+  }
+}
+
+function currentApplications(payload, output) {
+  const favorites = [];
+  for (const item of payload.settings?.commands || []) {
+    const shortcut = mapShortcut(item.macosHotkey);
+    if (item.extensionId === "e:r:clipboard-history" && shortcut) {
+      setEntrypoint(output, "clipboard", "history", "shortcut", shortcut);
+      continue;
+    }
+    if (item.extensionId === "e:r:emoji-picker" && shortcut) {
+      setEntrypoint(output, "core", "search-emojis", "shortcut", shortcut);
+      continue;
+    }
+    if (item.extensionId !== "e:r:applications" || typeof item.id !== "string") continue;
+    const separator = item.id.indexOf("::=::");
+    const bundleId = separator >= 0 ? bundleIdAtPath(item.id.slice(separator + 5)) : undefined;
+    if (!bundleId) continue;
+    if (shortcut) setEntrypoint(output, "applications", bundleId, "shortcut", shortcut);
+    if (typeof item.alias === "string" && item.alias.trim()) {
+      setEntrypoint(output, "applications", bundleId, "alias", item.alias.trim());
+    }
+    if (Number.isInteger(item.favoriteOrder)) favorites.push([item.favoriteOrder, `applications:${bundleId}`]);
+  }
+  if (favorites.length) output.favorites = favorites.sort((left, right) => left[0] - right[0]).map((item) => item[1]);
+}
+
+function extractSnippets(payload) {
+  const legacy = payload.builtin_package_snippets?.snippets;
+  const current = payload.snippets?.snippets;
+  const records = Array.isArray(legacy) ? legacy : Array.isArray(current) ? current : [];
+  const createdAt = Math.floor(Date.now() / 1000);
+  return records.flatMap((record) => {
+    const name = String(record.name || record.title || "").trim();
+    if (!name || typeof record.text !== "string") return [];
+    const keyword = typeof record.keyword === "string" ? record.keyword.trim() : "";
+    const digest = crypto.createHash("sha256").update(`${name}\0${record.text}`).digest("hex").slice(0, 12);
+    return [{
+      id: `snp-${digest}`,
+      name,
+      data: { text: record.text },
+      createdAt,
+      ...(keyword ? { expansion: { keyword, apps: [], word: true } } : {}),
+    }];
+  });
+}
+
+function writeSnippets(dataDir, imported) {
+  if (!imported.length) return undefined;
+  const output = path.join(dataDir, "snippets/snippets.json");
+  let existing = [];
+  if (fs.existsSync(output)) {
+    existing = JSON.parse(fs.readFileSync(output, "utf8"));
+    if (!Array.isArray(existing)) throw new Error(`${output} does not contain a JSON array`);
+  }
+  const seen = new Set(existing.map((item) => `${item.name}\0${item.data?.text || ""}`));
+  const additions = imported.filter((item) => !seen.has(`${item.name}\0${item.data.text}`));
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  const temporary = `${output}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify([...existing, ...additions], null, 2)}\n`, { mode: 0o600 });
+  fs.renameSync(temporary, output);
+  fs.chmodSync(output, 0o600);
+  return { output, additions: additions.length, total: imported.length };
+}
+
 function convert(payload) {
   const isV2 = payload.settings?.general !== undefined;
   const general = payload.settings?.general || {};
@@ -163,9 +302,11 @@ function convert(payload) {
   if (typeof general.openAtLogin === "boolean") {
     skipped.push("launch at login (Vicinae manages this outside settings.json)");
   }
-  skipped.push("command hotkeys/favorites/aliases (Raycast and Vicinae entrypoint IDs differ)");
-  skipped.push("Quicklinks/Snippets/Extensions (not represented by Vicinae settings.json)");
-  return { output, skipped };
+  if (isV2) currentApplications(payload, output);
+  else legacyApplications(payload, output);
+  skipped.push("unrecognized command hotkeys/favorites/aliases (provider IDs differ)");
+  skipped.push("Quicklinks/Extensions (not represented by Vicinae settings.json)");
+  return { output, snippets: extractSnippets(payload), skipped };
 }
 
 function main() {
@@ -177,6 +318,10 @@ function main() {
     fs.writeFileSync(args.output, `${JSON.stringify(result.output, null, 2)}\n`, { mode: 0o600 });
     fs.chmodSync(args.output, 0o600);
     console.error(`Wrote ${args.output}`);
+    const snippets = writeSnippets(args.dataDir, result.snippets);
+    if (snippets) {
+      console.error(`Wrote ${snippets.output} (${snippets.additions}/${snippets.total} snippets added)`);
+    }
     console.error("Not converted automatically:");
     for (const item of result.skipped) console.error(`- ${item}`);
     if (path.basename(args.output) === "settings.json") {

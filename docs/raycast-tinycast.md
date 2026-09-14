@@ -94,7 +94,7 @@ dotfiles としてレビューする要件には劣る。この優先順位な�
 1. Vicinae の macOS DMG を導入し、Raycast と同じログイン直後・同じ Extension 構成で、
    Activity Monitor の Memory と CPU を比較する。
 2. 下記の converter で Raycast の共通設定を Vicinae の `settings.json` へ変換し、chezmoi で配置する。
-3. 自動変換できない Quicklinks、Snippets、Script Commands、command keybind を手動で移す。
+3. 自動変換できない Quicklinks、Script Commands、Extension、残りの command keybind を手動で移す。
 4. 日常的に使う Raycast Extension を 1 つずつ Raycast Store から導入し、macOS 固有 API、OAuth、
    menu-bar command を使うものを重点的に確認する。
 5. 1 週間併用し、機能欠落がなく、実測メモリーが Raycast 未満なら Raycast の自動起動を止める。
@@ -106,18 +106,25 @@ dotfiles としてレビューする要件には劣る。この優先順位な�
 - launcher の global hotkey
 - menu bar icon の表示
 - compact window mode
+- app、Clipboard History、Emoji Search の hotkey（headerless export）
+- app の favorite（headerless export）
+- Snippets（既存の Vicinae snippets と重複を除いて merge）
 
 Raycast が Keychain に保存した export passphrase を自動で取得するため、通常は passphrase の入力は
 不要である。出力先を chezmoi source にすれば、そのまま dotfiles として管理できる。converter は
 現在の `RAYCFG3`（AES-256-GCM）に加え、先頭に signature がない Raycast 1.x の
 `IV + AES-256-CBC` export にも対応する。
 
+Vicinae が起動中だと snippets の保存が競合する可能性があるため、Vicinae を終了してから実行する。
+
 ```sh
 mkdir -p "$(chezmoi source-path)/dot_config/vicinae"
 raycast-to-vicinae \
+  --data-dir "$(chezmoi source-path)/dot_local/share/vicinae" \
   ~/.config/raycast/Raycast.rayconfig \
   "$(chezmoi source-path)/dot_config/vicinae/settings.json"
 chezmoi apply ~/.config/vicinae/settings.json
+chezmoi apply ~/.local/share/vicinae/snippets/snippets.json
 ```
 
 Keychain から取得できない場合は、passphrase だけを書いた権限 `0600` の一時ファイルを
@@ -128,11 +135,12 @@ raycast-to-vicinae --passphrase-file /path/to/passphrase \
   /path/to/Raycast.rayconfig /path/to/settings.json
 ```
 
-Quicklinks、Snippets、Extension、command ごとの hotkey/favorite/alias は自動変換しない。これらは
-Vicinae の `settings.json` に対応する安定した ID/保存形式がないか、Raycast と Vicinae で
-entrypoint ID が異なるためである。converter は終了時に手動移行項目を表示し、推測した値を
-書き込まない。既存の出力ファイルは上書きするため、Vicinae 側で設定を追加した後に再実行する
-場合は先に差分を退避する。
+Quicklinks、Extension、および `RAYCFG3` に含まれる app/command ごとの hotkey/favorite/alias は
+自動変換しない。これらは Vicinae の `settings.json` に対応する安定した ID/保存形式がないか、
+Raycast と Vicinae で entrypoint ID が異なるためである。なお Snippets は `settings.json` ではなく
+`~/.local/share/vicinae/snippets/snippets.json` へ直接 merge する。converter は終了時に残った
+手動移行項目を表示し、推測した値を書き込まない。既存の settings 出力ファイルは上書きするため、
+Vicinae 側で設定を追加した後に再実行する場合は先に差分を退避する。
 
 ## Tinycast 側で Git 管理できる設定
 
