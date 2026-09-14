@@ -298,6 +298,11 @@ def ensure_on_conflict(body: str, code: str) -> str | None:
     # 単純な部分文字列では見落とす。
     if re.search(r"\bON\s+CONFLICT\b", masked.upper()):
         return body
+    # RETURNINGがある形には足さない。`RETURNING (id + 1)` のように括弧で終わると、
+    # 足した句がRETURNINGのあとへ入って構文errorになる（ON CONFLICTはRETURNINGより
+    # 前に置く）。生成dumpには出ないが、手書きの旧形式にはありうる。
+    if re.search(r"\bRETURNING\b", masked.upper()):
+        return None
     # VALUESの閉じ括弧で終わるstatementにだけ足せる。`INSERT INTO t (a) SELECT ...` の
     # ように括弧が途中にあるだけの形へ足すと、別のSQLになってしまう。
     tail = masked.rstrip()

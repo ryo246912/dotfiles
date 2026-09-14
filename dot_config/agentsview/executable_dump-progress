@@ -107,7 +107,9 @@ def main() -> int:
             counter.lines += chunk.count(b"\n")
             counter.written += len(chunk)
     done.set()
-    counter.report(" (done)")
+    # 進捗を無効にしている場合（間隔0）は、完了の1行も出さない。
+    if every:
+        counter.report(" (done)")
     return 0
 
 

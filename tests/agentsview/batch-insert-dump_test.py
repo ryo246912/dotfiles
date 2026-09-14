@@ -22,6 +22,10 @@ def run(text, chunk=None, marker=True):
     """filterへtextを流し、status・stdout・stderrを返す。"""
 
     env = dict(os.environ)
+    # 呼び出したshellの設定で結果が変わらないよう、filterが読む値を固定する
+    # （chunkはcaseごとに上書きする）。
+    env["AGENTSVIEW_IMPORT_CHUNK_ROWS"] = "500"
+    env["AGENTSVIEW_IMPORT_PROGRESS_ROWS"] = "0"
     if chunk:
         env["AGENTSVIEW_IMPORT_CHUNK_ROWS"] = str(chunk)
     body = text + (MARK if marker else "")
@@ -231,6 +235,21 @@ case("dollar quote at the start of a continuation line",
      inserts=1, contains=["$tag$a;b$tag$)"])
 case("dollar sign identifier at the start of a continuation line",
      "INSERT INTO t (\na$$$b$) VALUES ('v') ON CONFLICT DO NOTHING;\n", inserts=1)
+
+# RETURNINGがある形には句を足さない（ON CONFLICTはRETURNINGより前に置くため）。
+case("returning ending in a paren is left alone",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') RETURNING (id + 1);\n",
+     marker=False, inserts=1,
+     contains=["no ON CONFLICT clause"], notin=["ON CONFLICT DO NOTHING"])
+case("returning a column is left alone",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') RETURNING id;\n",
+     marker=False, inserts=1, notin=["ON CONFLICT DO NOTHING"])
+case("returning inside a literal still gets the clause",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('RETURNING (id)');\n",
+     marker=False, inserts=1, contains=["VALUES ('RETURNING (id)') ON CONFLICT DO NOTHING;"])
+case("existing clause with returning is untouched",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') ON CONFLICT DO NOTHING RETURNING id;\n",
+     marker=False, inserts=1, notin=["DO NOTHING RETURNING id ON CONFLICT"])
 
 fails = 0
 for name, text, rc, inserts, chunk, marker, contains, notin in cases:

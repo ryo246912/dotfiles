@@ -243,7 +243,12 @@ elif [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$P
   ca_bundle="$PGSSLROOTCERT"
 else
   # docs/agentsview.mdがhost側の候補として挙げているpathと同じ順で探す。
+  # brew --prefix openssl@3 は /opt/homebrew/opt/openssl@3（Intelは /usr/local/opt）
+  # を指し、bundleはその下の etc/openssl@3/cert.pem である。Homebrewのprefix直下へ
+  # linkされる形もあるので両方見る。
   for candidate in /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt \
+    /opt/homebrew/opt/openssl@3/etc/openssl@3/cert.pem \
+    /usr/local/opt/openssl@3/etc/openssl@3/cert.pem \
     /opt/homebrew/etc/openssl@3/cert.pem /usr/local/etc/openssl@3/cert.pem; do
     if [ -r "$candidate" ]; then
       ca_bundle="$candidate"
