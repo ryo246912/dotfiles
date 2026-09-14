@@ -15,20 +15,6 @@ variable "cockroach_database_name" {
   default     = "agentsview"
 }
 
-variable "cockroach_owner_password" {
-  description = "migrationを行うowner roleのpassword。Terraform stateへsensitiveとして保存される。"
-  type        = string
-  sensitive   = true
-}
-
-variable "cockroach_push_password" {
-  description = "各PCの pg push が使うroleのpassword。Terraform stateへsensitiveとして保存される。"
-  type        = string
-  sensitive   = true
-}
-
-variable "cockroach_read_password" {
-  description = "Cloud Runのread-only viewerが使うroleのpassword。Terraform stateへsensitiveとして保存される。"
-  type        = string
-  sensitive   = true
-}
+# cockroach_sql_user.{owner,push,read}はpasswordを意図的に持たない。
+# 理由と実際のpassword設定方法はterraform/agentsview/cockroach_sql_users.tfの
+# コメントを参照。

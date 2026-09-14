@@ -371,6 +371,63 @@ shell = "bash -c"
 ["agentsview:cockroach:push".env]
 AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview') }}"
 
+["agentsview:cockroach:set-passwords"]
+# terraform/agentsview/cockroach_sql_users.tfはpasswordを持たない設計にして
+# いるため（理由は同fileのコメント参照）、applyのたびにCockroachDB Cloud API
+# を直接叩いて実際のpasswordを設定する。bootstrap初回のほか、password
+# rotation時にも実行する。CIからは呼ばない（tfaction.yamlのsecretsに
+# COCKROACH_*_PASSWORDを含めていないのはこのtaskのため）。
+#
+# TODO(password_wo): providerがpassword_wo／password_wo_versionを正式
+# releaseしてTerraform側へ移行したら、このtaskとCOCKROACH_*_PASSWORD secretは
+# 不要になる。
+description = "Set the real CockroachDB SQL user passwords via the Cloud API (Terraform intentionally omits password)"
+run = '''
+set -eu
+if { [ -z "${COCKROACH_API_KEY:-}" ] || [ -z "${COCKROACH_OWNER_PASSWORD:-}" ] ||
+     [ -z "${COCKROACH_PUSH_PASSWORD:-}" ] || [ -z "${COCKROACH_READ_PASSWORD:-}" ]; } &&
+   [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:set-passwords "$@"
+fi
+: "${COCKROACH_API_KEY:?fnox が未解決です}"
+: "${COCKROACH_OWNER_PASSWORD:?fnox が未解決です}"
+: "${COCKROACH_PUSH_PASSWORD:?fnox が未解決です}"
+: "${COCKROACH_READ_PASSWORD:?fnox が未解決です}"
+
+cluster_id="${COCKROACH_CLUSTER_ID:-}"
+if [ -z "$cluster_id" ]; then
+  cluster_id="$(fnox exec -- terraform -chdir=terraform/agentsview output -raw cockroach_cluster_id)"
+fi
+: "${cluster_id:?terraform outputからcockroach_cluster_idを取得できません}"
+
+# Authorization headerをcurlの引数に直接渡すと、ローカルの他プロセスから
+# `ps`でAPI keyが見える。curl configファイルに書いて渡すことでargvから隠す。
+curl_config="$(mktemp)"
+trap 'rm -f "$curl_config"' EXIT
+chmod 600 "$curl_config"
+printf 'header = "Authorization: Bearer %s"\n' "$COCKROACH_API_KEY" >"$curl_config"
+
+set_password() {
+  name="$1"
+  password="$2"
+  status="$(jq -cn --arg password "$password" '{password: $password}' |
+    curl -sS --connect-timeout 10 --max-time 60 -o /dev/null -w '%{http_code}' \
+      --request PUT \
+      --config "$curl_config" \
+      --header 'Content-Type: application/json' \
+      --data @- \
+      "https://cockroachlabs.cloud/api/v1/clusters/${cluster_id}/sql-users/${name}/password")"
+  [ "$status" = "200" ] || { echo "${name}: failed to set password (HTTP ${status})" >&2; exit 1; }
+  echo "${name}: password set"
+}
+
+set_password agentsview_owner "$COCKROACH_OWNER_PASSWORD"
+set_password agentsview_push "$COCKROACH_PUSH_PASSWORD"
+set_password agentsview_read "$COCKROACH_READ_PASSWORD"
+'''
+shell = "bash -c"
+
 ["agentsview:cockroach:dump:data"]
 description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
 hide = true

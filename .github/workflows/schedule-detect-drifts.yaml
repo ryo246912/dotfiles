@@ -1,0 +1,140 @@
+name: schedule-detect-drifts
+
+# tfactionのDrift Detection: 既存のdrift issueのうち、最終チェックが古いものから
+# 順にplanを実行してcode/実際のresourceの差分を検知し、issueへ結果を反映する。
+# https://suzuki-shunsuke.github.io/tfaction/docs/drift-detection
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 12:00 JST = 03:00 UTC。create-drift-issuesの3時間後。
+    - cron: "0 3 * * *"
+
+permissions: {}
+
+concurrency:
+  group: schedule-detect-drifts
+  cancel-in-progress: false
+
+jobs:
+  pick-out:
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      issues: ${{ steps.pick-out.outputs.issues }}
+      has_issues: ${{ steps.pick-out.outputs.has_issues }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-issues: read
+
+      - name: Pick out drift issues
+        id: pick-out
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: pick-out-drift-issues
+          github_token: ${{ steps.app-token.outputs.token }}
+
+  detect:
+    name: "detect (${{ matrix.issue.target }})"
+    needs: pick-out
+    if: fromJSON(needs.pick-out.outputs.has_issues)
+    runs-on: ${{ matrix.issue.runs_on }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.pick-out.outputs.issues) }}
+    env:
+      TFACTION_JOB_TYPE: terraform
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Tools
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install_args: "aqua:hashicorp/terraform"
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-plugins-${{ runner.os }}-
+
+      - name: Create Terraform plugin cache dir
+        run: mkdir -p ~/.terraform.d/plugin-cache
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.TFACTION_APP_ID }}
+          private-key: ${{ secrets.TFACTION_APP_PRIVATE_KEY }}
+          permission-issues: write
+
+      - name: Set drift env
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: set-drift-env
+          issue: ${{ toJSON(matrix.issue) }}
+          github_token: ${{ steps.app-token.outputs.token }}
+
+      - name: tfaction setup
+        id: setup
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: setup
+          github_token: ${{ steps.app-token.outputs.token }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ steps.setup.outputs.gcp_workload_identity_provider }}
+          service_account: ${{ steps.setup.outputs.gcp_service_account }}
+
+      - name: Output secrets
+        id: github-secrets
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: output-github-secrets
+          github_secrets: ${{ toJSON(secrets) }} # zizmor: ignore[overprovisioned-secrets] tfaction's official secrets pattern requires the full context here; the action filters it down to tfaction.yaml's declared secrets. https://suzuki-shunsuke.github.io/tfaction/docs/secret
+
+      - name: terraform init
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: terraform-init
+          github_token: ${{ steps.app-token.outputs.token }}
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Plan
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: plan
+          github_token: ${{ steps.app-token.outputs.token }}
+          secrets: ${{ steps.github-secrets.outputs.secrets }}
+
+      - name: Update drift issue
+        if: always()
+        uses: suzuki-shunsuke/tfaction@93bf76c239f5120cf83ec5149a1591c25412f9b4 # v2.1.1
+        with:
+          action: update-drift-issue
+          status: ${{ job.status }}
+          github_token: ${{ steps.app-token.outputs.token }}

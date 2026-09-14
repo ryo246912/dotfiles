@@ -1,0 +1,77 @@
+name: terraform-ci
+
+# terraform/agentsviewのfmt/validate/tflint/trivy。planに含めず独立したworkflowにして、
+# GCP認証やsecretsを必要としない範囲のチェックだけを素早く回す。
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "terraform/agentsview/**"
+      - "mise.toml"
+      - "tasks/terraform.toml"
+      - ".github/workflows/terraform-ci.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/agentsview/**"
+
+permissions: {}
+
+concurrency:
+  group: terraform-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    if: ${{ ! endsWith(github.actor, '[bot]') }}
+    runs-on: ubuntu-slim
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Tools
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install_args: "aqua:hashicorp/terraform aqua:terraform-linters/tflint"
+
+      # NOTE: GitHub-hosted runnerから認証付きでaquasecurity/trivyのrelease APIを叩くと
+      # 403になる(aquasecurity organizationのIP allow listでrunnerのIPが弾かれるため)。
+      # そのため認証なしでinstallする。
+      - name: Setup Trivy (without GitHub auth)
+        env:
+          MISE_VERBOSE: 1
+          MISE_GITHUB_TOKEN: ""
+          GITHUB_TOKEN: ""
+          AQUA_GITHUB_TOKEN: ""
+          GH_TOKEN: ""
+        run: mise install aqua:aquasecurity/trivy
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: terraform-plugins-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-plugins-${{ runner.os }}-
+          save-always: true
+
+      - name: Create Terraform plugin cache dir
+        run: mkdir -p ~/.terraform.d/plugin-cache
+
+      - name: Terraform fmt
+        run: mise run tf:fmt:check
+
+      - name: Terraform init & validate
+        run: mise run tf:validate
+
+      - name: Run TFLint
+        run: mise run tf:tflint
+
+      - name: Run Trivy
+        run: mise run tf:trivy

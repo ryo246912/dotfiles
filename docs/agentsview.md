@@ -129,19 +129,19 @@ gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectId)'
 URLへ安全に埋め込める16進passwordとAgentsView tokenを生成する。各出力をそれぞれ別のBitwarden secretへ保存し、terminalのscrollbackを消す。
 
 ```sh
-openssl rand -hex 32 # TF_VAR_cockroach_owner_password
-openssl rand -hex 32 # TF_VAR_cockroach_push_password
-openssl rand -hex 32 # TF_VAR_cockroach_read_password
+openssl rand -hex 32 # COCKROACH_OWNER_PASSWORD
+openssl rand -hex 32 # COCKROACH_PUSH_PASSWORD
+openssl rand -hex 32 # COCKROACH_READ_PASSWORD
 openssl rand -hex 32 # AGENTSVIEW_AUTH_TOKEN
 openssl rand -hex 32 # AGENTSVIEW_CURSOR_SECRET
 ```
 
-Bitwarden Secrets ManagerのUIでprojectを開き、**New secret**から次の5件を作る。CockroachDB URL 3件はcluster作成後の作業4で追加する。
+Bitwarden Secrets ManagerのUIでprojectを開き、**New secret**から次の5件を作る。CockroachDB URL 3件はcluster作成後の作業4で追加する。3つのCockroachDB passwordはTerraform変数ではない（`terraform/agentsview/cockroach_sql_users.tf`はpasswordを持たず、作業4で`mise run agentsview:cockroach:set-passwords`がCockroachDB Cloud APIへ直接設定する）。
 
 ```text
-TF_VAR_cockroach_owner_password
-TF_VAR_cockroach_push_password
-TF_VAR_cockroach_read_password
+COCKROACH_OWNER_PASSWORD
+COCKROACH_PUSH_PASSWORD
+COCKROACH_READ_PASSWORD
 AGENTSVIEW_AUTH_TOKEN
 AGENTSVIEW_CURSOR_SECRET
 ```
@@ -152,7 +152,8 @@ AGENTSVIEW_CURSOR_SECRET
 
 ```sh
 fnox exec -- sh -c '
-  for name in AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
+  for name in COCKROACH_OWNER_PASSWORD COCKROACH_PUSH_PASSWORD COCKROACH_READ_PASSWORD \
+              AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
     eval "test -n \"\${$name:-}\"" && echo "$name=set" || exit 1
   done
 '
@@ -190,28 +191,19 @@ sed -i.bak \
 rm -f terraform/agentsview/terraform.tfvars.bak
 ```
 
-次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の4件を、名前の大文字・小文字も完全一致させて作成する。
+次に[Bitwarden Secrets Manager](https://vault.bitwarden.com/#/sm)で、`dot_config/fnox/config.toml`の`providers.bws.project_id`と同じprojectを開く。**Secrets > New secret**から次の1件を、名前の大文字・小文字も完全一致させて作成する（作業2で生成した3つのCockroachDB passwordは、Terraformではなくこの後の password設定stepで使う）。
 
-| Secret name                       | Value                                                      |
-| --------------------------------- | ---------------------------------------------------------- |
-| `COCKROACH_API_KEY`               | Terraform用service accountで発行した`CCDB1_...` Secret key |
-| `TF_VAR_cockroach_owner_password` | 作業2で生成したowner用16進password                         |
-| `TF_VAR_cockroach_push_password`  | 作業2で生成したpush用16進password                          |
-| `TF_VAR_cockroach_read_password`  | 作業2で生成したread用16進password                          |
+| Secret name         | Value                                                      |
+| ------------------- | ---------------------------------------------------------- |
+| `COCKROACH_API_KEY` | Terraform用service accountで発行した`CCDB1_...` Secret key |
 
 Bitwarden Secrets Managerの**Machine accounts**で、`BWS_ACCESS_TOKEN`を発行したmachine accountを開き、上記projectへのread accessがあることも確認する。別projectへsecretを作った場合や、machine accountにproject accessがない場合、mappingが表示されても`secret ... not found`になる。
 
-4件を個別に取得できるか確認する。値をterminalへ表示しない。
+取得できるか確認する。値をterminalへ表示しない。
 
 ```sh
-for name in \
-  COCKROACH_API_KEY \
-  TF_VAR_cockroach_owner_password \
-  TF_VAR_cockroach_push_password \
-  TF_VAR_cockroach_read_password; do
-  test -n "$(fnox get "$name")" || { echo "$name=missing" >&2; exit 1; }
-  echo "$name=set"
-done
+test -n "$(fnox get COCKROACH_API_KEY)" || { echo "COCKROACH_API_KEY=missing" >&2; exit 1; }
+echo "COCKROACH_API_KEY=set"
 ```
 
 ###### `Error acquiring the state lock`が出た場合
@@ -274,7 +266,13 @@ fnox exec -- terraform -chdir=terraform/agentsview apply \
 
 CockroachDB Consoleの**Clusters**で`agentsview` clusterが`Basic`としてReadyになり、**SQL Users**にowner／push／readが表示されることを確認する。Google Cloud ConsoleではArtifact Registry repository、2つのSecret Manager secret container、service accountが作成されていることを確認する。
 
-**完了確認:** 次がID、database名、SQL hostを返す。
+上記のとおり`cockroach_sql_user.*`はpasswordを持たないため、この時点の3 userはCockroachDB providerが生成して破棄したrandom passwordのままで、誰も知らない状態である。作業2で生成した3つのpasswordを実際に設定する。
+
+```sh
+mise run agentsview:cockroach:set-passwords
+```
+
+**完了確認:** 次がID、database名、SQL hostを返し、`set-passwords`が3 userすべて`password set`を返す。
 
 ```sh
 fnox exec -- terraform -chdir=terraform/agentsview output cockroach_cluster_id
@@ -371,11 +369,11 @@ test -r "$PGSSLROOTCERT"
 
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
-このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
+このcommandもSQLSTATE `28P01`になる場合、`mise run agentsview:cockroach:set-passwords`がSQL userへ設定した`COCKROACH_OWNER_PASSWORD`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`COCKROACH_OWNER_PASSWORD`だけを更新して`set-passwords`を再実行し忘れた場合や、URLへ別userのpasswordを貼った場合に発生する。
 
 5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
 
-CockroachDB Console等でpasswordを別途変更していない前提で、planが`No changes`なのにURLだけが28P01になる場合、URL secretだけが誤っている可能性が高い。`TF_VAR_cockroach_owner_password`と同じ値で`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を作り直し、Terraform applyは行わず`psql`を再試行する。Consoleで変更した履歴がある場合は、planの有無にかかわらず上記rotationを実施してTerraformをsource of truthへ戻す。
+CockroachDB Console等でpasswordを別途変更していない前提で、planが`No changes`なのにURLだけが28P01になる場合、URL secretだけが誤っている可能性が高い。`COCKROACH_OWNER_PASSWORD`と同じ値で`AGENTSVIEW_COCKROACH_OWNER_PG_URL`を作り直し、`set-passwords`は再実行せず`psql`を再試行する。Consoleで変更した履歴がある場合は、`mise run agentsview:cockroach:set-passwords`を再実行してBitwardenの`COCKROACH_*_PASSWORD`をsource of truthへ戻す。
 
 続いて最小権限を設定する。CockroachDB CloudのConsole／APIで作成したSQL userは初期状態で`admin` roleに所属する。そのため、`GRANT SELECT`だけを追加しても既存の`admin`権限は消えず、read userは書き込み可能なままである。最初にpush／read userから`admin`を`REVOKE`する必要がある。
 
@@ -798,7 +796,7 @@ fnox exec -- mise run agentsview:pg:remote-local:dump
 
 ### 1. CockroachDBの権限設計を決める
 
-Basic cluster、database、owner／push／read userは次節のTerraformで作成する。Terraformは10 GiB storage／5,000万RUのusage limitも設定し、意図しない有料利用を防ぐ。passwordはuserごとに異なるrandom valueを用意する。
+Basic cluster、database、owner／push／read userは次節のTerraformで作成する。Terraformは10 GiB storage／5,000万RUのusage limitも設定し、意図しない有料利用を防ぐ。passwordはuserごとに異なるrandom valueを用意するが、`cockroach_sql_user`にはTerraformから渡さない（理由は2.0節参照）。`terraform apply`後に`mise run agentsview:cockroach:set-passwords`を実行し、CockroachDB Cloud APIで直接設定する。
 
 CockroachDB Terraform providerはdatabase内のschema／table権限を管理しないため、AgentsViewのschema bootstrap後に次だけSQL consoleまたはowner接続で実行する。CockroachDB versionによって`ALL TABLES IN SCHEMA`／default privilegeの対応が異なる場合は、Consoleが示す現行syntaxに合わせる。
 
@@ -856,16 +854,16 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 | `google_secret_manager_secret_iam_member.runtime_*` | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
 | `cockroach_cluster.agentsview`                      | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
 | `cockroach_database.agentsview`                     | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
-| `cockroach_sql_user.owner`                          | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
-| `cockroach_sql_user.push`                           | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
-| `cockroach_sql_user.read`                           | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
+| `cockroach_sql_user.owner`                          | passwordなし（意図的）                          | schema bootstrap／migration専用user。実passwordは`set-passwords` taskがAPI経由で設定                                                                        |
+| `cockroach_sql_user.push`                           | passwordなし（意図的）                          | 各PCからsessionを送るuser。app viewerとは分離する。実passwordは`set-passwords` taskがAPI経由で設定                                                          |
+| `cockroach_sql_user.read`                           | passwordなし（意図的）                          | Cloud Run viewer用user。後続SQLでSELECTだけを付与する。実passwordは`set-passwords` taskがAPI経由で設定                                                      |
 | `google_cloud_run_v2_service_iam_member.public`     | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
 
 **deploy用service accountとGitHub Workload Identity連携もこの表にない。** GitHub ActionsからTerraformやCloud Run deployを行っていない（`.github/workflows/`に残るのはAtuinのFly.io deployだけ）ため、`agentsview-deploy` service account、そのproject IAM、`secretVersionAdder`、Workload Identity Pool／Providerはいずれも使われていなかった。使わないidentityを置くと権限の棚卸し対象が増えるだけなので削除した。build・deploy・secret登録はoperator自身の認証情報（`gcloud auth login`）で実行する。将来CIから実行する場合はWIFごと作り直す。
 
 **Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
 
-`variables.tf`はproject IDとCockroachDB passwordというoperator入力だけを宣言する。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`sensitive = true`はCLI表示を伏せる指定であり、CockroachDB SQL user passwordをstateから除外する指定ではない。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続commandが必要とするhost、runtime service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
+`variables.tf`はproject IDというoperator入力だけを宣言する。CockroachDB SQL user passwordはTerraform変数として存在しない（`cockroach_sql_user.*`がpasswordを持たないため）。Cloud Run service名はmanifest・`clrnd.yml`・Terraformの3箇所で一致している必要があるため、入力変数ではなく`local.cloud_run_service_name`に固定している（regionと同じ扱い）。image URIとSecret Managerのversionはclrnd manifest側へ移したため、`agentsview_image`／`pg_url_secret_version`／`config_secret_version`は廃止した。`locals.tf`は全regional resourceで共有する`us-west2`を一箇所に固定する。`outputs.tf`は後続commandが必要とするhost、runtime service account名、Cloud Run service名／regionを公開する。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
 
 #### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
 
@@ -989,7 +987,7 @@ mise run agentsview:cloudrun:diff
 
 `clrnd diff`が空になれば、live serviceとmanifestが一致している。差分が出る場合は、manifestを実状に合わせるか（`clrnd init`で現行定義を書き出して比較する）、意図した変更としてdeployする。
 
-CockroachDB provider v1.22の`cockroach_sql_user`は`sensitive`な`password`を受け取るが、Terraformのwrite-only `password_wo`／`password_wo_version`には対応していない。そのため3つのSQL user passwordはplan出力では伏せられる一方、Terraform stateには保存される。GCS state bucketへのIAMをoperatorだけに制限し、stateをdownload／commitせず、Object VersioningとPublic Access Preventionを維持する。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
+CockroachDB provider v1.22の`cockroach_sql_user`は`sensitive`な`password`を受け取れるが、指定するとTerraformが値をbinary plan fileへ平文で埋め込む（`sensitive`はCLI出力とJSON構造化出力を伏せるだけで、tfactionがGitHub Artifactsへ上げるplan file自体には効かない）。このrepositoryは公開repoのため、`cockroach_sql_user.*`ではpasswordを意図的に省略し、Terraformのplan file・stateいずれにも実passwordを持ち込まない設計にしている（詳細はterraform/agentsview/cockroach_sql_users.tfのコメント参照）。実passwordは`mise run agentsview:cockroach:set-passwords`がCockroachDB Cloud APIを直接呼んで設定する。将来providerのwrite-only `password_wo`／`password_wo_version`（2026-09-14時点で未release、`main`ブランチのみ）が正式release版に入れば、この省略とset-passwords taskは不要になり、Terraform内だけで完結できる。Cockroach Cloud API keyはproviderが`COCKROACH_API_KEY`から読み、tfvarsへ書かない。
 
 #### 2.1 state bucketと初回認証
 
@@ -1008,7 +1006,7 @@ gcloud storage buckets update "gs://${TF_STATE_BUCKET}" --versioning
 gcloud auth application-default login
 ```
 
-stateにはCockroachDB SQL user password、resource ID、構成情報が入る。public access prevention、versioning、最小権限IAMを設定し、state fileをdownload／commitしない。
+stateにはresource ID、構成情報が入る（CockroachDB SQL user passwordは`cockroach_sql_user.*`が意図的にpasswordを持たないため含まれない）。public access prevention、versioning、最小権限IAMを設定し、state fileをdownload／commitしない。
 
 #### 2.2 Terraformを初期化
 
