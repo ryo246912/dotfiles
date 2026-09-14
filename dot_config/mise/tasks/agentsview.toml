@@ -117,11 +117,11 @@ esac
 # 時間のかかる相手では止まっているのか進んでいるのか分からない。
 progress="${AGENTSVIEW_DUMP_PROGRESS:-}"
 if [ -z "$progress" ]; then
-  progress="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-progress"
-  [ -x "$progress" ] || progress=dot_config/agentsview/executable_dump-progress
+  progress="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/dump-progress.py"
+  [ -f "$progress" ] || progress=dot_config/agentsview/scripts/dump-progress.py
 fi
-if [ ! -x "$progress" ]; then
-  echo "dump-progress が実行できません: ${progress}" >&2
+if [ ! -f "$progress" ]; then
+  echo "dump-progress.py が見つかりません: ${progress}" >&2
   exit 1
 fi
 
@@ -148,7 +148,7 @@ if [ ! -f "$prepare_auth" ]; then
   echo "prepare-dump-auth が見つかりません: ${prepare_auth}" >&2
   exit 1
 fi
-"$prepare_auth"
+python3 "$prepare_auth"
 pg_url="$(cat "$auth_dir/url")"
 
 # postgres imageはca-certificatesを含まないため、container内のsystem trust storeも
@@ -263,7 +263,7 @@ docker run --rm --interactive \
     --set=machine_since="$machine_since" \
     --set=FETCH_COUNT="$fetch_rows" \
     --tuples-only --no-align --quiet --file=- \
-  <"$dump_sql" | "$progress" "$dump_path"
+  <"$dump_sql" | python3 "$progress" "$dump_path"
 
 # dumpが最後まで書けたこと、schemaを実際に読めたことを末尾のmarkerで確認する。
 # 生成SQLは対象tableが0件でもerrorにならないので（information_schemaは権限で

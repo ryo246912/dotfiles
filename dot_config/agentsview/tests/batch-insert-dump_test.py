@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""batch-insert-dump のregression。`mise run test:agentsview` から実行する。
+"""batch-insert-dump.py のregression。`mise run test:agentsview` から実行する。
 
 このfilterはremote dumpをlocalへ取り込む唯一の経路で、切り詰めの検出・旧形式の
 受け入れ・chunk分割・comment／escape／dollar quoteの解釈を1つのparserで担う。
@@ -8,12 +8,15 @@
 """
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-FILTER = ROOT / "dot_config/agentsview/executable_batch-insert-dump"
+# 隣のdirectoryを指す（repository rootからの相対ではないので、このfileが
+# どこから実行されてもよい）。
+AGENTSVIEW = Path(__file__).resolve().parents[1]
+FILTER = AGENTSVIEW / "scripts/batch-insert-dump.py"
 # dump-inserts.sqlが最後に置く完了marker。既定では各caseの末尾へ足す。
 MARK = "-- agentsview-dump-complete tables=1\n"
 
@@ -75,6 +78,10 @@ case("line comment before insert", "-- hello\n" + ONE, inserts=1)
 case("trailing line comment without newline", ONE + MARK + "-- tail", inserts=1, marker=False)
 case("multi line value",
      "INSERT INTO t (a) VALUES (E'l1\nl2\n-- c\n/* b */') ON CONFLICT DO NOTHING;\n", inserts=1)
+# 値の2行目が `INSERT` で始まる形。stdoutの行頭を数えると2件に見えるが1件である。
+case("value whose next line starts with INSERT",
+     "INSERT INTO t (a) VALUES ('line1\nINSERT INTO fake (x) VALUES (1);') ON CONFLICT DO NOTHING;\n",
+     inserts=1)
 case("two inserts one chunk", ONE + ONE, inserts=2, contains=["BEGIN;\n"], notin=["COMMIT;\nBEGIN;"])
 case("chunking splits transactions", ONE * 3, inserts=3, chunk=1,
      contains=["BEGIN;\n", "COMMIT;\n"])
@@ -283,9 +290,14 @@ for name, text, rc, inserts, chunk, marker, contains, notin in cases:
     if got_rc != rc:
         problems.append(f"rc {got_rc} != {rc} ({err.strip()})")
     if inserts is not None:
-        n = sum(1 for line in out.splitlines() if line.upper().startswith("INSERT"))
-        if n != inserts:
-            problems.append(f"inserts {n} != {inserts}")
+        # 件数はfilter自身の要約行から採る。stdoutの行頭を数えると、改行を含む値の
+        # 2行目が `INSERT` で始まるINSERT（`multi line value`のような形）を2件と
+        # 数えてしまう。要約行がfilterの数えた件数そのものである。
+        summary = re.search(r"^INSERT statements: (\d+)", err, re.MULTILINE)
+        if summary is None:
+            problems.append("no summary line on stderr")
+        elif int(summary.group(1)) != inserts:
+            problems.append(f"inserts {summary.group(1)} != {inserts}")
     for needle in contains or []:
         if needle not in out and needle not in err:
             problems.append(f"missing {needle!r}")

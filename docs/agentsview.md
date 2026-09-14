@@ -332,12 +332,6 @@ test -r "$PGSSLROOTCERT"
 
 Linuxでは通常`/etc/ssl/certs/ca-certificates.crt`を使う。どのOSでも`test -r`が成功してから接続し、`sslmode=disable`やhostnameを検証しない設定へ弱めない。migration scriptはこれらの既知のpathからreadableなCA bundleを自動選択する。
 
-dumpが長時間戻らない場合、まず進捗の行を見る。行数が増えているなら単に遅い。`0 lines`のままなら、まだ行を受け取っていない状態（接続・TLS・最初のqueryのいずれか）なので、`psql`のstderrにerrorが出ていないかを見る。1度だけ1時間戻らなかったことがあるが、同じ設定で前後の実行は通っており原因は特定できていない。再発する場合は`AGENTSVIEW_DUMP_FETCH_ROWS=0`でcursorを切って切り分ける。
-
-`agentsview:cockroach:dump:remote`は`psql`をcontainerの中で動かすため、container内のlibpqはhost側の`PGSSLROOTCERT`を読めない（値が指すfileがcontainerに無い）。taskはhost側でその値も候補として見て、読めればそのbundleをcontainerへmountし、container内の`PGSSLROOTCERT`を指し直す。またpostgres imageは`ca-certificates`を含まないので、container内の`/etc/ssl/certs/ca-certificates.crt`とsystem trust storeはどちらも空である（[docker-library/postgres#1331](https://github.com/docker-library/postgres/issues/1331)）。taskはhost側で上記の候補からCA bundleを選び、containerへmountして渡す。CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで検証できる。
-
-CAの選択順は、URLの`sslrootcert`（private CAのcluster向け）→ host側の`PGSSLROOTCERT` → 上記の既知のpathである。`system`のようなfileを指さない値や読めないpathは候補から外し、次の候補へ進む（URLの`sslrootcert`だけは例外で、読めなければ止まる。private CAを指しているのに公開bundleへ落ちると、検証が通ったように見えて別のCAで通してしまうためである）。どれも読めない場合はdumpを始める前に止まり、何を設定すべきかを表示する。このtaskで`SSL error: certificate verify failed`が出る場合は、選ばれたbundleがこのclusterを検証できていない。`echo $PGSSLROOTCERT`でhost側の値を確認し、同じbundleで`psql`が通るかを試す。
-
 このcommandもSQLSTATE `28P01`になる場合、TerraformがSQL userへ設定した`TF_VAR_cockroach_owner_password`と、後から手作業で作った`AGENTSVIEW_COCKROACH_OWNER_PG_URL`内のpasswordが一致していない。特に、SQL user作成後にBitwardenの`TF_VAR_cockroach_owner_password`だけを更新した場合や、URLへ別userのpasswordを貼った場合に発生する。
 
 5. 上記`psql`を再実行し、`current_user`が`agentsview_owner`になることを確認してから`agentsview pg push`へ進む。
@@ -1198,13 +1192,13 @@ dumpの最後には完了markerが付く。
 -- agentsview-dump-complete tables=2
 ```
 
-schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:dump:remote`とimport filter（`dot_config/agentsview/executable_batch-insert-dump`、install後は`~/.config/agentsview/batch-insert-dump`）の両方がerrorにして、空のbackupを残さない。
+schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:dump:remote`とimport filter（`dot_config/agentsview/scripts/batch-insert-dump.py`）の両方がerrorにして、空のbackupを残さない。
 
 markerを持たないdumpのうち、`SET`や`setval`のような非INSERT statementを含むものは、以前のplain `pg_dump`形式のbackupとみなして取り込む（新しいdumpの出力はINSERTだけなので区別できる）。この経路ではtable数の確認ができないため、filterは注意書きを出す。
 
 markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
 
-dump周りのregressionは`mise run test:agentsview`で走る（`tests/agentsview/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
+dump周りのregressionは`mise run test:agentsview`で走る（`dot_config/agentsview/tests/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
 
 `ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
 

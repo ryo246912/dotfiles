@@ -32,6 +32,7 @@ README.md
 CLAUDE.md
 docs/**
 terraform/**
-tests/**
+.config/agentsview/tests
+.config/agentsview/tests/**
 
 **/*karabiner-ts*

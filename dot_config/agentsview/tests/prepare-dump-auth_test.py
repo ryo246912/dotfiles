@@ -12,10 +12,13 @@ import os
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "dot_config/agentsview/executable_prepare-dump-auth"
+# 隣のdirectoryを指す（repository rootからの相対ではないので、このfileが
+# どこから実行されてもよい）。
+AGENTSVIEW = Path(__file__).resolve().parents[1]
+SCRIPT = AGENTSVIEW / "executable_prepare-dump-auth"
 
 
 def run(url, **extra):
@@ -125,9 +128,18 @@ for name, url, rc, files, absent, stderr, env in cases:
     for fname in absent:
         if fname in got_files:
             problems.append(f"unexpected file {fname}")
-    # passwordはURLへ残してはいけない（URLはtaskのlogへ出る）。
-    if "url" in got_files and "pw@word" in got_files["url"]:
-        problems.append("url leaks the password")
+    # passwordはURLへ残してはいけない（URLはtaskのlogへ出る）。個別のpasswordを
+    # 文字列で探すのではなく、URLを解析してuserinfoのpassword部が空であることを見る。
+    # URIの中ではpasswordはpercent encodeされるので（`pw@word`は`pw%40word`）、
+    # 文字列一致では漏れを見落とす。
+    if "url" in got_files:
+        try:
+            leaked = urllib.parse.urlsplit(got_files["url"].strip()).password
+        except ValueError as exc:
+            problems.append(f"url is not parseable: {exc}")
+        else:
+            if leaked:
+                problems.append("url leaks the password")
     for fname, mode in modes.items():
         if mode != 0o600:
             problems.append(f"{fname} mode {oct(mode)} != 0o600")

@@ -483,12 +483,15 @@ def main() -> int:
     # 読めなかった値そのものはerrorへ出さない。このfilterはdump本文をerrorへ出さない
     # （dumpにはsession本文が入るため）という約束で動いており、ここへ来る文字列は
     # 検証していない入力である。中身はdumpの最終行を見れば分かる。
-    if re.fullmatch(r"[0-9]+", tables) is None:
+    # 桁数も見る。markerはcount(*)の出力で、その値はbigintに収まる（最大19桁）。
+    # 上限を置かないと、桁の多い値がそのまま下の要約へ出るうえ、intへ変換する処理を
+    # 足したときにCPythonの10進変換上限（既定4300桁）でValueErrorになる。
+    if re.fullmatch(r"[0-9]{1,19}", tables) is None:
         print("dump has a malformed completion marker", file=sys.stderr)
         return 1
-    # 数として見る。count(*)は 00 のような形を出さないが、手で書き換えたmarkerでも
-    # 0件を通さないようにする。
-    if int(tables) == 0:
+    # 0件かどうかだけを見る。count(*)は 00 のような形を出さないが、手で書き換えた
+    # markerでも0件を通さないようにする。0を落として何も残らなければ0件である。
+    if not tables.lstrip("0"):
         print(
             "dump covered 0 tables; check the schema name and that the role can read it",
             file=sys.stderr,

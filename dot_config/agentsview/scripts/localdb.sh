@@ -4,8 +4,7 @@ set -euo pipefail
 # local AgentsView databaseの操作をまとめたscript。container定義は compose.yaml、
 # localをCockroachDBにしている理由は docs/agentsview.md にある。
 #
-# 使えるmode（miseのtaskがあるものは併記する。無いものは日常では使わないので、
-# 必要なときにこのscriptを直接呼ぶ）:
+# miseのtaskから呼ぶmode:
 #   status               engine versionとmachineごとのsession数（agentsview:cockroach:status）
 #   push [args]          このmachineのsessionをlocalへpushする（agentsview:cockroach:push:local）
 #   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
@@ -14,11 +13,9 @@ set -euo pipefail
 #   restore [file]       dump（remote／local）の不足rowをlocalへmergeする
 #                        （agentsview:cockroach:merge がremote dumpのあとに呼ぶ）
 #   since                remote差分dumpの起点をmachineごとに出す（無ければ空。mergeが使う）
-#   up                   local CockroachDBを起動し、databaseの存在を確認する
-#                        （他のmodeが先頭で呼ぶので、単体で使うことはない）
-#   down                 local containerを止める（volumeは残す）
-#   sql                  local CockroachDBへ対話SQL shellで接続する
-#   repair-sequences     sequenceを実dataのidまで前進させる（巻き戻さない。restoreが呼ぶ）
+#
+# 他に up（各modeが先頭で呼ぶ）・repair-sequences（restoreが呼ぶ）・down・sql があるが、
+# taskは置いていない。必要なときにこのscriptを直接呼ぶ。
 #
 # macOS既定のbash 3.2でも動く範囲で書く（空arrayやwait -nを使わない）。
 
@@ -116,23 +113,20 @@ query_local() {
 }
 
 # dumpとrestoreが使うfilter。dumpをCockroachDBへ流せるINSERT列へ変換する。
-# chezmoi source treeでは executable_ prefixが付いたままなので、両方の名前を見る。
+# 実行bitは付けず python3 で起動するので、source treeとchezmoi適用後でpathは同じ。
 # 使うmodeから呼ぶ。ここで必須にすると、filterが無いmachineでは
-# up／down／sql／status／push／serve／repair-sequences まで動かなくなる。
+# status／push／serve まで動かなくなる。
 filter=""
 require_filter() {
-  filter="${AGENTSVIEW_BATCH_INSERT_DUMP:-${config_dir}/batch-insert-dump}"
+  filter="${AGENTSVIEW_BATCH_INSERT_DUMP:-${config_dir}/scripts/batch-insert-dump.py}"
   if [ ! -f "$filter" ]; then
-    filter="${config_dir}/executable_batch-insert-dump"
-  fi
-  if [ ! -f "$filter" ]; then
-    echo "batch-insert-dump が見つかりません: ${config_dir}" >&2
+    echo "batch-insert-dump.py が見つかりません: ${filter}" >&2
     exit 1
   fi
 }
 
 # dump専用のhelperを解決する。dumpしか使わないので、ここで初めて要求する
-# （helperが無いmachineでも up／down／sql／status／restore は動かせるようにする）。
+# （helperが無いmachineでも status／restore は動かせるようにする）。
 dump_sql=""
 progress=""
 require_dump_tools() {
@@ -144,13 +138,10 @@ require_dump_tools() {
     exit 1
   fi
 
-  # dumpの進捗をstderrへ出すhelper。source treeでは executable_ prefixが付く。
-  progress="${AGENTSVIEW_DUMP_PROGRESS:-${config_dir}/dump-progress}"
-  if [ ! -x "$progress" ]; then
-    progress="${config_dir}/executable_dump-progress"
-  fi
-  if [ ! -x "$progress" ]; then
-    echo "dump-progress が実行できません: ${config_dir}" >&2
+  # dumpの進捗をstderrへ出すhelper。
+  progress="${AGENTSVIEW_DUMP_PROGRESS:-${config_dir}/scripts/dump-progress.py}"
+  if [ ! -f "$progress" ]; then
+    echo "dump-progress.py が見つかりません: ${progress}" >&2
     exit 1
   fi
 
@@ -419,7 +410,7 @@ import_sql_file() {
   # commit済みになってしまう。読むだけなのでDBへは触らない。成功時の要約は
   # 取り込み時にも出るので、失敗したときだけ表示する。
   local check
-  if ! check="$("$filter" <"$1" 2>&1 >/dev/null)"; then
+  if ! check="$(python3 "$filter" <"$1" 2>&1 >/dev/null)"; then
     printf '%s\n' "$check" >&2
     return 1
   fi
@@ -433,7 +424,7 @@ import_sql_file() {
   # CockroachDBは1 transactionで書ける量に上限があるため、filterがBEGIN/COMMITで
   # chunkへ割る。途中で失敗するとそこまでのchunkはcommit済みで残るが、INSERTは
   # すべてON CONFLICT DO NOTHINGなので、原因を直して同じfileを再実行できる。
-  "$filter" <"$1" | psql_local --quiet --output=/dev/null
+  python3 "$filter" <"$1" | psql_local --quiet --output=/dev/null
 
   repair_sequences
   row_counts >"$temp_counts_after"
@@ -536,12 +527,12 @@ case "$mode" in
     # schema DDLは持ち出さない。CockroachDBのDDL／権限／sequenceをそのまま別の
     # databaseへ流せる保証はなく、schemaは常に現在のAgentsViewが作るためである。
     echo "local CockroachDBからdumpを書き出します: ${dump_path}" >&2
-    if ! dump_inserts_local | "$progress" "$dump_path"; then
+    if ! dump_inserts_local | python3 "$progress" "$dump_path"; then
       rm -f "$dump_path"
       exit 1
     fi
     # 壊れたdumpを残さないよう、statementとして読み切れることを確認する。
-    if ! "$filter" <"$dump_path" >/dev/null; then
+    if ! python3 "$filter" <"$dump_path" >/dev/null; then
       rm -f "$dump_path"
       exit 1
     fi
