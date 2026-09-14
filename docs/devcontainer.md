@@ -6,6 +6,31 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## devcontainer からホスト側 tmux pane を読む
+
+ホスト側の開発サーバーログを、devcontainer 内の AI エージェントから確認する場合は
+`host-tmux` を使います。コンテナへ bind mount される devcontainer scripts に同コマンドを置き、
+既存の `mac-host` SSH 接続上でホストの tmux client を実行します。tmux socket 自体をコンテナへ
+mount しないため、ホストとコンテナの UID や socket path の差に依存しません。
+
+```bash
+# pane ID（%3 など）、実行中コマンド、作業ディレクトリを一覧表示
+host-tmux list
+
+# 指定した pane の直近 200 行を取得（行数は省略可能、既定値は 200）
+host-tmux capture %3 200
+```
+
+AI エージェントには `/tmux %3`（Codex では `$tmux %3`）と指示すると、追加した tmux skill が
+`host-tmux capture` を呼び出してログを分析します。継続的なログ監視が
+必要なら、同じ capture コマンドを一定間隔で再実行させます。pane ID は tmux の session/window 構成を
+変えると変わり得るため、固定値を設定へ埋め込まず、その都度 `list` で確認してください。
+
+この経路は読み取り専用のラッパーですが、利用する SSH 鍵自体は通常のホストログイン権限を持ちます。
+鍵をより厳密に制限したい場合は、ホスト側 `authorized_keys` の `command=` で許可コマンドを制限する
+専用鍵・専用 dispatcher を別途用意してください。また、後述のリモートログイン、公開鍵登録、
+`mac-host` 設定が完了している必要があります。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
