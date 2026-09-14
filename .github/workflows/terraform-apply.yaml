@@ -116,6 +116,10 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls")
           PR_NUMBER=$(jq -r '.[0].number // ""' <<< "$PRS_JSON")
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::error::commit ${GITHUB_SHA} is not associated with any pull request. This workflow expects main to be updated only via merged PRs." >&2
+            exit 1
+          fi
 
           {
             echo "pr_number=${PR_NUMBER}"

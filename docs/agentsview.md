@@ -155,7 +155,8 @@ AGENTSVIEW_CURSOR_SECRET
 
 ```sh
 fnox exec -- sh -c '
-  for name in AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
+  for name in COCKROACH_OWNER_PASSWORD COCKROACH_PUSH_PASSWORD COCKROACH_READ_PASSWORD \
+              AGENTSVIEW_AUTH_TOKEN AGENTSVIEW_CURSOR_SECRET; do
     eval "test -n \"\${$name:-}\"" && echo "$name=set" || exit 1
   done
 '

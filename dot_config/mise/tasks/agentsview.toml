@@ -404,8 +404,8 @@ fi
 set_password() {
   name="$1"
   password="$2"
-  status="$(printf '{"password":"%s"}' "$password" |
-    curl -sS -o /dev/null -w '%{http_code}' \
+  status="$(jq -cn --arg password "$password" '{password: $password}' |
+    curl -sS --connect-timeout 10 --max-time 60 -o /dev/null -w '%{http_code}' \
       --request PUT \
       --header "Authorization: Bearer ${COCKROACH_API_KEY}" \
       --header 'Content-Type: application/json' \
