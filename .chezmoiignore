@@ -33,6 +33,5 @@ CLAUDE.md
 docs/**
 terraform/**
 .config/agentsview/tests
-.config/agentsview/tests/**
 
 **/*karabiner-ts*
