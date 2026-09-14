@@ -249,6 +249,27 @@ def pending_kind(pending: str) -> str:
     return "dollar-quoted string"
 
 
+# `OVERRIDING SYSTEM VALUE` を探すpattern。codeはliteral／commentの中身が空白なので、
+# dataの中の同じ語には当たらない。大文字化はしない（`ß`→`SS` のように長さが変わり、
+# bodyとの位置が合わなくなる）。
+OVERRIDING_RE = re.compile(r"\bOVERRIDING\s+SYSTEM\s+VALUE\s*", re.IGNORECASE)
+
+
+def strip_overriding(body: str, code: str) -> tuple[str, str, bool]:
+    """identity列向けの OVERRIDING SYSTEM VALUE を落とす。
+
+    CockroachDBはこのSQL標準の句を解釈せず `at or near "overriding": syntax error`
+    になる。取り込み側はidentity列を BY DEFAULT へ緩めてから流すので、句が無くても
+    明示idはそのまま入る。この句を含むのは、それを付けていた頃のdumpである。
+    """
+
+    match = OVERRIDING_RE.search(code)
+    if match is None:
+        return body, code, False
+    start, end = match.span()
+    return body[:start] + body[end:], code[:start] + code[end:], True
+
+
 def ensure_on_conflict(body: str, code: str) -> str | None:
     """INSERTへ ON CONFLICT DO NOTHING を補う。補えない形ならNoneを返す。
 
@@ -303,6 +324,8 @@ def main() -> int:
     tables = None
     # ON CONFLICT DO NOTHING を補えなかったINSERTの数。再実行が安全でない印である。
     unsafe = 0
+    # OVERRIDING SYSTEM VALUE を落としたINSERTの数。古いdumpの印である。
+    overriding = 0
     out.write("SET client_encoding = 'UTF8';\n")
     for lineno, line in enumerate(sys.stdin, start=1):
         # 完了markerはstatementではないので、statementへ渡さず値だけ覚える。
@@ -354,6 +377,11 @@ def main() -> int:
                 continue
             if in_chunk == 0:
                 out.write("BEGIN;\n")
+            # CockroachDBが解釈しない句を落とす。identity列は取り込み前に
+            # BY DEFAULTへ緩めてあるので、句が無くても明示idは入る。
+            body, code_body, dropped = strip_overriding(body, code_body)
+            if dropped:
+                overriding += 1
             fixed = ensure_on_conflict(body, code_body)
             if fixed is None:
                 unsafe += 1
@@ -405,6 +433,12 @@ def main() -> int:
         print(
             f"warning: {unsafe} INSERT statements have no ON CONFLICT clause;"
             " re-running this dump can stop on duplicate keys",
+            file=sys.stderr,
+        )
+    if overriding:
+        print(
+            f"note: dropped OVERRIDING SYSTEM VALUE from {overriding} INSERT statements"
+            " (CockroachDB does not accept it; identity columns are relaxed instead)",
             file=sys.stderr,
         )
     if tables is None and skipped_statements:
