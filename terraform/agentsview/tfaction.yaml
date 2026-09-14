@@ -18,9 +18,9 @@ secrets:
     secret_name: GCP_PROJECT_ID
   - env_name: COCKROACH_API_KEY
     secret_name: COCKROACH_API_KEY
-  - env_name: TF_VAR_cockroach_owner_password
-    secret_name: COCKROACH_OWNER_PASSWORD
-  - env_name: TF_VAR_cockroach_push_password
-    secret_name: COCKROACH_PUSH_PASSWORD
-  - env_name: TF_VAR_cockroach_read_password
-    secret_name: COCKROACH_READ_PASSWORD
+
+# CockroachDB SQL userのpasswordはここに置かない。cockroach_sql_user.*が
+# passwordを持たない設計にしているため、CIのplan/applyがpassword値を扱う
+# ことは一切ない。実際の値は `mise run agentsview:cockroach:set-passwords`
+# がoperatorのローカル環境からCockroachDB Cloud APIへ直接設定する。
+# 詳細はterraform/agentsview/cockroach_sql_users.tfのコメントを参照。
