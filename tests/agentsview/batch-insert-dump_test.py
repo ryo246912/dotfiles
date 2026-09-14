@@ -210,6 +210,28 @@ case("non-ascii identifier keeps the insert position",
      marker=False, inserts=1,
      contains=["VALUES ('x') ON CONFLICT DO NOTHING -- ß"])
 
+# 値の途中で改行が入るdumpでは、次の値のquoteが行頭側へ来る。tokenの直前の文字を
+# bufferへ足したあとに採ると、その1文字を二重に数えてescapeを見落とす。
+case("escape string at the start of a continuation line",
+     "INSERT INTO t (a, b) VALUES (\nE'it\\'s; ok', 'x') ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["E'it\\'s; ok', 'x')"])
+case("lowercase escape string at the start of a continuation line",
+     "INSERT INTO t (a, b) VALUES (\ne'it\\'s; ok', 'x') ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["e'it\\'s; ok', 'x')"])
+case("escape string as the second character of a line",
+     "INSERT INTO t (a, b) VALUES ('x',\n E'it\\'s; ok') ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["E'it\\'s; ok')"])
+# 識別子の一部のEはescape stringではない（`abce` という識別子に続くliteral）。
+case("identifier ending in e before a literal",
+     "INSERT INTO t (a) VALUES (\nabcE'it''s; ok') ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["abcE'it''s; ok')"])
+# 行頭のdollar quoteも同じ経路を通る。
+case("dollar quote at the start of a continuation line",
+     "INSERT INTO t (a) VALUES (\n$tag$a;b$tag$) ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["$tag$a;b$tag$)"])
+case("dollar sign identifier at the start of a continuation line",
+     "INSERT INTO t (\na$$$b$) VALUES ('v') ON CONFLICT DO NOTHING;\n", inserts=1)
+
 fails = 0
 for name, text, rc, inserts, chunk, marker, contains, notin in cases:
     got_rc, out, err = run(text, chunk=chunk, marker=marker)

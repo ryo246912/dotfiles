@@ -117,10 +117,12 @@ class Splitter:
             if match is None:
                 self._push(line[pos:])
                 return
+            # tokenの直前の文字を、bufferへ足す前に採る。足したあとだと、行頭側の
+            # tokenでrecentとline[:index]が同じ文字を二重に数えてしまう
+            # （行頭の `E'` が `EE` に見えて、backslash escapeを見落とす）。
+            context = self._context(line, match.start())
             self._push(line[pos : match.start()])
             token = match.group(0)
-            # tokenの直前の文字。statementの先頭なら空になる。
-            context = self._context(line, match.start())
             pos = match.end()
             if token == ";":
                 self._push(";")
