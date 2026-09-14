@@ -1,0 +1,3 @@
+["test:agentsview"]
+description = "Run the AgentsView dump filter regression"
+run         = "python3 tests/agentsview/batch-insert-dump_test.py"

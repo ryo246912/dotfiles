@@ -35,17 +35,6 @@ if [ ! -f "$compose_file" ]; then
   exit 1
 fi
 
-# dumpをCockroachDBへ流せるINSERT列へ変換するfilter。chezmoi source treeでは
-# executable_ prefixが付いたままなので、両方の名前を見る。
-filter="${AGENTSVIEW_BATCH_INSERT_DUMP:-${config_dir}/batch-insert-dump}"
-if [ ! -f "$filter" ]; then
-  filter="${config_dir}/executable_batch-insert-dump"
-fi
-if [ ! -f "$filter" ]; then
-  echo "batch-insert-dump が見つかりません: ${config_dir}" >&2
-  exit 1
-fi
-
 schema="${AGENTSVIEW_PG_SCHEMA:-agentsview}"
 database="${AGENTSVIEW_LOCAL_CRDB_DATABASE:-agentsview}"
 db_user="${AGENTSVIEW_LOCAL_CRDB_USER:-root}"
@@ -119,6 +108,22 @@ psql_local() {
 # 値をparseするquery用。header・整列・行数表示を外す。
 query_local() {
   psql_local --no-align --tuples-only --quiet --field-separator='|' "$@"
+}
+
+# dumpとrestoreが使うfilter。dumpをCockroachDBへ流せるINSERT列へ変換する。
+# chezmoi source treeでは executable_ prefixが付いたままなので、両方の名前を見る。
+# 使うmodeから呼ぶ。ここで必須にすると、filterが無いmachineでは
+# up／down／sql／status／push／serve／repair-sequences まで動かなくなる。
+filter=""
+require_filter() {
+  filter="${AGENTSVIEW_BATCH_INSERT_DUMP:-${config_dir}/batch-insert-dump}"
+  if [ ! -f "$filter" ]; then
+    filter="${config_dir}/executable_batch-insert-dump"
+  fi
+  if [ ! -f "$filter" ]; then
+    echo "batch-insert-dump が見つかりません: ${config_dir}" >&2
+    exit 1
+  fi
 }
 
 # dump専用のhelperを解決する。dumpしか使わないので、ここで初めて要求する
@@ -467,6 +472,7 @@ case "$mode" in
     done
     ;;
   dump)
+    require_filter
     require_dump_tools
     push_local
     require_schema
@@ -486,6 +492,7 @@ case "$mode" in
     echo "Local CockroachDB AgentsView backup: ${dump_path}"
     ;;
   restore)
+    require_filter
     dump_path="$(select_dump "${1:-${AGENTSVIEW_RESTORE_DUMP:-}}")"
     # 取り込む前にschemaを現在のAgentsView versionへ揃え、このmachineですでに
     # 収集したsessionも保持する。

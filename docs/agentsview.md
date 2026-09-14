@@ -1197,6 +1197,8 @@ markerを持たないdumpのうち、`SET`や`setval`のような非INSERT state
 
 markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
 
+filterのregressionは`mise run test:agentsview`で走る（`tests/agentsview/batch-insert-dump_test.py`）。取り込みの経路はこのfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある。
+
 `ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
 
 #### localをCockroachDBに揃える理由と制約
