@@ -1127,13 +1127,13 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 
 #### 「pull」の代わりに何を使うか
 
-| 目的                                      | 方法                                                                                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                 |
-| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                       |
-| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                  |
+| 目的                                      | 方法                                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                        |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                              |
+| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                                        |
 | CockroachDB障害に備える                   | `agentsview:cockroach:merge`でdataをlocal CockroachDBへmergeし、`agentsview:cockroach:dump:local`で保存する。自動replicaとはみなさない |
-| localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない |
+| localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない      |
 
 `agentsview pg pull`が無い以上、remoteのdataをlocalで扱う経路は「dumpして取り込む」しかない。localもCockroachDBにしているのは、この取り込みでengine差を跨がないようにするためである。dumpはdata-only／column INSERTでexportし、現在のAgentsViewがlocal CockroachDBへ作ったschemaへ、不足rowだけをmergeする。schema DDL・権限・sequenceはdumpから持ち込まない（schemaは常にAgentsViewのmigrationが作る）。
 
@@ -1184,12 +1184,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効＝完了行も出さない、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、dumpの行をまだ1つも受け取っていない。進捗は`psql`の接続と並行して動くので、DNS・TCP・TLS・最初のqueryのどこで待っていても`0 lines`になる。接続とTLSの成否は`psql`のstderrで見る。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
 - remote dumpはsession単位の差分にできる。`sessions`は起点より後に更新されたrow、`session_id`を持つtable（`messages`・`tool_calls`・`tool_result_events`・`usage_events`・`secret_findings`）はその範囲のsessionに属するrowだけを出す。それ以外のtable（`model_pricing`・`sync_metadata`・identity snapshot系）は全件で、AgentsViewでは合計1万行弱なので絞らない。取り込みが`ON CONFLICT DO NOTHING`である以上、localに既にあるrowを送っても捨てられるだけなので、差分にしても結果は変わらない。
 - 差分をsession単位にしているのは、`tool_calls`のように時刻列を持たないtableがあり、再parseで古い`timestamp`のrowが後から増えることもあるためである。親が入れば子は必ず揃い、foreign keyの順序も崩れない。
-- 起点は**machineごと**に決める。`agentsview:cockroach:merge`が`localdb.sh since`を呼び、localが持っている各machineの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻の並びを受け取って、`AGENTSVIEW_DUMP_SINCE_BY_MACHINE`として渡す。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
-
-  ```text
-  ('mac', '2026-09-06 12:00:00+00'), ('mini', '2026-08-25 09:00:00+00')
-  ```
-
+- 起点は**machineごと**に決める。`agentsview:cockroach:merge`が`localdb.sh since`を呼び、localが持っている各machineの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻の並びを受け取って、`AGENTSVIEW_DUMP_SINCE_BY_MACHINE`として渡す。形は`('mac', '2026-09-06 12:00:00+00'), ('mini', '2026-08-25 09:00:00+00')`である。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
 - machineごとに分けるのは、起点が1つだと取りこぼすからである。毎日pushしている自分のmachineの更新がlocalの`max`になるので、起点を1つにすると別machineのそれより古いsessionは毎回「起点より古い」と判定され、永久に送られない。machineごとなら、localに1行も無いmachineは起点を持たず全件の対象になり、localが遅れているmachineはそのmachineの遅れた起点が使われる。
 - 同じmachineの、localの最後の更新より古いままのremote sessionは送られない。そこまで取り直すには`AGENTSVIEW_DUMP_SINCE=all`を使う。
 - 並びは文字列ではなくSQLとして（`VALUES`の中身として）remoteへ渡る。machine名のescapeはlocal DBの`quote_literal`が行い、名前に改行やtabを含むmachineは並びから外す（起点を持たないので全件の対象になる。取りこぼす側には倒れない）。`agentsview:cockroach:dump:remote`は`psql`へ渡す前に、その出力らしい形かを文字種で確かめ、外れていれば全件dumpへ倒す。
