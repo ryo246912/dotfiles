@@ -1196,6 +1196,8 @@ schema名を間違えた場合や、roleにtableのSELECT権限が無い場合�
 
 markerを持たないdumpのうち、`SET`や`setval`のような非INSERT statementを含むものは、以前のplain `pg_dump`形式のbackupとみなして取り込む（新しいdumpの出力はINSERTだけなので区別できる）。この経路ではtable数の確認ができないため、filterは注意書きを出す。
 
+ただし受け入れるのは`--column-inserts`で作ったdump（dataがINSERTで書かれているもの）だけである。`pg_dump`の既定は`COPY ... FROM stdin`でdataを書き、そのdataはSQL statementではないので、このfilterのparserからは「非INSERT statement」にしか見えない。そのまま通すと0行を取り込んで成功したように見えるため、`COPY ... FROM stdin`を見つけた時点でerrorにして止める（`--column-inserts`で作り直すよう表示する）。
+
 markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
 
 dump周りのregressionは`mise run test:agentsview`で走る（`dot_config/agentsview/tests/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。

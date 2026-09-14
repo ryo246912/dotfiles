@@ -278,6 +278,10 @@ def pending_kind(pending: str) -> str:
     return "dollar-quoted string"
 
 
+# COPY ... FROM stdin の検出。dataはSQLではないので取り込めない。判定はliteralを
+# maskしたcode側で行うので、値の中に同じ文字列があっても誤検出しない。
+COPY_FROM_STDIN = re.compile(r"COPY\b.*\bFROM\s+STDIN\b", re.IGNORECASE | re.DOTALL)
+
 # 生成dumpのINSERTの末尾。ensure_on_conflictの早期returnに使う。句と `;` と末尾の
 # 空白が収まる長さだけ遡って探す（句そのものは23文字）。
 TAIL_SCAN = 64
@@ -413,6 +417,19 @@ def main() -> int:
                 return 1
             if body[:6].upper() != "INSERT":
                 if body:
+                    # COPY ... FROM stdin のdataはSQL statementではないので、この
+                    # parserからは「;で終わらない何か」にしか見えず、後続の文へ
+                    # 吸われて非INSERTとして捨てられる。markerの無いdumpは旧形式
+                    # として受け入れるので、そのまま0行を取り込んで成功扱いになる。
+                    # 黙ってrowを失うより、読めないと言って止める。
+                    if COPY_FROM_STDIN.match(strip_leading_noise(code_body)):
+                        print(
+                            "dump uses COPY ... FROM stdin, which this filter cannot read;"
+                            " re-create it with pg_dump --column-inserts"
+                            f" (after line {lineno})",
+                            file=sys.stderr,
+                        )
+                        return 1
                     skipped += 1
                     skipped_statements += 1
                 continue

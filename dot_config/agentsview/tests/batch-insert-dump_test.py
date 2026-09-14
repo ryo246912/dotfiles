@@ -176,6 +176,20 @@ case("line comment spelling the clause is not the clause",
      "SET x = 1;\nINSERT INTO t (a) VALUES ('x') -- ON CONFLICT DO NOTHING\n;\n",
      marker=False, inserts=1,
      contains=["VALUES ('x') ON CONFLICT DO NOTHING -- ON CONFLICT DO NOTHING"])
+# 既定のplain pg_dumpはCOPY ... FROM stdinでdataを書く。dataはSQLではないので
+# このparserからは非INSERT statementに見え、markerの無いdumpは旧形式として
+# 受け入れるため、黙って0行を取り込み成功扱いになっていた。読めないと言って止める。
+case("copy from stdin is rejected",
+     "SET client_encoding = 'UTF8';\n"
+     "COPY t (a, b) FROM stdin;\n1\tx\n2\ty\n\\.\n"
+     "SELECT pg_catalog.setval('t_id_seq', 3, true);\n",
+     rc=1, marker=False, contains=["COPY ... FROM stdin"])
+case("copy from stdin is rejected before any row is written",
+     "COPY t (a) FROM stdin;\n1\n\\.\n", rc=1, marker=False,
+     notin=["BEGIN;"])
+case("the phrase inside a value is not a copy block",
+     "INSERT INTO t (a) VALUES ('COPY x FROM stdin;') ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["VALUES ('COPY x FROM stdin;')"])
 case("value ending with the phrase is still normalized",
      "SET x = 1;\nINSERT INTO t (a) VALUES ('on conflict do nothing');\n",
      marker=False, inserts=1,
