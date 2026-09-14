@@ -133,11 +133,19 @@ else
 fi
 
 if ! brew list --cask "$tinycast_cask" &>/dev/null; then
-  # The variants conflict but share an app id, so remove a variant left by an OS upgrade first.
-  for installed_tinycast in $(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true); do
+  installed_tinycasts="$(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true)"
+  # Fetch and verify the replacement before removing a working variant left by an OS upgrade.
+  brew fetch --cask "abue-ammar/tinycast/${tinycast_cask}"
+  for installed_tinycast in $installed_tinycasts; do
     brew uninstall --cask "$installed_tinycast"
   done
-  brew install --cask "abue-ammar/tinycast/${tinycast_cask}"
+  if ! brew install --cask "abue-ammar/tinycast/${tinycast_cask}"; then
+    echo "failed to install ${tinycast_cask}; restoring the previous variant" >&2
+    for installed_tinycast in $installed_tinycasts; do
+      brew install --cask "abue-ammar/tinycast/${installed_tinycast}" || true
+    done
+    exit 1
+  fi
 else
   echo "${tinycast_cask} is already installed"
 fi
