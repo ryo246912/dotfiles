@@ -269,7 +269,28 @@ cp "$ca_bundle" "$auth_dir/ca.crt"
 # 先に作って明示的に600へ落とす。
 touch "$dump_path"
 chmod 600 "$dump_path"
+
+# 差分dumpの起点。空なら全件。AGENTSVIEW_DUMP_SINCE には次を渡せる:
+#   all         全件（既定。単体実行はbackupを作る用途なので全件にする）
+#   30d         今から30日前
+#   時刻の文字列 そのまま使う（remote-local:restoreはlocalの状態から計算して渡す）
+since="${AGENTSVIEW_DUMP_SINCE:-all}"
+case "$since" in
+  all) since="" ;;
+  [0-9]*d)
+    since="$(python3 -c 'import datetime, sys
+days = int(sys.argv[1])
+print((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).isoformat())' \
+      "${since%d}")"
+    ;;
+esac
+
 echo "remote CockroachDBからdumpを書き出します: ${dump_path}" >&2
+if [ -n "$since" ]; then
+  echo "  ${since} 以降に更新されたsessionとその子rowだけを対象にします（全件にするには AGENTSVIEW_DUMP_SINCE=all）" >&2
+else
+  echo "  全件を対象にします" >&2
+fi
 echo "  進捗は${AGENTSVIEW_DUMP_PROGRESS_SECONDS:-15}秒ごとに出ます（0 linesのままなら、まだserverが最初の行を返していません）" >&2
 docker run --rm --interactive \
   --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
@@ -278,6 +299,7 @@ docker run --rm --interactive \
   --env PGSSLROOTCERT=/run/agentsview-ca.crt \
   postgres:17 \
   psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
+    --set=since="$since" \
     --set=FETCH_COUNT="$fetch_rows" \
     --tuples-only --no-align --quiet --file=- \
   <"$dump_sql" | "$progress" "$dump_path"
@@ -319,6 +341,18 @@ backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/age
 # 正常終了してしまう。
 mkdir -p "$backup_dir"
 data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+
+# 取り込みは ON CONFLICT DO NOTHING なので、localに既にあるrowを送っても捨てられる。
+# localが持っている最後のsession更新から少し戻した時刻を起点にして、remoteが送る量を
+# 減らす。localがまだ空（schemaもsessionも無い）なら空文字が返り、全件dumpになる。
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+if [ -z "${AGENTSVIEW_DUMP_SINCE:-}" ]; then
+  AGENTSVIEW_DUMP_SINCE="$(bash "$script" since)"
+  [ -n "$AGENTSVIEW_DUMP_SINCE" ] || AGENTSVIEW_DUMP_SINCE=all
+  export AGENTSVIEW_DUMP_SINCE
+fi
+
 AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:remote:dump
 if [ ! -s "$data_dump" ]; then
   echo "CockroachDB AgentsView data export was not created: ${data_dump}" >&2

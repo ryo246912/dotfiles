@@ -16,8 +16,17 @@
 -- ためである。代わりに取り込み側（localdb.shのrestore）が、取り込み前にidentity列を
 -- BY DEFAULTへ緩める。
 --
+-- :since を渡すと差分dumpになる（空文字なら全件）。session単位で絞る:
+--   sessions            updated_at >= :since
+--   session_idを持つ子   その範囲のsessionに属するrowだけ
+--   それ以外            全件（AgentsViewでは合計1万行弱で、絞る意味がない）
+-- 取り込みは ON CONFLICT DO NOTHING なので、localに既にあるrowを送っても捨てられる。
+-- 送らないだけで結果は同じである。時刻ではなくsession単位にしているのは、
+-- tool_callsのように時刻列を持たないtableがあり、かつ再parseで古いtimestampのrowが
+-- 後から増えるため（親が入れば子は必ず揃い、foreign keyの順序も崩れない）。
+--
 -- 呼び出し方（psqlの:'schema'はclient側で置換される）:
---   psql --set=schema=agentsview --set=FETCH_COUNT=1000 \
+--   psql --set=schema=agentsview --set=since= --set=FETCH_COUNT=1000 \
 --     --tuples-only --no-align --quiet --file=- < このfile
 --
 -- FETCH_COUNTはpsqlにcursorで取らせる設定で、これが無いと生成したINSERT文を
@@ -98,11 +107,16 @@ depth AS (
 tbl AS (
   SELECT col.table_schema,
     col.table_name,
-    array_agg(col.name) AS names
+    array_agg(col.name) AS names,
+    -- 差分の条件に使える列があるか。quote_identを通した名前と比べないよう、
+    -- 生の列名を別に見る。
+    bool_or(col.raw_name = 'session_id') AS has_session_id,
+    bool_or(col.raw_name = 'updated_at') AS has_updated_at
   FROM (
     SELECT c.table_schema,
       c.table_name,
-      quote_ident(c.column_name) AS name
+      quote_ident(c.column_name) AS name,
+      c.column_name AS raw_name
     FROM information_schema.columns c
       JOIN information_schema.tables t
         ON t.table_schema = c.table_schema
@@ -130,6 +144,25 @@ SELECT 'SELECT '
     || '::text), ''NULL'')'
     || ' || ' || quote_literal(') ON CONFLICT DO NOTHING;')
     || ' FROM ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
+    -- 差分の条件。:sinceが空なら付けない（全件）。比較はtimestamptzへcastする
+    -- （文字列との比較をengineの暗黙castに任せない）。
+    || CASE
+         WHEN :'since' = '' THEN ''
+         -- session単位で絞れるのは、そのschemaにsessions.updated_atがある場合だけ。
+         -- 無いschemaで条件を付けると、存在しないtableを参照して止まる。
+         WHEN tbl.has_session_id AND EXISTS (
+                SELECT 1
+                FROM information_schema.columns c2
+                WHERE c2.table_schema = :'schema'
+                  AND c2.table_name = 'sessions'
+                  AND c2.column_name = 'updated_at'
+              ) THEN
+           ' WHERE session_id IN (SELECT id FROM ' || quote_ident(tbl.table_schema)
+           || '.sessions WHERE updated_at >= ' || quote_literal(:'since') || '::timestamptz)'
+         WHEN tbl.table_name::text = 'sessions' AND tbl.has_updated_at THEN
+           ' WHERE updated_at >= ' || quote_literal(:'since') || '::timestamptz'
+         ELSE ''
+       END
 FROM tbl
   JOIN (SELECT table_name, max(depth) AS depth FROM depth GROUP BY table_name) o
     ON o.table_name = tbl.table_name::text

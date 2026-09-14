@@ -14,6 +14,7 @@ set -euo pipefail
 #   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
 #   restore [file]       dump（remote／local）の不足rowをlocal CockroachDBへmergeする
 #   repair-sequences     sequenceを実dataのidまで前進させる（巻き戻さない）
+#   since                remote差分dumpの起点をstdoutへ出す（無ければ空）
 #
 # macOS既定のbash 3.2でも動く範囲で書く（空arrayやwait -nを使わない）。
 
@@ -168,8 +169,10 @@ require_dump_tools() {
 # 「INSERT文を1行ずつ返すSELECT」なので、その結果行がそのままINSERT文になる。
 # --echo-queriesは付けない（生成SQL自体がdumpへ混ざる）。
 dump_inserts_local() {
+  # localのdumpは常に全件。sinceはremote向けの差分用で、localは目の前にあるので
+  # 絞る意味がない（生成SQLは:'since'が必ず定義されている前提なので空で渡す）。
   psql_local --tuples-only --no-align --quiet --set=schema="$schema" \
-    --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
+    --set=since='' --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
 }
 
 require_agentsview() {
@@ -324,6 +327,33 @@ relax_identity_columns() {
   done <<EOF
 ${rows}
 EOF
+}
+
+# remote dumpの差分の起点をstdoutへ出す。localが持っている最後のsession更新から
+# overlapだけ戻した時刻である。戻すのは、machine間の時計ずれと、少し前に更新された
+# sessionが後から現れるぶんを吸収するためである。schemaやsessionが無ければ何も出さ
+# ない（呼び出し側は全件dumpにする）。
+#
+# 起点より古いまま残っているremoteのsessionは送られない。長く同期していなかった場合は
+# AGENTSVIEW_DUMP_SINCE=all で全件取り直す。
+dump_since() {
+  local overlap value
+  overlap="${AGENTSVIEW_DUMP_SINCE_OVERLAP:-7 days}"
+  # INTERVALのliteralへそのまま入れるので、英小文字・数字・空白だけに限る。
+  case "$overlap" in
+    '' | *[!a-z0-9\ ]*)
+      echo "AGENTSVIEW_DUMP_SINCE_OVERLAP は '7 days' のような形式で指定してください: ${overlap}" >&2
+      return 1
+      ;;
+  esac
+  # schemaもsessionsも無い（初回）、updated_atが無い、権限が無い、いずれの場合も
+  # 何も出さずに戻る。呼び出し側はそれを全件dumpとして扱う。
+  schema_exists || return 0
+  value="$(query_local --command="SELECT COALESCE((max(updated_at) - INTERVAL '${overlap}')::text, '')
+    FROM \"${schema}\".sessions" 2>/dev/null)" || return 0
+  value="$(printf '%s' "$value" | head -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  [ -n "$value" ] || return 0
+  printf '%s\n' "$value"
 }
 
 # 取り込み結果は「どのtableが何行増えたか」で確認したい。table一覧をschemaから
@@ -504,6 +534,12 @@ case "$mode" in
     ensure_up
     require_schema
     repair_sequences
+    ;;
+  since)
+    # remote-local:restoreがremote dumpへ渡す起点。containerが落ちていると何も
+    # 出せないので、ここでも起動しておく（このあとrestoreで使う）。
+    ensure_up
+    dump_since
     ;;
   *)
     echo "不明なmode: ${mode}" >&2

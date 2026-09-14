@@ -1183,6 +1183,10 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
 - `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。
 - dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、dumpの行をまだ1つも受け取っていない。進捗は`psql`の接続と並行して動くので、DNS・TCP・TLS・最初のqueryのどこで待っていても`0 lines`になる。接続とTLSの成否は`psql`のstderrで見る。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
+- remote dumpはsession単位の差分にできる。`sessions`は`updated_at >= since`、`session_id`を持つtable（`messages`・`tool_calls`・`tool_result_events`・`usage_events`・`secret_findings`）はその範囲のsessionに属するrowだけを出す。それ以外のtable（`model_pricing`・`sync_metadata`・identity snapshot系）は全件で、AgentsViewでは合計1万行弱なので絞らない。取り込みが`ON CONFLICT DO NOTHING`である以上、localに既にあるrowを送っても捨てられるだけなので、差分にしても結果は変わらない。
+- 差分をsession単位にしているのは、`tool_calls`のように時刻列を持たないtableがあり、再parseで古い`timestamp`のrowが後から増えることもあるためである。親が入れば子は必ず揃い、foreign keyの順序も崩れない。
+- 起点は`agentsview:cockroach:remote-local:restore`が決める。`localdb.sh since`がlocalの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻を出し、それを`AGENTSVIEW_DUMP_SINCE`として渡す。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
+- `agentsview:cockroach:remote:dump`を単体で実行した場合は全件である（backupを作る用途）。`AGENTSVIEW_DUMP_SINCE`には`all`（全件）、`30d`（今から30日前）、時刻の文字列を渡せる。起点より古いまま残っているremoteのsessionは送られないので、長く同期していなかった場合は`all`で取り直す。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。
