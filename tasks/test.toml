@@ -1,3 +1,13 @@
 ["test:agentsview"]
-description = "Run the AgentsView dump filter regression"
+depends     = ["test:agentsview:*"]
+description = "Run the AgentsView dump tooling regressions"
+
+["test:agentsview:dump-auth"]
+description = "Run the prepare-dump-auth regression"
+hide        = true
+run         = "python3 tests/agentsview/prepare-dump-auth_test.py"
+
+["test:agentsview:dump-filter"]
+description = "Run the batch-insert-dump regression"
+hide        = true
 run         = "python3 tests/agentsview/batch-insert-dump_test.py"
