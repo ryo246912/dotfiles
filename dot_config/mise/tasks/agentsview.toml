@@ -296,7 +296,7 @@ if [ -n "$since" ]; then
 else
   echo "  全件を対象にします" >&2
 fi
-echo "  進捗は${AGENTSVIEW_DUMP_PROGRESS_SECONDS:-15}秒ごとに出ます（0 linesのままなら、まだserverが最初の行を返していません）" >&2
+echo "  進捗は${AGENTSVIEW_DUMP_PROGRESS_SECONDS:-15}秒ごとに出ます（0 linesのままなら、まだ行を受け取っていません。errorはこの下に出ます）" >&2
 docker run --rm --interactive \
   --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
   --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
