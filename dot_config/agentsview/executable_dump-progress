@@ -97,8 +97,12 @@ def main() -> int:
     # 行ではなく固定長で読む。dumpは1 rowが1行なので、session本文の大きなrowでは
     # 1行がそのままmemoryへ載る。ここで使う量をchunk sizeで抑える（行数は読んだ
     # byte列の改行を数える）。
-    # modeは変えない。呼び出し元が0600で作ったfileへ書く。
-    with open(path, "wb") as out:
+    # dumpにはsession本文が入るので、書く前にこのfileのmodeを0600へ落とす。呼び出し元も
+    # そうしているが、既にあるfileへ書く場合はそのfileのmodeが残るため、書く側でも
+    # 確かめる（file名を知っている他userに、書いている最中の中身を読ませない）。
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with open(fd, "wb") as out:
         while True:
             chunk = sys.stdin.buffer.read(CHUNK_BYTES)
             if not chunk:

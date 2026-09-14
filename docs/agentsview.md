@@ -591,13 +591,13 @@ fnox exec -- sh -c 'curl -fsS \
 
 UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、resource typeをCloud Run Revision、service nameを`ryo-agentsview`に絞る。startup error、CockroachDB接続error、secret値、`token=`付きURLが記録されていないことを確認する。CockroachDB Consoleのcluster Metrics／Usageでstorage、RU、connection数を記録する。
 
-**完了確認:** `agentsview:cockroach:status`が対象projectのsessionを報告し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
+**完了確認:** 上の`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`が対象projectのsessionを報告し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
 
 ##### 作業10. 全projectへ広げて運用を始める
 
 1. 全PCのpush／watch／timerを停止し、停止した端末一覧とUTC時刻を記録する。
 2. 各PCで残りの全projectを`agentsview:cockroach:push:remote`する（`--projects`を付けなければ全project）。
-3. `agentsview:cockroach:status`とCloud Run viewerで、想定するsessionが揃っていることを確認する。
+3. remoteの`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`とCloud Run viewerで、想定するsessionが揃っていることを確認する（`agentsview:cockroach:status`はlocal containerを見るtaskなので、ここでは使わない）。
 4. 各PCの通常taskを`agentsview:cockroach:push:remote`へ切り替え、小さいprojectから再開する。
 5. Cloud Runを再度smoke testする。
 6. 数日はCloud Run error、CockroachDBのRU／storage、backupを毎日確認する。
@@ -1194,6 +1194,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - 同じmachineの、localの最後の更新より古いままのremote sessionは送られない。そこまで取り直すには`AGENTSVIEW_DUMP_SINCE=all`を使う。
 - 並びは文字列ではなくSQLとして（`VALUES`の中身として）remoteへ渡る。machine名のescapeはlocal DBの`quote_literal`が行い、名前に改行やtabを含むmachineは並びから外す（起点を持たないので全件の対象になる。取りこぼす側には倒れない）。`agentsview:cockroach:dump:remote`は`psql`へ渡す前に、その出力らしい形かを文字種で確かめ、外れていれば全件dumpへ倒す。
 - `agentsview:cockroach:dump:remote`を単体で実行した場合は全件である（backupを作る用途）。人が指定する`AGENTSVIEW_DUMP_SINCE`には`all`（全件）、`30d`（今から30日前）、時刻の文字列を渡せる。こちらを指定した場合は単一の起点として扱われ、machineごとの起点より優先される。
+- dump fileは所有者だけが読める（0600）。dumpにはsession本文が入るためである。`umask`は新しく作るfileにしか効かないので、既にあるpathへ書く場合に備えて、dumpを作るtaskが書く前に`chmod`し、bytesを書く`dump-progress`も開いたdescriptorへ`fchmod`する。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。

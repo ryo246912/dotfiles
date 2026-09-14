@@ -281,8 +281,10 @@ for name, text, rc, inserts, chunk, marker, contains, notin in cases:
     for needle in contains or []:
         if needle not in out and needle not in err:
             problems.append(f"missing {needle!r}")
+    # containsと同じく両方のstreamを見る。出力先が変わっても、出てはいけない形が
+    # 素通りしないようにする。
     for needle in notin or []:
-        if needle in out:
+        if needle in out or needle in err:
             problems.append(f"unexpected {needle!r}")
     # dump本文をerrorへ出していないこと（CWE-532）。
     if got_rc != 0 and any(tok in err for tok in ("oops", "INSERT INTO")):
