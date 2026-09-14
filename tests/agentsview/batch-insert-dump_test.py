@@ -98,7 +98,7 @@ case("non-ascii identifier with dollar quote after separator",
 case("legacy pg_dump backup without marker",
      "SET client_encoding = 'UTF8';\n\\restrict abc\n" + ONE +
      "SELECT pg_catalog.setval('agentsview.sessions_id_seq', 7, true);\n",
-     marker=False, inserts=1, contains=["legacy plain pg_dump backup"]),
+     marker=False, inserts=1, contains=["legacy plain pg_dump backup"])
 case("markerless dump with only inserts is rejected", ONE + ONE, rc=1, marker=False,
      contains=["missing the completion marker"])
 

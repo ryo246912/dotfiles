@@ -538,7 +538,8 @@ case "$mode" in
   since)
     # remote-local:restoreがremote dumpへ渡す起点。containerが落ちていると何も
     # 出せないので、ここでも起動しておく（このあとrestoreで使う）。
-    ensure_up
+    # このmodeのstdoutは呼び出し元が値として読むので、composeの進捗を混ぜない。
+    ensure_up >/dev/null
     dump_since
     ;;
   *)
