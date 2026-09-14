@@ -120,8 +120,18 @@ fi
 # tinycast: 公式のサードパーティ tap は Homebrew API メタデータを公開していないため、
 # mise の brew-cask バックエンドではなく、この mise task から実 Homebrew を呼び出す。
 # 完全修飾した cask 名を使い、tap 全体を trust しない。
-if ! brew list --cask tinycast &>/dev/null; then
-  brew install --cask abue-ammar/tinycast/tinycast
+if ! brew list --cask 2>/dev/null | grep -Eq '^tinycast(-sequoia|-universal)?$'; then
+  macos_major="$(sw_vers -productVersion | cut -d. -f1)"
+  if [ "$macos_major" -ge 26 ]; then
+    if [ "$(uname -m)" = "arm64" ]; then
+      tinycast_cask="tinycast"
+    else
+      tinycast_cask="tinycast-universal"
+    fi
+  else
+    tinycast_cask="tinycast-sequoia"
+  fi
+  brew install --cask "abue-ammar/tinycast/${tinycast_cask}"
 else
   echo "tinycast is already installed"
 fi

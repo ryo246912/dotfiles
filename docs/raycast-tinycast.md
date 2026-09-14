@@ -12,18 +12,19 @@ macOS のパッケージ bootstrap で Raycast と Tinycast を導入する。
 mise run bootstrap:mac-packages
 ```
 
-Tinycast は公式 tap の cask を利用する。サードパーティ tap の Homebrew API メタデータが
+Tinycast プロジェクトが提供するサードパーティ tap の cask を利用する。Homebrew API メタデータが
 公開されていないため、`[bootstrap.packages]` の `brew-cask:` には入れず、mise task から
-完全修飾した cask 名を指定して `brew install --cask abue-ammar/tinycast/tinycast` を実行する。
+完全修飾した cask 名を指定する。Apple silicon/macOS 26 以降は `tinycast`、Intel/macOS 26 は
+`tinycast-universal`、macOS 15 Sequoia は `tinycast-sequoia` を選ぶ。tap 全体は trust しない。
 
 Vicinae は比較対象に留め、現時点では bootstrap に追加しない。採用する場合は
 [公式 Releases](https://github.com/vicinaehq/vicinae/releases) の macOS 用 DMG を利用する。
 
 ## Raycast の設定を Git で管理する
 
-Raycast の **Settings → Advanced → Export** で設定を書き出し、出力されたファイルで
+Raycast の **Export Settings & Data** command で設定を書き出し、出力されたファイルで
 `dot_config/raycast/Raycast.rayconfig` を置き換えてコミットする。新しい Mac では
-**Settings → Advanced → Import** から、chezmoi が配置した
+**Import Settings & Data** command から、chezmoi が配置した
 `~/.config/raycast/Raycast.rayconfig` を読み込む。
 
 ```sh
@@ -33,24 +34,21 @@ git -C "$(chezmoi source-path)" add dot_config/raycast/Raycast.rayconfig
 git -C "$(chezmoi source-path)" commit -m "chore(raycast): update exported settings"
 ```
 
-`.rayconfig` はバイナリのスナップショットであり、通常のテキスト diff や手編集には向かない。
-設定変更後に再 export し、秘密情報を含めないことを確認して更新する。履歴・キャッシュなどの
-Raycast の内部データディレクトリを丸ごと追跡するのではなく、公式の export/import を使う。
+`.rayconfig` はパスフレーズで暗号化されたバイナリであり、通常のテキスト diff や手編集には
+向かない。8 文字以上のパスフレーズを password manager で管理し、Git のファイルや履歴には
+保存しない。設定変更後に再 export して更新する。Raycast の内部データディレクトリを丸ごと
+追跡するのではなく、公式の export/import を使う。
 
 ### export で管理できるもの
 
-Raycast の export 画面で選択した次の項目を、この 1 ファイルとして管理できる。
+現在の export は Settings、AI Chats、Extensions、Quicklinks、Snippets、Floating Notes、
+Clipboard History、Window Management、MCP Servers、Store Extensions、Navigation の 11 category を
+1 ファイルに格納する。復元する category は **import 時** に選択する。
 
-- General、Appearance、Advanced などの環境設定
-- グローバルおよび各コマンドのショートカット
-- Extensions と各 Extension の設定
-- Quicklinks、Snippets、Script Commands
-- Floating Notes
-
-アカウント認証、macOS の Accessibility などの権限、Raycast AI の履歴、クリップボード履歴、
-キャッシュは、端末固有または機密性の高いデータであり、このバックアップの管理対象にしない。
-export 時に表示される対象項目を確認し、API key、token、個人情報を含む Extension 設定は選択から
-外す。Raycast のバージョンにより export 対象は変わりうるため、画面の一覧を正とする。
+AI Chats や Clipboard History も含まれうるため、コミットする export に機密情報がないことを
+確認する。不要な category は import しない。アカウント認証、macOS の Accessibility などの権限、
+Keychain の credential や cache は端末ごとに再設定する。Raycast のバージョンにより category は
+変わりうるため、export/import 画面の一覧を正とする。
 
 ## 比較表
 
@@ -126,4 +124,4 @@ cache、Extension 本体などは設定ファイルとは別であり、秘密�
 - [Vicinae repository](https://github.com/vicinaehq/vicinae)
 - [Vicinae default configuration](https://github.com/vicinaehq/vicinae/blob/main/extra/config.jsonc)
 - [Vicinae extensions](https://docs.vicinae.com/extensions/introduction)
-- [Raycast: Import & Export](https://manual.raycast.com/preferences/advanced#import-and-export)
+- [Raycast: Import & Export](https://manual.raycast.com/import-export)
