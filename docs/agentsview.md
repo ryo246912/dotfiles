@@ -2,27 +2,10 @@
 
 複数端末のセッション情報をCockroachDB Cloudに集約し、Cloud Run上のread-only Web UIで参照する構成。
 
-## 実装済みファイル
-
-| ファイル                                             | 目的                                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `dot_config/agentsview/Dockerfile`                   | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
-| `dot_config/agentsview/cloudrun-service.yaml`        | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
-| `dot_config/agentsview/clrnd.yml`                    | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
-| `dot_config/agentsview/scripts/cloudrun.sh`          | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
-| `dot_config/agentsview/compose.yaml`                 | local検証用PostgreSQLのDocker Compose定義                                                                              |
-| `dot_config/agentsview/executable_prepare-dump-auth` | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `dot_config/mise/tasks/agentsview.toml`              | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local PostgreSQL、CockroachDBへのpush          |
-| `dot_config/mise/config.toml`                        | clrnd、terraform、gcloud、postgresql-binariesなどのversion pin                                                         |
-| `terraform/agentsview/*.tf`                          | CockroachDB、Artifact Registry、runtime service account、Secret Manager container／IAM、Cloud Run invoker IAM          |
-
-各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。
-
 ## Cloud Run／CockroachDBへの移行手順
 
 対象構成:
 
-- Atuin app／PostgreSQL: Fly.ioに残す（`psgl`／`ryo-shellhistory`）
 - AgentsView app: Google Cloud Run
 - AgentsView DB: CockroachDB Cloud Basic
 
@@ -30,11 +13,7 @@ AgentsViewのsource of truthは各PCのlocal SQLite archiveであり、Cockroach
 
 ### ゼロから構築する場合の全体手順
 
-この節から順番に実行すれば、空のGoogle Cloud projectとCockroachDB Cloud accountから、Cloud Run viewerを起動できる。コマンドはrepository rootから開始し、`<...>`は自分の値へ置き換える。
-
 #### A. 完了条件と作業順序
-
-以下の**作業1〜10を番号順に実行する**。各作業末尾の「完了確認」が通るまで次へ進まない。Google Cloud／CockroachDBのconsole表記は変更されることがあるため、表記が異なる場合は併記した公式documentへのlinkから同じ機能を開く。
 
 ##### 作業1. account、CLI、課金alertを準備する
 
@@ -73,22 +52,6 @@ Secret keyは`CCDB1_...`形式で、**画面を閉じると二度と表示でき
 
 ###### CLI準備
 
-repository rootでtoolをinstallし、versionを確認する。
-
-```sh
-mise trust
-mise install
-
-git --version
-mise --version
-fnox --version
-gcloud version
-fnox exec -- terraform version
-psql --version
-pg_dump --version
-docker version
-```
-
 Google Cloudへloginする。
 
 ```sh
@@ -96,7 +59,7 @@ gcloud auth login
 gcloud auth application-default login
 ```
 
-**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記commandがすべてversionを返す。
+**完了確認:** Google Cloud Consoleでprojectとbudgetが見え、CockroachDB service accountにorganization scopeの`Cluster Creator`が表示され、その`CCDB1_...` secretがsecret storeに保存され、上記の`gcloud auth login`と`gcloud auth application-default login`がどちらもerrorなく完了している。
 
 ##### 作業2. 固定値、password、ローカルsecretを準備する
 
@@ -116,7 +79,7 @@ Cloud RunとCockroachDBは可能な限り同じGCP regionにする。CockroachDB
 |    4 | South Carolina    | `us-east1`    | `us-east1`          | 主な利用者が北米東海岸にいる場合向け。日本中心では優先しない            |
 
 ```sh
-export GCP_PROJECT_ID='<google-cloud-project-id>'
+export GCP_PROJECT_ID='agentsview'
 export GCP_REGION='us-west2'
 export TF_STATE_BUCKET="${GCP_PROJECT_ID}-terraform-state"
 export TF_VAR_gcp_project_id="$GCP_PROJECT_ID"
@@ -145,8 +108,6 @@ TF_VAR_cockroach_read_password
 AGENTSVIEW_AUTH_TOKEN
 AGENTSVIEW_CURSOR_SECRET
 ```
-
-`dot_config/fnox/config.toml`が参照するsecret名と完全一致させる。値を`terraform.tfvars`、`.env`、shell history、GitHub logへ保存しない。
 
 **完了確認:** 次は値を表示せず、すべて`set`を返す。
 
@@ -498,58 +459,9 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
-- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`dot_config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
-- **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  EXPLAIN ANALYZE
-  SELECT count(*) FROM agentsview.sessions
-  WHERE deleted_at IS NULL
-    AND COALESCE(ended_at, started_at, created_at) >= now() - INTERVAL '"'"'7 days'"'"';"'
-  ```
-
-  出力の`cumulative time spent due to contention`と`sql cpu time`を比べる。
-
-  **contentionがexecution timeのほとんどを占める場合（lock待ち）。** これが実際に起きたcaseである。`sql cpu time: 4ms`／`KV rows decoded: 4,367`に対して`KV contention time: 1m22s`だった。表が小さく全走査自体は一瞬なので、indexを足しても直らない。`sessions`へ書き込みintentを残したまま終わっていないtransactionが原因である。中断した`agentsview pg push`や`pg watch`が典型。
-
-  ```sh
-  # 実行中transactionを古い順に見る。startが極端に古いものが原因。
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  SELECT id, session_id, start, application_name, num_stmts
-  FROM crdb_internal.cluster_transactions ORDER BY start;"'
-
-  # sessions表で待たされているlockを見る
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
-  SELECT table_name, txn_id, ts, lock_strength, granted, contended
-  FROM crdb_internal.cluster_locks WHERE table_name = '"'"'sessions'"'"' LIMIT 20;"'
-  ```
-
-  原因のsessionを止める。まず各PCで`agentsview pg push`／`pg watch`／daemonが残っていないかを確認し、残っていなければCockroachDB側でcancelする。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "CANCEL SESSION '"'"'<session_id>'"'"';"'
-  ```
-
-  cancel後にもう一度`EXPLAIN ANALYZE`を実行し、`contention`が消えていることを確認する。
-
-  **contentionがほぼ0で、scanに時間がかかっている場合（本当に遅いquery）。** そのときだけindexを検討する。sidebarのORDER BYとdate filterは`COALESCE(ended_at, started_at, created_at)`という式を使うが、AgentsViewが作る`sessions`のindexにこの式を支えるものは無い（`parent_session_id`、`termination_status`、`cwd`、`(project, git_branch)`、`secret_leak_count`だけ）。AgentsViewは自分のindexを`CREATE INDEX IF NOT EXISTS`で作るだけなので、追加したindexが消されることはない。
-
-  ```sh
-  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 -c "
-  CREATE INDEX IF NOT EXISTS idx_sessions_activity
-    ON agentsview.sessions ((COALESCE(ended_at, started_at, created_at)) DESC, id DESC);"'
-  ```
-
-  なお`limit`を下げても解決しない。`limit=500`はfrontendの`SESSION_PAGE_SIZE`定数（`frontend/src/lib/stores/sessions.svelte.ts`）でimageにcompile済みで設定から変えられず、かつ`GetSidebarSessionIndex`は`limit > 0`だと`WITH RECURSIVE`のpaging経路に入り、その中の`COUNT(*)`はlimitと無関係に全体を走査する（`internal/postgres/sessions.go`）。
-
-  どちらでもない場合はCockroachDB Cloud Consoleの**Metrics > Request Units**を見る。Basic planはburst RUを使い切ると強くthrottleされる。
-
-- **画面に`request timed out`が出る／logに`status 503`と`latency 30.0秒`が並ぶ** — Cloud Runではなく**AgentsView自身のwrite timeout**である。既定は30秒で、超えると`http.TimeoutHandler`が503と`{"error":"request timed out"}`を返す（`internal/server/middleware.go`）。dashboardはanalytics APIを同時に複数叩くため、`maxScale: 1`／1 CPUの上でCockroachDBへの集計が重なると30秒に収まらない。`cloudrun-service.yaml`で`--write-timeout`を延ばし、Cloud Run側の`timeoutSeconds`をそれより長くする（先に切れるとCloud Runが504を返し、appのJSONが届かない）。延ばしても解消しない場合はCPUを2にするか、期間を短くして切り分ける。
-
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
-- **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9の最初の`push`が未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:push`を済ませてから再deployする。
+- **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9の最初の`push`が未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:push:remote`を済ませてから再deployする。
 - **`28P01` / `password authentication failed`** — `agentsview-pg-url` secretのpasswordが誤っている。CockroachDB Cloud consoleでread-only roleのpasswordを再発行し、`agentsview:cloudrun:secrets`で新versionを登録してから再deployする。
 - **TLS / certificate error** — imageは`ca-certificates`入りのdebian-slimなので、通常はCockroachDB Cloudのcertを検証できる。出る場合はDB URLのhostとsslmodeを確認する。
 
@@ -595,7 +507,7 @@ done
 
 > **前提:**
 >
-> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の権限設定と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push`を先に済ませる。
+> - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の権限設定と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push:remote`を先に済ませる。
 > - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
 >
 > ```sh
@@ -654,8 +566,8 @@ agentsview projects --format json | jq -r '.[].name'
 
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
-fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
-fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- mise run agentsview:cockroach:push:remote -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'
 ```
 
 最初の`push`がCockroachDBの`agentsview` schemaにtableを作る。push userには`CREATE`があるため、この経路でだけschemaが作られる。read roleで動くCloud Run viewerは自分でschemaを作れないので、**viewerより先にpushを済ませる**。
@@ -673,21 +585,22 @@ fnox exec -- sh -c 'curl -fsS \
 
 UIではCloud Runの**Logs**または**Logging > Logs Explorer**を開き、resource typeをCloud Run Revision、service nameを`ryo-agentsview`に絞る。startup error、CockroachDB接続error、secret値、`token=`付きURLが記録されていないことを確認する。CockroachDB Consoleのcluster Metrics／Usageでstorage、RU、connection数を記録する。
 
-**完了確認:** `agentsview:cockroach:status`が対象projectのsessionを報告し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
+**完了確認:** 上の`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`が対象projectのsessionを報告し、認証済みAPI、session一覧、detail、analytics、usageが表示され、Cloud RunとCockroachDBにerrorがない。
 
 ##### 作業10. 全projectへ広げて運用を始める
 
 1. 全PCのpush／watch／timerを停止し、停止した端末一覧とUTC時刻を記録する。
-2. 各PCで残りの全projectを`agentsview:cockroach:push`する（`--projects`を付けなければ全project）。
-3. `agentsview:cockroach:status`とCloud Run viewerで、想定するsessionが揃っていることを確認する。
-4. 各PCの通常taskを`agentsview:cockroach:push`へ切り替え、小さいprojectから再開する。
+2. 各PCで残りの全projectを`agentsview:cockroach:push:remote`する（`--projects`を付けなければ全project）。
+3. remoteの`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`とCloud Run viewerで、想定するsessionが揃っていることを確認する（`agentsview:cockroach:status`はlocal containerを見るtaskなので、ここでは使わない）。
+4. 各PCの通常taskを`agentsview:cockroach:push:remote`へ切り替え、小さいprojectから再開する。
 5. Cloud Runを再度smoke testする。
 6. 数日はCloud Run error、CockroachDBのRU／storage、backupを毎日確認する。
 
 ```sh
-fnox exec -- mise run agentsview:cockroach:push
-fnox exec -- mise run agentsview:cockroach:status
-fnox exec -- mise run agentsview:pg:remote-local:dump
+fnox exec -- mise run agentsview:cockroach:push:remote
+fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'
+fnox exec -- mise run agentsview:cockroach:merge
+mise run agentsview:cockroach:dump:local
 ```
 
 **完了確認:** 全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功する。
@@ -785,16 +698,21 @@ agentsview projects --format json | jq -r '.[] | "\(.name)\t\(.session_count // 
 2. 既にCockroachDBを使っている場合は、現在の件数を控えておく。作業後の比較対象になる。
 
 ```sh
-fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'
 ```
 
-3. local PostgreSQLへ統合backupを作れる状態にしておく。CockroachDBとlocal archiveの両方をまとめたdumpが手元に残る。
+3. local CockroachDBへ統合backupを作れる状態にしておく。CockroachDBとlocal archiveの両方をまとめたdumpが手元に残る。
 
 ```sh
-fnox exec -- mise run agentsview:pg:remote-local:dump
+fnox exec -- mise run agentsview:cockroach:merge
+mise run agentsview:cockroach:dump:local
 ```
 
-4. backupを空の検証PostgreSQLへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
+4. そのbackupをlocal CockroachDBへrestoreできることを確認する。backup fileを作っただけでは合格にしない。
+
+```sh
+bash ~/.config/agentsview/scripts/localdb.sh restore
+```
 
 ### 1. CockroachDBの権限設計を決める
 
@@ -1109,7 +1027,7 @@ mise run agentsview:cloudrun:rollback -- --revision ryo-agentsview-00006-def
 
 ```sh
 export AGENTSVIEW_MIGRATION_PROJECTS='<agentsview projectsで確認した実在名>'
-fnox exec -- mise run agentsview:cockroach:push -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
+fnox exec -- mise run agentsview:cockroach:push:remote -- --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
 ```
 
 最初の`push`が次を行う。
@@ -1130,13 +1048,13 @@ daemonを介さず直接書きたい場合だけ次を使う。
 
 ```sh
 agentsview daemon stop
-AGENTSVIEW_NO_DAEMON=1 fnox exec -- mise run agentsview:cockroach:push -- --projects '<project>'
+AGENTSVIEW_NO_DAEMON=1 fnox exec -- mise run agentsview:cockroach:push:remote -- --projects '<project>'
 ```
 
 #### 3.3 内容を照合
 
 ```sh
-fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'
 ```
 
 CockroachDB側の件数はowner／read接続で直接確認できる。
@@ -1163,7 +1081,7 @@ semantic／hybrid searchを利用している場合、CockroachDBではpgvector�
 
 #### 結論: pushは可能、DBからlocalへのpullは提供されない
 
-AgentsViewの同期元はlocal PostgreSQLではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、PostgreSQL serverからlocal SQLite／session fileへ戻す`pg pull` commandはない。
+AgentsViewの同期元はlocal databaseではなく、各PCにあるsession fileとAgentsViewのlocal SQLite indexである。`agentsview pg push`は、local sessionを同期してからshared databaseへupsertする**一方向同期**であり、shared databaseからlocal SQLite／session fileへ戻す`pg pull` commandはない。
 
 CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCockroachDBをshared databaseとして扱える。このrepositoryでは次の経路を採用する。
 
@@ -1173,57 +1091,162 @@ CockroachDBはPostgreSQL wire protocolで接続でき、AgentsView 0.38.1はCock
     │ agentsview pg push（public TLS、push role）
     ▼
 CockroachDB Cloud Basic
-    │
-    │ SELECTのみ（read role）
-    ▼
-Cloud Run上のagentsview pg serve
+    │                                │
+    │ SELECTのみ（read role）        │ psql（data-only／column INSERT、push role）
+    ▼                                ▼
+Cloud Run上のagentsview pg serve     local CockroachDB（single-nodeのcontainer）
+                                     │
+                                     │ agentsview pg serve（mise run agentsview:serve）
+                                     ▼
+                                     手元のviewer／SQL
 ```
 
 差分pushは各PCからCockroachDBのTLS endpointへ直接送る。proxyは介さない。
 
 ```sh
 # 接続とwatermarkを確認
-fnox exec -- mise run agentsview:cockroach:status
+fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'
 
 # まず1 projectだけ
-fnox exec -- mise run agentsview:cockroach:push -- --projects '<project>'
+fnox exec -- mise run agentsview:cockroach:push:remote -- --projects '<project>'
 
 # 差分を全projectへ反映
-fnox exec -- mise run agentsview:cockroach:push
+fnox exec -- mise run agentsview:cockroach:push:remote
 
 # schema resetや内容修復後に限り全件を再送
-fnox exec -- mise run agentsview:cockroach:push -- --full --no-vectors
+fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 ```
 
-`agentsview:cockroach:push` taskは常に`--no-vectors`を追加し、CockroachDBに送る対象をsession contentへ限定する。AgentsViewはDB vendorだけを見てvector phaseを自動停止しないため、taskを介さず直接実行するときも`--no-vectors`または`push_vectors=false`を必ず指定する。incremental watermarkは接続target／project filterごとにlocal保存される。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
+`agentsview:cockroach:push:remote` taskは常に`--no-vectors`を追加し、CockroachDBに送る対象をsession contentへ限定する。AgentsViewはDB vendorだけを見てvector phaseを自動停止しないため、taskを介さず直接実行するときも`--no-vectors`または`push_vectors=false`を必ず指定する。incremental watermarkは接続target／project filterごとにlocal保存される。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
 
 #### 「pull」の代わりに何を使うか
 
-| 目的                                      | 方法                                                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                           |
-| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                 |
-| CockroachDB障害に備える                   | `agentsview:pg:remote-local:dump`でdataをlocal PostgreSQLへmergeし、custom-format backupを作る。自動replicaとはみなさない |
-| PostgreSQLへrollbackする                  | write停止後にschema／型を変換したexport/importをrehearsalする。CockroachDBのdumpをPostgreSQLへ無検証restoreしない         |
-| localでSQL分析する                        | read-only SQL clientでCockroachDBへ直接接続するか、分析用exportを別DBへimportする。本番との双方向同期はしない             |
+| 目的                                      | 方法                                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                        |
+| 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                              |
+| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                                        |
+| CockroachDB障害に備える                   | `agentsview:cockroach:merge`でdataをlocal CockroachDBへmergeし、`agentsview:cockroach:dump:local`で保存する。自動replicaとはみなさない |
+| localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない      |
 
-CockroachDBとPostgreSQLは同じwire protocolを話すが、DDL、sequence、権限、型、transaction semanticsは完全互換ではない。そのためCockroachDBのschema dumpをPostgreSQLへそのままrestoreする設計は採用しない。このrepositoryの`agentsview:pg:remote-local:dump`はdata-only／column INSERTとしてexportし、現在のAgentsViewがlocal PostgreSQLへ作ったschemaに不足rowだけをtransaction内でmergeする。
+`agentsview pg pull`が無い以上、remoteのdataをlocalで扱う経路は「dumpして取り込む」しかない。localもCockroachDBにしているのは、この取り込みでengine差を跨がないようにするためである。dumpはdata-only／column INSERTでexportし、現在のAgentsViewがlocal CockroachDBへ作ったschemaへ、不足rowだけをmergeする。schema DDL・権限・sequenceはdumpから持ち込まない（schemaは常にAgentsViewのmigrationが作る）。
 
-#### local PostgreSQLの位置づけ
+#### local CockroachDBの位置づけ
 
-local PostgreSQL（`dot_config/agentsview/compose.yaml`）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。
-
-local PostgreSQLを使うのはbackupのときだけである。`agentsview:pg:remote-local:dump`が、このmachineのlocal push、CockroachDBからのdata export、local merge、sequence補正、custom-format dumpを順に行う。
+local CockroachDB（`dot_config/agentsview/compose.yaml`の`cockroach` service）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。localを使うのは、remote dataの取り込み・backup・手元での閲覧のときだけである。
 
 ```sh
-# CockroachDB data + このmachineのsessionを統合したlocal PostgreSQL dump
-fnox exec -- mise run agentsview:pg:remote-local:dump
+# remoteのdataをlocalへ取り込む（dump → merge）
+fnox exec -- mise run agentsview:cockroach:merge
 
-# remoteへ接続せず、現在のlocal PostgreSQLだけをdump
-mise run agentsview:pg:local:dump
+# remoteへ接続せず、現在のlocal CockroachDBだけをdump（統合backupはmergeのあとにこれ）
+mise run agentsview:cockroach:dump:local
+
+# 手元のdumpを選んでlocalへmergeする（remote／localどちらのdumpでもよい）
+bash ~/.config/agentsview/scripts/localdb.sh restore
+
+# 取り込んだ内容をlocalのviewerで見る
+mise run agentsview:serve
 ```
 
-CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。importはtransaction内で行い、schema／型が合わなければ全体をrollbackする。
+CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
+
+importはINSERTを一定件数ごとのtransactionへ分けて流す。CockroachDBは1 transactionで書ける量に上限があり、dump全体を1 transactionにすると大きなbackupで失敗するためである。件数は`AGENTSVIEW_IMPORT_CHUNK_ROWS`（既定500）で変えられる。途中で失敗した場合、そこまでのchunkはcommit済みで残るが、すべてのINSERTが`ON CONFLICT DO NOTHING`なので、原因を直して同じfileを再実行すればよい。
+
+取り込みの前に、localのidentity列（`GENERATED ALWAYS AS IDENTITY`）を`ALTER COLUMN ... SET GENERATED BY DEFAULT`で緩める。そのままでは明示idのINSERTが`cannot insert into column "id"`で止まり、`OVERRIDING SYSTEM VALUE`はCockroachDBが解釈しないためである。緩めたまま戻さない。localは鏡であり、AgentsView自身のINSERTはidを指定しないので`BY DEFAULT`でも挙動は変わらない（remoteのschemaには触らない）。このALTERが通らないengine、またはidentity列を列挙できない場合は、1行も取り込まずに中止する。緩めるのはdumpを読み切って形を確認したあとなので、受け付けないdumpでschemaが変わることはない。
+
+取り込みの前に、同じfilterで読み切るだけのpassを1度走らせる。dumpが途中で切れている場合、filterの出力をそのままpsqlへ繋ぐと、切れていると分かる時点では手前のchunkが既にcommit済みになってしまうためである。この検証passはDBへ触らないので、壊れたdumpでは1行も書き込まれない。
+
+#### dumpの作り方（`pg_dump`を使わない理由）
+
+`pg_dump`はCockroachDBをsupportしない（[cockroachdb/cockroach#20296](https://github.com/cockroachdb/cockroach/issues/20296)）。`--schema`を渡すと`pg_dump`はschemaを絞るために次のqueryを送るが、CockroachDBは修飾付きのcollation名を解釈できず`at or near ".": syntax error`になる。
+
+```text
+WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.default
+```
+
+この`COLLATE pg_catalog.default`は、`pg_dump` 12以降がserver versionを12以上と見たときに必ず付ける（PostgreSQLの`src/fe_utils/string_utils.c`）。optionでは外せないため、remote／localのどちらのdumpでも`pg_dump`は使えない。
+
+代わりに、行の組み立てはserver側に任せる。`dot_config/agentsview/dump-inserts.sql`が`information_schema`と`quote_ident`／`quote_literal`から「INSERT文を返すSELECT」を作り、`psql`の`\gexec`で実行する。同じfileをremote（`agentsview:cockroach:dump:remote`）とlocal（`agentsview:cockroach:dump:local`）の両方が読むので、出力の形も一致する。
+
+- 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
+- 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
+- tableの順はforeign keyに従い、参照される側を先に出す。辺は`pg_catalog.pg_constraint`から取る。PostgreSQLの`information_schema.table_constraints`はSELECT以外の権限を持つtableしか返さないため、read-only roleでdumpすると辺が見えないからである。自己参照と循環はtableの順序では解けないので、その分はbest effortである。
+- 生成列（`GENERATED ALWAYS AS ... STORED`）は列一覧から外す。値を指定したINSERTは`cannot insert a non-DEFAULT value`でrestoreが止まるためである。外した結果dumpできる列が1つも残らないtable（全列が生成列、列が無い）があれば、dumpは`has no dumpable column`で止まる。markerはschemaのtableを数えるので、黙って落とすとrowだけ失われたdumpが成功扱いになる。
+- identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
+- `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。psqlが一度に持つ量は「件数×1行の大きさ」なので、session本文が極端に大きいschemaでは件数を下げる（PostgreSQL 16で183MBのtableを流したときのpsqlのmaxRSSは、`0`で192MiB、`1000`で100MiB、`200`で27MiBだった）。
+- dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効＝完了行も出さない、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、dumpの行をまだ1つも受け取っていない。進捗は`psql`の接続と並行して動くので、DNS・TCP・TLS・最初のqueryのどこで待っていても`0 lines`になる。接続とTLSの成否は`psql`のstderrで見る。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
+- remote dumpはsession単位の差分にできる。`sessions`は起点より後に更新されたrow、`session_id`を持つtable（`messages`・`tool_calls`・`tool_result_events`・`usage_events`・`secret_findings`）はその範囲のsessionに属するrowだけを出す。それ以外のtable（`model_pricing`・`sync_metadata`・identity snapshot系）は全件で、AgentsViewでは合計1万行弱なので絞らない。取り込みが`ON CONFLICT DO NOTHING`である以上、localに既にあるrowを送っても捨てられるだけなので、差分にしても結果は変わらない。
+- 差分をsession単位にしているのは、`tool_calls`のように時刻列を持たないtableがあり、再parseで古い`timestamp`のrowが後から増えることもあるためである。親が入れば子は必ず揃い、foreign keyの順序も崩れない。
+- 起点は**machineごと**に決める。`agentsview:cockroach:merge`が`localdb.sh since`を呼び、localが持っている各machineの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻の並びを受け取って、`AGENTSVIEW_DUMP_SINCE_BY_MACHINE`として渡す。形は`('mac', '2026-09-06 12:00:00+00'), ('mini', '2026-08-25 09:00:00+00')`である。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
+- machineごとに分けるのは、起点が1つだと取りこぼすからである。毎日pushしている自分のmachineの更新がlocalの`max`になるので、起点を1つにすると別machineのそれより古いsessionは毎回「起点より古い」と判定され、永久に送られない。machineごとなら、localに1行も無いmachineは起点を持たず全件の対象になり、localが遅れているmachineはそのmachineの遅れた起点が使われる。
+- 同じmachineの、localの最後の更新より古いままのremote sessionは送られない。そこまで取り直すには`AGENTSVIEW_DUMP_SINCE=all`を使う。
+- 並びは文字列ではなくSQLとして（`VALUES`の中身として）remoteへ渡る。machine名のescapeはlocal DBの`quote_literal`が行い、名前に改行やtabを含むmachineは並びから外す（起点を持たないので全件の対象になる。取りこぼす側には倒れない）。`agentsview:cockroach:dump:remote`は`psql`へ渡す前に、その出力らしい形かを文字種で確かめ、外れていれば全件dumpへ倒す。
+- `agentsview:cockroach:dump:remote`を単体で実行した場合は全件である（backupを作る用途）。人が指定する`AGENTSVIEW_DUMP_SINCE`には`all`（全件）、`30d`（今から30日前）、時刻の文字列を渡せる。こちらを指定した場合は単一の起点として扱われ、machineごとの起点より優先される。
+- dump fileは所有者だけが読める（0600）。dumpにはsession本文が入るためである。`umask`は新しく作るfileにしか効かないので、既にあるpathへ書く場合に備えて、dumpを作るtaskが書く前に`chmod`し、bytesを書く`dump-progress`も開いたdescriptorへ`fchmod`する。
+- schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
+
+dumpの最後には完了markerが付く。
+
+```text
+-- agentsview-dump-complete tables=2
+```
+
+schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:dump:remote`とimport filter（`dot_config/agentsview/scripts/batch-insert-dump.py`）の両方がerrorにして、空のbackupを残さない。
+
+markerを持たないdumpのうち、`SET`や`setval`のような非INSERT statementを含むものは、以前のplain `pg_dump`形式のbackupとみなして取り込む（新しいdumpの出力はINSERTだけなので区別できる）。この経路ではtable数の確認ができないため、filterは注意書きを出す。
+
+ただし受け入れるのは`--column-inserts`で作ったdump（dataがINSERTで書かれているもの）だけである。`pg_dump`の既定は`COPY ... FROM stdin`でdataを書き、そのdataはSQL statementではないので、このfilterのparserからは「非INSERT statement」にしか見えない。そのまま通すと0行を取り込んで成功したように見えるため、`COPY ... FROM stdin`を見つけた時点でerrorにして止める（`--column-inserts`で作り直すよう表示する）。
+
+markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
+
+dump周りのregressionは`mise run test:agentsview`で走る（`dot_config/agentsview/tests/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
+
+`ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
+
+生成dumpのINSERTは末尾が必ず`ON CONFLICT DO NOTHING;`なので、その形は末尾だけを見て素通しする。この判定を入れないと、statement全体をmaskした文字列をさらに2度大文字化して走査することになる（PostgreSQL 16で32MiBの値を1行流したとき、1.54秒から0.30秒に下がった）。peakのmemoryは変わらない。そちらを決めているのは、literal／commentをmaskした並びをstatementと同じ長さで持つparserの作り（1 statement分で、dumpの大きさには比例しない）である。
+
+#### localをCockroachDBに揃える理由と制約
+
+| 項目       | local（`compose.yaml`）                            | remote（CockroachDB Cloud Basic）         |
+| ---------- | -------------------------------------------------- | ----------------------------------------- |
+| engine     | `cockroachdb/cockroach`のsingle-node               | Basic cluster（複数node）                 |
+| 認証       | `--insecure`（TLSなし・passwordなし、`root`接続）  | `sslmode=verify-full`＋role別password     |
+| port       | `127.0.0.1:26257`（DB consoleは`127.0.0.1:18080`） | 公開SQL endpointの`26257`                 |
+| schema作成 | `agentsview pg push`（`root`）                     | `agentsview pg push`（`agentsview_push`） |
+| vector     | 使わない（`--no-vectors`）                         | 使わない（`--no-vectors`）                |
+
+localをPostgreSQLにしていると、取り込みのたびにDDL・sequence・型・transaction semanticsの差を迂回する必要があり、「remoteで動くがlocalで再現できない」状態が生まれる。engineを揃えると、AgentsViewのmigrationとqueryがlocalでも本番と同じcode pathを通り、remoteのdumpをそのまま取り込める。
+
+代償として、localでもpgvectorが無くなる。`agentsview:cockroach:push:local`は常に`--no-vectors`を付け、semantic／hybrid searchは`501 Not Available`になる（remoteと同じ制約）。vector searchをlocalで試したい場合だけ、別途PostgreSQLを立てて`AGENTSVIEW_PG_URL`を手で指定する。
+
+versionは`compose.yaml`の`image` tagで固定し、renovateが更新する。Basic clusterは自動upgradeされるため、localと厳密に一致はしない。差が問題になったときは両者を見比べる。
+
+```sh
+# local側のversion（machineごとのsession数も出る）
+mise run agentsview:cockroach:status
+
+# remote側のversion
+fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -Atc "SELECT version()"'
+```
+
+#### 切り替え後の確認
+
+localのengineが変わるため、各PCで初回だけ次を順に確認する。上から順に実行し、失敗したところで止める。
+
+1. `mise run agentsview:cockroach:push:local` — containerがhealthyになって`agentsview` databaseができ、AgentsViewのmigrationがCockroachDB上でschemaとtableを作る（PostgreSQL専用のindexやvectorを要求して失敗しないこと）。containerの起動はどのtaskでも自動なので、起動だけのtaskは置いていない
+2. `mise run agentsview:cockroach:status` — engine versionと、machineごとのsession数が出る
+3. `fnox exec -- mise run agentsview:cockroach:merge` — remoteのrowが取り込まれ、tableごとの増分が出る。続けてもう一度実行すると増分が`+0 rows`になる（冪等）
+4. `mise run agentsview:cockroach:dump:local` → `bash ~/.config/agentsview/scripts/localdb.sh restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
+5. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
+
+1でcontainerが即`exited (1)`になる場合は、taskが自動で出すcontainer logを読む。CockroachDB imageのentrypointは`start-single-node`に渡せるflagを制限しており、`--listen-addr`のhostが`127.0.0.1`／`localhost`以外だとそこで止まる。
+
+sequence補正はrestore／importの中で自動的に走るので、taskは置いていない。単体で実行しても副作用はない（sequenceを持たないschemaでは何もしない）。
+
+```sh
+bash ~/.config/agentsview/scripts/localdb.sh repair-sequences
+```
 
 ### 5. Cloud Run secretとserviceを作成
 
@@ -1394,9 +1417,3 @@ rollback後はtrafficがrevision名にpinされる。最新revisionを追う状�
 ```sh
 mise run agentsview:cloudrun:clrnd -- traffic --to-latest
 ```
-
-### 複数PCで運用している場合
-
-Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`chezmoi apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
-
----
