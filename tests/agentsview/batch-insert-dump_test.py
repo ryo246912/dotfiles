@@ -181,6 +181,14 @@ case("marker with leading zeros is rejected",
      contains=["covered 0 tables"])
 case("marker with a leading zero count is accepted",
      ONE + "-- agentsview-dump-complete tables=01\n", inserts=1, marker=False)
+# 読めないmarkerの中身はerrorへ出さない（dump本文が混じりうるため）。"oops"は
+# 下のCWE-532 guardが拾う。
+case("malformed marker is rejected without echoing it",
+     ONE + "-- agentsview-dump-complete tables=oops\n", rc=1, marker=False,
+     contains=["malformed completion marker"])
+case("non-ascii digit marker is rejected without echoing it",
+     ONE + "-- agentsview-dump-complete tables=\uff10\n", rc=1, marker=False,
+     contains=["malformed completion marker"], notin=["\uff10"])
 
 # ON CONFLICT句は改行やcommentを跨げる。既存句を見落として2つ目を足さないこと。
 case("existing clause across newline",

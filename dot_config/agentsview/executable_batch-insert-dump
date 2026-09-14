@@ -479,8 +479,12 @@ def main() -> int:
         return 1
     # isdigitは全角などASCII以外の数字も真になり、tables == "0" の判定を
     # すり抜ける。markerはcount(*)の出力なので、ASCIIの10進数だけを認める。
+    #
+    # 読めなかった値そのものはerrorへ出さない。このfilterはdump本文をerrorへ出さない
+    # （dumpにはsession本文が入るため）という約束で動いており、ここへ来る文字列は
+    # 検証していない入力である。中身はdumpの最終行を見れば分かる。
     if re.fullmatch(r"[0-9]+", tables) is None:
-        print(f"dump has a malformed completion marker: {tables[:40]}", file=sys.stderr)
+        print("dump has a malformed completion marker", file=sys.stderr)
         return 1
     # 数として見る。count(*)は 00 のような形を出さないが、手で書き換えたmarkerでも
     # 0件を通さないようにする。
