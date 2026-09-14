@@ -401,13 +401,20 @@ if [ -z "$cluster_id" ]; then
 fi
 : "${cluster_id:?terraform outputからcockroach_cluster_idを取得できません}"
 
+# Authorization headerをcurlの引数に直接渡すと、ローカルの他プロセスから
+# `ps`でAPI keyが見える。curl configファイルに書いて渡すことでargvから隠す。
+curl_config="$(mktemp)"
+trap 'rm -f "$curl_config"' EXIT
+chmod 600 "$curl_config"
+printf 'header = "Authorization: Bearer %s"\n' "$COCKROACH_API_KEY" >"$curl_config"
+
 set_password() {
   name="$1"
   password="$2"
   status="$(jq -cn --arg password "$password" '{password: $password}' |
     curl -sS --connect-timeout 10 --max-time 60 -o /dev/null -w '%{http_code}' \
       --request PUT \
-      --header "Authorization: Bearer ${COCKROACH_API_KEY}" \
+      --config "$curl_config" \
       --header 'Content-Type: application/json' \
       --data @- \
       "https://cockroachlabs.cloud/api/v1/clusters/${cluster_id}/sql-users/${name}/password")"
