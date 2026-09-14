@@ -148,6 +148,23 @@ case("data containing the phrase is still normalized",
      "SET x = 1;\nINSERT INTO t (a) VALUES ('talk about ON CONFLICT here');\n",
      marker=False, inserts=1,
      contains=["here') ON CONFLICT DO NOTHING;"])
+
+# 末尾が既に ON CONFLICT DO NOTHING; のstatementは、maskしたcodeを見ずに素通しする
+# （ensure_on_conflictの早期return）。素通しして良い形と、してはいけない形を分ける。
+case("clause with spaces before the semicolon is left alone",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') ON CONFLICT DO NOTHING  ;\n",
+     marker=False, inserts=1, notin=["NOTHING ON CONFLICT DO NOTHING"])
+case("lowercase clause is left alone",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') on conflict do nothing;\n",
+     marker=False, inserts=1, notin=["nothing ON CONFLICT DO NOTHING"])
+case("line comment spelling the clause is not the clause",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('x') -- ON CONFLICT DO NOTHING\n;\n",
+     marker=False, inserts=1,
+     contains=["VALUES ('x') ON CONFLICT DO NOTHING -- ON CONFLICT DO NOTHING"])
+case("value ending with the phrase is still normalized",
+     "SET x = 1;\nINSERT INTO t (a) VALUES ('on conflict do nothing');\n",
+     marker=False, inserts=1,
+     contains=["nothing') ON CONFLICT DO NOTHING;"])
 case("comment containing the phrase is still normalized",
      "SET x = 1;\n/* ON CONFLICT in a comment */ INSERT INTO t (a) VALUES ('x');\n",
      marker=False, inserts=1, contains=["VALUES ('x') ON CONFLICT DO NOTHING;"])

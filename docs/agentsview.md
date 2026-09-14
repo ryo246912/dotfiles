@@ -1182,10 +1182,18 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 - identity列（`GENERATED ALWAYS AS IDENTITY`）にも値を入れる。AgentsViewの`id`はこの形で、idは他tableから参照されうるため採番し直すわけにはいかない。SQL標準の`OVERRIDING SYSTEM VALUE`は**付けない**。CockroachDBが解釈せず`at or near "overriding": syntax error`になるためである。代わりに取り込み側が、取り込み前にlocalのidentity列を`BY DEFAULT`へ緩める（下記）。
 - `psql`には`FETCH_COUNT`を渡してcursorで受け取る。これが無いと生成したINSERT文を全件client memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。件数は`AGENTSVIEW_DUMP_FETCH_ROWS`（既定1000）で変えられ、`0`はcursorを使わない指定である（cursorを扱えないengineに当たったときの逃げ道）。psqlが一度に持つ量は「件数×1行の大きさ」なので、session本文が極端に大きいschemaでは件数を下げる（PostgreSQL 16で183MBのtableを流したときのpsqlのmaxRSSは、`0`で192MiB、`1000`で100MiB、`200`で27MiBだった）。
 - dumpの進捗は`AGENTSVIEW_DUMP_PROGRESS_SECONDS`（既定15秒、`0`で無効＝完了行も出さない、指定できるのは0.1秒以上）ごとにstderrへ出る。`psql`は書き出し中なにも言わないため、経過時間・行数・書き出したbyte数を別threadで報告する。`0 lines`のままなら、dumpの行をまだ1つも受け取っていない。進捗は`psql`の接続と並行して動くので、DNS・TCP・TLS・最初のqueryのどこで待っていても`0 lines`になる。接続とTLSの成否は`psql`のstderrで見る。取り込み側は`AGENTSVIEW_IMPORT_PROGRESS_ROWS`（既定2000件、`0`で無効）ごとに件数を出す。
-- remote dumpはsession単位の差分にできる。`sessions`は`updated_at >= since`、`session_id`を持つtable（`messages`・`tool_calls`・`tool_result_events`・`usage_events`・`secret_findings`）はその範囲のsessionに属するrowだけを出す。それ以外のtable（`model_pricing`・`sync_metadata`・identity snapshot系）は全件で、AgentsViewでは合計1万行弱なので絞らない。取り込みが`ON CONFLICT DO NOTHING`である以上、localに既にあるrowを送っても捨てられるだけなので、差分にしても結果は変わらない。
+- remote dumpはsession単位の差分にできる。`sessions`は起点より後に更新されたrow、`session_id`を持つtable（`messages`・`tool_calls`・`tool_result_events`・`usage_events`・`secret_findings`）はその範囲のsessionに属するrowだけを出す。それ以外のtable（`model_pricing`・`sync_metadata`・identity snapshot系）は全件で、AgentsViewでは合計1万行弱なので絞らない。取り込みが`ON CONFLICT DO NOTHING`である以上、localに既にあるrowを送っても捨てられるだけなので、差分にしても結果は変わらない。
 - 差分をsession単位にしているのは、`tool_calls`のように時刻列を持たないtableがあり、再parseで古い`timestamp`のrowが後から増えることもあるためである。親が入れば子は必ず揃い、foreign keyの順序も崩れない。
-- 起点は`agentsview:cockroach:merge`が決める。`localdb.sh since`がlocalの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻を出し、それを`AGENTSVIEW_DUMP_SINCE`として渡す。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
-- `agentsview:cockroach:dump:remote`を単体で実行した場合は全件である（backupを作る用途）。`AGENTSVIEW_DUMP_SINCE`には`all`（全件）、`30d`（今から30日前）、時刻の文字列を渡せる。起点より古いまま残っているremoteのsessionは送られないので、長く同期していなかった場合は`all`で取り直す。
+- 起点は**machineごと**に決める。`agentsview:cockroach:merge`が`localdb.sh since`を呼び、localが持っている各machineの`max(sessions.updated_at)`から`AGENTSVIEW_DUMP_SINCE_OVERLAP`（既定`7 days`）だけ戻した時刻の並びを受け取って、`AGENTSVIEW_DUMP_SINCE_BY_MACHINE`として渡す。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から現れるぶんを吸収するためである。localがまだ空なら全件になる。
+
+  ```text
+  ('mac', '2026-09-06 12:00:00+00'), ('mini', '2026-08-25 09:00:00+00')
+  ```
+
+- machineごとに分けるのは、起点が1つだと取りこぼすからである。毎日pushしている自分のmachineの更新がlocalの`max`になるので、起点を1つにすると別machineのそれより古いsessionは毎回「起点より古い」と判定され、永久に送られない。machineごとなら、localに1行も無いmachineは起点を持たず全件の対象になり、localが遅れているmachineはそのmachineの遅れた起点が使われる。
+- 同じmachineの、localの最後の更新より古いままのremote sessionは送られない。そこまで取り直すには`AGENTSVIEW_DUMP_SINCE=all`を使う。
+- 並びは文字列ではなくSQLとして（`VALUES`の中身として）remoteへ渡る。machine名のescapeはlocal DBの`quote_literal`が行い、名前に改行やtabを含むmachineは並びから外す（起点を持たないので全件の対象になる。取りこぼす側には倒れない）。`agentsview:cockroach:dump:remote`は`psql`へ渡す前に、その出力らしい形かを文字種で確かめ、外れていれば全件dumpへ倒す。
+- `agentsview:cockroach:dump:remote`を単体で実行した場合は全件である（backupを作る用途）。人が指定する`AGENTSVIEW_DUMP_SINCE`には`all`（全件）、`30d`（今から30日前）、時刻の文字列を渡せる。こちらを指定した場合は単一の起点として扱われ、machineごとの起点より優先される。
 - schema DDLは持ち出さない。schemaは常に現在のAgentsViewが作る。
 
 dumpの最後には完了markerが付く。
@@ -1203,6 +1211,8 @@ markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。
 dump周りのregressionは`mise run test:agentsview`で走る（`tests/agentsview/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
 
 `ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
+
+生成dumpのINSERTは末尾が必ず`ON CONFLICT DO NOTHING;`なので、その形は末尾だけを見て素通しする。この判定を入れないと、statement全体をmaskした文字列をさらに2度大文字化して走査することになる（PostgreSQL 16で32MiBの値を1行流したとき、1.54秒から0.30秒に下がった）。peakのmemoryは変わらない。そちらを決めているのは、literal／commentをmaskした並びをstatementと同じ長さで持つparserの作り（1 statement分で、dumpの大きさには比例しない）である。
 
 #### localをCockroachDBに揃える理由と制約
 

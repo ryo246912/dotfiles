@@ -207,24 +207,47 @@ cp "$ca_bundle" "$auth_dir/ca.crt"
 touch "$dump_path"
 chmod 600 "$dump_path"
 
-# 差分dumpの起点。空なら全件。AGENTSVIEW_DUMP_SINCE には次を渡せる:
-#   all         全件（既定。単体実行はbackupを作る用途なので全件にする）
+# 差分dumpの起点。どちらも空なら全件（単体実行はbackupを作る用途なので既定は全件）。
+# 人が指定する AGENTSVIEW_DUMP_SINCE には次を渡せる:
+#   all         全件
 #   30d         今から30日前
-#   時刻の文字列 そのまま使う（mergeはlocalの状態から計算して渡す）
-since="${AGENTSVIEW_DUMP_SINCE:-all}"
-case "$since" in
-  all) since="" ;;
-  [0-9]*d)
-    since="$(python3 -c 'import datetime, sys
+#   時刻の文字列 そのまま使う
+since="${AGENTSVIEW_DUMP_SINCE:-}"
+machine_since=""
+if [ -n "$since" ]; then
+  case "$since" in
+    all) since="" ;;
+    [0-9]*d)
+      since="$(python3 -c 'import datetime, sys
 days = int(sys.argv[1])
 print((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).isoformat())' \
-      "${since%d}")"
-    ;;
-esac
+        "${since%d}")"
+      ;;
+  esac
+else
+  # mergeが渡すmachineごとの起点（localdb.sh sinceの出力）。明示のAGENTSVIEW_DUMP_SINCE
+  # があるときは人の指定を優先するので見ない。
+  machine_since="${AGENTSVIEW_DUMP_SINCE_BY_MACHINE:-}"
+fi
+# この並びは文字列ではなくSQLとしてremoteへ送られる（VALUESの中身になる）。値の
+# escapeはlocal DBのquote_literalが行うので、ここは「その出力らしい形か」を確かめる
+# だけである（SQLの文法検査ではない。想定外の値はremoteでerrorになる）。手で
+# 環境変数へ入れた場合や、localdb.shの出力が途中で混ざった場合に気付ける。
+# 判定はtrで「想定される文字を全部消したら何も残らないか」を見る。caseのbracketは
+# 中の引用符の扱いがshellで揺れるので使わない。
+if [ -n "$machine_since" ] &&
+  [ -n "$(printf '%s' "$machine_since" | tr -d "0-9A-Za-z(), '\"._:+-")" ]; then
+  echo "AGENTSVIEW_DUMP_SINCE_BY_MACHINE に想定外の文字が含まれるため、全件dumpにします" >&2
+  machine_since=""
+fi
 
 echo "remote CockroachDBからdumpを書き出します: ${dump_path}" >&2
 if [ -n "$since" ]; then
   echo "  ${since} 以降に更新されたsessionとその子rowだけを対象にします（全件にするには AGENTSVIEW_DUMP_SINCE=all）" >&2
+elif [ -n "$machine_since" ]; then
+  echo "  machineごとの起点より後に更新されたsessionとその子rowだけを対象にします（全件にするには AGENTSVIEW_DUMP_SINCE=all）" >&2
+  echo "    ${machine_since}" >&2
+  echo "    この並びに無いmachineのsessionは全件が対象です" >&2
 else
   echo "  全件を対象にします" >&2
 fi
@@ -237,6 +260,7 @@ docker run --rm --interactive \
   postgres:17 \
   psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
     --set=since="$since" \
+    --set=machine_since="$machine_since" \
     --set=FETCH_COUNT="$fetch_rows" \
     --tuples-only --no-align --quiet --file=- \
   <"$dump_sql" | "$progress" "$dump_path"
@@ -278,14 +302,15 @@ mkdir -p "$backup_dir"
 data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
 
 # 取り込みは ON CONFLICT DO NOTHING なので、localに既にあるrowを送っても捨てられる。
-# localが持っている最後のsession更新から少し戻した時刻を起点にして、remoteが送る量を
-# 減らす。localがまだ空（schemaもsessionも無い）なら空文字が返り、全件dumpになる。
+# localがmachineごとに持っている最後のsession更新から少し戻した時刻を起点にして、
+# remoteが送る量を減らす。起点をmachineごとに分けるのは、1つにすると自分のmachineの
+# 最新更新が起点になり、別machineの古いsessionを永久に取りこぼすためである。localが
+# まだ空（schemaもsessionも無い）なら空文字が返り、全件dumpになる。
 script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
 [ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
-if [ -z "${AGENTSVIEW_DUMP_SINCE:-}" ]; then
-  AGENTSVIEW_DUMP_SINCE="$(bash "$script" since)"
-  [ -n "$AGENTSVIEW_DUMP_SINCE" ] || AGENTSVIEW_DUMP_SINCE=all
-  export AGENTSVIEW_DUMP_SINCE
+if [ -z "${AGENTSVIEW_DUMP_SINCE:-}" ] && [ -z "${AGENTSVIEW_DUMP_SINCE_BY_MACHINE:-}" ]; then
+  AGENTSVIEW_DUMP_SINCE_BY_MACHINE="$(bash "$script" since)"
+  export AGENTSVIEW_DUMP_SINCE_BY_MACHINE
 fi
 
 AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:dump:remote

@@ -16,8 +16,19 @@
 -- ためである。代わりに取り込み側（localdb.shのrestore）が、取り込み前にidentity列を
 -- BY DEFAULTへ緩める。
 --
--- :since を渡すと差分dumpになる（空文字なら全件）。session単位で絞る:
---   sessions            updated_at >= :since
+-- 差分dumpの起点は2つの変数で渡す。どちらも空文字なら全件になる:
+--   :since          単一の時刻。これ以降に更新されたsessionだけを送る
+--   :machine_since  machineごとの起点。('mac', '2026-09-06 12:00:00+00'), ('mini', ...)
+--                   というVALUESの並びをそのまま受け取る（localdb.shのsinceが作る）
+-- 両方ある場合は:sinceを採る（人が明示した値を優先する）。
+--
+-- machineごとに分けるのは、localがまだ知らないmachineのsessionを取りこぼさないため
+-- である。起点が1つだと、毎日pushしている自分のmachineの最新更新が起点になり、
+-- 別machineの古いsessionは「起点より古い」として永久に送られない。:machine_sinceでは
+-- 並びに無いmachine（localに1行も無いmachine）が起点を持たないので、全件の対象になる。
+--
+-- どちらの場合もsession単位で絞る:
+--   sessions            その起点以降に更新されたrow
 --   session_idを持つ子   その範囲のsessionに属するrowだけ
 --   それ以外            全件（AgentsViewでは合計1万行弱で、絞る意味がない）
 -- 取り込みは ON CONFLICT DO NOTHING なので、localに既にあるrowを送っても捨てられる。
@@ -26,8 +37,8 @@
 -- 後から増えるため（親が入れば子は必ず揃い、foreign keyの順序も崩れない）。
 --
 -- 呼び出し方（psqlの:'schema'はclient側で置換される）:
---   psql --set=schema=agentsview --set=since= --set=FETCH_COUNT=1000 \
---     --tuples-only --no-align --quiet --file=- < このfile
+--   psql --set=schema=agentsview --set=since= --set=machine_since= \
+--     --set=FETCH_COUNT=1000 --tuples-only --no-align --quiet --file=- < このfile
 --
 -- FETCH_COUNTはpsqlにcursorで取らせる設定で、これが無いと生成したINSERT文を
 -- すべてclient memoryへ溜めてから書き出す。session本文を含む大きなtableでは
@@ -110,8 +121,7 @@ tbl AS (
     array_agg(col.name) AS names,
     -- 差分の条件に使える列があるか。quote_identを通した名前と比べないよう、
     -- 生の列名を別に見る。
-    bool_or(col.raw_name = 'session_id') AS has_session_id,
-    bool_or(col.raw_name = 'updated_at') AS has_updated_at
+    bool_or(col.raw_name = 'session_id') AS has_session_id
   FROM (
     SELECT c.table_schema,
       c.table_name,
@@ -130,6 +140,43 @@ tbl AS (
     ORDER BY c.table_schema, c.table_name, c.ordinal_position
   ) col
   GROUP BY col.table_schema, col.table_name
+),
+-- 差分の条件をsessionsに対する述語の文字列として1度だけ組み立てる。子tableでは
+-- これを session_id IN (SELECT ... WHERE <述語>) の中へ、sessions自身では
+-- WHERE <述語> としてそのまま置く。
+-- 列はsessionsで修飾する（machineごとの述語はVALUESへ w という別名を付けるので、
+-- 修飾しないとmachineがどちらの列か決まらない）。
+flt AS (
+  SELECT CASE
+      WHEN :'since' <> '' THEN
+        'sessions.updated_at >= ' || quote_literal(:'since') || '::timestamptz'
+      -- 並びに無いmachineは起点が無いので全件送る（NOT EXISTSがtrueになる）。
+      -- machineがNULLのrowも、どの起点にも一致しないので同じく全件送る。
+      WHEN :'machine_since' <> '' THEN
+        '(NOT EXISTS (SELECT 1 FROM (VALUES ' || :'machine_since' || ') AS w (machine, since)'
+        || ' WHERE w.machine = sessions.machine)'
+        || ' OR EXISTS (SELECT 1 FROM (VALUES ' || :'machine_since' || ') AS w (machine, since)'
+        || ' WHERE w.machine = sessions.machine'
+        || ' AND sessions.updated_at >= w.since::timestamptz))'
+      ELSE ''
+    END AS pred,
+    -- session単位で絞れるのは、そのschemaのsessionsに必要な列がある場合だけ。
+    -- 無いまま条件を付けると、存在しない列を参照して止まる。
+    EXISTS (
+      SELECT 1
+      FROM information_schema.columns c2
+      WHERE c2.table_schema = :'schema'
+        AND c2.table_name = 'sessions'
+        AND c2.column_name = 'updated_at'
+    ) AND (
+      :'machine_since' = '' OR EXISTS (
+        SELECT 1
+        FROM information_schema.columns c3
+        WHERE c3.table_schema = :'schema'
+          AND c3.table_name = 'sessions'
+          AND c3.column_name = 'machine'
+      )
+    ) AS sessions_filterable
 )
 -- 値一覧は、列名のarrayを「1つ前の値を閉じて次の値を開く」文字列で繋いで作る。
 -- 列名a, bなら次のようになる:
@@ -144,26 +191,18 @@ SELECT 'SELECT '
     || '::text), ''NULL'')'
     || ' || ' || quote_literal(') ON CONFLICT DO NOTHING;')
     || ' FROM ' || quote_ident(tbl.table_schema) || '.' || quote_ident(tbl.table_name)
-    -- 差分の条件。:sinceが空なら付けない（全件）。比較はtimestamptzへcastする
+    -- 差分の条件。述語が空なら付けない（全件）。時刻はtimestamptzへcastする
     -- （文字列との比較をengineの暗黙castに任せない）。
     || CASE
-         WHEN :'since' = '' THEN ''
-         -- session単位で絞れるのは、そのschemaにsessions.updated_atがある場合だけ。
-         -- 無いschemaで条件を付けると、存在しないtableを参照して止まる。
-         WHEN tbl.has_session_id AND EXISTS (
-                SELECT 1
-                FROM information_schema.columns c2
-                WHERE c2.table_schema = :'schema'
-                  AND c2.table_name = 'sessions'
-                  AND c2.column_name = 'updated_at'
-              ) THEN
+         WHEN flt.pred = '' OR NOT flt.sessions_filterable THEN ''
+         WHEN tbl.has_session_id THEN
            ' WHERE session_id IN (SELECT id FROM ' || quote_ident(tbl.table_schema)
-           || '.sessions WHERE updated_at >= ' || quote_literal(:'since') || '::timestamptz)'
-         WHEN tbl.table_name::text = 'sessions' AND tbl.has_updated_at THEN
-           ' WHERE updated_at >= ' || quote_literal(:'since') || '::timestamptz'
+           || '.sessions WHERE ' || flt.pred || ')'
+         WHEN tbl.table_name::text = 'sessions' THEN ' WHERE ' || flt.pred
          ELSE ''
        END
 FROM tbl
+  CROSS JOIN flt
   JOIN (SELECT table_name, max(depth) AS depth FROM depth GROUP BY table_name) o
     ON o.table_name = tbl.table_name::text
 ORDER BY o.depth, tbl.table_name

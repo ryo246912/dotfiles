@@ -13,7 +13,7 @@ set -euo pipefail
 #   serve [args]         pushし続けながらlocalからAgentsViewを配信する（agentsview:serve）
 #   restore [file]       dump（remote／local）の不足rowをlocalへmergeする
 #                        （agentsview:cockroach:merge がremote dumpのあとに呼ぶ）
-#   since                remote差分dumpの起点をstdoutへ出す（無ければ空。mergeが使う）
+#   since                remote差分dumpの起点をmachineごとに出す（無ければ空。mergeが使う）
 #   up                   local CockroachDBを起動し、databaseの存在を確認する
 #                        （他のmodeが先頭で呼ぶので、単体で使うことはない）
 #   down                 local containerを止める（volumeは残す）
@@ -173,10 +173,10 @@ require_dump_tools() {
 # 「INSERT文を1行ずつ返すSELECT」なので、その結果行がそのままINSERT文になる。
 # --echo-queriesは付けない（生成SQL自体がdumpへ混ざる）。
 dump_inserts_local() {
-  # localのdumpは常に全件。sinceはremote向けの差分用で、localは目の前にあるので
-  # 絞る意味がない（生成SQLは:'since'が必ず定義されている前提なので空で渡す）。
+  # localのdumpは常に全件。差分はremote向けなので、localは目の前にあり絞る意味が
+  # ない（生成SQLは2つの起点が必ず定義されている前提なので、どちらも空で渡す）。
   psql_local --tuples-only --no-align --quiet --set=schema="$schema" \
-    --set=since='' --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
+    --set=since='' --set=machine_since='' --set=FETCH_COUNT="$fetch_rows" --file=- <"$dump_sql"
 }
 
 require_agentsview() {
@@ -333,13 +333,20 @@ ${rows}
 EOF
 }
 
-# remote dumpの差分の起点をstdoutへ出す。localが持っている最後のsession更新から
-# overlapだけ戻した時刻である。戻すのは、machine間の時計ずれと、少し前に更新された
-# sessionが後から現れるぶんを吸収するためである。schemaやsessionが無ければ何も出さ
-# ない（呼び出し側は全件dumpにする）。
+# remote差分dumpの起点をmachineごとにstdoutへ出す。形はdump-inserts.sqlが
+# :machine_since としてVALUESへ埋める並びで、1行に収まる:
+#   ('mac', '2026-09-06 12:00:00+00'), ('mini', '2026-08-25 09:00:00+00')
+# 各machineの起点は、localが持っているそのmachineの最後のsession更新からoverlapだけ
+# 戻した時刻である。戻すのは、machine間の時計ずれと、少し前に更新されたsessionが後から
+# 現れるぶんを吸収するためである。schemaやsessionが無ければ何も出さない（呼び出し側は
+# 全件dumpにする）。
 #
-# 起点より古いまま残っているremoteのsessionは送られない。長く同期していなかった場合は
-# AGENTSVIEW_DUMP_SINCE=all で全件取り直す。
+# machineごとに出すのは、起点が1つだと取りこぼすからである。毎日pushしている自分の
+# machineの更新が起点になるため、別machineの古いsessionは永久に送られない。並びに無い
+# machine（localに1行も無いmachine）は起点を持たず、remote側で全件の対象になる。
+#
+# 同じmachineの、localの最後の更新より古いままのremote sessionは送られない。そこまで
+# 取り直すには AGENTSVIEW_DUMP_SINCE=all を使う。
 dump_since() {
   local overlap value
   overlap="${AGENTSVIEW_DUMP_SINCE_OVERLAP:-7 days}"
@@ -350,13 +357,28 @@ dump_since() {
       return 1
       ;;
   esac
-  # schemaもsessionsも無い（初回）、updated_atが無い、権限が無い、いずれの場合も
+  # schemaもsessionsも無い（初回）、必要な列が無い、権限が無い、いずれの場合も
   # 何も出さずに戻る。呼び出し側はそれを全件dumpとして扱う。
   schema_exists || return 0
-  value="$(query_local --command="SELECT COALESCE((max(updated_at) - INTERVAL '${overlap}')::text, '')
-    FROM \"${schema}\".sessions" 2>/dev/null)" || return 0
+  # 並びはremoteへ送るSQLになるので、machine名はquote_literalに通したものだけを使う。
+  # 名前に改行やtabが入っていると1行に収まらないため、そのmachineは並びから外す
+  # （起点を持たないので全件の対象になる。取りこぼす側には倒れない）。
+  value="$(query_local --command="SELECT COALESCE(string_agg(
+      '(' || quote_literal(m.machine) || ', '
+        || quote_literal((m.last_update - INTERVAL '${overlap}')::text) || ')', ', '), '')
+    FROM (
+      SELECT machine, max(updated_at) AS last_update
+      FROM \"${schema}\".sessions
+      WHERE machine IS NOT NULL
+        AND strpos(machine, chr(10)) = 0
+        AND strpos(machine, chr(13)) = 0
+        AND strpos(machine, chr(9)) = 0
+      GROUP BY machine
+    ) m" 2>/dev/null)" || return 0
   value="$(printf '%s' "$value" | head -n 1 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   [ -n "$value" ] || return 0
+  # この並びはSQLとしてremoteへ送られる。想定外の文字が混じっていないかは、psqlへ
+  # 渡す直前（agentsview:cockroach:dump:remote）で最終確認する。
   printf '%s\n' "$value"
 }
 
