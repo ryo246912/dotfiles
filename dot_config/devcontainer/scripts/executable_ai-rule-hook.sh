@@ -22,6 +22,7 @@
 #
 # 注意:
 #   - ルール・スキルを自動で書き換えることはしない。suggestion.md を確認して手動転記する。
+#   - 最新の候補は ${STATE_ROOT}/<tool>/latest.md から確認できる。
 #   - ドライラン: AI_RULE_HOOK_DRY_RUN=1 でデバッグ用 JSON を出力（AI は呼ばない）
 #   - ステート保存先: ${XDG_STATE_HOME:-~/.local/state}/ai-rule-hook/<tool>/<session>/
 #
@@ -143,6 +144,17 @@ write_json() {
 	local payload="$2"
 
 	printf '%s\n' "$payload" >"$path"
+}
+
+publish_latest_suggestion() {
+	local suggestion_path="$1"
+	local tool_state_dir="${STATE_ROOT}/${TOOL}"
+	local latest_tmp="${tool_state_dir}/.latest.md.tmp.$$"
+
+	# 同じ tool の別 session が同時に終了しても、読み手に途中までのファイルを見せない。
+	mkdir -p "$tool_state_dir"
+	cp "$suggestion_path" "$latest_tmp"
+	mv -f "$latest_tmp" "${tool_state_dir}/latest.md"
 }
 
 tool_paths() {
@@ -517,7 +529,8 @@ if ((DRY_RUN == 1)); then
 fi
 
 if run_analysis "$PROMPT_OUTPUT_PATH" "$ANALYSIS_OUTPUT_PATH" "$ANALYSIS_STDERR_PATH"; then
-	log "wrote suggestion: $ANALYSIS_OUTPUT_PATH"
+	publish_latest_suggestion "$ANALYSIS_OUTPUT_PATH"
+	log "wrote suggestion: $ANALYSIS_OUTPUT_PATH (latest: ${STATE_ROOT}/${TOOL}/latest.md)"
 	if [[ "$TOOL" == "codex" ]] && [[ "$CANONICAL_EVENT" == "stop" ]]; then
 		jq -n --argjson last_lines "$CODEX_STOP_CURRENT_LINES" '{last_lines: $last_lines}' \
 			>"${SESSION_STATE_DIR}/codex-stop-state.json"
