@@ -16,7 +16,7 @@ const MAX_PAYLOAD_LENGTH = 512 * 1024 * 1024;
 function usage() {
   console.error(`Usage: raycast-to-vicinae [--passphrase-file FILE] RAYCONFIG [OUTPUT]
 
-Convert settings with safe Vicinae equivalents from a Raycast 2.x .rayconfig.
+Convert settings with safe Vicinae equivalents from a Raycast .rayconfig.
 OUTPUT defaults to ~/.config/vicinae/raycast-import.json.
 
 The passphrase is read from --passphrase-file, or from Raycast's macOS Keychain item.
@@ -68,11 +68,7 @@ function gunzipLimited(input, maximum, label) {
   return output;
 }
 
-function decryptRaycast(raw, passphrase) {
-  if (raw.length < FIXED_HEADER_LENGTH + TAG_LENGTH || !raw.subarray(0, MAGIC.length).equals(MAGIC)) {
-    throw new Error("not a current RAYCFG3 export; export a fresh file from Raycast 2.x");
-  }
-
+function decryptV2(raw, passphrase) {
   const headerLength = raw.readUInt32LE(8);
   if (headerLength < 1 || headerLength > MAX_HEADER_LENGTH) throw new Error("invalid header length");
   const payloadStart = FIXED_HEADER_LENGTH + headerLength;
@@ -97,6 +93,30 @@ function decryptRaycast(raw, passphrase) {
     if (error instanceof SyntaxError) throw new Error("decrypted payload is not JSON");
     throw new Error("could not decrypt export; check the passphrase");
   }
+}
+
+function decryptV1(raw, passphrase) {
+  if (raw.length < 32 || raw.length % 16 !== 0) throw new Error("not a recognized Raycast export");
+  const iv = raw.subarray(0, 16);
+  const key = crypto.createHash("sha256").update(passphrase, "utf8").digest();
+  try {
+    const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+    const compressed = Buffer.concat([decipher.update(raw.subarray(16)), decipher.final()]);
+    if (!compressed.subarray(0, 3).equals(Buffer.from([0x1f, 0x8b, 0x08]))) throw new Error("bad gzip magic");
+    const payload = JSON.parse(gunzipLimited(compressed, MAX_PAYLOAD_LENGTH, "payload"));
+    const keys = Object.keys(payload);
+    if (!keys.some((keyName) => keyName === "raycast_version" || keyName.startsWith("builtin_package_"))) {
+      throw new Error("unexpected payload");
+    }
+    return payload;
+  } catch {
+    throw new Error("could not decrypt export; check the passphrase");
+  }
+}
+
+function decryptRaycast(raw, passphrase) {
+  if (raw.subarray(0, MAGIC.length).equals(MAGIC)) return decryptV2(raw, passphrase);
+  return decryptV1(raw, passphrase);
 }
 
 // macOS virtual keycodes used by Raycast's LayoutIndependent shortcuts.
@@ -124,16 +144,21 @@ function mapShortcut(hotkey) {
 }
 
 function convert(payload) {
+  const isV2 = payload.settings?.general !== undefined;
   const general = payload.settings?.general || {};
+  const preferences = payload.builtin_package_raycastPreferences || {};
+  const appearance = preferences.preferencesAppearance || {};
   const output = {};
   const skipped = [];
   const toggle = mapShortcut(general.globalHotkey);
   if (toggle) output.global_shortcuts = { toggle };
   else if (general.globalHotkey) skipped.push("global hotkey (unsupported key shape/code)");
 
-  if (typeof general.showInMenuBar === "boolean") output.tray = { enabled: general.showInMenuBar };
-  if (typeof general.windowMode === "string") {
-    output.launcher_window = { compact_mode: { enabled: general.windowMode === "compact" } };
+  const showInMenuBar = isV2 ? general.showInMenuBar : appearance.statusBarIsVisible;
+  if (typeof showInMenuBar === "boolean") output.tray = { enabled: showInMenuBar };
+  const windowMode = isV2 ? general.windowMode : appearance.raycastPreferredWindowMode;
+  if (typeof windowMode === "string") {
+    output.launcher_window = { compact_mode: { enabled: windowMode === "compact" } };
   }
   if (typeof general.openAtLogin === "boolean") {
     skipped.push("launch at login (Vicinae manages this outside settings.json)");

@@ -127,18 +127,22 @@ if [ "$macos_major" -ge 26 ]; then
   else
     tinycast_cask="tinycast-universal"
   fi
-else
+elif [ "$macos_major" -eq 15 ]; then
   # The Sequoia cask has no architecture restriction and is the project's macOS 15 build.
   tinycast_cask="tinycast-sequoia"
+else
+  echo "Tinycast requires macOS 15 or later" >&2
+  exit 1
 fi
 
+installed_tinycasts="$(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true)"
+conflicting_tinycasts="$(printf '%s\n' "$installed_tinycasts" | grep -Fxv "$tinycast_cask" || true)"
+if [ -n "$conflicting_tinycasts" ]; then
+  echo "Tinycast variant '$conflicting_tinycasts' is still installed; refusing to remove a working app automatically." >&2
+  echo "Run 'brew uninstall --cask $conflicting_tinycasts', then rerun this task to install ${tinycast_cask}." >&2
+  exit 1
+fi
 if ! brew list --cask "$tinycast_cask" &>/dev/null; then
-  installed_tinycasts="$(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true)"
-  if [ -n "$installed_tinycasts" ]; then
-    echo "Tinycast variant '$installed_tinycasts' is still installed; refusing to remove a working app automatically." >&2
-    echo "Run 'brew uninstall --cask $installed_tinycasts', then rerun this task to install ${tinycast_cask}." >&2
-    exit 1
-  fi
   brew install --cask "abue-ammar/tinycast/${tinycast_cask}"
 else
   echo "${tinycast_cask} is already installed"

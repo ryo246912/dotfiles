@@ -108,9 +108,9 @@ dotfiles としてレビューする要件には劣る。この優先順位な�
 - compact window mode
 
 Raycast が Keychain に保存した export passphrase を自動で取得するため、通常は passphrase の入力は
-不要である。出力先を chezmoi source にすれば、そのまま dotfiles として管理できる。
-converter が対応するのは Raycast 2.x の `RAYCFG3` 形式である。リポジトリ内の古い export を
-そのまま使わず、先に Raycast の **Export Settings & Data** で最新ファイルを作り、置き換える。
+不要である。出力先を chezmoi source にすれば、そのまま dotfiles として管理できる。converter は
+現在の `RAYCFG3`（AES-256-GCM）に加え、先頭に signature がない Raycast 1.x の
+`IV + AES-256-CBC` export にも対応する。
 
 ```sh
 mkdir -p "$(chezmoi source-path)/dot_config/vicinae"
