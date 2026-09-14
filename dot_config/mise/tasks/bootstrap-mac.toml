@@ -134,18 +134,12 @@ fi
 
 if ! brew list --cask "$tinycast_cask" &>/dev/null; then
   installed_tinycasts="$(brew list --cask 2>/dev/null | grep -E '^tinycast(-sequoia|-universal)?$' || true)"
-  # Fetch and verify the replacement before removing a working variant left by an OS upgrade.
-  brew fetch --cask "abue-ammar/tinycast/${tinycast_cask}"
-  for installed_tinycast in $installed_tinycasts; do
-    brew uninstall --cask "$installed_tinycast"
-  done
-  if ! brew install --cask "abue-ammar/tinycast/${tinycast_cask}"; then
-    echo "failed to install ${tinycast_cask}; restoring the previous variant" >&2
-    for installed_tinycast in $installed_tinycasts; do
-      brew install --cask "abue-ammar/tinycast/${installed_tinycast}" || true
-    done
+  if [ -n "$installed_tinycasts" ]; then
+    echo "Tinycast variant '$installed_tinycasts' is still installed; refusing to remove a working app automatically." >&2
+    echo "Run 'brew uninstall --cask $installed_tinycasts', then rerun this task to install ${tinycast_cask}." >&2
     exit 1
   fi
+  brew install --cask "abue-ammar/tinycast/${tinycast_cask}"
 else
   echo "${tinycast_cask} is already installed"
 fi
