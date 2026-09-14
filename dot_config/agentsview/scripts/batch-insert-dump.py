@@ -16,6 +16,7 @@ dumpが途中で切れていないこと、schemaを実際に読めているこ�
 書ける量に上限があり、dump全体を1 transactionにすると失敗しうる。
 """
 
+import io
 import os
 import re
 import sys
@@ -25,7 +26,11 @@ PROGRESS_ENV = "AGENTSVIEW_IMPORT_PROGRESS_ROWS"
 # dump-inserts.sql が最後に置くmarker。dumpが最後まで書かれたことと、schemaを
 # 実際に読めたことを示す。
 MARKER = "-- agentsview-dump-complete tables="
-TOKEN = re.compile(r"'|\"|--|/\*|;|\$[A-Za-z_][A-Za-z_0-9]*\$|\$\$")
+# dollar quoteのtagは識別子と同じ規則なので、ASCII以外の文字も使える（`$é$`）。
+# `[^\W\d]` は「word characterのうち数字でないもの」＝ letter か `_` で、strの
+# patternでは既定でUnicodeとして解釈される。ASCIIに限ると、tagの中の `;` を
+# statementの区切りと読んでdataを落とす。
+TOKEN = re.compile(r"'|\"|--|/\*|;|\$[^\W\d]\w*\$|\$\$")
 
 
 def chunk_size() -> int:
@@ -346,6 +351,13 @@ def main() -> int:
     step = progress_rows()
     splitter = Splitter()
     out = sys.stdout
+    # 改行変換を明示的に切る。universal newlines（newline=None）で読むと、dataの中の
+    # CRがLFへ書き換わって、復元した値が元と変わってしまう。CPythonのsys.stdinは
+    # POSIXでは newline="\n" 相当で作られるため現状でも変換されないが、それは実装の
+    # 細部なので、壊れると黙ってdataが変わる以上ここで固定する。
+    stdin = io.TextIOWrapper(
+        sys.stdin.buffer, encoding=sys.stdin.encoding, errors=sys.stdin.errors, newline="\n"
+    )
     kept = 0
     skipped = 0
     # meta-commandを除いた、SQL statementとしてskipした数。旧形式の判定に使う。
@@ -356,7 +368,7 @@ def main() -> int:
     # ON CONFLICT DO NOTHING を補えなかったINSERTの数。再実行が安全でない印である。
     unsafe = 0
     out.write("SET client_encoding = 'UTF8';\n")
-    for lineno, line in enumerate(sys.stdin, start=1):
+    for lineno, line in enumerate(stdin, start=1):
         # 完了markerはstatementではないので、statementへ渡さず値だけ覚える。
         if not splitter.pending and line.startswith(MARKER):
             # markerは1つだけ。2つあるのはdumpを連結した状態で、どちらの範囲が

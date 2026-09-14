@@ -351,6 +351,14 @@ dump_since() {
   # schemaもsessionsも無い（初回）、必要な列が無い、権限が無い、いずれの場合も
   # 何も出さずに戻る。呼び出し側はそれを全件dumpとして扱う。
   schema_exists || return 0
+  # 上のcaseは文字種しか見ないので、`7 dayz` のようなINTERVALとして不正な値も通る。
+  # それを下のqueryで初めて踏むと、失敗が「起点なし」＝毎回の全件dumpとして黙って
+  # 埋もれる。設定の誤りは起点の計算と切り分けて、ここで止める（schema_existsを
+  # 通っている＝DBへは届いているので、ここでの失敗はINTERVALの書き方の問題である）。
+  if ! query_local --command="SELECT INTERVAL '${overlap}'" >/dev/null 2>&1; then
+    echo "AGENTSVIEW_DUMP_SINCE_OVERLAP がINTERVALとして解釈できません: ${overlap}" >&2
+    return 1
+  fi
   # 並びはremoteへ送るSQLになるので、machine名はquote_literalに通したものだけを使う。
   # 名前に改行やtabが入っていると1行に収まらないため、そのmachineは並びから外す
   # （起点を持たないので全件の対象になる。取りこぼす側には倒れない）。

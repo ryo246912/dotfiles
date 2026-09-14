@@ -76,6 +76,14 @@ case("doubled quote escape",
 case("nested block comment", "/* outer /* inner */ still */\n" + ONE, inserts=1)
 case("line comment before insert", "-- hello\n" + ONE, inserts=1)
 case("trailing line comment without newline", ONE + MARK + "-- tail", inserts=1, marker=False)
+# dollar quoteのtagは識別子と同じ規則で、ASCII以外も使える。tagの中の `;` を
+# statementの区切りと読むと、1文が2つに割れてdataが落ちる。
+case("non ascii dollar quote tag",
+     "INSERT INTO t (a) VALUES ($\u00e9$one;two$\u00e9$) ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["$\u00e9$one;two$\u00e9$"])
+case("non ascii dollar quote tag with digits",
+     "INSERT INTO t (a) VALUES ($t\u00e91$x;y$t\u00e91$) ON CONFLICT DO NOTHING;\n",
+     inserts=1, contains=["$t\u00e91$x;y$t\u00e91$"])
 case("multi line value",
      "INSERT INTO t (a) VALUES (E'l1\nl2\n-- c\n/* b */') ON CONFLICT DO NOTHING;\n", inserts=1)
 # 値の2行目が `INSERT` で始まる形。stdoutの行頭を数えると2件に見えるが1件である。
@@ -312,5 +320,20 @@ for name, text, rc, inserts, chunk, marker, contains, notin in cases:
     if problems:
         fails += 1
         print(f"FAIL {name}: {'; '.join(problems)}")
-print(f"{len(cases) - fails}/{len(cases)} passed")
+# 改行変換はtable駆動のcaseでは見えない（run()のtext=Trueが出力側も変換するため）。
+# dataの中のCRがLFへ化けると復元した値が黙って変わるので、bytesのまま確かめる。
+total = len(cases) + 1
+literal = b"'x\ry\r\nz'"
+raw = subprocess.run(
+    [sys.executable, str(FILTER)],
+    input=b"INSERT INTO t (a) VALUES (" + literal + b") ON CONFLICT DO NOTHING;\n" + MARK.encode(),
+    capture_output=True,
+    env={**os.environ, "AGENTSVIEW_IMPORT_CHUNK_ROWS": "500", "AGENTSVIEW_IMPORT_PROGRESS_ROWS": "0"},
+    check=False,
+)
+if literal not in raw.stdout:
+    fails += 1
+    print(f"FAIL carriage return survives the filter: {raw.stdout!r}")
+
+print(f"{total - fails}/{total} passed")
 sys.exit(1 if fails else 0)
