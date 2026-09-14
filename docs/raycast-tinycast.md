@@ -93,12 +93,46 @@ dotfiles としてレビューする要件には劣る。この優先順位な�
 
 1. Vicinae の macOS DMG を導入し、Raycast と同じログイン直後・同じ Extension 構成で、
    Activity Monitor の Memory と CPU を比較する。
-2. `~/.config/vicinae/settings.json` を chezmoi に追加し、設定 UI の変更が意図どおり diff になる
-   ことを確認する。password preference は別途安全に再設定する。
-3. Raycast の Quicklinks、Snippets、Script Commands、keybind を JSON/ファイルへ手動で移す。
+2. 下記の converter で Raycast の共通設定を Vicinae の `settings.json` へ変換し、chezmoi で配置する。
+3. 自動変換できない Quicklinks、Snippets、Script Commands、command keybind を手動で移す。
 4. 日常的に使う Raycast Extension を 1 つずつ Raycast Store から導入し、macOS 固有 API、OAuth、
    menu-bar command を使うものを重点的に確認する。
 5. 1 週間併用し、機能欠落がなく、実測メモリーが Raycast 未満なら Raycast の自動起動を止める。
+
+### Raycast export から Vicinae 設定を生成する
+
+`raycast-to-vicinae` は `.rayconfig` を復号し、意味が一致する次の設定を Vicinae JSON へ変換する。
+
+- launcher の global hotkey
+- menu bar icon の表示
+- compact window mode
+
+Raycast が Keychain に保存した export passphrase を自動で取得するため、通常は passphrase の入力は
+不要である。出力先を chezmoi source にすれば、そのまま dotfiles として管理できる。
+converter が対応するのは Raycast 2.x の `RAYCFG3` 形式である。リポジトリ内の古い export を
+そのまま使わず、先に Raycast の **Export Settings & Data** で最新ファイルを作り、置き換える。
+
+```sh
+mkdir -p "$(chezmoi source-path)/dot_config/vicinae"
+raycast-to-vicinae \
+  ~/.config/raycast/Raycast.rayconfig \
+  "$(chezmoi source-path)/dot_config/vicinae/settings.json"
+chezmoi apply ~/.config/vicinae/settings.json
+```
+
+Keychain から取得できない場合は、passphrase だけを書いた権限 `0600` の一時ファイルを
+`--passphrase-file` で渡す。ファイルをリポジトリへ追加してはいけない。
+
+```sh
+raycast-to-vicinae --passphrase-file /path/to/passphrase \
+  /path/to/Raycast.rayconfig /path/to/settings.json
+```
+
+Quicklinks、Snippets、Extension、command ごとの hotkey/favorite/alias は自動変換しない。これらは
+Vicinae の `settings.json` に対応する安定した ID/保存形式がないか、Raycast と Vicinae で
+entrypoint ID が異なるためである。converter は終了時に手動移行項目を表示し、推測した値を
+書き込まない。既存の出力ファイルは上書きするため、Vicinae 側で設定を追加した後に再実行する
+場合は先に差分を退避する。
 
 ## Tinycast 側で Git 管理できる設定
 

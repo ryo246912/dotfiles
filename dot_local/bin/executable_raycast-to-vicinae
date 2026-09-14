@@ -1,0 +1,169 @@
+#!/usr/bin/env node
+
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const process = require("node:process");
+const zlib = require("node:zlib");
+const { execFileSync } = require("node:child_process");
+
+const MAGIC = Buffer.from("RAYCFG3\n");
+const FIXED_HEADER_LENGTH = 12;
+const TAG_LENGTH = 16;
+const MAX_HEADER_LENGTH = 1024 * 1024;
+const MAX_PAYLOAD_LENGTH = 512 * 1024 * 1024;
+
+function usage() {
+  console.error(`Usage: raycast-to-vicinae [--passphrase-file FILE] RAYCONFIG [OUTPUT]
+
+Convert settings with safe Vicinae equivalents from a Raycast 2.x .rayconfig.
+OUTPUT defaults to ~/.config/vicinae/raycast-import.json.
+
+The passphrase is read from --passphrase-file, or from Raycast's macOS Keychain item.
+RAYCAST_EXPORT_PASSPHRASE is accepted for automated tests, but is discouraged interactively.`);
+}
+
+function parseArguments(argv) {
+  let passphraseFile;
+  const positional = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === "--passphrase-file") {
+      passphraseFile = argv[index + 1];
+      if (!passphraseFile) throw new Error("--passphrase-file requires a path");
+      index += 1;
+    } else if (argv[index] === "--help" || argv[index] === "-h") {
+      usage();
+      process.exit(0);
+    } else if (argv[index].startsWith("-")) {
+      throw new Error(`unknown option: ${argv[index]}`);
+    } else {
+      positional.push(argv[index]);
+    }
+  }
+  if (positional.length < 1 || positional.length > 2) throw new Error("expected RAYCONFIG and optional OUTPUT");
+  return {
+    input: positional[0],
+    output: positional[1] || path.join(process.env.HOME, ".config/vicinae/raycast-import.json"),
+    passphraseFile,
+  };
+}
+
+function readPassphrase(passphraseFile) {
+  if (passphraseFile) return fs.readFileSync(passphraseFile, "utf8").replace(/[\r\n]+$/, "");
+  if (process.env.RAYCAST_EXPORT_PASSPHRASE) return process.env.RAYCAST_EXPORT_PASSPHRASE;
+  try {
+    return execFileSync(
+      "security",
+      ["find-generic-password", "-s", "Raycast", "-a", "export_passphrase", "-w"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trimEnd();
+  } catch {
+    throw new Error("Raycast export passphrase not found in Keychain; use --passphrase-file");
+  }
+}
+
+function gunzipLimited(input, maximum, label) {
+  const output = zlib.gunzipSync(input, { maxOutputLength: maximum });
+  if (output.length > maximum) throw new Error(`${label} is too large`);
+  return output;
+}
+
+function decryptRaycast(raw, passphrase) {
+  if (raw.length < FIXED_HEADER_LENGTH + TAG_LENGTH || !raw.subarray(0, MAGIC.length).equals(MAGIC)) {
+    throw new Error("not a current RAYCFG3 export; export a fresh file from Raycast 2.x");
+  }
+
+  const headerLength = raw.readUInt32LE(8);
+  if (headerLength < 1 || headerLength > MAX_HEADER_LENGTH) throw new Error("invalid header length");
+  const payloadStart = FIXED_HEADER_LENGTH + headerLength;
+  const payloadEnd = raw.length - TAG_LENGTH;
+  if (payloadStart >= payloadEnd) throw new Error("truncated Raycast export");
+
+  const header = JSON.parse(
+    gunzipLimited(raw.subarray(FIXED_HEADER_LENGTH, payloadStart), MAX_HEADER_LENGTH, "header"),
+  );
+  if (header.schemaVersion !== 3) throw new Error(`unsupported Raycast schema: ${header.schemaVersion}`);
+  const iv = Buffer.from(header.encryption?.iv || "", "hex");
+  const salt = Buffer.from(header.encryption?.salt || "", "hex");
+  if (iv.length !== 16 || salt.length !== 16) throw new Error("invalid encryption header");
+
+  const key = crypto.scryptSync(passphrase, salt, 32, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
+  try {
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(raw.subarray(payloadEnd));
+    const compressed = Buffer.concat([decipher.update(raw.subarray(payloadStart, payloadEnd)), decipher.final()]);
+    return JSON.parse(gunzipLimited(compressed, MAX_PAYLOAD_LENGTH, "payload"));
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new Error("decrypted payload is not JSON");
+    throw new Error("could not decrypt export; check the passphrase");
+  }
+}
+
+// macOS virtual keycodes used by Raycast's LayoutIndependent shortcuts.
+const KEYCODES = new Map([
+  [0, "A"], [1, "S"], [2, "D"], [3, "F"], [4, "H"], [5, "G"], [6, "Z"], [7, "X"],
+  [8, "C"], [9, "V"], [11, "B"], [12, "Q"], [13, "W"], [14, "E"], [15, "R"], [16, "Y"],
+  [17, "T"], [18, "1"], [19, "2"], [20, "3"], [21, "4"], [22, "6"], [23, "5"], [24, "="],
+  [25, "9"], [26, "7"], [27, "-"], [28, "8"], [29, "0"], [30, "]"], [31, "O"], [32, "U"],
+  [33, "["], [34, "I"], [35, "P"], [37, "L"], [38, "J"], [39, "'"], [40, "K"], [41, ";"],
+  [42, "\\"], [43, ","], [44, "/"], [45, "N"], [46, "M"], [47, "."], [49, "SPACE"],
+  [50, "`"], [53, "ESCAPE"], [36, "RETURN"], [48, "TAB"], [51, "BACKSPACE"],
+]);
+
+function mapShortcut(hotkey) {
+  const shortcut = hotkey?.kind?.shortcut;
+  if (shortcut?.key?.type !== "LayoutIndependent") return undefined;
+  const key = KEYCODES.get(shortcut.key.code);
+  if (!key) return undefined;
+  const modifiers = [];
+  for (const item of shortcut.modifiers || []) {
+    const modifier = { Meta: "super", Ctrl: "control", Alt: "alt", Shift: "shift" }[item.modifier];
+    if (modifier && !modifiers.includes(modifier)) modifiers.push(modifier);
+  }
+  return [...modifiers, key].join("+");
+}
+
+function convert(payload) {
+  const general = payload.settings?.general || {};
+  const output = {};
+  const skipped = [];
+  const toggle = mapShortcut(general.globalHotkey);
+  if (toggle) output.global_shortcuts = { toggle };
+  else if (general.globalHotkey) skipped.push("global hotkey (unsupported key shape/code)");
+
+  if (typeof general.showInMenuBar === "boolean") output.tray = { enabled: general.showInMenuBar };
+  if (typeof general.windowMode === "string") {
+    output.launcher_window = { compact_mode: { enabled: general.windowMode === "compact" } };
+  }
+  if (typeof general.openAtLogin === "boolean") {
+    skipped.push("launch at login (Vicinae manages this outside settings.json)");
+  }
+  skipped.push("command hotkeys/favorites/aliases (Raycast and Vicinae entrypoint IDs differ)");
+  skipped.push("Quicklinks/Snippets/Extensions (not represented by Vicinae settings.json)");
+  return { output, skipped };
+}
+
+function main() {
+  try {
+    const args = parseArguments(process.argv.slice(2));
+    const payload = decryptRaycast(fs.readFileSync(args.input), readPassphrase(args.passphraseFile));
+    const result = convert(payload);
+    fs.mkdirSync(path.dirname(args.output), { recursive: true });
+    fs.writeFileSync(args.output, `${JSON.stringify(result.output, null, 2)}\n`, { mode: 0o600 });
+    fs.chmodSync(args.output, 0o600);
+    console.error(`Wrote ${args.output}`);
+    console.error("Not converted automatically:");
+    for (const item of result.skipped) console.error(`- ${item}`);
+    if (path.basename(args.output) === "settings.json") {
+      console.error("The output can be used directly as Vicinae's settings.json.");
+    } else {
+      console.error(`Add ${JSON.stringify(path.basename(args.output))} to settings.json's imports array.`);
+    }
+  } catch (error) {
+    console.error(`raycast-to-vicinae: ${error.message}`);
+    usage();
+    process.exitCode = 1;
+  }
+}
+
+main();
