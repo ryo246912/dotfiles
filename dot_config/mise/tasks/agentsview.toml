@@ -218,10 +218,23 @@ if [ -n "$since" ]; then
   case "$since" in
     all) since="" ;;
     [0-9]*d)
+      # globは先頭が数字で末尾がdなら通るので、`1abcd` のような値もここへ来る。
+      # そのままintへ渡すとpythonのtracebackになるため、数字だけか先に見る。
+      days="${since%d}"
+      case "$days" in
+        *[!0-9]*)
+          echo "AGENTSVIEW_DUMP_SINCE の日数が数字ではありません: ${since}" >&2
+          exit 1
+          ;;
+      esac
+      # 桁が数字だけでも、timedeltaの上限（999999999日）を超えると例外になる。
       since="$(python3 -c 'import datetime, sys
-days = int(sys.argv[1])
-print((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).isoformat())' \
-        "${since%d}")"
+try:
+    days = int(sys.argv[1])
+    print((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).isoformat())
+except (ValueError, OverflowError):
+    raise SystemExit("AGENTSVIEW_DUMP_SINCE の日数が大きすぎます")' \
+        "$days")" || exit 1
       ;;
   esac
 else
