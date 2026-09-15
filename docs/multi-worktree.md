@@ -2,12 +2,13 @@
 
 マルチリポジトリ × git worktree 管理ツール
 
-複数のリポジトリに対して、タスク単位で git worktree を一括作成し、共通の親ディレクトリにまとめて devcontainer でマウントする仕組みを提供します。
+複数のリポジトリに対して、タスク単位で git worktree を一括作成し、共通の親ディレクトリにまとめて Docker Sandboxes（または devcontainer）で扱う仕組みを提供します。
 
 ## 特徴
 
 - **タスク単位でのマルチリポジトリ管理**: 複数のリポジトリに対して同じブランチ名で worktree を一括作成
-- **devcontainer 自動生成**: タスクごとに devcontainer.json を自動生成し、すべてのリポジトリを一括マウント
+- **Docker Sandboxes 統合**: `multi-worktree dev <task> [agent]` で task root を workspace にした microVM を起動（既定バックエンド）
+- **devcontainer 自動生成**: タスクごとに devcontainer.json を自動生成し、すべてのリポジトリを一括マウント（`--devcontainer` 経路）
 - **グループ管理**: 用途別にリポジトリをグループ化して管理可能
 
 ## インストール
@@ -18,6 +19,7 @@
 - `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
 - `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
 - `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
+- `docs/docker-sandboxes.md` - Docker Sandboxes の使い方と devcontainer 比較
 
 ### 基本セットアップ
 
@@ -84,6 +86,16 @@ worktree_prefix = "multi-worktree"
 
 [settings]
 default_group = "default"
+
+[settings.sandbox]
+backend = "sbx"
+default_agent = "claude"
+name_prefix = "mw"
+extra_workspaces = [
+  "~/.config/git/config:ro",
+  "~/.config/gh:ro",
+  "~/.agents",
+]
 ```
 
 ### 設定項目
@@ -100,6 +112,16 @@ default_group = "default"
 #### `[settings]`
 
 - `default_group`: デフォルトで使用するグループ名
+
+#### `[settings.sandbox]`
+
+- `backend`: `dev` サブコマンドの既定バックエンド（`sbx` | `devcontainer`、デフォルト: `sbx`）
+- `default_agent`: `multi-worktree dev <task>` で agent を省略したときのデフォルト
+- `name_prefix`: sandbox 名の接頭辞（sandbox 名は `<prefix>-<task>-<agent>`）
+- `template`: sandbox template の OCI 参照（省略時は `sbx` の既定 template）
+- `extra_workspaces`: task root に加えてマウントする workspace（`:ro` で read-only）
+
+詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
 
 ## 使い方
 
@@ -166,13 +188,18 @@ multi-worktree open feat/add-auth
 
 worktreeディレクトリをVSCodeで開きます。
 
-5. **devcontainer でコマンドを実行**
+5. **Docker Sandboxes でエージェントを起動**
 
 ```bash
-multi-worktree exec feat/add-auth ccmanager
+multi-worktree dev feat/add-auth
+multi-worktree dev feat/add-auth claude
 ```
 
-devcontainerを起動し、その中でコマンドを実行します。既にコンテナが起動している場合はスキップされます。
+task root を workspace にした sandbox を作成してアタッチします。devcontainer で実行したい場合は `--devcontainer` を付けます。
+
+```bash
+multi-worktree dev feat/add-auth --devcontainer ccmanager
+```
 
 7. **各リポジトリのステータスを確認**
 
@@ -290,9 +317,42 @@ ccmc
 exit
 ```
 
-### `dev <task-name> [command]`
+### `dev <task-name> [agent] [options] [-- <agent-args...>]`
 
-指定したタスクの devcontainer でコマンドを実行します。
+指定したタスクを Docker Sandboxes backend で起動します（既定バックエンド）。
+
+**動作:**
+
+1. task root を primary workspace として `sbx create --name=<name> <agent> <task-root> <extra-workspaces...>` を実行（同名 sandbox があれば作成をスキップ）
+2. 作成直後に agent の設定ディレクトリを指す環境変数（`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を `/etc/sandbox-persistent.sh` に書き込む
+3. `sbx run <name>` でアタッチする
+4. `--` 以降は agent CLI にそのまま渡す
+
+**オプション:**
+
+- `--name=NAME`: sandbox 名を明示指定（省略時は `<prefix>-<task>-<agent>`）
+- `--branch=BRANCH`: sandbox の branch mode で起動（`auto` で自動命名）
+- `--template=REF`: sandbox template の OCI 参照
+- `--new`: 既存 sandbox を再利用せず作り直す
+- `--devcontainer`: devcontainer backend に切り替える
+
+**設定項目:**
+
+- `[settings.sandbox].backend` / `default_agent` / `name_prefix` / `template` / `extra_workspaces`
+
+**例:**
+
+```bash
+multi-worktree dev feat/add-auth                      # 既定 agent を sandbox で起動
+multi-worktree dev feat/add-auth claude               # agent を指定
+multi-worktree dev feat/add-auth codex -- --continue  # agent に引数を pass-through
+multi-worktree dev feat/add-auth claude --branch=auto # branch mode
+multi-worktree dev feat/add-auth --new                # sandbox を作り直す
+```
+
+### `dev <task-name> --devcontainer [command]`
+
+指定したタスクを devcontainer backend で実行します。
 
 **動作:**
 
@@ -309,10 +369,12 @@ exit
 **例:**
 
 ```bash
-multi-worktree dev feat/add-auth claude
-multi-worktree dev feat/add-auth ccmanager
-multi-worktree dev feat/add-auth bash
+multi-worktree dev feat/add-auth --devcontainer claude
+multi-worktree dev feat/add-auth --devcontainer ccmanager
+multi-worktree dev feat/add-auth --devcontainer bash
 ```
+
+コマンドを省略すると `[dev_commands]` から fzf で選択できます。
 
 ### `exec <task-name> [repo] <command> [args...]`
 
@@ -435,6 +497,15 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
+### Docker Sandboxes との統合
+
+- `multi-worktree dev <task> [agent]` で task root をそのまま sandbox の primary workspace に渡します
+- sandbox 名は `<prefix>-<task>-<agent>`。同名 sandbox があれば再利用（`--new` で作り直し）します
+- `[settings.sandbox].extra_workspaces` と agent の設定ディレクトリを追加 workspace としてマウントします
+- sbx はホストと同じ絶対パスにマウントするため、agent には `CLAUDE_CONFIG_DIR` / `CODEX_HOME` で設定ディレクトリを明示します
+- `.claude/settings.local.json` の通知 hook は `mac-host` が無い環境では no-op になるため、sandbox でも安全側で使えます
+- 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください
+
 ## トラブルシューティング
 
 ### 設定ファイルが見つからない
@@ -463,6 +534,10 @@ multi-worktree recreate feat/add-auth
 ```
 
 `recreate` は既存の repo worktree directory は保持したまま、`devcontainer.json` と `.claude/settings.local.json` を current config で上書き再生成します。`.git/` は欠けているときだけ補修されます。
+
+### Docker Sandboxes CLI が見つからない
+
+`multi-worktree dev <task>` が「sbx コマンドが見つかりません」で失敗する場合は `brew install docker/tap/sbx` でインストールし、`sbx login` でサインインしてください。sandbox を使わず従来どおり devcontainer で動かす場合は `multi-worktree dev <task> --devcontainer <command>` を使うか、`[settings.sandbox].backend` を `"devcontainer"` にします。
 
 ### worktree の削除に失敗する
 

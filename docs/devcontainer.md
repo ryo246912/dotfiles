@@ -6,6 +6,12 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+> [!NOTE]
+> AI エージェントの実行環境は **Docker Sandboxes (`sbx`) を既定**に切り替えています。
+> `multi-worktree dev <task>` は sandbox を起動し、devcontainer は `--devcontainer` を
+> 付けたときのフォールバック経路です。移行の背景と sandbox 側の使い方は
+> [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から

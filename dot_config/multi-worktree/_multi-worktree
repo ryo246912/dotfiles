@@ -11,7 +11,7 @@ _multi_worktree() {
         'status:各repoの状態確認'
         'sync:worktreeの内容をメインworktreeに同期（リポジトリ選択可）'
         'cd:worktreeディレクトリに移動'
-        'dev:devcontainerでコマンド実行'
+        'dev:Docker Sandboxes でAIエージェントを起動（--devcontainer で devcontainer 実行）'
         'exec:worktreeの指定リポジトリディレクトリでコマンド実行'
         'open:VSCodeでworktreeを開く'
         'help:ヘルプを表示'
@@ -126,23 +126,51 @@ _multi_worktree() {
                     if [[ $CURRENT -eq 2 ]]; then
                         _describe 'task name' task_names
                     elif [[ $CURRENT -ge 3 ]]; then
-                        local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
-                        if [[ -f "$config_file" ]]; then
-                            local -a _dev_vals _dev_disp
-                            local _in_sec=false _ln
-                            while IFS= read -r _ln; do
-                                [[ "$_ln" =~ '^[[:space:]]*#' ]] && continue
-                                if [[ "$_ln" == '[dev_commands]' ]]; then
-                                    _in_sec=true; continue
-                                elif [[ "$_ln" =~ '^\[' ]]; then
-                                    _in_sec=false; continue
-                                fi
-                                if $_in_sec && [[ "$_ln" =~ '^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*"(.*)"[[:space:]]*$' ]]; then
-                                    _dev_vals+=("${match[2]}")
-                                    _dev_disp+=("${match[1]} -- ${match[2]}")
-                                fi
-                            done < "$config_file"
-                            [[ ${#_dev_vals[@]} -gt 0 ]] && compadd -d _dev_disp -a _dev_vals
+                        # 既定は Docker Sandboxes backend。--devcontainer のときだけ旧経路を補完する
+                        local devcontainer_mode=false word current_word
+                        current_word="${words[CURRENT]}"
+                        for word in "${words[@]}"; do
+                            if [[ "$word" == "--devcontainer" ]]; then
+                                devcontainer_mode=true
+                                break
+                            fi
+                        done
+
+                        if [[ "$devcontainer_mode" == false ]]; then
+                            local -a sandbox_agents sandbox_opts
+                            sandbox_agents=(claude codex copilot docker-agent gemini kiro opencode shell)
+                            sandbox_opts=(--devcontainer --agent= --name= --branch= --template= --new --)
+
+                            if [[ "${words[CURRENT-1]}" == "--sbx" || "${words[CURRENT-1]}" == "--agent" ]]; then
+                                compadd -a sandbox_agents
+                            elif [[ "$current_word" == --sbx=* ]]; then
+                                compadd -P '--sbx=' claude codex copilot docker-agent gemini kiro opencode shell
+                            elif [[ "$current_word" == --agent=* ]]; then
+                                compadd -P '--agent=' claude codex copilot docker-agent gemini kiro opencode shell
+                            elif [[ "$current_word" == --* ]]; then
+                                compadd -a sandbox_opts
+                            else
+                                compadd -a sandbox_agents
+                            fi
+                        else
+                            local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"
+                            if [[ -f "$config_file" ]]; then
+                                local -a _dev_vals _dev_disp
+                                local _in_sec=false _ln
+                                while IFS= read -r _ln; do
+                                    [[ "$_ln" =~ '^[[:space:]]*#' ]] && continue
+                                    if [[ "$_ln" == '[dev_commands]' ]]; then
+                                        _in_sec=true; continue
+                                    elif [[ "$_ln" =~ '^\[' ]]; then
+                                        _in_sec=false; continue
+                                    fi
+                                    if $_in_sec && [[ "$_ln" =~ '^[[:space:]]*([^[:space:]=]+)[[:space:]]*=[[:space:]]*"(.*)"[[:space:]]*$' ]]; then
+                                        _dev_vals+=("${match[2]}")
+                                        _dev_disp+=("${match[1]} -- ${match[2]}")
+                                    fi
+                                done < "$config_file"
+                                [[ ${#_dev_vals[@]} -gt 0 ]] && compadd -d _dev_disp -a _dev_vals
+                            fi
                         fi
                     fi
                     ;;

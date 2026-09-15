@@ -57,13 +57,32 @@ exec_opts = [
 # デフォルトで使用するグループ名
 default_group = "default"
 
-# devcontainer 共通設定
+# devcontainer 共通設定（backend = "devcontainer" のときに使う）
 [settings.devcontainer]
 # コンテナが既に起動している場合、devcontainer up をスキップするか
 skip_up_if_running = true
 
-# dev サブコマンドで使用するコマンド一覧
-# `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
+# Docker Sandboxes (sbx) 共通設定
+# 詳細は docs/docker-sandboxes.md を参照
+[settings.sandbox]
+# dev サブコマンドの既定バックエンド（"sbx" | "devcontainer"）
+backend = "sbx"
+# agent 名を省略したときに起動する agent
+default_agent = "claude"
+# sandbox 名の接頭辞（sandbox 名は <prefix>-<task>-<agent>）
+name_prefix = "mw"
+# sandbox template の OCI 参照（空なら sbx の既定 template を使う）
+# template = "docker.io/docker/sandbox-templates:claude-code"
+# task root に加えてマウントする workspace
+# sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
+extra_workspaces = [
+  "~/.config/git/config:ro",
+  "~/.config/gh:ro",
+  "~/.agents",
+]
+
+# devcontainer backend の dev サブコマンドで使用するコマンド一覧
+# `multi-worktree dev <task> --devcontainer` でコマンドを省略した場合、fzf で選択できる
 [dev_commands]
 claude1 = "claude --dangerously-skip-permissions"
 claude2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'
