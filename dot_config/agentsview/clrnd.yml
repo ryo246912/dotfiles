@@ -1,0 +1,11 @@
+# AgentsViewのCloud Run service用clrnd設定。
+#
+# `project` は意図的に書かない。clrndは $CLOUDSDK_CORE_PROJECT ／
+# $GOOGLE_CLOUD_PROJECT にfallbackし、mise taskが $GCP_PROJECT_ID から
+# それを設定する。こうしてaccount識別子をこのrepositoryへcommitしない。
+#
+# `manifest` はこのfileからの相対で解決されるため、どのdirectoryから実行しても
+# 同じmanifestを指す。
+region: us-west2
+service: ryo-agentsview
+manifest: cloudrun-service.yaml

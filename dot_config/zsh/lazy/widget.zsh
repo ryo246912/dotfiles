@@ -1,9 +1,14 @@
-# ctrl + d(alt + shift + d)でインタラクティブツール選択起動 (e1s / lazydocker / d4s / lazygit /lazychezmoi / gh-dash / yazi)
+# ctrl + d(alt + shift + d)でインタラクティブツール選択起動
+# ツール一覧はここだけで定義する。tmux popup の中身は別プロセスの shell で
+# 評価されるため zsh の変数はそのままでは見えない。popup へ渡す文字列を
+# 組み立てる時点で zsh に展開させ、リテラルとして埋め込む。
+_SELECT_TOOL_LIST="lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nghui\nyazi"
+
 _select_tool() {
   if [ -n "$TMUX" ]; then
     tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
-      tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
+      tool=$(printf "%b" "'"$_SELECT_TOOL_LIST"'" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
       if tmux has-session -t overlay 2>/dev/null; then \
         tmux new-window -t overlay -c "$current_path" "$tool" ; \
         tmux attach -t overlay ; \
@@ -13,7 +18,7 @@ _select_tool() {
     '
   else
     local tool
-    tool=$(printf "lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nyazi" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || return 0
+    tool=$(printf "%b" "$_SELECT_TOOL_LIST" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || return 0
     BUFFER="$tool"
     zle accept-line
   fi

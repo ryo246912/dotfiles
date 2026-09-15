@@ -4,6 +4,15 @@
 # install package[npx: npm:prettier,pipx: pipx:httpie]
 mise use -g <package>:<tool>
 
+# install a bootstrap package without saving it to config
+mise bootstrap packages apply <manager>:<system_package>
+
+# add a bootstrap package to config and install it
+mise bootstrap packages use <manager>:<system_package>
+
+# display bootstrap package status
+mise bootstrap packages status
+
 # list installable list
 mise use
 
@@ -29,5 +38,6 @@ mise config get
 mise config
 ```
 $ package: echo -e "npm\npipx\naqua"
+$ manager: echo -e "brew\nbrew-cask\napt\ndnf\npacman"
 $ _--current: echo -e "\n --current"
 ;$
