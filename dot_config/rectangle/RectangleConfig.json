@@ -311,11 +311,11 @@
     },
     "leftHalf" : {
       "keyCode" : 123,
-      "modifierFlags" : 524288
+      "modifierFlags" : 655360
     },
     "maximize" : {
       "keyCode" : 126,
-      "modifierFlags" : 524288
+      "modifierFlags" : 655360
     },
     "reflowTodo" : {
       "keyCode" : 45,
@@ -323,7 +323,7 @@
     },
     "rightHalf" : {
       "keyCode" : 124,
-      "modifierFlags" : 524288
+      "modifierFlags" : 655360
     },
     "toggleTodo" : {
       "keyCode" : 11,
