@@ -9,8 +9,7 @@ mkdir -p "$XDG_STATE_HOME/psql" 2>/dev/null
 export PSQL_HISTORY="$XDG_STATE_HOME/psql/.psql_history"
 mkdir -p "$XDG_STATE_HOME/less" 2>/dev/null
 export LESSHISTFILE="$XDG_STATE_HOME/less/.lesshst"
-mkdir -p "$XDG_STATE_HOME/zsh" 2>/dev/null
-export HISTFILE="$XDG_STATE_HOME/zsh/.zsh_history"
+# NOTE: zsh の HISTFILE は遅延読込だと起動時の履歴読込に間に合わないため main.zsh で設定する
 
 # slack
 export SLACK_DEVELOPER_MENU=true
