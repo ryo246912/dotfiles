@@ -19,9 +19,8 @@ description = "Run zizmor"
 run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic --min-severity=low .github/workflows"
 
 ["lint:pinact"]
-# pinact v5 rejects the former single-dash long option (`-check`); keep `--check`.
-description = "Run pinact --check"
-run         = "pinact run --check"
+description = "Run pinact -check"
+run         = "pinact run -check"
 
 ["lint:toml"]
 description = "Run lint TOML files"
