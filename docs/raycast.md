@@ -1,14 +1,5 @@
 # Raycast と代替ランチャー
 
-## 運用方針
-
-メインランチャーには Vicinae を使用し、macOS bootstrap の `brew-cask:vicinae` で導入する。
-Vicinae の設定は `dot_config/vicinae/settings.json` を正本として chezmoi で管理する。
-
-Raycast と Tinycast は bootstrap でインストールしない。Raycast の export は移行前の設定値を
-参照・保管する目的で `dot_config/raycast/` に残すが、通常のセットアップでは import しない。
-Tinycast は比較対象としてのみ記録する。
-
 ## 比較表
 
 | 観点                                                  | Raycast                                                                                                       | Tinycast                                                                                                                                                                                           | Vicinae                                                                                                                                    |
