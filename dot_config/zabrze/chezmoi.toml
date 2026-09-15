@@ -9,8 +9,8 @@ snippet = "chezmoi add --template"
 trigger = "chad"
 
 [[snippets]]
-name            = "chezmoi apply --interactive --exclude=scripts,templates"
-snippet         = "chezmoi apply --interactive --exclude=scripts,templates"
+name            = "chezmoi apply"
+snippet         = "chezmoi apply --interactive --exclude=scripts"
 trigger-pattern = "(^chap$|chpa)"
 
 [[snippets]]

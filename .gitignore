@@ -1,13 +1,27 @@
 .venv/*
 
+## mise lockfiles（Renovate の artifact 更新では生成しない）
+mise*.lock
+
 *temp*
-dot_gitconfig.secret
-dot_gitconfig.secret-noreply
+dot_config/git/config.secret
+dot_config/git/config.work.secret
 dot_zprofile.secret
 dot_zshrc.secret
 
 ## claude
 settings.local.json
 
+## rulesync 配布先（ソースは .rulesync/rules/ 配下）
+/CLAUDE.md
+
 ## VSCode
 mcp.json
+!.rulesync/mcp.json
+!.vscode/mcp.json
+!dot_config/rulesync/exact_dot_rulesync/mcp.json
+# Terraform local state and plans (the dependency lock file remains tracked).
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan

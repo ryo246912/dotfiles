@@ -22,12 +22,6 @@ bat -l rb $(brew edit --print-path <app_name>)
 # open app homegage [ex:brew home colordiff]
 brew home <app_name>
 
-# tool
-brew info --installed --json | jq 'map(select(.installed[].installed_on_request == true)) | map({key: .full_name, value: .installed[0].version}) | from_entries' > ~/.local/share/chezmoi/dot_config/brew/brew.json
-
-# cask
-brew info --cask --installed --json=v2 | jq '.casks | map({key: .full_token, value: .version}) | from_entries' > ~/.local/share/chezmoi/dot_config/brew/brew_cask.json
-
 % other
 # chrome : list user profile
 cat ~/Library/Application\ Support/Google/Chrome/Local\ State | jq -r '.profile.info_cache | to_entries[] | "\(.key): \(.value.name)"'

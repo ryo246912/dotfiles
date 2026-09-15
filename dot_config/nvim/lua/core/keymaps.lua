@@ -2,17 +2,36 @@
 vim.g.mapleader = ","
 
 -- ウィンドウ最大化/もとに戻す関数
-vim.g.toggle_window_size = 0
+local saved_window_layouts = {}
+
 local function toggle_window_size()
-  if vim.g.toggle_window_size == 1 then
-    vim.cmd("normal! \\<C-w>=")
-    vim.g.toggle_window_size = 0
-  else
-    vim.cmd("resize")
-    vim.cmd("vertical resize")
-    vim.g.toggle_window_size = 1
+  local tabid = vim.api.nvim_get_current_tabpage()
+  local saved_layout = saved_window_layouts[tabid]
+
+  if saved_layout then
+    saved_window_layouts[tabid] = nil
+
+    if vim.api.nvim_win_is_valid(saved_layout.current_win) then
+      vim.api.nvim_set_current_win(saved_layout.current_win)
+    end
+    vim.cmd(saved_layout.restore_cmd)
+    return
   end
+
+  saved_window_layouts[tabid] = {
+    current_win = vim.api.nvim_get_current_win(),
+    restore_cmd = vim.fn.winrestcmd(),
+  }
+  vim.cmd("resize")
+  vim.cmd("vertical resize")
 end
+
+vim.api.nvim_create_autocmd({ "WinNew", "WinClosed" }, {
+  callback = function()
+    local tabid = vim.api.nvim_get_current_tabpage()
+    saved_window_layouts[tabid] = nil
+  end,
+})
 
 -- g1からg9のキーバインドで1-9のタブに移動するキーバインド追加
 local function go_to_nth_tab(n)
@@ -21,6 +40,42 @@ local function go_to_nth_tab(n)
     vim.cmd("tabnext " .. target_tab)
   else
     vim.api.nvim_err_writeln("Target tab does not exist")
+  end
+end
+
+local function exact_word_pattern(word)
+  return string.format("\\V\\<%s\\>", vim.fn.escape(word, [[\]]))
+end
+
+local function ensure_current_word_search()
+  local word = vim.fn.expand("<cword>")
+  if word == nil or word == "" then
+    return false
+  end
+
+  local pattern = exact_word_pattern(word)
+  local current = vim.fn.getreg("/")
+
+  if vim.v.hlsearch == 0 or current == "" then
+    vim.fn.setreg("/", pattern)
+    vim.o.hlsearch = true
+    return true
+  end
+
+  return false
+end
+
+local function jump_current_word(direction)
+  return function()
+    local initialized = ensure_current_word_search()
+    if initialized then
+      local flags = direction == "n" and "" or "b"
+      for _ = 1, vim.v.count1 do
+        vim.fn.search(vim.fn.getreg("/"), flags)
+      end
+      return
+    end
+    vim.cmd(("normal! %d%s"):format(vim.v.count1, direction))
   end
 end
 
@@ -64,6 +119,8 @@ keymap({ "n", "x" }, "gy", '"+y', { noremap = true })
 
 -- ESC連打でハイライト解除
 keymap("n", "<Esc><Esc>", ":nohlsearch<CR><Esc>", { noremap = true, silent = true })
+keymap("n", "n", jump_current_word("n"), { noremap = true, silent = true, desc = "現在単語/検索結果の次へ移動" })
+keymap("n", "N", jump_current_word("N"), { noremap = true, silent = true, desc = "現在単語/検索結果の前へ移動" })
 
 -- Emacs-like movement in Insert/Command
 keymap({ "i", "c" }, "<C-a>", "<Home>", { noremap = true })
@@ -91,10 +148,14 @@ keymap("v", "/", [[<ESC>/\%V]], { noremap = true })
 keymap("v", "?", [[<ESC>?\%V]], { noremap = true })
 
 
-keymap("n", "<leader>z", toggle_window_size, { noremap = true })
-keymap("n", "<A-z>", toggle_window_size, { noremap = true })
+keymap("n", "<leader>z", toggle_window_size, { noremap = true, silent = true, desc = "ウィンドウ最大化/復元" })
+keymap("n", "<A-z>", toggle_window_size, { noremap = true, silent = true, desc = "ウィンドウ最大化/復元" })
 
 -- g1-g9 mappings
 for i = 1, 9 do
   keymap("n", "g" .. i, function() go_to_nth_tab(i) end, { noremap = true })
 end
+keymap("n", "gb", ":tabprevious<CR>", { noremap = true, silent = true, desc = "前のタブへ移動" })
+
+-- ジャンプリストを戻る (<C-o>の代替)
+keymap("n", "gh", "<C-o>", { noremap = true, desc = "ジャンプリストを戻る" })

@@ -2,24 +2,51 @@
   // https://containers.dev/implementors/json_reference/
   "name": "Devcontainer for AI Agent",
   "build": {
-    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile"
+    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile",
+    // GH_TOKEN は build context にコピーせず、mise install の間だけ secret mount する。
+    "options": ["--secret", "id=github_token,env=GH_TOKEN"]
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {
-    // "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {}
+    // docker compose / DBコンテナをコンテナ内で建てられるようにする(DinD)
+    // DooD(ホストのdocker.sockマウント)ではなくDinDを採用し、
+    // compose で建てたコンテナ群を dev container 内に隔離する
+    "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
   },
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストのユーザー名（SSH接続用）
-    "HOST_USER": "${localEnv:USER}"
+    "HOST_USER": "${localEnv:USER}",
+    // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
+    "CRIT_HOST": "0.0.0.0",
+    "CRIT_PORT": "7842",
+    // crit: 非loopback bindを許可する。Docker側は127.0.0.1だけにpublishするため外部公開されない
+    "CRIT_ALLOW_UNAUTHENTICATED_NETWORK": "1",
+    // crit: コンテナ内では更新チェック不要のため無効化
+    "CRIT_NO_UPDATE_CHECK": "1"
   },
+  // crit のレビューUIをホストのブラウザから開けるようにポートを公開する。
+  // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
+  // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
+  // ホストの loopback のみに束縛する。host port は固定せず Docker に自動採番させる
+  // (devcontainer を複数同時起動してもポート衝突が起きないようにするため)。
+  // 実際に割り当てられた host port は post-start.sh が ~/.crit-host-port に書き出し、
+  // ホストへ通知する（docs/crit.md 参照）。
+  "appPort": ["127.0.0.1::7842"],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",
   "mounts": [
     // .config
-    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/tmp/gitconfig-host,readonly",
+    // 注意: target は /tmp 配下にしないこと。/tmp はコンテナ内で tmpfs にマウントされるため
+    // (Enhanced Container Isolation 等)、/tmp 配下を target にした bind mount は
+    // その tmpfs にシャドウされて消える。/home/vscode/.config は Dockerfile で作成済みの
+    // 実ディレクトリなので、ここを target にする。
+    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.config/gitconfig-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
@@ -39,13 +66,16 @@
     // Claude account2 config for independent quota/auth
     "type=bind,source=${localEnv:HOME}/.claude-account2,target=/home/vscode/.claude-account2",
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
-    "type=bind,source=${localEnv:HOME}/.claude.json,target=/tmp/claude-config-host.json,readonly",
-    "type=bind,source=${localEnv:HOME}/.gemini,target=/home/vscode/.gemini",
+    "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.config/claude-config-host.json,readonly",
+    "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
     "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
-    "type=bind,source=${localEnv:HOME}/.local/state/.copilot,target=/home/vscode/.local/state/.copilot",
-    "type=bind,source=${localEnv:HOME}/.local/share/opencode,target=/home/vscode/.local/share/opencode",
-    "type=bind,source=${localEnv:HOME}/.config/opencode,target=/home/vscode/.config/opencode",
-    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit"
+    "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
+    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit",
+    // DinDのdockerデータ(イメージ等)をnamed volumeで永続化し、リビルド時のpullを回避。
+    // ${devcontainerId} でスコープし、multi-worktree で複数の devcontainer を同時起動しても
+    // 各コンテナが独立した /var/lib/docker を持つようにする(共有による daemon 起動失敗・破損を回避)。
+    // devcontainerId は同一 devcontainer のリビルドを跨いで安定するため、永続化も保たれる。
+    "source=devcontainer-dind-var-lib-docker-${devcontainerId},target=/var/lib/docker,type=volume"
   ],
   "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
   "postStartCommand": "bash /home/vscode/.config/devcontainer/scripts/post-start.sh"

@@ -1,22 +1,28 @@
+[settings]
+auto_install = false
+experimental = true
+
 [tools]
-"aqua:anthropics/claude-code"    = "2.1.81"
-"aqua:astral-sh/uv"              = "0.10.12"
-"aqua:cli/cli"                   = "2.89.0"
-"aqua:golangci/golangci-lint"    = "2.11.3"
+"aqua:BurntSushi/ripgrep"        = "15.2.0"
+"aqua:anthropics/claude-code"    = "2.1.218"
+"aqua:astral-sh/uv"              = "0.12.5"
+"aqua:cli/cli"                   = "2.100.0"
+"aqua:golangci/golangci-lint"    = "2.13.2"
 "aqua:koalaman/shellcheck"       = "0.11.0"
-"aqua:mvdan/sh"                  = "3.13.0"
-"aqua:openai/codex"              = "0.110.0"
-bun                              = "1.3.5"
-"github:github/copilot-cli"      = "1.0.10"
-go                               = "1.25.6"
-node                             = "22.19.0"
-"npm:@google/gemini-cli"         = "0.34.0"
-"npm:@taplo/cli"                 = "0.7.0"
-"npm:@typescript/native-preview" = "7.0.0-dev.20260323.1"
-"npm:ccusage"                    = "18.0.10"
-"npm:opencode-ai"                = "1.1.48"
-"npm:prettier"                   = "3.8.1"
-python                           = "3.14.3"
+"aqua:mvdan/sh"                  = "3.14.1"
+"aqua:openai/codex"              = "0.146.0"
+"aqua:tamasfe/taplo"             = "0.10.0"
+"core:bun"                       = "1.4.2"
+"core:go"                        = "1.27.1"
+"core:node"                      = "22.19.0"
+"core:python"                    = "3.14.6"
+"github:github/copilot-cli"      = "1.0.73"
+"github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
+"github:tomasz-tomczyk/crit"     = "0.19.1"
+"npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
+"npm:ccusage"                    = "20.0.1"
+"npm:oxfmt"                      = "0.59.0"
+"npm:oxlint"                     = "1.76.0"
 
 [settings.npm]
 bun = true

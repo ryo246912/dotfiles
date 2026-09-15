@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# pristineな`crit` CLIへdevcontainer固有の処理を追加するラッパー。
+#
+# crit skill本体はupstreamの内容をそのまま利用する。リポジトリ固有の次の処理は
+# skill本文ではなく、このラッパーへ実装してエージェントのコンテキスト消費を避ける。
+#
+#   1. post-start.shが~/.crit-host-portへ記録したhost側の公開URLを追加出力する。
+#      crit本体の出力は変更しない。
+#   2. crit daemon起動中に次のレビューを開始したとき、mac-hostへ再レビュー待ちを通知する。
+#
+# どちらの処理もbest-effortとし、失敗してもレビューループを止めない。
+set -uo pipefail
+
+# ラッパーはmise shimより前のPATHに置かれるため、実体は`mise which`で絶対pathを取得する。
+# 取得した実体を直接実行し、ラッパー自身の再帰呼び出しを避ける。
+real_crit="$(mise which crit 2>/dev/null || true)"
+if [ -z "${real_crit}" ]; then
+	echo "crit: real binary not found (is crit installed via mise?)" >&2
+	exit 127
+fi
+
+host_port_file="${HOME}/.crit-host-port"
+ssh_config="${HOME}/.config/ssh/config"
+
+# 通知不要な補助subcommandではなく、レビューの開始・継続かを判定する。
+is_review_launch() {
+	case "${1-}" in
+	share | fetch | unpublish | install | config | check | pull | push | comment | comments | auth | stop | status | stats | cleanup | plan-hook | _serve | help | -h | --help | -v | --version) return 1 ;;
+	*) return 0 ;;
+	esac
+}
+
+# :7842で待ち受けるcrit daemonが既にあれば再レビューラウンドとみなす。
+daemon_running() {
+	if command -v ss >/dev/null 2>&1; then
+		ss -ltn 2>/dev/null | grep -q ':7842[[:space:]]'
+	elif command -v lsof >/dev/null 2>&1; then
+		lsof -iTCP:7842 -sTCP:LISTEN >/dev/null 2>&1
+	else
+		return 1
+	fi
+}
+
+notify_host() { # $1: 通知メッセージ
+	[ -f "${ssh_config}" ] || return 0
+	timeout 5 ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=2 mac-host \
+		"macos-notify-cli --title 'crit' --message '$1' --sound Glass" >/dev/null 2>&1 || true
+}
+
+if is_review_launch "${1-}"; then
+	# 再レビューラウンドでは、差分の準備完了をhostへ通知する。
+	if daemon_running; then
+		notify_host '再レビュー待ちです'
+	fi
+	# host側の公開portが分かる場合は、reviewerが開くURLを追加出力する。
+	if [ -s "${host_port_file}" ]; then
+		printf 'crit UI (host): http://localhost:%s\n' "$(cat "${host_port_file}")"
+	fi
+fi
+
+exec "${real_crit}" "$@"

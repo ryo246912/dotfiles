@@ -212,7 +212,7 @@ git stash list --pretty=format:"%C(green)%gd %C(auto)%h%d %s" --date=format:"%Y/
 git stash show <stash_num> -u -p
 
 # pop stash
-git stash pop <stash_num>
+git stash pop --index <stash_num>
 
 # pop stash file
 git checkout <stash_num> <stash_file>

@@ -1,79 +1,111 @@
 [[snippets]]
+context         = "^(aws-vault\\s|[^\\s]+$)"
+global          = true
 name            = "terraform"
 snippet         = "terraform"
 trigger-pattern = "^tf$"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform init"
 snippet = "terraform init"
 trigger = "tfi"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform plan"
 snippet = "terraform plan"
 trigger = "tfp"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform plan (Debug: All)"
 snippet = "TF_LOG=DEBUG terraform plan"
 trigger = "tfpd"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform plan (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform plan"
 trigger = "tfpdc"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform plan (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform plan"
 trigger = "tfpdp"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform apply"
 snippet = "terraform apply"
 trigger = "tfa"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform apply (Debug: All)"
 snippet = "TF_LOG=DEBUG terraform apply"
 trigger = "tfad"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform apply (Debug: Core)"
 snippet = "TF_LOG_CORE=DEBUG terraform apply"
 trigger = "tfadc"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform apply (Debug: Provider)"
 snippet = "TF_LOG_PROVIDER=DEBUG terraform apply"
 trigger = "tfadp"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform fmt -recursive"
 snippet = "terraform fmt -recursive"
 trigger = "tff"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform validate"
 snippet = "terraform validate"
 trigger = "tfv"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform show"
 snippet = "terraform show"
 trigger = "tfs"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform state"
 snippet = "terraform state"
 trigger = "tfst"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform workspace"
 snippet = "terraform workspace"
 trigger = "tfw"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "terraform output"
 snippet = "terraform output"
 trigger = "tfo"
@@ -100,14 +132,18 @@ snippet = "tflint --fix"
 trigger = "tflf"
 
 [[snippets]]
+context = "^(aws-vault\\s|[^\\s]+$)"
+global  = true
 name    = "tftui"
 snippet = "tftui"
 trigger = "tft"
 
 [[snippets]]
-name    = "pug (tetui2)"
-snippet = "pug"
-trigger = "tft2"
+context         = "^(aws-vault\\s|[^\\s]+$)"
+global          = true
+name            = "pug (tftui2)"
+snippet         = "pug"
+trigger-pattern = "(tft2|tftt)"
 
 # trivy
 [[snippets]]

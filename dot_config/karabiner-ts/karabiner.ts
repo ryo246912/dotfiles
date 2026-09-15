@@ -53,5 +53,5 @@ writeToProfile(
     // mirrorQwertyCommandRules,
     // mirrorQwertyCommandShiftRules,
   ],
-  profileSettings
+  profileSettings,
 );

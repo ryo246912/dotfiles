@@ -1,0 +1,61 @@
+name: apm-global
+version: 1.0.0
+description: User-scope APM manifest for external agent skills (deployed via `apm install -g`)
+author: ryo246912
+# Deploy skills to these agent platforms under the user scope.
+# claude -> ~/.claude/skills/, codex/copilot/cursor -> ~/.agents/skills/ (共通の universal dir)。
+targets:
+  - claude
+  - codex
+  - copilot
+  - cursor
+dependencies:
+  # 外部スキルはすべて upstream リポジトリから依存として取得する（vendor しない）。
+  # 再現性のため各依存をコミット SHA または release tag に pin する。
+  # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
+  apm:
+    # crit（tomasz-tomczyk/crit プラグイン）。
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.19.1
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.19.1
+    # v0.4.0 以降の skill/ は生成前の SKILL.template.md のみで APM package として無効なため、
+    # SKILL.md を含む最後の release commit に固定する。配置名は skill 名と揃える。
+    - git: zenbu-labs/terminal-browser
+      path: skill
+      ref: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
+      alias: terminal-browser
+    # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する。
+    - git: classmethod/tsumiki
+      ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
+      alias: tsumiki
+    - git: ctxrs/ctx
+      path: skills/ctx-agent-history-search
+      ref: v0.25.0
+      alias: ctx-agent-history-search
+    - git: mattpocock/skills
+      path: skills/engineering/resolving-merge-conflicts
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: resolving-merge-conflicts
+    - git: mattpocock/skills
+      path: skills/productivity/grill-me
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: grill-me
+    # grill-me が呼び出す interview loop。本体と同じ commit に pin する。
+    - git: mattpocock/skills
+      path: skills/productivity/grilling
+      ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+      alias: grilling
+    - git: cathrynlavery/diagram-design
+      path: skills/diagram-design
+      ref: a157f7616473d966d6f433cf0b4d4f1880603504
+      alias: diagram-design
+    - git: vercel-labs/skills
+      path: skills/find-skills
+      ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+      alias: find-skills
+    # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
+    - git: DietrichGebert/ponytail
+      ref: v4.9.0
+      alias: ponytail
+  mcp: []
+includes: auto
+scripts: {}

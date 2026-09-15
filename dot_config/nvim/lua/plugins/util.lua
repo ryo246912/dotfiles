@@ -1,5 +1,12 @@
 return {
   {
+    -- Neovim 0.11 サポートが打ち切られる直前の最後のコミット (2026-03-31)
+    -- feat!: drop support for Nvim 0.11 (c82bf96f, 2026-04-01) の直前
+    "nvim-treesitter/nvim-treesitter",
+    commit = "90cd6580e720caedacb91fdd587b747a6e77d61f",
+    build = ":TSUpdate",
+  },
+  {
       'MeanderingProgrammer/render-markdown.nvim',
       dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' },
       ---@module 'render-markdown'
@@ -20,6 +27,9 @@ return {
   {
     "rcarriga/nvim-notify",
     config = function()
+      if #vim.api.nvim_list_uis() == 0 then
+        return
+      end
       require("notify").setup({
         background_colour = "#000000",
       })
@@ -43,5 +53,12 @@ return {
   {
     "vim-jp/vimdoc-ja",
     lazy = true,
+  },
+  {
+    "chrishrb/gx.nvim",
+    keys = { { "gx", "<cmd>Browse<cr>", mode = { "n", "x" } } },
+    opts = {
+      open_browser_app = vim.fn.has("mac") == 1 and "open" or vim.fn.has("wsl") == 1 and "wslview" or "xdg-open",
+    },
   },
 }

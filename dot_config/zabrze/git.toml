@@ -30,9 +30,9 @@ snippet = "git branch -a --sort=-committerdate👇 --format='%(HEAD) %(refname:s
 trigger = "gba"
 
 [[snippets]]
-name    = "git branch --show-current"
-snippet = "git branch --show-current"
-trigger = "gbc"
+name            = "git branch --show-current"
+snippet         = "git branch --show-current"
+trigger-pattern = "(gbc|gbs)"
 
 [[snippets]]
 name    = "git bisect"
@@ -74,6 +74,12 @@ trigger = "gcb"
 name    = "git checkout"
 snippet = "git checkout"
 trigger = "gch"
+
+[[snippets]]
+cursor  = "👇"
+name    = "git checkout origin"
+snippet = "git checkout origin/👇~0"
+trigger = "gcho"
 
 [[snippets]]
 evaluate = true
@@ -130,6 +136,11 @@ trigger-pattern = "(^gd$|gshss)"
 name    = "git diff change"
 snippet = "git diff --diff-filter=U"
 trigger = "gdc"
+
+[[snippets]]
+name    = "hunk diff origin/main"
+snippet = "hunk diff origin/main...HEAD"
+trigger = "gdom"
 
 [[snippets]]
 name            = "git diff --cached(staged)"
@@ -213,6 +224,11 @@ trigger-pattern = "^gm$"
 name    = "git merge --abort"
 snippet = "git merge --abort"
 trigger = "gma"
+
+[[snippets]]
+name    = "git merge --continue"
+snippet = "git merge --continue"
+trigger = "gmc"
 
 [[snippets]]
 name    = "git merge --squash"
@@ -334,6 +350,11 @@ snippet = "git show"
 trigger = "gsh"
 
 [[snippets]]
+name    = "git show signature and identities"
+snippet = "git show --no-patch --show-signature --format=fuller HEAD"
+trigger = "gshf"
+
+[[snippets]]
 name    = "git show HEAD~1"
 snippet = "git show HEAD~1"
 trigger = "gshh"
@@ -371,7 +392,7 @@ trigger = "gstl"
 
 [[snippets]]
 name    = "git stash pop"
-snippet = "git stash pop stash@{0}"
+snippet = "git stash pop --index stash@{0}"
 trigger = "gstp"
 
 [[snippets]]
@@ -655,6 +676,17 @@ name            = "(git show) --stat"
 snippet         = "--stat"
 trigger-pattern = "(-s|-st)"
 
+# git tools
+[[snippets]]
+name            = "ghui"
+snippet         = "ghui"
+trigger-pattern = "ghu"
+
+[[snippets]]
+name            = "gitpane"
+snippet         = "gitpane --root ~/work"
+trigger-pattern = "(gpa|glv)"
+
 [[snippets]]
 name            = "gitui"
 snippet         = "gitui"
@@ -664,6 +696,11 @@ trigger-pattern = "^gu$"
 name            = "lazygit"
 snippet         = "lazygit"
 trigger-pattern = "^lg$"
+
+[[snippets]]
+name            = "glab-tui"
+snippet         = "glab-tui"
+trigger-pattern = "^gt$"
 
 [[snippets]]
 name            = "tig"

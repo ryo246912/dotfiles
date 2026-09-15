@@ -1,7 +1,8 @@
 {
-  "targets": ["claudecode"],
-  "features": ["rules"],
-  "baseDirs": ["."],
+  "targets": {
+    "claudecode": ["rules"],
+  },
+  "outputRoots": ["."],
   "delete": false,
   "verbose": false,
   "silent": false,

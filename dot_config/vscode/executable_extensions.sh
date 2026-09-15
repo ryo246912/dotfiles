@@ -9,7 +9,7 @@ code --install-extension danielbreiner.go-to-relative
 code --install-extension dbaeumer.vscode-eslint
 code --install-extension eamodio.gitlens
 code --install-extension emmanuelbeziat.vscode-great-icons
-code --install-extension esbenp.prettier-vscode
+code --install-extension oxc.oxc-vscode
 code --install-extension EXCEEDSYSTEM.vscode-macros
 code --install-extension formulahendry.auto-rename-tag
 code --install-extension GitHub.remotehub

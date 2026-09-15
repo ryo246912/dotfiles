@@ -3,17 +3,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "**.yaml"
-      - "**.toml"
-      - "**.json"
   pull_request:
     branches:
       - main
-    paths:
-      - "**.yaml"
-      - "**.toml"
-      - "**.json"
 
 permissions: {}
 
@@ -22,58 +14,102 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-json:
+  lint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       pull-requests: read
     timeout-minutes: 1
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "npm:prettier"
-        env:
-          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
-      - name: prettier
-        run: prettier --check '**/*.json'
 
-  lint-yaml:
-    if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    timeout-minutes: 1
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
-          persist-credentials: false
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "npm:prettier"
-        env:
-          MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
-      - name: prettier
-        run: prettier --check '**/*.{yaml,yml}'
+          files_yaml: |
+            json:
+              - "**/*.json"
+            yaml:
+              - "**/*.yaml"
+              - "**/*.yml"
+            md:
+              - "**/*.md"
+            toml:
+              - "**/*.toml"
+            actions:
+              - ".github/workflows/*"
+              - ".github/actionlint.yaml"
+              - ".github/actionlint.yml"
+            secret:
+              - "**/*"
 
-  lint-toml:
-    if: ${{ ! endsWith(github.actor, '[bot]')}}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    timeout-minutes: 1
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          persist-credentials: false
-      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
-        with:
-          install_args: "npm:@taplo/cli"
+          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
-      - name: taplo
-        run: taplo format --check
+
+      - name: oxfmt (json)
+        id: lint-json
+        if: steps.changed-files.outputs.json_any_changed == 'true'
+        background: true
+        run: mise run lint:json
+
+      - name: oxfmt (yaml)
+        id: lint-yaml
+        if: steps.changed-files.outputs.yaml_any_changed == 'true'
+        background: true
+        run: mise run lint:yaml
+
+      - name: oxfmt (markdown)
+        id: lint-md
+        if: steps.changed-files.outputs.md_any_changed == 'true'
+        background: true
+        run: mise run lint:md
+
+      - name: taplo (toml)
+        id: lint-toml
+        if: steps.changed-files.outputs.toml_any_changed == 'true'
+        background: true
+        run: mise run lint:toml
+
+      - name: actionlint
+        id: lint-actionlint
+        if: steps.changed-files.outputs.actions_any_changed == 'true'
+        background: true
+        run: mise run lint:actionlint
+
+      - name: ghalint
+        id: lint-ghalint
+        if: steps.changed-files.outputs.actions_any_changed == 'true'
+        background: true
+        run: mise run lint:ghalint
+        env:
+          GHALINT_LOG_COLOR: always
+
+      - name: zizmor
+        id: lint-zizmor
+        if: steps.changed-files.outputs.actions_any_changed == 'true'
+        background: true
+        run: mise run lint:zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: pinact
+        id: lint-pinact
+        if: steps.changed-files.outputs.actions_any_changed == 'true'
+        background: true
+        run: mise run lint:pinact
+
+      - name: secretlint
+        id: lint-secret
+        if: steps.changed-files.outputs.secret_any_changed == 'true'
+        background: true
+        run: mise run lint:secret
+
+      - name: wait for all lints
+        wait-all: true

@@ -1,3 +1,7 @@
+os:
+  edit: "nvim {{filename}}"
+  editAtLine: "nvim +{{line}} {{filename}}"
+  editAtLineAndWait: "nvim +{{line}} {{filename}}"
 customCommands:
   - command: czg
     context: "files, worktrees, localBranches, remotes, tags"
@@ -19,10 +23,6 @@ customCommands:
     context: "files, worktrees, localBranches, remotes, tags"
     output: terminal
     key: Y
-  - command: nvim {{ .SelectedFile.Name | quote }}
-    context: "files"
-    output: terminal
-    key: e
   - command: $SHELL || zsh || bash
     context: "files, worktrees, localBranches, remotes, tags, commits"
     output: terminal
@@ -63,6 +63,10 @@ customCommands:
         body: "merge {{.CheckedOutBranch.Name}} to {{.SelectedLocalBranch.Name}}?"
     description: "Merge current branch into selected branch"
     loadingText: "Merging..."
+  - command: "gh pr view --web 2>/dev/null || gh pr create --web --head {{ .CheckedOutBranch.Name | quote }}"
+    key: o
+    context: "localBranches, commits, files, worktrees"
+    description: "Open/Create PR for current branch"
 promptToReturnFromSubprocess: false
 gui:
   language: "ja"
@@ -72,3 +76,4 @@ git:
   pagers:
     - colorArg: always
       pager: delta --paging=never --no-gitconfig
+  overrideGpg: true

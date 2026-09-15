@@ -17,39 +17,34 @@
     "deny": [
       "Bash(sudo:*)",
       "Bash(rm -rf:*)",
+      "Read(**/.env)",
+      "Read(.env)",
       "Read(**/.env.*)",
       "Read(.env.*)",
+      "Read(**/.envrc)",
+      "Read(.envrc)",
+      "Read(**/*.secret)",
+      "Read(*.secret)",
+      "Read(**/fnox.local.toml)",
+      "Read(fnox.local.toml)",
       "Read(id_rsa)",
       "Read(id_ed25519)",
+      "Read(~/.ssh/id_rsa)",
+      "Read(~/.ssh/id_ed25519)",
       "Read(**/*token*)",
       "Read(**/*key*)",
-      "Write(.env*)",
-      "Write(**/secrets/**)"
-    ]
-  },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | xargs -r sed -i -e 's/[[:space:]]*$//' -e '$a\\'"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))' | xargs -r tsgo --noEmit"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".toml\"))' | xargs -r taplo format --check"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".sh\"))' | xargs -r shfmt --write"
-          }
-        ]
-      }
+      "Read(~/**/*token*)",
+      "Read(~/**/*key*)",
+      "Edit(**/.env)",
+      "Edit(.env*)",
+      "Edit(**/.env*)",
+      "Edit(**/.envrc)",
+      "Edit(.envrc)",
+      "Edit(**/*.secret)",
+      "Edit(*.secret)",
+      "Edit(**/fnox.local.toml)",
+      "Edit(fnox.local.toml)",
+      "Edit(**/secrets/**)"
     ]
   },
   "statusLine": {

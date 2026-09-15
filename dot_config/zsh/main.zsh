@@ -1,5 +1,4 @@
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
-export EDITOR=nvim
 
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
@@ -19,6 +18,10 @@ setopt hist_reduce_blanks
 setopt hist_save_no_dups
 # 対話型シェルでのコメントを有効
 setopt INTERACTIVE_COMMENTS
+# 各セッションが終了時に履歴を上書きせず追記する
+setopt APPEND_HISTORY
+# コマンド実行のたびにすぐ履歴ファイルに書き込む
+setopt INC_APPEND_HISTORY
 
 if [ "$(uname)" = "Darwin" ]; then
   # ctrl + dは無効

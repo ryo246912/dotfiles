@@ -1,8 +1,3 @@
-# tpmのインストール
-if ! [ -e "$HOME/.config/tmux/plugins/tpm" ]; then
-  git clone https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
-fi
-
 # historyの保存先
 mkdir -p "$XDG_STATE_HOME/node" 2>/dev/null
 export NODE_REPL_HISTORY="$XDG_STATE_HOME/node/.node_repl_history"
@@ -17,15 +12,6 @@ export LESSHISTFILE="$XDG_STATE_HOME/less/.lesshst"
 mkdir -p "$XDG_STATE_HOME/zsh" 2>/dev/null
 export HISTFILE="$XDG_STATE_HOME/zsh/.zsh_history"
 
-# less
-export LESS_TERMCAP_mb=$'\e[1;32m'
-export LESS_TERMCAP_md=$'\e[1;32m'
-export LESS_TERMCAP_me=$'\e[0m'
-export LESS_TERMCAP_se=$'\e[0m'
-export LESS_TERMCAP_so=$'\e[01;33m'
-export LESS_TERMCAP_ue=$'\e[0m'
-export LESS_TERMCAP_us=$'\e[1;4;31m'
-
 # slack
 export SLACK_DEVELOPER_MENU=true
 
@@ -34,7 +20,7 @@ export COMPOSE_MENU=0
 
 # GitHub CLI
 if command -v gh >/dev/null 2>&1; then
-  export GH_TOKEN=$(gh auth token)
+  export GH_TELEMETRY=false
 fi
 
 # .zshrc.secretの読込

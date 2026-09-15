@@ -1,0 +1,22 @@
+root_dirs = ["~/private", "~/work"]
+
+# Maximum directory depth for repo discovery
+scan_depth = 2
+
+pinned_repos = [""]
+
+excluded_repos = [""]
+
+[watch]
+debounce_ms     = 500
+poll_fetch_secs = 30
+poll_local_secs = 5
+
+[ui]
+frame_rate      = 10
+update_position = "top-right" # Update notification position ("top-right" or "top-left")
+
+[graph]
+branches      = "all" # Branch filter: "all", "local", "remote", or "none"
+label_max_len = 24    # Max length for branch/tag labels
+show_stats    = true  # Show +N/-M diff stats per commit

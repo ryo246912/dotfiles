@@ -19,6 +19,15 @@ aws sts get-caller-identity --profile <profile>
 # sso : login sso
 aws sso login --profile <profile> && export AWS_PROFILE=<profile>
 
+# aws-vault : run command with temporary credentials [ex.aws-vault exec <profile> -- aws sts get-caller-identity]
+aws-vault exec <profile> --
+
+# aws-vault : login & export temporary credentials to environment variables
+eval $(aws-vault export <profile> --format=export-env)
+
+# aws-vault : clear cached sessions
+aws-vault clear <profile>
+
 # iam : display iam users
 aws iam list-users | fx
 
@@ -37,6 +46,9 @@ aws iam list-groups-for-user --user-name $(aws sts get-caller-identity --query "
 # iam : display mfadevices
 aws iam list-mfa-devices
 
+# organization : display organization account list
+aws organizations list-accounts
+
 # organization : display organization account
 aws organizations describe-organization
 
@@ -50,7 +62,10 @@ aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]'
 LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && aws logs describe-log-streams --log-group-name "$LOG_GROUP"
 
 # awslogs : [--start=<time> ex.2m,5h,1d,2w,YYYY/MM/DD]
-LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && awslogs get "$LOG_GROUP" --timestamp --start=6h | lnav -c ':set-text-view-mode raw'
+LOG_GROUP=$(aws logs describe-log-groups --query 'logGroups[].logGroupName' | jq -r '.[]' | fzf) && awslogs get "$LOG_GROUP" --timestamp --start=1h | lnav -c ':set-text-view-mode raw'
+
+# taws : taws in readonly mode
+aws-vault exec <profile> -- taws --readonly
 
 # aws option : [--filter:filter by server][--query: filter by client(jq)][--output:text,json,table]
 <option>

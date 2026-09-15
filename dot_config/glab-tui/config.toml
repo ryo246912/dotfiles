@@ -1,0 +1,11 @@
+# nvim と揃えて tokyonight 系にする
+theme_preset = "tokyo-night"
+
+[issues]
+columns = ["ID", "State", "Title", "Labels", "Assignees"]
+
+[mrs]
+columns = ["ID", "State", "Title", "Reviewers", "Labels"]
+
+[pipelines]
+columns = ["ID", "Status", "Ref"]

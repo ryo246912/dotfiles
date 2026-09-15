@@ -10,11 +10,4 @@ show_preview = true
 
 timezone = "+9"
 
-common_subcommands = [
-    "git",
-    "npm",
-    "gh",
-    "docker",
-    "docker-compose",
-    "make",
-]
+common_subcommands = ["git", "npm", "gh", "docker", "docker-compose", "make"]

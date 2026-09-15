@@ -37,7 +37,7 @@ tmux capture-pane -p -S -100 -t <pane_from>
 tmux select-layout tiled
 
 # restore resurrect file
-ln -sf <resurrect_file> ~/.local/share/tmux/resurrect/last && tmux run-shell ~/.config/tmux/plugins/tmux-resurrect/scripts/restore.sh
+ln -sf <resurrect_file> ~/.local/share/tmux/resurrect/last && tmux run-shell "$(mise where http:tmux-resurrect)/scripts/restore.sh"
 
 # relink resurrect file
 ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "hooks": {},
+  "claudecode": {
+    "hooks": {
+      "sessionStart": [
+        {
+          "matcher": "clear",
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
+      "sessionEnd": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
+      "preCompact": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+          "timeout": 30
+        }
+      ],
+      "postToolUse": [
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))) + \"\\u0000\"' | xargs -0 -r -- tsgo --noEmit --"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".toml\"))) + \"\\u0000\"' | xargs -0 -r -- taplo format --check --"
+        },
+        {
+          "matcher": "Write|Edit|MultiEdit",
+          "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+        }
+      ]
+    }
+  },
+  "copilot": {
+    "hooks": {
+      "sessionStart": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool copilot",
+          "timeout": 30
+        }
+      ],
+      "sessionEnd": [
+        {
+          "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool copilot",
+          "timeout": 30
+        }
+      ]
+    }
+  }
+}

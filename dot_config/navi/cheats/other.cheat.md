@@ -46,6 +46,9 @@ ffmpeg -i <input_file> -vf "fps=10" <input_file>.gif
 # gh-md-toc : generate table of contents
 gh-md-toc <markdown_file> --insert --no-backup
 
+# grip : preview a Markdown file in the browser [-b:open in browser]
+grip -b <markdown_file>
+
 # inkscape : convert from svg file to png file
 inkscape --export-filename="<output_file>.png" --export-width=<width> --export-height=<width> <input_file>
 
@@ -65,10 +68,13 @@ rclone lsd <remote>:<folder-name>
 rclone copy <remote>:<folder-name> <remote2>:<folder-name2> -P
 
 # renovate: dry-run remote
-LOG_LEVEL=debug renovate --token "$(ghtkn get)" --dry-run ryo246912/dotfiles
+RENOVATE_TOKEN=$(gh auth token) LOG_LEVEL=debug renovate --dry-run ryo246912/dotfiles
 
 # renovate: run local
-LOG_LEVEL=debug renovate --token "$(ghtkn get)" --dry-run --platform=local
+RENOVATE_TOKEN=$(gh auth token) LOG_LEVEL=debug renovate --dry-run --platform=local
+
+# renovate: create renovate dependency dashboard
+RENOVATE_TOKEN=$(gh auth token) renovate --platform github ryo246912/dotfiles
 
 # vim : move n rows
 :<n>

@@ -206,32 +206,32 @@ HideTrayTip() {
     TrayTip
 }
 ;「Space」+ 「Right_Control」
-Space & RControl::
-{
-    global ModifierStatus
-    if (ModifierStatus = 0)
-    {
-        ModifierStatus := 10
-        TrayTip "Modifier=Control"
-        SetTimer HideTrayTip, -800
-    }
-    else if (ModifierStatus = 10)
-    {
-        ModifierStatus := 11
-        TrayTip "Modifier=Control+Shift"
-        SetTimer HideTrayTip, -800
-    }
-    else if (ModifierStatus = 11)
-    {
-        ModifierStatus := 0
-        TrayTip "Modifier=None"
-        SetTimer HideTrayTip, -800
-    }
-    else
-    {
-        ModifierStatus := 0
-    }
-}
+; Space & RControl::
+; {
+;     global ModifierStatus
+;     if (ModifierStatus = 0)
+;     {
+;         ModifierStatus := 10
+;         TrayTip "Modifier=Control"
+;         SetTimer HideTrayTip, -800
+;     }
+;     else if (ModifierStatus = 10)
+;     {
+;         ModifierStatus := 11
+;         TrayTip "Modifier=Control+Shift"
+;         SetTimer HideTrayTip, -800
+;     }
+;     else if (ModifierStatus = 11)
+;     {
+;         ModifierStatus := 0
+;         TrayTip "Modifier=None"
+;         SetTimer HideTrayTip, -800
+;     }
+;     else
+;     {
+;         ModifierStatus := 0
+;     }
+; }
 ;「Space」+ 「Left_Alt」
 Space & LAlt::
 {

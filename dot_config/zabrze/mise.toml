@@ -5,8 +5,23 @@ trigger-pattern = "^mi$"
 
 [[snippets]]
 name            = "mise install interactive"
-snippet         = "GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//')"
+snippet         = "{ _a=($(mise ls --current | fzf -m | awk '{print $1}')); [[ ${#_a[@]} -gt 0 ]] && GITHUB_TOKEN=$(gh auth token) mise install --jobs=2 \"${_a[@]}\"; unset _a; }"
 trigger-pattern = "^mii$"
+
+[[snippets]]
+name            = "mise bootstrap packages apply"
+snippet         = "mise bootstrap packages apply"
+trigger-pattern = "^mba$"
+
+[[snippets]]
+name            = "mise bootstrap packages use"
+snippet         = "mise bootstrap packages use"
+trigger-pattern = "^mbu$"
+
+[[snippets]]
+name            = "mise bootstrap packages status"
+snippet         = "mise bootstrap packages status"
+trigger-pattern = "^mbs$"
 
 [[snippets]]
 name    = "mise ls --current"
@@ -15,7 +30,7 @@ trigger = "mls"
 
 [[snippets]]
 name    = "mise ls interactive"
-snippet = "mise ls $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//')"
+snippet = "{ _a=($(mise ls --current | fzf -m | awk '{print $1}')); [[ ${#_a[@]} -gt 0 ]] && mise ls \"${_a[@]}\"; unset _a; }"
 trigger = "mlss"
 
 [[snippets]]
@@ -40,7 +55,7 @@ trigger-pattern = "^mu$"
 
 [[snippets]]
 name            = "mise uninstall interactive"
-snippet         = "mise uninstall $(mise ls --current | fzf -m | awk '{printf \"%s \", $1}' | sed 's/ $//') --all"
+snippet         = "{ _a=($(mise ls --current | fzf -m | awk '{print $1}')); [[ ${#_a[@]} -gt 0 ]] && mise uninstall \"${_a[@]}\" --all; unset _a; }"
 trigger-pattern = "^mui$"
 
 [[snippets]]

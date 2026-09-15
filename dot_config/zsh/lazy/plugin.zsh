@@ -54,7 +54,6 @@ __zsh-auto-notify_atload() {
       "git log"
       "git show"
       "git rebase"
-      "gemini"
       "gh-dash"
       "gh-actions-dash"
       "lazygit"
@@ -79,6 +78,9 @@ zinit wait lucid light-mode blockf for \
 
 zinit wait lucid light-mode blockf for \
     @'azu/ni.zsh'
+
+zinit wait lucid light-mode for \
+    @'diverdale/colored-man-pages-plus'
 
 ### completion ###
 zinit wait lucid light-mode blockf for \
