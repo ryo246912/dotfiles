@@ -6,6 +6,8 @@
     "dot_config/sidebery/**",
     "dot_config/obsidian/**",
     "dot_config/navi/**",
+    "dot_config/rectangle/**",
+    "dot_config/vicinae/**",
     "**/bun.lock",
     "**/*.toml"
   ]
