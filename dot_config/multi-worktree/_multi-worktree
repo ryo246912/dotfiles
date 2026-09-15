@@ -11,7 +11,7 @@ _multi_worktree() {
         'status:各repoの状態確認'
         'sync:worktreeの内容をメインworktreeに同期（リポジトリ選択可）'
         'cd:worktreeディレクトリに移動'
-        'dev:devcontainerで実行、または --sbx で Docker Sandboxes を起動'
+        'dev:Docker Sandboxes でAIエージェントを起動（--devcontainer で devcontainer 実行）'
         'exec:worktreeの指定リポジトリディレクトリでコマンド実行'
         'open:VSCodeでworktreeを開く'
         'help:ヘルプを表示'
@@ -126,32 +126,31 @@ _multi_worktree() {
                     if [[ $CURRENT -eq 2 ]]; then
                         _describe 'task name' task_names
                     elif [[ $CURRENT -ge 3 ]]; then
-                        local sandbox_mode=false word current_word
+                        # 既定は Docker Sandboxes backend。--devcontainer のときだけ旧経路を補完する
+                        local devcontainer_mode=false word current_word
                         current_word="${words[CURRENT]}"
                         for word in "${words[@]}"; do
-                            if [[ "$word" == "--sbx" || "$word" == --sbx=* ]]; then
-                                sandbox_mode=true
+                            if [[ "$word" == "--devcontainer" ]]; then
+                                devcontainer_mode=true
                                 break
                             fi
                         done
 
-                        if [[ "$sandbox_mode" == true ]]; then
+                        if [[ "$devcontainer_mode" == false ]]; then
                             local -a sandbox_agents sandbox_opts
                             sandbox_agents=(claude codex copilot docker-agent gemini kiro opencode shell)
-                            sandbox_opts=(--name --name= --cli --cli= --)
+                            sandbox_opts=(--devcontainer --agent= --name= --branch= --template= --new --)
 
-                            if [[ "${words[CURRENT-1]}" == "--sbx" ]]; then
+                            if [[ "${words[CURRENT-1]}" == "--sbx" || "${words[CURRENT-1]}" == "--agent" ]]; then
                                 compadd -a sandbox_agents
-                            elif [[ "${words[CURRENT-1]}" == "--cli" ]]; then
-                                compadd sbx docker
                             elif [[ "$current_word" == --sbx=* ]]; then
                                 compadd -P '--sbx=' claude codex copilot docker-agent gemini kiro opencode shell
-                            elif [[ "$current_word" == --cli=* ]]; then
-                                compadd -P '--cli=' sbx docker
+                            elif [[ "$current_word" == --agent=* ]]; then
+                                compadd -P '--agent=' claude codex copilot docker-agent gemini kiro opencode shell
                             elif [[ "$current_word" == --* ]]; then
                                 compadd -a sandbox_opts
                             else
-                                _message 'agent arguments'
+                                compadd -a sandbox_agents
                             fi
                         else
                             local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/multi-worktree/config.toml"

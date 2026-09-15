@@ -1,5 +1,9 @@
 # ccmanager Docker Sandboxes 経由 AI Agent 対応
 
+> [!NOTE]
+> このプランは実装済みです。実際の使い方は [docs/docker-sandboxes.md](../docs/docker-sandboxes.md) を参照してください。
+> 調査時点の想定と実際の `sbx` CLI の仕様が違っていた箇所は、本ドキュメント内で修正しています。
+
 ## 概要
 
 - ccmanager の commandPresets に **Docker Sandboxes**（Docker製品、`sbx` CLI）経由で AI Agent を起動するプリセットを追加する
@@ -11,7 +15,8 @@
 
 **Sandbox 機能自体は無料（追加課金なし）。**
 
-- `sbx` CLI は Docker Desktop に付属（Docker Desktop は無料利用枠あり）
+- `sbx` は単体 CLI で、**Docker Desktop は不要**（macOS は `brew install docker/tap/sbx`、Windows は `winget install -h Docker.sbx`）
+- 利用には Docker ID でのサインイン（`sbx login`）が必要
 - Sandbox インフラ自体の費用はない
 - 課金されるのは各 Agent の API トークン費用のみ（通常の利用と同じ）
 
@@ -26,14 +31,16 @@
 
 **各 Agent のセッション保存先（devcontainer のマウント設定より）:**
 
-| Agent | セッションデータパス |
-|-------|---------------------|
-| Claude | `~/.claude` |
-| Codex | `~/.codex` |
-| Copilot | `~/.local/state/.copilot` |
-| Gemini | `~/.gemini` |
+| Agent   | セッションデータパス |
+| ------- | -------------------- |
+| Claude  | `~/.claude`          |
+| Codex   | `~/.codex`           |
+| Copilot | `~/.copilot`         |
+| Gemini  | `~/.gemini`          |
 
-**注意:** `~/.claude` のユーザーレベル設定は sandbox 内では読み込まれない。セッションデータ（`.local/share/`以下）とは別物。
+**注意:** sbx はホストと同じ絶対パスに workspace をマウントするため、sandbox 内の `$HOME` はホストとは別物になる。
+マウントしただけでは agent が `~/.claude` を見つけられないので、`CLAUDE_CONFIG_DIR` / `CODEX_HOME` を
+`/etc/sandbox-persistent.sh` に書き込んで明示する。
 
 ## 要件
 
@@ -141,13 +148,13 @@ mkdir -p ~/.gemini
 
 ## 技術的課題と対応策
 
-| 課題 | 対応策 |
-|------|--------|
-| `sbx` CLI のインストール | Docker Desktop の最新版が必要。`sbx --version` で確認 |
-| 各 Agent の実際のセッション保存パス | devcontainer のマウント設定で確認済み（claude: `~/.claude`, codex: `~/.codex`, copilot: `~/.local/state/.copilot`, gemini: `~/.gemini`） |
-| ccmanager の状態検出が sandbox 経由で動作するか | `detectionStrategy: "claude"` は出力パターンで検出するため、sandbox 内の出力がそのまま流れてくれば動作するはず。実機で要確認 |
-| `sbx run` の引数渡し構文（`--` の位置）| `sbx run <agent> <workspaces...> -- <agent-args...>` が正しい構文か要確認 |
-| `~/.claude` 設定が読まれない | MCP サーバー設定等が必要な場合は `.claude/settings.json` に記載が必要 |
+| 課題                                            | 対応策                                                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `sbx` CLI のインストール                        | Docker Desktop の最新版が必要。`sbx --version` で確認                                                                                    |
+| 各 Agent の実際のセッション保存パス             | devcontainer のマウント設定で確認済み（claude: `~/.claude`, codex: `~/.codex`, copilot: `~/.local/state/.copilot`, gemini: `~/.gemini`） |
+| ccmanager の状態検出が sandbox 経由で動作するか | `detectionStrategy: "claude"` は出力パターンで検出するため、sandbox 内の出力がそのまま流れてくれば動作するはず。実機で要確認             |
+| `sbx run` の引数渡し構文（`--` の位置）         | `sbx run <agent> <workspaces...> -- <agent-args...>` が正しい構文か要確認                                                                |
+| `~/.claude` 設定が読まれない                    | MCP サーバー設定等が必要な場合は `.claude/settings.json` に記載が必要                                                                    |
 
 ## テスト計画
 
@@ -173,3 +180,22 @@ mkdir -p ~/.gemini
 - [Docker Sandboxes Architecture](https://docs.docker.com/ai/sandboxes/architecture/)
 - `dot_config/ccmanager/config.json` - 既存プリセット設定
 - `dot_local/bin/` - 既存カスタムスクリプト群
+
+## 実装結果（調査時点との差分）
+
+| 調査時点の想定                                   | 実際の仕様 / 実装                                                                            |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `sbx` は Docker Desktop 付属                     | 単体 CLI。Docker Desktop 不要（`brew install docker/tap/sbx`）                               |
+| `sbx run <agent> <dirs...> -- <args>` で毎回起動 | workspace は**作成時にしか指定できない**ため `sbx create` → `sbx run <name>` に分離          |
+| `--name` は `sbx run --name <name>`              | `--name=<name>` 形式。既存 sandbox には `sbx run <name>` でアタッチ（agent 名は渡さない）    |
+| `docker sandbox` への fallback                   | 現行製品の CLI は `sbx` のみのため fallback は削除                                           |
+| `~/.claude` をマウントすれば読まれる             | sandbox 内の `$HOME` が別物のため `CLAUDE_CONFIG_DIR` / `CODEX_HOME` の明示が必要            |
+| ccmanager からのみ利用                           | `multi-worktree dev` の既定バックエンドも sandbox に変更（devcontainer は `--devcontainer`） |
+
+成果物:
+
+- `dot_local/bin/executable_sbx-agent` - `sbx` ラッパー（ccmanager プリセットから呼ばれる）
+- `dot_local/bin/executable_multi-worktree` - `dev` サブコマンドの sandbox backend
+- `dot_config/ccmanager/config.json` - `sbx` / `sbx-codex` / `sbx-copilot` / `sbx-gemini` プリセット
+- `dot_config/multi-worktree/config.toml.sample` - `[settings.sandbox]`
+- `docs/docker-sandboxes.md` - 使い方と devcontainer 比較

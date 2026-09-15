@@ -1,36 +1,242 @@
 #!/usr/bin/env bash
-# sbx-agent <agent> [agent-args...]
-# Usage: sbx-agent claude
-#        sbx-agent codex resume --yolo
+#
+# sbx-agent: Docker Sandboxes (sbx) 経由で AI Agent を起動するラッパー
+#
+# devcontainer で行っていた「ホストの agent 設定をマウントして隔離環境で動かす」を
+# Docker Sandboxes に置き換えるためのスクリプト。
+#
+# Usage:
+#   sbx-agent <agent> [options] [-- <agent-args>...]
+#
+#   agent   : claude | codex | copilot | gemini など sbx が対応する agent 名
+#
+# Options:
+#   --name NAME      sandbox 名を明示指定（既定: <repo>-<branch>-<agent>）
+#   --branch NAME    branch mode で起動する（auto を渡すと sbx が命名）
+#   --template REF   sandbox template の OCI 参照を指定
+#   --workspace DIR  primary workspace（既定: カレントディレクトリ）
+#   --mount PATH     追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
+#   --new            既存 sandbox を再利用せず必ず新規作成する
+#   --no-config      agent 設定ディレクトリの自動マウントを行わない
+#   -h, --help       このヘルプを表示
+#
+# Environment:
+#   SBX_AGENT_MOUNTS  追加 workspace を `,` 区切りで指定（--mount と併用可）
+#
+# 参考: https://docs.docker.com/reference/cli/sbx/
+set -uo pipefail
+
+log_info() { printf '\033[0;34m[INFO]\033[0m %s\n' "$1" >&2; }
+log_warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$1" >&2; }
+log_error() { printf '\033[0;31m[ERROR]\033[0m %s\n' "$1" >&2; }
+
+show_usage() {
+    sed -n '3,26p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 1
+fi
+
+case "$1" in
+    -h | --help)
+        show_usage
+        exit 0
+        ;;
+    -*)
+        log_error "最初の引数には agent 名を指定してください (例: sbx-agent claude)"
+        exit 1
+        ;;
+esac
+
 AGENT="$1"
 shift
 
-# Agent ごとのセッションデータパスを解決
+SANDBOX_NAME=""
+BRANCH=""
+TEMPLATE=""
+WORKSPACE="$PWD"
+FORCE_NEW=false
+MOUNT_CONFIG=true
+EXTRA_MOUNTS=()
+AGENT_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --name)
+            shift
+            [[ $# -eq 0 ]] && { log_error "--name には値が必要です"; exit 1; }
+            SANDBOX_NAME="$1"
+            ;;
+        --name=*) SANDBOX_NAME="${1#*=}" ;;
+        --branch)
+            shift
+            [[ $# -eq 0 ]] && { log_error "--branch には値が必要です"; exit 1; }
+            BRANCH="$1"
+            ;;
+        --branch=*) BRANCH="${1#*=}" ;;
+        --template)
+            shift
+            [[ $# -eq 0 ]] && { log_error "--template には値が必要です"; exit 1; }
+            TEMPLATE="$1"
+            ;;
+        --template=*) TEMPLATE="${1#*=}" ;;
+        --workspace)
+            shift
+            [[ $# -eq 0 ]] && { log_error "--workspace には値が必要です"; exit 1; }
+            WORKSPACE="$1"
+            ;;
+        --workspace=*) WORKSPACE="${1#*=}" ;;
+        --mount)
+            shift
+            [[ $# -eq 0 ]] && { log_error "--mount には値が必要です"; exit 1; }
+            EXTRA_MOUNTS+=("$1")
+            ;;
+        --mount=*) EXTRA_MOUNTS+=("${1#*=}") ;;
+        --new) FORCE_NEW=true ;;
+        --no-config) MOUNT_CONFIG=false ;;
+        -h | --help)
+            show_usage
+            exit 0
+            ;;
+        --)
+            shift
+            AGENT_ARGS=("$@")
+            break
+            ;;
+        *) AGENT_ARGS+=("$1") ;;
+    esac
+    shift
+done
+
+if ! command -v sbx >/dev/null 2>&1; then
+    log_error "sbx コマンドが見つかりません。'brew install docker/tap/sbx' でインストールしてください"
+    exit 1
+fi
+
+# agent ごとの設定ディレクトリと、sandbox 内でそれを参照させる環境変数
+#   sbx はホストと同じ絶対パスに workspace をマウントするため、sandbox 内の
+#   $HOME は別物になる。CLAUDE_CONFIG_DIR / CODEX_HOME を明示して読ませる。
+AGENT_CONFIG_DIR=""
+AGENT_CONFIG_ENV=""
 case "$AGENT" in
-  claude)   SESSION_DIR="${HOME}/.claude" ;;
-  codex)    SESSION_DIR="${HOME}/.codex" ;;
-  copilot)  SESSION_DIR="${HOME}/.local/state/.copilot" ;;
-  gemini)   SESSION_DIR="${HOME}/.gemini" ;;
-  *)        SESSION_DIR="" ;;
+    claude)
+        AGENT_CONFIG_DIR="${HOME}/.claude"
+        AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
+        ;;
+    codex)
+        AGENT_CONFIG_DIR="${HOME}/.codex"
+        AGENT_CONFIG_ENV="CODEX_HOME"
+        ;;
+    copilot) AGENT_CONFIG_DIR="${HOME}/.copilot" ;;
+    gemini) AGENT_CONFIG_DIR="${HOME}/.gemini" ;;
 esac
 
-# サンドボックス名: {repo}-{branch}-{agent}
-# hostname制約に合わせて英数字とハイフンのみ、先頭末尾のハイフンを除去
-REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "repo")
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-SANDBOX_NAME=$(printf '%s-%s-%s' "$REPO" "$BRANCH" "$AGENT" \
-  | tr '[:upper:]' '[:lower:]' \
-  | tr -cs 'a-z0-9-' '-' \
-  | sed 's/^-//;s/-$//')
+# sandbox 名: <repo>-<branch>-<agent>
+# sbx の sandbox 名は hostname 相当のため、英数字とハイフンのみに正規化する
+sanitize_name() {
+    printf '%s' "$1" \
+        | tr -d '\n' \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed -E 's#[^a-z0-9]+#-#g; s#-+#-#g; s#^-+##; s#-+$##'
+}
 
-# 既存サンドボックスがあれば再アタッチ
-if sbx ls 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "$SANDBOX_NAME"; then
-  exec sbx run "$SANDBOX_NAME" -- "$@"
+if [[ -z "$SANDBOX_NAME" ]]; then
+    repo=$(git -C "$WORKSPACE" rev-parse --show-toplevel 2>/dev/null) || repo="$WORKSPACE"
+    branch=$(git -C "$WORKSPACE" rev-parse --abbrev-ref HEAD 2>/dev/null) || branch=""
+    # commit の無いリポジトリでは --abbrev-ref HEAD が "HEAD" を返す
+    [[ -z "$branch" || "$branch" == "HEAD" ]] && branch="main"
+    SANDBOX_NAME=$(sanitize_name "$(basename "$repo")-${branch}-${AGENT}")
+    [[ -z "$SANDBOX_NAME" ]] && SANDBOX_NAME="sbx-${AGENT}"
 fi
 
-# 新規作成: カレントディレクトリを主ワークスペース、セッションデータを追加マウント
-if [ -n "$SESSION_DIR" ]; then
-  exec sbx run --name "$SANDBOX_NAME" "$AGENT" "." "$SESSION_DIR" -- "$@"
-else
-  exec sbx run --name "$SANDBOX_NAME" "$AGENT" "." -- "$@"
+# workspace を絶対パス化する（sbx はホストの絶対パスをそのまま sandbox 内にマウントする）
+WORKSPACE=$(cd "$WORKSPACE" 2>/dev/null && pwd) || {
+    log_error "workspace が見つかりません: $WORKSPACE"
+    exit 1
+}
+
+# 追加 workspace の組み立て
+#   - 環境変数 SBX_AGENT_MOUNTS（`:` 区切り）→ --mount → agent 設定ディレクトリ の順
+#   - `<path>:ro` は sbx の read-only マウント指定なので接尾辞として温存する
+MOUNTS=()
+add_mount() {
+    local spec="$1"
+    local path="$spec"
+    local suffix=""
+
+    if [[ "$spec" == *:ro ]]; then
+        path="${spec%:ro}"
+        suffix=":ro"
+    fi
+
+    path="${path/#\~/$HOME}"
+    if [[ ! -e "$path" ]]; then
+        log_warn "存在しないためマウントをスキップします: $path"
+        return
+    fi
+
+    MOUNTS+=("${path}${suffix}")
+}
+
+if [[ -n "${SBX_AGENT_MOUNTS:-}" ]]; then
+    # `:` は read-only 指定の `:ro` と衝突するため `,` 区切りにしている
+    IFS=',' read -ra _env_mounts <<< "$SBX_AGENT_MOUNTS"
+    for spec in "${_env_mounts[@]}"; do
+        [[ -n "$spec" ]] && add_mount "$spec"
+    done
 fi
+
+for spec in ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"}; do
+    add_mount "$spec"
+done
+
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    # devcontainer.json で bind mount していたホスト設定を workspace として渡す
+    add_mount "${HOME}/.config/git/config:ro"
+    add_mount "${HOME}/.config/gh:ro"
+    add_mount "${HOME}/.agents:ro"
+    [[ -n "$AGENT_CONFIG_DIR" ]] && add_mount "$AGENT_CONFIG_DIR"
+fi
+
+sandbox_exists() {
+    sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$SANDBOX_NAME"
+}
+
+# sandbox 内で永続化したい環境変数を /etc/sandbox-persistent.sh に書き込む。
+# sandbox 作成時にしか workspace を追加できないため、作成直後に一度だけ実行する。
+persist_agent_env() {
+    [[ -z "$AGENT_CONFIG_ENV" || -z "$AGENT_CONFIG_DIR" ]] && return 0
+    [[ ! -d "$AGENT_CONFIG_DIR" ]] && return 0
+
+    if ! sbx exec -d "$SANDBOX_NAME" bash -c \
+        "echo 'export ${AGENT_CONFIG_ENV}=${AGENT_CONFIG_DIR}' >> /etc/sandbox-persistent.sh" 2>/dev/null; then
+        log_warn "${AGENT_CONFIG_ENV} の永続化に失敗しました。sandbox 内で手動設定してください"
+    fi
+}
+
+if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
+    create_cmd=(sbx create --name="$SANDBOX_NAME")
+    [[ -n "$TEMPLATE" ]] && create_cmd+=(--template "$TEMPLATE")
+    create_cmd+=("$AGENT" "$WORKSPACE")
+    create_cmd+=(${MOUNTS[@]+"${MOUNTS[@]}"})
+
+    log_info "sandbox を作成します: $SANDBOX_NAME"
+    log_info "  workspace: $WORKSPACE"
+    [[ ${#MOUNTS[@]} -gt 0 ]] && log_info "  追加 workspace: ${MOUNTS[*]}"
+
+    if ! "${create_cmd[@]}"; then
+        log_error "sandbox の作成に失敗しました"
+        exit 1
+    fi
+
+    persist_agent_env
+fi
+
+# 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
+run_cmd=(sbx run "$SANDBOX_NAME")
+[[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
+[[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
+
+exec "${run_cmd[@]}"

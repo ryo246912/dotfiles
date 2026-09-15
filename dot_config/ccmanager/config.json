@@ -86,23 +86,23 @@
         "id": "sbx-codex",
         "name": "Codex (Docker Sandbox)",
         "command": "sbx-agent",
-        "args": ["codex", "resume", "--yolo"],
-        "fallbackArgs": ["codex", "--yolo"],
+        "args": ["codex", "--", "resume", "--yolo"],
+        "fallbackArgs": ["codex", "--", "--yolo"],
         "detectionStrategy": "codex"
       },
       {
         "id": "sbx-copilot",
         "name": "Copilot (Docker Sandbox)",
         "command": "sbx-agent",
-        "args": ["copilot", "--resume", "--yolo"],
-        "fallbackArgs": ["copilot", "--yolo"],
+        "args": ["copilot", "--", "--resume", "--yolo"],
+        "fallbackArgs": ["copilot", "--", "--yolo"],
         "detectionStrategy": "github-copilot"
       },
       {
         "id": "sbx-gemini",
         "name": "Gemini (Docker Sandbox)",
         "command": "sbx-agent",
-        "args": ["gemini", "-s"],
+        "args": ["gemini", "--", "-s"],
         "fallbackArgs": ["gemini"],
         "detectionStrategy": "gemini"
       }

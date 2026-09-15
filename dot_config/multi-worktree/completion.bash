@@ -101,28 +101,29 @@ _multi_worktree_completion() {
                 local task_names=$(multi-worktree list 2>/dev/null | awk '{print $1}')
                 COMPREPLY=($(compgen -W "$task_names" -- "$cur"))
             elif [[ $cword -ge 3 ]]; then
-                local sandbox_mode=false word
+                # 既定は Docker Sandboxes backend。--devcontainer のときだけ旧経路を補完する
+                local devcontainer_mode=false word
                 for word in "${words[@]}"; do
-                    if [[ "$word" == "--sbx" || "$word" == --sbx=* ]]; then
-                        sandbox_mode=true
+                    if [[ "$word" == "--devcontainer" ]]; then
+                        devcontainer_mode=true
                         break
                     fi
                 done
 
-                if [[ "$sandbox_mode" == true ]]; then
+                if [[ "$devcontainer_mode" == false ]]; then
                     local sandbox_agents="claude codex copilot docker-agent gemini kiro opencode shell"
-                    if [[ "$prev" == "--sbx" ]]; then
+                    if [[ "$prev" == "--sbx" || "$prev" == "--agent" ]]; then
                         COMPREPLY=($(compgen -W "$sandbox_agents" -- "$cur"))
-                    elif [[ "$prev" == "--cli" ]]; then
-                        COMPREPLY=($(compgen -W "sbx docker" -- "$cur"))
                     elif [[ "$cur" == --sbx=* ]]; then
                         COMPREPLY=($(compgen -W "$sandbox_agents" -- "${cur#--sbx=}"))
                         COMPREPLY=("${COMPREPLY[@]/#/--sbx=}")
-                    elif [[ "$cur" == --cli=* ]]; then
-                        COMPREPLY=($(compgen -W "sbx docker" -- "${cur#--cli=}"))
-                        COMPREPLY=("${COMPREPLY[@]/#/--cli=}")
+                    elif [[ "$cur" == --agent=* ]]; then
+                        COMPREPLY=($(compgen -W "$sandbox_agents" -- "${cur#--agent=}"))
+                        COMPREPLY=("${COMPREPLY[@]/#/--agent=}")
                     elif [[ "$cur" == --* ]]; then
-                        COMPREPLY=($(compgen -W "--name --name= --cli --cli= --" -- "$cur"))
+                        COMPREPLY=($(compgen -W "--devcontainer --agent= --name= --branch= --template= --new --" -- "$cur"))
+                    else
+                        COMPREPLY=($(compgen -W "$sandbox_agents" -- "$cur"))
                     fi
                 else
                     # [dev_commands] セクションからコマンド名を補完
