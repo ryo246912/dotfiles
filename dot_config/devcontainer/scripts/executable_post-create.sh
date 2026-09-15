@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
+bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
+
 # .claude.json のコピー（既存の処理）
 claude_config_host=~/.config/claude-config-host.json
 if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then
