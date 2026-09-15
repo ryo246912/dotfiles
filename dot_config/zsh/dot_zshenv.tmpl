@@ -33,19 +33,32 @@ fi
 # （brew 版 git より /usr/bin/git が優先される、GNU 版 sed/grep/find が BSD 版に負ける等）。
 # path_helper より後に走る .zprofile で同じ関数を呼び直して打ち消す。
 # 非ログインシェルは .zprofile を読まないが path_helper も走らないため、ここでの適用で足りる。
+#
+# 関数の責務は PATH の順序だけに限定する。`brew shellenv` や `mise activate` のように
+# PATH 以外（HOMEBREW_PREFIX・MANPATH・INFOPATH・MISE_SHELL 等）も触るものは関数の外に置き、
+# シェルごとに1回だけ流す。INFOPATH のように prepend される変数を再適用で二重に積まないため。
 __zsh_setup_path() {
   # パスの重複を除く（関数内でローカル化しないよう -g を付ける）
   typeset -gU path PATH
 
+  # mise shims は brew の bin より前に置く（.chezmoi.toml.tmpl の post-apply hook と同じ理由:
+  # 後ろだと実 Homebrew 版の gh 等が mise の aqua shim を shadow する）。
+  # HOMEBREW_PREFIX は下の `brew shellenv` が export する。brew 未導入なら
+  # 既定値のディレクトリが存在せず (N) で落ちる。
+  local mise_shims="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims"
+  local brew_prefix="${HOMEBREW_PREFIX:-/opt/homebrew}"
+
   if [ "$(uname)" = "Darwin" ]; then
     export ANDROID_HOME=$HOME/Library/Android/sdk
     path=(
+      $mise_shims(N)
+      $brew_prefix/{bin,sbin}(N)
       $HOME/{,.local/}{,s}bin(N)
       /{opt,usr}/local/{,s}bin(N)
-      /opt/homebrew/opt/coreutils/libexec/gnubin(N)
-      /opt/homebrew/opt/findutils/libexec/gnubin(N)
-      /opt/homebrew/opt/grep/libexec/gnubin(N)
-      /opt/homebrew/opt/gnu-sed/libexec/gnubin(N)
+      $brew_prefix/opt/coreutils/libexec/gnubin(N)
+      $brew_prefix/opt/findutils/libexec/gnubin(N)
+      $brew_prefix/opt/grep/libexec/gnubin(N)
+      $brew_prefix/opt/gnu-sed/libexec/gnubin(N)
       $HOME/.cargo/bin(N)
       $HOME/go/bin(N)
       $ANDROID_HOME/emulator(N)
@@ -54,6 +67,7 @@ __zsh_setup_path() {
     )
   else
     path=(
+      $mise_shims(N)
       $HOME/{,.local/}{,s}bin(N)
       /{opt,usr}/local/{,s}bin(N)
       $HOME/.cargo/bin(N)
@@ -61,22 +75,16 @@ __zsh_setup_path() {
       $path
     )
   fi
+}
 
-  if [ "$(uname)" = "Darwin" ]; then
+# PATH 以外も設定するため関数の外（= シェルごとに1回だけ）で流す。
+# ここでの PATH への prepend は直後の __zsh_setup_path が組み直すので順序には影響しない。
+if [ "$(uname)" = "Darwin" ]; then
 {{ if (lookPath "brew") -}}
 {{ output "brew" "shellenv" | trim }}
 {{- end }}
-  fi
+fi
 
-  # mise shims は /opt/homebrew/bin より前に置く（.chezmoi.toml.tmpl の post-apply hook と
-  # 同じ理由: 後ろだと実 Homebrew 版の gh 等が mise の aqua shim を shadow する）。
-  # 後述の `mise activate --shims` と重複するが、.zprofile からの再適用では
-  # mise activate を流さずに順序だけ戻したいのでここでも明示する。
-  path=(
-    ${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}/shims(N)
-    $path
-  )
-}
 __zsh_setup_path
 
 # HOST_ENV をホスト名で解決する
