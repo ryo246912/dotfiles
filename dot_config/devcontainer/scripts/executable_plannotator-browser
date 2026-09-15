@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+url=${1:?"Plannotator URL is required"}
+port_file=${HOME}/.plannotator-host-port
+
+if [ ! -s "$port_file" ]; then
+	printf 'ホスト側portを取得できません。post-start処理を再実行してください。\n' >&2
+	exit 1
+fi
+
+host_port=$(cat "$port_file")
+if ! [[ $host_port =~ ^[0-9]+$ ]]; then
+	printf '保存されたhost portが不正です。post-start処理を再実行してください。\n' >&2
+	exit 1
+fi
+container_port=${PLANNOTATOR_PORT:-19432}
+url_pattern="^https?://(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${container_port}([/?#]|$)"
+if ! [[ $url =~ $url_pattern ]]; then
+	printf 'Plannotator URLのportをhost用に変換できませんでした: %s\n' "$url" >&2
+	exit 1
+fi
+host_url=$(printf '%s\n' "$url" | sed -E "s#(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${container_port}#localhost:${host_port}#")
+printf -v host_url_escaped '%q' "$host_url"
+
+# devcontainerからmacOS hostの既存browserへreview URLを渡す。
+if timeout 5 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=2 \
+	mac-host "open ${host_url_escaped}" 2>/dev/null; then
+	printf 'Plannotator reviewをhost browserで開きました: %s\n' "$host_url"
+else
+	printf '自動でbrowserを開けませんでした。次のURLを開いてください: %s\n' "$host_url" >&2
+fi
