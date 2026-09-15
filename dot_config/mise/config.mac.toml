@@ -63,9 +63,11 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
 "brew-cask:obsidian"              = "latest" # 1.13.4
 "brew-cask:overview"              = "latest" # 1.2.3-beta
+"brew-cask:rectangle"             = "latest" # 1.100
 "brew-cask:slack"                 = "latest" # 4.51.180
 "brew-cask:syncthing-app"         = "latest" # 2.1.2-1
 "brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
 "brew-cask:visual-studio-code"    = "latest" # 1.106.3
 "brew-cask:wezterm@nightly"       = "latest"
 
