@@ -45,10 +45,6 @@
     - [ ] 設定で`Vimium Options.json`をインポート
   - [ ] Tab Position Options
 
-- [ ] Raycast
-  - [ ] `Raycast.rayconfig`をインポート
-  - [ ] 設定の管理方法と Tinycast との比較は [Raycast と Tinycast](raycast-tinycast.md) を参照
-
 - [ ] Google日本語入力
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
 
