@@ -54,7 +54,7 @@ dependencies:
       alias: find-skills
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
     - git: DietrichGebert/ponytail
-      ref: v4.9.0
+      ref: v4.10.0
       alias: ponytail
   mcp: []
 includes: auto
