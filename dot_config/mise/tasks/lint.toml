@@ -19,8 +19,8 @@ description = "Run zizmor"
 run         = "GH_TOKEN=$(gh auth token) zizmor --pedantic --min-severity=low .github/workflows"
 
 ["lint:pinact"]
-description = "Run pinact -check"
-run         = "pinact run -check"
+description = "Run pinact --check"
+run         = "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run --check"
 
 ["lint:toml"]
 description = "Run lint TOML files"
