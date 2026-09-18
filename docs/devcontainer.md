@@ -34,24 +34,19 @@ devcontainer 専用の SSH 鍵を発行し、[SSH コミット署名](https://do
 に切り替えています。ホスト通知用の `id_docker_devcontainer` 鍵とは用途が異なるため、
 署名専用の鍵を別に発行して分離しています。
 
-### 初回セットアップ（ホスト側で一度だけ実行）
+### 初回セットアップ
 
-```bash
-# 1. 署名専用の SSH 鍵を発行（既に存在する場合はスキップ）
-if [ ! -f ~/.ssh/id_docker_devcontainer_sign ]; then
-  ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_docker_devcontainer_sign \
-    -C "devcontainer commit signing"
-fi
+署名専用の SSH 鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`
+（`executable_initialize.sh`、後述）が無ければ自動生成するため、手動での鍵生成は不要です。
+`devcontainer up` 実行時にこのコマンドの出力に生成した公開鍵が表示されるので、それを
+GitHub に **Signing Key** として登録してください（初回のみ）:
 
-# 2. 公開鍵を GitHub に "Signing Key" として登録
-#    GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
-cat ~/.ssh/id_docker_devcontainer_sign.pub
+```text
+GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
 ```
 
 `dot_config/devcontainer/devcontainer.json` はこの鍵（秘密鍵・公開鍵とも）を
 `/home/vscode/.ssh/id_docker_devcontainer_sign(.pub)` に読み取り専用でマウントします。
-`mounts` はファイルの存在を前提とするため、上記の鍵生成を行う前に `devcontainer up` すると
-マウント自体が失敗します（`id_docker_devcontainer` と同様）。必ず先に鍵を生成してください。
 `postCreateCommand`（`executable_post-create.sh`）が鍵の存在を検知すると、コンテナ内の
 `~/.gitconfig` に以下を設定します（include で読み込んだホストの GPG 署名設定より後に
 書き込まれるため、後勝ちでこちらが有効になります）:
@@ -73,6 +68,31 @@ git log --show-signature -1
 ```
 
 GitHub 上でも、push したコミットに `Verified` バッジが付くことを確認してください。
+
+## mounts の source が無いことによるコンテナ作成失敗の防止
+
+devcontainer.json の `mounts` は `docker run --mount` として処理されます。レガシーな `-v`
+（bind mount）と違い、`--mount` は host 側の source パスが存在しないと自動生成せず、
+`invalid mount config for type "bind": bind source path does not exist` でコンテナ作成自体が
+失敗します（target 側はコンテナ内に新規で作られるので問題になりません）。
+
+このリポジトリの `mounts` には、ツール未実行だと存在しないディレクトリ（`~/.config/gh` 等）や、
+一度も生成していないと存在しないファイル（devcontainer 専用の SSH 鍵、`~/.claude.json` 等）が
+含まれるため、`initializeCommand`（コンテナ作成前にホスト側で実行される devcontainer.json の
+フック）で事前に用意しています:
+
+```jsonc
+"initializeCommand": "bash ${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh"
+```
+
+`dot_config/devcontainer/scripts/executable_initialize.sh` は各 mount の source を種類ごとに
+（ディレクトリは `mkdir -p`、空でよいファイルは `touch`、JSON は `{}`、SSH 鍵は `ssh-keygen` で
+生成）用意し、既に存在するものには触れません。**`mounts` を変更したら、このスクリプトも合わせて
+更新してください。**
+
+`~/.config/git/config` や `~/.config/devcontainer/scripts` のように chezmoi apply 済みなら
+必ず存在するはずのパスは対象外にしています。ここが無い場合はホスト側のセットアップ自体に
+問題があるため、意図的にエラーで気付けるようにしています。
 
 ## devcontainer からホストへの通知設定（macOS のみ）
 
