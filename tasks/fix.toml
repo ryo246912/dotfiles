@@ -5,13 +5,13 @@ description = "Run all formatters"
 ["fix:action"]
 description = "Run fix actions files"
 run = [
-    "GH_TOKEN=$(ghtkn get) pinact run",
+    "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run",
     "disable-checkout-persist-credentials",
 ]
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
-run         = "GH_TOKEN=$(ghtkn get) pinact run"
+run         = "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run"
 
 ["fix:toml"]
 description = "Run fix TOML files"
