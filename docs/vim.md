@@ -111,6 +111,14 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 
 このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
 
+## コメントアウトの toggle
+
+`tpope/vim-commentary` を導入済み(`dot_config/nvim/lua/plugins/editor.lua`)。`gc` operator でコメントアウトの toggle ができる(すでにコメントアウトされていれば解除される)。
+
+- カーソル行だけを toggle : `gcc`
+- 選択行(ビジュアルモード)を toggle : 範囲選択→ `gc`
+- motion/テキストオブジェクトと組み合わせて toggle : 例. `gcap`(段落), `gc3j`(カーソル行+下3行)
+
 ## help
 
 tagsファイルがあると以下が使える
