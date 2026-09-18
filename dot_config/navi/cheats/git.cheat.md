@@ -310,7 +310,7 @@ $ pick_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
   <(git symbolic-ref --short refs/remotes/origin/HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
-  --- --column 1
+  --- --column 1 --header 'pick_start_commit: select the branch to log commits from'
 $ pick_start_commit: git log "<pick_branch>" \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
