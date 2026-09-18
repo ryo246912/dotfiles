@@ -22,6 +22,22 @@ echo "✓ ホストの git config を設定しました"
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 
+# コミット署名: ホストの個人GPG秘密鍵はコンテナにマウントしていないため、
+# include した host config の GPG 署名設定を devcontainer 専用の SSH 鍵で上書きする
+# （書き込み順の後勝ちで include.path より優先される。詳細は docs/devcontainer.md 参照）。
+signing_key=~/.ssh/id_docker_devcontainer_sign
+if [ -f "${signing_key}" ]; then
+	git config --global gpg.format ssh
+	git config --global user.signingkey "${signing_key}"
+	allowed_signers=~/.config/git/allowed_signers
+	mkdir -p "$(dirname "$allowed_signers")"
+	printf '%s %s\n' "$(git config user.email)" "$(cat "${signing_key}.pub")" >"$allowed_signers"
+	git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
+	echo "✓ devcontainer専用のSSH鍵でコミット署名を設定しました"
+else
+	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないため、コミット署名設定をスキップしました"
+fi
+
 # claude-account2 ディレクトリを作成
 account2_dir="${HOME}/.claude-account2"
 mkdir -p "${account2_dir}"
