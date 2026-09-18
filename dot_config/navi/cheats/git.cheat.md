@@ -311,7 +311,7 @@ $ pick_branch: cat \
   <(git symbolic-ref --short refs/remotes/origin/HEAD) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
-$ pick_start_commit: git log <pick_branch> \
+$ pick_start_commit: git log "<pick_branch>" \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
