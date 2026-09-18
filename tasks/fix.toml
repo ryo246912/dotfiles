@@ -4,7 +4,10 @@ description = "Run all formatters"
 
 ["fix:action"]
 description = "Run fix actions files"
-run         = ["GH_TOKEN=$(ghtkn get) pinact run", "disable-checkout-persist-credentials"]
+run = [
+    "GH_TOKEN=$(ghtkn get) pinact run",
+    "disable-checkout-persist-credentials",
+]
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
