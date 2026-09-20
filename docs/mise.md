@@ -495,8 +495,9 @@ ghui の config は chezmoi 管理のまま維持する。`mise bootstrap` の�
 
 ## `mise doctor project`（プロジェクト診断）
 
-mise 2026.9.6 以降、`[doctor.checks.<name>]` に「このリポジトリが前提にしている環境」を
-宣言しておき、`mise doctor project` でまとめて検証できる。機能自体は 2026.9.6 で入ったが、
+mise 2026.9.6 以降、`[doctor.checks.<name>]` に「前提にしている環境」を宣言しておき、
+`mise doctor project` でまとめて検証できる。本リポジトリの check は
+`dot_config/mise/config.toml`（global）に置いている。機能自体は 2026.9.6 で入ったが、
 `dot_config/mise/config.toml` の `min_version` はこの機能の要求水準ではなく、採用した mise の
 バージョンに合わせて 2026.9.10 にしている。
 
@@ -508,6 +509,12 @@ mise doctor project --json
 通常の `mise doctor` は mise 自身の診断のみで、宣言した check は走らない。ディレクトリ
 移動や task 実行でも自動実行されず、明示的に叩いたときだけ実行される。check は `jobs`
 設定に従って並行実行され、1つ落ちても他は最後まで走る。
+
+**global config の check は「`mise doctor project` を叩いたディレクトリ」を root として
+走る**（project config の check と違い、宣言元のディレクトリに固定されない）。そのため
+リポジトリ固有の前提を global に置くときは、対象外のリポジトリで実行されても落ちないよう
+条件を付ける必要がある（`lefthook` の check が `lefthook.yml` の有無で早期 exit しているのは
+このため）。
 
 各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
 `shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が

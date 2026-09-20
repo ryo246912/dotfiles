@@ -29,29 +29,3 @@ lefthook install
 [[watch_files]]
 patterns = ["lefthook.yml"]
 run      = "lefthook install"
-
-# mise doctor project で「このリポジトリが前提にしている環境」をまとめて検証する。
-# 通常の mise doctor や task 実行では走らず、明示的に叩いたときだけ実行される。
-[doctor.checks.chezmoi]
-description = "chezmoi is installed and initialized"
-hint        = "Install tools with `mise install` and initialize chezmoi (see docs/setup.md)."
-run         = 'src="$(chezmoi source-path)" && git -C "$src" rev-parse --is-inside-work-tree >/dev/null'
-timeout     = "5s"
-
-[doctor.checks.lefthook]
-description = "lefthook pre-push hook is installed in this repository"
-hint        = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`)."
-run         = 'grep -q lefthook "$(git rev-parse --git-path hooks/pre-push)"'
-timeout     = "5s"
-
-[doctor.checks.gh-auth]
-description = "gh can issue a token for the lint tasks"
-hint        = "Run `gh auth login`. `lint:zizmor` uses `GH_TOKEN=$(gh auth token)` and `lint:pinact` falls back to `ghtkn exec`."
-run         = "gh auth token >/dev/null"
-timeout     = "10s"
-
-[doctor.checks.git-secrets]
-description = "git-secrets patterns are registered for this machine"
-hint        = "Deploy the git config with `chezmoi apply`: dot_config/git/config.tmpl registers the [secrets] providers/patterns into ~/.config/git/config. With none registered, `mise run lint:git-secrets` passes without scanning anything."
-run         = "git config --get-all secrets.patterns >/dev/null || git config --get-all secrets.providers >/dev/null"
-timeout     = "5s"
