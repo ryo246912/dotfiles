@@ -4,7 +4,6 @@
 **/*win*
 {{ else -}}
 **/*karabiner*
-**/*raycast*
 **/*mac*
 **/*brew*
 {{- end }}
@@ -35,3 +34,6 @@ terraform/**
 .config/agentsview/tests
 
 **/*karabiner-ts*
+
+**/*raycast*
+**/*rectangle*
