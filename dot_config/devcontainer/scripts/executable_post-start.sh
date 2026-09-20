@@ -57,24 +57,10 @@ else
 fi
 
 # Plannotatorはlive app annotationに必要なlocal modeでloopbackだけにbindする。
-# socatで別portの0.0.0.0へrelayし、Dockerはそのrelay portをhost loopbackにだけ公開する。
+# TCP relayで別portの0.0.0.0へ中継し、Dockerはそのrelay portをhost loopbackにだけ公開する。
 PLANNOTATOR_PORT=${PLANNOTATOR_PORT:-19433}
 PLANNOTATOR_FORWARD_PORT=${PLANNOTATOR_FORWARD_PORT:-19432}
-PLANNOTATOR_SOCAT_PID_FILE=~/.plannotator-socat.pid
-if [ -s "$PLANNOTATOR_SOCAT_PID_FILE" ]; then
-	old_socat_pid=$(cat "$PLANNOTATOR_SOCAT_PID_FILE")
-	if [[ $old_socat_pid =~ ^[0-9]+$ ]] && [ "$(ps -p "$old_socat_pid" -o comm= 2>/dev/null)" = "socat" ]; then
-		kill "$old_socat_pid"
-	fi
-fi
-nohup socat "TCP-LISTEN:${PLANNOTATOR_FORWARD_PORT},bind=0.0.0.0,fork,reuseaddr" \
-	"TCP:127.0.0.1:${PLANNOTATOR_PORT}" >~/.plannotator-socat.log 2>&1 &
-echo $! >"$PLANNOTATOR_SOCAT_PID_FILE"
-sleep 0.1
-if ! kill -0 "$(cat "$PLANNOTATOR_SOCAT_PID_FILE")" 2>/dev/null; then
-	cat ~/.plannotator-socat.log >&2
-	exit 1
-fi
+"$HOME/.config/devcontainer/scripts/ensure-plannotator-relay"
 
 # plannotator-browserがこのfileを読み、container内のURLをhostのURLへ置き換える。
 PLANNOTATOR_HOST_PORT_FILE=~/.plannotator-host-port

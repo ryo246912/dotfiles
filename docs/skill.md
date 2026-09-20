@@ -119,6 +119,16 @@ live modeで開けないpageをcontentとしてreviewする場合は、snapshot�
 plannotator annotate 'http://localhost:8081' --static --no-jina
 ```
 
+host側のPlannotator URLで「接続が拒否されました」と表示される場合は、container内のrelayを再起動します。
+
+```bash
+~/.config/devcontainer/scripts/ensure-plannotator-relay
+cat ~/.plannotator-relay.log
+```
+
+`plannotator-browser`もreview起動ごとにrelayを確認し、停止していれば自動復旧します。
+Plannotatorとdev serverのプロセスは、review中はterminalで終了させないでください。
+
 ### code diffをreviewする
 
 current branchの変更は次のskillでreviewします。
