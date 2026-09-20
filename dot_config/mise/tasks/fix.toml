@@ -39,7 +39,7 @@ run         = ["ghatm set -t 5"]
 description = "Run fix TOML files"
 dir         = "{{cwd}}"
 hide        = true
-run         = "taplo format"
+run         = "taplo format --config ~/.config/taplo/config.toml"
 
 ["fix:yaml"]
 description = "Run fix YAML files"

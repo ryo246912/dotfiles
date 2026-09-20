@@ -30,7 +30,7 @@ run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn 
 description = "Run lint TOML files"
 dir         = "{{cwd}}"
 hide        = true
-run         = "taplo format --check"
+run         = "taplo format --check --config ~/.config/taplo/config.toml"
 
 ["lint:yaml"]
 description = "Run lint YAML files"
