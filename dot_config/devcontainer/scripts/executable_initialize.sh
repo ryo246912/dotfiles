@@ -38,8 +38,14 @@ ensure_json_file() {
 # 生きているか確認する: 既に死んでいれば(クラッシュ等で残った古いロック)奪って取り直す。
 # 生きていれば、鍵ファイルを同時に触ると壊れるため、諦めて呼び出し元にエラーを返す
 # (鍵の書き換えを試みるより、その回の処理をスキップする方が安全)。
+#
+# 「死んだPIDだと確認してから rm -rf する」のように確認と削除の間に隙間があると、
+# その隙間で別プロセスが同じ死んだロックを正当に奪って再取得していた場合、その
+# 生きているロックごと消してしまう(TOCTOU)。これを避けるため、まず `mv` で
+# ロックを自分専用の名前へ原子的に退避してから、退避できた中身を改めて検査し、
+# 実は生きていた場合(競合)は空いていれば元に戻して諦める。
 _ssh_key_lock_acquire() {
-	local lock="$1" i pid
+	local lock="$1" i pid stolen
 	for i in $(seq 1 50); do
 		if mkdir "$lock" 2>/dev/null; then
 			echo "$$" >"${lock}/pid" 2>/dev/null || true
@@ -48,7 +54,21 @@ _ssh_key_lock_acquire() {
 		if [ -f "${lock}/pid" ]; then
 			pid="$(cat "${lock}/pid" 2>/dev/null || true)"
 			if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-				rm -rf "$lock" 2>/dev/null || true
+				stolen="${lock}.stale.$$"
+				if mv "$lock" "$stolen" 2>/dev/null; then
+					pid="$(cat "${stolen}/pid" 2>/dev/null || true)"
+					if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+						# 退避した中身が実は生きていた(競合)。空いていれば元に戻し、
+						# 既に別プロセスが $lock を取り直していれば自分の分だけ捨てる。
+						if [ ! -e "$lock" ]; then
+							mv "$stolen" "$lock" 2>/dev/null || rm -rf "$stolen" 2>/dev/null
+						else
+							rm -rf "$stolen" 2>/dev/null
+						fi
+					else
+						rm -rf "$stolen" 2>/dev/null
+					fi
+				fi
 				continue
 			fi
 		fi
