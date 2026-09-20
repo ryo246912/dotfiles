@@ -131,15 +131,32 @@ _ensure_ssh_key_locked() {
 # 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合(または
 # ロック取得失敗などで処理をスキップした場合)は 1 を返す。
 # multi-worktree 等で複数の devcontainer が同じ鍵パスへ同時に initializeCommand から触れる
-# 可能性があるため、mkdir ロックで生成/同期処理を直列化する。ロックが取得できない間は、他プロセスが
-# 同じ鍵ファイルを書き換えている可能性があるため一切触らない(取得できた場合のみ処理し、自分で
-# 作ったロックだけを解放する)。
+# 可能性があるため、鍵の生成/同期処理を直列化する。
+#
+# `flock` が使えるならそちらを使う: プロセスが保持する fd に紐づく OS レベルの
+# アドバイザリロックで、mkdir/pid ファイルベースの自前実装と違って TOCTOU が原理的に無く、
+# プロセスが死ねば OS が自動的に解放するため孤児ロックも発生しない。WSL2/Linux では
+# util-linux の一部として標準で入っていることが多い。
+# `flock` が無い環境(素の macOS 等)向けには、`_ssh_key_lock_acquire` による
+# mkdir ベースのフォールバックを用意している。こちらは死んだ/孤児ロックの回収を
+# ベストエフォートで行うが、`flock` ほど厳密ではない(ごく狭い理論上の競合が残りうる)。
 ensure_ssh_key() {
 	# `local key=... lock="${key}.lock"` のように同じ local 文の中で書くと、右辺の ${key} は
 	# この文で代入する新しい値ではなく代入前の(未設定の)値を参照してしまうため、
 	# 必ず key を確定させた後に別の local 文で lock を組み立てる。
 	local key="$1" comment="$2" rc=0
 	local lock="${key}.lock"
+	if command -v flock >/dev/null 2>&1; then
+		(
+			exec 9>"$lock"
+			if ! flock -w 5 9; then
+				echo "✗ ロック取得がタイムアウトしたため、鍵の処理をスキップしました: ${key}" >&2
+				exit 1
+			fi
+			_ensure_ssh_key_locked "$key" "$comment"
+		) || rc=$?
+		return "$rc"
+	fi
 	if ! _ssh_key_lock_acquire "$lock"; then
 		echo "✗ ロック取得がタイムアウトしたため、鍵の処理をスキップしました: ${key}" >&2
 		return 1
