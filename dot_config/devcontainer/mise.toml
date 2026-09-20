@@ -28,5 +28,5 @@ experimental = true
 [settings.npm]
 bun = true
 
-[settings.pipx]
+[settings.pypi]
 uvx = true

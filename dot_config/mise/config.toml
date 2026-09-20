@@ -1,4 +1,4 @@
-min_version = "2026.8.12"
+min_version = "2026.9.10"
 
 [env]
 # https://evermeet.cx/ffmpeg/
@@ -158,7 +158,7 @@ includes = ["tasks/*.toml"]
 [settings.npm]
 bun = true
 
-[settings.pipx]
+[settings.pypi]
 uvx = true
 
 [hooks]

@@ -492,3 +492,33 @@ mise bootstrap dotfiles save ~/.config/app/state.json
 **この構成は mise `[dotfiles]` には移せない。** chezmoi 固有の機能に依存するため、
 ghui の config は chezmoi 管理のまま維持する。`mise bootstrap` のフェーズ一覧で
 `[dotfiles]` を chezmoi に委ねているのは、この点でも妥当。
+
+## `mise doctor project`（プロジェクト診断）
+
+mise 2026.9.6 以降、`[doctor.checks.<name>]` に「このリポジトリが前提にしている環境」を
+宣言しておき、`mise doctor project` でまとめて検証できる。
+
+```sh
+mise doctor project
+mise doctor project --json
+```
+
+本リポジトリの `mise.toml` では次の4点を宣言している。
+
+| check         | 検証内容                           | 落ちたときに困ること                                  |
+| ------------- | ---------------------------------- | ----------------------------------------------------- |
+| `chezmoi`     | chezmoi が導入・初期化済みか       | `chezmoi apply` できず dotfiles を反映できない        |
+| `lefthook`    | pre-push hook が install 済みか    | push 前の lint が丸ごと素通りする                     |
+| `gh-auth`     | `gh auth token` が取れるか         | `lint:zizmor` / `lint:pinact` が token 不足で落ちる   |
+| `git-secrets` | パターンが git config に登録済みか | `lint:git-secrets` が**何も走査せずに成功**してしまう |
+
+`git-secrets` の check が特に効く。パターン未登録でも `git secrets --scan` は exit 0 を
+返すため、lint が通っているのに実際にはスキャンされていない状態を検出できる。
+
+通常の `mise doctor` は mise 自身の診断のみで、これらの check は走らない。ディレクトリ
+移動や task 実行でも自動実行されず、明示的に叩いたときだけ実行される。check は `jobs`
+設定に従って並行実行され、1つ落ちても他は最後まで走る。
+
+各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
+`shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が
+漏れることはない。詳細な出力が要るときは `run` のコマンドを直接叩く。
