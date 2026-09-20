@@ -176,18 +176,19 @@ timeout     = "5s"
 # lefthook を設定しているリポジトリでのみ検証する。global 宣言の check は実行時の
 # ディレクトリで走るため、無条件にすると lefthook を使わないリポジトリで必ず落ちる。
 [doctor.checks.lefthook]
-description = "lefthook pre-push hook is installed where lefthook is configured"
-hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`)."
+description = "lefthook pre-push hook is installed and executable where lefthook is configured"
+hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`). git silently skips a hook that is not executable, so the pre-push lint would not run at all."
 run = '''
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -f "$root/lefthook.yml" ] || [ -f "$root/lefthook.yaml" ] || exit 0
-grep -q lefthook "$(git rev-parse --git-path hooks/pre-push)"
+hook="$(git rev-parse --git-path hooks/pre-push)"
+[ -x "$hook" ] && grep -q lefthook "$hook"
 '''
 timeout = "5s"
 
 [doctor.checks.gh-auth]
-description = "gh can issue a token for the lint tasks"
-hint        = "Run `gh auth login`. The dotfiles repo's `lint:zizmor` uses `GH_TOKEN=$(gh auth token)` and `lint:pinact` falls back to `ghtkn exec`."
+description = "gh is authenticated"
+hint        = "Run `gh auth login --scopes project`. chezmoi's post-apply hook aborts when `gh auth token` yields nothing, and the dotfiles repo's `lint:zizmor` / `lint:pinact` need a token too."
 run         = "gh auth token >/dev/null"
 timeout     = "10s"
 
