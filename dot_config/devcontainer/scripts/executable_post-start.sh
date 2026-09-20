@@ -56,14 +56,33 @@ else
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
 fi
 
-# Plannotatorもhost portを自動採番する。plannotator-browserがこのfileを読み、
-# container内のURLをhostのURLへ置き換えてbrowserを開く。
+# Plannotatorはlive app annotationに必要なlocal modeでloopbackだけにbindする。
+# socatで別portの0.0.0.0へrelayし、Dockerはそのrelay portをhost loopbackにだけ公開する。
+PLANNOTATOR_PORT=${PLANNOTATOR_PORT:-19433}
+PLANNOTATOR_FORWARD_PORT=${PLANNOTATOR_FORWARD_PORT:-19432}
+PLANNOTATOR_SOCAT_PID_FILE=~/.plannotator-socat.pid
+if [ -s "$PLANNOTATOR_SOCAT_PID_FILE" ]; then
+	old_socat_pid=$(cat "$PLANNOTATOR_SOCAT_PID_FILE")
+	if [[ $old_socat_pid =~ ^[0-9]+$ ]] && [ "$(ps -p "$old_socat_pid" -o comm= 2>/dev/null)" = "socat" ]; then
+		kill "$old_socat_pid"
+	fi
+fi
+nohup socat "TCP-LISTEN:${PLANNOTATOR_FORWARD_PORT},bind=0.0.0.0,fork,reuseaddr" \
+	"TCP:127.0.0.1:${PLANNOTATOR_PORT}" >~/.plannotator-socat.log 2>&1 &
+echo $! >"$PLANNOTATOR_SOCAT_PID_FILE"
+sleep 0.1
+if ! kill -0 "$(cat "$PLANNOTATOR_SOCAT_PID_FILE")" 2>/dev/null; then
+	cat ~/.plannotator-socat.log >&2
+	exit 1
+fi
+
+# plannotator-browserがこのfileを読み、container内のURLをhostのURLへ置き換える。
 PLANNOTATOR_HOST_PORT_FILE=~/.plannotator-host-port
 PLANNOTATOR_CONTAINER_ID_FILE=~/.plannotator-container-id
 PLANNOTATOR_HOST_PORT=""
 for _ in 1 2; do
 	PLANNOTATOR_HOST_PORT=$(timeout 5 ssh "${SSH_OPTS[@]}" mac-host \
-		"docker port '${HOSTNAME}' ${PLANNOTATOR_PORT:-19432}/tcp" 2>/dev/null | tail -n1 | sed -E 's/.*://') || true
+		"docker port '${HOSTNAME}' ${PLANNOTATOR_FORWARD_PORT}/tcp" 2>/dev/null | tail -n1 | sed -E 's/.*://') || true
 	[ -n "$PLANNOTATOR_HOST_PORT" ] && break
 	sleep 1
 done

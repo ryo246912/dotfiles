@@ -80,33 +80,44 @@ CLIを直接実行する場合は次を使います。
 plannotator annotate path/to/artifact.html
 ```
 
-### 開発中のweb siteをreviewする
+### 開発中のfrontendをreviewする
 
-最初にViteなどのdev serverをcontainer内で起動します。
+devcontainer内でfrontendのdev serverを起動します。Expo Webの例では次を実行します。
+
+```bash
+npx expo start --web --host lan
+```
+
+Viteなど、任意のhostからのaccessを明示的に許可するdev serverは次のように起動します。
 
 ```bash
 npm run dev -- --host 0.0.0.0
 ```
 
-別のterminalまたはagent sessionから、dev serverのloopback URLをPlannotatorへ渡します。
-このdevcontainerではPlannotatorをremote modeで使うため、`--static`を指定して現在のpageを
-snapshotとして取得し、pageのcontentやtextにcommentします。remote modeでは
-hot reloadやpage内操作を保ったlive annotationは使えないため、状態ごとにsnapshotをreviewします。
-`--no-jina`はcontainer内のdev serverへ直接accessするために指定します。
+dev serverが表示したloopback URLを別のterminalまたはagent sessionからPlannotatorへ渡します。
+`--app`はlive annotationを必須にし、pageを開けない場合はstatic contentへ自動fallbackせずerrorを返します。
 
 ```text
-$plannotator-annotate http://localhost:5173 --static --no-jina
+$plannotator-annotate http://localhost:8081 --app
 ```
 
-CLIで直接起動する場合は次のとおりです。pathやqueryを含むURLも渡せます。
+CLIで直接起動する場合は次のとおりです。Viteの例ではportを`5173`に変えます。
 
 ```bash
-plannotator annotate 'http://localhost:5173/admin?tab=users' --static --no-jina
+plannotator annotate 'http://localhost:8081' --app
+plannotator annotate 'http://localhost:5173/admin?tab=users' --app
 ```
 
-annotation UIでtextを選択してcommentするか、page全体へのcommentを追加し、
-**Send Annotations**を押すとfeedbackがagentへ戻ります。pageの状態を変えた後は
-review commandを再実行して、新しいsnapshotを確認します。
+Plannotatorはdev serverをreverse proxyし、review UIだけをDockerのhost loopbackへ公開して
+macOSのbrowserで自動的に開きます。dev serverのportを`appPort`へ個別に追加する必要はありません。
+review中もnavigation、form操作、hot reload、WebSocketを利用できます。pen toolで要素をclickするか
+textを選択してcommentを付け、**Send Annotations**でfeedbackをagentへ戻します。
+
+live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
+
+```bash
+plannotator annotate 'http://localhost:8081' --static --no-jina
+```
 
 ### code diffをreviewする
 

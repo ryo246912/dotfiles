@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 
 
 RUN apt-get update && apt-get install -y \
+    socat \
     zsh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

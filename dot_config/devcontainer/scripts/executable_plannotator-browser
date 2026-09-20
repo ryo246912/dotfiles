@@ -14,7 +14,7 @@ if ! [[ $host_port =~ ^[0-9]+$ ]]; then
 	printf '保存されたhost portが不正です。post-start処理を再実行してください。\n' >&2
 	exit 1
 fi
-container_port=${PLANNOTATOR_PORT:-19432}
+container_port=${PLANNOTATOR_PORT:-19433}
 url_pattern="^https?://(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0):${container_port}([/?#]|$)"
 if ! [[ $url =~ $url_pattern ]]; then
 	printf 'Plannotator URLのportをhost用に変換できませんでした: %s\n' "$url" >&2
