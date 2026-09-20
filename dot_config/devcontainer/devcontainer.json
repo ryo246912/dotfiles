@@ -39,7 +39,7 @@
   // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
   // ホストの loopback のみに束縛する。host port は固定せず Docker に自動採番させる
   // (devcontainer を複数同時起動してもポート衝突が起きないようにするため)。
-  // 実際に割り当てられたhost portはpost-start.shが~/.crit-host-portへ書き出す。
+  // 実際に割り当てられたhost portはpost-start.shが~/.crit-host-portへ書き出す（docs/crit.md参照）。
   "appPort": ["127.0.0.1::7842"],
   // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
   // "workspaceFolder": "${localWorkspaceFolder}",

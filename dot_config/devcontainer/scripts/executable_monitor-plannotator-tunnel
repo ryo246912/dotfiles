@@ -2,17 +2,22 @@
 set -euo pipefail
 
 pid=${1:?"SSH PID is required"}
-port=${2:?"Local port is required"}
-pid_file=${3:?"PID file is required"}
+start_time=${2:?"SSH process start time is required"}
+port=${3:?"Local port is required"}
+pid_file=${4:?"PID file is required"}
 misses=0
 
-while kill -0 "$pid" 2>/dev/null; do
+same_process() {
+	[ -r "/proc/${pid}/stat" ] && [ "$(awk '{print $22}' "/proc/${pid}/stat")" = "$start_time" ]
+}
+
+while same_process; do
 	if (echo >"/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1; then
 		misses=0
 	else
 		((misses += 1))
 		if ((misses >= 2)); then
-			kill "$pid" 2>/dev/null || true
+			same_process && kill "$pid" 2>/dev/null || true
 			if [ "$(cat "$pid_file" 2>/dev/null || true)" = "$pid" ]; then
 				rm -f "$pid_file"
 			fi

@@ -136,6 +136,7 @@ cat ~/.cache/plannotator-tunnels/19433.log
 
 `plannotator-browser`はreview起動ごとに必要な2本のtunnelを起動します。複数のdevcontainerが同時に
 Plannotatorを使うとeditor portの`19433`が衝突するため、reviewするcontainerは1つだけにしてください。
+`19433`は`devcontainer.json`の`PLANNOTATOR_PORT`です。変更する場合は、この確認commandも同じ値に読み替えます。
 Plannotatorとdev serverのprocessは、review中はterminalで終了させないでください。
 
 ### code diffをreviewする

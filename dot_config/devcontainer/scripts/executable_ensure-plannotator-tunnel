@@ -31,13 +31,27 @@ nohup ssh -F ~/.config/ssh/config -N \
 pid=$!
 echo "$pid" >"$pid_file"
 
-sleep 1
-if kill -0 "$pid" 2>/dev/null; then
+ready=false
+for _ in 1 2 3 4 5; do
+	if ! kill -0 "$pid" 2>/dev/null; then
+		break
+	fi
+	if timeout 2 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=1 \
+		mac-host "nc -z 127.0.0.1 '${port}'" 2>/dev/null; then
+		ready=true
+		break
+	fi
+	sleep 1
+done
+
+if [ "$ready" = true ]; then
+	start_time=$(awk '{print $22}' "/proc/${pid}/stat")
 	nohup "$HOME/.config/devcontainer/scripts/monitor-plannotator-tunnel" \
-		"$pid" "$port" "$pid_file" >/dev/null 2>&1 &
+		"$pid" "$start_time" "$port" "$pid_file" >/dev/null 2>&1 &
 	exit 0
 fi
 
+kill "$pid" 2>/dev/null || true
 cat "$log_file" >&2
 rm -f "$pid_file"
 printf 'Port %s may already be used by another devcontainer.\n' "$port" >&2
