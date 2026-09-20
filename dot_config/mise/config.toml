@@ -169,6 +169,6 @@ lefthook install
 # 静かに欠ける。マシン側の前提なので個別リポジトリではなくここに置く。
 [doctor.checks.fnox-bws]
 description = "fnox can resolve BWS_ACCESS_TOKEN"
-hint        = "Run `fnox set --global --provider age BWS_ACCESS_TOKEN`. Until then the zsh startup silently skips the export and every bws-backed secret is missing."
+hint        = 'Run `FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN` (see docs/fnox.md; without FNOX_CONFIG_DIR the value lands in the chezmoi deploy target and the next `chezmoi apply` wipes it). Until then the zsh startup silently skips the export and every bws-backed secret is missing.'
 run         = "fnox get BWS_ACCESS_TOKEN >/dev/null"
 timeout     = "5s"
