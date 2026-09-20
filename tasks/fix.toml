@@ -1,17 +1,31 @@
 ["fix:all"]
-depends     = ["fix:*"]
+# ["fix:*"] ではなく明示的に列挙している: そのglobはfix:pinactや
+# fix:action-disable-checkout-persist-credentialsにも直接マッチしてしまい、
+# miseは兄弟同士のdependsを並列実行するため、fix:action内で逐次実行される
+# のと同時にもう一度実行され、同じワークフローファイルへの書き込みが競合する。
+depends = [
+    "fix:action",
+    "fix:toml",
+    "fix:yaml",
+    "fix:json",
+    "fix:md",
+]
 description = "Run all formatters"
 
 ["fix:action"]
 description = "Run fix actions files"
 run = [
-    "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run",
-    "disable-checkout-persist-credentials",
+    { task = "fix:pinact" },
+    { task = "fix:action-disable-checkout-persist-credentials" },
 ]
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
-run         = "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run"
+run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run; else ghtkn exec -- pinact run; fi"
+
+["fix:action-disable-checkout-persist-credentials"]
+description = "Run fix actions disable-checkout-persist-credentials"
+run         = ["disable-checkout-persist-credentials"]
 
 ["fix:toml"]
 description = "Run fix TOML files"
@@ -21,14 +35,14 @@ run         = "taplo format"
 ["fix:yaml"]
 description = "Run fix YAML files"
 hide        = true
-run         = "oxfmt '**/*.{yaml,yml}'"
+run         = "oxfmt --disable-nested-config '**/*.{yaml,yml}'"
 
 ["fix:json"]
 description = "Run fix JSON files"
 hide        = true
-run         = "oxfmt '**/*.json'"
+run         = "oxfmt --disable-nested-config '**/*.json'"
 
 ["fix:md"]
 description = "Run fix Markdown files"
 hide        = true
-run         = "oxfmt '**/*.md'"
+run         = "oxfmt --disable-nested-config '**/*.md'"

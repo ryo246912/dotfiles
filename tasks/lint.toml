@@ -20,7 +20,7 @@ run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic -
 
 ["lint:pinact"]
 description = "Run pinact --check"
-run         = "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run --check"
+run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
 
 ["lint:toml"]
 description = "Run lint TOML files"
@@ -30,17 +30,17 @@ run         = "taplo format --check"
 ["lint:yaml"]
 description = "Run lint YAML files"
 hide        = true
-run         = "oxfmt --check '**/*.{yaml,yml}'"
+run         = "oxfmt --disable-nested-config --check '**/*.{yaml,yml}'"
 
 ["lint:json"]
 description = "Run lint JSON files"
 hide        = true
-run         = "oxfmt --check '**/*.json'"
+run         = "oxfmt --disable-nested-config --check '**/*.json'"
 
 ["lint:md"]
 description = "Run lint Markdown files"
 hide        = true
-run         = "oxfmt --check '**/*.md'"
+run         = "oxfmt --disable-nested-config --check '**/*.md'"
 
 ["lint:secret"]
 description = "Run secretlint"
