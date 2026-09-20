@@ -34,6 +34,11 @@ if [ -f "${signing_key}" ]; then
 	signing_pubkey="$(ssh-keygen -y -P "" -f "${signing_key}" 2>/dev/null)" || signing_pubkey=""
 fi
 if [ -n "${signing_pubkey}" ]; then
+	# 以前このコンテナで post-create.sh が失敗分岐(署名鍵が使えない状態)を通っていた場合、
+	# ~/.gitconfig に commit.gpgsign=false が書き込まれたまま残る。再実行時に鍵が使える
+	# ようになっていても、この分岐では signingkey 等しか更新しないため、明示的に true へ
+	# 戻さないと署名が無効なままになってしまう。
+	git config --global commit.gpgsign true
 	git config --global gpg.format ssh
 	git config --global user.signingkey "${signing_key}"
 	allowed_signers=~/.config/git/allowed_signers

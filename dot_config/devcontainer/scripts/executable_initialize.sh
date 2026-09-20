@@ -33,10 +33,43 @@ ensure_json_file() {
 	}
 }
 
+# 自分の PID を書き込んだ「宣言用」ディレクトリを一時パスに用意してから、それを
+# mv で $lock へ公開する。mkdir してから別途 pid を書き込む(2手順に分かれた)
+# 従来方式だと、mkdir 成功後にスケジューリング等で長時間止まった場合、その間に
+# 他プロセスがこのロックを「pid が無いままの孤児」とみなして奪ってしまい、後から
+# 目覚めた自分が pid を書き込むと今度は相手の(新しい)ロックを上書きしてしまう、
+# という競合があった。pid を書いた状態のディレクトリを一括で公開すれば、$lock が
+# 存在する瞬間には必ず正しい pid が入っており、この隙間が生まれない。
+#
+# mv の宛先が既に(別プロセスの)ディレクトリとして存在する場合、mv は「その中へ
+# 移動」するだけで置き換えてくれないため、公開後に ${lock}/pid を読み直して本当に
+# 自分の PID になっているか確認する。なっていなければ自分の宣言用ディレクトリが
+# 誤って相手のロックの中へネストされているので、それを片付けてから諦める
+# (呼び出し元はループを継続し、次の機会に取り直す)。
+_ssh_key_lock_publish() {
+	local lock="$1" tmp
+	tmp="${lock}.claim.$$"
+	rm -rf "$tmp" 2>/dev/null
+	mkdir "$tmp" 2>/dev/null || return 1
+	if ! echo "$$" >"${tmp}/pid" 2>/dev/null; then
+		rm -rf "$tmp" 2>/dev/null
+		return 1
+	fi
+	if ! mv "$tmp" "$lock" 2>/dev/null; then
+		rm -rf "$tmp" 2>/dev/null
+		return 1
+	fi
+	if [ "$(cat "${lock}/pid" 2>/dev/null || true)" = "$$" ]; then
+		return 0
+	fi
+	rm -rf "${lock}/$(basename "$tmp")" 2>/dev/null
+	return 1
+}
+
 # ロックの中身を自分専用の名前へ mv で原子的に退避し、実際に死んでいた(あるいは
 # pid ファイルが無かった)場合だけ破棄する。退避した中身が実は生きていた場合
 # (競合)は、$lock が空いていれば元に戻す。呼び出し元はこの後どのみちループを
-# 継続すればよい(奪取できていれば次の mkdir で自分が取得できる)。
+# 継続すればよい(奪取できていれば次の _ssh_key_lock_publish で自分が取得できる)。
 #
 # 「死んでいる/孤児だと判断してから rm -rf する」のように確認と削除の間に隙間が
 # あると、その隙間で別プロセスが同じロックを正当に奪って再取得していた場合、その
@@ -72,8 +105,7 @@ _ssh_key_lock_try_steal() {
 _ssh_key_lock_acquire() {
 	local lock="$1" i pid no_pid_streak=0
 	for i in $(seq 1 50); do
-		if mkdir "$lock" 2>/dev/null; then
-			echo "$$" >"${lock}/pid" 2>/dev/null || true
+		if _ssh_key_lock_publish "$lock"; then
 			return 0
 		fi
 		if [ -f "${lock}/pid" ]; then
@@ -123,7 +155,16 @@ _ensure_ssh_key_locked() {
 	# 秘密鍵が無いのに孤立した .pub だけ残っていると、ssh-keygen が対話的な上書き確認で
 	# 止まってしまうため、鍵ペア生成前に削除しておく。
 	rm -f "${key}.pub"
-	ssh-keygen -t ed25519 -N "" -f "$key" -C "$comment" -q
+	# この関数は `if ensure_ssh_key ...; then` や `... || rc=$?` のように呼び出し元で
+	# 常にガードされているため、bash の仕様上 `set -e` はここでは効かない(ガードされた
+	# コマンド内では無効になる)。そのため ssh-keygen の失敗を明示的に検査しないと、
+	# 鍵ファイルが実際には存在しないのに "✓ 生成しました" と表示して 0 を返してしまう。
+	# 既存鍵がある場合の 1(no-op)とは区別できる 2 を返し、呼び出し元(トップレベル)で
+	# 明示的にスクリプト全体を止められるようにする。
+	if ! ssh-keygen -t ed25519 -N "" -f "$key" -C "$comment" -q; then
+		echo "✗ SSH鍵の生成に失敗しました: $key" >&2
+		return 2
+	fi
 	echo "✓ SSH鍵を生成しました: $key"
 	return 0
 }
@@ -174,9 +215,17 @@ ensure_dir ~/.config/mise
 # .ssh
 ensure_empty_file ~/.ssh/known_hosts
 # devcontainer専用のSSH鍵（ホスト通知用。docs/devcontainer.md 参照）
-ensure_ssh_key ~/.ssh/id_docker_devcontainer "devcontainer host notify" || true
+# ensure_ssh_key の戻り値: 0=新規生成, 1=既存鍵のまま(no-op)/取得失敗等でスキップ,
+# 2=新規鍵の生成自体が失敗(回復不能。mount source が用意できないため続けても
+# devcontainer up がどのみち失敗するので、ここで明示的に止める)。
+notify_rc=0
+ensure_ssh_key ~/.ssh/id_docker_devcontainer "devcontainer host notify" || notify_rc=$?
+[ "$notify_rc" -eq 2 ] && exit 1
 # devcontainer専用のSSH鍵（コミット署名用。docs/devcontainer.md 参照）
-if ensure_ssh_key ~/.ssh/id_docker_devcontainer_sign "devcontainer commit signing"; then
+sign_rc=0
+ensure_ssh_key ~/.ssh/id_docker_devcontainer_sign "devcontainer commit signing" || sign_rc=$?
+[ "$sign_rc" -eq 2 ] && exit 1
+if [ "$sign_rc" -eq 0 ]; then
 	echo "  → GitHub Settings > SSH and GPG keys > New SSH key (Key type: Signing Key) に以下を登録してください:"
 	cat ~/.ssh/id_docker_devcontainer_sign.pub
 fi
