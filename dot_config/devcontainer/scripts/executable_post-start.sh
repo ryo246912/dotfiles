@@ -50,10 +50,7 @@ done
 
 if [ -n "$CRIT_HOST_PORT" ]; then
 	echo "$CRIT_HOST_PORT" >"$CRIT_HOST_PORT_FILE"
-	timeout 5 ssh "${SSH_OPTS[@]}" mac-host \
-		"macos-notify-cli --title 'crit' --message 'crit UI: http://localhost:${CRIT_HOST_PORT}' --sound Glass" \
-		2>/dev/null || true
-	echo "✓ crit の host port (${CRIT_HOST_PORT}) を ${CRIT_HOST_PORT_FILE} に記録し、ホストへ通知しました"
+	echo "✓ crit の host port (${CRIT_HOST_PORT}) を ${CRIT_HOST_PORT_FILE} に記録しました"
 else
 	rm -f "$CRIT_HOST_PORT_FILE"
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
