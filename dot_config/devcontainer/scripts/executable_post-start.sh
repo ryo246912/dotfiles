@@ -55,33 +55,3 @@ else
 	rm -f "$CRIT_HOST_PORT_FILE"
 	echo "ℹ️ crit の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
 fi
-
-# Plannotatorはlive app annotationに必要なlocal modeでloopbackだけにbindする。
-# TCP relayで別portの0.0.0.0へ中継し、Dockerはそのrelay portをhost loopbackにだけ公開する。
-PLANNOTATOR_PORT=${PLANNOTATOR_PORT:-19433}
-PLANNOTATOR_FORWARD_PORT=${PLANNOTATOR_FORWARD_PORT:-19432}
-"$HOME/.config/devcontainer/scripts/ensure-plannotator-relay"
-
-# plannotator-browserがこのfileを読み、container内のURLをhostのURLへ置き換える。
-PLANNOTATOR_HOST_PORT_FILE=~/.plannotator-host-port
-PLANNOTATOR_CONTAINER_ID_FILE=~/.plannotator-container-id
-PLANNOTATOR_HOST_PORT=""
-for _ in 1 2; do
-	PLANNOTATOR_HOST_PORT=$(timeout 5 ssh "${SSH_OPTS[@]}" mac-host \
-		"docker port '${HOSTNAME}' ${PLANNOTATOR_FORWARD_PORT}/tcp" 2>/dev/null | tail -n1 | sed -E 's/.*://') || true
-	[ -n "$PLANNOTATOR_HOST_PORT" ] && break
-	sleep 1
-done
-
-if [ -n "$PLANNOTATOR_HOST_PORT" ]; then
-	echo "$PLANNOTATOR_HOST_PORT" >"$PLANNOTATOR_HOST_PORT_FILE"
-	echo "$HOSTNAME" >"$PLANNOTATOR_CONTAINER_ID_FILE"
-	echo "✓ Plannotator の host port (${PLANNOTATOR_HOST_PORT}) を ${PLANNOTATOR_HOST_PORT_FILE} に記録しました"
-else
-	if [ -f "$PLANNOTATOR_CONTAINER_ID_FILE" ] && [ "$(cat "$PLANNOTATOR_CONTAINER_ID_FILE")" = "$HOSTNAME" ]; then
-		echo "ℹ️ Plannotator の host port 再取得に失敗したため、同一containerのcacheを保持しました"
-	else
-		rm -f "$PLANNOTATOR_HOST_PORT_FILE" "$PLANNOTATOR_CONTAINER_ID_FILE"
-		echo "ℹ️ Plannotator の host port 取得をスキップしました（devcontainer 外、または mac-host に接続できない環境）"
-	fi
-fi

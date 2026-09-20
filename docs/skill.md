@@ -108,8 +108,9 @@ plannotator annotate 'http://localhost:8081' --app
 plannotator annotate 'http://localhost:5173/admin?tab=users' --app
 ```
 
-Plannotatorはdev serverをreverse proxyし、review UIだけをDockerのhost loopbackへ公開して
-macOSのbrowserで自動的に開きます。dev serverのportを`appPort`へ個別に追加する必要はありません。
+Plannotatorはdev serverを内部のrandom portでreverse proxyします。review起動時にeditor portと
+このlive-app proxy portを同じport番号のままSSH reverse tunnelでmacOSへ公開し、browserで自動的に開きます。
+URLとCSPのoriginがcontainer内とhost側で一致するため、live iframeも表示できます。
 review中もnavigation、form操作、hot reload、WebSocketを利用できます。pen toolで要素をclickするか
 textを選択してcommentを付け、**Send Annotations**でfeedbackをagentへ戻します。
 
@@ -119,15 +120,16 @@ live modeで開けないpageをcontentとしてreviewする場合は、snapshot�
 plannotator annotate 'http://localhost:8081' --static --no-jina
 ```
 
-host側のPlannotator URLで「接続が拒否されました」と表示される場合は、container内のrelayを再起動します。
+host側のPlannotator URLで「接続が拒否されました」と表示される場合は、tunnelの状態とlogを確認します。
 
 ```bash
-~/.config/devcontainer/scripts/ensure-plannotator-relay
-cat ~/.plannotator-relay.log
+ps -ef | grep '[s]sh.*127.0.0.1:19433'
+cat ~/.cache/plannotator-tunnels/19433.log
 ```
 
-`plannotator-browser`もreview起動ごとにrelayを確認し、停止していれば自動復旧します。
-Plannotatorとdev serverのプロセスは、review中はterminalで終了させないでください。
+`plannotator-browser`はreview起動ごとに必要な2本のtunnelを起動します。複数のdevcontainerが同時に
+Plannotatorを使うとeditor portの`19433`が衝突するため、reviewするcontainerは1つだけにしてください。
+Plannotatorとdev serverのprocessは、review中はterminalで終了させないでください。
 
 ### code diffをreviewする
 
