@@ -8,56 +8,69 @@ description = "Run all action linters"
 
 ["lint:actionlint"]
 description = "Run actionlint"
+dir         = "{{cwd}}"
 run         = "actionlint -ignore 'SC2016:'"
 
 ["lint:ghalint"]
 description = "Run ghalint"
+dir         = "{{cwd}}"
 run         = "ghalint run"
 
 ["lint:zizmor"]
 description = "Run zizmor"
+dir         = "{{cwd}}"
 run         = "GH_TOKEN=$(gh auth token) zizmor --pedantic --min-severity=low .github/workflows"
 
 ["lint:pinact"]
 description = "Run pinact --check"
-run         = "pinact run --check"
+dir         = "{{cwd}}"
+run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
 
 ["lint:toml"]
 description = "Run lint TOML files"
+dir         = "{{cwd}}"
 hide        = true
-run         = "taplo format --check"
+run         = "taplo format --check --config ~/.config/taplo/config.toml"
 
 ["lint:yaml"]
 description = "Run lint YAML files"
+dir         = "{{cwd}}"
 hide        = true
-run         = "oxfmt --check '**/*.{yaml,yml}'"
+run         = "oxfmt --disable-nested-config --check '**/*.{yaml,yml}'"
 
 ["lint:json"]
 description = "Run lint JSON files"
+dir         = "{{cwd}}"
 hide        = true
-run         = "oxfmt --check '**/*.json'"
+run         = "oxfmt --disable-nested-config --check '**/*.json'"
 
 ["lint:md"]
 description = "Run lint Markdown files"
+dir         = "{{cwd}}"
 hide        = true
-run         = "oxfmt --check '**/*.md'"
+run         = "oxfmt --disable-nested-config --check '**/*.md'"
 
 ["lint:secret"]
 description = "Run secretlint"
+dir         = "{{cwd}}"
 run         = "secretlint '**/*' --secretlintrc ~/.config/secretlint/secretlintrc.json"
 
 ["lint:git-secrets"]
 description = "Run git-secrets scan"
+dir         = "{{cwd}}"
 run         = "git secrets --scan"
 
 ["lint:betterleaks:staged"]
 description = "Run betterleaks"
+dir         = "{{cwd}}"
 run         = "betterleaks git --staged -v"
 
 ["lint:betterleaks:head"]
 description = "Run betterleaks"
+dir         = "{{cwd}}"
 run         = "betterleaks git -v --log-opts='HEAD'"
 
 ["lint:betterleaks:all"]
 description = "Run betterleaks"
+dir         = "{{cwd}}"
 run         = "betterleaks git -v"

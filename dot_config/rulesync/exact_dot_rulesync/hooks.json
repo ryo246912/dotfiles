@@ -22,6 +22,20 @@
           "timeout": 30
         }
       ],
+      "preToolUse": [
+        {
+          "matcher": "EnterPlanMode",
+          "command": "if command -v plannotator >/dev/null 2>&1; then plannotator improve-context; fi",
+          "timeout": 5
+        }
+      ],
+      "permissionRequest": [
+        {
+          "matcher": "ExitPlanMode",
+          "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+          "timeout": 345600
+        }
+      ],
       "postToolUse": [
         {
           "matcher": "Write|Edit|MultiEdit",

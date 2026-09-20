@@ -1,3 +1,9 @@
+# chezmoi は既定で「実行時の process umask」から target の mode を決める
+# （通常ファイル = 0o666 &^ umask、ディレクトリ = 0o777 &^ umask）。
+# そのため apply を実行したシェルの umask が 077 から 022 へ変わると、
+# 既存ファイルとの間に mode 0600 ⟶ 0644 の差分が全ファイルで発生する。
+# 実行環境に依存させないよう umask を明示して固定する。
+umask = 0o077
 pager = "delta"
 [edit]
 args    = ["--wait", "--new-window"]
@@ -11,11 +17,6 @@ unlock = "auto"
 args = [
     "-c",
     """
-# install マーカー保存用の XDG state を用意（永続化）。
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
-mkdir -p "$state_dir" || exit 1
-source_dir=$CHEZMOI_SOURCE_DIR
-mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
 # post-apply hook は run_once の PATH 変更を引き継がないため、mise 本体と aqua/gh 用の
 # mise shims を PATH に通す。mise 本体は mac/linux とも https://mise.run 経由で ~/.local/bin に導入するため、~/.local/bin を先頭にする。mise shims は
 # /opt/homebrew/bin より前に置く（後ろだと実 Homebrew 版の gh 等が mise の aqua shim を
@@ -25,7 +26,29 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
-# 1) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
+# 1) macOS では新しい config を mise に読ませる前に、mise 本体を
+#    min_version へ更新する。run_once_install-mise_mac.sh はこの post-apply hook より
+#    先に実行され、mise 未導入時の初回インストールを担う。
+#    min_version は mise 自身で config をロードせずテキストとして抽出し、
+#    self-update も config を読まずに実行する。
+if [ "$(uname)" = "Darwin" ]; then
+  mise_config="$HOME/.config/mise/config.toml"
+  required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
+  if [ -z "$required_mise_version" ]; then
+    echo "error: $mise_config から min_version を取得できません"
+    exit 1
+  fi
+  echo "Ensuring mise $required_mise_version is installed..."
+  MISE_NO_CONFIG=1 mise self-update --yes "$required_mise_version" || exit 1
+fi
+
+# install マーカー保存用の XDG state を用意（永続化）。
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/chezmoi"
+mkdir -p "$state_dir" || exit 1
+source_dir=$CHEZMOI_SOURCE_DIR
+mise_hash=$(cat "$HOME/.config/mise/config"*.toml 2>/dev/null | (command -v sha1sum >/dev/null && sha1sum || shasum -a 1))
+
+# 2) bootstrap.packages を convergent に導入する。ハッシュマーカーではなく
 #    `mise bootstrap packages status --missing`（未同期なら exit 1）で実際の導入状態を判定するので、
 #    パッケージ削除等のドリフトも検知して収束し、手動導入後も回復できる（マーカー不整合が起きない）。
 #    bottle/deb は sha256 で入る（gpg 不要）ため gpg_verify=true の mise install より前に gnupg を
@@ -57,7 +80,7 @@ if ! MISE_ENV=$bootstrap_env mise bootstrap packages status --missing >/dev/null
     exit 1
   fi
 fi
-# 2) mise install
+# 3) mise install
 if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   mise install --jobs=1 aqua:cli/cli || true
   # 未ログインなら対話ログインを実行する
@@ -73,14 +96,30 @@ if [ "$(cat "$state_dir/mise-config-hash" 2>/dev/null)" != "$mise_hash" ]; then
   GITHUB_TOKEN=$github_token mise install --jobs=2 || exit 1
   echo "$mise_hash" > "$state_dir/mise-config-hash"
 fi
-# 3) APM の user-scope dependencies を各エージェントへ反映する。
-#    mise install で apm 自体を導入した後に実行し、lockfile/commands の同期も既存 task に委ねる。
-echo "Running mise run apm:install..."
-CHEZMOI_SOURCE_DIR=$source_dir mise run apm:install || exit 1
-# 4) rulesync generate:
+# 4) APM の user-scope dependencies を各エージェントへ反映する。
+#    manifest/lockfile の内容が前回の成功時から変わった場合だけ実行し、毎回の apply で
+#    スキルの install・command 同期・rulesync generate-commands が走るのを避ける。
+hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
+calculate_apm_hash() {
+  for f in "$HOME/.apm/apm.yml" "$HOME/.apm/apm.lock.yaml"; do
+    [ -f "$f" ] && echo "$f $(hash_cmd < "$f")"
+  done | hash_cmd
+}
+apm_hash=$(calculate_apm_hash)
+if [ "$(cat "$state_dir/apm-hash" 2>/dev/null)" != "$apm_hash" ]; then
+  echo "Running mise run apm:install..."
+  if CHEZMOI_SOURCE_DIR=$source_dir mise run apm:install; then
+    # install が lockfile を更新する場合があるため、完了後の内容をマーカーへ保存する。
+    calculate_apm_hash > "$state_dir/apm-hash" || exit 1
+  else
+    exit 1
+  fi
+else
+  echo "APM manifest and lockfile are unchanged; skipping skill installation."
+fi
+# 5) rulesync generate:
 #    rulesync のソース（プロジェクト直下の .rulesync/ + rulesync.jsonc、および
 #    グローバルの ~/.config/rulesync/）に差分があるときだけハッシュマーカーで判定して走らせる。
-hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 rulesync_hash=$(
   {
     find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
