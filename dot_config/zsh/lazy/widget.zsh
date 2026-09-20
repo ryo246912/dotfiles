@@ -6,7 +6,11 @@ _SELECT_TOOL_LIST="lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nghui\nya
 
 _select_tool() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
+    # tmuxの#{pane_current_path}はプロセスツリーの状態次第で
+    # 実際のカレントディレクトリと異なる値を返すことがあるため、
+    # zsh自身が把握している$PWDを明示的に渡す。
+    local _popup_cwd=$PWD
+    tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
       tool=$(printf "%b" "'"$_SELECT_TOOL_LIST"'" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
       if tmux has-session -t overlay 2>/dev/null; then \
@@ -33,8 +37,9 @@ fi
 # ctrl + y(alt + shift + y)でyazi起動
 _yazi() {
   if [ -n "$TMUX" ]; then
+    local _popup_cwd=$PWD
     # cf. https://github.com/sxyazi/yazi/issues/2308#issuecomment-2731102243
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
+    tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
       if tmux has-session -t popup 2>/dev/null; then \
         tmux new-window -t popup -c "$current_path" -e _ZO_DATA_DIR="$HOME/.local/state/zoxide" "yazi" ; \
@@ -62,8 +67,9 @@ _custom_navi_widget() {
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
   if [ -n "$TMUX" ]; then
+    local _popup_cwd=$PWD
     if [ "$(uname)" = "Darwin" ]; then
-      tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
         read -r -t 0.05 _navi_widget_drain 2>/dev/null || :; \
         window=$(tmux display -p -F "#S:#I.#P") && \
         export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
@@ -75,7 +81,7 @@ _custom_navi_widget() {
         tmux paste-buffer -drp -t $window -b tmp \
       '
     else
-      tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+      tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
         read -r -t 0.05 _navi_widget_drain 2>/dev/null || :; \
         window=$(tmux display -p -F "#S:#I.#P") && \
         export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
@@ -114,7 +120,8 @@ _navi_insert_pipe_snippet() {
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
   local word
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    local _popup_cwd=$PWD
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
       TMP_BUFFER=$(navi --print --query "shell:pipe-command ") && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
@@ -190,7 +197,8 @@ fi
 # ctrl + q → ctrl + s(alt + shift + q → alt + shift + s)でshortcut表示
 _shortcut() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    local _popup_cwd=$PWD
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
       cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
@@ -208,7 +216,8 @@ _navi_copy_snippet() {
   #前方の空白文字を削除 ${TMP_BUFFER#"${TMP_BUFFER%%[![:space:]]*}"}
   #複数の連続した空白を1つにする sed -e "s/  */ /g"
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+    local _popup_cwd=$PWD
+    tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
       TMP_BUFFER=$(navi --print) && \
       TMP_BUFFER=${TMP_BUFFER%"${TMP_BUFFER##*[![:space:]]}"} && \
@@ -241,7 +250,8 @@ fi
 # ctrl + q → ctrl + w(alt + shift + q → alt + shift + w)でgit-worktree-managerを実行
 _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
-    tmux popup -xC -yC -w95% -h95% -E -d "#{pane_current_path}" '\
+    local _popup_cwd=$PWD
+    tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
       current_path=$(tmux display -p -F "#{pane_current_path}") ; \
       if tmux has-session -t popup 2>/dev/null; then \
         tmux new-window -t popup -c "$current_path" "git-worktree-manager" ; \
