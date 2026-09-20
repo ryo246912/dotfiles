@@ -27,6 +27,3 @@ experimental = true
 
 [settings.npm]
 package_manager = "aube"
-
-[settings.pypi]
-uvx = true

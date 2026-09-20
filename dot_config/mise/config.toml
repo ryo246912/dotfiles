@@ -158,9 +158,6 @@ includes = ["tasks/*.toml"]
 [settings.npm]
 package_manager = "aube"
 
-[settings.pypi]
-uvx = true
-
 [hooks]
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
