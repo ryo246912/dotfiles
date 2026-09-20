@@ -3,12 +3,12 @@ depends     = ["fix:*"]
 description = "Run all formatters"
 
 ["fix:action"]
-depends = [
-    "fix:pinact",
-    "fix:action-disable-checkout-persist-credentials",
-    "fix:action-timeout-minutes",
-]
 description = "Run fix actions files"
+run = [
+    { task = "fix:pinact" },
+    { task = "fix:action-disable-checkout-persist-credentials" },
+    { task = "fix:action-timeout-minutes" },
+]
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
