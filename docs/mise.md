@@ -397,7 +397,7 @@ fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]
 **mise では代替できない機能**を調査した結果を記録する。
 
 調査対象は mise **v2026.9.5**（2026-09-10 リリース。本リポジトリの
-`min_version` は `2026.8.12` で、`bootstrap dotfiles` はそれ以前から存在する）。
+`min_version` は `2026.9.10` で、`bootstrap dotfiles` はそれ以前から存在する）。
 
 参考: [Dotfiles | mise-en-place](https://mise.jdx.dev/dotfiles.html)
 
