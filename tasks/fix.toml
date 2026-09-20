@@ -1,5 +1,15 @@
 ["fix:all"]
-depends     = ["fix:*"]
+# Listed explicitly instead of ["fix:*"]: that glob also matches fix:pinact and
+# fix:action-disable-checkout-persist-credentials directly, and mise runs sibling
+# depends in parallel, so they'd run a second time concurrently with fix:action's
+# own sequential run of them, racing on the same workflow files.
+depends = [
+    "fix:action",
+    "fix:toml",
+    "fix:yaml",
+    "fix:json",
+    "fix:md",
+]
 description = "Run all formatters"
 
 ["fix:action"]
