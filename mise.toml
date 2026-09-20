@@ -35,7 +35,7 @@ run      = "lefthook install"
 [doctor.checks.chezmoi]
 description = "chezmoi is installed and initialized"
 hint        = "Install tools with `mise install` and initialize chezmoi (see docs/setup.md)."
-run         = "chezmoi source-path >/dev/null"
+run         = 'src="$(chezmoi source-path)" && git -C "$src" rev-parse --is-inside-work-tree >/dev/null'
 timeout     = "5s"
 
 [doctor.checks.lefthook]
