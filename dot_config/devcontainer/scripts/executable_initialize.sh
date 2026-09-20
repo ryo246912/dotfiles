@@ -80,11 +80,17 @@ _ensure_ssh_key_locked() {
 # 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合は 1 を返す。
 # multi-worktree 等で複数の devcontainer が同じ鍵パスへ同時に initializeCommand から触れる
 # 可能性があるため、mkdir ロックで生成/同期処理を直列化する。
+# ロックを取得できないまま(タイムアウト後)進む場合でも、自分が作っていないロックディレクトリは
+# 他プロセスがまだ保持している可能性があるため絶対に rmdir しない(自分が取得できた時だけ解放する)。
 ensure_ssh_key() {
-	local key="$1" comment="$2" lock="${key}.lock" rc=0
-	_ssh_key_lock_acquire "$lock" || true
+	local key="$1" comment="$2" lock="${key}.lock" rc=0 owned=0
+	if _ssh_key_lock_acquire "$lock"; then
+		owned=1
+	fi
 	_ensure_ssh_key_locked "$key" "$comment" || rc=$?
-	rmdir "$lock" 2>/dev/null || true
+	if [ "$owned" -eq 1 ]; then
+		rmdir "$lock" 2>/dev/null || true
+	fi
 	return "$rc"
 }
 
