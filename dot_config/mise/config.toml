@@ -163,3 +163,12 @@ root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$root"
 lefthook install
 """
+
+# mise doctor project 用。dot_config/zsh/lazy/mise.zsh は `fnox get` の失敗を
+# 握りつぶすため、age 未設定でもシェルは正常に起動し、bws 経由の secret だけが
+# 静かに欠ける。マシン側の前提なので個別リポジトリではなくここに置く。
+[doctor.checks.fnox-bws]
+description = "fnox can resolve BWS_ACCESS_TOKEN"
+hint        = "Run `fnox set --global --provider age BWS_ACCESS_TOKEN`. Until then the zsh startup silently skips the export and every bws-backed secret is missing."
+run         = "fnox get BWS_ACCESS_TOKEN >/dev/null"
+timeout     = "5s"
