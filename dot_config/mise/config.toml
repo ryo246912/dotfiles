@@ -156,7 +156,7 @@ trusted_config_paths = [
 includes = ["tasks/*.toml"]
 
 [settings.npm]
-bun = true
+package_manager = "aube"
 
 [settings.pypi]
 uvx = true

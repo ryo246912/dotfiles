@@ -26,7 +26,7 @@ experimental = true
 "npm:oxlint"                     = "1.76.0"
 
 [settings.npm]
-bun = true
+package_manager = "aube"
 
 [settings.pypi]
 uvx = true
