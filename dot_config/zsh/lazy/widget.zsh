@@ -64,6 +64,7 @@ _custom_navi_widget() {
   if [ -n "$TMUX" ]; then
     if [ "$(uname)" = "Darwin" ]; then
       tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+        read -r -t 0.05 _navi_widget_drain 2>/dev/null; \
         window=$(tmux display -p -F "#S:#I.#P") && \
         export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
         TMP_BUFFER=$(navi --print) && \
@@ -75,6 +76,7 @@ _custom_navi_widget() {
       '
     else
       tmux popup -xC -y "#{popup_pane_bottom}" -d "#{pane_current_path}" -w95% -h40% -E '\
+        read -r -t 0.05 _navi_widget_drain 2>/dev/null; \
         window=$(tmux display -p -F "#S:#I.#P") && \
         export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
         TMP_BUFFER=$(navi --print) && \
