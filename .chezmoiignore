@@ -4,7 +4,6 @@
 **/*win*
 {{ else -}}
 **/*karabiner*
-**/*raycast*
 **/*mac*
 **/*brew*
 {{- end }}
@@ -31,7 +30,9 @@ rulesync.lock
 README.md
 CLAUDE.md
 docs/**
-terraform/**
 .config/agentsview/tests
 
 **/*karabiner-ts*
+
+**/*raycast*
+**/*rectangle*
