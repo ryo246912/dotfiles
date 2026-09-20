@@ -11,7 +11,7 @@ _select_tool() {
     # zsh自身が把握している$PWDを明示的に渡す。
     local _popup_cwd=$PWD
     tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
-      current_path=$(tmux display -p -F "#{pane_current_path}") ; \
+      current_path=$PWD ; \
       tool=$(printf "%b" "'"$_SELECT_TOOL_LIST"'" | fzf --header="ツールを選択 (Esc: キャンセル)" --layout=reverse --border) || exit 0 ; \
       if tmux has-session -t overlay 2>/dev/null; then \
         tmux new-window -t overlay -c "$current_path" "$tool" ; \
@@ -40,7 +40,7 @@ _yazi() {
     local _popup_cwd=$PWD
     # cf. https://github.com/sxyazi/yazi/issues/2308#issuecomment-2731102243
     tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
-      current_path=$(tmux display -p -F "#{pane_current_path}") ; \
+      current_path=$PWD ; \
       if tmux has-session -t popup 2>/dev/null; then \
         tmux new-window -t popup -c "$current_path" -e _ZO_DATA_DIR="$HOME/.local/state/zoxide" "yazi" ; \
         tmux attach -t popup ; \
@@ -252,7 +252,7 @@ _git_worktree_manager() {
   if [ -n "$TMUX" ]; then
     local _popup_cwd=$PWD
     tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
-      current_path=$(tmux display -p -F "#{pane_current_path}") ; \
+      current_path=$PWD ; \
       if tmux has-session -t popup 2>/dev/null; then \
         tmux new-window -t popup -c "$current_path" "git-worktree-manager" ; \
         tmux attach -t popup ; \
