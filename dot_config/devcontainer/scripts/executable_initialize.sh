@@ -33,13 +33,22 @@ ensure_json_file() {
 	}
 }
 
-# 鍵が無ければ生成する。生成した場合は 0、既に存在した場合は 1 を返す。
+# 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合は 1 を返す。
+# 秘密鍵はあるが .pub だけ無い(削除・復元漏れ等)場合は、mounts の .pub 側 source が欠けて
+# devcontainer up が失敗するため、秘密鍵から公開鍵だけを再構成する(鍵ペア自体は再生成しない)。
 ensure_ssh_key() {
 	local key="$1" comment="$2"
 	if [ -f "$key" ]; then
+		if [ ! -f "${key}.pub" ]; then
+			ssh-keygen -y -f "$key" >"${key}.pub"
+			echo "✓ 秘密鍵から公開鍵を再構成しました: ${key}.pub"
+		fi
 		return 1
 	fi
 	mkdir -p "$(dirname "$key")"
+	# 秘密鍵が無いのに孤立した .pub だけ残っていると、ssh-keygen が対話的な上書き確認で
+	# 止まってしまうため、鍵ペア生成前に削除しておく。
+	rm -f "${key}.pub"
 	ssh-keygen -t ed25519 -N "" -f "$key" -C "$comment" -q
 	echo "✓ SSH鍵を生成しました: $key"
 	return 0
