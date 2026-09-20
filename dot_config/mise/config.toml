@@ -201,6 +201,6 @@ timeout     = "5s"
 # シェルは正常に起動し、bws 経由の secret だけが静かに欠ける。
 [doctor.checks.fnox-bws]
 description = "fnox can resolve BWS_ACCESS_TOKEN"
-hint        = 'Run `FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN` (see docs/fnox.md; without FNOX_CONFIG_DIR the value lands in the chezmoi deploy target and the next `chezmoi apply` wipes it). Until then the zsh startup silently skips the export and every bws-backed secret is missing.'
+hint        = 'Run `FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN`, then `chezmoi diff` and `chezmoi apply` (see docs/fnox.md). FNOX_CONFIG_DIR targets the chezmoi source so the next apply cannot wipe the value; this check reads the deployed config, so it stays red until you apply. Until then the zsh startup silently skips the export and every bws-backed secret is missing.'
 run         = "fnox get BWS_ACCESS_TOKEN >/dev/null"
 timeout     = "5s"
