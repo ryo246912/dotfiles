@@ -503,19 +503,7 @@ mise doctor project
 mise doctor project --json
 ```
 
-本リポジトリの `mise.toml` では次の4点を宣言している。
-
-| check         | 検証内容                           | 落ちたときに困ること                                  |
-| ------------- | ---------------------------------- | ----------------------------------------------------- |
-| `chezmoi`     | chezmoi が導入・初期化済みか       | `chezmoi apply` できず dotfiles を反映できない        |
-| `lefthook`    | pre-push hook が install 済みか    | push 前の lint が丸ごと素通りする                     |
-| `gh-auth`     | `gh auth token` が取れるか         | `lint:zizmor` / `lint:pinact` が token 不足で落ちる   |
-| `git-secrets` | パターンが git config に登録済みか | `lint:git-secrets` が**何も走査せずに成功**してしまう |
-
-`git-secrets` の check が特に効く。パターン未登録でも `git secrets --scan` は exit 0 を
-返すため、lint が通っているのに実際にはスキャンされていない状態を検出できる。
-
-通常の `mise doctor` は mise 自身の診断のみで、これらの check は走らない。ディレクトリ
+通常の `mise doctor` は mise 自身の診断のみで、宣言した check は走らない。ディレクトリ
 移動や task 実行でも自動実行されず、明示的に叩いたときだけ実行される。check は `jobs`
 設定に従って並行実行され、1つ落ちても他は最後まで走る。
 
