@@ -40,7 +40,17 @@ ensure_ssh_key() {
 	local key="$1" comment="$2"
 	if [ -f "$key" ]; then
 		if [ ! -f "${key}.pub" ]; then
-			ssh-keygen -y -f "$key" >"${key}.pub"
+			# `>` によるリダイレクトはコマンド実行前にファイルを作成するため、ssh-keygen が
+			# 失敗しても空の .pub が残ってしまい、次回以降そのまま「存在する」と誤判定されて
+			# 再構成がスキップされ続ける。一時ファイルに書いてから成功時のみ rename する。
+			local pub_tmp
+			pub_tmp="${key}.pub.tmp.$$"
+			if ! ssh-keygen -y -f "$key" >"$pub_tmp"; then
+				rm -f "$pub_tmp"
+				echo "✗ 秘密鍵からの公開鍵の再構成に失敗しました: ${key}" >&2
+				return 1
+			fi
+			mv "$pub_tmp" "${key}.pub"
 			echo "✓ 秘密鍵から公開鍵を再構成しました: ${key}.pub"
 		fi
 		return 1
