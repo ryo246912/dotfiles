@@ -12,7 +12,7 @@ description = "Run fix actions files"
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
-run         = "pinact run"
+run         = "GITHUB_TOKEN=${GITHUB_TOKEN:-$(ghtkn get)} pinact run"
 
 ["fix:action-disable-checkout-persist-credentials"]
 description = "Run fix actions disable-checkout-persist-credentials"
@@ -30,14 +30,14 @@ run         = "taplo format"
 ["fix:yaml"]
 description = "Run fix YAML files"
 hide        = true
-run         = "oxfmt '**/*.{yaml,yml}'"
+run         = "oxfmt --disable-nested-config '**/*.{yaml,yml}'"
 
 ["fix:json"]
 description = "Run fix JSON files"
 hide        = true
-run         = "oxfmt '**/*.json'"
+run         = "oxfmt --disable-nested-config '**/*.json'"
 
 ["fix:md"]
 description = "Run fix Markdown files"
 hide        = true
-run         = "oxfmt '**/*.md'"
+run         = "oxfmt --disable-nested-config '**/*.md'"
