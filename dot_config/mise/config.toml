@@ -150,6 +150,7 @@ trusted_config_paths = [
 ]
 
 [task_config]
+dir      = "{{cwd}}"
 includes = ["tasks/*.toml"]
 
 [settings.npm]
