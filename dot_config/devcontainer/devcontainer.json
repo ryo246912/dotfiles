@@ -18,7 +18,7 @@
   },
   // mounts の source がホストに無いとコンテナ作成が失敗する（docs/devcontainer.md 参照）ため、
   // initializeCommand（コンテナ作成前にホスト側で実行される）で事前に用意する。
-  "initializeCommand": "bash ${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh",
+  "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'",
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定

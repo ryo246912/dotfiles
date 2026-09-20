@@ -56,8 +56,10 @@ GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
 - `gpg.ssh.allowedSignersFile = ~/.config/git/allowed_signers`
   （`git log --show-signature`等でのローカル検証用。`user.email` と公開鍵から自動生成）
 
-鍵ファイルが無い場合は署名設定をスキップするだけなので、未セットアップのホストでも
-devcontainer 自体は問題なく起動します。
+この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`executable_initialize.sh`）
+が毎回必ず生成するため、通常は常に mount されており、未セットアップのホストでもコンテナは
+問題なく起動します。万が一鍵が存在しない場合、`postCreateCommand` は署名設定をスキップする
+だけです（`mounts` からこの鍵を外した構成だけを想定した防御処理です）。
 
 ### 動作確認
 
@@ -82,7 +84,7 @@ devcontainer.json の `mounts` は `docker run --mount` として処理されま
 フック）で事前に用意しています:
 
 ```jsonc
-"initializeCommand": "bash ${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh"
+"initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'"
 ```
 
 `dot_config/devcontainer/scripts/executable_initialize.sh` は各 mount の source を種類ごとに
