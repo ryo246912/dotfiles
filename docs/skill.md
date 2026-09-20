@@ -2,6 +2,7 @@
 
 このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
 
+- Plannotator / Effective HTML skills
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumiki skills
@@ -25,8 +26,138 @@ mise run apm:install
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `dot_apm/apm.yml` で commit SHA に pin しています。更新時は upstream の内容を確認して
+依存先は再現性のため `dot_apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
 `ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
+
+## Plannotator / Effective HTML
+
+### 導入構成
+
+- Plannotator CLIはdevcontainer imageのmise toolとしてインストールします。
+- `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
+  APMでuser scopeへ配布します。
+- APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
+  Plannotator用のslash command fileを別途管理しません。
+- Claude Codeのplan review hookはRulesyncのglobal hook、Codexのplan review hookは`~/.codex/hooks.json`で
+  設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
+- code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
+
+### HTML artifactを作成してreviewする
+
+[Effective HTML](https://github.com/plannotator/effective-html)のskillは、作りたいartifactに合わせて使い分けます。
+
+| skill              | 使いどころ                                                  |
+| ------------------ | ----------------------------------------------------------- |
+| `$html`            | report、explainer、presentation、landing pageなどの汎用HTML |
+| `$design-artifact` | palette、typography、layoutなどのvisual directionを決める   |
+| `$html-wireframe`  | 情報設計や導線を確認するlow-fidelity wireframe              |
+| `$html-prototype`  | 見た目を確認するmockup、または操作できるprototype           |
+| `$html-plan`       | plan、roadmap、rollout、実装手順                            |
+| `$html-diagram`    | architecture、sequence、process、state、hierarchyのdiagram  |
+
+`$html`は汎用の入り口です。作るものがwireframeやprototypeと明確な場合は、
+対応するspecialist skillを直接指定します。`$design-artifact`は他のskillと組み合わせて
+visual directionを調整する場合に使えます。
+
+```text
+$html-wireframe 管理画面の情報階層と2つの導線案をHTMLで作成して
+
+$html-prototype ユーザー登録から完了までの操作可能なprototypeをHTMLで作成して
+
+$design-artifact $html-plan この実装planをprojectのdesign languageに合わせて可視化して
+```
+
+作成したHTMLはPlannotator skillからreviewできます。Plannotatorはskill実行時に起動するため、
+container起動時にPlannotatorを常駐起動する必要はありません。
+
+```text
+$plannotator-annotate path/to/artifact.html
+```
+
+CLIを直接実行する場合は次を使います。
+
+```bash
+plannotator annotate path/to/artifact.html
+```
+
+### 開発中のfrontendをreviewする
+
+devcontainer内でfrontendのdev serverを起動します。Expo Webの例では次を実行します。
+
+```bash
+npx expo start --web --host lan
+```
+
+Viteなど、任意のhostからのaccessを明示的に許可するdev serverは次のように起動します。
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+dev serverが表示したloopback URLを別のterminalまたはagent sessionからPlannotatorへ渡します。
+`--app`はlive annotationを必須にし、pageを開けない場合はstatic contentへ自動fallbackせずerrorを返します。
+
+```text
+$plannotator-annotate http://localhost:8081 --app
+```
+
+CLIで直接起動する場合は次のとおりです。Viteの例ではportを`5173`に変えます。
+
+```bash
+plannotator annotate 'http://localhost:8081' --app
+plannotator annotate 'http://localhost:5173/admin?tab=users' --app
+```
+
+Plannotatorはdev serverを内部のrandom portでreverse proxyします。review起動時にeditor portと
+このlive-app proxy portを同じport番号のままSSH reverse tunnelでmacOSへ公開し、browserで自動的に開きます。
+URLとCSPのoriginがcontainer内とhost側で一致するため、live iframeも表示できます。
+review中もnavigation、form操作、hot reload、WebSocketを利用できます。pen toolで要素をclickするか
+textを選択してcommentを付け、**Send Annotations**でfeedbackをagentへ戻します。
+
+tabを自動で閉じたくない場合は、Plannotator右上の**Settings**を開き、
+**Auto-close Tab**を**Off**にします。この選択はbrowserに保存されるため、以後のreviewにも適用されます。
+ただし、**Send Annotations**は現在のCLI sessionを完了させる操作です。tabを残しても完了画面になり、
+同じannotation UIやlive appを引き続き操作することはできません。agentがfeedbackを反映した後に
+`$plannotator-annotate <URL> --app`をもう一度実行し、新しいreview sessionで確認してください。
+critのように1つの画面をfeedback送信後も継続利用する動作は、Plannotatorの現行session modelでは利用できません。
+
+live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
+
+```bash
+plannotator annotate 'http://localhost:8081' --static --no-jina
+```
+
+host側のPlannotator URLで「接続が拒否されました」と表示される場合は、tunnelの状態とlogを確認します。
+
+```bash
+ps -ef | grep '[s]sh.*127.0.0.1:19433'
+cat ~/.cache/plannotator-tunnels/19433.log
+```
+
+`plannotator-browser`はreview起動ごとに必要な2本のtunnelを起動します。複数のdevcontainerが同時に
+Plannotatorを使うとeditor portの`19433`が衝突するため、reviewするcontainerは1つだけにしてください。
+`19433`は`devcontainer.json`の`PLANNOTATOR_PORT`です。変更する場合は、この確認commandも同じ値に読み替えます。
+Plannotatorとdev serverのprocessは、review中はterminalで終了させないでください。
+
+### code diffをreviewする
+
+current branchの変更は次のskillでreviewします。
+
+```text
+$plannotator-review
+```
+
+GitHub PRをreviewする場合はPR URLを渡します。
+
+```text
+$plannotator-review https://github.com/owner/repository/pull/123
+```
+
+### agentの最後の返答をreviewする
+
+```text
+$plannotator-last
+```
 
 ## `crit` / `crit-cli`
 

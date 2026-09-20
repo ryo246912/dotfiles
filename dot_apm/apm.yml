@@ -14,9 +14,47 @@ dependencies:
   # 再現性のため各依存をコミット SHA または release tag に pin する。
   # CLI も配布するリポジトリは release tag を使い、Renovate で同一PRにまとめる。
   apm:
+    # Plannotatorのreview / annotate / last launcher skills。
+    - git: backnotprop/plannotator
+      path: apps/skills/core/plannotator-review
+      ref: v0.27.14
+      alias: plannotator-review
+    - git: backnotprop/plannotator
+      path: apps/skills/core/plannotator-annotate
+      ref: v0.27.14
+      alias: plannotator-annotate
+    - git: backnotprop/plannotator
+      path: apps/skills/core/plannotator-last
+      ref: v0.27.14
+      alias: plannotator-last
+    # Effective HTMLのartifact作成skills。releaseがないためcommit SHAへ固定する。
+    - git: plannotator/effective-html
+      path: skills/html
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: html
+    - git: plannotator/effective-html
+      path: skills/design-artifact
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: design-artifact
+    - git: plannotator/effective-html
+      path: skills/html-wireframe
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: html-wireframe
+    - git: plannotator/effective-html
+      path: skills/html-prototype
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: html-prototype
+    - git: plannotator/effective-html
+      path: skills/html-plan
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: html-plan
+    - git: plannotator/effective-html
+      path: skills/html-diagram
+      ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
+      alias: html-diagram
     # crit（tomasz-tomczyk/crit プラグイン）。
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.18.4
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.18.4
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.19.1
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.19.1
     # v0.4.0 以降の skill/ は生成前の SKILL.template.md のみで APM package として無効なため、
     # SKILL.md を含む最後の release commit に固定する。配置名は skill 名と揃える。
     - git: zenbu-labs/terminal-browser

@@ -76,6 +76,12 @@ snippet = "git checkout"
 trigger = "gch"
 
 [[snippets]]
+cursor  = "👇"
+name    = "git checkout origin"
+snippet = "git checkout origin/👇~0"
+trigger = "gcho"
+
+[[snippets]]
 evaluate = true
 name     = "git checkout master"
 snippet  = "git checkout $(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4)"
@@ -342,6 +348,11 @@ trigger-pattern = "^gs$"
 name    = "git show"
 snippet = "git show"
 trigger = "gsh"
+
+[[snippets]]
+name    = "git show signature and identities"
+snippet = "git show --no-patch --show-signature --format=fuller HEAD"
+trigger = "gshf"
 
 [[snippets]]
 name    = "git show HEAD~1"

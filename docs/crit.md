@@ -7,15 +7,15 @@
 
 ## 構成
 
-| 項目         | 設定                                                                      | 場所                                                                                  |
-| ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                               | `dot_config/devcontainer/mise.toml`                                                   |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                    | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番）     | `dot_config/devcontainer/devcontainer.json`                                           |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                                  | `dot_config/devcontainer/devcontainer.json`                                           |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）                   | `dot_config/devcontainer/scripts/post-create.sh`                                      |
-| ポート通知   | 割り当てられた host port を `~/.crit-host-port` に記録し、mac-host へ通知 | `dot_config/devcontainer/scripts/executable_post-start.sh`（適用後: `post-start.sh`） |
+| 項目         | 設定                                                                  | 場所                                                                                  |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                           | `dot_config/devcontainer/mise.toml`                                                   |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）            | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
+| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
+| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `dot_config/devcontainer/devcontainer.json`                                           |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                              | `dot_config/devcontainer/devcontainer.json`                                           |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）               | `dot_config/devcontainer/scripts/post-create.sh`                                      |
+| ポート記録   | 割り当てられた host port を `~/.crit-host-port` に記録                | `dot_config/devcontainer/scripts/executable_post-start.sh`（適用後: `post-start.sh`） |
 
 `~/.crit.config.json` の内容:
 
@@ -54,7 +54,7 @@ Docker がコンテナのポートをホストの `127.0.0.1` にだけ publish 
 > `devcontainer up`（devcontainer CLI）では解釈されず publish されない（これが当初ホストから
 > 開けなかった原因）。
 
-## ポートの自動採番と通知
+## ポートの自動採番と記録
 
 以前は host port を `7842` に固定していたため、devcontainer を同時に2つ以上起動すると
 `Bind for 127.0.0.1:7842 failed: port is already allocated` で衝突していた。これを避けるため、
@@ -68,7 +68,6 @@ Docker がコンテナのポートをホストの `127.0.0.1` にだけ publish 
 1. コンテナの `$HOSTNAME`（Docker のデフォルトで short container ID と一致）を使い、
    `mac-host` へ SSH して `docker port "$HOSTNAME" 7842/tcp` を実行し、割り当てられた host port を取得
 2. 取得できたら `~/.crit-host-port` に書き込む
-3. `macos-notify-cli` でホストへ `crit UI: http://localhost:<port>` を通知する
 
 `multi-worktree` に限らず、この base template (`dot_config/devcontainer/devcontainer.json`) から
 起動する devcontainer であればどの経路（devcontainer CLI 直接、VS Code など）でも同じ仕組みが働く。
