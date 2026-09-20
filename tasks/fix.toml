@@ -3,15 +3,19 @@ depends     = ["fix:*"]
 description = "Run all formatters"
 
 ["fix:action"]
-description = "Run fix actions files"
-run = [
-    "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run; else ghtkn exec -- pinact run; fi",
-    "disable-checkout-persist-credentials",
+depends = [
+    "fix:pinact",
+    "fix:action-disable-checkout-persist-credentials",
 ]
+description = "Run fix actions files"
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
 run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run; else ghtkn exec -- pinact run; fi"
+
+["fix:action-disable-checkout-persist-credentials"]
+description = "Run fix actions disable-checkout-persist-credentials"
+run         = ["disable-checkout-persist-credentials"]
 
 ["fix:toml"]
 description = "Run fix TOML files"
