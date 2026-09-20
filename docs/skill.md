@@ -114,6 +114,13 @@ URLとCSPのoriginがcontainer内とhost側で一致するため、live iframe�
 review中もnavigation、form操作、hot reload、WebSocketを利用できます。pen toolで要素をclickするか
 textを選択してcommentを付け、**Send Annotations**でfeedbackをagentへ戻します。
 
+tabを自動で閉じたくない場合は、Plannotator右上の**Settings**を開き、
+**Auto-close Tab**を**Off**にします。この選択はbrowserに保存されるため、以後のreviewにも適用されます。
+ただし、**Send Annotations**は現在のCLI sessionを完了させる操作です。tabを残しても完了画面になり、
+同じannotation UIやlive appを引き続き操作することはできません。agentがfeedbackを反映した後に
+`$plannotator-annotate <URL> --app`をもう一度実行し、新しいreview sessionで確認してください。
+critのように1つの画面をfeedback送信後も継続利用する動作は、Plannotatorの現行session modelでは利用できません。
+
 live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
 
 ```bash
