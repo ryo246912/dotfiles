@@ -33,15 +33,27 @@ ensure_json_file() {
 	}
 }
 
-# 鍵パスへのロックを取得する。50回(最大5秒)試して取れなければ諦めて続行する
-# (他の devcontainer 初期化が終わるのを無期限に待ってハングするのを避けるため)。
+# 鍵パスへのロックを取得する。50回(最大5秒)試して取れなければ諦める。
+# ロックディレクトリには取得者の PID を書き込み、取得できなかった場合はその PID がまだ
+# 生きているか確認する: 既に死んでいれば(クラッシュ等で残った古いロック)奪って取り直す。
+# 生きていれば、鍵ファイルを同時に触ると壊れるため、諦めて呼び出し元にエラーを返す
+# (鍵の書き換えを試みるより、その回の処理をスキップする方が安全)。
 _ssh_key_lock_acquire() {
-	local lock="$1" i
+	local lock="$1" i pid
 	for i in $(seq 1 50); do
-		mkdir "$lock" 2>/dev/null && return 0
+		if mkdir "$lock" 2>/dev/null; then
+			echo "$$" >"${lock}/pid" 2>/dev/null || true
+			return 0
+		fi
+		if [ -f "${lock}/pid" ]; then
+			pid="$(cat "${lock}/pid" 2>/dev/null || true)"
+			if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+				rm -rf "$lock" 2>/dev/null || true
+				continue
+			fi
+		fi
 		sleep 0.1
 	done
-	echo "⚠ ロック取得がタイムアウトしました。ロック無しで続行します: $lock" >&2
 	return 1
 }
 
@@ -77,20 +89,24 @@ _ensure_ssh_key_locked() {
 	return 0
 }
 
-# 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合は 1 を返す。
+# 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合(または
+# ロック取得失敗などで処理をスキップした場合)は 1 を返す。
 # multi-worktree 等で複数の devcontainer が同じ鍵パスへ同時に initializeCommand から触れる
-# 可能性があるため、mkdir ロックで生成/同期処理を直列化する。
-# ロックを取得できないまま(タイムアウト後)進む場合でも、自分が作っていないロックディレクトリは
-# 他プロセスがまだ保持している可能性があるため絶対に rmdir しない(自分が取得できた時だけ解放する)。
+# 可能性があるため、mkdir ロックで生成/同期処理を直列化する。ロックが取得できない間は、他プロセスが
+# 同じ鍵ファイルを書き換えている可能性があるため一切触らない(取得できた場合のみ処理し、自分で
+# 作ったロックだけを解放する)。
 ensure_ssh_key() {
-	local key="$1" comment="$2" lock="${key}.lock" rc=0 owned=0
-	if _ssh_key_lock_acquire "$lock"; then
-		owned=1
+	# `local key=... lock="${key}.lock"` のように同じ local 文の中で書くと、右辺の ${key} は
+	# この文で代入する新しい値ではなく代入前の(未設定の)値を参照してしまうため、
+	# 必ず key を確定させた後に別の local 文で lock を組み立てる。
+	local key="$1" comment="$2" rc=0
+	local lock="${key}.lock"
+	if ! _ssh_key_lock_acquire "$lock"; then
+		echo "✗ ロック取得がタイムアウトしたため、鍵の処理をスキップしました: ${key}" >&2
+		return 1
 	fi
 	_ensure_ssh_key_locked "$key" "$comment" || rc=$?
-	if [ "$owned" -eq 1 ]; then
-		rmdir "$lock" 2>/dev/null || true
-	fi
+	rm -rf "$lock" 2>/dev/null || true
 	return "$rc"
 }
 

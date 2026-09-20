@@ -58,8 +58,9 @@ GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
   `namespaces="git"` を付与し、この鍵が git 以外の OpenSSH 署名用途に流用されないよう制限しています）
 
 この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`executable_initialize.sh`）
-が毎回必ず生成するため、通常は常に mount されており、未セットアップのホストでもコンテナは
-問題なく起動します。万が一鍵が存在しない場合（`mounts` からこの鍵を外した構成等）、
+が存在しない場合に生成する（既存の鍵はそのまま使い、公開鍵だけ都度同期する）ため、通常は常に
+mount されており、未セットアップのホストでもコンテナは問題なく起動します。万が一鍵が存在しない
+場合（`mounts` からこの鍵を外した構成等）や、鍵が非対話で使えない(パスフレーズ付き等)場合、
 `postCreateCommand` は `commit.gpgsign` を明示的に `false` にします。include したホストの
 GPG 署名設定（`commit.gpgsign = true` / GPG の `user.signingkey`）をそのままにすると、
 GPG 秘密鍵をマウントしていないコンテナでは commit のたびに

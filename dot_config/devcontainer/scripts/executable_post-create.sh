@@ -26,21 +26,29 @@ git config --global url.https://github.com/.insteadOf git@github.com:
 # include した host config の GPG 署名設定を devcontainer 専用の SSH 鍵で上書きする
 # （書き込み順の後勝ちで include.path より優先される。詳細は docs/devcontainer.md 参照）。
 signing_key=~/.ssh/id_docker_devcontainer_sign
+# .pub ファイルの中身をそのまま信用せず、秘密鍵から都度公開鍵を導出して使う。
+# こうすることで、.pub が秘密鍵と不一致(手動差し替え等)の場合や、秘密鍵がパスフレーズ付きで
+# 非対話に使えない場合(-P "" での導出が失敗する)を、同じ判定でまとめて弾ける。
+signing_pubkey=""
 if [ -f "${signing_key}" ]; then
+	signing_pubkey="$(ssh-keygen -y -P "" -f "${signing_key}" 2>/dev/null)" || signing_pubkey=""
+fi
+if [ -n "${signing_pubkey}" ]; then
 	git config --global gpg.format ssh
 	git config --global user.signingkey "${signing_key}"
 	allowed_signers=~/.config/git/allowed_signers
 	mkdir -p "$(dirname "$allowed_signers")"
 	# namespaces="git" で git の署名/検証以外(file署名等)への流用を防ぐ(GitLab公式手順と同じ制約)
-	printf '%s namespaces="git" %s\n' "$(git config user.email)" "$(cat "${signing_key}.pub")" >"$allowed_signers"
+	printf '%s namespaces="git" %s\n' "$(git config user.email)" "$signing_pubkey" >"$allowed_signers"
 	git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
 	echo "✓ devcontainer専用のSSH鍵でコミット署名を設定しました"
 else
 	# include した host config には commit.gpgsign=true と GPG 鍵の signingkey が残っているが、
 	# GPG秘密鍵はコンテナにマウントしていないため、無効化しないと commit のたびに
-	# "secret key not available" で失敗する。
+	# "secret key not available" で失敗する。署名鍵が非対話で使えない(パスフレーズ付き等)場合も
+	# 同様にここに落ちるため、署名設定だけ有効なまま commit が壊れる状態を防げる。
 	git config --global commit.gpgsign false
-	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないため、コミット署名を無効化しました"
+	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないか非対話で使用できないため、コミット署名を無効化しました"
 fi
 
 # claude-account2 ディレクトリを作成
