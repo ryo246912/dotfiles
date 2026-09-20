@@ -20,8 +20,3 @@ mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
 !dot_config/rulesync/exact_dot_rulesync/mcp.json
-# Terraform local state and plans (the dependency lock file remains tracked).
-**/.terraform/*
-*.tfstate
-*.tfstate.*
-*.tfplan

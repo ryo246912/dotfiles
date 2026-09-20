@@ -30,7 +30,6 @@ rulesync.lock
 README.md
 CLAUDE.md
 docs/**
-terraform/**
 .config/agentsview/tests
 
 **/*karabiner-ts*
