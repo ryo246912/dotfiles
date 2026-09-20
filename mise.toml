@@ -51,7 +51,7 @@ run         = "gh auth token >/dev/null"
 timeout     = "10s"
 
 [doctor.checks.git-secrets]
-description = "git-secrets has patterns registered in this repository"
-hint        = "Run `git secrets --install && git secrets --register-aws`. With no patterns registered, `mise run lint:git-secrets` passes without scanning anything."
+description = "git-secrets patterns are registered for this machine"
+hint        = "Deploy the git config with `chezmoi apply`: dot_config/git/config.tmpl registers the [secrets] providers/patterns into ~/.config/git/config. With none registered, `mise run lint:git-secrets` passes without scanning anything."
 run         = "git config --get-all secrets.patterns >/dev/null || git config --get-all secrets.providers >/dev/null"
 timeout     = "5s"

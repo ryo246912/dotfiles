@@ -496,7 +496,9 @@ ghui の config は chezmoi 管理のまま維持する。`mise bootstrap` の�
 ## `mise doctor project`（プロジェクト診断）
 
 mise 2026.9.6 以降、`[doctor.checks.<name>]` に「このリポジトリが前提にしている環境」を
-宣言しておき、`mise doctor project` でまとめて検証できる。
+宣言しておき、`mise doctor project` でまとめて検証できる。機能自体は 2026.9.6 で入ったが、
+`dot_config/mise/config.toml` の `min_version` はこの機能の要求水準ではなく、採用した mise の
+バージョンに合わせて 2026.9.10 にしている。
 
 ```sh
 mise doctor project
