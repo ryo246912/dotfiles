@@ -33,42 +33,61 @@ ensure_json_file() {
 	}
 }
 
+# ロックの中身を自分専用の名前へ mv で原子的に退避し、実際に死んでいた(あるいは
+# pid ファイルが無かった)場合だけ破棄する。退避した中身が実は生きていた場合
+# (競合)は、$lock が空いていれば元に戻す。呼び出し元はこの後どのみちループを
+# 継続すればよい(奪取できていれば次の mkdir で自分が取得できる)。
+#
+# 「死んでいる/孤児だと判断してから rm -rf する」のように確認と削除の間に隙間が
+# あると、その隙間で別プロセスが同じロックを正当に奪って再取得していた場合、その
+# 生きているロックごと消してしまう(TOCTOU)。rm ではなく mv で退避してから改めて
+# 中身を検査することでこれを避ける。
+_ssh_key_lock_try_steal() {
+	local lock="$1" stolen pid
+	stolen="${lock}.stale.$$"
+	if mv "$lock" "$stolen" 2>/dev/null; then
+		pid="$(cat "${stolen}/pid" 2>/dev/null || true)"
+		if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+			if [ ! -e "$lock" ]; then
+				mv "$stolen" "$lock" 2>/dev/null || rm -rf "$stolen" 2>/dev/null
+			else
+				rm -rf "$stolen" 2>/dev/null
+			fi
+		else
+			rm -rf "$stolen" 2>/dev/null
+		fi
+	fi
+}
+
 # 鍵パスへのロックを取得する。50回(最大5秒)試して取れなければ諦める。
 # ロックディレクトリには取得者の PID を書き込み、取得できなかった場合はその PID がまだ
 # 生きているか確認する: 既に死んでいれば(クラッシュ等で残った古いロック)奪って取り直す。
 # 生きていれば、鍵ファイルを同時に触ると壊れるため、諦めて呼び出し元にエラーを返す
 # (鍵の書き換えを試みるより、その回の処理をスキップする方が安全)。
 #
-# 「死んだPIDだと確認してから rm -rf する」のように確認と削除の間に隙間があると、
-# その隙間で別プロセスが同じ死んだロックを正当に奪って再取得していた場合、その
-# 生きているロックごと消してしまう(TOCTOU)。これを避けるため、まず `mv` で
-# ロックを自分専用の名前へ原子的に退避してから、退避できた中身を改めて検査し、
-# 実は生きていた場合(競合)は空いていれば元に戻して諦める。
+# mkdir 成功後・pid 書き込み前にプロセスが死ぬと、pid ファイルの無いロックが孤児として
+# 残る。これは「pid が無い = 死んでいる」と即断せず(mkdir 直後の一瞬はまだ書き込み中の
+# 可能性があるため)、pid ファイルが無い状態が何回か(0.5秒相当)続いて初めて孤児と
+# みなして奪取する。放置すると誰も永久に取得できなくなるため、これも必ず処理する。
 _ssh_key_lock_acquire() {
-	local lock="$1" i pid stolen
+	local lock="$1" i pid no_pid_streak=0
 	for i in $(seq 1 50); do
 		if mkdir "$lock" 2>/dev/null; then
 			echo "$$" >"${lock}/pid" 2>/dev/null || true
 			return 0
 		fi
 		if [ -f "${lock}/pid" ]; then
+			no_pid_streak=0
 			pid="$(cat "${lock}/pid" 2>/dev/null || true)"
 			if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
-				stolen="${lock}.stale.$$"
-				if mv "$lock" "$stolen" 2>/dev/null; then
-					pid="$(cat "${stolen}/pid" 2>/dev/null || true)"
-					if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-						# 退避した中身が実は生きていた(競合)。空いていれば元に戻し、
-						# 既に別プロセスが $lock を取り直していれば自分の分だけ捨てる。
-						if [ ! -e "$lock" ]; then
-							mv "$stolen" "$lock" 2>/dev/null || rm -rf "$stolen" 2>/dev/null
-						else
-							rm -rf "$stolen" 2>/dev/null
-						fi
-					else
-						rm -rf "$stolen" 2>/dev/null
-					fi
-				fi
+				_ssh_key_lock_try_steal "$lock"
+				continue
+			fi
+		else
+			no_pid_streak=$((no_pid_streak + 1))
+			if [ "$no_pid_streak" -ge 5 ]; then
+				_ssh_key_lock_try_steal "$lock"
+				no_pid_streak=0
 				continue
 			fi
 		fi
