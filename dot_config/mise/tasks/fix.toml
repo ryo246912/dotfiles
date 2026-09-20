@@ -1,5 +1,11 @@
 ["fix:all"]
-depends     = ["fix:*"]
+depends = [
+    "fix:action",
+    "fix:toml",
+    "fix:yaml",
+    "fix:json",
+    "fix:md",
+]
 description = "Run all formatters"
 
 ["fix:action"]
