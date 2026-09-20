@@ -17,15 +17,15 @@ dependencies:
     # Plannotatorのreview / annotate / last launcher skills。
     - git: backnotprop/plannotator
       path: apps/skills/core/plannotator-review
-      ref: v0.27.14
+      ref: v0.27.15
       alias: plannotator-review
     - git: backnotprop/plannotator
       path: apps/skills/core/plannotator-annotate
-      ref: v0.27.14
+      ref: v0.27.15
       alias: plannotator-annotate
     - git: backnotprop/plannotator
       path: apps/skills/core/plannotator-last
-      ref: v0.27.14
+      ref: v0.27.15
       alias: plannotator-last
     # Effective HTMLのartifact作成skills。releaseがないためcommit SHAへ固定する。
     - git: plannotator/effective-html
