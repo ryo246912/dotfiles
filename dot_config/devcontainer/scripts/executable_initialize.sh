@@ -33,25 +33,38 @@ ensure_json_file() {
 	}
 }
 
-# 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合は 1 を返す。
-# 秘密鍵はあるが .pub だけ無い(削除・復元漏れ等)場合は、mounts の .pub 側 source が欠けて
-# devcontainer up が失敗するため、秘密鍵から公開鍵だけを再構成する(鍵ペア自体は再生成しない)。
-ensure_ssh_key() {
+# 鍵パスへのロックを取得する。50回(最大5秒)試して取れなければ諦めて続行する
+# (他の devcontainer 初期化が終わるのを無期限に待ってハングするのを避けるため)。
+_ssh_key_lock_acquire() {
+	local lock="$1" i
+	for i in $(seq 1 50); do
+		mkdir "$lock" 2>/dev/null && return 0
+		sleep 0.1
+	done
+	echo "⚠ ロック取得がタイムアウトしました。ロック無しで続行します: $lock" >&2
+	return 1
+}
+
+# ensure_ssh_key の本体(ロック取得後に呼ばれる)。
+_ensure_ssh_key_locked() {
 	local key="$1" comment="$2"
 	if [ -f "$key" ]; then
-		if [ ! -f "${key}.pub" ]; then
-			# `>` によるリダイレクトはコマンド実行前にファイルを作成するため、ssh-keygen が
-			# 失敗しても空の .pub が残ってしまい、次回以降そのまま「存在する」と誤判定されて
-			# 再構成がスキップされ続ける。一時ファイルに書いてから成功時のみ rename する。
-			local pub_tmp
-			pub_tmp="${key}.pub.tmp.$$"
-			if ! ssh-keygen -y -f "$key" >"$pub_tmp"; then
-				rm -f "$pub_tmp"
-				echo "✗ 秘密鍵からの公開鍵の再構成に失敗しました: ${key}" >&2
-				return 1
-			fi
+		# 秘密鍵から公開鍵を導出して .pub と同期する。.pub が無い場合(削除・復元漏れ)だけでなく、
+		# 秘密鍵だけ手動で差し替えられて .pub が古い(鍵ペアの不一致)場合も、常に導出し直して
+		# 比較することでまとめて解消する。
+		# `-P ""` でパスフレーズ入力を待たせず即エラーにする: initializeCommand は非対話実行のため、
+		# 対話プロンプトが出るとコンテナ作成が無期限にハングしてしまう。
+		local pub_tmp="${key}.pub.tmp.$$"
+		if ! ssh-keygen -y -P "" -f "$key" >"$pub_tmp" 2>/dev/null; then
+			rm -f "$pub_tmp"
+			echo "✗ 秘密鍵からの公開鍵の導出に失敗しました(パスフレーズ付き秘密鍵は非対応): ${key}" >&2
+			return 1
+		fi
+		if [ ! -f "${key}.pub" ] || ! cmp -s "$pub_tmp" "${key}.pub"; then
 			mv "$pub_tmp" "${key}.pub"
-			echo "✓ 秘密鍵から公開鍵を再構成しました: ${key}.pub"
+			echo "✓ 秘密鍵から公開鍵を(再)構成しました: ${key}.pub"
+		else
+			rm -f "$pub_tmp"
 		fi
 		return 1
 	fi
@@ -62,6 +75,17 @@ ensure_ssh_key() {
 	ssh-keygen -t ed25519 -N "" -f "$key" -C "$comment" -q
 	echo "✓ SSH鍵を生成しました: $key"
 	return 0
+}
+
+# 鍵ペアが無ければ生成する。新規に鍵ペアを生成した場合は 0、既存の鍵をそのまま使った場合は 1 を返す。
+# multi-worktree 等で複数の devcontainer が同じ鍵パスへ同時に initializeCommand から触れる
+# 可能性があるため、mkdir ロックで生成/同期処理を直列化する。
+ensure_ssh_key() {
+	local key="$1" comment="$2" lock="${key}.lock" rc=0
+	_ssh_key_lock_acquire "$lock" || true
+	_ensure_ssh_key_locked "$key" "$comment" || rc=$?
+	rmdir "$lock" 2>/dev/null || true
+	return "$rc"
 }
 
 # .config/* (gh・ccusage・mise はツール側が初回実行時に作るディレクトリ。未実行だと無いことがある)

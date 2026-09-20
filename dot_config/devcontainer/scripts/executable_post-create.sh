@@ -31,11 +31,16 @@ if [ -f "${signing_key}" ]; then
 	git config --global user.signingkey "${signing_key}"
 	allowed_signers=~/.config/git/allowed_signers
 	mkdir -p "$(dirname "$allowed_signers")"
-	printf '%s %s\n' "$(git config user.email)" "$(cat "${signing_key}.pub")" >"$allowed_signers"
+	# namespaces="git" で git の署名/検証以外(file署名等)への流用を防ぐ(GitLab公式手順と同じ制約)
+	printf '%s namespaces="git" %s\n' "$(git config user.email)" "$(cat "${signing_key}.pub")" >"$allowed_signers"
 	git config --global gpg.ssh.allowedSignersFile "$allowed_signers"
 	echo "✓ devcontainer専用のSSH鍵でコミット署名を設定しました"
 else
-	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないため、コミット署名設定をスキップしました"
+	# include した host config には commit.gpgsign=true と GPG 鍵の signingkey が残っているが、
+	# GPG秘密鍵はコンテナにマウントしていないため、無効化しないと commit のたびに
+	# "secret key not available" で失敗する。
+	git config --global commit.gpgsign false
+	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないため、コミット署名を無効化しました"
 fi
 
 # claude-account2 ディレクトリを作成

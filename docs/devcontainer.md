@@ -54,12 +54,16 @@ GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
 - `gpg.format = ssh`
 - `user.signingkey = ~/.ssh/id_docker_devcontainer_sign`
 - `gpg.ssh.allowedSignersFile = ~/.config/git/allowed_signers`
-  （`git log --show-signature`等でのローカル検証用。`user.email` と公開鍵から自動生成）
+  （`git log --show-signature`等でのローカル検証用。`user.email` と公開鍵から自動生成。
+  `namespaces="git"` を付与し、この鍵が git 以外の OpenSSH 署名用途に流用されないよう制限しています）
 
 この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`executable_initialize.sh`）
 が毎回必ず生成するため、通常は常に mount されており、未セットアップのホストでもコンテナは
-問題なく起動します。万が一鍵が存在しない場合、`postCreateCommand` は署名設定をスキップする
-だけです（`mounts` からこの鍵を外した構成だけを想定した防御処理です）。
+問題なく起動します。万が一鍵が存在しない場合（`mounts` からこの鍵を外した構成等）、
+`postCreateCommand` は `commit.gpgsign` を明示的に `false` にします。include したホストの
+GPG 署名設定（`commit.gpgsign = true` / GPG の `user.signingkey`）をそのままにすると、
+GPG 秘密鍵をマウントしていないコンテナでは commit のたびに
+`gpg: signing failed: secret key not available` で失敗するためです。
 
 ### 動作確認
 
@@ -88,9 +92,14 @@ devcontainer.json の `mounts` は `docker run --mount` として処理されま
 ```
 
 `dot_config/devcontainer/scripts/executable_initialize.sh` は各 mount の source を種類ごとに
-（ディレクトリは `mkdir -p`、空でよいファイルは `touch`、JSON は `{}`、SSH 鍵は `ssh-keygen` で
-生成）用意し、既に存在するものには触れません。**`mounts` を変更したら、このスクリプトも合わせて
-更新してください。**
+（ディレクトリは `mkdir -p`、空でよいファイルは `touch`、JSON は `{}`）用意します。ディレクトリや
+JSON は既に存在するものには触れませんが、SSH 鍵だけは例外です: 秘密鍵があれば毎回そこから公開鍵を
+導出して `.pub` と同期し（欠落時の再構成に加え、秘密鍵だけ手動で差し替えて `.pub` が古いままの
+不整合も解消します）、秘密鍵が無いのに孤立した `.pub` だけ残っている場合はそれを削除してから新規に
+鍵ペアを生成します。同じ鍵パスを複数の devcontainer（multi-worktree 等）が同時に触る可能性がある
+ため、鍵ごとに `mkdir` ロックで生成/同期処理を直列化しています（ロックが取れなくても他プロセスの
+完了を無期限には待たず、一定時間で諦めて続行します）。**`mounts` を変更したら、このスクリプトも
+合わせて更新してください。**
 
 `~/.config/git/config` や `~/.config/devcontainer/scripts` のように chezmoi apply 済みなら
 必ず存在するはずのパスは対象外にしています。ここが無い場合はホスト側のセットアップ自体に
