@@ -93,6 +93,14 @@
     },
     {
       "matchPackageNames": [
+        "github:backnotprop/plannotator",
+        "backnotprop/plannotator",
+        "https://github.com/backnotprop/plannotator"
+      ],
+      "groupName": "plannotator"
+    },
+    {
+      "matchPackageNames": [
         "http:terminal-browser",
         "zenbu-labs/terminal-browser",
         "https://github.com/zenbu-labs/terminal-browser"

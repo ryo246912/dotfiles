@@ -8,10 +8,47 @@ glob_matcher: doublestar
 
 pre-commit:
   jobs:
-    - name: go (ai-only)
-      glob: "**/*.go"
+    - name: actions (ai-only)
+      glob: ".github/workflows/**/*.{yaml,yml}"
       only: &ai-only
         - run: test "${AI_AGENT:-}" = "1"
+      run: mise run lint:action
+      fail_text: "❌ [ai-only] GitHub Actions lint failed."
+    - name: toml (ai-only)
+      glob: "**/*.toml"
+      only: *ai-only
+      run: mise run lint:toml
+      fail_text: "❌ [ai-only] TOML format check failed."
+    - name: yaml (ai-only)
+      glob: "**/*.{yaml,yml}"
+      only: *ai-only
+      run: mise run lint:yaml
+      fail_text: "❌ [ai-only] YAML format check failed."
+    - name: json (ai-only)
+      glob: "**/*.json"
+      only: *ai-only
+      run: mise run lint:json
+      fail_text: "❌ [ai-only] JSON format check failed."
+    - name: markdown (ai-only)
+      glob: "**/*.md"
+      only: *ai-only
+      run: mise run lint:md
+      fail_text: "❌ [ai-only] Markdown format check failed."
+    - name: secretlint (ai-only)
+      only: *ai-only
+      run: mise run lint:secret
+      fail_text: "❌ [ai-only] secretlint failed."
+    - name: git-secrets (ai-only)
+      only: *ai-only
+      run: mise run lint:git-secrets
+      fail_text: "❌ [ai-only] git-secrets failed."
+    - name: betterleaks (ai-only)
+      only: *ai-only
+      run: mise run lint:betterleaks:staged
+      fail_text: "❌ [ai-only] betterleaks failed."
+    - name: go (ai-only)
+      glob: "**/*.go"
+      only: *ai-only
       run: mise run lint:go
       fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
     - name: python (ai-only)

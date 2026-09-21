@@ -1,7 +1,13 @@
+[env]
+# macOSのlibpqは、OpenSSLの既定trust storeをKeychainへ必ずしも橋渡ししない。
+# CockroachDBへのverify-full接続がpsql、AgentsView、fnoxの子processで動くよう、
+# system CA bundleを明示する。
+PGSSLROOTCERT = "/etc/ssl/cert.pem"
+
 [tools]
 "cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
 "github:hzqtc/taproom"                        = { version = "0.6.2", bin = "taproom" }
-"http:terminal-browser"                       = { version = "0.5.3", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
+"http:terminal-browser"                       = { version = "0.11.1", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
 # silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
@@ -33,8 +39,6 @@
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
-# - raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
-#   ERROR になる（根本原因未確認。実 brew では問題なくインストールできることを確認済み）
 # - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
 # - google-drive/tailscale-app: pkg インストーラが sudo を要求し post-apply hook（非対話）を
 #   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
@@ -57,9 +61,11 @@
 "brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
 "brew-cask:obsidian"              = "latest" # 1.13.4
 "brew-cask:overview"              = "latest" # 1.2.3-beta
+"brew-cask:rectangle"             = "latest" # 1.100
 "brew-cask:slack"                 = "latest" # 4.51.180
 "brew-cask:syncthing-app"         = "latest" # 2.1.2-1
 "brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
 "brew-cask:visual-studio-code"    = "latest" # 1.106.3
 "brew-cask:wezterm@nightly"       = "latest"
 
