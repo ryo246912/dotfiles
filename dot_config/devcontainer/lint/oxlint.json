@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/oxlint_v1.76.0/npm/oxlint/configuration_schema.json",
   "categories": {
     "correctness": "error",
     "perf": "error",
@@ -9,8 +9,10 @@
     "suspicious": "error"
   },
   "plugins": [
+    "eslint",
     "import",
     "node",
+    "oxc",
     "promise",
     "typescript",
     "unicorn",

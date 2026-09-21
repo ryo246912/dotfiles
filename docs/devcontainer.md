@@ -282,3 +282,8 @@ ssh -F ~/.config/ssh/config mac-host \
 
 devcontainerでは`AI_AGENT=1`を設定し、作成時にAIエージェント向けの
 Lefthook pre-commitをインストールする。
+
+フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
+非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
+失敗する。不要になったフックは、対象リポジトリのdevcontainer内で
+`lefthook uninstall`を実行して削除する。

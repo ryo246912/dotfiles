@@ -58,10 +58,6 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
     /usr/local/bin/mise reshim -C /mise && \
     /usr/local/bin/mise trust /mise/config.toml
 
-# install tool via curl
-USER root
-RUN curl -fsSL https://cli.coderabbit.ai/install.sh | sh
-
 USER vscode
 
 WORKDIR /workspace

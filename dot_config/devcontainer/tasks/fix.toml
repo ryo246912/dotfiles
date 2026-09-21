@@ -1,16 +1,15 @@
 ["fix:all"]
-# ["fix:*"] ではなく明示的に列挙している: そのglobはfix:pinactや
-# fix:action-disable-checkout-persist-credentialsにも直接マッチしてしまい、
-# miseは兄弟同士のdependsを並列実行するため、fix:action内で逐次実行される
-# のと同時にもう一度実行され、同じワークフローファイルへの書き込みが競合する。
-depends = [
-    "fix:action",
-    "fix:toml",
-    "fix:yaml",
-    "fix:json",
-    "fix:md",
+description = "Run all formatters sequentially"
+run = [
+    { task = "fix:action" },
+    { task = "fix:yaml" },
+    { task = "fix:toml" },
+    { task = "fix:json" },
+    { task = "fix:md" },
+    { task = "fix:go" },
+    { task = "fix:python" },
+    { task = "fix:typescript" },
 ]
-description = "Run all formatters"
 
 ["fix:action"]
 description = "Run fix actions files"

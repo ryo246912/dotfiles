@@ -11,6 +11,8 @@ lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
 if [ ! -e "$local_lefthook_config" ]; then
 	cp "$lefthook_template" "$local_lefthook_config"
 fi
+git_exclude="$(git rev-parse --git-path info/exclude)"
+grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null || echo "lefthook.local.yml" >>"$git_exclude"
 
 # Install the devcontainer-specific hooks for this checkout.
 (
