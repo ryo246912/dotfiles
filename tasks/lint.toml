@@ -1,6 +1,6 @@
 ["lint:all"]
-# Keep this list explicit so the standalone lint:shell task is not included in
-# the repository-wide default; shell checks are enforced only in AI containers.
+# 独立したlint:shellタスクをリポジトリ全体の既定値へ含めないよう明示的に列挙する。
+# shellの検査をhookで強制するのはAI用devcontainerだけとする。
 depends = [
     "lint:action",
     "lint:toml",
@@ -67,4 +67,4 @@ run         = "betterleaks git --staged -v"
 
 ["lint:shell"]
 description = "Check shell script formatting with shfmt"
-run         = "shfmt -d ."
+run         = "shfmt -l ."

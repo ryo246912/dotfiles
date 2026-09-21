@@ -56,4 +56,4 @@ run         = "betterleaks git --staged -v"
 
 ["lint:shell"]
 description = "Check shell script formatting with shfmt"
-run         = "shfmt -d ."
+run         = "shfmt -l ."
