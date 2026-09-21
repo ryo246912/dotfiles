@@ -238,8 +238,8 @@ git remote set-url <shortname> git@github.com:<user>/<repo>.git
 # add remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add <shortname> git@github.com:<user>/<repo>.git
 
-# add origin url
-git remote add origin $(gh repo view owner/repo --json sshUrl -q .sshUrl)
+# add origin url (select from own repository)
+git remote add origin $(gh repo view <own_repo> --json sshUrl -q .sshUrl)
 
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
@@ -297,6 +297,20 @@ $ prefix: echo -e "wip: \nmemo: \n"
 $ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | .login )')"
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ state: echo -e "open\nall\nclosed\nmerged"
+
+$ own_repo: gh repo list --limit 100 \
+  --json nameWithOwner,visibility,pushedAt,description \
+  --jq '\
+    ["repo","visibility","pushedAt","description"] \
+    , ( .[] | \
+    [.nameWithOwner \
+    ,.visibility \
+    ,(if .pushedAt then (.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) else "-" end) \
+    ,.description[0:50] \
+    ]) | @tsv \
+  ' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
 
 $ commit1: git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
