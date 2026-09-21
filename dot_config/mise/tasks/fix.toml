@@ -58,3 +58,8 @@ description = "Run fix Markdown files"
 dir         = "{{cwd}}"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.md'"
+
+["fix:shell"]
+description = "Format shell scripts with shfmt"
+dir         = "{{cwd}}"
+run         = "shfmt -w ."

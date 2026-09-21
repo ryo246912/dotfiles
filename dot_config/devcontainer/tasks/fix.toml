@@ -9,6 +9,7 @@ run = [
     { task = "fix:go" },
     { task = "fix:python" },
     { task = "fix:typescript" },
+    { task = "fix:shell" },
 ]
 
 ["fix:action"]
@@ -45,3 +46,7 @@ run         = "oxfmt --disable-nested-config '**/*.json'"
 description = "Run fix Markdown files"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.md'"
+
+["fix:shell"]
+description = "Format shell scripts with shfmt"
+run         = "shfmt -w ."

@@ -1,5 +1,16 @@
 ["lint:all"]
-depends     = ["lint:*"]
+# Keep this list explicit so the standalone lint:shell task is not included in
+# the repository-wide default; shell checks are enforced only in AI containers.
+depends = [
+    "lint:action",
+    "lint:toml",
+    "lint:yaml",
+    "lint:json",
+    "lint:md",
+    "lint:secret",
+    "lint:git-secrets",
+    "lint:betterleaks:staged",
+]
 description = "Run all linters"
 
 ["lint:action"]
@@ -53,3 +64,7 @@ run         = "git secrets --scan"
 ["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
 run         = "betterleaks git --staged -v"
+
+["lint:shell"]
+description = "Check shell script formatting with shfmt"
+run         = "shfmt -d ."

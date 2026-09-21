@@ -53,3 +53,7 @@ run         = "git secrets --scan"
 ["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
 run         = "betterleaks git --staged -v"
+
+["lint:shell"]
+description = "Check shell script formatting with shfmt"
+run         = "shfmt -d ."

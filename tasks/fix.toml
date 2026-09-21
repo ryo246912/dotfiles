@@ -46,3 +46,7 @@ run         = "oxfmt --disable-nested-config '**/*.json'"
 description = "Run fix Markdown files"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.md'"
+
+["fix:shell"]
+description = "Format shell scripts with shfmt"
+run         = "shfmt -w ."
