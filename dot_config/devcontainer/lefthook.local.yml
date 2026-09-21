@@ -11,7 +11,7 @@ pre-commit:
     - name: actions (ai-only)
       glob: ".github/workflows/**/*.{yaml,yml}"
       only: &ai-only
-        - run: test "${AI_AGENT:-}" = "1"
+        - run: test -n "${AI_AGENT:-}"
       run: mise run lint:action
       fail_text: "❌ [ai-only] GitHub Actions lint failed."
     - name: toml (ai-only)

@@ -280,8 +280,9 @@ ssh -F ~/.config/ssh/config mac-host \
 
 ## AIエージェント向けpre-commit
 
-devcontainerでは`AI_AGENT=1`を設定し、作成時にAIエージェント向けの
-Lefthook pre-commitをインストールする。
+devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
+エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
 
 フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
 非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
