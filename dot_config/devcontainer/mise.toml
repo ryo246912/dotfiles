@@ -49,6 +49,8 @@ includes = ["/mise/tasks/*.toml"]
 [hooks]
 postinstall = '''
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-cd "$root"
-lefthook install
+config="$root/lefthook.local.yml"
+[ -f "$config" ] || exit 0
+cd "$root" || exit 0
+LEFTHOOK_CONFIG="$config" lefthook install
 '''
