@@ -508,7 +508,7 @@ create_repo_worktree() {
                 add_args=("-b" "$resolved_branch" "$base_ref")
             fi
 
-            git worktree add "$worktree_path" "${add_args[@]}"
+            git worktree add --relative-paths "$worktree_path" "${add_args[@]}"
         ) 2>&1
     ); then
         log_success "[$repo_name] worktree を作成しました: $worktree_path (ブランチ: $task_name)"
@@ -944,8 +944,9 @@ generate_devcontainer() {
         # worktree のマウント
         worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
 
-        # 実体リポジトリのマウント（.git アクセス用）
-        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
+        # Git metadata だけをホストと同じパスへ mount する。
+        # 実体リポジトリ全体はコンテナへ公開しない。
+        worktree_mounts+=",\"type=bind,source=${repo}/.git,target=${repo}/.git\""
     done
 
     worktree_mounts+="]"

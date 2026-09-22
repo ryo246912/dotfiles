@@ -48,6 +48,10 @@
   enabled = true
 [init]
   defaultBranch = main
+[worktree]
+  # devcontainer が common git dir だけを mount できるよう、新規 worktree の
+  # .git/gitdir 間の参照を絶対パスではなく相対パスで保存する。
+  useRelativePaths = true
 [advice]
   skippedCherryPicks = false
 [user]

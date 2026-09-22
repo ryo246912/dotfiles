@@ -6,6 +6,26 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## workspace と Git worktree の mount 範囲
+
+base template は `${localWorkspaceFolder}` のみを bind mount し、親ディレクトリは
+mount しません。`~/project/repo` のような通常 checkout で `../..` を mount すると
+`$HOME` 全体がコンテナから見えるためです。
+
+`ccmanager` や手動起動では `devc-up-wrapper` を `up` と `exec` の両方に使います。
+ラッパーは devcontainer CLI へ次を渡します。
+
+- `--mount-workspace-git-root=false`: workspace より広い Git root の自動 mount を無効化
+- `--mount-git-worktree-common-dir=true`: linked worktree が参照する common git dir だけを mount
+
+後者は relative-paths 形式の worktree を前提とするため、`multi-worktree` は
+`git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は一度作り直すか、
+対応する Git で `git worktree repair --relative-paths` を実行してください。
+
+`multi-worktree` が生成する複数リポジトリ用の devcontainer は、各 worktree に加えて
+実体リポジトリの `.git` だけを同じ絶対パスへ mount します。実体リポジトリの
+working tree や、その他の兄弟ディレクトリはコンテナから見えません。
+
 ## devcontainer からホスト側 tmux pane を読む
 
 ホスト側の開発サーバーログを、devcontainer 内の AI エージェントから確認する場合は

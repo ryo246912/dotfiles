@@ -1,3 +1,21 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-exec "$@" # 元のコマンドを実行
+set -euo pipefail
+
+# devcontainer CLI の既定値は workspace ではなく Git root を mount する。
+# その動作を無効化し、linked worktree で必要な common git dir だけを
+# mount することで、workspace の兄弟ディレクトリを公開しない。
+args=("$@")
+if [[ "${1##*/}" == devcontainer && ("${2:-}" == up || "${2:-}" == exec) ]]; then
+	# exec では後半がコンテナ内コマンドになるため、CLI option は
+	# subcommand の直後へ挿入する（末尾に追加しない）。
+	args=(
+		"$1"
+		"$2"
+		--mount-workspace-git-root=false
+		--mount-git-worktree-common-dir=true
+		"${@:3}"
+	)
+fi
+
+exec "${args[@]}"
