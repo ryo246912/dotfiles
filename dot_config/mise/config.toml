@@ -173,14 +173,19 @@ hint        = "Install tools with `mise install` and initialize chezmoi (see doc
 run         = 'src="$(chezmoi source-path)" && git -C "$src" rev-parse --is-inside-work-tree >/dev/null'
 timeout     = "5s"
 
-# lefthook を設定しているリポジトリでのみ検証する。global 宣言の check は実行時の
-# ディレクトリで走るため、無条件にすると lefthook を使わないリポジトリで必ず落ちる。
+# lefthook.yml が pre-push を定義しているリポジトリでのみ検証する。global 宣言の
+# check は実行時のディレクトリで走るため無条件にすると lefthook を使わないリポジトリで
+# 必ず落ちるし、lefthook install は「設定された」フックしか作らないので pre-commit だけの
+# 構成でも落ちてしまう。
 [doctor.checks.lefthook]
-description = "lefthook pre-push hook is installed and executable where lefthook is configured"
+description = "lefthook pre-push hook is installed and executable where lefthook configures pre-push"
 hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`). git silently skips a hook that is not executable, so the pre-push lint would not run at all."
 run = '''
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || [ -f "$root/lefthook.yaml" ] || exit 0
+config="$root/lefthook.yml"
+[ -f "$config" ] || config="$root/lefthook.yaml"
+[ -f "$config" ] || exit 0
+grep -q '^pre-push:' "$config" || exit 0
 hook="$(git rev-parse --git-path hooks/pre-push)"
 [ -x "$hook" ] && grep -q lefthook "$hook"
 '''
