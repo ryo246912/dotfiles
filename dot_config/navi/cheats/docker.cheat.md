@@ -25,10 +25,11 @@ docker system df
 # disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
-# disk image : shrink unused space without deleting data(sparse) [require:quit Docker Desktop & GNU cp(coreutils)][--update=none:keep an existing .bak so a re-run after a failure restores from it]
-cp --update=none ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak &&
+# disk image : shrink unused space without deleting data(sparse) [require:quit Docker Desktop & GNU cp/mv(coreutils)][.bak is only ever a complete copy, so re-running after any failure restores from it]
+cp ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.tmp &&
+mv --update=none ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.tmp ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak &&
 cp --sparse=always ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw &&
-rm ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak
+rm -f ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.tmp
 
 # display no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker image ls -f dangling=true
