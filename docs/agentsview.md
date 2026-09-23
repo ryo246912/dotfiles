@@ -872,6 +872,41 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 
 `agentsview:cockroach:push:remote` taskは常に`--no-vectors`を追加し、CockroachDBに送る対象をsession contentへ限定する。AgentsViewはDB vendorだけを見てvector phaseを自動停止しないため、taskを介さず直接実行するときも`--no-vectors`または`push_vectors=false`を必ず指定する。incremental watermarkは接続target／project filterごとにlocal保存される。初回CockroachDB pushは必ず小さいprojectで確認してから広げる。
 
+#### 定期 push（launchd / systemd timer で 15 分ごと）
+
+各PCから手動で`mise run agentsview:cockroach:push:remote`を都度叩く代わりに、mise bootstrapのuser service（macOS: LaunchAgent / Linux: systemd user timer）で15分ごとに自動pushできる。bootstrapのuser service機構そのものは[docs/mise.md](./mise.md)を参照。
+
+実体は非対話task`agentsview:cockroach:push:daemon`（`dot_config/mise/tasks/agentsview.toml`）。pushは`agentsview:cockroach:push:remote`と同じ（fnoxで`AGENTSVIEW_COCKROACH_PUSH_PG_URL`を解決し`agentsview pg push --no-vectors`）で、daemon用に次を足している。
+
+- **fnox解決込みの自己再実行**: launchd/systemdはzsh起動を経ず`AGENTSVIEW_COCKROACH_PUSH_PG_URL`がenvに無いため、taskが`fnox exec -- mise run ...`で自身を再実行して解決する。最小PATHでも辿れるようmiseは絶対パスで叩く（`~/.config/fnox/age.txt`があればbwsは非対話で解ける）。
+- **machine名の補完**: launchd/systemdは`AGENTSVIEW_PG_MACHINE`を持たないので、`dot_zshenv.tmpl`と同じく`host-env.map`から導出し、対話pushと同じmachine名に揃える（導出できなければ`hostname`）。
+- **多重起動防止**: PID + 起動時刻の identity lock（`$XDG_STATE_HOME/agentsview/push.lock`）。実行中のpushが生きていればskip、異常終了で残ったlockは奪い直す。24hのmtime backstop付き。
+
+定義は`dot_config/mise/config.mac.toml`（`[bootstrap.macos.launchd.agents.agentsview-push]`）と`dot_config/mise/config.linux.toml`（`[bootstrap.linux.systemd.units.agentsview-push]`）。`chezmoi apply`で反映後、OS別に適用する。
+
+```sh
+# macOS: ログ出力先を先に作る（launchd は親ディレクトリを作らない）
+mkdir -p ~/.local/state/agentsview
+
+# 差分だけ確認 → 適用
+MISE_ENV=mac   mise bootstrap macos launchd-agents apply --dry-run
+MISE_ENV=mac   mise bootstrap macos launchd-agents apply
+
+MISE_ENV=linux mise bootstrap linux systemd-units apply --dry-run
+MISE_ENV=linux mise bootstrap linux systemd-units apply
+# headless / WSL では停止中も timer を動かすため lingering を有効化
+loginctl enable-linger "$USER"
+```
+
+動作確認:
+
+```sh
+tail -f ~/.local/state/agentsview/push.log            # macOS のログ
+systemctl --user list-timers 'agentsview-push*'       # Linux（次回発火時刻）
+journalctl --user -u agentsview-push -f               # Linux のログ
+mise run agentsview:cockroach:push:daemon             # 手動で 1 回（fnox 解決込み）
+```
+
 #### 「pull」の代わりに何を使うか
 
 | 目的                                      | 方法                                                                                                                                   |
