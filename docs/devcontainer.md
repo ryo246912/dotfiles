@@ -284,6 +284,9 @@ devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向�
 Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
 
+pre-commitでは、未stageの変更と未追跡ファイルを一時的にstashし、stage済みの内容だけを
+worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
+
 multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
 直下で`.git`を持つ各リポジトリへ`lefthook.local.yml`を配置し、それぞれに`lefthook install`する。
 直下にリポジトリがない場合は、workspaceが属するリポジトリへインストールする。

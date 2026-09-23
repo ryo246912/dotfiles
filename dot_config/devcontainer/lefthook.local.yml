@@ -8,61 +8,81 @@ glob_matcher: doublestar
 
 pre-commit:
   jobs:
-    - name: actions (ai-only)
-      glob: ".github/workflows/**/*.{yaml,yml}"
+    - name: stash files (ai-only)
       only: &ai-only
         - run: test -n "${AI_AGENT:-}"
-      run: mise run lint:action
-      fail_text: "❌ [ai-only] GitHub Actions lint failed."
-    - name: toml (ai-only)
-      glob: "**/*.toml"
+      run: |
+        marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
+        before="$(git rev-parse --verify -q refs/stash || true)"
+        git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit"
+        after="$(git rev-parse --verify -q refs/stash || true)"
+        if [ "$before" != "$after" ]; then
+          printf '%s\n' "$after" > "$marker"
+        else
+          rm -f "$marker"
+        fi
+    - name: lint (ai-only)
       only: *ai-only
-      run: mise run lint:toml
-      fail_text: "❌ [ai-only] TOML format check failed."
-    - name: yaml (ai-only)
-      glob: "**/*.{yaml,yml}"
+      group:
+        parallel: true
+        jobs:
+          - name: actions
+            glob: ".github/workflows/**/*.{yaml,yml}"
+            run: mise run lint:action
+            fail_text: "❌ [ai-only] GitHub Actions lint failed."
+          - name: toml
+            glob: "**/*.toml"
+            run: mise run lint:toml
+            fail_text: "❌ [ai-only] TOML format check failed."
+          - name: yaml
+            glob: "**/*.{yaml,yml}"
+            run: mise run lint:yaml
+            fail_text: "❌ [ai-only] YAML format check failed."
+          - name: json
+            glob: "**/*.json"
+            run: mise run lint:json
+            fail_text: "❌ [ai-only] JSON format check failed."
+          - name: markdown
+            glob: "**/*.md"
+            run: mise run lint:md
+            fail_text: "❌ [ai-only] Markdown format check failed."
+          - name: shell
+            glob: "**/*.{sh,bash,bats}"
+            run: mise run lint:shell
+            fail_text: "❌ [ai-only] shell format check failed."
+          - name: secretlint
+            run: mise run lint:secret
+            fail_text: "❌ [ai-only] secretlint failed."
+          - name: git-secrets
+            run: mise run lint:git-secrets
+            fail_text: "❌ [ai-only] git-secrets failed."
+          - name: betterleaks
+            run: mise run lint:betterleaks:staged
+            fail_text: "❌ [ai-only] betterleaks failed."
+          - name: go
+            glob: "**/*.go"
+            run: mise run lint:go
+            fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
+          - name: python
+            glob: "**/*.py"
+            run: mise run lint:python
+            fail_text: "❌ [ai-only] Python lint or format check failed."
+          - name: typescript
+            glob: "**/{*.{js,jsx,ts,tsx,mjs,cjs,mts,cts},package.json,tsconfig*.json,oxlint.json,oxfmt.json}"
+            run: mise run lint:typescript
+            fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."
+    - name: stash pop (ai-only)
       only: *ai-only
-      run: mise run lint:yaml
-      fail_text: "❌ [ai-only] YAML format check failed."
-    - name: json (ai-only)
-      glob: "**/*.json"
-      only: *ai-only
-      run: mise run lint:json
-      fail_text: "❌ [ai-only] JSON format check failed."
-    - name: markdown (ai-only)
-      glob: "**/*.md"
-      only: *ai-only
-      run: mise run lint:md
-      fail_text: "❌ [ai-only] Markdown format check failed."
-    - name: shell (ai-only)
-      glob: "**/*.{sh,bash,bats}"
-      only: *ai-only
-      run: mise run lint:shell
-      fail_text: "❌ [ai-only] shell format check failed."
-    - name: secretlint (ai-only)
-      only: *ai-only
-      run: mise run lint:secret
-      fail_text: "❌ [ai-only] secretlint failed."
-    - name: git-secrets (ai-only)
-      only: *ai-only
-      run: mise run lint:git-secrets
-      fail_text: "❌ [ai-only] git-secrets failed."
-    - name: betterleaks (ai-only)
-      only: *ai-only
-      run: mise run lint:betterleaks:staged
-      fail_text: "❌ [ai-only] betterleaks failed."
-    - name: go (ai-only)
-      glob: "**/*.go"
-      only: *ai-only
-      run: mise run lint:go
-      fail_text: "❌ [ai-only] Go lint, test, vet, or build failed."
-    - name: python (ai-only)
-      glob: "**/*.py"
-      only: *ai-only
-      run: mise run lint:python
-      fail_text: "❌ [ai-only] Python lint or format check failed."
-    - name: typescript (ai-only)
-      glob: "**/{*.{js,jsx,ts,tsx,mjs,cjs,mts,cts},package.json,tsconfig*.json,oxlint.json,oxfmt.json}"
-      only: *ai-only
-      run: mise run lint:typescript
-      fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."
+      run: |
+        marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
+        if [ -f "$marker" ]; then
+          expected="$(cat "$marker")"
+          current="$(git rev-parse --verify -q refs/stash || true)"
+          if [ "$current" != "$expected" ]; then
+            echo "❌ [ai-only] Lefthookが作成したstashを特定できません。" >&2
+            exit 1
+          fi
+          git reset --hard -q
+          git stash pop --index -q
+          rm -f "$marker"
+        fi
