@@ -159,7 +159,7 @@ includes = ["tasks/*.toml"]
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || exit 0
+[ -f "$root/lefthook.yml" ] || [ -f "$root/lefthook.yaml" ] || exit 0
 cd "$root"
 lefthook install
 """
