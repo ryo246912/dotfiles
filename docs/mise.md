@@ -513,8 +513,9 @@ mise doctor project --json
 **global config の check は「`mise doctor project` を叩いたディレクトリ」を root として
 走る**（project config の check と違い、宣言元のディレクトリに固定されない）。そのため
 リポジトリ固有の前提を global に置くときは、対象外のリポジトリで実行されても落ちないよう
-条件を付ける必要がある（`lefthook` の check が `lefthook.yml` の有無で早期 exit しているのは
-このため）。
+条件を付ける必要がある（`lefthook` の check が `lefthook.yml` の `pre-push` 宣言を見て早期
+exit しているのはこのため。`lefthook install` は設定済みのフックしか作らないので、`lefthook.yml`
+の有無だけでは `pre-commit` のみの構成を誤検出する）。
 
 各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
 `shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が
