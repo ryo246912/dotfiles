@@ -159,8 +159,10 @@ includes = ["tasks/*.toml"]
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || [ -f "$root/lefthook.yaml" ] || exit 0
 cd "$root"
+# lefthook install は設定が無いと lefthook.yml を勝手に生成してしまうので、
+# 設定の有無は lefthook 自身に判定させる（対応する名前と形式は lefthook dump が知っている）。
+lefthook dump >/dev/null 2>&1 || exit 0
 lefthook install
 """
 
@@ -173,19 +175,18 @@ hint        = "Install tools with `mise install` and initialize chezmoi (see doc
 run         = 'src="$(chezmoi source-path)" && git -C "$src" rev-parse --is-inside-work-tree >/dev/null'
 timeout     = "5s"
 
-# lefthook.yml が pre-push を定義しているリポジトリでのみ検証する。global 宣言の
-# check は実行時のディレクトリで走るため無条件にすると lefthook を使わないリポジトリで
-# 必ず落ちるし、lefthook install は「設定された」フックしか作らないので pre-commit だけの
-# 構成でも落ちてしまう。
+# pre-push を実際に定義しているリポジトリでのみ検証する。global 宣言の check は実行時の
+# ディレクトリで走るため無条件にすると lefthook を使わないリポジトリで必ず落ちるし、
+# lefthook install は「設定された」フックしか作らないので pre-commit だけの構成でも落ちる。
+# 判定は lefthook dump に委譲する（設定ファイルを直接 grep すると extends や
+# lefthook-local.yml 経由の pre-push を取りこぼすし、対応する設定ファイル名も取り違える）。
 [doctor.checks.lefthook]
 description = "lefthook pre-push hook is installed and executable where lefthook configures pre-push"
 hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`). git silently skips a hook that is not executable, so the pre-push lint would not run at all."
 run = '''
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-config="$root/lefthook.yml"
-[ -f "$config" ] || config="$root/lefthook.yaml"
-[ -f "$config" ] || exit 0
-grep -q '^pre-push:' "$config" || exit 0
+cd "$root"
+lefthook dump 2>/dev/null | grep -q '^pre-push:' || exit 0
 hook="$(git rev-parse --git-path hooks/pre-push)"
 [ -x "$hook" ] && grep -q lefthook "$hook"
 '''
