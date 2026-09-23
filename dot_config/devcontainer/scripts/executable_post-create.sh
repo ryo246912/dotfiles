@@ -7,8 +7,8 @@ bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${P
 # devcontainer専用のLefthook設定を各リポジトリへ配置し、hookをインストールする。
 # multi-worktreeではworkspace(task root)自体がccmanager用のsynthetic git repositoryで、
 # 実際のリポジトリは直下に並ぶ（例: task-root/repo-a, task-root/repo-b）。
-# そのため直下に.gitを持つディレクトリがあればそれぞれを対象にし、
-# なければ通常どおりworkspaceのリポジトリを対象にする。
+# task rootのブランチ名でmulti-worktreeを判定し、その場合だけ直下のリポジトリを対象にする。
+# 通常のリポジトリは直下にsubmoduleがあってもworkspace自体を対象にする。
 lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
 
 install_lefthook() {
@@ -29,13 +29,19 @@ install_lefthook() {
 }
 
 lefthook_repo_roots=()
-for child_git in "${PWD}"/*/.git; do
-	[ -e "$child_git" ] || continue
-	child_root="$(dirname "$child_git")"
-	git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
-	lefthook_repo_roots+=("$child_root")
-done
-if [ "${#lefthook_repo_roots[@]}" -eq 0 ] && workspace_root="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+workspace_branch=""
+if [ -n "$workspace_root" ]; then
+	workspace_branch="$(git -C "$workspace_root" branch --show-current 2>/dev/null || true)"
+fi
+if [[ "$workspace_branch" == multi-worktree-* ]]; then
+	for child_git in "${PWD}"/*/.git; do
+		[ -e "$child_git" ] || continue
+		child_root="$(dirname "$child_git")"
+		git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+		lefthook_repo_roots+=("$child_root")
+	done
+elif [ -n "$workspace_root" ]; then
 	lefthook_repo_roots+=("$workspace_root")
 fi
 for repo_root in "${lefthook_repo_roots[@]}"; do

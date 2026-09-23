@@ -288,8 +288,9 @@ pre-commitでは、未stageの変更と未追跡ファイルを一時的にstash
 worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
 
 multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
-直下で`.git`を持つ各リポジトリへ`lefthook.local.yml`を配置し、それぞれに`lefthook install`する。
-直下にリポジトリがない場合は、workspaceが属するリポジトリへインストールする。
+`multi-worktree-*`ブランチのtask rootだけを複数リポジトリ構成として扱い、直下で`.git`を持つ
+各リポジトリへ`lefthook.local.yml`を配置して、それぞれに`lefthook install`する。
+通常のworkspaceは直下にsubmoduleがあっても、workspaceが属する親リポジトリへインストールする。
 
 フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
 非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
