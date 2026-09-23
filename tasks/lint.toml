@@ -22,6 +22,10 @@ run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic -
 description = "Run pinact --check"
 run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
 
+["lint:dockerfile-pin"]
+description = "Run dockerfile-pin check"
+run         = "dockerfile-pin check"
+
 ["lint:toml"]
 description = "Run lint TOML files"
 hide        = true

@@ -44,12 +44,14 @@ jobs:
               - ".github/workflows/*"
               - ".github/actionlint.yaml"
               - ".github/actionlint.yml"
+            dockerfile:
+              - "**/Dockerfile*"
             secret:
               - "**/*"
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
+          install_args: "aqua:azu/dockerfile-pin aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
@@ -106,6 +108,12 @@ jobs:
         run: mise run lint:pinact
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      - name: dockerfile-pin
+        id: lint-dockerfile-pin
+        if: steps.changed-files.outputs.dockerfile_any_changed == 'true'
+        background: true
+        run: mise run lint:dockerfile-pin
 
       - name: secretlint
         id: lint-secret

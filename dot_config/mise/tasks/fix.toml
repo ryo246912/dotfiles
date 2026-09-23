@@ -5,6 +5,7 @@
 # 逐次実行されるのと同時にもう一度実行され、同じワークフローファイルへの書き込みが競合する。
 depends = [
     "fix:action",
+    "fix:dockerfile-pin",
     "fix:toml",
     "fix:yaml",
     "fix:json",
@@ -34,6 +35,11 @@ run         = ["disable-checkout-persist-credentials"]
 description = "Run fix actions timeout-minutes"
 dir         = "{{cwd}}"
 run         = ["ghatm set -t 5"]
+
+["fix:dockerfile-pin"]
+description = "Run dockerfile-pin (fix)"
+dir         = "{{cwd}}"
+run         = "dockerfile-pin run --write"
 
 ["fix:toml"]
 description = "Run fix TOML files"
