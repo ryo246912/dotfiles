@@ -38,6 +38,8 @@ hide        = true
 run         = "taplo format"
 
 ["fix:yaml"]
+# fix:dockerfile-pinとcompose.yamlへ同時に書き込むと競合するため、先に完了させる。
+depends     = ["fix:dockerfile-pin"]
 description = "Run fix YAML files"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.{yaml,yml}'"

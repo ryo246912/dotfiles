@@ -59,7 +59,7 @@ pre-push:
             fail_text: "❌ [pre-push] pinact check failed. Run: mise run fix:pinact"
           - name: lint:dockerfile-pin
             run: mise run lint:dockerfile-pin
-            glob: "**/{Dockerfile*,docker-compose*.{yml,yaml},compose.{yml,yaml}}"
+            glob: "**/{Dockerfile*,docker-compose*.{yml,yaml},compose*.{yml,yaml}}"
             fail_text: "❌ [pre-push] dockerfile-pin check failed. Run: mise run fix:dockerfile-pin"
 
     - name: stash pop
