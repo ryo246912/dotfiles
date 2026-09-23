@@ -1,7 +1,8 @@
 [[snippets]]
+global  = true
 name    = "fnox exec -- "
 snippet = "fnox exec -- "
-trigger = "fne"
+trigger = "fe"
 
 [[snippets]]
 cursor  = "👇"
