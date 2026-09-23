@@ -1,4 +1,5 @@
 [[snippets]]
+global  = true
 name    = "fnox exec -- "
 snippet = "fnox exec -- "
 trigger = "fne"
