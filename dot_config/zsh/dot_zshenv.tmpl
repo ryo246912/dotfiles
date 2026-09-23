@@ -114,9 +114,10 @@ if [ -z "${FNOX_PROFILE:-}" ]; then
 fi
 
 if command -v mise >/dev/null 2>&1; then
-{{ if (lookPath "mise") -}}
-{{ output "mise" "activate" "zsh" "--shims" | trim }}
-{{- end }}
+  # activation code を chezmoi apply 時に埋め込むと、その後の self-update で mise 本体と
+  # 生成済みコードの CLI option が食い違う（例: hook-env の --shell-pid）。起動時に現在の
+  # mise から生成し、常に同じ version の CLI と activation code を組み合わせる。
+  eval "$(mise activate zsh --shims)"
 fi
 
 # Editor
