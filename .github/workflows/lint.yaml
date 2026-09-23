@@ -46,6 +46,10 @@ jobs:
               - ".github/actionlint.yml"
             dockerfile:
               - "**/Dockerfile*"
+              - "**/docker-compose*.yml"
+              - "**/docker-compose*.yaml"
+              - "**/compose.yml"
+              - "**/compose.yaml"
             secret:
               - "**/*"
 
