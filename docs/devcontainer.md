@@ -284,6 +284,10 @@ devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向�
 Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
 
+multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
+直下で`.git`を持つ各リポジトリへ`lefthook.local.yml`を配置し、それぞれに`lefthook install`する。
+直下にリポジトリがない場合は、workspaceが属するリポジトリへインストールする。
+
 フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
 非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
 失敗する。不要になったフックは、対象リポジトリのdevcontainer内で
