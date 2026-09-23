@@ -27,8 +27,8 @@ ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
 # disk image : shrink unused space without deleting data(sparse) [require:quit Docker Desktop & GNU cp(coreutils)]
 cp ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak
-cp --sparse=always ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
-rm ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak
+&& cp --sparse=always ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
+&& rm ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.bak
 
 # display no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker image ls -f dangling=true
