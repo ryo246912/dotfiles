@@ -40,6 +40,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
 # - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
+# - orca: 公式の独自 tap（stablyai/orca）から導入し、brew 管理で更新する
 # - google-drive/tailscale-app: pkg インストーラが sudo を要求し post-apply hook（非対話）を
 #   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
 #   brew-cask シムが未対応。zoom は private ホストでしか使わない。
