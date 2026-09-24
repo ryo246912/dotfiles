@@ -32,7 +32,7 @@ experimental = true
 "github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"                                = "0.19.1"
 "go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
-"npm:@fission-ai/openspec"                                   = "1.13.2"
+"npm:@fission-ai/openspec"                                  = "1.13.2"
 "npm:ccusage"                                               = "20.0.23"
 "npm:oxfmt"                                                 = "0.59.0"
 "npm:oxlint"                                                = "1.83.0"
