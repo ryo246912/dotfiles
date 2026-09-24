@@ -20,6 +20,8 @@
   // initializeCommand（コンテナ作成前にホスト側で実行される）で事前に用意する。
   "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'",
   "remoteEnv": {
+    "AI_AGENT": "1",
+    "LEFTHOOK_CONFIG": "lefthook.local.yml",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
@@ -56,6 +58,7 @@
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // devcontainer専用のSSH鍵（ホスト通知用）
@@ -63,8 +66,6 @@
     // devcontainer専用のSSH鍵（コミット署名用。ホストの個人GPG秘密鍵はコンテナに一切マウントしない）
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign,target=/home/vscode/.ssh/id_docker_devcontainer_sign,readonly",
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign.pub,target=/home/vscode/.ssh/id_docker_devcontainer_sign.pub,readonly",
-    // devcontainer scripts
-    "type=bind,source=${localEnv:HOME}/.config/devcontainer/scripts,target=/home/vscode/.config/devcontainer/scripts,readonly",
     // git - parent directory of workspace
     // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
     "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",

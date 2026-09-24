@@ -1,0 +1,45 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: all
+  disable:
+    # Deprecated or overly opinionated linters that conflict with the enabled set.
+    - depguard
+    - exhaustruct
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - godox
+    - ireturn
+    - lll
+    - mnd
+    - nlreturn
+    - noinlineerr
+    - paralleltest
+    - testpackage
+    - varnamelen
+    - wsl
+    - wsl_v5
+  settings:
+    govet:
+      enable-all: true
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: exported
+          disabled: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: false
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - golines

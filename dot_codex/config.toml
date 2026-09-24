@@ -1,2 +1,6 @@
 [features]
 codex_hooks = true
+
+# Mark every command spawned by Codex so AI-only Git hooks can detect it.
+[shell_environment_policy]
+set = { AI_AGENT = "1" }

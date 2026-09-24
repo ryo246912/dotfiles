@@ -1,65 +1,52 @@
 ["fix:all"]
-# ["fix:*"] ではなく明示的に列挙している: そのglobはfix:pinact、
-# fix:action-disable-checkout-persist-credentials、fix:action-timeout-minutesにも
-# 直接マッチしてしまい、miseは兄弟同士のdependsを並列実行するため、fix:action内で
-# 逐次実行されるのと同時にもう一度実行され、同じワークフローファイルへの書き込みが競合する。
-depends = [
-    "fix:action",
-    "fix:toml",
-    "fix:yaml",
-    "fix:json",
-    "fix:md",
+description = "Run all formatters sequentially"
+run = [
+    { task = "fix:action" },
+    { task = "fix:yaml" },
+    { task = "fix:toml" },
+    { task = "fix:json" },
+    { task = "fix:md" },
+    { task = "fix:go" },
+    { task = "fix:python" },
+    { task = "fix:typescript" },
+    { task = "fix:shell" },
 ]
-description = "Run all formatters"
 
 ["fix:action"]
 description = "Run fix actions files"
 run = [
     { task = "fix:pinact" },
     { task = "fix:action-disable-checkout-persist-credentials" },
-    { task = "fix:action-timeout-minutes" },
 ]
 
 ["fix:pinact"]
 description = "Run pinact (fix)"
-dir         = "{{cwd}}"
 run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run; else ghtkn exec -- pinact run; fi"
 
 ["fix:action-disable-checkout-persist-credentials"]
 description = "Run fix actions disable-checkout-persist-credentials"
-dir         = "{{cwd}}"
 run         = ["disable-checkout-persist-credentials"]
-
-["fix:action-timeout-minutes"]
-description = "Run fix actions timeout-minutes"
-dir         = "{{cwd}}"
-run         = ["ghatm set -t 5"]
 
 ["fix:toml"]
 description = "Run fix TOML files"
-dir         = "{{cwd}}"
 hide        = true
-run         = "taplo format --config ~/.config/taplo/config.toml"
+run         = "taplo format"
 
 ["fix:yaml"]
 description = "Run fix YAML files"
-dir         = "{{cwd}}"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.{yaml,yml}'"
 
 ["fix:json"]
 description = "Run fix JSON files"
-dir         = "{{cwd}}"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.json'"
 
 ["fix:md"]
 description = "Run fix Markdown files"
-dir         = "{{cwd}}"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.md'"
 
 ["fix:shell"]
 description = "Format shell scripts with shfmt"
-dir         = "{{cwd}}"
 run         = "shfmt -w ."

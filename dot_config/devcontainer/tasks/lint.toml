@@ -1,16 +1,5 @@
 ["lint:all"]
-# 独立したlint:shellタスクをリポジトリ全体の既定値へ含めないよう明示的に列挙する。
-# shellの検査をhookで強制するのはAI用devcontainerだけとする。
-depends = [
-    "lint:action",
-    "lint:toml",
-    "lint:yaml",
-    "lint:json",
-    "lint:md",
-    "lint:secret",
-    "lint:git-secrets",
-    "lint:betterleaks:staged",
-]
+depends     = ["lint:*"]
 description = "Run all linters"
 
 ["lint:action"]
@@ -27,7 +16,7 @@ run         = "ghalint run"
 
 ["lint:zizmor"]
 description = "Run zizmor"
-run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic --min-severity=low .github/workflows"
+run         = "if [ -f zizmor.yml ]; then GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic --min-severity=low .github/workflows; else GH_TOKEN=$(gh auth token) zizmor --pedantic --min-severity=low .github/workflows; fi"
 
 ["lint:pinact"]
 description = "Run pinact --check"
@@ -55,7 +44,7 @@ run         = "oxfmt --disable-nested-config --check '**/*.md'"
 
 ["lint:secret"]
 description = "Run secretlint"
-run         = "secretlint '**/*'"
+run         = 'secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/secretlintrc.json" "**/*"'
 
 ["lint:git-secrets"]
 description = "Run git-secrets scan"
