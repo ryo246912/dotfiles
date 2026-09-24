@@ -1,5 +1,16 @@
 ["lint:all"]
-depends     = ["lint:*"]
+# 独立したlint:shellタスクをリポジトリ全体の既定値へ含めないよう明示的に列挙する。
+# shellの検査をhookで強制するのはAI用devcontainerだけとする。
+depends = [
+    "lint:action",
+    "lint:toml",
+    "lint:yaml",
+    "lint:json",
+    "lint:md",
+    "lint:secret",
+    "lint:git-secrets",
+    "lint:betterleaks:staged",
+]
 description = "Run all linters"
 
 ["lint:action"]
@@ -20,7 +31,7 @@ run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic -
 
 ["lint:pinact"]
 description = "Run pinact --check"
-run         = "pinact run --check"
+run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
 
 ["lint:toml"]
 description = "Run lint TOML files"
@@ -30,17 +41,17 @@ run         = "taplo format --check"
 ["lint:yaml"]
 description = "Run lint YAML files"
 hide        = true
-run         = "oxfmt --check '**/*.{yaml,yml}'"
+run         = "oxfmt --disable-nested-config --check '**/*.{yaml,yml}'"
 
 ["lint:json"]
 description = "Run lint JSON files"
 hide        = true
-run         = "oxfmt --check '**/*.json'"
+run         = "oxfmt --disable-nested-config --check '**/*.json'"
 
 ["lint:md"]
 description = "Run lint Markdown files"
 hide        = true
-run         = "oxfmt --check '**/*.md'"
+run         = "oxfmt --disable-nested-config --check '**/*.md'"
 
 ["lint:secret"]
 description = "Run secretlint"
@@ -53,3 +64,7 @@ run         = "git secrets --scan"
 ["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
 run         = "betterleaks git --staged -v"
+
+["lint:shell"]
+description = "Check shell script formatting with shfmt"
+run         = "shfmt -l ."

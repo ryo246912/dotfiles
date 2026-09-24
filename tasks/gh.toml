@@ -5,7 +5,9 @@ python3 -c '
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
+from pathlib import Path
 
 AGENTS = ["github-copilot", "cursor", "codex", "claude-code"]
 
@@ -63,10 +65,38 @@ if not has_pin:
 
     pin_args = ["--pin", resolved_ref]
 
-for agent in AGENTS:
-    subprocess.run(
-        ["gh", "skill", "install", repo, *install_args, "--agent", agent, "--scope", "user", *pin_args],
-        check=True,
-    )
+skill_is_explicit = bool(install_args and not install_args[0].startswith("-"))
+all_skills = "--all" in install_args
+
+if not skill_is_explicit and not all_skills:
+    with tempfile.TemporaryDirectory(prefix="gh-skill-install-") as staging_dir:
+        subprocess.run(
+            ["gh", "skill", "install", repo, *install_args, "--dir", staging_dir, *pin_args],
+            check=True,
+        )
+
+        selected_paths = []
+        for skill_file in sorted(Path(staging_dir).glob("*/SKILL.md")):
+            for line in skill_file.read_text(encoding="utf-8").splitlines():
+                if line.lstrip().startswith("github-path:"):
+                    selected_paths.append(line.split(":", 1)[1].strip().strip("\\\"\x27"))
+                    break
+
+        if not selected_paths:
+            print("Error: could not determine the selected skill path(s).", file=sys.stderr)
+            sys.exit(1)
+
+        for skill_path in selected_paths:
+            for agent in AGENTS:
+                subprocess.run(
+                    ["gh", "skill", "install", repo, skill_path, *install_args, "--agent", agent, "--scope", "user", *pin_args],
+                    check=True,
+                )
+else:
+    for agent in AGENTS:
+        subprocess.run(
+            ["gh", "skill", "install", repo, *install_args, "--agent", agent, "--scope", "user", *pin_args],
+            check=True,
+        )
 ' "$@"
 '''

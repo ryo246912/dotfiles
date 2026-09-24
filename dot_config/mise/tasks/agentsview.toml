@@ -1,185 +1,4 @@
-["agentsview:setup:db-roles"]
-description = "Create/update AgentsView PostgreSQL roles for owner, local push, and read-only viewer"
-run = '''
-set -eu
-
-if { [ -z "${AGENTSVIEW_ADMIN_PG_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_OWNER_PASSWORD:-}" ] ||
-     [ -z "${AGENTSVIEW_PUSH_PASSWORD:-}" ] || [ -z "${AGENTSVIEW_READ_PASSWORD:-}" ]; } &&
-   [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:setup:db-roles "$@"
-fi
-
-: "${AGENTSVIEW_ADMIN_PG_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-: "${AGENTSVIEW_OWNER_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-: "${AGENTSVIEW_PUSH_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-: "${AGENTSVIEW_READ_PASSWORD:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-pg_app="${AGENTSVIEW_PG_APP:-psgl}"
-pg_user="${AGENTSVIEW_ADMIN_PG_USER:-postgres}"
-pg_db="${AGENTSVIEW_ADMIN_PG_DATABASE:-ryo_shellhistory}"
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_log="$(mktemp)"
-
-sql_escape() {
-  printf "%s" "$1" | sed "s/'/''/g"
-}
-
-owner_pass=$(sql_escape "$AGENTSVIEW_OWNER_PASSWORD")
-push_pass=$(sql_escape "$AGENTSVIEW_PUSH_PASSWORD")
-read_pass=$(sql_escape "$AGENTSVIEW_READ_PASSWORD")
-
-# private network の PostgreSQL へ flyctl proxy 経由で接続する（他 task と同じ経路）。
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$pg_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-# admin password は PGPASSWORD(env) 経由で渡し、argv（process table）に出さない。
-# ON_ERROR_STOP=1 で途中の DDL/GRANT 失敗も検出し、非ゼロで停止する。
-PGPASSWORD="$AGENTSVIEW_ADMIN_PG_PASSWORD" psql \
-  "postgres://${pg_user}@127.0.0.1:${proxy_port}/${pg_db}?sslmode=disable" \
-  -v ON_ERROR_STOP=1 -q <<SQL
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_owner') THEN
-    CREATE ROLE agentsview_owner LOGIN PASSWORD '$owner_pass';
-  ELSE
-    ALTER ROLE agentsview_owner LOGIN PASSWORD '$owner_pass';
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_push_mac') THEN
-    CREATE ROLE agentsview_push_mac LOGIN PASSWORD '$push_pass';
-  ELSE
-    ALTER ROLE agentsview_push_mac LOGIN PASSWORD '$push_pass';
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agentsview_read') THEN
-    CREATE ROLE agentsview_read LOGIN PASSWORD '$read_pass';
-  ELSE
-    ALTER ROLE agentsview_read LOGIN PASSWORD '$read_pass';
-  END IF;
-END
-\$\$;
-
--- 再実行時に昇格属性が残らないよう、role 属性を毎回意図した状態へ正規化する。
-ALTER ROLE agentsview_owner    NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE agentsview_push_mac NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-ALTER ROLE agentsview_read     NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-
-CREATE SCHEMA IF NOT EXISTS agentsview AUTHORIZATION agentsview_owner;
-ALTER SCHEMA agentsview OWNER TO agentsview_owner;
-
-GRANT USAGE ON SCHEMA agentsview TO agentsview_read;
-GRANT USAGE ON SCHEMA agentsview TO agentsview_push_mac;
-
-GRANT SELECT ON ALL TABLES IN SCHEMA agentsview TO agentsview_read;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA agentsview TO agentsview_push_mac;
-GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA agentsview TO agentsview_push_mac;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
-  GRANT SELECT ON TABLES TO agentsview_read;
-ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentsview_push_mac;
-ALTER DEFAULT PRIVILEGES FOR ROLE agentsview_owner IN SCHEMA agentsview
-  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO agentsview_push_mac;
-SQL
-'''
-shell = "bash -c"
-
-["agentsview:setup:migrate"]
-description = "Start flyctl proxy, run initial AgentsView schema migration with the owner PostgreSQL role, then stop proxy"
-run = '''
-set -eu
-
-if [ -z "${AGENTSVIEW_OWNER_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:setup:migrate "$@"
-fi
-
-: "${AGENTSVIEW_OWNER_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_OWNER_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
-
-if [ -n "${AGENTSVIEW_MIGRATION_PROJECTS:-}" ]; then
-  agentsview pg push --projects "$AGENTSVIEW_MIGRATION_PROJECTS"
-else
-  agentsview pg push
-fi
-'''
-shell = "bash -c"
-
-["agentsview:fly:tokens"]
+["agentsview:tokens"]
 description = "Generate AgentsView auth_token and cursor_secret values for secret manager storage"
 run = '''
 set -eu
@@ -188,155 +7,487 @@ printf 'AGENTSVIEW_AUTH_TOKEN=%s\n' "$(openssl rand -base64 32)"
 printf 'AGENTSVIEW_CURSOR_SECRET=%s\n' "$(openssl rand -base64 32)"
 '''
 
-["agentsview:fly:secrets"]
-description = "Set Fly secrets for the public AgentsView viewer with a read-only PostgreSQL role"
+# local databaseもCockroachDBである。container定義は
+# dot_config/agentsview/compose.yaml、task本体は
+# dot_config/agentsview/scripts/localdb.sh で、ここはmode指定だけを行う。
+["agentsview:cockroach:status"]
+description = "Show the local CockroachDB version and session counts per machine"
 run = '''
-set -eu
-
-if { [ -z "${AGENTSVIEW_READ_PG_URL:-}" ] || [ -z "${AGENTSVIEW_AUTH_TOKEN:-}" ] ||
-     [ -z "${AGENTSVIEW_CURSOR_SECRET:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:fly:secrets "$@"
-fi
-
-: "${AGENTSVIEW_READ_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-: "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-: "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-CONFIG_B64=$(
-  printf 'public_url = "https://ryo-agentsview.fly.dev"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n\n[pg]\nallow_insecure = true\n' "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" \
-  | base64 | tr -d '\n'
-)
-
-# secret 値を argv（process table）に出さないよう、stdin 経由の import を使う。
-# import は各行を最初の '=' で KEY/VALUE に分割するため、値に含まれる '='
-# （URL の query や base64 の padding）はそのまま値として保持される。
-printf 'AGENTSVIEW_PG_URL=%s\nAGENTSVIEW_CONFIG_TOML=%s\n' \
-  "$AGENTSVIEW_READ_PG_URL" "$CONFIG_B64" \
-  | flyctl secrets import -a ryo-agentsview
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" status "$@"
 '''
 shell = "bash -c"
 
-["agentsview:deploy"]
-description = "Deploy the AgentsView public viewer to Fly.io"
-run         = "flyctl deploy --app ryo-agentsview -c dot_config/agentsview/fly.toml"
-
-["agentsview:pg:status"]
-description = "Start flyctl proxy, show AgentsView PostgreSQL sync status, then stop proxy"
+["agentsview:cockroach:push:local"]
+description = "Incrementally push local AgentsView sessions into the local CockroachDB container"
 run = '''
-set -eu
-
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:status "$@"
-fi
-
-: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
-
-agentsview pg status
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" push "$@"
 '''
 shell = "bash -c"
 
-["agentsview:pg:push"]
-description = "Start flyctl proxy, push local AgentsView sessions to PostgreSQL, then stop proxy"
+["agentsview:cockroach:dump:local"]
+description = "Dump the consolidated local AgentsView CockroachDB database"
 run = '''
-set -eu
-
-if [ -z "${AGENTSVIEW_PROXY_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
-  export _FNOX_REEXEC=1
-  exec fnox exec -- mise run agentsview:pg:push "$@"
-fi
-
-: "${AGENTSVIEW_PROXY_PG_URL:?fnox が未解決です。dot_config/fnox/config.toml を確認してください}"
-
-proxy_port="${AGENTSVIEW_PG_PROXY_PORT:-15432}"
-proxy_app="${AGENTSVIEW_PG_APP:-psgl}"
-proxy_log="$(mktemp)"
-
-cleanup() {
-  if [ -n "${proxy_pid:-}" ]; then
-    kill "$proxy_pid" 2>/dev/null || true
-    wait "$proxy_pid" 2>/dev/null || true
-  fi
-  rm -f "$proxy_log"
-}
-
-if nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; then
-  echo "127.0.0.1:${proxy_port} is already in use" >&2
-  exit 1
-fi
-
-flyctl proxy "${proxy_port}:5432" -a "$proxy_app" >"$proxy_log" 2>&1 &
-proxy_pid=$!
-
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-i=0
-while ! nc -z 127.0.0.1 "$proxy_port" >/dev/null 2>&1; do
-  if ! kill -0 "$proxy_pid" 2>/dev/null; then
-    cat "$proxy_log" >&2
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge 40 ]; then
-    cat "$proxy_log" >&2
-    echo "Timed out waiting for flyctl proxy on 127.0.0.1:${proxy_port}" >&2
-    exit 1
-  fi
-  sleep 0.25
-done
-
-export AGENTSVIEW_PG_URL="$AGENTSVIEW_PROXY_PG_URL"
-export AGENTSVIEW_PG_MACHINE="${AGENTSVIEW_PG_MACHINE:-$(hostname)}"
-
-agentsview pg push "$@"
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" dump "$@"
 '''
 shell = "bash -c"
 
 ["agentsview:serve"]
-description = "Start local AgentsView server"
-run         = "agentsview serve"
+description = "Continuously push local sessions and serve AgentsView from the local CockroachDB container"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+exec bash "$script" serve "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:push:remote"]
+description = "Push local sessions directly to CockroachDB"
+run = '''
+set -eu
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:push:remote -- "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+# AGENTSVIEW_PG_URL だけはfnoxが解決したsecretなのでここで渡す。schemaは
+# ["agentsview:cockroach:push:remote".env] に置いている。
+AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push --no-vectors "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:push:remote".env]
+AGENTSVIEW_PG_SCHEMA = "{{ env.AGENTSVIEW_PG_SCHEMA | default(value='agentsview') }}"
+
+["agentsview:cockroach:dump:remote"]
+description = "Export CockroachDB AgentsView rows as PostgreSQL-compatible column INSERT statements"
+run = '''
+# psqlの終了statusを進捗表示のpipeで隠さないよう pipefail を付ける。
+set -euo pipefail
+
+if [ -z "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:-}" ] && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cockroach:dump:remote "$@"
+fi
+: "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+# 呼び出し元がpathを決めた場合はそれに書く。mergeが、この実行で
+# 作ったdumpを名前のsortではなく確実に指せるようにするためである。
+dump_path="${AGENTSVIEW_DUMP_PATH:-${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql}"
+auth_dir="$(mktemp -d)"
+cleanup_dump() {
+  status=$?
+  rm -rf "$auth_dir"
+  if [ "$status" -ne 0 ]; then
+    rm -f "$dump_path"
+  fi
+  return "$status"
+}
+trap cleanup_dump EXIT
+
+# dumpにはsession本文が入るので、所有者だけが読めるようにする（localdb.shと同じ）。
+umask 077
+mkdir -p "$(dirname "$dump_path")"
+# dataをINSERT列へ書き出すSQL。local側（localdb.sh dump）と共通で、出力の形も
+# 同じである。pg_dumpを使わない理由は dump-inserts.sql のcommentにある。
+# 解決順は他のtaskと同じで、chezmoi適用済みの ~/.config を先に見て、無ければ
+# repository rootのsource treeを使う（環境変数での明示指定はそのまま尊重する）。
+# psqlにcursorで結果を取らせる件数。これが無いと生成したINSERT文を全件client
+# memoryへ溜めるため、session本文を含む大きなtableでpsqlが落ちる。0にするとcursorを
+# 使わない（cursorを扱えないengineに当たったときの逃げ道）。
+fetch_rows="${AGENTSVIEW_DUMP_FETCH_ROWS:-1000}"
+case "$fetch_rows" in
+  '' | *[!0-9]*)
+    echo "AGENTSVIEW_DUMP_FETCH_ROWS は0以上の整数で指定してください: ${fetch_rows}" >&2
+    exit 1
+    ;;
+esac
+
+# 進捗をstderrへ出すhelper。psqlは書き出し中なにも言わないため、remoteのように
+# 時間のかかる相手では止まっているのか進んでいるのか分からない。
+progress="${AGENTSVIEW_DUMP_PROGRESS:-}"
+if [ -z "$progress" ]; then
+  progress="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/dump-progress.py"
+  [ -f "$progress" ] || progress=dot_config/agentsview/scripts/dump-progress.py
+fi
+if [ ! -f "$progress" ]; then
+  echo "dump-progress.py が見つかりません: ${progress}" >&2
+  exit 1
+fi
+
+dump_sql="${AGENTSVIEW_DUMP_INSERTS_SQL:-}"
+if [ -z "$dump_sql" ]; then
+  dump_sql="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/dump-inserts.sql"
+  [ -r "$dump_sql" ] || dump_sql=dot_config/agentsview/dump-inserts.sql
+fi
+if [ ! -r "$dump_sql" ]; then
+  echo "dump-inserts.sql が読めません: ${dump_sql}" >&2
+  exit 1
+fi
+# auth_dirとPG URLはこのtask内で決まる値なのでexportする。静的な
+# AGENTSVIEW_DUMP_ALLOW_REMOTE は ["agentsview:cockroach:dump:remote".env] にある。
+export AGENTSVIEW_DUMP_AUTH_DIR="$auth_dir"
+export AGENTSVIEW_DUMP_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
+# source treeではexecutable_ prefixが付いたままなので、両方の名前を見る。
+prepare_auth="${AGENTSVIEW_PREPARE_DUMP_AUTH:-}"
+if [ -z "$prepare_auth" ]; then
+  prepare_auth="${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/prepare-dump-auth"
+  [ -f "$prepare_auth" ] || prepare_auth=dot_config/agentsview/executable_prepare-dump-auth
+fi
+if [ ! -f "$prepare_auth" ]; then
+  echo "prepare-dump-auth が見つかりません: ${prepare_auth}" >&2
+  exit 1
+fi
+python3 "$prepare_auth"
+pg_url="$(cat "$auth_dir/url")"
+
+# postgres imageはca-certificatesを含まないため、container内のsystem trust storeも
+# /etc/ssl/certs/ca-certificates.crtも空である（docker-library/postgres#1331）。
+# remote URLはsslmode=verify-fullなので、hostが既に信頼しているCA bundleを渡す。
+# CockroachDB Cloud BasicのserverはLet's Encryptの証明書なので、公開CA bundleで足りる。
+ca_bundle=""
+# URLがsslrootcertでCAを指定していた場合は、それを最優先で使う。system trust
+# storeに無いprivate CAのclusterはこれでしか検証できない。
+if [ -s "$auth_dir/sslrootcert" ]; then
+  ca_bundle="$(cat "$auth_dir/sslrootcert")"
+  if [ ! -r "$ca_bundle" ]; then
+    echo "URLのsslrootcertが読めません: ${ca_bundle}" >&2
+    # libpqは~を展開しないので、psqlで直接繋いでも同じpathで失敗する。ここで
+    # 展開すると、このtaskだけ通ってpsqlでは通らない状態になるため展開しない。
+    case "$ca_bundle" in
+      "~"*)
+        echo "  libpqは~を展開しません。絶対pathで指定してください。" >&2
+        ;;
+    esac
+    exit 1
+  fi
+elif [ -n "${PGSSLROOTCERT:-}" ] && [ "$PGSSLROOTCERT" != "system" ] && [ -r "$PGSSLROOTCERT" ]; then
+  ca_bundle="$PGSSLROOTCERT"
+else
+  # docs/agentsview.mdがhost側の候補として挙げているpathと同じ順で探す。
+  # brew --prefix openssl@3 は /opt/homebrew/opt/openssl@3（Intelは /usr/local/opt）
+  # を指し、bundleはその下の etc/openssl@3/cert.pem である。Homebrewのprefix直下へ
+  # linkされる形もあるので両方見る。
+  for candidate in /etc/ssl/cert.pem /etc/ssl/certs/ca-certificates.crt \
+    /opt/homebrew/opt/openssl@3/etc/openssl@3/cert.pem \
+    /usr/local/opt/openssl@3/etc/openssl@3/cert.pem \
+    /opt/homebrew/etc/openssl@3/cert.pem /usr/local/etc/openssl@3/cert.pem; do
+    if [ -r "$candidate" ]; then
+      ca_bundle="$candidate"
+      break
+    fi
+  done
+fi
+if [ -z "$ca_bundle" ]; then
+  echo "読めるCA bundleが見つかりません。PGSSLROOTCERTに設定してください" >&2
+  exit 1
+fi
+# mount元はauth_dirへcopyしたfileにする。hostのCA bundleは/etcにあることが多く、
+# macOSのDocker Desktopが既定で共有するpathの外だが、auth_dir（$TMPDIR配下）は
+# pgpassのmountで既に使えている。
+cp "$ca_bundle" "$auth_dir/ca.crt"
+
+# psqlはstdoutへ書くので、fileはhost側のredirectで作る。containerへ出力先を
+# mountしないため、uidを合わせる必要もない。PGSSLROOTCERTが指すのはmountした
+# CA bundleで、postgres imageはca-certificatesを含まずsystem trust storeが
+# 空なので、remoteのsslmode=verify-fullはこのfileだけで検証する。
+# umaskは新しく作るfileにしか効かない。AGENTSVIEW_DUMP_PATHが既にあるfileを
+# 指していると、他userから読める状態のままsession本文を書き込むことになる。
+# 先に作って明示的に600へ落とす。
+touch "$dump_path"
+chmod 600 "$dump_path"
+
+# 差分dumpの起点。どちらも空なら全件（単体実行はbackupを作る用途なので既定は全件）。
+# 人が指定する AGENTSVIEW_DUMP_SINCE には次を渡せる:
+#   all         全件
+#   30d         今から30日前
+#   時刻の文字列 そのまま使う
+since="${AGENTSVIEW_DUMP_SINCE:-}"
+machine_since=""
+if [ -n "$since" ]; then
+  case "$since" in
+    all) since="" ;;
+    [0-9]*d)
+      # globは先頭が数字で末尾がdなら通るので、`1abcd` のような値もここへ来る。
+      # そのままintへ渡すとpythonのtracebackになるため、数字だけか先に見る。
+      days="${since%d}"
+      case "$days" in
+        *[!0-9]*)
+          echo "AGENTSVIEW_DUMP_SINCE の日数が数字ではありません: ${since}" >&2
+          exit 1
+          ;;
+      esac
+      # 桁が数字だけでも、timedeltaの上限（999999999日）を超えると例外になる。
+      since="$(python3 -c 'import datetime, sys
+try:
+    days = int(sys.argv[1])
+    print((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).isoformat())
+except (ValueError, OverflowError):
+    raise SystemExit("AGENTSVIEW_DUMP_SINCE の日数が大きすぎます")' \
+        "$days")" || exit 1
+      ;;
+  esac
+else
+  # mergeが渡すmachineごとの起点（localdb.sh sinceの出力）。明示のAGENTSVIEW_DUMP_SINCE
+  # があるときは人の指定を優先するので見ない。
+  machine_since="${AGENTSVIEW_DUMP_SINCE_BY_MACHINE:-}"
+fi
+# この並びは文字列ではなくSQLとしてremoteへ送られる（VALUESの中身になる）。値の
+# escapeはlocal DBのquote_literalが行うので、ここは「その出力らしい形か」を確かめる
+# だけである（SQLの文法検査ではない。想定外の値はremoteでerrorになる）。手で
+# 環境変数へ入れた場合や、localdb.shの出力が途中で混ざった場合に気付ける。
+# 判定はtrで「想定される文字を全部消したら何も残らないか」を見る。caseのbracketは
+# 中の引用符の扱いがshellで揺れるので使わない。
+if [ -n "$machine_since" ] &&
+  [ -n "$(printf '%s' "$machine_since" | tr -d "0-9A-Za-z(), '\"._:+-")" ]; then
+  echo "AGENTSVIEW_DUMP_SINCE_BY_MACHINE に想定外の文字が含まれるため、全件dumpにします" >&2
+  machine_since=""
+fi
+
+echo "remote CockroachDBからdumpを書き出します: ${dump_path}" >&2
+if [ -n "$since" ]; then
+  echo "  ${since} 以降に更新されたsessionとその子rowだけを対象にします（全件にするには AGENTSVIEW_DUMP_SINCE=all）" >&2
+elif [ -n "$machine_since" ]; then
+  echo "  machineごとの起点より後に更新されたsessionとその子rowだけを対象にします（全件にするには AGENTSVIEW_DUMP_SINCE=all）" >&2
+  echo "    ${machine_since}" >&2
+  echo "    この並びに無いmachineのsessionは全件が対象です" >&2
+else
+  echo "  全件を対象にします" >&2
+fi
+echo "  進捗は${AGENTSVIEW_DUMP_PROGRESS_SECONDS:-15}秒ごとに出ます（0 linesのままなら、まだ行を受け取っていません。errorはこの下に出ます）" >&2
+docker run --rm --interactive \
+  --volume "$auth_dir/pgpass:/run/agentsview.pgpass:ro" \
+  --volume "$auth_dir/ca.crt:/run/agentsview-ca.crt:ro" \
+  --env PGPASSFILE=/run/agentsview.pgpass \
+  --env PGSSLROOTCERT=/run/agentsview-ca.crt \
+  postgres:17 \
+  psql "$pg_url" --set=ON_ERROR_STOP=1 --set=schema=agentsview \
+    --set=since="$since" \
+    --set=machine_since="$machine_since" \
+    --set=FETCH_COUNT="$fetch_rows" \
+    --tuples-only --no-align --quiet --file=- \
+  <"$dump_sql" | python3 "$progress" "$dump_path"
+
+# dumpが最後まで書けたこと、schemaを実際に読めたことを末尾のmarkerで確認する。
+# 生成SQLは対象tableが0件でもerrorにならないので（information_schemaは権限で
+# filterされる）、markerだけが手掛かりである。restoreはfilterが同じmarkerを見るが、
+# このtaskを単体で実行した場合はここで気付けないと空のbackupが残る。
+marker="$(tail -n 1 "$dump_path")"
+tables="${marker#-- agentsview-dump-complete tables=}"
+case "$tables" in
+  "$marker" | '' | *[!0-9]*)
+    echo "dumpが完了markerで終わっていません: ${dump_path}" >&2
+    exit 1
+    ;;
+  0)
+    echo "dumpに1つもtableが入っていません: ${dump_path}" >&2
+    echo "  schema名（agentsview）と、roleがtableを読めることを確認してください。" >&2
+    exit 1
+    ;;
+esac
+
+echo "CockroachDB AgentsView data export: $dump_path (${tables} tables)"
+'''
+shell = "bash -c"
+
+["agentsview:cockroach:dump:remote".env]
+AGENTSVIEW_DUMP_ALLOW_REMOTE = "yes"
+
+["agentsview:cockroach:merge"]
+description = "Pull CockroachDB rows and merge the missing ones into the local CockroachDB container"
+run = '''
+set -euo pipefail
+
+backup_dir="${AGENTSVIEW_BACKUP_DIR:-${XDG_STATE_HOME:-${HOME}/.local/state}/agentsview}"
+# 書き先をこちらで決めてからdumpさせる。backup directoryを名前でsortして最新を選ぶと、
+# 時計のずれた既存fileや同時に走る別の実行のfileを掴みうる。
+mkdir -p "$backup_dir"
+data_dump="${backup_dir}/agentsview-cockroach-data-$(date +%Y%m%d-%H%M%S)-$$.sql"
+
+# 取り込みは ON CONFLICT DO NOTHING なので、localに既にあるrowを送っても捨てられる。
+# localがmachineごとに持っている最後のsession更新から少し戻した時刻を起点にして、
+# remoteが送る量を減らす。起点をmachineごとに分けるのは、1つにすると自分のmachineの
+# 最新更新が起点になり、別machineの古いsessionを永久に取りこぼすためである。localが
+# まだ空（schemaもsessionも無い）なら空文字が返り、全件dumpになる。
+script="${AGENTSVIEW_LOCALDB_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/localdb.sh}"
+[ -f "$script" ] || script=dot_config/agentsview/scripts/localdb.sh
+if [ -z "${AGENTSVIEW_DUMP_SINCE:-}" ] && [ -z "${AGENTSVIEW_DUMP_SINCE_BY_MACHINE:-}" ]; then
+  AGENTSVIEW_DUMP_SINCE_BY_MACHINE="$(bash "$script" since)"
+  export AGENTSVIEW_DUMP_SINCE_BY_MACHINE
+fi
+
+AGENTSVIEW_DUMP_PATH="$data_dump" mise run agentsview:cockroach:dump:remote
+if [ ! -s "$data_dump" ]; then
+  echo "CockroachDB AgentsView data export was not created: ${data_dump}" >&2
+  exit 1
+fi
+
+# remoteとlocalが同じengineでも、schemaは現在のAgentsViewがlocalへ作ったものを使い、
+# dumpからはdataだけを取り込む。remoteのDDL／権限／sequenceは持ち込まない。
+exec bash "$script" restore "$data_dump"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:secrets"]
+# 1回きりの操作ではないためtaskとして残す。初回登録のほか、Cloud Run URLの確定後、
+# CockroachDBのpassword rotation、auth token更新のたびに新versionを登録する。
+description = "Create new Secret Manager versions for the Cloud Run viewer"
+run = '''
+set -eu
+if { [ -z "${AGENTSVIEW_COCKROACH_READ_PG_URL:-}" ] || [ -z "${AGENTSVIEW_AUTH_TOKEN:-}" ] ||
+     [ -z "${AGENTSVIEW_CURSOR_SECRET:-}" ]; } && [ -z "${_FNOX_REEXEC:-}" ]; then
+  export _FNOX_REEXEC=1
+  exec fnox exec -- mise run agentsview:cloudrun:secrets "$@"
+fi
+
+: "${GCP_PROJECT_ID:?GCP_PROJECT_IDを設定してください}"
+: "${AGENTSVIEW_COCKROACH_READ_PG_URL:?fnox が未解決です}"
+: "${AGENTSVIEW_AUTH_TOKEN:?fnox が未解決です}"
+: "${AGENTSVIEW_CURSOR_SECRET:?fnox が未解決です}"
+
+region="us-west2"
+public_url="${AGENTSVIEW_CLOUD_RUN_URL:-}"
+if [ -z "$public_url" ]; then
+  public_url=$(gcloud run services describe ryo-agentsview \
+    --project="$GCP_PROJECT_ID" --region="$region" --format='value(status.url)' 2>/dev/null || true)
+fi
+: "${public_url:?初回だけAGENTSVIEW_CLOUD_RUN_URLに公開URLを指定してください}"
+
+ensure_secret() {
+  if ! gcloud secrets describe "$1" --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+    gcloud secrets create "$1" --project="$GCP_PROJECT_ID" --replication-policy=automatic >/dev/null
+  fi
+}
+
+ensure_secret agentsview-pg-url
+ensure_secret agentsview-config-toml
+
+printf '%s' "$AGENTSVIEW_COCKROACH_READ_PG_URL" |
+  gcloud secrets versions add agentsview-pg-url --project="$GCP_PROJECT_ID" --data-file=- >/dev/null
+
+printf 'public_url = "%s"\nrequire_auth = true\nauth_token = "%s"\ncursor_secret = "%s"\n' \
+  "$public_url" "$AGENTSVIEW_AUTH_TOKEN" "$AGENTSVIEW_CURSOR_SECRET" |
+  gcloud secrets versions add agentsview-config-toml --project="$GCP_PROJECT_ID" --data-file=- >/dev/null
+
+echo "Cloud Run secret versions added. Secret values were not printed."
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:build"]
+description = "Build the AgentsView image into Artifact Registry with a commit-pinned tag"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" build "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:deploy"]
+description = "Build the image and deploy the Cloud Run service with clrnd"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" deploy "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:verify"]
+description = "Validate the clrnd manifest and the resources it references"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" verify "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:render"]
+description = "Print the clrnd manifest with its templates expanded"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" render "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:diff"]
+description = "Show the diff between the live Cloud Run service and the manifest"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" diff "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:status"]
+description = "Show the Cloud Run service state, traffic split, and URL"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" status "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:revisions"]
+description = "List Cloud Run revisions with their traffic share"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" revisions "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:refresh"]
+description = "Roll a new Cloud Run revision without changing the definition (restart containers)"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" refresh "$@"
+'''
+shell = "bash -c"
+
+["agentsview:cloudrun:rollback"]
+description = "Send Cloud Run traffic back to the previous revision"
+run = '''
+set -euo pipefail
+script="${AGENTSVIEW_CLOUDRUN_SCRIPT:-${XDG_CONFIG_HOME:-$HOME/.config}/agentsview/scripts/cloudrun.sh}"
+if [ ! -f "$script" ] && [ -f dot_config/agentsview/scripts/cloudrun.sh ]; then
+  script=dot_config/agentsview/scripts/cloudrun.sh
+fi
+exec bash "$script" rollback "$@"
+
+'''
+shell = "bash -c"

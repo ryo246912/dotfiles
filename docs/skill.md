@@ -2,9 +2,10 @@
 
 このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
 
+- Plannotator / Effective HTML skills
 - `crit` / `crit-cli`
 - `terminal-browser`
-- Tsumikiの14 skill
+- Tsumiki skills
 - Ponytailの6 skill
 - `ctx-agent-history-search`
 - `resolving-merge-conflicts`
@@ -28,8 +29,138 @@ mise run apm:install
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `dot_apm/apm.yml` で commit SHA に pin しています。更新時は upstream の内容を確認して
+依存先は再現性のため `dot_apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
 `ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
+
+## Plannotator / Effective HTML
+
+### 導入構成
+
+- Plannotator CLIはdevcontainer imageのmise toolとしてインストールします。
+- `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
+  APMでuser scopeへ配布します。
+- APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
+  Plannotator用のslash command fileを別途管理しません。
+- Claude Codeのplan review hookはRulesyncのglobal hook、Codexのplan review hookは`~/.codex/hooks.json`で
+  設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
+- code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
+
+### HTML artifactを作成してreviewする
+
+[Effective HTML](https://github.com/plannotator/effective-html)のskillは、作りたいartifactに合わせて使い分けます。
+
+| skill              | 使いどころ                                                  |
+| ------------------ | ----------------------------------------------------------- |
+| `$html`            | report、explainer、presentation、landing pageなどの汎用HTML |
+| `$design-artifact` | palette、typography、layoutなどのvisual directionを決める   |
+| `$html-wireframe`  | 情報設計や導線を確認するlow-fidelity wireframe              |
+| `$html-prototype`  | 見た目を確認するmockup、または操作できるprototype           |
+| `$html-plan`       | plan、roadmap、rollout、実装手順                            |
+| `$html-diagram`    | architecture、sequence、process、state、hierarchyのdiagram  |
+
+`$html`は汎用の入り口です。作るものがwireframeやprototypeと明確な場合は、
+対応するspecialist skillを直接指定します。`$design-artifact`は他のskillと組み合わせて
+visual directionを調整する場合に使えます。
+
+```text
+$html-wireframe 管理画面の情報階層と2つの導線案をHTMLで作成して
+
+$html-prototype ユーザー登録から完了までの操作可能なprototypeをHTMLで作成して
+
+$design-artifact $html-plan この実装planをprojectのdesign languageに合わせて可視化して
+```
+
+作成したHTMLはPlannotator skillからreviewできます。Plannotatorはskill実行時に起動するため、
+container起動時にPlannotatorを常駐起動する必要はありません。
+
+```text
+$plannotator-annotate path/to/artifact.html
+```
+
+CLIを直接実行する場合は次を使います。
+
+```bash
+plannotator annotate path/to/artifact.html
+```
+
+### 開発中のfrontendをreviewする
+
+devcontainer内でfrontendのdev serverを起動します。Expo Webの例では次を実行します。
+
+```bash
+npx expo start --web --host lan
+```
+
+Viteなど、任意のhostからのaccessを明示的に許可するdev serverは次のように起動します。
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+dev serverが表示したloopback URLを別のterminalまたはagent sessionからPlannotatorへ渡します。
+`--app`はlive annotationを必須にし、pageを開けない場合はstatic contentへ自動fallbackせずerrorを返します。
+
+```text
+$plannotator-annotate http://localhost:8081 --app
+```
+
+CLIで直接起動する場合は次のとおりです。Viteの例ではportを`5173`に変えます。
+
+```bash
+plannotator annotate 'http://localhost:8081' --app
+plannotator annotate 'http://localhost:5173/admin?tab=users' --app
+```
+
+Plannotatorはdev serverを内部のrandom portでreverse proxyします。review起動時にeditor portと
+このlive-app proxy portを同じport番号のままSSH reverse tunnelでmacOSへ公開し、browserで自動的に開きます。
+URLとCSPのoriginがcontainer内とhost側で一致するため、live iframeも表示できます。
+review中もnavigation、form操作、hot reload、WebSocketを利用できます。pen toolで要素をclickするか
+textを選択してcommentを付け、**Send Annotations**でfeedbackをagentへ戻します。
+
+tabを自動で閉じたくない場合は、Plannotator右上の**Settings**を開き、
+**Auto-close Tab**を**Off**にします。この選択はbrowserに保存されるため、以後のreviewにも適用されます。
+ただし、**Send Annotations**は現在のCLI sessionを完了させる操作です。tabを残しても完了画面になり、
+同じannotation UIやlive appを引き続き操作することはできません。agentがfeedbackを反映した後に
+`$plannotator-annotate <URL> --app`をもう一度実行し、新しいreview sessionで確認してください。
+critのように1つの画面をfeedback送信後も継続利用する動作は、Plannotatorの現行session modelでは利用できません。
+
+live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
+
+```bash
+plannotator annotate 'http://localhost:8081' --static --no-jina
+```
+
+host側のPlannotator URLで「接続が拒否されました」と表示される場合は、tunnelの状態とlogを確認します。
+
+```bash
+ps -ef | grep '[s]sh.*127.0.0.1:19433'
+cat ~/.cache/plannotator-tunnels/19433.log
+```
+
+`plannotator-browser`はreview起動ごとに必要な2本のtunnelを起動します。複数のdevcontainerが同時に
+Plannotatorを使うとeditor portの`19433`が衝突するため、reviewするcontainerは1つだけにしてください。
+`19433`は`devcontainer.json`の`PLANNOTATOR_PORT`です。変更する場合は、この確認commandも同じ値に読み替えます。
+Plannotatorとdev serverのprocessは、review中はterminalで終了させないでください。
+
+### code diffをreviewする
+
+current branchの変更は次のskillでreviewします。
+
+```text
+$plannotator-review
+```
+
+GitHub PRをreviewする場合はPR URLを渡します。
+
+```text
+$plannotator-review https://github.com/owner/repository/pull/123
+```
+
+### agentの最後の返答をreviewする
+
+```text
+$plannotator-last
+```
 
 ## `crit` / `crit-cli`
 
@@ -94,7 +225,8 @@ Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証�
 | `dev-webtest`        | Playwrightで画面動作、visual、accessibility、responsive、formをtestする                      |
 | `ipa-security-check` | IPAの公開資料に基づいてsource codeを静的検査し、出典付きで脆弱性候補を報告する               |
 | `ipa-security-guide` | security診断reportを読み、優先順位付きの`dev-debug`依頼リストへ変換する                      |
-| `kairo-implement`    | 分割済みtaskを指定順に実装し、TDD commandを使って完了まで検証する                            |
+| `task-breakdown`     | 開発に限らない依頼を、依存関係と完了条件を持つ実行可能なtaskへ構造分解する                   |
+| `uat-test-design`    | repositoryを分析し、業務・system・非機能の受入test項目を階層化して生成する                   |
 
 最初にどのskillを使うべきか分からない場合は、次のように`dev-navigate`へ相談します。
 
@@ -111,167 +243,149 @@ $dev-plan checkout "決済providerを追加し、失敗時に安全にretryで�
 `dev-verify`の順で使用します。Web UIを含む場合は`dev-webtest-plan`と`dev-webtest`、security確認が必要な場合は
 `ipa-security-check`と`ipa-security-guide`を組み合わせます。
 
-## tsumiki 入門ガイド
+## Tsumiki 入門ガイド
 
-### 1. tsumikiとは何か
+### 現行の中心は Dev Skills
 
-tsumikiは「**要件定義 → 設計 → タスク分割 → 実装（TDD）**」という開発プロセスを、Claude Codeのスラッシュコマンド／スキルとして一気通貫でサポートするフレームワークです。
+Tsumikiの現行workflowはDev Skillsです。従来このページで中心としていたKairo・個別TDD・DIRECT commandは、upstreamで
+`tsumiki-legacy` pluginへ分離されたlegacy機能です。新しい開発ではDev Skillsを使用し、Kairoを前提とした
+`kairo-requirements` → `kairo-design` → `kairo-tasks`という手順は採用しません。
 
-大きく分けて以下のコマンド群があります。
-
-| カテゴリ                     | 何をするか                                              | 本プロジェクトで使うか               |
-| ---------------------------- | ------------------------------------------------------- | ------------------------------------ |
-| **Kairo**                    | 要件定義〜実装までの包括的フロー                        | ◎ メインで使用                       |
-| **TDD**                      | Red/Green/Refactorの個別実行（Kairoの内部でも使われる） | △ 必要に応じて個別実行               |
-| **Dev Skills**               | コンテキスト分析・計画・実装・検証の統合ワークフロー    | △ 代替案として利用可                 |
-| **DCS**                      | 既存コードの分析・調査・PRD作成支援                     | △ 途中の調査で利用可                 |
-| **ユーティリティ**           | ヘルプ・自動デバッグ・小規模修正など                    | ○ 困ったときに利用                   |
-| **リバースエンジニアリング** | 既存コードから設計書・要件定義書を逆生成                | – 今回はゼロからの開発なので基本不要 |
-
-ポイントは、**各ステップの成果物がすべて `docs/` 配下にMarkdown等のドキュメントとして残る**ことです。これは今回の課題が必須としている「Design Doc」や「判断理由の記録」とも相性が良い仕組みです。
-
----
-
-### 2. 全体のワークフロー（Kairo）
-
-tsumikiのメインフローは次の5ステップです。
+Dev Skillsは、新規projectの初期化または既存projectの分析から、計画、test-first実装、検証、debug、Web testまでを
+次のようにつなぎます。
 
 ```mermaid
 flowchart TD
-    A[要件概要を伝える] --> B["/tsumiki:kairo-requirements"]
-    B --> C{要件を確認}
-    C -->|修正必要| B
-    C -->|OK| D["/tsumiki:kairo-design"]
-    D --> E{設計を確認}
-    E -->|修正必要| D
-    E -->|OK| F["/tsumiki:kairo-tasks"]
-    F --> G{タスクを確認}
-    G -->|OK| H["/tsumiki:kairo-implement もしくは kairo-loop"]
-    H --> I{全タスク完了?}
-    I -->|No| H
-    I -->|Yes| J[完了]
+    A[新規project] --> B[dev-init]
+    C[既存project] --> D[dev-context]
+    B --> E[docs/dev/context.md]
+    D --> E
+    E --> F[dev-plan]
+    F --> G[dev-impl]
+    F --> H[dev-run]
+    G --> I[dev-verify]
+    H --> I
+    G -->|失敗| J[dev-debug]
+    H -->|失敗| J
+    F --> K[dev-screen-spec]
+    K --> L[dev-webtest-plan]
+    L --> M[dev-webtest]
+    M -->|問題を検出| J
 ```
 
-**重要な考え方**: 各ステップの後には必ず人間（自分）が生成物をレビューし、必要なら修正を指示してから次のステップに進みます。生成AIに丸投げするのではなく、「AIの提案を検証・レビューする過程」自体が今回の課題で評価されるポイントでもあります。
+どこから始めるか判断できない場合は、`dev-navigate`へ目的を伝えます。
 
----
-
-### 3. 各コマンドの詳細
-
-#### 3-1. `/tsumiki:init-tech-stack` — 技術スタックの決定
-
-プロジェクトで使うフレームワーク・ライブラリを対話的に決めます。
-
-- 生成物: `docs/tech-stack.md`
-- 今回は非機能要件で「フロントエンド: TypeScript + React」「バックエンド: Go」と指定されているため、その制約を踏まえた選定を行うことになります（React内でのラッパーフレームワークやUIライブラリ、Goでのフレームワーク・APIスキーマ形式など、指定がない部分をここで決定していきます）。
-
-#### 3-2. `/tsumiki:kairo-requirements` — 要件定義
-
-要件の概要を渡すと、EARS記法（Easy Approach to Requirements Syntax）で詳細な要件定義書を作ってくれます。
-
-```
-/tsumiki:kairo-requirements 要件概要
+```text
+/dev-navigate
+既存Web applicationへ決済機能を追加したいです。どのskillから始めるべきですか。
 ```
 
-- 生成物: `docs/spec/{要件名}-requirements.md`
-- 含まれる内容: ユーザーストーリー、EARS記法の詳細要件、エッジケース、受け入れ基準
-- 課題側の「Design Doc に要件の整理（自分で補った要件を含む）を書く」という要求と直結する部分です。README.mdの機能要件（ツイート・フォロー・タイムライン）や非機能要件をここでインプットします。
+### 基本workflow
 
-#### 3-3. `/tsumiki:kairo-design` — 設計
+#### 1. Contextを準備する
 
-要件を承認した後に実行します（省略しても直前の要件定義を引き継いで実行可能）。
+新規projectでは`dev-init`が技術stackを対話で決定し、承認後にscaffoldします。既存projectでは`dev-context`が技術stack、
+test framework、規約、architectureを分析します。どちらも後続skillが共有する`docs/dev/context.md`を生成します。
 
-- 生成物: `docs/design/{要件名}/` 配下
-  - アーキテクチャ設計書
-  - データフロー図（Mermaid）
-  - TypeScriptインターフェース定義
-  - データベーススキーマ
-  - APIエンドポイント仕様
-- **注意点**: 課題が求める「Design Doc」には「検討した選択肢とトレードオフ」「最終的に選んだ方針とその理由」という比較検討のセクションが必須です。`kairo-design` はそのまま「決定した設計」を出力する傾向があるため、この比較検討部分は生成後に自分で加筆するか、設計を依頼する際のプロンプトで「複数の選択肢とトレードオフも明記してほしい」と明示的に指示するのがおすすめです。
-
-#### 3-4. `/tsumiki:kairo-tasks` — タスク分割
-
-設計を確認した後に実行します。
-
-- 生成物: `docs/tasks/{要件名}/overview.md`、`docs/tasks/{要件名}/TASK-XXXX.md`
-- 依存関係を考慮した実装順序、各タスクのテスト要件・UI/UX要件まで含めて分割してくれます。
-- `/tsumiki:kairo-task-verify`（タスク内容の確認用コマンド）を実行してから実装に進むと安全です。
-
-#### 3-5. 実装コマンド
-
-タスクができたら実装に入ります。2つのやり方があります。
-
-```bash
-# 全タスクを順番に実装
-/tsumiki:kairo-implement
-
-# 特定タスクだけ実装（タスクファイル名 TASK番号 を指定）
-/tsumiki:kairo-implement タスクファイル名 TASK番号
-
-# タスク範囲を指定して自動連続実装（長時間実行・compact対応）
-/tsumiki:kairo-loop
+```text
+/dev-init
 ```
 
-内部的には各タスクごとに以下のTDDサイクルが自動で回ります。
-
-1. `tdd-requirements`（TDD要件定義）
-2. `tdd-testcases`（テストケース作成）
-3. `tdd-red`（失敗するテストを書く）
-4. `tdd-green`（テストを通す最小実装）
-5. `tdd-refactor`（リファクタリング）
-6. `tdd-verify-complete`（完了確認）
-
-このサイクルを個別に手動で回したい場合は `/tsumiki:tdd-requirements` 〜 `/tsumiki:tdd-verify-complete` を1つずつ呼び出すこともできます。
-
----
-
-### 4. 生成物が置かれるディレクトリ構成
-
-```
-./
-├── docs/
-│   ├── tech-stack.md        # 技術スタック選定
-│   ├── spec/{要件名}/        # 要件定義書（requirements.md 等）
-│   ├── design/{要件名}/      # 設計書（architecture.md, api-endpoints.md, database-schema.sql 等）
-│   ├── tasks/{要件名}/       # タスク一覧（overview.md, TASK-XXXX.md）
-│   └── implements/{要件名}/{タスクID}/  # 実装に関する記録
-├── frontend/                # フロントエンド（TypeScript + React）
-├── backend/                 # バックエンド（Go）
-└── database/                # DB関連
+```text
+/dev-context
 ```
 
-プロジェクト固有のルールを追加したい場合は `docs/rule/{種類1}/{種類2}/*.md` にMarkdownを置くと、対応するコマンド実行時に自動で読み込まれます（例: `docs/rule/kairo/requirements/` は `kairo-requirements` 実行時のみ読み込まれる）。
+#### 2. Planを作る
 
----
+`dev-plan`はinterface-firstの設計とtest可能なtaskを`docs/dev/plans/<plan-name>/`へ出力します。素早く計画する
+Lightweight modeと、EARS要件、user story、受け入れ条件まで作るFull-spec modeがあり、実行中に選択します。
 
-### 5. 困ったときは
-
-```bash
-# コマンド一覧・使い方を表示
-/tsumiki:help
-
-# 特定コマンドの詳細ヘルプ
-/tsumiki:help kairo-requirements
-
-# 「〜が分からない」で検索
-/tsumiki:help テストが失敗して原因がわからない
+```text
+/dev-plan auth "ユーザー認証機能を実装"
 ```
 
-その他、テストやビルドで詰まった場合は `/tsumiki:auto-debug`（テストエラー自動デバッグ）、`/tsumiki:build-fix`（ビルドエラー修正）なども用意されています。
+既存のPRDを入力にすることもできます。
 
----
+```text
+/dev-plan auth ./docs/prd.md
+```
 
-### 6. 本プロジェクト（ENG-1100課題）での想定進行イメージ
+#### 3. 実装する
 
-`ENG-1100/README.md` の要件（ツイート・フォロー・タイムライン、TypeScript+React／Go、Design Doc必須）を踏まえると、次の順序で進めるのが自然です。
+taskを1件ずつ実装する場合は`dev-impl`へplan名とtask IDを渡します。Planを作るほどではない軽微な変更には、修正指示を
+直接渡すquick modeを使用できます。どちらもRed → Green → Refactorをguardrailとするtest-first実装です。
 
-1. `/tsumiki:init-tech-stack` — React側のフレームワークやUIライブラリ、Go側のWebフレームワークやAPIスキーマ形式（OpenAPI等）を決定
-2. `/tsumiki:kairo-requirements` — 機能要件・非機能要件・自分で補った要件をEARS記法で整理
-3. `/tsumiki:kairo-design` — アーキテクチャ、データフロー、API仕様、DBスキーマを設計。**比較検討したトレードオフと決定理由は別途加筆**して課題の「Design Doc」要件を満たす
-4. `/tsumiki:kairo-tasks` → `/tsumiki:kairo-task-verify` — 実装タスクへ分割・確認
-5. `/tsumiki:kairo-implement` または `/tsumiki:kairo-loop` — TDDサイクルで実装を進行
+```text
+/dev-impl auth 001
+```
 
-各ステップの成果物は必ず内容を読んでレビューし、必要な修正指示を出してから次に進むことをおすすめします（AIに任せた部分と自分で判断した部分を分けて記録する、という課題の評価観点にも合致します）。
+```text
+/dev-impl "validation messageを日本語へ変更"
+```
+
+複数taskを連続実行する場合は`dev-run`へ対象範囲を渡します。各taskについて`dev-impl`、`dev-verify`、失敗時の
+`dev-debug`を組み合わせて実行します。
+
+```text
+/dev-run auth 001 005
+```
+
+#### 4. 検証・debugする
+
+`dev-verify`はplanのtask完了状態、test、build、lint、file sizeを確認し、
+`docs/dev/plans/<plan-name>/reports/`へreportを出力します。
+
+```text
+/dev-verify auth
+```
+
+失敗の原因を調べて修正する場合は`dev-debug`を使用します。errorの自動検出、error messageの直接指定、Web testで
+検出した問題を扱う`webtest` modeに対応します。
+
+```text
+/dev-debug "TypeError: Cannot read properties of undefined"
+```
+
+### Web UIをtestする
+
+Web UIを含む変更では、画面仕様、Playwright test計画、実行を分離します。
+
+1. `dev-screen-spec`でsource codeまたはplanから`docs/dev/screen-specs/`へ画面仕様を生成・差分更新する。
+2. `dev-webtest-plan`でplanと画面仕様からPlaywright用test計画を生成・差分更新する。
+3. `dev-webtest`で計画test、monkey test、visual、accessibility、responsive、formを確認する。
+4. 問題が見つかった場合は`dev-debug webtest`で修正する。
+
+```text
+/dev-screen-spec from-plan auth
+/dev-webtest-plan auth
+/dev-webtest auth
+/dev-debug webtest
+```
+
+### その他の現行command
+
+Dev Skills以外にも、目的別のcommandを使用できます。
+
+| カテゴリ            | 主なcommand                                                              | 用途                                                     |
+| ------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------- |
+| DCS                 | `dcs:feature-rubber-duck`、`dcs:impact-analysis`、`dcs:bug-analysis`など | PRD作成、影響範囲・bug・performance・edge caseなどの分析 |
+| utility             | `help`、`orchestrate`、`refine-plan`、`refine-execute`                   | command案内、複雑な依頼の編成、小規模変更の計画と実行    |
+| error対応           | `auto-debug`、`build-fix`、`env-fix`、`flaky-fix`、`timeout-fix`         | test、build、環境、flaky test、timeoutの修正             |
+| reverse engineering | `rev-tasks`、`rev-design`、`rev-specs`、`rev-requirements`               | 既存codeからtask、設計、test仕様、要件を逆生成           |
+
+このdotfilesではTsumiki commandをRulesync経由でも配布します。Claude Codeでは`/tsumiki-<name>`、Codexでは
+`$tsumiki-<name>`として呼び出します。たとえばhelpは`/tsumiki-help`または`$tsumiki-help`です。詳細は
+[`docs/rulesync.md`](rulesync.md)を参照してください。
+
+### Legacy commandについて
+
+Kairo、個別TDD、DIRECTが必要な既存workflowでは、upstreamの`tsumiki-legacy` pluginを明示的に導入し、Claude Codeで
+`/tsumiki-legacy:<command>`として実行します。たとえばKairoの要件定義は
+`/tsumiki-legacy:kairo-requirements`です。現行の`tsumiki` pluginだけを導入した環境では利用できません。
+
+新規作業でKairoの成果物や手順をそのままDev Skillsへ読み替えないでください。Dev Skillsではcontextを
+`docs/dev/context.md`、planを`docs/dev/plans/<plan-name>/`で管理し、個別のTDD commandではなく`dev-impl`が
+test-first実装を担当します。
 
 ## Ponytail skills
 
@@ -548,7 +662,7 @@ proposal・delta spec・design・tasksという小さなartifactを任意の時�
 
 ### 調査した候補
 
-2026-08-15時点の各公式repositoryと同梱workflowを確認しました。star数ではなく、artifact量、仕様を後から直せるか、
+2026-09-24時点の各公式repositoryと同梱workflowを確認しました。star数ではなく、artifact量、仕様を後から直せるか、
 実装・検証の仕組み、導入負荷で比較しています。
 
 #### 有力候補
@@ -613,7 +727,7 @@ flowchart LR
 
 #### 0. OpenSpecをprojectへ導入する
 
-OpenSpec CLIはmiseでversionをpinし、hostのglobal環境とdevcontainer imageの両方へ導入します。
+OpenSpec CLIは**1.13.2**をmiseでpinし、hostのglobal環境とdevcontainer imageの両方へ導入します。
 
 | 実行環境     | mise設定                            | installされるタイミング                             |
 | ------------ | ----------------------------------- | --------------------------------------------------- |
@@ -637,11 +751,12 @@ CLIを導入した後、対象repositoryごとに初期化します。APMからs
 
 ```bash
 cd <project>
-openspec init
+openspec init --tools claude,codex
 ```
 
-このguideで使用する`/opsx:continue`と`/opsx:verify`を利用できるよう、初期化後にexpanded workflowを選択してprojectへ
-反映します。
+1.13.2のdefaultは`core` profileで、`propose`・`explore`・`apply`・`update`・`sync`・`archive`を配布します。
+このguideで使う`continue`と`verify`はdefaultに含まれないため、初期化後にprofile wizardでこれらを含む
+custom workflowを選び、projectの生成fileへ反映します。
 
 ```bash
 openspec config profile # wizardでexpanded workflowを選択する
@@ -649,7 +764,44 @@ cd <project>
 openspec update
 ```
 
-以下ではClaude Codeのcanonical表記`/opsx:<command>`を使います。Codexでは生成された`$openspec-<command>`を使います。
+`openspec config profile`はglobalの選択を更新するだけです。wizard内でprojectへの反映を選ばなかった場合は、必ず
+`openspec update`も実行します。CLIをmiseでupgradeしたときも、新しいCLIが生成するskill / commandへ更新するため、
+各projectで`openspec update`を実行します。`openspec update`がnpmの最新版への自動upgradeを提案しても、このdotfilesでは
+miseのpinがsource of truthなので承認せず、先にmise設定とこの文書を同時に更新します。
+
+##### 1.13.2のskill / commandの呼び出し方
+
+OpenSpecではworkflowとその配布形式が別の概念です。Claude Codeはcommandとskillの両方を生成できますが、
+Codexは**skills-only**で、従来のCodex custom promptは生成しません。この文書は公式文書と同じClaude Codeの
+canonical表記を使いますが、実際の入力は次のように読み替えます。
+
+| Workflow | Claude Code command | Codex skill                 |
+| -------- | ------------------- | --------------------------- |
+| propose  | `/opsx:propose`     | `$openspec-propose`         |
+| explore  | `/opsx:explore`     | `$openspec-explore`         |
+| update   | `/opsx:update`      | `$openspec-update-change`   |
+| apply    | `/opsx:apply`       | `$openspec-apply-change`    |
+| sync     | `/opsx:sync`        | `$openspec-sync-specs`      |
+| archive  | `/opsx:archive`     | `$openspec-archive-change`  |
+| continue | `/opsx:continue`    | `$openspec-continue-change` |
+| verify   | `/opsx:verify`      | `$openspec-verify-change`   |
+
+Codexでは`$openspec-apply`のようにcommand IDをそのまま使うのではなく、生成された**skill name**を使います。
+skillは`.agents/skills/openspec-*/SKILL.md`に生成されます。Claude Codeのskillは`.claude/skills/openspec-*/SKILL.md`、
+commandは`.claude/commands/opsx/<id>.md`です。別のagentを使う場合は、`openspec init`完了時に表示される
+getting-started hintを優先します。toolによって`/opsx-propose`、`@opsx-propose`、`/openspec-propose`など表記が異なります。
+
+生成されたOpenSpec skillはmanaged fileです。`SKILL.md`を直接編集しても次の`openspec update`で置き換えられるため、
+workflow選択は`openspec config profile`、project固有のcontextやruleは`openspec/config.yaml`、workflow自体の変更はcustom schemaで
+管理します。
+
+更新後は次でCLIと生成結果を確認します。
+
+```bash
+openspec --version
+openspec config list
+find .claude/skills .claude/commands/opsx .agents/skills -maxdepth 2 -type f 2>/dev/null | sort
+```
 
 #### 1. まず仕様案を作る
 
@@ -958,7 +1110,7 @@ wireframe、color、dark modeのreviewで新しいproduct判断が出た場合�
 
 ###### F. task coverageを承認してから実装する
 
-OpenSpec 1.9.0には、**実装前のtraceability表だけを生成する専用skill / commandはありません**。`openspec validate`はartifactの
+OpenSpec 1.13.2には、**実装前のtraceability表だけを生成する専用skill / commandはありません**。`openspec validate`はartifactの
 形式検査、`/opsx:verify`は実装後のcode照合です。このgateでは通常のagentへ次のread-only promptを渡します。Claude Code・
 Codexのどちらでもslash commandではなく、通常のchat requestとして実行します。
 

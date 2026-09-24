@@ -4,10 +4,8 @@
 **/*win*
 {{ else -}}
 **/*karabiner*
-**/*raycast*
 **/*mac*
 **/*brew*
-.docker/config.json
 {{- end }}
 _*
 plan*
@@ -32,5 +30,9 @@ rulesync.lock
 README.md
 CLAUDE.md
 docs/**
+.config/agentsview/tests
 
 **/*karabiner-ts*
+
+**/*raycast*
+**/*rectangle*
