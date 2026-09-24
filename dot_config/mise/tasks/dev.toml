@@ -237,3 +237,116 @@ run = [
     "cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands",
     "cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills",
 ]
+
+["dev:cleanup-cache"]
+description = "Clean up development caches on macOS (asks before heavy or destructive deletions)"
+# - 再生成できるキャッシュは確認なしで削除
+# - 再DLが重いもの・データが消えうるものは y/N で確認してから削除
+# y/N 確認・mise prune のプロンプトに stdin を渡すため raw = true にする。
+raw = true
+shell = "bash -c"
+run = '''
+set -uo pipefail
+
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
+
+confirm() { read -r -p "$1 [y/N] " a; [[ "$a" =~ ^[Yy]$ ]]; }
+section() { printf '\n=== %s ===\n' "$1"; }
+
+section "実行前の空き容量"
+df -h / | tail -1
+
+# ------------------------------------------------------------
+section "パッケージマネージャ / ランタイム"
+# ------------------------------------------------------------
+if command -v bun >/dev/null 2>&1; then
+  bun pm cache rm
+fi
+# bun pm cache の参照先と別に残っている旧キャッシュ（bun本体・globalは消さない）
+rm -rf "$HOME/.bun/install/cache"
+
+if command -v mise >/dev/null 2>&1; then
+  mise cache clear
+  mise prune   # 未参照の古いツールバージョン（確認プロンプトあり）
+fi
+
+if command -v go >/dev/null 2>&1; then
+  go clean -cache -testcache
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  npm cache clean --force
+fi
+# ~/.npm のキャッシュ・npx キャッシュ・ログ（prefix が ~/.npm でもツール本体は消さない）
+rm -rf "$HOME/.npm/"{_cacache,_npx,_logs}
+
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm store prune
+fi
+
+if command -v yarn >/dev/null 2>&1; then
+  yarn cache clean
+fi
+
+if command -v uv >/dev/null 2>&1; then
+  uv cache clean
+fi
+
+if command -v pip >/dev/null 2>&1; then
+  pip cache purge
+fi
+
+# ------------------------------------------------------------
+section "Homebrew"
+# ------------------------------------------------------------
+if command -v brew >/dev/null 2>&1; then
+  brew cleanup --prune=all
+  brew autoremove
+fi
+
+# ------------------------------------------------------------
+section "Terraform プラグインキャッシュ"
+# ------------------------------------------------------------
+rm -rf "$HOME/.terraform.d/plugin-cache/"*
+
+# ------------------------------------------------------------
+section "~/.cache 全削除"
+# ------------------------------------------------------------
+rm -rf "$CACHE_DIR/"*
+
+# ------------------------------------------------------------
+section "確認付きの項目"
+# ------------------------------------------------------------
+if command -v go >/dev/null 2>&1 && confirm "Go モジュールキャッシュを削除しますか?（次回ビルドで再DL）"; then
+  go clean -modcache
+fi
+
+if [ -d "$HOME/.gradle" ] && confirm "Gradle のキャッシュ・wrapper・daemon・JDK を削除しますか?（gradle.properties / init.d は残します）"; then
+  pkill -f GradleDaemon 2>/dev/null || true
+  rm -rf "$HOME/.gradle/"{caches,wrapper/dists,daemon,native,jdks}
+fi
+
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  docker system df
+  if confirm "Docker の停止中コンテナ・未使用イメージ・ビルドキャッシュを削除しますか?（ボリュームは残します）"; then
+    docker system prune -a -f
+  fi
+fi
+
+if [ -d "$HOME/Library/Developer/Xcode" ] && confirm "Xcode の DerivedData / DeviceSupport / 使えないシミュレータを削除しますか?"; then
+  rm -rf "$HOME/Library/Developer/Xcode/DerivedData/"*
+  rm -rf "$HOME/Library/Developer/Xcode/iOS DeviceSupport/"*
+  if command -v xcrun >/dev/null 2>&1; then
+    xcrun simctl delete unavailable
+  fi
+fi
+
+if confirm "~/Library/Caches と ~/Library/Logs を削除しますか?（アプリを終了してから推奨）"; then
+  rm -rf "$HOME/Library/Caches/"*
+  rm -rf "$HOME/Library/Logs/"*
+fi
+
+section "実行後の空き容量"
+df -h / | tail -1
+echo "ゴミ箱を空にするのもお忘れなく。"
+'''
