@@ -277,3 +277,22 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+## AIエージェント向けpre-commit
+
+devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
+エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
+
+pre-commitでは、未stageの変更と未追跡ファイルを一時的にstashし、stage済みの内容だけを
+worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
+
+multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
+`multi-worktree-*`ブランチのtask rootだけを複数リポジトリ構成として扱い、直下で`.git`を持つ
+各リポジトリへ`lefthook.local.yml`を配置して、それぞれに`lefthook install`する。
+通常のworkspaceは直下にsubmoduleがあっても、workspaceが属する親リポジトリへインストールする。
+
+フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
+非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
+失敗する。不要になったフックは、対象リポジトリのdevcontainer内で
+`lefthook uninstall`を実行して削除する。

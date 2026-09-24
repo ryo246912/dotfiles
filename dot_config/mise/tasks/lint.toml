@@ -1,5 +1,18 @@
 ["lint:all"]
-depends     = ["lint:*"]
+# 独立したlint:shellタスクをグローバルの既定値へ含めないよう明示的に列挙する。
+# shellの検査をhookで強制するのはAI用devcontainerだけとする。
+depends = [
+    "lint:action",
+    "lint:toml",
+    "lint:yaml",
+    "lint:json",
+    "lint:md",
+    "lint:secret",
+    "lint:git-secrets",
+    "lint:betterleaks:staged",
+    "lint:betterleaks:head",
+    "lint:betterleaks:all",
+]
 description = "Run all linters"
 
 ["lint:action"]
@@ -74,3 +87,8 @@ run         = "betterleaks git -v --log-opts='HEAD'"
 description = "Run betterleaks"
 dir         = "{{cwd}}"
 run         = "betterleaks git -v"
+
+["lint:shell"]
+description = "Check shell script formatting with shfmt"
+dir         = "{{cwd}}"
+run         = "shfmt -l ."

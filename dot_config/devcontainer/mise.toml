@@ -3,24 +3,48 @@ auto_install = false
 experimental = true
 
 [tools]
-"aqua:BurntSushi/ripgrep"        = "15.2.0"
-"aqua:anthropics/claude-code"    = "2.1.278"
-"aqua:astral-sh/uv"              = "0.12.15"
-"aqua:cli/cli"                   = "2.101.0"
-"aqua:golangci/golangci-lint"    = "2.13.2"
-"aqua:koalaman/shellcheck"       = "0.11.0"
-"aqua:mvdan/sh"                  = "3.14.1"
-"aqua:openai/codex"              = "0.155.1"
-"aqua:tamasfe/taplo"             = "0.10.0"
-"core:bun"                       = "1.4.2"
-"core:go"                        = "1.27.1"
-"core:node"                      = "22.19.0"
-"core:python"                    = "3.14.7"
-"github:backnotprop/plannotator" = "0.27.14"
-"github:github/copilot-cli"      = "1.0.86"
-"github:philschmid/mcp-cli"      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"github:tomasz-tomczyk/crit"     = "0.19.1"
-"npm:@typescript/native-preview" = "7.0.0-dev.20260519.1"
-"npm:ccusage"                    = "20.0.23"
-"npm:oxfmt"                      = "0.59.0"
-"npm:oxlint"                     = "1.83.0"
+"aqua:BurntSushi/ripgrep"                                   = "15.2.0"
+"aqua:anthropics/claude-code"                               = "2.1.278"
+"aqua:astral-sh/ruff"                                       = "0.16.3"
+"aqua:astral-sh/uv"                                         = "0.12.15"
+"aqua:awslabs/git-secrets"                                  = "1.3.0"
+"aqua:cli/cli"                                              = "2.101.0"
+"aqua:evilmartians/lefthook"                                = "2.1.14"
+"aqua:golangci/golangci-lint"                               = "2.13.2"
+"aqua:koalaman/shellcheck"                                  = "0.11.0"
+"aqua:mvdan/sh"                                             = "3.14.1"
+"aqua:openai/codex"                                         = "0.155.1"
+"aqua:rhysd/actionlint"                                     = "1.7.12"
+"aqua:secretlint/secretlint"                                = "13.0.5"
+"aqua:suzuki-shunsuke/disable-checkout-persist-credentials" = "1.0.0"
+"aqua:suzuki-shunsuke/ghalint"                              = "1.5.6"
+"aqua:suzuki-shunsuke/ghtkn"                                = "0.4.0"
+"aqua:suzuki-shunsuke/pinact"                               = "5.0.0"
+"aqua:tamasfe/taplo"                                        = "0.10.0"
+"aqua:zizmorcore/zizmor"                                    = "1.28.0"
+"core:bun"                                                  = "1.4.2"
+"core:go"                                                   = "1.27.1"
+"core:node"                                                 = "22.19.0"
+"core:python"                                               = "3.14.7"
+"github:backnotprop/plannotator"                            = "0.27.14"
+"github:betterleaks/betterleaks"                            = "1.3.1"
+"github:github/copilot-cli"                                 = "1.0.86"
+"github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
+"github:tomasz-tomczyk/crit"                                = "0.19.1"
+"go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+"npm:ccusage"                                               = "20.0.23"
+"npm:oxfmt"                                                 = "0.59.0"
+"npm:oxlint"                                                = "1.83.0"
+
+[task_config]
+dir      = "{{cwd}}"
+includes = ["/mise/tasks/*.toml"]
+
+[hooks]
+postinstall = '''
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+config="$root/lefthook.local.yml"
+[ -f "$config" ] || exit 0
+cd "$root" || exit 0
+LEFTHOOK_CONFIG="$config" lefthook install
+'''
