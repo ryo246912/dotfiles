@@ -14,7 +14,7 @@ pre-commit:
       run: |
         marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
         before="$(git rev-parse --verify -q refs/stash || true)"
-        git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit"
+        git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit" || exit 1
         after="$(git rev-parse --verify -q refs/stash || true)"
         if [ "$before" != "$after" ]; then
           printf '%s\n' "$after" > "$marker"
