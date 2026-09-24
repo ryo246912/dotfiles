@@ -795,6 +795,121 @@ getting-started hintを優先します。toolによって`/opsx-propose`、`@ops
 workflow選択は`openspec config profile`、project固有のcontextやruleは`openspec/config.yaml`、workflow自体の変更はcustom schemaで
 管理します。
 
+##### `propose` / `openspec-propose`
+
+明確になった変更を1つのchangeとして開始し、proposal、delta specs、design、tasksなど、実装に必要な
+planning artifactを一度に作るskillです。新規機能、独立したbug fix、既存changeと目的が異なる追加要件の開始に
+使います。既存changeの細部を直すだけなら`update`を使い、二重のchangeを作りません。
+
+```text
+# Claude Code
+/opsx:propose add-diary-search
+
+# Codex
+$openspec-propose add-diary-search
+```
+
+##### `explore` / `openspec-explore`
+
+まだchangeを作るべきか、どの方式を選ぶべきか、scopeをどこで分けるかが曖昧なときの調査・壁打ち用skillです。
+codebaseを読み、選択肢やtrade-offを整理しますが、明示的に依頼または提案を承認するまでcodeは変更しません。結論が出たら
+`propose`で新規changeにするか、現在のchangeへ反映するよう依頼します。
+
+```text
+/opsx:explore 日記検索をfull-text searchとtag filterのどちらから始めるべきか
+$openspec-explore 日記検索のscopeと既存storageへの影響を調査してください
+```
+
+##### `update` / `openspec-update-change`
+
+active changeに既にあるplanning artifactだけを更新し、proposal・specs・design・tasksの整合を取り直すskillです。
+codeは変更せず、artifactごとに修正確認を求めます。実装途中に新しいscenarioやtaskが必要と分かったときは、
+`tasks.md`だけを直接書き換えず、先に`update`でrequirementからtaskまで波及させます。まだ1つもfileがない
+artifactは作らないため、その場合は`continue`を使います。
+
+```text
+/opsx:update add-diary-search
+$openspec-update-change add-diary-search
+承認済みdecision: 検索結果0件とoffline時のscenarioを追加し、対応するtest taskまで整合させてください。
+```
+
+##### `continue` / `openspec-continue-change`
+
+expanded workflowで、artifactの依存graphを確認して次に作れるartifactを1つずつ作成するskillです。`propose`で一括作成
+する代わりに、各artifactをreviewしてから次へ進みたい大きなchangeに使います。`status`がmissing / readyと示す
+artifactの作成に使い、作成済みartifactの修正には`update`を使います。
+
+```text
+/opsx:continue add-diary-search
+$openspec-continue-change add-diary-search
+```
+
+##### `apply` / `openspec-apply-change`
+
+`tasks.md`の未完了checkboxを順に実装し、code・testを変更して完了taskを`[x]`にするskillです。中断後も同じ
+change名で再開できます。1回で全taskを任せず、対象task IDまたはphase、実行するtest、diff提示後に停止することを
+追加指示し、小batchで使います。仕様変更が必要になったら`apply`の中で推測させず、一度停止して`update`に戻します。
+
+```text
+/opsx:apply add-diary-search
+$openspec-apply-change add-diary-search
+task 2.1〜2.3だけを実装し、対応testを実行してdiffと結果を示したら止まってください。
+```
+
+##### `verify` / `openspec-verify-change`
+
+expanded workflowで、実装とchange artifactをcompleteness・correctness・coherenceの3観点で照合するskillです。
+CRITICAL / WARNING / SUGGESTIONを報告しますが、archiveを強制的にblockするcommandではありません。test・lint・実機または
+browser確認を別途実行し、指摘が仕様の問題なら`update`、実装の問題なら`apply`へ戻します。修正後は必ず再実行します。
+
+```text
+/opsx:verify add-diary-search
+$openspec-verify-change add-diary-search
+```
+
+##### `sync` / `openspec-sync-specs`
+
+active changeのdelta specsを`openspec/specs/`のmain specsへmergeし、change自体はactiveのまま残す任意のskillです。
+長期changeのmain specsを先に更新したい場合、並行changeが最新specを必要な場合、spec mergeだけ先にreviewしたい場合に使います。
+通常の短いchangeでは`archive`がsyncを提案するため、省略できます。
+
+```text
+/opsx:sync add-diary-search
+$openspec-sync-specs add-diary-search
+```
+
+##### `archive` / `openspec-archive-change`
+
+完了したchangeのartifact状態とtask進捗を確認し、未syncのdelta specsをmain specsへ反映するか確認した上で、changeを
+`openspec/changes/archive/YYYY-MM-DD-<name>/`へ移すskillです。未完了taskはwarningになるだけでarchiveできるため、
+`verify`、test、review指摘、task checkboxの完了を人間が確認してから使います。
+
+```text
+/opsx:archive add-diary-search
+$openspec-archive-change add-diary-search
+```
+
+##### 初回実装時の段取り
+
+1. 要件や方式が曖昧なら`explore`で調査・壁打ちする。明確ならこのstepは省略する。
+2. `propose <change-name>`でchangeとplanning artifactを作る。1つずつreviewする場合は`new`と`continue`の方式を使う。
+3. proposal、全delta spec、design、tasksをreviewし、`grill-me`の結果と承認済みdecisionを`update`で反映する。
+4. `openspec validate <change-name> --strict`、wireframe / color / dark mode review、traceability auditを実行する。
+5. uncovered requirementが0になったら`apply`を小batchで実行し、batchごとにtest・lint・diff reviewを行う。
+6. 全task完了後に`verify`とproject固有のtestを実行する。残差は`update`または`apply`で直し、再度`verify`する。
+7. 必要な場合だけ`sync`を先行し、最後に`archive`とPRへ進む。
+
+##### 実装途中から新しいtaskを追加する段取り
+
+1. 新taskが現在のchangeの目的・scope内かを確認する。別のuser value、独立したrelease、大きな追加要件なら現在の
+   `tasks.md`へ追加せず、`explore`の後に`propose`で別changeを作る。archive済みchangeも直接再利用しない。
+2. 現在のscope内なら`apply`を停止し、発見したgapと必要な受け入れ条件を`update <change-name>`へ渡す。
+3. `update`でrequirement / scenario、design、implementation task、test taskを一緒に整合させる。まだ必要なartifactが
+   未作成なら`continue`で作ってから`update`する。
+4. strict validation、artifact diff、traceability表を再reviewし、新scenarioのimplementation / test taskが両方あることを確認する。
+5. `apply <change-name>`を再実行する。既存の`[x]`のtaskは保持され、追加した未完了taskから実装を続行できる。
+6. testと`verify`を再実行し、新taskだけでなく既存scenarioにregressionがないことも確認する。
+
 更新後は次でCLIと生成結果を確認します。
 
 ```bash
