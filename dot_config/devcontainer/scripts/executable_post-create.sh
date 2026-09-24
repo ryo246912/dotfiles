@@ -4,6 +4,50 @@ set -e
 # OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
 bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
 
+# devcontainer専用のLefthook設定を各リポジトリへ配置し、hookをインストールする。
+# multi-worktreeではworkspace(task root)自体がccmanager用のsynthetic git repositoryで、
+# 実際のリポジトリは直下に並ぶ（例: task-root/repo-a, task-root/repo-b）。
+# task rootのブランチ名でmulti-worktreeを判定し、その場合だけ直下のリポジトリを対象にする。
+# 通常のリポジトリは直下にsubmoduleがあってもworkspace自体を対象にする。
+lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
+
+install_lefthook() {
+	local repo_root=$1
+	local local_lefthook_config="${repo_root}/lefthook.local.yml"
+	if [ ! -e "$local_lefthook_config" ]; then
+		cp "$lefthook_template" "$local_lefthook_config"
+	fi
+	local git_exclude
+	git_exclude="$(git -C "$repo_root" rev-parse --path-format=absolute --git-path info/exclude)"
+	mkdir -p "$(dirname "$git_exclude")"
+	grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null || echo "lefthook.local.yml" >>"$git_exclude"
+	(
+		cd "$repo_root"
+		LEFTHOOK_CONFIG="$local_lefthook_config" lefthook install
+	)
+	echo "✓ ${repo_root} に Lefthook をインストールしました"
+}
+
+lefthook_repo_roots=()
+workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+workspace_branch=""
+if [ -n "$workspace_root" ]; then
+	workspace_branch="$(git -C "$workspace_root" branch --show-current 2>/dev/null || true)"
+fi
+if [[ "$workspace_branch" == multi-worktree-* ]]; then
+	for child_git in "${PWD}"/*/.git; do
+		[ -e "$child_git" ] || continue
+		child_root="$(dirname "$child_git")"
+		git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+		lefthook_repo_roots+=("$child_root")
+	done
+elif [ -n "$workspace_root" ]; then
+	lefthook_repo_roots+=("$workspace_root")
+fi
+for repo_root in "${lefthook_repo_roots[@]}"; do
+	install_lefthook "$repo_root"
+done
+
 # .claude.json のコピー（既存の処理）
 claude_config_host=~/.config/claude-config-host.json
 if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then

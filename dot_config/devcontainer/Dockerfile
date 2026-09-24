@@ -35,6 +35,7 @@ RUN install -d -o vscode -g vscode \
     /home/vscode/.config \
     /home/vscode/.config/gh
 COPY --chown=vscode:vscode mise.toml /mise/config.toml
+COPY --chown=vscode:vscode tasks /mise/tasks
 
 USER vscode
 

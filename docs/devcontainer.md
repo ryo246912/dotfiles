@@ -18,13 +18,19 @@ mount しません。`~/project/repo` のような通常 checkout で `../..` �
 - `--mount-workspace-git-root=false`: workspace より広い Git root の自動 mount を無効化
 - `--mount-git-worktree-common-dir=true`: linked worktree が参照する common git dir だけを mount
 
+この base template で linked worktree を開く場合、`devcontainer up` / `devcontainer exec` の直接実行は
+サポートしません。必ず `devc-up-wrapper` 経由で実行するか、上記2オプションを
+直接指定してください。VS Code Dev Containers 拡張からこの base template を直接開く
+経路も、common git dir の安全な mount を保証できないため対象外です。
+
 後者は relative-paths 形式の worktree を前提とするため、`multi-worktree` は
-`git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は一度作り直すか、
-対応する Git で `git worktree repair --relative-paths` を実行してください。
+`git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は
+`git worktree remove` の後に `git worktree add --relative-paths` で作り直してください。
 
 `multi-worktree` が生成する複数リポジトリ用の devcontainer は、各 worktree に加えて
-実体リポジトリの `.git` だけを同じ絶対パスへ mount します。実体リポジトリの
-working tree や、その他の兄弟ディレクトリはコンテナから見えません。
+実体リポジトリの `.git` だけを、その worktree の相対 `gitdir` がコンテナ内で
+到達するパスへ mount します。実体リポジトリの working tree や、その他の
+兄弟ディレクトリはコンテナから見えません。
 
 ## devcontainer からホスト側 tmux pane を読む
 
@@ -297,3 +303,22 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+## AIエージェント向けpre-commit
+
+devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
+エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
+
+pre-commitでは、未stageの変更と未追跡ファイルを一時的にstashし、stage済みの内容だけを
+worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
+
+multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
+`multi-worktree-*`ブランチのtask rootだけを複数リポジトリ構成として扱い、直下で`.git`を持つ
+各リポジトリへ`lefthook.local.yml`を配置して、それぞれに`lefthook install`する。
+通常のworkspaceは直下にsubmoduleがあっても、workspaceが属する親リポジトリへインストールする。
+
+フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
+非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
+失敗する。不要になったフックは、対象リポジトリのdevcontainer内で
+`lefthook uninstall`を実行して削除する。

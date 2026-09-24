@@ -942,11 +942,19 @@ generate_devcontainer() {
         fi
 
         # worktree のマウント
-        worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
+        local container_worktree_path="/workspaces/${worktree_name}/${repo_name}"
+        worktree_mounts+="\"type=bind,source=${worktree_path},target=${container_worktree_path}\""
 
-        # Git metadata だけをホストと同じパスへ mount する。
-        # 実体リポジトリ全体はコンテナへ公開しない。
-        worktree_mounts+=",\"type=bind,source=${repo}/.git,target=${repo}/.git\""
+        # .git file の相対参照がコンテナ内で到達する位置に、common git dir だけを
+        # mount する。worktree は host と異なるパスへ mount するため、host の
+        # ${repo}/.git を target にそのまま使うと relative gitdir が解決できない。
+        local common_git_dir git_dir_relative container_git_dir
+        common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir) || continue
+        git_dir_relative=$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' \
+            "$common_git_dir" "$worktree_path")
+        container_git_dir=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(sys.argv[1], sys.argv[2])))' \
+            "$container_worktree_path" "$git_dir_relative")
+        worktree_mounts+=",\"type=bind,source=${common_git_dir},target=${container_git_dir}\""
     done
 
     worktree_mounts+="]"

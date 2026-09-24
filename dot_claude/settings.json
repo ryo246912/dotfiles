@@ -1,19 +1,11 @@
 {
   "env": {
-    "DISABLE_AUTOUPDATER": "1"
+    "DISABLE_AUTOUPDATER": "1",
+    "AI_AGENT": "1"
   },
   "cleanupPeriodDays": 36500,
   "permissions": {
-    "allow": [
-      "Bash(mise list:*)",
-      "Bash(ccmanager --help)",
-      "Bash(xcode-select:*)",
-      "Bash(claude mcp:*)",
-      "Bash(find:*)",
-      "Bash(ls:*)",
-      "Bash(shfmt:*)",
-      "WebFetch(domain:docs.anthropic.com)"
-    ],
+    "allow": [],
     "deny": [
       "Bash(sudo:*)",
       "Bash(rm -rf:*)",
@@ -54,9 +46,6 @@
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "expo-deployment@expo-plugins": true
-  },
-  "bash": {
-    "blockUnlistedCommands": true
   },
   "git": {
     "includeCoAuthor": false
