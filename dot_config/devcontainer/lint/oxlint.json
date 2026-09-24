@@ -3,9 +3,6 @@
   "categories": {
     "correctness": "error",
     "perf": "error",
-    "pedantic": "error",
-    "restriction": "error",
-    "style": "error",
     "suspicious": "error"
   },
   "plugins": [
@@ -21,6 +18,57 @@
     "jsx-a11y"
   ],
   "rules": {
-    "import/no-default-export": "off"
+    "eslint/func-style": [
+      "error",
+      "expression"
+    ],
+    "eslint/max-params": "error",
+    "eslint/no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "eslint/no-empty-function": "error",
+    "eslint/no-use-before-define": [
+      "error",
+      {
+        "functions": false,
+        "variables": false
+      }
+    ],
+    "eslint/prefer-arrow-callback": "error",
+    "import/consistent-type-specifier-style": "error",
+    "import/exports-last": "error",
+    "import/no-anonymous-default-export": "error",
+    "import/no-namespace": "error",
+    "import/no-unassigned-import": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "promise/always-return": "error",
+    "promise/catch-or-return": "error",
+    "promise/prefer-await-to-then": "error",
+    "react-perf/jsx-no-jsx-as-prop": "off",
+    "react-perf/jsx-no-new-array-as-prop": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react/only-export-components": "error",
+    "react/react-in-jsx-scope": "off",
+    "react/refs": "error",
+    "react/set-state-in-effect": "error",
+    "react/todo": "error",
+    "typescript/consistent-type-definitions": [
+      "error",
+      "type"
+    ],
+    "typescript/consistent-type-imports": "error",
+    "typescript/explicit-function-return-type": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "unicorn/no-anonymous-default-export": "error",
+    "unicorn/prefer-spread": "error",
+    "unicorn/prefer-type-error": "error"
   }
 }
