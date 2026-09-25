@@ -174,8 +174,10 @@ GitHub 上でも、push したコミットに `Verified` バッジが付くこ�
 Lefthook のインストール）が失敗すると、identity の設定まで到達しませんでした。現在は次の順序にしています。
 
 1. git の `include.path` / 認証 / コミット署名の設定（identity の解決を確認し、解決できなければ警告）
-2. プロジェクト生成物の分離、Lefthook のインストール（失敗しても警告して続行）
-3. `.claude.json` のコピー、`claude-account2` の共有、`~/.crit.config.json` の生成
+2. プロジェクト生成物の分離（失敗したら止める。分離できないまま依存インストール等が走ると、
+   生成物がホスト共有のワークスペースへ書き込まれるため。identity は 1 で設定済み）
+3. Lefthook のインストール（失敗しても警告して続行）
+4. `.claude.json` のコピー、`claude-account2` の共有、`~/.crit.config.json` の生成
 
 `Author identity unknown` が出た場合は、次で切り分けます。
 
@@ -311,8 +313,9 @@ pre-commitでは、未stageの変更と未追跡ファイルを一時的にstash
 worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
 
 - stashの対象から、`mount-container-only-dirs.sh`がbind mountする`node_modules` / `.venv` / `.gradle` /
-  `.terraform` / `target`を除外する。`.gitignore`対象でないと、これらは未追跡の空ディレクトリとして
-  `git stash -u`の削除対象になり、`Device or resource busy`で失敗するため。stashが途中で失敗しても
+  `.terraform` / `target`を配下のファイルごと（`**/node_modules/**`など）除外する。`.gitignore`対象でないと、
+  これらは未追跡の空ディレクトリとして`git stash -u`の削除対象になり、`Device or resource busy`で
+  失敗するため。ディレクトリ名だけの除外では、mount内の生成物がstashに取り込まれる。stashが途中で失敗しても
   復元用のマーカーを書いてから失敗を返すので、後続の`stash pop`で未追跡ファイルは復元される。
 - `shell`ジョブは`shfmt -l {staged_files}`で、ステージ済みの`*.sh` / `*.bash` / `*.bats`だけを検査する。
   リポジトリ全体を走査する`mise run lint:shell`は、shfmtが解析できない`.zsh`が1つでもあると
