@@ -245,7 +245,11 @@ description = "Clean up development caches on macOS (asks before heavy or destru
 # y/N 確認・mise prune のプロンプトに stdin を渡すため raw = true にする。
 raw = true
 run = '''
+# 1つのツールが失敗しても残りの掃除は続けたいので errexit は付けず、
+# 失敗を記録して最後に非ゼロで終了する。
 set -uo pipefail
+failed=0
+trap 'failed=1; echo "failed: $BASH_COMMAND" >&2' ERR
 # dir/* で隠しファイルも対象にし、マッチなしのときはパターン文字列を残さない
 shopt -s dotglob nullglob
 
@@ -356,5 +360,10 @@ fi
 section "実行後の空き容量"
 df -h / | tail -1
 echo "ゴミ箱を空にするのもお忘れなく。"
+
+if [ "$failed" -ne 0 ]; then
+  echo "一部のコマンドが失敗しました（上の failed: を確認してください）" >&2
+  exit 1
+fi
 '''
 shell = "bash -c"
