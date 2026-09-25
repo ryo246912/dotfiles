@@ -9,13 +9,6 @@ snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --works
 trigger = "ccmc"
 
 [[snippets]]
-cursor          = "👇"
-evaluate        = true
-name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
-trigger-pattern = "(^ccmc2$|ccmcc2)"
-
-[[snippets]]
 name    = "devcontainer up"
 snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
 trigger = "dcup"
