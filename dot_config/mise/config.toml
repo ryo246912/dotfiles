@@ -160,9 +160,23 @@ postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$root"
-# lefthook install は設定が無いと lefthook.yml を勝手に生成してしまうので、
-# 設定の有無は lefthook 自身に判定させる（対応する名前と形式は lefthook dump が知っている）。
-lefthook dump >/dev/null 2>&1 || exit 0
+# lefthook install は設定が無いと lefthook.yml を勝手に生成してしまうので、設定の有無で
+# ガードする。判定は lefthook 自身に任せる（対応する名前・形式や extends /
+# lefthook-local.yml の合成は lefthook dump が知っている）。
+if ! lefthook dump >/dev/null 2>&1; then
+  # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
+  # 後者は黙って飛ばさず lefthook install に進め、パースエラーを表に出す。
+  # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
+  for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
+    for ext in yml yaml json jsonc toml; do
+      if [ -f "$name.$ext" ]; then
+        lefthook install
+        exit
+      fi
+    done
+  done
+  exit 0
+fi
 lefthook install
 """
 
@@ -184,9 +198,22 @@ timeout     = "5s"
 description = "lefthook pre-push hook is installed and executable where lefthook configures pre-push"
 hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`). git silently skips a hook that is not executable, so the pre-push lint would not run at all."
 run = '''
+command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$root"
-lefthook dump 2>/dev/null | grep -q '^pre-push:' || exit 0
+if dump="$(lefthook dump 2>/dev/null)"; then
+  printf '%s\n' "$dump" | grep -q '^pre-push:' || exit 0
+else
+  # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
+  # 前者は対象外なので skip、後者は lefthook install も通らない異常なので FAIL させる。
+  # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
+  for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
+    for ext in yml yaml json jsonc toml; do
+      if [ -f "$name.$ext" ]; then exit 1; fi
+    done
+  done
+  exit 0
+fi
 hook="$(git rev-parse --git-path hooks/pre-push)"
 [ -x "$hook" ] && grep -q lefthook "$hook"
 '''

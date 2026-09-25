@@ -518,6 +518,13 @@ exit しているのはこのため。`lefthook install` は設定済みのフ�
 有無だけでは `pre-commit` のみの構成を誤検出する。設定ファイルを直接 grep せず `lefthook dump`
 に委譲しているのは、`extends` や `lefthook-local.yml` で合成された `pre-push` も拾うため）。
 
+ただし `lefthook dump` の失敗は「設定が無い」と「設定が壊れていて読めない」の両方で起きる
+ので、失敗をそのまま skip にすると後者が PASS に化ける。`lefthook` の check と postinstall
+hook は、dump が失敗したときに設定ファイルの実在を確認し、実在するなら異常として扱う
+（check は FAIL、postinstall は `lefthook install` に進めてパースエラーを表に出す）。
+確認する名前と拡張子は lefthook の `internal/config/loader.go` の `MainConfigNames` /
+`LocalConfigNames` / `Extensions` に合わせている。
+
 各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
 `shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が
 漏れることはない。詳細な出力が要るときは `run` のコマンドを直接叩く。
