@@ -34,7 +34,7 @@ experimental = true
 "go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 "npm:ccusage"                                               = "20.0.23"
 "npm:oxfmt"                                                 = "0.59.0"
-"npm:oxlint"                                                = "1.83.0"
+"npm:oxlint"                                                = "1.85.0"
 
 [settings.npm]
 bun = true
