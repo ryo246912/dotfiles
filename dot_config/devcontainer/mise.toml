@@ -36,12 +36,6 @@ experimental = true
 "npm:oxfmt"                                                 = "0.59.0"
 "npm:oxlint"                                                = "1.85.0"
 
-[settings.npm]
-bun = true
-
-[settings.pipx]
-uvx = true
-
 [task_config]
 dir      = "{{cwd}}"
 includes = ["/mise/tasks/*.toml"]

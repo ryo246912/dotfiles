@@ -1,4 +1,4 @@
-min_version = "2026.8.12"
+min_version = "2026.9.10"
 
 [env]
 # https://evermeet.cx/ffmpeg/
@@ -155,17 +155,101 @@ trusted_config_paths = [
 [task_config]
 includes = ["tasks/*.toml"]
 
-[settings.npm]
-bun = true
-
-[settings.pipx]
-uvx = true
-
 [hooks]
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || exit 0
 cd "$root"
+# lefthook install は設定が無いと lefthook.yml を勝手に生成してしまうので、設定の有無で
+# ガードする。判定は lefthook 自身に任せる（対応する名前・形式や extends /
+# lefthook-local.yml の合成は lefthook dump が知っている）。
+if ! lefthook dump >/dev/null 2>&1; then
+  # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
+  # 後者は黙って飛ばさず lefthook install に進め、パースエラーを表に出す。
+  # LEFTHOOK_CONFIG があると lefthook は既定の名前を一切見ずそのパスだけを読むので、
+  # 判定もそのパスだけで行う（相対パスは repo root 基準。すでに root にいる）。
+  if [ -n "${LEFTHOOK_CONFIG:-}" ]; then
+    if [ -f "$LEFTHOOK_CONFIG" ]; then
+      lefthook install
+      exit
+    fi
+    exit 0
+  fi
+  # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
+  for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
+    for ext in yml yaml json jsonc toml; do
+      if [ -f "$name.$ext" ]; then
+        lefthook install
+        exit
+      fi
+    done
+  done
+  exit 0
+fi
 lefthook install
 """
+
+# mise doctor project 用。宣言した check は通常の mise doctor や task 実行では走らず、
+# 明示的に叩いたときだけ実行される。global config の check は「mise doctor project を
+# 叩いたディレクトリ」を root として走る（project config と違い固定されない）。
+[doctor.checks.chezmoi]
+description = "chezmoi is installed and initialized"
+hint        = "Install tools with `mise install` and initialize chezmoi (see docs/setup.md)."
+run         = 'src="$(chezmoi source-path)" && git -C "$src" rev-parse --is-inside-work-tree >/dev/null'
+timeout     = "5s"
+
+# pre-push を実際に定義しているリポジトリでのみ検証する。global 宣言の check は実行時の
+# ディレクトリで走るため無条件にすると lefthook を使わないリポジトリで必ず落ちるし、
+# lefthook install は「設定された」フックしか作らないので pre-commit だけの構成でも落ちる。
+# 判定は lefthook dump に委譲する（設定ファイルを直接 grep すると extends や
+# lefthook-local.yml 経由の pre-push を取りこぼすし、対応する設定ファイル名も取り違える）。
+[doctor.checks.lefthook]
+description = "lefthook pre-push hook is installed and executable where lefthook configures pre-push"
+hint = "Run `lefthook install` (mise's postinstall hook normally does this on `mise install`). git silently skips a hook that is not executable, so the pre-push lint would not run at all."
+run = '''
+command -v lefthook >/dev/null 2>&1 || exit 0
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$root"
+if dump="$(lefthook dump 2>/dev/null)"; then
+  printf '%s\n' "$dump" | grep -q '^pre-push:' || exit 0
+else
+  # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
+  # 前者は対象外なので skip、後者は lefthook install も通らない異常なので FAIL させる。
+  # LEFTHOOK_CONFIG があると lefthook は既定の名前を一切見ずそのパスだけを読むので、
+  # 判定もそのパスだけで行う（相対パスは repo root 基準。すでに root にいる）。
+  if [ -n "${LEFTHOOK_CONFIG:-}" ]; then
+    if [ -f "$LEFTHOOK_CONFIG" ]; then exit 1; fi
+    exit 0
+  fi
+  # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
+  for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
+    for ext in yml yaml json jsonc toml; do
+      if [ -f "$name.$ext" ]; then exit 1; fi
+    done
+  done
+  exit 0
+fi
+hook="$(git rev-parse --git-path hooks/pre-push)"
+[ -x "$hook" ] && grep -q lefthook "$hook"
+'''
+timeout = "5s"
+
+[doctor.checks.gh-auth]
+description = "gh is authenticated"
+hint        = "Run `gh auth login --scopes project`. chezmoi's post-apply hook aborts when `gh auth token` yields nothing, and the dotfiles repo's `lint:zizmor` / `lint:pinact` need a token too."
+run         = "gh auth token >/dev/null"
+timeout     = "10s"
+
+[doctor.checks.git-secrets]
+description = "git-secrets patterns are registered for this machine"
+hint        = "Deploy the git config with `chezmoi apply`: dot_config/git/config.tmpl registers the [secrets] providers/patterns into ~/.config/git/config. With none registered, `mise run lint:git-secrets` passes without scanning anything."
+run         = "git config --get-all secrets.patterns >/dev/null || git config --get-all secrets.providers >/dev/null"
+timeout     = "5s"
+
+# dot_config/zsh/lazy/mise.zsh は `fnox get` の失敗を握りつぶすため、age 未設定でも
+# シェルは正常に起動し、bws 経由の secret だけが静かに欠ける。
+[doctor.checks.fnox-bws]
+description = "fnox can resolve BWS_ACCESS_TOKEN"
+hint        = 'Run `FNOX_CONFIG_DIR="$(chezmoi source-path)/dot_config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN`, then `chezmoi diff` and `chezmoi apply` (see docs/fnox.md). FNOX_CONFIG_DIR targets the chezmoi source so the next apply cannot wipe the value; this check reads the deployed config, so it stays red until you apply. Until then the zsh startup silently skips the export and every bws-backed secret is missing.'
+run         = "fnox get BWS_ACCESS_TOKEN >/dev/null"
+timeout     = "5s"

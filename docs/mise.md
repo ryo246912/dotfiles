@@ -397,7 +397,7 @@ fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]
 **mise では代替できない機能**を調査した結果を記録する。
 
 調査対象は mise **v2026.9.5**（2026-09-10 リリース。本リポジトリの
-`min_version` は `2026.8.12` で、`bootstrap dotfiles` はそれ以前から存在する）。
+`min_version` は `2026.9.10` で、`bootstrap dotfiles` はそれ以前から存在する）。
 
 参考: [Dotfiles | mise-en-place](https://mise.jdx.dev/dotfiles.html)
 
@@ -492,3 +492,41 @@ mise bootstrap dotfiles save ~/.config/app/state.json
 **この構成は mise `[dotfiles]` には移せない。** chezmoi 固有の機能に依存するため、
 ghui の config は chezmoi 管理のまま維持する。`mise bootstrap` のフェーズ一覧で
 `[dotfiles]` を chezmoi に委ねているのは、この点でも妥当。
+
+## `mise doctor project`（プロジェクト診断）
+
+mise 2026.9.6 以降、`[doctor.checks.<name>]` に「前提にしている環境」を宣言しておき、
+`mise doctor project` でまとめて検証できる。本リポジトリの check は
+`dot_config/mise/config.toml`（global）に置いている。機能自体は 2026.9.6 で入ったが、
+`dot_config/mise/config.toml` の `min_version` はこの機能の要求水準ではなく、採用した mise の
+バージョンに合わせて 2026.9.10 にしている。
+
+```sh
+mise doctor project
+mise doctor project --json
+```
+
+通常の `mise doctor` は mise 自身の診断のみで、宣言した check は走らない。ディレクトリ
+移動や task 実行でも自動実行されず、明示的に叩いたときだけ実行される。check は `jobs`
+設定に従って並行実行され、1つ落ちても他は最後まで走る。
+
+**global config の check は「`mise doctor project` を叩いたディレクトリ」を root として
+走る**（project config の check と違い、宣言元のディレクトリに固定されない）。そのため
+リポジトリ固有の前提を global に置くときは、対象外のリポジトリで実行されても落ちないよう
+条件を付ける必要がある（`lefthook` の check が `lefthook dump` の `pre-push` 宣言を見て早期
+exit しているのはこのため。`lefthook install` は設定済みのフックしか作らないので、設定ファイルの
+有無だけでは `pre-commit` のみの構成を誤検出する。設定ファイルを直接 grep せず `lefthook dump`
+に委譲しているのは、`extends` や `lefthook-local.yml` で合成された `pre-push` も拾うため）。
+
+ただし `lefthook dump` の失敗は「設定が無い」と「設定が壊れていて読めない」の両方で起きる
+ので、失敗をそのまま skip にすると後者が PASS に化ける。`lefthook` の check と postinstall
+hook は、dump が失敗したときに設定ファイルの実在を確認し、実在するなら異常として扱う
+（check は FAIL、postinstall は `lefthook install` に進めてパースエラーを表に出す）。
+確認する名前と拡張子は lefthook の `internal/config/loader.go` の `MainConfigNames` /
+`LocalConfigNames` / `Extensions` に合わせている（`.config/lefthook` は `MainConfigNames` に、
+`.jsonc` は `Extensions` に含まれる）。`LEFTHOOK_CONFIG` が設定されている場合、lefthook は
+既定の名前を一切見ずそのパスだけを読む（`loadMain`）ため、判定もそのパスだけで行う。
+
+各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
+`shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が
+漏れることはない。詳細な出力が要るときは `run` のコマンドを直接叩く。
