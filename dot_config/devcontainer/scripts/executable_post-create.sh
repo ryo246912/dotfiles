@@ -58,10 +58,11 @@ if [ -z "$(git config user.name)" ] || [ -z "$(git config user.email)" ]; then
 fi
 
 # OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
-# 補助的な処理のため、失敗しても後続（.claude.json 等）を止めない（post-start.sh と同じ扱い）。
-if ! bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"; then
-	echo "⚠️ プロジェクト生成物の分離に失敗しましたが、残りの作成処理を続行します" >&2
-fi
+# 失敗を握りつぶさない。分離できないまま後続の依存インストールやビルドが走ると、
+# .venv / node_modules / target がホスト共有のワークスペースへ書き込まれるため、作成時点で止める。
+# （post-start.sh の再 mount は既存内容を隠すだけなので、そちらは警告して続行する。）
+# git の identity 設定は上で済んでいるため、ここで止まっても commit はできる。
+bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
 
 # devcontainer専用のLefthook設定を各リポジトリへ配置し、hookをインストールする。
 # multi-worktreeではworkspace(task root)自体がccmanager用のsynthetic git repositoryで、
