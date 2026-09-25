@@ -523,7 +523,9 @@ exit しているのはこのため。`lefthook install` は設定済みのフ�
 hook は、dump が失敗したときに設定ファイルの実在を確認し、実在するなら異常として扱う
 （check は FAIL、postinstall は `lefthook install` に進めてパースエラーを表に出す）。
 確認する名前と拡張子は lefthook の `internal/config/loader.go` の `MainConfigNames` /
-`LocalConfigNames` / `Extensions` に合わせている。
+`LocalConfigNames` / `Extensions` に合わせている（`.config/lefthook` は `MainConfigNames` に、
+`.jsonc` は `Extensions` に含まれる）。`LEFTHOOK_CONFIG` が設定されている場合、lefthook は
+既定の名前を一切見ずそのパスだけを読む（`loadMain`）ため、判定もそのパスだけで行う。
 
 各 check は `run`（必須・exit 0 で PASS）のほか `description` / `hint` / `timeout` / `dir` /
 `shell` / `os` を取る。コマンドの出力は捕捉した上で破棄されるため、診断結果に認証情報が

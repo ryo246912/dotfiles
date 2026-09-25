@@ -166,6 +166,15 @@ cd "$root"
 if ! lefthook dump >/dev/null 2>&1; then
   # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
   # 後者は黙って飛ばさず lefthook install に進め、パースエラーを表に出す。
+  # LEFTHOOK_CONFIG があると lefthook は既定の名前を一切見ずそのパスだけを読むので、
+  # 判定もそのパスだけで行う（相対パスは repo root 基準。すでに root にいる）。
+  if [ -n "${LEFTHOOK_CONFIG:-}" ]; then
+    if [ -f "$LEFTHOOK_CONFIG" ]; then
+      lefthook install
+      exit
+    fi
+    exit 0
+  fi
   # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
   for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
     for ext in yml yaml json jsonc toml; do
@@ -206,6 +215,12 @@ if dump="$(lefthook dump 2>/dev/null)"; then
 else
   # dump は設定が無いときだけでなく、設定が壊れていて読めないときにも失敗する。
   # 前者は対象外なので skip、後者は lefthook install も通らない異常なので FAIL させる。
+  # LEFTHOOK_CONFIG があると lefthook は既定の名前を一切見ずそのパスだけを読むので、
+  # 判定もそのパスだけで行う（相対パスは repo root 基準。すでに root にいる）。
+  if [ -n "${LEFTHOOK_CONFIG:-}" ]; then
+    if [ -f "$LEFTHOOK_CONFIG" ]; then exit 1; fi
+    exit 0
+  fi
   # 名前と拡張子は lefthook の internal/config/loader.go の定義に合わせている。
   for name in lefthook .lefthook .config/lefthook lefthook-local .lefthook-local .config/lefthook-local; do
     for ext in yml yaml json jsonc toml; do
