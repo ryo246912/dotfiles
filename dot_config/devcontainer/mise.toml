@@ -28,7 +28,7 @@ experimental = true
 "core:python"                                               = "3.14.7"
 "github:backnotprop/plannotator"                            = "0.27.14"
 "github:betterleaks/betterleaks"                            = "1.3.1"
-"github:github/copilot-cli"                                 = "1.0.86"
+"github:github/copilot-cli"                                 = "1.0.88"
 "github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"                                = "0.19.1"
 "go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
