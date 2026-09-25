@@ -66,7 +66,7 @@
     // devcontainer専用のSSH鍵（コミット署名用。ホストの個人GPG秘密鍵はコンテナに一切マウントしない）
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign,target=/home/vscode/.ssh/id_docker_devcontainer_sign,readonly",
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign.pub,target=/home/vscode/.ssh/id_docker_devcontainer_sign.pub,readonly",
-    // workspace だけを mount する。worktree の common git dir は devc-up-wrapper が
+    // workspace だけを mount する。worktree の common git dir は up/exec に指定する
     // devcontainer CLI の --mount-git-worktree-common-dir で個別に mount する。
     // 親ディレクトリを mount すると、通常 checkout が ~/project/repo にある場合に
     // HOME 全体がコンテナから見えてしまうため禁止。

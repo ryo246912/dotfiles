@@ -393,6 +393,9 @@ ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
+`multi-worktree cd` で起動したシェルでは `DEVCONTAINER_CONFIG` に task 用の
+`.devcontainer/devcontainer.json` が設定されるため、`ccmc` はこの生成 config でコンテナを起動します。
+自分で `cd` した場合は base template が使われ、配下 repo の `.git` が mount されません。
 
 #### 同じ group の task を横断管理する
 
@@ -431,7 +434,7 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 生成される `devcontainer.json` には以下の設定が含まれます：
 
 - 各リポジトリの worktree をマウント
-- 実体リポジトリ（`.git` アクセス用）をマウント
+- 実体リポジトリの `.git` だけをマウント（worktree の相対 `gitdir` がコンテナ内で解決できる位置）
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
@@ -476,7 +479,6 @@ git worktree remove ../worktrees/multi-worktree-feat-add-auth/repo-a --force
 ## 関連ツール
 
 - `git-worktree-manager`: 単一リポジトリ内の worktree 対話操作ツール
-- `devc-up-wrapper`: devcontainer 起動ラッパー
 
 ## ライセンス
 

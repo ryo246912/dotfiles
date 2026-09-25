@@ -949,7 +949,10 @@ generate_devcontainer() {
         # mount する。worktree は host と異なるパスへ mount するため、host の
         # ${repo}/.git を target にそのまま使うと relative gitdir が解決できない。
         local common_git_dir git_dir_relative container_git_dir
-        common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir) || continue
+        if ! common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir); then
+            log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $worktree_path"
+            continue
+        fi
         git_dir_relative=$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' \
             "$common_git_dir" "$worktree_path")
         container_git_dir=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(sys.argv[1], sys.argv[2])))' \
@@ -1443,6 +1446,13 @@ cmd_cd() {
 
     # worktree ディレクトリに移動
     cd "$target_dir" || return 1
+
+    # ccmc / dcup などの snippet が base template ではなく、各 repo の .git を
+    # mount する task 用 devcontainer.json を使うようにする。
+    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
+    if [[ -f "$task_devcontainer_config" ]]; then
+        export DEVCONTAINER_CONFIG="$task_devcontainer_config"
+    fi
 
     # シェルを起動（SHELL 環境変数を使用、デフォルトは bash）
     local shell="${SHELL:-/bin/bash}"
