@@ -244,7 +244,6 @@ description = "Clean up development caches on macOS (asks before heavy or destru
 # - 再DLが重いもの・データが消えうるものは y/N で確認してから削除
 # y/N 確認・mise prune のプロンプトに stdin を渡すため raw = true にする。
 raw = true
-shell = "bash -c"
 run = '''
 set -uo pipefail
 
@@ -350,3 +349,4 @@ section "実行後の空き容量"
 df -h / | tail -1
 echo "ゴミ箱を空にするのもお忘れなく。"
 '''
+shell = "bash -c"
