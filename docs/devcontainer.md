@@ -163,6 +163,29 @@ git log --show-signature -1
 
 GitHub 上でも、push したコミットに `Verified` バッジが付くことを確認してください。
 
+### commit が `Author identity unknown` で失敗する場合
+
+コンテナ内の `~/.gitconfig` は `postCreateCommand`（`executable_post-create.sh`）が作ります。ホストの
+`user.name` / `user.email` は `~/.config/gitconfig-host` として読み取り専用でマウントされていますが、
+`~/.gitconfig` の `include.path` から参照しない限り git には読まれません。そのため
+`post-create.sh` が `~/.gitconfig` を作る前に止まると、`gitconfig-host` があっても identity は未設定のままです。
+
+`post-create.sh` は `set -e` のため、以前は git の設定より前にある処理（プロジェクト生成物の分離・
+Lefthook のインストール）が失敗すると、identity の設定まで到達しませんでした。現在は次の順序にしています。
+
+1. git の `include.path` / 認証 / コミット署名の設定（identity の解決を確認し、解決できなければ警告）
+2. プロジェクト生成物の分離、Lefthook のインストール（失敗しても警告して続行）
+3. `.claude.json` のコピー、`claude-account2` の共有、`~/.crit.config.json` の生成
+
+`Author identity unknown` が出た場合は、次で切り分けます。
+
+```bash
+ls -la ~/.gitconfig ~/.config/gitconfig-host   # ~/.gitconfig が無ければ post-create.sh が未完了
+git config --global --get-all include.path     # gitconfig-host が含まれているか
+git config user.name && git config user.email  # 空ならホスト側の ~/.config/git/config の [user] を確認
+bash ~/.config/devcontainer/scripts/post-create.sh  # 冪等なので再実行して復旧できる
+```
+
 ## mounts の source が無いことによるコンテナ作成失敗の防止
 
 devcontainer.json の `mounts` は `docker run --mount` として処理されます。レガシーな `-v`
@@ -286,6 +309,17 @@ Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空で
 
 pre-commitでは、未stageの変更と未追跡ファイルを一時的にstashし、stage済みの内容だけを
 worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
+
+- stashの対象から、`mount-container-only-dirs.sh`がbind mountする`node_modules` / `.venv` / `.gradle` /
+  `.terraform` / `target`を除外する。`.gitignore`対象でないと、これらは未追跡の空ディレクトリとして
+  `git stash -u`の削除対象になり、`Device or resource busy`で失敗するため。stashが途中で失敗しても
+  復元用のマーカーを書いてから失敗を返すので、後続の`stash pop`で未追跡ファイルは復元される。
+- `shell`ジョブは`shfmt -l {staged_files}`で、ステージ済みの`*.sh` / `*.bash` / `*.bats`だけを検査する。
+  リポジトリ全体を走査する`mise run lint:shell`は、shfmtが解析できない`.zsh`が1つでもあると
+  無関係な変更のコミットまで失敗するため、hookでは使わない。
+- `lefthook.local.yml`は各リポジトリに無い場合だけテンプレートからコピーされる。既に配置済みの
+  リポジトリへテンプレートの変更を反映するには、`~/.config/devcontainer/lefthook.local.yml`を
+  そのリポジトリの`lefthook.local.yml`へ上書きコピーする。
 
 multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
 `multi-worktree-*`ブランチのtask rootだけを複数リポジトリ構成として扱い、直下で`.git`を持つ
