@@ -246,6 +246,8 @@ description = "Clean up development caches on macOS (asks before heavy or destru
 raw = true
 run = '''
 set -uo pipefail
+# dir/* で隠しファイルも対象にし、マッチなしのときはパターン文字列を残さない
+shopt -s dotglob nullglob
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
 
@@ -311,7 +313,13 @@ rm -rf "$HOME/.terraform.d/plugin-cache/"*
 # ------------------------------------------------------------
 section "~/.cache 全削除"
 # ------------------------------------------------------------
-rm -rf "$CACHE_DIR/"*
+# XDG_CACHE_HOME の設定ミスで / や $HOME を消さないよう、実体パスを確認してから削除する
+if cache_root=$(cd -P "$CACHE_DIR" 2>/dev/null && pwd -P) \
+  && [[ "$cache_root" != "/" && "$cache_root" != "$(cd -P "$HOME" && pwd -P)" ]]; then
+  rm -rf -- "$cache_root"/*
+else
+  echo "skip: $CACHE_DIR は削除対象として不正です" >&2
+fi
 
 # ------------------------------------------------------------
 section "確認付きの項目"
