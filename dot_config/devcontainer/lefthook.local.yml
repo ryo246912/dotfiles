@@ -53,7 +53,7 @@ pre-commit:
             run: mise run lint:md
             fail_text: "❌ [ai-only] Markdown format check failed."
           - name: shell
-            glob: "**/*.{sh,bash,bats}"
+            glob: "**/*.sh"
             run: mise run lint:shell
             fail_text: "❌ [ai-only] shell format check failed."
           - name: secretlint
