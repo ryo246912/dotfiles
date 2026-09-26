@@ -134,7 +134,7 @@ bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
   保存し、次回ビルド時に rsync で復元してから `mise install` します。バージョンが変わったツールだけが
   ダウンロード/ビルドされます。
 - install 先は常に `/mise/data` のままなので、shim や shebang の絶対パスは壊れません。
-- 復元した古いバージョンは `mise prune --tools` で削除し、イメージには `mise.toml` のバージョンだけを残します。
+- 復元した古いバージョンは `mise prune --tools` で削除を試みます（失敗時は警告のみでビルドを続行するため、残る場合があります）。
 - go（`GOMODCACHE` / `GOCACHE`）と bun のキャッシュも cache mount（id: `devcontainer-mise-cache`）に置いて再利用します。
 - `tasks/` の COPY は install の後に置き、tasks の変更で install layer が無効化されないようにしています。
 

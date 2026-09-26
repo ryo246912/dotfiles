@@ -68,6 +68,7 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
       BUN_INSTALL_CACHE_DIR=/mise/cache/bun; \
     rsync -a /mise/data-cache/ /mise/data/; \
     /usr/local/bin/mise install -C /mise aqua:cli/cli; \
+    /usr/local/bin/mise reshim -C /mise; \
     /usr/local/bin/mise install -C /mise; \
     /usr/local/bin/mise prune -C /mise --tools || echo "warn: mise prune failed" >&2; \
     rm -rf /mise/data/downloads; \
