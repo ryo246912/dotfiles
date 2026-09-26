@@ -57,5 +57,4 @@ run         = "betterleaks git --staged -v"
 ["lint:shell"]
 description = "Check shell script formatting with shfmt"
 # `shfmt -l .` は .zsh 等も探索し、bash として解析できず失敗するため、git 管理下の *.sh だけを対象にする。
-# NUL 区切りで空白を含むパスに対応し、0 件なら何もせず（shfmt の stdin 待ちを避ける）、未 stage で削除済みのファイルは除く。
-run = '''git ls-files -z '*.sh' | xargs -0 -r sh -c 'for f; do [ -e "$f" ] && printf "%s\0" "$f"; done' _ | xargs -0 -r shfmt -l'''
+run = "shfmt -l $(git ls-files '*.sh')"
