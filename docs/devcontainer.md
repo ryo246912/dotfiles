@@ -317,9 +317,11 @@ worktreeに残してlintする。lintの成否にかかわらず最後のジョ�
   これらは未追跡の空ディレクトリとして`git stash -u`の削除対象になり、`Device or resource busy`で
   失敗するため。ディレクトリ名だけの除外では、mount内の生成物がstashに取り込まれる。stashが途中で失敗しても
   復元用のマーカーを書いてから失敗を返すので、後続の`stash pop`で未追跡ファイルは復元される。
-- `shell`ジョブは`shfmt -l {staged_files}`で、ステージ済みの`*.sh` / `*.bash` / `*.bats`だけを検査する。
-  リポジトリ全体を走査する`mise run lint:shell`は、shfmtが解析できない`.zsh`が1つでもあると
-  無関係な変更のコミットまで失敗するため、hookでは使わない。
+- `shell`ジョブは`mise run lint:shell`を実行し、対象はgit管理下の`*.sh`だけにしている
+  （`shfmt -l $(git ls-files '*.sh')`）。`shfmt -l .`は`.zsh`なども探索し、bashとして解析できず
+  失敗するため。shfmtには「解析できるものだけを対象にする」オプションが無いので、拡張子で絞っている。
+  整形差分があるファイルが1つでもあると（`shfmt -l`は終了コード1を返す）、`*.sh`を含むコミットは
+  リポジトリ内の既存ファイルの差分でも失敗する。
 - `lefthook.local.yml`は各リポジトリに無い場合だけテンプレートからコピーされる。既に配置済みの
   リポジトリへテンプレートの変更を反映するには、`~/.config/devcontainer/lefthook.local.yml`を
   そのリポジトリの`lefthook.local.yml`へ上書きコピーする。

@@ -56,4 +56,5 @@ run         = "betterleaks git --staged -v"
 
 ["lint:shell"]
 description = "Check shell script formatting with shfmt"
-run         = "shfmt -l ."
+# `shfmt -l .` は .zsh 等も探索し、bash として解析できず失敗するため、git 管理下の *.sh だけを対象にする。
+run = "shfmt -l $(git ls-files '*.sh')"

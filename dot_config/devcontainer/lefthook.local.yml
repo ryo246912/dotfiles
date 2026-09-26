@@ -59,9 +59,7 @@ pre-commit:
             fail_text: "❌ [ai-only] Markdown format check failed."
           - name: shell
             glob: "**/*.{sh,bash,bats}"
-            # `mise run lint:shell` は `shfmt -l .` でリポジトリ全体を走査し、shfmt が解析できない
-            # .zsh 等が1つでもあると無関係な変更のコミットまで失敗する。ステージ済みの対象だけを検査する。
-            run: shfmt -l {staged_files}
+            run: mise run lint:shell
             fail_text: "❌ [ai-only] shell format check failed."
           - name: secretlint
             run: mise run lint:secret
