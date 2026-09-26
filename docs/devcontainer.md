@@ -308,32 +308,3 @@ ssh -F ~/.config/ssh/config mac-host \
 devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
 Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
-
-pre-commitでは、未stageの変更と未追跡ファイルを一時的にstashし、stage済みの内容だけを
-worktreeに残してlintする。lintの成否にかかわらず最後のジョブでstashを復元する。
-
-- `mount-container-only-dirs.sh`がbind mountする`node_modules` / `.venv` / `.gradle` / `.terraform` / `target`は、
-  グローバルgitignore（`dot_config/git/gitignore`）で無視する。無視されないと未追跡の空ディレクトリとして
-  `git stash -u`の削除対象になり、`Device or resource busy`で失敗するため。ホストの`core.excludesfile`
-  （`~/.config/git/gitignore`）はコンテナ内に無いので、`devcontainer.json`で`~/.config/gitignore-host`へ
-  読み取り専用でmountし、`post-create.sh`が`core.excludesfile`をそこへ向ける（`~/.config/git`は
-  `post-create.sh`が書き込むため、その配下にはmountしない）。mountを追加したので既存のコンテナは再作成が必要。
-  stashが途中で失敗しても復元用のマーカーを書いてから失敗を返すので、後続の`stash pop`で未追跡ファイルは復元される。
-- `shell`ジョブは`mise run lint:shell`を実行し、対象はgit管理下の`*.sh`だけにしている
-  （`shfmt -l $(git ls-files '*.sh')`）。`shfmt -l .`は`.zsh`なども探索し、bashとして解析できず
-  失敗するため。shfmtには「解析できるものだけを対象にする」オプションが無いので、拡張子で絞っている。
-  整形差分があるファイルが1つでもあると（`shfmt -l`は終了コード1を返す）、`*.sh`を含むコミットは
-  リポジトリ内の既存ファイルの差分でも失敗する。
-- `lefthook.local.yml`は各リポジトリに無い場合だけテンプレートからコピーされる。既に配置済みの
-  リポジトリへテンプレートの変更を反映するには、`~/.config/devcontainer/lefthook.local.yml`を
-  そのリポジトリの`lefthook.local.yml`へ上書きコピーする。
-
-multi-worktreeのようにworkspace直下に複数のリポジトリ（`repo-a/`、`repo-b/`など）を並べる構成では、
-`multi-worktree-*`ブランチのtask rootだけを複数リポジトリ構成として扱い、直下で`.git`を持つ
-各リポジトリへ`lefthook.local.yml`を配置して、それぞれに`lefthook install`する。
-通常のworkspaceは直下にsubmoduleがあっても、workspaceが属する親リポジトリへインストールする。
-
-フックはホストと共有する`.git/hooks`へ書き込まれるため、コンテナを破棄した後も残る。
-非AI環境ではAI向けジョブはスキップされるが、ホストにLefthookがない場合はcommitが
-失敗する。不要になったフックは、対象リポジトリのdevcontainer内で
-`lefthook uninstall`を実行して削除する。
