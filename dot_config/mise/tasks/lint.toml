@@ -39,6 +39,11 @@ description = "Run pinact --check"
 dir         = "{{cwd}}"
 run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
 
+["lint:dockerfile-pin"]
+description = "Run dockerfile-pin check"
+dir         = "{{cwd}}"
+run         = "dockerfile-pin check"
+
 ["lint:toml"]
 description = "Run lint TOML files"
 dir         = "{{cwd}}"

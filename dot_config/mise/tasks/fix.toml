@@ -5,6 +5,7 @@
 # 逐次実行されるのと同時にもう一度実行され、同じワークフローファイルへの書き込みが競合する。
 depends = [
     "fix:action",
+    "fix:dockerfile-pin",
     "fix:toml",
     "fix:yaml",
     "fix:json",
@@ -35,6 +36,11 @@ description = "Run fix actions timeout-minutes"
 dir         = "{{cwd}}"
 run         = ["ghatm set -t 5"]
 
+["fix:dockerfile-pin"]
+description = "Run dockerfile-pin (fix)"
+dir         = "{{cwd}}"
+run         = "dockerfile-pin run --write"
+
 ["fix:toml"]
 description = "Run fix TOML files"
 dir         = "{{cwd}}"
@@ -42,6 +48,8 @@ hide        = true
 run         = "taplo format --config ~/.config/taplo/config.toml"
 
 ["fix:yaml"]
+# fix:dockerfile-pinとcompose.yamlへ同時に書き込むと競合するため、先に完了させる。
+depends     = ["fix:dockerfile-pin"]
 description = "Run fix YAML files"
 dir         = "{{cwd}}"
 hide        = true
