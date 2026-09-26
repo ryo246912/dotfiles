@@ -9,13 +9,6 @@ snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --
 trigger = "ccmc"
 
 [[snippets]]
-cursor          = "👇"
-evaluate        = true
-name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
-trigger-pattern = "(^ccmc2$|ccmcc2)"
-
-[[snippets]]
 name    = "devcontainer up"
 snippet = "devcontainer up --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true"
 trigger = "dcup"
@@ -36,12 +29,6 @@ global  = true
 name    = "claude"
 snippet = "claude"
 trigger = "cl"
-
-[[snippets]]
-global  = true
-name    = "claude2"
-snippet = "claude2"
-trigger = "cl2"
 
 [[snippets]]
 global  = true
@@ -74,14 +61,14 @@ snippet = "codex --yolo"
 trigger = "cxy"
 
 [[snippets]]
-context = ".*claude(2)?\\s"
+context = ".*claude\\s"
 global  = true
 name    = "(ccmanager) --multi-project"
 snippet = "--multi-project"
 trigger = "mp"
 
 [[snippets]]
-context = ".*claude(2)?\\s"
+context = ".*claude\\s"
 global  = true
 name    = "(claude*) --dangerously-skip-permissions"
 snippet = "--dangerously-skip-permissions"

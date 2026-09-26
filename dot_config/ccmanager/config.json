@@ -39,9 +39,18 @@
       {
         "id": "2",
         "name": "Claude A2 (resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "fallbackArgs": [],
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude \"$@\"",
+          "dummy",
+          "--dangerously-skip-permissions"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude \"$@\"",
+          "dummy"
+        ],
         "detectionStrategy": "claude"
       },
       {
@@ -54,8 +63,18 @@
       {
         "id": "4",
         "name": "Claude A2 (no resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude \"$@\"",
+          "dummy",
+          "--dangerously-skip-permissions"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude \"$@\"",
+          "dummy"
+        ],
         "detectionStrategy": "claude"
       },
       {
