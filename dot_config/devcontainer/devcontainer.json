@@ -55,6 +55,9 @@
     // その tmpfs にシャドウされて消える。/home/vscode/.config は Dockerfile で作成済みの
     // 実ディレクトリなので、ここを target にする。
     "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.config/gitconfig-host,readonly",
+    // グローバル gitignore。host config の core.excludesfile は ~/.config/git/gitignore を指すが、
+    // post-create.sh が ~/.config/git に書き込むため、git/ 配下には mount せず gitconfig-host と同様に別名で置く。
+    "type=bind,source=${localEnv:HOME}/.config/git/gitignore,target=/home/vscode/.config/gitignore-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",

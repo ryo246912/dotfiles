@@ -14,6 +14,9 @@ if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; t
 	git config --global --add include.path "$gitconfig_host"
 fi
 echo "✓ ホストの git config を設定しました"
+# host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
+# 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
+git config --global core.excludesfile ~/.config/gitignore-host
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 
