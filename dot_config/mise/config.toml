@@ -5,6 +5,11 @@ min_version = "2026.8.12"
 # https://github.com/acj/asdf-ffmpeg
 ASDF_FFMPEG_ENABLE = "gpl libx264"
 
+# mise の標準 backend で取得できない CLI は、Nix 導入済みの環境で `nix:<attr>` として
+# [tools] に宣言する。plugin の取得元も config で固定し、手動の plugin install を不要にする。
+[plugins]
+nix = "https://github.com/jbadeau/mise-nix.git#e310c4c20e8273ba850298c10fbe97d0c858c300"
+
 [tools]
 # ffmpeg                                                      = "latest"
 # ruby                                                        = "3.3.1"

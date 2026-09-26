@@ -7,6 +7,49 @@
 [brew | mise-en-place](https://mise.jdx.dev/bootstrap/packages/brew.html)、
 [macOS defaults | mise-en-place](https://mise.jdx.dev/bootstrap/macos-defaults.html)
 
+## mise-nix による Nix パッケージ管理
+
+[mise-nix](https://github.com/jbadeau/mise-nix) は mise の tool backend なので、Nix
+パッケージも通常の mise tool と同じく `mise.toml` の `[tools]` で宣言的に管理できる。
+このリポジトリでは `dot_config/mise/config.toml` の `[plugins]` に plugin の URL と commit を
+固定しているため、`mise plugin install` を手動実行する必要はない。`nix:` の tool を初めて
+`mise install` したときに mise が plugin を取得する。
+
+```toml
+[plugins]
+nix = "https://github.com/jbadeau/mise-nix.git#<commit>"
+
+[tools]
+# mise の core/aqua/github/cargo/npm 等で取得できない CLI に限って追加する
+"nix:hello" = "2.12.1"
+```
+
+運用上の優先順位は次の通り。
+
+1. mise の core/aqua/github/cargo/npm 等の標準 backend
+2. OS パッケージや GUI アプリ、システム設定は `[bootstrap.*]`
+3. 上記で取得できない **CLI パッケージ**だけ `nix:<nixpkgs attribute>`
+4. sudo、Rosetta、Homebrew の postflight、macOS Login Item などホスト状態の変更が必要なものは
+   mise-nix では表現できないため、既存の idempotent な `bootstrap:*` task
+
+mise-nix 自体が Nix を呼び出すため、**Nix は事前にインストールされている必要がある**。
+また mise-nix が配置するのは mise の install directory と shim であり、macOS の `.app` を
+`/Applications` に登録したり `defaults` を変更したりはしない。このため、現在
+`bootstrap:mac-packages` / `bootstrap:mac-defaults` にある例外を機械的に `nix:` へ移すことは
+しない。Nix 導入済み環境で CLI を追加するときは、例えば以下で候補とバージョンを確認してから
+chezmoi source の `[tools]` に固定する。
+
+```sh
+nix search nixpkgs '^<package>$'
+mise ls-remote nix:<package>
+mise use --global nix:<package>@<version>
+mise install
+```
+
+unfree / insecure / local flake は暗黙に許可せず、必要なホストの `config.private.toml` 等で
+`MISE_NIX_ALLOW_UNFREE=true` / `MISE_NIX_ALLOW_INSECURE=true` /
+`MISE_NIX_ALLOW_LOCAL_FLAKES=true` を明示する。
+
 ## `mise bootstrap` のフェーズ
 
 `mise bootstrap`（フル実行）は以下を順に処理する。
