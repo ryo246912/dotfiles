@@ -81,3 +81,16 @@ key_repeat         = 2
 [bootstrap.macos.defaults]
 "NSGlobalDomain"   = { "com.apple.swipescrolldirection" = false }
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
+
+# AgentsView のセッションを 15 分ごとに CockroachDB へ push する LaunchAgent（詳細は docs/agentsview.md）。
+# 適用: MISE_ENV=mac mise bootstrap macos launchd-agents apply
+# secret（AGENTSVIEW_COCKROACH_PUSH_PG_URL）は task 側が fnox（bws/age）から解決する。
+# 事前に mise が ~/.local/bin/mise にあり、ログ用に ~/.local/state/agentsview を作成しておくこと。
+[bootstrap.macos.launchd.agents.agentsview-push]
+args           = ["run", "agentsview:cockroach:push:daemon"]
+keep_alive     = false
+program        = "~/.local/bin/mise"
+run_at_load    = true
+start_interval = 900                                         # 15 min
+stderr_path    = "~/.local/state/agentsview/push.log"
+stdout_path    = "~/.local/state/agentsview/push.log"
