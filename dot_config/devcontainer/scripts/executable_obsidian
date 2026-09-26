@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# devcontainer から macOS ホストの Obsidian CLI を実行する SSH bridge。
+set -euo pipefail
+
+ssh_config="${HOME}/.config/ssh/config"
+
+if [[ ! -f "${ssh_config}" ]]; then
+	printf 'obsidian: SSH config not found: %s (restart the devcontainer)\n' "${ssh_config}" >&2
+	exit 1
+fi
+
+# 引数を remote shell が再解釈しても内容が変わらないよう、POSIX shell の single-quote
+# 形式へ変換する。改行を含む引数も保持する。
+quote_arg() {
+	printf "'%s'" "${1//\'/\'\\\'\'}"
+}
+
+remote_command="exec /usr/local/bin/obsidian"
+for arg in "$@"; do
+	remote_command+=" $(quote_arg "${arg}")"
+done
+
+ssh_opts=(-F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5)
+if [[ -t 0 && -t 1 ]]; then
+	# 引数なしで起動する Obsidian CLI の TUI を利用できるよう PTY を割り当てる。
+	ssh_opts+=(-t)
+else
+	ssh_opts+=(-T)
+fi
+
+exec ssh "${ssh_opts[@]}" mac-host "${remote_command}"
