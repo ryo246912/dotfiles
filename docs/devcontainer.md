@@ -6,6 +6,38 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## workspace と Git worktree の mount 範囲
+
+base template は `${localWorkspaceFolder}` のみを bind mount し、親ディレクトリは
+mount しません。`~/project/repo` のような通常 checkout で `../..` を mount すると
+`$HOME` 全体がコンテナから見えるためです。
+
+`ccmanager` や手動起動（zabrze の `ccmc` / `dcup` / `dcex`）では、`devcontainer up` と
+`devcontainer exec` の両方に次のオプションを直接指定しています。
+
+- `--mount-workspace-git-root=false`: workspace より広い Git root の自動 mount を無効化
+- `--mount-git-worktree-common-dir=true`: linked worktree が参照する common git dir だけを mount
+
+この base template で linked worktree を開く場合は、`up` / `exec` の両方に上記2オプションを
+指定してください。VS Code Dev Containers 拡張からこの base template を直接開く
+経路は、common git dir の安全な mount を保証できないため対象外です。
+
+snippet の `--config` は `${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json}` です。
+`multi-worktree cd <task>` で入ったシェルでは、`DEVCONTAINER_CONFIG` に task root の
+`.devcontainer/devcontainer.json` が設定されます。そのため、task root の `ccmc` は各 repo の
+`.git` を mount した生成 config で起動します。task root は linked worktree ではなく
+synthetic repository なので、base template では配下 repo の `.git` が mount されず、
+コンテナ内の git が `not a git repository` になります。
+
+`--mount-git-worktree-common-dir` は relative-paths 形式の worktree を前提とするため、`multi-worktree` は
+`git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は
+`git worktree remove` の後に `git worktree add --relative-paths` で作り直してください。
+
+`multi-worktree` が生成する複数リポジトリ用の devcontainer は、各 worktree に加えて
+実体リポジトリの `.git` だけを、その worktree の相対 `gitdir` がコンテナ内で
+到達するパスへ mount します。実体リポジトリの working tree や、その他の
+兄弟ディレクトリはコンテナから見えません。
+
 ## devcontainer からホスト側 tmux pane を読む
 
 ホスト側の開発サーバーログを、devcontainer 内の AI エージェントから確認する場合は
