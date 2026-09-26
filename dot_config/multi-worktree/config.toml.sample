@@ -66,6 +66,6 @@ skip_up_if_running = true
 # `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
 [dev_commands]
 claude1 = "claude --dangerously-skip-permissions"
-claude2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'
+claude_a2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'
 copilot = "copilot --yolo"
 codex = "codex --yolo"
