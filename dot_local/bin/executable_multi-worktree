@@ -508,7 +508,7 @@ create_repo_worktree() {
                 add_args=("-b" "$resolved_branch" "$base_ref")
             fi
 
-            git worktree add "$worktree_path" "${add_args[@]}"
+            git worktree add --relative-paths "$worktree_path" "${add_args[@]}"
         ) 2>&1
     ); then
         log_success "[$repo_name] worktree を作成しました: $worktree_path (ブランチ: $task_name)"
@@ -942,10 +942,22 @@ generate_devcontainer() {
         fi
 
         # worktree のマウント
-        worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
+        local container_worktree_path="/workspaces/${worktree_name}/${repo_name}"
+        worktree_mounts+="\"type=bind,source=${worktree_path},target=${container_worktree_path}\""
 
-        # 実体リポジトリのマウント（.git アクセス用）
-        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
+        # .git file の相対参照がコンテナ内で到達する位置に、common git dir だけを
+        # mount する。worktree は host と異なるパスへ mount するため、host の
+        # ${repo}/.git を target にそのまま使うと relative gitdir が解決できない。
+        local common_git_dir git_dir_relative container_git_dir
+        if ! common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir); then
+            log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $worktree_path"
+            continue
+        fi
+        git_dir_relative=$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' \
+            "$common_git_dir" "$worktree_path")
+        container_git_dir=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(sys.argv[1], sys.argv[2])))' \
+            "$container_worktree_path" "$git_dir_relative")
+        worktree_mounts+=",\"type=bind,source=${common_git_dir},target=${container_git_dir}\""
     done
 
     worktree_mounts+="]"
@@ -1434,6 +1446,13 @@ cmd_cd() {
 
     # worktree ディレクトリに移動
     cd "$target_dir" || return 1
+
+    # ccmc / dcup などの snippet が base template ではなく、各 repo の .git を
+    # mount する task 用 devcontainer.json を使うようにする。
+    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
+    if [[ -f "$task_devcontainer_config" ]]; then
+        export DEVCONTAINER_CONFIG="$task_devcontainer_config"
+    fi
 
     # シェルを起動（SHELL 環境変数を使用、デフォルトは bash）
     local shell="${SHELL:-/bin/bash}"

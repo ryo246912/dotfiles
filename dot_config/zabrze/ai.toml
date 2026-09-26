@@ -5,18 +5,18 @@ trigger = "ccm"
 
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devc-up-wrapper devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\""
+snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\""
 trigger = "ccmc"
 
 [[snippets]]
 name    = "devcontainer up"
-snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json"
+snippet = "devcontainer up --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true"
 trigger = "dcup"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
-snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
+snippet = "devcontainer exec --workspace-folder . --config ${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json} --mount-workspace-git-root=false --mount-git-worktree-common-dir=true -- 👇"
 trigger = "dcex"
 
 [[snippets]]
