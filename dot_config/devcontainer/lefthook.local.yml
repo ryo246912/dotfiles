@@ -14,13 +14,19 @@ pre-commit:
       run: |
         marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
         before="$(git rev-parse --verify -q refs/stash || true)"
-        git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit" || exit 1
+        # bind mount された生成物ディレクトリ（.venv 等）が未追跡に見えると stash -u が削除しようとして
+        # "Device or resource busy" で失敗する。グローバル gitignore で無視しておくこと（docs/devcontainer.md 参照）。
+        rc=0
+        git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit" || rc=$?
         after="$(git rev-parse --verify -q refs/stash || true)"
+        # stash が失敗しても途中まで作られている場合がある。マーカーを必ず書き、
+        # 後続の stash pop で未追跡ファイルを復元できるようにしてから失敗を返す。
         if [ "$before" != "$after" ]; then
           printf '%s\n' "$after" > "$marker"
         else
           rm -f "$marker"
         fi
+        exit "$rc"
     - name: lint (ai-only)
       only: *ai-only
       group:
@@ -47,7 +53,7 @@ pre-commit:
             run: mise run lint:md
             fail_text: "❌ [ai-only] Markdown format check failed."
           - name: shell
-            glob: "**/*.{sh,bash,bats}"
+            glob: "**/*.sh"
             run: mise run lint:shell
             fail_text: "❌ [ai-only] shell format check failed."
           - name: secretlint

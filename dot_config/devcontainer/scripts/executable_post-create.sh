@@ -1,61 +1,9 @@
 #!/bin/bash
 set -e
 
-# OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
-bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
-
-# devcontainer専用のLefthook設定を各リポジトリへ配置し、hookをインストールする。
-# multi-worktreeではworkspace(task root)自体がccmanager用のsynthetic git repositoryで、
-# 実際のリポジトリは直下に並ぶ（例: task-root/repo-a, task-root/repo-b）。
-# task rootのブランチ名でmulti-worktreeを判定し、その場合だけ直下のリポジトリを対象にする。
-# 通常のリポジトリは直下にsubmoduleがあってもworkspace自体を対象にする。
-lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
-
-install_lefthook() {
-	local repo_root=$1
-	local local_lefthook_config="${repo_root}/lefthook.local.yml"
-	if [ ! -e "$local_lefthook_config" ]; then
-		cp "$lefthook_template" "$local_lefthook_config"
-	fi
-	local git_exclude
-	git_exclude="$(git -C "$repo_root" rev-parse --path-format=absolute --git-path info/exclude)"
-	mkdir -p "$(dirname "$git_exclude")"
-	grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null || echo "lefthook.local.yml" >>"$git_exclude"
-	(
-		cd "$repo_root"
-		LEFTHOOK_CONFIG="$local_lefthook_config" lefthook install
-	)
-	echo "✓ ${repo_root} に Lefthook をインストールしました"
-}
-
-lefthook_repo_roots=()
-workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-workspace_branch=""
-if [ -n "$workspace_root" ]; then
-	workspace_branch="$(git -C "$workspace_root" branch --show-current 2>/dev/null || true)"
-fi
-if [[ "$workspace_branch" == multi-worktree-* ]]; then
-	for child_git in "${PWD}"/*/.git; do
-		[ -e "$child_git" ] || continue
-		child_root="$(dirname "$child_git")"
-		git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
-		lefthook_repo_roots+=("$child_root")
-	done
-elif [ -n "$workspace_root" ]; then
-	lefthook_repo_roots+=("$workspace_root")
-fi
-for repo_root in "${lefthook_repo_roots[@]}"; do
-	install_lefthook "$repo_root"
-done
-
-# .claude.json のコピー（既存の処理）
-claude_config_host=~/.config/claude-config-host.json
-if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then
-	cp "$claude_config_host" ~/.claude.json
-	echo "✓ .claude.json をコピーしました"
-else
-	echo "ℹ️ .claude.json のコピーはスキップしました"
-fi
+# git の identity / 署名設定は、他の補助的な処理（生成物の分離・Lefthook）より先に行う。
+# このスクリプトは set -e のため、後段のどれかが失敗すると以降の処理が実行されず、
+# ~/.gitconfig が作られないまま commit 時に "Author identity unknown" になってしまう。
 
 # コンテナ用の書き込み可能な .gitconfig にホスト設定を追加
 # ホストの gitconfig（user.name / user.email を含む）は /home/vscode/.config/gitconfig-host に
@@ -66,6 +14,9 @@ if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; t
 	git config --global --add include.path "$gitconfig_host"
 fi
 echo "✓ ホストの git config を設定しました"
+# host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
+# 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
+git config --global core.excludesfile ~/.config/gitignore-host
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 
@@ -101,6 +52,78 @@ else
 	# 同様にここに落ちるため、署名設定だけ有効なまま commit が壊れる状態を防げる。
 	git config --global commit.gpgsign false
 	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないか非対話で使用できないため、コミット署名を無効化しました"
+fi
+
+# identity が解決できているか確認する。ホストの gitconfig が空・未マウントだと
+# include しても user.name / user.email が得られず、commit が "Author identity unknown" で失敗する。
+if [ -z "$(git config user.name)" ] || [ -z "$(git config user.email)" ]; then
+	echo "⚠️ git の user.name / user.email が解決できません。ホストの ~/.config/git/config（コンテナ内: ${gitconfig_host}）に [user] があるか確認してください" >&2
+fi
+
+# OS 依存の生成物を、ホストへ書き込まないコンテナローカル領域へ切り替える。
+# 失敗を握りつぶさない。分離できないまま後続の依存インストールやビルドが走ると、
+# .venv / node_modules / target がホスト共有のワークスペースへ書き込まれるため、作成時点で止める。
+# （post-start.sh の再 mount は既存内容を隠すだけなので、そちらは警告して続行する。）
+# git の identity 設定は上で済んでいるため、ここで止まっても commit はできる。
+bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${PWD}"
+
+# devcontainer専用のLefthook設定を各リポジトリへ配置し、hookをインストールする。
+# multi-worktreeではworkspace(task root)自体がccmanager用のsynthetic git repositoryで、
+# 実際のリポジトリは直下に並ぶ（例: task-root/repo-a, task-root/repo-b）。
+# task rootのブランチ名でmulti-worktreeを判定し、その場合だけ直下のリポジトリを対象にする。
+# 通常のリポジトリは直下にsubmoduleがあってもworkspace自体を対象にする。
+lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
+
+# 呼び出し元が `if ! install_lefthook ...` で失敗を警告に落とすため、bash の仕様上この関数内では
+# set -e が効かない。各コマンドの失敗を確実に伝えるよう、明示的に `|| return 1` を付ける。
+install_lefthook() {
+	local repo_root=$1
+	local local_lefthook_config="${repo_root}/lefthook.local.yml"
+	if [ ! -e "$local_lefthook_config" ]; then
+		cp "$lefthook_template" "$local_lefthook_config" || return 1
+	fi
+	local git_exclude
+	git_exclude="$(git -C "$repo_root" rev-parse --path-format=absolute --git-path info/exclude)" || return 1
+	mkdir -p "$(dirname "$git_exclude")" || return 1
+	if ! grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null; then
+		echo "lefthook.local.yml" >>"$git_exclude" || return 1
+	fi
+	(
+		cd "$repo_root" || exit 1
+		LEFTHOOK_CONFIG="$local_lefthook_config" lefthook install
+	) || return 1
+	echo "✓ ${repo_root} に Lefthook をインストールしました"
+}
+
+lefthook_repo_roots=()
+workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+workspace_branch=""
+if [ -n "$workspace_root" ]; then
+	workspace_branch="$(git -C "$workspace_root" branch --show-current 2>/dev/null || true)"
+fi
+if [[ "$workspace_branch" == multi-worktree-* ]]; then
+	for child_git in "${PWD}"/*/.git; do
+		[ -e "$child_git" ] || continue
+		child_root="$(dirname "$child_git")"
+		git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
+		lefthook_repo_roots+=("$child_root")
+	done
+elif [ -n "$workspace_root" ]; then
+	lefthook_repo_roots+=("$workspace_root")
+fi
+for repo_root in "${lefthook_repo_roots[@]}"; do
+	if ! install_lefthook "$repo_root"; then
+		echo "⚠️ ${repo_root} への Lefthook のインストールに失敗しましたが、残りの作成処理を続行します" >&2
+	fi
+done
+
+# .claude.json のコピー（既存の処理）
+claude_config_host=~/.config/claude-config-host.json
+if [ ! -f ~/.claude.json ] && [ -f "$claude_config_host" ]; then
+	cp "$claude_config_host" ~/.claude.json
+	echo "✓ .claude.json をコピーしました"
+else
+	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
 # claude-account2 ディレクトリを作成
