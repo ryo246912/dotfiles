@@ -1,6 +1,7 @@
 #!/bin/bash
 # Claude account2 (CLAUDE_CONFIG_DIR=~/.claude-account2) で account1 の設定を共有する。
 # ccmanager preset の Claude A2 はこのディレクトリを CLAUDE_CONFIG_DIR に指定して起動する。
+# ~/.claude の各エントリは claude の初回起動後に作られるため、apply のたびに実行して不足分を補う。
 # devcontainer 側は post-create.sh で同じ処理を行う。
 
 account2_dir="${HOME}/.claude-account2"
