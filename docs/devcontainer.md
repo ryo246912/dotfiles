@@ -125,6 +125,21 @@ bind mountのtargetにはLinuxの仕様上ディレクトリが必要です。�
 bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 ```
 
+## イメージのリビルド高速化（mise ツールのキャッシュ）
+
+`dot_config/devcontainer/mise.toml` を変更すると `mise install` の layer は必ず再実行されますが、
+全ツールをゼロから入れ直さないよう `Dockerfile` で次の工夫をしています。
+
+- インストール済みツール（`/mise/data`）を BuildKit の cache mount（id: `devcontainer-mise-data`）に
+  保存し、次回ビルド時に rsync で復元してから `mise install` します。バージョンが変わったツールだけが
+  ダウンロード/ビルドされます。
+- install 先は常に `/mise/data` のままなので、shim や shebang の絶対パスは壊れません。
+- 復元した古いバージョンは `mise prune --tools` で削除を試みます（失敗時は警告のみでビルドを続行するため、残る場合があります）。
+- go（`GOMODCACHE` / `GOCACHE`）と bun のキャッシュも cache mount（id: `devcontainer-mise-cache`）に置いて再利用します。
+- `tasks/` の COPY は install の後に置き、tasks の変更で install layer が無効化されないようにしています。
+
+cache mount は `docker builder prune` で削除されます（削除されても初回と同じフルインストールになるだけです）。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
