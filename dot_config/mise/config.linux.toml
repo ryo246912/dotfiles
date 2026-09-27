@@ -11,3 +11,15 @@
 "apt:tig"       = "latest"
 "apt:tree"      = "latest"
 "apt:ugrep"     = "latest"
+
+# AgentsView のセッションを 15 分ごとに CockroachDB へ push する systemd user timer（詳細は docs/agentsview.md）。
+# timer 系フィールド（on_unit_active_sec 等）があると mise が .service と .timer を生成する。
+# 適用: MISE_ENV=linux mise bootstrap linux systemd-units apply
+# secret（AGENTSVIEW_COCKROACH_PUSH_PG_URL）は task 側が fnox（bws/age）から解決する。
+# 事前に mise が %h/.local/bin/mise にあること。headless/WSL は loginctl enable-linger "$USER" も。
+[bootstrap.linux.systemd.units.agentsview-push]
+description        = "Push AgentsView sessions to CockroachDB every 15 minutes"
+exec_start         = "%h/.local/bin/mise run agentsview:cockroach:push:daemon"
+on_boot_sec        = "5min"
+on_unit_active_sec = "15min"
+type               = "oneshot"

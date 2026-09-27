@@ -126,6 +126,50 @@ initial_key_repeat = 15
   実行ファイル起動用の LaunchAgent 定義で、`.app` バンドルを「ログイン項目」として登録する
   ものではない（システム設定の「ログイン項目」一覧にも出てこない）。
 
+### `[bootstrap.macos.launchd.agents]` / `[bootstrap.linux.systemd.units]`（user service）
+
+常駐・定期実行を宣言的に持たせる。macOS は LaunchAgent、Linux は systemd user unit を生成して
+`launchctl` / `systemctl --user` へ load する。cron を書かずに「N 分ごとに task を叩く」定期
+ジョブを dotfiles 管理下に置ける（このリポジトリでは AgentsView の 15 分ごとの push に使用。
+[docs/agentsview.md](./agentsview.md) の「定期 push」）。
+
+```toml
+# macOS: config.mac.toml。start_interval 秒ごとに起動
+[bootstrap.macos.launchd.agents.agentsview-push]
+program        = "~/.local/bin/mise" # ~ は mise が展開して plist に書き出す
+args           = ["run", "agentsview:cockroach:push:daemon"]
+run_at_load    = true
+start_interval = 900                 # 15 min
+keep_alive     = false               # 常駐でなく都度起動なので false
+stdout_path    = "~/.local/state/agentsview/push.log"
+stderr_path    = "~/.local/state/agentsview/push.log"
+
+# Linux: config.linux.toml。timer 系フィールドがあると .service + .timer を生成
+[bootstrap.linux.systemd.units.agentsview-push]
+description        = "..."
+exec_start         = "%h/.local/bin/mise run agentsview:cockroach:push:daemon" # %h=$HOME
+type               = "oneshot"
+on_boot_sec        = "5min"
+on_unit_active_sec = "15min"          # 以後 15 分ごと
+```
+
+```sh
+# 適用（差分は --dry-run で確認）
+MISE_ENV=mac   mise bootstrap macos launchd-agents apply
+MISE_ENV=linux mise bootstrap linux systemd-units apply
+```
+
+注意点:
+
+- **PATH が最小**: launchd / systemd user unit は login shell を経ないため PATH が最小。実行は
+  絶対パス（macOS: `~/.local/bin/mise`、Linux: `%h/.local/bin/mise`）で指定する。`mise run <task>`
+  経由なら task が使う mise 管理ツール（fnox / agentsview 等）は mise が PATH に載せる。
+- **ログの親ディレクトリ**: launchd は `stdout_path` の親を作らないので、`mkdir -p ~/.local/state/agentsview`
+  を先に済ませる。
+- **secret**: dotfiles や plist に直書きせず task 側で fnox（bws/age）から解決する。
+- **`persistent` は monotonic timer に効かない**: `on_boot_sec` / `on_unit_active_sec` は monotonic
+  timer で、停止中の取りこぼし補填（`Persistent=`）は `on_calendar` のときだけ有効。
+
 ## 既に brew で導入済みの状態からのマイグレーション手順
 
 元々は `brew install` /
