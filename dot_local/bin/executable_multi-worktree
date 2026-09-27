@@ -1447,10 +1447,6 @@ cmd_cd() {
     # worktree ディレクトリに移動
     cd "$target_dir" || return 1
 
-    # ccmc / dcup などの snippet は devc-config で task root の生成 config を選ぶため、
-    # ここで DEVCONTAINER_CONFIG を export しない（別 task に cd した後も古い task の
-    # config が使われてしまうため）。
-
     # シェルを起動（SHELL 環境変数を使用、デフォルトは bash）
     local shell="${SHELL:-/bin/bash}"
     exec "$shell"

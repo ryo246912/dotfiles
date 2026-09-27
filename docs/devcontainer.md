@@ -22,12 +22,9 @@ mount しません。`~/project/repo` のような通常 checkout で `../..` �
 指定してください。VS Code Dev Containers 拡張からこの base template を直接開く
 経路は、common git dir の安全な mount を保証できないため対象外です。
 
-snippet の `--config` は `$(devc-config)` で決まります（`dot_local/bin/executable_devc-config`）。
-
-1. `DEVCONTAINER_CONFIG` が設定されていればそれを使う（手動での上書き用）
-2. カレントディレクトリが `multi-worktree` の task root なら、生成された
-   `.devcontainer/devcontainer.json`（name が `Multi-worktree: ` で始まるもの）を使う
-3. それ以外は base template を使う
+snippet の `--config` は、カレントディレクトリの `.devcontainer/devcontainer.json` が
+`multi-worktree` の生成したもの（`Multi-worktree` を含む）ならそれを、それ以外は base template を使います。
+repo 自身が持つ `.devcontainer/` は AI agent 用ではないため採用しません。
 
 task root は linked worktree ではなく synthetic repository なので、base template で起動すると
 `--mount-git-worktree-common-dir` が効かず、配下 repo の `.git` が mount されません。

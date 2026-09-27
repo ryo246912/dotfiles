@@ -393,7 +393,7 @@ ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
-task root で `ccmc` を起動すると、`devc-config` が task 用の `.devcontainer/devcontainer.json` を
+task root で `ccmc` を起動すると、snippet が task 用の `.devcontainer/devcontainer.json` を
 選び、この生成 config でコンテナを起動します（`multi-worktree cd` を経由せず自分で `cd` した場合も同じ）。
 `multi-worktree dev` も、config.toml の `up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
 
@@ -479,7 +479,6 @@ git worktree remove ../worktrees/multi-worktree-feat-add-auth/repo-a --force
 ## 関連ツール
 
 - `git-worktree-manager`: 単一リポジトリ内の worktree 対話操作ツール
-- `devc-config`: devcontainer CLI の `--config` に渡す config（task root では生成 config）を解決
 
 ## ライセンス
 
