@@ -393,8 +393,8 @@ ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
-task root で `ccmc` を起動すると、snippet が task 用の `.devcontainer/devcontainer.json` を
-選び、この生成 config でコンテナを起動します（`multi-worktree cd` を経由せず自分で `cd` した場合も同じ）。
+`ccmc` は `--config` を指定しないため、各セッションの workspace（task root）にある生成 config で
+コンテナを起動します。`ccmc` を実行するディレクトリは問いません。
 `multi-worktree dev` も、config.toml の `up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
 
 #### 同じ group の task を横断管理する
