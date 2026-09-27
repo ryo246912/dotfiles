@@ -8,6 +8,13 @@
   },
   // https://github.com/devcontainers/features/tree/main/src
   "features": {
+    // Ubuntu 24.04 の git(2.43) は relative-paths 形式の worktree が設定する
+    // extensions.relativeWorktrees を解釈できず `unknown repository extension` になるため、
+    // PPA から最新の git(2.48+) を入れる。
+    "ghcr.io/devcontainers/features/git:1.3.8": {
+      "version": "latest",
+      "ppa": true
+    },
     // docker compose / DBコンテナをコンテナ内で建てられるようにする(DinD)
     // DooD(ホストのdocker.sockマウント)ではなくDinDを採用し、
     // compose で建てたコンテナ群を dev container 内に隔離する

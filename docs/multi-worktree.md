@@ -284,8 +284,8 @@ multi-worktree status feat/add-auth
 ```bash
 multi-worktree cd feat/add-auth
 # 新しいシェルが起動し、worktree ディレクトリに移動
-# そのまま task root で ccmanager / ccmc を起動できる
-ccmc
+# そのまま task root で ccmanager を起動できる
+ccmanager
 # 作業後 exit で戻る
 exit
 ```
@@ -391,20 +391,18 @@ ccmanager
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
-
-#### ccmc で devcontainer を使う
-
-`ccmc` を任意の repo で起動し、ccmanager で `multi-worktree create` したブランチの worktree
-（`<task root>/<repo>`）を選ぶと、その親（task root）に生成された config でコンテナを起動します
-（`--workspace-folder ..`）。task root 自体を project にした ccmanager（上記や multi-project mode）
-では `..` に config がないため、`ccmc` ではなく `ccmanager` か `multi-worktree dev` を使ってください。
-`multi-worktree dev` も、config.toml の `up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
+`multi-worktree dev` は、config.toml の `up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
 
 #### 同じ group の task を横断管理する
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
+# devcontainer で起動する場合は worktrees ディレクトリで
+cd /path/to/worktrees && ccmcm
 ```
+
+`ccmcm` は各 task root に生成された `.devcontainer/devcontainer.json` でコンテナを起動します。
+配下 repo の git はコンテナ内・ホスト側のどちらでも使えます（[docs/devcontainer.md](./devcontainer.md) 参照）。
 
 - 起動ディレクトリは任意です
 - `CCMANAGER_MULTI_PROJECT_ROOT` には group ごとの `base_dir` を指定します
@@ -434,8 +432,7 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 
 生成される `devcontainer.json` には以下の設定が含まれます：
 
-- 各リポジトリの worktree をマウント
-- 実体リポジトリの `.git` だけをマウント（worktree の相対 `gitdir` がコンテナ内で解決できる位置）
+- task root と、実体リポジトリの `.git` だけをマウント（ホストと同じ相対配置で `/workspaces` 配下へ）
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 

@@ -5,25 +5,40 @@ trigger = "ccm"
 
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\""
+snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\""
 trigger = "ccmc"
 
 [[snippets]]
 cursor          = "👇"
 evaluate        = true
 name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
+snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmc2$|ccmcc2)"
+
+# multi-worktree の task root を project とする multi-project mode。
+# --config を指定せず、各 task root に生成された .devcontainer/devcontainer.json を使う。
+# worktrees ディレクトリ（group の base_dir）で実行する。
+[[snippets]]
+name    = "ccmanager devcontainer(multi-worktree)"
+snippet = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder .\""
+trigger = "ccmcm"
+
+[[snippets]]
+cursor          = "👇"
+evaluate        = true
+name            = "ccmanager devcontainer(multi-worktree, claude account2)"
+snippet         = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder . env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
+trigger-pattern = "(^ccmcm2$)"
 
 [[snippets]]
 name    = "devcontainer up"
-snippet = "devcontainer up --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true"
+snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true"
 trigger = "dcup"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
-snippet = "devcontainer exec --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true -- 👇"
+snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount-workspace-git-root=false --mount-git-worktree-common-dir=true -- 👇"
 trigger = "dcex"
 
 [[snippets]]

@@ -899,10 +899,6 @@ generate_devcontainer() {
 
     local devcontainer_file="${devcontainer_dir}/devcontainer.json"
 
-    # タスク名から / を - に変換
-    local task_dir_name=$(echo "$task_name" | sed 's/\//-/g')
-    local worktree_name="multi-worktree-${task_dir_name}"
-
     # ベーステンプレートのパス
     local base_template="$HOME/.config/devcontainer/devcontainer.json"
 
@@ -912,66 +908,57 @@ generate_devcontainer() {
         return 1
     fi
 
-    # マウント設定を生成（JSON配列形式）
-    local worktree_mounts="["
-    local first=true
-
+    # task root 配下の各 repo worktree の common git dir を集める
+    local -a common_git_dirs=()
     for repo in "${repos[@]}"; do
         # チルダ展開と環境変数展開
         repo="${repo/#\~/$HOME}"
         repo="${repo//\$HOME/$HOME}"
-        [[ ! -d "$repo" ]] && continue
 
         local repo_name=$(basename "$repo")
         local worktree_path="${worktree_base_dir}/${repo_name}"
+        [[ -f "${worktree_path}/.git" ]] || continue
 
-        [[ ! -d "$worktree_path" ]] && continue
-
-        # 絶対パスに変換（realpathが利用可能な場合はそれを使用）
-        if command -v realpath &>/dev/null; then
-            worktree_path=$(realpath "$worktree_path")
-        else
-            # realpathが利用できない場合、cdで絶対パスを取得
-            worktree_path=$(cd "$worktree_path" && pwd)
-        fi
-
-        if [[ "$first" == true ]]; then
-            first=false
-        else
-            worktree_mounts+=","
-        fi
-
-        # worktree のマウント
-        local container_worktree_path="/workspaces/${worktree_name}/${repo_name}"
-        worktree_mounts+="\"type=bind,source=${worktree_path},target=${container_worktree_path}\""
-
-        # .git file の相対参照がコンテナ内で到達する位置に、common git dir だけを
-        # mount する。worktree は host と異なるパスへ mount するため、host の
-        # ${repo}/.git を target にそのまま使うと relative gitdir が解決できない。
-        local common_git_dir git_dir_relative container_git_dir
+        local common_git_dir
         if ! common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir); then
             log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $worktree_path"
             continue
         fi
-        git_dir_relative=$(python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' \
-            "$common_git_dir" "$worktree_path")
-        container_git_dir=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(sys.argv[1], sys.argv[2])))' \
-            "$container_worktree_path" "$git_dir_relative")
-        worktree_mounts+=",\"type=bind,source=${common_git_dir},target=${container_git_dir}\""
+        if ! grep -q '^gitdir: [^/]' "${worktree_path}/.git"; then
+            log_warn "[$repo_name] gitdir が絶対パスのため、コンテナ内で git が使えません。git worktree add --relative-paths で作り直してください"
+        fi
+        common_git_dirs+=("$(realpath "$common_git_dir")")
     done
 
-    worktree_mounts+="]"
+    # devcontainer CLI が linked worktree に対して行うのと同じく、task root と各 repo の
+    # common git dir の共通祖先を /workspaces に対応させ、ホストと同じ相対配置で mount する。
+    # worktree の .git file と common git dir 側の gitdir がどちらも相対パスなので、
+    # ホスト・コンテナの両方で git が使える。mount するのは task root と各 .git だけ。
+    local mount_spec
+    mount_spec=$(python3 - "$worktree_base_dir" ${common_git_dirs[@]+"${common_git_dirs[@]}"} <<'PY'
+import json, os, sys
+task_root, git_dirs = sys.argv[1], sys.argv[2:]
+ancestor = os.path.commonpath([task_root] + [os.path.dirname(d) for d in git_dirs])
+def target(path):
+    return os.path.normpath(os.path.join("/workspaces", os.path.relpath(path, ancestor)))
+print(json.dumps({
+    "workspaceFolder": target(task_root),
+    "workspaceMount": f"type=bind,source={task_root},target={target(task_root)}",
+    "mounts": [f"type=bind,source={d},target={target(d)}" for d in git_dirs],
+}))
+PY
+    )
 
     # jq を使ってベーステンプレートを読み込み、マウント設定を追加
     # JSONCのコメントを除去してからjqでパース
     if command -v jq &>/dev/null; then
         # // で始まる行コメントを除去（文字列内の // は保護）
         grep -v '^\s*//' "$base_template" | sed 's|^[[:space:]]*//.*||' | \
-        jq --argjson new_mounts "$worktree_mounts" \
-           --arg workspace_folder "/workspaces/${worktree_name}" \
+        jq --argjson spec "$mount_spec" \
            --arg task_name "$task_name" \
-           '.mounts += $new_mounts |
-            .workspaceFolder = $workspace_folder |
+           '.mounts += $spec.mounts |
+            .workspaceMount = $spec.workspaceMount |
+            .workspaceFolder = $spec.workspaceFolder |
             .name = "Multi-worktree: " + $task_name' \
            > "$devcontainer_file"
     else
