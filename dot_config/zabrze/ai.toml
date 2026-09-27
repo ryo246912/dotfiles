@@ -5,14 +5,14 @@ trigger = "ccm"
 
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\""
+snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\""
 trigger = "ccmc"
 
 [[snippets]]
 cursor          = "👇"
 evaluate        = true
 name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder . --mount-workspace-git-root=false --mount-git-worktree-common-dir=true env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
+snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true\" --devc-exec-command \"devcontainer exec --workspace-folder .. --mount-workspace-git-root=false --mount-git-worktree-common-dir=true env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmc2$|ccmcc2)"
 
 [[snippets]]

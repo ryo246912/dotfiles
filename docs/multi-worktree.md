@@ -388,21 +388,22 @@ multi-worktree help
 ```bash
 multi-worktree cd feat/add-auth
 ccmanager
-# または
-ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
-`ccmc` は `--config` を指定しないため、各セッションの workspace（task root）にある生成 config で
-コンテナを起動します。`ccmc` を実行するディレクトリは問いません。
+
+#### ccmc で devcontainer を使う
+
+`ccmc` を任意の repo で起動し、ccmanager で `multi-worktree create` したブランチの worktree
+（`<task root>/<repo>`）を選ぶと、その親（task root）に生成された config でコンテナを起動します
+（`--workspace-folder ..`）。task root 自体を project にした ccmanager（上記や multi-project mode）
+では `..` に config がないため、`ccmc` ではなく `ccmanager` か `multi-worktree dev` を使ってください。
 `multi-worktree dev` も、config.toml の `up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
 
 #### 同じ group の task を横断管理する
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
-# または
-CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmc --multi-project
 ```
 
 - 起動ディレクトリは任意です

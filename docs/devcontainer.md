@@ -23,10 +23,16 @@ mount しません。`~/project/repo` のような通常 checkout で `../..` �
 経路は、common git dir の安全な mount を保証できないため対象外です。
 
 snippet は `--config` を指定しません。devcontainer CLI は `--workspace-folder` の
-`.devcontainer/devcontainer.json` を使うため、`multi-worktree create` した task root では
-生成された config が選ばれます。`ccmanager` は `ccmc` を実行したディレクトリに関係なく、
-各セッションの worktree（task root）を cwd にして `devcontainer up` / `exec` を実行します。
-そのため、どこから `ccmc` を起動しても task 用の config でコンテナが起動します。
+`.devcontainer/devcontainer.json` を使います。
+
+`ccmc` / `ccmc2` は `--workspace-folder ..` です。ccmanager は `--devc-*-command` を起動時に固定し、
+選んだ worktree を cwd にして shell を介さず実行します。ccmanager で `multi-worktree create` した
+ブランチ（`<task root>/<repo>` の worktree）を選ぶと、`..` が task root になります。そのため、
+`ccmc` をどの repo で起動しても、task root に生成された config でコンテナが起動します。
+コンテナは task root 単位で1つで、claude は task root（全 repo が見える位置）で起動します。
+multi-worktree 以外の worktree を選ぶと `..` に config がないため起動しません。
+
+`dcup` / `dcex` は `--workspace-folder .` なので、task root で実行してください。
 
 task root は linked worktree ではなく synthetic repository なので、base template で起動すると
 `--mount-git-worktree-common-dir` が効かず、配下 repo の `.git` が mount されません。
