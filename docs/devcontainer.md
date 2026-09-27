@@ -22,12 +22,22 @@ mount しません。`~/project/repo` のような通常 checkout で `../..` �
 指定してください。VS Code Dev Containers 拡張からこの base template を直接開く
 経路は、common git dir の安全な mount を保証できないため対象外です。
 
-snippet の `--config` は `${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json}` です。
-`multi-worktree cd <task>` で入ったシェルでは、`DEVCONTAINER_CONFIG` に task root の
-`.devcontainer/devcontainer.json` が設定されます。そのため、task root の `ccmc` は各 repo の
-`.git` を mount した生成 config で起動します。task root は linked worktree ではなく
-synthetic repository なので、base template では配下 repo の `.git` が mount されず、
-コンテナ内の git が `not a git repository` になります。
+snippet の `--config` は `$(devc-config)` で決まります（`dot_local/bin/executable_devc-config`）。
+
+1. `DEVCONTAINER_CONFIG` が設定されていればそれを使う（手動での上書き用）
+2. カレントディレクトリが `multi-worktree` の task root なら、生成された
+   `.devcontainer/devcontainer.json`（name が `Multi-worktree: ` で始まるもの）を使う
+3. それ以外は base template を使う
+
+task root は linked worktree ではなく synthetic repository なので、base template で起動すると
+`--mount-git-worktree-common-dir` が効かず、配下 repo の `.git` が mount されません。
+コンテナ内の各 repo の `.git` ファイルが指す `gitdir`（例: `/app-diary/.git/worktrees/...`）が
+存在せず、git が `not a git repository` になります。`multi-worktree cd` を経由せず task root に
+`cd` して `ccmc` を起動しても、生成 config が選ばれます。
+
+既に base template や古い生成 config で作成済みのコンテナは、`devcontainer up` しても mount が
+更新されません。`multi-worktree recreate <task>` で config を再生成したうえで、
+`dcup --remove-existing-container` などでコンテナを作り直してください。
 
 `--mount-git-worktree-common-dir` は relative-paths 形式の worktree を前提とするため、`multi-worktree` は
 `git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は

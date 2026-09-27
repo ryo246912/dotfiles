@@ -1447,12 +1447,9 @@ cmd_cd() {
     # worktree ディレクトリに移動
     cd "$target_dir" || return 1
 
-    # ccmc / dcup などの snippet が base template ではなく、各 repo の .git を
-    # mount する task 用 devcontainer.json を使うようにする。
-    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
-    if [[ -f "$task_devcontainer_config" ]]; then
-        export DEVCONTAINER_CONFIG="$task_devcontainer_config"
-    fi
+    # ccmc / dcup などの snippet は devc-config で task root の生成 config を選ぶため、
+    # ここで DEVCONTAINER_CONFIG を export しない（別 task に cd した後も古い task の
+    # config が使われてしまうため）。
 
     # シェルを起動（SHELL 環境変数を使用、デフォルトは bash）
     local shell="${SHELL:-/bin/bash}"
@@ -1516,6 +1513,20 @@ cmd_dev() {
     # 設定の読み込み
     local up_opts=$(get_devcontainer_up_opts "$group")
     local exec_opts=$(get_devcontainer_exec_opts "$group")
+
+    # --config 未指定だと base template が使われ、task root 配下 repo の common git dir が
+    # mount されずコンテナ内の git が壊れるため、生成された task 用 config を補う。
+    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
+    if [[ -f "$task_devcontainer_config" ]]; then
+        if [[ " $up_opts " != *" --config "* ]]; then
+            up_opts+=" --config $task_devcontainer_config"
+        fi
+        if [[ " $exec_opts " != *" --config "* ]]; then
+            exec_opts+=" --config $task_devcontainer_config"
+        fi
+    else
+        log_warn "task 用 devcontainer.json がありません。multi-worktree recreate $task_name で再生成してください"
+    fi
     local skip_up=$(get_devcontainer_skip_up_if_running)
 
     # worktree ディレクトリに移動
