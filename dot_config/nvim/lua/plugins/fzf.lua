@@ -12,6 +12,12 @@ return {
             ["ctrl-v"]  = require("fzf-lua.actions").file_vsplit,
             ["ctrl-t"]  = require("fzf-lua.actions").file_tabedit,
           },
+          grep = {
+            ["default"] = require("fzf-lua.actions").file_edit,
+            ["ctrl-h"]  = require("fzf-lua.actions").file_split,
+            ["ctrl-v"]  = require("fzf-lua.actions").file_vsplit,
+            ["ctrl-t"]  = require("fzf-lua.actions").file_tabedit,
+          },
         },
       })
 
