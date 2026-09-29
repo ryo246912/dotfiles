@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [Obsidian CLI](docs/obsidian.md)
