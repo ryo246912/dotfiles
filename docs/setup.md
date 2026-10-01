@@ -325,6 +325,14 @@ do shell script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrom
 do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
 ```
 
+- [ ] Claude Desktop（work3用）
+
+```applescript
+do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/ClaudeWork3\" > /dev/null 2>&1 &"
+```
+
+- 「保存設定」の手順は上記と同様（**名前**は「Claude-Work3.app」など任意の名前に設定）
+
 - [ ] Markdownファイルのデフォルトアプリ設定
   - `chezmoi apply`で`~/.local/bin/md-preview-launcher`を配置する
   - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
