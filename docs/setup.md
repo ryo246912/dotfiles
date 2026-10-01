@@ -288,12 +288,23 @@
     ```
 
 - [ ] claude（work3用の追加アカウント）
-  - `claude-work`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`dot_local/bin/executable_claude-work`）
+  - `claude-work3`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`dot_local/bin/executable_claude-work3`）
   - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する
   - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
 
     ```sh
-    claude-work
+    claude-work3
+    ```
+
+- [ ] ccmanagerのプロジェクトルート作成
+  - `CCMANAGER_MULTI_PROJECT_ROOT`（`dot_config/zsh/lazy/private.zsh` / `work.zsh.tmpl`）が指す
+    `~/Programming/<role>/worktrees` と、実体のリポジトリを置く`~/Programming/<role>/repos`は
+    chezmoiの管理外のため、事前にディレクトリを作成する
+  - work1/work2ロールは`~/work/worktrees`のまま（対象外）
+
+    ```sh
+    mkdir -p ~/Programming/repo/repos ~/Programming/repo/worktrees
+    mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
     ```
 
 ### カスタムアプリの作成手順
