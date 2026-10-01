@@ -59,6 +59,21 @@
         "detectionStrategy": "claude"
       },
       {
+        "id": "5",
+        "name": "Claude Work3 (resume)",
+        "command": "claude-work3",
+        "args": ["--dangerously-skip-permissions"],
+        "fallbackArgs": [],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "6",
+        "name": "Claude Work3 (no resume)",
+        "command": "claude-work3",
+        "args": ["--dangerously-skip-permissions"],
+        "detectionStrategy": "claude"
+      },
+      {
         "id": "codex",
         "name": "Codex",
         "command": "codex",
