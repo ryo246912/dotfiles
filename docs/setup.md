@@ -287,6 +287,15 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+- [ ] claude（work3用の追加アカウント）
+  - `claude-work`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`dot_local/bin/executable_claude-work`）
+  - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する
+  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
+
+    ```sh
+    claude-work
+    ```
+
 ### カスタムアプリの作成手順
 
 - 手順

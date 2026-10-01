@@ -72,7 +72,7 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
 - `config.work.toml` 側は中身をすべて `[profiles.work.*]` の下に置く。これは
   `FNOX_PROFILE=work` のときだけ有効になるので、import されているだけでは何も起きない。
-- `dot_config/zsh/dot_zshenv.tmpl` が `HOST_ENV` に work ロール（`work1` / `work2`）が含まれる
+- `dot_config/zsh/dot_zshenv.tmpl` が `HOST_ENV` に work ロール（`work1` / `work2` / `work3`）が含まれる
   ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
   同じ仕組み）。
 
@@ -191,7 +191,7 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
    aws-vault exec <aws_profile> -- aws sts get-caller-identity   # AWS 認証自体の確認
    aws-vault exec <aws_profile> -- fnox exec --profile work -- env | rg '^(AWS_|DATABASE_URL)'
    ```
-5. `HOST_ENV` に work ロール（`work1`/`work2`）が含まれるホストでは、上記の `--profile work` を
+5. `HOST_ENV` に work ロール（`work1`/`work2`/`work3`）が含まれるホストでは、上記の `--profile work` を
    明示しなくても shell 起動時に `FNOX_PROFILE=work` が自動で export されるので、
    `fnox activate zsh` 経由の secret（`env = true` のもの）はそのまま使えます（`env = "exec"` に
    した secret は引き続き `fnox exec` 経由が必要）。
