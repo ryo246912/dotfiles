@@ -1,2 +1,4 @@
 [tools]
-# work3 ロール専用のツールをここに追加する（例: "aqua:xxx/yyy" = "1.0.0"）
+"aqua:aws/aws-cli"                        = "2.37.7"
+"aqua:pre-commit/pre-commit"              = "4.6.2"
+"npm:@openapitools/openapi-generator-cli" = "2.41.0"
