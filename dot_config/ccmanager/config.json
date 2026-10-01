@@ -62,7 +62,7 @@
         "id": "5",
         "name": "Claude Work3 (resume)",
         "command": "claude-work3",
-        "args": ["--dangerously-skip-permissions"],
+        "args": ["--resume", "--dangerously-skip-permissions"],
         "fallbackArgs": [],
         "detectionStrategy": "claude"
       },
