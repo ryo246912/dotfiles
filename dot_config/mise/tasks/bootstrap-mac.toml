@@ -116,6 +116,13 @@ if ! brew list --cask opencode-bar &>/dev/null; then
 else
   echo "opencode-bar is already installed"
 fi
+
+# orca: 公式の独自 tap から配布されるため real brew で導入する。
+if ! brew list --cask orca &>/dev/null; then
+  brew install --cask stablyai/orca/orca
+else
+  echo "orca is already installed"
+fi
 '''
 
 ["bootstrap:mac-defaults"]
@@ -138,7 +145,7 @@ fi
 
 # ログイン項目: mise の [bootstrap.macos.launchd.agents] は実行ファイル起動用で
 # .app バンドルの Login Item 相当にはならないため osascript で設定する
-for app in Docker Raycast; do
+for app in Docker Orca Raycast; do
   if ! osascript -e 'tell application "System Events" to get the name of every login item' | grep -q "$app"; then
     osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/${app}.app\", hidden:false}"
   fi

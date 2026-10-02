@@ -12,3 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
+- [Orca（AI agent orchestration / mobile companion）](docs/orca.md)
