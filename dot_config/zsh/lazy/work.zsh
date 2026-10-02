@@ -7,7 +7,7 @@ export AWS_VAULT_BACKEND=keychain
 # ccmanager
 # work3ロールは別パスを使うため、ここでは設定しない（lazy/work3.zshが担当）。
 # glob順はLC_COLLATE依存で信頼できないため、読み込み順に頼らずここで明示的に除外する。
-if command -v ccmanager >/dev/null 2>&1 && [[ "${HOST_ENV:-}" != *work3* ]]; then
+if command -v ccmanager >/dev/null 2>&1 && [[ "${HOST_ENV:-}" == *work* ]] && [[ "${HOST_ENV:-}" != *work3* ]]; then
     export CCMANAGER_MULTI_PROJECT_ROOT=~/work/worktrees
 fi
 # terraform

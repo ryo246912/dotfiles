@@ -289,7 +289,15 @@
 
 - [ ] claude（work3用の追加アカウント）
   - `claude-work3`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`dot_local/bin/executable_claude-work3`）
-  - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する
+  - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（`claude-work3`実行時に自動で行われるので、通常は手動実行不要）
+
+    ```sh
+    mkdir -p ~/.claude-work3
+    for entry in projects settings.json agents skills plugins; do
+      [ -e ~/.claude-work3/"$entry" ] || [ -L ~/.claude-work3/"$entry" ] || ln -s ../.claude/"$entry" ~/.claude-work3/"$entry"
+    done
+    ```
+
   - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
 
     ```sh

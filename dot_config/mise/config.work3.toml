@@ -1,7 +1,6 @@
 [tools]
-"aqua:aws/aws-cli"                        = "2.37.7"
-"aqua:pre-commit/pre-commit"              = "4.6.2"
-"npm:@openapitools/openapi-generator-cli" = "2.41.0"
+"aqua:aws/aws-cli"           = "2.37.7"
+"aqua:pre-commit/pre-commit" = "4.6.2"
 
 [bootstrap.packages]
 "brew:libpq"     = "latest" # 18.6
