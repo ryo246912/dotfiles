@@ -41,7 +41,7 @@ services:
   # するため）。network_modeがcockroach containerのnetnsを指すので、client側からは
   # 127.0.0.1:26257がlocal clusterになる（hostへpublishしたportではない）。
   pgtools:
-    image: postgres:17
+    image: postgres:18
     entrypoint: ["true"]
     network_mode: "service:cockroach"
     profiles:
