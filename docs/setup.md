@@ -305,7 +305,7 @@
     ```
 
 - [ ] ccmanagerのプロジェクトルート作成
-  - `CCMANAGER_MULTI_PROJECT_ROOT`（`dot_config/zsh/lazy/private.zsh` / `work3.zsh`）が指す
+  - `CCMANAGER_MULTI_PROJECT_ROOT`（`dot_config/zsh/lazy/private.zsh` / `workN.zsh`）が指す
     `~/Programming/<role>/worktrees` と、実体のリポジトリを置く`~/Programming/<role>/repos`は
     chezmoiの管理外のため、事前にディレクトリを作成する
   - work1/work2ロールは`~/work/worktrees`のまま（対象外）
