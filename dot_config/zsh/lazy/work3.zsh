@@ -7,6 +7,4 @@ export AWS_CLI_AUTO_PROMPT=on-partial
 export AWS_VAULT_BIOMETRICS=true
 export AWS_VAULT_BACKEND=keychain
 # ccmanager
-if command -v ccmanager >/dev/null 2>&1; then
-    export CCMANAGER_MULTI_PROJECT_ROOT=~/Programming/work3/worktrees
-fi
+export CCMANAGER_MULTI_PROJECT_ROOT=~/Programming/work3/worktrees
