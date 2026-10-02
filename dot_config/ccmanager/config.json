@@ -79,7 +79,7 @@
         "command": "sh",
         "args": [
           "-c",
-          "mkdir -p \"$HOME/.claude-account2\"; for e in projects settings.json agents skills plugins; do [ -e \"$HOME/.claude-account2/$e\" ] || [ -L \"$HOME/.claude-account2/$e\" ] || ln -s \"../.claude/$e\" \"$HOME/.claude-account2/$e\"; done; CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --resume --dangerously-skip-permissions"
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --resume --dangerously-skip-permissions"
         ],
         "fallbackArgs": [],
         "detectionStrategy": "claude"
@@ -90,7 +90,7 @@
         "command": "sh",
         "args": [
           "-c",
-          "mkdir -p \"$HOME/.claude-account2\"; for e in projects settings.json agents skills plugins; do [ -e \"$HOME/.claude-account2/$e\" ] || [ -L \"$HOME/.claude-account2/$e\" ] || ln -s \"../.claude/$e\" \"$HOME/.claude-account2/$e\"; done; CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --dangerously-skip-permissions"
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --dangerously-skip-permissions"
         ],
         "detectionStrategy": "claude"
       },
@@ -100,7 +100,7 @@
         "command": "sh",
         "args": [
           "-c",
-          "mkdir -p \"$HOME/.claude-work3\"; for e in projects settings.json agents skills plugins; do [ -e \"$HOME/.claude-work3/$e\" ] || [ -L \"$HOME/.claude-work3/$e\" ] || ln -s \"../.claude/$e\" \"$HOME/.claude-work3/$e\"; done; CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --resume --dangerously-skip-permissions"
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --resume --dangerously-skip-permissions"
         ],
         "fallbackArgs": [],
         "detectionStrategy": "claude"
@@ -111,7 +111,7 @@
         "command": "sh",
         "args": [
           "-c",
-          "mkdir -p \"$HOME/.claude-work3\"; for e in projects settings.json agents skills plugins; do [ -e \"$HOME/.claude-work3/$e\" ] || [ -L \"$HOME/.claude-work3/$e\" ] || ln -s \"../.claude/$e\" \"$HOME/.claude-work3/$e\"; done; CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --dangerously-skip-permissions"
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --dangerously-skip-permissions"
         ],
         "detectionStrategy": "claude"
       },
