@@ -9,8 +9,14 @@ vim.opt.swapfile = false
 vim.opt.mouse = "a"
 -- コマンドラインの履歴上限を10000件にする
 vim.opt.history = 10000
--- options/localoptions 以外は保存して、編集状態を広く復元する
-vim.opt.sessionoptions = { "blank", "buffers", "curdir", "folds", "help", "tabpages", "winsize", "terminal" }
+-- 表示中の pane だけを保存し、非表示の旧い buffer は次回起動時に復元しない。
+-- 従来どおり全 buffer を復元したい場合は init.lua の読み込み前に false を設定する。
+vim.g.session_visible_only = vim.g.session_visible_only ~= false
+local sessionoptions = { "blank", "curdir", "folds", "help", "tabpages", "winsize", "terminal" }
+if not vim.g.session_visible_only then
+  table.insert(sessionoptions, "buffers")
+end
+vim.opt.sessionoptions = sessionoptions
 
 -- vim-markdown (vim-polyglot) のデフォルトキーマップを無効化
 vim.g.vim_markdown_no_default_key_mappings = 1
