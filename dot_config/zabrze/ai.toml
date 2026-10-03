@@ -3,29 +3,31 @@ name    = "ccmanager"
 snippet = "ccmanager"
 trigger = "ccm"
 
-# devcontainer で起動する。config の選択と .git の mount は devc が cwd から判定する。
-# account2 / work3 などは ccmanager の preset で選ぶ（docs/ai.md 参照）。
+# 単一 repo / ccmanager の worktree を devcontainer で起動する。
+# common git dir（実体リポジトリの .git）をホストと同じ絶対パスに mount する（docs/devcontainer.md 参照）。
+# account2 / work3 などは ccmanager の preset で選ぶ。
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devc up\" --devc-exec-command \"devc exec\""
+snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\""
 trigger = "ccmc"
 
-# CCMANAGER_MULTI_PROJECT_ROOT 配下の project（multi-worktree の task root や
-# ccmanager の worktree）を横断管理する。どのディレクトリからでも起動できる。
+# CCMANAGER_MULTI_PROJECT_ROOT 配下の multi-worktree task root を横断管理する。どこからでも起動できる。
+# ccmanager は選んだ task root を cwd にして実行するため、--config なしで task root の
+# .devcontainer/devcontainer.json（multi-worktree が生成）が使われる。
 [[snippets]]
 name    = "ccmanager devcontainer(multi-project)"
-snippet = "ccmanager --multi-project --devc-up-command \"devc up\" --devc-exec-command \"devc exec\""
+snippet = "ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder .\""
 trigger = "ccmcm"
 
 [[snippets]]
 name    = "devcontainer up"
-snippet = "devc up"
+snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)"
 trigger = "dcup"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
-snippet = "devc exec -- 👇"
+snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
 trigger = "dcex"
 
 [[snippets]]

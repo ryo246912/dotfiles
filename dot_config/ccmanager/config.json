@@ -37,14 +37,6 @@
         "fallbackArgs": []
       },
       {
-        "id": "2",
-        "name": "Claude A2 (resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
         "id": "3",
         "name": "Claude A1 (no resume)",
         "command": "claude",
@@ -59,29 +51,10 @@
         "detectionStrategy": "claude"
       },
       {
-        "id": "5",
-        "name": "Claude Work3 (resume)",
-        "command": "claude-work3",
-        "args": ["--resume", "--dangerously-skip-permissions"],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
         "id": "6",
         "name": "Claude Work3 (no resume)",
         "command": "claude-work3",
         "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "7",
-        "name": "Claude A2 (devcontainer, resume)",
-        "command": "sh",
-        "args": [
-          "-c",
-          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --resume --dangerously-skip-permissions"
-        ],
-        "fallbackArgs": [],
         "detectionStrategy": "claude"
       },
       {
@@ -92,17 +65,6 @@
           "-c",
           "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --dangerously-skip-permissions"
         ],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "9",
-        "name": "Claude Work3 (devcontainer, resume)",
-        "command": "sh",
-        "args": [
-          "-c",
-          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --resume --dangerously-skip-permissions"
-        ],
-        "fallbackArgs": [],
         "detectionStrategy": "claude"
       },
       {

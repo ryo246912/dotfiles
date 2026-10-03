@@ -12,4 +12,3 @@
 # Setup
 
 - [setup](docs/setup.md)
-- [AI エージェントの起動コマンド](docs/ai.md)

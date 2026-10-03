@@ -20,23 +20,19 @@ worktree_prefix = "multi-worktree"
 
 # グループ別 devcontainer 設定（オプション）
 # exec サブコマンドで使用する devcontainer のオプション設定
-# --config には task root に生成される .devcontainer/devcontainer.json を指定する
-# （省略時も multi-worktree dev が補う）。base template（~/.config/devcontainer/devcontainer.json）は
-# 配下 repo の .git を mount しないため、コンテナ内で git が使えなくなる。
+# multi-worktree dev は task root に移動してから実行し、--config 未指定なら task root に
+# 生成された .devcontainer/devcontainer.json を絶対パスで補うため、実行時の pwd によらず動く。
+# base template（~/.config/devcontainer/devcontainer.json）は配下 repo の .git を mount しないため指定しない。
 [groups.default.devcontainer]
 # devcontainer up コマンドのオプション（配列形式）
 up_opts = [
     "--workspace-folder",
     ".",
-    "--config",
-    ".devcontainer/devcontainer.json",
 ]
 # devcontainer exec コマンドのオプション（配列形式）
 exec_opts = [
     "--workspace-folder",
     ".",
-    "--config",
-    ".devcontainer/devcontainer.json",
 ]
 
 [groups.work.devcontainer]
@@ -44,15 +40,11 @@ exec_opts = [
 up_opts = [
     "--workspace-folder",
     ".",
-    "--config",
-    ".devcontainer/devcontainer.json",
 ]
 # devcontainer exec コマンドのオプション（配列形式）
 exec_opts = [
     "--workspace-folder",
     ".",
-    "--config",
-    ".devcontainer/devcontainer.json",
 ]
 
 # 全グループ共通の設定

@@ -284,8 +284,8 @@ multi-worktree status feat/add-auth
 ```bash
 multi-worktree cd feat/add-auth
 # 新しいシェルが起動し、worktree ディレクトリに移動
-# そのまま task root で ccmanager / ccmc を起動できる
-ccmc
+# そのまま task root で ccmanager を起動できる
+ccmanager
 # 作業後 exit で戻る
 exit
 ```
@@ -388,23 +388,20 @@ multi-worktree help
 ```bash
 multi-worktree cd feat/add-auth
 ccmanager
-# devcontainer で起動する場合
-ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
-`ccmc` は `devc` 経由で task root の `.devcontainer/devcontainer.json` を使います。
 
 #### 同じ group の task を横断管理する
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
-# devcontainer で起動する場合（どのディレクトリからでも可）
-ccmcm
 ```
 
-`ccmcm` は `devc` 経由で、選んだ task root に生成された `.devcontainer/devcontainer.json` で
-コンテナを起動します（[docs/devcontainer.md](./devcontainer.md) 参照）。
+devcontainer で起動する `ccmcm` は `--config` を指定しません。ccmanager は選んだ task root を cwd に
+して `devcontainer up` / `exec` を実行するので、task root に生成された
+`.devcontainer/devcontainer.json` が使われます。task root で `ccmc` を使うと base template で起動し、
+配下 repo の `.git` が mount されません。
 
 - 起動ディレクトリは任意です
 - `CCMANAGER_MULTI_PROJECT_ROOT` には group ごとの `base_dir` を指定します

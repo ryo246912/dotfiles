@@ -77,6 +77,7 @@
     "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
     // Claude account2 config for independent quota/auth
     "type=bind,source=${localEnv:HOME}/.claude-account2,target=/home/vscode/.claude-account2",
+    "type=bind,source=${localEnv:HOME}/.claude-work3,target=/home/vscode/.claude-work3",
     // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
     "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.config/claude-config-host.json,readonly",
     "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
