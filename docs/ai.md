@@ -4,6 +4,19 @@
 
 ### ホスト
 
+初回は `~/.claude` の設定（`projects` / `settings.json` / `agents` / `skills` / `plugins`）を共有する symlink を作ります。
+devcontainer の post-create でも同じ symlink を作るので、一度 devcontainer を起動していれば不要です。
+
+```bash
+for account in claude-account2 claude-work3; do
+  mkdir -p ~/."$account"
+  for entry in projects settings.json agents skills plugins; do
+    [ -e ~/.claude/"$entry" ] || continue
+    [ -e ~/."$account"/"$entry" ] || [ -L ~/."$account"/"$entry" ] || ln -s ../.claude/"$entry" ~/."$account"/"$entry"
+  done
+done
+```
+
 ```bash
 # account2 のアカウント
 CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
