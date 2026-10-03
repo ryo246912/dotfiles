@@ -944,8 +944,19 @@ generate_devcontainer() {
         # worktree のマウント
         worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
 
-        # 実体リポジトリのマウント（.git アクセス用）
-        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
+        # 実体リポジトリの common git dir（.git）だけを、ホストと同じ絶対パスにマウントする。
+        # worktree の .git file は common git dir 配下を絶対パスで参照するため、同じパスに
+        # mount すればコンテナ内でも git が使え、実体リポジトリの working tree や兄弟
+        # ディレクトリは見えない。
+        local common_git_dir
+        if ! common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir); then
+            log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $worktree_path"
+            continue
+        fi
+        if grep -q '^gitdir: [^/]' "${worktree_path}/.git" 2>/dev/null; then
+            log_warn "[$repo_name] worktree が relative-paths 形式のため、コンテナ内で git が使えません。docs/devcontainer.md の移行手順で絶対パスに戻してください"
+        fi
+        worktree_mounts+=",\"type=bind,source=${common_git_dir},target=${common_git_dir}\""
     done
 
     worktree_mounts+="]"
@@ -1497,6 +1508,20 @@ cmd_dev() {
     # 設定の読み込み
     local up_opts=$(get_devcontainer_up_opts "$group")
     local exec_opts=$(get_devcontainer_exec_opts "$group")
+
+    # --config 未指定だと base template が使われ、task root 配下 repo の common git dir が
+    # mount されずコンテナ内の git が壊れるため、生成された task 用 config を補う。
+    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
+    if [[ -f "$task_devcontainer_config" ]]; then
+        if [[ " $up_opts " != *" --config "* ]]; then
+            up_opts+=" --config $task_devcontainer_config"
+        fi
+        if [[ " $exec_opts " != *" --config "* ]]; then
+            exec_opts+=" --config $task_devcontainer_config"
+        fi
+    else
+        log_warn "task 用 devcontainer.json がありません。multi-worktree recreate $task_name で再生成してください"
+    fi
     local skip_up=$(get_devcontainer_skip_up_if_running)
 
     # worktree ディレクトリに移動

@@ -66,9 +66,11 @@
     // devcontainer専用のSSH鍵（コミット署名用。ホストの個人GPG秘密鍵はコンテナに一切マウントしない）
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign,target=/home/vscode/.ssh/id_docker_devcontainer_sign,readonly",
     "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign.pub,target=/home/vscode/.ssh/id_docker_devcontainer_sign.pub,readonly",
-    // git - parent directory of workspace
-    // 本体の .git (2つ上の階層) を、ホストと同じ絶対パスにマウント
-    "source=${localWorkspaceFolder}/../..,target=${localWorkspaceFolder}/../..,type=bind",
+    // workspace をホストと同じ絶対パスにも mount する。linked worktree の common git dir
+    // （実体リポジトリの .git）は、起動側が `devcontainer up --mount` でホストと同じ絶対パスに
+    // 個別に mount する（multi-worktree は生成 config に含める。docs/devcontainer.md 参照）。
+    // 親ディレクトリ（../..）を mount すると、通常 checkout が ~/project/repo にある場合に
+    // HOME 全体がコンテナから見えてしまうため mount しない。
     "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
     // AI agent configs
     "type=bind,source=${localEnv:HOME}/.claude,target=/home/vscode/.claude",

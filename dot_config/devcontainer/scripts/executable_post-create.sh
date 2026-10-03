@@ -68,6 +68,10 @@ fi
 echo "✓ ホストの git config を設定しました"
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
+# コンテナには自分の worktree と common git dir しか mount しないため、同じリポジトリの
+# 他の worktree はコンテナから見えない。git gc の自動 prune がそれらを「消えた worktree」と
+# みなして .git/worktrees/<name> を削除し、ホスト側の worktree を壊さないようにする。
+git config --global gc.worktreePruneExpire never
 
 # コミット署名: ホストの個人GPG秘密鍵はコンテナにマウントしていないため、
 # include した host config の GPG 署名設定を devcontainer 専用の SSH 鍵で上書きする
