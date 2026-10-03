@@ -6,6 +6,11 @@
 "github:render-oss/cli"  = { version = "2.15.1", rename_exe = "render" }
 "github:superfly/flyctl" = "0.4.29"
 
+[settings]
+trusted_config_paths = [
+    "~/Programming/repo/worktrees",
+]
+
 [bootstrap.packages]
 # 実際に WSL を使い始めたら bootstrap-mac.toml 側への切り出しを検討する
 "brew-cask:android-studio" = "latest" # 2026.1.3.7,quail3,AI-261.26222.65.2613.15948027

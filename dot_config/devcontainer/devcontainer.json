@@ -22,6 +22,10 @@
   "remoteEnv": {
     "AI_AGENT": "1",
     "LEFTHOOK_CONFIG": "lefthook.local.yml",
+    // workspace（/workspaces 配下と、同じ絶対パスに mount したホストのパス）の mise 設定を信頼する。
+    // post-create の lefthook install などが mise を経由すると trust 確認の prompt が出て、
+    // TTY のない ccmanager の devcontainer up では失敗するため。
+    "MISE_TRUSTED_CONFIG_PATHS": "/workspaces:${localWorkspaceFolder}",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
