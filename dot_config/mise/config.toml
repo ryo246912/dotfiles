@@ -93,7 +93,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:kyu08/fzf-make"                                     = "0.75.0"
 "github:masasuzu/clrnd"                                     = "0.5.1"
 "github:max-sixty/worktrunk"                                = "0.80.0"
-"github:microsoft/apm"                                      = "0.31.0"
+"github:microsoft/apm"                                      = "0.32.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
 "github:rcieri/glab-tui"                                    = "0.9.1"
 "github:rivolink/leaf"                                      = { version = "1.28.3", bin = "leaf" }
