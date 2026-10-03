@@ -20,7 +20,7 @@ trigger = "ccmcm"
 
 [[snippets]]
 name    = "devcontainer up"
-snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)"
+snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount \"type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)\""
 trigger = "dcup"
 
 [[snippets]]

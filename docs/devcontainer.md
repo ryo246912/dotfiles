@@ -8,7 +8,7 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 
 ## workspace と Git metadata の mount 範囲
 
-コンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
+リポジトリ関連でコンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
 `.git`）だけです。`~/project/repo` のような通常 checkout で `../..` を mount すると
 `$HOME` 全体がコンテナから見えるため、親ディレクトリは mount しません。
 
@@ -38,10 +38,12 @@ relative-paths 形式で作った worktree が残っていると、コンテナ�
 ```bash
 cd ~/path/to/repo
 git config --global --unset worktree.useRelativePaths   # 設定している場合
-# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す
-git worktree list --porcelain | sed -n 's/^worktree //p' |
-  while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt"; done
-git config --unset extensions.relativeWorktrees
+# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す。
+# 全件成功したときだけ extension を外す（zsh で exit がシェルを閉じないよう subshell で実行）
+(
+  git worktree list --porcelain | sed -n 's/^worktree //p' |
+    while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt" || exit 1; done
+) && git config --unset extensions.relativeWorktrees
 ```
 
 ## devcontainer からホスト側 tmux pane を読む
