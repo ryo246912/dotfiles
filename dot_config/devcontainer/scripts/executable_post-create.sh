@@ -19,6 +19,10 @@ echo "✓ ホストの git config を設定しました"
 git config --global core.excludesfile ~/.config/gitignore-host
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
+# コンテナには自分の worktree と common git dir しか mount しないため、同じリポジトリの
+# 他の worktree はコンテナから見えない。git gc の自動 prune がそれらを「消えた worktree」と
+# みなして .git/worktrees/<name> を削除し、ホスト側の worktree を壊さないようにする。
+git config --global gc.worktreePruneExpire never
 
 # コミット署名: ホストの個人GPG秘密鍵はコンテナにマウントしていないため、
 # include した host config の GPG 署名設定を devcontainer 専用の SSH 鍵で上書きする
@@ -126,17 +130,18 @@ else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
-# claude-account2 ディレクトリを作成
-account2_dir="${HOME}/.claude-account2"
-mkdir -p "${account2_dir}"
-
-for shared_entry in projects settings.json agents skills plugins; do
-	if [ ! -e "${account2_dir}/${shared_entry}" ] && [ ! -L "${account2_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
-		ln -s "../.claude/${shared_entry}" "${account2_dir}/${shared_entry}"
-		echo "✓ .claude-account2/${shared_entry} を共有しました"
-	else
-		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
-	fi
+# claude-account2 / claude-work3 ディレクトリを作成し、~/.claude の設定を共有する
+for account in claude-account2 claude-work3; do
+	account_dir="${HOME}/.${account}"
+	mkdir -p "${account_dir}"
+	for shared_entry in projects settings.json agents skills plugins; do
+		if [ ! -e "${account_dir}/${shared_entry}" ] && [ ! -L "${account_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
+			ln -s "../.claude/${shared_entry}" "${account_dir}/${shared_entry}"
+			echo "✓ .${account}/${shared_entry} を共有しました"
+		else
+			echo "ℹ️ .${account}/${shared_entry} の共有はスキップしました"
+		fi
+	done
 done
 
 if [ ! -f ~/.crit.config.json ]; then

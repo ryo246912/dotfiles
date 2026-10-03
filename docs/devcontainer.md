@@ -6,6 +6,46 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+## workspace と Git metadata の mount 範囲
+
+リポジトリ関連でコンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
+`.git`）だけです。`~/project/repo` のような通常 checkout で `../..` を mount すると
+`$HOME` 全体がコンテナから見えるため、親ディレクトリは mount しません。
+
+linked worktree の `.git` file と、common git dir 側の `worktrees/<name>/gitdir` は
+どちらも絶対パスです。そこで workspace と common git dir を**ホストと同じ絶対パス**に
+mount し、ホスト・コンテナのどちらでも同じパスで git が解決できるようにしています。
+relative-paths 形式（`git worktree add --relative-paths` / `worktree.useRelativePaths`）は使いません。
+相対パスはホストとコンテナで mount 先のパスが違うと参照先がずれます。また repo に
+`extensions.relativeWorktrees` が付き、git 2.48 未満（コンテナの Ubuntu 24.04 の git 2.43 など）が
+その repo を読めなくなります。
+
+### コンテナ内の注意点
+
+- 同じリポジトリの他の worktree はコンテナから見えません。post-create で
+  `gc.worktreePruneExpire = never` を設定し、`git gc` の自動 prune がそれらの
+  `.git/worktrees/<name>` を削除しないようにしています。コンテナ内で
+  `git worktree prune` を手動実行しないでください。ホスト側の worktree が壊れます。
+- 既存のコンテナは `devcontainer up` しても mount が更新されません。config を変えたら
+  `multi-worktree recreate <task>` で再生成し、コンテナを作り直してください
+  （`devcontainer up ... --remove-existing-container`）。
+
+### relative-paths 形式の worktree を戻す
+
+relative-paths 形式で作った worktree が残っていると、コンテナ内で git が使えません。
+ホストの git 2.48 以上で、実体リポジトリごとに次を実行して絶対パス形式に戻してください。
+
+```bash
+cd ~/path/to/repo
+git config --global --unset worktree.useRelativePaths   # 設定している場合
+# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す。
+# 全件成功したときだけ extension を外す（zsh で exit がシェルを閉じないよう subshell で実行）
+(
+  git worktree list --porcelain | sed -n 's/^worktree //p' |
+    while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt" || exit 1; done
+) && git config --unset extensions.relativeWorktrees
+```
+
 ## devcontainer からホスト側 tmux pane を読む
 
 ホスト側の開発サーバーログを、devcontainer 内の AI エージェントから確認する場合は
@@ -92,6 +132,21 @@ bind mountのtargetにはLinuxの仕様上ディレクトリが必要です。�
 ```bash
 bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 ```
+
+## イメージのリビルド高速化（mise ツールのキャッシュ）
+
+`dot_config/devcontainer/mise.toml` を変更すると `mise install` の layer は必ず再実行されますが、
+全ツールをゼロから入れ直さないよう `Dockerfile` で次の工夫をしています。
+
+- インストール済みツール（`/mise/data`）を BuildKit の cache mount（id: `devcontainer-mise-data`）に
+  保存し、次回ビルド時に rsync で復元してから `mise install` します。バージョンが変わったツールだけが
+  ダウンロード/ビルドされます。
+- install 先は常に `/mise/data` のままなので、shim や shebang の絶対パスは壊れません。
+- 復元した古いバージョンは `mise prune --tools` で削除を試みます（失敗時は警告のみでビルドを続行するため、残る場合があります）。
+- go（`GOMODCACHE` / `GOCACHE`）と bun のキャッシュも cache mount（id: `devcontainer-mise-cache`）に置いて再利用します。
+- `tasks/` の COPY は install の後に置き、tasks の変更で install layer が無効化されないようにしています。
+
+cache mount は `docker builder prune` で削除されます（削除されても初回と同じフルインストールになるだけです）。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 

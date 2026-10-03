@@ -287,6 +287,34 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+- [ ] claude（work3用の追加アカウント）
+  - `claude-work3`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`dot_local/bin/executable_claude-work3`）
+  - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（`claude-work3`実行時に自動で行われるので、通常は手動実行不要）
+
+    ```sh
+    mkdir -p ~/.claude-work3
+    for entry in projects settings.json agents skills plugins; do
+      [ -e ~/.claude-work3/"$entry" ] || [ -L ~/.claude-work3/"$entry" ] || ln -s ../.claude/"$entry" ~/.claude-work3/"$entry"
+    done
+    ```
+
+  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
+
+    ```sh
+    claude-work3
+    ```
+
+- [ ] ccmanagerのプロジェクトルート作成
+  - `CCMANAGER_MULTI_PROJECT_ROOT`（`dot_config/zsh/lazy/private.zsh` / `workN.zsh`）が指す
+    `~/Programming/<role>/worktrees` と、実体のリポジトリを置く`~/Programming/<role>/repos`は
+    chezmoiの管理外のため、事前にディレクトリを作成する
+  - work1/work2ロールは`~/work/worktrees`のまま（対象外）
+
+    ```sh
+    mkdir -p ~/Programming/repo/repos ~/Programming/repo/worktrees
+    mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
+    ```
+
 ### カスタムアプリの作成手順
 
 - 手順
@@ -315,6 +343,14 @@ do shell script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrom
 ```applescript
 do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
 ```
+
+- [ ] Claude Desktop（work3用）
+
+```applescript
+do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/ClaudeWork3\" > /dev/null 2>&1 &"
+```
+
+- 「保存設定」の手順は上記と同様（**名前**は「Claude-Work3.app」など任意の名前に設定）
 
 - [ ] Markdownファイルのデフォルトアプリ設定
   - `chezmoi apply`で`~/.local/bin/md-preview-launcher`を配置する
