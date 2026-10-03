@@ -1,6 +1,6 @@
 services:
   cockroach:
-    image: cockroachdb/cockroach:v26.3.1
+    image: cockroachdb/cockroach:v26.3.1@sha256:204f131510c78393adb02345f289a8dbb32e1491e26cc92b6c7751f3b97be3c5
     # local専用なので--insecure（TLSなし・password認証なし）で動かす。remoteは
     # sslmode=verify-fullとrole別passwordを使うため、認証方式だけが本番と異なる。
     #
@@ -41,7 +41,7 @@ services:
   # するため）。network_modeがcockroach containerのnetnsを指すので、client側からは
   # 127.0.0.1:26257がlocal clusterになる（hostへpublishしたportではない）。
   pgtools:
-    image: postgres:17
+    image: postgres:17@sha256:f4c66b820c6f974249089d3d16d86a3698eae11e8746eb6644b2271031e91232
     entrypoint: ["true"]
     network_mode: "service:cockroach"
     profiles:
