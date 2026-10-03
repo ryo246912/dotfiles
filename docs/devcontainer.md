@@ -46,8 +46,9 @@ mount 先は、task root と各 common git dir の共通祖先を `/workspaces` 
 `/workspaces/worktrees/multi-worktree-foo` と `/workspaces/app-diary/.git` に mount されます。
 実体リポジトリの working tree や兄弟ディレクトリはコンテナから見えません。
 
-`ccmcm` は `CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project` を `--config` なしで
-起動します。worktrees ディレクトリ（group の `base_dir`）で実行してください。ccmanager は
+`ccmcm` は `ccmanager --multi-project` を `--config` なしで起動します。project root は
+`CCMANAGER_MULTI_PROJECT_ROOT`（`dot_config/zsh/private.zsh` / `work.zsh` で worktrees
+ディレクトリを設定）なので、起動ディレクトリは問いません。ccmanager は
 選んだ project（task root）を cwd にして `devcontainer up` / `exec` を実行するので、
 devcontainer CLI は task root の生成 config を使います。
 

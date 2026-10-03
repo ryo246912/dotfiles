@@ -17,17 +17,17 @@ trigger-pattern = "(^ccmc2$|ccmcc2)"
 
 # multi-worktree の task root を project とする multi-project mode。
 # --config を指定せず、各 task root に生成された .devcontainer/devcontainer.json を使う。
-# worktrees ディレクトリ（group の base_dir）で実行する。
+# project root は CCMANAGER_MULTI_PROJECT_ROOT（private.zsh / work.zsh で設定）。
 [[snippets]]
 name    = "ccmanager devcontainer(multi-worktree)"
-snippet = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder .\""
+snippet = "ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder .\""
 trigger = "ccmcm"
 
 [[snippets]]
 cursor          = "👇"
 evaluate        = true
 name            = "ccmanager devcontainer(multi-worktree, claude account2)"
-snippet         = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder . env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
+snippet         = "ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder . env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
 trigger-pattern = "(^ccmcm2$)"
 
 [[snippets]]

@@ -397,9 +397,12 @@ ccmanager
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
-# devcontainer で起動する場合は worktrees ディレクトリで
-cd /path/to/worktrees && ccmcm
+# devcontainer で起動する場合
+ccmcm
 ```
+
+`CCMANAGER_MULTI_PROJECT_ROOT` は `dot_config/zsh/private.zsh`（`~/Programming/repo/worktrees`）と
+`work.zsh`（`~/work/worktrees`）で設定しています。
 
 `ccmcm` は各 task root に生成された `.devcontainer/devcontainer.json` でコンテナを起動します。
 配下 repo の git はコンテナ内・ホスト側のどちらでも使えます（[docs/devcontainer.md](./devcontainer.md) 参照）。
