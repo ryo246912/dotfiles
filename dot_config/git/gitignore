@@ -7,9 +7,17 @@ node_modules/
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # terraform
 tftui.plan
+.terraform/
+
+# Gradle
+.gradle/
+
+# Rust / Maven
+target/
 
 # git
 COMMIT_EDITMSG
@@ -28,6 +36,7 @@ packed-refs
 
 ## Claude
 settings.local.json
+.claude/worktrees/
 
 ## VSCode
 mcp.json

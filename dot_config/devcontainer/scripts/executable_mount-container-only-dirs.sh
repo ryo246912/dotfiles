@@ -55,7 +55,10 @@ add_target() {
 	local target=$1
 	case "${target}" in
 	"${workspace}"/*) targets["${target}"]=1 ;;
-	*) echo "error: mount target is outside workspace: ${target}" >&2; exit 1 ;;
+	*)
+		echo "error: mount target is outside workspace: ${target}" >&2
+		exit 1
+		;;
 	esac
 }
 

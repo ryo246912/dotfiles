@@ -1,6 +1,6 @@
 #!/bin/bash
 code --install-extension adam-bender.commit-message-editor
-code --install-extension albert.TabOut #tabで{}外にカーソル移動する拡張
+code --install-extension albert.TabOut                     #tabで{}外にカーソル移動する拡張
 code --install-extension auchenberg.vscode-browser-preview #VScodeでブラウザをプレビューする拡張
 code --install-extension GitWorktrees.git-worktrees
 code --install-extension GrapeCity.gc-excelviewer
