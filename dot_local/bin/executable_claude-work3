@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-_claude_prepare_account2_dir() {
-  local config_dir="${HOME}/.claude-account2"
+_claude_prepare_work3_dir() {
+  local config_dir="${HOME}/.claude-work3"
   local shared_entry
   mkdir -p "$config_dir"
 
@@ -13,6 +13,5 @@ _claude_prepare_account2_dir() {
   done
 }
 
-_claude_prepare_account2_dir
-exec env CLAUDE_CONFIG_DIR="${HOME}/.claude-account2" claude "$@"
-
+_claude_prepare_work3_dir
+exec env CLAUDE_CONFIG_DIR="${HOME}/.claude-work3" claude "$@"

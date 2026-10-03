@@ -1,4 +1,49 @@
-# 外部 skill の使い方
+# AI エージェント
+
+## snippet を使わずに起動する
+
+### ホスト
+
+初回は `~/.claude` の設定（`projects` / `settings.json` / `agents` / `skills` / `plugins`）を共有する symlink を作ります。
+devcontainer の post-create でも同じ symlink を作るので、一度 devcontainer を起動していれば不要です。
+
+```bash
+for account in claude-account2 claude-work3; do
+  mkdir -p ~/."$account"
+  for entry in projects settings.json agents skills plugins; do
+    [ -e ~/.claude/"$entry" ] || continue
+    [ -e ~/."$account"/"$entry" ] || [ -L ~/."$account"/"$entry" ] || ln -s ../.claude/"$entry" ~/."$account"/"$entry"
+  done
+done
+```
+
+```bash
+# account2 のアカウント
+CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
+
+# work3 のアカウント
+CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
+```
+
+### devcontainer
+
+`devcontainer exec` の `--` 以降がコンテナ内で実行されます。先に `dcup` で起動しておきます。
+`~/.claude-account2` と `~/.claude-work3` は base template でコンテナへ mount しています。
+
+```bash
+# account2 のアカウントで Claude Code を起動
+devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontainer.json \
+  -- env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions
+
+# work3 のアカウントで Claude Code を起動
+devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontainer.json \
+  -- env CLAUDE_CONFIG_DIR=/home/vscode/.claude-work3 claude --dangerously-skip-permissions
+```
+
+multi-worktree の task root では `--config` を省略します（task root に生成された
+`.devcontainer/devcontainer.json` が使われます）。
+
+## 外部 skill の使い方
 
 このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
 
@@ -13,7 +58,7 @@
 - `diagram-design`
 - `find-skills`
 
-## インストール
+### インストール
 
 設定を反映してから APM を実行します。
 
@@ -29,9 +74,9 @@ mise run apm:install
 依存先は再現性のため `dot_apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
 `ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
 
-## Plannotator / Effective HTML
+### Plannotator / Effective HTML
 
-### 導入構成
+#### 導入構成
 
 - Plannotator CLIはdevcontainer imageのmise toolとしてインストールします。
 - `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
@@ -42,7 +87,7 @@ mise run apm:install
   設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
 - code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
 
-### HTML artifactを作成してreviewする
+#### HTML artifactを作成してreviewする
 
 [Effective HTML](https://github.com/plannotator/effective-html)のskillは、作りたいartifactに合わせて使い分けます。
 
@@ -80,7 +125,7 @@ CLIを直接実行する場合は次を使います。
 plannotator annotate path/to/artifact.html
 ```
 
-### 開発中のfrontendをreviewする
+#### 開発中のfrontendをreviewする
 
 devcontainer内でfrontendのdev serverを起動します。Expo Webの例では次を実行します。
 
@@ -139,7 +184,7 @@ Plannotatorを使うとeditor portの`19433`が衝突するため、reviewする
 `19433`は`devcontainer.json`の`PLANNOTATOR_PORT`です。変更する場合は、この確認commandも同じ値に読み替えます。
 Plannotatorとdev serverのprocessは、review中はterminalで終了させないでください。
 
-### code diffをreviewする
+#### code diffをreviewする
 
 current branchの変更は次のskillでreviewします。
 
@@ -153,21 +198,21 @@ GitHub PRをreviewする場合はPR URLを渡します。
 $plannotator-review https://github.com/owner/repository/pull/123
 ```
 
-### agentの最後の返答をreviewする
+#### agentの最後の返答をreviewする
 
 ```text
 $plannotator-last
 ```
 
-## `crit` / `crit-cli`
+### `crit` / `crit-cli`
 
-### 用途
+#### 用途
 
 `crit`はcode diff、plan、ローカルHTML、実行中のWeb applicationをbrowser UIで確認し、行や要素へcommentを付けて
 エージェントへ戻すreview skillです。`crit-cli`はcommentの作成・返信、reviewの共有、GitHub PRとの同期などを
 エージェントがCLIから操作するための補助skillであり、通常は直接起動しません。
 
-### 使い方
+#### 使い方
 
 `crit`はユーザーが明示的に起動します。Claude Codeでは`/crit`、Codexでは`$crit`を使い、必要に応じてreview対象を
 指定します。
@@ -183,14 +228,14 @@ $crit を使って、現在のgit diffをreviewできるようにしてくださ
 devcontainerでは`crit`を起動した後、表示されたhost側URLをbrowserで開きます。commentを送信するとエージェントが
 修正し、再reviewできます。CLIの構成、PR commentのpull / push、tool比較は[`docs/crit.md`](crit.md)を参照してください。
 
-## `terminal-browser`
+### `terminal-browser`
 
-### 用途
+#### 用途
 
 terminal pane内に実browserを表示し、エージェントが同じtabに対してsnapshot、click、入力、JavaScript評価を行うskillです。
 Web applicationの動作確認、生成したHTMLの可視化、browser上でしか確認できない状態の調査に使用します。
 
-### 使い方
+#### 使い方
 
 browserで確認したいURLと操作内容を自然言語で伝えます。明示的に指定する場合は、Claude Codeでは
 `/terminal-browser`、Codexでは`$terminal-browser`を使用します。
@@ -202,7 +247,7 @@ $terminal-browser を使って http://localhost:3000 を開き、login formを�
 skillは必要に応じてterminalを分割し、`terminal-browser action`で開いているtabを操作します。認証情報や個人情報を
 入力させる場合は、実行する操作と送信先を事前に確認してください。
 
-## Tsumiki skills
+### Tsumiki skills
 
 Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
 依頼内容に応じて自動選択されますが、Claude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`で明示できます。
@@ -240,9 +285,9 @@ $dev-plan checkout "決済providerを追加し、失敗時に安全にretryで�
 `dev-verify`の順で使用します。Web UIを含む場合は`dev-webtest-plan`と`dev-webtest`、security確認が必要な場合は
 `ipa-security-check`と`ipa-security-guide`を組み合わせます。
 
-## Tsumiki 入門ガイド
+### Tsumiki 入門ガイド
 
-### 現行の中心は Dev Skills
+#### 現行の中心は Dev Skills
 
 Tsumikiの現行workflowはDev Skillsです。従来このページで中心としていたKairo・個別TDD・DIRECT commandは、upstreamで
 `tsumiki-legacy` pluginへ分離されたlegacy機能です。新しい開発ではDev Skillsを使用し、Kairoを前提とした
@@ -277,9 +322,9 @@ flowchart TD
 既存Web applicationへ決済機能を追加したいです。どのskillから始めるべきですか。
 ```
 
-### 基本workflow
+#### 基本workflow
 
-#### 1. Contextを準備する
+##### 1. Contextを準備する
 
 新規projectでは`dev-init`が技術stackを対話で決定し、承認後にscaffoldします。既存projectでは`dev-context`が技術stack、
 test framework、規約、architectureを分析します。どちらも後続skillが共有する`docs/dev/context.md`を生成します。
@@ -292,7 +337,7 @@ test framework、規約、architectureを分析します。どちらも後続ski
 /dev-context
 ```
 
-#### 2. Planを作る
+##### 2. Planを作る
 
 `dev-plan`はinterface-firstの設計とtest可能なtaskを`docs/dev/plans/<plan-name>/`へ出力します。素早く計画する
 Lightweight modeと、EARS要件、user story、受け入れ条件まで作るFull-spec modeがあり、実行中に選択します。
@@ -307,7 +352,7 @@ Lightweight modeと、EARS要件、user story、受け入れ条件まで作るFu
 /dev-plan auth ./docs/prd.md
 ```
 
-#### 3. 実装する
+##### 3. 実装する
 
 taskを1件ずつ実装する場合は`dev-impl`へplan名とtask IDを渡します。Planを作るほどではない軽微な変更には、修正指示を
 直接渡すquick modeを使用できます。どちらもRed → Green → Refactorをguardrailとするtest-first実装です。
@@ -327,7 +372,7 @@ taskを1件ずつ実装する場合は`dev-impl`へplan名とtask IDを渡しま
 /dev-run auth 001 005
 ```
 
-#### 4. 検証・debugする
+##### 4. 検証・debugする
 
 `dev-verify`はplanのtask完了状態、test、build、lint、file sizeを確認し、
 `docs/dev/plans/<plan-name>/reports/`へreportを出力します。
@@ -343,7 +388,7 @@ taskを1件ずつ実装する場合は`dev-impl`へplan名とtask IDを渡しま
 /dev-debug "TypeError: Cannot read properties of undefined"
 ```
 
-### Web UIをtestする
+#### Web UIをtestする
 
 Web UIを含む変更では、画面仕様、Playwright test計画、実行を分離します。
 
@@ -359,7 +404,7 @@ Web UIを含む変更では、画面仕様、Playwright test計画、実行を�
 /dev-debug webtest
 ```
 
-### その他の現行command
+#### その他の現行command
 
 Dev Skills以外にも、目的別のcommandを使用できます。
 
@@ -374,7 +419,7 @@ Dev Skills以外にも、目的別のcommandを使用できます。
 `$tsumiki-<name>`として呼び出します。たとえばhelpは`/tsumiki-help`または`$tsumiki-help`です。詳細は
 [`docs/rulesync.md`](rulesync.md)を参照してください。
 
-### Legacy commandについて
+#### Legacy commandについて
 
 Kairo、個別TDD、DIRECTが必要な既存workflowでは、upstreamの`tsumiki-legacy` pluginを明示的に導入し、Claude Codeで
 `/tsumiki-legacy:<command>`として実行します。たとえばKairoの要件定義は
@@ -384,7 +429,7 @@ Kairo、個別TDD、DIRECTが必要な既存workflowでは、upstreamの`tsumiki
 `docs/dev/context.md`、planを`docs/dev/plans/<plan-name>/`で管理し、個別のTDD commandではなく`dev-impl`が
 test-first実装を担当します。
 
-## Ponytail skills
+### Ponytail skills
 
 Ponytailは、YAGNI、standard library、native platform機能、既存dependencyの順に検討し、要件を満たす最小の実装を
 選ぶcoding workflowです。短いcodeを目的化するのではなく、security、accessibility、trust boundaryのvalidation、
@@ -399,7 +444,7 @@ data lossを防ぐerror handlingは省略しません。
 | `ponytail-gain`   | 公開benchmarkに基づくcode量、cost、処理時間への影響をscoreboardで表示する           |
 | `ponytail-help`   | mode、skill、command、無効化方法をquick referenceとして表示する                     |
 
-### 使い方
+#### 使い方
 
 通常modeは`full`です。Claude Codeでは`/ponytail`、Codexでは`$ponytail`を使い、必要に応じてlevelを指定します。
 
@@ -423,14 +468,14 @@ Ponytailを止めるときは「stop ponytail」または「normal mode」と伝
 `PONYTAIL_DEFAULT_MODE`へ`lite`、`full`、`ultra`、`off`のいずれかを設定します。pluginのalways-on activationには
 Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`から`node`を実行できる必要があります。
 
-## `ctx-agent-history-search`
+### `ctx-agent-history-search`
 
-### 用途
+#### 用途
 
 ローカルに保存された過去のcoding-agent sessionを`ctx` CLIで検索し、以前の判断、試行、失敗理由、関連する会話を
 現在の作業前に確認するskillです。同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。
 
-### 使い方
+#### 使い方
 
 初回だけ`ctx setup`でindexを作成します。明示的に使う場合は、Claude Codeでは`/ctx-agent-history-search`、Codexでは
 `$ctx-agent-history-search`を指定します。
@@ -442,14 +487,14 @@ $ctx-agent-history-search を使って、以前database migrationに失敗した
 手動検索では`ctx search "query"`、詳細表示では`ctx show session <session-id>`などを使用します。setup、主要command、
 local historyに含まれる秘密情報の注意点は[`docs/ctx.md`](ctx.md)を参照してください。
 
-## `resolving-merge-conflicts`
+### `resolving-merge-conflicts`
 
-### 用途
+#### 用途
 
 進行中の `git merge` または `git rebase` で発生した conflict を、両方の変更意図を調べながら解消する skill です。
 単に片側を採用するのではなく、commit・PR・issue などの一次情報を確認し、可能な限り双方の意図を保ちます。
 
-### 使い方
+#### 使い方
 
 conflict が発生した状態で、エージェントに自然言語で依頼します。明示的に指定する場合は、Claude Code では
 `/resolving-merge-conflicts`、Codex では `$resolving-merge-conflicts` を使用します。
@@ -475,9 +520,9 @@ skill は次の順に作業します。
 > この skill は進行中の merge/rebase を `--abort` せず、最後まで完了させる方針です。中断したい場合は、実行前に
 > その旨を明示してください。また、作業ツリーに退避していない変更がないか事前に確認してください。
 
-## `grill-me`
+### `grill-me`
 
-### 用途
+#### 用途
 
 計画、設計、意思決定を実行に移す前に、未決定事項や暗黙の前提を質問によって洗い出す skill です。質問を
 decision tree として扱い、前提が確定した時点で回答可能になる質問を round ごとに提示します。
@@ -485,7 +530,7 @@ decision tree として扱い、前提が確定した時点で回答可能にな
 `grill-me` はユーザーが明示的に起動する skill です。質問処理の本体である `grilling` も APM で一緒に
 インストールされます。
 
-### 使い方
+#### 使い方
 
 Claude Code では `/grill-me`、Codex では `$grill-me` に続けて検討対象を渡します。
 
@@ -508,14 +553,14 @@ $grill-me を使って、新しい CLI の配布方法を固めたいです。
 - 変更できない制約（期限、互換性、予算など）
 - 特に不安な判断
 
-## `diagram-design`
+### `diagram-design`
 
-### 用途
+#### 用途
 
 architecture、flowchart、sequence、ER、timeline、swimlane、quadrant、Gantt などの図を、inline SVG/CSS を含む
 self-contained HTML として生成する skill です。文章や表より図の方が理解しやすい情報に使用します。
 
-### 初回セットアップ
+#### 初回セットアップ
 
 最初の図を作るとき、skill は同梱の `references/style-guide.md` がデフォルトのままか確認します。デフォルトの場合は、
 次のいずれかを選択します。
@@ -529,7 +574,7 @@ self-contained HTML として生成する skill です。文章や表より図�
 APM の再インストールや更新では配布先が再生成される可能性があります。ブランド設定を継続的に管理したい場合は、
 upstream skill を直接編集せず、生成時に URL・design system・token を指定してください。
 
-### 使い方
+#### 使い方
 
 作りたい図、含める要素、要素間の関係、出力先を自然言語で依頼します。skill は依頼内容から図の種類を選択します。
 明示的に指定する場合は、Claude Code では `/diagram-design`、Codex では `$diagram-design` を使用します。
@@ -570,9 +615,9 @@ SVG は Google Fonts を外部参照するため、font を取得しない offli
 あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
 複雑な場合は overview と detail に分割してください。
 
-## `find-skills`
+### `find-skills`
 
-### 用途
+#### 用途
 
 実現したい作業に利用できる既存のagent skillを検索し、候補の品質を確認して提案するskillです。「この作業に使える
 skillはあるか」「エージェントへ特定分野の能力を追加したい」といった依頼で使用します。
@@ -580,7 +625,7 @@ skillはあるか」「エージェントへ特定分野の能力を追加した
 検索結果をそのまま勧めるのではなく、install数、配布元の信頼性、GitHub starsなどを確認してから候補を提示します。
 適切なskillが見つからなかった場合は、通常のエージェント機能で作業を続けるか、独自skillを作る方法を提案します。
 
-### 使い方
+#### 使い方
 
 skillは該当する依頼から自動的に選択されます。明示的に指定する場合は、Claude Codeでは`/find-skills`、Codexでは
 `$find-skills`を使用し、探したい分野と具体的な作業を伝えます。

@@ -6,37 +6,45 @@ devcontainer 定義は `dot_config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
-## workspace と Git worktree の mount 範囲
+## workspace と Git metadata の mount 範囲
 
-base template は `${localWorkspaceFolder}` のみを bind mount し、親ディレクトリは
-mount しません。`~/project/repo` のような通常 checkout で `../..` を mount すると
-`$HOME` 全体がコンテナから見えるためです。
+リポジトリ関連でコンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
+`.git`）だけです。`~/project/repo` のような通常 checkout で `../..` を mount すると
+`$HOME` 全体がコンテナから見えるため、親ディレクトリは mount しません。
 
-`ccmanager` や手動起動（zabrze の `ccmc` / `dcup` / `dcex`）では、`devcontainer up` と
-`devcontainer exec` の両方に次のオプションを直接指定しています。
+linked worktree の `.git` file と、common git dir 側の `worktrees/<name>/gitdir` は
+どちらも絶対パスです。そこで workspace と common git dir を**ホストと同じ絶対パス**に
+mount し、ホスト・コンテナのどちらでも同じパスで git が解決できるようにしています。
+relative-paths 形式（`git worktree add --relative-paths` / `worktree.useRelativePaths`）は使いません。
+相対パスはホストとコンテナで mount 先のパスが違うと参照先がずれます。また repo に
+`extensions.relativeWorktrees` が付き、git 2.48 未満（コンテナの Ubuntu 24.04 の git 2.43 など）が
+その repo を読めなくなります。
 
-- `--mount-workspace-git-root=false`: workspace より広い Git root の自動 mount を無効化
-- `--mount-git-worktree-common-dir=true`: linked worktree が参照する common git dir だけを mount
+### コンテナ内の注意点
 
-この base template で linked worktree を開く場合は、`up` / `exec` の両方に上記2オプションを
-指定してください。VS Code Dev Containers 拡張からこの base template を直接開く
-経路は、common git dir の安全な mount を保証できないため対象外です。
+- 同じリポジトリの他の worktree はコンテナから見えません。post-create で
+  `gc.worktreePruneExpire = never` を設定し、`git gc` の自動 prune がそれらの
+  `.git/worktrees/<name>` を削除しないようにしています。コンテナ内で
+  `git worktree prune` を手動実行しないでください。ホスト側の worktree が壊れます。
+- 既存のコンテナは `devcontainer up` しても mount が更新されません。config を変えたら
+  `multi-worktree recreate <task>` で再生成し、コンテナを作り直してください
+  （`devcontainer up ... --remove-existing-container`）。
 
-snippet の `--config` は `${DEVCONTAINER_CONFIG:-$HOME/.config/devcontainer/devcontainer.json}` です。
-`multi-worktree cd <task>` で入ったシェルでは、`DEVCONTAINER_CONFIG` に task root の
-`.devcontainer/devcontainer.json` が設定されます。そのため、task root の `ccmc` は各 repo の
-`.git` を mount した生成 config で起動します。task root は linked worktree ではなく
-synthetic repository なので、base template では配下 repo の `.git` が mount されず、
-コンテナ内の git が `not a git repository` になります。
+### relative-paths 形式の worktree を戻す
 
-`--mount-git-worktree-common-dir` は relative-paths 形式の worktree を前提とするため、`multi-worktree` は
-`git worktree add --relative-paths` で新規 worktree を作成します。既存の worktree は
-`git worktree remove` の後に `git worktree add --relative-paths` で作り直してください。
+relative-paths 形式で作った worktree が残っていると、コンテナ内で git が使えません。
+ホストの git 2.48 以上で、実体リポジトリごとに次を実行して絶対パス形式に戻してください。
 
-`multi-worktree` が生成する複数リポジトリ用の devcontainer は、各 worktree に加えて
-実体リポジトリの `.git` だけを、その worktree の相対 `gitdir` がコンテナ内で
-到達するパスへ mount します。実体リポジトリの working tree や、その他の
-兄弟ディレクトリはコンテナから見えません。
+```bash
+cd ~/path/to/repo
+git config --global --unset worktree.useRelativePaths   # 設定している場合
+# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す。
+# 全件成功したときだけ extension を外す（zsh で exit がシェルを閉じないよう subshell で実行）
+(
+  git worktree list --porcelain | sed -n 's/^worktree //p' |
+    while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt" || exit 1; done
+) && git config --unset extensions.relativeWorktrees
+```
 
 ## devcontainer からホスト側 tmux pane を読む
 
