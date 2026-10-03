@@ -38,7 +38,9 @@ relative-paths 形式で作った worktree が残っていると、コンテナ�
 ```bash
 cd ~/path/to/repo
 git config --global --unset worktree.useRelativePaths   # 設定している場合
-git worktree repair --no-relative-paths
+# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す
+git worktree list --porcelain | sed -n 's/^worktree //p' |
+  while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt"; done
 git config --unset extensions.relativeWorktrees
 ```
 

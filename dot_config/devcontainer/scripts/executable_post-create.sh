@@ -107,17 +107,18 @@ else
 	echo "ℹ️ devcontainer用の署名鍵(${signing_key})が見つからないか非対話で使用できないため、コミット署名を無効化しました"
 fi
 
-# claude-account2 ディレクトリを作成
-account2_dir="${HOME}/.claude-account2"
-mkdir -p "${account2_dir}"
-
-for shared_entry in projects settings.json agents skills plugins; do
-	if [ ! -e "${account2_dir}/${shared_entry}" ] && [ ! -L "${account2_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
-		ln -s "../.claude/${shared_entry}" "${account2_dir}/${shared_entry}"
-		echo "✓ .claude-account2/${shared_entry} を共有しました"
-	else
-		echo "ℹ️ .claude-account2/${shared_entry} の共有はスキップしました"
-	fi
+# claude-account2 / claude-work3 ディレクトリを作成し、~/.claude の設定を共有する
+for account in claude-account2 claude-work3; do
+	account_dir="${HOME}/.${account}"
+	mkdir -p "${account_dir}"
+	for shared_entry in projects settings.json agents skills plugins; do
+		if [ ! -e "${account_dir}/${shared_entry}" ] && [ ! -L "${account_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
+			ln -s "../.claude/${shared_entry}" "${account_dir}/${shared_entry}"
+			echo "✓ .${account}/${shared_entry} を共有しました"
+		else
+			echo "ℹ️ .${account}/${shared_entry} の共有はスキップしました"
+		fi
+	done
 done
 
 if [ ! -f ~/.crit.config.json ]; then
