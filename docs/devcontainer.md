@@ -16,25 +16,27 @@ linked worktree の `.git` file と、common git dir 側の `worktrees/<name>/gi
 どちらも絶対パスです。そこで workspace と common git dir を**ホストと同じ絶対パス**に
 mount し、ホスト・コンテナのどちらでも同じパスで git が解決できるようにしています。
 relative-paths 形式（`git worktree add --relative-paths` / `worktree.useRelativePaths`）は使いません。
-relative-paths 形式にすると repo に `extensions.relativeWorktrees` が付き、git 2.48 未満
-（コンテナの Ubuntu 24.04 の git 2.43 など）や対応していないツールがその repo を
-読めなくなるためです。
+相対パスはホストとコンテナで mount 先のパスが違うと参照先がずれます。また repo に
+`extensions.relativeWorktrees` が付き、git 2.48 未満（コンテナの Ubuntu 24.04 の git 2.43 など）が
+その repo を読めなくなります。
 
-### 単一リポジトリ（`ccmc` / `ccmc2` / `dcup`）
+### 起動コマンド `devc`
 
-base template で起動し、`devcontainer up` に common git dir の mount を追加します。
+`ccmc` / `ccmcm` / `dcup` / `dcex` は `devc up` / `devc exec` で devcontainer を起動します。
+`devc` はカレントディレクトリを workspace とし、使う config と追加 mount を判定します。
 
-```bash
-devcontainer up --workspace-folder . --config ~/.config/devcontainer/devcontainer.json \
-  --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=<同じパス>
-```
+| cwd | config | 追加 mount（`up` のみ） |
+| --- | --- | --- |
+| multi-worktree の task root（`multi-worktree-*` ブランチで `.devcontainer/devcontainer.json` がある） | task root の生成 config | なし（生成 config に含まれる） |
+| それ以外の git repo / worktree | base template | common git dir をホストと同じ絶対パスに mount |
 
-`$(git rev-parse ...)` は snippet を実行したディレクトリで評価されます。そのため `ccmc` は
-対象リポジトリ（またはその worktree）で起動してください。同じリポジトリの worktree は
-common git dir を共有するので、ccmanager が作る worktree でも同じ mount で git が使えます。
-`devcontainer exec` には mount の指定は不要です。
+ccmanager の `--devc-up-command` / `--devc-exec-command` はシェルを通さず、選んだ project /
+worktree を cwd にして実行されます。そのため `$(git rev-parse ...)` のようなシェル展開は使えません。
+また `--multi-project` では project ごとに使う config が違うので、起動時の cwd では判定できません。
+`devc` が実行時の cwd で判定するため、`ccmcm` はどのディレクトリからでも起動できます
+（project root は `CCMANAGER_MULTI_PROJECT_ROOT`）。
 
-### multi-worktree（`ccmcm` / `ccmcm2`、`multi-worktree dev`）
+### multi-worktree の生成 config
 
 task root は配下に複数 repo の worktree を持つ synthetic repository で、linked worktree では
 ありません。そのため base template では配下 repo の `.git` が mount されません。
@@ -42,11 +44,9 @@ task root は配下に複数 repo の worktree を持つ synthetic repository �
 各 repo の worktree に加えて、その common git dir をホストと同じ絶対パスへ mount します。
 実体リポジトリの working tree や兄弟ディレクトリはコンテナから見えません。
 
-- `ccmcm` は `CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project` を `--config` なしで起動します。
-  worktrees ディレクトリ（group の `base_dir`）で実行してください。ccmanager は選んだ task root を
-  cwd にして `devcontainer up` / `exec` を実行するため、task root の生成 config が使われます。
 - `multi-worktree dev` は、`up_opts` / `exec_opts` に `--config` がなければ task 用 config を補います。
-- task root で `ccmc` を使うと base template で起動するため、配下 repo の git は使えません。
+- task root 配下の repo（`<task root>/<repo>`）を cwd にして `devc` を使うと、その repo 単体の
+  コンテナ（base template）になります。複数 repo をまとめて扱うときは task root で起動してください。
 
 ### コンテナ内の注意点
 

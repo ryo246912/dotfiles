@@ -3,42 +3,29 @@ name    = "ccmanager"
 snippet = "ccmanager"
 trigger = "ccm"
 
+# devcontainer で起動する。config の選択と .git の mount は devc が cwd から判定する。
+# account2 / work3 などは ccmanager の preset で選ぶ（docs/ai.md 参照）。
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\""
+snippet = "ccmanager --devc-up-command \"devc up\" --devc-exec-command \"devc exec\""
 trigger = "ccmc"
 
+# CCMANAGER_MULTI_PROJECT_ROOT 配下の project（multi-worktree の task root や
+# ccmanager の worktree）を横断管理する。どのディレクトリからでも起動できる。
 [[snippets]]
-cursor          = "👇"
-evaluate        = true
-name            = "ccmanager devcontainer(claude account2)"
-snippet         = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
-trigger-pattern = "(^ccmc2$|ccmcc2)"
-
-# multi-worktree の task root を project とする multi-project mode。
-# --config を指定せず、各 task root に生成された .devcontainer/devcontainer.json を使う。
-# worktrees ディレクトリ（group の base_dir）で実行する。
-[[snippets]]
-name    = "ccmanager devcontainer(multi-worktree)"
-snippet = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder .\""
+name    = "ccmanager devcontainer(multi-project)"
+snippet = "ccmanager --multi-project --devc-up-command \"devc up\" --devc-exec-command \"devc exec\""
 trigger = "ccmcm"
 
 [[snippets]]
-cursor          = "👇"
-evaluate        = true
-name            = "ccmanager devcontainer(multi-worktree, claude account2)"
-snippet         = "CCMANAGER_MULTI_PROJECT_ROOT=$PWD ccmanager --multi-project --devc-up-command \"devcontainer up --workspace-folder .\" --devc-exec-command \"devcontainer exec --workspace-folder . env CLAUDE_CONFIG_DIR=/home/vscode/.claude-account2 claude --dangerously-skip-permissions\""
-trigger-pattern = "(^ccmcm2$)"
-
-[[snippets]]
 name    = "devcontainer up"
-snippet = "devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)"
+snippet = "devc up"
 trigger = "dcup"
 
 [[snippets]]
 cursor  = "👇"
 name    = "devcontainer exec"
-snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json -- 👇"
+snippet = "devc exec -- 👇"
 trigger = "dcex"
 
 [[snippets]]
