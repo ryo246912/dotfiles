@@ -3,12 +3,11 @@ name    = "ccmanager"
 snippet = "ccmanager"
 trigger = "ccm"
 
-# 単一 repo / ccmanager の worktree を devcontainer で起動する。
-# common git dir（実体リポジトリの .git）をホストと同じ絶対パスに mount する（docs/devcontainer.md 参照）。
-# account2 / work3 などは ccmanager の preset で選ぶ。
+# リポジトリの root で起動する。ccmanager が作る worktree の common git dir（root の .git）を
+# ホストと同じ絶対パスに mount する（docs/devcontainer.md 参照）。account2 / work3 は preset で選ぶ。
 [[snippets]]
 name    = "ccmanager devcontainer"
-snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$(git rev-parse --path-format=absolute --git-common-dir),target=$(git rev-parse --path-format=absolute --git-common-dir)\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\""
+snippet = "ccmanager --devc-up-command \"devcontainer up --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json --mount type=bind,source=$PWD/.git,target=$PWD/.git\" --devc-exec-command \"devcontainer exec --workspace-folder . --config $HOME/.config/devcontainer/devcontainer.json\""
 trigger = "ccmc"
 
 # CCMANAGER_MULTI_PROJECT_ROOT 配下の multi-worktree task root を横断管理する。どこからでも起動できる。

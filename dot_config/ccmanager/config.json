@@ -37,22 +37,8 @@
         "fallbackArgs": []
       },
       {
-        "id": "4",
-        "name": "Claude account2",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "6",
-        "name": "Claude Work3",
-        "command": "claude-work3",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
         "id": "8",
-        "name": "Claude account2 (devcontainer)",
+        "name": "Claude account2",
         "command": "sh",
         "args": [
           "-c",
@@ -62,7 +48,7 @@
       },
       {
         "id": "10",
-        "name": "Claude Work3 (devcontainer)",
+        "name": "Claude Work3",
         "command": "sh",
         "args": [
           "-c",
