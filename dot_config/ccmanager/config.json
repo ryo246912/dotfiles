@@ -31,62 +31,14 @@
     "presets": [
       {
         "id": "1",
-        "name": "Claude A1",
+        "name": "Claude account1",
         "command": "claude",
         "args": ["--dangerously-skip-permissions"],
         "fallbackArgs": []
       },
       {
-        "id": "2",
-        "name": "Claude A2 (resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "3",
-        "name": "Claude A1 (no resume)",
-        "command": "claude",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "4",
-        "name": "Claude A2 (no resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "5",
-        "name": "Claude Work3 (resume)",
-        "command": "claude-work3",
-        "args": ["--resume", "--dangerously-skip-permissions"],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "6",
-        "name": "Claude Work3 (no resume)",
-        "command": "claude-work3",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "7",
-        "name": "Claude A2 (devcontainer, resume)",
-        "command": "sh",
-        "args": [
-          "-c",
-          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --resume --dangerously-skip-permissions"
-        ],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
         "id": "8",
-        "name": "Claude A2 (devcontainer, no resume)",
+        "name": "Claude account2",
         "command": "sh",
         "args": [
           "-c",
@@ -95,19 +47,8 @@
         "detectionStrategy": "claude"
       },
       {
-        "id": "9",
-        "name": "Claude Work3 (devcontainer, resume)",
-        "command": "sh",
-        "args": [
-          "-c",
-          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --resume --dangerously-skip-permissions"
-        ],
-        "fallbackArgs": [],
-        "detectionStrategy": "claude"
-      },
-      {
         "id": "10",
-        "name": "Claude Work3 (devcontainer, no resume)",
+        "name": "Claude Work3",
         "command": "sh",
         "args": [
           "-c",

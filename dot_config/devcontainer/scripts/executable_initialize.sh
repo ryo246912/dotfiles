@@ -235,6 +235,7 @@ ensure_dir ~/.claude
 ensure_json_file ~/.claude/settings.json
 ensure_json_file ~/.claude.json
 ensure_dir ~/.claude-account2
+ensure_dir ~/.claude-work3
 ensure_dir ~/.agents
 ensure_dir ~/.codex
 ensure_dir ~/.copilot

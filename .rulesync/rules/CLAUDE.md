@@ -23,6 +23,10 @@ Tools are managed by [mise](https://mise.jdx.dev/) (`mise.toml`); version upgrad
 
 `CLAUDE.md` is generated from `.rulesync/rules/CLAUDE.md` by `rulesync generate` — edit the source, not this file. See `docs/rulesync.md`.
 
+## Documentation
+
+- Write docs under `docs/`. Do not add links to new docs (or any other new links) in `README.md`.
+
 ## More details
 
 See `docs/**` and `README.md`.
