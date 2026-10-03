@@ -1508,20 +1508,6 @@ cmd_dev() {
     # 設定の読み込み
     local up_opts=$(get_devcontainer_up_opts "$group")
     local exec_opts=$(get_devcontainer_exec_opts "$group")
-
-    # --config 未指定だと base template が使われ、task root 配下 repo の common git dir が
-    # mount されずコンテナ内の git が壊れるため、生成された task 用 config を補う。
-    local task_devcontainer_config="${worktree_base_dir}/.devcontainer/devcontainer.json"
-    if [[ -f "$task_devcontainer_config" ]]; then
-        if [[ " $up_opts " != *" --config "* ]]; then
-            up_opts+=" --config $task_devcontainer_config"
-        fi
-        if [[ " $exec_opts " != *" --config "* ]]; then
-            exec_opts+=" --config $task_devcontainer_config"
-        fi
-    else
-        log_warn "task 用 devcontainer.json がありません。multi-worktree recreate $task_name で再生成してください"
-    fi
     local skip_up=$(get_devcontainer_skip_up_if_running)
 
     # worktree ディレクトリに移動

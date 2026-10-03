@@ -5,11 +5,11 @@
 ### ホスト
 
 ```bash
-# work3 用アカウント（初回は ~/.claude-work3 を作成して ~/.claude の設定を共有する）
-claude-work3 --dangerously-skip-permissions
-
-# 任意のアカウント
+# account2 のアカウント
 CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
+
+# work3 のアカウント
+CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
 ```
 
 ### devcontainer
