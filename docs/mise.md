@@ -840,6 +840,10 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
 ### 使い方
 
 ```sh
+# ローカルのhistory状況を確認する（追跡entry数・checkpoint数・直近checkpointの内容・
+# 自動保存serviceが動いているか・origin接続先の有無、をまとめて表示する）
+mise bootstrap dotfiles status
+
 # 変更を今すぐチェックポイントとして保存する（mise run dotfiles:history-save）
 mise bootstrap dotfiles save
 
@@ -879,6 +883,21 @@ mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
 
 未接続の場合は `mise bootstrap dotfiles status` の末尾に
 `Setup repository: none` と表示される。
+
+**privateリポジトリで問題ないか:** 公式ドキュメントが明記している:
+
+> "Use a private repository: synchronization sends earlier checkpoints too,
+> so temporary edits can become part of the shared history."
+
+つまり private リポジトリが前提の推奨構成であり、それ自体は追加の暗号化を必須と
+していない。ただし「過去の checkpoint も丸ごと送られる」ため、一時的にせよ
+secretを書いてcommitしてしまった履歴がある場合、後で消しても history 経由で
+残り続ける点に注意（本リポジトリの track 対象 — `~/.config`、alacritty/ghostty/
+git/mise/rio の各 config、rulesync の `mcp.json`、`~/.zshenv` — はいずれも
+secretを直接書く想定のファイルではないため、通常はこの懸念に当たらない）。
+secretを含むファイルを新たに track する場合は、`encrypt = true` +
+`[history.encryption].recipients` を最初の checkpoint から設定すること
+（後から暗号化しても、それ以前の平文履歴は残る）。
 
 ## ハマりどころ
 

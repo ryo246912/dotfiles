@@ -16,9 +16,15 @@
   ```sh
   git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
   cd ~/dotfiles
-  mise trust
+  mise settings add trusted_config_paths ~/dotfiles
   ```
 
+  `mise trust` はその場限りの対話承認だが、`trusted_config_paths` は
+  `~/.config/mise/config.toml`（グローバル）に書き込まれる設定で、一度実行すれば以後
+  trust状態をmiseが参照するたびに自動で信頼される（再clone・再bootstrapでも
+  都度 `mise trust` し直す必要がない）。`config/mise/config.toml` 側で同じ
+  `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
+  （dotfiles配置後に）同じ仕組みを永続化するためである。
   直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
   更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
   実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
@@ -63,6 +69,9 @@
     は `MISE_ENV=mac` の明示を省略してよい
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
+  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
+    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
+    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
   - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
     background service を有効化しようとする（`mise bootstrap services status` で確認可能。
     systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
@@ -556,9 +565,15 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```sh
   git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
   cd ~/dotfiles
-  mise trust
+  mise settings add trusted_config_paths ~/dotfiles
   ```
 
+  `mise trust` はその場限りの対話承認だが、`trusted_config_paths` は
+  `~/.config/mise/config.toml`（グローバル）に書き込まれる設定で、一度実行すれば以後
+  trust状態をmiseが参照するたびに自動で信頼される（再clone・再bootstrapでも
+  都度 `mise trust` し直す必要がない）。`config/mise/config.toml` 側で同じ
+  `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
+  （dotfiles配置後に）同じ仕組みを永続化するためである。
   直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
   更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
   実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
