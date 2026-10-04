@@ -42,8 +42,8 @@ trigger = "cl"
 
 [[snippets]]
 global  = true
-name    = "claude2"
-snippet = "claude2"
+name    = "claude (account2)"
+snippet = "CLAUDE_CONFIG_DIR=~/.claude-account2 claude"
 trigger = "cl2"
 
 [[snippets]]
@@ -77,14 +77,14 @@ snippet = "codex --yolo"
 trigger = "cxy"
 
 [[snippets]]
-context = ".*claude(2)?\\s"
+context = ".*claude\\s"
 global  = true
 name    = "(ccmanager) --multi-project"
 snippet = "--multi-project"
 trigger = "mp"
 
 [[snippets]]
-context = ".*claude(2)?\\s"
+context = ".*claude\\s"
 global  = true
 name    = "(claude*) --dangerously-skip-permissions"
 snippet = "--dangerously-skip-permissions"

@@ -93,14 +93,10 @@ def count_tokens_in_directory(
                         total_tokens += len(tokens)
                         file_count += 1
                 except UnicodeDecodeError:
-                    print(
-                        f"警告: UTF-8でデコードできないファイル: {file_path} (スキップ)"
-                    )
+                    print(f"警告: UTF-8でデコードできないファイル: {file_path} (スキップ)")
                     excluded_files_count += 1
                 except Exception as e:
-                    print(
-                        f"エラー: {file_path} の処理中にエラーが発生しました: {e} (スキップ)"
-                    )
+                    print(f"エラー: {file_path} の処理中にエラーが発生しました: {e} (スキップ)")
                     excluded_files_count += 1
             else:
                 excluded_files_count += 1

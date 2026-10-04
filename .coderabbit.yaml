@@ -30,9 +30,9 @@ reviews:
   poem: false
   enable_prompt_for_ai_agents: false
   path_filters:
-    - "!not_config/**"
-    - "!not_config/sidebery/**"
-    - "!not_config/dbeaver/**"
+    - "!unmanaged/**"
+    - "!unmanaged/sidebery/**"
+    - "!unmanaged/dbeaver/**"
     - "!config-mac/raycast/**"
   path_instructions:
     - path: "config/**/*.json"

@@ -198,10 +198,10 @@ _shortcut() {
     local _popup_cwd=$PWD
     tmux popup -xC -y "#{popup_pane_bottom}" -d "$_popup_cwd" -w95% -h40% -E '\
       export FZF_DEFAULT_OPTS="-m --layout=reverse --border" && \
-      cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+      cat ~/.local/share/chezmoi/unmanaged/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
     '
   else
-    cat ~/.local/share/chezmoi/not_config/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
+    cat ~/.local/share/chezmoi/unmanaged/shortcut/list.csv | column -t -s, | fzf --no-sort --layout=reverse --border
   fi
 }
 zle -N _shortcut

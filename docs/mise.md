@@ -545,7 +545,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
   `mise.linux.toml` に振り分けていたが、後に `~/.config` を track mode へ移行した際に
   ほとんどが共通 `config/` へ吸収され、OS 限定で今も copy として残るのは
-  mise 自体の tool/config pin（`mise.mac.toml`）と raycast・autohotkey の
+  mise 自体の tool/config pin（`mise.mac.toml`）と hammerspoon・autohotkey の
   seed 元（`config-mac/`・`config-linux/`。詳細は後述の track/history の節）だけになった。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
   → `{% if os() == "macos" %}` のような機械的な置換がほとんどで、11 ファイルの書き換えは
@@ -553,8 +553,8 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   `|| true` で必ずガードする点だけが実質的なハマりどころだった）。
 - **WSL→Windows ネイティブアプリへの配置**: これは想定通り `[dotfiles]` の対象外
   （`$HOME` 配下の宣言的配置という設計の範囲外）のままだったため、`mise run
-dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）という
-  **対話式タスク**として持ち越した。元の chezmoi `run_onchange_*.sh.tmpl` が持っていた
+bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstrap.toml`）
+  という**対話式タスク**として持ち越した。元の chezmoi `run_onchange_*.sh.tmpl` が持っていた
   y/n/d の対話プロンプトはそのまま踏襲している。
 
 移行後のアーキテクチャ:
@@ -694,14 +694,19 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
   `[dotfiles]` 側の追記が不要になる。
   **`~/.config` を track mode へ移行した現在の本リポジトリでは、このパターンで
   残っているのは mise 自体の tool/config pin（`config-mac/mise` → `mise.mac.toml`）
-  だけ**。それ以外の OS 限定ファイル（raycast・autohotkey）は `[dotfiles]` の
+  だけ**。それ以外の OS 限定ファイル（hammerspoon・vicinae・autohotkey）は `[dotfiles]` の
   宣言的コピーではなく、track mode の節で述べた `[bootstrap.hooks.pre-dotfiles]`
   の一度きり seed（find+cp、`[dotfiles]` に書かない）で配る形に変わった——OS ごとに
   「常に収束させたい」ものではなく「初回だけ置いて、あとは手元編集の history に
   任せたい」ものだったため。`mise.linux.toml` はこの移行で対象が無くなり削除した。
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
-  もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`）は `not_config/`
-  に置く（このリポジトリではもともとこの用途の慣習的なディレクトリ名だったので流用した）。
+  もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`/`raycast`/
+  `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
+  用途を名前で表している）。`raycast`/`rectangle` はアプリ自体の Import 機能で
+  手動反映する想定（`.rayconfig` はバイナリで diff できないため。docs/raycast.md
+  参照）。`~/.config` 配下に実在するファイルは track mode の対象に変わりなく含まれる
+  （`"~/.config" = { mode = "track" }` はブランケット宣言のため。配布の有無と
+  history 記録の有無は独立している）。
 
 > **同一キーの merge は上書き、別キーは並存する（実機で確認済みの挙動）**
 >
@@ -816,7 +821,7 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   （`mise bootstrap dotfiles track` を実行しても同様）。そのため、真新しいマシンでは
   何もデプロイされない。本リポジトリでは `[bootstrap.hooks.pre-dotfiles]`
   （`mise.toml` 参照）で `config/`（共通）と、OS 限定で残った
-  `config-mac/raycast`・`config-linux/autohotkey` から `~/.config` へ
+  `config-mac/hammerspoon`・`config-linux/autohotkey` から `~/.config` へ
   「無いものだけ」を find+cp で seed してから track フェーズに入るようにしている。
   より宣言的な代替（`[dotfiles]` の copy/template mode、`[bootstrap.files]`/
   `[bootstrap.directories]`）は無いか公式ドキュメントで確認したが、いずれも
@@ -833,8 +838,8 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   （mise 自体の tool/config pin。git 側を正として常に収束させたい）だけを
   copy のまま残し、それ以外を track にしているのはこのため。
 - **`status`/`diff`/`apply` は track エントリに対してはほぼ no-op**（state は常に
-  `applied` ではなく `tracked` になる）。差分レビューは `dotfiles:diff`
-  （`tasks/dotfiles.toml`）ではなく次項の `history diff` を使うこと。
+  `applied` ではなく `tracked` になる）。差分レビューは `bootstrap:dotfiles:diff`
+  （`tasks/bootstrap.toml`）ではなく次項の `history diff` を使うこと。
 
 ### 使い方
 
@@ -843,13 +848,13 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
 # 自動保存serviceが動いているか・origin接続先の有無、をまとめて表示する）
 mise bootstrap dotfiles status
 
-# 変更を今すぐチェックポイントとして保存する（mise run dotfiles:history-save）
+# 変更を今すぐチェックポイントとして保存する（mise run bootstrap:dotfiles:history-save）
 mise bootstrap dotfiles save
 
-# 変更履歴を辿る（mise run dotfiles:history-log）
+# 変更履歴を辿る（mise run bootstrap:dotfiles:history-log）
 mise bootstrap dotfiles history
 
-# working tree と最新 checkpoint の差分（行単位、mise run dotfiles:history-diff で delta へ pipe）
+# working tree と最新 checkpoint の差分（行単位、mise run bootstrap:dotfiles:history-diff で delta へ pipe）
 mise bootstrap dotfiles history diff --patch
 
 # 2つの checkpoint 間の差分
@@ -872,9 +877,11 @@ mise bootstrap dotfiles undo
 
 checkpoint の実体はデフォルトでは各マシンのローカルにしか無い。複数マシンで
 共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは**別の**専用 git
-リポジトリを用意し、各マシンで一度だけ接続する（`[history.origin]` として
-machine-local に書き込まれる設定で、git 管理される `mise.toml`/`config/mise/config.toml`
-側には残らない。マシンごとに実行が必要）。
+リポジトリを用意し、各マシンで一度だけ接続する。接続先は `mise bootstrap dotfiles
+origin set`（`--remove` で解除）でのみ設定でき、config ファイルに直接書く手段は無い
+（`origin --help` 参照）。書き込み先も `[history.origin]` として machine-local に
+なり、git 管理される `mise.toml`/`config/mise/config.toml` 側には残らないため、
+マシンごとに実行が必要。
 
 history 同期専用の **private** リポジトリ `ryo246912/dotfiles-history` を使う:
 

@@ -358,8 +358,7 @@
     ```
 
 - [ ] claude（work3用の追加アカウント）
-  - `claude-work3`コマンドで`CLAUDE_CONFIG_DIR=~/.claude-work3`として起動する（`local/bin/claude-work3`）
-  - 初回実行時に`~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（`claude-work3`実行時に自動で行われるので、通常は手動実行不要）
+  - `~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（devcontainerのpost-createでも同じsymlinkを作るので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
 
     ```sh
     mkdir -p ~/.claude-work3
@@ -371,7 +370,7 @@
   - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
 
     ```sh
-    claude-work3
+    CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
     ```
 
 - [ ] ccmanagerのプロジェクトルート作成

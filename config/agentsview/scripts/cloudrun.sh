@@ -31,9 +31,9 @@ fi
 # ~/.config/agentsview のsourceは常に $DOTFILES_DIR/config/agentsview に決まる
 # （chezmoi source-path 相当の動的解決は不要）。
 dotfiles_source_dir() {
-  dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
-  [ -f "$dotfiles_dir/mise.toml" ] || return 1
-  printf '%s' "$dotfiles_dir/config/agentsview"
+	dotfiles_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+	[ -f "$dotfiles_dir/mise.toml" ] || return 1
+	printf '%s' "$dotfiles_dir/config/agentsview"
 }
 
 check_config_current() {

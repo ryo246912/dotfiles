@@ -47,7 +47,7 @@ run      = "lefthook install"
 #
 # 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
 #    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
-#    （OS限定の raycast・hammerspoon・rectangle・vicinae・autohotkey）から ~/.config へ
+#    （OS限定の hammerspoon・vicinae・autohotkey）から ~/.config へ
 #    「無いものだけ」コピーする一度きりの seed をここで行う。2回目以降は対象ファイルが
 #    既に存在するため実質no-opになる。
 #
@@ -78,9 +78,7 @@ seed_tree() {
 
 seed_tree "$(pwd)/config" "$HOME/.config"
 if [ "$(uname)" = "Darwin" ]; then
-  seed_tree "$(pwd)/config-mac/raycast" "$HOME/.config/raycast"
   seed_tree "$(pwd)/config-mac/hammerspoon" "$HOME/.config/hammerspoon"
-  seed_tree "$(pwd)/config-mac/rectangle" "$HOME/.config/rectangle"
   seed_tree "$(pwd)/config-mac/vicinae" "$HOME/.config/vicinae"
 else
   seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
