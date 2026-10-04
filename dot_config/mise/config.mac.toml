@@ -79,15 +79,24 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
 
 # borders の常駐（`mise bootstrap macos launchd-agents apply` で適用）。
-# 設定は起動時に ~/.config/borders/bordersrc が読まれ、その中で borders を呼ぶため PATH を通す
+# 既定の枠設定は bordersrc を作らず起動引数で渡す（引数があると borders は bordersrc を読まない）。
+# アプリごとの色は ~/.hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
+# inactive_color を透明にしているため、ルールに無いアプリは非フォーカス時に枠を出さない
 [bootstrap.macos.launchd.agents.borders]
-environment  = { PATH = "/opt/homebrew/bin:/usr/bin:/bin", LANG = "en_US.UTF-8" }
-keep_alive   = true
+args = [
+    "style=round",
+    "width=6.0",
+    "hidpi=on",
+    "active_color=0xffe2e2e3",
+    "inactive_color=0x00000000",
+]
+environment = { LANG = "en_US.UTF-8" }
+keep_alive = true
 process_type = "Interactive"
-program      = "/opt/homebrew/bin/borders"
-run_at_load  = true
-stderr_path  = "~/Library/Logs/borders.err.log"
-stdout_path  = "~/Library/Logs/borders.out.log"
+program = "/opt/homebrew/bin/borders"
+run_at_load = true
+stderr_path = "~/Library/Logs/borders.err.log"
+stdout_path = "~/Library/Logs/borders.out.log"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）
 [bootstrap.macos.finder]
