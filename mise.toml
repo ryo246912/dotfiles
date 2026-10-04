@@ -9,17 +9,18 @@ includes = ["tasks/*.toml"]
 
 [tools]
 "aqua:awslabs/git-secrets"       = "1.3.0"
-"aqua:evilmartians/lefthook"     = "2.1.10"
+"aqua:evilmartians/lefthook"     = "2.1.14"
+"aqua:mvdan/sh"                  = "3.14.1"
 "aqua:rhysd/actionlint"          = "1.7.12"
 "aqua:secretlint/secretlint"     = "13.0.5"
 "aqua:suzuki-shunsuke/ghalint"   = "1.5.6"
-"aqua:suzuki-shunsuke/pinact"    = "4.1.1"
+"aqua:suzuki-shunsuke/pinact"    = "5.0.0"
 "aqua:tamasfe/taplo"             = "0.10.0"
-"aqua:zizmorcore/zizmor"         = "1.28.0"
+"aqua:zizmorcore/zizmor"         = "1.30.1"
 "github:betterleaks/betterleaks" = "1.3.1"
 "github:superfly/flyctl"         = "0.4.29"
-"npm:oxfmt"                      = "0.59.0"
-"npm:oxlint"                     = "1.76.0"
+"npm:oxfmt"                      = "0.71.0"
+"npm:oxlint"                     = "1.86.0"
 
 [hooks]
 postinstall = """
@@ -45,8 +46,9 @@ run      = "lefthook install"
 #
 # 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
 #    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
-#    （OS限定で残った raycast・autohotkey のみ）から ~/.config へ「無いものだけ」コピーする
-#    一度きりの seed をここで行う。2回目以降は対象ファイルが既に存在するため実質no-opになる。
+#    （OS限定の raycast・hammerspoon・rectangle・vicinae・autohotkey）から ~/.config へ
+#    「無いものだけ」コピーする一度きりの seed をここで行う。2回目以降は対象ファイルが
+#    既に存在するため実質no-opになる。
 #
 #    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
 #    - [dotfiles] の track mode は "Track entries cannot contain source, content,
@@ -76,6 +78,9 @@ seed_tree() {
 seed_tree "$(pwd)/config" "$HOME/.config"
 if [ "$(uname)" = "Darwin" ]; then
   seed_tree "$(pwd)/config-mac/raycast" "$HOME/.config/raycast"
+  seed_tree "$(pwd)/config-mac/hammerspoon" "$HOME/.config/hammerspoon"
+  seed_tree "$(pwd)/config-mac/rectangle" "$HOME/.config/rectangle"
+  seed_tree "$(pwd)/config-mac/vicinae" "$HOME/.config/vicinae"
 else
   seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
 fi

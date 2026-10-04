@@ -25,6 +25,10 @@ docker system df
 # disk image [-s:file block size][-k:KB][file:Docker.raw or Docker.qcow2]
 ls -sk ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
 
+# disk image : shrink unused space without deleting data(sparse) [require:quit Docker Desktop & GNU cp(coreutils)][needs free space = shrunk size, not a 2nd full copy][Docker.raw is untouched until the mv, so a failure loses nothing]
+cp --sparse=always ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.new &&
+mv ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw.new ~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw
+
 # display no referenced images [-f:filter (dangling=not referenced by any containers)]
 docker image ls -f dangling=true
 

@@ -1,0 +1,19 @@
+line-length    = 100
+target-version = "py311"
+
+[lint]
+ignore = [
+    "COM812", # Conflicts with the formatter.
+    "D203",   # Prefer D211: no blank line before a class docstring.
+    "D213",   # Prefer D212: summary on the first docstring line.
+]
+select = ["ALL"]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[format]
+docstring-code-format = true
+indent-style          = "space"
+line-ending           = "lf"
+quote-style           = "double"

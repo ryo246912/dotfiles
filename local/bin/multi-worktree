@@ -944,8 +944,20 @@ generate_devcontainer() {
         # worktree のマウント
         worktree_mounts+="\"type=bind,source=${worktree_path},target=/workspaces/${worktree_name}/${repo_name}\""
 
-        # 実体リポジトリのマウント（.git アクセス用）
-        worktree_mounts+=",\"type=bind,source=${repo},target=${repo}\""
+        # 実体リポジトリの common git dir（.git）だけを、ホストと同じ絶対パスにマウントする。
+        # worktree の .git file は common git dir 配下を絶対パスで参照するため、同じパスに
+        # mount すればコンテナ内でも git が使え、実体リポジトリの working tree や兄弟
+        # ディレクトリは見えない。
+        # relative-paths 形式の repo は古い git では rev-parse 自体が失敗するため、先に確認する
+        if grep -q '^gitdir: [^/]' "${worktree_path}/.git" 2>/dev/null; then
+            log_warn "[$repo_name] worktree が relative-paths 形式のため、コンテナ内で git が使えません。docs/devcontainer.md の移行手順で絶対パスに戻してください"
+        fi
+        local common_git_dir
+        if ! common_git_dir=$(git -C "$worktree_path" rev-parse --path-format=absolute --git-common-dir); then
+            log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $worktree_path"
+            continue
+        fi
+        worktree_mounts+=",\"type=bind,source=${common_git_dir},target=${common_git_dir}\""
     done
 
     worktree_mounts+="]"

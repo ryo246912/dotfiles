@@ -345,8 +345,8 @@ brew list --cask --versions
   後者3つは private ホスト限定のため `HOST_ENV` で判定して work ホストではスキップする）。
 - パスワードプロンプトで**止まって見える**（エラーは出ない） →
   cask のインストーラが `pkg`（Apple 標準の installer 形式）で、システムレベルの
-  コンポーネント導入に sudo を要求する場合、`.chezmoi.toml.tmpl` の post-apply hook
-  （非対話実行）の途中で気づかれにくいパスワードプロンプトが挟まりハングしているように
+  コンポーネント導入に sudo を要求する場合、`mise bootstrap`（非対話実行）の
+  途中で気づかれにくいパスワードプロンプトが挟まりハングしているように
   見える。エラーではないのでパスワードを入力すれば進むが、post-apply hook を無言のまま
   完走させたい場合は該当パッケージを `[bootstrap.packages]` から外し
   `mise run bootstrap:mac-packages` 側の例外パッケージとして扱う（ユーザーが明示的に
@@ -386,10 +386,9 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 いずれも `brew tap` を先に打たず `brew install owner/tap/<name>` の完全修飾名で
 インストールしている（Homebrew の tap trust: `brew tap` 後の短縮名インストールは
 未信頼 tap で失敗しうるが、完全修飾名はその項目単体を暗黙に信任するため安全）。
-**`.chezmoi.toml.tmpl` の post-apply hook は `mise bootstrap packages apply` の失敗を
-fatal 扱いする**ため、未確認の tap を安易に `[bootstrap.packages]` に入れると、hook 全体を
-壊すリスクがある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に
-検証してから。
+**`mise bootstrap packages apply` の失敗はそのまま `mise bootstrap` 全体を止める**ため、
+未確認の tap を安易に `[bootstrap.packages]` に入れると、bootstrap 全体を壊すリスクが
+ある。追加する場合は先に `mise bootstrap packages apply --dry-run` で個別に検証してから。
 
 # chezmoi ↔ mise dotfiles 比較検討
 
@@ -894,3 +893,17 @@ mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
   （`$MISE_PROJECT_ROOT` 等）はフック内では未設定になる。フック・タスク内で
   リポジトリの場所を参照したい場合は `$(pwd)` で解決するか、常にリポジトリ直下から
   実行する運用にする（本リポジトリの `[bootstrap.hooks.*]` はこの前提で書いている）。
+
+## mise にない機能: chezmoi `modify_`（既存内容への部分マージ）
+
+mise の `[dotfiles]` は `symlink`/`copy`/`template`/`track`/`block`/`line` の
+各 mode を持つが、chezmoi の `modify_`（**target の既存内容を stdin で受け取り、
+任意の変換結果を書き出す**）に相当する mode は無い。`template` は常に
+source からの生成結果で target を上書きするだけで、既存 target を読んでマージする
+機能ではない（`track` は内容を一切変更せず履歴保存のみ）。
+
+この制約により、「アプリが自分で書き換える設定ファイルの一部キーだけを共有する」
+（例: ghui の `config.json` に `editorCommand` だけ注入し、ユーザーのテーマ設定は
+保持する）という chezmoi `modify_` の用途は mise へ1:1移植できない。本リポジトリでは
+この種のユースケースを持ち込まない方針とし、ghui の `editorCommand` 連携は
+この移行では見送った（必要なら `~/.config/ghui/config.json` を手動で編集する）。

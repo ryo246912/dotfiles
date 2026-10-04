@@ -1,5 +1,14 @@
 export WORDCHARS="*?_-.[]~&;=!#$%^(){}<>"
 
+# 履歴ファイルの保存先。
+# zsh は rc ファイル（= この .zshrc 経由の読込）を全て流した後、最初のプロンプトを出す前に
+# HISTFILE を1回だけ読み込む。zinit の turbo（wait）で遅延読込される lazy/*.zsh で設定すると
+# その読込に間に合わず、macOS の /etc/zshrc が設定する $ZDOTDIR/.zsh_history（過去の残骸）が
+# 読まれてしまい、`exec $SHELL -l` 直後の履歴が数十件しか無い状態になる。
+# （その後 share_history のインポートで実ファイルが読まれ、コマンドを1回実行すると全件見えるようになる）
+# そのため HISTFILE だけは遅延させず、必ずここ（起動時）で設定する。
+mkdir -p "$XDG_STATE_HOME/zsh" 2>/dev/null
+export HISTFILE="$XDG_STATE_HOME/zsh/.zsh_history"
 # zshプロセスのメモリ上に保存される履歴の件数
 HISTSIZE=10000
 # ファイルに保存される履歴の件数

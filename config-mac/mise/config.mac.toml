@@ -7,7 +7,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 [tools]
 "cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
 "github:hzqtc/taproom"                        = { version = "0.6.2", bin = "taproom" }
-"http:terminal-browser"                       = { version = "0.7.5", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
+"http:terminal-browser"                       = { version = "0.11.1", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
 # silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
@@ -31,6 +31,9 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew:tig"          = "latest" # 2.6.1
 "brew:tree"         = "latest" # 2.3.2
 "brew:ugrep"        = "latest" # 7.8.3
+# 独自 tap（[bootstrap.brew.taps]）の formula。bottle が無く mise がソースビルドする（要 Xcode CLT）。
+# Homebrew API メタデータが無く renovate で追えないためバージョンマーカーは付けない。
+"brew:felixkratz/formulae/borders" = "latest"
 
 # casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
 # が中断/ハングするため `mise run bootstrap:mac-packages`
@@ -39,8 +42,6 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 # - thock: 独自 tap + postflight（thock --install）
 # - firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact
 # - docker-desktop: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応
-# - raycast: mise brew-cask 経由だと `app artifact 'Raycast.app' was not found` で
-#   ERROR になる（根本原因未確認。実 brew では問題なくインストールできることを確認済み）
 # - opencode-bar: 独自 tap（opgginc/tap）が Homebrew API メタデータ未公開
 # - google-drive/tailscale-app: pkg インストーラが sudo を要求し post-apply hook（非対話）を
 #   止めてしまう。keycastr/termius/thunderbird は auto_updates を使っており mise の
@@ -58,16 +59,42 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:font-hackgen-nerd"     = "latest" # 2.10.0
 "brew-cask:ghostty"               = "latest" # 1.3.1
 "brew-cask:google-chrome"         = "latest" # 151.0.7922.72
+"brew-cask:hammerspoon"           = "latest" # 1.1.1
 "brew-cask:karabiner-elements"    = "latest" # 13.7.0
 "brew-cask:keyboardcleantool"     = "latest" # 7
 "brew-cask:memory-cleaner"        = "latest" # 5.5.3,271
 "brew-cask:obsidian"              = "latest" # 1.13.4
 "brew-cask:overview"              = "latest" # 1.2.3-beta
+"brew-cask:rectangle"             = "latest" # 1.100
 "brew-cask:slack"                 = "latest" # 4.51.180
 "brew-cask:syncthing-app"         = "latest" # 2.1.2-1
 "brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
 "brew-cask:visual-studio-code"    = "latest" # 1.106.3
 "brew-cask:wezterm@nightly"       = "latest"
+
+[bootstrap.brew.taps]
+"felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
+
+# borders の常駐（`mise bootstrap macos launchd-agents apply` で適用）。
+# 既定の枠設定は bordersrc を作らず起動引数で渡す（引数があると borders は bordersrc を読まない）。
+# アプリごとの色は ~/.config/hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
+# inactive_color を透明にしているため、ルールに無いアプリは非フォーカス時に枠を出さない
+[bootstrap.macos.launchd.agents.borders]
+args = [
+    "style=round",
+    "width=12.0",
+    "hidpi=on",
+    "active_color=0xffe2e2e3",
+    "inactive_color=0x00000000",
+]
+environment = { LANG = "en_US.UTF-8" }
+keep_alive = true
+process_type = "Interactive"
+program = "/opt/homebrew/bin/borders"
+run_at_load = true
+stderr_path = "~/Library/Logs/borders.err.log"
+stdout_path = "~/Library/Logs/borders.out.log"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）
 [bootstrap.macos.finder]
@@ -81,3 +108,5 @@ key_repeat         = 2
 [bootstrap.macos.defaults]
 "NSGlobalDomain"   = { "com.apple.swipescrolldirection" = false }
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
+# Hammerspoon の設定を ~/.hammerspoon ではなく ~/.config/hammerspoon から読ませる（~ は Hammerspoon 側で展開）
+"org.hammerspoon.Hammerspoon" = { MJConfigFile = "~/.config/hammerspoon/init.lua" }

@@ -28,6 +28,24 @@ globs:
 - リファクタリングや実装方針の「案」を求められた場合は、コードを変更せずに提案のみを行う
 - 実装（ファイル編集）は「実装して」「コードに反映して」など、変更を明示的に依頼された場合のみ行う
 
+## Local development environment
+
+- devcontainer内でPlannotatorのreview画面を起動したら、reviewerがfeedbackを送信するかsessionを閉じるまで、`plannotator annotate`のprocessを終了、background化、または再起動せずに待つ
+- frontend、backend、databaseなど、host browserからaccessされるlocal serviceを起動するときは、次の順序を守る
+  1. frontendとbackendのdevelopment server、およびSupabaseなど依存するlocal serviceを起動し、それぞれがcontainer内でlistenしていることを確認する
+  2. host browserからaccessするすべてのportについて、`~/.config/devcontainer/scripts/ensure-plannotator-tunnel <port>`を実行し、SSH reverse tunnelを準備する
+  3. 必要なportをすべて準備してから`plannotator annotate <URL> --app`をforegroundで起動する
+- Plannotatorが自動で転送するのはannotation editorとlive-app proxyのportだけである。live appがbrowserから直接accessするAPI、Supabase、asset serverなどのportは自動転送されないため、漏れなく個別に`ensure-plannotator-tunnel`を実行する
+- container内の`curl`だけで動作確認を完了しない。host browserと同じ経路でも画面操作、API request、認証などを確認する
+- 例: Expo Webが`8081`、APIが`3000`、Supabase APIが`54321`でlistenする場合は、各serviceの起動後、Plannotatorの起動前に次を実行する
+
+  ```bash
+  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 8081
+  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 3000
+  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 54321
+  plannotator annotate http://localhost:8081 --app
+  ```
+
 ## コミットの粒度
 
 - コード実装を依頼されている場合は、変更を未コミットのまま溜め込まず、意味のある作業単位が完了するたびにコミットする

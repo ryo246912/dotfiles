@@ -37,9 +37,15 @@
         "/(^|\\/)aws-cli$/",
         "/(^|\\/)cosign$/",
         "/(^|\\/)rust$/",
-        "/(^|\\/)pdm$/"
+        "/(^|\\/)pdm$/",
+        "/(^|\\/)cspell$/"
       ],
       "matchUpdateTypes": ["minor", "patch"],
+      "enabled": false
+    },
+    {
+      "matchPackageNames": ["docker/cli", "aqua:docker/cli"],
+      "matchUpdateTypes": ["patch"],
       "enabled": false
     },
     {
@@ -90,6 +96,14 @@
         "cargo:https://github.com/vorojar/md-preview"
       ],
       "groupName": "md-preview"
+    },
+    {
+      "matchPackageNames": [
+        "github:backnotprop/plannotator",
+        "backnotprop/plannotator",
+        "https://github.com/backnotprop/plannotator"
+      ],
+      "groupName": "plannotator"
     },
     {
       "matchPackageNames": [

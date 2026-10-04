@@ -152,7 +152,7 @@ git push origin :<branch>
 git rebase --autosquash --autostash -i <commit1>
 
 # rebase onto [--onto: --onto <base_branch> <pick_start_commit>^ ~ <pick_end_commit>(HEAD)] [ex.git rebase --onto release/xxx abcdef^]
-git rebase --autosquash --autostash --onto <all_branch> <commit1>^
+git rebase --autosquash --autostash --onto <all_branch> <pick_start_commit>^
 
 # git grep [-i:ignore upper&lower][-P:perl regex]
 git grep -iP '<regex>' <grep_commit> -- <dir>
@@ -238,8 +238,8 @@ git remote set-url <shortname> git@github.com:<user>/<repo>.git
 # add remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add <shortname> git@github.com:<user>/<repo>.git
 
-# add origin url
-git remote add origin $(gh repo view owner/repo --json sshUrl -q .sshUrl)
+# add origin url (select from own repository)
+git remote add origin $(gh repo view <own_repo> --json sshUrl -q .sshUrl)
 
 # add upstream remote url [ex:git remote add upstream git@github.com:<user>/<repo>.git]
 git remote add upstream https://github.com/$(git remote get-url upstream |sed -e 's/https:\/\/github.com\///' -e 's/\.git$//')
@@ -298,11 +298,34 @@ $ author: echo -e "\n@me\n$(gh api "/repos/$(git config remote.origin.url | sed 
 $ search: echo -e "\nuser-review-requested:@me\nreviewed-by:@me\ninvolves:@me\n$(gh api "/repos/$(git config remote.origin.url | sed -e 's/.*github.com.\(.*\).*/\1/' -e 's/\.git//')/contributors?per_page=100" | jq -r '(.[] | "involves:"+.login )')"
 $ state: echo -e "open\nall\nclosed\nmerged"
 
+$ own_repo: gh repo list --limit 100 \
+  --json nameWithOwner,visibility,pushedAt,description \
+  --jq '\
+    ["repo","visibility","pushedAt","description"] \
+    , ( .[] | \
+    [.nameWithOwner \
+    ,.visibility \
+    ,(if .pushedAt then (.pushedAt | strptime("%Y-%m-%dT%H:%M:%SZ") | strftime("%Y/%m/%d %H:%M:%S")) else "-" end) \
+    ,.description[0:50] \
+    ]) | @tsv \
+  ' \
+  | column -ts $'\t' \
+  --- --headers 1 --column 1
+
 $ commit1: git log <branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
 $ commit2: git log <branch> \
+  --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
+  --- --column 1 --delimiter ; \
+  --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
+$ pick_branch: cat \
+  <(git rev-parse --abbrev-ref HEAD) \
+  <(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) \
+  <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
+  --- --column 1 --header 'pick_branch: select the branch to log commits from' --map 'printf "%q" "$(cat)"'
+$ pick_start_commit: git log <pick_branch> \
   --pretty=format:"%h; (%cd)%d %s" --date=format:"%Y/%m/%d %H:%M:%S" \
   --- --column 1 --delimiter ; \
   --preview "git show {1} --name-only --oneline | sed -e 1d -e '$ s/$/\n/' ; git show {1} | delta --no-gitconfig"
@@ -327,7 +350,7 @@ $ remote_branch: git branch -r --format='%(refname:short) %09 %(committername) %
   --- --column 1 --map "sed s'|origin/||'"
 $ all_branch: cat \
   <(git rev-parse --abbrev-ref HEAD) \
-  <(git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f3,4) \
+  <(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) \
   <(git branch -a --format='%(refname:short) %09 %(committername) %09 %(committerdate:format:%Y/%m/%d %H:%M) %09 %(objectname:short)' | column -ts $'\t') \
   --- --column 1
 $ merge_branch: git fetch -p --tags && \

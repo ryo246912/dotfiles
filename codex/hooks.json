@@ -20,6 +20,12 @@
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
             "timeout": 30,
             "statusMessage": "Reviewing recent transcript for rule updates"
+          },
+          {
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+            "timeout": 345600,
+            "statusMessage": "Opening plan in Plannotator"
           }
         ]
       }

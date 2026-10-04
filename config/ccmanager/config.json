@@ -31,31 +31,29 @@
     "presets": [
       {
         "id": "1",
-        "name": "Claude A1",
+        "name": "Claude account1",
         "command": "claude",
         "args": ["--dangerously-skip-permissions"],
         "fallbackArgs": []
       },
       {
-        "id": "2",
-        "name": "Claude A2 (resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
-        "fallbackArgs": [],
+        "id": "8",
+        "name": "Claude account2",
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --dangerously-skip-permissions"
+        ],
         "detectionStrategy": "claude"
       },
       {
-        "id": "3",
-        "name": "Claude A1 (no resume)",
-        "command": "claude",
-        "args": ["--dangerously-skip-permissions"],
-        "detectionStrategy": "claude"
-      },
-      {
-        "id": "4",
-        "name": "Claude A2 (no resume)",
-        "command": "claude2",
-        "args": ["--dangerously-skip-permissions"],
+        "id": "10",
+        "name": "Claude Work3",
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --dangerously-skip-permissions"
+        ],
         "detectionStrategy": "claude"
       },
       {
