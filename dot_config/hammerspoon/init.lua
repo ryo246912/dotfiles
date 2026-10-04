@@ -1,4 +1,4 @@
--- ~/.hammerspoon 配下のファイル変更（chezmoi apply 等）で設定を自動リロードする
+-- ~/.config/hammerspoon 配下のファイル変更（chezmoi apply 等）で設定を自動リロードする
 configWatcher = hs.pathwatcher
   .new(hs.configdir, function(files)
     for _, file in ipairs(files) do

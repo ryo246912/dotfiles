@@ -80,12 +80,12 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:wezterm@nightly"       = "latest"
 
 [bootstrap.brew.taps]
-# JankyBorders（アプリごとの枠の色は ~/.hammerspoon/app_borders_rules.lua）
+# JankyBorders（アプリごとの枠の色は ~/.config/hammerspoon/app_borders_rules.lua）
 "felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
 
 # borders の常駐（`mise bootstrap macos launchd-agents apply` で適用）。
 # 既定の枠設定は bordersrc を作らず起動引数で渡す（引数があると borders は bordersrc を読まない）。
-# アプリごとの色は ~/.hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
+# アプリごとの色は ~/.config/hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
 # inactive_color を透明にしているため、ルールに無いアプリは非フォーカス時に枠を出さない
 [bootstrap.macos.launchd.agents.borders]
 args = [
@@ -115,3 +115,5 @@ key_repeat         = 2
 [bootstrap.macos.defaults]
 "NSGlobalDomain"   = { "com.apple.swipescrolldirection" = false }
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
+# Hammerspoon の設定を ~/.hammerspoon ではなく ~/.config/hammerspoon から読ませる（~ は Hammerspoon 側で展開）
+"org.hammerspoon.Hammerspoon" = { MJConfigFile = "~/.config/hammerspoon/init.lua" }
