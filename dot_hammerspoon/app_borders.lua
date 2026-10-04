@@ -13,6 +13,7 @@ local CREATE_DELAY_SEC = 0.5
 
 local args_cache = {} -- pid -> 起動引数
 local pending = {} -- window id -> 生成時の遅延タイマー（GC 対策で参照を保持）
+local running_tasks = {} -- 実行中の borders プロセス（GC 対策で参照を保持）
 
 local function find_borders()
   for _, path in ipairs(BORDERS_CANDIDATES) do
@@ -65,13 +66,19 @@ local function paint(win)
   for _, rule in ipairs(M.rules) do
     if match(rule, app) then
       -- フォーカスのたびに送り直すので、borders 再起動で上書きが消えても次のフォーカスで復帰する
-      hs.task
-        .new(M.borders, nil, {
-          'apply-to=' .. win:id(),
-          'active_color=' .. rule.color,
-          'inactive_color=' .. (rule.inactive or inactive_of(rule.color)),
-        })
-        :start()
+      local task
+      task = hs.task.new(M.borders, function()
+        running_tasks[task] = nil
+      end, {
+        'apply-to=' .. win:id(),
+        'active_color=' .. rule.color,
+        'inactive_color=' .. (rule.inactive or inactive_of(rule.color)),
+      })
+      -- 実行中の hs.task が GC されると終了させられるため、完了まで参照を保持する
+      running_tasks[task] = true
+      if not task:start() then
+        running_tasks[task] = nil
+      end
       return
     end
   end
