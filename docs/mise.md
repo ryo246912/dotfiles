@@ -946,6 +946,9 @@ X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...
   `apm: command not found` で落ちる）。pinned versionを上げた直後など、
   apm/rulesync自身がlockfileに無い状態になったら、`MISE_LOCKED`無しで
   一度 `mise install` してlockfileを更新してから実行すること。
+  hookでは、使わないtoolの未登録警告がnestedな`mise run`の回数だけ繰り返されるため、
+  `MISE_LOG_LEVEL=error`も設定してmise自身のWARNだけを抑制している。この設定は
+  `apm install`やrulesync taskがstderrへ出す警告・エラーには影響しない。
 
 ## mise にない機能: chezmoi `modify_`（既存内容への部分マージ）
 

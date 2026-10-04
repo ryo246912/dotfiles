@@ -90,14 +90,17 @@ fi
 # 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
 #    MISE_HISTORY_ENABLED=0でprotective checkpointだけを無効化するが、hook自体は実行する。
 #    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
+#    MISE_LOCKED=1はglobal tool tableのnetwork解決を防ぐ速度対策。lockfile未登録の
+#    無関係なtool警告だけをMISE_LOG_LEVEL=errorで隠す（task自身のstderrは隠れない）。
 [bootstrap.hooks.post-dotfiles]
 run = """
 set -e
+export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 if mise which apm >/dev/null 2>&1; then
-  MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
+  mise --cd "$HOME" run apm:sync
 fi
 if mise which rulesync >/dev/null 2>&1; then
-  MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
+  mise --cd "$HOME" run rulesync:sync
 fi
 """
 
@@ -147,8 +150,9 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 [bootstrap.hooks.post-tools]
 run = """
 set -e
-MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
-MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
+export MISE_LOCKED=1 MISE_LOG_LEVEL=error
+mise --cd "$HOME" run apm:sync
+mise --cd "$HOME" run rulesync:sync
 """
 
 # "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
