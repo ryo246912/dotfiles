@@ -112,9 +112,12 @@ fi
 lock_file="${XDG_STATE_HOME:-$HOME/.local/state}/agentsview/push.lock"
 lock_owned=""
 lock_stale_min=1440
+my_id="$$ $(proc_token "$$")"
 
 cleanup() {
-  [ -n "$lock_owned" ] && rm -f "$lock_file"
+  # 自分が今も owner のときだけ消す。万一（例: 24h backstop）別起動に奪われていた場合に、
+  # その新しい owner のロックを誤って消して多重 push を招かないようにする。
+  [ -n "$lock_owned" ] && [ "$(cat "$lock_file" 2>/dev/null || true)" = "$my_id" ] && rm -f "$lock_file"
   return 0
 }
 trap cleanup EXIT
@@ -127,7 +130,7 @@ mkdir -p "$(dirname "$lock_file")"
 # 成功で lock_owned=1。既に存在すれば非 0。
 acquire_lock() {
   _tmp="$(mktemp "${lock_file}.XXXXXX")" || return 1
-  printf '%s %s\n' "$$" "$(proc_token "$$")" >"$_tmp"
+  printf '%s\n' "$my_id" >"$_tmp"
   if ln "$_tmp" "$lock_file" 2>/dev/null; then
     rm -f "$_tmp"
     lock_owned=1
