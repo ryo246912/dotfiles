@@ -46,8 +46,16 @@ local function inactive_of(color)
   return inactive
 end
 
+-- borders の常駐プロセス（launchd agent）が居ない状態で `borders apply-to=...` を実行すると、
+-- そのプロセス自身が既定設定のまま常駐してしまい、後から起動した launchd agent 側が
+-- 設定を送って終了→keep_alive で再起動、を繰り返す。そのため常駐を確認してから送る
+local function borders_running()
+  local _, ok = hs.execute('/usr/bin/pgrep -xq borders')
+  return ok
+end
+
 local function paint(win)
-  if not win or not win:id() then
+  if not win or not win:id() or not borders_running() then
     return
   end
   local app = win:application()
@@ -103,9 +111,12 @@ function M.start(rules)
   end)
   M.app_watcher:start()
 
-  for _, win in ipairs(M.filter:getWindows()) do
-    paint(win)
-  end
+  -- ログイン直後は borders より先に Hammerspoon が起動しうるため、常駐を待ってから全ウィンドウに適用する
+  M.startup_timer = hs.timer.waitUntil(borders_running, function()
+    for _, win in ipairs(M.filter:getWindows()) do
+      paint(win)
+    end
+  end, 2)
 end
 
 return M

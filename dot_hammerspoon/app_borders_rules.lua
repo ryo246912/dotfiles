@@ -8,6 +8,7 @@
 -- 色の指定（0xAARRGGBB。JankyBorders の gradient(...) / glow(...) 記法も可）
 --   color    : フォーカス時の色（必須）
 --   inactive : 非フォーカス時の色。省略時は color のアルファを 0x88 にした色
+--              （0xffRRGGBB 形式のときのみ。gradient/glow を使う場合は inactive を明示する）
 --
 -- 注意: args は部分一致なので、より具体的なルール（Claude2 等）を汎用ルールより上に書く
 return {
