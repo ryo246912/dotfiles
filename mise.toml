@@ -100,13 +100,24 @@ fi
 #    同名フィールドで上書きされるため。tasks/task-configuration.html#task_config.cascade
 #    参照）。`mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に
 #    切り替えることで回避する。
+#
+#    `MISE_LOCKED=1` を付けているのは速度対策。`mise --cd "$HOME" run ...` は
+#    cd先の global config.toml（[tools] に100件超のtool pin）をそのたびに新規解決
+#    しようとし、各toolのversion解決（特にlockfileに無い/古いもの）がnetwork越しに
+#    なるため、実機で1回あたり数十秒〜かかることがある（実機確認済み。sandbox環境では
+#    120秒経っても終わらなかった）。apm:sync/rulesync:syncはapm/rulesyncの2toolだけ
+#    使えればよく、他のtool群を毎回解決し直す必要が無いため、`MISE_LOCKED=1`で
+#    lockfile済みのversionへ解決を限定し、network解決をskipする（実機確認済み:
+#    120秒超→0.3秒）。lockfileに無いtool分は
+#    `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
+#    という警告が出るが、apm/rulesync自体の解決には影響しない無害な警告。
 [bootstrap.hooks.post-dotfiles]
 run = """
 if mise which apm >/dev/null 2>&1; then
-  mise --cd "$HOME" run apm:sync
+  MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
 fi
 if mise which rulesync >/dev/null 2>&1; then
-  mise --cd "$HOME" run rulesync:sync
+  MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
 fi
 """
 
@@ -156,11 +167,11 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 #    確実に同期する。post-dotfiles 側で未導入のためスキップされた場合（真新しいマシン等）
 #    はここで初めて実行される。post-dotfiles で既に実行済みの場合はハッシュマーカーが
 #    更新済みなので、ここでの再実行は差分ゼロの no-op になる（apm:sync/rulesync:sync 参照）。
-#    `--cd "$HOME"` が必要な理由は post-dotfiles のコメント参照。
+#    `--cd "$HOME"` と `MISE_LOCKED=1` が必要な理由は post-dotfiles のコメント参照。
 [bootstrap.hooks.post-tools]
 run = """
-mise --cd "$HOME" run apm:sync
-mise --cd "$HOME" run rulesync:sync
+MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
+MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
 """
 
 # "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global

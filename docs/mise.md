@@ -917,6 +917,18 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   （`$MISE_PROJECT_ROOT` 等）はフック内では未設定になる。フック・タスク内で
   リポジトリの場所を参照したい場合は `$(pwd)` で解決するか、常にリポジトリ直下から
   実行する運用にする（本リポジトリの `[bootstrap.hooks.*]` はこの前提で書いている）。
+- `mise --cd <dir> run <task>` は、呼び出し時点で `<dir>` の config（グローバル
+  config ならその `[tools]` 全件）を毎回新規に解決しようとする。pin済みversionが
+  lockfileに無い/古い場合はnetwork越しのversion解決が走り、tool数が多いと
+  1回の呼び出しに数十秒〜数分かかることがある（実機・sandbox両方で確認済み。
+  sandboxでは`[tools]`が100件超のglobal configに対して3分14秒かかった）。
+  実際に使うtoolが決まっている軽量taskを呼ぶだけなら `MISE_LOCKED=1`
+  （`--locked` 相当）を付け、lockfile済みのversionへ解決を限定してnetwork解決を
+  skipする（同条件で0.3秒まで短縮できた。本リポジトリの `post-dotfiles`/
+  `post-tools` フックが `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
+  lockfileに無いtoolについては
+  `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
+  という警告が出るが、無関係なtoolの警告なので無視してよい。
 
 ## mise にない機能: chezmoi `modify_`（既存内容への部分マージ）
 
