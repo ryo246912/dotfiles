@@ -92,11 +92,11 @@ dependencies:
 
 ### 外部スキルを追加・更新する（依存として取り込む）
 
-`apm/apm.yml` の `dependencies.apm` を編集し（SHA pin 付き）、`mise bootstrap dotfiles apply` → `mise run apm:install`
+`apm/apm.yml` の `dependencies.apm` を編集し（SHA pin 付き）、`mise bootstrap dotfiles apply` → `mise --cd "$HOME" run apm:install`
 を実行します。
 
 ```bash
-mise run apm:install
+mise --cd "$HOME" run apm:install
 # または
 apm install -g
 ```
@@ -108,7 +108,7 @@ Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech
 `$tsumiki-init-tech-stack` のように呼び出します。Codexのcustom prompt（`/prompts:...`）には依存しません。
 `mise bootstrap` の `[bootstrap.hooks.final]` は `~/.apm/apm.yml` と `~/.apm/apm.lock.yaml` の内容を
 前回の成功時と比較し、変更がない場合はこの install・command 同期・command生成をスキップします。
-手動の `mise run apm:install` はこの判定に関係なく常に実行できます。
+手動の `mise --cd "$HOME" run apm:install` はこの判定に関係なく常に実行できます。
 同期時は source directory 側の `apm/apm.lock.yaml` を `0644` に正規化するため、APM が user scope の
 lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles apply` で mode 差分は表示されません。
 

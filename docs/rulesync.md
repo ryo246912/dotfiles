@@ -87,7 +87,7 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 ## 生成コマンド
 
 ```bash
-mise run rulesync:generate
+mise --cd "$HOME" run rulesync:generate
 ```
 
 `config/mise/tasks/dev.toml` で以下の2ステップを実行します。

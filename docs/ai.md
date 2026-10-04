@@ -64,7 +64,7 @@ multi-worktree の task root では `--config` を省略します（task root �
 
 ```bash
 mise bootstrap dotfiles apply
-mise run apm:install
+mise --cd "$HOME" run apm:install
 ```
 
 `mise run apm:install` は user scope で skill をインストールします。Claude Code では
@@ -72,7 +72,7 @@ mise run apm:install
 インストール後は、エージェントを新しいセッションで起動してください。
 
 依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise run apm:install` を実行します。
+`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
 
 ### Plannotator / Effective HTML
 

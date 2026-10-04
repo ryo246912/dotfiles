@@ -9,13 +9,13 @@ mise で dotfiles を反映した後、ctx CLI と APM 管理の skills をイ�
 ```bash
 mise bootstrap dotfiles apply
 mise install github:ctxrs/ctx
-mise run apm:install
+mise --cd "$HOME" run apm:install
 ```
 
 `mise run apm:install` は `apm install -g` で生成された `~/.apm/apm.lock.yaml` を mise dotfiles source directory の `apm/apm.lock.yaml` へコピーします。lockfile どおりに再現インストールする npm ci 相当の task は `mise run apm:ci` です。lockfile だけを反映したい場合は次の task を使います。
 
 ```bash
-mise run apm:sync-lock
+mise --cd "$HOME" run apm:sync-lock
 ```
 
 初回は ctx のローカル index を作成します。
