@@ -218,31 +218,6 @@ git log --show-signature -1
 
 GitHub 上でも、push したコミットに `Verified` バッジが付くことを確認してください。
 
-### commit が `Author identity unknown` で失敗する場合
-
-コンテナ内の `~/.gitconfig` は `postCreateCommand`（`executable_post-create.sh`）が作ります。ホストの
-`user.name` / `user.email` は `~/.config/gitconfig-host` として読み取り専用でマウントされていますが、
-`~/.gitconfig` の `include.path` から参照しない限り git には読まれません。そのため
-`post-create.sh` が `~/.gitconfig` を作る前に止まると、`gitconfig-host` があっても identity は未設定のままです。
-
-`post-create.sh` は `set -e` のため、以前は git の設定より前にある処理（プロジェクト生成物の分離・
-Lefthook のインストール）が失敗すると、identity の設定まで到達しませんでした。現在は次の順序にしています。
-
-1. git の `include.path` / 認証 / コミット署名の設定（identity の解決を確認し、解決できなければ警告）
-2. プロジェクト生成物の分離（失敗したら止める。分離できないまま依存インストール等が走ると、
-   生成物がホスト共有のワークスペースへ書き込まれるため。identity の設定処理は 1 で実行済み）
-3. Lefthook のインストール（失敗しても警告して続行）
-4. `.claude.json` のコピー、`claude-account2` の共有、`~/.crit.config.json` の生成
-
-`Author identity unknown` が出た場合は、次で切り分けます。
-
-```bash
-ls -la ~/.gitconfig ~/.config/gitconfig-host   # ~/.gitconfig が無ければ post-create.sh が未完了
-git config --global --get-all include.path     # gitconfig-host が含まれているか
-git config user.name && git config user.email  # 空ならホスト側の ~/.config/git/config の [user] を確認
-bash ~/.config/devcontainer/scripts/post-create.sh  # 冪等なので再実行して復旧できる
-```
-
 ## mounts の source が無いことによるコンテナ作成失敗の防止
 
 devcontainer.json の `mounts` は `docker run --mount` として処理されます。レガシーな `-v`
