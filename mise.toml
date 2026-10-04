@@ -92,6 +92,7 @@ fi
 #    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
 [bootstrap.hooks.post-dotfiles]
 run = """
+set -e
 if mise which apm >/dev/null 2>&1; then
   MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
 fi
@@ -145,6 +146,7 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 # 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
 [bootstrap.hooks.post-tools]
 run = """
+set -e
 MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
 MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
 """
