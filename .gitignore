@@ -6,6 +6,7 @@ mise*.lock
 *temp*
 dot_config/git/config.secret
 dot_config/git/config.work.secret
+dot_config/git/config.work3.secret
 dot_zprofile.secret
 dot_zshrc.secret
 

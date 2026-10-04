@@ -59,6 +59,8 @@
   path = ~/.config/git/config.secret
 [includeIf "gitdir:~/work/"]
   path = ~/.config/git/config.work.secret
+[includeIf "gitdir:~/Programming/work3/"]
+  path = ~/.config/git/config.work3.secret
 {{ else }}
 [include]
   path = ~/.config/git/config.work.secret
