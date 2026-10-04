@@ -1,10 +1,50 @@
 # devcontainer
 
 AI エージェントを devcontainer 内で実行するための共通基盤に関する設定をまとめます。
-devcontainer 定義は `dot_config/devcontainer/` を参照してください。
+devcontainer 定義は `config/devcontainer/` を参照してください。
 
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
+
+## workspace と Git metadata の mount 範囲
+
+リポジトリ関連でコンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
+`.git`）だけです。`~/project/repo` のような通常 checkout で `../..` を mount すると
+`$HOME` 全体がコンテナから見えるため、親ディレクトリは mount しません。
+
+linked worktree の `.git` file と、common git dir 側の `worktrees/<name>/gitdir` は
+どちらも絶対パスです。そこで workspace と common git dir を**ホストと同じ絶対パス**に
+mount し、ホスト・コンテナのどちらでも同じパスで git が解決できるようにしています。
+relative-paths 形式（`git worktree add --relative-paths` / `worktree.useRelativePaths`）は使いません。
+相対パスはホストとコンテナで mount 先のパスが違うと参照先がずれます。また repo に
+`extensions.relativeWorktrees` が付き、git 2.48 未満（コンテナの Ubuntu 24.04 の git 2.43 など）が
+その repo を読めなくなります。
+
+### コンテナ内の注意点
+
+- 同じリポジトリの他の worktree はコンテナから見えません。post-create で
+  `gc.worktreePruneExpire = never` を設定し、`git gc` の自動 prune がそれらの
+  `.git/worktrees/<name>` を削除しないようにしています。コンテナ内で
+  `git worktree prune` を手動実行しないでください。ホスト側の worktree が壊れます。
+- 既存のコンテナは `devcontainer up` しても mount が更新されません。config を変えたら
+  `multi-worktree recreate <task>` で再生成し、コンテナを作り直してください
+  （`devcontainer up ... --remove-existing-container`）。
+
+### relative-paths 形式の worktree を戻す
+
+relative-paths 形式で作った worktree が残っていると、コンテナ内で git が使えません。
+ホストの git 2.48 以上で、実体リポジトリごとに次を実行して絶対パス形式に戻してください。
+
+```bash
+cd ~/path/to/repo
+git config --global --unset worktree.useRelativePaths   # 設定している場合
+# 引数なしの repair は main worktree しか直さないため、各 worktree のパスを渡す。
+# 全件成功したときだけ extension を外す（zsh で exit がシェルを閉じないよう subshell で実行）
+(
+  git worktree list --porcelain | sed -n 's/^worktree //p' |
+    while IFS= read -r wt; do git worktree repair --no-relative-paths "$wt" || exit 1; done
+) && git config --unset extensions.relativeWorktrees
+```
 
 ## devcontainer からホスト側 tmux pane を読む
 
@@ -93,6 +133,21 @@ bind mountのtargetにはLinuxの仕様上ディレクトリが必要です。�
 bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 ```
 
+## イメージのリビルド高速化（mise ツールのキャッシュ）
+
+`config/devcontainer/mise.toml` を変更すると `mise install` の layer は必ず再実行されますが、
+全ツールをゼロから入れ直さないよう `Dockerfile` で次の工夫をしています。
+
+- インストール済みツール（`/mise/data`）を BuildKit の cache mount（id: `devcontainer-mise-data`）に
+  保存し、次回ビルド時に rsync で復元してから `mise install` します。バージョンが変わったツールだけが
+  ダウンロード/ビルドされます。
+- install 先は常に `/mise/data` のままなので、shim や shebang の絶対パスは壊れません。
+- 復元した古いバージョンは `mise prune --tools` で削除を試みます（失敗時は警告のみでビルドを続行するため、残る場合があります）。
+- go（`GOMODCACHE` / `GOCACHE`）と bun のキャッシュも cache mount（id: `devcontainer-mise-cache`）に置いて再利用します。
+- `tasks/` の COPY は install の後に置き、tasks の変更で install layer が無効化されないようにしています。
+
+cache mount は `docker builder prune` で削除されます（削除されても初回と同じフルインストールになるだけです）。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
@@ -124,7 +179,7 @@ devcontainer 専用の SSH 鍵を発行し、[SSH コミット署名](https://do
 ### 初回セットアップ
 
 署名専用の SSH 鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`
-（`executable_initialize.sh`、後述）が無ければ自動生成するため、手動での鍵生成は不要です。
+（`initialize.sh`、後述）が無ければ自動生成するため、手動での鍵生成は不要です。
 `devcontainer up` 実行時にこのコマンドの出力に生成した公開鍵が表示されるので、それを
 GitHub に **Signing Key** として登録してください（初回のみ）:
 
@@ -132,9 +187,9 @@ GitHub に **Signing Key** として登録してください（初回のみ）:
 GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
 ```
 
-`dot_config/devcontainer/devcontainer.json` はこの鍵（秘密鍵・公開鍵とも）を
+`config/devcontainer/devcontainer.json` はこの鍵（秘密鍵・公開鍵とも）を
 `/home/vscode/.ssh/id_docker_devcontainer_sign(.pub)` に読み取り専用でマウントします。
-`postCreateCommand`（`executable_post-create.sh`）が鍵の存在を検知すると、コンテナ内の
+`postCreateCommand`（`post-create.sh`）が鍵の存在を検知すると、コンテナ内の
 `~/.gitconfig` に以下を設定します（include で読み込んだホストの GPG 署名設定より後に
 書き込まれるため、後勝ちでこちらが有効になります）:
 
@@ -144,7 +199,7 @@ GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
   （`git log --show-signature`等でのローカル検証用。`user.email` と公開鍵から自動生成。
   `namespaces="git"` を付与し、この鍵が git 以外の OpenSSH 署名用途に流用されないよう制限しています）
 
-この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`executable_initialize.sh`）
+この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`initialize.sh`）
 が存在しない場合に生成する（既存の鍵はそのまま使い、公開鍵だけ都度同期する）ため、通常は常に
 mount されており、未セットアップのホストでもコンテナは問題なく起動します。万が一鍵が存在しない
 場合（`mounts` からこの鍵を外した構成等）や、鍵が非対話で使えない(パスフレーズ付き等)場合、
@@ -179,7 +234,7 @@ devcontainer.json の `mounts` は `docker run --mount` として処理されま
 "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'"
 ```
 
-`dot_config/devcontainer/scripts/executable_initialize.sh` は各 mount の source を種類ごとに
+`config/devcontainer/scripts/initialize.sh` は各 mount の source を種類ごとに
 （ディレクトリは `mkdir -p`、空でよいファイルは `touch`、JSON は `{}`）用意します。ディレクトリや
 JSON は既に存在するものには触れませんが、SSH 鍵だけは例外です: 秘密鍵があれば毎回そこから公開鍵を
 導出して `.pub` と同期し（欠落時の再構成に加え、秘密鍵だけ手動で差し替えて `.pub` が古いままの
@@ -277,3 +332,9 @@ ssh -F ~/.config/ssh/config mac-host \
 - ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
 - ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
+
+## AIエージェント向けpre-commit
+
+devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
+Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
+エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。

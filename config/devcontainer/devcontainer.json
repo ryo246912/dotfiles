@@ -1,0 +1,102 @@
+{
+  // https://containers.dev/implementors/json_reference/
+  "name": "Devcontainer for AI Agent",
+  "build": {
+    "dockerfile": "${localEnv:HOME}/.config/devcontainer/Dockerfile",
+    // GH_TOKEN は build context にコピーせず、mise install の間だけ secret mount する。
+    "options": ["--secret", "id=github_token,env=GH_TOKEN"]
+  },
+  // https://github.com/devcontainers/features/tree/main/src
+  "features": {
+    // docker compose / DBコンテナをコンテナ内で建てられるようにする(DinD)
+    // DooD(ホストのdocker.sockマウント)ではなくDinDを採用し、
+    // compose で建てたコンテナ群を dev container 内に隔離する
+    "ghcr.io/devcontainers/features/docker-in-docker:2.13.0": {
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    }
+  },
+  // mounts の source がホストに無いとコンテナ作成が失敗する（docs/devcontainer.md 参照）ため、
+  // initializeCommand（コンテナ作成前にホスト側で実行される）で事前に用意する。
+  "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'",
+  "remoteEnv": {
+    "AI_AGENT": "1",
+    "LEFTHOOK_CONFIG": "lefthook.local.yml",
+    // workspace（/workspaces 配下と、同じ絶対パスに mount したホストのパス）の mise 設定を信頼する。
+    // post-create の lefthook install などが mise を経由すると trust 確認の prompt が出て、
+    // TTY のない ccmanager の devcontainer up では失敗するため。
+    "MISE_TRUSTED_CONFIG_PATHS": "/workspaces:${localWorkspaceFolder}",
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    // claudeがxterm-256colorを必要とするため、TERMを設定
+    "TERM": "xterm-256color",
+    // ホストのユーザー名（SSH接続用）
+    "HOST_USER": "${localEnv:USER}",
+    // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
+    "CRIT_HOST": "0.0.0.0",
+    "CRIT_PORT": "7842",
+    // crit: 非loopback bindを許可する。Docker側は127.0.0.1だけにpublishするため外部公開されない
+    "CRIT_ALLOW_UNAUTHENTICATED_NETWORK": "1",
+    // crit: コンテナ内では更新チェック不要のため無効化
+    "CRIT_NO_UPDATE_CHECK": "1",
+    // local modeでdev serverのlive annotationを有効にし、UIは起動時にSSH reverse tunnelでhostへ公開する。
+    "PLANNOTATOR_REMOTE": "0",
+    "PLANNOTATOR_PORT": "19433",
+    "PLANNOTATOR_BROWSER": "/home/vscode/.config/devcontainer/scripts/plannotator-browser"
+  },
+  // crit のreview UIをhostのbrowserから開けるようにportを公開する。
+  // multi-worktree は devcontainer CLI (`devcontainer up`) で起動するが、CLI は forwardPorts を
+  // 解釈しない(VS Code拡張専用)ため、実際に publish される appPort (= docker run -p) を使う。
+  // ホストの loopback のみに束縛する。host port は固定せず Docker に自動採番させる
+  // (devcontainer を複数同時起動してもポート衝突が起きないようにするため)。
+  // 実際に割り当てられたhost portはpost-start.shが~/.crit-host-portへ書き出す（docs/crit.md参照）。
+  "appPort": ["127.0.0.1::7842"],
+  // localWorkspaceFolder: ホスト側の作業ディレクトリ(.git/wk/{project}-{branch})を指す
+  // "workspaceFolder": "${localWorkspaceFolder}",
+  "mounts": [
+    // .config
+    // 注意: target は /tmp 配下にしないこと。/tmp はコンテナ内で tmpfs にマウントされるため
+    // (Enhanced Container Isolation 等)、/tmp 配下を target にした bind mount は
+    // その tmpfs にシャドウされて消える。/home/vscode/.config は Dockerfile で作成済みの
+    // 実ディレクトリなので、ここを target にする。
+    "type=bind,source=${localEnv:HOME}/.config/git/config,target=/home/vscode/.config/gitconfig-host,readonly",
+    // グローバル gitignore。host config の core.excludesfile は ~/.config/git/gitignore を指すが、
+    // post-create.sh が ~/.config/git に書き込むため、git/ 配下には mount せず gitconfig-host と同様に別名で置く。
+    "type=bind,source=${localEnv:HOME}/.config/git/gitignore,target=/home/vscode/.config/gitignore-host,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
+    // .ssh
+    "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
+    // devcontainer専用のSSH鍵（ホスト通知用）
+    "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer,target=/home/vscode/.ssh/id_ed25519,readonly",
+    // devcontainer専用のSSH鍵（コミット署名用。ホストの個人GPG秘密鍵はコンテナに一切マウントしない）
+    "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign,target=/home/vscode/.ssh/id_docker_devcontainer_sign,readonly",
+    "type=bind,source=${localEnv:HOME}/.ssh/id_docker_devcontainer_sign.pub,target=/home/vscode/.ssh/id_docker_devcontainer_sign.pub,readonly",
+    // workspace をホストと同じ絶対パスにも mount する。linked worktree の common git dir
+    // （実体リポジトリの .git）は、起動側が `devcontainer up --mount` でホストと同じ絶対パスに
+    // 個別に mount する（multi-worktree は生成 config に含める。docs/devcontainer.md 参照）。
+    // 親ディレクトリ（../..）を mount すると、通常 checkout が ~/project/repo にある場合に
+    // HOME 全体がコンテナから見えてしまうため mount しない。
+    "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+    // AI agent configs
+    "type=bind,source=${localEnv:HOME}/.claude,target=/home/vscode/.claude",
+    "type=bind,source=${localEnv:HOME}/.claude/settings.json,target=/home/vscode/.claude/settings.json,readonly",
+    // Claude account2 config for independent quota/auth
+    "type=bind,source=${localEnv:HOME}/.claude-account2,target=/home/vscode/.claude-account2",
+    "type=bind,source=${localEnv:HOME}/.claude-work3,target=/home/vscode/.claude-work3",
+    // .claude.jsonは一時的に読み取り専用でマウント(コピー用)
+    "type=bind,source=${localEnv:HOME}/.claude.json,target=/home/vscode/.config/claude-config-host.json,readonly",
+    "type=bind,source=${localEnv:HOME}/.agents,target=/home/vscode/.agents",
+    "type=bind,source=${localEnv:HOME}/.codex,target=/home/vscode/.codex",
+    "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
+    "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit",
+    // DinDのdockerデータ(イメージ等)をnamed volumeで永続化し、リビルド時のpullを回避。
+    // ${devcontainerId} でスコープし、multi-worktree で複数の devcontainer を同時起動しても
+    // 各コンテナが独立した /var/lib/docker を持つようにする(共有による daemon 起動失敗・破損を回避)。
+    // devcontainerId は同一 devcontainer のリビルドを跨いで安定するため、永続化も保たれる。
+    "source=devcontainer-dind-var-lib-docker-${devcontainerId},target=/var/lib/docker,type=volume"
+  ],
+  "postCreateCommand": "bash /home/vscode/.config/devcontainer/scripts/post-create.sh",
+  "postStartCommand": "bash /home/vscode/.config/devcontainer/scripts/post-start.sh"
+}

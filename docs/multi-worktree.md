@@ -14,14 +14,14 @@
 
 このツールは chezmoi で管理されており、以下のファイルで構成されています：
 
-- `dot_local/bin/executable_multi-worktree` - メインスクリプト
-- `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
-- `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
-- `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
+- `local/bin/multi-worktree` - メインスクリプト
+- `config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
+- `config/multi-worktree/completion.bash` - Bash 補完スクリプト
+- `config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
 
 ### 基本セットアップ
 
-chezmoi apply 後、設定ファイルを作成してください：
+`mise bootstrap dotfiles apply` 後、設定ファイルを作成してください：
 
 ```bash
 # 設定ディレクトリの作成
@@ -284,8 +284,8 @@ multi-worktree status feat/add-auth
 ```bash
 multi-worktree cd feat/add-auth
 # 新しいシェルが起動し、worktree ディレクトリに移動
-# そのまま task root で ccmanager / ccmc を起動できる
-ccmc
+# そのまま task root で ccmanager を起動できる
+ccmanager
 # 作業後 exit で戻る
 exit
 ```
@@ -388,8 +388,6 @@ multi-worktree help
 ```bash
 multi-worktree cd feat/add-auth
 ccmanager
-# または
-ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
@@ -398,9 +396,12 @@ ccmc
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
-# または
-CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmc --multi-project
 ```
+
+devcontainer で起動する `ccmcm` は `--config` を指定しません。ccmanager は選んだ task root を cwd に
+して `devcontainer up` / `exec` を実行するので、task root に生成された
+`.devcontainer/devcontainer.json` が使われます。task root で `ccmc` を使うと base template で起動し、
+配下 repo の `.git` が mount されません。
 
 - 起動ディレクトリは任意です
 - `CCMANAGER_MULTI_PROJECT_ROOT` には group ごとの `base_dir` を指定します
@@ -431,7 +432,7 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 生成される `devcontainer.json` には以下の設定が含まれます：
 
 - 各リポジトリの worktree をマウント
-- 実体リポジトリ（`.git` アクセス用）をマウント
+- 実体リポジトリの `.git`（common git dir）だけを、ホストと同じ絶対パスにマウント
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
@@ -476,7 +477,6 @@ git worktree remove ../worktrees/multi-worktree-feat-add-auth/repo-a --force
 ## 関連ツール
 
 - `git-worktree-manager`: 単一リポジトリ内の worktree 対話操作ツール
-- `devc-up-wrapper`: devcontainer 起動ラッパー
 
 ## ライセンス
 
