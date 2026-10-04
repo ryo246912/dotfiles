@@ -43,6 +43,11 @@
       "enabled": false
     },
     {
+      "matchPackageNames": ["docker/cli", "aqua:docker/cli"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
     },
