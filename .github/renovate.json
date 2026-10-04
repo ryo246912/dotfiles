@@ -37,7 +37,8 @@
         "/(^|\\/)aws-cli$/",
         "/(^|\\/)cosign$/",
         "/(^|\\/)rust$/",
-        "/(^|\\/)pdm$/"
+        "/(^|\\/)pdm$/",
+        "/(^|\\/)cspell$/"
       ],
       "matchUpdateTypes": ["minor", "patch"],
       "enabled": false
