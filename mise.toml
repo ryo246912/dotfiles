@@ -166,14 +166,19 @@ mise --cd "$HOME" run rulesync:sync
 # "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
 # config からしか有効にならない実機仕様のため）。以下のエントリは常に git 側の内容へ
 # 収束させたい copy/template のまま維持している。このうち "~/.config" 配下の
-# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）と
-# "~/.zshenv" は、config/mise/config.toml 側で同じ target に track も追加宣言して
-# いる（mise の「ownership」パターン。dotfiles.html#ownership 参照）。ライブ編集は
-# 依然として次の apply で上書きされるが、上書き直前に history checkpoint が自動で
-# 記録されるため、`mise bootstrap dotfiles rollback <path>` で復元できるようになる
-# （実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex"・"~/.local" はディレクトリ
-# 全体が対象で、git 管理外のランタイム状態（認証情報等）も混在するため、意図的に
-# track の対象外にしている（config/mise/config.toml のコメント参照）。
+# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）、
+# "~/.zshenv"、"~/.apm"・"~/.claude"・"~/.codex" 配下の個別ファイル（apm.yml、
+# apm.lock.yaml、claude/settings.json、codex/config.toml、codex/hooks.json）は、
+# config/mise/config.toml 側で同じ target に track も追加宣言している（mise の
+# 「ownership」パターン。dotfiles.html#ownership 参照。「copyで丸ごと管理する
+# ディレクトリの中の、個別ファイルだけをtrackする」構成も実機で問題なく動作することを
+# 確認済み）。ライブ編集は依然として次の apply で上書きされるが、上書き直前に
+# history checkpoint が自動で記録されるため、`mise bootstrap dotfiles rollback <path>`
+# で復元できるようになる（実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex" は
+# ディレクトリ全体としては track の対象外にしている（apm_modules・session log・
+# 認証情報等の git 管理外のランタイム状態も混在するため）。"~/.local" も同様の理由で
+# ディレクトリ全体・個別ファイルのいずれも track していない（config/mise/config.toml
+# のコメント参照）。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "copy" }
 "~/.claude"                             = { source = "claude", mode = "copy" }

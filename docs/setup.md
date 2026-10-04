@@ -16,15 +16,23 @@
   ```sh
   git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
   cd ~/dotfiles
-  mise settings add trusted_config_paths ~/dotfiles
+  mkdir -p ~/.config/mise
+  cat > ~/.config/mise/config.toml << 'EOF'
+  [settings]
+  trusted_config_paths = ["~/dotfiles"]
+  EOF
   ```
 
   `mise trust` はその場限りの対話承認だが、`trusted_config_paths` は
-  `~/.config/mise/config.toml`（グローバル）に書き込まれる設定で、一度実行すれば以後
+  `~/.config/mise/config.toml`（グローバル設定）に書き込む設定で、一度書けば以後
   trust状態をmiseが参照するたびに自動で信頼される（再clone・再bootstrapでも
-  都度 `mise trust` し直す必要がない）。`config/mise/config.toml` 側で同じ
-  `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
-  （dotfiles配置後に）同じ仕組みを永続化するためである。
+  都度 `mise trust` し直す必要がない。`mise settings add trusted_config_paths
+~/dotfiles` を実行しても同じ内容が書き込まれる）。まだ一度も bootstrap していない
+  最初の clone 直後はこのファイル自体が存在しないため `>` で新規作成してよいが、
+  既に他の設定が書かれている環境（2台目以降の手動セットアップ等）では既存の
+  `[settings]` テーブルと重複しないよう手動で追記すること。`config/mise/config.toml`
+  側で同じ `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
+  （dotfiles配置後に）同じ設定を上書き・永続化するためである。
   直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
   更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
   実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
@@ -76,10 +84,11 @@
     background service を有効化しようとする（`mise bootstrap services status` で確認可能。
     systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
   - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
-    **別の**専用 git リポジトリを用意し、マシンごとに一度だけ接続する
+    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
+    マシンごとに一度だけ接続する
     （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
     ```sh
-    mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
+    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
     ```
 
 - [ ] macOS defaults の適用
@@ -565,15 +574,23 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```sh
   git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
   cd ~/dotfiles
-  mise settings add trusted_config_paths ~/dotfiles
+  mkdir -p ~/.config/mise
+  cat > ~/.config/mise/config.toml << 'EOF'
+  [settings]
+  trusted_config_paths = ["~/dotfiles"]
+  EOF
   ```
 
   `mise trust` はその場限りの対話承認だが、`trusted_config_paths` は
-  `~/.config/mise/config.toml`（グローバル）に書き込まれる設定で、一度実行すれば以後
+  `~/.config/mise/config.toml`（グローバル設定）に書き込む設定で、一度書けば以後
   trust状態をmiseが参照するたびに自動で信頼される（再clone・再bootstrapでも
-  都度 `mise trust` し直す必要がない）。`config/mise/config.toml` 側で同じ
-  `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
-  （dotfiles配置後に）同じ仕組みを永続化するためである。
+  都度 `mise trust` し直す必要がない。`mise settings add trusted_config_paths
+~/dotfiles` を実行しても同じ内容が書き込まれる）。まだ一度も bootstrap していない
+  最初の clone 直後はこのファイル自体が存在しないため `>` で新規作成してよいが、
+  既に他の設定が書かれている環境（2台目以降の手動セットアップ等）では既存の
+  `[settings]` テーブルと重複しないよう手動で追記すること。`config/mise/config.toml`
+  側で同じ `trusted_config_paths = ["~/dotfiles", ...]` を宣言しているのも、
+  （dotfiles配置後に）同じ設定を上書き・永続化するためである。
   直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
   更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
   実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、

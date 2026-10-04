@@ -877,8 +877,10 @@ checkpoint の実体はデフォルトでは各マシンのローカルにしか
 machine-local に書き込まれる設定で、git 管理される `mise.toml`/`config/mise/config.toml`
 側には残らない。マシンごとに実行が必要）。
 
+history 同期専用の **private** リポジトリ `ryo246912/dotfiles-history` を使う:
+
 ```sh
-mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
+mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
 ```
 
 未接続の場合は `mise bootstrap dotfiles status` の末尾に
@@ -893,8 +895,11 @@ mise bootstrap dotfiles origin set https://github.com/<you>/<setup-repo>.git
 していない。ただし「過去の checkpoint も丸ごと送られる」ため、一時的にせよ
 secretを書いてcommitしてしまった履歴がある場合、後で消しても history 経由で
 残り続ける点に注意（本リポジトリの track 対象 — `~/.config`、alacritty/ghostty/
-git/mise/rio の各 config、rulesync の `mcp.json`、`~/.zshenv` — はいずれも
-secretを直接書く想定のファイルではないため、通常はこの懸念に当たらない）。
+git/mise/rio の各 config、rulesync の `mcp.json`、`~/.zshenv`、`apm.yml`/
+`apm.lock.yaml`、`claude/settings.json`、`codex/config.toml`/`hooks.json` —
+はいずれもsecretを直接書く想定のファイルではないため、通常はこの懸念に当たらない）。
+`dotfiles-history` リポジトリ自体を**private** のまま運用し、他人に共同管理者
+権限を与えないこと。
 secretを含むファイルを新たに track する場合は、`encrypt = true` +
 `[history.encryption].recipients` を最初の checkpoint から設定すること
 （後から暗号化しても、それ以前の平文履歴は残る）。
