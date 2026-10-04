@@ -87,42 +87,7 @@ else
 fi
 """
 
-# 1) post-dotfiles: `mise bootstrap dotfiles apply` の直後に発火する（`mise bootstrap
-#    dotfiles apply` 単体実行時にも発火する。docs/mise.md 参照）。apm/rulesync は
-#    それぞれ独立に、導入済み（`mise which` で解決できる）場合だけ同期する。未導入なら
-#    黙ってスキップし、後続の post-tools 側で改めて実行する。
-#
-#    `apm:sync`/`rulesync:sync` は config/mise/tasks/dev.toml（deploy先:
-#    ~/.config/mise/tasks/dev.toml、global scope）で定義したタスクだが、この hook は
-#    必ずこのリポジトリの checkout ルート（project config root）で実行されるため、素の
-#    `mise run apm:sync` では見つからない（実機確認済み）。mise の `[task_config].includes`
-#    は config root ごとのスコープで、project 側が自分の `includes = ["tasks/*.toml"]` を
-#    宣言していると、global 側の includes は継承されない（cascade しても descendant 側の
-#    同名フィールドで上書きされるため。tasks/task-configuration.html#task_config.cascade
-#    参照）。`mise --cd "$HOME" run ...` で呼び出し時の config root を global 側に
-#    切り替えることで回避する。
-#
-#    `MISE_LOCKED=1` を付けているのは速度対策。`mise --cd "$HOME" run ...` は
-#    cd先の global config.toml（[tools] に100件超のtool pin）をそのたびに新規解決
-#    しようとし、各toolのversion解決（特にlockfileに無い/古いもの）がnetwork越しに
-#    なるため、実機で1回あたり数十秒〜かかることがある（実機確認済み。sandbox環境では
-#    120秒経っても終わらなかった）。apm:sync/rulesync:syncはapm/rulesyncの2toolだけ
-#    使えればよく、他のtool群を毎回解決し直す必要が無いため、`MISE_LOCKED=1`で
-#    lockfile済みのversionへ解決を限定し、network解決をskipする（実機確認済み:
-#    120秒超→0.3秒）。lockfileに無いtool分は
-#    `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
-#    という警告が出るが、apm/rulesync自体の解決には影響しない無害な警告。
-[bootstrap.hooks.post-dotfiles]
-run = """
-if mise which apm >/dev/null 2>&1; then
-  MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
-fi
-if mise which rulesync >/dev/null 2>&1; then
-  MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
-fi
-"""
-
-# 2) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
+# 1) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
 #    gh を導入・認証し、GITHUB_TOKEN 付きで明示的に mise install する。
 #
 #    - なぜ `mise install` 単体では pre-tools が動かないのか:
@@ -164,11 +129,11 @@ echo "Running mise install..."
 GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
-# 3) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
-#    確実に同期する。post-dotfiles 側で未導入のためスキップされた場合（真新しいマシン等）
-#    はここで初めて実行される。post-dotfiles で既に実行済みの場合はハッシュマーカーが
-#    更新済みなので、ここでの再実行は差分ゼロの no-op になる（apm:sync/rulesync:sync 参照）。
-#    `--cd "$HOME"` と `MISE_LOCKED=1` が必要な理由は post-dotfiles のコメント参照。
+# 2) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
+#    確実に同期する。日常的な `mise bootstrap dotfiles apply` と post-merge は10秒以内で
+#    完了させるため、tool解決・network accessを伴う同期はここ（full bootstrap）だけで行う。
+#    個別に反映したい場合は `mise --cd "$HOME" run apm:sync` /
+#    `mise --cd "$HOME" run rulesync:sync` を実行する。
 [bootstrap.hooks.post-tools]
 run = """
 MISE_LOCKED=1 mise --cd "$HOME" run apm:sync

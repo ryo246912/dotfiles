@@ -568,8 +568,7 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
 - 旧 `.chezmoi.toml.tmpl` の `hooks.apply.post`（約140行の bash）は、mise 自体が
   `[bootstrap.packages]`/`[tools]` フェーズをネイティブに処理するようになった分だけ
   大幅に縮小し、`[bootstrap.hooks.pre-tools]`（gh 認証・GITHUB_TOKEN 付き mise install）・
-  `[bootstrap.hooks.post-dotfiles]`/`[bootstrap.hooks.post-tools]`（APM/rulesync の
-  ハッシュマーカー制御。実体は共通タスク `sync:agents`）の3フックに整理した。
+  `[bootstrap.hooks.post-tools]`（APM/rulesync のハッシュマーカー制御）の2フックに整理した。
   mise 自体の self-update は `mise bootstrap` の外（`lefthook.yml` の `post-merge`）に切り出したため、
   bootstrap hook 側には残していない。
   - hook は `mise bootstrap` の実行時にしか発火しない（公式ドキュメント
@@ -585,27 +584,25 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
     二重実行が唯一の手段（詳細は `mise.toml` の `pre-tools` コメント参照）。
     2回目は全ツール導入済みの冪等チェックのみで即座に完了するため、
     実処理としての無駄（再ダウンロード等）は発生しない。
-  - **git pull 後の日常的な再適用でも APM/rulesync を同期したい**（chezmoi の
-    `run_onchange_*` 相当）。`pre-dotfiles`/`post-dotfiles` は `mise bootstrap
-dotfiles apply` 単体実行時にも発火する（実機確認済み。前掲の「target →
-    source」節参照）ので、`lefthook.yml` の `post-merge` に `mise bootstrap
-dotfiles apply --yes` を追加し、`post-dotfiles` フックから APM/rulesync 同期
-    タスク（`sync:agents`）を呼ぶようにした。ただし apm/rulesync 自体が mise の
-    `[tools]` 管理ツールなので、フルの `mise bootstrap`（真新しいマシン等）では
-    `post-dotfiles` の時点でまだ未導入の可能性があり、その場合は `mise which`
-    で判定して黙ってスキップし、`[tools]` フェーズ完了後の `post-tools` 側で
-    改めて実行する（ハッシュマーカーにより実処理は一度しか走らない）。
-  - **ハマりどころ**: `sync:agents`/`apm:install`/`rulesync:generate` は
+  - git pull 後の `post-merge` にある `dotfiles-apply` job は
+    `mise bootstrap dotfiles apply --yes` だけを実行する（その前の別jobである
+    `ensure-mise-version` は、必要な場合にmise自体を更新する）。
+    APM/rulesync 同期をここから呼ぶと、global config の100件超のtool解決とnestedな
+    `mise run` が入り、変更が小さくても数十秒かかるためである。日常的なdotfiles applyは
+    network accessを伴わない10秒以内の経路に保ち、依存を更新したときは明示的に
+    `mise --cd "$HOME" run apm:sync` / `mise --cd "$HOME" run rulesync:sync`、または
+    full `mise bootstrap`を実行する。
+  - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
-    global scope）で定義したタスクだが、これらの hook は必ずこのリポジトリの
+    global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
     checkout ルート（project config root）で実行される。mise の
     `[task_config].includes` は config root ごとのスコープで、project 側が
     自分の `includes = ["tasks/*.toml"]` を宣言していると global 側の
     includes は継承されない（`cascade = true` を付けても descendant 側の
     同名フィールドで上書きされる。tasks/task-configuration.html#task_config.cascade
-    参照）ため、素の `mise run sync:agents` はこの hook から呼ぶと
-    `no task sync:agents found` になる（実機確認済み）。`mise --cd "$HOME"
-run sync:agents` のように呼び出し時の config root を global 側に切り替える
+    参照）ため、素の `mise run apm:sync` はこの hook から呼ぶと
+    `no task apm:sync found` になる（実機確認済み）。`mise --cd "$HOME"
+run apm:sync` のように呼び出し時の config root を global 側に切り替える
     ことで解決する。nested な `mise run apm:install`/`mise run rulesync:generate`
     呼び出し（タスク本体の中から呼ぶ分）はタスクの実行コンテキストを引き継ぐため
     改めて `--cd` し直す必要はない（実機確認済み）。
@@ -934,8 +931,8 @@ X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...
   sandboxでは`[tools]`が100件超のglobal configに対して3分14秒かかった）。
   実際に使うtoolが決まっている軽量taskを呼ぶだけなら `MISE_LOCKED=1`
   （`--locked` 相当）を付け、lockfile済みのversionへ解決を限定してnetwork解決を
-  skipする（同条件で0.3秒まで短縮できた。本リポジトリの `post-dotfiles`/
-  `post-tools` フックが `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
+  skipする（同条件で0.3秒まで短縮できた。本リポジトリの `post-tools` フックが
+  `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
   lockfileに無いtoolについては
   `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
   という警告が出る。taskが使わないtool（apm:sync/rulesync:syncなら、global

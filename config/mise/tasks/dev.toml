@@ -1,8 +1,7 @@
 ["apm:sync"]
 description = "APM を manifest/lockfile の変更時、または生成物の欠落時だけ同期する"
-# [bootstrap.hooks.post-tools]（フル `mise bootstrap`）と [bootstrap.hooks.post-dotfiles]
-# （`mise bootstrap dotfiles apply` 単体実行時にも発火する。git pull 後の日常的な再適用で
-# chezmoi の run_onchange 相当として使う）の両方から、apm が導入済みの場合だけ呼ばれる。
+# [bootstrap.hooks.post-tools]（フル `mise bootstrap`）または手動実行から呼ばれる。
+# 日常的な `mise bootstrap dotfiles apply` では、10秒以内で完了させるため実行しない。
 # 毎回の呼び出しで skill install が走るのを避けるため、XDG_STATE_HOME 配下の
 # ハッシュマーカーで「前回実行時から変更が無ければ skip」を判定する。
 run = '''
@@ -152,7 +151,13 @@ if [ ! -f "$lockfile" ]; then
   exit 1
 fi
 
-installed_version=$(apm --version | awk '{print $NF}' | sed 's/^v//')
+# 出力例: "Agent Package Manager (APM) CLI version 0.31.0 (8fd10ac)"。
+# 最終fieldはbuild SHAなので、`version` の直後を読む。
+installed_version=$(apm --version | sed -n 's/.* version \([^ ]*\).*/\1/p' | head -n 1 | sed 's/^v//')
+if [ -z "$installed_version" ]; then
+  echo "Could not parse the installed version from 'apm --version'" >&2
+  exit 1
+fi
 lockfile_version=$(awk '$1 == "apm_version:" { print $2 }' "$lockfile")
 if [ -z "$lockfile_version" ]; then
   echo "apm_version is missing from $lockfile" >&2
@@ -390,7 +395,7 @@ PY
 ["rulesync:generate-commands"]
 description = "Generate Claude commands and Codex skills from external commands"
 # apm:install/apm:ci から呼ばれる。apm と rulesync は独立に導入されうる
-# （[bootstrap.hooks.post-dotfiles] 参照）ため、rulesync 未導入でも apm:install
+# rulesync はAPMとは独立に導入されうるため、rulesync 未導入でも apm:install
 # 自体は完了できるよう、ここで黙ってスキップする（rulesync 導入後の apm:sync/
 # post-tools で改めて呼ばれた際に実行される）。
 run = '''
