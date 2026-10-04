@@ -148,7 +148,7 @@ if ! acquire_lock; then
   # 直列化しないと、複数起動が同じ stale を見て互いの取り直したロックを消し合い二重 push
   # しうる。メタロックは read-judge-rm-acquire の間だけ（数 ms）保持する。保持中の異常終了に
   # 備え、1 分より古い reclaim dir は残骸として掃除する。
-  [ -n "$(find "$reclaim_dir" -maxdepth 0 -mmin +1 2>/dev/null)" ] && rm -rf "$reclaim_dir"
+  [ -n "$(find "$reclaim_dir" -mmin +1 2>/dev/null)" ] && rm -rf "$reclaim_dir"
   if ! mkdir "$reclaim_dir" 2>/dev/null; then
     log "another push holds or is recovering the lock. Skipping."
     exit 0
@@ -164,7 +164,7 @@ if ! acquire_lock; then
     stale="no owner recorded"
   elif ! kill -0 "$old_pid" 2>/dev/null || [ "$(proc_token "$old_pid")" != "$old_tok" ]; then
     stale="pid $old_pid no longer the owner"
-  elif [ -n "$(find "$lock_file" -maxdepth 0 -mmin "+${lock_stale_min}" 2>/dev/null)" ]; then
+  elif [ -n "$(find "$lock_file" -mmin "+${lock_stale_min}" 2>/dev/null)" ]; then
     stale="older than ${lock_stale_min}min"
   fi
   if [ -z "$stale" ]; then

@@ -117,6 +117,7 @@ key_repeat         = 2
 # 事前に mise が ~/.local/bin/mise にあり、ログ用に ~/.local/state/agentsview を作成しておくこと。
 [bootstrap.macos.launchd.agents.agentsview-push]
 args           = ["run", "agentsview:cockroach:push:daemon"]
+environment    = { MISE_ENV = "mac" }                        # config.mac.toml の [env]（PGSSLROOTCERT 等）を読ませる
 keep_alive     = false
 program        = "~/.local/bin/mise"
 run_at_load    = true

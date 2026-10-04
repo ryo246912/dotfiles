@@ -947,7 +947,7 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 
 - **fnox解決込みの自己再実行**: launchd/systemdはzsh起動を経ず`AGENTSVIEW_COCKROACH_PUSH_PG_URL`がenvに無いため、taskが`fnox exec -- mise run ...`で自身を再実行して解決する。最小PATHでも辿れるようmiseは絶対パスで叩く（`~/.config/fnox/age.txt`があればbwsは非対話で解ける）。
 - **machine名の補完**: launchd/systemdは`AGENTSVIEW_PG_MACHINE`を持たないので、`dot_zshenv.tmpl`と同じく`host-env.map`から導出し、対話pushと同じmachine名に揃える（導出できなければ`hostname`）。
-- **多重起動防止**: PID + 起動時刻の identity lock（`$XDG_STATE_HOME/agentsview/push.lock`）。実行中のpushが生きていればskip、異常終了で残ったlockは奪い直す。24hのmtime backstop付き。
+- **多重起動防止**: PID + 起動時刻の identity lock（`${XDG_STATE_HOME:-$HOME/.local/state}/agentsview/push.lock`）。実行中のpushが生きていればskip、異常終了で残ったlockは奪い直す。24hのmtime backstop付き。
 
 定義は`config-mac/mise/config.mac.toml`（`[bootstrap.macos.launchd.agents.agentsview-push]`）と`config/mise/config.linux.toml`（service の`[bootstrap.linux.systemd.units.agentsview-push]` + timer の`[bootstrap.linux.systemd.units.agentsview-push-timer]`）。`mise bootstrap dotfiles apply`で反映後、OS別に適用する。
 
