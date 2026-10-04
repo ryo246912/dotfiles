@@ -15,7 +15,7 @@
 | `config/agentsview/scripts/cloudrun.sh`   | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
 | `config/agentsview/compose.yaml`          | local検証用CockroachDBのDocker Compose定義                                                                             |
 | `config/agentsview/prepare-dump-auth`     | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
-| `config/mise/tasks/agentsview.toml`       | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDBへのpush                     |
+| `config/mise/tasks/agentsview.toml`       | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDBへのpush                      |
 | `config/mise/config.toml`                 | clrnd、gcloud、postgresql-binariesなどのversion pin                                                                    |
 
 各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。GCP/CockroachDBの基盤（Terraform）は`ryo246912/infra`リポジトリを参照。
@@ -1143,7 +1143,7 @@ Google Cloud Consoleで次も確認する。
 | `config/agentsview/clrnd.yml`             | `mise bootstrap dotfiles apply` のみ（次回のclrnd実行から反映）                        |
 | `config/mise/tasks/agentsview.toml`       | `mise bootstrap dotfiles apply` のみ                                                   |
 | `config/mise/config.toml`（tool version） | `mise bootstrap dotfiles apply` → `mise install`                                       |
-| infraリポジトリの`*.tf`                   | infraリポジトリ側で`terraform plan` → 内容確認 → `terraform apply`                    |
+| infraリポジトリの`*.tf`                   | infraリポジトリ側で`terraform plan` → 内容確認 → `terraform apply`                     |
 
 ### 手順1. mainを取り込み、applyする
 
