@@ -87,7 +87,20 @@ else
 fi
 """
 
-# 1) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
+# 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
+#    MISE_HISTORY_ENABLED=0でprotective checkpointだけを無効化するが、hook自体は実行する。
+#    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
+[bootstrap.hooks.post-dotfiles]
+run = """
+if mise which apm >/dev/null 2>&1; then
+  MISE_LOCKED=1 mise --cd "$HOME" run apm:sync
+fi
+if mise which rulesync >/dev/null 2>&1; then
+  MISE_LOCKED=1 mise --cd "$HOME" run rulesync:sync
+fi
+"""
+
+# 2) pre-tools: [tools] フェーズ（native の step 15. `mise install` 相当）の前に
 #    gh を導入・認証し、GITHUB_TOKEN 付きで明示的に mise install する。
 #
 #    - なぜ `mise install` 単体では pre-tools が動かないのか:
@@ -129,11 +142,7 @@ echo "Running mise install..."
 GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
-# 2) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
-#    確実に同期する。日常的な `mise bootstrap dotfiles apply` と post-merge は10秒以内で
-#    完了させるため、tool解決・network accessを伴う同期はここ（full bootstrap）だけで行う。
-#    個別に反映したい場合は `mise --cd "$HOME" run apm:sync` /
-#    `mise --cd "$HOME" run rulesync:sync` を実行する。
+# 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
 [bootstrap.hooks.post-tools]
 run = """
 MISE_LOCKED=1 mise --cd "$HOME" run apm:sync

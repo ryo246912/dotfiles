@@ -568,7 +568,8 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
 - 旧 `.chezmoi.toml.tmpl` の `hooks.apply.post`（約140行の bash）は、mise 自体が
   `[bootstrap.packages]`/`[tools]` フェーズをネイティブに処理するようになった分だけ
   大幅に縮小し、`[bootstrap.hooks.pre-tools]`（gh 認証・GITHUB_TOKEN 付き mise install）・
-  `[bootstrap.hooks.post-tools]`（APM/rulesync のハッシュマーカー制御）の2フックに整理した。
+  `[bootstrap.hooks.post-dotfiles]`/`[bootstrap.hooks.post-tools]`（APM/rulesync の
+  ハッシュマーカー制御）の3フックに整理した。
   mise 自体の self-update は `mise bootstrap` の外（`lefthook.yml` の `post-merge`）に切り出したため、
   bootstrap hook 側には残していない。
   - hook は `mise bootstrap` の実行時にしか発火しない（公式ドキュメント
@@ -585,13 +586,14 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
     2回目は全ツール導入済みの冪等チェックのみで即座に完了するため、
     実処理としての無駄（再ダウンロード等）は発生しない。
   - git pull 後の `post-merge` にある `dotfiles-apply` job は
-    `mise bootstrap dotfiles apply --yes` だけを実行する（その前の別jobである
-    `ensure-mise-version` は、必要な場合にmise自体を更新する）。
-    APM/rulesync 同期をここから呼ぶと、global config の100件超のtool解決とnestedな
-    `mise run` が入り、変更が小さくても数十秒かかるためである。日常的なdotfiles applyは
-    network accessを伴わない10秒以内の経路に保ち、依存を更新したときは明示的に
-    `mise --cd "$HOME" run apm:sync` / `mise --cd "$HOME" run rulesync:sync`、または
-    full `mise bootstrap`を実行する。
+    `MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes` を実行する。
+    `dotfiles apply` はhistoryが有効だと、操作前後にtrack対象（この構成では
+    `~/.config`の広い範囲）のprotective checkpointを作る。ファイル数の多い実環境では、
+    実際のcopyが1ディレクトリだけでもこのwalkとGit snapshotに約80秒かかっていた。
+    post-mergeはGit管理されたsourceからの自動再適用であり、常駐history-watchが編集を
+    別途保存するため、この自動経路だけoperation checkpointを無効化する。通常の手動apply、
+    `mise bootstrap dotfiles save`、history-watch、full bootstrapではhistoryを維持する。
+    `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
@@ -931,8 +933,8 @@ X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...
   sandboxでは`[tools]`が100件超のglobal configに対して3分14秒かかった）。
   実際に使うtoolが決まっている軽量taskを呼ぶだけなら `MISE_LOCKED=1`
   （`--locked` 相当）を付け、lockfile済みのversionへ解決を限定してnetwork解決を
-  skipする（同条件で0.3秒まで短縮できた。本リポジトリの `post-tools` フックが
-  `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
+  skipする（同条件で0.3秒まで短縮できた。本リポジトリの `post-dotfiles`/
+  `post-tools` フックが `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
   lockfileに無いtoolについては
   `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
   という警告が出る。taskが使わないtool（apm:sync/rulesync:syncなら、global

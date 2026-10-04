@@ -48,11 +48,11 @@ post-merge:
         fi
     - name: dotfiles-apply
       # chezmoi の git 連携（pull 後の自動 apply）相当。`mise bootstrap dotfiles apply`
-      # は pre-dotfiles フックも伴って実行される。10秒以内で完了させるため、network accessや
-      # global tool tableの解決を伴うapm/rulesync同期はfull `mise bootstrap` または
-      # `mise --cd "$HOME" run apm:sync` / `rulesync:sync` の手動実行に限定する。
+      # はpre/post-dotfilesフック（APM/rulesync同期を含む）も実行する。一方、通常のapplyが
+      # ~/.config全体のprotective checkpointを前後2回作ると数十秒かかるため、この自動apply
+      # だけhistoryを無効化する。常駐history-watchと手動save/full bootstrapの履歴は維持される。
       # ensure-mise-version の後に実行する（min_version を満たした mise で実行するため）。
-      run: mise bootstrap dotfiles apply --yes
+      run: MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes
 
 pre-push:
   jobs:

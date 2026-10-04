@@ -1,7 +1,6 @@
 ["apm:sync"]
 description = "APM を manifest/lockfile の変更時、または生成物の欠落時だけ同期する"
-# [bootstrap.hooks.post-tools]（フル `mise bootstrap`）または手動実行から呼ばれる。
-# 日常的な `mise bootstrap dotfiles apply` では、10秒以内で完了させるため実行しない。
+# [bootstrap.hooks.post-dotfiles]/[bootstrap.hooks.post-tools]または手動実行から呼ばれる。
 # 毎回の呼び出しで skill install が走るのを避けるため、XDG_STATE_HOME 配下の
 # ハッシュマーカーで「前回実行時から変更が無ければ skip」を判定する。
 run = '''
