@@ -48,6 +48,14 @@
 - [ ] Google日本語入力
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
 
+- [ ] アプリごとのウィンドウ枠の色（JankyBorders + Hammerspoon）
+  - borders/hammerspoon は `mise run bootstrap:mac` で導入され、borders は `brew services` で常駐する
+  - 既定の枠設定は `~/.config/borders/bordersrc`、アプリ（プロセス）ごとの色は `~/.hammerspoon/app_borders_rules.lua` に書く
+    - 同じアプリを `--user-data-dir` 違いで起動した Claude Desktop（Claude2/ClaudeWork3）も起動引数で判別して色を分ける
+    - Chrome 等を追加する場合はルールを1行追加するだけ（`~/.hammerspoon` 配下の変更は自動リロード）
+  - [ ] Hammerspoon を起動し、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で Hammerspoon を許可
+  - [ ] 反映されない場合は Hammerspoon のメニューバーアイコンから「Reload Config」、borders は `brew services restart borders`
+
 - [ ] システム設定
   - [ ] キーボードショートカット
     - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
