@@ -1,7 +1,7 @@
 # devcontainer
 
 AI エージェントを devcontainer 内で実行するための共通基盤に関する設定をまとめます。
-devcontainer 定義は `dot_config/devcontainer/` を参照してください。
+devcontainer 定義は `config/devcontainer/` を参照してください。
 
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
@@ -135,7 +135,7 @@ bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 
 ## イメージのリビルド高速化（mise ツールのキャッシュ）
 
-`dot_config/devcontainer/mise.toml` を変更すると `mise install` の layer は必ず再実行されますが、
+`config/devcontainer/mise.toml` を変更すると `mise install` の layer は必ず再実行されますが、
 全ツールをゼロから入れ直さないよう `Dockerfile` で次の工夫をしています。
 
 - インストール済みツール（`/mise/data`）を BuildKit の cache mount（id: `devcontainer-mise-data`）に
@@ -179,7 +179,7 @@ devcontainer 専用の SSH 鍵を発行し、[SSH コミット署名](https://do
 ### 初回セットアップ
 
 署名専用の SSH 鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`
-（`executable_initialize.sh`、後述）が無ければ自動生成するため、手動での鍵生成は不要です。
+（`initialize.sh`、後述）が無ければ自動生成するため、手動での鍵生成は不要です。
 `devcontainer up` 実行時にこのコマンドの出力に生成した公開鍵が表示されるので、それを
 GitHub に **Signing Key** として登録してください（初回のみ）:
 
@@ -187,9 +187,9 @@ GitHub に **Signing Key** として登録してください（初回のみ）:
 GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
 ```
 
-`dot_config/devcontainer/devcontainer.json` はこの鍵（秘密鍵・公開鍵とも）を
+`config/devcontainer/devcontainer.json` はこの鍵（秘密鍵・公開鍵とも）を
 `/home/vscode/.ssh/id_docker_devcontainer_sign(.pub)` に読み取り専用でマウントします。
-`postCreateCommand`（`executable_post-create.sh`）が鍵の存在を検知すると、コンテナ内の
+`postCreateCommand`（`post-create.sh`）が鍵の存在を検知すると、コンテナ内の
 `~/.gitconfig` に以下を設定します（include で読み込んだホストの GPG 署名設定より後に
 書き込まれるため、後勝ちでこちらが有効になります）:
 
@@ -199,7 +199,7 @@ GitHub > Settings > SSH and GPG keys > New SSH key > Key type: Signing Key
   （`git log --show-signature`等でのローカル検証用。`user.email` と公開鍵から自動生成。
   `namespaces="git"` を付与し、この鍵が git 以外の OpenSSH 署名用途に流用されないよう制限しています）
 
-この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`executable_initialize.sh`）
+この鍵（`~/.ssh/id_docker_devcontainer_sign`）は `initializeCommand`（`initialize.sh`）
 が存在しない場合に生成する（既存の鍵はそのまま使い、公開鍵だけ都度同期する）ため、通常は常に
 mount されており、未セットアップのホストでもコンテナは問題なく起動します。万が一鍵が存在しない
 場合（`mounts` からこの鍵を外した構成等）や、鍵が非対話で使えない(パスフレーズ付き等)場合、
@@ -234,7 +234,7 @@ devcontainer.json の `mounts` は `docker run --mount` として処理されま
 "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'"
 ```
 
-`dot_config/devcontainer/scripts/executable_initialize.sh` は各 mount の source を種類ごとに
+`config/devcontainer/scripts/initialize.sh` は各 mount の source を種類ごとに
 （ディレクトリは `mkdir -p`、空でよいファイルは `touch`、JSON は `{}`）用意します。ディレクトリや
 JSON は既に存在するものには触れませんが、SSH 鍵だけは例外です: 秘密鍵があれば毎回そこから公開鍵を
 導出して `.pub` と同期し（欠落時の再構成に加え、秘密鍵だけ手動で差し替えて `.pub` が古いままの

@@ -8,12 +8,12 @@ globs:
 
 # CLAUDE.md
 
-This is a personal dotfiles repository managed with [chezmoi](https://github.com/twpayne/chezmoi).
+This is a personal dotfiles repository managed with [mise](https://mise.jdx.dev/)'s `[dotfiles]` feature (`mise bootstrap dotfiles`).
 
 ## Critical Rule
 
-- **Always edit source files in this repository**, never the deployed files (`~/.config/`, `~/.local/`, `~/`, etc.) — they get overwritten by chezmoi on the next apply.
-- After editing, run `chezmoi diff` to preview and `chezmoi apply` to deploy.
+- **Always edit source files in this repository**, never the deployed files (`~/.config/`, `~/.local/`, `~/`, etc.) — they get overwritten by `mise bootstrap dotfiles apply` on the next run.
+- After editing, run `mise bootstrap dotfiles diff` to preview and `mise bootstrap dotfiles apply` to deploy.
 
 ## Tooling
 

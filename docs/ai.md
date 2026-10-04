@@ -45,7 +45,7 @@ multi-worktree の task root では `--config` を省略します（task root �
 
 ## 外部 skill の使い方
 
-このページでは、`dot_apm/apm.yml` で導入している次の skill の使い方を説明します。
+このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。
 
 - Plannotator / Effective HTML skills
 - `crit` / `crit-cli`
@@ -63,16 +63,16 @@ multi-worktree の task root では `--config` を省略します（task root �
 設定を反映してから APM を実行します。
 
 ```bash
-chezmoi apply
-mise run apm:install
+mise bootstrap dotfiles apply
+mise --cd "$HOME" run apm:install
 ```
 
 `mise run apm:install` は user scope で skill をインストールします。Claude Code では
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `dot_apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `chezmoi apply` と `mise run apm:install` を実行します。
+依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
+`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
 
 ### Plannotator / Effective HTML
 
@@ -649,4 +649,4 @@ npx skills find testing --owner vercel-labs
 
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
-`dot_apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+`apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。

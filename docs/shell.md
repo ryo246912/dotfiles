@@ -1,7 +1,7 @@
 # HOST_ENV の一時的な上書き
 
-`dot_config/zsh/dot_zshenv.tmpl` は、`HOST_ENV` が未設定の場合だけ
-`dot_config/zsh/host-env.map` から現在のホスト名に対応する値を解決する
+`templates/zsh/.zshenv.tera` は、`HOST_ENV` が未設定の場合だけ
+`config/zsh/host-env.map` から現在のホスト名に対応する値を解決する
 （既に `HOST_ENV` が export 済みなら上書きしない）。これを利用すると、
 別ロールの設定を一時的なシェルで試せる。
 
