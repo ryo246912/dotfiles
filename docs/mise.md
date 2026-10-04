@@ -917,6 +917,16 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   （`$MISE_PROJECT_ROOT` 等）はフック内では未設定になる。フック・タスク内で
   リポジトリの場所を参照したい場合は `$(pwd)` で解決するか、常にリポジトリ直下から
   実行する運用にする（本リポジトリの `[bootstrap.hooks.*]` はこの前提で書いている）。
+- `mise` は呼び出すたびに mise本体の新versionが出ていないかを
+  `https://mise.jdx.dev/releases.tsv` へ毎回問い合わせる（`mise WARN mise version
+X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...`
+  いずれも「何かする前にまずこれが走る」ため、network が遅い/不調な環境では
+  **`mise bootstrap: pre-dotfiles hooks` のような最初の出力が出る前から**何十秒も
+  固まったように見える（実機確認済み: `mise --version` だけでも sandbox 環境で
+  4.5秒かかった）。`disable_update_warning = true`（`mise.toml`・
+  `config/mise/config.toml` 両方で設定済み）でこの問い合わせ自体を止められる
+  （同条件で0.08秒まで短縮）。`mise.toml` 側に置いているのは、`config/mise/config.toml`
+  がまだ配置されていない最初の `mise bootstrap` 実行時にも効かせるため。
 - `mise --cd <dir> run <task>` は、呼び出し時点で `<dir>` の config（グローバル
   config ならその `[tools]` 全件）を毎回新規に解決しようとする。pin済みversionが
   lockfileに無い/古い場合はnetwork越しのversion解決が走り、tool数が多いと
