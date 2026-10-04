@@ -104,7 +104,7 @@
 
     },
     "gapSize" : {
-      "float" : 0
+      "float" : 4
     },
     "greenButtonOverride" : {
       "bool" : false
@@ -316,6 +316,14 @@
     "maximize" : {
       "keyCode" : 126,
       "modifierFlags" : 655360
+    },
+    "nextDisplay" : {
+      "keyCode" : 124,
+      "modifierFlags" : 1835008
+    },
+    "previousDisplay" : {
+      "keyCode" : 123,
+      "modifierFlags" : 1835008
     },
     "reflowTodo" : {
       "keyCode" : 45,
