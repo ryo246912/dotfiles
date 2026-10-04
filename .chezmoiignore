@@ -12,6 +12,7 @@ _*
 plan*
 
 .aws/*
+.config/git/config.work3.secret
 .config/claude*
 .config/dbeaver*
 .config/memo*

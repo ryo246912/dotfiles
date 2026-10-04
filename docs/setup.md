@@ -104,7 +104,7 @@
     nvim ~/.config/git/config.work.secret
     ```
 
-    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる）
+    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる。読み込み確認は `~/Programming/work3/` 配下のリポジトリ内で実行すること）
 
     ```sh
     cp "$(chezmoi source-path)/dot_config/git/config.work3.secret.sample" ~/.config/git/config.work3.secret
