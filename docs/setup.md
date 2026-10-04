@@ -156,6 +156,13 @@
     nvim ~/.config/git/config.work.secret
     ```
 
+    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる。読み込み確認は `~/Programming/work3/` 配下のリポジトリ内で実行すること）
+
+    ```sh
+    cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+    nvim ~/.config/git/config.work3.secret
+    ```
+
     - 編集後、設定ファイルが読み込まれていることを確認する
 
     ```sh
@@ -359,7 +366,7 @@
 - [ ] ccmanagerのプロジェクトルート作成
   - `CCMANAGER_MULTI_PROJECT_ROOT`（`config/zsh/lazy/private.zsh` / `workN.zsh`）が指す
     `~/Programming/<role>/worktrees` と、実体のリポジトリを置く`~/Programming/<role>/repos`は
-    chezmoiの管理外のため、事前にディレクトリを作成する
+    `[dotfiles]`の管理外のため、事前にディレクトリを作成する
   - work1/work2ロールは`~/work/worktrees`のまま（対象外）
 
     ```sh

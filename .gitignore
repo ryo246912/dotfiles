@@ -11,6 +11,7 @@ mise*.lock
 !templates/**
 config/git/config.secret
 config/git/config.work.secret
+config/git/config.work3.secret
 config/zsh/.zprofile.secret
 config/zsh/.zshrc.secret
 
