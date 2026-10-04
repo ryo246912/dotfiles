@@ -928,7 +928,15 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   `post-tools` フックが `apm:sync`/`rulesync:sync` を呼ぶ際も付けている）。
   lockfileに無いtoolについては
   `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
-  という警告が出るが、無関係なtoolの警告なので無視してよい。
+  という警告が出る。taskが使わないtool（apm:sync/rulesync:syncなら、global
+  configにある他の100件超）の警告は無視してよいが、**taskが実際に使うtool
+  （この場合は apm/rulesync 自体）の警告は無視しないこと**。lockfileが無くても
+  taskの実行自体は失敗しない（実機確認済み: 唯一のtool entryがlockfileに無い
+  状態でも対象taskは実行された）が、PATH上に既に解決済みのversionが無い場合は
+  そのtool無しでtaskが走ることになる（例えばapm自体が入っていなければ
+  `apm: command not found` で落ちる）。pinned versionを上げた直後など、
+  apm/rulesync自身がlockfileに無い状態になったら、`MISE_LOCKED`無しで
+  一度 `mise install` してlockfileを更新してから実行すること。
 
 ## mise にない機能: chezmoi `modify_`（既存内容への部分マージ）
 
