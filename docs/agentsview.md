@@ -949,11 +949,14 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 - **machine名の補完**: launchd/systemdは`AGENTSVIEW_PG_MACHINE`を持たないので、`dot_zshenv.tmpl`と同じく`host-env.map`から導出し、対話pushと同じmachine名に揃える（導出できなければ`hostname`）。
 - **多重起動防止**: PID + 起動時刻の identity lock（`$XDG_STATE_HOME/agentsview/push.lock`）。実行中のpushが生きていればskip、異常終了で残ったlockは奪い直す。24hのmtime backstop付き。
 
-定義は`config-mac/mise/config.mac.toml`（`[bootstrap.macos.launchd.agents.agentsview-push]`）と`config/mise/config.linux.toml`（`[bootstrap.linux.systemd.units.agentsview-push]`）。`mise bootstrap dotfiles apply`で反映後、OS別に適用する。
+定義は`config-mac/mise/config.mac.toml`（`[bootstrap.macos.launchd.agents.agentsview-push]`）と`config/mise/config.linux.toml`（service の`[bootstrap.linux.systemd.units.agentsview-push]` + timer の`[bootstrap.linux.systemd.units.agentsview-push-timer]`）。`mise bootstrap dotfiles apply`で反映後、OS別に適用する。
 
 ```sh
 # macOS: ログ出力先を先に作る（launchd は親ディレクトリを作らない）
 mkdir -p ~/.local/state/agentsview
+
+# source TOML を deploy（これが無いと新規 unit が見えない）
+mise bootstrap dotfiles apply
 
 # 差分だけ確認 → 適用
 MISE_ENV=mac   mise bootstrap macos launchd-agents apply --dry-run

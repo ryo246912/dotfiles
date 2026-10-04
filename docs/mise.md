@@ -145,16 +145,22 @@ keep_alive     = false               # 常駐でなく都度起動なので fals
 stdout_path    = "~/.local/state/agentsview/push.log"
 stderr_path    = "~/.local/state/agentsview/push.log"
 
-# Linux: config.linux.toml。timer 系フィールドがあると .service + .timer を生成
-[bootstrap.linux.systemd.units.agentsview-push]
-description        = "..."
-exec_start         = "%h/.local/bin/mise run agentsview:cockroach:push:daemon" # %h=$HOME
-type               = "oneshot"
+# Linux: config.linux.toml。timer 系キーを持つ entry は .timer として生成され、サービス実行キー
+# （exec_start 等）は別の service entry に置いて timer から unit で参照する。
+[bootstrap.linux.systemd.units.agentsview-push]        # service
+description = "..."
+exec_start  = "%h/.local/bin/mise run agentsview:cockroach:push:daemon" # %h=$HOME
+type        = "oneshot"
+
+[bootstrap.linux.systemd.units.agentsview-push-timer]  # timer → 上の service を叩く
 on_boot_sec        = "5min"
 on_unit_active_sec = "15min"          # 以後 15 分ごと
+unit               = "agentsview-push"
 ```
 
 ```sh
+# source TOML を deploy してから apply する（これが無いと新規 unit が見えない）
+mise bootstrap dotfiles apply
 # 適用（差分は --dry-run で確認）
 MISE_ENV=mac   mise bootstrap macos launchd-agents apply
 MISE_ENV=linux mise bootstrap linux systemd-units apply
