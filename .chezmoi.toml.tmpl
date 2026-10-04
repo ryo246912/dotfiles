@@ -31,19 +31,9 @@ fi
 #    先に実行され、mise 未導入時の初回インストールを担う。
 #    min_version は mise 自身で config をロードせずテキストとして抽出し、
 #    self-update も config を読まずに実行する。
-#    mac 専用機能（独自 tap の brew:・launchd agent 等）が要求する版は config.mac.toml の
-#    min_version に置き（Linux/WSL は self-update しないため config.toml を上げない）、
-#    そちらを優先して読む。
 if [ "$(uname)" = "Darwin" ]; then
   mise_config="$HOME/.config/mise/config.toml"
-  mise_config_mac="$HOME/.config/mise/config.mac.toml"
-  required_mise_version=""
-  if [ -f "$mise_config_mac" ]; then
-    required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config_mac")
-  fi
-  if [ -z "$required_mise_version" ]; then
-    required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
-  fi
+  required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' "$mise_config")
   if [ -z "$required_mise_version" ]; then
     echo "error: $mise_config から min_version を取得できません"
     exit 1
