@@ -6,6 +6,7 @@
 **/*karabiner*
 **/*mac*
 **/*brew*
+.config/hammerspoon
 {{- end }}
 _*
 plan*
