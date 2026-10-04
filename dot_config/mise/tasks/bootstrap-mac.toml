@@ -24,7 +24,7 @@ fi
 
 ["bootstrap:mac-packages"]
 depends = ["bootstrap:mac-brew"]
-description = "brew-cask/[bootstrap.packages] では扱えない特殊パッケージ（custom option・tap・postflight・service）を導入する"
+description = "brew-cask/[bootstrap.packages] では扱えない特殊パッケージ（custom option・tap・postflight）を導入する"
 run = '''
 #!/bin/bash
 set -euo pipefail
@@ -115,26 +115,6 @@ if ! brew list --cask opencode-bar &>/dev/null; then
   brew install --cask opgginc/tap/opencode-bar
 else
   echo "opencode-bar is already installed"
-fi
-
-# borders(JankyBorders): 独自 tap（felixkratz/formulae）の formula で Homebrew API メタデータが無く、
-# bottle も無いソースビルドのため [bootstrap.packages] の brew: では扱えない。
-# 設定は ~/.config/borders/bordersrc、アプリごとの色は ~/.hammerspoon/app_borders_rules.lua
-if ! brew list borders &>/dev/null; then
-  brew install felixkratz/formulae/borders
-else
-  echo "borders is already installed"
-fi
-if ! brew services list | grep -qE '^borders[[:space:]]+started'; then
-  brew services start borders
-fi
-
-# hammerspoon: cask 定義が auto_updates を使っており mise の brew-cask シムが未対応。
-# JankyBorders の枠の色をアプリ（プロセス）ごとに切り替えるために使う（~/.hammerspoon/init.lua）
-if ! brew list --cask hammerspoon &>/dev/null; then
-  brew install --cask hammerspoon
-else
-  echo "hammerspoon is already installed"
 fi
 '''
 

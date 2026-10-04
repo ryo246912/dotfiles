@@ -1,5 +1,5 @@
 #!/bin/bash
-# JankyBorders の既定設定（brew services で起動した borders が読み込む）
+# JankyBorders の既定設定（mise の launchd agent で常駐する borders が起動時に読み込む）
 # アプリごとの色は ~/.hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
 # inactive_color を透明にしているため、ルールに無いアプリは非フォーカス時に枠を出さない。
 options=(
