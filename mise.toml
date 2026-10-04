@@ -132,7 +132,8 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 # 2) post-tools: [tools] フェーズ直後（apm/rulesync が必要とするツールの導入完了後）に
 #    確実に同期する。日常的な `mise bootstrap dotfiles apply` と post-merge は10秒以内で
 #    完了させるため、tool解決・network accessを伴う同期はここ（full bootstrap）だけで行う。
-#    個別に反映したい場合は `mise run apm:sync` / `mise run rulesync:sync` を実行する。
+#    個別に反映したい場合は `mise --cd "$HOME" run apm:sync` /
+#    `mise --cd "$HOME" run rulesync:sync` を実行する。
 [bootstrap.hooks.post-tools]
 run = """
 MISE_LOCKED=1 mise --cd "$HOME" run apm:sync

@@ -584,11 +584,14 @@ dotfiles:sync-mac`/`dotfiles:sync-windows`（`tasks/dotfiles-sync.toml`）とい
     二重実行が唯一の手段（詳細は `mise.toml` の `pre-tools` コメント参照）。
     2回目は全ツール導入済みの冪等チェックのみで即座に完了するため、
     実処理としての無駄（再ダウンロード等）は発生しない。
-  - git pull 後の `post-merge` は `mise bootstrap dotfiles apply --yes` だけを実行する。
+  - git pull 後の `post-merge` にある `dotfiles-apply` job は
+    `mise bootstrap dotfiles apply --yes` だけを実行する（その前の別jobである
+    `ensure-mise-version` は、必要な場合にmise自体を更新する）。
     APM/rulesync 同期をここから呼ぶと、global config の100件超のtool解決とnestedな
     `mise run` が入り、変更が小さくても数十秒かかるためである。日常的なdotfiles applyは
     network accessを伴わない10秒以内の経路に保ち、依存を更新したときは明示的に
-    `mise run apm:sync` / `mise run rulesync:sync`、またはfull `mise bootstrap`を実行する。
+    `mise --cd "$HOME" run apm:sync` / `mise --cd "$HOME" run rulesync:sync`、または
+    full `mise bootstrap`を実行する。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
