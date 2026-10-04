@@ -1,3 +1,8 @@
+# mac 専用機能が要求する mise の最小版（config.toml より新しい版にする）。
+# 2026.9.12: 独自 tap formula の評価（brew:felixkratz/formulae/borders）と launchd agent の process_type。
+# chezmoi の post-apply hook は mac ではこの値を優先して self-update する
+min_version = "2026.9.12"
+
 [env]
 # macOSのlibpqは、OpenSSLの既定trust storeをKeychainへ必ずしも橋渡ししない。
 # CockroachDBへのverify-full接続がpsql、AgentsView、fnoxの子processで動くよう、
