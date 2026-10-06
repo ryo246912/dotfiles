@@ -146,7 +146,7 @@ keys = [
   # { key = "j",      with = "super",                 esc = "\u0002O"}       , # ctrl + b → O(mode切替→easy motion jump line、カスタム)
   { key = "l",        with = "super",                 esc = "\u0002s"}       , # ctrl + b → s(ペイン一覧表示)
   { key = "l",        with = "super | shift",         esc = "\u0002w"}       , # ctrl + b → w(ウィンドウ一覧表示)
-  { key = "o",        with = "control | shift",       esc = "\u0002R"}       , # ctrl + b → R(easymotion quickopen、カスタム)
+  { key = "o",        with = "super | shift",         esc = "\u0002R"}       , # ctrl + b → R(easymotion quickopen、カスタム)
   { key = "p",        with = "super",                 esc = "\u0002\u0010"}  , # ctrl + b → ctrl + p(popup window、カスタム)
   { key = "p",        with = "super | shift",         esc = "\u0002P"}       , # ctrl + b → P(overlay強制kill、カスタム)
   { key = "r",        with = "super",                 esc = "\u0002r"}       , # ctrl + b → r(.tmux.confの再読込、カスタム)
