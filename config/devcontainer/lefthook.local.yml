@@ -106,11 +106,28 @@ pre-commit:
           echo "   git stash list で lefthook-pre-commit を確認して復元してください。" >&2
           exit 1
         fi
+        # stash 後に hook 実行中に加えられた変更（lint の自動修正や並行して動く別プロセスの編集）は stash に含まれない。
+        # 消さずに退避してから復元する。
+        backup="$(git rev-parse --git-path lefthook-pre-commit-backup)/$(date +%Y%m%d-%H%M%S)-$$"
+        if ! git diff --quiet; then
+          mkdir -p "$backup"
+          git diff --binary > "$backup/tracked.patch"
+        fi
         git reset --hard -q
         # lint 等が stash 内の未追跡ファイルと同名のファイルを生成していると、pop が
-        # "already exists, no checkout" で失敗して stash が残る。stash の内容で上書きされるものだけ先に消す。
+        # "already exists, no checkout" で失敗して stash が残る。stash の内容で上書きされるものだけ先に退避する。
         if git rev-parse --verify -q "$expected^3" >/dev/null; then
-          git ls-tree -r -z --name-only "$expected^3" | xargs -0 -r rm -f --
+          git ls-tree -r -z --name-only "$expected^3" | xargs -0 -r sh -c '
+            b="$1"; shift
+            for f; do
+              [ -e "$f" ] || [ -L "$f" ] || continue
+              mkdir -p "$b/untracked/$(dirname "$f")"
+              mv -- "$f" "$b/untracked/$f"
+            done
+          ' _ "$backup"
+        fi
+        if [ -d "$backup" ]; then
+          echo "⚠️ [ai-only] hook実行中に変更されたファイルを $backup に退避しました（tracked.patch / untracked/）。" >&2
         fi
         rm -f "$marker"
         if ! git stash pop --index -q; then

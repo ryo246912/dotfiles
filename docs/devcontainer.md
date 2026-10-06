@@ -340,7 +340,9 @@ Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空で
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
 
 lint前に未ステージの変更と未追跡ファイルを`lefthook-pre-commit`という名前でstashし、
-lintの成否にかかわらず最後に復元する。lintが同名の未追跡ファイルを生成していても、
-stashの内容で上書きされるものは復元前に削除する。復元に失敗した場合や、
-hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まるので、
-`git stash list`で`lefthook-pre-commit`を確認して`git stash pop --index stash@{N}`で復元する。
+lintの成否にかかわらず最後に復元する。hook実行中に追跡済みファイルへ加えられた変更と、
+stash内の未追跡ファイルと同じパスに作られたファイルは、復元前に
+`.git/lefthook-pre-commit-backup/<日時>/`へ退避する（`tracked.patch`と`untracked/`）。
+復元に失敗した場合や、hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まる。
+`git stash list`で`lefthook-pre-commit`を確認する。stashに含まれる未追跡ファイルと同じパスのファイルが
+残っている場合は、そのファイルを退避または削除してから`git stash pop --index stash@{N}`で復元する。
