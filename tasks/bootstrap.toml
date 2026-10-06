@@ -97,13 +97,7 @@ run = '''
 set -eu
 set -o pipefail
 
-targets=$(mise bootstrap dotfiles status --json | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for f in data['files']:
-    if f['mode'] == 'copy' and f['state'] == 'differs':
-        print(f['target'])
-")
+targets=$(mise bootstrap dotfiles status --json | jq -r '.files[] | select(.mode == "copy" and .state == "differs") | .target')
 
 if [ -z "$targets" ]; then
   echo "取り込める差分はありません"
