@@ -1,0 +1,85 @@
+["sandbox:build-template"]
+description = "Build the Docker Sandboxes template with the devcontainer toolchain and load it into sbx"
+run = '''
+set -eu
+
+# devcontainer と同じツール群（~/.config/devcontainer/mise.toml）を入れた sandbox template を
+# ビルドして sbx の image store へ読み込む。詳細は docs/docker-sandboxes.md 参照。
+#
+# sbx が使う Docker daemon はホストの daemon と image store を共有しないため、
+# ローカルビルドした image は tar 経由で `sbx template load` する必要がある。
+
+context="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer"
+dockerfile="${context}/Dockerfile.sandbox"
+tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
+variant="${SBX_TEMPLATE_VARIANT:-claude-code}"
+
+for cmd in docker sbx; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }
+done
+[ -f "$dockerfile" ] || { echo "error: $dockerfile が見つかりません（dotfiles を適用してください）" >&2; exit 1; }
+
+# aqua:/github: backend の API レート制限を避けるため GH_TOKEN を build secret で渡す
+gh_token=""
+command -v gh >/dev/null 2>&1 && gh_token=$(gh auth token 2>/dev/null || true)
+
+tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
+trap 'rm -f "$tar_path"' EXIT
+
+echo "==> docker build ($tag, variant=$variant)"
+GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
+  --secret id=github_token,env=GH_TOKEN \
+  --build-arg "VARIANT=${variant}" \
+  -f "$dockerfile" \
+  -t "$tag" \
+  "$context"
+
+echo "==> docker image save -> sbx template load"
+docker image save "$tag" -o "$tar_path"
+sbx template load "$tar_path"
+
+echo "==> 完了。利用可能な template:"
+sbx template ls
+echo
+echo "sbx-agent / multi-worktree dev は $tag を自動で使います"
+echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
+'''
+
+["sandbox:setup"]
+description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills)"
+run = '''
+set -eu
+
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+
+# devcontainer と同じ初期化（マウント元の作成と mac-host 用 SSH 鍵の生成）を流用する。
+# 鍵をホストの authorized_keys へ登録する手順は docs/devcontainer.md 参照。
+initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh"
+if [ -f "$initialize" ]; then
+  echo "==> マウント元と SSH 鍵を準備"
+  bash "$initialize" || echo "warn: initialize.sh が失敗しました" >&2
+fi
+
+echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
+if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
+  sbx secret set github --command 'gh auth token' || echo "warn: secret の登録に失敗しました" >&2
+else
+  echo "warn: gh が未ログインのためスキップしました（gh auth login 後に再実行）" >&2
+fi
+
+echo "==> ホスト連携に必要な network policy を許可"
+# mac-host への SSH（通知 / host-tmux / plannotator tunnel）。
+# sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
+sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
+
+echo "==> ホストの agent skills を共有 store へ取り込む"
+sbx skills import || echo "warn: skills の取り込みに失敗しました" >&2
+
+echo "==> 現在の設定"
+sbx secret ls || true
+sbx policy ls || true
+'''
+
+["sandbox:ls"]
+description = "List Docker Sandboxes with their ports and workspaces"
+run = "sbx ls"

@@ -12,10 +12,11 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 > 付けたときのフォールバック経路です。移行の背景と sandbox 側の使い方は
 > [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
 >
-> ただし **このページに書かれているツールチェイン（mise + 各種 CLI）とホスト連携
-> （通知・crit・plannotator・host-tmux・lefthook）は sandbox 側では未実現**です。
-> lint を回したり crit でレビューしたりする用途では、今のところ devcontainer backend の方が
-> 揃っています。項目ごとの再現状況は
+> このページのツールチェイン（`mise.toml` / `tasks/` / `lint/`）とホスト連携スクリプト
+> （通知・crit・plannotator・host-tmux・lefthook）は **`Dockerfile.sandbox` 経由で sandbox 側にも
+> 移植済み**で、同じファイルを共有しています。そのため `mise.toml` や `scripts/` を変更したら
+> `mise run sandbox:build-template` で sandbox 用 template も作り直してください。
+> 項目ごとの再現状況と、まだ差分が残っている点（生成物ディレクトリの分離など）は
 > [devcontainer との機能対応表](./docker-sandboxes.md#devcontainer-との機能対応表) にまとめています。
 
 ## workspace と Git metadata の mount 範囲
@@ -159,6 +160,22 @@ bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 - `tasks/` の COPY は install の後に置き、tasks の変更で install layer が無効化されないようにしています。
 
 cache mount は `docker builder prune` で削除されます（削除されても初回と同じフルインストールになるだけです）。
+
+## このディレクトリの共有範囲（devcontainer / sandbox）
+
+`config/devcontainer/` は devcontainer と Docker Sandboxes の両方から使われます。
+
+| ファイル                                   | devcontainer               | Docker Sandboxes                                         |
+| ------------------------------------------ | -------------------------- | -------------------------------------------------------- |
+| `devcontainer.json`                        | 本体の定義                 | 未使用                                                   |
+| `Dockerfile`                               | devcontainer の image      | 未使用                                                   |
+| `Dockerfile.sandbox`                       | 未使用                     | `mise run sandbox:build-template` が使う template の定義 |
+| `mise.toml` / `tasks/` / `lint/`           | bind mount + image に COPY | image に COPY（同じ内容）                                |
+| `scripts/`                                 | bind mount                 | image に COPY                                            |
+| `lefthook.local.yml`                       | bind mount                 | image に COPY                                            |
+| `scripts/initialize.sh`                    | `initializeCommand`        | `mise run sandbox:setup` が流用                          |
+| `scripts/post-create.sh` / `post-start.sh` | `postCreateCommand` 等     | 未使用（代わりに `sandbox-post-create.sh`）              |
+| `scripts/sandbox-post-create.sh`           | 未使用                     | `sbx exec` で sandbox 作成直後に実行                     |
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
