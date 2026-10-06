@@ -215,6 +215,7 @@ ensure_ssh_key() {
 ensure_dir ~/.config/gh
 ensure_dir ~/.config/ccusage
 ensure_dir ~/.config/mise
+ensure_dir ~/.config/nvim
 
 # .ssh
 ensure_empty_file ~/.ssh/known_hosts

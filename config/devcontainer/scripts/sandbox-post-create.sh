@@ -3,11 +3,10 @@ set -uo pipefail
 
 # Docker Sandboxes 版の post-create / post-start 相当。
 # sandbox 内で `sbx exec` から実行される（sbx には postCreateCommand が無いため、
-# sbx-agent が sandbox 作成直後に一度だけ呼ぶ）。
+# sbx-agent が sandbox へアタッチするたびに呼ぶ。全処理が冪等）。
 #
-# devcontainer の post-create.sh / post-start.sh のうち、sandbox 側で意味のある処理だけを行う。
-#   - git 設定は sbx-agent が GIT_CONFIG_* で注入済みなのでここでは触らない
-#   - 生成物ディレクトリの分離（mount-container-only-dirs.sh）は未移植（docs/docker-sandboxes.md 参照）
+# devcontainer の post-create.sh / post-start.sh のうち、sandbox 側で意味のある処理を行う。
+# git 設定は sbx-agent が GIT_CONFIG_* で注入済みなのでここでは触らない。
 #
 # 失敗しても sandbox の起動は止めない（個々の処理を best-effort で進める）。
 
@@ -170,6 +169,64 @@ install_lefthook_all() {
     done
 }
 
+# ---------------------------------------------------------------------------
+# nvim
+# ---------------------------------------------------------------------------
+# ホストの ~/.config/nvim はホストと同じ絶対パスにマウントされる（sandbox 内の $HOME とは別）。
+# nvim は $XDG_CONFIG_HOME/nvim しか見ないため、symlink を張って同じ設定を読ませる。
+# プラグイン本体は stdpath("data") = sandbox 内の ~/.local/share/nvim に入る。
+setup_nvim() {
+    local host_nvim="${SBX_HOST_NVIM_CONFIG:-}"
+    local target="${XDG_CONFIG_HOME:-${HOME}/.config}/nvim"
+
+    if [ -z "$host_nvim" ] || [ ! -d "$host_nvim" ]; then
+        log_skip "nvim 設定が渡されていないためスキップしました（SBX_HOST_NVIM_CONFIG=${host_nvim:-未設定}）"
+        return 0
+    fi
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$host_nvim" ]; then
+        log_skip "nvim 設定の symlink は既に存在します"
+        return 0
+    fi
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        log_warn "既存の ${target} があるため nvim 設定の symlink を張りませんでした"
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    if ln -sfn "$host_nvim" "$target"; then
+        log_ok "nvim 設定を共有しました: ${target} -> ${host_nvim}"
+    else
+        log_warn "nvim 設定の symlink に失敗しました"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# プロジェクト生成物の分離
+# ---------------------------------------------------------------------------
+# workspace はホストと共有されているため、node_modules / .venv / target などの
+# OS 依存の生成物をそのまま作るとホスト側に Linux 版が書かれてしまう。
+# devcontainer と同じスクリプトで sandbox ローカル領域へ bind mount して隠す。
+# sandbox は microVM なので mount が使え、base image の agent ユーザーは sudo を持つ。
+separate_artifacts() {
+    local script="${scripts_dir}/mount-container-only-dirs.sh"
+
+    [ -x "$script" ] || [ -f "$script" ] || {
+        log_skip "mount-container-only-dirs.sh が無いため生成物の分離をスキップしました"
+        return 0
+    }
+    if ! sudo -n true 2>/dev/null; then
+        log_warn "パスワード無しの sudo が使えないため生成物の分離をスキップしました"
+        return 1
+    fi
+    if bash "$script" "$PWD"; then
+        return 0
+    fi
+    log_warn "生成物の分離に失敗しました（ホスト側に node_modules 等が書かれる可能性があります）"
+    return 1
+}
+
+setup_nvim
+separate_artifacts
 setup_ssh_config
 setup_crit
 setup_agent_configs

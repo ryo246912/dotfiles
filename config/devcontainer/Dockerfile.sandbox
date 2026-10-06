@@ -26,8 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# 既定シェルは bash のまま変えない。sbx は /etc/sandbox-persistent.sh を
-# bash 起動時に source する作りなので、chsh すると環境変数の引き継ぎが壊れる。
+# 既定シェルを zsh にする（devcontainer と同じ）。
+# sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
+# zsh でも同じ内容を読むよう /etc/zsh/zshenv からも source する。
+ENV SHELL=/usr/bin/zsh
+RUN chsh -s /usr/bin/zsh agent \
+    && install -d /etc/zsh \
+    && printf '%s\n' \
+      '# sbx が書き込む永続環境変数を zsh でも読む（bash 側は sbx 本体が source する）' \
+      '[ -r /etc/sandbox-persistent.sh ] && . /etc/sandbox-persistent.sh' \
+      >> /etc/zsh/zshenv
 
 # mise を全ユーザーから使える場所へ入れる
 RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh

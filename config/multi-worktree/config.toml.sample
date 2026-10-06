@@ -80,8 +80,10 @@ skills = "readonly"
 # cpus = "4"
 # memory = "8g"
 # sandbox 作成時に公開するポート（host:sandbox）
-# crit の review UI をホストのブラウザから開く場合などに使う
-# publish_ports = ["7842:7842"]
+# crit / plannotator は sbx-agent が自動で公開するため、ここに書く必要はない
+# publish_ports = ["3000:3000"]
+# ホストで認証済みの MCP サーバを sandbox から使う（`mise run sandbox:mcp` で登録したもの）
+# static_mcp = ["notion", "aws-api", "chrome-devtools"]
 # task root に加えてマウントする workspace
 # sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
 # 以下は sbx-agent が既定で追加するため、ここに書く必要はない

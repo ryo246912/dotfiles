@@ -80,6 +80,89 @@ sbx secret ls || true
 sbx policy ls || true
 '''
 
-["sandbox:ls"]
-description = "List Docker Sandboxes with their ports and workspaces"
-run = "sbx ls"
+["sandbox:mcp"]
+description = "Register MCP servers on the host so sandboxes can reuse host-side auth"
+run = '''
+set -eu
+
+# ホスト側で一度だけ認証し、その認証情報を全 sandbox から使い回すための登録。
+# OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
+# 注入するため、sandbox 内の agent は生の認証情報を読めない。
+#
+# ここで登録するのは「ホストの認証・ホストのリソースが必要なもの」だけにする。
+# npx で動く普通の MCP サーバは rulesync 経由でエージェント自身の設定に入れており、
+# そちらは sandbox 内（VM 内）で動くので devcontainer と同じ隔離が保たれる。
+#
+# 追加したら SBX_AGENT_STATIC_MCP か --static-mcp で sandbox に読み込ませる。
+
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+
+registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
+
+# notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
+if registered notion; then
+  echo "ℹ️ notion は既に登録済み"
+else
+  echo "==> notion を登録（ブラウザで認可します）"
+  sbx mcp add notion --url https://mcp.notion.com/mcp || echo "warn: notion の登録に失敗" >&2
+fi
+
+# aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
+# （--command で登録したサーバはホストで動く。sandbox 内の agent は gateway 経由でのみ接続する）
+if registered aws-api; then
+  echo "ℹ️ aws-api は既に登録済み"
+else
+  echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
+  sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
+    || echo "warn: aws-api の登録に失敗" >&2
+fi
+
+# chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
+if registered chrome-devtools; then
+  echo "ℹ️ chrome-devtools は既に登録済み"
+else
+  echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
+  sbx mcp add chrome-devtools --command npx \
+    --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
+    || echo "warn: chrome-devtools の登録に失敗" >&2
+fi
+
+echo
+echo "==> 登録済みの MCP サーバ"
+sbx mcp ls || true
+echo
+echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
+echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
+'''
+
+["sandbox:template-save"]
+description = "Save a running sandbox's filesystem as a reusable template"
+run = '''
+set -eu
+
+# 使い方: mise run sandbox:template-save <sandbox-name> [tag]
+# sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
+# 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
+
+sandbox="${1:-}"
+tag="${2:-sbx-agent:local}"
+[ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+
+sbx template save "$sandbox" "$tag"
+echo
+sbx template ls
+'''
+
+["sandbox:template-ls"]
+description = "List saved Docker Sandboxes templates"
+run = "sbx template ls"
+
+["sandbox:template-rm"]
+description = "Remove a saved Docker Sandboxes template"
+run = '''
+set -eu
+tag="${1:-}"
+[ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
+sbx template rm "$tag"
+'''

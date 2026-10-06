@@ -12,11 +12,13 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 
 > [!IMPORTANT]
 > 使い始める前に **1 回だけ** 次を実行してください。カスタム template を作らないと
-> sandbox 内にツールチェイン（mise + lint 群 / crit / plannotator など）が入りません。
+> sandbox 内にツールチェイン（mise + lint 群 / nvim / crit / plannotator など）が入りません。
+> 普段の開発フローは [ccmanager での開発の段取り](#ccmanager-での開発の段取り) を参照してください。
 >
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
+> mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 > ```
 
 ## devcontainer に対する利点
@@ -149,6 +151,10 @@ sbx secret ls
 ```bash
 mise run sandbox:setup
 ```
+
+> [!NOTE]
+> このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
+> 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
 
 続いて、devcontainer と同じツールチェインが入った template をビルドします
 （[後述](#ツールチェインカスタム-template)）。これをやらないと sandbox 内に lint 群や crit が入りません。
@@ -313,6 +319,201 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 | `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
 | `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
 
+## ccmanager での開発の段取り
+
+### 最初の 1 回だけ（ホスト側のセットアップ）
+
+```bash
+mise install                     # sbx を導入
+sbx login                        # Docker ID でサインイン
+mise run sandbox:setup           # secret / network policy / skills / 通知用 SSH 鍵
+mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
+mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
+```
+
+`sandbox:setup` の内容（secret 登録と network policy）は **`sbx-agent` が sandbox を作るときに
+自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
+「SSH 鍵と skills をまとめて用意したいとき」に使う入り口です。
+
+ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
+devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
+
+MCP を常用するならシェルの設定に入れておきます。
+
+```bash
+export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools
+```
+
+### タスクごと
+
+```bash
+# 1. worktree を一括作成（全リポジトリに同じブランチの worktree ＋ task 設定を作る）
+multi-worktree create feat/add-auth
+
+# 2. task root へ移動
+multi-worktree cd feat/add-auth
+
+# 3. ccmanager を起動して preset を選ぶ
+ccmc
+```
+
+ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sandbox preset を選ぶと、
+`sbx-agent` が次を自動でやってから agent にアタッチします。
+
+1. sandbox 名を `<repo>-<branch>-<agent>` から決める（既にあれば再利用）
+2. ホスト側の前提条件（github secret / `localhost:22` の policy）を冪等に整える
+3. ツールチェイン入り template があれば使って `sbx create`
+   - ホストの git / gh / aws / nvim 設定と agent 設定ディレクトリをマウント
+   - 各 worktree の common git dir をマウント
+   - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
+   - crit / plannotator のポートを公開（host port は自動採番）
+   - `--static-mcp` で登録済み MCP を読み込む
+4. sandbox 内で初期化（nvim symlink / 生成物の分離 / `mac-host` SSH config / lefthook / crit）
+5. `sbx run` でアタッチ
+
+`multi-worktree dev` から直接起動することもできます。
+
+```bash
+multi-worktree dev feat/add-auth              # 既定 agent
+multi-worktree dev feat/add-auth codex        # agent 指定
+multi-worktree dev feat/add-auth --rm         # 終了時に sandbox を削除
+multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer backend
+```
+
+### セッション中
+
+| やりたいこと                      | コマンド（ホスト側の別端末から）                  |
+| --------------------------------- | ------------------------------------------------- |
+| sandbox 内でシェルを開く          | `sbx exec -it <sandbox> zsh`                      |
+| lint を回す                       | `sbx exec <sandbox> bash -lc 'mise run lint:all'` |
+| 公開ポートを確認（crit の UI 等） | `sbx ports <sandbox>`                             |
+| 通信がブロックされた原因を見る    | `sbx policy log <sandbox>`                        |
+| 一覧・リソースを見る              | `sbx` （TUI）/ `sbx ls` / `sbx inspect <sandbox>` |
+
+sandbox 内で手動インストールしたツールを次回以降も使いたくなったら、template に焼き直せます。
+
+```bash
+mise run sandbox:template-save <sandbox-name>   # 既定タグ sbx-agent:local を更新
+mise run sandbox:template-ls
+```
+
+### 片付け
+
+```bash
+multi-worktree remove feat/add-auth   # worktree を一括削除
+sbx rm <sandbox-name>                 # sandbox（VM・インストール済みパッケージ・生成物）を削除
+sbx prune                             # 使っていない sandbox をまとめて削除
+```
+
+`sbx stop` はインストール済みパッケージを保ったまま止めるだけなので、
+翌日また同じタスクを続けるなら `stop` のままにしておくと起動が速くなります。
+
+## ファイルシステムとパスの関係
+
+### 編集は双方向・即時にホストへ反映される
+
+既定の **direct mode** は container の bind mount と同じ理解で合っています。
+filesystem passthrough でホストのディレクトリを直接見せているので、
+sandbox 内の編集は**コピーや同期を介さず即座にホストへ反映**されます（逆方向も同じ）。
+エージェントが編集している最中にホスト側のエディタで開けば、そのまま変更が見えます。
+
+反映されないのは次の 3 つです。
+
+| 場所                                | 実体                                                       |
+| ----------------------------------- | ---------------------------------------------------------- |
+| workspace として渡していないパス    | sandbox からそもそも見えない                               |
+| sandbox 内の `$HOME` や `/` 配下    | VM 内だけに存在し、`sbx rm` で消える                       |
+| clone mode（`--clone`）の作業ツリー | VM 内の別クローン。fetch / push するまでホストに出てこない |
+
+### パスはホストと同じ絶対パスになる
+
+ここが devcontainer との一番大きな違いです。
+
+|            | devcontainer                                                           | Docker Sandboxes                               |
+| ---------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| マウント先 | `devcontainer.json` の `target` で任意に指定（`/workspaces/...` など） | **ホストと同じ絶対パスに固定**（変更できない） |
+| `$HOME`    | `/home/vscode`                                                         | `/home/agent`                                  |
+
+devcontainer では `target` でパスが変わるため、linked worktree の `.git` file や common git dir 側の
+`worktrees/<name>/gitdir` が**絶対パス**で相手を指していることが問題になり、
+「workspace と common git dir をホストと同じ絶対パスに mount する」という工夫が必要でした
+（[docs/devcontainer.md](./devcontainer.md) の「workspace と Git metadata の mount 範囲」）。
+
+sandbox では**その工夫が標準動作**です。パスがずれないので、
+
+- エラーメッセージやスタックトレースのパスがホストでそのまま開ける
+- `.git` file の `gitdir:` も、common git dir 側の `gitdir` も、両方同じパスで解決する
+- `direnv` / `mise` の信頼パスや設定ファイル内の絶対パスもそのまま通る
+
+ただし **`$HOME` は別物**なので、`~/.config/...` や `~/.claude` を前提にしているものは
+そのままでは解決しません。`sbx-agent` はここを 2 通りで埋めています。
+
+| 対象                       | 方法                                                                        |
+| -------------------------- | --------------------------------------------------------------------------- |
+| git 設定                   | `GIT_CONFIG_COUNT` / `KEY` / `VALUE` でホストのパスを直接指定               |
+| agent 設定（claude/codex） | `CLAUDE_CONFIG_DIR` / `CODEX_HOME` にホストのパスを設定                     |
+| nvim                       | `~/.config/nvim` → ホストのパスへ symlink（nvim は XDG パスしか見ないため） |
+
+### git 操作で残る注意点は 1 つだけ
+
+パスが一致するので devcontainer で必要だった考慮はほぼ消えますが、
+**linked worktree の common git dir を追加 workspace として渡す**必要は残ります
+（task root だけ渡すと `.git` pointer file の指す先が見えない）。
+`sbx-agent` と `multi-worktree dev` が自動で渡します。詳細は
+[worktree と Git metadata の mount](#worktree-と-git-metadata-の-mount) を参照してください。
+
+## clone mode（`--clone`）とは
+
+`--clone` を付けると、**sandbox が VM 内に自分用の git clone を作ってそこで作業する**モードになります。
+
+|                             | direct mode（既定）            | clone mode（`--clone`）                       |
+| --------------------------- | ------------------------------ | --------------------------------------------- |
+| エージェントが編集するもの  | ホストの working tree そのもの | VM 内の別クローン                             |
+| ホストへの反映              | 即時                           | fetch / push するまで出てこない               |
+| ホスト側リポジトリ          | 読み書き                       | `/run/sandbox/source` に read-only でマウント |
+| 生成物（`node_modules` 等） | **ホストに書かれる**           | VM 内だけ                                     |
+| 切り替え                    | —                              | 作成時に固定（後から変更するには作り直し）    |
+
+レビュー前に何も手元へ入れたくないときや、同じリポジトリで複数エージェントを並列に走らせたいときに
+向いています。ブランチは作成時にホストが checkout している ref に追従するだけで、自動では作られません。
+
+### multi-worktree では使えない
+
+`sbx` は **main worktree 以外から `--clone` を拒否します**。
+clone mode はホストのリポジトリを read-only で bind mount してそこから clone しますが、
+linked worktree の `.git` は「ファイル」で、中身は common git dir を指す `gitdir:` という
+ポインタです。read-only マウントされた worktree ディレクトリだけでは
+このポインタの先（実体リポジトリの `.git`）に到達できず、clone 元として使えません。
+
+公式ドキュメントも「clone mode is rejected from inside a Git worktree other than the main one」
+と明記しており、`multi-worktree` の task root は linked worktree の集まりなので対象外です。
+
+そのため「生成物をホストに書かせない」目的には clone mode を使わず、
+次の方法を使っています。
+
+## 生成物をホストに書かせない
+
+`node_modules` / `.venv` / `target` / `.gradle` / `.terraform` を **sandbox ローカル領域へ
+bind mount して隠します**。devcontainer で使っていた `mount-container-only-dirs.sh` を
+そのまま流用しており、sandbox 側に追加の実装はありません。
+
+仕組みはシンプルです。
+
+1. workspace を走査して、生成物ディレクトリと、それを作るはずの manifest
+   （`package.json` / `pyproject.toml` / `Cargo.toml` / `*.tf` など）を見つける
+2. 各対象に `/var/lib/devcontainer-project-artifacts/<hash>` を `mount --bind` で被せる
+3. エージェントが `npm install` すると、中身は VM 内のバッキングディレクトリに書かれ、
+   **ホスト側の `node_modules` は空のまま**
+
+sandbox は microVM なので mount が使え、base image の `agent` ユーザーは sudo を持っています。
+`sbx-agent` はアタッチごとに初期化スクリプトを実行するため、`sbx stop` で mount が外れても
+次の起動で張り直されます（`mountpoint -q` で判定するので二重 mount にはなりません）。
+
+- ホスト側に既に `node_modules` がある場合は、**移行せず隠すだけ**です（ホストの中身は保たれます）
+- symlink になっている対象は、リンク先が workspace 外に及ぶ可能性があるため分離しません
+- パスワード無しの sudo が使えない場合は警告を出してスキップします（この場合は従来どおり
+  ホストに書かれます）
+
 ## worktree と Git metadata の mount
 
 `multi-worktree` の task root には各リポジトリの **linked worktree** が並びます。linked worktree の
@@ -474,16 +675,17 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### Dockerfile / features
 
-| devcontainer でやっていたこと                                    | sandbox                                                                              |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| docker-in-docker feature                                         | ✅ 標準で sandbox 専用 docker daemon を持つ                                          |
-| DinD データを `${devcontainerId}` スコープの named volume に分離 | ✅ 不要。sandbox ごとに独立（`sbx rm` で消える）                                     |
-| mise + 各種ツール（lint 群 / 言語処理系 / crit / plannotator）   | ✅ `Dockerfile.sandbox` が同じ `mise.toml` で入れる                                  |
-| mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                    |
-| `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/shims:$PATH`                       |
-| `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                         |
-| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                 |
-| Ubuntu 24.04 + zsh を既定シェルに                                | ⚠️ zsh は入れるが `chsh` はしない（`/etc/sandbox-persistent.sh` が bash 前提のため） |
+| devcontainer でやっていたこと                                    | sandbox                                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| docker-in-docker feature                                         | ✅ 標準で sandbox 専用 docker daemon を持つ                                                 |
+| DinD データを `${devcontainerId}` スコープの named volume に分離 | ✅ 不要。sandbox ごとに独立（`sbx rm` で消える）                                            |
+| mise + 各種ツール（lint 群 / 言語処理系 / crit / plannotator）   | ✅ `Dockerfile.sandbox` が同じ `mise.toml` で入れる                                         |
+| mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                           |
+| `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/shims:$PATH`                              |
+| `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                |
+| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                        |
+| nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を渡して symlink      |
+| Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む |
 
 ### mounts
 
@@ -526,7 +728,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                     |
 | コミット署名（専用鍵 + `allowed_signers`）                                                        | ⚠️ ssh-agent forwarding で署名はできる。`allowed_signers`（検証側）は未設定 |
 | `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される |
-| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` をコンテナローカルへ分離）    | ❌ **未実現**（下記参照）                                                   |
+| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ✅ 同じスクリプトを `sudo mount --bind` で流用                              |
 
 ### postStartCommand（`post-start.sh`）
 
@@ -536,7 +738,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `mac-host` への SSH config 生成        | ✅ `sandbox-post-create.sh` で生成                                      |
 | crit の host port 取得・記録           | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                        |
 | crit の host port をホストへ通知       | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため） |
-| 生成物ディレクトリの bind mount 再張り | ❌ 下記 `mount-container-only-dirs.sh` が未実現                         |
+| 生成物ディレクトリの bind mount 再張り | ✅ アタッチごとに初期化スクリプトを実行して張り直す                     |
 
 ### コンテナ内でできていたこと
 
@@ -551,28 +753,21 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている       |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている          |
 | `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている          |
-| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ **未実現**                                                           |
+| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                    |
+| 生成物（`node_modules` / `.venv`）をホストに書かない | ✅ sandbox ローカルへ bind mount（[詳細](#生成物をホストに書かせない)） |
 
-### 未実現: 生成物ディレクトリの分離
+### 残っている差分
 
-devcontainer は `mount-container-only-dirs.sh` で `node_modules` / `.venv` / `target` /
-`.gradle` / `.terraform` をコンテナローカル領域へ bind mount し、OS 依存の生成物が
-ホスト共有の workspace に書かれないようにしていました。これは sandbox では未実現です。
-
-- sbx の direct mode は workspace をホストとそのまま共有するため、エージェントが
-  `npm install` すると **Linux 版の `node_modules` がホストに書かれます**
-- sandbox 内で `mount --bind` を張るには VM 内で root 権限が必要で、`sbx exec -u root` から
-  仕込むことは原理的には可能ですが、未検証のため入れていません
-- sbx 本来の答えは `--clone`（clone mode）ですが、**multi-worktree の linked worktree からは
-  使えません**（sbx 側が `.git` pointer file を解決できず拒否する）
-
-当面は「ホスト側で `npm install` し直す」か、生成物を使うリポジトリでは
-devcontainer backend（`--devcontainer`）を使う運用になります。
+| 項目                                   | 状況                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| `gpg.ssh.allowedSignersFile`           | 署名の作成はできるが、検証用の allowed_signers は未設定                          |
+| `~/.claude/settings.json` の read-only | devcontainer は settings.json だけ ro で重ね mount していたが、sandbox は全体 rw |
+| `~/.config/ccusage` / `~/.config/mise` | 既定では渡していない（必要なら `extra_workspaces`）                              |
 
 ### まとめ
 
-ツールチェインとホスト連携は移植済みで、**残る差分は「生成物ディレクトリの分離」と
-`allowed_signers`（署名検証）、`~/.claude/settings.json` の read-only 化の 3 点**です。
+ツールチェイン・ホスト連携・生成物の分離・MCP はすべて移植済みで、
+**残る差分は `allowed_signers`（署名検証）と `~/.claude/settings.json` の read-only 化**だけです。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 
 ## MCP の扱い
@@ -586,11 +781,45 @@ devcontainer では MCP サーバ（`npx` の stdio サーバ）がコンテナ�
 | `sbx mcp add --local` / `--command`（stdio）               | **ホスト**           | ⚠️ MCP サーバはホスト権限で動く。agent は gateway 経由のみ  |
 | `sbx mcp add --url`（リモート）                            | リモート             | ⚠️ gateway がホストから接続する（認証情報はホストに留まる） |
 
+### 使い分け
+
 このリポジトリは MCP を rulesync 経由でエージェント自身の設定に入れているため、
-**sandbox でも devcontainer と同じく VM 内で動きます**（`npx` 用の node は template に入っています）。
-`sbx mcp` を使うのは「MCP の認証情報をエージェントに読ませたくない」場合です。
-その場合でも stdio サーバ本体はホストで動く点に注意してください
-（ホスト側プロキシが credential を注入し、agent には渡しません）。
+普通のサーバは **sandbox でも devcontainer と同じく VM 内で動きます**
+（`npx` 用の node は template に入っています）。
+
+`sbx mcp` を使うのは **ホストの認証やホストのリソースが必要なもの**だけです。
+ホスト側で一度認証すれば、以降は全 sandbox から認証なしで使えます。
+
+```bash
+mise run sandbox:mcp     # notion(OAuth) / aws-api / chrome-devtools を登録
+```
+
+| サーバ            | 登録方法                                               | ホスト側で何を使うか                                        |
+| ----------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| `notion`          | `sbx mcp add notion --url https://mcp.notion.com/mcp`  | 初回のみブラウザで OAuth 認可。トークンは OS キーチェーンへ |
+| `aws-api`         | `sbx mcp add aws-api --command uvx --args ...`         | ホストの `~/.aws`（profile / SSO）                          |
+| `chrome-devtools` | `sbx mcp add chrome-devtools --command npx --args ...` | ホストで起動している Chrome（`localhost:9222`）             |
+
+sandbox に読み込ませるには `--static-mcp` を使います。既定値は
+`SBX_AGENT_STATIC_MCP` か `[settings.sandbox].static_mcp` で指定できます。
+
+```bash
+export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools
+sbx-agent claude                                 # 作成時に読み込まれる
+sbx-agent claude --static-mcp notion             # 明示指定
+```
+
+起動済みの sandbox には `sbx-agent` が `sbx mcp load` で後から足します。
+
+### トレードオフ
+
+`--command` で登録した stdio サーバは**ホストで動きます**。ホストの認証をそのまま使える
+代わりに、MCP サーバ自体は sandbox の隔離の外にあります（ホストのファイル・ネットワーク・
+認証情報に触れます）。信頼できるサーバだけを登録してください。
+エージェントは gateway にしか繋がらないので、**生の認証情報は読めません**。
+
+認証情報の隔離を優先したい場合は rulesync 側（VM 内実行）に置き、
+sandbox 内で `aws sso login` 等をやり直す運用になります。
 
 ## 管理ツール（CLI / TUI）
 
@@ -698,8 +927,9 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 - カスタム template のビルドにはホスト側の Docker daemon が必要（sandbox 内ではビルドできない）。
 - `--skills=readwrite` の sandbox は他の sandbox が読む skills を書き換えられる。
   信頼境界を分けたい場合は `--skills=off`。
-- **生成物（`node_modules` / `.venv` / `target`）はホストの workspace に書かれる。**
-  devcontainer の `mount-container-only-dirs.sh` 相当が未実現（[詳細](#未実現-生成物ディレクトリの分離)）。
+- 生成物（`node_modules` / `.venv` / `target`）は sandbox ローカルへ bind mount して隠すが、
+  パスワード無しの sudo が使えないとスキップされ、ホストに書かれる
+  （[詳細](#生成物をホストに書かせない)）。
 - `mise.toml` / `tasks/` / `lint/` / `scripts/` を変えたら `mise run sandbox:build-template` で
   template を作り直す（マウントではなく image に COPY しているため）。
 

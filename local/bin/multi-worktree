@@ -760,6 +760,11 @@ get_sandbox_publish_ports() {
     get_sandbox_array "publish_ports"
 }
 
+# ホストに登録済みの MCP サーバ名（ホスト側で認証済みのものを sandbox から使い回す）
+get_sandbox_static_mcp() {
+    get_sandbox_array "static_mcp"
+}
+
 # [settings.sandbox] の配列値を読み込む（1 行 1 要素で出力）
 get_sandbox_array() {
     local key="$1"
@@ -1779,6 +1784,12 @@ cmd_dev_sandbox() {
         [[ -z "$port" ]] && continue
         sbx_args+=(--publish "$port")
     done < <(get_sandbox_publish_ports)
+
+    local mcp_server
+    while IFS= read -r mcp_server; do
+        [[ -z "$mcp_server" ]] && continue
+        sbx_args+=(--static-mcp "$mcp_server")
+    done < <(get_sandbox_static_mcp)
 
     sbx_args+=(${mount_args[@]+"${mount_args[@]}"})
     [[ ${#sandbox_agent_args[@]} -gt 0 ]] && sbx_args+=(-- "${sandbox_agent_args[@]}")
