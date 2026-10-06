@@ -345,6 +345,9 @@ lintの成否にかかわらず最後に復元する。hook実行中に加えら
 ファイル・ディレクトリ・シンボリックリンク（`untracked/`）は、復元前に
 `.git/lefthook-pre-commit-backup/<日時>/`へ退避する。シンボリックリンクはリンク先をたどらずリンク自体を退避する。
 必要なら`git apply`で`staged.patch`→`tracked.patch`の順に適用し、`untracked/`からコピーして戻す。
+stashに含まれる未追跡ファイルと同じパスをhookが`git add`していた場合、そのパスは復元後のファイルと衝突して
+`git apply`が`already exists in working directory`で失敗する。その場合は`git apply --index --exclude=<パス> staged.patch`で
+残りを適用し、衝突したパスはhook実行中の内容が`untracked/<パス>`にあるので、復元後のファイルと見比べて手で取り込む。
 退避に失敗した場合は`git reset --hard`を行わずに中断する。
 復元に失敗した場合や、hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まる。
 `git stash list`で`lefthook-pre-commit`を確認する。stashに含まれる未追跡ファイルと同じパスのファイルが
