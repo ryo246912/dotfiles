@@ -43,6 +43,56 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## ステータスライン（prompt cache カウントダウン）
+
+Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
+効いている（warm）間は前回までの処理を再利用できるので、返信が速く、使用制限への影響も
+小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
+会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
+cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
+
+`claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
+`claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
+30 秒ごとに更新します。Claude Code v2.1.251 以降と `jq` が必要です。
+
+### 表示の読み方
+
+```text
+cache ● 1h ████░░ 38m left · hit 91% · misses 0
+cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
+```
+
+| 表示                                | 意味                                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                     |
+| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                          |
+| `○ cold`（赤）                      | cache が期限切れ。次のメッセージで会話全体を処理し直す                                                                   |
+| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                |
+| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                     |
+| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                            |
+| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                      |
+| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない |
+| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）         |
+| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                              |
+
+`prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
+何も表示しません。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
+subagent のリクエストはこの統計に含まれません。
+
+### cache を長持ちさせるための注意
+
+- サブスクリプションのプラン内利用では、main conversation の cache TTL は 1 時間、
+  subagent と workflow は 5 分です。API キー利用時や、使用制限を超えて使用クレジットに
+  移ったときは、main conversation も 5 分になります。
+- セッション中にモデルを切り替えると cache はすべて作り直しになります。`opusplan` では
+  plan mode への出入りも切り替えとして扱われます。
+- セッション中に `CLAUDE.md` を編集しても cache は壊れませんが、編集内容は `/clear`・
+  `/compact`・再起動のいずれかまで反映されません。
+- やり直したいときは `/rewind` で戻ると既存の cache を再利用できます。`/compact` は
+  新しい cache を作ります。
+
+参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields)
+
 ## 外部 skill の使い方
 
 このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。
