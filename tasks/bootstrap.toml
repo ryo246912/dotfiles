@@ -93,7 +93,13 @@ description = "差分がある copy mode の entry を1つずつ delta で確認
 # 場合は同コメントにある `diff -ru <source> <target> | delta` を別途実行すること）。
 # add 自体はディレクトリ内で実際に変更されたファイルだけを正しく反映する
 # （実機確認済み: 変更していない兄弟ファイルは上書きされない）。
+# `run` は mise 自身が Tera テンプレートとして解釈するため、bash の `${#array[@]}`
+# （配列長）がリテラルに含む `{#` を Tera の comment tag の開始と誤認し、
+# `Closing comment tag '#}' not found` で task の検証自体に失敗する
+# （実機確認済み。mise 2026.10.1）。`{% raw %}`/`{% endraw %}` で囲んで
+# bash 本体を Tera の解釈対象から外すことで回避する。
 run = '''
+{% raw %}
 set -eu
 set -o pipefail
 
@@ -133,6 +139,7 @@ mise bootstrap dotfiles add "${selected[@]}"
 echo
 echo "~/dotfiles に取り込みました。内容を確認して commit してください:"
 echo "  cd ~/dotfiles && git status && git diff"
+{% endraw %}
 '''
 shell = "bash -c"
 
