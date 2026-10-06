@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+
+port=${1:?"Tunnel port is required"}
+if ! [[ $port =~ ^[0-9]+$ ]] || ((port < 1 || port > 65535)); then
+	printf 'Invalid tunnel port: %s\n' "$port" >&2
+	exit 1
+fi
+
+state_dir=${HOME}/.cache/plannotator-tunnels
+pid_file=${state_dir}/${port}.pid
+log_file=${state_dir}/${port}.log
+mkdir -p "$state_dir"
+
+if [ -s "$pid_file" ]; then
+	pid=$(cat "$pid_file")
+	cmdline=""
+	if [[ $pid =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+		cmdline=$(tr '\0' ' ' <"/proc/${pid}/cmdline")
+	fi
+	if [[ $cmdline == *"127.0.0.1:${port}:127.0.0.1:${port}"* ]]; then
+		exit 0
+	fi
+fi
+
+rm -f "$pid_file"
+nohup ssh -F ~/.config/ssh/config -N \
+	-o BatchMode=yes -o ConnectTimeout=2 -o ExitOnForwardFailure=yes \
+	-o ServerAliveInterval=15 -o ServerAliveCountMax=2 \
+	-R "127.0.0.1:${port}:127.0.0.1:${port}" mac-host >"$log_file" 2>&1 &
+pid=$!
+echo "$pid" >"$pid_file"
+
+ready=false
+for _ in 1 2 3 4 5; do
+	if ! kill -0 "$pid" 2>/dev/null; then
+		break
+	fi
+	if timeout 2 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=1 \
+		mac-host "nc -z 127.0.0.1 '${port}'" 2>/dev/null; then
+		ready=true
+		break
+	fi
+	sleep 1
+done
+
+if [ "$ready" = true ]; then
+	start_time=$(awk '{print $22}' "/proc/${pid}/stat")
+	nohup "$HOME/.config/devcontainer/scripts/monitor-plannotator-tunnel" \
+		"$pid" "$start_time" "$port" "$pid_file" >/dev/null 2>&1 &
+	exit 0
+fi
+
+kill "$pid" 2>/dev/null || true
+cat "$log_file" >&2
+rm -f "$pid_file"
+printf 'Port %s may already be used by another devcontainer.\n' "$port" >&2
+exit 1
