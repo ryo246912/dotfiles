@@ -11,6 +11,12 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 > `multi-worktree dev <task>` は sandbox を起動し、devcontainer は `--devcontainer` を
 > 付けたときのフォールバック経路です。移行の背景と sandbox 側の使い方は
 > [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
+>
+> ただし **このページに書かれているツールチェイン（mise + 各種 CLI）とホスト連携
+> （通知・crit・plannotator・host-tmux・lefthook）は sandbox 側では未実現**です。
+> lint を回したり crit でレビューしたりする用途では、今のところ devcontainer backend の方が
+> 揃っています。項目ごとの再現状況は
+> [devcontainer との機能対応表](./docker-sandboxes.md#devcontainer-との機能対応表) にまとめています。
 
 ## workspace と Git metadata の mount 範囲
 

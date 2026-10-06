@@ -121,7 +121,7 @@ _multi_worktree_completion() {
                         COMPREPLY=($(compgen -W "$sandbox_agents" -- "${cur#--agent=}"))
                         COMPREPLY=("${COMPREPLY[@]/#/--agent=}")
                     elif [[ "$cur" == --* ]]; then
-                        COMPREPLY=($(compgen -W "--devcontainer --agent= --name= --branch= --template= --new --" -- "$cur"))
+                        COMPREPLY=($(compgen -W "--devcontainer --agent= --name= --branch= --template= --new --rm --" -- "$cur"))
                     else
                         COMPREPLY=($(compgen -W "$sandbox_agents" -- "$cur"))
                     fi

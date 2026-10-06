@@ -73,15 +73,23 @@ default_agent = "claude"
 name_prefix = "mw"
 # sandbox template の OCI 参照（空なら sbx の既定 template を使う）
 # template = "docker.io/docker/sandbox-templates:claude-code"
+# 共有 skills store（~/.claude/skills 等から sbx skills import したもの）の扱い
+#   off | readonly | readwrite
+skills = "readonly"
+# リソース上限（空なら sbx の既定）
+# cpus = "4"
+# memory = "8g"
+# sandbox 作成時に公開するポート（host:sandbox）
+# crit の review UI をホストのブラウザから開く場合などに使う
+# publish_ports = ["7842:7842"]
 # task root に加えてマウントする workspace
 # sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
-# 各 worktree の common git dir（実体リポジトリの .git）は自動で追加されるので不要
+# 以下は sbx-agent が既定で追加するため、ここに書く必要はない
+#   - 各 worktree の common git dir（実体リポジトリの .git）
+#   - ~/.config/git/config, ~/.config/git/gitignore, ~/.config/gh, ~/.aws/config, ~/.agents
+#   - agent の設定ディレクトリ（~/.claude, ~/.codex, ~/.copilot）
 extra_workspaces = [
-  "~/.config/git/config:ro",
-  "~/.config/git/gitignore:ro",
-  "~/.config/gh:ro",
-  "~/.aws/config:ro",
-  "~/.agents",
+  "~/.coderabbit",
 ]
 
 # devcontainer backend の dev サブコマンドで使用するコマンド一覧

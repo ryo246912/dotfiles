@@ -92,12 +92,9 @@ default_group = "default"
 backend = "sbx"
 default_agent = "claude"
 name_prefix = "mw"
+skills = "readonly"
 extra_workspaces = [
-  "~/.config/git/config:ro",
-  "~/.config/git/gitignore:ro",
-  "~/.config/gh:ro",
-  "~/.aws/config:ro",
-  "~/.agents",
+  "~/.coderabbit",
 ]
 ```
 
@@ -121,9 +118,15 @@ extra_workspaces = [
 - `backend`: `dev` サブコマンドの既定バックエンド（`sbx` | `devcontainer`、デフォルト: `sbx`）
 - `default_agent`: `multi-worktree dev <task>` で agent を省略したときのデフォルト
 - `name_prefix`: sandbox 名の接頭辞（sandbox 名は `<prefix>-<task>-<agent>`）
+- `skills`: 共有 skills store の扱い（`off` | `readonly` | `readwrite`、デフォルト: `readonly`）
 - `template`: sandbox template の OCI 参照（省略時は `sbx` の既定 template）
+- `cpus` / `memory`: リソース上限（省略時は `sbx` の既定）
+- `publish_ports`: 作成時に公開するポート（`host:sandbox` 形式の配列）
 - `extra_workspaces`: task root に加えてマウントする workspace（`:ro` で read-only）
-  - 各 worktree の common git dir（実体リポジトリの `.git`）は自動で追加されます
+  - 以下は `sbx-agent` が自動で追加するため書く必要はありません
+    - 各 worktree の common git dir（実体リポジトリの `.git`）
+    - `~/.config/git/config` / `~/.config/git/gitignore` / `~/.config/gh` / `~/.aws/config` / `~/.agents`
+    - agent の設定ディレクトリ（`~/.claude` / `~/.codex` / `~/.copilot`）
 
 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
 
@@ -327,12 +330,12 @@ exit
 
 **動作:**
 
-1. task root を primary workspace として `sbx create --name=<name> <agent> <task-root> <extra-workspaces...>` を実行（同名 sandbox があれば作成をスキップ）
-2. 各 worktree の common git dir（実体リポジトリの `.git`）を追加 workspace として渡す
-3. 作成直後に agent の設定ディレクトリを指す環境変数（`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を `/etc/sandbox-persistent.sh` に書き込む
-4. 同じく作成直後に、sandbox 内の global git config に `include.path` / `core.excludesfile` を設定する
-5. `sbx run <name>` でアタッチする
-6. `--` 以降は agent CLI にそのまま渡す
+1. task root と各 worktree の common git dir（実体リポジトリの `.git`）を `sbx-agent` に渡す
+2. `sbx-agent` が `sbx create` でホスト設定・agent 設定ディレクトリ・環境変数を含めて sandbox を作る（同名 sandbox があれば作成をスキップ）
+3. `sbx run <name>` でアタッチする
+4. `--` 以降は agent CLI にそのまま渡す
+
+sbx の呼び出し自体は `local/bin/sbx-agent` に委譲しており、ccmanager の sandbox preset と実装を共有しています。
 
 **オプション:**
 
@@ -340,11 +343,12 @@ exit
 - `--branch=BRANCH`: sandbox の branch mode で起動（`auto` で自動命名）
 - `--template=REF`: sandbox template の OCI 参照
 - `--new`: 既存 sandbox を再利用せず作り直す
+- `--rm`: agent セッション終了時に sandbox を削除する
 - `--devcontainer`: devcontainer backend に切り替える
 
 **設定項目:**
 
-- `[settings.sandbox].backend` / `default_agent` / `name_prefix` / `template` / `extra_workspaces`
+- `[settings.sandbox].backend` / `default_agent` / `name_prefix` / `skills` / `template` / `cpus` / `memory` / `publish_ports` / `extra_workspaces`
 
 **例:**
 
@@ -354,6 +358,7 @@ multi-worktree dev feat/add-auth claude               # agent を指定
 multi-worktree dev feat/add-auth codex -- --continue  # agent に引数を pass-through
 multi-worktree dev feat/add-auth claude --branch=auto # branch mode
 multi-worktree dev feat/add-auth --new                # sandbox を作り直す
+multi-worktree dev feat/add-auth --rm                 # 終了時に sandbox を削除
 ```
 
 ### `dev <task-name> --devcontainer [command]`
@@ -508,8 +513,9 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 
 - `multi-worktree dev <task> [agent]` で task root をそのまま sandbox の primary workspace に渡します
 - sandbox 名は `<prefix>-<task>-<agent>`。同名 sandbox があれば再利用（`--new` で作り直し）します
-- `[settings.sandbox].extra_workspaces`・agent の設定ディレクトリ・各 worktree の common git dir を追加 workspace としてマウントします
-- sbx はホストと同じ絶対パスにマウントするため、agent には `CLAUDE_CONFIG_DIR` / `CODEX_HOME` で設定ディレクトリを明示します
+- `[settings.sandbox].extra_workspaces`・ホストの git / gh / aws 設定・agent の設定ディレクトリ・各 worktree の common git dir を追加 workspace としてマウントします
+- sbx はホストと同じ絶対パスにマウントするため、`--env` で `CLAUDE_CONFIG_DIR` / `CODEX_HOME` と `GIT_CONFIG_*` を明示します
+- devcontainer でできていたことの再現状況（ツールチェインとホスト連携スクリプトは未実現）は [docs/docker-sandboxes.md](./docker-sandboxes.md#devcontainer-との機能対応表) を参照してください
 - `.claude/settings.local.json` の通知 hook は `mac-host` が無い環境では no-op になるため、sandbox でも安全側で使えます
 - 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください
 
@@ -544,7 +550,7 @@ multi-worktree recreate feat/add-auth
 
 ### Docker Sandboxes CLI が見つからない
 
-`multi-worktree dev <task>` が「sbx コマンドが見つかりません」で失敗する場合は `brew install docker/tap/sbx` でインストールし、`sbx login` でサインインしてください。sandbox を使わず従来どおり devcontainer で動かす場合は `multi-worktree dev <task> --devcontainer <command>` を使うか、`[settings.sandbox].backend` を `"devcontainer"` にします。
+`multi-worktree dev <task>` が「sbx コマンドが見つかりません」で失敗する場合は `mise install`（`config-mac/mise/config.mac.toml` の `github:docker/sbx-releases`）で導入し、`sbx login` でサインインしてください。sandbox を使わず従来どおり devcontainer で動かす場合は `multi-worktree dev <task> --devcontainer <command>` を使うか、`[settings.sandbox].backend` を `"devcontainer"` にします。
 
 ### worktree の削除に失敗する
 

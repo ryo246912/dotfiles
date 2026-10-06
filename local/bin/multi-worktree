@@ -72,6 +72,7 @@ Usage: multi-worktree <subcommand> [options]
   --branch BRANCH    sandbox を branch mode で起動（auto で自動命名、dev のみ）
   --template REF     sandbox template の OCI 参照を指定（dev のみ）
   --new              既存 sandbox を再利用せず新規作成（dev のみ）
+  --rm               agent セッション終了時に sandbox を削除（dev のみ）
 
 例:
   multi-worktree create feat/add-auth                              # fzf でブランチを選択して作成
@@ -147,7 +148,7 @@ check_config() {
         log_info "backend = \"sbx\""
         log_info "default_agent = \"claude\""
         log_info "name_prefix = \"mw\""
-        log_info "extra_workspaces = [\"~/.config/git/config:ro\", \"~/.config/gh:ro\", \"~/.agents\"]"
+        log_info "skills = \"readonly\""
         log_info ""
         log_info "[dev_commands]"
         log_info "claude = \"claude --dangerously-skip-permissions\""
@@ -737,8 +738,31 @@ get_sandbox_template() {
     get_section_value "settings.sandbox" "template" ""
 }
 
-# [settings.sandbox] の配列値を読み込む（1 行 1 要素で出力）
+# 共有 skills store の扱い（off | readonly | readwrite）
+get_sandbox_skills() {
+    get_section_value "settings.sandbox" "skills" "readonly"
+}
+
+get_sandbox_cpus() {
+    get_section_value "settings.sandbox" "cpus" ""
+}
+
+get_sandbox_memory() {
+    get_section_value "settings.sandbox" "memory" ""
+}
+
 get_sandbox_extra_workspaces() {
+    get_sandbox_array "extra_workspaces"
+}
+
+# 公開ポート（host:sandbox 形式。crit の UI などをホストのブラウザから開くために使う）
+get_sandbox_publish_ports() {
+    get_sandbox_array "publish_ports"
+}
+
+# [settings.sandbox] の配列値を読み込む（1 行 1 要素で出力）
+get_sandbox_array() {
+    local key="$1"
     local in_section=false
     local in_array=false
     local result=()
@@ -769,7 +793,7 @@ get_sandbox_extra_workspaces() {
         if [[ "$in_section" == true ]] && [[ "$in_array" == false ]]; then
             local current_key=""
             current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
-            if [[ "$current_key" == "extra_workspaces" ]] && [[ "$line" == *"["* ]]; then
+            if [[ "$current_key" == "$key" ]] && [[ "$line" == *"["* ]]; then
                 in_array=true
                 parse_items "$(echo "$line" | sed -E 's/^[^[]*\[//; s/\].*$//')"
                 [[ "$line" == *"]"* ]] && in_array=false
@@ -821,12 +845,6 @@ build_sandbox_name() {
     fi
 
     echo "$name"
-}
-
-# 指定名の sandbox が既に存在するか（sbx ls の 1 列目が sandbox 名）
-sandbox_exists() {
-    local name="$1"
-    sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$name"
 }
 
 # worktree が参照する common git dir（実体リポジトリの .git）を列挙する
@@ -1683,70 +1701,8 @@ cmd_cd() {
     exec "$shell"
 }
 
-# agent ごとの設定ディレクトリ（devcontainer.json で bind mount していたもの）
-sandbox_agent_config_dir() {
-    case "$1" in
-        claude) echo "${HOME}/.claude" ;;
-        codex) echo "${HOME}/.codex" ;;
-        copilot) echo "${HOME}/.copilot" ;;
-        gemini) echo "${HOME}/.gemini" ;;
-        *) echo "" ;;
-    esac
-}
-
-# sandbox 内で agent に設定ディレクトリを参照させるための環境変数名
-# sbx はホストと同じ絶対パスに workspace をマウントするため、sandbox 内の $HOME とは別物になる
-sandbox_agent_config_env() {
-    case "$1" in
-        claude) echo "CLAUDE_CONFIG_DIR" ;;
-        codex) echo "CODEX_HOME" ;;
-        *) echo "" ;;
-    esac
-}
-
-# sandbox 内で永続化したい環境変数を /etc/sandbox-persistent.sh に書き込む
-# workspace は作成時にしか追加できないため、sandbox 作成直後に一度だけ実行する
-persist_sandbox_agent_env() {
-    local sandbox_name="$1"
-    local agent="$2"
-    local config_dir config_env
-
-    config_dir=$(sandbox_agent_config_dir "$agent")
-    config_env=$(sandbox_agent_config_env "$agent")
-
-    [[ -z "$config_dir" || -z "$config_env" ]] && return 0
-    [[ ! -d "$config_dir" ]] && return 0
-
-    if ! sbx exec -d "$sandbox_name" bash -c \
-        "echo 'export ${config_env}=${config_dir}' >> /etc/sandbox-persistent.sh" 2>/dev/null; then
-        log_warn "${config_env} の永続化に失敗しました。sandbox 内で手動設定してください"
-    fi
-}
-
-# ホストの git 設定を sandbox 内の git に読ませる
-# devcontainer 側の post-create.sh と同じ方式（global config に include.path を足し、
-# core.excludesfile をホストの gitignore に向ける）。sandbox 内の $HOME はホストと
-# 別物なので、ホストの ~/.config/git/config が自動では読まれないため必要。
-configure_sandbox_git() {
-    local sandbox_name="$1"
-    local host_gitconfig="${HOME}/.config/git/config"
-    local host_gitignore="${HOME}/.config/git/gitignore"
-    local -a commands=()
-
-    [[ -f "$host_gitconfig" ]] && commands+=("git config --global --get-all include.path | grep -Fxq '$host_gitconfig' || git config --global --add include.path '$host_gitconfig'")
-    [[ -f "$host_gitignore" ]] && commands+=("git config --global core.excludesfile '$host_gitignore'")
-
-    [[ ${#commands[@]} -eq 0 ]] && return 0
-
-    local script
-    script=$(printf '%s; ' "${commands[@]}")
-
-    if ! sbx exec -d "$sandbox_name" bash -c "$script true" 2>/dev/null; then
-        log_warn "sandbox 内の git 設定に失敗しました。user.name / user.email は手動設定してください"
-    fi
-}
-
 # dev サブコマンド（Docker Sandboxes backend）
+# sbx の呼び出し自体は sbx-agent に委譲する（ccmanager から直接使う経路と実装を共有するため）。
 cmd_dev_sandbox() {
     local task_name="$1"
     local sandbox_agent="$2"
@@ -1754,12 +1710,12 @@ cmd_dev_sandbox() {
     local sandbox_branch="$4"
     local sandbox_template="$5"
     local force_new="$6"
-    shift 6
+    local remove_on_exit="$7"
+    shift 7
     local -a sandbox_agent_args=("$@")
 
-    if ! command_exists sbx; then
-        log_error "sbx コマンドが見つかりません。'brew install docker/tap/sbx' でインストールしてください"
-        log_info "devcontainer backend を使う場合は 'multi-worktree dev $task_name --devcontainer <command>' を実行してください"
+    if ! command_exists sbx-agent; then
+        log_error "sbx-agent コマンドが見つかりません。dotfiles を適用してください（mise bootstrap dotfiles apply）"
         return 1
     fi
 
@@ -1778,9 +1734,9 @@ cmd_dev_sandbox() {
 
     [[ -z "$sandbox_name" ]] && sandbox_name=$(build_sandbox_name "$task_name" "$sandbox_agent")
 
-    # 追加 workspace: [settings.sandbox].extra_workspaces + agent の設定ディレクトリ
-    # `<path>:ro` は sbx の read-only 指定なので接尾辞として温存する
-    local -a mounts=()
+    # 追加 workspace: [settings.sandbox].extra_workspaces + 各 worktree の common git dir
+    # （ホスト設定と agent 設定ディレクトリは sbx-agent 側が既定で追加する）
+    local -a mount_args=()
     local spec path suffix
     while IFS= read -r spec; do
         [[ -z "$spec" ]] && continue
@@ -1791,63 +1747,49 @@ cmd_dev_sandbox() {
             suffix=":ro"
         fi
         path=$(expand_path "$path")
-        if [[ ! -e "$path" ]]; then
-            log_warn "存在しないためマウントをスキップします: $path"
-            continue
-        fi
-        mounts+=("${path}${suffix}")
+        mount_args+=(--mount "${path}${suffix}")
     done < <(get_sandbox_extra_workspaces)
 
-    # 各 worktree の common git dir（実体リポジトリの .git）も workspace として渡す
     local git_dir
     while IFS= read -r git_dir; do
         [[ -z "$git_dir" ]] && continue
-        mounts+=("$git_dir")
+        mount_args+=(--mount "$git_dir")
     done < <(collect_worktree_git_dirs "$worktree_base_dir")
 
-    local agent_config_dir
-    agent_config_dir=$(sandbox_agent_config_dir "$sandbox_agent")
-    if [[ -n "$agent_config_dir" ]] && [[ -d "$agent_config_dir" ]]; then
-        local already_mounted=false
-        for spec in ${mounts[@]+"${mounts[@]}"}; do
-            [[ "${spec%:ro}" == "$agent_config_dir" ]] && already_mounted=true && break
-        done
-        [[ "$already_mounted" == false ]] && mounts+=("$agent_config_dir")
-    fi
+    local -a sbx_args=(
+        "$sandbox_agent"
+        --name "$sandbox_name"
+        --workspace "$worktree_base_dir"
+    )
+    [[ -n "$sandbox_branch" ]] && sbx_args+=(--branch "$sandbox_branch")
+    [[ -n "$sandbox_template" ]] && sbx_args+=(--template "$sandbox_template")
+    [[ "$force_new" == "true" ]] && sbx_args+=(--new)
+    [[ "$remove_on_exit" == "true" ]] && sbx_args+=(--rm)
+
+    local skills cpus memory
+    skills=$(get_sandbox_skills)
+    cpus=$(get_sandbox_cpus)
+    memory=$(get_sandbox_memory)
+    [[ -n "$skills" ]] && sbx_args+=(--skills "$skills")
+    [[ -n "$cpus" ]] && sbx_args+=(--cpus "$cpus")
+    [[ -n "$memory" ]] && sbx_args+=(--memory "$memory")
+
+    local port
+    while IFS= read -r port; do
+        [[ -z "$port" ]] && continue
+        sbx_args+=(--publish "$port")
+    done < <(get_sandbox_publish_ports)
+
+    sbx_args+=(${mount_args[@]+"${mount_args[@]}"})
+    [[ ${#sandbox_agent_args[@]} -gt 0 ]] && sbx_args+=(-- "${sandbox_agent_args[@]}")
 
     log_info "タスク '$task_name' で Docker Sandboxes を起動します"
     log_info "agent: $sandbox_agent"
     log_info "sandbox 名: $sandbox_name"
     log_info "workspace: $worktree_base_dir"
-    [[ ${#mounts[@]} -gt 0 ]] && log_info "追加 workspace: ${mounts[*]}"
-    [[ -n "$sandbox_branch" ]] && log_info "branch mode: $sandbox_branch"
-
-    # sandbox の workspace は作成時にしか指定できないため、作成と起動を分ける
-    if [[ "$force_new" == "true" ]] || ! sandbox_exists "$sandbox_name"; then
-        local -a create_cmd=(sbx create --name="$sandbox_name")
-        [[ -n "$sandbox_template" ]] && create_cmd+=(--template "$sandbox_template")
-        create_cmd+=("$sandbox_agent" "$worktree_base_dir")
-        create_cmd+=(${mounts[@]+"${mounts[@]}"})
-
-        log_info "sandbox を作成中: ${create_cmd[*]}"
-        if ! "${create_cmd[@]}"; then
-            log_error "sandbox の作成に失敗しました"
-            return 1
-        fi
-
-        persist_sandbox_agent_env "$sandbox_name" "$sandbox_agent"
-        configure_sandbox_git "$sandbox_name"
-    else
-        log_info "既存の sandbox を再利用します: $sandbox_name"
-    fi
-
-    # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
-    local -a run_cmd=(sbx run "$sandbox_name")
-    [[ -n "$sandbox_branch" ]] && run_cmd+=(--branch="$sandbox_branch")
-    [[ ${#sandbox_agent_args[@]} -gt 0 ]] && run_cmd+=(-- "${sandbox_agent_args[@]}")
 
     cd "$worktree_base_dir" || return 1
-    "${run_cmd[@]}"
+    sbx-agent "${sbx_args[@]}"
 
     local exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
@@ -1857,6 +1799,7 @@ cmd_dev_sandbox() {
 
     log_success "Docker Sandboxes のセッションが終了しました"
 }
+
 
 # dev サブコマンド（devcontainer backend）
 cmd_dev_devcontainer() {
@@ -1982,6 +1925,7 @@ cmd_dev() {
     local sandbox_branch=""
     local sandbox_template=""
     local force_new="false"
+    local remove_on_exit="false"
     local -a passthrough_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -2034,6 +1978,10 @@ cmd_dev() {
                 backend="${backend:-sbx}"
                 force_new="true"
                 ;;
+            --rm)
+                backend="${backend:-sbx}"
+                remove_on_exit="true"
+                ;;
             --)
                 shift
                 passthrough_args+=("$@")
@@ -2059,7 +2007,7 @@ cmd_dev() {
                 passthrough_args=("${passthrough_args[@]:1}")
             fi
             cmd_dev_sandbox "$task_name" "$sandbox_agent" "$sandbox_name" \
-                "$sandbox_branch" "$sandbox_template" "$force_new" \
+                "$sandbox_branch" "$sandbox_template" "$force_new" "$remove_on_exit" \
                 ${passthrough_args[@]+"${passthrough_args[@]}"}
             ;;
         *)

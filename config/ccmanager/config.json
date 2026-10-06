@@ -74,10 +74,26 @@
       },
       {
         "id": "sbx",
-        "name": "Claude (Docker Sandbox)",
+        "name": "Claude account1 (Docker Sandbox)",
         "command": "sbx-agent",
         "args": ["claude"],
         "fallbackArgs": ["claude"],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-account2",
+        "name": "Claude account2 (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["claude", "--config-dir", "~/.claude-account2", "--name-suffix", "a2"],
+        "fallbackArgs": ["claude", "--config-dir", "~/.claude-account2", "--name-suffix", "a2"],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-work3",
+        "name": "Claude Work3 (Docker Sandbox)",
+        "command": "sbx-agent",
+        "args": ["claude", "--config-dir", "~/.claude-work3", "--name-suffix", "w3"],
+        "fallbackArgs": ["claude", "--config-dir", "~/.claude-work3", "--name-suffix", "w3"],
         "detectionStrategy": "claude"
       },
       {
@@ -95,14 +111,6 @@
         "args": ["copilot", "--", "--resume", "--yolo"],
         "fallbackArgs": ["copilot", "--", "--yolo"],
         "detectionStrategy": "github-copilot"
-      },
-      {
-        "id": "sbx-gemini",
-        "name": "Gemini (Docker Sandbox)",
-        "command": "sbx-agent",
-        "args": ["gemini", "--", "-s"],
-        "fallbackArgs": ["gemini"],
-        "detectionStrategy": "gemini"
       }
     ],
     "defaultPresetId": "1",
