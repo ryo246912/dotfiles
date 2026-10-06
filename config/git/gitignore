@@ -46,6 +46,7 @@ plan/**
 
 ## ccmanager
 .ccmanager.json
+.ccmanager/
 
 ## crit
 .crit/
