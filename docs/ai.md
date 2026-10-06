@@ -62,18 +62,19 @@ cache ● 1h ████░░ 38m left · hit 91% · misses 0
 cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
-| 表示                                | 意味                                                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                     |
-| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                          |
-| `○ cold`（赤）                      | cache が期限切れ。次のメッセージで会話全体を処理し直す                                                                   |
-| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                |
-| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                     |
-| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                            |
-| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                      |
-| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない |
-| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）         |
-| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                              |
+| 表示                                | 意味                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
+| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
+| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
+| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない） |
+| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                               |
+| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                    |
+| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                           |
+| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                     |
+| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                |
+| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                        |
+| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                             |
 
 `prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
 何も表示しません。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
@@ -81,13 +82,18 @@ subagent のリクエストはこの統計に含まれません。
 
 ### cache を長持ちさせるための注意
 
-- サブスクリプションのプラン内利用では、main conversation の cache TTL は 1 時間、
-  subagent と workflow は 5 分です。API キー利用時や、使用制限を超えて使用クレジットに
-  移ったときは、main conversation も 5 分になります。
+- 既定の cache TTL は、サブスクリプションのプラン内利用では main conversation が 1 時間、
+  subagent と workflow が 5 分です。API キー利用時や、使用制限を超えて使用クレジットに
+  移ったときは、main conversation も 5 分になります。TTL は main conversation なら
+  `promptCacheTtl`（または `CLAUDE_CODE_PROMPT_CACHE_TTL`）、subagent などは
+  `subagentPromptCacheTtl`（または `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL`）で `5m` / `1h`
+  に変更できます（v2.1.242 以降）。
 - セッション中にモデルを切り替えると cache はすべて作り直しになります。`opusplan` では
   plan mode への出入りも切り替えとして扱われます。
-- セッション中に `CLAUDE.md` を編集しても cache は壊れませんが、編集内容は `/clear`・
-  `/compact`・再起動のいずれかまで反映されません。
+- プロジェクトルートとユーザーレベルの `CLAUDE.md` はセッション開始時に読み込まれます。
+  セッション中に編集しても cache は壊れませんが、編集内容は `/clear`・`/compact`・再起動の
+  いずれかまで反映されません。サブディレクトリの nested `CLAUDE.md` や `paths:` 付きの
+  rule は必要になった時点で読み込まれるため、読み込まれる前の編集はそのまま反映されます。
 - やり直したいときは `/rewind` で戻ると既存の cache を再利用できます。`/compact` は
   新しい cache を作ります。
 
@@ -110,21 +116,27 @@ subagent のリクエストはこの統計に含まれません。
 1. 同じ作業の続きなら、間を空けずに送ります。黄色（残り 20% 未満）になっていて、
    まだ聞きたいことがあるなら、今のうちに聞きます。
 2. cache を保つためだけの「つなぎ」の送信は基本しません。その送信自体にも cache 読み込みと
-   出力の分のコストがかかります。元を取れるのは、会話がかなり長く（数十万トークン級）、
-   しかも確実にすぐ戻ってくる場合くらいです。
+   出力の分のコストがかかります。元を取れるのは、TTL 内に確実に作業を再開し、つなぎの
+   送信のコスト（会話全体の cache 読み込み ≈ 0.1 倍＋出力）が cold 後の再書き込み
+   （1.25 倍 / 2 倍）より小さくなる場合だけです。会話の長さ・出力量・モデルによって
+   変わるので、固定の目安はありません。
 3. cold になったら、送る前に続けるかどうかを考えます。ステータスラインの
    `next message re-caches 82k tokens` がその再送のコストです。
    - 前の文脈がもう要らないなら、`/clear` で新しく始めた方が安いです。
-   - 文脈は要るけれど長すぎるなら、`/compact` で縮めてからの方が安く済みます。
+   - 文脈は要るけれど長すぎるなら、`/compact` で縮める手もあります。ただし cold 時の
+     `/compact` は要約を作るために会話全体を cache なしで処理し直すので、`/compact`
+     としては最もコストが高くなります。縮めた文脈でこの後も何度もやり取りする場合に
+     元が取れます。`/compact` はなるべく warm のうち（作業の区切り）に実行します。
 4. 話題が変わるときは、cold かどうかに関係なく `/clear` します。関係のない長い履歴を
    毎回送り続けるのは、cache が効いていても無駄です。
 5. cache を壊す操作に注意します。モデルの切り替えや、`opusplan` での plan mode の出入りは、
    warm でも cache を作り直しにします。
 
-まとめると、作業はまとまった時間で一気に進め、休憩明けで cold になっていたら、続けるか、
-`/compact` するか、`/clear` するかを選ぶのが一番得な使い方です。
+まとめると、作業はまとまった時間で一気に進め、区切りでは warm のうちに `/compact` し、
+休憩明けで cold になっていたら、続けるか `/clear` するかを選ぶのが一番得な使い方です。
 
-参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields)
+参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields) /
+[How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
 ## 外部 skill の使い方
 

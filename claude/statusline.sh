@@ -16,7 +16,10 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
     def mins: if . >= 60 then "\((. / 60) | floor)m" else "\(.)s" end;
     ({"5m": 300, "1h": 3600}[$c.ttl // ""]) as $ttl_sec
   | (if $c.expires_at != null then $c.expires_at - $now else null end) as $left
-  | if ($c.warm == true) and ($left == null or $left > 0) then
+  | if $c.caching_observed == false then
+      # cache token がまだ一度も報告されていない（caching 無効、または provider が報告しない）。
+      "\u001b[90mcache – not observed\u001b[0m"
+    elif ($c.warm == true) and ($left == null or $left > 0) then
       # warm: 緑。残り 20% 未満で黄色。
       (if $ttl_sec != null and $left != null then ([$left / $ttl_sec, 1] | min) else null end) as $frac
       | (if $frac != null and $frac < 0.2 then "\u001b[33m" else "\u001b[32m" end) as $color
