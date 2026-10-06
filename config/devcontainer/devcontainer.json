@@ -18,8 +18,7 @@
   },
   // mounts の source がホストに無いとコンテナ作成が失敗する（docs/devcontainer.md 参照）ため、
   // initializeCommand（コンテナ作成前にホスト側で実行される）で事前に用意する。
-  // ~/.aws/config は AWS を使わないホストには無いため、無ければ空ファイルを作る（既存のファイルには触れない）。
-  "initializeCommand": "mkdir -p '${localEnv:HOME}/.aws' && { [ -e '${localEnv:HOME}/.aws/config' ] || touch '${localEnv:HOME}/.aws/config'; } && bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'",
+  "initializeCommand": "bash '${localEnv:HOME}/.config/devcontainer/scripts/initialize.sh'",
   "remoteEnv": {
     "AI_AGENT": "1",
     "LEFTHOOK_CONFIG": "lefthook.local.yml",
