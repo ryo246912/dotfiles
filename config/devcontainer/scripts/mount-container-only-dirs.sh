@@ -90,15 +90,26 @@ done < <(
 )
 
 sudo install -d -o "$(id -u)" -g "$(id -g)" "${storage_root}"
+skipped=0
 for target in "${!targets[@]}"; do
+	# シンボリックリンクは sudo の操作がリンク先（workspace 外のこともある）に及ぶため分離しない。
+	if [ -L "${target}" ]; then
+		echo "⚠️ シンボリックリンクのため分離しません: ${target}" >&2
+		skipped=$((skipped + 1))
+		continue
+	fi
 	mountpoint -q "${target}" && continue
 	key=$(printf '%s' "${target}" | sha256sum | cut -d ' ' -f 1)
 	backing_dir="${storage_root}/${key}"
 	if [ -d "${target}" ] && [ -n "$(find "${target}" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
 		echo "ℹ️ ホスト側の既存内容を移行せず隠します: ${target}" >&2
 	fi
-	sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}" "${backing_dir}"
+	# 既存の target は mount で隠すだけなので、所有者・権限を変えないよう無いときだけ作る。
+	if [ ! -d "${target}" ]; then
+		sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
+	fi
+	sudo install -d -o "$(id -u)" -g "$(id -g)" "${backing_dir}"
 	sudo mount --bind "${backing_dir}" "${target}"
 done
 
-echo "✓ ${#targets[@]} 個のプロジェクト生成物をコンテナ内に分離しました"
+echo "✓ $((${#targets[@]} - skipped)) 個のプロジェクト生成物をコンテナ内に分離しました"
