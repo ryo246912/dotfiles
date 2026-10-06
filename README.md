@@ -1,6 +1,6 @@
 # ryo's dotfiles
 
-- dotfile manager: [chezmoi](https://github.com/twpayne/chezmoi)
+- dotfile manager: [mise](https://mise.jdx.dev/) (`[dotfiles]` / `mise bootstrap`)
 
 - OS: MacOS/Windows(WSL2)
 - shell: zsh

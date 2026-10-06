@@ -13,17 +13,18 @@
 
 ## インストール
 
-このツールは chezmoi で管理されており、以下のファイルで構成されています：
+このツールは mise の `[dotfiles]` で管理されており、以下のファイルで構成されています：
 
-- `dot_local/bin/executable_multi-worktree` - メインスクリプト
-- `dot_config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
-- `dot_config/multi-worktree/completion.bash` - Bash 補完スクリプト
-- `dot_config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
+- `local/bin/multi-worktree` - メインスクリプト
+- `local/bin/sbx-agent` - Docker Sandboxes ラッパー
+- `config/multi-worktree/config.toml.sample` - 設定ファイルのサンプル
+- `config/multi-worktree/completion.bash` - Bash 補完スクリプト
+- `config/multi-worktree/_multi-worktree` - Zsh 補完スクリプト
 - `docs/docker-sandboxes.md` - Docker Sandboxes の使い方と devcontainer 比較
 
 ### 基本セットアップ
 
-chezmoi apply 後、設定ファイルを作成してください：
+`mise bootstrap dotfiles apply` 後、設定ファイルを作成してください：
 
 ```bash
 # 設定ディレクトリの作成
@@ -93,7 +94,9 @@ default_agent = "claude"
 name_prefix = "mw"
 extra_workspaces = [
   "~/.config/git/config:ro",
+  "~/.config/git/gitignore:ro",
   "~/.config/gh:ro",
+  "~/.aws/config:ro",
   "~/.agents",
 ]
 ```
@@ -120,6 +123,7 @@ extra_workspaces = [
 - `name_prefix`: sandbox 名の接頭辞（sandbox 名は `<prefix>-<task>-<agent>`）
 - `template`: sandbox template の OCI 参照（省略時は `sbx` の既定 template）
 - `extra_workspaces`: task root に加えてマウントする workspace（`:ro` で read-only）
+  - 各 worktree の common git dir（実体リポジトリの `.git`）は自動で追加されます
 
 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
 
@@ -311,8 +315,8 @@ multi-worktree status feat/add-auth
 ```bash
 multi-worktree cd feat/add-auth
 # 新しいシェルが起動し、worktree ディレクトリに移動
-# そのまま task root で ccmanager / ccmc を起動できる
-ccmc
+# そのまま task root で ccmanager を起動できる
+ccmanager
 # 作業後 exit で戻る
 exit
 ```
@@ -324,9 +328,11 @@ exit
 **動作:**
 
 1. task root を primary workspace として `sbx create --name=<name> <agent> <task-root> <extra-workspaces...>` を実行（同名 sandbox があれば作成をスキップ）
-2. 作成直後に agent の設定ディレクトリを指す環境変数（`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を `/etc/sandbox-persistent.sh` に書き込む
-3. `sbx run <name>` でアタッチする
-4. `--` 以降は agent CLI にそのまま渡す
+2. 各 worktree の common git dir（実体リポジトリの `.git`）を追加 workspace として渡す
+3. 作成直後に agent の設定ディレクトリを指す環境変数（`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を `/etc/sandbox-persistent.sh` に書き込む
+4. 同じく作成直後に、sandbox 内の global git config に `include.path` / `core.excludesfile` を設定する
+5. `sbx run <name>` でアタッチする
+6. `--` 以降は agent CLI にそのまま渡す
 
 **オプション:**
 
@@ -450,8 +456,6 @@ multi-worktree help
 ```bash
 multi-worktree cd feat/add-auth
 ccmanager
-# または
-ccmc
 ```
 
 `cd` で入る task root が `ccmanager` の project root になります。
@@ -460,9 +464,12 @@ ccmc
 
 ```bash
 CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmanager --multi-project
-# または
-CCMANAGER_MULTI_PROJECT_ROOT=/path/to/worktrees ccmc --multi-project
 ```
+
+devcontainer で起動する `ccmcm` は `--config` を指定しません。ccmanager は選んだ task root を cwd に
+して `devcontainer up` / `exec` を実行するので、task root に生成された
+`.devcontainer/devcontainer.json` が使われます。task root で `ccmc` を使うと base template で起動し、
+配下 repo の `.git` が mount されません。
 
 - 起動ディレクトリは任意です
 - `CCMANAGER_MULTI_PROJECT_ROOT` には group ごとの `base_dir` を指定します
@@ -493,7 +500,7 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 生成される `devcontainer.json` には以下の設定が含まれます：
 
 - 各リポジトリの worktree をマウント
-- 実体リポジトリ（`.git` アクセス用）をマウント
+- 実体リポジトリの `.git`（common git dir）だけを、ホストと同じ絶対パスにマウント
 - Git、GitHub CLI、Claude の設定をマウント
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
@@ -501,7 +508,7 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 
 - `multi-worktree dev <task> [agent]` で task root をそのまま sandbox の primary workspace に渡します
 - sandbox 名は `<prefix>-<task>-<agent>`。同名 sandbox があれば再利用（`--new` で作り直し）します
-- `[settings.sandbox].extra_workspaces` と agent の設定ディレクトリを追加 workspace としてマウントします
+- `[settings.sandbox].extra_workspaces`・agent の設定ディレクトリ・各 worktree の common git dir を追加 workspace としてマウントします
 - sbx はホストと同じ絶対パスにマウントするため、agent には `CLAUDE_CONFIG_DIR` / `CODEX_HOME` で設定ディレクトリを明示します
 - `.claude/settings.local.json` の通知 hook は `mac-host` が無い環境では no-op になるため、sandbox でも安全側で使えます
 - 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください
@@ -551,7 +558,6 @@ git worktree remove ../worktrees/multi-worktree-feat-add-auth/repo-a --force
 ## 関連ツール
 
 - `git-worktree-manager`: 単一リポジトリ内の worktree 対話操作ツール
-- `devc-up-wrapper`: devcontainer 起動ラッパー
 
 ## ライセンス
 

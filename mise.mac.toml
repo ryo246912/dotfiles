@@ -1,0 +1,3 @@
+[dotfiles]
+"~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "copy" }
+"~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "copy" }

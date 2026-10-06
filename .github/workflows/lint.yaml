@@ -104,6 +104,8 @@ jobs:
         if: steps.changed-files.outputs.actions_any_changed == 'true'
         background: true
         run: mise run lint:pinact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: secretlint
         id: lint-secret

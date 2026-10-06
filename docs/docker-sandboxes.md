@@ -9,17 +9,17 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 
 ## devcontainer との違い
 
-| 項目           | devcontainer                                | Docker Sandboxes (sbx)                                  |
-| -------------- | ------------------------------------------- | ------------------------------------------------------- |
-| 隔離境界       | コンテナ（ホストと kernel 共有）            | microVM（専用 kernel）                                  |
-| 起動方法       | `devcontainer up` + `devcontainer exec`     | `sbx create` + `sbx run`                                |
-| ホスト連携     | `mounts` で任意のパスを bind mount          | workspace として渡したディレクトリのみ                  |
-| マウント先パス | `devcontainer.json` の `target` で指定      | **ホストと同じ絶対パス**に固定                          |
-| docker 利用    | docker-in-docker feature を有効化           | 標準で sandbox 専用 docker daemon を持つ                |
-| ポート公開     | `appPort` / `forwardPorts`                  | `sbx ports <name> --publish <host>:<sandbox>`           |
-| 通信制御       | 無し（ホストのネットワークに準拠）          | ホスト側プロキシで network policy を強制                |
-| 認証情報       | `~/.config/gh` などを read-only mount       | `sbx secret` で OS キーチェーンに保存し、プロキシが注入 |
-| 定義ファイル   | `dot_config/devcontainer/devcontainer.json` | 不要（CLI 引数と `[settings.sandbox]` で指定）          |
+| 項目           | devcontainer                            | Docker Sandboxes (sbx)                                  |
+| -------------- | --------------------------------------- | ------------------------------------------------------- |
+| 隔離境界       | コンテナ（ホストと kernel 共有）        | microVM（専用 kernel）                                  |
+| 起動方法       | `devcontainer up` + `devcontainer exec` | `sbx create` + `sbx run`                                |
+| ホスト連携     | `mounts` で任意のパスを bind mount      | workspace として渡したディレクトリのみ                  |
+| マウント先パス | `devcontainer.json` の `target` で指定  | **ホストと同じ絶対パス**に固定                          |
+| docker 利用    | docker-in-docker feature を有効化       | 標準で sandbox 専用 docker daemon を持つ                |
+| ポート公開     | `appPort` / `forwardPorts`              | `sbx ports <name> --publish <host>:<sandbox>`           |
+| 通信制御       | 無し（ホストのネットワークに準拠）      | ホスト側プロキシで network policy を強制                |
+| 認証情報       | `~/.config/gh` などを read-only mount   | `sbx secret` で OS キーチェーンに保存し、プロキシが注入 |
+| 定義ファイル   | `config/devcontainer/devcontainer.json` | 不要（CLI 引数と `[settings.sandbox]` で指定）          |
 
 大きな前提の違いは 2 つです。
 
@@ -105,7 +105,7 @@ sbx run --name=my-sbx claude ~/dev/app ~/dev/libs:ro ~/.config/git/config:ro
 
 ### `sbx-agent` ラッパー
 
-`dot_local/bin/sbx-agent`（適用後: `~/.local/bin/sbx-agent`）は、
+`local/bin/sbx-agent`（適用後: `~/.local/bin/sbx-agent`）は、
 devcontainer でやっていた「ホストの agent 設定をマウントして隔離環境で動かす」を
 `sbx` で再現するラッパーです。ccmanager のプリセットからも呼ばれます。
 
@@ -122,11 +122,17 @@ sbx-agent --help
 
 1. sandbox 名を `<repo>-<branch>-<agent>` から生成する（hostname 相当なので英数字とハイフンに正規化）
 2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/gh:ro` / `~/.agents:ro` と agent の設定ディレクトリを
-   追加 workspace として渡す
-3. 作成直後に `CLAUDE_CONFIG_DIR` / `CODEX_HOME` を `/etc/sandbox-persistent.sh` へ書き込み、
+   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/gh:ro` /
+   `~/.aws/config:ro` / `~/.agents:ro` と agent の設定ディレクトリを追加 workspace として渡す
+   （devcontainer.json の `mounts` に対応）
+3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
+   追加 workspace として渡す（後述）
+4. 作成直後に `CLAUDE_CONFIG_DIR` / `CODEX_HOME` を `/etc/sandbox-persistent.sh` へ書き込み、
    sandbox 内の agent がホストの設定ディレクトリを読むようにする
-4. `sbx run <name>` でアタッチする
+5. 同じく作成直後に、sandbox 内の global git config へ `include.path`（ホストの
+   `~/.config/git/config`）と `core.excludesfile` を設定する（devcontainer の
+   `post-create.sh` と同じ方式）
+6. `sbx run <name>` でアタッチする
 
 agent ごとの設定ディレクトリの対応:
 
@@ -179,7 +185,7 @@ extra_workspaces = [
 
 ### ccmanager
 
-`dot_config/ccmanager/config.json` の `commandPresets` に `sbx-agent` 経由のプリセットを用意しています。
+`config/ccmanager/config.json` の `commandPresets` に `sbx-agent` 経由のプリセットを用意しています。
 
 | preset id     | 起動内容                               |
 | ------------- | -------------------------------------- |
@@ -187,6 +193,36 @@ extra_workspaces = [
 | `sbx-codex`   | `sbx-agent codex -- resume --yolo`     |
 | `sbx-copilot` | `sbx-agent copilot -- --resume --yolo` |
 | `sbx-gemini`  | `sbx-agent gemini -- -s`               |
+
+## worktree と Git metadata の mount
+
+`multi-worktree` の task root には各リポジトリの **linked worktree** が並びます。linked worktree の
+`.git` は file であり、実体リポジトリの common git dir（`<repo>/.git`）を**絶対パス**で参照します。
+task root だけを workspace として渡すと、sandbox 内から common git dir が見えず git が壊れます。
+
+sbx はホストと同じ絶対パスに workspace をマウントするため、common git dir を追加 workspace として
+渡せばホスト・sandbox のどちらでも同じパスで git が解決できます。`multi-worktree dev` と `sbx-agent` は
+`git rev-parse --path-format=absolute --git-common-dir` でこれを解決して自動で渡します。
+devcontainer 側の mount 範囲と同じ考え方で、詳細は
+[docs/devcontainer.md](./devcontainer.md) の「workspace と Git metadata の mount 範囲」を参照してください。
+
+- 実体リポジトリの working tree や兄弟ディレクトリは渡さないので、sandbox からは見えません
+- relative-paths 形式の worktree（`git worktree add --relative-paths` /
+  `worktree.useRelativePaths`）は絶対パス mount では解決できないため、warn を出してスキップします
+
+### ホストの git 設定
+
+sandbox 内の `$HOME` はホストとは別物なので、`~/.config/git/config` を mount しただけでは
+git に読まれません。sandbox 作成直後に devcontainer の `post-create.sh` と同じ設定を流し込みます。
+
+```bash
+git config --global --add include.path <host>/.config/git/config
+git config --global core.excludesfile <host>/.config/git/gitignore
+```
+
+コミット署名は devcontainer 専用鍵（`~/.ssh/id_docker_devcontainer_sign`）を前提にしているため、
+sandbox 内で署名コミットを行う場合は鍵を追加 workspace として渡し、`user.signingkey` を
+sandbox 内で設定してください（既定ではホストの個人鍵は一切渡しません）。
 
 ## devcontainer からの移行メモ
 
@@ -197,6 +233,8 @@ extra_workspaces = [
   `CLAUDE_CONFIG_DIR` などで明示する必要があります（`sbx-agent` が自動で行います）。
 - **DinD feature は不要**: sandbox は最初から専用の docker daemon を持っているため、
   `docker compose up` がそのまま動きます。`/var/lib/docker` の named volume 分離も不要です。
+- **`../..` の mount は不要**: devcontainer と同じく、親ディレクトリではなく common git dir だけを
+  渡します（上記「worktree と Git metadata の mount」参照）。
 - **`appPort` → `sbx ports`**: crit のようにホストのブラウザから開く UI は
   `sbx ports <name> --publish <host>:<sandbox>` で公開します。sandbox 内のサービスは
   `127.0.0.1` ではなく `0.0.0.0` に bind させてください。
@@ -215,6 +253,9 @@ extra_workspaces = [
 - ラップトップをスリープさせると sandbox の時刻がずれて TLS やトークンが失敗することがある。
   `sbx stop` → `sbx run` で復旧する。
 - カスタム template のビルドにはホスト側の Docker daemon が必要（sandbox 内ではビルドできない）。
+- devcontainer が持ち込んでいた `config/devcontainer/lint/*` や `config/devcontainer/tasks/*`、
+  `lefthook.local.yml`、`AI_AGENT` / `MISE_TRUSTED_CONFIG_PATHS` などの環境は sandbox には入らない。
+  必要なら追加 workspace で渡すか、カスタム template に焼き込む。
 
 ## トラブルシューティング
 
