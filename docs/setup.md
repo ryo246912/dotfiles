@@ -139,6 +139,17 @@
   - [ ] コントロールセンター
     - [ ] 「バッテリー」→「割合を表示」
   - [ ] 壁紙
+  - [ ] フルディスクアクセス（ターミナルアプリ）
+    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
+    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
+
+      ```sh
+      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+      ```
+
+    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
+      - `/Applications/Ghostty.app`
+    - [ ] 追加したターミナルアプリを再起動する
 
 - [ ] atuin
   - [ ] atuin login
