@@ -106,7 +106,7 @@ mods = "Command|Shift"
 [[keyboard.bindings]]
 chars = "\u0002R"
 key = "O"
-mods = "Command"
+mods = "Control|Shift"
 
 # ctrl + b → ctrl + p(popup windowを起動、カスタム)
 [[keyboard.bindings]]
@@ -382,7 +382,7 @@ mods = "Control|Shift"
 [[keyboard.bindings]]
 chars = "\u0002R"
 key = "O"
-mods = "Control"
+mods = "Control|Shift"
 
 # ctrl + b → ctrl + p(popup windowを起動、カスタム)
 [[keyboard.bindings]]
