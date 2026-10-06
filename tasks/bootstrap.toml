@@ -77,6 +77,71 @@ mise bootstrap dotfiles apply --yes "${selected[@]}"
 '''
 shell = "bash -c"
 
+["bootstrap:dotfiles:add-interactive"]
+description = "差分がある copy mode の entry を1つずつ delta で確認しながら ~/dotfiles に取り込む（target → source）"
+# `mise bootstrap dotfiles add` は copy/template mode の entry について、live edit した
+# target の内容を ~/dotfiles 側の source へ書き戻す（通常の [dotfiles] の反対方向）。
+# status --json の state が "differs" かつ mode が "copy" の entry だけを対象にする理由:
+# - template mode は対象外にする: target は render 後のプレーンテキストなので、これを
+#   add すると source の Tera テンプレート（`{{ ... }}` 構文）がそのまま上書きされ、
+#   テンプレートが壊れる（実機確認済み: `mise bootstrap dotfiles add --dry-run` が
+#   `cp <target> <source.tera>` を実行することを確認した）。
+# - track mode は対象外（そもそも source を持たないため add できない。diff/apply も
+#   no-op。bootstrap:dotfiles:apply-interactive のコメント参照）。
+# ディレクトリ単位の entry（"~/.config/mise" 等）は diff が「内容が異なる」旨の1行のみで
+# ファイル単位の中身までは出ない（bootstrap:dotfiles:diff のコメント参照。中身を見たい
+# 場合は同コメントにある `diff -ru <source> <target> | delta` を別途実行すること）。
+# add 自体はディレクトリ内で実際に変更されたファイルだけを正しく反映する
+# （実機確認済み: 変更していない兄弟ファイルは上書きされない）。
+run = '''
+set -eu
+set -o pipefail
+
+targets=$(mise bootstrap dotfiles status --json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data['files']:
+    if f['mode'] == 'copy' and f['state'] == 'differs':
+        print(f['target'])
+")
+
+if [ -z "$targets" ]; then
+  echo "取り込める差分はありません"
+  exit 0
+fi
+
+# y と答えた target はここに溜めておき、全件の確認が終わった後に1回の add で
+# まとめて取り込む（bootstrap:dotfiles:apply-interactive と同じ理由で batching する）。
+selected=()
+
+while IFS= read -r target <&3; do
+  echo "=== $target ==="
+  if ! mise bootstrap dotfiles diff "$target" | delta; then
+    echo "warning: diff に失敗したため skip します: $target" >&2
+    continue
+  fi
+  printf '%s を ~/dotfiles に取り込みますか? (y/N) ' "$target"
+  read -r answer < /dev/tty
+  case "$answer" in
+    y | Y) selected+=("$target") ;;
+    *) echo "skip: $target" ;;
+  esac
+done 3<<EOF
+$targets
+EOF
+
+if [ ${#selected[@]} -eq 0 ]; then
+  echo "取り込む target はありません"
+  exit 0
+fi
+
+mise bootstrap dotfiles add "${selected[@]}"
+echo
+echo "~/dotfiles に取り込みました。内容を確認して commit してください:"
+echo "  cd ~/dotfiles && git status && git diff"
+'''
+shell = "bash -c"
+
 # track mode（"~/.config"）の history 操作。config/mise/config.toml 参照。
 ["bootstrap:dotfiles:history-log"]
 description = "track mode の checkpoint 履歴を確認する"
