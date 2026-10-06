@@ -75,7 +75,7 @@ if is_darwin then
   send_string_binding("f", "CMD", "\x02\x06")
   send_string_binding("l", "CMD", "\x02s")
   send_string_binding("l", "CMD|SHIFT", "\x02w")
-  send_string_binding("o", "CMD", "\x02R")
+  send_string_binding("o", "CTRL|SHIFT", "\x02R")
   send_string_binding("p", "CMD", "\x02\x10")
   send_string_binding("r", "CMD", "\x02r")
   send_string_binding("s", "CMD", "\x02e")
