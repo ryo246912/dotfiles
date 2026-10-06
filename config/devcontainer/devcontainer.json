@@ -63,7 +63,6 @@
     // post-create.sh が ~/.config/git に書き込むため、git/ 配下には mount せず gitconfig-host と同様に別名で置く。
     "type=bind,source=${localEnv:HOME}/.config/git/gitignore,target=/home/vscode/.config/gitignore-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
-    "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     "type=bind,source=${localEnv:HOME}/.config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
     // .ssh

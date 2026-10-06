@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
-# Claude Code statusLine ラッパー。
-# 既存のステータスライン（ccusage）の出力をそのまま表示し、その下の行に
-# prompt cache の残り時間・ヒット率などを表示するキャッシュ・セグメントを追加する。
+# Claude Code statusLine。
+# prompt cache の残り時間・ヒット率などを表示するキャッシュ・セグメント。
 # 参照: https://code.claude.com/docs/en/statusline#prompt-cache-fields
 
-# 元のコマンドとキャッシュ・セグメントが同じ入力を使えるよう、stdin を先に保存する。
 input=$(cat)
-
-# 元のステータスライン。出力は加工せずそのまま表示する。
-original=$(printf '%s' "$input" | ccusage statusline --visual-burn-rate emoji)
-[ -n "$original" ] && printf '%s\n' "$original"
 
 command -v jq >/dev/null 2>&1 || exit 0
 

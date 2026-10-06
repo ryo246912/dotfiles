@@ -211,9 +211,8 @@ ensure_ssh_key() {
 	return "$rc"
 }
 
-# .config/* (gh・ccusage・mise はツール側が初回実行時に作るディレクトリ。未実行だと無いことがある)
+# .config/* (gh・mise はツール側が初回実行時に作るディレクトリ。未実行だと無いことがある)
 ensure_dir ~/.config/gh
-ensure_dir ~/.config/ccusage
 ensure_dir ~/.config/mise
 
 # .ssh
