@@ -192,6 +192,9 @@ ensure_ssh_key() {
 			exec 9>"$lock"
 			if ! flock -w 5 9; then
 				echo "✗ ロック取得がタイムアウトしたため、鍵の処理をスキップしました: ${key}" >&2
+				# 鍵がまだ無いままスキップすると mount source が欠けて devcontainer up が失敗するため、
+				# その場合は回復不能(2)として呼び出し元で止める。
+				[ -f "$key" ] || exit 2
 				exit 1
 			fi
 			_ensure_ssh_key_locked "$key" "$comment"
@@ -200,6 +203,7 @@ ensure_ssh_key() {
 	fi
 	if ! _ssh_key_lock_acquire "$lock"; then
 		echo "✗ ロック取得がタイムアウトしたため、鍵の処理をスキップしました: ${key}" >&2
+		[ -f "$key" ] || return 2
 		return 1
 	fi
 	_ensure_ssh_key_locked "$key" "$comment" || rc=$?
@@ -216,7 +220,7 @@ ensure_dir ~/.config/mise
 ensure_empty_file ~/.ssh/known_hosts
 # devcontainer専用のSSH鍵（ホスト通知用。docs/devcontainer.md 参照）
 # ensure_ssh_key の戻り値: 0=新規生成, 1=既存鍵のまま(no-op)/取得失敗等でスキップ,
-# 2=新規鍵の生成自体が失敗(回復不能。mount source が用意できないため続けても
+# 2=新規鍵の生成自体が失敗、または鍵が無いままロック取得に失敗(回復不能。mount source が用意できないため続けても
 # devcontainer up がどのみち失敗するので、ここで明示的に止める)。
 notify_rc=0
 ensure_ssh_key ~/.ssh/id_docker_devcontainer "devcontainer host notify" || notify_rc=$?
