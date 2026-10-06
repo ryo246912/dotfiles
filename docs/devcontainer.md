@@ -338,3 +338,9 @@ ssh -F ~/.config/ssh/config mac-host \
 devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
 Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
+
+lint前に未ステージの変更と未追跡ファイルを`lefthook-pre-commit`という名前でstashし、
+lintの成否にかかわらず最後に復元する。lintが同名の未追跡ファイルを生成していても、
+stashの内容で上書きされるものは復元前に削除する。復元に失敗した場合や、
+hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まるので、
+`git stash list`で`lefthook-pre-commit`を確認して`git stash pop --index stash@{N}`で復元する。
