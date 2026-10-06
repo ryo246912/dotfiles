@@ -45,6 +45,10 @@ if [ -z "$targets" ]; then
   exit 0
 fi
 
+# y と答えた target はここに溜めておき、全件の確認が終わった後に1回の apply で
+# まとめて適用する（target ごとに apply すると pre/post-dotfiles hook が毎回走るため）。
+selected=()
+
 # target 一覧は fd 3 経由で読む（stdin/fd 0 は下の `read -r answer < /dev/tty` 用に
 # 空けておく。while の stdin をそのまま使うと、ループ内の read が target 一覧の
 # 次の行を answer として食ってしまう）。
@@ -57,12 +61,19 @@ while IFS= read -r target <&3; do
   printf '%s を適用しますか? (y/N) ' "$target"
   read -r answer < /dev/tty
   case "$answer" in
-    y | Y) mise bootstrap dotfiles apply --yes "$target" ;;
+    y | Y) selected+=("$target") ;;
     *) echo "skip: $target" ;;
   esac
 done 3<<EOF
 $targets
 EOF
+
+if [ ${#selected[@]} -eq 0 ]; then
+  echo "適用する target はありません"
+  exit 0
+fi
+
+mise bootstrap dotfiles apply --yes "${selected[@]}"
 '''
 shell = "bash -c"
 
