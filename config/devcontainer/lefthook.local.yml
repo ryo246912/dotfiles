@@ -9,7 +9,7 @@ glob_matcher: doublestar
 pre-commit:
   jobs:
     - name: stash files (ai-only)
-      only: &ai-only
+      only:
         - run: test -n "${AI_AGENT:-}"
       run: |
         marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
@@ -111,7 +111,8 @@ pre-commit:
         backup="$(git rev-parse --git-path lefthook-pre-commit-backup)/$(date +%Y%m%d-%H%M%S)-$$"
         backup_failed() {
           echo "❌ [ai-only] hook実行中に変更されたファイルを $backup へ退避できませんでした。" >&2
-          echo "   作業ツリーには触れずに中断します。退避した変更は stash（$expected）に残っています。" >&2
+          echo "   git reset --hard は行わずに中断します。退避した変更は stash（$expected）に残っています。" >&2
+          echo "   途中まで退避したファイルがある場合は $backup に残っています。" >&2
           exit 1
         }
         # 退避はすべて git reset --hard より前に行い、失敗したら reset / 復元へ進まない。
@@ -131,6 +132,7 @@ pre-commit:
         fi
         if [ -d "$backup" ]; then
           echo "⚠️ [ai-only] hook実行中に変更されたファイルを $backup に退避しました（tracked.patch / untracked/）。" >&2
+          echo "   必要なら git apply $backup/tracked.patch や untracked/ からのコピーで戻してください。" >&2
         fi
         git reset --hard -q
         rm -f "$marker"

@@ -343,6 +343,8 @@ lint前に未ステージの変更と未追跡ファイルを`lefthook-pre-commi
 lintの成否にかかわらず最後に復元する。hook実行中に追跡済みファイルへ加えられた変更と、
 stash内の未追跡ファイルと同じパスに作られたファイルは、復元前に
 `.git/lefthook-pre-commit-backup/<日時>/`へ退避する（`tracked.patch`と`untracked/`）。
+必要なら`git apply <退避先>/tracked.patch`や`untracked/`からのコピーで戻す。退避に失敗した場合は
+`git reset --hard`を行わずに中断する。
 復元に失敗した場合や、hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まる。
 `git stash list`で`lefthook-pre-commit`を確認する。stashに含まれる未追跡ファイルと同じパスのファイルが
 残っている場合は、そのファイルを退避または削除してから`git stash pop --index stash@{N}`で復元する。
