@@ -28,7 +28,13 @@ description = "差分がある entry を1つずつ delta で確認しながら�
 # （bootstrap:dotfiles:diff のコメント参照）。track mode の entry（"~/.config"）は
 # state が常に "applied" 以外（"tracked"）になり、diff/apply も何もしない
 # no-op なので対象から除外する（履歴レビューは bootstrap:dotfiles:history-diff を使う）。
+# `run` は mise 自身が Tera テンプレートとして解釈するため、bash の `${#array[@]}`
+# （配列長）がリテラルに含む `{#` を Tera の comment tag の開始と誤認し、
+# `Closing comment tag '#}' not found` で task の検証自体に失敗する
+# （実機確認済み。mise 2026.10.1）。`{% raw %}`/`{% endraw %}` で囲んで
+# bash 本体を Tera の解釈対象から外すことで回避する。
 run = '''
+{% raw %}
 set -eu
 set -o pipefail
 
@@ -74,6 +80,7 @@ if [ ${#selected[@]} -eq 0 ]; then
 fi
 
 mise bootstrap dotfiles apply --yes "${selected[@]}"
+{% endraw %}
 '''
 shell = "bash -c"
 
@@ -101,8 +108,15 @@ shell       = "bash -c"
 
 ["bootstrap:dotfiles:sync-mac"]
 description = "macOS ネイティブアプリの設定ファイルを ~/Library/Application Support 配下へ対話的にコピーする"
+# `run` は mise 自身が Tera テンプレートとして解釈するため、bash の `${#array[@]}`
+# （配列長）がリテラルに含む `{#` を Tera の comment tag の開始と誤認し、
+# `Closing comment tag '#}' not found` で task の検証自体に失敗する
+# （実機確認済み。mise 2026.10.1）。`{% raw %}`/`{% endraw %}` で囲んで
+# bash 本体を Tera の解釈対象から外すことで回避する（shebang 行は Tera 解釈前の
+# ファイル先頭である必要があるため、`{% raw %}` の外に置く）。
 run = '''
 #!/bin/bash
+{% raw %}
 set -euo pipefail
 [ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
 
@@ -139,12 +153,15 @@ for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
     esac
   done
 done
+{% endraw %}
 '''
 
 ["bootstrap:dotfiles:sync-windows"]
 description = "WSL から Windows ネイティブアプリ($APPDATA 等)へ設定ファイルを対話的にコピーする"
+# `{% raw %}`/`{% endraw %}` の理由は bootstrap:dotfiles:sync-mac のコメント参照。
 run = '''
 #!/bin/bash
+{% raw %}
 set -euo pipefail
 [ "$(uname)" != "Linux" ] && { echo "WSL(Linux) 専用のタスクです"; exit 1; }
 : "${APPDATA:?APPDATA が未設定です。Windows 標準の %APPDATA%（.../AppData/Roaming）ではなく、
@@ -190,12 +207,15 @@ for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
     esac
   done
 done
+{% endraw %}
 '''
 
 ["bootstrap:dotfiles:sync-commitizen"]
 description = "commitizen 導入済みのときだけ .commitlintrc.js を対話的にコピーする"
+# `{% raw %}`/`{% endraw %}` の理由は bootstrap:dotfiles:sync-mac のコメント参照。
 run = '''
 #!/bin/bash
+{% raw %}
 set -euo pipefail
 
 file_mappings=(
@@ -230,4 +250,5 @@ for ((i = 0; i < ${#file_mappings[@]}; i += 3)); do
     esac
   done
 done
+{% endraw %}
 '''
