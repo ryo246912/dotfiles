@@ -102,12 +102,6 @@ chars = "\u0002w"
 key = "L"
 mods = "Command|Shift"
 
-# ctrl + b → R(easymotion quickopen 、カスタム)
-[[keyboard.bindings]]
-chars = "\u0002R"
-key = "O"
-mods = "Command"
-
 # ctrl + b → ctrl + p(popup windowを起動、カスタム)
 [[keyboard.bindings]]
 chars = "\u0002\u0010"
@@ -132,9 +126,9 @@ chars = "\u0002e"
 key = "S"
 mods = "Command"
 
-# ctrl + b → ctrl + r(tmux-resurrect、ウィンドウの復元)
+# ctrl + b → R(tmux-resurrect、ウィンドウの復元)
 [[keyboard.bindings]]
-chars = "\u0002\u0012"
+chars = "\u0002R"
 key = "R"
 mods = "Command|Shift"
 
@@ -378,12 +372,6 @@ chars = "\u0002w"
 key = "L"
 mods = "Control|Shift"
 
-# ctrl + b → R(easymotion quickopen 、カスタム)
-[[keyboard.bindings]]
-chars = "\u0002R"
-key = "O"
-mods = "Control"
-
 # ctrl + b → ctrl + p(popup windowを起動、カスタム)
 [[keyboard.bindings]]
 chars = "\u0002\u0010"
@@ -409,10 +397,10 @@ key = "S"
 mods = "Control"
 
 # ctrl + b → R(tmux-resurrect、ウィンドウの復元)
-# [[keyboard.bindings]]
-# chars = "\u0002\u0052"
-# key = "R"
-# mods = "Control|Shift"
+[[keyboard.bindings]]
+chars = "\u0002R"
+key = "R"
+mods = "Control|Shift"
 
 # ctrl + b → S(tmux-resurrect、ウィンドウの保存)
 # [[keyboard.bindings]]
