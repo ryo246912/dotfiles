@@ -111,28 +111,46 @@ pre-commit:
         backup="$(git rev-parse --git-path lefthook-pre-commit-backup)/$(date +%Y%m%d-%H%M%S)-$$"
         backup_failed() {
           echo "❌ [ai-only] hook実行中に変更されたファイルを $backup へ退避できませんでした。" >&2
-          echo "   git reset --hard は行わずに中断します。退避した変更は stash（$expected）に残っています。" >&2
-          echo "   途中まで退避したファイルがある場合は $backup に残っています。" >&2
+          echo "   git reset --hard は行わずに中断します。stash（$expected）自体はそのまま残っています。" >&2
+          echo "   hook実行中の変更は作業ツリー（途中まで退避済みの分は $backup）にあります。" >&2
           exit 1
         }
         # 退避はすべて git reset --hard より前に行い、失敗したら reset / 復元へ進まない。
+        # hook 実行中に git add された変更は、stash 時点の index（$expected^2）との差分として staged.patch に、
+        # 未ステージの変更は index との差分として tracked.patch に保存する。
+        if ! git diff --cached --quiet "$expected^2"; then
+          mkdir -p "$backup" && git diff --cached --binary "$expected^2" > "$backup/staged.patch" || backup_failed
+        fi
         if ! git diff --quiet; then
           mkdir -p "$backup" && git diff --binary > "$backup/tracked.patch" || backup_failed
         fi
-        # lint 等が stash 内の未追跡ファイルと同名のファイル（またはディレクトリ）を生成していると、pop が
-        # "already exists, no checkout" で失敗して stash が残る。stash の内容で上書きされるものだけ先に退避する。
+        # lint 等が stash 内の未追跡ファイルと同じパス（またはその親ディレクトリの位置）にファイル・ディレクトリ・
+        # シンボリックリンクを作っていると、pop が "already exists, no checkout" で失敗して stash が残る。
+        # stash の内容で上書きされるものだけ先に退避する。親がシンボリックリンクの場合はリンク先をたどらず、
+        # リンク自体を退避する（リポジトリ外のファイルを動かさないため）。
         if git rev-parse --verify -q "$expected^3" >/dev/null; then
           git ls-tree -r -z --name-only "$expected^3" | xargs -0 -r sh -c '
             b="$1"; shift
+            move() { mkdir -p "$b/untracked/$(dirname "$1")" && mv -- "$1" "$b/untracked/$1" || exit 1; }
             for f; do
-              [ -e "$f" ] || [ -L "$f" ] || continue
-              mkdir -p "$b/untracked/$(dirname "$f")" && mv -- "$f" "$b/untracked/$f" || exit 1
+              p=""; rest="$f"
+              while :; do
+                c="${rest%%/*}"
+                p="${p:+$p/}$c"
+                if [ "$c" = "$rest" ]; then
+                  if [ -e "$p" ] || [ -L "$p" ]; then move "$p"; fi
+                  break
+                fi
+                rest="${rest#*/}"
+                if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then move "$p"; break; fi
+                [ -d "$p" ] || break
+              done
             done
           ' _ "$backup" || backup_failed
         fi
         if [ -d "$backup" ]; then
-          echo "⚠️ [ai-only] hook実行中に変更されたファイルを $backup に退避しました（tracked.patch / untracked/）。" >&2
-          echo "   必要なら git apply $backup/tracked.patch や untracked/ からのコピーで戻してください。" >&2
+          echo "⚠️ [ai-only] hook実行中に変更されたファイルを $backup に退避しました（staged.patch / tracked.patch / untracked/）。" >&2
+          echo "   必要なら git apply で staged.patch → tracked.patch の順に適用し、untracked/ からコピーして戻してください。" >&2
         fi
         git reset --hard -q
         rm -f "$marker"
