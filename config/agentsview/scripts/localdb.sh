@@ -408,6 +408,39 @@ push_local() {
 		agentsview pg push --no-vectors "$@"
 }
 
+# pg push --watchはdata dirごとにflockを取り、2つ目は`already locked`で即exitする。
+# flockはprocess終了で外れるので、このerrorは前回のserveから取り残された
+# watcherがまだ生きていることを意味する（親のbashだけがSIGKILLされた場合など）。
+# 親がinit（PID 1）に付け替わったwatcherは持ち主のいない残骸なので止め、
+# 親が生きているwatcherは別のserveが使用中なので触らずに中断する。
+stop_orphaned_watcher() {
+	# 先頭の実行file名まで含めて照合し、文字列を含むだけのshellなどに当てない。
+	pids="$(pgrep -f '^([^ ]*/)?agentsview pg push --watch' || true)"
+	[ -n "$pids" ] || return 0
+	for pid in $pids; do
+		ppid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
+		[ -n "$ppid" ] || continue
+		if [ "$ppid" != 1 ]; then
+			echo "agentsview pg push --watch が既に動いています（pid ${pid}, parent ${ppid}）。" >&2
+			echo "別のagentsview:serveを止めるか、不要なら kill ${pid} してから再実行してください" >&2
+			exit 1
+		fi
+		echo "取り残されたagentsview pg push --watch（pid ${pid}）を停止します" >&2
+		kill "$pid" 2>/dev/null || true
+		# SIGTERMでpushを区切ってからlockを外すので、終了を待ってから次へ進む。
+		i=0
+		while kill -0 "$pid" 2>/dev/null; do
+			if [ "$i" -ge 30 ]; then
+				echo "pid ${pid} が30秒以内に終了しなかったためSIGKILLします" >&2
+				kill -9 "$pid" 2>/dev/null || true
+				break
+			fi
+			sleep 1
+			i=$((i + 1))
+		done
+	done
+}
+
 # dumpのINSERTをchunkごとのtransactionで流し、前後の行数差を報告する。
 import_sql_file() {
 	temp_counts_before="$(mktemp)"
@@ -485,6 +518,7 @@ push)
 	push_local "$@"
 	;;
 serve)
+	stop_orphaned_watcher
 	push_local
 	export AGENTSVIEW_PG_SCHEMA="$schema"
 	export AGENTSVIEW_PG_URL="$host_url"
@@ -505,6 +539,8 @@ serve)
 	trap cleanup_serve EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
+	# terminal／tmux paneを閉じたときも子processを道連れにする。
+	trap 'exit 129' HUP
 
 	# watcherが落ちたままserveを続けると、sessionの収集が黙って止まる。どちらかが
 	# 終了したらもう一方も停止し、終了statusを引き継ぐ。macOS既定のbash 3.2には
