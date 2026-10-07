@@ -482,13 +482,22 @@ sandbox 内では symlink のリンク先（リポジトリのパス）が存在
 
 リポジトリの場所は次の順で解決します。
 
-1. `DOTFILES_DIR`（既定以外の場所に clone している場合に export する運用）
-2. `~/dotfiles`（既定の clone 先）
-3. 配置済み symlink（`~/.config/zsh/main.zsh` など）のリンク先から逆算
+1. 配置済み symlink（`~/.config/zsh/main.zsh` など）のリンク先から逆算
+2. `DOTFILES_DIR`（既定以外の場所に clone している場合に export する運用）
+3. `~/dotfiles`（既定の clone 先）
+
+**1 を最優先にしている**のは、これが「実際にリンク先になっているツリー」を直接示すため
+確実だからです。2 と 3 は symlink が 1 つも見つからない（dotfiles 未適用など）場合の
+フォールバックです。`mise.toml` と `.git` があるだけでは同じ構成の別プロジェクトを
+誤認するため、`mise.toml` に `[dotfiles]` の宣言があることも確認します。
 
 どれも外れた場合は warning を出して続行します（ホスト設定が読めない状態になるため、
-`DOTFILES_DIR` を export してください）。workspace 自体がリポジトリのときは
-既にマウント済みなので追加しません。
+`DOTFILES_DIR` を export してください）。
+
+追加マウントを省略するのは **workspace がリポジトリ root そのものだったときだけ**です。
+サブディレクトリ（`~/dotfiles/config/devcontainer` など）を workspace にした場合は
+root が sandbox から見えないため、`~/.config` 配下の symlink を解決するには
+リポジトリの追加マウントが必要になります。
 
 > [!NOTE]
 > 同じ理由で、Docker の build context も「配置先」ではなく**リポジトリ側**を使います。

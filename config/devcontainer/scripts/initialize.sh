@@ -233,37 +233,105 @@ HOST_CONFIG_STAGE="$HOME/.cache/devcontainer/host-config"
 # 注意: ディレクトリごと rm -rf して作り直してはいけない。このコピーは起動中の
 # devcontainer が bind mount しているため（multi-worktree では複数が同時に動く）、
 # 新しいコンテナを作るたびに中身を消すと、動いているコンテナから設定が消える。
-# そのため「src から消えた entry だけを削除し、残りは上書きコピー」で差分反映する。
+# そのため「一時ディレクトリへ実体をコピーしてから、差分だけを mv で反映」する。
+#
+# mv は同一ファイルシステム内では atomic（rename(2)）なので、起動中のコンテナが
+# 中途半端な内容のファイルを読むことがない。dst へ直接 cp すると書き込み途中の
+# 内容が見えてしまう。
 materialize_config() {
-	local name="$1" src dst rel
+	local name="$1" src dst tmp rel rc=0 stale dirs files
 	src="$HOME/.config/$name"
 	dst="${HOST_CONFIG_STAGE}/$name"
 	[ -d "$src" ] || return 0
 	mkdir -p "$dst"
+	tmp="${HOST_CONFIG_STAGE}/.staging-${name}"
+	rm -rf "$tmp"
+	mkdir -p "$tmp"
 
-	# src に無くなった entry を消す（リンク切れの symlink も -L で残すため両方見る）
-	(cd "$dst" && find . -mindepth 1) | while IFS= read -r rel; do
+	# -L で symlink を辿って、まず一時ディレクトリへ実体をコピーする
+	if ! cp -RL "$src/." "$tmp/" 2>/dev/null; then
+		echo "⚠️ 一部をコピーできませんでした(リンク切れ?): $src" >&2
+		rc=1
+	fi
+
+	# dst から消すもの: 配置先から消えた entry と、file ↔ directory で型が変わった entry。
+	# 走査中に削除するため、先に一覧を確定させる。
+	stale=$(cd "$dst" && find . -mindepth 1 2>/dev/null)
+	printf '%s\n' "$stale" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
 		rel="${rel#./}"
-		[ -e "${src}/${rel}" ] || [ -L "${src}/${rel}" ] || rm -rf "${dst}/${rel}"
+		if [ ! -e "${tmp}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		elif [ -d "${tmp}/${rel}" ] && [ ! -d "${dst}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		elif [ ! -d "${tmp}/${rel}" ] && [ -d "${dst}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		fi
 	done
 
-	# -L で symlink を辿って実体をコピーする。リンク切れが1つあっても全体は止めない
-	# （必要なものが欠けていれば下の検証か docker build が明示的に失敗する）。
-	cp -RL "$src/." "$dst/" 2>/dev/null \
-		|| echo "⚠️ 一部をコピーできませんでした(リンク切れ?): $src" >&2
-	echo "✓ 実体化: $dst"
+	# ディレクトリを先に作り、ファイルは mv で atomic に置き換える
+	dirs=$(cd "$tmp" && find . -mindepth 1 -type d 2>/dev/null)
+	files=$(cd "$tmp" && find . ! -type d 2>/dev/null)
+	printf '%s\n' "$dirs" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
+		mkdir -p "${dst}/${rel#./}"
+	done
+	printf '%s\n' "$files" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
+		rel="${rel#./}"
+		mv -f "${tmp}/${rel}" "${dst}/${rel}"
+	done
+
+	rm -rf "$tmp"
+	[ "$rc" -eq 0 ] && echo "✓ 実体化: $dst"
+	return "$rc"
 }
 
-materialize_config devcontainer
-materialize_config nvim
-materialize_config mise
-materialize_config ccusage
+materialize_all() {
+	# build context になる devcontainer は失敗を致命的に扱う（古いコピーのまま build させない）
+	materialize_config devcontainer || return 1
+	# 残りは read-only な設定の共有なので、1 つリンク切れがあっても起動は止めない
+	materialize_config nvim || echo "⚠️ nvim 設定の実体化に失敗しました" >&2
+	materialize_config mise || echo "⚠️ mise 設定の実体化に失敗しました" >&2
+	materialize_config ccusage || echo "⚠️ ccusage 設定の実体化に失敗しました" >&2
+	return 0
+}
+
+# 実体化は直列化する。multi-worktree で複数の devcontainer を同時に起動すると
+# initializeCommand も同時に走り、同じコピーへ書き込んでしまう。
+# ロックの仕組みは SSH 鍵の処理（_ssh_key_lock_acquire）と同じものを流用する。
+with_stage_lock() {
+	local lock="${HOST_CONFIG_STAGE}.lock" rc=0
+	mkdir -p "$(dirname "$lock")"
+	if command -v flock >/dev/null 2>&1; then
+		(
+			exec 9>"$lock"
+			flock -w 60 9 || exit 3
+			"$@"
+		) || rc=$?
+		[ "$rc" -eq 3 ] && echo "✗ 設定の実体化のロック取得がタイムアウトしました" >&2
+		return "$rc"
+	fi
+	if ! _ssh_key_lock_acquire "$lock"; then
+		echo "✗ 設定の実体化のロック取得がタイムアウトしました" >&2
+		return 1
+	fi
+	"$@" || rc=$?
+	rm -rf "$lock" 2>/dev/null || true
+	return "$rc"
+}
+
+with_stage_lock materialize_all || exit 1
 
 # build context と Dockerfile の COPY 対象が揃っているか確認する
 # （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
 stage_missing=""
 for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
-	[ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
+	# 実体化コピーだけを見ると、過去の実行で作られた古いコピーが残っているせいで
+	# 「配置先から消えた・リンク切れになった」のを見逃す。配置先と両方を確認する
+	# （[ -e ] はリンク切れの symlink に対して偽になるのでリンク切れも検出できる）。
+	[ -e "$HOME/.config/devcontainer/${required}" ] \
+		&& [ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
 		|| stage_missing="${stage_missing}${stage_missing:+, }${required}"
 done
 if [ -n "$stage_missing" ]; then

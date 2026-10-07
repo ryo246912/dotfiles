@@ -16,11 +16,21 @@ set -eu
 # リポジトリの場所は MISE_PROJECT_ROOT（このリポジトリ内で実行した場合）→ DOTFILES_DIR →
 # ~/.config/git/gitignore の symlink から逆算 → 既定の ~/dotfiles の順で解決する。
 # 別のプロジェクトから実行しても、dotfiles が適用済みなら動くようにしている。
-looks_like_dotfiles() { [ -f "$1/mise.toml" ] && [ -e "$1/.git" ]; }
+# mise.toml と .git があるだけでは、同じ構成の別プロジェクトを誤認する。
+# ここで欲しいのは「このビルドに必要なファイルを持つツリー」なので、それ自体を目印にする。
+looks_like_dotfiles() {
+  [ -f "$1/mise.toml" ] && [ -e "$1/.git" ] && [ -f "$1/config/devcontainer/Dockerfile.sandbox" ]
+}
 
 repo_root=""
 for candidate in "${MISE_PROJECT_ROOT:-}" "${DOTFILES_DIR:-}"; do
   [ -n "$candidate" ] || continue
+  # DOTFILES_DIR はクォート付きで export されている（例: DOTFILES_DIR="~/foo"）ことが
+  # あり、その場合 ~ が展開されないため自前で展開する
+  case "$candidate" in
+    "~") candidate="$HOME" ;;
+    "~/"*) candidate="${HOME}/${candidate#"~/"}" ;;
+  esac
   if looks_like_dotfiles "$candidate"; then repo_root="$candidate"; break; fi
 done
 if [ -z "$repo_root" ] && [ -L "$HOME/.config/git/gitignore" ]; then

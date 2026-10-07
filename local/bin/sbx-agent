@@ -104,35 +104,46 @@ resolve_symlink() {
     printf '%s' "$target"
 }
 
+# 候補が「この dotfiles リポジトリ」かどうかを判定する。
+# mise.toml と .git があるだけでは、同じ構成の別プロジェクトを誤認する
+# （config/devcontainer のように mise.toml を持つサブディレクトリも引っかかる）。
+# このリポジトリは mise.toml の [dotfiles] で配置先を宣言しているので、それを目印にする。
+looks_like_dotfiles_repo() {
+    [[ -f "$1/mise.toml" && -e "$1/.git" ]] || return 1
+    # [dotfiles] と [dotfiles."~/.config"] の両方に当てる
+    grep -q '^\[dotfiles[].]' "$1/mise.toml" 2>/dev/null
+}
+
 # dotfiles リポジトリのチェックアウト先を特定する。
 # mise の [dotfiles] は ~/.config・~/.claude・~/.codex を symlink-each で配置するため、
 # それらをマウントしても中身はリポジトリを指す symlink のままになる。sbx はホストと同じ
 # 絶対パスへマウントするので、リポジトリ自体も同じパスで渡せば全ての symlink が解決する。
 find_dotfiles_repo() {
     local candidate probe target dir
-    for candidate in "${DOTFILES_DIR:-}" "${HOME}/dotfiles"; do
-        [[ -n "$candidate" ]] || continue
-        candidate=$(expand_tilde "$candidate")
-        if [[ -f "${candidate}/mise.toml" && -e "${candidate}/.git" ]]; then
-            printf '%s' "$candidate"
-            return 0
-        fi
-    done
-    # 別の場所に clone していて DOTFILES_DIR も export されていない場合は、
-    # 配置済みの symlink のリンク先からリポジトリのルートを逆算する。
-    # config/devcontainer のように mise.toml を持つサブディレクトリを誤検出しないよう、
-    # .git も併せて確認する。
+    # 配置済み symlink のリンク先から逆算するのが最も確実（「実際にリンク先になっている
+    # ツリー」が分かるため）なので、環境変数や既定パスより先に試す。
     for probe in "${HOME}/.config/zsh/main.zsh" "${HOME}/.config/git/gitignore" "${HOME}/.claude/settings.json"; do
         [[ -L "$probe" ]] || continue
         target=$(resolve_symlink "$probe") || continue
         dir=$(dirname "$target")
         while [[ "$dir" != "/" && "$dir" != "." ]]; do
-            if [[ -f "${dir}/mise.toml" && -e "${dir}/.git" ]]; then
+            if looks_like_dotfiles_repo "$dir"; then
                 printf '%s' "$dir"
                 return 0
             fi
             dir=$(dirname "$dir")
         done
+    done
+    # symlink が 1 つも見つからない（dotfiles 未適用など）場合のフォールバック。
+    # DOTFILES_DIR はクォート付きで export されている（例: DOTFILES_DIR="~/foo"）ことが
+    # あるため、expand_tilde で ~ を展開してから判定する。
+    for candidate in "${DOTFILES_DIR:-}" "${HOME}/dotfiles"; do
+        [[ -n "$candidate" ]] || continue
+        candidate=$(expand_tilde "$candidate")
+        if looks_like_dotfiles_repo "$candidate"; then
+            printf '%s' "$candidate"
+            return 0
+        fi
     done
     return 1
 }
@@ -382,8 +393,10 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
     # read-only で渡さないと、sandbox 内では全てリンク切れになる。
     if dotfiles_repo=$(find_dotfiles_repo); then
-        # workspace がリポジトリ自身（またはその配下）のときは既にマウント済みなので足さない
-        if [[ "$WORKSPACE" != "$dotfiles_repo" && "$WORKSPACE" != "$dotfiles_repo"/* ]]; then
+        # 省略するのは workspace がリポジトリ root そのもののときだけ（既に rw でマウント
+        # 済み）。サブディレクトリを workspace にした場合は root が見えないため、
+        # ~/.config 配下の symlink を解決するにはリポジトリの追加マウントが必要になる。
+        if [[ "$WORKSPACE" != "$dotfiles_repo" ]]; then
             add_mount "${dotfiles_repo}:ro"
         fi
     else
