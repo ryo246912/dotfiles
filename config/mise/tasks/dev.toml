@@ -233,9 +233,15 @@ if [ "$source_lock" -ef "$destination_lock" ]; then
 fi
 
 mkdir -p "$destination_dir"
-cp "$source_lock" "$destination_lock"
-chmod 0644 "$destination_lock"
-ln -sfn "$destination_lock" "$source_lock"
+# 中断時に repo 側の lockfile が途中まで書かれた状態にならないよう、同じディレクトリの
+# 一時ファイルへコピーしてから rename する。
+temporary_lock=$(mktemp "${destination_lock}.XXXXXX")
+trap 'rm -f "$temporary_lock"' EXIT
+cp "$source_lock" "$temporary_lock"
+chmod 0644 "$temporary_lock"
+mv "$temporary_lock" "$destination_lock"
+# DOTFILES_DIR が相対パスでもリンク切れにならないよう、絶対パスへ解決してからリンクする。
+ln -sfn "$(cd "$destination_dir" && pwd -P)/apm.lock.yaml" "$source_lock"
 '''
 shell = "bash -c"
 
