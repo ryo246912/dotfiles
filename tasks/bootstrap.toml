@@ -150,9 +150,12 @@ file_mappings=(
   "$MISE_PROJECT_ROOT/config/navi/config.yaml" "$HOME/Library/Application Support/navi/config.yaml"
 )
 
-for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
-  source_file="${file_mappings[i]}"
-  dest_dir="${file_mappings[i + 1]}"
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  source_file="$1"
+  dest_dir="$2"
+  shift 2
 
   dest_parent_dir=$(dirname "$dest_dir")
   [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
@@ -201,9 +204,12 @@ file_mappings=(
   "$MISE_PROJECT_ROOT/unmanaged/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
 )
 
-for ((i = 0; i < ${#file_mappings[@]}; i += 2)); do
-  source_file="${file_mappings[i]}"
-  dest_dir="${file_mappings[i + 1]}"
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  source_file="$1"
+  dest_dir="$2"
+  shift 2
 
   dest_parent_dir=$(dirname "$dest_dir")
   [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
@@ -238,10 +244,13 @@ file_mappings=(
   "commitizen" "$MISE_PROJECT_ROOT/config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
 )
 
-for ((i = 0; i < ${#file_mappings[@]}; i += 3)); do
-  command="${file_mappings[i]}"
-  source_file="${file_mappings[i + 1]}"
-  dest_dir="${file_mappings[i + 2]}"
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  command="$1"
+  source_file="$2"
+  dest_dir="$3"
+  shift 3
 
   command -v "$command" >/dev/null 2>&1 || continue
 
