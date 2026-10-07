@@ -175,11 +175,10 @@ shell = "bash -c"
 description = "Deploy user-scope external skills and commands to agent dirs"
 # apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
 # ~/.apm は [dotfiles] が配置するため、事前に `mise bootstrap dotfiles apply` 済みであること。
-# ~/.apm/apm.lock.yaml は repo の apm/apm.lock.yaml への symlink（mise.toml の symlink-each）
-# なので、apm install -g が更新した lockfile はそのまま repo 側に反映される。
 run = [
     "mise run apm:validate-lock-version",
     "apm install -g",
+    "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
@@ -190,9 +189,55 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 run = [
     "mise run apm:validate-lock-version",
     "apm install -g --frozen",
+    "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
+
+["apm:sync-lock"]
+description = "Copy the user-scope APM lockfile into the dotfiles source tree"
+# apm install -g で生成された ~/.apm/apm.lock.yaml を SOT とし、
+# git 管理する dotfiles リポジトリ側（apm/apm.lock.yaml）へ反映する（DOTFILES_DIR、既定は ~/dotfiles）。
+run = '''
+set -eu
+
+source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+# DOTFILES_DIR がクォート付きで export されている（例: export DOTFILES_DIR="~/foo"）と、
+# シェルが `~` を展開しないため文字列としてそのまま渡ってくる。ここで正規化しておかないと
+# 「存在しないパス」として扱われてしまう（実機で確認済みの不具合）。
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
+source_lock="$HOME/.apm/apm.lock.yaml"
+destination_dir="$source_dir/apm"
+destination_lock="$destination_dir/apm.lock.yaml"
+
+if [ ! -f "$source_dir/mise.toml" ]; then
+  echo "error: $source_dir does not look like the dotfiles repo checkout (no mise.toml); set DOTFILES_DIR if it's cloned elsewhere." >&2
+  exit 1
+fi
+
+if [ ! -f "$source_lock" ]; then
+  echo "APM lockfile not found: $source_lock" >&2
+  exit 1
+fi
+
+# ~/.apm は symlink-each（mise.toml 参照）だが、apm は lockfile を一時ファイル + os.replace で
+# 書き出すため（microsoft/apm の utils/atomic_io.py。symlink を解決しない）、apm install -g の
+# 後は ~/.apm/apm.lock.yaml が symlink から実ファイルに置き換わり repo 側は更新されない。
+# 実ファイルになっていたら repo へコピーし、symlink を張り直す（次の apply が conflict に
+# ならないようにするため）。symlink のまま（同一ファイル）なら何もしない。
+if [ "$source_lock" -ef "$destination_lock" ]; then
+  exit 0
+fi
+
+mkdir -p "$destination_dir"
+cp "$source_lock" "$destination_lock"
+chmod 0644 "$destination_lock"
+ln -sfn "$destination_lock" "$source_lock"
+'''
+shell = "bash -c"
 
 ["apm:sync-commands"]
 description = "Sync namespaced commands from APM modules into Rulesync sources"

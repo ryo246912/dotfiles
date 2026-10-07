@@ -130,9 +130,12 @@ mise --cd "$HOME" run rulesync:sync
 # 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
 # exclude を変更する際は3ファイルとも揃えること）。
 #
-# "~/.apm"・"~/.claude"・"~/.codex" も同じ理由で symlink-each にしている（apm install・
-# Claude Code・Codex がこれらのファイルを書き換えた内容も repo の作業ツリーへ直接入る。
-# apm_modules・session log 等の source に無いファイルには触らない）。
+# "~/.apm"・"~/.claude"・"~/.codex" も同じ理由で symlink-each にしている（アプリが
+# これらのファイルをその場で書き換えた内容は repo の作業ツリーへ直接入る。apm_modules・
+# session log 等の source に無いファイルには触らない）。ただし一時ファイル + rename で
+# 保存するアプリは symlink を実ファイルに置き換えてしまう。apm の lockfile がこれに
+# 該当するため、apm:sync-lock（config/mise/tasks/dev.toml）が repo へのコピーと
+# symlink の張り直しを行う。
 #
 # 以下のエントリは常に git 側の内容へ収束させたい copy/template（"~/.config/mise" は
 # mise の trust がパス単位であることや mise 自身の起動に関わるため、symlink にせず
