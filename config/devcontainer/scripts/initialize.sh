@@ -223,20 +223,30 @@ ensure_dir ~/.config/nvim
 # コンテナ外を指す symlink を辿らないため COPY が "not found" で失敗する。
 # そこで symlink を解決した実体のコピーをホスト側に作り、devcontainer.json はそちらを
 # build context と read-only mount の source として参照する（元が read-only mount なので
-# コピーでも挙動は変わらない）。コンテナ作成ごとにこの initializeCommand で作り直すため、
+# コピーでも挙動は変わらない）。コンテナ作成ごとにこの initializeCommand で差分反映するため、
 # ~/.config 側の編集は次の起動で反映される。
 #
 # 置き場所は ~/.cache 配下に固定する: devcontainer.json では ${localEnv:...} に既定値を
 # 書けないため、XDG_CACHE_HOME ではなく ~/.cache を直接使う必要がある。
 HOST_CONFIG_STAGE="$HOME/.cache/devcontainer/host-config"
 
+# 注意: ディレクトリごと rm -rf して作り直してはいけない。このコピーは起動中の
+# devcontainer が bind mount しているため（multi-worktree では複数が同時に動く）、
+# 新しいコンテナを作るたびに中身を消すと、動いているコンテナから設定が消える。
+# そのため「src から消えた entry だけを削除し、残りは上書きコピー」で差分反映する。
 materialize_config() {
-	local name="$1" src dst
+	local name="$1" src dst rel
 	src="$HOME/.config/$name"
 	dst="${HOST_CONFIG_STAGE}/$name"
 	[ -d "$src" ] || return 0
-	rm -rf "$dst"
 	mkdir -p "$dst"
+
+	# src に無くなった entry を消す（リンク切れの symlink も -L で残すため両方見る）
+	(cd "$dst" && find . -mindepth 1) | while IFS= read -r rel; do
+		rel="${rel#./}"
+		[ -e "${src}/${rel}" ] || [ -L "${src}/${rel}" ] || rm -rf "${dst}/${rel}"
+	done
+
 	# -L で symlink を辿って実体をコピーする。リンク切れが1つあっても全体は止めない
 	# （必要なものが欠けていれば下の検証か docker build が明示的に失敗する）。
 	cp -RL "$src/." "$dst/" 2>/dev/null \

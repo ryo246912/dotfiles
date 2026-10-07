@@ -208,7 +208,11 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 ```
 
 `initializeCommand` はコンテナ作成前に毎回ホスト側で走るため、`~/.config` 側の編集は
-次の起動でコピーに反映されます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
+次の起動でコピーに反映されます。反映は**差分のみ**（更新は上書き、`~/.config` 側から
+消えた entry だけ削除）で、ディレクトリごと作り直すことはしません。
+このコピーは起動中の devcontainer が bind mount しているため
+（`multi-worktree` では複数が同時に動く）、作り直すと動いているコンテナから
+設定が消えてしまいます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
 `scripts` / `lefthook.local.yml` が揃っているかを検証し、欠けていればそこで止めます
 （dotfiles 未適用やリンク切れを、分かりにくい `docker build` エラーの前に検出するため）。
 
