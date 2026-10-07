@@ -125,9 +125,12 @@ HINT
 fi
 
 echo "==> docker image save -> sbx template load"
-# 数 GB の tar を書くため、$TMPDIR にも同等の空きが必要
+# 数 GB の tar を書くため、一時ディレクトリにも同等の空きが必要。
+# set -u 下で TMPDIR 未設定の環境（Linux では珍しくない）だと、メッセージ自体が
+# "TMPDIR: unbound variable" で落ちて診断が出ないため既定値を入れる
+# （mktemp -t 側は未設定でもシステムの一時ディレクトリへフォールバックする）。
 if ! docker image save "$tag" -o "$tar_path"; then
-  echo "error: docker image save が失敗しました（$TMPDIR の空き容量を確認してください）" >&2
+  echo "error: docker image save が失敗しました（${TMPDIR:-/tmp} の空き容量を確認してください）" >&2
   exit 1
 fi
 sbx template load "$tar_path"
