@@ -287,6 +287,51 @@ materialize_config() {
 	return "$rc"
 }
 
+# ファイル単位の mount 元も同じように実体化する。
+#
+# 当初は「ファイル単位の bind mount なら Docker が source 側の symlink を解決するので
+# そのままで良い」と考えていたが、実際には symlink がコンテナ内へそのまま渡り、
+# core.excludesfile が指す ~/.config/gitignore-host が
+# "Too many levels of symbolic links" で読めなくなる事例が出た。
+# Docker の symlink 解決に依存せず、ここで実体を作って渡す。
+#
+# 実体化に失敗しても mount 元が欠けないように、空の実体を用意しておく
+# （mounts の source が無いとコンテナ作成自体が失敗するため。このファイル冒頭の説明を参照）。
+ensure_staged_placeholder() {
+	local dst="$1" placeholder="$2"
+	[ -e "$dst" ] && return 0
+	mkdir -p "$(dirname "$dst")"
+	if [ -n "$placeholder" ]; then
+		printf '%s\n' "$placeholder" >"$dst"
+	else
+		: >"$dst"
+	fi
+	echo "✓ 作成(空の実体): $dst"
+}
+
+# 引数: <コピー先の名前> <コピー元のパス> [実体化できなかったときに書く内容]
+materialize_file() {
+	local name="$1" src="$2" placeholder="${3:-}" dst tmp
+	dst="${HOST_CONFIG_STAGE}/files/${name}"
+	mkdir -p "$(dirname "$dst")"
+	# [ -e ] はリンク切れの symlink に対して偽になるので、リンク切れもここで弾ける
+	if [ ! -e "$src" ]; then
+		echo "⚠️ 実体化できません(未配置かリンク切れ): $src" >&2
+		ensure_staged_placeholder "$dst" "$placeholder"
+		return 1
+	fi
+	tmp="${dst}.new"
+	# -L で symlink を辿って実体をコピーし、mv で atomic に置き換える
+	if ! cp -L "$src" "$tmp" 2>/dev/null; then
+		rm -f "$tmp"
+		echo "⚠️ 実体化に失敗しました: $src" >&2
+		ensure_staged_placeholder "$dst" "$placeholder"
+		return 1
+	fi
+	mv -f "$tmp" "$dst"
+	echo "✓ 実体化: $dst"
+}
+
 materialize_all() {
 	# build context になる devcontainer は失敗を致命的に扱う（古いコピーのまま build させない）
 	materialize_config devcontainer || return 1
@@ -294,6 +339,21 @@ materialize_all() {
 	materialize_config nvim || echo "⚠️ nvim 設定の実体化に失敗しました" >&2
 	materialize_config mise || echo "⚠️ mise 設定の実体化に失敗しました" >&2
 	materialize_config ccusage || echo "⚠️ ccusage 設定の実体化に失敗しました" >&2
+
+	# gitconfig / gitignore はコンテナ内の git が常に読むため、失敗を致命的に扱う。
+	# ここが読めないと core.excludesfile の解決に失敗して git status 系が全部死ぬ。
+	materialize_file gitconfig-host "$HOME/.config/git/config" || return 1
+	materialize_file gitignore-host "$HOME/.config/git/gitignore" || return 1
+
+	# agent の設定。無くても起動はできるので warning 止まりにする
+	materialize_file claude-config-host.json "$HOME/.claude.json" '{}' \
+		|| echo "⚠️ .claude.json の実体化に失敗しました" >&2
+	materialize_file claude-settings.json "$HOME/.claude/settings.json" '{}' \
+		|| echo "⚠️ .claude/settings.json の実体化に失敗しました" >&2
+	materialize_file codex-config.toml "$HOME/.codex/config.toml" \
+		|| echo "⚠️ .codex/config.toml の実体化に失敗しました" >&2
+	materialize_file codex-hooks.json "$HOME/.codex/hooks.json" '{}' \
+		|| echo "⚠️ .codex/hooks.json の実体化に失敗しました" >&2
 	return 0
 }
 
@@ -320,25 +380,6 @@ with_stage_lock() {
 	rm -rf "$lock" 2>/dev/null || true
 	return "$rc"
 }
-
-with_stage_lock materialize_all || exit 1
-
-# build context と Dockerfile の COPY 対象が揃っているか確認する
-# （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
-stage_missing=""
-for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
-	# 実体化コピーだけを見ると、過去の実行で作られた古いコピーが残っているせいで
-	# 「配置先から消えた・リンク切れになった」のを見逃す。配置先と両方を確認する
-	# （[ -e ] はリンク切れの symlink に対して偽になるのでリンク切れも検出できる）。
-	[ -e "$HOME/.config/devcontainer/${required}" ] \
-		&& [ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
-		|| stage_missing="${stage_missing}${stage_missing:+, }${required}"
-done
-if [ -n "$stage_missing" ]; then
-	echo "✗ devcontainer の build context に必要なものがありません: ${stage_missing}" >&2
-	echo "  mise bootstrap dotfiles apply で ~/.config/devcontainer を配置してください" >&2
-	exit 1
-fi
 
 # .ssh
 ensure_empty_file ~/.ssh/known_hosts
@@ -376,3 +417,28 @@ ensure_dir ~/.coderabbit
 
 # .aws（config だけを mount する。AWS を使わないホストには無いため、無ければ空ファイルを用意する）
 ensure_empty_file ~/.aws/config
+
+# ---------------------------------------------------------------------------
+# ホスト設定の実体化（symlink の解決）
+# ---------------------------------------------------------------------------
+# mount 元が全て揃ってから実行する必要があるため、ensure_* の後＝このファイルの最後に置く
+# （~/.codex/config.toml などは上の ensure_* で初めて作られるので、先に実体化すると
+# 「未配置」と判定してしまう）。
+with_stage_lock materialize_all || exit 1
+
+# build context と Dockerfile の COPY 対象が揃っているか確認する
+# （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
+stage_missing=""
+for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
+	# 実体化コピーだけを見ると、過去の実行で作られた古いコピーが残っているせいで
+	# 「配置先から消えた・リンク切れになった」のを見逃す。配置先と両方を確認する
+	# （[ -e ] はリンク切れの symlink に対して偽になるのでリンク切れも検出できる）。
+	[ -e "$HOME/.config/devcontainer/${required}" ] \
+		&& [ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
+		|| stage_missing="${stage_missing}${stage_missing:+, }${required}"
+done
+if [ -n "$stage_missing" ]; then
+	echo "✗ devcontainer の build context に必要なものがありません: ${stage_missing}" >&2
+	echo "  mise bootstrap dotfiles apply で ~/.config/devcontainer を配置してください" >&2
+	exit 1
+fi

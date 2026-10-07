@@ -227,21 +227,45 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 コンテナ内へ渡り、リンク先（ホストのリポジトリのパス）がコンテナ内に無いため
 **リンク切れ**になります。対処は mount の性質によって分けています。
 
-| mount                                                              | 対処                                                                      |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `~/.config/devcontainer` / `nvim` / `mise` / `ccusage`（readonly） | 上記の実体化コピー（`~/.cache/devcontainer/host-config`）を source にする |
-| `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json`  | **ファイル単位**で重ねて mount する（下記）                               |
-| `~/.config/git/config` / `gitignore`                               | 元からファイル単位の mount なので対処不要                                 |
-| `~/.config/gh` / `~/.agents` / `~/.copilot` など                   | dotfiles 管理外（実ファイル）なので対処不要                               |
+| mount                                                                                                                       | 対処                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `~/.config/devcontainer` / `nvim` / `mise` / `ccusage`（ディレクトリ・readonly）                                            | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
+| `~/.config/git/config` / `gitignore` / `~/.claude.json` / `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json` | 実体化したファイル（`~/.cache/devcontainer/host-config/files/<name>`）を source にする |
+| `~/.config/gh` / `~/.agents` / `~/.copilot` など                                                                            | dotfiles 管理外（実ファイル）なので対処不要                                            |
 
-ファイル単位の mount なら、Docker が **source 側の symlink を解決してから** mount するため
-リンク切れになりません。`~/.claude` / `~/.codex` はディレクトリごと read-write で mount
-（エージェントが `projects/` などを書き戻すため）したうえで、その上に
-dotfiles 管理のファイルだけを readonly で重ねています。
+> [!IMPORTANT]
+> **ファイル単位の mount でも Docker の symlink 解決に頼ってはいけません。**
+> 当初は「ファイル単位なら Docker が source 側の symlink を解決するので対処不要」と
+> 考えていましたが、実際には symlink がコンテナ内へそのまま渡り、
+> `core.excludesfile` が指す `/home/vscode/.config/gitignore-host` が
+> `fatal: ... Too many levels of symbolic links` で読めなくなる事例が出ました。
+> こうなると `git status` / `git diff` 系が全滅し、それを内部で呼ぶ crit なども落ちます
+> （`git -c core.excludesFile= status` だけ通ることで切り分けできます）。
+> そのため**ディレクトリもファイルも区別せず、すべて実体化したコピーを渡しています**。
 
-読み取り専用の mount をコピーに置き換えても挙動は変わりませんが、
-**read-write の mount はコピーにできない**（書き戻しが repo に反映されない）ため、
-この 2 系統に分けるのが一番素直でした。
+`~/.claude` / `~/.codex` はディレクトリごと read-write で mount（エージェントが
+`projects/` などを書き戻すため）したうえで、その上に dotfiles 管理のファイルだけを
+実体化したコピーから readonly で重ねています。read-write の mount 自体はコピーにできない
+（書き戻しが repo に反映されない）ため、この 2 層構成になっています。
+
+`git/config` と `git/gitignore` はコンテナ内の git が常に読むため、実体化に失敗したら
+**コンテナ作成を止めます**。他のファイルは warning 止まりですが、`mounts` の source が
+無いとコンテナ作成自体が失敗するため、失敗時は空の実体を置いて mount 元を確保します。
+
+### なぜハードリンクではないのか
+
+mise の `[dotfiles]` が持つ mode は `symlink` / `symlink-each` / `copy` / `template` で、
+**ハードリンクの mode はありません**。仮にあっても、このリポジトリでは使えません。
+
+- `git pull` / `git checkout` はファイルを「一時ファイル + rename」で書き換えるため、
+  repo 側のパスが別 inode になり、**ハードリンクが黙って切れる**。両方のパスは
+  存在し続けるので、気づかないまま内容が乖離する（symlink なら起きない）
+- 同じ理由でアトミック保存するエディタ・ツールでも切れる。`apm` の lockfile が
+  まさにこれで、`apm:sync-lock` で張り直す対応が入っている
+- ディレクトリはハードリンクできないため、repo 側に増えたファイルが `~/.config` に現れない
+
+実体化コピーはこの問題を持ちません（`initializeCommand` が毎回作り直すため、
+`git pull` の後も次の起動で追従します）。
 
 > [!TIP]
 > Docker Sandboxes 側はマウント先がホストと同じ絶対パスになるので、
