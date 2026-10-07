@@ -125,7 +125,8 @@ extra_workspaces = [
 - `extra_workspaces`: task root に加えてマウントする workspace（`:ro` で read-only）
   - 以下は `sbx-agent` が自動で追加するため書く必要はありません
     - 各 worktree の common git dir（実体リポジトリの `.git`）
-    - `~/.config/git/config` / `~/.config/git/gitignore` / `~/.config/gh` / `~/.aws/config` / `~/.agents`
+    - `~/.config/git/config` / `~/.config/git/gitignore` / `~/.aws/config` / `~/.agents` /
+      `~/.config/nvim` / `~/.ssh/known_hosts` / `~/.claude.json`（いずれも read-only）
     - agent の設定ディレクトリ（`~/.claude` / `~/.codex` / `~/.copilot`）
 
 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
