@@ -69,9 +69,8 @@ jobs:
       - name: mise bootstrap（[dotfiles] 配置・[bootstrap.hooks.*] 実行）
         # [dotfiles]・[bootstrap.hooks.*] は checkout したこのリポジトリの mise.toml
         # 自身が持つため、cwd をリポジトリ直下に保ったまま実行する（chezmoi の --source 相当の
-        # 外部指定は不要）。Linux 専用の mise.<ENV>.toml overlay は不要になった
-        # （~/.config は共通の track mode entry・OS 限定分は config-linux/autohotkey のみ
-        # で pre-dotfiles hook が seed する）。
+        # 外部指定は不要）。Linux 専用の差分（~/.config の OS 別 exclude・autohotkey）は
+        # MISE_ENV=linux で読まれる mise.linux.toml overlay が持つ。
         # full mise install（aqua/github backend）が GitHub API を使うため、read-only の
         # github.token を実行するこのステップに限定して注入する（ghalint: job env 禁止）。
         env:
@@ -85,8 +84,9 @@ jobs:
           # packages フェーズは mise bootstrap プロセス起動時に読み込んだ config しか見ないため、
           # [bootstrap.packages]（config/mise/config.linux.toml という dotfile）を
           # 同一プロセス内で先に配置しても反映されない。dotfiles を先に別プロセスで適用してから
-          # 本体を実行する（docs/setup.md 参照）。
-          mise bootstrap dotfiles apply --yes
+          # 本体を実行する（docs/setup.md 参照）。~/.config は symlink-each のため、runner の
+          # ~/.config に同名の実ファイルがあっても conflict で止まらないよう --force を付ける。
+          mise bootstrap dotfiles apply --yes --force
           mise trust ~/.config/mise/config.linux.toml
           # packages フェーズ(apt)の sudo は `[ -t 0 ]`(TTY) を要するため PTY を割り当てる
           # （runner の sudo は NOPASSWD なのでプロンプトは出ない）。

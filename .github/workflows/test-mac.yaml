@@ -103,8 +103,9 @@ jobs:
           # packages フェーズは mise bootstrap プロセス起動時に読み込んだ config しか見ないため、
           # [bootstrap.packages]（config-mac/mise/config.mac.toml という dotfile）を
           # 同一プロセス内で先に配置しても反映されない。dotfiles を先に別プロセスで適用してから
-          # 本体を実行する（docs/setup.md 参照）。
-          mise bootstrap dotfiles apply --yes
+          # 本体を実行する（docs/setup.md 参照）。~/.config は symlink-each のため、runner の
+          # ~/.config に同名の実ファイルがあっても conflict で止まらないよう --force を付ける。
+          mise bootstrap dotfiles apply --yes --force
           mise trust ~/.config/mise/config.mac.toml
           mise bootstrap --yes
 
