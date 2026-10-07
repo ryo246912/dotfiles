@@ -16,9 +16,16 @@ description = "[dotfiles] の差分を delta で表示する"
 run   = "set -o pipefail; mise bootstrap dotfiles diff | delta"
 shell = "bash -c"
 
+# apply 系 task は MISE_HISTORY_ENABLED=0 で実行する。history が有効だと apply は
+# 前後に protective checkpoint を取るため history の operation lock を取りに行くが、
+# 常駐 history-watch が ~/.config 全体の保存・定期スキャン（数十秒かかる）で lock を
+# 握っていると、mise 側で固定の30秒待ったあと
+# "another history operation is running" で失敗する。手元のライブ編集は
+# history-watch が別途保存しているため、post-merge の自動 apply（lefthook.yml）と同様に
+# 手動 apply でも operation checkpoint を無効化する（docs/mise.md 参照）。
 ["bootstrap:dotfiles:apply"]
 description = "[dotfiles] を適用する"
-run         = "mise bootstrap dotfiles apply"
+run         = "MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply"
 
 ["bootstrap:dotfiles:apply-interactive"]
 description = "差分がある entry を1つずつ delta で確認しながら適用する"
@@ -75,7 +82,8 @@ if [ -z "${selected[*]-}" ]; then
   exit 0
 fi
 
-mise bootstrap dotfiles apply --yes "${selected[@]}"
+# history を無効化する理由は bootstrap:dotfiles:apply のコメント参照。
+MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes "${selected[@]}"
 '''
 shell = "bash -c"
 

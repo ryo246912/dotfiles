@@ -591,8 +591,14 @@ bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstra
     `~/.config`の広い範囲）のprotective checkpointを作る。ファイル数の多い実環境では、
     実際のcopyが1ディレクトリだけでもこのwalkとGit snapshotに約80秒かかっていた。
     post-mergeはGit管理されたsourceからの自動再適用であり、常駐history-watchが編集を
-    別途保存するため、この自動経路だけoperation checkpointを無効化する。通常の手動apply、
-    `mise bootstrap dotfiles save`、history-watch、full bootstrapではhistoryを維持する。
+    別途保存するため、この自動経路ではoperation checkpointを無効化する。
+    同じ理由で、手動applyのtask（`bootstrap:dotfiles:apply`・
+    `bootstrap:dotfiles:apply-interactive`）も`MISE_HISTORY_ENABLED=0`で実行する。
+    historyが有効なapplyはoperation lockを取りに行くが、history-watchが`~/.config`の
+    保存・定期スキャンでlockを握っていると、mise固定の30秒待った後に
+    `another history operation is running`で失敗することが頻発したため。
+    `mise bootstrap dotfiles save`、history-watch、full bootstrap、
+    素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
