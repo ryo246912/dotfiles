@@ -9,7 +9,11 @@ set -eu
 # sbx が使う Docker daemon はホストの daemon と image store を共有しないため、
 # ローカルビルドした image は tar 経由で `sbx template load` する必要がある。
 
-context="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer"
+# ビルドコンテキストは「配置先（~/.config/devcontainer）」ではなく dotfiles リポジトリ側を使う。
+# 配置先は mise の dotfiles 運用やユーザーの手動 symlink によって実体ファイルでないことがあり、
+# その場合 BuildKit はコンテキスト外を指す symlink を辿らないため COPY が "not found" で失敗する。
+repo_root="${MISE_PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+context="${repo_root}/config/devcontainer"
 dockerfile="${context}/Dockerfile.sandbox"
 tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
 variant="${SBX_TEMPLATE_VARIANT:-claude-code}"
@@ -17,18 +21,37 @@ variant="${SBX_TEMPLATE_VARIANT:-claude-code}"
 for cmd in docker sbx; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }
 done
-[ -f "$dockerfile" ] || { echo "error: $dockerfile が見つかりません（dotfiles を適用してください）" >&2; exit 1; }
 
-# aqua:/github: backend の API レート制限を避けるため GH_TOKEN を build secret で渡す
+# COPY する対象が実体として読めることを先に確かめる（symlink 切れ・未配置をここで検出する）
+missing=""
+for required in Dockerfile.sandbox mise.toml tasks lint scripts lefthook.local.yml; do
+  [ -e "${context}/${required}" ] || missing="${missing}${missing:+, }${required}"
+done
+if [ -n "$missing" ]; then
+  echo "error: ビルドコンテキストに必要なものがありません: ${missing}" >&2
+  echo "       context=${context}" >&2
+  echo "       dotfiles リポジトリのルートで実行してください（MISE_PROJECT_ROOT から解決しています）" >&2
+  exit 1
+fi
+
+# aqua:/github: backend の API レート制限を避けるため GH_TOKEN を build secret で渡す。
+# 取得できなかった場合は --secret を付けない（空の env を渡すと BuildKit が失敗するため）。
 gh_token=""
 command -v gh >/dev/null 2>&1 && gh_token=$(gh auth token 2>/dev/null || true)
+secret_args=""
+if [ -n "$gh_token" ]; then
+  secret_args="--secret id=github_token,env=GH_TOKEN"
+else
+  echo "warn: gh のトークンが取得できないため build secret なしで続行します（API レート制限に注意）" >&2
+fi
 
 tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
 trap 'rm -f "$tar_path"' EXIT
 
 echo "==> docker build ($tag, variant=$variant)"
+# shellcheck disable=SC2086 # secret_args は意図的に分割させる
 GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
-  --secret id=github_token,env=GH_TOKEN \
+  $secret_args \
   --build-arg "VARIANT=${variant}" \
   -f "$dockerfile" \
   -t "$tag" \

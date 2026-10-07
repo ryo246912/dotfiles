@@ -603,6 +603,9 @@ mise run sandbox:build-template
 
 やっていること:
 
+0. build context は **dotfiles リポジトリの `config/devcontainer/`**（配置先の
+   `~/.config/devcontainer` ではない）。配置先が実体ファイルでない場合、BuildKit は
+   コンテキスト外を指す symlink を辿らず `COPY` が "not found" で失敗するため
 1. `FROM docker/sandbox-templates:claude-code`（Ubuntu + 非 root の `agent` ユーザー + sudo。
    Git / Docker CLI / Node.js / Python / Go / Java を同梱）
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
