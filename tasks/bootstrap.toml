@@ -23,9 +23,30 @@ shell = "bash -c"
 # "another history operation is running" で失敗する。手元のライブ編集は
 # history-watch が別途保存しているため、post-merge の自動 apply（lefthook.yml）と同様に
 # 手動 apply でも operation checkpoint を無効化する（docs/mise.md 参照）。
+#
+# apply 後は bootstrap:tools:install で mise install も続けて実行する
+# （apply で配置した ~/.config/mise 配下の global config を読ませるため、
+# apply とは別プロセスで実行する必要がある。mise.toml の [bootstrap] コメント参照）。
 ["bootstrap:dotfiles:apply"]
-description = "[dotfiles] を適用する"
-run         = "MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply"
+description = "[dotfiles] を適用し、続けて mise install する"
+run = """
+set -e
+MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply
+mise run bootstrap:tools:install
+"""
+
+# GITHUB_TOKEN 付きの mise install（GitHub API の rate limit 回避）。
+# [bootstrap.hooks.pre-tools]（mise.toml）の install 部分と同等だが、gh の導入・
+# ログインは行わない。gh 未ログイン時は token なしで続行する。
+["bootstrap:tools:install"]
+description = "GITHUB_TOKEN 付きで mise install する"
+run = """
+github_token=$(gh auth token 2>/dev/null || true)
+if [ -z "$github_token" ]; then
+  echo "warning: gh 未ログインのため GITHUB_TOKEN なしで mise install します" >&2
+fi
+GITHUB_TOKEN=$github_token mise install --jobs=2
+"""
 
 ["bootstrap:dotfiles:apply-interactive"]
 description = "差分がある entry を1つずつ delta で確認しながら適用する"
@@ -82,8 +103,10 @@ if [ -z "${selected[*]-}" ]; then
   exit 0
 fi
 
-# history を無効化する理由は bootstrap:dotfiles:apply のコメント参照。
+# history を無効化する理由・続けて mise install する理由は bootstrap:dotfiles:apply の
+# コメント参照。
 MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes "${selected[@]}"
+mise run bootstrap:tools:install
 '''
 shell = "bash -c"
 
