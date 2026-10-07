@@ -988,19 +988,51 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 
 ## トラブルシューティング
 
-| 症状                           | 対処                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| パッケージが取得できない       | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                    |
-| `You are not authenticated`    | `sbx login` で再認証                                                                              |
-| モデル API に到達できない      | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                  |
-| ポートフォワードが効かない     | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                     |
-| agent がホストの設定を読まない | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                  |
-| コミットが署名されない         | `ssh-add -L` で鍵が見えるか確認（forwarding はホストの ssh-agent が前提）                         |
-| sandbox 内で git が使えない    | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）               |
-| 時刻ずれでトークンが失敗する   | `sbx stop` → `sbx run` で再起動                                                                   |
-| lint / crit が sandbox に無い  | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
-| ホストへの通知が飛ばない       | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
-| 初期化スクリプトが見つからない | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
+| 症状                                                             | 対処                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                    |
+| `You are not authenticated`                                      | `sbx login` で再認証                                                                              |
+| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                  |
+| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                     |
+| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                  |
+| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認（forwarding はホストの ssh-agent が前提）                         |
+| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）               |
+| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                   |
+| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
+| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
+| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
+| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                           |
+
+### template のビルドが `exporting to image` で失敗する
+
+全ステップが成功したあと、最後の `exporting to image` だけが
+
+```
+ERROR: failed to build: failed to solve: failed to extract layer sha256:...:
+write /var/lib/desktop-containerd/daemon/.../snapshots/566/fs/mise/data/installs/...:
+input/output error
+```
+
+で失敗する場合、**Dockerfile の問題ではなく Docker Desktop のディスク不足**です。
+`/var/lib/desktop-containerd` は Docker Desktop の VM 内なので、仮想ディスクが上限に
+達すると `ENOSPC` ではなく `input/output error` として現れることがあります。
+
+この template はツールチェイン一式（`core:go` / `node` / `python` / `bun` ＋ lint 群）が
+入るため数 GB になります。対処は次の順で。
+
+1. `docker system df` で使用量を確認する
+2. `docker image prune -a` / `docker container prune` で空ける
+3. Docker Desktop の Settings > Resources > **Disk usage limit** を増やす
+4. それでも直らなければ仮想ディスクの破損を疑う（Troubleshoot > Clean / Purge data）
+
+> [!WARNING]
+> `docker builder prune` でも空きますが、`Dockerfile.sandbox` が使っている
+> **mise のインストール済みツールの cache mount も消えます**。
+> 次回のビルドは初回と同じフルインストール（数百秒）になります。
+
+`docker image save` が書く tar も数 GB になるため、`$TMPDIR`（macOS では
+`/var/folders/...`）側にも同等の空きが必要です。足りない場合は `TMPDIR` を
+空きのあるパスに向けて実行してください。
 
 ## 参考
 

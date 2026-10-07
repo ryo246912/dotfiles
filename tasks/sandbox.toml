@@ -87,17 +87,49 @@ fi
 tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
 trap 'rm -f "$tar_path"' EXIT
 
+# provenance / SBOM の attestation を切る。付いていると出力が単一イメージではなく
+# attestation manifest を含む OCI index（manifest list）になり、`docker image save` した
+# tar も index 形式になるため `sbx template load` が意図したイメージを選べない可能性がある。
+# ここで欲しいのはローカル専用の単一イメージなので、attestation は不要。
+# buildx を使わない docker では未対応のフラグなので、使えるときだけ付ける。
+attest_args=""
+if docker build --help 2>/dev/null | grep -q -- '--provenance'; then
+  attest_args="--provenance=false --sbom=false"
+fi
+
 echo "==> docker build ($tag, variant=$variant)"
-# shellcheck disable=SC2086 # secret_args は意図的に分割させる
-GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
+# shellcheck disable=SC2086 # secret_args / attest_args は意図的に分割させる
+if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
   $secret_args \
+  $attest_args \
   --build-arg "VARIANT=${variant}" \
   -f "$dockerfile" \
   -t "$tag" \
-  "$context"
+  "$context"; then
+  echo >&2
+  echo "error: docker build が失敗しました" >&2
+  # このイメージはツールチェイン一式（go / node / python / bun 他）で数 GB になるため、
+  # 全ステップ成功したあと "exporting to image" で input/output error になる場合は
+  # ほぼ Docker Desktop のディスク不足。ビルド内容の問題と紛れやすいので明示する。
+  cat >&2 <<'HINT'
+  ヒント: 各ステップは成功したのに "exporting to image" で
+  "input/output error" になった場合は Docker Desktop のディスク不足がほぼ原因です。
+    1. docker system df で使用量を確認する
+    2. docker image prune -a / docker container prune で空ける
+    3. Docker Desktop の Settings > Resources > Disk usage limit を増やす
+    4. それでも直らなければ仮想ディスクの破損を疑う（Troubleshoot > Clean / Purge data）
+  docker builder prune でも空きますが、mise のインストール済みツールの cache mount も
+  消えるため、次回のビルドは初回と同じフルインストールになります。
+HINT
+  exit 1
+fi
 
 echo "==> docker image save -> sbx template load"
-docker image save "$tag" -o "$tar_path"
+# 数 GB の tar を書くため、$TMPDIR にも同等の空きが必要
+if ! docker image save "$tag" -o "$tar_path"; then
+  echo "error: docker image save が失敗しました（$TMPDIR の空き容量を確認してください）" >&2
+  exit 1
+fi
 sbx template load "$tar_path"
 
 echo "==> 完了。利用可能な template:"
