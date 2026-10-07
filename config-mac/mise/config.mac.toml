@@ -110,3 +110,17 @@ key_repeat         = 2
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
 # Hammerspoon の設定を ~/.hammerspoon ではなく ~/.config/hammerspoon から読ませる（~ は Hammerspoon 側で展開）
 "org.hammerspoon.Hammerspoon" = { MJConfigFile = "~/.config/hammerspoon/init.lua" }
+
+# AgentsView のセッションを 15 分ごとに CockroachDB へ push する LaunchAgent（詳細は docs/agentsview.md）。
+# 適用: MISE_ENV=mac mise bootstrap macos launchd-agents apply
+# secret（AGENTSVIEW_COCKROACH_PUSH_PG_URL）は task 側が fnox（bws/age）から解決する。
+# 事前に mise が ~/.local/bin/mise にあり、ログ用に ~/.local/state/agentsview を作成しておくこと。
+[bootstrap.macos.launchd.agents.agentsview-push]
+args           = ["run", "agentsview:cockroach:push:daemon"]
+environment    = { MISE_ENV = "mac" }                        # config.mac.toml の [env]（PGSSLROOTCERT 等）を読ませる
+keep_alive     = false
+program        = "~/.local/bin/mise"
+run_at_load    = true
+start_interval = 900                                         # 15 min
+stderr_path    = "~/.local/state/agentsview/push.log"
+stdout_path    = "~/.local/state/agentsview/push.log"
