@@ -383,6 +383,8 @@ multi-worktree help
 - 配下 repo の worktree ブランチ名は従来どおり `<task-name>` のままです
 - task root の `.git/` は `ccmanager` の project discovery 用で、配下 repo の `.git` file とは別物です
 
+ccmanager 自体の使い方は [`docs/ccmanager.md`](ccmanager.md) を参照してください。
+
 #### 単一 task を管理する
 
 ```bash
