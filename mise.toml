@@ -45,11 +45,6 @@ run      = "lefthook install"
 # 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
 # 2段階の運用にしている（docs/setup.md 参照）。
 #
-# 0) pre-dotfiles: 以前は track mode の "~/.config" へ config/ から「無いものだけ」を
-#    一度きり seed する hook をここに置いていたが、"~/.config" を symlink-each でも宣言して
-#    config/ の各ファイルへのリンクを張る構成にしたため削除した
-#    （下の [dotfiles] のコメント参照）。
-
 # 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
 #    MISE_HISTORY_ENABLED=0でprotective checkpointだけを無効化するが、hook自体は実行する。
 #    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
@@ -135,26 +130,32 @@ mise --cd "$HOME" run rulesync:sync
 # 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
 # exclude を変更する際は3ファイルとも揃えること）。
 #
+# "~/.apm"・"~/.claude"・"~/.codex" も同じ理由で symlink-each にしている（apm install・
+# Claude Code・Codex がこれらのファイルを書き換えた内容も repo の作業ツリーへ直接入る。
+# apm_modules・session log 等の source に無いファイルには触らない）。
+#
 # 以下のエントリは常に git 側の内容へ収束させたい copy/template（"~/.config/mise" は
 # mise の trust がパス単位であることや mise 自身の起動に関わるため、symlink にせず
 # copy のまま維持する）。このうち "~/.config" 配下の
-# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）、
-# "~/.zshenv"、"~/.apm"・"~/.claude"・"~/.codex" 配下の個別ファイル（apm.yml、
-# apm.lock.yaml、claude/settings.json、codex/config.toml、codex/hooks.json）は、
+# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）と
+# "~/.zshenv" は、
 # config/mise/config.toml 側で同じ target に track も追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。「copyで丸ごと管理する
 # ディレクトリの中の、個別ファイルだけをtrackする」構成も実機で問題なく動作することを
 # 確認済み）。ライブ編集は依然として次の apply で上書きされるが、上書き直前に
 # history checkpoint が自動で記録されるため、`mise bootstrap dotfiles rollback <path>`
-# で復元できるようになる（実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex" は
+# で復元できるようになる（実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex" 配下の
+# 個別ファイル（apm.yml、apm.lock.yaml、claude/settings.json、codex/config.toml、
+# codex/hooks.json）にも track を宣言しているが、symlink-each のため history には
+# リンクとして記録され、内容の変更履歴は repo の Git で追う。これらのディレクトリは
 # ディレクトリ全体としては track の対象外にしている（apm_modules・session log・
 # 認証情報等の git 管理外のランタイム状態も混在するため）。"~/.local" も同様の理由で
 # ディレクトリ全体・個別ファイルのいずれも track していない（config/mise/config.toml
 # のコメント参照）。
 [dotfiles]
-"~/.apm"                                = { source = "apm", mode = "copy" }
-"~/.claude"                             = { source = "claude", mode = "copy" }
-"~/.codex"                              = { source = "codex", mode = "copy" }
+"~/.apm"                                = { source = "apm", mode = "symlink-each" }
+"~/.claude"                             = { source = "claude", mode = "symlink-each" }
+"~/.codex"                              = { source = "codex", mode = "symlink-each" }
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
 "~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }

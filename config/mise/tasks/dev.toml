@@ -223,6 +223,12 @@ if [ ! -f "$source_lock" ]; then
   exit 1
 fi
 
+# ~/.apm は symlink-each（mise.toml 参照）なので、通常は両者が同じファイルを指しており
+# コピー不要（cp は同一ファイルだとエラーになる）。
+if [ "$source_lock" -ef "$destination_lock" ]; then
+  exit 0
+fi
+
 mkdir -p "$destination_dir"
 cp "$source_lock" "$destination_lock"
 chmod 0644 "$destination_lock"

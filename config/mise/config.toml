@@ -180,15 +180,16 @@ lefthook install
 # リンク先の内容は記録しないため、symlink-each で配置したファイルの内容の変更履歴は
 # repo の Git で追う）。
 #
-# "~/.config" 配下の単一ファイル管理エントリ・"~/.apm"/"~/.claude"/"~/.codex" 配下の
-# 単一ファイル管理エントリ（いずれも mise.toml の [dotfiles] 参照）は copy/template
-# mode のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
+# "~/.config" 配下の単一ファイル管理エントリ（mise.toml の [dotfiles] 参照）は
+# copy/template mode のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。実機で「同じ target を
 # copy/template と track の両方でカバーしても衝突しない」こと、「copyで丸ごと管理する
 # ディレクトリの中の、個別ファイルだけをtrackする」構成も問題なく動作することを
 # 確認済み）。copy/template 側が source へ収束させる主挙動は変わらないが、apply で
 # ライブ編集が上書きされる直前に history checkpoint が自動記録されるため、
 # `mise bootstrap dotfiles rollback <path>` で復元できるようになる（実機確認済み）。
+# "~/.apm"/"~/.claude"/"~/.codex" 配下の個別ファイルも track しているが、mise.toml 側は
+# symlink-each のためリンクとして記録される（内容の履歴は repo の Git で追う）。
 #
 # "~/.apm"・"~/.claude"・"~/.codex" は、ディレクトリ全体としてはここに含めていない。
 # "~/.local" も同様（単一ファイルも含めて一切 track していない）。これらのディレクトリ
