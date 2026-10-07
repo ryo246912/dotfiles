@@ -342,7 +342,7 @@ sbx の呼び出し自体は `local/bin/sbx-agent` に委譲しており、ccman
 - `--name=NAME`: sandbox 名を明示指定（省略時は `<prefix>-<task>-<agent>`）
 - `--branch=BRANCH`: sandbox の branch mode で起動（`auto` で自動命名）
 - `--template=REF`: sandbox template の OCI 参照
-- `--new`: 既存 sandbox を再利用せず作り直す
+- `--new`: 既存 sandbox を削除してから作り直す（workspace や env は作成時にしか確定しないため）
 - `--rm`: agent セッション終了時に sandbox を削除する
 - `--devcontainer`: devcontainer backend に切り替える
 
@@ -357,7 +357,7 @@ multi-worktree dev feat/add-auth                      # 既定 agent を sandbox
 multi-worktree dev feat/add-auth claude               # agent を指定
 multi-worktree dev feat/add-auth codex -- --continue  # agent に引数を pass-through
 multi-worktree dev feat/add-auth claude --branch=auto # branch mode
-multi-worktree dev feat/add-auth --new                # sandbox を作り直す
+multi-worktree dev feat/add-auth --new                # sandbox を削除して作り直す
 multi-worktree dev feat/add-auth --rm                 # 終了時に sandbox を削除
 ```
 

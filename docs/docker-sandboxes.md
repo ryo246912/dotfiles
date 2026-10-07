@@ -137,8 +137,12 @@ sbx login
 sbx policy set-default balanced
 ```
 
-GitHub トークンは secret として登録しておきます。ホストの `gh` から都度解決されるので、
-生トークンはエージェントから読めません。
+GitHub トークンは secret として登録しておきます。ホストの `gh` から都度解決され、
+送信時にホスト側プロキシが注入するので、**生トークンはエージェントから読めません**。
+
+sandbox には `~/.config/gh` をマウントしません。`gh` が OS のキーチェーンを使えない環境だと
+`hosts.yml` にトークンが平文で保存され、read-only マウントでもエージェントから読めてしまうためです。
+sandbox 内の `gh` と git の GitHub 認証はこの secret 経由で通ります。
 
 ```bash
 sbx secret set github --command 'gh auth token'
@@ -238,9 +242,10 @@ sbx-agent --help
 1. sandbox 名を `<repo>-<branch>-<agent>[-<suffix>]` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/gh:ro` /
-   `~/.aws/config:ro` / `~/.agents:ro` と agent の設定ディレクトリを追加 workspace として渡す
-   （`devcontainer.json` の `mounts` に対応）
+   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
+   `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` と
+   agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
 4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
@@ -272,7 +277,7 @@ multi-worktree dev feat/add-auth                      # 既定 agent を sandbox
 multi-worktree dev feat/add-auth claude               # agent を指定
 multi-worktree dev feat/add-auth codex -- --continue  # agent に引数を pass-through
 multi-worktree dev feat/add-auth claude --branch=auto # branch mode
-multi-worktree dev feat/add-auth --new                # sandbox を作り直す
+multi-worktree dev feat/add-auth --new                # sandbox を削除して作り直す
 multi-worktree dev feat/add-auth --rm                 # 終了時に sandbox を削除
 multi-worktree dev feat/add-auth --name=my-sbx        # sandbox 名を明示
 multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer backend
@@ -363,7 +368,8 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
 1. sandbox 名を `<repo>-<branch>-<agent>` から決める（既にあれば再利用）
 2. ホスト側の前提条件（github secret / `localhost:22` の policy）を冪等に整える
 3. ツールチェイン入り template があれば使って `sbx create`
-   - ホストの git / gh / aws / nvim 設定と agent 設定ディレクトリをマウント
+   - ホストの git / aws / nvim 設定（read-only）と agent 設定ディレクトリをマウント
+     （gh のトークンファイルは渡さず `sbx secret` 経由にする）
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
@@ -659,7 +665,7 @@ devcontainer が `appPort: 127.0.0.1::7842` で自動採番していたのと同
 sandbox を複数同時に起動してもポートが衝突しません。割り当てられた port は
 `sbx ports <sandbox>` で確認できます。
 
-ホスト連携が不要な場合は `sbx-agent --no-host-bridge` で無効化できます。
+ホスト連携が不要な場合は `sbx-agent claude --no-host-bridge` のように agent 名を指定して無効化できます。
 
 ## devcontainer との機能対応表
 
@@ -667,46 +673,46 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### initializeCommand（`initialize.sh`）
 
-| devcontainer でやっていたこと    | sandbox                                                                          |
-| -------------------------------- | -------------------------------------------------------------------------------- |
-| mount source の事前作成          | ✅ `mise run sandbox:setup` が同じ `initialize.sh` を流用する                    |
-| 通知用 SSH 鍵の生成              | ✅ 同上（`~/.ssh/id_docker_devcontainer` を read-only でマウントして使う）       |
-| 署名用 SSH 鍵の生成・`.pub` 同期 | ✅ 不要。ssh-agent forwarding でホストの鍵をそのまま使う（秘密鍵はホストに残る） |
+| devcontainer でやっていたこと    | sandbox                                                                                                                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| mount source の事前作成          | ✅ `mise run sandbox:setup` が同じ `initialize.sh` を流用する                                                                                                                 |
+| 通知用 SSH 鍵の生成              | ✅ 同上（`~/.ssh/id_docker_devcontainer` を read-only でマウントして使う）                                                                                                    |
+| 署名用 SSH 鍵の生成・`.pub` 同期 | ⚠️ sandbox の署名には不要（ssh-agent forwarding を使う）。ただし `sandbox:setup` が流用する `initialize.sh` は devcontainer 用の署名鍵も生成し、GitHub への登録手順を表示する |
 
 ### Dockerfile / features
 
-| devcontainer でやっていたこと                                    | sandbox                                                                                     |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| docker-in-docker feature                                         | ✅ 標準で sandbox 専用 docker daemon を持つ                                                 |
-| DinD データを `${devcontainerId}` スコープの named volume に分離 | ✅ 不要。sandbox ごとに独立（`sbx rm` で消える）                                            |
-| mise + 各種ツール（lint 群 / 言語処理系 / crit / plannotator）   | ✅ `Dockerfile.sandbox` が同じ `mise.toml` で入れる                                         |
-| mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                           |
-| `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/shims:$PATH`                              |
-| `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                |
-| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                        |
-| nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を渡して symlink      |
-| Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む |
+| devcontainer でやっていたこと                                    | sandbox                                                                                                                                               |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| docker-in-docker feature                                         | ✅ 標準で sandbox 専用 docker daemon を持つ                                                                                                           |
+| DinD データを `${devcontainerId}` スコープの named volume に分離 | ✅ 不要。sandbox ごとに独立（`sbx rm` で消える）                                                                                                      |
+| mise + 各種ツール（lint 群 / 言語処理系 / crit / plannotator）   | ✅ `Dockerfile.sandbox` が同じ `mise.toml` で入れる                                                                                                   |
+| mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                                                                                     |
+| `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/data/shims:$PATH`                                                                                   |
+| `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                                                                          |
+| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                                                                                  |
+| nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を `:ro` で渡して symlink（lockfile は `AI_AGENT=1` のとき state dir へ逃がす） |
+| Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む                                                           |
 
 ### mounts
 
-| devcontainer の mount                     | sandbox                                                       |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                    |
-| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                   |
-| `~/.config/gh`                            | ✅ `:ro`。加えて `sbx secret set github` でトークン注入も可能 |
-| `~/.aws/config`                           | ✅ `:ro`                                                      |
-| `~/.agents`                               | ✅ `:ro`                                                      |
-| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                      |
-| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                 |
-| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                         |
-| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                     |
-| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）       |
-| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                             |
-| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                            |
-| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）        |
-| `~/.config/ccusage` / `~/.config/mise`    | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）        |
-| `~/.coderabbit`                           | ⚠️ `extra_workspaces` で追加する                              |
-| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                         |
+| devcontainer の mount                     | sandbox                                                                                                           |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                        |
+| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                       |
+| `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbx secret set github` でプロキシが注入する |
+| `~/.aws/config`                           | ✅ `:ro`                                                                                                          |
+| `~/.agents`                               | ✅ `:ro`                                                                                                          |
+| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                                                                          |
+| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                                                                     |
+| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                                                                             |
+| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                                                                         |
+| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）                                                           |
+| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                 |
+| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
+| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
+| `~/.config/ccusage` / `~/.config/mise`    | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
+| `~/.coderabbit`                           | ⚠️ `extra_workspaces` で追加する                                                                                  |
+| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
 

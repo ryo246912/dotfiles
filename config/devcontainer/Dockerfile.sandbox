@@ -92,7 +92,7 @@ RUN --mount=type=secret,id=github_token \
     rm -rf /mise/data/downloads; \
     mise reshim -C /mise; \
     rsync -a --delete /mise/data/ /mise/data-cache/; \
-    chown -R agent:agent /mise
+    chown -R agent:agent /mise/data /mise/state
 
 # mise の trust は実行ユーザーごとに記録されるため、root で trust しても agent では効かない。
 # 代わりに trusted path を env で宣言する（sbx-agent は workspace を足した値を --env で渡す）。

@@ -6,11 +6,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [tools]
 "cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
-# Docker Sandboxes (sbx)。mac 専用（microVM が Apple Silicon / Windows 11 のみ対応）。
-# aqua registry には未登録のため github backend を使う。配布物は docker/sbx-releases の
-# リリース資産で、darwin 版は bin/ + libexec/ + completions/ という構成なので bin_path=bin
-# を指定する（libexec は sbx 本体が隣接パスから読むため、install dir ごと展開させる）。
-"github:docker/sbx-releases"                  = { version = "0.47.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+"github:docker/sbx-releases"                  = { version = "0.47.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } } # Docker Sandboxes (sbx)。Apple Silicon 専用
 "github:hzqtc/taproom"                        = { version = "0.6.2", bin = "taproom" }
 "http:terminal-browser"                       = { version = "0.11.1", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 

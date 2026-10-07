@@ -14,8 +14,9 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 >
 > このページのツールチェイン（`mise.toml` / `tasks/` / `lint/`）とホスト連携スクリプト
 > （通知・crit・plannotator・host-tmux・lefthook）は **`Dockerfile.sandbox` 経由で sandbox 側にも
-> 移植済み**で、同じファイルを共有しています。そのため `mise.toml` や `scripts/` を変更したら
-> `mise run sandbox:build-template` で sandbox 用 template も作り直してください。
+> 移植済み**で、同じファイルを共有しています。これらは bind mount ではなく image へ COPY して
+> いるため、`mise.toml` / `tasks/` / `lint/` / `scripts/` / `lefthook.local.yml` のいずれかを
+> 変更したら `mise run sandbox:build-template` で sandbox 用 template を作り直してください。
 > 項目ごとの再現状況と、まだ差分が残っている点（生成物ディレクトリの分離など）は
 > [devcontainer との機能対応表](./docker-sandboxes.md#devcontainer-との機能対応表) にまとめています。
 

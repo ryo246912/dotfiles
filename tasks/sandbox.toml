@@ -55,10 +55,14 @@ command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise inst
 # devcontainer と同じ初期化（マウント元の作成と mac-host 用 SSH 鍵の生成）を流用する。
 # 鍵をホストの authorized_keys へ登録する手順は docs/devcontainer.md 参照。
 initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh"
-if [ -f "$initialize" ]; then
-  echo "==> マウント元と SSH 鍵を準備"
-  bash "$initialize" || echo "warn: initialize.sh が失敗しました" >&2
-fi
+# ここが無い＝dotfiles が未適用。ホスト連携（通知・crit・plannotator）に必要な SSH 鍵と
+# マウント元が用意されないため、不完全なセットアップを成功と誤認させないように止める。
+[ -f "$initialize" ] || {
+  echo "error: $initialize が見つかりません（mise bootstrap dotfiles apply を実行してください）" >&2
+  exit 1
+}
+echo "==> マウント元と SSH 鍵を準備"
+bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; exit 1; }
 
 echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
 if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
@@ -99,12 +103,15 @@ command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise inst
 
 registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
 
+failed=""
+note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
+
 # notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
 if registered notion; then
   echo "ℹ️ notion は既に登録済み"
 else
   echo "==> notion を登録（ブラウザで認可します）"
-  sbx mcp add notion --url https://mcp.notion.com/mcp || echo "warn: notion の登録に失敗" >&2
+  sbx mcp add notion --url https://mcp.notion.com/mcp || note_failure notion
 fi
 
 # aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
@@ -114,7 +121,7 @@ if registered aws-api; then
 else
   echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
   sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
-    || echo "warn: aws-api の登録に失敗" >&2
+    || note_failure aws-api
 fi
 
 # chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
@@ -124,7 +131,7 @@ else
   echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
   sbx mcp add chrome-devtools --command npx \
     --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
-    || echo "warn: chrome-devtools の登録に失敗" >&2
+    || note_failure chrome-devtools
 fi
 
 echo
@@ -133,6 +140,13 @@ sbx mcp ls || true
 echo
 echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
 echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
+
+# 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
+if [ -n "$failed" ]; then
+  echo >&2
+  echo "error: 登録できなかった MCP サーバ: ${failed}" >&2
+  exit 1
+fi
 '''
 
 ["sandbox:template-save"]
@@ -156,7 +170,7 @@ sbx template ls
 
 ["sandbox:template-ls"]
 description = "List saved Docker Sandboxes templates"
-run = "sbx template ls"
+run         = "sbx template ls"
 
 ["sandbox:template-rm"]
 description = "Remove a saved Docker Sandboxes template"

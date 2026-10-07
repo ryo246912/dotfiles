@@ -71,7 +71,7 @@ Usage: multi-worktree <subcommand> [options]
   --name NAME        sandbox 名を明示指定（dev の sandbox backend のみ）
   --branch BRANCH    sandbox を branch mode で起動（auto で自動命名、dev のみ）
   --template REF     sandbox template の OCI 参照を指定（dev のみ）
-  --new              既存 sandbox を再利用せず新規作成（dev のみ）
+  --new              既存 sandbox を削除して作り直す（dev のみ）
   --rm               agent セッション終了時に sandbox を削除（dev のみ）
 
 例:
@@ -1800,9 +1800,9 @@ cmd_dev_sandbox() {
     log_info "workspace: $worktree_base_dir"
 
     cd "$worktree_base_dir" || return 1
-    sbx-agent "${sbx_args[@]}"
-
-    local exit_code=$?
+    # set -e 下では失敗した時点で抜けてしまうため、`||` で終了コードを捕捉する
+    local exit_code=0
+    sbx-agent "${sbx_args[@]}" || exit_code=$?
     if [[ $exit_code -ne 0 ]]; then
         log_error "Docker Sandboxes の起動に失敗しました (終了コード: $exit_code)"
         return $exit_code
@@ -1950,6 +1950,12 @@ cmd_dev() {
             --sbx=*)
                 backend="sbx"
                 sandbox_agent="${1#*=}"
+                ;;
+            --agent)
+                shift
+                [[ $# -eq 0 ]] && { log_error "--agent には値が必要です"; return 1; }
+                backend="${backend:-sbx}"
+                sandbox_agent="$1"
                 ;;
             --agent=*)
                 backend="${backend:-sbx}"

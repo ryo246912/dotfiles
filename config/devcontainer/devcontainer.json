@@ -66,9 +66,11 @@
     "type=bind,source=${localEnv:HOME}/.config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.config/mise,target=/home/vscode/.config/mise,readonly",
     "type=bind,source=${localEnv:HOME}/.config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
-    // nvim 設定。lazy.nvim が lazy-lock.json を設定ディレクトリへ書くため readonly にはしない
-    // （プラグイン本体は stdpath("data") = コンテナ内の ~/.local/share/nvim に入る）。
-    "type=bind,source=${localEnv:HOME}/.config/nvim,target=/home/vscode/.config/nvim",
+    // nvim 設定。read-only で渡す（書き込み可能にすると、コンテナ内のエージェントが
+    // ホストの init.lua を書き換えられ、次回ホストで nvim を起動したときに実行されてしまう）。
+    // lazy.nvim の lockfile は AI_AGENT=1 のとき state dir へ逃がしている（config/nvim/init.lua）。
+    // プラグイン本体は stdpath("data") = コンテナ内の ~/.local/share/nvim に入る。
+    "type=bind,source=${localEnv:HOME}/.config/nvim,target=/home/vscode/.config/nvim,readonly",
     // .ssh
     "type=bind,source=${localEnv:HOME}/.ssh/known_hosts,target=/home/vscode/.ssh/known_hosts,readonly",
     // devcontainer専用のSSH鍵（ホスト通知用）

@@ -139,7 +139,7 @@ _multi_worktree() {
                         if [[ "$devcontainer_mode" == false ]]; then
                             local -a sandbox_agents sandbox_opts
                             sandbox_agents=(claude codex copilot docker-agent gemini kiro opencode shell)
-                            sandbox_opts=(--devcontainer --agent= --name= --branch= --template= --new --rm --)
+                            sandbox_opts=(--sbx --sbx= --devcontainer --agent --agent= --name --name= --branch --branch= --template --template= --new --rm --)
 
                             if [[ "${words[CURRENT-1]}" == "--sbx" || "${words[CURRENT-1]}" == "--agent" ]]; then
                                 compadd -a sandbox_agents
