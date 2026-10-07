@@ -178,6 +178,72 @@ cache mount は `docker builder prune` で削除されます（削除されて�
 | `scripts/post-create.sh` / `post-start.sh` | `postCreateCommand` 等     | 未使用（代わりに `sandbox-post-create.sh`）              |
 | `scripts/sandbox-post-create.sh`           | 未使用                     | `sbx exec` で sandbox 作成直後に実行                     |
 
+## symlink で配置されたホスト設定の扱い
+
+mise の `[dotfiles]` は `~/.config` / `~/.claude` / `~/.codex` を **`symlink-each`** で配置します
+（`mise.toml` の `[dotfiles."~/.config"]` を参照）。
+`~/.config/devcontainer/mise.toml` や `~/.config/nvim/init.lua` は実ファイルではなく、
+**dotfiles リポジトリを指す symlink** です。これが devcontainer に 2 つの影響を与えます。
+
+### 1. build context に使えない
+
+BuildKit は **build context の外を指す symlink を辿りません**。
+`~/.config/devcontainer` をそのまま context にすると、`Dockerfile` の
+
+```dockerfile
+COPY --chown=vscode:vscode mise.toml /mise/config.toml
+```
+
+が `failed to compute cache key: "/mise.toml": not found` で失敗します
+（`COPY . ...` のようなディレクトリ単位の COPY は「成功するがリンク切れが入る」ため、
+より分かりにくい壊れ方をします）。
+
+そこで `initializeCommand`（`scripts/initialize.sh`）が、symlink を解決した実体のコピーを
+`~/.cache/devcontainer/host-config/` に作り、`devcontainer.json` はそちらを
+`build.context` / `build.dockerfile` に指定しています。
+
+```jsonc
+"context": "${localEnv:HOME}/.cache/devcontainer/host-config/devcontainer",
+"dockerfile": "${localEnv:HOME}/.cache/devcontainer/host-config/devcontainer/Dockerfile",
+```
+
+`initializeCommand` はコンテナ作成前に毎回ホスト側で走るため、`~/.config` 側の編集は
+次の起動でコピーに反映されます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
+`scripts` / `lefthook.local.yml` が揃っているかを検証し、欠けていればそこで止めます
+（dotfiles 未適用やリンク切れを、分かりにくい `docker build` エラーの前に検出するため）。
+
+> [!NOTE]
+> 置き場所を `XDG_CACHE_HOME` ではなく `~/.cache` 固定にしているのは、
+> `devcontainer.json` の `${localEnv:...}` に既定値を書けないためです
+> （未設定の環境変数は空文字になり、mount の source が壊れます）。
+
+### 2. ディレクトリ単位の bind mount でリンク切れになる
+
+`~/.config/nvim` のようにディレクトリごと mount すると、中身の symlink はそのまま
+コンテナ内へ渡り、リンク先（ホストのリポジトリのパス）がコンテナ内に無いため
+**リンク切れ**になります。対処は mount の性質によって分けています。
+
+| mount                                                              | 対処                                                                      |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `~/.config/devcontainer` / `nvim` / `mise` / `ccusage`（readonly） | 上記の実体化コピー（`~/.cache/devcontainer/host-config`）を source にする |
+| `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json`  | **ファイル単位**で重ねて mount する（下記）                               |
+| `~/.config/git/config` / `gitignore`                               | 元からファイル単位の mount なので対処不要                                 |
+| `~/.config/gh` / `~/.agents` / `~/.copilot` など                   | dotfiles 管理外（実ファイル）なので対処不要                               |
+
+ファイル単位の mount なら、Docker が **source 側の symlink を解決してから** mount するため
+リンク切れになりません。`~/.claude` / `~/.codex` はディレクトリごと read-write で mount
+（エージェントが `projects/` などを書き戻すため）したうえで、その上に
+dotfiles 管理のファイルだけを readonly で重ねています。
+
+読み取り専用の mount をコピーに置き換えても挙動は変わりませんが、
+**read-write の mount はコピーにできない**（書き戻しが repo に反映されない）ため、
+この 2 系統に分けるのが一番素直でした。
+
+> [!TIP]
+> Docker Sandboxes 側はマウント先がホストと同じ絶対パスになるので、
+> **dotfiles リポジトリ自体を read-only で渡すだけ**で全ての symlink が解決します。
+> 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#ホスト設定は-symlink-なので-dotfiles-リポジトリも渡す) を参照してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から

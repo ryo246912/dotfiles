@@ -468,6 +468,36 @@ sandbox では**その工夫が標準動作**です。パスがずれないの�
 `sbx-agent` と `multi-worktree dev` が自動で渡します。詳細は
 [worktree と Git metadata の mount](#worktree-と-git-metadata-の-mount) を参照してください。
 
+### ホスト設定は symlink なので dotfiles リポジトリも渡す
+
+mise の `[dotfiles]` は `~/.config` / `~/.claude` / `~/.codex` を **`symlink-each`** で配置します
+（`mise.toml` の `[dotfiles."~/.config"]` を参照）。つまり `~/.config/nvim/init.lua` などは
+実ファイルではなく **dotfiles リポジトリを指す symlink** です。
+
+sbx はホストと同じ絶対パスにマウントするため、`~/.config/nvim` だけを渡すと
+sandbox 内では symlink のリンク先（リポジトリのパス）が存在せず、**全部リンク切れ**になります。
+
+そこで `sbx-agent` は **dotfiles リポジトリ自体も read-only で追加 workspace に渡します**。
+パスがホストと同じなので、これだけで `~/.config` 配下の symlink がそのまま解決します。
+
+リポジトリの場所は次の順で解決します。
+
+1. `DOTFILES_DIR`（既定以外の場所に clone している場合に export する運用）
+2. `~/dotfiles`（既定の clone 先）
+3. 配置済み symlink（`~/.config/zsh/main.zsh` など）のリンク先から逆算
+
+どれも外れた場合は warning を出して続行します（ホスト設定が読めない状態になるため、
+`DOTFILES_DIR` を export してください）。workspace 自体がリポジトリのときは
+既にマウント済みなので追加しません。
+
+> [!NOTE]
+> 同じ理由で、Docker の build context も「配置先」ではなく**リポジトリ側**を使います。
+> BuildKit はコンテキストの外を指す symlink を辿らないため、`~/.config/devcontainer` を
+> context にすると `COPY mise.toml` が `"/mise.toml": not found` で失敗します。
+> `mise run sandbox:build-template` はリポジトリの `config/devcontainer` を context にし、
+> devcontainer 側は `initialize.sh` が symlink を解決したコピーを作ってそれを context にします
+> （[docs/devcontainer.md](./devcontainer.md#symlink-で配置されたホスト設定の扱い) 参照）。
+
 ## clone mode（`--clone`）とは
 
 `--clone` を付けると、**sandbox が VM 内に自分用の git clone を作ってそこで作業する**モードになります。

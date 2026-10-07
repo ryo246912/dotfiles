@@ -95,6 +95,48 @@ expand_tilde() {
     printf '%s' "${path//\$HOME/$HOME}"
 }
 
+# symlink を 1 段だけ解決する。
+# macOS の readlink には -f が無い環境があるため、GNU coreutils に依存しない形で辿る。
+resolve_symlink() {
+    local path="$1" target
+    target=$(readlink "$path" 2>/dev/null) || return 1
+    [[ "$target" != /* ]] && target="$(cd "$(dirname "$path")" 2>/dev/null && pwd)/$target"
+    printf '%s' "$target"
+}
+
+# dotfiles リポジトリのチェックアウト先を特定する。
+# mise の [dotfiles] は ~/.config・~/.claude・~/.codex を symlink-each で配置するため、
+# それらをマウントしても中身はリポジトリを指す symlink のままになる。sbx はホストと同じ
+# 絶対パスへマウントするので、リポジトリ自体も同じパスで渡せば全ての symlink が解決する。
+find_dotfiles_repo() {
+    local candidate probe target dir
+    for candidate in "${DOTFILES_DIR:-}" "${HOME}/dotfiles"; do
+        [[ -n "$candidate" ]] || continue
+        candidate=$(expand_tilde "$candidate")
+        if [[ -f "${candidate}/mise.toml" && -e "${candidate}/.git" ]]; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    # 別の場所に clone していて DOTFILES_DIR も export されていない場合は、
+    # 配置済みの symlink のリンク先からリポジトリのルートを逆算する。
+    # config/devcontainer のように mise.toml を持つサブディレクトリを誤検出しないよう、
+    # .git も併せて確認する。
+    for probe in "${HOME}/.config/zsh/main.zsh" "${HOME}/.config/git/gitignore" "${HOME}/.claude/settings.json"; do
+        [[ -L "$probe" ]] || continue
+        target=$(resolve_symlink "$probe") || continue
+        dir=$(dirname "$target")
+        while [[ "$dir" != "/" && "$dir" != "." ]]; do
+            if [[ -f "${dir}/mise.toml" && -e "${dir}/.git" ]]; then
+                printf '%s' "$dir"
+                return 0
+            fi
+            dir=$(dirname "$dir")
+        done
+    done
+    return 1
+}
+
 require_value() {
     [[ $2 -gt 0 ]] || {
         log_error "$1 には値が必要です"
@@ -335,6 +377,19 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
     [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
+
+    # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
+    # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
+    # read-only で渡さないと、sandbox 内では全てリンク切れになる。
+    if dotfiles_repo=$(find_dotfiles_repo); then
+        # workspace がリポジトリ自身（またはその配下）のときは既にマウント済みなので足さない
+        if [[ "$WORKSPACE" != "$dotfiles_repo" && "$WORKSPACE" != "$dotfiles_repo"/* ]]; then
+            add_mount "${dotfiles_repo}:ro"
+        fi
+    else
+        log_warn "dotfiles リポジトリが見つからないため、ホスト設定の symlink が sandbox 内で解決できません"
+        log_warn "  既定の ~/dotfiles 以外に clone している場合は DOTFILES_DIR を export してください"
+    fi
 fi
 
 # ホスト連携: mac-host への SSH に使う devcontainer 専用鍵

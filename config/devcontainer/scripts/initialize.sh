@@ -217,6 +217,51 @@ ensure_dir ~/.config/ccusage
 ensure_dir ~/.config/mise
 ensure_dir ~/.config/nvim
 
+# mise の [dotfiles] は ~/.config を symlink-each で配置するため、配下のファイルは
+# dotfiles リポジトリを指す symlink になっている。これをそのまま bind mount すると、
+# リンク先のホストのパスはコンテナ内に無いためリンク切れになる。Docker の build context も
+# コンテナ外を指す symlink を辿らないため COPY が "not found" で失敗する。
+# そこで symlink を解決した実体のコピーをホスト側に作り、devcontainer.json はそちらを
+# build context と read-only mount の source として参照する（元が read-only mount なので
+# コピーでも挙動は変わらない）。コンテナ作成ごとにこの initializeCommand で作り直すため、
+# ~/.config 側の編集は次の起動で反映される。
+#
+# 置き場所は ~/.cache 配下に固定する: devcontainer.json では ${localEnv:...} に既定値を
+# 書けないため、XDG_CACHE_HOME ではなく ~/.cache を直接使う必要がある。
+HOST_CONFIG_STAGE="$HOME/.cache/devcontainer/host-config"
+
+materialize_config() {
+	local name="$1" src dst
+	src="$HOME/.config/$name"
+	dst="${HOST_CONFIG_STAGE}/$name"
+	[ -d "$src" ] || return 0
+	rm -rf "$dst"
+	mkdir -p "$dst"
+	# -L で symlink を辿って実体をコピーする。リンク切れが1つあっても全体は止めない
+	# （必要なものが欠けていれば下の検証か docker build が明示的に失敗する）。
+	cp -RL "$src/." "$dst/" 2>/dev/null \
+		|| echo "⚠️ 一部をコピーできませんでした(リンク切れ?): $src" >&2
+	echo "✓ 実体化: $dst"
+}
+
+materialize_config devcontainer
+materialize_config nvim
+materialize_config mise
+materialize_config ccusage
+
+# build context と Dockerfile の COPY 対象が揃っているか確認する
+# （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
+stage_missing=""
+for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
+	[ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
+		|| stage_missing="${stage_missing}${stage_missing:+, }${required}"
+done
+if [ -n "$stage_missing" ]; then
+	echo "✗ devcontainer の build context に必要なものがありません: ${stage_missing}" >&2
+	echo "  mise bootstrap dotfiles apply で ~/.config/devcontainer を配置してください" >&2
+	exit 1
+fi
+
 # .ssh
 ensure_empty_file ~/.ssh/known_hosts
 # devcontainer専用のSSH鍵（ホスト通知用。docs/devcontainer.md 参照）
@@ -243,6 +288,11 @@ ensure_dir ~/.claude-account2
 ensure_dir ~/.claude-work3
 ensure_dir ~/.agents
 ensure_dir ~/.codex
+# ~/.codex 配下の設定は symlink-each で配置されるため、ディレクトリごとの mount では
+# リンク切れになる。~/.claude/settings.json と同じく実体を単体 mount するので、
+# dotfiles 未適用でも mount source が欠けないように用意しておく。
+ensure_empty_file ~/.codex/config.toml
+ensure_json_file ~/.codex/hooks.json
 ensure_dir ~/.copilot
 ensure_dir ~/.coderabbit
 

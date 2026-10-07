@@ -10,9 +10,38 @@ set -eu
 # ローカルビルドした image は tar 経由で `sbx template load` する必要がある。
 
 # ビルドコンテキストは「配置先（~/.config/devcontainer）」ではなく dotfiles リポジトリ側を使う。
-# 配置先は mise の dotfiles 運用やユーザーの手動 symlink によって実体ファイルでないことがあり、
-# その場合 BuildKit はコンテキスト外を指す symlink を辿らないため COPY が "not found" で失敗する。
-repo_root="${MISE_PROJECT_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+# 配置先は mise の [dotfiles] が symlink-each で配置するため中身が symlink であり、
+# BuildKit はコンテキスト外を指す symlink を辿らないため COPY が "not found" で失敗する。
+#
+# リポジトリの場所は MISE_PROJECT_ROOT（このリポジトリ内で実行した場合）→ DOTFILES_DIR →
+# ~/.config/git/gitignore の symlink から逆算 → 既定の ~/dotfiles の順で解決する。
+# 別のプロジェクトから実行しても、dotfiles が適用済みなら動くようにしている。
+looks_like_dotfiles() { [ -f "$1/mise.toml" ] && [ -e "$1/.git" ]; }
+
+repo_root=""
+for candidate in "${MISE_PROJECT_ROOT:-}" "${DOTFILES_DIR:-}"; do
+  [ -n "$candidate" ] || continue
+  if looks_like_dotfiles "$candidate"; then repo_root="$candidate"; break; fi
+done
+if [ -z "$repo_root" ] && [ -L "$HOME/.config/git/gitignore" ]; then
+  # 配置済み symlink のリンク先からルートを逆算する（config/devcontainer のように
+  # mise.toml を持つサブディレクトリを誤検出しないよう .git も確認する）
+  link=$(readlink "$HOME/.config/git/gitignore")
+  case "$link" in /*) ;; *) link="$HOME/.config/git/$link" ;; esac
+  dir=$(dirname "$link")
+  while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    if looks_like_dotfiles "$dir"; then repo_root="$dir"; break; fi
+    dir=$(dirname "$dir")
+  done
+fi
+if [ -z "$repo_root" ] && looks_like_dotfiles "$HOME/dotfiles"; then
+  repo_root="$HOME/dotfiles"
+fi
+if [ -z "$repo_root" ]; then
+  echo "error: dotfiles リポジトリが見つかりません" >&2
+  echo "       リポジトリ内で実行するか、DOTFILES_DIR を export してください" >&2
+  exit 1
+fi
 context="${repo_root}/config/devcontainer"
 dockerfile="${context}/Dockerfile.sandbox"
 tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
@@ -30,7 +59,7 @@ done
 if [ -n "$missing" ]; then
   echo "error: ビルドコンテキストに必要なものがありません: ${missing}" >&2
   echo "       context=${context}" >&2
-  echo "       dotfiles リポジトリのルートで実行してください（MISE_PROJECT_ROOT から解決しています）" >&2
+  echo "       mise bootstrap dotfiles apply でリポジトリを最新にしてください" >&2
   exit 1
 fi
 
