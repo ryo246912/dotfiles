@@ -30,6 +30,16 @@ vim.opt.rtp:prepend(lazypath)
 local lockfile = nil
 if vim.env.AI_AGENT then
   lockfile = vim.fn.stdpath("state") .. "/lazy-lock.json"
+  -- 初回だけ、マウントされた設定ディレクトリの lockfile を種にする。
+  -- これをしないとエージェント環境だけプラグインのバージョンが独自に解決され、
+  -- ホストと別のバージョンが入ってしまう。
+  if vim.fn.filereadable(lockfile) == 0 then
+    local host_lockfile = vim.fn.stdpath("config") .. "/lazy-lock.json"
+    if vim.fn.filereadable(host_lockfile) == 1 then
+      vim.fn.mkdir(vim.fn.fnamemodify(lockfile, ":h"), "p")
+      vim.fn.writefile(vim.fn.readfile(host_lockfile), lockfile)
+    end
+  end
 end
 
 require("lazy").setup({

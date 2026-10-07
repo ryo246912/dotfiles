@@ -509,16 +509,16 @@ CCMANAGER_MULTI_PROJECT_ROOT=~/dev/worktrees ccmanager --multi-project
 
 - 各リポジトリの worktree をマウント
 - 実体リポジトリの `.git`（common git dir）だけを、ホストと同じ絶対パスにマウント
-- Git、GitHub CLI、Claude の設定をマウント
+- Git、GitHub CLI、Claude の設定をマウント（devcontainer 経路のみ。sandbox 経路は `~/.config/gh` を渡しません）
 - 環境変数 `CCMANAGER_WORKTREE_PATH`, `CCMANAGER_WORKTREE_BRANCH` を設定
 
 ### Docker Sandboxes との統合
 
 - `multi-worktree dev <task> [agent]` で task root をそのまま sandbox の primary workspace に渡します
 - sandbox 名は `<prefix>-<task>-<agent>`。同名 sandbox があれば再利用（`--new` で作り直し）します
-- `[settings.sandbox].extra_workspaces`・ホストの git / gh / aws 設定・agent の設定ディレクトリ・各 worktree の common git dir を追加 workspace としてマウントします
+- `[settings.sandbox].extra_workspaces`・ホストの git / aws / nvim 設定・agent の設定ディレクトリ・各 worktree の common git dir を追加 workspace としてマウントします（`~/.config/gh` は渡さず、GitHub 認証は `sbx secret` で行います）
 - sbx はホストと同じ絶対パスにマウントするため、`--env` で `CLAUDE_CONFIG_DIR` / `CODEX_HOME` と `GIT_CONFIG_*` を明示します
-- devcontainer でできていたことの再現状況（ツールチェインとホスト連携スクリプトは未実現）は [docs/docker-sandboxes.md](./docker-sandboxes.md#devcontainer-との機能対応表) を参照してください
+- devcontainer でできていたことの再現状況は [docs/docker-sandboxes.md](./docker-sandboxes.md#devcontainer-との機能対応表) を参照してください（ツールチェインとホスト連携スクリプトは `mise run sandbox:build-template` でビルドした template 側で再現しています）
 - `.claude/settings.local.json` の通知 hook は `mac-host` が無い環境では no-op になるため、sandbox でも安全側で使えます
 - 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください
 

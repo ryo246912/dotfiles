@@ -88,7 +88,8 @@ skills = "readonly"
 # sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
 # 以下は sbx-agent が既定で追加するため、ここに書く必要はない
 #   - 各 worktree の common git dir（実体リポジトリの .git）
-#   - ~/.config/git/config, ~/.config/git/gitignore, ~/.config/gh, ~/.aws/config, ~/.agents
+#   - ~/.config/git/config, ~/.config/git/gitignore, ~/.aws/config, ~/.agents
+#   - ~/.config/nvim, ~/.ssh/known_hosts, ~/.claude.json（いずれも read-only）
 #   - agent の設定ディレクトリ（~/.claude, ~/.codex, ~/.copilot）
 extra_workspaces = [
   "~/.coderabbit",
