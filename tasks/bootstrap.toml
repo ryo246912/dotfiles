@@ -37,15 +37,18 @@ mise run bootstrap:tools:install
 
 # GITHUB_TOKEN 付きの mise install（GitHub API の rate limit 回避）。
 # [bootstrap.hooks.pre-tools]（mise.toml）の install 部分と同等だが、gh の導入・
-# ログインは行わない。gh 未ログイン時は token なしで続行する。
+# ログインは行わない。gh から token を取れない場合（未導入・未ログイン）は、
+# 親環境の GITHUB_TOKEN を空文字で上書きしないよう export せずに続行する。
 ["bootstrap:tools:install"]
 description = "GITHUB_TOKEN 付きで mise install する"
 run = """
 github_token=$(gh auth token 2>/dev/null || true)
-if [ -z "$github_token" ]; then
-  echo "warning: gh 未ログインのため GITHUB_TOKEN なしで mise install します" >&2
+if [ -n "$github_token" ]; then
+  export GITHUB_TOKEN="$github_token"
+else
+  echo "warning: gh が未導入または未ログインのため、gh の token なしで mise install します" >&2
 fi
-GITHUB_TOKEN=$github_token mise install --jobs=2
+mise install --jobs=2
 """
 
 ["bootstrap:dotfiles:apply-interactive"]
