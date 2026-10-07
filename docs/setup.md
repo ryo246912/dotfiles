@@ -47,8 +47,8 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
-    このコマンドで `config/` 等の中身が `~/.config` へ copy される（`~/.config` は
-    copy と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
+    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
+    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
   - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
     [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
@@ -606,8 +606,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     MISE_ENV=linux mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.linux.toml
     ```
-    このコマンドで `config/` 等の中身が `~/.config` へ copy される（`~/.config` は
-    copy と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
+    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
+    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
   - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
     `~/.config/mise/config.linux.toml` を正しく読める:

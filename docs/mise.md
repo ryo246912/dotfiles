@@ -545,7 +545,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
   `mise.linux.toml` に振り分けている。現在は mise 自体の tool/config pin
   （`config-mac/mise`）、hammerspoon・vicinae（`config-mac/`）、autohotkey
-  （`config-linux/`）と、`~/.config` 共通 copy の OS 別 exclude（旧 `.chezmoiignore` の
+  （`config-linux/`）と、`~/.config` 共通 symlink-each の OS 別 exclude（旧 `.chezmoiignore` の
   darwin/else 分岐相当）がこの振り分けの対象。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
   → `{% if os() == "macos" %}` のような機械的な置換がほとんどで、11 ファイルの書き換えは
@@ -701,8 +701,8 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
   本リポジトリでは mise 自体の tool/config pin（`config-mac/mise`）と
   hammerspoon・vicinae を `mise.mac.toml`、autohotkey を `mise.linux.toml` で宣言している。
   （一時期は track mode の `~/.config` へ pre-dotfiles hook で「無いものだけ」seed する
-  運用にしていたが、`config/` の更新が既存ファイルへ反映されないため、旧 chezmoi apply
-  と同等に常に copy で収束させる構成へ戻した。）
+  運用にしていたが、`config/` の更新が既存ファイルへ反映されないため、`config/` の
+  各ファイルへ symlink-each でリンクを張る双方向の構成に変えた。）
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
   もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`/`raycast`/
   `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
@@ -822,19 +822,27 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
 - **track には source からの配置が無い。** 追跡対象が存在しない場合は
   「存在するようになったら追跡する」だけで待機し、内容を生成してはくれない
   （`mise bootstrap dotfiles track` を実行しても同様）。本リポジトリでは
-  `"~/.config"` を track に加えて `{ source = "config", mode = "copy" }` でも宣言し
-  （`mise.toml`、OS 別 exclude は `mise.mac.toml`/`mise.linux.toml`）、
-  旧 chezmoi apply と同等に apply のたびに `config/` の内容へ収束させている。
-  以前は pre-dotfiles hook で「無いものだけ」を一度きり seed していたが、
+  `"~/.config"` を track に加えて `{ source = "config", mode = "symlink-each" }` でも
+  宣言し（`mise.toml`、OS 別 exclude は `mise.mac.toml`/`mise.linux.toml`）、
+  `~/.config` 配下に `config/` の各ファイルへのシンボリックリンクを張っている。
+  実体は repo 側にあるため、`~/.config` 側の編集も repo の作業ツリーに直接反映される
+  （双方向）。以前は pre-dotfiles hook で「無いものだけ」を一度きり seed していたが、
   `config/` 側の更新が既存ファイルへ反映されないため廃止した。
+  - 既存の実ファイルをリンクへ置き換えるには `mise bootstrap dotfiles apply --force` が
+    必要（初回移行時。`--force` 前に `diff -ru ~/dotfiles/config ~/.config` 等で
+    `~/.config` 側だけにある編集を repo へ取り込んでおくこと）。
+  - 保存時に「一時ファイルへ書いて rename」するアプリは、リンクを実ファイルで
+    置き換えてしまう。その場合は repo との同期が切れ、次の apply が conflict になるため、
+    差分を repo へ取り込んでから `--force` で張り直す。
+  - mise の history は symlink をリンクとして記録する（中身は記録しない）ため、
+    リンク化したファイルの変更履歴は repo の git で追う。
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
   track 側が管理する（実機確認済み）。**同じ target path を track と copy の
   両方でカバーすると、copy 側の再適用が track 側のライブ編集を上書きする**
-  （実機で確認済み）。本リポジトリでは「git 側（`config/`）を正とし、`~/.config` 側の
-  直接編集は history に残しつつ apply で戻す」方針のため、`~/.config` 全体をこの形で
-  宣言している（上書きされた編集は `mise bootstrap dotfiles rollback <path>` で復元できる）。
+  （実機で確認済み。上書きされた編集は `mise bootstrap dotfiles rollback <path>` で
+  復元できる）。
 - **`status`/`diff`/`apply` は track エントリに対してはほぼ no-op**（state は常に
   `applied` ではなく `tracked` になる）。差分レビューは `bootstrap:dotfiles:diff`
   （`tasks/bootstrap.toml`）ではなく次項の `history diff` を使うこと。

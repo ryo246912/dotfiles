@@ -1,14 +1,14 @@
 # "~/.config" は mise.toml の共通エントリを、旧 .chezmoiignore の darwin 分岐
 # （**/*win*・.config/atuin/fly.toml）の除外を足して上書きする。同一キーは merge ではなく
 # 上書きになるため、共通の exclude（"/mise"・"/agentsview/tests"）も繰り返し書くこと。
-# hammerspoon・vicinae は macOS 限定の設定なので config-mac/ から配る。
+# hammerspoon・vicinae は macOS 限定の設定なので config-mac/ から symlink-each で配る。
 [dotfiles]
-"~/.config/hammerspoon"                   = { source = "config-mac/hammerspoon", mode = "copy" }
+"~/.config/hammerspoon"                   = { source = "config-mac/hammerspoon", mode = "symlink-each" }
 "~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "copy" }
 "~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "copy" }
-"~/.config/vicinae"                       = { source = "config-mac/vicinae", mode = "copy" }
+"~/.config/vicinae"                       = { source = "config-mac/vicinae", mode = "symlink-each" }
 
 [dotfiles."~/.config"]
 exclude = ["/mise", "/agentsview/tests", "*win*", "/atuin/fly.toml"]
-mode    = "copy"
+mode    = "symlink-each"
 source  = "config"

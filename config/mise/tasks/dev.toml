@@ -63,7 +63,8 @@ hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; f
 
 rulesync_hash=$(
   {
-    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
+    # ~/.config 配下は config/ への symlink-each（mise.toml 参照）なので -L でリンク先を辿る
+    find -L "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
     for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
       [ -f "$f" ] && echo "$f"
     done

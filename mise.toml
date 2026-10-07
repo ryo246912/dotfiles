@@ -46,8 +46,8 @@ run      = "lefthook install"
 # 2段階の運用にしている（docs/setup.md 参照）。
 #
 # 0) pre-dotfiles: 以前は track mode の "~/.config" へ config/ から「無いものだけ」を
-#    一度きり seed する hook をここに置いていたが、"~/.config" を copy でも宣言して
-#    apply のたびに config/ へ収束させる（旧 chezmoi apply 相当）構成にしたため削除した
+#    一度きり seed する hook をここに置いていたが、"~/.config" を symlink-each でも宣言して
+#    config/ の各ファイルへのリンクを張る構成にしたため削除した
 #    （下の [dotfiles] のコメント参照）。
 
 # 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
@@ -119,18 +119,22 @@ mise --cd "$HOME" run rulesync:sync
 """
 
 # "~/.config" は track mode（config/mise/config.toml 側で宣言。track は global
-# config からしか有効にならない実機仕様のため）と copy mode（下記）の両方で宣言している。
-# copy は旧 chezmoi apply（dot_config → ~/.config）と同等で、apply のたびに config/ 配下の
-# 全ファイルを ~/.config へ上書きする（ディレクトリ copy は追加的なので、config/ に無い
-# ~/.config 配下のファイルは消さない）。~/.config 側を直接編集した内容は次の apply で
-# config/ の内容に戻るが、track（history-watch）が編集を checkpoint に記録しているため
-# `mise bootstrap dotfiles rollback <path>` で復元できる。exclude は旧 .chezmoiignore の
+# config からしか有効にならない実機仕様のため）と symlink-each mode（下記）の両方で
+# 宣言している。symlink-each は config/ 配下の各ファイルへのシンボリックリンクを
+# ~/.config 側に1ファイルずつ張る（実体は ~/dotfiles/config/ 側）ため、~/.config 側で
+# 編集しても repo の作業ツリーが直接変わり、双方向に同期される。config/ に無い
+# ~/.config 配下のファイル（アプリが生成するもの等）には触らず、config/ から削除・exclude
+# したファイルのリンクは次の apply で外れる。既存の実ファイルをリンクへ置き換えるには
+# `mise bootstrap dotfiles apply --force` が必要（初回移行時や、アプリが保存時に
+# リンクを実ファイルで置き換えた場合）。exclude は旧 .chezmoiignore の
 # 共通除外に対応する（"/mise" は専用エントリ "~/.config/mise" が管理するため除外）。
 # OS 別の除外（旧 .chezmoiignore の darwin/else 分岐）は mise.mac.toml / mise.linux.toml で
 # 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
 # exclude を変更する際は3ファイルとも揃えること）。
 #
-# 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
+# 以下のエントリは常に git 側の内容へ収束させたい copy/template（"~/.config/mise" は
+# mise の trust がパス単位であることや mise 自身の起動に関わるため、symlink にせず
+# copy のまま維持する）。このうち "~/.config" 配下の
 # 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）、
 # "~/.zshenv"、"~/.apm"・"~/.claude"・"~/.codex" 配下の個別ファイル（apm.yml、
 # apm.lock.yaml、claude/settings.json、codex/config.toml、codex/hooks.json）は、
@@ -159,7 +163,7 @@ mise --cd "$HOME" run rulesync:sync
 
 [dotfiles."~/.config"]
 exclude = ["/mise", "/agentsview/tests"]
-mode    = "copy"
+mode    = "symlink-each"
 source  = "config"
 
 # ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は

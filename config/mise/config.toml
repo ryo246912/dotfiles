@@ -173,8 +173,8 @@ lefthook install
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
 # ここ（deploy先: ~/.config/mise/config.toml）で宣言する。
-# 内容の配置は mise.toml 側の "~/.config" copy エントリ（config/ から apply のたびに
-# 収束させる。OS 別の除外は mise.mac.toml / mise.linux.toml）が行い、変更履歴は
+# 内容の配置は mise.toml 側の "~/.config" symlink-each エントリ（config/ の各ファイルへ
+# リンクを張る。OS 別の除外は mise.mac.toml / mise.linux.toml）が行い、変更履歴は
 # `mise bootstrap dotfiles save`（または [bootstrap.services.mise-history] による
 # 自動保存）が checkpoint として記録する。
 #
