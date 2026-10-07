@@ -176,7 +176,9 @@ lefthook install
 # 内容の配置は mise.toml 側の "~/.config" symlink-each エントリ（config/ の各ファイルへ
 # リンクを張る。OS 別の除外は mise.mac.toml / mise.linux.toml）が行い、変更履歴は
 # `mise bootstrap dotfiles save`（または [bootstrap.services.mise-history] による
-# 自動保存）が checkpoint として記録する。
+# 自動保存）が checkpoint として記録する（mise history は symlink をリンクとして記録し
+# リンク先の内容は記録しないため、symlink-each で配置したファイルの内容の変更履歴は
+# repo の Git で追う）。
 #
 # "~/.config" 配下の単一ファイル管理エントリ・"~/.apm"/"~/.claude"/"~/.codex" 配下の
 # 単一ファイル管理エントリ（いずれも mise.toml の [dotfiles] 参照）は copy/template

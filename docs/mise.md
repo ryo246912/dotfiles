@@ -671,7 +671,8 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 **source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
 全部コピーされる**。一部だけ除外したい場合は、ディレクトリを walk する
 `copy`/`symlink-each` エントリの `exclude`（glob の配列）を使う（chezmoi の
-`.chezmoiignore` 相当。`~/.config` の symlink-each エントリで使用中）。`/` を含まない
+`.chezmoiignore` 相当。`~/.config` の symlink-each エントリで使用中。`min_version` の
+2026.9.2 で同じ仕様の `exclude` があることを mise の該当タグの docs で確認済み）。`/` を含まない
 パターンは任意のパス要素に、含むパターンは source root 基準でマッチする。先頭 `/` で
 root に固定する書き方は mise 2026.9.15 以降でしか効かないため使わない。
 
