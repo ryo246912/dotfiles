@@ -43,6 +43,29 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## ccmanager
+
+### 同じ worktree で複数セッションを立ち上げる
+
+メニューで worktree を Enter で選ぶと、その worktree で動いているセッションがあれば最初の1つにアタッチします。
+同じ worktree に追加でセッションを立てるときは Session Actions を使います。
+
+1. 起動済みセッションの**セッション行**にカーソルを合わせる
+2. `Space` で Session Actions を開く
+3. `S`（New session in same directory）を押す
+4. preset 選択画面で preset を選ぶ（同じ preset でも新規セッションとして起動する）
+
+Session Actions では次の操作もできます。
+
+| キー | 操作 |
+| --- | --- |
+| `S` | 同じディレクトリで新規セッションを作成 |
+| `R` | セッション名を変更（メニューに `パス : 名前` で表示され、同じ worktree の複数セッションを見分けやすくなる） |
+| `X` | セッションを閉じる |
+
+同じディレクトリで複数のエージェントが同時にファイルを編集すると衝突しやすいため、
+2つ目以降は調査・レビュー専用にするなど役割を分けて使います。
+
 ## 外部 skill の使い方
 
 このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。
