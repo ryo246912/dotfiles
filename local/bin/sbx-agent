@@ -466,9 +466,12 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
 fi
 
-# 設定ディレクトリが存在しない（=マウントされていない）場合は env を設定しない。
-# sandbox 内に空ディレクトリを作らせるだけで、ホストには永続化されないため。
-[[ -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]] && add_env "$AGENT_CONFIG_ENV" "$CONFIG_DIR"
+# 設定ディレクトリをマウントしていない場合は env を設定しない。
+# マウントしていないホストのパスを指すと、sandbox 内に空ディレクトリを作らせるだけで
+# ホストには永続化されず、agent の起動や設定の保存に失敗しうる。
+# --no-config のときは下のマウント処理ごとスキップされるので、ここも併せて見る。
+[[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]] \
+    && add_env "$AGENT_CONFIG_ENV" "$CONFIG_DIR"
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
     # ホストの gitconfig を include する（post-create.sh の include.path 相当）
