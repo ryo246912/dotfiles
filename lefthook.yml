@@ -7,8 +7,14 @@ output:
 post-merge:
   # post-checkout では glob が常に "no files for inspection" で skip されるため、glob で絞り込まない。
   jobs: &sync-jobs
+    - name: install-mise (ai-only)
+      only: &ai-only
+        - run: test -n "${AI_AGENT:-}"
+      run: command -v mise >/dev/null 2>&1 || [ -x "$HOME/.local/bin/mise" ] || curl -fsSL https://mise.run | sh
     - name: ensure-mise-version
       run: |
+        # mise.run は ~/.local/bin に入れるが、AI エージェントの PATH に含まれるとは限らないため明示する。
+        PATH="$PATH:$HOME/.local/bin"
         required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' mise.toml)
         if [ -z "$required_mise_version" ]; then
           echo "error: mise.toml から min_version を取得できません" >&2
@@ -46,7 +52,13 @@ post-merge:
         EOF
           exit 1
         fi
+    - name: mise-install (ai-only)
+      only: *ai-only
+      run: |
+        PATH="$PATH:$HOME/.local/bin"
+        mise trust && mise install
     - name: dotfiles-apply
+      skip: *ai-only
       # `mise bootstrap dotfiles apply` はpre/post-dotfilesフック（APM/rulesync同期を含む）も
       # 実行する。通常のapplyが~/.config全体のprotective checkpointを前後2回作ると数十秒
       # かかるため、この自動applyだけhistoryを無効化する（常駐history-watchと手動save/
