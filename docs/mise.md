@@ -843,7 +843,8 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
-  track 側が管理する（実機確認済み）。**同じ target path を track と copy の
+  track 側が管理する（実機確認済み。現在は `~/.config/mise` も `~/.config` の
+  symlink-each に含めている）。**同じ target path を track と copy の
   両方でカバーすると、copy 側の再適用が track 側のライブ編集を上書きする**
   （実機で確認済み。上書きされた編集は `mise bootstrap dotfiles rollback <path>` で
   復元できる）。

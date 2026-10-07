@@ -1,11 +1,11 @@
 # "~/.config" は mise.toml の共通エントリを、旧 .chezmoiignore の else（非 darwin）分岐
 # （**/*mac*・**/*brew*）の除外を足して上書きする。同一キーは merge ではなく
-# 上書きになるため、共通の exclude（"mise/**"・"agentsview/tests"）も繰り返し書くこと。
+# 上書きになるため、共通の exclude（"agentsview/tests"）も繰り返し書くこと。
 # autohotkey は WSL（Windows 側で使う）限定の設定なので config-linux/ から symlink-each で配る。
 [dotfiles]
 "~/.config/autohotkey" = { source = "config-linux/autohotkey", mode = "symlink-each" }
 
 [dotfiles."~/.config"]
-exclude = ["mise/**", "agentsview/tests", "*mac*", "*brew*"]
+exclude = ["agentsview/tests", "*mac*", "*brew*"]
 mode    = "symlink-each"
 source  = "config"

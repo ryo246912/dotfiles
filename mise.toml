@@ -121,8 +121,10 @@ mise --cd "$HOME" run rulesync:sync
 # ~/.config 配下のファイル（アプリが生成するもの等）には触らず、config/ から削除・exclude
 # したファイルのリンクは次の apply で外れる。既存の実ファイルをリンクへ置き換えるには
 # `mise bootstrap dotfiles apply --force` が必要（初回移行時や、アプリが保存時に
-# リンクを実ファイルで置き換えた場合）。exclude は旧 .chezmoiignore の
-# 共通除外に対応する（mise/ は専用エントリ "~/.config/mise" が管理するため除外）。
+# リンクを実ファイルで置き換えた場合）。exclude は旧 .chezmoiignore の共通除外に対応する。
+# ~/.config/mise もこのエントリでリンクする（mise は global config を symlink を解決した
+# パスでも global と判定・自動 trust し、`mise use -g` 等の書き込みも symlink を保ったまま
+# リンク先を更新する。mise v2026.9.12 の config/mod.rs・config_file/mod.rs・file.rs で確認）。
 # パターンは先頭 "/" を付けない（"/" 始まりで source root に固定する書き方は mise 2026.9.15
 # 以降の機能で、それ以前は何にもマッチしない）。"/" を含むパターンは source root 基準、
 # 含まないパターン（"*win*" 等）はツリー中の任意のパス要素にマッチする。
@@ -137,10 +139,8 @@ mise --cd "$HOME" run rulesync:sync
 # 該当するため、apm:sync-lock（config/mise/tasks/dev.toml）が repo へのコピーと
 # symlink の張り直しを行う。
 #
-# 以下のエントリは常に git 側の内容へ収束させたい copy/template（"~/.config/mise" は
-# mise の trust がパス単位であることや mise 自身の起動に関わるため、symlink にせず
-# copy のまま維持する）。このうち "~/.config" 配下の
-# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）と
+# 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
+# 単一ファイルエントリ（alacritty/ghostty/git/rio/rulesync mcp.json）と
 # "~/.zshenv" は、
 # config/mise/config.toml 側で同じ target に track も追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。「copyで丸ごと管理する
@@ -162,18 +162,17 @@ mise --cd "$HOME" run rulesync:sync
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
 "~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
-"~/.config/mise"                        = { source = "config/mise", mode = "copy" }
 "~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
 "~/.local"                              = { source = "local", mode = "copy" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]
-exclude = ["mise/**", "agentsview/tests"]
+exclude = ["agentsview/tests"]
 mode    = "symlink-each"
 source  = "config"
 
-# ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は
+# ~/.config 全体の history 自動保存。track entry 自体は
 # config/mise/config.toml（deploy先: ~/.config/mise/config.toml）側で宣言する
 # （mise の track mode は project config ではなく global config からのみ有効になる
 # 実機仕様のため）。
