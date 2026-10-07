@@ -68,7 +68,9 @@ done 3<<EOF
 $targets
 EOF
 
-if [ ${#selected[@]} -eq 0 ]; then
+# 件数判定に配列長（$ と { と # の連続）を使わないこと（mise は run を Tera テンプレートとして
+# 描画するため、波括弧+# がコメント開始タグと解釈されてタスクの検証に失敗する）。
+if [ -z "${selected[*]-}" ]; then
   echo "適用する target はありません"
   exit 0
 fi
