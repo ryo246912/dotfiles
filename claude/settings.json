@@ -49,5 +49,88 @@
   },
   "git": {
     "includeCoAuthor": false
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator improve-context; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+            "timeout": 345600
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))) + \"\\u0000\"' | xargs -0 -r -- tsgo --noEmit --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".toml\"))) + \"\\u0000\"' | xargs -0 -r -- taplo format --check --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+          }
+        ]
+      }
+    ]
   }
 }
