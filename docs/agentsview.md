@@ -969,6 +969,8 @@ bash ~/.config/agentsview/scripts/localdb.sh restore
 mise run agentsview:serve
 ```
 
+`agentsview:serve`が`pg push --watch: already locked (~/.agentsview/pg-watch.lock)`で止まる場合、前回のwatcherがまだ生きている。lockは`flock`なのでprocessが終われば外れ、lock fileを消しても意味はない。`mise run`はtaskを別process groupで起動するため、ghostの`stop --force`などでmiseだけがSIGKILLされると、`localdb.sh serve`のbashとwatcher／`pg serve`がPID 1の下に取り残される。`serve`は起動前にこの残骸を見つけてSIGTERMで片付け、終了処理中のwatcherは最大15秒待つ。親が生きているwatcherは別のserveが使用中とみなして触らずに中断する。ghostで止めるときは`--force`ではなく通常の`stop`（SIGTERM）を使う。
+
 CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
 
 importはINSERTを一定件数ごとのtransactionへ分けて流す。CockroachDBは1 transactionで書ける量に上限があり、dump全体を1 transactionにすると大きなbackupで失敗するためである。件数は`AGENTSVIEW_IMPORT_CHUNK_ROWS`（既定500）で変えられる。途中で失敗した場合、そこまでのchunkはcommit済みで残るが、すべてのINSERTが`ON CONFLICT DO NOTHING`なので、原因を直して同じfileを再実行すればよい。

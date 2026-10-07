@@ -408,36 +408,50 @@ push_local() {
 		agentsview pg push --no-vectors "$@"
 }
 
+# pidが$2秒以内に終了すれば0を返す。
+wait_exit() {
+	i=0
+	while kill -0 "$1" 2>/dev/null; do
+		[ "$i" -lt "$2" ] || return 1
+		sleep 1
+		i=$((i + 1))
+	done
+}
+
 # pg push --watchはdata dirごとにflockを取り、2つ目は`already locked`で即exitする。
-# flockはprocess終了で外れるので、このerrorは前回のserveから取り残された
-# watcherがまだ生きていることを意味する（親のbashだけがSIGKILLされた場合など）。
-# 親がinit（PID 1）に付け替わったwatcherは持ち主のいない残骸なので止め、
-# 親が生きているwatcherは別のserveが使用中なので触らずに中断する。
-stop_orphaned_watcher() {
+# flockはprocess終了で外れるので、このerrorは前回のwatcherがまだ生きていることを
+# 意味する。起きる経路は2つある。
+# - 前回のserveが終了処理中（SIGTERM後のpush完了待ちなど）。少し待てば消える。
+# - 前回のserveの親だけが消えた。mise runはtaskを別process groupで起動するので、
+#   ghost stop --forceなどでmiseだけがSIGKILLされると、このscriptのbashと
+#   watcher／pg serveがPID 1の下に取り残される。
+# 後者はbashへSIGTERMを送り、cleanup_serveにwatcherとpg serveを片付けさせる。
+stop_stale_serve() {
 	# 先頭の実行file名まで含めて照合し、文字列を含むだけのshellなどに当てない。
 	pids="$(pgrep -f '^([^ ]*/)?agentsview pg push --watch' || true)"
-	[ -n "$pids" ] || return 0
 	for pid in $pids; do
 		ppid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
 		[ -n "$ppid" ] || continue
+		target="$pid"
 		if [ "$ppid" != 1 ]; then
-			echo "agentsview pg push --watch が既に動いています（pid ${pid}, parent ${ppid}）。" >&2
-			echo "別のagentsview:serveを止めるか、不要なら kill ${pid} してから再実行してください" >&2
-			exit 1
-		fi
-		echo "取り残されたagentsview pg push --watch（pid ${pid}）を停止します" >&2
-		kill "$pid" 2>/dev/null || true
-		# SIGTERMでpushを区切ってからlockを外すので、終了を待ってから次へ進む。
-		i=0
-		while kill -0 "$pid" 2>/dev/null; do
-			if [ "$i" -ge 30 ]; then
-				echo "pid ${pid} が30秒以内に終了しなかったためSIGKILLします" >&2
-				kill -9 "$pid" 2>/dev/null || true
-				break
+			grandparent="$(ps -o ppid= -p "$ppid" 2>/dev/null | tr -d ' ')"
+			if [ "$grandparent" = 1 ] && ps -o args= -p "$ppid" 2>/dev/null | grep -q 'localdb\.sh serve'; then
+				target="$ppid"
+			else
+				echo "agentsview pg push --watch（pid ${pid}）の終了を待っています..." >&2
+				wait_exit "$pid" 15 && continue
+				echo "agentsview pg push --watch が既に動いています（pid ${pid}, parent ${ppid}）。" >&2
+				echo "別のagentsview:serveを止めるか、不要なら kill ${ppid} してから再実行してください" >&2
+				exit 1
 			fi
-			sleep 1
-			i=$((i + 1))
-		done
+		fi
+		echo "取り残されたagentsview serve（pid ${target}）を停止します" >&2
+		kill "$target" 2>/dev/null || true
+		if ! wait_exit "$pid" 30; then
+			echo "pid ${pid} が30秒以内に終了しなかったためSIGKILLします" >&2
+			pkill -9 -P "$target" 2>/dev/null || true
+			kill -9 "$target" "$pid" 2>/dev/null || true
+		fi
 	done
 }
 
@@ -518,7 +532,7 @@ push)
 	push_local "$@"
 	;;
 serve)
-	stop_orphaned_watcher
+	stop_stale_serve
 	push_local
 	export AGENTSVIEW_PG_SCHEMA="$schema"
 	export AGENTSVIEW_PG_URL="$host_url"
