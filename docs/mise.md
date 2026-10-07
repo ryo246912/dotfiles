@@ -667,7 +667,7 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 
 `target` はファイルだけでなく**ディレクトリ**も指定でき、`copy`/`symlink` は
 ディレクトリを渡すと中身ごと再帰的に配置する。
-`"~/.apm" = { source = "apm", mode = "copy" }` のように宣言すると、
+`"~/.local" = { source = "local", mode = "copy" }` のように宣言すると、
 **source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
 全部コピーされる**。一部だけ除外したい場合は、ディレクトリを walk する
 `copy`/`symlink-each` エントリの `exclude`（glob の配列）を使う（chezmoi の
@@ -683,7 +683,8 @@ root に固定する書き方は mise 2026.9.15 以降でしか効かないた�
 後述の「target → source の逆方向ワークフロー」参照）:
 
 - **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から
-  `"~/.apm" = { source = "apm", mode = "copy" }` のように1行でまとめて配る。
+  `"~/.local" = { source = "local", mode = "copy" }`（`~/.apm` 等は `mode = "symlink-each"`）
+  のように1行でまとめて配る。
   これで `[dotfiles]` は194行→11行（当時の `~/.config` 込みの数字）まで縮んだ。
 - **テンプレート**（Tera）が要るファイルは配布元ディレクトリの外、`templates/` に隔離する
   （配布元ディレクトリ配下に置いたままだと、ブランケット copy が未レンダリングの
