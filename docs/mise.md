@@ -543,10 +543,10 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   OS 限定のファイル（chezmoi で `{{ else }}` 分岐により除外されていたもの）は、当初は
   mise のネイティブな `mise.<ENV>.toml` オーバーレイ機構（`MISE_ENV` に応じて自動マージ
   される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
-  `mise.linux.toml` に振り分けていたが、後に `~/.config` を track mode へ移行した際に
-  ほとんどが共通 `config/` へ吸収され、OS 限定で今も copy として残るのは
-  mise 自体の tool/config pin（`mise.mac.toml`）と hammerspoon・autohotkey の
-  seed 元（`config-mac/`・`config-linux/`。詳細は後述の track/history の節）だけになった。
+  `mise.linux.toml` に振り分けている。現在は mise 自体の tool/config pin
+  （`config-mac/mise`）、hammerspoon・vicinae（`config-mac/`）、autohotkey
+  （`config-linux/`）と、`~/.config` 共通 copy の OS 別 exclude（旧 `.chezmoiignore` の
+  darwin/else 分岐相当）がこの振り分けの対象。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
   → `{% if os() == "macos" %}` のような機械的な置換がほとんどで、11 ファイルの書き換えは
   数十分で完了した（`exec()` が `set -e` 相当で動くため、失敗しうるシェルコマンドは
@@ -698,13 +698,11 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
   共存する**ことを実機で確認済み。そのため OS 限定ファイルは 1 ファイルずつではなく、
   ディレクトリ単位でまとめて宣言してよい。今後そのディレクトリにファイルを追加しても
   `[dotfiles]` 側の追記が不要になる。
-  **`~/.config` を track mode へ移行した現在の本リポジトリでは、このパターンで
-  残っているのは mise 自体の tool/config pin（`config-mac/mise` → `mise.mac.toml`）
-  だけ**。それ以外の OS 限定ファイル（hammerspoon・vicinae・autohotkey）は `[dotfiles]` の
-  宣言的コピーではなく、track mode の節で述べた `[bootstrap.hooks.pre-dotfiles]`
-  の一度きり seed（find+cp、`[dotfiles]` に書かない）で配る形に変わった——OS ごとに
-  「常に収束させたい」ものではなく「初回だけ置いて、あとは手元編集の history に
-  任せたい」ものだったため。`mise.linux.toml` はこの移行で対象が無くなり削除した。
+  本リポジトリでは mise 自体の tool/config pin（`config-mac/mise`）と
+  hammerspoon・vicinae を `mise.mac.toml`、autohotkey を `mise.linux.toml` で宣言している。
+  （一時期は track mode の `~/.config` へ pre-dotfiles hook で「無いものだけ」seed する
+  運用にしていたが、`config/` の更新が既存ファイルへ反映されないため、旧 chezmoi apply
+  と同等に常に copy で収束させる構成へ戻した。）
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
   もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`/`raycast`/
   `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
@@ -770,8 +768,7 @@ chezmoi の `.chezmoiignore` OS 条件分岐に相当する「このファイル
 ```sh
 mise.toml        # 共通（全 OS で配る）
 mise.mac.toml     # MISE_ENV に "mac" を含むときだけ追加で読まれる
-mise.linux.toml   # 存在すれば MISE_ENV に "linux" を含むときだけ追加で読まれる
-                  # （本リポジトリでは現在 linux 固有の [dotfiles] entry が無いため未使用）
+mise.linux.toml   # MISE_ENV に "linux" を含むときだけ追加で読まれる
 ```
 
 同一ファイル内で OS ごとに**内容の一部だけ**変えたい場合（1ファイルは常に配るが
@@ -822,27 +819,22 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   `config/mise/config.toml`（`~/.config/mise/config.toml` へ deploy される git source）に
   `"~/.config" = { mode = "track" }` を書くことで、通常の `[dotfiles]` copy と同じ
   「git で編集 → deploy」の流儀を保ったまま track を宣言している。
-- **track には source からの初回配置（seeding）が無い。** 追跡対象が存在しない場合は
+- **track には source からの配置が無い。** 追跡対象が存在しない場合は
   「存在するようになったら追跡する」だけで待機し、内容を生成してはくれない
-  （`mise bootstrap dotfiles track` を実行しても同様）。そのため、真新しいマシンでは
-  何もデプロイされない。本リポジトリでは `[bootstrap.hooks.pre-dotfiles]`
-  （`mise.toml` 参照）で `config/`（共通）と、OS 限定で残った
-  `config-mac/hammerspoon`・`config-linux/autohotkey` から `~/.config` へ
-  「無いものだけ」を find+cp で seed してから track フェーズに入るようにしている。
-  より宣言的な代替（`[dotfiles]` の copy/template mode、`[bootstrap.files]`/
-  `[bootstrap.directories]`）は無いか公式ドキュメントで確認したが、いずれも
-  「ディレクトリツリー一括・無ければ配置してあれば触らない」という条件を満たす
-  仕組みは持たない（copy/template は常に source へ収束＝上書き、
-  `[bootstrap.files]` はファイル単位の絶対パス宣言かつ常に内容収束）ため、
-  hook 以外の書き方は無いという結論に至った（詳細は `mise.toml` のコメント参照）。
+  （`mise bootstrap dotfiles track` を実行しても同様）。本リポジトリでは
+  `"~/.config"` を track に加えて `{ source = "config", mode = "copy" }` でも宣言し
+  （`mise.toml`、OS 別 exclude は `mise.mac.toml`/`mise.linux.toml`）、
+  旧 chezmoi apply と同等に apply のたびに `config/` の内容へ収束させている。
+  以前は pre-dotfiles hook で「無いものだけ」を一度きり seed していたが、
+  `config/` 側の更新が既存ファイルへ反映されないため廃止した。
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
-  track 側が管理する（実機確認済み）。逆に、**同じ target path を track と copy の
-  両方でカバーすると、copy 側の再適用が track 側のライブ編集を無言で消す**
-  （実機で確認済みの破壊的挙動）。本リポジトリで `~/.config/mise`
-  （mise 自体の tool/config pin。git 側を正として常に収束させたい）だけを
-  copy のまま残し、それ以外を track にしているのはこのため。
+  track 側が管理する（実機確認済み）。**同じ target path を track と copy の
+  両方でカバーすると、copy 側の再適用が track 側のライブ編集を上書きする**
+  （実機で確認済み）。本リポジトリでは「git 側（`config/`）を正とし、`~/.config` 側の
+  直接編集は history に残しつつ apply で戻す」方針のため、`~/.config` 全体をこの形で
+  宣言している（上書きされた編集は `mise bootstrap dotfiles rollback <path>` で復元できる）。
 - **`status`/`diff`/`apply` は track エントリに対してはほぼ no-op**（state は常に
   `applied` ではなく `tracked` になる）。差分レビューは `bootstrap:dotfiles:diff`
   （`tasks/bootstrap.toml`）ではなく次項の `history diff` を使うこと。

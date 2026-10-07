@@ -45,50 +45,10 @@ run      = "lefthook install"
 # 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
 # 2段階の運用にしている（docs/setup.md 参照）。
 #
-# 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
-#    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
-#    （OS限定の hammerspoon・vicinae・autohotkey）から ~/.config へ
-#    「無いものだけ」コピーする一度きりの seed をここで行う。2回目以降は対象ファイルが
-#    既に存在するため実質no-opになる。
-#
-#    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
-#    - [dotfiles] の track mode は "Track entries cannot contain source, content,
-#      exclude, or manifest." （dotfiles.html）と明記されており、source からの
-#      初回配置手段を一切持たない設計。
-#    - [dotfiles] の copy/template/symlink mode は1ターゲットパス=1ソースの宣言で、
-#      「無ければ配置・あれば触らない」という条件分岐を持たない
-#      （apply は既存ターゲットを常に source へ収束＝上書きする。
-#      dotfiles.html#start-with-one-managed-file 参照）。
-#    - [bootstrap.files]/[bootstrap.directories] は絶対パスをファイル単位で宣言する
-#      root 権限向けの仕組みで、ディレクトリツリー一括かつ「無ければ作る」ではなく
-#      常に内容を収束（=上書き）させる（bootstrap/files.html 参照）ため、
-#      「一度だけ seed して以降は track に委ねる」用途には不向き。
-#    以上より、この一度きりの seed は hook 以外に宣言的な書き方が無い。
-[bootstrap.hooks.pre-dotfiles]
-run = """
-set -eu
-
-seed_tree() {
-  src_dir="$1"
-  dest_dir="$2"
-  [ -d "$src_dir" ] || return 0
-  find "$src_dir" -type f | while IFS= read -r src_file; do
-    rel_path="${src_file#"$src_dir"/}"
-    dest_file="$dest_dir/$rel_path"
-    [ -e "$dest_file" ] && continue
-    mkdir -p "$(dirname "$dest_file")"
-    cp "$src_file" "$dest_file"
-  done
-}
-
-seed_tree "$(pwd)/config" "$HOME/.config"
-if [ "$(uname)" = "Darwin" ]; then
-  seed_tree "$(pwd)/config-mac/hammerspoon" "$HOME/.config/hammerspoon"
-  seed_tree "$(pwd)/config-mac/vicinae" "$HOME/.config/vicinae"
-else
-  seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
-fi
-"""
+# 0) pre-dotfiles: 以前は track mode の "~/.config" へ config/ から「無いものだけ」を
+#    一度きり seed する hook をここに置いていたが、"~/.config" を copy でも宣言して
+#    apply のたびに config/ へ収束させる（旧 chezmoi apply 相当）構成にしたため削除した
+#    （下の [dotfiles] のコメント参照）。
 
 # 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
 #    MISE_HISTORY_ENABLED=0でprotective checkpointだけを無効化するが、hook自体は実行する。
@@ -158,9 +118,19 @@ mise --cd "$HOME" run apm:sync
 mise --cd "$HOME" run rulesync:sync
 """
 
-# "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
-# config からしか有効にならない実機仕様のため）。以下のエントリは常に git 側の内容へ
-# 収束させたい copy/template のまま維持している。このうち "~/.config" 配下の
+# "~/.config" は track mode（config/mise/config.toml 側で宣言。track は global
+# config からしか有効にならない実機仕様のため）と copy mode（下記）の両方で宣言している。
+# copy は旧 chezmoi apply（dot_config → ~/.config）と同等で、apply のたびに config/ 配下の
+# 全ファイルを ~/.config へ上書きする（ディレクトリ copy は追加的なので、config/ に無い
+# ~/.config 配下のファイルは消さない）。~/.config 側を直接編集した内容は次の apply で
+# config/ の内容に戻るが、track（history-watch）が編集を checkpoint に記録しているため
+# `mise bootstrap dotfiles rollback <path>` で復元できる。exclude は旧 .chezmoiignore の
+# 共通除外に対応する（"/mise" は専用エントリ "~/.config/mise" が管理するため除外）。
+# OS 別の除外（旧 .chezmoiignore の darwin/else 分岐）は mise.mac.toml / mise.linux.toml で
+# 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
+# exclude を変更する際は3ファイルとも揃えること）。
+#
+# 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
 # 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）、
 # "~/.zshenv"、"~/.apm"・"~/.claude"・"~/.codex" 配下の個別ファイル（apm.yml、
 # apm.lock.yaml、claude/settings.json、codex/config.toml、codex/hooks.json）は、
@@ -186,6 +156,11 @@ mise --cd "$HOME" run rulesync:sync
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
 "~/.local"                              = { source = "local", mode = "copy" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
+
+[dotfiles."~/.config"]
+exclude = ["/mise", "/agentsview/tests"]
+mode    = "copy"
+source  = "config"
 
 # ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は
 # config/mise/config.toml（deploy先: ~/.config/mise/config.toml）側で宣言する
