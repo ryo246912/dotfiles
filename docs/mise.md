@@ -594,6 +594,11 @@ bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstra
     別途保存するため、この自動経路だけoperation checkpointを無効化する。通常の手動apply、
     `mise bootstrap dotfiles save`、history-watch、full bootstrapではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
+  - `post-checkout` も `post-merge` と同じ job（`ensure-mise-version` → `dotfiles-apply` →
+    `lefthook-install`）を実行する。Claude アプリなどが `git worktree add` で作業を始めた
+    場合も mise の更新・dotfiles の再適用・Git hook の再インストールが行われ、
+    `pre-push` などの hook が有効な状態になる。branch の checkout ごとに apply が走るため、
+    古い branch を checkout するとその時点の source が `~/.config` 等へ適用される点に注意。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
