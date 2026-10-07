@@ -666,18 +666,19 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 ### ディレクトリ単位で宣言する（ブランケットコピー）
 
 `target` はファイルだけでなく**ディレクトリ**も指定でき、`copy`/`symlink` は
-ディレクトリを渡すと中身ごと再帰的に配置する。**mise には chezmoi の `.chezmoiignore`
-に相当する「ディレクトリ丸ごと配りつつ一部だけ除外する」機能は無い**（`ignore`/
-`exclude` のようなフィールドを試したが実機で無視されるだけだった）。
-`"~/.config" = { source = "config", mode = "copy" }` のように宣言すると、
+ディレクトリを渡すと中身ごと再帰的に配置する。
+`"~/.apm" = { source = "apm", mode = "copy" }` のように宣言すると、
 **source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
-全部コピーされる**。
+全部コピーされる**。一部だけ除外したい場合は、ディレクトリを walk する
+`copy`/`symlink-each` エントリの `exclude`（glob の配列）を使う（chezmoi の
+`.chezmoiignore` 相当。`~/.config` の symlink-each エントリで使用中）。`/` を含まない
+パターンは任意のパス要素に、含むパターンは source root 基準でマッチする。先頭 `/` で
+root に固定する書き方は mise 2026.9.15 以降でしか効かないため使わない。
 
 本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
 「ブランケットコピーしてよい形」に揃えた（`~/.apm`・`~/.claude`・`~/.codex`・`~/.local` に
-現在も採用中。**`~/.config` 自体は後に track mode へ移行しており、この節のパターンでは
-なくなった**。track の詳細・具体的な現在の `~/.config` 内訳は前節「target → source
-の逆方向ワークフロー」参照）:
+現在も採用中。`~/.config` は track と `exclude` 付きの symlink-each の併用で、詳細は
+後述の「target → source の逆方向ワークフロー」参照）:
 
 - **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から
   `"~/.apm" = { source = "apm", mode = "copy" }` のように1行でまとめて配る。

@@ -127,7 +127,10 @@ mise --cd "$HOME" run rulesync:sync
 # したファイルのリンクは次の apply で外れる。既存の実ファイルをリンクへ置き換えるには
 # `mise bootstrap dotfiles apply --force` が必要（初回移行時や、アプリが保存時に
 # リンクを実ファイルで置き換えた場合）。exclude は旧 .chezmoiignore の
-# 共通除外に対応する（"/mise" は専用エントリ "~/.config/mise" が管理するため除外）。
+# 共通除外に対応する（mise/ は専用エントリ "~/.config/mise" が管理するため除外）。
+# パターンは先頭 "/" を付けない（"/" 始まりで source root に固定する書き方は mise 2026.9.15
+# 以降の機能で、それ以前は何にもマッチしない）。"/" を含むパターンは source root 基準、
+# 含まないパターン（"*win*" 等）はツリー中の任意のパス要素にマッチする。
 # OS 別の除外（旧 .chezmoiignore の darwin/else 分岐）は mise.mac.toml / mise.linux.toml で
 # 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
 # exclude を変更する際は3ファイルとも揃えること）。
@@ -162,7 +165,7 @@ mise --cd "$HOME" run rulesync:sync
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]
-exclude = ["/mise", "/agentsview/tests"]
+exclude = ["mise/**", "agentsview/tests"]
 mode    = "symlink-each"
 source  = "config"
 
