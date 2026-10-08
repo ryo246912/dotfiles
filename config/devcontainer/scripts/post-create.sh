@@ -224,6 +224,8 @@ fi
 if command -v gh >/dev/null 2>&1; then
 	if gh alias list 2>/dev/null | grep -q '^stack:'; then
 		echo "✓ gh stack -> gh-stack の alias はホスト設定から見えています"
+	elif gh stack --help >/dev/null 2>&1; then
+		echo "✓ gh stack は extension / 組み込みコマンドとして使えます"
 	else
 		echo "ℹ️ gh の stack alias がありません（~/.config/gh は read-only なのでここでは設定できません）"
 		echo "   ホスト側で mise bootstrap を実行するか、次を打ってください:"

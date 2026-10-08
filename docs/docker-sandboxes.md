@@ -816,11 +816,12 @@ sandbox は microVM なので mount が使え、base image の `agent` ユーザ
 - symlink になっている対象は、リンク先が workspace 外に及ぶ可能性があるため分離しません
 - パスワード無しの sudo が使えない場合は警告を出してスキップします（この場合は従来どおり
   ホストに書かれます）
-- workspace は virtiofs passthrough で、権限はホスト側でホストユーザーとして判定されるため、
-  sandbox の root からはホストのディレクトリを辿れず `mount: ...: permission denied` になることが
-  あります。その場合は agent 本人の権限で開いた fd（`/proc/<pid>/fd/<n>`）を
-  `mount --no-canonicalize --bind` の target に渡して張り直します。それでも失敗した対象は
-  警告して残りの分離を続けます
+- workspace は virtiofs passthrough で、アクセスはホスト側で判定されます。agent ユーザーとしては
+  読み書きできますが、sandbox の root（sudo）からの要求は拒否され `mount: ...: permission denied`
+  になります。その場合は `setpriv` で **uid/gid は agent のまま `CAP_SYS_ADMIN` だけ持たせて**
+  mount(2) を呼び直します（path の解決が agent として行われるため通る）。`mount(8)` は実 uid が
+  root でないと fstab 以外を拒否するので、syscall は `python3` から直接呼んでいます。
+  それでも失敗した対象は警告して残りの分離を続けます
 
 ## worktree と Git metadata の mount
 

@@ -131,7 +131,10 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
-if command -v gh >/dev/null 2>&1 && ! gh alias list 2>/dev/null | grep -q '^stack:'; then
+# gh-stack を extension として入れている（`gh stack` が既に動く）場合、gh は同名の alias を
+# "already a gh command or extension" で拒否するのでスキップする。
+if command -v gh >/dev/null 2>&1 && ! gh alias list 2>/dev/null | grep -q '^stack:' \
+  && ! gh stack --help >/dev/null 2>&1; then
   gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1 \
     || echo "warn: gh の stack alias を設定できませんでした（gh alias set stack で手動設定してください）" >&2
 fi

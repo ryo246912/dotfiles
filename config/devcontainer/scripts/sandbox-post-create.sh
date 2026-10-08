@@ -259,6 +259,13 @@ setup_gh_alias() {
         log_skip "gh の stack alias は既に定義済みです"
         return 0
     fi
+    # gh-stack が gh の extension として入っている（または gh 本体に stack がある）場合は
+    # alias 無しで `gh stack` が動く。gh はそれと同名の alias を
+    # "already a gh command or extension" で拒否するので、先に確かめてスキップする。
+    if gh stack --help >/dev/null 2>&1; then
+        log_skip "gh stack は extension / 組み込みコマンドとして既に使えます"
+        return 0
+    fi
     local err
     if err=$(gh alias set stack '!gh-stack "$@"' 2>&1 >/dev/null); then
         log_ok "gh stack -> gh-stack の alias を設定しました"

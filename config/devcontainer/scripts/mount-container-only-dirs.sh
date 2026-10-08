@@ -90,25 +90,33 @@ done < <(
 )
 
 # root で target を辿れない共有 FS 向けのフォールバック付き bind mount。
-# Docker Sandboxes の workspace（virtiofs passthrough）はホスト側でホストユーザーの権限として
-# 判定されるため、sandbox の root（sudo）からはホストのディレクトリを辿れず
-# `mount: ...: permission denied` になる。agent 本人の権限で target を開いた fd を
-# /proc/<pid>/fd/<n> の magic link として渡せば、root はパスを辿り直さずに済む。
-# --no-canonicalize が無いと mount(8) が realpath で同じパスを root として辿り直してしまう。
+# Docker Sandboxes の workspace（virtiofs passthrough）はホスト側でアクセスを判定しており、
+# agent ユーザーとしては読み書きできるが、root（sudo）からの要求は拒否されて
+# `mount: ...: permission denied` になる（/proc/<pid>/fd 経由で渡しても同じだった）。
+# そこで「uid/gid は実行ユーザーのまま、CAP_SYS_ADMIN だけ持たせて」mount(2) を呼ぶ。
+# path の解決は実行ユーザーとして行われ、mount 自体は CAP_SYS_ADMIN で許可される。
+# mount(8) は実 uid が root でないと fstab 以外を拒否する（restricted mode）ため、
+# syscall は python3 から直接呼ぶ（4096 = MS_BIND）。
+bind_mount_as_user() {
+	command -v setpriv >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 || return 1
+	sudo setpriv --reuid="$(id -u)" --regid="$(id -g)" --groups="$(id -G | tr ' ' ,)" \
+		--inh-caps=+sys_admin --ambient-caps=+sys_admin \
+		python3 -I -c '
+import ctypes, os, sys
+libc = ctypes.CDLL(None, use_errno=True)
+if libc.mount(sys.argv[1].encode(), sys.argv[2].encode(), None, 4096, None) != 0:
+    sys.exit("mount: %s: %s" % (sys.argv[2], os.strerror(ctypes.get_errno())))
+' "$1" "$2"
+}
+
 bind_mount() {
-	local source=$1 target=$2 fd rc=0 err
+	local source=$1 target=$2 err
 	err=$(sudo mount --bind "${source}" "${target}" 2>&1) && return 0
-	exec {fd}<"${target}" || {
-		echo "${err}" >&2
-		return 1
-	}
-	sudo mount --no-canonicalize --bind "${source}" "/proc/$$/fd/${fd}" 2>/dev/null || rc=$?
-	exec {fd}<&-
-	if [ "${rc}" -ne 0 ]; then
-		echo "${err}" >&2
-		return 1
+	if bind_mount_as_user "${source}" "${target}" 2>/dev/null && mountpoint -q "${target}"; then
+		return 0
 	fi
-	mountpoint -q "${target}"
+	echo "${err}" >&2
+	return 1
 }
 
 sudo install -d -o "$(id -u)" -g "$(id -g)" "${storage_root}"
