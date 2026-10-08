@@ -274,18 +274,24 @@ description = "Save a running sandbox's filesystem as a reusable template"
 run = '''
 set -eu
 
-# 使い方: mise run sandbox:template-save <sandbox-name> [tag]
-# sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
-# 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:template-save <sandbox-name> [tag]
+  # sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
+  # 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
 
-sandbox="${1:-}"
-tag="${2:-sbx-agent:local}"
-[ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
-command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+  sandbox="${1:-}"
+  tag="${2:-sbx-agent:local}"
+  [ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
+  command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
 
-sbx template save "$sandbox" "$tag"
-echo
-sbx template ls
+  sbx template save "$sandbox" "$tag"
+  echo
+  sbx template ls
+}
+
+main "$@"
 '''
 
 ["sandbox:template-ls"]
@@ -296,9 +302,16 @@ run         = "sbx template ls"
 description = "Remove a saved Docker Sandboxes template"
 run = '''
 set -eu
-tag="${1:-}"
-[ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
-sbx template rm "$tag"
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  tag="${1:-}"
+  [ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
+  sbx template rm "$tag"
+}
+
+main "$@"
 '''
 
 ["sandbox:disk"]
@@ -343,103 +356,109 @@ description = "Reclaim Docker Sandboxes disk space (dry-run unless --yes)"
 run = '''
 set -eu
 
-# 使い方:
-#   mise run sandbox:prune                          # 何が消えるか出すだけ（既定）
-#   mise run sandbox:prune --yes                    # 停止済み sandbox + dangling image
-#   mise run sandbox:prune --yes --template         # + ホストの template image
-#   mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
-#   mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
-#   mise run sandbox:prune --yes --all              # --template + --build-cache
-#
-# 既定を dry-run にしているのは、消すと取り返せないものが混ざるため
-# （--build-cache-all は mise のインストール済みツールの cache mount も消す）。
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方:
+  #   mise run sandbox:prune                          # 何が消えるか出すだけ（既定）
+  #   mise run sandbox:prune --yes                    # 停止済み sandbox + dangling image
+  #   mise run sandbox:prune --yes --template         # + ホストの template image
+  #   mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
+  #   mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
+  #   mise run sandbox:prune --yes --all              # --template + --build-cache
+  #
+  # 既定を dry-run にしているのは、消すと取り返せないものが混ざるため
+  # （--build-cache-all は mise のインストール済みツールの cache mount も消す）。
 
-apply=false
-do_template=false
-do_cache=false
-cache_all=false
-failed=0
-tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
+  apply=false
+  do_template=false
+  do_cache=false
+  cache_all=false
+  failed=0
+  tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
 
-# cache mount（mise のインストール済みツール）を残して build cache を掃除するための filter。
-# docker buildx prune の filter に type があり、exec.cachemount がこれに当たる
-# （buildx の docs が `--filter "type!=exec.cachemount"` をそのまま例示している）。
-cache_keep_filter='type!=exec.cachemount'
+  # cache mount（mise のインストール済みツール）を残して build cache を掃除するための filter。
+  # docker buildx prune の filter に type があり、exec.cachemount がこれに当たる
+  # （buildx の docs が `--filter "type!=exec.cachemount"` をそのまま例示している）。
+  cache_keep_filter='type!=exec.cachemount'
 
-for arg in "$@"; do
-  case "$arg" in
-    -y | --yes) apply=true ;;
-    --template) do_template=true ;;
-    --build-cache) do_cache=true ;;
-    --build-cache-all) do_cache=true; cache_all=true ;;
-    --all) do_template=true; do_cache=true ;;
-    -h | --help)
-      echo "usage: mise run sandbox:prune [--yes] [--template] [--build-cache|--build-cache-all] [--all]"
-      exit 0
-      ;;
-    *) echo "error: 不明な引数: $arg" >&2; exit 2 ;;
-  esac
-done
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) apply=true ;;
+      --template) do_template=true ;;
+      --build-cache) do_cache=true ;;
+      --build-cache-all) do_cache=true; cache_all=true ;;
+      --all) do_template=true; do_cache=true ;;
+      -h | --help)
+        echo "usage: mise run sandbox:prune [--yes] [--template] [--build-cache|--build-cache-all] [--all]"
+        exit 0
+        ;;
+      *) echo "error: 不明な引数: $arg" >&2; exit 2 ;;
+    esac
+  done
 
-# dry-run では「消える候補」を実際に並べる（コマンド名だけ出しても判断材料にならない）。
-# 実行時は失敗しても後続を続けるが、最後に非ゼロで終わるよう failed に記録する。
-run_or_show() {
-  if [ "$apply" = true ]; then
-    echo "+ $*"
-    "$@" || { echo "warn: 失敗しました: $*" >&2; failed=1; }
-  else
-    echo "  (dry-run) $*"
+  # dry-run では「消える候補」を実際に並べる（コマンド名だけ出しても判断材料にならない）。
+  # 実行時は失敗しても後続を続けるが、最後に非ゼロで終わるよう failed に記録する。
+  run_or_show() {
+    if [ "$apply" = true ]; then
+      echo "+ $*"
+      "$@" || { echo "warn: 失敗しました: $*" >&2; failed=1; }
+    else
+      echo "  (dry-run) $*"
+    fi
+  }
+
+  [ "$apply" = true ] || echo "== dry-run（実行するには --yes を付ける）=="
+
+  # 1) 停止済み sandbox。sbx prune は停止済みしか対象にしないので動いているものは残る。
+  if command -v sbx >/dev/null 2>&1; then
+    echo "==> 停止済み sandbox"
+    sbx prune --dry-run || true
+    run_or_show sbx prune --force
+    echo
   fi
+
+  if command -v docker >/dev/null 2>&1; then
+    # 2) dangling image。タグの付いていない層だけなので安全。
+    echo "==> ホストの dangling image"
+    docker image ls --filter dangling=true || true
+    run_or_show docker image prune --force
+    echo
+
+    # 3) ホストに残る template image。sbx template load で sbx 側の image store に
+    #    コピー済みなので、ホストのこれは次回ビルドの layer cache としてしか使わない。
+    if [ "$do_template" = true ]; then
+      echo "==> ホストの template image ($tag)"
+      if docker image inspect "$tag" >/dev/null 2>&1; then
+        docker image ls "$tag" || true
+        run_or_show docker image rm "$tag"
+      else
+        echo "  (無し)"
+      fi
+      echo
+    fi
+
+    # 4) build cache。既定では cache mount を残す filter 付きで掃除する
+    #    （--build-cache-all で cache mount も消す = 次回ビルドがフルインストールになる）。
+    if [ "$do_cache" = true ]; then
+      if [ "$cache_all" = true ]; then
+        echo "==> ホストの build cache（cache mount も消す / 次回ビルドがフルインストール）"
+        docker buildx du || true
+        run_or_show docker builder prune --force
+      else
+        echo "==> ホストの build cache（cache mount は残す）"
+        docker buildx du --filter "$cache_keep_filter" || true
+        run_or_show docker builder prune --force --filter "$cache_keep_filter"
+      fi
+      echo
+    fi
+  fi
+
+  echo "==> 残り"
+  command -v docker >/dev/null 2>&1 && docker system df || true
+
+  [ "$failed" -eq 0 ] || { echo "error: 一部の削除に失敗しました（上の warn を確認してください）" >&2; exit 1; }
 }
 
-[ "$apply" = true ] || echo "== dry-run（実行するには --yes を付ける）=="
-
-# 1) 停止済み sandbox。sbx prune は停止済みしか対象にしないので動いているものは残る。
-if command -v sbx >/dev/null 2>&1; then
-  echo "==> 停止済み sandbox"
-  sbx prune --dry-run || true
-  run_or_show sbx prune --force
-  echo
-fi
-
-if command -v docker >/dev/null 2>&1; then
-  # 2) dangling image。タグの付いていない層だけなので安全。
-  echo "==> ホストの dangling image"
-  docker image ls --filter dangling=true || true
-  run_or_show docker image prune --force
-  echo
-
-  # 3) ホストに残る template image。sbx template load で sbx 側の image store に
-  #    コピー済みなので、ホストのこれは次回ビルドの layer cache としてしか使わない。
-  if [ "$do_template" = true ]; then
-    echo "==> ホストの template image ($tag)"
-    if docker image inspect "$tag" >/dev/null 2>&1; then
-      docker image ls "$tag" || true
-      run_or_show docker image rm "$tag"
-    else
-      echo "  (無し)"
-    fi
-    echo
-  fi
-
-  # 4) build cache。既定では cache mount を残す filter 付きで掃除する
-  #    （--build-cache-all で cache mount も消す = 次回ビルドがフルインストールになる）。
-  if [ "$do_cache" = true ]; then
-    if [ "$cache_all" = true ]; then
-      echo "==> ホストの build cache（cache mount も消す / 次回ビルドがフルインストール）"
-      docker buildx du || true
-      run_or_show docker builder prune --force
-    else
-      echo "==> ホストの build cache（cache mount は残す）"
-      docker buildx du --filter "$cache_keep_filter" || true
-      run_or_show docker builder prune --force --filter "$cache_keep_filter"
-    fi
-    echo
-  fi
-fi
-
-echo "==> 残り"
-command -v docker >/dev/null 2>&1 && docker system df || true
-
-[ "$failed" -eq 0 ] || { echo "error: 一部の削除に失敗しました（上の warn を確認してください）" >&2; exit 1; }
+main "$@"
 '''

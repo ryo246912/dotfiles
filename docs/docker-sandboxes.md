@@ -282,6 +282,14 @@ ssh-add -L   # 公開鍵が 1 行出れば OK
 - 署名を GitHub で **Verified** にするには、同じ公開鍵（`ssh-add -L` の出力）を
   GitHub の [SSH and GPG keys](https://github.com/settings/keys) に **Signing key** として
   登録してください。Authentication key とは別の枠なので、認証用に登録済みでも改めて追加が必要です。
+  `gh` からなら次の通りです（登録するのは `.pub` の公開鍵で、秘密鍵は渡しません）。
+
+```bash
+# signing key の登録には admin:ssh_signing_key scope が要る（初回だけブラウザで認可）
+gh auth refresh -h github.com -s admin:ssh_signing_key
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"
+gh ssh-key list   # TYPE が signing の行があれば OK
+```
 
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
@@ -499,6 +507,8 @@ mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
 mise run sandbox:setup           # secret / network policy / skills / 通知用 SSH 鍵
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
+gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
 mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
