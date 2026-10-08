@@ -242,7 +242,18 @@ materialize_config() {
 	local name="$1" src dst tmp rel rc=0 stale dirs files
 	src="$HOME/.config/$name"
 	dst="${HOST_CONFIG_STAGE}/$name"
-	[ -d "$src" ] || return 0
+	if [ ! -d "$src" ]; then
+		# 配置先から消えた場合、過去の実行で作ったコピーを残すと「消したはずの設定」が
+		# 新しいコンテナへ mount され続ける。mount 元として存在だけ残し、中身を空にする。
+		# 元から無いもの（未導入のツール等）は何もせず成功扱いにする。
+		if [ -d "$dst" ]; then
+			rm -rf "$dst"
+			mkdir -p "$dst"
+			echo "⚠️ ホスト側から消えたため staged コピーを空にしました: $src" >&2
+			return 1
+		fi
+		return 0
+	fi
 	mkdir -p "$dst"
 	tmp="${HOST_CONFIG_STAGE}/.staging-${name}"
 	rm -rf "$tmp"

@@ -210,6 +210,10 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 `initializeCommand` はコンテナ作成前に毎回ホスト側で走るため、`~/.config` 側の編集は
 次の起動でコピーに反映されます。反映は**差分のみ**（更新は上書き、`~/.config` 側から
 消えた entry だけ削除）で、ディレクトリごと作り直すことはしません。
+`~/.config/<name>` がディレクトリごと消えた場合は、コピーの中身を空にして
+ディレクトリ自体は残します（mount 元として要るため）。残しておくと「消したはずの設定」が
+新しいコンテナへ mount され続けるからです。元から無いもの（未導入のツール等）は
+何もせず成功扱いにするので、毎回 warning が出ることはありません。
 このコピーは起動中の devcontainer が bind mount しているため
 （`multi-worktree` では複数が同時に動く）、作り直すと動いているコンテナから
 設定が消えてしまいます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
