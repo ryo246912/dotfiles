@@ -54,5 +54,18 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
   end
 ' 2>/dev/null)
 
-[ -n "$cache_line" ] && printf '%s\n' "$cache_line"
+# 作業ディレクトリの git branch（detached HEAD なら短縮 SHA）を左に表示する。
+# statusline は頻繁に実行されるため、--no-optional-locks で index.lock を取らない。
+cwd=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // empty' 2>/dev/null)
+branch=""
+if [ -n "$cwd" ]; then
+	branch=$(git --no-optional-locks -C "$cwd" branch --show-current 2>/dev/null)
+	[ -z "$branch" ] && branch=$(git --no-optional-locks -C "$cwd" rev-parse --short HEAD 2>/dev/null)
+fi
+
+line=""
+[ -n "$branch" ] && line=$(printf '\033[36m%s\033[0m' "$branch")
+[ -n "$line" ] && [ -n "$cache_line" ] && line="$line · "
+line="$line$cache_line"
+[ -n "$line" ] && printf '%s\n' "$line"
 exit 0

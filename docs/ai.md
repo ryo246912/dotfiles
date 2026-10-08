@@ -50,6 +50,7 @@ Claude Code はメッセージを送るたびに会話全体をモデルへ再�
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
+左端には作業ディレクトリの git branch を表示します。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
 `claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
@@ -60,12 +61,13 @@ cold になったら次のメッセージで再キャッシュされるトーク
 ### 表示の読み方
 
 ```text
-cache ● 1h ████░░ 38m left · hit 91% · misses 0
-cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
+main · cache ● 1h ████░░ 38m left · hit 91% · misses 0
+main · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
 | 表示                                | 意味                                                                                                                                                    |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                 |
 | `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
 | `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
 | `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
