@@ -6,6 +6,20 @@ devcontainer 定義は `config/devcontainer/` を参照してください。
 `multi-worktree` や `crit`（docs/crit.md）など、この base template から起動する
 devcontainer はいずれもここに書かれた仕組みを共有します。
 
+> [!NOTE]
+> AI エージェントの実行環境は **Docker Sandboxes (`sbx`) を既定**に切り替えています。
+> `multi-worktree dev <task>` は sandbox を起動し、devcontainer は `--devcontainer` を
+> 付けたときのフォールバック経路です。移行の背景と sandbox 側の使い方は
+> [docs/docker-sandboxes.md](./docker-sandboxes.md) を参照してください。
+>
+> このページのツールチェイン（`mise.toml` / `tasks/` / `lint/`）とホスト連携スクリプト
+> （通知・crit・plannotator・host-tmux・lefthook）は **`Dockerfile.sandbox` 経由で sandbox 側にも
+> 移植済み**で、同じファイルを共有しています。これらは bind mount ではなく image へ COPY して
+> いるため、`mise.toml` / `tasks/` / `lint/` / `scripts/` / `lefthook.local.yml` のいずれかを
+> 変更したら `mise run sandbox:build-template` で sandbox 用 template を作り直してください。
+> 項目ごとの再現状況と、まだ差分が残っている点（生成物ディレクトリの分離など）は
+> [devcontainer との機能対応表](./docker-sandboxes.md#devcontainer-との機能対応表) にまとめています。
+
 ## workspace と Git metadata の mount 範囲
 
 リポジトリ関連でコンテナに mount するのは workspace と、その git が参照する common git dir（実体リポジトリの
@@ -148,6 +162,197 @@ bash ~/.config/devcontainer/scripts/mount-container-only-dirs.sh "$PWD"
 
 cache mount は `docker builder prune` で削除されます（削除されても初回と同じフルインストールになるだけです）。
 
+## このディレクトリの共有範囲（devcontainer / sandbox）
+
+`config/devcontainer/` は devcontainer と Docker Sandboxes の両方から使われます。
+
+| ファイル                                   | devcontainer               | Docker Sandboxes                                         |
+| ------------------------------------------ | -------------------------- | -------------------------------------------------------- |
+| `devcontainer.json`                        | 本体の定義                 | 未使用                                                   |
+| `Dockerfile`                               | devcontainer の image      | 未使用                                                   |
+| `Dockerfile.sandbox`                       | 未使用                     | `mise run sandbox:build-template` が使う template の定義 |
+| `mise.toml` / `tasks/` / `lint/`           | bind mount + image に COPY | image に COPY（同じ内容）                                |
+| `scripts/`                                 | bind mount                 | image に COPY                                            |
+| `lefthook.local.yml`                       | bind mount                 | image に COPY                                            |
+| `scripts/initialize.sh`                    | `initializeCommand`        | `mise run sandbox:setup` が流用                          |
+| `scripts/post-create.sh` / `post-start.sh` | `postCreateCommand` 等     | 未使用（代わりに `sandbox-post-create.sh`）              |
+| `scripts/sandbox-post-create.sh`           | 未使用                     | `sbx exec` で sandbox 作成直後に実行                     |
+
+## symlink で配置されたホスト設定の扱い
+
+mise の `[dotfiles]` は `~/.config` / `~/.claude` / `~/.codex` を **`symlink-each`** で配置します
+（`mise.toml` の `[dotfiles."~/.config"]` を参照）。
+`~/.config/devcontainer/mise.toml` や `~/.config/nvim/init.lua` は実ファイルではなく、
+**dotfiles リポジトリを指す symlink** です。これが devcontainer に 2 つの影響を与えます。
+
+### 1. build context に使えない
+
+BuildKit は **build context の外を指す symlink を辿りません**。
+`~/.config/devcontainer` をそのまま context にすると、`Dockerfile` の
+
+```dockerfile
+COPY --chown=vscode:vscode mise.toml /mise/config.toml
+```
+
+が `failed to compute cache key: "/mise.toml": not found` で失敗します
+（`COPY . ...` のようなディレクトリ単位の COPY は「成功するがリンク切れが入る」ため、
+より分かりにくい壊れ方をします）。
+
+そこで `initializeCommand`（`scripts/initialize.sh`）が、symlink を解決した実体のコピーを
+`~/.cache/devcontainer/host-config/` に作り、`devcontainer.json` はそちらを
+`build.context` / `build.dockerfile` に指定しています。
+
+```jsonc
+"context": "${localEnv:HOME}/.cache/devcontainer/host-config/devcontainer",
+"dockerfile": "${localEnv:HOME}/.cache/devcontainer/host-config/devcontainer/Dockerfile",
+```
+
+`initializeCommand` はコンテナ作成前に毎回ホスト側で走るため、`~/.config` 側の編集は
+次の起動でコピーに反映されます。反映は**差分のみ**（更新は上書き、`~/.config` 側から
+消えた entry だけ削除）で、ディレクトリごと作り直すことはしません。
+`~/.config/<name>` がディレクトリごと消えた場合は、コピーの中身を空にして
+ディレクトリ自体は残します（mount 元として要るため）。残しておくと「消したはずの設定」が
+新しいコンテナへ mount され続けるからです。元から無いもの（未導入のツール等）は
+何もせず成功扱いにするので、毎回 warning が出ることはありません。
+このコピーは起動中の devcontainer が bind mount しているため
+（`multi-worktree` では複数が同時に動く）、作り直すと動いているコンテナから
+設定が消えてしまいます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
+`scripts` / `lefthook.local.yml` が揃っているかを検証し、欠けていればそこで止めます
+（dotfiles 未適用やリンク切れを、分かりにくい `docker build` エラーの前に検出するため）。
+
+> [!NOTE]
+> 置き場所を `XDG_CACHE_HOME` ではなく `~/.cache` 固定にしているのは、
+> `devcontainer.json` の `${localEnv:...}` に既定値を書けないためです
+> （未設定の環境変数は空文字になり、mount の source が壊れます）。
+
+### 2. ディレクトリ単位の bind mount でリンク切れになる
+
+`~/.config/nvim` のようにディレクトリごと mount すると、中身の symlink はそのまま
+コンテナ内へ渡り、リンク先（ホストのリポジトリのパス）がコンテナ内に無いため
+**リンク切れ**になります。対処は mount の性質によって分けています。
+
+| mount                                                                                                                       | 対処                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `~/.config/devcontainer` / `nvim` / `mise`（ディレクトリ・readonly）                                                        | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
+| `~/.config/git/config` / `gitignore` / `~/.claude.json` / `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json` | 実体化したファイル（`~/.cache/devcontainer/host-config/files/<name>`）を source にする |
+| `~/.config/gh` / `~/.agents` / `~/.copilot` など                                                                            | dotfiles 管理外（実ファイル）なので対処不要                                            |
+
+> [!IMPORTANT]
+> **ファイル単位の mount でも Docker の symlink 解決に頼ってはいけません。**
+> 当初は「ファイル単位なら Docker が source 側の symlink を解決するので対処不要」と
+> 考えていましたが、実際には symlink がコンテナ内へそのまま渡り、
+> `core.excludesfile` が指す `/home/vscode/.config/gitignore-host` が
+> `fatal: ... Too many levels of symbolic links` で読めなくなる事例が出ました。
+> こうなると `git status` / `git diff` 系が全滅し、それを内部で呼ぶ crit なども落ちます
+> （`git -c core.excludesFile= status` だけ通ることで切り分けできます）。
+> そのため**ディレクトリもファイルも区別せず、すべて実体化したコピーを渡しています**。
+
+`~/.claude` / `~/.codex` はディレクトリごと read-write で mount（エージェントが
+`projects/` などを書き戻すため）したうえで、その上に dotfiles 管理のファイルだけを
+実体化したコピーから readonly で重ねています。read-write の mount 自体はコピーにできない
+（書き戻しが repo に反映されない）ため、この 2 層構成になっています。
+
+`git/config` と `git/gitignore` はコンテナ内の git が常に読むため、実体化に失敗したら
+**コンテナ作成を止めます**。他のファイルは warning 止まりですが、`mounts` の source が
+無いとコンテナ作成自体が失敗するため、失敗時は空の実体を置いて mount 元を確保します。
+
+### `include.path` は特別扱いが必要（読めないと git が即死する）
+
+`post-create.sh` はホストの gitconfig を `include.path` で取り込みます。
+
+```bash
+git config --global --add include.path ~/.config/gitconfig-host
+```
+
+ここで重要なのは、**`include.path` が読めないときの git の挙動が `core.excludesfile` と違う**ことです。
+
+| 設定                | 指す先が読めないとき                  |
+| ------------------- | ------------------------------------- |
+| `core.excludesfile` | `warning:` が出るだけ（終了コード 0） |
+| `include.path`      | **`fatal:` で即死（終了コード 128）** |
+
+```console
+$ git status                      # include.path が symlink ループを指している場合
+fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
+```
+
+`status` / `diff` に限らず**あらゆる git コマンド**が落ちるため、git を内部で呼ぶツール
+（crit など）もまとめて動かなくなります。
+
+さらに厄介なのが、**git は自分で壊れた `include.path` を外せない**点です。
+`git config --get-all` も `--unset-all` も include を展開しようとして同じ `fatal` で
+落ちるため、`git config` 経由では修復できません。
+
+```console
+$ git config --global --unset-all --fixed-value include.path .../gitconfig-host
+fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
+# → ファイルは変更されない
+```
+
+そのため `post-create.sh` は次の 3 段構えにしています。
+
+1. 登録前に `[ -r "$gitconfig_host" ]` で読めることを確認する（読めなければ登録しない）
+2. 前回の実行で登録済みの壊れた `include.path` は、`~/.gitconfig` を
+   **awk で直接書き換えて**取り除く（git では外せないため）。他の `include.path` は残す。
+   置換時は元のモードを `stat -Lc` で引き継ぎ（`-L` なしだと symlink 自身の 777 を拾う）、
+   `mv` の宛先は `readlink -f` で実体にする（`~/.gitconfig` が symlink の場合にリンクを壊さない）
+3. そのうえで **`exit 1` で失敗させる**。続行するとホストの `user.name` / `user.email` が
+   無いまま成功扱いになり、後の commit で `Author identity unknown` として表面化するため
+
+つまり「一度壊れたらコンテナ内の git が一切使えない」状態には陥らず（壊れた include は
+取り除かれるので調査中も git は使える）、かつ**壊れていること自体は `devcontainer up` の
+失敗として見える**ようにしています。この状態になったらホスト側で
+`mise bootstrap dotfiles apply` を実行し、devcontainer を作り直してください。
+
+> [!NOTE]
+> `initialize.sh` が成功していても、ここで失敗しうることに注意してください。
+> `initialize.sh` が検証しているのは**ホスト側の実体化コピー**であって、
+> コンテナ内の mount が読めることは保証しません
+> （この PR では実際に「ホスト側は正常なのにコンテナ内のパスだけ壊れる」事象を踏んでいます）。
+
+#### ネストした include（`*.secret`）は実体化しない
+
+ホストの gitconfig はさらに別のファイルを include しています。
+
+```ini
+[include]
+  path = ~/.config/git/config.secret
+[includeIf "gitdir:~/work/"]
+  path = ~/.config/git/config.work.secret
+```
+
+これらは**実体化も mount もしません**。リポジトリに入っているのは `.sample` だけで、
+実ファイルはホスト固有の秘密情報です（`~/.config/gh` を渡さないのと同じ理由）。
+
+コンテナ内にこのパスは存在しませんが、**include 先が「無い」または「リンク切れ」の場合、
+git は黙って無視します**（`fatal` になるのは上記のループのような「アクセスを試みて失敗」
+するケースだけ）。そのため渡さなくても壊れません。
+
+```console
+$ git status   # include.path = /nonexistent/foo
+                # → 出力なし、終了コード 0
+```
+
+### なぜハードリンクではないのか
+
+mise の `[dotfiles]` が持つ mode は `symlink` / `symlink-each` / `copy` / `template` で、
+**ハードリンクの mode はありません**。仮にあっても、このリポジトリでは使えません。
+
+- `git pull` / `git checkout` はファイルを「一時ファイル + rename」で書き換えるため、
+  repo 側のパスが別 inode になり、**ハードリンクが黙って切れる**。両方のパスは
+  存在し続けるので、気づかないまま内容が乖離する（symlink なら起きない）
+- 同じ理由でアトミック保存するエディタ・ツールでも切れる。`apm` の lockfile が
+  まさにこれで、`apm:sync-lock` で張り直す対応が入っている
+- ディレクトリはハードリンクできないため、repo 側に増えたファイルが `~/.config` に現れない
+
+実体化コピーはこの問題を持ちません（`initializeCommand` が毎回作り直すため、
+`git pull` の後も次の起動で追従します）。
+
+> [!TIP]
+> Docker Sandboxes 側はマウント先がホストと同じ絶対パスになるので、
+> **dotfiles リポジトリ自体を read-only で渡すだけ**で全ての symlink が解決します。
+> 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#ホスト設定は-symlink-なので-dotfiles-リポジトリも渡す) を参照してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から
@@ -247,7 +452,7 @@ JSON は既に存在するものには触れませんが、SSH 鍵だけは例�
 待たず一定時間で諦める、死んだ/孤児ロックをベストエフォートで回収する、というだけで `flock` ほど
 厳密ではない）。**`mounts` を変更したら、このスクリプトも合わせて更新してください。**
 
-`~/.config/git/config` や `~/.config/devcontainer/scripts` のように chezmoi apply 済みなら
+`~/.config/git/config` や `~/.config/devcontainer/scripts` のように dotfiles 適用済みなら
 必ず存在するはずのパスは対象外にしています。ここが無い場合はホスト側のセットアップ自体に
 問題があるため、意図的にエラーで気付けるようにしています。
 

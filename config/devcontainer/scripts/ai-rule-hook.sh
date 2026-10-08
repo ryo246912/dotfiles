@@ -148,12 +148,12 @@ write_json() {
 tool_paths() {
 	case "$TOOL" in
 	claude)
-		RULE_SOURCE_PATH="$HOME/.claude/CLAUDE.md"
-		SKILLS_DIR="$HOME/.claude/skills"
+		RULE_SOURCE_PATH="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/CLAUDE.md"
+		SKILLS_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 		ANALYZER_BIN="claude"
 		;;
 	codex)
-		RULE_SOURCE_PATH="$HOME/.codex/AGENTS.md"
+		RULE_SOURCE_PATH="${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
 		SKILLS_DIR=""
 		ANALYZER_BIN="codex"
 		;;

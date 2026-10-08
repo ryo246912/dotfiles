@@ -33,6 +33,10 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $*" >&2
 }
 
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 # 使用方法を表示
 show_usage() {
     cat <<EOF
@@ -50,7 +54,8 @@ Usage: multi-worktree <subcommand> [options]
   sync <task-name> [repo...]            worktreeのHEADをメインworktreeにcheckout --detach
   sync <task-name> --all [repo...]      worktreeの内容をメインworktreeにrsyncで完全同期
   cd <task-name> [repo]                  worktreeディレクトリに移動（repo指定時はそのリポジトリへ）
-  dev <task-name> [command]              devcontainerでコマンド実行（省略時は [dev_commands] からfzf選択）
+  dev <task-name> [agent]                Docker Sandboxes でAIエージェントを起動（既定）
+  dev <task-name> --devcontainer <cmd>   devcontainerでコマンドを実行
   exec <task-name> [<repo>] <command>   worktreeでコマンド実行（repo省略時はroot、指定時はそのリポジトリ）
   exec main [--group=GROUP] <repo> <command>  メインworktreeの指定リポジトリディレクトリでコマンド実行
   open <task-name>                       VSCodeでworktreeを開く
@@ -61,6 +66,13 @@ Usage: multi-worktree <subcommand> [options]
   --default-branch   各リポジトリのデフォルトブランチを checkout（createコマンドのみ）
   --group=GROUP      使用するリポジトリグループ（create/status mainコマンド、デフォルト: default）
   --force            git worktree remove失敗時も強制削除（removeコマンドのみ）
+  --devcontainer     dev サブコマンドで devcontainer backend を使う
+  --sbx[=AGENT]      dev サブコマンドで Docker Sandboxes backend を使う（既定）
+  --name NAME        sandbox 名を明示指定（dev の sandbox backend のみ）
+  --branch BRANCH    sandbox を branch mode で起動（auto で自動命名、dev のみ）
+  --template REF     sandbox template の OCI 参照を指定（dev のみ）
+  --new              既存 sandbox を削除して作り直す（dev のみ）
+  --rm               agent セッション終了時に sandbox を削除（dev のみ）
 
 例:
   multi-worktree create feat/add-auth                              # fzf でブランチを選択して作成
@@ -78,7 +90,12 @@ Usage: multi-worktree <subcommand> [options]
   multi-worktree sync feat/add-auth --all repo1 repo2  # 特定リポジトリをrsyncで完全同期
   multi-worktree cd feat/add-auth                      # task root に移動
   ccmc                                                 # root で ccmanager/ccmc を起動
-  multi-worktree dev feat/add-auth ccmanager
+  multi-worktree dev feat/add-auth                      # 既定 agent を sandbox で起動
+  multi-worktree dev feat/add-auth claude               # agent を指定して sandbox で起動
+  multi-worktree dev feat/add-auth codex -- --continue  # agent に引数を pass-through
+  multi-worktree dev feat/add-auth claude --branch=auto # sandbox の branch mode で起動
+  multi-worktree dev feat/add-auth --new                # sandbox を作り直す
+  multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer で実行
   multi-worktree exec feat/add-auth npm install
   multi-worktree exec feat/add-auth repo1 npm install
   multi-worktree exec feat/add-auth repo1 make build
@@ -127,6 +144,12 @@ check_config() {
         log_info "[settings]"
         log_info "default_group = \"default\""
         log_info ""
+        log_info "[settings.sandbox]"
+        log_info "backend = \"sbx\""
+        log_info "default_agent = \"claude\""
+        log_info "name_prefix = \"mw\""
+        log_info "skills = \"readonly\""
+        log_info ""
         log_info "[dev_commands]"
         log_info "claude = \"claude --dangerously-skip-permissions\""
         log_info "claude_a2 = 'env CLAUDE_CONFIG_DIR=\$HOME/.claude-account2 claude --dangerously-skip-permissions'"
@@ -160,10 +183,14 @@ get_config_value() {
         fi
 
         # グループ内でキーを探す
-        if [[ "$in_group" == true ]] && [[ "$line" =~ ^[[:space:]]*$key[[:space:]]*= ]]; then
-            value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
-            echo "$value"
-            return 0
+        if [[ "$in_group" == true ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]]; then
+                value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
+                echo "$value"
+                return 0
+            fi
         fi
     done < "$CONFIG_FILE"
 
@@ -194,19 +221,24 @@ get_config_array() {
         fi
 
         # 配列の開始を検出
-        if [[ "$in_group" == true ]] && [[ "$line" =~ ^[[:space:]]*$key[[:space:]]*=[[:space:]]*\[ ]]; then
-            in_array=true
-            # 同じ行に要素がある場合
-            local content=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*\[//' | sed 's/\]//')
-            if [[ -n "$content" ]]; then
-                IFS=',' read -ra items <<< "$content"
-                for item in "${items[@]}"; do
-                    item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
-                    [[ -n "$item" ]] && result+=("$item")
-                done
+        if [[ "$in_group" == true ]] && [[ "$in_array" == false ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]] && [[ "$line" == *"["* ]]; then
+                local content=""
+                in_array=true
+                # 同じ行に要素がある場合
+                content=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*\[//' | sed 's/\]//')
+                if [[ -n "$content" ]]; then
+                    IFS=',' read -ra items <<< "$content"
+                    for item in "${items[@]}"; do
+                        item=$(echo "$item" | sed -E 's/^[[:space:]]*"(.*)"[[:space:]]*$/\1/' | sed -E "s/^[[:space:]]*'(.*)'[[:space:]]*$/\1/" | xargs)
+                        [[ -n "$item" ]] && result+=("$item")
+                    done
+                fi
+                [[ "$line" =~ \] ]] && in_array=false
+                continue
             fi
-            [[ "$line" =~ \] ]] && in_array=false
-            continue
         fi
 
         # 配列要素の読み込み
@@ -314,6 +346,39 @@ get_default_group() {
     done < "$CONFIG_FILE"
 
     echo "default"
+}
+
+get_section_value() {
+    local section="$1"
+    local key="$2"
+    local default_value="${3:-}"
+    local in_section=false
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// /}" ]] && continue
+
+        if [[ "$line" == "[$section]" ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]]; then
+                local value=""
+                value=$(echo "$line" | sed -E 's/^[[:space:]]*'"$key"'[[:space:]]*=[[:space:]]*//' | sed -E 's/^"(.*)"$/\1/' | sed -E "s/^'(.*)'$/\1/")
+                echo "$value"
+                return 0
+            fi
+        fi
+    done < "$CONFIG_FILE"
+
+    echo "$default_value"
 }
 
 # base_dirを絶対パスに解決する共通関数
@@ -639,6 +704,195 @@ get_devcontainer_skip_up_if_running() {
     else
         echo "$value"
     fi
+}
+
+# ---------------------------------------------------------------------------
+# Docker Sandboxes (sbx) 連携
+# ---------------------------------------------------------------------------
+# 設定は [settings.sandbox] セクションから読み込む。
+#   backend          = "sbx" | "devcontainer"  dev サブコマンドの既定バックエンド
+#   default_agent    = "claude"                 agent 省略時に使う agent
+#   name_prefix      = "mw"                     sandbox 名の接頭辞
+#   template         = ""                       sandbox template の OCI 参照
+#   extra_workspaces = ["~/.claude", ...]       追加でマウントする workspace
+
+get_sandbox_backend() {
+    get_section_value "settings.sandbox" "backend" "sbx"
+}
+
+get_sandbox_default_agent() {
+    get_section_value "settings.sandbox" "default_agent" "claude"
+}
+
+get_sandbox_name_prefix() {
+    local value
+    value=$(get_section_value "settings.sandbox" "name_prefix" "")
+    if [[ -z "$value" ]]; then
+        # 旧キー名との互換
+        value=$(get_section_value "settings.sandbox" "default_name_prefix" "mw")
+    fi
+    echo "$value"
+}
+
+get_sandbox_template() {
+    get_section_value "settings.sandbox" "template" ""
+}
+
+# 共有 skills store の扱い（off | readonly | readwrite）
+get_sandbox_skills() {
+    get_section_value "settings.sandbox" "skills" "readonly"
+}
+
+get_sandbox_cpus() {
+    get_section_value "settings.sandbox" "cpus" ""
+}
+
+get_sandbox_memory() {
+    get_section_value "settings.sandbox" "memory" ""
+}
+
+get_sandbox_extra_workspaces() {
+    get_sandbox_array "extra_workspaces"
+}
+
+# 公開ポート（host:sandbox 形式。crit の UI などをホストのブラウザから開くために使う）
+get_sandbox_publish_ports() {
+    get_sandbox_array "publish_ports"
+}
+
+# ホストに登録済みの MCP サーバ名（ホスト側で認証済みのものを sandbox から使い回す）
+get_sandbox_static_mcp() {
+    get_sandbox_array "static_mcp"
+}
+
+# [settings.sandbox] の配列値を読み込む（1 行 1 要素で出力）
+get_sandbox_array() {
+    local key="$1"
+    local in_section=false
+    local in_array=false
+    local result=()
+
+    parse_items() {
+        local content="$1"
+        local item
+        IFS=',' read -ra items <<< "$content"
+        for item in ${items[@]+"${items[@]}"}; do
+            item=$(echo "$item" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/')
+            [[ -n "$item" ]] && result+=("$item")
+        done
+        return 0
+    }
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+        if [[ "$line" == "[settings.sandbox]" ]]; then
+            in_section=true
+            continue
+        elif [[ "$line" =~ ^\[.*\] ]]; then
+            in_section=false
+            in_array=false
+            continue
+        fi
+
+        if [[ "$in_section" == true ]] && [[ "$in_array" == false ]]; then
+            local current_key=""
+            current_key=$(echo "${line%%=*}" | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//')
+            if [[ "$current_key" == "$key" ]] && [[ "$line" == *"["* ]]; then
+                in_array=true
+                parse_items "$(echo "$line" | sed -E 's/^[^[]*\[//; s/\].*$//')"
+                [[ "$line" == *"]"* ]] && in_array=false
+                continue
+            fi
+        fi
+
+        if [[ "$in_array" == true ]]; then
+            if [[ "$line" == *"]"* ]]; then
+                in_array=false
+                parse_items "${line%%]*}"
+            else
+                parse_items "$line"
+            fi
+        fi
+    done < "$CONFIG_FILE"
+
+    if [[ ${#result[@]} -gt 0 ]]; then
+        printf '%s\n' "${result[@]}"
+    fi
+}
+
+# sbx の sandbox 名は hostname 相当のため、英数字とハイフンのみに正規化する
+sanitize_sandbox_name_component() {
+    local value="$1"
+
+    value=$(printf '%s' "$value" \
+        | tr -d '\n' \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed -E 's#[^a-z0-9]+#-#g; s#-+#-#g; s#^-+##; s#-+$##')
+
+    if [[ -z "$value" ]]; then
+        echo "sandbox"
+    else
+        echo "$value"
+    fi
+}
+
+build_sandbox_name() {
+    local task_name="$1"
+    local agent="$2"
+    local prefix
+    prefix=$(sanitize_sandbox_name_component "$(get_sandbox_name_prefix)")
+    local name
+    name="$(sanitize_sandbox_name_component "$task_name")-$(sanitize_sandbox_name_component "$agent")"
+
+    if [[ -n "$prefix" ]] && [[ "$prefix" != "sandbox" ]]; then
+        name="${prefix}-${name}"
+    fi
+
+    echo "$name"
+}
+
+# worktree が参照する common git dir（実体リポジトリの .git）を列挙する
+# linked worktree の .git file は common git dir を絶対パスで参照するため、これを
+# 追加 workspace として渡さないと sandbox 内で git が解決できない。sbx はホストと
+# 同じ絶対パスにマウントするので、devcontainer 側の mount と同じ考え方で揃う
+# （docs/devcontainer.md「workspace と Git metadata の mount 範囲」参照）。
+collect_worktree_git_dirs() {
+    local task_root_dir="$1"
+    local entry repo_name common_git_dir
+    local -a dirs=()
+
+    for entry in "$task_root_dir"/*; do
+        [[ -d "$entry" ]] || continue
+        [[ -e "$entry/.git" ]] || continue
+
+        repo_name=$(basename "$entry")
+
+        # この関数の stdout は呼び出し側で読み取るため、log_warn は stderr に回す
+        # （log_warn 自体は stdout に出力する実装のため）
+        # relative-paths 形式の worktree は絶対パス mount では解決できない
+        if grep -q '^gitdir: [^/]' "${entry}/.git" 2>/dev/null; then
+            log_warn "[$repo_name] worktree が relative-paths 形式のため、sandbox 内で git が使えません。docs/devcontainer.md の移行手順で絶対パスに戻してください" >&2
+            continue
+        fi
+
+        if ! common_git_dir=$(git -C "$entry" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+            log_warn "[$repo_name] common git dir を取得できないため .git を mount しません: $entry" >&2
+            continue
+        fi
+
+        local seen=false existing
+        for existing in ${dirs[@]+"${dirs[@]}"}; do
+            if [[ "$existing" == "$common_git_dir" ]]; then
+                seen=true
+                break
+            fi
+        done
+        [[ "$seen" == false ]] && dirs+=("$common_git_dir")
+    done
+
+    [[ ${#dirs[@]} -gt 0 ]] && printf '%s\n' "${dirs[@]}"
+    return 0
 }
 
 # [dev_commands] セクションからコマンド一覧を読み込む
@@ -999,7 +1253,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\""
+            "command": "if command -v ssh >/dev/null 2>&1 && [ -f \"$HOME/.config/ssh/config\" ] && grep -Eq '^[[:space:]]*Host[[:space:]]+mac-host([[:space:]]|$)' \"$HOME/.config/ssh/config\" 2>/dev/null; then CURRENT_DIR=$(basename \"$PWD\"); ssh -F \"$HOME/.config/ssh/config\" -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}が確認待ちです\\\" --sound Glass; fi\"; fi"
           }
         ]
       }
@@ -1010,7 +1264,7 @@ write_claude_settings_file() {
         "hooks": [
           {
             "type": "command",
-            "command": "CURRENT_DIR=$(basename \"$PWD\"); ssh -F ~/.config/ssh/config -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\""
+            "command": "if command -v ssh >/dev/null 2>&1 && [ -f \"$HOME/.config/ssh/config\" ] && grep -Eq '^[[:space:]]*Host[[:space:]]+mac-host([[:space:]]|$)' \"$HOME/.config/ssh/config\" 2>/dev/null; then CURRENT_DIR=$(basename \"$PWD\"); ssh -F \"$HOME/.config/ssh/config\" -o ConnectTimeout=2 -o StrictHostKeyChecking=no mac-host \"if [ -n \\\"$TMUX\\\" ]; then macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero --current-tmux; else macos-notify-cli --title \\\"Claude Code\\\" --message \\\"${CURRENT_DIR}で作業が完了しました\\\" --sound Hero; fi\"; fi"
           }
         ]
       }
@@ -1452,8 +1706,114 @@ cmd_cd() {
     exec "$shell"
 }
 
-# dev サブコマンド
-cmd_dev() {
+# dev サブコマンド（Docker Sandboxes backend）
+# sbx の呼び出し自体は sbx-agent に委譲する（ccmanager から直接使う経路と実装を共有するため）。
+cmd_dev_sandbox() {
+    local task_name="$1"
+    local sandbox_agent="$2"
+    local sandbox_name="$3"
+    local sandbox_branch="$4"
+    local sandbox_template="$5"
+    local force_new="$6"
+    local remove_on_exit="$7"
+    shift 7
+    local -a sandbox_agent_args=("$@")
+
+    if ! command_exists sbx-agent; then
+        log_error "sbx-agent コマンドが見つかりません。dotfiles を適用してください（mise bootstrap dotfiles apply）"
+        return 1
+    fi
+
+    [[ -z "$sandbox_agent" ]] && sandbox_agent=$(get_sandbox_default_agent)
+    [[ -z "$sandbox_template" ]] && sandbox_template=$(get_sandbox_template)
+
+    local worktree_base_dir
+    worktree_base_dir=$(find_worktree_dir "$task_name")
+
+    if [[ -z "$worktree_base_dir" ]] || [[ ! -d "$worktree_base_dir" ]]; then
+        log_error "タスク '$task_name' の worktree が見つかりません"
+        return 1
+    fi
+
+    worktree_base_dir=$(cd "$worktree_base_dir" && pwd)
+
+    [[ -z "$sandbox_name" ]] && sandbox_name=$(build_sandbox_name "$task_name" "$sandbox_agent")
+
+    # 追加 workspace: [settings.sandbox].extra_workspaces + 各 worktree の common git dir
+    # （ホスト設定と agent 設定ディレクトリは sbx-agent 側が既定で追加する）
+    local -a mount_args=()
+    local spec path suffix
+    while IFS= read -r spec; do
+        [[ -z "$spec" ]] && continue
+        suffix=""
+        path="$spec"
+        if [[ "$spec" == *:ro ]]; then
+            path="${spec%:ro}"
+            suffix=":ro"
+        fi
+        path=$(expand_path "$path")
+        mount_args+=(--mount "${path}${suffix}")
+    done < <(get_sandbox_extra_workspaces)
+
+    local git_dir
+    while IFS= read -r git_dir; do
+        [[ -z "$git_dir" ]] && continue
+        mount_args+=(--mount "$git_dir")
+    done < <(collect_worktree_git_dirs "$worktree_base_dir")
+
+    local -a sbx_args=(
+        "$sandbox_agent"
+        --name "$sandbox_name"
+        --workspace "$worktree_base_dir"
+    )
+    [[ -n "$sandbox_branch" ]] && sbx_args+=(--branch "$sandbox_branch")
+    [[ -n "$sandbox_template" ]] && sbx_args+=(--template "$sandbox_template")
+    [[ "$force_new" == "true" ]] && sbx_args+=(--new)
+    [[ "$remove_on_exit" == "true" ]] && sbx_args+=(--rm)
+
+    local skills cpus memory
+    skills=$(get_sandbox_skills)
+    cpus=$(get_sandbox_cpus)
+    memory=$(get_sandbox_memory)
+    [[ -n "$skills" ]] && sbx_args+=(--skills "$skills")
+    [[ -n "$cpus" ]] && sbx_args+=(--cpus "$cpus")
+    [[ -n "$memory" ]] && sbx_args+=(--memory "$memory")
+
+    local port
+    while IFS= read -r port; do
+        [[ -z "$port" ]] && continue
+        sbx_args+=(--publish "$port")
+    done < <(get_sandbox_publish_ports)
+
+    local mcp_server
+    while IFS= read -r mcp_server; do
+        [[ -z "$mcp_server" ]] && continue
+        sbx_args+=(--static-mcp "$mcp_server")
+    done < <(get_sandbox_static_mcp)
+
+    sbx_args+=(${mount_args[@]+"${mount_args[@]}"})
+    [[ ${#sandbox_agent_args[@]} -gt 0 ]] && sbx_args+=(-- "${sandbox_agent_args[@]}")
+
+    log_info "タスク '$task_name' で Docker Sandboxes を起動します"
+    log_info "agent: $sandbox_agent"
+    log_info "sandbox 名: $sandbox_name"
+    log_info "workspace: $worktree_base_dir"
+
+    cd "$worktree_base_dir" || return 1
+    # set -e 下では失敗した時点で抜けてしまうため、`||` で終了コードを捕捉する
+    local exit_code=0
+    sbx-agent "${sbx_args[@]}" || exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log_error "Docker Sandboxes の起動に失敗しました (終了コード: $exit_code)"
+        return $exit_code
+    fi
+
+    log_success "Docker Sandboxes のセッションが終了しました"
+}
+
+
+# dev サブコマンド（devcontainer backend）
+cmd_dev_devcontainer() {
     local task_name="$1"
     shift
 
@@ -1562,6 +1922,118 @@ cmd_dev() {
 
     log_success "コマンドが正常に完了しました"
 }
+
+# dev サブコマンド
+# 既定のバックエンドは Docker Sandboxes。[settings.sandbox].backend または
+# --devcontainer / --sbx で切り替える。
+cmd_dev() {
+    local task_name="$1"
+    shift
+
+    local backend=""
+    local sandbox_agent=""
+    local sandbox_name=""
+    local sandbox_branch=""
+    local sandbox_template=""
+    local force_new="false"
+    local remove_on_exit="false"
+    local -a passthrough_args=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --devcontainer)
+                backend="devcontainer"
+                ;;
+            --sbx)
+                backend="sbx"
+                ;;
+            --sbx=*)
+                backend="sbx"
+                sandbox_agent="${1#*=}"
+                ;;
+            --agent)
+                shift
+                [[ $# -eq 0 ]] && { log_error "--agent には値が必要です"; return 1; }
+                backend="${backend:-sbx}"
+                sandbox_agent="$1"
+                ;;
+            --agent=*)
+                backend="${backend:-sbx}"
+                sandbox_agent="${1#*=}"
+                ;;
+            --name=*)
+                backend="${backend:-sbx}"
+                sandbox_name="${1#*=}"
+                ;;
+            --name)
+                shift
+                [[ $# -eq 0 ]] && { log_error "--name には値が必要です"; return 1; }
+                backend="${backend:-sbx}"
+                sandbox_name="$1"
+                ;;
+            --branch=*)
+                backend="${backend:-sbx}"
+                sandbox_branch="${1#*=}"
+                ;;
+            --branch)
+                shift
+                [[ $# -eq 0 ]] && { log_error "--branch には値が必要です"; return 1; }
+                backend="${backend:-sbx}"
+                sandbox_branch="$1"
+                ;;
+            --template=*)
+                backend="${backend:-sbx}"
+                sandbox_template="${1#*=}"
+                ;;
+            --template)
+                shift
+                [[ $# -eq 0 ]] && { log_error "--template には値が必要です"; return 1; }
+                backend="${backend:-sbx}"
+                sandbox_template="$1"
+                ;;
+            --new)
+                backend="${backend:-sbx}"
+                force_new="true"
+                ;;
+            --rm)
+                backend="${backend:-sbx}"
+                remove_on_exit="true"
+                ;;
+            --)
+                shift
+                passthrough_args+=("$@")
+                break
+                ;;
+            *)
+                passthrough_args+=("$1")
+                ;;
+        esac
+        shift
+    done
+
+    [[ -z "$backend" ]] && backend=$(get_sandbox_backend)
+
+    case "$backend" in
+        devcontainer)
+            cmd_dev_devcontainer "$task_name" ${passthrough_args[@]+"${passthrough_args[@]}"}
+            ;;
+        sbx | sandbox)
+            # sandbox backend では最初の位置引数を agent 名として扱う
+            if [[ -z "$sandbox_agent" ]] && [[ ${#passthrough_args[@]} -gt 0 ]]; then
+                sandbox_agent="${passthrough_args[0]}"
+                passthrough_args=("${passthrough_args[@]:1}")
+            fi
+            cmd_dev_sandbox "$task_name" "$sandbox_agent" "$sandbox_name" \
+                "$sandbox_branch" "$sandbox_template" "$force_new" "$remove_on_exit" \
+                ${passthrough_args[@]+"${passthrough_args[@]}"}
+            ;;
+        *)
+            log_error "未知の backend です: $backend (sbx または devcontainer を指定してください)"
+            return 1
+            ;;
+    esac
+}
+
 
 # exec サブコマンド
 # worktreeの指定リポジトリディレクトリでコマンドを直接実行する

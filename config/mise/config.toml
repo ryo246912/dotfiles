@@ -14,7 +14,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:Wilfred/difftastic"                                   = "0.70.0"
 "aqua:ajeetdsouza/zoxide"                                   = "0.10.0"
 "aqua:anthropics/claude-code"                               = "2.1.278"
-"aqua:antonmedv/fx"                                         = "39.2.0"
+"aqua:antonmedv/fx"                                         = "40.0.0"
 "aqua:aquasecurity/trivy"                                   = "0.74.0"
 "aqua:astral-sh/uv"                                         = "0.12.15"
 "aqua:atuinsh/atuin"                                        = "18.8.0"
@@ -85,6 +85,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:d-kuro/gwq"                                         = "0.1.1"
 "github:dyoshikawa/rulesync"                                = "8.21.0"
 "github:github/copilot-cli"                                 = "1.0.88"
+"github:github/gh-stack"                                    = { version = "0.2.0", bin = "gh-stack" }
 "github:gpanders/ijq"                                       = "1.1.2"
 "github:iamrohithrnair/emeraldian"                          = { version = "0.6.0", bin = "emeraldian" }
 "github:jdx/fnox"                                           = "1.35.1"
@@ -122,7 +123,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:@kitlangton/ghui"                                      = "0.9.1"
 "npm:agentlytics"                                           = "0.2.13"
 "npm:ccmanager"                                             = "4.1.25"
-"npm:ccusage"                                               = "20.0.26"
 "npm:concurrently"                                          = "10.0.5"
 "npm:cspell"                                                = "10.3.3"
 "npm:czg"                                                   = "1.14.0"
@@ -131,7 +131,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:macos-notify-mcp"                                      = "0.0.8"
 "npm:open-cli"                                              = "9.0.0"
 "npm:oxfmt"                                                 = "0.71.0"
-"npm:oxlint"                                                = "1.86.0"
+"npm:oxlint"                                                = "1.87.0"
 "npm:renovate"                                              = "44.0.1"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:grip"                                                 = "4.6.2"
@@ -173,19 +173,23 @@ lefthook install
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
 # ここ（deploy先: ~/.config/mise/config.toml）で宣言する。
-# 初回配置は [bootstrap.hooks.pre-dotfiles]（mise.toml 参照）が config/ から
-# 「無いものだけ」seed する。以後は `mise bootstrap dotfiles save`（または
-# [bootstrap.services.mise-history] による自動保存）が checkpoint を記録する。
+# 内容の配置は mise.toml 側の "~/.config" symlink-each エントリ（config/ の各ファイルへ
+# リンクを張る。OS 別の除外は mise.mac.toml / mise.linux.toml）が行い、変更履歴は
+# `mise bootstrap dotfiles save`（または [bootstrap.services.mise-history] による
+# 自動保存）が checkpoint として記録する（mise history は symlink をリンクとして記録し
+# リンク先の内容は記録しないため、symlink-each で配置したファイルの内容の変更履歴は
+# repo の Git で追う）。
 #
-# "~/.config" 配下の単一ファイル管理エントリ・"~/.apm"/"~/.claude"/"~/.codex" 配下の
-# 単一ファイル管理エントリ（いずれも mise.toml の [dotfiles] 参照）は copy/template
-# mode のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
+# "~/.config" 配下の単一ファイル管理エントリ（mise.toml の [dotfiles] 参照）は
+# copy/template mode のまま維持しつつ、ここで同じ target に track を追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。実機で「同じ target を
 # copy/template と track の両方でカバーしても衝突しない」こと、「copyで丸ごと管理する
 # ディレクトリの中の、個別ファイルだけをtrackする」構成も問題なく動作することを
 # 確認済み）。copy/template 側が source へ収束させる主挙動は変わらないが、apply で
 # ライブ編集が上書きされる直前に history checkpoint が自動記録されるため、
 # `mise bootstrap dotfiles rollback <path>` で復元できるようになる（実機確認済み）。
+# "~/.apm"/"~/.claude"/"~/.codex" 配下の個別ファイルも track しているが、mise.toml 側は
+# symlink-each のためリンクとして記録される（内容の履歴は repo の Git で追う）。
 #
 # "~/.apm"・"~/.claude"・"~/.codex" は、ディレクトリ全体としてはここに含めていない。
 # "~/.local" も同様（単一ファイルも含めて一切 track していない）。これらのディレクトリ
