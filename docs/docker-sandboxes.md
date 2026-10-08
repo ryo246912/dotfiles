@@ -954,14 +954,6 @@ template を渡すときは **`--pull missing` を付けます**。`sbx create` 
 `never` ではなく `missing` なのは、`SBX_AGENT_TEMPLATE` にレジストリ上の参照を指定した場合に
 取得できなくなるのを避けるためです（ローカルに有れば引きません）。
 
-> [!NOTE]
-> 以前は `sbx template ls` を grep して「有れば使う / 無ければ sbx の既定へフォールバック」
-> していましたが、出力の形（`repo:tag` を 1 列で出すか、docker images 風に REPOSITORY と
-> TAG を別カラムで出すか）に依存して取りこぼし、**ビルド済みなのに既定 template で起動する**
-> ことがありました。事前に当たりに行くのをやめ、そのまま渡して失敗したときに原因を出す形に
-> しています（`mise run sandbox:build-template` は「最初の 1 回だけ」の手順に入っているので、
-> 未ビルドで止まるのは想定内です）。
-
 `mise.toml` や `tasks/` / `lint/` / `scripts/` を変えたら **template を再ビルド**してください。
 
 ## ホスト連携（mac-host への SSH 経路）
