@@ -79,6 +79,10 @@ setup_no_proxy() {
         log_skip "NO_PROXY のローカル除外は既に設定済みです"
         return 0
     fi
+    if ! has_cap_sys_admin; then
+        log_skip "sandbox では mount が使えないため生成物の分離をスキップしました（node_modules 等はホストに書かれます）"
+        return 0
+    fi
     if ! sudo -n true 2>/dev/null; then
         log_warn "パスワード無しの sudo が使えないため NO_PROXY を設定できませんでした"
         return 1
@@ -243,7 +247,16 @@ setup_nvim() {
 # workspace はホストと共有されているため、node_modules / .venv / target などの
 # OS 依存の生成物をそのまま作るとホスト側に Linux 版が書かれてしまう。
 # devcontainer と同じスクリプトで sandbox ローカル領域へ bind mount して隠す。
-# sandbox は microVM なので mount が使え、base image の agent ユーザーは sudo を持つ。
+#
+# ただし sbx の agent は microVM 内のさらにコンテナで動いており、root でも CAP_SYS_ADMIN を
+# 持たない（CapBnd が Docker 既定の a80425fb）。この場合は /tmp 同士の bind mount すら
+# "permission denied" になり分離できないので、試さずにスキップする（生成物はホストに書かれる）。
+has_cap_sys_admin() {
+    local bnd
+    bnd=$(awk '/^CapBnd:/ { print $2 }' /proc/self/status 2>/dev/null) || return 1
+    [ -n "$bnd" ] && (( (16#$bnd >> 21) & 1 ))
+}
+
 separate_artifacts() {
     local script="${scripts_dir}/mount-container-only-dirs.sh"
 
@@ -251,6 +264,10 @@ separate_artifacts() {
         log_skip "mount-container-only-dirs.sh が無いため生成物の分離をスキップしました"
         return 0
     }
+    if ! has_cap_sys_admin; then
+        log_skip "sandbox では mount が使えないため生成物の分離をスキップしました（node_modules 等はホストに書かれます）"
+        return 0
+    fi
     if ! sudo -n true 2>/dev/null; then
         log_warn "パスワード無しの sudo が使えないため生成物の分離をスキップしました"
         return 1

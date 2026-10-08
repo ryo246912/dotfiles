@@ -89,36 +89,6 @@ done < <(
 		-type f \( "${manifest_name_predicates[@]}" \) -print0
 )
 
-# root で target を辿れない共有 FS 向けのフォールバック付き bind mount。
-# Docker Sandboxes の workspace（virtiofs passthrough）はホスト側でアクセスを判定しており、
-# agent ユーザーとしては読み書きできるが、root（sudo）からの要求は拒否されて
-# `mount: ...: permission denied` になる（/proc/<pid>/fd 経由で渡しても同じだった）。
-# そこで「uid/gid は実行ユーザーのまま、CAP_SYS_ADMIN だけ持たせて」mount(2) を呼ぶ。
-# path の解決は実行ユーザーとして行われ、mount 自体は CAP_SYS_ADMIN で許可される。
-# mount(8) は実 uid が root でないと fstab 以外を拒否する（restricted mode）ため、
-# syscall は python3 から直接呼ぶ（4096 = MS_BIND）。
-bind_mount_as_user() {
-	command -v setpriv >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 || return 1
-	sudo setpriv --reuid="$(id -u)" --regid="$(id -g)" --groups="$(id -G | tr ' ' ,)" \
-		--inh-caps=+sys_admin --ambient-caps=+sys_admin \
-		python3 -I -c '
-import ctypes, os, sys
-libc = ctypes.CDLL(None, use_errno=True)
-if libc.mount(sys.argv[1].encode(), sys.argv[2].encode(), None, 4096, None) != 0:
-    sys.exit("mount: %s: %s" % (sys.argv[2], os.strerror(ctypes.get_errno())))
-' "$1" "$2"
-}
-
-bind_mount() {
-	local source=$1 target=$2 err
-	err=$(sudo mount --bind "${source}" "${target}" 2>&1) && return 0
-	if bind_mount_as_user "${source}" "${target}" 2>/dev/null && mountpoint -q "${target}"; then
-		return 0
-	fi
-	echo "${err}" >&2
-	return 1
-}
-
 sudo install -d -o "$(id -u)" -g "$(id -g)" "${storage_root}"
 skipped=0
 failed=0
@@ -136,13 +106,12 @@ for target in "${!targets[@]}"; do
 		echo "ℹ️ ホスト側の既存内容を移行せず隠します: ${target}" >&2
 	fi
 	# 既存の target は mount で隠すだけなので、所有者・権限を変えないよう無いときだけ作る。
-	# workspace は実行ユーザーが書けるので sudo は不要（sandbox では root だと辿れないこともある）。
 	if [ ! -d "${target}" ]; then
-		mkdir -p "${target}" || sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
+		sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
 	fi
 	sudo install -d -o "$(id -u)" -g "$(id -g)" "${backing_dir}"
 	# 1 つ失敗しても残りは分離する（set -e で途中終了すると後続が全部ホストに書かれる）
-	if ! bind_mount "${backing_dir}" "${target}"; then
+	if ! sudo mount --bind "${backing_dir}" "${target}"; then
 		echo "⚠️ 分離できませんでした: ${target}" >&2
 		failed=$((failed + 1))
 	fi
