@@ -1074,7 +1074,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                 |
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
-| `~/.config/ccusage` / `~/.config/mise`    | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
+| `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
 | `~/.coderabbit`                           | ⚠️ `extra_workspaces` で追加する                                                                                  |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
@@ -1130,7 +1130,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | 項目                                   | 状況                                                                             |
 | -------------------------------------- | -------------------------------------------------------------------------------- |
 | `~/.claude/settings.json` の read-only | devcontainer は settings.json だけ ro で重ね mount していたが、sandbox は全体 rw |
-| `~/.config/ccusage` / `~/.config/mise` | 既定では渡していない（必要なら `extra_workspaces`）                              |
+| `~/.config/mise`                       | 既定では渡していない（必要なら `extra_workspaces`）                              |
 
 ### まとめ
 

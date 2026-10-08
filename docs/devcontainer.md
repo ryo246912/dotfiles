@@ -233,7 +233,7 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 
 | mount                                                                                                                       | 対処                                                                                   |
 | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `~/.config/devcontainer` / `nvim` / `mise` / `ccusage`（ディレクトリ・readonly）                                            | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
+| `~/.config/devcontainer` / `nvim` / `mise`（ディレクトリ・readonly）                                                        | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
 | `~/.config/git/config` / `gitignore` / `~/.claude.json` / `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json` | 実体化したファイル（`~/.cache/devcontainer/host-config/files/<name>`）を source にする |
 | `~/.config/gh` / `~/.agents` / `~/.copilot` など                                                                            | dotfiles 管理外（実ファイル）なので対処不要                                            |
 
