@@ -316,6 +316,9 @@ materialize_file() {
 	mkdir -p "$(dirname "$dst")"
 	# [ -e ] はリンク切れの symlink に対して偽になるので、リンク切れもここで弾ける
 	if [ ! -e "$src" ]; then
+		# 配置先から消えた・リンク切れになった場合、過去の実行で作ったコピーを残すと
+		# 「消したはずの設定」が新しいコンテナへ mount され続ける。古いコピーは捨てる。
+		rm -f "$dst"
 		echo "⚠️ 実体化できません(未配置かリンク切れ): $src" >&2
 		ensure_staged_placeholder "$dst" "$placeholder"
 		return 1
@@ -324,6 +327,8 @@ materialize_file() {
 	# -L で symlink を辿って実体をコピーし、mv で atomic に置き換える
 	if ! cp -L "$src" "$tmp" 2>/dev/null; then
 		rm -f "$tmp"
+		# source はあるのにコピーだけ失敗した場合は一時的な事象の可能性があるため、
+		# 既存のコピーは消さずに残す（無い場合だけ空の実体を用意する）
 		echo "⚠️ 実体化に失敗しました: $src" >&2
 		ensure_staged_placeholder "$dst" "$placeholder"
 		return 1

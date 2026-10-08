@@ -29,19 +29,33 @@ else
 	gitconfig_file="${HOME}/.gitconfig"
 	if [ -f "$gitconfig_file" ] && grep -Fq -- "$gitconfig_host" "$gitconfig_file"; then
 		gitconfig_tmp="${gitconfig_file}.tmp.$$"
+		# 置換で権限が広がらないよう元のモードを引き継ぐ。~/.gitconfig は credential
+		# helper の設定等を含みうるため、umask 任せにすると 0600 が 0644 になる。
+		# -L で symlink を辿る。付けないと symlink 自身のモード(777)を拾ってしまい、
+		# 実体を 777 に広げてしまう。
+		gitconfig_mode="$(stat -Lc '%a' "$gitconfig_file" 2>/dev/null || echo 600)"
 		# git は "\tpath = <value>" の形で書くため、行頭の空白を落として完全一致で消す
-		# （前方一致にすると gitconfig-host-foo のような別の値まで消えてしまう）
+		# （前方一致にすると gitconfig-host-foo のような別の値まで消えてしまう）。
+		# mv の宛先は readlink -f で実体にする: ~/.gitconfig が symlink の場合に
+		# symlink 自体を置き換えてリンクを壊さないため。
 		if awk -v target="path = ${gitconfig_host}" '
 			{ line = $0; sub(/^[ \t]+/, "", line); if (line == target) next; print }
-		' "$gitconfig_file" >"$gitconfig_tmp" && mv "$gitconfig_tmp" "$gitconfig_file"; then
-			echo "✓ 読めない include.path を ~/.gitconfig から取り除きました（残すと git が使えなくなるため）"
+		' "$gitconfig_file" >"$gitconfig_tmp" \
+			&& chmod "$gitconfig_mode" "$gitconfig_tmp" \
+			&& mv "$gitconfig_tmp" "$(readlink -f -- "$gitconfig_file")"; then
+			echo "✓ 読めない include.path を ~/.gitconfig から取り除きました（残すと git が使えなくなるため）" >&2
 		else
 			rm -f "$gitconfig_tmp"
 			echo "   ~/.gitconfig から include.path を取り除けませんでした。手動で削除してください" >&2
 		fi
 	fi
-	echo "⚠️ ${gitconfig_host} が読めないため、ホストの git config を取り込みませんでした" >&2
-	echo "   user.name / user.email 等が未設定になります。ホスト側で mise bootstrap dotfiles apply を実行し、devcontainer を作り直してください" >&2
+	# ここで続行すると、ホストの user.name / user.email が無いまま成功扱いになり、
+	# 後で commit 時に "Author identity unknown" として表面化する。
+	# mount が壊れている以上コンテナを作り直す必要があるので、明示的に失敗させる。
+	# （壊れた include は上で取り除いてあるので、調査のために git は使える状態で残る）
+	echo "✗ ${gitconfig_host} が読めないため、ホストの git config を取り込めません" >&2
+	echo "  ホスト側で mise bootstrap dotfiles apply を実行し、devcontainer を作り直してください" >&2
+	exit 1
 fi
 # host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
 # 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
