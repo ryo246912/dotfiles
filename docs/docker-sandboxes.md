@@ -1001,7 +1001,55 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 | lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
 | ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
 | 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
+| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | 同じ原因。`sbx template ls` に `sbx-agent:local` が無ければ既定 template で起動している           |
+| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）     |
 | template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                           |
+
+### ホスト設定が参照するコマンドが sandbox に無い（`cannot run delta` 等）
+
+`sbx-agent` はホストの gitconfig を `include.path` で取り込みます。その中には
+**ホストにしか無いコマンドを指す設定**が含まれます。
+
+```ini
+[pager]
+  diff = delta
+  log = delta
+[interactive]
+  diffFilter = delta --color-only
+```
+
+`delta` は sandbox のツールチェインに入っていないため、放置すると
+`git log` / `diff` / `show` が `error: cannot run delta` で失敗します。
+エージェント環境では pager 自体が不要なので `sbx-agent` が無効化します。
+
+| 上書き方法              | `pager.<cmd>` に勝てるか         |
+| ----------------------- | -------------------------------- |
+| `PAGER=cat`             | ❌                               |
+| `core.pager=cat`        | ❌                               |
+| **`GIT_PAGER=cat`**     | ✅                               |
+| `pager.log=cat`（個別） | ✅（ただし項目ごとに列挙が必要） |
+
+`pager.<cmd>` は `core.pager` や `PAGER` より強いため、それらでは上書きできません。
+`GIT_PAGER` なら上書きでき、ホスト側が `pager.blame` 等を増やしても追従不要なので、
+`sbx-agent` は `--env GIT_PAGER=cat` を渡します。
+`interactive.diffFilter`（`git add -p` 等で使う）は env では上書きできないため、
+`GIT_CONFIG_*` 側で `cat` に差し替えます。
+
+> [!NOTE]
+> `GIT_CONFIG_GLOBAL=/dev/null` では回避できません。`sbx-agent` の git 設定は
+> `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` の**環境変数**で
+> 注入しており、`GIT_CONFIG_GLOBAL` とは独立に適用されるためです。
+
+delta のある表示を sandbox でも使いたい場合は、`config/devcontainer/mise.toml` に
+`"aqua:dandavison/delta"` を追加して template を作り直し、上記の無効化を外してください。
+
+#### 既知の差分: `credential.helper`
+
+同じ理由で、ホストの `credential.helper = osxkeychain`（macOS 用）は Linux の
+sandbox には存在しません。GitHub については `credential.https://github.com.helper` を
+`!gh auth git-credential` で上書きしているため実害はありませんが、
+**GitHub 以外の HTTPS git host** を使うとこのヘルパーの解決に失敗します。
+現状は未対処です（`credential.helper` に空文字を入れるとリストをリセットできます）。
 
 ### template のビルドが `exporting to image` で失敗する
 

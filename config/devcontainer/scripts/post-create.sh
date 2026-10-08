@@ -60,6 +60,9 @@ fi
 # host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
 # 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
 git config --global core.excludesfile ~/.config/gitignore-host
+# interactive.diffFilter もホスト設定では delta を指す（git add -p 等で使われる）。
+# pager 側は remoteEnv の GIT_PAGER=cat で潰しているが、こちらは env では上書きできない。
+git config --global interactive.diffFilter cat
 git config --global credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 # コンテナには自分の worktree と common git dir しか mount しないため、同じリポジトリの

@@ -273,6 +273,13 @@ if [[ -z "$TEMPLATE" ]]; then
         TEMPLATE="$SBX_AGENT_TEMPLATE"
     elif sbx template ls 2>/dev/null | grep -q "$DEFAULT_TEMPLATE"; then
         TEMPLATE="$DEFAULT_TEMPLATE"
+    else
+        # 黙って sbx の既定 template にフォールバックすると、PATH に mise の shim も
+        # scripts も入らない sandbox が出来上がる。症状は「PATH に mise が無い」
+        # 「cannot run delta」のように間接的で原因に辿りにくいので、作成前に明示する。
+        log_warn "ツールチェイン入りの template ($DEFAULT_TEMPLATE) が見つかりません"
+        log_warn "  sbx の既定 template で起動します。mise / lint 群 / nvim / crit は入りません"
+        log_warn "  用意するには: mise run sandbox:build-template"
     fi
 fi
 
@@ -477,6 +484,16 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # ホストの gitconfig を include する（post-create.sh の include.path 相当）
     [[ -f "${HOME}/.config/git/config" ]] && add_git_config include.path "${HOME}/.config/git/config"
     [[ -f "${HOME}/.config/git/gitignore" ]] && add_git_config core.excludesfile "${HOME}/.config/git/gitignore"
+    # ホストの gitconfig は pager と interactive.diffFilter に delta を指定しているが、
+    # delta は sandbox のツールチェインに無いため、そのままだと git log / diff / show が
+    # "cannot run delta" で失敗する。エージェント環境では pager は不要なので無効化する。
+    #
+    # pager.<cmd> は core.pager や PAGER より強いため、それらでは上書きできない。
+    # GIT_PAGER は pager.<cmd> も上書きできる（実測で確認）ので env で渡す。
+    # ホスト側が pager.blame 等を増やしても追従不要という利点もある。
+    add_env GIT_PAGER cat
+    add_git_config interactive.diffFilter cat
+
     # gh の認証情報を git の credential helper として使う
     add_git_config 'credential.https://github.com.helper' '!gh auth git-credential'
     add_git_config 'url.https://github.com/.insteadOf' 'git@github.com:'

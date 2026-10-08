@@ -34,6 +34,11 @@
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
+    // ホストの gitconfig は pager に delta を指定しているが、delta はこのコンテナの
+    // ツールチェインに無いため、そのままだと git log / diff / show が
+    // "cannot run delta" で失敗する。エージェント環境では pager 自体が不要。
+    // pager.<cmd> は core.pager / PAGER より強く、GIT_PAGER でしか上書きできない。
+    "GIT_PAGER": "cat",
     // ホストのユーザー名（SSH接続用）
     "HOST_USER": "${localEnv:USER}",
     // crit: ホストのブラウザから参照できるよう0.0.0.0にバインドし、固定ポートで待ち受ける
