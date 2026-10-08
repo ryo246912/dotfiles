@@ -77,11 +77,10 @@
     // post-create.sh が ~/.config/git に書き込むため、git/ 配下には mount せず gitconfig-host と同様に別名で置く。
     "type=bind,source=${localEnv:HOME}/.cache/devcontainer/host-config/files/gitignore-host,target=/home/vscode/.config/gitignore-host,readonly",
     "type=bind,source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,readonly",
-    // ccusage / mise / devcontainer / nvim は dotfiles が symlink-each で配置するため、
+    // mise / devcontainer / nvim は dotfiles が symlink-each で配置するため、
     // ~/.config 側をそのまま mount すると中身がリンク切れになる。initializeCommand が
     // symlink を解決して作ったコピー（~/.cache/devcontainer/host-config）を mount する。
     // いずれも元から readonly なので、コピーを渡しても挙動は変わらない。
-    "type=bind,source=${localEnv:HOME}/.cache/devcontainer/host-config/ccusage,target=/home/vscode/.config/ccusage,readonly",
     "type=bind,source=${localEnv:HOME}/.cache/devcontainer/host-config/mise,target=/home/vscode/.config/mise,readonly",
     "type=bind,source=${localEnv:HOME}/.cache/devcontainer/host-config/devcontainer,target=/home/vscode/.config/devcontainer,readonly",
     // nvim 設定。read-only で渡す（書き込み可能にすると、コンテナ内のエージェントが

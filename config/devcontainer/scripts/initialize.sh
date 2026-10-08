@@ -211,9 +211,8 @@ ensure_ssh_key() {
 	return "$rc"
 }
 
-# .config/* (gh・ccusage・mise はツール側が初回実行時に作るディレクトリ。未実行だと無いことがある)
+# .config/* (gh・mise はツール側が初回実行時に作るディレクトリ。未実行だと無いことがある)
 ensure_dir ~/.config/gh
-ensure_dir ~/.config/ccusage
 ensure_dir ~/.config/mise
 ensure_dir ~/.config/nvim
 
@@ -354,7 +353,6 @@ materialize_all() {
 	# 残りは read-only な設定の共有なので、1 つリンク切れがあっても起動は止めない
 	materialize_config nvim || echo "⚠️ nvim 設定の実体化に失敗しました" >&2
 	materialize_config mise || echo "⚠️ mise 設定の実体化に失敗しました" >&2
-	materialize_config ccusage || echo "⚠️ ccusage 設定の実体化に失敗しました" >&2
 
 	# gitconfig / gitignore はコンテナ内の git が常に読むため、失敗を致命的に扱う。
 	# ここが読めないと core.excludesfile の解決に失敗して git status 系が全部死ぬ。

@@ -43,6 +43,137 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## ステータスライン（prompt cache カウントダウン）
+
+Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
+効いている（warm）間は前回までの処理を再利用できるので、返信が速く、使用制限への影響も
+小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
+会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
+cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
+左端には作業ディレクトリの git branch を表示します。
+
+`claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
+`claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
+30 秒ごとに更新します。Claude Code v2.1.251 以降と `jq` が必要です。
+`claude/` は symlink-each で `~/.claude` へ配置されます。初回は `mise bootstrap dotfiles apply`
+で symlink を作成します。以降、既存ファイルの変更はそのまま反映されますが、`claude/` に
+新しく追加したファイルは再度 apply するまで `~/.claude` に現れません。
+
+### 表示の読み方
+
+```text
+main · cache ● 1h ████░░ 38m left · hit 91% · misses 0
+main · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
+```
+
+| 表示                                | 意味                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                 |
+| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
+| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
+| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
+| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                     |
+| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない） |
+| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                               |
+| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                    |
+| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                           |
+| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                     |
+| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                |
+| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                        |
+| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                             |
+
+`prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
+灰色で `cache – waiting` を表示します（Claude Code が v2.1.251 未満の場合もこの表示のままです）。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
+subagent のリクエストはこの統計に含まれません。
+
+### cache を長持ちさせるための注意
+
+- 既定の cache TTL は、サブスクリプションのプラン内利用では main conversation が 1 時間、
+  subagent と workflow が 5 分です。API キー利用時や、使用制限を超えて使用クレジットに
+  移ったときは、main conversation も 5 分になります。TTL は main conversation なら
+  `promptCacheTtl`（または `CLAUDE_CODE_PROMPT_CACHE_TTL`）、subagent などは
+  `subagentPromptCacheTtl`（または `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL`）で `5m` / `1h`
+  に変更できます（v2.1.242 以降）。
+- セッション中にモデルを切り替えると cache はすべて作り直しになります。`opusplan` では
+  plan mode への出入りも切り替えとして扱われます。
+- プロジェクトルートとユーザーレベルの `CLAUDE.md` はセッション開始時に読み込まれます。
+  セッション中に編集しても cache は壊れませんが、編集内容は `/clear`・`/compact`・再起動の
+  いずれかまで反映されません。サブディレクトリの nested `CLAUDE.md` や `paths:` 付きの
+  rule は必要になった時点で読み込まれるため、読み込まれる前の編集はそのまま反映されます。
+- やり直したいときは `/rewind` で戻ると既存の cache を再利用できます。`/compact` は
+  新しい cache を作ります。
+
+### cache を意識した使い方
+
+基本は「cache が warm のうちに続けて指示を送る」方が得です。ただし、cache を保つためだけに
+メッセージを送るのは、多くの場合は得になりません。
+
+#### なぜ warm のうちに送ると得か
+
+以下の「〜倍」は、cache を使わない通常の入力トークンの料金を 1 としたときの比率です
+（API 料金での目安）。
+
+| 入力の種類                   | 料金の比率                                  |
+| ---------------------------- | ------------------------------------------- |
+| 通常の入力（cache なし）     | 1 倍                                        |
+| cache から読む（hit）        | 約 0.1 倍（9 割引）                         |
+| cache に書き込む（作り直し） | 5 分 TTL で約 1.25 倍、1 時間 TTL で約 2 倍 |
+
+- warm のうちは、会話の大部分を約 0.1 倍で読めます。
+- cold になると、会話全体をもう一度 cache に書き込みます。通常の入力より高い 1.25 倍 / 2 倍が
+  会話全体にかかります。
+- API キーではこの比率がそのまま請求額に効きます。サブスクリプションでは直接の請求はありませんが、
+  同じ比率で使用制限の減り方に効きます。返信も速くなります。
+- cache に当たるたびに TTL はリセットされます。続けてやり取りしている間はずっと warm のままです。
+
+#### hit 率と料金の関係
+
+hit 率（ステータスラインの `hit 91%`）が高いほど入力の料金は下がります。ただし反比例ではなく、
+ほぼ直線的に下がります。書き込みの割増しを除いた入力料金の目安は次のとおりです。
+
+```text
+入力料金 ≈ (1 − hit 率) × 1 + hit 率 × 0.1
+```
+
+式の hit 率は 0〜1 の割合です（`hit 91%` なら 0.91）。
+
+| hit 率 | 入力料金（cache なしとの比） |
+| ------ | ---------------------------- |
+| 0%     | 1.0 倍                       |
+| 50%    | 約 0.55 倍                   |
+| 90%    | 約 0.19 倍                   |
+
+- 下がるのは入力の料金だけです。出力トークンの料金は cache の有無で変わりません。
+- cold になるたびに会話全体を割増し（1.25 倍 / 2 倍）で書き直すので、実際の損は hit 率の
+  数字から見えるより大きくなります。
+
+#### 実際の使い方
+
+1. 同じ作業の続きなら、間を空けずに送ります。黄色（残り 20% 未満）になっていて、
+   まだ聞きたいことがあるなら、今のうちに聞きます。
+2. cache を保つためだけの「つなぎ」の送信は基本しません。その送信自体にも cache 読み込みと
+   出力の分のコストがかかります。元を取れるのは、TTL 内に確実に作業を再開し、つなぎの
+   送信のコスト（会話全体の cache 読み込み ≈ 0.1 倍＋つなぎメッセージ自体の入力＋出力）が cold 後の再書き込み
+   （1.25 倍 / 2 倍）より小さくなる場合だけです。会話の長さ・出力量・モデルによって
+   変わるので、固定の目安はありません。
+3. cold になったら、送る前に続けるかどうかを考えます。ステータスラインの
+   `next message re-caches 82k tokens` がその再送のコストです。
+   - 前の文脈がもう要らないなら、`/clear` で新しく始めた方が安いです。
+   - 文脈は要るけれど長すぎるなら、`/compact` で縮める手もあります。ただし cold 時の
+     `/compact` は要約を作るために会話全体を cache なしで処理し直すので、`/compact`
+     としては最もコストが高くなります。縮めた文脈でこの後も何度もやり取りする場合に
+     元が取れます。`/compact` はなるべく warm のうち（作業の区切り）に実行します。
+4. 話題が変わるときは、cold かどうかに関係なく `/clear` します。関係のない長い履歴を
+   毎回送り続けるのは、cache が効いていても無駄です。
+5. cache を壊す操作に注意します。モデルの切り替えや、`opusplan` での plan mode の出入りは、
+   warm でも cache を作り直しにします。
+
+まとめると、作業はまとまった時間で一気に進め、区切りでは warm のうちに `/compact` し、
+休憩明けで cold になっていたら、続けるか `/clear` するかを選ぶのが一番得な使い方です。
+
+参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields) /
+[How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
+
 ## 外部 skill の使い方
 
 このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。
