@@ -270,13 +270,8 @@ for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
 done
 
 # template は常に DEFAULT_TEMPLATE を使う。--template / SBX_AGENT_TEMPLATE で上書きでき、
-# --no-template で sbx の既定 template に戻せる。
-#
-# 以前は `sbx template ls` を grep して「有れば使う / 無ければ sbx の既定へフォールバック」
-# していたが、出力の形（`repo:tag` を 1 列で出すか、docker images 風に REPOSITORY と TAG を
-# 別カラムで出すか）に依存して取りこぼし、ビルド済みなのに既定 template で起動してしまった。
-# 事前に当たりに行くのをやめ、そのまま渡して失敗したときに原因を出す形にしている
-# （`mise run sandbox:build-template` は docs の「最初の 1 回だけ」の手順に入っている）。
+# --no-template で sbx の既定 template に戻せる。未ビルドなら sbx create が失敗し、
+# そこで原因と build 手順を出す。
 if [[ "$NO_TEMPLATE" == true ]]; then
     [[ -n "$TEMPLATE" ]] && log_warn "--no-template が指定されたため --template を無視します"
     TEMPLATE=""
