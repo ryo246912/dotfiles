@@ -61,7 +61,7 @@ post-merge:
       # 1回だけ手動で流す（docs/setup.md の手順と同じコマンド）。
       fail_text: '❌ [post-merge] dotfiles apply failed. 既存の実ファイルとの conflict なら: mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws" （先に配置先だけにある編集を repo へ取り込むこと。docs/mise.md 参照）'
     - name: lefthook-install
-      run: lefthook install
+      run: mise exec -- lefthook install
 
 post-checkout:
   jobs: *sync-jobs
