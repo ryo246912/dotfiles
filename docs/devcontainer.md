@@ -285,14 +285,26 @@ fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
 # → ファイルは変更されない
 ```
 
-そのため `post-create.sh` は次の 2 段構えにしています。
+そのため `post-create.sh` は次の 3 段構えにしています。
 
 1. 登録前に `[ -r "$gitconfig_host" ]` で読めることを確認する（読めなければ登録しない）
 2. 前回の実行で登録済みの壊れた `include.path` は、`~/.gitconfig` を
-   **awk で直接書き換えて**取り除く（git では外せないため）。他の `include.path` は残す
+   **awk で直接書き換えて**取り除く（git では外せないため）。他の `include.path` は残す。
+   置換時は元のモードを `stat -Lc` で引き継ぎ（`-L` なしだと symlink 自身の 777 を拾う）、
+   `mv` の宛先は `readlink -f` で実体にする（`~/.gitconfig` が symlink の場合にリンクを壊さない）
+3. そのうえで **`exit 1` で失敗させる**。続行するとホストの `user.name` / `user.email` が
+   無いまま成功扱いになり、後の commit で `Author identity unknown` として表面化するため
 
-これで「一度壊れたらコンテナ内の git が一切使えない」状態に陥らず、
-warning を見て原因に辿れます。
+つまり「一度壊れたらコンテナ内の git が一切使えない」状態には陥らず（壊れた include は
+取り除かれるので調査中も git は使える）、かつ**壊れていること自体は `devcontainer up` の
+失敗として見える**ようにしています。この状態になったらホスト側で
+`mise bootstrap dotfiles apply` を実行し、devcontainer を作り直してください。
+
+> [!NOTE]
+> `initialize.sh` が成功していても、ここで失敗しうることに注意してください。
+> `initialize.sh` が検証しているのは**ホスト側の実体化コピー**であって、
+> コンテナ内の mount が読めることは保証しません
+> （この PR では実際に「ホスト側は正常なのにコンテナ内のパスだけ壊れる」事象を踏んでいます）。
 
 #### ネストした include（`*.secret`）は実体化しない
 
