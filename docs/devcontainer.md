@@ -252,6 +252,71 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 **コンテナ作成を止めます**。他のファイルは warning 止まりですが、`mounts` の source が
 無いとコンテナ作成自体が失敗するため、失敗時は空の実体を置いて mount 元を確保します。
 
+### `include.path` は特別扱いが必要（読めないと git が即死する）
+
+`post-create.sh` はホストの gitconfig を `include.path` で取り込みます。
+
+```bash
+git config --global --add include.path ~/.config/gitconfig-host
+```
+
+ここで重要なのは、**`include.path` が読めないときの git の挙動が `core.excludesfile` と違う**ことです。
+
+| 設定                | 指す先が読めないとき                  |
+| ------------------- | ------------------------------------- |
+| `core.excludesfile` | `warning:` が出るだけ（終了コード 0） |
+| `include.path`      | **`fatal:` で即死（終了コード 128）** |
+
+```console
+$ git status                      # include.path が symlink ループを指している場合
+fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
+```
+
+`status` / `diff` に限らず**あらゆる git コマンド**が落ちるため、git を内部で呼ぶツール
+（crit など）もまとめて動かなくなります。
+
+さらに厄介なのが、**git は自分で壊れた `include.path` を外せない**点です。
+`git config --get-all` も `--unset-all` も include を展開しようとして同じ `fatal` で
+落ちるため、`git config` 経由では修復できません。
+
+```console
+$ git config --global --unset-all --fixed-value include.path .../gitconfig-host
+fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
+# → ファイルは変更されない
+```
+
+そのため `post-create.sh` は次の 2 段構えにしています。
+
+1. 登録前に `[ -r "$gitconfig_host" ]` で読めることを確認する（読めなければ登録しない）
+2. 前回の実行で登録済みの壊れた `include.path` は、`~/.gitconfig` を
+   **awk で直接書き換えて**取り除く（git では外せないため）。他の `include.path` は残す
+
+これで「一度壊れたらコンテナ内の git が一切使えない」状態に陥らず、
+warning を見て原因に辿れます。
+
+#### ネストした include（`*.secret`）は実体化しない
+
+ホストの gitconfig はさらに別のファイルを include しています。
+
+```ini
+[include]
+  path = ~/.config/git/config.secret
+[includeIf "gitdir:~/work/"]
+  path = ~/.config/git/config.work.secret
+```
+
+これらは**実体化も mount もしません**。リポジトリに入っているのは `.sample` だけで、
+実ファイルはホスト固有の秘密情報です（`~/.config/gh` を渡さないのと同じ理由）。
+
+コンテナ内にこのパスは存在しませんが、**include 先が「無い」または「リンク切れ」の場合、
+git は黙って無視します**（`fatal` になるのは上記のループのような「アクセスを試みて失敗」
+するケースだけ）。そのため渡さなくても壊れません。
+
+```console
+$ git status   # include.path = /nonexistent/foo
+                # → 出力なし、終了コード 0
+```
+
 ### なぜハードリンクではないのか
 
 mise の `[dotfiles]` が持つ mode は `symlink` / `symlink-each` / `copy` / `template` で、

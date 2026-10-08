@@ -10,10 +10,39 @@ set -e
 # 読み取り専用でマウントされているため（/tmp 配下は使わない。docs/devcontainer.md 参照）、
 # 既存の ~/.gitconfig があっても include を追加する。
 gitconfig_host=~/.config/gitconfig-host
-if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
-	git config --global --add include.path "$gitconfig_host"
+# include.path が読めないパスを指していると、git は警告ではなく
+# "fatal: unable to access ...: Too many levels of symbolic links" で即死し、
+# status / diff を含む全コマンドが使えなくなる（core.excludesfile は warning で済む）。
+# そのため読めることを確認してから登録し、読めない場合は登録しない。
+if [ -r "$gitconfig_host" ]; then
+	if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
+		git config --global --add include.path "$gitconfig_host"
+	fi
+	echo "✓ ホストの git config を設定しました"
+else
+	# 前回の実行で登録済みなら取り除く。壊れた include を残すと git の全コマンドが fatal に
+	# なるため、ホスト設定を取り込めないことより優先する。
+	#
+	# 注意: ここで git config は使えない。--get-all も --unset-all も壊れた include を
+	# 展開しようとして同じ fatal で落ちるため、git は自分で壊れた include を外せない。
+	# そのため ~/.gitconfig を直接書き換える。
+	gitconfig_file="${HOME}/.gitconfig"
+	if [ -f "$gitconfig_file" ] && grep -Fq -- "$gitconfig_host" "$gitconfig_file"; then
+		gitconfig_tmp="${gitconfig_file}.tmp.$$"
+		# git は "\tpath = <value>" の形で書くため、行頭の空白を落として完全一致で消す
+		# （前方一致にすると gitconfig-host-foo のような別の値まで消えてしまう）
+		if awk -v target="path = ${gitconfig_host}" '
+			{ line = $0; sub(/^[ \t]+/, "", line); if (line == target) next; print }
+		' "$gitconfig_file" >"$gitconfig_tmp" && mv "$gitconfig_tmp" "$gitconfig_file"; then
+			echo "✓ 読めない include.path を ~/.gitconfig から取り除きました（残すと git が使えなくなるため）"
+		else
+			rm -f "$gitconfig_tmp"
+			echo "   ~/.gitconfig から include.path を取り除けませんでした。手動で削除してください" >&2
+		fi
+	fi
+	echo "⚠️ ${gitconfig_host} が読めないため、ホストの git config を取り込みませんでした" >&2
+	echo "   user.name / user.email 等が未設定になります。ホスト側で mise bootstrap dotfiles apply を実行し、devcontainer を作り直してください" >&2
 fi
-echo "✓ ホストの git config を設定しました"
 # host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
 # 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
 git config --global core.excludesfile ~/.config/gitignore-host
