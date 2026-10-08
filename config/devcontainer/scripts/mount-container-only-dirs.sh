@@ -91,6 +91,7 @@ done < <(
 
 sudo install -d -o "$(id -u)" -g "$(id -g)" "${storage_root}"
 skipped=0
+failed=0
 for target in "${!targets[@]}"; do
 	# シンボリックリンクは sudo の操作がリンク先（workspace 外のこともある）に及ぶため分離しない。
 	if [ -L "${target}" ]; then
@@ -109,7 +110,12 @@ for target in "${!targets[@]}"; do
 		sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
 	fi
 	sudo install -d -o "$(id -u)" -g "$(id -g)" "${backing_dir}"
-	sudo mount --bind "${backing_dir}" "${target}"
+	# 1 つ失敗しても残りは分離する（set -e で途中終了すると後続が全部ホストに書かれる）
+	if ! sudo mount --bind "${backing_dir}" "${target}"; then
+		echo "⚠️ 分離できませんでした: ${target}" >&2
+		failed=$((failed + 1))
+	fi
 done
 
-echo "✓ $((${#targets[@]} - skipped)) 個のプロジェクト生成物をコンテナ内に分離しました"
+echo "✓ $((${#targets[@]} - skipped - failed)) 個のプロジェクト生成物をコンテナ内に分離しました"
+[ "${failed}" -eq 0 ]

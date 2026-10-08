@@ -206,3 +206,4 @@ EOF
 else
 	echo "ℹ️ ~/.crit.config.json は既に存在します"
 fi
+

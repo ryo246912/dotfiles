@@ -19,6 +19,18 @@ if [ -z "${real_crit}" ]; then
 	exit 127
 fi
 
+# crit daemon は CRIT_HOST=0.0.0.0 で待ち受け、client も 0.0.0.0 へ接続する。
+# sandbox ではプロキシ（HTTP(S)_PROXY）が設定されており、NO_PROXY に無いローカル宛ての接続も
+# プロキシ経由になって "Approval required…" が返る。/etc/sandbox-persistent.sh 側でも足しているが
+# （sandbox-post-create.sh の setup_no_proxy）、それを読まない起動経路や sbx が同ファイルを
+# 書き直した場合でも確実に効くよう、ここでも足す（devcontainer ではプロキシが無いので無害）。
+for __np_host in 0.0.0.0 localhost 127.0.0.1 ::1; do
+	case ",${NO_PROXY:-}," in *",${__np_host},"*) ;; *) NO_PROXY="${NO_PROXY:+${NO_PROXY},}${__np_host}" ;; esac
+	case ",${no_proxy:-}," in *",${__np_host},"*) ;; *) no_proxy="${no_proxy:+${no_proxy},}${__np_host}" ;; esac
+done
+unset __np_host
+export NO_PROXY no_proxy
+
 host_port_file="${HOME}/.crit-host-port"
 ssh_config="${HOME}/.config/ssh/config"
 

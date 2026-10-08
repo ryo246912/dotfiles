@@ -186,7 +186,18 @@ echo "==> ホスト設定を反映"
 sbx settings set clipboard.imagePaste true || echo "warn: clipboard.imagePaste の設定に失敗しました" >&2
 
 echo "==> ホストの agent skills を共有 store へ取り込む"
-sbx skills import || echo "warn: skills の取り込みに失敗しました" >&2
+# --force で skill ごとの Overwrite 確認（[y/N]）を飛ばす。プロンプトは sbx 自身の行入力で
+# 1 文字では受け付けられないため、付けないと skill の数だけ y + Enter を打つことになる。
+#
+# ホスト側（~/.claude/skills 等）が正で、共有 store はそこから作る派生物なので、
+# 上書きして揃えるのが期待する動作になる。sandbox は store を既定で read-only で
+# マウントする（sbx-agent の --skills 既定が readonly）ため、store 側だけにある編集が
+# 失われる心配も実質ない。
+#
+# 1 つずつ確認したい場合は --force 無しで手で流す:
+#   sbx skills import              # skill ごとに確認する
+#   sbx skills import --dry-run    # 何が入れ替わるか見るだけ
+sbx skills import --force || echo "warn: skills の取り込みに失敗しました" >&2
 
 echo "==> 現在の設定"
 sbx secret ls || true
@@ -263,18 +274,24 @@ description = "Save a running sandbox's filesystem as a reusable template"
 run = '''
 set -eu
 
-# 使い方: mise run sandbox:template-save <sandbox-name> [tag]
-# sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
-# 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:template-save <sandbox-name> [tag]
+  # sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
+  # 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
 
-sandbox="${1:-}"
-tag="${2:-sbx-agent:local}"
-[ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
-command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+  sandbox="${1:-}"
+  tag="${2:-sbx-agent:local}"
+  [ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
+  command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
 
-sbx template save "$sandbox" "$tag"
-echo
-sbx template ls
+  sbx template save "$sandbox" "$tag"
+  echo
+  sbx template ls
+}
+
+main "$@"
 '''
 
 ["sandbox:template-ls"]
@@ -285,7 +302,163 @@ run         = "sbx template ls"
 description = "Remove a saved Docker Sandboxes template"
 run = '''
 set -eu
-tag="${1:-}"
-[ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
-sbx template rm "$tag"
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  tag="${1:-}"
+  [ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
+  sbx template rm "$tag"
+}
+
+main "$@"
+'''
+
+["sandbox:disk"]
+description = "Show where Docker Sandboxes disk usage is going (read-only)"
+run = '''
+set -eu
+
+# 読み取り専用。回収は mise run sandbox:prune。
+# ディスクは「ホストの Docker（template をビルドする側）」と「sbx の image store /
+# sandbox 本体」の 2 箇所に分かれて増える。sbx は sandbox 間で layer を共有しないため
+# （docs/docker-sandboxes.md の「リソース使用量」参照）、sandbox の数だけ増える。
+
+# Docker Desktop が止まっていても sbx 側の情報は出したいので、docker 側は失敗を許す
+# （Resource Saver で VM が落ちているときは df が接続エラーになる）。
+if command -v docker >/dev/null 2>&1; then
+  echo "==> ホストの Docker（template のビルド元・build cache）"
+  if docker system df; then
+    echo
+    echo "--- image ごとの内訳（SHARED SIZE が layer の共有分）"
+    docker system df -v 2>/dev/null | sed -n '/^Images space usage:/,/^$/p'
+  else
+    echo "warn: docker に接続できませんでした（Docker Desktop が停止中？）" >&2
+  fi
+  echo
+else
+  echo "warn: docker が無いためホスト側は省略します" >&2
+fi
+
+if command -v sbx >/dev/null 2>&1; then
+  echo "==> sbx の template（sandbox 作成元の image）"
+  sbx template ls || true
+  echo
+  echo "==> sandbox 本体（それぞれが root 20GB + docker data 10GB の上限を持つ）"
+  sbx ls || true
+else
+  echo "warn: sbx が無いため sandbox 側は省略します" >&2
+fi
+'''
+
+["sandbox:prune"]
+description = "Reclaim Docker Sandboxes disk space (dry-run unless --yes)"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方:
+  #   mise run sandbox:prune                          # 何が消えるか出すだけ（既定）
+  #   mise run sandbox:prune --yes                    # 停止済み sandbox + dangling image
+  #   mise run sandbox:prune --yes --template         # + ホストの template image
+  #   mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
+  #   mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
+  #   mise run sandbox:prune --yes --all              # --template + --build-cache
+  #
+  # 既定を dry-run にしているのは、消すと取り返せないものが混ざるため
+  # （--build-cache-all は mise のインストール済みツールの cache mount も消す）。
+
+  apply=false
+  do_template=false
+  do_cache=false
+  cache_all=false
+  failed=0
+  tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
+
+  # cache mount（mise のインストール済みツール）を残して build cache を掃除するための filter。
+  # docker buildx prune の filter に type があり、exec.cachemount がこれに当たる
+  # （buildx の docs が `--filter "type!=exec.cachemount"` をそのまま例示している）。
+  cache_keep_filter='type!=exec.cachemount'
+
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) apply=true ;;
+      --template) do_template=true ;;
+      --build-cache) do_cache=true ;;
+      --build-cache-all) do_cache=true; cache_all=true ;;
+      --all) do_template=true; do_cache=true ;;
+      -h | --help)
+        echo "usage: mise run sandbox:prune [--yes] [--template] [--build-cache|--build-cache-all] [--all]"
+        exit 0
+        ;;
+      *) echo "error: 不明な引数: $arg" >&2; exit 2 ;;
+    esac
+  done
+
+  # dry-run では「消える候補」を実際に並べる（コマンド名だけ出しても判断材料にならない）。
+  # 実行時は失敗しても後続を続けるが、最後に非ゼロで終わるよう failed に記録する。
+  run_or_show() {
+    if [ "$apply" = true ]; then
+      echo "+ $*"
+      "$@" || { echo "warn: 失敗しました: $*" >&2; failed=1; }
+    else
+      echo "  (dry-run) $*"
+    fi
+  }
+
+  [ "$apply" = true ] || echo "== dry-run（実行するには --yes を付ける）=="
+
+  # 1) 停止済み sandbox。sbx prune は停止済みしか対象にしないので動いているものは残る。
+  if command -v sbx >/dev/null 2>&1; then
+    echo "==> 停止済み sandbox"
+    sbx prune --dry-run || true
+    run_or_show sbx prune --force
+    echo
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    # 2) dangling image。タグの付いていない層だけなので安全。
+    echo "==> ホストの dangling image"
+    docker image ls --filter dangling=true || true
+    run_or_show docker image prune --force
+    echo
+
+    # 3) ホストに残る template image。sbx template load で sbx 側の image store に
+    #    コピー済みなので、ホストのこれは次回ビルドの layer cache としてしか使わない。
+    if [ "$do_template" = true ]; then
+      echo "==> ホストの template image ($tag)"
+      if docker image inspect "$tag" >/dev/null 2>&1; then
+        docker image ls "$tag" || true
+        run_or_show docker image rm "$tag"
+      else
+        echo "  (無し)"
+      fi
+      echo
+    fi
+
+    # 4) build cache。既定では cache mount を残す filter 付きで掃除する
+    #    （--build-cache-all で cache mount も消す = 次回ビルドがフルインストールになる）。
+    if [ "$do_cache" = true ]; then
+      if [ "$cache_all" = true ]; then
+        echo "==> ホストの build cache（cache mount も消す / 次回ビルドがフルインストール）"
+        docker buildx du || true
+        run_or_show docker builder prune --force
+      else
+        echo "==> ホストの build cache（cache mount は残す）"
+        docker buildx du --filter "$cache_keep_filter" || true
+        run_or_show docker builder prune --force --filter "$cache_keep_filter"
+      fi
+      echo
+    fi
+  fi
+
+  echo "==> 残り"
+  command -v docker >/dev/null 2>&1 && docker system df || true
+
+  [ "$failed" -eq 0 ] || { echo "error: 一部の削除に失敗しました（上の warn を確認してください）" >&2; exit 1; }
+}
+
+main "$@"
 '''

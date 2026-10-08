@@ -85,6 +85,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:d-kuro/gwq"                                         = "0.1.1"
 "github:dyoshikawa/rulesync"                                = "8.21.0"
 "github:github/copilot-cli"                                 = "1.0.88"
+"github:github/gh-stack"                                    = { version = "0.2.0", bin = "gh-stack" }
 "github:gpanders/ijq"                                       = "1.1.2"
 "github:iamrohithrnair/emeraldian"                          = { version = "0.6.0", bin = "emeraldian" }
 "github:jdx/fnox"                                           = "1.35.1"

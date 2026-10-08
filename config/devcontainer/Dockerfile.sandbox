@@ -100,6 +100,25 @@ RUN --mount=type=secret,id=github_token \
     rsync -a --delete /mise/data/ /mise/data-cache/; \
     chown -R agent:agent /mise/data /mise/state
 
+# gh stack（github/gh-stack）は gh の公式 extension として入れる。gh 2.102 以降の `stack` は
+# 「extension を入れてください」と出すだけの組み込みコマンドで、extension があればそちらが
+# 優先される。mise には gh extension の backend が無いので、ここで `gh extension install` する。
+# 入り先は agent の ~/.local/share/gh/extensions（~/.config/gh とは別）。token は API の
+# レート制限回避用で、GH_CONFIG_DIR を使い捨てにして image には残さない。
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=v0.2.0
+RUN --mount=type=secret,id=github_token \
+    set -eu; \
+    if [ -s /run/secrets/github_token ]; then \
+      export GH_TOKEN="$(cat /run/secrets/github_token)"; \
+    fi; \
+    install -d -o agent -g agent "${AGENT_HOME}/.local" "${AGENT_HOME}/.local/share"; \
+    gh_config="$(mktemp -d)"; \
+    MISE_TRUSTED_CONFIG_PATHS=/mise XDG_DATA_HOME="${AGENT_HOME}/.local/share" GH_CONFIG_DIR="$gh_config" \
+      /mise/data/shims/gh extension install github/gh-stack --pin "$GH_STACK_VERSION"; \
+    rm -rf "$gh_config"; \
+    chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
+
 # tasks と設定ツリーは install の後に COPY する（上記の理由でキャッシュを守るため）。
 # devcontainer が bind mount していたのと同じ ~/.config/devcontainer 配下へ置くので、
 # tasks が参照する ${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/... がそのまま解決する。

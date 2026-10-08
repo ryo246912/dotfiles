@@ -105,12 +105,43 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
 # 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
+#    gh stack の extension 登録もここで行う（gh も gh-stack も [tools] なので、tools フェーズの後でないと
+#    まだ入っていない）。
 [bootstrap.hooks.post-tools]
 run = """
 set -e
 export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 mise --cd "$HOME" run apm:sync
 mise --cd "$HOME" run rulesync:sync
+
+# `gh stack` を gh-stack（mise で入れた bin）へ転送する。
+# gh 2.102 以降は `stack` が「公式 extension を入れてください」と出して exit 1 するだけの
+# 組み込みコマンドで、同名の alias は "already a gh command or extension" で拒否される。
+# extension として入っていればそちらが優先されるので、gh-stack を local extension
+# （ディレクトリへの symlink）として登録する。`gh extension install .` はローカルの
+# ディレクトリを symlink するだけなのでネットワークも認証も要らない。symlink 先は mise の
+# shim なので gh-stack を上げても張り直し不要。公式 extension を自分で入れている場合など、
+# 既に `gh stack` extension があれば触らない。
+# gh も gh-stack も mise の shim 経由なので、hook の PATH には入っていない
+# （pre-tools hook が同じ理由で PATH を足している）。足さないと command -v gh が外れて
+# 黙ってスキップされる。
+if [ "$(uname)" = "Darwin" ]; then
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
+else
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
+if command -v gh >/dev/null 2>&1 && gh_stack_bin=$(command -v gh-stack 2>/dev/null); then
+  # 以前の版が入れた alias は組み込みの stack に隠れて使われないので消しておく
+  if gh alias list 2>/dev/null | grep -q '^stack:.*gh-stack'; then
+    gh alias delete stack >/dev/null 2>&1 || true
+  fi
+  if ! gh extension list 2>/dev/null | grep -q '^gh stack'; then
+    gh_stack_dir="${XDG_DATA_HOME:-$HOME/.local/share}/gh-local-extensions/gh-stack"
+    { mkdir -p "$gh_stack_dir" && ln -sfn "$gh_stack_bin" "$gh_stack_dir/gh-stack" \
+      && (cd "$gh_stack_dir" && gh extension install . >/dev/null 2>&1); } \
+      || echo "warn: gh stack の extension 登録に失敗しました" >&2
+  fi
+fi
 """
 
 # "~/.config" は track mode（config/mise/config.toml 側で宣言。track は global

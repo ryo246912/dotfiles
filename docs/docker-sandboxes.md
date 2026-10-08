@@ -77,6 +77,10 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 `sbx run --rm` で使い捨てセッション、`sbx run -d` でバックグラウンド常駐、`sbx stop` で
 インストール済みパッケージを保ったまま停止できます。`sbx prune` でまとめて掃除もできます。
 
+ここで言う「軽い」は**手順**の話（定義ファイルもビルドも要らない）で、**消費資源は
+devcontainer の方が有利**です。後述の「[リソース使用量](#リソース使用量devcontainer-との比較)」
+を参照してください。
+
 ### 比較表
 
 | 項目           | devcontainer                            | Docker Sandboxes (sbx)                                        |
@@ -92,6 +96,7 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 | コミット署名   | 専用 SSH 鍵をコンテナに mount           | ssh-agent forwarding（秘密鍵はホストに残る）                  |
 | ツールチェイン | Dockerfile + mise で固定・キャッシュ    | カスタム template（同じ `mise.toml` を使う）                  |
 | 定義ファイル   | `config/devcontainer/devcontainer.json` | 不要（CLI 引数と `[settings.sandbox]`、任意で `sbxenv.yaml`） |
+| リソース消費   | 1 つの VM を全コンテナで共有（有利）    | sandbox ごとに VM + 専用 daemon（下記「リソース使用量」参照） |
 
 ## 大きな前提の違い
 
@@ -103,6 +108,108 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 3. **workspace・ports・secrets・`sandboxOptions` は作成時にしか確定しない。**
    変更するには `sbx rm` して作り直します（`sbx mount` / `sbx umount` で後から足せる
    dynamic mount もありますが、`sbx-agent` は使っていません）。
+
+## リソース使用量（devcontainer との比較）
+
+**結論から言うと、リソース効率は devcontainer の方が有利です。** sbx はそれを隔離の対価として
+払っています。Docker 公式の Architecture ページがそのまま書いています。
+
+> Sandboxes trade higher resource overhead (a VM plus its own daemon) for complete isolation.
+> — [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)
+
+差が出るのは **並列数** です。1 つだけ長時間動かすなら体感差は小さく、`multi-worktree` で
+複数同時に動かすほど開きます。
+
+### 構造の違い
+
+| 観点             | devcontainer（Docker Desktop）                                 | sbx（ローカル sandbox）                                                              |
+| ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 分離単位         | **1 つの Linux VM を全コンテナで共有**（kernel 共有）          | **sandbox ごとに microVM**（専用 kernel）                                            |
+| メモリ既定       | Docker VM に対してホストの 50%（1 つ分）                       | **sandbox ごとに**ホストの 50%（512 MiB〜32 GiB、上限 `max(75%, 512 MiB)`）          |
+| swap             | 1 GB（既定）                                                   | 設定項目が見当たらない（未確認）                                                     |
+| CPU 既定         | Docker Desktop の CPU limit（1 つ分）                          | `--cpus` 未指定で**ホストの全 CPU**（Linux arm64 のみ 16 上限）                      |
+| ディスク         | 1 つの disk image を共有し、**image layer も全コンテナで共有** | sandbox ごとに root 20 GB + docker data 10 GB。**layer は sandbox 間で共有されない** |
+| アイドル時の回収 | Resource Saver が既定 5 分で VM を停止し **2 GB 以上**を返す   | **ローカルには idle 停止が無い**（`--ttl` / `--on-timeout` は cloud 限定）           |
+| 復帰コスト       | VM 再起動 3〜10 秒                                             | `sbx stop` したものは `sbx run` で再開（VM の再作成は不要）                          |
+| ホスト FS 経由   | virtiofs の bind mount                                         | virtiofs passthrough（ホスト側キャッシュが既定 ON）                                  |
+| docker daemon    | 1 つ（docker-in-docker を足すとコンテナ内にもう 1 つ）         | **sandbox ごとに 1 つ**                                                              |
+
+効いてくるのは主に次の 3 点です。
+
+1. **メモリの既定が「ホストの 50%」で、それが sandbox ごとに付く。**
+   Docker Desktop の Memory limit も既定はホストの 50% ですが、そちらは VM 1 つ分です。
+   sbx は 2 つ起動すれば 50% の上限が 2 つ並びます（上限なので常時その量を使うわけでは
+   ありませんが、設計上の天井が違います）。
+2. **CPU の既定が「全部」。** `cpus: 0`（= `--cpus` 未指定）はホストの全 CPU を割り当てます。
+   並列で起動すると素直にオーバーサブスクライブします。実際これが問題になった形跡があり、
+   Linux arm64 では「複数の sandbox を同時起動すると `VM did not connect within 15s` で
+   失敗する」ため既定が 16 CPU に制限されています（[Release notes](https://docs.docker.com/ai/sandboxes/release-notes/)）。
+3. **image layer が sandbox 間で共有されない。** devcontainer なら同じ base image を
+   N 個のコンテナが共有しますが、sandbox はそれぞれが自分の image store を持ちます。
+   このリポジトリの template はツールチェイン一式で数 GB あるため、ここが一番効きます。
+
+### 数値の出所
+
+| 数値                                                      | 出所                                                                                                                             |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 「VM + 専用 daemon の分だけオーバーヘッドが高い」         | [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)（公式明記）                                                   |
+| 「sandbox 間で image / layer を共有しない」               | 同上（"Multiple sandboxes don't share images or layers."）                                                                       |
+| sandbox ごとに専用 kernel                                 | [Isolation layers](https://docs.docker.com/ai/sandboxes/security/isolation/)                                                     |
+| メモリ既定 50% / 512 MiB〜32 GiB / 上限 max(75%, 512 MiB) | `sbx create --help`（sbx 0.47.0 の実バイナリで確認）                                                                             |
+| `cpus: 0` = 全 CPU、Linux arm64 は 16 上限                | [Environment files](https://docs.docker.com/ai/sandboxes/configuration/environment-files/)                                       |
+| root 20 GB / docker data 10 GB（既定）                    | [Troubleshooting](https://docs.docker.com/ai/sandboxes/troubleshooting/)（`DOCKER_SANDBOXES_ROOT_SIZE` / `_DOCKER_SIZE` で変更） |
+| Docker Desktop の Memory limit 既定 50% / swap 1 GB       | [Docker Desktop settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/)                                    |
+| Resource Saver で 2 GB 以上回収・既定 5 分・復帰 3〜10 秒 | [Resource Saver mode](https://docs.docker.com/desktop/use-desktop/resource-saver/)                                               |
+| virtiofs キャッシュが既定 ON                              | [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)                                                               |
+
+### 分かっていないこと
+
+- **Docker は sandbox 1 つあたりの実測オーバーヘッドを公開していません。**
+  探した範囲では見つからず、出てくるのは個人ブログの観測値だけでした
+  （例: 36 GB のホストで既定 17.8 GB が割り当てられた、という観測）。数値として引くには弱いので、
+  必要なら下の手順で自分の環境を測るのが確実です。
+- **割り当てたメモリが常時 RSS として居座るのかは未計測。** sbx の VMM（`libsailor.so`）には
+  `virtio_balloon` と `BalloonStats` のシンボルがあるので、ballooning で返す仕組みはあり、
+  `--memory` は「上限」であって予約ではない可能性が高いと見ています（シンボルの存在のみ確認。
+  実際に返しているかは未測定）。
+- **root 20 GB / docker 10 GB が sparse かどうかも未計測。** 配布物に `mkfs.ext4` が含まれており
+  通常は sparse になるため「上限」と読めますが、確認はしていません。
+- 参考値として、別実装の microVM では **VMM 自体のメモリオーバーヘッドは小さい**ことが
+  仕様として保証されています（Firecracker は 1 vCPU / 128 MiB 構成で VMM スレッドが
+  **5 MiB 以下**、`/sbin/init` 到達まで **125 ms 以下**。
+  [SPECIFICATION.md](https://github.com/firecracker-microvm/firecracker/blob/main/SPECIFICATION.md)）。
+  sbx の VMM は Firecracker ではなく Docker 独自（`containerd-shim-nerdbox` + `libsailor.so`）なので
+  **そのまま当てはめられません**が、「重いのは VMM プロセスではなく guest kernel と
+  guest 側のページキャッシュ」という見方の裏付けにはなります。
+
+### 自分の環境で測る
+
+```bash
+# sandbox ごとに記録された CPU / memory の上限を見る
+sbx ls --json
+
+# TUI でライブのメモリ・CPU 使用量を見る（カードごとに表示される）
+sbx
+
+# devcontainer 側
+docker stats                 # コンテナごとの CPU / メモリ
+docker system df             # image / layer / volume の実使用量
+```
+
+Docker Desktop 側の総量は Settings > Resources（Memory limit / Disk usage limit）と
+Settings > Resources > Advanced の Disk usage で見られます。
+
+### このリポジトリでの実務的な指針
+
+- **並列させるなら上限を明示する。** `sbx-agent` は `--cpus` / `--memory` をそのまま渡すので、
+  `multi-worktree` で複数動かすときは既定（全 CPU・ホストの 50%）に任せず絞るのが無難です。
+- **使い終わったら止める。** ローカル sandbox には idle 停止が無いので、`sbx stop` で止めるか
+  `sbx run --rm` で使い捨てにします。溜まったものは `sbx prune`（停止済みを一括削除）や
+  `sbx rm` で片付けます。ディスクは sandbox 単位で増えるので、ここが一番効きます。
+  現状確認は `mise run sandbox:disk`、回収は `mise run sandbox:prune`
+  （[ディスクを空ける](#ディスクを空けるimage-layer-の-prune)参照）。
+- **ディスクが厳しいなら devcontainer を使う。** `multi-worktree dev --devcontainer` で
+  従来経路に戻せます。隔離より資源効率を優先する場面では素直にこちらです。
 
 ## セットアップ
 
@@ -157,6 +264,33 @@ sbx secret ls
 mise run sandbox:setup
 ```
 
+### コミット署名用の SSH 鍵を ssh-agent に登録する（Mac で一度だけ）
+
+sandbox 内のコミットは、ホストの ssh-agent を forwarding して SSH 署名します
+（[詳細](#ホストの-git-設定とコミット署名)）。ホストの ssh-agent が空だと `sbx-agent` が
+`ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します` と警告し、
+署名なしでコミットされます。次を一度だけ実行してください。
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+ssh-add -L   # 公開鍵が 1 行出れば OK
+```
+
+- `--apple-use-keychain` でパスフレーズを Keychain に保存しておくと、再起動で agent が空に
+  なっても `sbx-agent` が `ssh-add --apple-load-keychain` で自動的に読み込み直します。
+- このあと `sbx-agent` を起動し直せば警告は消え、sandbox 内のコミットが SSH 署名されます。
+- 署名を GitHub で **Verified** にするには、同じ公開鍵（`ssh-add -L` の出力）を
+  GitHub の [SSH and GPG keys](https://github.com/settings/keys) に **Signing key** として
+  登録してください。Authentication key とは別の枠なので、認証用に登録済みでも改めて追加が必要です。
+  `gh` からなら次の通りです（登録するのは `.pub` の公開鍵で、秘密鍵は渡しません）。
+
+```bash
+# signing key の登録には admin:ssh_signing_key scope が要る（初回だけブラウザで認可）
+gh auth refresh -h github.com -s admin:ssh_signing_key
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"
+gh ssh-key list   # TYPE が signing の行があれば OK
+```
+
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
 > 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
@@ -197,9 +331,9 @@ devcontainer と共通です。[docs/devcontainer.md](./devcontainer.md) の手�
 # ── ライフサイクル ─────────────────────────────────────────────
 sbx create --name=my-sbx claude .    # 作成のみ（アタッチしない）
 sbx run --name=my-sbx claude .       # 作成してアタッチ
-sbx run my-sbx                       # 既存 sandbox に再アタッチ（agent は spec から解決）
-sbx run my-sbx --branch=fix-bug      # branch mode（専用 worktree で作業させる）
-sbx run my-sbx -- --continue         # `--` 以降は agent へ pass-through
+sbx run --name=my-sbx                # 既存 sandbox に再アタッチ（agent は spec から解決）
+sbx run --name=my-sbx --branch=fix-bug # branch mode（専用 worktree で作業させる）
+sbx run --name=my-sbx -- --continue  # `--` 以降は agent へ pass-through
 sbx run --rm claude                  # セッション終了時に sandbox を削除
 sbx run -d --name=my-sbx claude .    # バックグラウンド常駐（ポート公開したまま使う）
 sbx ls                               # 一覧
@@ -225,7 +359,7 @@ sbx policy allow network "*.npmjs.org,*.pypi.org"
 
 # ── 認証情報 / skills / MCP ────────────────────────────────────
 sbx secret set github --command 'gh auth token'
-sbx skills import                    # ホストの skills を共有 store へ取り込む
+sbx skills import --force            # ホストの skills を共有 store へ取り込む（確認を飛ばす）
 sbx mcp add <name> --url <url>       # MCP サーバを gateway 経由で共有
 
 # ── TUI ────────────────────────────────────────────────────────
@@ -274,7 +408,7 @@ sbx-agent --help
    （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
-6. `sbx run <name>` でアタッチする
+6. `sbx run --name <name>` でアタッチする（位置引数で名前を渡す形は sbx 0.47 で deprecated）
 
 agent ごとの設定ディレクトリの対応（`--config-dir` で上書き可）:
 
@@ -372,9 +506,21 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
 mise run sandbox:setup           # secret / network policy / skills / 通知用 SSH 鍵
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
+gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
+gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
 mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
+
+> [!NOTE]
+> `sandbox:setup` の `sbx skills import` は **`--force`** を付けています。付けないと skill ごとに
+> `Overwrite "<skill>"? [y/N]` を聞かれ、skill の数だけ y + Enter を打つことになります
+> （プロンプトは sbx 自身の行入力なので、1 文字で受け付けるようにはできません）。
+> ホストの `~/.claude/skills` 等が正で共有 store はその派生物、かつ sandbox は store を既定で
+> read-only でマウントする（`sbx-agent` の `--skills` 既定が `readonly`）ため、上書きして
+> 揃えるのが期待する動作になります。1 つずつ確認したいときは `--force` 無しで、
+> 何が入れ替わるか見るだけなら `sbx skills import --dry-run` を手で流してください。
 
 `sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
@@ -414,7 +560,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
    - `--static-mcp` で登録済み MCP を読み込む
-4. sandbox 内で初期化（nvim symlink / 生成物の分離 / `mac-host` SSH config / lefthook / crit）
+4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
 `multi-worktree dev` から直接起動することもできます。
@@ -453,6 +599,73 @@ sbx prune                             # 使っていない sandbox をまとめ�
 
 `sbx stop` はインストール済みパッケージを保ったまま止めるだけなので、
 翌日また同じタスクを続けるなら `stop` のままにしておくと起動が速くなります。
+
+### ディスクを空ける（image layer の prune）
+
+まずどこを食っているか見ます。ディスクは **ホストの Docker**（template をビルドする側）と
+**sbx の image store / sandbox 本体** の 2 箇所に分かれて増えます。
+
+```bash
+mise run sandbox:disk
+```
+
+回収は `sandbox:prune` です。**既定は dry-run**（何が消えるか出すだけ）で、`--yes` を付けて
+初めて実行します。
+
+```bash
+mise run sandbox:prune                          # 何が消えるか出すだけ
+mise run sandbox:prune --yes                    # 停止済み sandbox + ホストの dangling image
+mise run sandbox:prune --yes --template         # + ホストの template image
+mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
+mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
+mise run sandbox:prune --yes --all              # --template + --build-cache
+```
+
+dry-run では消える候補を実際に列挙します（`sbx prune --dry-run`・`docker image ls`・
+`docker buildx du`）。実行時にどれかの削除が失敗した場合は、残りを続けたうえで
+**最後に非ゼロで終了**します。
+
+素のコマンドは次の 6 つです。何がどこを空けるかが段ごとに違うので、効果とコストを
+分けて把握しておくと選びやすくなります。
+
+| コマンド                                                | 空く場所                                 | コスト                                                                                                    |
+| ------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sbx prune`                                             | 停止済み sandbox（VM ごと）              | なし。**動いている sandbox は対象外**なので習慣的に打てる（`--dry-run` で事前確認、`--force` で確認省略） |
+| `sbx template rm <tag>`                                 | sbx 側の template image                  | その template からの `sbx create` ができなくなる（`mise run sandbox:build-template` で作り直す）          |
+| `docker image prune`                                    | ホストの dangling layer                  | なし（タグの付いていない層だけ）                                                                          |
+| `docker image rm sbx-agent:local`                       | ホストの template image（数 GB）         | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
+| `docker builder prune --filter "type!=exec.cachemount"` | ホストの build cache（cache mount 以外） | なし。**mise の cache mount を残す**ので次回も再ダウンロードは起きない                                    |
+| `docker builder prune`                                  | ホストの build cache（全部）             | **次回の `sandbox:build-template` が初回と同じフルインストールになる**（下記）                            |
+
+> [!NOTE]
+> `docker image rm sbx-agent:local` と `docker builder prune` の違いが効きます。
+> `Dockerfile.sandbox` は mise のインストール済みツールを
+> `RUN --mount=type=cache,id=sandbox-mise-cache` で持っており、これは **image ではなく
+> BuildKit の build cache 側**にあります。つまり image を消しても再ダウンロードは起きず、
+> 素の `docker builder prune` を打つと全ツールを取り直すことになります。
+>
+> それを避けるのが `--filter "type!=exec.cachemount"` です。buildx の filter には `type` が
+> あり、cache mount は `exec.cachemount` に当たります（buildx の docs がこの filter を
+> そのまま例示しています）。`sandbox:prune --build-cache` はこの filter 付きで、
+> `--build-cache-all` が filter 無しの全消しです。
+> 容量だけ抑えたいなら `docker builder prune --max-used-space 10GB` のように上限を
+> 決める手もあります（全消しではなくキャップ）。
+>
+> なお docker 29 系では `docker builder prune` は `docker buildx prune` そのもので、
+> その `-a`/`--all` は「全未使用 cache」ではなく **internal/frontend image を含める**
+> という意味なので、cache mount を残す目的には使えません。
+
+> [!TIP]
+> ホストの `sbx-agent:local` は、`sbx template load` した時点で **sbx 側の image store に
+> コピー済み**です。ホストに残っているものは次回ビルドの layer cache としてしか使わないので、
+> 容量が厳しいときは `--template` で落とすのが効率的です（sandbox は動き続けます）。
+
+sandbox の中で作った image を空けたいときは、sandbox 内で普通に `docker` を打ちます
+（sandbox ごとに専用の docker daemon を持っているため、ホストには影響しません）。
+
+```bash
+sbx exec <sandbox-name> docker system prune -af
+```
 
 ## ファイルシステムとパスの関係
 
@@ -578,31 +791,31 @@ linked worktree の `.git` は「ファイル」で、中身は common git dir �
 公式ドキュメントも「clone mode is rejected from inside a Git worktree other than the main one」
 と明記しており、`multi-worktree` の task root は linked worktree の集まりなので対象外です。
 
-そのため「生成物をホストに書かせない」目的には clone mode を使わず、
-次の方法を使っています。
+そのため生成物の置き場所を分ける目的には clone mode を使えず、
+次の運用にしています。
 
-## 生成物をホストに書かせない
+## 生成物（`node_modules` 等）の扱い
 
-`node_modules` / `.venv` / `target` / `.gradle` / `.terraform` を **sandbox ローカル領域へ
-bind mount して隠します**。devcontainer で使っていた `mount-container-only-dirs.sh` を
-そのまま流用しており、sandbox 側に追加の実装はありません。
+sandbox では `node_modules` / `.venv` / `target` などの生成物を**分離しません**。
+sandbox 内で `npm install` 等をすると、ホストの workspace（worktree）にそのまま Linux 版が書かれます。
 
-仕組みはシンプルです。
+devcontainer では `mount-container-only-dirs.sh` でコンテナローカル領域へ bind mount して隠していますが、
+sbx の agent は microVM の中でさらにコンテナとして動いており、`sudo` しても root は
+`CAP_SYS_ADMIN` を持ちません（`/proc/self/status` の `CapBnd` が Docker 既定の `a80425fb`）。
+共有フォルダ上に限らず `/tmp` 同士の `mount --bind` も `permission denied` になるため、
+mount による分離は使えません。
 
-1. workspace を走査して、生成物ディレクトリと、それを作るはずの manifest
-   （`package.json` / `pyproject.toml` / `Cargo.toml` / `*.tf` など）を見つける
-2. 各対象に `/var/lib/devcontainer-project-artifacts/<hash>` を `mount --bind` で被せる
-3. エージェントが `npm install` すると、中身は VM 内のバッキングディレクトリに書かれ、
-   **ホスト側の `node_modules` は空のまま**
+代わりにディレクトリ単位で持ち主を分けます。生成物は `.gitignore` 済みなので、
+checkout 間で混ざることはありません。
 
-sandbox は microVM なので mount が使え、base image の `agent` ユーザーは sudo を持っています。
-`sbx-agent` はアタッチごとに初期化スクリプトを実行するため、`sbx stop` で mount が外れても
-次の起動で張り直されます（`mountpoint -q` で判定するので二重 mount にはなりません）。
+| ディレクトリ                              | 生成物の持ち主 | 用途                                                     |
+| ----------------------------------------- | -------------- | -------------------------------------------------------- |
+| worktree（`multi-worktree` / ccmanager）  | sandbox        | エージェントの実装・テスト（Linux 版の `node_modules`）  |
+| main のチェックアウト（例: `~/dotfiles`） | ホスト         | 動作確認。ブランチを checkout してホストで install・実行 |
 
-- ホスト側に既に `node_modules` がある場合は、**移行せず隠すだけ**です（ホストの中身は保たれます）
-- symlink になっている対象は、リンク先が workspace 外に及ぶ可能性があるため分離しません
-- パスワード無しの sudo が使えない場合は警告を出してスキップします（この場合は従来どおり
-  ホストに書かれます）
+- worktree でホストから install やテストをしない（ネイティブモジュールが Linux 版 / macOS 版で
+  入れ替わって片方で壊れる）。
+- ホストで動作確認したいときは、main のチェックアウトで対象ブランチを checkout してから行う。
 
 ## worktree と Git metadata の mount
 
@@ -654,11 +867,40 @@ commit.gpgsign  = true
 
 ホストの ssh-agent に鍵が無い場合は `commit.gpgsign = false` にして警告します。
 ホストの gitconfig が GPG 署名を有効にしていても GPG 秘密鍵は sandbox に渡らないため、
-無効化しないと commit が毎回失敗するからです。`ssh-add ~/.ssh/id_ed25519` で鍵を登録してください。
+無効化しないと commit が毎回失敗するからです。
 
-> [!NOTE]
-> devcontainer では `gpg.ssh.allowedSignersFile` も設定して署名の検証までできるようにしていましたが、
-> sandbox 側では未設定です（署名の作成のみ）。
+macOS の ssh-agent は再起動のたびに空になり、`~/.ssh/config` の `AddKeysToAgent yes` も
+「SSH で鍵を使った時点」でしか登録しません。ホストの git が GPG 署名・HTTPS push だと
+SSH 鍵を使う機会が無いため、空のままになりがちです。そこで `sbx-agent` は agent が空のとき
+`ssh-add --apple-load-keychain` で Keychain に保存済みの鍵を非対話で読み込んでから判定します。
+Keychain にまだ保存していなければ、一度だけ次を実行してください（以降は自動で読み込まれます）。
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+ssh-add -L   # 公開鍵が表示されれば OK
+```
+
+署名を GitHub で Verified にするには、同じ公開鍵を GitHub に **Signing key** として登録しておく
+必要があります（Authentication key とは別枠）。
+
+`ssh-add -L` が `Could not open a connection to your authentication agent` になる場合は
+`SSH_AUTH_SOCK` が古い（tmux の古いセッションなど）ので、新しいシェルから実行してください。
+
+### 署名の検証（`allowed_signers`）
+
+SSH 署名を `git log --show-signature` などで検証するには `gpg.ssh.allowedSignersFile` が必要です
+（無いと `gpg.ssh.allowedSignersFile needs to be configured` になります）。sandbox で作った commit は
+SSH 署名なので、ホストで検証するときも同じです。
+
+`sbx-agent` は署名を有効にするとき、次をまとめて行います。
+
+1. ホストの `~/.config/git/allowed_signers` に `<user.email> namespaces="git" <ssh-add -L の 1 行目>` を
+   冪等に追記する（email は workspace で有効な `user.email`。work 用の `includeIf` も反映される）
+2. そのファイルを同じ絶対パスで read-only マウントし、sandbox の `gpg.ssh.allowedSignersFile` に指定する
+
+ホストの `~/.config/git/config`（`templates/git/config.tera`）も同じファイルを
+`gpg.ssh.allowedSignersFile` に指定しているので、sandbox の commit をホストでも検証できます。
+マウントは作成時に固定されるため、既存の sandbox には `sbx-agent --new` で反映してください。
 
 ## ツールチェイン（カスタム template）
 
@@ -709,8 +951,15 @@ mise run sandbox:build-template
 base image 側が持っており、バージョンと認証は sbx が管理するため、mise の shim で
 上書きしないようにしています。
 
-template 名の既定は `sbx-agent:local` で、`sbx-agent` は `sbx template ls` にこれがあれば
-自動で使います。別名を使う場合は `SBX_AGENT_TEMPLATE` か `[settings.sandbox].template` を設定します。
+`sbx-agent` は **常に `sbx-agent:local` を template として渡します**。別名を使う場合は
+`--template` か `SBX_AGENT_TEMPLATE`、`--no-template` で sbx の既定 template に戻せます
+（優先順位は `--no-template` > `--template` > `SBX_AGENT_TEMPLATE` > 既定）。
+
+template を渡すときは **`--pull missing` を付けます**。`sbx create` の `--pull` は
+**既定が `always`** なので（`sbx create --help`。sbx 0.47.0 で確認）、付けないと
+`sbx-agent:local` のようなローカルにしか無い template をレジストリから引こうとします。
+`never` ではなく `missing` なのは、`SBX_AGENT_TEMPLATE` にレジストリ上の参照を指定した場合に
+取得できなくなるのを避けるためです（ローカルに有れば引きません）。
 
 `mise.toml` や `tasks/` / `lint/` / `scripts/` を変えたら **template を再ビルド**してください。
 
@@ -741,13 +990,39 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 `sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
-| 処理                          | 内容                                                                                   |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                     |
-| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                     |
-| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す |
-| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                       |
-| lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ          |
+| 処理                          | 内容                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                           |
+| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                           |
+| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
+| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
+| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
+| lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ                |
+
+> [!NOTE]
+> sbx は `HTTP(S)_PROXY` を sandbox のプロキシに向けますが、既定の `NO_PROXY` には `0.0.0.0` が
+> 入っていません。crit は `CRIT_HOST=0.0.0.0` で待ち受け、client も `0.0.0.0:7842` へ接続するため、
+> そのままだと接続がプロキシ経由になって `Approval required…` が返り、crit が起動に失敗します。
+> plannotator など sandbox 内のローカルサーバーへの接続も同じ問題を踏みうるので、初期化スクリプトが
+> `/etc/sandbox-persistent.sh` にループバック系をまとめて足します（bash / zsh の両方が読む）。
+> `crit` ラッパーと `plannotator-browser` も実行時に同じ値を足すので、二重に効きます。
+> いずれも template に入っているため、既存の sandbox へは `mise run sandbox:build-template` →
+> `sbx-agent --new` で反映してください。
+
+> [!NOTE]
+> `gh stack`（[github/gh-stack](https://github.com/github/gh-stack)）は、devcontainer と sandbox では
+> **gh の公式 extension として template（image）のビルド時に入れています**
+> （`Dockerfile` / `Dockerfile.sandbox` の `gh extension install github/gh-stack --pin ...`）。
+> gh 2.102 以降、`stack` は「公式 extension を入れてください」と表示して exit 1 するだけの
+> 組み込みコマンドで、extension が入っていればそちらが優先されます（同名の alias は
+> `already a gh command or extension` で作れません）。
+>
+> - mise には gh extension を入れる backend が無いため、mise ではなく Dockerfile で入れています。
+>   バージョンは `ARG GH_STACK_VERSION` で固定し、renovate が追従します。
+> - 入り先は `~/.local/share/gh/extensions` で `~/.config/gh` とは別です。devcontainer で
+>   `~/.config/gh` を read-only mount していても、sandbox で mount していなくても image のものが見えます。
+> - 更新は他のツールと同じく template の再ビルド（`mise run sandbox:build-template` → `sbx-agent --new`、
+>   devcontainer は rebuild）です。
 
 crit（7842）と plannotator（19433）の **host port は固定せず sbx に採番させます**。
 devcontainer が `appPort: 127.0.0.1::7842` で自動採番していたのと同じ理由で、
@@ -815,25 +1090,24 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### postCreateCommand（`post-create.sh`）
 
-| devcontainer でやっていたこと                                                                     | sandbox                                                                     |
-| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                    |
-| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行                                          |
-| `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                     |
-| `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                     |
-| コミット署名（専用鍵 + `allowed_signers`）                                                        | ⚠️ ssh-agent forwarding で署名はできる。`allowed_signers`（検証側）は未設定 |
-| `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される |
-| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ✅ 同じスクリプトを `sudo mount --bind` で流用                              |
+| devcontainer でやっていたこと                                                                     | sandbox                                                                                 |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                                |
+| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行                                                      |
+| `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                                 |
+| `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                                 |
+| コミット署名（専用鍵 + `allowed_signers`）                                                        | ✅ ssh-agent forwarding で署名し、ホストの `allowed_signers` をマウントして検証もできる |
+| `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される             |
+| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ❌ 使わない（mount できないため。worktree は sandbox 用と割り切る）                     |
 
 ### postStartCommand（`post-start.sh`）
 
-| devcontainer でやっていたこと          | sandbox                                                                 |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| `mise trust`                           | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替           |
-| `mac-host` への SSH config 生成        | ✅ `sandbox-post-create.sh` で生成                                      |
-| crit の host port 取得・記録           | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                        |
-| crit の host port をホストへ通知       | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため） |
-| 生成物ディレクトリの bind mount 再張り | ✅ アタッチごとに初期化スクリプトを実行して張り直す                     |
+| devcontainer でやっていたこと    | sandbox                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| `mise trust`                     | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替           |
+| `mac-host` への SSH config 生成  | ✅ `sandbox-post-create.sh` で生成                                      |
+| crit の host port 取得・記録     | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                        |
+| crit の host port をホストへ通知 | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため） |
 
 ### コンテナ内でできていたこと
 
@@ -849,20 +1123,20 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている          |
 | `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている          |
 | MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                    |
-| 生成物（`node_modules` / `.venv`）をホストに書かない | ✅ sandbox ローカルへ bind mount（[詳細](#生成物をホストに書かせない)） |
+| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）  |
 
 ### 残っている差分
 
 | 項目                                   | 状況                                                                             |
 | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `gpg.ssh.allowedSignersFile`           | 署名の作成はできるが、検証用の allowed_signers は未設定                          |
 | `~/.claude/settings.json` の read-only | devcontainer は settings.json だけ ro で重ね mount していたが、sandbox は全体 rw |
 | `~/.config/ccusage` / `~/.config/mise` | 既定では渡していない（必要なら `extra_workspaces`）                              |
 
 ### まとめ
 
-ツールチェイン・ホスト連携・生成物の分離・MCP はすべて移植済みで、
-**残る差分は `allowed_signers`（署名検証）と `~/.claude/settings.json` の read-only 化**だけです。
+ツールチェイン・ホスト連携・MCP はすべて移植済みで、
+**残る差分は生成物の分離（mount できないため運用で分ける）と
+`~/.claude/settings.json` の read-only 化**です。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 
 ## MCP の扱い
@@ -1025,30 +1299,50 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 - カスタム template のビルドにはホスト側の Docker daemon が必要（sandbox 内ではビルドできない）。
 - `--skills=readwrite` の sandbox は他の sandbox が読む skills を書き換えられる。
   信頼境界を分けたい場合は `--skills=off`。
-- 生成物（`node_modules` / `.venv` / `target`）は sandbox ローカルへ bind mount して隠すが、
-  パスワード無しの sudo が使えないとスキップされ、ホストに書かれる
-  （[詳細](#生成物をホストに書かせない)）。
+- 生成物（`node_modules` / `.venv` / `target`）は worktree に書かれる。worktree は sandbox、main の
+  チェックアウトはホストと持ち主を分けて運用する（[詳細](#生成物node_modules-等の扱い)）。
 - `mise.toml` / `tasks/` / `lint/` / `scripts/` を変えたら `mise run sandbox:build-template` で
   template を作り直す（マウントではなく image に COPY しているため）。
 
 ## トラブルシューティング
 
-| 症状                                                             | 対処                                                                                              |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                    |
-| `You are not authenticated`                                      | `sbx login` で再認証                                                                              |
-| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                  |
-| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                     |
-| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                  |
-| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認（forwarding はホストの ssh-agent が前提）                         |
-| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）               |
-| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                   |
-| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
-| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
-| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
-| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | 同じ原因。`sbx template ls` に `sbx-agent:local` が無ければ既定 template で起動している           |
-| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）     |
-| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                           |
+| 症状                                                             | 対処                                                                                                                        |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                                              |
+| `You are not authenticated`                                      | `sbx login` で再認証                                                                                                        |
+| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                                            |
+| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                                               |
+| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                                            |
+| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認。macOS は `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` を一度実行                       |
+| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）                                         |
+| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                                             |
+| crit / plannotator が `Approval required…` で起動しない          | `NO_PROXY` に `0.0.0.0` が無い。template を作り直して `sbx-agent --new`（暫定なら `NO_PROXY="$NO_PROXY,0.0.0.0" crit ...`） |
+| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                                                   |
+| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認                           |
+| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                                                  |
+| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                                                |
+| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                                               |
+| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）                               |
+| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                                                     |
+
+### `sbx create` が template を見つけられずに失敗する
+
+`--pull missing` で渡しているため、`sbx-agent:local` がローカルの image store に無いと
+作成できません。`sbx-agent` は失敗時に確認手順を出します。
+
+```console
+[ERROR] sandbox の作成に失敗しました
+[ERROR]   template (sbx-agent:local) が原因かもしれません。確認するには:
+[ERROR]     sbx template ls
+[ERROR]   未ビルドなら: mise run sandbox:build-template
+[ERROR]   template 無しで起動するには --no-template を付けてください
+```
+
+- `sbx template ls` に出ていないなら `mise run sandbox:build-template` を実行します。
+- `error: not signed in to Docker` が出る場合は template ではなく `sbx login` の問題です
+  （`sbx template ls` は未ログインだと exit 1 になります）。
+- ツールチェイン無しでも急いで起動したいときは `--no-template` を付けます
+  （mise / lint 群 / nvim / crit は入りません）。
 
 ### ホスト設定が参照するコマンドが sandbox に無い（`cannot run delta` 等）
 
