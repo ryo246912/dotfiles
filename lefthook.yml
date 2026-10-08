@@ -10,7 +10,11 @@ post-merge:
     - name: install-mise (ai-only)
       only: &ai-only
         - run: test -n "${AI_AGENT:-}"
-      run: command -v mise >/dev/null 2>&1 || [ -x "$HOME/.local/bin/mise" ] || curl -fsSL https://mise.run | sh
+      run: |
+        command -v mise >/dev/null 2>&1 || [ -x "$HOME/.local/bin/mise" ] && exit 0
+        # Claude Code のクラウド環境では mise.jdx.dev（リリース一覧）が拒否されるため、バージョンを固定して GitHub から取得する。
+        MISE_VERSION="$(awk -F'"' '/^min_version/ { print $2; exit }' mise.toml)"
+        curl -fsSL https://mise.run | MISE_VERSION="$MISE_VERSION" MISE_INSTALL_FROM_GITHUB=1 sh
     - name: ensure-mise-version
       run: |
         # mise.run は ~/.local/bin に入れるが、AI エージェントの PATH に含まれるとは限らないため明示する。
@@ -56,7 +60,12 @@ post-merge:
       only: *ai-only
       run: |
         PATH="$PATH:$HOME/.local/bin"
-        mise trust && mise install
+        # Claude Code のクラウド環境の GitHub API はセッションのリポジトリ以外を拒否する。token があると mise は
+        # mise.lock の url_api（GitHub API）を使うため、token を外して url（直接ダウンロード）を使わせる。
+        if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+          unset GITHUB_TOKEN GH_TOKEN
+        fi
+        mise trust --yes && mise install --yes
     - name: dotfiles-apply
       skip: *ai-only
       # `mise bootstrap dotfiles apply` はpre/post-dotfilesフック（APM/rulesync同期を含む）も

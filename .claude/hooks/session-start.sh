@@ -13,13 +13,12 @@ ENV
 # shellcheck disable=SC1090
 source "$CLAUDE_ENV_FILE"
 
-# mise.jdx.dev（リリース一覧）はネットワークポリシーで拒否されるため、バージョンを固定して GitHub から取得する。
+# クローン直後は git hook が未インストールで lefthook の post-checkout が走らないため、
+# lefthook を動かすのに必要な mise と lefthook だけ入れ、残りのセットアップは post-checkout に任せる。
 if ! command -v mise >/dev/null 2>&1; then
 	MISE_VERSION="$(awk -F'"' '/^min_version/ { print $2; exit }' mise.toml)"
 	curl -fsSL https://mise.run | MISE_VERSION="$MISE_VERSION" MISE_INSTALL_FROM_GITHUB=1 sh
 fi
 mise trust --yes
-# クラウド環境の GitHub API はセッションのリポジトリ以外を拒否する。token があると mise は mise.lock の
-# url_api（GitHub API）を使うため、token を外して url（直接ダウンロード）を使わせる。
-env -u GITHUB_TOKEN -u GH_TOKEN mise install --yes
-lefthook install
+env -u GITHUB_TOKEN -u GH_TOKEN mise install --yes aqua:evilmartians/lefthook
+AI_AGENT="${AI_AGENT:-1}" mise exec -- lefthook run post-checkout
