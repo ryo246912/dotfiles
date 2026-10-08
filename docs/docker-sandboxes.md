@@ -332,7 +332,7 @@ sbx policy allow network "*.npmjs.org,*.pypi.org"
 
 # ── 認証情報 / skills / MCP ────────────────────────────────────
 sbx secret set github --command 'gh auth token'
-sbx skills import                    # ホストの skills を共有 store へ取り込む
+sbx skills import --force            # ホストの skills を共有 store へ取り込む（確認を飛ばす）
 sbx mcp add <name> --url <url>       # MCP サーバを gateway 経由で共有
 
 # ── TUI ────────────────────────────────────────────────────────
@@ -482,6 +482,15 @@ mise run sandbox:setup           # secret / network policy / skills / 通知用 
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
 mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
+
+> [!NOTE]
+> `sandbox:setup` の `sbx skills import` は **`--force`** を付けています。付けないと skill ごとに
+> `Overwrite "<skill>"? [y/N]` を聞かれ、skill の数だけ y + Enter を打つことになります
+> （プロンプトは sbx 自身の行入力なので、1 文字で受け付けるようにはできません）。
+> ホストの `~/.claude/skills` 等が正で共有 store はその派生物、かつ sandbox は store を既定で
+> read-only でマウントする（`sbx-agent` の `--skills` 既定が `readonly`）ため、上書きして
+> 揃えるのが期待する動作になります。1 つずつ確認したいときは `--force` 無しで、
+> 何が入れ替わるか見るだけなら `sbx skills import --dry-run` を手で流してください。
 
 `sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は

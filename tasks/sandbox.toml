@@ -186,7 +186,18 @@ echo "==> ホスト設定を反映"
 sbx settings set clipboard.imagePaste true || echo "warn: clipboard.imagePaste の設定に失敗しました" >&2
 
 echo "==> ホストの agent skills を共有 store へ取り込む"
-sbx skills import || echo "warn: skills の取り込みに失敗しました" >&2
+# --force で skill ごとの Overwrite 確認（[y/N]）を飛ばす。プロンプトは sbx 自身の行入力で
+# 1 文字では受け付けられないため、付けないと skill の数だけ y + Enter を打つことになる。
+#
+# ホスト側（~/.claude/skills 等）が正で、共有 store はそこから作る派生物なので、
+# 上書きして揃えるのが期待する動作になる。sandbox は store を既定で read-only で
+# マウントする（sbx-agent の --skills 既定が readonly）ため、store 側だけにある編集が
+# 失われる心配も実質ない。
+#
+# 1 つずつ確認したい場合は --force 無しで手で流す:
+#   sbx skills import              # skill ごとに確認する
+#   sbx skills import --dry-run    # 何が入れ替わるか見るだけ
+sbx skills import --force || echo "warn: skills の取り込みに失敗しました" >&2
 
 echo "==> 現在の設定"
 sbx secret ls || true
