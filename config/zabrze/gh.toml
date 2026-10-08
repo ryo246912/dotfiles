@@ -322,6 +322,11 @@ snippet = "gh-reassign-reviewer"
 trigger = "ghr"
 
 [[snippets]]
+name    = "gh-stack"
+snippet = "gh-stack"
+trigger = "ghst"
+
+[[snippets]]
 context = "^gh\\spr\\s(view|issue)"
 global  = true
 name    = "(gh pr/issue view) -w"
