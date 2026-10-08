@@ -332,10 +332,16 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
   起動した ccmanager では `~/.local/bin` が PATH に無く `sbx-agent` が見つからない。
   `zsh` は `-c`（非ログイン・非対話）でも `~/.zshenv` を読むので、そこで組み立てている
   PATH（`~/.local/bin`・mise shims）がそのまま効く。
-- **引数の転送**: ccmanager は preset の `args` の後ろに検出戦略ごとの引数を足す
-  （`detectionStrategy: "claude"` なら `--teammate-mode in-process`）。`zsh -c 'cmd' …` の
+- **引数の転送**: ccmanager は起動時に入力した初期プロンプトを preset の `args` の後ろへ
+  足す（`detectionStrategy` ごとに渡し方が違い、`claude`/`codex` は最終引数、
+  `github-copilot` は `-i <prompt>`。pin している ccmanager 4.1.25 の
+  `dist/utils/presetPrompt.js` の `preparePresetLaunch` で確認）。`zsh -c 'cmd' …` の
   第1引数は `$0` になるため、ダミーの `$0`（`"sbx-agent"`）を置いて以降を `"$@"` で
-  受け、`--` の後ろに転送している。これが無いと追加引数が `$0` に吸われて消える。
+  受け、`--` の後ろに転送している。これが無いとプロンプトが `$0` に吸われて消える。
+  なお `--teammate-mode in-process` の自動注入は `command` が `claude` そのものの
+  ときだけなので（同 4.1.25 の `dist/utils/commandArgs.js` の `injectTeammateMode`）、
+  `zsh` 経由のこれらの preset には付かない（`sh` 経由の既存 preset「Claude account2」
+  「Claude Work3」も同様）。
 
 ## ccmanager での開発の段取り
 
