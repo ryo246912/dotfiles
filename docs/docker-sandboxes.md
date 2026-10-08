@@ -324,6 +324,19 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 | `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
 | `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
 
+実際の preset は上の表のコマンドを直接 `command` に書くのではなく、
+`command: "zsh"` + `args: ["-c", "exec sbx-agent … -- \"$@\"", "sbx-agent"]` の形にしています。
+理由は2つあり、どちらも省略できません。
+
+- **PATH**: ccmanager は親プロセスの環境でそのまま `command` を exec するため、GUI から
+  起動した ccmanager では `~/.local/bin` が PATH に無く `sbx-agent` が見つからない。
+  `zsh` は `-c`（非ログイン・非対話）でも `~/.zshenv` を読むので、そこで組み立てている
+  PATH（`~/.local/bin`・mise shims）がそのまま効く。
+- **引数の転送**: ccmanager は preset の `args` の後ろに検出戦略ごとの引数を足す
+  （`detectionStrategy: "claude"` なら `--teammate-mode in-process`）。`zsh -c 'cmd' …` の
+  第1引数は `$0` になるため、ダミーの `$0`（`"sbx-agent"`）を置いて以降を `"$@"` で
+  受け、`--` の後ろに転送している。これが無いと追加引数が `$0` に吸われて消える。
+
 ## ccmanager での開発の段取り
 
 ### 最初の 1 回だけ（ホスト側のセットアップ）

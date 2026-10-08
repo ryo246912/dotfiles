@@ -76,40 +76,56 @@
         "id": "sbx",
         "name": "Claude account1 (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent claude"],
-        "fallbackArgs": ["-c", "exec sbx-agent claude"],
+        "args": ["-c", "exec sbx-agent claude -- \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent claude -- \"$@\"", "sbx-agent"],
         "detectionStrategy": "claude"
       },
       {
         "id": "sbx-account2",
         "name": "Claude account2 (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2"],
-        "fallbackArgs": ["-c", "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2"],
+        "args": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2 -- \"$@\"",
+          "sbx-agent"
+        ],
         "detectionStrategy": "claude"
       },
       {
         "id": "sbx-work3",
         "name": "Claude Work3 (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3"],
-        "fallbackArgs": ["-c", "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3"],
+        "args": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3 -- \"$@\"",
+          "sbx-agent"
+        ],
         "detectionStrategy": "claude"
       },
       {
         "id": "sbx-codex",
         "name": "Codex (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent codex -- resume --yolo"],
-        "fallbackArgs": ["-c", "exec sbx-agent codex -- --yolo"],
+        "args": ["-c", "exec sbx-agent codex -- resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent codex -- --yolo \"$@\"", "sbx-agent"],
         "detectionStrategy": "codex"
       },
       {
         "id": "sbx-copilot",
         "name": "Copilot (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent copilot -- --resume --yolo"],
-        "fallbackArgs": ["-c", "exec sbx-agent copilot -- --yolo"],
+        "args": ["-c", "exec sbx-agent copilot -- --resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent copilot -- --yolo \"$@\"", "sbx-agent"],
         "detectionStrategy": "github-copilot"
       }
     ],

@@ -50,6 +50,12 @@
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.local`（および `~/.config`）に
+    実ファイルが残っていると conflict で止まる。その場合は一度だけ force が必要
+    （[docs/mise.md](./mise.md) の「target → source の逆方向ワークフロー」参照）:
+    ```sh
+    mise bootstrap dotfiles apply --force --yes "~/.local"
+    ```
   - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
     [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
     `~/.config/mise/config.mac.toml` を正しく読める:
@@ -609,6 +615,12 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.local`（および `~/.config`）に
+    実ファイルが残っていると conflict で止まる。その場合は一度だけ force が必要
+    （[docs/mise.md](./mise.md) の「target → source の逆方向ワークフロー」参照）:
+    ```sh
+    mise bootstrap dotfiles apply --force --yes "~/.local"
+    ```
   - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
     `~/.config/mise/config.linux.toml` を正しく読める:
     1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）

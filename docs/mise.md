@@ -457,7 +457,7 @@ default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` �
 | ディレクトリ丸ごと除外      | `.chezmoiignore` に glob パターンで一括記述可能                                                                                          | エントリ単位の設定になる想定（glob 一括除外の仕組みは未確認）                                                               |
 | フック                      | `run_once_*`/`run_onchange_*`（コンテンツハッシュで再実行判定）+ `hooks.apply.pre/post`（任意の複雑な bash）                             | `[bootstrap.hooks.pre-dotfiles]`/`post-dotfiles`（dotfiles フェーズ全体を挟む粒度）                                         |
 | 差分プレビュー              | `chezmoi diff`                                                                                                                           | `mise bootstrap dotfiles diff`                                                                                              |
-| 適用の安全性                | `apply` で決定的に収束。衝突時は対話 or `--force`                                                                                        | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles` で上書き                                          |
+| 適用の安全性                | `apply` で決定的に収束。衝突時は対話 or `--force`                                                                                        | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles`（`apply` では `--force`）で上書き                 |
 | 逆方向同期（配置先→source） | 無し（source を直接編集するのが正）。ただし `chezmoi edit` で source を開いて即座に反映は可能                                            | あり（`track`/`add --changed`/`history`）。ブログの主眼と推測される新機能                                                   |
 | バージョン履歴              | git（source dir 自体が git repo）                                                                                                        | git（source dir）に加え、mise 独自の checkpoint/history ストアが並走する模様                                                |
 | 暗号化・秘密情報            | 組み込みテンプレート関数でパスワードマネージャー多数連携（bitwarden/1Password/pass/keyring等） + 外部ツール（本リポジトリは `fnox`）併用 | エントリに `encrypt = true` + `[history.encryption].recipients`（age 系）。パスワードマネージャー連携の組み込み関数は未確認 |
@@ -840,6 +840,28 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
     差分を repo へ取り込んでから `--force` で張り直す。
   - mise の history は symlink をリンクとして記録する（中身は記録しない）ため、
     リンク化したファイルの変更履歴は repo の git で追う。
+- **`~/.local` も同じ理由で `copy` → `symlink-each` に変えた**（`local/bin` のスクリプトを
+  `~/.local/bin` 側で直接直してもそのまま repo の作業ツリーへ入る）。既存環境には copy 時代の
+  実ファイルが `~/.local/bin` に残っているため、**移行時に一度だけ force が必要**:
+
+  ```sh
+  # 1) ~/.local 側だけにある編集が無いか確認する（管理外の share/state は除外）
+  diff -ru "$PWD/local" "$HOME/.local" | grep -v '^Only in .*/\.local[/:]'
+  # 2) このエントリだけを対象に置き換える
+  mise bootstrap dotfiles apply --force --yes "~/.local"
+  ```
+
+  target 引数を付けると force の影響をそのエントリに閉じられるので、他エントリの
+  ライブ編集を巻き込まない。target は前方一致ではなく「宣言したキーそのもの、または
+  解決後の絶対パス」との完全一致で照合され、`symlink-each` の各ファイルへの展開は
+  照合より後に走るため、ここでは個別ファイルではなく `"~/.local"` と書く
+  （mise の `src/system/files.rs: matches_target` と
+  `src/cli/dotfiles/mod.rs: select_requests` で確認）。
+  `mise bootstrap` を1コマンドで流す場合、同じ役割のフラグ名は `--force-dotfiles` に
+  なる（`apply` サブコマンドは `-f`/`--force`、トップレベルの `mise bootstrap` は
+  `--force-dotfiles`）。移行が済めば実ファイルは残らないので、以降の apply に force は
+  不要。
+
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
