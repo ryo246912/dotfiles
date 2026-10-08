@@ -834,7 +834,9 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   `config/` 側の更新が既存ファイルへ反映されないため廃止した。
   - 既存の実ファイルをリンクへ置き換えるには `mise bootstrap dotfiles apply --force` が
     必要（初回移行時。`--force` 前に `diff -ru ~/dotfiles/config ~/.config` 等で
-    `~/.config` 側だけにある編集を repo へ取り込んでおくこと）。
+    `~/.config` 側だけにある編集を repo へ取り込んでおくこと）。target 引数で
+    `"~/.config"` と指定すればこのエントリだけに force を閉じられる（後述の `~/.local` の
+    項参照。両方まとめて `apply --force --yes "~/.config" "~/.local"` と書いてもよい）。
   - 保存時に「一時ファイルへ書いて rename」するアプリは、リンクを実ファイルで
     置き換えてしまう。その場合は repo との同期が切れ、次の apply が conflict になるため、
     差分を repo へ取り込んでから `--force` で張り直す。
