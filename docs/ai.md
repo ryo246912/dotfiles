@@ -69,6 +69,7 @@ cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 | `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
 | `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
 | `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
+| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                     |
 | `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない） |
 | `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                               |
 | `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                    |
@@ -79,7 +80,7 @@ cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 | `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                             |
 
 `prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
-何も表示しません。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
+灰色で `cache – waiting` を表示します（Claude Code が v2.1.251 未満の場合もこの表示のままです）。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
 subagent のリクエストはこの統計に含まれません。
 
 ### cache を長持ちさせるための注意

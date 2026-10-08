@@ -7,10 +7,11 @@ input=$(cat)
 
 command -v jq >/dev/null 2>&1 || exit 0
 
-# prompt_cache が現れるまで（最初の API 応答前・v2.1.251 未満）は何も表示しない。
+# prompt_cache が現れるまで（最初の API 応答前・v2.1.251 未満）は灰色で waiting を表示する。
 # 自分のバージョンに存在しないフィールドは空文字となり、表示をスキップする。
 cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
-  .prompt_cache // empty
+  if .prompt_cache == null then "\u001b[90mcache – waiting\u001b[0m" else
+  .prompt_cache
   | . as $c
   | def kfmt: if . >= 1000 then "\((. / 1000) | round)k" else tostring end;
     def mins: if . >= 60 then "\((. / 60) | floor)m" else "\(.)s" end;
@@ -50,6 +51,7 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
       ]
       | "\u001b[31m\(join(" · "))\u001b[0m"
     else empty end
+  end
 ' 2>/dev/null)
 
 [ -n "$cache_line" ] && printf '%s\n' "$cache_line"
