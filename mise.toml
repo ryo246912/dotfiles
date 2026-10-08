@@ -21,7 +21,7 @@ includes = ["tasks/*.toml"]
 "github:betterleaks/betterleaks" = "1.3.1"
 "github:superfly/flyctl"         = "0.4.29"
 "npm:oxfmt"                      = "0.71.0"
-"npm:oxlint"                     = "1.86.0"
+"npm:oxlint"                     = "1.87.0"
 
 [hooks]
 postinstall = """
@@ -45,51 +45,6 @@ run      = "lefthook install"
 # 生成された global config を新しいプロセスの `mise bootstrap` に読ませる
 # 2段階の運用にしている（docs/setup.md 参照）。
 #
-# 0) pre-dotfiles: track mode（後述）は「target に既にあるものを追跡する」だけで
-#    source から初回配置する仕組みを持たないため、config/（共通）と config-mac|linux/
-#    （OS限定の hammerspoon・vicinae・autohotkey）から ~/.config へ
-#    「無いものだけ」コピーする一度きりの seed をここで行う。2回目以降は対象ファイルが
-#    既に存在するため実質no-opになる。
-#
-#    より宣言的な代替手段は無い（公式ドキュメントで確認済み）:
-#    - [dotfiles] の track mode は "Track entries cannot contain source, content,
-#      exclude, or manifest." （dotfiles.html）と明記されており、source からの
-#      初回配置手段を一切持たない設計。
-#    - [dotfiles] の copy/template/symlink mode は1ターゲットパス=1ソースの宣言で、
-#      「無ければ配置・あれば触らない」という条件分岐を持たない
-#      （apply は既存ターゲットを常に source へ収束＝上書きする。
-#      dotfiles.html#start-with-one-managed-file 参照）。
-#    - [bootstrap.files]/[bootstrap.directories] は絶対パスをファイル単位で宣言する
-#      root 権限向けの仕組みで、ディレクトリツリー一括かつ「無ければ作る」ではなく
-#      常に内容を収束（=上書き）させる（bootstrap/files.html 参照）ため、
-#      「一度だけ seed して以降は track に委ねる」用途には不向き。
-#    以上より、この一度きりの seed は hook 以外に宣言的な書き方が無い。
-[bootstrap.hooks.pre-dotfiles]
-run = """
-set -eu
-
-seed_tree() {
-  src_dir="$1"
-  dest_dir="$2"
-  [ -d "$src_dir" ] || return 0
-  find "$src_dir" -type f | while IFS= read -r src_file; do
-    rel_path="${src_file#"$src_dir"/}"
-    dest_file="$dest_dir/$rel_path"
-    [ -e "$dest_file" ] && continue
-    mkdir -p "$(dirname "$dest_file")"
-    cp "$src_file" "$dest_file"
-  done
-}
-
-seed_tree "$(pwd)/config" "$HOME/.config"
-if [ "$(uname)" = "Darwin" ]; then
-  seed_tree "$(pwd)/config-mac/hammerspoon" "$HOME/.config/hammerspoon"
-  seed_tree "$(pwd)/config-mac/vicinae" "$HOME/.config/vicinae"
-else
-  seed_tree "$(pwd)/config-linux/autohotkey" "$HOME/.config/autohotkey"
-fi
-"""
-
 # 1) post-dotfiles: dotfiles適用後にAPM/rulesyncを同期する。post-mergeでは
 #    MISE_HISTORY_ENABLED=0でprotective checkpointだけを無効化するが、hook自体は実行する。
 #    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
@@ -150,44 +105,130 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
 # 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
+#    gh stack の extension 登録もここで行う（gh も gh-stack も [tools] なので、tools フェーズの後でないと
+#    まだ入っていない）。
 [bootstrap.hooks.post-tools]
 run = """
 set -e
 export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 mise --cd "$HOME" run apm:sync
 mise --cd "$HOME" run rulesync:sync
+
+# `gh stack` を gh-stack（mise で入れた bin）へ転送する。
+# gh 2.102 以降は `stack` が「公式 extension を入れてください」と出して exit 1 するだけの
+# 組み込みコマンドで、同名の alias は "already a gh command or extension" で拒否される。
+# extension として入っていればそちらが優先されるので、gh-stack を local extension
+# （ディレクトリへの symlink）として登録する。`gh extension install .` はローカルの
+# ディレクトリを symlink するだけなのでネットワークも認証も要らない。symlink 先は mise の
+# shim なので gh-stack を上げても張り直し不要。公式 extension を自分で入れている場合など、
+# 既に `gh stack` extension があれば触らない。
+# gh も gh-stack も mise の shim 経由なので、hook の PATH には入っていない
+# （pre-tools hook が同じ理由で PATH を足している）。足さないと command -v gh が外れて
+# 黙ってスキップされる。
+if [ "$(uname)" = "Darwin" ]; then
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
+else
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
+if command -v gh >/dev/null 2>&1 && gh_stack_bin=$(command -v gh-stack 2>/dev/null); then
+  # 以前の版が入れた alias は組み込みの stack に隠れて使われないので消しておく
+  if gh alias list 2>/dev/null | grep -q '^stack:.*gh-stack'; then
+    gh alias delete stack >/dev/null 2>&1 || true
+  fi
+  if ! gh extension list 2>/dev/null | grep -q '^gh stack'; then
+    gh_stack_dir="${XDG_DATA_HOME:-$HOME/.local/share}/gh-local-extensions/gh-stack"
+    { mkdir -p "$gh_stack_dir" && ln -sfn "$gh_stack_bin" "$gh_stack_dir/gh-stack" \
+      && (cd "$gh_stack_dir" && gh extension install . >/dev/null 2>&1); } \
+      || echo "warn: gh stack の extension 登録に失敗しました" >&2
+  fi
+fi
 """
 
-# "~/.config" 自体は track mode（config/mise/config.toml 側で宣言。track は global
-# config からしか有効にならない実機仕様のため）。以下のエントリは常に git 側の内容へ
-# 収束させたい copy/template のまま維持している。このうち "~/.config" 配下の
-# 単一ファイルエントリ（mise/alacritty/ghostty/git/rio/rulesync mcp.json）、
-# "~/.zshenv"、"~/.apm"・"~/.claude"・"~/.codex" 配下の個別ファイル（apm.yml、
-# apm.lock.yaml、claude/settings.json、codex/config.toml、codex/hooks.json）は、
+# "~/.config" は track mode（config/mise/config.toml 側で宣言。track は global
+# config からしか有効にならない実機仕様のため）と symlink-each mode（下記）の両方で
+# 宣言している。symlink-each は config/ 配下の各ファイルへのシンボリックリンクを
+# ~/.config 側に1ファイルずつ張る（実体は ~/dotfiles/config/ 側）ため、~/.config 側で
+# 編集しても repo の作業ツリーが直接変わり、双方向に同期される。config/ に無い
+# ~/.config 配下のファイル（アプリが生成するもの等）には触らず、config/ から削除・exclude
+# したファイルのリンクは次の apply で外れる。既存の実ファイルをリンクへ置き換えるには
+# `mise bootstrap dotfiles apply --force` が必要（初回移行時や、アプリが保存時に
+# リンクを実ファイルで置き換えた場合）。exclude は旧 .chezmoiignore の共通除外に対応する。
+# ~/.config/mise もこのエントリでリンクする（mise は global config を symlink を解決した
+# パスでも global と判定・自動 trust し、`mise use -g` 等の書き込みも symlink を保ったまま
+# リンク先を更新する。mise v2026.9.12 の config/mod.rs・config_file/mod.rs・file.rs で確認）。
+# パターンは先頭 "/" を付けない（"/" 始まりで source root に固定する書き方は mise 2026.9.15
+# 以降の機能で、それ以前は何にもマッチしない）。"/" を含むパターンは source root 基準、
+# 含まないパターン（"*win*" 等）はツリー中の任意のパス要素にマッチする。
+# OS 別の除外（旧 .chezmoiignore の darwin/else 分岐）は mise.mac.toml / mise.linux.toml で
+# 同じキーを再宣言して上書きする（同一キーは merge ではなく上書きになるため、
+# exclude を変更する際は3ファイルとも揃えること）。
+#
+# "~/.apm"・"~/.claude"・"~/.codex" も同じ理由で symlink-each にしている（アプリが
+# これらのファイルをその場で書き換えた内容は repo の作業ツリーへ直接入る。apm_modules・
+# session log 等の source に無いファイルには触らない）。ただし一時ファイル + rename で
+# 保存するアプリは symlink を実ファイルに置き換えてしまう。apm の lockfile がこれに
+# 該当するため、apm:sync-lock（config/mise/tasks/dev.toml）が repo へのコピーと
+# symlink の張り直しを行う。
+#
+# "~/.aws" も symlink-each にしている。aws/ には雛形（config.example）だけを置き、
+# 実際の ~/.aws/config・credentials（アカウント ID や認証情報を含む）は source に無いため触らない。
+#
+# 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
+# 単一ファイルエントリ（alacritty/ghostty/git/rio/rulesync mcp.json）と
+# "~/.zshenv" は、
 # config/mise/config.toml 側で同じ target に track も追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。「copyで丸ごと管理する
 # ディレクトリの中の、個別ファイルだけをtrackする」構成も実機で問題なく動作することを
 # 確認済み）。ライブ編集は依然として次の apply で上書きされるが、上書き直前に
 # history checkpoint が自動で記録されるため、`mise bootstrap dotfiles rollback <path>`
-# で復元できるようになる（実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex" は
+# で復元できるようになる（実機確認済み）。"~/.apm"・"~/.claude"・"~/.codex" 配下の
+# 個別ファイル（apm.yml、apm.lock.yaml、claude/settings.json、codex/config.toml、
+# codex/hooks.json）にも track を宣言しているが、symlink-each のため history には
+# リンクとして記録され、内容の変更履歴は repo の Git で追う。これらのディレクトリは
 # ディレクトリ全体としては track の対象外にしている（apm_modules・session log・
 # 認証情報等の git 管理外のランタイム状態も混在するため）。"~/.local" も同様の理由で
 # ディレクトリ全体・個別ファイルのいずれも track していない（config/mise/config.toml
 # のコメント参照）。
+#
+# "~/.local" は ~/.config と同じく symlink-each にしている。local/bin のスクリプトを
+# ~/.local/bin 側で直接編集しても repo の作業ツリーへ反映されるようにするため
+# （copy だと apply するまで反映されず、逆方向の編集も失われる）。
+# symlink-each なので ~/.local/share・state 等の管理外のものはそのまま残る。
+#
+# copy からの移行（既存環境では1回だけ必要）: ~/.local/bin には copy 時代の実ファイルが
+# 残っているため、通常の apply は conflict で止まる。force で置き換える:
+#   mise bootstrap dotfiles apply --force --yes "~/.local"
+# target 引数（この "~/.local"）を付けると force の影響をこのエントリだけに閉じられる
+# ため、他エントリのライブ編集を巻き込まない。target は前方一致ではなく「宣言した
+# キーそのもの（または解決後の絶対パス）」と完全一致で照合され、symlink-each の
+# 各ファイルへの展開は照合より後に行われるので、ここでは "~/.local" と書く
+# （mise の src/system/files.rs: matches_target / src/cli/dotfiles/mod.rs:
+# select_requests で確認）。
+# force の前に ~/.local 側だけにある編集が無いか確認すること:
+#   diff -ru "$PWD/local" "$HOME/.local" | grep -v '^Only in .*/\.local[/:]'
+# `mise bootstrap` を1コマンドで流す場合は、同じ役割のフラグ名が --force-dotfiles に
+# なる（`apply` サブコマンドは -f/--force、トップレベルの `mise bootstrap` は
+# --force-dotfiles。mise の CLI reference で確認）。移行が済めば実ファイルは残らない
+# ので、以降の apply に force は不要。
 [dotfiles]
-"~/.apm"                                = { source = "apm", mode = "copy" }
-"~/.claude"                             = { source = "claude", mode = "copy" }
-"~/.codex"                              = { source = "codex", mode = "copy" }
+"~/.apm"                                = { source = "apm", mode = "symlink-each" }
+"~/.aws"                                = { source = "aws", mode = "symlink-each" }
+"~/.claude"                             = { source = "claude", mode = "symlink-each" }
+"~/.codex"                              = { source = "codex", mode = "symlink-each" }
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
 "~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
-"~/.config/mise"                        = { source = "config/mise", mode = "copy" }
 "~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
-"~/.local"                              = { source = "local", mode = "copy" }
+"~/.local"                              = { source = "local", mode = "symlink-each" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
-# ~/.config 全体（"~/.config/mise" を除く）の history 自動保存。track entry 自体は
+[dotfiles."~/.config"]
+exclude = ["agentsview/tests"]
+mode    = "symlink-each"
+source  = "config"
+
+# ~/.config 全体の history 自動保存。track entry 自体は
 # config/mise/config.toml（deploy先: ~/.config/mise/config.toml）側で宣言する
 # （mise の track mode は project config ではなく global config からのみ有効になる
 # 実機仕様のため）。
