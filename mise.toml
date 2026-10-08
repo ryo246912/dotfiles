@@ -139,6 +139,9 @@ mise --cd "$HOME" run rulesync:sync
 # 該当するため、apm:sync-lock（config/mise/tasks/dev.toml）が repo へのコピーと
 # symlink の張り直しを行う。
 #
+# "~/.aws" も symlink-each にしている。aws/ には雛形（config.example）だけを置き、
+# 実際の ~/.aws/config・credentials（アカウント ID や認証情報を含む）は source に無いため触らない。
+#
 # 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
 # 単一ファイルエントリ（alacritty/ghostty/git/rio/rulesync mcp.json）と
 # "~/.zshenv" は、
@@ -178,6 +181,7 @@ mise --cd "$HOME" run rulesync:sync
 # ので、以降の apply に force は不要。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "symlink-each" }
+"~/.aws"                                = { source = "aws", mode = "symlink-each" }
 "~/.claude"                             = { source = "claude", mode = "symlink-each" }
 "~/.codex"                              = { source = "codex", mode = "symlink-each" }
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }

@@ -677,9 +677,9 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 root に固定する書き方は mise 2026.9.15 以降でしか効かないため使わない。
 
 本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
-「ブランケットコピーしてよい形」に揃えた（`~/.local`・`~/.apm`・`~/.claude`・`~/.codex`
-は同じディレクトリ構成のまま symlink-each で、`~/.config` は track と `exclude` 付きの
-symlink-each の併用で配置している。詳細は後述の「target → source の逆方向ワークフロー」
+「ブランケットコピーしてよい形」に揃えた（`~/.local`・`~/.apm`・`~/.aws`・`~/.claude`・
+`~/.codex` は同じディレクトリ構成のまま symlink-each で、`~/.config` は track と `exclude`
+付きの symlink-each の併用で配置している。詳細は後述の「target → source の逆方向ワークフロー」
 参照）:
 
 - **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から

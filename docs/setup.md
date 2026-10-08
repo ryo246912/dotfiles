@@ -50,11 +50,12 @@
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
-    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` に実ファイルが
-    残っていると conflict で止まる。その場合は一度だけ force が必要。target を並べて
-    この2エントリだけに force を閉じる（他エントリのライブ編集を巻き込まないため）:
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
+    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
+    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
+    巻き込まないため）:
     ```sh
-    MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
+    MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
     ```
     force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
     （確認のしかたと注意点は [docs/mise.md](./mise.md) の
@@ -620,11 +621,12 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
-    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` に実ファイルが
-    残っていると conflict で止まる。その場合は一度だけ force が必要。target を並べて
-    この2エントリだけに force を閉じる（他エントリのライブ編集を巻き込まないため）:
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
+    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
+    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
+    巻き込まないため）:
     ```sh
-    MISE_ENV=linux mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
+    MISE_ENV=linux mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
     ```
     force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
     （確認のしかたと注意点は [docs/mise.md](./mise.md) の
