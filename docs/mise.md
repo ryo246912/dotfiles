@@ -853,6 +853,13 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   mise bootstrap dotfiles apply --force --yes "~/.local"
   ```
 
+  `~/.config` も一緒に移行するなら target を並べる
+  （`apply --force --yes "~/.config" "~/.local"`）。その場合は `MISE_ENV` が解決済みである
+  ことを確かめること（通常は `~/.zshenv` が `HOST_ENV` から導出する）。未設定のまま
+  `~/.config` を force すると `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、
+  他 OS 向けのファイルまでリンクしてしまう。新規マシンの初回適用のように `HOST_ENV` が
+  まだ無い段階では `MISE_ENV=mac`（または `linux`）を明示する（docs/setup.md 参照）。
+
   target 引数を付けると force の影響をそのエントリに閉じられるので、他エントリの
   ライブ編集を巻き込まない。target は前方一致ではなく「宣言したキーそのもの、または
   解決後の絶対パス」との完全一致で照合され、`symlink-each` の各ファイルへの展開は

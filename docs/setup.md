@@ -54,11 +54,13 @@
     残っていると conflict で止まる。その場合は一度だけ force が必要。target を並べて
     この2エントリだけに force を閉じる（他エントリのライブ編集を巻き込まないため）:
     ```sh
-    mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
+    MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
     ```
     force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
     （確認のしかたと注意点は [docs/mise.md](./mise.md) の
-    「target → source の逆方向ワークフロー」参照）。
+    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
+    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
+    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
   - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
     [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
     `~/.config/mise/config.mac.toml` を正しく読める:
@@ -622,11 +624,13 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     残っていると conflict で止まる。その場合は一度だけ force が必要。target を並べて
     この2エントリだけに force を閉じる（他エントリのライブ編集を巻き込まないため）:
     ```sh
-    mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
+    MISE_ENV=linux mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local"
     ```
     force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
     （確認のしかたと注意点は [docs/mise.md](./mise.md) の
-    「target → source の逆方向ワークフロー」参照）。
+    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
+    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
+    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
   - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
     `~/.config/mise/config.linux.toml` を正しく読める:
     1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
