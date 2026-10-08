@@ -267,11 +267,31 @@ for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
     done
 done
 
+# `sbx template ls` に指定の template があるかを判定する。
+# 出力の形は sbx のバージョンで変わりうる（`repo:tag` を 1 列で出す形と、docker images 風に
+# REPOSITORY と TAG を別カラムで出す形）。判定を間違えると「template はあるのに既定
+# template で起動する」ことになり、症状が「PATH に mise が無い」のように間接的で原因に
+# 辿りにくいため、どちらの形でも拾えるようにしておく。
+template_loaded() {
+    local ref="$1" repo tag out
+    repo="${ref%%:*}"
+    tag="${ref##*:}"
+    out=$(sbx template ls 2>/dev/null) || return 1
+    # 部分一致（grep -F）だと `sbx-agent-old:local` のような別 template を取り違えるため、
+    # 列の完全一致で見る。1 列目が参照そのもの（`repo:tag`）か、1・2 列目が repo と tag に
+    # 分かれている（docker images 風）かのどちらかなら「ある」と判定する。
+    printf '%s\n' "$out" | awk -v ref="$ref" -v repo="$repo" -v tag="$tag" '
+        $1 == ref { found = 1 }
+        $1 == repo && $2 == tag { found = 1 }
+        END { exit !found }
+    '
+}
+
 # template 未指定なら、ツールチェイン入りのローカル template があればそれを使う
 if [[ -z "$TEMPLATE" ]]; then
     if [[ -n "${SBX_AGENT_TEMPLATE:-}" ]]; then
         TEMPLATE="$SBX_AGENT_TEMPLATE"
-    elif sbx template ls 2>/dev/null | grep -q "$DEFAULT_TEMPLATE"; then
+    elif template_loaded "$DEFAULT_TEMPLATE"; then
         TEMPLATE="$DEFAULT_TEMPLATE"
     else
         # 黙って sbx の既定 template にフォールバックすると、PATH に mise の shim も
@@ -280,6 +300,10 @@ if [[ -z "$TEMPLATE" ]]; then
         log_warn "ツールチェイン入りの template ($DEFAULT_TEMPLATE) が見つかりません"
         log_warn "  sbx の既定 template で起動します。mise / lint 群 / nvim / crit は入りません"
         log_warn "  用意するには: mise run sandbox:build-template"
+        # ビルド済みなのにここへ来る場合は判定の取りこぼしなので、実際の一覧を見せる
+        # （sbx template ls 自体が失敗している場合も、その stderr がそのまま出る）。
+        log_warn "  現在の sbx template ls:"
+        sbx template ls 2>&1 | sed 's/^/    /' >&2 || true
     fi
 fi
 
@@ -637,7 +661,12 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
         create_cmd+=(--static-mcp "$spec")
     done
-    [[ -n "$TEMPLATE" ]] && create_cmd+=(--template "$TEMPLATE")
+    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:local` のような
+    # ローカルにしか無い template をレジストリから引こうとしてしまう（sbx 0.47.0 の
+    # `sbx create --help` で確認。docs も `sbx run --pull never -t TAG` を例示している）。
+    # never ではなく missing にするのは、SBX_AGENT_TEMPLATE にレジストリ上の参照を
+    # 指定された場合に取得できなくなるのを避けるため（ローカルに有れば引かない）。
+    [[ -n "$TEMPLATE" ]] && create_cmd+=(--template "$TEMPLATE" --pull missing)
     [[ -n "$CPUS" ]] && create_cmd+=(--cpus "$CPUS")
     [[ -n "$MEMORY" ]] && create_cmd+=(--memory "$MEMORY")
     if [[ "$HOST_BRIDGE" == true ]]; then
