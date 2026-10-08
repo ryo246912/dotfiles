@@ -1,3 +1,7 @@
+# Codex の SessionStart フックは PATH を後続のシェルへ引き継げないため、mise.run が入れる ~/.local/bin を
+# git hook 側で補い、mise 経由で lefthook を起動する。
+lefthook: PATH="$PATH:$HOME/.local/bin" mise exec -- lefthook
+
 output:
   - meta
   - summary
