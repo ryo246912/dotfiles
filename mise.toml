@@ -105,7 +105,7 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
 # 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
-#    gh の alias もここで用意する（gh も gh-stack も [tools] なので、tools フェーズの後でないと
+#    gh stack の extension 登録もここで行う（gh も gh-stack も [tools] なので、tools フェーズの後でないと
 #    まだ入っていない）。
 [bootstrap.hooks.post-tools]
 run = """
@@ -114,29 +114,33 @@ export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 mise --cd "$HOME" run apm:sync
 mise --cd "$HOME" run rulesync:sync
 
-# `gh stack` を gh-stack（mise で入れた bin）へ転送する alias。
-# gh は未知のサブコマンドを PATH から探さず、extension ディレクトリにあるものしか dispatch
-# しないため（cli/cli の pkg/cmd/extension/manager.go: Dispatch）、PATH 上に gh-stack が
-# あるだけでは `gh stack` は動かない。gh の shell alias（`!` 始まり）は
-# `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を埋めるので "$@" がそのまま
-# 引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
-# alias の保存先 ~/.config/gh/config.yml は認証情報と同じファイルで repo 管理外のため、
-# bootstrap のたびにここで冪等に用意する。既に stack alias があれば触らない
-# （ユーザーが別の定義にしている場合を尊重する）。
+# `gh stack` を gh-stack（mise で入れた bin）へ転送する。
+# gh 2.102 以降は `stack` が「公式 extension を入れてください」と出して exit 1 するだけの
+# 組み込みコマンドで、同名の alias は "already a gh command or extension" で拒否される。
+# extension として入っていればそちらが優先されるので、gh-stack を local extension
+# （ディレクトリへの symlink）として登録する。`gh extension install .` はローカルの
+# ディレクトリを symlink するだけなのでネットワークも認証も要らない。symlink 先は mise の
+# shim なので gh-stack を上げても張り直し不要。公式 extension を自分で入れている場合など、
+# 既に `gh stack` extension があれば触らない。
 # gh も gh-stack も mise の shim 経由なので、hook の PATH には入っていない
 # （pre-tools hook が同じ理由で PATH を足している）。足さないと command -v gh が外れて
-# alias が黙ってスキップされる。
+# 黙ってスキップされる。
 if [ "$(uname)" = "Darwin" ]; then
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
-# gh-stack を extension として入れている（`gh stack` が既に動く）場合、gh は同名の alias を
-# "already a gh command or extension" で拒否するのでスキップする。
-if command -v gh >/dev/null 2>&1 && ! gh alias list 2>/dev/null | grep -q '^stack:' \
-  && ! gh stack --help >/dev/null 2>&1; then
-  gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1 \
-    || echo "warn: gh の stack alias を設定できませんでした（gh alias set stack で手動設定してください）" >&2
+if command -v gh >/dev/null 2>&1 && gh_stack_bin=$(command -v gh-stack 2>/dev/null); then
+  # 以前の版が入れた alias は組み込みの stack に隠れて使われないので消しておく
+  if gh alias list 2>/dev/null | grep -q '^stack:.*gh-stack'; then
+    gh alias delete stack >/dev/null 2>&1 || true
+  fi
+  if ! gh extension list 2>/dev/null | grep -q '^gh stack'; then
+    gh_stack_dir="${XDG_DATA_HOME:-$HOME/.local/share}/gh-local-extensions/gh-stack"
+    { mkdir -p "$gh_stack_dir" && ln -sfn "$gh_stack_bin" "$gh_stack_dir/gh-stack" \
+      && (cd "$gh_stack_dir" && gh extension install . >/dev/null 2>&1); } \
+      || echo "warn: gh stack の extension 登録に失敗しました" >&2
+  fi
 fi
 """
 

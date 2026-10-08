@@ -207,28 +207,22 @@ else
 	echo "ℹ️ ~/.crit.config.json は既に存在します"
 fi
 
-# gh stack を gh-stack（mise で入れた bin）へ転送する alias を用意する。
-# gh は未知のサブコマンドを PATH から探さず、extension ディレクトリに入っているものしか
-# dispatch しない（cli/cli の pkg/cmd/extension/manager.go: Dispatch は m.list() の結果しか
-# 見ない）ため、PATH 上に gh-stack があるだけでは `gh stack` は動かない。
-# gh の shell alias（`!` 始まり）は `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を
-# 埋めるので "$@" がそのまま引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
-#
-# alias は ~/.config/gh/config.yml に入るが、devcontainer はホストの ~/.config/gh を
-# **read-only** で bind mount している（認証情報と同じファイルなのでコンテナから書かせない）。
-# そのためコンテナ内で `gh alias set` はできない。ここでは有無だけ確認し、無ければ
-# ホスト側で用意する手順を案内する（ホストで設定すれば、この read-only マウント経由で
-# コンテナからも見える）。
-# sandbox 側は ~/.config/gh をマウントしないので、そちらは自前で set する
-# （sandbox-post-create.sh 参照）。
-if command -v gh >/dev/null 2>&1; then
-	if gh alias list 2>/dev/null | grep -q '^stack:'; then
-		echo "✓ gh stack -> gh-stack の alias はホスト設定から見えています"
-	elif gh stack --help >/dev/null 2>&1; then
-		echo "✓ gh stack は extension / 組み込みコマンドとして使えます"
+# gh stack を gh-stack（mise で入れた bin）へ転送する。
+# gh 2.102 以降は `stack` が「公式 extension を入れてください」と出すだけの組み込みコマンドで、
+# 同名の alias は作れない。extension として入っていればそちらが優先されるので、gh-stack を
+# local extension（ディレクトリへの symlink）として登録する（ネットワーク・認証は不要）。
+# extension は ${XDG_DATA_HOME:-~/.local/share}/gh に入り、read-only mount の ~/.config/gh には
+# 書かないのでコンテナ内で登録できる。詳細は sandbox-post-create.sh の setup_gh_stack 参照。
+if command -v gh >/dev/null 2>&1 && gh_stack_bin=$(command -v gh-stack 2>/dev/null); then
+	if gh extension list 2>/dev/null | grep -q '^gh stack'; then
+		echo "ℹ️ gh stack は extension として登録済みです"
 	else
-		echo "ℹ️ gh の stack alias がありません（~/.config/gh は read-only なのでここでは設定できません）"
-		echo "   ホスト側で mise bootstrap を実行するか、次を打ってください:"
-		echo "   gh alias set stack '!gh-stack \"\$@\"'"
+		gh_stack_dir="${XDG_DATA_HOME:-$HOME/.local/share}/gh-local-extensions/gh-stack"
+		if mkdir -p "$gh_stack_dir" && ln -sfn "$gh_stack_bin" "$gh_stack_dir/gh-stack" &&
+			(cd "$gh_stack_dir" && gh extension install . >/dev/null 2>&1); then
+			echo "✓ gh stack -> gh-stack を local extension として登録しました"
+		else
+			echo "⚠️ gh stack の extension 登録に失敗しました" >&2
+		fi
 	fi
 fi
