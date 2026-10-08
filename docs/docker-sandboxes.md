@@ -896,6 +896,9 @@ sandbox 内で `aws sso login` 等をやり直す運用になります。
 sbx          # TUI ダッシュボード（カードで一覧 + CPU/メモリをライブ表示 + network パネル）
 ```
 
+tmux からは `prefix + C-d` のツール選択（`config/tmux/tmux.conf`）に `sbx` を入れてあるので、
+`lazygit`/`ghui` と同じように overlay session で開けます。
+
 | キー    | 動作                                         |
 | ------- | -------------------------------------------- |
 | `c`     | 新規作成                                     |
