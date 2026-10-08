@@ -991,7 +991,6 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 | `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
 | NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
 | `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
-| `gh stack` の extension 登録  | `gh-stack`（mise で入れた bin）を gh の local extension として登録する                       |
 | lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ                |
 
 > [!NOTE]
@@ -1005,37 +1004,19 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 > `sbx-agent --new` で反映してください。
 
 > [!NOTE]
-> `gh stack`（[github/gh-stack](https://github.com/github/gh-stack)）は gh の extension ですが、
-> 他の `gh-*` ツールと同じく mise の `[tools]` で `gh-stack` という bin として入れています
-> （host は `config/mise/config.toml`、devcontainer と sandbox は共有の
-> `config/devcontainer/mise.toml`）。
->
+> `gh stack`（[github/gh-stack](https://github.com/github/gh-stack)）は、devcontainer と sandbox では
+> **gh の公式 extension として template（image）のビルド時に入れています**
+> （`Dockerfile` / `Dockerfile.sandbox` の `gh extension install github/gh-stack --pin ...`）。
 > gh 2.102 以降、`stack` は「公式 extension を入れてください」と表示して exit 1 するだけの
-> **組み込みコマンド**になっています（`gh stack` が「既に使える」わけではありません）。
-> そのため `gh alias set stack ...` は `already a gh command or extension` で拒否されます。
-> 一方で extension として入っていればそちらが優先されるので、mise の `gh-stack` を
-> **local extension**（ディレクトリへの symlink）として登録しています。
+> 組み込みコマンドで、extension が入っていればそちらが優先されます（同名の alias は
+> `already a gh command or extension` で作れません）。
 >
-> ```bash
-> mkdir -p ~/.local/share/gh-local-extensions/gh-stack
-> ln -sfn "$(command -v gh-stack)" ~/.local/share/gh-local-extensions/gh-stack/gh-stack
-> (cd ~/.local/share/gh-local-extensions/gh-stack && gh extension install .)
-> ```
->
-> `gh extension install .` はローカルのディレクトリを symlink するだけなので、ネットワークも
-> gh の認証も要りません。symlink 先は mise の shim なので、`gh-stack` を上げても張り直し不要です。
-> extension は `~/.local/share/gh` に入り `~/.config/gh` には書かないので、`~/.config/gh` を
-> read-only で mount している devcontainer でも、mount していない sandbox でも同じ手順で登録できます。
->
-> | 環境         | 登録する場所                                                    |
-> | ------------ | --------------------------------------------------------------- |
-> | host         | `[bootstrap.hooks.post-tools]`（以前の版が入れた alias は削除） |
-> | devcontainer | `post-create.sh`                                                |
-> | sandbox      | `sandbox-post-create.sh`（`setup_gh_stack`）                    |
->
-> 既に `gh stack` extension がある場合（公式 extension を自分で入れた場合など）は触りません。
-> `gh-stack` 単体でも動くので（`go-gh` が `GH_TOKEN` や gh の資格情報からトークンを解決する）、
-> `gh-stack ...` と直接打っても使えます。
+> - mise には gh extension を入れる backend が無いため、mise ではなく Dockerfile で入れています。
+>   バージョンは `ARG GH_STACK_VERSION` で固定し、renovate が追従します。
+> - 入り先は `~/.local/share/gh/extensions` で `~/.config/gh` とは別です。devcontainer で
+>   `~/.config/gh` を read-only mount していても、sandbox で mount していなくても image のものが見えます。
+> - 更新は他のツールと同じく template の再ビルド（`mise run sandbox:build-template` → `sbx-agent --new`、
+>   devcontainer は rebuild）です。
 
 crit（7842）と plannotator（19433）の **host port は固定せず sbx に採番させます**。
 devcontainer が `appPort: 127.0.0.1::7842` で自動採番していたのと同じ理由で、

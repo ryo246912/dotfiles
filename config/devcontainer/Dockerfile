@@ -85,6 +85,20 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
     rsync -a --delete /mise/data/ /mise/data-cache/; \
     /usr/local/bin/mise trust /mise/config.toml
 
+# gh stack（github/gh-stack）は gh の公式 extension として入れる。gh 2.102 以降の `stack` は
+# 「extension を入れてください」と出すだけの組み込みコマンドで、extension があればそちらが
+# 優先される。mise には gh extension の backend が無いので、ここで `gh extension install` する。
+# 入り先は ~/.local/share/gh/extensions で、read-only mount される ~/.config/gh とは別なので
+# 実行時もそのまま見える。GH_CONFIG_DIR は使い捨てにして image に設定を残さない。
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=v0.2.0
+RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
+    set -eu; \
+    gh_config="$(mktemp -d)"; \
+    GH_TOKEN="$(cat /run/secrets/github_token)" GH_CONFIG_DIR="$gh_config" \
+      /mise/data/shims/gh extension install github/gh-stack --pin "$GH_STACK_VERSION"; \
+    rm -rf "$gh_config"
+
 # tasks の変更で上の重い install layer が無効化されないよう、install の後に COPY する。
 COPY --chown=vscode:vscode tasks /mise/tasks
 

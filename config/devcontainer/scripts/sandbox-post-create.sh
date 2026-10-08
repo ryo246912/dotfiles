@@ -238,44 +238,6 @@ setup_nvim() {
 }
 
 # ---------------------------------------------------------------------------
-# gh stack -> gh-stack（local extension として登録）
-# ---------------------------------------------------------------------------
-# gh 2.102 以降は `stack` が「公式 extension を入れてください」と出して exit 1 するだけの
-# 組み込みコマンドになっており、同名の alias は "already a gh command or extension" で
-# 拒否される。extension として入っていればそちらが優先されるので、mise で入れた gh-stack を
-# local extension（ディレクトリへの symlink）として登録する。`gh extension install .` は
-# ローカルのディレクトリを symlink するだけなのでネットワークも gh の認証も要らない。
-# 実体は mise の shim を指すので、gh-stack のバージョンを上げても張り直し不要。
-# extension の置き場所は ${XDG_DATA_HOME:-~/.local/share}/gh で、~/.config/gh とは別。
-setup_gh_stack() {
-    command -v gh >/dev/null 2>&1 || {
-        log_skip "gh が無いため gh stack の設定をスキップしました"
-        return 0
-    }
-    local ext_bin ext_dir err
-    ext_bin=$(command -v gh-stack 2>/dev/null) || {
-        log_skip "gh-stack が無いため gh stack の設定をスキップしました"
-        return 0
-    }
-    # 以前の版が入れた alias は組み込みの stack に隠れて使われないので消しておく
-    if gh alias list 2>/dev/null | grep -q '^stack:.*gh-stack'; then
-        gh alias delete stack >/dev/null 2>&1 || true
-    fi
-    if gh extension list 2>/dev/null | grep -q '^gh stack'; then
-        log_skip "gh stack は extension として登録済みです"
-        return 0
-    fi
-    ext_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/gh-local-extensions/gh-stack"
-    if mkdir -p "$ext_dir" && ln -sfn "$ext_bin" "${ext_dir}/gh-stack" \
-        && err=$(cd "$ext_dir" && gh extension install . 2>&1 >/dev/null); then
-        log_ok "gh stack -> gh-stack を local extension として登録しました"
-        return 0
-    fi
-    log_warn "gh stack の extension 登録に失敗しました: ${err:-（エラー出力なし）}"
-    return 1
-}
-
-# ---------------------------------------------------------------------------
 # プロジェクト生成物の分離
 # ---------------------------------------------------------------------------
 # workspace はホストと共有されているため、node_modules / .venv / target などの
@@ -306,7 +268,6 @@ separate_artifacts
 setup_ssh_config
 setup_crit
 setup_agent_configs
-setup_gh_stack
 install_lefthook_all
 
 # plannotator のホスト側トンネルは mac-host 経由。スクリプト自体は image に入っている。
