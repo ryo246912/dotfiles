@@ -667,9 +667,9 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 
 `target` はファイルだけでなく**ディレクトリ**も指定でき、`copy`/`symlink` は
 ディレクトリを渡すと中身ごと再帰的に配置する。
-`"~/.local" = { source = "local", mode = "copy" }` のように宣言すると、
+`"~/.local" = { source = "local", mode = "symlink-each" }` のように宣言すると、
 **source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
-全部コピーされる**。一部だけ除外したい場合は、ディレクトリを walk する
+全部配置される**。一部だけ除外したい場合は、ディレクトリを walk する
 `copy`/`symlink-each` エントリの `exclude`（glob の配列）を使う（chezmoi の
 `.chezmoiignore` 相当。`~/.config` の symlink-each エントリで使用中。`min_version` の
 2026.9.2 で同じ仕様の `exclude` があることを mise の該当タグの docs で確認済み）。`/` を含まない
@@ -677,13 +677,13 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 root に固定する書き方は mise 2026.9.15 以降でしか効かないため使わない。
 
 本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
-「ブランケットコピーしてよい形」に揃えた（`~/.local` は copy で現在も採用中。
-`~/.apm`・`~/.claude`・`~/.codex` は同じディレクトリ構成のまま symlink-each で、
-`~/.config` は track と `exclude` 付きの symlink-each の併用で配置している。詳細は
-後述の「target → source の逆方向ワークフロー」参照）:
+「ブランケットコピーしてよい形」に揃えた（`~/.local`・`~/.apm`・`~/.claude`・`~/.codex`
+は同じディレクトリ構成のまま symlink-each で、`~/.config` は track と `exclude` 付きの
+symlink-each の併用で配置している。詳細は後述の「target → source の逆方向ワークフロー」
+参照）:
 
 - **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から
-  `"~/.local" = { source = "local", mode = "copy" }`（`~/.apm` 等は `mode = "symlink-each"`）
+  `"~/.local" = { source = "local", mode = "symlink-each" }`（`~/.apm` 等も同じ）
   のように1行でまとめて配る。
   これで `[dotfiles]` は194行→11行（当時の `~/.config` 込みの数字）まで縮んだ。
 - **テンプレート**（Tera）が要るファイルは配布元ディレクトリの外、`templates/` に隔離する

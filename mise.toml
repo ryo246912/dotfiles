@@ -155,6 +155,11 @@ mise --cd "$HOME" run rulesync:sync
 # 認証情報等の git 管理外のランタイム状態も混在するため）。"~/.local" も同様の理由で
 # ディレクトリ全体・個別ファイルのいずれも track していない（config/mise/config.toml
 # のコメント参照）。
+#
+# "~/.local" は ~/.config と同じく symlink-each にしている。local/bin のスクリプトを
+# ~/.local/bin 側で直接編集しても repo の作業ツリーへ反映されるようにするため
+# （copy だと apply するまで反映されず、逆方向の編集も失われる）。
+# symlink-each なので ~/.local/share・state 等の管理外のものはそのまま残る。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "symlink-each" }
 "~/.claude"                             = { source = "claude", mode = "symlink-each" }
@@ -164,7 +169,7 @@ mise --cd "$HOME" run rulesync:sync
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
 "~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
-"~/.local"                              = { source = "local", mode = "copy" }
+"~/.local"                              = { source = "local", mode = "symlink-each" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]
