@@ -583,32 +583,47 @@ mise run sandbox:disk
 初めて実行します。
 
 ```bash
-mise run sandbox:prune                        # 何が消えるか出すだけ
-mise run sandbox:prune --yes                  # 停止済み sandbox + ホストの dangling image
-mise run sandbox:prune --yes --template       # + ホストの template image
-mise run sandbox:prune --yes --build-cache    # + ホストの build cache
-mise run sandbox:prune --yes --all            # 全部
+mise run sandbox:prune                          # 何が消えるか出すだけ
+mise run sandbox:prune --yes                    # 停止済み sandbox + ホストの dangling image
+mise run sandbox:prune --yes --template         # + ホストの template image
+mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
+mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
+mise run sandbox:prune --yes --all              # --template + --build-cache
 ```
 
-素のコマンドは次の 5 つです。何がどこを空けるかが段ごとに違うので、効果とコストを
+dry-run では消える候補を実際に列挙します（`sbx prune --dry-run`・`docker image ls`・
+`docker buildx du`）。実行時にどれかの削除が失敗した場合は、残りを続けたうえで
+**最後に非ゼロで終了**します。
+
+素のコマンドは次の 6 つです。何がどこを空けるかが段ごとに違うので、効果とコストを
 分けて把握しておくと選びやすくなります。
 
-| コマンド                          | 空く場所                         | コスト                                                                                                    |
-| --------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `sbx prune`                       | 停止済み sandbox（VM ごと）      | なし。**動いている sandbox は対象外**なので習慣的に打てる（`--dry-run` で事前確認、`--force` で確認省略） |
-| `sbx template rm <tag>`           | sbx 側の template image          | その template からの `sbx create` ができなくなる（`mise run sandbox:build-template` で作り直す）          |
-| `docker image prune`              | ホストの dangling layer          | なし（タグの付いていない層だけ）                                                                          |
-| `docker image rm sbx-agent:local` | ホストの template image（数 GB） | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
-| `docker builder prune`            | ホストの build cache             | **次回の `sandbox:build-template` が初回と同じフルインストールになる**（下記）                            |
+| コマンド                                                | 空く場所                                 | コスト                                                                                                    |
+| ------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sbx prune`                                             | 停止済み sandbox（VM ごと）              | なし。**動いている sandbox は対象外**なので習慣的に打てる（`--dry-run` で事前確認、`--force` で確認省略） |
+| `sbx template rm <tag>`                                 | sbx 側の template image                  | その template からの `sbx create` ができなくなる（`mise run sandbox:build-template` で作り直す）          |
+| `docker image prune`                                    | ホストの dangling layer                  | なし（タグの付いていない層だけ）                                                                          |
+| `docker image rm sbx-agent:local`                       | ホストの template image（数 GB）         | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
+| `docker builder prune --filter "type!=exec.cachemount"` | ホストの build cache（cache mount 以外） | なし。**mise の cache mount を残す**ので次回も再ダウンロードは起きない                                    |
+| `docker builder prune`                                  | ホストの build cache（全部）             | **次回の `sandbox:build-template` が初回と同じフルインストールになる**（下記）                            |
 
 > [!NOTE]
 > `docker image rm sbx-agent:local` と `docker builder prune` の違いが効きます。
 > `Dockerfile.sandbox` は mise のインストール済みツールを
 > `RUN --mount=type=cache,id=sandbox-mise-cache` で持っており、これは **image ではなく
 > BuildKit の build cache 側**にあります。つまり image を消しても再ダウンロードは起きず、
-> `docker builder prune` を打つと全ツールを取り直すことになります。
+> 素の `docker builder prune` を打つと全ツールを取り直すことになります。
+>
+> それを避けるのが `--filter "type!=exec.cachemount"` です。buildx の filter には `type` が
+> あり、cache mount は `exec.cachemount` に当たります（buildx の docs がこの filter を
+> そのまま例示しています）。`sandbox:prune --build-cache` はこの filter 付きで、
+> `--build-cache-all` が filter 無しの全消しです。
 > 容量だけ抑えたいなら `docker builder prune --max-used-space 10GB` のように上限を
 > 決める手もあります（全消しではなくキャップ）。
+>
+> なお docker 29 系では `docker builder prune` は `docker buildx prune` そのもので、
+> その `-a`/`--all` は「全未使用 cache」ではなく **internal/frontend image を含める**
+> という意味なので、cache mount を残す目的には使えません。
 
 > [!TIP]
 > ホストの `sbx-agent:local` は、`sbx template load` した時点で **sbx 側の image store に
