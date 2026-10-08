@@ -886,9 +886,21 @@ ssh-add -L   # 公開鍵が表示されれば OK
 `ssh-add -L` が `Could not open a connection to your authentication agent` になる場合は
 `SSH_AUTH_SOCK` が古い（tmux の古いセッションなど）ので、新しいシェルから実行してください。
 
-> [!NOTE]
-> devcontainer では `gpg.ssh.allowedSignersFile` も設定して署名の検証までできるようにしていましたが、
-> sandbox 側では未設定です（署名の作成のみ）。
+### 署名の検証（`allowed_signers`）
+
+SSH 署名を `git log --show-signature` などで検証するには `gpg.ssh.allowedSignersFile` が必要です
+（無いと `gpg.ssh.allowedSignersFile needs to be configured` になります）。sandbox で作った commit は
+SSH 署名なので、ホストで検証するときも同じです。
+
+`sbx-agent` は署名を有効にするとき、次をまとめて行います。
+
+1. ホストの `~/.config/git/allowed_signers` に `<user.email> namespaces="git" <ssh-add -L の 1 行目>` を
+   冪等に追記する（email は workspace で有効な `user.email`。work 用の `includeIf` も反映される）
+2. そのファイルを同じ絶対パスで read-only マウントし、sandbox の `gpg.ssh.allowedSignersFile` に指定する
+
+ホストの `~/.config/git/config`（`templates/git/config.tera`）も同じファイルを
+`gpg.ssh.allowedSignersFile` に指定しているので、sandbox の commit をホストでも検証できます。
+マウントは作成時に固定されるため、既存の sandbox には `sbx-agent --new` で反映してください。
 
 ## ツールチェイン（カスタム template）
 
@@ -1078,15 +1090,15 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### postCreateCommand（`post-create.sh`）
 
-| devcontainer でやっていたこと                                                                     | sandbox                                                                     |
-| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                    |
-| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行                                          |
-| `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                     |
-| `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                     |
-| コミット署名（専用鍵 + `allowed_signers`）                                                        | ⚠️ ssh-agent forwarding で署名はできる。`allowed_signers`（検証側）は未設定 |
-| `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される |
-| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ❌ 使わない（mount できないため。worktree は sandbox 用と割り切る）         |
+| devcontainer でやっていたこと                                                                     | sandbox                                                                                 |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                                |
+| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行                                                      |
+| `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                                 |
+| `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                                 |
+| コミット署名（専用鍵 + `allowed_signers`）                                                        | ✅ ssh-agent forwarding で署名し、ホストの `allowed_signers` をマウントして検証もできる |
+| `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される             |
+| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ❌ 使わない（mount できないため。worktree は sandbox 用と割り切る）                     |
 
 ### postStartCommand（`post-start.sh`）
 
@@ -1117,14 +1129,13 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 | 項目                                   | 状況                                                                             |
 | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `gpg.ssh.allowedSignersFile`           | 署名の作成はできるが、検証用の allowed_signers は未設定                          |
 | `~/.claude/settings.json` の read-only | devcontainer は settings.json だけ ro で重ね mount していたが、sandbox は全体 rw |
 | `~/.config/ccusage` / `~/.config/mise` | 既定では渡していない（必要なら `extra_workspaces`）                              |
 
 ### まとめ
 
 ツールチェイン・ホスト連携・MCP はすべて移植済みで、
-**残る差分は生成物の分離（mount できないため運用で分ける）と `allowed_signers`（署名検証）、
+**残る差分は生成物の分離（mount できないため運用で分ける）と
 `~/.claude/settings.json` の read-only 化**です。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 

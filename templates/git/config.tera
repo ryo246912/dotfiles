@@ -17,6 +17,11 @@
 [core]
   editor = nvim
   excludesfile = ~/.config/git/gitignore
+[gpg "ssh"]
+  # SSH 署名（sandbox 内の commit は ssh-agent forwarding で SSH 署名される）の検証用。
+  # 中身は sbx-agent が「email namespaces="git" 公開鍵」を追記して管理する
+  # （docs/docker-sandboxes.md の「ホストの git 設定とコミット署名」参照）。
+  allowedSignersFile = ~/.config/git/allowed_signers
 [grep]
   lineNumber = true
 [merge]

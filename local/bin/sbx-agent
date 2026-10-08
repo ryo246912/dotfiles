@@ -531,6 +531,25 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         add_git_config gpg.format ssh
         add_git_config user.signingkey "key::${signing_pubkey}"
         add_git_config commit.gpgsign true
+
+        # 署名の検証（git log --show-signature 等）には allowed_signers が要る。無いと
+        # "gpg.ssh.allowedSignersFile needs to be configured" になる。ホストの
+        # ~/.config/git/allowed_signers に「email + 署名鍵」を冪等に追記し、同じ絶対パスで
+        # read-only マウントして sandbox からも参照する（ホスト側の gitconfig も同じファイルを
+        # 指しているので、sandbox で作った SSH 署名の commit をホストでも検証できる）。
+        # email は workspace で有効な user.email（includeIf の work 用設定も反映される）。
+        allowed_signers="${HOME}/.config/git/allowed_signers"
+        signer_email=$(git -C "$WORKSPACE" config user.email 2>/dev/null) || signer_email=""
+        if [[ -n "$signer_email" ]]; then
+            signer_line="${signer_email} namespaces=\"git\" ${signing_pubkey}"
+            mkdir -p "$(dirname "$allowed_signers")"
+            touch "$allowed_signers"
+            grep -qxF "$signer_line" "$allowed_signers" || printf '%s\n' "$signer_line" >>"$allowed_signers"
+        fi
+        if [[ -s "$allowed_signers" ]]; then
+            add_mount "${allowed_signers}:ro"
+            add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
+        fi
     else
         # ホストの gitconfig が GPG 署名を有効にしていても、GPG 秘密鍵は sandbox に
         # 渡らないため commit が毎回失敗する。署名だけ無効化する。
