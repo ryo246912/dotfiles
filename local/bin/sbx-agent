@@ -494,7 +494,14 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     add_env GIT_PAGER cat
     add_git_config interactive.diffFilter cat
 
-    # gh の認証情報を git の credential helper として使う
+    # gh の認証情報を git の credential helper として使う。
+    # URL 限定の helper は generic な credential.helper に「追加」されるだけなので、
+    # 先に空文字でリストをリセットする。これをしないとホスト設定の
+    # credential.helper = osxkeychain が先に試され、sandbox には無いため
+    # "git: 'credential-osxkeychain' is not a git command" が毎回出る。
+    # （GIT_CONFIG_VALUE が欠けても git は fatal にならないので、空値が
+    #   環境変数として渡らない環境でも現状より悪化はしない）
+    add_git_config 'credential.https://github.com.helper' ''
     add_git_config 'credential.https://github.com.helper' '!gh auth git-credential'
     add_git_config 'url.https://github.com/.insteadOf' 'git@github.com:'
     # 同じリポジトリの他 worktree は sandbox から見えないため、git gc の自動 prune が

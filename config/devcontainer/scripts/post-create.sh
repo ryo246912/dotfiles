@@ -63,7 +63,12 @@ git config --global core.excludesfile ~/.config/gitignore-host
 # interactive.diffFilter もホスト設定では delta を指す（git add -p 等で使われる）。
 # pager 側は remoteEnv の GIT_PAGER=cat で潰しているが、こちらは env では上書きできない。
 git config --global interactive.diffFilter cat
-git config --global credential.https://github.com.helper '!gh auth git-credential'
+# URL 限定の helper は generic な credential.helper に「追加」されるだけなので、
+# 先に空文字でリストをリセットしてから gh を足す。これをしないとホスト設定の
+# credential.helper = osxkeychain が先に試され、コンテナには無いため
+# "git: 'credential-osxkeychain' is not a git command" が毎回出る。
+git config --global --replace-all credential.https://github.com.helper ""
+git config --global --add credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 # コンテナには自分の worktree と common git dir しか mount しないため、同じリポジトリの
 # 他の worktree はコンテナから見えない。git gc の自動 prune がそれらを「消えた worktree」と

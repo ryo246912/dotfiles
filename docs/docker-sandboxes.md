@@ -1043,13 +1043,43 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 delta のある表示を sandbox でも使いたい場合は、`config/devcontainer/mise.toml` に
 `"aqua:dandavison/delta"` を追加して template を作り直し、上記の無効化を外してください。
 
-#### 既知の差分: `credential.helper`
+#### `credential.helper` も同じ問題を持つ
 
 同じ理由で、ホストの `credential.helper = osxkeychain`（macOS 用）は Linux の
-sandbox には存在しません。GitHub については `credential.https://github.com.helper` を
-`!gh auth git-credential` で上書きしているため実害はありませんが、
-**GitHub 以外の HTTPS git host** を使うとこのヘルパーの解決に失敗します。
-現状は未対処です（`credential.helper` に空文字を入れるとリストをリセットできます）。
+sandbox には存在しません。
+
+ここで注意が必要なのは、**URL 限定の helper は generic な helper を置き換えるのではなく、
+リストに追加される**という点です。つまり `credential.https://github.com.helper` に
+`!gh auth git-credential` を設定しても、github.com 向けの解決では
+`osxkeychain` → `gh` の順に試され、**毎回エラーが出てから** `gh` にたどり着きます。
+
+```console
+$ git credential fill   # generic osxkeychain + URL 限定 gh
+git: 'credential-osxkeychain' is not a git command. See 'git --help'.
+...
+```
+
+そこで、URL 限定の helper に**空文字を先に入れてリストをリセット**してから `gh` を足します。
+
+```bash
+add_git_config 'credential.https://github.com.helper' ''
+add_git_config 'credential.https://github.com.helper' '!gh auth git-credential'
+```
+
+devcontainer 側（`post-create.sh`）は `git config` で同じ状態を作ります。
+
+```bash
+git config --global --replace-all credential.https://github.com.helper ""
+git config --global --add credential.https://github.com.helper '!gh auth git-credential'
+```
+
+> [!NOTE]
+> `GIT_CONFIG_VALUE_n` が欠けても git は fatal にならないため、空の値が環境変数として
+> 渡らない環境でも現状より悪化はしません（リセットが効かずエラーが出るだけ）。
+
+**GitHub 以外の HTTPS git host**（社内 GitLab 等）については、リセットの対象が
+github.com 限定なので `osxkeychain` の解決に失敗したままです。必要になったら
+generic な `credential.helper` 側もリセットしてください。
 
 ### template のビルドが `exporting to image` で失敗する
 
