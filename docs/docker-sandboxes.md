@@ -150,7 +150,8 @@ sbx secret ls
 ```
 
 ここまでと、ホストへの SSH 経路に必要な network policy・skills の取り込み（`~/.claude/skills` /
-`~/.agents/skills` / `~/.copilot/skills` を走査）・通知用 SSH 鍵の生成は 1 つの task にまとめてあります。
+`~/.agents/skills` / `~/.copilot/skills` を走査）・通知用 SSH 鍵の生成・ドキュメントサイトの許可
+（[後述](#ドキュメントサイトの許可)）・ホスト設定（`clipboard.imagePaste`）は 1 つの task にまとめてあります。
 
 ```bash
 mise run sandbox:setup
@@ -159,6 +160,26 @@ mise run sandbox:setup
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
 > 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
+> ドキュメントサイトの許可とホスト設定は `sandbox:setup` でだけ反映するため、
+> `config/sbx/allow-domains.txt` を変更したら `mise run sandbox:setup` を再実行してください。
+
+### ドキュメントサイトの許可
+
+`Balanced` の allowlist には AI API・パッケージレジストリ・GitHub などが入っていますが、
+docs.anthropic.com・MDN・Zenn・Qiita・Stack Overflow のような**ドキュメント・技術情報サイトは
+入っていません**。調査中に毎回ブロックされないよう、よく読むサイトを
+`config/sbx/allow-domains.txt`（1 行 1 パターン、`#` 以降はコメント）に並べ、
+`sandbox:setup` が `sbx policy allow network` で全 sandbox に許可します。
+
+- 一覧に無いドメインは、ブロック時に出る承認リクエストで個別に許可します
+  （`sbx policy approval ls` → `sbx policy approval respond <id> --option <option-id>`）。
+- preset を `allow-all` にすれば許可の手間は無くなりますが、プロキシが GitHub トークンなどを
+  注入している以上、外部への持ち出しを防ぐ効果が失われるため `Balanced` のまま必要な分だけ許可します。
+- kit の `permissions.network.allow` でも宣言できますが採用していません。kit は sandbox 作成時にしか
+  反映されず、許可を足すたびに sandbox の作り直しが必要になるためです。global な policy なら
+  起動中の sandbox にも即座に反映されます。
+- 一覧から行を消しても反映済みのルールは残ります。`sbx policy rm network --resource <domain>` で
+  個別に削除してください。
 
 続いて、devcontainer と同じツールチェインが入った template をビルドします
 （[後述](#ツールチェインカスタム-template)）。これをやらないと sandbox 内に lint 群や crit が入りません。
@@ -355,9 +376,9 @@ mise run sandbox:build-template  # devcontainer と同じツールチェイン�
 mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
 
-`sandbox:setup` の内容（secret 登録と network policy）は **`sbx-agent` が sandbox を作るときに
+`sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
-「SSH 鍵と skills をまとめて用意したいとき」に使う入り口です。
+「SSH 鍵・skills・ドキュメントサイトの許可・ホスト設定をまとめて用意したいとき」に使う入り口です。
 
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
