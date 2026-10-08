@@ -56,7 +56,8 @@ cold になったら次のメッセージで再キャッシュされるトーク
 `claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
 30 秒ごとに更新します。Claude Code v2.1.251 以降と `jq` が必要です。
 `claude/` は symlink-each で `~/.claude` へ配置されます。初回は `mise bootstrap dotfiles apply`
-で symlink を作成し、以降の `claude/` の変更はそのまま反映されます。
+で symlink を作成します。以降、既存ファイルの変更はそのまま反映されますが、`claude/` に
+新しく追加したファイルは再度 apply するまで `~/.claude` に現れません。
 
 ### 表示の読み方
 
