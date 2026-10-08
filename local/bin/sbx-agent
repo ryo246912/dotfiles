@@ -481,6 +481,11 @@ fi
     && add_env "$AGENT_CONFIG_ENV" "$CONFIG_DIR"
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
+    # ホストの gitconfig の url."git@github.com:".pushInsteadOf（push を SSH に寄せる）を打ち消し、
+    # push も HTTPS のままにする。sandbox からは SSH で GitHub に出られず、gh の認証も
+    # HTTPS にしか効かないため。下の insteadOf は push URL には適用されない（書き換えは連鎖しない）。
+    # マッチ長が同じ pushInsteadOf は先に読まれた方が勝つため、必ず include.path より前に追加する。
+    add_git_config 'url.https://github.com/.pushInsteadOf' 'https://github.com/'
     # ホストの gitconfig を include する（post-create.sh の include.path 相当）
     [[ -f "${HOME}/.config/git/config" ]] && add_git_config include.path "${HOME}/.config/git/config"
     [[ -f "${HOME}/.config/git/gitignore" ]] && add_git_config core.excludesfile "${HOME}/.config/git/gitignore"

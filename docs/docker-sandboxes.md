@@ -630,15 +630,17 @@ devcontainer 側の mount 範囲と同じ考え方で、詳細は
 
 sandbox 内の `$HOME` はホストとは別物なので、`~/.config/git/config` を mount しただけでは
 git に読まれません。`sbx-agent` は `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n`
-で以下を注入します（devcontainer の `post-create.sh` と同じ内容）。
+で以下を注入します（`pushInsteadOf` 以外は devcontainer の `post-create.sh` と同じ内容。
+devcontainer は SSH で GitHub に出られるため `pushInsteadOf` の打ち消しは不要）。
 
-| 設定                                   | 目的                                                        |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `include.path`                         | ホストの `~/.config/git/config`（`user.name` 等）を取り込む |
-| `core.excludesfile`                    | ホストのグローバル gitignore を使う                         |
-| `credential.https://github.com.helper` | `!gh auth git-credential` で gh の認証を使う                |
-| `url.https://github.com/.insteadOf`    | SSH 形式の remote を HTTPS に書き換える                     |
-| `gc.worktreePruneExpire`               | 見えていない worktree を git gc が消さないようにする        |
+| 設定                                    | 目的                                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `include.path`                          | ホストの `~/.config/git/config`（`user.name` 等）を取り込む  |
+| `core.excludesfile`                     | ホストのグローバル gitignore を使う                          |
+| `credential.https://github.com.helper`  | `!gh auth git-credential` で gh の認証を使う                 |
+| `url.https://github.com/.insteadOf`     | SSH 形式の remote を HTTPS に書き換える                      |
+| `url.https://github.com/.pushInsteadOf` | ホスト設定の push を SSH に寄せる `pushInsteadOf` を打ち消す |
+| `gc.worktreePruneExpire`                | 見えていない worktree を git gc が消さないようにする         |
 
 コミット署名は **SSH agent forwarding**（sbx の既定で有効）を使います。
 ホストのパスは sandbox 内に存在しないため、鍵ファイルではなく forwarded agent の公開鍵を
