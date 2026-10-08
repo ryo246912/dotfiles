@@ -18,7 +18,8 @@
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
-#   --template REF     sandbox template の OCI 参照
+#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:local）
+#   --no-template      template を指定せず sbx の既定 template で起動する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
@@ -33,8 +34,7 @@
 #
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
-#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら
-#                       ローカルに sbx-agent:local があればそれを使う）
+#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:local）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
@@ -77,6 +77,7 @@ WORKSPACE="$PWD"
 CONFIG_DIR=""
 BRANCH=""
 TEMPLATE=""
+NO_TEMPLATE=false
 SKILLS="readonly"
 CPUS=""
 MEMORY=""
@@ -187,6 +188,7 @@ while [[ $# -gt 0 ]]; do
             TEMPLATE="$1"
             ;;
         --template=*) TEMPLATE="${1#*=}" ;;
+        --no-template) NO_TEMPLATE=true ;;
         --mount)
             shift && require_value --mount $#
             EXTRA_MOUNTS+=("$1")
@@ -267,44 +269,19 @@ for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
     done
 done
 
-# `sbx template ls` に指定の template があるかを判定する。
-# 出力の形は sbx のバージョンで変わりうる（`repo:tag` を 1 列で出す形と、docker images 風に
-# REPOSITORY と TAG を別カラムで出す形）。判定を間違えると「template はあるのに既定
-# template で起動する」ことになり、症状が「PATH に mise が無い」のように間接的で原因に
-# 辿りにくいため、どちらの形でも拾えるようにしておく。
-template_loaded() {
-    local ref="$1" repo tag out
-    repo="${ref%%:*}"
-    tag="${ref##*:}"
-    out=$(sbx template ls 2>/dev/null) || return 1
-    # 部分一致（grep -F）だと `sbx-agent-old:local` のような別 template を取り違えるため、
-    # 列の完全一致で見る。1 列目が参照そのもの（`repo:tag`）か、1・2 列目が repo と tag に
-    # 分かれている（docker images 風）かのどちらかなら「ある」と判定する。
-    printf '%s\n' "$out" | awk -v ref="$ref" -v repo="$repo" -v tag="$tag" '
-        $1 == ref { found = 1 }
-        $1 == repo && $2 == tag { found = 1 }
-        END { exit !found }
-    '
-}
-
-# template 未指定なら、ツールチェイン入りのローカル template があればそれを使う
-if [[ -z "$TEMPLATE" ]]; then
-    if [[ -n "${SBX_AGENT_TEMPLATE:-}" ]]; then
-        TEMPLATE="$SBX_AGENT_TEMPLATE"
-    elif template_loaded "$DEFAULT_TEMPLATE"; then
-        TEMPLATE="$DEFAULT_TEMPLATE"
-    else
-        # 黙って sbx の既定 template にフォールバックすると、PATH に mise の shim も
-        # scripts も入らない sandbox が出来上がる。症状は「PATH に mise が無い」
-        # 「cannot run delta」のように間接的で原因に辿りにくいので、作成前に明示する。
-        log_warn "ツールチェイン入りの template ($DEFAULT_TEMPLATE) が見つかりません"
-        log_warn "  sbx の既定 template で起動します。mise / lint 群 / nvim / crit は入りません"
-        log_warn "  用意するには: mise run sandbox:build-template"
-        # ビルド済みなのにここへ来る場合は判定の取りこぼしなので、実際の一覧を見せる
-        # （sbx template ls 自体が失敗している場合も、その stderr がそのまま出る）。
-        log_warn "  現在の sbx template ls:"
-        sbx template ls 2>&1 | sed 's/^/    /' >&2 || true
-    fi
+# template は常に DEFAULT_TEMPLATE を使う。--template / SBX_AGENT_TEMPLATE で上書きでき、
+# --no-template で sbx の既定 template に戻せる。
+#
+# 以前は `sbx template ls` を grep して「有れば使う / 無ければ sbx の既定へフォールバック」
+# していたが、出力の形（`repo:tag` を 1 列で出すか、docker images 風に REPOSITORY と TAG を
+# 別カラムで出すか）に依存して取りこぼし、ビルド済みなのに既定 template で起動してしまった。
+# 事前に当たりに行くのをやめ、そのまま渡して失敗したときに原因を出す形にしている
+# （`mise run sandbox:build-template` は docs の「最初の 1 回だけ」の手順に入っている）。
+if [[ "$NO_TEMPLATE" == true ]]; then
+    [[ -n "$TEMPLATE" ]] && log_warn "--no-template が指定されたため --template を無視します"
+    TEMPLATE=""
+elif [[ -z "$TEMPLATE" ]]; then
+    TEMPLATE="${SBX_AGENT_TEMPLATE:-$DEFAULT_TEMPLATE}"
 fi
 
 case "$SKILLS" in
@@ -688,6 +665,14 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
 
     if ! "${create_cmd[@]}"; then
         log_error "sandbox の作成に失敗しました"
+        if [[ -n "$TEMPLATE" ]]; then
+            # --pull missing なので、ローカルの image store に無い template は作成できない。
+            # 「image が無い」系のエラーはここが原因なので、確認と作成の手順を出す。
+            log_error "  template ($TEMPLATE) が原因かもしれません。確認するには:"
+            log_error "    sbx template ls"
+            log_error "  未ビルドなら: mise run sandbox:build-template"
+            log_error "  template 無しで起動するには --no-template を付けてください"
+        fi
         exit 1
     fi
 

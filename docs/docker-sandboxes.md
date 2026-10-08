@@ -709,19 +709,23 @@ mise run sandbox:build-template
 base image 側が持っており、バージョンと認証は sbx が管理するため、mise の shim で
 上書きしないようにしています。
 
-template 名の既定は `sbx-agent:local` で、`sbx-agent` は `sbx template ls` にこれがあれば
-自動で使います。別名を使う場合は `SBX_AGENT_TEMPLATE` か `[settings.sandbox].template` を設定します。
+`sbx-agent` は **常に `sbx-agent:local` を template として渡します**。別名を使う場合は
+`--template` か `SBX_AGENT_TEMPLATE`、`--no-template` で sbx の既定 template に戻せます
+（優先順位は `--no-template` > `--template` > `SBX_AGENT_TEMPLATE` > 既定）。
 
-`sbx-agent` は template を渡すとき **`--pull missing` を付けます**。`sbx create` の `--pull` は
+template を渡すときは **`--pull missing` を付けます**。`sbx create` の `--pull` は
 **既定が `always`** なので（`sbx create --help`。sbx 0.47.0 で確認）、付けないと
 `sbx-agent:local` のようなローカルにしか無い template をレジストリから引こうとします。
 `never` ではなく `missing` なのは、`SBX_AGENT_TEMPLATE` にレジストリ上の参照を指定した場合に
 取得できなくなるのを避けるためです（ローカルに有れば引きません）。
 
-判定は `sbx template ls` の出力を**列の完全一致**で見ます。出力が `repo:tag` の 1 列なのか
-docker images 風に REPOSITORY と TAG が別カラムなのかは sbx のバージョンで変わりうるため、
-両方に対応しています。部分一致にすると `sbx-agent-old:local` のような別 template を
-取り違えるため使いません。
+> [!NOTE]
+> 以前は `sbx template ls` を grep して「有れば使う / 無ければ sbx の既定へフォールバック」
+> していましたが、出力の形（`repo:tag` を 1 列で出すか、docker images 風に REPOSITORY と
+> TAG を別カラムで出すか）に依存して取りこぼし、**ビルド済みなのに既定 template で起動する**
+> ことがありました。事前に当たりに行くのをやめ、そのまま渡して失敗したときに原因を出す形に
+> しています（`mise run sandbox:build-template` は「最初の 1 回だけ」の手順に入っているので、
+> 未ビルドで止まるのは想定内です）。
 
 `mise.toml` や `tasks/` / `lint/` / `scripts/` を変えたら **template を再ビルド**してください。
 
@@ -1072,32 +1076,29 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 | lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
 | ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
 | 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
-| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | 同じ原因。`sbx template ls` に `sbx-agent:local` が無ければ既定 template で起動している           |
-| ビルド済みなのに template が見つからないと言われる               | 下記参照。警告に続けて `sbx template ls` の実際の出力が出るので、まずそれを見る                   |
+| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                      |
+| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                     |
 | `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）     |
 | template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                           |
 
-### ビルド済みなのに「template が見つかりません」と言われる
+### `sbx create` が template を見つけられずに失敗する
 
-`mise run sandbox:build-template` が成功しているのに
-`ツールチェイン入りの template (sbx-agent:local) が見つかりません` が出る場合、
-`sbx-agent` 側の判定が `sbx template ls` の出力を取りこぼしています。
-警告のあとに実際の `sbx template ls` を出すようにしているので、まずその形を確認してください。
+`--pull missing` で渡しているため、`sbx-agent:local` がローカルの image store に無いと
+作成できません。`sbx-agent` は失敗時に確認手順を出します。
 
 ```console
-[WARN] ツールチェイン入りの template (sbx-agent:local) が見つかりません
-...
-[WARN]   現在の sbx template ls:
-    REPOSITORY   TAG     IMAGE ID       CREATED       SIZE
-    sbx-agent    local   a1b2c3d4e5f6   2 hours ago   6.1GB
+[ERROR] sandbox の作成に失敗しました
+[ERROR]   template (sbx-agent:local) が原因かもしれません。確認するには:
+[ERROR]     sbx template ls
+[ERROR]   未ビルドなら: mise run sandbox:build-template
+[ERROR]   template 無しで起動するには --no-template を付けてください
 ```
 
-- 上のように **`sbx-agent` と `local` が別カラム**、または 1 列に `sbx-agent:local` の
-  どちらかなら判定は通るはずです。それでも出る場合は列の位置が想定と違います。
-- `error: not signed in to Docker` が出ている場合は template ではなく `sbx login` の問題です
+- `sbx template ls` に出ていないなら `mise run sandbox:build-template` を実行します。
+- `error: not signed in to Docker` が出る場合は template ではなく `sbx login` の問題です
   （`sbx template ls` は未ログインだと exit 1 になります）。
-- 暫定回避として `SBX_AGENT_TEMPLATE=sbx-agent:local` を export すれば判定を飛ばして
-  そのまま使えます（`--template` 指定と同じ扱いになります）。
+- ツールチェイン無しでも急いで起動したいときは `--no-template` を付けます
+  （mise / lint 群 / nvim / crit は入りません）。
 
 ### ホスト設定が参照するコマンドが sandbox に無い（`cannot run delta` 等）
 
