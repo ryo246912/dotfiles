@@ -77,6 +77,10 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 `sbx run --rm` で使い捨てセッション、`sbx run -d` でバックグラウンド常駐、`sbx stop` で
 インストール済みパッケージを保ったまま停止できます。`sbx prune` でまとめて掃除もできます。
 
+ここで言う「軽い」は**手順**の話（定義ファイルもビルドも要らない）で、**消費資源は
+devcontainer の方が有利**です。後述の「[リソース使用量](#リソース使用量devcontainer-との比較)」
+を参照してください。
+
 ### 比較表
 
 | 項目           | devcontainer                            | Docker Sandboxes (sbx)                                        |
@@ -92,6 +96,7 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 | コミット署名   | 専用 SSH 鍵をコンテナに mount           | ssh-agent forwarding（秘密鍵はホストに残る）                  |
 | ツールチェイン | Dockerfile + mise で固定・キャッシュ    | カスタム template（同じ `mise.toml` を使う）                  |
 | 定義ファイル   | `config/devcontainer/devcontainer.json` | 不要（CLI 引数と `[settings.sandbox]`、任意で `sbxenv.yaml`） |
+| リソース消費   | 1 つの VM を全コンテナで共有（有利）    | sandbox ごとに VM + 専用 daemon（下記「リソース使用量」参照） |
 
 ## 大きな前提の違い
 
@@ -103,6 +108,106 @@ sandbox は**最初から sandbox 専用の docker daemon** を持つため、�
 3. **workspace・ports・secrets・`sandboxOptions` は作成時にしか確定しない。**
    変更するには `sbx rm` して作り直します（`sbx mount` / `sbx umount` で後から足せる
    dynamic mount もありますが、`sbx-agent` は使っていません）。
+
+## リソース使用量（devcontainer との比較）
+
+**結論から言うと、リソース効率は devcontainer の方が有利です。** sbx はそれを隔離の対価として
+払っています。Docker 公式の Architecture ページがそのまま書いています。
+
+> Sandboxes trade higher resource overhead (a VM plus its own daemon) for complete isolation.
+> — [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)
+
+差が出るのは **並列数** です。1 つだけ長時間動かすなら体感差は小さく、`multi-worktree` で
+複数同時に動かすほど開きます。
+
+### 構造の違い
+
+| 観点             | devcontainer（Docker Desktop）                                 | sbx（ローカル sandbox）                                                              |
+| ---------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 分離単位         | **1 つの Linux VM を全コンテナで共有**（kernel 共有）          | **sandbox ごとに microVM**（専用 kernel）                                            |
+| メモリ既定       | Docker VM に対してホストの 50%（1 つ分）                       | **sandbox ごとに**ホストの 50%（512 MiB〜32 GiB、上限 `max(75%, 512 MiB)`）          |
+| swap             | 1 GB（既定）                                                   | 設定項目が見当たらない（未確認）                                                     |
+| CPU 既定         | Docker Desktop の CPU limit（1 つ分）                          | `--cpus` 未指定で**ホストの全 CPU**（Linux arm64 のみ 16 上限）                      |
+| ディスク         | 1 つの disk image を共有し、**image layer も全コンテナで共有** | sandbox ごとに root 20 GB + docker data 10 GB。**layer は sandbox 間で共有されない** |
+| アイドル時の回収 | Resource Saver が既定 5 分で VM を停止し **2 GB 以上**を返す   | **ローカルには idle 停止が無い**（`--ttl` / `--on-timeout` は cloud 限定）           |
+| 復帰コスト       | VM 再起動 3〜10 秒                                             | `sbx stop` したものは `sbx run` で再開（VM の再作成は不要）                          |
+| ホスト FS 経由   | virtiofs の bind mount                                         | virtiofs passthrough（ホスト側キャッシュが既定 ON）                                  |
+| docker daemon    | 1 つ（docker-in-docker を足すとコンテナ内にもう 1 つ）         | **sandbox ごとに 1 つ**                                                              |
+
+効いてくるのは主に次の 3 点です。
+
+1. **メモリの既定が「ホストの 50%」で、それが sandbox ごとに付く。**
+   Docker Desktop の Memory limit も既定はホストの 50% ですが、そちらは VM 1 つ分です。
+   sbx は 2 つ起動すれば 50% の上限が 2 つ並びます（上限なので常時その量を使うわけでは
+   ありませんが、設計上の天井が違います）。
+2. **CPU の既定が「全部」。** `cpus: 0`（= `--cpus` 未指定）はホストの全 CPU を割り当てます。
+   並列で起動すると素直にオーバーサブスクライブします。実際これが問題になった形跡があり、
+   Linux arm64 では「複数の sandbox を同時起動すると `VM did not connect within 15s` で
+   失敗する」ため既定が 16 CPU に制限されています（[Release notes](https://docs.docker.com/ai/sandboxes/release-notes/)）。
+3. **image layer が sandbox 間で共有されない。** devcontainer なら同じ base image を
+   N 個のコンテナが共有しますが、sandbox はそれぞれが自分の image store を持ちます。
+   このリポジトリの template はツールチェイン一式で数 GB あるため、ここが一番効きます。
+
+### 数値の出所
+
+| 数値                                                      | 出所                                                                                                                             |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 「VM + 専用 daemon の分だけオーバーヘッドが高い」         | [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)（公式明記）                                                   |
+| 「sandbox 間で image / layer を共有しない」               | 同上（"Multiple sandboxes don't share images or layers."）                                                                       |
+| sandbox ごとに専用 kernel                                 | [Isolation layers](https://docs.docker.com/ai/sandboxes/security/isolation/)                                                     |
+| メモリ既定 50% / 512 MiB〜32 GiB / 上限 max(75%, 512 MiB) | `sbx create --help`（sbx 0.47.0 の実バイナリで確認）                                                                             |
+| `cpus: 0` = 全 CPU、Linux arm64 は 16 上限                | [Environment files](https://docs.docker.com/ai/sandboxes/configuration/environment-files/)                                       |
+| root 20 GB / docker data 10 GB（既定）                    | [Troubleshooting](https://docs.docker.com/ai/sandboxes/troubleshooting/)（`DOCKER_SANDBOXES_ROOT_SIZE` / `_DOCKER_SIZE` で変更） |
+| Docker Desktop の Memory limit 既定 50% / swap 1 GB       | [Docker Desktop settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/)                                    |
+| Resource Saver で 2 GB 以上回収・既定 5 分・復帰 3〜10 秒 | [Resource Saver mode](https://docs.docker.com/desktop/use-desktop/resource-saver/)                                               |
+| virtiofs キャッシュが既定 ON                              | [Architecture](https://docs.docker.com/ai/sandboxes/architecture/)                                                               |
+
+### 分かっていないこと
+
+- **Docker は sandbox 1 つあたりの実測オーバーヘッドを公開していません。**
+  探した範囲では見つからず、出てくるのは個人ブログの観測値だけでした
+  （例: 36 GB のホストで既定 17.8 GB が割り当てられた、という観測）。数値として引くには弱いので、
+  必要なら下の手順で自分の環境を測るのが確実です。
+- **割り当てたメモリが常時 RSS として居座るのかは未計測。** sbx の VMM（`libsailor.so`）には
+  `virtio_balloon` と `BalloonStats` のシンボルがあるので、ballooning で返す仕組みはあり、
+  `--memory` は「上限」であって予約ではない可能性が高いと見ています（シンボルの存在のみ確認。
+  実際に返しているかは未測定）。
+- **root 20 GB / docker 10 GB が sparse かどうかも未計測。** 配布物に `mkfs.ext4` が含まれており
+  通常は sparse になるため「上限」と読めますが、確認はしていません。
+- 参考値として、別実装の microVM では **VMM 自体のメモリオーバーヘッドは小さい**ことが
+  仕様として保証されています（Firecracker は 1 vCPU / 128 MiB 構成で VMM スレッドが
+  **5 MiB 以下**、`/sbin/init` 到達まで **125 ms 以下**。
+  [SPECIFICATION.md](https://github.com/firecracker-microvm/firecracker/blob/main/SPECIFICATION.md)）。
+  sbx の VMM は Firecracker ではなく Docker 独自（`containerd-shim-nerdbox` + `libsailor.so`）なので
+  **そのまま当てはめられません**が、「重いのは VMM プロセスではなく guest kernel と
+  guest 側のページキャッシュ」という見方の裏付けにはなります。
+
+### 自分の環境で測る
+
+```bash
+# sandbox ごとに記録された CPU / memory の上限を見る
+sbx ls --json
+
+# TUI でライブのメモリ・CPU 使用量を見る（カードごとに表示される）
+sbx
+
+# devcontainer 側
+docker stats                 # コンテナごとの CPU / メモリ
+docker system df             # image / layer / volume の実使用量
+```
+
+Docker Desktop 側の総量は Settings > Resources（Memory limit / Disk usage limit）と
+Settings > Resources > Advanced の Disk usage で見られます。
+
+### このリポジトリでの実務的な指針
+
+- **並列させるなら上限を明示する。** `sbx-agent` は `--cpus` / `--memory` をそのまま渡すので、
+  `multi-worktree` で複数動かすときは既定（全 CPU・ホストの 50%）に任せず絞るのが無難です。
+- **使い終わったら止める。** ローカル sandbox には idle 停止が無いので、`sbx stop` で止めるか
+  `sbx run --rm` で使い捨てにします。溜まったものは `sbx prune`（停止済みを一括削除）や
+  `sbx rm` で片付けます。ディスクは sandbox 単位で増えるので、ここが一番効きます。
+- **ディスクが厳しいなら devcontainer を使う。** `multi-worktree dev --devcontainer` で
+  従来経路に戻せます。隔離より資源効率を優先する場面では素直にこちらです。
 
 ## セットアップ
 
