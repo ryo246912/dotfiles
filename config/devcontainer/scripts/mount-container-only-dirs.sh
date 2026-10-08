@@ -89,8 +89,31 @@ done < <(
 		-type f \( "${manifest_name_predicates[@]}" \) -print0
 )
 
+# root で target を辿れない共有 FS 向けのフォールバック付き bind mount。
+# Docker Sandboxes の workspace（virtiofs passthrough）はホスト側でホストユーザーの権限として
+# 判定されるため、sandbox の root（sudo）からはホストのディレクトリを辿れず
+# `mount: ...: permission denied` になる。agent 本人の権限で target を開いた fd を
+# /proc/<pid>/fd/<n> の magic link として渡せば、root はパスを辿り直さずに済む。
+# --no-canonicalize が無いと mount(8) が realpath で同じパスを root として辿り直してしまう。
+bind_mount() {
+	local source=$1 target=$2 fd rc=0 err
+	err=$(sudo mount --bind "${source}" "${target}" 2>&1) && return 0
+	exec {fd}<"${target}" || {
+		echo "${err}" >&2
+		return 1
+	}
+	sudo mount --no-canonicalize --bind "${source}" "/proc/$$/fd/${fd}" 2>/dev/null || rc=$?
+	exec {fd}<&-
+	if [ "${rc}" -ne 0 ]; then
+		echo "${err}" >&2
+		return 1
+	fi
+	mountpoint -q "${target}"
+}
+
 sudo install -d -o "$(id -u)" -g "$(id -g)" "${storage_root}"
 skipped=0
+failed=0
 for target in "${!targets[@]}"; do
 	# シンボリックリンクは sudo の操作がリンク先（workspace 外のこともある）に及ぶため分離しない。
 	if [ -L "${target}" ]; then
@@ -105,11 +128,17 @@ for target in "${!targets[@]}"; do
 		echo "ℹ️ ホスト側の既存内容を移行せず隠します: ${target}" >&2
 	fi
 	# 既存の target は mount で隠すだけなので、所有者・権限を変えないよう無いときだけ作る。
+	# workspace は実行ユーザーが書けるので sudo は不要（sandbox では root だと辿れないこともある）。
 	if [ ! -d "${target}" ]; then
-		sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
+		mkdir -p "${target}" || sudo install -d -o "$(id -u)" -g "$(id -g)" "${target}"
 	fi
 	sudo install -d -o "$(id -u)" -g "$(id -g)" "${backing_dir}"
-	sudo mount --bind "${backing_dir}" "${target}"
+	# 1 つ失敗しても残りは分離する（set -e で途中終了すると後続が全部ホストに書かれる）
+	if ! bind_mount "${backing_dir}" "${target}"; then
+		echo "⚠️ 分離できませんでした: ${target}" >&2
+		failed=$((failed + 1))
+	fi
 done
 
-echo "✓ $((${#targets[@]} - skipped)) 個のプロジェクト生成物をコンテナ内に分離しました"
+echo "✓ $((${#targets[@]} - skipped - failed)) 個のプロジェクト生成物をコンテナ内に分離しました"
+[ "${failed}" -eq 0 ]

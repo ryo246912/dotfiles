@@ -264,6 +264,25 @@ sbx secret ls
 mise run sandbox:setup
 ```
 
+### コミット署名用の SSH 鍵を ssh-agent に登録する（Mac で一度だけ）
+
+sandbox 内のコミットは、ホストの ssh-agent を forwarding して SSH 署名します
+（[詳細](#ホストの-git-設定とコミット署名)）。ホストの ssh-agent が空だと `sbx-agent` が
+`ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します` と警告し、
+署名なしでコミットされます。次を一度だけ実行してください。
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+ssh-add -L   # 公開鍵が 1 行出れば OK
+```
+
+- `--apple-use-keychain` でパスフレーズを Keychain に保存しておくと、再起動で agent が空に
+  なっても `sbx-agent` が `ssh-add --apple-load-keychain` で自動的に読み込み直します。
+- このあと `sbx-agent` を起動し直せば警告は消え、sandbox 内のコミットが SSH 署名されます。
+- 署名を GitHub で **Verified** にするには、同じ公開鍵（`ssh-add -L` の出力）を
+  GitHub の [SSH and GPG keys](https://github.com/settings/keys) に **Signing key** として
+  登録してください。Authentication key とは別の枠なので、認証用に登録済みでも改めて追加が必要です。
+
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
 > 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
@@ -304,9 +323,9 @@ devcontainer と共通です。[docs/devcontainer.md](./devcontainer.md) の手�
 # ── ライフサイクル ─────────────────────────────────────────────
 sbx create --name=my-sbx claude .    # 作成のみ（アタッチしない）
 sbx run --name=my-sbx claude .       # 作成してアタッチ
-sbx run my-sbx                       # 既存 sandbox に再アタッチ（agent は spec から解決）
-sbx run my-sbx --branch=fix-bug      # branch mode（専用 worktree で作業させる）
-sbx run my-sbx -- --continue         # `--` 以降は agent へ pass-through
+sbx run --name=my-sbx                # 既存 sandbox に再アタッチ（agent は spec から解決）
+sbx run --name=my-sbx --branch=fix-bug # branch mode（専用 worktree で作業させる）
+sbx run --name=my-sbx -- --continue  # `--` 以降は agent へ pass-through
 sbx run --rm claude                  # セッション終了時に sandbox を削除
 sbx run -d --name=my-sbx claude .    # バックグラウンド常駐（ポート公開したまま使う）
 sbx ls                               # 一覧
@@ -381,7 +400,7 @@ sbx-agent --help
    （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
-6. `sbx run <name>` でアタッチする
+6. `sbx run --name <name>` でアタッチする（位置引数で名前を渡す形は sbx 0.47 で deprecated）
 
 agent ごとの設定ディレクトリの対応（`--config-dir` で上書き可）:
 
@@ -479,6 +498,7 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
 mise run sandbox:setup           # secret / network policy / skills / 通知用 SSH 鍵
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
 mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
@@ -786,6 +806,11 @@ sandbox は microVM なので mount が使え、base image の `agent` ユーザ
 - symlink になっている対象は、リンク先が workspace 外に及ぶ可能性があるため分離しません
 - パスワード無しの sudo が使えない場合は警告を出してスキップします（この場合は従来どおり
   ホストに書かれます）
+- workspace は virtiofs passthrough で、権限はホスト側でホストユーザーとして判定されるため、
+  sandbox の root からはホストのディレクトリを辿れず `mount: ...: permission denied` になることが
+  あります。その場合は agent 本人の権限で開いた fd（`/proc/<pid>/fd/<n>`）を
+  `mount --no-canonicalize --bind` の target に渡して張り直します。それでも失敗した対象は
+  警告して残りの分離を続けます
 
 ## worktree と Git metadata の mount
 

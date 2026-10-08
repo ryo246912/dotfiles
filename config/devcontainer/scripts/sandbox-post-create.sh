@@ -222,11 +222,14 @@ setup_gh_alias() {
         log_skip "gh の stack alias は既に定義済みです"
         return 0
     fi
-    if gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1; then
+    local err
+    if err=$(gh alias set stack '!gh-stack "$@"' 2>&1 >/dev/null); then
         log_ok "gh stack -> gh-stack の alias を設定しました"
         return 0
     fi
-    log_warn "gh stack の alias を設定できませんでした"
+    # 原因が分からないと直せないため、gh のエラーと保存先をそのまま出す
+    log_warn "gh stack の alias を設定できませんでした: ${err:-（gh がエラーを出力しませんでした）}"
+    log_warn "  保存先: ${GH_CONFIG_DIR:-${XDG_CONFIG_HOME:-${HOME}/.config}/gh}（書き込めるか確認してください）"
     return 1
 }
 

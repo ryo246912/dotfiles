@@ -333,7 +333,7 @@ exit
 
 1. task root と各 worktree の common git dir（実体リポジトリの `.git`）を `sbx-agent` に渡す
 2. `sbx-agent` が `sbx create` でホスト設定・agent 設定ディレクトリ・環境変数を含めて sandbox を作る（同名 sandbox があれば作成をスキップ）
-3. `sbx run <name>` でアタッチする
+3. `sbx run --name <name>` でアタッチする
 4. `--` 以降は agent CLI にそのまま渡す
 
 sbx の呼び出し自体は `local/bin/sbx-agent` に委譲しており、ccmanager の sandbox preset と実装を共有しています。

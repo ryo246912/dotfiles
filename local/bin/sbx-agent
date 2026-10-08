@@ -711,7 +711,8 @@ fi
 run_post_create
 
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
-run_cmd=(sbx run "$SANDBOX_NAME")
+# 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
+run_cmd=(sbx run --name "$SANDBOX_NAME")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
 [[ "$REMOVE_ON_EXIT" == true ]] && run_cmd+=(--rm)
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
