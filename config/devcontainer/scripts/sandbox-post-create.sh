@@ -63,6 +63,43 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
+# ローカル宛ての通信を sandbox のプロキシに通さない
+# ---------------------------------------------------------------------------
+# sbx は HTTP(S)_PROXY を sandbox のプロキシへ向け、/etc/sandbox-persistent.sh で export する。
+# NO_PROXY に 0.0.0.0 が無いため、CRIT_HOST=0.0.0.0 で待ち受ける crit daemon へ client が
+# 0.0.0.0:7842 で接続するとプロキシ経由になり、"Approval required…" が返って crit が止まる。
+# plannotator など sandbox 内のローカルサーバーへの接続も同じ問題を踏みうるので、
+# ループバック系をまとめて足す。bash（sbx 本体）と zsh（/etc/zsh/zshenv）の両方が source するため
+# POSIX sh の構文で書き、多重に source されても重複しないよう未登録のものだけ足す。
+setup_no_proxy() {
+    local file=/etc/sandbox-persistent.sh
+    local marker='# dotfiles: local no_proxy'
+
+    if [ -r "$file" ] && grep -qF "$marker" "$file"; then
+        log_skip "NO_PROXY のローカル除外は既に設定済みです"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        log_warn "パスワード無しの sudo が使えないため NO_PROXY を設定できませんでした"
+        return 1
+    fi
+    if sudo tee -a "$file" >/dev/null <<'SH'; then
+# dotfiles: local no_proxy
+for __np_host in 0.0.0.0 localhost 127.0.0.1 ::1; do
+    case ",${NO_PROXY:-}," in *",${__np_host},"*) ;; *) NO_PROXY="${NO_PROXY:+${NO_PROXY},}${__np_host}" ;; esac
+    case ",${no_proxy:-}," in *",${__np_host},"*) ;; *) no_proxy="${no_proxy:+${no_proxy},}${__np_host}" ;; esac
+done
+unset __np_host
+export NO_PROXY no_proxy
+SH
+        log_ok "NO_PROXY に 0.0.0.0 / localhost / 127.0.0.1 / ::1 を追加しました（${file}）"
+        return 0
+    fi
+    log_warn "NO_PROXY の設定に失敗しました（${file}）"
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # crit
 # ---------------------------------------------------------------------------
 # devcontainer では post-start.sh が `docker port` で host port を調べていたが、sandbox では
@@ -259,6 +296,7 @@ separate_artifacts() {
 }
 
 setup_nvim
+setup_no_proxy
 separate_artifacts
 setup_ssh_config
 setup_crit

@@ -981,14 +981,25 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 `sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
-| 処理                          | 内容                                                                                   |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                     |
-| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                     |
-| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す |
-| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                       |
-| `gh stack` の alias 設定      | `gh-stack`（mise で入れた bin）へ転送する gh の shell alias を sandbox 内に用意する    |
-| lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ          |
+| 処理                          | 内容                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                           |
+| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                           |
+| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
+| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
+| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
+| `gh stack` の alias 設定      | `gh-stack`（mise で入れた bin）へ転送する gh の shell alias を sandbox 内に用意する          |
+| lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ                |
+
+> [!NOTE]
+> sbx は `HTTP(S)_PROXY` を sandbox のプロキシに向けますが、既定の `NO_PROXY` には `0.0.0.0` が
+> 入っていません。crit は `CRIT_HOST=0.0.0.0` で待ち受け、client も `0.0.0.0:7842` へ接続するため、
+> そのままだと接続がプロキシ経由になって `Approval required…` が返り、crit が起動に失敗します。
+> plannotator など sandbox 内のローカルサーバーへの接続も同じ問題を踏みうるので、初期化スクリプトが
+> `/etc/sandbox-persistent.sh` にループバック系をまとめて足します（bash / zsh の両方が読む）。
+> `crit` ラッパーと `plannotator-browser` も実行時に同じ値を足すので、二重に効きます。
+> いずれも template に入っているため、既存の sandbox へは `mise run sandbox:build-template` →
+> `sbx-agent --new` で反映してください。
 
 > [!NOTE]
 > `gh stack`（[github/gh-stack](https://github.com/github/gh-stack)）は gh の extension ですが、
@@ -1294,23 +1305,24 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 
 ## トラブルシューティング
 
-| 症状                                                             | 対処                                                                                                  |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                        |
-| `You are not authenticated`                                      | `sbx login` で再認証                                                                                  |
-| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                      |
-| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                         |
-| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                      |
-| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認。macOS は `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` を一度実行 |
-| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）                   |
-| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                       |
-| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                             |
-| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認     |
-| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                            |
-| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                          |
-| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                         |
-| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）         |
-| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                               |
+| 症状                                                             | 対処                                                                                                                        |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                                              |
+| `You are not authenticated`                                      | `sbx login` で再認証                                                                                                        |
+| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                                            |
+| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                                               |
+| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                                            |
+| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認。macOS は `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` を一度実行                       |
+| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）                                         |
+| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                                             |
+| crit / plannotator が `Approval required…` で起動しない          | `NO_PROXY` に `0.0.0.0` が無い。template を作り直して `sbx-agent --new`（暫定なら `NO_PROXY="$NO_PROXY,0.0.0.0" crit ...`） |
+| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                                                   |
+| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認                           |
+| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                                                  |
+| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                                                |
+| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                                               |
+| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）                               |
+| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                                                     |
 
 ### `sbx create` が template を見つけられずに失敗する
 
