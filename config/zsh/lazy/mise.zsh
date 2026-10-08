@@ -63,7 +63,7 @@ if command -v atuin >/dev/null 2>&1; then
     # daemon.enabled = true だとコマンド記録時に daemon へ接続するため、未起動ならここで起動する。
     # 18.8.0 の daemon は起動時に古いソケットを消さないので、プロセスが無ければ残骸を消してから起動する。
     if ! pgrep -f "atuin daemon" >/dev/null 2>&1; then
-        rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/atuin/atuin.sock"
+        rm -f "${XDG_RUNTIME_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/atuin}/atuin.sock"
         (atuin daemon >/dev/null 2>&1 &)
     fi
 fi
