@@ -837,7 +837,24 @@ commit.gpgsign  = true
 
 ホストの ssh-agent に鍵が無い場合は `commit.gpgsign = false` にして警告します。
 ホストの gitconfig が GPG 署名を有効にしていても GPG 秘密鍵は sandbox に渡らないため、
-無効化しないと commit が毎回失敗するからです。`ssh-add ~/.ssh/id_ed25519` で鍵を登録してください。
+無効化しないと commit が毎回失敗するからです。
+
+macOS の ssh-agent は再起動のたびに空になり、`~/.ssh/config` の `AddKeysToAgent yes` も
+「SSH で鍵を使った時点」でしか登録しません。ホストの git が GPG 署名・HTTPS push だと
+SSH 鍵を使う機会が無いため、空のままになりがちです。そこで `sbx-agent` は agent が空のとき
+`ssh-add --apple-load-keychain` で Keychain に保存済みの鍵を非対話で読み込んでから判定します。
+Keychain にまだ保存していなければ、一度だけ次を実行してください（以降は自動で読み込まれます）。
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+ssh-add -L   # 公開鍵が表示されれば OK
+```
+
+署名を GitHub で Verified にするには、同じ公開鍵を GitHub に **Signing key** として登録しておく
+必要があります（Authentication key とは別枠）。
+
+`ssh-add -L` が `Could not open a connection to your authentication agent` になる場合は
+`SSH_AUTH_SOCK` が古い（tmux の古いセッションなど）ので、新しいシェルから実行してください。
 
 > [!NOTE]
 > devcontainer では `gpg.ssh.allowedSignersFile` も設定して署名の検証までできるようにしていましたが、
@@ -1252,23 +1269,23 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 
 ## トラブルシューティング
 
-| 症状                                                             | 対処                                                                                              |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                    |
-| `You are not authenticated`                                      | `sbx login` で再認証                                                                              |
-| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                  |
-| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                     |
-| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                  |
-| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認（forwarding はホストの ssh-agent が前提）                         |
-| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）               |
-| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                   |
-| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                         |
-| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認 |
-| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                        |
-| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                      |
-| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                     |
-| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）     |
-| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                           |
+| 症状                                                             | 対処                                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| パッケージが取得できない                                         | `sbx policy log` でブロック先を確認し `sbx policy allow network <host>` で許可                        |
+| `You are not authenticated`                                      | `sbx login` で再認証                                                                                  |
+| モデル API に到達できない                                        | `sbx policy allow network api.anthropic.com`。secret 登録後なら sandbox を再作成                      |
+| ポートフォワードが効かない                                       | サービスが `0.0.0.0` に bind しているか確認し、`sbx ports` をホスト端末で実行                         |
+| agent がホストの設定を読まない                                   | 設定ディレクトリを追加 workspace に渡し、`CLAUDE_CONFIG_DIR` 等を `--env` で明示                      |
+| コミットが署名されない                                           | `ssh-add -L` で鍵が見えるか確認。macOS は `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` を一度実行 |
+| sandbox 内で git が使えない                                      | linked worktree の common git dir が渡っているか確認（relative-paths 形式は非対応）                   |
+| 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                       |
+| lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                             |
+| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認     |
+| 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                            |
+| `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                          |
+| `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                         |
+| `error: cannot run delta`                                        | ホストの gitconfig が pager に delta を指定しているため。`GIT_PAGER=cat` で無効化済み（下記）         |
+| template のビルドが `exporting to image` で `input/output error` | Docker Desktop のディスク不足。下記参照                                                               |
 
 ### `sbx create` が template を見つけられずに失敗する
 

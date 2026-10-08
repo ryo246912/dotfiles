@@ -517,8 +517,22 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # コミット署名: sbx は SSH agent forwarding が既定で有効なので、ホストの秘密鍵を
     # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
     # なく forwarded agent の公開鍵（key:: 形式）を指定する。
-    signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1) || signing_pubkey=""
-    if [[ -n "$signing_pubkey" && "$signing_pubkey" != *"no identities"* ]]; then
+    #
+    # macOS の ssh-agent は再起動直後は空で、~/.ssh/config の AddKeysToAgent は「SSH で
+    # 鍵を使った時点」でしか登録しない。ホストの git が GPG 署名・HTTPS push だと SSH 鍵を
+    # 使う機会が無く、ずっと空のままになる。Keychain にパスフレーズを保存済みの鍵は
+    # 非対話で読み込めるので、空のときだけ試す（未保存なら何も起きない）。
+    # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
+    agent_rc=0
+    ssh-add -L >/dev/null 2>&1 || agent_rc=$?
+    if [[ $agent_rc -eq 1 && "$(uname -s)" == Darwin ]]; then
+        ssh-add -q --apple-load-keychain >/dev/null 2>&1 || true
+        agent_rc=0
+        ssh-add -L >/dev/null 2>&1 || agent_rc=$?
+    fi
+    signing_pubkey=""
+    [[ $agent_rc -eq 0 ]] && signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1)
+    if [[ -n "$signing_pubkey" ]]; then
         add_git_config gpg.format ssh
         add_git_config user.signingkey "key::${signing_pubkey}"
         add_git_config commit.gpgsign true
@@ -526,7 +540,17 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         # ホストの gitconfig が GPG 署名を有効にしていても、GPG 秘密鍵は sandbox に
         # 渡らないため commit が毎回失敗する。署名だけ無効化する。
         add_git_config commit.gpgsign false
-        log_warn "ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します（ssh-add で鍵を登録してください）"
+        if [[ $agent_rc -eq 2 ]]; then
+            log_warn "ホストの ssh-agent に接続できないため sandbox 内のコミット署名を無効化します"
+            log_warn "  SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-（未設定）} を確認してください（tmux の古いセッションでは古いソケットを指していることがあります）"
+        else
+            log_warn "ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します"
+            if [[ "$(uname -s)" == Darwin ]]; then
+                log_warn "  一度だけ ssh-add --apple-use-keychain ~/.ssh/id_ed25519 を実行すると、以降は自動で読み込みます"
+            else
+                log_warn "  ssh-add ~/.ssh/id_ed25519 で鍵を登録してください"
+            fi
+        fi
     fi
 
     if [[ ${#GIT_CONFIG_PAIRS[@]} -gt 0 ]]; then
