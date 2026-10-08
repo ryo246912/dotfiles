@@ -206,6 +206,8 @@ Settings > Resources > Advanced の Disk usage で見られます。
 - **使い終わったら止める。** ローカル sandbox には idle 停止が無いので、`sbx stop` で止めるか
   `sbx run --rm` で使い捨てにします。溜まったものは `sbx prune`（停止済みを一括削除）や
   `sbx rm` で片付けます。ディスクは sandbox 単位で増えるので、ここが一番効きます。
+  現状確認は `mise run sandbox:disk`、回収は `mise run sandbox:prune`
+  （[ディスクを空ける](#ディスクを空けるimage-layer-の-prune)参照）。
 - **ディスクが厳しいなら devcontainer を使う。** `multi-worktree dev --devcontainer` で
   従来経路に戻せます。隔離より資源効率を優先する場面では素直にこちらです。
 
@@ -558,6 +560,58 @@ sbx prune                             # 使っていない sandbox をまとめ�
 
 `sbx stop` はインストール済みパッケージを保ったまま止めるだけなので、
 翌日また同じタスクを続けるなら `stop` のままにしておくと起動が速くなります。
+
+### ディスクを空ける（image layer の prune）
+
+まずどこを食っているか見ます。ディスクは **ホストの Docker**（template をビルドする側）と
+**sbx の image store / sandbox 本体** の 2 箇所に分かれて増えます。
+
+```bash
+mise run sandbox:disk
+```
+
+回収は `sandbox:prune` です。**既定は dry-run**（何が消えるか出すだけ）で、`--yes` を付けて
+初めて実行します。
+
+```bash
+mise run sandbox:prune                        # 何が消えるか出すだけ
+mise run sandbox:prune --yes                  # 停止済み sandbox + ホストの dangling image
+mise run sandbox:prune --yes --template       # + ホストの template image
+mise run sandbox:prune --yes --build-cache    # + ホストの build cache
+mise run sandbox:prune --yes --all            # 全部
+```
+
+素のコマンドは次の 5 つです。何がどこを空けるかが段ごとに違うので、効果とコストを
+分けて把握しておくと選びやすくなります。
+
+| コマンド                          | 空く場所                         | コスト                                                                                                    |
+| --------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sbx prune`                       | 停止済み sandbox（VM ごと）      | なし。**動いている sandbox は対象外**なので習慣的に打てる（`--dry-run` で事前確認、`--force` で確認省略） |
+| `sbx template rm <tag>`           | sbx 側の template image          | その template からの `sbx create` ができなくなる（`mise run sandbox:build-template` で作り直す）          |
+| `docker image prune`              | ホストの dangling layer          | なし（タグの付いていない層だけ）                                                                          |
+| `docker image rm sbx-agent:local` | ホストの template image（数 GB） | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
+| `docker builder prune`            | ホストの build cache             | **次回の `sandbox:build-template` が初回と同じフルインストールになる**（下記）                            |
+
+> [!NOTE]
+> `docker image rm sbx-agent:local` と `docker builder prune` の違いが効きます。
+> `Dockerfile.sandbox` は mise のインストール済みツールを
+> `RUN --mount=type=cache,id=sandbox-mise-cache` で持っており、これは **image ではなく
+> BuildKit の build cache 側**にあります。つまり image を消しても再ダウンロードは起きず、
+> `docker builder prune` を打つと全ツールを取り直すことになります。
+> 容量だけ抑えたいなら `docker builder prune --max-used-space 10GB` のように上限を
+> 決める手もあります（全消しではなくキャップ）。
+
+> [!TIP]
+> ホストの `sbx-agent:local` は、`sbx template load` した時点で **sbx 側の image store に
+> コピー済み**です。ホストに残っているものは次回ビルドの layer cache としてしか使わないので、
+> 容量が厳しいときは `--template` で落とすのが効率的です（sandbox は動き続けます）。
+
+sandbox の中で作った image を空けたいときは、sandbox 内で普通に `docker` を打ちます
+（sandbox ごとに専用の docker daemon を持っているため、ホストには影響しません）。
+
+```bash
+sbx exec <sandbox-name> docker system prune -af
+```
 
 ## ファイルシステムとパスの関係
 
