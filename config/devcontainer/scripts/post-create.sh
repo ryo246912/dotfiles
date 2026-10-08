@@ -206,3 +206,24 @@ EOF
 else
 	echo "ℹ️ ~/.crit.config.json は既に存在します"
 fi
+
+# gh stack を gh-stack（mise で入れた bin）へ転送する alias を用意する。
+# gh は未知のサブコマンドを PATH から探さず、extension ディレクトリに入っているものしか
+# dispatch しない（cli/cli の pkg/cmd/extension/manager.go: Dispatch は m.list() の結果しか
+# 見ない）ため、PATH 上に gh-stack があるだけでは `gh stack` は動かない。
+# gh の shell alias（`!` 始まり）は `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を
+# 埋めるので "$@" がそのまま引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
+#
+# alias は ~/.config/gh/config.yml に入る。このファイルは認証情報と同じ場所なので
+# repo では管理せず（sandbox にもマウントしない）、代わりにここで毎回冪等に用意する。
+# `gh alias` は auth check を免除されている（pkg/cmd/alias/alias.go の DisableAuthCheck）ため、
+# gh 未ログインの sandbox でも設定できる。
+if command -v gh >/dev/null 2>&1; then
+	if gh alias list 2>/dev/null | grep -q '^stack:'; then
+		echo "ℹ️ gh の stack alias は既に定義済みです"
+	elif gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1; then
+		echo "✓ gh stack -> gh-stack の alias を設定しました"
+	else
+		echo "⚠️ gh stack の alias を設定できませんでした" >&2
+	fi
+fi

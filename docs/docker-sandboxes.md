@@ -747,7 +747,22 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 | `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                     |
 | `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す |
 | `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                       |
+| `gh stack` の alias 設定      | `gh-stack`（mise で入れた bin）へ転送する gh の shell alias を用意する                 |
 | lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ          |
+
+> [!NOTE]
+> `gh stack`（[github/gh-stack](https://github.com/github/gh-stack)）は gh の extension ですが、
+> 他の `gh-*` ツールと同じく mise の `[tools]` で `gh-stack` という bin として入れています
+> （host は `config/mise/config.toml`、devcontainer と sandbox は共有の
+> `config/devcontainer/mise.toml`）。
+> gh は未知のサブコマンドを PATH から探さず extension ディレクトリにあるものだけを dispatch
+> するため（`pkg/cmd/extension/manager.go` の `Dispatch`）、PATH に `gh-stack` があるだけでは
+> `gh stack` は動きません。そこで `gh alias set stack '!gh-stack "$@"'` を入れて転送しています。
+> alias の保存先 `~/.config/gh/config.yml` は認証情報と同じファイルで repo 管理外（sandbox にも
+> マウントしない）なので、host は `[bootstrap.hooks.post-tools]`、devcontainer は
+> `post-create.sh`、sandbox は `sandbox-post-create.sh` がそれぞれ冪等に設定します。
+> `gh-stack` 単体でも動くので（`go-gh` が `GH_TOKEN` や gh の資格情報からトークンを解決する）、
+> alias が無くても `gh-stack ...` で使えます。
 
 crit（7842）と plannotator（19433）の **host port は固定せず sbx に採番させます**。
 devcontainer が `appPort: 127.0.0.1::7842` で自動採番していたのと同じ理由で、

@@ -105,12 +105,28 @@ GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
 # 3) post-tools: 新規環境など、post-dotfiles時点でtoolが未導入だった場合にも同期する。
+#    gh の alias もここで用意する（gh も gh-stack も [tools] なので、tools フェーズの後でないと
+#    まだ入っていない）。
 [bootstrap.hooks.post-tools]
 run = """
 set -e
 export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 mise --cd "$HOME" run apm:sync
 mise --cd "$HOME" run rulesync:sync
+
+# `gh stack` を gh-stack（mise で入れた bin）へ転送する alias。
+# gh は未知のサブコマンドを PATH から探さず、extension ディレクトリにあるものしか dispatch
+# しないため（cli/cli の pkg/cmd/extension/manager.go: Dispatch）、PATH 上に gh-stack が
+# あるだけでは `gh stack` は動かない。gh の shell alias（`!` 始まり）は
+# `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を埋めるので "$@" がそのまま
+# 引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
+# alias の保存先 ~/.config/gh/config.yml は認証情報と同じファイルで repo 管理外のため、
+# bootstrap のたびにここで冪等に用意する。既に stack alias があれば触らない
+# （ユーザーが別の定義にしている場合を尊重する）。
+if command -v gh >/dev/null 2>&1 && ! gh alias list 2>/dev/null | grep -q '^stack:'; then
+  gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1 \
+    || echo "warn: gh の stack alias を設定できませんでした（gh alias set stack で手動設定してください）" >&2
+fi
 """
 
 # "~/.config" は track mode（config/mise/config.toml 側で宣言。track は global

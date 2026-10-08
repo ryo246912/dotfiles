@@ -201,6 +201,36 @@ setup_nvim() {
 }
 
 # ---------------------------------------------------------------------------
+# gh stack -> gh-stack の alias
+# ---------------------------------------------------------------------------
+# gh は未知のサブコマンドを PATH から探さず、extension ディレクトリにあるものしか
+# dispatch しない（cli/cli の pkg/cmd/extension/manager.go: Dispatch は m.list() の結果しか
+# 見ない）ため、PATH 上に gh-stack があるだけでは `gh stack` は動かない。
+# gh の shell alias（`!` 始まり）は `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を
+# 埋めるので "$@" がそのまま引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
+#
+# alias の保存先 ~/.config/gh/config.yml は認証情報と同じファイルのため sandbox には
+# マウントしていない（sbx-agent のコメント参照）。そのためここで毎回用意する。
+# `gh alias` は auth check を免除されている（pkg/cmd/alias/alias.go の DisableAuthCheck）ので、
+# gh 未ログインの sandbox でも設定できる。
+setup_gh_alias() {
+    command -v gh >/dev/null 2>&1 || {
+        log_skip "gh が無いため gh stack の alias をスキップしました"
+        return 0
+    }
+    if gh alias list 2>/dev/null | grep -q '^stack:'; then
+        log_skip "gh の stack alias は既に定義済みです"
+        return 0
+    fi
+    if gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1; then
+        log_ok "gh stack -> gh-stack の alias を設定しました"
+        return 0
+    fi
+    log_warn "gh stack の alias を設定できませんでした"
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # プロジェクト生成物の分離
 # ---------------------------------------------------------------------------
 # workspace はホストと共有されているため、node_modules / .venv / target などの
@@ -230,6 +260,7 @@ separate_artifacts
 setup_ssh_config
 setup_crit
 setup_agent_configs
+setup_gh_alias
 install_lefthook_all
 
 # plannotator のホスト側トンネルは mac-host 経由。スクリプト自体は image に入っている。
