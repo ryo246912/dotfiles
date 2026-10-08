@@ -791,27 +791,31 @@ linked worktree の `.git` は「ファイル」で、中身は common git dir �
 公式ドキュメントも「clone mode is rejected from inside a Git worktree other than the main one」
 と明記しており、`multi-worktree` の task root は linked worktree の集まりなので対象外です。
 
-そのため「生成物をホストに書かせない」目的には clone mode を使えず、
-次の方法を使っています。
+そのため生成物の置き場所を分ける目的には clone mode を使えず、
+次の運用にしています。
 
-## 生成物をホストに書かせない（sandbox ではできない）
+## 生成物（`node_modules` 等）の扱い
 
-devcontainer では `node_modules` / `.venv` / `target` / `.gradle` / `.terraform` を
-`mount-container-only-dirs.sh` でコンテナローカル領域へ bind mount して隠していますが、
-**sandbox ではこれができません**。生成物はホストの workspace にそのまま書かれます。
+sandbox では `node_modules` / `.venv` / `target` などの生成物を**分離しません**。
+sandbox 内で `npm install` 等をすると、ホストの workspace（worktree）にそのまま Linux 版が書かれます。
 
+devcontainer では `mount-container-only-dirs.sh` でコンテナローカル領域へ bind mount して隠していますが、
 sbx の agent は microVM の中でさらにコンテナとして動いており、`sudo` しても root は
 `CAP_SYS_ADMIN` を持ちません（`/proc/self/status` の `CapBnd` が Docker 既定の `a80425fb`）。
-そのため共有フォルダ上に限らず、`/tmp` 同士の `mount --bind` も `permission denied` になります。
-初期化スクリプトはこれを検出して分離をスキップします（`ℹ️` を 1 行出すだけ）。
+共有フォルダ上に限らず `/tmp` 同士の `mount --bind` も `permission denied` になるため、
+mount による分離は使えません。
 
-実用上の注意:
+代わりにディレクトリ単位で持ち主を分けます。生成物は `.gitignore` 済みなので、
+checkout 間で混ざることはありません。
 
-- ホストと sandbox で同じディレクトリの `node_modules` を使い回すと、ネイティブモジュールが
-  Linux 版 / macOS 版で入れ替わって壊れることがあります。ホスト側で使っているプロジェクトで
-  sandbox から `npm install` などをした場合は、ホストで入れ直してください。
-- `.gitignore` 済みなので commit には混ざりません。
-- 確実に分けたいなら clone mode（`--clone`）ですが、[multi-worktree では使えません](#multi-worktree-では使えない)。
+| ディレクトリ                              | 生成物の持ち主 | 用途                                                     |
+| ----------------------------------------- | -------------- | -------------------------------------------------------- |
+| worktree（`multi-worktree` / ccmanager）  | sandbox        | エージェントの実装・テスト（Linux 版の `node_modules`）  |
+| main のチェックアウト（例: `~/dotfiles`） | ホスト         | 動作確認。ブランチを checkout してホストで install・実行 |
+
+- worktree でホストから install やテストをしない（ネイティブモジュールが Linux 版 / macOS 版で
+  入れ替わって片方で壊れる）。
+- ホストで動作確認したいときは、main のチェックアウトで対象ブランチを checkout してから行う。
 
 ## worktree と Git metadata の mount
 
@@ -1082,33 +1086,32 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                     |
 | コミット署名（専用鍵 + `allowed_signers`）                                                        | ⚠️ ssh-agent forwarding で署名はできる。`allowed_signers`（検証側）は未設定 |
 | `~/.claude-account2` / `-work3` への symlink 共有                                                 | ⚠️ 不要。`CLAUDE_CONFIG_DIR` がホストのディレクトリを直接指すため共有される |
-| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ❌ root に `CAP_SYS_ADMIN` が無く mount できないためスキップ                |
+| `mount-container-only-dirs.sh`（`node_modules` / `.venv` / `target` の分離）                      | ❌ 使わない（mount できないため。worktree は sandbox 用と割り切る）         |
 
 ### postStartCommand（`post-start.sh`）
 
-| devcontainer でやっていたこと          | sandbox                                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `mise trust`                           | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替                             |
-| `mac-host` への SSH config 生成        | ✅ `sandbox-post-create.sh` で生成                                                        |
-| crit の host port 取得・記録           | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                                          |
-| crit の host port をホストへ通知       | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため）                   |
-| 生成物ディレクトリの bind mount 再張り | ❌ sandbox では mount できない（[詳細](#生成物をホストに書かせないsandbox-ではできない)） |
+| devcontainer でやっていたこと    | sandbox                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| `mise trust`                     | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替           |
+| `mac-host` への SSH config 生成  | ✅ `sandbox-post-create.sh` で生成                                      |
+| crit の host port 取得・記録     | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                        |
+| crit の host port をホストへ通知 | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため） |
 
 ### コンテナ内でできていたこと
 
-| できていたこと                                       | sandbox                                                                        |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                           |
-| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                            |
-| lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`        |
-| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                   |
-| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）           |
-| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                         |
-| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている              |
-| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                 |
-| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている                 |
-| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                           |
-| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ ホストに書かれる（[詳細](#生成物をホストに書かせないsandbox-ではできない)） |
+| できていたこと                                       | sandbox                                                                 |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                    |
+| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                     |
+| lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install` |
+| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                            |
+| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）    |
+| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                  |
+| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている       |
+| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている          |
+| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている          |
+| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                    |
+| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）  |
 
 ### 残っている差分
 
@@ -1121,7 +1124,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 ### まとめ
 
 ツールチェイン・ホスト連携・MCP はすべて移植済みで、
-**残る差分は生成物の分離（sandbox では mount できない）と `allowed_signers`（署名検証）、
+**残る差分は生成物の分離（mount できないため運用で分ける）と `allowed_signers`（署名検証）、
 `~/.claude/settings.json` の read-only 化**です。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 
@@ -1285,8 +1288,8 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 - カスタム template のビルドにはホスト側の Docker daemon が必要（sandbox 内ではビルドできない）。
 - `--skills=readwrite` の sandbox は他の sandbox が読む skills を書き換えられる。
   信頼境界を分けたい場合は `--skills=off`。
-- 生成物（`node_modules` / `.venv` / `target`）はホストの workspace に書かれる。sandbox の root は
-  `CAP_SYS_ADMIN` を持たず bind mount で隠せないため（[詳細](#生成物をホストに書かせないsandbox-ではできない)）。
+- 生成物（`node_modules` / `.venv` / `target`）は worktree に書かれる。worktree は sandbox、main の
+  チェックアウトはホストと持ち主を分けて運用する（[詳細](#生成物node_modules-等の扱い)）。
 - `mise.toml` / `tasks/` / `lint/` / `scripts/` を変えたら `mise run sandbox:build-template` で
   template を作り直す（マウントではなく image に COPY しているため）。
 
