@@ -214,16 +214,19 @@ fi
 # gh の shell alias（`!` 始まり）は `sh -c '<expansion>' -- <args>` で実行され、`--` が $0 を
 # 埋めるので "$@" がそのまま引数になる（pkg/cmd/root/alias.go: expandShellAlias）。
 #
-# alias は ~/.config/gh/config.yml に入る。このファイルは認証情報と同じ場所なので
-# repo では管理せず（sandbox にもマウントしない）、代わりにここで毎回冪等に用意する。
-# `gh alias` は auth check を免除されている（pkg/cmd/alias/alias.go の DisableAuthCheck）ため、
-# gh 未ログインの sandbox でも設定できる。
+# alias は ~/.config/gh/config.yml に入るが、devcontainer はホストの ~/.config/gh を
+# **read-only** で bind mount している（認証情報と同じファイルなのでコンテナから書かせない）。
+# そのためコンテナ内で `gh alias set` はできない。ここでは有無だけ確認し、無ければ
+# ホスト側で用意する手順を案内する（ホストで設定すれば、この read-only マウント経由で
+# コンテナからも見える）。
+# sandbox 側は ~/.config/gh をマウントしないので、そちらは自前で set する
+# （sandbox-post-create.sh 参照）。
 if command -v gh >/dev/null 2>&1; then
 	if gh alias list 2>/dev/null | grep -q '^stack:'; then
-		echo "ℹ️ gh の stack alias は既に定義済みです"
-	elif gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1; then
-		echo "✓ gh stack -> gh-stack の alias を設定しました"
+		echo "✓ gh stack -> gh-stack の alias はホスト設定から見えています"
 	else
-		echo "⚠️ gh stack の alias を設定できませんでした" >&2
+		echo "ℹ️ gh の stack alias がありません（~/.config/gh は read-only なのでここでは設定できません）"
+		echo "   ホスト側で mise bootstrap を実行するか、次を打ってください:"
+		echo "   gh alias set stack '!gh-stack \"\$@\"'"
 	fi
 fi

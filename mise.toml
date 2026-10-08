@@ -123,6 +123,14 @@ mise --cd "$HOME" run rulesync:sync
 # alias の保存先 ~/.config/gh/config.yml は認証情報と同じファイルで repo 管理外のため、
 # bootstrap のたびにここで冪等に用意する。既に stack alias があれば触らない
 # （ユーザーが別の定義にしている場合を尊重する）。
+# gh も gh-stack も mise の shim 経由なので、hook の PATH には入っていない
+# （pre-tools hook が同じ理由で PATH を足している）。足さないと command -v gh が外れて
+# alias が黙ってスキップされる。
+if [ "$(uname)" = "Darwin" ]; then
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
+else
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+fi
 if command -v gh >/dev/null 2>&1 && ! gh alias list 2>/dev/null | grep -q '^stack:'; then
   gh alias set stack '!gh-stack "$@"' >/dev/null 2>&1 \
     || echo "warn: gh の stack alias を設定できませんでした（gh alias set stack で手動設定してください）" >&2
