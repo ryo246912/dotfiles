@@ -143,7 +143,7 @@ echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].templat
 '''
 
 ["sandbox:setup"]
-description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills)"
+description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills, settings)"
 run = '''
 set -eu
 
@@ -172,6 +172,18 @@ echo "==> ホスト連携に必要な network policy を許可"
 # mac-host への SSH（通知 / host-tmux / plannotator tunnel）。
 # sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
 sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
+
+echo "==> 調査でよく読むドキュメントサイトを全 sandbox で許可"
+# 一覧は config/sbx/allow-domains.txt。kit ではなく global な policy で許可する理由は
+# docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
+allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$MISE_PROJECT_ROOT/config/sbx/allow-domains.txt" | grep -v '^$' | paste -sd, -)
+if [ -n "$allow_domains" ]; then
+  sbx policy allow network "$allow_domains" || echo "warn: ドキュメントサイトの許可に失敗しました" >&2
+fi
+
+echo "==> ホスト設定を反映"
+# ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
+sbx settings set clipboard.imagePaste true || echo "warn: clipboard.imagePaste の設定に失敗しました" >&2
 
 echo "==> ホストの agent skills を共有 store へ取り込む"
 sbx skills import || echo "warn: skills の取り込みに失敗しました" >&2
