@@ -48,14 +48,15 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
 例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
 
-| 種類                               | 例                                                                   | git 管理 | 理由                                                                     |
-| ---------------------------------- | -------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------ |
-| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                     | する     | generate の入力であり、リポジトリ固有の target / output 設定だから       |
-| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`                                          | する     | `CLAUDE.md` を生成するための正本だから                                   |
-| プロジェクト単位の生成物           | `CLAUDE.md`                                                          | しない   | `rulesync generate` で再生成される出力だから                             |
-| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                     | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから |
-| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから     |
-| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル    | しない   | `rulesync generate` で実ホームへ再生成される出力だから                   |
+| 種類                               | 例                                                                   | git 管理 | 理由                                                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                     | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
+| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                  | する     | 生成物の正本だから                                                                                                                |
+| プロジェクト単位の生成物           | `CLAUDE.md`                                                          | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
+| プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`, `.codex/config.toml`   | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
+| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                     | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
+| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
+| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル    | しない   | `rulesync generate` で実ホームへ再生成される出力だから                                                                            |
 
 ### 初回 clone と `rulesync init` の関係
 

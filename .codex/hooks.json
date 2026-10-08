@@ -7,8 +7,7 @@
           {
             "type": "command",
             "command": "\"$(git rev-parse --show-toplevel)/scripts/ai-session-setup.sh\"",
-            "timeout": 600,
-            "statusMessage": "Installing mise tools and git hooks"
+            "timeout": 600
           }
         ]
       }
