@@ -836,7 +836,7 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
     必要（初回移行時。`--force` 前に `diff -ru ~/dotfiles/config ~/.config` 等で
     `~/.config` 側だけにある編集を repo へ取り込んでおくこと）。target 引数で
     `"~/.config"` と指定すればこのエントリだけに force を閉じられる（後述の `~/.local` の
-    項参照。両方まとめて `apply --force --yes "~/.config" "~/.local"` と書いてもよい）。
+    項参照。まとめて `apply --force --yes "~/.config" "~/.local" "~/.aws"` と書いてもよい）。
   - 保存時に「一時ファイルへ書いて rename」するアプリは、リンクを実ファイルで
     置き換えてしまう。その場合は repo との同期が切れ、次の apply が conflict になるため、
     差分を repo へ取り込んでから `--force` で張り直す。
@@ -854,7 +854,7 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   ```
 
   `~/.config` も一緒に移行するなら target を並べる
-  （`apply --force --yes "~/.config" "~/.local"`）。その場合は `MISE_ENV` が解決済みである
+  （`apply --force --yes "~/.config" "~/.local" "~/.aws"`）。その場合は `MISE_ENV` が解決済みである
   ことを確かめること（通常は `~/.zshenv` が `HOST_ENV` から導出する）。未設定のまま
   `~/.config` を force すると `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、
   他 OS 向けのファイルまでリンクしてしまう。新規マシンの初回適用のように `HOST_ENV` が
