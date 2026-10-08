@@ -139,6 +139,9 @@ mise --cd "$HOME" run rulesync:sync
 # 該当するため、apm:sync-lock（config/mise/tasks/dev.toml）が repo へのコピーと
 # symlink の張り直しを行う。
 #
+# "~/.aws" も symlink-each にしている。aws/ には雛形（config.example）だけを置き、
+# 実際の ~/.aws/config・credentials（アカウント ID や認証情報を含む）は source に無いため触らない。
+#
 # 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
 # 単一ファイルエントリ（alacritty/ghostty/git/rio/rulesync mcp.json）と
 # "~/.zshenv" は、
@@ -155,8 +158,30 @@ mise --cd "$HOME" run rulesync:sync
 # 認証情報等の git 管理外のランタイム状態も混在するため）。"~/.local" も同様の理由で
 # ディレクトリ全体・個別ファイルのいずれも track していない（config/mise/config.toml
 # のコメント参照）。
+#
+# "~/.local" は ~/.config と同じく symlink-each にしている。local/bin のスクリプトを
+# ~/.local/bin 側で直接編集しても repo の作業ツリーへ反映されるようにするため
+# （copy だと apply するまで反映されず、逆方向の編集も失われる）。
+# symlink-each なので ~/.local/share・state 等の管理外のものはそのまま残る。
+#
+# copy からの移行（既存環境では1回だけ必要）: ~/.local/bin には copy 時代の実ファイルが
+# 残っているため、通常の apply は conflict で止まる。force で置き換える:
+#   mise bootstrap dotfiles apply --force --yes "~/.local"
+# target 引数（この "~/.local"）を付けると force の影響をこのエントリだけに閉じられる
+# ため、他エントリのライブ編集を巻き込まない。target は前方一致ではなく「宣言した
+# キーそのもの（または解決後の絶対パス）」と完全一致で照合され、symlink-each の
+# 各ファイルへの展開は照合より後に行われるので、ここでは "~/.local" と書く
+# （mise の src/system/files.rs: matches_target / src/cli/dotfiles/mod.rs:
+# select_requests で確認）。
+# force の前に ~/.local 側だけにある編集が無いか確認すること:
+#   diff -ru "$PWD/local" "$HOME/.local" | grep -v '^Only in .*/\.local[/:]'
+# `mise bootstrap` を1コマンドで流す場合は、同じ役割のフラグ名が --force-dotfiles に
+# なる（`apply` サブコマンドは -f/--force、トップレベルの `mise bootstrap` は
+# --force-dotfiles。mise の CLI reference で確認）。移行が済めば実ファイルは残らない
+# ので、以降の apply に force は不要。
 [dotfiles]
 "~/.apm"                                = { source = "apm", mode = "symlink-each" }
+"~/.aws"                                = { source = "aws", mode = "symlink-each" }
 "~/.claude"                             = { source = "claude", mode = "symlink-each" }
 "~/.codex"                              = { source = "codex", mode = "symlink-each" }
 "~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
@@ -164,7 +189,7 @@ mise --cd "$HOME" run rulesync:sync
 "~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
 "~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
-"~/.local"                              = { source = "local", mode = "copy" }
+"~/.local"                              = { source = "local", mode = "symlink-each" }
 "~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]

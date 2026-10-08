@@ -4,6 +4,11 @@
 コメントをそのままエージェントへフィードバックできる CLI ツールです。
 **AIエージェントは devcontainer 内で実行する前提**で統合しています（devcontainer 定義は
 `config/devcontainer/` を参照）。
+Docker Sandboxes (`sbx`) で動かす場合は `appPort` の代わりに
+`sbx ports <sandbox> --publish 7842` でレビュー UI を公開し、割り当てられた host port は
+`sbx ports <sandbox>` で確認します（host port を固定すると sandbox を複数起動したときに衝突する。
+`sbx-agent` は起動時にこの公開と host port の記録まで自動で行う。
+[docs/docker-sandboxes.md](./docker-sandboxes.md) 参照）。
 
 ## 構成
 

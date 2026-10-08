@@ -215,6 +215,187 @@ ensure_ssh_key() {
 ensure_dir ~/.config/gh
 ensure_dir ~/.config/ccusage
 ensure_dir ~/.config/mise
+ensure_dir ~/.config/nvim
+
+# mise の [dotfiles] は ~/.config を symlink-each で配置するため、配下のファイルは
+# dotfiles リポジトリを指す symlink になっている。これをそのまま bind mount すると、
+# リンク先のホストのパスはコンテナ内に無いためリンク切れになる。Docker の build context も
+# コンテナ外を指す symlink を辿らないため COPY が "not found" で失敗する。
+# そこで symlink を解決した実体のコピーをホスト側に作り、devcontainer.json はそちらを
+# build context と read-only mount の source として参照する（元が read-only mount なので
+# コピーでも挙動は変わらない）。コンテナ作成ごとにこの initializeCommand で差分反映するため、
+# ~/.config 側の編集は次の起動で反映される。
+#
+# 置き場所は ~/.cache 配下に固定する: devcontainer.json では ${localEnv:...} に既定値を
+# 書けないため、XDG_CACHE_HOME ではなく ~/.cache を直接使う必要がある。
+HOST_CONFIG_STAGE="$HOME/.cache/devcontainer/host-config"
+
+# 注意: ディレクトリごと rm -rf して作り直してはいけない。このコピーは起動中の
+# devcontainer が bind mount しているため（multi-worktree では複数が同時に動く）、
+# 新しいコンテナを作るたびに中身を消すと、動いているコンテナから設定が消える。
+# そのため「一時ディレクトリへ実体をコピーしてから、差分だけを mv で反映」する。
+#
+# mv は同一ファイルシステム内では atomic（rename(2)）なので、起動中のコンテナが
+# 中途半端な内容のファイルを読むことがない。dst へ直接 cp すると書き込み途中の
+# 内容が見えてしまう。
+materialize_config() {
+	local name="$1" src dst tmp rel rc=0 stale dirs files
+	src="$HOME/.config/$name"
+	dst="${HOST_CONFIG_STAGE}/$name"
+	if [ ! -d "$src" ]; then
+		# 配置先から消えた場合、過去の実行で作ったコピーを残すと「消したはずの設定」が
+		# 新しいコンテナへ mount され続ける。mount 元として存在だけ残し、中身を空にする。
+		# 元から無いもの（未導入のツール等）は何もせず成功扱いにする。
+		if [ -d "$dst" ]; then
+			rm -rf "$dst"
+			mkdir -p "$dst"
+			echo "⚠️ ホスト側から消えたため staged コピーを空にしました: $src" >&2
+			return 1
+		fi
+		return 0
+	fi
+	mkdir -p "$dst"
+	tmp="${HOST_CONFIG_STAGE}/.staging-${name}"
+	rm -rf "$tmp"
+	mkdir -p "$tmp"
+
+	# -L で symlink を辿って、まず一時ディレクトリへ実体をコピーする
+	if ! cp -RL "$src/." "$tmp/" 2>/dev/null; then
+		echo "⚠️ 一部をコピーできませんでした(リンク切れ?): $src" >&2
+		rc=1
+	fi
+
+	# dst から消すもの: 配置先から消えた entry と、file ↔ directory で型が変わった entry。
+	# 走査中に削除するため、先に一覧を確定させる。
+	stale=$(cd "$dst" && find . -mindepth 1 2>/dev/null)
+	printf '%s\n' "$stale" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
+		rel="${rel#./}"
+		if [ ! -e "${tmp}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		elif [ -d "${tmp}/${rel}" ] && [ ! -d "${dst}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		elif [ ! -d "${tmp}/${rel}" ] && [ -d "${dst}/${rel}" ]; then
+			rm -rf "${dst}/${rel}"
+		fi
+	done
+
+	# ディレクトリを先に作り、ファイルは mv で atomic に置き換える
+	dirs=$(cd "$tmp" && find . -mindepth 1 -type d 2>/dev/null)
+	files=$(cd "$tmp" && find . ! -type d 2>/dev/null)
+	printf '%s\n' "$dirs" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
+		mkdir -p "${dst}/${rel#./}"
+	done
+	printf '%s\n' "$files" | while IFS= read -r rel; do
+		[ -n "$rel" ] || continue
+		rel="${rel#./}"
+		mv -f "${tmp}/${rel}" "${dst}/${rel}"
+	done
+
+	rm -rf "$tmp"
+	[ "$rc" -eq 0 ] && echo "✓ 実体化: $dst"
+	return "$rc"
+}
+
+# ファイル単位の mount 元も同じように実体化する。
+#
+# 当初は「ファイル単位の bind mount なら Docker が source 側の symlink を解決するので
+# そのままで良い」と考えていたが、実際には symlink がコンテナ内へそのまま渡り、
+# core.excludesfile が指す ~/.config/gitignore-host が
+# "Too many levels of symbolic links" で読めなくなる事例が出た。
+# Docker の symlink 解決に依存せず、ここで実体を作って渡す。
+#
+# 実体化に失敗しても mount 元が欠けないように、空の実体を用意しておく
+# （mounts の source が無いとコンテナ作成自体が失敗するため。このファイル冒頭の説明を参照）。
+ensure_staged_placeholder() {
+	local dst="$1" placeholder="$2"
+	[ -e "$dst" ] && return 0
+	mkdir -p "$(dirname "$dst")"
+	if [ -n "$placeholder" ]; then
+		printf '%s\n' "$placeholder" >"$dst"
+	else
+		: >"$dst"
+	fi
+	echo "✓ 作成(空の実体): $dst"
+}
+
+# 引数: <コピー先の名前> <コピー元のパス> [実体化できなかったときに書く内容]
+materialize_file() {
+	local name="$1" src="$2" placeholder="${3:-}" dst tmp
+	dst="${HOST_CONFIG_STAGE}/files/${name}"
+	mkdir -p "$(dirname "$dst")"
+	# [ -e ] はリンク切れの symlink に対して偽になるので、リンク切れもここで弾ける
+	if [ ! -e "$src" ]; then
+		# 配置先から消えた・リンク切れになった場合、過去の実行で作ったコピーを残すと
+		# 「消したはずの設定」が新しいコンテナへ mount され続ける。古いコピーは捨てる。
+		rm -f "$dst"
+		echo "⚠️ 実体化できません(未配置かリンク切れ): $src" >&2
+		ensure_staged_placeholder "$dst" "$placeholder"
+		return 1
+	fi
+	tmp="${dst}.new"
+	# -L で symlink を辿って実体をコピーし、mv で atomic に置き換える
+	if ! cp -L "$src" "$tmp" 2>/dev/null; then
+		rm -f "$tmp"
+		# source はあるのにコピーだけ失敗した場合は一時的な事象の可能性があるため、
+		# 既存のコピーは消さずに残す（無い場合だけ空の実体を用意する）
+		echo "⚠️ 実体化に失敗しました: $src" >&2
+		ensure_staged_placeholder "$dst" "$placeholder"
+		return 1
+	fi
+	mv -f "$tmp" "$dst"
+	echo "✓ 実体化: $dst"
+}
+
+materialize_all() {
+	# build context になる devcontainer は失敗を致命的に扱う（古いコピーのまま build させない）
+	materialize_config devcontainer || return 1
+	# 残りは read-only な設定の共有なので、1 つリンク切れがあっても起動は止めない
+	materialize_config nvim || echo "⚠️ nvim 設定の実体化に失敗しました" >&2
+	materialize_config mise || echo "⚠️ mise 設定の実体化に失敗しました" >&2
+	materialize_config ccusage || echo "⚠️ ccusage 設定の実体化に失敗しました" >&2
+
+	# gitconfig / gitignore はコンテナ内の git が常に読むため、失敗を致命的に扱う。
+	# ここが読めないと core.excludesfile の解決に失敗して git status 系が全部死ぬ。
+	materialize_file gitconfig-host "$HOME/.config/git/config" || return 1
+	materialize_file gitignore-host "$HOME/.config/git/gitignore" || return 1
+
+	# agent の設定。無くても起動はできるので warning 止まりにする
+	materialize_file claude-config-host.json "$HOME/.claude.json" '{}' \
+		|| echo "⚠️ .claude.json の実体化に失敗しました" >&2
+	materialize_file claude-settings.json "$HOME/.claude/settings.json" '{}' \
+		|| echo "⚠️ .claude/settings.json の実体化に失敗しました" >&2
+	materialize_file codex-config.toml "$HOME/.codex/config.toml" \
+		|| echo "⚠️ .codex/config.toml の実体化に失敗しました" >&2
+	materialize_file codex-hooks.json "$HOME/.codex/hooks.json" '{}' \
+		|| echo "⚠️ .codex/hooks.json の実体化に失敗しました" >&2
+	return 0
+}
+
+# 実体化は直列化する。multi-worktree で複数の devcontainer を同時に起動すると
+# initializeCommand も同時に走り、同じコピーへ書き込んでしまう。
+# ロックの仕組みは SSH 鍵の処理（_ssh_key_lock_acquire）と同じものを流用する。
+with_stage_lock() {
+	local lock="${HOST_CONFIG_STAGE}.lock" rc=0
+	mkdir -p "$(dirname "$lock")"
+	if command -v flock >/dev/null 2>&1; then
+		(
+			exec 9>"$lock"
+			flock -w 60 9 || exit 3
+			"$@"
+		) || rc=$?
+		[ "$rc" -eq 3 ] && echo "✗ 設定の実体化のロック取得がタイムアウトしました" >&2
+		return "$rc"
+	fi
+	if ! _ssh_key_lock_acquire "$lock"; then
+		echo "✗ 設定の実体化のロック取得がタイムアウトしました" >&2
+		return 1
+	fi
+	"$@" || rc=$?
+	rm -rf "$lock" 2>/dev/null || true
+	return "$rc"
+}
 
 # .ssh
 ensure_empty_file ~/.ssh/known_hosts
@@ -242,8 +423,38 @@ ensure_dir ~/.claude-account2
 ensure_dir ~/.claude-work3
 ensure_dir ~/.agents
 ensure_dir ~/.codex
+# ~/.codex 配下の設定は symlink-each で配置されるため、ディレクトリごとの mount では
+# リンク切れになる。~/.claude/settings.json と同じく実体を単体 mount するので、
+# dotfiles 未適用でも mount source が欠けないように用意しておく。
+ensure_empty_file ~/.codex/config.toml
+ensure_json_file ~/.codex/hooks.json
 ensure_dir ~/.copilot
 ensure_dir ~/.coderabbit
 
 # .aws（config だけを mount する。AWS を使わないホストには無いため、無ければ空ファイルを用意する）
 ensure_empty_file ~/.aws/config
+
+# ---------------------------------------------------------------------------
+# ホスト設定の実体化（symlink の解決）
+# ---------------------------------------------------------------------------
+# mount 元が全て揃ってから実行する必要があるため、ensure_* の後＝このファイルの最後に置く
+# （~/.codex/config.toml などは上の ensure_* で初めて作られるので、先に実体化すると
+# 「未配置」と判定してしまう）。
+with_stage_lock materialize_all || exit 1
+
+# build context と Dockerfile の COPY 対象が揃っているか確認する
+# （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
+stage_missing=""
+for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
+	# 実体化コピーだけを見ると、過去の実行で作られた古いコピーが残っているせいで
+	# 「配置先から消えた・リンク切れになった」のを見逃す。配置先と両方を確認する
+	# （[ -e ] はリンク切れの symlink に対して偽になるのでリンク切れも検出できる）。
+	[ -e "$HOME/.config/devcontainer/${required}" ] \
+		&& [ -e "${HOST_CONFIG_STAGE}/devcontainer/${required}" ] \
+		|| stage_missing="${stage_missing}${stage_missing:+, }${required}"
+done
+if [ -n "$stage_missing" ]; then
+	echo "✗ devcontainer の build context に必要なものがありません: ${stage_missing}" >&2
+	echo "  mise bootstrap dotfiles apply で ~/.config/devcontainer を配置してください" >&2
+	exit 1
+fi

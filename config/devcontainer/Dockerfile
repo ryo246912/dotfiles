@@ -1,3 +1,12 @@
+# devcontainer 用の image。
+#
+# build context は ~/.config/devcontainer ではなく、initializeCommand
+# （scripts/initialize.sh）が symlink を解決して作る
+# ~/.cache/devcontainer/host-config/devcontainer を使う。
+# ~/.config 配下は mise の [dotfiles] が symlink-each で配置するため、そのまま context に
+# すると BuildKit がコンテキスト外を指す symlink を辿れず、下の COPY が "not found" で
+# 失敗する（docs/devcontainer.md 参照）。レイアウトは ~/.config/devcontainer と同じなので
+# COPY のパスはそのまま使える。
 ARG VERSION=ubuntu-24.04
 FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 

@@ -1,0 +1,114 @@
+# syntax=docker/dockerfile:1
+#
+# Docker Sandboxes 用のカスタム template。
+# devcontainer の Dockerfile と同じツール群（このディレクトリの mise.toml）を sandbox の
+# Linux microVM 側に入れる。ホストの mise で入れたツールは macOS バイナリなので
+# sandbox（Linux）では一切使えないため、こちらで別に入れ直す必要がある。
+#
+# build context は dotfiles リポジトリ側のこのディレクトリ（config/devcontainer）。
+# 配置先（~/.config/devcontainer）を使うと、実体ファイルでない場合に BuildKit が
+# コンテキスト外の symlink を辿れず COPY が "not found" で失敗する:
+#   mise run sandbox:build-template
+#
+# devcontainer との対応:
+#   - mise.toml / tasks/ / lint/ / scripts/ / lefthook.local.yml は devcontainer と共有する。
+#     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
+#     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
+#   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
+ARG VARIANT=claude-code
+FROM docker/sandbox-templates:${VARIANT}
+
+ARG AGENT_HOME=/home/agent
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    rsync \
+    zsh \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# 既定シェルを zsh にする（devcontainer と同じ）。
+# sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
+# zsh でも同じ内容を読むよう /etc/zsh/zshenv からも source する。
+ENV SHELL=/usr/bin/zsh
+RUN chsh -s /usr/bin/zsh agent \
+    && install -d /etc/zsh \
+    && printf '%s\n' \
+      '# sbx が書き込む永続環境変数を zsh でも読む（bash 側は sbx 本体が source する）' \
+      '[ -r /etc/sandbox-persistent.sh ] && . /etc/sandbox-persistent.sh' \
+      >> /etc/zsh/zshenv
+
+# mise を全ユーザーから使える場所へ入れる
+RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise sh
+
+# data dir と config dir は分ける。同一にすると cache mount からの rsync が
+# COPY した config.toml / tasks を上書きしてしまう。
+ENV MISE_DATA_DIR=/mise/data \
+    MISE_CONFIG_DIR=/mise \
+    MISE_STATE_DIR=/mise/state \
+    MISE_CACHE_DIR=/mise/cache
+# agent セッションは sbx が起動するため、PATH は image 側で確定させる。
+# crit ラッパー（scripts/crit）を mise shim より前に置く（docs/crit.md 参照）。
+ENV PATH=${AGENT_HOME}/.config/devcontainer/scripts:/mise/data/shims:$PATH
+
+RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
+
+# mise install より前に COPY するのは mise.toml だけにする。
+# 設定ツリー全体をここで COPY すると、scripts/ を 1 行直しただけで下の重い install layer が
+# 無効化されてしまうため、残りは install の後に COPY する。
+COPY --chown=agent:agent mise.toml /mise/config.toml
+
+# agent CLI（claude / codex / copilot）は base image 側が持っているため mise では入れない。
+# sbx が agent のバージョンと認証を管理するので、mise の shim で上書きしないようにする。
+ARG DISABLE_TOOLS="aqua:anthropics/claude-code,aqua:openai/codex,github:github/copilot-cli"
+
+# root で install して最後に chown する。BuildKit の cache mount の uid を base image の
+# agent ユーザーに合わせて決め打ちしないための措置（uid は image 側の都合で変わりうる）。
+#
+# mise.toml が変わるとこの RUN は必ず再実行されるが、全ツールを毎回ゼロから入れ直すと遅いため、
+# インストール済みツール(/mise/data)を cache mount(/mise/data-cache)へ保存し、次回ビルド時に
+# 復元してから `mise install` する。差分（バージョンが変わったツール）だけが取得される。
+# cache mount は `docker builder prune` で消える（消えても初回と同じフルインストールになるだけ）。
+#
+# /run/secrets/github_token は build 時に --secret で渡されるホストの GH_TOKEN。
+# aqua:/github: backend の API レート制限回避に使う。無くてもビルドは続行する。
+#
+# mise の trust は実行ユーザーごとに記録されるため、root で `mise trust` しても agent では
+# 効かない。ビルド中も実行時も env で宣言する（下の ENV が実行時用）。
+RUN --mount=type=secret,id=github_token \
+    --mount=type=cache,id=sandbox-mise-cache,target=/mise/cache \
+    --mount=type=cache,id=sandbox-mise-data,target=/mise/data-cache,sharing=locked \
+    set -eu; \
+    export MISE_DISABLE_TOOLS="$DISABLE_TOOLS" \
+      MISE_YES=1 \
+      MISE_TRUSTED_CONFIG_PATHS=/mise \
+      GOMODCACHE=/mise/cache/go-mod \
+      GOCACHE=/mise/cache/go-build \
+      GOFLAGS=-modcacherw \
+      BUN_INSTALL_CACHE_DIR=/mise/cache/bun; \
+    if [ -s /run/secrets/github_token ]; then \
+      export GITHUB_TOKEN="$(cat /run/secrets/github_token)"; \
+    fi; \
+    rsync -a /mise/data-cache/ /mise/data/; \
+    mise install -C /mise aqua:cli/cli; \
+    mise reshim -C /mise; \
+    mise install -C /mise; \
+    mise prune -C /mise --tools || echo "warn: mise prune failed" >&2; \
+    rm -rf /mise/data/downloads; \
+    mise reshim -C /mise; \
+    rsync -a --delete /mise/data/ /mise/data-cache/; \
+    chown -R agent:agent /mise/data /mise/state
+
+# tasks と設定ツリーは install の後に COPY する（上記の理由でキャッシュを守るため）。
+# devcontainer が bind mount していたのと同じ ~/.config/devcontainer 配下へ置くので、
+# tasks が参照する ${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/... がそのまま解決する。
+COPY --chown=agent:agent tasks /mise/tasks
+COPY --chown=agent:agent . ${AGENT_HOME}/.config/devcontainer
+
+# mise の trust は実行ユーザーごとに記録されるため、root で trust しても agent では効かない。
+# 代わりに trusted path を env で宣言する（sbx-agent は workspace を足した値を --env で渡す）。
+ENV MISE_TRUSTED_CONFIG_PATHS=/mise
+
+USER agent
+WORKDIR ${AGENT_HOME}/workspace

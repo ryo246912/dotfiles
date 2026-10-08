@@ -1,0 +1,291 @@
+["sandbox:build-template"]
+description = "Build the Docker Sandboxes template with the devcontainer toolchain and load it into sbx"
+run = '''
+set -eu
+
+# devcontainer と同じツール群（~/.config/devcontainer/mise.toml）を入れた sandbox template を
+# ビルドして sbx の image store へ読み込む。詳細は docs/docker-sandboxes.md 参照。
+#
+# sbx が使う Docker daemon はホストの daemon と image store を共有しないため、
+# ローカルビルドした image は tar 経由で `sbx template load` する必要がある。
+
+# ビルドコンテキストは「配置先（~/.config/devcontainer）」ではなく dotfiles リポジトリ側を使う。
+# 配置先は mise の [dotfiles] が symlink-each で配置するため中身が symlink であり、
+# BuildKit はコンテキスト外を指す symlink を辿らないため COPY が "not found" で失敗する。
+#
+# リポジトリの場所は MISE_PROJECT_ROOT（このリポジトリ内で実行した場合）→ DOTFILES_DIR →
+# ~/.config/git/gitignore の symlink から逆算 → 既定の ~/dotfiles の順で解決する。
+# 別のプロジェクトから実行しても、dotfiles が適用済みなら動くようにしている。
+# mise.toml と .git があるだけでは、同じ構成の別プロジェクトを誤認する。
+# ここで欲しいのは「このビルドに必要なファイルを持つツリー」なので、それ自体を目印にする。
+looks_like_dotfiles() {
+  [ -f "$1/mise.toml" ] && [ -e "$1/.git" ] && [ -f "$1/config/devcontainer/Dockerfile.sandbox" ]
+}
+
+repo_root=""
+for candidate in "${MISE_PROJECT_ROOT:-}" "${DOTFILES_DIR:-}"; do
+  [ -n "$candidate" ] || continue
+  # DOTFILES_DIR はクォート付きで export されている（例: DOTFILES_DIR="~/foo"）ことが
+  # あり、その場合 ~ が展開されないため自前で展開する
+  case "$candidate" in
+    "~") candidate="$HOME" ;;
+    "~/"*) candidate="${HOME}/${candidate#"~/"}" ;;
+  esac
+  if looks_like_dotfiles "$candidate"; then repo_root="$candidate"; break; fi
+done
+if [ -z "$repo_root" ] && [ -L "$HOME/.config/git/gitignore" ]; then
+  # 配置済み symlink のリンク先からルートを逆算する（config/devcontainer のように
+  # mise.toml を持つサブディレクトリを誤検出しないよう .git も確認する）
+  link=$(readlink "$HOME/.config/git/gitignore")
+  case "$link" in /*) ;; *) link="$HOME/.config/git/$link" ;; esac
+  dir=$(dirname "$link")
+  while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    if looks_like_dotfiles "$dir"; then repo_root="$dir"; break; fi
+    dir=$(dirname "$dir")
+  done
+fi
+if [ -z "$repo_root" ] && looks_like_dotfiles "$HOME/dotfiles"; then
+  repo_root="$HOME/dotfiles"
+fi
+if [ -z "$repo_root" ]; then
+  echo "error: dotfiles リポジトリが見つかりません" >&2
+  echo "       リポジトリ内で実行するか、DOTFILES_DIR を export してください" >&2
+  exit 1
+fi
+context="${repo_root}/config/devcontainer"
+dockerfile="${context}/Dockerfile.sandbox"
+tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
+variant="${SBX_TEMPLATE_VARIANT:-claude-code}"
+
+for cmd in docker sbx; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }
+done
+
+# COPY する対象が実体として読めることを先に確かめる（symlink 切れ・未配置をここで検出する）
+missing=""
+for required in Dockerfile.sandbox mise.toml tasks lint scripts lefthook.local.yml; do
+  [ -e "${context}/${required}" ] || missing="${missing}${missing:+, }${required}"
+done
+if [ -n "$missing" ]; then
+  echo "error: ビルドコンテキストに必要なものがありません: ${missing}" >&2
+  echo "       context=${context}" >&2
+  echo "       mise bootstrap dotfiles apply でリポジトリを最新にしてください" >&2
+  exit 1
+fi
+
+# aqua:/github: backend の API レート制限を避けるため GH_TOKEN を build secret で渡す。
+# 取得できなかった場合は --secret を付けない（空の env を渡すと BuildKit が失敗するため）。
+gh_token=""
+command -v gh >/dev/null 2>&1 && gh_token=$(gh auth token 2>/dev/null || true)
+secret_args=""
+if [ -n "$gh_token" ]; then
+  secret_args="--secret id=github_token,env=GH_TOKEN"
+else
+  echo "warn: gh のトークンが取得できないため build secret なしで続行します（API レート制限に注意）" >&2
+fi
+
+tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
+trap 'rm -f "$tar_path"' EXIT
+
+# provenance / SBOM の attestation を切る。付いていると出力が単一イメージではなく
+# attestation manifest を含む OCI index（manifest list）になり、`docker image save` した
+# tar も index 形式になるため `sbx template load` が意図したイメージを選べない可能性がある。
+# ここで欲しいのはローカル専用の単一イメージなので、attestation は不要。
+# buildx を使わない docker では未対応のフラグなので、使えるときだけ付ける。
+attest_args=""
+if docker build --help 2>/dev/null | grep -q -- '--provenance'; then
+  attest_args="--provenance=false --sbom=false"
+fi
+
+echo "==> docker build ($tag, variant=$variant)"
+# shellcheck disable=SC2086 # secret_args / attest_args は意図的に分割させる
+if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
+  $secret_args \
+  $attest_args \
+  --build-arg "VARIANT=${variant}" \
+  -f "$dockerfile" \
+  -t "$tag" \
+  "$context"; then
+  echo >&2
+  echo "error: docker build が失敗しました" >&2
+  # このイメージはツールチェイン一式（go / node / python / bun 他）で数 GB になるため、
+  # 全ステップ成功したあと "exporting to image" で input/output error になる場合は
+  # ほぼ Docker Desktop のディスク不足。ビルド内容の問題と紛れやすいので明示する。
+  cat >&2 <<'HINT'
+  ヒント: 各ステップは成功したのに "exporting to image" で
+  "input/output error" になった場合は Docker Desktop のディスク不足がほぼ原因です。
+    1. docker system df で使用量を確認する
+    2. docker image prune -a / docker container prune で空ける
+    3. Docker Desktop の Settings > Resources > Disk usage limit を増やす
+    4. それでも直らなければ仮想ディスクの破損を疑う（Troubleshoot > Clean / Purge data）
+  docker builder prune でも空きますが、mise のインストール済みツールの cache mount も
+  消えるため、次回のビルドは初回と同じフルインストールになります。
+HINT
+  exit 1
+fi
+
+echo "==> docker image save -> sbx template load"
+# 数 GB の tar を書くため、一時ディレクトリにも同等の空きが必要。
+# set -u 下で TMPDIR 未設定の環境（Linux では珍しくない）だと、メッセージ自体が
+# "TMPDIR: unbound variable" で落ちて診断が出ないため既定値を入れる
+# （mktemp -t 側は未設定でもシステムの一時ディレクトリへフォールバックする）。
+if ! docker image save "$tag" -o "$tar_path"; then
+  echo "error: docker image save が失敗しました（${TMPDIR:-/tmp} の空き容量を確認してください）" >&2
+  exit 1
+fi
+sbx template load "$tar_path"
+
+echo "==> 完了。利用可能な template:"
+sbx template ls
+echo
+echo "sbx-agent / multi-worktree dev は $tag を自動で使います"
+echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
+'''
+
+["sandbox:setup"]
+description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills, settings)"
+run = '''
+set -eu
+
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+
+# devcontainer と同じ初期化（マウント元の作成と mac-host 用 SSH 鍵の生成）を流用する。
+# 鍵をホストの authorized_keys へ登録する手順は docs/devcontainer.md 参照。
+initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh"
+# ここが無い＝dotfiles が未適用。ホスト連携（通知・crit・plannotator）に必要な SSH 鍵と
+# マウント元が用意されないため、不完全なセットアップを成功と誤認させないように止める。
+[ -f "$initialize" ] || {
+  echo "error: $initialize が見つかりません（mise bootstrap dotfiles apply を実行してください）" >&2
+  exit 1
+}
+echo "==> マウント元と SSH 鍵を準備"
+bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; exit 1; }
+
+echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
+if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
+  sbx secret set github --command 'gh auth token' || echo "warn: secret の登録に失敗しました" >&2
+else
+  echo "warn: gh が未ログインのためスキップしました（gh auth login 後に再実行）" >&2
+fi
+
+echo "==> ホスト連携に必要な network policy を許可"
+# mac-host への SSH（通知 / host-tmux / plannotator tunnel）。
+# sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
+sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
+
+echo "==> 調査でよく読むドキュメントサイトを全 sandbox で許可"
+# 一覧は config/sbx/allow-domains.txt。kit ではなく global な policy で許可する理由は
+# docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
+allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$MISE_PROJECT_ROOT/config/sbx/allow-domains.txt" | grep -v '^$' | paste -sd, -)
+if [ -n "$allow_domains" ]; then
+  sbx policy allow network "$allow_domains" || echo "warn: ドキュメントサイトの許可に失敗しました" >&2
+fi
+
+echo "==> ホスト設定を反映"
+# ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
+sbx settings set clipboard.imagePaste true || echo "warn: clipboard.imagePaste の設定に失敗しました" >&2
+
+echo "==> ホストの agent skills を共有 store へ取り込む"
+sbx skills import || echo "warn: skills の取り込みに失敗しました" >&2
+
+echo "==> 現在の設定"
+sbx secret ls || true
+sbx policy ls || true
+'''
+
+["sandbox:mcp"]
+description = "Register MCP servers on the host so sandboxes can reuse host-side auth"
+run = '''
+set -eu
+
+# ホスト側で一度だけ認証し、その認証情報を全 sandbox から使い回すための登録。
+# OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
+# 注入するため、sandbox 内の agent は生の認証情報を読めない。
+#
+# ここで登録するのは「ホストの認証・ホストのリソースが必要なもの」だけにする。
+# npx で動く普通の MCP サーバは rulesync 経由でエージェント自身の設定に入れており、
+# そちらは sandbox 内（VM 内）で動くので devcontainer と同じ隔離が保たれる。
+#
+# 追加したら SBX_AGENT_STATIC_MCP か --static-mcp で sandbox に読み込ませる。
+
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+
+registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
+
+failed=""
+note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
+
+# notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
+if registered notion; then
+  echo "ℹ️ notion は既に登録済み"
+else
+  echo "==> notion を登録（ブラウザで認可します）"
+  sbx mcp add notion --url https://mcp.notion.com/mcp || note_failure notion
+fi
+
+# aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
+# （--command で登録したサーバはホストで動く。sandbox 内の agent は gateway 経由でのみ接続する）
+if registered aws-api; then
+  echo "ℹ️ aws-api は既に登録済み"
+else
+  echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
+  sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
+    || note_failure aws-api
+fi
+
+# chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
+if registered chrome-devtools; then
+  echo "ℹ️ chrome-devtools は既に登録済み"
+else
+  echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
+  sbx mcp add chrome-devtools --command npx \
+    --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
+    || note_failure chrome-devtools
+fi
+
+echo
+echo "==> 登録済みの MCP サーバ"
+sbx mcp ls || true
+echo
+echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
+echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
+
+# 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
+if [ -n "$failed" ]; then
+  echo >&2
+  echo "error: 登録できなかった MCP サーバ: ${failed}" >&2
+  exit 1
+fi
+'''
+
+["sandbox:template-save"]
+description = "Save a running sandbox's filesystem as a reusable template"
+run = '''
+set -eu
+
+# 使い方: mise run sandbox:template-save <sandbox-name> [tag]
+# sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
+# 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
+
+sandbox="${1:-}"
+tag="${2:-sbx-agent:local}"
+[ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+
+sbx template save "$sandbox" "$tag"
+echo
+sbx template ls
+'''
+
+["sandbox:template-ls"]
+description = "List saved Docker Sandboxes templates"
+run         = "sbx template ls"
+
+["sandbox:template-rm"]
+description = "Remove a saved Docker Sandboxes template"
+run = '''
+set -eu
+tag="${1:-}"
+[ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
+sbx template rm "$tag"
+'''

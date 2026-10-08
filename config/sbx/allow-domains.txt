@@ -1,0 +1,27 @@
+# sandbox からのアクセスを全 sandbox 共通で許可するドメイン（mise run sandbox:setup が読み込む）。
+# Balanced preset の allowlist に無い、調査でよく読むドキュメント・技術情報サイトを並べる。
+# ここに無いドメインは、ブロック時の承認リクエスト（sbx policy approval）で個別に許可する。
+# 1行1パターン。`#` 以降はコメント。`*.example.com` は1階層、`**.example.com` は多階層の subdomain に一致する。
+
+# AI / Claude
+docs.anthropic.com
+docs.claude.com
+code.claude.com
+
+# 言語・フレームワーク・ツールの公式ドキュメント
+developer.mozilla.org
+docs.docker.com
+docs.github.com
+docs.aws.amazon.com
+www.python.org
+docs.python.org
+fastapi.tiangolo.com
+nextjs.org
+www.npmjs.com
+mise.jdx.dev
+
+# Q&A・技術記事
+stackoverflow.com
+zenn.dev
+qiita.com
+**.wikipedia.org
