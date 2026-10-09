@@ -396,9 +396,12 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
     # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
     # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
+    # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
+    # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
     if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
         config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
-        for entry in "$CONFIG_DIR"/* "$CONFIG_DIR"/.[!.]*; do
+        for shared_entry in projects settings.json agents skills plugins; do
+            entry="${CONFIG_DIR}/${shared_entry}"
             [[ -L "$entry" && -e "$entry" ]] || continue
             link=$(readlink "$entry")
             [[ "$link" == /* ]] || link="$(dirname "$entry")/${link}"
