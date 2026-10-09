@@ -23,4 +23,13 @@ function M.find_repos()
   return repos
 end
 
+-- 操作対象になりうるディレクトリ（リポジトリがなければ cwd）
+function M.candidate_dirs()
+  local repos = M.find_repos()
+  if #repos == 0 then
+    return { vim.fn.getcwd() }
+  end
+  return repos
+end
+
 return M

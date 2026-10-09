@@ -55,36 +55,7 @@ return {
       local git_utils = require("utils.git")
       local find_repos = git_utils.find_repos
 
-      local function open_float_term(cmd, cwd)
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.bo[buf].bufhidden = "wipe"
-        local width = math.floor(vim.o.columns * 0.9)
-        local height = math.floor(vim.o.lines * 0.9)
-        local win = vim.api.nvim_open_win(buf, true, {
-          relative = "editor",
-          width = width,
-          height = height,
-          row = math.floor((vim.o.lines - height) / 2),
-          col = math.floor((vim.o.columns - width) / 2),
-          style = "minimal",
-          border = "rounded",
-        })
-
-        vim.fn.termopen(cmd, {
-          cwd = cwd,
-          on_exit = function()
-            vim.schedule(function()
-              if vim.api.nvim_win_is_valid(win) then
-                vim.api.nvim_win_close(win, true)
-              end
-              if vim.api.nvim_buf_is_valid(buf) then
-                vim.api.nvim_buf_delete(buf, { force = true })
-              end
-            end)
-          end,
-        })
-        vim.cmd("startinsert")
-      end
+      local float_term = require("utils.float_term")
 
       local function verify_git_ref(repo, ref, on_found, on_missing)
         vim.system({ "git", "rev-parse", "--verify", "--quiet", ref .. "^{commit}" }, { cwd = repo }, function(r)
@@ -148,7 +119,7 @@ return {
               vim.notify("origin/main または base branch を取得できません", vim.log.levels.WARN)
               return
             end
-            open_float_term({ hunk_cmd, "diff", base_ref .. "...HEAD" }, repo)
+            float_term.open("hunk", { hunk_cmd, "diff", base_ref .. "...HEAD" }, { cwd = repo })
           end)
         end)
       end
@@ -218,7 +189,12 @@ return {
       end
 
       vim.keymap.set("n", "<leader>gd", function() with_repo("DiffviewOpen") end,    { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
-      vim.keymap.set("n", "<leader>gD", function() with_repo_callback(open_hunkdiff) end, { noremap = true, silent = true, desc = "base branchとの差分をhunkで表示" })
+      -- 起動中の hunk があれば表示/非表示を切り替え、なければリポジトリを選択して起動
+      -- （別のリポジトリへ移動していたら古い hunk は破棄して起動し直す）
+      vim.keymap.set({ "n", "t" }, "<leader>gD", function()
+        if float_term.toggle("hunk", { cwds = git_utils.candidate_dirs() }) then return end
+        with_repo_callback(open_hunkdiff)
+      end, { noremap = true, silent = true, desc = "hunk を開閉（base branchとの差分）" })
       vim.keymap.set("n", "<leader>gl", open_file_history_multi,                      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（Tab複数選択・別タブ）" })
       vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>",                { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
 
@@ -641,32 +617,17 @@ return {
     config = function()
       local keymap = vim.keymap.set
 
+      local float_term = require("utils.float_term")
+
       -- lazygitを指定したリポジトリをcwdとしてフローティングターミナルで開く
       local function open_lazygit(path)
-        local buf = vim.api.nvim_create_buf(false, true)
-        local width  = math.floor(vim.o.columns * 0.9)
-        local height = math.floor(vim.o.lines   * 0.9)
-        local win = vim.api.nvim_open_win(buf, true, {
-          relative = "editor",
-          width    = width,
-          height   = height,
-          row      = math.floor((vim.o.lines   - height) / 2),
-          col      = math.floor((vim.o.columns - width)  / 2),
-          style    = "minimal",
-          border   = "rounded",
-        })
-        vim.fn.termopen({ "lazygit" }, {
-          cwd = path,
-          on_exit = function()
-            if vim.api.nvim_win_is_valid(win) then
-              vim.api.nvim_win_close(win, true)
-            end
-          end,
-        })
-        vim.cmd("startinsert")
+        float_term.open("lazygit", { "lazygit" }, { cwd = path })
       end
 
       local function open_lazygit_with_selection()
+        -- 起動中の lazygit があれば表示/非表示を切り替える
+        -- （別のリポジトリへ移動していたら古い lazygit は破棄して起動し直す）
+        if float_term.toggle("lazygit", { cwds = require("utils.git").candidate_dirs() }) then return end
         local cwd = vim.fn.getcwd()
         local repos = require("utils.git").find_repos()
         if #repos == 0 then
@@ -685,7 +646,7 @@ return {
         end
       end
 
-      keymap("n", "<leader>gg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開く（ディレクトリ選択）" })
+      keymap({ "n", "t" }, "<leader>gg", open_lazygit_with_selection, { noremap = true, silent = true, desc = "lazygit を開閉（ディレクトリ選択）" })
     end,
   },
 }
