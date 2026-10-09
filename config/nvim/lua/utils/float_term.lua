@@ -79,7 +79,7 @@ function M.open(group, cmd, opts)
   sessions[group] = s
   s.win = vim.api.nvim_open_win(buf, true, win_config())
 
-  s.job = vim.fn.termopen(cmd, {
+  local ok, job = pcall(vim.fn.termopen, cmd, {
     cwd = opts.cwd,
     on_exit = function()
       vim.schedule(function()
@@ -95,6 +95,13 @@ function M.open(group, cmd, opts)
       end)
     end,
   })
+  -- 起動に失敗したら空のセッションを残さない（残すと toggle が再起動を妨げる）
+  if not ok or job <= 0 then
+    dispose(group, s)
+    vim.notify("ターミナルを起動できません: " .. tostring(ok and vim.inspect(cmd) or job), vim.log.levels.ERROR)
+    return
+  end
+  s.job = job
   vim.cmd("startinsert")
 end
 
