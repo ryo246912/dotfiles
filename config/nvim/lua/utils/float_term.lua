@@ -1,8 +1,15 @@
 -- フローティングターミナル（lazygit, hunk など）をプロセスを落とさずに表示/非表示する
 local M = {}
 
--- group ごとに 1 セッション保持: { buf, win, job, cwd, exited }
+-- group ごとに 1 セッション保持: { buf, win, job, cwd, exited, hidden_seq }
 local sessions = {}
+-- 引っ込めた順番を記録する連番（まとめて引っ込めたものは同じ番号）
+local seq = 0
+
+function M.next_seq()
+  seq = seq + 1
+  return seq
+end
 
 local function win_config()
   local width = math.floor(vim.o.columns * 0.9)
@@ -33,11 +40,12 @@ local function is_visible(s)
   return s.win and vim.api.nvim_win_is_valid(s.win)
 end
 
-local function hide(s)
+local function hide(s, batch)
   if is_visible(s) then
     vim.api.nvim_win_hide(s.win)
   end
   s.win = nil
+  s.hidden_seq = batch or M.next_seq()
 end
 
 local function dispose(group, s)
@@ -73,10 +81,11 @@ function M.toggle(group, opts)
   return true
 end
 
--- 表示中のセッションをすべて引っ込め、引っ込めた group の一覧を返す
+-- 表示中のセッションをすべて引っ込め、引っ込めた group の一覧と連番を返す
 -- （カーソルのあったセッションを最後にして、出し直したときに手前に来るようにする）
 function M.hide_visible()
   local groups = {}
+  local batch = M.next_seq()
   local current = vim.api.nvim_get_current_win()
   local focused
   for group, s in pairs(sessions) do
@@ -86,13 +95,29 @@ function M.hide_visible()
       else
         table.insert(groups, group)
       end
-      hide(s)
+      hide(s, batch)
     end
   end
   if focused then
     table.insert(groups, focused)
   end
-  return groups
+  return groups, batch
+end
+
+-- 裏にあるセッションのうち、最後に引っ込めたもの（まとめて引っ込めたなら全部）の group 一覧と連番を返す
+function M.latest_hidden()
+  local latest, groups = nil, {}
+  for group, s in pairs(sessions) do
+    if is_valid(s) and not is_visible(s) then
+      local n = s.hidden_seq or 0
+      if latest == nil or n > latest then
+        latest, groups = n, { group }
+      elseif n == latest then
+        table.insert(groups, group)
+      end
+    end
+  end
+  return groups, latest
 end
 
 -- 指定した group のセッションを出し直す。1 つでも出し直せたら true

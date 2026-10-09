@@ -176,32 +176,42 @@ return {
       end
 
       -- 表示中のポップアップ（float_term と toggleterm の float）を引っ込める。
-      -- 何も表示されていなければ、最後に引っ込めたものを出し直す
-      local restore_last = nil
+      -- 何も表示されていなければ、裏にあるポップアップのうち最後に引っ込めたものを出す
+      -- （,q で引っ込めたもの、,gg などで引っ込めたもののどちらも対象）
+      local last_batch = nil -- 最後に ,q で引っ込めたもの: { seq, terms, groups }
       local function toggle_popups()
+        local tt = require("toggleterm.terminal")
         local hidden_terms = {}
-        for _, term in ipairs(require("toggleterm.terminal").get_all(true)) do
+        for _, term in ipairs(tt.get_all(true)) do
           if term:is_open() and term:is_float() then
             term:close()
             table.insert(hidden_terms, term)
           end
         end
-        local hidden_groups = float_term.hide_visible()
+        local hidden_groups, batch = float_term.hide_visible()
         if #hidden_terms > 0 or #hidden_groups > 0 then
-          restore_last = function()
-            local shown = float_term.show_groups(hidden_groups)
-            for _, term in ipairs(hidden_terms) do
-              if require("toggleterm.terminal").get(term.id, true) then
-                term:open()
-                shown = true
-              end
-            end
-            return shown
-          end
+          last_batch = { seq = batch, terms = hidden_terms, groups = hidden_groups }
           return
         end
-        if not (restore_last and restore_last()) then
-          vim.notify("引っ込めたポップアップはありません", vim.log.levels.INFO)
+
+        local latest_groups, latest_seq = float_term.latest_hidden()
+        -- ,q で引っ込めたあとに ,gg などで別のものを引っ込めていたら、そちらを優先する
+        if last_batch and (latest_seq == nil or last_batch.seq >= latest_seq) then
+          local shown = float_term.show_groups(last_batch.groups)
+          for _, term in ipairs(last_batch.terms) do
+            if tt.get(term.id, true) and not term:is_open() then
+              term:open()
+              shown = true
+            end
+          end
+          last_batch = nil
+          if shown then
+            return
+          end
+          latest_groups = float_term.latest_hidden()
+        end
+        if not float_term.show_groups(latest_groups) then
+          vim.notify("裏にあるポップアップはありません", vim.log.levels.INFO)
         end
       end
 
