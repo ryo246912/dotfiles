@@ -175,6 +175,37 @@ return {
         end)
       end
 
+      -- 表示中のポップアップ（float_term と toggleterm の float）を引っ込める。
+      -- 何も表示されていなければ、最後に引っ込めたものを出し直す
+      local restore_last = nil
+      local function toggle_popups()
+        local hidden_terms = {}
+        for _, term in ipairs(require("toggleterm.terminal").get_all(true)) do
+          if term:is_open() and term:is_float() then
+            term:close()
+            table.insert(hidden_terms, term)
+          end
+        end
+        local hidden_float = float_term.hide_visible()
+        if #hidden_terms > 0 or hidden_float then
+          restore_last = function()
+            local shown = hidden_float and float_term.show_last()
+            for _, term in ipairs(hidden_terms) do
+              if require("toggleterm.terminal").get(term.id, true) then
+                term:open()
+                shown = true
+              end
+            end
+            return shown
+          end
+          return
+        end
+        if not (restore_last and restore_last()) then
+          vim.notify("引っ込めたポップアップはありません", vim.log.levels.INFO)
+        end
+      end
+
+      keymap({ "n", "t" }, "<leader>q", toggle_popups, { noremap = true, silent = true, desc = "ポップアップを引っ込める/出し直す" })
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
       keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップを開閉" })
 keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })

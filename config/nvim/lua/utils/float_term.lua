@@ -1,8 +1,10 @@
 -- フローティングターミナル（lazygit, hunk など）をプロセスを落とさずに表示/非表示する
 local M = {}
 
--- group ごとに 1 セッション保持: { buf, win, job, exited }
+-- group ごとに 1 セッション保持: { group, buf, win, job, cwd, exited }
 local sessions = {}
+-- 最後に引っ込めたセッションの group
+local last_hidden
 
 local function win_config()
   local width = math.floor(vim.o.columns * 0.9)
@@ -29,11 +31,16 @@ local function show(s)
   end
 end
 
+local function is_visible(s)
+  return s.win and vim.api.nvim_win_is_valid(s.win)
+end
+
 local function hide(s)
-  if s.win and vim.api.nvim_win_is_valid(s.win) then
+  if is_visible(s) then
     vim.api.nvim_win_hide(s.win)
   end
   s.win = nil
+  last_hidden = s.group
 end
 
 local function dispose(group, s)
@@ -57,12 +64,34 @@ function M.toggle(group, opts)
     sessions[group] = nil
     return false
   end
-  if s.win and vim.api.nvim_win_is_valid(s.win) then
+  if is_visible(s) then
     hide(s)
     return true
   end
   if opts.cwds and not vim.tbl_contains(opts.cwds, s.cwd) then
     dispose(group, s)
+    return false
+  end
+  show(s)
+  return true
+end
+
+-- 表示中のセッションをすべて引っ込める。1 つでも引っ込めたら true
+function M.hide_visible()
+  local hidden = false
+  for _, s in pairs(sessions) do
+    if is_valid(s) and is_visible(s) then
+      hide(s)
+      hidden = true
+    end
+  end
+  return hidden
+end
+
+-- 最後に引っ込めたセッションを出し直す。出し直せたら true
+function M.show_last()
+  local s = last_hidden and sessions[last_hidden]
+  if not is_valid(s) or is_visible(s) then
     return false
   end
   show(s)
@@ -81,7 +110,7 @@ function M.open(group, cmd, opts)
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "hide"
-  local s = { buf = buf, cwd = opts.cwd }
+  local s = { group = group, buf = buf, cwd = opts.cwd }
   sessions[group] = s
   s.win = vim.api.nvim_open_win(buf, true, win_config())
 
