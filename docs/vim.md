@@ -170,7 +170,7 @@ tagsファイルがあると以下が使える
 
 `:Lazy update` で `You have local changes in ... Please remove them to update.` と出る場合は、プラグインのディレクトリ(`~/.local/share/nvim/lazy/<プラグイン名>/`)内のファイルが書き換わっていて、lazy.nvim が上書きを避けて更新を止めている。
 
-1. 何が変わったかを確認する: `git -C ~/.local/share/nvim/lazy/<プラグイン名> diff --stat`
+1. 何が変わったかを確認する: `git -C ~/.local/share/nvim/lazy/<プラグイン名> status --short`(`??` は追加されたファイルで、`diff` には出ない)と `git -C ~/.local/share/nvim/lazy/<プラグイン名> diff --stat`
 2. プラグイン本体を自分で直していないなら、中身は本家から取り直せばよい。Neovim をすべて終了してからディレクトリごと消し、起動して `:Lazy install`(または `:Lazy sync`)で入れ直す
 
    ```sh
