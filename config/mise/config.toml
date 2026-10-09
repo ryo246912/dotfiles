@@ -156,9 +156,6 @@ trusted_config_paths = [
 [task_config]
 includes = ["tasks/*.toml"]
 
-[settings.npm]
-bun = true
-
 [settings.pipx]
 uvx = true
 
