@@ -523,12 +523,14 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 > 何が入れ替わるか見るだけなら `sbx skills import --dry-run` を手で流してください。
 
 > [!IMPORTANT]
-> sbx は共有 store を sandbox 内の `/home/agent/.claude/skills` にマウントしますが、
+> sbx は共有 store（`--skills=off` 以外）を sandbox 内の `/home/agent/.claude/skills` にマウントしますが、
 > `sbx-agent claude` は `CLAUDE_CONFIG_DIR` をホストの設定ディレクトリ（既定 `~/.claude`）に
 > 向けるため、**Claude Code が実際に読むのは `$CLAUDE_CONFIG_DIR/skills`（ホストの実体）**です。
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
-> 同じパスへマウントします。これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。
+> 同じパスへ**書き込み可で**マウントします（`projects` / `settings.json` / `agents` / `skills` / `plugins` のみ）。
+> これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。マウントは作成時に決まるため、
+> 既存の sandbox に反映するには `--new` で作り直してください。
 
 `sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
