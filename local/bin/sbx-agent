@@ -391,30 +391,6 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
     [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
-    # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
-    # symlink で共有している（devcontainer の post-create.sh が作る）。sandbox 内では
-    # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
-    # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
-    # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
-    # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
-    # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
-    if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
-        config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
-        for shared_entry in projects settings.json agents skills plugins; do
-            entry="${CONFIG_DIR}/${shared_entry}"
-            [[ -L "$entry" && -e "$entry" ]] || continue
-            link=$(readlink "$entry")
-            [[ "$link" == /* ]] || link="$(dirname "$entry")/${link}"
-            # 親ディレクトリだけ正規化し、最後の要素は symlink のまま渡す
-            # （~/.claude/settings.json のように dotfiles への symlink でも、
-            # リポジトリは上で read-only マウントするので解決できる）
-            link_parent=$(cd "$(dirname "$link")" 2>/dev/null && pwd -P) || continue
-            target="${link_parent}/$(basename "$link")"
-            [[ "$target" == "$config_dir_real"/* ]] && continue
-            add_mount "$target"
-        done
-    fi
-
     # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
     # read-only で渡さないと、sandbox 内では全てリンク切れになる。
@@ -428,6 +404,46 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     else
         log_warn "dotfiles リポジトリが見つからないため、ホスト設定の symlink が sandbox 内で解決できません"
         log_warn "  既定の ~/dotfiles 以外に clone している場合は DOTFILES_DIR を export してください"
+    fi
+
+    # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
+    # symlink で共有している（devcontainer の post-create.sh が作る）。sandbox 内では
+    # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
+    # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
+    # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
+    # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
+    # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
+    # 最終的に dotfiles リポジトリ内を指すもの（~/.claude/settings.json など symlink-each で
+    # 配置したもの）は read-only にする。書き込み可で渡すと、上の `${dotfiles_repo}:ro` より
+    # 子のマウントが優先され、sandbox からホストの dotfiles を書き換えられてしまう。
+    if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
+        config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
+        dotfiles_repo_real=""
+        [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
+        for shared_entry in projects settings.json agents skills plugins; do
+            entry="${CONFIG_DIR}/${shared_entry}"
+            [[ -L "$entry" && -e "$entry" ]] || continue
+            target=$(resolve_symlink "$entry") || continue
+            # 親ディレクトリだけ正規化し、最後の要素は symlink のまま渡す
+            # （リンク先がさらに symlink でも、その経路ごと sandbox 内で解決させるため）
+            target_parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || continue
+            target="${target_parent}/$(basename "$target")"
+            [[ "$target" == "$config_dir_real"/* ]] && continue
+
+            # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
+            final="$target"
+            for _ in 1 2 3 4 5 6 7 8; do
+                [[ -L "$final" ]] || break
+                final=$(resolve_symlink "$final") || break
+            done
+            final_parent=$(cd "$(dirname "$final")" 2>/dev/null && pwd -P) || continue
+            final="${final_parent}/$(basename "$final")"
+            if [[ -n "$dotfiles_repo_real" && "$final" == "$dotfiles_repo_real"/* ]]; then
+                add_mount "${target}:ro"
+            else
+                add_mount "$target"
+            fi
+        done
     fi
 fi
 
