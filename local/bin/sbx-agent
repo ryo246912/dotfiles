@@ -429,6 +429,10 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             target_parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || continue
             target="${target_parent}/$(basename "$target")"
             [[ "$target" == "$config_dir_real"/* ]] && continue
+            # sbx がマウントできるのはディレクトリと通常ファイルだけで、ファイルへの symlink
+            # （~/.claude/settings.json など）は "exists but is not a directory" で作成ごと失敗する。
+            # 共有が要るのは skills などのディレクトリなので、それ以外は渡さない。
+            [[ -d "$target" ]] || continue
 
             # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
             final="$target"
