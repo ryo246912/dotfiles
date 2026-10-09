@@ -435,14 +435,8 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             [[ -d "$target" ]] || continue
 
             # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
-            final="$target"
-            for _ in 1 2 3 4 5 6 7 8; do
-                [[ -L "$final" ]] || break
-                final=$(resolve_symlink "$final") || break
-            done
-            final_parent=$(cd "$(dirname "$final")" 2>/dev/null && pwd -P) || continue
-            final="${final_parent}/$(basename "$final")"
-            if [[ -n "$dotfiles_repo_real" && "$final" == "$dotfiles_repo_real"/* ]]; then
+            final=$(cd "$target" 2>/dev/null && pwd -P) || continue
+            if [[ -n "$dotfiles_repo_real" && ("$final" == "$dotfiles_repo_real" || "$final" == "$dotfiles_repo_real"/*) ]]; then
                 add_mount "${target}:ro"
             else
                 add_mount "$target"
