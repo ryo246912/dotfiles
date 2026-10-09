@@ -1,7 +1,7 @@
 -- フローティングターミナル（lazygit, hunk など）をプロセスを落とさずに表示/非表示する
 local M = {}
 
--- group ごとに 1 セッション保持: { buf, win, job }
+-- group ごとに 1 セッション保持: { buf, win, job, exited }
 local sessions = {}
 
 local function win_config()
@@ -18,13 +18,15 @@ local function win_config()
   }
 end
 
-local function is_alive(s)
-  return s and vim.api.nvim_buf_is_valid(s.buf) and vim.fn.jobwait({ s.job }, 0)[1] == -1
+local function is_valid(s)
+  return s and vim.api.nvim_buf_is_valid(s.buf)
 end
 
 local function show(s)
   s.win = vim.api.nvim_open_win(s.buf, true, win_config())
-  vim.cmd("startinsert")
+  if not s.exited then
+    vim.cmd("startinsert")
+  end
 end
 
 local function hide(s)
@@ -34,10 +36,22 @@ local function hide(s)
   s.win = nil
 end
 
+local function dispose(group, s)
+  if sessions[group] == s then
+    sessions[group] = nil
+  end
+  if s.win and vim.api.nvim_win_is_valid(s.win) then
+    vim.api.nvim_win_close(s.win, true)
+  end
+  if vim.api.nvim_buf_is_valid(s.buf) then
+    vim.api.nvim_buf_delete(s.buf, { force = true })
+  end
+end
+
 -- 既存セッションがあれば表示/非表示を切り替えて true を返す。なければ false
 function M.toggle(group)
   local s = sessions[group]
-  if not is_alive(s) then
+  if not is_valid(s) then
     sessions[group] = nil
     return false
   end
@@ -50,11 +64,13 @@ function M.toggle(group)
 end
 
 -- 新しいセッションを開く（同じ group の既存セッションは終了させる）
-function M.open(group, cmd, cwd)
+-- opts.cwd: 作業ディレクトリ
+-- opts.close_on_exit: false ならコマンド終了後も出力を残す（q で閉じる）。既定 true
+function M.open(group, cmd, opts)
+  opts = opts or {}
   local old = sessions[group]
-  if is_alive(old) then
-    hide(old)
-    vim.fn.jobstop(old.job)
+  if is_valid(old) then
+    dispose(group, old)
   end
 
   local buf = vim.api.nvim_create_buf(false, true)
@@ -64,18 +80,18 @@ function M.open(group, cmd, cwd)
   s.win = vim.api.nvim_open_win(buf, true, win_config())
 
   s.job = vim.fn.termopen(cmd, {
-    cwd = cwd,
+    cwd = opts.cwd,
     on_exit = function()
       vim.schedule(function()
-        if sessions[group] == s then
-          sessions[group] = nil
+        if opts.close_on_exit == false then
+          s.exited = true
+          if vim.api.nvim_buf_is_valid(buf) then
+            vim.keymap.set({ "n", "t" }, "q", function() dispose(group, s) end,
+              { buffer = buf, nowait = true, desc = "ポップアップを閉じる" })
+          end
+          return
         end
-        if s.win and vim.api.nvim_win_is_valid(s.win) then
-          vim.api.nvim_win_close(s.win, true)
-        end
-        if vim.api.nvim_buf_is_valid(buf) then
-          vim.api.nvim_buf_delete(buf, { force = true })
-        end
+        dispose(group, s)
       end)
     end,
   })

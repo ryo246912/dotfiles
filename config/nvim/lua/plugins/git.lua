@@ -119,7 +119,7 @@ return {
               vim.notify("origin/main または base branch を取得できません", vim.log.levels.WARN)
               return
             end
-            float_term.open("hunk", { hunk_cmd, "diff", base_ref .. "...HEAD" }, repo)
+            float_term.open("hunk", { hunk_cmd, "diff", base_ref .. "...HEAD" }, { cwd = repo })
           end)
         end)
       end
@@ -619,7 +619,7 @@ return {
 
       -- lazygitを指定したリポジトリをcwdとしてフローティングターミナルで開く
       local function open_lazygit(path)
-        float_term.open("lazygit", { "lazygit" }, path)
+        float_term.open("lazygit", { "lazygit" }, { cwd = path })
       end
 
       local function open_lazygit_with_selection()

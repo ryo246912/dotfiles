@@ -14,6 +14,7 @@ return {
       require("core.file_actions").setup()
 
       local Terminal = require("toggleterm.terminal").Terminal
+      local float_term = require("utils.float_term")
       local keymap = vim.keymap.set
       local terminal_history_path = vim.fn.stdpath("state") .. "/terminal_command_history"
       local max_history = 30
@@ -58,18 +59,12 @@ return {
         end
 
         save_command_history(cmd)
-        Terminal:new({
-          cmd = cmd,
-          direction = "float",
-          hidden = true,
-          close_on_exit = false,
-          float_opts = {
-            border = "curved",
-          },
-        }):toggle()
+        float_term.open("popup_command", cmd, { close_on_exit = false })
       end
 
       local function open_popup_command_picker()
+        -- 実行中/実行済みのポップアップがあれば表示/非表示を切り替える
+        if float_term.toggle("popup_command") then return end
         local history = load_command_history()
         local choices = {}
         local values = {}
@@ -181,7 +176,7 @@ return {
       end
 
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
-      keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップ" })
+      keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップを開閉" })
 keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })
       keymap({ "n", "t" }, "<leader>E", toggle_filetree, { noremap = true, silent = true, desc = "filetree(ft) を開閉" })
       keymap({ "n" }, "<leader>md", toggle_leaf, { noremap = true, silent = true, desc = "Markdownプレビュー(leaf)" })

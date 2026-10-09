@@ -349,22 +349,7 @@ local function add_shell_action(actions, label, parts, cwd)
   add_action(actions, {
     label = label,
     run = function()
-      local ok, terminal = pcall(require, "toggleterm.terminal")
-      if not ok then
-        vim.notify("toggleterm.nvim の読み込みに失敗しました", vim.log.levels.ERROR)
-        return
-      end
-
-      terminal.Terminal:new({
-        cmd = shell_join(parts),
-        cwd = cwd,
-        direction = "float",
-        hidden = true,
-        close_on_exit = false,
-        float_opts = {
-          border = "curved",
-        },
-      }):toggle()
+      require("utils.float_term").open("file_action", shell_join(parts), { cwd = cwd, close_on_exit = false })
     end,
   })
 end
@@ -566,10 +551,18 @@ function M.setup()
     callback = save_hook_post,
   })
 
-  vim.keymap.set("n", "<leader>xa", "<cmd>CurrentFileActions<CR>", {
+  -- 実行中/実行済みの action ポップアップがあれば表示/非表示を切り替え、なければ action を選択
+  vim.keymap.set({ "n", "t" }, "<leader>xa", function()
+    if require("utils.float_term").toggle("file_action") then
+      return
+    end
+    if vim.fn.mode() == "n" then
+      M.pick_current_file_action()
+    end
+  end, {
     noremap = true,
     silent = true,
-    desc = "現在ファイルの action を実行",
+    desc = "現在ファイルの action を実行（ポップアップ開閉）",
   })
   vim.keymap.set("n", "<leader>xf", "<cmd>FormatBuffer<CR>", {
     noremap = true,
