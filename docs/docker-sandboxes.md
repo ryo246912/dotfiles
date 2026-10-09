@@ -528,7 +528,8 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 > 向けるため、**Claude Code が実際に読むのは `$CLAUDE_CONFIG_DIR/skills`（ホストの実体）**です。
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
-> 同じパスへ**書き込み可で**マウントします（`projects` / `settings.json` / `agents` / `skills` / `plugins` のみ）。
+> 同じパスへマウントします（`projects` / `settings.json` / `agents` / `skills` / `plugins` のみ）。基本は**書き込み可**ですが、
+> リンクを辿った先が dotfiles リポジトリ内のもの（通常は `settings.json`）は read-only です。
 > これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。マウントは作成時に決まるため、
 > 既存の sandbox に反映するには `--new` で作り直してください。
 
