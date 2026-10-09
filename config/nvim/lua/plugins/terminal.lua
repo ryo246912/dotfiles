@@ -186,10 +186,10 @@ return {
             table.insert(hidden_terms, term)
           end
         end
-        local hidden_float = float_term.hide_visible()
-        if #hidden_terms > 0 or hidden_float then
+        local hidden_groups = float_term.hide_visible()
+        if #hidden_terms > 0 or #hidden_groups > 0 then
           restore_last = function()
-            local shown = hidden_float and float_term.show_last()
+            local shown = float_term.show_groups(hidden_groups)
             for _, term in ipairs(hidden_terms) do
               if require("toggleterm.terminal").get(term.id, true) then
                 term:open()

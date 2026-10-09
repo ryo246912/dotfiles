@@ -1,10 +1,8 @@
 -- フローティングターミナル（lazygit, hunk など）をプロセスを落とさずに表示/非表示する
 local M = {}
 
--- group ごとに 1 セッション保持: { group, buf, win, job, cwd, exited }
+-- group ごとに 1 セッション保持: { buf, win, job, cwd, exited }
 local sessions = {}
--- 最後に引っ込めたセッションの group
-local last_hidden
 
 local function win_config()
   local width = math.floor(vim.o.columns * 0.9)
@@ -40,7 +38,6 @@ local function hide(s)
     vim.api.nvim_win_hide(s.win)
   end
   s.win = nil
-  last_hidden = s.group
 end
 
 local function dispose(group, s)
@@ -76,26 +73,39 @@ function M.toggle(group, opts)
   return true
 end
 
--- 表示中のセッションをすべて引っ込める。1 つでも引っ込めたら true
+-- 表示中のセッションをすべて引っ込め、引っ込めた group の一覧を返す
+-- （カーソルのあったセッションを最後にして、出し直したときに手前に来るようにする）
 function M.hide_visible()
-  local hidden = false
-  for _, s in pairs(sessions) do
+  local groups = {}
+  local current = vim.api.nvim_get_current_win()
+  local focused
+  for group, s in pairs(sessions) do
     if is_valid(s) and is_visible(s) then
+      if s.win == current then
+        focused = group
+      else
+        table.insert(groups, group)
+      end
       hide(s)
-      hidden = true
     end
   end
-  return hidden
+  if focused then
+    table.insert(groups, focused)
+  end
+  return groups
 end
 
--- 最後に引っ込めたセッションを出し直す。出し直せたら true
-function M.show_last()
-  local s = last_hidden and sessions[last_hidden]
-  if not is_valid(s) or is_visible(s) then
-    return false
+-- 指定した group のセッションを出し直す。1 つでも出し直せたら true
+function M.show_groups(groups)
+  local shown = false
+  for _, group in ipairs(groups) do
+    local s = sessions[group]
+    if is_valid(s) and not is_visible(s) then
+      show(s)
+      shown = true
+    end
   end
-  show(s)
-  return true
+  return shown
 end
 
 -- 新しいセッションを開く（同じ group の既存セッションは終了させる）
@@ -110,7 +120,7 @@ function M.open(group, cmd, opts)
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "hide"
-  local s = { group = group, buf = buf, cwd = opts.cwd }
+  local s = { buf = buf, cwd = opts.cwd }
   sessions[group] = s
   s.win = vim.api.nvim_open_win(buf, true, win_config())
 
