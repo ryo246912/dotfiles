@@ -413,9 +413,9 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
     # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
     # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
-    # 最終的に dotfiles リポジトリ内を指すもの（~/.claude/settings.json など symlink-each で
-    # 配置したもの）は read-only にする。書き込み可で渡すと、上の `${dotfiles_repo}:ro` より
-    # 子のマウントが優先され、sandbox からホストの dotfiles を書き換えられてしまう。
+    # 最終的に dotfiles リポジトリ内を指すディレクトリは read-only にする。書き込み可で渡すと、
+    # 上の `${dotfiles_repo}:ro` より子のマウントが優先され、sandbox からホストの dotfiles を
+    # 書き換えられてしまう。
     if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
         config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
         dotfiles_repo_real=""
