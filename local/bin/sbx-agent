@@ -391,6 +391,26 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
     [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
+    # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
+    # symlink で共有している（devcontainer の post-create.sh が作る）。sandbox 内では
+    # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
+    # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
+    # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
+    if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
+        config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
+        for entry in "$CONFIG_DIR"/* "$CONFIG_DIR"/.[!.]*; do
+            [[ -L "$entry" && -e "$entry" ]] || continue
+            link=$(readlink "$entry")
+            [[ "$link" == /* ]] || link="$(dirname "$entry")/${link}"
+            # 親ディレクトリだけ正規化し、最後の要素は symlink のまま渡す
+            # （~/.claude/settings.json のように dotfiles への symlink でも、
+            # リポジトリは上で read-only マウントするので解決できる）
+            link_parent=$(cd "$(dirname "$link")" 2>/dev/null && pwd -P) || continue
+            target="${link_parent}/$(basename "$link")"
+            [[ "$target" == "$config_dir_real"/* ]] && continue
+            add_mount "$target"
+        done
+    fi
 
     # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
