@@ -49,7 +49,9 @@ local function dispose(group, s)
 end
 
 -- 既存セッションがあれば表示/非表示を切り替えて true を返す。なければ false
-function M.toggle(group)
+-- opts.cwds: 指定すると、非表示のセッションの cwd がこの中にない場合は破棄して false を返す
+function M.toggle(group, opts)
+  opts = opts or {}
   local s = sessions[group]
   if not is_valid(s) then
     sessions[group] = nil
@@ -57,9 +59,13 @@ function M.toggle(group)
   end
   if s.win and vim.api.nvim_win_is_valid(s.win) then
     hide(s)
-  else
-    show(s)
+    return true
   end
+  if opts.cwds and not vim.tbl_contains(opts.cwds, s.cwd) then
+    dispose(group, s)
+    return false
+  end
+  show(s)
   return true
 end
 
@@ -75,7 +81,7 @@ function M.open(group, cmd, opts)
 
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "hide"
-  local s = { buf = buf }
+  local s = { buf = buf, cwd = opts.cwd }
   sessions[group] = s
   s.win = vim.api.nvim_open_win(buf, true, win_config())
 

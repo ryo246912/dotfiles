@@ -558,6 +558,8 @@ function M.setup()
     end
     if vim.fn.mode() == "n" then
       M.pick_current_file_action()
+    else
+      vim.notify("action 選択はノーマルモードで実行してください", vim.log.levels.WARN)
     end
   end, {
     noremap = true,

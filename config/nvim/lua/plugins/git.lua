@@ -190,8 +190,10 @@ return {
 
       vim.keymap.set("n", "<leader>gd", function() with_repo("DiffviewOpen") end,    { noremap = true, silent = true, desc = "Git差分パネル（複数リポジトリ対応）" })
       -- 起動中の hunk があれば表示/非表示を切り替え、なければリポジトリを選択して起動
+      -- （別のリポジトリへ移動していたら古い hunk は破棄して起動し直す）
       vim.keymap.set({ "n", "t" }, "<leader>gD", function()
-        if not float_term.toggle("hunk") then with_repo_callback(open_hunkdiff) end
+        if float_term.toggle("hunk", { cwds = git_utils.candidate_dirs() }) then return end
+        with_repo_callback(open_hunkdiff)
       end, { noremap = true, silent = true, desc = "hunk を開閉（base branchとの差分）" })
       vim.keymap.set("n", "<leader>gl", open_file_history_multi,                      { noremap = true, silent = true, desc = "リポジトリ全体のコミット履歴（Tab複数選択・別タブ）" })
       vim.keymap.set("n", "<leader>gL", ":DiffviewFileHistory %<CR>",                { noremap = true, silent = true, desc = "現在ファイルのコミット履歴（diffview）" })
@@ -624,7 +626,8 @@ return {
 
       local function open_lazygit_with_selection()
         -- 起動中の lazygit があれば表示/非表示を切り替える
-        if float_term.toggle("lazygit") then return end
+        -- （別のリポジトリへ移動していたら古い lazygit は破棄して起動し直す）
+        if float_term.toggle("lazygit", { cwds = require("utils.git").candidate_dirs() }) then return end
         local cwd = vim.fn.getcwd()
         local repos = require("utils.git").find_repos()
         if #repos == 0 then
