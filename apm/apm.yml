@@ -67,7 +67,7 @@ dependencies:
       alias: tsumiki
     - git: ctxrs/ctx
       path: skills/ctx-agent-history-search
-      ref: v0.25.0
+      ref: v2.2.8
       alias: ctx-agent-history-search
     - git: mattpocock/skills
       path: skills/engineering/resolving-merge-conflicts
