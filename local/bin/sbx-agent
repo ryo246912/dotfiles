@@ -630,12 +630,18 @@ sandbox_exists() {
 ensure_host_prerequisites() {
     [[ "$HOST_BRIDGE" != true ]] && return 0
 
-    # GitHub トークン: プロキシが注入するため agent は生トークンを読めない
-    if ! sbx secret ls 2>/dev/null | grep -q '[[:space:]]github[[:space:]]'; then
-        if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-            sbx secret set github --command 'gh auth token' >/dev/null 2>&1 \
-                && log_info "github の secret を登録しました"
+    # GitHub トークン: プロキシが注入するため agent は生トークンを読めない。
+    # 登録済みでも毎回登録し直す。`gh auth refresh` などでホストのトークンが入れ替わると、
+    # sbx に保存された古い値のままでは sandbox 内の gh が "token expired or invalid" になる。
+    # secret は sandbox 作成時に注入されるため、ここ（作成時だけ呼ばれる）で揃えれば足りる。
+    if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
+        if sbx secret set github --command 'gh auth token' >/dev/null 2>&1; then
+            log_info "github の secret をホストの gh から登録し直しました"
+        else
+            log_warn "github の secret の登録に失敗しました（sandbox 内の gh が認証できない可能性があります）"
         fi
+    else
+        log_warn "ホストの gh が未ログインのため github の secret を更新できませんでした（gh auth login）"
     fi
 
     # mac-host への SSH。sandbox プロキシは host.docker.internal を localhost に

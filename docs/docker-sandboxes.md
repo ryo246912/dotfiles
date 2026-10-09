@@ -293,7 +293,8 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
-> 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
+> 作るときに自動でも実行**します。github の secret は毎回ホストの `gh` から登録し直すので、
+> `gh auth refresh` などでトークンが入れ替わっても、sandbox を作り直せば追従します。
 > ドキュメントサイトの許可とホスト設定は `sandbox:setup` でだけ反映するため、
 > `config/sbx/allow-domains.txt` を変更したら `mise run sandbox:setup` を再実行してください。
 
@@ -451,7 +452,7 @@ name_prefix = "mw"
 # 共有 skills store の扱い（off | readonly | readwrite）
 skills = "readonly"
 # sandbox template の OCI 参照（空なら sbx の既定 template）
-# template = "docker.io/docker/sandbox-templates:claude-code"
+# template = "docker.io/docker/sandbox-templates:claude-code-docker"
 # リソース上限
 # cpus = "4"
 # memory = "8g"
@@ -946,8 +947,11 @@ mise run sandbox:build-template
 0. build context は **dotfiles リポジトリの `config/devcontainer/`**（配置先の
    `~/.config/devcontainer` ではない）。配置先が実体ファイルでない場合、BuildKit は
    コンテキスト外を指す symlink を辿らず `COPY` が "not found" で失敗するため
-1. `FROM docker/sandbox-templates:claude-code`（Ubuntu + 非 root の `agent` ユーザー + sudo。
-   Git / Docker CLI / Node.js / Python / Go / Java を同梱）
+1. `FROM docker/sandbox-templates:claude-code-docker`（Ubuntu + 非 root の `agent` ユーザー + sudo。
+   Git / Docker CLI / Node.js / Python / Go / Java を同梱）。**`-docker` 版でないと sandbox 内に
+   dockerd がありません**（通常の `claude-code` 版は docker CLI だけ）。`-docker` 版から作った
+   sandbox はエージェントのコンテナが microVM 内で特権モードになり、`/var/lib/docker` に専用
+   ボリュームが付いて dockerd が自動起動します。別の版でビルドするなら `SBX_TEMPLATE_VARIANT` を指定
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
 3. `mise install` で devcontainer と同じツール群を入れる（BuildKit の cache mount で差分ビルド、
    `GH_TOKEN` は build secret で渡してレート制限を避ける）

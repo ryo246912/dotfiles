@@ -15,7 +15,10 @@
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
-ARG VARIANT=claude-code
+#     `-docker` 版を使う。sandbox 内に dockerd を持つのはこの版だけで、通常版（claude-code）には
+#     docker CLI しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で
+#     特権モードになり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
+ARG VARIANT=claude-code-docker
 FROM docker/sandbox-templates:${VARIANT}
 
 ARG AGENT_HOME=/home/agent
