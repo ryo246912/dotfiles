@@ -1,6 +1,6 @@
 # context-analyzer
 
-[Context Analyzer](https://github.com/manavgup/context-analyzer)（PyPI package名は`context-tracker`）は、Claude Codeのsession logとhookの記録から、**1回のAPI呼び出しごとに、contextに何がどれだけ載っていたか**を分解するツールです。localのweb dashboardで、contextの増え方、tool別のtoken量、使われないまま載り続けている部分（dead weight）、cacheの読み直し量を見られます。
+[Context Analyzer](https://github.com/manavgup/context-analyzer)（PyPI package名は`context-tracker`）は、Claude Codeのsession logから、**1回のAPI呼び出しごとに、contextに何がどれだけ載っていたか**を分解するツールです。localのweb dashboardで、contextの増え方、tool別のtoken量、使われないまま載り続けている部分（dead weight）、cacheの読み直し量を見られます。
 
 ほかのツールとの使い分けは次のとおりです。
 
@@ -22,45 +22,45 @@ context-tracker --help
 
 次の3つのコマンドが入ります。
 
-| コマンド               | 用途                                           |
-| ---------------------- | ---------------------------------------------- |
-| `context-tracker`      | dashboard、統計の表示、MCP server              |
-| `context-tracker-hook` | Claude Codeのhookから呼ばれ、eventを記録する   |
-| `ccscope`              | 単体のcontext viewer（この文書では使いません） |
+| コマンド               | 用途                                                                   |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `context-tracker`      | dashboard、統計の表示、MCP server                                      |
+| `context-tracker-hook` | Claude Codeのhookから呼ばれ、eventを記録する（この文書では使いません） |
+| `ccscope`              | 単体のcontext viewer（この文書では使いません）                         |
 
-### hookの設定
+### hookは設定しない
 
-READMEにある`context-tracker up`（hookの自動設定）は、PyPIで公開されている1.0.0にはまだありません。また、自動設定は`~/.claude/settings.json`を直接書き換えるため、このrepoの管理と衝突します。そのため、hookはrulesyncのglobal source（`config/rulesync/.rulesync/hooks.json`の`claudecode.hooks`）に登録し、`mise run rulesync:generate`で`~/.claude/settings.json`（＝`claude/settings.json`）へ生成しています（[`rulesync.md`](rulesync.md)）。
+context-analyzerは、Claude Codeのhook（`context-tracker-hook`）でeventを記録する機能を持っていますが、このdotfilesでは**hookを設定していません**。
 
-```json
-{
-  "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
-  "timeout": 10
-}
-```
+token量の分析はsession log（`~/.claude/projects/`）だけでできるためです。同じsessionで、hookの記録がある場合と無い場合を比べたところ、tool別のtoken量、dead weight、health score、tool error、subagentの結果はすべて同じでした。違ったのは、受け取ったhook eventの件数の表示だけです。
 
-- `command -v`で囲み、context-trackerが入っていない環境（devcontainerなど）では何もしないようにしています。
-- 登録しているeventは、`PostToolUse`、`PreCompact`、`SessionStart`、`SessionEnd`、`SubagentStop`の5つです。
-- context-tracker自身は`PostToolUseFailure`、`PostCompact`、`UserPromptSubmit`、`SubagentStart`、`InstructionsLoaded`にもhookを入れる設計です。しかし、pinしているrulesync 8.21.0はこれらをClaude Codeのevent名へ変換できないため、登録していません（`rulesync generate`が小文字のkeyのまま出力し、Claude Codeに無視されます）。この5つが無いと、tool失敗の回数、compaction後の記録、入力ごとの注意表示（nudge）、subagentの開始が取れません。token量の分析はsession log（`~/.claude/projects/`）から行うので、主な機能には影響しません。
-- hookは1回あたり約0.4秒かかります（Pythonの起動時間）。tool呼び出しのたびに動くので、気になる場合はhooks.jsonから外してrulesync generateします。外してもsession logからの分析はできます。
+hookでしか得られないのは次のもので、token分析には使いません。
 
-hookを変えたあとは`mise run rulesync:generate`し、Claude Codeを再起動します。
+- 入力を送るたびの注意（nudge）。contextがwindowの60%を超えた、costが$10を超えた、同じfileを3回以上Readした、といった場合にstderrへ出す
+- tool失敗の回数、compactionの前後、subagentの開始・終了、CLAUDE.mdの読み込みの記録
+
+一方で、hookはtool呼び出しと入力の送信のたびに約0.4秒（Pythonの起動時間）かかります。また`context-tracker up`（hookの自動設定とdashboardの起動）は`~/.claude/settings.json`を直接書き換えるため、このrepoの管理と衝突します。hookを入れずにdashboardを起動する`context-tracker up --no-hooks`は使えます。
+
+hookを使いたくなった場合は、`context-tracker up`ではなく、rulesyncのglobal source（`config/rulesync/.rulesync/hooks.json`の`claudecode.hooks`）に`if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi`を登録して`mise run rulesync:generate`します（[`rulesync.md`](rulesync.md)）。pinしているrulesync 8.21.0で変換できるのは`postToolUse`、`preCompact`、`sessionStart`、`sessionEnd`、`subagentStop`と、`UserPromptSubmit`になる`beforeSubmitPrompt`です。`PostToolUseFailure`、`PostCompact`、`SubagentStart`、`InstructionsLoaded`は変換できません（小文字のkeyのまま出力され、Claude Codeに無視されます）。
 
 ### 記録される場所
 
-| 場所                                      | 内容                                                                             |
-| ----------------------------------------- | -------------------------------------------------------------------------------- |
-| `~/.claude/context-trace/<session>.jsonl` | hookの記録。tool名、入力・出力の**文字数**など。promptやtool出力の中身は残さない |
-| `~/.context-analyzer/analyzer.db`         | session logとhookの記録を取り込んだSQLite。dashboard起動時に自動で更新される     |
+| 場所                                      | 内容                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `~/.claude/context-trace/<session>.jsonl` | hookを設定した場合だけ作られる記録。tool名、入力・出力の**文字数**など。promptやtool出力の中身は残さない |
+| `~/.context-analyzer/analyzer.db`         | session logを取り込んだSQLite。dashboard起動時に自動で更新される                                         |
 
 読むのは`~/.claude/projects/`（Claude Code）と`~/.codex/sessions/`（Codex）です。`~/.claude-account2`／`~/.claude-work3`の`projects`は`~/.claude/projects`へのsymlinkなので（[`ai.md`](ai.md)）、全accountのsessionが入ります。集計はlocalで完結し、外部へは送りません。
 
 ## 使い方
 
 ```bash
-# dashboardを起動（http://127.0.0.1:8080 、Ctrl+Cで止める）
+# dashboardを起動（http://127.0.0.1:9201 、Ctrl+Cで止める）
 context-tracker dashboard
-context-tracker dashboard --port 8081
+context-tracker dashboard --port 8081   # portを変える
+
+# hookを設定せずに、取り込みとdashboardの起動をまとめて行う（http://127.0.0.1:8080 ）
+context-tracker up --no-hooks
 
 # 全sessionの要約を表示
 context-tracker stats
