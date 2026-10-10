@@ -71,8 +71,8 @@ backend = "sbx"
 default_agent = "claude"
 # sandbox 名の接頭辞（sandbox 名は <prefix>-<task>-<agent>）
 name_prefix = "mw"
-# sandbox template の OCI 参照（空なら sbx の既定 template を使う）
-# template = "docker.io/docker/sandbox-templates:shell-docker"
+# sandbox template の OCI 参照（空なら sbx-agent の既定 = mise run sandbox:build-template で作る sbx-agent:local）
+# template = "sbx-agent:local"
 # 共有 skills store（~/.claude/skills 等から sbx skills import したもの）の扱い
 #   off | readonly | readwrite
 skills = "readonly"

@@ -451,8 +451,8 @@ default_agent = "claude"
 name_prefix = "mw"
 # 共有 skills store の扱い（off | readonly | readwrite）
 skills = "readonly"
-# sandbox template の OCI 参照（空なら sbx の既定 template）
-# template = "docker.io/docker/sandbox-templates:shell-docker"
+# sandbox template の OCI 参照（空なら sbx-agent の既定 = sbx-agent:local）
+# template = "sbx-agent:local"
 # リソース上限
 # cpus = "4"
 # memory = "8g"
