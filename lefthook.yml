@@ -64,6 +64,30 @@ post-merge:
       # 自動では付けない（全エントリのライブ編集を巻き込むため）。移行は target を絞って
       # 1回だけ手動で流す（docs/setup.md の手順と同じコマンド）。
       fail_text: '❌ [post-merge] dotfiles apply failed. 既存の実ファイルとの conflict なら: mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws" （先に配置先だけにある編集を repo へ取り込むこと。docs/mise.md 参照）'
+    # dotfiles-apply で反映した [tools] のバージョン変更を、git pull / checkout のたびに導入する。
+    # GitHub API の rate limit を避けるため、pre-tools hook（mise.toml）と同じく gh の token を渡す。
+    - name: mise-install
+      skip:
+        - run: test -n "${AI_AGENT:-}"
+      run: |
+        github_token=$(gh auth token 2>/dev/null || true)
+
+        # global lockfile（gitignore 済みのローカル生成物）を mise が読めない場合は退避して作り直す。
+        # 例: mise 2026.10 で uv の依存グラフを持つ lockfile_version 1 の lockfile は
+        # "Python dependency graphs require lockfile revision 2" で読めなくなるが、案内される
+        # `mise lock --upgrade` 自身も同じ読み込みエラーで失敗するため、upgrade では直せない。
+        # lockfile を読めないと mise は空の lockfile として扱うので、作り直しても失うものはない。
+        global_lockfile="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}/mise.lock"
+        if [ -f "$global_lockfile" ] \
+          && mise --cd "$HOME" ls --global --offline 2>&1 >/dev/null | grep -q 'failed to read lockfile'; then
+          backup="$global_lockfile.bak.$(date +%Y%m%d%H%M%S)"
+          mv "$global_lockfile" "$backup"
+          echo "global lockfile を読めないため退避して再生成します（退避先: $backup）"
+          GITHUB_TOKEN=$github_token mise --cd "$HOME" lock --global
+        fi
+
+        GITHUB_TOKEN=$github_token mise install --jobs=2
+      fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
     - name: lefthook-install
       run: mise exec -- lefthook install
 

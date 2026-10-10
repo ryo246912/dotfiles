@@ -600,6 +600,14 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `mise bootstrap dotfiles save`、history-watch、full bootstrap、
     素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
+  - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
+    `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
+    その前に global lockfile（`~/.config/mise/mise.lock`、gitignore 済み）を mise が読めるか確認し、
+    `failed to read lockfile ... (possible corruption)` になる場合は `mise.lock.bak.<日時>` へ退避して
+    `mise lock --global` で作り直す。mise 2026.10 では uv の依存グラフを持つ `lockfile_version = 1`
+    の lockfile が `Python dependency graphs require lockfile revision 2; run mise lock --upgrade`
+    で読めなくなるが、案内される `mise lock --upgrade` 自身も同じ読み込みエラーで失敗するため
+    （2026.10.4 で確認）、upgrade ではなく作り直しで対処している。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
