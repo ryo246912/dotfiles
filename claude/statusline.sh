@@ -59,7 +59,9 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
 # rate limit はアカウント単位なので、受け取った値を config dir ごとに保存し、
 # prompt を送る前（rate_limits がまだ無い間）はリセット前の保存値を表示する。
 # 青を基本に、残り 20% 未満で黄色、5% 未満で赤。
-# pace: window 内で均等に使った場合の使用率との差。▲ は均等ペースより速く消費している（黄色）、▼ は余裕あり。
+# 予測: ここまでの消費ペース（使用率 ÷ 経過時間）が続くと仮定し、リセットまで持つなら ✓、
+# リセット前に尽きるなら ⚠ empty <尽きるまでの時間>（黄色、リセットまでの半分も持たないなら赤）。
+# window 開始直後（経過 10% 未満）はペースが不安定なため予測しない。
 # 参照: https://code.claude.com/docs/en/statusline#rate-limit-usage
 now=$(date +%s)
 rl_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline-rate-limits.json"
@@ -95,12 +97,17 @@ limit_line=$(printf '%s' "$input" | jq -r --argjson now "$now" --argjson saved "
       | (if .resets_at != null and .resets_at > $now then .resets_at - $now else null end) as $remain
       | [
           "\($label) \($bar) \($left | round)% left",
+          (if $remain != null then "reset \($remain | dur)" else empty end),
           (if $remain != null then
              ([[$win - $remain, 0] | max, $win] | min) as $elapsed
-             | ((.used_percentage - $elapsed / $win * 100) | round) as $d
-             | if $d > 0 then "\u001b[33m▲\($d)%\($color)" else "▼\(-$d)%" end
-           else empty end),
-          (if $remain != null then "reset \($remain | dur)" else empty end)
+             | if $elapsed < $win * 0.1 then empty
+               elif .used_percentage <= 0 then "✓"
+               else ($left / (.used_percentage / $elapsed)) as $tte
+                 | if $tte >= $remain then "✓"
+                   else "\(if $tte < $remain / 2 then "\u001b[31m" else "\u001b[33m" end)⚠ empty \($tte | dur)\($color)"
+                   end
+               end
+           else empty end)
         ]
       | "\($color)\(join(" "))\u001b[0m"
     end;

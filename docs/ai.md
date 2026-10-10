@@ -43,14 +43,14 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
-## ステータスライン（prompt cache カウントダウン）
+## ステータスライン（prompt cache・rate limit・コンテキスト）
 
 Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
 効いている（warm）間は前回までの処理を再利用できるので、返信が速く、使用制限への影響も
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
-左端には作業ディレクトリの git branch を表示します。
+あわせて、git branch・モデル・コンテキストの残り・rate limit（5h / weekly）の残りを表示します。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
 `claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
@@ -61,14 +61,27 @@ cold になったら次のメッセージで再キャッシュされるトーク
 
 ### 表示の読み方
 
+1 行目に branch・モデル・コンテキスト、2 行目に rate limit・cache を表示します。
+
 ```text
-main · cache ● 1h ████░░ 38m left · hit 91% · misses 0
-main · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
+main · Opus 5.5 xhigh · ctx ████░░ 62% left 76k/200k
+5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
+```
+
+```text
+main · Opus 5.5 xhigh · ctx – waiting
+5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
 | 表示                                | 意味                                                                                                                                                    |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                 |
+| `Opus 5.5 xhigh`（紫）              | モデル名と reasoning effort（`model.display_name`・`effort.level`）。effort 非対応モデルではモデル名のみ                                                |
+| `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`   |
+| `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                           |
+| `reset 2h9m`                        | rate limit の枠がリセットされるまでの時間（`rate_limits.*.resets_at` から計算）                                                                         |
+| `✓`                                 | ここまでの消費ペース（使用率 ÷ 経過時間）が続いても、リセットまで枠が持つ                                                                               |
+| `⚠ empty 23m`（黄/赤）              | 今のペースだとリセット前に枠を使い切る。表示はそれまでの時間。リセットまでの半分も持たないときは赤。枠の経過が 10% 未満の間は予測しない                 |
 | `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
 | `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
 | `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
@@ -85,6 +98,11 @@ main · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_ex
 `prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
 灰色で `cache – waiting` を表示します（Claude Code が v2.1.251 未満の場合もこの表示のままです）。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
 subagent のリクエストはこの統計に含まれません。
+
+`rate_limits` も最初の API 応答まで届かないため、受け取った値を config dir ごとに
+`${CLAUDE_CONFIG_DIR:-~/.claude}/statusline-rate-limits.json` へ保存し、prompt を送る前は
+リセット前の保存値を表示します。保存値は前回の応答時点のものなので、その後に他のセッションで
+使った分は最初の応答まで反映されません。
 
 ### cache を長持ちさせるための注意
 
