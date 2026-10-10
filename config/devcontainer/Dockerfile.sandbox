@@ -62,9 +62,12 @@ RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 # 無効化されてしまうため、残りは install の後に COPY する。
 COPY --chown=agent:agent mise.toml /mise/config.toml
 
-# agent CLI（claude / codex / copilot）は base image 側が持っているため mise では入れない。
-# sbx が agent のバージョンと認証を管理するので、mise の shim で上書きしないようにする。
-ARG DISABLE_TOOLS="aqua:anthropics/claude-code,aqua:openai/codex,github:github/copilot-cli"
+# agent CLI（claude / codex / copilot）も mise.toml のバージョンで入れる。base image
+# （claude-code-docker）には claude しか入っておらず、同じ template を ccmanager から
+# claude / codex / copilot で使い回すため。PATH は mise shim が base image の
+# ~/.local/bin より前なので、シェルから呼ぶ agent は mise 側になる。
+# 特定のツールを外したい場合は --build-arg DISABLE_TOOLS=<tool>,... で指定する。
+ARG DISABLE_TOOLS=""
 
 # root で install して最後に chown する。BuildKit の cache mount の uid を base image の
 # agent ユーザーに合わせて決め打ちしないための措置（uid は image 側の都合で変わりうる）。

@@ -963,9 +963,11 @@ mise run sandbox:build-template
 6. ビルドした image を `docker image save` → `sbx template load` で sbx の image store へ入れる
    （sbx の Docker daemon はホストの image store を共有しないため、tar 経由で渡す必要があります）
 
-**agent CLI（claude / codex / copilot）は mise では入れません**（`MISE_DISABLE_TOOLS` で除外）。
-base image 側が持っており、バージョンと認証は sbx が管理するため、mise の shim で
-上書きしないようにしています。
+**agent CLI（claude / codex / copilot）も mise で入れます**（バージョンは
+`config/devcontainer/mise.toml`）。base image（`claude-code-docker`）には `claude` しか
+入っておらず、同じ template を claude / codex / copilot で使い回すためです。PATH は mise の
+shim が base image の `~/.local/bin` より前にあるので、シェルから呼ぶ agent は mise 側になります。
+特定のツールを外したいときは `--build-arg DISABLE_TOOLS=<tool>,...` で除外できます。
 
 `sbx-agent` は **常に `sbx-agent:local` を template として渡します**。別名を使う場合は
 `--template` か `SBX_AGENT_TEMPLATE`、`--no-template` で sbx の既定 template に戻せます
@@ -1069,7 +1071,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                                                                                     |
 | `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/data/shims:$PATH`                                                                                   |
 | `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                                                                          |
-| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                                                                                  |
+| claude / codex / copilot の CLI                                  | ✅ mise で入れる（base image には claude しか無いため。バージョンは `config/devcontainer/mise.toml`）                                                 |
 | nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を `:ro` で渡して symlink（lockfile は `AI_AGENT=1` のとき state dir へ逃がす） |
 | Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む                                                           |
 
