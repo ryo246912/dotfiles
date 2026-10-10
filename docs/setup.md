@@ -4,20 +4,109 @@
 
 ### 初期設定
 
-- [ ] chezmoiの実行
-  - `--use-builtin-git=on` で clone するため、事前の `xcode-select --install`（system git）は不要
-  - Command Line Tools は直後の Homebrew インストーラが自動導入する
+- [ ] mise本体のインストール（未導入時のみ）
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply --use-builtin-git=on ryo246912
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
   ```
 
-- [ ] miseの実行（上の `chezmoi init --apply` の post-apply hook が自動実行する）
-  - hook が順に実行する:
-    1. `MISE_ENV=mac mise bootstrap packages apply`
-    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
-    3. `GITHUB_TOKEN=$(gh auth token) mise install`
-  - 失敗時は `chezmoi apply` で再試行
+- [ ] リポジトリの clone
+
+  ```sh
+  git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
+  cd ~/dotfiles
+  ```
+
+  明示的な `mise trust` は不要。直後の `mise bootstrap dotfiles apply --yes`
+  （後述）の `--yes` 自体が、未trustの `mise.toml` をそのまま自動trustし、
+  `~/.local/state/mise/trusted-configs/` にtrust状態を永続化する（実機確認済み:
+  trustなしの状態から `mise bootstrap dotfiles apply --yes` を直接実行しても
+  成功し、以後 `--yes` を付けずに呼んでもtrustエラーが出ない）。
+  `config/mise/config.toml` 側で宣言している `trusted_config_paths` は、
+  （dotfiles配置後に）この trust 状態を明示的な設定としても持たせるためのもので、
+  初回セットアップの成立自体には不要。
+  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
+  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
+  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
+  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
+  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
+
+- [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
+      実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
+      `mise.toml`/`mise.mac.toml` 自身が持つ。`MISE_ENV` は通常シェル起動時に
+      `templates/zsh/.zshenv.tera` が `HOST_ENV`（`config/zsh/host-env.map` 由来）から
+      自動導出するが、その `.zshenv` 自体がまだ配置されていない最初の bootstrap では
+      未設定なので、ここでは明示指定が必須）
+  - **最初に `[dotfiles]` だけを適用する**（`[bootstrap.packages]` は
+    `config-mac/mise/config.mac.toml` という dotfile の中身なので、他のフェーズより
+    先に一度実体化しておく必要がある。`mise bootstrap` 内の packages フェーズは
+    プロセス起動時に読み込んだ config しか見ないため、同一プロセス内で
+    dotfiles 配置 → packages フェーズの順に反映されることはない）:
+    ```sh
+    MISE_ENV=mac mise bootstrap dotfiles apply --yes
+    mise trust ~/.config/mise/config.mac.toml
+    ```
+    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
+    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
+    track/history の節参照）。
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
+    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
+    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
+    巻き込まないため）:
+    ```sh
+    MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
+    ```
+    force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
+    （確認のしかたと注意点は [docs/mise.md](./mise.md) の
+    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
+    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
+    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
+  - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
+    [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
+    `~/.config/mise/config.mac.toml` を正しく読める:
+    1. `[bootstrap.packages]` の導入（brew/brew-cask）
+    2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    4. `[tools]` の導入（3 で完了しているため通常は即座に終わる）
+    5. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+
+    ```sh
+    MISE_ENV=mac mise bootstrap
+    ```
+
+  - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+  - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
+    手動シンボリックリンク作成は不要
+  - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
+    は `MISE_ENV=mac` の明示を省略してよい
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
+  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
+    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
+    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
+  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
+    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
+    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
+  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
+    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
+    マシンごとに一度だけ接続する
+    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
+    ```sh
+    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+    ```
+
+- [ ] macOS defaults の適用
+
+  ```sh
+  MISE_ENV=mac mise bootstrap macos defaults apply
+  ```
+
+- [ ] mac 個別セットアップ
+
+  ```sh
+  mise run bootstrap:mac
+  ```
 
 - [ ] karabiner-elements
   - [ ] 「Default」というProfile名を作成 or リネーム
@@ -26,28 +115,20 @@
     mise run karabiner:apply
     ```
 
-- [ ] Clibor
-  - [ ] 定型文を設定
-
 - [ ] Browser
   - [ ] Vimium
     - [ ] 設定で`Vimium Options.json`をインポート
   - [ ] Tab Position Options
 
-- [ ] Raycast
-  - [ ] `Raycast.rayconfig`をインポート
-
 - [ ] Google日本語入力
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
 
 - [ ] システム設定
-  - [ ] トラックパッド
-    - [ ] 「システム設定」→「トラックパッド」→「スクロールとズーム」→「ナチュラルなスクロール」をOFFにする
-  - [ ] キーボード
-    - [ ] 「システム設定」→「キーボード」→「キーのリピート速度」を「速い」にする
-    - [ ] 「システム設定」→「キーボード」→「リピート入力認識までの時間」を「短い」にする
   - [ ] キーボードショートカット
-    - [ ] 「通知センターの表示」
+    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
+      ```sh
+      mise run bootstrap:mac-hotkeys
+      ```
     - [ ] ファンクションキーとして使用するをONにする
     - [ ] 不要なショートカットはOFFにする
 
@@ -70,6 +151,17 @@
   - [ ] コントロールセンター
     - [ ] 「バッテリー」→「割合を表示」
   - [ ] 壁紙
+  - [ ] フルディスクアクセス（ターミナルアプリ）
+    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
+    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
+
+      ```sh
+      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+      ```
+
+    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
+      - `/Applications/Ghostty.app`
+    - [ ] 追加したターミナルアプリを再起動する
 
 - [ ] atuin
   - [ ] atuin login
@@ -82,6 +174,35 @@
     mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
 - [ ] git
+  - [ ] secret設定ファイルの作成
+    - サンプルをコピーし、`machineId`を自分の値に編集する
+    - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
+
+    ```sh
+    cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
+    nvim ~/.config/git/config.secret
+    ```
+
+    - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
+
+    ```sh
+    cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
+    nvim ~/.config/git/config.work.secret
+    ```
+
+    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる。読み込み確認は `~/Programming/work3/` 配下のリポジトリ内で実行すること）
+
+    ```sh
+    cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+    nvim ~/.config/git/config.work3.secret
+    ```
+
+    - 編集後、設定ファイルが読み込まれていることを確認する
+
+    ```sh
+    git config --show-origin --get-regexp '^user\.(email|signingkey)$'
+    ```
+
   - [ ] 秘密鍵の設定
     - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
       export済みの`secret_key.asc`を`.gnupg`にコピーしてきて、importする
@@ -96,16 +217,17 @@
     gpg --export-secret-keys --armor <fingerprint> > ~/.secret_key.asc
     ```
 
-        - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
-        ```sh
-        gpg --list-secret-keys --keyid-format LONG
-        # ----------------------------------
-        # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
-        #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
-        # uid                 [ultimate] Your Name <your.email@example.com>
-        # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
-        ```
-        - パスフレーズは、パスワードマネージャーに保存しているものを参照
+    - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
+
+    ```sh
+    gpg --list-secret-keys --keyid-format LONG
+    # ----------------------------------
+    # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
+    #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+    # uid                 [ultimate] Your Name <your.email@example.com>
+    # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
+    ```
+    - パスフレーズは、パスワードマネージャーに保存しているものを参照
 
     - 新規に秘密鍵を作成する場合は、以下のコマンドを実行
       - 基本そのままEnterを押していく
@@ -151,6 +273,33 @@
     ```
     setup-git-gpg
     ```
+  - [ ] GPG署名の確認
+    - ローカルでは、署名済みコミットを検証する
+
+    ```sh
+    git verify-commit HEAD
+    ```
+
+    - `Good signature`と表示されれば署名自体の検証は成功している
+    - コミットのauthor・committerと、署名に使用したGPG鍵のUIDは別の情報である。`git verify-commit`が表示する名前とメールアドレスはGPG鍵のUIDであり、commit authorとの一致を検証しているわけではない
+    - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
+    - author・committerと署名をまとめて確認する場合は、以下を実行する
+
+    ```sh
+    git show --no-patch --show-signature --format=fuller HEAD
+    ```
+
+    - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
+
+    ```sh
+    git push origin HEAD
+    gh api "repos/{owner}/{repo}/commits/$(git rev-parse HEAD)" \
+      --jq '.commit.verification | {verified, reason, verified_at}'
+    ```
+
+    - `verified`が`true`ならGitHubでも署名が正しく認識されている
+    - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
+
   - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
@@ -231,6 +380,33 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
+- [ ] claude（work3用の追加アカウント）
+  - `~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（devcontainerのpost-createでも同じsymlinkを作るので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
+
+    ```sh
+    mkdir -p ~/.claude-work3
+    for entry in projects settings.json agents skills plugins; do
+      [ -e ~/.claude-work3/"$entry" ] || [ -L ~/.claude-work3/"$entry" ] || ln -s ../.claude/"$entry" ~/.claude-work3/"$entry"
+    done
+    ```
+
+  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
+
+    ```sh
+    CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
+    ```
+
+- [ ] ccmanagerのプロジェクトルート作成
+  - `CCMANAGER_MULTI_PROJECT_ROOT`（`config/zsh/lazy/private.zsh` / `workN.zsh`）が指す
+    `~/Programming/<role>/worktrees` と、実体のリポジトリを置く`~/Programming/<role>/repos`は
+    `[dotfiles]`の管理外のため、事前にディレクトリを作成する
+  - work1/work2ロールは`~/work/worktrees`のまま（対象外）
+
+    ```sh
+    mkdir -p ~/Programming/repo/repos ~/Programming/repo/worktrees
+    mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
+    ```
+
 ### カスタムアプリの作成手順
 
 - 手順
@@ -259,6 +435,31 @@ do shell script "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrom
 ```applescript
 do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/Claude2\" > /dev/null 2>&1 &"
 ```
+
+- [ ] Claude Desktop（work3用）
+
+```applescript
+do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=\"$HOME/Library/Application Support/ClaudeWork3\" > /dev/null 2>&1 &"
+```
+
+- 「保存設定」の手順は上記と同様（**名前**は「Claude-Work3.app」など任意の名前に設定）
+
+- [ ] Markdownファイルのデフォルトアプリ設定
+  - `mise bootstrap dotfiles apply`で`~/.local/bin/md-preview-launcher`を配置する
+  - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
+  - 「シェルスクリプトを実行」をワークフローへ追加し、以下のように設定する
+    - シェル: `/bin/zsh`
+    - 入力の引き渡し方法: 「引数として」
+    - スクリプト:
+
+      ```sh
+      "$HOME/.local/bin/md-preview-launcher" "$@"
+      ```
+
+  - `md-preview-launcher.app`という名前で`~/Applications`へ保存する
+  - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
+  - 「このアプリケーションで開く」から`md-preview-launcher`を選択する
+  - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
 
 ### プライベート設定
 
@@ -376,15 +577,83 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   ```
 - [ ] ユーザー名とパスワードを設定
 
-- [ ] chezmoiの実行
+- [ ] mise本体のインストール（未導入時のみ）
 
   ```sh
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply ryo246912
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
   ```
 
-- [ ] miseの実行
-  - hook が順に実行する:
-    1. `MISE_ENV=linux mise bootstrap packages apply`（**sudo のパスワード入力が要るので対話端末で実行すること**）
-    2. gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン
-    3. `GITHUB_TOKEN=$(gh auth token) mise install`
-  - 非対話端末で apt bootstrap が未適用の場合、hook は最初の bootstrap で `exit 1` して**初回 `chezmoi init --apply` 自体が失敗する**（gh/mise install も走らない）。対話端末で `chezmoi apply` を実行すること
+- [ ] リポジトリの clone
+
+  ```sh
+  git clone https://github.com/ryo246912/dotfiles.git ~/dotfiles
+  cd ~/dotfiles
+  ```
+
+  明示的な `mise trust` は不要。直後の `mise bootstrap dotfiles apply --yes`
+  （後述）の `--yes` 自体が、未trustの `mise.toml` をそのまま自動trustし、
+  `~/.local/state/mise/trusted-configs/` にtrust状態を永続化する（実機確認済み:
+  trustなしの状態から `mise bootstrap dotfiles apply --yes` を直接実行しても
+  成功し、以後 `--yes` を付けずに呼んでもtrustエラーが出ない）。
+  `config/mise/config.toml` 側で宣言している `trusted_config_paths` は、
+  （dotfiles配置後に）この trust 状態を明示的な設定としても持たせるためのもので、
+  初回セットアップの成立自体には不要。
+  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
+  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
+  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
+  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
+  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
+
+- [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
+      **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
+      `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
+      自身が持つため、必ず `~/dotfiles` 直下で実行する）
+  - **最初に `[dotfiles]` だけを適用する**（apt 用の `[bootstrap.packages]` は
+    `config/mise/config.linux.toml` という dotfile の中身なので、他のフェーズより
+    先に一度実体化しておく必要がある。packages フェーズは `mise bootstrap`
+    プロセス起動時に読み込んだ config しか見ないため、同一プロセス内で
+    dotfiles 配置 → packages フェーズの順に反映されることはない）:
+    ```sh
+    MISE_ENV=linux mise bootstrap dotfiles apply --yes
+    mise trust ~/.config/mise/config.linux.toml
+    ```
+    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
+    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
+    track/history の節参照）。
+    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
+    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
+    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
+    巻き込まないため）:
+    ```sh
+    MISE_ENV=linux mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
+    ```
+    force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
+    （確認のしかたと注意点は [docs/mise.md](./mise.md) の
+    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
+    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
+    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
+  - 続けて `mise bootstrap` 本体を実行する。今度は packages フェーズが上で配置した
+    `~/.config/mise/config.linux.toml` を正しく読める:
+    1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
+    2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    4. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
+
+    ```sh
+    MISE_ENV=linux mise bootstrap
+    ```
+
+  - 元の chezmoi hook にあった「非対話端末なら apt bootstrap で中断する」ガードは
+    native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
+    プロンプトでハングしうる。対話端末（TTY）から実行すること
+  - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）
+
+- [ ] git-credential-manager (GCM) のセットアップ（GPG 鍵のインポート後に実行。詳細は
+      [`docs/credentials.md`](./credentials.md) 参照）
+  ```sh
+  pass init "$(git config user.signingkey)"
+  git-credential-manager configure
+  ```

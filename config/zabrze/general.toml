@@ -1,0 +1,222 @@
+[[snippets]]
+name            = "atuin search -i"
+snippet         = "atuin search -i"
+trigger-pattern = "(ats|ase)"
+
+[[snippets]]
+name    = "atuin stats"
+snippet = "atuin stats"
+trigger = "atst"
+
+[[snippets]]
+name            = "aqua search"
+snippet         = "aqua g"
+trigger-pattern = "(^as$|^ag$)"
+
+[[snippets]]
+name    = "aws-vault"
+snippet = "aws-vault"
+trigger = "awv"
+
+[[snippets]]
+cursor  = "👇"
+name    = "aws-vault exec <profile> -- "
+snippet = "aws-vault exec 👇 -- "
+trigger = "awe"
+
+[[snippets]]
+name    = "aws-vault list"
+snippet = "aws-vault list"
+trigger = "awl"
+
+[[snippets]]
+name    = "aws-vault login <login>"
+snippet = "aws-vault login "
+trigger = "awlo"
+
+[[snippets]]
+name            = "code ."
+snippet         = "code ."
+trigger-pattern = "^c\\.$"
+
+[[snippets]]
+name            = "caffeinate"
+snippet         = "caffeinate"
+trigger-pattern = "^ca$"
+
+[[snippets]]
+name            = "cal -3"
+snippet         = "cal -3"
+trigger-pattern = "^c3$"
+
+[[snippets]]
+name            = "cal -y"
+snippet         = "cal -y"
+trigger-pattern = "^cy$"
+
+[[snippets]]
+name            = "echo"
+snippet         = "echo"
+trigger-pattern = "^e$"
+
+[[snippets]]
+name            = "exec $SHELL -l"
+snippet         = "exec $SHELL -l"
+trigger-pattern = "^es$"
+
+[[snippets]]
+name            = "ls -la"
+snippet         = "ls -la"
+trigger-pattern = "^la$"
+
+[[snippets]]
+name            = "ls -l"
+snippet         = "ls -l"
+trigger-pattern = "^ll$"
+
+[[snippets]]
+name            = "nvim"
+snippet         = "nvim"
+trigger-pattern = "(^nv$|^v$)"
+
+[[snippets]]
+name            = "nvim ."
+snippet         = "nvim ."
+trigger-pattern = "(^n\\.|^v\\.)"
+
+[[snippets]]
+name            = "sudo"
+snippet         = "sudo"
+trigger-pattern = "^s$"
+
+[[snippets]]
+name            = "which"
+snippet         = "which"
+trigger-pattern = "^w$"
+
+[[snippets]]
+name            = "yazi"
+snippet         = "yazi"
+trigger-pattern = "^y$"
+
+[[snippets]]
+name            = "czg"
+snippet         = "czg"
+trigger-pattern = "^cz$"
+
+[[snippets]]
+name    = "czg ai"
+snippet = "czg ai"
+trigger = "cza"
+
+[[snippets]]
+name    = "czg ai(English)"
+snippet = "CZ_LANG=en czg ai"
+trigger = "czae"
+
+[[snippets]]
+name            = "gotip --view=history"
+snippet         = "gotip --view=history -- --tags=shipper_resolver_test,admin_resolver_test,forwarder_resolver_test,resolver_test"
+trigger-pattern = "^got$"
+
+[[snippets]]
+context         = "^go\\s"
+global          = true
+name            = "./..."
+snippet         = "./..."
+trigger-pattern = "(\\.\\.\\.\\.|\\.4)"
+
+[[snippets]]
+name            = "ghost"
+snippet         = "ghost"
+trigger-pattern = "^ght$"
+
+[[snippets]]
+name            = "ghost run"
+snippet         = "ghost run"
+trigger-pattern = "^ghtr$"
+
+[[snippets]]
+name            = "koji --config ~/.config/koji/config.toml"
+snippet         = "koji --config ~/.config/koji/config.toml"
+trigger-pattern = "^ko$"
+
+[[snippets]]
+name            = "rtty"
+snippet         = "rtty run zsh --font-size 12"
+trigger-pattern = "(^rt$|^bt$)"
+
+[[snippets]]
+name    = "terminal-browser --split right"
+snippet = "terminal-browser --split right"
+trigger = "tbr"
+
+[[snippets]]
+name    = "terminal-browser --split down"
+snippet = "terminal-browser --split down"
+trigger = "tbb"
+
+[[snippets]]
+name    = "terminal-browser --split up"
+snippet = "terminal-browser --split up"
+trigger = "tbt"
+
+[[snippets]]
+name    = "terminal-browser --split left"
+snippet = "terminal-browser --split left"
+trigger = "tbl"
+
+[[snippets]]
+global          = true
+name            = "ug -QPn"
+snippet         = "ug -QPn"
+trigger-pattern = "(^ug$|igrep)"
+
+[[snippets]]
+name            = "up --noinput"
+snippet         = "up --noinput"
+trigger-pattern = "^up$"
+
+[[snippets]]
+name            = "wifitui"
+snippet         = "wifitui"
+trigger-pattern = "(^wf$|^wi$)"
+
+[[snippets]]
+name            = "zinit"
+snippet         = "zinit"
+trigger-pattern = "^zi$"
+
+[[snippets]]
+name            = "ji"
+snippet         = "ji"
+trigger-pattern = "^zz$"
+
+[[snippets]]
+name    = "fuzzy change git root directory"
+snippet = "() { local dir; dir=$(roots --depth 2 | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
+trigger = "zD"
+
+[[snippets]]
+name    = "fuzzy change directory under git roots"
+snippet = "() { local dir; dir=$(roots --depth 2 | while IFS= read -r root; do find \"$root\" -mindepth 1 -maxdepth 3 \\( -name .git -o -name node_modules -o -name vendor -o -name testdata \\) -prune -o -type d -print 2>/dev/null; done | sort -u | fzf +m) && [[ -n $dir ]] && cd -- \"$dir\" }"
+trigger = "zd"
+
+[[snippets]]
+global          = true
+name            = "|"
+snippet         = "|"
+trigger-pattern = "^pi$"
+
+[[snippets]]
+global  = true
+name    = "|& spacer --after 5"
+snippet = "|& spacer --after 5"
+trigger = "sp"
+
+[[snippets]]
+context = ".*delta\\s"
+global  = true
+name    = "(delta) --no-gitconfig"
+snippet = "--no-gitconfig"
+trigger = "ng"

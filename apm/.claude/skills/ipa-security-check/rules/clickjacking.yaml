@@ -1,0 +1,110 @@
+category: clickjacking
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.9 クリックジャッキング"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/clickjacking.html
+cwe: CWE-1021
+
+rules:
+  - id: IPA-SWS-1-CJK-001
+    title: "X-Frame-Options ヘッダの欠落"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "X-Frame-Options を DENY または SAMEORIGIN で設定 (9-(i)-a)"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"]X-Frame-Options:\s*(DENY|SAMEORIGIN)'
+            description: "X-Frame-Options 設定あり (OK signal)"
+      java:
+        patterns:
+          - type: regex
+            regex: 'setHeader\s*\(\s*["'']X-Frame-Options["'']'
+            description: "setHeader で X-Frame-Options (OK signal)"
+          - type: regex
+            regex: '\.frameOptions\s*\(\s*\)'
+            description: "Spring Security frameOptions() (OK signal)"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'helmet\.frameguard\s*\('
+            description: "helmet.frameguard 利用 (OK signal)"
+
+  - id: IPA-SWS-1-CJK-002
+    title: "X-Frame-Options に危険値"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ALLOWALL や ワイルドカードは使用しない"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'X-Frame-Options:\s*ALLOWALL'
+            description: "X-Frame-Options: ALLOWALL (仕様外、無効)"
+          - type: regex
+            regex: 'X-Frame-Options:\s*ALLOW-FROM\s+\*'
+            description: "ALLOW-FROM * (ワイルドカード)"
+
+  - id: IPA-SWS-1-CJK-003
+    title: "CSP frame-ancestors の不在 / 危険値"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "frame-ancestors 'none' / 'self' を CSP に追加"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'Content-Security-Policy:[^\n]*frame-ancestors'
+            description: "CSP frame-ancestors 設定あり (OK signal)"
+          - type: regex
+            regex: 'frame-ancestors\s+[^;]*\*'
+            description: "frame-ancestors にワイルドカード *"
+
+  - id: IPA-SWS-1-CJK-004
+    title: "Apache httpd で X-Frame-Options 未設定"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "Header always set X-Frame-Options \"SAMEORIGIN\" を追加"
+    languages:
+      apache:
+        patterns:
+          - type: regex
+            regex: 'Header\s+(always\s+)?set\s+X-Frame-Options'
+            description: "Apache で X-Frame-Options 設定 (OK signal)"
+
+  - id: IPA-SWS-1-CJK-005
+    title: "Nginx で X-Frame-Options 未設定"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "add_header X-Frame-Options \"SAMEORIGIN\" always; を追加"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'add_header\s+X-Frame-Options'
+            description: "Nginx X-Frame-Options 設定 (OK signal)"
+
+  - id: IPA-SWS-1-CJK-006
+    title: "IIS web.config に X-Frame-Options 未設定"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "<add name=\"X-Frame-Options\" value=\"SAMEORIGIN\" /> を追加"
+    languages:
+      xml:
+        patterns:
+          - type: regex
+            regex: '<add\s+name="X-Frame-Options"'
+            description: "IIS web.config の X-Frame-Options (OK signal)"
+
+  - id: IPA-SWS-1-CJK-007
+    title: "重要操作にマウスのみ完結を許す UI 設計"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "重要操作前に再認証・CAPTCHA・確認モーダルを挟む (9-(i)-b / 9-(ii))"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<form[^>]*action=["''][^"'']*(delete|withdraw|change_password|public_setting)'
+            description: "重要操作フォーム (確認ステップ/再認証の有無確認)"

@@ -1,0 +1,330 @@
+category: sql_injection
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.1 SQLインジェクション"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/sql.html
+cwe: CWE-89
+
+rules:
+  - id: IPA-SWS-1-SQLI-001
+    title: "文字列連結によるSQL組み立て (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "プレースホルダによる SQL 文の組み立て (1-(i)-a)"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\$_(GET|POST|REQUEST|COOKIE|SERVER)\[[^\]]+\][^;]*\.\s*[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|VALUES)\b'
+            description: "スーパーグローバルを SQL 様文字列に . で連結"
+          - type: regex
+            regex: '[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"]*[''"]\s*\.\s*\$\w+'
+            description: "SQL 文字列リテラルへの変数連結"
+          - type: regex
+            regex: '\b(mysql_query|mysqli_query|pg_query|->query|->exec)\s*\([^)]*\.\s*\$'
+            description: "クエリ実行関数に文字列連結を渡している"
+          - type: regex
+            regex: '[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"]*\$\w+[^''"]*[''"]'
+            description: "ダブルクォート内の変数展開で SQL 組み立て"
+          - type: regex
+            regex: 'sprintf\s*\(\s*[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"]*%[sd]'
+            description: "sprintf で SQL 文字列組み立て"
+    fix_example:
+      php: |
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE id = :id");
+        $stmt->execute([':id' => $_GET['id']]);
+
+  - id: IPA-SWS-1-SQLI-002
+    title: "文字列連結によるSQL組み立て (Java)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "PreparedStatement と setXxx() による SQL 組み立て"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: '"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*"\s*\+\s*\w+'
+            description: "SQL 文字列に変数を + で連結"
+          - type: regex
+            regex: '\.execute(Query|Update)?\s*\(\s*"[^"]*"\s*\+'
+            description: "execute系メソッドに文字列連結結果を渡している"
+          - type: regex
+            regex: 'Statement\s+\w+\s*=\s*\w+\.createStatement\s*\(\s*\)'
+            description: "Statement.createStatement の使用 (PreparedStatement 推奨)"
+          - type: regex
+            regex: 'String\.format\s*\(\s*"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b'
+            description: "String.format で SQL 組み立て"
+          - type: regex
+            regex: 'StringBuilder\s*\(\s*"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b'
+            description: "StringBuilder で SQL を連結"
+    fix_example:
+      java: |
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM users WHERE id = ?");
+        ps.setInt(1, userId);
+
+  - id: IPA-SWS-1-SQLI-003
+    title: "文字列連結によるSQL組み立て (Python)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "cursor.execute(\"...\", (params,)) の引数渡しまたは ORM 利用"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '\.execute\s*\(\s*[''"][^''"]*%[sd][''"][^)]*%'
+            description: "% 演算子による SQL 文字列構築"
+          - type: regex
+            regex: '\.execute\s*\(\s*f[''"]'
+            description: "f-string による SQL 構築"
+          - type: regex
+            regex: '\.execute\s*\(\s*[''"][^''"]*[''"]\s*\.\s*format\s*\('
+            description: ".format() による SQL 構築"
+          - type: regex
+            regex: '\.execute\s*\(\s*[''"][^''"]*[''"]\s*\+'
+            description: "文字列連結による SQL 構築"
+          - type: regex
+            regex: '(cursor|cur|db|conn)\.execute\s*\(\s*[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"]*\{\w+\}'
+            description: "format フィールドを SQL に直接埋め込み"
+    fix_example:
+      python: |
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+
+  - id: IPA-SWS-1-SQLI-004
+    title: "文字列補間による SQL 組み立て (Ruby)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ActiveRecord のクエリビルダや where('? = ?', val) を使用"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\.where\s*\(\s*[''"][^''"]*#\{'
+            description: "where 句に文字列補間"
+          - type: regex
+            regex: '\.(execute|exec_query|find_by_sql)\s*\(\s*[''"][^''"]*#\{'
+            description: "生 SQL 実行系に文字列補間"
+          - type: regex
+            regex: '[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"]*#\{[^}]+\}'
+            description: "SQL 文字列に #{} 展開"
+    fix_example:
+      ruby: |
+        User.where(id: params[:id])
+        User.where('id = ?', params[:id])
+
+  - id: IPA-SWS-1-SQLI-005
+    title: "文字列連結による SQL 組み立て (C#/.NET)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "SqlCommand + Parameters.AddWithValue / Add で型指定"
+    languages:
+      csharp:
+        patterns:
+          - type: regex
+            regex: '"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*"\s*\+\s*\w+'
+            description: "文字列連結による SQL 構築"
+          - type: regex
+            regex: '\$"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*\{'
+            description: "C# 文字列補間 ($\"...\") による SQL 構築"
+          - type: regex
+            regex: 'String\.Format\s*\(\s*"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b'
+            description: "String.Format での SQL 構築"
+          - type: regex
+            regex: 'new\s+SqlCommand\s*\(\s*"[^"]*"\s*\+'
+            description: "SqlCommand コンストラクタに動的 SQL"
+          - type: regex
+            regex: '"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^"]*"\s*&\s*\w+'
+            description: "VB.NET 文字列連結 (& 演算子) による SQL 構築"
+    fix_example:
+      csharp: |
+        var cmd = new SqlCommand("SELECT * FROM Users WHERE Id = @id", conn);
+        cmd.Parameters.Add("@id", SqlDbType.Int).Value = id;
+
+  - id: IPA-SWS-1-SQLI-006
+    title: "文字列連結による SQL 組み立て (Node.js/JavaScript/TypeScript)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "パラメータ化クエリ (connection.query(sql, [params])) または ORM 使用"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: '\.(query|execute)\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`'
+            description: "テンプレートリテラルで SQL 構築"
+          - type: regex
+            regex: '\.(query|execute)\s*\(\s*[''"][^''"]*[''"]\s*\+'
+            description: "クエリ関数に文字列連結を渡している"
+          - type: regex
+            regex: '[''"`][^''"`]*\b(SELECT|INSERT|UPDATE|DELETE)\b[^''"`]*[''"`]\s*\+\s*(req\.|request\.|params|user|input)'
+            description: "SQL リテラルにリクエスト由来の変数を + で連結"
+      typescript:
+        patterns:
+          - type: regex
+            regex: '\.(query|execute)\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`'
+            description: "テンプレートリテラルで SQL 構築"
+    fix_example:
+      javascript: |
+        connection.query('SELECT * FROM users WHERE id = ?', [id], (err, rows) => { });
+
+  - id: IPA-SWS-1-SQLI-007
+    title: "文字列連結による SQL 組み立て (Go)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "db.Query(\"... ?\", arg) のプレースホルダ使用"
+    languages:
+      go:
+        patterns:
+          - type: regex
+            regex: 'db\.(Query|Exec|QueryRow)\s*\(\s*"[^"]*"\s*\+\s*\w+'
+            description: "db.Query に文字列連結"
+          - type: regex
+            regex: 'fmt\.Sprintf\s*\(\s*"[^"]*\b(SELECT|INSERT|UPDATE|DELETE)\b'
+            description: "fmt.Sprintf で SQL 構築"
+    fix_example:
+      go: |
+        rows, err := db.Query("SELECT * FROM users WHERE id = ?", id)
+
+  - id: IPA-SWS-1-SQLI-008
+    title: "危険なエスケープ関数のみへの依存 (PHP)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "addslashes / mysql_escape_string ではなくプレースホルダを使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\baddslashes\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "addslashes による SQL エスケープ (Shift_JIS 問題)"
+          - type: regex
+            regex: '\b(mysql_escape_string|mysql_real_escape_string)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "古い mysql_(real_)escape_string への依存"
+          - type: regex
+            regex: '\bhtmlspecialchars\s*\([^)]+\)[^;]*[''"][^''"]*\b(SELECT|INSERT|UPDATE|DELETE)'
+            description: "htmlspecialchars を SQL エスケープとして誤用"
+    fix_example:
+      php: |
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE name = ?');
+        $stmt->execute([$_POST['name']]);
+
+  - id: IPA-SWS-1-SQLI-009
+    title: "識別子 (ORDER BY / テーブル名) への外部入力埋め込み"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ホワイトリスト方式でカラム名・テーブル名を制限"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'ORDER\s+BY\s+[''"]?\s*\.\s*\$_(GET|POST|REQUEST)'
+            description: "ORDER BY 句に外部入力を連結"
+          - type: regex
+            regex: 'FROM\s+[''"]?\s*\.\s*\$_(GET|POST|REQUEST)'
+            description: "FROM 句に外部入力を連結"
+          - type: regex
+            regex: '\bORDER\s+BY\s+\$_(GET|POST|REQUEST)'
+            description: "ORDER BY 句にスーパーグローバル直挿入"
+      java:
+        patterns:
+          - type: regex
+            regex: 'ORDER\s+BY\s+"\s*\+\s*\w+'
+            description: "ORDER BY 句に変数を + 連結"
+    fix_example:
+      php: |
+        $allowed = ['id', 'name', 'created_at'];
+        $col = in_array($_GET['sort'], $allowed, true) ? $_GET['sort'] : 'id';
+        $sql = "SELECT * FROM users ORDER BY $col";
+
+  - id: IPA-SWS-1-SQLI-010
+    title: "hidden パラメータに SQL 文を指定 (論外パターン)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "SQL 文をクライアントに渡さない (1-(ii))"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<input[^>]+type=["'']?hidden["'']?[^>]+value=["''][^"'']*\b(SELECT|INSERT|UPDATE|DELETE)\b'
+            description: "hidden パラメータに SQL 文を指定"
+
+  - id: IPA-SWS-1-SQLI-011
+    title: "MySQL Connector/J で characterEncoding=sjis/ujis + 動的プレースホルダ (JVN#59748723)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "useServerPrepStmts=true を付与し、文字コードは utf8 を使用"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'jdbc:mysql:[^"'']*characterEncoding=(sjis|ujis)'
+            description: "古い MySQL JDBC で Shift_JIS / EUC-JP 指定"
+          - type: regex
+            regex: 'jdbc:mysql:[^"'']*(?!useServerPrepStmts=true)[^"'']*$'
+            description: "useServerPrepStmts 未指定の MySQL 接続文字列 (要確認)"
+    fix_example:
+      java: |
+        String url = "jdbc:mysql://HOST/DB?useUnicode=true&characterEncoding=utf8&useServerPrepStmts=true";
+
+  - id: IPA-SWS-1-SQLI-012
+    title: "Perl DBD::mysql で SQL_INTEGER 指定の quote (数値検証されない)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "数値型キャスト ($v + 0) または bind_param + SQL_INTEGER の併用"
+    languages:
+      perl:
+        patterns:
+          - type: regex
+            regex: '->quote\s*\([^,]+,\s*SQL_INTEGER\s*\)'
+            description: "DBD::mysql の quote(..., SQL_INTEGER) は入力をそのまま返す"
+
+  - id: IPA-SWS-1-SQLI-013
+    title: "prepare 使用だが SQL 自体に文字列連結"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "SQL リテラル内に変数を埋め込まず、必ずプレースホルダ位置に渡す"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '->prepare\s*\(\s*[''"][^''"]*[''"]\s*\.\s*\$'
+            description: "PDO::prepare の引数に文字列連結"
+      java:
+        patterns:
+          - type: regex
+            regex: 'prepareStatement\s*\(\s*"[^"]*"\s*\+\s*\w+'
+            description: "prepareStatement に動的 SQL 文字列"
+
+  - id: IPA-SWS-1-SQLI-014
+    title: "エラーメッセージのブラウザ表示 (DB 種別/SQL 露出)"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "本番では display_errors=Off / customErrors mode=On (1-(iii))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'display_errors\s*=\s*(On|1|true)'
+            description: "display_errors が ON"
+          - type: regex
+            regex: '\b(echo|print|var_dump|print_r)\s*\(\s*\$\w*[Ee]rror'
+            description: "エラーオブジェクトを直接出力"
+      python:
+        patterns:
+          - type: regex
+            regex: '\bDEBUG\s*=\s*True'
+            description: "Django DEBUG=True"
+
+  - id: IPA-SWS-1-SQLI-015
+    title: "DB 接続が root/管理者権限ユーザ (1-(iv))"
+    severity: medium
+    remediation_type: 保険的対策
+    remediation: "アプリ専用の最小権限 DB アカウントを使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '(mysqli_connect|new\s+PDO|new\s+mysqli)\s*\([^)]*[''"]root[''"]'
+            description: "DB ユーザに root を指定"
+      yaml:
+        patterns:
+          - type: regex
+            regex: '(username|user):\s*[''"]?root[''"]?'
+            description: "設定ファイルの DB ユーザが root"

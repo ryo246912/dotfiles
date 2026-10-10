@@ -1,0 +1,176 @@
+{
+  "env": {
+    "DISABLE_AUTOUPDATER": "1",
+    "AI_AGENT": "1"
+  },
+  "cleanupPeriodDays": 36500,
+  "tui": "default",
+  "skipDangerousModePermissionPrompt": true,
+  "permissions": {
+    "allow": [],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(rm -rf:*)",
+      "Read(**/.env)",
+      "Read(.env)",
+      "Read(**/.env.*)",
+      "Read(.env.*)",
+      "Read(**/.envrc)",
+      "Read(.envrc)",
+      "Read(**/*.secret)",
+      "Read(*.secret)",
+      "Read(**/fnox.local.toml)",
+      "Read(fnox.local.toml)",
+      "Read(id_rsa)",
+      "Read(id_ed25519)",
+      "Read(~/.ssh/id_rsa)",
+      "Read(~/.ssh/id_ed25519)",
+      "Read(**/*token*)",
+      "Read(**/*key*)",
+      "Read(~/**/*token*)",
+      "Read(~/**/*key*)",
+      "Edit(**/.env)",
+      "Edit(.env*)",
+      "Edit(**/.env*)",
+      "Edit(**/.envrc)",
+      "Edit(.envrc)",
+      "Edit(**/*.secret)",
+      "Edit(*.secret)",
+      "Edit(**/fnox.local.toml)",
+      "Edit(fnox.local.toml)",
+      "Edit(**/secrets/**)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/statusline.sh\"; \"$f\"",
+    "refreshInterval": 30
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "expo-deployment@expo-plugins": true
+  },
+  "git": {
+    "includeCoAuthor": false
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Loading ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator improve-context; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+            "timeout": 345600
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -j '.tool_input.file_path + \"\\u0000\"' | xargs -0 -r -- perl -lpi -e 's/[ \\t]+$//' --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".ts\") or endswith(\".tsx\"))) + \"\\u0000\"' | xargs -0 -r -- tsgo --noEmit --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".toml\"))) + \"\\u0000\"' | xargs -0 -r -- taplo format --check --"
+          },
+          {
+            "type": "command",
+            "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Loading ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Tracking ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

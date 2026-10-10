@@ -1,16 +1,33 @@
 .venv/*
 
+## mise lockfiles（Renovate の artifact 更新では生成しない）
+mise*.lock
+# クラウド環境は GitHub API を使えず、URL とチェックサムを記録した lockfile がないと mise install できないため除外しない。
+!/mise.lock
+
 *temp*
-dot_gitconfig.secret
-dot_gitconfig.secret-noreply
-dot_zprofile.secret
-dot_zshrc.secret
+# "templates/" は "*temp*" に部分一致してしまうため明示的に復帰させる
+# （mise dotfiles のテンプレート source を置くディレクトリ。以後ここに新規ファイルを
+# 追加しても git add で無視されないようにするため）。
+!templates/
+!templates/**
+config/git/config.secret
+config/git/config.work.secret
+config/git/config.work3.secret
+config/zsh/.zprofile.secret
+config/zsh/.zshrc.secret
 
 ## claude
 settings.local.json
+
+## rulesync 配布先（ソースは .rulesync/rules/ 配下）
+/CLAUDE.md
 
 ## VSCode
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-!dot_config/rulesync/exact_dot_rulesync/mcp.json
+# rulesync が生成する mcp.json は ~/.config/rulesync/.rulesync/mcp.json（実ホーム側）に
+# 出力されるだけで、このリポジトリには非テンプレートの mcp.json 自体が存在しない
+# （source は templates/rulesync/mcp.json.tera）。そのため上の `mcp.json` ignore に対する
+# !negation はもう不要（旧 dot_config/.../mcp.json.tmpl 時代の名残）。

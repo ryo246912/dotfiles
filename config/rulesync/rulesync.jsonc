@@ -1,0 +1,13 @@
+{
+  "targets": {
+    "claudecode": ["rules", "skills", "commands", "hooks"],
+    "codexcli": ["rules", "skills"],
+    "copilot": ["rules"],
+    "copilotcli": ["rules", "mcp"],
+  },
+  "delete": false,
+  "verbose": false,
+  "silent": false,
+  "global": true,
+  "simulateCommands": true,
+}

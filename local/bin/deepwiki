@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title deepwiki
+# @raycast.mode silent
+
+# Optional parameters:
+# @raycast.icon 🤖
+# @raycast.description GitHubのURLをDeepWikiで開く
+
+# コマンドの失敗、未定義変数、パイプ途中の失敗を検知して即座に終了する。
+set -euo pipefail
+
+# osascriptを利用できない環境で不明瞭な「ファイルがない」エラーを出さないよう、
+# 実行環境がmacOSであることを最初に確認する。
+if [[ "$(/usr/bin/uname -s)" != "Darwin" ]]; then
+  echo "このスクリプトはmacOS専用です。" >&2
+  exit 1
+fi
+
+# System Eventsから最前面アプリの表示名とバンドルIDをまとめて取得する。
+# 「表示名|バンドルID」の形式にすることで、後続のBash処理で分割できる。
+if ! app_info=$(/usr/bin/osascript <<'APPLESCRIPT'
+tell application "System Events"
+  set frontmostProcess to first process whose frontmost is true
+  return (name of frontmostProcess) & "|" & (bundle identifier of frontmostProcess)
+end tell
+APPLESCRIPT
+); then
+  # アクセシビリティ権限などが原因で取得できない場合に、確認箇所を明示する。
+  echo "最前面アプリの取得に失敗しました。システム設定でアクセシビリティ権限を確認してください。" >&2
+  exit 1
+fi
+
+# 最初の「|」を境に、エラー表示用のアプリ名と判定用のバンドルIDへ分割する。
+browser_name=${app_info%%|*}
+bundle_id=${app_info#*|}
+
+# ブラウザ固有のURL取得処理とタブ作成処理を、バンドルIDから一度だけ選択する。
+# 対応ブラウザを追加するときの判定箇所を集約し、片方だけの更新漏れを防ぐ。
+case "$bundle_id" in
+  com.google.Chrome)
+    # Chromeはactive tabのURLを取得し、作成後は末尾のタブを明示的に選択する。
+    browser_name="Google Chrome"
+    get_url_script='tell application "Google Chrome" to return URL of active tab of front window as string'
+    open_tab_script='on run argv
+  tell application "Google Chrome"
+    tell front window
+      make new tab with properties {URL:item 1 of argv}
+      set active tab index to (count of tabs)
+    end tell
+    activate
+  end tell
+end run'
+    ;;
+  company.thebrowser.Browser)
+    # Arcはactive tabのURLを取得し、front windowへ新しいタブを追加する。
+    browser_name="Arc"
+    get_url_script='tell application "Arc" to get the URL of the active tab of front window'
+    open_tab_script='on run argv
+  tell application "Arc"
+    tell front window to make new tab with properties {URL:item 1 of argv}
+    activate
+  end tell
+end run'
+    ;;
+  *)
+    # バンドルIDが既知のブラウザと一致しない場合は利用者へ対応ブラウザを案内する。
+    echo "${browser_name}は非対応ブラウザです。ChromeまたはArcを使用してください。" >&2
+    exit 1
+    ;;
+esac
+
+# 選択したブラウザ用AppleScriptを実行し、失敗時は対象ブラウザを含む案内を表示する。
+if ! current_url=$(/usr/bin/osascript -e "$get_url_script"); then
+  echo "URLの取得に失敗しました。${browser_name}のウィンドウとタブを確認してください。" >&2
+  exit 1
+fi
+
+# GitHub URLからownerとrepositoryの2セグメントだけを抽出する。
+# pull requestなどのサブパス、クエリ、フラグメントはDeepWikiでは不要なため除外する。
+if [[ "$current_url" =~ ^https://github\.com/([^/?#]+)/([^/?#]+) ]]; then
+  owner=${BASH_REMATCH[1]}
+  repository=${BASH_REMATCH[2]}
+  deepwiki_url="https://deepwiki.com/${owner}/${repository}"
+else
+  # GitHub以外のページやownerだけのURLを誤ってDeepWikiへ送らないように処理を中止する。
+  echo "GitHubのリポジトリURLではありません。owner/repository形式のページを開いてください。" >&2
+  exit 1
+fi
+
+# 選択済みのAppleScriptで、元のブラウザにDeepWiki用の新規タブを作成する。
+# URLはスクリプトへ埋め込まずargvで渡し、引用符などを含むURLでも安全に扱う。
+if ! printf '%s\n' "$open_tab_script" | /usr/bin/osascript - "$deepwiki_url"; then
+  echo "DeepWikiのタブを${browser_name}で開けませんでした。" >&2
+  exit 1
+fi
+
+# Raycastの実行結果として、実際に開いたDeepWiki URLを通知する。
+echo "DeepWikiで別タブで開きました: ${deepwiki_url}"

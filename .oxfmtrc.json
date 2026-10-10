@@ -1,9 +1,13 @@
 {
   "$schema": "https://oxc.rs/schemas/formatter/schema.json",
   "ignorePatterns": [
-    "dot_config/sidebery/**",
-    "dot_config/obsidian/**",
-    "dot_config/navi/**",
+    "apm/apm.lock.yaml",
+    ".mise/locks/**",
+    "unmanaged/sidebery/**",
+    "config/obsidian/**",
+    "config/navi/**",
+    "unmanaged/rectangle/**",
+    "config-mac/vicinae/**",
     "**/bun.lock",
     "**/*.toml"
   ]

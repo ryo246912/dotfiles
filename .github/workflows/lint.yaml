@@ -22,7 +22,7 @@ jobs:
       pull-requests: read
     timeout-minutes: 1
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -44,12 +44,18 @@ jobs:
               - ".github/workflows/*"
               - ".github/actionlint.yaml"
               - ".github/actionlint.yml"
+            dockerfile:
+              - "**/Dockerfile*"
+              - "**/docker-compose*.yml"
+              - "**/docker-compose*.yaml"
+              - "**/compose*.yml"
+              - "**/compose*.yaml"
             secret:
               - "**/*"
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          install_args: "aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
+          install_args: "aqua:azu/dockerfile-pin aqua:rhysd/actionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
@@ -104,6 +110,14 @@ jobs:
         if: steps.changed-files.outputs.actions_any_changed == 'true'
         background: true
         run: mise run lint:pinact
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: dockerfile-pin
+        id: lint-dockerfile-pin
+        if: steps.changed-files.outputs.dockerfile_any_changed == 'true'
+        background: true
+        run: mise run lint:dockerfile-pin
 
       - name: secretlint
         id: lint-secret
@@ -112,14 +126,4 @@ jobs:
         run: mise run lint:secret
 
       - name: wait for all lints
-        if: always()
-        wait:
-          - lint-json
-          - lint-yaml
-          - lint-md
-          - lint-toml
-          - lint-actionlint
-          - lint-ghalint
-          - lint-zizmor
-          - lint-pinact
-          - lint-secret
+        wait-all: true

@@ -1,0 +1,363 @@
+category: operation_checklist
+ipa:
+  document: 安全なウェブサイトの運用管理に向けての20ヶ条 / 実装チェックリスト
+  section: "20条 / 第7版巻末チェックリスト"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/sitecheck.html
+
+rules:
+  - id: IPA-OPS-1-001
+    title: "機密設定ファイルの公開ディレクトリ配置 (第1条)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: ".env / config 系を public/ 配下から除外し .gitignore に登録"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(public|static|www|htdocs|wwwroot|docroot)/[^"''\s]*\.(env|env\.local|env\.production)'
+            description: "公開ディレクトリに .env が配置"
+          - type: regex
+            regex: '(public|static|www|htdocs)/[^"''\s]*(config\.php|application\.yml|database\.yml|web\.config|secrets\.json|credentials\.json)'
+            description: "公開ディレクトリに機密設定ファイル"
+          - type: regex
+            regex: '(public|static|www)/\.(git|svn|hg|DS_Store)'
+            description: "VCS ディレクトリ / DS_Store が公開ディレクトリ"
+          - type: regex
+            regex: '\.(bak|swp|orig|old)$'
+            description: "バックアップファイル拡張子 (公開ディレクトリにあれば NG)"
+
+  - id: IPA-OPS-1-002
+    title: "依存ライブラリの脆弱性管理 (第4条)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "lock ファイル使用 + npm audit / pip-audit / Trivy / Dependabot"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '^(package\.json|requirements\.txt|Gemfile|composer\.json|pom\.xml|build\.gradle|Cargo\.toml|go\.mod)$'
+            description: "依存定義ファイル (lock 同梱と監査ツール統合を確認)"
+
+  - id: IPA-OPS-1-003
+    title: "詳細エラーメッセージの本番返却 (第5条)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "display_errors=Off / DEBUG=False / include-stacktrace=never"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'display_errors\s*=\s*(On|1|true)'
+            description: "PHP display_errors=On"
+          - type: regex
+            regex: 'expose_php\s*=\s*(On|1|true)'
+            description: "PHP expose_php=On (Server ヘッダで PHP バージョン露出)"
+      python:
+        patterns:
+          - type: regex
+            regex: '\bDEBUG\s*=\s*True'
+            description: "Django/Flask DEBUG=True"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'consider_all_requests_local\s*=\s*true'
+            description: "Rails consider_all_requests_local=true"
+      java:
+        patterns:
+          - type: regex
+            regex: 'server\.error\.include-stacktrace\s*=\s*always'
+            description: "Spring Boot include-stacktrace=always"
+
+  - id: IPA-OPS-1-004
+    title: "機微情報のログ出力 (第6条)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ログ出力からパスワード/トークン/カード番号を除外"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(logger\.(info|debug|warn|error)|console\.log)\s*\([^)]*(password|pwd|secret|token|authorization|cookie|cardNumber|cvv)'
+            description: "ログに機微情報"
+
+  - id: IPA-OPS-1-005
+    title: "HTTPS リダイレクト / HSTS ヘッダ (第7条)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "全面 HTTPS 化 + HSTS (max-age=31536000; includeSubDomains)"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'return\s+301\s+https://'
+            description: "Nginx HTTPS リダイレクト (OK signal)"
+          - type: regex
+            regex: 'add_header\s+Strict-Transport-Security'
+            description: "Nginx HSTS 設定 (OK signal)"
+      apache:
+        patterns:
+          - type: regex
+            regex: 'RewriteRule\s+[^]]*https://%\{HTTP_HOST\}'
+            description: "Apache HTTPS リダイレクト (OK signal)"
+      all:
+        patterns:
+          - type: regex
+            regex: 'Strict-Transport-Security:\s*max-age=0'
+            description: "HSTS max-age=0 (機能無効化)"
+
+  - id: IPA-OPS-1-006
+    title: "TLS バージョン / 弱い暗号スイート (第7条)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "TLS 1.2+ のみ。RC4/DES/3DES/MD5/NULL 暗号を含めない"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'ssl_protocols\s+[^;]*\b(SSLv2|SSLv3|TLSv1|TLSv1\.0|TLSv1\.1)\b'
+            description: "古い SSL/TLS バージョン許可"
+          - type: regex
+            regex: 'ssl_ciphers\s+[^;]*\b(RC4|DES|3DES|MD5|NULL)\b'
+            description: "弱い暗号スイート許可"
+
+  - id: IPA-OPS-1-007
+    title: "混在コンテンツ (HTTPS ページ内の http:// リソース)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "全リソース URL を //protocol-relative または https:// に変更"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '(src|href|action)\s*=\s*["'']http://'
+            description: "HTML 内に http:// で始まる URL (混在コンテンツの可能性)"
+
+  - id: IPA-OPS-1-008
+    title: "弱いパスワードハッシュ (第8条 / 2.5 パスワード)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "bcrypt / argon2 / scrypt / PBKDF2 を使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\bmd5\s*\(\s*\$?password'
+            description: "パスワードを md5 でハッシュ"
+          - type: regex
+            regex: '\bsha1\s*\(\s*\$?password'
+            description: "パスワードを sha1 でハッシュ"
+          - type: regex
+            regex: '\bhash\s*\(\s*[''"]sha256[''"]\s*,\s*\$?password'
+            description: "パスワードを sha256 単体でハッシュ (ソルト/ストレッチング不足)"
+      python:
+        patterns:
+          - type: regex
+            regex: 'hashlib\.(md5|sha1|sha256)\s*\(\s*password'
+            description: "パスワードを hashlib で単純ハッシュ"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'crypto\.createHash\s*\(\s*[''"](md5|sha1)[''"]'
+            description: "Node.js md5/sha1 ハッシュ"
+
+  - id: IPA-OPS-1-009
+    title: "ハードコードされた認証情報 / シークレット (第12条)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "環境変数または Secrets Manager から取得"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\bAKIA[0-9A-Z]{16}\b'
+            description: "AWS Access Key ID 形式"
+          - type: regex
+            regex: '(password|passwd|pwd|api[_-]?key|secret|token)\s*[:=]\s*[''"][A-Za-z0-9!@#$%^&*+/=]{8,}[''"]'
+            description: "ハードコードされたパスワード / API キー"
+          - type: regex
+            regex: '\bgh[pousr]_[A-Za-z0-9]{36,}\b'
+            description: "GitHub PAT 形式"
+          - type: regex
+            regex: '-----BEGIN (RSA )?PRIVATE KEY-----'
+            description: "秘密鍵が直書き"
+
+  - id: IPA-OPS-1-010
+    title: "弱いデフォルトパスワード (第11条)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "テスト/サンプルアカウントを本番投入しない"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(password|pwd)\s*[:=]\s*[''"]?(admin|password|test|123456|root|guest|changeme)[''"]?'
+            description: "弱いデフォルトパスワード"
+
+  - id: IPA-OPS-1-011
+    title: "Dockerfile USER root のまま"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "非 root ユーザに USER を切り替える"
+    languages:
+      dockerfile:
+        patterns:
+          - type: regex
+            regex: '^USER\s+root\b'
+            description: "USER root 指示"
+          - type: regex
+            regex: '^FROM\s+[^:\s]+:latest\b'
+            description: ":latest タグ使用 (バージョン固定推奨)"
+
+  - id: IPA-OPS-1-012
+    title: "chmod 777 等の過剰パーミッション"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "必要最小限のパーミッション (755 / 644)"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\bchmod\s+(-R\s+)?(777|666)\b'
+            description: "chmod 777 / 666"
+
+  - id: IPA-OPS-1-013
+    title: "クラウド Security Group の 0.0.0.0/0 全開放 (第15条)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "SSH 22 / RDP 3389 / DB 3306,5432 等を 0.0.0.0/0 で開放しない"
+    languages:
+      terraform:
+        patterns:
+          - type: regex
+            regex: 'cidr_blocks\s*=\s*\[\s*"0\.0\.0\.0/0"\s*\]'
+            description: "Terraform で 0.0.0.0/0 全開放"
+          - type: regex
+            regex: 'from_port\s*=\s*(22|3389|3306|5432)'
+            description: "重要ポートの SG 定義 (CIDR 確認要)"
+
+  - id: IPA-OPS-1-014
+    title: "S3 バケット公開 / 暗号化なし (第19条)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "BlockPublicAccess + デフォルト暗号化を有効化"
+    languages:
+      terraform:
+        patterns:
+          - type: regex
+            regex: 'block_public_acls\s*=\s*false'
+            description: "S3 block_public_acls=false"
+          - type: regex
+            regex: 'restrict_public_buckets\s*=\s*false'
+            description: "S3 restrict_public_buckets=false"
+      yaml:
+        patterns:
+          - type: regex
+            regex: 'PubliclyAccessible:\s*true'
+            description: "CloudFormation で RDS PubliclyAccessible=true"
+
+  - id: IPA-OPS-1-015
+    title: "IAM Role のワイルドカード濫用"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "最小権限原則。Resource: \"*\" / Action: \"*\" を避ける"
+    languages:
+      json:
+        patterns:
+          - type: regex
+            regex: '"(Action|Resource)"\s*:\s*"\*"'
+            description: "IAM ポリシーで Action/Resource ワイルドカード"
+      yaml:
+        patterns:
+          - type: regex
+            regex: '(Action|Resource):\s*[''"]?\*[''"]?\s*$'
+            description: "IAM ポリシーでワイルドカード"
+
+  - id: IPA-OPS-1-016
+    title: "セキュリティヘッダ群 (CSP / X-Content-Type-Options / Referrer-Policy)"
+    severity: medium
+    remediation_type: 保険的対策
+    remediation: "CSP / X-Content-Type-Options: nosniff / Referrer-Policy / Permissions-Policy"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'X-Content-Type-Options:\s*nosniff'
+            description: "nosniff 設定 (OK signal)"
+          - type: regex
+            regex: 'Referrer-Policy:\s*(strict-origin-when-cross-origin|no-referrer|same-origin)'
+            description: "Referrer-Policy 設定 (OK signal)"
+
+  - id: IPA-OPS-1-017
+    title: "認証/認可ライブラリ未使用 (第8条)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "bcrypt / argon2 / devise / passport / Spring Security を使用"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\b(bcrypt|argon2|scrypt|pbkdf2|password_hash)\b'
+            description: "推奨ハッシュライブラリ使用 (OK signal)"
+
+  - id: IPA-OPS-1-018
+    title: "アカウントロック / レートリミットの不在 (第8条)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "express-rate-limit / django-axes / rack-attack / bucket4j 等"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'require\s*\(\s*[''"]express-rate-limit[''"]'
+            description: "express-rate-limit 利用 (OK signal)"
+      python:
+        patterns:
+          - type: regex
+            regex: '\bdjango[_-]axes\b'
+            description: "django-axes 利用 (OK signal)"
+
+  - id: IPA-OPS-1-019
+    title: "server_tokens / X-Powered-By 露出"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "server_tokens off; / expose_php = Off"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'server_tokens\s+on'
+            description: "Nginx server_tokens on (バージョン露出)"
+      php:
+        patterns:
+          - type: regex
+            regex: 'expose_php\s*=\s*On'
+            description: "PHP expose_php=On"
+
+  - id: IPA-CL-1-001
+    title: "ファイルアップロード先での実行権限"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "uploads ディレクトリで php/jsp/aspx/cgi の実行を禁止"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'location\s+[^{]*/uploads[^{]*\{'
+            description: "uploads ロケーション (実行禁止設定確認要)"
+      apache:
+        patterns:
+          - type: regex
+            regex: 'php_admin_flag\s+engine\s+off'
+            description: "Apache uploads で PHP 実行禁止 (OK signal)"
+
+  - id: IPA-CL-1-002
+    title: "WAF / IDS / IPS の不在 (第17条)"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "ModSecurity + OWASP CRS / AWS WAF を導入"
+    languages:
+      nginx:
+        patterns:
+          - type: regex
+            regex: 'modsecurity\s+on'
+            description: "ModSecurity on (OK signal)"

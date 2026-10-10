@@ -1,0 +1,279 @@
+category: xss
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.5 クロスサイト・スクリプティング"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/cross-site-scripting.html
+cwe: CWE-79
+
+rules:
+  - id: IPA-SWS-1-XSS-001
+    title: "エスケープなしの直接出力 (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "htmlspecialchars($v, ENT_QUOTES | ENT_HTML5, 'UTF-8') を必ず通す (5-(i))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\becho\s+\$_(GET|POST|REQUEST|COOKIE|SERVER)\b'
+            description: "echo でスーパーグローバル直出力"
+          - type: regex
+            regex: '\bprint\s+\$_(GET|POST|REQUEST|COOKIE|SERVER)\b'
+            description: "print でスーパーグローバル直出力"
+          - type: regex
+            regex: '<\?=\s*\$_(GET|POST|REQUEST|COOKIE|SERVER)'
+            description: "<?= でスーパーグローバル直出力"
+          - type: regex
+            regex: '\bhtmlspecialchars\s*\([^,)]+\)\s*;'
+            description: "htmlspecialchars 第2引数なし (ENT_QUOTES 不足)"
+    fix_example:
+      php: |
+        echo htmlspecialchars($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+  - id: IPA-SWS-1-XSS-002
+    title: "エスケープなしの直接出力 (JSP / Servlet)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "<c:out value=\"${v}\" /> または fn:escapeXml を使用"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: '<%=\s*(request\.|param\.|session\.).*?%>'
+            description: "JSP scriptlet で未エスケープ出力"
+          - type: regex
+            regex: 'out\.println\s*\(\s*request\.getParameter\('
+            description: "out.println に request.getParameter 直渡し"
+          - type: regex
+            regex: 'th:utext\s*='
+            description: "Thymeleaf th:utext (Unescaped) の使用"
+
+  - id: IPA-SWS-1-XSS-003
+    title: "html_safe / raw による未エスケープ (Ruby / Rails)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "自動エスケープに任せる。raw / html_safe は信頼できる文字列のみ"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\.html_safe\b'
+            description: ".html_safe 呼び出し"
+          - type: regex
+            regex: '\braw\s*\('
+            description: "raw() 呼び出し"
+          - type: regex
+            regex: '\braw\s+\w+'
+            description: "raw <変数> 形式"
+          - type: regex
+            regex: '<%==\s'
+            description: "<%== でのエスケープ無効出力"
+
+  - id: IPA-SWS-1-XSS-004
+    title: "React dangerouslySetInnerHTML"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "原則禁止。必要な場合は DOMPurify でサニタイズ"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'dangerouslySetInnerHTML\s*='
+            description: "React dangerouslySetInnerHTML 使用"
+      typescript:
+        patterns:
+          - type: regex
+            regex: 'dangerouslySetInnerHTML\s*='
+            description: "React dangerouslySetInnerHTML 使用"
+
+  - id: IPA-SWS-1-XSS-005
+    title: "Vue v-html / Angular [innerHTML]"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "原則禁止。Angular は DomSanitizer で明示的検査"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: '\bv-html\s*='
+            description: "Vue v-html ディレクティブ使用"
+          - type: regex
+            regex: '\[innerHTML\]\s*='
+            description: "Angular [innerHTML] 使用"
+          - type: regex
+            regex: 'bypassSecurityTrust(Html|Script|Style|Url|ResourceUrl)\b'
+            description: "Angular bypassSecurityTrust* 使用"
+
+  - id: IPA-SWS-1-XSS-006
+    title: "DOM Based XSS の危険 DOM API"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "textContent や DOM API を使用し、innerHTML 直書きを避ける"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: '\.innerHTML\s*='
+            description: ".innerHTML への代入"
+          - type: regex
+            regex: '\.outerHTML\s*='
+            description: ".outerHTML への代入"
+          - type: regex
+            regex: '\binsertAdjacentHTML\s*\('
+            description: "insertAdjacentHTML 使用"
+          - type: regex
+            regex: '\bdocument\.write(ln)?\s*\('
+            description: "document.write(ln) 使用"
+          - type: regex
+            regex: '\beval\s*\('
+            description: "eval() 使用"
+          - type: regex
+            regex: '\bnew\s+Function\s*\('
+            description: "new Function() 使用"
+          - type: regex
+            regex: '\bsetTimeout\s*\(\s*[''"`]'
+            description: "setTimeout 第1引数に文字列"
+          - type: regex
+            regex: '\bsetInterval\s*\(\s*[''"`]'
+            description: "setInterval 第1引数に文字列"
+          - type: regex
+            regex: 'location\.(hash|search|href)[^=]*\.(innerHTML|outerHTML|src)'
+            description: "location.* の値を DOM へ書き込み"
+          - type: regex
+            regex: '\bwindow\.name\b'
+            description: "window.name は XSS の入力経路"
+          - type: regex
+            regex: '\$\([^)]+\)\.html\s*\('
+            description: "jQuery .html() への動的代入"
+      typescript:
+        patterns:
+          - type: regex
+            regex: '\.innerHTML\s*='
+            description: ".innerHTML への代入"
+
+  - id: IPA-SWS-1-XSS-007
+    title: "URL 属性 (href/src) への外部入力 (5-(ii))"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "http(s):// で始まる URL のみ許可 (スキームをホワイトリスト)"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: '\.(href|src|action|formaction)\s*=\s*[^;]+(location|input|param|query|user)'
+            description: "href/src に未検証 URL 代入"
+          - type: regex
+            regex: 'href\s*=\s*["'']?javascript:'
+            description: "href に javascript: スキーム"
+          - type: regex
+            regex: 'src\s*=\s*["'']?javascript:'
+            description: "src に javascript: スキーム"
+      html:
+        patterns:
+          - type: regex
+            regex: 'href\s*=\s*["'']?\$\{[^}]+\}'
+            description: "テンプレートで href にプレースホルダ (スキーム検査要)"
+
+  - id: IPA-SWS-1-XSS-008
+    title: "Content-Type に charset 未指定 (5-(viii))"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "Content-Type に charset=UTF-8 を明示"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"]Content-Type:\s*text/html[''"]?\s*\)'
+            description: "Content-Type: text/html に charset がない"
+      all:
+        patterns:
+          - type: regex
+            regex: 'Content-Type:\s*text/html(?![^\n]*charset)'
+            description: "Content-Type: text/html に charset が含まれない"
+
+  - id: IPA-SWS-1-XSS-009
+    title: "<script> 要素内容の動的生成 (5-(iii))"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "<script> 内容を外部入力で生成しない。JSON エンコードを介する"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '<script[^>]*>[^<]*<\?(=|php)[^?]*\$_(GET|POST|REQUEST)'
+            description: "<script> 内に PHP 変数埋め込み"
+
+  - id: IPA-SWS-1-XSS-010
+    title: "CSP / X-XSS-Protection / X-Content-Type-Options 未設定 (5-(x))"
+    severity: medium
+    remediation_type: 保険的対策
+    remediation: "Content-Security-Policy, X-Content-Type-Options: nosniff を付与"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"]X-Content-Type-Options:\s*nosniff[''"]'
+            description: "X-Content-Type-Options: nosniff が設定 (OK signal)"
+      all:
+        patterns:
+          - type: regex
+            regex: 'unsafe-inline'
+            description: "CSP に unsafe-inline (要見直し)"
+          - type: regex
+            regex: 'unsafe-eval'
+            description: "CSP に unsafe-eval (要見直し)"
+
+  - id: IPA-SWS-1-XSS-011
+    title: "属性値 unquoted への動的出力"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "必ず \" で囲み、\" は &quot; にエスケープ"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<[a-zA-Z][^>]*\s(value|href|src|alt|title|class|id)\s*=\s*<%='
+            description: "属性値の unquoted 出力 (JSP)"
+          - type: regex
+            regex: '<[a-zA-Z][^>]*\s(value|href|src)\s*=\s*\$\{[^}]+\}\s*>'
+            description: "属性値の unquoted テンプレート展開"
+
+  - id: IPA-SWS-1-XSS-012
+    title: "イベントハンドラ属性 (onclick 等) への外部入力"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "原則禁止。addEventListener で外から付与"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '\bon(click|load|error|mouseover|focus|blur|change|submit)\s*=\s*["''][^"'']*\$\{'
+            description: "イベントハンドラ属性にテンプレート変数"
+          - type: regex
+            regex: '\bon(click|load|error)\s*=\s*["''][^"'']*<%='
+            description: "イベントハンドラ属性に JSP 変数"
+
+  - id: IPA-SWS-1-XSS-013
+    title: "Blade / Twig / Jinja2 の raw 出力"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "自動エスケープを使用、生出力は信頼できる値のみ"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\{!!.+!!\}'
+            description: "Laravel Blade {!! !!} (raw 出力)"
+      python:
+        patterns:
+          - type: regex
+            regex: '\{\{\s*[^}]+\s*\|\s*safe\s*\}\}'
+            description: "Jinja2 |safe フィルタ"
+          - type: regex
+            regex: '\{%\s*autoescape\s+false\s*%\}'
+            description: "Jinja2 autoescape false ブロック"
+      all:
+        patterns:
+          - type: regex
+            regex: '\{\{\{[^}]+\}\}\}'
+            description: "Mustache/Handlebars triple-stash (raw 出力)"

@@ -1,0 +1,198 @@
+category: directory_traversal
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.3 パス名パラメータの未チェック／ディレクトリ・トラバーサル"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/parameter.html
+cwe: CWE-22
+
+rules:
+  - id: IPA-SWS-1-TRAV-001
+    title: "入力直渡しのファイル系API (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "basename + realpath で正規化し、ベースディレクトリ prefix を確認 (3-(i)-b)"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\b(fopen|file_get_contents|file|readfile|file_put_contents|copy|unlink|SplFileObject)\s*\(\s*\$_(GET|POST|REQUEST|COOKIE|SERVER)\['
+            description: "ファイル操作 API にスーパーグローバル直渡し"
+          - type: regex
+            regex: '\b(include|include_once|require|require_once)\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "include/require に外部入力 (LFI)"
+          - type: regex
+            regex: '\b(fopen|file_get_contents|readfile|include|require)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)\['
+            description: "ファイル系 API に外部入力を連結"
+          - type: regex
+            regex: '\b(fopen|file_get_contents|include)\s*\([^)]*\$_(GET|POST)\[[^\]]+\]\s*\.\s*["''](\.php|\.html|\.tpl)["'']'
+            description: "拡張子付与で include (それでも危険、basename 必須)"
+    fix_example:
+      php: |
+        $dir  = '/var/www/templates/';
+        $file = basename($_GET['file']);
+        $path = realpath($dir . $file);
+        if ($path !== false && strpos($path, $dir) === 0) {
+            $content = file_get_contents($path);
+        }
+
+  - id: IPA-SWS-1-TRAV-002
+    title: "入力直渡しのファイル系API (Java)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "Paths.get + toRealPath + ベースディレクトリ確認"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'new\s+File\s*\(\s*request\.getParameter\('
+            description: "new File にリクエストパラメータを直接渡している"
+          - type: regex
+            regex: 'new\s+FileInputStream\s*\(\s*request\.getParameter\('
+            description: "FileInputStream に直接渡している"
+          - type: regex
+            regex: 'Paths\.get\s*\(\s*request\.getParameter\('
+            description: "Paths.get にリクエストパラメータを直接渡している"
+          - type: regex
+            regex: 'Files\.(readAllBytes|readAllLines|newInputStream)\s*\(\s*Paths\.get\(\s*request\.'
+            description: "Files API への外部入力直渡し"
+    fix_example:
+      java: |
+        Path base = Paths.get("/var/www/templates").toRealPath();
+        Path target = base.resolve(name).normalize().toRealPath();
+        if (!target.startsWith(base)) {
+            throw new SecurityException();
+        }
+
+  - id: IPA-SWS-1-TRAV-003
+    title: "入力直渡しのファイル系API (Python)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "os.path.basename + realpath で正規化、ベースディレクトリ prefix 確認"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '\bopen\s*\(\s*(request\.|flask\.request\.|os\.environ|sys\.argv)'
+            description: "open() に外部入力直渡し"
+          - type: regex
+            regex: '\bopen\s*\(\s*[^)]*request\.(args|form|values|GET|POST)\['
+            description: "open() にリクエスト辞書直渡し"
+          - type: regex
+            regex: '\b(send_file|send_from_directory)\s*\([^)]*request\.'
+            description: "Flask send_file にリクエスト直渡し"
+          - type: regex
+            regex: '\bopen\s*\(\s*os\.path\.join\s*\([^)]*request\.'
+            description: "os.path.join 経由でもサニタイズ不足"
+    fix_example:
+      python: |
+        import os
+        base = '/var/www/templates'
+        name = os.path.basename(request.args['file'])
+        path = os.path.realpath(os.path.join(base, name))
+        if not path.startswith(base):
+            abort(403)
+
+  - id: IPA-SWS-1-TRAV-004
+    title: "入力直渡しのファイル系API (Ruby / Rails)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "File.basename + File.expand_path + ベース prefix 確認"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\bFile\.(read|open|new|delete)\s*\(\s*params\['
+            description: "File.read 等に params 直渡し"
+          - type: regex
+            regex: '\bsend_file\s*\(\s*params\['
+            description: "send_file に params 直渡し"
+          - type: regex
+            regex: '\brender\s+file:\s*params\['
+            description: "render file: に params 直渡し (Local File Inclusion)"
+    fix_example:
+      ruby: |
+        base = '/var/www/templates'
+        name = File.basename(params[:file])
+        path = File.expand_path(File.join(base, name))
+        raise unless path.start_with?(base + '/')
+        File.read(path)
+
+  - id: IPA-SWS-1-TRAV-005
+    title: "入力直渡しのファイル系API (Node.js)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "path.basename + path.resolve + ベース prefix 確認"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: '\bfs\.(readFile|readFileSync|createReadStream|writeFile|writeFileSync|unlink)\s*\(\s*(req\.(query|body|params|headers)|request\.)'
+            description: "fs API にリクエスト由来データを直渡し"
+          - type: regex
+            regex: '\bres\.sendFile\s*\(\s*(req\.(query|body|params)|userInput)'
+            description: "res.sendFile に外部入力直渡し"
+          - type: regex
+            regex: '\bpath\.join\s*\([^)]*req\.(query|body|params)'
+            description: "path.join 経由でもサニタイズ不足"
+      typescript:
+        patterns:
+          - type: regex
+            regex: '\bfs\.(readFile|readFileSync|createReadStream)\s*\(\s*req\.'
+            description: "fs API にリクエスト由来データを直渡し"
+    fix_example:
+      javascript: |
+        const base = '/var/www/templates';
+        const safe = path.basename(req.query.file);
+        const target = path.resolve(base, safe);
+        if (!target.startsWith(base)) return res.status(403).end();
+
+  - id: IPA-SWS-1-TRAV-006
+    title: "入力直渡しのファイル系API (.NET)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "Path.GetFileName + Path.GetFullPath + ベース確認"
+    languages:
+      csharp:
+        patterns:
+          - type: regex
+            regex: 'File\.(ReadAllText|ReadAllBytes|Open|OpenRead|WriteAllText|Delete)\s*\(\s*Request\.'
+            description: "File API に Request 経由データ直渡し"
+          - type: regex
+            regex: 'new\s+FileStream\s*\(\s*Request\.'
+            description: "FileStream に Request 直渡し"
+    fix_example:
+      csharp: |
+        var baseDir = Path.GetFullPath(@"C:\app\templates\");
+        var name    = Path.GetFileName(Request.QueryString["file"]);
+        var path    = Path.GetFullPath(Path.Combine(baseDir, name));
+        if (!path.StartsWith(baseDir)) throw new SecurityException();
+
+  - id: IPA-SWS-1-TRAV-007
+    title: "トラバーサル文字列を含む入力 (検出文字列)"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "入力に ../ や %2f が含まれていたら処理中止 (3-(iii))"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\.\./|\.\.\\\\'
+            description: "../ または ..\ の生混入 (URL/入力に直接含まれる場合)"
+          - type: regex
+            regex: '%2e%2e%2f|%2e%2e/|\.\.%2f|\.\.%5c|%252e%252e%252f|%c0%ae%c0%ae/'
+            description: "URL エンコード形式のトラバーサル"
+          - type: regex
+            regex: '%00'
+            description: "NULL バイト (拡張子チェックバイパス)"
+
+  - id: IPA-SWS-1-TRAV-008
+    title: "basename / realpath / prefix 確認の不在"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "固定ディレクトリ + basename + realpath + prefix 確認の組合せ実装"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'open\s*\([^)]+\.[''"]?(\.php|\.html|\.txt|\.tpl)[''"]?'
+            description: "拡張子付与のみで basename を経由していない可能性"

@@ -1,0 +1,278 @@
+# `mise bootstrap dotfiles` のラッパー task。
+# 常に `~/dotfiles` 直下（このリポジトリの checkout ルート）で実行する前提
+# （`mise bootstrap` 全般と同じ制約。docs/mise.md 参照）。
+
+["bootstrap:dotfiles:status"]
+description = "[dotfiles] の現在の状態を確認する（read-only）"
+run         = "mise bootstrap dotfiles status"
+
+["bootstrap:dotfiles:diff"]
+description = "[dotfiles] の差分を delta で表示する"
+# 単一ファイルの entry（template 等）は行単位の unified diff が出るが、
+# ディレクトリ単位の entry（"~/.config" 等のブランケット copy）は
+# 「内容が異なる」旨の1行のみで、ファイル単位の中身までは出ない
+# （mise 2026.9.3 で実機確認済み）。ディレクトリ entry の中身まで見たい場合は
+# `diff -ru <source> <target> | delta` のように直接比較すること。
+run   = "set -o pipefail; mise bootstrap dotfiles diff | delta"
+shell = "bash -c"
+
+# apply 系 task は MISE_HISTORY_ENABLED=0 で実行する。history が有効だと apply は
+# 前後に protective checkpoint を取るため history の operation lock を取りに行くが、
+# 常駐 history-watch が ~/.config 全体の保存・定期スキャン（数十秒かかる）で lock を
+# 握っていると、mise 側で固定の30秒待ったあと
+# "another history operation is running" で失敗する。手元のライブ編集は
+# history-watch が別途保存しているため、post-merge の自動 apply（lefthook.yml）と同様に
+# 手動 apply でも operation checkpoint を無効化する（docs/mise.md 参照）。
+#
+# apply 後は bootstrap:tools:install で mise install も続けて実行する
+# （apply で配置した ~/.config/mise 配下の global config を読ませるため、
+# apply とは別プロセスで実行する必要がある。mise.toml の [bootstrap] コメント参照）。
+["bootstrap:dotfiles:apply"]
+description = "[dotfiles] を適用し、続けて mise install する"
+run = """
+set -e
+MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply
+mise run bootstrap:tools:install
+"""
+
+# GITHUB_TOKEN 付きの mise install（GitHub API の rate limit 回避）。
+# [bootstrap.hooks.pre-tools]（mise.toml）の install 部分と同等だが、gh の導入・
+# ログインは行わない。gh から token を取れない場合（未導入・未ログイン）は、
+# 親環境の GITHUB_TOKEN を空文字で上書きしないよう export せずに続行する。
+["bootstrap:tools:install"]
+description = "GITHUB_TOKEN 付きで mise install する"
+run = """
+github_token=$(gh auth token 2>/dev/null || true)
+if [ -n "$github_token" ]; then
+  export GITHUB_TOKEN="$github_token"
+else
+  echo "warning: gh が未導入または未ログインのため、gh の token なしで mise install します" >&2
+fi
+mise install --jobs=2
+"""
+
+["bootstrap:dotfiles:apply-interactive"]
+description = "差分がある entry を1つずつ delta で確認しながら適用する"
+# status --json の state は "applied"（同期済み）以外なら差分ありとみなす
+# （"differs"/"missing"/"source missing" 等）。entry 単位（宣言した target 単位）の
+# 粒度であり、ディレクトリ entry 内の1ファイルだけを選ぶことはできない
+# （bootstrap:dotfiles:diff のコメント参照）。track mode の entry（"~/.config"）は
+# state が常に "applied" 以外（"tracked"）になり、diff/apply も何もしない
+# no-op なので対象から除外する（履歴レビューは bootstrap:dotfiles:history-diff を使う）。
+run = '''
+set -eu
+set -o pipefail
+
+targets=$(mise bootstrap dotfiles status --json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for f in data['files']:
+    if f['mode'] != 'track' and f['state'] != 'applied':
+        print(f['target'])
+")
+
+if [ -z "$targets" ]; then
+  echo "全て最新です"
+  exit 0
+fi
+
+# y と答えた target はここに溜めておき、全件の確認が終わった後に1回の apply で
+# まとめて適用する（target ごとに apply すると pre/post-dotfiles hook が毎回走るため）。
+selected=()
+
+# target 一覧は fd 3 経由で読む（stdin/fd 0 は下の `read -r answer < /dev/tty` 用に
+# 空けておく。while の stdin をそのまま使うと、ループ内の read が target 一覧の
+# 次の行を answer として食ってしまう）。
+while IFS= read -r target <&3; do
+  echo "=== $target ==="
+  if ! mise bootstrap dotfiles diff "$target" | delta; then
+    echo "warning: diff に失敗したため skip します: $target" >&2
+    continue
+  fi
+  printf '%s を適用しますか? (y/N) ' "$target"
+  read -r answer < /dev/tty
+  case "$answer" in
+    y | Y) selected+=("$target") ;;
+    *) echo "skip: $target" ;;
+  esac
+done 3<<EOF
+$targets
+EOF
+
+# 件数判定に配列長（$ と { と # の連続）を使わないこと（mise は run を Tera テンプレートとして
+# 描画するため、波括弧+# がコメント開始タグと解釈されてタスクの検証に失敗する）。
+if [ -z "${selected[*]-}" ]; then
+  echo "適用する target はありません"
+  exit 0
+fi
+
+# history を無効化する理由・続けて mise install する理由は bootstrap:dotfiles:apply の
+# コメント参照。
+MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes "${selected[@]}"
+mise run bootstrap:tools:install
+'''
+shell = "bash -c"
+
+# track mode（"~/.config"）の history 操作。config/mise/config.toml 参照。
+["bootstrap:dotfiles:history-log"]
+description = "track mode の checkpoint 履歴を確認する"
+run         = "mise bootstrap dotfiles history"
+
+["bootstrap:dotfiles:history-save"]
+description = "track mode の変更を今すぐ checkpoint として保存する"
+run         = "mise bootstrap dotfiles save"
+
+["bootstrap:dotfiles:history-diff"]
+description = "track mode の working tree と最新 checkpoint の差分を delta で表示する"
+run         = "set -o pipefail; mise bootstrap dotfiles history diff --patch | delta"
+shell       = "bash -c"
+
+# chezmoi の run_onchange_*.sh.tmpl（interactive y/n/d コピー）を移植したタスク群。
+# mise の [dotfiles] は $HOME 配下の宣言的な配置のみを扱うため、$HOME の外側
+# （macOS の ~/Library/Application Support、WSL から見た Windows 側 $APPDATA 等）への
+# 対話式コピーは [dotfiles] エントリではなくタスクとして実装する。
+# 実行はリポジトリを checkout した状態で `mise run bootstrap:dotfiles:sync-mac` のように行う
+# （$MISE_PROJECT_ROOT はこのタスクを読み込んだ mise.toml があるディレクトリ、
+# つまりこのリポジトリのルートを指す）。
+
+["bootstrap:dotfiles:sync-mac"]
+description = "macOS ネイティブアプリの設定ファイルを ~/Library/Application Support 配下へ対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
+
+file_mappings=(
+  "$MISE_PROJECT_ROOT/unmanaged/claude-desktop/claude_desktop_config_mac.json" "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/keybindings_mac.json" "$HOME/Library/Application Support/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/global.code-snippets" "$HOME/Library/Application Support/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/config/navi/config.yaml" "$HOME/Library/Application Support/navi/config.yaml"
+)
+
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  source_file="$1"
+  dest_dir="$2"
+  shift 2
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''
+
+["bootstrap:dotfiles:sync-windows"]
+description = "WSL から Windows ネイティブアプリ($APPDATA 等)へ設定ファイルを対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Linux" ] && { echo "WSL(Linux) 専用のタスクです"; exit 1; }
+: "${APPDATA:?APPDATA が未設定です。Windows 標準の %APPDATA%（.../AppData/Roaming）ではなく、
+AppData の親ディレクトリ（例: /mnt/c/Users/<user>/AppData）を export してください
+（下のマッピングが Roaming/Local を自分で付け足すため）}"
+: "${USERDIR:?USERDIR が未設定です（例: /mnt/c/Users/<user>）}"
+
+file_mappings=(
+  "$MISE_PROJECT_ROOT/unmanaged/claude-desktop/claude_desktop_config_win.json" "$APPDATA/Roaming/Claude/claude_desktop_config.json"
+  "$MISE_PROJECT_ROOT/config-linux/autohotkey/AutoHotkey.ahk" "$USERDIR/Documents/Tool/AutoHotkey/AutoHotkey.ahk"
+  "$HOME/.config/alacritty/alacritty.toml" "$APPDATA/Roaming/alacritty/alacritty.toml"
+  "$HOME/.config/rio/config.toml" "$APPDATA/Local/rio/config.toml"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/keybindings_linux.json" "$APPDATA/Roaming/Code/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/keybindings_linux.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/keybindings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/settings.json" "$APPDATA/Roaming/Code/User/settings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/settings.json" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/settings.json"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/global.code-snippets" "$APPDATA/Roaming/Code/User/snippets/global.code-snippets"
+  "$MISE_PROJECT_ROOT/unmanaged/vscode/global.code-snippets" "$USERDIR/scoop/apps/vscode/current/data/user-data/User/snippets/global.code-snippets"
+)
+
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  source_file="$1"
+  dest_dir="$2"
+  shift 2
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''
+
+["bootstrap:dotfiles:sync-commitizen"]
+description = "commitizen 導入済みのときだけ .commitlintrc.js を対話的にコピーする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+
+file_mappings=(
+  "commitizen" "$MISE_PROJECT_ROOT/config/commitizen/.commitlintrc.js" "$HOME/.commitlintrc.js"
+)
+
+# 配列長の展開（$ { #）は mise の Tera 描画でコメント開始タグと解釈されるため使わない
+set -- "${file_mappings[@]}"
+while [ "$#" -gt 0 ]; do
+  command="$1"
+  source_file="$2"
+  dest_dir="$3"
+  shift 3
+
+  command -v "$command" >/dev/null 2>&1 || continue
+
+  dest_parent_dir=$(dirname "$dest_dir")
+  [ -d "$dest_parent_dir" ] || mkdir -p "$dest_parent_dir"
+
+  if [ -f "$dest_dir" ] && [ "$source_file" -ot "$dest_dir" ]; then
+    continue
+  fi
+
+  while true; do
+    echo "$source_file をコピーしますか? (y/n/d)"
+    read -r answer
+    case "$answer" in
+      y | Y)
+        cp "$source_file" "$dest_dir"
+        break
+        ;;
+      n | N) break ;;
+      d | D) delta "$dest_dir" "$source_file" ;;
+      *) ;;
+    esac
+  done
+done
+'''
