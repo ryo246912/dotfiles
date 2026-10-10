@@ -5,6 +5,7 @@
   },
   "cleanupPeriodDays": 36500,
   "tui": "default",
+  "remoteControlAtStartup": true,
   "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "allow": [],
