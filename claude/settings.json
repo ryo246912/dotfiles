@@ -4,6 +4,7 @@
     "AI_AGENT": "1"
   },
   "cleanupPeriodDays": 36500,
+  "tui": "default",
   "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "allow": [],
