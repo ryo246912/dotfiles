@@ -8,7 +8,7 @@ AgentsViewとの使い分けは次のとおりです。
 | -------------------------------------------------------- | ------------------------------------------------------------ |
 | 全端末の合計cost、project・model別の推移                 | AgentsView（Cloud Run UI。[`agentsview.md`](agentsview.md)） |
 | 作業種別・tool・Bashコマンド別のcost、無駄の検出と修正案 | codeburn（このPCのsessionだけ）                              |
-| 1 requestに実際に何が載っていたか                        | claude-trace（[`claude-trace.md`](claude-trace.md)）         |
+| Bashコマンドの出力そのものを減らす                       | rtk（[`rtk.md`](rtk.md)）                                    |
 
 ## 導入
 
@@ -59,6 +59,35 @@ codeburn report -p 30days --format json | jq '.shellCommands'
 # 作業種別ごとのcostとone-shot rate
 codeburn report -p 30days --format json | jq '.activities[] | {category, cost, oneShotRate}'
 ```
+
+## ブラウザで見る
+
+`codeburn web`でlocalのweb dashboardが起動し、browserが開きます。`report`のTUIと同じ内容を、グラフ付きで見られます。
+
+```bash
+codeburn web                 # 既定は今日。http://127.0.0.1:4747 で待ち受ける
+codeburn web -p 30days       # 開いたときの期間
+codeburn web --project dotfiles
+codeburn web --port 4800 --no-open   # port指定、browserを自動で開かない
+```
+
+`127.0.0.1`だけで待ち受けるので、同じPCのbrowserからしか開けません。`Ctrl+C`で止めます。画面上部で`Usage`／`Context`の切り替え、期間（Today〜Lifetime）、`Cost`／`Tokens`の表示切り替え、agentの絞り込みができます。
+
+| panel                             | 内容                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| Daily buckets                     | 日別（Today／7 daysでは時間別）のcost推移。`Sessions`／`Models`で色分けを切り替える |
+| Cost／Tokens／Cache hit／One-shot | 期間の合計、cache read／writeの量、one-shot rate                                    |
+| Top models／Model efficiency      | model別cost、編集1回あたりcostとone-shot rate                                       |
+| Workflow                          | 修正のやり直し率（correction rate）、最初の編集までの時間、何度も編集し直されたfile |
+| Spend punchcard                   | 曜日×時間帯のspend（Today／7 daysで表示）                                           |
+| Top projects／By activity         | project別、作業種別（debugging、featureなど）別のcost                               |
+| Subagents／Skills／MCP servers    | subagent種別、skill、MCP serverごとの利用                                           |
+| Savings & waste                   | retryで余計にかかったcost（retry tax）など                                          |
+| Tools                             | tool別の呼び出し数                                                                  |
+
+`Context`では、`codeburn context`と同じくsessionを選んでcontextの内訳を見られます。
+
+左のsidebarの**Share this device**／**Search local devices**は、他の端末と合計値を共有する機能です。このdotfilesでは端末をまたいだ集計はAgentsViewで行うので、onにしません。
 
 ## token効率の悪い使い方を見つける
 

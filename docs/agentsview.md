@@ -1595,19 +1595,19 @@ LIMIT 30;
 
 AgentsView以外にもtool・コマンド単位の分析をうたうツールがある。いずれも個人開発で、削減率などの数字は各READMEの自己申告である（2026年10月時点で調査、未検証）。多くは`~/.claude/projects/`のJSONLを直接読むので、Claude Code以外のagentや他端末の分は見えない。
 
-| ツール                                                                              | 分かること                                                                                                                                | 形態                       |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| [CodeBurn](https://github.com/getagentseal/codeburn)                                | task種別（debug、refactor、testなど）・tool・model・MCP server・project別のspend、作業種別ごとの一発成功率（Edit→Bash→Editのretryを検出） | CLI／TUI（`npx codeburn`） |
-| [claude-usage-analyzer](https://github.com/SingggggYee/claude-usage-analyzer)       | tool別の呼び出し回数と推定token影響、token sinkのranking、異常に高いsession                                                               | Rust CLI                   |
-| [claude-token-analyzer](https://github.com/li195111/claude-token-analyzer)          | ExcessiveToolUse、LowCacheHitRateなど6種類の異常検知                                                                                      | Claude Code plugin         |
-| [claude-context-optimizer](https://github.com/egorfedorov/claude-context-optimizer) | Readしたが使われなかったfile、CLAUDE.mdや固定overheadの監査                                                                               | Claude Code plugin         |
-| [context-analyzer](https://github.com/manavgup/context-analyzer)                    | hookでcontextの中身を記録し、call当たりcostとcontext sizeの関係を可視化                                                                   | hook＋SQLite＋dashboard    |
-| [rtk](https://github.com/rtk-ai/rtk)                                                | `rtk discover`で過去のsessionから出力を圧縮できたBashコマンドを洗い出す。hookで実際に圧縮し、`rtk gain`で削減量を見る                     | Bash hook／CLI             |
-| [claude-trace](https://github.com/badlogic/lemmy/tree/main/apps/claude-trace)       | API request／responseを丸ごと記録。1 requestに何が載っていたか（system prompt、tool定義、tool結果）を直接見られる                         | Claude Code wrapper        |
+| ツール                                                                              | 分かること                                                                                                                                | 形態                        |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| [CodeBurn](https://github.com/getagentseal/codeburn)                                | task種別（debug、refactor、testなど）・tool・model・MCP server・project別のspend、作業種別ごとの一発成功率（Edit→Bash→Editのretryを検出） | CLI／TUI／web（`codeburn`） |
+| [claude-usage-analyzer](https://github.com/SingggggYee/claude-usage-analyzer)       | tool別の呼び出し回数と推定token影響、token sinkのranking、異常に高いsession                                                               | Rust CLI                    |
+| [claude-token-analyzer](https://github.com/li195111/claude-token-analyzer)          | ExcessiveToolUse、LowCacheHitRateなど6種類の異常検知                                                                                      | Claude Code plugin          |
+| [claude-context-optimizer](https://github.com/egorfedorov/claude-context-optimizer) | Readしたが使われなかったfile、CLAUDE.mdや固定overheadの監査                                                                               | Claude Code plugin          |
+| [context-analyzer](https://github.com/manavgup/context-analyzer)                    | hookでcontextの中身を記録し、call当たりcostとcontext sizeの関係を可視化                                                                   | hook＋SQLite＋dashboard     |
+| [rtk](https://github.com/rtk-ai/rtk)                                                | `rtk discover`で過去のsessionから出力を圧縮できたBashコマンドを洗い出す。hookで実際に圧縮し、`rtk gain`で削減量を見る                     | Bash hook／CLI              |
+| [claude-trace](https://github.com/badlogic/lemmy/tree/main/apps/claude-trace)       | API request／responseを丸ごと記録。1 requestに何が載っていたか（system prompt、tool定義、tool結果）を直接見られる                         | Claude Code wrapper         |
 
 公式の方法として、Claude CodeのOpenTelemetryも使える。`claude_code.tool_result` eventに`tool_name`、`tool_input_size_bytes`、`tool_result_size_bytes`、`duration_ms`が載り、`OTEL_LOG_TOOL_DETAILS=1`を付けるとBashの`bash_command`も入る。`claude_code.api_request` eventにはrequestごとのtoken数とcostがある。ただしcollectorとbackend（Grafana＋Lokiなど）を別途用意する必要があり、記録は有効にした後のsessionからである（[Monitoring](https://code.claude.com/docs/en/monitoring-usage)）。
 
-CodeBurnとclaude-traceはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)と[`claude-trace.md`](claude-trace.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、request単位の中身を確かめたいときにclaude-traceを使う。
+CodeBurnとrtkはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)と[`rtk.md`](rtk.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、Bash出力が重いと分かったらrtkで削る。claude-traceは、普段使うnative binary版のClaude Code（2.1.113以降）では動かないため導入していない。
 
 ### 数字が合わない・出ないとき
 

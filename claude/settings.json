@@ -109,6 +109,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PermissionRequest": [
