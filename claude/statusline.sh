@@ -56,17 +56,37 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
 
 # rate limit（5h / weekly）の残り割合とリセットまでの時間を表示する。
 # claude.ai Pro/Max のみ、最初の API 応答後に現れる。window ごとに独立して欠けうるため、無い window はスキップする。
-# 残り 20% 未満で黄色、5% 未満で赤。
+# rate limit はアカウント単位なので、受け取った値を config dir ごとに保存し、
+# prompt を送る前（rate_limits がまだ無い間）はリセット前の保存値を表示する。
+# 青を基本に、残り 20% 未満で黄色、5% 未満で赤。
 # pace: window 内で均等に使った場合の使用率との差。▲ は均等ペースより速く消費している（黄色）、▼ は余裕あり。
 # 参照: https://code.claude.com/docs/en/statusline#rate-limit-usage
-limit_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
+now=$(date +%s)
+rl_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline-rate-limits.json"
+rl_now=$(printf '%s' "$input" | jq -c '
+  .rate_limits // {} | {five_hour, seven_day} | with_entries(select(.value.used_percentage != null))
+  | if length > 0 then . else empty end
+' 2>/dev/null)
+if [ -n "$rl_now" ]; then
+	rl_saved="$rl_now"
+	if [ "$rl_now" != "$(cat "$rl_file" 2>/dev/null)" ]; then
+		# 書き込めない環境（読み取り専用 mount 等）では保存しないだけで表示は続ける。
+		tmp="$rl_file.$$"
+		{ printf '%s' "$rl_now" >"$tmp" && mv -f "$tmp" "$rl_file" || rm -f "$tmp"; } 2>/dev/null
+	fi
+else
+	rl_saved=$(jq -c 'objects' "$rl_file" 2>/dev/null)
+fi
+limit_line=$(printf '%s' "$input" | jq -r --argjson now "$now" --argjson saved "${rl_saved:-null}" '
   def dur: if . >= 86400 then "\((. / 86400) | floor)d\(((. % 86400) / 3600) | floor)h"
            elif . >= 3600 then "\((. / 3600) | floor)h\(((. % 3600) / 60) | floor)m"
            else "\((. / 60) | floor)m" end;
+  # 保存値はリセット時刻を過ぎていたら使わない（Claude Code も同様に window を落とす）。
+  def pick($k): .rate_limits[$k] // ($saved[$k]? | select(.resets_at != null and .resets_at > $now));
   def seg($label; $win):
     if . == null or .used_percentage == null then empty else
       ([[100 - .used_percentage, 0] | max, 100] | min) as $left
-      | (if $left < 5 then "\u001b[31m" elif $left < 20 then "\u001b[33m" else "\u001b[32m" end) as $color
+      | (if $left < 5 then "\u001b[31m" elif $left < 20 then "\u001b[33m" else "\u001b[34m" end) as $color
       | ((($left / 100 * 6) | ceil) as $n | ("█" * $n) + ("░" * (6 - $n))) as $bar
       | (if .resets_at != null and .resets_at > $now then .resets_at - $now else null end) as $remain
       | [
@@ -80,7 +100,7 @@ limit_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
         ]
       | "\($color)\(join(" "))\u001b[0m"
     end;
-  [(.rate_limits.five_hour | seg("5h"; 18000)), (.rate_limits.seven_day | seg("week"; 604800))]
+  [(pick("five_hour") | seg("5h"; 18000)), (pick("seven_day") | seg("week"; 604800))]
   | join(" · ")
 ' 2>/dev/null)
 
@@ -90,12 +110,12 @@ model_line=$(printf '%s' "$input" | jq -r '
   | if length > 0 then "\u001b[35m\(join(" "))\u001b[0m" else empty end
 ' 2>/dev/null)
 
-# コンテキストウィンドウの残り。最初の API 応答前・/compact 直後は null のためスキップする。
+# コンテキストウィンドウの残り。最初の API 応答前・/compact 直後は null のため灰色で waiting を表示する。
 # 残り 20% 未満で黄色、10% 未満で赤（auto-compact が近い）。
 # 参照: https://code.claude.com/docs/en/statusline#context-window-fields
 ctx_line=$(printf '%s' "$input" | jq -r '
   .context_window
-  | if . == null or .used_percentage == null then empty else
+  | if . == null or .used_percentage == null then "\u001b[90mctx – waiting\u001b[0m" else
       def kfmt: if . >= 1000000 then "\((. / 100000 | round) / 10)M"
                 elif . >= 1000 then "\((. / 1000) | round)k" else tostring end;
       ([[100 - .used_percentage, 0] | max, 100] | min) as $left
@@ -131,9 +151,9 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: branch・モデル・コンテキスト / 2 行目: cache・rate limit
+# 1 行目: branch・モデル・コンテキスト / 2 行目: rate limit・cache
 line1=$(join_parts "$branch" "$model_line" "$ctx_line")
-line2=$(join_parts "$cache_line" "$limit_line")
+line2=$(join_parts "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
 exit 0
