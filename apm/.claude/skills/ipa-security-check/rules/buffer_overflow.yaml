@@ -1,0 +1,182 @@
+category: buffer_overflow
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.10 バッファオーバーフロー"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/bach-overflow.html
+cwe:
+  - CWE-119
+  - CWE-120
+  - CWE-787
+
+rules:
+  - id: IPA-SWS-1-BOF-001
+    title: "危険関数 strcpy / strcat"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "strncpy + NUL 終端 / strlcpy / strcpy_s を使用"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\bstrcpy\s*\('
+            description: "strcpy 使用 (バッファ長チェックなし)"
+          - type: regex
+            regex: '\bstrcat\s*\('
+            description: "strcat 使用 (バッファ長チェックなし)"
+          - type: regex
+            regex: '\b_mbscpy\s*\('
+            description: "_mbscpy 使用"
+          - type: regex
+            regex: '\bwcscpy\s*\('
+            description: "wcscpy 使用"
+          - type: regex
+            regex: '\bwcscat\s*\('
+            description: "wcscat 使用"
+      cpp:
+        patterns:
+          - type: regex
+            regex: '\bstrcpy\s*\('
+            description: "strcpy 使用"
+
+  - id: IPA-SWS-1-BOF-002
+    title: "危険関数 sprintf / vsprintf"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "snprintf / vsnprintf を使用しサイズ指定"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\bsprintf\s*\('
+            description: "sprintf 使用 (サイズ未指定)"
+          - type: regex
+            regex: '\bvsprintf\s*\('
+            description: "vsprintf 使用 (サイズ未指定)"
+          - type: regex
+            regex: '\bswprintf\s*\('
+            description: "swprintf 使用"
+      cpp:
+        patterns:
+          - type: regex
+            regex: '\bsprintf\s*\('
+            description: "sprintf 使用"
+
+  - id: IPA-SWS-1-BOF-003
+    title: "危険関数 gets / scanf(\"%s\")"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "fgets またはサイズ幅指定の scanf を使用"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\bgets\s*\('
+            description: "gets 使用 (C11 で削除済)"
+          - type: regex
+            regex: '\bscanf\s*\(\s*"[^"]*%s'
+            description: "scanf(\"%s\") の幅指定なし"
+          - type: regex
+            regex: '\bfscanf\s*\(\s*[^,]+,\s*"[^"]*%s'
+            description: "fscanf(\"%s\") の幅指定なし"
+
+  - id: IPA-SWS-1-BOF-004
+    title: "フォーマット文字列攻撃"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "第1引数を必ず固定文字列にする (printf(\"%s\", user_input))"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\b(printf|fprintf|sprintf|snprintf|syslog)\s*\(\s*[a-zA-Z_]\w*\s*\)'
+            description: "printf 系の第1引数が変数のみ"
+          - type: regex
+            regex: '\b(printf|fprintf|sprintf|snprintf|syslog)\s*\(\s*[a-zA-Z_]\w*\s*,(?!\s*"[^"]*%)'
+            description: "printf 系の第1引数が変数 (フォーマット文字列攻撃の可能性)"
+
+  - id: IPA-SWS-1-BOF-005
+    title: "memcpy / memmove サイズに外部入力"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "サイズに整数オーバーフロー検査を追加、可能なら memcpy_s"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\bmem(cpy|move)\s*\([^,]+,[^,]+,[^)]*\b(argv|argc|input|size|len|n)\b'
+            description: "memcpy/memmove のサイズに外部入力候補"
+      cpp:
+        patterns:
+          - type: regex
+            regex: '\bmem(cpy|move)\s*\([^,]+,[^,]+,[^)]*\b(argv|input|size|len)\b'
+            description: "memcpy/memmove のサイズに外部入力候補"
+
+  - id: IPA-SWS-1-BOF-006
+    title: "alloca に外部入力 / 固定長スタックバッファ"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "alloca は使用しない。スタック上の固定長バッファに外部入力を直書き込みしない"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\balloca\s*\('
+            description: "alloca 使用"
+          - type: regex
+            regex: '\bchar\s+\w+\s*\[\s*\d+\s*\]\s*;'
+            description: "固定長スタックバッファ宣言 (要文脈確認)"
+
+  - id: IPA-SWS-1-BOF-007
+    title: "コンパイラ保護オプションの欠如"
+    severity: medium
+    remediation_type: 保険的対策
+    remediation: "-fstack-protector-strong, -D_FORTIFY_SOURCE=2, -fPIE -pie を有効化"
+    languages:
+      makefile:
+        patterns:
+          - type: regex
+            regex: '-fstack-protector'
+            description: "-fstack-protector 設定 (OK signal)"
+          - type: regex
+            regex: '-D_FORTIFY_SOURCE'
+            description: "-D_FORTIFY_SOURCE 設定 (OK signal)"
+          - type: regex
+            regex: '-Wformat-security'
+            description: "-Wformat-security 設定 (OK signal)"
+
+  - id: IPA-SWS-1-BOF-008
+    title: "古い API getwd / realpath (固定バッファ版)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "getcwd 使用、realpath は (path, NULL) で動的確保"
+    languages:
+      c:
+        patterns:
+          - type: regex
+            regex: '\bgetwd\s*\('
+            description: "getwd 使用 (POSIX で廃止)"
+          - type: regex
+            regex: '\brealpath\s*\([^,]+,\s*\w+\s*\)'
+            description: "realpath の第2引数が固定バッファ (要サイズ確認)"
+
+  - id: IPA-SWS-1-BOF-009
+    title: "ネイティブ拡張 (FFI / Node-gyp / cffi) の存在"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "10-(i)-b。ネイティブ部分を最小化し、集中レビュー"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: 'import\s+(ctypes|cffi)\b'
+            description: "ctypes / cffi 利用 (ネイティブ呼び出し)"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'require\s+[''"]ffi[''"]'
+            description: "FFI 利用"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'node-gyp'
+            description: "node-gyp ビルド設定"

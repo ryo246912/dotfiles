@@ -1,0 +1,221 @@
+category: access_control
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.11 アクセス制御や認可制御の欠落"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/access-control.html
+cwe:
+  - CWE-284
+  - CWE-285
+  - CWE-639
+  - CWE-862
+  - CWE-863
+
+rules:
+  - id: IPA-SWS-1-ACL-001
+    title: "外部入力をそのままSQL検索キーに (IDOR)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "user_id はセッションから取得し、WHERE id = ? AND user_id = ? で絞り込む"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'WHERE\s+id\s*=\s*[\$''"]?\$_(GET|POST|REQUEST)'
+            description: "WHERE id = $_GET... の直渡し"
+          - type: regex
+            regex: 'WHERE\s+user_id\s*=\s*\$_(GET|POST|REQUEST)'
+            description: "WHERE user_id = $_GET... の直渡し"
+          - type: regex
+            regex: '(user_id|userId)\s*=\s*\$_(GET|POST|REQUEST)\['
+            description: "user_id をリクエストパラメータから取得"
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\bfind\s*\(\s*params\[:id\]\s*\)'
+            description: "Model.find(params[:id]) で current_user 経由なし"
+      python:
+        patterns:
+          - type: regex
+            regex: '\w+\.objects\.get\s*\(\s*id\s*=\s*request\.(GET|POST)'
+            description: "Model.objects.get に request.GET/POST 直渡し"
+      javascript:
+        patterns:
+          - type: regex
+            regex: '(user_id|userId)\s*=\s*req\.(query|body|params)\.'
+            description: "user_id を req.query/body から取得"
+    fix_example:
+      php: |
+        $current_user_id = $_SESSION['user_id'];
+        $order = db_query("SELECT * FROM orders WHERE id = ? AND user_id = ?",
+                          [$order_id, $current_user_id]);
+
+  - id: IPA-SWS-1-ACL-002
+    title: "認証ガード未付与のコントローラ"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ApplicationController に before_action / @login_required / [Authorize]"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '@(Get|Post|Put|Delete)Mapping'
+            description: "マッピングアノテーション (認証ガード確認要)"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'class\s+\w+Controller\s*<\s*ApplicationController'
+            description: "Controller 定義 (before_action 確認要)"
+      csharp:
+        patterns:
+          - type: regex
+            regex: '\[ApiController\]'
+            description: "ApiController 属性 ([Authorize] の有無確認要)"
+
+  - id: IPA-SWS-1-ACL-003
+    title: "認可の明示的無効化"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "重要パスで認可を外さない"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '@csrf_exempt\b'
+            description: "Django @csrf_exempt"
+          - type: regex
+            regex: '\.AllowAnonymous'
+            description: "AllowAnonymous (.NET)"
+      java:
+        patterns:
+          - type: regex
+            regex: 'permitAll\s*\(\s*\)'
+            description: "Spring Security permitAll()"
+      csharp:
+        patterns:
+          - type: regex
+            regex: '\[AllowAnonymous\]'
+            description: "[AllowAnonymous] 属性"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'skip_before_action\s*:authenticate'
+            description: "skip_before_action :authenticate"
+
+  - id: IPA-SWS-1-ACL-004
+    title: "クライアント信頼パターン (Cookie / hidden の権限)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ロール情報はサーバ側セッションまたは検証済み JWT から取得"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\$_(COOKIE|POST|GET)\[[''"](role|admin|is_admin|user_type|permission|level)[''"]\]'
+            description: "権限情報をクライアント送信値から取得"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'request\.cookies\[[''"](role|admin|is_admin)[''"]\]'
+            description: "権限情報を Cookie から取得"
+          - type: regex
+            regex: '(role|is_admin|isAdmin)\s*===?\s*[''"]admin[''"]'
+            description: "クライアント側のみでロール判定 (サーバ側も必要)"
+      html:
+        patterns:
+          - type: regex
+            regex: '<input[^>]*type=["'']hidden["''][^>]*name=["''](role|admin|is_admin|permission)["'']'
+            description: "hidden で権限情報を伝達"
+
+  - id: IPA-SWS-1-ACL-005
+    title: "Mass Assignment (role / is_admin への一括代入)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "$fillable / strong_parameters / DTO で特権フィールドを除外"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '(User|Account|Admin)::create\s*\(\s*request\(?\)?->all\('
+            description: "Laravel Mass Assignment (request->all())"
+          - type: regex
+            regex: '(User|Account)::update\s*\(\s*request\(?\)?->all\('
+            description: "update に request->all() 直渡し"
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\.update\s*\(\s*params\[:\w+\]\s*\)'
+            description: "update に params 直渡し (strong_parameters 確認要)"
+          - type: regex
+            regex: '\.create!?\s*\(\s*params\[:\w+\]\s*\)'
+            description: "create に params 直渡し (strong_parameters 確認要)"
+      python:
+        patterns:
+          - type: regex
+            regex: 'User\.objects\.create\s*\(\s*\*\*request\.'
+            description: "User.objects.create(**request...) (Mass Assignment)"
+
+  - id: IPA-SWS-1-ACL-006
+    title: "JWT 検証なしの使用"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "JWT は秘密鍵で署名検証してから利用"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: 'jwt\.decode\s*\([^)]*verify\s*=\s*False'
+            description: "jwt.decode(verify=False)"
+          - type: regex
+            regex: 'jwt\.decode\s*\([^,)]+\s*\)'
+            description: "jwt.decode の第2引数 (鍵) 省略の可能性"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'jwt\.decode\s*\([^)]*\)\s*(?!\.verify)'
+            description: "jwt.decode のみ (verify を呼んでいない可能性)"
+
+  - id: IPA-SWS-1-ACL-007
+    title: "認可成功時 vs 認可失敗時のレスポンス差異"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "404 と 403 の区別を慎重に。ID 列挙を許さない"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'http_response_code\s*\(\s*404\s*\)'
+            description: "404 返却 (認可失敗との混同チェック)"
+
+  - id: IPA-SWS-1-ACL-008
+    title: "メールアドレスのみのログイン (識別符号不該当の可能性)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "パスワード等の秘密情報を必ず要求 (11-(i))"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: 'login\s*\(\s*[''"][^''"]*email'
+            description: "ログイン関数名 (パスワード要求の有無を確認)"
+
+  - id: IPA-SWS-1-ACL-009
+    title: "管理者専用エンドポイントの権限ロール未検証"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "/admin 系に hasRole('ADMIN') / [Authorize(Roles=\"Admin\")] を付与"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: '@RequestMapping\s*\([^)]*[''"]/admin'
+            description: "/admin 系マッピング (権限チェック確認要)"
+      python:
+        patterns:
+          - type: regex
+            regex: '@app\.route\s*\(\s*[''"]/admin'
+            description: "Flask /admin ルート (権限チェック確認要)"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'namespace\s+:admin'
+            description: "Rails admin 名前空間 (権限チェック確認要)"

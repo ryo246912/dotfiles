@@ -1,0 +1,109 @@
+# IPA セキュリティチェック レポート
+
+**実行日時**: {{scan_date}}
+**スコープ**: {{scope_summary}}
+**スキャン対象**: {{files_scanned}} ファイル
+
+## サマリ (対応待ち / 対応中のみ)
+
+| 重大度 | 件数 |
+|---|---|
+| Critical | {{count_critical}} |
+| High     | {{count_high}} |
+| Medium   | {{count_medium}} |
+| Low      | {{count_low}} |
+| Info     | {{count_info}} |
+| **合計** | **{{total_findings}}** |
+
+参考件数:
+
+| 区分 | 件数 |
+|---|---|
+| 偽陽性候補 (本文外) | {{count_fp}} |
+| トリアージ済み 問題なし | {{count_not_an_issue}} |
+| トリアージ済み 保留 | {{count_deferred}} |
+
+## ステータス凡例
+
+| ステータス | 意味 |
+|---|---|
+| `未対応` | 未着手 (デフォルト) |
+| `対応する` | 修正予定 / 実施中 |
+| `問題なし` | 確認の上、本物の脆弱性ではない / 受容可能 |
+| `保留` | 一旦保留 |
+
+## 出典
+
+このレポートは以下の IPA 公開資料に基づいています:
+
+- 安全なウェブサイトの作り方 改訂第7版
+- 安全な SQL の呼び出し方
+- ウェブ健康診断仕様
+- セキュリティ実装チェックリスト
+- 安全なウェブサイトの運用管理に向けての20ヶ条
+
+公式: https://www.ipa.go.jp/security/vuln/websecurity/about.html
+
+---
+
+## 検出結果
+
+{{findings_by_category}}
+
+---
+
+## 偽陽性候補
+
+`15-false-positive-review` エージェントが**周辺コードと呼び出し元を再評価**して、偽陽性の疑いがあると判定した finding です。
+本文の検出結果には計上していません。判定が誤りと思うものはステータスを `対応する` に変更すると次回スキャンで通常レポートに戻ります。
+
+{{findings_false_positive}}
+
+---
+
+## トリアージ済み (抑止)
+
+ステータスが `問題なし` または `保留` の finding です。サマリ件数からも除外しています。
+
+{{findings_triaged}}
+
+---
+
+{{errors_section}}
+
+## このレポートの読み方
+
+- **severity**: IPA 原文の重大度を基準に Critical/High/Medium/Low/Info に正規化
+- **remediation_type**: IPA 用語の「根本的解決」「保険的対策」を区別
+- **rule_id**: `IPA-<doc>-<chapter>-<vuln>-<seq>` 形式 (例: `IPA-SWS-1-SQLI-001` = 安全なウェブサイトの作り方 1.1 SQLi の 1番目)
+- 各 finding には IPA 原典 (文書名・章・ページ・URL) を明記
+
+## トリアージの使い方
+
+各 finding 直下の `<!-- ipa-triage:begin ... ipa-triage:end -->` ブロックを編集します。
+
+```
+<!-- ipa-triage:begin
+status: 問題なし
+snippet_hash: sha256:1a2b3c4d5e6f7890
+triaged_at: 2026-05-15T10:00:00Z
+triaged_by: alice
+note: テストフィクスチャ用のダミー値で外部入力経路なし
+ipa-triage:end -->
+```
+
+- 利用できる `status` 値: `未対応` / `対応する` / `問題なし` / `保留`
+- `note` は自由記述 (複数行可)
+- 次回 `/ipa-security-check` 実行時、同一の `snippet_hash` を持つ finding にステータスが引き継がれます
+- `問題なし` / `保留` にした finding は次回以降「トリアージ済み (抑止)」セクションへ移動し、本文の検出結果やサマリから外れます
+- `snippet_hash` 行は書き換えないでください (一致判定が壊れます)
+
+## 誤検知のインライン抑止 (補助)
+
+ソース側で個別に抑止したい場合は、問題箇所の直前行に以下を置きます:
+
+```
+// ipa-skip: IPA-SWS-1-SQLI-001  reason: 内部固定値を埋め込んでいるため
+```
+
+`reason:` は必須です。インライン抑止は検出段階で finding 自体が生成されないため、トリアージとは別軸の仕組みです。

@@ -1,0 +1,221 @@
+category: os_command_injection
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.2 OSコマンド・インジェクション"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/os-command.html
+cwe: CWE-78
+
+rules:
+  - id: IPA-SWS-1-OSCMD-001
+    title: "シェル経由のコマンド実行 (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "シェル起動関数を避け、配列引数を取る API を使用 (2-(i))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\b(system|exec|passthru|shell_exec|popen|proc_open|pcntl_exec)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE|SERVER)'
+            description: "危険関数にスーパーグローバルを直接渡している"
+          - type: regex
+            regex: '\b(system|exec|passthru|shell_exec|popen|proc_open)\s*\([^)]*\.\s*\$\w+'
+            description: "危険関数に文字列連結を渡している"
+          - type: regex
+            regex: '`[^`]*\$_(GET|POST|REQUEST|COOKIE)\b'
+            description: "バッククォート演算子に外部入力を埋め込み"
+          - type: regex
+            regex: '\bescapeshell(arg|cmd)\s*\('
+            description: "escapeshellarg/cmd のみへの依存 (根本対策ではない)"
+    fix_example:
+      php: |
+        $allowed = ['option1', 'option2'];
+        if (in_array($_GET['opt'], $allowed, true)) {
+            $out = file_get_contents("/safe/path");
+        }
+
+  - id: IPA-SWS-1-OSCMD-002
+    title: "シェル経由のコマンド実行 (Python)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "subprocess.run([cmd, arg], shell=False) で配列引数を使用"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: 'subprocess\.(call|run|Popen|check_call|check_output)\s*\([^)]*shell\s*=\s*True'
+            description: "subprocess に shell=True 指定"
+          - type: regex
+            regex: '\bos\.(system|popen)\s*\('
+            description: "os.system / os.popen はシェル起動"
+          - type: regex
+            regex: '\bcommands\.(getoutput|getstatusoutput)\s*\('
+            description: "commands モジュール (Python2 系) はシェル起動"
+          - type: regex
+            regex: 'subprocess\.[A-Za-z]+\s*\(\s*[''"][^''"]*\{[^}]*\}[^''"]*[''"]'
+            description: "subprocess の引数を format で組み立てている"
+    fix_example:
+      python: |
+        subprocess.run(["convert", filename, "out.png"], shell=False, check=True)
+
+  - id: IPA-SWS-1-OSCMD-003
+    title: "シェル経由のコマンド実行 (Node.js/JavaScript)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "child_process.execFile / spawn で配列引数を使用"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'child_process\.(exec|execSync)\s*\(\s*[`"''][^`"'']*(\$\{|\+)'
+            description: "child_process.exec に文字列連結 / テンプレートリテラル"
+          - type: regex
+            regex: 'require\s*\(\s*[''"]child_process[''"]\s*\)\.(exec|execSync)\s*\('
+            description: "child_process.exec の直接呼び出し"
+          - type: regex
+            regex: '(exec|execSync)\s*\([^)]*(req\.(query|body|params|headers)|request\.)'
+            description: "exec にリクエスト由来データを渡している"
+          - type: regex
+            regex: '\bspawn\s*\([^,)]+,[^)]*\bshell\s*:\s*true'
+            description: "spawn の shell:true オプション"
+      typescript:
+        patterns:
+          - type: regex
+            regex: 'child_process\.(exec|execSync)\s*\(\s*[`"''][^`"'']*(\$\{|\+)'
+            description: "child_process.exec に文字列連結 / テンプレートリテラル"
+    fix_example:
+      javascript: |
+        child_process.execFile("ls", [userInput]);
+
+  - id: IPA-SWS-1-OSCMD-004
+    title: "シェル経由のコマンド実行 (Java)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ProcessBuilder(List<String>) で引数配列を使用"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'Runtime\.getRuntime\(\)\.exec\s*\(\s*"[^"]*"\s*\+'
+            description: "Runtime.exec に文字列連結を渡している"
+          - type: regex
+            regex: 'Runtime\.getRuntime\(\)\.exec\s*\(\s*[A-Za-z_]\w*\s*\)'
+            description: "Runtime.exec に単一文字列変数 (要確認)"
+          - type: regex
+            regex: 'new\s+ProcessBuilder\s*\(\s*"(sh|bash|cmd|cmd\.exe)"\s*,\s*"(-c|/c)"'
+            description: "ProcessBuilder で sh -c / cmd /c を使用 (シェル経由)"
+          - type: regex
+            regex: 'Runtime\.getRuntime\(\)\.exec\s*\(\s*"(sh|bash|cmd)\s+'
+            description: "exec に sh / bash / cmd 文字列を渡している"
+    fix_example:
+      java: |
+        ProcessBuilder pb = new ProcessBuilder("ls", userInput);
+        pb.start();
+
+  - id: IPA-SWS-1-OSCMD-005
+    title: "シェル経由のコマンド実行 (Ruby)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "system([\"cmd\", arg1]) や IO.popen([cmd, arg]) で配列を使用"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\bsystem\s*\(\s*[''"][^''"]*#\{'
+            description: "system に文字列補間"
+          - type: regex
+            regex: '\bIO\.popen\s*\(\s*[''"][^''"]*#\{'
+            description: "IO.popen に文字列補間"
+          - type: regex
+            regex: '`[^`]*#\{[^}]+\}[^`]*`'
+            description: "バッククォート演算子に文字列補間"
+          - type: regex
+            regex: '%x\{[^}]*#\{[^}]+\}'
+            description: "%x{} 構文に文字列補間"
+          - type: regex
+            regex: '\bKernel\.\s*(system|exec)\s*\(\s*[''"][^''"]*#\{'
+            description: "Kernel.system / exec に文字列補間"
+          - type: regex
+            regex: '\bexec\s*\(\s*[''"][^''"]*#\{'
+            description: "exec に文字列補間"
+    fix_example:
+      ruby: |
+        system("ls", params[:dir])
+        IO.popen(["ls", params[:dir]])
+
+  - id: IPA-SWS-1-OSCMD-006
+    title: "Perl open() のパイプ起動とシェル経由実行"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "sysopen() を使用、または open の list-form (open(F, '-|', cmd, args))"
+    languages:
+      perl:
+        patterns:
+          - type: regex
+            regex: '\bopen\s*\(\s*[^,]+,\s*["''][^"'']*\$\w+[^"'']*\|["'']'
+            description: "open() のパイプ起動引数に変数 (末尾 |)"
+          - type: regex
+            regex: '\bopen\s*\(\s*[^,]+,\s*["''][^"'']*\|\s*[^|"'']*\$\w+'
+            description: "open() のパイプ起動引数に変数 (先頭 |)"
+          - type: regex
+            regex: '\bsystem\s*\(\s*["''][^"'']*\$\w+'
+            description: "system に変数を含む文字列 (シェル経由)"
+          - type: regex
+            regex: '`[^`]*\$\w+[^`]*`'
+            description: "バッククォートに変数を含む"
+          - type: regex
+            regex: '\bqx[/{(\[][^/})\]]*\$\w+'
+            description: "qx// に変数 (シェル経由)"
+    fix_example:
+      perl: |
+        sysopen(my $fh, $filename, O_RDONLY) or die;
+        open(my $fh, '-|', '/usr/bin/grep', $keyword, 'file.txt');
+
+  - id: IPA-SWS-1-OSCMD-007
+    title: ".NET Process.Start のシェル経由起動"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ProcessStartInfo + ArgumentList を使用、UseShellExecute=false"
+    languages:
+      csharp:
+        patterns:
+          - type: regex
+            regex: 'Process\.Start\s*\(\s*"[^"]*"\s*\+'
+            description: "Process.Start に文字列連結"
+          - type: regex
+            regex: 'UseShellExecute\s*=\s*true'
+            description: "UseShellExecute = true 指定"
+          - type: regex
+            regex: 'Process\.Start\s*\(\s*"cmd(\.exe)?"\s*,\s*"/[ck]\s'
+            description: "cmd.exe /c の起動"
+
+  - id: IPA-SWS-1-OSCMD-008
+    title: "Go の exec.Command でシェル起動"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "exec.Command(name, args...) で引数を分離。シェル経由を避ける"
+    languages:
+      go:
+        patterns:
+          - type: regex
+            regex: 'exec\.Command\s*\(\s*"(sh|bash|cmd|cmd\.exe)"\s*,\s*"(-c|/c)"'
+            description: "exec.Command で sh -c / cmd /c"
+          - type: regex
+            regex: 'fmt\.Sprintf\s*\([^)]+\)[^)]*exec\.Command'
+            description: "コマンドを Sprintf で組み立てている"
+
+  - id: IPA-SWS-1-OSCMD-009
+    title: "入力ホワイトリスト検証なしのシェル経由呼び出し (汎用 2-(ii))"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "引数に許可文字種を限定するホワイトリスト検証を追加"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\b(system|exec|shell_exec|passthru)\s*\([^)]+\)\s*;'
+            description: "シェル起動関数の呼び出し (引数検証コードの有無を確認)"
+      python:
+        patterns:
+          - type: regex
+            regex: 'subprocess\.\w+\s*\([^)]+\)'
+            description: "subprocess 呼び出し (検証コード有無を確認)"
