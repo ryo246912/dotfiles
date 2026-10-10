@@ -102,12 +102,12 @@ codeburn web --port 4800 --no-open   # port指定、browserを自動で開かな
 
 次はCLIだけの機能です（codeburn 0.9.25で確認）。
 
-| 知りたいこと                     | コマンド                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 無駄の検出と修正案（`optimize`） | `codeburn optimize`（JSONなら`--format json`）                                                         |
-| Bashコマンド別の呼び出し数       | `codeburn report`のTUIの**Shell Commands**、または`codeburn report --format json \| jq .shellCommands` |
-| sessionごとのcost一覧            | `codeburn sessions --no-pager`                                                                         |
-| 期間の比較                       | `codeburn compare-periods`                                                                             |
+| 知りたいこと                     | コマンド                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 無駄の検出と修正案（`optimize`） | `codeburn optimize`（JSONなら`--format json`）                                                       |
+| Bashコマンド別の呼び出し数       | `codeburn report`のTUIの**Shell Commands**、またはJSONの`.shellCommands`（「まず見るもの」のjqの例） |
+| sessionごとのcost一覧            | `codeburn sessions --no-pager`                                                                       |
+| 期間の比較                       | `codeburn compare-periods`                                                                           |
 
 webの**Tools**はtool別（Bash、Read、Editなど）の呼び出し数までで、Bashの中身のコマンド別には分かれません。
 
