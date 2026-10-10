@@ -1408,7 +1408,7 @@ agentsview activity report --preset week --date 2026-10-10
 
 ### API で全端末の数字を取る
 
-Cloud Run上のAPIはWeb UIと同じく全端末分を返す。bearer tokenはfnox経由で渡し、shellやhistoryへ出さない。headerは`printf`（shell組み込み）からstdin経由で`curl -H @-`へ渡し、process一覧（`ps`）にtokenが出ないようにする。
+Cloud Run上のAPIはWeb UIと同じく全端末分を返す。bearer tokenはfnox経由で渡し、shellやhistoryへ出さない。headerは`printf`（shell組み込み）からstdin経由で`curl -H @-`へ渡し、process一覧（`ps`）にtokenが出ないようにする（`-H @-`はcurl 7.55.0以降が必要。macOS同梱のcurlならCatalina以降）。
 
 ```sh
 # 期間内のtotal（totalCost、各token数、cacheSavings）
@@ -1504,7 +1504,7 @@ LIMIT 30;
 
 #### 3. tool callごとの実token増分
 
-tool callを発行したassistant messageと、次のAPI requestの`context_tokens`の差から、そのtool結果で増えたtokenを出す。同じmessageで並列に呼んだtoolはまとめて1行になる。user入力が挟まった場合はその分も含むので、上位を見て個別にtranscriptで確認する。
+`claude_request_id`でAPI requestの境界を判定するため、**Claude Codeのsessionだけ**が対象になる（他のagentはこの列が空）。tool callを発行したassistant messageと、次のAPI requestの`context_tokens`の差から、そのtool結果で増えたtokenを出す。同じmessageで並列に呼んだtoolはまとめて1行になる。user入力が挟まった場合はその分も含むので、上位を見て個別にtranscriptで確認する。
 
 ```sql
 -- tool callごとの実token増分（次のAPI requestでcontextがどれだけ増えたか）
@@ -1552,7 +1552,7 @@ LIMIT 30;
 
 #### 5. 大きい結果を何回持ち越したか
 
-10,000文字以上の結果について、次のcompaction（`is_compact_boundary`）までに続いたAPI request数を掛ける。`reread_chars`が大きいものほど、早めに捨てる（subagentに任せる、出力を絞る、`/compact`する）価値がある。
+3と同じく`claude_request_id`でrequestを数えるので、**Claude Codeのsessionだけ**が対象になる。10,000文字以上の結果について、次のcompaction（`is_compact_boundary`）までに続いたAPI request数を掛ける。`reread_chars`が大きいものほど、早めに捨てる（subagentに任せる、出力を絞る、`/compact`する）価値がある。
 
 ```sql
 -- 大きいtool結果が、次のcompactionまでに何回API requestへ載り直したか

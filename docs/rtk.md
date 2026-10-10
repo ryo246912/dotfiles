@@ -30,7 +30,7 @@ hookは`PreToolUse`の`Bash` matcherで登録しています。正本はrulesync
 
 - `rtk init -g`は使いません。`~/.claude/settings.json`や`~/.claude/CLAUDE.md`を直接書き換えるため、このrepoの管理と衝突します。hookを変えるときは`config/rulesync/.rulesync/hooks.json`を編集して`mise run rulesync:generate`します（[`rulesync.md`](rulesync.md)）。
 - `command -v rtk`で囲んでいるのは、rtkが入っていない環境（devcontainerなど、同じsettings.jsonを共有する場所）でBashのたびにhook errorを出さないためです。
-- この書き方だとrtkは自分のhookを検出できず、`rtk gain`や`rtk discover`の先頭に`No hook installed — run rtk init -g`という警告が出ます。書き換えは正しく動いているので無視します（`rtk init --show`も「not found」と表示します）。
+- この書き方だとrtkは自分のhookを検出できず、`rtk gain`や`rtk discover`の先頭に`No hook installed — run rtk init -g`という警告が出ます（`rtk init --show`も「not found」と表示します）。書き換えは正しく動いているので、下の「設定file」にある`suppress_hook_warning = true`で警告を止めます。
 - hookは書き換え後のコマンドを返すだけで、permissionの判定は変えません。
 - telemetryは既定で無効です（`rtk telemetry status`で確認できます）。
 
@@ -103,11 +103,27 @@ rtk session                # 直近sessionごとのrtk利用率と出力量
 RTK_DISABLED=1 git log -n 3
 ```
 
-特定のコマンドを常に書き換えの対象外にする場合は、`~/.config/rtk/config.toml`に書きます（rtkの設定fileは既定値のままで、repoでは管理していません。常用する設定ができたら`config/rtk/config.toml`としてrepoへ追加します）。
+特定のコマンドを常に書き換えの対象外にする場合は、rtkの設定fileに`exclude_commands`を書きます（次の「設定file」を参照）。
+
+完全に止める場合は、`config/rulesync/.rulesync/hooks.json`から上記のhookを削除して`mise run rulesync:generate`します。
+
+## 設定file
+
+設定fileの場所はOSで異なります。`rtk config`の先頭に出る`Config:`のpathが、実際に読まれるfileです。
+
+| OS    | path                                            |
+| ----- | ----------------------------------------------- |
+| macOS | `~/Library/Application Support/rtk/config.toml` |
+| Linux | `~/.config/rtk/config.toml`                     |
+
+既定では存在しないので、`rtk config --create`で作るか、直接書きます。このdotfilesでは設定fileをrepoで管理していません（macOSの保存先が`~/.config`配下ではないため）。
 
 ```toml
 [hooks]
+# 上記の「No hook installed」警告を出さない
+suppress_hook_warning = true
+# 常に書き換えない（素の出力を返す）コマンド
 exclude_commands = ["git diff"]
 ```
 
-完全に止める場合は、`config/rulesync/.rulesync/hooks.json`から上記のhookを削除して`mise run rulesync:generate`します。現在の設定は`rtk config`で確認できます。
+設定fileを作らずに一時的に警告だけ止める場合は、環境変数`RTK_SUPPRESS_HOOK_WARNING=1`でも同じ効果があります。現在の設定は`rtk config`で確認できます。
