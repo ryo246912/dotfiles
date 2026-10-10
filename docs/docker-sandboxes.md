@@ -293,7 +293,8 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 
 > [!NOTE]
 > このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
-> 作るときに自動でも実行**します（登録済みなら何もしません）。手で打たなくても普段の起動で揃います。
+> 作るときに自動でも実行**します。github の secret は毎回ホストの `gh` から登録し直すので、
+> `gh auth refresh` などでトークンが入れ替わっても、sandbox を作り直せば追従します。
 > ドキュメントサイトの許可とホスト設定は `sandbox:setup` でだけ反映するため、
 > `config/sbx/allow-domains.txt` を変更したら `mise run sandbox:setup` を再実行してください。
 
@@ -450,8 +451,9 @@ default_agent = "claude"
 name_prefix = "mw"
 # 共有 skills store の扱い（off | readonly | readwrite）
 skills = "readonly"
-# sandbox template の OCI 参照（空なら sbx の既定 template）
-# template = "docker.io/docker/sandbox-templates:claude-code"
+# sandbox template の OCI 参照（空なら sbx-agent の既定 = agent ごとの sbx-agent:<agent>）
+# 設定すると全 agent で同じ template になるため、agent と FLAVOR が合わないと kit が適用されず、作成失敗またはログインを求められる
+# template = "sbx-agent:claude"
 # リソース上限
 # cpus = "4"
 # memory = "8g"
@@ -522,6 +524,30 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 > 揃えるのが期待する動作になります。1 つずつ確認したいときは `--force` 無しで、
 > 何が入れ替わるか見るだけなら `sbx skills import --dry-run` を手で流してください。
 
+> [!IMPORTANT]
+> sbx は共有 store（`--skills=off` 以外）を sandbox 内の `/home/agent/.claude/skills` にマウントしますが、
+> `sbx-agent claude` は `CLAUDE_CONFIG_DIR` をホストの設定ディレクトリ（既定 `~/.claude`）に
+> 向けるため、**Claude Code が実際に読むのは `$CLAUDE_CONFIG_DIR/skills`（ホストの実体）**です。
+> `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
+> 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
+> 同じパスへマウントします（`projects` / `agents` / `skills` / `plugins` のディレクトリのみ）。基本は**書き込み可**ですが、
+> リンクを辿った先が dotfiles リポジトリ内のものは read-only です。`settings.json` はファイルへの symlink で、
+> sbx はこれを直接マウントできない（`workspace path exists but is not a directory` で作成に失敗する）ため、
+> 代わりにリンク先のあるディレクトリ（`~/.claude`）を **read-only** で足して、symlink の連鎖ごと解決させます。
+> そのため account2 / work3 の sandbox からはメインの `~/.claude`（会話履歴など）も読めます。
+> statusline は `$CLAUDE_CONFIG_DIR/statusline.sh` が無ければ、隣の `.claude/statusline.sh` を使います。
+> これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。マウントは作成時に決まるため、
+> 既存の sandbox に反映するには `--new` で作り直してください。
+
+> [!WARNING]
+> `sbx-agent codex` では、`~/.codex/config.toml` の実体があるディレクトリ（dotfiles リポジトリの
+> `codex/`）を**書き込み可で**重ねてマウントします。codex は「このディレクトリを信頼するか」の答えを
+> `config.toml` に保存するため、read-only のままだと `failed to persist config.toml` で起動できません
+> （一時ファイル + rename で書くのでファイル単体ではなくディレクトリが要ります）。
+> ホストと同じく信頼設定は dotfiles 側に残りますが、sandbox 内の agent が `config.toml` /
+> `hooks.json` を書き換えると、次にホストで codex を起動したときにその hooks や MCP の起動コマンドが
+> 実行されます。sandbox の外に影響し得る経路なので、変更は `git diff codex/` で確認してください。
+
 `sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
 「SSH 鍵・skills・ドキュメントサイトの許可・ホスト設定をまとめて用意したいとき」に使う入り口です。
@@ -585,7 +611,7 @@ multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer backen
 sandbox 内で手動インストールしたツールを次回以降も使いたくなったら、template に焼き直せます。
 
 ```bash
-mise run sandbox:template-save <sandbox-name>   # 既定タグ sbx-agent:local を更新
+mise run sandbox:template-save <sandbox-name> <tag>   # tag は保存元と同じ agent の sbx-agent:<agent>
 mise run sandbox:template-ls
 ```
 
@@ -633,12 +659,12 @@ dry-run では消える候補を実際に列挙します（`sbx prune --dry-run`
 | `sbx prune`                                             | 停止済み sandbox（VM ごと）              | なし。**動いている sandbox は対象外**なので習慣的に打てる（`--dry-run` で事前確認、`--force` で確認省略） |
 | `sbx template rm <tag>`                                 | sbx 側の template image                  | その template からの `sbx create` ができなくなる（`mise run sandbox:build-template` で作り直す）          |
 | `docker image prune`                                    | ホストの dangling layer                  | なし（タグの付いていない層だけ）                                                                          |
-| `docker image rm sbx-agent:local`                       | ホストの template image（数 GB）         | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
+| `docker image rm sbx-agent:<agent>`                     | ホストの template image（数 GB）         | 次回ビルドで layer cache が効かなくなる。**mise の再ダウンロードは起きない**（下記）                      |
 | `docker builder prune --filter "type!=exec.cachemount"` | ホストの build cache（cache mount 以外） | なし。**mise の cache mount を残す**ので次回も再ダウンロードは起きない                                    |
 | `docker builder prune`                                  | ホストの build cache（全部）             | **次回の `sandbox:build-template` が初回と同じフルインストールになる**（下記）                            |
 
 > [!NOTE]
-> `docker image rm sbx-agent:local` と `docker builder prune` の違いが効きます。
+> `docker image rm sbx-agent:<agent>` と `docker builder prune` の違いが効きます。
 > `Dockerfile.sandbox` は mise のインストール済みツールを
 > `RUN --mount=type=cache,id=sandbox-mise-cache` で持っており、これは **image ではなく
 > BuildKit の build cache 側**にあります。つまり image を消しても再ダウンロードは起きず、
@@ -656,9 +682,9 @@ dry-run では消える候補を実際に列挙します（`sbx prune --dry-run`
 > という意味なので、cache mount を残す目的には使えません。
 
 > [!TIP]
-> ホストの `sbx-agent:local` は、`sbx template load` した時点で **sbx 側の image store に
-> コピー済み**です。ホストに残っているものは次回ビルドの layer cache としてしか使わないので、
-> 容量が厳しいときは `--template` で落とすのが効率的です（sandbox は動き続けます）。
+> ホストの `sbx-agent:<agent>` は、`sbx template load` した時点で **sbx 側の image store に
+> コピー済み**です。`sandbox:build-template` は load 後にホスト側を消しますが、手でビルドした
+> ものや旧名の `sbx-agent:local` が残っていれば `--template` で落とせます（sandbox は動き続けます）。
 
 sandbox の中で作った image を空けたいときは、sandbox 内で普通に `docker` を打ちます
 （sandbox ごとに専用の docker daemon を持っているため、ホストには影響しません）。
@@ -923,7 +949,21 @@ workspace としてマウントしたディレクトリは「ファイルが見�
 ### このリポジトリの template
 
 `config/devcontainer/Dockerfile.sandbox` が、**devcontainer と同じ `mise.toml`** を使って
-sandbox 用の image をビルドします。
+sandbox 用の image をビルドします。**agent ごとに、中身は同じで base image だけが違う template**
+（`sbx-agent:claude` / `sbx-agent:codex` / `sbx-agent:copilot`）を作り、`sbx-agent` が
+agent に合ったものを自動で選びます。ccmanager などから agent を切り替える側は何も意識しません。
+
+| agent   | template            | base image（FLAVOR）                          |
+| ------- | ------------------- | --------------------------------------------- |
+| claude  | `sbx-agent:claude`  | `docker/sandbox-templates:claude-code-docker` |
+| codex   | `sbx-agent:codex`   | `docker/sandbox-templates:codex-docker`       |
+| copilot | `sbx-agent:copilot` | `docker/sandbox-templates:copilot-docker`     |
+
+1 つの template を全 agent で使い回せないのは、sbx が template の base（FLAVOR）を記録し、
+`sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
+FLAVOR と agent が合わないと `failed to apply kit to sandbox` で作成に失敗するか、kit が当たらず
+agent がログインを求めます（agent を含まない `shell-docker` でも同じ。実機で確認）。
+使わない agent はディスクを食うだけなので、`SBX_TEMPLATE_AGENTS="claude codex"` のように絞れます。
 
 ```bash
 mise run sandbox:build-template
@@ -934,8 +974,10 @@ mise run sandbox:build-template
 0. build context は **dotfiles リポジトリの `config/devcontainer/`**（配置先の
    `~/.config/devcontainer` ではない）。配置先が実体ファイルでない場合、BuildKit は
    コンテキスト外を指す symlink を辿らず `COPY` が "not found" で失敗するため
-1. `FROM docker/sandbox-templates:claude-code`（Ubuntu + 非 root の `agent` ユーザー + sudo。
-   Git / Docker CLI / Node.js / Python / Go / Java を同梱）
+1. `FROM docker/sandbox-templates:<agent>-docker`（上の表。Ubuntu + 非 root の `agent` ユーザー + sudo）。
+   **`-docker` 版でないと sandbox 内に dockerd がありません**（通常版は docker CLI だけ）。
+   `-docker` 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードになり、
+   `/var/lib/docker` に専用ボリュームが付いて dockerd が自動起動します
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
 3. `mise install` で devcontainer と同じツール群を入れる（BuildKit の cache mount で差分ビルド、
    `GH_TOKEN` は build secret で渡してレート制限を避ける）
@@ -945,19 +987,24 @@ mise run sandbox:build-template
    パスの書き換え無しでそのまま解決します
 5. `scripts/` を PATH の先頭に置き、`crit` ラッパーが mise shim より先に来るようにする
 6. ビルドした image を `docker image save` → `sbx template load` で sbx の image store へ入れる
-   （sbx の Docker daemon はホストの image store を共有しないため、tar 経由で渡す必要があります）
+   （sbx の Docker daemon はホストの image store を共有しないため、tar 経由で渡す必要があります）。
+   load 後はホスト側の image を消します（agent の数だけ数 GB ずつ増えるため。mise の
+   インストール済みツールは cache mount に残るので、次回のビルドも差分だけで済みます）
 
-**agent CLI（claude / codex / copilot）は mise では入れません**（`MISE_DISABLE_TOOLS` で除外）。
-base image 側が持っており、バージョンと認証は sbx が管理するため、mise の shim で
-上書きしないようにしています。
+**agent CLI（claude / codex / copilot）も mise で入れます**（バージョンは
+`config/devcontainer/mise.toml`）。base image には対応する agent しか入っていないため、
+どの template からでも claude / codex / copilot を同じバージョンで使えるようにしています。PATH は
+mise の shim が base image の `~/.local/bin` より前にあるので、シェルから呼ぶ agent は mise 側になります。
+特定のツールを外したいときは `--build-arg DISABLE_TOOLS=<tool>,...` で除外できます。
 
-`sbx-agent` は **常に `sbx-agent:local` を template として渡します**。別名を使う場合は
-`--template` か `SBX_AGENT_TEMPLATE`、`--no-template` で sbx の既定 template に戻せます
+`sbx-agent` は **agent に合わせて `sbx-agent:<agent>` を template として渡します**。別名を使う場合は
+`--template` か `SBX_AGENT_TEMPLATE`（全 agent に同じ template が効くので FLAVOR に注意）、
+`--no-template` で sbx の既定 template に戻せます
 （優先順位は `--no-template` > `--template` > `SBX_AGENT_TEMPLATE` > 既定）。
 
 template を渡すときは **`--pull missing` を付けます**。`sbx create` の `--pull` は
 **既定が `always`** なので（`sbx create --help`。sbx 0.47.0 で確認）、付けないと
-`sbx-agent:local` のようなローカルにしか無い template をレジストリから引こうとします。
+`sbx-agent:claude` のようなローカルにしか無い template をレジストリから引こうとします。
 `never` ではなく `missing` なのは、`SBX_AGENT_TEMPLATE` にレジストリ上の参照を指定した場合に
 取得できなくなるのを避けるためです（ローカルに有れば引きません）。
 
@@ -1053,7 +1100,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | mise cache mount によるリビルド高速化                            | ✅ 同じ BuildKit cache mount 方式                                                                                                                     |
 | `crit` ラッパーを mise shim より前の PATH に置く                 | ✅ `ENV PATH=~/.config/devcontainer/scripts:/mise/data/shims:$PATH`                                                                                   |
 | `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                                                                          |
-| claude / codex / copilot の CLI                                  | ⚠️ base image 側が提供（mise では入れない。バージョンは sbx が管理）                                                                                  |
+| claude / codex / copilot の CLI                                  | ✅ mise で入れる（base image には claude しか無いため。バージョンは `config/devcontainer/mise.toml`）                                                 |
 | nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を `:ro` で渡して symlink（lockfile は `AI_AGENT=1` のとき state dir へ逃がす） |
 | Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む                                                           |
 
@@ -1327,12 +1374,12 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 
 ### `sbx create` が template を見つけられずに失敗する
 
-`--pull missing` で渡しているため、`sbx-agent:local` がローカルの image store に無いと
+`--pull missing` で渡しているため、`sbx-agent:<agent>` がローカルの image store に無いと
 作成できません。`sbx-agent` は失敗時に確認手順を出します。
 
 ```console
 [ERROR] sandbox の作成に失敗しました
-[ERROR]   template (sbx-agent:local) が原因かもしれません。確認するには:
+[ERROR]   template (sbx-agent:claude) が原因かもしれません。確認するには:
 [ERROR]     sbx template ls
 [ERROR]   未ビルドなら: mise run sandbox:build-template
 [ERROR]   template 無しで起動するには --no-template を付けてください

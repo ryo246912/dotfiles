@@ -38,6 +38,9 @@ docker volume ls -f dangling=true
 # remove no referenced images(rmi) [-q:only display volume names] [ex:docker rmi <image_id>]
 docker image rm $(docker images -q -f dangling=true)
 
+# remove all images not used by any container [-a:not only dangling but also unused tagged images][-f:skip confirmation]
+docker image prune -a
+
 # remove container
 docker container rm <container>
 
