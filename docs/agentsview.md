@@ -1426,6 +1426,189 @@ fnox exec -- sh -c 'curl -fsS \
 
 `summary`は`agent`、`project`、`machine`、`model`などのquery parameterでUsage画面と同じ絞り込みができる。ほかに`/api/v1/usage/top-sessions`、`/api/v1/usage/pairwise-comparison`、`/api/v1/activity/report`、`/api/v1/analytics/*`、`/api/v1/trends/terms`がある。
 
+### tool・コマンド単位でtoken効率を分析する
+
+Usage画面とCLIはsession・model・project単位までで、「どのtool・どのBashコマンドがtokenを食ったか」は出ない。DashboardのTool Usageも呼び出し回数だけである。ただしAgentsViewのlocal SQLite（`~/.agentsview/sessions.db`）には、tool callごとに次の列が入っているので、SQLで直接集計できる。
+
+| table        | 使う列                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `tool_calls` | `tool_name`、`input_json`（Bashなら`$.command`）、`file_path`、`result_content_length`（結果の文字数）          |
+| `messages`   | `context_tokens`（input＋cache read＋cache write）、`output_tokens`、`claude_request_id`、`is_compact_boundary` |
+| `sessions`   | `project`、`agent`、`started_at`                                                                                |
+
+#### 考え方
+
+tool結果は次のAPI requestからinput（ほぼcache read）としてcontextに載り、compactionされるまで**毎requestで読み直される**。そのため効率の悪さは2つの量で見る。
+
+1. **一度に入れた量**: 結果の文字数（`result_content_length`）、または次のrequestで増えた`context_tokens`の差分（こちらが実token数に近い）
+2. **持ち越した回数**: 大きな結果を取り込んだあと、compactionまでに何回requestが続いたか。量×回数が実際に払ったcache readになる
+
+文字数からtokenへの換算は目安で、英語・コードは約4文字で1token、日本語は1〜2文字で1token程度。
+
+#### 実行方法
+
+このPCのsessionだけが対象（端末をまたいだ集計はできない）。daemonが動いていても`-readonly`で開けば安全に読める。下のSQLをfileに保存して流し込むか、`sqlite3`の対話画面に貼る。
+
+```sh
+sqlite3 -readonly -header -column ~/.agentsview/sessions.db < query.sql
+```
+
+期間を変えるときは`date('now', '-30 days')`を書き換える。AgentsViewのversionを上げたら列名が変わっていないか`sqlite3 ~/.agentsview/sessions.db '.schema tool_calls'`で確認する。
+
+#### 1. tool別の結果サイズ
+
+どのtoolが最もcontextを埋めているか。`calls`が多いのに`avg_chars`が小さいtoolは問題になりにくく、`total_chars`と`max_chars`が大きいtoolを疑う。
+
+```sql
+-- tool別: 呼び出し回数と結果サイズ（contextへ入った文字数）
+SELECT tc.tool_name,
+       COUNT(*)                                   AS calls,
+       SUM(tc.result_content_length)              AS total_chars,
+       CAST(AVG(tc.result_content_length) AS INT) AS avg_chars,
+       MAX(tc.result_content_length)              AS max_chars
+FROM tool_calls tc
+JOIN sessions s ON s.id = tc.session_id
+WHERE s.started_at >= date('now', '-30 days')
+GROUP BY tc.tool_name
+ORDER BY total_chars DESC
+LIMIT 20;
+```
+
+#### 2. Bashコマンド別の結果サイズ
+
+`git log`、`mise run`、test runner、`cat`など、どのコマンドの出力が重いか。先頭2語でまとめているので、`mise run lint:md`まで分けたい場合は`instr`をもう1段増やすか、`substr(cmd, 1, 40)`でまとめる。
+
+```sql
+-- Bashコマンド別（先頭2語でまとめる）
+WITH b AS (
+  SELECT trim(json_extract(tc.input_json, '$.command')) || ' ' AS cmd,
+         tc.result_content_length AS len
+  FROM tool_calls tc
+  JOIN sessions s ON s.id = tc.session_id
+  WHERE tc.tool_name = 'Bash'
+    AND s.started_at >= date('now', '-30 days')
+), w AS (
+  SELECT substr(cmd, 1, instr(cmd, ' ') - 1) AS w1,
+         ltrim(substr(cmd, instr(cmd, ' ') + 1)) AS rest,
+         len
+  FROM b
+)
+SELECT w1 || ' ' || substr(rest, 1, instr(rest || ' ', ' ') - 1) AS command,
+       COUNT(*)                     AS calls,
+       SUM(len)                     AS total_chars,
+       CAST(AVG(len) AS INT)        AS avg_chars,
+       MAX(len)                     AS max_chars
+FROM w
+GROUP BY command
+ORDER BY total_chars DESC
+LIMIT 30;
+```
+
+#### 3. tool callごとの実token増分
+
+tool callを発行したassistant messageと、次のAPI requestの`context_tokens`の差から、そのtool結果で増えたtokenを出す。同じmessageで並列に呼んだtoolはまとめて1行になる。user入力が挟まった場合はその分も含むので、上位を見て個別にtranscriptで確認する。
+
+```sql
+-- tool callごとの実token増分（次のAPI requestでcontextがどれだけ増えたか）
+WITH calls AS (
+  SELECT m.session_id, m.ordinal, m.context_tokens, m.output_tokens,
+         m.claude_request_id,
+         GROUP_CONCAT(tc.tool_name || ':' ||
+           substr(COALESCE(json_extract(tc.input_json, '$.command'),
+                           tc.file_path, json_extract(tc.input_json, '$.pattern'), ''), 1, 60),
+           ' | ') AS tools
+  FROM messages m
+  JOIN tool_calls tc ON tc.message_id = m.id
+  WHERE m.role = 'assistant' AND m.has_context_tokens = 1
+  GROUP BY m.id
+)
+SELECT c.session_id,
+       c.tools,
+       (SELECT n.context_tokens FROM messages n
+         WHERE n.session_id = c.session_id AND n.ordinal > c.ordinal
+           AND n.role = 'assistant' AND n.has_context_tokens = 1
+           AND n.claude_request_id <> c.claude_request_id
+         ORDER BY n.ordinal LIMIT 1)
+         - c.context_tokens - c.output_tokens AS added_tokens
+FROM calls c
+WHERE added_tokens > 0
+ORDER BY added_tokens DESC
+LIMIT 30;
+```
+
+#### 4. 同じfileの繰り返しRead
+
+同じsessionで同じfileを3回以上Readしている箇所。compaction後の読み直しや、全体Readの繰り返しが多い場合は、`offset`／`limit`指定やGrepで済ませる指示をCLAUDE.mdに書く候補になる。
+
+```sql
+-- 同じsessionで同じfileを何度もReadしている箇所
+SELECT tc.session_id, tc.file_path,
+       COUNT(*) AS reads, SUM(tc.result_content_length) AS total_chars
+FROM tool_calls tc
+WHERE tc.tool_name = 'Read' AND tc.file_path IS NOT NULL
+GROUP BY tc.session_id, tc.file_path
+HAVING COUNT(*) >= 3
+ORDER BY total_chars DESC
+LIMIT 30;
+```
+
+#### 5. 大きい結果を何回持ち越したか
+
+10,000文字以上の結果について、次のcompaction（`is_compact_boundary`）までに続いたAPI request数を掛ける。`reread_chars`が大きいものほど、早めに捨てる（subagentに任せる、出力を絞る、`/compact`する）価値がある。
+
+```sql
+-- 大きいtool結果が、次のcompactionまでに何回API requestへ載り直したか
+WITH big AS (
+  SELECT tc.session_id, tc.tool_name, m.ordinal,
+         substr(COALESCE(json_extract(tc.input_json, '$.command'), tc.file_path, ''), 1, 60) AS target,
+         tc.result_content_length AS chars,
+         COALESCE((SELECT MIN(b.ordinal) FROM messages b
+                    WHERE b.session_id = m.session_id AND b.ordinal > m.ordinal
+                      AND b.is_compact_boundary = 1), 1e9) AS until_ordinal
+  FROM tool_calls tc
+  JOIN messages m ON m.id = tc.message_id
+  WHERE tc.result_content_length >= 10000
+)
+SELECT big.session_id, big.tool_name, big.target, big.chars,
+       COUNT(DISTINCT n.claude_request_id)             AS later_requests,
+       big.chars * COUNT(DISTINCT n.claude_request_id) AS reread_chars
+FROM big
+JOIN messages n ON n.session_id = big.session_id
+ AND n.ordinal > big.ordinal AND n.ordinal < big.until_ordinal
+ AND n.role = 'assistant' AND n.claude_request_id <> ''
+GROUP BY big.session_id, big.ordinal, big.tool_name, big.target, big.chars
+ORDER BY reread_chars DESC
+LIMIT 30;
+```
+
+#### 結果からわかる改善の例
+
+| 見つかったもの                             | 対策の例                                                                                                  |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| test・lint・buildの出力が大きい            | 失敗だけを出すflag、`tail -n 50`へのpipe、quiet modeを使う指示をCLAUDE.mdやskillに書く。rtkで自動圧縮する |
+| `git log`／`git diff`が大きい              | `--stat`、`-n`、path指定を使う                                                                            |
+| 巨大fileの全体Read、同じfileの繰り返しRead | Grepで位置を特定してから範囲指定でReadする                                                                |
+| 大きい結果のあとsessionが長く続いている    | 調査はsubagentに任せて要約だけを戻す。区切りで`/compact`か新しいsessionにする                             |
+| MCP toolの結果が大きい                     | 使わないMCP serverを外す。ページングや件数指定のある呼び方にする                                          |
+
+#### 外部ツール
+
+AgentsView以外にもtool・コマンド単位の分析をうたうツールがある。いずれも個人開発で、削減率などの数字は各READMEの自己申告である（2026年10月時点で調査、未検証）。多くは`~/.claude/projects/`のJSONLを直接読むので、Claude Code以外のagentや他端末の分は見えない。
+
+| ツール                                                                              | 分かること                                                                                                                                | 形態                       |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| [CodeBurn](https://github.com/getagentseal/codeburn)                                | task種別（debug、refactor、testなど）・tool・model・MCP server・project別のspend、作業種別ごとの一発成功率（Edit→Bash→Editのretryを検出） | CLI／TUI（`npx codeburn`） |
+| [claude-usage-analyzer](https://github.com/SingggggYee/claude-usage-analyzer)       | tool別の呼び出し回数と推定token影響、token sinkのranking、異常に高いsession                                                               | Rust CLI                   |
+| [claude-token-analyzer](https://github.com/li195111/claude-token-analyzer)          | ExcessiveToolUse、LowCacheHitRateなど6種類の異常検知                                                                                      | Claude Code plugin         |
+| [claude-context-optimizer](https://github.com/egorfedorov/claude-context-optimizer) | Readしたが使われなかったfile、CLAUDE.mdや固定overheadの監査                                                                               | Claude Code plugin         |
+| [context-analyzer](https://github.com/manavgup/context-analyzer)                    | hookでcontextの中身を記録し、call当たりcostとcontext sizeの関係を可視化                                                                   | hook＋SQLite＋dashboard    |
+| [rtk](https://github.com/rtk-ai/rtk)                                                | `rtk discover`で過去のsessionから出力を圧縮できたBashコマンドを洗い出す。hookで実際に圧縮し、`rtk gain`で削減量を見る                     | Bash hook／CLI             |
+| [claude-trace](https://github.com/badlogic/lemmy/tree/main/apps/claude-trace)       | API request／responseを丸ごと記録。1 requestに何が載っていたか（system prompt、tool定義、tool結果）を直接見られる                         | Claude Code wrapper        |
+
+公式の方法として、Claude CodeのOpenTelemetryも使える。`claude_code.tool_result` eventに`tool_name`、`tool_input_size_bytes`、`tool_result_size_bytes`、`duration_ms`が載り、`OTEL_LOG_TOOL_DETAILS=1`を付けるとBashの`bash_command`も入る。`claude_code.api_request` eventにはrequestごとのtoken数とcostがある。ただしcollectorとbackend（Grafana＋Lokiなど）を別途用意する必要があり、記録は有効にした後のsessionからである（[Monitoring](https://code.claude.com/docs/en/monitoring-usage)）。
+
+まずは既存のAgentsView DBへの上記SQLで傾向をつかみ、より継続的に見たくなったらCodeBurnかOpenTelemetryを足す、という順が手間が少ない。
+
 ### 数字が合わない・出ないとき
 
 - **Cloud Run UIに最近のsessionがない**: そのPCからpushされていない。`agentsview pg status`でwatermarkを確認し、`mise run agentsview:cockroach:push:remote`を実行する（「4. local dataとCockroachDBのpush／pull」）。
