@@ -49,6 +49,12 @@
       "enabled": false
     },
     {
+      "description": "mise lock が生成する .mise/locks 配下は mise の更新 PR で一緒に更新されるため npm manager では更新しない",
+      "matchManagers": ["npm"],
+      "matchFileNames": [".mise/locks/**"],
+      "enabled": false
+    },
+    {
       "matchManagers": ["gomod"],
       "groupName": "Go modules"
     },
