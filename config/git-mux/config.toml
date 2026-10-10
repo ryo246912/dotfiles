@@ -1,0 +1,15 @@
+[general]
+default_view          = "repos"
+refresh_interval_secs = 60
+
+[orgs]
+exclude = []
+include = [] # only show these orgs (empty = all)
+
+[repos]
+exclude = []
+
+[workspaces]
+cleanup_after_days = 7           # auto-remove stale workspaces (0 to disable)
+dir                = "~/dev-mux" # where cloned workspaces live
+source_dirs        = ["~/dev"]   # existing checkout dirs

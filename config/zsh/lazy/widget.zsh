@@ -2,7 +2,7 @@
 # ツール一覧はここだけで定義する。tmux popup の中身は別プロセスの shell で
 # 評価されるため zsh の変数はそのままでは見えない。popup へ渡す文字列を
 # 組み立てる時点で zsh に展開させ、リテラルとして埋め込む。
-_SELECT_TOOL_LIST="lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nghui\nyazi"
+_SELECT_TOOL_LIST="lazygit\ne1s\nlazydocker\nd4s\nlazychezmoi\ngh-dash\nghui\nyazi\ngit-mux"
 
 _select_tool() {
   if [ -n "$TMUX" ]; then
@@ -268,6 +268,31 @@ if [ "$(uname)" = "Darwin" ]; then
   bindkey "^Q^W" _git_worktree_manager
 else
   bindkey "^[Q^[W" _git_worktree_manager
+fi
+
+# ctrl + q → ctrl + m(alt + shift + q → alt + shift + m)でgit-muxを実行
+_git_mux() {
+  if [ -n "$TMUX" ]; then
+    local _popup_cwd=$PWD
+    tmux popup -xC -yC -w95% -h95% -E -d "$_popup_cwd" '\
+      current_path=$PWD ; \
+      if tmux has-session -t popup 2>/dev/null; then \
+        tmux new-window -t popup -c "$current_path" "git-mux" ; \
+        tmux attach -t popup ; \
+      else \
+        tmux new-session -s popup -c "$current_path" "git-mux" \; set-option status off ; \
+      fi \
+    '
+  else
+    BUFFER='git-mux'
+    zle accept-line
+  fi
+}
+zle -N _git_mux
+if [ "$(uname)" = "Darwin" ]; then
+  bindkey "^Q^M" _git_mux
+else
+  bindkey "^[Q^[M" _git_mux
 fi
 
 # option + ↑で１つ上のディレクトリに移動
