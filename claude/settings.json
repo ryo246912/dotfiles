@@ -66,6 +66,15 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+            "timeout": 10
+          }
+        ]
+      },
+      {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
@@ -84,6 +93,11 @@
             "type": "command",
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+            "timeout": 10
           }
         ]
       }
@@ -95,6 +109,11 @@
             "type": "command",
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+            "timeout": 10
           }
         ]
       }
@@ -154,6 +173,15 @@
             "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -178,6 +206,17 @@
             "statusMessage": "Tracking ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+            "timeout": 10
           }
         ]
       }

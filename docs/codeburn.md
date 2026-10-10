@@ -4,11 +4,12 @@
 
 AgentsViewとの使い分けは次のとおりです。
 
-| 知りたいこと                                             | 使うもの                                                     |
-| -------------------------------------------------------- | ------------------------------------------------------------ |
-| 全端末の合計cost、project・model別の推移                 | AgentsView（Cloud Run UI。[`agentsview.md`](agentsview.md)） |
-| 作業種別・tool・Bashコマンド別のcost、無駄の検出と修正案 | codeburn（このPCのsessionだけ）                              |
-| Bashコマンドの出力そのものを減らす                       | rtk（[`rtk.md`](rtk.md)）                                    |
+| 知りたいこと                                             | 使うもの                                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------- |
+| 全端末の合計cost、project・model別の推移                 | AgentsView（Cloud Run UI。[`agentsview.md`](agentsview.md)）     |
+| 作業種別・tool・Bashコマンド別のcost、無駄の検出と修正案 | codeburn（このPCのsessionだけ）                                  |
+| 1つのsessionでどのturn・tool結果がcontextを膨らませたか  | context-analyzer（[`context-analyzer.md`](context-analyzer.md)） |
+| Bashコマンドの出力そのものを減らす                       | rtk（[`rtk.md`](rtk.md)）                                        |
 
 ## 導入
 

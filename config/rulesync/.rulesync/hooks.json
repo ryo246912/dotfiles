@@ -8,18 +8,30 @@
           "matcher": "clear",
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+          "timeout": 10
         }
       ],
       "sessionEnd": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+          "timeout": 10
         }
       ],
       "preCompact": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+          "timeout": 10
         }
       ],
       "preToolUse": [
@@ -57,6 +69,16 @@
         {
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+        },
+        {
+          "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+          "timeout": 10
+        }
+      ],
+      "subagentStop": [
+        {
+          "command": "if command -v context-tracker-hook >/dev/null 2>&1; then context-tracker-hook; fi",
+          "timeout": 10
         }
       ]
     }

@@ -1605,7 +1605,7 @@ AgentsView以外にもtool・コマンド単位の分析をうたうツールが
 
 公式の方法として、Claude CodeのOpenTelemetryも使える。`claude_code.tool_result` eventに`tool_name`、`tool_input_size_bytes`、`tool_result_size_bytes`、`duration_ms`が載り、`OTEL_LOG_TOOL_DETAILS=1`を付けるとBashの`bash_command`も入る。`claude_code.api_request` eventにはrequestごとのtoken数とcostがある。ただしcollectorとbackend（Grafana＋Lokiなど）を別途用意する必要があり、記録は有効にした後のsessionからである（[Monitoring](https://code.claude.com/docs/en/monitoring-usage)）。
 
-CodeBurnとrtkはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)と[`rtk.md`](rtk.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、Bash出力が重いと分かったらrtkで削る。claude-traceは、普段使うnative binary版のClaude Code（2.1.113以降）では動かないため導入していない。
+CodeBurn、context-analyzer、rtkはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)、[`context-analyzer.md`](context-analyzer.md)、[`rtk.md`](rtk.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、1つのsessionのどのturn・どのtool結果がcontextを膨らませたかはcontext-analyzerで掘り下げ、Bash出力が重いと分かったらrtkで削る。claude-traceは、普段使うnative binary版のClaude Code（2.1.113以降）では動かないため導入していない。
 
 ### 数字が合わない・出ないとき
 
