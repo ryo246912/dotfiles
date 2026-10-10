@@ -426,7 +426,9 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
         dotfiles_repo_real=""
         [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
-        for shared_entry in projects settings.json agents skills plugins; do
+        # settings.json を先に処理する。下で親ディレクトリ（~/.claude）を read-only で足すため、
+        # その中の skills / projects などの書き込み可マウントより前に積んでおく。
+        for shared_entry in settings.json projects agents skills plugins; do
             entry="${CONFIG_DIR}/${shared_entry}"
             [[ -L "$entry" && -e "$entry" ]] || continue
             target=$(resolve_symlink "$entry") || continue
@@ -437,8 +439,14 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             [[ "$target" == "$config_dir_real"/* ]] && continue
             # sbx がマウントできるのはディレクトリと通常ファイルだけで、ファイルへの symlink
             # （~/.claude/settings.json など）は "exists but is not a directory" で作成ごと失敗する。
-            # 共有が要るのは skills などのディレクトリなので、それ以外は渡さない。
-            [[ -d "$target" ]] || continue
+            # ファイル（settings.json）はリンク先のあるディレクトリ（~/.claude）を read-only で
+            # 足して、symlink の連鎖ごと sandbox 内で解決させる。dotfiles リポジトリ内なら
+            # 上の `${dotfiles_repo}:ro` で既に解決するので足さない。
+            if [[ ! -d "$target" ]]; then
+                [[ -n "$dotfiles_repo_real" && ("$target_parent" == "$dotfiles_repo_real" || "$target_parent" == "$dotfiles_repo_real"/*) ]] \
+                    || add_mount "${target_parent}:ro"
+                continue
+            fi
 
             # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
             final=$(cd "$target" 2>/dev/null && pwd -P) || continue

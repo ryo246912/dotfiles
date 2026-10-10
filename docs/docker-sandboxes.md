@@ -531,8 +531,11 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
 > 同じパスへマウントします（`projects` / `agents` / `skills` / `plugins` のディレクトリのみ）。基本は**書き込み可**ですが、
-> リンクを辿った先が dotfiles リポジトリ内のものは read-only です。sbx はファイルへの symlink をマウントできない
-> （`workspace path exists but is not a directory` で作成に失敗する）ため、`settings.json` は対象外です。
+> リンクを辿った先が dotfiles リポジトリ内のものは read-only です。`settings.json` はファイルへの symlink で、
+> sbx はこれを直接マウントできない（`workspace path exists but is not a directory` で作成に失敗する）ため、
+> 代わりにリンク先のあるディレクトリ（`~/.claude`）を **read-only** で足して、symlink の連鎖ごと解決させます。
+> そのため account2 / work3 の sandbox からはメインの `~/.claude`（会話履歴など）も読めます。
+> statusline は `$CLAUDE_CONFIG_DIR/statusline.sh` が無ければ、隣の `.claude/statusline.sh` を使います。
 > これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。マウントは作成時に決まるため、
 > 既存の sandbox に反映するには `--new` で作り直してください。
 
