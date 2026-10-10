@@ -543,3 +543,17 @@ ssh -F ~/.config/ssh/config mac-host \
 devcontainerでは`AI_AGENT`を設定し、作成時にAIエージェント向けの
 Lefthook pre-commitをインストールする。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。
+
+lint前に未ステージの変更と未追跡ファイルを`lefthook-pre-commit`という名前でstashし、
+lintの成否にかかわらず最後に復元する。hook実行中に加えられた変更（ステージ済みは`staged.patch`、
+未ステージは`tracked.patch`）と、stash内の未追跡ファイルと同じパス（またはその親の位置）に作られた
+ファイル・ディレクトリ・シンボリックリンク（`untracked/`）は、復元前に
+`.git/lefthook-pre-commit-backup/<日時>/`へ退避する。シンボリックリンクはリンク先をたどらずリンク自体を退避する。
+必要なら`git apply`で`staged.patch`→`tracked.patch`の順に適用し、`untracked/`からコピーして戻す。
+stashに含まれる未追跡ファイルと同じパスをhookが`git add`していた場合、そのパスは復元後のファイルと衝突して
+`git apply`が`already exists in working directory`で失敗する。その場合は`git apply --index --exclude=<パス> staged.patch`で
+残りを適用し、衝突したパスはhook実行中の内容が`untracked/<パス>`にあるので、復元後のファイルと見比べて手で取り込む。
+退避に失敗した場合は`git reset --hard`を行わずに中断する。
+復元に失敗した場合や、hookが中断されてstashが残った場合は、次回のcommitがその旨を表示して止まる。
+`git stash list`で`lefthook-pre-commit`を確認する。stashに含まれる未追跡ファイルと同じパスのファイルが
+残っている場合は、そのファイルを退避または削除してから`git stash pop --index stash@{N}`で復元する。

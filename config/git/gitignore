@@ -44,6 +44,10 @@ mcp.json
 ## AI
 plan/**
 
+## ccmanager
+.ccmanager.json
+.ccmanager/
+
 ## crit
 .crit/
 lefthook.local.yml
