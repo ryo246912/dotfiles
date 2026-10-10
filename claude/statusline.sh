@@ -67,22 +67,26 @@ rl_now=$(printf '%s' "$input" | jq -c '
   .rate_limits // {} | {five_hour, seven_day} | with_entries(select(.value.used_percentage != null))
   | if length > 0 then . else empty end
 ' 2>/dev/null)
+rl_saved=$(jq -c 'objects' "$rl_file" 2>/dev/null)
 if [ -n "$rl_now" ]; then
-	rl_saved="$rl_now"
-	if [ "$rl_now" != "$(cat "$rl_file" 2>/dev/null)" ]; then
+	# 今回の payload に無い window の保存値は保持する（既存の保存値とマージ）。
+	rl_merged=$(jq -nc --argjson old "${rl_saved:-null}" --argjson new "$rl_now" '($old // {}) + $new' 2>/dev/null)
+	rl_merged=${rl_merged:-$rl_now}
+	if [ "$rl_merged" != "$rl_saved" ]; then
 		# 書き込めない環境（読み取り専用 mount 等）では保存しないだけで表示は続ける。
 		tmp="$rl_file.$$"
-		{ printf '%s' "$rl_now" >"$tmp" && mv -f "$tmp" "$rl_file" || rm -f "$tmp"; } 2>/dev/null
+		{ printf '%s' "$rl_merged" >"$tmp" && mv -f "$tmp" "$rl_file" || rm -f "$tmp"; } 2>/dev/null
 	fi
-else
-	rl_saved=$(jq -c 'objects' "$rl_file" 2>/dev/null)
+	rl_saved="$rl_merged"
 fi
 limit_line=$(printf '%s' "$input" | jq -r --argjson now "$now" --argjson saved "${rl_saved:-null}" '
   def dur: if . >= 86400 then "\((. / 86400) | floor)d\(((. % 86400) / 3600) | floor)h"
            elif . >= 3600 then "\((. / 3600) | floor)h\(((. % 3600) / 60) | floor)m"
            else "\((. / 60) | floor)m" end;
   # 保存値はリセット時刻を過ぎていたら使わない（Claude Code も同様に window を落とす）。
-  def pick($k): .rate_limits[$k] // ($saved[$k]? | select(.resets_at != null and .resets_at > $now));
+  def pick($k):
+    if .rate_limits[$k].used_percentage? != null then .rate_limits[$k]
+    else $saved[$k]? | select(.resets_at != null and .resets_at > $now) end;
   def seg($label; $win):
     if . == null or .used_percentage == null then empty else
       ([[100 - .used_percentage, 0] | max, 100] | min) as $left
