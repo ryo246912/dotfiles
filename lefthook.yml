@@ -66,26 +66,26 @@ post-merge:
       fail_text: '❌ [post-merge] dotfiles apply failed. 既存の実ファイルとの conflict なら: mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws" （先に配置先だけにある編集を repo へ取り込むこと。docs/mise.md 参照）'
     # dotfiles-apply で反映した [tools] のバージョン変更を、git pull / checkout のたびに導入する。
     # GitHub API の rate limit を避けるため、pre-tools hook（mise.toml）と同じく gh の token を渡す。
-    - name: mise-install
-      skip:
-        - run: test -n "${AI_AGENT:-}"
-      run: |
-        set -e
-        # 環境変数で GITHUB_TOKEN を渡している場合はそれを優先する。
-        github_token=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}
-        if [ -z "$github_token" ]; then
-          echo "warning: GITHUB_TOKEN も gh auth token も取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
-        fi
-
-        # mise に組み込まれた aube（npm backend）は、aube CLI と違い RLIMIT_NOFILE を引き上げないため、
-        # macOS の既定値（256）のままだと npm:renovate 等で "Too many open files (os error 24)" になる。
-        nofile=$(ulimit -n)
-        if [ "$nofile" != unlimited ] && [ "$nofile" -lt 10240 ]; then
-          ulimit -n 10240 2>/dev/null || true
-        fi
-
-        GITHUB_TOKEN=$github_token mise install --jobs=2
-      fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
+    # - name: mise-install
+    #   skip:
+    #     - run: test -n "${AI_AGENT:-}"
+    #   run: |
+    #     set -e
+    #     # 環境変数で GITHUB_TOKEN を渡している場合はそれを優先する。
+    #     github_token=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}
+    #     if [ -z "$github_token" ]; then
+    #       echo "warning: GITHUB_TOKEN も gh auth token も取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
+    #     fi
+    #
+    #     # mise に組み込まれた aube（npm backend）は、aube CLI と違い RLIMIT_NOFILE を引き上げないため、
+    #     # macOS の既定値（256）のままだと npm:renovate 等で "Too many open files (os error 24)" になる。
+    #     nofile=$(ulimit -n)
+    #     if [ "$nofile" != unlimited ] && [ "$nofile" -lt 10240 ]; then
+    #       ulimit -n 10240 2>/dev/null || true
+    #     fi
+    #
+    #     GITHUB_TOKEN=$github_token mise install --jobs=2
+    #   fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
     - name: lefthook-install
       run: mise exec -- lefthook install
 
