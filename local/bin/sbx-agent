@@ -18,7 +18,7 @@
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
-#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:local）
+#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
 #   --no-template      template を指定せず sbx の既定 template で起動する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
@@ -34,7 +34,7 @@
 #
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
-#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:local）
+#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
@@ -244,8 +244,10 @@ readonly SANDBOX_POST_CREATE="${SANDBOX_SCRIPTS_DIR}/sandbox-post-create.sh"
 # crit / plannotator は sandbox 内では固定ポートで待ち受け、host port は sbx に自動採番させる
 readonly CRIT_SANDBOX_PORT=7842
 readonly PLANNOTATOR_SANDBOX_PORT=19433
-# mise run sandbox:build-template が作るローカル template の既定名
-readonly DEFAULT_TEMPLATE="sbx-agent:local"
+# mise run sandbox:build-template が agent ごとに作るローカル template の既定名。
+# 中身は同じで base image（FLAVOR）だけが agent に合わせてある。sbx は FLAVOR に合った
+# agent の kit（認証など）しか当てられないため、agent ごとに template を選ぶ。
+readonly DEFAULT_TEMPLATE="sbx-agent:${AGENT}"
 
 if ! command -v sbx >/dev/null 2>&1; then
     log_error "sbx コマンドが見つかりません。'mise install' で導入してください（docs/docker-sandboxes.md 参照）"
@@ -719,7 +721,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
         create_cmd+=(--static-mcp "$spec")
     done
-    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:local` のような
+    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:claude` のような
     # ローカルにしか無い template をレジストリから引こうとしてしまう（sbx 0.47.0 の
     # `sbx create --help` で確認。docs も `sbx run --pull never -t TAG` を例示している）。
     # never ではなく missing にするのは、SBX_AGENT_TEMPLATE にレジストリ上の参照を

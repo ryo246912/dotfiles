@@ -71,8 +71,10 @@ backend = "sbx"
 default_agent = "claude"
 # sandbox 名の接頭辞（sandbox 名は <prefix>-<task>-<agent>）
 name_prefix = "mw"
-# sandbox template の OCI 参照（空なら sbx-agent の既定 = mise run sandbox:build-template で作る sbx-agent:local）
-# template = "sbx-agent:local"
+# sandbox template の OCI 参照（空なら sbx-agent の既定 = mise run sandbox:build-template が
+# agent ごとに作る sbx-agent:<agent>）。設定すると全 agent で同じ template になるため、
+# agent と base image（FLAVOR）が合わないと作成に失敗する
+# template = "sbx-agent:claude"
 # 共有 skills store（~/.claude/skills 等から sbx skills import したもの）の扱い
 #   off | readonly | readwrite
 skills = "readonly"

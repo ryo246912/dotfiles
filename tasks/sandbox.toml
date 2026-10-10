@@ -54,10 +54,28 @@ if [ -z "$repo_root" ]; then
 fi
 context="${repo_root}/config/devcontainer"
 dockerfile="${context}/Dockerfile.sandbox"
-tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
-# -docker 版でないと sandbox 内に dockerd が無い。shell-docker は sbx create claude の
-# kit 適用に失敗するため使えない（Dockerfile.sandbox 参照）
-variant="${SBX_TEMPLATE_VARIANT:-claude-code-docker}"
+# agent ごとに、中身は同じで base image だけが違う template を作る（sbx-agent:<agent>）。
+# sbx は template の base（FLAVOR）を記録し、`sbx create <agent>` はその agent 用の kit
+# （認証・network policy など）を当てるため、agent と FLAVOR が合わないと作成に失敗するか、
+# kit が当たらずログインを求められる。agent を含まない shell-docker も同じ理由で使えない。
+# -docker 版でないと sandbox 内に dockerd が無い。sbx-agent は agent に合った template を選ぶ。
+#
+# SBX_TEMPLATE_AGENTS で作る agent を絞れる（ディスクを食うため、使わない agent は外す）。
+agents="${SBX_TEMPLATE_AGENTS:-claude codex copilot}"
+variant_for() {
+  case "$1" in
+    claude) echo claude-code-docker ;;
+    codex) echo codex-docker ;;
+    copilot) echo copilot-docker ;;
+    *) return 1 ;;
+  esac
+}
+for agent in $agents; do
+  variant_for "$agent" >/dev/null || {
+    echo "error: 未対応の agent です: $agent（claude / codex / copilot）" >&2
+    exit 2
+  }
+done
 
 for cmd in docker sbx; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }
@@ -86,8 +104,8 @@ else
   echo "warn: gh のトークンが取得できないため build secret なしで続行します（API レート制限に注意）" >&2
 fi
 
-tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
-trap 'rm -f "$tar_path"' EXIT
+tar_path=""
+trap 'rm -f "${tar_path:-}"' EXIT
 
 # provenance / SBOM の attestation を切る。付いていると出力が単一イメージではなく
 # attestation manifest を含む OCI index（manifest list）になり、`docker image save` した
@@ -99,21 +117,24 @@ if docker build --help 2>/dev/null | grep -q -- '--provenance'; then
   attest_args="--provenance=false --sbom=false"
 fi
 
-echo "==> docker build ($tag, variant=$variant)"
-# shellcheck disable=SC2086 # secret_args / attest_args は意図的に分割させる
-if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
-  $secret_args \
-  $attest_args \
-  --build-arg "VARIANT=${variant}" \
-  -f "$dockerfile" \
-  -t "$tag" \
-  "$context"; then
-  echo >&2
-  echo "error: docker build が失敗しました" >&2
-  # このイメージはツールチェイン一式（go / node / python / bun 他）で数 GB になるため、
-  # 全ステップ成功したあと "exporting to image" で input/output error になる場合は
-  # ほぼ Docker Desktop のディスク不足。ビルド内容の問題と紛れやすいので明示する。
-  cat >&2 <<'HINT'
+for agent in $agents; do
+  variant=$(variant_for "$agent")
+  tag="sbx-agent:${agent}"
+  echo "==> docker build ($tag, variant=$variant)"
+  # shellcheck disable=SC2086 # secret_args / attest_args は意図的に分割させる
+  if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
+    $secret_args \
+    $attest_args \
+    --build-arg "VARIANT=${variant}" \
+    -f "$dockerfile" \
+    -t "$tag" \
+    "$context"; then
+    echo >&2
+    echo "error: docker build が失敗しました" >&2
+    # このイメージはツールチェイン一式（go / node / python / bun 他）で数 GB になるため、
+    # 全ステップ成功したあと "exporting to image" で input/output error になる場合は
+    # ほぼ Docker Desktop のディスク不足。ビルド内容の問題と紛れやすいので明示する。
+    cat >&2 <<'HINT'
   ヒント: 各ステップは成功したのに "exporting to image" で
   "input/output error" になった場合は Docker Desktop のディスク不足がほぼ原因です。
     1. docker system df で使用量を確認する
@@ -123,24 +144,31 @@ if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
   docker builder prune でも空きますが、mise のインストール済みツールの cache mount も
   消えるため、次回のビルドは初回と同じフルインストールになります。
 HINT
-  exit 1
-fi
+    exit 1
+  fi
 
-echo "==> docker image save -> sbx template load"
-# 数 GB の tar を書くため、一時ディレクトリにも同等の空きが必要。
-# set -u 下で TMPDIR 未設定の環境（Linux では珍しくない）だと、メッセージ自体が
-# "TMPDIR: unbound variable" で落ちて診断が出ないため既定値を入れる
-# （mktemp -t 側は未設定でもシステムの一時ディレクトリへフォールバックする）。
-if ! docker image save "$tag" -o "$tar_path"; then
-  echo "error: docker image save が失敗しました（${TMPDIR:-/tmp} の空き容量を確認してください）" >&2
-  exit 1
-fi
-sbx template load "$tar_path"
+  echo "==> docker image save -> sbx template load"
+  # 数 GB の tar を書くため、一時ディレクトリにも同等の空きが必要。
+  # set -u 下で TMPDIR 未設定の環境（Linux では珍しくない）だと、メッセージ自体が
+  # "TMPDIR: unbound variable" で落ちて診断が出ないため既定値を入れる
+  # （mktemp -t 側は未設定でもシステムの一時ディレクトリへフォールバックする）。
+  tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
+  if ! docker image save "$tag" -o "$tar_path"; then
+    echo "error: docker image save が失敗しました（${TMPDIR:-/tmp} の空き容量を確認してください）" >&2
+    exit 1
+  fi
+  sbx template load "$tar_path"
+  rm -f "$tar_path"
+  # sbx の image store へコピー済みなので、ホスト側の image は消してディスクを空ける
+  # （agent の数だけ数 GB ずつ増えるため）。mise のインストール済みツールは cache mount に
+  # 残るので、次回のビルドも差分だけで済む。
+  docker image rm "$tag" >/dev/null 2>&1 || true
+done
 
 echo "==> 完了。利用可能な template:"
 sbx template ls
 echo
-echo "sbx-agent / multi-worktree dev は $tag を自動で使います"
+echo "sbx-agent / multi-worktree dev は agent に合わせて sbx-agent:<agent> を自動で使います"
 echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
 '''
 
@@ -284,7 +312,8 @@ main() {
   # 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
 
   sandbox="${1:-}"
-  tag="${2:-sbx-agent:local}"
+  # 保存元 sandbox の agent に合わせた名前にする（sbx-agent は sbx-agent:<agent> を使う）
+  tag="${2:-sbx-agent:claude}"
   [ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
   command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
 
@@ -377,7 +406,8 @@ main() {
   do_cache=false
   cache_all=false
   failed=0
-  tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
+  # build-template が agent ごとに作る template（旧名の sbx-agent:local も掃除対象にする）
+  tags="sbx-agent:claude sbx-agent:codex sbx-agent:copilot sbx-agent:local"
 
   # cache mount（mise のインストール済みツール）を残して build cache を掃除するための filter。
   # docker buildx prune の filter に type があり、exec.cachemount がこれに当たる
@@ -430,13 +460,15 @@ main() {
     # 3) ホストに残る template image。sbx template load で sbx 側の image store に
     #    コピー済みなので、ホストのこれは次回ビルドの layer cache としてしか使わない。
     if [ "$do_template" = true ]; then
-      echo "==> ホストの template image ($tag)"
-      if docker image inspect "$tag" >/dev/null 2>&1; then
-        docker image ls "$tag" || true
-        run_or_show docker image rm "$tag"
-      else
-        echo "  (無し)"
-      fi
+      for tag in $tags; do
+        echo "==> ホストの template image ($tag)"
+        if docker image inspect "$tag" >/dev/null 2>&1; then
+          docker image ls "$tag" || true
+          run_or_show docker image rm "$tag"
+        else
+          echo "  (無し)"
+        fi
+      done
       echo
     fi
 

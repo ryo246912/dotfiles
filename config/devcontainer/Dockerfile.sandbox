@@ -15,12 +15,14 @@
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
-#     `claude-code-docker` を使う。sandbox 内に dockerd を持つのは `-docker` 版だけで、通常版
-#     には docker CLI しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で
-#     特権モードになり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
-#     agent を含まない `shell-docker` は使えない。template には版（FLAVOR）が記録され、
-#     `sbx create claude` は claude 用の kit を当てようとして "failed to apply kit to sandbox"
-#     で作成に失敗するため（実機で確認）。
+#     agent ごとの `-docker` 版（claude-code-docker / codex-docker / copilot-docker）を
+#     VARIANT で切り替えて、中身が同じ template を agent の数だけ作る（sandbox:build-template）。
+#     sbx は template の base（FLAVOR）を記録し、`sbx create <agent>` はその agent 用の kit
+#     （認証など）を当てるため、FLAVOR と agent が合わないと "failed to apply kit to sandbox"
+#     で失敗するか、kit が当たらずログインを求められる（agent を含まない shell-docker も同じ。
+#     実機で確認）。sandbox 内に dockerd を持つのは `-docker` 版だけで、通常版には docker CLI
+#     しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードに
+#     なり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
 ARG VARIANT=claude-code-docker
 FROM docker/sandbox-templates:${VARIANT}
 
@@ -79,10 +81,10 @@ RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 # 無効化されてしまうため、残りは install の後に COPY する。
 COPY --chown=agent:agent mise.toml /mise/config.toml
 
-# agent CLI（claude / codex / copilot）も mise.toml のバージョンで入れる。base image
-# （claude-code-docker）には claude しか入っておらず、同じ template を ccmanager から
-# claude / codex / copilot で使い回すため。PATH は mise shim が base image の
-# ~/.local/bin より前なので、シェルから呼ぶ agent は mise 側になる。
+# agent CLI（claude / codex / copilot）も mise.toml のバージョンで入れる。base image には
+# 対応する agent しか入っていないため、どの template からでも全 agent を同じバージョンで使える
+# ようにする。PATH は mise shim が base image の ~/.local/bin より前なので、シェルから呼ぶ
+# agent は mise 側になる。
 # 特定のツールを外したい場合は --build-arg DISABLE_TOOLS=<tool>,... で指定する。
 ARG DISABLE_TOOLS=""
 
