@@ -56,16 +56,11 @@ __generate_and_load_completion() {
 
 # atuin
 if command -v atuin >/dev/null 2>&1; then
-    eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r)"
+    # 18.13.0 以降は既定で ? が Atuin AI にbindされるため無効化する
+    eval "$(atuin init zsh --disable-up-arrow --disable-ctrl-r --disable-ai)"
     export ATUIN_CONFIG_DIR="$HOME/.config/atuin"
     __generate_and_load_completion "atuin"
-    # daemon.autostart は atuin 18.13.0 以降の機能で、18.8.0 では無視される。
-    # daemon.enabled = true だとコマンド記録時に daemon へ接続するため、未起動ならここで起動する。
-    # 18.8.0 の daemon は起動時に古いソケットを消さないので、プロセスが無ければ残骸を消してから起動する。
-    if ! pgrep -f "atuin daemon" >/dev/null 2>&1; then
-        rm -f "${XDG_RUNTIME_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/atuin}/atuin.sock"
-        (atuin daemon >/dev/null 2>&1 &)
-    fi
+    # daemon は config.toml の daemon.autostart で必要時に自動起動される
 fi
 
 # aws-vault
