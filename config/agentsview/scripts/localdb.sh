@@ -408,6 +408,53 @@ push_local() {
 		agentsview pg push --no-vectors "$@"
 }
 
+# pidが$2秒以内に終了すれば0を返す。
+wait_exit() {
+	i=0
+	while kill -0 "$1" 2>/dev/null; do
+		[ "$i" -lt "$2" ] || return 1
+		sleep 1
+		i=$((i + 1))
+	done
+}
+
+# pg push --watchはdata dirごとにflockを取り、2つ目は`already locked`で即exitする。
+# flockはprocess終了で外れるので、このerrorは前回のwatcherがまだ生きていることを
+# 意味する。起きる経路は2つある。
+# - 前回のserveが終了処理中（SIGTERM後のpush完了待ちなど）。少し待てば消える。
+# - 前回のserveの親だけが消えた。mise runはtaskを別process groupで起動するので、
+#   ghost stop --forceなどでmiseだけがSIGKILLされると、このscriptのbashと
+#   watcher／pg serveがPID 1の下に取り残される。
+# 後者はbashへSIGTERMを送り、cleanup_serveにwatcherとpg serveを片付けさせる。
+stop_stale_serve() {
+	# 先頭の実行file名まで含めて照合し、文字列を含むだけのshellなどに当てない。
+	pids="$(pgrep -f '^([^ ]*/)?agentsview pg push --watch' || true)"
+	for pid in $pids; do
+		ppid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
+		[ -n "$ppid" ] || continue
+		target="$pid"
+		if [ "$ppid" != 1 ]; then
+			grandparent="$(ps -o ppid= -p "$ppid" 2>/dev/null | tr -d ' ')"
+			if [ "$grandparent" = 1 ] && ps -o args= -p "$ppid" 2>/dev/null | grep -q 'localdb\.sh serve'; then
+				target="$ppid"
+			else
+				echo "agentsview pg push --watch（pid ${pid}）の終了を待っています..." >&2
+				wait_exit "$pid" 15 && continue
+				echo "agentsview pg push --watch が既に動いています（pid ${pid}, parent ${ppid}）。" >&2
+				echo "別のagentsview:serveを止めるか、不要なら kill ${ppid} してから再実行してください" >&2
+				exit 1
+			fi
+		fi
+		echo "取り残されたagentsview serve（pid ${target}）を停止します" >&2
+		kill "$target" 2>/dev/null || true
+		if ! wait_exit "$pid" 30; then
+			echo "pid ${pid} が30秒以内に終了しなかったためSIGKILLします" >&2
+			pkill -9 -P "$target" 2>/dev/null || true
+			kill -9 "$target" "$pid" 2>/dev/null || true
+		fi
+	done
+}
+
 # dumpのINSERTをchunkごとのtransactionで流し、前後の行数差を報告する。
 import_sql_file() {
 	temp_counts_before="$(mktemp)"
@@ -485,6 +532,7 @@ push)
 	push_local "$@"
 	;;
 serve)
+	stop_stale_serve
 	push_local
 	export AGENTSVIEW_PG_SCHEMA="$schema"
 	export AGENTSVIEW_PG_URL="$host_url"
@@ -505,11 +553,21 @@ serve)
 	trap cleanup_serve EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
+	# terminal／tmux paneを閉じたときも子processを道連れにする。
+	trap 'exit 129' HUP
 
 	# watcherが落ちたままserveを続けると、sessionの収集が黙って止まる。どちらかが
 	# 終了したらもう一方も停止し、終了statusを引き継ぐ。macOS既定のbash 3.2には
 	# `wait -n` がないためpollで監視する。
+	# 親（mise）が消えたら止まる。mise runはtaskを別process groupで起動するので、
+	# ghost stop --force（SIGKILL）はmiseにしか届かず、ここで気付かないと
+	# watcherとpg serveが動き続けて次の起動がlockで落ちる。
+	parent_pid="$PPID"
 	while :; do
+		if [ "$(ps -o ppid= -p "$$" 2>/dev/null | tr -d ' ')" != "$parent_pid" ]; then
+			echo "parent process ${parent_pid} exited; stopping serve" >&2
+			exit 129
+		fi
 		if ! kill -0 "$watch_pid" 2>/dev/null; then
 			watch_status=0
 			wait "$watch_pid" || watch_status=$?

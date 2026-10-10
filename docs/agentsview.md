@@ -977,6 +977,36 @@ importはINSERTを一定件数ごとのtransactionへ分けて流す。Cockroach
 
 取り込みの前に、同じfilterで読み切るだけのpassを1度走らせる。dumpが途中で切れている場合、filterの出力をそのままpsqlへ繋ぐと、切れていると分かる時点では手前のchunkが既にcommit済みになってしまうためである。この検証passはDBへ触らないので、壊れたdumpでは1行も書き込まれない。
 
+#### `agentsview:serve`が`already locked`で止まる場合
+
+```text
+fatal: pg push --watch: already locked (~/.agentsview/pg-watch.lock)
+agentsview pg push --watch exited with status 1; stopping serve
+fatal: pg serve: schema migration failed: creating pg tables: context canceled
+```
+
+前回の`agentsview pg push --watch`がまだ生きている。lockは`flock`なのでprocessが終われば外れ、lock fileを消しても意味はない（最後の`context canceled`はwatcherの失敗でserveを止めた巻き添えで、原因ではない）。
+
+今すぐの対応は、残っているprocessを確認して止めることである。
+
+```sh
+ps -o pid,ppid,args -e | grep -E 'localdb.sh serve|agentsview pg' | grep -v grep
+```
+
+- PPIDが`1`の`localdb.sh serve`があれば、取り残された残骸である。そのPIDへ`kill <pid>`を送ると、scriptの後片付け（`cleanup_serve`）がwatcherと`pg serve`も止める。
+- `localdb.sh serve`が無く`agentsview pg push --watch`だけが残っている場合は、そのPIDへ`kill <pid>`を送る。
+- 親が生きている（別terminalやghostで動いている）場合は、そちらのserveを止める。
+
+止めたあと、もう一度psで何も出ないことを確かめてから`mise run agentsview:serve`を実行する。
+
+**ghostで動かす場合。** `ghost run mise run agentsview:serve`で起動し、`ghost stop`（TUIでは`s`）で止める。`mise run`はtaskを別process groupで起動するため、ghostのsignalはmiseにしか届かないが、次のように扱っている。
+
+| 止め方                                         | 挙動                                                                                                                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ghost stop`／TUIの`s`（SIGTERM）              | miseがtaskのprocess groupへSIGTERMを転送し、`cleanup_serve`がwatcherと`pg serve`の終了を待つ。ghostは送った瞬間に停止扱いにするが、process自体はpushの区切りまで少し残る             |
+| `ghost stop --force`／TUIの`Ctrl-K`（SIGKILL） | miseだけが即死する。`serve`は親が消えたことを1秒以内に検知して、自分でwatcherと`pg serve`を止める                                                                                    |
+| 停止直後に再起動                               | `serve`は起動前に前回のwatcherを最大15秒待つ。PPIDが1の`localdb.sh serve`（親を失った残骸）はSIGTERMで片付ける。親が生きたままのwatcherは別のserveが使用中とみなし、触らずに中断する |
+
 #### dumpの作り方（`pg_dump`を使わない理由）
 
 `pg_dump`はCockroachDBをsupportしない（[cockroachdb/cockroach#20296](https://github.com/cockroachdb/cockroach/issues/20296)）。`--schema`を渡すと`pg_dump`はschemaを絞るために次のqueryを送るが、CockroachDBは修飾付きのcollation名を解釈できず`at or near ".": syntax error`になる。
