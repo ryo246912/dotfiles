@@ -55,9 +55,9 @@ fi
 context="${repo_root}/config/devcontainer"
 dockerfile="${context}/Dockerfile.sandbox"
 tag="${SBX_TEMPLATE_TAG:-sbx-agent:local}"
-# agent を含まない shell 系の -docker 版（-docker 版でないと sandbox 内に dockerd が無い。
-# agent CLI は mise で入れる。Dockerfile.sandbox 参照）
-variant="${SBX_TEMPLATE_VARIANT:-shell-docker}"
+# -docker 版でないと sandbox 内に dockerd が無い。shell-docker は sbx create claude の
+# kit 適用に失敗するため使えない（Dockerfile.sandbox 参照）
+variant="${SBX_TEMPLATE_VARIANT:-claude-code-docker}"
 
 for cmd in docker sbx; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }

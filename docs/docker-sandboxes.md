@@ -947,9 +947,10 @@ mise run sandbox:build-template
 0. build context は **dotfiles リポジトリの `config/devcontainer/`**（配置先の
    `~/.config/devcontainer` ではない）。配置先が実体ファイルでない場合、BuildKit は
    コンテキスト外を指す symlink を辿らず `COPY` が "not found" で失敗するため
-1. `FROM docker/sandbox-templates:shell-docker`（Ubuntu + 非 root の `agent` ユーザー + sudo）。
-   特定の agent を含まない `shell` 系を使い、agent CLI は 3 で mise から入れます。
-   **`-docker` 版でないと sandbox 内に dockerd がありません**（通常版は docker CLI だけ）。`-docker` 版から作った
+1. `FROM docker/sandbox-templates:claude-code-docker`（Ubuntu + 非 root の `agent` ユーザー + sudo）。
+   **`-docker` 版でないと sandbox 内に dockerd がありません**（通常版は docker CLI だけ）。
+   agent を含まない `shell-docker` は使えません。template には版（FLAVOR）が記録され、
+   `sbx create claude` が claude 用の kit を当てようとして `failed to apply kit to sandbox` で失敗します。`-docker` 版から作った
    sandbox はエージェントのコンテナが microVM 内で特権モードになり、`/var/lib/docker` に専用
    ボリュームが付いて dockerd が自動起動します。別の版でビルドするなら `SBX_TEMPLATE_VARIANT` を指定
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
@@ -964,8 +965,8 @@ mise run sandbox:build-template
    （sbx の Docker daemon はホストの image store を共有しないため、tar 経由で渡す必要があります）
 
 **agent CLI（claude / codex / copilot）も mise で入れます**（バージョンは
-`config/devcontainer/mise.toml`）。base image（`shell-docker`）は agent を含まず、
-同じ template を claude / codex / copilot で使い回すためです。PATH は mise の
+`config/devcontainer/mise.toml`）。base image（`claude-code-docker`）には `claude` しか
+入っておらず、同じ template を claude / codex / copilot で使い回すためです。PATH は mise の
 shim が base image の `~/.local/bin` より前にあるので、シェルから呼ぶ agent は mise 側になります。
 特定のツールを外したいときは `--build-arg DISABLE_TOOLS=<tool>,...` で除外できます。
 
