@@ -1,7 +1,10 @@
 # MEMO: taplo.tomlのreloadには、拡張機能の再起動が必要
+# array_auto_expand: mise の [tools] で配列を持つインラインテーブル（trust_policy_excludes 等）が
+# 複数行に展開されて揃えが崩れるのを防ぐ。
 [formatting]
 align_entries       = true
 allowed_blank_lines = 1
 array_auto_collapse = false
+array_auto_expand   = false
 indent_string       = "    "
 reorder_keys        = true
