@@ -109,11 +109,11 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 
 まとめると、標準機能だけでは直近数件しか追えないので、履歴からインタラクティブに選びたいなら `yanky.nvim` か `nvim-neoclip.lua` を telescope/fzf-lua と組み合わせるのが定番。
 
-このdotfilesでは `nvim-neoclip.lua` を導入済み(`dot_config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
+このdotfilesでは `nvim-neoclip.lua` を導入済み(`config/nvim/lua/plugins/neoclip.lua`)。`<leader>y` で fzf-lua 経由のヤンク履歴ピッカーを開く。`<CR>`で`"`レジスタに設定し、直接ペーストする場合はfzf内で`<C-p>`を押す。
 
 ## コメントアウトの toggle
 
-`tpope/vim-commentary` を導入済み(`dot_config/nvim/lua/plugins/editor.lua`)。`gc` operator でコメントアウトの toggle ができる(すでにコメントアウトされていれば解除される)。
+`tpope/vim-commentary` を導入済み(`config/nvim/lua/plugins/editor.lua`)。`gc` operator でコメントアウトの toggle ができる(すでにコメントアウトされていれば解除される)。
 
 - カーソル行だけを toggle : `gcc`
 - 選択行(ビジュアルモード)を toggle : 範囲選択→ `gc`
@@ -135,7 +135,7 @@ tagsファイルがあると以下が使える
 
 ## Neovim の設定を再読み込みする
 
-`dot_config/nvim/` 以下の Lua 設定を変更した場合は、変更した内容に応じて次の方法で再読み込みする。
+`config/nvim/` 以下の Lua 設定を変更した場合は、変更した内容に応じて次の方法で再読み込みする。
 
 - 現在開いている Lua ファイルだけを再実行する: `:luafile %`
 - `init.lua` を再実行する: `:source $MYVIMRC`
@@ -144,3 +144,58 @@ tagsファイルがあると以下が使える
 `require()` で読み込み済みの Lua モジュールはキャッシュされるため、`:source $MYVIMRC` だけでは `lua/core/` や `lua/plugins/` 以下の変更が反映されない場合がある。また、autocmd、キーマップ、プラグインの初期化処理によっては、同じ設定を再実行すると処理が重複する場合がある。
 
 確実にすべての変更を反映するには、`:qa` で Neovim を終了してから再起動する。編集中のファイルがある場合は、先に `:wa` ですべて保存してから `:qa` を実行する。
+
+## プラグイン由来のエラーを調べて直す
+
+起動時やコマンド実行時に `Error in VimEnter Autocommands` のようなエラーが出たら、まずスタックトレースを下から読み、どこが原因かを切り分ける。
+
+- 自分の設定ファイル(例: `~/.config/nvim/lua/core/autocmds.lua:26`)は、エラーを起こした処理を呼び出した場所
+- その上にあるプラグインのファイル(例: `.../lazy/<プラグイン名>/lua/...:65`)が、実際にエラーを出している場所
+- `[C]: in function 'assert'` のように `assert` で落ちている場合は、プラグインが想定していない値(取得できないパスなど)を受け取ったことが多い
+
+### 原因がプラグイン側か確認する
+
+1. `:Lazy` を開き、対象プラグインのインストール済みのコミットを確認する(プラグインの行で `<CR>` を押すと詳細が出る)
+2. スタックトレースのファイルと行番号を、手元のファイル(`~/.local/share/nvim/lazy/<プラグイン名>/`)で開いて確認する
+3. 本家リポジトリの最新版で同じ箇所が変わっていないか確認する。`git log -S "<行の文字列>" -- <ファイル>` で、その行が追加・削除されたコミットを探せる
+4. 最新版で直っていれば、手元のプラグインが古いだけと判断できる。issue や PR もあわせて検索する
+
+### 直し方
+
+- 更新して直る場合: `:Lazy update <プラグイン名>` で更新する(すべて更新するなら `:Lazy update`)
+- 更新で壊れた場合: `:Lazy update` は `lazy-lock.json` も新しいコミットで書き換えるため、先に lock を更新前の内容に戻してから(git 管理していれば `git checkout <更新前のコミット> -- lazy-lock.json`) `:Lazy restore <プラグイン名>` を実行する。lock がない場合は、プラグイン定義に `commit = "<コミット>"` や `tag = "<タグ>"` を指定して一時的に固定する
+- 本家で直っていない場合: 自分の設定側で、エラーになる呼び出し方を避ける(引数やオプションを変える、対象のバッファを絞るなど)
+
+### プラグインを更新・再インストールできないとき
+
+`:Lazy update` で `You have local changes in ... Please remove them to update.` と出る場合は、プラグインのディレクトリ(`~/.local/share/nvim/lazy/<プラグイン名>/`)内のファイルが書き換わっていて、lazy.nvim が上書きを避けて更新を止めている。
+
+1. 何が変わったかを確認する: `git -C ~/.local/share/nvim/lazy/<プラグイン名> status --short`(`??` は追加されたファイルで、`diff` には出ない)と `git -C ~/.local/share/nvim/lazy/<プラグイン名> diff --stat`
+2. プラグイン本体を自分で直していないなら、中身は本家から取り直せばよい。Neovim をすべて終了してからディレクトリごと消し、起動して `:Lazy install`(または `:Lazy sync`)で入れ直す
+
+   ```sh
+   rm -rf ~/.local/share/nvim/lazy/<プラグイン名>
+   ```
+
+- Lazy の画面で `x`(削除)→ `I`(インストール)でも入れ直せるが、更新処理が動いている最中だと削除しきれないことがある。clone 中に `BUG: ... initial ref transaction called with existing refs` のような git の内部エラーが出たら、clone 先に前の ref が残っている状態なので、上の手順で Neovim を閉じてから消し直す
+- それでも同じエラーになる場合は、Neovim を通さずに `git clone` を直接試し、そこでも再現するなら git 自体を更新する
+
+#### ローカル変更が入る原因と防ぎ方
+
+自分で編集していないのに書き換わる場合は、ファイルを再帰的に整形するツールがプラグインのディレクトリまで処理していることが多い(変更されたのが `.json` / `.yml` / `.md` などの整形対象だけなら、ほぼこれ)。
+
+- この dotfiles の `mise run fix:*` タスク(`config/mise/tasks/fix.toml`)は、実行したディレクトリ以下の `**/*.md` などをすべて整形する。`$HOME` など広いディレクトリでは実行しない
+- Neovim の保存時の自動整形で、プラグインのファイルを開いて保存すると書き換わる。中身を読むだけなら保存しない
+
+### 起動を止めないための保険
+
+起動時の autocmd などでプラグインの関数を呼ぶ場合は、`pcall` で包んでおくと、プラグインの不具合で起動全体がエラーになるのを防げる。失敗したときは `vim.notify` で内容を通知しておくと、エラーに気づける。
+
+```lua
+local ok, err = pcall(function()
+  require("neo-tree.command").execute({ source = "filesystem", action = "show" })
+end)
+if not ok then
+  vim.notify("neo-tree の起動に失敗しました: " .. tostring(err), vim.log.levels.WARN)
+end
+```

@@ -3,19 +3,24 @@
 [crit](https://github.com/tomasz-tomczyk/crit) は、プラン・diff・フロントエンドをブラウザ上でレビューし、
 コメントをそのままエージェントへフィードバックできる CLI ツールです。
 **AIエージェントは devcontainer 内で実行する前提**で統合しています（devcontainer 定義は
-`dot_config/devcontainer/` を参照）。
+`config/devcontainer/` を参照）。
+Docker Sandboxes (`sbx`) で動かす場合は `appPort` の代わりに
+`sbx ports <sandbox> --publish 7842` でレビュー UI を公開し、割り当てられた host port は
+`sbx ports <sandbox>` で確認します（host port を固定すると sandbox を複数起動したときに衝突する。
+`sbx-agent` は起動時にこの公開と host port の記録まで自動で行う。
+[docs/docker-sandboxes.md](./docker-sandboxes.md) 参照）。
 
 ## 構成
 
-| 項目         | 設定                                                                  | 場所                                                                                  |
-| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                           | `dot_config/devcontainer/mise.toml`                                                   |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）            | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `dot_config/devcontainer/devcontainer.json`                                           |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                              | `dot_config/devcontainer/devcontainer.json`                                           |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）               | `dot_config/devcontainer/scripts/post-create.sh`                                      |
-| ポート記録   | 割り当てられた host port を `~/.crit-host-port` に記録                | `dot_config/devcontainer/scripts/executable_post-start.sh`（適用後: `post-start.sh`） |
+| 項目         | 設定                                                                  | 場所                                                  |
+| ------------ | --------------------------------------------------------------------- | ----------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                           | `config/devcontainer/mise.toml`                       |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）            | `config/devcontainer/devcontainer.json` (`remoteEnv`) |
+| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                | `config/devcontainer/devcontainer.json` (`remoteEnv`) |
+| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `config/devcontainer/devcontainer.json`               |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                              | `config/devcontainer/devcontainer.json`               |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）               | `config/devcontainer/scripts/post-create.sh`          |
+| ポート記録   | 割り当てられた host port を `~/.crit-host-port` に記録                | `config/devcontainer/scripts/post-start.sh`           |
 
 `~/.crit.config.json` の内容:
 
@@ -69,7 +74,7 @@ Docker がコンテナのポートをホストの `127.0.0.1` にだけ publish 
    `mac-host` へ SSH して `docker port "$HOSTNAME" 7842/tcp` を実行し、割り当てられた host port を取得
 2. 取得できたら `~/.crit-host-port` に書き込む
 
-`multi-worktree` に限らず、この base template (`dot_config/devcontainer/devcontainer.json`) から
+`multi-worktree` に限らず、この base template (`config/devcontainer/devcontainer.json`) から
 起動する devcontainer であればどの経路（devcontainer CLI 直接、VS Code など）でも同じ仕組みが働く。
 devcontainer 外（`mac-host` に SSH できない環境）では静かにスキップされる。
 
@@ -80,8 +85,8 @@ devcontainer 外（`mac-host` に SSH できない環境）では静かにスキ
 ## `/crit` skill（APM で upstream 依存として配布）
 
 crit@crit プラグインが提供する 2 つの skill を、**APM の外部依存として upstream から取得**しています。
-`dot_apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
-をコミット SHA 付きで宣言しており、`chezmoi apply` → `mise run apm:install`（= `apm install -g`）で各エージェント
+`apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
+をコミット SHA 付きで宣言しており、`mise bootstrap` → `mise run apm:install`（= `apm install -g`）で各エージェント
 向けに配置されます（`docs/apm.md` 参照）。skill 本文はこのリポジトリに vendor せず、pristine な upstream を使います。
 
 | skill      | 役割                                                               | 配布先                       |

@@ -30,7 +30,7 @@ run         = ["disable-checkout-persist-credentials"]
 
 ["fix:dockerfile-pin"]
 description = "Run dockerfile-pin (fix)"
-run         = "dockerfile-pin run --write"
+run         = "dockerfile-pin run --write --ignore-images docker/sandbox-templates:*"
 
 ["fix:toml"]
 description = "Run fix TOML files"
@@ -53,3 +53,7 @@ run         = "oxfmt --disable-nested-config '**/*.json'"
 description = "Run fix Markdown files"
 hide        = true
 run         = "oxfmt --disable-nested-config '**/*.md'"
+
+["fix:shell"]
+description = "Format shell scripts with shfmt"
+run         = "shfmt -w ."
