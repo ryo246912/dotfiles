@@ -449,6 +449,26 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             fi
         done
     fi
+
+    # codex は信頼したディレクトリなどを $CODEX_HOME/config.toml に書き込む。~/.codex/config.toml は
+    # dotfiles リポジトリへの symlink で、リポジトリは上で read-only マウントしているため、そのままだと
+    # "failed to persist config.toml" で信頼設定を保存できない。ホストと同じく dotfiles 側へ書けるよう、
+    # 実体のあるディレクトリ（リポジトリの codex/）だけを書き込み可で重ねる。codex は一時ファイル +
+    # rename で書くため、ファイル単体ではなくディレクトリでマウントする必要がある。
+    # 注意: sandbox 内の agent が config.toml / hooks.json を書き換えると、次にホストで codex を
+    # 起動したときにその hooks や MCP の起動コマンドが実行される（sandbox の外へ影響が出る）。
+    if [[ "$AGENT" == codex && -n "$CONFIG_DIR" && -L "${CONFIG_DIR}/config.toml" ]]; then
+        codex_config="${CONFIG_DIR}/config.toml"
+        for _ in 1 2 3 4 5 6 7 8; do
+            [[ -L "$codex_config" ]] || break
+            codex_config=$(resolve_symlink "$codex_config") || break
+        done
+        if [[ -f "$codex_config" ]] && codex_config_dir=$(cd "$(dirname "$codex_config")" 2>/dev/null && pwd -P); then
+            log_warn "codex の設定ディレクトリを書き込み可でマウントします: ${codex_config_dir}"
+            log_warn "  sandbox 内での config.toml / hooks.json の変更はホストの codex にも反映されます"
+            add_mount "$codex_config_dir"
+        fi
+    fi
 fi
 
 # ホスト連携: mac-host への SSH に使う devcontainer 専用鍵

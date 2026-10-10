@@ -536,6 +536,15 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 > これが無いと sandbox 内でリンク切れになり、crit などの skill が見つかりません。マウントは作成時に決まるため、
 > 既存の sandbox に反映するには `--new` で作り直してください。
 
+> [!WARNING]
+> `sbx-agent codex` では、`~/.codex/config.toml` の実体があるディレクトリ（dotfiles リポジトリの
+> `codex/`）を**書き込み可で**重ねてマウントします。codex は「このディレクトリを信頼するか」の答えを
+> `config.toml` に保存するため、read-only のままだと `failed to persist config.toml` で起動できません
+> （一時ファイル + rename で書くのでファイル単体ではなくディレクトリが要ります）。
+> ホストと同じく信頼設定は dotfiles 側に残りますが、sandbox 内の agent が `config.toml` /
+> `hooks.json` を書き換えると、次にホストで codex を起動したときにその hooks や MCP の起動コマンドが
+> 実行されます。sandbox の外に影響し得る経路なので、変更は `git diff codex/` で確認してください。
+
 `sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
 自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
 「SSH 鍵・skills・ドキュメントサイトの許可・ホスト設定をまとめて用意したいとき」に使う入り口です。
