@@ -452,7 +452,7 @@ name_prefix = "mw"
 # 共有 skills store の扱い（off | readonly | readwrite）
 skills = "readonly"
 # sandbox template の OCI 参照（空なら sbx-agent の既定 = agent ごとの sbx-agent:<agent>）
-# 設定すると全 agent で同じ template になるため、agent と FLAVOR が合わないと作成に失敗する
+# 設定すると全 agent で同じ template になるため、agent と FLAVOR が合わないと kit が適用されず、作成失敗またはログインを求められる
 # template = "sbx-agent:claude"
 # リソース上限
 # cpus = "4"
