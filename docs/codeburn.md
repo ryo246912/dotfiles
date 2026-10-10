@@ -62,7 +62,7 @@ codeburn report -p 30days --format json | jq '.activities[] | {category, cost, o
 
 ## ブラウザで見る
 
-`codeburn web`でlocalのweb dashboardが起動し、browserが開きます。`report`のTUIと同じ内容を、グラフ付きで見られます。
+`codeburn web`でlocalのweb dashboardが起動し、browserが開きます。`report`のTUIとほぼ同じ内容をグラフ付きで見られますが、web版にない機能もあります（下の「webで見られないもの」）。
 
 ```bash
 codeburn web                 # 既定は今日。http://127.0.0.1:4747 で待ち受ける
@@ -85,7 +85,31 @@ codeburn web --port 4800 --no-open   # port指定、browserを自動で開かな
 | Savings & waste                   | retryで余計にかかったcost（retry tax）など                                          |
 | Tools                             | tool別の呼び出し数                                                                  |
 
-`Context`では、`codeburn context`と同じくsessionを選んでcontextの内訳を見られます。
+### Contextタブ: contextの大きさと中身
+
+画面上部の`Context`に切り替え、`Claude Code`／`Codex`を選んでからsessionをclickすると、`codeburn context <session>`と同じ内訳が出ます。
+
+| 表示                      | 内容                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| Context (exact)           | 最後のturnのcontext量とwindowに対する割合（例: `67.7K / 200.0K`、34%）。API usageからの実測値 |
+| Est. tokens／Compactions  | session全体の推定token数と、compactionの回数                                                  |
+| role／block／tool別の内訳 | assistant・user・tool、さらにtext・tool-call・tool-result、tool名ごとのtoken数                |
+| Live window／Full history | 現在のwindow（compaction後）だけか、session全体かの切り替え                                   |
+
+`tool`／`tool-result`が大部分を占めていれば、test出力や全体Readなど大きいtool結果がcontextを埋めています。内訳のtoken数は文字数からの推定です。
+
+### webで見られないもの
+
+次はCLIだけの機能です（codeburn 0.9.25で確認）。
+
+| 知りたいこと                     | コマンド                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 無駄の検出と修正案（`optimize`） | `codeburn optimize`（JSONなら`--format json`）                                                         |
+| Bashコマンド別の呼び出し数       | `codeburn report`のTUIの**Shell Commands**、または`codeburn report --format json \| jq .shellCommands` |
+| sessionごとのcost一覧            | `codeburn sessions --no-pager`                                                                         |
+| 期間の比較                       | `codeburn compare-periods`                                                                             |
+
+webの**Tools**はtool別（Bash、Read、Editなど）の呼び出し数までで、Bashの中身のコマンド別には分かれません。
 
 左のsidebarの**Share this device**／**Search local devices**は、他の端末と合計値を共有する機能です。このdotfilesでは端末をまたいだ集計はAgentsViewで行うので、onにしません。
 
