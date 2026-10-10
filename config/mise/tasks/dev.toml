@@ -63,7 +63,8 @@ hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; f
 
 rulesync_hash=$(
   {
-    find "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
+    # ~/.config 配下は config/ への symlink-each（mise.toml 参照）なので -L でリンク先を辿る
+    find -L "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
     for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
       [ -f "$f" ] && echo "$f"
     done
@@ -222,9 +223,25 @@ if [ ! -f "$source_lock" ]; then
   exit 1
 fi
 
+# ~/.apm は symlink-each（mise.toml 参照）だが、apm は lockfile を一時ファイル + os.replace で
+# 書き出すため（microsoft/apm の utils/atomic_io.py。symlink を解決しない）、apm install -g の
+# 後は ~/.apm/apm.lock.yaml が symlink から実ファイルに置き換わり repo 側は更新されない。
+# 実ファイルになっていたら repo へコピーし、symlink を張り直す（次の apply が conflict に
+# ならないようにするため）。symlink のまま（同一ファイル）なら何もしない。
+if [ "$source_lock" -ef "$destination_lock" ]; then
+  exit 0
+fi
+
 mkdir -p "$destination_dir"
-cp "$source_lock" "$destination_lock"
-chmod 0644 "$destination_lock"
+# 中断時に repo 側の lockfile が途中まで書かれた状態にならないよう、同じディレクトリの
+# 一時ファイルへコピーしてから rename する。
+temporary_lock=$(mktemp "${destination_lock}.XXXXXX")
+trap 'rm -f "$temporary_lock"' EXIT
+cp "$source_lock" "$temporary_lock"
+chmod 0644 "$temporary_lock"
+mv "$temporary_lock" "$destination_lock"
+# DOTFILES_DIR が相対パスでもリンク切れにならないよう、絶対パスへ解決してからリンクする。
+ln -sfn "$(cd "$destination_dir" && pwd -P)/apm.lock.yaml" "$source_lock"
 '''
 shell = "bash -c"
 

@@ -13,6 +13,7 @@ experimental = true
 "aqua:golangci/golangci-lint"                               = "2.13.2"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:mvdan/sh"                                             = "3.14.1"
+"aqua:neovim/neovim"                                        = "0.12.5"
 "aqua:openai/codex"                                         = "0.155.1"
 "aqua:rhysd/actionlint"                                     = "1.7.12"
 "aqua:secretlint/secretlint"                                = "13.0.5"
@@ -32,9 +33,8 @@ experimental = true
 "github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"                                = "0.19.1"
 "go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
-"npm:ccusage"                                               = "20.0.26"
 "npm:oxfmt"                                                 = "0.71.0"
-"npm:oxlint"                                                = "1.86.0"
+"npm:oxlint"                                                = "1.87.0"
 
 [settings.npm]
 bun = true

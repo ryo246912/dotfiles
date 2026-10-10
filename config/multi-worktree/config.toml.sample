@@ -57,13 +57,46 @@ exec_opts = [
 # デフォルトで使用するグループ名
 default_group = "default"
 
-# devcontainer 共通設定
+# devcontainer 共通設定（backend = "devcontainer" のときに使う）
 [settings.devcontainer]
 # コンテナが既に起動している場合、devcontainer up をスキップするか
 skip_up_if_running = true
 
-# dev サブコマンドで使用するコマンド一覧
-# `multi-worktree dev <task>` でコマンドを省略した場合、fzf で選択できる
+# Docker Sandboxes (sbx) 共通設定
+# 詳細は docs/docker-sandboxes.md を参照
+[settings.sandbox]
+# dev サブコマンドの既定バックエンド（"sbx" | "devcontainer"）
+backend = "sbx"
+# agent 名を省略したときに起動する agent
+default_agent = "claude"
+# sandbox 名の接頭辞（sandbox 名は <prefix>-<task>-<agent>）
+name_prefix = "mw"
+# sandbox template の OCI 参照（空なら sbx の既定 template を使う）
+# template = "docker.io/docker/sandbox-templates:claude-code"
+# 共有 skills store（~/.claude/skills 等から sbx skills import したもの）の扱い
+#   off | readonly | readwrite
+skills = "readonly"
+# リソース上限（空なら sbx の既定）
+# cpus = "4"
+# memory = "8g"
+# sandbox 作成時に公開するポート（host:sandbox）
+# crit / plannotator は sbx-agent が自動で公開するため、ここに書く必要はない
+# publish_ports = ["3000:3000"]
+# ホストで認証済みの MCP サーバを sandbox から使う（`mise run sandbox:mcp` で登録したもの）
+# static_mcp = ["notion", "aws-api", "chrome-devtools"]
+# task root に加えてマウントする workspace
+# sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
+# 以下は sbx-agent が既定で追加するため、ここに書く必要はない
+#   - 各 worktree の common git dir（実体リポジトリの .git）
+#   - ~/.config/git/config, ~/.config/git/gitignore, ~/.aws/config, ~/.agents
+#   - ~/.config/nvim, ~/.ssh/known_hosts, ~/.claude.json（いずれも read-only）
+#   - agent の設定ディレクトリ（~/.claude, ~/.codex, ~/.copilot）
+extra_workspaces = [
+  "~/.coderabbit",
+]
+
+# devcontainer backend の dev サブコマンドで使用するコマンド一覧
+# `multi-worktree dev <task> --devcontainer` でコマンドを省略した場合、fzf で選択できる
 [dev_commands]
 claude1 = "claude --dangerously-skip-permissions"
 claude2 = 'CLAUDE_CONFIG_DIR=$HOME/.claude-account2 claude --dangerously-skip-permissions'

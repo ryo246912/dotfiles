@@ -2,6 +2,8 @@
 
 ## mise lockfiles（Renovate の artifact 更新では生成しない）
 mise*.lock
+# クラウド環境は GitHub API を使えず、URL とチェックサムを記録した lockfile がないと mise install できないため除外しない。
+!/mise.lock
 
 *temp*
 # "templates/" は "*temp*" に部分一致してしまうため明示的に復帰させる

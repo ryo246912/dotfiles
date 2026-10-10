@@ -457,7 +457,7 @@ default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` �
 | ディレクトリ丸ごと除外      | `.chezmoiignore` に glob パターンで一括記述可能                                                                                          | エントリ単位の設定になる想定（glob 一括除外の仕組みは未確認）                                                               |
 | フック                      | `run_once_*`/`run_onchange_*`（コンテンツハッシュで再実行判定）+ `hooks.apply.pre/post`（任意の複雑な bash）                             | `[bootstrap.hooks.pre-dotfiles]`/`post-dotfiles`（dotfiles フェーズ全体を挟む粒度）                                         |
 | 差分プレビュー              | `chezmoi diff`                                                                                                                           | `mise bootstrap dotfiles diff`                                                                                              |
-| 適用の安全性                | `apply` で決定的に収束。衝突時は対話 or `--force`                                                                                        | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles` で上書き                                          |
+| 適用の安全性                | `apply` で決定的に収束。衝突時は対話 or `--force`                                                                                        | `status`/`diff`/`apply` の3段階。デフォルトは衝突拒否、`--force-dotfiles`（`apply` では `--force`）で上書き                 |
 | 逆方向同期（配置先→source） | 無し（source を直接編集するのが正）。ただし `chezmoi edit` で source を開いて即座に反映は可能                                            | あり（`track`/`add --changed`/`history`）。ブログの主眼と推測される新機能                                                   |
 | バージョン履歴              | git（source dir 自体が git repo）                                                                                                        | git（source dir）に加え、mise 独自の checkpoint/history ストアが並走する模様                                                |
 | 暗号化・秘密情報            | 組み込みテンプレート関数でパスワードマネージャー多数連携（bitwarden/1Password/pass/keyring等） + 外部ツール（本リポジトリは `fnox`）併用 | エントリに `encrypt = true` + `[history.encryption].recipients`（age 系）。パスワードマネージャー連携の組み込み関数は未確認 |
@@ -543,10 +543,10 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   OS 限定のファイル（chezmoi で `{{ else }}` 分岐により除外されていたもの）は、当初は
   mise のネイティブな `mise.<ENV>.toml` オーバーレイ機構（`MISE_ENV` に応じて自動マージ
   される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
-  `mise.linux.toml` に振り分けていたが、後に `~/.config` を track mode へ移行した際に
-  ほとんどが共通 `config/` へ吸収され、OS 限定で今も copy として残るのは
-  mise 自体の tool/config pin（`mise.mac.toml`）と hammerspoon・autohotkey の
-  seed 元（`config-mac/`・`config-linux/`。詳細は後述の track/history の節）だけになった。
+  `mise.linux.toml` に振り分けている。現在は mise 自体の tool/config pin
+  （`config-mac/mise`）、hammerspoon・vicinae（`config-mac/`）、autohotkey
+  （`config-linux/`）と、`~/.config` 共通 symlink-each の OS 別 exclude（旧 `.chezmoiignore` の
+  darwin/else 分岐相当）がこの振り分けの対象。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
   → `{% if os() == "macos" %}` のような機械的な置換がほとんどで、11 ファイルの書き換えは
   数十分で完了した（`exec()` が `set -e` 相当で動くため、失敗しうるシェルコマンドは
@@ -591,8 +591,14 @@ bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstra
     `~/.config`の広い範囲）のprotective checkpointを作る。ファイル数の多い実環境では、
     実際のcopyが1ディレクトリだけでもこのwalkとGit snapshotに約80秒かかっていた。
     post-mergeはGit管理されたsourceからの自動再適用であり、常駐history-watchが編集を
-    別途保存するため、この自動経路だけoperation checkpointを無効化する。通常の手動apply、
-    `mise bootstrap dotfiles save`、history-watch、full bootstrapではhistoryを維持する。
+    別途保存するため、この自動経路ではoperation checkpointを無効化する。
+    同じ理由で、手動applyのtask（`bootstrap:dotfiles:apply`・
+    `bootstrap:dotfiles:apply-interactive`）も`MISE_HISTORY_ENABLED=0`で実行する。
+    historyが有効なapplyはoperation lockを取りに行くが、history-watchが`~/.config`の
+    保存・定期スキャンでlockを握っていると、mise固定の30秒待った後に
+    `another history operation is running`で失敗することが頻発したため。
+    `mise bootstrap dotfiles save`、history-watch、full bootstrap、
+    素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
@@ -660,21 +666,25 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
 ### ディレクトリ単位で宣言する（ブランケットコピー）
 
 `target` はファイルだけでなく**ディレクトリ**も指定でき、`copy`/`symlink` は
-ディレクトリを渡すと中身ごと再帰的に配置する。**mise には chezmoi の `.chezmoiignore`
-に相当する「ディレクトリ丸ごと配りつつ一部だけ除外する」機能は無い**（`ignore`/
-`exclude` のようなフィールドを試したが実機で無視されるだけだった）。
-`"~/.config" = { source = "config", mode = "copy" }` のように宣言すると、
+ディレクトリを渡すと中身ごと再帰的に配置する。
+`"~/.local" = { source = "local", mode = "symlink-each" }` のように宣言すると、
 **source ディレクトリに物理的に存在するファイルは何であれ、TOML に書いていなくても
-全部コピーされる**。
+全部配置される**。一部だけ除外したい場合は、ディレクトリを walk する
+`copy`/`symlink-each` エントリの `exclude`（glob の配列）を使う（chezmoi の
+`.chezmoiignore` 相当。`~/.config` の symlink-each エントリで使用中。`min_version` の
+2026.9.2 で同じ仕様の `exclude` があることを mise の該当タグの docs で確認済み）。`/` を含まない
+パターンは任意のパス要素に、含むパターンは source root 基準でマッチする。先頭 `/` で
+root に固定する書き方は mise 2026.9.15 以降でしか効かないため使わない。
 
 本リポジトリではこれを逆手に取り、以下の方針でリポジトリのディレクトリ構成そのものを
-「ブランケットコピーしてよい形」に揃えた（`~/.apm`・`~/.claude`・`~/.codex`・`~/.local` に
-現在も採用中。**`~/.config` 自体は後に track mode へ移行しており、この節のパターンでは
-なくなった**。track の詳細・具体的な現在の `~/.config` 内訳は前節「target → source
-の逆方向ワークフロー」参照）:
+「ブランケットコピーしてよい形」に揃えた（`~/.local`・`~/.apm`・`~/.aws`・`~/.claude`・
+`~/.codex` は同じディレクトリ構成のまま symlink-each で、`~/.config` は track と `exclude`
+付きの symlink-each の併用で配置している。詳細は後述の「target → source の逆方向ワークフロー」
+参照）:
 
 - **配ってよいファイルだけを置く専用ディレクトリを決め**、`mise.toml`（共通）から
-  `"~/.apm" = { source = "apm", mode = "copy" }` のように1行でまとめて配る。
+  `"~/.local" = { source = "local", mode = "symlink-each" }`（`~/.apm` 等も同じ）
+  のように1行でまとめて配る。
   これで `[dotfiles]` は194行→11行（当時の `~/.config` 込みの数字）まで縮んだ。
 - **テンプレート**（Tera）が要るファイルは配布元ディレクトリの外、`templates/` に隔離する
   （配布元ディレクトリ配下に置いたままだと、ブランケット copy が未レンダリングの
@@ -692,13 +702,11 @@ run apm:sync` のように呼び出し時の config root を global 側に切り
   共存する**ことを実機で確認済み。そのため OS 限定ファイルは 1 ファイルずつではなく、
   ディレクトリ単位でまとめて宣言してよい。今後そのディレクトリにファイルを追加しても
   `[dotfiles]` 側の追記が不要になる。
-  **`~/.config` を track mode へ移行した現在の本リポジトリでは、このパターンで
-  残っているのは mise 自体の tool/config pin（`config-mac/mise` → `mise.mac.toml`）
-  だけ**。それ以外の OS 限定ファイル（hammerspoon・vicinae・autohotkey）は `[dotfiles]` の
-  宣言的コピーではなく、track mode の節で述べた `[bootstrap.hooks.pre-dotfiles]`
-  の一度きり seed（find+cp、`[dotfiles]` に書かない）で配る形に変わった——OS ごとに
-  「常に収束させたい」ものではなく「初回だけ置いて、あとは手元編集の history に
-  任せたい」ものだったため。`mise.linux.toml` はこの移行で対象が無くなり削除した。
+  本リポジトリでは mise 自体の tool/config pin（`config-mac/mise`）と
+  hammerspoon・vicinae を `mise.mac.toml`、autohotkey を `mise.linux.toml` で宣言している。
+  （一時期は track mode の `~/.config` へ pre-dotfiles hook で「無いものだけ」seed する
+  運用にしていたが、`config/` の更新が既存ファイルへ反映されないため、`config/` の
+  各ファイルへ symlink-each でリンクを張る双方向の構成に変えた。）
 - **絶対に配りたくないファイル**（旧 chezmoi の `.chezmoiignore` で丸ごと除外していた
   もの。例: `vscode`/`dbeaver`/`sidebery`/`rclone`/`karabiner-ts`/`raycast`/
   `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
@@ -764,8 +772,7 @@ chezmoi の `.chezmoiignore` OS 条件分岐に相当する「このファイル
 ```sh
 mise.toml        # 共通（全 OS で配る）
 mise.mac.toml     # MISE_ENV に "mac" を含むときだけ追加で読まれる
-mise.linux.toml   # 存在すれば MISE_ENV に "linux" を含むときだけ追加で読まれる
-                  # （本リポジトリでは現在 linux 固有の [dotfiles] entry が無いため未使用）
+mise.linux.toml   # MISE_ENV に "linux" を含むときだけ追加で読まれる
 ```
 
 同一ファイル内で OS ごとに**内容の一部だけ**変えたい場合（1ファイルは常に配るが
@@ -816,27 +823,62 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   `config/mise/config.toml`（`~/.config/mise/config.toml` へ deploy される git source）に
   `"~/.config" = { mode = "track" }` を書くことで、通常の `[dotfiles]` copy と同じ
   「git で編集 → deploy」の流儀を保ったまま track を宣言している。
-- **track には source からの初回配置（seeding）が無い。** 追跡対象が存在しない場合は
+- **track には source からの配置が無い。** 追跡対象が存在しない場合は
   「存在するようになったら追跡する」だけで待機し、内容を生成してはくれない
-  （`mise bootstrap dotfiles track` を実行しても同様）。そのため、真新しいマシンでは
-  何もデプロイされない。本リポジトリでは `[bootstrap.hooks.pre-dotfiles]`
-  （`mise.toml` 参照）で `config/`（共通）と、OS 限定で残った
-  `config-mac/hammerspoon`・`config-linux/autohotkey` から `~/.config` へ
-  「無いものだけ」を find+cp で seed してから track フェーズに入るようにしている。
-  より宣言的な代替（`[dotfiles]` の copy/template mode、`[bootstrap.files]`/
-  `[bootstrap.directories]`）は無いか公式ドキュメントで確認したが、いずれも
-  「ディレクトリツリー一括・無ければ配置してあれば触らない」という条件を満たす
-  仕組みは持たない（copy/template は常に source へ収束＝上書き、
-  `[bootstrap.files]` はファイル単位の絶対パス宣言かつ常に内容収束）ため、
-  hook 以外の書き方は無いという結論に至った（詳細は `mise.toml` のコメント参照）。
+  （`mise bootstrap dotfiles track` を実行しても同様）。本リポジトリでは
+  `"~/.config"` を track に加えて `{ source = "config", mode = "symlink-each" }` でも
+  宣言し（`mise.toml`、OS 別 exclude は `mise.mac.toml`/`mise.linux.toml`）、
+  `~/.config` 配下に `config/` の各ファイルへのシンボリックリンクを張っている。
+  実体は repo 側にあるため、`~/.config` 側の編集も repo の作業ツリーに直接反映される
+  （双方向）。以前は pre-dotfiles hook で「無いものだけ」を一度きり seed していたが、
+  `config/` 側の更新が既存ファイルへ反映されないため廃止した。
+  - 既存の実ファイルをリンクへ置き換えるには `mise bootstrap dotfiles apply --force` が
+    必要（初回移行時。`--force` 前に `diff -ru ~/dotfiles/config ~/.config` 等で
+    `~/.config` 側だけにある編集を repo へ取り込んでおくこと）。target 引数で
+    `"~/.config"` と指定すればこのエントリだけに force を閉じられる（後述の `~/.local` の
+    項参照。まとめて `apply --force --yes "~/.config" "~/.local" "~/.aws"` と書いてもよい）。
+  - 保存時に「一時ファイルへ書いて rename」するアプリは、リンクを実ファイルで
+    置き換えてしまう。その場合は repo との同期が切れ、次の apply が conflict になるため、
+    差分を repo へ取り込んでから `--force` で張り直す。
+  - mise の history は symlink をリンクとして記録する（中身は記録しない）ため、
+    リンク化したファイルの変更履歴は repo の git で追う。
+- **`~/.local` も同じ理由で `copy` → `symlink-each` に変えた**（`local/bin` のスクリプトを
+  `~/.local/bin` 側で直接直してもそのまま repo の作業ツリーへ入る）。既存環境には copy 時代の
+  実ファイルが `~/.local/bin` に残っているため、**移行時に一度だけ force が必要**:
+
+  ```sh
+  # 1) ~/.local 側だけにある編集が無いか確認する（管理外の share/state は除外）
+  diff -ru "$PWD/local" "$HOME/.local" | grep -v '^Only in .*/\.local[/:]'
+  # 2) このエントリだけを対象に置き換える
+  mise bootstrap dotfiles apply --force --yes "~/.local"
+  ```
+
+  `~/.config` も一緒に移行するなら target を並べる
+  （`apply --force --yes "~/.config" "~/.local" "~/.aws"`）。その場合は `MISE_ENV` が解決済みである
+  ことを確かめること（通常は `~/.zshenv` が `HOST_ENV` から導出する）。未設定のまま
+  `~/.config` を force すると `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、
+  他 OS 向けのファイルまでリンクしてしまう。新規マシンの初回適用のように `HOST_ENV` が
+  まだ無い段階では `MISE_ENV=mac`（または `linux`）を明示する（docs/setup.md 参照）。
+
+  target 引数を付けると force の影響をそのエントリに閉じられるので、他エントリの
+  ライブ編集を巻き込まない。target は前方一致ではなく「宣言したキーそのもの、または
+  解決後の絶対パス」との完全一致で照合され、`symlink-each` の各ファイルへの展開は
+  照合より後に走るため、ここでは個別ファイルではなく `"~/.local"` と書く
+  （mise の `src/system/files.rs: matches_target` と
+  `src/cli/dotfiles/mod.rs: select_requests` で確認）。
+  `mise bootstrap` を1コマンドで流す場合、同じ役割のフラグ名は `--force-dotfiles` に
+  なる（`apply` サブコマンドは `-f`/`--force`、トップレベルの `mise bootstrap` は
+  `--force-dotfiles`）。移行が済めば実ファイルは残らないので、以降の apply に force は
+  不要。
+
 - **track 対象木の中に、より具体的なキーの copy entry を入れ子にしても安全に共存する。**
   `"~/.config" = track` と `"~/.config/mise" = copy` を同時に宣言した場合、
   `~/.config/mise` 配下は copy 側が排他的に管理し、それ以外の `~/.config` 配下は
-  track 側が管理する（実機確認済み）。逆に、**同じ target path を track と copy の
-  両方でカバーすると、copy 側の再適用が track 側のライブ編集を無言で消す**
-  （実機で確認済みの破壊的挙動）。本リポジトリで `~/.config/mise`
-  （mise 自体の tool/config pin。git 側を正として常に収束させたい）だけを
-  copy のまま残し、それ以外を track にしているのはこのため。
+  track 側が管理する（実機確認済み。現在は `~/.config/mise` も `~/.config` の
+  symlink-each に含めている）。**同じ target path を track と copy の
+  両方でカバーすると、copy 側の再適用が track 側のライブ編集を上書きする**
+  （実機で確認済み。上書きされた編集は `mise bootstrap dotfiles rollback <path>` で
+  復元できる）。
 - **`status`/`diff`/`apply` は track エントリに対してはほぼ no-op**（state は常に
   `applied` ではなく `tracked` になる）。差分レビューは `bootstrap:dotfiles:diff`
   （`tasks/bootstrap.toml`）ではなく次項の `history diff` を使うこと。

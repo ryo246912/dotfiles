@@ -10,14 +10,65 @@ set -e
 # 読み取り専用でマウントされているため（/tmp 配下は使わない。docs/devcontainer.md 参照）、
 # 既存の ~/.gitconfig があっても include を追加する。
 gitconfig_host=~/.config/gitconfig-host
-if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
-	git config --global --add include.path "$gitconfig_host"
+# include.path が読めないパスを指していると、git は警告ではなく
+# "fatal: unable to access ...: Too many levels of symbolic links" で即死し、
+# status / diff を含む全コマンドが使えなくなる（core.excludesfile は warning で済む）。
+# そのため読めることを確認してから登録し、読めない場合は登録しない。
+if [ -r "$gitconfig_host" ]; then
+	if ! git config --global --get-all include.path | grep -Fxq "$gitconfig_host"; then
+		git config --global --add include.path "$gitconfig_host"
+	fi
+	echo "✓ ホストの git config を設定しました"
+else
+	# 前回の実行で登録済みなら取り除く。壊れた include を残すと git の全コマンドが fatal に
+	# なるため、ホスト設定を取り込めないことより優先する。
+	#
+	# 注意: ここで git config は使えない。--get-all も --unset-all も壊れた include を
+	# 展開しようとして同じ fatal で落ちるため、git は自分で壊れた include を外せない。
+	# そのため ~/.gitconfig を直接書き換える。
+	gitconfig_file="${HOME}/.gitconfig"
+	if [ -f "$gitconfig_file" ] && grep -Fq -- "$gitconfig_host" "$gitconfig_file"; then
+		gitconfig_tmp="${gitconfig_file}.tmp.$$"
+		# 置換で権限が広がらないよう元のモードを引き継ぐ。~/.gitconfig は credential
+		# helper の設定等を含みうるため、umask 任せにすると 0600 が 0644 になる。
+		# -L で symlink を辿る。付けないと symlink 自身のモード(777)を拾ってしまい、
+		# 実体を 777 に広げてしまう。
+		gitconfig_mode="$(stat -Lc '%a' "$gitconfig_file" 2>/dev/null || echo 600)"
+		# git は "\tpath = <value>" の形で書くため、行頭の空白を落として完全一致で消す
+		# （前方一致にすると gitconfig-host-foo のような別の値まで消えてしまう）。
+		# mv の宛先は readlink -f で実体にする: ~/.gitconfig が symlink の場合に
+		# symlink 自体を置き換えてリンクを壊さないため。
+		if awk -v target="path = ${gitconfig_host}" '
+			{ line = $0; sub(/^[ \t]+/, "", line); if (line == target) next; print }
+		' "$gitconfig_file" >"$gitconfig_tmp" \
+			&& chmod "$gitconfig_mode" "$gitconfig_tmp" \
+			&& mv "$gitconfig_tmp" "$(readlink -f -- "$gitconfig_file")"; then
+			echo "✓ 読めない include.path を ~/.gitconfig から取り除きました（残すと git が使えなくなるため）" >&2
+		else
+			rm -f "$gitconfig_tmp"
+			echo "   ~/.gitconfig から include.path を取り除けませんでした。手動で削除してください" >&2
+		fi
+	fi
+	# ここで続行すると、ホストの user.name / user.email が無いまま成功扱いになり、
+	# 後で commit 時に "Author identity unknown" として表面化する。
+	# mount が壊れている以上コンテナを作り直す必要があるので、明示的に失敗させる。
+	# （壊れた include は上で取り除いてあるので、調査のために git は使える状態で残る）
+	echo "✗ ${gitconfig_host} が読めないため、ホストの git config を取り込めません" >&2
+	echo "  ホスト側で mise bootstrap dotfiles apply を実行し、devcontainer を作り直してください" >&2
+	exit 1
 fi
-echo "✓ ホストの git config を設定しました"
 # host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
 # 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
 git config --global core.excludesfile ~/.config/gitignore-host
-git config --global credential.https://github.com.helper '!gh auth git-credential'
+# interactive.diffFilter もホスト設定では delta を指す（git add -p 等で使われる）。
+# pager 側は remoteEnv の GIT_PAGER=cat で潰しているが、こちらは env では上書きできない。
+git config --global interactive.diffFilter cat
+# URL 限定の helper は generic な credential.helper に「追加」されるだけなので、
+# 先に空文字でリストをリセットしてから gh を足す。これをしないとホスト設定の
+# credential.helper = osxkeychain が先に試され、コンテナには無いため
+# "git: 'credential-osxkeychain' is not a git command" が毎回出る。
+git config --global --replace-all credential.https://github.com.helper ""
+git config --global --add credential.https://github.com.helper '!gh auth git-credential'
 git config --global url.https://github.com/.insteadOf git@github.com:
 # コンテナには自分の worktree と common git dir しか mount しないため、同じリポジトリの
 # 他の worktree はコンテナから見えない。git gc の自動 prune がそれらを「消えた worktree」と
@@ -155,3 +206,4 @@ EOF
 else
 	echo "ℹ️ ~/.crit.config.json は既に存在します"
 fi
+
