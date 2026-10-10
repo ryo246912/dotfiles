@@ -18,7 +18,7 @@
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
-#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:local）
+#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
 #   --no-template      template を指定せず sbx の既定 template で起動する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
@@ -34,7 +34,7 @@
 #
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
-#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:local）
+#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
@@ -244,8 +244,14 @@ readonly SANDBOX_POST_CREATE="${SANDBOX_SCRIPTS_DIR}/sandbox-post-create.sh"
 # crit / plannotator は sandbox 内では固定ポートで待ち受け、host port は sbx に自動採番させる
 readonly CRIT_SANDBOX_PORT=7842
 readonly PLANNOTATOR_SANDBOX_PORT=19433
-# mise run sandbox:build-template が作るローカル template の既定名
-readonly DEFAULT_TEMPLATE="sbx-agent:local"
+# mise run sandbox:build-template が agent ごとに作るローカル template の既定名。
+# 中身は同じで base image（FLAVOR）だけが agent に合わせてある。sbx は FLAVOR に合った
+# agent の kit（認証など）しか当てられないため、agent ごとに template を選ぶ。
+# build-template が作らない agent（shell など）は template を渡さず sbx の既定に任せる。
+case "$AGENT" in
+    claude | codex | copilot) readonly DEFAULT_TEMPLATE="sbx-agent:${AGENT}" ;;
+    *) readonly DEFAULT_TEMPLATE="" ;;
+esac
 
 if ! command -v sbx >/dev/null 2>&1; then
     log_error "sbx コマンドが見つかりません。'mise install' で導入してください（docs/docker-sandboxes.md 参照）"
@@ -391,7 +397,6 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
     [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
-
     # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
     # read-only で渡さないと、sandbox 内では全てリンク切れになる。
@@ -405,6 +410,72 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     else
         log_warn "dotfiles リポジトリが見つからないため、ホスト設定の symlink が sandbox 内で解決できません"
         log_warn "  既定の ~/dotfiles 以外に clone している場合は DOTFILES_DIR を export してください"
+    fi
+
+    # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
+    # symlink で共有している（devcontainer の post-create.sh が作る）。sandbox 内では
+    # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
+    # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
+    # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
+    # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
+    # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
+    # 最終的に dotfiles リポジトリ内を指すディレクトリは read-only にする。書き込み可で渡すと、
+    # 上の `${dotfiles_repo}:ro` より子のマウントが優先され、sandbox からホストの dotfiles を
+    # 書き換えられてしまう。
+    if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
+        config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
+        dotfiles_repo_real=""
+        [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
+        # settings.json を先に処理する。下で親ディレクトリ（~/.claude）を read-only で足すため、
+        # その中の skills / projects などの書き込み可マウントより前に積んでおく。
+        for shared_entry in settings.json projects agents skills plugins; do
+            entry="${CONFIG_DIR}/${shared_entry}"
+            [[ -L "$entry" && -e "$entry" ]] || continue
+            target=$(resolve_symlink "$entry") || continue
+            # 親ディレクトリだけ正規化し、最後の要素は symlink のまま渡す
+            # （リンク先がさらに symlink でも、その経路ごと sandbox 内で解決させるため）
+            target_parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || continue
+            target="${target_parent}/$(basename "$target")"
+            [[ "$target" == "$config_dir_real"/* ]] && continue
+            # sbx がマウントできるのはディレクトリと通常ファイルだけで、ファイルへの symlink
+            # （~/.claude/settings.json など）は "exists but is not a directory" で作成ごと失敗する。
+            # ファイル（settings.json）はリンク先のあるディレクトリ（~/.claude）を read-only で
+            # 足して、symlink の連鎖ごと sandbox 内で解決させる。dotfiles リポジトリ内なら
+            # 上の `${dotfiles_repo}:ro` で既に解決するので足さない。
+            if [[ ! -d "$target" ]]; then
+                [[ -n "$dotfiles_repo_real" && ("$target_parent" == "$dotfiles_repo_real" || "$target_parent" == "$dotfiles_repo_real"/*) ]] \
+                    || add_mount "${target_parent}:ro"
+                continue
+            fi
+
+            # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
+            final=$(cd "$target" 2>/dev/null && pwd -P) || continue
+            if [[ -n "$dotfiles_repo_real" && ("$final" == "$dotfiles_repo_real" || "$final" == "$dotfiles_repo_real"/*) ]]; then
+                add_mount "${target}:ro"
+            else
+                add_mount "$target"
+            fi
+        done
+    fi
+
+    # codex は信頼したディレクトリなどを $CODEX_HOME/config.toml に書き込む。~/.codex/config.toml は
+    # dotfiles リポジトリへの symlink で、リポジトリは上で read-only マウントしているため、そのままだと
+    # "failed to persist config.toml" で信頼設定を保存できない。ホストと同じく dotfiles 側へ書けるよう、
+    # 実体のあるディレクトリ（リポジトリの codex/）だけを書き込み可で重ねる。codex は一時ファイル +
+    # rename で書くため、ファイル単体ではなくディレクトリでマウントする必要がある。
+    # 注意: sandbox 内の agent が config.toml / hooks.json を書き換えると、次にホストで codex を
+    # 起動したときにその hooks や MCP の起動コマンドが実行される（sandbox の外へ影響が出る）。
+    if [[ "$AGENT" == codex && -n "$CONFIG_DIR" && -L "${CONFIG_DIR}/config.toml" ]]; then
+        codex_config="${CONFIG_DIR}/config.toml"
+        for _ in 1 2 3 4 5 6 7 8; do
+            [[ -L "$codex_config" ]] || break
+            codex_config=$(resolve_symlink "$codex_config") || break
+        done
+        if [[ -f "$codex_config" ]] && codex_config_dir=$(cd "$(dirname "$codex_config")" 2>/dev/null && pwd -P); then
+            log_warn "codex の設定ディレクトリを書き込み可でマウントします: ${codex_config_dir}"
+            log_warn "  sandbox 内での config.toml / hooks.json の変更はホストの codex にも反映されます"
+            add_mount "$codex_config_dir"
+        fi
     fi
 fi
 
@@ -587,12 +658,18 @@ sandbox_exists() {
 ensure_host_prerequisites() {
     [[ "$HOST_BRIDGE" != true ]] && return 0
 
-    # GitHub トークン: プロキシが注入するため agent は生トークンを読めない
-    if ! sbx secret ls 2>/dev/null | grep -q '[[:space:]]github[[:space:]]'; then
-        if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-            sbx secret set github --command 'gh auth token' >/dev/null 2>&1 \
-                && log_info "github の secret を登録しました"
+    # GitHub トークン: プロキシが注入するため agent は生トークンを読めない。
+    # 登録済みでも毎回登録し直す。`gh auth refresh` などでホストのトークンが入れ替わると、
+    # sbx に保存された古い値のままでは sandbox 内の gh が "token expired or invalid" になる。
+    # secret は sandbox 作成時に注入されるため、ここ（作成時だけ呼ばれる）で揃えれば足りる。
+    if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
+        if sbx secret set github --command 'gh auth token' >/dev/null 2>&1; then
+            log_info "github の secret をホストの gh から登録し直しました"
+        else
+            log_warn "github の secret の登録に失敗しました（sandbox 内の gh が認証できない可能性があります）"
         fi
+    else
+        log_warn "ホストの gh が未ログインのため github の secret を更新できませんでした（gh auth login）"
     fi
 
     # mac-host への SSH。sandbox プロキシは host.docker.internal を localhost に
@@ -676,7 +753,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
         create_cmd+=(--static-mcp "$spec")
     done
-    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:local` のような
+    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:claude` のような
     # ローカルにしか無い template をレジストリから引こうとしてしまう（sbx 0.47.0 の
     # `sbx create --help` で確認。docs も `sbx run --pull never -t TAG` を例示している）。
     # never ではなく missing にするのは、SBX_AGENT_TEMPLATE にレジストリ上の参照を

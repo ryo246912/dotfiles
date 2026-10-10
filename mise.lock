@@ -66,19 +66,19 @@ url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/3849248
 provenance = "github-attestations"
 
 [[tools."aqua:secretlint/secretlint"]]
-version = "13.0.5"
+version = "13.0.7"
 backend = "aqua:secretlint/secretlint"
-specifiers = ["13.0.5"]
+specifiers = ["13.0.7"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
-checksum = "sha256:eec03d17b46b95e424eec8b5524ce6f21bd7ed3ec8f2f3916894e5e786ab788a"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.5/secretlint-13.0.5-linux-x64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/531516753"
+checksum = "sha256:05682b7062f30631b35ea3ef29f237f954815b480dfea435b49bdc3ec15a1573"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-linux-x64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842667"
 
 [tools."aqua:secretlint/secretlint"."platforms.macos-arm64"]
-checksum = "sha256:3198e963b03e5a9e32277697c5f2a21b7375daea0aa5b4be87271d6151d8465e"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.5/secretlint-13.0.5-darwin-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/531516748"
+checksum = "sha256:a034ca69f5fdc055d26e16b0c773d66924746807dc1fd64ed0e29377a05fa31c"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-darwin-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842665"
 
 [[tools."aqua:suzuki-shunsuke/ghalint"]]
 version = "1.5.6"

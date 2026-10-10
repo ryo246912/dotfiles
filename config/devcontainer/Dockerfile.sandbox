@@ -15,18 +15,40 @@
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
-ARG VARIANT=claude-code
+#     agent ごとの `-docker` 版（claude-code-docker / codex-docker / copilot-docker）を
+#     VARIANT で切り替えて、中身が同じ template を agent の数だけ作る（sandbox:build-template）。
+#     sbx は template の base（FLAVOR）を記録し、`sbx create <agent>` はその agent 用の kit
+#     （認証など）を当てるため、FLAVOR と agent が合わないと "failed to apply kit to sandbox"
+#     で失敗するか、kit が当たらずログインを求められる（agent を含まない shell-docker も同じ。
+#     実機で確認）。sandbox 内に dockerd を持つのは `-docker` 版だけで、通常版には docker CLI
+#     しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードに
+#     なり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
+ARG VARIANT=claude-code-docker
 FROM docker/sandbox-templates:${VARIANT}
 
 ARG AGENT_HOME=/home/agent
 
 USER root
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# curl / ca-certificates / git は base image に入っているが、下の mise のインストールや
+# git 操作に必須なので、別の版でビルドしても困らないよう明示しておく。
+#
+# apt のパッケージリストとダウンロード済み .deb は BuildKit の cache mount に置く。
+# image の layer には残らないので apt-get clean / rm -rf /var/lib/apt/lists/* は不要で、
+# 再ビルド時は差分だけ取得される。sharing=locked は同時ビルドで apt のロックが競合しないため。
+# Ubuntu 系 image の /etc/apt/apt.conf.d/docker-clean は install 後に .deb を消すので、
+# cache を効かせるために外して Keep-Downloaded-Packages を有効にする。
+RUN rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
     rsync \
-    zsh \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    zsh
 
 # 既定シェルを zsh にする（devcontainer と同じ）。
 # sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
@@ -59,9 +81,12 @@ RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 # 無効化されてしまうため、残りは install の後に COPY する。
 COPY --chown=agent:agent mise.toml /mise/config.toml
 
-# agent CLI（claude / codex / copilot）は base image 側が持っているため mise では入れない。
-# sbx が agent のバージョンと認証を管理するので、mise の shim で上書きしないようにする。
-ARG DISABLE_TOOLS="aqua:anthropics/claude-code,aqua:openai/codex,github:github/copilot-cli"
+# agent CLI（claude / codex / copilot）も mise.toml のバージョンで入れる。base image には
+# 対応する agent しか入っていないため、どの template からでも全 agent を同じバージョンで使える
+# ようにする。PATH は mise shim が base image の ~/.local/bin より前なので、シェルから呼ぶ
+# agent は mise 側になる。
+# 特定のツールを外したい場合は --build-arg DISABLE_TOOLS=<tool>,... で指定する。
+ARG DISABLE_TOOLS=""
 
 # root で install して最後に chown する。BuildKit の cache mount の uid を base image の
 # agent ユーザーに合わせて決め打ちしないための措置（uid は image 側の都合で変わりうる）。

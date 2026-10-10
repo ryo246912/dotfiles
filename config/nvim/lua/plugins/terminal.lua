@@ -14,6 +14,7 @@ return {
       require("core.file_actions").setup()
 
       local Terminal = require("toggleterm.terminal").Terminal
+      local float_term = require("utils.float_term")
       local keymap = vim.keymap.set
       local terminal_history_path = vim.fn.stdpath("state") .. "/terminal_command_history"
       local max_history = 30
@@ -58,18 +59,12 @@ return {
         end
 
         save_command_history(cmd)
-        Terminal:new({
-          cmd = cmd,
-          direction = "float",
-          hidden = true,
-          close_on_exit = false,
-          float_opts = {
-            border = "curved",
-          },
-        }):toggle()
+        float_term.open("popup_command", cmd, { close_on_exit = false })
       end
 
       local function open_popup_command_picker()
+        -- 実行中/実行済みのポップアップがあれば表示/非表示を切り替える
+        if float_term.toggle("popup_command") then return end
         local history = load_command_history()
         local choices = {}
         local values = {}
@@ -180,8 +175,49 @@ return {
         end)
       end
 
+      -- 表示中のポップアップ（float_term と toggleterm の float）を引っ込める。
+      -- 何も表示されていなければ、裏にあるポップアップのうち最後に引っ込めたものを出す
+      -- （,q で引っ込めたもの、,gg などで引っ込めたもののどちらも対象）
+      local last_batch = nil -- 最後に ,q で引っ込めたもの: { seq, terms, groups }
+      local function toggle_popups()
+        local tt = require("toggleterm.terminal")
+        local hidden_terms = {}
+        for _, term in ipairs(tt.get_all(true)) do
+          if term:is_open() and term:is_float() then
+            term:close()
+            table.insert(hidden_terms, term)
+          end
+        end
+        local hidden_groups, batch = float_term.hide_visible()
+        if #hidden_terms > 0 or #hidden_groups > 0 then
+          last_batch = { seq = batch, terms = hidden_terms, groups = hidden_groups }
+          return
+        end
+
+        local latest_groups, latest_seq = float_term.latest_hidden()
+        -- ,q で引っ込めたあとに ,gg などで別のものを引っ込めていたら、そちらを優先する
+        if last_batch and (latest_seq == nil or last_batch.seq >= latest_seq) then
+          local shown = float_term.show_groups(last_batch.groups)
+          for _, term in ipairs(last_batch.terms) do
+            if tt.get(term.id, true) and not term:is_open() then
+              term:open()
+              shown = true
+            end
+          end
+          last_batch = nil
+          if shown then
+            return
+          end
+          latest_groups = float_term.latest_hidden()
+        end
+        if not float_term.show_groups(latest_groups) then
+          vim.notify("裏にあるポップアップはありません", vim.log.levels.INFO)
+        end
+      end
+
+      keymap({ "n", "t" }, "<leader>q", toggle_popups, { noremap = true, silent = true, desc = "ポップアップを引っ込める/出し直す" })
       keymap({ "n", "t" }, "<leader>t", toggle_terminal, { noremap = true, silent = true, desc = "ターミナル開閉" })
-      keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップ" })
+      keymap({ "n", "t" }, "<leader>H", open_popup_command_picker, { noremap = true, silent = true, desc = "コマンド履歴・実行ポップアップを開閉" })
 keymap({ "n", "t" }, "<leader>gk", toggle_keifu, { noremap = true, silent = true, desc = "keifu を開閉" })
       keymap({ "n", "t" }, "<leader>E", toggle_filetree, { noremap = true, silent = true, desc = "filetree(ft) を開閉" })
       keymap({ "n" }, "<leader>md", toggle_leaf, { noremap = true, silent = true, desc = "Markdownプレビュー(leaf)" })
