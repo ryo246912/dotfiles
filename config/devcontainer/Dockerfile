@@ -11,11 +11,17 @@ ARG VERSION=ubuntu-24.04
 FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
 
 
-RUN apt-get update && apt-get install -y \
+# apt のパッケージリストと .deb は BuildKit の cache mount に置く（layer に残らないので
+# apt-get clean / rm -rf /var/lib/apt/lists/* は不要。Dockerfile.sandbox と同じ）。
+# docker-clean は install 後に .deb を消して cache を無効にするため外しておく。
+RUN rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install -y \
     rsync \
-    zsh \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    zsh
 ENV SHELL=/usr/bin/zsh
 #set default shell to zsh
 RUN chsh -s /bin/zsh

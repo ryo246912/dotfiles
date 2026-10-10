@@ -29,14 +29,23 @@ USER root
 
 # curl / ca-certificates / git は agent 向けの版には入っているが、shell 版の内容は明示されて
 # いないため、下の mise のインストールや git 操作に要るものは自前で入れておく。
-RUN apt-get update && apt-get install -y --no-install-recommends \
+#
+# apt のパッケージリストとダウンロード済み .deb は BuildKit の cache mount に置く。
+# image の layer には残らないので apt-get clean / rm -rf /var/lib/apt/lists/* は不要で、
+# 再ビルド時は差分だけ取得される。sharing=locked は同時ビルドで apt のロックが競合しないため。
+# Ubuntu 系 image の /etc/apt/apt.conf.d/docker-clean は install 後に .deb を消すので、
+# cache を効かせるために外して Keep-Downloaded-Packages を有効にする。
+RUN rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
     rsync \
-    zsh \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    zsh
 
 # 既定シェルを zsh にする（devcontainer と同じ）。
 # sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
