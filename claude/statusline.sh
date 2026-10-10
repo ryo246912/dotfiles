@@ -58,6 +58,9 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
 # claude.ai Pro/Max のみ、最初の API 応答後に現れる。window ごとに独立して欠けうるため、無い window はスキップする。
 # rate limit はアカウント単位なので、受け取った値を config dir ごとに保存し、
 # prompt を送る前（rate_limits がまだ無い間）はリセット前の保存値を表示する。
+# 複数セッションが同じファイルを更新するため、各セッションは自分が最後に受け取った（古いかもしれない）値で
+# 定期更新する。同じ枠（resets_at が同じ）なら使用率は増える一方なので、使用率の大きい方を新しい観測として残し、
+# resets_at が後の値は新しい枠として採用する。表示もこのマージ後の値を使う。
 # 青を基本に、残り 20% 未満で黄色、5% 未満で赤。
 # 予測: ここまでの消費ペース（使用率 ÷ 経過時間）が続くと仮定し、リセットまで持つなら ✓、
 # リセット前に尽きるなら ⚠ empty <尽きるまでの時間>（黄色、リセットまでの半分も持たないなら赤）。
@@ -66,13 +69,21 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
 now=$(date +%s)
 rl_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline-rate-limits.json"
 rl_now=$(printf '%s' "$input" | jq -c '
-  .rate_limits // {} | {five_hour, seven_day} | with_entries(select(.value.used_percentage != null))
+  .rate_limits // {} | {five_hour, seven_day} | with_entries(select(.value.used_percentage != null and .value.resets_at != null))
   | if length > 0 then . else empty end
 ' 2>/dev/null)
 rl_saved=$(jq -c 'objects' "$rl_file" 2>/dev/null)
 if [ -n "$rl_now" ]; then
-	# 今回の payload に無い window の保存値は保持する（既存の保存値とマージ）。
-	rl_merged=$(jq -nc --argjson old "${rl_saved:-null}" --argjson new "$rl_now" '($old // {}) + $new' 2>/dev/null)
+	# window ごとに新しい方の観測を残す。今回の payload に無い window の保存値は保持する。
+	# resets_at は応答ごとに数秒ずれうるため、60 秒以上後なら新しい枠とみなす。
+	rl_merged=$(jq -nc --argjson old "${rl_saved:-null}" --argjson new "$rl_now" '
+    ($old // {}) as $o
+    | $o + ($new | with_entries(
+        $o[.key] as $s
+        | if $s == null or ($s.resets_at // 0) + 60 < .value.resets_at then .
+          elif ($s.resets_at // 0) > .value.resets_at + 60 or ($s.used_percentage // 0) > .value.used_percentage then .value = $s
+          else . end))
+  ' 2>/dev/null)
 	rl_merged=${rl_merged:-$rl_now}
 	if [ "$rl_merged" != "$rl_saved" ]; then
 		# 書き込めない環境（読み取り専用 mount 等）では保存しないだけで表示は続ける。
@@ -85,10 +96,8 @@ limit_line=$(printf '%s' "$input" | jq -r --argjson now "$now" --argjson saved "
   def dur: if . >= 86400 then "\((. / 86400) | floor)d\(((. % 86400) / 3600) | floor)h"
            elif . >= 3600 then "\((. / 3600) | floor)h\(((. % 3600) / 60) | floor)m"
            else "\((. / 60) | floor)m" end;
-  # 保存値はリセット時刻を過ぎていたら使わない（Claude Code も同様に window を落とす）。
-  def pick($k):
-    if .rate_limits[$k].used_percentage? != null then .rate_limits[$k]
-    else $saved[$k]? | select(.resets_at != null and .resets_at > $now) end;
+  # $saved は今回の値とマージ済み。リセット時刻を過ぎた枠は使わない（Claude Code も同様に window を落とす）。
+  def pick($k): $saved[$k]? | select(.used_percentage != null and .resets_at != null and .resets_at > $now);
   def seg($label; $win):
     if . == null or .used_percentage == null then empty else
       ([[100 - .used_percentage, 0] | max, 100] | min) as $left
