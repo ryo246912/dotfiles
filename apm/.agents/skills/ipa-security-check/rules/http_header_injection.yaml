@@ -1,0 +1,133 @@
+category: http_header_injection
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.7 HTTPヘッダ・インジェクション"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/http-header.html
+cwe: CWE-113
+
+rules:
+  - id: IPA-SWS-1-HHDR-001
+    title: "header() に外部入力を連結 (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ヘッダ出力 API を使用し、入力に \r\n が含まれていれば 400 を返す (7-(i))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"](Location|Set-Cookie|Refresh|Content-Disposition)[^''"]*[''"]\s*\.\s*\$'
+            description: "header() に Location/Set-Cookie 等の文字列連結"
+          - type: regex
+            regex: 'header\s*\(\s*[^)]*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "header() にスーパーグローバルを直接渡している"
+          - type: regex
+            regex: 'setcookie\s*\(\s*[^,]+,\s*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "setcookie 値にスーパーグローバル直渡し"
+    fix_example:
+      php: |
+        $url = $_GET['url'];
+        if (preg_match('/[\r\n]/', $url)) { http_response_code(400); exit; }
+        header('Location: ' . $url);
+
+  - id: IPA-SWS-1-HHDR-002
+    title: "response.setHeader/addHeader に外部入力 (Java Servlet)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "入力に CRLF があれば 400。または sendRedirect 使用"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'response\.(setHeader|addHeader|addCookie)\s*\([^)]*request\.getParameter\('
+            description: "setHeader/addHeader にリクエストパラメータ直渡し"
+          - type: regex
+            regex: 'response\.sendRedirect\s*\(\s*request\.getParameter\('
+            description: "sendRedirect にリクエストパラメータ直渡し"
+
+  - id: IPA-SWS-1-HHDR-003
+    title: "Response.Redirect/AppendHeader に外部入力 (.NET)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "入力検証後にリダイレクト、または許可リスト URL のみ"
+    languages:
+      csharp:
+        patterns:
+          - type: regex
+            regex: 'Response\.(Redirect|AppendHeader|AddHeader)\s*\(\s*Request\.'
+            description: "Response.Redirect/AddHeader に Request 直渡し"
+
+  - id: IPA-SWS-1-HHDR-004
+    title: "redirect_to に params 直渡し (Rails)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ホワイトリストまたは allow_other_host: false で同一ホスト限定"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'redirect_to\s+params\['
+            description: "redirect_to に params 直渡し"
+          - type: regex
+            regex: 'response\.headers\[[^\]]+\]\s*=\s*params\['
+            description: "response.headers に params 直代入"
+
+  - id: IPA-SWS-1-HHDR-005
+    title: "res.setHeader/redirect に req 直渡し (Node.js)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "入力検証 (\r\n 含む場合は 400) + ホワイトリスト URL"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'res\.(setHeader|writeHead|redirect)\s*\([^)]*req\.(query|body|params|headers)'
+            description: "res の setHeader/redirect に req 直渡し"
+          - type: regex
+            regex: 'res\.cookie\s*\([^,]+,\s*req\.(query|body|params|headers)'
+            description: "res.cookie 値に req 直渡し"
+      typescript:
+        patterns:
+          - type: regex
+            regex: 'res\.(setHeader|redirect)\s*\([^)]*req\.(query|body|params)'
+            description: "res の setHeader/redirect に req 直渡し"
+
+  - id: IPA-SWS-1-HHDR-006
+    title: "生の print でヘッダ書き出し (Perl/CGI)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "CGI モジュールの redirect / header API を使用、CRLF 除去"
+    languages:
+      perl:
+        patterns:
+          - type: regex
+            regex: 'print\s+["''][^"'']*(Location|Set-Cookie):[^"'']*\$\w+'
+            description: "print で Location/Set-Cookie ヘッダ + 変数"
+
+  - id: IPA-SWS-1-HHDR-007
+    title: "入力に CRLF (\\r\\n / %0d%0a) 検査なし"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "ヘッダに使う入力で改行コード検査必須 (7-(ii))"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '%0d%0a|%0D%0A|%0a%0d'
+            description: "入力に URL エンコード CRLF (ペイロード形跡)"
+
+  - id: IPA-SWS-1-HHDR-008
+    title: "オープンリダイレクト (Location に任意URL)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "同一オリジン許可リストで Location 値を制限"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"]Location:\s*[''"]\s*\.\s*\$_(GET|POST|REQUEST)'
+            description: "Location ヘッダにスーパーグローバル直連結 (オープンリダイレクト)"
+      python:
+        patterns:
+          - type: regex
+            regex: 'redirect\s*\(\s*request\.(args|GET|POST|values)'
+            description: "Flask/Django redirect に外部入力"

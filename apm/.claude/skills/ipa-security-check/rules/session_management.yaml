@@ -1,0 +1,227 @@
+category: session_management
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.4 セッション管理の不備"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/session-management.html
+cwe:
+  - CWE-330
+  - CWE-384
+  - CWE-522
+  - CWE-614
+
+rules:
+  - id: IPA-SWS-1-SESS-001
+    title: "自前セッションID生成 (弱い乱数)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "フレームワーク標準セッション機構または CSPRNG (random_bytes 等) を使用 (4-(i))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'md5\s*\(\s*(time\(\)|microtime|uniqid|date\()'
+            description: "md5(time()) 等の予測可能なシード"
+          - type: regex
+            regex: 'sha1\s*\(\s*(time\(\)|microtime|uniqid|date\()'
+            description: "sha1(time()) 等の予測可能なシード"
+          - type: regex
+            regex: '(session_id|sid|token)\s*=\s*\b(uniqid|rand|mt_rand|time)\s*\('
+            description: "弱い乱数関数でセッションID生成"
+          - type: regex
+            regex: '\bmd5\s*\([^)]*\$user'
+            description: "ユーザIDをmd5でトークン化 (推測可能)"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'Math\.random\s*\(\s*\)'
+            description: "Math.random() はセッションID生成に不適"
+      python:
+        patterns:
+          - type: regex
+            regex: '\brandom\.(random|randint|choice|sample)\s*\('
+            description: "random モジュール (CSPRNG ではない) でセッションID生成"
+    fix_example:
+      php: |
+        $sid = bin2hex(random_bytes(32));
+
+  - id: IPA-SWS-1-SESS-002
+    title: "セッションIDをURLパラメータに格納 (4-(ii))"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "Cookie のみで管理し、URL Rewriting を無効化"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'session\.use_trans_sid\s*=\s*1'
+            description: "PHP session.use_trans_sid=1 (URL Rewriting 有効)"
+          - type: regex
+            regex: 'session\.use_only_cookies\s*=\s*0'
+            description: "PHP session.use_only_cookies=0"
+      all:
+        patterns:
+          - type: regex
+            regex: '[?&](sid|sessionid|PHPSESSID|jsessionid)=[^&"''\s]+'
+            description: "URL に sid/sessionid 等が露出している"
+          - type: regex
+            regex: ';jsessionid='
+            description: "Java JSESSIONID の URL Rewriting"
+
+  - id: IPA-SWS-1-SESS-003
+    title: "ログイン成功後のセッションID再生成漏れ (4-(iv)-a)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "認証成功直後に session_regenerate_id(true) / invalidate() / Session.Abandon() を呼ぶ"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\bauthenticate\s*\([^)]+\)\s*\)?\s*\{[^}]*\$_SESSION\[[^\]]+\]\s*='
+            description: "authenticate 後すぐ $_SESSION 代入 (regenerate_id なし)"
+      java:
+        patterns:
+          - type: regex
+            regex: 'getSession\s*\(\s*\)\.setAttribute\s*\(\s*"(user|userId|authenticated)"'
+            description: "ログイン後 setAttribute 前に invalidate していない可能性"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'session\[:user_id\]\s*=\s*\w+\.id(?!.*reset_session)'
+            description: "session[:user_id] 代入前後で reset_session が呼ばれていない"
+
+  - id: IPA-SWS-1-SESS-004
+    title: "Cookie の Secure 属性なし (4-(iii))"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "HTTPS 通信の Cookie に Secure 属性を必ず付与"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'session\.cookie_secure\s*=\s*(0|false|off|Off)'
+            description: "session.cookie_secure が無効"
+          - type: regex
+            regex: 'setcookie\s*\([^,]+,[^,]+,[^,]+,[^,]+,[^,]+,\s*false'
+            description: "setcookie の第7引数 (secure) が false"
+          - type: regex
+            regex: 'setcookie\s*\([^)]+\)'
+            description: "setcookie 呼び出し (Secure フラグ確認要)"
+      javascript:
+        patterns:
+          - type: regex
+            regex: '(res\.cookie|cookie)\s*\([^)]*secure\s*:\s*false'
+            description: "cookie secure:false 指定"
+          - type: regex
+            regex: 'cookie\s*:\s*\{[^}]*\}'
+            description: "cookie 属性ブロック (secure 確認要)"
+      java:
+        patterns:
+          - type: regex
+            regex: '\.setSecure\s*\(\s*false\s*\)'
+            description: "Cookie.setSecure(false)"
+          - type: regex
+            regex: 'server\.servlet\.session\.cookie\.secure\s*=\s*false'
+            description: "Spring Boot で cookie.secure=false"
+      csharp:
+        patterns:
+          - type: regex
+            regex: 'requireSSL\s*=\s*"false"'
+            description: "web.config の requireSSL=false"
+    fix_example:
+      php: |
+        ini_set('session.cookie_secure', 1);
+        setcookie('sid', $sid, ['secure'=>true,'httponly'=>true,'samesite'=>'Strict']);
+
+  - id: IPA-SWS-1-SESS-005
+    title: "Cookie の HttpOnly 属性なし"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "XSS による Cookie 窃取を防ぐため HttpOnly を付与 (5-(ix))"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'session\.cookie_httponly\s*=\s*(0|false|off|Off)'
+            description: "session.cookie_httponly が無効"
+          - type: regex
+            regex: 'setcookie\s*\([^,]+,[^,]+,[^,]+,[^,]+,[^,]+,[^,]+,\s*false'
+            description: "setcookie 第8引数 (httponly) が false"
+      javascript:
+        patterns:
+          - type: regex
+            regex: '(res\.cookie|cookie)\s*\([^)]*httpOnly\s*:\s*false'
+            description: "cookie httpOnly:false 指定"
+      java:
+        patterns:
+          - type: regex
+            regex: '<http-only>\s*false\s*</http-only>'
+            description: "web.xml で http-only=false"
+
+  - id: IPA-SWS-1-SESS-006
+    title: "SameSite 属性未指定"
+    severity: medium
+    remediation_type: 保険的対策
+    remediation: "SameSite=Lax または Strict を付与"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'setcookie\s*\([^)]*\)\s*;'
+            description: "setcookie に samesite が含まれない可能性 (要確認)"
+          - type: regex
+            regex: 'session\.cookie_samesite\s*=\s*[''"]?None'
+            description: "SameSite=None 指定 (Secure 必須)"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'sameSite\s*:\s*[''"]?none[''"]?'
+            description: "cookie sameSite:none 指定 (Secure 必須)"
+
+  - id: IPA-SWS-1-SESS-007
+    title: "Cookie の有効期限が長すぎる (4-(vi))"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "Cookie 有効期限は短く (推奨 30 分〜数時間)、サーバ側タイムアウトも併用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'time\(\)\s*\+\s*\d{7,}'
+            description: "Cookie 有効期限が約 4 ヶ月以上"
+          - type: regex
+            regex: 'session\.cookie_lifetime\s*=\s*\d{7,}'
+            description: "session.cookie_lifetime が長すぎる"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'maxAge\s*:\s*\d{10,}'
+            description: "maxAge が極端に大きい"
+
+  - id: IPA-SWS-1-SESS-008
+    title: "ログアウト処理でセッション破棄なし"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "ログアウト時に session_destroy() / invalidate() / Session.Abandon()"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'function\s+logout\s*\([^)]*\)\s*\{(?![^}]*session_destroy)'
+            description: "logout 関数に session_destroy がない (要確認)"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'def\s+logout\b(?!.*reset_session)'
+            description: "logout メソッドに reset_session がない (要確認)"
+
+  - id: IPA-SWS-1-SESS-009
+    title: "セッションIDが固定値 (4-(v))"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "ログインごとに新規セッションID発行"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(session|sid|token)\s*=\s*[''"][a-zA-Z0-9]{8,}[''"]'
+            description: "セッションIDがハードコード文字列"
