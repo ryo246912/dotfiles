@@ -712,9 +712,9 @@ root に固定する書き方は mise 2026.9.15 以降でしか効かないた�
   `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
   用途を名前で表している）。`raycast`/`rectangle` はアプリ自体の Import 機能で
   手動反映する想定（`.rayconfig` はバイナリで diff できないため。docs/raycast.md
-  参照）。`~/.config` 配下に実在するファイルは track mode の対象に変わりなく含まれる
-  （`"~/.config" = { mode = "track" }` はブランケット宣言のため。配布の有無と
-  history 記録の有無は独立している）。
+  参照）。`~/.config` の track entry は `include` で配置対象のディレクトリだけに
+  絞っているため、`unmanaged/` のものや `~/.config` にしか無いディレクトリは
+  history にも記録されない（後述の「history の暗号化と記録対象の絞り込み」参照）。
 
 > **同一キーの merge は上書き、別キーは並存する（実機で確認済みの挙動）**
 >
@@ -951,6 +951,69 @@ git/mise/rio の各 config、rulesync の `mcp.json`、`~/.zshenv`、`apm.yml`/
 secretを含むファイルを新たに track する場合は、`encrypt = true` +
 `[history.encryption].recipients` を最初の checkpoint から設定すること
 （後から暗号化しても、それ以前の平文履歴は残る）。
+
+### history の暗号化と記録対象の絞り込み
+
+`config/mise/config.toml` の track entry はすべて `encrypt = true` にしてあり、
+history（ローカルの `repo.git` と origin）には age で暗号化した内容だけが入る。
+手元の `history diff`・`rollback` は復号して動くので、操作はこれまでと同じ
+（実機確認済み）。
+
+- **例外は `~/.config/mise`。** mise は自身の設定の暗号化を
+  `encrypt an external dotfile source instead of configuration` で拒否するため
+  （新しいマシンが復号前に読む必要がある）、このエントリだけ平文で記録する。
+  中身は公開 repo の `config/mise` と同じで、`config.local.toml` は mise が常に記録しない。
+- **`~/.config` は `include` で配置対象だけに絞る。** `config/`・`config-mac/`・
+  `config-linux/` のトップレベル要素と、template で配置する alacritty・ghostty・rio
+  だけを記録し、`~/.config` にしか無いディレクトリ（`gh/hosts.yml` のように認証情報を
+  含むアプリの実行時状態など）は記録しない。組み込みの credential フィルタはファイル名
+  だけを見るうえ、`hosts.yml` を除外するのは `~/.config/mise` の中だけなので、
+  絞らないと `gh/hosts.yml` が記録されてしまう。
+  `config/` にディレクトリを足したら include にも追加する。
+  `mise run lint:history-include`（pre-push でも実行）が過不足を検出する。
+- **秘密鍵は `~/.config/mise/age.txt`。** mise の既定の identity パスで、
+  `[history] exclude` で明示的に除外している（`encrypt = true` のエントリでは組み込みの
+  credential フィルタが外れるため）。
+
+#### 初回セットアップ（平文の history がすでに origin にある場合）
+
+暗号化を有効にしても過去の平文 checkpoint は残り、mise は push 前の検査でそれを
+見つけると sync を拒否する。過去の checkpoint を引き継ぐ必要は薄いので、history を
+作り直す。
+
+```sh
+# 0) すべてのマシンで watcher を止める（作り直しの途中で古い store が書き戻さないように）
+mise bootstrap services remove mise-history
+
+# 1) 各マシンで age 鍵を作り、表示された公開鍵（age1...）を控える
+mise exec -- age-keygen -o ~/.config/mise/age.txt
+chmod 600 ~/.config/mise/age.txt
+#    別途 recovery 用の鍵を1つ作り、秘密鍵はオフライン（パスワードマネージャー等）に保管する
+
+# 2) config/mise/config.toml の [history.encryption].recipients を公開鍵に置き換えて
+#    push し、全マシンで pull する
+
+# 3) 平文が入っていたか確認する（入っていたらトークンをローテートする）
+repo="${MISE_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mise}/history/repo.git"
+git --git-dir="$repo" log --all --name-only --format= | sort -u | grep -v '^home/.config/mise/'
+
+# 4) 1台目: store を退避して暗号化した最初の checkpoint を作り、空にした origin へ送る
+#    （GitHub 上で dotfiles-history を作り直すか、別名の空の private repo を用意する）
+mv "$(dirname "$repo")" "$(dirname "$repo").bak-plaintext"
+mise bootstrap dotfiles save --description "start encrypted history"
+mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+mise bootstrap dotfiles sync
+
+# 5) 2台目以降: store を退避して origin から取り込む
+mv "$(dirname "$repo")" "$(dirname "$repo").bak-plaintext"
+mise bootstrap --adopt https://github.com/ryo246912/dotfiles-history.git
+
+# 6) 全マシンが済んだら watcher を戻す。動作を確認したら *.bak-plaintext を削除する
+mise bootstrap services apply
+```
+
+`age1yubikey1...` のような plugin recipient やパスフレーズ付き SSH 鍵は、background で
+動く watcher が復号・暗号化できず自動保存が止まるので使わない。
 
 ## ハマりどころ
 

@@ -94,6 +94,10 @@ pre-push:
             run: mise run lint:md
             glob: "**/*.md"
             fail_text: "❌ [pre-push] markdown lint failed. Run: mise run fix:md"
+          - name: lint:history-include
+            run: mise run lint:history-include
+            glob: "{config/**,config-mac/**,config-linux/**,mise*.toml}"
+            fail_text: "❌ [pre-push] ~/.config の history include が配置対象と一致しません。config/mise/config.toml の include を更新してください"
           - name: lint:actionlint
             run: mise run lint:actionlint
             glob: ".github/workflows/**/*.{yaml,yml}"

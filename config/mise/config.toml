@@ -200,17 +200,107 @@ lefthook install
 # 巻き込むと機密情報が history に残る・origin 同期時に流出しうる・大量ファイルで
 # checkpoint が重くなるおそれがある。narrow に保つため、個別ファイルで列挙できる
 # ものだけを対象にしている。
+#
+# "~/.config" も同じ理由で include を付け、このリポジトリが配置するもの（config/・
+# config-mac/・config-linux/ のトップレベル要素と、template で配置する alacritty・
+# ghostty・rio）だけを記録する。~/.config にしか無いディレクトリ（gh/hosts.yml 等の
+# 認証情報を含むアプリの実行時状態）は history に入らない。config/ にディレクトリを
+# 足したら include にも追加すること（`mise run lint:history-include` が一致を検査する）。
+#
+# 秘匿化: track している全エントリに encrypt = true を付け、history（ローカル git と
+# origin）には age で暗号化した内容だけを保存する（手元の history diff/rollback は
+# 復号して使える）。例外は "~/.config/mise" で、mise は自身の設定の暗号化を
+# `encrypt an external dotfile source instead of configuration` で拒否する（新しい
+# マシンが復号前に読む必要があるため。実機確認済み）。より具体的なキーのこのエントリが
+# "~/.config" の include（mise/**）より優先され、平文で記録される。中身は公開 repo の
+# config/mise と同じで、config.local.toml は mise が常に記録しない。populated な include は credential 名のファイルも選択するため、
+# 平文で残さないためにも暗号化が前提になる。recipients は公開鍵なので公開 repo に
+# 置いてよい。秘密鍵は ~/.config/mise/age.txt（mise の既定 identity パス）に各マシンで
+# `mise exec -- age-keygen -o ~/.config/mise/age.txt` で生成し、track しない
+# （[history] exclude で明示的に除外。encrypt = true のエントリでは組み込みの
+# credential フィルタが外れるため）。
+# watcher（history-watch）が止まらないよう、age1yubikey1... 等の plugin recipient や
+# パスフレーズ付き SSH 鍵は使わない。詳細は docs/mise.md の「history の暗号化」参照。
+[history]
+exclude = ["~/.config/mise/age.txt"]
+
+[history.encryption]
+# TODO: 各マシンの age 公開鍵（age-keygen が表示する "Public key: age1..."）と、
+# オフライン保管する recovery 鍵の公開鍵に置き換える。未設定（不正な recipient）の
+# 間は history の保存が失敗する（mise は平文へフォールバックしない）。
+recipients = [
+    "age1REPLACE_WITH_MAC_PUBLIC_KEY",
+    "age1REPLACE_WITH_LINUX_PUBLIC_KEY",
+    "age1REPLACE_WITH_RECOVERY_PUBLIC_KEY",
+]
+
 [dotfiles]
-"~/.apm/apm.lock.yaml"                  = { mode = "track" }
-"~/.apm/apm.yml"                        = { mode = "track" }
-"~/.claude/settings.json"               = { mode = "track" }
-"~/.codex/config.toml"                  = { mode = "track" }
-"~/.codex/hooks.json"                   = { mode = "track" }
-"~/.config"                             = { mode = "track" }
-"~/.config/alacritty/alacritty.toml"    = { mode = "track" }
-"~/.config/ghostty/config"              = { mode = "track" }
-"~/.config/git/config"                  = { mode = "track" }
+"~/.apm/apm.lock.yaml"                  = { mode = "track", encrypt = true }
+"~/.apm/apm.yml"                        = { mode = "track", encrypt = true }
+"~/.claude/settings.json"               = { mode = "track", encrypt = true }
+"~/.codex/config.toml"                  = { mode = "track", encrypt = true }
+"~/.codex/hooks.json"                   = { mode = "track", encrypt = true }
+"~/.config/alacritty/alacritty.toml"    = { mode = "track", encrypt = true }
+"~/.config/ghostty/config"              = { mode = "track", encrypt = true }
+"~/.config/git/config"                  = { mode = "track", encrypt = true }
 "~/.config/mise"                        = { mode = "track" }
-"~/.config/rio/config.toml"             = { mode = "track" }
-"~/.config/rulesync/.rulesync/mcp.json" = { mode = "track" }
-"~/.zshenv"                             = { mode = "track" }
+"~/.config/rio/config.toml"             = { mode = "track", encrypt = true }
+"~/.config/rulesync/.rulesync/mcp.json" = { mode = "track", encrypt = true }
+"~/.zshenv"                             = { mode = "track", encrypt = true }
+
+[dotfiles."~/.config"]
+encrypt = true
+include = [
+    "/.czrc",
+    "act/**",
+    "agentsview/**",
+    "alacritty/**",
+    "aqua/**",
+    "atuin/**",
+    "autohotkey/**",
+    "ccmanager/**",
+    "commitizen/**",
+    "deck/**",
+    "devcontainer/**",
+    "dive/**",
+    "fnox/**",
+    "gh-dash/**",
+    "ghostty/**",
+    "ghtkn/**",
+    "git/**",
+    "gitmux/**",
+    "gitpane/**",
+    "gitui/**",
+    "glab-tui/**",
+    "glow/**",
+    "gotip/**",
+    "gwq/**",
+    "hammerspoon/**",
+    "koji/**",
+    "laminate/**",
+    "lazygit/**",
+    "lefthook/**",
+    "lnav/**",
+    "mise/**",
+    "multi-worktree/**",
+    "navi/**",
+    "nix/**",
+    "nvim/**",
+    "obsidian/**",
+    "rio/**",
+    "rulesync/**",
+    "sbx/**",
+    "secretlint/**",
+    "taplo/**",
+    "tbkeys/**",
+    "tig/**",
+    "tmux/**",
+    "vicinae/**",
+    "vim/**",
+    "wezterm/**",
+    "worktrunk/**",
+    "yazi/**",
+    "zabrze/**",
+    "zsh/**",
+]
+mode = "track"

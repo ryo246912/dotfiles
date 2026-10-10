@@ -10,6 +10,7 @@ depends = [
     "lint:secret",
     "lint:git-secrets",
     "lint:betterleaks:staged",
+    "lint:history-include",
 ]
 description = "Run all linters"
 
@@ -64,6 +65,12 @@ run         = "secretlint '**/*'"
 ["lint:git-secrets"]
 description = "Run git-secrets scan"
 run         = "git secrets --scan"
+
+["lint:history-include"]
+# config/mise/config.toml の "~/.config" track entry の include が、~/.config へ配置する
+# ディレクトリ（config/・config-mac/・config-linux/ と template target）と一致するか検査する。
+description = "Check the ~/.config history include list matches deployed directories"
+run         = "python3 scripts/check-history-include.py"
 
 ["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
