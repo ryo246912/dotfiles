@@ -1,1 +1,1 @@
-FROM ghcr.io/kenn-io/agentsview:0.39.0
+FROM ghcr.io/kenn-io/agentsview:0.39.0@sha256:0938406f9d1ee75f420c3639c01fbaec29a27d757c3ec2ddcd67c1abbf954345

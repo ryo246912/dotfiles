@@ -7,8 +7,7 @@
 # すると BuildKit がコンテキスト外を指す symlink を辿れず、下の COPY が "not found" で
 # 失敗する（docs/devcontainer.md 参照）。レイアウトは ~/.config/devcontainer と同じなので
 # COPY のパスはそのまま使える。
-ARG VERSION=ubuntu-24.04
-FROM mcr.microsoft.com/vscode/devcontainers/base:$VERSION
+FROM mcr.microsoft.com/vscode/devcontainers/base:ubuntu-24.04@sha256:d94c97dd9cacf183d0a6fd12a8e87b526e9e928307674ae9c94139139c0c6eae
 
 
 # apt のパッケージリストと .deb は BuildKit の cache mount に置く（layer に残らないので
