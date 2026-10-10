@@ -307,14 +307,19 @@ set -eu
 # mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
 # 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
 main() {
-  # 使い方: mise run sandbox:template-save <sandbox-name> [tag]
+  # 使い方: mise run sandbox:template-save <sandbox-name> <tag>
   # sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
   # 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
 
+  # tag は必須にする。sbx-agent は sbx-agent:<agent> を使い、template には保存元の
+  # base（FLAVOR）が残るため、既定値で決め打ちすると別 agent の template を上書きしてしまう。
+  # 上書きするなら保存元 sandbox と同じ agent の sbx-agent:<agent> を指定する。
   sandbox="${1:-}"
-  # 保存元 sandbox の agent に合わせた名前にする（sbx-agent は sbx-agent:<agent> を使う）
-  tag="${2:-sbx-agent:claude}"
-  [ -n "$sandbox" ] || { echo "usage: mise run sandbox:template-save <sandbox-name> [tag]" >&2; exit 2; }
+  tag="${2:-}"
+  [ -n "$sandbox" ] && [ -n "$tag" ] || {
+    echo "usage: mise run sandbox:template-save <sandbox-name> <tag>（例: sbx-agent:codex）" >&2
+    exit 2
+  }
   command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
 
   sbx template save "$sandbox" "$tag"

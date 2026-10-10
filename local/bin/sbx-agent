@@ -247,7 +247,11 @@ readonly PLANNOTATOR_SANDBOX_PORT=19433
 # mise run sandbox:build-template が agent ごとに作るローカル template の既定名。
 # 中身は同じで base image（FLAVOR）だけが agent に合わせてある。sbx は FLAVOR に合った
 # agent の kit（認証など）しか当てられないため、agent ごとに template を選ぶ。
-readonly DEFAULT_TEMPLATE="sbx-agent:${AGENT}"
+# build-template が作らない agent（shell など）は template を渡さず sbx の既定に任せる。
+case "$AGENT" in
+    claude | codex | copilot) readonly DEFAULT_TEMPLATE="sbx-agent:${AGENT}" ;;
+    *) readonly DEFAULT_TEMPLATE="" ;;
+esac
 
 if ! command -v sbx >/dev/null 2>&1; then
     log_error "sbx コマンドが見つかりません。'mise install' で導入してください（docs/docker-sandboxes.md 参照）"

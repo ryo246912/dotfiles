@@ -599,7 +599,7 @@ multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer backen
 sandbox 内で手動インストールしたツールを次回以降も使いたくなったら、template に焼き直せます。
 
 ```bash
-mise run sandbox:template-save <sandbox-name> [tag]   # 既定タグは sbx-agent:claude（agent に合わせて指定）
+mise run sandbox:template-save <sandbox-name> <tag>   # tag は保存元と同じ agent の sbx-agent:<agent>
 mise run sandbox:template-ls
 ```
 
