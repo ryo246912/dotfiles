@@ -602,7 +602,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
   - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
     `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
-    その前に global lockfile（`~/.config/mise/mise.lock`、gitignore 済み）を mise が読めるか確認し、
+    その前に global lockfile（`~/.config/mise/mise.lock`、リポジトリ管理外のローカル生成物）を mise が読めるか確認し、
     `failed to read lockfile ... (possible corruption)` になる場合は `mise.lock.bak.<日時>` へ退避して
     `mise lock --global` で作り直す。mise 2026.10 では uv の依存グラフを持つ `lockfile_version = 1`
     の lockfile が `Python dependency graphs require lockfile revision 2; run mise lock --upgrade`

@@ -70,9 +70,13 @@ post-merge:
       skip:
         - run: test -n "${AI_AGENT:-}"
       run: |
+        set -e
         github_token=$(gh auth token 2>/dev/null || true)
+        if [ -z "$github_token" ]; then
+          echo "warning: gh auth token を取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
+        fi
 
-        # global lockfile（gitignore 済みのローカル生成物）を mise が読めない場合は退避して作り直す。
+        # global lockfile（リポジトリ管理外のローカル生成物）を mise が読めない場合は退避して作り直す。
         # 例: mise 2026.10 で uv の依存グラフを持つ lockfile_version 1 の lockfile は
         # "Python dependency graphs require lockfile revision 2" で読めなくなるが、案内される
         # `mise lock --upgrade` 自身も同じ読み込みエラーで失敗するため、upgrade では直せない。
