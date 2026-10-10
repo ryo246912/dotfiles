@@ -57,24 +57,58 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
 # rate limit（5h / weekly）の残り割合とリセットまでの時間を表示する。
 # claude.ai Pro/Max のみ、最初の API 応答後に現れる。window ごとに独立して欠けうるため、無い window はスキップする。
 # 残り 20% 未満で黄色、5% 未満で赤。
+# pace: window 内で均等に使った場合の使用率との差。▲ は均等ペースより速く消費している（黄色）、▼ は余裕あり。
 # 参照: https://code.claude.com/docs/en/statusline#rate-limit-usage
 limit_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
   def dur: if . >= 86400 then "\((. / 86400) | floor)d\(((. % 86400) / 3600) | floor)h"
            elif . >= 3600 then "\((. / 3600) | floor)h\(((. % 3600) / 60) | floor)m"
            else "\((. / 60) | floor)m" end;
-  def seg($label):
+  def seg($label; $win):
     if . == null or .used_percentage == null then empty else
       ([[100 - .used_percentage, 0] | max, 100] | min) as $left
       | (if $left < 5 then "\u001b[31m" elif $left < 20 then "\u001b[33m" else "\u001b[32m" end) as $color
       | ((($left / 100 * 6) | ceil) as $n | ("█" * $n) + ("░" * (6 - $n))) as $bar
+      | (if .resets_at != null and .resets_at > $now then .resets_at - $now else null end) as $remain
       | [
           "\($label) \($bar) \($left | round)% left",
-          (if .resets_at != null and .resets_at > $now then "reset \((.resets_at - $now) | dur)" else empty end)
+          (if $remain != null then
+             ([[$win - $remain, 0] | max, $win] | min) as $elapsed
+             | ((.used_percentage - $elapsed / $win * 100) | round) as $d
+             | if $d > 0 then "\u001b[33m▲\($d)%\($color)" else "▼\(-$d)%" end
+           else empty end),
+          (if $remain != null then "reset \($remain | dur)" else empty end)
         ]
       | "\($color)\(join(" "))\u001b[0m"
     end;
-  [(.rate_limits.five_hour | seg("5h")), (.rate_limits.seven_day | seg("week"))]
+  [(.rate_limits.five_hour | seg("5h"; 18000)), (.rate_limits.seven_day | seg("week"; 604800))]
   | join(" · ")
+' 2>/dev/null)
+
+# モデル名と reasoning effort（例: Opus 5.5 xhigh）。effort 非対応モデルではモデル名のみ。
+model_line=$(printf '%s' "$input" | jq -r '
+  [.model.display_name // empty, .effort.level // empty]
+  | if length > 0 then "\u001b[35m\(join(" "))\u001b[0m" else empty end
+' 2>/dev/null)
+
+# コンテキストウィンドウの残り。最初の API 応答前・/compact 直後は null のためスキップする。
+# 残り 20% 未満で黄色、10% 未満で赤（auto-compact が近い）。
+# 参照: https://code.claude.com/docs/en/statusline#context-window-fields
+ctx_line=$(printf '%s' "$input" | jq -r '
+  .context_window
+  | if . == null or .used_percentage == null then empty else
+      def kfmt: if . >= 1000000 then "\((. / 100000 | round) / 10)M"
+                elif . >= 1000 then "\((. / 1000) | round)k" else tostring end;
+      ([[100 - .used_percentage, 0] | max, 100] | min) as $left
+      | (if $left < 10 then "\u001b[31m" elif $left < 20 then "\u001b[33m" else "\u001b[32m" end) as $color
+      | ((($left / 100 * 6) | ceil) as $n | ("█" * $n) + ("░" * (6 - $n))) as $bar
+      | [
+          "ctx \($bar) \($left | round)% left",
+          (if .context_window_size != null then
+             "\((.used_percentage / 100 * .context_window_size) | kfmt)/\(.context_window_size | kfmt)"
+           else empty end)
+        ]
+      | "\($color)\(join(" "))\u001b[0m"
+    end
 ' 2>/dev/null)
 
 # 作業ディレクトリの git branch（detached HEAD なら短縮 SHA）を左に表示する。
@@ -85,12 +119,21 @@ if [ -n "$cwd" ]; then
 	branch=$(git --no-optional-locks -C "$cwd" branch --show-current 2>/dev/null)
 	[ -z "$branch" ] && branch=$(git --no-optional-locks -C "$cwd" rev-parse --short HEAD 2>/dev/null)
 fi
+[ -n "$branch" ] && branch=$(printf '\033[36m%s\033[0m' "$branch")
 
-line=""
-[ -n "$branch" ] && line=$(printf '\033[36m%s\033[0m' "$branch")
-[ -n "$line" ] && [ -n "$cache_line" ] && line="$line · "
-line="$line$cache_line"
-[ -n "$line" ] && [ -n "$limit_line" ] && line="$line · "
-line="$line$limit_line"
-[ -n "$line" ] && printf '%s\n' "$line"
+# 空でない引数を " · " で連結する。
+join_parts() {
+	local out="" p
+	for p in "$@"; do
+		[ -z "$p" ] && continue
+		out="${out:+$out · }$p"
+	done
+	printf '%s' "$out"
+}
+
+# 1 行目: branch・モデル・コンテキスト / 2 行目: cache・rate limit
+line1=$(join_parts "$branch" "$model_line" "$ctx_line")
+line2=$(join_parts "$cache_line" "$limit_line")
+[ -n "$line1" ] && printf '%s\n' "$line1"
+[ -n "$line2" ] && printf '%s\n' "$line2"
 exit 0
