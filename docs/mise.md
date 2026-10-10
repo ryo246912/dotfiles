@@ -33,7 +33,7 @@
 
 - `[bootstrap.packages]` の `brew:`/`brew-cask:`（`config.mac.toml` の大半）は **実 Homebrew が
   一切不要**。mise 自体さえ入っていれば `mise bootstrap
-packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
+  packages apply` だけで導入できる。実 Homebrew の有無・導入順序に依存しない。
 - 実 Homebrew が要るのは、Rosetta 前提・postflight・sudo が要る pkg インストーラ・
   API メタデータ未確認のサードパーティ tap・mise 未対応の cask artifact 種別を使う例外パッケージ:
   ```sh
@@ -366,7 +366,7 @@ brew list --cask --versions
   パッケージとして扱う（本リポジトリでは raycast がこれに該当する。実 brew では問題なく
   インストールできることを確認済み）。
 - `ERROR failed to fetch Homebrew cask '<tap>/<name>' directly. ... HTTP status client
-error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
+  error (404 Not Found)` → サードパーティ tap が Homebrew API メタデータ
   （`api/cask/<token>.json`）を公開していない場合のエラー。詳細は次項
   「サードパーティ tap の注意」参照（本リポジトリでは opencode-bar がこれに該当する）。
 
@@ -416,7 +416,7 @@ mise には `[dotfiles]` セクションと `mise bootstrap dotfiles` サブコ�
   に相当する分岐を、テンプレートの中ではなく設定の外側で表現するイメージ）。
 - **テンプレートエンジンは Tera**（chezmoi の Go template とは別物。書き直しが必要）。
   `os()` / `arch()` / `os_family()` で OS 判定、`env.HOME` / `get_env(name=..,
-default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` でキャッシュ可）
+  default=..)` で環境変数、`exec(command)`（`cache_key`/`cache_duration` でキャッシュ可）
   でシェルアウト、`path is file` / `is dir` / `is exists` でパス存在判定ができる。
   `status`/`diff`/`apply` はテンプレート出力（`exec()` 呼び出し含む）を評価して差分検知する。
   `--dry-run` は何も実行しない代わりに `exec()` を評価せず `(if changed)` 扱いになる。
@@ -553,7 +553,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   `|| true` で必ずガードする点だけが実質的なハマりどころだった）。
 - **WSL→Windows ネイティブアプリへの配置**: これは想定通り `[dotfiles]` の対象外
   （`$HOME` 配下の宣言的配置という設計の範囲外）のままだったため、`mise run
-bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstrap.toml`）
+  bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstrap.toml`）
   という**対話式タスク**として持ち越した。元の chezmoi `run_onchange_*.sh.tmpl` が持っていた
   y/n/d の対話プロンプトはそのまま踏襲している。
 
@@ -610,7 +610,7 @@ bootstrap:dotfiles:sync-mac`/`bootstrap:dotfiles:sync-windows`（`tasks/bootstra
     同名フィールドで上書きされる。tasks/task-configuration.html#task_config.cascade
     参照）ため、素の `mise run apm:sync` はこの hook から呼ぶと
     `no task apm:sync found` になる（実機確認済み）。`mise --cd "$HOME"
-run apm:sync` のように呼び出し時の config root を global 側に切り替える
+    run apm:sync` のように呼び出し時の config root を global 側に切り替える
     ことで解決する。nested な `mise run apm:install`/`mise run rulesync:generate`
     呼び出し（タスク本体の中から呼ぶ分）はタスクの実行コンテキストを引き継ぐため
     改めて `--cd` し直す必要はない（実機確認済み）。
@@ -967,7 +967,7 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   実行する運用にする（本リポジトリの `[bootstrap.hooks.*]` はこの前提で書いている）。
 - `mise` は呼び出すたびに mise本体の新versionが出ていないかを
   `https://mise.jdx.dev/releases.tsv` へ毎回問い合わせる（`mise WARN mise version
-X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...`
+  X.Y.Z available` の表示元）。`mise bootstrap`・`mise --cd "$HOME" run ...`
   いずれも「何かする前にまずこれが走る」ため、network が遅い/不調な環境では
   **`mise bootstrap: pre-dotfiles hooks` のような最初の出力が出る前から**何十秒も
   固まったように見える（実機確認済み: `mise --version` だけでも sandbox 環境で

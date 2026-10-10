@@ -16,6 +16,21 @@ url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets
 url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
+[[tools."aqua:azu/dockerfile-pin"]]
+version = "1.5.0"
+backend = "aqua:azu/dockerfile-pin"
+specifiers = ["1.5.0"]
+
+[tools."aqua:azu/dockerfile-pin"."platforms.linux-x64"]
+checksum = "sha256:88845bfbe4918596f00eb77ebeec8a0826026c9b24bcc83053cae48402e95ea6"
+url = "https://github.com/azu/dockerfile-pin/releases/download/v1.5.0/dockerfile-pin_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/azu/dockerfile-pin/releases/assets/531468534"
+
+[tools."aqua:azu/dockerfile-pin"."platforms.macos-arm64"]
+checksum = "sha256:8e2dfd82c2eedeaf18ed8c9f833a51dce2f7f374906ba45e81515fc620d3890e"
+url = "https://github.com/azu/dockerfile-pin/releases/download/v1.5.0/dockerfile-pin_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/azu/dockerfile-pin/releases/assets/531468532"
+
 [[tools."aqua:evilmartians/lefthook"]]
 version = "2.1.14"
 backend = "aqua:evilmartians/lefthook"
@@ -176,10 +191,10 @@ url = "https://github.com/superfly/flyctl/releases/download/v0.4.29/flyctl_0.4.2
 url_api = "https://api.github.com/repos/superfly/flyctl/releases/assets/385745065"
 
 [[tools."npm:oxfmt"]]
-version = "0.71.0"
-aube = { path = ".mise/locks/npm-oxfmt/0.71.0", digest = "sha256:2b7bfb8c20b448ab9b5549e2e0a43049a897d50d995103408bbba2b0add2bcf0" }
+version = "0.72.0"
+aube = { path = ".mise/locks/npm-oxfmt/0.72.0", digest = "sha256:8cff19be82a82e83efe243f08fd8bf1a2a2f635f10384d070d7956209ddd9b44" }
 backend = "npm:oxfmt"
-specifiers = ["0.71.0"]
+specifiers = ["0.72.0"]
 
 [[tools."npm:oxlint"]]
 version = "1.87.0"
