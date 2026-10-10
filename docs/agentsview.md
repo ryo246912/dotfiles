@@ -1331,7 +1331,7 @@ token「総量」はcache readが支配するので、**比較はcostかoutput t
 - **Concurrency chart**: 青がinteractive、橙がautomated。**Overlay**で`Tokens`か`Cost`を重ねると、どの時間帯に費用が出たかがわかる。bucketをclickするとその時間帯のsessionだけに絞れる
 - **Breakdown**: `Agent-min`と`Cost`を切り替えてProject／Model／Agent別に並べる。「時間はかかっているがcostは小さい」「短時間だが高い」projectを見分ける
 
-Total CostはUsage画面や`agentsview usage daily`と同じ日・同じtimezoneなら一致する（subagent・fork sessionも含めて重複除去済み）。
+Total Costは、同じ日・timezone・集計対象（UIではMachine filter。CLIはこのPCのsessionだけ）にそろえた場合にUsage画面や`agentsview usage daily`と一致する（subagent・fork sessionも含めて重複除去済み）。
 
 #### Dashboard: 使い方の傾向
 
@@ -1408,19 +1408,17 @@ agentsview activity report --preset week --date 2026-10-10
 
 ### API で全端末の数字を取る
 
-Cloud Run上のAPIはWeb UIと同じく全端末分を返す。bearer tokenはfnox経由で渡し、shellやhistoryへ出さない。
+Cloud Run上のAPIはWeb UIと同じく全端末分を返す。bearer tokenはfnox経由で渡し、shellやhistoryへ出さない。headerは`printf`（shell組み込み）からstdin経由で`curl -H @-`へ渡し、process一覧（`ps`）にtokenが出ないようにする。
 
 ```sh
 # 期間内のtotal（totalCost、各token数、cacheSavings）
-fnox exec -- sh -c 'curl -fsS \
-  -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
-  "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
+fnox exec -- sh -c 'printf "Authorization: Bearer %s\n" "$AGENTSVIEW_AUTH_TOKEN" \
+  | curl -fsS -H @- "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
   | jq '.totals'
 
 # model別cost（高い順）
-fnox exec -- sh -c 'curl -fsS \
-  -H "Authorization: Bearer $AGENTSVIEW_AUTH_TOKEN" \
-  "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
+fnox exec -- sh -c 'printf "Authorization: Bearer %s\n" "$AGENTSVIEW_AUTH_TOKEN" \
+  | curl -fsS -H @- "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
   | jq '.modelTotals | sort_by(-.cost) | .[] | {model, cost, outputTokens}'
 ```
 
@@ -1611,7 +1609,7 @@ CodeBurnとrtkはこのdotfilesで導入済みである。使い方は[`codeburn
 
 ### 数字が合わない・出ないとき
 
-- **Cloud Run UIに最近のsessionがない**: そのPCからpushされていない。`agentsview pg status`でwatermarkを確認し、`mise run agentsview:cockroach:push:remote`を実行する（「4. local dataとCockroachDBのpush／pull」）。
+- **Cloud Run UIに最近のsessionがない**: そのPCからpushされていない。`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`でremote（CockroachDB Cloud）のwatermarkを確認し、`mise run agentsview:cockroach:push:remote`を実行する（「4. local dataとCockroachDBのpush／pull」）。
 - **costが付かないsession／model**: そのmodelがLiteLLM価格表にない、またはagentがtokenをlocal logへ書いていない。AgentsViewはagentが書き出したtokenしか集計できない。
 - **dashboardが`request timed out`になる**: 期間が長く、CockroachDBへの集計が重なっている。期間を短くして切り分ける。恒常的なら「`HealthCheckContainerError`で初回revisionが起動しない場合」内の`request timed out`の項（`--write-timeout`）を参照。
 - **CLIとUIの合計が違う**: CLIはこのPCだけ、UIは全端末。UIでMachineをこのPCに絞ると近い値になる。
