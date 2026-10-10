@@ -559,7 +559,15 @@ serve)
 	# watcherが落ちたままserveを続けると、sessionの収集が黙って止まる。どちらかが
 	# 終了したらもう一方も停止し、終了statusを引き継ぐ。macOS既定のbash 3.2には
 	# `wait -n` がないためpollで監視する。
+	# 親（mise）が消えたら止まる。mise runはtaskを別process groupで起動するので、
+	# ghost stop --force（SIGKILL）はmiseにしか届かず、ここで気付かないと
+	# watcherとpg serveが動き続けて次の起動がlockで落ちる。
+	parent_pid="$PPID"
 	while :; do
+		if [ "$(ps -o ppid= -p "$$" 2>/dev/null | tr -d ' ')" != "$parent_pid" ]; then
+			echo "parent process ${parent_pid} exited; stopping serve" >&2
+			exit 129
+		fi
 		if ! kill -0 "$watch_pid" 2>/dev/null; then
 			watch_status=0
 			wait "$watch_pid" || watch_status=$?
