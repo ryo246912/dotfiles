@@ -119,6 +119,34 @@ fzf のようなあいまい検索 UI でレジスタ一覧から選んでペー
 - 選択行(ビジュアルモード)を toggle : 範囲選択→ `gc`
 - motion/テキストオブジェクトと組み合わせて toggle : 例. `gcap`(段落), `gc3j`(カーソル行+下3行)
 
+## 画像の表示・貼り付け(Markdown)
+
+`config/nvim/lua/plugins/markdown.lua` で `folke/snacks.nvim`(画像表示)と `HakonHarnes/img-clip.nvim`(クリップボード画像の貼り付け)を導入済み。
+
+### 画像を表示する
+
+- Markdown を開くと `![alt](path)` の画像が snacks.nvim で表示される
+  - ghostty : バッファ内に inline 表示
+  - wezterm など inline 非対応の端末 : カーソルを画像リンクに置いたときにフロートで表示(snacks が端末を判定して自動で切り替える)
+- `<leader>ih` : カーソル位置の画像をフロートで表示(inline 表示中でも大きく見たいときに使う)
+- 相対パスは編集中のファイル基準で解決される。見つからない場合は `assets/` `images/` `img/` などの定番ディレクトリも探索される
+- PNG 以外(JPG / WebP など)の表示には ImageMagick(`magick`)が必要。mac は `config-mac/mise/config.mac.toml` の `brew:imagemagick` で導入される
+- tmux 内で表示するには `allow-passthrough on` が必要(`config/tmux/tmux.conf` で設定済み)
+- 表示されないときは `:checkhealth snacks` で端末・ImageMagick の対応状況を確認する
+
+PDF は snacks.nvim ではなく image.nvim の簡易ビューア(`config/nvim/lua/plugins/image.lua`)で開く。
+
+### クリップボードの画像を貼り付ける
+
+1. スクリーンショットなどの画像をクリップボードにコピーする(mac なら `cmd+ctrl+shift+4` など)
+2. Markdown を開いて、画像を入れたい行で `<leader>ip`(または `:PasteImage`)
+3. ファイル名を聞かれるので入力して `<CR>`(空のまま `<CR>` で日時のファイル名になる)
+4. 編集中のファイルと同じ階層の `assets/` に PNG で保存され、`![](assets/<ファイル名>.png)` が挿入される
+
+- クリップボード上のファイルパスや画像 URL を貼り付けた場合も、画像としてコピー/ダウンロードしてリンクを挿入する
+- 必要なコマンド : mac は `pngpaste`(`config-mac/mise/config.mac.toml` の `brew:pngpaste`)、Linux は `xclip`(X11)か `wl-clipboard`(Wayland)
+- 動かないときは `:checkhealth img-clip` で依存コマンドを確認する
+
 ## help
 
 tagsファイルがあると以下が使える
