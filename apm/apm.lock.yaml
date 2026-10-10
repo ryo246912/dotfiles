@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-10T14:01:35.041540+00:00'
+generated_at: '2026-10-09T02:54:01.052477+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -966,37 +966,6 @@ dependencies:
   - .cursor/commands/tech-stack.md
   - .cursor/commands/test-optimization-patterns.md
   - .cursor/commands/timeout-fix.md
-  - .github/prompts/auto-debug.prompt.md
-  - .github/prompts/build-fix.prompt.md
-  - .github/prompts/direct-setup.prompt.md
-  - .github/prompts/direct-verify.prompt.md
-  - .github/prompts/env-fix.prompt.md
-  - .github/prompts/flaky-fix.prompt.md
-  - .github/prompts/help.prompt.md
-  - .github/prompts/init-tech-stack.prompt.md
-  - .github/prompts/kairo-design.prompt.md
-  - .github/prompts/kairo-loop.prompt.md
-  - .github/prompts/kairo-requirements.prompt.md
-  - .github/prompts/kairo-tasknote.prompt.md
-  - .github/prompts/kairo-tasks.prompt.md
-  - .github/prompts/orchestrate.prompt.md
-  - .github/prompts/refine-execute.prompt.md
-  - .github/prompts/refine-plan.prompt.md
-  - .github/prompts/rev-design.prompt.md
-  - .github/prompts/rev-requirements.prompt.md
-  - .github/prompts/rev-specs.prompt.md
-  - .github/prompts/rev-tasks.prompt.md
-  - .github/prompts/tdd-green.prompt.md
-  - .github/prompts/tdd-red.prompt.md
-  - .github/prompts/tdd-refactor.prompt.md
-  - .github/prompts/tdd-requirements.prompt.md
-  - .github/prompts/tdd-tasknote.prompt.md
-  - .github/prompts/tdd-testcases.prompt.md
-  - .github/prompts/tdd-todo.prompt.md
-  - .github/prompts/tdd-verify-complete.prompt.md
-  - .github/prompts/tech-stack.prompt.md
-  - .github/prompts/test-optimization-patterns.prompt.md
-  - .github/prompts/timeout-fix.prompt.md
   deployed_file_hashes:
     .agents/skills/dev-context/SKILL.md: sha256:a718cfef90957e8c8731f5bf333243c11f2c3e75ed31998f7bf82b0ac1db2ab6
     .agents/skills/dev-context/references/context-template.md: sha256:1b6db9752bbce16a472b4a9c62462e02ef6e12a642990925a4622f0d130c99b5
@@ -1321,37 +1290,6 @@ dependencies:
     .cursor/commands/tech-stack.md: sha256:a2fee065b3db125d768c09a2659ff20ddbc608c3a63a23621e93748d87422009
     .cursor/commands/test-optimization-patterns.md: sha256:0846e576d9570f2e3c743bc629b3d0fc701ededd3689b4e2fc77aefd3a416569
     .cursor/commands/timeout-fix.md: sha256:cb40a98d985fdc02524ba40935f0de2cfdd2b1b6b1872921c7fba15cf0a715c2
-    .github/prompts/auto-debug.prompt.md: sha256:a3d298b8bffd1168346edff8825665fc92a18c18602ee60f4a0dff2edc17cd53
-    .github/prompts/build-fix.prompt.md: sha256:19f44b6d578cbd23634ccd169c1baf3d83093d967e5feadba8a71abcb4153a5a
-    .github/prompts/direct-setup.prompt.md: sha256:3669bd835b4563d3d5965fc5536e028a611aea808efa30b750066a5cf0bf0976
-    .github/prompts/direct-verify.prompt.md: sha256:2cefe51ff9288df386fef29c3fa91ee1fe801ed5de8e05ff0072f97f3fe72fd2
-    .github/prompts/env-fix.prompt.md: sha256:859f5b7c9ea52ee993f587b39fe3b700a39fda1624f0327c9af00d54ab01920d
-    .github/prompts/flaky-fix.prompt.md: sha256:237810405a9de0231cf408ce3cf8828daeb99742deaff043e6ef8a10345ff6d4
-    .github/prompts/help.prompt.md: sha256:be154a5ff053060df5171d40be60c0cbf77091d7649d2cd729cfdb3c8aaf2464
-    .github/prompts/init-tech-stack.prompt.md: sha256:d45e0dd7875d67ba2e614e55b0039912c707224a37d22af78baa449bba21dec3
-    .github/prompts/kairo-design.prompt.md: sha256:9853461a15827ee91aa01febfc32fb32b1ade26e6acb76570c5f3426f02f964b
-    .github/prompts/kairo-loop.prompt.md: sha256:b16d461700e91fd2fcbe4d77ce132d27a7c111dd3d8f0fd021291a85249eb40a
-    .github/prompts/kairo-requirements.prompt.md: sha256:57f20266d1d92323c30fd0a10921d9cab5befde73b7a4f5f17a2ff2727d1b00b
-    .github/prompts/kairo-tasknote.prompt.md: sha256:fbd6087782cc6d3f59635ad59f9bbcd845dd4e3b7c05b82a370fcd8a2388f674
-    .github/prompts/kairo-tasks.prompt.md: sha256:7d057a0ca60221fea38a795ad9c621277cd2c2f204dcf00afd9c9d5eb38a215b
-    .github/prompts/orchestrate.prompt.md: sha256:a716d96eef2a7eac2a5796ee9820aa98a04c168f1b0aabcdd04668b567829af2
-    .github/prompts/refine-execute.prompt.md: sha256:325d2b64337904f54636f4add39fee2391cecd06833c409422e63892bf8a7bd0
-    .github/prompts/refine-plan.prompt.md: sha256:57e370486f7ad1fcfcdbd063c5b82daf28e03f5a934c5192e2bb0181722cde3a
-    .github/prompts/rev-design.prompt.md: sha256:7142f4c88117487262345b0d67fece90f702cfaa088756c3e6d4a8749163800c
-    .github/prompts/rev-requirements.prompt.md: sha256:1ae3685269ab78cc843f3eb47075315fde3208680dfc3d4edab7479fcd79875b
-    .github/prompts/rev-specs.prompt.md: sha256:f13ac7dcb32f4ab10e1824ce11880d4fc3a4cd3a69e2c3746f0d8f072e7a74a6
-    .github/prompts/rev-tasks.prompt.md: sha256:d83a3d7d56d4e9f7f3fb2f2d29aeb88b4be63c57e08e4054328f2590fc5a40e6
-    .github/prompts/tdd-green.prompt.md: sha256:6d42cf9f11de1bd62bc9c130a989d24321a5478d4870cb00a4100dfb4f962f24
-    .github/prompts/tdd-red.prompt.md: sha256:111f0f5206ee9b9c6728eef132d47170e377b5df41b8addd9d8912344755e7e8
-    .github/prompts/tdd-refactor.prompt.md: sha256:e49c8d7197a43ce508a72483bdf3caaf8e02313f557be2605f8b07b7e4bb213d
-    .github/prompts/tdd-requirements.prompt.md: sha256:162c2f848ee1c5641c3c43c27dcc21ce7d2dbb4fbc9232632fecf08115afc788
-    .github/prompts/tdd-tasknote.prompt.md: sha256:77b7f88f6122b882aba42d0ebf701010633a97acf9a326b3fe5133095f9f6cad
-    .github/prompts/tdd-testcases.prompt.md: sha256:995a8f35501859488b80d68ee41f74d2d4a2c440982b64c1c550780b5d3dd11c
-    .github/prompts/tdd-todo.prompt.md: sha256:cb59405d94eb003fd5c86b10612b2ec5d53d549baf46b33cfd07151308f195b1
-    .github/prompts/tdd-verify-complete.prompt.md: sha256:a7501c3fa8b7210ce6555a1b12b0b4bca02ce74a28222615d3eb58e0838a2111
-    .github/prompts/tech-stack.prompt.md: sha256:50b2eff18e588b6ee392f769c1bb326825f48cf132b81f038578ba8ee10cc16c
-    .github/prompts/test-optimization-patterns.prompt.md: sha256:584d958390939e07d9436cedf81bcc1d202d7fdfdf0758ad1e67553bc283c038
-    .github/prompts/timeout-fix.prompt.md: sha256:582becab914324f43f61dec92a6c0cde1180fd8cae40730ed57cb275d715024b
   content_hash: sha256:9c8a7959a181eeefbd501b28bded81746511b0c386d697370208e1cdd2d54f6e
   declared_license: MIT
 - repo_url: ctxrs/ctx
@@ -1408,7 +1346,6 @@ dependencies:
   - .claude/skills/ponytail-review/SKILL.md
   - .claude/skills/ponytail/SKILL.md
   - .copilot/hooks/ponytail-copilot-hooks.json
-  - .github/hooks/ponytail-copilot-hooks.json
   deployed_file_hashes:
     .agents/skills/ponytail-audit/SKILL.md: sha256:38c209f3b56c8c8291bd00cf91da1ee9048ddafb1b5e7f838c1e1b81822e4023
     .agents/skills/ponytail-debt/SKILL.md: sha256:d3611761039bdb2955e31856834feeec6ed5483a3fc64576e9a166f949a131d1
@@ -1423,7 +1360,6 @@ dependencies:
     .claude/skills/ponytail-review/SKILL.md: sha256:4b29656469baa5df3513a1557197ec8053162c6a54c166c871c57061e37a8ebb
     .claude/skills/ponytail/SKILL.md: sha256:1316a2f3f95741d2300b116fe0c2d81ce4a9568656ed0a62643f54aaf09957f2
     .copilot/hooks/ponytail-copilot-hooks.json: sha256:22aa9893d29232932296a1678bc838074157a4a2e193f477e052fe49321dc3b1
-    .github/hooks/ponytail-copilot-hooks.json: sha256:22aa9893d29232932296a1678bc838074157a4a2e193f477e052fe49321dc3b1
   content_hash: sha256:6c9747b181968b8a3f83e2ba22a52d8558fd6c7ac02b0e77ae0e8fe66ad0adb4
 - repo_url: mattpocock/skills
   alias: resolving-merge-conflicts
@@ -1655,8 +1591,8 @@ dependencies:
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
-  resolved_commit: 9694e99b6291ee910a541ae3451c62bf622cbc5c
-  resolved_ref: v0.22.0
+  resolved_commit: de61b1bb07d92df4869ea7b4438592d7105d9113
+  resolved_ref: v0.19.1
   version: unknown
   virtual_path: integrations/claude-code/skills/crit
   is_virtual: true
@@ -1667,14 +1603,14 @@ dependencies:
   - .claude/skills/crit
   - .claude/skills/crit/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit/SKILL.md: sha256:a58038a6b4fb984557039cfc3d8419768b23be7730178c99d0033617502f74d3
-    .claude/skills/crit/SKILL.md: sha256:a58038a6b4fb984557039cfc3d8419768b23be7730178c99d0033617502f74d3
-  content_hash: sha256:248b04d7e90515adbca50ad87650ee9a6e935df04fac81c1318c54151a0a7179
+    .agents/skills/crit/SKILL.md: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
+    .claude/skills/crit/SKILL.md: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
+  content_hash: sha256:87e2d574596b15e795e395151f8dac09c2f5c72a08adb2184117ee77d691e8b9
 - repo_url: tomasz-tomczyk/crit
   name: crit-cli
   host: github.com
-  resolved_commit: 9694e99b6291ee910a541ae3451c62bf622cbc5c
-  resolved_ref: v0.22.0
+  resolved_commit: de61b1bb07d92df4869ea7b4438592d7105d9113
+  resolved_ref: v0.19.1
   version: unknown
   virtual_path: integrations/claude-code/skills/crit-cli
   is_virtual: true
@@ -1685,9 +1621,9 @@ dependencies:
   - .claude/skills/crit-cli
   - .claude/skills/crit-cli/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit-cli/SKILL.md: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
-    .claude/skills/crit-cli/SKILL.md: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
-  content_hash: sha256:1ffa9e4e745d889e5ca8c2c8161b951dcfe871623bc2e57b31d54297aa01ee64
+    .agents/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
+    .claude/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
+  content_hash: sha256:7a9756c98a7838e87ac532a5e4d3387f71d61eaf52051be919dfdbe588e1d4fa
 - repo_url: vercel-labs/skills
   alias: find-skills
   name: find-skills
@@ -2036,7 +1972,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
+  content_hash: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
 - kind: project-relative
   target: claude
   value: .claude/skills/crit/SKILL.md
@@ -2045,7 +1981,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:a58038a6b4fb984557039cfc3d8419768b23be7730178c99d0033617502f74d3
+  content_hash: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
 - kind: project-relative
   target: claude
   value: .claude/skills/ctx-agent-history-search
@@ -4952,7 +4888,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
+  content_hash: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
 - kind: project-relative
   target: codex
   value: .agents/skills/crit/SKILL.md
@@ -4961,7 +4897,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:a58038a6b4fb984557039cfc3d8419768b23be7730178c99d0033617502f74d3
+  content_hash: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
 - kind: project-relative
   target: codex
   value: .agents/skills/ctx-agent-history-search
@@ -7842,294 +7778,6 @@ deployments:
   - zenbu-labs/terminal-browser/skill
   active_owner: zenbu-labs/terminal-browser/skill
   content_hash: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
-- kind: project-relative
-  target: copilot
-  value: .github/hooks/ponytail-copilot-hooks.json
-  runtime: null
-  scope: project
-  owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
-  content_hash: sha256:22aa9893d29232932296a1678bc838074157a4a2e193f477e052fe49321dc3b1
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/auto-debug.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a3d298b8bffd1168346edff8825665fc92a18c18602ee60f4a0dff2edc17cd53
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/build-fix.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:19f44b6d578cbd23634ccd169c1baf3d83093d967e5feadba8a71abcb4153a5a
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/direct-setup.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:3669bd835b4563d3d5965fc5536e028a611aea808efa30b750066a5cf0bf0976
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/direct-verify.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:2cefe51ff9288df386fef29c3fa91ee1fe801ed5de8e05ff0072f97f3fe72fd2
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/env-fix.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:859f5b7c9ea52ee993f587b39fe3b700a39fda1624f0327c9af00d54ab01920d
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/flaky-fix.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:237810405a9de0231cf408ce3cf8828daeb99742deaff043e6ef8a10345ff6d4
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/help.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:be154a5ff053060df5171d40be60c0cbf77091d7649d2cd729cfdb3c8aaf2464
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/init-tech-stack.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:d45e0dd7875d67ba2e614e55b0039912c707224a37d22af78baa449bba21dec3
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/kairo-design.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:9853461a15827ee91aa01febfc32fb32b1ade26e6acb76570c5f3426f02f964b
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/kairo-loop.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:b16d461700e91fd2fcbe4d77ce132d27a7c111dd3d8f0fd021291a85249eb40a
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/kairo-requirements.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:57f20266d1d92323c30fd0a10921d9cab5befde73b7a4f5f17a2ff2727d1b00b
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/kairo-tasknote.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:fbd6087782cc6d3f59635ad59f9bbcd845dd4e3b7c05b82a370fcd8a2388f674
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/kairo-tasks.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:7d057a0ca60221fea38a795ad9c621277cd2c2f204dcf00afd9c9d5eb38a215b
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/orchestrate.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a716d96eef2a7eac2a5796ee9820aa98a04c168f1b0aabcdd04668b567829af2
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/refine-execute.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:325d2b64337904f54636f4add39fee2391cecd06833c409422e63892bf8a7bd0
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/refine-plan.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:57e370486f7ad1fcfcdbd063c5b82daf28e03f5a934c5192e2bb0181722cde3a
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/rev-design.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:7142f4c88117487262345b0d67fece90f702cfaa088756c3e6d4a8749163800c
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/rev-requirements.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:1ae3685269ab78cc843f3eb47075315fde3208680dfc3d4edab7479fcd79875b
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/rev-specs.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:f13ac7dcb32f4ab10e1824ce11880d4fc3a4cd3a69e2c3746f0d8f072e7a74a6
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/rev-tasks.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:d83a3d7d56d4e9f7f3fb2f2d29aeb88b4be63c57e08e4054328f2590fc5a40e6
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-green.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:6d42cf9f11de1bd62bc9c130a989d24321a5478d4870cb00a4100dfb4f962f24
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-red.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:111f0f5206ee9b9c6728eef132d47170e377b5df41b8addd9d8912344755e7e8
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-refactor.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:e49c8d7197a43ce508a72483bdf3caaf8e02313f557be2605f8b07b7e4bb213d
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-requirements.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:162c2f848ee1c5641c3c43c27dcc21ce7d2dbb4fbc9232632fecf08115afc788
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-tasknote.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:77b7f88f6122b882aba42d0ebf701010633a97acf9a326b3fe5133095f9f6cad
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-testcases.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:995a8f35501859488b80d68ee41f74d2d4a2c440982b64c1c550780b5d3dd11c
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-todo.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:cb59405d94eb003fd5c86b10612b2ec5d53d549baf46b33cfd07151308f195b1
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tdd-verify-complete.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a7501c3fa8b7210ce6555a1b12b0b4bca02ce74a28222615d3eb58e0838a2111
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/tech-stack.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:50b2eff18e588b6ee392f769c1bb326825f48cf132b81f038578ba8ee10cc16c
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/test-optimization-patterns.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:584d958390939e07d9436cedf81bcc1d202d7fdfdf0758ad1e67553bc283c038
-- kind: project-relative
-  target: copilot
-  value: .github/prompts/timeout-fix.prompt.md
-  runtime: null
-  scope: project
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:582becab914324f43f61dec92a6c0cde1180fd8cae40730ed57cb275d715024b
 - kind: project-relative
   target: copilot
   value: .copilot/hooks/ponytail-copilot-hooks.json
