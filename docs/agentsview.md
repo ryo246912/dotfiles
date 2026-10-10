@@ -2,6 +2,8 @@
 
 複数端末のセッション情報をCockroachDB Cloudに集約し、Cloud Run上のread-only Web UIで参照する構成。
 
+token使用量・costなどの分析方法（画面の見方、CLI、API）は[agentsview-analysis.md](./agentsview-analysis.md)を参照。
+
 > [!IMPORTANT]
 > Fly.ioからの移行は完了している。Fly上のAgentsView app（`ryo-agentsview`）と`agentsview` schema／roleは削除済みで、rollback先は存在しない。Atuinは引き続きFly.io（`psgl`／`ryo-shellhistory`）を使う。GCP/CockroachDBの基盤管理（Terraform）は`ryo246912/infra`リポジトリへ移行済みで、このリポジトリにはCloud Run manifestとtaskだけが残る。
 
