@@ -600,6 +600,12 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `mise bootstrap dotfiles save`、history-watch、full bootstrap、
     素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
+  - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
+    `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
+    環境変数の `GITHUB_TOKEN` があればそれを優先し、どちらも無ければ warning を出して token なしで実行する。
+    また、mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
+    引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。job 内で
+    `ulimit -n 10240` に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
