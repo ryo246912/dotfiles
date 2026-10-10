@@ -54,6 +54,29 @@ cache_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
   end
 ' 2>/dev/null)
 
+# rate limit（5h / weekly）の残り割合とリセットまでの時間を表示する。
+# claude.ai Pro/Max のみ、最初の API 応答後に現れる。window ごとに独立して欠けうるため、無い window はスキップする。
+# 残り 20% 未満で黄色、5% 未満で赤。
+# 参照: https://code.claude.com/docs/en/statusline#rate-limit-usage
+limit_line=$(printf '%s' "$input" | jq -r --argjson now "$(date +%s)" '
+  def dur: if . >= 86400 then "\((. / 86400) | floor)d\(((. % 86400) / 3600) | floor)h"
+           elif . >= 3600 then "\((. / 3600) | floor)h\(((. % 3600) / 60) | floor)m"
+           else "\((. / 60) | floor)m" end;
+  def seg($label):
+    if . == null or .used_percentage == null then empty else
+      ([[100 - .used_percentage, 0] | max, 100] | min) as $left
+      | (if $left < 5 then "\u001b[31m" elif $left < 20 then "\u001b[33m" else "\u001b[32m" end) as $color
+      | ((($left / 100 * 6) | ceil) as $n | ("█" * $n) + ("░" * (6 - $n))) as $bar
+      | [
+          "\($label) \($bar) \($left | round)% left",
+          (if .resets_at != null and .resets_at > $now then "reset \((.resets_at - $now) | dur)" else empty end)
+        ]
+      | "\($color)\(join(" "))\u001b[0m"
+    end;
+  [(.rate_limits.five_hour | seg("5h")), (.rate_limits.seven_day | seg("week"))]
+  | join(" · ")
+' 2>/dev/null)
+
 # 作業ディレクトリの git branch（detached HEAD なら短縮 SHA）を左に表示する。
 # statusline は頻繁に実行されるため、--no-optional-locks で index.lock を取らない。
 cwd=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // empty' 2>/dev/null)
@@ -67,5 +90,7 @@ line=""
 [ -n "$branch" ] && line=$(printf '\033[36m%s\033[0m' "$branch")
 [ -n "$line" ] && [ -n "$cache_line" ] && line="$line · "
 line="$line$cache_line"
+[ -n "$line" ] && [ -n "$limit_line" ] && line="$line · "
+line="$line$limit_line"
 [ -n "$line" ] && printf '%s\n' "$line"
 exit 0
