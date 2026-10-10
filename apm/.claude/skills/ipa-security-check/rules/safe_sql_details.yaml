@@ -1,0 +1,222 @@
+category: safe_sql_details
+ipa:
+  document: 安全なSQLの呼び出し方
+  section: "詳細検出パターン (SQL別冊)"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/about.html
+cwe: CWE-89
+
+rules:
+  - id: IPA-SQL-2-LIKE-001
+    title: "LIKE 句のメタ文字 (% / _) エスケープ漏れ"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "LIKE で使用する値は \ で % と _ をエスケープしてからプレースホルダ"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'LIKE\s+[''"]%\s*[''"]?\s*\.\s*\$'
+            description: "LIKE '%' . $var 形式 (メタ文字エスケープなし)"
+          - type: regex
+            regex: 'LIKE\s+CONCAT\s*\(\s*[''"]%[''"]?\s*,\s*\$'
+            description: "LIKE CONCAT('%', $var) (エスケープ確認要)"
+      java:
+        patterns:
+          - type: regex
+            regex: 'LIKE\s+"\s*%\s*"\s*\+\s*\w+'
+            description: "LIKE \"%\" + var (エスケープなし)"
+
+  - id: IPA-SQL-2-QUOTE-001
+    title: "PHP::PDO::quote の文脈外利用"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "PDO::quote はプレースホルダの代替ではない。bindValue を使う"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '->quote\s*\(\s*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "PDO::quote にスーパーグローバル直渡し"
+
+  - id: IPA-SQL-2-NUM-001
+    title: "数値型に文字列用エスケープのみ適用"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "数値型は intval / (int) キャストまたは bind_param 型指定"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'mysqli_real_escape_string\s*\(\s*[^)]+\)\s*[^;]*=\s*\$\w+'
+            description: "real_escape_string で数値処理 (id=$id でクォートなし)"
+      perl:
+        patterns:
+          - type: regex
+            regex: '->quote\s*\([^,]+,\s*SQL_INTEGER\s*\)'
+            description: "DBD::mysql quote(..., SQL_INTEGER) は入力をそのまま返す (IPA 5.4.3)"
+
+  - id: IPA-SQL-2-IDENT-001
+    title: "識別子 (テーブル名/カラム名) の動的構築"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "識別子はホワイトリスト方式で限定 (プレースホルダは識別子には効かない)"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'FROM\s+\$\w+'
+            description: "FROM 句に変数 (テーブル名動的指定)"
+          - type: regex
+            regex: 'SELECT\s+\$\w+\s+FROM'
+            description: "SELECT 句のカラム名に変数"
+      java:
+        patterns:
+          - type: regex
+            regex: 'FROM\s+"\s*\+\s*\w+'
+            description: "Java FROM 句に変数連結"
+      python:
+        patterns:
+          - type: regex
+            regex: 'FROM\s+\{\w+\}'
+            description: "Python FROM 句に format 変数"
+
+  - id: IPA-SQL-2-ENC-001
+    title: "DB 接続エンコーディングが Shift_JIS / EUC-JP"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "UTF-8 で統一 (utf8mb4 推奨)"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'characterEncoding=(sjis|ujis|Shift_JIS|EUC-JP)'
+            description: "JDBC URL で SJIS / EUC-JP"
+      php:
+        patterns:
+          - type: regex
+            regex: 'default_charset\s*=\s*[''"]?(SJIS|Shift_JIS|EUC-JP)'
+            description: "php.ini default_charset が日本語非UTF8"
+          - type: regex
+            regex: 'set names\s+(sjis|ujis|cp932)'
+            description: "SET NAMES で SJIS/EUC-JP"
+
+  - id: IPA-SQL-2-ENC-002
+    title: "MySQL Connector/J で useServerPrepStmts 未指定"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "useServerPrepStmts=true を付与 (静的プレースホルダ有効化)"
+    languages:
+      java:
+        patterns:
+          - type: regex
+            regex: 'jdbc:mysql:[^"'']+useServerPrepStmts=true'
+            description: "useServerPrepStmts=true (OK signal)"
+          - type: regex
+            regex: 'jdbc:mysql://[^"''\s]+'
+            description: "MySQL JDBC URL (useServerPrepStmts の有無を確認)"
+
+  - id: IPA-SQL-2-PERL-001
+    title: "Perl DBI で mysql_server_prepare 未指定"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "mysql_server_prepare=1 を DSN に追加し静的プレースホルダ有効化"
+    languages:
+      perl:
+        patterns:
+          - type: regex
+            regex: 'DBI:mysql:[^;''"]+mysql_server_prepare=1'
+            description: "mysql_server_prepare=1 (OK signal)"
+
+  - id: IPA-SQL-2-PRE-001
+    title: "prepare 引数自体に文字列連結"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "SQL リテラル中に変数を埋め込まず、? や :name のプレースホルダのみ使う"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '->prepare\s*\(\s*[''"][^''"]*[''"]\s*\.\s*\$\w+'
+            description: "PDO::prepare 引数に変数連結"
+          - type: regex
+            regex: 'mysqli_prepare\s*\([^,]+,\s*[''"][^''"]*[''"]\s*\.\s*\$'
+            description: "mysqli_prepare 引数に変数連結"
+      java:
+        patterns:
+          - type: regex
+            regex: 'prepareStatement\s*\(\s*"[^"]*"\s*\+\s*\w+'
+            description: "prepareStatement 引数に変数連結"
+
+  - id: IPA-SQL-2-PRE-002
+    title: "bind_param での型指定漏れ (PHP mysqli)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "bind_param の第1引数で i/s/d/b の型を明示"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\bbind_param\s*\(\s*[''"]s+[''"]\s*,'
+            description: "bind_param で全部 s 指定 (数値も s)"
+
+  - id: IPA-SQL-2-RAW-001
+    title: "ORM の raw SQL / find_by_sql"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ORM の raw 系 API でも必ずプレースホルダを使用"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\.find_by_sql\s*\(\s*[''"][^''"]*#\{'
+            description: "find_by_sql に文字列補間"
+          - type: regex
+            regex: 'exec_query\s*\(\s*[''"][^''"]*#\{'
+            description: "exec_query に文字列補間"
+      python:
+        patterns:
+          - type: regex
+            regex: '\.raw\s*\(\s*f[''"]'
+            description: "Django Model.objects.raw に f-string"
+          - type: regex
+            regex: 'text\s*\(\s*f[''"]'
+            description: "SQLAlchemy text() に f-string"
+
+  - id: IPA-SQL-2-OUTPUT-001
+    title: "出力エンコーディング不一致"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "アプリ内部・DB・HTTP レスポンスのエンコーディングを UTF-8 で統一"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'internal_encoding\s*=\s*[''"]?(SJIS|Shift_JIS|EUC-JP)'
+            description: "PHP internal_encoding が非 UTF-8"
+
+  - id: IPA-SQL-2-ESC-001
+    title: "addslashes / stripslashes の使用"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "addslashes は DB エンジン非連動。プレースホルダ使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\baddslashes\s*\('
+            description: "addslashes 使用 (Shift_JIS 問題あり)"
+          - type: regex
+            regex: '\bstripslashes\s*\('
+            description: "stripslashes 使用 (古いコードの兆候)"
+
+  - id: IPA-SQL-2-NUMCAST-001
+    title: "数値キャスト検証なし"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "数値は (int)/intval/ctype_digit で検証してから組み立て"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'WHERE\s+id\s*=\s*\$_(GET|POST|REQUEST)'
+            description: "WHERE id = $_GET... をクォートなしで使用 (数値前提)"
