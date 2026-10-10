@@ -27,6 +27,11 @@
           "matcher": "EnterPlanMode",
           "command": "if command -v plannotator >/dev/null 2>&1; then plannotator improve-context; fi",
           "timeout": 5
+        },
+        {
+          "matcher": "Bash",
+          "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
+          "timeout": 5
         }
       ],
       "permissionRequest": [
