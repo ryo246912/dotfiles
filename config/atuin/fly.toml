@@ -12,7 +12,7 @@ primary_region = "nrt"              # 東京リージョン
 cmd = ["start"]
 
 [build]
-image = "ghcr.io/atuinsh/atuin:18.17.1"
+image = "ghcr.io/atuinsh/atuin:18.23.0"
 
 [env]
 ATUIN_HOST              = "0.0.0.0"
