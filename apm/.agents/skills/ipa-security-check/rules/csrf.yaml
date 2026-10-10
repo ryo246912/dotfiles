@@ -1,0 +1,173 @@
+category: csrf
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.6 CSRF"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/csrf.html
+cwe: CWE-352
+
+rules:
+  - id: IPA-SWS-1-CSRF-001
+    title: "GET メソッドで状態変更処理"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "状態変更は POST / PUT / DELETE のみで受け付ける"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'app\.get\s*\([^)]*(delete|remove|update|transfer|withdraw|change|logout|destroy)'
+            description: "Express の GET ルートで状態変更系の名前"
+      php:
+        patterns:
+          - type: regex
+            regex: 'Route::get\s*\([^)]*(delete|update|transfer|change|destroy)'
+            description: "Laravel Route::get で状態変更系"
+      java:
+        patterns:
+          - type: regex
+            regex: '@GetMapping\s*\([^)]*(delete|update|transfer|change)'
+            description: "Spring @GetMapping で状態変更系"
+      html:
+        patterns:
+          - type: regex
+            regex: '<form[^>]*method=["'']get["'']'
+            description: "form の method が GET"
+
+  - id: IPA-SWS-1-CSRF-002
+    title: "フレームワーク CSRF 保護の無効化"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "CSRF 保護は本番で有効にする"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '@csrf_exempt\b'
+            description: "Django @csrf_exempt デコレータ"
+          - type: regex
+            regex: 'CSRF_ENABLED\s*=\s*False'
+            description: "Flask-WTF CSRF_ENABLED = False"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'skip_before_action\s*:verify_authenticity_token'
+            description: "Rails CSRF 検証スキップ"
+          - type: regex
+            regex: 'protect_from_forgery\s+with:\s*:null_session'
+            description: "Rails null_session (CSRF 機能無効化に近い)"
+      java:
+        patterns:
+          - type: regex
+            regex: '\.csrf\s*\(\s*\)\s*\.disable\s*\(\s*\)'
+            description: "Spring Security http.csrf().disable()"
+      csharp:
+        patterns:
+          - type: regex
+            regex: '\[IgnoreAntiforgeryToken\]'
+            description: "ASP.NET [IgnoreAntiforgeryToken]"
+          - type: regex
+            regex: 'ValidateAntiForgeryToken\s*=\s*false'
+            description: "ValidateAntiForgeryToken=false"
+      php:
+        patterns:
+          - type: regex
+            regex: 'VerifyCsrfToken[^}]*\$except\s*=\s*\['
+            description: "Laravel VerifyCsrfToken の $except に追加"
+
+  - id: IPA-SWS-1-CSRF-003
+    title: "推測可能な CSRF トークン"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "CSPRNG (random_bytes / SecureRandom) でトークン生成"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '(csrf|token)[^=]*=\s*md5\s*\('
+            description: "CSRF トークンを md5 で生成"
+          - type: regex
+            regex: '(csrf|token)[^=]*=\s*uniqid\s*\('
+            description: "CSRF トークンを uniqid で生成"
+          - type: regex
+            regex: '(csrf|token)[^=]*=\s*time\s*\(\s*\)'
+            description: "CSRF トークンを time() で生成"
+          - type: regex
+            regex: 'md5\s*\(\s*\$user(_id)?\b'
+            description: "ユーザIDのmd5をトークン化"
+    fix_example:
+      php: |
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $token;
+
+  - id: IPA-SWS-1-CSRF-004
+    title: "timing-safe でないトークン比較"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "hash_equals / MessageDigest.isEqual を使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'csrf_token[^;]*===?\s*\$_(POST|GET|REQUEST)'
+            description: "== / === でトークン比較 (hash_equals 推奨)"
+      java:
+        patterns:
+          - type: regex
+            regex: '\.equals\s*\([^)]*csrf'
+            description: "Java .equals() でトークン比較 (MessageDigest.isEqual 推奨)"
+
+  - id: IPA-SWS-1-CSRF-005
+    title: "POST フォームにトークン不在"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "<input type=\"hidden\" name=\"csrf_token\" value=\"...\"> を埋め込み (6-(i)-a)"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<form[^>]*method=["'']post["''][^>]*>(?![\s\S]{0,500}(csrf|_token|__RequestVerificationToken|authenticity_token|@csrf))'
+            description: "POST フォームに CSRF トークンの hidden が見当たらない"
+
+  - id: IPA-SWS-1-CSRF-006
+    title: "SameSite Cookie 属性未指定 (保険)"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "SameSite=Lax または Strict をセッション Cookie に付与"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'setcookie\s*\([^)]*\)'
+            description: "setcookie 呼び出し (SameSite 確認要)"
+          - type: regex
+            regex: 'session\.cookie_samesite\s*=\s*[''"]?None'
+            description: "SameSite=None (Secure 必須)"
+
+  - id: IPA-SWS-1-CSRF-007
+    title: "Referer/Origin チェックの不在 (6-(i)-c)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "Referer / Origin を確認し、空または異なるドメインなら拒否"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\$_SERVER\[[''"]HTTP_REFERER[''"]\]'
+            description: "HTTP_REFERER 参照 (OK signal)"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'req\.headers\.(referer|origin)\b'
+            description: "req.headers.referer/origin 参照 (OK signal)"
+
+  - id: IPA-SWS-1-CSRF-008
+    title: "重要操作前の再認証なし (6-(i)-b)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "重要操作 (パスワード変更等) でパスワード再入力を要求"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<form[^>]*action=["''][^"'']*(change_password|change_email|delete_account|withdraw)'
+            description: "重要操作フォームに current_password 入力欄があるか確認要"

@@ -1,0 +1,16 @@
+{
+  "sessionStart": [
+    {
+      "command": "node \"PONYTAIL_DIR/hooks/ponytail-activate.js\"",
+      "timeout": 5,
+      "_apm_source": "dietrichgebert/ponytail"
+    }
+  ],
+  "beforeSubmitPrompt": [
+    {
+      "command": "node \"PONYTAIL_DIR/hooks/ponytail-mode-tracker.js\"",
+      "timeout": 5,
+      "_apm_source": "dietrichgebert/ponytail"
+    }
+  ]
+}

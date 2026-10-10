@@ -1,5 +1,16 @@
 ["lint:all"]
-depends     = ["lint:*"]
+# 独立したlint:shellタスクをリポジトリ全体の既定値へ含めないよう明示的に列挙する。
+# shellの検査をhookで強制するのはAI用devcontainerだけとする。
+depends = [
+    "lint:action",
+    "lint:toml",
+    "lint:yaml",
+    "lint:json",
+    "lint:md",
+    "lint:secret",
+    "lint:git-secrets",
+    "lint:betterleaks:staged",
+]
 description = "Run all linters"
 
 ["lint:action"]
@@ -21,6 +32,10 @@ run         = "GH_TOKEN=$(gh auth token) zizmor --config zizmor.yml --pedantic -
 ["lint:pinact"]
 description = "Run pinact --check"
 run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn exec -- pinact run --check; fi"
+
+["lint:dockerfile-pin"]
+description = "Run dockerfile-pin check"
+run         = "dockerfile-pin check --ignore-images docker/sandbox-templates:*"
 
 ["lint:toml"]
 description = "Run lint TOML files"
@@ -53,3 +68,8 @@ run         = "git secrets --scan"
 ["lint:betterleaks:staged"]
 description = "Run betterleaks detect"
 run         = "betterleaks git --staged -v"
+
+["lint:shell"]
+description = "Check shell script formatting with shfmt"
+# `shfmt -l .` は .zsh 等も探索し、bash として解析できず失敗するため、git 管理下の *.sh だけを対象にする。
+run = "shfmt -l $(git ls-files '*.sh')"

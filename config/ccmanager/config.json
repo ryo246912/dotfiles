@@ -1,0 +1,136 @@
+{
+  "shortcuts": {
+    "returnToMenu": {
+      "ctrl": true,
+      "key": "e"
+    },
+    "cancel": {
+      "key": "escape"
+    }
+  },
+  "statusHooks": {
+    "idle": {
+      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero --current-tmux; else macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero; fi",
+      "enabled": true
+    },
+    "waiting_input": {
+      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass --current-tmux; else macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass; fi",
+      "enabled": true
+    }
+  },
+  "worktree": {
+    "autoDirectory": true,
+    "autoDirectoryPattern": "../worktrees/{project}-{branch}",
+    "copySessionData": true,
+    "sortByLastSession": false
+  },
+  "command": {
+    "command": "claude"
+  },
+  "commandPresets": {
+    "presets": [
+      {
+        "id": "1",
+        "name": "Claude account1",
+        "command": "claude",
+        "args": ["--dangerously-skip-permissions"],
+        "fallbackArgs": []
+      },
+      {
+        "id": "8",
+        "name": "Claude account2",
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-account2\" exec claude --dangerously-skip-permissions"
+        ],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "10",
+        "name": "Claude Work3",
+        "command": "sh",
+        "args": [
+          "-c",
+          "CLAUDE_CONFIG_DIR=\"$HOME/.claude-work3\" exec claude --dangerously-skip-permissions"
+        ],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "codex",
+        "name": "Codex",
+        "command": "codex",
+        "args": ["--yolo"],
+        "detectionStrategy": "codex",
+        "fallbackArgs": ["--yolo"]
+      },
+      {
+        "id": "copilot",
+        "name": "Copilot",
+        "command": "copilot",
+        "detectionStrategy": "github-copilot",
+        "args": ["--yolo"],
+        "fallbackArgs": ["--yolo"]
+      },
+      {
+        "id": "sbx",
+        "name": "Claude account1 (Docker Sandbox)",
+        "command": "zsh",
+        "args": ["-c", "exec sbx-agent claude -- \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent claude -- \"$@\"", "sbx-agent"],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-account2",
+        "name": "Claude account2 (Docker Sandbox)",
+        "command": "zsh",
+        "args": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-suffix a2 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-work3",
+        "name": "Claude Work3 (Docker Sandbox)",
+        "command": "zsh",
+        "args": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-suffix w3 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "detectionStrategy": "claude"
+      },
+      {
+        "id": "sbx-codex",
+        "name": "Codex (Docker Sandbox)",
+        "command": "zsh",
+        "args": ["-c", "exec sbx-agent codex -- resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent codex -- --yolo \"$@\"", "sbx-agent"],
+        "detectionStrategy": "codex"
+      },
+      {
+        "id": "sbx-copilot",
+        "name": "Copilot (Docker Sandbox)",
+        "command": "zsh",
+        "args": ["-c", "exec sbx-agent copilot -- --resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent copilot -- --yolo \"$@\"", "sbx-agent"],
+        "detectionStrategy": "github-copilot"
+      }
+    ],
+    "defaultPresetId": "1",
+    "selectPresetOnStart": true
+  },
+  "worktreeHooks": {}
+}
