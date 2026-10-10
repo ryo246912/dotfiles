@@ -950,7 +950,7 @@ workspace としてマウントしたディレクトリは「ファイルが見�
 
 `config/devcontainer/Dockerfile.sandbox` が、**devcontainer と同じ `mise.toml`** を使って
 sandbox 用の image をビルドします。**agent ごとに、中身は同じで base image だけが違う template**
-（`sbx-agent:claude` / `sbx-agent:codex` / `sbx-agent:copilot`）を作り、`sbx-agent` が
+（既定では `sbx-agent:claude` / `sbx-agent:codex`。`sbx-agent:copilot` は指定時のみ。下記）を作り、`sbx-agent` が
 agent に合ったものを自動で選びます。ccmanager などから agent を切り替える側は何も意識しません。
 
 | agent   | template            | base image（FLAVOR）                          |
