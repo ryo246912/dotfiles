@@ -159,20 +159,20 @@ url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/552067
 provenance = "github-attestations"
 
 [[tools."github:betterleaks/betterleaks"]]
-version = "1.3.1"
+version = "1.9.0"
 backend = "github:betterleaks/betterleaks"
-specifiers = ["1.3.1"]
+specifiers = ["v1.9.0"]
 
 [tools."github:betterleaks/betterleaks"."platforms.linux-x64"]
-checksum = "sha256:7b241c80204538cbb210c94514dc7cdff86430938bd7d5b6e289207959530849"
-url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212674"
+checksum = "sha256:f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7"
+url = "https://github.com/betterleaks/betterleaks/releases/download/v1.9.0/betterleaks_1.9.0_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/599108929"
 provenance = "github-attestations"
 
 [tools."github:betterleaks/betterleaks"."platforms.macos-arm64"]
-checksum = "sha256:d8840dc2523074900fc053d85af776f667f351ec1ea0158f9ff65861cf011c7d"
-url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212670"
+checksum = "sha256:83dd7eaab13d44a1e8e347a17064cdef153a1478db473276d41b38d55613d3f2"
+url = "https://github.com/betterleaks/betterleaks/releases/download/v1.9.0/betterleaks_1.9.0_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/599108927"
 provenance = "github-attestations"
 
 [[tools."github:superfly/flyctl"]]
