@@ -950,7 +950,7 @@ workspace としてマウントしたディレクトリは「ファイルが見�
 
 `config/devcontainer/Dockerfile.sandbox` が、**devcontainer と同じ `mise.toml`** を使って
 sandbox 用の image をビルドします。**agent ごとに、中身は同じで base image だけが違う template**
-（`sbx-agent:claude` / `sbx-agent:codex` / `sbx-agent:copilot`）を作り、`sbx-agent` が
+（既定では `sbx-agent:claude` / `sbx-agent:codex`。`sbx-agent:copilot` は指定時のみ。下記）を作り、`sbx-agent` が
 agent に合ったものを自動で選びます。ccmanager などから agent を切り替える側は何も意識しません。
 
 | agent   | template            | base image（FLAVOR）                          |
@@ -963,7 +963,8 @@ agent に合ったものを自動で選びます。ccmanager などから agent 
 `sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
 FLAVOR と agent が合わないと `failed to apply kit to sandbox` で作成に失敗するか、kit が当たらず
 agent がログインを求めます（agent を含まない `shell-docker` でも同じ。実機で確認）。
-使わない agent はディスクを食うだけなので、`SBX_TEMPLATE_AGENTS="claude codex"` のように絞れます。
+使わない agent はディスクを食うだけなので、**既定では claude / codex の 2 つだけ**をビルドします。
+copilot も必要なら `SBX_TEMPLATE_AGENTS="claude codex copilot"` のように指定してください。
 
 ```bash
 mise run sandbox:build-template

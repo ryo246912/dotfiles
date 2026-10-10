@@ -785,7 +785,8 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
             # 「image が無い」系のエラーはここが原因なので、確認と作成の手順を出す。
             log_error "  template ($TEMPLATE) が原因かもしれません。確認するには:"
             log_error "    sbx template ls"
-            log_error "  未ビルドなら: mise run sandbox:build-template"
+            # build-template の既定は claude / codex だけなので、それ以外は agent を明示させる
+            log_error "  未ビルドなら: SBX_TEMPLATE_AGENTS=${AGENT} mise run sandbox:build-template"
             log_error "  template 無しで起動するには --no-template を付けてください"
         fi
         exit 1
