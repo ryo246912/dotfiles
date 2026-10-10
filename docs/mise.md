@@ -603,11 +603,15 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
     `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
     その前に global lockfile（`~/.config/mise/mise.lock`、リポジトリ管理外のローカル生成物）を mise が読めるか確認し、
-    `failed to read lockfile ... (possible corruption)` になる場合は `mise.lock.bak.<日時>` へ退避して
-    `mise lock --global` で作り直す。mise 2026.10 では uv の依存グラフを持つ `lockfile_version = 1`
-    の lockfile が `Python dependency graphs require lockfile revision 2; run mise lock --upgrade`
-    で読めなくなるが、案内される `mise lock --upgrade` 自身も同じ読み込みエラーで失敗するため
-    （2026.10.4 で確認）、upgrade ではなく作り直しで対処している。
+    `failed to read lockfile ... (possible corruption)` になる場合は `mise.lock.bak.<日時>` へ控えを取ってから
+    `uv = ...` 行（Python の依存グラフ）だけを取り除く。それでも読めなければ lockfile を退避する。
+    mise 2026.10 では uv の依存グラフを持つ `lockfile_version = 1` の lockfile が
+    `Python dependency graphs require lockfile revision 2; run mise lock --upgrade` で読めなくなるが、
+    案内される `mise lock --upgrade` 自身も同じ読み込みエラーで失敗する。さらに explicit な `mise lock` は
+    source distribution をビルドしないため、wheel のない docopt に依存する `pipx:grip` の依存グラフを作れず
+    global lockfile 全体の生成が失敗する（いずれも 2026.10.4 で確認）。`mise install` は依存グラフを作れない
+    pipx tool を version-only にフォールバックし、既存の revision 1 lockfile も version-only のまま更新するため、
+    `uv = ...` 行を落とした lockfile は mise 自身が書くものと同じ形になる。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの

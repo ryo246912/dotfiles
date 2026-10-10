@@ -76,18 +76,29 @@ post-merge:
           echo "warning: gh auth token を取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
         fi
 
-        # global lockfile（リポジトリ管理外のローカル生成物）を mise が読めない場合は退避して作り直す。
-        # 例: mise 2026.10 で uv の依存グラフを持つ lockfile_version 1 の lockfile は
-        # "Python dependency graphs require lockfile revision 2" で読めなくなるが、案内される
-        # `mise lock --upgrade` 自身も同じ読み込みエラーで失敗するため、upgrade では直せない。
-        # lockfile を読めないと mise は空の lockfile として扱うので、作り直しても失うものはない。
+        # global lockfile（リポジトリ管理外のローカル生成物）を mise が読めない場合は修復する。
+        # 例: uv の依存グラフ（`uv = ...` 行）を持つ lockfile_version 1 の lockfile は、mise 2026.10 で
+        # "Python dependency graphs require lockfile revision 2" となり読めない。案内される
+        # `mise lock --upgrade` は同じ読み込みエラーで失敗し、仮に読めても explicit な `mise lock` は
+        # wheel のない依存を持つ pipx:grip（docopt）の依存グラフを作れず全体が失敗する。
+        # そのため `uv = ...` 行だけを落として、mise 2026.10 の `mise install` 自身が書くのと同じ
+        # version-only の revision 1 lockfile に戻す（他ツールの checksum/url はそのまま残る）。
+        # それでも読めない場合は退避する。読めない lockfile は空として扱われるので失うものはない。
         global_lockfile="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}/mise.lock"
-        if [ -f "$global_lockfile" ] \
-          && mise --cd "$HOME" ls --global --offline 2>&1 >/dev/null | grep -q 'failed to read lockfile'; then
+        global_lockfile_unreadable() {
+          [ -f "$global_lockfile" ] \
+            && mise --cd "$HOME" ls --global --offline 2>&1 >/dev/null | grep -q 'failed to read lockfile'
+        }
+        if global_lockfile_unreadable; then
           backup="$global_lockfile.bak.$(date +%Y%m%d%H%M%S)"
-          mv "$global_lockfile" "$backup"
-          echo "global lockfile を読めないため退避して再生成します（退避先: $backup）"
-          GITHUB_TOKEN=$github_token mise --cd "$HOME" lock --global
+          cp "$global_lockfile" "$backup"
+          sed '/^uv = /d' "$backup" >"$global_lockfile"
+          if global_lockfile_unreadable; then
+            rm "$global_lockfile"
+            echo "warning: global lockfile を読めないため退避しました（退避先: $backup）" >&2
+          else
+            echo "global lockfile から uv の依存グラフを除いて修復しました（修復前: $backup）"
+          fi
         fi
 
         GITHUB_TOKEN=$github_token mise install --jobs=2
