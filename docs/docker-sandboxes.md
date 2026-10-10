@@ -963,7 +963,8 @@ agent に合ったものを自動で選びます。ccmanager などから agent 
 `sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
 FLAVOR と agent が合わないと `failed to apply kit to sandbox` で作成に失敗するか、kit が当たらず
 agent がログインを求めます（agent を含まない `shell-docker` でも同じ。実機で確認）。
-使わない agent はディスクを食うだけなので、`SBX_TEMPLATE_AGENTS="claude codex"` のように絞れます。
+使わない agent はディスクを食うだけなので、**既定では claude / codex の 2 つだけ**をビルドします。
+copilot も必要なら `SBX_TEMPLATE_AGENTS="claude codex copilot"` のように指定してください。
 
 ```bash
 mise run sandbox:build-template

@@ -60,8 +60,9 @@ dockerfile="${context}/Dockerfile.sandbox"
 # kit が当たらずログインを求められる。agent を含まない shell-docker も同じ理由で使えない。
 # -docker 版でないと sandbox 内に dockerd が無い。sbx-agent は agent に合った template を選ぶ。
 #
-# SBX_TEMPLATE_AGENTS で作る agent を絞れる（ディスクを食うため、使わない agent は外す）。
-agents="${SBX_TEMPLATE_AGENTS:-claude codex copilot}"
+# 既定はよく使う claude / codex だけ作る（ディスクを食うため）。copilot も要るときは
+# SBX_TEMPLATE_AGENTS="claude codex copilot" のように SBX_TEMPLATE_AGENTS で指定する。
+agents="${SBX_TEMPLATE_AGENTS:-claude codex}"
 variant_for() {
   case "$1" in
     claude) echo claude-code-docker ;;
