@@ -15,17 +15,24 @@
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
-#     `-docker` 版を使う。sandbox 内に dockerd を持つのはこの版だけで、通常版（claude-code）には
-#     docker CLI しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で
-#     特権モードになり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
-ARG VARIANT=claude-code-docker
+#     agent を含まない `shell` 系の `-docker` 版を使う。agent CLI は claude / codex / copilot
+#     とも下で mise から入れるため、特定の agent 向けの版（claude-code 等）である必要は無い。
+#     sandbox 内に dockerd を持つのは `-docker` 版だけで、通常版には docker CLI しか無い。
+#     -docker 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードになり、
+#     /var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
+ARG VARIANT=shell-docker
 FROM docker/sandbox-templates:${VARIANT}
 
 ARG AGENT_HOME=/home/agent
 
 USER root
 
+# curl / ca-certificates / git は agent 向けの版には入っているが、shell 版の内容は明示されて
+# いないため、下の mise のインストールや git 操作に要るものは自前で入れておく。
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
     rsync \
     zsh \
     && apt-get clean \
@@ -63,9 +70,9 @@ RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 COPY --chown=agent:agent mise.toml /mise/config.toml
 
 # agent CLI（claude / codex / copilot）も mise.toml のバージョンで入れる。base image
-# （claude-code-docker）には claude しか入っておらず、同じ template を ccmanager から
-# claude / codex / copilot で使い回すため。PATH は mise shim が base image の
-# ~/.local/bin より前なので、シェルから呼ぶ agent は mise 側になる。
+# （shell-docker）は agent を含まず、同じ template を ccmanager から claude / codex /
+# copilot で使い回すため。PATH は mise shim が base image の ~/.local/bin より前なので、
+# base image 側に agent が入っていても、シェルから呼ぶ agent は mise 側になる。
 # 特定のツールを外したい場合は --build-arg DISABLE_TOOLS=<tool>,... で指定する。
 ARG DISABLE_TOOLS=""
 
