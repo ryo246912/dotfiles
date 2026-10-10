@@ -1,0 +1,280 @@
+category: web_health_check
+ipa:
+  document: ウェブ健康診断仕様
+  section: "13 診断項目 (A〜M)"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/ug65p900000196e2-att/000017319.pdf
+
+rules:
+  - id: IPA-WHC-A-001
+    title: "(A) SQLインジェクション診断パターン (動的検査の静的ヒント)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "文字列連結 SQL を撤廃しプレースホルダを使用"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(SELECT|INSERT|UPDATE|DELETE|WHERE|FROM)[^;]*[''"]\s*[+&.]\s*\w+'
+            description: "文字列連結による SQL 組み立て (汎用)"
+          - type: regex
+            regex: '(SELECT|INSERT|UPDATE|DELETE)[^`''"]*\$\{[^}]+\}'
+            description: "テンプレートリテラル/f-string で SQL 組み立て"
+          - type: regex
+            regex: '\.execute\(\s*[''"][^''"]*[''"]\s*%\s*'
+            description: "% 演算子で SQL 組み立て (Python)"
+          - type: regex
+            regex: '\.execute\(\s*[''"][^''"]*[''"]\s*\.format\('
+            description: ".format() で SQL 組み立て (Python)"
+
+  - id: IPA-WHC-B-001
+    title: "(B) XSS 診断対象 (入力内容確認・エラー画面)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "全出力でエスケープ"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '<%=\s*request\.getParameter'
+            description: "JSP 生出力"
+          - type: regex
+            regex: 'echo\s+\$_(GET|POST|REQUEST|COOKIE)'
+            description: "PHP 生出力"
+          - type: regex
+            regex: 'dangerouslySetInnerHTML'
+            description: "React dangerouslySetInnerHTML"
+          - type: regex
+            regex: '\bv-html\b'
+            description: "Vue v-html"
+          - type: regex
+            regex: '\[innerHTML\]\s*='
+            description: "Angular [innerHTML]"
+          - type: regex
+            regex: 'document\.write\s*\('
+            description: "document.write 使用"
+
+  - id: IPA-WHC-C-001
+    title: "(C) CSRF 診断 (重要処理にトークン検証)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "hidden トークン + サーバ側検証"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '@csrf_exempt\b'
+            description: "Django @csrf_exempt"
+      ruby:
+        patterns:
+          - type: regex
+            regex: 'skip_before_action\s*:verify_authenticity_token'
+            description: "Rails CSRF スキップ"
+      java:
+        patterns:
+          - type: regex
+            regex: '\.csrf\s*\(\s*\)\s*\.disable\s*\('
+            description: "Spring CSRF disable"
+
+  - id: IPA-WHC-D-001
+    title: "(D) OSコマンド・インジェクション診断"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "シェル経由のコマンド呼び出しを避ける"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\b(system|exec|popen|passthru|shell_exec|proc_open)\s*\('
+            description: "シェル起動関数の使用"
+          - type: regex
+            regex: 'subprocess\.(call|run|Popen|check_output)[^)]*shell\s*=\s*True'
+            description: "subprocess shell=True"
+          - type: regex
+            regex: 'child_process\.(exec|execSync)\s*\('
+            description: "Node.js child_process.exec"
+          - type: regex
+            regex: 'Runtime\.getRuntime\(\)\.exec\s*\(\s*"[^"]*"\s*\+'
+            description: "Java Runtime.exec に文字列連結"
+
+  - id: IPA-WHC-E-001
+    title: "(E) ディレクトリ・リスティング (Apache/Nginx/IIS 設定)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "Options -Indexes / autoindex off / directoryBrowse=false"
+    languages:
+      apache:
+        patterns:
+          - type: regex
+            regex: '^[^#]*Options\s+[^#\n]*\bIndexes\b'
+            description: "Apache Options Indexes 有効"
+      nginx:
+        patterns:
+          - type: regex
+            regex: '^[^#]*autoindex\s+on'
+            description: "Nginx autoindex on"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'require\s*\(\s*[''"]serve-index[''"]'
+            description: "Express serve-index ミドルウェア"
+      xml:
+        patterns:
+          - type: regex
+            regex: '<param-name>listings</param-name>\s*<param-value>true</param-value>'
+            description: "Tomcat DefaultServlet listings=true"
+
+  - id: IPA-WHC-F-001
+    title: "(F) メールヘッダ・インジェクション診断"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "宛先固定 + 改行除去"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'mail\s*\([^)]*,\s*[^)]*,\s*[^)]*,\s*[''"][^''"]*\$_(GET|POST|REQUEST)'
+            description: "mail() の追加ヘッダにスーパーグローバル"
+          - type: regex
+            regex: '(Subject|From|To|Cc|Bcc)\s*[:=]\s*\$_(GET|POST|REQUEST)'
+            description: "ヘッダにスーパーグローバル直代入"
+
+  - id: IPA-WHC-G-001
+    title: "(G) ディレクトリ・トラバーサル診断"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "basename + realpath + ベース確認"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '(file_get_contents|fopen|readfile|include|require|require_once|include_once)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "ファイル系 API にスーパーグローバル"
+          - type: regex
+            regex: '\bopen\s*\(\s*request\.(GET|POST|args|form|params)'
+            description: "open に Python request 直渡し"
+          - type: regex
+            regex: 'fs\.(readFile|createReadStream|sendFile|readFileSync)\s*\([^)]*req\.(query|body|params)'
+            description: "fs API に req 直渡し"
+
+  - id: IPA-WHC-H-001
+    title: "(H) 意図しないリダイレクト診断"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "ホワイトリスト URL のみ許可"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"]Location:\s*[''"]\s*\.\s*\$_(GET|POST|REQUEST)'
+            description: "Location ヘッダに外部入力連結"
+      python:
+        patterns:
+          - type: regex
+            regex: 'redirect\s*\(\s*request\.(args|GET|POST|values)'
+            description: "redirect に request 直渡し"
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'res\.redirect\s*\(\s*req\.(query|body|params)'
+            description: "res.redirect に req 直渡し"
+          - type: regex
+            regex: 'location\.(href|assign|replace)\s*=\s*\w+\.value'
+            description: "location.href にフォーム値直代入"
+
+  - id: IPA-WHC-I-001
+    title: "(I) HTTPヘッダ・インジェクション診断"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "CRLF 検査 + ヘッダ出力 API 使用"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'header\s*\(\s*[''"][^''"]*[''"]\s*\.\s*\$_(GET|POST|REQUEST)'
+            description: "header() に外部入力連結"
+          - type: regex
+            regex: 'setcookie\s*\(\s*[^,)]*,\s*\$_(GET|POST|REQUEST)'
+            description: "setcookie 値に外部入力直渡し"
+
+  - id: IPA-WHC-J-001
+    title: "(J) 認証の診断 (パスワードポリシー / アカウントロック)"
+    severity: medium
+    remediation_type: 根本的解決
+    remediation: "8文字以上、英数字混在、アカウントロック、共通エラーメッセージ"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<input[^>]*name=["'']?password["''][^>]*type=["'']text["'']'
+            description: "パスワード入力欄が type=text (伏字でない)"
+          - type: regex
+            regex: '(minlength|min_length|min)\s*[:=]\s*[1-7]\b'
+            description: "パスワード最小長が 8 未満"
+      all:
+        patterns:
+          - type: regex
+            regex: '[''"](ユーザ?ID|user(name|_id))[^''"]*(存在しない|not\s+found|invalid)'
+            description: "ユーザID限定のエラーメッセージ (粒度過剰)"
+          - type: regex
+            regex: '\bmd5\s*\(\s*\$?password\b'
+            description: "パスワードを md5 でハッシュ (弱い)"
+          - type: regex
+            regex: '\bsha1\s*\(\s*\$?password\b'
+            description: "パスワードを sha1 でハッシュ (弱い)"
+
+  - id: IPA-WHC-K-001
+    title: "(K) セッション管理の不備 (健康診断)"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "フレームワーク標準セッション機構 + Secure/HttpOnly + 再生成"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: 'session\.use_trans_sid\s*=\s*1'
+            description: "PHP session.use_trans_sid=1 (URL Rewriting)"
+          - type: regex
+            regex: 'session\.cookie_secure\s*=\s*(0|false|off)'
+            description: "PHP cookie_secure 無効"
+          - type: regex
+            regex: 'session\.cookie_httponly\s*=\s*(0|false|off)'
+            description: "PHP cookie_httponly 無効"
+
+  - id: IPA-WHC-L-001
+    title: "(L) 認可制御の不備、欠落 (健康診断)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "所有者検証 (WHERE user_id = current_user) + ロール検証"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\w+\.find\s*\(\s*params\[:id\]\s*\)'
+            description: "Model.find(params[:id]) で current_user スコープなし"
+      php:
+        patterns:
+          - type: regex
+            regex: '\$_(COOKIE|POST|GET)\[[''"](role|admin|is_admin|permission)[''"]\]'
+            description: "権限情報をクライアント送信値から取得"
+
+  - id: IPA-WHC-M-001
+    title: "(M) クローラ耐性 (N+1 / 全件取得)"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "ページネーション、N+1 解消、レートリミット、キャッシュ"
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: '\.objects\.all\s*\(\s*\)(?!.*\[)'
+            description: "Django .objects.all() (LIMIT/スライスなし)"
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\b\w+\.all\b(?!.*\.limit)'
+            description: "Rails .all (limit なし)"
+      all:
+        patterns:
+          - type: regex
+            regex: 'SELECT\s+\*\s+FROM\s+\w+(?![\s\S]{0,100}LIMIT)'
+            description: "SELECT * FROM ... に LIMIT なし"

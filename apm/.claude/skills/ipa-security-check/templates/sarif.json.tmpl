@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "IPA Security Check Skill",
+          "version": "1.0.0",
+          "informationUri": "https://www.ipa.go.jp/security/vuln/websecurity/about.html",
+          "shortDescription": {
+            "text": "Static analysis based on IPA secure website guidelines"
+          },
+          "fullDescription": {
+            "text": "Detects vulnerability candidates based on IPA 5 documents: 安全なウェブサイトの作り方 第7版 / 安全な SQL の呼び出し方 / ウェブ健康診断仕様 / セキュリティ実装チェックリスト / 安全なウェブサイトの運用管理に向けての20ヶ条"
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "startTimeUtc": "{{start_time_utc}}",
+          "endTimeUtc": "{{end_time_utc}}",
+          "arguments": []
+        }
+      ]
+    }
+  ]
+}

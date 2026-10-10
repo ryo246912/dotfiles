@@ -1,0 +1,128 @@
+category: mail_header_injection
+ipa:
+  document: 安全なウェブサイトの作り方 改訂第7版
+  section: "1.8 メールヘッダ・インジェクション"
+  url: https://www.ipa.go.jp/security/vuln/websecurity/mail-header.html
+cwe: CWE-93
+
+rules:
+  - id: IPA-SWS-1-MHDR-001
+    title: "mail() / mb_send_mail() に外部入力直渡し (PHP)"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "宛先 (To) は固定。件名・差出人はヘッダに渡す前に改行除去 (8-(i)-a)"
+    languages:
+      php:
+        patterns:
+          - type: regex
+            regex: '\b(mail|mb_send_mail)\s*\([^)]*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "mail()/mb_send_mail() にスーパーグローバル"
+          - type: regex
+            regex: '\b(mail|mb_send_mail)\s*\([^)]*\.\s*\$\w+'
+            description: "mail()/mb_send_mail() の引数を文字列連結"
+          - type: regex
+            regex: '[''"](From|To|Cc|Bcc|Subject|Reply-To)\s*:[^''"]*[''"]\s*\.\s*\$_(GET|POST|REQUEST|COOKIE)'
+            description: "From/To/Subject 文字列にスーパーグローバル連結"
+    fix_example:
+      php: |
+        $to      = 'info@example.com'; // 固定
+        $from    = preg_replace('/[\r\n]/', '', $_POST['email']);
+        if ($from !== $_POST['email']) { http_response_code(400); exit; }
+        $subject = preg_replace('/[\r\n]/', '', $_POST['subject']);
+        mb_send_mail($to, $subject, $body, "From: $from");
+
+  - id: IPA-SWS-1-MHDR-002
+    title: "Python email/smtplib に外部入力直渡し"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "To は固定、From/Subject は改行除去後に msg['Subject'] = ..."
+    languages:
+      python:
+        patterns:
+          - type: regex
+            regex: 'msg\[[''"](To|From|Subject|Cc|Bcc)[''"]\]\s*=\s*request\.'
+            description: "EmailMessage のヘッダにリクエスト直代入"
+          - type: regex
+            regex: 'smtplib\.[A-Z]\w*\([^)]*\)\.sendmail\s*\([^)]*request\.'
+            description: "smtplib.sendmail に request 直渡し"
+
+  - id: IPA-SWS-1-MHDR-003
+    title: "Ruby Mail / ActionMailer に params 直渡し"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "To/From/Subject は改行検証後または固定値に"
+    languages:
+      ruby:
+        patterns:
+          - type: regex
+            regex: '\b(to|from|cc|bcc|subject)\s+params\['
+            description: "Mail DSL のヘッダに params 直渡し"
+          - type: regex
+            regex: '\bmail\s*\(\s*to:\s*params\['
+            description: "mail(to: params[...]) パターン"
+
+  - id: IPA-SWS-1-MHDR-004
+    title: "Perl sendmail パイプにヘッダ + 変数埋め込み"
+    severity: critical
+    remediation_type: 根本的解決
+    remediation: "ヘッダに使う変数は s/[\r\n].*//s で改行以降を削除"
+    languages:
+      perl:
+        patterns:
+          - type: regex
+            regex: 'print\s+\$\w+\s+["''](From|To|Subject|Cc|Bcc):[^"'']*\$\w+'
+            description: "sendmail ハンドル print にヘッダ + 変数"
+          - type: regex
+            regex: 'open\s*\([^,]+,\s*["'']\|.*sendmail'
+            description: "sendmail パイプ起動"
+
+  - id: IPA-SWS-1-MHDR-005
+    title: "Node.js nodemailer に req 直渡し"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "to は固定値、from/subject は改行検証"
+    languages:
+      javascript:
+        patterns:
+          - type: regex
+            regex: 'transporter\.sendMail\s*\(\s*\{[^}]*(to|from|subject|cc|bcc)\s*:\s*req\.(query|body|params)'
+            description: "nodemailer に req 直渡し"
+
+  - id: IPA-SWS-1-MHDR-006
+    title: "HTML hidden に宛先メールアドレス (8-(ii))"
+    severity: high
+    remediation_type: 根本的解決
+    remediation: "宛先はサーバ側に保持、HTML hidden で持たない"
+    languages:
+      html:
+        patterns:
+          - type: regex
+            regex: '<input[^>]+type=["'']?hidden["'']?[^>]+name=["'']?(to|recipient|mail_to|mailto)["'']?[^>]+value=["''][^"'']+@'
+            description: "hidden で宛先メールアドレスを送信"
+
+  - id: IPA-SWS-1-MHDR-007
+    title: "入力に CRLF / ヘッダ名混入を検出"
+    severity: high
+    remediation_type: 保険的対策
+    remediation: "ヘッダ用入力で \r\n や Bcc:/Cc: を含む文字列を拒否 (8-(iii))"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '%0d%0a|%0a%0d|\\r\\n'
+            description: "入力に CRLF (URL エンコード形式)"
+          - type: regex
+            regex: '\b(Bcc|Cc|Subject|From|To|Content-Type)\s*:'
+            description: "入力にヘッダ名 (混入チェック)"
+
+  - id: IPA-SWS-1-MHDR-008
+    title: "メールアドレス形式の未検証"
+    severity: low
+    remediation_type: 保険的対策
+    remediation: "RFC 準拠の正規表現でメールアドレスを検証"
+    languages:
+      all:
+        patterns:
+          - type: regex
+            regex: '\bmail\s*\([^)]*\$\w+[^)]*\)'
+            description: "mail 呼び出し (メールアドレス検証コードの有無を確認)"
