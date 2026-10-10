@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# claude-trace を JS 版 Claude Code で起動する wrapper。
+#
+# claude-trace は `node --require <interceptor> <claude の cli.js>` で起動して fetch を
+# 横取りする。普段使っている Claude Code（aqua:anthropics/claude-code）は 2.1.113 以降
+# native binary になったため node から読み込めず、そのままでは何も記録されない。
+# そこで最後の JS 版（2.1.112）を cache へ別途入れ、その cli.js を --claude-path に渡す。
+# 使い方と制約は docs/claude-trace.md を参照。
+#
+# usage: claude-trace-js [claude-trace の option...] [--run-with <claude の引数...>]
+
+set -euo pipefail
+
+version="${CLAUDE_TRACE_CLAUDE_VERSION:-2.1.112}"
+prefix="${XDG_CACHE_HOME:-$HOME/.cache}/claude-trace/claude-code-${version}"
+cli="${prefix}/node_modules/@anthropic-ai/claude-code/cli.js"
+
+if ! command -v claude-trace >/dev/null 2>&1; then
+	echo "claude-trace が見つかりません。mise install で npm:@mariozechner/claude-trace を入れてください" >&2
+	exit 1
+fi
+
+if [ ! -f "$cli" ]; then
+	echo "JS 版 Claude Code ${version} を ${prefix} へ install します" >&2
+	npm install --silent --no-fund --no-audit --prefix "$prefix" "@anthropic-ai/claude-code@${version}"
+fi
+
+if [ ! -f "$cli" ]; then
+	echo "${cli} がありません。2.1.113 以降は native binary で cli.js を含まないため、2.1.112 以前を指定してください" >&2
+	exit 1
+fi
+
+# 古い版が自分を最新へ更新して native binary に置き換わらないよう、auto update を止める。
+export DISABLE_AUTOUPDATER=1
+exec claude-trace --claude-path "$cli" "$@"

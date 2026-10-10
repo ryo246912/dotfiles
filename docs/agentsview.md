@@ -1607,7 +1607,7 @@ AgentsView以外にもtool・コマンド単位の分析をうたうツールが
 
 公式の方法として、Claude CodeのOpenTelemetryも使える。`claude_code.tool_result` eventに`tool_name`、`tool_input_size_bytes`、`tool_result_size_bytes`、`duration_ms`が載り、`OTEL_LOG_TOOL_DETAILS=1`を付けるとBashの`bash_command`も入る。`claude_code.api_request` eventにはrequestごとのtoken数とcostがある。ただしcollectorとbackend（Grafana＋Lokiなど）を別途用意する必要があり、記録は有効にした後のsessionからである（[Monitoring](https://code.claude.com/docs/en/monitoring-usage)）。
 
-まずは既存のAgentsView DBへの上記SQLで傾向をつかみ、より継続的に見たくなったらCodeBurnかOpenTelemetryを足す、という順が手間が少ない。
+CodeBurnとclaude-traceはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)と[`claude-trace.md`](claude-trace.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、request単位の中身を確かめたいときにclaude-traceを使う。
 
 ### 数字が合わない・出ないとき
 

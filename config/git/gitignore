@@ -37,6 +37,7 @@ packed-refs
 ## Claude
 settings.local.json
 .claude/worktrees/
+.claude-trace/
 
 ## VSCode
 mcp.json
