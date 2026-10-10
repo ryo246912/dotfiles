@@ -71,9 +71,10 @@ post-merge:
         - run: test -n "${AI_AGENT:-}"
       run: |
         set -e
-        github_token=$(gh auth token 2>/dev/null || true)
+        # 環境変数で GITHUB_TOKEN を渡している場合はそれを優先する。
+        github_token=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}
         if [ -z "$github_token" ]; then
-          echo "warning: gh auth token を取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
+          echo "warning: GITHUB_TOKEN も gh auth token も取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
         fi
 
         # global lockfile（リポジトリ管理外のローカル生成物）を mise が読めない場合は修復する。
@@ -85,9 +86,10 @@ post-merge:
         # version-only の revision 1 lockfile に戻す（他ツールの checksum/url はそのまま残る）。
         # それでも読めない場合は退避する。読めない lockfile は空として扱われるので失うものはない。
         global_lockfile="${MISE_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/mise}/mise.lock"
+        # `mise lock --sidecars` はツールを解決せず lockfile を読むだけで、読めなければ非0で終了する。
         global_lockfile_unreadable() {
           [ -f "$global_lockfile" ] \
-            && mise --cd "$HOME" ls --global --offline 2>&1 >/dev/null | grep -q 'failed to read lockfile'
+            && ! mise --cd "$HOME" lock --global --sidecars >/dev/null 2>&1
         }
         if global_lockfile_unreadable; then
           backup="$global_lockfile.bak.$(date +%Y%m%d%H%M%S)"
