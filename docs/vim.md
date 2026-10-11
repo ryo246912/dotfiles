@@ -147,6 +147,36 @@ PDF は snacks.nvim ではなく image.nvim の簡易ビューア(`config/nvim/l
 - 必要なコマンド : mac は `pngpaste`(`config-mac/mise/config.mac.toml` の `brew:pngpaste`)、Linux は `xclip`(X11)か `wl-clipboard`(Wayland)
 - 動かないときは `:checkhealth img-clip` で依存コマンドを確認する
 
+## LSP の表示(inlay hint / hover)と保存時の format
+
+`config/nvim/lua/plugins/lsp.lua` と `config/nvim/lua/core/file_actions.lua` で設定している。
+
+### inlay hint
+
+引数名や推論された型などを、コードの横に薄い文字で表示する。デフォルトで有効。
+
+- `<leader>xh`(`:InlayHintsToggle`) : 表示/非表示を切り替える(状態は保存されないので、再起動すると有効に戻る)
+- Python は basedpyright を使う。pyright は inlay hint に未対応のため(Mason が basedpyright を自動インストールする)
+  - basedpyright は `basedpyright.analysis` の設定を読むので、`python.analysis` の設定(`typeCheckingMode = "basic"` など)を同じ内容で渡している
+
+### カーソル位置の hover(型・ドキュメント)
+
+VSCode のように、シンボルの上でカーソルを止めると型やドキュメントを popup で表示する。デフォルトで有効。
+
+- 表示までの待ち時間は `updatetime`(500ms、`config/nvim/lua/core/options.lua`)
+- カーソルを動かすと閉じる。popup にフォーカスは移らないので、そのまま編集を続けられる
+- ノーマルモードのときだけ表示する。情報が無い場所では何も表示しない
+- `<leader>xk`(`:AutoHoverToggle`) : 有効/無効を切り替える
+- popup の中を読みたい・スクロールしたいときは `K` で開く(こちらはフォーカスできる)
+
+### 保存時の format(save hook)
+
+`:w` で保存すると、ファイルタイプに応じた formatter が自動で実行される(gofmt / ruff / oxfmt / taplo / LSP format など)。
+
+- `<leader>xs`(`:SaveHooksToggle`) : 保存時の format の有効/無効を切り替える
+- `<leader>xf`(`:FormatBuffer`) : 現在のバッファを手動で format する
+- CLI の formatter はファイルを書き換えた後にバッファを読み直す。読み直しで消える syntax ハイライトと LSP の接続(inlay hint・診断)は自動で復元している
+
 ## help
 
 tagsファイルがあると以下が使える
