@@ -24,7 +24,8 @@ return {
       vim.g.inlay_hints_enabled = vim.g.inlay_hints_enabled ~= false
 
       local ts_server = has_lspconfig("ts_ls") and "ts_ls" or "tsserver"
-      local python_server = has_lspconfig("pyright") and "pyright" or (has_lspconfig("basedpyright") and "basedpyright" or nil)
+      -- pyright は inlay hints (textDocument/inlayHint) に未対応のため basedpyright を優先する
+      local python_server = has_lspconfig("basedpyright") and "basedpyright" or (has_lspconfig("pyright") and "pyright" or nil)
       local servers = {
         gopls = {
           settings = {
@@ -112,8 +113,9 @@ return {
           },
         }
         if python_server == "basedpyright" then
+          -- basedpyright は python.analysis ではなく basedpyright.analysis を読むため同じ設定を渡す
           python_settings.settings.basedpyright = {
-            analysis = {
+            analysis = vim.tbl_extend("force", python_settings.settings.python.analysis, {
               inlayHints = {
                 variableTypes       = true,
                 functionReturnTypes = true,
@@ -121,7 +123,7 @@ return {
                 callArgumentNames   = true,
                 genericTypes        = true,
               },
-            },
+            }),
           }
         end
         servers[python_server] = python_settings
