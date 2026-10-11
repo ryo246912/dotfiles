@@ -161,6 +161,10 @@ if [ -n "$cwd" ]; then
 fi
 [ -n "$branch" ] && branch=$(printf '\033[36m%s\033[0m' "$branch")
 
+# session id（`claude --resume <id>` 用）を灰色で表示する。
+session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
+[ -n "$session" ] && session=$(printf '\033[90m%s\033[0m' "$session")
+
 # 空でない引数を " · " で連結する。
 join_parts() {
 	local out="" p
@@ -171,8 +175,8 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: branch・モデル・コンテキスト / 2 行目: rate limit・cache
-line1=$(join_parts "$branch" "$model_line" "$ctx_line")
+# 1 行目: branch・モデル・コンテキスト・session id / 2 行目: rate limit・cache
+line1=$(join_parts "$branch" "$model_line" "$ctx_line" "$session")
 line2=$(join_parts "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
