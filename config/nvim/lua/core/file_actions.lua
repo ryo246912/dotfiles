@@ -279,13 +279,27 @@ local function run_cli_formatter(ctx, formatter, opts)
 
   if vim.api.nvim_buf_is_valid(ctx.bufnr) then
     local treesitter_was_active = vim.treesitter.highlighter.active[ctx.bufnr] ~= nil
+    local lsp_clients = vim.lsp.get_clients({ bufnr = ctx.bufnr })
     vim.api.nvim_buf_call(ctx.bufnr, function()
       vim.cmd("silent noautocmd edit")
+      -- :edit clears regex syntax items, and the Syntax autocmd that reloads
+      -- them is skipped by noautocmd, so reapply the buffer's syntax here.
+      local syntax = vim.bo.syntax
+      if syntax ~= "" then
+        vim.cmd("doautocmd <nomodeline> Syntax " .. vim.fn.fnameescape(syntax))
+      end
     end)
     -- :edit detaches the existing parser. BufRead autocmds are intentionally
     -- skipped above, so restore Treesitter explicitly after reloading the file.
     if treesitter_was_active then
       pcall(vim.treesitter.start, ctx.bufnr)
+    end
+    -- :edit also detaches LSP clients, and they are not reattached without
+    -- the skipped autocmds, so reattach them (on_attach re-enables inlay hints).
+    for _, client in ipairs(lsp_clients) do
+      if not client:is_stopped() and not vim.lsp.buf_is_attached(ctx.bufnr, client.id) then
+        vim.lsp.buf_attach_client(ctx.bufnr, client.id)
+      end
     end
   end
 
