@@ -50,7 +50,7 @@ Claude Code はメッセージを送るたびに会話全体をモデルへ再�
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
-あわせて、git branch・モデル・コンテキストの残り・rate limit（5h / weekly）の残りを表示します。
+あわせて、git branch・モデル・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
 `claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
