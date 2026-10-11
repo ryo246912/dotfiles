@@ -177,8 +177,8 @@ mcpc @aws-cloudwatch tools-call <tool-name> key:=value
 複雑な引数は JSON を標準入力から渡すと shell quoting の事故を避けられます。
 
 ```bash
-jq -n --arg log_group '/aws/lambda/example' '{logGroupName: $log_group}' |
-  mcpc --json @aws-cloudwatch tools-call <tool-name>
+jq -n --arg prefix '/aws/lambda/' '{log_group_name_prefix: $prefix, max_items: 20}' |
+  mcpc --json @aws-cloudwatch tools-call describe_log_groups
 ```
 
 作業後は不要な session を閉じます。次回必要になった時点で再び `connect` するのが動的 load の基本フローです。
