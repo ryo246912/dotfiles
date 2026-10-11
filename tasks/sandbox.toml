@@ -294,7 +294,7 @@ fi
 # ホストで動く sbx のサーバには効かない。SBX_MCP_AWS_VAULT_PROFILE を指定すると
 # `aws-vault exec <profile> --` でラップして登録し、サーバ起動時にその profile の
 # 一時 credential を発行する（未指定なら aws-api と同じくホストの ~/.aws を使う）。
-mcpc_config="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/apm-home/.copilot/mcp-config.json"
+mcpc_config="$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json"
 if [ ! -f "$mcpc_config" ]; then
   echo "ℹ️ mcpc 用 MCP config が無いためスキップ（先に mise run apm:install）: $mcpc_config"
 elif ! command -v jq >/dev/null 2>&1; then
@@ -322,7 +322,8 @@ else
       continue
     fi
     if registered "$name"; then
-      echo "ℹ️ $name は既に登録済み（profile を変えるなら登録を削除してから再実行。sbx mcp --help 参照）"
+      # sbx は登録時の command / args を保持するため、apm.yml の version を上げても自動では追従しない
+      echo "ℹ️ $name は既に登録済み（version / profile を変えたら登録を削除してから再実行。sbx mcp --help 参照）"
       continue
     fi
     if [ -n "$aws_vault_prefix" ]; then

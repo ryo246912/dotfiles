@@ -29,7 +29,7 @@ calculate_apm_hash() {
       printf '%s\n' "$module"
     done | sort
     # apm:install-mcpc が生成する mcpc 専用 config が消えていても再生成されるようにする。
-    mcpc_config="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/apm-home/.copilot/mcp-config.json"
+    mcpc_config="$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json"
     [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
   } | hash_cmd
 }
@@ -203,22 +203,30 @@ run = [
 description = "Generate the mcpc-only MCP config from apm.yml dependencies.mcp"
 # dependencies.mcp を agent の native MCP として常時 load させないよう、HOME を隔離して
 # Copilot CLI 形式の config を mcpc 専用の場所へ生成する（docs/mcpc/README.md 参照）。
-# 隔離先は ~/.config（mise history の track 対象）を避け、XDG_STATE_HOME 配下に置く。
+# 隔離先は ~/.config（mise history の track 対象）を避けて ~/.local/state 配下に置く。
+# devcontainer.json の mount（${localEnv:...} は既定値構文を持たない）や docs と一致させるため、
+# XDG_STATE_HOME には追従せず固定パスにする。
 # 追加引数（例: --frozen）は apm install へそのまま渡す。
 run = '''
 set -eu
 
 main() {
   real_home="$HOME"
-  isolated_home="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/apm-home"
+  isolated_home="$HOME/.local/state/mcpc/apm-home"
   mkdir -p "$isolated_home/.apm"
   cp "$real_home/.apm/apm.yml" "$isolated_home/.apm/apm.yml"
   cp "$real_home/.apm/apm.lock.yaml" "$isolated_home/.apm/apm.lock.yaml"
   HOME="$isolated_home" apm install -g --only mcp --target copilot "$@"
   # MCP の解決結果（mcp_configs 等）を含む lockfile を user scope へ戻す。
-  # ~/.apm/apm.lock.yaml が symlink のままなら repo 側へ直接書かれ、実ファイルなら
-  # 後続の apm:sync-lock が repo へ反映する。
-  cp "$isolated_home/.apm/apm.lock.yaml" "$real_home/.apm/apm.lock.yaml"
+  # cp で symlink を辿って repo 側へ直接書くと、中断時に半端な lockfile が残っても
+  # apm:sync-lock が（同一ファイルとみなして）修復しない。apm 自身と同じく一時ファイル +
+  # rename で ~/.apm/apm.lock.yaml を実ファイルに置き換え、repo への反映と symlink の
+  # 張り直しは後続の apm:sync-lock に任せる。
+  temporary_lock=$(mktemp "$real_home/.apm/apm.lock.yaml.XXXXXX")
+  trap 'rm -f "$temporary_lock"' EXIT
+  cp "$isolated_home/.apm/apm.lock.yaml" "$temporary_lock"
+  chmod 0644 "$temporary_lock"
+  mv "$temporary_lock" "$real_home/.apm/apm.lock.yaml"
   echo "mcpc config: $isolated_home/.copilot/mcp-config.json"
 }
 

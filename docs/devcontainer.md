@@ -39,7 +39,8 @@ expiration、`AWS_VAULT` を `remoteEnv` が container へ転送します。prof
 起動後は container 内で認証先を確認します。秘密値そのものは表示しないでください。
 
 ```bash
-aws sts get-caller-identity
+# AWS CLI は image に入っていないため uvx で一時的に実行する
+uvx --from awscli aws sts get-caller-identity
 printf 'profile=%s expires=%s\n' "$AWS_VAULT" "$AWS_CREDENTIAL_EXPIRATION"
 ```
 

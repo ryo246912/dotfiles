@@ -26,7 +26,7 @@ mise run apm:install
 `mise run apm:install` は次のように役割を分けています。
 
 - APM package は既存の agent target へ install する。
-- MCP は `apm:install-mcpc` が隔離した HOME（`${XDG_STATE_HOME:-~/.local/state}/mcpc/apm-home`）で `--only mcp --target copilot` を実行し、mcpc 専用の `~/.local/state/mcpc/apm-home/.copilot/mcp-config.json` だけを生成する。
+- MCP は `apm:install-mcpc` が隔離した HOME（`~/.local/state/mcpc/apm-home`。devcontainer の mount と揃えるため `XDG_STATE_HOME` には追従しない固定パス）で `--only mcp --target copilot` を実行し、mcpc 専用の `~/.local/state/mcpc/apm-home/.copilot/mcp-config.json` だけを生成する。
   `~/.config` は mise の history で丸ごと track しているため、生成物は state 配下に置く。
 - `~/.apm/apm.lock.yaml` を `apm/apm.lock.yaml` へ同期する。
 
@@ -101,7 +101,7 @@ lockfile を正とし、タスク側では重複定義しません。
 - 未指定の場合は `aws-api` と同じく host の `~/.aws`（profile / SSO）をそのまま使います。
 - config の `env`（`${AWS_ACCESS_KEY_ID}` 等）は mcpc の起動環境から転送するための設定なので、
   sbx に登録した server には使いません。
-- 登録済みの server はスキップします。profile を切り替えるときは登録を削除してから
+- 登録済みの server はスキップします。`apm/apm.yml` で version を上げたときや profile を切り替えるときは登録を削除してから
   （`sbx mcp --help` 参照）、別の `SBX_MCP_AWS_VAULT_PROFILE` で再実行してください。
 
 ### 必要なときだけ load する
