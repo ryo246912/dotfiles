@@ -22,7 +22,9 @@
     "autoDirectory": true,
     "autoDirectoryPattern": "../worktrees/{project}-{branch}",
     "copySessionData": true,
-    "sortByLastSession": false
+    "sortByLastSession": true,
+    "autoUseDefaultBranch": false,
+    "includeRemoteBranches": true
   },
   "command": {
     "command": "claude"
@@ -132,5 +134,14 @@
     "defaultPresetId": "1",
     "selectPresetOnStart": true
   },
-  "worktreeHooks": {}
+  "worktreeHooks": {
+    "post_creation": {
+      "command": "",
+      "enabled": false
+    }
+  },
+  "autoApproval": {
+    "enabled": false,
+    "timeout": 120
+  }
 }
