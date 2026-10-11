@@ -30,17 +30,6 @@ snippet = "devcontainer exec --workspace-folder . --config $HOME/.config/devcont
 trigger = "dcex"
 
 [[snippets]]
-cursor  = "👇"
-name    = "mcpc with aws-vault"
-snippet = "aws-vault exec 👇 -- mcpc connect ~/.local/state/mcpc/apm-home/.copilot/mcp-config.json --stdio"
-trigger = "mcp"
-
-[[snippets]]
-name    = "mcpc via sbx MCP gateway (inside Docker Sandbox)"
-snippet = "mcpc connect http://mcp-gateway.docker.internal/mcp @sbx"
-trigger = "mcpsbx"
-
-[[snippets]]
 global  = true
 name    = "claude"
 snippet = "claude"

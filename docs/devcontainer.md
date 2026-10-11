@@ -19,7 +19,7 @@ host で mcpc 用 MCP config を生成します。この config に credential �
 ```bash
 mise bootstrap dotfiles apply
 mise run apm:install
-test -f ~/.local/state/mcpc/apm-home/.copilot/mcp-config.json
+test -f ~/.config/mcpc/apm-home/.copilot/mcp-config.json
 ```
 
 次に、利用する aws-vault profile の子 process として devcontainer を起動します。
@@ -47,7 +47,7 @@ printf 'profile=%s expires=%s\n' "$AWS_VAULT" "$AWS_CREDENTIAL_EXPIRATION"
 AI agent も同じ環境を継承するため、container 内では plain `mcpc` で接続できます。
 
 ```bash
-mcpc connect ~/.local/state/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
 mcpc @aws-cloudwatch tools-list
 ```
 

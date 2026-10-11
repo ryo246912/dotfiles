@@ -236,123 +236,69 @@ sbx policy ls || true
 '''
 
 ["sandbox:mcp"]
-description = "Register MCP servers on the host so sandboxes can reuse host-side auth"
+description = "Serve mcpc MCP servers to sandboxes over HTTP from the host (mcp-proxy)"
 run = '''
 set -eu
 
-# ホスト側で一度だけ認証し、その認証情報を全 sandbox から使い回すための登録。
-# OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
-# 注入するため、sandbox 内の agent は生の認証情報を読めない。
-#
-# ここで登録するのは「ホストの認証・ホストのリソースが必要なもの」だけにする。
-# npx で動く普通の MCP サーバは rulesync 経由でエージェント自身の設定に入れており、
-# そちらは sandbox 内（VM 内）で動くので devcontainer と同じ隔離が保たれる。
-#
-# 追加したら SBX_AGENT_STATIC_MCP か --static-mcp で sandbox に読み込ませる。
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結するため、本体を関数にする。
+main() {
+  # 使い方（host で前面実行し、作業が終わったら Ctrl-C で止める）:
+  #   aws-vault exec <profile> -- fnox exec --profile work -- mise run sandbox:mcp aws-cloudwatch slack
+  #
+  # apm/apm.yml の dependencies.mcp（mcpc 用 config）にある stdio server を host で起動し、
+  # mcp-proxy で http://127.0.0.1:<port>/servers/<name>/mcp として公開する。sandbox 内の mcpc は
+  # ~/.config/mcpc/sandbox/mcp-config.json（apm:install-mcpc が生成。sbx-agent が mount）経由で
+  # host.docker.internal:<port> へ繋ぐ。
+  #
+  # - sbx の MCP gateway は使わない。gateway に載せた tool は sandbox 内の agent の native MCP にも
+  #   常時見えてしまい、mcpc で必要な時だけ読むことによるコンテキスト節約が成立しないため。
+  # - server は host で動くので、AWS / Slack / Metabase の credential は sandbox に入らない。
+  #   mcp-proxy は config の env（${VAR}）を展開しないため env を外し、--pass-environment で
+  #   aws-vault / fnox が設定したこのプロセスの環境をそのまま server へ渡す。
+  # - mcp-proxy は指定した server を起動時にすべて立ち上げ、1 つでも失敗すると止まるため、
+  #   使う server だけを引数で選ぶ。
+  # - proxy に認証は無い。127.0.0.1 にだけ bind し、使う間だけ起動しておくこと。
 
-command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+  command -v jq >/dev/null 2>&1 || { echo "error: jq が必要です（mise install）" >&2; exit 127; }
+  command -v mcp-proxy >/dev/null 2>&1 || { echo "error: mcp-proxy が必要です（mise install pipx:mcp-proxy）" >&2; exit 127; }
 
-registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
+  config="$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json"
+  [ -f "$config" ] || { echo "error: $config がありません（先に mise run apm:install）" >&2; exit 1; }
+  port="${MCPC_PROXY_PORT:-8931}"
 
-failed=""
-note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
-
-# notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
-if registered notion; then
-  echo "ℹ️ notion は既に登録済み"
-else
-  echo "==> notion を登録（ブラウザで認可します）"
-  sbx mcp add notion --url https://mcp.notion.com/mcp || note_failure notion
-fi
-
-# aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
-# （--command で登録したサーバはホストで動く。sandbox 内の agent は gateway 経由でのみ接続する）
-if registered aws-api; then
-  echo "ℹ️ aws-api は既に登録済み"
-else
-  echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
-  sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
-    || note_failure aws-api
-fi
-
-# chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
-if registered chrome-devtools; then
-  echo "ℹ️ chrome-devtools は既に登録済み"
-else
-  echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
-  sbx mcp add chrome-devtools --command npx \
-    --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
-    || note_failure chrome-devtools
-fi
-
-# mcpc 用 MCP（apm/apm.yml の dependencies.mcp。aws-billing / aws-cloudwatch 等）:
-# apm:install-mcpc が生成した config から command / args を読み、ホスト側 stdio サーバとして登録する。
-# version の pin は APM の manifest / lockfile を正とし、ここでは重複定義しない。
-# sandbox 内の agent / mcpc は gateway 経由でのみ接続するため、AWS の credential は VM に入らない。
-#
-# config の env（${AWS_ACCESS_KEY_ID} 等）は mcpc の起動環境から転送するためのもので、
-# ホストで動く sbx のサーバには効かない。SBX_MCP_AWS_VAULT_PROFILE を指定すると
-# `aws-vault exec <profile> --` でラップして登録し、サーバ起動時にその profile の
-# 一時 credential を発行する（未指定なら aws-api と同じくホストの ~/.aws を使う）。
-mcpc_config="$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json"
-if [ ! -f "$mcpc_config" ]; then
-  echo "ℹ️ mcpc 用 MCP config が無いためスキップ（先に mise run apm:install）: $mcpc_config"
-elif ! command -v jq >/dev/null 2>&1; then
-  note_failure "mcpc 用 MCP（jq が必要）"
-else
-  aws_vault_prefix=""
-  if [ -n "${SBX_MCP_AWS_VAULT_PROFILE:-}" ]; then
-    # サーバは TTY の無い gateway から起動されるため、macOS では MFA 等の入力を GUI で受ける
-    aws_vault_prompt=""
-    [ "$(uname -s)" = Darwin ] && aws_vault_prompt="--prompt=osascript,"
-    aws_vault_prefix="${aws_vault_prompt}exec,${SBX_MCP_AWS_VAULT_PROFILE},--,"
+  if [ "$#" -eq 0 ]; then
+    echo "usage: mise run sandbox:mcp <server>...（例: aws-cloudwatch slack）" >&2
+    echo "server:" >&2
+    jq -r '.mcpServers | keys[] | "  " + .' "$config" >&2
+    exit 2
   fi
-  # sbx mcp add の --args は `,` 区切り。引数に `,` を含むサーバは正しく渡せないので失敗扱いにする。
-  # 空の args でも列がずれないよう、区切りには IFS の空白類ではない US（0x1f）を使う。
-  servers=$(jq -r '.mcpServers // {} | to_entries[]
-    | select(.value.command != null)
-    | (.value.args // []) as $args
-    | [.key, .value.command, ($args | join(",")), (if any($args[]; contains(",")) then "ng" else "ok" end)]
-    | join("\u001f")' "$mcpc_config")
-  us="$(printf '\037')"
-  while IFS="$us" read -r name command args args_ok; do
-    [ -n "$name" ] || continue
-    if [ "$args_ok" != ok ]; then
-      note_failure "$name（引数に , を含む）"
-      continue
-    fi
-    if registered "$name"; then
-      # sbx は登録時の command / args を保持するため、apm.yml の version を上げても自動では追従しない
-      echo "ℹ️ $name は既に登録済み（version / profile を変えたら登録を削除してから再実行。sbx mcp --help 参照）"
-      continue
-    fi
-    if [ -n "$aws_vault_prefix" ]; then
-      args="${aws_vault_prefix}${command}${args:+,$args}"
-      command=aws-vault
-    fi
-    echo "==> $name を登録（ホスト側 stdio: $command）"
-    sbx mcp add "$name" --command "$command" ${args:+--args "$args"} || note_failure "$name"
-  done <<EOF
-$servers
-EOF
-fi
+  for name in "$@"; do
+    jq -e --arg name "$name" '.mcpServers[$name].command != null' "$config" >/dev/null || {
+      echo "error: stdio server '$name' は $config にありません" >&2
+      exit 2
+    }
+  done
 
-echo
-echo "==> 登録済みの MCP サーバ"
-sbx mcp ls || true
-echo
-echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
-echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
-echo "mcpc 用 MCP（aws-billing 等）は必要なときだけ読み込み、sandbox 内の mcpc から gateway へ接続します:"
-echo "  sbx mcp load aws-cloudwatch --sandbox <sandbox-name>"
-echo "  mcpc connect http://mcp-gateway.docker.internal/mcp @sbx   # sandbox 内（docs/mcpc/README.md 参照）"
+  proxy_config="$HOME/.config/mcpc/proxy/mcp-config.json"
+  mkdir -p "$(dirname "$proxy_config")"
+  jq --args '{mcpServers: (.mcpServers
+      | with_entries(select(.key as $k | $ARGS.positional | index($k)))
+      | map_values({command, args: (.args // [])}))}' "$@" <"$config" >"$proxy_config"
 
-# 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
-if [ -n "$failed" ]; then
-  echo >&2
-  echo "error: 登録できなかった MCP サーバ: ${failed}" >&2
-  exit 1
-fi
+  # sandbox から host の localhost:<port> へ出られるようにする（sbx のプロキシは
+  # host.docker.internal を localhost に書き換えて転送するため、許可ルールは localhost で書く）
+  if command -v sbx >/dev/null 2>&1 && ! sbx policy ls 2>/dev/null | grep -q "localhost:${port}"; then
+    sbx policy allow network "localhost:${port}" || echo "warn: localhost:${port} の許可に失敗しました" >&2
+  fi
+
+  echo "==> sandbox 内で使う例:"
+  for name in "$@"; do
+    echo "  mcpc connect \"\$MCPC_SANDBOX_CONFIG:${name}\" @${name}"
+  done
+  exec mcp-proxy --pass-environment --host 127.0.0.1 --port "$port" --named-server-config "$proxy_config"
+}
+
+main "$@"
 '''
 
 ["sandbox:template-save"]

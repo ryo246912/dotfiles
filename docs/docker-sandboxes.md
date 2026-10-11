@@ -18,7 +18,6 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
-> mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 > ```
 
 ## devcontainer に対する利点
@@ -512,7 +511,6 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
-mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（任意）
 ```
 
 > [!NOTE]
@@ -555,11 +553,8 @@ mise run sandbox:mcp             # ホスト認証が必要な MCP を登録（�
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-MCP を常用するならシェルの設定に入れておきます。
-
-```bash
-export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools
-```
+MCP（AWS / Notion / Slack / Metabase / Chrome）は sandbox 内の mcpc から必要な時だけ使います。
+host 側の準備は [MCP の扱い](#mcp-の扱い) を参照してください。
 
 ### タスクごと
 
@@ -585,7 +580,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む
+   - mcpc 用の sandbox config（`~/.config/mcpc/sandbox`）を read-only でマウント
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -1170,7 +1165,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている       |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている          |
 | `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている          |
-| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                    |
+| MCP（ホストで認証済みのものを使う）                  | ✅ mcpc + `mise run sandbox:mcp`（[詳細](#mcp-の扱い)）                 |
 | 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）  |
 
 ### 残っている差分
@@ -1189,59 +1184,40 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ## MCP の扱い
 
-devcontainer では MCP サーバ（`npx` の stdio サーバ）がコンテナ内で動いていたため、
-ホストから隔離されていました。sandbox では **どちらの経路を使うかで隔離レベルが変わります**。
+agent の native MCP として常時登録すると、使わない会話でも全 tool の定義がコンテキストを消費します。
+このリポジトリでは AWS / Notion / Slack / Metabase / Chrome の MCP を **mcpc（CLI）から必要な時だけ**
+使います（仕組みは [`docs/mcpc/README.md`](mcpc/README.md)）。sandbox でも同じで、sbx の MCP gateway
+（`sbx mcp` / `--static-mcp`）は使いません。gateway に載せた tool は sandbox 内の agent にも native MCP
+として常に見えてしまい、mcpc によるコンテキスト節約が成立しないためです。
 
-| 経路                                                       | MCP サーバが動く場所 | 隔離                                                        |
-| ---------------------------------------------------------- | -------------------- | ----------------------------------------------------------- |
-| エージェント自身の MCP 設定（`~/.claude.json` / rulesync） | **sandbox 内の VM**  | ✅ devcontainer と同じ。VM の外には出られない               |
-| `sbx mcp add --local` / `--command`（stdio）               | **ホスト**           | ⚠️ MCP サーバはホスト権限で動く。agent は gateway 経由のみ  |
-| `sbx mcp add --url`（リモート）                            | リモート             | ⚠️ gateway がホストから接続する（認証情報はホストに留まる） |
-
-### 使い分け
-
-このリポジトリは MCP を rulesync 経由でエージェント自身の設定に入れているため、
-普通のサーバは **sandbox でも devcontainer と同じく VM 内で動きます**
-（`npx` 用の node は template に入っています）。
-
-`sbx mcp` を使うのは **ホストの認証やホストのリソースが必要なもの**だけです。
-ホスト側で一度認証すれば、以降は全 sandbox から認証なしで使えます。
-
-```bash
-mise run sandbox:mcp     # notion(OAuth) / aws-api / chrome-devtools / mcpc 用 MCP を登録
+```
+[host]    aws-vault exec … -- fnox exec --profile work -- mise run sandbox:mcp aws-cloudwatch slack
+            └─ mcp-proxy（127.0.0.1:8931）─ stdio MCP server（credential は host の環境だけが持つ）
+[sandbox] mcpc connect "$MCPC_SANDBOX_CONFIG:aws-cloudwatch" @aws-cloudwatch
+            └─ http://host.docker.internal:8931/servers/aws-cloudwatch/mcp
 ```
 
-| サーバ            | 登録方法                                               | ホスト側で何を使うか                                          |
-| ----------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `notion`          | `sbx mcp add notion --url https://mcp.notion.com/mcp`  | 初回のみブラウザで OAuth 認可。トークンは OS キーチェーンへ   |
-| `aws-api`         | `sbx mcp add aws-api --command uvx --args ...`         | ホストの `~/.aws`（profile / SSO）                            |
-| `chrome-devtools` | `sbx mcp add chrome-devtools --command npx --args ...` | ホストで起動している Chrome（`localhost:9222`）               |
-| `aws-billing` 等  | mcpc 用 config（APM の `dependencies.mcp`）から登録    | `SBX_MCP_AWS_VAULT_PROFILE` の aws-vault（未指定は `~/.aws`） |
+| 経路                                                       | MCP サーバが動く場所 | agent の context        | 認証情報                       |
+| ---------------------------------------------------------- | -------------------- | ----------------------- | ------------------------------ |
+| エージェント自身の MCP 設定（`~/.claude.json` / rulesync） | sandbox 内の VM      | 全 tool 定義が常に入る  | VM 内                          |
+| mcpc + `mise run sandbox:mcp`（このリポジトリの既定）      | ホスト               | `mcpc` の出力だけが入る | ホストに留まり VM には入らない |
 
-sandbox に読み込ませるには `--static-mcp` を使います。既定値は
-`SBX_AGENT_STATIC_MCP` か `[settings.sandbox].static_mcp` で指定できます。
+- MCP server の定義と version は `apm/apm.yml` の `dependencies.mcp` で管理し、`mise run apm:install` が
+  host 用（stdio）と sandbox 用（URL だけ）の mcpc config を生成します。
+- `sbx-agent` は sandbox 用 config があれば read-only でマウントし、そのパスを `MCPC_SANDBOX_CONFIG` で渡します。
+  config を生成する前に作った sandbox には入らないので、作り直してください。
+- `sandbox:mcp` は `localhost:8931` を network policy に追加します（ポートは `MCPC_PROXY_PORT` で変更）。
 
-```bash
-export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools
-sbx-agent claude                                 # 作成時に読み込まれる
-sbx-agent claude --static-mcp notion             # 明示指定
-```
-
-起動済みの sandbox には `sbx-agent` が `sbx mcp load` で後から足します。
-
-sandbox 内の mcpc からは gateway（`http://mcp-gateway.docker.internal/mcp`）へ接続して、load 済みの
-server の tool を検索・実行できます。AWS MCP を必要なときだけ load する手順は
-[`docs/mcpc/README.md`](mcpc/README.md#docker-sandboxessbx内で使う) を参照してください。
+手順の詳細は [`docs/mcpc/README.md`](mcpc/README.md#docker-sandboxessbx内で使う) を参照してください。
 
 ### トレードオフ
 
-`--command` で登録した stdio サーバは**ホストで動きます**。ホストの認証をそのまま使える
-代わりに、MCP サーバ自体は sandbox の隔離の外にあります（ホストのファイル・ネットワーク・
-認証情報に触れます）。信頼できるサーバだけを登録してください。
-エージェントは gateway にしか繋がらないので、**生の認証情報は読めません**。
+MCP server は**ホストで動きます**。ホストの認証をそのまま使える代わりに、server 自体は sandbox の
+隔離の外にあります（ホストのファイル・ネットワーク・認証情報に触れます）。信頼できる server だけを
+`apm/apm.yml` に追加してください。
 
-認証情報の隔離を優先したい場合は rulesync 側（VM 内実行）に置き、
-sandbox 内で `aws sso login` 等をやり直す運用になります。
+proxy には認証がありません。127.0.0.1 にだけ bind しますが、network policy で `localhost:8931` を許可した
+sandbox からは誰でも呼べます。使う間だけ起動し、作業が終わったら止めてください。
 
 ## 管理ツール（CLI / TUI）
 

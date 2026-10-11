@@ -146,6 +146,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:context-tracker"                                      = "1.0.0"
 "pipx:grip"                                                 = "4.6.2"
+"pipx:mcp-proxy"                                            = "0.13.0"
 "pipx:tftui"                                                = "0.14.1"
 
 [settings]

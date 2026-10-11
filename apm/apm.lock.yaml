@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-09T02:54:01.052477+00:00'
+generated_at: '2026-10-11T16:06:44.917114+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -8347,6 +8347,15 @@ deployments:
   content_hash: sha256:cb40a98d985fdc02524ba40935f0de2cfdd2b1b6b1872921c7fba15cf0a715c2
 - kind: uri
   target: mcp
+  value: aws-api
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
   value: aws-billing
   runtime: copilot
   scope: project
@@ -8363,10 +8372,67 @@ deployments:
   - .
   active_owner: .
   content_hash: null
+- kind: uri
+  target: mcp
+  value: chrome-devtools
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: metabase
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: notion
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
+- kind: uri
+  target: mcp
+  value: slack
+  runtime: copilot
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
 mcp_servers:
+- aws-api
 - aws-billing
 - aws-cloudwatch
+- chrome-devtools
+- metabase
+- notion
+- slack
 mcp_configs:
+  aws-api:
+    name: aws-api
+    transport: stdio
+    env:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_REGION: ${AWS_REGION}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+    args:
+    - FASTMCP_LOG_LEVEL=ERROR
+    - uvx
+    - awslabs.aws-api-mcp-server@1.5.6
+    version: 1.5.6
+    registry: false
+    command: env
   aws-billing:
     name: aws-billing
     transport: stdio
@@ -8399,7 +8465,57 @@ mcp_configs:
     version: 0.1.7
     registry: false
     command: env
+  chrome-devtools:
+    name: chrome-devtools
+    transport: stdio
+    args:
+    - -y
+    - chrome-devtools-mcp@0.13.0
+    - --browser-url=http://localhost:9222
+    version: 0.13.0
+    registry: false
+    command: npx
+  metabase:
+    name: metabase
+    transport: stdio
+    env:
+      METABASE_URL: ${METABASE_URL}
+      METABASE_API_KEY: ${METABASE_API_KEY}
+    args:
+    - -y
+    - '@cognitionai/metabase-mcp-server@2.2.0'
+    version: 2.2.0
+    registry: false
+    command: npx
+  notion:
+    name: notion
+    transport: stdio
+    args:
+    - -y
+    - mcp-remote@0.14.3
+    - https://mcp.notion.com/mcp
+    version: 0.14.3
+    registry: false
+    command: npx
+  slack:
+    name: slack
+    transport: stdio
+    env:
+      SLACK_MCP_XOXP_TOKEN: ${SLACK_MCP_XOXP_TOKEN}
+    args:
+    - -y
+    - slack-mcp-server@1.3.0
+    - --transport
+    - stdio
+    version: 1.3.0
+    registry: false
+    command: npx
 mcp_target_servers:
   copilot:
+  - aws-api
   - aws-billing
   - aws-cloudwatch
+  - chrome-devtools
+  - metabase
+  - notion
+  - slack

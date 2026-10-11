@@ -130,7 +130,7 @@
     "type=bind,source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot",
     // apm:install-mcpc が隔離HOMEへ生成したmcpc専用MCP config。credentialを含まないためreadonlyで共有する。
     // source が無いと作成に失敗するため initialize.sh で事前に用意する。
-    "type=bind,source=${localEnv:HOME}/.local/state/mcpc/apm-home/.copilot,target=/home/vscode/.local/state/mcpc/apm-home/.copilot,readonly",
+    "type=bind,source=${localEnv:HOME}/.config/mcpc/apm-home/.copilot,target=/home/vscode/.config/mcpc/apm-home/.copilot,readonly",
     "type=bind,source=${localEnv:HOME}/.coderabbit,target=/home/vscode/.coderabbit",
     // DinDのdockerデータ(イメージ等)をnamed volumeで永続化し、リビルド時のpullを回避。
     // ${devcontainerId} でスコープし、multi-worktree で複数の devcontainer を同時起動しても

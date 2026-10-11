@@ -13,6 +13,11 @@
 # [profiles.work.secrets]
 # SOME_APP_API_KEY = { provider = "bws", value = "SOME_APP_API_KEY" }
 # DATABASE_URL = { provider = "aws", value = "database-url" }
+# mcpc の Slack / Metabase MCP 用（apm/apm.yml の dependencies.mcp。docs/mcpc/README.md）。
+# shell には常駐させず、`fnox exec --profile work -- mcpc ...` / `mise run sandbox:mcp` の時だけ渡す。
+# SLACK_MCP_XOXP_TOKEN = { provider = "bws", value = "SLACK_MCP_XOXP_TOKEN", env = "exec" }
+# METABASE_URL         = { provider = "bws", value = "METABASE_URL", env = "exec" }
+# METABASE_API_KEY     = { provider = "bws", value = "METABASE_API_KEY", env = "exec" }
 
 # aws-vault のプロファイル名(`aws-vault list`)と同名の fnox profile を追加で定義できる
 # [profiles.xxx.providers.aws]
