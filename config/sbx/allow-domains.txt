@@ -1,5 +1,5 @@
 # sandbox からのアクセスを全 sandbox 共通で許可するドメイン（mise run sandbox:setup が読み込む）。
-# Balanced preset の allowlist に無い、調査でよく読むドキュメント・技術情報サイトを並べる。
+# Balanced preset の allowlist に無い、調査でよく読むドキュメント・技術情報サイトや、ツールが取得に使うホストを並べる。
 # ここに無いドメインは、ブロック時の承認リクエスト（sbx policy approval）で個別に許可する。
 # 1行1パターン。`#` 以降はコメント。`*.example.com` は1階層、`**.example.com` は多階層の subdomain に一致する。
 
@@ -25,3 +25,7 @@ stackoverflow.com
 zenn.dev
 qiita.com
 **.wikipedia.org
+
+# パッケージ・ビルドツールの取得元（Balanced preset に無いもの）
+# FE の openapi-generator-cli が初回起動時にジェネレータ本体（jar）を Maven Central からダウンロードする
+repo1.maven.org
