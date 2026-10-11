@@ -112,6 +112,9 @@ git branch -m <branch> <branch>
 # rename remote branch
 git push origin :<branch> <branch>
 
+# push detached HEAD to remote branch [refs/heads/:required when HEAD is detached]
+git push origin HEAD:refs/heads/<remote_branch>
+
 # revert
 git revert <commit1>
 
