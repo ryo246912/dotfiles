@@ -5,6 +5,8 @@ vim.opt.termguicolors = true
 vim.opt.backup = false
 -- スワップファイルを作らない
 vim.opt.swapfile = false
+-- CursorHold (LSP の auto hover など) が発火するまでの待ち時間 (デフォルト4000msは長すぎる)
+vim.opt.updatetime = 500
 -- マウス操作の有効化
 vim.opt.mouse = "a"
 -- コマンドラインの履歴上限を10000件にする

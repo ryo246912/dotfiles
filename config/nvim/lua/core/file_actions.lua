@@ -585,7 +585,7 @@ function M.setup()
     silent = true,
     desc = "現在バッファを format",
   })
-  vim.keymap.set("n", "<leader>xh", "<cmd>SaveHooksToggle<CR>", {
+  vim.keymap.set("n", "<leader>xs", "<cmd>SaveHooksToggle<CR>", {
     noremap = true,
     silent = true,
     desc = "save hook を切り替え",

@@ -22,6 +22,7 @@ return {
       vim.g.lsp_enabled = vim.g.lsp_enabled ~= false
       vim.g.inline_diagnostics_enabled = vim.g.inline_diagnostics_enabled ~= false
       vim.g.inlay_hints_enabled = vim.g.inlay_hints_enabled ~= false
+      vim.g.auto_hover_enabled = vim.g.auto_hover_enabled ~= false
 
       local ts_server = has_lspconfig("ts_ls") and "ts_ls" or "tsserver"
       -- pyright は inlay hints (textDocument/inlayHint) に未対応のため basedpyright を優先する
@@ -330,6 +331,25 @@ return {
           vim.lsp.inlay_hint.enable(vim.g.inlay_hints_enabled, { bufnr = bufnr })
         end
 
+        -- VSCode のように、カーソルを止めると型やドキュメントを hover popup で表示する
+        -- (表示までの待ち時間は updatetime。popup はカーソル移動で閉じる)
+        if client:supports_method("textDocument/hover") then
+          vim.api.nvim_create_autocmd("CursorHold", {
+            group = vim.api.nvim_create_augroup("LspAutoHover" .. bufnr, { clear = true }),
+            buffer = bufnr,
+            callback = function()
+              if not vim.g.auto_hover_enabled or vim.fn.mode() ~= "n" then
+                return
+              end
+              -- 既に float (K で開いた hover や診断 popup など) にフォーカスがある時は出さない
+              if vim.api.nvim_win_get_config(0).relative ~= "" then
+                return
+              end
+              vim.lsp.buf.hover({ focusable = false, silent = true, border = "rounded" })
+            end,
+          })
+        end
+
         if vim.b[bufnr].vscode_like_lsp_maps then
           return
         end
@@ -505,6 +525,18 @@ return {
         noremap = true,
         silent = true,
         desc = "inline diagnostics を切り替え",
+      })
+
+      vim.api.nvim_create_user_command("AutoHoverToggle", function()
+        vim.g.auto_hover_enabled = not vim.g.auto_hover_enabled
+        local status = vim.g.auto_hover_enabled and "有効" or "無効"
+        vim.notify("auto hover を " .. status .. " にしました", vim.log.levels.INFO)
+      end, {})
+
+      vim.keymap.set("n", "<leader>xk", "<cmd>AutoHoverToggle<CR>", {
+        noremap = true,
+        silent = true,
+        desc = "カーソル位置の auto hover を切り替え",
       })
 
       local function apply_inlay_hints(enabled)
