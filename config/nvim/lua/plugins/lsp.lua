@@ -494,6 +494,7 @@ return {
       pcall(vim.api.nvim_del_user_command, "InlayHintsEnable")
       pcall(vim.api.nvim_del_user_command, "InlayHintsDisable")
       pcall(vim.api.nvim_del_user_command, "InlayHintsToggle")
+      pcall(vim.api.nvim_del_user_command, "AutoHoverToggle")
 
       vim.api.nvim_create_user_command("LspEnable", enable_lsp, {})
       vim.api.nvim_create_user_command("LspDisable", disable_lsp, {})
