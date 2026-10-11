@@ -42,7 +42,7 @@ ln -sf <resurrect_file> ~/.local/share/tmux/resurrect/last && tmux run-shell "$(
 # relink resurrect file
 ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last
 
-# send-keys to resume claude after usage limit at specified time [caffeinate:prevent sleep]
+# send-keys to resume ai agent after usage limit at specified time [caffeinate:prevent sleep]
 nohup caffeinate -i bash -c '
   T="<send_time>"
   target=$(date -d "$T" +%s) || { echo "時刻の計算に失敗。中止します"; exit 1; }
@@ -74,7 +74,6 @@ $ tty: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
   --- --column 6
-$ send_time: date -d "+5 hours" +%H:%M
 $ target_pane: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
