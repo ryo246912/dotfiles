@@ -120,9 +120,3 @@ _G.MyTabline = function()
 end
 
 vim.opt.tabline = "%!v:lua.MyTabline()"
-
--- editpromptから起動された場合(EDITPROMPT=1)は、:q でも自動保存して終了する
--- (保存されないとeditpromptが空とみなして対象paneに出力しないため。破棄したい時は :q!)
-if vim.env.EDITPROMPT == "1" then
-  vim.opt.autowriteall = true
-end
