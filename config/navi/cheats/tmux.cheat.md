@@ -50,11 +50,11 @@ nohup caffeinate -i bash -c '
   secs=$(( target - $(date +%s) ))
   echo "$(date): ${secs}秒後($(date -d @$target))に送信予定"
   sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; }
-  tmux send-keys -t <target_pane> Escape
-  sleep 1
-  tmux send-keys -t <target_pane> -l "usage limitで中断した作業の続きを進めて"
-  sleep 1
-  tmux send-keys -t <target_pane> Enter
+  tmux send-keys -t <target_pane> Escape &&
+  sleep 1 &&
+  tmux send-keys -t <target_pane> -l "usage limitで中断した作業の続きを進めて" &&
+  sleep 1 &&
+  tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; }
   echo "$(date): 送信完了"
 ' > ~/claude-resume.log 2>&1 &
 ```
