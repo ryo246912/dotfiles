@@ -78,7 +78,7 @@ account/role を混同しないため、credential 更新時は container の再
 - container 内の process と AI agent は一時 credential を読めます。信頼できる repository と MCP server
   だけを起動し、AWS側では最小権限の roleを使用してください。
 - `env`、debug log、agent の会話へ秘密値を出力しないでください。確認には
-  `aws sts get-caller-identity` と `AWS_CREDENTIAL_EXPIRATION` を使います。
+  `uvx --from awscli aws sts get-caller-identity` と `AWS_CREDENTIAL_EXPIRATION` を使います。
 - credential は dotfiles、APM manifest、MCP config には書き込まれませんが、container runtime の環境として
   保持されます。共有hostでは Docker inspect 権限を持つ利用者も秘密値を参照できる前提で運用してください。
 - 長時間稼働させず、作業終了後は container と mcpc session を停止してください。
