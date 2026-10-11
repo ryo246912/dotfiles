@@ -1,0 +1,178 @@
+-- フローティングターミナル（lazygit, hunk など）をプロセスを落とさずに表示/非表示する
+local M = {}
+
+-- group ごとに 1 セッション保持: { buf, win, job, cwd, exited, hidden_seq }
+local sessions = {}
+-- 引っ込めた順番を記録する連番（まとめて引っ込めたものは同じ番号）
+local seq = 0
+
+function M.next_seq()
+  seq = seq + 1
+  return seq
+end
+
+local function win_config()
+  local width = math.floor(vim.o.columns * 0.9)
+  local height = math.floor(vim.o.lines * 0.9)
+  return {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    style = "minimal",
+    border = "rounded",
+  }
+end
+
+local function is_valid(s)
+  return s and vim.api.nvim_buf_is_valid(s.buf)
+end
+
+local function show(s)
+  s.win = vim.api.nvim_open_win(s.buf, true, win_config())
+  if not s.exited then
+    vim.cmd("startinsert")
+  end
+end
+
+local function is_visible(s)
+  return s.win and vim.api.nvim_win_is_valid(s.win)
+end
+
+local function hide(s, batch)
+  if is_visible(s) then
+    vim.api.nvim_win_hide(s.win)
+  end
+  s.win = nil
+  s.hidden_seq = batch or M.next_seq()
+end
+
+local function dispose(group, s)
+  if sessions[group] == s then
+    sessions[group] = nil
+  end
+  if s.win and vim.api.nvim_win_is_valid(s.win) then
+    vim.api.nvim_win_close(s.win, true)
+  end
+  if vim.api.nvim_buf_is_valid(s.buf) then
+    vim.api.nvim_buf_delete(s.buf, { force = true })
+  end
+end
+
+-- 既存セッションがあれば表示/非表示を切り替えて true を返す。なければ false
+-- opts.cwds: 指定すると、非表示のセッションの cwd がこの中にない場合は破棄して false を返す
+function M.toggle(group, opts)
+  opts = opts or {}
+  local s = sessions[group]
+  if not is_valid(s) then
+    sessions[group] = nil
+    return false
+  end
+  if is_visible(s) then
+    hide(s)
+    return true
+  end
+  if opts.cwds and not vim.tbl_contains(opts.cwds, s.cwd) then
+    dispose(group, s)
+    return false
+  end
+  show(s)
+  return true
+end
+
+-- 表示中のセッションをすべて引っ込め、引っ込めた group の一覧と連番を返す
+-- （カーソルのあったセッションを最後にして、出し直したときに手前に来るようにする）
+function M.hide_visible()
+  local groups = {}
+  local batch = M.next_seq()
+  local current = vim.api.nvim_get_current_win()
+  local focused
+  for group, s in pairs(sessions) do
+    if is_valid(s) and is_visible(s) then
+      if s.win == current then
+        focused = group
+      else
+        table.insert(groups, group)
+      end
+      hide(s, batch)
+    end
+  end
+  if focused then
+    table.insert(groups, focused)
+  end
+  return groups, batch
+end
+
+-- 裏にあるセッションのうち、最後に引っ込めたもの（まとめて引っ込めたなら全部）の group 一覧と連番を返す
+function M.latest_hidden()
+  local latest, groups = nil, {}
+  for group, s in pairs(sessions) do
+    if is_valid(s) and not is_visible(s) then
+      local n = s.hidden_seq or 0
+      if latest == nil or n > latest then
+        latest, groups = n, { group }
+      elseif n == latest then
+        table.insert(groups, group)
+      end
+    end
+  end
+  return groups, latest
+end
+
+-- 指定した group のセッションを出し直す。1 つでも出し直せたら true
+function M.show_groups(groups)
+  local shown = false
+  for _, group in ipairs(groups) do
+    local s = sessions[group]
+    if is_valid(s) and not is_visible(s) then
+      show(s)
+      shown = true
+    end
+  end
+  return shown
+end
+
+-- 新しいセッションを開く（同じ group の既存セッションは終了させる）
+-- opts.cwd: 作業ディレクトリ
+-- opts.close_on_exit: false ならコマンド終了後も出力を残す（q で閉じる）。既定 true
+function M.open(group, cmd, opts)
+  opts = opts or {}
+  local old = sessions[group]
+  if is_valid(old) then
+    dispose(group, old)
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].bufhidden = "hide"
+  local s = { buf = buf, cwd = opts.cwd }
+  sessions[group] = s
+  s.win = vim.api.nvim_open_win(buf, true, win_config())
+
+  local ok, job = pcall(vim.fn.termopen, cmd, {
+    cwd = opts.cwd,
+    on_exit = function()
+      vim.schedule(function()
+        if opts.close_on_exit == false then
+          s.exited = true
+          if vim.api.nvim_buf_is_valid(buf) then
+            vim.keymap.set({ "n", "t" }, "q", function() dispose(group, s) end,
+              { buffer = buf, nowait = true, desc = "ポップアップを閉じる" })
+          end
+          return
+        end
+        dispose(group, s)
+      end)
+    end,
+  })
+  -- 起動に失敗したら空のセッションを残さない（残すと toggle が再起動を妨げる）
+  if not ok or job <= 0 then
+    dispose(group, s)
+    vim.notify("ターミナルを起動できません: " .. tostring(ok and vim.inspect(cmd) or job), vim.log.levels.ERROR)
+    return
+  end
+  s.job = job
+  vim.cmd("startinsert")
+end
+
+return M

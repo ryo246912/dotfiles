@@ -1,0 +1,49 @@
+# macOS系
+.DS_Store
+
+# Node.js
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# terraform
+tftui.plan
+.terraform/
+
+# Gradle
+.gradle/
+
+# Rust / Maven
+target/
+
+# git
+COMMIT_EDITMSG
+commondir
+config
+description
+FETCH_HEAD
+gitdir
+gitui
+HEAD
+index
+index.lock
+MERGE_RR
+ORIG_HEAD
+packed-refs
+
+## Claude
+settings.local.json
+.claude/worktrees/
+
+## VSCode
+mcp.json
+
+## AI
+plan/**
+
+## crit
+.crit/
+lefthook.local.yml

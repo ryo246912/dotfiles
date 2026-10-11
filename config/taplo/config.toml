@@ -1,0 +1,7 @@
+# MEMO: taplo.tomlのreloadには、拡張機能の再起動が必要
+[formatting]
+align_entries       = true
+allowed_blank_lines = 1
+array_auto_collapse = false
+indent_string       = "    "
+reorder_keys        = true
