@@ -28,9 +28,11 @@ calculate_apm_hash() {
       [ -e "$module" ] || [ -L "$module" ] || continue
       printf '%s\n' "$module"
     done | sort
-    # apm:install-mcpc が生成する mcpc 専用 config が消えていても再生成されるようにする。
-    mcpc_config="$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json"
-    [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
+    # apm:install-mcpc が生成する mcpc 専用 config（host 用・sandbox 用）が消えていても再生成されるようにする。
+    for mcpc_config in "$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json" \
+      "$HOME/.config/mcpc/sandbox/mcp-config.json"; do
+      [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
+    done
   } | hash_cmd
 }
 apm_hash=$(calculate_apm_hash)

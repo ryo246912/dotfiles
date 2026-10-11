@@ -120,7 +120,7 @@ mcpc close @aws-cloudwatch
 
 ## devcontainer 内で使う
 
-devcontainer では server を container 内で動かします。host で `aws-vault exec <profile> -- devcontainer up ...` として短期 credential を container の起動環境へ渡します。セットアップ、account 切り替え、期限切れ時の再起動手順は [`docs/devcontainer.md`](../devcontainer.md#aws-vault-の認証を-container-内の-ai-agent-で使う) を参照してください。Slack / Metabase の token は devcontainer へは渡していません。
+devcontainer では server を container 内で動かします。host で `aws-vault exec <profile> -- devcontainer up ...` として短期 credential を container の起動環境へ渡します。セットアップ、account 切り替え、期限切れ時の再起動手順は [`docs/devcontainer.md`](../devcontainer.md#aws-vault-の認証を-container-内の-ai-agent-で使う) を参照してください。Slack / Metabase の token は devcontainer へは渡していません。また `chrome-devtools` の `localhost:9222` は container 自身を指すため、devcontainer からは host の Chrome に繋がりません（host か sandbox の `sandbox:mcp` 経由で使ってください）。
 
 ## tool を検索して必要な schema だけ読む
 
