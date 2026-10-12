@@ -44,19 +44,21 @@ ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last
 
 # send-keys to resume ai agent after usage limit at specified time [caffeinate:prevent sleep]
 nohup caffeinate -i bash -c '
-  T="<send_time>"
-  target=$(date -d "$T" +%s) || { echo "時刻の計算に失敗。中止します"; exit 1; }
-  [ "$target" -le "$(date +%s)" ] && target=$(date -d "tomorrow $T" +%s)
-  secs=$(( target - $(date +%s) ))
-  echo "$(date): ${secs}秒後($(date -d @$target))に送信予定"
-  sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; }
-  tmux send-keys -t <target_pane> Escape &&
+  T="<send_time>";
+  target=$(date -d "$T" +%s) || { echo "時刻の計算に失敗。中止します"; exit 1; };
+  [ "$target" -le "$(date +%s)" ] && target=$(date -d "tomorrow $T" +%s);
+  secs=$(( target - $(date +%s) ));
+  echo "$(date): ${secs}秒後($(date -d @$target))に送信予定";
+  sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; };
+  case "$(tmux display-message -p -t <target_pane> "#{pane_current_command}")" in
+    zsh|bash|fish|sh) ;;
+    *) tmux send-keys -t <target_pane> Escape && sleep 1 || { echo "$(date): 送信失敗。中止します"; exit 1; } ;;
+  esac;
+  tmux send-keys -t <target_pane> -l "$1" &&
   sleep 1 &&
-  tmux send-keys -t <target_pane> -l "usage limitで中断した作業の続きを進めて" &&
-  sleep 1 &&
-  tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; }
-  echo "$(date): 送信完了"
-' > ~/claude-resume.log 2>&1 &
+  tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; };
+  echo "$(date): 送信完了";
+' _ '<message>' > ~/claude-resume.log 2>&1 &
 ```
 $ hv: echo -e "v\nh"
 $ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f | head -n 10
@@ -74,6 +76,7 @@ $ tty: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
   --- --column 6
+$ message: echo "usage limitで中断した作業の続きを進めて" --- --fzf-overrides "--no-select-1" --map "sed \"s/'/'\\\\\\\\''/g\""
 $ target_pane: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
