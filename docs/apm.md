@@ -114,7 +114,8 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
   APM による lockfile の再生成はできず、`apm_version` の値だけを書き換えます（0.32.0 → 0.33.0 では、
   書き換えた lockfile で `apm install -g --frozen` が成功し、lockfile の内容も変わらないことを確認済み）。
   新しい APM で content hash の計算方法などが変わり install が失敗する場合は、ローカルで
-  `apm install -g --update` を実行して lockfile を再生成してください。
+  `apm install -g --update` を実行して lockfile を再生成し、`mise --cd "$HOME" run apm:sync-lock` で
+  `apm/apm.lock.yaml` に同期してから commit してください。
 - **project scope の生成物を commit しない**: `apm install` は `apm/` 配下に `.claude/`・`.agents/`・
   `apm_modules/` などを生成します。Renovate は変更・未追跡ファイルをすべてPRに含めるため、`.gitignore` で
   `apm/apm.yml`・`apm/apm.lock.yaml` 以外を除外しています。
