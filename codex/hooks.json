@@ -4,15 +4,11 @@
       {
         "hooks": [
           {
+            "statusMessage": "Checking rule update suggestions",
             "type": "command",
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
-            "timeout": 30,
-            "statusMessage": "Checking rule update suggestions"
-          }
-        ]
-      },
-      {
-        "hooks": [
+            "timeout": 30
+          },
           {
             "type": "command",
             "statusMessage": "Tracking ponytail mode...",
@@ -26,16 +22,16 @@
       {
         "hooks": [
           {
+            "statusMessage": "Reviewing recent transcript for rule updates",
             "type": "command",
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
-            "timeout": 30,
-            "statusMessage": "Reviewing recent transcript for rule updates"
+            "timeout": 30
           },
           {
+            "statusMessage": "Opening plan in Plannotator",
             "type": "command",
             "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
-            "timeout": 345600,
-            "statusMessage": "Opening plan in Plannotator"
+            "timeout": 345600
           }
         ]
       }

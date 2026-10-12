@@ -1,13 +1,16 @@
 {
   "targets": {
-    "claudecode": ["rules", "skills", "commands", "hooks"],
-    "codexcli": ["rules", "skills"],
+    "claudecode": ["rules", "skills", "commands", "hooks", "permissions"],
+    "codexcli": ["rules", "skills", "hooks", "permissions"],
     "copilot": ["rules"],
-    "copilotcli": ["rules"],
+    "copilotcli": ["rules", "hooks"],
   },
   "delete": false,
   "verbose": false,
   "silent": false,
   "global": true,
   "simulateCommands": true,
+  // rulesync は既定で hooks 一覧を丸ごと置き換えるため、APM が merge した plugin の hooks
+  // （ponytail 等）が generate のたびに消えてしまう。rulesync 管理外の hooks は残す。
+  "preserveUnownedHooks": true,
 }
