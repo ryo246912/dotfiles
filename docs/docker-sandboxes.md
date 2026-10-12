@@ -296,7 +296,7 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 > 作るときに自動でも実行**します。github の secret は毎回ホストの `gh` から登録し直すので、
 > `gh auth refresh` などでトークンが入れ替わっても、sandbox を作り直せば追従します。
 > ドキュメントサイトの許可とホスト設定は `sandbox:setup` でだけ反映するため、
-> `config/sbx/allow-domains.txt` を変更したら `mise run sandbox:setup` を再実行してください。
+> `config/sbx/allow-domains*.txt` を変更したら `mise run sandbox:setup` を再実行してください。
 
 ### ドキュメントサイトの許可
 
@@ -306,6 +306,9 @@ docs.anthropic.com・MDN・Zenn・Qiita・Stack Overflow のような**ドキュ
 `config/sbx/allow-domains.txt`（1 行 1 パターン、`#` 以降はコメント）に並べ、
 `sandbox:setup` が `sbx policy allow network` で全 sandbox に許可します。
 
+- 特定の環境（work3 / private など）でだけ許可したいドメインは `config/sbx/allow-domains.<name>.txt` に
+  書きます。gitignore 済みなのでコミットされず、`sandbox:setup` が `allow-domains.txt` と一緒に読み込みます。
+  雛形の `allow-domains.work3.txt.example` を `.example` を外してコピーして使ってください。
 - 一覧に無いドメインは、ブロック時に出る承認リクエストで個別に許可します
   （`sbx policy approval ls` → `sbx policy approval respond <id> --option <option-id>`）。
 - preset を `allow-all` にすれば許可の手間は無くなりますが、プロキシが GitHub トークンなどを

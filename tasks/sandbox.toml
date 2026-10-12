@@ -204,13 +204,18 @@ echo "==> ホスト連携に必要な network policy を許可"
 # sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
 sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
 
-echo "==> 調査でよく読むドキュメントサイトを全 sandbox で許可"
-# 一覧は config/sbx/allow-domains.txt。kit ではなく global な policy で許可する理由は
+echo "==> 許可リストのドメインを全 sandbox で許可"
+# 一覧は config/sbx/allow-domains.txt（共通）と allow-domains.<name>.txt（work3 / private など
+# 環境ごと。gitignore 済み）。kit ではなく global な policy で許可する理由は
 # docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
-allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$MISE_PROJECT_ROOT/config/sbx/allow-domains.txt" | grep -v '^$' | paste -sd, -)
-if [ -n "$allow_domains" ]; then
-  sbx policy allow network "$allow_domains" || echo "warn: ドキュメントサイトの許可に失敗しました" >&2
-fi
+for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.txt "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
+  # allow-domains.*.txt が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$allow_file" ] || continue
+  allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow_file" | grep -v '^$' | paste -sd, -) || true
+  if [ -n "$allow_domains" ]; then
+    sbx policy allow network "$allow_domains" || echo "warn: $(basename "$allow_file") のドメインの許可に失敗しました" >&2
+  fi
+done
 
 echo "==> ホスト設定を反映"
 # ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
