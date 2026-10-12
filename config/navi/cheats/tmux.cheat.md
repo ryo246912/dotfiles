@@ -44,18 +44,18 @@ ln -fs <resurrect_file> ~/.local/share/tmux/resurrect/last
 
 # send-keys to resume ai agent after usage limit at specified time [caffeinate:prevent sleep]
 nohup caffeinate -i bash -c '
-  T="<send_time>"
-  target=$(date -d "$T" +%s) || { echo "時刻の計算に失敗。中止します"; exit 1; }
-  [ "$target" -le "$(date +%s)" ] && target=$(date -d "tomorrow $T" +%s)
-  secs=$(( target - $(date +%s) ))
-  echo "$(date): ${secs}秒後($(date -d @$target))に送信予定"
-  sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; }
+  T="<send_time>";
+  target=$(date -d "$T" +%s) || { echo "時刻の計算に失敗。中止します"; exit 1; };
+  [ "$target" -le "$(date +%s)" ] && target=$(date -d "tomorrow $T" +%s);
+  secs=$(( target - $(date +%s) ));
+  echo "$(date): ${secs}秒後($(date -d @$target))に送信予定";
+  sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; };
   tmux send-keys -t <target_pane> Escape &&
   sleep 1 &&
   tmux send-keys -t <target_pane> -l "usage limitで中断した作業の続きを進めて" &&
   sleep 1 &&
-  tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; }
-  echo "$(date): 送信完了"
+  tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; };
+  echo "$(date): 送信完了";
 ' > ~/claude-resume.log 2>&1 &
 ```
 $ hv: echo -e "v\nh"
