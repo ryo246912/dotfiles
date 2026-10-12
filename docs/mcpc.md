@@ -287,6 +287,56 @@ mcpc 自身の proxy にしています。
 - config の `${VAR}` を展開しないため、別に env を外した config を作る必要がある。
 - 指定した server を起動時にすべて立ち上げ、1 つでも失敗すると止まる。
 
+## 経路を切り替える
+
+どちらの経路も定義（`config/mcpc/mcp*.yml`）は共通なので、切り替えはコマンドと環境変数だけで済みます。
+sandbox の template の再ビルドは、mcpc を template に入れる（または mcpc の version を上げる）ときだけ必要です。
+gateway 経路は template の managed settings が最初から許可しているため、再ビルドは要りません。
+
+### mcpc 経路（既定）で使う
+
+```bash
+mise run apm:install                 # config/mcpc/mcp*.yml から mcpc 用 config を生成
+mise run sandbox:build-template      # 初回・mcpc の version を上げたときだけ（template に mcpc を入れる）
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+sbx-agent claude                     # 新しく作る sandbox（config の mount と token は作成時に渡る）
+```
+
+- `sandbox:mcp-gateway` による sbx への登録は使いません。gateway 経路から移ってきた場合、登録が残っていても
+  `sbx-agent` が読み込まないので害はありません。不要なら消します（OAuth の token も消えるため、gateway 経路に
+  戻すときは認可をやり直します）。
+
+  ```bash
+  sbx mcp ls
+  sbx mcp rm <name>                  # 一覧の server ごとに
+  rm -rf ~/.local/state/sbx-mcp      # sandbox:mcp-gateway の登録記録
+  ```
+
+- `SBX_AGENT_MCP_GATEWAY` を export している場合は外します。
+
+### sbx gateway 経路（オプション）に切り替える
+
+```bash
+mise run sandbox:mcp-stop            # mcpc の proxy を止める（任意）
+mise run sandbox:mcp-gateway         # config/mcpc/mcp*.yml を host の sbx mcp に登録（remote は初回だけ OAuth）
+export SBX_AGENT_MCP_GATEWAY=1       # 常用するならシェルの設定に書く（ccmanager / multi-worktree の sbx-agent にも効く）
+sbx-agent claude --new               # gateway から全 server を読み込んだ sandbox を作り直す
+sbx mcp load <name> --sandbox <sandbox-name>   # 作り直さずに起動済みの sandbox へ足す場合
+```
+
+- 一部だけ使うなら `SBX_AGENT_MCP_GATEWAY` の代わりに `--static-mcp <name>` / `SBX_AGENT_STATIC_MCP` を指定します。
+- 定義を変えたら `mise run sandbox:mcp-gateway` を再実行します（変わった server だけ登録し直す）。
+
+### mcpc 経路に戻す
+
+```bash
+unset SBX_AGENT_MCP_GATEWAY          # シェルの設定からも外す
+sbx-agent claude --new               # gateway から何も読み込まない sandbox に作り直す
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+```
+
+起動済みの sandbox に読み込んだ server は、作り直すまで agent に見え続けます。
+
 ## devcontainer で使う
 
 devcontainer では Claude Code の native MCP を managed settings で止めています（[`docs/devcontainer.md`](devcontainer.md#mcp)）。
