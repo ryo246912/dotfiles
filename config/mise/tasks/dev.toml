@@ -251,9 +251,9 @@ config="$isolated_home/.copilot/mcp-config.json"
 [ -f "$config" ] || { mkdir -p "$(dirname "$config")"; echo '{"mcpServers": {}}' >"$config"; }
 echo "mcpc config: $config"
 
-# Docker Sandboxes 用の mcpc config。サーバは host の mcpc proxy（mise run sandbox:mcp）が動かし、
+# Docker Sandboxes 用の mcpc config。サーバは host の mcpc proxy（mise run sandbox:mcpc）が動かし、
 # sandbox 内の mcpc は host.docker.internal:<port> へ繋ぐ（sbx のプロキシが host の localhost へ転送する）。
-# port はこの config の並び順で base から振り、sandbox:mcp もこのファイルから読む（対応表を 1 か所に持つ）。
+# port はこの config の並び順で base から振り、sandbox:mcpc もこのファイルから読む（対応表を 1 か所に持つ）。
 # proxy の bearer token は値を書かず、sbx-agent が sandbox に渡す MCPC_PROXY_TOKEN を mcpc が展開する。
 sandbox_dir="$config_dir/sandbox"
 mkdir -p "$sandbox_dir"

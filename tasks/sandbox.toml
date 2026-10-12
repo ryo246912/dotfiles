@@ -240,7 +240,7 @@ sbx secret ls || true
 sbx policy ls || true
 '''
 
-["sandbox:mcp"]
+["sandbox:mcpc"]
 description = "Serve MCP servers to sandboxes from host-side mcpc proxies (default MCP path)"
 run = '''
 set -eu
@@ -248,8 +248,8 @@ set -eu
 # mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結するため、本体を関数にする。
 main() {
   # 使い方（host で実行。proxy は mcpc の bridge としてバックグラウンドで動き続ける）:
-  #   aws-vault exec <profile> -- fnox exec --profile work -- mise run sandbox:mcp notion slack
-  #   止めるときは mise run sandbox:mcp-stop
+  #   aws-vault exec <profile> -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
+  #   止めるときは mise run sandbox:mcpc-stop
   #
   # 指定したサーバごとに host で `mcpc connect <config>:<name> @sbx-<name> --proxy 127.0.0.1:<port>`
   # を起動し、sandbox 内の mcpc は $MCPC_SANDBOX_CONFIG（apm:install-mcpc が生成し、sbx-agent が
@@ -270,7 +270,7 @@ main() {
   done
 
   if [ "$#" -eq 0 ]; then
-    echo "usage: mise run sandbox:mcp <server>...（例: notion slack）" >&2
+    echo "usage: mise run sandbox:mcpc <server>...（例: notion slack）" >&2
     echo "server（host の port）:" >&2
     jq -r '.mcpServers | to_entries[] | "  \(.key)\t\(.value.url | sub(".*:"; ""))"' "$sandbox_config" >&2
     exit 2
@@ -309,7 +309,7 @@ main() {
   for name in "$@"; do
     echo "  mcpc connect \"\$MCPC_SANDBOX_CONFIG:${name}\" @${name}"
   done
-  echo "止めるとき: mise run sandbox:mcp-stop"
+  echo "止めるとき: mise run sandbox:mcpc-stop"
   if [ -n "$failed" ]; then
     echo "error: 起動できなかった proxy: $failed（mcpc @sbx-<name> logs を確認）" >&2
     exit 1
@@ -319,8 +319,8 @@ main() {
 main "$@"
 '''
 
-["sandbox:mcp-stop"]
-description = "Stop the host-side mcpc proxies started by sandbox:mcp"
+["sandbox:mcpc-stop"]
+description = "Stop the host-side mcpc proxies started by sandbox:mcpc"
 run = '''
 set -eu
 sandbox_config="$HOME/.config/mcpc/sandbox/mcp-config.json"
@@ -335,7 +335,7 @@ description = "(Optional) Register config/mcpc/mcp*.yml on the host sbx MCP gate
 run = '''
 set -eu
 
-# 【オプション】既定の経路は mcpc（mise run sandbox:mcp）。こちらは MCP を sandbox 内の agent の
+# 【オプション】既定の経路は mcpc（mise run sandbox:mcpc）。こちらは MCP を sandbox 内の agent の
 # native MCP として使う経路で、gateway に載せた tool の定義は agent のコンテキストに常に入る。
 # 戻す場合は SBX_AGENT_MCP_GATEWAY=1 で sbx-agent に全サーバを読み込ませる（docs/mcpc.md）。
 #

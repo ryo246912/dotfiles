@@ -29,7 +29,7 @@ config/mcpc/mcp.yml, mcp.<env>.yml        … MCP の定義（APM の dependenci
         │
         ├─ host          : mcpc connect <host 用 config>:<server> @<session>
         ├─ devcontainer  : 同上（config を read-only mount）
-        ├─ sandbox（既定）: host の `mise run sandbox:mcp` が mcpc proxy を立て、sandbox 内の mcpc から接続
+        ├─ sandbox（既定）: host の `mise run sandbox:mcpc` が mcpc proxy を立て、sandbox 内の mcpc から接続
         └─ sandbox（オプション）: `mise run sandbox:mcp-gateway` で sbx の gateway に登録し、agent の native MCP として使う
 ```
 
@@ -124,7 +124,7 @@ mcpc close @notion
 sandbox（[`docs/docker-sandboxes.md`](docker-sandboxes.md)）では credential を VM に入れず、MCP サーバは host で動かします。
 
 ```
-[host]    aws-vault exec … -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+[host]    aws-vault exec … -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
             └─ mcpc connect <host 用 config>:notion @sbx-notion --proxy 127.0.0.1:8934 --proxy-bearer-token <token>
                  └─ notion の remote MCP（OAuth token は host の keychain）
 [sandbox] mcpc connect "$MCPC_SANDBOX_CONFIG:notion" @notion
@@ -133,26 +133,26 @@ sandbox（[`docs/docker-sandboxes.md`](docker-sandboxes.md)）では credential 
 
 仕組み:
 
-- `mise run sandbox:mcp <server>...` は、指定した server ごとに host で `mcpc connect ... --proxy 127.0.0.1:<port>` を
+- `mise run sandbox:mcpc <server>...` は、指定した server ごとに host で `mcpc connect ... --proxy 127.0.0.1:<port>` を
   実行する。mcpc の bridge が server との session を持ち、その session を新しい MCP サーバとして `127.0.0.1:<port>` に
   公開する（mcpc の [MCP proxy](https://github.com/apify/mcpc#mcp-proxy) 機能）。proxy の利用者には元の OAuth token や
   HTTP header を渡さない。
-- stdio / remote のどちらも同じ方法で中継できる。bridge はバックグラウンドで動き続け、`mise run sandbox:mcp-stop` で止める。
+- stdio / remote のどちらも同じ方法で中継できる。bridge はバックグラウンドで動き続け、`mise run sandbox:mcpc-stop` で止める。
   起動し直すと、その時の環境（aws-vault / fnox の credential）で接続し直す。
 - proxy は bearer token を要求する。token は host の `${XDG_STATE_HOME:-~/.local/state}/mcpc/proxy-token`（`0600`）にあり、
-  `sandbox:mcp` と `sbx-agent` のどちらかが最初に作る。`sbx-agent` が `MCPC_PROXY_TOKEN` として sandbox に渡し、
+  `sandbox:mcpc` と `sbx-agent` のどちらかが最初に作る。`sbx-agent` が `MCPC_PROXY_TOKEN` として sandbox に渡し、
   sandbox 用 config の `${MCPC_PROXY_TOKEN}` を mcpc が展開する。token の値は config ファイルには書かない。
 - `sbx-agent` は sandbox 用 config（`~/.config/mcpc/sandbox`）を read-only で mount し、そのパスを `MCPC_SANDBOX_CONFIG` で
   渡す（sandbox 内の `$HOME` はホストと別物のため）。config を生成する前に作った sandbox は作り直す。
-- sbx のプロキシは `host.docker.internal` を host の localhost へ転送するため、`sandbox:mcp` が network policy に
+- sbx のプロキシは `host.docker.internal` を host の localhost へ転送するため、`sandbox:mcpc` が network policy に
   `localhost:<port>` を追加する。
 - sandbox 内の agent の native MCP には何も載らない。`sbx-agent` は既定で gateway から何も読み込まない。
 
 ```bash
 # host（初回は mise run apm:install と mise run sandbox:build-template も）
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack aws-cloudwatch
-mise run sandbox:mcp            # 引数なしで server と port の一覧
-mise run sandbox:mcp-stop       # 全 proxy を止める
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack aws-cloudwatch
+mise run sandbox:mcpc            # 引数なしで server と port の一覧
+mise run sandbox:mcpc-stop       # 全 proxy を止める
 ```
 
 ```bash
@@ -261,7 +261,7 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 
 5. sandbox 内で `claude mcp list` を実行し、gateway 経由で tool が見えることを確認する。
 
-同じ定義は mcpc からも使えます（`mise run apm:install` で mcpc 用 config に入り、`mise run sandbox:mcp <name>`
+同じ定義は mcpc からも使えます（`mise run apm:install` で mcpc 用 config に入り、`mise run sandbox:mcpc <name>`
 で proxy できる）。定義を変えたら `mise run sandbox:mcp-gateway` を再実行すると、変わった server だけ登録し直します。
 
 ## sandbox の 2 経路の比較
@@ -274,7 +274,7 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 | credential           | host に留まる（mcpc の keychain / 起動した shell の環境）  | host に留まる（sbx の keychain / host の環境）        |
 | remote の OAuth      | `mcpc login <url>`                                         | `sbx mcp add --url` の初回認可                        |
 | sandbox からの接続先 | `host.docker.internal:<port>`（server ごと、bearer token） | `mcp-gateway.docker.internal`（1 つに集約）           |
-| 起動・停止           | `sandbox:mcp` / `sandbox:mcp-stop` で必要な時だけ          | 登録は常駐。sandbox 作成時・`sbx mcp load` で読み込み |
+| 起動・停止           | `sandbox:mcpc` / `sandbox:mcpc-stop` で必要な時だけ        | 登録は常駐。sandbox 作成時・`sbx mcp load` で読み込み |
 | 必要な許可           | network policy の `localhost:<port>`                       | 不要（sbx の gateway）                                |
 
 ### 単体の mcp-proxy を使わない理由
@@ -298,7 +298,7 @@ gateway 経路は template の managed settings が最初から許可してい�
 ```bash
 mise run apm:install                 # config/mcpc/mcp*.yml から mcpc 用 config を生成
 mise run sandbox:build-template      # 初回・mcpc の version を上げたときだけ（template に mcpc を入れる）
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
 sbx-agent claude --new               # config の mount と token は作成時に渡るため、既存の sandbox は作り直す
 ```
 
@@ -317,7 +317,7 @@ sbx-agent claude --new               # config の mount と token は作成時�
 ### sbx gateway 経路（オプション）に切り替える
 
 ```bash
-mise run sandbox:mcp-stop            # mcpc の proxy を止める（任意）
+mise run sandbox:mcpc-stop            # mcpc の proxy を止める（任意）
 mise run sandbox:mcp-gateway         # config/mcpc/mcp*.yml を host の sbx mcp に登録（remote は初回だけ OAuth）
 export SBX_AGENT_MCP_GATEWAY=1       # 常用するならシェルの設定に書く（ccmanager / multi-worktree の sbx-agent にも効く）
 sbx-agent claude --new               # gateway から全 server を読み込んだ sandbox を作り直す
@@ -332,7 +332,7 @@ sbx mcp load <name> --sandbox <sandbox-name>   # 作り直さずに起動済み�
 ```bash
 unset SBX_AGENT_MCP_GATEWAY SBX_AGENT_STATIC_MCP   # シェルの設定からも外す
 sbx-agent claude --new               # gateway から何も読み込まない sandbox に作り直す
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
 ```
 
 multi-worktree の `[settings.sandbox].static_mcp` を設定している場合は、そこも外します。起動済みの sandbox に
@@ -384,7 +384,7 @@ MCP が必要なときは `mcpc help --skill` を確認する。
   config 生成前に作った sandbox なので作り直す）を確認します。
 - 401 になる: host の token と sandbox の `MCPC_PROXY_TOKEN` が違います。token を作り直した場合は sandbox を作り直します。
 - AWS の認証エラー: `aws-vault exec <profile> -- aws sts get-caller-identity` と session の有効期限を確認し、
-  proxy を `mise run sandbox:mcp` で起動し直します。
+  proxy を `mise run sandbox:mcpc` で起動し直します。
 - Slack の認証エラー: `fnox exec --profile work -- env | grep -c '^SLACK_MCP_XOXP_TOKEN='` で変数が渡っているか
   （値は表示しない）を確認します。
 

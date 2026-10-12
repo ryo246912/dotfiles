@@ -264,7 +264,7 @@ fi
 if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
     STATIC_MCP+=("$SBX_AGENT_STATIC_MCP")
 fi
-# 既定の MCP 経路は mcpc（host の `mise run sandbox:mcp` が proxy し、sandbox 内の mcpc から使う）で、
+# 既定の MCP 経路は mcpc（host の `mise run sandbox:mcpc` が proxy し、sandbox 内の mcpc から使う）で、
 # agent の native MCP には何も読み込まない（tool の定義をコンテキストに入れないため）。
 # SBX_AGENT_MCP_GATEWAY=1 のときだけ、sbx gateway 経路として mise run sandbox:mcp-gateway が登録する MCP
 # （config/mcpc/mcp.yml と mcp.<name>.yml の registry: false のもの）を全て読み込む。
@@ -417,7 +417,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
     add_mount "${HOME}/.config/nvim:ro"
-    # mcpc 用の sandbox config（host の `mise run sandbox:mcp` の proxy へ繋ぐ URL だけで credential は
+    # mcpc 用の sandbox config（host の `mise run sandbox:mcpc` の proxy へ繋ぐ URL だけで credential は
     # 含まない）。apm:install-mcpc が生成する。未生成のホストでは mount しない（docs/mcpc.md）。
     [[ -f "${HOME}/.config/mcpc/sandbox/mcp-config.json" ]] && add_mount "${HOME}/.config/mcpc/sandbox:ro"
     # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
@@ -566,7 +566,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
     [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
     # sandbox 内の mcpc 用。$HOME はホストと別物なので mount したホストの絶対パスを渡し、host の mcpc proxy
-    # （mise run sandbox:mcp）が要求する bearer token も渡す。token は sandbox:mcp と同じファイルを共有し、
+    # （mise run sandbox:mcpc）が要求する bearer token も渡す。token は sandbox:mcpc と同じファイルを共有し、
     # 無ければここで作る（どちらを先に実行しても揃う）。
     if [[ -f "${HOME}/.config/mcpc/sandbox/mcp-config.json" ]]; then
         add_env MCPC_SANDBOX_CONFIG "${HOME}/.config/mcpc/sandbox/mcp-config.json"

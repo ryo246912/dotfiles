@@ -55,7 +55,7 @@ dependencies:
       url: http://127.0.0.1:3845/mcp
       sbx_options: ["--skip-ssrf-check"]
     # korotovsky/slack-mcp-server。user token（xoxp）は fnox の work profile から渡す
-    # （aws-vault exec … -- fnox exec --profile work -- … の配下で mcpc / sandbox:mcp を起動する）
+    # （aws-vault exec … -- fnox exec --profile work -- … の配下で mcpc / sandbox:mcpc を起動する）
     - name: slack
       registry: false
       transport: stdio

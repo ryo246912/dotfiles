@@ -5,7 +5,7 @@
 # - mise run apm:install（apm:install-mcpc）が mcp.yml と mcp.<name>.yml をまとめた manifest を
 #   隔離した HOME で apm install し、mcpc 専用の config（~/.local/state/mcpc/apm-home/.copilot/mcp-config.json）
 #   と sandbox 用の config（~/.config/mcpc/sandbox/mcp-config.json）を生成する。
-# - sandbox からは host の mcpc proxy（mise run sandbox:mcp）経由で使う。sbx の gateway に載せる
+# - sandbox からは host の mcpc proxy（mise run sandbox:mcpc）経由で使う。sbx の gateway に載せる
 #   経路もオプションで残している（mise run sandbox:mcp-gateway）。
 # - すべて self-defined（registry: false）で書く。registry 参照は解決後のコマンドが残らないため使えない。
 # - stdio はパッケージを args の `<package>@<version>` で固定し、Renovate で更新する

@@ -556,7 +556,7 @@ mise run sandbox:build-template  # devcontainer と同じツールチェイン�
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-MCP は sandbox 内の mcpc から使います。使う server だけを host で `mise run sandbox:mcp <server>...` で
+MCP は sandbox 内の mcpc から使います。使う server だけを host で `mise run sandbox:mcpc <server>...` で
 proxy してから接続します（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
@@ -1188,21 +1188,21 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 ## MCP の扱い
 
 MCP は **agent の native MCP には載せず、sandbox 内の mcpc から必要な時だけ使います**（tool の定義を
-agent のコンテキストに入れないため）。server は host で動かし、host の mcpc proxy（`mise run sandbox:mcp`）
+agent のコンテキストに入れないため）。server は host で動かし、host の mcpc proxy（`mise run sandbox:mcpc`）
 経由で接続します。sbx の gateway に載せて agent の native MCP として使う経路も、オプションで残しています。
 定義・設定の仕組み・2 つの経路の比較は [`docs/mcpc.md`](mcpc.md) にまとめています。
 
 | 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                            |
 | ---------------------------------------------------- | --------------------- | --------------------------------------------------------------------------- |
-| mcpc + host の mcpc proxy（`sandbox:mcp`）           | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する    |
+| mcpc + host の mcpc proxy（`sandbox:mcpc`）          | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する    |
 | `sbx mcp` の gateway（`sandbox:mcp-gateway`）        | **ホスト** / リモート | オプション。`SBX_AGENT_MCP_GATEWAY=1` で agent の native MCP として読み込む |
 | エージェント自身の MCP 設定（`~/.claude.json` など） | sandbox 内の VM       | ❌ 読み込ませない（下記）                                                   |
 
 ```bash
 # host
 mise run apm:install                                                     # config/mcpc/mcp*.yml から mcpc 用 config を生成
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
-mise run sandbox:mcp-stop
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
+mise run sandbox:mcpc-stop
 
 # sandbox 内
 mcpc connect "$MCPC_SANDBOX_CONFIG:notion" @notion
