@@ -1266,6 +1266,11 @@ mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初�
 | `sbx_options`（独自キー）       | `sbx mcp add` の末尾にそのまま追加（`--dir` など）     |
 
 - registry 参照（`io.github.xxx/yyy` 形式）は解決後のコマンドが manifest に無いため登録しません。
+- remote サーバの URL にクエリ（`?toolsets=...` など）を付けると、`sbx mcp add --url` の OAuth 検出が
+  「protected resource metadata resource ... does not match requested resource」で失敗します（サーバが返す
+  resource はクエリ無しの URL のため）。クエリが必要なサーバは `npx -y mcp-remote@<version> <URL>` を
+  stdio として登録し、OAuth は mcp-remote に任せます（クエリ中の `,` は `%2C` にエンコード）。
+  例は `mcp.work3.yml.example` の datadog です。
 - `sbx_options` は APM の書式に無い独自キーで、`sbx mcp add` 固有のオプションを渡すのに使います。
   例：相対パスの `--project` を使う stdio サーバに `--dir <作業ディレクトリ>`、ホストの
   `127.0.0.1` で動くサーバ（Figma デスクトップなど）に `--skip-ssrf-check`（gateway はホストから接続するため
