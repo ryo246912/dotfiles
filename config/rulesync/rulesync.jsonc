@@ -3,7 +3,7 @@
     "claudecode": ["rules", "skills", "commands", "hooks"],
     "codexcli": ["rules", "skills"],
     "copilot": ["rules"],
-    "copilotcli": ["rules", "mcp"],
+    "copilotcli": ["rules"],
   },
   "delete": false,
   "verbose": false,

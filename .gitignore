@@ -16,9 +16,8 @@ config/git/config.work.secret
 config/git/config.work3.secret
 config/zsh/.zprofile.secret
 config/zsh/.zshrc.secret
-# 環境ごとの sandbox 許可ドメイン・MCP サーバ（雛形は *.<name>.*.example）
+# 環境ごとの sandbox 許可ドメイン（雛形は allow-domains.<name>.txt.example）
 config/sbx/allow-domains.*.txt
-config/sbx/mcp-servers.*.toml
 
 ## claude
 settings.local.json
@@ -30,7 +29,6 @@ settings.local.json
 mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
-# rulesync が生成する mcp.json は ~/.config/rulesync/.rulesync/mcp.json（実ホーム側）に
-# 出力されるだけで、このリポジトリには非テンプレートの mcp.json 自体が存在しない
-# （source は templates/rulesync/mcp.json.tera）。そのため上の `mcp.json` ignore に対する
-# !negation はもう不要（旧 dot_config/.../mcp.json.tmpl 時代の名残）。
+# MCP サーバは APM（apm/apm.yml の dependencies.mcp）で管理しており、このリポジトリには
+# mcp.json 自体が存在しない。そのため上の `mcp.json` ignore に対する !negation はもう不要
+# （旧 dot_config/.../mcp.json.tmpl・templates/rulesync/mcp.json.tera 時代の名残）。

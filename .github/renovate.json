@@ -132,17 +132,17 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/sbx/mcp-servers.toml"],
+      "managerFilePatterns": ["apm/apm.yml"],
       "matchStrings": [
-        "command\\s*=\\s*\"npx\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\npackage\\s*=\\s*\"(?<depName>[^\"]+)\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\nversion\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+        "command:\\s*npx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>(?:@[^/\"\\s]+/)?[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
       ],
       "datasourceTemplate": "npm"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/sbx/mcp-servers.toml"],
+      "managerFilePatterns": ["apm/apm.yml"],
       "matchStrings": [
-        "command\\s*=\\s*\"uvx\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\npackage\\s*=\\s*\"(?<depName>[^\"]+)\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\nversion\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+        "command:\\s*uvx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
       ],
       "datasourceTemplate": "pypi"
     },

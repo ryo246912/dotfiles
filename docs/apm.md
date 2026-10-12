@@ -2,7 +2,7 @@
 
 [APM](https://github.com/microsoft/apm) は、AI エージェント用のスキル・プロンプト・MCP サーバ等の
 プリミティブを `apm.yml` で宣言し、`apm install` で各エージェントの設定ディレクトリへ配布する
-パッケージマネージャです。このリポジトリでは **外部スキルの管理** にのみ APM を利用します。
+パッケージマネージャです。このリポジトリでは **外部スキルと MCP サーバの管理** に APM を利用します。
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
 `apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は immutable なコミット
@@ -11,16 +11,50 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                                | 管理ツール | ソース                              | 配布先                                                     |
-| ----------------------------------- | ---------- | ----------------------------------- | ---------------------------------------------------------- |
-| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`         | リポジトリ直下の `CLAUDE.md`（gitignore）                  |
-| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/`        | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`） |
-| **外部スキル（グローバル）**        | **APM**    | `apm/apm.yml` の `dependencies.apm` | `~/.claude/skills/` 等（`apm install -g`）                 |
+| 対象                          | 管理ツール | ソース                              | 配布先                                                        |
+| ----------------------------- | ---------- | ----------------------------------- | ------------------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`  | rulesync   | `.rulesync/rules/CLAUDE.md`         | リポジトリ直下の `CLAUDE.md`（gitignore）                     |
+| グローバルな自作 skill / rule | rulesync   | `config/rulesync/.rulesync/`        | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）    |
+| **外部スキル（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.apm` | `~/.claude/skills/` 等（`apm install -g`）                    |
+| **MCP サーバ（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.mcp` | `~/.claude.json` 等（`apm install -g`）・sandbox は `sbx mcp` |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`config/rulesync/`）で管理します。
 - **外部スキル**は upstream 依存として `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、
   pristine な upstream をそのまま使います。
+
+## MCP サーバ
+
+MCP サーバも `apm/apm.yml` の `dependencies.mcp` で管理します（以前は rulesync の
+`templates/rulesync/mcp.json.tera` で Copilot CLI 向けにだけ配布していました）。
+`apm install -g` が `targets` の各 agent のユーザー設定（Claude Code は `~/.claude.json`、
+Codex は `~/.codex/config.toml`、Copilot CLI は `~/.copilot/mcp-config.json` など）へ書き込みます。
+
+```yaml
+dependencies:
+  mcp:
+    - name: notion
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    - name: chrome-devtools
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
+```
+
+- すべて self-defined（`registry: false`）で書き、stdio サーバはパッケージを `args` の
+  `<package>@<version>` で固定します。Renovate が `npx` は npm、`uvx` は PyPI の新しいバージョンで
+  更新します（`command` の直後に `args` を書いたものが対象）。
+- `env` に `${VAR}` を書くと、Codex 向けには `apm install` の時点で値が解決されて
+  `codex/config.toml`（リポジトリ管理）へ書き込まれます。`AWS_PROFILE` などはホストの環境から
+  継承させ、`env` には固定値だけを書きます。
+- Docker Sandboxes では、ここの `registry: false` のエントリを `mise run sandbox:mcp` がホストの
+  `sbx mcp` に登録し、sandbox 内の agent は gateway 経由で使います（agent 自身の設定にある
+  MCP は sandbox 内では読み込みません）。詳細は `docs/docker-sandboxes.md` の「MCP の扱い」参照。
+- registry 参照（`io.github.xxx/yyy` 形式）は、解決後のコマンドが manifest に残らないため
+  sandbox には登録されません。
 
 ## 依存の宣言と pin
 

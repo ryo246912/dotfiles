@@ -94,6 +94,64 @@ dependencies:
     - git: DietrichGebert/ponytail
       ref: v4.13.0
       alias: ponytail
-  mcp: []
+  # MCP サーバ。APM が targets の各 agent のユーザー設定（~/.claude.json など）へ書き込む。
+  # sandbox ではホストの sbx mcp に登録して gateway 経由で使う（mise run sandbox:mcp が
+  # ここの registry: false のエントリを読む。docs/docker-sandboxes.md の「MCP の扱い」参照）。
+  # - stdio はパッケージを args の `<package>@<version>` で固定し、Renovate で更新する
+  #   （npx は npm、uvx は PyPI。command の直後に args を書く）。
+  # - env に `${VAR}` を書くと Codex 向けには install 時に値が config.toml（リポジトリ管理）へ
+  #   書き込まれるため、AWS_PROFILE などはホストの環境から継承させて env には書かない。
+  mcp:
+    # OAuth。初回のみブラウザで認可する
+    - name: notion
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    - name: deepwiki
+      registry: false
+      transport: http
+      url: https://mcp.deepwiki.com/mcp
+    - name: context7
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "@upstash/context7-mcp@4.3.0"]
+    # ホストで起動している Chrome（--remote-debugging-port）に接続する
+    - name: chrome-devtools
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
+    - name: chrome-devtools-2
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9223"]
+    - name: chrome-devtools-3
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9224"]
+    # AWS 系はホストの AWS 認証情報（~/.aws、AWS_PROFILE）をそのまま使う
+    - name: aws-api
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["awslabs.aws-api-mcp-server@1.5.6"]
+    - name: aws-billing
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["awslabs.billing-cost-management-mcp-server@0.0.39"]
+      env:
+        FASTMCP_LOG_LEVEL: ERROR
+        AWS_REGION: ap-northeast-1
+    - name: aws-cloudwatch
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["awslabs.cloudwatch-mcp-server@0.3.1"]
+      env:
+        FASTMCP_LOG_LEVEL: ERROR
 includes: auto
 scripts: {}
