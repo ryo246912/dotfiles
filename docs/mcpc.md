@@ -174,10 +174,10 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 
 仕組み（add と load の 2 段階）:
 
-| 段階 | コマンド                                                                       | 範囲                        | コンテキストへの影響              |
-| ---- | ------------------------------------------------------------------------------ | --------------------------- | --------------------------------- |
-| add  | `sbx mcp add`（`mise run sandbox:add-mcp`）                                    | host 全体の登録簿。一度だけ | なし                              |
-| load | `--static-mcp` / `SBX_AGENT_MCP_GATEWAY=1`（作成時）、`sbx mcp load`（起動後） | 特定の sandbox の gateway   | ここで tool の定義が agent に入る |
+| 段階 | コマンド                                                                                    | 範囲                        | コンテキストへの影響              |
+| ---- | ------------------------------------------------------------------------------------------- | --------------------------- | --------------------------------- |
+| add  | `sbx mcp add`（`mise run sandbox:add-mcp`）                                                 | host 全体の登録簿。一度だけ | なし                              |
+| load | `--static-mcp` / `SBX_AGENT_MCP_GATEWAY=1`（作成時）、`mise run sandbox:load-mcp`（起動後） | 特定の sandbox の gateway   | ここで tool の定義が agent に入る |
 
 - gateway は sandbox ごとの MCP の窓口（host の sandboxd 内の HTTP listener。sandbox からは
   `http://mcp-gateway.docker.internal/mcp`）で、load した server だけを 1 つの endpoint にまとめて中継する。
@@ -185,7 +185,8 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
   OAuth token や API キーは host の OS keychain に入り、sbx のプロキシが送信時に注入する。
 - load は `sbx-agent` の `--static-mcp`（作成時）か `sbx mcp load`（起動後）で、add 済みの server を sandbox の gateway に読み込む。sandbox 内の agent は
   gateway（`http://mcp-gateway.docker.internal/mcp`）だけに MCP として接続し、読み込んだ server の全 tool が
-  native MCP として見える。起動済みの sandbox には `sbx mcp load <name> --sandbox <sandbox-name>` で後から足せ、
+  native MCP として見える。起動済みの sandbox には `mise run sandbox:load-mcp` で後から足せ（sbx の TUI には MCP を load する操作が無いため、
+  sandbox と server を fzf で選んで `sbx mcp load <name> --sandbox <sandbox>` を実行する task を用意している）、
   接続中の agent には MCP の `tools/list_changed` 通知で新しい tool が伝わる（反映するかは agent 次第）。
 - template の Claude Code の managed settings（`config/devcontainer/claude/mcp-policy.sandbox.json`）は URL の
   server だけを許可しており、gateway は通る（stdio は止まる）。
@@ -264,7 +265,8 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
    ```bash
    SBX_AGENT_MCP_GATEWAY=1 sbx-agent claude        # 新しく作る sandbox に全 server を読み込む
    sbx-agent claude --static-mcp linear            # 追加した server だけ
-   sbx mcp load linear --sandbox <sandbox-name>    # 起動済みの sandbox に後から足す
+   mise run sandbox:load-mcp                       # 起動済みの sandbox に後から足す（sandbox と server を fzf で選ぶ）
+   mise run sandbox:load-mcp <sandbox> linear      # 指定して足す
    ```
 
 5. sandbox 内で `claude mcp list` を実行し、gateway 経由で tool が見えることを確認する。
@@ -329,7 +331,7 @@ mise run sandbox:mcpc-stop            # mcpc の proxy を止める（任意）
 mise run sandbox:add-mcp         # add: config/mcpc/mcp*.yml を host の sbx に登録（remote は初回だけ OAuth）
 export SBX_AGENT_MCP_GATEWAY=1       # 常用するならシェルの設定に書く（ccmanager / multi-worktree の sbx-agent にも効く）
 sbx-agent claude --new               # gateway から全 server を読み込んだ sandbox を作り直す
-sbx mcp load <name> --sandbox <sandbox-name>   # 作り直さずに起動済みの sandbox へ足す場合
+mise run sandbox:load-mcp                      # 作り直さずに起動済みの sandbox へ足す場合（fzf で選ぶ）
 ```
 
 - 一部だけ使うなら `SBX_AGENT_MCP_GATEWAY` の代わりに `--static-mcp <name>` / `SBX_AGENT_STATIC_MCP` を指定します。
