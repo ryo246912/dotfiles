@@ -76,6 +76,13 @@ ENV PATH=${AGENT_HOME}/.config/devcontainer/scripts:/mise/data/shims:$PATH
 
 RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 
+# sandbox 内の Claude Code が使う MCP は、ホストに登録した sbx mcp（gateway 経由）だけにする。
+# gateway は URL で登録されるため remote（HTTP/SSE）は通し、エージェント自身の設定
+# （共有している ~/.claude.json など）にある stdio サーバ（npx / uvx）は読み込ませない。
+# base image の managed-settings.json を上書きしないよう drop-in に置く。
+# 詳細は docs/docker-sandboxes.md の「MCP の扱い」参照。
+COPY claude/mcp-policy.sandbox.json /etc/claude-code/managed-settings.d/50-mcp.json
+
 # mise install より前に COPY するのは mise.toml だけにする。
 # 設定ツリー全体をここで COPY すると、scripts/ を 1 行直しただけで下の重い install layer が
 # 無効化されてしまうため、残りは install の後に COPY する。

@@ -1,0 +1,19 @@
+# sandbox から使う MCP サーバ（mise run sandbox:mcp がホストの sbx mcp に登録する）。
+# sandbox 内の agent は自身の MCP 設定を読まず、ここに並べたサーバだけを gateway 経由で使う
+# （docs/docker-sandboxes.md の「MCP の扱い」参照）。
+#
+# 書式: 1 行 1 サーバ。`<name> <sbx mcp add の引数...>`。`#` で始まる行と空行は無視する。
+#   引数はシェルと同じ規則で分割する（空白を含む値はクォートする）。--header に `${secret}` を
+#   渡すときは、展開されないよう '...' で囲む。
+# 既に登録済みの name は変更しない。定義を変えたら `sbx mcp rm <name>` してから再実行する。
+# sbx-agent は --static-mcp / SBX_AGENT_STATIC_MCP が無い場合、ここに並べた全サーバを読み込む。
+# 環境ごと（work3 / private など）のサーバは mcp-servers.<name>.txt に書く（gitignore 済み）。
+
+# OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
+notion --url https://mcp.notion.com/mcp
+
+# ホストの ~/.aws の認証情報（profile / SSO）をそのまま使う
+aws-api --command uvx --args awslabs.aws-api-mcp-server@latest
+
+# ホストで起動している Chrome に接続する
+chrome-devtools --command npx --args -y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222

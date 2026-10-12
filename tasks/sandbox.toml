@@ -245,57 +245,56 @@ description = "Register MCP servers on the host so sandboxes can reuse host-side
 run = '''
 set -eu
 
-# ホスト側で一度だけ認証し、その認証情報を全 sandbox から使い回すための登録。
+# sandbox から使う MCP サーバをホストの sbx mcp に登録する。
 # OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
 # 注入するため、sandbox 内の agent は生の認証情報を読めない。
 #
-# ここで登録するのは「ホストの認証・ホストのリソースが必要なもの」だけにする。
-# npx で動く普通の MCP サーバは rulesync 経由でエージェント自身の設定に入れており、
-# そちらは sandbox 内（VM 内）で動くので devcontainer と同じ隔離が保たれる。
-#
-# 追加したら SBX_AGENT_STATIC_MCP か --static-mcp で sandbox に読み込ませる。
+# sandbox 内の agent は自身の MCP 設定（~/.claude.json など）を読まない（template の
+# managed settings で止めている）ため、sandbox で使う MCP はすべてここで登録する。
+# 一覧は config/sbx/mcp-servers.txt（共通）と mcp-servers.<name>.txt（work3 / private など
+# 環境ごと。gitignore 済み）。書式は mcp-servers.txt の先頭コメント参照。
 
 command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
 
-registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
+registered_names=$(sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }') || registered_names=""
+is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
 
 failed=""
+declared=""
 note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
 
-# notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
-if registered notion; then
-  echo "ℹ️ notion は既に登録済み"
-else
-  echo "==> notion を登録（ブラウザで認可します）"
-  sbx mcp add notion --url https://mcp.notion.com/mcp || note_failure notion
-fi
+for server_file in "$MISE_PROJECT_ROOT"/config/sbx/mcp-servers.txt "$MISE_PROJECT_ROOT"/config/sbx/mcp-servers.*.txt; do
+  # mcp-servers.*.txt が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$server_file" ] || continue
+  echo "==> $(basename "$server_file")"
+  # 一覧は fd 3 から読み、stdin は OAuth の認可などで sbx mcp add が使えるよう端末のまま残す
+  while IFS= read -r line <&3 || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    # 引数はシェルと同じ規則で分割する（クォートした値を 1 引数として渡すため）
+    eval "set -- $line"
+    [ $# -ge 1 ] || continue
+    name=$1
+    shift
+    declared="${declared} ${name} "
+    if is_registered "$name"; then
+      echo "ℹ️ $name は既に登録済み"
+      continue
+    fi
+    echo "==> $name を登録"
+    sbx mcp add "$name" "$@" || note_failure "$name"
+  done 3< "$server_file"
+done
 
-# aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
-# （--command で登録したサーバはホストで動く。sandbox 内の agent は gateway 経由でのみ接続する）
-if registered aws-api; then
-  echo "ℹ️ aws-api は既に登録済み"
-else
-  echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
-  sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
-    || note_failure aws-api
-fi
-
-# chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
-if registered chrome-devtools; then
-  echo "ℹ️ chrome-devtools は既に登録済み"
-else
-  echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
-  sbx mcp add chrome-devtools --command npx \
-    --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
-    || note_failure chrome-devtools
-fi
+# 一覧から消したサーバは自動では消さない（OAuth トークンなども消えるため）。気付けるよう表示だけする
+for name in $registered_names; do
+  case "$declared" in *" $name "*) ;; *) echo "ℹ️ $name は mcp-servers*.txt に無い登録です（不要なら sbx mcp rm $name）" ;; esac
+done
 
 echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
-echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
+echo "sbx-agent は mcp-servers*.txt の全サーバを sandbox に読み込みます（--static-mcp で絞り込めます）。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then

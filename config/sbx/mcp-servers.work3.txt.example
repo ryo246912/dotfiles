@@ -1,0 +1,10 @@
+# 特定の環境（work3 / private など）でだけ sandbox から使いたい MCP サーバ。
+# `cp mcp-servers.work3.txt.example mcp-servers.work3.txt` のように .example を外してコピーして使う。
+# mcp-servers.<name>.txt は gitignore 済みで、mise run sandbox:mcp と sbx-agent が
+# mcp-servers.txt と一緒に読み込む。書式は mcp-servers.txt と同じ。
+
+# AWS の billing / cost（ホストの AWS 認証情報を使う）
+# aws-billing --command uvx --args awslabs.billing-cost-management-mcp-server@latest
+
+# 社内の remote MCP（ヘッダの secret は sbx secret set で登録しておく）
+# internal-docs --url https://mcp.example.com/mcp --header 'Authorization: Bearer ${internal_docs_token}'

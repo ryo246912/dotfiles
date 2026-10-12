@@ -51,6 +51,11 @@ RUN install -d -o vscode -g vscode \
     /home/vscode/.config/gh
 COPY --chown=vscode:vscode mise.toml /mise/config.toml
 
+# コンテナ内の Claude Code からは MCP サーバに接続しない（ホストの ~/.claude.json などを共有して
+# いても読み込ませない）。managed settings の drop-in なので ~/.claude 側の設定では上書きできない。
+# 詳細は docs/devcontainer.md の「MCP」参照。
+COPY claude/mcp-policy.devcontainer.json /etc/claude-code/managed-settings.d/50-mcp.json
+
 USER vscode
 
 # mise.toml が変わるとこの RUN は必ず再実行されるが、全ツールを毎回ゼロから入れ直すと遅いため、
