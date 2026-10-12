@@ -299,7 +299,7 @@ gateway 経路は template の managed settings が最初から許可してい�
 mise run apm:install                 # config/mcpc/mcp*.yml から mcpc 用 config を生成
 mise run sandbox:build-template      # 初回・mcpc の version を上げたときだけ（template に mcpc を入れる）
 aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
-sbx-agent claude                     # 新しく作る sandbox（config の mount と token は作成時に渡る）
+sbx-agent claude --new               # config の mount と token は作成時に渡るため、既存の sandbox は作り直す
 ```
 
 - `sandbox:mcp-gateway` による sbx への登録は使いません。gateway 経路から移ってきた場合、登録が残っていても
@@ -330,12 +330,13 @@ sbx mcp load <name> --sandbox <sandbox-name>   # 作り直さずに起動済み�
 ### mcpc 経路に戻す
 
 ```bash
-unset SBX_AGENT_MCP_GATEWAY          # シェルの設定からも外す
+unset SBX_AGENT_MCP_GATEWAY SBX_AGENT_STATIC_MCP   # シェルの設定からも外す
 sbx-agent claude --new               # gateway から何も読み込まない sandbox に作り直す
 aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack
 ```
 
-起動済みの sandbox に読み込んだ server は、作り直すまで agent に見え続けます。
+multi-worktree の `[settings.sandbox].static_mcp` を設定している場合は、そこも外します。起動済みの sandbox に
+読み込んだ server は、作り直すまで agent に見え続けます。
 
 ## devcontainer で使う
 
