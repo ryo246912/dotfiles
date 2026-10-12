@@ -109,8 +109,8 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
   `mise run apm:validate-lock-version` が失敗します。そのため mise の `github:microsoft/apm`、
   `.github/renovate.json` の `constraints.apm`（Renovate が `apm install` に使う version）、
-  `apm/apm.lock.yaml` の `apm_version` を regex manager で同じ dependency として扱い、`apm` group の
-  同じPRで揃えて更新します。Renovate は `constraints` を base branch の設定から読むため、このPRで新しい
+  `apm/apm.lock.yaml` の `apm_version` をすべて `microsoft/apm` として抽出し（`constraints.apm` は組み込みの
+  renovate-config manager、`apm_version` は regex manager）、`apm` group の同じPRで揃えて更新します。Renovate は `constraints` を base branch の設定から読むため、このPRで新しい
   APM による lockfile の再生成はできず、`apm_version` の値だけを書き換えます（0.32.0 → 0.33.0 では、
   書き換えた lockfile で `apm install -g --frozen` が成功し、lockfile の内容も変わらないことを確認済み）。
   新しい APM で content hash の計算方法などが変わり install が失敗する場合は、ローカルで

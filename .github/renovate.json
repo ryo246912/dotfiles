@@ -146,11 +146,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": [".github/renovate.json", "apm/apm.lock.yaml"],
-      "matchStrings": [
-        "\"constraints\":\\s*\\{[^}]*?\"apm\":\\s*\"(?<currentValue>[^\"]+)\"",
-        "(?:^|\\n)apm_version:\\s*'?(?<currentValue>[^'\\s]+)'?"
-      ],
+      "description": "constraints.apm は組み込みの renovate-config manager が microsoft/apm として抽出するため、ここでは lockfile の apm_version だけを扱う",
+      "managerFilePatterns": ["apm/apm.lock.yaml"],
+      "matchStrings": ["(?:^|\\n)apm_version:\\s*'?(?<currentValue>[^'\\s]+)'?"],
       "depNameTemplate": "microsoft/apm",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"
