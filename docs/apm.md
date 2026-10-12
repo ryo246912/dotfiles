@@ -41,6 +41,7 @@ dependencies:
       registry: false
       transport: stdio
       command: npx
+      # ホストまたは sandbox（sbx mcp でホスト側に起動）用。devcontainer の localhost からはホストの Chrome に届かない
       args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
 ```
 
@@ -55,6 +56,10 @@ dependencies:
   MCP は sandbox 内では読み込みません）。詳細は `docs/docker-sandboxes.md` の「MCP の扱い」参照。
 - registry 参照（`io.github.xxx/yyy` 形式）は、解決後のコマンドが manifest に残らないため
   sandbox には登録されません。
+- rulesync から移行したホストでは、以前 rulesync が配布した定義が残ります。一度だけ
+  `~/.config/rulesync/.rulesync/mcp.json` を削除し、`~/.copilot/mcp-config.json` から旧名
+  （`makenotion/notion-mcp-server`・`io.github.ChromeDevTools/chrome-devtools-mcp` など）の
+  エントリを消してください（rulesync の `mcp` target は外してあるので再生成はされません）。
 
 ## 依存の宣言と pin
 

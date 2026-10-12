@@ -30,5 +30,6 @@ mcp.json
 !.rulesync/mcp.json
 !.vscode/mcp.json
 # MCP サーバは APM（apm/apm.yml の dependencies.mcp）で管理しており、このリポジトリには
-# mcp.json 自体が存在しない。そのため上の `mcp.json` ignore に対する !negation はもう不要
+# mcp.json 自体が存在しない。上の `mcp.json` ignore に対する !negation は実質使っていないが、
+# 該当パスに mcp.json を置いたときに ignore されないよう残している
 # （旧 dot_config/.../mcp.json.tmpl・templates/rulesync/mcp.json.tera 時代の名残）。
