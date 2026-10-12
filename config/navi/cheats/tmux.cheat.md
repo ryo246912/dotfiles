@@ -52,7 +52,7 @@ nohup caffeinate -i bash -c '
   sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; };
   tmux send-keys -t <target_pane> Escape &&
   sleep 1 &&
-  tmux send-keys -t <target_pane> -l "usage limitで中断した作業の続きを進めて" &&
+  tmux send-keys -t <target_pane> -l "<message>" &&
   sleep 1 &&
   tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; };
   echo "$(date): 送信完了";
@@ -74,6 +74,7 @@ $ tty: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
   --- --column 6
+$ message: echo "usage limitで中断した作業の続きを進めて"
 $ target_pane: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
