@@ -196,6 +196,65 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 - `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにする。
 - `mcp*.yml` から消した server は自動では消さない。不要なら `sbx mcp rm <name>`。
 
+### tool の定義はいつコンテキストに入るか
+
+- `sbx mcp add`（`sandbox:mcp-gateway`）は host の sbx に**登録するだけ**で、この時点ではどの agent の
+  コンテキストにも入らない。
+- sandbox の gateway に**読み込んだ**時点（`--static-mcp` / `SBX_AGENT_MCP_GATEWAY=1` / `sbx mcp load`）で、
+  agent の MCP client が gateway から `tools/list` を受け取り、読み込んだ server の全 tool の定義が agent の
+  native tool として system prompt に入る。これは**会話ごとに毎回**で、使わない会話でも消費する。
+- gateway は「server を host で動かし、credential を隠して中継する」仕組みで、tool の定義を減らす仕組みではない。
+  proxy しても、agent が MCP client として繋ぐ限りコンテキストへの入り方は native MCP と変わらない。
+- mcpc proxy では agent は MCP client ではなく、Bash で `mcpc` を実行するだけなので、入るのは `mcpc` の出力だけになる。
+- 補足: agent 側の機能で定義の読み込みを遅らせられる場合はある（Claude Code の MCP tool search など）。
+  ただし agent・バージョンごとに挙動が違い、このリポジトリでは前提にしていない。
+
+### 新しい MCP を追加する手順（sbx gateway）
+
+1. 定義を書く。共通なら `config/mcpc/mcp.yml`、work3 などの環境だけなら `config/mcpc/mcp.<env>.yml`
+   （無ければ `mcp.<env>.yml.example` をコピー。gitignore 済み）に `registry: false` で追加する。
+
+   ```yaml
+   # remote（HTTP）
+   - name: linear
+     registry: false
+     transport: http
+     url: https://mcp.linear.app/mcp
+   # stdio（パッケージは <package>@<version> で固定）
+   - name: example
+     registry: false
+     transport: stdio
+     command: npx
+     args: ["-y", "example-mcp-server@1.2.3"]
+     sbx_options: ["--dir", "/path/to/workdir"] # 必要なときだけ
+   ```
+
+   - credential は値を書かない。stdio が host の環境変数を使うなら、`aws-vault exec` / `fnox exec` の配下で
+     次の手順を実行する（gateway の stdio は host の環境を継承する）。
+   - URL にクエリが必要な remote は `mcp-remote` を stdio として書く（`mcp.work3.yml.example` の datadog）。
+   - `127.0.0.1` で動く host のサーバは `sbx_options: ["--skip-ssrf-check"]` を付ける。
+
+2. `mcp.<env>.yml` を新しく置いた場合は `mise bootstrap dotfiles apply` で `~/.config/mcpc` に配置する。
+3. host で登録する（remote は初回だけブラウザで OAuth の認可が開く）。
+
+   ```bash
+   mise run sandbox:mcp-gateway
+   sbx mcp ls          # 登録されたか確認
+   ```
+
+4. sandbox に読み込む。
+
+   ```bash
+   SBX_AGENT_MCP_GATEWAY=1 sbx-agent claude        # 新しく作る sandbox に全 server を読み込む
+   sbx-agent claude --static-mcp linear            # 追加した server だけ
+   sbx mcp load linear --sandbox <sandbox-name>    # 起動済みの sandbox に後から足す
+   ```
+
+5. sandbox 内で `claude mcp list` を実行し、gateway 経由で tool が見えることを確認する。
+
+同じ定義は mcpc からも使えます（`mise run apm:install` で mcpc 用 config に入り、`mise run sandbox:mcp <name>`
+で proxy できる）。定義を変えたら `mise run sandbox:mcp-gateway` を再実行すると、変わった server だけ登録し直します。
+
 ## sandbox の 2 経路の比較
 
 | 観点                 | mcpc proxy（既定）                                         | sbx gateway（オプション）                             |

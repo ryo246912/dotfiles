@@ -1240,6 +1240,8 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 
 定義（`config/mcpc/mcp*.yml`）、mcpc proxy と sbx gateway の仕組み、`sbx mcp add` への変換規則、
 2 つの経路の比較は [`docs/mcpc/README.md`](mcpc/README.md#sandbox-で使うmcpc-proxy既定) を参照してください。
+sbx gateway に新しい MCP を追加する手順は
+[`docs/mcpc/README.md` の「新しい MCP を追加する手順（sbx gateway）」](mcpc/README.md#新しい-mcp-を追加する手順sbx-gateway) です。
 
 ### トレードオフ
 
