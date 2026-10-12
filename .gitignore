@@ -16,9 +16,9 @@ config/git/config.work.secret
 config/git/config.work3.secret
 config/zsh/.zprofile.secret
 config/zsh/.zshrc.secret
-# 環境ごとの sandbox 許可ドメイン・MCP サーバ（雛形は *.<name>.txt.example）
+# 環境ごとの sandbox 許可ドメイン・MCP サーバ（雛形は *.<name>.*.example）
 config/sbx/allow-domains.*.txt
-config/sbx/mcp-servers.*.txt
+config/sbx/mcp-servers.*.toml
 
 ## claude
 settings.local.json

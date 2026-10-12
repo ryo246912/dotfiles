@@ -18,7 +18,7 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
-> mise run sandbox:mcp             # sandbox で使う MCP をホストに登録（config/sbx/mcp-servers*.txt）
+> mise run sandbox:mcp             # sandbox で使う MCP をホストに登録（config/sbx/mcp-servers*.toml）
 > ```
 
 ## devcontainer に対する利点
@@ -515,7 +515,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
-mise run sandbox:mcp             # sandbox で使う MCP をホストに登録（config/sbx/mcp-servers*.txt）
+mise run sandbox:mcp             # sandbox で使う MCP をホストに登録（config/sbx/mcp-servers*.toml）
 ```
 
 > [!NOTE]
@@ -558,7 +558,7 @@ mise run sandbox:mcp             # sandbox で使う MCP をホストに登録�
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-sandbox で使う MCP は `config/sbx/mcp-servers*.txt` に並べて `mise run sandbox:mcp` で登録します。
+sandbox で使う MCP は `config/sbx/mcp-servers*.toml` に並べて `mise run sandbox:mcp` で登録します。
 `sbx-agent` は既定でその全サーバを読み込みます（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
@@ -585,7 +585,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp-servers*.txt` の全サーバ）
+   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp-servers*.toml` の全サーバ）
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -1225,35 +1225,59 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 
 ### 登録するサーバの管理
 
-sandbox で使う MCP サーバは `config/sbx/mcp-servers.txt` で管理します。1 行 1 サーバで、
-`<name> <sbx mcp add の引数...>` を書きます（引数はシェルと同じ規則で分割）。
+sandbox で使う MCP サーバは `config/sbx/mcp-servers.toml` で管理します。1 テーブル 1 サーバで、
+テーブル名が `sbx mcp add` に渡す name になります。stdio サーバは `package` と `version` を分けて書き、
+バージョンを固定します（`@latest` にしない）。
 
-```text
-notion --url https://mcp.notion.com/mcp
-aws-api --command uvx --args awslabs.aws-api-mcp-server@latest
-chrome-devtools --command npx --args -y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222
+```toml
+[notion]
+url = "https://mcp.notion.com/mcp"
+
+[aws-api]
+command = "uvx"
+package = "awslabs.aws-api-mcp-server"
+version = "1.5.6"
+
+[chrome-devtools]
+command = "npx"
+package = "chrome-devtools-mcp"
+version = "1.10.1"
+args = ["--browser-url=http://localhost:9222"]
 ```
 
-work3 / private など特定の環境だけで使うサーバは `config/sbx/mcp-servers.<name>.txt` に書きます。
-gitignore 済みなのでコミットされません。雛形は `mcp-servers.work3.txt.example` です。
+| キー      | 意味                                                                                    |
+| --------- | --------------------------------------------------------------------------------------- |
+| `url`     | remote サーバの URL（`--url`）                                                          |
+| `command` | ホストで起動する stdio サーバのコマンド（`--command`）                                  |
+| `package` | 起動するパッケージ。`npx` は `-y <package>@<version>`、それ以外は `<package>@<version>` |
+| `version` | `package` のバージョン                                                                  |
+| `args`    | `package` の後ろに渡す引数（`--args` が `,` 区切りのため `,` を含む値は不可）           |
+| `options` | `sbx mcp add` にそのまま渡す追加オプション（`--header` / `--scope` / `--dir` など）     |
+
+- `version` は Renovate が更新します（`npx` は npm、`uvx` は PyPI）。
+- work3 / private など特定の環境だけで使うサーバは `config/sbx/mcp-servers.<name>.toml` に書きます。
+  gitignore 済みなのでコミットされず、Renovate の更新対象にもなりません。雛形は
+  `mcp-servers.work3.toml.example` です。
 
 ```bash
-mise run sandbox:mcp     # mcp-servers*.txt のうち未登録のサーバを登録する（OAuth は初回だけブラウザで認可）
+mise run sandbox:mcp     # mcp-servers*.toml を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
 ```
 
-- 登録済みの name は変更しません。定義を変えたら `sbx mcp rm <name>` してから再実行します。
+- 登録した定義（`sbx mcp add` の引数）を `~/.local/state/sbx-mcp/<name>` に記録し、`version` などが
+  変わったサーバだけ `sbx mcp rm` → `sbx mcp add` で登録し直します。
+  remote サーバは URL を変えたときだけ登録し直します（OAuth の認可をやり直すことがあります）。
 - 一覧から消したサーバは自動では消しません（OAuth トークンも消えるため）。
   `sandbox:mcp` が「一覧に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
-- `--header` に `${secret}` を渡すときは、展開されないよう `'...'` で囲み、secret は
+- `options` の `--header` に `${secret}` を書くとそのまま sbx に渡ります。secret は
   `sbx secret set` で登録しておきます。
 
 ### sandbox への読み込み
 
-`sbx-agent` は既定で `mcp-servers*.txt` の全サーバを `--static-mcp` で読み込みます。
+`sbx-agent` は既定で `mcp-servers*.toml` の全サーバを `--static-mcp` で読み込みます。
 起動済みの sandbox には `sbx mcp load` で後から足します。絞り込みたいときだけ指定します。
 
 ```bash
-sbx-agent claude                                 # mcp-servers*.txt の全サーバ
+sbx-agent claude                                 # mcp-servers*.toml の全サーバ
 sbx-agent claude --static-mcp notion             # notion だけ
 export SBX_AGENT_STATIC_MCP=notion,aws-api       # 既定を変える
 ```

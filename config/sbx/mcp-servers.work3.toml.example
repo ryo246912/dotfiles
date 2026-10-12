@@ -1,0 +1,15 @@
+# 特定の環境（work3 / private など）でだけ sandbox から使いたい MCP サーバ。
+# `cp mcp-servers.work3.toml.example mcp-servers.work3.toml` のように .example を外してコピーして使う。
+# mcp-servers.<name>.toml は gitignore 済みで、mise run sandbox:mcp と sbx-agent が
+# mcp-servers.toml と一緒に読み込む。書式は mcp-servers.toml と同じ（Renovate の更新対象外）。
+
+# AWS の billing / cost（ホストの AWS 認証情報を使う）
+# [aws-billing]
+# command = "uvx"
+# package = "awslabs.billing-cost-management-mcp-server"
+# version = "0.0.0"
+
+# 社内の remote MCP（ヘッダの secret は sbx secret set で登録しておく）
+# [internal-docs]
+# url = "https://mcp.example.com/mcp"
+# options = ["--header", "Authorization: Bearer ${internal_docs_token}"]

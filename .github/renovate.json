@@ -132,6 +132,22 @@
   "customManagers": [
     {
       "customType": "regex",
+      "managerFilePatterns": ["config/sbx/mcp-servers.toml"],
+      "matchStrings": [
+        "command\\s*=\\s*\"npx\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\npackage\\s*=\\s*\"(?<depName>[^\"]+)\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\nversion\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/sbx/mcp-servers.toml"],
+      "matchStrings": [
+        "command\\s*=\\s*\"uvx\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\npackage\\s*=\\s*\"(?<depName>[^\"]+)\"(?:\\n(?:[^\\[\\n][^\\n]*)?)*?\\nversion\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["config/devcontainer/Dockerfile*"],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nARG\\s+\\w+=(?<currentValue>\\S+)"
