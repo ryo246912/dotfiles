@@ -132,6 +132,22 @@
   "customManagers": [
     {
       "customType": "regex",
+      "managerFilePatterns": ["config/mcpc/mcp.yml"],
+      "matchStrings": [
+        "command:\\s*npx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>(?:@[^/\"\\s]+/)?[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
+      ],
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/mcpc/mcp.yml"],
+      "matchStrings": [
+        "command:\\s*uvx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
+      ],
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
       "managerFilePatterns": ["config/devcontainer/Dockerfile*"],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nARG\\s+\\w+=(?<currentValue>\\S+)"

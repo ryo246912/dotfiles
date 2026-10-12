@@ -430,6 +430,25 @@ mise の `[dotfiles]` が持つ mode は `symlink` / `symlink-each` / `copy` / `
 > **dotfiles リポジトリ自体を read-only で渡すだけ**で全ての symlink が解決します。
 > 詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#ホスト設定は-symlink-なので-dotfiles-リポジトリも渡す) を参照してください。
 
+## MCP
+
+devcontainer では**コンテナ内の Claude Code から MCP サーバに接続しません**。`~/.claude` や `~/.claude.json` を
+ホストと共有しているため、そのままだとホストで `claude mcp add` したサーバ（`npx` / `uvx` の
+stdio サーバや `mcp-remote` 経由の Notion など）がコンテナ内でも起動します。
+
+image に Claude Code の managed settings の drop-in
+（`/etc/claude-code/managed-settings.d/50-mcp.json`、中身は `config/devcontainer/claude/mcp-policy.devcontainer.json`）
+を置き、`allowedMcpServers: []` で全サーバを止めています。managed settings なので共有している
+ユーザー設定では上書きできず、ホスト側の設定も書き換えません。反映には image のリビルドが必要です。
+
+この制限は Claude Code だけです。Codex などは共有している自身の設定に MCP サーバがあればコンテナ内でも
+起動します（このリポジトリでは agent に MCP を登録しないので、手で追加しない限り空です）。
+
+MCP は agent の native MCP ではなく mcpc（CLI）から使います。mcpc はこの制限を受けないため、
+mount した mcpc 用 config（`~/.config/mcpc/apm-home/.copilot/mcp-config.json`）からコンテナ内でも使えます
+（[docs/mcpc/README.md](./mcpc/README.md#devcontainer-で使う)）。AWS の認証は下の「aws-vault の認証を
+container 内の AI agent で使う」を参照してください。
+
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 
 base template で `docker-in-docker`（DinD）feature を有効化しているため、devcontainer 内から

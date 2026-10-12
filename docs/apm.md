@@ -2,7 +2,7 @@
 
 [APM](https://github.com/microsoft/apm) は、AI エージェント用のスキル・プロンプト・MCP サーバ等の
 プリミティブを `apm.yml` で宣言し、`apm install` で各エージェントの設定ディレクトリへ配布する
-パッケージマネージャです。このリポジトリでは **外部スキルと mcpc 用 MCP server の管理** に APM を利用します。
+パッケージマネージャです。このリポジトリでは **外部スキルの管理** に APM を利用します。
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
 `apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は immutable なコミット
@@ -11,19 +11,34 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                                | 管理ツール | ソース                              | 配布先                                                     |
-| ----------------------------------- | ---------- | ----------------------------------- | ---------------------------------------------------------- |
-| このリポジトリの `CLAUDE.md`        | rulesync   | `.rulesync/rules/CLAUDE.md`         | リポジトリ直下の `CLAUDE.md`（gitignore）                  |
-| グローバルな自作 skill / rule / MCP | rulesync   | `config/rulesync/.rulesync/`        | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`） |
-| **外部スキル（グローバル）**        | **APM**    | `apm/apm.yml` の `dependencies.apm` | `~/.claude/skills/` 等（`apm install -g`）                 |
-| **mcpc 用 MCP server**              | **APM**    | `apm/apm.yml` の `dependencies.mcp` | `~/.config/mcpc/apm-home/.copilot/mcp-config.json`         |
+| 対象                          | 管理ツール | ソース                                                         | 配布先                                                         |
+| ----------------------------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`  | rulesync   | `.rulesync/rules/CLAUDE.md`                                    | リポジトリ直下の `CLAUDE.md`（gitignore）                      |
+| グローバルな自作 skill / rule | rulesync   | `config/rulesync/.rulesync/`                                   | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）     |
+| **外部スキル（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.apm`                            | `~/.claude/skills/` 等（`apm install -g`）                     |
+| MCP サーバ                    | **APM**    | `config/mcpc/mcp*.yml`（APM の `dependencies.mcp` と同じ書式） | mcpc 専用の config（`apm:install-mcpc`）。agent には登録しない |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`config/rulesync/`）で管理します。
 - **外部スキル**は upstream 依存として `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、
   pristine な upstream をそのまま使います。
-- **MCP server** は `dependencies.mcp` で定義と version を管理します。agent の native MCP として常時 load
-  させず、Copilot CLI 形式の設定を mcpc が必要時に読み込みます（`docs/mcpc/README.md` 参照）。
+
+## MCP サーバ
+
+MCP サーバは **どの agent の native MCP にも登録せず**、mcpc（CLI）から必要な時だけ使います
+（[`docs/mcpc/README.md`](mcpc/README.md)）。そのため `apm install -g` は `--only apm` で実行し
+（`apm:install` / `apm:ci`）、MCP は `~/.claude.json` などへ書き込みません。`apm.yml` の
+`dependencies.mcp` は空のままにします。
+
+- `dependencies.mcp` に書くと、`--only apm` では lockfile に載らないため `apm install --frozen`（`apm:ci`）が
+  「MCP server '...' is missing from apm.lock.yaml」で失敗します。
+- MCP の定義とバージョンは `config/mcpc/mcp.yml`（と環境別の `mcp.<env>.yml`）に、APM の
+  `dependencies.mcp` と同じ書式で書きます。`apm:install-mcpc` がこれを別の manifest として隔離した HOME で
+  `apm install --only mcp --target copilot` し、mcpc 専用の config を生成します（`apm/apm.lock.yaml` には載りません）。
+- rulesync から移行したホストでは、以前 rulesync が配布した定義が残ります。一度だけ
+  `~/.config/rulesync/.rulesync/mcp.json` を削除し、`~/.copilot/mcp-config.json` から旧名
+  （`makenotion/notion-mcp-server`・`io.github.ChromeDevTools/chrome-devtools-mcp` など）の
+  エントリを消してください（rulesync の `mcp` target は外してあるので再生成はされません）。
 
 ## 依存の宣言と pin
 

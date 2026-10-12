@@ -175,7 +175,7 @@ fi
 # 実際の ~/.aws/config・credentials（アカウント ID や認証情報を含む）は source に無いため触らない。
 #
 # 以下のエントリは常に git 側の内容へ収束させたい copy/template。このうち "~/.config" 配下の
-# 単一ファイルエントリ（alacritty/ghostty/git/rio/rulesync mcp.json）と
+# 単一ファイルエントリ（alacritty/ghostty/git/rio）と
 # "~/.zshenv" は、
 # config/mise/config.toml 側で同じ target に track も追加宣言している（mise の
 # 「ownership」パターン。dotfiles.html#ownership 参照。「copyで丸ごと管理する
@@ -212,17 +212,16 @@ fi
 # --force-dotfiles。mise の CLI reference で確認）。移行が済めば実ファイルは残らない
 # ので、以降の apply に force は不要。
 [dotfiles]
-"~/.apm"                                = { source = "apm", mode = "symlink-each" }
-"~/.aws"                                = { source = "aws", mode = "symlink-each" }
-"~/.claude"                             = { source = "claude", mode = "symlink-each" }
-"~/.codex"                              = { source = "codex", mode = "symlink-each" }
-"~/.config/alacritty/alacritty.toml"    = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
-"~/.config/ghostty/config"              = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
-"~/.config/git/config"                  = { source = "templates/git/config.tera", mode = "template", template = "tera" }
-"~/.config/rio/config.toml"             = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
-"~/.config/rulesync/.rulesync/mcp.json" = { source = "templates/rulesync/mcp.json.tera", mode = "template", template = "tera" }
-"~/.local"                              = { source = "local", mode = "symlink-each" }
-"~/.zshenv"                             = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
+"~/.apm"                             = { source = "apm", mode = "symlink-each" }
+"~/.aws"                             = { source = "aws", mode = "symlink-each" }
+"~/.claude"                          = { source = "claude", mode = "symlink-each" }
+"~/.codex"                           = { source = "codex", mode = "symlink-each" }
+"~/.config/alacritty/alacritty.toml" = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
+"~/.config/ghostty/config"           = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
+"~/.config/git/config"               = { source = "templates/git/config.tera", mode = "template", template = "tera" }
+"~/.config/rio/config.toml"          = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
+"~/.local"                           = { source = "local", mode = "symlink-each" }
+"~/.zshenv"                          = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]
 exclude = ["agentsview/tests"]

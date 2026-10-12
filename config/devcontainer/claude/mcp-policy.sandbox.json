@@ -1,0 +1,4 @@
+{
+  "allowManagedMcpServersOnly": true,
+  "allowedMcpServers": [{ "serverUrl": "*://*/*" }]
+}

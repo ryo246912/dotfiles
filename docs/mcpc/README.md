@@ -1,134 +1,238 @@
-# mcpc 導入・利用ガイド
+# mcpc で MCP を使う
 
-[mcpc](https://github.com/apify/mcpc) は MCP の操作をシェルコマンドとして提供する CLI client です。この dotfiles では `mcp-cli` の代わりに mcpc を使い、必要な MCP server だけを session に接続して tool を動的に検索・実行します。
+[mcpc](https://github.com/apify/mcpc) は MCP の操作をシェルコマンドとして提供する CLI client です。この dotfiles では
+**MCP サーバをどの agent の native MCP にも登録せず、mcpc から必要な時だけ使います**。MCP サーバの定義とバージョンは
+APM（[`docs/apm.md`](../apm.md)）の書式で管理します。
 
 ## なぜ mcpc を使うのか（コンテキスト節約の仕組み）
 
-agent（Claude Code など）の native MCP に server を登録すると、起動時に全 tool の定義（名前・説明・引数の JSON Schema）が system prompt に入り、使わない会話でもコンテキストを消費し続けます。
+agent（Claude Code など）の native MCP に server を登録すると、起動時に全 tool の定義（名前・説明・引数の JSON Schema）が
+system prompt に入り、使わない会話でもコンテキストを消費し続けます。server を足すほど毎回の会話が重くなります。
 
-mcpc では MCP server を agent の設定に登録しません。
+mcpc では MCP サーバを agent の設定に登録しません。
 
-1. MCP server の定義は agent が読まない mcpc 専用の config（`~/.config/mcpc/apm-home/.copilot/mcp-config.json`）にだけ置く。agent は起動時に何も読み込まない。
-2. 必要になったら agent が Bash で `mcpc connect <config>:<server> @<session>` を実行する。mcpc の bridge process が server との接続を保持し、agent にはコマンドの出力だけが返る。
-3. `mcpc grep` で tool 名を探し、`tools-get` で使う tool の schema だけを読み、`tools-call` で実行する。コンテキストに入るのはこの出力だけ。
+1. MCP サーバの定義は、agent が読まない mcpc 専用の config にだけ置く。agent は起動時に MCP を何も読み込まない。
+2. 必要になったら agent が Bash で `mcpc connect <config>:<server> @<session>` を実行する。mcpc の bridge process が
+   server との接続を保持し、agent にはコマンドの出力だけが返る。
+3. `mcpc grep` で tool 名を探し、`tools-get` で使う tool の schema だけを読み、`tools-call` で実行する。
+   コンテキストに入るのはこの出力だけ。
 4. 作業後は `mcpc close @<session>` で閉じる。
 
-## 管理している MCP server
+## 全体像
 
-`apm/apm.yml` の `dependencies.mcp` で定義と version を pin しています（追加・更新もここで行う）。
-
-| server            | 用途                               | 実体（pin）                                  | 認証                                                        |
-| ----------------- | ---------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| `aws-api`         | AWS CLI 相当の API 呼び出し        | `awslabs.aws-api-mcp-server`（uvx）          | `aws-vault exec` が渡す一時 credential                      |
-| `aws-billing`     | 請求・コスト                       | `awslabs.billing-cost-management-mcp-server` | 同上                                                        |
-| `aws-cloudwatch`  | CloudWatch Logs / Metrics / Alarms | `awslabs.cloudwatch-mcp-server`              | 同上                                                        |
-| `notion`          | Notion（remote MCP）               | `mcp-remote` → `https://mcp.notion.com/mcp`  | 初回にブラウザで OAuth。token は `~/.mcp-auth`              |
-| `slack`           | Slack                              | `slack-mcp-server`（korotovsky）             | `SLACK_MCP_XOXP_TOKEN`（fnox の work profile）              |
-| `metabase`        | Metabase                           | `@cognitionai/metabase-mcp-server`           | `METABASE_URL` / `METABASE_API_KEY`（fnox の work profile） |
-| `chrome-devtools` | host の Chrome（`localhost:9222`） | `chrome-devtools-mcp`                        | 不要（remote debugging を有効にした Chrome を起動しておく） |
-
-credential の値や profile 名は config に書きません。config の `env` は `${VAR}` で mcpc の起動環境から server へ転送します（mcpc は stdio server に最小限の環境変数しか渡さないため）。
-
-## セットアップ
-
-dotfiles を反映し、mise で mcpc、APM、server の起動に使う uv / node をインストールしてから、mcpc 用 config を生成します。
-
-```bash
-mise bootstrap dotfiles apply
-mise install
-mise run apm:install
+```
+config/mcpc/mcp.yml, mcp.<env>.yml        … MCP の定義（APM の dependencies.mcp 書式）
+        │ mise run apm:install（apm:install-mcpc）
+        ▼
+~/.config/mcpc/apm-home/.copilot/mcp-config.json   … host / devcontainer 用（stdio は command、remote は url）
+~/.config/mcpc/sandbox/mcp-config.json             … sandbox 用（host の mcpc proxy の URL だけ）
+        │
+        ├─ host          : mcpc connect <host 用 config>:<server> @<session>
+        ├─ devcontainer  : 同上（config を read-only mount）
+        ├─ sandbox（既定）: host の `mise run sandbox:mcp` が mcpc proxy を立て、sandbox 内の mcpc から接続
+        └─ sandbox（オプション）: `mise run sandbox:mcp-gateway` で sbx の gateway に登録し、agent の native MCP として使う
 ```
 
-`mise run apm:install` は次のように役割を分けています。
+| 経路                         | MCP サーバが動く場所 | agent のコンテキスト         | credential                               |
+| ---------------------------- | -------------------- | ---------------------------- | ---------------------------------------- |
+| host                         | host                 | `mcpc` の出力だけ            | 起動した shell の環境 / mcpc の keychain |
+| devcontainer                 | container            | `mcpc` の出力だけ            | `remoteEnv` で container に渡す（AWS）   |
+| sandbox：mcpc proxy（既定）  | host                 | `mcpc` の出力だけ            | host に留まる（proxy の token だけ渡す） |
+| sandbox：sbx gateway（任意） | host                 | 載せた server の全 tool 定義 | host に留まる（sbx が送信時に注入）      |
 
-- APM package は既存の agent target へ install する。
-- MCP は `apm:install-mcpc` が隔離した HOME（`~/.config/mcpc/apm-home`）で `--only mcp --target copilot` を実行し、mcpc 専用の config を生成する。実際の `~/.copilot/mcp-config.json` とは別の場所なので、Copilot CLI や他の agent には登録されない。
-- 同時に sandbox 用の config（`~/.config/mcpc/sandbox/mcp-config.json`。URL だけ）も生成する（[後述](#docker-sandboxessbx内で使う)）。
-- `~/.apm/apm.lock.yaml` を `apm/apm.lock.yaml` へ同期する。
+## MCP の定義と管理
 
-server を更新するときは `apm/apm.yml` の `version` と、`args` にある `package@version` を同じ version に更新して `mise run apm:install` を実行し、manifest と lockfile を一緒に commit します。
+定義は `config/mcpc/mcp.yml`（共通）と `config/mcpc/mcp.<env>.yml`（work2 / work3 / private など。gitignore 済み、
+雛形は `mcp.<env>.yml.example`）に、APM の `apm.yml` の `dependencies.mcp` と同じ書式で書きます。mcpc 経路と
+sbx gateway 経路の両方がこのファイルを読みます。`apm/apm.yml` の `dependencies.mcp` は空のままです
+（[`docs/apm.md`](../apm.md#mcp-サーバ)）。
 
-## work3 で使う（認証情報の渡し方）
+```yaml
+dependencies:
+  mcp:
+    - name: notion # remote（OAuth は mcpc login）
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    - name: slack # stdio。値はホストの環境から転送する
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "slack-mcp-server@1.3.0", "--transport", "stdio"]
+      env:
+        SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
+```
 
-AWS は `aws-vault exec`、Slack / Metabase は fnox の work profile（`HOST_ENV` に work ロールを含むホストで有効。[`docs/fnox.md`](../fnox.md)）から環境変数として渡します。Slack / Metabase の secret は `config/fnox/config.work.toml` の `[profiles.work.secrets]` に `env = "exec"` で登録してください（同ファイルにコメントアウトした例があります）。
+- すべて self-defined（`registry: false`）で書きます。registry 参照は解決後のコマンドが残らないため使えません。
+- stdio はパッケージを `args` の `<package>@<version>` で固定します。`mcp.yml` は Renovate が `npx`（npm）/
+  `uvx`（PyPI）の新しいバージョンで更新します（`command` の直後に `args` を書いたものが対象）。
+- credential は値を書きません。mcpc は stdio サーバに最小限の環境変数（PATH / HOME など）しか渡さないため、
+  ホストの環境から渡したい値は `env` に `KEY: "${KEY}"` と書き、mcpc の起動時に展開させます。
+- `sbx_options` は sbx gateway 経路だけで使う独自キーです（`--dir` / `--skip-ssrf-check` など）。APM は
+  警告を出して保持するだけで、mcpc は無視します。
+- 同じ name を複数のファイルに書いた場合は先に読んだ方（`mcp.yml` → `mcp.<env>.yml` の順）を使います。
+- 環境別のファイルを置いたら `mise bootstrap dotfiles apply` で `~/.config/mcpc` へ配置し、`mise run apm:install` します。
 
-`aws-vault exec` / `fnox exec` は親 shell の環境を書き換えないため、mcpc をその子 process として起動します。何度も実行するなら配下の shell に入ると楽です。
+## mcpc の設定の仕組み（apm:install-mcpc）
+
+`mise run apm:install`（と `apm:ci`）の最後に `apm:install-mcpc` が次を行います。
+
+1. `~/.config/mcpc/mcp.yml` と `mcp.<env>.yml` の `dependencies.mcp` を yq / jq で 1 つにまとめ、mcpc 専用の
+   manifest（`~/.config/mcpc/apm-home/.apm/apm.yml`）を毎回作り直す。
+2. その manifest を、HOME を `~/.config/mcpc/apm-home` に隔離して `apm install -g --only mcp --target copilot` する。
+   APM は Copilot CLI 形式の config（`<HOME>/.copilot/mcp-config.json`）を書くので、隔離した HOME の下にだけ
+   生成され、実際の `~/.copilot` や `~/.claude.json` には何も登録されない。
+3. 生成した config の並び順で、各 server に host の port（`MCPC_PROXY_PORT_BASE`、既定 8931 から連番）を割り当て、
+   sandbox 用の config（`~/.config/mcpc/sandbox/mcp-config.json`）を書く。中身は
+   `http://host.docker.internal:<port>` と `Authorization: Bearer ${MCPC_PROXY_TOKEN}` だけで、credential は含まない。
+
+`~/.apm/apm.yml` とは別の manifest なので、MCP は `apm/apm.lock.yaml` に載らず、`apm:ci` の `--frozen` とも独立しています。
+定義ファイルや生成物が変わると `apm:sync`（`mise bootstrap` の hook）が `apm:install` をやり直します。
+
+## 認証
+
+| 対象                             | 方法                                                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| AWS（stdio の awslabs 系）       | `aws-vault exec <profile> --` の配下で mcpc / proxy を起動し、`env` の `${AWS_*}` で転送する                          |
+| AWS MCP（`aws-mcp`）             | `mcp-proxy-for-aws` の `--profile` でホストの AWS プロファイルを使う                                                  |
+| Slack                            | fnox の work profile（`fnox exec --profile work --`）が `SLACK_MCP_XOXP_TOKEN` を渡す（[`docs/fnox.md`](../fnox.md)） |
+| remote（Notion / Metabase など） | host で一度 `mcpc login <url>`（ブラウザで OAuth）。token は OS の keychain に入り、config には書かない               |
+| `mcp-remote` 経由（Datadog）     | 初回接続時に host のブラウザで OAuth。token は `~/.mcp-auth` に保存される                                             |
+
+`aws-vault exec` / `fnox exec` は親 shell の環境を書き換えないため、mcpc はその子 process として起動します。何度も
+実行するなら配下の shell に入ります。
 
 ```bash
 aws-vault exec my-profile -- fnox exec --profile work -- zsh
-mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:slack @slack
-mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc login https://mcp.notion.com/mcp     # remote は初回だけ
 ```
 
-session は接続時の credential を保持するため、profile を切り替えるときや期限が切れたときは `mcpc close` してから新しい `aws-vault exec` の配下で接続し直します。aws-vault の profile には必要な最小権限だけを付与してください。
+session は接続時の credential を保持します。profile を切り替えるときや期限が切れたときは `mcpc close` してから接続し直します。
 
-## Docker Sandboxes（sbx）内で使う
-
-sandbox（[`docs/docker-sandboxes.md`](../docker-sandboxes.md)）では credential を VM へ渡しません。MCP server は **host で動かし**、mcp-proxy で HTTP として公開します。sandbox 内の mcpc は URL だけを書いた config で接続します。
-
-```
-[host]    aws-vault exec … -- fnox exec --profile work -- mise run sandbox:mcp aws-cloudwatch slack
-            └─ mcp-proxy（127.0.0.1:8931）─ stdio MCP server
-[sandbox] mcpc connect "$MCPC_SANDBOX_CONFIG:aws-cloudwatch" @aws-cloudwatch
-            └─ http://host.docker.internal:8931/servers/aws-cloudwatch/mcp
-```
-
-| 経路         | MCP server が動く場所 | mcpc の config                                                     | credential                        |
-| ------------ | --------------------- | ------------------------------------------------------------------ | --------------------------------- |
-| host         | host                  | `~/.config/mcpc/apm-home/.copilot/mcp-config.json`                 | `aws-vault` / `fnox` の環境を転送 |
-| devcontainer | container             | 同上（read-only mount）                                            | `remoteEnv` で container へ渡す   |
-| sandbox      | host（mcp-proxy）     | `$MCPC_SANDBOX_CONFIG`（`~/.config/mcpc/sandbox/mcp-config.json`） | host の proxy process だけが持つ  |
-
-sbx の MCP gateway（`sbx mcp` / `--static-mcp`）は使いません。gateway に載せた tool は sandbox 内の agent にも native MCP として常に見えてしまい、上記のコンテキスト節約が成立しないためです。
-
-### 初回だけ
-
-mcpc は sandbox template に mise で入れています（`config/devcontainer/mise.toml`）。template を作り直し、sandbox 用 config を生成してから sandbox を作ります。`sbx-agent` は config があれば read-only でマウントし、`MCPC_SANDBOX_CONFIG` にそのパスを入れます。config を生成する前に作った sandbox は作り直してください。
+## host で使う
 
 ```bash
-mise run apm:install
-mise run sandbox:build-template
+mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:notion @notion
+mcpc @notion tools-list
+mcpc close @notion
 ```
 
-### 使うとき
+## sandbox で使う：mcpc proxy（既定）
 
-host で使う server だけを指定して proxy を前面で起動し、作業が終わったら Ctrl-C で止めます。mcp-proxy は指定した server を起動時にすべて立ち上げ、1 つでも失敗すると止まるため、必要なものだけを渡します。引数なしで実行すると server の一覧を表示します。
+sandbox（[`docs/docker-sandboxes.md`](../docker-sandboxes.md)）では credential を VM に入れず、MCP サーバは host で動かします。
+
+```
+[host]    aws-vault exec … -- fnox exec --profile work -- mise run sandbox:mcp notion slack
+            └─ mcpc connect <host 用 config>:notion @sbx-notion --proxy 127.0.0.1:8934 --proxy-bearer-token <token>
+                 └─ notion の remote MCP（OAuth token は host の keychain）
+[sandbox] mcpc connect "$MCPC_SANDBOX_CONFIG:notion" @notion
+            └─ http://host.docker.internal:8934（Authorization: Bearer $MCPC_PROXY_TOKEN）
+```
+
+仕組み:
+
+- `mise run sandbox:mcp <server>...` は、指定した server ごとに host で `mcpc connect ... --proxy 127.0.0.1:<port>` を
+  実行する。mcpc の bridge が server との session を持ち、その session を新しい MCP サーバとして `127.0.0.1:<port>` に
+  公開する（mcpc の [MCP proxy](https://github.com/apify/mcpc#mcp-proxy) 機能）。proxy の利用者には元の OAuth token や
+  HTTP header を渡さない。
+- stdio / remote のどちらも同じ方法で中継できる。bridge はバックグラウンドで動き続け、`mise run sandbox:mcp-stop` で止める。
+  起動し直すと、その時の環境（aws-vault / fnox の credential）で接続し直す。
+- proxy は bearer token を要求する。token は host の `${XDG_STATE_HOME:-~/.local/state}/mcpc/proxy-token`（`0600`）にあり、
+  `sandbox:mcp` と `sbx-agent` のどちらかが最初に作る。`sbx-agent` が `MCPC_PROXY_TOKEN` として sandbox に渡し、
+  sandbox 用 config の `${MCPC_PROXY_TOKEN}` を mcpc が展開する。token の値は config ファイルには書かない。
+- `sbx-agent` は sandbox 用 config（`~/.config/mcpc/sandbox`）を read-only で mount し、そのパスを `MCPC_SANDBOX_CONFIG` で
+  渡す（sandbox 内の `$HOME` はホストと別物のため）。config を生成する前に作った sandbox は作り直す。
+- sbx のプロキシは `host.docker.internal` を host の localhost へ転送するため、`sandbox:mcp` が network policy に
+  `localhost:<port>` を追加する。
+- sandbox 内の agent の native MCP には何も載らない。`sbx-agent` は既定で gateway から何も読み込まない。
 
 ```bash
-# host（tmux の別 pane など）
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp aws-cloudwatch slack
+# host（初回は mise run apm:install と mise run sandbox:build-template も）
+aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcp notion slack aws-cloudwatch
+mise run sandbox:mcp            # 引数なしで server と port の一覧
+mise run sandbox:mcp-stop       # 全 proxy を止める
 ```
 
 ```bash
 # sandbox 内
-mcpc connect "$MCPC_SANDBOX_CONFIG:aws-cloudwatch" @aws-cloudwatch
-mcpc grep -E 'log|query'
-mcpc @aws-cloudwatch tools-get describe_log_groups
-mcpc close @aws-cloudwatch
+mcpc connect "$MCPC_SANDBOX_CONFIG:notion" @notion
+mcpc grep -E 'page|search'
+mcpc close @notion
 ```
 
-- `sandbox:mcp` は config の `env`（`${VAR}`）を外し、`--pass-environment` で aws-vault / fnox が設定した proxy の環境をそのまま server へ渡します（mcp-proxy は `${VAR}` を展開しないため）。
-- `localhost:8931` を network policy に追加します（sbx のプロキシは `host.docker.internal` を host の localhost へ転送するため）。ポートは `MCPC_PROXY_PORT` で変えられますが、変えたら `mise run apm:install` で sandbox 用 config も作り直してください。
-- proxy に認証はありません。127.0.0.1 にだけ bind しますが、policy を許可した sandbox からは呼べるので、使う間だけ起動してください。
-- Notion の OAuth は proxy の起動時に host のブラウザで行います。chrome-devtools は host の Chrome に繋がります。
+## sandbox で使う：sbx gateway（オプション）
 
-### うまく繋がらないとき
+agent の native MCP として使う経路に戻すための口です。tool の定義が agent のコンテキストに常に入るため、既定では使いません。
 
-- host で `curl -s 127.0.0.1:8931/status` を実行し、proxy と server が起動しているか確認します。
-- sandbox 内で `curl -s http://host.docker.internal:8931/status` が失敗する場合は `sbx policy log <sandbox-name>` でブロックされていないか確認します。
-- `echo "$MCPC_SANDBOX_CONFIG"` が空なら、config 生成前に作った sandbox です。作り直してください。
+```bash
+mise run sandbox:mcp-gateway                   # config/mcpc/mcp*.yml を host の sbx mcp に登録
+SBX_AGENT_MCP_GATEWAY=1 sbx-agent claude       # 全 server を gateway から agent に読み込む
+sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC_MCP でも指定できる）
+```
 
-## devcontainer 内で使う
+仕組み:
 
-devcontainer では server を container 内で動かします。host で `aws-vault exec <profile> -- devcontainer up ...` として短期 credential を container の起動環境へ渡します。セットアップ、account 切り替え、期限切れ時の再起動手順は [`docs/devcontainer.md`](../devcontainer.md#aws-vault-の認証を-container-内の-ai-agent-で使う) を参照してください。Slack / Metabase の token は devcontainer へは渡していません。また `chrome-devtools` の `localhost:9222` は container 自身を指すため、devcontainer からは host の Chrome に繋がりません（host か sandbox の `sandbox:mcp` 経由で使ってください）。
+- `sbx mcp add` で host の sbx に server を登録する。stdio は host で起動され、remote は host から接続される。
+  OAuth token や API キーは host の OS keychain に入り、sbx のプロキシが送信時に注入する。
+- `sbx-agent` が `--static-mcp` で登録済みの server を sandbox の gateway に読み込む。sandbox 内の agent は
+  gateway（`http://mcp-gateway.docker.internal/mcp`）だけに MCP として接続し、読み込んだ server の全 tool が
+  native MCP として見える。起動済みの sandbox には `sbx mcp load` で後から足す。
+- template の Claude Code の managed settings（`config/devcontainer/claude/mcp-policy.sandbox.json`）は URL の
+  server だけを許可しており、gateway は通る（stdio は止まる）。
+
+`sandbox:mcp-gateway` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
+
+| mcp.yml                         | sbx mcp add                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `transport: http` / `sse` + url | `--url <url>`（`headers` は `--header 'Name: value'`）                                                 |
+| `transport: stdio` + command    | `--command <command> --args <args を , で連結>`                                                        |
+| stdio の `env`                  | `--command env --args K=V,...,<command>,<args>` で包む（`${KEY}` だけの値は除き、host の環境から継承） |
+| `sbx_options`（独自キー）       | `sbx mcp add` の末尾にそのまま追加（`--dir` など）                                                     |
+
+- 登録した定義を `~/.local/state/sbx-mcp/<name>` に記録し、変わった server だけ `sbx mcp rm` → `sbx mcp add` で
+  登録し直す（remote は OAuth の認可をやり直すことがある）。
+- remote の URL にクエリを付けると OAuth 検出が失敗するため、クエリが必要な server は `mcp-remote` を stdio として
+  書く（`mcp.work3.yml.example` の datadog）。
+- `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにする。
+- `mcp*.yml` から消した server は自動では消さない。不要なら `sbx mcp rm <name>`。
+
+## sandbox の 2 経路の比較
+
+| 観点                 | mcpc proxy（既定）                                         | sbx gateway（オプション）                             |
+| -------------------- | ---------------------------------------------------------- | ----------------------------------------------------- |
+| agent のコンテキスト | `mcpc` の出力だけ                                          | 読み込んだ server の全 tool 定義が常に入る            |
+| agent からの使い方   | Bash で `mcpc connect` / `grep` / `tools-call`             | native MCP の tool として直接呼ぶ                     |
+| server が動く場所    | host（mcpc の bridge）                                     | host（sbx）                                           |
+| credential           | host に留まる（mcpc の keychain / 起動した shell の環境）  | host に留まる（sbx の keychain / host の環境）        |
+| remote の OAuth      | `mcpc login <url>`                                         | `sbx mcp add --url` の初回認可                        |
+| sandbox からの接続先 | `host.docker.internal:<port>`（server ごと、bearer token） | `mcp-gateway.docker.internal`（1 つに集約）           |
+| 起動・停止           | `sandbox:mcp` / `sandbox:mcp-stop` で必要な時だけ          | 登録は常駐。sandbox 作成時・`sbx mcp load` で読み込み |
+| 必要な許可           | network policy の `localhost:<port>`                       | 不要（sbx の gateway）                                |
+
+### 単体の mcp-proxy を使わない理由
+
+[sparfenyuk/mcp-proxy](https://github.com/sparfenyuk/mcp-proxy) も stdio の server を HTTP で公開できますが、次の理由で
+mcpc 自身の proxy にしています。
+
+- named server は stdio だけで、remote（Notion / Metabase / deepwiki など）を中継できない。
+- proxy に認証が無い（mcpc は bearer token を要求できる）。
+- config の `${VAR}` を展開しないため、別に env を外した config を作る必要がある。
+- 指定した server を起動時にすべて立ち上げ、1 つでも失敗すると止まる。
+
+## devcontainer で使う
+
+devcontainer では Claude Code の native MCP を managed settings で止めています（[`docs/devcontainer.md`](../devcontainer.md#mcp)）。
+mcpc は CLI なのでこの制限を受けず、mount した host 用 config から container 内で server を起動して使えます。
+AWS の credential は host で `aws-vault exec <profile> -- devcontainer up ...` として渡します
+（[`docs/devcontainer.md`](../devcontainer.md#aws-vault-の認証を-container-内の-ai-agent-で使う)）。Slack などの
+token は devcontainer へは渡していません。`chrome-devtools` の `localhost:9222` は container 自身を指すため、
+host の Chrome には繋がりません。
 
 ## tool を検索して必要な schema だけ読む
 
-接続済み session を確認し、全 tool 定義を先に context へ入れる代わりに `grep` で候補を絞ります。その後 `tools-get` で対象 tool の schema を取得し、`tools-call` で実行します。
-
 ```bash
-mcpc
-mcpc grep -E 'log|query'
+mcpc                                   # 接続中の session
+mcpc grep -E 'log|query'               # tool 名を検索
 mcpc @aws-cloudwatch tools-get <tool-name>
 mcpc @aws-cloudwatch tools-call <tool-name> key:=value
 ```
@@ -140,38 +244,35 @@ jq -n --arg prefix '/aws/lambda/' '{log_group_name_prefix: $prefix, max_items: 2
   mcpc --json @aws-cloudwatch tools-call describe_log_groups
 ```
 
-設定内の全 server をまとめて接続する場合、stdio server は既定では除外されるため `--stdio` が必要です（必要な server だけを接続するのが基本です）。
-
-```bash
-mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json --stdio
-```
-
 ## AI agent から使う
 
-mcpc 自身が agent 向けの最新ガイドを出力します。agent の instructions に次の方針を追加すると、MCP tool を常時登録せず Bash 経由で段階的に発見できます。
+mcpc 自身が agent 向けの最新ガイドを出力します。agent の instructions に次の方針を追加すると、MCP tool を
+常時登録せず Bash 経由で段階的に発見できます。
 
 ```text
 MCP が必要なときは `mcpc help --skill` を確認する。
 必要な server だけ `mcpc connect <config>:<server> @<session>` で接続する
-（sandbox 内では <config> に "$MCPC_SANDBOX_CONFIG" を使う）。
+（host は ~/.config/mcpc/apm-home/.copilot/mcp-config.json、sandbox 内では "$MCPC_SANDBOX_CONFIG"）。
 `mcpc grep` → `tools-get` → `tools-call` の順に必要な tool だけを調べる。
 作業後は `mcpc close @<session>` で session を閉じる。
 ```
 
-機械処理では `--json` を使い、出力を `jq` などへ渡します。
-
 ## トラブルシューティング
 
-- `mcpc connect` が失敗したら `~/.mcpc/logs/bridge-<session>.log` を確認します。
-- AWS の認証エラーでは `aws-vault exec <profile> -- aws sts get-caller-identity` と aws-vault session の有効期限を確認します。
-- Slack / Metabase の認証エラーでは `fnox exec --profile work -- env | grep -c '^SLACK_MCP_XOXP_TOKEN='` などで変数が渡っているか（値は表示しない）を確認します。
-- 起動中の session が不調なら `mcpc restart @<session>`、不要な状態を消す場合は `mcpc clean` を使います。
-- command や引数が変わった可能性がある場合は `mcpc help <command>` と `mcpc help --skill` を正としてください。
+- `mcpc connect` が失敗したら `mcpc @<session> logs`（`~/.mcpc/logs/bridge-@<session>.log`）を確認します。
+- sandbox から繋がらない: host で `mcpc` を実行して `@sbx-<server>` が動いているか、`sbx policy log <sandbox-name>` で
+  `localhost:<port>` がブロックされていないか、sandbox 内で `echo "$MCPC_SANDBOX_CONFIG"` が空でないか（空なら
+  config 生成前に作った sandbox なので作り直す）を確認します。
+- 401 になる: host の token と sandbox の `MCPC_PROXY_TOKEN` が違います。token を作り直した場合は sandbox を作り直します。
+- AWS の認証エラー: `aws-vault exec <profile> -- aws sts get-caller-identity` と session の有効期限を確認し、
+  proxy を `mise run sandbox:mcp` で起動し直します。
+- Slack の認証エラー: `fnox exec --profile work -- env | grep -c '^SLACK_MCP_XOXP_TOKEN='` で変数が渡っているか
+  （値は表示しない）を確認します。
 
 ## 関連リンク
 
-- [apify/mcpc](https://github.com/apify/mcpc)
-- [sparfenyuk/mcp-proxy](https://github.com/sparfenyuk/mcp-proxy)
+- [apify/mcpc](https://github.com/apify/mcpc)（[MCP proxy](https://github.com/apify/mcpc#mcp-proxy) / [AI sandboxes](https://github.com/apify/mcpc#ai-sandboxes)）
+- [Docker Sandboxes の MCP gateway](https://docs.docker.com/ai/sandboxes/mcp-gateway/)
+- [microsoft/apm](https://github.com/microsoft/apm)
 - [AWS Labs MCP servers](https://github.com/awslabs/mcp)
 - [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
-- [@cognitionai/metabase-mcp-server](https://www.npmjs.com/package/@cognitionai/metabase-mcp-server)

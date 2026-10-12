@@ -1,0 +1,88 @@
+# work3 でだけ使う MCP サーバ。
+# `cp mcp.work3.yml.example mcp.work3.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
+# mcp.<name>.yml は gitignore 済みで、mise run apm:install（mcpc）と sandbox:mcp-gateway が mcp.yml と一緒に読む。
+# 置いた後は mise bootstrap dotfiles apply で ~/.config/mcpc へ配置してから mise run apm:install する。
+# 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
+dependencies:
+  mcp:
+    # OAuth。初回のみブラウザで認可する
+    - name: notion
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    # AWS の remote MCP をホストの AWS プロファイルで proxy する。
+    # sbx gateway 経路では sbx_options の --dir に work3 のリポジトリ（tools/aws-mcp-proxy がある所）を指定する
+    - name: aws-mcp
+      registry: false
+      transport: stdio
+      command: uv
+      args:
+        - run
+        - --project
+        # mcpc は cwd を指定できないため絶対パスで書く（sbx gateway 経路は sbx_options の --dir でも可）
+        - /Users/xxx/work3/xxx/tools/aws-mcp-proxy
+        - --frozen
+        - mcp-proxy-for-aws
+        - https://aws-mcp.us-east-1.api.aws/mcp
+        - --profile
+        - xxx
+        - --metadata
+        - AWS_REGION=ap-northeast-1
+      sbx_options: ["--dir", "/Users/xxx/work3/xxx"]
+    # Datadog は toolsets / omit_tools をクエリでしか指定できないが、sbx の OAuth 検出は
+    # サーバが返す resource（クエリ無しの .../v1/mcp）と登録 URL の完全一致を要求するため、
+    # クエリ付き URL を --url で登録すると「discovery failed」になる。
+    # そこでホスト側で mcp-remote を stdio として起動し、OAuth は mcp-remote に任せる
+    # （初回接続時にホストのブラウザで認可。トークンはホストの ~/.mcp-auth に保存される）。
+    # sbx の --args は `,` 区切りなので、クエリ中の `,` は %2C にエンコードしておく。
+    - name: datadog
+      registry: false
+      transport: stdio
+      command: npx
+      args:
+        - -y
+        - mcp-remote@0.14.3
+        - https://mcp.ap1.datadoghq.com/v1/mcp?toolsets=core%2Capm%2Cdbm%2Cerror-tracking%2Cddsql&omit_tools=create_datadog_notebook%2Cedit_datadog_notebook%2Cupsert_datadog_dashboard%2Cupdate_datadog_error_tracking_issue%2Cmanage_datadog_error_tracking_issue_comments%2Cddsql_upsert_saved_query
+    - name: metabase
+      registry: false
+      transport: http
+      url: https://metabase.xxx.com/api/mcp
+    # ホストで起動している Figma デスクトップアプリの MCP。gateway はホストから接続するので
+    # 127.0.0.1 はホストを指す。ループバック宛ては sbx の SSRF チェックで拒否されるため外す
+    - name: figma-desktop
+      registry: false
+      transport: http
+      url: http://127.0.0.1:3845/mcp
+      sbx_options: ["--skip-ssrf-check"]
+    # korotovsky/slack-mcp-server。user token（xoxp）は fnox の work profile から渡す
+    # （aws-vault exec … -- fnox exec --profile work -- … の配下で mcpc / sandbox:mcp を起動する）
+    - name: slack
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "slack-mcp-server@1.3.0", "--transport", "stdio"]
+      env:
+        SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
+    # AWS Labs の個別 MCP。aws-vault exec が渡す一時 credential を使う
+    - name: aws-billing
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["awslabs.billing-cost-management-mcp-server@0.0.31"]
+      env:
+        FASTMCP_LOG_LEVEL: ERROR
+        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+        AWS_REGION: "${AWS_REGION}"
+    - name: aws-cloudwatch
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["awslabs.cloudwatch-mcp-server@0.1.7"]
+      env:
+        FASTMCP_LOG_LEVEL: ERROR
+        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+        AWS_REGION: "${AWS_REGION}"

@@ -84,8 +84,9 @@ skills = "readonly"
 # sandbox 作成時に公開するポート（host:sandbox）
 # crit / plannotator は sbx-agent が自動で公開するため、ここに書く必要はない
 # publish_ports = ["3000:3000"]
-# ホストで認証済みの MCP サーバを sandbox から使う（`mise run sandbox:mcp` で登録したもの）
-# static_mcp = ["notion", "aws-api", "chrome-devtools"]
+# sbx gateway 経由で sandbox の agent に読み込む MCP サーバ（`mise run sandbox:mcp-gateway` で登録したもの）
+# 既定では読み込まない（MCP は mcpc から使う。docs/mcpc/README.md 参照）
+# static_mcp = ["deepwiki", "context7", "chrome-devtools"]
 # task root に加えてマウントする workspace
 # sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
 # 以下は sbx-agent が既定で追加するため、ここに書く必要はない

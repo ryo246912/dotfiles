@@ -28,8 +28,10 @@ calculate_apm_hash() {
       [ -e "$module" ] || [ -L "$module" ] || continue
       printf '%s\n' "$module"
     done | sort
-    # apm:install-mcpc が生成する mcpc 専用 config（host 用・sandbox 用）が消えていても再生成されるようにする。
-    for mcpc_config in "$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json" \
+    # config/mcpc/mcp*.yml（MCP の定義）の変更と、apm:install-mcpc が生成する config（host 用・sandbox 用）の
+    # 欠落でも再生成されるようにする。
+    for mcpc_config in "$HOME/.config/mcpc/mcp.yml" "$HOME/.config/mcpc"/mcp.*.yml \
+      "$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json" \
       "$HOME/.config/mcpc/sandbox/mcp-config.json"; do
       [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
     done
@@ -180,6 +182,9 @@ shell = "bash -c"
 description = "Deploy user-scope external skills, commands and the mcpc MCP config"
 # apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
 # ~/.apm は [dotfiles] が配置するため、事前に `mise bootstrap dotfiles apply` 済みであること。
+# --only apm: スキル等の APM パッケージだけを配布し、MCP はホストの agent（~/.claude.json など）に
+# 登録しない。MCP は config/mcpc/mcp*.yml で管理し、apm:install-mcpc が mcpc 専用 config に入れる
+# （docs/mcpc/README.md 参照）。
 run = [
     "mise run apm:validate-lock-version",
     "apm install -g --only apm",
@@ -194,60 +199,70 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
 run = [
     "mise run apm:validate-lock-version",
-    "apm install -g --only apm --frozen",
-    "mise run apm:install-mcpc --frozen",
+    # apm/apm.yml には MCP を書かないため、agent へは MCP を配布しない
+    "apm install -g --frozen --only apm",
+    # mcpc 用 MCP は config/mcpc/mcp*.yml から別 manifest で入れる（lockfile は repo に持たない）
+    "mise run apm:install-mcpc",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
 
 ["apm:install-mcpc"]
-description = "Generate the mcpc-only MCP config from apm.yml dependencies.mcp"
-# dependencies.mcp を agent の native MCP として常時 load させないよう、HOME を隔離して
-# Copilot CLI 形式の config を mcpc 専用の場所へ生成する（docs/mcpc/README.md 参照）。
-# 隔離先は devcontainer の mount・sandbox:mcp・docs と揃えた固定パス（~/.config/mcpc/apm-home）。
-# 追加引数（例: --frozen）は apm install へそのまま渡す。
+description = "Generate the mcpc-only MCP configs from config/mcpc/mcp*.yml with APM"
+# MCP は agent の native MCP に登録せず、mcpc から必要な時だけ使う（docs/mcpc/README.md）。
+# ~/.config/mcpc/mcp.yml（共通）と mcp.<name>.yml（work3 など。gitignore 済み）をまとめた
+# manifest を作り、隔離した HOME（~/.config/mcpc/apm-home）で apm install する。生成された
+# Copilot CLI 形式の config を mcpc が読み、実際の ~/.copilot や ~/.claude.json には書き込まない。
+# ~/.apm/apm.yml とは別 manifest なので、apm/apm.lock.yaml には MCP が載らない（apm:ci の --frozen と独立）。
 run = '''
 set -eu
 
-main() {
-  real_home="$HOME"
-  isolated_home="$HOME/.config/mcpc/apm-home"
-  mkdir -p "$isolated_home/.apm"
-  cp "$real_home/.apm/apm.yml" "$isolated_home/.apm/apm.yml"
-  cp "$real_home/.apm/apm.lock.yaml" "$isolated_home/.apm/apm.lock.yaml"
-  # --frozen は MCP だけを入れる場合も APM package の展開先（apm_modules）と lockfile の整合を
-  # 確認するため、直前の `apm install -g --only apm` が展開した実体を参照させる。
-  if [ -d "$real_home/.apm/apm_modules" ]; then
-    ln -sfn "$real_home/.apm/apm_modules" "$isolated_home/.apm/apm_modules"
-  fi
-  HOME="$isolated_home" apm install -g --only mcp --target copilot "$@"
-  # MCP の解決結果（mcp_configs 等）を含む lockfile を user scope へ戻す。
-  # cp で symlink を辿って repo 側へ直接書くと、中断時に半端な lockfile が残っても
-  # apm:sync-lock が（同一ファイルとみなして）修復しない。apm 自身と同じく一時ファイル +
-  # rename で ~/.apm/apm.lock.yaml を実ファイルに置き換え、repo への反映と symlink の
-  # 張り直しは後続の apm:sync-lock に任せる。
-  temporary_lock=$(mktemp "$real_home/.apm/apm.lock.yaml.XXXXXX")
-  trap 'rm -f "$temporary_lock"' EXIT
-  cp "$isolated_home/.apm/apm.lock.yaml" "$temporary_lock"
-  chmod 0644 "$temporary_lock"
-  mv "$temporary_lock" "$real_home/.apm/apm.lock.yaml"
-  echo "mcpc config: $isolated_home/.copilot/mcp-config.json"
+for cmd in apm yq jq; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+done
 
-  # Docker Sandboxes 用の mcpc config。server は host の sandbox:mcp（mcp-proxy）が動かし、
-  # sandbox 内の mcpc は同じ名前の server へ HTTP で繋ぐ（URL だけで credential は含まない）。
-  # sbx のプロキシは host.docker.internal を host の localhost へ転送する。
-  sandbox_dir="$real_home/.config/mcpc/sandbox"
-  mkdir -p "$sandbox_dir"
-  jq --arg base "http://host.docker.internal:${MCPC_PROXY_PORT:-8931}/servers" \
-    '{mcpServers: (.mcpServers | with_entries(.value = {url: "\($base)/\(.key)/mcp"}))}' \
-    "$isolated_home/.copilot/mcp-config.json" >"$sandbox_dir/mcp-config.json.tmp"
-  mv "$sandbox_dir/mcp-config.json.tmp" "$sandbox_dir/mcp-config.json"
-  echo "mcpc config (sandbox): $sandbox_dir/mcp-config.json"
-}
+config_dir="$HOME/.config/mcpc"
+isolated_home="$config_dir/apm-home"
+[ -f "$config_dir/mcp.yml" ] || { echo "error: $config_dir/mcp.yml がありません（mise bootstrap dotfiles apply）" >&2; exit 1; }
 
-# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結するため、最終行を main にする。
-main "$@"
+# mcp.yml → mcp.<name>.yml の順に読み、同じ name は先に読んだ方を使う（sandbox:mcp-gateway と同じ規則）
+manifests=""
+for file in "$config_dir/mcp.yml" "$config_dir"/mcp.*.yml; do
+  [ -f "$file" ] || continue
+  # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
+  json=$(yq -o=json '.dependencies.mcp // []' "$file") || { echo "error: $file を解析できません" >&2; exit 1; }
+  manifests="${manifests}${json}
+"
+done
+merged=$(printf '%s' "$manifests" | jq -s 'add // [] | reduce .[] as $server ([]; if any(.[]; .name == $server.name) then . else . + [$server] end)')
+
+# 一覧から消したサーバが config に残らないよう、毎回作り直す。
+# .copilot ディレクトリは devcontainer が bind mount するため、ディレクトリごとは消さない
+rm -rf "$isolated_home/.apm"
+rm -f "$isolated_home/.copilot/mcp-config.json"
+mkdir -p "$isolated_home/.apm"
+jq -n --argjson mcp "$merged" '{name: "mcpc", version: "0.0.0", dependencies: {apm: [], mcp: $mcp}}' \
+  | yq -P -o=yaml >"$isolated_home/.apm/apm.yml"
+HOME="$isolated_home" apm install -g --only mcp --target copilot
+config="$isolated_home/.copilot/mcp-config.json"
+[ -f "$config" ] || { mkdir -p "$(dirname "$config")"; echo '{"mcpServers": {}}' >"$config"; }
+echo "mcpc config: $config"
+
+# Docker Sandboxes 用の mcpc config。サーバは host の mcpc proxy（mise run sandbox:mcp）が動かし、
+# sandbox 内の mcpc は host.docker.internal:<port> へ繋ぐ（sbx のプロキシが host の localhost へ転送する）。
+# port はこの config の並び順で base から振り、sandbox:mcp もこのファイルから読む（対応表を 1 か所に持つ）。
+# proxy の bearer token は値を書かず、sbx-agent が sandbox に渡す MCPC_PROXY_TOKEN を mcpc が展開する。
+sandbox_dir="$config_dir/sandbox"
+mkdir -p "$sandbox_dir"
+jq --argjson base "${MCPC_PROXY_PORT_BASE:-8931}" '{mcpServers: (.mcpServers
+    | to_entries | to_entries
+    | map({key: .value.key, value: {
+        url: "http://host.docker.internal:\($base + .key)",
+        headers: {Authorization: "Bearer ${MCPC_PROXY_TOKEN}"}}})
+    | from_entries)}' "$config" >"$sandbox_dir/mcp-config.json.tmp"
+mv "$sandbox_dir/mcp-config.json.tmp" "$sandbox_dir/mcp-config.json"
+echo "mcpc config (sandbox): $sandbox_dir/mcp-config.json"
 '''
 shell = "bash -c"
 

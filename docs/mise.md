@@ -949,7 +949,7 @@ mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history
 していない。ただし「過去の checkpoint も丸ごと送られる」ため、一時的にせよ
 secretを書いてcommitしてしまった履歴がある場合、後で消しても history 経由で
 残り続ける点に注意（本リポジトリの track 対象 — `~/.config`、alacritty/ghostty/
-git/mise/rio の各 config、rulesync の `mcp.json`、`~/.zshenv`、`apm.yml`/
+git/mise/rio の各 config、`~/.zshenv`、`apm.yml`/
 `apm.lock.yaml`、`claude/settings.json`、`codex/config.toml`/`hooks.json` —
 はいずれもsecretを直接書く想定のファイルではないため、通常はこの懸念に当たらない）。
 `dotfiles-history` リポジトリ自体を**private** のまま運用し、他人に共同管理者
