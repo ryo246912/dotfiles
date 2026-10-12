@@ -25,7 +25,8 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
   - ここに自作 skill（`article` / `memo` / `planning` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
-    （`config/rulesync/.rulesync/hooks.json`）が入っている
+    （`config/rulesync/.rulesync/hooks.json`）、permissions
+    （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
 
 > [!NOTE]
 > サードパーティ由来の**外部スキル**（独自カスタマイズを含まないもの）は rulesync ではなく
@@ -84,6 +85,45 @@ init が作ろうとする雛形がぶつかる場合は、init ではなく既�
 chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側の `~/.config/rulesync/.rulesync/` で
 直接 `rulesync init` して作ったファイルは、正本ではないため git 管理しません。必要な内容だけ
 `config/rulesync/.rulesync/` へ移してください。
+
+## hooks と permissions（グローバル）
+
+`~/.claude` と `~/.codex` は repo の `claude/`・`codex/` への symlink-each（`mise.toml` 参照）なので、
+グローバル generate が書き込む `~/.claude/settings.json`・`~/.codex/hooks.json`・`~/.codex/config.toml` は
+そのまま repo の `claude/settings.json`・`codex/hooks.json`・`codex/config.toml` になる。これらの
+`hooks` / `permissions` 部分は rulesync の出力なので、直接編集せず source 側を編集して generate すること
+（それ以外のキー、例えば `claude/settings.json` の `env` や `statusLine` は手で編集してよい）。
+
+### hooks（`config/rulesync/.rulesync/hooks.json`）
+
+| ブロック           | 生成先                                | 内容                                                               |
+| ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
+| `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、plannotator、rtk、編集後の formatter / type check 等 |
+| `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
+| `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
+
+`rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
+plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
+各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
+この設定が無いと rulesync は hooks 一覧を丸ごと置き換えるため、generate のたびに APM 由来の hooks が消える。
+
+### permissions（`config/rulesync/.rulesync/permissions.jsonc`）
+
+共通の `permission` ブロックで `sudo` / `rm -rf` と秘匿ファイル（`.env`・`.envrc`・`*.secret`・
+`fnox.local.toml`・SSH 鍵・`secrets/`）へのアクセスを禁止し、ツールごとの差分を tool-scoped ブロックで上書きする
+（tool-scoped の category は共通側の同名 category を丸ごと置き換えるので、共通のルールも再掲している）。
+
+- Claude Code: `~/.claude/settings.json` の `permissions.deny` に生成する。ファイル名に `token` / `key` を含む
+  ファイルも広く Read 禁止にしている（Claude Code の Read deny は Read ツールだけに効くため影響が小さい）。
+- Codex CLI: bash ルールは `~/.codex/rules/rulesync.rules`（execpolicy の `forbidden`）、ファイルのルールは
+  `~/.codex/config.toml` の `[permissions.rulesync]` プロファイルに生成する。Codex のファイル deny は
+  サンドボックス内のシェルコマンドにも効くため、`*token*` / `*key*` のような広い glob は入れていない。
+  rulesync が生成するプロファイルは `:workspace` を継承し、従来の `workspace-write` よりも厳しい
+  （ワークスペース外の読み取りや一時ディレクトリへの書き込みが拒否される）ため、`:root` の読み取りと
+  `:tmpdir` / `:slash_tmp` への書き込みを許可して従来相当にしている。承認は従来どおりユーザーが行う
+  （`approvals_reviewer = "user"`。rulesync の既定は `auto_review`）。
+- `~/.codex/config.toml` のその他のキー（`shell_environment_policy` 等）は rulesync が保持するが、
+  コメントは保持されない。
 
 ## 生成コマンド
 

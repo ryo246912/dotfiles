@@ -1,0 +1,103 @@
+{
+  "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
+  // 全ツール共通: 破壊的コマンドと秘匿ファイル（.env・鍵・secret 等）へのアクセスを禁止する
+  "permission": {
+    "bash": {
+      "sudo *": "deny",
+      "rm -rf *": "deny",
+    },
+    "read": {
+      ".env": "deny",
+      ".env.*": "deny",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      ".envrc": "deny",
+      "**/.envrc": "deny",
+      "*.secret": "deny",
+      "**/*.secret": "deny",
+      "fnox.local.toml": "deny",
+      "**/fnox.local.toml": "deny",
+      "id_rsa": "deny",
+      "id_ed25519": "deny",
+      "~/.ssh/id_rsa": "deny",
+      "~/.ssh/id_ed25519": "deny",
+    },
+    "edit": {
+      ".env*": "deny",
+      "**/.env": "deny",
+      "**/.env*": "deny",
+      ".envrc": "deny",
+      "**/.envrc": "deny",
+      "*.secret": "deny",
+      "**/*.secret": "deny",
+      "fnox.local.toml": "deny",
+      "**/fnox.local.toml": "deny",
+      "**/secrets/**": "deny",
+    },
+  },
+  "claudecode": {
+    "permission": {
+      // Claude Code の Read deny は Read ツールだけに効くため、ファイル名に token/key を含むものも広く塞ぐ。
+      // Codex ではサンドボックス全体（シェルコマンドを含む）に効き、keyboard.ts 等まで読めなくなるので共通側には置かない。
+      // tool-scoped category は共通側の同名 category を丸ごと置き換えるため、共通の read ルールも再掲する。
+      "read": {
+        ".env": "deny",
+        ".env.*": "deny",
+        "**/.env": "deny",
+        "**/.env.*": "deny",
+        ".envrc": "deny",
+        "**/.envrc": "deny",
+        "*.secret": "deny",
+        "**/*.secret": "deny",
+        "fnox.local.toml": "deny",
+        "**/fnox.local.toml": "deny",
+        "id_rsa": "deny",
+        "id_ed25519": "deny",
+        "~/.ssh/id_rsa": "deny",
+        "~/.ssh/id_ed25519": "deny",
+        "**/*token*": "deny",
+        "**/*key*": "deny",
+        "~/**/*token*": "deny",
+        "~/**/*key*": "deny",
+      },
+    },
+  },
+  "codexcli": {
+    // 承認の判断は従来どおりユーザーが行う（rulesync の既定は auto_review）
+    "approval_policy": "on-request",
+    "approvals_reviewer": "user",
+    "permission": {
+      // rulesync が生成する :workspace プロファイルは従来の workspace-write より厳しく、
+      // ワークスペース外の読み取りや一時ディレクトリへの書き込みが拒否されるため、従来相当まで広げる。
+      "read": {
+        ":root": "allow",
+        ".env": "deny",
+        ".env.*": "deny",
+        "**/.env": "deny",
+        "**/.env.*": "deny",
+        ".envrc": "deny",
+        "**/.envrc": "deny",
+        "*.secret": "deny",
+        "**/*.secret": "deny",
+        "fnox.local.toml": "deny",
+        "**/fnox.local.toml": "deny",
+        "~/.ssh/id_rsa": "deny",
+        "~/.ssh/id_ed25519": "deny",
+      },
+      "edit": {
+        ":tmpdir": "allow",
+        ":slash_tmp": "allow",
+        ".env*": "deny",
+        "**/.env": "deny",
+        "**/.env*": "deny",
+        ".envrc": "deny",
+        "**/.envrc": "deny",
+        "*.secret": "deny",
+        "**/*.secret": "deny",
+        "fnox.local.toml": "deny",
+        "**/fnox.local.toml": "deny",
+        "**/secrets/**": "deny",
+      },
+    },
+  },
+}
