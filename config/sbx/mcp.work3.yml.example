@@ -1,0 +1,18 @@
+# 特定の環境（work3 / private など）でだけ sandbox から使いたい MCP サーバ。
+# `cp mcp.work3.yml.example mcp.work3.yml` のように .example を外してコピーして使う。
+# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp と sbx-agent が mcp.yml と一緒に読む。
+# 書式は mcp.yml と同じ（APM の dependencies.mcp）。Renovate の更新対象外なので version は手で上げる。
+dependencies:
+  mcp:
+    # 社内の remote MCP（ヘッダの ${...} は sbx secret set で登録した secret として解決される）
+    # - name: internal-docs
+    #   registry: false
+    #   transport: http
+    #   url: https://mcp.example.com/mcp
+    #   headers:
+    #     Authorization: "Bearer ${internal_docs_token}"
+    # - name: some-tool
+    #   registry: false
+    #   transport: stdio
+    #   command: npx
+    #   args: ["-y", "some-mcp-server@1.0.0"]

@@ -23,7 +23,7 @@
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
-#                      既定は apm/apm.yml の MCP（registry: false）の全サーバ。登録は `mise run sandbox:mcp`
+#                      既定は config/sbx/mcp*.yml の MCP（registry: false）の全サーバ。登録は `mise run sandbox:mcp`
 #                      （認証はホスト側で一度だけ）
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
@@ -36,7 +36,7 @@
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
-#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら apm.yml の MCP の全サーバ）
+#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら config/sbx/mcp*.yml の全サーバ）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
 set -uo pipefail
@@ -262,16 +262,19 @@ fi
 if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
     STATIC_MCP+=("$SBX_AGENT_STATIC_MCP")
 fi
-# どちらも無ければ、mise run sandbox:mcp が登録する MCP（apm/apm.yml の dependencies.mcp のうち
-# registry: false のもの）を全て読み込む。sandbox 内の agent は自身の MCP 設定を読まない
+# どちらも無ければ、mise run sandbox:mcp が登録する MCP（config/sbx/mcp.yml と mcp.<name>.yml の
+# registry: false のもの）を全て読み込む。sandbox 内の Claude Code は自身の MCP 設定を読まない
 # （template の managed settings で止めている）ため、既定で何も読み込まないと MCP が 1 つも使えなくなる。
-if [[ ${#STATIC_MCP[@]} -eq 0 ]] && _repo=$(find_dotfiles_repo) && [[ -f "${_repo}/apm/apm.yml" ]]; then
+if [[ ${#STATIC_MCP[@]} -eq 0 ]] && _repo=$(find_dotfiles_repo); then
     if command -v yq >/dev/null 2>&1; then
-        while IFS= read -r _name; do
-            [[ -n "$_name" ]] && STATIC_MCP+=("$_name")
-        done < <(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "${_repo}/apm/apm.yml")
+        for _file in "${_repo}"/config/sbx/mcp.yml "${_repo}"/config/sbx/mcp.*.yml; do
+            [[ -f "$_file" ]] || continue
+            while IFS= read -r _name; do
+                [[ -n "$_name" ]] && STATIC_MCP+=("$_name")
+            done < <(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "$_file")
+        done
     else
-        log_warn "yq が無いため apm.yml の MCP を読み込めません（mise install で導入してください）"
+        log_warn "yq が無いため config/sbx/mcp*.yml の MCP を読み込めません（mise install で導入してください）"
     fi
 fi
 # `,` 区切りを展開して重複を除く

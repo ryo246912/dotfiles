@@ -2,7 +2,7 @@
 
 [APM](https://github.com/microsoft/apm) は、AI エージェント用のスキル・プロンプト・MCP サーバ等の
 プリミティブを `apm.yml` で宣言し、`apm install` で各エージェントの設定ディレクトリへ配布する
-パッケージマネージャです。このリポジトリでは **外部スキルと MCP サーバの管理** に APM を利用します。
+パッケージマネージャです。このリポジトリでは **外部スキルの管理** に APM を利用します。
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
 `apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は immutable なコミット
@@ -25,37 +25,14 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 
 ## MCP サーバ
 
-MCP サーバも `apm/apm.yml` の `dependencies.mcp` で管理します（以前は rulesync の
-`templates/rulesync/mcp.json.tera` で Copilot CLI 向けにだけ配布していました）。
-`apm install -g` が `targets` の各 agent のユーザー設定（Claude Code は `~/.claude.json`、
-Codex は `~/.codex/config.toml`、Copilot CLI は `~/.copilot/mcp-config.json` など）へ書き込みます。
+MCP サーバは **ホストの agent には登録せず**、Docker Sandboxes からホストの `sbx mcp`（gateway）経由でだけ
+使います。そのため `apm install -g` は `--only apm` で実行し（`apm:install` / `apm:ci`）、MCP は
+`~/.claude.json` などへ書き込みません。`apm.yml` の `dependencies.mcp` は空のままにします。
 
-```yaml
-dependencies:
-  mcp:
-    - name: notion
-      registry: false
-      transport: http
-      url: https://mcp.notion.com/mcp
-    - name: chrome-devtools
-      registry: false
-      transport: stdio
-      command: npx
-      # ホストまたは sandbox（sbx mcp でホスト側に起動）用。devcontainer の localhost からはホストの Chrome に届かない
-      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
-```
-
-- すべて self-defined（`registry: false`）で書き、stdio サーバはパッケージを `args` の
-  `<package>@<version>` で固定します。Renovate が `npx` は npm、`uvx` は PyPI の新しいバージョンで
-  更新します（`command` の直後に `args` を書いたものが対象）。
-- `env` に `${VAR}` を書くと、Codex 向けには `apm install` の時点で値が解決されて
-  `codex/config.toml`（リポジトリ管理）へ書き込まれます。`AWS_PROFILE` などはホストの環境から
-  継承させ、`env` には固定値だけを書きます。
-- Docker Sandboxes では、ここの `registry: false` のエントリを `mise run sandbox:mcp` がホストの
-  `sbx mcp` に登録し、sandbox 内の agent は gateway 経由で使います（agent 自身の設定にある
-  MCP は sandbox 内では読み込みません）。詳細は `docs/docker-sandboxes.md` の「MCP の扱い」参照。
-- registry 参照（`io.github.xxx/yyy` 形式）は、解決後のコマンドが manifest に残らないため
-  sandbox には登録されません。
+- `dependencies.mcp` に書くと、`--only apm` では lockfile に載らないため `apm install --frozen`（`apm:ci`）が
+  「MCP server '...' is missing from apm.lock.yaml」で失敗します。
+- MCP の定義とバージョンは `config/sbx/mcp.yml` に、APM の `dependencies.mcp` と同じ書式で書きます
+  （詳細は `docs/docker-sandboxes.md` の「MCP の扱い」）。
 - rulesync から移行したホストでは、以前 rulesync が配布した定義が残ります。一度だけ
   `~/.config/rulesync/.rulesync/mcp.json` を削除し、`~/.copilot/mcp-config.json` から旧名
   （`makenotion/notion-mcp-server`・`io.github.ChromeDevTools/chrome-devtools-mcp` など）の

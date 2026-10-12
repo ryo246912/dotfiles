@@ -241,7 +241,7 @@ sbx policy ls || true
 '''
 
 ["sandbox:mcp"]
-description = "Register the APM-managed MCP servers on the host so sandboxes can reuse host-side auth"
+description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
 run = '''
 set -eu
 
@@ -251,14 +251,13 @@ set -eu
 #
 # sandbox 内の agent は自身の MCP 設定（~/.claude.json など）を読まない（template の
 # managed settings で止めている）ため、sandbox で使う MCP はすべてここで登録する。
-# MCP の定義とバージョンは APM（apm/apm.yml の dependencies.mcp）で管理しており、
-# そのうち self-defined（registry: false）のエントリを sbx mcp add の引数に変換する。
+# MCP の定義とバージョンは config/sbx/mcp.yml（共通）と mcp.<name>.yml（work3 / private など
+# 環境ごと。gitignore 済み）に APM の dependencies.mcp と同じ書式で書いており、
+# self-defined（registry: false）のエントリを sbx mcp add の引数に変換する。
 
 for cmd in sbx yq jq; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
 done
-
-manifest="$MISE_PROJECT_ROOT/apm/apm.yml"
 
 # 登録した定義（sbx mcp add の引数）をサーバごとに記録し、version などの変更を検出する
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-mcp"
@@ -314,54 +313,64 @@ register() {
   fi
 }
 
-echo "==> $manifest"
-specs=$(to_specs "$manifest") || { echo "error: $manifest の dependencies.mcp を読めませんでした" >&2; exit 1; }
-# 一覧は fd 3 から読み、stdin は OAuth の認可などで sbx mcp add が使えるよう端末のまま残す
-while IFS="$(printf '\t')" read -r name type spec <&3; do
-  [ -n "$name" ] || continue
-  if [ "$name" = skip ]; then
-    echo "ℹ️ $type は registry 参照のため sandbox には登録しません（registry: false で定義してください）"
-    continue
-  fi
-  declared="${declared}${name} "
-  # spec は jq の @sh でクォート済みなので eval で安全に引数へ戻せる
-  eval "set -- $spec"
-  recorded=$(cat "$state_dir/$name" 2>/dev/null || true)
-  if ! is_registered "$name"; then
-    echo "==> $name を登録"
-    register "$@"
-  elif [ "$recorded" = "$spec" ]; then
-    echo "ℹ️ $name は登録済み（定義に変更なし）"
-  elif [ -z "$recorded" ] && [ "$type" = url ]; then
-    # この仕組みより前に登録した remote サーバ。登録し直すと OAuth の認可もやり直しになるため、
-    # 今の定義を記録するだけにする（以降に定義を変えたときは下の分岐で登録し直す）。
-    # sbx mcp ls からは登録済みの URL を確かめられないため、違う場合に気付けるよう案内を出す
-    printf '%s\n' "$spec" >"$state_dir/$name"
-    echo "ℹ️ $name は登録済み（今の定義を記録しました）"
-    echo "   登録済みの URL は確かめられないため、apm.yml と違う場合は sbx mcp rm $name してから再実行してください"
-  else
-    echo "==> $name の定義が変わったため登録し直します"
-    [ "$type" = url ] && echo "   （remote サーバのため OAuth の認可をやり直す場合があります）"
-    if sbx mcp rm "$name"; then
-      register "$@"
-    else
-      note_failure "$name"
+for manifest in "$MISE_PROJECT_ROOT"/config/sbx/mcp.yml "$MISE_PROJECT_ROOT"/config/sbx/mcp.*.yml; do
+  # mcp.*.yml が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$manifest" ] || continue
+  echo "==> $(basename "$manifest")"
+  specs=$(to_specs "$manifest") || { note_failure "$(basename "$manifest")"; continue; }
+  # 一覧は fd 3 から読み、stdin は OAuth の認可などで sbx mcp add が使えるよう端末のまま残す
+  while IFS="$(printf '\t')" read -r name type spec <&3; do
+    [ -n "$name" ] || continue
+    if [ "$name" = skip ]; then
+      echo "ℹ️ $type は registry 参照のため sandbox には登録しません（registry: false で定義してください）"
+      continue
     fi
-  fi
-done 3<<SPECS
+    case "$declared" in
+      *" $name "*)
+        echo "warn: $name は先に読んだファイルで定義済みのため、$(basename "$manifest") の定義は使いません" >&2
+        continue
+        ;;
+    esac
+    declared="${declared}${name} "
+    # spec は jq の @sh でクォート済みなので eval で安全に引数へ戻せる
+    eval "set -- $spec"
+    recorded=$(cat "$state_dir/$name" 2>/dev/null || true)
+    if ! is_registered "$name"; then
+      echo "==> $name を登録"
+      register "$@"
+    elif [ "$recorded" = "$spec" ]; then
+      echo "ℹ️ $name は登録済み（定義に変更なし）"
+    elif [ -z "$recorded" ] && [ "$type" = url ]; then
+      # この仕組みより前に登録した remote サーバ。登録し直すと OAuth の認可もやり直しになるため、
+      # 今の定義を記録するだけにする（以降に定義を変えたときは下の分岐で登録し直す）。
+      # sbx mcp ls からは登録済みの URL を確かめられないため、違う場合に気付けるよう案内を出す
+      printf '%s\n' "$spec" >"$state_dir/$name"
+      echo "ℹ️ $name は登録済み（今の定義を記録しました）"
+      echo "   登録済みの URL は確かめられないため、mcp*.yml と違う場合は sbx mcp rm $name してから再実行してください"
+    else
+      echo "==> $name の定義が変わったため登録し直します"
+      [ "$type" = url ] && echo "   （remote サーバのため OAuth の認可をやり直す場合があります）"
+      if sbx mcp rm "$name"; then
+        register "$@"
+      else
+        note_failure "$name"
+      fi
+    fi
+  done 3<<SPECS
 $specs
 SPECS
+done
 
 # 一覧から消したサーバは自動では消さない（OAuth トークンなども消えるため）。気付けるよう表示だけする
 for name in $registered_names; do
-  case "$declared" in *" $name "*) ;; *) echo "ℹ️ $name は apm.yml に無い登録です（不要なら sbx mcp rm $name）" ;; esac
+  case "$declared" in *" $name "*) ;; *) echo "ℹ️ $name は mcp*.yml に無い登録です（不要なら sbx mcp rm $name）" ;; esac
 done
 
 echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sbx-agent は apm.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
+echo "sbx-agent は mcp*.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then

@@ -18,7 +18,7 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
-> mise run sandbox:mcp             # apm.yml の MCP を sandbox 用にホストの sbx mcp へ登録
+> mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 > ```
 
 ## devcontainer に対する利点
@@ -515,7 +515,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
-mise run sandbox:mcp             # apm.yml の MCP を sandbox 用にホストの sbx mcp へ登録
+mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 ```
 
 > [!NOTE]
@@ -558,7 +558,7 @@ mise run sandbox:mcp             # apm.yml の MCP を sandbox 用にホスト�
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-sandbox で使う MCP は `apm/apm.yml` の `dependencies.mcp` から `mise run sandbox:mcp` で登録します。
+sandbox で使う MCP は `config/sbx/mcp*.yml` から `mise run sandbox:mcp` で登録します。
 `sbx-agent` は既定でその全サーバを読み込みます（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
@@ -585,7 +585,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む（既定は `apm/apm.yml` の MCP の全サーバ）
+   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp*.yml` の全サーバ）
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -1221,25 +1221,44 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 - remote（HTTP / SSE）サーバは許可リストを通りますが、宛先は network policy で別途止まります。
 - managed settings なので `~/.claude/settings.json` などの共有設定では上書きできず、ホスト側の
   `~/.claude.json` も書き換えません（ホストでは今まで通り全サーバが使えます）。
-- この制限は Claude Code だけです。Codex は `CODEX_HOME`（ホストの `~/.codex`）の `config.toml` を
-  そのまま読むため、APM が書き込んだ MCP サーバは sandbox 内でも起動します。
+- この制限は Claude Code だけです。Codex などは自身の設定（`~/.codex/config.toml` など）に MCP サーバが
+  あれば sandbox 内でも起動します（このリポジトリでは APM から MCP を登録しないので、手で追加しない限り空です）。
 - 反映には template の再ビルド（`mise run sandbox:build-template`）と sandbox の作り直しが必要です。
   sandbox 内で `claude mcp list` を実行し、gateway 以外が出ないことを確認してください。
 
 ### 登録するサーバの管理
 
-MCP サーバの定義とバージョンは **APM（`apm/apm.yml` の `dependencies.mcp`）** で管理します
-（[docs/apm.md](./apm.md#mcp-サーバ)）。ホストの agent へは `apm install -g` が配布し、
-sandbox 向けには `mise run sandbox:mcp` が同じ定義をホストの `sbx mcp` に登録します。
+MCP サーバの定義とバージョンは `config/sbx/mcp.yml` で管理します。書式は APM の
+`apm.yml` の `dependencies.mcp` と同じで、すべて self-defined（`registry: false`、起動方法を自分で書く形式）で書きます。
+ホストの agent には登録しません（`apm install` は `--only apm`。[docs/apm.md](./apm.md#mcp-サーバ)）。
+
+```yaml
+dependencies:
+  mcp:
+    - name: notion
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    - name: chrome-devtools
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
+```
+
+- stdio サーバはパッケージを `args` の `<package>@<version>` で固定します。Renovate が `npx` は npm、
+  `uvx` は PyPI の新しいバージョンで更新します（`command` の直後に `args` を書いたものが対象）。
+- work3 / private など特定の環境だけで使うサーバは `config/sbx/mcp.<name>.yml` に書きます。
+  gitignore 済みなのでコミットされず、Renovate の更新対象にもなりません。雛形は `mcp.work3.yml.example` です。
+  同じ name を複数のファイルに書いた場合は、先に読んだ方（`mcp.yml`）を使います。
 
 ```bash
-mise run apm:sync        # ホストの agent へ配布（apm.yml を変えたら）
-mise run sandbox:mcp     # 同じ定義を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
+mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
 ```
 
 `sandbox:mcp` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
 
-| apm.yml                         | sbx mcp add                                            |
+| mcp.yml                         | sbx mcp add                                            |
 | ------------------------------- | ------------------------------------------------------ |
 | `transport: http` / `sse` + url | `--url <url>`（`headers` は `--header 'Name: value'`） |
 | `transport: stdio` + command    | `--command <command> --args <args を , で連結>`        |
@@ -1253,17 +1272,17 @@ mise run sandbox:mcp     # 同じ定義を sbx mcp に反映する（OAuth は�
 - この仕組みより前に登録済みだった remote サーバは、登録し直すと認可もやり直しになるため、
   今の定義を記録するだけにします（実際に登録されている URL は確かめられないので、違う場合は
   `sbx mcp rm <name>` してから再実行します）。
-- `apm.yml` から消したサーバは自動では消しません（OAuth トークンも消えるため）。
-  `sandbox:mcp` が「apm.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
+- `mcp*.yml` から消したサーバは自動では消しません（OAuth トークンも消えるため）。
+  `sandbox:mcp` が「mcp*.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
 - `headers` に書いた `${VAR}` はそのまま sbx に渡り、sbx の secret（`sbx secret set`）として解決されます。
 
 ### sandbox への読み込み
 
-`sbx-agent` は既定で `apm.yml` の MCP（`registry: false`）を全て `--static-mcp` で読み込みます。
+`sbx-agent` は既定で `config/sbx/mcp*.yml` の MCP（`registry: false`）を全て `--static-mcp` で読み込みます。
 起動済みの sandbox には `sbx mcp load` で後から足します。絞り込みたいときだけ指定します。
 
 ```bash
-sbx-agent claude                                 # apm.yml の MCP を全て
+sbx-agent claude                                 # mcp*.yml の MCP を全て
 sbx-agent claude --static-mcp notion             # notion だけ
 export SBX_AGENT_STATIC_MCP=notion,aws-api       # 既定を変える
 ```

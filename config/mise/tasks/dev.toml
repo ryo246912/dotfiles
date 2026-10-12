@@ -175,9 +175,11 @@ shell = "bash -c"
 description = "Deploy user-scope external skills and commands to agent dirs"
 # apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
 # ~/.apm は [dotfiles] が配置するため、事前に `mise bootstrap dotfiles apply` 済みであること。
+# --only apm: スキル等の APM パッケージだけを配布し、MCP はホストの agent（~/.claude.json など）に
+# 登録しない。MCP は sandbox からホストの sbx mcp 経由でだけ使う（config/sbx/mcp.yml、docs/apm.md 参照）。
 run = [
     "mise run apm:validate-lock-version",
-    "apm install -g",
+    "apm install -g --only apm",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
@@ -188,7 +190,8 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
 run = [
     "mise run apm:validate-lock-version",
-    "apm install -g --frozen",
+    # apm:install と同じく MCP は配布しない
+    "apm install -g --frozen --only apm",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
