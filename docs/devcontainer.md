@@ -355,7 +355,7 @@ mise の `[dotfiles]` が持つ mode は `symlink` / `symlink-each` / `copy` / `
 
 ## MCP
 
-devcontainer では**コンテナ内から MCP サーバに接続しません**。`~/.claude` や `~/.claude.json` を
+devcontainer では**コンテナ内の Claude Code から MCP サーバに接続しません**。`~/.claude` や `~/.claude.json` を
 ホストと共有しているため、そのままだとホストで `claude mcp add` したサーバ（`npx` / `uvx` の
 stdio サーバや `mcp-remote` 経由の Notion など）がコンテナ内でも起動します。
 
@@ -363,6 +363,9 @@ image に Claude Code の managed settings の drop-in
 （`/etc/claude-code/managed-settings.d/50-mcp.json`、中身は `config/devcontainer/claude/mcp-policy.devcontainer.json`）
 を置き、`allowedMcpServers: []` で全サーバを止めています。managed settings なので共有している
 ユーザー設定では上書きできず、ホスト側の設定も書き換えません。反映には image のリビルドが必要です。
+
+この制限は Claude Code だけです。Codex は共有している `config.toml` の MCP サーバ（APM が書き込んだもの）を
+コンテナ内でも起動します。
 
 MCP を使いたい作業は Docker Sandboxes で行います（ホスト側の `sbx mcp` を gateway 経由で使う。
 [docs/docker-sandboxes.md の「MCP の扱い」](./docker-sandboxes.md#mcp-の扱い) 参照）。

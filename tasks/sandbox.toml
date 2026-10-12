@@ -334,9 +334,11 @@ while IFS="$(printf '\t')" read -r name type spec <&3; do
     echo "ℹ️ $name は登録済み（定義に変更なし）"
   elif [ -z "$recorded" ] && [ "$type" = url ]; then
     # この仕組みより前に登録した remote サーバ。登録し直すと OAuth の認可もやり直しになるため、
-    # 今の定義を記録するだけにする（URL を変えたときは下の分岐で登録し直す）
+    # 今の定義を記録するだけにする（以降に定義を変えたときは下の分岐で登録し直す）。
+    # sbx mcp ls からは登録済みの URL を確かめられないため、違う場合に気付けるよう案内を出す
     printf '%s\n' "$spec" >"$state_dir/$name"
     echo "ℹ️ $name は登録済み（今の定義を記録しました）"
+    echo "   登録済みの URL は確かめられないため、apm.yml と違う場合は sbx mcp rm $name してから再実行してください"
   else
     echo "==> $name の定義が変わったため登録し直します"
     [ "$type" = url ] && echo "   （remote サーバのため OAuth の認可をやり直す場合があります）"

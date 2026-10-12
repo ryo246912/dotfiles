@@ -1189,8 +1189,9 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ## MCP の扱い
 
-sandbox では **MCP サーバへの接続をすべてホスト側（`sbx mcp` の gateway）に寄せます**。
-sandbox 内の agent は自身の MCP 設定を読まず、ホストに登録したサーバだけを gateway 経由で使います。
+sandbox では **MCP サーバへの接続をホスト側（`sbx mcp` の gateway）に寄せます**。
+sandbox 内の Claude Code は自身の MCP 設定にある stdio サーバを読まず、ホストに登録したサーバを
+gateway 経由で使います（Codex には同じ制限を入れていません。下記）。
 
 | 経路                                                  | MCP サーバが動く場所 | sandbox での扱い                                                  |
 | ----------------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
@@ -1220,6 +1221,8 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 - remote（HTTP / SSE）サーバは許可リストを通りますが、宛先は network policy で別途止まります。
 - managed settings なので `~/.claude/settings.json` などの共有設定では上書きできず、ホスト側の
   `~/.claude.json` も書き換えません（ホストでは今まで通り全サーバが使えます）。
+- この制限は Claude Code だけです。Codex は `CODEX_HOME`（ホストの `~/.codex`）の `config.toml` を
+  そのまま読むため、APM が書き込んだ MCP サーバは sandbox 内でも起動します。
 - 反映には template の再ビルド（`mise run sandbox:build-template`）と sandbox の作り直しが必要です。
   sandbox 内で `claude mcp list` を実行し、gateway 以外が出ないことを確認してください。
 
@@ -1245,8 +1248,11 @@ mise run sandbox:mcp     # 同じ定義を sbx mcp に反映する（OAuth は�
 - registry 参照（`io.github.xxx/yyy` 形式）は解決後のコマンドが manifest に無いため登録しません。
 - `sbx mcp add` の `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにします。
 - 登録した定義を `~/.local/state/sbx-mcp/<name>` に記録し、バージョンなどが変わったサーバだけ
-  `sbx mcp rm` → `sbx mcp add` で登録し直します。remote サーバは URL を変えたときだけ登録し直します
-  （OAuth の認可をやり直すことがあります）。
+  `sbx mcp rm` → `sbx mcp add` で登録し直します。remote サーバも定義（URL / headers）が変わると登録し直すため、
+  OAuth の認可をやり直すことがあります。
+- この仕組みより前に登録済みだった remote サーバは、登録し直すと認可もやり直しになるため、
+  今の定義を記録するだけにします（実際に登録されている URL は確かめられないので、違う場合は
+  `sbx mcp rm <name>` してから再実行します）。
 - `apm.yml` から消したサーバは自動では消しません（OAuth トークンも消えるため）。
   `sandbox:mcp` が「apm.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
 - `headers` に書いた `${VAR}` はそのまま sbx に渡り、sbx の secret（`sbx secret set`）として解決されます。

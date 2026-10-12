@@ -76,13 +76,6 @@ ENV PATH=${AGENT_HOME}/.config/devcontainer/scripts:/mise/data/shims:$PATH
 
 RUN install -d -o agent -g agent /mise /mise/data /mise/cache /mise/state
 
-# sandbox 内の Claude Code が使う MCP は、ホストに登録した sbx mcp（gateway 経由）だけにする。
-# gateway は URL で登録されるため remote（HTTP/SSE）は通し、エージェント自身の設定
-# （共有している ~/.claude.json など）にある stdio サーバ（npx / uvx）は読み込ませない。
-# base image の managed-settings.json を上書きしないよう drop-in に置く。
-# 詳細は docs/docker-sandboxes.md の「MCP の扱い」参照。
-COPY claude/mcp-policy.sandbox.json /etc/claude-code/managed-settings.d/50-mcp.json
-
 # mise install より前に COPY するのは mise.toml だけにする。
 # 設定ツリー全体をここで COPY すると、scripts/ を 1 行直しただけで下の重い install layer が
 # 無効化されてしまうため、残りは install の後に COPY する。
@@ -156,6 +149,13 @@ RUN --mount=type=secret,id=github_token \
 # tasks が参照する ${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/... がそのまま解決する。
 COPY --chown=agent:agent tasks /mise/tasks
 COPY --chown=agent:agent . ${AGENT_HOME}/.config/devcontainer
+
+# sandbox 内の Claude Code に、エージェント自身の設定（共有している ~/.claude.json など）にある
+# stdio サーバ（npx / uvx）を読み込ませない。sandbox で使う MCP はホストに登録した sbx mcp で、
+# gateway は URL で登録されるため remote（HTTP/SSE）は通す（remote の宛先は network policy で別途止まる）。
+# base image の managed-settings.json を上書きしないよう drop-in に置く。上の重い install layer を
+# 無効化しないよう install の後に COPY する。詳細は docs/docker-sandboxes.md の「MCP の扱い」参照。
+COPY claude/mcp-policy.sandbox.json /etc/claude-code/managed-settings.d/50-mcp.json
 
 # mise の trust は実行ユーザーごとに記録されるため、root で trust しても agent では効かない。
 # 代わりに trusted path を env で宣言する（sbx-agent は workspace を足した値を --env で渡す）。

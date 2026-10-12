@@ -51,11 +51,6 @@ RUN install -d -o vscode -g vscode \
     /home/vscode/.config/gh
 COPY --chown=vscode:vscode mise.toml /mise/config.toml
 
-# コンテナ内の Claude Code からは MCP サーバに接続しない（ホストの ~/.claude.json などを共有して
-# いても読み込ませない）。managed settings の drop-in なので ~/.claude 側の設定では上書きできない。
-# 詳細は docs/devcontainer.md の「MCP」参照。
-COPY claude/mcp-policy.devcontainer.json /etc/claude-code/managed-settings.d/50-mcp.json
-
 USER vscode
 
 # mise.toml が変わるとこの RUN は必ず再実行されるが、全ツールを毎回ゼロから入れ直すと遅いため、
@@ -111,5 +106,11 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
 
 # tasks の変更で上の重い install layer が無効化されないよう、install の後に COPY する。
 COPY --chown=vscode:vscode tasks /mise/tasks
+
+# コンテナ内の Claude Code からは MCP サーバに接続しない（ホストの ~/.claude.json などを共有して
+# いても読み込ませない）。managed settings の drop-in なので ~/.claude 側の設定では上書きできない。
+# COPY は USER に関係なく root 所有で置かれる。上の重い install layer を無効化しないよう最後に置く。
+# 詳細は docs/devcontainer.md の「MCP」参照。
+COPY claude/mcp-policy.devcontainer.json /etc/claude-code/managed-settings.d/50-mcp.json
 
 WORKDIR /workspace
