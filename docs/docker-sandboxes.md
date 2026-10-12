@@ -1249,7 +1249,7 @@ dependencies:
 - stdio サーバはパッケージを `args` の `<package>@<version>` で固定します。Renovate が `npx` は npm、
   `uvx` は PyPI の新しいバージョンで更新します（`command` の直後に `args` を書いたものが対象）。
 - work3 / private など特定の環境だけで使うサーバは `config/sbx/mcp.<name>.yml` に書きます。
-  gitignore 済みなのでコミットされず、Renovate の更新対象にもなりません。雛形は `mcp.work3.yml.example` です。
+  gitignore 済みなのでコミットされず、Renovate の更新対象にもなりません。雛形は `mcp.work2.yml.example` / `mcp.work3.yml.example` です。
   同じ name を複数のファイルに書いた場合は、先に読んだ方（`mcp.yml`）を使います。
 
 ```bash
@@ -1263,8 +1263,13 @@ mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初�
 | `transport: http` / `sse` + url | `--url <url>`（`headers` は `--header 'Name: value'`） |
 | `transport: stdio` + command    | `--command <command> --args <args を , で連結>`        |
 | stdio の `env`                  | `--command env --args K=V,...,<command>,<args>` で包む |
+| `sbx_options`（独自キー）       | `sbx mcp add` の末尾にそのまま追加（`--dir` など）     |
 
 - registry 参照（`io.github.xxx/yyy` 形式）は解決後のコマンドが manifest に無いため登録しません。
+- `sbx_options` は APM の書式に無い独自キーで、`sbx mcp add` 固有のオプションを渡すのに使います。
+  例：相対パスの `--project` を使う stdio サーバに `--dir <作業ディレクトリ>`、ホストの
+  `127.0.0.1` で動くサーバ（Figma デスクトップなど）に `--skip-ssrf-check`（gateway はホストから接続するため
+  ループバックはホストを指しますが、sbx の SSRF チェックで拒否されます）。
 - `sbx mcp add` の `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにします。
 - 登録した定義を `~/.local/state/sbx-mcp/<name>` に記録し、バージョンなどが変わったサーバだけ
   `sbx mcp rm` → `sbx mcp add` で登録し直します。remote サーバも定義（URL / headers）が変わると登録し直すため、
@@ -1284,7 +1289,7 @@ mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初�
 ```bash
 sbx-agent claude                                 # mcp*.yml の MCP を全て
 sbx-agent claude --static-mcp notion             # notion だけ
-export SBX_AGENT_STATIC_MCP=notion,aws-api       # 既定を変える
+export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定を変える
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。

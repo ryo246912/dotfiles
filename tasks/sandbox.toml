@@ -271,6 +271,7 @@ is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
 # - remote: --url と、headers を --header 'Name: value' で渡す
 # - stdio: sbx mcp add に env を渡すオプションが無いため、env があれば `env K=V ... <command>` で包む
 #   （sbx の --args は `,` 区切りなので、`,` を含む引数はエラーにする）
+# - sbx_options（APM の書式には無い独自キー）は sbx mcp add の末尾にそのまま足す
 # - registry 参照（文字列形式や registry: false 以外）は解決後のコマンドが manifest に無いため対象外
 to_specs() {
   # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
@@ -281,6 +282,7 @@ to_specs() {
         "skip\t\(if type == "object" then .name else . end)\t"
       else
         .name as $name
+        | (.sbx_options // []) as $sbx_options
         | if (.transport // "") == "stdio" then
             ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
             | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
@@ -297,7 +299,7 @@ to_specs() {
             error("\($name): transport が stdio なら command、それ以外は url が必要です")
           end
         | .[0] as $type | .[1] as $add_args
-        | "\($name)\t\($type)\t\([$name] + $add_args | @sh)"
+        | "\($name)\t\($type)\t\([$name] + $add_args + $sbx_options | @sh)"
       end'
 }
 

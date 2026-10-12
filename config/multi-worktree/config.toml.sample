@@ -86,7 +86,7 @@ skills = "readonly"
 # publish_ports = ["3000:3000"]
 # sandbox に読み込む MCP サーバ（`mise run sandbox:mcp` で登録したもの）
 # 未指定なら config/sbx/mcp*.yml の MCP（registry: false）を全て読み込む
-# static_mcp = ["notion", "aws-api", "chrome-devtools"]
+# static_mcp = ["deepwiki", "context7", "chrome-devtools"]
 # task root に加えてマウントする workspace
 # sbx はホストと同じ絶対パスにマウントするため、`:ro` で read-only 指定できる
 # 以下は sbx-agent が既定で追加するため、ここに書く必要はない
