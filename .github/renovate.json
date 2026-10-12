@@ -128,7 +128,7 @@
       "groupName": "terminal-browser"
     },
     {
-      "description": "apm.lock.yaml の apm_version を mise の APM CLI と揃えるため、Renovate が apm install に使う constraints.apm も同じPRで更新する",
+      "description": "mise の APM CLI、Renovate が apm install に使う constraints.apm、apm.lock.yaml の apm_version を同じPRで揃えて更新する（apm:validate-lock-version が一致を要求するため）",
       "matchPackageNames": ["microsoft/apm"],
       "groupName": "apm"
     },
@@ -146,8 +146,11 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": [".github/renovate.json"],
-      "matchStrings": ["\"constraints\":\\s*\\{[^}]*?\"apm\":\\s*\"(?<currentValue>[^\"]+)\""],
+      "managerFilePatterns": [".github/renovate.json", "apm/apm.lock.yaml"],
+      "matchStrings": [
+        "\"constraints\":\\s*\\{[^}]*?\"apm\":\\s*\"(?<currentValue>[^\"]+)\"",
+        "(?:^|\\n)apm_version:\\s*'?(?<currentValue>[^'\\s]+)'?"
+      ],
       "depNameTemplate": "microsoft/apm",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"

@@ -107,10 +107,14 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
   user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
   scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
-  `mise run apm:validate-lock-version` が失敗するため、`.github/renovate.json` の `constraints.apm` を mise の
-  `github:microsoft/apm` と同じ version にします。両者は Renovate の `apm` group で同じPRで更新されます。
-  ただしこのPRでは lockfile の `apm_version` は更新されません。マージ後、次の lockFileMaintenance のPRか、
-  ローカルで `apm install -g --update` を実行して lockfile を再生成してください。
+  `mise run apm:validate-lock-version` が失敗します。そのため mise の `github:microsoft/apm`、
+  `.github/renovate.json` の `constraints.apm`（Renovate が `apm install` に使う version）、
+  `apm/apm.lock.yaml` の `apm_version` を regex manager で同じ dependency として扱い、`apm` group の
+  同じPRで揃えて更新します。Renovate は `constraints` を base branch の設定から読むため、このPRで新しい
+  APM による lockfile の再生成はできず、`apm_version` の値だけを書き換えます（0.32.0 → 0.33.0 では、
+  書き換えた lockfile で `apm install -g --frozen` が成功し、lockfile の内容も変わらないことを確認済み）。
+  新しい APM で content hash の計算方法などが変わり install が失敗する場合は、ローカルで
+  `apm install -g --update` を実行して lockfile を再生成してください。
 - **project scope の生成物を commit しない**: `apm install` は `apm/` 配下に `.claude/`・`.agents/`・
   `apm_modules/` などを生成します。Renovate は変更・未追跡ファイルをすべてPRに含めるため、`.gitignore` で
   `apm/apm.yml`・`apm/apm.lock.yaml` 以外を除外しています。
