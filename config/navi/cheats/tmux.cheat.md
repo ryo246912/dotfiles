@@ -52,11 +52,11 @@ nohup caffeinate -i bash -c '
   sleep "$secs" || { echo "sleep失敗。中止します"; exit 1; };
   tmux send-keys -t <target_pane> Escape &&
   sleep 1 &&
-  tmux send-keys -t <target_pane> -l "<message>" &&
+  tmux send-keys -t <target_pane> -l "$1" &&
   sleep 1 &&
   tmux send-keys -t <target_pane> Enter || { echo "$(date): 送信失敗。中止します"; exit 1; };
   echo "$(date): 送信完了";
-' > ~/claude-resume.log 2>&1 &
+' _ '<message>' > ~/claude-resume.log 2>&1 &
 ```
 $ hv: echo -e "v\nh"
 $ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f | head -n 10
