@@ -213,6 +213,11 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 **mcpc proxy ではここが違います。** agent は MCP クライアントにならず、Bash で `mcpc` を実行するだけなので、
 コンテキストに入るのは `mcpc` の出力だけです。
 
+> [!NOTE]
+> 上は agent が受け取ったツール定義をそのまま system prompt に入れる場合の挙動です。Claude Code の MCP tool search の
+> ように、agent 側で定義を遅延読み込みする機能があると、system prompt に入るタイミングや量は agent / version によって
+> 変わります。このリポジトリではその機能を前提にせず、定義を agent に渡さない mcpc 経路を既定にしています。
+
 ### 新しい MCP を追加する手順（sbx gateway）
 
 1. 定義を書く。共通なら `config/mcpc/mcp.yml`、work3 などの環境だけなら `config/mcpc/mcp.<env>.yml`
