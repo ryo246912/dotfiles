@@ -74,7 +74,7 @@ $ tty: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
   --- --column 6
-$ message: echo "usage limitで中断した作業の続きを進めて"
+$ message: echo "usage limitで中断した作業の続きを進めて" --- --fzf-overrides "--no-select-1" --map "sed \"s/'/'\\\\\\\\''/g\""
 $ target_pane: tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \
   | column -t \
