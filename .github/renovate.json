@@ -10,6 +10,14 @@
   "devcontainer": {
     "managerFilePatterns": ["config/devcontainer/**/devcontainer.json"]
   },
+  "constraints": {
+    "apm": "0.33.0"
+  },
+  "apm": {
+    "lockFileMaintenance": {
+      "enabled": true
+    }
+  },
   "customDatasources": {
     "brew-formula": {
       "defaultRegistryUrlTemplate": "https://formulae.brew.sh/api/formula/{{{packageName}}}.json",
@@ -120,16 +128,31 @@
       "groupName": "terminal-browser"
     },
     {
-      "matchPackageNames": ["https://github.com/zenbu-labs/terminal-browser"],
-      "matchDatasources": ["git-refs"],
-      "enabled": false
+      "description": "mise の APM CLI、Renovate が apm install に使う constraints.apm、apm.lock.yaml の apm_version を同じPRで揃えて更新する（apm:validate-lock-version が一致を要求するため）",
+      "matchPackageNames": ["microsoft/apm"],
+      "groupName": "apm"
     },
     {
-      "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
-      "groupName": "tsumiki"
+      "matchPackageNames": ["mattpocock/skills"],
+      "groupName": "mattpocock/skills"
+    },
+    {
+      "description": "resolving-merge-conflicts は v1.3.0 で upstream から削除されたため v1.2.3 に固定する（apm/apm.yml 参照）",
+      "matchManagers": ["apm"],
+      "matchDepNames": ["mattpocock/skills/skills/engineering/resolving-merge-conflicts"],
+      "enabled": false
     }
   ],
   "customManagers": [
+    {
+      "customType": "regex",
+      "description": "constraints.apm は組み込みの renovate-config manager が microsoft/apm として抽出するため、ここでは lockfile の apm_version だけを扱う",
+      "managerFilePatterns": ["apm/apm.lock.yaml"],
+      "matchStrings": ["(?:^|\\n)apm_version:\\s*'?(?<currentValue>[^'\\s]+)'?"],
+      "depNameTemplate": "microsoft/apm",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
     {
       "customType": "regex",
       "managerFilePatterns": ["config/sbx/mcp.yml"],
@@ -246,27 +269,6 @@
       ],
       "datasourceTemplate": "custom.brew-cask",
       "versioningTemplate": "loose"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["apm/apm.yml"],
-      "matchStrings": [
-        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#(?<currentDigest>[0-9a-f]{40})",
-        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s(?<currentDigest>[0-9a-f]{40})"
-      ],
-      "packageNameTemplate": "https://github.com/{{{depName}}}",
-      "currentValueTemplate": "main",
-      "datasourceTemplate": "git-refs"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["apm/apm.yml"],
-      "matchStrings": [
-        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#v?(?<currentValue>[^\\s]+)",
-        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s+v?(?<currentValue>[^\\s]+)"
-      ],
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]
 }
