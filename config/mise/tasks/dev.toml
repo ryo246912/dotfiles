@@ -31,7 +31,7 @@ calculate_apm_hash() {
     # config/mcpc/mcp*.yml（MCP の定義）の変更と、apm:install-mcpc が生成する config（host 用・sandbox 用）の
     # 欠落でも再生成されるようにする。
     for mcpc_config in "$HOME/.config/mcpc/mcp.yml" "$HOME/.config/mcpc"/mcp.*.yml \
-      "$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json" \
+      "$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json" \
       "$HOME/.config/mcpc/sandbox/mcp-config.json"; do
       [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
     done
@@ -184,7 +184,7 @@ description = "Deploy user-scope external skills, commands and the mcpc MCP conf
 # ~/.apm は [dotfiles] が配置するため、事前に `mise bootstrap dotfiles apply` 済みであること。
 # --only apm: スキル等の APM パッケージだけを配布し、MCP はホストの agent（~/.claude.json など）に
 # 登録しない。MCP は config/mcpc/mcp*.yml で管理し、apm:install-mcpc が mcpc 専用 config に入れる
-# （docs/mcpc/README.md 参照）。
+# （docs/mcpc.md 参照）。
 run = [
     "mise run apm:validate-lock-version",
     "apm install -g --only apm",
@@ -210,9 +210,11 @@ run = [
 
 ["apm:install-mcpc"]
 description = "Generate the mcpc-only MCP configs from config/mcpc/mcp*.yml with APM"
-# MCP は agent の native MCP に登録せず、mcpc から必要な時だけ使う（docs/mcpc/README.md）。
+# MCP は agent の native MCP に登録せず、mcpc から必要な時だけ使う（docs/mcpc.md）。
 # ~/.config/mcpc/mcp.yml（共通）と mcp.<name>.yml（work3 など。gitignore 済み）をまとめた
-# manifest を作り、隔離した HOME（~/.config/mcpc/apm-home）で apm install する。生成された
+# manifest を作り、隔離した HOME（~/.local/state/mcpc/apm-home）で apm install する。生成物（manifest・lockfile・
+# config）は ~/.config（mise history で丸ごと track）を避けて state 配下に置く。devcontainer の mount と揃えるため
+# XDG_STATE_HOME には追従しない固定パスにする。生成された
 # Copilot CLI 形式の config を mcpc が読み、実際の ~/.copilot や ~/.claude.json には書き込まない。
 # ~/.apm/apm.yml とは別 manifest なので、apm/apm.lock.yaml には MCP が載らない（apm:ci の --frozen と独立）。
 run = '''
@@ -223,7 +225,7 @@ for cmd in apm yq jq; do
 done
 
 config_dir="$HOME/.config/mcpc"
-isolated_home="$config_dir/apm-home"
+isolated_home="$HOME/.local/state/mcpc/apm-home"
 [ -f "$config_dir/mcp.yml" ] || { echo "error: $config_dir/mcp.yml がありません（mise bootstrap dotfiles apply）" >&2; exit 1; }
 
 # mcp.yml → mcp.<name>.yml の順に読み、同じ name は先に読んだ方を使う（sandbox:mcp-gateway と同じ規則）

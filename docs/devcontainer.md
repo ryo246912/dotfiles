@@ -19,7 +19,7 @@ host で mcpc 用 MCP config を生成します。この config に credential �
 ```bash
 mise bootstrap dotfiles apply
 mise run apm:install
-test -f ~/.config/mcpc/apm-home/.copilot/mcp-config.json
+test -f ~/.local/state/mcpc/apm-home/.copilot/mcp-config.json
 ```
 
 次に、利用する aws-vault profile の子 process として devcontainer を起動します。
@@ -47,7 +47,7 @@ printf 'profile=%s expires=%s\n' "$AWS_VAULT" "$AWS_CREDENTIAL_EXPIRATION"
 AI agent も同じ環境を継承するため、container 内では plain `mcpc` で接続できます。
 
 ```bash
-mcpc connect ~/.config/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
+mcpc connect ~/.local/state/mcpc/apm-home/.copilot/mcp-config.json:aws-cloudwatch @aws-cloudwatch
 mcpc @aws-cloudwatch tools-list
 ```
 
@@ -445,8 +445,8 @@ image に Claude Code の managed settings の drop-in
 起動します（このリポジトリでは agent に MCP を登録しないので、手で追加しない限り空です）。
 
 MCP は agent の native MCP ではなく mcpc（CLI）から使います。mcpc はこの制限を受けないため、
-mount した mcpc 用 config（`~/.config/mcpc/apm-home/.copilot/mcp-config.json`）からコンテナ内でも使えます
-（[docs/mcpc/README.md](./mcpc/README.md#devcontainer-で使う)）。AWS の認証は下の「aws-vault の認証を
+mount した mcpc 用 config（`~/.local/state/mcpc/apm-home/.copilot/mcp-config.json`）からコンテナ内でも使えます
+（[docs/mcpc.md](./mcpc.md#devcontainer-で使う)）。AWS の認証は下の「aws-vault の認証を
 container 内の AI agent で使う」を参照してください。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）

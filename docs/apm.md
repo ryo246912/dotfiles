@@ -26,7 +26,7 @@ SHA に pin し、`apm install -g`（user scope）で各エージェントの sk
 ## MCP サーバ
 
 MCP サーバは **どの agent の native MCP にも登録せず**、mcpc（CLI）から必要な時だけ使います
-（[`docs/mcpc/README.md`](mcpc/README.md)）。そのため `apm install -g` は `--only apm` で実行し
+（[`docs/mcpc.md`](mcpc.md)）。そのため `apm install -g` は `--only apm` で実行し
 （`apm:install` / `apm:ci`）、MCP は `~/.claude.json` などへ書き込みません。`apm.yml` の
 `dependencies.mcp` は空のままにします。
 

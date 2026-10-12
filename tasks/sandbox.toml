@@ -254,7 +254,7 @@ main() {
   # 指定したサーバごとに host で `mcpc connect <config>:<name> @sbx-<name> --proxy 127.0.0.1:<port>`
   # を起動し、sandbox 内の mcpc は $MCPC_SANDBOX_CONFIG（apm:install-mcpc が生成し、sbx-agent が
   # mount する）から host.docker.internal:<port> へ繋ぐ。sandbox 内の agent の native MCP には
-  # 何も載らないため、tool の定義はコンテキストに入らない（docs/mcpc/README.md）。
+  # 何も載らないため、tool の定義はコンテキストに入らない（docs/mcpc.md）。
   # - サーバは host で動き、OAuth token（mcpc login）や aws-vault / fnox の credential は
   #   sandbox に入らない。stdio サーバへは config の env（${VAR}）でこのプロセスの環境から転送する。
   # - proxy は bearer token（MCPC_PROXY_TOKEN）を要求する。token は host の state に置き、
@@ -263,7 +263,7 @@ main() {
     command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
   done
 
-  config="$HOME/.config/mcpc/apm-home/.copilot/mcp-config.json"
+  config="$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json"
   sandbox_config="$HOME/.config/mcpc/sandbox/mcp-config.json"
   for file in "$config" "$sandbox_config"; do
     [ -f "$file" ] || { echo "error: $file がありません（先に mise run apm:install）" >&2; exit 1; }
@@ -337,7 +337,7 @@ set -eu
 
 # 【オプション】既定の経路は mcpc（mise run sandbox:mcp）。こちらは MCP を sandbox 内の agent の
 # native MCP として使う経路で、gateway に載せた tool の定義は agent のコンテキストに常に入る。
-# 戻す場合は SBX_AGENT_MCP_GATEWAY=1 で sbx-agent に全サーバを読み込ませる（docs/mcpc/README.md）。
+# 戻す場合は SBX_AGENT_MCP_GATEWAY=1 で sbx-agent に全サーバを読み込ませる（docs/mcpc.md）。
 #
 # sandbox から使う MCP サーバをホストの sbx mcp に登録する。
 # OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に

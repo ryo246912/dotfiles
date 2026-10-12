@@ -1190,7 +1190,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 MCP は **agent の native MCP には載せず、sandbox 内の mcpc から必要な時だけ使います**（tool の定義を
 agent のコンテキストに入れないため）。server は host で動かし、host の mcpc proxy（`mise run sandbox:mcp`）
 経由で接続します。sbx の gateway に載せて agent の native MCP として使う経路も、オプションで残しています。
-定義・設定の仕組み・2 つの経路の比較は [`docs/mcpc/README.md`](mcpc/README.md) にまとめています。
+定義・設定の仕組み・2 つの経路の比較は [`docs/mcpc.md`](mcpc.md) にまとめています。
 
 | 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                            |
 | ---------------------------------------------------- | --------------------- | --------------------------------------------------------------------------- |
@@ -1239,9 +1239,9 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 ### 定義と sandbox への読み込み
 
 定義（`config/mcpc/mcp*.yml`）、mcpc proxy と sbx gateway の仕組み、`sbx mcp add` への変換規則、
-2 つの経路の比較は [`docs/mcpc/README.md`](mcpc/README.md#sandbox-で使うmcpc-proxy既定) を参照してください。
+2 つの経路の比較は [`docs/mcpc.md`](mcpc.md#sandbox-で使うmcpc-proxy既定) を参照してください。
 sbx gateway に新しい MCP を追加する手順は
-[`docs/mcpc/README.md` の「新しい MCP を追加する手順（sbx gateway）」](mcpc/README.md#新しい-mcp-を追加する手順sbx-gateway) です。
+[`docs/mcpc.md` の「新しい MCP を追加する手順（sbx gateway）」](mcpc.md#新しい-mcp-を追加する手順sbx-gateway) です。
 
 ### トレードオフ
 
@@ -1254,7 +1254,7 @@ sandbox の隔離の外にあります（ホストのファイル・ネットワ
 devcontainer ではコンテナ内の Claude Code の native MCP から接続しません。image（`Dockerfile`）に
 `allowedMcpServers: []` の managed settings（`config/devcontainer/claude/mcp-policy.devcontainer.json`）を
 置いているため、共有している `~/.claude.json` のサーバも読み込まれません。mcpc は CLI なので影響を受けず、
-mount した mcpc 用 config からコンテナ内で使えます（[`docs/mcpc/README.md`](mcpc/README.md#devcontainer-で使う)）。
+mount した mcpc 用 config からコンテナ内で使えます（[`docs/mcpc.md`](mcpc.md#devcontainer-で使う)）。
 
 ## 管理ツール（CLI / TUI）
 

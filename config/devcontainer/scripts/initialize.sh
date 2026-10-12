@@ -429,7 +429,7 @@ ensure_json_file ~/.codex/hooks.json
 ensure_dir ~/.copilot
 ensure_dir ~/.coderabbit
 # mcpc 専用 MCP config（apm:install-mcpc の生成先）。未生成でも mount source として必要
-ensure_dir ~/.config/mcpc/apm-home/.copilot
+ensure_dir ~/.local/state/mcpc/apm-home/.copilot
 
 # .aws（config だけを mount する。AWS を使わないホストには無いため、無ければ空ファイルを用意する）
 ensure_empty_file ~/.aws/config

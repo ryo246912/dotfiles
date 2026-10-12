@@ -1,9 +1,9 @@
 # MCP サーバの定義。書式は APM の apm.yml の dependencies.mcp と同じ
 # （https://github.com/microsoft/apm の manifest schema）。
 #
-# MCP はどの agent の native MCP にも登録せず、mcpc（CLI）から必要な時だけ使う（docs/mcpc/README.md）。
+# MCP はどの agent の native MCP にも登録せず、mcpc（CLI）から必要な時だけ使う（docs/mcpc.md）。
 # - mise run apm:install（apm:install-mcpc）が mcp.yml と mcp.<name>.yml をまとめた manifest を
-#   隔離した HOME で apm install し、mcpc 専用の config（~/.config/mcpc/apm-home/.copilot/mcp-config.json）
+#   隔離した HOME で apm install し、mcpc 専用の config（~/.local/state/mcpc/apm-home/.copilot/mcp-config.json）
 #   と sandbox 用の config（~/.config/mcpc/sandbox/mcp-config.json）を生成する。
 # - sandbox からは host の mcpc proxy（mise run sandbox:mcp）経由で使う。sbx の gateway に載せる
 #   経路もオプションで残している（mise run sandbox:mcp-gateway）。

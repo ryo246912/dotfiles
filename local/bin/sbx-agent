@@ -24,7 +24,7 @@
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES sbx gateway に登録済みの MCP サーバを agent に読み込む（`,` 区切り、複数指定可）
 #                      登録は `mise run sandbox:mcp-gateway`。既定では読み込まない（MCP は mcpc から使う。
-#                      docs/mcpc/README.md）。載せた tool の定義は agent のコンテキストに常に入る
+#                      docs/mcpc.md）。載せた tool の定義は agent のコンテキストに常に入る
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
 #   --rm               agent セッション終了時に sandbox を削除する
@@ -418,7 +418,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
     add_mount "${HOME}/.config/nvim:ro"
     # mcpc 用の sandbox config（host の `mise run sandbox:mcp` の proxy へ繋ぐ URL だけで credential は
-    # 含まない）。apm:install-mcpc が生成する。未生成のホストでは mount しない（docs/mcpc/README.md）。
+    # 含まない）。apm:install-mcpc が生成する。未生成のホストでは mount しない（docs/mcpc.md）。
     [[ -f "${HOME}/.config/mcpc/sandbox/mcp-config.json" ]] && add_mount "${HOME}/.config/mcpc/sandbox:ro"
     # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
