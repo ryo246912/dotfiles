@@ -96,6 +96,10 @@
       "groupName": "ctx"
     },
     {
+      "matchPackageNames": ["github:github/gh-stack", "github/gh-stack"],
+      "groupName": "gh-stack"
+    },
+    {
       "matchPackageNames": [
         "github:tomasz-tomczyk/crit",
         "tomasz-tomczyk/crit",
