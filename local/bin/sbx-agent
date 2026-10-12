@@ -269,9 +269,14 @@ if [[ ${#STATIC_MCP[@]} -eq 0 ]] && _repo=$(find_dotfiles_repo); then
     if command -v yq >/dev/null 2>&1; then
         for _file in "${_repo}"/config/sbx/mcp.yml "${_repo}"/config/sbx/mcp.*.yml; do
             [[ -f "$_file" ]] || continue
+            # プロセス置換だと yq の失敗（YAML の構文エラーなど）が見えず、MCP 0 件のまま黙って起動するため分ける
+            if ! _names=$(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "$_file"); then
+                log_warn "$(basename "$_file") の解析に失敗したため、その MCP は読み込みません"
+                continue
+            fi
             while IFS= read -r _name; do
                 [[ -n "$_name" ]] && STATIC_MCP+=("$_name")
-            done < <(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "$_file")
+            done <<<"$_names"
         done
     else
         log_warn "yq が無いため config/sbx/mcp*.yml の MCP を読み込めません（mise install で導入してください）"
