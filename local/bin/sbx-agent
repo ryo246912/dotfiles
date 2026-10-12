@@ -22,8 +22,8 @@
 #   --no-template      template を指定せず sbx の既定 template で起動する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
-#   --static-mcp NAMES sbx gateway に登録済みの MCP サーバを agent に読み込む（`,` 区切り、複数指定可）
-#                      登録は `mise run sandbox:mcp-gateway`。既定では読み込まない（MCP は mcpc から使う。
+#   --static-mcp NAMES sbx に add 済みの MCP サーバを sandbox の gateway に load する（`,` 区切り、複数指定可）
+#                      登録は `mise run sandbox:add-mcp`。既定では読み込まない（MCP は mcpc から使う。
 #                      docs/mcpc.md）。載せた tool の定義は agent のコンテキストに常に入る
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
@@ -266,7 +266,7 @@ if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
 fi
 # 既定の MCP 経路は mcpc（host の `mise run sandbox:mcpc` が proxy し、sandbox 内の mcpc から使う）で、
 # agent の native MCP には何も読み込まない（tool の定義をコンテキストに入れないため）。
-# SBX_AGENT_MCP_GATEWAY=1 のときだけ、sbx gateway 経路として mise run sandbox:mcp-gateway が登録する MCP
+# SBX_AGENT_MCP_GATEWAY=1 のときだけ、sbx gateway 経路として mise run sandbox:add-mcp が登録する MCP
 # （config/mcpc/mcp.yml と mcp.<name>.yml の registry: false のもの）を全て読み込む。
 if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ "${SBX_AGENT_MCP_GATEWAY:-}" == 1 ]] && _repo=$(find_dotfiles_repo); then
     if command -v yq >/dev/null 2>&1; then

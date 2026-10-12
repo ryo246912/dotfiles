@@ -1,6 +1,6 @@
 # work3 でだけ使う MCP サーバ。
 # `cp mcp.work3.yml.example mcp.work3.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
-# mcp.<name>.yml は gitignore 済みで、mise run apm:install（mcpc）と sandbox:mcp-gateway が mcp.yml と一緒に読む。
+# mcp.<name>.yml は gitignore 済みで、mise run apm:install（mcpc）と sandbox:add-mcp が mcp.yml と一緒に読む。
 # 置いた後は mise bootstrap dotfiles apply で ~/.config/mcpc へ配置してから mise run apm:install する。
 # 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
 dependencies:

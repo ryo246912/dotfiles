@@ -330,8 +330,8 @@ for name in $(jq -r '.mcpServers | keys[]' "$sandbox_config"); do
 done
 '''
 
-["sandbox:mcp-gateway"]
-description = "(Optional) Register config/mcpc/mcp*.yml on the host sbx MCP gateway for the agents in sandboxes"
+["sandbox:add-mcp"]
+description = "(Optional) Add config/mcpc/mcp*.yml to the host sbx MCP registry (sbx mcp add); sbx-agent / sbx mcp load loads them"
 run = '''
 set -eu
 

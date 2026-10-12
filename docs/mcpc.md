@@ -30,7 +30,7 @@ config/mcpc/mcp.yml, mcp.<env>.yml        … MCP の定義（APM の dependenci
         ├─ host          : mcpc connect <host 用 config>:<server> @<session>
         ├─ devcontainer  : 同上（config を read-only mount）
         ├─ sandbox（既定）: host の `mise run sandbox:mcpc` が mcpc proxy を立て、sandbox 内の mcpc から接続
-        └─ sandbox（オプション）: `mise run sandbox:mcp-gateway` で sbx の gateway に登録し、agent の native MCP として使う
+        └─ sandbox（オプション）: `mise run sandbox:add-mcp` で sbx に add し、sandbox の gateway に load して agent の native MCP として使う
 ```
 
 | 経路                         | MCP サーバが動く場所 | agent のコンテキスト         | credential                               |
@@ -167,22 +167,30 @@ mcpc close @notion
 agent の native MCP として使う経路に戻すための口です。tool の定義が agent のコンテキストに常に入るため、既定では使いません。
 
 ```bash
-mise run sandbox:mcp-gateway                   # config/mcpc/mcp*.yml を host の sbx mcp に登録
+mise run sandbox:add-mcp                   # add: config/mcpc/mcp*.yml を host の sbx に登録
 SBX_AGENT_MCP_GATEWAY=1 sbx-agent claude       # 全 server を gateway から agent に読み込む
 sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC_MCP でも指定できる）
 ```
 
-仕組み:
+仕組み（add と load の 2 段階）:
 
-- `sbx mcp add` で host の sbx に server を登録する。stdio は host で起動され、remote は host から接続される。
+| 段階 | コマンド                                                                       | 範囲                        | コンテキストへの影響              |
+| ---- | ------------------------------------------------------------------------------ | --------------------------- | --------------------------------- |
+| add  | `sbx mcp add`（`mise run sandbox:add-mcp`）                                    | host 全体の登録簿。一度だけ | なし                              |
+| load | `--static-mcp` / `SBX_AGENT_MCP_GATEWAY=1`（作成時）、`sbx mcp load`（起動後） | 特定の sandbox の gateway   | ここで tool の定義が agent に入る |
+
+- gateway は sandbox ごとの MCP の窓口（host の sandboxd 内の HTTP listener。sandbox からは
+  `http://mcp-gateway.docker.internal/mcp`）で、load した server だけを 1 つの endpoint にまとめて中継する。
+- add は `sbx mcp add` で host の sbx に server を登録する。stdio は host で起動され、remote は host から接続される。
   OAuth token や API キーは host の OS keychain に入り、sbx のプロキシが送信時に注入する。
-- `sbx-agent` が `--static-mcp` で登録済みの server を sandbox の gateway に読み込む。sandbox 内の agent は
+- load は `sbx-agent` の `--static-mcp`（作成時）か `sbx mcp load`（起動後）で、add 済みの server を sandbox の gateway に読み込む。sandbox 内の agent は
   gateway（`http://mcp-gateway.docker.internal/mcp`）だけに MCP として接続し、読み込んだ server の全 tool が
-  native MCP として見える。起動済みの sandbox には `sbx mcp load` で後から足す。
+  native MCP として見える。起動済みの sandbox には `sbx mcp load <name> --sandbox <sandbox-name>` で後から足せ、
+  接続中の agent には MCP の `tools/list_changed` 通知で新しい tool が伝わる（反映するかは agent 次第）。
 - template の Claude Code の managed settings（`config/devcontainer/claude/mcp-policy.sandbox.json`）は URL の
   server だけを許可しており、gateway は通る（stdio は止まる）。
 
-`sandbox:mcp-gateway` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
+`sandbox:add-mcp` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
 
 | mcp.yml                         | sbx mcp add                                                                                            |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -244,14 +252,14 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
    - `127.0.0.1` で動く host のサーバは `sbx_options: ["--skip-ssrf-check"]` を付ける。
 
 2. `mcp.<env>.yml` を新しく置いた場合は `mise bootstrap dotfiles apply` で `~/.config/mcpc` に配置する。
-3. host で登録する（remote は初回だけブラウザで OAuth の認可が開く）。
+3. host で sbx に add する（remote は初回だけブラウザで OAuth の認可が開く）。
 
    ```bash
-   mise run sandbox:mcp-gateway
+   mise run sandbox:add-mcp
    sbx mcp ls          # 登録されたか確認
    ```
 
-4. sandbox に読み込む。
+4. sandbox の gateway に load する。
 
    ```bash
    SBX_AGENT_MCP_GATEWAY=1 sbx-agent claude        # 新しく作る sandbox に全 server を読み込む
@@ -262,7 +270,7 @@ sbx-agent claude --static-mcp notion           # 一部だけ（SBX_AGENT_STATIC
 5. sandbox 内で `claude mcp list` を実行し、gateway 経由で tool が見えることを確認する。
 
 同じ定義は mcpc からも使えます（`mise run apm:install` で mcpc 用 config に入り、`mise run sandbox:mcpc <name>`
-で proxy できる）。定義を変えたら `mise run sandbox:mcp-gateway` を再実行すると、変わった server だけ登録し直します。
+で proxy できる）。定義を変えたら `mise run sandbox:add-mcp` を再実行すると、変わった server だけ登録し直します。
 
 ## sandbox の 2 経路の比較
 
@@ -302,14 +310,14 @@ aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc n
 sbx-agent claude --new               # config の mount と token は作成時に渡るため、既存の sandbox は作り直す
 ```
 
-- `sandbox:mcp-gateway` による sbx への登録は使いません。gateway 経路から移ってきた場合、登録が残っていても
+- `sandbox:add-mcp` による sbx への登録は使いません。gateway 経路から移ってきた場合、登録が残っていても
   `sbx-agent` が読み込まないので害はありません。不要なら消します（OAuth の token も消えるため、gateway 経路に
   戻すときは認可をやり直します）。
 
   ```bash
   sbx mcp ls
   sbx mcp rm <name>                  # 一覧の server ごとに
-  rm -rf ~/.local/state/sbx-mcp      # sandbox:mcp-gateway の登録記録
+  rm -rf ~/.local/state/sbx-mcp      # sandbox:add-mcp の登録記録
   ```
 
 - `SBX_AGENT_MCP_GATEWAY` を export している場合は外します。
@@ -318,14 +326,14 @@ sbx-agent claude --new               # config の mount と token は作成時�
 
 ```bash
 mise run sandbox:mcpc-stop            # mcpc の proxy を止める（任意）
-mise run sandbox:mcp-gateway         # config/mcpc/mcp*.yml を host の sbx mcp に登録（remote は初回だけ OAuth）
+mise run sandbox:add-mcp         # add: config/mcpc/mcp*.yml を host の sbx に登録（remote は初回だけ OAuth）
 export SBX_AGENT_MCP_GATEWAY=1       # 常用するならシェルの設定に書く（ccmanager / multi-worktree の sbx-agent にも効く）
 sbx-agent claude --new               # gateway から全 server を読み込んだ sandbox を作り直す
 sbx mcp load <name> --sandbox <sandbox-name>   # 作り直さずに起動済みの sandbox へ足す場合
 ```
 
 - 一部だけ使うなら `SBX_AGENT_MCP_GATEWAY` の代わりに `--static-mcp <name>` / `SBX_AGENT_STATIC_MCP` を指定します。
-- 定義を変えたら `mise run sandbox:mcp-gateway` を再実行します（変わった server だけ登録し直す）。
+- 定義を変えたら `mise run sandbox:add-mcp` を再実行します（変わった server だけ登録し直す）。
 
 ### mcpc 経路に戻す
 

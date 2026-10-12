@@ -1195,7 +1195,7 @@ agent のコンテキストに入れないため）。server は host で動か�
 | 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                            |
 | ---------------------------------------------------- | --------------------- | --------------------------------------------------------------------------- |
 | mcpc + host の mcpc proxy（`sandbox:mcpc`）          | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する    |
-| `sbx mcp` の gateway（`sandbox:mcp-gateway`）        | **ホスト** / リモート | オプション。`SBX_AGENT_MCP_GATEWAY=1` で agent の native MCP として読み込む |
+| `sbx mcp` の gateway（`sandbox:add-mcp`）            | **ホスト** / リモート | オプション。`SBX_AGENT_MCP_GATEWAY=1` で agent の native MCP として読み込む |
 | エージェント自身の MCP 設定（`~/.claude.json` など） | sandbox 内の VM       | ❌ 読み込ませない（下記）                                                   |
 
 ```bash

@@ -228,7 +228,7 @@ config_dir="$HOME/.config/mcpc"
 isolated_home="$HOME/.local/state/mcpc/apm-home"
 [ -f "$config_dir/mcp.yml" ] || { echo "error: $config_dir/mcp.yml がありません（mise bootstrap dotfiles apply）" >&2; exit 1; }
 
-# mcp.yml → mcp.<name>.yml の順に読み、同じ name は先に読んだ方を使う（sandbox:mcp-gateway と同じ規則）
+# mcp.yml → mcp.<name>.yml の順に読み、同じ name は先に読んだ方を使う（sandbox:add-mcp と同じ規則）
 manifests=""
 for file in "$config_dir/mcp.yml" "$config_dir"/mcp.*.yml; do
   [ -f "$file" ] || continue
