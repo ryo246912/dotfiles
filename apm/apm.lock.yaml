@@ -1,9 +1,8 @@
 lockfile_version: '1'
-generated_at: '2026-10-10T15:02:54.502584+00:00'
+generated_at: '2026-10-12T11:41:32.800598+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
-  alias: plannotator-annotate
   name: plannotator-annotate
   host: github.com
   resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
@@ -26,7 +25,6 @@ dependencies:
     .claude/skills/plannotator-annotate/agents/openai.yaml: sha256:49137b906b17bfd19a205dc482146d222439a89cee5dfd8b3a634626779b95a0
   content_hash: sha256:e5808aeba6bdea6419da0d02c6e4a52158d69e7fd4d493ec1f9ac88a32bd7a36
 - repo_url: backnotprop/plannotator
-  alias: plannotator-last
   name: plannotator-last
   host: github.com
   resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
@@ -49,7 +47,6 @@ dependencies:
     .claude/skills/plannotator-last/agents/openai.yaml: sha256:bd5d6af4ff01937b5e1ea1ddc88b3323f47a0babcd2c57c5c189fc74d7887252
   content_hash: sha256:2f22274e82dd727474b2fd974c97721cedd05622ffaa5d68eb7fcf9aabb89b0c
 - repo_url: backnotprop/plannotator
-  alias: plannotator-review
   name: plannotator-review
   host: github.com
   resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
@@ -72,11 +69,9 @@ dependencies:
     .claude/skills/plannotator-review/agents/openai.yaml: sha256:9e928f07b26f69d78f92ce3fb2d16efc427e4daa5f640d01a19cc23131b8be24
   content_hash: sha256:51e265575de25eb99dce7689f81c01ee8f45dd2d253b054c1d42494298342248
 - repo_url: cathrynlavery/diagram-design
-  alias: diagram-design
   name: diagram-design
   host: github.com
   resolved_commit: a157f7616473d966d6f433cf0b4d4f1880603504
-  resolved_ref: a157f7616473d966d6f433cf0b4d4f1880603504
   version: unknown
   virtual_path: skills/diagram-design
   is_virtual: true
@@ -607,11 +602,9 @@ dependencies:
     .claude/skills/diagram-design/references/type-venn.md: sha256:f8d5d4f0506160e0502f932140306b12d25adea1d1f6f319fb38c2345b0c6b42
   content_hash: sha256:75c519b7b882b59faa14bb2da86cbb7de6cfc347ceb432bdbbcbbd1f90cdefac
 - repo_url: classmethod/tsumiki
-  alias: tsumiki
   name: tsumiki
   host: github.com
   resolved_commit: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
-  resolved_ref: 9a0a2348ebf1cb83b7cf91adfe2ffff28be02525
   version: 1.4.2
   package_type: marketplace_plugin
   deployed_files:
@@ -904,37 +897,6 @@ dependencies:
   - .claude/skills/kairo-implement/SKILL.md
   - .claude/skills/kairo-implement/kairo-direct-process.md
   - .claude/skills/kairo-implement/kairo-tdd-process.md
-  - .copilot/prompts/auto-debug.prompt.md
-  - .copilot/prompts/build-fix.prompt.md
-  - .copilot/prompts/direct-setup.prompt.md
-  - .copilot/prompts/direct-verify.prompt.md
-  - .copilot/prompts/env-fix.prompt.md
-  - .copilot/prompts/flaky-fix.prompt.md
-  - .copilot/prompts/help.prompt.md
-  - .copilot/prompts/init-tech-stack.prompt.md
-  - .copilot/prompts/kairo-design.prompt.md
-  - .copilot/prompts/kairo-loop.prompt.md
-  - .copilot/prompts/kairo-requirements.prompt.md
-  - .copilot/prompts/kairo-tasknote.prompt.md
-  - .copilot/prompts/kairo-tasks.prompt.md
-  - .copilot/prompts/orchestrate.prompt.md
-  - .copilot/prompts/refine-execute.prompt.md
-  - .copilot/prompts/refine-plan.prompt.md
-  - .copilot/prompts/rev-design.prompt.md
-  - .copilot/prompts/rev-requirements.prompt.md
-  - .copilot/prompts/rev-specs.prompt.md
-  - .copilot/prompts/rev-tasks.prompt.md
-  - .copilot/prompts/tdd-green.prompt.md
-  - .copilot/prompts/tdd-red.prompt.md
-  - .copilot/prompts/tdd-refactor.prompt.md
-  - .copilot/prompts/tdd-requirements.prompt.md
-  - .copilot/prompts/tdd-tasknote.prompt.md
-  - .copilot/prompts/tdd-testcases.prompt.md
-  - .copilot/prompts/tdd-todo.prompt.md
-  - .copilot/prompts/tdd-verify-complete.prompt.md
-  - .copilot/prompts/tech-stack.prompt.md
-  - .copilot/prompts/test-optimization-patterns.prompt.md
-  - .copilot/prompts/timeout-fix.prompt.md
   - .cursor/commands/auto-debug.md
   - .cursor/commands/build-fix.md
   - .cursor/commands/direct-setup.md
@@ -1228,37 +1190,6 @@ dependencies:
     .claude/skills/kairo-implement/SKILL.md: sha256:f32321049a4ae8fe370f9be5762165ddc11efed4510c198dc4aa0019e544026b
     .claude/skills/kairo-implement/kairo-direct-process.md: sha256:d9ce7a4d94f51324381c746f5addd10fea0d043713282447b6f295f4880cd610
     .claude/skills/kairo-implement/kairo-tdd-process.md: sha256:04c48c9c682045264d6c5e7743dbf49768c8ed3daf66e4a82747e3c8b5787479
-    .copilot/prompts/auto-debug.prompt.md: sha256:a3d298b8bffd1168346edff8825665fc92a18c18602ee60f4a0dff2edc17cd53
-    .copilot/prompts/build-fix.prompt.md: sha256:19f44b6d578cbd23634ccd169c1baf3d83093d967e5feadba8a71abcb4153a5a
-    .copilot/prompts/direct-setup.prompt.md: sha256:3669bd835b4563d3d5965fc5536e028a611aea808efa30b750066a5cf0bf0976
-    .copilot/prompts/direct-verify.prompt.md: sha256:2cefe51ff9288df386fef29c3fa91ee1fe801ed5de8e05ff0072f97f3fe72fd2
-    .copilot/prompts/env-fix.prompt.md: sha256:859f5b7c9ea52ee993f587b39fe3b700a39fda1624f0327c9af00d54ab01920d
-    .copilot/prompts/flaky-fix.prompt.md: sha256:237810405a9de0231cf408ce3cf8828daeb99742deaff043e6ef8a10345ff6d4
-    .copilot/prompts/help.prompt.md: sha256:be154a5ff053060df5171d40be60c0cbf77091d7649d2cd729cfdb3c8aaf2464
-    .copilot/prompts/init-tech-stack.prompt.md: sha256:d45e0dd7875d67ba2e614e55b0039912c707224a37d22af78baa449bba21dec3
-    .copilot/prompts/kairo-design.prompt.md: sha256:9853461a15827ee91aa01febfc32fb32b1ade26e6acb76570c5f3426f02f964b
-    .copilot/prompts/kairo-loop.prompt.md: sha256:b16d461700e91fd2fcbe4d77ce132d27a7c111dd3d8f0fd021291a85249eb40a
-    .copilot/prompts/kairo-requirements.prompt.md: sha256:57f20266d1d92323c30fd0a10921d9cab5befde73b7a4f5f17a2ff2727d1b00b
-    .copilot/prompts/kairo-tasknote.prompt.md: sha256:fbd6087782cc6d3f59635ad59f9bbcd845dd4e3b7c05b82a370fcd8a2388f674
-    .copilot/prompts/kairo-tasks.prompt.md: sha256:7d057a0ca60221fea38a795ad9c621277cd2c2f204dcf00afd9c9d5eb38a215b
-    .copilot/prompts/orchestrate.prompt.md: sha256:a716d96eef2a7eac2a5796ee9820aa98a04c168f1b0aabcdd04668b567829af2
-    .copilot/prompts/refine-execute.prompt.md: sha256:325d2b64337904f54636f4add39fee2391cecd06833c409422e63892bf8a7bd0
-    .copilot/prompts/refine-plan.prompt.md: sha256:57e370486f7ad1fcfcdbd063c5b82daf28e03f5a934c5192e2bb0181722cde3a
-    .copilot/prompts/rev-design.prompt.md: sha256:7142f4c88117487262345b0d67fece90f702cfaa088756c3e6d4a8749163800c
-    .copilot/prompts/rev-requirements.prompt.md: sha256:1ae3685269ab78cc843f3eb47075315fde3208680dfc3d4edab7479fcd79875b
-    .copilot/prompts/rev-specs.prompt.md: sha256:f13ac7dcb32f4ab10e1824ce11880d4fc3a4cd3a69e2c3746f0d8f072e7a74a6
-    .copilot/prompts/rev-tasks.prompt.md: sha256:d83a3d7d56d4e9f7f3fb2f2d29aeb88b4be63c57e08e4054328f2590fc5a40e6
-    .copilot/prompts/tdd-green.prompt.md: sha256:6d42cf9f11de1bd62bc9c130a989d24321a5478d4870cb00a4100dfb4f962f24
-    .copilot/prompts/tdd-red.prompt.md: sha256:111f0f5206ee9b9c6728eef132d47170e377b5df41b8addd9d8912344755e7e8
-    .copilot/prompts/tdd-refactor.prompt.md: sha256:e49c8d7197a43ce508a72483bdf3caaf8e02313f557be2605f8b07b7e4bb213d
-    .copilot/prompts/tdd-requirements.prompt.md: sha256:162c2f848ee1c5641c3c43c27dcc21ce7d2dbb4fbc9232632fecf08115afc788
-    .copilot/prompts/tdd-tasknote.prompt.md: sha256:77b7f88f6122b882aba42d0ebf701010633a97acf9a326b3fe5133095f9f6cad
-    .copilot/prompts/tdd-testcases.prompt.md: sha256:995a8f35501859488b80d68ee41f74d2d4a2c440982b64c1c550780b5d3dd11c
-    .copilot/prompts/tdd-todo.prompt.md: sha256:cb59405d94eb003fd5c86b10612b2ec5d53d549baf46b33cfd07151308f195b1
-    .copilot/prompts/tdd-verify-complete.prompt.md: sha256:a7501c3fa8b7210ce6555a1b12b0b4bca02ce74a28222615d3eb58e0838a2111
-    .copilot/prompts/tech-stack.prompt.md: sha256:50b2eff18e588b6ee392f769c1bb326825f48cf132b81f038578ba8ee10cc16c
-    .copilot/prompts/test-optimization-patterns.prompt.md: sha256:584d958390939e07d9436cedf81bcc1d202d7fdfdf0758ad1e67553bc283c038
-    .copilot/prompts/timeout-fix.prompt.md: sha256:582becab914324f43f61dec92a6c0cde1180fd8cae40730ed57cb275d715024b
     .cursor/commands/auto-debug.md: sha256:8cefbd76a7bab0a355f9348fbb2b91716c7c15cf22079a62bd7dd8f9c41f632f
     .cursor/commands/build-fix.md: sha256:813bf6cdf28748b817d0cbe12e519c9c7aece087691ff87bb47767bff562fa21
     .cursor/commands/direct-setup.md: sha256:a9857efb5b5944dce742487dfb0436825c39e3dae7386dbe090f0b6c20732f6e
@@ -1293,7 +1224,6 @@ dependencies:
   content_hash: sha256:9c8a7959a181eeefbd501b28bded81746511b0c386d697370208e1cdd2d54f6e
   declared_license: MIT
 - repo_url: ctxrs/ctx
-  alias: ctx-agent-history-search
   name: ctx-agent-history-search
   host: github.com
   resolved_commit: 8ee759ab1efc0cad4d7b6d05027a7fe7e7f0d0a7
@@ -1313,7 +1243,6 @@ dependencies:
   content_hash: sha256:b9ee8ae28832c0058d21c16f1dc1cad4e72ad70597359033d18b6b7e556c40ce
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
-  alias: ponytail
   name: ponytail
   host: github.com
   resolved_commit: 08e952d7a8057a57ce561ff1330d093fd92eec67
@@ -1345,7 +1274,6 @@ dependencies:
   - .claude/skills/ponytail-review
   - .claude/skills/ponytail-review/SKILL.md
   - .claude/skills/ponytail/SKILL.md
-  - .copilot/hooks/ponytail-copilot-hooks.json
   deployed_file_hashes:
     .agents/skills/ponytail-audit/SKILL.md: sha256:38c209f3b56c8c8291bd00cf91da1ee9048ddafb1b5e7f838c1e1b81822e4023
     .agents/skills/ponytail-debt/SKILL.md: sha256:d3611761039bdb2955e31856834feeec6ed5483a3fc64576e9a166f949a131d1
@@ -1359,14 +1287,12 @@ dependencies:
     .claude/skills/ponytail-help/SKILL.md: sha256:dd07abd59ef4acdfc308c193e22b8c526fd99dc1c9a48d710f5ecd5c58b8580c
     .claude/skills/ponytail-review/SKILL.md: sha256:4b29656469baa5df3513a1557197ec8053162c6a54c166c871c57061e37a8ebb
     .claude/skills/ponytail/SKILL.md: sha256:1316a2f3f95741d2300b116fe0c2d81ce4a9568656ed0a62643f54aaf09957f2
-    .copilot/hooks/ponytail-copilot-hooks.json: sha256:22aa9893d29232932296a1678bc838074157a4a2e193f477e052fe49321dc3b1
   content_hash: sha256:6c9747b181968b8a3f83e2ba22a52d8558fd6c7ac02b0e77ae0e8fe66ad0adb4
 - repo_url: mattpocock/skills
-  alias: resolving-merge-conflicts
   name: resolving-merge-conflicts
   host: github.com
-  resolved_commit: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
-  resolved_ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+  resolved_ref: v1.2.3
   version: unknown
   virtual_path: skills/engineering/resolving-merge-conflicts
   is_virtual: true
@@ -1385,11 +1311,10 @@ dependencies:
     .claude/skills/resolving-merge-conflicts/agents/openai.yaml: sha256:a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf
   content_hash: sha256:bfafce942f3d1264eb6bb931cd39b66cf8889f08072ba6264b5b111b141d2354
 - repo_url: mattpocock/skills
-  alias: grill-me
   name: grill-me
   host: github.com
-  resolved_commit: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
-  resolved_ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+  resolved_ref: v1.2.3
   version: unknown
   virtual_path: skills/productivity/grill-me
   is_virtual: true
@@ -1408,11 +1333,10 @@ dependencies:
     .claude/skills/grill-me/agents/openai.yaml: sha256:c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b
   content_hash: sha256:0ac1a28d5e7ab05c4a51046c9d74fd7bfc070ba6a3b9ec8451bd274e746d67b6
 - repo_url: mattpocock/skills
-  alias: grilling
   name: grilling
   host: github.com
-  resolved_commit: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
-  resolved_ref: 84fdeffd12f2ee307994d1eb6feb48173b6e0502
+  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+  resolved_ref: v1.2.3
   version: unknown
   virtual_path: skills/productivity/grilling
   is_virtual: true
@@ -1431,11 +1355,9 @@ dependencies:
     .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
   content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
 - repo_url: plannotator/effective-html
-  alias: design-artifact
   name: design-artifact
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/design-artifact
   is_virtual: true
@@ -1454,11 +1376,9 @@ dependencies:
     .claude/skills/design-artifact/agents/openai.yaml: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
   content_hash: sha256:50894cbcca4d43d3e3d1cadeb361b71fe618097158666f935125962356f738b2
 - repo_url: plannotator/effective-html
-  alias: html
   name: html
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/html
   is_virtual: true
@@ -1497,11 +1417,9 @@ dependencies:
     .claude/skills/html/references/interfaces.md: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
   content_hash: sha256:fcc378531c364b52dd9bf94f5029a4ed17c6d7624927e1a7355996cabbf798e5
 - repo_url: plannotator/effective-html
-  alias: html-diagram
   name: html-diagram
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/html-diagram
   is_virtual: true
@@ -1520,11 +1438,9 @@ dependencies:
     .claude/skills/html-diagram/agents/openai.yaml: sha256:ff40d59b2ec85ffbd34432672000ad88350e38fe6efc20cf1811be9a1a656ce0
   content_hash: sha256:ae9012713423f5e239b1d910ae7225becc8d720db665ee37301344086dc28fbf
 - repo_url: plannotator/effective-html
-  alias: html-plan
   name: html-plan
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/html-plan
   is_virtual: true
@@ -1543,11 +1459,9 @@ dependencies:
     .claude/skills/html-plan/agents/openai.yaml: sha256:25cff822f6a3c53601914a1b7c2584e7352d4e33f75e5485511b52ccedc82129
   content_hash: sha256:5363b9679337b62889d56ca9f3c9fb351f56cb2b1a577d07d53d1fddd8ad4e90
 - repo_url: plannotator/effective-html
-  alias: html-prototype
   name: html-prototype
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/html-prototype
   is_virtual: true
@@ -1566,11 +1480,9 @@ dependencies:
     .claude/skills/html-prototype/agents/openai.yaml: sha256:d102a3bddbde9ec6456f543453f9fcdd3db2ca73997457c8de81af18a3328318
   content_hash: sha256:4d11c5da2cc52887ea56db5511d1a5e5be3771255d55ab47a074318cd15a8529
 - repo_url: plannotator/effective-html
-  alias: html-wireframe
   name: html-wireframe
   host: github.com
   resolved_commit: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
-  resolved_ref: 2ac1dfecb0f2474e75260cb6d3c9b9d6d9b5062e
   version: unknown
   virtual_path: skills/html-wireframe
   is_virtual: true
@@ -1625,11 +1537,10 @@ dependencies:
     .claude/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
   content_hash: sha256:7a9756c98a7838e87ac532a5e4d3387f71d61eaf52051be919dfdbe588e1d4fa
 - repo_url: vercel-labs/skills
-  alias: find-skills
   name: find-skills
   host: github.com
-  resolved_commit: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
-  resolved_ref: 941a7bcfeca4bf07913b9fb6f8ed81f20ff5297c
+  resolved_commit: 671e8c320810d36fed80fac5f1a2c1bf7e82d812
+  resolved_ref: v1.7.2
   version: unknown
   virtual_path: skills/find-skills
   is_virtual: true
@@ -1648,7 +1559,7 @@ dependencies:
   name: terminal-browser
   host: github.com
   resolved_commit: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
-  resolved_ref: 1b21e3a76453a53eda7f5bdc93c4aaabf70052f2
+  resolved_ref: v0.3.2
   version: unknown
   virtual_path: skill
   is_virtual: true
@@ -7778,294 +7689,6 @@ deployments:
   - zenbu-labs/terminal-browser/skill
   active_owner: zenbu-labs/terminal-browser/skill
   content_hash: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
-- kind: project-relative
-  target: copilot
-  value: .copilot/hooks/ponytail-copilot-hooks.json
-  runtime: null
-  scope: user
-  owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
-  content_hash: sha256:22aa9893d29232932296a1678bc838074157a4a2e193f477e052fe49321dc3b1
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/auto-debug.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a3d298b8bffd1168346edff8825665fc92a18c18602ee60f4a0dff2edc17cd53
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/build-fix.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:19f44b6d578cbd23634ccd169c1baf3d83093d967e5feadba8a71abcb4153a5a
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/direct-setup.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:3669bd835b4563d3d5965fc5536e028a611aea808efa30b750066a5cf0bf0976
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/direct-verify.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:2cefe51ff9288df386fef29c3fa91ee1fe801ed5de8e05ff0072f97f3fe72fd2
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/env-fix.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:859f5b7c9ea52ee993f587b39fe3b700a39fda1624f0327c9af00d54ab01920d
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/flaky-fix.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:237810405a9de0231cf408ce3cf8828daeb99742deaff043e6ef8a10345ff6d4
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/help.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:be154a5ff053060df5171d40be60c0cbf77091d7649d2cd729cfdb3c8aaf2464
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/init-tech-stack.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:d45e0dd7875d67ba2e614e55b0039912c707224a37d22af78baa449bba21dec3
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/kairo-design.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:9853461a15827ee91aa01febfc32fb32b1ade26e6acb76570c5f3426f02f964b
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/kairo-loop.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:b16d461700e91fd2fcbe4d77ce132d27a7c111dd3d8f0fd021291a85249eb40a
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/kairo-requirements.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:57f20266d1d92323c30fd0a10921d9cab5befde73b7a4f5f17a2ff2727d1b00b
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/kairo-tasknote.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:fbd6087782cc6d3f59635ad59f9bbcd845dd4e3b7c05b82a370fcd8a2388f674
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/kairo-tasks.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:7d057a0ca60221fea38a795ad9c621277cd2c2f204dcf00afd9c9d5eb38a215b
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/orchestrate.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a716d96eef2a7eac2a5796ee9820aa98a04c168f1b0aabcdd04668b567829af2
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/refine-execute.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:325d2b64337904f54636f4add39fee2391cecd06833c409422e63892bf8a7bd0
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/refine-plan.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:57e370486f7ad1fcfcdbd063c5b82daf28e03f5a934c5192e2bb0181722cde3a
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/rev-design.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:7142f4c88117487262345b0d67fece90f702cfaa088756c3e6d4a8749163800c
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/rev-requirements.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:1ae3685269ab78cc843f3eb47075315fde3208680dfc3d4edab7479fcd79875b
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/rev-specs.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:f13ac7dcb32f4ab10e1824ce11880d4fc3a4cd3a69e2c3746f0d8f072e7a74a6
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/rev-tasks.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:d83a3d7d56d4e9f7f3fb2f2d29aeb88b4be63c57e08e4054328f2590fc5a40e6
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-green.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:6d42cf9f11de1bd62bc9c130a989d24321a5478d4870cb00a4100dfb4f962f24
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-red.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:111f0f5206ee9b9c6728eef132d47170e377b5df41b8addd9d8912344755e7e8
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-refactor.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:e49c8d7197a43ce508a72483bdf3caaf8e02313f557be2605f8b07b7e4bb213d
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-requirements.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:162c2f848ee1c5641c3c43c27dcc21ce7d2dbb4fbc9232632fecf08115afc788
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-tasknote.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:77b7f88f6122b882aba42d0ebf701010633a97acf9a326b3fe5133095f9f6cad
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-testcases.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:995a8f35501859488b80d68ee41f74d2d4a2c440982b64c1c550780b5d3dd11c
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-todo.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:cb59405d94eb003fd5c86b10612b2ec5d53d549baf46b33cfd07151308f195b1
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tdd-verify-complete.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:a7501c3fa8b7210ce6555a1b12b0b4bca02ce74a28222615d3eb58e0838a2111
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/tech-stack.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:50b2eff18e588b6ee392f769c1bb326825f48cf132b81f038578ba8ee10cc16c
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/test-optimization-patterns.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:584d958390939e07d9436cedf81bcc1d202d7fdfdf0758ad1e67553bc283c038
-- kind: project-relative
-  target: copilot
-  value: .copilot/prompts/timeout-fix.prompt.md
-  runtime: null
-  scope: user
-  owners:
-  - classmethod/tsumiki
-  active_owner: classmethod/tsumiki
-  content_hash: sha256:582becab914324f43f61dec92a6c0cde1180fd8cae40730ed57cb275d715024b
 - kind: project-relative
   target: cursor
   value: .cursor/commands/auto-debug.md

@@ -5,9 +5,10 @@
 パッケージマネージャです。このリポジトリでは **外部スキルの管理** に APM を利用します。
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
-`apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は immutable なコミット
-SHA に pin し、`apm install -g`（user scope）で各エージェントの skill ディレクトリ（`~/.claude/skills/`・
-`~/.agents/skills/`）へ都度 install します。
+`apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は release tag、または
+`apm.lock.yaml` の commit で pin し、`apm install -g`（user scope）で各エージェントの skill ディレクトリ
+（`~/.claude/skills/`・`~/.agents/skills/`）へ都度 install します。依存と lockfile の更新は Renovate の
+[apm manager](https://docs.renovatebot.com/modules/manager/apm/) が行います（後述）。
 
 ## 役割分担（rulesync との住み分け）
 
@@ -47,57 +48,72 @@ APMは依存先を取得した後、対象pathの構成からpackageを判別し
 - リポジトリに`apm.yml`、またはClaude Code plugin形式のskills・commandsなどがあり、複数primitiveをまとめて
   取り込みたいなら、**plugin/package**としてリポジトリ全体を指定する。
 
-### 1つのskillをインストールする
+### 書式（文字列形式で書く）
 
-`path`には`SKILL.md`が置かれたdirectoryを指定します。短縮形でも書けますが、インストール名を明示する場合は
-object formを使います。
+Renovate の apm manager は `dependencies.apm` の**文字列形式**（`owner/repo[/path]#<ref>`）だけを読みます。
+object 形式（`git:`/`path:`/`ref:`/`alias:`）の依存は Renovate に無視されるため、更新を Renovate に任せる
+依存は文字列形式で書きます。
 
 ```yaml
 dependencies:
   apm:
-    - git: owner/repository
-      path: path/to/skill
-      ref: <sha>
-      alias: installed-skill-name
+    # 1つのskill（virtual package）: SKILL.md が置かれた directory を path に書く
+    - owner/repository/path/to/skill#v1.2.3
+    # plugin/package全体: path を書かない
+    - owner/plugin-repository#v2.0.0
+    # release tag の無い依存: ref を書かず、apm.lock.yaml の commit で pin する
+    - owner/no-tag-repository/path/to/skill
 ```
 
-`alias`がローカルでのpackage名になり、skillの配置名を明示できます。`alias`を省略するとAPMがリポジトリ名と
-subdirectory名から既定名を決めるため、期待するskill名と異なる場合だけ指定します。
+配置名は path の末尾（path が無ければ repo 名）になります。これが期待する skill 名と異なる場合だけ、object
+形式の `alias` で配置名を明示します（例: `zenbu-labs/terminal-browser` の `skill/`）。object 形式の依存は
+Renovate で更新されないため、upstream の変更で使えなくなったなどの理由で意図的に固定する依存に限ります。
 
-### plugin/package全体をインストールする
-
-複数のskillsやcommandsを含むplugin/packageは`path`を指定せず、リポジトリ全体を依存にします。
+pluginが選択可能なskillsを公開しており、その一部だけが必要な場合はobject formへ`skills`を追加します
+（この場合も Renovate では更新されません）。
 
 ```yaml
 dependencies:
   apm:
     - git: owner/plugin-repository
-      ref: <sha>
-      alias: plugin-name
-```
-
-pluginが選択可能なskillsを公開しており、その一部だけが必要な場合はobject formへ`skills`を追加します。
-
-```yaml
-dependencies:
-  apm:
-    - git: owner/plugin-repository
-      ref: <sha>
-      alias: plugin-name
+      ref: v2.0.0
       skills:
         - selected-skill
 ```
 
 `skills`を省略するとpackage全体を取り込みます。`skills: ["*"]`は公開されたskillsをすべて選択します。
-`alias`はpackageのローカル名であり、plugin内の個々のskill名を書き換える設定ではありません。
 
-- **再現性**: 各依存を immutable なコミット SHA に pin することで、新しいマシンでも同じ内容が install
-  されます（pin しないと HEAD 追従になり、upstream の変更が commit/レビュー無しに挙動を変えてしまう）。
-- **SHA の取得・更新**: `git ls-remote https://github.com/<owner>/<repo> HEAD` で最新コミットを取得して差し替えます。
+### pin と Renovate による更新
+
+- **release tag がある依存**は `#<tag>` に pin します。Renovate（`github-tags` datasource）が新しい tag を
+  見つけると `apm.yml` を更新し、同じPRで `apm install` を実行して `apm.lock.yaml` も更新します。
+  CLI も配布するリポジトリ（plannotator・crit・ctx など）は `.github/renovate.json` の `groupName` で mise の
+  CLI 更新と同一PRにまとめます。
+- **release tag が無い依存**（effective-html・tsumiki・diagram-design）は ref を書きません。`apm.lock.yaml`
+  の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
+  Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
+  週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。
+- **Renovate で更新しない依存**: `resolving-merge-conflicts`（v1.3.0 で upstream から削除）は
+  `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。
 - 詳細なfieldと判別規則はAPM公式の[Manifest Schema](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/manifest-schema.md#41-dependenciesapm----listapmdependency)を参照してください。
-- `apm install -g` は解決結果を `~/.apm/apm.lock.yaml` にも記録します（integrity hash 付き）。より厳密な
-  再現性が必要なら、生成された `~/.apm/apm.lock.yaml` を `chezmoi add` して commit してください
-  （npm の `package-lock.json` に相当）。
+
+### Renovate が lockfile を生成する仕組みと制約
+
+Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実行して `apm.lock.yaml` を再生成します。
+このリポジトリで使う lockfile は user scope（`apm install -g`）のものなので、両者が同じ内容になるように
+次の構成にしています。
+
+- **`targets` に `copilot` を含めない**: copilot は scope によって配布先が異なり（project scope は `.github/`、
+  user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
+  scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
+- **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
+  `mise run apm:validate-lock-version` が失敗するため、`.github/renovate.json` の `constraints.apm` を mise の
+  `github:microsoft/apm` と同じ version にします。両者は Renovate の `apm` group で同じPRで更新されます。
+  ただしこのPRでは lockfile の `apm_version` は更新されません。マージ後、次の lockFileMaintenance のPRか、
+  ローカルで `apm install -g --update` を実行して lockfile を再生成してください。
+- **project scope の生成物を commit しない**: `apm install` は `apm/` 配下に `.claude/`・`.agents/`・
+  `apm_modules/` などを生成します。Renovate は変更・未追跡ファイルをすべてPRに含めるため、`.gitignore` で
+  `apm/apm.yml`・`apm/apm.lock.yaml` 以外を除外しています。
 
 ## ディレクトリ構成
 
@@ -108,7 +124,7 @@ dependencies:
 
 ### 外部スキルを追加・更新する（依存として取り込む）
 
-`apm/apm.yml` の `dependencies.apm` を編集し（SHA pin 付き）、`mise bootstrap dotfiles apply` → `mise --cd "$HOME" run apm:install`
+`apm/apm.yml` の `dependencies.apm` を編集し（tag pin、tag が無ければ ref なし）、`mise bootstrap dotfiles apply` → `mise --cd "$HOME" run apm:install`
 を実行します。
 
 ```bash
@@ -139,5 +155,6 @@ lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles a
   場合は upstream を fork するか、`dependencies.apm` の pin を差し替えます。
 - `apm` 本体はグローバルの mise（`config/mise/config.toml`）の `github:microsoft/apm`
   バックエンド（GitHub リリースのバイナリ）で管理しています。
-- `targets` は `claude` / `codex` / `copilot` / `cursor`。`claude` は `~/.claude/skills/`、
-  それ以外は共通の `~/.agents/skills/` へ配布されます。
+- `targets` は `claude` / `codex` / `cursor`。`claude` は `~/.claude/skills/`、
+  それ以外は共通の `~/.agents/skills/` へ配布されます。`copilot` を外している理由は
+  「Renovate が lockfile を生成する仕組みと制約」を参照してください。

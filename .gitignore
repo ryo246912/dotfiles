@@ -20,6 +20,12 @@ config/zsh/.zshrc.secret
 config/sbx/allow-domains.*.txt
 config/sbx/mcp.*.yml
 
+## APM: Renovate の apm manager が lockfile 更新時に apm/ で実行する project scope の
+## `apm install` の生成物（.claude/・.agents/・apm_modules/ など）を PR に含めない。
+/apm/*
+!/apm/apm.yml
+!/apm/apm.lock.yaml
+
 ## claude
 settings.local.json
 
