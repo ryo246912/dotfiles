@@ -3,6 +3,7 @@
   "ignorePatterns": [
     "apm/apm.lock.yaml",
     ".mise/locks/**",
+    "config/mise/.mise/locks/**",
     "unmanaged/sidebery/**",
     "config/obsidian/**",
     "config/navi/**",

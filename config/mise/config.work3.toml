@@ -1,5 +1,6 @@
 [tools]
 "aqua:aws/aws-cli"           = "2.37.7"
+"aqua:biomejs/biome"         = "1.9.4"
 "aqua:pre-commit/pre-commit" = "4.6.2"
 java                         = "temurin-21"
 
