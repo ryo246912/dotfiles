@@ -47,6 +47,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:k1LoW/roots"                                          = "0.4.2"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:leg100/pug"                                           = "0.6.5"
+"aqua:mikefarah/yq"                                         = "4.53.6"
 "aqua:mvdan/sh"                                             = "3.14.1"
 "aqua:nektos/act"                                           = "0.2.89"
 "aqua:neovim/neovim"                                        = "0.12.5"
@@ -207,16 +208,15 @@ lefthook install
 # checkpoint が重くなるおそれがある。narrow に保つため、個別ファイルで列挙できる
 # ものだけを対象にしている。
 [dotfiles]
-"~/.apm/apm.lock.yaml"                  = { mode = "track" }
-"~/.apm/apm.yml"                        = { mode = "track" }
-"~/.claude/settings.json"               = { mode = "track" }
-"~/.codex/config.toml"                  = { mode = "track" }
-"~/.codex/hooks.json"                   = { mode = "track" }
-"~/.config"                             = { mode = "track" }
-"~/.config/alacritty/alacritty.toml"    = { mode = "track" }
-"~/.config/ghostty/config"              = { mode = "track" }
-"~/.config/git/config"                  = { mode = "track" }
-"~/.config/mise"                        = { mode = "track" }
-"~/.config/rio/config.toml"             = { mode = "track" }
-"~/.config/rulesync/.rulesync/mcp.json" = { mode = "track" }
-"~/.zshenv"                             = { mode = "track" }
+"~/.apm/apm.lock.yaml"               = { mode = "track" }
+"~/.apm/apm.yml"                     = { mode = "track" }
+"~/.claude/settings.json"            = { mode = "track" }
+"~/.codex/config.toml"               = { mode = "track" }
+"~/.codex/hooks.json"                = { mode = "track" }
+"~/.config"                          = { mode = "track" }
+"~/.config/alacritty/alacritty.toml" = { mode = "track" }
+"~/.config/ghostty/config"           = { mode = "track" }
+"~/.config/git/config"               = { mode = "track" }
+"~/.config/mise"                     = { mode = "track" }
+"~/.config/rio/config.toml"          = { mode = "track" }
+"~/.zshenv"                          = { mode = "track" }

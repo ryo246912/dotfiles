@@ -1,0 +1,8 @@
+# 特定の環境（work3 / private など）でだけ許可したいドメイン。
+# `cp allow-domains.work3.txt.example allow-domains.work3.txt` のように .example を外してコピーして使う。
+# allow-domains.<name>.txt は gitignore 済みで、mise run sandbox:setup が allow-domains.txt と一緒に読み込む。
+# 書式は allow-domains.txt と同じ（1行1パターン、`#` 以降はコメント）。
+
+# 社内ドキュメント・ツール
+# docs.example.com
+# **.example.internal

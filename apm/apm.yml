@@ -94,6 +94,9 @@ dependencies:
     - git: DietrichGebert/ponytail
       ref: v4.13.0
       alias: ponytail
+  # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
+  # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
+  # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
   mcp: []
 includes: auto
 scripts: {}

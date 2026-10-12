@@ -150,6 +150,13 @@ RUN --mount=type=secret,id=github_token \
 COPY --chown=agent:agent tasks /mise/tasks
 COPY --chown=agent:agent . ${AGENT_HOME}/.config/devcontainer
 
+# sandbox 内の Claude Code に、エージェント自身の設定（共有している ~/.claude.json など）にある
+# stdio サーバ（npx / uvx）を読み込ませない。sandbox で使う MCP はホストに登録した sbx mcp で、
+# gateway は URL で登録されるため remote（HTTP/SSE）は通す（remote の宛先は network policy で別途止まる）。
+# base image の managed-settings.json を上書きしないよう drop-in に置く。上の重い install layer を
+# 無効化しないよう install の後に COPY する。詳細は docs/docker-sandboxes.md の「MCP の扱い」参照。
+COPY claude/mcp-policy.sandbox.json /etc/claude-code/managed-settings.d/50-mcp.json
+
 # mise の trust は実行ユーザーごとに記録されるため、root で trust しても agent では効かない。
 # 代わりに trusted path を env で宣言する（sbx-agent は workspace を足した値を --env で渡す）。
 ENV MISE_TRUSTED_CONFIG_PATHS=/mise

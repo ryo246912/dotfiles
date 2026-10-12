@@ -204,13 +204,18 @@ echo "==> ホスト連携に必要な network policy を許可"
 # sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
 sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
 
-echo "==> 調査でよく読むドキュメントサイトを全 sandbox で許可"
-# 一覧は config/sbx/allow-domains.txt。kit ではなく global な policy で許可する理由は
+echo "==> 許可リストのドメインを全 sandbox で許可"
+# 一覧は config/sbx/allow-domains.txt（共通）と allow-domains.<name>.txt（work3 / private など
+# 環境ごと。gitignore 済み）。kit ではなく global な policy で許可する理由は
 # docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
-allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$MISE_PROJECT_ROOT/config/sbx/allow-domains.txt" | grep -v '^$' | paste -sd, -)
-if [ -n "$allow_domains" ]; then
-  sbx policy allow network "$allow_domains" || echo "warn: ドキュメントサイトの許可に失敗しました" >&2
-fi
+for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.txt "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
+  # allow-domains.*.txt が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$allow_file" ] || continue
+  allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow_file" | grep -v '^$' | paste -sd, -) || true
+  if [ -n "$allow_domains" ]; then
+    sbx policy allow network "$allow_domains" || echo "warn: $(basename "$allow_file") のドメインの許可に失敗しました" >&2
+  fi
+done
 
 echo "==> ホスト設定を反映"
 # ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
@@ -236,61 +241,138 @@ sbx policy ls || true
 '''
 
 ["sandbox:mcp"]
-description = "Register MCP servers on the host so sandboxes can reuse host-side auth"
+description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
 run = '''
 set -eu
 
-# ホスト側で一度だけ認証し、その認証情報を全 sandbox から使い回すための登録。
+# sandbox から使う MCP サーバをホストの sbx mcp に登録する。
 # OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
 # 注入するため、sandbox 内の agent は生の認証情報を読めない。
 #
-# ここで登録するのは「ホストの認証・ホストのリソースが必要なもの」だけにする。
-# npx で動く普通の MCP サーバは rulesync 経由でエージェント自身の設定に入れており、
-# そちらは sandbox 内（VM 内）で動くので devcontainer と同じ隔離が保たれる。
-#
-# 追加したら SBX_AGENT_STATIC_MCP か --static-mcp で sandbox に読み込ませる。
+# sandbox 内の agent は自身の MCP 設定（~/.claude.json など）を読まない（template の
+# managed settings で止めている）ため、sandbox で使う MCP はすべてここで登録する。
+# MCP の定義とバージョンは config/sbx/mcp.yml（共通）と mcp.<name>.yml（work3 / private など
+# 環境ごと。gitignore 済み）に APM の dependencies.mcp と同じ書式で書いており、
+# self-defined（registry: false）のエントリを sbx mcp add の引数に変換する。
 
-command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+for cmd in sbx yq jq; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+done
 
-registered() { sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$1"; }
+# 登録した定義（sbx mcp add の引数）をサーバごとに記録し、version などの変更を検出する
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-mcp"
+mkdir -p "$state_dir"
+
+registered_names=$(sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }') || registered_names=""
+is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
+
+# dependencies.mcp の各サーバを「name <TAB> url|command <TAB> sh クォート済みの sbx mcp add 引数」
+# の 1 行にする。
+# - remote: --url と、headers を --header 'Name: value' で渡す
+# - stdio: sbx mcp add に env を渡すオプションが無いため、env があれば `env K=V ... <command>` で包む
+#   （sbx の --args は `,` 区切りなので、`,` を含む引数はエラーにする）
+# - sbx_options（APM の書式には無い独自キー）は sbx mcp add の末尾にそのまま足す
+# - registry 参照（文字列形式や registry: false 以外）は解決後のコマンドが manifest に無いため対象外
+to_specs() {
+  # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
+  json=$(yq -o=json '.dependencies.mcp // []' "$1") || return 1
+  printf '%s\n' "$json" | jq -r '
+    .[]
+    | if (type != "object") or (.registry != false) then
+        "skip\t\(if type == "object" then .name else . end)\t"
+      else
+        .name as $name
+        | (.sbx_options // []) as $sbx_options
+        | if (.transport // "") == "stdio" then
+            ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
+            | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
+            | ($argv[1:] + (.args // [])) as $cmd_args
+            | if ($cmd_args | map(select(contains(","))) | length) > 0 then
+                error("\($name): args / env に , を含む値は sbx に渡せません")
+              else . end
+            | ["command", (["--command", $argv[0]]
+                + (if ($cmd_args | length) > 0 then ["--args", ($cmd_args | join(","))] else [] end))]
+          elif .url then
+            ["url", (["--url", .url]
+              + ([(.headers // {}) | to_entries[] | ["--header", "\(.key): \(.value)"]] | add // []))]
+          else
+            error("\($name): transport が stdio なら command、それ以外は url が必要です")
+          end
+        | .[0] as $type | .[1] as $add_args
+        | "\($name)\t\($type)\t\([$name] + $add_args + $sbx_options | @sh)"
+      end'
+}
 
 failed=""
+declared=" "
 note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
 
-# notion: OAuth。初回のみブラウザで認可する（トークンはホストのキーチェーンへ）
-if registered notion; then
-  echo "ℹ️ notion は既に登録済み"
-else
-  echo "==> notion を登録（ブラウザで認可します）"
-  sbx mcp add notion --url https://mcp.notion.com/mcp || note_failure notion
-fi
+register() {
+  if sbx mcp add "$@"; then
+    printf '%s\n' "$spec" >"$state_dir/$name"
+  else
+    note_failure "$name"
+  fi
+}
 
-# aws: ホストの ~/.aws の認証情報をそのまま使いたいので、ホスト側 stdio サーバとして登録する
-# （--command で登録したサーバはホストで動く。sandbox 内の agent は gateway 経由でのみ接続する）
-if registered aws-api; then
-  echo "ℹ️ aws-api は既に登録済み"
-else
-  echo "==> aws-api を登録（ホストの AWS 認証情報を使う）"
-  sbx mcp add aws-api --command uvx --args "awslabs.aws-api-mcp-server@latest" \
-    || note_failure aws-api
-fi
+for manifest in "$MISE_PROJECT_ROOT"/config/sbx/mcp.yml "$MISE_PROJECT_ROOT"/config/sbx/mcp.*.yml; do
+  # mcp.*.yml が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$manifest" ] || continue
+  echo "==> $(basename "$manifest")"
+  specs=$(to_specs "$manifest") || { note_failure "$(basename "$manifest")"; continue; }
+  # 一覧は fd 3 から読み、stdin は OAuth の認可などで sbx mcp add が使えるよう端末のまま残す
+  while IFS="$(printf '\t')" read -r name type spec <&3; do
+    [ -n "$name" ] || continue
+    if [ "$name" = skip ]; then
+      echo "ℹ️ $type は registry 参照のため sandbox には登録しません（registry: false で定義してください）"
+      continue
+    fi
+    case "$declared" in
+      *" $name "*)
+        echo "warn: $name は先に読んだファイルで定義済みのため、$(basename "$manifest") の定義は使いません" >&2
+        continue
+        ;;
+    esac
+    declared="${declared}${name} "
+    # spec は jq の @sh でクォート済みなので eval で安全に引数へ戻せる
+    eval "set -- $spec"
+    recorded=$(cat "$state_dir/$name" 2>/dev/null || true)
+    if ! is_registered "$name"; then
+      echo "==> $name を登録"
+      register "$@"
+    elif [ "$recorded" = "$spec" ]; then
+      echo "ℹ️ $name は登録済み（定義に変更なし）"
+    elif [ -z "$recorded" ] && [ "$type" = url ]; then
+      # この仕組みより前に登録した remote サーバ。登録し直すと OAuth の認可もやり直しになるため、
+      # 今の定義を記録するだけにする（以降に定義を変えたときは下の分岐で登録し直す）。
+      # sbx mcp ls からは登録済みの URL を確かめられないため、違う場合に気付けるよう案内を出す
+      printf '%s\n' "$spec" >"$state_dir/$name"
+      echo "ℹ️ $name は登録済み（今の定義を記録しました）"
+      echo "   登録済みの URL は確かめられないため、mcp*.yml と違う場合は sbx mcp rm $name してから再実行してください"
+    else
+      echo "==> $name の定義が変わったため登録し直します"
+      [ "$type" = url ] && echo "   （remote サーバのため OAuth の認可をやり直す場合があります）"
+      if sbx mcp rm "$name"; then
+        register "$@"
+      else
+        note_failure "$name"
+      fi
+    fi
+  done 3<<SPECS
+$specs
+SPECS
+done
 
-# chrome-devtools: ホストの Chrome に繋ぐ必要があるため、必ずホスト側で動かす
-if registered chrome-devtools; then
-  echo "ℹ️ chrome-devtools は既に登録済み"
-else
-  echo "==> chrome-devtools を登録（ホストの Chrome に接続）"
-  sbx mcp add chrome-devtools --command npx \
-    --args "-y,chrome-devtools-mcp@latest,--browser-url=http://localhost:9222" \
-    || note_failure chrome-devtools
-fi
+# 一覧から消したサーバは自動では消さない（OAuth トークンなども消えるため）。気付けるよう表示だけする
+for name in $registered_names; do
+  case "$declared" in *" $name "*) ;; *) echo "ℹ️ $name は mcp*.yml に無い登録です（不要なら sbx mcp rm $name）" ;; esac
+done
 
 echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sandbox で使うには --static-mcp か SBX_AGENT_STATIC_MCP を設定してください。例:"
-echo "  export SBX_AGENT_STATIC_MCP=notion,aws-api,chrome-devtools"
+echo "sbx-agent は mcp*.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then
