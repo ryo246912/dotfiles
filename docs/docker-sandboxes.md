@@ -408,7 +408,7 @@ sbx-agent --help
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
 4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
-   `LEFTHOOK_CONFIG` / `MISE_TRUSTED_CONFIG_PATHS`）と agent の設定ディレクトリ
+   `LEFTHOOK_CONFIG` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`）と agent の設定ディレクトリ
    （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
@@ -1038,14 +1038,14 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 `sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
-| 処理                          | 内容                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                           |
-| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                           |
-| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
-| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
-| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
-| lefthook のインストール       | task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ                |
+| 処理                          | 内容                                                                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                                                   |
+| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                                                   |
+| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す                               |
+| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記）                         |
+| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                                                     |
+| lefthook のインストール       | `INSTALL_LOCAL_LEFTHOOK=1` のときのみ。task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ |
 
 > [!NOTE]
 > sbx は `HTTP(S)_PROXY` を sandbox のプロキシに向けますが、既定の `NO_PROXY` には `0.0.0.0` が
@@ -1141,7 +1141,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | devcontainer でやっていたこと                                                                     | sandbox                                                                                 |
 | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                                |
-| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行                                                      |
+| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ。既定は無効） |
 | `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                                 |
 | `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                                 |
 | コミット署名（専用鍵 + `allowed_signers`）                                                        | ✅ ssh-agent forwarding で署名し、ホストの `allowed_signers` をマウントして検証もできる |
@@ -1159,19 +1159,19 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### コンテナ内でできていたこと
 
-| できていたこと                                       | sandbox                                                                 |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                    |
-| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                     |
-| lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install` |
-| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                            |
-| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）    |
-| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                  |
-| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている       |
-| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている          |
-| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている          |
-| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                    |
-| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）  |
+| できていたこと                                       | sandbox                                                                                                          |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                                                             |
+| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                                                              |
+| lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ） |
+| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                                                     |
+| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）                                             |
+| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                                                           |
+| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
+| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
+| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている                                                   |
+| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                                                             |
+| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）                                           |
 
 ### 残っている差分
 

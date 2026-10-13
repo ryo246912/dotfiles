@@ -37,6 +37,7 @@
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら config/sbx/mcp*.yml の全サーバ）
+#   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
 set -uo pipefail
@@ -536,6 +537,8 @@ add_env TERM xterm-256color
 add_env HOST_USER "${USER:-}"
 # devcontainer 専用の lint hook 設定を使う
 add_env LEFTHOOK_CONFIG lefthook.local.yml
+# lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
+add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
 add_env MISE_TRUSTED_CONFIG_PATHS "/mise:$WORKSPACE"
 if [[ "$HOST_BRIDGE" == true ]]; then

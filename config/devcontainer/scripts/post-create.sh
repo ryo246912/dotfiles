@@ -166,11 +166,17 @@ if [[ "$workspace_branch" == multi-worktree-* ]]; then
 elif [ -n "$workspace_root" ]; then
 	lefthook_repo_roots+=("$workspace_root")
 fi
-for repo_root in "${lefthook_repo_roots[@]}"; do
-	if ! install_lefthook "$repo_root"; then
-		echo "⚠️ ${repo_root} への Lefthook のインストールに失敗しましたが、残りの作成処理を続行します" >&2
-	fi
-done
+# 既定では lefthook.local.yml のコピーと hook のインストールを行わない。
+# 有効にする場合はホストで INSTALL_LOCAL_LEFTHOOK=1 を設定する（devcontainer.json の remoteEnv で渡る）。
+if [ "${INSTALL_LOCAL_LEFTHOOK:-0}" = "1" ]; then
+	for repo_root in "${lefthook_repo_roots[@]}"; do
+		if ! install_lefthook "$repo_root"; then
+			echo "⚠️ ${repo_root} への Lefthook のインストールに失敗しましたが、残りの作成処理を続行します" >&2
+		fi
+	done
+else
+	echo "ℹ️ INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook.local.yml の配置をスキップしました"
+fi
 
 # .claude.json のコピー（既存の処理）
 claude_config_host=~/.config/claude-config-host.json
