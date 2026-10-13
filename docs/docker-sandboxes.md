@@ -212,7 +212,7 @@ Settings > Resources > Advanced の Disk usage で見られます。
   従来経路に戻せます。隔離より資源効率を優先する場面では素直にこちらです。
 - **同じタスク内で Claude のセッションを増やすだけなら sandbox を増やさない。** sandbox の中で
   `←` / `/bg` / `claude agents` を使えば VM は 1 つのままです
-  （[`docs/claude-agent-view.md`](claude-agent-view.md#sandbox-ごとに起動する場合との比較)）。
+  （[`docs/ai.md`](ai.md#sandbox-ごとに起動する場合との比較)）。
 
 ## セットアップ
 
