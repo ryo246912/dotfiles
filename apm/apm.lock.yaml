@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-12T15:03:45.782660+00:00'
+generated_at: '2026-10-13T12:29:36.077136+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1313,8 +1313,8 @@ dependencies:
 - repo_url: mattpocock/skills
   name: grill-me
   host: github.com
-  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-  resolved_ref: v1.2.3
+  resolved_commit: 24fe0ef7737efae15c87225755e9f6f5965e4888
+  resolved_ref: v1.3.1
   version: unknown
   virtual_path: skills/productivity/grill-me
   is_virtual: true
@@ -1327,16 +1327,16 @@ dependencies:
   - .claude/skills/grill-me/SKILL.md
   - .claude/skills/grill-me/agents/openai.yaml
   deployed_file_hashes:
-    .agents/skills/grill-me/SKILL.md: sha256:6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54
+    .agents/skills/grill-me/SKILL.md: sha256:caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637
     .agents/skills/grill-me/agents/openai.yaml: sha256:c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b
-    .claude/skills/grill-me/SKILL.md: sha256:6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54
+    .claude/skills/grill-me/SKILL.md: sha256:caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637
     .claude/skills/grill-me/agents/openai.yaml: sha256:c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b
-  content_hash: sha256:0ac1a28d5e7ab05c4a51046c9d74fd7bfc070ba6a3b9ec8451bd274e746d67b6
+  content_hash: sha256:fe33aaa8e8dcd606107b1bfe3109f257b4a7e0f4907afd6506b62ccfb73cd1d3
 - repo_url: mattpocock/skills
   name: grilling
   host: github.com
-  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-  resolved_ref: v1.2.3
+  resolved_commit: 24fe0ef7737efae15c87225755e9f6f5965e4888
+  resolved_ref: v1.3.1
   version: unknown
   virtual_path: skills/productivity/grilling
   is_virtual: true
@@ -1349,11 +1349,11 @@ dependencies:
   - .claude/skills/grilling/SKILL.md
   - .claude/skills/grilling/agents/openai.yaml
   deployed_file_hashes:
-    .agents/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+    .agents/skills/grilling/SKILL.md: sha256:10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2
     .agents/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
-    .claude/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+    .claude/skills/grilling/SKILL.md: sha256:10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2
     .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
-  content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
+  content_hash: sha256:e98f109bca3d8889f673d9f32bf84086f85a70ff9e241f8a34a4560a07ab5a39
 - repo_url: plannotator/effective-html
   name: design-artifact
   host: github.com
@@ -3728,7 +3728,7 @@ deployments:
   owners:
   - mattpocock/skills/skills/productivity/grill-me
   active_owner: mattpocock/skills/skills/productivity/grill-me
-  content_hash: sha256:6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54
+  content_hash: sha256:caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637
 - kind: project-relative
   target: claude
   value: .claude/skills/grill-me/agents/openai.yaml
@@ -3755,7 +3755,7 @@ deployments:
   owners:
   - mattpocock/skills/skills/productivity/grilling
   active_owner: mattpocock/skills/skills/productivity/grilling
-  content_hash: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+  content_hash: sha256:10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2
 - kind: project-relative
   target: claude
   value: .claude/skills/grilling/agents/openai.yaml
@@ -6644,7 +6644,7 @@ deployments:
   owners:
   - mattpocock/skills/skills/productivity/grill-me
   active_owner: mattpocock/skills/skills/productivity/grill-me
-  content_hash: sha256:6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54
+  content_hash: sha256:caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637
 - kind: project-relative
   target: codex
   value: .agents/skills/grill-me/agents/openai.yaml
@@ -6671,7 +6671,7 @@ deployments:
   owners:
   - mattpocock/skills/skills/productivity/grilling
   active_owner: mattpocock/skills/skills/productivity/grilling
-  content_hash: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+  content_hash: sha256:10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2
 - kind: project-relative
   target: codex
   value: .agents/skills/grilling/agents/openai.yaml
