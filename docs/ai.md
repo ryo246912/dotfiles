@@ -43,6 +43,11 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## 複数セッションを並走させる（agent view）
+
+空のプロンプトで `←` を押すと出るセッション一覧（`claude agents`）の使い方は
+[`docs/claude-agent-view.md`](claude-agent-view.md) を参照。
+
 ## ステータスライン（prompt cache・rate limit・コンテキスト）
 
 Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
