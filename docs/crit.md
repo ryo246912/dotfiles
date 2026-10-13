@@ -111,7 +111,7 @@ crit@crit プラグインが提供する 2 つの skill を、**APM の外部依
 
 ## GitHub PRとreview commentを同期する
 
-このrepositoryでpinしているcrit v0.18.2では、`crit pull` / `crit push`でGitHub PRとlocal review fileを同期できます。
+このrepositoryでpinしているcrit v0.19.1では、`crit pull` / `crit push`でGitHub PRとlocal review fileを同期できます。
 どちらも内部でGitHub CLI (`gh`)を使います。最初にdevcontainer内で認証状態と対象PRを確認してください。
 
 ```bash
@@ -201,13 +201,92 @@ crit push --event request-changes -m "未対応の指摘があります"
 
 複数のcrit reviewがある場合は`crit status`で現在のreview fileを確認します。default以外の保存先を同期する場合は、同じ
 `--output <directory>`（短縮形`-o`）をpullとpushの両方へ指定します。たとえば`crit pull -o .crit 123`で取り込んだ後は、
-`crit push -o .crit --dry-run 123`で同じreview fileの投稿内容を確認します。`--session`はreview UIへの再接続用であり、
-v0.18.2の`pull` / `push` optionではありません。
+`crit push -o .crit --dry-run 123`で同じreview fileの投稿内容を確認します。同じdirectory・branchに複数のsessionが
+ある場合、`pull` / `push`は推測せずに失敗するので、`crit status`で確認したIDを`--session <id>`で指定します。
 
 > [!NOTE]
-> upstream v0.18.4ではGitLab MR syncも追加されていますが、このrepositoryは現在v0.18.2へpinしています。GitLab運用を
-> 始める場合は、crit本体とAPM skillsを同じreleaseへ更新し、`glab auth status`、`crit pull --forge gitlab`、
-> `crit push --forge gitlab --dry-run`を検証してから利用してください。
+> pin中のv0.19.1はGitLab MR sync（v0.18.4で追加）にも対応しています。GitLab運用を始める場合は、
+> `glab auth status`、`crit pull --forge gitlab`、`crit push --forge gitlab --dry-run`を検証してから利用してください。
+
+## 他人のPRをcritでreviewする（壁打ち → 選んだcommentだけPRへ投稿）
+
+前節の「推奨するPR review loop」は**自分のPR**についた指摘をagentに直させる流れです。ここでは**reviewerとして**
+PRを読む流れを扱います。PRへcheckoutし、critのUIでagentと壁打ちしながらcommentを書き、PRに残したいものだけを
+`crit push`で投稿します。
+
+この流れは`crit-pr-review` skill（`config/rulesync/.rulesync/skills/crit-pr-review/SKILL.md`、rulesyncでglobal配布）に
+まとめています。agentに`/crit-pr-review 123`（Codexでは`$crit-pr-review 123`）のように頼むと、以下を順に進めます。
+
+### 手順
+
+```bash
+# 1. PRを確認してcheckout（agentがcodeを読んだりtestを実行して根拠を確かめるため）
+gh pr view 123 --json number,title,headRefName,baseRefName
+gh pr checkout 123
+
+# 2. PRの差分（merge-base..head、GitHubと同じ範囲）をcritで開く
+crit pr 123
+crit pull 123        # 必要なら既存のGitHub review commentも取り込む
+
+# 3. UIでcommentを書き、Finish Review → agentがreplyで回答 → 再度crit pr 123 … を繰り返す
+
+# 4. 投稿するcommentを選んだら、review fileとdry-runで投稿内容を確認
+crit push --dry-run 123
+
+# 5. 投稿（既定はcomment。approve / request-changesは明示したときだけ）
+crit push -m "review summary" 123
+```
+
+壁打ちの相手は2通りあります。
+
+- **Finish Review**: 起動元のagentが未解決commentを読み、`crit comment --reply-to`で回答する（skillはcodeを編集しない）
+- **Send now**: devcontainerの`agent_cmd`で、comment単位で即時に別のagentへ質問する
+
+### `crit push`で何が投稿されるか
+
+`crit push`には「このcommentだけ投稿する」という選択optionはありません。投稿対象はreview fileの状態で決まります
+（v0.19.1のsourceで確認）。
+
+| review fileの状態                                   | push                                                   |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| 未resolve・`github_id`なしのline comment            | **投稿される**（1つのPR reviewのinline commentとして） |
+| resolve済みのline comment                           | 投稿されない                                           |
+| review-level comment（file / line指定なし）         | 投稿されない（local only）                             |
+| GitHub由来 / 投稿済みthreadへの`github_id`なしreply | **resolve状態に関係なく投稿される**                    |
+| 投稿済みcommentの本文をlocalで編集                  | 次のpushでGitHub側も編集される                         |
+| PRのheadが進んだ後の古いcomment                     | 投稿されず、staleとしてexport markdownへ退避される     |
+
+このため、次のように使い分けます。
+
+- **PRへ出さない壁打ちは、resolveするかreview-level commentに書く**。
+- **`crit pull`で取り込んだGitHub threadの中では壁打ちしない**。そのthreadについて相談したいときは、同じ行に別の
+  local commentを作る。
+- 壁打ちのreplyが付いたcommentを投稿したい場合は、同じ行に投稿用の新しいcommentを作り、元のthreadはresolveする。
+  元のthreadをそのまま投稿すると、次回以降のpushで壁打ちのreplyまでPRへ投稿されます。
+- resolve済みcommentに`--resolve`なしでreplyすると未resolveに戻り、投稿対象に復活します。
+
+### 投稿前の確認
+
+`crit push --dry-run`は新規line commentだけを表示し、reply・編集・削除は表示しません。replyも含めて確認するには、
+review fileを直接見ます。
+
+```bash
+review_file=$(crit status --json | jq -r '.review_file')
+jq -r '
+  (.files // {} | to_entries[] | .key as $p | .value.comments[]? |
+    ( select((.resolved | not) and .github_id == null and .dom_anchor == null)
+      | "NEW-COMMENT  \($p):\(.start_line)-\(.end_line) [\(.id)] replies=\(.replies // [] | length) \(.body | split("\n")[0])" ),
+    ( select(.github_id != null) | .id as $root | .replies[]? | select(.github_id == null)
+      | "NEW-REPLY    \($p) [\($root)] \(.body | split("\n")[0])" )),
+  (.review_comments[]? | select(.resolved | not) | "LOCAL-ONLY   (review) [\(.id)] \(.body | split("\n")[0])")
+' "$review_file"
+```
+
+- `NEW-COMMENT`: 今回のpushで新しく投稿されるline comment。`replies`が0でないものは、上記のとおり投稿用commentを作り直す
+- `NEW-REPLY`: 既存のGitHub threadへ投稿されるreply。意図しないものはUIから削除する
+- `LOCAL-ONLY`: 投稿されないreview-level comment
+
+投稿は`gh`で認証したuserとして行われます。agentが作成した文面を投稿する場合、AIが作成した旨を入れるかは都度決めます。
 
 ## difit・crit・Plannotator比較レポート
 
