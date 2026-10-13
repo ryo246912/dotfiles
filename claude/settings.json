@@ -54,6 +54,9 @@
   "git": {
     "includeCoAuthor": false
   },
+  "worktree": {
+    "bgIsolation": "none"
+  },
   "hooks": {
     "SessionStart": [
       {

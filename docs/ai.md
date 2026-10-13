@@ -135,7 +135,9 @@ claude agents --permission-mode plan --model opus --effort high
 - すでに linked worktree の中にいるとき（`multi-worktree` の worktree はこれに当たる）
 - git リポジトリではなく、`WorktreeCreate` hook も無いとき
 
-worktree を作らせたくない場合は設定で無効化できます。
+**このリポジトリでは無効化しています**（`claude/settings.json`）。dispatch したセッションも
+今の作業ディレクトリをそのまま編集するので、並列で同じファイルを触らないよう役割を分けるか、
+`multi-worktree` で worktree を分けてから起動します。
 
 ```json
 {
@@ -145,7 +147,7 @@ worktree を作らせたくない場合は設定で無効化できます。
 }
 ```
 
-一覧から削除すると **Claude が作った worktree も未コミットの変更ごと消えます。** 残したいものは
+有効にしている場合、一覧から削除すると **Claude が作った worktree も未コミットの変更ごと消えます。** 残したいものは
 先にコミット・push しておきます（未 push のコミットがある worktree は削除がブロックされます）。
 
 ### スクリプトから操作する
@@ -205,14 +207,14 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
   FS の露出制限）が丸ごと無くなります。** `--dangerously-skip-permissions` 前提の運用では
   ここが一番大きな差なので、単純に置き換えるのはおすすめしません。
 
-| 観点                    | セッションごとに sandbox      | ホストで agent view                  | 1 つの sandbox の中で agent view      |
-| ----------------------- | ----------------------------- | ------------------------------------ | ------------------------------------- |
-| Claude Code プロセス    | N 個                          | N 個 + supervisor                    | N 個 + supervisor                     |
-| VM / docker daemon      | N 個                          | 0                                    | 1 個                                  |
-| ディスク（template 等） | N 個分                        | 0                                    | 1 個分                                |
-| アイドル時の回収        | 無し（`sbx stop` を手で打つ） | 約 1 時間でプロセス停止              | プロセスは停止、VM は残る             |
-| 隔離                    | セッション間も VM で分離      | 無し（Claude Code の権限設定だけ）   | ホストとは分離、セッション間は同じ VM |
-| ファイル衝突の回避      | `multi-worktree` の worktree  | `.claude/worktrees/` に自動 worktree | 同左                                  |
+| 観点                    | セッションごとに sandbox      | ホストで agent view                | 1 つの sandbox の中で agent view      |
+| ----------------------- | ----------------------------- | ---------------------------------- | ------------------------------------- |
+| Claude Code プロセス    | N 個                          | N 個 + supervisor                  | N 個 + supervisor                     |
+| VM / docker daemon      | N 個                          | 0                                  | 1 個                                  |
+| ディスク（template 等） | N 個分                        | 0                                  | 1 個分                                |
+| アイドル時の回収        | 無し（`sbx stop` を手で打つ） | 約 1 時間でプロセス停止            | プロセスは停止、VM は残る             |
+| 隔離                    | セッション間も VM で分離      | 無し（Claude Code の権限設定だけ） | ホストとは分離、セッション間は同じ VM |
+| ファイル衝突の回避      | `multi-worktree` の worktree  | 無し（`bgIsolation: none`）        | 同左                                  |
 
 #### 使い分けの指針
 
@@ -222,8 +224,8 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
   `←` / `/bg` / `claude agents` を使う。VM は 1 つのまま、Claude のセッションだけ増やせます。
   sandbox の中では workspace だけが見えるので隔離はホストとの間で保たれ、増えるのは
   プロセス分のメモリだけです。ただし同じ VM 内のセッション同士は分離されないので、
-  同じファイルを触る作業は worktree を分けます（`multi-worktree` の worktree の中では
-  自動 worktree が作られない点に注意）。
+  同じファイルを触る作業は worktree を分けます（自動 worktree は無効化しているので
+  `multi-worktree` で分ける）。
 - **隔離が要らない軽い作業**（ドキュメント調査・質問など）: ホストで `claude agents` から dispatch。
   VM を立てるより圧倒的に軽量です。
 
