@@ -188,7 +188,7 @@ fi
 # global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
 # config dir に保存したメールアドレスを global config が更新されるまで使う。
 email_cache="$config_dir/statusline-account-email"
-if [ -f "$email_cache" ] && [ "$email_cache" -nt "$account_file" ]; then
+if [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
 	email=$(cat "$email_cache" 2>/dev/null)
 else
 	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)

@@ -578,7 +578,7 @@ ccmc
 ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sandbox preset を選ぶと、
 `sbx-agent` が次を自動でやってから agent にアタッチします。
 
-1. sandbox 名を `<repo>-<branch>-<agent>` から決める（既にあれば再利用）
+1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から決める（claude の preset は `a1` / `a2` / `w3` が prefix。既にあれば再利用）
 2. ホスト側の前提条件（github secret / `localhost:22` の policy）を冪等に整える
 3. ツールチェイン入り template があれば使って `sbx create`
    - ホストの git / aws / nvim 設定（read-only）と agent 設定ディレクトリをマウント
