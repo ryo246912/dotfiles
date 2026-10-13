@@ -33,6 +33,7 @@
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
+#   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
 # MCP は起動時に何も load しない（tool の定義を agent のコンテキストに入れないため）。既定は sandbox 内の
 # mcpc から使い、sbx gateway で使う場合は起動後に `mise run sandbox:load-mcp` で必要なものだけ load する
@@ -495,6 +496,8 @@ add_env TERM xterm-256color
 add_env HOST_USER "${USER:-}"
 # devcontainer 専用の lint hook 設定を使う
 add_env LEFTHOOK_CONFIG lefthook.local.yml
+# lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
+add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
 add_env MISE_TRUSTED_CONFIG_PATHS "/mise:$WORKSPACE"
 if [[ "$HOST_BRIDGE" == true ]]; then
