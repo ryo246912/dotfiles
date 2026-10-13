@@ -1,5 +1,5 @@
 ---
-name: crit-pr-review
+name: crit-pr
 description: 他人（または自分）の GitHub PR を crit の UI でレビューする skill。PR へ checkout して `crit pr` で差分を開き、UI 上でエージェントと壁打ちしながらコメントを書き、ユーザーが選んだコメントだけを `crit push` で PR へ投稿する。「crit で PR をレビューしたい」「PR を crit で見て壁打ちしたい」と明示されたときに使う。PR の指摘に対してコードを修正する用途は fix-review を使う。
 targets:
   - claudecode

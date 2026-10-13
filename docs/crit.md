@@ -214,8 +214,8 @@ crit push --event request-changes -m "未対応の指摘があります"
 PRを読む流れを扱います。PRへcheckoutし、critのUIでagentと壁打ちしながらcommentを書き、PRに残したいものだけを
 `crit push`で投稿します。
 
-この流れは`crit-pr-review` skill（`config/rulesync/.rulesync/skills/crit-pr-review/SKILL.md`、rulesyncでglobal配布）に
-まとめています。agentに`/crit-pr-review 123`（Codexでは`$crit-pr-review 123`）のように頼むと、以下を順に進めます。
+この流れは`crit-pr` skill（`config/rulesync/.rulesync/skills/crit-pr/SKILL.md`、rulesyncでglobal配布）に
+まとめています。agentに`/crit-pr 123`（Codexでは`$crit-pr 123`）のように頼むと、以下を順に進めます。
 
 ### 手順
 
