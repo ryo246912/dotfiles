@@ -28,7 +28,7 @@
     "AI_AGENT": "1",
     "LEFTHOOK_CONFIG": "lefthook.local.yml",
     // 1 のときだけ post-create で lefthook.local.yml を配置して hook をインストールする（既定: 無効）
-    "INSTALL_LOCAL_LEFTHOOK": "${localEnv:INSTALL_LOCAL_LEFTHOOK:0}",
+    "INSTALL_LOCAL_LEFTHOOK": "${localEnv:INSTALL_LOCAL_LEFTHOOK}",
     // workspace（/workspaces 配下と、同じ絶対パスに mount したホストのパス）の mise 設定を信頼する。
     // post-create の lefthook install などが mise を経由すると trust 確認の prompt が出て、
     // TTY のない ccmanager の devcontainer up では失敗するため。
