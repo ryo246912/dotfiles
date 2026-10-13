@@ -918,7 +918,7 @@ CockroachDB Cloud Basic
     ▼                                ▼
 Cloud Run上のagentsview pg serve     local CockroachDB（single-nodeのcontainer）
                                      │
-                                     │ agentsview pg serve（mise run agentsview:serve）
+                                     │ agentsview pg serve（mise run agentsview:serve:postgresql）
                                      ▼
                                      手元のviewer／SQL
 ```
@@ -947,7 +947,7 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                        |
 | 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                              |
-| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                                        |
+| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve:postgresql`で読む                             |
 | CockroachDB障害に備える                   | `agentsview:cockroach:merge`でdataをlocal CockroachDBへmergeし、`agentsview:cockroach:dump:local`で保存する。自動replicaとはみなさない |
 | localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない      |
 
@@ -968,7 +968,7 @@ mise run agentsview:cockroach:dump:local
 bash ~/.config/agentsview/scripts/localdb.sh restore
 
 # 取り込んだ内容をlocalのviewerで見る
-mise run agentsview:serve
+mise run agentsview:serve:postgresql
 ```
 
 CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
@@ -979,7 +979,7 @@ importはINSERTを一定件数ごとのtransactionへ分けて流す。Cockroach
 
 取り込みの前に、同じfilterで読み切るだけのpassを1度走らせる。dumpが途中で切れている場合、filterの出力をそのままpsqlへ繋ぐと、切れていると分かる時点では手前のchunkが既にcommit済みになってしまうためである。この検証passはDBへ触らないので、壊れたdumpでは1行も書き込まれない。
 
-#### `agentsview:serve`が`already locked`で止まる場合
+#### `agentsview:serve:postgresql`が`already locked`で止まる場合
 
 ```text
 fatal: pg push --watch: already locked (~/.agentsview/pg-watch.lock)
@@ -999,9 +999,9 @@ ps -o pid,ppid,args -e | grep -E 'localdb.sh serve|agentsview pg' | grep -v grep
 - `localdb.sh serve`が無く`agentsview pg push --watch`だけが残っている場合は、そのPIDへ`kill <pid>`を送る。
 - 親が生きている（別terminalやghostで動いている）場合は、そちらのserveを止める。
 
-止めたあと、もう一度psで何も出ないことを確かめてから`mise run agentsview:serve`を実行する。
+止めたあと、もう一度psで何も出ないことを確かめてから`mise run agentsview:serve:postgresql`を実行する。
 
-**ghostで動かす場合。** `ghost run mise run agentsview:serve`で起動し、`ghost stop`（TUIでは`s`）で止める。`mise run`はtaskを別process groupで起動するため、ghostのsignalはmiseにしか届かないが、次のように扱っている。
+**ghostで動かす場合。** `ghost run mise run agentsview:serve:postgresql`で起動し、`ghost stop`（TUIでは`s`）で止める。`mise run`はtaskを別process groupで起動するため、ghostのsignalはmiseにしか届かないが、次のように扱っている。
 
 | 止め方                                         | 挙動                                                                                                                                                                                 |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -1090,7 +1090,7 @@ localのengineが変わるため、各PCで初回だけ次を順に確認する�
 2. `mise run agentsview:cockroach:status` — engine versionと、machineごとのsession数が出る
 3. `fnox exec -- mise run agentsview:cockroach:merge` — remoteのrowが取り込まれ、tableごとの増分が出る。続けてもう一度実行すると増分が`+0 rows`になる（冪等）
 4. `mise run agentsview:cockroach:dump:local` → `bash ~/.config/agentsview/scripts/localdb.sh restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
-5. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
+5. `mise run agentsview:serve:postgresql` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
 
 1でcontainerが即`exited (1)`になる場合は、taskが自動で出すcontainer logを読む。CockroachDB imageのentrypointは`start-single-node`に渡せるflagを制限しており、`--listen-addr`のhostが`127.0.0.1`／`localhost`以外だとそこで止まる。
 
@@ -1274,12 +1274,13 @@ AgentsViewでtoken使用量・cost・作業傾向を分析するときの「ど�
 
 同じ数字でも、見る入口によって集計対象の端末が変わる。最初にここを間違えると「PCごとの合計と合わない」状態になる。
 
-| 入口                                                   | 集計対象                                                       | 向いている用途                               |
-| ------------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------- |
-| Cloud Run上のWeb UI（`$AGENTSVIEW_CLOUD_RUN_URL`）     | CockroachDB Cloudへpush済みの**全端末**                        | 普段の分析。端末をまたいだ合計・比較         |
-| `mise run agentsview:serve`（local CockroachDB）       | local CockroachDBへmergeした端末（dumpを取り込んだ分）＋このPC | Cloud Runを使わずに全端末をまとめて見る      |
-| `agentsview usage daily`／`stats`などのCLI             | **このPCのlocal SQLite archiveだけ**                           | このPCの日次cost、scriptやstatuslineへの組込 |
-| REST API（`/api/v1/usage/summary`など、Cloud Run経由） | Cloud Run UIと同じ（全端末）                                   | jqで加工したい、定期的に数値を取りたい       |
+| 入口                                                        | 集計対象                                                       | 向いている用途                                    |
+| ----------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| Cloud Run上のWeb UI（`$AGENTSVIEW_CLOUD_RUN_URL`）          | CockroachDB Cloudへpush済みの**全端末**                        | 普段の分析。端末をまたいだ合計・比較              |
+| `mise run agentsview:serve:postgresql`（local CockroachDB） | local CockroachDBへmergeした端末（dumpを取り込んだ分）＋このPC | Cloud Runを使わずに全端末をまとめて見る           |
+| `mise run agentsview:serve`（local SQLite）                 | **このPCのlocal SQLite archiveだけ**                           | このPCのsessionを手早く見る。Insights生成もできる |
+| `agentsview usage daily`／`stats`などのCLI                  | **このPCのlocal SQLite archiveだけ**                           | このPCの日次cost、scriptやstatuslineへの組込      |
+| REST API（`/api/v1/usage/summary`など、Cloud Run経由）      | Cloud Run UIと同じ（全端末）                                   | jqで加工したい、定期的に数値を取りたい            |
 
 - Web UIのPG-backed表示（`pg serve`）はread-onlyで、SSEによる自動更新がない。最新値は各画面の**refresh**ボタンか期間変更で取り直す。数字が古いときは、まず各PCから`agentsview pg push`（または`agentsview:cockroach:push:remote`）されているかを疑う。
 - CLIは`pg serve`を見ない。CLIの数字とCloud Run UIの数字が違うのは、CLIがこのPC分しか持っていないためで正常である。

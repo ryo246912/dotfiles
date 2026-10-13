@@ -37,6 +37,7 @@
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら config/sbx/mcp*.yml の全サーバ）
+#   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
@@ -608,20 +609,48 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
     # なく forwarded agent の公開鍵（key:: 形式）を指定する。
     #
+    # 署名に使う鍵は SBX_AGENT_SIGNING_KEY（既定 ~/.ssh/id_ed25519）に固定する。
+    # 以前は `ssh-add -L | head -n 1` で agent の先頭の鍵を使っていたが、再起動後は
+    # agent への鍵の登録順が変わりうる（他の SSH 接続で AddKeysToAgent が別の鍵を先に
+    # 入れる等）。GitHub に Signing key として登録していない鍵で署名すると Unverified に
+    # なり、そのたびに `gh ssh-key add` し直す羽目になるため、登録済みの鍵だけを使う。
+    #
     # macOS の ssh-agent は再起動直後は空で、~/.ssh/config の AddKeysToAgent は「SSH で
     # 鍵を使った時点」でしか登録しない。ホストの git が GPG 署名・HTTPS push だと SSH 鍵を
-    # 使う機会が無く、ずっと空のままになる。Keychain にパスフレーズを保存済みの鍵は
-    # 非対話で読み込めるので、空のときだけ試す（未保存なら何も起きない）。
+    # 使う機会が無く、ずっと空のままになる。そこで鍵が agent に無ければここで登録する。
+    # - パスフレーズ無しの鍵: ssh-add がそのまま読み込める（Keychain には何も保存されない
+    #   ため、--apple-load-keychain だけでは再起動のたびに空のままになっていた）
+    # - パスフレーズ付きの鍵: --apple-use-keychain により Keychain に保存済みなら非対話で、
+    #   未保存なら端末で一度だけパスフレーズを聞いて Keychain に保存する
     # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
+    signing_key="${SBX_AGENT_SIGNING_KEY:-${HOME}/.ssh/id_ed25519}"
+    signing_key="${signing_key%.pub}"
+    # agent 内の鍵との照合は「鍵種別 + 鍵本体」で行う（comment は agent 側と異なりうる）
+    signing_key_id=""
+    [[ -f "${signing_key}.pub" ]] && signing_key_id=$(awk '{ print $1 " " $2; exit }' "${signing_key}.pub")
+    agent_has_signing_key() {
+        ssh-add -L 2>/dev/null | awk '{ print $1 " " $2 }' | grep -qxF "$signing_key_id"
+    }
+
     agent_rc=0
     ssh-add -L >/dev/null 2>&1 || agent_rc=$?
-    if [[ $agent_rc -eq 1 && "$(uname -s)" == Darwin ]]; then
-        ssh-add -q --apple-load-keychain >/dev/null 2>&1 || true
-        agent_rc=0
-        ssh-add -L >/dev/null 2>&1 || agent_rc=$?
+    if [[ $agent_rc -ne 2 && -n "$signing_key_id" ]] && ! agent_has_signing_key; then
+        if [[ "$(uname -s)" == Darwin ]]; then
+            ssh-add -q --apple-load-keychain >/dev/null 2>&1 || true
+            agent_has_signing_key || ssh-add -q --apple-use-keychain "$signing_key" 2>/dev/null || true
+        else
+            ssh-add -q "$signing_key" 2>/dev/null || true
+        fi
     fi
     signing_pubkey=""
-    [[ $agent_rc -eq 0 ]] && signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1)
+    if [[ $agent_rc -ne 2 ]]; then
+        if [[ -n "$signing_key_id" ]]; then
+            agent_has_signing_key && signing_pubkey="$signing_key_id"
+        else
+            # 鍵ファイルが無い（agent にだけ鍵がある構成）場合は従来通り先頭の鍵を使う
+            signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1)
+        fi
+    fi
     if [[ -n "$signing_pubkey" ]]; then
         add_git_config gpg.format ssh
         add_git_config user.signingkey "key::${signing_pubkey}"
@@ -653,11 +682,11 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             log_warn "ホストの ssh-agent に接続できないため sandbox 内のコミット署名を無効化します"
             log_warn "  SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-（未設定）} を確認してください（tmux の古いセッションでは古いソケットを指していることがあります）"
         else
-            log_warn "ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します"
+            log_warn "署名用の鍵（${signing_key}）をホストの ssh-agent に登録できないため sandbox 内のコミット署名を無効化します"
             if [[ "$(uname -s)" == Darwin ]]; then
-                log_warn "  一度だけ ssh-add --apple-use-keychain ~/.ssh/id_ed25519 を実行すると、以降は自動で読み込みます"
+                log_warn "  一度だけ ssh-add --apple-use-keychain ${signing_key} を実行すると、以降は自動で読み込みます"
             else
-                log_warn "  ssh-add ~/.ssh/id_ed25519 で鍵を登録してください"
+                log_warn "  ssh-add ${signing_key} で鍵を登録してください"
             fi
         fi
     fi

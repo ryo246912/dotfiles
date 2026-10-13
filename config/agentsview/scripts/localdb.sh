@@ -9,7 +9,7 @@ set -euo pipefail
 #   push [args]          このmachineのsessionをlocalへpushする（agentsview:cockroach:push:local）
 #   dump                 local CockroachDBをdata-only INSERTのdumpへ書き出す
 #                        （agentsview:cockroach:dump:local）
-#   serve [args]         pushし続けながらlocalからAgentsViewを配信する（agentsview:serve）
+#   serve [args]         pushし続けながらlocalからAgentsViewを配信する（agentsview:serve:postgresql）
 #   restore [file]       dump（remote／local）の不足rowをlocalへmergeする
 #                        （agentsview:cockroach:merge がremote dumpのあとに呼ぶ）
 #   since                remote差分dumpの起点をmachineごとに出す（無ければ空。mergeが使う）
@@ -441,7 +441,7 @@ stop_stale_serve() {
 				echo "agentsview pg push --watch（pid ${pid}）の終了を待っています..." >&2
 				wait_exit "$pid" 15 && continue
 				echo "agentsview pg push --watch が既に動いています（pid ${pid}, parent ${ppid}）。" >&2
-				echo "別のagentsview:serveを止めるか、不要なら kill ${ppid} してから再実行してください" >&2
+				echo "別のagentsview:serve:postgresqlを止めるか、不要なら kill ${ppid} してから再実行してください" >&2
 				exit 1
 			fi
 		fi
