@@ -107,6 +107,10 @@ subagent のリクエストはこの統計に含まれません。
 リセット前の保存値を表示します。保存値は前回の応答時点のものなので、その後に他のセッションで
 使った分は最初の応答まで反映されません。
 
+メールアドレスも、数 MB になりうる global config を毎回 parse しないよう
+`${CLAUDE_CONFIG_DIR:-~/.claude}/statusline-account-email` へ保存し、global config が
+更新されるまでは保存値を表示します。
+
 ### cache を長持ちさせるための注意
 
 - 既定の cache TTL は、サブスクリプションのプラン内利用では main conversation が 1 時間、

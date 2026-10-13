@@ -185,7 +185,19 @@ if [ -n "$CLAUDE_CONFIG_DIR" ]; then
 else
 	account_file="$HOME/.claude.json"
 fi
-email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
+# global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
+# config dir に保存したメールアドレスを global config が更新されるまで使う。
+email_cache="$config_dir/statusline-account-email"
+if [ -f "$email_cache" ] && [ "$email_cache" -nt "$account_file" ]; then
+	email=$(cat "$email_cache" 2>/dev/null)
+else
+	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
+	# 書き込めない環境（読み取り専用 mount 等）では保存しないだけで表示は続ける。
+	if [ -f "$account_file" ]; then
+		tmp="$email_cache.$$"
+		{ printf '%s' "$email" >"$tmp" && mv -f "$tmp" "$email_cache" || rm -f "$tmp"; } 2>/dev/null
+	fi
+fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
 [ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
 
