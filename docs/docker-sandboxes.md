@@ -387,7 +387,7 @@ ccmanager のプリセットと `multi-worktree dev` の両方がこれを経由
 ```bash
 sbx-agent claude                              # カレントディレクトリを workspace に起動
 sbx-agent codex -- resume --yolo              # agent に引数を pass-through
-sbx-agent claude --config-dir ~/.claude-work3 --name-suffix w3
+sbx-agent claude --config-dir ~/.claude-work3 --name-prefix w3
 sbx-agent claude --branch=auto                # branch mode
 sbx-agent claude --rm                         # セッション終了時に削除
 sbx-agent claude --skills=off                 # 共有 skills を渡さない
@@ -398,7 +398,7 @@ sbx-agent --help
 
 やっていること:
 
-1. sandbox 名を `<repo>-<branch>-<agent>[-<suffix>]` から生成する
+1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
@@ -474,13 +474,14 @@ extra_workspaces = [
 
 `config/ccmanager/config.json` の `commandPresets` に、通常 preset と 1:1 対応する
 sandbox preset を用意しています。claude は account ごとに別 sandbox になります
-（env は作成時に固定されるため、`--name-suffix` で名前を分けています）。
+（env は作成時に固定されるため、`--name-prefix` で branch 名の前に account の識別子
+（`a1` / `a2` / `w3`）を入れて名前を分けています）。
 
 | preset id      | 起動内容                                                            |
 | -------------- | ------------------------------------------------------------------- |
-| `sbx`          | `sbx-agent claude`（`~/.claude`）                                   |
-| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --name-suffix a2` |
-| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --name-suffix w3`    |
+| `sbx`          | `sbx-agent claude --name-prefix a1`（`~/.claude`）                  |
+| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --name-prefix a2` |
+| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --name-prefix w3`    |
 | `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
 | `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
 
