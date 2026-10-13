@@ -168,10 +168,11 @@ fi
 # 未指定時は ~/.claude.json）の oauthAccount.emailAddress。API キー利用などで無い場合はラベルのみ。
 config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 config_dir="${config_dir%/}"
-case "${config_dir##*/}" in
+config_name="${config_dir##*/}"
+case "$config_name" in
 .claude) account_label="account1" ;;
-.claude-*) account_label="${config_dir##*/.claude-}" ;;
-*) account_label="${config_dir##*/}" ;;
+.claude-*) account_label="${config_name#.claude-}" ;;
+*) account_label="$config_name" ;;
 esac
 case "$account_label" in
 account1) account_color='\033[1;97;44m' ;;
