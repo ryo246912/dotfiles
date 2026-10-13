@@ -337,7 +337,7 @@ set -eu
 
 # 【オプション】既定の経路は mcpc（mise run sandbox:mcpc）。こちらは MCP を sandbox 内の agent の
 # native MCP として使う経路で、gateway に載せた tool の定義は agent のコンテキストに常に入る。
-# 戻す場合は SBX_AGENT_MCP_GATEWAY=1 で sbx-agent に全サーバを読み込ませる（docs/mcpc.md）。
+# add した後、起動済みの sandbox に mise run sandbox:load-mcp で必要なものだけ load する（docs/mcpc.md）。
 #
 # sandbox から使う MCP サーバをホストの sbx mcp に登録する。
 # OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
@@ -470,7 +470,7 @@ echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sandbox の agent に読み込ませるには SBX_AGENT_MCP_GATEWAY=1 で sbx-agent を起動します（--static-mcp で絞り込めます）。"
+echo "sandbox に読み込むには起動後に mise run sandbox:load-mcp を実行します（sandbox と server を fzf で選ぶ）。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then
@@ -499,13 +499,15 @@ main() {
   sandbox="${1:-}"
   [ "$#" -gt 0 ] && shift
   if [ -z "$sandbox" ]; then
-    sandboxes=$(sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }')
+    listing=$(sbx ls) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    sandboxes=$(printf '%s\n' "$listing" | awk 'NR > 1 { print $1 }')
     [ -n "$sandboxes" ] || { echo "error: sandbox がありません（sbx ls）" >&2; exit 1; }
     sandbox=$(printf '%s\n' "$sandboxes" | fzf --prompt 'sandbox> ' --header 'MCP を load する sandbox を選ぶ') || exit 130
   fi
 
   if [ "$#" -eq 0 ]; then
-    names=$(sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }')
+    listing=$(sbx mcp ls) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+    names=$(printf '%s\n' "$listing" | awk 'NR > 1 { print $1 }')
     [ -n "$names" ] || { echo "error: add 済みの MCP サーバがありません（mise run sandbox:add-mcp）" >&2; exit 1; }
     selected=$(printf '%s\n' "$names" | fzf --multi --prompt 'mcp> ' --header "Tab で複数選択して ${sandbox} に load") || exit 130
     # shellcheck disable=SC2086 # 名前は空白を含まない（sbx mcp ls の 1 列目）

@@ -1192,11 +1192,11 @@ agent のコンテキストに入れないため）。server は host で動か�
 経由で接続します。sbx の gateway に載せて agent の native MCP として使う経路も、オプションで残しています。
 定義・設定の仕組み・2 つの経路の比較は [`docs/mcpc.md`](mcpc.md) にまとめています。
 
-| 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                            |
-| ---------------------------------------------------- | --------------------- | --------------------------------------------------------------------------- |
-| mcpc + host の mcpc proxy（`sandbox:mcpc`）          | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する    |
-| `sbx mcp` の gateway（`sandbox:add-mcp`）            | **ホスト** / リモート | オプション。`SBX_AGENT_MCP_GATEWAY=1` で agent の native MCP として読み込む |
-| エージェント自身の MCP 設定（`~/.claude.json` など） | sandbox 内の VM       | ❌ 読み込ませない（下記）                                                   |
+| 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                                            |
+| ---------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| mcpc + host の mcpc proxy（`sandbox:mcpc`）          | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する                    |
+| `sbx mcp` の gateway（`sandbox:add-mcp`）            | **ホスト** / リモート | オプション。起動後に `sandbox:load-mcp` で必要な server だけ agent の native MCP に読み込む |
+| エージェント自身の MCP 設定（`~/.claude.json` など） | sandbox 内の VM       | ❌ 読み込ませない（下記）                                                                   |
 
 ```bash
 # host
