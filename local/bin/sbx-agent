@@ -12,8 +12,8 @@
 #   agent   : claude | codex | copilot | shell など sbx が対応する agent 名
 #
 # Options:
-#   --name NAME        sandbox 名（既定: <repo>-<branch>-<agent>）
-#   --name-suffix SFX  既定の sandbox 名の末尾に付ける識別子（--config-dir と併用する）
+#   --name NAME        sandbox 名（既定: <repo>-[<prefix>-]<branch>-<agent>）
+#   --name-prefix PFX  既定の sandbox 名で branch の前に付ける識別子（--config-dir と併用する）
 #   --workspace DIR    primary workspace（既定: カレントディレクトリ）
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
@@ -74,7 +74,7 @@ AGENT="$1"
 shift
 
 SANDBOX_NAME=""
-NAME_SUFFIX=""
+NAME_PREFIX=""
 WORKSPACE="$PWD"
 CONFIG_DIR=""
 BRANCH=""
@@ -165,11 +165,11 @@ while [[ $# -gt 0 ]]; do
             SANDBOX_NAME="$1"
             ;;
         --name=*) SANDBOX_NAME="${1#*=}" ;;
-        --name-suffix)
-            shift && require_value --name-suffix $#
-            NAME_SUFFIX="$1"
+        --name-prefix)
+            shift && require_value --name-prefix $#
+            NAME_PREFIX="$1"
             ;;
-        --name-suffix=*) NAME_SUFFIX="${1#*=}" ;;
+        --name-prefix=*) NAME_PREFIX="${1#*=}" ;;
         --workspace)
             shift && require_value --workspace $#
             WORKSPACE="$1"
@@ -338,7 +338,7 @@ WORKSPACE=$(cd "$(expand_tilde "$WORKSPACE")" 2>/dev/null && pwd) || {
     exit 1
 }
 
-# sandbox 名: <repo>-<branch>-<agent>
+# sandbox 名: <repo>-[<prefix>-]<branch>-<agent>
 # sbx の sandbox 名は hostname 相当のため、英数字とハイフンのみに正規化する
 sanitize_name() {
     printf '%s' "$1" \
@@ -352,7 +352,7 @@ if [[ -z "$SANDBOX_NAME" ]]; then
     branch=$(git -C "$WORKSPACE" rev-parse --abbrev-ref HEAD 2>/dev/null) || branch=""
     # commit の無いリポジトリでは --abbrev-ref HEAD が "HEAD" を返す
     [[ -z "$branch" || "$branch" == "HEAD" ]] && branch="main"
-    SANDBOX_NAME=$(sanitize_name "$(basename "$repo")-${branch}-${AGENT}${NAME_SUFFIX:+-$NAME_SUFFIX}")
+    SANDBOX_NAME=$(sanitize_name "$(basename "$repo")-${NAME_PREFIX:+$NAME_PREFIX-}${branch}-${AGENT}")
     [[ -z "$SANDBOX_NAME" ]] && SANDBOX_NAME="sbx-${AGENT}"
 fi
 # sandbox 名は 63 文字以内で、末尾がハイフン・ピリオドでないことが要求される

@@ -161,6 +161,46 @@ if [ -n "$cwd" ]; then
 fi
 [ -n "$branch" ] && branch=$(printf '\033[36m%s\033[0m' "$branch")
 
+# ログイン中のアカウントを先頭にバッジで表示する（例: [account2] foo@example.com）。
+# ラベルは config dir 名から決める: ~/.claude → account1、~/.claude-<name> → <name>。
+# バッジの色はアカウントごとに固定（account1 青・account2 紫・work3 黄・その他 灰）。
+# メールアドレスは Claude Code の global config（CLAUDE_CONFIG_DIR 指定時は <dir>/.claude.json、
+# 未指定時は ~/.claude.json）の oauthAccount.emailAddress。API キー利用などで無い場合はラベルのみ。
+config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+config_dir="${config_dir%/}"
+config_name="${config_dir##*/}"
+case "$config_name" in
+.claude) account_label="account1" ;;
+.claude-*) account_label="${config_name#.claude-}" ;;
+*) account_label="$config_name" ;;
+esac
+case "$account_label" in
+account1) account_color='\033[1;97;44m' ;;
+account2) account_color='\033[1;97;45m' ;;
+work3) account_color='\033[1;30;43m' ;;
+*) account_color='\033[1;97;100m' ;;
+esac
+if [ -n "$CLAUDE_CONFIG_DIR" ]; then
+	account_file="$config_dir/.claude.json"
+else
+	account_file="$HOME/.claude.json"
+fi
+# global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
+# config dir に保存したメールアドレスを global config が更新されるまで使う。
+email_cache="$config_dir/statusline-account-email"
+if [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
+	email=$(cat "$email_cache" 2>/dev/null)
+else
+	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
+	# 書き込めない環境（読み取り専用 mount 等）では保存しないだけで表示は続ける。
+	if [ -f "$account_file" ]; then
+		tmp="$email_cache.$$"
+		{ printf '%s' "$email" >"$tmp" && mv -f "$tmp" "$email_cache" || rm -f "$tmp"; } 2>/dev/null
+	fi
+fi
+account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
+[ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
+
 # session id（`claude --resume <id>` 用）を灰色で表示する。
 session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 [ -n "$session" ] && session=$(printf '\033[90m%s\033[0m' "$session")
@@ -175,8 +215,8 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: branch・モデル・コンテキスト・session id / 2 行目: rate limit・cache
-line1=$(join_parts "$branch" "$model_line" "$ctx_line" "$session")
+# 1 行目: アカウント・branch・モデル・コンテキスト・session id / 2 行目: rate limit・cache
+line1=$(join_parts "$account" "$branch" "$model_line" "$ctx_line" "$session")
 line2=$(join_parts "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
