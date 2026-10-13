@@ -231,7 +231,7 @@ select_action() {
 	local actions="lazygit	Lazygitでリポジトリを開く
 livediff	livediffでファイル変更をリアルタイム表示
 nvim	Neovimでディレクトリを開く
-hunk	hunkでブランチの差分を表示
+hunk	hunkでremoteのデフォルトブランチとHEADの差分を表示
 cd	ディレクトリに移動する（新しいシェル）"
 
 	# fzfでアクション選択
@@ -349,7 +349,37 @@ open_hunk() {
 	fi
 
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
-	"$hunk_cmd" diff "main...$branch_name"
+
+	local base_ref
+	base_ref=$(get_remote_default_ref) || exit 1
+	"$hunk_cmd" diff "${base_ref}...HEAD"
+}
+
+# 現在のリポジトリのremoteのデフォルトブランチ参照(例: origin/main)を取得
+# 優先順位: 上流ブランチのremote → origin、<remote>/HEAD の symbolic-ref → main → master
+get_remote_default_ref() {
+	local remote default_ref
+
+	remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null | cut -d/ -f1)
+	if [ -z "$remote" ] || ! git remote | grep -qx "$remote"; then
+		remote="origin"
+	fi
+
+	default_ref=$(git symbolic-ref --short "refs/remotes/$remote/HEAD" 2>/dev/null)
+	if [ -n "$default_ref" ]; then
+		echo "$default_ref"
+		return 0
+	fi
+
+	local branch
+	for branch in main master; do
+		if git show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
+			echo "$remote/$branch"
+			return 0
+		fi
+	done
+
+	error_exit "$remote のデフォルトブランチを特定できません (git remote set-head $remote --auto を試してください)"
 }
 
 # ディレクトリに移動（新しいシェル）
@@ -658,7 +688,7 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
   lazygit         Lazygitでリポジトリを開く
   livediff        livediffでファイル変更をリアルタイム表示
   nvim            Neovimでディレクトリを開く
-  hunk            hunkでブランチの差分を表示
+  hunk            hunkでremoteのデフォルトブランチとHEADの差分を表示
   cd              ディレクトリに移動する（新しいシェル）
 
 補足:
