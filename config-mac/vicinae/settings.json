@@ -79,7 +79,7 @@
       "@lucaschultz/store.raycast.port-manager": {
          "entrypoints": {
             "kill-listening-process": {
-               "enabled": false
+               "enabled": true
             },
             "named-ports": {
                "enabled": false
