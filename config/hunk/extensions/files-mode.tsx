@@ -4,13 +4,15 @@
 // 手動で切り替える手段が無い。この拡張は組み込み pane (hunk:files) を置き換え、
 // `S` キー (コマンド id: files-mode.toggle) で tree / flat を切り替えられるようにする。
 //
-// `F` キー (コマンド id: files-mode.focus) で一覧にフォーカスし、キーボードで操作できる:
+// vim のウィンドウ移動と同じく Ctrl-W → h で一覧に、Ctrl-W → l (または Esc) で diff に
+// フォーカスを移す (Ctrl-W → w で行き来)。一覧にフォーカス中は以下のキーで操作できる:
 //   j / k (↓ / ↑)   行を移動 (ファイル行に乗ると diff もそのファイルへ移動)
 //   g / G           先頭 / 末尾へ
 //   l (→)           ディレクトリを開く (開いていれば最初の子へ)
 //   h (←)           ディレクトリを閉じる (閉じていれば・ファイル上なら親ディレクトリへ)
 //   Enter           ディレクトリなら開閉、ファイルならフォーカスを抜けて diff に戻る
-//   Esc / F         フォーカスを抜ける
+//   /               ファイル名フィルタに入力 (diff 側の / は本文検索のまま)
+//   Esc             フォーカスを抜ける
 //   それ以外のキーは通常どおり hunk に渡す (q で終了など)
 //
 // 初期モードは ~/.config/hunk/config.toml で変更できる:
@@ -23,6 +25,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from
 import type {
   ExtensionDiffFile,
   ExtensionKeyEvent,
+  ExtensionKeyboardModeContext,
   ExtensionKeyboardModeKeyResult,
   ExtensionPaneProps,
   ExtensionPaneTheme,
@@ -617,10 +620,25 @@ export default function registerFilesMode(hunk: HunkExtensionAPI) {
     ctx.notify(`Files: ${next}`);
   });
 
+  // Ctrl-W の次のキーを待つモード (diff にフォーカスがあるとき用)
+  hunk.registerKeyboardMode({
+    id: "window",
+    title: "Ctrl-W",
+    onKey(key, ctx) {
+      if (isChar(key, "h") || key.name === "left" || isChar(key, "w") || isCtrlW(key)) {
+        ctx.keyboardModes.enterMode("focus");
+        return "handled";
+      }
+      // l などは diff にフォーカスしたまま。それ以外のキーも vim と同じく取り消して捨てる
+      return "exit";
+    },
+  });
+
   hunk.registerKeyboardMode({
     id: "focus",
     title: "Files",
     onEnter() {
+      windowPending = false;
       const selected = paneLink?.selectedFileId;
       updateStore((state) => ({
         ...state,
@@ -629,14 +647,20 @@ export default function registerFilesMode(hunk: HunkExtensionAPI) {
       }));
     },
     onExit() {
+      windowPending = false;
       updateStore((state) => ({ ...state, focused: false }));
     },
-    onKey(key) {
-      return handleFocusKey(key);
+    onKey(key, ctx) {
+      return handleFocusKey(key, ctx);
     },
   });
 
-  hunk.registerCommand({ id: "focus", title: "Focus files pane", key: "F" }, (ctx) => {
+  hunk.registerCommand({ id: "window", title: "Window command (Ctrl-W)", key: "ctrl+w" }, (ctx) => {
+    ctx.keyboardModes.enterMode("window");
+  });
+
+  // キー割り当て無し: [keybindings] "files-mode.focus" = "..." で直接フォーカスするキーを足せる
+  hunk.registerCommand({ id: "focus", title: "Focus files pane" }, (ctx) => {
     if (ctx.keyboardModes.isActive("focus")) {
       ctx.keyboardModes.exitMode();
       return;
@@ -649,8 +673,15 @@ export default function registerFilesMode(hunk: HunkExtensionAPI) {
 // ---- フォーカス中のキー操作 ----
 
 function isChar(key: ExtensionKeyEvent, char: string) {
-  return key.sequence === char;
+  return !key.ctrl && !key.meta && !key.option && key.sequence === char;
 }
+
+function isCtrlW(key: ExtensionKeyEvent) {
+  return (key.ctrl && key.name === "w") || key.sequence === "\x17";
+}
+
+// 一覧にフォーカス中に Ctrl-W を押し、次のキーを待っているか
+let windowPending = false;
 
 function moveCursor(rows: readonly NavRow[], index: number) {
   const row = rows[Math.max(0, Math.min(rows.length - 1, index))];
@@ -661,9 +692,28 @@ function moveCursor(rows: readonly NavRow[], index: number) {
   }
 }
 
-function handleFocusKey(key: ExtensionKeyEvent): ExtensionKeyboardModeKeyResult {
+function handleFocusKey(
+  key: ExtensionKeyEvent,
+  ctx: ExtensionKeyboardModeContext,
+): ExtensionKeyboardModeKeyResult {
+  if (windowPending) {
+    windowPending = false;
+    if (isChar(key, "l") || key.name === "right" || isChar(key, "w") || isCtrlW(key)) {
+      return "exit";
+    }
+    // h などは一覧にフォーカスしたまま。それ以外のキーも取り消して捨てる
+    return "handled";
+  }
+  if (isCtrlW(key)) {
+    windowPending = true;
+    return "handled";
+  }
   if (key.ctrl || key.meta || key.option) return "pass";
-  if (key.name === "escape" || isChar(key, "F")) return "exit";
+  if (key.name === "escape") return "exit";
+  if (isChar(key, "/")) {
+    ctx.commands.execute("hunk.review.focusFilter");
+    return "handled";
+  }
 
   const rows = paneLink?.rows ?? [];
   if (rows.length === 0) return "pass";
