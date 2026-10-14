@@ -214,7 +214,7 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
 | ディスク（template 等） | N 個分                        | 0                                  | 1 個分                                |
 | アイドル時の回収        | 無し（`sbx stop` を手で打つ） | 約 1 時間でプロセス停止            | プロセスは停止、VM は残る             |
 | 隔離                    | セッション間も VM で分離      | 無し（Claude Code の権限設定だけ） | ホストとは分離、セッション間は同じ VM |
-| ファイル衝突の回避      | `multi-worktree` の worktree  | 無し（`bgIsolation: none`）        | 同左                                  |
+| ファイル衝突の回避      | `multi-worktree` の worktree  | 無し（`bgIsolation: none`）        | 無し（役割を分ける）                  |
 
 #### 使い分けの指針
 
@@ -224,8 +224,10 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
   `←` / `/bg` / `claude agents` を使う。VM は 1 つのまま、Claude のセッションだけ増やせます。
   sandbox の中では workspace だけが見えるので隔離はホストとの間で保たれ、増えるのは
   プロセス分のメモリだけです。ただし同じ VM 内のセッション同士は分離されないので、
-  同じファイルを触る作業は worktree を分けます（自動 worktree は無効化しているので
-  `multi-worktree` で分ける）。
+  同じファイルを書き換える作業は並走させず、2 つ目以降は調査・レビューなど読むだけの役割にします。
+  sandbox の中からは `multi-worktree` を実行できず（設定ファイルが無い）、ホストで新しく作った
+  worktree も起動済みの sandbox には見えないので、編集を並列にしたいときは
+  ホストで `multi-worktree` の別タスクとして別の sandbox を立てます。
 - **隔離が要らない軽い作業**（ドキュメント調査・質問など）: ホストで `claude agents` から dispatch。
   VM を立てるより圧倒的に軽量です。
 
