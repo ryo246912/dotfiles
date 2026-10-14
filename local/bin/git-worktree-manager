@@ -231,7 +231,7 @@ select_action() {
 	local actions="lazygit	Lazygitでリポジトリを開く
 livediff	livediffでファイル変更をリアルタイム表示
 nvim	Neovimでディレクトリを開く
-hunk	hunkでブランチの差分を表示
+hunk	hunkでbase(デフォルトブランチ/stack下のブランチ)とHEADの差分を表示
 cd	ディレクトリに移動する（新しいシェル）"
 
 	# fzfでアクション選択
@@ -349,7 +349,86 @@ open_hunk() {
 	fi
 
 	cd "$worktree_path" || error_exit "ディレクトリへの移動に失敗: $worktree_path"
-	"$hunk_cmd" diff "main...$branch_name"
+
+	local base_ref
+	base_ref=$(select_hunk_base) || exit 1
+	"$hunk_cmd" diff "${base_ref}...HEAD"
+}
+
+# hunkの差分のbaseを選択
+# 候補: remoteのデフォルトブランチ(merge-base) と、merge-base〜HEAD 間にあるlocalブランチ
+# 例: origin/main ─ A ─ B ─ C(HEAD) なら merge-base / A / B が候補 (候補が1つならfzfを省略)
+select_hunk_base() {
+	local default_ref merge_base head_sha
+	default_ref=$(get_remote_default_ref) || exit 1
+	merge_base=$(git merge-base "$default_ref" HEAD) ||
+		error_exit "$default_ref と HEAD の merge-base を取得できません"
+	head_sha=$(git rev-parse HEAD)
+
+	# 表示用: ref<TAB>ラベル<TAB>merge-baseからのコミット数 (stackの下から順に並べる)
+	local candidates
+	candidates=$(printf '%s\t%s\t%s\n' "$default_ref" "$default_ref (merge-base $(git rev-parse --short "$merge_base"))" 0)
+
+	local branch sha distance
+	while IFS=$'\t' read -r branch sha; do
+		[ -z "$branch" ] && continue
+		# HEAD自身やmerge-baseと同じ位置のブランチは差分が無い/重複するので除外
+		if [ "$sha" = "$head_sha" ] || [ "$sha" = "$merge_base" ]; then
+			continue
+		fi
+		distance=$(git rev-list --count "${merge_base}..${sha}")
+		candidates+=$'\n'"$(printf '%s\t%s\t%s' "$branch" "$branch" "$distance")"
+	done < <(git for-each-ref --merged HEAD --contains "$merge_base" \
+		--format=$'%(refname:short)\t%(objectname)' refs/heads/)
+
+	candidates=$(printf '%s\n' "$candidates" | sort -t$'\t' -k3,3n -k1,1)
+
+	if [ "$(printf '%s\n' "$candidates" | wc -l)" -eq 1 ]; then
+		printf '%s\n' "$candidates" | cut -f1
+		return 0
+	fi
+
+	local selected
+	selected=$(printf '%s\n' "$candidates" | fzf \
+		--header="hunkの差分のbaseを選択してください (base...HEAD)" \
+		--delimiter='\t' \
+		--with-nth=2 \
+		--preview='git log --oneline --color=always {1}...HEAD; echo; git diff --stat --color=always {1}...HEAD' \
+		--preview-window="right:60%")
+
+	if [ -z "$selected" ]; then
+		echo "${YELLOW}base選択がキャンセルされました${NC}" >&2
+		return 1
+	fi
+
+	printf '%s\n' "$selected" | cut -f1
+}
+
+# 現在のリポジトリのremoteのデフォルトブランチ参照(例: origin/main)を取得
+# 優先順位: 上流ブランチのremote → origin、<remote>/HEAD の symbolic-ref → main → master
+get_remote_default_ref() {
+	local remote default_ref
+
+	remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null | cut -d/ -f1)
+	if [ -z "$remote" ] || ! git remote | grep -qx "$remote"; then
+		remote="origin"
+	fi
+
+	default_ref=$(git symbolic-ref --short "refs/remotes/$remote/HEAD" 2>/dev/null)
+	if [ -n "$default_ref" ]; then
+		echo "$default_ref"
+		return 0
+	fi
+
+	local branch
+	for branch in main master; do
+		if git show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
+			echo "$remote/$branch"
+			return 0
+		fi
+	done
+
+	error_exit "$remote のデフォルトブランチを特定できません (git remote set-head $remote --auto を試してください)"
 }
 
 # ディレクトリに移動（新しいシェル）
@@ -658,7 +737,7 @@ Git Worktree Manager - git worktree / multi-worktree の管理とアクション
   lazygit         Lazygitでリポジトリを開く
   livediff        livediffでファイル変更をリアルタイム表示
   nvim            Neovimでディレクトリを開く
-  hunk            hunkでブランチの差分を表示
+  hunk            hunkでbase(デフォルトブランチ/stack下のブランチ)とHEADの差分を表示
   cd              ディレクトリに移動する（新しいシェル）
 
 補足:

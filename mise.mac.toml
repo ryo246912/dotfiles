@@ -9,6 +9,6 @@
 "~/.config/vicinae"                       = { source = "config-mac/vicinae", mode = "symlink-each" }
 
 [dotfiles."~/.config"]
-exclude = ["agentsview/tests", "*win*", "atuin/fly.toml"]
+exclude = ["agentsview/tests", "hunk/extensions", "*win*", "atuin/fly.toml"]
 mode    = "symlink-each"
 source  = "config"

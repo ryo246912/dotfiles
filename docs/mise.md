@@ -587,8 +587,8 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     実処理としての無駄（再ダウンロード等）は発生しない。
   - git pull 後の `post-merge` にある `dotfiles-apply` job は
     `MISE_HISTORY_ENABLED=0 mise bootstrap dotfiles apply --yes` を実行する。
-    `dotfiles apply` はhistoryが有効だと、操作前後にtrack対象（この構成では
-    `~/.config`の広い範囲）のprotective checkpointを作る。ファイル数の多い実環境では、
+    `dotfiles apply` はhistoryが有効だと、操作前後にtrack対象（当時の構成では
+    `~/.config`全体）のprotective checkpointを作る。ファイル数の多い実環境では、
     実際のcopyが1ディレクトリだけでもこのwalkとGit snapshotに約80秒かかっていた。
     post-mergeはGit管理されたsourceからの自動再適用であり、常駐history-watchが編集を
     別途保存するため、この自動経路ではoperation checkpointを無効化する。
@@ -718,9 +718,8 @@ root に固定する書き方は mise 2026.9.15 以降でしか効かないた�
   `rectangle`/`vimium`）は `unmanaged/` に置く（`[dotfiles]` が配布しない、という
   用途を名前で表している）。`raycast`/`rectangle` はアプリ自体の Import 機能で
   手動反映する想定（`.rayconfig` はバイナリで diff できないため。docs/raycast.md
-  参照）。`~/.config` 配下に実在するファイルは track mode の対象に変わりなく含まれる
-  （`"~/.config" = { mode = "track" }` はブランケット宣言のため。配布の有無と
-  history 記録の有無は独立している）。
+  参照）。`unmanaged/` のものは track mode の対象にもならない（track は `config/`・
+  `config-mac/`・`config-linux/` に存在する名前だけを include する。後述）。
 
 > **同一キーの merge は上書き、別キーは並存する（実機で確認済みの挙動）**
 >
@@ -817,8 +816,11 @@ mise bootstrap dotfiles unapply "~/.zshrc"
 `[dotfiles]` の whole-file エントリ（symlink/copy/template）は「source を編集して
 apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれとは別に **配置済みファイルを
 直接編集し、その変更を自動で記録する**運用（`mode = "track"`）もある。ブログ記事の
-"self-saving" の核心はこちら。本リポジトリでは `~/.config`（apm/claude/codex/local は
-主に tool 管理で history の恩恵が薄いため対象外）に採用した。
+"self-saving" の核心はこちら。本リポジトリでは `~/.config` のうち `config/`・`config-mac/`・
+`config-linux/` 直下に存在する名前と同名のもの（apm/claude/codex/local は主に tool 管理で
+history の恩恵が薄いため対象外）に採用した。名前だけで選ぶため、`agentsview/tests` や
+他 OS 専用のディレクトリのように symlink-each の exclude・OS 別 overlay で配っていないものも、
+`~/.config` 側に実在すれば track される。
 
 ### 実機で判明した制約
 
@@ -826,9 +828,29 @@ apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれ�
   project config（このリポジトリの `mise.toml`）に書くと
   `tracking is enrolled from the global configuration only, ignoring entry`
   という warning とともに無視される（実機確認済み）。本リポジトリでは
-  `config/mise/config.toml`（`~/.config/mise/config.toml` へ deploy される git source）に
-  `"~/.config" = { mode = "track" }` を書くことで、通常の `[dotfiles]` copy と同じ
-  「git で編集 → deploy」の流儀を保ったまま track を宣言している。
+  `config/mise/config.toml`（`~/.config/mise/config.toml` へ deploy される git source）と、
+  apply 時に生成する `~/.config/mise/conf.d/history-track.toml`（global config の conf.d も
+  global 扱いになることを実機確認済み）に track を書くことで、通常の `[dotfiles]` copy と
+  同じ「git で編集 → deploy」の流儀を保ったまま track を宣言している。
+- **`~/.config` 丸ごとの track（`"~/.config" = { mode = "track" }`）はやめた。**
+  repo 管理外のアプリの状態・キャッシュ等まで含めて `~/.config` 全体を walk・snapshot
+  するため、history-watch が数十秒 operation lock を握り、`mise bootstrap packages use`
+  のような history を使う操作が mise 固定の30秒待ちの後
+  `another history operation is running` で頻繁に失敗していた。現在は
+  `templates/mise/history-track.toml.tera` が apply 時に `config/`・`config-mac/`・
+  `config-linux/` 直下を列挙し、ディレクトリは `"~/.config"` entry の
+  `include = ["<name>/**", ...]`、直下のファイル（`.czrc`）は個別の track entry として
+  生成する。repo にディレクトリを足しても、配置のために実行する apply で再生成される
+  ため track 設定を手で書き換える必要は無い。
+  - include のパターンがすべて `/` を含む場合だけ、mise は該当ディレクトリだけを walk
+    する（`mise bootstrap dotfiles paths --json` の `searched_partially: true`）。
+    `.czrc` のような `/` を含まないパターンを1つでも混ぜると `~/.config` 全体を walk
+    するようになるため（実機確認済み）、直下のファイルは include に入れない。
+  - include はグロブの `{a,b}` 展開に対応せず、`[dotfiles]` の値は Tera テンプレートとして
+    描画されない（いずれも実機確認済み）。そのため global config 自体ではなく、
+    template mode で生成する conf.d のファイルで列挙している。
+  - 同じキー `"~/.config"` を `config/mise/config.toml` 側にも書くと片方で上書きされる
+    ため、そちらには書かないこと。
 - **track には source からの配置が無い。** 追跡対象が存在しない場合は
   「存在するようになったら追跡する」だけで待機し、内容を生成してはくれない
   （`mise bootstrap dotfiles track` を実行しても同様）。本リポジトリでは
