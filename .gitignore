@@ -4,9 +4,11 @@
 mise*.lock
 # クラウド環境は GitHub API を使えず、URL とチェックサムを記録した lockfile がないと mise install できないため除外しない。
 !/mise.lock
-# mise がツールのインストール時に作る排他ロック（例: config/mise/.mise/locks/npm-agentlytics/0.2.13）。
-# 実行時の一時状態なので管理しない。.mise/ 自体は設定置き場にもなり得るため locks/ だけ除外する。
+# mise の npm backend（aube）が mise.lock と対で作る lockfile ディレクトリ（.mise/locks/<tool>/<version>/）。
+# git 管理する mise.lock（直下）から path + digest で参照されるため直下のものは管理し、
+# mise*.lock と同じく直下以外（global config の config/mise/ 等）のものは管理しない。
 **/.mise/locks/
+!/.mise/locks/
 
 *temp*
 # "templates/" は "*temp*" に部分一致してしまうため明示的に復帰させる
