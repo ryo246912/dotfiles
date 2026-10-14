@@ -18,7 +18,7 @@ shell = "bash -c"
 
 # apply 系 task は MISE_HISTORY_ENABLED=0 で実行する。history が有効だと apply は
 # 前後に protective checkpoint を取るため history の operation lock を取りに行くが、
-# 常駐 history-watch が ~/.config 全体の保存・定期スキャン（数十秒かかる）で lock を
+# 常駐 history-watch が track 対象の保存・定期スキャン（以前の ~/.config 丸ごと track では数十秒）で lock を
 # 握っていると、mise 側で固定の30秒待ったあと
 # "another history operation is running" で失敗する。手元のライブ編集は
 # history-watch が別途保存しているため、post-merge の自動 apply（lefthook.yml）と同様に

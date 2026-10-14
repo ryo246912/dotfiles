@@ -1,0 +1,29 @@
+# このファイルは mise.toml の [dotfiles] が templates/mise/history-track.toml.tera から
+# 生成する（直接編集しないこと）。
+#
+# ~/.config のうち dotfiles（config/・config-mac/・config-linux/）が配っているものだけを
+# track する。repo 側にディレクトリ・ファイルを足しても、次の
+# `mise bootstrap dotfiles apply`（配置のために結局必要になる）で再生成されるため、
+# track 設定を手で書き換える必要は無い。
+#
+# - ディレクトリは "<name>/**" の include で選ぶ。include が "/" を含むパターンだけなら
+#   mise は該当ディレクトリだけを walk する（`mise bootstrap dotfiles paths --json` の
+#   searched_partially = true）。".czrc" のような "/" を含まないパターンを1つでも
+#   混ぜると ~/.config 全体を walk するようになるため（実機確認済み）、直下のファイルは
+#   include ではなく個別の track entry にしている。
+# - exec は repo の checkout ルートで実行される前提（`mise bootstrap` 全般と同じ制約）。
+[dotfiles."~/.config"]
+mode = "track"
+include = [
+{%- for name in exec(command="find config config-mac config-linux -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sed 's|.*/||' | sort -u") | trim | split(pat="\n") %}
+{%- if name != "" %}
+  "{{ name }}/**",
+{%- endif %}
+{%- endfor %}
+]
+{% for name in exec(command="find config config-mac config-linux -mindepth 1 -maxdepth 1 ! -type d 2>/dev/null | sed 's|.*/||' | sort -u") | trim | split(pat="\n") %}
+{%- if name != "" %}
+[dotfiles."~/.config/{{ name }}"]
+mode = "track"
+{% endif %}
+{%- endfor %}

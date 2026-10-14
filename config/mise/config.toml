@@ -182,6 +182,14 @@ lefthook install
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
 # ここ（deploy先: ~/.config/mise/config.toml）で宣言する。
+# ~/.config 自体の track は ~/.config 全体（repo 管理外のアプリの状態・キャッシュ等も含む）を
+# walk して数十秒 history の lock を握り、`mise bootstrap packages use` 等が
+# "another history operation is running" で失敗する原因になっていたため、ここでは
+# 宣言しない。代わりに dotfiles が配っているディレクトリ・ファイルだけを include する
+# track entry を ~/.config/mise/conf.d/history-track.toml（templates/mise/
+# history-track.toml.tera から apply 時に生成。config/ にディレクトリを足しても
+# 手で書き換える必要は無い）で宣言している。同じキー "~/.config" をここにも書くと
+# どちらか一方で上書きされるため、ここには書かないこと。
 # 内容の配置は mise.toml 側の "~/.config" symlink-each エントリ（config/ の各ファイルへ
 # リンクを張る。OS 別の除外は mise.mac.toml / mise.linux.toml）が行い、変更履歴は
 # `mise bootstrap dotfiles save`（または [bootstrap.services.mise-history] による
@@ -213,10 +221,8 @@ lefthook install
 "~/.claude/settings.json"            = { mode = "track" }
 "~/.codex/config.toml"               = { mode = "track" }
 "~/.codex/hooks.json"                = { mode = "track" }
-"~/.config"                          = { mode = "track" }
 "~/.config/alacritty/alacritty.toml" = { mode = "track" }
 "~/.config/ghostty/config"           = { mode = "track" }
 "~/.config/git/config"               = { mode = "track" }
-"~/.config/mise"                     = { mode = "track" }
 "~/.config/rio/config.toml"          = { mode = "track" }
 "~/.zshenv"                          = { mode = "track" }
