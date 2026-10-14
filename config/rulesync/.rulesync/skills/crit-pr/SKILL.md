@@ -1,177 +1,286 @@
 ---
 name: crit-pr
-description: 他人（または自分）の GitHub PR を crit の UI でレビューする skill。PR へ checkout して `crit pr` で差分を開き、UI 上でエージェントと壁打ちしながらコメントを書き、ユーザーが選んだコメントだけを `crit push` で PR へ投稿する。「crit で PR をレビューしたい」「PR を crit で見て壁打ちしたい」と明示されたときに使う。PR の指摘に対してコードを修正する用途は fix-review を使う。
+description: >-
+  他人の GitHub PR を crit の UI でレビューする skill。PR へ checkout し、指摘候補（must/should/imo/nit/Q）を
+  裏取りしたうえで crit のインラインコメントとして並べ、`crit pr` の UI でユーザーと壁打ちする。選ばれた指摘だけを
+  未 submit の draft レビューとして投稿し、submit 用の本文例まで出す。「crit で PR をレビューしたい」
+  「PR を crit で見て壁打ちしたい」と crit を使う指定があるときに使う。crit を使わない PR レビューは review-pr、
+  自分の PR に付いた指摘への対応は fix-review を使う。
 targets:
   - claudecode
   - codexcli
 ---
 
-# crit で PR をレビューする
+# crit-pr — crit の UI で PR をレビューし、draft を投稿する
 
-PR を **レビューする側** として crit を使う skill。目的は次の 2 つ。
+レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を投稿する**
+までを進める。review-pr skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
+submit（Approve / Comment / Request changes）はユーザーが自分で行う。指摘の取捨と最終的な文面の責任はユーザーにあり、
+この skill は判断材料をそろえて下書きを作る役に徹する。
 
-1. crit の UI で差分にコメントを付け、エージェントと壁打ち（質問・妥当性確認・代案検討）する
-2. 壁打ちの結果、PR に残したいコメントだけを GitHub の PR review として投稿する
+全体の流れ:
 
-`crit` / `crit-cli` skill（APM で配布）の手順を前提にしつつ、以下のルールを **優先** する。
+1. PR の情報を集め、PR の head へ checkout する
+2. コードを読み、指摘候補を洗い出して裏を取る
+3. 動作確認手順を書く
+4. 指摘候補を crit のコメントとして並べ、表と一緒に出す
+5. crit の UI でユーザーと壁打ちし、投稿する No を決めてもらう
+6. 選ばれた No を draft レビューとして投稿し、submit 用の本文例を出す
 
-## 絶対に守ること
+`crit` / `crit-cli` skill（APM で配布）の CLI の使い方を前提にしつつ、以下のルールを優先する。
 
-- **コードを編集しない**。この skill はレビュー専用。検証のためにファイルを読む・テストを実行するのはよいが、
-  Edit / Write やコミットはしない（ユーザーが明示的に頼んだ場合を除く）。
-- **`crit push` は remote への書き込み**。必ず「投稿対象の一覧」と `crit push --dry-run` をユーザーに見せ、
-  明示的な OK をもらってから実行する。
-- `--event approve` / `--event request-changes` はユーザーが指示したときだけ使う。既定は `comment`。
-- コメントの resolve は、Step 5 でユーザーが「投稿しない」と選んだものに対してのみ行う。
+## 1. PR の情報を集め、checkout する
 
-## crit push の仕様（v0.19.1 時点・ソース確認済み）
-
-`crit push` に「このコメントだけ投稿する」という選択オプションは無い。投稿対象は review file の状態で決まる。
-
-| 種類                                         | push されるか                                                                 |
-| -------------------------------------------- | ----------------------------------------------------------------------------- |
-| line comment（未 resolve・`github_id` なし） | **される**（PR の inline review comment として 1 つの review にまとめて投稿） |
-| line comment（resolved）                     | されない                                                                      |
-| review-level comment（ファイル・行指定なし） | **されない**（local only）。全体的な壁打ちはここに書けば安全                  |
-| GitHub 由来/投稿済みスレッドへの reply       | **resolve 状態に関係なく、`github_id` のない reply はすべて投稿される**       |
-| 投稿済みコメントの本文をローカルで編集       | 次の push で GitHub 側も編集される（PATCH）                                   |
-| PR の head が進んだ後の古いコメント          | 投稿されず `stale` として export markdown に退避される                        |
-
-そのため次の運用にする。
-
-- 壁打ちは「自分で作ったローカルコメントのスレッド」か「review-level comment」で行う。
-- **`crit pull` で取り込んだ GitHub スレッドの中では壁打ちしない**（reply が resolve しても投稿されるため）。
-  そのスレッドについて相談したいときは、同じ行に別のローカルコメントを作ってそこで話す。
-- 壁打ちの reply が付いたコメントを投稿したいときは、元スレッドをそのまま push しない。
-  投稿用の新しいコメントを同じ行に作り、元スレッドは resolve する（元スレッドを push すると、
-  次回以降の push で壁打ちの reply まで PR に投稿される）。
-- resolve 済みのコメントに `--resolve` なしで reply すると **未 resolve に戻り、push 対象に復活する**。
-  resolve 済みスレッドで話を続けたら、Step 5 の前に再度 resolve する。
-- `crit push --dry-run` は reply・編集・削除を表示しない。Step 5 の jq で必ず確認する。
-
-## Step 1: 対象 PR を特定して checkout する
-
-PR 番号または URL をユーザーの発言から取得する。無ければ確認する。
+入力は PR の URL か番号。番号だけなら、カレントディレクトリのリポジトリ（`gh repo view --json nameWithOwner`）の PR とみなす。
 
 ```bash
-gh auth status
-gh pr view <PR> --json number,title,url,author,headRefName,baseRefName,isCrossRepository
+gh pr view <N> --json number,title,url,author,body,baseRefName,headRefName,headRefOid,files,labels,comments,reviews
+gh pr diff <N>
+gh pr checks <N>
 git status --short
 ```
 
-- working tree に未コミットの変更がある場合は、checkout 前にユーザーへ確認する（stash するか、別 worktree を使うか）。
-- 問題なければ checkout する。
+- **作成者**を控える。作成者が自分でないなら、ラベル変更・ブランチへの push・他人のスレッドへの返信はしない。必要ならユーザーに「作成者へ依頼してください」と伝える
+- **PR 本文**から、目的・受け入れ条件・関連チケット・関連 PR・作成者が自分で書いた懸念点を拾う。関連 PR が複数あれば、この PR が受け持つ範囲を表で整理しておくと、指摘の「本 PR との関係」の判定がぶれない
+- **head の SHA**（`headRefOid`）を控える。行番号はすべてこの SHA のファイルで数える
+- リポジトリに規約（`CLAUDE.md`・`AGENTS.md`・`CONTRIBUTING.md` など）・仕様書・動作確認の手引きがあれば、変更箇所に関係する部分だけを読む。規約違反の指摘の根拠になる
+
+working tree に未コミットの変更があれば、checkout 前にユーザーへ確認する（stash するか、別 worktree を使うか）。
+問題なければ checkout し、手元の HEAD が PR の head と一致することを確かめる。
 
 ```bash
-gh pr checkout <PR>
+gh pr checkout <N>
+git rev-parse HEAD   # headRefOid と一致すること
 ```
 
-checkout はエージェントが PR のコードを読んだりテストを実行したりして、壁打ちの根拠を確認するために行う。
-crit の差分表示自体は `crit pr` が PR の merge-base..head を取得して行うので、checkout 先と差分は GitHub と一致する。
+crit のコメントの行番号は**手元のファイルの行番号**なので、HEAD が head の SHA と一致していないと投稿時に行がずれる。
 
-## Step 2: crit で PR を開く
+## 2. 指摘候補を洗い出し、裏を取る
 
-`run_in_background: true` で起動し、Finish Review まで待つ（`crit` skill の Step 2 と同じ）。
+diff だけを読まない。変更した関数の呼び出し元・呼び出し先、同じデータを読む別の経路（取得と保存、新旧の API など）、
+追加されたテストまで読む。`/code-review` を併用してよいが、その出力は**候補**として扱い、下の裏取りを通す。
+
+**crit に載せる前に、1 件ずつ裏を取る。** 誤った指摘を作成者に送ると、作成者の時間を奪い、レビュー全体の信頼も下がるため。
+
+- 「〜が無い」と書く前に、diff 全体（**ファイル末尾に追加されたテスト**を含む）と既存コードを grep し、本当に無いことを確かめる
+- 「〜になる」と書く前に、その分岐が実際に踏まれる条件をコードで追う。追い切れないものは「可能性」と書くか、区分を Q にする
+- 行番号は推測しない。`nl -ba <path> | sed -n '<from>,<to>p'` で表示して数える（HEAD は head の SHA）
+- PR 本文やコードコメントで作成者が既に認めている事柄なら、それを指摘の根拠として引用する
+
+裏取りで成り立たなかった候補は捨てずに控えておく。submit 本文の「コード観点」に「〜は確認の結果、成り立たない」と書く材料になる。
+
+検証のためにファイルを読む・テストを実行するのはよいが、**コードは編集しない**（ユーザーが明示的に頼んだ場合を除く）。
+
+### 区分
+
+| 区分   | 意味                                                                        |
+| ------ | --------------------------------------------------------------------------- |
+| must   | マージを止める欠陥。データ破損・セキュリティ・要件未達など                  |
+| should | 直してほしい。PR の目的や不変条件を損なう、テストが変更を守っていない、など |
+| imo    | 意見・設計の好み。直さなくても動く                                          |
+| nit    | 体裁・命名・重複など、実害の無いもの                                        |
+| Q      | 質問。意図の確認や、裏が取り切れない懸念                                    |
+
+must が 0 件のことは普通にある。無理に上げない。区分に迷ったら、両方の見方を「区分理由」に書いてユーザーに委ねる。
+
+### 本 PR との関係（◯ / △ / ☓）
+
+| 記号 | 意味                                                                                           |
+| ---- | ---------------------------------------------------------------------------------------------- |
+| ◯    | この PR が追加・変更した行への指摘                                                             |
+| △    | 既存のコードだが、この PR の変更の効果・前提・不変条件を損なう（直さないと PR の目的が欠ける） |
+| ☓    | この PR が触っていない既存のコード。同じ根の問題や、範囲を超えるリファクタ                     |
+
+記号には必ず理由を 1 行添える（例: 「△ 処理自体は既存だが、PR が足した整合性の保証が同時実行で崩れる」）。
+☓ の指摘は「別チケットで」と添えて出すかどうかをユーザーが決める。
+
+## 3. 動作確認手順を書く
+
+ユーザーがそのまま手を動かせる粒度で書く。**URL と操作を 1 つずつ書き下す。**
+「設定画面を開く」ではなく、どの画面のどこを押すとそこへ着くかまで書く。
+
+- **どの環境で確かめるか**を最初に決めて理由を書く
+  - FE だけの変更 → FE の Preview
+  - BE を含み、API の Preview が無い → ローカル（起動コマンド、PR の head への切り替え、ポート、必要な設定ファイル）
+  - 不具合修正なら、**修正前を再現する手順**（既存の dev 環境など）を先に置く。修正前で再現できないと、修正後に通っても修正の証明にならない
+- **前提**: feature flag、権限・ロール、必要なデータ、アカウント
+- **画面への到達経路**: トップや一覧画面から、メニュー・ボタンの表示名（i18n の文言をコードで確認する）で 1 手ずつ
+- **操作**: ボタンが押せる条件（例: 変更が無いと保存ボタンが無効）をコードで確かめ、その条件を満たす操作も書く
+- **期待結果**: 画面の表示、エラーメッセージの文言、Network タブで見る API とステータス、必要なら DB を確かめる SQL
+- **破壊的な操作**（削除など、元に戻せないもの）には、テスト用のデータで行うよう注意を添える
+- レビュー指摘に関係する「意地悪な操作」（競合、境界、別タブ）があれば足す
+
+手順はターミナルに出す。crit 上でも見たいとユーザーが言えば、review-level comment（行指定なし）として追加する。
+
+## 4. 指摘候補を crit に並べ、表と一緒に出す
+
+### crit を起動する
+
+`run_in_background: true` で起動する（`crit` skill の Step 2 と同じく、Finish Review まで終了しない）。
 
 ```bash
-crit pr <PR>
+crit pr <N>
 ```
 
-起動ログの URL をユーザーへそのまま伝える。devcontainer 内では `crit` ラッパーが
-`crit UI (host): http://localhost:<port>` も出力するので、ホストのブラウザ用にはそちらを伝える。
+`crit pr` は PR の merge-base..head を差分として開くので、表示は GitHub と一致する。起動ログの URL をユーザーへそのまま伝える。
+devcontainer 内では `crit` ラッパーが `crit UI (host): http://localhost:<port>` も出力するので、ホストのブラウザ用にはそちらを伝える。
+複数の review session があると CLI が失敗するので、その場合は `crit status` で ID を確認し、以降の `crit comment` /
+`crit comments` に `--session <id>` を付ける。
 
-既存の GitHub レビューコメントも見たい場合は、起動後に取り込む（ユーザーに要否を確認してよい）。
+### 指摘候補をコメントとして追加する
+
+各候補を、対象コードの行に line comment として追加する。本文の 1 行目は `No.<n> [<区分>] <一言>` にして、
+crit の UI と表を No で対応させる。複数行の本文は JSON をファイルに書いて `--json --file` で一括追加する。
+
+```json
+[
+  {
+    "file": "app/usecases/orders.py",
+    "line": "120-128",
+    "body": "No.1 [should] 更新処理がロックを取っていない\n\n**本PRとの関係**: △ 処理自体は既存だが、PR が足した整合性の保証が同時実行で崩れる\n\n**理由**: <起きる条件と結果>\n\n**関連コード**: `app/models/order.py:45`"
+  }
+]
+```
 
 ```bash
-crit pull <PR>
+crit comment --json --file <comments.json> --author 'Claude Code'
 ```
 
-UI に反映されない場合はブラウザをリロードしてもらう。取り込んだスレッドでは壁打ちしないことを一言添える。
+- 対象が diff の外の行でも、ファイル上の行に付けてよい（投稿時に付け替える。6 を参照）
+- 行に付けられない指摘（PR 全体への意見など）は review-level comment（`file` も `line` も付けない）にする
 
-複数の review session があるとコマンドが失敗するので、その場合は `crit status` で ID を確認し、以降の
-`crit comment` / `crit comments` / `crit pull` / `crit push` に `--session <id>` を付ける。
+### ターミナルにも表と詳細を出す
 
-## Step 3: 壁打ちのループ
+```markdown
+| No  | 区分   | 一言                           | 本PRとの関係                                                    | 区分理由                         | 対象コード                       |
+| --- | ------ | ------------------------------ | --------------------------------------------------------------- | -------------------------------- | -------------------------------- |
+| 1   | should | 更新処理がロックを取っていない | △ 処理自体は既存だが、PR が足した整合性の保証が同時実行で崩れる | PR の目的が欠ける。直すのは 1 行 | `app/usecases/orders.py:120-128` |
+```
 
-ユーザーにこう伝える:
+並び順は区分の重い順（must → should → imo → nit → Q）。No ごとの詳細（理由・対象コード・関連コード）は、
+コードを要約せず行番号どおりに貼る（crit の UI では対象行が見えているので、コメント本文には貼らなくてよい）。
 
-> crit の UI で気になる行にコメントしてください。質問・懸念・「これ PR に書くべき？」など何でも OK です。
-> 終わったら Finish Review を押してください。全体的な話は review-level comment に書くと PR には投稿されません。
+## 5. crit の UI で壁打ちし、投稿する No を決めてもらう
+
+表を出したら、ユーザーにこう伝えて**止まる**。投稿する No が決まるまで、何も投稿しない。
+
+> crit の UI で各指摘にリプライして、質問・反論・文面の相談をしてください。気になる行には新しいコメントも付けられます。
+> 終わったら Finish Review を押してください。投稿する No が決まったら教えてください。
 
 （devcontainer で `agent_cmd` が設定されていれば、各コメントの「Send now」で即時に別エージェントの回答も得られる。）
 
-`crit` が終了したら stdout（または `crit comments --json`）で未 resolve コメントを読み、各コメントに **reply で** 答える。
+`crit` が終了したら stdout（または `crit comments --json`）で未 resolve のコメントを読み、各スレッドに **reply で** 答える。
 
-- 根拠となるコード・テスト・ドキュメントを実際に読んでから答える。推測なら推測と書く。
-- 指摘が PR に投稿する価値がありそうなら、その旨と投稿用の文面案を reply に含める。
-- 返信は `crit comment --reply-to <id> --author 'Claude Code' '<body>'`。複数あるときは `--json --file` でまとめる。
-- エージェント側から気付いた点を追加してよい（`crit comment --author 'Claude Code' <path>:<line> '<body>'`）。
-  ただしエージェントが作った line comment も未 resolve なら push 対象になるので、Step 5 で必ず選別する。
-- `crit pull` 由来（`github_id` あり）のスレッドには reply しない。必要なら同じ行に新しいローカルコメントを作る。
+- 根拠となるコード・テスト・ドキュメントを実際に読んでから答える。推測なら推測と書く
+- 返信は `crit comment --reply-to <id> --author 'Claude Code' '<body>'`。複数あるときは `--json --file` でまとめる
+- ユーザーが新しく付けたコメントは、指摘候補として裏取りし、No・区分・本 PR との関係を付けて表に足す
+- 壁打ちで指摘が誤りと分かったら、表から外したことを明言し、そのコメントにその旨を reply する
+  （resolve はユーザーが UI で行う。`--resolve` はユーザーに頼まれたときだけ付ける）
+- 区分・本 PR との関係・文面を変えたら、表を出し直す
 
-返信し終えたら、再度 `crit pr <PR>`（または crit の finish prompt が示すコマンド）をバックグラウンドで実行して次の
-Finish Review を待つ。ユーザーが「投稿に進む」「PR にコメントしたい」と言うか、コメントなしで Finish Review したら Step 4 へ。
+返信し終えたら、再度 `crit pr <N>` をバックグラウンドで実行して次の Finish Review を待つ。
+ユーザーが投稿する No を指定するか、コメントなしで Finish Review したら 6 へ進む。
 
-## Step 4: 投稿するコメントを選ぶ
+## 6. draft レビューを投稿し、submit 用の本文例を出す
 
-未 resolve のコメントを一覧にして、ユーザーに「PR に投稿する / しない」を選んでもらう。
+`crit push` は使わない。`crit push` は event 付き（既定は COMMENT）でレビューを作るため、投稿した時点で submit され、
+draft にできない。また resolve の有無に関係なく GitHub 上のスレッドへの reply まで投稿する。
+投稿は review-pr skill の `scripts/post_draft_review.py` で PENDING のレビューとして行う。
 
-```bash
-crit comments --json
+### インラインコメントの書式
+
+```markdown
+**以下、AIによる返信**
+[<区分>] <一言>
+
+<本文>
 ```
 
-表示する項目: コメント ID、`path:line`、作成者、本文の要約、reply の有無、投稿用文面案。
-既定はすべて「投稿しない」とし、ユーザーが選んだものだけを投稿対象にする。
+先頭の行より上は、ユーザーが後から自分のコメントを書き足す場所になる。本文は作成者に向けて書く（理由、起きる条件、直し方の案）。
+壁打ちの経緯や crit 上の reply はそのまま載せず、結論だけを本文にまとめる。コードの提案は短いコードブロックで添える。
+ユーザーが自分で書いたコメントをそのまま投稿したいと言った場合は、`**以下、AIによる返信**` を付けずにその本文を使う。
 
-選択結果に応じて review file を整える。
+### comments.json を作る
 
-| ケース                                   | 対応                                                                                                                              |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 投稿する・reply なし・本文そのままで良い | そのまま残す                                                                                                                      |
-| 投稿する・reply あり、または文面を直す   | 同じ `path:line` に投稿用の新しいコメントを作成し、元のコメントは `--resolve` 付き reply で resolve する                          |
-| 投稿しない                               | `--resolve` 付き reply で resolve する（例: `crit comment --reply-to <id> --resolve --author 'Claude Code' 'PR には投稿しない'`） |
+選ばれた No ごとに、crit のコメントの `file`・`start_line`・`end_line`（`crit comments --json` で確認）から作る。
+置き場所はスクラッチパッドなどの一時ディレクトリ。
 
-投稿用コメントの文面はユーザーに確認してもらう。`--author` はユーザー名（`git config user.name`）を使い、
-GitHub へは `gh` で認証したユーザーとして投稿されることを伝える。
-GitHub 側のコメントに AI 作成である旨を入れるかはユーザーに確認する。
-
-## Step 5: 投稿内容を確認する
-
-review file のパスを取得し、push で GitHub に書き込まれるものを列挙する（dry-run が表示しない reply も含む）。
-
-```bash
-review_file=$(crit status --json | jq -r '.review_file')
-jq -r '
-  (.files // {} | to_entries[] | .key as $p | .value.comments[]? |
-    ( select((.resolved | not) and .github_id == null and .dom_anchor == null)
-      | "NEW-COMMENT  \($p):\(.start_line)-\(.end_line) [\(.id)] replies=\(.replies // [] | length) \(.body | split("\n")[0])" ),
-    ( select(.github_id != null) | .id as $root | .replies[]? | select(.github_id == null)
-      | "NEW-REPLY    \($p) [\($root)] \(.body | split("\n")[0])" )),
-  (.review_comments[]? | select(.resolved | not) | "LOCAL-ONLY   (review) [\(.id)] \(.body | split("\n")[0])")
-' "$review_file"
-crit push --dry-run <PR>
+```json
+{
+  "commit_id": "<head の SHA>",
+  "comments": [
+    {
+      "path": "app/usecases/orders.py",
+      "start_line": 120,
+      "line": 128,
+      "body": "**以下、AIによる返信**\n[should] ..."
+    }
+  ]
+}
 ```
 
-- `NEW-COMMENT` が Step 4 で選んだものと一致していること（`replies` が 0 であること）を確認する。
-- `NEW-REPLY` が意図しない内容なら、UI からその reply を削除してもらってから再確認する。
-- dry-run の `stale` / `full-stack` は投稿されない。PR に新しい push があった場合は `crit pr <PR>` を開き直す。
+- 1 行だけなら `start_line` を省く
+- **指摘の対象が diff の外の行**なら、インラインには付けられない。関連する diff 内の行（PR が追加した処理やコメント）に付け、
+  本文で本来の場所（`path:line`）を示す。適当な行が無ければ submit 本文に回す
+- 投稿前に `git rev-parse HEAD` が PR の head と一致していることを確かめる。PR に新しい push があったら、
+  `gh pr checkout <N>` で取り直し、行番号を数え直す
 
-一覧と dry-run の結果をユーザーに見せ、投稿してよいか明示的に確認する。
+### 投稿する
 
-## Step 6: PR へ投稿する
+review-pr skill の script を使う。指定した行が diff にあるかの検査、既存の PENDING の検出、`event` なしでの作成をまとめて行う。
+script は rulesync で同じ skills ディレクトリに配置される review-pr の中にある。
 
 ```bash
-crit push <PR>                                   # comment（既定）
-crit push -m '<review summary>' <PR>             # review 全体のコメントを付ける場合
-crit push --event request-changes -m '<msg>' <PR> # ユーザーが指示した場合のみ（message 必須）
-crit push --event approve -m '<msg>' <PR>         # ユーザーが指示した場合のみ
+script=<この skill のディレクトリ>/../review-pr/scripts/post_draft_review.py
+python3 "$script" --repo <owner/name> --pr <N> --input <comments.json> --dry-run   # 検査だけ
+python3 "$script" --repo <owner/name> --pr <N> --input <comments.json>             # 投稿
 ```
 
-投稿後は PR の URL を伝える。投稿したコメントには `github_id` が記録されるので、以降そのスレッドに reply すると
-次の push で投稿される点を伝える。
+先に `--dry-run` で通してから投稿する。
+
+- 既に PENDING のレビューがあれば、新しく作らずにユーザーへ伝える。ユーザーが同意したら、GraphQL の
+  `addPullRequestReviewThread` で既存の PENDING に足す
+- 投稿後に文面を直すときは、**まず今の本文を取り直す**（ユーザーが手で直していることがある）。そのうえで GraphQL の
+  `updatePullRequestReviewComment` で更新する
+
+投稿したら、レビューの URL（`html_url`）と、付けた行の対応表（No・区分・ファイル:行）を報告する。
+diff の外の指摘をどこに付け替えたかも書く。crit 側のコメントは、ユーザーに確認したうえで投稿済みのものに
+`投稿済み（draft）` と reply し、`--resolve` で閉じてよい。
+
+### submit 用の本文例
+
+次の書式で出す。ユーザーはこれを土台に submit の画面で仕上げる。
+
+```markdown
+<ユーザーの入力欄>
+
+must/shouldは対応確認お願いしたいです。imo/nitsの対応要否はお任せします
+以下、確認した評価観点です。
+
+**動作確認**
+
+- [x] <3 で書いた手順のうち、確かめた項目。1 項目 1 行>
+
+**コード観点**
+
+- [x] 「<裏取りで成り立たなかった候補>」は確認の結果、成り立たない (`path:line`)
+- [ ] <投稿した指摘> → <区分>でコメント (`path:line`)
+```
+
+- 動作確認の項目は、ユーザーが実際に行ったものに合わせて直してもらう前提で、3 の手順から起こす。行っていない項目を `[x]` にしない
+- 「成り立たない」項目は、2 で控えた候補から、作成者やほかのレビュアーが気にしそうなものを選ぶ
+- 投稿していない指摘（☓ で見送ったものなど）は書かない
+- must/should が 0 件なら、定型文の 1 行目は「imo/nitsの対応要否はお任せします」だけにする
+- submit の種別（Approve / Comment / Request changes）の目安を一言添える。決めるのはユーザー
 
 ## 後片付け
 
-- レビューを続けるなら Step 3 に戻る。相手が修正を push した後は `crit pr <PR>` で開き直し、`crit pull <PR>` で
-  返信を取り込む。
-- 終わったら、ユーザーに確認したうえで元のブランチへ戻る（`git switch -`）。
+- 相手が修正を push した後に再レビューするなら、`gh pr checkout <N>` で取り直して `crit pr <N>` を開き直す
+- 終わったら、ユーザーに確認したうえで元のブランチへ戻る（`git switch -`）
+
+## してはいけないこと
+
+- レビューを submit しない（`crit push`、`event` を付けた投稿、`submit_pending` の実行を含む）
+- 他人のブランチへの commit / push、他人のスレッドへの返信、ラベルや状態の変更をしない
+- コードを編集しない（検証のための読み取り・テスト実行は可）
+- 裏を取っていない候補を crit や表に載せない
