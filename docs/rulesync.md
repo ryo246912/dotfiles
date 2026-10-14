@@ -125,6 +125,11 @@ plugin package から merge する ponytail の hooks 等）は generate 後も�
 - `~/.codex/config.toml` のその他のキー（`shell_environment_policy` 等）は rulesync が保持するが、
   コメントは保持されない。
 
+## skill のコンテキストへの載せ方
+
+自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
+（[`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理)）。
+
 ## 生成コマンド
 
 ```bash
