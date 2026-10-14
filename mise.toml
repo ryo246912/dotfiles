@@ -219,13 +219,19 @@ fi
 "~/.config/alacritty/alacritty.toml"       = { source = "templates/alacritty/alacritty.toml.tera", mode = "template", template = "tera" }
 "~/.config/ghostty/config"                 = { source = "templates/ghostty/config.tera", mode = "template", template = "tera" }
 "~/.config/git/config"                     = { source = "templates/git/config.tera", mode = "template", template = "tera" }
+"~/.config/hunk/extensions"                = { source = "config/hunk/extensions", mode = "symlink" }
 "~/.config/mise/conf.d/history-track.toml" = { source = "templates/mise/history-track.toml.tera", mode = "template", template = "tera" }
 "~/.config/rio/config.toml"                = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.local"                                 = { source = "local", mode = "symlink-each" }
 "~/.zshenv"                                = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
+# "~/.config/hunk/extensions" は "~/.config" の symlink-each から exclude し、ディレクトリごと
+# symlink にする。hunk は拡張に自身の React を渡す処理を「拡張ディレクトリ（とその実体パス）配下」
+# のファイルにだけ適用するため、ファイル単位の symlink だと実体パス（~/dotfiles/config/...）が
+# 対象外になり `Cannot find package 'react'` で読み込みに失敗する（hunk v0.23.0 の
+# extensions/hostRuntimeModules.ts で確認）。exclude は3ファイルとも揃えること。
 [dotfiles."~/.config"]
-exclude = ["agentsview/tests"]
+exclude = ["agentsview/tests", "hunk/extensions"]
 mode    = "symlink-each"
 source  = "config"
 
