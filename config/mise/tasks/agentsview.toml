@@ -41,13 +41,13 @@ exec bash "$script" dump "$@"
 shell = "bash -c"
 
 # 普段使いのviewer。このPCのlocal SQLite archive（~/.agentsview）をそのまま配信する。
-# 他端末のsessionも見たいときは agentsview:serve:postgresql（local CockroachDB）を使う。
+# 他端末のsessionも見たいときは agentsview:serve:cockroach（local CockroachDB）を使う。
 ["agentsview:serve"]
 description = "Serve AgentsView from this machine's local SQLite archive"
 run         = 'exec agentsview serve "$@"'
 shell       = "bash -c"
 
-["agentsview:serve:postgresql"]
+["agentsview:serve:cockroach"]
 description = "Continuously push local sessions and serve AgentsView from the local CockroachDB container"
 run = '''
 set -euo pipefail
