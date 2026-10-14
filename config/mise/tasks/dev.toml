@@ -382,7 +382,12 @@ for command_source, namespace, source_dir, generated_commands, generated_outputs
     for destination_name, source_file in generated_commands.items():
         command_name = destination_name.removeprefix(f"{namespace}-")
         destination_file = rulesync_dir / destination_name
-        shutil.copy2(source_file, destination_file)
+        # 現行のRulesyncはfrontmatterの無いcommandをエラーにするため、無い場合は最小限のものを補う。
+        command_text = source_file.read_text()
+        if not command_text.startswith("---\n"):
+            description = f"Run the {namespace} {command_name.removesuffix('.md')} workflow."
+            command_text = f'---\ndescription: "{description}"\n---\n\n{command_text}'
+        destination_file.write_text(command_text)
         owned_paths.add(destination_file.relative_to(home).as_posix())
 
         # Codexはcommandを扱わないため、指定されたpackageでは同じ本文をAgent Skillへ変換する。
