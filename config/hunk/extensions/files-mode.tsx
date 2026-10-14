@@ -4,15 +4,26 @@
 // 手動で切り替える手段が無い。この拡張は組み込み pane (hunk:files) を置き換え、
 // `S` キー (コマンド id: files-mode.toggle) で tree / flat を切り替えられるようにする。
 //
+// `F` キー (コマンド id: files-mode.focus) で一覧にフォーカスし、キーボードで操作できる:
+//   j / k (↓ / ↑)   行を移動 (ファイル行に乗ると diff もそのファイルへ移動)
+//   g / G           先頭 / 末尾へ
+//   l (→)           ディレクトリを開く (開いていれば最初の子へ)
+//   h (←)           ディレクトリを閉じる (閉じていれば・ファイル上なら親ディレクトリへ)
+//   Enter           ディレクトリなら開閉、ファイルならフォーカスを抜けて diff に戻る
+//   Esc / F         フォーカスを抜ける
+//   それ以外のキーは通常どおり hunk に渡す (q で終了など)
+//
 // 初期モードは ~/.config/hunk/config.toml で変更できる:
 //   [extension.files-mode]
 //   default = "tree"  # "tree" | "flat" | "auto"(組み込みと同じく幅で自動判定)
 //
 // 行の描画は組み込み pane (hunk v0.23.0 の FileSidebars.tsx / FileListItem.tsx) に揃えている。
 import type { ScrollBoxRenderable } from "@opentui/core";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import type {
   ExtensionDiffFile,
+  ExtensionKeyEvent,
+  ExtensionKeyboardModeKeyResult,
   ExtensionPaneProps,
   ExtensionPaneTheme,
   HunkExtensionAPI,
@@ -23,28 +34,68 @@ type Mode = "tree" | "flat" | "auto";
 // 組み込みと同じ閾値: 本文幅が32列以上なら auto は tree になる
 const TREE_MIN_CONTENT_WIDTH = 32;
 
-// ---- モードの保持 (pane を閉じても状態が残るよう React の外に持つ) ----
+// ---- 状態の保持 ----
+// キーボードモード (React の外) と pane の両方から触るため、React の外に持つ。
+// pane を閉じても表示モードや折りたたみ状態が残る。
 
-let mode: Mode = "tree";
+type Store = {
+  mode: Mode;
+  // tree 表示で折りたたんでいるディレクトリのパス
+  collapsed: ReadonlySet<string>;
+  // キーボードで一覧を操作中か
+  focused: boolean;
+  // フォーカス中のカーソル行 (rowKey)
+  cursor: string | null;
+};
+
+let store: Store = { mode: "tree", collapsed: new Set(), focused: false, cursor: null };
 // auto のときに実際に表示しているモード (トグル時の基準にする)
 let lastResolvedMode: Exclude<Mode, "auto"> = "tree";
 const listeners = new Set<() => void>();
 
-function setMode(next: Mode) {
-  if (next === mode) return;
-  mode = next;
+function updateStore(update: (current: Store) => Store) {
+  const next = update(store);
+  if (next === store) return;
+  store = next;
   for (const listener of listeners) listener();
 }
 
-function useMode() {
+function useStore() {
   return useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    () => mode,
+    () => store,
   );
 }
+
+function toggleCollapsed(path: string) {
+  updateStore((current) => {
+    const collapsed = new Set(current.collapsed);
+    if (!collapsed.delete(path)) collapsed.add(path);
+    return { ...current, collapsed };
+  });
+}
+
+function setCollapsed(path: string, value: boolean) {
+  if (store.collapsed.has(path) === value) return;
+  toggleCollapsed(path);
+}
+
+// キーボードモードから見える pane の最新状態 (描画のたびに pane が書き込む)
+type NavRow = {
+  key: string;
+  kind: "file" | "directory";
+  fileId?: string;
+  path?: string;
+  parentKey: string | null;
+};
+let paneLink: {
+  rows: NavRow[];
+  selectedFileId: string | null;
+  selectFile: (fileId: string) => void;
+} | null = null;
 
 // ---- 表示用のエントリ構築 ----
 
@@ -240,7 +291,39 @@ function indentWidth(depth: number, textWidth: number, reserved: number) {
   return Math.min(Math.max(0, depth) * 2, Math.max(0, textWidth - reserved - 1));
 }
 
-const rowId = (fileId: string) => `files-mode-row:${fileId}`;
+const fileKey = (fileId: string) => `f:${fileId}`;
+const directoryKey = (path: string) => `d:${path}`;
+const rowId = (key: string) => `files-mode-row:${key}`;
+
+// 表示中の行から、キーボードで移動できる行 (ファイル・ディレクトリ) を親子関係つきで取り出す
+function buildNavRows(entries: readonly Entry[]): NavRow[] {
+  const rows: NavRow[] = [];
+  const directoryStack: DirectoryEntry[] = [];
+  for (const entry of entries) {
+    if (entry.kind === "group") continue;
+    while (
+      directoryStack.length > 0 &&
+      directoryStack[directoryStack.length - 1].depth >= entry.depth
+    ) {
+      directoryStack.pop();
+    }
+    const parent = directoryStack[directoryStack.length - 1];
+    const parentKey = parent ? directoryKey(parent.path) : null;
+    if (entry.kind === "directory") {
+      rows.push({ key: directoryKey(entry.path), kind: "directory", path: entry.path, parentKey });
+      directoryStack.push(entry);
+    } else {
+      rows.push({ key: fileKey(entry.id), kind: "file", fileId: entry.id, parentKey });
+    }
+  }
+  return rows;
+}
+
+// カーソル行の背景 (フォーカス中のみ)
+function rowBackground(theme: ExtensionPaneTheme, cursor: boolean, selected = false) {
+  if (cursor) return theme.selectedHunk;
+  return selected ? theme.panelAlt : theme.panel;
+}
 
 // ---- 行コンポーネント ----
 
@@ -263,6 +346,7 @@ function GroupRow({
 function DirectoryRow({
   entry,
   collapsed,
+  cursor,
   statsLaneWidth,
   textWidth,
   theme,
@@ -270,6 +354,7 @@ function DirectoryRow({
 }: {
   entry: DirectoryEntry;
   collapsed: boolean;
+  cursor: boolean;
   statsLaneWidth: number;
   textWidth: number;
   theme: ExtensionPaneTheme;
@@ -281,19 +366,23 @@ function DirectoryRow({
   const trailingWidth = countText ? Math.max(statsLaneWidth, countText.length + 1) : 0;
   const indent = indentWidth(entry.depth, textWidth, 2 + trailingWidth + 1);
   const labelWidth = Math.max(1, textWidth - 1 - 2 - trailingWidth - indent);
+  const background = rowBackground(theme, cursor);
   return (
     <box
-      style={{ width: "100%", height: 1, flexDirection: "row", backgroundColor: theme.panel }}
+      id={rowId(directoryKey(entry.path))}
+      style={{ width: "100%", height: 1, flexDirection: "row", backgroundColor: background }}
       onMouseUp={() => onToggle(entry.path)}
     >
-      <box style={{ width: 1, height: 1, backgroundColor: theme.panel }} />
+      <text fg={cursor ? theme.accent : background} bg={background}>
+        {cursor ? "▌" : " "}
+      </text>
       <box
         style={{
           flexGrow: 1,
           height: 1,
           paddingLeft: indent,
           flexDirection: "row",
-          backgroundColor: theme.panel,
+          backgroundColor: background,
         }}
       >
         <text fg={theme.muted}>{collapsed ? "› " : "⌄ "}</text>
@@ -305,7 +394,7 @@ function DirectoryRow({
               height: 1,
               flexDirection: "row",
               justifyContent: "flex-end",
-              backgroundColor: theme.panel,
+              backgroundColor: background,
             }}
           >
             <text fg={theme.muted}>{countText}</text>
@@ -318,6 +407,7 @@ function DirectoryRow({
 
 function FileRow({
   entry,
+  cursor,
   paddingLeft,
   selected,
   statsLaneWidth,
@@ -326,6 +416,7 @@ function FileRow({
   onSelect,
 }: {
   entry: FileEntry;
+  cursor: boolean;
   paddingLeft: number;
   selected: boolean;
   statsLaneWidth: number;
@@ -333,19 +424,19 @@ function FileRow({
   theme: ExtensionPaneTheme;
   onSelect: (fileId: string) => void;
 }) {
-  const background = selected ? theme.panelAlt : theme.panel;
+  const background = rowBackground(theme, cursor, selected);
   const iconWidth = entry.icon ? 2 : 0;
   const indent = indentWidth(entry.depth, textWidth, iconWidth + statsLaneWidth + 1);
   const nameWidth = Math.max(1, textWidth - 1 - iconWidth - statsLaneWidth - indent);
   const statColor = { note: theme.noteBorder, add: theme.badgeAdded, del: theme.badgeRemoved };
   return (
     <box
-      id={rowId(entry.id)}
+      id={rowId(fileKey(entry.id))}
       style={{ width: "100%", height: 1, flexDirection: "row", backgroundColor: background }}
       onMouseUp={() => onSelect(entry.id)}
     >
-      <text fg={selected ? theme.accent : background} bg={background}>
-        {selected ? "▌" : " "}
+      <text fg={selected || cursor ? theme.accent : background} bg={background}>
+        {selected || cursor ? "▌" : " "}
       </text>
       <box
         style={{
@@ -393,10 +484,9 @@ function FilesModePane({
   width,
   actions,
 }: ExtensionPaneProps): ReactNode {
-  const currentMode = useMode();
+  const { mode: currentMode, collapsed, focused, cursor } = useStore();
   const scrollRef = useRef<ScrollBoxRenderable | null>(null);
   const skipRevealRef = useRef(false);
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
 
   // 組み込みと同じく、行頭の選択マーカー1列 + 余白を引いた幅をテキスト幅とする
   const textWidth = Math.max(8, width - 2);
@@ -415,36 +505,39 @@ function FilesModePane({
   const maxStats = Math.max(0, ...fileEntries.map(statsWidth));
   const statsLaneWidth = maxStats > 0 ? maxStats + 1 : 0;
 
+  const navRows = useMemo(() => buildNavRows(entries), [entries]);
+  paneLink = { rows: navRows, selectedFileId, selectFile: actions.selectFile };
+
   const toggleDirectory = (path: string) => {
     skipRevealRef.current = true;
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (!next.delete(path)) next.add(path);
-      return next;
-    });
+    toggleCollapsed(path);
   };
 
-  // 選択されたファイルが折りたたみの中にあれば展開する
+  // 選択されたファイルが折りたたみの中にあれば展開し、カーソルもそのファイルに合わせる
+  // (フォーカス中にカーソルがディレクトリ上にあるときは動かさない)
   useEffect(() => {
     const selected = files.find((file) => file.id === selectedFileId);
     if (!selected) return;
-    setCollapsed((current) => {
-      const hidden = directoryPaths(selected.path).filter((path) => current.has(path));
-      if (hidden.length === 0) return current;
-      const next = new Set(current);
-      for (const path of hidden) next.delete(path);
-      return next;
+    updateStore((current) => {
+      const hidden = directoryPaths(selected.path).filter((path) => current.collapsed.has(path));
+      const keepCursor = current.focused && current.cursor?.startsWith("d:");
+      const nextCursor = keepCursor ? current.cursor : fileKey(selected.id);
+      if (hidden.length === 0 && nextCursor === current.cursor) return current;
+      const collapsed = new Set(current.collapsed);
+      for (const path of hidden) collapsed.delete(path);
+      return { ...current, collapsed, cursor: nextCursor };
     });
   }, [files, selectedFileId]);
 
-  // 選択行を常に表示範囲に入れる (ディレクトリの開閉操作の直後は除く)
+  // フォーカス中はカーソル行、それ以外は選択行を表示範囲に入れる (マウスでの開閉直後は除く)
   useEffect(() => {
     if (skipRevealRef.current) {
       skipRevealRef.current = false;
       return;
     }
-    if (selectedFileId) scrollRef.current?.scrollChildIntoView(rowId(selectedFileId));
-  }, [collapsed, files, resolvedMode, selectedFileId]);
+    const key = focused ? cursor : selectedFileId ? fileKey(selectedFileId) : null;
+    if (key) scrollRef.current?.scrollChildIntoView(rowId(key));
+  }, [collapsed, cursor, files, focused, resolvedMode, selectedFileId]);
 
   return (
     <scrollbox
@@ -472,6 +565,7 @@ function FilesModePane({
                 key={entry.id}
                 entry={entry}
                 collapsed={collapsed.has(entry.path)}
+                cursor={focused && cursor === directoryKey(entry.path)}
                 statsLaneWidth={statsLaneWidth}
                 textWidth={textWidth}
                 theme={theme}
@@ -483,6 +577,7 @@ function FilesModePane({
             <FileRow
               key={entry.id}
               entry={entry}
+              cursor={focused && cursor === fileKey(entry.id)}
               paddingLeft={resolvedMode === "tree" ? 0 : 1}
               selected={entry.id === selectedFileId}
               statsLaneWidth={statsLaneWidth}
@@ -500,7 +595,7 @@ function FilesModePane({
 export default function registerFilesMode(hunk: HunkExtensionAPI) {
   const configured = hunk.config.default;
   if (configured === "tree" || configured === "flat" || configured === "auto") {
-    mode = configured;
+    store = { ...store, mode: configured };
   } else if (configured !== undefined) {
     hunk.log(`unknown default mode: ${String(configured)} (expected "tree", "flat" or "auto")`);
   }
@@ -515,10 +610,108 @@ export default function registerFilesMode(hunk: HunkExtensionAPI) {
   });
 
   hunk.registerCommand({ id: "toggle", title: "Toggle files pane tree/flat", key: "S" }, (ctx) => {
-    const current = mode === "auto" ? lastResolvedMode : mode;
+    const current = store.mode === "auto" ? lastResolvedMode : store.mode;
     const next = current === "tree" ? "flat" : "tree";
-    setMode(next);
+    updateStore((state) => ({ ...state, mode: next }));
     if (!ctx.panes.isOpen("files")) ctx.panes.open("files");
     ctx.notify(`Files: ${next}`);
   });
+
+  hunk.registerKeyboardMode({
+    id: "focus",
+    title: "Files",
+    onEnter() {
+      const selected = paneLink?.selectedFileId;
+      updateStore((state) => ({
+        ...state,
+        focused: true,
+        cursor: selected ? fileKey(selected) : (paneLink?.rows[0]?.key ?? null),
+      }));
+    },
+    onExit() {
+      updateStore((state) => ({ ...state, focused: false }));
+    },
+    onKey(key) {
+      return handleFocusKey(key);
+    },
+  });
+
+  hunk.registerCommand({ id: "focus", title: "Focus files pane", key: "F" }, (ctx) => {
+    if (ctx.keyboardModes.isActive("focus")) {
+      ctx.keyboardModes.exitMode();
+      return;
+    }
+    if (!ctx.panes.isOpen("files")) ctx.panes.open("files");
+    ctx.keyboardModes.enterMode("focus");
+  });
+}
+
+// ---- フォーカス中のキー操作 ----
+
+function isChar(key: ExtensionKeyEvent, char: string) {
+  return key.sequence === char;
+}
+
+function moveCursor(rows: readonly NavRow[], index: number) {
+  const row = rows[Math.max(0, Math.min(rows.length - 1, index))];
+  if (!row) return;
+  updateStore((state) => (state.cursor === row.key ? state : { ...state, cursor: row.key }));
+  if (row.kind === "file" && row.fileId && row.fileId !== paneLink?.selectedFileId) {
+    paneLink?.selectFile(row.fileId);
+  }
+}
+
+function handleFocusKey(key: ExtensionKeyEvent): ExtensionKeyboardModeKeyResult {
+  if (key.ctrl || key.meta || key.option) return "pass";
+  if (key.name === "escape" || isChar(key, "F")) return "exit";
+
+  const rows = paneLink?.rows ?? [];
+  if (rows.length === 0) return "pass";
+  const index = rows.findIndex((row) => row.key === store.cursor);
+  const row = rows[index];
+
+  if (key.name === "down" || isChar(key, "j")) {
+    moveCursor(rows, index < 0 ? 0 : index + 1);
+    return "handled";
+  }
+  if (key.name === "up" || isChar(key, "k")) {
+    moveCursor(rows, index < 0 ? 0 : index - 1);
+    return "handled";
+  }
+  if (isChar(key, "g") || key.name === "home") {
+    moveCursor(rows, 0);
+    return "handled";
+  }
+  if (isChar(key, "G") || key.name === "end") {
+    moveCursor(rows, rows.length - 1);
+    return "handled";
+  }
+  if (!row) return "pass";
+
+  if (key.name === "right" || isChar(key, "l")) {
+    if (row.kind === "directory" && row.path) {
+      if (store.collapsed.has(row.path)) setCollapsed(row.path, false);
+      else moveCursor(rows, index + 1);
+    }
+    return "handled";
+  }
+  if (key.name === "left" || isChar(key, "h")) {
+    if (row.kind === "directory" && row.path && !store.collapsed.has(row.path)) {
+      setCollapsed(row.path, true);
+    } else if (row.parentKey) {
+      moveCursor(
+        rows,
+        rows.findIndex((candidate) => candidate.key === row.parentKey),
+      );
+    }
+    return "handled";
+  }
+  if (key.name === "return" || key.name === "enter") {
+    if (row.kind === "directory" && row.path) {
+      toggleCollapsed(row.path);
+      return "handled";
+    }
+    return "exit";
+  }
+  return "pass";
 }
