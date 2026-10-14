@@ -88,7 +88,7 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 ## skill のコンテキストへの載せ方
 
 自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
-（[`docs/skills.md`](skills.md)）。
+（[`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理)）。
 
 ## 生成コマンド
 

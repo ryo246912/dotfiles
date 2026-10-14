@@ -48,10 +48,6 @@
     "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/statusline.sh\"; \"$f\"",
     "refreshInterval": 30
   },
-  "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true,
-    "expo-deployment@expo-plugins": true
-  },
   "skillOverrides": {
     "crit": "on",
     "crit-cli": "on",
