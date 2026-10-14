@@ -210,6 +210,9 @@ Settings > Resources > Advanced の Disk usage で見られます。
   （[ディスクを空ける](#ディスクを空けるimage-layer-の-prune)参照）。
 - **ディスクが厳しいなら devcontainer を使う。** `multi-worktree dev --devcontainer` で
   従来経路に戻せます。隔離より資源効率を優先する場面では素直にこちらです。
+- **同じタスク内で Claude のセッションを増やすだけなら sandbox を増やさない。** sandbox の中で
+  `←` / `/bg` / `claude agents` を使えば VM は 1 つのままです（この構成は未検証。
+  [`docs/ai.md`](ai.md#sandbox-ごとに起動する場合との比較)）。
 
 ## セットアップ
 
