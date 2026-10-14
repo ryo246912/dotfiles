@@ -14,6 +14,9 @@ return {
       end
       require("notify").setup({
         background_colour = "#000000",
+        -- 重複通知のマージは、フェードアウト中の通知を置き換えようとして
+        -- "No matching notification found to replace" になり元の通知が消えるため無効化
+        merge_duplicates = false,
       })
       vim.notify = require("notify")
     end,
