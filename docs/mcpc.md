@@ -72,6 +72,8 @@ dependencies:
   警告を出して保持するだけで、mcpc は無視します。
 - 同じ name を複数のファイルに書いた場合は先に読んだ方（`mcp.yml` → `mcp.<env>.yml` の順）を使います。
 - 環境別のファイルを置いたら `mise bootstrap dotfiles apply` で `~/.config/mcpc` へ配置し、`mise run apm:install` します。
+- 以前の `config/sbx/mcp.<env>.yml` は読みません。残っている場合は `apm:install-mcpc` が警告するので、
+  `git mv` ではなく（gitignore 済みのため）`mv config/sbx/mcp.<env>.yml config/mcpc/` で移動してから上を実行します。
 
 ## mcpc の設定の仕組み（apm:install-mcpc）
 
@@ -84,9 +86,11 @@ dependencies:
    生成され、実際の `~/.copilot` や `~/.claude.json` には何も登録されない。生成物は `~/.config`（mise の history で
    丸ごと track している）を避けて `~/.local/state` に置く（devcontainer の mount と揃えるため `XDG_STATE_HOME` には
    追従しない固定パス）。
-3. 生成した config の並び順で、各 server に host の port（`MCPC_PROXY_PORT_BASE`、既定 8931 から連番）を割り当て、
-   sandbox 用の config（`~/.config/mcpc/sandbox/mcp-config.json`）を書く。中身は
-   `http://host.docker.internal:<port>` と `Authorization: Bearer ${MCPC_PROXY_TOKEN}` だけで、credential は含まない。
+3. 各 server に host の port（`MCPC_PROXY_PORT_BASE`、既定 8931 から）を割り当て、sandbox 用の config
+   （`~/.config/mcpc/sandbox/mcp-config.json`）を書く。中身は `http://host.docker.internal:<port>` と
+   `Authorization: Bearer ${MCPC_PROXY_TOKEN}` だけで、credential は含まない。既存の server は前回の port を
+   引き継ぎ、新しい server にだけ空いている port を振る（server を消しても他の server の port はずれない）。
+   定義から消した server の proxy（`@sbx-<name>`）はここで止める。
 
 `~/.apm/apm.yml` とは別の manifest なので、MCP は `apm/apm.lock.yaml` に載らず、`apm:ci` の `--frozen` とも独立しています。
 定義ファイルや生成物が変わると `apm:sync`（`mise bootstrap` の hook）が `apm:install` をやり直します。
@@ -152,7 +156,7 @@ sandbox（[`docs/docker-sandboxes.md`](docker-sandboxes.md)）では credential 
 # host（初回は mise run apm:install と mise run sandbox:build-template も）
 aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack aws-cloudwatch
 mise run sandbox:mcpc            # 引数なしで server と port の一覧
-mise run sandbox:mcpc-stop       # 全 proxy を止める
+mise run sandbox:mcpc-stop       # 全 proxy（mcpc の @sbx-* session）を止める
 ```
 
 ```bash

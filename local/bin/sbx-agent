@@ -529,8 +529,13 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         add_env MCPC_SANDBOX_CONFIG "${HOME}/.config/mcpc/sandbox/mcp-config.json"
         _token_file="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/proxy-token"
         if [[ ! -s "$_token_file" ]]; then
+            # sandbox:mcpc と同時に初回作成しても同じ token になるよう、一時ファイルに書いてから ln で置く
             mkdir -p "$(dirname "$_token_file")"
-            (umask 077 && od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$_token_file")
+            [[ -e "$_token_file" && ! -s "$_token_file" ]] && rm -f "$_token_file"
+            _token_tmp=$(mktemp "${_token_file}.XXXXXX")
+            od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$_token_tmp"
+            ln "$_token_tmp" "$_token_file" 2>/dev/null || true
+            rm -f "$_token_tmp"
         fi
         add_env MCPC_PROXY_TOKEN "$(cat "$_token_file")"
     fi

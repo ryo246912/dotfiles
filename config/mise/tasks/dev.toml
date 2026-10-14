@@ -237,6 +237,11 @@ for file in "$config_dir/mcp.yml" "$config_dir"/mcp.*.yml; do
   manifests="${manifests}${json}
 "
 done
+# 旧パス（config/sbx/mcp.<name>.yml）に残った gitignore 済みのファイルは読まないため、移動を促す
+for file in "$HOME/.config/sbx"/mcp.*.yml; do
+  [ -f "$file" ] || continue
+  echo "warn: $file は読み込まれません。config/mcpc/ へ移動してください（docs/mcpc.md）" >&2
+done
 merged=$(printf '%s' "$manifests" | jq -s 'add // [] | reduce .[] as $server ([]; if any(.[]; .name == $server.name) then . else . + [$server] end)')
 
 # 一覧から消したサーバが config に残らないよう、毎回作り直す。
@@ -253,18 +258,37 @@ echo "mcpc config: $config"
 
 # Docker Sandboxes 用の mcpc config。サーバは host の mcpc proxy（mise run sandbox:mcpc）が動かし、
 # sandbox 内の mcpc は host.docker.internal:<port> へ繋ぐ（sbx のプロキシが host の localhost へ転送する）。
-# port はこの config の並び順で base から振り、sandbox:mcpc もこのファイルから読む（対応表を 1 か所に持つ）。
+# port は base から振り、sandbox:mcpc もこのファイルから読む（対応表を 1 か所に持つ）。
 # proxy の bearer token は値を書かず、sbx-agent が sandbox に渡す MCPC_PROXY_TOKEN を mcpc が展開する。
+# 既存サーバの port は前回の config から引き継ぎ、新しいサーバにだけ空いている port を振る。並び順で振り直すと
+# サーバを消したときに後ろのサーバの port がずれ、動いている proxy（旧 port）と食い違うため。
 sandbox_dir="$config_dir/sandbox"
+sandbox_config="$sandbox_dir/mcp-config.json"
 mkdir -p "$sandbox_dir"
-jq --argjson base "${MCPC_PROXY_PORT_BASE:-8931}" '{mcpServers: (.mcpServers
-    | to_entries | to_entries
-    | map({key: .value.key, value: {
-        url: "http://host.docker.internal:\($base + .key)",
-        headers: {Authorization: "Bearer ${MCPC_PROXY_TOKEN}"}}})
-    | from_entries)}' "$config" >"$sandbox_dir/mcp-config.json.tmp"
-mv "$sandbox_dir/mcp-config.json.tmp" "$sandbox_dir/mcp-config.json"
-echo "mcpc config (sandbox): $sandbox_dir/mcp-config.json"
+previous='{}'
+[ -f "$sandbox_config" ] && previous=$(cat "$sandbox_config")
+jq --argjson base "${MCPC_PROXY_PORT_BASE:-8931}" --argjson previous "$previous" '
+  ($previous.mcpServers // {} | with_entries(.value |= (.url | sub(".*:"; "") | tonumber))) as $prev
+  | (.mcpServers | keys_unsorted) as $names
+  | (reduce $names[] as $name ({ports: {}, used: []};
+      if $prev[$name] then .ports[$name] = $prev[$name] | .used += [$prev[$name]] else . end)
+    | reduce ($names[] | select($prev[.] | not)) as $name (.;
+        first(range($base; $base + 1000) as $port | select(.used | index($port) | not) | $port) as $port
+        | .ports[$name] = $port | .used += [$port])
+    | .ports) as $ports
+  | {mcpServers: ($names | map({key: ., value: {
+      url: "http://host.docker.internal:\($ports[.])",
+      headers: {Authorization: "Bearer ${MCPC_PROXY_TOKEN}"}}}) | from_entries)}' \
+  "$config" >"$sandbox_config.tmp"
+# 一覧から消したサーバの proxy（sandbox:mcpc が起動したもの）は止める
+if command -v mcpc >/dev/null 2>&1; then
+  for name in $(jq -rn --argjson previous "$previous" --slurpfile current "$sandbox_config.tmp" \
+    '($previous.mcpServers // {} | keys) - ($current[0].mcpServers | keys) | .[]'); do
+    mcpc close "@sbx-$name" >/dev/null 2>&1 && echo "stopped: @sbx-$name（定義から削除）" || true
+  done
+fi
+mv "$sandbox_config.tmp" "$sandbox_config"
+echo "mcpc config (sandbox): $sandbox_config"
 '''
 shell = "bash -c"
 

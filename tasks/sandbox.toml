@@ -278,8 +278,15 @@ main() {
 
   token_file="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/proxy-token"
   if [ ! -s "$token_file" ]; then
+    # sbx-agent と同時に初回作成しても同じ token になるよう、一時ファイルに書いてから ln で置く
+    # （ln は既存のファイルを上書きしないため、先に置いた方の token が残る）
     mkdir -p "$(dirname "$token_file")"
-    (umask 077 && od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$token_file")
+    # 中身の無いファイル（書き込み途中で中断したもの）だけ消す
+    [ -e "$token_file" ] && [ ! -s "$token_file" ] && rm -f "$token_file"
+    tmp=$(mktemp "$token_file.XXXXXX")
+    od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$tmp"
+    ln "$tmp" "$token_file" 2>/dev/null || true
+    rm -f "$tmp"
   fi
   token=$(cat "$token_file")
 
@@ -323,10 +330,11 @@ main "$@"
 description = "Stop the host-side mcpc proxies started by sandbox:mcpc"
 run = '''
 set -eu
-sandbox_config="$HOME/.config/mcpc/sandbox/mcp-config.json"
-[ -f "$sandbox_config" ] || exit 0
-for name in $(jq -r '.mcpServers | keys[]' "$sandbox_config"); do
-  mcpc close "@sbx-$name" >/dev/null 2>&1 && echo "stopped: @sbx-$name" || true
+command -v mcpc >/dev/null 2>&1 || { echo "error: mcpc が必要です（mise install）" >&2; exit 127; }
+# config ではなく mcpc のセッション一覧から探す（config から消したサーバの proxy も止めるため）
+sessions=$(mcpc --json) || { echo "error: mcpc のセッション一覧を取得できません" >&2; exit 1; }
+for session in $(printf '%s' "$sessions" | jq -r '.sessions[]?.name | select(startswith("@sbx-"))'); do
+  mcpc close "$session" >/dev/null 2>&1 && echo "stopped: $session" || true
 done
 '''
 
