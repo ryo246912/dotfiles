@@ -117,14 +117,14 @@ server ごとの認証方式は次のとおりです。
 MCP サーバは host（devcontainer なら container）で mcpc が起動します。sandbox 内の mcpc は host の proxy に繋ぐだけで、
 MCP サーバの credential は持ちません。
 
-| 場所           | 認証するもの                          | コマンド                                                                        | ファイル・環境変数                                                                                 |
-| -------------- | ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| host           | remote の OAuth（server ごとに 1 回） | `mcpc login <url>`（例: `mcpc login https://mcp.notion.com/mcp`）               | token は OS の keychain（mcpc が管理。`mcpc` で profile の一覧を確認、`mcpc logout <url>` で削除） |
-| host           | `mcp-remote` の OAuth                 | 初回の `mcpc connect`（または `sandbox:mcpc`）でブラウザが開く                  | `~/.mcp-auth`                                                                                      |
-| host           | aws-mcp                               | なし（profile で認証できる状態にする）                                          | `~/.aws/config`                                                                                    |
-| host → sandbox | proxy の bearer token                 | `mise run sandbox:mcpc <server>...`（token が無ければ作る）                     | host: `~/.local/state/mcpc/proxy-token`（`0600`）                                                  |
-| sandbox        | なし（token は `sbx-agent` が渡す）   | `mcpc connect "$MCPC_SANDBOX_CONFIG:<server>" @<server>`                        | env: `MCPC_PROXY_TOKEN` / `MCPC_SANDBOX_CONFIG`、mount: `~/.config/mcpc/sandbox`（read-only）      |
-| devcontainer   | remote の OAuth                       | container 内で `mcpc login <url>`（host の keychain は container から見えない） | config: `~/.local/state/mcpc/apm-home/.copilot/mcp-config.json`（read-only mount）                 |
+| 場所           | 認証するもの                          | コマンド                                                                        | ファイル・環境変数                                                                                           |
+| -------------- | ------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| host           | remote の OAuth（server ごとに 1 回） | `mcpc login <url>`（例: `mcpc login https://mcp.notion.com/mcp`）               | token は OS の keychain（mcpc が管理。`mcpc --json` の `profiles` で一覧を確認、`mcpc logout <url>` で削除） |
+| host           | `mcp-remote` の OAuth                 | 初回の `mcpc connect`（または `sandbox:mcpc`）でブラウザが開く                  | `~/.mcp-auth`                                                                                                |
+| host           | aws-mcp                               | なし（profile で認証できる状態にする）                                          | `~/.aws/config`                                                                                              |
+| host → sandbox | proxy の bearer token                 | `mise run sandbox:mcpc <server>...`（token が無ければ作る）                     | host: `~/.local/state/mcpc/proxy-token`（`0600`）                                                            |
+| sandbox        | なし（token は `sbx-agent` が渡す）   | `mcpc connect "$MCPC_SANDBOX_CONFIG:<server>" @<server>`                        | env: `MCPC_PROXY_TOKEN` / `MCPC_SANDBOX_CONFIG`、mount: `~/.config/mcpc/sandbox`（read-only）                |
+| devcontainer   | remote の OAuth                       | container 内で `mcpc login <url>`（host の keychain は container から見えない） | config: `~/.local/state/mcpc/apm-home/.copilot/mcp-config.json`（read-only mount）                           |
 
 sandbox で使うまでの流れ:
 

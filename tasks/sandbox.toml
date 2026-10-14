@@ -385,7 +385,11 @@ to_specs() {
         .name as $name
         | (.sbx_options // []) as $sbx_options
         | if (.transport // "") == "stdio" then
-            ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
+            # sbx は ${VAR} を展開しないため、そのまま渡すと不正な値で起動してしまう。登録せずにエラーにする
+            ([(.env // {}) | to_entries[]
+              | if (.value | tostring | test("\\$\\{")) then
+                  error("\($name): env の ${VAR} は sbx gateway 経路では使えません（\(.key)）")
+                else "\(.key)=\(.value)" end]) as $env
             | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
             | ($argv[1:] + (.args // [])) as $cmd_args
             | if ($cmd_args | map(select(contains(","))) | length) > 0 then
