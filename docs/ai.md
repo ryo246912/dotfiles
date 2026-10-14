@@ -222,8 +222,9 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
   並列させるときは `--cpus` / `--memory` を絞る。
 - **同じタスク（同じ sandbox）の中で調査・レビューを並走させたい**: sandbox の中で
   `←` / `/bg` / `claude agents` を使う。VM は 1 つのまま、Claude のセッションだけ増やせます。
-  sandbox の中では workspace だけが見えるので隔離はホストとの間で保たれ、増えるのは
-  プロセス分のメモリだけです。ただし同じ VM 内のセッション同士は分離されないので、
+  sandbox から見えるのは `sbx-agent` が渡した workspace（task root・agent の設定ディレクトリ・
+  git 設定などの追加 mount。[一覧](docker-sandboxes.md#sbx-agent-ラッパー)）だけなので、
+  ホストとの隔離は sandbox 1 つのときと変わらず、増えるのはプロセス分のメモリだけです。ただし同じ VM 内のセッション同士は分離されないので、
   同じファイルを書き換える作業は並走させず、2 つ目以降は調査・レビューなど読むだけの役割にします。
   sandbox の中からは `multi-worktree` を実行できず（設定ファイルが無い）、ホストで新しく作った
   worktree も起動済みの sandbox には見えないので、編集を並列にしたいときは
