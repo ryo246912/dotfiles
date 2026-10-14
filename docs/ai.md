@@ -604,6 +604,8 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `claude/settings.json` には今 `enabledPlugins` を書いていない（global で有効な plugin は無い）。どのプロジェクトでも使う plugin ができたら、ここで `true` にする。
 - 特定のプロジェクトでだけ使う plugin（例: Expo のリポジトリの `expo-deployment`）は、global には書かず、
   そのリポジトリの `.claude/settings.json`（チームで共有する）か `.claude/settings.local.json`（自分だけ）で `true` にする。
+- `enabledPlugins` は有効・無効を切り替えるだけで、plugin を入れてはくれない。plugin を使う端末ごとに
+  `/plugin install <plugin>@<marketplace>`（他の marketplace なら先に `/plugin marketplace add`）で入れておく。
 
 ### 関連リンク
 
@@ -818,7 +820,7 @@ skillは必要に応じてterminalを分割し、`terminal-browser action`で開
 ### Tsumiki skills
 
 Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
-依頼内容に応じて自動選択されますが、Claude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`で明示できます。
+Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では選ばれず、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 | skill                | 用途                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------- |
@@ -1041,11 +1043,11 @@ Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`か
 #### 用途
 
 ローカルに保存された過去のcoding-agent sessionを`ctx` CLIで検索し、以前の判断、試行、失敗理由、関連する会話を
-現在の作業前に確認するskillです。同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。
+現在の作業前に確認するskillです。Codexでは、同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では使われません（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 #### 使い方
 
-初回だけ`ctx setup`でindexを作成します。明示的に使う場合は、Claude Codeでは`/ctx-agent-history-search`、Codexでは
+初回だけ`ctx setup`でindexを作成します。Claude Codeでは`/ctx-agent-history-search`で呼び出します。Codexで明示する場合は
 `$ctx-agent-history-search`を指定します。
 
 ```text
@@ -1195,8 +1197,8 @@ skillはあるか」「エージェントへ特定分野の能力を追加した
 
 #### 使い方
 
-skillは該当する依頼から自動的に選択されます。明示的に指定する場合は、Claude Codeでは`/find-skills`、Codexでは
-`$find-skills`を使用し、探したい分野と具体的な作業を伝えます。
+Codexでは該当する依頼から自動的に選択され、`$find-skills`で明示もできます。Claude Codeでは`skillOverrides`で
+`user-invocable-only`にしているため、`/find-skills`で呼び出します。どちらも探したい分野と具体的な作業を伝えます。
 
 ```text
 /find-skills
