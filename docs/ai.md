@@ -43,6 +43,210 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## 複数セッションを並走させる（agent view）
+
+Claude Code には、1 つの画面から複数のセッションを起動・監視・切り替えできる
+**agent view** があります（research preview）。空のプロンプトで `←` を押すと出てくる
+セッション一覧がこれです。公式ドキュメントは [Agent view](https://code.claude.com/docs/en/agent-view)。
+
+> [!NOTE]
+> 「同じ claude プロセスの中で別セッションを開く」機能ではありません。
+> 各セッションは **supervisor（バックグラウンドサービス）配下の別々の Claude Code プロセス**として動きます。
+> 1 つの画面から操作できるだけで、プロセスや隔離環境が共有されるわけではありません。
+> リソースの話は [sandbox ごとに起動する場合との比較](#sandbox-ごとに起動する場合との比較) を参照。
+
+### 開く・閉じる
+
+| 操作                                         | 方法                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| agent view を開く                            | `claude agents`（`--cwd <dir>` でそのディレクトリ配下のセッションだけに絞る）  |
+| 今の会話をバックグラウンドに回して一覧を開く | 空のプロンプトで `←`、または `/bg`（`/background`）                            |
+| 今の会話をコピーして別セッションで並走させる | `/fork`（元の会話はそのまま続く）                                              |
+| 一覧から抜ける                               | `Esc`（セッションは止まらない）                                                |
+| `claude` 単体で agent view を開くようにする  | `/config defaultToAgentsView=true`                                             |
+| `←` で一覧に飛ぶ挙動を止める                 | 設定 `leftArrowOpensAgents: false`                                             |
+| agent view 自体を無効化                      | 設定 `disableAgentView: true`、または環境変数 `CLAUDE_CODE_DISABLE_AGENT_VIEW` |
+
+`←` で一覧に移ると、そのセッションの行が選択された状態になります。`Esc` で会話に戻るか、
+`Enter` で開き直せます。ツール実行中は 10 秒ほど待ってから切り替わり、権限プロンプトや
+入力途中のテキストがあると切り替わらないことがあります。
+
+### 一覧の操作
+
+| キー                  | 動作                                                              |
+| --------------------- | ----------------------------------------------------------------- |
+| `↑` / `↓`             | 行の移動                                                          |
+| `Enter` / `→`         | 選択したセッションにアタッチ                                      |
+| `Space`               | peek パネル（中身をのぞく）の開閉                                 |
+| `Alt+1`..`Alt+9`      | 表示中ディレクトリのセッション 1〜9 にアタッチ                    |
+| `Ctrl+T`              | pin / unpin（pin したセッションはアイドルでもプロセスを止めない） |
+| `Ctrl+R`              | 名前を変更                                                        |
+| `Ctrl+S`              | 状態別 / ディレクトリ別のグルーピング切り替え                     |
+| `Ctrl+F`              | 名前で検索                                                        |
+| `Ctrl+X`              | 停止。2 秒以内にもう一度押すと削除                                |
+| `Ctrl+G`              | dispatch するプロンプトを `$EDITOR` で編集                        |
+| `Shift+↑` / `Shift+↓` | グループ内で並べ替え                                              |
+| `?`                   | ショートカット一覧                                                |
+
+アタッチ中は、空のプロンプトで `←`・`/exit`・`Ctrl+Z`（元いた場所に戻る）でデタッチします。
+**デタッチしてもセッションは止まりません。** 止めるときは一覧で `Ctrl+X` か `/stop`。
+
+キーは `~/.claude/keybindings.json` の `Agents` コンテキストで変更できます。
+
+### 新しいセッションを起動する（dispatch）
+
+一覧の入力欄にプロンプトを書いて `Enter` すると、1 プロンプト = 1 セッションで起動します。
+
+| 入力                     | 効果                                                 |
+| ------------------------ | ---------------------------------------------------- |
+| `<prompt>`               | 新しいセッションを起動                               |
+| `@<agent-name> <prompt>` | カスタム subagent をメインエージェントとして起動     |
+| `/<command>`             | skill / command を最初のプロンプトとして起動         |
+| `! <command>`            | シェルコマンドだけをバックグラウンドジョブとして実行 |
+| `#<number>` / PR の URL  | その PR を担当している既存セッションを選択           |
+
+シェルからも起動できます（`-p` / `--print` とは併用不可）。
+
+```bash
+claude --bg "flaky な SettingsChangeDetector のテストを調査して"
+claude --bg --name flaky-test-fix "flaky なテストを調査して"
+claude --agent code-reviewer --bg "PR 1234 のレビューコメントに対応して"
+claude --resume <session-id> --bg "続きをやって"
+
+# dispatch 時の既定を指定して agent view を開く
+claude agents --permission-mode plan --model opus --effort high
+```
+
+#### 権限モード
+
+- `←` / `/bg` でバックグラウンドに回したセッションは、今の権限モードをそのまま引き継ぎます。
+- 一覧から dispatch したセッションは、対象ディレクトリの `permissions.defaultMode` が使われます。
+  ただし `auto` / `bypassPermissions` はユーザー設定（`~/.claude/settings.json`）・managed settings・
+  `--settings` で指定したときだけ有効で、プロジェクト設定からは選べません。
+- `claude agents --dangerously-skip-permissions` のように、開くときのフラグで既定を渡すこともできます。
+
+### ファイル編集の隔離（worktree）
+
+一覧や `--bg` から dispatch したセッションは、ファイルを編集する前に
+`.claude/worktrees/` 配下に**専用の git worktree を作ってそこへ移動**します。
+並列セッションが同じファイルを書き合わないための仕組みです。次の場合は worktree を作りません。
+
+- `←` / `/bg` で、すでに開いていたセッションをバックグラウンドに回したとき
+- すでに linked worktree の中にいるとき（`multi-worktree` の worktree はこれに当たる）
+- git リポジトリではなく、`WorktreeCreate` hook も無いとき
+
+**このリポジトリでは無効化しています**（`claude/settings.json`）。dispatch したセッションも
+今の作業ディレクトリをそのまま編集するので、並列で同じファイルを触らないよう役割を分けるか、
+`multi-worktree` で worktree を分けてから起動します。
+
+```json
+{
+  "worktree": {
+    "bgIsolation": "none"
+  }
+}
+```
+
+有効にしている場合、一覧から削除すると **Claude が作った worktree も未コミットの変更ごと消えます。** 残したいものは
+先にコミット・push しておきます（未 push のコミットがある worktree は削除がブロックされます）。
+
+### スクリプトから操作する
+
+```bash
+claude agents --json          # 稼働中のセッション（--all で完了済みも）
+claude attach <id|name>
+claude logs <id|name>
+claude stop <id>
+claude respawn <id>           # 再起動（--all で全部）
+claude rm <id>                # 一覧から削除（transcript は claude --resume で残る）
+
+claude daemon status          # supervisor の状態・ワーカー数
+claude daemon logs            # ~/.claude/daemon.log を追う
+claude daemon stop --any --keep-workers   # セッションを残して supervisor だけ再起動
+```
+
+状態は `~/.claude/jobs/<id>/state.json` を直接読まず、`claude agents --json` の `state`
+（`working` / `blocked` / `done` / `failed` / `stopped`）を使います。
+
+#### 複数アカウントとの関係
+
+`CLAUDE_CONFIG_DIR` を設定していると、supervisor はその設定ディレクトリを使う**別インスタンス**として
+動きます。[ホスト](#ホスト) の account2 / work3 のように `CLAUDE_CONFIG_DIR` を切り替えて
+起動している場合、agent view の一覧もアカウントごとに分かれます。
+
+### プロセスの仕組み
+
+- 最初にセッションをバックグラウンドに回すか `claude agents` を開いたときに、
+  **supervisor** が起動します。端末や agent view を閉じてもセッションが生き残るのはこのためです。
+- **各セッションは supervisor 配下の独立した Claude Code プロセスです。**
+- 作業中・権限待ち・アタッチ中のセッションはプロセスが動き続けます。
+- 完了または入力待ちで、**約 1 時間アタッチされていないセッションはプロセスが止められます。**
+  会話はディスクに残り、次にアタッチ・返信したときに再開します（初回応答が少し遅くなる）。
+  止めたくなければ `Ctrl+T` で pin します。
+- 異常終了したプロセスは supervisor が再起動します。マシンをシャットダウンすると止まります。
+
+| パス                           | 中身                                                        |
+| ------------------------------ | ----------------------------------------------------------- |
+| `~/.claude/daemon.log`         | supervisor のログ                                           |
+| `~/.claude/daemon/roster.json` | 稼働中セッション（再接続用）                                |
+| `~/.claude/jobs/<id>/`         | セッションごとの状態。`tmp/` はスクラッチ（削除時に消える） |
+
+### sandbox ごとに起動する場合との比較
+
+このリポジトリでは `multi-worktree dev` で **セッションごとに sbx sandbox（microVM）** を作っています
+（[`docs/docker-sandboxes.md`](docker-sandboxes.md)）。agent view に寄せるとリソース的に得か、の整理です。
+
+#### 結論
+
+- **Claude Code のプロセス自体のコストはほぼ変わりません。** agent view でもセッションごとに
+  別プロセスなので、「1 プロセスに相乗りして軽くなる」ことはありません。
+- **差が出るのは sandbox（microVM）の数です。** sbx は sandbox ごとに VM・専用 kernel・
+  専用 docker daemon・image store（template 数 GB）を持つため、並列数 N に比例して重くなります。
+  agent view でまとめれば、この VM 側の N 倍が消えます。
+- ただし **ホストで `claude agents` を使うと sandbox の隔離（ネットワーク制御・secret 注入・
+  FS の露出制限）が丸ごと無くなります。** `--dangerously-skip-permissions` 前提の運用では
+  ここが一番大きな差なので、単純に置き換えるのはおすすめしません。
+
+| 観点                    | セッションごとに sandbox      | ホストで agent view                | 1 つの sandbox の中で agent view      |
+| ----------------------- | ----------------------------- | ---------------------------------- | ------------------------------------- |
+| Claude Code プロセス    | N 個                          | N 個 + supervisor                  | N 個 + supervisor                     |
+| VM / docker daemon      | N 個                          | 0                                  | 1 個                                  |
+| ディスク（template 等） | N 個分                        | 0                                  | 1 個分                                |
+| アイドル時の回収        | 無し（`sbx stop` を手で打つ） | 約 1 時間でプロセス停止            | プロセスは停止、VM は残る             |
+| 隔離                    | セッション間も VM で分離      | 無し（Claude Code の権限設定だけ） | ホストとは分離、セッション間は同じ VM |
+| ファイル衝突の回避      | `multi-worktree` の worktree  | 無し（`bgIsolation: none`）        | 無し（役割を分ける）                  |
+
+#### 使い分けの指針
+
+- **安全性を優先する重い実装タスク**: これまで通りセッションごとに sandbox。
+  並列させるときは `--cpus` / `--memory` を絞る。
+- **同じタスク（同じ sandbox）の中で調査・レビューを並走させたい**: sandbox の中で
+  `←` / `/bg` / `claude agents` を使う。VM は 1 つのまま、Claude のセッションだけ増やせます。
+  sandbox から見えるのは `sbx-agent` が渡した workspace（task root・agent の設定ディレクトリ・
+  git 設定などの追加 mount。[一覧](docker-sandboxes.md#sbx-agent-ラッパー)）だけなので、
+  ホストとの隔離は sandbox 1 つのときと変わらず、増えるのはプロセス分のメモリだけです。ただし同じ VM 内のセッション同士は分離されないので、
+  同じファイルを書き換える作業は並走させず、2 つ目以降は調査・レビューなど読むだけの役割にします。
+  sandbox の中からは `multi-worktree` を実行できず（設定ファイルが無い）、ホストで新しく作った
+  worktree も起動済みの sandbox には見えないので、編集を並列にしたいときは
+  ホストで `multi-worktree` の別タスクとして別の sandbox を立てます。
+- **隔離が要らない軽い作業**（ドキュメント調査・質問など）: ホストで `claude agents` から dispatch。
+  VM を立てるより圧倒的に軽量です。
+
+> [!NOTE]
+> sandbox の中で agent view を使う構成は、この環境ではまだ動作確認していません。
+> 使う場合、supervisor は sandbox の中で動きます。
+> `sbx stop` すると sandbox 内のセッションもすべて止まり、ホストの `claude agents` からは見えません。
+
+### agent view の注意点
+
+- バックグラウンドセッションも通常どおり使用量を消費します。10 並列なら 10 倍の速さで枠を使います。
+- セッションは別プロセスなので、増やしすぎるとメモリが枯渇します（`possibly low memory` で失敗する）。
+- dispatch したセッションはコード変更をコミット・push するよう指示されています
+  （`main` / `master` への push・force-push・merge はしない）。
+- `claude agents` がセッション一覧ではなく subagent の一覧を出す場合は、agent view が使えない古い版です。`claude update` で更新します。
+
+参考: [Manage agents with agent view](https://code.claude.com/docs/en/agent-view) / [Run agents in parallel](https://code.claude.com/docs/en/agents)
+
 ## ステータスライン（prompt cache・rate limit・コンテキスト）
 
 Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
@@ -61,40 +265,42 @@ cold になったら次のメッセージで再キャッシュされるトーク
 
 ### 表示の読み方
 
-1 行目に branch・モデル・コンテキスト・session id、2 行目に rate limit・cache を表示します。
+1 行目にアカウント・branch・モデル・コンテキスト・session id、2 行目に rate limit・cache を表示します。
 
 ```text
-main · Opus 5.5 xhigh · ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
+ account2  foo@example.com · main · Opus 5.5 xhigh · ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
 5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
 ```
 
 ```text
-main · Opus 5.5 xhigh · ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
+ work3  bar@example.com · main · Opus 5.5 xhigh · ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
 5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
-| 表示                                | 意味                                                                                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                 |
-| `Opus 5.5 xhigh`（紫）              | モデル名と reasoning effort（`model.display_name`・`effort.level`）。effort 非対応モデルではモデル名のみ                                                |
-| `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`   |
-| `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                          |
-| `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                           |
-| `reset 2h9m`                        | rate limit の枠がリセットされるまでの時間（`rate_limits.*.resets_at` から計算）                                                                         |
-| `✓`                                 | ここまでの消費ペース（使用率 ÷ 経過時間）が続いても、リセットまで枠が持つ                                                                               |
-| `⚠ empty 23m`（黄/赤）              | 今のペースだとリセット前に枠を使い切る。表示はそれまでの時間。リセットまでの半分も持たないときは赤。枠の経過が 10% 未満の間は予測しない                 |
-| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                    |
-| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                         |
-| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                           |
-| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                     |
-| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない） |
-| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                               |
-| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                    |
-| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                           |
-| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                     |
-| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                |
-| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                        |
-| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                             |
+| 表示                                | 意味                                                                                                                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account2`（背景色）                | ログイン中のアカウント。config dir 名から決める（`~/.claude` → `account1`、`~/.claude-<name>` → `<name>`）。背景色は account1 青・account2 紫・work3 黄・その他 灰                                 |
+| `foo@example.com`（太字）           | ログイン中のメールアドレス（global config の `oauthAccount.emailAddress`。`CLAUDE_CONFIG_DIR` 指定時は `<dir>/.claude.json`、未指定時は `~/.claude.json`）。API キー利用などで無い場合は表示しない |
+| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                                                            |
+| `Opus 5.5 xhigh`（紫）              | モデル名と reasoning effort（`model.display_name`・`effort.level`）。effort 非対応モデルではモデル名のみ                                                                                           |
+| `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`                                              |
+| `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                                                                     |
+| `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                                                                      |
+| `reset 2h9m`                        | rate limit の枠がリセットされるまでの時間（`rate_limits.*.resets_at` から計算）                                                                                                                    |
+| `✓`                                 | ここまでの消費ペース（使用率 ÷ 経過時間）が続いても、リセットまで枠が持つ                                                                                                                          |
+| `⚠ empty 23m`（黄/赤）              | 今のペースだとリセット前に枠を使い切る。表示はそれまでの時間。リセットまでの半分も持たないときは赤。枠の経過が 10% 未満の間は予測しない                                                            |
+| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                                                               |
+| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                                                                    |
+| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                                                                      |
+| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                                                                |
+| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない）                                            |
+| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                                                                          |
+| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                                                               |
+| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                                                                      |
+| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                                                                |
+| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                                                           |
+| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                                                                   |
+| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                                                                        |
 
 `prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
 灰色で `cache – waiting` を表示します（Claude Code が v2.1.251 未満の場合もこの表示のままです）。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
@@ -104,6 +310,10 @@ subagent のリクエストはこの統計に含まれません。
 `${CLAUDE_CONFIG_DIR:-~/.claude}/statusline-rate-limits.json` へ保存し、prompt を送る前は
 リセット前の保存値を表示します。保存値は前回の応答時点のものなので、その後に他のセッションで
 使った分は最初の応答まで反映されません。
+
+メールアドレスも、数 MB になりうる global config を毎回 parse しないよう
+`${CLAUDE_CONFIG_DIR:-~/.claude}/statusline-account-email` へ保存し、global config が
+更新されるまでは保存値を表示します。
 
 ### cache を長持ちさせるための注意
 
@@ -191,6 +401,108 @@ hit 率（ステータスラインの `hit 91%`）が高いほど入力の料金
 休憩明けで cold になっていたら、続けるか `/clear` するかを選ぶのが一番得な使い方です。
 
 参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields) /
+[How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
+
+## トークン使用量を抑える
+
+別タスクで `/clear` するだけでは、**同じタスクの長いラリー**で消費が膨らむのを防げません。
+Claude Code はメッセージのたびに会話全体を送るので、1 ターンのコストは「その時点の会話の長さ」に
+比例します。cache が warm でも 0.1 倍で読み直すだけなので、会話が長くなるほど 1 ターンが重くなります。
+ツールを 1 回呼ぶたびにも同じ量を読み直すため、1 往復のラリーでも内部では何回分もかかります。
+
+### 長いラリーで使いすぎる原因
+
+Opus 5.5・Sonnet 5.5・Haiku 5.5 などは**既定で 1M コンテキスト**で動き、auto-compact は
+**約 967K トークンまで発動しません**。つまり何もしなければ、同じタスクを続ける限り会話は
+数十万トークンまで膨らみ続け、その全体を毎ターン（毎ツール呼び出し）読み直します。
+
+| 会話の長さ | 1 ターンで読む量（cache hit 時の課金換算） |
+| ---------- | ------------------------------------------ |
+| 50K        | 50K × 0.1 = 5K 相当                        |
+| 200K       | 200K × 0.1 = 20K 相当                      |
+| 600K       | 600K × 0.1 = 60K 相当                      |
+
+200K で止めるだけで、600K まで伸びた場合に比べて 1 ターンあたり約 1/3 になります。
+
+### このリポジトリの設定
+
+`claude/settings.json` に次を入れています（全アカウント共通。`~/.claude-*` は
+`settings.json` を symlink で共有）。
+
+```json
+{
+  "autoCompactWindow": 200000
+}
+```
+
+- 会話が 200K に達したら auto-compact します（指定できる範囲は 100K〜1M）。
+- 調査結果を大量に抱えたまま進めたいタスクだけ、`claude --autocompact 500k` で起動して
+  その起動中だけ広げます。セッション中の `/autocompact 500k` でも変えられますが、モデルごとの値として
+  ユーザー設定の `modelSettings` に書き込まれ（＝このリポジトリの `claude/settings.json` が変わる）、
+  上の値より優先され続けるので、使ったら `/autocompact 200k` で戻すか差分を捨てます。
+- コミュニティ記事でよく出てくる `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` は公式ドキュメントに無く、
+  効かないという報告が多いので使いません。
+
+> [!NOTE]
+> 閾値を下げるほど compact の回数は増え、要約で細部が落ちます。compact は会話全体を読む
+> 1 回分のリクエストなので、200K より大きく下げても得にはなりにくいです。
+> 細部が要る作業は、ファイル（plan・メモ）に書かせておくと compact 後も読み直せます。
+
+### compact を自分で打つ
+
+auto-compact は作業の途中で発動します。区切りがついた時点で、cache が warm なうちに
+自分で `/compact` する方が安く、要約の質も上がります。
+
+```text
+/compact 決定事項・変更したファイル・残りの TODO を残して。試行錯誤の経緯は捨ててよい
+```
+
+- 失敗した方向に進んだときは `/compact` ではなく `/rewind`（`Esc` 2 回）で戻ります。
+  既存の cache をそのまま使えます。
+- 話の途中で状況を確認したいだけなら `/recap`。会話を書き換えないので cache を壊しません。
+- 長い会話を cold の状態で再開すると、Pro / Max では「要約から再開」を提案されます。
+  文脈を細かく覚えていなくてよければ要約を選びます。
+
+### モデルと effort の切り替え方
+
+| 操作               | cache への影響（サブスクリプション / API キー）                                           |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `/effort` の変更   | Opus 5.5・Sonnet 5.5・Haiku 5.5・Fable 5.1 では**壊れない**。それ以外のモデルでは作り直し |
+| `/model` の変更    | **作り直し**（会話全体を書き込み直す）                                                    |
+| `opusplan`         | plan mode の出入りのたびにモデルが変わるので、そのたびに作り直し                          |
+| fast mode を入れる | 最初の 1 回だけ作り直し（以降の on / off は維持）                                         |
+| 権限モードの変更   | 壊れない（`opusplan` を除く）                                                             |
+
+使い分けは次のとおりです。
+
+1. **effort はラリー中に気軽に変えてよい。** 方針を決める・難しいバグを追うときは `/effort high`
+   以上、方針が決まった後の機械的な修正や確認は `/effort low`〜`medium` に下げます。
+   thinking は出力トークンとして数えられるので、効くのは出力側です。1 ターンだけ深く考えさせたいなら、
+   effort を変えずにプロンプトへ `ultrathink` を入れます。
+2. **モデルはセッションの最初に決めて、途中で変えない。** 途中で変えると会話全体を割増しで
+   書き直すので、長いラリーの後半ほど損です。変えたいときは `/compact` か `/clear` の直後
+   （どのみち cache を作り直すタイミング）に変えます。
+3. **重い調査・ログ読みは subagent に出す。** 大量のファイルやログは subagent の文脈に閉じて、
+   メインの会話には要約だけが戻ります。メインの会話が膨らまないことが一番効きます。
+   subagent 自体のトークンを減らすなら、定義の `model: haiku` か
+   `CLAUDE_CODE_SUBAGENT_MODEL` で小さいモデルにします（このリポジトリでは未設定）。
+
+### その他の習慣
+
+- **指示を具体的にする。** 「直して」より「`auth.ts` の `login` に入力チェックを足して」の方が、
+  ファイルの探索（＝読み込み）が少なく済みます。
+- **出力の大きいコマンドは絞る。** テストやログはそのまま読ませず `| tail` / `grep` で絞ります。
+  このリポジトリでは [rtk](rtk.md) の PreToolUse hook が Bash の出力を圧縮しています。
+- **`CLAUDE.md` は短く保つ。** 毎回の先頭に載るので、特定作業の手順は skill に移します
+  （skill は呼ばれたときだけ読まれる）。
+- **使っていない MCP は切る。** `/mcp` で無効化し、`gh` などの CLI で済むものは CLI を使います。
+- **何に使ったかを見る。** `/usage` で、使用量のうち skill・subagent・MCP が占める割合と、
+  long context や cache miss が 10% 以上を占めているかの警告が見られます。`/context` で
+  今の会話の中身の内訳が見られます。セッションをまたいだ分析は [codeburn](codeburn.md) /
+  [AgentsView](agentsview.md)。
+
+参考: [Manage costs effectively](https://code.claude.com/docs/en/costs) /
+[Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
 [How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
 ## 外部 skill の使い方

@@ -6,6 +6,6 @@
 "~/.config/autohotkey" = { source = "config-linux/autohotkey", mode = "symlink-each" }
 
 [dotfiles."~/.config"]
-exclude = ["agentsview/tests", "*mac*", "*brew*"]
+exclude = ["agentsview/tests", "hunk/extensions", "*mac*", "*brew*"]
 mode    = "symlink-each"
 source  = "config"

@@ -23,6 +23,9 @@ target/
 COMMIT_EDITMSG
 commondir
 config
+# 上の `config` は同名のディレクトリ（dotfiles の config/ 等）とその配下の未追跡ファイルまで
+# 除外してしまうため、ディレクトリだけ復帰させる（`config` という名前のファイルは除外されたまま）
+!config/
 description
 FETCH_HEAD
 gitdir
