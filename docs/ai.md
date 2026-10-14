@@ -558,12 +558,16 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 | -------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | 本体                       | `apm/apm.yml`・`config/rulesync/.rulesync/skills/` → `~/.claude/skills`                 | skill をインストールする。どのプロジェクトでも使える状態にする |
 | 既定の見せ方               | `claude/settings.json`（`~/.claude/settings.json`）の `skillOverrides`                  | 普段の一覧を軽くしておく                                       |
-| プロジェクトごとの切り替え | 各リポジトリの `.claude/settings.local.json`（commit しない）か `.claude/settings.json` | そのプロジェクトで使う skill だけ `"on"` に上げる              |
+| プロジェクトごとの切り替え | 各リポジトリの `.claude/settings.local.json`（commit しない）か `.claude/settings.json` | そのプロジェクトで使う skill を `"on"` に上げる                |
+
+プロジェクト側に書くときは、`claude/settings.json` の `skillOverrides` を丸ごとコピーしてから、そのプロジェクトで
+使う skill の値だけを変えます。
 
 ```jsonc
 // 例: フロントエンドのリポジトリの .claude/settings.local.json
 {
   "skillOverrides": {
+    // claude/settings.json の skillOverrides をすべてコピーし、次の値だけ変える
     "html-prototype": "on",
     "html-wireframe": "on",
   },
@@ -572,20 +576,22 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 > [!IMPORTANT]
 > user とプロジェクトの両方に `skillOverrides` を書いたとき、skill ごとに合わさるのか、プロジェクト側で丸ごと
-> 置き換わるのかはドキュメントで確認できていません。最初に 1 つのリポジトリで `/context` の Skills の行を見て
-> 確かめてください。丸ごと置き換わる場合は、プロジェクト側にも全 skill を書く必要があります。
+> 置き換わるのかはドキュメントで確認できていません。丸ごと置き換わる場合、プロジェクト側に変えたい skill だけを
+> 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
+> 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
 
 ### 既定の設定（`claude/settings.json`）
 
-| 値                    | skill                                                                                                                                                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`                                                                                                                           |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`crit-pr`、`fix-review`、`review-pr`、`tmux` |
-| `user-invocable-only` | 上以外（tsumiki の `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`article`、`coderabbit`、`deepwiki`、`suggest-rules`）                                                                          |
+| 値                    | skill                                                                                                                                                                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`                                                                                                                                                                               |
+| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`crit-pr`、`fix-review`、`review-pr`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`article`、`coderabbit`、`deepwiki`、`suggest-rules`）                                                                                                                        |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
-  `crit-pr` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を呼び出すため、呼ばれる側を
-  `user-invocable-only` にすると Claude から使えなくなります。
+  `crit-pr` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
+  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
+  使えなくなります（呼ばれる側は `name-only` 以上にする）。
 - `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、ここにも追加します。
 
 ### plugin の管理
