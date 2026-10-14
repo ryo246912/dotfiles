@@ -154,6 +154,11 @@ lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles a
 > スキル数が多いほどコンテキスト（トークン）を消費するため、不要なものは
 > `dependencies.apm` から外してください。tsumiki は現在14スキルを導入しています。
 
+## コンテキストへの載せ方
+
+外部スキルを足したら、`claude/settings.json` の `skillOverrides` にも追加して一覧への載せ方を決めます
+（書かないと `"on"` 扱いで説明文が毎回コンテキストに入る）。詳細は [`docs/skills.md`](skills.md) を参照してください。
+
 ## 注意事項
 
 - 配布先（`~/.claude/skills/` 等）は生成物です。skill 本文はこのリポジトリに持たないため、内容を変えたい
