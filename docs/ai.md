@@ -826,7 +826,7 @@ skillは必要に応じてterminalを分割し、`terminal-browser action`で開
 ### Tsumiki skills
 
 Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
-Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では選ばれず、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
+Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは、`dev-run`から呼ばれる`dev-impl`・`dev-verify`・`dev-debug`を`name-only`にしているためClaudeから呼び出せます。それ以外は`skillOverrides`で`user-invocable-only`にしているため自動では選ばれず、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 | skill                | 用途                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------- |
