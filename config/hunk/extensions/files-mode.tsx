@@ -5,7 +5,7 @@
 // `S` キー (コマンド id: files-mode.toggle) で tree / flat を切り替えられるようにする。
 //
 // vim のウィンドウ移動と同じく Ctrl-W → h で一覧に、Ctrl-W → l (または Esc) で diff に
-// フォーカスを移す (Ctrl-W → w で行き来)。一覧にフォーカス中は以下のキーで操作できる:
+// フォーカスを移す。一覧にフォーカス中は以下のキーで操作できる:
 //   j / k (↓ / ↑)   行を移動 (ファイル行に乗ると diff もそのファイルへ移動)
 //   g / G           先頭 / 末尾へ
 //   l (→)           ディレクトリを開く (開いていれば最初の子へ)
@@ -532,6 +532,13 @@ function FilesModePane({
     });
   }, [files, selectedFileId]);
 
+  // フォーカス中にカーソル行が消えたら (フィルタ等)、選択中のファイルなどへカーソルを移す
+  useEffect(() => {
+    if (!focused || navRows.some((row) => row.key === cursor)) return;
+    const fallback = cursorFallback(navRows, selectedFileId);
+    updateStore((state) => ({ ...state, cursor: fallback?.key ?? null }));
+  }, [focused, cursor, navRows, selectedFileId]);
+
   // フォーカス中はカーソル行、それ以外は選択行を表示範囲に入れる (マウスでの開閉直後は除く)
   useEffect(() => {
     if (skipRevealRef.current) {
@@ -625,7 +632,7 @@ export default function registerFilesMode(hunk: HunkExtensionAPI) {
     id: "window",
     title: "Ctrl-W",
     onKey(key, ctx) {
-      if (isChar(key, "h") || key.name === "left" || isChar(key, "w") || isCtrlW(key)) {
+      if (isChar(key, "h") || key.name === "left") {
         ctx.keyboardModes.enterMode("focus");
         return "handled";
       }
@@ -683,6 +690,14 @@ function isCtrlW(key: ExtensionKeyEvent) {
 // 一覧にフォーカス中に Ctrl-W を押し、次のキーを待っているか
 let windowPending = false;
 
+// カーソル行が見つからないときの移り先: 選択中のファイル → 最初のファイル行 → 先頭行
+function cursorFallback(rows: readonly NavRow[], selectedFileId: string | null) {
+  const selected = selectedFileId
+    ? rows.find((row) => row.key === fileKey(selectedFileId))
+    : undefined;
+  return selected ?? rows.find((row) => row.kind === "file") ?? rows[0];
+}
+
 function moveCursor(rows: readonly NavRow[], index: number) {
   const row = rows[Math.max(0, Math.min(rows.length - 1, index))];
   if (!row) return;
@@ -698,7 +713,7 @@ function handleFocusKey(
 ): ExtensionKeyboardModeKeyResult {
   if (windowPending) {
     windowPending = false;
-    if (isChar(key, "l") || key.name === "right" || isChar(key, "w") || isCtrlW(key)) {
+    if (isChar(key, "l") || key.name === "right") {
       return "exit";
     }
     // h などは一覧にフォーカスしたまま。それ以外のキーも取り消して捨てる
@@ -717,7 +732,16 @@ function handleFocusKey(
 
   const rows = paneLink?.rows ?? [];
   if (rows.length === 0) return "pass";
-  const index = rows.findIndex((row) => row.key === store.cursor);
+  let index = rows.findIndex((row) => row.key === store.cursor);
+  if (index < 0) {
+    // カーソル行がフィルタ等で消えていたら、選択中のファイルの位置から動かす
+    const fallback = cursorFallback(rows, paneLink?.selectedFileId ?? null);
+    moveCursor(rows, fallback ? rows.indexOf(fallback) : 0);
+    if (key.name === "down" || key.name === "up" || isChar(key, "j") || isChar(key, "k")) {
+      return "handled";
+    }
+    index = rows.findIndex((row) => row.key === store.cursor);
+  }
   const row = rows[index];
 
   if (key.name === "down" || isChar(key, "j")) {
