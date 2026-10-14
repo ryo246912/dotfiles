@@ -816,8 +816,11 @@ mise bootstrap dotfiles unapply "~/.zshrc"
 `[dotfiles]` の whole-file エントリ（symlink/copy/template）は「source を編集して
 apply で配る」chezmoi と同じ片方向モデルだが、mise にはこれとは別に **配置済みファイルを
 直接編集し、その変更を自動で記録する**運用（`mode = "track"`）もある。ブログ記事の
-"self-saving" の核心はこちら。本リポジトリでは `~/.config` のうち dotfiles が配っている
-もの（apm/claude/codex/local は主に tool 管理で history の恩恵が薄いため対象外）に採用した。
+"self-saving" の核心はこちら。本リポジトリでは `~/.config` のうち `config/`・`config-mac/`・
+`config-linux/` 直下に存在する名前と同名のもの（apm/claude/codex/local は主に tool 管理で
+history の恩恵が薄いため対象外）に採用した。名前だけで選ぶため、`agentsview/tests` や
+他 OS 専用のディレクトリのように symlink-each の exclude・OS 別 overlay で配っていないものも、
+`~/.config` 側に実在すれば track される。
 
 ### 実機で判明した制約
 

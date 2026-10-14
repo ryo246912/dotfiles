@@ -1,8 +1,9 @@
 # このファイルは mise.toml の [dotfiles] が templates/mise/history-track.toml.tera から
 # 生成する（直接編集しないこと）。
 #
-# ~/.config のうち dotfiles（config/・config-mac/・config-linux/）が配っているものだけを
-# track する。repo 側にディレクトリ・ファイルを足しても、次の
+# ~/.config のうち dotfiles の source（config/・config-mac/・config-linux/）直下と同名の
+# ものだけを track する（名前だけで選ぶため、OS 別 overlay・symlink-each の exclude で
+# 配っていないものも ~/.config 側に実在すれば含まれる）。repo 側にディレクトリ・ファイルを足しても、次の
 # `mise bootstrap dotfiles apply`（配置のために結局必要になる）で再生成されるため、
 # track 設定を手で書き換える必要は無い。
 #
