@@ -400,6 +400,108 @@ hit 率（ステータスラインの `hit 91%`）が高いほど入力の料金
 参考: [Customize your status line — Prompt cache fields](https://code.claude.com/docs/en/statusline#prompt-cache-fields) /
 [How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
+## トークン使用量を抑える
+
+別タスクで `/clear` するだけでは、**同じタスクの長いラリー**で消費が膨らむのを防げません。
+Claude Code はメッセージのたびに会話全体を送るので、1 ターンのコストは「その時点の会話の長さ」に
+比例します。cache が warm でも 0.1 倍で読み直すだけなので、会話が長くなるほど 1 ターンが重くなります。
+ツールを 1 回呼ぶたびにも同じ量を読み直すため、1 往復のラリーでも内部では何回分もかかります。
+
+### 長いラリーで使いすぎる原因
+
+Opus 5.5・Sonnet 5.5・Haiku 5.5 などは**既定で 1M コンテキスト**で動き、auto-compact は
+**約 967K トークンまで発動しません**。つまり何もしなければ、同じタスクを続ける限り会話は
+数十万トークンまで膨らみ続け、その全体を毎ターン（毎ツール呼び出し）読み直します。
+
+| 会話の長さ | 1 ターンで読む量（cache hit 時の課金換算） |
+| ---------- | ------------------------------------------ |
+| 50K        | 50K × 0.1 = 5K 相当                        |
+| 200K       | 200K × 0.1 = 20K 相当                      |
+| 600K       | 600K × 0.1 = 60K 相当                      |
+
+200K で止めるだけで、600K まで伸びた場合に比べて 1 ターンあたり約 1/3 になります。
+
+### このリポジトリの設定
+
+`claude/settings.json` に次を入れています（全アカウント共通。`~/.claude-*` は
+`settings.json` を symlink で共有）。
+
+```json
+{
+  "autoCompactWindow": 200000
+}
+```
+
+- 会話が 200K に達したら auto-compact します（指定できる範囲は 100K〜1M）。
+- 調査結果を大量に抱えたまま進めたいタスクだけ、`claude --autocompact 500k` で起動して
+  その起動中だけ広げます。セッション中の `/autocompact 500k` でも変えられますが、モデルごとの値として
+  ユーザー設定の `modelSettings` に書き込まれ（＝このリポジトリの `claude/settings.json` が変わる）、
+  上の値より優先され続けるので、使ったら `/autocompact 200k` で戻すか差分を捨てます。
+- コミュニティ記事でよく出てくる `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` は公式ドキュメントに無く、
+  効かないという報告が多いので使いません。
+
+> [!NOTE]
+> 閾値を下げるほど compact の回数は増え、要約で細部が落ちます。compact は会話全体を読む
+> 1 回分のリクエストなので、200K より大きく下げても得にはなりにくいです。
+> 細部が要る作業は、ファイル（plan・メモ）に書かせておくと compact 後も読み直せます。
+
+### compact を自分で打つ
+
+auto-compact は作業の途中で発動します。区切りがついた時点で、cache が warm なうちに
+自分で `/compact` する方が安く、要約の質も上がります。
+
+```text
+/compact 決定事項・変更したファイル・残りの TODO を残して。試行錯誤の経緯は捨ててよい
+```
+
+- 失敗した方向に進んだときは `/compact` ではなく `/rewind`（`Esc` 2 回）で戻ります。
+  既存の cache をそのまま使えます。
+- 話の途中で状況を確認したいだけなら `/recap`。会話を書き換えないので cache を壊しません。
+- 長い会話を cold の状態で再開すると、Pro / Max では「要約から再開」を提案されます。
+  文脈を細かく覚えていなくてよければ要約を選びます。
+
+### モデルと effort の切り替え方
+
+| 操作               | cache への影響（サブスクリプション / API キー）                                           |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `/effort` の変更   | Opus 5.5・Sonnet 5.5・Haiku 5.5・Fable 5.1 では**壊れない**。それ以外のモデルでは作り直し |
+| `/model` の変更    | **作り直し**（会話全体を書き込み直す）                                                    |
+| `opusplan`         | plan mode の出入りのたびにモデルが変わるので、そのたびに作り直し                          |
+| fast mode を入れる | 最初の 1 回だけ作り直し（以降の on / off は維持）                                         |
+| 権限モードの変更   | 壊れない（`opusplan` を除く）                                                             |
+
+使い分けは次のとおりです。
+
+1. **effort はラリー中に気軽に変えてよい。** 方針を決める・難しいバグを追うときは `/effort high`
+   以上、方針が決まった後の機械的な修正や確認は `/effort low`〜`medium` に下げます。
+   thinking は出力トークンとして数えられるので、効くのは出力側です。1 ターンだけ深く考えさせたいなら、
+   effort を変えずにプロンプトへ `ultrathink` を入れます。
+2. **モデルはセッションの最初に決めて、途中で変えない。** 途中で変えると会話全体を割増しで
+   書き直すので、長いラリーの後半ほど損です。変えたいときは `/compact` か `/clear` の直後
+   （どのみち cache を作り直すタイミング）に変えます。
+3. **重い調査・ログ読みは subagent に出す。** 大量のファイルやログは subagent の文脈に閉じて、
+   メインの会話には要約だけが戻ります。メインの会話が膨らまないことが一番効きます。
+   subagent 自体のトークンを減らすなら、定義の `model: haiku` か
+   `CLAUDE_CODE_SUBAGENT_MODEL` で小さいモデルにします（このリポジトリでは未設定）。
+
+### その他の習慣
+
+- **指示を具体的にする。** 「直して」より「`auth.ts` の `login` に入力チェックを足して」の方が、
+  ファイルの探索（＝読み込み）が少なく済みます。
+- **出力の大きいコマンドは絞る。** テストやログはそのまま読ませず `| tail` / `grep` で絞ります。
+  このリポジトリでは [rtk](rtk.md) の PreToolUse hook が Bash の出力を圧縮しています。
+- **`CLAUDE.md` は短く保つ。** 毎回の先頭に載るので、特定作業の手順は skill に移します
+  （skill は呼ばれたときだけ読まれる）。
+- **使っていない MCP は切る。** `/mcp` で無効化し、`gh` などの CLI で済むものは CLI を使います。
+- **何に使ったかを見る。** `/usage` で、使用量のうち skill・subagent・MCP が占める割合と、
+  long context や cache miss が 10% 以上を占めているかの警告が見られます。`/context` で
+  今の会話の中身の内訳が見られます。セッションをまたいだ分析は [codeburn](codeburn.md) /
+  [AgentsView](agentsview.md)。
+
+参考: [Manage costs effectively](https://code.claude.com/docs/en/costs) /
+[Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
+[How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
+
 ## 外部 skill の使い方
 
 このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。

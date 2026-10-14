@@ -4,6 +4,7 @@
     "AI_AGENT": "1"
   },
   "cleanupPeriodDays": 36500,
+  "autoCompactWindow": 200000,
   "tui": "default",
   "remoteControlAtStartup": true,
   "skipDangerousModePermissionPrompt": true,
