@@ -485,6 +485,42 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 | `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
 | `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
 
+claude の 3 つには、さらに `--anthropic-token-command 'security find-generic-password -s sbx-agent-anthropic-<a1|a2|w3> -w'`
+を付けています（[account ごとの Anthropic 認証](#account-ごとの-anthropic-認証)）。
+
+#### account ごとの Anthropic 認証
+
+`CLAUDE_CONFIG_DIR` を分けるだけでは、sandbox 内の Claude Code が API を呼ぶ account は分かれません。
+sandbox 内で `/login` すると、サインインはホスト側で行われ、トークンは **ホスト全体で 1 つの global な
+`anthropic` secret** として保存され、ホスト側プロキシが全 sandbox の通信に注入します
+（secret の変更は既存 sandbox にも再起動なしで反映される）。このため work3 の sandbox で `/login`
+すると、account1 の preset で作った sandbox も work3 の account で動きます。statusline の
+account 表示は `CLAUDE_CONFIG_DIR` と `<dir>/.claude.json` から決めているだけなので、実際に API を呼ぶ account と一致するとは限りません。
+
+sandbox スコープの secret（`sbx secret set anthropic --sandbox <name>`）は global より優先されるため、
+`sbx-agent --anthropic-token-command CMD` は起動のたびに CMD をこの sandbox 専用の `anthropic` secret として
+登録します（`--command` なのでトークンは sbx に保存されず、ホスト側で都度解決される）。登録に失敗した場合は、
+別 account で黙って動くのを避けるため起動を止めます。
+
+トークンは account ごとに一度だけ発行し、キーチェーンに保存します（`claude setup-token` のトークンは 1 年有効）。
+
+```bash
+# account1（~/.claude）
+claude setup-token
+mise run sandbox:anthropic-token a1
+# account2 / work3
+CLAUDE_CONFIG_DIR=~/.claude-account2 claude setup-token
+mise run sandbox:anthropic-token a2
+CLAUDE_CONFIG_DIR=~/.claude-work3 claude setup-token
+mise run sandbox:anthropic-token w3
+```
+
+> [!WARNING]
+> 長期トークン（`sk-ant-oat01-…`）を `anthropic` secret として渡した場合に、プロキシが subscription の
+> トークンとして正しく注入するかは公式ドキュメントに記載がなく、未検証です。導入後は sandbox 内の
+> `/status` で account を、`/usage` でどの account の使用量が増えるかを確認してください。
+> 認証エラーになる場合は、該当 preset から `--anthropic-token-command` を外すと従来どおり global secret で動きます。
+
 実際の preset は上の表のコマンドを直接 `command` に書くのではなく、
 `command: "zsh"` + `args: ["-c", "exec sbx-agent … -- \"$@\"", "sbx-agent"]` の形にしています。
 理由は2つあり、どちらも省略できません。

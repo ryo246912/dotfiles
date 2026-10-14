@@ -16,6 +16,11 @@
 #   --name-prefix PFX  既定の sandbox 名で branch の前に付ける識別子（--config-dir と併用する）
 #   --workspace DIR    primary workspace（既定: カレントディレクトリ）
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
+#   --anthropic-token-command CMD
+#                      claude 用。CMD の標準出力（`claude setup-token` のトークン）を
+#                      この sandbox 専用の anthropic secret として登録する（sbx secret set --sandbox）。
+#                      sandbox 内の /login はホスト全体で 1 つの global secret になり、
+#                      account を分けられないため、account ごとの preset ではこれを使う
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
 #   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
@@ -77,6 +82,7 @@ SANDBOX_NAME=""
 NAME_PREFIX=""
 WORKSPACE="$PWD"
 CONFIG_DIR=""
+ANTHROPIC_TOKEN_COMMAND=""
 BRANCH=""
 TEMPLATE=""
 NO_TEMPLATE=false
@@ -180,6 +186,11 @@ while [[ $# -gt 0 ]]; do
             CONFIG_DIR="$1"
             ;;
         --config-dir=*) CONFIG_DIR="${1#*=}" ;;
+        --anthropic-token-command)
+            shift && require_value --anthropic-token-command $#
+            ANTHROPIC_TOKEN_COMMAND="$1"
+            ;;
+        --anthropic-token-command=*) ANTHROPIC_TOKEN_COMMAND="${1#*=}" ;;
         --branch)
             shift && require_value --branch $#
             BRANCH="$1"
@@ -305,6 +316,11 @@ if [[ "$NO_TEMPLATE" == true ]]; then
     TEMPLATE=""
 elif [[ -z "$TEMPLATE" ]]; then
     TEMPLATE="${SBX_AGENT_TEMPLATE:-$DEFAULT_TEMPLATE}"
+fi
+
+if [[ -n "$ANTHROPIC_TOKEN_COMMAND" && "$AGENT" != claude ]]; then
+    log_error "--anthropic-token-command は claude でのみ使えます"
+    exit 1
 fi
 
 case "$SKILLS" in
@@ -816,10 +832,34 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         exit 1
     fi
 
+    SANDBOX_CREATED=true
 else
     log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
     republish_ports
     load_static_mcp
+fi
+
+# account ごとの Anthropic 認証。sandbox 内の Claude Code で /login すると、sbx はトークンを
+# ホスト全体で 1 つの global な anthropic secret として保存し、全 sandbox がそれを使う
+# （CLAUDE_CONFIG_DIR を分けても API を呼ぶ account は最後に /login した account になる）。
+# sandbox スコープの secret は global より優先されるため、account ごとのトークンを
+# この sandbox 専用に登録して分ける。--command なのでトークン自体は sbx の設定に残らず、
+# ホスト側で都度（--refresh の間隔で）解決される。secret の変更は既存 sandbox にも
+# 再起動なしで反映されるため、再利用時も毎回登録し直す（keychain のトークン差し替えに追従させる）。
+if [[ -n "$ANTHROPIC_TOKEN_COMMAND" ]]; then
+    if sbx secret set anthropic --sandbox "$SANDBOX_NAME" --command "$ANTHROPIC_TOKEN_COMMAND" >/dev/null; then
+        log_info "anthropic の secret をこの sandbox 専用に登録しました: $SANDBOX_NAME"
+    else
+        log_error "anthropic の secret の登録に失敗しました: $SANDBOX_NAME"
+        log_error "  コマンドがトークンを出力するか確認してください: $ANTHROPIC_TOKEN_COMMAND"
+        log_error "  トークンの登録手順: mise run sandbox:anthropic-token <name>（docs/docker-sandboxes.md 参照）"
+        # 登録できないまま起動すると、global secret（別 account）で黙って動いてしまうため止める。
+        # 作ったばかりの sandbox は消しておき、次回の起動で作成からやり直せるようにする。
+        if [[ "${SANDBOX_CREATED:-false}" == true ]]; then
+            sbx rm --force "$SANDBOX_NAME" >/dev/null 2>&1 || true
+        fi
+        exit 1
+    fi
 fi
 
 # 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と
