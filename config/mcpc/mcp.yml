@@ -10,10 +10,8 @@
 # - すべて self-defined（registry: false）で書く。registry 参照は解決後のコマンドが残らないため使えない。
 # - stdio はパッケージを args の `<package>@<version>` で固定し、Renovate で更新する
 #   （npx は npm、uvx は PyPI。command の直後に args を書く）。
-# - mcpc は stdio サーバに最小限の環境変数しか渡さないため、ホストの環境から渡したい値は
-#   env に `KEY: "${KEY}"` で書く（aws-vault exec / fnox exec が設定した値を転送する）。
-#   sbx gateway 経路では `${KEY}` だけの値は書かなかったものとして扱い（ホストの環境から継承する）、
-#   それ以外の値は `env K=V ... <command>` で包んで sbx に渡す。
+# - credential は書かない。認証は OAuth（mcpc login / sbx の認可）か、サーバ自身が読むホストの設定
+#   （~/.aws の profile など）に任せる（docs/mcpc.md の「認証のパターン」）。
 # - sbx_options は sbx gateway 経路で sbx mcp add にそのまま渡す追加オプション（--dir / --skip-ssrf-check など）。
 #   APM の書式では未定義のキーなので APM 側では passthrough として無視される。
 # - 環境ごと（work2 / work3 / private など）のサーバは mcp.<name>.yml に書く（gitignore 済み、

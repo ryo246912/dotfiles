@@ -1215,7 +1215,7 @@ agent のコンテキストに入れないため）。server は host で動か�
 ```bash
 # host
 mise run apm:install                                                     # config/mcpc/mcp*.yml から mcpc 用 config を生成
-aws-vault exec my-profile -- fnox exec --profile work -- mise run sandbox:mcpc notion slack
+mise run sandbox:mcpc notion metabase
 mise run sandbox:mcpc-stop
 
 # sandbox 内

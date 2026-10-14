@@ -34,15 +34,6 @@
     // TTY のない ccmanager の devcontainer up では失敗するため。
     "MISE_TRUSTED_CONFIG_PATHS": "/workspaces:${localWorkspaceFolder}",
     "GH_TOKEN": "${localEnv:GH_TOKEN}",
-    // `aws-vault exec <profile> -- devcontainer up ...` が発行した短期credentialを
-    // container内のagentとmcpcへ渡す。値はdotfilesやMCP configには保存しない。
-    "AWS_ACCESS_KEY_ID": "${localEnv:AWS_ACCESS_KEY_ID}",
-    "AWS_SECRET_ACCESS_KEY": "${localEnv:AWS_SECRET_ACCESS_KEY}",
-    "AWS_SESSION_TOKEN": "${localEnv:AWS_SESSION_TOKEN}",
-    "AWS_CREDENTIAL_EXPIRATION": "${localEnv:AWS_CREDENTIAL_EXPIRATION}",
-    "AWS_REGION": "${localEnv:AWS_REGION}",
-    "AWS_DEFAULT_REGION": "${localEnv:AWS_DEFAULT_REGION}",
-    "AWS_VAULT": "${localEnv:AWS_VAULT}",
     // claudeがxterm-256colorを必要とするため、TERMを設定
     "TERM": "xterm-256color",
     // ホストの gitconfig は pager に delta を指定しているが、delta はこのコンテナの

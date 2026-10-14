@@ -282,10 +282,11 @@ jq --argjson base "${MCPC_PROXY_PORT_BASE:-8931}" --argjson previous "$previous"
   "$config" >"$sandbox_config.tmp"
 # 一覧から消したサーバの proxy（sandbox:mcpc が起動したもの）は止める
 if command -v mcpc >/dev/null 2>&1; then
-  for name in $(jq -rn --argjson previous "$previous" --slurpfile current "$sandbox_config.tmp" \
-    '($previous.mcpServers // {} | keys) - ($current[0].mcpServers | keys) | .[]'); do
-    mcpc close "@sbx-$name" >/dev/null 2>&1 && echo "stopped: @sbx-$name（定義から削除）" || true
-  done
+  jq -rn --argjson previous "$previous" --slurpfile current "$sandbox_config.tmp" \
+    '($previous.mcpServers // {} | keys) - ($current[0].mcpServers | keys) | .[]' \
+    | while IFS= read -r name; do
+      mcpc close "@sbx-$name" >/dev/null 2>&1 && echo "stopped: @sbx-$name（定義から削除）" || true
+    done
 fi
 mv "$sandbox_config.tmp" "$sandbox_config"
 echo "mcpc config (sandbox): $sandbox_config"

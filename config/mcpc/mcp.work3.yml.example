@@ -54,35 +54,3 @@ dependencies:
       transport: http
       url: http://127.0.0.1:3845/mcp
       sbx_options: ["--skip-ssrf-check"]
-    # korotovsky/slack-mcp-server。user token（xoxp）は fnox の work profile から渡す
-    # （aws-vault exec … -- fnox exec --profile work -- … の配下で mcpc / sandbox:mcpc を起動する）
-    - name: slack
-      registry: false
-      transport: stdio
-      command: npx
-      args: ["-y", "slack-mcp-server@1.3.0", "--transport", "stdio"]
-      env:
-        SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
-    # AWS Labs の個別 MCP。aws-vault exec が渡す一時 credential を使う
-    - name: aws-billing
-      registry: false
-      transport: stdio
-      command: uvx
-      args: ["awslabs.billing-cost-management-mcp-server@0.0.31"]
-      env:
-        FASTMCP_LOG_LEVEL: ERROR
-        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
-        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
-        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
-        AWS_REGION: "${AWS_REGION}"
-    - name: aws-cloudwatch
-      registry: false
-      transport: stdio
-      command: uvx
-      args: ["awslabs.cloudwatch-mcp-server@0.1.7"]
-      env:
-        FASTMCP_LOG_LEVEL: ERROR
-        AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
-        AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
-        AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
-        AWS_REGION: "${AWS_REGION}"
