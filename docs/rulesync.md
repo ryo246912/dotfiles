@@ -85,6 +85,11 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 直接 `rulesync init` して作ったファイルは、正本ではないため git 管理しません。必要な内容だけ
 `config/rulesync/.rulesync/` へ移してください。
 
+## skill のコンテキストへの載せ方
+
+自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
+（[`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理)）。
+
 ## 生成コマンド
 
 ```bash
