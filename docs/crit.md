@@ -239,12 +239,20 @@ python3 <skills>/review-pr/scripts/post_draft_review.py --repo owner/name --pr 1
 python3 <skills>/review-pr/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json
 ```
 
-壁打ちの相手は2通りあります。
+壁打ちは**Finish Reviewの往復**で行います。Finish Reviewを押すたびに、未resolveのcommentとreplyがまとめて起動元の
+agentへ渡り、agentが各threadへreplyしてから次のFinish Reviewを待ちます。何往復でもできます。
 
-- **Finish Review**: 起動元のagentが未解決commentを読み、`crit comment --reply-to`で回答する（skillはcodeを編集しない）
-- **Send now**: devcontainerの`agent_cmd`で、comment単位で即時に別のagentへ質問する
+devcontainerの`agent_cmd`による**Send now**も使えますが、補助に留めます。Send nowで呼ばれるのは
+`claude --dangerously-skip-permissions -p`の別processで、会話の調査結果や指摘の表を知りません。また、critが渡す指示は
+「commentに対応し、必要ならcodeを編集する」なので、PRのcodeを手元で書き換えることがあります。使うときはcommentに
+「codeは変更せず回答だけ」と書きます。
 
-`crit-pr`はscriptをsiblingの`review-pr` skillから使うため、2つのskillは一緒に配布しておきます。
+### review-prとの共通化
+
+指摘の区分・本PRとの関係・動作確認手順・投稿書式・submit本文例は、critを使わない`review-pr` skillと共通です。重複を避けるため、
+共通部分は`review-pr`の`references/`（`pr-info.md` / `findings.md` / `manual-test.md` / `draft-review.md`）に置き、
+両方のskillがそこを読みます。`crit-pr`にはcrit固有の手順だけを書いています。投稿scriptも`review-pr`の
+`scripts/post_draft_review.py`を使うため、2つのskillは一緒に配布しておきます。
 
 ### 投稿に`crit push`を使わない理由
 
