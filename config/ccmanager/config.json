@@ -126,32 +126,16 @@
         "id": "sbx-codex",
         "name": "Codex (Docker Sandbox)",
         "command": "zsh",
-        "args": [
-          "-c",
-          "exec sbx-agent codex -- resume --yolo \"$@\"",
-          "sbx-agent"
-        ],
-        "fallbackArgs": [
-          "-c",
-          "exec sbx-agent codex -- --yolo \"$@\"",
-          "sbx-agent"
-        ],
+        "args": ["-c", "exec sbx-agent codex -- resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent codex -- --yolo \"$@\"", "sbx-agent"],
         "detectionStrategy": "codex"
       },
       {
         "id": "sbx-copilot",
         "name": "Copilot (Docker Sandbox)",
         "command": "zsh",
-        "args": [
-          "-c",
-          "exec sbx-agent copilot -- --resume --yolo \"$@\"",
-          "sbx-agent"
-        ],
-        "fallbackArgs": [
-          "-c",
-          "exec sbx-agent copilot -- --yolo \"$@\"",
-          "sbx-agent"
-        ],
+        "args": ["-c", "exec sbx-agent copilot -- --resume --yolo \"$@\"", "sbx-agent"],
+        "fallbackArgs": ["-c", "exec sbx-agent copilot -- --yolo \"$@\"", "sbx-agent"],
         "detectionStrategy": "github-copilot"
       }
     ],
