@@ -132,8 +132,12 @@ claude agents --permission-mode plan --model opus --effort high
 並列セッションが同じファイルを書き合わないための仕組みです。次の場合は worktree を作りません。
 
 - `←` / `/bg` で、すでに開いていたセッションをバックグラウンドに回したとき
-- すでに linked worktree の中にいるとき（`multi-worktree` の worktree はこれに当たる）
+- すでに linked worktree の中にいるとき（`multi-worktree` が作った各リポジトリの worktree の中で起動した場合）
 - git リポジトリではなく、`WorktreeCreate` hook も無いとき
+
+`multi-worktree dev` の既定の起動位置である task root は、ccmanager 用の synthetic な git リポジトリで
+linked worktree ではありません。有効のままだとそこで起動したセッションは task root の worktree を作り、
+配下の各リポジトリの中身はその worktree に入りません。
 
 **このリポジトリでは無効化しています**（`claude/settings.json`）。dispatch したセッションも
 今の作業ディレクトリをそのまま編集するので、並列で同じファイルを触らないよう役割を分けるか、
