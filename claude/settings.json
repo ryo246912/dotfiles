@@ -48,6 +48,10 @@
     "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/statusline.sh\"; \"$f\"",
     "refreshInterval": 30
   },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/subagent-statusline.sh\"; \"$f\""
+  },
   "skillOverrides": {
     "crit": "on",
     "crit-cli": "on",

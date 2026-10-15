@@ -124,10 +124,22 @@ limit_line=$(printf '%s' "$input" | jq -r --argjson now "$now" --argjson saved "
   | join(" · ")
 ' 2>/dev/null)
 
-# モデル名と reasoning effort（例: Opus 5.5 xhigh）。effort 非対応モデルではモデル名のみ。
+# モデル名（紫）と reasoning effort。effort 非対応モデル（`effort` が無い）ではモデル名のみ。
+# effort は 5 段階のゲージと色で表示する（low 灰・medium 緑・high シアン・xhigh 黄・max 赤）。
+# fast mode が有効なら ⚡ を付ける。`/effort` の変更はセッション中でも次の更新で反映される。
+# 参照: https://code.claude.com/docs/en/model-config#adjust-effort-level
 model_line=$(printf '%s' "$input" | jq -r '
-  [.model.display_name // empty, .effort.level // empty]
-  | if length > 0 then "\u001b[35m\(join(" "))\u001b[0m" else empty end
+  (.effort.level // null) as $lv
+  | ({"low": 1, "medium": 2, "high": 3, "xhigh": 4, "max": 5}[$lv // ""]) as $n
+  | ({"low": "90", "medium": "32", "high": "36", "xhigh": "33", "max": "1;31"}[$lv // ""] // "0") as $c
+  | [
+      (if .model.display_name != null then "\u001b[35m\(.model.display_name)\u001b[0m" else empty end),
+      (if .fast_mode == true then "\u001b[33m⚡\u001b[0m" else empty end),
+      (if $lv == null then empty
+       elif $n != null then "\u001b[\($c)m\("▰" * $n)\("▱" * (5 - $n)) \($lv)\u001b[0m"
+       else "\u001b[\($c)m\($lv)\u001b[0m" end)
+    ]
+  | if length > 0 then join(" ") else empty end
 ' 2>/dev/null)
 
 # コンテキストウィンドウの残り。最初の API 応答前・/compact 直後は null のため灰色で waiting を表示する。

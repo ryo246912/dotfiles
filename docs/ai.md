@@ -247,6 +247,57 @@ claude daemon stop --any --keep-workers   # セッションを残して supervis
 
 参考: [Manage agents with agent view](https://code.claude.com/docs/en/agent-view) / [Run agents in parallel](https://code.claude.com/docs/en/agents)
 
+## effort（推論の深さ）の変え方
+
+effort は、1 回の応答でどれだけ深く考えるか（thinking にどれだけトークンを使うか）の設定です。
+上げるほど難しい問題に強くなり、出力トークン（＝rate limit の消費）と応答時間が増えます。
+今の値はステータスラインのモデル名の右に表示されます（[表示の読み方](#表示の読み方)）。
+
+### レベル
+
+| レベル   | 使いどころ                                                                               |
+| -------- | ---------------------------------------------------------------------------------------- |
+| `low`    | 結果をすぐ自分で見る軽いやりとり（ブレスト・小さなリネーム）                             |
+| `medium` | 範囲がはっきりした日常の作業。Opus 5.5・Sonnet 5.5・Haiku 5.5 の既定                     |
+| `high`   | 検証が大事・エッジケースがありそうな作業（バグ修正など）。上記以外の対応モデルの既定     |
+| `xhigh`  | さらに深く考える。トークン消費も増える                                                   |
+| `max`    | 放っておいて解かせたい難問。考えすぎて効率が落ちることもある。**そのセッション限り**有効 |
+
+- Opus 5.5 / Sonnet 5.5 / Haiku 5.5 / Fable 5.1 などは 5 段階すべて、Opus 4.6 / Sonnet 4.6 は `xhigh` 無しの 4 段階。
+  非対応のレベルを指定すると、それ以下で一番高いレベルで動きます（Opus 4.6 の `xhigh` → `high`）。
+- effort 非対応のモデル（Haiku 4.5 など）では設定は無視され、ステータスラインにも表示されません。
+
+### 変え方
+
+| 方法                                        | 例                                    | 範囲                                                                     |
+| ------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------ |
+| `/effort <level>`                           | `/effort high`                        | そのモデルの既定として保存。Claude の作業中でも打てる                    |
+| `/effort`（引数なし）                       | スライダーで `←` / `→`                | `Enter` で既定として保存、`s` でこのセッションだけ                       |
+| `/effort auto`                              |                                       | 保存したレベルを消してモデルの既定に戻す                                 |
+| `/model` のピッカー                         | モデルを選びつつ `←` / `→`            | `/effort` のスライダーと同じ                                             |
+| `--effort` フラグ                           | `claude --effort xhigh`               | 起動したセッションだけ                                                   |
+| `CLAUDE_CODE_EFFORT_LEVEL` 環境変数         | `CLAUDE_CODE_EFFORT_LEVEL=low claude` | その環境から起動したセッション。`max` もここなら保存される               |
+| settings の `effortLevel` / `modelSettings` | `"effortLevel": "high"`               | `modelSettings` はモデルごと、`effortLevel` はそれ以外の既定。`max` 不可 |
+| skill / subagent の frontmatter の `effort` | `effort: low`                         | その skill / subagent が動いている間だけ（環境変数には負ける）           |
+| Remote Control の effort コントロール       | スマホ・ブラウザから選ぶ              | そのセッションだけ                                                       |
+
+優先順位は「環境変数・`--effort`・セッション中の `/effort`」→「保存したモデルごとの値・`effortLevel`」→
+「モデルの既定」です。1 ターンだけ深く考えさせたいなら、effort を変えずにプロンプトへ `ultrathink`
+を入れます（API に送る effort は変わらない。「think hard」などはキーワードとして扱われません）。
+
+> [!NOTE]
+> `/effort <level>` は既定として**保存**されます。このリポジトリでは `~/.claude/settings.json` が
+> `claude/settings.json` への symlink なので、保存すると `claude/settings.json` に `modelSettings` の差分が出ます。
+> 一時的に変えたいだけなら `/effort` のスライダーで `s`（このセッションだけ）を使うか、`--effort` で起動します。
+> また Opus 5.5 は、ユーザー設定の最上位 `effortLevel` を無視します（プロジェクト設定などの `effortLevel` は効く）。
+
+- `/effort ultracode`（`--effort ultracode`）は effort レベルではなく、動的な workflow を組み立てるモードの on/off です。
+  `--effort ultracode` は `xhigh` で始めて ultracode を on にします。
+- cache への影響は [モデルと effort の切り替え方](#モデルと-effort-の切り替え方) を参照
+  （Opus 5.5・Sonnet 5.5・Haiku 5.5・Fable 5.1 では `/effort` で cache は壊れない）。
+
+参考: [Model configuration — Adjust effort level](https://code.claude.com/docs/en/model-config#adjust-effort-level)
+
 ## ステータスライン（prompt cache・rate limit・コンテキスト）
 
 Claude Code はメッセージを送るたびに会話全体をモデルへ再送信します。prompt cache が
@@ -254,7 +305,8 @@ Claude Code はメッセージを送るたびに会話全体をモデルへ再�
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
-あわせて、git branch・モデル・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
+あわせて、git branch・モデルと effort・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
+subagent が動いているときは、agent panel の各行にも model と effort を表示します（[subagent の行](#subagent-の行)）。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
 `claude/settings.json` の `statusLine.refreshInterval: 30` で、カウントダウンを
@@ -268,12 +320,12 @@ cold になったら次のメッセージで再キャッシュされるトーク
 1 行目にアカウント・branch・モデル・コンテキスト・session id、2 行目に rate limit・cache を表示します。
 
 ```text
- account2  foo@example.com · main · Opus 5.5 xhigh · ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
+ account2  foo@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
 5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
 ```
 
 ```text
- work3  bar@example.com · main · Opus 5.5 xhigh · ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
+ work3  bar@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
 5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
@@ -282,7 +334,9 @@ cold になったら次のメッセージで再キャッシュされるトーク
 | `account2`（背景色）                | ログイン中のアカウント。config dir 名から決める（`~/.claude` → `account1`、`~/.claude-<name>` → `<name>`）。背景色は account1 青・account2 紫・work3 黄・その他 灰                                 |
 | `foo@example.com`（太字）           | ログイン中のメールアドレス（global config の `oauthAccount.emailAddress`。`CLAUDE_CONFIG_DIR` 指定時は `<dir>/.claude.json`、未指定時は `~/.claude.json`）。API キー利用などで無い場合は表示しない |
 | `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                                                            |
-| `Opus 5.5 xhigh`（紫）              | モデル名と reasoning effort（`model.display_name`・`effort.level`）。effort 非対応モデルではモデル名のみ                                                                                           |
+| `Opus 5.5`（紫）                    | モデル名（`model.display_name`）                                                                                                                                                                   |
+| `⚡`（黄）                          | fast mode が有効（`fast_mode`）                                                                                                                                                                    |
+| `▰▰▰▰▱ xhigh`                       | reasoning effort（`effort.level`）。ゲージは low 1〜max 5 マス、色は low 灰・medium 緑・high シアン・xhigh 黄・max 赤。`/effort` の変更は次の更新で反映。effort 非対応モデルでは表示しない         |
 | `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`                                              |
 | `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                                                                     |
 | `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                                                                      |
@@ -314,6 +368,23 @@ subagent のリクエストはこの統計に含まれません。
 メールアドレスも、数 MB になりうる global config を毎回 parse しないよう
 `${CLAUDE_CONFIG_DIR:-~/.claude}/statusline-account-email` へ保存し、global config が
 更新されるまでは保存値を表示します。
+
+### subagent の行
+
+agent panel（プロンプト下の subagent 一覧）の各行は、`claude/subagent-statusline.sh`
+（`settings.json` の `subagentStatusLine`）が描画します。既定の行に、subagent の model と effort を足しています。
+
+```text
+reviewer · Reading files · haiku-5-5 low · 12k tokens
+Explore · Find callers of login · 800 tokens
+```
+
+- effort は subagent 定義の frontmatter（`effort: low` など）か、呼び出し時に指定された値です。
+  未指定のときは表示しません（セッションの effort を引き継ぐ）。数値（トークン予算）のときは `8k tok` のように表示します。
+- model は解決されるまで表示しません。色は effort はメインのステータスラインと同じ、model は紫です。
+- `claude/` に新しく追加したファイルなので、初回は `mise bootstrap dotfiles apply` で `~/.claude` へ symlink を作成します。
+
+参考: [Customize your status line — Subagent status lines](https://code.claude.com/docs/en/statusline#subagent-status-lines)
 
 ### cache を長持ちさせるための注意
 
