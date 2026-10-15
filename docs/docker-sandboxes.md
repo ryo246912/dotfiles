@@ -236,7 +236,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.47.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+#   "github:docker/sbx-releases" = { version = "0.48.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
 mise install
 sbx version
 ```
