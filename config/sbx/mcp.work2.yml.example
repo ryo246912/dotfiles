@@ -1,6 +1,6 @@
 # work2 でだけ sandbox から使う MCP サーバ。
 # `cp mcp.work2.yml.example mcp.work2.yml` で .example を外してコピーして使う。
-# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp と sbx-agent が mcp.yml と一緒に読む。
+# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp-add と sbx-agent が mcp.yml と一緒に読む。
 # 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
 dependencies:
   mcp:

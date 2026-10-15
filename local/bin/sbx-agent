@@ -23,7 +23,7 @@
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
-#                      既定は読み込まない（後から `mise run sandbox:mcp-load`）。登録は `mise run sandbox:mcp`
+#                      既定は読み込まない（後から `mise run sandbox:mcp-load`）。登録は `mise run sandbox:mcp-add`
 #                      （認証はホスト側で一度だけ）
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
