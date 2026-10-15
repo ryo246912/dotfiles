@@ -455,6 +455,13 @@ run_with_timeout() {
   while kill -0 "$pid" 2>/dev/null; do
     if [ "$i" -ge $((secs * 10)) ]; then
       kill "$pid" 2>/dev/null
+      # TERM で終了しない場合に備え、1 秒待っても残っていれば KILL する
+      i=0
+      while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 10 ]; do
+        sleep 0.1
+        i=$((i + 1))
+      done
+      kill -9 "$pid" 2>/dev/null
       wait "$pid" 2>/dev/null
       return 124
     fi
