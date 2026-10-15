@@ -365,10 +365,11 @@ image に Claude Code の managed settings の drop-in
 ユーザー設定では上書きできず、ホスト側の設定も書き換えません。反映には image のリビルドが必要です。
 
 この制限は Claude Code だけです。Codex などは共有している自身の設定に MCP サーバがあればコンテナ内でも
-起動します（このリポジトリでは APM から MCP を登録しないので、手で追加しない限り空です）。
+起動します（このリポジトリでは agent に MCP を登録しないので、手で追加しない限り空です）。
 
-MCP を使いたい作業は Docker Sandboxes で行います（ホスト側の `sbx mcp` を gateway 経由で使う。
-[docs/docker-sandboxes.md の「MCP の扱い」](./docker-sandboxes.md#mcp-の扱い) 参照）。
+MCP は agent の native MCP ではなく mcpc（CLI）から使います。mcpc はこの制限を受けないため、
+mount した mcpc 用 config（`~/.local/state/mcpc/apm-home/.copilot/mcp-config.json`）からコンテナ内でも使えます
+（[docs/mcpc.md](./mcpc.md#devcontainer-で使う)）。
 
 ## devcontainer 内での docker compose / DB コンテナ（DinD）
 

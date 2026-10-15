@@ -18,7 +18,6 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
-> mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 > ```
 
 ## devcontainer に対する利点
@@ -523,7 +522,6 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
-mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 ```
 
 > [!NOTE]
@@ -566,8 +564,8 @@ mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの s
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-sandbox で使う MCP は `config/sbx/mcp*.yml` から `mise run sandbox:mcp` で登録します。
-`sbx-agent` は既定でその全サーバを読み込みます（[MCP の扱い](#mcp-の扱い)）。
+MCP は sandbox 内の mcpc から使います。使う server だけを host で `mise run sandbox:mcpc <server>...` で
+proxy してから接続します（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
 
@@ -593,7 +591,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp*.yml` の全サーバ）
+   - mcpc 用の sandbox config（`~/.config/mcpc/sandbox`）を read-only でマウントし、proxy の token を `--env` で渡す
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -1184,7 +1182,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
 | `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている                                                   |
-| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                                                             |
+| MCP（ホストで認証済みのものを使う）                  | ✅ mcpc + host の mcpc proxy（[詳細](#mcp-の扱い)）                                                              |
 | 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）                                           |
 
 ### 残っている差分
@@ -1203,15 +1201,26 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ## MCP の扱い
 
-sandbox では **MCP サーバへの接続をホスト側（`sbx mcp` の gateway）に寄せます**。
-sandbox 内の Claude Code は自身の MCP 設定にある stdio サーバを読まず、ホストに登録したサーバを
-gateway 経由で使います（Codex には同じ制限を入れていません。下記）。
+MCP は **agent の native MCP には載せず、sandbox 内の mcpc から必要な時だけ使います**（tool の定義を
+agent のコンテキストに入れないため）。server は host で動かし、host の mcpc proxy（`mise run sandbox:mcpc`）
+経由で接続します。sbx の gateway に載せて agent の native MCP として使う経路も、オプションで残しています。
+定義・設定の仕組み・2 つの経路の比較は [`docs/mcpc.md`](mcpc.md) にまとめています。
 
-| 経路                                                  | MCP サーバが動く場所 | sandbox での扱い                                                  |
-| ----------------------------------------------------- | -------------------- | ----------------------------------------------------------------- |
-| `sbx mcp add --url`（リモート）                       | リモート             | ✅ 使う。gateway がホストから接続する（認証情報はホストに留まる） |
-| `sbx mcp add --command`（stdio）                      | **ホスト**           | ✅ 使う。agent は gateway 経由でのみ接続する                      |
-| エージェント自身の MCP 設定（`~/.claude.json` / APM） | sandbox 内の VM      | ❌ 読み込ませない（下記）                                         |
+| 経路                                                 | MCP サーバが動く場所  | sandbox での扱い                                                                            |
+| ---------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| mcpc + host の mcpc proxy（`sandbox:mcpc`）          | **ホスト**            | ✅ 既定。sandbox 内の mcpc から `host.docker.internal:<port>` へ接続する                    |
+| `sbx mcp` の gateway（`sandbox:add-mcp`）            | **ホスト** / リモート | オプション。起動後に `sandbox:load-mcp` で必要な server だけ agent の native MCP に読み込む |
+| エージェント自身の MCP 設定（`~/.claude.json` など） | sandbox 内の VM       | ❌ 読み込ませない（下記）                                                                   |
+
+```bash
+# host
+mise run apm:install                                                     # config/mcpc/mcp*.yml から mcpc 用 config を生成
+mise run sandbox:mcpc notion metabase
+mise run sandbox:mcpc-stop
+
+# sandbox 内
+mcpc connect "$MCPC_SANDBOX_CONFIG:notion" @notion
+```
 
 ### エージェント自身の MCP 設定を止める
 
@@ -1231,7 +1240,8 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 ```
 
 - 許可リストに `serverUrl` しか無いため、**stdio サーバ（`npx` / `uvx` で起動するもの）はすべて読み込まれません**。
-  gateway は URL で登録されるので影響を受けません。
+  gateway は URL で登録されるので影響を受けません（オプションの sbx gateway 経路のため）。既定の mcpc 経路では
+  `sbx-agent` が gateway に何も読み込まないので、agent の native MCP は空です。mcpc は CLI なのでこの制限を受けません。
 - remote（HTTP / SSE）サーバは許可リストを通りますが、宛先は network policy で別途止まります。
 - managed settings なので `~/.claude/settings.json` などの共有設定では上書きできず、ホスト側の
   `~/.claude.json` も書き換えません（ホストでは今まで通り全サーバが使えます）。
@@ -1240,91 +1250,25 @@ sandbox は `~/.claude` や `~/.claude.json` をホストと共有するため�
 - 反映には template の再ビルド（`mise run sandbox:build-template`）と sandbox の作り直しが必要です。
   sandbox 内で `claude mcp list` を実行し、gateway 以外が出ないことを確認してください。
 
-### 登録するサーバの管理
+### 定義と sandbox への読み込み
 
-MCP サーバの定義とバージョンは `config/sbx/mcp.yml` で管理します。書式は APM の
-`apm.yml` の `dependencies.mcp` と同じで、すべて self-defined（`registry: false`、起動方法を自分で書く形式）で書きます。
-ホストの agent には登録しません（`apm install` は `--only apm`。[docs/apm.md](./apm.md#mcp-サーバ)）。
-
-```yaml
-dependencies:
-  mcp:
-    - name: notion
-      registry: false
-      transport: http
-      url: https://mcp.notion.com/mcp
-    - name: chrome-devtools
-      registry: false
-      transport: stdio
-      command: npx
-      args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
-```
-
-- stdio サーバはパッケージを `args` の `<package>@<version>` で固定します。Renovate が `npx` は npm、
-  `uvx` は PyPI の新しいバージョンで更新します（`command` の直後に `args` を書いたものが対象）。
-- work3 / private など特定の環境だけで使うサーバは `config/sbx/mcp.<name>.yml` に書きます。
-  gitignore 済みなのでコミットされず、Renovate の更新対象にもなりません。雛形は `mcp.work2.yml.example` / `mcp.work3.yml.example` です。
-  同じ name を複数のファイルに書いた場合は、先に読んだ方（`mcp.yml`）を使います。
-
-```bash
-mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
-```
-
-`sandbox:mcp` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
-
-| mcp.yml                         | sbx mcp add                                            |
-| ------------------------------- | ------------------------------------------------------ |
-| `transport: http` / `sse` + url | `--url <url>`（`headers` は `--header 'Name: value'`） |
-| `transport: stdio` + command    | `--command <command> --args <args を , で連結>`        |
-| stdio の `env`                  | `--command env --args K=V,...,<command>,<args>` で包む |
-| `sbx_options`（独自キー）       | `sbx mcp add` の末尾にそのまま追加（`--dir` など）     |
-
-- registry 参照（`io.github.xxx/yyy` 形式）は解決後のコマンドが manifest に無いため登録しません。
-- remote サーバの URL にクエリ（`?toolsets=...` など）を付けると、`sbx mcp add --url` の OAuth 検出が
-  「protected resource metadata resource ... does not match requested resource」で失敗します（サーバが返す
-  resource はクエリ無しの URL のため）。クエリが必要なサーバは `npx -y mcp-remote@<version> <URL>` を
-  stdio として登録し、OAuth は mcp-remote に任せます（クエリ中の `,` は `%2C` にエンコード）。
-  例は `mcp.work3.yml.example` の datadog です。
-- `sbx_options` は APM の書式に無い独自キーで、`sbx mcp add` 固有のオプションを渡すのに使います。
-  例：相対パスの `--project` を使う stdio サーバに `--dir <作業ディレクトリ>`、ホストの
-  `127.0.0.1` で動くサーバ（Figma デスクトップなど）に `--skip-ssrf-check`（gateway はホストから接続するため
-  ループバックはホストを指しますが、sbx の SSRF チェックで拒否されます）。
-- `sbx mcp add` の `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにします。
-- 登録した定義を `~/.local/state/sbx-mcp/<name>` に記録し、バージョンなどが変わったサーバだけ
-  `sbx mcp rm` → `sbx mcp add` で登録し直します。remote サーバも定義（URL / headers）が変わると登録し直すため、
-  OAuth の認可をやり直すことがあります。
-- この仕組みより前に登録済みだった remote サーバは、登録し直すと認可もやり直しになるため、
-  今の定義を記録するだけにします（実際に登録されている URL は確かめられないので、違う場合は
-  `sbx mcp rm <name>` してから再実行します）。
-- `mcp*.yml` から消したサーバは自動では消しません（OAuth トークンも消えるため）。
-  `sandbox:mcp` が「mcp*.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
-- `headers` に書いた `${VAR}` はそのまま sbx に渡り、sbx の secret（`sbx secret set`）として解決されます。
-
-### sandbox への読み込み
-
-`sbx-agent` は既定で `config/sbx/mcp*.yml` の MCP（`registry: false`）を全て `--static-mcp` で読み込みます。
-起動済みの sandbox には `sbx mcp load` で後から足します。絞り込みたいときだけ指定します。
-
-```bash
-sbx-agent claude                                 # mcp*.yml の MCP を全て
-sbx-agent claude --static-mcp notion             # notion だけ
-export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定を変える
-```
-
-multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
+定義（`config/mcpc/mcp*.yml`）、mcpc proxy と sbx gateway の仕組み、`sbx mcp add` への変換規則、
+2 つの経路の比較は [`docs/mcpc.md`](mcpc.md#sandbox-で使うmcpc-proxy既定) を参照してください。
+sbx gateway に新しい MCP を追加する手順は
+[`docs/mcpc.md` の「新しい MCP を追加する手順（sbx gateway）」](mcpc.md#新しい-mcp-を追加する手順sbx-gateway) です。
 
 ### トレードオフ
 
-`--command` で登録した stdio サーバは**ホストで動きます**。ホストの認証をそのまま使える
-代わりに、MCP サーバ自体は sandbox の隔離の外にあります（ホストのファイル・ネットワーク・
-認証情報に触れます）。信頼できるサーバだけを登録してください。
-エージェントは gateway にしか繋がらないので、**生の認証情報は読めません**。
+どちらの経路も stdio サーバは**ホストで動きます**。ホストの認証をそのまま使える代わりに、MCP サーバ自体は
+sandbox の隔離の外にあります（ホストのファイル・ネットワーク・認証情報に触れます）。信頼できるサーバだけを
+定義してください。sandbox 側は proxy / gateway にしか繋がらないので、**生の認証情報は読めません**。
 
 ### devcontainer
 
-devcontainer ではコンテナ内から MCP に接続しません。image（`Dockerfile`）に
+devcontainer ではコンテナ内の Claude Code の native MCP から接続しません。image（`Dockerfile`）に
 `allowedMcpServers: []` の managed settings（`config/devcontainer/claude/mcp-policy.devcontainer.json`）を
-置いているため、共有している `~/.claude.json` のサーバも読み込まれません。
+置いているため、共有している `~/.claude.json` のサーバも読み込まれません。mcpc は CLI なので影響を受けず、
+mount した mcpc 用 config からコンテナ内で使えます（[`docs/mcpc.md`](mcpc.md#devcontainer-で使う)）。
 
 ## 管理ツール（CLI / TUI）
 

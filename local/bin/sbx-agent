@@ -22,9 +22,6 @@
 #   --no-template      template を指定せず sbx の既定 template で起動する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
-#   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
-#                      既定は config/sbx/mcp*.yml の MCP（registry: false）の全サーバ。登録は `mise run sandbox:mcp`
-#                      （認証はホスト側で一度だけ）
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
 #   --rm               agent セッション終了時に sandbox を削除する
@@ -36,10 +33,12 @@
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
-#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら config/sbx/mcp*.yml の全サーバ）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
+# MCP は起動時に何も load しない（tool の定義を agent のコンテキストに入れないため）。既定は sandbox 内の
+# mcpc から使い、sbx gateway で使う場合は起動後に `mise run sandbox:load-mcp` で必要なものだけ load する
+# （docs/mcpc.md）。
 # 参考: https://docs.docker.com/reference/cli/sbx/
 set -uo pipefail
 
@@ -90,7 +89,6 @@ MOUNT_CONFIG=true
 HOST_BRIDGE=true
 EXTRA_MOUNTS=()
 PUBLISH_PORTS=()
-STATIC_MCP=()
 AGENT_ARGS=()
 
 expand_tilde() {
@@ -207,11 +205,6 @@ while [[ $# -gt 0 ]]; do
             SKILLS="$1"
             ;;
         --skills=*) SKILLS="${1#*=}" ;;
-        --static-mcp)
-            shift && require_value --static-mcp $#
-            STATIC_MCP+=("$1")
-            ;;
-        --static-mcp=*) STATIC_MCP+=("${1#*=}") ;;
         --cpus)
             shift && require_value --cpus $#
             CPUS="$1"
@@ -260,43 +253,6 @@ if ! command -v sbx >/dev/null 2>&1; then
     log_error "sbx コマンドが見つかりません。'mise install' で導入してください（docs/docker-sandboxes.md 参照）"
     exit 1
 fi
-
-if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
-    STATIC_MCP+=("$SBX_AGENT_STATIC_MCP")
-fi
-# どちらも無ければ、mise run sandbox:mcp が登録する MCP（config/sbx/mcp.yml と mcp.<name>.yml の
-# registry: false のもの）を全て読み込む。sandbox 内の Claude Code は自身の MCP 設定を読まない
-# （template の managed settings で止めている）ため、既定で何も読み込まないと MCP が 1 つも使えなくなる。
-if [[ ${#STATIC_MCP[@]} -eq 0 ]] && _repo=$(find_dotfiles_repo); then
-    if command -v yq >/dev/null 2>&1; then
-        for _file in "${_repo}"/config/sbx/mcp.yml "${_repo}"/config/sbx/mcp.*.yml; do
-            [[ -f "$_file" ]] || continue
-            # プロセス置換だと yq の失敗（YAML の構文エラーなど）が見えず、MCP 0 件のまま黙って起動するため分ける
-            if ! _names=$(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "$_file"); then
-                log_warn "$(basename "$_file") の解析に失敗したため、その MCP は読み込みません"
-                continue
-            fi
-            while IFS= read -r _name; do
-                [[ -n "$_name" ]] && STATIC_MCP+=("$_name")
-            done <<<"$_names"
-        done
-    else
-        log_warn "yq が無いため config/sbx/mcp*.yml の MCP を読み込めません（mise install で導入してください）"
-    fi
-fi
-# `,` 区切りを展開して重複を除く
-MCP_SERVERS=()
-for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
-    IFS=',' read -ra _names <<< "$_spec"
-    for _name in "${_names[@]}"; do
-        [[ -z "$_name" ]] && continue
-        _seen=false
-        for _existing in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
-            [[ "$_existing" == "$_name" ]] && _seen=true && break
-        done
-        [[ "$_seen" == false ]] && MCP_SERVERS+=("$_name")
-    done
-done
 
 # template は常に DEFAULT_TEMPLATE を使う。--template / SBX_AGENT_TEMPLATE で上書きでき、
 # --no-template で sbx の既定 template に戻せる。未ビルドなら sbx create が失敗し、
@@ -416,6 +372,9 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
     add_mount "${HOME}/.config/nvim:ro"
+    # mcpc 用の sandbox config（host の `mise run sandbox:mcpc` の proxy へ繋ぐ URL だけで credential は
+    # 含まない）。apm:install-mcpc が生成する。未生成のホストでは mount しない（docs/mcpc.md）。
+    [[ -f "${HOME}/.config/mcpc/sandbox/mcp-config.json" ]] && add_mount "${HOME}/.config/mcpc/sandbox:ro"
     # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
@@ -563,6 +522,26 @@ fi
 if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
     [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
+    # sandbox 内の mcpc 用。$HOME はホストと別物なので mount したホストの絶対パスを渡し、host の mcpc proxy
+    # （mise run sandbox:mcpc）が要求する bearer token も渡す。token は sandbox:mcpc と同じファイルを共有し、
+    # 無ければここで作る（どちらを先に実行しても揃う）。
+    if [[ -f "${HOME}/.config/mcpc/sandbox/mcp-config.json" ]]; then
+        add_env MCPC_SANDBOX_CONFIG "${HOME}/.config/mcpc/sandbox/mcp-config.json"
+        _token_file="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/proxy-token"
+        if [[ ! -s "$_token_file" ]]; then
+            # sandbox:mcpc と同時に初回作成しても同じ token になるよう、一時ファイルに書いてから ln で置く
+            mkdir -p "$(dirname "$_token_file")"
+            _token_tmp=$(mktemp "${_token_file}.XXXXXX")
+            od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$_token_tmp"
+            ln "$_token_tmp" "$_token_file" 2>/dev/null || true
+            rm -f "$_token_tmp"
+        fi
+        if [[ -s "$_token_file" ]]; then
+            add_env MCPC_PROXY_TOKEN "$(cat "$_token_file")"
+        else
+            echo "warn: ${_token_file} が空のため MCPC_PROXY_TOKEN を渡しません（削除してから再実行してください）" >&2
+        fi
+    fi
 fi
 
 # 設定ディレクトリをマウントしていない場合は env を設定しない。
@@ -744,15 +723,6 @@ republish_ports() {
     done
 }
 
-# 登録済みの MCP サーバを稼働中の sandbox へ読み込む（認証はホスト側で済んでいる）
-load_static_mcp() {
-    local name
-    for name in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
-        sbx mcp load "$name" --sandbox "$SANDBOX_NAME" >/dev/null 2>&1 \
-            || log_warn "MCP サーバ '$name' の読み込みに失敗しました（sbx mcp add で登録済みか確認してください）"
-    done
-}
-
 # sandbox 内の指定ポートに割り当てられた host port を調べる
 sandbox_host_port() {
     local sandbox_port="$1"
@@ -803,9 +773,6 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     ensure_host_prerequisites
 
     create_cmd=(sbx create --name="$SANDBOX_NAME" --skills="$SKILLS")
-    for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
-        create_cmd+=(--static-mcp "$spec")
-    done
     # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:claude` のような
     # ローカルにしか無い template をレジストリから引こうとしてしまう（sbx 0.47.0 の
     # `sbx create --help` で確認。docs も `sbx run --pull never -t TAG` を例示している）。
@@ -848,7 +815,6 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
 else
     log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
     republish_ports
-    load_static_mcp
 fi
 
 # 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と

@@ -57,7 +57,8 @@ dependencies:
     - DietrichGebert/ponytail#v5.1.0
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
-  # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
+  # MCP は config/mcpc/mcp*.yml（同じ dependencies.mcp の書式）で管理し、apm:install-mcpc が
+  # 別の manifest として mcpc 専用の config に入れる（docs/mcpc.md）。
   mcp: []
 includes: auto
 scripts: {}

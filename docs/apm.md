@@ -12,12 +12,12 @@
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                          | 管理ツール | ソース                                                       | 配布先                                                             |
-| ----------------------------- | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------ |
-| このリポジトリの `CLAUDE.md`  | rulesync   | `.rulesync/rules/CLAUDE.md`                                  | リポジトリ直下の `CLAUDE.md`（gitignore）                          |
-| グローバルな自作 skill / rule | rulesync   | `config/rulesync/.rulesync/`                                 | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）         |
-| **外部スキル（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.apm`                          | `~/.claude/skills/` 等（`apm install -g`）                         |
-| MCP サーバ（sandbox 用）      | sbx mcp    | `config/sbx/mcp.yml`（APM の `dependencies.mcp` と同じ書式） | ホストの `sbx mcp`（`mise run sandbox:mcp`）。agent には登録しない |
+| 対象                          | 管理ツール | ソース                                                         | 配布先                                                         |
+| ----------------------------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| このリポジトリの `CLAUDE.md`  | rulesync   | `.rulesync/rules/CLAUDE.md`                                    | リポジトリ直下の `CLAUDE.md`（gitignore）                      |
+| グローバルな自作 skill / rule | rulesync   | `config/rulesync/.rulesync/`                                   | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）     |
+| **外部スキル（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.apm`                            | `~/.claude/skills/` 等（`apm install -g`）                     |
+| MCP サーバ                    | **APM**    | `config/mcpc/mcp*.yml`（APM の `dependencies.mcp` と同じ書式） | mcpc 専用の config（`apm:install-mcpc`）。agent には登録しない |
 
 - **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`config/rulesync/`）で管理します。
@@ -26,14 +26,16 @@
 
 ## MCP サーバ
 
-MCP サーバは **ホストの agent には登録せず**、Docker Sandboxes からホストの `sbx mcp`（gateway）経由でだけ
-使います。そのため `apm install -g` は `--only apm` で実行し（`apm:install` / `apm:ci`）、MCP は
-`~/.claude.json` などへ書き込みません。`apm.yml` の `dependencies.mcp` は空のままにします。
+MCP サーバは **どの agent の native MCP にも登録せず**、mcpc（CLI）から必要な時だけ使います
+（[`docs/mcpc.md`](mcpc.md)）。そのため `apm install -g` は `--only apm` で実行し
+（`apm:install` / `apm:ci`）、MCP は `~/.claude.json` などへ書き込みません。`apm.yml` の
+`dependencies.mcp` は空のままにします。
 
 - `dependencies.mcp` に書くと、`--only apm` では lockfile に載らないため `apm install --frozen`（`apm:ci`）が
   「MCP server '...' is missing from apm.lock.yaml」で失敗します。
-- MCP の定義とバージョンは `config/sbx/mcp.yml` に、APM の `dependencies.mcp` と同じ書式で書きます
-  （詳細は `docs/docker-sandboxes.md` の「MCP の扱い」）。
+- MCP の定義とバージョンは `config/mcpc/mcp.yml`（と環境別の `mcp.<env>.yml`）に、APM の
+  `dependencies.mcp` と同じ書式で書きます。`apm:install-mcpc` がこれを別の manifest として隔離した HOME で
+  `apm install --only mcp --target copilot` し、mcpc 専用の config を生成します（`apm/apm.lock.yaml` には載りません）。
 - rulesync から移行したホストでは、以前 rulesync が配布した定義が残ります。一度だけ
   `~/.config/rulesync/.rulesync/mcp.json` を削除し、`~/.copilot/mcp-config.json` から旧名
   （`makenotion/notion-mcp-server`・`io.github.ChromeDevTools/chrome-devtools-mcp` など）の

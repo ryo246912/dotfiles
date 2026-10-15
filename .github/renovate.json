@@ -155,7 +155,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/sbx/mcp.yml"],
+      "managerFilePatterns": ["config/mcpc/mcp.yml"],
       "matchStrings": [
         "command:\\s*npx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>(?:@[^/\"\\s]+/)?[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
       ],
@@ -163,7 +163,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/sbx/mcp.yml"],
+      "managerFilePatterns": ["config/mcpc/mcp.yml"],
       "matchStrings": [
         "command:\\s*uvx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
       ],

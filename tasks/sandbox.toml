@@ -240,18 +240,119 @@ sbx secret ls || true
 sbx policy ls || true
 '''
 
-["sandbox:mcp"]
-description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
+["sandbox:mcpc"]
+description = "Serve MCP servers to sandboxes from host-side mcpc proxies (default MCP path)"
 run = '''
 set -eu
 
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結するため、本体を関数にする。
+main() {
+  # 使い方（host で実行。proxy は mcpc の bridge としてバックグラウンドで動き続ける）:
+  #   mise run sandbox:mcpc notion metabase
+  #   止めるときは mise run sandbox:mcpc-stop
+  #
+  # 指定したサーバごとに host で `mcpc connect <config>:<name> @sbx-<name> --proxy 127.0.0.1:<port>`
+  # を起動し、sandbox 内の mcpc は $MCPC_SANDBOX_CONFIG（apm:install-mcpc が生成し、sbx-agent が
+  # mount する）から host.docker.internal:<port> へ繋ぐ。sandbox 内の agent の native MCP には
+  # 何も載らないため、tool の定義はコンテキストに入らない（docs/mcpc.md）。
+  # - サーバは host で動き、OAuth token（mcpc login で host の keychain に保存）は sandbox に入らない。
+  # - proxy は bearer token（MCPC_PROXY_TOKEN）を要求する。token は host の state に置き、
+  #   sbx-agent が sandbox に env で渡す（config には値を書かない）。
+  for cmd in mcpc jq sbx; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+
+  config="$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json"
+  sandbox_config="$HOME/.config/mcpc/sandbox/mcp-config.json"
+  for file in "$config" "$sandbox_config"; do
+    [ -f "$file" ] || { echo "error: $file がありません（先に mise run apm:install）" >&2; exit 1; }
+  done
+
+  if [ "$#" -eq 0 ]; then
+    echo "usage: mise run sandbox:mcpc <server>...（例: notion metabase）" >&2
+    echo "server（host の port）:" >&2
+    jq -r '.mcpServers | to_entries[] | "  \(.key)\t\(.value.url | sub(".*:"; ""))"' "$sandbox_config" >&2
+    exit 2
+  fi
+
+  token_file="${XDG_STATE_HOME:-$HOME/.local/state}/mcpc/proxy-token"
+  if [ ! -s "$token_file" ]; then
+    # sbx-agent と同時に初回作成しても同じ token になるよう、一時ファイルに書いてから ln で置く
+    # （ln は既存のファイルを上書きしないため、先に置いた方の token が残る）
+    mkdir -p "$(dirname "$token_file")"
+    tmp=$(mktemp "$token_file.XXXXXX")
+    od -An -N32 -tx1 /dev/urandom | tr -d ' \n' >"$tmp"
+    ln "$tmp" "$token_file" 2>/dev/null || true
+    rm -f "$tmp"
+  fi
+  token=$(cat "$token_file")
+  # 空のファイルは消さない（別の起動が置いた token を消しうるため）。手で消してもらう
+  [ -n "$token" ] || { echo "error: $token_file が空です。削除してから再実行してください" >&2; exit 1; }
+
+  failed=""
+  for name in "$@"; do
+    port=$(jq -r --arg name "$name" '.mcpServers[$name].url // empty | sub(".*:"; "")' "$sandbox_config")
+    if [ -z "$port" ]; then
+      echo "error: '$name' は $sandbox_config にありません" >&2
+      failed="${failed}${failed:+, }$name"
+      continue
+    fi
+    # 既存の proxy は接続時の credential を保持しているため、張り直して今の環境で起動し直す
+    mcpc close "@sbx-$name" >/dev/null 2>&1 || true
+    echo "==> $name を 127.0.0.1:$port で proxy"
+    if ! mcpc connect "$config:$name" "@sbx-$name" --proxy "127.0.0.1:$port" --proxy-bearer-token "$token"; then
+      failed="${failed}${failed:+, }$name"
+      continue
+    fi
+    # sbx のプロキシは host.docker.internal を host の localhost へ転送するため、許可ルールは localhost で書く
+    if ! sbx policy ls 2>/dev/null | grep -Eq "localhost:${port}([^0-9]|$)"; then
+      sbx policy allow network "localhost:${port}" || echo "warn: localhost:${port} の許可に失敗しました" >&2
+    fi
+  done
+
+  echo
+  echo "sandbox 内で使う例:"
+  for name in "$@"; do
+    echo "  mcpc connect \"\$MCPC_SANDBOX_CONFIG:${name}\" @${name}"
+  done
+  echo "止めるとき: mise run sandbox:mcpc-stop"
+  if [ -n "$failed" ]; then
+    echo "error: 起動できなかった proxy: $failed（mcpc @sbx-<name> logs を確認）" >&2
+    exit 1
+  fi
+}
+
+main "$@"
+'''
+
+["sandbox:mcpc-stop"]
+description = "Stop the host-side mcpc proxies started by sandbox:mcpc"
+run = '''
+set -eu
+command -v mcpc >/dev/null 2>&1 || { echo "error: mcpc が必要です（mise install）" >&2; exit 127; }
+# config ではなく mcpc のセッション一覧から探す（config から消したサーバの proxy も止めるため）
+sessions=$(mcpc --json) || { echo "error: mcpc のセッション一覧を取得できません" >&2; exit 1; }
+for session in $(printf '%s' "$sessions" | jq -r '.sessions[]?.name | select(startswith("@sbx-"))'); do
+  mcpc close "$session" >/dev/null 2>&1 && echo "stopped: $session" || true
+done
+'''
+
+["sandbox:add-mcp"]
+description = "(Optional) Add config/mcpc/mcp*.yml to the host sbx MCP registry (sbx mcp add); sbx-agent / sbx mcp load loads them"
+run = '''
+set -eu
+
+# 【オプション】既定の経路は mcpc（mise run sandbox:mcpc）。こちらは MCP を sandbox 内の agent の
+# native MCP として使う経路で、gateway に載せた tool の定義は agent のコンテキストに常に入る。
+# add した後、起動済みの sandbox に mise run sandbox:load-mcp で必要なものだけ load する（docs/mcpc.md）。
+#
 # sandbox から使う MCP サーバをホストの sbx mcp に登録する。
 # OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
 # 注入するため、sandbox 内の agent は生の認証情報を読めない。
 #
 # sandbox 内の agent は自身の MCP 設定（~/.claude.json など）を読まない（template の
-# managed settings で止めている）ため、sandbox で使う MCP はすべてここで登録する。
-# MCP の定義とバージョンは config/sbx/mcp.yml（共通）と mcp.<name>.yml（work3 / private など
+# managed settings で止めている）ため、agent に MCP を使わせるならここで登録する。
+# MCP の定義とバージョンは config/mcpc/mcp.yml（共通）と mcp.<name>.yml（work3 / private など
 # 環境ごと。gitignore 済み）に APM の dependencies.mcp と同じ書式で書いており、
 # self-defined（registry: false）のエントリを sbx mcp add の引数に変換する。
 
@@ -284,7 +385,11 @@ to_specs() {
         .name as $name
         | (.sbx_options // []) as $sbx_options
         | if (.transport // "") == "stdio" then
-            ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
+            # sbx は ${VAR} を展開しないため、そのまま渡すと不正な値で起動してしまう。登録せずにエラーにする
+            ([(.env // {}) | to_entries[]
+              | if (.value | tostring | test("\\$\\{")) then
+                  error("\($name): env の ${VAR} は sbx gateway 経路では使えません（\(.key)）")
+                else "\(.key)=\(.value)" end]) as $env
             | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
             | ($argv[1:] + (.args // [])) as $cmd_args
             | if ($cmd_args | map(select(contains(","))) | length) > 0 then
@@ -315,7 +420,7 @@ register() {
   fi
 }
 
-for manifest in "$MISE_PROJECT_ROOT"/config/sbx/mcp.yml "$MISE_PROJECT_ROOT"/config/sbx/mcp.*.yml; do
+for manifest in "$MISE_PROJECT_ROOT"/config/mcpc/mcp.yml "$MISE_PROJECT_ROOT"/config/mcpc/mcp.*.yml; do
   # mcp.*.yml が 1 つも無いとき glob がそのまま残るため存在確認する
   [ -f "$manifest" ] || continue
   echo "==> $(basename "$manifest")"
@@ -372,7 +477,7 @@ echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sbx-agent は mcp*.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
+echo "sandbox に読み込むには起動後に mise run sandbox:load-mcp を実行します（sandbox と server を fzf で選ぶ）。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then
@@ -380,6 +485,55 @@ if [ -n "$failed" ]; then
   echo "error: 登録できなかった MCP サーバ: ${failed}" >&2
   exit 1
 fi
+'''
+
+["sandbox:load-mcp"]
+description = "(Optional) Load sbx-added MCP servers into a running sandbox's gateway (fzf to pick)"
+# 起動済みの sandbox に、sandbox:add-mcp で add 済みの MCP サーバを後から load する（sbx mcp load）。
+# 引数を省くと sandbox（1 つ）と MCP サーバ（Tab で複数）を fzf で選ぶ。
+#   mise run sandbox:load-mcp                          # どちらも fzf で選ぶ
+#   mise run sandbox:load-mcp <sandbox> [<name>...]    # 指定したものだけ
+# load した tool の定義は、その sandbox の agent のコンテキストに入る（docs/mcpc.md）。
+raw = true
+run = '''
+set -eu
+
+main() {
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+
+  sandbox="${1:-}"
+  [ "$#" -gt 0 ] && shift
+  if [ -z "$sandbox" ]; then
+    listing=$(sbx ls) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    sandboxes=$(printf '%s\n' "$listing" | awk 'NR > 1 { print $1 }')
+    [ -n "$sandboxes" ] || { echo "error: sandbox がありません（sbx ls）" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" | fzf --prompt 'sandbox> ' --header 'MCP を load する sandbox を選ぶ') || exit 130
+  fi
+
+  if [ "$#" -eq 0 ]; then
+    listing=$(sbx mcp ls) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+    names=$(printf '%s\n' "$listing" | awk 'NR > 1 { print $1 }')
+    [ -n "$names" ] || { echo "error: add 済みの MCP サーバがありません（mise run sandbox:add-mcp）" >&2; exit 1; }
+    selected=$(printf '%s\n' "$names" | fzf --multi --prompt 'mcp> ' --header "Tab で複数選択して ${sandbox} に load") || exit 130
+    # shellcheck disable=SC2086 # 名前は空白を含まない（sbx mcp ls の 1 列目）
+    set -- $selected
+  fi
+
+  failed=""
+  for name in "$@"; do
+    echo "==> ${name} を ${sandbox} に load"
+    sbx mcp load "$name" --sandbox "$sandbox" || failed="${failed}${failed:+, }${name}"
+  done
+  if [ -n "$failed" ]; then
+    echo "error: load できなかった MCP サーバ: ${failed}（sbx mcp ls / sbx ls を確認）" >&2
+    exit 1
+  fi
+  echo "接続中の agent に反映されない場合は agent を再起動してください（tools/list_changed への対応は agent 次第）。"
+}
+
+main "$@"
 '''
 
 ["sandbox:template-save"]

@@ -28,6 +28,13 @@ calculate_apm_hash() {
       [ -e "$module" ] || [ -L "$module" ] || continue
       printf '%s\n' "$module"
     done | sort
+    # config/mcpc/mcp*.yml（MCP の定義）の変更と、apm:install-mcpc が生成する config（host 用・sandbox 用）の
+    # 欠落でも再生成されるようにする。
+    for mcpc_config in "$HOME/.config/mcpc/mcp.yml" "$HOME/.config/mcpc"/mcp.*.yml \
+      "$HOME/.local/state/mcpc/apm-home/.copilot/mcp-config.json" \
+      "$HOME/.config/mcpc/sandbox/mcp-config.json"; do
+      [ -f "$mcpc_config" ] && echo "$mcpc_config $(hash_cmd < "$mcpc_config")"
+    done
   } | hash_cmd
 }
 apm_hash=$(calculate_apm_hash)
@@ -178,14 +185,16 @@ fi
 shell = "bash -c"
 
 ["apm:install"]
-description = "Deploy user-scope external skills and commands to agent dirs"
+description = "Deploy user-scope external skills, commands and the mcpc MCP config"
 # apm install -g は cwd に依存せず ~/.apm/apm.yml を読む。
 # ~/.apm は [dotfiles] が配置するため、事前に `mise bootstrap dotfiles apply` 済みであること。
 # --only apm: スキル等の APM パッケージだけを配布し、MCP はホストの agent（~/.claude.json など）に
-# 登録しない。MCP は sandbox からホストの sbx mcp 経由でだけ使う（config/sbx/mcp.yml、docs/apm.md 参照）。
+# 登録しない。MCP は config/mcpc/mcp*.yml で管理し、apm:install-mcpc が mcpc 専用 config に入れる
+# （docs/mcpc.md 参照）。
 run = [
     "mise run apm:validate-lock-version",
     "apm install -g --only apm",
+    "mise run apm:install-mcpc",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
@@ -196,12 +205,99 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
 run = [
     "mise run apm:validate-lock-version",
-    # apm:install と同じく MCP は配布しない
+    # apm/apm.yml には MCP を書かないため、agent へは MCP を配布しない
     "apm install -g --frozen --only apm",
+    # mcpc 用 MCP は config/mcpc/mcp*.yml から別 manifest で入れる（lockfile は repo に持たない）
+    "mise run apm:install-mcpc",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
+
+["apm:install-mcpc"]
+description = "Generate the mcpc-only MCP configs from config/mcpc/mcp*.yml with APM"
+# MCP は agent の native MCP に登録せず、mcpc から必要な時だけ使う（docs/mcpc.md）。
+# ~/.config/mcpc/mcp.yml（共通）と mcp.<name>.yml（work3 など。gitignore 済み）をまとめた
+# manifest を作り、隔離した HOME（~/.local/state/mcpc/apm-home）で apm install する。生成物（manifest・lockfile・
+# config）は ~/.config（mise history で丸ごと track）を避けて state 配下に置く。devcontainer の mount と揃えるため
+# XDG_STATE_HOME には追従しない固定パスにする。生成された
+# Copilot CLI 形式の config を mcpc が読み、実際の ~/.copilot や ~/.claude.json には書き込まない。
+# ~/.apm/apm.yml とは別 manifest なので、apm/apm.lock.yaml には MCP が載らない（apm:ci の --frozen と独立）。
+run = '''
+set -eu
+
+for cmd in apm yq jq; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+done
+
+config_dir="$HOME/.config/mcpc"
+isolated_home="$HOME/.local/state/mcpc/apm-home"
+[ -f "$config_dir/mcp.yml" ] || { echo "error: $config_dir/mcp.yml がありません（mise bootstrap dotfiles apply）" >&2; exit 1; }
+
+# mcp.yml → mcp.<name>.yml の順に読み、同じ name は先に読んだ方を使う（sandbox:add-mcp と同じ規則）
+manifests=""
+for file in "$config_dir/mcp.yml" "$config_dir"/mcp.*.yml; do
+  [ -f "$file" ] || continue
+  # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
+  json=$(yq -o=json '.dependencies.mcp // []' "$file") || { echo "error: $file を解析できません" >&2; exit 1; }
+  manifests="${manifests}${json}
+"
+done
+# 旧パス（config/sbx/mcp.<name>.yml）に残った gitignore 済みのファイルは読まないため、移動を促す
+for file in "$HOME/.config/sbx"/mcp.*.yml; do
+  [ -f "$file" ] || continue
+  echo "warn: $file は読み込まれません。config/mcpc/ へ移動してください（docs/mcpc.md）" >&2
+done
+merged=$(printf '%s' "$manifests" | jq -s 'add // [] | reduce .[] as $server ([]; if any(.[]; .name == $server.name) then . else . + [$server] end)')
+
+# 一覧から消したサーバが config に残らないよう、毎回作り直す。
+# .copilot ディレクトリは devcontainer が bind mount するため、ディレクトリごとは消さない
+rm -rf "$isolated_home/.apm"
+rm -f "$isolated_home/.copilot/mcp-config.json"
+mkdir -p "$isolated_home/.apm"
+jq -n --argjson mcp "$merged" '{name: "mcpc", version: "0.0.0", dependencies: {apm: [], mcp: $mcp}}' \
+  | yq -P -o=yaml >"$isolated_home/.apm/apm.yml"
+HOME="$isolated_home" apm install -g --only mcp --target copilot
+config="$isolated_home/.copilot/mcp-config.json"
+[ -f "$config" ] || { mkdir -p "$(dirname "$config")"; echo '{"mcpServers": {}}' >"$config"; }
+echo "mcpc config: $config"
+
+# Docker Sandboxes 用の mcpc config。サーバは host の mcpc proxy（mise run sandbox:mcpc）が動かし、
+# sandbox 内の mcpc は host.docker.internal:<port> へ繋ぐ（sbx のプロキシが host の localhost へ転送する）。
+# port は base から振り、sandbox:mcpc もこのファイルから読む（対応表を 1 か所に持つ）。
+# proxy の bearer token は値を書かず、sbx-agent が sandbox に渡す MCPC_PROXY_TOKEN を mcpc が展開する。
+# 既存サーバの port は前回の config から引き継ぎ、新しいサーバにだけ空いている port を振る。並び順で振り直すと
+# サーバを消したときに後ろのサーバの port がずれ、動いている proxy（旧 port）と食い違うため。
+sandbox_dir="$config_dir/sandbox"
+sandbox_config="$sandbox_dir/mcp-config.json"
+mkdir -p "$sandbox_dir"
+previous='{}'
+[ -f "$sandbox_config" ] && previous=$(cat "$sandbox_config")
+jq --argjson base "${MCPC_PROXY_PORT_BASE:-8931}" --argjson previous "$previous" '
+  ($previous.mcpServers // {} | with_entries(.value |= (.url | sub(".*:"; "") | tonumber))) as $prev
+  | (.mcpServers | keys_unsorted) as $names
+  | (reduce $names[] as $name ({ports: {}, used: []};
+      if $prev[$name] then .ports[$name] = $prev[$name] | .used += [$prev[$name]] else . end)
+    | reduce ($names[] | select($prev[.] | not)) as $name (.;
+        first(range($base; $base + 1000) as $port | select(.used | index($port) | not) | $port) as $port
+        | .ports[$name] = $port | .used += [$port])
+    | .ports) as $ports
+  | {mcpServers: ($names | map({key: ., value: {
+      url: "http://host.docker.internal:\($ports[.])",
+      headers: {Authorization: "Bearer ${MCPC_PROXY_TOKEN}"}}}) | from_entries)}' \
+  "$config" >"$sandbox_config.tmp"
+# 一覧から消したサーバの proxy（sandbox:mcpc が起動したもの）は止める
+if command -v mcpc >/dev/null 2>&1; then
+  jq -rn --argjson previous "$previous" --slurpfile current "$sandbox_config.tmp" \
+    '($previous.mcpServers // {} | keys) - ($current[0].mcpServers | keys) | .[]' \
+    | while IFS= read -r name; do
+      mcpc close "@sbx-$name" >/dev/null 2>&1 && echo "stopped: @sbx-$name（定義から削除）" || true
+    done
+fi
+mv "$sandbox_config.tmp" "$sandbox_config"
+echo "mcpc config (sandbox): $sandbox_config"
+'''
+shell = "bash -c"
 
 ["apm:sync-lock"]
 description = "Copy the user-scope APM lockfile into the dotfiles source tree"

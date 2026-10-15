@@ -1,6 +1,7 @@
-# work3 でだけ sandbox から使う MCP サーバ。
+# work3 でだけ使う MCP サーバ。
 # `cp mcp.work3.yml.example mcp.work3.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
-# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp と sbx-agent が mcp.yml と一緒に読む。
+# mcp.<name>.yml は gitignore 済みで、mise run apm:install（mcpc）と sandbox:add-mcp が mcp.yml と一緒に読む。
+# 置いた後は mise bootstrap dotfiles apply で ~/.config/mcpc へ配置してから mise run apm:install する。
 # 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
 dependencies:
   mcp:
@@ -10,7 +11,7 @@ dependencies:
       transport: http
       url: https://mcp.notion.com/mcp
     # AWS の remote MCP をホストの AWS プロファイルで proxy する。
-    # --project は相対パスなので、sbx_options の --dir に work3 のリポジトリ（tools/aws-mcp-proxy がある所）を指定する
+    # sbx gateway 経路では sbx_options の --dir に work3 のリポジトリ（tools/aws-mcp-proxy がある所）を指定する
     - name: aws-mcp
       registry: false
       transport: stdio
@@ -18,7 +19,8 @@ dependencies:
       args:
         - run
         - --project
-        - tools/aws-mcp-proxy
+        # mcpc は cwd を指定できないため絶対パスで書く（sbx gateway 経路は sbx_options の --dir でも可）
+        - /Users/xxx/work3/xxx/tools/aws-mcp-proxy
         - --frozen
         - mcp-proxy-for-aws
         - https://aws-mcp.us-east-1.api.aws/mcp
