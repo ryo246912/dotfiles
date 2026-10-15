@@ -567,7 +567,7 @@ mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの s
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
 sandbox で使う MCP は `config/sbx/mcp*.yml` から `mise run sandbox:mcp` で登録します。
-`sbx-agent` は既定でその全サーバを読み込みます（[MCP の扱い](#mcp-の扱い)）。
+`sbx-agent` は既定では読み込まないので、使うものだけ指定するか後から足します（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
 
@@ -593,7 +593,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp*.yml` の全サーバ）
+   - `--static-mcp` で登録済み MCP を読み込む（既定は読み込まない）
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -1302,13 +1302,13 @@ mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初�
 
 ### sandbox への読み込み
 
-`sbx-agent` は既定で `config/sbx/mcp*.yml` の MCP（`registry: false`）を全て `--static-mcp` で読み込みます。
-起動済みの sandbox には `sbx mcp load` で後から足します。絞り込みたいときだけ指定します。
+`sbx-agent` は既定では MCP を**読み込みません**。使うものだけ `--static-mcp` で指定するか、
+起動済みの sandbox に後から足します。
 
 ```bash
-sbx-agent claude                                 # mcp*.yml の MCP を全て
+sbx-agent claude                                 # MCP なし
 sbx-agent claude --static-mcp notion             # notion だけ
-export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定を変える
+export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定で読み込むものを決める
 ```
 
 起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
@@ -1320,6 +1320,24 @@ mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選�
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
+
+### 読み込みとコンテキスト
+
+登録（`sbx mcp add`）しただけで `load` していない MCP は、agent のコンテキストを使いません。
+
+- `sbx mcp add`（`mise run sandbox:mcp`）はホストの gateway に登録するだけで、どの sandbox にも割り当てません。
+- sandbox から見えるのは `--static-mcp` / `sbx mcp load`（`mise run sandbox:mcp-load`）で読み込んだサーバだけです。
+  `sbx-agent` も起動時に指定されたサーバを 1 つずつ `sbx mcp load ... --sandbox` しています。
+  読み込んでいないサーバはツール一覧に出ないため、ツール定義のトークンも使いません。
+- sandbox 内の Claude Code は template の managed settings（[上記](#エージェント自身の-mcp-設定を止める)）で
+  自身の stdio MCP を起動しないため、別の経路から入ってくることもありません。
+
+一度 `load` したサーバのツールは、その sandbox の agent から見えるようになります
+（Claude Code は MCP ツールが多いと定義を後から読む tool search に切り替えるため、全量がそのまま載るとは限りません）。
+既定で全サーバを読み込まないのはこのためで、必要なものだけ指定するか後から足します。
+
+確かめるときは sandbox 内で `claude mcp list` と `/context` を実行し、
+どのサーバ・ツールがどれだけトークンを使っているかを `load` の前後で比べます。
 
 ### トレードオフ
 

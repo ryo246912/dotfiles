@@ -372,7 +372,7 @@ echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sbx-agent は mcp*.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
+echo "sbx-agent は既定では MCP を読み込みません。--static-mcp / SBX_AGENT_STATIC_MCP で指定するか、起動後に mise run sandbox:mcp-load で足してください。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then
