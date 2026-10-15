@@ -8,10 +8,10 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 ## 2つのスコープ
 
-| スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                   | 用途                                                                                                                                                         |
-| ---------------- | ---------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                   | **このリポジトリ自身**の `CLAUDE.md` を生成する自己参照的な設定                                                                                              |
-| グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
+| スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                                 | 用途                                                                                                                                                         |
+| ---------------- | ---------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` を生成する自己参照的な設定                                                                                              |
+| グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
 
 - プロジェクト単位の設定が生成するのは、あなたが今読んでいる **この `CLAUDE.md` そのもの**です。
   ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` に反映されます。
@@ -25,7 +25,8 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
   - ここに自作 skill（`article` / `memo` / `planning` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
-    （`config/rulesync/.rulesync/hooks.json`）が入っている
+    （`config/rulesync/.rulesync/hooks.json`）、permissions
+    （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
 
 > [!NOTE]
 > サードパーティ由来の**外部スキル**（独自カスタマイズを含まないもの）は rulesync ではなく
@@ -48,15 +49,15 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
 例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
 
-| 種類                               | 例                                                                   | git 管理 | 理由                                                                                                                              |
-| ---------------------------------- | -------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                     | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
-| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                  | する     | 生成物の正本だから                                                                                                                |
-| プロジェクト単位の生成物           | `CLAUDE.md`                                                          | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
-| プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`, `.codex/config.toml`   | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
-| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                     | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
-| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md` | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
-| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.copilot/` 配下へ生成されるファイル    | しない   | `rulesync generate` で実ホームへ再生成される出力だから                                                                            |
+| 種類                               | 例                                                                              | git 管理 | 理由                                                                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
+| プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                             | する     | 生成物の正本だから                                                                                                                |
+| プロジェクト単位の生成物           | `CLAUDE.md`                                                                     | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
+| プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`                                    | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
+| グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                                | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
+| グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md`            | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
+| グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` 配下へ生成されるファイル | しない   | `rulesync generate` で実ホームへ再生成される出力だから                                                                            |
 
 ### 初回 clone と `rulesync init` の関係
 
@@ -85,6 +86,45 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 直接 `rulesync init` して作ったファイルは、正本ではないため git 管理しません。必要な内容だけ
 `config/rulesync/.rulesync/` へ移してください。
 
+## hooks と permissions（グローバル）
+
+`~/.claude` と `~/.codex` は repo の `claude/`・`codex/` への symlink-each（`mise.toml` 参照）なので、
+グローバル generate が書き込む `~/.claude/settings.json`・`~/.codex/hooks.json`・`~/.codex/config.toml` は
+そのまま repo の `claude/settings.json`・`codex/hooks.json`・`codex/config.toml` になる。これらの
+`hooks` / `permissions` 部分は rulesync の出力なので、直接編集せず source 側を編集して generate すること
+（それ以外のキー、例えば `claude/settings.json` の `env` や `statusLine` は手で編集してよい）。
+
+### hooks（`config/rulesync/.rulesync/hooks.json`）
+
+| ブロック           | 生成先                                | 内容                                                               |
+| ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
+| `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、plannotator、rtk、編集後の formatter / type check 等 |
+| `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
+| `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
+
+`rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
+plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
+各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
+この設定が無いと rulesync は hooks 一覧を丸ごと置き換えるため、generate のたびに APM 由来の hooks が消える。
+
+### permissions（`config/rulesync/.rulesync/permissions.jsonc`）
+
+共通の `permission` ブロックで `sudo` / `rm -rf` と秘匿ファイル（`.env`・`.envrc`・`*.secret`・
+`fnox.local.toml`・SSH 鍵・`secrets/`）へのアクセスを禁止し、ツールごとの差分を tool-scoped ブロックで上書きする
+（tool-scoped の category は共通側の同名 category を丸ごと置き換えるので、共通のルールも再掲している）。
+
+- Claude Code: `~/.claude/settings.json` の `permissions.deny` に生成する。ファイル名に `token` / `key` を含む
+  ファイルも広く Read 禁止にしている（Claude Code の Read deny は Read ツールだけに効くため影響が小さい）。
+- Codex CLI: bash ルールは `~/.codex/rules/rulesync.rules`（execpolicy の `forbidden`）、ファイルのルールは
+  `~/.codex/config.toml` の `[permissions.rulesync]` プロファイルに生成する。Codex のファイル deny は
+  サンドボックス内のシェルコマンドにも効くため、`*token*` / `*key*` のような広い glob は入れていない。
+  rulesync が生成するプロファイルは `:workspace` を継承し、従来の `workspace-write` よりも厳しい
+  （ワークスペース外の読み取りや一時ディレクトリへの書き込みが拒否される）ため、`:root` の読み取りと
+  `:tmpdir` / `:slash_tmp` への書き込みを許可して従来相当にしている。承認は従来どおりユーザーが行う
+  （`approvals_reviewer = "user"`。rulesync の既定は `auto_review`）。
+- `~/.codex/config.toml` のその他のキー（`shell_environment_policy` 等）は rulesync が保持するが、
+  コメントは保持されない。
+
 ## skill のコンテキストへの載せ方
 
 自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
@@ -106,6 +146,9 @@ mise --cd "$HOME" run rulesync:generate
 
 どちらかのスコープが未初期化でも、もう片方の生成を止めないように warning を出して skip します。
 
+`mise run rulesync:sync`（bootstrap の post-dotfiles hook から呼ばれる）は source のハッシュに加えて
+`rulesync --version` も比較するため、rulesync を upgrade しただけでも次回の sync で再生成されます。
+
 ## トラブルシューティング
 
 ### `.rulesync directory not found. Run 'rulesync init' first.`
@@ -123,3 +166,21 @@ mise --cd "$HOME" run rulesync:generate
 `rulesync.jsonc` に古い `baseDirs` フィールドが残っている場合に出る警告です。このリポジトリの
 `rulesync.jsonc` / `config/rulesync/rulesync.jsonc` は `outputRoots` へ移行済みなので、
 この警告が出る場合はリポジトリが最新でない（`mise bootstrap dotfiles apply` 前、または `git pull` 前）可能性が高いです。
+
+### `~/.codex/skills/` に古い skill が残っている
+
+rulesync v9.1.0 以降、Codex CLI 向け skill の出力先は `~/.codex/skills/` から Codex 標準の
+`~/.agents/skills/`（APM と同じ場所）へ移動しました。`delete: false` のため旧出力は自動では削除されず、
+Codex で同じ skill が重複して見える場合があります。tsumiki 由来の skill（`tsumiki-*`）は
+`mise run apm:install` が state manifest を元に削除しますが、自作 skill（`article` / `memo` 等）の旧出力は
+手動で削除してください。
+
+```bash
+ls ~/.codex/skills/   # ~/.agents/skills/ に同名の skill があることを確認してから削除する
+```
+
+### プロジェクト単位の `.codex/config.toml` について
+
+以前は Codex CLI の hooks を有効化するため `.codex/config.toml` に `[features] hooks = true` が生成されていましたが、
+Codex CLI の hooks が GA（デフォルト有効）になったため、rulesync は生成しなくなりました。
+このリポジトリでも git 管理から外しています。

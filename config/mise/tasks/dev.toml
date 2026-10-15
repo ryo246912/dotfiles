@@ -63,14 +63,20 @@ hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; f
 
 rulesync_hash=$(
   {
-    # ~/.config 配下は config/ への symlink-each（mise.toml 参照）なので -L でリンク先を辿る
-    find -L "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
-    for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
-      [ -f "$f" ] && echo "$f"
+    # rulesync 本体の更新だけで出力先・形式が変わることがある（例: v9.1.0 で Codex skills の
+    # 出力先が ~/.codex/skills から ~/.agents/skills へ移動）ため、source が同じでも
+    # バージョンが変われば再生成する
+    rulesync --version 2>/dev/null
+    {
+      # ~/.config 配下は config/ への symlink-each（mise.toml 参照）なので -L でリンク先を辿る
+      find -L "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
+      for f in "$source_dir/rulesync.jsonc" "$HOME/.config/rulesync/rulesync.jsonc"; do
+        [ -f "$f" ] && echo "$f"
+      done
+    } | sort | while IFS= read -r f; do
+      echo "$f $(hash_cmd < "$f")"
     done
-  } | sort | while IFS= read -r f; do
-    echo "$f $(hash_cmd < "$f")"
-  done | hash_cmd
+  } | hash_cmd
 )
 rulesync_needs_generate=0
 if [ "$(cat "$state_dir/rulesync-hash" 2>/dev/null)" != "$rulesync_hash" ]; then
@@ -268,11 +274,14 @@ command_sources = [
         "namespace": "tsumiki",
         "generated_outputs": [
             {"directory": ".claude/commands", "type": "command"},
-            {"directory": ".codex/skills", "type": "skill"},
+            {"directory": ".agents/skills", "type": "skill"},
         ],
         "codex_skills": True,
     },
 ]
+# 以前のRulesyncが使っていた生成先。state manifestに残る旧pathを削除できるよう管理対象に含める。
+# Rulesync v9.1.0でCodex skillsの生成先が`.codex/skills`から`.agents/skills`へ移動した。
+legacy_generated_directories = [".codex/skills"]
 
 home = Path.home()
 modules_dir = home / ".apm" / "apm_modules"
@@ -294,6 +303,7 @@ generated_command_owners = {}
 managed_roots = {
     PurePosixPath(rulesync_dir.relative_to(home).as_posix()),
     PurePosixPath(rulesync_skills_dir.relative_to(home).as_posix()),
+    *(PurePosixPath(directory) for directory in legacy_generated_directories),
 }
 for command_source in command_sources:
     # 設定値を取り出し、HOME外のpathを参照できないよう相対pathとnamespaceを検証する。
@@ -372,7 +382,12 @@ for command_source, namespace, source_dir, generated_commands, generated_outputs
     for destination_name, source_file in generated_commands.items():
         command_name = destination_name.removeprefix(f"{namespace}-")
         destination_file = rulesync_dir / destination_name
-        shutil.copy2(source_file, destination_file)
+        # 現行のRulesyncはfrontmatterの無いcommandをエラーにするため、無い場合は最小限のものを補う。
+        command_text = source_file.read_text()
+        if not command_text.startswith("---\n"):
+            description = f"Run the {namespace} {command_name.removesuffix('.md')} workflow."
+            command_text = f'---\ndescription: "{description}"\n---\n\n{command_text}'
+        destination_file.write_text(command_text)
         owned_paths.add(destination_file.relative_to(home).as_posix())
 
         # Codexはcommandを扱わないため、指定されたpackageでは同じ本文をAgent Skillへ変換する。
