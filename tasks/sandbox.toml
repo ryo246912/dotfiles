@@ -382,6 +382,56 @@ if [ -n "$failed" ]; then
 fi
 '''
 
+["sandbox:mcp-load"]
+description = "Load host-registered MCP servers into a running sandbox, selected with fzf"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:mcp-load [sandbox-name]
+  # sbx-agent の --static-mcp で読み込まなかった MCP を、起動済みの sandbox へ後から足す。
+  # sandbox を省略すると fzf で選び、MCP は fzf で複数選択する（Tab で選択）。
+  # 選べるのは sbx mcp ls に登録済みのサーバ（登録は mise run sandbox:mcp）。
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+
+  sandbox="${1:-}"
+  if [ -z "$sandbox" ]; then
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" \
+      | fzf --header-lines=1 --prompt="sandbox> " --header="読み込み先の sandbox を選択" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$sandbox" ] || exit 130
+  fi
+
+  servers=$(sbx mcp ls 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ "$(printf '%s\n' "$servers" | wc -l)" -gt 1 ] \
+    || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp）" >&2; exit 1; }
+  names=$(printf '%s\n' "$servers" \
+    | fzf --multi --header-lines=1 --prompt="mcp> " \
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）" \
+    | awk '{ print $1 }') || exit 130
+  [ -n "$names" ] || exit 130
+
+  failed=""
+  for name in $names; do
+    if sbx mcp load "$name" --sandbox "$sandbox"; then
+      echo "✅ $name を $sandbox に読み込みました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: $name の読み込みに失敗しました" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 読み込めなかった MCP サーバ: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
 ["sandbox:template-save"]
 description = "Save a running sandbox's filesystem as a reusable template"
 run = '''

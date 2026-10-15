@@ -1311,6 +1311,14 @@ sbx-agent claude --static-mcp notion             # notion だけ
 export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定を変える
 ```
 
+起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
+sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数選択。sandbox は引数でも指定可）。
+
+```bash
+mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
+mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ
+```
+
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
 
 ### トレードオフ
