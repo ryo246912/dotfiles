@@ -554,7 +554,12 @@ fi
 # Docker Desktop / colima が停止中・起動途中だと docker info が応答せず止まるため、タイムアウトを付ける
 if command -v docker >/dev/null 2>&1; then
   if run_with_timeout 3 docker info >/dev/null 2>&1; then
-    run_with_timeout 30 docker system df || {
+    # df が応答しないデーモンでは prune も止まるため、df が成功したときだけ prune を確認する
+    if run_with_timeout 30 docker system df; then
+      if confirm "Docker の停止中コンテナ・未使用イメージ・ビルドキャッシュを削除しますか?（ボリュームは残します）"; then
+        docker system prune -a -f
+      fi
+    else
       rc=$?
       if [ "$rc" -eq 124 ]; then
         echo "skip: docker system df がタイムアウトしました" >&2
@@ -562,9 +567,6 @@ if command -v docker >/dev/null 2>&1; then
         failed=1
         echo "failed: docker system df (exit $rc)" >&2
       fi
-    }
-    if confirm "Docker の停止中コンテナ・未使用イメージ・ビルドキャッシュを削除しますか?（ボリュームは残します）"; then
-      docker system prune -a -f
     fi
   else
     echo "skip: Docker デーモンに接続できません（未起動またはタイムアウト）"
