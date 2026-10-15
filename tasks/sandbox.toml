@@ -3,6 +3,10 @@ description = "Build the Docker Sandboxes template with the devcontainer toolcha
 run = '''
 set -eu
 
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+
 # devcontainer と同じツール群（~/.config/devcontainer/mise.toml）を入れた sandbox template を
 # ビルドして sbx の image store へ読み込む。詳細は docs/docker-sandboxes.md 参照。
 #
@@ -60,9 +64,24 @@ dockerfile="${context}/Dockerfile.sandbox"
 # kit が当たらずログインを求められる。agent を含まない shell-docker も同じ理由で使えない。
 # -docker 版でないと sandbox 内に dockerd が無い。sbx-agent は agent に合った template を選ぶ。
 #
-# 既定はよく使う claude / codex だけ作る（ディスクを食うため）。copilot も要るときは
-# SBX_TEMPLATE_AGENTS="claude codex copilot" のように SBX_TEMPLATE_AGENTS で指定する。
-agents="${SBX_TEMPLATE_AGENTS:-claude codex}"
+# 作る agent は 引数 → SBX_TEMPLATE_AGENTS → fzf で複数選択（claude を選択済み）の順で決める。
+# template は 1 つ数 GB になるため、使う agent だけ作る。fzf が無い・端末でないときは claude だけ。
+#   mise run sandbox:build-template                # fzf で選ぶ
+#   mise run sandbox:build-template codex copilot  # 指定した agent だけ
+agents="$*"
+[ -n "$agents" ] || agents="${SBX_TEMPLATE_AGENTS:-}"
+if [ -z "$agents" ]; then
+  if command -v fzf >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
+    # 先頭の claude を load 時に選択しておく（Tab で切り替え、Enter で確定）
+    agents=$(printf '%s\n' claude codex copilot \
+      | fzf --multi --bind 'load:toggle' --prompt="agent> " \
+          --header="template を作る agent を選択（Tab で切り替え、Enter で確定）" \
+      | tr '\n' ' ') || exit 130
+    [ -n "${agents% }" ] || exit 130
+  else
+    agents=claude
+  fi
+fi
 variant_for() {
   case "$1" in
     claude) echo claude-code-docker ;;
@@ -171,6 +190,9 @@ sbx template ls
 echo
 echo "sbx-agent / multi-worktree dev は agent に合わせて sbx-agent:<agent> を自動で使います"
 echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
+}
+
+main "$@"
 '''
 
 ["sandbox:setup"]
@@ -444,9 +466,30 @@ set -eu
 # mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
 # 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
 main() {
-  tag="${1:-}"
-  [ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
-  sbx template rm "$tag"
+  # 使い方: mise run sandbox:template-rm [tag...]
+  # tag を省略すると sbx template ls の一覧を fzf で複数選択（Tab）して削除する。
+  if [ $# -eq 0 ]; then
+    command -v fzf >/dev/null 2>&1 || { echo "usage: mise run sandbox:template-rm <tag>...（fzf があれば省略可）" >&2; exit 2; }
+    templates=$(sbx template ls) || { echo "error: sbx template ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$templates" | wc -l)" -gt 1 ] || { echo "error: template がありません" >&2; exit 1; }
+    # 1 列目が REPOSITORY、2 列目が TAG の場合は repo:tag にする（1 列目に : を含めばそのまま使う）
+    selected=$(printf '%s\n' "$templates" \
+      | fzf --multi --header-lines=1 --prompt="template> " --header="削除する template を選択（Tab で複数選択）" \
+      | awk '{ if (index($1, ":") || NF < 2) print $1; else print $1 ":" $2 }') || exit 130
+    [ -n "$selected" ] || exit 130
+    # shellcheck disable=SC2086 # 改行区切りの tag を引数に分割する
+    set -- $selected
+  fi
+
+  failed=""
+  for tag in "$@"; do
+    if sbx template rm "$tag"; then
+      echo "✅ $tag を削除しました"
+    else
+      failed="${failed}${failed:+, }$tag"
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 削除できなかった template: ${failed}" >&2; exit 1; }
 }
 
 main "$@"

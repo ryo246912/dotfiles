@@ -25,16 +25,16 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 
-| タスク                   | 用途                                                                                                             | 使うタイミング               |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                             | 初回だけ                     |
-| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`） | 初回・ツール構成を変えたとき |
-| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                    | 初回・yml を変えたとき       |
-| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                  | 必要になったとき             |
-| `sandbox:template-ls`    | 保存済み template の一覧                                                                                         | 随時                         |
-| `sandbox:template-rm`    | template を削除する                                                                                              | 随時                         |
-| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                   | 容量が気になったとき         |
-| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）  | 容量が足りないとき           |
+| タスク                   | 用途                                                                                                                                              | 使うタイミング               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
+| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
+| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
+| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき             |
+| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
+| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
+| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
+| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
 
 ## devcontainer に対する利点
 
@@ -985,12 +985,19 @@ agent に合ったものを自動で選びます。ccmanager などから agent 
 `sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
 FLAVOR と agent が合わないと `failed to apply kit to sandbox` で作成に失敗するか、kit が当たらず
 agent がログインを求めます（agent を含まない `shell-docker` でも同じ。実機で確認）。
-使わない agent はディスクを食うだけなので、**既定では claude / codex の 2 つだけ**をビルドします。
-copilot も必要なら `SBX_TEMPLATE_AGENTS="claude codex copilot"` のように指定してください。
+使わない agent はディスクを食うだけなので、作る agent は実行時に fzf で選びます（claude を選択済み。
+Tab で切り替え、Enter で確定）。引数か `SBX_TEMPLATE_AGENTS` で指定すると fzf は出ません。
+fzf が無い・端末でないときは claude だけを作ります。
 
 ```bash
-mise run sandbox:build-template
+mise run sandbox:build-template                # fzf で選ぶ
+mise run sandbox:build-template codex copilot  # 指定した agent だけ
+SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 ```
+
+ビルドしていない agent の preset（ccmanager の codex など）を選んだ場合、その場でビルドはされず
+`sbx create` が失敗します。`sbx-agent` が `mise run sandbox:build-template <agent>` の手順を表示するので、
+ビルドしてから選び直してください（`--no-template` を付ければツールチェイン無しで起動はできます）。
 
 やっていること:
 
@@ -1504,7 +1511,7 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 [ERROR] sandbox の作成に失敗しました
 [ERROR]   template (sbx-agent:claude) が原因かもしれません。確認するには:
 [ERROR]     sbx template ls
-[ERROR]   未ビルドなら: mise run sandbox:build-template
+[ERROR]   未ビルドなら: mise run sandbox:build-template claude
 [ERROR]   template 無しで起動するには --no-template を付けてください
 ```
 
