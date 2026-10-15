@@ -285,7 +285,8 @@ done
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-mcp"
 mkdir -p "$state_dir"
 
-registered_names=$(sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }') || registered_names=""
+# 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+registered_names=$(sbx mcp ls -q 2>/dev/null) || registered_names=""
 is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
 
 # dependencies.mcp の各サーバを「name <TAB> url|command <TAB> sh クォート済みの sbx mcp add 引数」
@@ -430,13 +431,13 @@ main() {
     [ -n "$sandbox" ] || exit 130
   fi
 
-  servers=$(sbx mcp ls 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
-  [ "$(printf '%s\n' "$servers" | wc -l)" -gt 1 ] \
+  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ -n "$servers" ] \
     || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp-add）" >&2; exit 1; }
   names=$(printf '%s\n' "$servers" \
-    | fzf --multi --header-lines=1 --prompt="mcp> " \
-        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）" \
-    | awk '{ print $1 }') || exit 130
+    | fzf --multi --prompt="mcp> " \
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）") || exit 130
   [ -n "$names" ] || exit 130
 
   failed=""
