@@ -505,6 +505,120 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 [Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
 [How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
+## skill のコンテキスト管理
+
+skill の本体は APM（[`docs/apm.md`](apm.md)）と rulesync（[`docs/rulesync.md`](rulesync.md)）で global
+（`~/.claude/skills` など）に配布したまま、**Claude に見せるかどうか**だけを設定で切り替えます。
+
+### skill はどれだけコンテキストを使うか
+
+- 常に入るのは、各 skill の**名前と説明文の一覧**だけです（Claude がどの skill を使うか判断するため）。
+- 本文（`SKILL.md`）は、その skill を実際に使ったときだけ読み込まれます。
+- 一覧には上限があり、既定はコンテキストの 1% です。超えると、使われていない skill から説明文が削られます
+  （`skillListingBudgetFraction` または環境変数 `SLASH_COMMAND_TOOL_CHAR_BUDGET` で変更できる）。
+- 量は `/context` の Skills の行で確認できます。`/skill-doctor` を使うと、一度も使っていない skill や plugin が分かります。
+
+### skill を絞る方法（3 系統）
+
+#### 1. 設定で skill ごとの見せ方を決める（`skillOverrides`）
+
+`/skills` の画面で切り替えると `.claude/settings.local.json` に書かれます。どの設定ファイルにも書けます。
+
+| 値                      | 効果                                                      |
+| ----------------------- | --------------------------------------------------------- |
+| `"on"`                  | 名前と説明を一覧に載せる（書かなかった skill もこの扱い） |
+| `"name-only"`           | 名前だけ載せる。説明文の分のコンテキストが減る            |
+| `"user-invocable-only"` | Claude からは見えない。`/名前` で手動でだけ使える         |
+| `"off"`                 | Claude からも `/` メニューからも隠す                      |
+
+Claude Code の plugin の skill には効きません（下の 2 で plugin ごと切り替える）。
+
+#### 2. plugin をプロジェクトごとにオン・オフする（`enabledPlugins`）
+
+`"<plugin>@<marketplace>": true | false` を user（`~/.claude/settings.json`）・project（`.claude/settings.json`）・
+local（`.claude/settings.local.json`）のどこにでも書けます。plugin ごとに、優先度の高い場所に書いた値が勝ちます
+（local > project > user）。無効にした plugin の skill が一覧から消えることはドキュメントに明記されていないため、
+`/context` で確認します。
+
+#### 3. skill 側の書き方で絞る
+
+- `disable-model-invocation: true`（`SKILL.md` のフロントマター）: 説明ごとコンテキストから消え、`/名前` でだけ動く。
+  `user-invocable: false` は `/` メニューから隠すだけで、コンテキストは減らない。
+- `paths`（フロントマター）: 指定したパターンに合うファイルを触ったときだけ自動で読み込む。
+- サブディレクトリの `.claude/skills/`: 起動時には読まれず、そのディレクトリのファイルを最初に読み書きしたときに読み込まれる。
+
+APM で入れた upstream の skill はフロントマターを書き換えても更新で消えるため、3 は自作の skill（rulesync）でだけ使います。
+
+そのほか、セッション単位で全部止めるなら `--disable-slash-commands`（skill とコマンドを全部無効）や `--bare`
+（skill・plugin・MCP・CLAUDE.md の自動読み込みを止める）があります。
+
+### 3 層に分けて管理する
+
+| 層                         | 置き場所                                                                                | 役割                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 本体                       | `apm/apm.yml`・`config/rulesync/.rulesync/skills/` → `~/.claude/skills`                 | skill をインストールする。どのプロジェクトでも使える状態にする |
+| 既定の見せ方               | `claude/settings.json`（`~/.claude/settings.json`）の `skillOverrides`                  | 普段の一覧を軽くしておく                                       |
+| プロジェクトごとの切り替え | 各リポジトリの `.claude/settings.local.json`（commit しない）か `.claude/settings.json` | そのプロジェクトで使う skill を `"on"` に上げる                |
+
+プロジェクト側に書くときは、`claude/settings.json` の `skillOverrides` を丸ごとコピーしてから、そのプロジェクトで
+使う skill の値だけを変えます。
+
+```jsonc
+// 例: フロントエンドのリポジトリの .claude/settings.local.json
+{
+  "skillOverrides": {
+    // claude/settings.json の skillOverrides をすべてコピーし、次の値だけ変える
+    "html-prototype": "on",
+    "html-wireframe": "on",
+  },
+}
+```
+
+> [!IMPORTANT]
+> user とプロジェクトの両方に `skillOverrides` を書いたとき、skill ごとに合わさるのか、プロジェクト側で丸ごと
+> 置き換わるのかはドキュメントで確認できていません。丸ごと置き換わる場合、プロジェクト側に変えたい skill だけを
+> 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
+> 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
+
+### 既定の設定（`claude/settings.json`）
+
+| 値                    | skill                                                                                                                                                                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`                                                                                                                                                                               |
+| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`crit-pr`、`fix-review`、`review-pr`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`article`、`coderabbit`、`deepwiki`、`suggest-rules`）                                                                                                                        |
+
+- 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
+  `crit-pr` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
+  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
+  使えなくなります（呼ばれる側は `name-only` 以上にする）。
+- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、ここにも追加します。
+
+### plugin の管理
+
+Claude Code の plugin は、skill とは別に `enabledPlugins` で管理します。
+
+| 種類                                                   | 例                                                  | 管理の仕方                                                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 公式 marketplace（`claude-plugins-official`）の plugin | `frontend-design` など                              | marketplace は最初から登録済み。`enabledPlugins` に書いて有効にする                                                     |
+| 他の marketplace の plugin                             | `expo-deployment@expo-plugins` など                 | `/plugin marketplace add` で marketplace を足し、`enabledPlugins` に書く                                                |
+| Claude Code 本体に同梱の skill（bundled）              | `/code-review`、`/simplify`、`/loop`、`/claude-api` | 普段は残す（使うときだけ本文が読まれる）。全部外すなら `disableBundledSkills`（`CLAUDE_CODE_DISABLE_BUNDLED_SKILLS=1`） |
+| claude.ai のアカウント側の skill・plugin               | Web / cloud セッションの `anthropic-skills:*` など  | dotfiles では管理できない。claude.ai の設定で外す                                                                       |
+
+方針:
+
+- `claude/settings.json` には今 `enabledPlugins` を書いていない（global で有効な plugin は無い）。どのプロジェクトでも使う plugin ができたら、ここで `true` にする。
+- 特定のプロジェクトでだけ使う plugin（例: Expo のリポジトリの `expo-deployment`）は、global には書かず、
+  そのリポジトリの `.claude/settings.json`（チームで共有する）か `.claude/settings.local.json`（自分だけ）で `true` にする。
+- `enabledPlugins` は有効・無効を切り替えるだけで、plugin を入れてはくれない。plugin を使う端末ごとに
+  `/plugin install <plugin>@<marketplace>`（他の marketplace なら先に `/plugin marketplace add`）で入れておく。
+
+### 関連リンク
+
+- [Skills（Claude Code）](https://code.claude.com/docs/en/skills)
+- [Plugins の読み込み](https://code.claude.com/docs/en/plugins/loading)
+- [Settings](https://code.claude.com/docs/en/settings)
+
 ## 外部 skill の使い方
 
 このページでは、`apm/apm.yml` で導入している次の skill の使い方を説明します。
@@ -712,7 +826,7 @@ skillは必要に応じてterminalを分割し、`terminal-browser action`で開
 ### Tsumiki skills
 
 Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
-依頼内容に応じて自動選択されますが、Claude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`で明示できます。
+Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では選ばれず、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 | skill                | 用途                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------- |
@@ -935,11 +1049,11 @@ Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`か
 #### 用途
 
 ローカルに保存された過去のcoding-agent sessionを`ctx` CLIで検索し、以前の判断、試行、失敗理由、関連する会話を
-現在の作業前に確認するskillです。同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。
+現在の作業前に確認するskillです。Codexでは、同じrepositoryで過去の経緯が役立つ可能性があるときに自動的に使用されます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では使われません（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 #### 使い方
 
-初回だけ`ctx setup`でindexを作成します。明示的に使う場合は、Claude Codeでは`/ctx-agent-history-search`、Codexでは
+初回だけ`ctx setup`でindexを作成します。Claude Codeでは`/ctx-agent-history-search`で呼び出します。Codexで明示する場合は
 `$ctx-agent-history-search`を指定します。
 
 ```text
@@ -1089,8 +1203,8 @@ skillはあるか」「エージェントへ特定分野の能力を追加した
 
 #### 使い方
 
-skillは該当する依頼から自動的に選択されます。明示的に指定する場合は、Claude Codeでは`/find-skills`、Codexでは
-`$find-skills`を使用し、探したい分野と具体的な作業を伝えます。
+Codexでは該当する依頼から自動的に選択され、`$find-skills`で明示もできます。Claude Codeでは`skillOverrides`で
+`user-invocable-only`にしているため、`/find-skills`で呼び出します。どちらも探したい分野と具体的な作業を伝えます。
 
 ```text
 /find-skills
