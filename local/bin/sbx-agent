@@ -23,7 +23,7 @@
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
-#                      既定は config/sbx/mcp*.yml の MCP（registry: false）の全サーバ。登録は `mise run sandbox:mcp`
+#                      既定は読み込まない（後から `mise run sandbox:mcp-load`）。登録は `mise run sandbox:mcp-add`
 #                      （認証はホスト側で一度だけ）
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
@@ -36,7 +36,7 @@
 # Environment:
 #   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
-#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら config/sbx/mcp*.yml の全サーバ）
+#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
@@ -264,26 +264,9 @@ fi
 if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
     STATIC_MCP+=("$SBX_AGENT_STATIC_MCP")
 fi
-# どちらも無ければ、mise run sandbox:mcp が登録する MCP（config/sbx/mcp.yml と mcp.<name>.yml の
-# registry: false のもの）を全て読み込む。sandbox 内の Claude Code は自身の MCP 設定を読まない
-# （template の managed settings で止めている）ため、既定で何も読み込まないと MCP が 1 つも使えなくなる。
-if [[ ${#STATIC_MCP[@]} -eq 0 ]] && _repo=$(find_dotfiles_repo); then
-    if command -v yq >/dev/null 2>&1; then
-        for _file in "${_repo}"/config/sbx/mcp.yml "${_repo}"/config/sbx/mcp.*.yml; do
-            [[ -f "$_file" ]] || continue
-            # プロセス置換だと yq の失敗（YAML の構文エラーなど）が見えず、MCP 0 件のまま黙って起動するため分ける
-            if ! _names=$(yq '.dependencies.mcp // [] | .[] | select(tag == "!!map" and .registry == false) | .name' "$_file"); then
-                log_warn "$(basename "$_file") の解析に失敗したため、その MCP は読み込みません"
-                continue
-            fi
-            while IFS= read -r _name; do
-                [[ -n "$_name" ]] && STATIC_MCP+=("$_name")
-            done <<<"$_names"
-        done
-    else
-        log_warn "yq が無いため config/sbx/mcp*.yml の MCP を読み込めません（mise install で導入してください）"
-    fi
-fi
+# どちらも無ければ何も読み込まない。読み込んだ MCP のツール定義は agent のコンテキストを使うため、
+# 必要なものだけ --static-mcp / SBX_AGENT_STATIC_MCP で指定するか、起動後に
+# mise run sandbox:mcp-load で足す（登録だけしたサーバは sandbox から見えない）。
 # `,` 区切りを展開して重複を除く
 MCP_SERVERS=()
 for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
@@ -838,8 +821,8 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
             # 「image が無い」系のエラーはここが原因なので、確認と作成の手順を出す。
             log_error "  template ($TEMPLATE) が原因かもしれません。確認するには:"
             log_error "    sbx template ls"
-            # build-template の既定は claude / codex だけなので、それ以外は agent を明示させる
-            log_error "  未ビルドなら: SBX_TEMPLATE_AGENTS=${AGENT} mise run sandbox:build-template"
+            # build-template は選んだ agent しか作らないため、この agent を明示させる
+            log_error "  未ビルドなら: mise run sandbox:build-template ${AGENT}"
             log_error "  template 無しで起動するには --no-template を付けてください"
         fi
         exit 1

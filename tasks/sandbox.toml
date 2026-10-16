@@ -3,6 +3,10 @@ description = "Build the Docker Sandboxes template with the devcontainer toolcha
 run = '''
 set -eu
 
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+
 # devcontainer と同じツール群（~/.config/devcontainer/mise.toml）を入れた sandbox template を
 # ビルドして sbx の image store へ読み込む。詳細は docs/docker-sandboxes.md 参照。
 #
@@ -60,9 +64,24 @@ dockerfile="${context}/Dockerfile.sandbox"
 # kit が当たらずログインを求められる。agent を含まない shell-docker も同じ理由で使えない。
 # -docker 版でないと sandbox 内に dockerd が無い。sbx-agent は agent に合った template を選ぶ。
 #
-# 既定はよく使う claude / codex だけ作る（ディスクを食うため）。copilot も要るときは
-# SBX_TEMPLATE_AGENTS="claude codex copilot" のように SBX_TEMPLATE_AGENTS で指定する。
-agents="${SBX_TEMPLATE_AGENTS:-claude codex}"
+# 作る agent は 引数 → SBX_TEMPLATE_AGENTS → fzf で複数選択（claude を選択済み）の順で決める。
+# template は 1 つ数 GB になるため、使う agent だけ作る。fzf が無い・端末でないときは claude だけ。
+#   mise run sandbox:build-template                # fzf で選ぶ
+#   mise run sandbox:build-template codex copilot  # 指定した agent だけ
+agents="$*"
+[ -n "$agents" ] || agents="${SBX_TEMPLATE_AGENTS:-}"
+if [ -z "$agents" ]; then
+  if command -v fzf >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
+    # 先頭の claude を load 時に選択しておく（Tab で切り替え、Enter で確定）
+    agents=$(printf '%s\n' claude codex copilot \
+      | fzf --multi --bind 'load:toggle' --prompt="agent> " \
+          --header="template を作る agent を選択（Tab で切り替え、Enter で確定）" \
+      | tr '\n' ' ') || exit 130
+    [ -n "${agents% }" ] || exit 130
+  else
+    agents=claude
+  fi
+fi
 variant_for() {
   case "$1" in
     claude) echo claude-code-docker ;;
@@ -171,6 +190,9 @@ sbx template ls
 echo
 echo "sbx-agent / multi-worktree dev は agent に合わせて sbx-agent:<agent> を自動で使います"
 echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
+}
+
+main "$@"
 '''
 
 ["sandbox:setup"]
@@ -240,7 +262,7 @@ sbx secret ls || true
 sbx policy ls || true
 '''
 
-["sandbox:mcp"]
+["sandbox:mcp-add"]
 description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
 run = '''
 set -eu
@@ -263,7 +285,8 @@ done
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-mcp"
 mkdir -p "$state_dir"
 
-registered_names=$(sbx mcp ls 2>/dev/null | awk 'NR > 1 { print $1 }') || registered_names=""
+# 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+registered_names=$(sbx mcp ls -q 2>/dev/null) || registered_names=""
 is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
 
 # dependencies.mcp の各サーバを「name <TAB> url|command <TAB> sh クォート済みの sbx mcp add 引数」
@@ -372,7 +395,7 @@ echo
 echo "==> 登録済みの MCP サーバ"
 sbx mcp ls || true
 echo
-echo "sbx-agent は mcp*.yml の MCP（registry: false）を全て sandbox に読み込みます（--static-mcp で絞り込めます）。"
+echo "sbx-agent は既定では MCP を読み込みません。--static-mcp / SBX_AGENT_STATIC_MCP で指定するか、起動後に mise run sandbox:mcp-load で足してください。"
 
 # 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
 if [ -n "$failed" ]; then
@@ -382,32 +405,103 @@ if [ -n "$failed" ]; then
 fi
 '''
 
-["sandbox:template-save"]
-description = "Save a running sandbox's filesystem as a reusable template"
+["sandbox:mcp-load"]
+description = "Load host-registered MCP servers into a running sandbox, selected with fzf"
 run = '''
 set -eu
 
 # mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
 # 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
 main() {
-  # 使い方: mise run sandbox:template-save <sandbox-name> <tag>
-  # sandbox 内で手動インストールしたツールを template に焼き直し、次の sandbox から使う。
-  # 注意: 手で置いた API キー等も image に入るため、認証情報は sbx secret で管理すること。
+  # 使い方: mise run sandbox:mcp-load [sandbox-name]
+  # sbx-agent の --static-mcp で読み込まなかった MCP を、起動済みの sandbox へ後から足す。
+  # sandbox を省略すると fzf で選び、MCP は fzf で複数選択する（Tab で選択）。
+  # 選べるのは sbx mcp ls に登録済みのサーバ（登録は mise run sandbox:mcp-add）。
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
 
-  # tag は必須にする。sbx-agent は sbx-agent:<agent> を使い、template には保存元の
-  # base（FLAVOR）が残るため、既定値で決め打ちすると別 agent の template を上書きしてしまう。
-  # 上書きするなら保存元 sandbox と同じ agent の sbx-agent:<agent> を指定する。
   sandbox="${1:-}"
-  tag="${2:-}"
-  [ -n "$sandbox" ] && [ -n "$tag" ] || {
-    echo "usage: mise run sandbox:template-save <sandbox-name> <tag>（例: sbx-agent:codex）" >&2
-    exit 2
-  }
-  command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+  if [ -z "$sandbox" ]; then
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" \
+      | fzf --header-lines=1 --prompt="sandbox> " --header="読み込み先の sandbox を選択" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$sandbox" ] || exit 130
+  fi
 
-  sbx template save "$sandbox" "$tag"
-  echo
-  sbx template ls
+  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ -n "$servers" ] \
+    || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp-add）" >&2; exit 1; }
+  names=$(printf '%s\n' "$servers" \
+    | fzf --multi --prompt="mcp> " \
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）") || exit 130
+  [ -n "$names" ] || exit 130
+
+  failed=""
+  for name in $names; do
+    if sbx mcp load "$name" --sandbox "$sandbox"; then
+      echo "✅ $name を $sandbox に読み込みました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: $name の読み込みに失敗しました" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 読み込めなかった MCP サーバ: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
+["sandbox:mcp-unload"]
+description = "Unload MCP servers from a running sandbox, selected with fzf"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:mcp-unload [sandbox-name]
+  # sandbox:mcp-load の逆。読み込んだ MCP を sandbox から外し、agent のコンテキストを空ける。
+  # 登録（sbx mcp add）は残るので、また sandbox:mcp-load で読み込める（登録ごと消すなら sbx mcp rm）。
+  # sbx mcp unload は sbx 0.48.0 から。ローカルの sandbox で読み込み済みのサーバだけを一覧する
+  # 手段が sbx に無いため、候補は登録済みの全サーバになる（読み込んでいないものは失敗として出る）。
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+  sbx mcp unload --help >/dev/null 2>&1 \
+    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
+
+  sandbox="${1:-}"
+  if [ -z "$sandbox" ]; then
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" \
+      | fzf --header-lines=1 --prompt="sandbox> " --header="MCP を外す sandbox を選択" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$sandbox" ] || exit 130
+  fi
+
+  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ -n "$servers" ] || { echo "error: 登録済みの MCP サーバがありません" >&2; exit 1; }
+  names=$(printf '%s\n' "$servers" \
+    | fzf --multi --prompt="mcp> " \
+        --header="${sandbox} から外す MCP を選択（Tab で複数選択）") || exit 130
+  [ -n "$names" ] || exit 130
+
+  failed=""
+  for name in $names; do
+    if sbx mcp unload "$name" --sandbox "$sandbox"; then
+      echo "✅ $name を $sandbox から外しました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: $name を外せませんでした（読み込んでいない可能性があります）" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 外せなかった MCP サーバ: ${failed}" >&2; exit 1; }
 }
 
 main "$@"
@@ -425,9 +519,30 @@ set -eu
 # mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
 # 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
 main() {
-  tag="${1:-}"
-  [ -n "$tag" ] || { echo "usage: mise run sandbox:template-rm <tag>" >&2; exit 2; }
-  sbx template rm "$tag"
+  # 使い方: mise run sandbox:template-rm [tag...]
+  # tag を省略すると sbx template ls の一覧を fzf で複数選択（Tab）して削除する。
+  if [ $# -eq 0 ]; then
+    command -v fzf >/dev/null 2>&1 || { echo "usage: mise run sandbox:template-rm <tag>...（fzf があれば省略可）" >&2; exit 2; }
+    templates=$(sbx template ls) || { echo "error: sbx template ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$templates" | wc -l)" -gt 1 ] || { echo "error: template がありません" >&2; exit 1; }
+    # 1 列目が REPOSITORY、2 列目が TAG の場合は repo:tag にする（1 列目に : を含めばそのまま使う）
+    selected=$(printf '%s\n' "$templates" \
+      | fzf --multi --header-lines=1 --prompt="template> " --header="削除する template を選択（Tab で複数選択）" \
+      | awk '{ if (index($1, ":") || NF < 2) print $1; else print $1 ":" $2 }') || exit 130
+    [ -n "$selected" ] || exit 130
+    # shellcheck disable=SC2086 # 改行区切りの tag を引数に分割する
+    set -- $selected
+  fi
+
+  failed=""
+  for tag in "$@"; do
+    if sbx template rm "$tag"; then
+      echo "✅ $tag を削除しました"
+    else
+      failed="${failed}${failed:+, }$tag"
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 削除できなかった template: ${failed}" >&2; exit 1; }
 }
 
 main "$@"

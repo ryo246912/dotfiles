@@ -18,8 +18,24 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > ```bash
 > mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
-> mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
+> mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 > ```
+
+## mise タスク一覧
+
+sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
+
+| タスク                   | 用途                                                                                                                                              | 使うタイミング               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
+| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
+| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
+| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき             |
+| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                              | 要らなくなったとき           |
+| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
+| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
+| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
+| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
 
 ## devcontainer に対する利点
 
@@ -221,7 +237,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.47.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+#   "github:docker/sbx-releases" = { version = "0.48.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
 mise install
 sbx version
 ```
@@ -523,7 +539,7 @@ ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
 mise run sandbox:build-template  # devcontainer と同じツールチェイン入りの template
-mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
+mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 ```
 
 > [!NOTE]
@@ -566,8 +582,8 @@ mise run sandbox:mcp             # config/sbx/mcp*.yml の MCP をホストの s
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
 
-sandbox で使う MCP は `config/sbx/mcp*.yml` から `mise run sandbox:mcp` で登録します。
-`sbx-agent` は既定でその全サーバを読み込みます（[MCP の扱い](#mcp-の扱い)）。
+sandbox で使う MCP は `config/sbx/mcp*.yml` から `mise run sandbox:mcp-add` で登録します。
+`sbx-agent` は既定では読み込まないので、使うものだけ指定するか後から足します（[MCP の扱い](#mcp-の扱い)）。
 
 ### タスクごと
 
@@ -593,7 +609,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
-   - `--static-mcp` で登録済み MCP を読み込む（既定は `config/sbx/mcp*.yml` の全サーバ）
+   - `--static-mcp` で登録済み MCP を読み込む（既定は読み込まない）
 4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
@@ -615,13 +631,6 @@ multi-worktree dev feat/add-auth --devcontainer ccmanager  # devcontainer backen
 | 公開ポートを確認（crit の UI 等） | `sbx ports <sandbox>`                             |
 | 通信がブロックされた原因を見る    | `sbx policy log <sandbox>`                        |
 | 一覧・リソースを見る              | `sbx` （TUI）/ `sbx ls` / `sbx inspect <sandbox>` |
-
-sandbox 内で手動インストールしたツールを次回以降も使いたくなったら、template に焼き直せます。
-
-```bash
-mise run sandbox:template-save <sandbox-name> <tag>   # tag は保存元と同じ agent の sbx-agent:<agent>
-mise run sandbox:template-ls
-```
 
 ### 片付け
 
@@ -977,12 +986,19 @@ agent に合ったものを自動で選びます。ccmanager などから agent 
 `sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
 FLAVOR と agent が合わないと `failed to apply kit to sandbox` で作成に失敗するか、kit が当たらず
 agent がログインを求めます（agent を含まない `shell-docker` でも同じ。実機で確認）。
-使わない agent はディスクを食うだけなので、**既定では claude / codex の 2 つだけ**をビルドします。
-copilot も必要なら `SBX_TEMPLATE_AGENTS="claude codex copilot"` のように指定してください。
+使わない agent はディスクを食うだけなので、作る agent は実行時に fzf で選びます（claude を選択済み。
+Tab で切り替え、Enter で確定）。引数か `SBX_TEMPLATE_AGENTS` で指定すると fzf は出ません。
+fzf が無い・端末でないときは claude だけを作ります。
 
 ```bash
-mise run sandbox:build-template
+mise run sandbox:build-template                # fzf で選ぶ
+mise run sandbox:build-template codex copilot  # 指定した agent だけ
+SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 ```
+
+ビルドしていない agent の preset（ccmanager の codex など）を選んだ場合、その場でビルドはされず
+`sbx create` が失敗します。`sbx-agent` が `mise run sandbox:build-template <agent>` の手順を表示するので、
+ビルドしてから選び直してください（`--no-template` を付ければツールチェイン無しで起動はできます）。
 
 やっていること:
 
@@ -1267,10 +1283,10 @@ dependencies:
   同じ name を複数のファイルに書いた場合は、先に読んだ方（`mcp.yml`）を使います。
 
 ```bash
-mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
+mise run sandbox:mcp-add     # mcp*.yml を sbx mcp に反映する（OAuth は初回だけブラウザで認可）
 ```
 
-`sandbox:mcp` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
+`sandbox:mcp-add` は `registry: false` のエントリを次のように `sbx mcp add` の引数へ変換します。
 
 | mcp.yml                         | sbx mcp add                                            |
 | ------------------------------- | ------------------------------------------------------ |
@@ -1297,21 +1313,58 @@ mise run sandbox:mcp     # mcp*.yml を sbx mcp に反映する（OAuth は初�
   今の定義を記録するだけにします（実際に登録されている URL は確かめられないので、違う場合は
   `sbx mcp rm <name>` してから再実行します）。
 - `mcp*.yml` から消したサーバは自動では消しません（OAuth トークンも消えるため）。
-  `sandbox:mcp` が「mcp*.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
+  `sandbox:mcp-add` が「mcp*.yml に無い登録」として表示するので、不要なら `sbx mcp rm <name>` します。
 - `headers` に書いた `${VAR}` はそのまま sbx に渡り、sbx の secret（`sbx secret set`）として解決されます。
 
 ### sandbox への読み込み
 
-`sbx-agent` は既定で `config/sbx/mcp*.yml` の MCP（`registry: false`）を全て `--static-mcp` で読み込みます。
-起動済みの sandbox には `sbx mcp load` で後から足します。絞り込みたいときだけ指定します。
+`sbx-agent` は既定では MCP を**読み込みません**。使うものだけ `--static-mcp` で指定するか、
+起動済みの sandbox に後から足します。
 
 ```bash
-sbx-agent claude                                 # mcp*.yml の MCP を全て
+sbx-agent claude                                 # MCP なし
 sbx-agent claude --static-mcp notion             # notion だけ
-export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定を変える
+export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定で読み込むものを決める
+```
+
+起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
+sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数選択。sandbox は引数でも指定可）。
+
+```bash
+mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
+mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ
+```
+
+要らなくなった MCP は `mise run sandbox:mcp-unload` で外せます（`sbx mcp unload`。sbx 0.48.0 以降）。
+登録（`sbx mcp add`）は残るので、また `sandbox:mcp-load` で読み込めます。
+sbx にはローカルの sandbox で読み込み済みのサーバを一覧する手段が無いため、候補は登録済みの全サーバです
+（読み込んでいないものを選ぶと失敗として表示されます）。
+
+```bash
+mise run sandbox:mcp-unload              # sandbox も fzf で選ぶ
+mise run sandbox:mcp-unload my-sandbox   # sandbox を指定して MCP だけ選ぶ
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
+
+### 読み込みとコンテキスト
+
+登録（`sbx mcp add`）しただけで `load` していない MCP は、agent のコンテキストを使いません。
+
+- `sbx mcp add`（`mise run sandbox:mcp-add`）はホストの gateway に登録するだけで、どの sandbox にも割り当てません。
+- sandbox から見えるのは `--static-mcp` / `sbx mcp load`（`mise run sandbox:mcp-load`）で読み込んだサーバだけです。
+  `sbx-agent` も起動時に指定されたサーバを 1 つずつ `sbx mcp load ... --sandbox` しています。
+  読み込んでいないサーバはツール一覧に出ないため、ツール定義のトークンも使いません。
+- sandbox 内の Claude Code は template の managed settings（[上記](#エージェント自身の-mcp-設定を止める)）で
+  自身の stdio MCP を起動しません。ただし共有の `~/.claude.json` にある remote（HTTP / SSE）サーバは許可リストを通るため、
+  network policy で宛先が許可されていれば、gateway で `load` していなくてもツールが見えることがあります。
+
+一度 `load` したサーバのツールは、その sandbox の agent から見えるようになります
+（Claude Code は MCP ツールが多いと定義を後から読む tool search に切り替えるため、全量がそのまま載るとは限りません）。
+既定で全サーバを読み込まないのはこのためで、必要なものだけ指定するか後から足します。
+
+確かめるときは sandbox 内で `claude mcp list` と `/context` を実行し、
+どのサーバ・ツールがどれだけトークンを使っているかを `load` の前後で比べます。
 
 ### トレードオフ
 
@@ -1470,7 +1523,7 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 [ERROR] sandbox の作成に失敗しました
 [ERROR]   template (sbx-agent:claude) が原因かもしれません。確認するには:
 [ERROR]     sbx template ls
-[ERROR]   未ビルドなら: mise run sandbox:build-template
+[ERROR]   未ビルドなら: mise run sandbox:build-template claude
 [ERROR]   template 無しで起動するには --no-template を付けてください
 ```
 

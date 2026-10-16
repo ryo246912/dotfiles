@@ -2,7 +2,7 @@
 # （https://github.com/microsoft/apm の manifest schema）。
 #
 # MCP はホストの agent には登録せず、sandbox からホストの sbx mcp（gateway）経由でだけ使う。
-# そのため APM（apm install）には読ませず、mise run sandbox:mcp がこのファイルを読んで
+# そのため APM（apm install）には読ませず、mise run sandbox:mcp-add がこのファイルを読んで
 # sbx mcp add の引数に変換する（docs/docker-sandboxes.md の「MCP の扱い」参照）。
 # - すべて self-defined（registry: false）で書く。registry 参照は解決後のコマンドが残らないため使えない。
 # - stdio はパッケージを args の `<package>@<version>` で固定し、Renovate で更新する
