@@ -1,6 +1,7 @@
 # work3 でだけ sandbox から使う MCP サーバ。
 # `cp mcp.work3.yml.example mcp.work3.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
-# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp-add と sbx-agent が mcp.yml と一緒に読む。
+# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp-add が mcp.yml と一緒に読んで登録する
+# （sandbox へは自動で読み込まない。--static-mcp か mise run sandbox:mcp-load で指定する）。
 # 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
 dependencies:
   mcp:

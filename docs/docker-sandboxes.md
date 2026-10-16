@@ -1356,7 +1356,8 @@ multi-worktree からは `[settings.sandbox].static_mcp` でも指定できま�
   `sbx-agent` も起動時に指定されたサーバを 1 つずつ `sbx mcp load ... --sandbox` しています。
   読み込んでいないサーバはツール一覧に出ないため、ツール定義のトークンも使いません。
 - sandbox 内の Claude Code は template の managed settings（[上記](#エージェント自身の-mcp-設定を止める)）で
-  自身の stdio MCP を起動しないため、別の経路から入ってくることもありません。
+  自身の stdio MCP を起動しません。ただし共有の `~/.claude.json` にある remote（HTTP / SSE）サーバは許可リストを通るため、
+  network policy で宛先が許可されていれば、gateway で `load` していなくてもツールが見えることがあります。
 
 一度 `load` したサーバのツールは、その sandbox の agent から見えるようになります
 （Claude Code は MCP ツールが多いと定義を後から読む tool search に切り替えるため、全量がそのまま載るとは限りません）。
