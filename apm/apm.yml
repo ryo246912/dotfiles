@@ -48,9 +48,9 @@ dependencies:
     # resolving-merge-conflicts は v1.3.0 で upstream から削除されたため v1.2.3 に固定する
     # （Renovate では更新しない）。
     - mattpocock/skills/skills/engineering/resolving-merge-conflicts#v1.2.3
-    - mattpocock/skills/skills/productivity/grill-me#v1.2.3
+    - mattpocock/skills/skills/productivity/grill-me#v1.3.1
     # grill-me が呼び出す interview loop。本体と同じ tag に pin する（Renovate で同一PRにまとめる）。
-    - mattpocock/skills/skills/productivity/grilling#v1.2.3
+    - mattpocock/skills/skills/productivity/grilling#v1.3.1
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.7.2
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
