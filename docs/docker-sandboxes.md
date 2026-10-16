@@ -31,6 +31,7 @@ sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 | `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
 | `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
 | `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき             |
+| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                              | 要らなくなったとき           |
 | `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
 | `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
 | `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
@@ -1332,6 +1333,16 @@ sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数�
 ```bash
 mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
 mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ
+```
+
+要らなくなった MCP は `mise run sandbox:mcp-unload` で外せます（`sbx mcp unload`。sbx 0.48.0 以降）。
+登録（`sbx mcp add`）は残るので、また `sandbox:mcp-load` で読み込めます。
+sbx にはローカルの sandbox で読み込み済みのサーバを一覧する手段が無いため、候補は登録済みの全サーバです
+（読み込んでいないものを選ぶと失敗として表示されます）。
+
+```bash
+mise run sandbox:mcp-unload              # sandbox も fzf で選ぶ
+mise run sandbox:mcp-unload my-sandbox   # sandbox を指定して MCP だけ選ぶ
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。

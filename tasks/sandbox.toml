@@ -455,6 +455,58 @@ main() {
 main "$@"
 '''
 
+["sandbox:mcp-unload"]
+description = "Unload MCP servers from a running sandbox, selected with fzf"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:mcp-unload [sandbox-name]
+  # sandbox:mcp-load の逆。読み込んだ MCP を sandbox から外し、agent のコンテキストを空ける。
+  # 登録（sbx mcp add）は残るので、また sandbox:mcp-load で読み込める（登録ごと消すなら sbx mcp rm）。
+  # sbx mcp unload は sbx 0.48.0 から。ローカルの sandbox で読み込み済みのサーバだけを一覧する
+  # 手段が sbx に無いため、候補は登録済みの全サーバになる（読み込んでいないものは失敗として出る）。
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+  sbx mcp unload --help >/dev/null 2>&1 \
+    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
+
+  sandbox="${1:-}"
+  if [ -z "$sandbox" ]; then
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" \
+      | fzf --header-lines=1 --prompt="sandbox> " --header="MCP を外す sandbox を選択" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$sandbox" ] || exit 130
+  fi
+
+  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ -n "$servers" ] || { echo "error: 登録済みの MCP サーバがありません" >&2; exit 1; }
+  names=$(printf '%s\n' "$servers" \
+    | fzf --multi --prompt="mcp> " \
+        --header="${sandbox} から外す MCP を選択（Tab で複数選択）") || exit 130
+  [ -n "$names" ] || exit 130
+
+  failed=""
+  for name in $names; do
+    if sbx mcp unload "$name" --sandbox "$sandbox"; then
+      echo "✅ $name を $sandbox から外しました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: $name を外せませんでした（読み込んでいない可能性があります）" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 外せなかった MCP サーバ: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
 ["sandbox:template-ls"]
 description = "List saved Docker Sandboxes templates"
 run         = "sbx template ls"
