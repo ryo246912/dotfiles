@@ -461,6 +461,30 @@ shopt -s dotglob nullglob
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 confirm() { read -r -p "$1 [y/N] " a; [[ "$a" =~ ^[Yy]$ ]]; }
+# macOS には timeout コマンドが無いため、指定秒数を超えたら TERM で止める簡易版
+run_with_timeout() {
+  local secs=$1 pid i=0
+  shift
+  "$@" &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$i" -ge $((secs * 10)) ]; then
+      kill "$pid" 2>/dev/null
+      # TERM で終了しない場合に備え、1 秒待っても残っていれば KILL する
+      i=0
+      while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 10 ]; do
+        sleep 0.1
+        i=$((i + 1))
+      done
+      kill -9 "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      return 124
+    fi
+    sleep 0.1
+    i=$((i + 1))
+  done
+  wait "$pid"
+}
 section() { printf '\n=== %s ===\n' "$1"; }
 
 section "実行前の空き容量"
@@ -542,10 +566,25 @@ if [ -d "$HOME/.gradle" ] && confirm "Gradle のキャッシュ・wrapper・daem
   rm -rf "$HOME/.gradle/"{caches,wrapper/dists,daemon,native,jdks}
 fi
 
-if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-  docker system df
-  if confirm "Docker の停止中コンテナ・未使用イメージ・ビルドキャッシュを削除しますか?（ボリュームは残します）"; then
-    docker system prune -a -f
+# Docker Desktop / colima が停止中・起動途中だと docker info が応答せず止まるため、タイムアウトを付ける
+if command -v docker >/dev/null 2>&1; then
+  if run_with_timeout 3 docker info >/dev/null 2>&1; then
+    # df が応答しないデーモンでは prune も止まるため、df が成功したときだけ prune を確認する
+    if run_with_timeout 30 docker system df; then
+      if confirm "Docker の停止中コンテナ・未使用イメージ・ビルドキャッシュを削除しますか?（ボリュームは残します）"; then
+        docker system prune -a -f
+      fi
+    else
+      rc=$?
+      if [ "$rc" -eq 124 ]; then
+        echo "skip: docker system df がタイムアウトしました" >&2
+      else
+        failed=1
+        echo "failed: docker system df (exit $rc)" >&2
+      fi
+    fi
+  else
+    echo "skip: Docker デーモンに接続できません（未起動またはタイムアウト）"
   fi
 fi
 
