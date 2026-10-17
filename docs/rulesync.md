@@ -179,6 +179,18 @@ Codex で同じ skill が重複して見える場合があります。tsumiki �
 ls ~/.codex/skills/   # ~/.agents/skills/ に同名の skill があることを確認してから削除する
 ```
 
+### 自作 skill を消しても配布先に残る
+
+`config/rulesync/.rulesync/skills/` から skill を消しても、`delete: false` のため `~/.claude/skills/` と
+`~/.agents/skills/` の生成物は残ります。手動で削除してください。
+
+```bash
+rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
+```
+
+`delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
+同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
+
 ### プロジェクト単位の `.codex/config.toml` について
 
 以前は Codex CLI の hooks を有効化するため `.codex/config.toml` に `[features] hooks = true` が生成されていましたが、
