@@ -145,6 +145,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:oxlint"                                                = "1.87.0"
 "npm:renovate"                                              = { version = "44.0.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 "npm:ulid"                                                  = "3.0.2"
+"pipx:basic-memory"                                         = { version = "0.23.2", uvx_args = "--prerelease=allow" }
 "pipx:context-tracker"                                      = "1.0.0"
 "pipx:grip"                                                 = "4.6.2"
 "pipx:tftui"                                                = "0.14.1"
