@@ -23,7 +23,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに自作 skill（`memo` / `planning` / `review-pr` 等、`config/rulesync/.rulesync/skills/`）や
+  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-comment` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
     （`config/rulesync/.rulesync/hooks.json`）、permissions
     （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
