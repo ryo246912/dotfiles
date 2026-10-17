@@ -7,17 +7,17 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 ## 全体像
 
 ```text
- [自分の PR で採用した指摘] ─ lesson-record（直した直後に記録）─┐
+ [自分の PR で採用した指摘] ─ lessons-record（直した直後に記録）─┐
  [ユーザーの訂正]           ─────────────────────────────────────┤
                                                                  ├→ inbox/（観察）
- [targets の全リポジトリの PR] ─ harvest-review-lessons（週次）──┘        │
+ [targets の全リポジトリの PR] ─ lessons-harvest（週次）──┘        │
    received: 自分が受けた指摘 / given: 自分が書いた指摘 / team: チーム内の指摘   │ 週次でまとめる
                                                                           ↓
                                      lessons/（教訓。candidate → active → retired）
                                        昇格・失効は agent-lessons への PR で人が確認する
                                                                           │
      ┌────────────────────────────────────────────────────────────────────┤
-     ↓ SessionStart hook（タイトルを注入）  ↓ self-review（push 前）   ↓ review-pr（観点）
+     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-self-review（push 前）   ↓ pr-reviewer-comment（観点）
    received + team                       received + team の Check   given + team
 ```
 
@@ -25,17 +25,17 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | 保存・同期               | private リポジトリ（`agent-lessons`）を `~/.local/share/agent-lessons` に clone したもの |
 | 検索                     | Basic Memory の project `agent-lessons`（frontmatter のメタデータで絞り込む）            |
-| その場の記録             | `lesson-record` skill（fix-review と COMMON.md のレビュー対応フローから呼ぶ）            |
-| 週次の収集・昇格         | `harvest-review-lessons` skill を Claude Desktop のローカル定期タスクで実行              |
+| その場の記録             | `lessons-record` skill（pr-author-fix と COMMON.md のレビュー対応フローから呼ぶ）        |
+| 週次の収集・昇格         | `lessons-harvest` skill を Claude Desktop のローカル定期タスクで実行                     |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
-| push 前の突き合わせ      | `self-review` skill                                                                      |
-| レビュー時の観点         | `review-pr` / `crit-pr`（`references/findings.md`）                                      |
+| push 前の突き合わせ      | `pr-author-self-review` skill                                                            |
+| レビュー時の観点         | `pr-reviewer-comment` / `pr-reviewer-comment-crit`（`references/findings.md`）           |
 | 同期・初期設定のコマンド | `mise run lessons:setup` / `mise run lessons:sync`（`config/mise/tasks/lessons.toml`）   |
 
 ## 知見リポジトリの構成
 
 個人と会社の知見を 1 つの private リポジトリに置く。会社のコードが残らないよう、書くのは一般化したルールと
-根本原因と根拠の URL だけにし、元のコメント本文やコード片は書かない（`lesson-record` skill の「記録しないもの」）。
+根本原因と根拠の URL だけにし、元のコメント本文やコード片は書かない（`lessons-record` skill の「記録しないもの」）。
 commit 前に secretlint を通す。
 
 ```text
@@ -58,11 +58,11 @@ agent-lessons/
 
 ### source（誰の指摘か）
 
-| source     | 内容                                       | 使う場所                                    |
-| ---------- | ------------------------------------------ | ------------------------------------------- |
-| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、self-review            |
-| `given`    | 自分がレビューで書いた指摘                 | review-pr / crit-pr の観点                  |
-| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、self-review、review-pr |
+| source     | 内容                                       | 使う場所                                                        |
+| ---------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-self-review                      |
+| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点           |
+| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-self-review、pr-reviewer-comment |
 
 ### targets.md
 
@@ -183,11 +183,11 @@ semantic search を切る・自動更新を切る）、インデックス作成�
 
 Claude Desktop のサイドバーの **Routines** から新しいタスクを作り、**Local** を選ぶ。
 
-| 項目       | 値                                   |
-| ---------- | ------------------------------------ |
-| 頻度       | Weekly（例: 月曜の朝）               |
-| フォルダ   | `~/.local/share/agent-lessons`       |
-| プロンプト | `/harvest-review-lessons を実行して` |
+| 項目       | 値                             |
+| ---------- | ------------------------------ |
+| 頻度       | Weekly（例: 月曜の朝）         |
+| フォルダ   | `~/.local/share/agent-lessons` |
+| プロンプト | `/lessons-harvest を実行して`  |
 
 - ローカルの定期タスクは、Desktop アプリが開いていて、マシンが起きているときだけ動く
 - 作ったら一度 **Run now** で実行し、`gh` / `git` / `basic-memory` / `secretlint` / `mise run lessons:sync` の
@@ -203,10 +203,10 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される |
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                        |
-| push・PR 作成の前    | `self-review` skill が diff と教訓の `## Check` を突き合わせ、当てはまる箇所を直す                             |
-| 指摘を直したとき     | `fix-review` / PR 作成後のレビュー対応フローが `lesson-record` で観察を記録する                                |
-| 他人の PR のレビュー | `review-pr` / `crit-pr` が `given`・`team` の教訓を観点として読む                                              |
-| 毎週                 | `harvest-review-lessons` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                               |
+| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Check` を突き合わせ、当てはまる箇所を直す                   |
+| 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                            |
+| 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                   |
+| 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                                      |
 
 ### 週次の PR を確認する
 

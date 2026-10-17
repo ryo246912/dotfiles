@@ -64,7 +64,7 @@
     "ponytail-review": "on",
     "memo": "on",
     "planning": "on",
-    "self-review": "on",
+    "pr-author-self-review": "on",
     "plannotator-review": "name-only",
     "plannotator-annotate": "name-only",
     "plannotator-last": "name-only",
@@ -78,10 +78,10 @@
     "grill-me": "name-only",
     "grilling": "name-only",
     "diagram-design": "name-only",
-    "crit-pr": "name-only",
-    "fix-review": "name-only",
-    "lesson-record": "name-only",
-    "review-pr": "name-only",
+    "pr-reviewer-comment-crit": "name-only",
+    "pr-author-fix": "name-only",
+    "lessons-record": "name-only",
+    "pr-reviewer-comment": "name-only",
     "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",
@@ -99,11 +99,8 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
-    "article": "user-invocable-only",
-    "coderabbit": "user-invocable-only",
-    "deepwiki": "user-invocable-only",
     "suggest-rules": "user-invocable-only",
-    "harvest-review-lessons": "user-invocable-only"
+    "lessons-harvest": "user-invocable-only"
   },
   "git": {
     "includeCoAuthor": false

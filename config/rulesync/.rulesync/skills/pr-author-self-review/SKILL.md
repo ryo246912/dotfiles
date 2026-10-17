@@ -1,5 +1,5 @@
 ---
-name: self-review
+name: pr-author-self-review
 description: push や PR 作成の前に、agent-lessons に貯めた過去のレビュー指摘（自分が受けた指摘・チームの規約）と現在の diff を突き合わせ、同じ指摘を受けそうな箇所を直す skill。実装が一区切りして push・PR 作成に進む前に使う。
 targets:
   - claudecode
@@ -55,4 +55,4 @@ basic-memory tool read-note <permalink> --project agent-lessons --json
 | ...  | 該当あり / 該当なし | 直した内容 |
 
 教訓自体が古い・誤っていると判断したら、直さずに表の「対応」にその旨を書く（教訓の修正は週次の
-`harvest-review-lessons` の PR か、ユーザーが行う）。
+`lessons-harvest` の PR か、ユーザーが行う）。

@@ -1,6 +1,6 @@
 ---
-name: lesson-record
-description: 採用したレビュー指摘やユーザーの訂正を、次の実装で同じ指摘を受けないための教訓として agent-lessons（Basic Memory）の inbox に 1 件記録する skill。fix-review などで指摘を直した直後や、ユーザーに実装を訂正されたときに使う。
+name: lessons-record
+description: 採用したレビュー指摘やユーザーの訂正を、次の実装で同じ指摘を受けないための教訓として agent-lessons（Basic Memory）の inbox に 1 件記録する skill。pr-author-fix などで指摘を直した直後や、ユーザーに実装を訂正されたときに使う。
 targets:
   - claudecode
   - codexcli
@@ -10,7 +10,7 @@ targets:
 
 レビュー指摘を直した直後のエージェントが、**なぜその指摘を受けたか**を一番正確に言える。その場で
 agent-lessons の inbox に観察（`type: lesson_observation`）として書き残す。集計・昇格・注入は
-週次の `harvest-review-lessons` と SessionStart hook が行うので、ここでは 1 件書くだけにする。
+週次の `lessons-harvest` と SessionStart hook が行うので、ここでは 1 件書くだけにする。
 仕組みの全体は dotfiles の `docs/agent-lessons.md` にある。
 
 記録に失敗しても本来の作業（修正・push・返信）は止めない。失敗したことだけをユーザーに伝える。

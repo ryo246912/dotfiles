@@ -23,7 +23,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに自作 skill（`article` / `memo` / `planning` 等、`config/rulesync/.rulesync/skills/`）や
+  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-comment` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
     （`config/rulesync/.rulesync/hooks.json`）、permissions
     （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
@@ -172,12 +172,24 @@ mise --cd "$HOME" run rulesync:generate
 rulesync v9.1.0 以降、Codex CLI 向け skill の出力先は `~/.codex/skills/` から Codex 標準の
 `~/.agents/skills/`（APM と同じ場所）へ移動しました。`delete: false` のため旧出力は自動では削除されず、
 Codex で同じ skill が重複して見える場合があります。tsumiki 由来の skill（`tsumiki-*`）は
-`mise run apm:install` が state manifest を元に削除しますが、自作 skill（`article` / `memo` 等）の旧出力は
+`mise run apm:install` が state manifest を元に削除しますが、自作 skill（`memo` / `planning` 等）の旧出力は
 手動で削除してください。
 
 ```bash
 ls ~/.codex/skills/   # ~/.agents/skills/ に同名の skill があることを確認してから削除する
 ```
+
+### 自作 skill を消しても配布先に残る
+
+`config/rulesync/.rulesync/skills/` から skill を消しても、`delete: false` のため `~/.claude/skills/` と
+`~/.agents/skills/` の生成物は残ります。手動で削除してください。
+
+```bash
+rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
+```
+
+`delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
+同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
 
 ### プロジェクト単位の `.codex/config.toml` について
 

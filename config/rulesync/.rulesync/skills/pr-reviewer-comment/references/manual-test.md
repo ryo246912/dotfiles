@@ -1,6 +1,6 @@
 # 動作確認手順の書き方
 
-review-pr / crit-pr skill の共通手順。
+pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 ユーザーがそのまま手を動かせる粒度で書く。**URL と操作を 1 つずつ書き下す。** 「設定画面を開く」ではなく、どの画面のどこを押すとそこへ着くかまで書く。
 

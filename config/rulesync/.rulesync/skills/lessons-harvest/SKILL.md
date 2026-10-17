@@ -1,5 +1,5 @@
 ---
-name: harvest-review-lessons
+name: lessons-harvest
 description: agent-lessons の targets に並べたリポジトリから、前回以降にマージされた PR のレビュー指摘（自分が受けた・自分が書いた・チーム内）を集めて教訓にまとめ、昇格・失効の変更を agent-lessons への PR として出す週次 skill。Claude Desktop のローカル定期タスクから呼ぶ。
 targets:
   - claudecode
@@ -99,7 +99,7 @@ query($owner: String!, $name: String!, $number: Int!) {
 
 ## 4. 観察を inbox に書く
 
-採用された指摘ごとに、`lesson-record` skill の「2. inbox に書く」の形式で `inbox/<source>/` に書く。
+採用された指摘ごとに、`lessons-record` skill の「2. inbox に書く」の形式で `inbox/<source>/` に書く。
 `scope_key` は対象リポジトリの `<host>/<owner>/<repo>`。`evidence` は指摘コメントの URL。既に同じ
 `evidence` の観察があれば書かない。
 

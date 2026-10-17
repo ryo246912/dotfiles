@@ -1,6 +1,6 @@
 # 指摘候補の洗い出しと出し方
 
-review-pr / crit-pr skill の共通手順。
+pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 agent-lessons が設定済み（`basic-memory tool list-projects` に `agent-lessons` がある）なら、読む前に過去の指摘から
 観点を引いておく。自分がよく書く指摘（`given`）とチームの規約（`team`）が対象。ここで引いた観点も、下の裏取りを通してから候補にする。
