@@ -97,9 +97,7 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
-    "article": "user-invocable-only",
     "coderabbit": "user-invocable-only",
-    "deepwiki": "user-invocable-only",
     "suggest-rules": "user-invocable-only"
   },
   "git": {

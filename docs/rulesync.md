@@ -23,7 +23,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに自作 skill（`article` / `memo` / `planning` 等、`config/rulesync/.rulesync/skills/`）や
+  - ここに自作 skill（`memo` / `planning` / `review-pr` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
     （`config/rulesync/.rulesync/hooks.json`）、permissions
     （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
@@ -172,7 +172,7 @@ mise --cd "$HOME" run rulesync:generate
 rulesync v9.1.0 以降、Codex CLI 向け skill の出力先は `~/.codex/skills/` から Codex 標準の
 `~/.agents/skills/`（APM と同じ場所）へ移動しました。`delete: false` のため旧出力は自動では削除されず、
 Codex で同じ skill が重複して見える場合があります。tsumiki 由来の skill（`tsumiki-*`）は
-`mise run apm:install` が state manifest を元に削除しますが、自作 skill（`article` / `memo` 等）の旧出力は
+`mise run apm:install` が state manifest を元に削除しますが、自作 skill（`memo` / `planning` 等）の旧出力は
 手動で削除してください。
 
 ```bash
