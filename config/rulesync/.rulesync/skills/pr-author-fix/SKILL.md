@@ -1,5 +1,5 @@
 ---
-name: fix-review
+name: pr-author-fix
 description: GitHub PR のレビューコメント（特にインラインコメント）を取得・整理し、ユーザー確認を挟みつつ修正を進める skill。gh CLI での指摘対応と修正提案が必要なときに使う。
 targets:
   - claudecode
