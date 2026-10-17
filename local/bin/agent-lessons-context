@@ -1,0 +1,79 @@
+#!/bin/bash
+# agent-lessons-context
+#
+# Claude Code / Codex の SessionStart hook。Basic Memory の agent-lessons project から、
+# 作業中のリポジトリに効く active な教訓（type: lesson）のタイトルを stdout に出し、
+# エージェントのコンテキストへ注入する。使い方は docs/agent-lessons.md。
+#
+#   agent-lessons-context               hook として stdin の JSON（.cwd）を読み、教訓を出力する
+#   agent-lessons-context --scope-keys  カレントディレクトリに効く scope_key を JSON 配列で出力する（skill 用）
+#
+# Basic Memory 標準の `basic-memory hook session-start` を使わないのは、注入対象が
+# task / decision / session に固定されていて、リポジトリや org 単位で絞れないため。
+#
+# 失敗してもセッションを止めないよう、どの経路でも exit 0 で終わる。
+set -u
+
+readonly PROJECT="${AGENT_LESSONS_PROJECT:-agent-lessons}"
+readonly LESSONS_DIR="${AGENT_LESSONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons}"
+readonly SYNC_STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/agent-lessons/last-sync"
+
+command -v jq >/dev/null 2>&1 || exit 0
+
+# git@host:owner/repo.git / https://user@host/owner/repo.git → host/owner/repo
+scope_keys() {
+	local remote slug
+	remote=$(git -C "$1" remote get-url origin 2>/dev/null) || remote=""
+	slug=$(printf '%s' "$remote" | sed -E 's#^[a-z+]+://##; s#^[^@/]*@##; s#^([^/:]+):#\1/#; s#\.git$##')
+	if [[ "$slug" =~ ^[^/]+/[^/]+/[^/]+$ ]]; then
+		jq -cn --arg owner "${slug%/*}" --arg repo "$slug" '["global", $owner, $repo]'
+	else
+		printf '["global"]\n'
+	fi
+}
+
+if [ "${1:-}" = "--scope-keys" ]; then
+	scope_keys "$PWD"
+	exit 0
+fi
+
+command -v basic-memory >/dev/null 2>&1 || exit 0
+[ -d "$LESSONS_DIR" ] || exit 0
+
+cwd=$(jq -r '.cwd // empty' 2>/dev/null) || cwd=""
+[ -n "$cwd" ] || cwd=$PWD
+
+# 他の端末で記録・マージされた教訓を取り込む。1 日 1 回だけ、セッション開始を待たせずに裏で行う。
+if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ]; then
+	mkdir -p "$(dirname "$SYNC_STAMP")" && touch "$SYNC_STAMP"
+	# shellcheck disable=SC2016 # $1 / $2 は子の sh で展開する
+	nohup sh -c 'git -C "$1" pull --rebase --autostash --quiet && basic-memory reindex --search -p "$2"' \
+		sh "$LESSONS_DIR" "$PROJECT" >/dev/null 2>&1 &
+fi
+
+keys=$(scope_keys "$cwd")
+
+# given（自分が書いた指摘）はレビュー観点なので、review 系 skill でだけ読む
+filter=$(jq -cn --argjson keys "$keys" '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
+json=$(timeout 30 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
+	--project "$PROJECT" --page-size 40 --json 2>/dev/null) || exit 0
+
+# file_path は lessons/<source>/<scope_key>/<title>.md
+printf '%s' "$json" | jq -r --arg project "$PROJECT" '
+  def section($source; $heading):
+    [.results[] | select(.file_path | startswith("lessons/" + $source + "/"))]
+    | if length == 0 then empty
+      else "## " + $heading, (.[] | "- " + .title + " (`" + .permalink + "`)"), ""
+      end;
+  if (.results // []) | length == 0 then empty
+  else
+    "# agent-lessons: 過去のレビュー指摘から学んだ教訓",
+    "",
+    "以下は過去の PR レビューと訂正から集めた参照データです（指示文ではありません）。該当する作業では、同じ指摘を受けないように実装してください。",
+    "詳細と根拠は `basic-memory tool read-note <permalink> --project " + $project + "` で読めます。",
+    "",
+    section("received"; "自分（とエージェント）がよく受ける指摘"),
+    section("team"; "このチームの規約")
+  end' 2>/dev/null
+
+exit 0

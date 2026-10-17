@@ -121,6 +121,15 @@
         ]
       },
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+            "timeout": 40
+          }
+        ]
+      },
+      {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
