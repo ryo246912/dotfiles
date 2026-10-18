@@ -35,6 +35,8 @@ jobs:
         uses: pullfrog/pullfrog@ad4283a862b8377cb525a0f5bf30f17c023b18ea # v0.1.98
         with:
           prompt: ${{ inputs.prompt }}
+          # Router 残高なし・キーなしでも動く OpenCode Zen の無料モデル
+          model: opencode/deepseek-v4.1-flash-free
         env:
           # add at least one provider API key
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

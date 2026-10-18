@@ -32,6 +32,14 @@
         "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage, \"changelogUrl\": ($contains($string(homepage), 'github.com') ? $join([$replace((homepage), /\\.git$/, ''), '/releases'], '') : '') }"
       ],
       "format": "json"
+    },
+    "opencode-deepseek-flash-free": {
+      "description": "models.dev の OpenCode Zen 無料モデル deepseek-v<version>-flash-free の version を返す",
+      "defaultRegistryUrlTemplate": "https://models.dev/api.json",
+      "transformTemplates": [
+        "{ \"releases\": [ $each(opencode.models, function($v, $k) { $contains($k, /^deepseek-v[0-9.]+-flash-free$/) ? { \"version\": $replace($k, /^deepseek-v([0-9.]+)-flash-free$/, \"$1\"), \"releaseTimestamp\": $v.release_date } }) ], \"homepage\": \"https://opencode.ai/docs/zen\" }"
+      ],
+      "format": "json"
     }
   },
   "packageRules": [
@@ -144,6 +152,15 @@
     }
   ],
   "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Pullfrog の無料モデル opencode/deepseek-v<version>-flash-free を新しい version に上げる",
+      "managerFilePatterns": [".github/workflows/pullfrog.yml"],
+      "matchStrings": ["model:\\s*opencode/deepseek-v(?<currentValue>[0-9.]+)-flash-free"],
+      "depNameTemplate": "opencode/deepseek-flash-free",
+      "datasourceTemplate": "custom.opencode-deepseek-flash-free",
+      "versioningTemplate": "loose"
+    },
     {
       "customType": "regex",
       "description": "constraints.apm は組み込みの renovate-config manager が microsoft/apm として抽出するため、ここでは lockfile の apm_version だけを扱う",
