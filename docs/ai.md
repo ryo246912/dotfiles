@@ -1297,3 +1297,48 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## ブラウザ操作（Chrome DevTools MCP と Playwright）
+
+ブラウザを操作させる手段として、Chrome DevTools MCP と Playwright MCP（テストは `dev-webtest` skill が使う
+playwright-cli）を用途で使い分けます。両方の MCP を常に読み込むとツール定義でコンテキストを多く使い、
+エージェントがどちらを使うか迷う原因にもなるため、作業に合わせて片方だけ有効にするのがおすすめです。
+
+| 観点                                 | Chrome DevTools MCP                              | Playwright                                         |
+| ------------------------------------ | ------------------------------------------------ | -------------------------------------------------- |
+| ブラウザ操作（クリック・入力・遷移） | ◯                                                | ◎ アクセシビリティツリーでの要素指定が安定している |
+| コンソールログ                       | ◎ 一覧とスタックトレースまで取れる               | △ メッセージ一覧が中心                             |
+| ネットワーク                         | ◎ リクエスト一覧と各リクエストのヘッダー・ボディ | △ リクエスト一覧が中心                             |
+| パフォーマンス                       | ◎ トレース取得、Core Web Vitals・LCP の分析      | ✕                                                  |
+| CPU・ネットワークの低速化の再現      | ◯                                                | △                                                  |
+| 対応ブラウザ                         | Chrome のみ                                      | Chromium・Firefox・WebKit                          |
+| 起動中の Chrome への接続             | ◯ `--browser-url`                                | ◯ `--cdp-endpoint`                                 |
+| E2E テストへの流用                   | ✕                                                | ◎                                                  |
+
+### 使い分けの指針
+
+- **デバッグ・調査は Chrome DevTools MCP。** 「ボタンを押すと API が 500 を返す原因を調べて」「コンソールの
+  エラーを見て」「表示が遅い理由を調べて」など、人が DevTools を開いてやる作業を任せるときに使います。
+- **対話的な画面操作は Playwright MCP。** 「このフォームに入力して送信して」「この手順で画面を進めて」など、
+  操作そのものが目的のときに使います。要素をアクセシビリティツリーで指定するので操作が安定します。
+- **シナリオ通りのテストは Playwright（skill）。** 画面仕様に沿った動作確認、visual・accessibility・responsive
+  の確認、Chrome 以外のブラウザでの確認、テストコードへの落とし込みは `dev-webtest` 系 skill
+  （[Web UIをtestする](#web-uiをtestする)）を使います。
+
+### MCP の設定
+
+sandbox からは `config/sbx/mcp.yml` の `chrome-devtools` と `playwright` を sbx mcp（gateway）経由で使います
+（登録は `mise run sandbox:mcp-add`。詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#mcp-の扱い)）。
+どちらもホストで起動している同じ Chrome に CDP で接続する（`chrome-devtools` は `--browser-url`、`playwright` は
+`--cdp-endpoint` に `http://localhost:9222` を指定）ので、先にホストでデバッグポート付きの Chrome を起動しておきます。
+sandbox へ読み込むときは、作業に合わせて片方だけ指定します（`--static-mcp` / `mise run sandbox:mcp-load`）。
+
+```bash
+# macOS
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile1 > /dev/null 2>&1 &
+```
+
+- `--user-data-dir` を普段のプロファイルと分けておくと、そのプロファイルでログインした状態のまま調査できます。
+- 複数の Chrome を並行して使う場合は 9223 / 9224 で起動し、`config/sbx/mcp.work2.yml.example` を参考に
+  `chrome-devtools-2` / `chrome-devtools-3` を追加します。

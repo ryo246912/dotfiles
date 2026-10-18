@@ -30,3 +30,10 @@ dependencies:
       transport: stdio
       command: npx
       args: ["-y", "chrome-devtools-mcp@1.10.1", "--browser-url=http://localhost:9222"]
+    # chrome-devtools と同じ Chrome（9222）に CDP で接続する。画面操作はこちら、コンソール・ネットワークの
+    # 調査は chrome-devtools と使い分ける（docs/ai.md の「ブラウザ操作」参照）
+    - name: playwright
+      registry: false
+      transport: stdio
+      command: npx
+      args: ["-y", "@playwright/mcp@0.0.83", "--cdp-endpoint=http://localhost:9222"]
