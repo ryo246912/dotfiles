@@ -1,7 +1,10 @@
-"""hunks.json と groups.json から「変更グループ」の HTML を作り、HTML に差し込む。
+"""変更グループ（groups.json）を検査し、差分付きの HTML 片を作る（HTML は render_brief.py が組み立てる）。
 
-HTML の `<!-- pr-reviewer-brief:groups:start -->` と `<!-- pr-reviewer-brief:groups:end -->` の間を置き換える。
-すべての hunk がちょうど 1 つのグループに入っていなければ、何も書き換えずに終了コード 1 で終わる。
+    python3 render_groups.py --hunks hunks.json --groups groups.json --check draft   # 振り分けだけ検査
+    python3 render_groups.py --hunks hunks.json --groups groups.json --check full    # 解説まで検査
+
+draft はすべての hunk がちょうど 1 つのグループに入っているかと id・title・kind を、full はさらに
+risk・summary・intent を検査する。問題があれば終了コード 1。
 
 groups.json の書式（グループは読む順に並べる）:
 
@@ -11,13 +14,14 @@ groups.json の書式（グループは読む順に並べる）:
           "id": "g1",
           "title": "URL・ホスト判定の共通基盤",
           "kind": "feature",          # feature / fix / refactor / test / docs / config / chore / generated
+          "hunks": ["h001", "h002"],
+          "prs": [123],               # stack のとき、どの PR の変更か（任意）
+          # ここまでを情報集めの段階で書く。以下は文章の段階で足す
           "risk": "high",             # high（要注意）/ medium（注意）/ low（低リスク）
           "summary": "一覧に出す 1 文",
           "intent": "なぜこの変更をするのか",
           "impact": "影響範囲（任意）",
           "checkpoints": ["レビューで確かめること（任意）"],
-          "prs": [123],               # stack のとき、どの PR の変更か（任意）
-          "hunks": ["h001", "h002"],
           "hunk_notes": {"h002": "この hunk だけの補足（任意）"}
         }
       ]
@@ -29,7 +33,6 @@ kind が generated のグループ（lockfile・生成物・スナップショ�
 import argparse
 import html
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -44,20 +47,20 @@ KIND_LABELS = {
     "chore": "chore",
     "generated": "generated",
 }
-MARKER = re.compile(r"(<!-- pr-reviewer-brief:groups:start -->)(.*?)(<!-- pr-reviewer-brief:groups:end -->)", re.S)
 LARGE_HUNK_LINES = 300
 
 esc = html.escape
 
 
-def validate(hunks: dict[str, dict], groups: list[dict]) -> list[str]:
+def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") -> list[str]:
     errors: list[str] = []
     owner: dict[str, str] = {}
+    keys = ("id", "title", "kind", "hunks") + (("risk", "summary", "intent") if stage == "full" else ())
     for group in groups:
-        for key in ("id", "title", "kind", "risk", "summary", "intent", "hunks"):
+        for key in keys:
             if key not in group:
                 errors.append(f"{group.get('id', '?')}: {key} が無い")
-        if group.get("risk") not in RISK_LABELS:
+        if stage == "full" and group.get("risk") not in RISK_LABELS:
             errors.append(f"{group.get('id')}: risk は {'/'.join(RISK_LABELS)} のどれか")
         if group.get("kind") not in KIND_LABELS:
             errors.append(f"{group.get('id')}: kind は {'/'.join(KIND_LABELS)} のどれか")
@@ -204,26 +207,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--hunks", required=True, type=Path)
     parser.add_argument("--groups", required=True, type=Path)
-    parser.add_argument("--html", required=True, type=Path, help="差し込み先の HTML")
-    parser.add_argument("--blob-url", help="https://github.com/<owner>/<repo>/blob/<head SHA>（ファイルへのリンク用）")
+    parser.add_argument("--check", choices=["draft", "full"], default="full")
     args = parser.parse_args()
 
     hunks = {hunk["id"]: hunk for hunk in json.loads(args.hunks.read_text())["hunks"]}
     groups = json.loads(args.groups.read_text())["groups"]
-    errors = validate(hunks, groups)
-    if errors:
-        for error in errors:
-            print(error, file=sys.stderr)
-        return 1
-
-    page = args.html.read_text()
-    if not MARKER.search(page):
-        print("HTML に pr-reviewer-brief:groups のマーカーが無い", file=sys.stderr)
-        return 1
-    fragment = render(hunks, groups, args.blob_url)
-    args.html.write_text(MARKER.sub(lambda m: m.group(1) + fragment + m.group(3), page, count=1))
-    print(f"{len(groups)} groups / {len(hunks)} hunks を差し込んだ")
-    return 0
+    errors = validate(hunks, groups, args.check)
+    for error in errors:
+        print(error, file=sys.stderr)
+    if not errors:
+        print(f"ok: {len(groups)} groups / {len(hunks)} hunks")
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

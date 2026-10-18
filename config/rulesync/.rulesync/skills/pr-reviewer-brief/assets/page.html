@@ -1,15 +1,11 @@
 <!doctype html>
-<!--
-  pr-reviewer-brief の雛形。{{...}} を埋め、書くことが無い section は丸ごと消す。
-  各 section の先頭のコメントに書くことがある。コメントは書き出すときに消してよい。
--->
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="pr-reviewer-brief-head" content="{{head の SHA。stack なら一番上の PR の SHA}}" />
-    <meta name="pr-reviewer-brief-generated" content="{{生成日時 ISO 8601}}" />
-    <title>{{PR のタイトルを短く}}</title>
+    <meta name="pr-reviewer-brief-head" content="{{head_sha}}" />
+    <meta name="pr-reviewer-brief-generated" content="{{generated}}" />
+    <title>{{title}}</title>
     <style>
       :root {
         --bg: #ffffff;
@@ -199,6 +195,10 @@
       .dg .edge.added { stroke: var(--added); stroke-width: 2.5; }
       .dg .edge.removed { stroke: var(--removed); stroke-dasharray: 6 4; }
       .dg .arrowhead { fill: var(--muted); }
+      .dg .arrowhead.changed { fill: var(--accent); }
+      .dg .arrowhead.added { fill: var(--added); }
+      .dg .arrowhead.removed { fill: var(--removed); }
+      .dg .label-bg { fill: var(--bg); }
       .dg .badge { fill: var(--accent); }
       .dg text.badge-text { fill: var(--bg); font-size: 12px; font-weight: 700; }
       /* スタック構成: 積み木 */
@@ -234,254 +234,9 @@
   </head>
   <body>
     <div class="layout">
-      <nav>
-        <!-- 消した section のリンクも消す -->
-        <a href="#tldr">TL;DR</a>
-        <a href="#pictures">絵で見る</a>
-        <a href="#stack">スタック構成</a>
-        <a href="#background">前提知識</a>
-        <a href="#changes">変更内容</a>
-        <a href="#interfaces">スキーマ・API・設定</a>
-        <a href="#groups">変更グループ</a>
-        <a href="#manual-test">動作確認手順</a>
-        <a href="#focus">重点的に見る箇所</a>
-        <a href="#unknowns">未確認事項</a>
-      </nav>
+{{nav}}
       <main>
-        <header>
-          <h1>{{PR のタイトル。stack なら stack 全体を表す名前}}</h1>
-          <div class="meta">
-            <span><a href="{{PR の URL}}">{{owner/repo#N}}</a></span>
-            <span>作成者 {{author}}</span>
-            <span><code>{{base}}</code> ← <code>{{head}}</code></span>
-            <span>head <code>{{SHA の先頭 7 文字}}</code></span>
-            <!-- stack のときだけ -->
-            <span class="badge">stack #{{stack 番号}} · {{PR 数}} PR</span>
-            <span>生成 {{生成日時}}</span>
-          </div>
-          <!-- 数値は変更グループから JS で埋める -->
-          <div class="meta">
-            <span class="tag" id="diff-stats"></span>
-            <span class="progress">確認 <span id="progress-text">0/0</span><span class="progress-bar"><span id="progress-fill"></span></span></span>
-          </div>
-        </header>
-
-        <section id="tldr">
-          <!-- 3 行以内。誰の・何の課題を・どう変えるか。専門用語は使わない -->
-          <h2>TL;DR</h2>
-          <div class="tldr">
-            <p>{{1 行目}}</p>
-            <p>{{2 行目}}</p>
-          </div>
-        </section>
-
-        <section id="pictures">
-          <!--
-            文章を読む前に、絵だけで「何が・どこで・どう変わるか」をつかめるようにする章（ELI5 の考え方）。
-            コードベースを何も知らない人が見る前提で、大きな絵と少ない言葉で描く。描き方は SKILL.md の 4 の「絵で見る」。
-            - 絵は 2〜4 枚。1 枚で 1 つの問いに答える（例: この PR は何をする？ どこを触る？ データはどう流れる？）
-            - 箱の名前は画面名・機能名・役割など、知らない人にも分かる言葉で書く。クラス名は small の補足に回す
-            - 変わったところだけ色を付ける（changed=変わる / added=増える / removed=なくなる）。色の意味は凡例で示す
-            - 下の 2 枚は形の例。中身は PR に合わせて描き直し、要らない絵は消す
-          -->
-          <h2>絵で見る</h2>
-          <div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span><span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>
-          <div class="pictures">
-            <figure class="picture wide">
-              <h3>{{この PR は何をする？}}</h3>
-              <p class="lead">{{1 文で}}</p>
-              <svg class="dg" viewBox="0 0 880 250" role="img" aria-label="{{図の説明}}">
-                <defs>
-                  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                    <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
-                  </marker>
-                </defs>
-                <!-- 左: 変更前 -->
-                <text class="title" x="20" y="28">変更前</text>
-                <rect class="zone" x="10" y="40" width="410" height="200" rx="12" />
-                <text class="icon" x="40" y="130">👤</text>
-                <text class="small" x="30" y="160">{{ユーザー}}</text>
-                <rect class="box" x="120" y="95" width="120" height="60" rx="10" />
-                <text x="180" y="130" text-anchor="middle">{{画面}}</text>
-                <rect class="box" x="290" y="95" width="110" height="60" rx="10" />
-                <text x="345" y="130" text-anchor="middle">{{API}}</text>
-                <path class="edge" d="M80,125 H116" marker-end="url(#arrow)" />
-                <path class="edge" d="M240,125 H286" marker-end="url(#arrow)" />
-                <text class="small" x="30" y="220">{{困っていること}}</text>
-                <!-- 右: 変更後 -->
-                <text class="title" x="470" y="28">変更後</text>
-                <rect class="zone" x="460" y="40" width="410" height="200" rx="12" />
-                <text class="icon" x="490" y="130">👤</text>
-                <text class="small" x="480" y="160">{{ユーザー}}</text>
-                <rect class="box changed" x="570" y="95" width="120" height="60" rx="10" />
-                <text x="630" y="130" text-anchor="middle">{{画面}}</text>
-                <rect class="box added" x="740" y="95" width="110" height="60" rx="10" />
-                <text x="795" y="130" text-anchor="middle">{{新しい処理}}</text>
-                <path class="edge" d="M530,125 H566" marker-end="url(#arrow)" />
-                <path class="edge added" d="M690,125 H736" marker-end="url(#arrow)" />
-                <text class="small" x="480" y="220">{{どう良くなるか}}</text>
-              </svg>
-            </figure>
-
-            <figure class="picture">
-              <h3>{{どこを触る？}}</h3>
-              <p class="lead">{{触る場所を 1 文で}}</p>
-              <svg class="dg" viewBox="0 0 440 300" role="img" aria-label="{{図の説明}}">
-                <!-- 層ごとに箱を並べ、触る箱に色を付ける。番号のバッジは変更グループの順番と合わせる -->
-                <text class="small" x="10" y="20">{{画面}}</text>
-                <rect class="box changed" x="10" y="30" width="200" height="56" rx="10" />
-                <text x="110" y="63" text-anchor="middle">{{画面 A}}</text>
-                <rect class="box" x="230" y="30" width="200" height="56" rx="10" />
-                <text x="330" y="63" text-anchor="middle">{{画面 B}}</text>
-                <text class="small" x="10" y="120">{{共通処理}}</text>
-                <rect class="box changed" x="10" y="130" width="420" height="56" rx="10" />
-                <text x="220" y="163" text-anchor="middle">{{共通処理}}</text>
-                <circle class="badge" cx="420" cy="132" r="12" /><text class="badge-text" x="420" y="136" text-anchor="middle">1</text>
-                <text class="small" x="10" y="220">{{データ}}</text>
-                <rect class="box" x="10" y="230" width="420" height="56" rx="10" />
-                <text x="220" y="263" text-anchor="middle">{{テーブル}}</text>
-              </svg>
-              <figcaption>{{補足があれば}}</figcaption>
-            </figure>
-          </div>
-        </section>
-
-        <section id="stack">
-          <!--
-            stack のときだけ。下（default branch 側）から上への順。各 PR は 1〜2 行で、全体のどの部分を受け持つかを書く。
-            ユーザーが指定した PR の li に class="current"、merge 済みの li に class="merged" を付ける。
-          -->
-          <h2>スタック構成</h2>
-          <!-- 積み木: li を下（trunk 側）から順に書く。表示は上が一番上の PR になる -->
-          <ol class="stack-blocks">
-            <li>
-              <div class="stack-head">
-                <a href="{{URL}}">#{{N}}</a><strong>{{タイトル}}</strong><span class="tag">{{Open / Merged / Draft}}</span>
-                <span class="tag">{{changedFiles}} files</span><span class="added">+{{a}}</span><span class="removed">−{{d}}</span>
-              </div>
-              <p class="stack-sum">{{1〜2 行のまとめ。全体のどの部分を受け持つか}}</p>
-            </li>
-          </ol>
-          <div class="stack-trunk">{{trunk のブランチ名}}</div>
-        </section>
-
-        <section id="background">
-          <!-- 変更前（base 側）の話。説明には根拠のファイルと行を .evidence で添える -->
-          <h2>前提知識</h2>
-
-          <h3>今の機能</h3>
-          <p>{{どの画面で、ユーザーの何の操作で、内部のどこを通って動いているか}}</p>
-          <p class="evidence">根拠: <a href="{{base 側のファイルの URL#L10-L20}}"><code>{{path:10-20}}</code></a></p>
-
-          <h3>用語集</h3>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>用語</th><th>意味</th><th>コード上の名前</th></tr></thead>
-              <tbody>
-                <tr><td>{{用語}}</td><td>{{意味}}</td><td><code>{{ClassName / table_name}}</code></td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- スキーマが変わるか、テーブル間の関係が分からないと読めない PR のときだけ。変わるなら変更前・変更後を並べる -->
-          <h3>データモデル</h3>
-          <pre class="mermaid">
-erDiagram
-  {{ENTITY}} ||--o{ {{ENTITY}} : "{{関係}}"
-          </pre>
-        </section>
-
-        <section id="changes">
-          <h2>変更内容</h2>
-
-          <h3>変更前と変更後</h3>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>観点</th><th>変更前</th><th>変更後</th></tr></thead>
-              <tbody>
-                <tr><td>{{ユーザーから見える振る舞い など}}</td><td>{{}}</td><td>{{}}</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!--
-            シーケンス図は原則描かない。3 者以上が絡み順番が結果を左右する、非同期・リトライ・状態遷移があるなど、
-            本文だけでは追えない難しいやりとりのときだけ、その部分に絞って描く。
-          -->
-          <h3>{{難しいやりとりの名前}}</h3>
-          <pre class="mermaid">
-sequenceDiagram
-  participant A as {{}}
-  participant B as {{}}
-  A->>B: {{}}
-  Note over A,B: {{この PR で変わった点}}
-          </pre>
-        </section>
-
-        <section id="interfaces">
-          <!-- migration、API の入出力、設定値、feature flag、権限。無ければ「なし」と 1 行書く -->
-          <h2>スキーマ・API・設定の差分</h2>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>種類</th><th>対象</th><th>変更</th><th>互換性・移行</th></tr></thead>
-              <tbody>
-                <tr><td>{{DB / API / 設定 / flag}}</td><td><code>{{}}</code></td><td>{{}}</td><td>{{}}</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="groups">
-          <!--
-            差分を振る舞いの単位でまとめた変更グループ。読む順に並べる（entry point → 中心のロジック → 周辺 → テスト）。
-            中身は scripts/render_groups.py がマーカーの間に差し込む。手で書かない。
-          -->
-          <h2>変更グループ</h2>
-          <!-- pr-reviewer-brief:groups:start -->
-          <!-- pr-reviewer-brief:groups:end -->
-        </section>
-
-        <section id="manual-test">
-          <h2>動作確認手順</h2>
-          <h3>環境</h3>
-          <p>{{どこで確かめるかと理由。URL、起動コマンド}}</p>
-          <h3>前提</h3>
-          <ul>
-            <li>{{feature flag、権限・ロール、必要なデータ、アカウント}}</li>
-          </ul>
-          <!-- 破壊的な操作がある手順には .callout で注意を添える -->
-          <ol class="steps">
-            <li id="step-1">
-              <h3>{{何を確かめるか}}</h3>
-              <dl class="step">
-                <dt>URL</dt><dd><a href="{{}}"><code>{{}}</code></a></dd>
-                <dt>操作</dt><dd>{{押すボタンの表示名、入力値を 1 手ずつ}}</dd>
-                <dt>期待結果</dt><dd>{{画面の表示、メッセージの文言、Network タブで見る API とステータス}}</dd>
-              </dl>
-              <!-- スクリーンショットがあるときだけ。失敗したときは画像の代わりにエラーを書く。最後に embed_images.py で埋め込む -->
-              <figure>
-                <img src=".pr-reviewer-brief/{{名前}}/screenshots/step-1.png" alt="{{何が写っているか}}" loading="lazy" />
-                <figcaption>{{撮った時点の操作}}（Preview, head {{SHA の先頭 7 文字}}）</figcaption>
-              </figure>
-            </li>
-          </ol>
-        </section>
-
-        <section id="focus">
-          <!-- 評価はせず、なぜ時間をかけるべきかを事実で書く -->
-          <h2>重点的に見る箇所</h2>
-          <ul>
-            <li><a href="{{URL}}"><code>{{path:line}}</code></a> — {{なぜ見るべきか}}</li>
-          </ul>
-        </section>
-
-        <section id="unknowns">
-          <!-- 調べきれなかったこと、--auto で置いた仮定。無ければ section ごと消す -->
-          <h2>未確認事項</h2>
-          <ul>
-            <li>{{}}</li>
-          </ul>
-        </section>
+{{content}}
       </main>
     </div>
     <script>
