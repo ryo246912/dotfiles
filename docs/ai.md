@@ -1300,9 +1300,9 @@ dotfilesで継続管理する場合は、提案された`npx skills add`を直�
 
 ## ブラウザ操作（Chrome DevTools MCP と Playwright）
 
-ブラウザを操作させる手段は、Chrome DevTools MCP と Playwright（`dev-webtest` skill が使う playwright-cli）の
-2 つを用途で使い分けます。Playwright MCP は入れていません（MCP を両方入れるとツール定義でコンテキストを
-多く使い、エージェントがどちらを使うか迷う原因にもなるため）。
+ブラウザを操作させる手段として、Chrome DevTools MCP と Playwright MCP（テストは `dev-webtest` skill が使う
+playwright-cli）を用途で使い分けます。両方の MCP を常に読み込むとツール定義でコンテキストを多く使い、
+エージェントがどちらを使うか迷う原因にもなるため、作業に合わせて片方だけ有効にするのがおすすめです。
 
 | 観点                                 | Chrome DevTools MCP                              | Playwright                                         |
 | ------------------------------------ | ------------------------------------------------ | -------------------------------------------------- |
@@ -1319,16 +1319,19 @@ dotfilesで継続管理する場合は、提案された`npx skills add`を直�
 
 - **デバッグ・調査は Chrome DevTools MCP。** 「ボタンを押すと API が 500 を返す原因を調べて」「コンソールの
   エラーを見て」「表示が遅い理由を調べて」など、人が DevTools を開いてやる作業を任せるときに使います。
-- **シナリオ通りの操作・テストは Playwright。** 画面仕様に沿った動作確認、visual・accessibility・responsive
+- **対話的な画面操作は Playwright MCP。** 「このフォームに入力して送信して」「この手順で画面を進めて」など、
+  操作そのものが目的のときに使います。要素をアクセシビリティツリーで指定するので操作が安定します。
+- **シナリオ通りのテストは Playwright（skill）。** 画面仕様に沿った動作確認、visual・accessibility・responsive
   の確認、Chrome 以外のブラウザでの確認、テストコードへの落とし込みは `dev-webtest` 系 skill
   （[Web UIをtestする](#web-uiをtestする)）を使います。
 
-### Chrome DevTools MCP の設定
+### MCP の設定
 
-sandbox からは `config/sbx/mcp.yml` の `chrome-devtools` を sbx mcp（gateway）経由で使います
+sandbox からは `config/sbx/mcp.yml` の `chrome-devtools` と `playwright` を sbx mcp（gateway）経由で使います
 （登録は `mise run sandbox:mcp-add`。詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#mcp-の扱い)）。
-ホストで起動している Chrome に `--browser-url=http://localhost:9222` で CDP 接続するので、先にホストで
-デバッグポート付きの Chrome を起動しておきます。
+どちらもホストで起動している同じ Chrome に CDP で接続する（`chrome-devtools` は `--browser-url`、`playwright` は
+`--cdp-endpoint` に `http://localhost:9222` を指定）ので、先にホストでデバッグポート付きの Chrome を起動しておきます。
+sandbox へ読み込むときは、作業に合わせて片方だけ指定します（`--static-mcp` / `mise run sandbox:mcp-load`）。
 
 ```bash
 # macOS
