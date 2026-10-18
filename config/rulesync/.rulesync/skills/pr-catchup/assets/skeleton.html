@@ -198,7 +198,7 @@
             <span><code>{{base}}</code> ← <code>{{head}}</code></span>
             <span>head <code>{{SHA の先頭 7 文字}}</code></span>
             <!-- stack のときだけ -->
-            <span class="badge">stack: {{PR 数}} PR</span>
+            <span class="badge">stack #{{stack 番号}} · {{PR 数}} PR</span>
             <span>生成 {{生成日時}}</span>
           </div>
           <!-- 数値は変更グループから JS で埋める -->
@@ -332,9 +332,9 @@ sequenceDiagram
                 <dt>操作</dt><dd>{{押すボタンの表示名、入力値を 1 手ずつ}}</dd>
                 <dt>期待結果</dt><dd>{{画面の表示、メッセージの文言、Network タブで見る API とステータス}}</dd>
               </dl>
-              <!-- スクリーンショットがあるときだけ。失敗したときは画像の代わりにエラーを書く -->
+              <!-- スクリーンショットがあるときだけ。失敗したときは画像の代わりにエラーを書く。最後に embed_images.py で埋め込む -->
               <figure>
-                <img src="screenshots/step-1.png" alt="{{何が写っているか}}" loading="lazy" />
+                <img src=".pr-catchup/{{名前}}/screenshots/step-1.png" alt="{{何が写っているか}}" loading="lazy" />
                 <figcaption>{{撮った時点の操作}}（Preview, head {{SHA の先頭 7 文字}}）</figcaption>
               </figure>
             </li>

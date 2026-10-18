@@ -1,11 +1,11 @@
 ---
 name: pr-catchup
 description: >-
-  GitHub PR の URL か番号を受け取り、コードベースに詳しくないレビュアーでも短時間で内容をつかめる HTML の
+  GitHub PR の URL・番号、または gh stack の stack 番号を受け取り、コードベースに詳しくないレビュアーでも短時間で内容をつかめる HTML の
   キャッチアップ資料を作る skill。前提となる機能・データモデル・用語、変更前後の振る舞い、画面での動作確認手順を
   まとめ、差分は意図ごとの変更グループに分けて解説とリスク付きで並べ、グループごとに確認済みを付けながら読めるようにする。
-  オプションで Playwright で Preview 環境のスクリーンショットを撮って手順に貼る。
-  stack PR（分割した PR の連なり）は 1 つの PR とみなして全体を説明し、各 PR は短くまとめる。
+  頼まれれば Playwright で Preview 環境のスクリーンショットを撮って手順に貼る。
+  gh stack の stack（分割した PR の連なり）は 1 つの PR とみなして全体を説明し、各 PR は短くまとめる。
   「この PR の解説を作って」「PR の前提から分かるようにまとめて」「stack 全体を把握したい」など、レビュー前に
   内容をつかみたいときに使う。指摘の洗い出しや draft レビューの投稿は pr-reviewer-comment を使う。
 targets:
@@ -26,45 +26,44 @@ targets:
 3. 前提知識（今の機能・データモデル・用語）を調べる
 4. 変更内容を整理する
 5. 差分を変更グループに分け、解説を付ける
-6. 動作確認手順を書く（オプション: スクリーンショットを撮る）
+6. 動作確認手順を書く（頼まれたらスクリーンショットも撮る）
 7. HTML を書き出し、場所を伝える
 
 ## 引数
 
-`/pr-catchup <PR の URL か番号> [オプション]`
+`/pr-catchup <対象> [--auto]`
 
-| オプション               | 意味                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------- |
-| `--screenshots`          | Preview 環境で動作確認手順のスクリーンショットを撮り、手順に貼る（6 を参照）          |
-| `--preview-url <url>`    | Preview 環境の URL。省略時は PR のコメント・deployment から探す                       |
-| `--storage-state <file>` | ログイン済みの Playwright storage state（`playwright codegen --save-storage` で作る） |
-| `--no-stack`             | stack を辿らず、指定した PR だけを対象にする                                          |
-| `--single-file`          | スクリーンショットを HTML に埋め込み、1 ファイルで共有できるようにする                |
-| `--auto`                 | 非対話モード。ユーザーに質問せず最後まで進める（定期実行用。下の「非対話モード」）    |
-| `--out <dir>`            | 出力先ディレクトリ（既定は 7 を参照）                                                 |
+対象は次のどれか。
 
-番号だけなら、カレントディレクトリのリポジトリ（`gh repo view --json nameWithOwner`）の PR とみなす。
-ユーザーが自然文で「スクショも撮って」などと言った場合も、対応するオプションが指定されたものとして扱う。
+| 書き方                   | 対象                                                           |
+| ------------------------ | -------------------------------------------------------------- |
+| PR の URL、`123`、`#123` | その PR。gh stack の stack に入っていれば、その stack 全体     |
+| `stack 7`、`stack #7`    | gh stack の stack 番号（github.com の stack の UI に出る番号） |
+
+番号だけなら PR 番号とみなす（stack 番号と PR 番号はどちらも数字なので、stack 番号のときは `stack` を付けてもらう）。
+リポジトリはカレントディレクトリのもの（`gh repo view --json nameWithOwner`）とみなす。
+
+`--auto` は定期実行用の非対話モード（下の「非対話モード」）。それ以外の指定（スクリーンショットを撮るか、ログイン
+情報など）は、ユーザーの自然文から読み取る。
 
 ## 1. 対象の PR と stack を確定する
 
-`--no-stack` が無ければ、まず stack かどうかを調べる。
+gh stack（GitHub の Stacked PRs）の Stacks REST API で、stack とその PR を取る。
 
 ```bash
-python3 <この skill のディレクトリ>/scripts/find_stack.py --pr <N> [--repo owner/name]
+python3 <この skill のディレクトリ>/scripts/get_stack.py --stack <stack 番号> [--repo owner/name]
+python3 <この skill のディレクトリ>/scripts/get_stack.py --pr <PR 番号> [--repo owner/name]
 ```
 
-base / head ブランチの連なり（PR の base が別の PR の head になっている）を上下に辿り、下（default branch 側）から
-上への順で JSON を返す。`prs` が 2 件以上なら stack として扱う。
+PR を下（trunk 側）から上への順で JSON に出す。`is_stack` が false（stack に入っていない、または repository で
+Stacked PRs が有効でない）なら、その PR 単体として進める。
 
-- `warnings` に分岐（1 つの PR の上に複数の PR が乗っている）があれば、`--auto` でなければユーザーにどの枝を
-  対象にするか聞く。`--auto` なら指定した PR を含む枝だけを対象にし、残りは「未確認事項」に書く
-- merge 済みの PR は stack の一部として表に載せるが、差分は base に入っているので全体の差分には含めない
-- Graphite などの stack ツールが PR 本文に stack の一覧を書いていれば、それと突き合わせる。食い違えば本文の一覧を
-  優先し、食い違ったことを「未確認事項」に書く
+- merge 済みの PR は stack の一部として表に載せるが、差分は trunk に入っているので全体の差分には含めない
+  （`diff_base` が、まだ merge されていない一番下の PR の base になっている）
+- `warnings` があれば、その内容を「未確認事項」に書く
 
 **stack の扱い方**: stack 全体を 1 つの PR とみなして読む。資料の主役は stack 全体の説明で、各 PR は
-「スタック構成」の表で 1〜2 行にまとめるだけにする。ユーザーが指定した PR は表で強調する。
+「スタック構成」の表で 1〜2 行にまとめるだけにする。ユーザーが PR 番号で指定したなら、その PR を表で強調する。
 
 ## 2. PR の情報と差分を集める
 
@@ -79,12 +78,12 @@ gh pr checks <N>
 カレントディレクトリが対象リポジトリなら手元で取る（ファイルも読めるので、こちらを優先する）。
 
 ```bash
-git fetch origin <stack_base> pull/<一番上の PR>/head
-git diff --stat origin/<stack_base>...FETCH_HEAD
-git diff origin/<stack_base>...FETCH_HEAD -- <path>
+git fetch origin <diff_base> pull/<一番上の PR>/head
+git diff --stat origin/<diff_base>...FETCH_HEAD
+git diff origin/<diff_base>...FETCH_HEAD -- <path>
 ```
 
-手元に無ければ `gh api repos/<owner>/<repo>/compare/<stack_base>...<一番上の headRefOid>` を使う。
+手元に無ければ `gh api repos/<owner>/<repo>/compare/<diff_base>...<一番上の headRefOid>` を使う。
 
 - **head の SHA** を控える（stack なら一番上の PR の SHA）。ファイルへのリンクと行番号はすべてこの SHA で書く
 - PR 本文・関連 issue（`closingIssuesReferences`）・関連チケットから、目的・背景・受け入れ条件を拾う
@@ -118,7 +117,7 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
   時間をかけるべき場所。評価はせず、なぜ見るべきかを事実で書く
 - **未確認事項**: 調べきれなかったこと、`--auto` で置いた仮定
 
-### シーケンス図は原則描かない
+### シーケンス図は必要な場合のみ描く
 
 シーケンス図は、**本文だけでは順序や関係が追えない難しいやりとり**があるときだけ描く。目安:
 
@@ -137,7 +136,7 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
 
    ```bash
    git diff origin/<base>...FETCH_HEAD | python3 <この skill のディレクトリ>/scripts/split_hunks.py \
-     --out <出力先>/hunks.json --index
+     --out <作業ディレクトリ>/hunks.json --index
    ```
 
    `--index` で hunk ごとに 1 行の一覧（`h001 path @@ -1,10 +1,13 @@ +3 -2 | 最初の変更行`）が出る。振り分けはこの
@@ -174,9 +173,11 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
 - **破壊的な操作**（削除など）には、テスト用のデータで行うよう注意を添える
 - 1 つの手順は 1 つの確認に対応させ、手順ごとに `id`（`step-1` など）を振る。スクリーンショットとの対応に使う
 
-### オプション: スクリーンショットを撮る（`--screenshots`）
+### スクリーンショットを撮る（頼まれたときだけ）
 
-1. **Preview の URL を決める**。`--preview-url` が無ければ、PR のコメント（Vercel などの bot）と
+ユーザーが「スクショも撮って」などと頼んだときだけ撮る。
+
+1. **Preview の URL を決める**。ユーザーが URL を伝えていればそれを使う。無ければ PR のコメント（Vercel などの bot）と
    `gh api repos/<owner>/<repo>/deployments?sha=<head SHA>` → 各 deployment の statuses の `environment_url` から探す。
    見つからなければ、`--auto` でなければユーザーに聞き、`--auto` なら撮らずに「未確認事項」に書く
 2. **撮影計画の JSON を書く**。動作確認手順の各手順を、URL と操作に落とす。書式は `scripts/screenshot.py` の冒頭を参照
@@ -202,11 +203,11 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
 3. **撮る**
 
    ```bash
-   uv run <この skill のディレクトリ>/scripts/screenshot.py --plan <plan.json> --out-dir <出力先>/screenshots \
-     [--storage-state <file>]
+   uv run <この skill のディレクトリ>/scripts/screenshot.py --plan <作業ディレクトリ>/shots.json \
+     --out-dir <作業ディレクトリ>/screenshots [--storage-state <file>]
    ```
 
-   結果は `<出力先>/screenshots/manifest.json` に、手順ごとの画像のパスと成否が出る。失敗した手順は、エラーを
+   結果は `<作業ディレクトリ>/screenshots/manifest.json` に、手順ごとの画像のパスと成否が出る。失敗した手順は、エラーを
    手順の下に書いて画像なしで載せる（撮り直しは 1 回まで）
 
 撮影のときに守ること:
@@ -214,31 +215,34 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
 - **データを変える操作はしない**。保存・削除・送信など、Preview のデータを書き換えるボタンは押さず、押す直前の
   画面を撮る。ユーザーが明示的に許したときだけ押してよい
 - 個人情報・トークンが映る要素は `mask` で隠す
-- ログインが要る環境で `--storage-state` が無ければ、ログイン画面を撮らずに止め、作り方
-  （`uvx playwright codegen --save-storage=auth.json <url>`）を伝える
+- ログインが要る環境なら、ログイン済みの storage state のファイルをユーザーに聞き、`--storage-state` に渡す。
+  無ければログイン画面を撮らずに止め、作り方（`uvx playwright codegen --save-storage=auth.json <url>`）を伝える
 
 ## 7. HTML を書き出す
 
 `assets/skeleton.html` をコピーし、各 section を埋める。雛形のコメントに、各 section で書くことがある。
 書くことが無い section（stack でない PR の「スタック構成」、図が要らないときの図など）は丸ごと消す。
 
-- **出力先**: `--out` が無ければ `${PR_CATCHUP_DIR:-$HOME/.cache/pr-catchup}/<owner>__<repo>/<名前>/index.html`。
-  `<名前>` は単体の PR なら `pr-<N>`、stack なら `stack-<一番下の N>-<一番上の N>`
+- **出力先**: カレントディレクトリの `./plan/<名前>.html`（`./plan` が無ければ作る）。`<名前>` は単体の PR なら
+  `pr-<N>`、stack なら `stack-<stack 番号>`
+- **作業ディレクトリ**: `hunks.json`・`groups.json`・スクリーンショットなどの途中のファイルは
+  `./plan/.pr-catchup/<名前>/` に置く
 - `<meta name="pr-catchup-head">` に head の SHA（stack なら一番上の PR の SHA）を入れる。定期実行で作り直しの要否を判断するのに使う
 - 図は mermaid で書く（雛形が読み込む）。ER 図・シーケンス図以外の図は基本的に使わない
 - 他の section を埋めたあとで、変更グループを差し込む。ヘッダーのファイル数・hunk 数・確認の進捗は、差し込んだ
   グループから自動で埋まる
 
   ```bash
-  python3 <この skill のディレクトリ>/scripts/render_groups.py --hunks <出力先>/hunks.json \
-    --groups <出力先>/groups.json --html <出力先>/index.html \
+  python3 <この skill のディレクトリ>/scripts/render_groups.py --hunks <作業ディレクトリ>/hunks.json \
+    --groups <作業ディレクトリ>/groups.json --html ./plan/<名前>.html \
     --blob-url https://github.com/<owner>/<repo>/blob/<head SHA>
   ```
 
-- `--single-file` なら、書き出したあとに画像を埋め込む
+- 最後に、スクリーンショットを HTML に埋め込み、1 ファイルで共有できるようにする（撮らなかったときは不要）。
+  埋め込む前の `<img>` は、HTML から見た相対パス `.pr-catchup/<名前>/screenshots/<id>.png` で書いておく
 
   ```bash
-  python3 <この skill のディレクトリ>/scripts/embed_images.py <出力先>/index.html
+  python3 <この skill のディレクトリ>/scripts/embed_images.py ./plan/<名前>.html
   ```
 
 書き出したら、ファイルのパスを伝え、ターミナルにも TL;DR、（stack なら）スタック構成の表、変更グループの一覧
@@ -250,8 +254,8 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 将来、立ち上がった PR に対して定期実行（cron など）で資料を作るためのモード。
 
 - ユーザーに質問しない。決められないことは仮定を置いて進め、仮定を「未確認事項」に書く
-- 出力先に同じ PR の `index.html` があり、`pr-catchup-head` が今の head の SHA と同じなら、何もせず終了する
-- `--screenshots` が付いていても、Preview の URL やログイン情報が自動で得られなければ撮らない
+- 出力先に同じ名前の HTML があり、`pr-catchup-head` が今の head の SHA と同じなら、何もせず終了する
+- スクリーンショットを頼まれていても、Preview の URL やログイン情報が自動で得られなければ撮らない
 - 終わったら、出力したファイルのパスを 1 行だけ出す
 
 ## してはいけないこと
