@@ -186,13 +186,13 @@ git diff origin/<stack_base>...FETCH_HEAD -- <path>
 
 ## 6. HTML を書き出す
 
-`assets/template.html` をコピーし、各 section を埋める。テンプレートのコメントに、各 section で書くことがある。
+`assets/skeleton.html` をコピーし、各 section を埋める。雛形のコメントに、各 section で書くことがある。
 書くことが無い section（stack でない PR の「スタック構成」、図が要らないときの図など）は丸ごと消す。
 
 - **出力先**: `--out` が無ければ `${PR_CATCHUP_DIR:-$HOME/.cache/pr-catchup}/<owner>__<repo>/<名前>/index.html`。
   `<名前>` は単体の PR なら `pr-<N>`、stack なら `stack-<一番下の N>-<一番上の N>`
 - `<meta name="pr-catchup-head">` に head の SHA（stack なら一番上の PR の SHA）を入れる。定期実行で作り直しの要否を判断するのに使う
-- 図は mermaid で書く（テンプレートが読み込む）。ER 図・シーケンス図以外の図は基本的に使わない
+- 図は mermaid で書く（雛形が読み込む）。ER 図・シーケンス図以外の図は基本的に使わない
 - `--single-file` なら、書き出したあとに画像を埋め込む
 
   ```bash
