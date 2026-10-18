@@ -105,11 +105,57 @@ def render_hunk(hunk: dict, note: str | None, blob_url: str | None) -> str:
     )
 
 
+def size_bar(added: int, removed: int, scale: int) -> str:
+    """追加・削除の行数を、scale 行を 100% とした横棒にする。"""
+    add = 100 * added / scale if scale else 0
+    rem = 100 * removed / scale if scale else 0
+    return (
+        f'<span class="sizebar" title="+{added} −{removed}"><span class="add" style="width:{add:.1f}%"></span>'
+        f'<span class="del" style="width:{rem:.1f}%"></span></span>'
+    )
+
+
+def render_file_map(hunks: dict[str, dict], groups: list[dict], numbers: dict[str, int]) -> str:
+    """変更ファイルをディレクトリごとに並べ、ファイルごとの変更量と、どのグループに入っているかを示す。"""
+    files: dict[str, dict] = {}
+    for group in groups:
+        for hunk_id in group["hunks"]:
+            hunk = hunks[hunk_id]
+            entry = files.setdefault(hunk["path"], {"added": 0, "removed": 0, "groups": []})
+            entry["added"] += hunk["added"]
+            entry["removed"] += hunk["removed"]
+            if group["id"] not in [g["id"] for g in entry["groups"]]:
+                entry["groups"].append(group)
+    scale = max((f["added"] + f["removed"] for f in files.values()), default=0)
+    rows, current_dir = [], None
+    for path in sorted(files):
+        directory, _, name = path.rpartition("/")
+        if directory != current_dir:
+            rows.append(f'<div class="dir">{esc(directory or ".")}/</div>')
+            current_dir = directory
+        entry = files[path]
+        chips = "".join(
+            f'<a class="chip risk-{g["risk"]}" href="#group-{esc(g["id"])}">{numbers[g["id"]]}. {esc(g["title"])}</a>'
+            for g in entry["groups"]
+        )
+        rows.append(
+            f'<div class="file"><code title="{esc(path)}">{esc(name)}</code>'
+            f'{size_bar(entry["added"], entry["removed"], scale)}<span class="chips">{chips}</span></div>'
+        )
+    return (
+        f'<details class="file-map"><summary>変更ファイルの地図（{len(files)} files）</summary>{"".join(rows)}</details>'
+    )
+
+
 def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> str:
     groups = [g for g in groups if g["kind"] != "generated"] + [g for g in groups if g["kind"] == "generated"]
+    numbers = {group["id"]: index for index, group in enumerate(groups, start=1)}
+    scale = max((sum(hunks[h]["added"] + hunks[h]["removed"] for h in g["hunks"]) for g in groups), default=0)
     overview, details = [], []
     for group in groups:
         members = [hunks[hunk_id] for hunk_id in group["hunks"]]
+        added = sum(hunk["added"] for hunk in members)
+        removed = sum(hunk["removed"] for hunk in members)
         files = len({hunk["path"] for hunk in members})
         risk = f'<span class="risk risk-{group["risk"]}">{RISK_LABELS[group["risk"]]}</span>'
         kind = f'<span class="tag">{KIND_LABELS[group["kind"]]}</span>'
@@ -118,9 +164,10 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
         count = f'<span class="checkpoint-count">確認ポイント {len(checkpoints)}</span>' if checkpoints else ""
         overview.append(
             f'<li class="group-row risk-border-{group["risk"]}" data-group="{esc(group["id"])}">'
-            f'<a href="#group-{esc(group["id"])}"><span class="group-title">{esc(group["title"])}</span>'
+            f'<a href="#group-{esc(group["id"])}"><span class="group-title">{numbers[group["id"]]}. {esc(group["title"])}</span>'
             f'<span class="group-summary">{esc(group["summary"])}</span></a>'
-            f'<span class="group-tags">{count}{kind}{prs}<span class="tag">{files} files / {len(members)} hunks</span>{risk}'
+            f'<span class="group-tags">{count}{kind}{prs}<span class="tag">{files} files / {len(members)} hunks</span>'
+            f'{size_bar(added, removed, scale)}{risk}'
             f'<span class="done-mark" aria-label="確認済み">✓</span></span></li>'
         )
         impact = f'<p><strong>影響範囲:</strong> {esc(group["impact"])}</p>' if group.get("impact") else ""
@@ -134,7 +181,7 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
         open_attr = "" if group["kind"] == "generated" else " open"
         details.append(
             f'<article class="group risk-border-{group["risk"]}" id="group-{esc(group["id"])}">'
-            f'<header class="group-head"><div>{risk} <h3>{esc(group["title"])}</h3>'
+            f'<header class="group-head"><div>{risk} <h3>{numbers[group["id"]]}. {esc(group["title"])}</h3>'
             f'<p class="intent"><strong>意図:</strong> {esc(group["intent"])}</p>{impact}{checklist}</div>'
             f'<label class="approve"><input type="checkbox" data-group="{esc(group["id"])}" /> 確認済み</label></header>'
             f'<details class="group-diff"{open_attr}><summary>差分 {files} files / {len(members)} hunks</summary>'
@@ -147,6 +194,7 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
     )
     return (
         f'\n<div id="diff-groups" {stats}>'
+        f'{render_file_map(hunks, groups, numbers)}'
         f'<ol class="group-list">{"".join(overview)}</ol>'
         f'<h3 class="sub">変更グループ詳細</h3>{"".join(details)}</div>\n'
     )

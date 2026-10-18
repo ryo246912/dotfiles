@@ -167,11 +167,68 @@
       table.diff tr.del td { background: var(--diff-del-bg); }
       table.diff tr.del td.ln { background: var(--diff-del-ln); }
       table.diff tr.meta td { color: var(--muted); }
+      /* 絵で見る: 図のカード */
+      .pictures { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
+      .picture { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--bg); margin: 0; }
+      .picture > h3 { margin: 0 0 4px; font-size: 16px; }
+      .picture > .lead { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+      .picture > figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+      .picture.wide { grid-column: 1 / -1; }
+      .picture svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+      .picture:not(.wide) svg { max-width: 520px; }
+      /* 横長の絵は、狭い画面で縮めすぎず、カードの中で横にスクロールさせる */
+      .picture.wide { overflow-x: auto; }
+      .picture.wide svg { min-width: 640px; }
+      .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+      .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; border-radius: 3px; border: 2px solid var(--border); background: var(--surface); }
+      .legend .lg-changed::before { border-color: var(--accent); background: var(--highlight); }
+      .legend .lg-added::before { border-color: var(--added); background: var(--diff-add-bg); }
+      .legend .lg-removed::before { border-color: var(--removed); background: var(--diff-del-bg); border-style: dashed; }
+      /* 図の部品（inline SVG の class） */
+      .dg text { fill: var(--text); font: 14px system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+      .dg text.small { font-size: 12px; fill: var(--muted); }
+      .dg text.title { font-size: 15px; font-weight: 700; }
+      .dg text.icon { font-size: 26px; }
+      .dg .box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+      .dg .box.changed { fill: var(--highlight); stroke: var(--accent); stroke-width: 2.5; }
+      .dg .box.added { fill: var(--diff-add-bg); stroke: var(--added); stroke-width: 2.5; }
+      .dg .box.removed { fill: var(--diff-del-bg); stroke: var(--removed); stroke-width: 2; stroke-dasharray: 6 4; }
+      .dg .zone { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 4; }
+      .dg .edge { fill: none; stroke: var(--muted); stroke-width: 2; }
+      .dg .edge.changed { stroke: var(--accent); stroke-width: 2.5; }
+      .dg .edge.added { stroke: var(--added); stroke-width: 2.5; }
+      .dg .edge.removed { stroke: var(--removed); stroke-dasharray: 6 4; }
+      .dg .arrowhead { fill: var(--muted); }
+      .dg .badge { fill: var(--accent); }
+      .dg text.badge-text { fill: var(--bg); font-size: 12px; font-weight: 700; }
+      /* スタック構成: 積み木 */
+      ol.stack-blocks { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column-reverse; gap: 6px; max-width: 720px; }
+      ol.stack-blocks > li { border: 2px solid var(--border); border-radius: 8px; padding: 8px 14px; background: var(--surface); }
+      ol.stack-blocks > li.current { border-color: var(--accent); background: var(--highlight); }
+      ol.stack-blocks > li.merged { opacity: 0.6; border-style: dashed; }
+      ol.stack-blocks > li .stack-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+      ol.stack-blocks > li .stack-sum { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+      .stack-trunk { max-width: 720px; text-align: center; padding: 4px; border-top: 4px solid var(--muted); color: var(--muted); font-size: 13px; }
+      /* 変更量のバーと変更ファイルの地図（render_groups.py が出す） */
+      .sizebar { display: inline-flex; width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); vertical-align: middle; }
+      .sizebar > .add { background: var(--added); }
+      .sizebar > .del { background: var(--removed); }
+      details.file-map { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; }
+      details.file-map > summary { padding: 8px 16px; cursor: pointer; font-weight: 600; }
+      .file-map .dir { padding: 6px 16px 2px; color: var(--muted); font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; border-top: 1px solid var(--border); }
+      .file-map .file { display: grid; grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 2px 16px 2px 32px; font-size: 13px; }
+      .file-map .file code { background: none; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .file-map .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+      .file-map .chip { font-size: 11px; padding: 0 6px; border-radius: 6px; text-decoration: none; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+      .file-map .chip.risk-high { border-color: var(--removed); color: var(--removed); }
+      .file-map .chip.risk-medium { border-color: var(--warn-border); color: var(--risk-medium); }
       @media (max-width: 800px) {
         .layout { display: block; }
         nav { display: none; }
         main { padding: 24px 16px 64px; }
         dl.step { grid-template-columns: minmax(0, 1fr); }
+        .file-map .file { grid-template-columns: minmax(0, 1fr) 80px; padding-left: 16px; }
+        .file-map .chips { grid-column: 1 / -1; }
       }
     </style>
   </head>
@@ -180,6 +237,7 @@
       <nav>
         <!-- 消した section のリンクも消す -->
         <a href="#tldr">TL;DR</a>
+        <a href="#pictures">絵で見る</a>
         <a href="#stack">スタック構成</a>
         <a href="#background">前提知識</a>
         <a href="#changes">変更内容</a>
@@ -217,26 +275,94 @@
           </div>
         </section>
 
+        <section id="pictures">
+          <!--
+            文章を読む前に、絵だけで「何が・どこで・どう変わるか」をつかめるようにする章（ELI5 の考え方）。
+            コードベースを何も知らない人が見る前提で、大きな絵と少ない言葉で描く。描き方は SKILL.md の 4 の「絵で見る」。
+            - 絵は 2〜4 枚。1 枚で 1 つの問いに答える（例: この PR は何をする？ どこを触る？ データはどう流れる？）
+            - 箱の名前は画面名・機能名・役割など、知らない人にも分かる言葉で書く。クラス名は small の補足に回す
+            - 変わったところだけ色を付ける（changed=変わる / added=増える / removed=なくなる）。色の意味は凡例で示す
+            - 下の 2 枚は形の例。中身は PR に合わせて描き直し、要らない絵は消す
+          -->
+          <h2>絵で見る</h2>
+          <div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span><span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>
+          <div class="pictures">
+            <figure class="picture wide">
+              <h3>{{この PR は何をする？}}</h3>
+              <p class="lead">{{1 文で}}</p>
+              <svg class="dg" viewBox="0 0 880 250" role="img" aria-label="{{図の説明}}">
+                <defs>
+                  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                    <path class="arrowhead" d="M0,0 L10,5 L0,10 z" />
+                  </marker>
+                </defs>
+                <!-- 左: 変更前 -->
+                <text class="title" x="20" y="28">変更前</text>
+                <rect class="zone" x="10" y="40" width="410" height="200" rx="12" />
+                <text class="icon" x="40" y="130">👤</text>
+                <text class="small" x="30" y="160">{{ユーザー}}</text>
+                <rect class="box" x="120" y="95" width="120" height="60" rx="10" />
+                <text x="180" y="130" text-anchor="middle">{{画面}}</text>
+                <rect class="box" x="290" y="95" width="110" height="60" rx="10" />
+                <text x="345" y="130" text-anchor="middle">{{API}}</text>
+                <path class="edge" d="M80,125 H116" marker-end="url(#arrow)" />
+                <path class="edge" d="M240,125 H286" marker-end="url(#arrow)" />
+                <text class="small" x="30" y="220">{{困っていること}}</text>
+                <!-- 右: 変更後 -->
+                <text class="title" x="470" y="28">変更後</text>
+                <rect class="zone" x="460" y="40" width="410" height="200" rx="12" />
+                <text class="icon" x="490" y="130">👤</text>
+                <text class="small" x="480" y="160">{{ユーザー}}</text>
+                <rect class="box changed" x="570" y="95" width="120" height="60" rx="10" />
+                <text x="630" y="130" text-anchor="middle">{{画面}}</text>
+                <rect class="box added" x="740" y="95" width="110" height="60" rx="10" />
+                <text x="795" y="130" text-anchor="middle">{{新しい処理}}</text>
+                <path class="edge" d="M530,125 H566" marker-end="url(#arrow)" />
+                <path class="edge added" d="M690,125 H736" marker-end="url(#arrow)" />
+                <text class="small" x="480" y="220">{{どう良くなるか}}</text>
+              </svg>
+            </figure>
+
+            <figure class="picture">
+              <h3>{{どこを触る？}}</h3>
+              <p class="lead">{{触る場所を 1 文で}}</p>
+              <svg class="dg" viewBox="0 0 440 300" role="img" aria-label="{{図の説明}}">
+                <!-- 層ごとに箱を並べ、触る箱に色を付ける。番号のバッジは変更グループの順番と合わせる -->
+                <text class="small" x="10" y="20">{{画面}}</text>
+                <rect class="box changed" x="10" y="30" width="200" height="56" rx="10" />
+                <text x="110" y="63" text-anchor="middle">{{画面 A}}</text>
+                <rect class="box" x="230" y="30" width="200" height="56" rx="10" />
+                <text x="330" y="63" text-anchor="middle">{{画面 B}}</text>
+                <text class="small" x="10" y="120">{{共通処理}}</text>
+                <rect class="box changed" x="10" y="130" width="420" height="56" rx="10" />
+                <text x="220" y="163" text-anchor="middle">{{共通処理}}</text>
+                <circle class="badge" cx="420" cy="132" r="12" /><text class="badge-text" x="420" y="136" text-anchor="middle">1</text>
+                <text class="small" x="10" y="220">{{データ}}</text>
+                <rect class="box" x="10" y="230" width="420" height="56" rx="10" />
+                <text x="220" y="263" text-anchor="middle">{{テーブル}}</text>
+              </svg>
+              <figcaption>{{補足があれば}}</figcaption>
+            </figure>
+          </div>
+        </section>
+
         <section id="stack">
           <!--
             stack のときだけ。下（default branch 側）から上への順。各 PR は 1〜2 行で、全体のどの部分を受け持つかを書く。
-            ユーザーが指定した PR の行に class="current"、merge 済みの行に class="merged" を付ける。
+            ユーザーが指定した PR の li に class="current"、merge 済みの li に class="merged" を付ける。
           -->
           <h2>スタック構成</h2>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>#</th><th>タイトル</th><th>状態</th><th>受け持つ範囲</th><th>規模</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><a href="{{URL}}">#{{N}}</a></td>
-                  <td>{{タイトル}}</td>
-                  <td>{{Open / Merged / Draft}}</td>
-                  <td>{{1〜2 行のまとめ}}</td>
-                  <td>{{changedFiles}} files, <span class="added">+{{a}}</span> <span class="removed">−{{d}}</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <!-- 積み木: li を下（trunk 側）から順に書く。表示は上が一番上の PR になる -->
+          <ol class="stack-blocks">
+            <li>
+              <div class="stack-head">
+                <a href="{{URL}}">#{{N}}</a><strong>{{タイトル}}</strong><span class="tag">{{Open / Merged / Draft}}</span>
+                <span class="tag">{{changedFiles}} files</span><span class="added">+{{a}}</span><span class="removed">−{{d}}</span>
+              </div>
+              <p class="stack-sum">{{1〜2 行のまとめ。全体のどの部分を受け持つか}}</p>
+            </li>
+          </ol>
+          <div class="stack-trunk">{{trunk のブランチ名}}</div>
         </section>
 
         <section id="background">
