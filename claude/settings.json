@@ -80,6 +80,7 @@
     "pr-reviewer-comment-crit": "name-only",
     "pr-author-fix": "name-only",
     "pr-reviewer-comment": "name-only",
+    "pr-catchup": "name-only",
     "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",
