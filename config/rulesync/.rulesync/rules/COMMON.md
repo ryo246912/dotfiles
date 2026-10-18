@@ -71,8 +71,8 @@ globs:
 ## 過去の指摘から学ぶ（agent-lessons）
 
 - SessionStart で「agent-lessons: 過去のレビュー指摘から学んだ教訓」が注入されていたら、該当する作業ではそれに従って実装する
-- 実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
-- レビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
+- Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
+- Claude Code / Codex CLI でレビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
 
 ## PR作成後のレビュー対応
 

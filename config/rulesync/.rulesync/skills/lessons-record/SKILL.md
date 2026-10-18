@@ -57,7 +57,7 @@ source: <received|given>
 scope_key: <host>/<owner>/<repo>
 category: <category>
 evidence: <URL>
-globs: [<glob>, ...]
+globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると YAML のエイリアスとして読まれる）
 ---
 ## Rule
 <タイトルと同じ 1 文。必要なら 1〜2 行の補足>

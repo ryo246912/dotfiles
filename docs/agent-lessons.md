@@ -40,9 +40,10 @@ commit 前に secretlint を通す。
 
 ```text
 agent-lessons/
-  targets.yml                    # 収集する個人のリポジトリと前回の実行日
+  targets.yml                    # 収集する個人のリポジトリ
   targets.<name>.yml             # 会社などのリポジトリ（gitignore。その端末にだけ置く）
   targets.work.yml.example       # targets.<name>.yml の雛形
+  harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
 ```
@@ -68,8 +69,8 @@ agent-lessons/
 
 ### targets.yml と targets.<name>.yml
 
-収集するリポジトリは 2 種類のファイルに分けて書く。どちらも `lessons-harvest` が読み、ファイルごとに
-`last_harvest`（前回の実行日）を持つ。
+収集するリポジトリは 2 種類のファイルに分けて書く。どちらも `lessons-harvest` が読む。前回の実行日はファイル名ごとに
+`harvest-state.yml` に持ち、週次 PR がマージされたときだけ進む（PR を閉じれば、その期間はもう一度集め直される）。
 
 | ファイル             | 書くもの             | git                                      |
 | -------------------- | -------------------- | ---------------------------------------- |
@@ -85,7 +86,6 @@ cp targets.work.yml.example targets.work.yml   # xxx を実際の値に置き換
 ```
 
 ```yaml
-last_harvest:
 repos:
   - repo: github.com/acme/api
     team: true
@@ -107,6 +107,7 @@ scope_key: global
 category: doc-behavior-drift
 count: 4 # 観察の数
 prs: 3 # 異なる PR の数
+sessions: 0 # ユーザーに訂正された異なるセッションの数
 reviewers: 2 # team のときだけ。異なる指摘者の数（名前は残さない）
 first_seen: 2026-10-14
 last_seen: 2026-10-16
@@ -141,13 +142,16 @@ globs: ["docs/**", "**/*.example"]
 | `enforced`  | lint・hook・テストで強制済み（手で付ける）    | しない |
 | `retired`   | 90 日以上出ていない、または他の教訓に統合した | しない |
 
-| 変更                       | 条件                                                                                |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| candidate → active         | `received` / `given`: 異なる 2 PR 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner               | 同じ owner の 2 リポジトリ以上で同じ教訓                                            |
-| owner → global             | 2 owner 以上で同じ教訓（社名・サービス名を取り除いてから）                          |
-| active → retired           | `last_seen` から 90 日                                                              |
-| lint / hook への格上げ候補 | active になった後も 2 回以上指摘された                                              |
+| 変更               | 条件                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| candidate → active | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
+| repo → owner       | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
+| owner → global     | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
+
+会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
+リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
+| active → retired | `last_seen` から 90 日 |
+| lint / hook への格上げ候補 | active になった後も 2 回以上指摘された |
 
 ## セットアップ
 
@@ -163,11 +167,12 @@ gh repo create agent-lessons --private --description "Lessons learned from PR re
 
 既定値を変えるときだけ、端末ローカルのシェル設定（dotfiles に commit しない場所）で環境変数を設定する。
 
-| 環境変数                | 既定値                                           | 用途                       |
-| ----------------------- | ------------------------------------------------ | -------------------------- |
-| `AGENT_LESSONS_REPO`    | なし（`lessons:setup` で必須）                   | 初回の clone 元            |
-| `AGENT_LESSONS_DIR`     | `${XDG_DATA_HOME:-~/.local/share}/agent-lessons` | clone 先                   |
-| `AGENT_LESSONS_PROJECT` | `agent-lessons`                                  | Basic Memory の project 名 |
+| 環境変数             | 既定値                                           | 用途            |
+| -------------------- | ------------------------------------------------ | --------------- |
+| `AGENT_LESSONS_REPO` | なし（`lessons:setup` で必須）                   | 初回の clone 元 |
+| `AGENT_LESSONS_DIR`  | `${XDG_DATA_HOME:-~/.local/share}/agent-lessons` | clone 先        |
+
+Basic Memory の project 名は `agent-lessons` で固定している。
 
 clone 先を `~/.config` の下にしないこと。mise の track モードが `~/.config` の一部を dotfiles に記録するため
 （[docs/mise.md](mise.md) の track の節）。
@@ -179,7 +184,8 @@ mise --cd "$HOME" run rulesync:generate   # SessionStart hook と skill を配�
 ```
 
 `lessons:setup` は clone、空のリポジトリなら targets の雛形の配置、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
-semantic search を切る・自動更新を切る）、インデックス作成を行う。
+semantic search を切る・自動更新を切る）、インデックス作成を行う。この 2 つの設定は Basic Memory 全体に効くため、
+Basic Memory を他の用途でも使っていて semantic search が要るなら、`lessons:setup` のあとで戻す。
 
 ### 3. 週次の定期タスクを作る（集計を回す端末で 1 回）
 
@@ -243,6 +249,8 @@ mise run lessons:sync
 - **devcontainer・sandbox の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
+- **注入する教訓は 40 件まで。** コンテキストを抑えるため。超えた分は push 前の `pr-author-self-review` が diff に
+  関係するものだけ読む。常に 40 件を超えるなら、lint などで強制できる教訓を `enforced` にして減らす
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに

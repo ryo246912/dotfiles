@@ -34,14 +34,23 @@ gh pr list --state open --json url,headRefName \
 ## 1. 対象と前回の実行日を読む
 
 `<dir>/targets.yml`（個人のリポジトリ。commit 済み）と `<dir>/targets.*.yml`（会社などのリポジトリ。gitignore 済みで
-その端末にだけある）をすべて読む。ファイルごとに `last_harvest` を持つ。
+その端末にだけある）をすべて読む。
 
 ```yaml
-last_harvest: 2026-10-10 # 前回の実行日。空なら 90 日前から集める
 repos:
   - repo: github.com/<company>/<repo>
     team: true # 自分が関わっていない PR の指摘（team）も集める
 ```
+
+前回の実行日は `<dir>/harvest-state.yml`（commit 済み）に targets ファイル名ごとに持つ。無いファイルは 90 日前から集める。
+
+```yaml
+targets.yml: 2026-10-10
+targets.work.yml: 2026-10-10
+```
+
+日付を targets ファイルではなくここに置くのは、週次 PR と一緒にマージされたときだけ進め、PR を閉じたら戻るようにするため
+（gitignore された `targets.*.yml` に書くと、マージされなかった期間の指摘が失われる）。
 
 ## 2. PR とレビュースレッドを集める
 
@@ -49,26 +58,31 @@ repos:
 
 ```bash
 gh api user --hostname <host> --jq .login
-gh pr list -R <host>/<owner>/<repo> --state merged --search "merged:>=<last_harvest>" \
-  --limit 200 --json number,author,url
+gh pr list -R <host>/<owner>/<repo> --state merged --search "merged:<前回の実行日>..<今日>" \
+  --limit 1000 --json number,author,url
 ```
 
-`team: true` でないリポジトリでは、作者が自分の PR と、自分がレビューした PR（`--search "merged:>=<日付> reviewed-by:@me"`）だけにする。
+件数が `--limit` と同じになったら取りこぼしているので、期間を半分ずつに分けて取り直し、全件を集める
+（取りこぼしたまま実行日を進めると、その PR の指摘は二度と集まらない）。
 
-PR ごとにスレッドを取る。
+`team: true` でないリポジトリでは、作者が自分の PR と、自分がレビューした PR（`--search` に `reviewed-by:@me` を足す）だけにする。
+
+PR ごとにスレッドを取る。`--paginate` がスレッドを `endCursor` で最後のページまで辿る。
 
 ```bash
-gh api graphql --hostname <host> -F owner=<owner> -F name=<repo> -F number=<n> -f query='
-query($owner: String!, $name: String!, $number: Int!) {
+gh api graphql --hostname <host> --paginate --slurp -F owner=<owner> -F name=<repo> -F number=<n> -f query='
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       author { login }
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $endCursor) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           isResolved
           isOutdated
           path
-          comments(first: 20) {
+          comments(first: 100) {
+            totalCount
             nodes { author { login __typename } body url }
           }
         }
@@ -77,6 +91,8 @@ query($owner: String!, $name: String!, $number: Int!) {
   }
 }'
 ```
+
+`comments.totalCount` が 100 を超えるスレッドは、採用されたかを判定できないので捨てる。
 
 ## 3. スレッドを分類し、採用されたものだけを残す
 
@@ -115,41 +131,49 @@ git switch -c weekly/$(date +%F)
 `status: pending` の観察を 1 件ずつ処理する。
 
 1. 同じ `source` で、`scope_key` が同じかその上位（owner・global）の教訓（`type: lesson`）から、同じ種類の
-   ものを探す（`basic-memory tool search-notes --type lesson --meta source=<source> --project agent-lessons --json`
-   でタイトルを見て、近いものは `basic-memory tool read-note <permalink> --project agent-lessons --json` の
-   `frontmatter.category` と本文で判断する）
-2. あれば: `count` を 1 増やし、`last_seen` を更新し、`## Evidence` に URL と日付を追記する。`prs`（異なる PR の数）、
+   ものを探す（`basic-memory tool search-notes --type lesson --meta source=<source> --project agent-lessons --page-size 100 --json`
+   でタイトルを見る。結果の `has_more` が true なら `--page` を増やして最後まで読む。近いものは
+   `basic-memory tool read-note <permalink> --project agent-lessons --json` の `frontmatter.category` と本文で判断する）
+2. あれば: `count` を 1 増やし、`last_seen` を更新し、`## Evidence` に URL（訂正なら日付と要旨）と日付を追記する。
+   根拠が PR なら `prs`（異なる PR の数）、ユーザーの訂正なら `sessions`（異なるセッションの数）、
    `team` なら `reviewers`（異なる指摘者の数。名前は残さない）も更新する
-3. 無ければ: `lessons/<source>/<scope_key>/` に `status: candidate`・`count: 1` で新しく作る
+3. 無ければ: `lessons/<source>/<scope_key>/` に `status: candidate`・`count: 1` で新しく作る。根拠に応じて
+   `prs: 1` か `sessions: 1` を、`team` なら `reviewers: 1` も付ける
 4. 観察の `status` を `processed` にする
 
 教訓は**項目単位で追記・修正し、ファイル全体を書き直さない**（何度も書き直すと根拠や細部が失われるため）。
 
 ## 6. 昇格・失効を判定する
 
-| 変更                       | 条件                                                                                                        |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| candidate → active         | `received` / `given`: `prs` が 2 以上。`team`: `prs` が 3 以上、または `reviewers` が 2 以上                |
-| repo → owner へ広げる      | 同じ owner の異なる 2 リポジトリ以上で同じ教訓がある。`lessons/<source>/<host>/<owner>/` に統合する         |
-| owner → global へ広げる    | 異なる 2 owner 以上で同じ教訓がある。**社名・サービス名・リポジトリ名を取り除いて**から `global` に統合する |
-| active → retired           | `last_seen` が 90 日以上前                                                                                  |
-| lint / hook への格上げ候補 | active になった後に 2 回以上また指摘された（文章では防げていない）。PR 本文の「格上げ候補」に挙げる         |
+| 変更                       | 条件                                                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| candidate → active         | `received` / `given`: `prs` と `sessions` の合計が 2 以上。`team`: `prs` が 3 以上、または `reviewers` が 2 以上 |
+| repo → owner へ広げる      | 同じ owner の異なる 2 リポジトリ以上で同じ教訓がある。`lessons/<source>/<host>/<owner>/` に統合する              |
+| owner → global へ広げる    | `targets.yml`（個人）のリポジトリだけを根拠に、異なる 2 owner 以上で同じ教訓がある                               |
+| active → retired           | `last_seen` が 90 日以上前                                                                                       |
+| lint / hook への格上げ候補 | active になった後に 2 回以上また指摘された（文章では防げていない）。PR 本文の「格上げ候補」に挙げる              |
+
+`targets.*.yml`（会社など）のリポジトリが根拠に含まれる教訓は、**自動では `global` に広げない**。`global` は個人の
+リポジトリにも注入されるため。同じ教訓が個人と会社の両方で出ているなど広げる価値があるものは、社名・サービス名・
+リポジトリ名を取り除いた文面案を PR 本文の「要確認」に書き、ユーザーの判断に任せる。
 
 統合して不要になった教訓は削除せず `status: retired` にし、`## Evidence` に統合先を書く。
 `enforced`（lint・hook で強制済み）はユーザーが手で付ける。
 
 ## 7. PR を出す
 
+まず `harvest-state.yml` の、読んだ targets ファイルすべての日付を今日にする。そのあとで stage し、secretlint を通す。
+
 ```bash
 git add --all
-git diff --cached --name-only -z \
+git diff --cached --no-renames --name-only --diff-filter=ACM -z \
   | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
 ```
 
-secretlint が通ったら、読んだ targets ファイルすべての `last_harvest` を今日の日付にし、commit・push して PR を作る
-（`targets.*.yml` は gitignore 済みなので、その端末でだけ更新される）。
+secretlint が通ったら commit・push し、PR を作る。
 
 ```bash
+git commit -m "weekly: lessons $(date +%F)"
 git push -u origin HEAD
 gh pr create --title "weekly: lessons $(date +%F)" --body "<下の本文>"
 git switch main

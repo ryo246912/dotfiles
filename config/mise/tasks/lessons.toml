@@ -7,7 +7,6 @@ run = '''
 set -euo pipefail
 repo="${AGENT_LESSONS_REPO:?AGENT_LESSONS_REPO に <owner>/agent-lessons を設定してください}"
 dir="${AGENT_LESSONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons}"
-project="${AGENT_LESSONS_PROJECT:-agent-lessons}"
 
 if [ ! -d "$dir/.git" ]; then
   gh repo clone "$repo" "$dir"
@@ -27,16 +26,20 @@ if [ ! -f "$dir/targets.yml" ]; then
   git -C "$dir" push --quiet -u origin HEAD
 fi
 
-if ! basic-memory tool list-projects 2>/dev/null | jq -e --arg p "$project" '.projects[]? | select(.name == $p)' >/dev/null; then
-  basic-memory project add "$project" "$dir"
+registered=$(basic-memory tool list-projects | jq -r '.projects[]? | select(.name == "agent-lessons") | .path')
+if [ -z "$registered" ]; then
+  basic-memory project add agent-lessons "$dir"
+elif [ "$(realpath "$registered")" != "$(realpath "$dir")" ]; then
+  echo "error: Basic Memory の agent-lessons は $registered を指しています。basic-memory project remove agent-lessons で外してから再実行してください" >&2
+  exit 1
 fi
 
 # 教訓は日本語で書くため、英語専用の既定 embedding model（bge-small-en）は使わず、メタデータと全文検索で引く。
-# 初回の model ダウンロードも不要になる。
+# 初回の model ダウンロードも不要になる。この設定は project ごとではなく Basic Memory 全体に効く。
 basic-memory config set semantic_search_enabled false
 # バージョンは mise で固定しているため、Basic Memory 自身の自動更新は止める。
 basic-memory config set auto_update false
-basic-memory reindex --search -p "$project"
+basic-memory reindex --search -p agent-lessons
 '''
 shell = "bash -c"
 
@@ -45,7 +48,6 @@ description = "Commit local agent-lessons changes, pull, push, and reindex Basic
 run = '''
 set -euo pipefail
 dir="${AGENT_LESSONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons}"
-project="${AGENT_LESSONS_PROJECT:-agent-lessons}"
 cd "$dir"
 
 branch=$(git branch --show-current)
@@ -56,12 +58,12 @@ fi
 
 git add --all
 if ! git diff --cached --quiet; then
-  git diff --cached --name-only --diff-filter=AM -z \
+  git diff --cached --no-renames --name-only --diff-filter=ACM -z \
     | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
 git pull --rebase --quiet
 git push --quiet
-basic-memory reindex --search -p "$project"
+basic-memory reindex --search -p agent-lessons
 '''
 shell = "bash -c"

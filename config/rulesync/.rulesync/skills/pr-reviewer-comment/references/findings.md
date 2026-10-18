@@ -9,8 +9,10 @@ agent-lessons が設定済み（`basic-memory tool list-projects` に `agent-les
 filter=$(jq -cn --argjson keys "$(agent-lessons-context --scope-keys)" \
   '{scope_key: {"$in": $keys}, source: {"$in": ["given", "team"]}}')
 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
-  --project agent-lessons --page-size 50 --json
+  --project agent-lessons --page-size 100 --json
 ```
+
+結果の `has_more` が true なら、`--page` を増やして最後まで読む。
 
 diff だけを読まない。変更した関数の呼び出し元・呼び出し先、同じデータを読む別の経路（取得と保存、新旧の API など）、追加されたテストまで読む。`/code-review` を併用してよいが、その出力は**候補**として扱い、下の裏取りを通す。
 

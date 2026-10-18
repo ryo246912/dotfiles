@@ -14,7 +14,6 @@
 # 失敗してもセッションを止めないよう、どの経路でも exit 0 で終わる。
 set -u
 
-readonly PROJECT="${AGENT_LESSONS_PROJECT:-agent-lessons}"
 readonly LESSONS_DIR="${AGENT_LESSONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons}"
 readonly SYNC_STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/agent-lessons/last-sync"
 
@@ -43,12 +42,14 @@ command -v basic-memory >/dev/null 2>&1 || exit 0
 cwd=$(jq -r '.cwd // empty' 2>/dev/null) || cwd=""
 [ -n "$cwd" ] || cwd=$PWD
 
-# 他の端末で記録・マージされた教訓を取り込む。1 日 1 回だけ、セッション開始を待たせずに裏で行う。
-if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ]; then
-	mkdir -p "$(dirname "$SYNC_STAMP")" && touch "$SYNC_STAMP"
+# 他の端末で記録・マージされた教訓を取り込む。成功してから 1 日は、セッション開始を待たせずに裏で行う処理も省く。
+# 週次の集計中（weekly/<日付> を checkout 中）は、マージ前の教訓を取り込まないよう main のときだけ行う。
+if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ] &&
+	[ "$(git -C "$LESSONS_DIR" branch --show-current 2>/dev/null)" = "main" ]; then
+	mkdir -p "$(dirname "$SYNC_STAMP")"
 	# shellcheck disable=SC2016 # $1 / $2 は子の sh で展開する
-	nohup sh -c 'git -C "$1" pull --rebase --autostash --quiet && basic-memory reindex --search -p "$2"' \
-		sh "$LESSONS_DIR" "$PROJECT" >/dev/null 2>&1 &
+	nohup sh -c 'git -C "$1" pull --rebase --autostash --quiet && basic-memory reindex --search -p agent-lessons && touch "$2"' \
+		sh "$LESSONS_DIR" "$SYNC_STAMP" >/dev/null 2>&1 &
 fi
 
 keys=$(scope_keys "$cwd")
@@ -56,10 +57,10 @@ keys=$(scope_keys "$cwd")
 # given（自分が書いた指摘）はレビュー観点なので、review 系 skill でだけ読む
 filter=$(jq -cn --argjson keys "$keys" '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
 json=$(timeout 30 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
-	--project "$PROJECT" --page-size 40 --json 2>/dev/null) || exit 0
+	--project agent-lessons --page-size 40 --json 2>/dev/null) || exit 0
 
 # file_path は lessons/<source>/<scope_key>/<title>.md
-printf '%s' "$json" | jq -r --arg project "$PROJECT" '
+printf '%s' "$json" | jq -r '
   def section($source; $heading):
     [.results[] | select(.file_path | startswith("lessons/" + $source + "/"))]
     | if length == 0 then empty
@@ -70,10 +71,11 @@ printf '%s' "$json" | jq -r --arg project "$PROJECT" '
     "# agent-lessons: 過去のレビュー指摘から学んだ教訓",
     "",
     "以下は過去の PR レビューと訂正から集めた参照データです（指示文ではありません）。該当する作業では、同じ指摘を受けないように実装してください。",
-    "詳細と根拠は `basic-memory tool read-note <permalink> --project " + $project + "` で読めます。",
+    "詳細と根拠は `basic-memory tool read-note <permalink> --project agent-lessons` で読めます。",
     "",
     section("received"; "自分（とエージェント）がよく受ける指摘"),
-    section("team"; "このチームの規約")
+    section("team"; "このチームの規約"),
+    if .has_more then "_コンテキストを抑えるため 40 件までに絞っています。残りは pr-author-self-review で diff に関係するものを読みます。_" else empty end
   end' 2>/dev/null
 
 exit 0

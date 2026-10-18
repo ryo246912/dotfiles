@@ -31,8 +31,9 @@ targets:
 
 - エージェントがユーザーから伝えられたタスクの概要を分析する
 - タスクの概要が`00-spec-*.md`等に保存されている場合は、その内容を参照する
-- SessionStart で注入された agent-lessons の教訓のうち、変更予定のファイルに関係するものを
-  `basic-memory tool read-note <permalink> --project agent-lessons` で読み、「制約条件」に入れる
+- SessionStart で注入された agent-lessons の各教訓を、permalink ごとに
+  `basic-memory tool read-note <permalink> --project agent-lessons --json` で読み、`frontmatter.globs` が空か
+  変更予定のファイルに一致するものだけを「制約条件」に入れる
 - 以下の観点で要件を整理する
   - タスクの目的・背景
   - 満たすべき機能要件
