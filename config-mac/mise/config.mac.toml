@@ -9,7 +9,11 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 # Docker Sandboxes (sbx)。Apple Silicon 専用
 "github:docker/sbx-releases" = { version = "0.48.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 "github:hzqtc/taproom"       = { version = "0.6.2", bin = "taproom" }
-"http:terminal-browser"      = { version = "0.13.4", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
+# fsearch（macOS 専用の全ディスクファイル検索。名前の fuzzy 検索と内容の grep）。Apple Silicon 専用。
+# 初回の検索で daemon が起動して索引を作る。常駐させる場合は `fsearch install --login`
+# （~/.local/bin/fsearch へコピーして login agent を登録。Full Disk Access を ~/.local/bin/fsearch に付与する）。
+"github:noahdunnagan/fsearch" = { version = "0.2.1", platforms.macos-arm64 = { asset_pattern = "fsearch-aarch64-apple-darwin.tar.gz" } }
+"http:terminal-browser"       = { version = "0.13.4", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
 # silicon は mac 専用（config.mac.toml の brew:silicon, native arm64。harfbuzz 等の依存も
