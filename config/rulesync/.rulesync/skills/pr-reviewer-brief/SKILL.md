@@ -164,8 +164,8 @@ git diff origin/<diff_base>...FETCH_HEAD -- <path>
 
 ユーザーがそのまま手を動かせる粒度で、**URL と操作を 1 つずつ**書き下す。
 
-- **環境**: どこで確かめるかと、その理由。FE だけの変更なら Preview、BE を含み API の Preview が無ければローカル
-  （起動コマンド、PR の head への切り替え、ポート、必要な設定）。stack なら一番上の PR の環境で確かめる
+- **環境**: 基本はローカル（localhost）。PR の head への切り替え、起動コマンド、ポート、必要な設定を書く。PR に
+  Preview 環境があれば、その URL も併記する。stack なら一番上の PR の head で確かめる
 - **前提**: feature flag、権限・ロール、必要なデータ、アカウント
 - **不具合修正なら**、修正前の環境で不具合を再現する手順を先に置く
 - **各手順**: 開く URL → 操作（押すボタンの表示名、入力値）→ 期待結果（画面の表示、メッセージの文言、Network タブで
@@ -177,14 +177,18 @@ git diff origin/<diff_base>...FETCH_HEAD -- <path>
 
 ユーザーが「スクショも撮って」などと頼んだときだけ撮る。
 
-1. **Preview の URL を決める**。ユーザーが URL を伝えていればそれを使う。無ければ PR のコメント（Vercel などの bot）と
-   `gh api repos/<owner>/<repo>/deployments?sha=<head SHA>` → 各 deployment の statuses の `environment_url` から探す。
-   見つからなければ、`--auto` でなければユーザーに聞き、`--auto` なら撮らずに「未確認事項」に書く
+1. **撮る先の URL を決める**。ユーザーが URL を伝えていればそれを使う。無ければ次の順で決める
+   - **localhost（多くはこちら）**: 手元で PR の head のアプリが起動していれば、その URL（`http://localhost:<port>`）を使う。
+     起動していなければ、6 の「環境」に書いた手順（PR の head への切り替え、起動コマンド）で起動してよいかユーザーに聞く。
+     起動コマンドはリポジトリの README・`package.json` の scripts・mise の task などで確かめる
+   - **Preview**: PR のコメント（Vercel などの bot）と `gh api repos/<owner>/<repo>/deployments?sha=<head SHA>` → 各
+     deployment の statuses の `environment_url` から探す
+   - どちらも決まらなければ、`--auto` でなければユーザーに聞き、`--auto` なら撮らずに「未確認事項」に書く
 2. **撮影計画の JSON を書く**。動作確認手順の各手順を、URL と操作に落とす。書式は `scripts/screenshot.py` の冒頭を参照
 
    ```json
    {
-     "base_url": "https://pr-123.preview.example.com",
+     "base_url": "http://localhost:3000",
      "shots": [
        {
          "id": "step-1",
@@ -204,19 +208,11 @@ git diff origin/<diff_base>...FETCH_HEAD -- <path>
 
    ```bash
    uv run <この skill のディレクトリ>/scripts/screenshot.py --plan <作業ディレクトリ>/shots.json \
-     --out-dir <作業ディレクトリ>/screenshots [--storage-state <file>]
+     --out-dir <作業ディレクトリ>/screenshots
    ```
 
    結果は `<作業ディレクトリ>/screenshots/manifest.json` に、手順ごとの画像のパスと成否が出る。失敗した手順は、エラーを
    手順の下に書いて画像なしで載せる（撮り直しは 1 回まで）
-
-撮影のときに守ること:
-
-- **データを変える操作はしない**。保存・削除・送信など、Preview のデータを書き換えるボタンは押さず、押す直前の
-  画面を撮る。ユーザーが明示的に許したときだけ押してよい
-- 個人情報・トークンが映る要素は `mask` で隠す
-- ログインが要る環境なら、ログイン済みの storage state のファイルをユーザーに聞き、`--storage-state` に渡す。
-  無ければログイン画面を撮らずに止め、作り方（`uvx playwright codegen --save-storage=auth.json <url>`）を伝える
 
 ## 7. HTML を書き出す
 
@@ -255,7 +251,7 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 
 - ユーザーに質問しない。決められないことは仮定を置いて進め、仮定を「未確認事項」に書く
 - 出力先に同じ名前の HTML があり、`pr-reviewer-brief-head` が今の head の SHA と同じなら、何もせず終了する
-- スクリーンショットを頼まれていても、Preview の URL やログイン情報が自動で得られなければ撮らない
+- スクリーンショットを頼まれていても、起動済みの localhost か Preview の URL が無ければ撮らない（アプリを起動しない）
 - 終わったら、出力したファイルのパスを 1 行だけ出す
 
 ## してはいけないこと
@@ -263,4 +259,3 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 - GitHub へ投稿しない（コメント・レビュー・ラベル・状態の変更を含む）。他人のブランチへ commit / push しない
 - コードを編集しない（調べるための読み取り・テスト実行は可）
 - 根拠のない「今はこう動く」を書かない
-- スクリーンショットのために Preview のデータを書き換えない
