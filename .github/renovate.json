@@ -60,6 +60,12 @@
       "enabled": false
     },
     {
+      "description": "mergiraf は Codeberg 配布で mise manager の aqua 解決（GitHub 前提）では追えないため、customManager（gitea-releases）側で更新する",
+      "matchManagers": ["mise"],
+      "matchDepNames": ["aqua:codeberg.org/mergiraf/mergiraf"],
+      "enabled": false
+    },
+    {
       "matchPackageNames": ["docker/cli", "aqua:docker/cli"],
       "matchUpdateTypes": ["patch"],
       "enabled": false
@@ -233,6 +239,16 @@
       ],
       "packageNameTemplate": "github.com/atotto/clipboard",
       "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/mise/**/*.toml"],
+      "matchStrings": [
+        "\"aqua:codeberg\\.org/mergiraf/mergiraf\"\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "mergiraf/mergiraf",
+      "datasourceTemplate": "gitea-releases",
+      "registryUrlTemplate": "https://codeberg.org"
     },
     {
       "customType": "regex",
