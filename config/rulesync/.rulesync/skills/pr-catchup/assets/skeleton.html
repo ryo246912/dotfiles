@@ -23,6 +23,12 @@
         --warn-bg: #fff8c5;
         --warn-border: #d4a72c;
         --highlight: #ddf4ff;
+        --risk-high-bg: #ffebe9;
+        --risk-medium: #9a6700;
+        --diff-add-bg: #e6ffec;
+        --diff-add-ln: #ccffd8;
+        --diff-del-bg: #ffebe9;
+        --diff-del-ln: #ffd7d5;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) {
@@ -37,6 +43,12 @@
           --warn-bg: #2e2a1a;
           --warn-border: #9e6a03;
           --highlight: #12263f;
+        --risk-high-bg: #3c1618;
+        --risk-medium: #d29922;
+        --diff-add-bg: #12261e;
+        --diff-add-ln: #1b4721;
+        --diff-del-bg: #25171c;
+        --diff-del-ln: #542426;
         }
       }
       :root[data-theme="dark"] {
@@ -51,6 +63,12 @@
         --warn-bg: #2e2a1a;
         --warn-border: #9e6a03;
         --highlight: #12263f;
+        --risk-high-bg: #3c1618;
+        --risk-medium: #d29922;
+        --diff-add-bg: #12261e;
+        --diff-add-ln: #1b4721;
+        --diff-del-bg: #25171c;
+        --diff-del-ln: #542426;
       }
       * { box-sizing: border-box; }
       body {
@@ -97,6 +115,58 @@
       figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; }
       figcaption { color: var(--muted); font-size: 12px; }
       .mermaid { background: var(--surface); border-radius: 8px; padding: 12px; overflow-x: auto; }
+      .progress { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+      .progress-bar { width: 160px; height: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+      .progress-bar > span { display: block; height: 100%; width: 0; background: var(--added); transition: width 0.2s; }
+      .tag { display: inline-block; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+      .risk { display: inline-block; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+      .risk-high { background: var(--risk-high-bg); color: var(--removed); }
+      .risk-medium { background: var(--warn-bg); color: var(--risk-medium); }
+      .risk-low { background: var(--surface); color: var(--muted); }
+      .risk-border-high { border-left: 4px solid var(--removed); }
+      .risk-border-medium { border-left: 4px solid var(--warn-border); }
+      .risk-border-low { border-left: 4px solid var(--border); }
+      .checkpoint-count { color: var(--removed); font-size: 12px; font-weight: 600; white-space: nowrap; }
+      ol.group-list { list-style: none; padding: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+      .group-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+      .group-row:last-child { border-bottom: none; }
+      .group-row > a { color: var(--text); text-decoration: none; min-width: 0; flex: 1 1 320px; }
+      .group-title { display: block; font-weight: 600; }
+      .group-summary { display: block; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .group-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+      .done-mark { visibility: hidden; color: var(--added); font-weight: 700; }
+      .group-row.done .done-mark { visibility: visible; }
+      .group-row.done .group-title { color: var(--muted); }
+      h3.sub { margin-top: 32px; color: var(--muted); font-size: 14px; }
+      article.group { border: 1px solid var(--border); border-radius: 8px; margin: 16px 0; overflow: hidden; }
+      .group-head { display: flex; justify-content: space-between; gap: 16px; padding: 16px; }
+      .group-head h3 { display: inline; margin: 0; }
+      .intent { margin: 8px 0 0; }
+      .intent strong { color: var(--accent); }
+      .checkpoints { margin: 8px 0 0; padding-left: 20px; font-size: 14px; }
+      .approve { flex: none; align-self: start; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+      article.group.done .approve { border-color: var(--added); color: var(--added); }
+      details.group-diff > summary { padding: 8px 16px; background: var(--surface); border-top: 1px solid var(--border); cursor: pointer; font-size: 13px; color: var(--muted); }
+      details.hunk { border-top: 1px solid var(--border); }
+      details.hunk > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 16px; cursor: pointer; font-size: 13px; }
+      details.hunk > summary::-webkit-details-marker { display: none; }
+      details.hunk > summary::before { content: "▸"; color: var(--muted); }
+      details.hunk[open] > summary::before { content: "▾"; }
+      .diff-wrap > p { margin: 0; padding: 8px 16px; }
+      .hunk-id { color: var(--muted); font-family: ui-monospace, monospace; }
+      .hunk-path { font-weight: 600; background: none; padding: 0; }
+      .hunk-range { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; }
+      .hunk-note { margin: 0; padding: 6px 16px; background: var(--highlight); font-size: 13px; }
+      .diff-wrap { overflow-x: auto; }
+      table.diff { border: none; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; width: 100%; }
+      table.diff td { border: none; padding: 0 8px; white-space: pre; }
+      table.diff td.ln { width: 1%; text-align: right; color: var(--muted); user-select: none; }
+      table.diff td.sign { width: 1%; user-select: none; }
+      table.diff tr.add td { background: var(--diff-add-bg); }
+      table.diff tr.add td.ln { background: var(--diff-add-ln); }
+      table.diff tr.del td { background: var(--diff-del-bg); }
+      table.diff tr.del td.ln { background: var(--diff-del-ln); }
+      table.diff tr.meta td { color: var(--muted); }
       @media (max-width: 800px) {
         .layout { display: block; }
         nav { display: none; }
@@ -114,7 +184,7 @@
         <a href="#background">前提知識</a>
         <a href="#changes">変更内容</a>
         <a href="#interfaces">スキーマ・API・設定</a>
-        <a href="#reading-order">読む順番</a>
+        <a href="#groups">変更グループ</a>
         <a href="#manual-test">動作確認手順</a>
         <a href="#focus">重点的に見る箇所</a>
         <a href="#unknowns">未確認事項</a>
@@ -127,10 +197,14 @@
             <span>作成者 {{author}}</span>
             <span><code>{{base}}</code> ← <code>{{head}}</code></span>
             <span>head <code>{{SHA の先頭 7 文字}}</code></span>
-            <span class="added">+{{additions}}</span><span class="removed">−{{deletions}}</span>
             <!-- stack のときだけ -->
             <span class="badge">stack: {{PR 数}} PR</span>
             <span>生成 {{生成日時}}</span>
+          </div>
+          <!-- 数値は変更グループから JS で埋める -->
+          <div class="meta">
+            <span class="tag" id="diff-stats"></span>
+            <span class="progress">確認 <span id="progress-text">0/0</span><span class="progress-bar"><span id="progress-fill"></span></span></span>
           </div>
         </header>
 
@@ -204,12 +278,6 @@ erDiagram
             </table>
           </div>
 
-          <h3>主な変更点</h3>
-          <!-- ファイル単位ではなくテーマごと。何を・なぜ・どのファイルで。stack なら、どの PR の変更かも添える -->
-          <h4>{{テーマ}}</h4>
-          <p>{{何を・なぜ}}</p>
-          <p class="evidence">{{#N}} / <a href="{{URL}}"><code>{{path}}</code></a></p>
-
           <!--
             シーケンス図は原則描かない。3 者以上が絡み順番が結果を左右する、非同期・リトライ・状態遷移があるなど、
             本文だけでは追えない難しいやりとりのときだけ、その部分に絞って描く。
@@ -237,18 +305,14 @@ sequenceDiagram
           </div>
         </section>
 
-        <section id="reading-order">
-          <!-- entry point → 中心のロジック → 周辺 → テスト。リンクは head の SHA で -->
-          <h2>読む順番</h2>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>順</th><th>ファイル</th><th>役割</th><th>PR</th></tr></thead>
-              <tbody>
-                <tr><td>1</td><td><a href="{{URL}}"><code>{{path}}</code></a></td><td>{{}}</td><td>{{#N}}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="evidence">読まなくてよいファイル: {{生成物・lockfile・スナップショット}}</p>
+        <section id="groups">
+          <!--
+            差分を振る舞いの単位でまとめた変更グループ。読む順に並べる（entry point → 中心のロジック → 周辺 → テスト）。
+            中身は scripts/render_groups.py がマーカーの間に差し込む。手で書かない。
+          -->
+          <h2>変更グループ</h2>
+          <!-- pr-catchup:groups:start -->
+          <!-- pr-catchup:groups:end -->
         </section>
 
         <section id="manual-test">
@@ -294,6 +358,42 @@ sequenceDiagram
         </section>
       </main>
     </div>
+    <script>
+      (() => {
+        const container = document.getElementById("diff-groups");
+        if (!container) return;
+        const d = container.dataset;
+        document.getElementById("diff-stats").textContent = `${d.files} files / ${d.hunks} hunks +${d.added} −${d.removed}`;
+        const head = document.querySelector('meta[name="pr-catchup-head"]')?.content ?? "";
+        const key = `pr-catchup:${location.pathname}:${head}`;
+        let done = {};
+        try { done = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
+        const boxes = [...container.querySelectorAll("input[type=checkbox][data-group]")];
+        const update = () => {
+          const count = boxes.filter((box) => box.checked).length;
+          document.getElementById("progress-text").textContent = `${count}/${boxes.length}`;
+          document.getElementById("progress-fill").style.width = `${boxes.length ? (count / boxes.length) * 100 : 0}%`;
+        };
+        for (const box of boxes) {
+          const id = box.dataset.group;
+          const mark = (checked) => {
+            box.closest("article.group").classList.toggle("done", checked);
+            container.querySelector(`.group-row[data-group="${CSS.escape(id)}"]`)?.classList.toggle("done", checked);
+          };
+          box.checked = Boolean(done[id]);
+          mark(box.checked);
+          box.addEventListener("change", () => {
+            done[id] = box.checked;
+            mark(box.checked);
+            // 確認したグループは差分を畳む
+            if (box.checked) box.closest("article.group").querySelector("details.group-diff").open = false;
+            try { localStorage.setItem(key, JSON.stringify(done)); } catch {}
+            update();
+          });
+        }
+        update();
+      })();
+    </script>
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
       const dark =
