@@ -53,3 +53,13 @@ dependencies:
       transport: http
       url: http://127.0.0.1:3845/mcp
       sbx_options: ["--skip-ssrf-check"]
+    # ホストの Docker で起動している PostgreSQL（ポートをホストに公開しておく）。gateway がホストで
+    # 起動するので localhost はホストを指す。--access-mode=restricted で読み取り専用にする
+    # （書き込みも許すなら unrestricted）。DATABASE_URI に , を含めると sbx に渡せない
+    - name: postgres
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["postgres-mcp@0.3.0", "--access-mode=restricted"]
+      env:
+        DATABASE_URI: postgresql://xxx:xxx@localhost:5432/xxx
