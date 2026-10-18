@@ -33,12 +33,12 @@ gh pr list --state open --json url,headRefName \
 
 ## 1. 対象と前回の実行日を読む
 
-`<dir>/targets.md` の frontmatter を読む。
+`<dir>/targets.yml`（個人のリポジトリ。commit 済み）と `<dir>/targets.*.yml`（会社などのリポジトリ。gitignore 済みで
+その端末にだけある）をすべて読む。ファイルごとに `last_harvest` を持つ。
 
 ```yaml
-last_harvest: 2026-10-10 # 前回の実行日。無ければ 90 日前から集める
+last_harvest: 2026-10-10 # 前回の実行日。空なら 90 日前から集める
 repos:
-  - repo: github.com/ryo246912/dotfiles
   - repo: github.com/<company>/<repo>
     team: true # 自分が関わっていない PR の指摘（team）も集める
 ```
@@ -146,7 +146,8 @@ git diff --cached --name-only -z \
   | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
 ```
 
-secretlint が通ったら、`targets.md` の `last_harvest` を今日の日付にして commit し、push して PR を作る。
+secretlint が通ったら、読んだ targets ファイルすべての `last_harvest` を今日の日付にし、commit・push して PR を作る
+（`targets.*.yml` は gitignore 済みなので、その端末でだけ更新される）。
 
 ```bash
 git push -u origin HEAD

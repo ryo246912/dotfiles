@@ -1,0 +1,11 @@
+# 会社のリポジトリ。この端末でだけ集める。
+# `cp targets.work.yml.example targets.work.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
+# targets.<name>.yml は gitignore 済みで、lessons-harvest skill が targets.yml と一緒に読む。
+# last_harvest は前回の実行日。lessons-harvest skill が更新する。空なら 90 日前から集める。
+# team: true のリポジトリでは、自分が関わっていない PR の指摘（team）も集める。
+last_harvest:
+repos:
+  - repo: github.com/xxx/api
+    team: true
+  - repo: ghe.xxx.example.com/xxx/infra
+    team: true

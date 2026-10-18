@@ -13,6 +13,20 @@ if [ ! -d "$dir/.git" ]; then
   gh repo clone "$repo" "$dir"
 fi
 
+# 作ったばかりの空のリポジトリなら、収集対象の雛形を置く。会社のリポジトリは
+# targets.<name>.yml に書き、gitignore して端末の外に出さない。
+if [ ! -f "$dir/targets.yml" ]; then
+  templates="${XDG_CONFIG_HOME:-$HOME/.config}/agent-lessons"
+  cp "$templates/targets.yml.example" "$dir/targets.yml"
+  cp "$templates/targets.work.yml.example" "$dir/targets.work.yml.example"
+  printf 'targets.*.yml\n' >>"$dir/.gitignore"
+  # 空のリポジトリを clone すると、ローカルの init.defaultBranch の名前になるため main に揃える
+  git -C "$dir" rev-parse --quiet --verify HEAD >/dev/null || git -C "$dir" symbolic-ref HEAD refs/heads/main
+  git -C "$dir" add targets.yml targets.work.yml.example .gitignore
+  git -C "$dir" commit --quiet -m "chore: add harvest targets"
+  git -C "$dir" push --quiet -u origin HEAD
+fi
+
 if ! basic-memory tool list-projects 2>/dev/null | jq -e --arg p "$project" '.projects[]? | select(.name == $p)' >/dev/null; then
   basic-memory project add "$project" "$dir"
 fi
@@ -42,7 +56,6 @@ fi
 
 git add --all
 if ! git diff --cached --quiet; then
-  # 会社のリポジトリの指摘も入るため、秘密情報が混ざっていたら commit しない
   git diff --cached --name-only --diff-filter=AM -z \
     | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"

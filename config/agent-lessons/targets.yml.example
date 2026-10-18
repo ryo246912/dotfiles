@@ -1,0 +1,7 @@
+# agent-lessons が週次でレビュー指摘を集める、個人のリポジトリ。
+# mise run lessons:setup が、空の agent-lessons リポジトリへ targets.yml としてコピーする。
+# 会社のリポジトリはここに書かず、targets.<name>.yml（gitignore 済み）に書く（targets.work.yml.example）。
+# last_harvest は前回の実行日。lessons-harvest skill が更新する。空なら 90 日前から集める。
+last_harvest:
+repos:
+  - repo: github.com/ryo246912/dotfiles

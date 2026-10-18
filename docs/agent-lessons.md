@@ -40,7 +40,9 @@ commit 前に secretlint を通す。
 
 ```text
 agent-lessons/
-  targets.md                     # 収集するリポジトリと前回の実行日
+  targets.yml                    # 収集する個人のリポジトリと前回の実行日
+  targets.<name>.yml             # 会社などのリポジトリ（gitignore。その端末にだけ置く）
+  targets.work.yml.example       # targets.<name>.yml の雛形
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
 ```
@@ -64,20 +66,31 @@ agent-lessons/
 | `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点           |
 | `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-self-review、pr-reviewer-comment |
 
-### targets.md
+### targets.yml と targets.<name>.yml
 
-```markdown
----
-last_harvest: 2026-10-10
+収集するリポジトリは 2 種類のファイルに分けて書く。どちらも `lessons-harvest` が読み、ファイルごとに
+`last_harvest`（前回の実行日）を持つ。
+
+| ファイル             | 書くもの             | git                                      |
+| -------------------- | -------------------- | ---------------------------------------- |
+| `targets.yml`        | 個人のリポジトリ     | commit する（全端末で共有）              |
+| `targets.<name>.yml` | 会社などのリポジトリ | `targets.*.yml` を gitignore（端末だけ） |
+
+雛形は dotfiles の `config/agent-lessons/`（`~/.config/agent-lessons/`）にあり、`mise run lessons:setup` が空の
+agent-lessons リポジトリへ `targets.yml`・`targets.work.yml.example`・`.gitignore` を置く。会社の端末では次のようにする。
+
+```bash
+cd ~/.local/share/agent-lessons
+cp targets.work.yml.example targets.work.yml   # xxx を実際の値に置き換える
+```
+
+```yaml
+last_harvest:
 repos:
-  - repo: github.com/ryo246912/dotfiles
   - repo: github.com/acme/api
     team: true
   - repo: ghe.example.com/platform/infra
     team: true
----
-
-# targets
 ```
 
 `team: true` のリポジトリでは、自分が関わっていない PR の指摘も集める。
@@ -141,21 +154,10 @@ globs: ["docs/**", "**/*.example"]
 ### 1. private リポジトリを作る（最初の 1 回）
 
 ```bash
-gh repo create agent-lessons --private --clone --description "Lessons learned from PR reviews for coding agents"
-cd agent-lessons
-mkdir -p inbox lessons
-cat > targets.md <<'EOF'
----
-repos:
-  - repo: github.com/ryo246912/dotfiles
----
-
-# targets
-EOF
-git add . && git commit -m "chore: initialize agent-lessons" && git push
+gh repo create agent-lessons --private --description "Lessons learned from PR reviews for coding agents"
 ```
 
-会社のリポジトリは、あとから `targets.md` の `repos` に足す。
+中身は空のままでよい。次の `mise run lessons:setup` が雛形を置いて push する。
 
 ### 2. 端末ごとの設定
 
@@ -176,7 +178,7 @@ AGENT_LESSONS_REPO=ryo246912/agent-lessons mise run lessons:setup
 mise --cd "$HOME" run rulesync:generate   # SessionStart hook と skill を配る
 ```
 
-`lessons:setup` は clone、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
+`lessons:setup` は clone、空のリポジトリなら targets の雛形の配置、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
 semantic search を切る・自動更新を切る）、インデックス作成を行う。
 
 ### 3. 週次の定期タスクを作る（集計を回す端末で 1 回）
