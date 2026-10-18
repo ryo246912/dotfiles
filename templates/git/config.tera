@@ -26,6 +26,11 @@
   lineNumber = true
 [merge]
   conflictStyle = diff3
+[merge "mergiraf"]
+  # 構文を理解する merge driver。適用するファイルは ~/.config/git/attributes（config/git/attributes）で指定。
+  # 解決結果は `mergiraf review <file>_<id>`（merge 時に表示される）で line-based merge との差分を確認できる。
+  name = mergiraf
+  driver = mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L
 [pager]
   diff = delta
   log = delta
