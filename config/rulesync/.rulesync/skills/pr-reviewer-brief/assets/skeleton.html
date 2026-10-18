@@ -1,14 +1,14 @@
 <!doctype html>
 <!--
-  pr-catchup の雛形。{{...}} を埋め、書くことが無い section は丸ごと消す。
+  pr-reviewer-brief の雛形。{{...}} を埋め、書くことが無い section は丸ごと消す。
   各 section の先頭のコメントに書くことがある。コメントは書き出すときに消してよい。
 -->
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="pr-catchup-head" content="{{head の SHA。stack なら一番上の PR の SHA}}" />
-    <meta name="pr-catchup-generated" content="{{生成日時 ISO 8601}}" />
+    <meta name="pr-reviewer-brief-head" content="{{head の SHA。stack なら一番上の PR の SHA}}" />
+    <meta name="pr-reviewer-brief-generated" content="{{生成日時 ISO 8601}}" />
     <title>{{PR のタイトルを短く}}</title>
     <style>
       :root {
@@ -311,8 +311,8 @@ sequenceDiagram
             中身は scripts/render_groups.py がマーカーの間に差し込む。手で書かない。
           -->
           <h2>変更グループ</h2>
-          <!-- pr-catchup:groups:start -->
-          <!-- pr-catchup:groups:end -->
+          <!-- pr-reviewer-brief:groups:start -->
+          <!-- pr-reviewer-brief:groups:end -->
         </section>
 
         <section id="manual-test">
@@ -334,7 +334,7 @@ sequenceDiagram
               </dl>
               <!-- スクリーンショットがあるときだけ。失敗したときは画像の代わりにエラーを書く。最後に embed_images.py で埋め込む -->
               <figure>
-                <img src=".pr-catchup/{{名前}}/screenshots/step-1.png" alt="{{何が写っているか}}" loading="lazy" />
+                <img src=".pr-reviewer-brief/{{名前}}/screenshots/step-1.png" alt="{{何が写っているか}}" loading="lazy" />
                 <figcaption>{{撮った時点の操作}}（Preview, head {{SHA の先頭 7 文字}}）</figcaption>
               </figure>
             </li>
@@ -364,8 +364,8 @@ sequenceDiagram
         if (!container) return;
         const d = container.dataset;
         document.getElementById("diff-stats").textContent = `${d.files} files / ${d.hunks} hunks +${d.added} −${d.removed}`;
-        const head = document.querySelector('meta[name="pr-catchup-head"]')?.content ?? "";
-        const key = `pr-catchup:${location.pathname}:${head}`;
+        const head = document.querySelector('meta[name="pr-reviewer-brief-head"]')?.content ?? "";
+        const key = `pr-reviewer-brief:${location.pathname}:${head}`;
         let done = {};
         try { done = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
         const boxes = [...container.querySelectorAll("input[type=checkbox][data-group]")];

@@ -88,7 +88,7 @@ def main() -> int:
     parser.add_argument("--storage-state", type=Path, help="ログイン済みの Playwright storage state")
     parser.add_argument(
         "--executable-path",
-        default=os.environ.get("PR_CATCHUP_CHROMIUM"),
+        default=os.environ.get("PR_REVIEWER_BRIEF_CHROMIUM"),
         help="Chromium の実行ファイル（Playwright の同梱版と版が合わないとき）",
     )
     args = parser.parse_args()

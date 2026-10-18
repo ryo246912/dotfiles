@@ -1,6 +1,6 @@
-"""hunks.json と groups.json から「変更グループ」の HTML を作り、index.html に差し込む。
+"""hunks.json と groups.json から「変更グループ」の HTML を作り、HTML に差し込む。
 
-index.html の `<!-- pr-catchup:groups:start -->` と `<!-- pr-catchup:groups:end -->` の間を置き換える。
+HTML の `<!-- pr-reviewer-brief:groups:start -->` と `<!-- pr-reviewer-brief:groups:end -->` の間を置き換える。
 すべての hunk がちょうど 1 つのグループに入っていなければ、何も書き換えずに終了コード 1 で終わる。
 
 groups.json の書式（グループは読む順に並べる）:
@@ -44,7 +44,7 @@ KIND_LABELS = {
     "chore": "chore",
     "generated": "generated",
 }
-MARKER = re.compile(r"(<!-- pr-catchup:groups:start -->)(.*?)(<!-- pr-catchup:groups:end -->)", re.S)
+MARKER = re.compile(r"(<!-- pr-reviewer-brief:groups:start -->)(.*?)(<!-- pr-reviewer-brief:groups:end -->)", re.S)
 LARGE_HUNK_LINES = 300
 
 esc = html.escape
@@ -156,7 +156,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--hunks", required=True, type=Path)
     parser.add_argument("--groups", required=True, type=Path)
-    parser.add_argument("--html", required=True, type=Path, help="差し込み先の index.html")
+    parser.add_argument("--html", required=True, type=Path, help="差し込み先の HTML")
     parser.add_argument("--blob-url", help="https://github.com/<owner>/<repo>/blob/<head SHA>（ファイルへのリンク用）")
     args = parser.parse_args()
 
@@ -170,7 +170,7 @@ def main() -> int:
 
     page = args.html.read_text()
     if not MARKER.search(page):
-        print("index.html に pr-catchup:groups のマーカーが無い", file=sys.stderr)
+        print("HTML に pr-reviewer-brief:groups のマーカーが無い", file=sys.stderr)
         return 1
     fragment = render(hunks, groups, args.blob_url)
     args.html.write_text(MARKER.sub(lambda m: m.group(1) + fragment + m.group(3), page, count=1))

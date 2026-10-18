@@ -1,8 +1,8 @@
 ---
-name: pr-catchup
+name: pr-reviewer-brief
 description: >-
   GitHub PR の URL・番号、または gh stack の stack 番号を受け取り、コードベースに詳しくないレビュアーでも短時間で内容をつかめる HTML の
-  キャッチアップ資料を作る skill。前提となる機能・データモデル・用語、変更前後の振る舞い、画面での動作確認手順を
+  解説資料（ブリーフ）を作る skill。前提となる機能・データモデル・用語、変更前後の振る舞い、画面での動作確認手順を
   まとめ、差分は意図ごとの変更グループに分けて解説とリスク付きで並べ、グループごとに確認済みを付けながら読めるようにする。
   頼まれれば Playwright で Preview 環境のスクリーンショットを撮って手順に貼る。
   gh stack の stack（分割した PR の連なり）は 1 つの PR とみなして全体を説明し、各 PR は短くまとめる。
@@ -13,7 +13,7 @@ targets:
   - codexcli
 ---
 
-# pr-catchup — PR のキャッチアップ資料を HTML で作る
+# pr-reviewer-brief — レビュー前に読む PR の解説資料を HTML で作る
 
 レビューに入る前に、**その PR が何を変え、なぜ変え、どう確かめるか**を、コードベースを知らない人にも分かる形で
 1 枚の HTML にまとめる。この skill は**説明に徹する**。良し悪しの指摘はしない（気づいた懸念は「重点的に見る箇所」に
@@ -31,7 +31,7 @@ targets:
 
 ## 引数
 
-`/pr-catchup <対象> [--auto]`
+`/pr-reviewer-brief <対象> [--auto]`
 
 対象は次のどれか。
 
@@ -226,8 +226,8 @@ git diff origin/<diff_base>...FETCH_HEAD -- <path>
 - **出力先**: カレントディレクトリの `./plan/<名前>.html`（`./plan` が無ければ作る）。`<名前>` は単体の PR なら
   `pr-<N>`、stack なら `stack-<stack 番号>`
 - **作業ディレクトリ**: `hunks.json`・`groups.json`・スクリーンショットなどの途中のファイルは
-  `./plan/.pr-catchup/<名前>/` に置く
-- `<meta name="pr-catchup-head">` に head の SHA（stack なら一番上の PR の SHA）を入れる。定期実行で作り直しの要否を判断するのに使う
+  `./plan/.pr-reviewer-brief/<名前>/` に置く
+- `<meta name="pr-reviewer-brief-head">` に head の SHA（stack なら一番上の PR の SHA）を入れる。定期実行で作り直しの要否を判断するのに使う
 - 図は mermaid で書く（雛形が読み込む）。ER 図・シーケンス図以外の図は基本的に使わない
 - 他の section を埋めたあとで、変更グループを差し込む。ヘッダーのファイル数・hunk 数・確認の進捗は、差し込んだ
   グループから自動で埋まる
@@ -239,7 +239,7 @@ git diff origin/<diff_base>...FETCH_HEAD -- <path>
   ```
 
 - 最後に、スクリーンショットを HTML に埋め込み、1 ファイルで共有できるようにする（撮らなかったときは不要）。
-  埋め込む前の `<img>` は、HTML から見た相対パス `.pr-catchup/<名前>/screenshots/<id>.png` で書いておく
+  埋め込む前の `<img>` は、HTML から見た相対パス `.pr-reviewer-brief/<名前>/screenshots/<id>.png` で書いておく
 
   ```bash
   python3 <この skill のディレクトリ>/scripts/embed_images.py ./plan/<名前>.html
@@ -254,7 +254,7 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 将来、立ち上がった PR に対して定期実行（cron など）で資料を作るためのモード。
 
 - ユーザーに質問しない。決められないことは仮定を置いて進め、仮定を「未確認事項」に書く
-- 出力先に同じ名前の HTML があり、`pr-catchup-head` が今の head の SHA と同じなら、何もせず終了する
+- 出力先に同じ名前の HTML があり、`pr-reviewer-brief-head` が今の head の SHA と同じなら、何もせず終了する
 - スクリーンショットを頼まれていても、Preview の URL やログイン情報が自動で得られなければ撮らない
 - 終わったら、出力したファイルのパスを 1 行だけ出す
 
