@@ -1363,8 +1363,19 @@ multi-worktree からは `[settings.sandbox].static_mcp` でも指定できま�
 （Claude Code は MCP ツールが多いと定義を後から読む tool search に切り替えるため、全量がそのまま載るとは限りません）。
 既定で全サーバを読み込まないのはこのためで、必要なものだけ指定するか後から足します。
 
+`unload` したサーバのツール定義は、次のターン以降コンテキストから外れます
+（gateway がツール一覧の変更を `notifications/tools/list_changed` で通知し、Claude Code が一覧を取り直す前提）。
+ただし次のものは残ります。
+
+- それまでの会話履歴にあるツール呼び出しと結果。外すには `/clear` で新しく始めるか `/compact` で要約する。
+- tool search で一度読み込んだツール定義（履歴の一部のため、そのセッション中は残る）。
+- 共有の `~/.claude.json` にある remote サーバのツール（gateway を通らないため `unload` の対象外）。
+
+通知が届かず古い一覧が残った場合（ツール名は見えるが呼ぶと失敗する）は、
+sandbox 内で `/mcp` から再接続するか agent を起動し直します。
+
 確かめるときは sandbox 内で `claude mcp list` と `/context` を実行し、
-どのサーバ・ツールがどれだけトークンを使っているかを `load` の前後で比べます。
+どのサーバ・ツールがどれだけトークンを使っているかを `load` / `unload` の前後で比べます。
 
 ### トレードオフ
 
