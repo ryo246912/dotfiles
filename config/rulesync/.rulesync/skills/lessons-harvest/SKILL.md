@@ -33,8 +33,8 @@ gh pr list --state open --json url,headRefName \
 
 ## 1. 対象と前回の実行日を読む
 
-`<dir>/targets.yml`（個人のリポジトリ。commit 済み）と `<dir>/targets.*.yml`（会社などのリポジトリ。gitignore 済みで
-その端末にだけある）をすべて読む。
+dotfiles が配る `${XDG_CONFIG_HOME:-$HOME/.config}/agent-lessons/targets.yml`（個人のリポジトリ）と、
+同じディレクトリの `targets.*.yml`（会社などのリポジトリ。dotfiles で gitignore 済みで、その端末にだけある）をすべて読む。
 
 ```yaml
 repos:
@@ -49,8 +49,7 @@ targets.yml: 2026-10-10
 targets.work.yml: 2026-10-10
 ```
 
-日付を targets ファイルではなくここに置くのは、週次 PR と一緒にマージされたときだけ進め、PR を閉じたら戻るようにするため
-（gitignore された `targets.*.yml` に書くと、マージされなかった期間の指摘が失われる）。
+日付を targets ファイルではなくここに置くのは、週次 PR と一緒にマージされたときだけ進め、PR を閉じたら戻るようにするため。
 
 ## 2. PR とレビュースレッドを集める
 

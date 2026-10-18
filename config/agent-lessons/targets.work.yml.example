@@ -1,6 +1,6 @@
 # 会社のリポジトリ。この端末でだけ集める。
-# `cp targets.work.yml.example targets.work.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
-# targets.<name>.yml は gitignore 済みで、lessons-harvest skill が targets.yml と一緒に読む。
+# `cp targets.work.yml.example ~/.config/agent-lessons/targets.work.yml` でコピーし、xxx を実際の値に置き換える。
+# targets.<name>.yml は gitignore 済みで、lessons-harvest skill が ~/.config/agent-lessons/ の targets.yml と一緒に読む。
 # team: true のリポジトリでは、自分が関わっていない PR の指摘（team）も集める。
 repos:
   - repo: github.com/xxx/api

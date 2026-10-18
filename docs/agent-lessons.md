@@ -40,9 +40,6 @@ commit 前に secretlint を通す。
 
 ```text
 agent-lessons/
-  targets.yml                    # 収集する個人のリポジトリ
-  targets.<name>.yml             # 会社などのリポジトリ（gitignore。その端末にだけ置く）
-  targets.work.yml.example       # targets.<name>.yml の雛形
   harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
@@ -67,22 +64,21 @@ agent-lessons/
 | `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点           |
 | `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-self-review、pr-reviewer-comment |
 
-### targets.yml と targets.<name>.yml
+### 収集対象（targets.yml と targets.<name>.yml）
 
-収集するリポジトリは 2 種類のファイルに分けて書く。どちらも `lessons-harvest` が読む。前回の実行日はファイル名ごとに
-`harvest-state.yml` に持ち、週次 PR がマージされたときだけ進む（PR を閉じれば、その期間はもう一度集め直される）。
+収集するリポジトリは dotfiles の `config/agent-lessons/`（`~/.config/agent-lessons/` に配られる）に書く。
+どちらも `lessons-harvest` が読む。
 
-| ファイル             | 書くもの             | git                                      |
-| -------------------- | -------------------- | ---------------------------------------- |
-| `targets.yml`        | 個人のリポジトリ     | commit する（全端末で共有）              |
-| `targets.<name>.yml` | 会社などのリポジトリ | `targets.*.yml` を gitignore（端末だけ） |
+| ファイル             | 書くもの             | git                                                        |
+| -------------------- | -------------------- | ---------------------------------------------------------- |
+| `targets.yml`        | 個人のリポジトリ     | dotfiles に commit する                                    |
+| `targets.<name>.yml` | 会社などのリポジトリ | dotfiles で gitignore（雛形は `targets.work.yml.example`） |
 
-雛形は dotfiles の `config/agent-lessons/`（`~/.config/agent-lessons/`）にあり、`mise run lessons:setup` が空の
-agent-lessons リポジトリへ `targets.yml`・`targets.work.yml.example`・`.gitignore` を置く。会社の端末では次のようにする。
+会社の端末では、雛形を `~/.config/agent-lessons/` へコピーし、xxx を実際の値に置き換える。
 
 ```bash
-cd ~/.local/share/agent-lessons
-cp targets.work.yml.example targets.work.yml   # xxx を実際の値に置き換える
+cp ~/dotfiles/config/agent-lessons/targets.work.yml.example ~/.config/agent-lessons/targets.work.yml
+nvim ~/.config/agent-lessons/targets.work.yml
 ```
 
 ```yaml
@@ -93,7 +89,9 @@ repos:
     team: true
 ```
 
-`team: true` のリポジトリでは、自分が関わっていない PR の指摘も集める。
+`team: true` のリポジトリでは、自分が関わっていない PR の指摘も集める。前回の実行日は agent-lessons リポジトリの
+`harvest-state.yml` にファイル名ごとに持ち、週次 PR がマージされたときだけ進む（PR を閉じれば、その期間はもう一度
+集め直される）。
 
 ### 教訓（lessons/）の形式
 
@@ -158,10 +156,10 @@ globs: ["docs/**", "**/*.example"]
 ### 1. private リポジトリを作る（最初の 1 回）
 
 ```bash
-gh repo create agent-lessons --private --description "Lessons learned from PR reviews for coding agents"
+gh repo create agent-lessons --private --add-readme --description "Lessons learned from PR reviews for coding agents"
 ```
 
-中身は空のままでよい。次の `mise run lessons:setup` が雛形を置いて push する。
+README だけでよい（`main` ブランチを作るため）。中身は週次の集計と記録で増えていく。
 
 ### 2. 端末ごとの設定
 
@@ -183,7 +181,7 @@ AGENT_LESSONS_REPO=ryo246912/agent-lessons mise run lessons:setup
 mise --cd "$HOME" run rulesync:generate   # SessionStart hook と skill を配る
 ```
 
-`lessons:setup` は clone、空のリポジトリなら targets の雛形の配置、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
+`lessons:setup` は clone、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
 semantic search を切る・自動更新を切る）、インデックス作成を行う。この 2 つの設定は Basic Memory 全体に効くため、
 Basic Memory を他の用途でも使っていて semantic search が要るなら、`lessons:setup` のあとで戻す。
 
