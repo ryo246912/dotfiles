@@ -26,8 +26,12 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 - **GitHub Issue**: issue に紐づいた PR を使う（番号での全文検索は無関係な PR にも当たるので使わない）
 
   ```bash
-  gh issue view <番号> --repo <owner>/<repo> --json closedByPullRequestsReferences
+  gh issue view <番号> --repo <owner>/<repo> --json closedByPullRequestsReferences \
+    --jq '.closedByPullRequestsReferences[] | select(.url | startswith("https://github.com/<今のリポジトリの owner/repo>/pull/"))'
   ```
+
+  後の手順は PR 番号を今のリポジトリで引くので、今のリポジトリ（`gh repo view --json nameWithOwner --jq .nameWithOwner`）の
+  PR だけを使う。別のリポジトリの PR しか無ければ、PR なしとして進める
 
 - **それ以外（`ABC-123` など）**: タイトル・本文に ID を含む PR と、head ブランチ名に ID を含む PR を探す
 
