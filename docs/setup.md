@@ -329,6 +329,42 @@
 
   - `host-env.map` に行を追加した場合は、ここでコミットして push する
 
+- [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
+  - 雛形（`.sample` / `.example`）をコピーして、`xxx` などのプレースホルダを実際の値に書き換える。
+    コピー先はどれも gitignore 済みか、リポジトリの外にあるため、コミットされない
+  - git の `config.work.secret` / `config.work3.secret` は上の「git」の「secret設定ファイルの作成」で用意済み
+
+    | 用途                        | 雛形                                         | コピー先                                         | 対象             |
+    | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
+    | AWS の SSO・aws-vault 設定  | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
+    | sandbox の許可ドメイン      | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
+    | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
+    | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+
+  - AWS: `XXX` のプロファイル名・`sso_account_id`・`sso_start_url` を書き換え、ログインできることを確認する
+
+    ```sh
+    cp ~/.aws/config.example ~/.aws/config
+    nvim ~/.aws/config
+    aws sso login --sso-session work
+    aws-vault list
+    ```
+
+  - sandbox: `config/sbx/` はリポジトリ（`~/dotfiles`）側に置く。編集後に登録し直す
+    （詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md)）
+
+    ```sh
+    cd ~/dotfiles/config/sbx
+    cp allow-domains.work3.txt.example allow-domains.work3.txt
+    cp mcp.work3.yml.example mcp.work3.yml # work2 なら mcp.work2.yml.example
+    nvim allow-domains.work3.txt mcp.work3.yml
+    mise run sandbox:setup
+    mise run sandbox:mcp-add
+    ```
+
+  - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形はない。置いておけば zsh の起動時に読み込まれるので、
+    仕事用のトークンや環境変数など、リポジトリに置けないものを書く
+
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
   - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
     checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
