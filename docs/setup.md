@@ -32,6 +32,48 @@
   リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
   `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
+- [ ] ホストのロール（`HOST_ENV`）を決める
+  - `HOST_ENV` は `<os>,<role>`（例: `mac,private` / `mac,work2`）の形で、ログインシェル起動時に
+    `templates/zsh/.zshenv.tera` がホスト名から解決し、次の値を導出する
+    （どれも export 済みなら上書きしない）
+
+    | 変数                    | 値                                         | 使われる場所                                                         |
+    | ----------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+    | `MISE_ENV`              | `HOST_ENV` と同じ                          | `config.<os>.toml`・`config.<role>.toml`（`config/mise/`）を読み込む |
+    | `FNOX_PROFILE`          | `HOST_ENV` に `work` を含むときだけ `work` | `config/fnox/config.work.toml` の `[profiles.work.*]`                |
+    | `AGENTSVIEW_PG_MACHINE` | `HOST_ENV` の `,` を `-` にした値          | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）    |
+
+    `HOST_ENV` はほかに `mise run bootstrap:mac` の private/work 限定 cask の分岐でも使う
+
+  - ホスト ID を確認する（macOS は `LocalHostName`、Linux/WSL は `hostname -s`）
+
+    ```sh
+    scutil --get LocalHostName
+    ```
+
+  - `config/zsh/host-env.map` に `<ホストID>=<os>,<role>` の行があるか確認する。
+    `<role>` は `config/mise/config.<role>.toml` が存在する名前（`private` / `work1` / `work2` / `work3`）にする
+    - 既存の行（例: `ryo-mac-private`）に合わせる場合は、ホスト名の方を変える
+
+      ```sh
+      sudo scutil --set LocalHostName ryo-mac-private
+      ```
+
+    - 新しいホストなら `host-env.map` に行を追加してコミットする
+    - ホスト名を変えずに別の ID で引きたい場合は、`MISE_HOST_ID` を設定するとその値で
+      `host-env.map` を引く（`~/.zshenv` より前に読まれる `/etc/zshenv` などで export する）
+  - 下の初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
+    `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
+    bootstrap 後に新しいシェルを開いて解決結果を確認し、`mise bootstrap` をもう一度実行する
+
+    ```sh
+    exec zsh -l
+    echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
+    mise bootstrap
+    ```
+
+  - 一時的に別ロールの設定を試す方法は [docs/shell.md](./shell.md) 参照
+
 - [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
       実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
       `mise.toml`/`mise.mac.toml` 自身が持つ。`MISE_ENV` は通常シェル起動時に
@@ -607,6 +649,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
       **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
+      `HOST_ENV` の決め方と初回 bootstrap 後の再実行は Mac 側の「ホストのロール（`HOST_ENV`）を決める」参照
+      （ホスト ID は `hostname -s`）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
   - **最初に `[dotfiles]` だけを適用する**（apt 用の `[bootstrap.packages]` は
