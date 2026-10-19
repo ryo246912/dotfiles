@@ -72,7 +72,7 @@ printf '{"base_sha": "%s", "head_sha": "%s"}\n' "$(git merge-base origin/<diff_b
 
 ## 4. 関連するチケットを取る
 
-前に作った資料のチケットが残らないよう、先に `rm -f <work>/ticket.json` で消す。そのうえで `<skill>/references/ticket.md` に従い、
+前に作った資料のチケットが残らないよう、先に `rm -rf <work>/ticket.json <work>/ticket-images` で消す。そのうえで `<skill>/references/ticket.md` に従い、
 PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）を探す。見つかって中身が取れれば `ticket.json` に書く。
 見つからなければ何もしない。
 

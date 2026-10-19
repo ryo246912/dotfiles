@@ -36,7 +36,8 @@ ID か URL の種類に合う取り方を使う。
 
 ## 3. ticket.json を書く
 
-書式は `<skill>/scripts/render_brief.py` の冒頭（ticket の書式）。本文をそのまま貼らず、資料に要るところだけを短くまとめる。
+書式は `<skill>/scripts/render_brief.py` の冒頭（ticket の書式）。`summary`・`requirements`・`acceptance` は資料に要るところだけを
+短くまとめ、本文そのものは `sections`・`comments` に転記する（資料の HTML だけでチケットの中身が分かるようにするため）。
 
 ```json
 {
@@ -49,9 +50,42 @@ ID か URL の種類に合う取り方を使う。
   "summary": "何のための・何をするチケットか（2〜3 文）",
   "requirements": ["やること（チケットに書かれたもの）"],
   "acceptance": ["受け入れ条件（書かれていれば）"],
-  "links": [{ "title": "仕様書", "url": "https://..." }]
+  "links": [{ "title": "仕様書", "url": "https://..." }],
+  "sections": [
+    {
+      "title": "背景",
+      "body": "本文をそのまま\n\n- 箇条書きも\n\n![今の画面](ticket-images/1.png)",
+      "images": []
+    }
+  ],
+  "comments": [{ "author": "alice", "date": "2026-10-01", "body": "コメントの本文" }]
 }
 ```
 
 - `requirements`・`acceptance` はチケットに書かれていることだけを書く。推測で足さない
 - 仕様書・デザインなどへのリンクがあれば `links` に入れる。リンク先は開かなくてよい
+
+## 4. 本文と画像を転記する
+
+資料ではチケットの本文がセクションごとに開閉できる形で出る（最初は閉じている）。チケットを開かなくても中身が分かるよう、
+**要約せずに転記する**。
+
+- `sections`: チケットの見出し（「背景」「やること」「デザイン」など）ごとに 1 つ。見出しが無ければ「本文」1 つにまとめる。
+  `body` の書き方（段落・箇条書き・小見出し・コード・画像の位置）は `render_brief.py` の冒頭。表は箇条書きに直してよい
+- `comments`: コメント（書いた人・日付・本文）。bot の自動コメントなど中身の無いものは省く
+- 本文に入った画像は、ダウンロードして `<work>/ticket-images/` に置き、本文の元の位置に
+  `![説明](ticket-images/<n>.<拡張子>)` の 1 行を書く。位置が分からない画像はそのセクションの `images` に入れる
+
+  ```bash
+  mkdir -p <work>/ticket-images
+  curl -fsSL --proto '=https' --max-filesize 5000000 -o "<work>/ticket-images/<n>.<拡張子>" "<画像の URL>"
+  file --mime-type -b "<work>/ticket-images/<n>.<拡張子>"   # image/ で始まらなければ消す
+  ```
+
+  - GitHub の添付画像（`https://github.com/user-attachments/...` など github.com の URL）だけは、認証のヘッダ
+    `-H "Authorization: Bearer $(gh auth token)"` を付ける。**ほかのホストにはトークンを送らない**
+  - Linear・Notion・Jira の画像は、MCP が画像の中身か取得できる URL を返すときに取る。取れなければ、元の URL を
+    `![説明](<URL>)` のまま書く（資料ではリンクになる）
+  - 1 枚 5MB・全体で 20 枚までにする（HTML に埋め込むため）。超えた分は URL のまま書く
+
+- `rm -rf <work>/ticket-images` してから取り直す（前回の画像が残らないように）

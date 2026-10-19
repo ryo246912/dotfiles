@@ -17,7 +17,7 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 
 ## 1. チケットを取る
 
-`<skill>/references/ticket.md` の 2・3 に従い、`target.json` の `ticket` を取って `ticket.json` を書く。
+`<skill>/references/ticket.md` の 2〜4 に従い、`target.json` の `ticket` を取って `ticket.json` を書く。
 
 ## 2. 関連する PR を探す
 

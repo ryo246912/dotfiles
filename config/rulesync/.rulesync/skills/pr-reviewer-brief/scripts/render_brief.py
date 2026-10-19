@@ -49,7 +49,14 @@ ticket（ticket.json）の書式。前提知識の先頭に「チケットの内
     {"id": "ABC-123", "source": "Linear", "url": "https://...", "title": "...", "status": "In Progress",
      "fetched": true,                       # 取得できなかったら false（id と url だけ出す）
      "summary": "チケットの要約", "requirements": ["やること"], "acceptance": ["受け入れ条件"],
-     "links": [{"title": "仕様書", "url": "https://..."}]}
+     "links": [{"title": "仕様書", "url": "https://..."}],
+     # チケットの本文。要約せずに転記する。各セクションは「チケットの本文」に開閉できる形で出る（最初は閉じている）
+     "sections": [{"title": "背景", "body": "本文", "images": [{"path": "ticket-images/1.png", "alt": "...", "caption": "..."}]}],
+     "comments": [{"author": "alice", "date": "2026-10-01", "body": "本文"}]}
+
+sections・comments の body では、空行で段落、`- ` で箇条書き、`1. ` で番号付き、`#` で始まる行で小見出し、
+``` で囲んだ部分でコードになる。1 行に `![説明](ticket-images/1.png)` だけを書くと、その位置に画像を埋め込む。
+画像は <workdir>/ticket-images/ の下のファイルだけを埋め込む（http(s) の URL ならリンクにする）。
 """
 
 import argparse
@@ -161,7 +168,7 @@ def stack_section(brief: dict) -> str:
     return f'<ol class="stack-blocks">{"".join(blocks)}</ol><div class="stack-trunk">{trunk}</div>'
 
 
-def ticket_block(ticket: dict) -> str:
+def ticket_block(ticket: dict, workdir: Path) -> str:
     title = esc(ticket.get("title") or "")
     label = f"{esc(ticket.get('id', ''))} {title}".strip()
     meta = " · ".join(esc(v) for v in (ticket.get("source"), ticket.get("status")) if v)
@@ -177,12 +184,13 @@ def ticket_block(ticket: dict) -> str:
     if ticket.get("links"):
         items = "".join(f"<li>{link(l.get('url'), esc(l.get('title') or l.get('url', '')))}</li>" for l in ticket["links"])
         parts.append(f"<h4>関連リンク</h4><ul>{items}</ul>")
+    parts.append(ticket_body(ticket, workdir))
     return "".join(parts)
 
 
-def background_section(brief: dict) -> str:
+def background_section(brief: dict, workdir: Path) -> str:
     bg = brief.get("background") or {}
-    parts = [ticket_block(brief["ticket"])] if brief.get("ticket") else []
+    parts = [ticket_block(brief["ticket"], workdir)] if brief.get("ticket") else []
     if bg.get("current"):
         parts.append("<h3>今の機能</h3>")
         for item in bg["current"]:
@@ -227,8 +235,107 @@ def changes_section(brief: dict) -> str:
     return "".join(parts)
 
 
+IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
+               ".webp": "image/webp", ".svg": "image/svg+xml"}
+MAX_TICKET_IMAGE = 5 * 1024 * 1024
+
+
 def image_data_uri(path: Path) -> str:
-    return "data:image/png;base64," + base64.b64encode(path.read_bytes()).decode()
+    mime = IMAGE_TYPES.get(path.suffix.lower(), "image/png")
+    return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode()
+
+
+def ticket_image(workdir: Path, src: str, alt: str = "", caption: str = "") -> str:
+    """チケットの画像を埋め込む。<workdir>/ticket-images/ の外のファイルや、大きすぎるものは埋め込まない。"""
+    label = esc(caption or alt or src)
+    if safe_url(src):
+        return f'<p class="evidence">画像（取り込めなかった）: {link(src, label)}</p>'
+    base = (workdir / "ticket-images").resolve()
+    path = (workdir / src).resolve()
+    if not path.is_relative_to(base) or path.suffix.lower() not in IMAGE_TYPES or not path.is_file():
+        return f'<p class="evidence">画像が見つからない: <code>{esc(src)}</code></p>'
+    if path.stat().st_size > MAX_TICKET_IMAGE:
+        return f'<p class="evidence">画像が大きすぎるので載せていない: <code>{esc(src)}</code></p>'
+    figcaption = f"<figcaption>{inline(caption)}</figcaption>" if caption else ""
+    return f'<figure><img src="{image_data_uri(path)}" alt="{esc(alt)}" loading="lazy" />{figcaption}</figure>'
+
+
+def rich_text(text: str, workdir: Path) -> str:
+    """チケットの本文を HTML にする（段落・箇条書き・小見出し・コード・画像）。"""
+    out, para, items, list_tag, code = [], [], [], "", None
+
+    def flush() -> None:
+        nonlocal para, items, list_tag
+        if para:
+            out.append("<p>" + "<br />".join(inline(line) for line in para) + "</p>")
+        if items:
+            out.append(f"<{list_tag}>" + "".join(f"<li>{inline(i)}</li>" for i in items) + f"</{list_tag}>")
+        para, items, list_tag = [], [], ""
+
+    for line in text.splitlines():
+        if code is not None:
+            if line.strip().startswith("```"):
+                out.append(f"<pre><code>{esc(chr(10).join(code))}</code></pre>")
+                code = None
+            else:
+                code.append(line)
+            continue
+        stripped = line.strip()
+        bullet = re.match(r"^[-*] (.*)", stripped)
+        number = re.match(r"^\d+[.)] (.*)", stripped)
+        image = re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", stripped)
+        if stripped.startswith("```"):
+            flush()
+            code = []
+        elif not stripped:
+            flush()
+        elif image:
+            flush()
+            out.append(ticket_image(workdir, image.group(2), image.group(1)))
+        elif stripped.startswith("#"):
+            flush()
+            out.append(f"<h5>{inline(stripped.lstrip('#').strip())}</h5>")
+        elif bullet or number:
+            tag = "ul" if bullet else "ol"
+            if para or (items and list_tag != tag):
+                flush()
+            list_tag = tag
+            items.append((bullet or number).group(1))
+        else:
+            if items:
+                flush()
+            para.append(stripped)
+    if code is not None:
+        out.append(f"<pre><code>{esc(chr(10).join(code))}</code></pre>")
+    flush()
+    return "".join(out)
+
+
+def ticket_body(ticket: dict, workdir: Path) -> str:
+    """チケットの本文とコメントを、セクションごとに開閉できる形で出す。"""
+    blocks = []
+    for sec in ticket.get("sections") or []:
+        images = "".join(
+            ticket_image(workdir, img.get("path", ""), img.get("alt", ""), img.get("caption", ""))
+            for img in sec.get("images") or []
+        )
+        count = f' <span class="tag">画像 {len(sec["images"])}</span>' if sec.get("images") else ""
+        blocks.append(
+            f'<details class="ticket-sec"><summary>{inline(sec.get("title") or "本文")}{count}</summary>'
+            f'<div class="ticket-body">{rich_text(sec.get("body", ""), workdir)}{images}</div></details>'
+        )
+    comments = ticket.get("comments") or []
+    if comments:
+        items = "".join(
+            f'<div class="ticket-comment"><p class="evidence">{esc(c.get("author", ""))}'
+            f'{" · " + esc(c["date"]) if c.get("date") else ""}</p>{rich_text(c.get("body", ""), workdir)}</div>'
+            for c in comments
+        )
+        blocks.append(
+            f'<details class="ticket-sec"><summary>コメント <span class="tag">{len(comments)} 件</span></summary>'
+            f'<div class="ticket-body">{items}</div></details>'
+        )
+    return "<h4>チケットの本文</h4>" + "".join(blocks) if blocks else ""
 
 
 def manual_test_section(brief: dict, workdir: Path) -> str:
@@ -313,7 +420,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     if brief.get("stack"):
         sections.append(section("stack", "スタック構成", stack_section(brief)))
     for sid, title, body in (
-        ("background", "前提知識", background_section(brief)),
+        ("background", "前提知識", background_section(brief, workdir)),
         ("changes", "変更内容", changes_section(brief)),
     ):
         if body:
