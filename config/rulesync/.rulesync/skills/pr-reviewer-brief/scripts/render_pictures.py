@@ -235,6 +235,7 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     width = x - GAP_X * 1.6 + 10
     bottom = max(y + h for _, y, _, h in pos.values())
     col_right = {c: max(pos[n][0] + pos[n][2] for n in ids) for c, ids in columns.items()}
+    col_left = {c: min(pos[n][0] for n in ids) for c, ids in columns.items()}
     lowest = {c: ids[-1] for c, ids in columns.items()}  # 列の一番下の箱（その下には何も無い）
     half_gap = GAP_X * 0.8
     back_edges = 0
@@ -246,7 +247,8 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
         status = status_of(edge)
         if rank[b] > rank[a]:  # 右の列へ
             sx, sy, ex, ey = ax + aw + 2, ay + ah / 2, bx - 4, by + bh / 2
-            mx = (sx + ex) / 2
+            # 出発する列に戻る矢印の通り道があれば、曲がり目とラベルはその右に置く（ラベル同士を重ねない）
+            mx = (max(sx, col_right[rank[a]] + lane_room.get(rank[a], 0)) + ex) / 2
             path = f"M{sx:.0f},{sy:.0f} C{mx:.0f},{sy:.0f} {mx:.0f},{ey:.0f} {ex:.0f},{ey:.0f}"
             at = (mx, (sy + ey) / 2)
         elif a == b:  # 自分自身へ戻る: 箱の上に輪を描く
@@ -269,7 +271,7 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
                 start = f"M{ax + aw / 2:.0f},{ay + ah + 2:.0f} L{ax + aw / 2:.0f},{low:.0f}"
                 start_x = ax + aw / 2
             else:
-                start_x = ax - half_gap
+                start_x = col_left[rank[a]] - half_gap  # 列でいちばん左の端の外側を下りる（幅の広い箱を横切らない）
                 start = f"M{ax - 2:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{low:.0f}"
             if lowest[rank[b]] == b:
                 end_x = bx + bw / 2
