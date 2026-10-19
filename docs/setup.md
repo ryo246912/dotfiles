@@ -168,6 +168,28 @@
     nvim ~/.config/git/config.work3.secret
     ```
 
+    - 各値の確認方法
+      - `coderabbit.machineId`: CodeRabbit CLI が初回実行時に git config へ書き込む値。
+        既存マシンがあればそこで確認して同じ値にする。新しいマシンでは CLI を一度実行して、
+        書き込まれた値を `config.secret` へ移す（どのファイルに書かれたかも `--show-origin` で分かる）
+
+        ```sh
+        git config --show-origin --get coderabbit.machineId
+        ```
+
+      - `user.email`: 仕事用に GitHub アカウントへ登録・確認済み（Verified）のメールアドレス。
+        GitHub の「Settings」→「Emails」で確認する。GPG 鍵の UID にも同じアドレスが入っている必要がある
+        （入っていないと GitHub で Verified にならない。追加方法は下の「秘密鍵の設定」の `adduid`）
+      - `user.signingkey`: そのメールアドレスを UID に持つ GPG 鍵の LONG 形式の鍵 ID（16 桁）。
+        鍵の import・作成は下の「秘密鍵の設定」で行うので、そこまで済んでから埋める。
+        `sec   rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろが鍵 ID
+
+        ```sh
+        gpg --list-secret-keys --keyid-format LONG <メールアドレス>
+        ```
+
+        GitHub に登録済みの鍵 ID は `gh gpg-key list` の 2 列目（KEY ID）でも確認できる
+
     - 編集後、設定ファイルが読み込まれていることを確認する
 
     ```sh
@@ -356,6 +378,12 @@
     | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
 
   - AWS: `XXX` のプロファイル名・`sso_account_id`・`sso_start_url` を書き換え、ログインできることを確認する
+    - `sso_start_url`: IAM Identity Center の AWS access portal の URL（`https://xxx.awsapps.com/start` の形）。
+      社内の AWS 利用案内か管理者から受け取る。ブラウザで開いてログインできれば正しい
+    - `sso_account_id` / `sso_role_name`: AWS access portal にログインすると、使えるアカウント（12 桁の ID）と
+      ロール名が一覧で出る。CLI では `aws configure sso` を対話で進めると選択肢として表示される
+    - `XXX`（プロファイル名）: 自由に付けてよいが、aws-vault・Terraform・`mcp.<role>.yml` の `--profile` などで
+      同じ名前を参照するので揃える
 
     ```sh
     cp ~/.aws/config.example ~/.aws/config
@@ -376,6 +404,11 @@
     mise run sandbox:mcp-add
     ```
 
+  - sandbox の値
+    - `allow-domains.work3.txt`: sandbox から使う社内ドキュメント・ツールのドメイン。
+      一覧に無いドメインはブロックされるので、作業中に `sbx policy log <sandbox>` でブロックされたものを見て追加する
+    - `mcp.<role>.yml` の `xxx`: `--profile` は上の AWS のプロファイル名、`sbx_options` の `--dir` は
+      `tools/aws-mcp-proxy` がある work3 リポジトリのパス、metabase などの URL は社内の各サービスの URL
   - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形はない。置いておけば zsh の起動時に読み込まれるので、
     仕事用のトークンや環境変数など、リポジトリに置けないものを書く
 
