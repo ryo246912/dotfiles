@@ -213,13 +213,15 @@ def changes_section(brief: dict) -> str:
         parts.append("<h3>変更前と変更後</h3>" + table(["観点", "変更前", "変更後"], rows))
     for seq in changes.get("sequences", []):
         parts.append(f"<h3>{esc(seq['title'])}</h3>{mermaid(seq['mermaid'])}")
-    if brief.get("related_prs") and not brief.get("stack"):
+    stacked = {pr["number"] for pr in brief.get("prs", [])} if brief.get("stack") else set()
+    related = [pr for pr in brief.get("related_prs") or [] if pr["number"] not in stacked]
+    if related:
         items = "".join(
             f'<li>{link(pr.get("url"), "#" + str(pr["number"]))} {esc(pr.get("title", ""))}'
             f' <span class="tag">{esc(pr.get("state", ""))}</span>'
             + (f" — {inline(pr['summary'])}" if pr.get("summary") else "")
             + "</li>"
-            for pr in brief["related_prs"]
+            for pr in related
         )
         parts.append(f"<h3>関連する PR</h3><ul>{items}</ul>")
     return "".join(parts)

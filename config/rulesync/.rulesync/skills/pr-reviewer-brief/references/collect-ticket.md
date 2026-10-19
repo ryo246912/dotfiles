@@ -27,7 +27,7 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 gh pr list --state all --search "<チケットの ID>" --json number,title,url,state,headRefName --limit 20
 ```
 
-- 見つかったら、open な PR のうち一番新しいものについて `get_stack.py --pr <N>` を実行し、出力に
+- 見つかったら、open な PR のうち一番新しいもの（open が無ければ merged のうち一番新しいもの）について `get_stack.py --pr <N>` を実行し、出力に
   `"mode": "ticket"` と `"ticket": "<ID>"` を足して `target.json` を上書きする（stack ならスタック構成が出る）
 - 各 PR について `collect.md` の 1 と同じく `pr-<N>.json` を取る
 - 差分は hunk に分けない（チケットモードでは変更グループを出さない）。`gh pr diff <N> --name-only` で変更ファイルの一覧だけ見て、

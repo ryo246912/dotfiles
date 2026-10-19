@@ -111,7 +111,8 @@ PR ではなくチケットを渡されたとき。資料には **TL;DR・スタ
 - `tldr`: このチケットで、誰の・何の課題を・どう変えるのか
 - `background`: 1 と同じ。チケットに出てくる画面・機能が**今**どう動いているかを、今の default branch のコードを読んで根拠付きで書く
 - 変更内容: 関連する PR があれば、`target.json`（stack なら `prs`・`stack` を `brief.json` にも書く）と各 `pr-<N>.json` から
-  `changes.before_after` を書き、`related_prs` に PR ごとの 1 文のまとめを書く。PR が無ければ、チケットに書かれた
+  `changes.before_after` を書く。PR ごとの 1 文のまとめは、stack の PR なら `prs[].summary`（スタック構成に出る）、
+  それ以外の PR なら `related_prs` に書く。PR が無ければ、チケットに書かれた
   「これから変えること」を `changes.before_after` にまとめる（変更後の列は「チケットでの予定」と分かるように書く）
 - 変更グループ・絵・動作確認手順・重点的に見る箇所は書かない。`render_groups.py` の検査もしない
 
