@@ -39,11 +39,14 @@ pr-reviewer-brief skill の段階 3。ユーザーが「スクショも撮って
 ## 3. 撮って、HTML を作り直す
 
 ```bash
+uvx playwright install chromium   # Chromium が無ければ（初回だけ）
 uv run <skill>/scripts/screenshot.py --plan <work>/shots.json --out-dir <work>/screenshots
 python3 <skill>/scripts/render_brief.py --workdir <work> --out <出力先の HTML>
 ```
 
-失敗した手順は、エラーが手順の下に出る（撮り直しは 1 回まで）。画像は HTML に埋め込まれるので、1 ファイルで共有できる。
+Chromium を別の場所に入れているなら、`PR_REVIEWER_BRIEF_CHROMIUM` に実行ファイルのパスを入れる（`--executable-path` でも渡せる）。
+失敗した手順は、エラーが手順の下に出る。セレクタの誤りなど直せる原因なら `shots.json` を直して 1 回だけ撮り直してよい
+（スクリプトは自動では撮り直さない）。画像は HTML に埋め込まれるので、1 ファイルで共有できる。
 
 ## 終わり方
 

@@ -72,14 +72,14 @@ def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") ->
             errors.append(f"{group.get('id')}: kind は {'/'.join(KIND_LABELS)} のどれか")
         for hunk_id in group.get("hunks", []):
             if hunk_id not in hunks:
-                errors.append(f"{group['id']}: 存在しない hunk {hunk_id}")
+                errors.append(f"{group.get('id', '?')}: 存在しない hunk {hunk_id}")
             elif hunk_id in owner:
-                errors.append(f"{hunk_id} が {owner[hunk_id]} と {group['id']} の両方に入っている")
+                errors.append(f"{hunk_id} が {owner[hunk_id]} と {group.get('id', '?')} の両方に入っている")
             else:
-                owner[hunk_id] = group["id"]
+                owner[hunk_id] = group.get("id", "?")
         for hunk_id in group.get("hunk_notes", {}):
             if hunk_id not in group.get("hunks", []):
-                errors.append(f"{group['id']}: hunk_notes の {hunk_id} がグループの hunks に無い")
+                errors.append(f"{group.get('id', '?')}: hunk_notes の {hunk_id} がグループの hunks に無い")
     missing = [hunk_id for hunk_id in hunks if hunk_id not in owner]
     if missing:
         errors.append(f"どのグループにも入っていない hunk: {', '.join(missing)}")

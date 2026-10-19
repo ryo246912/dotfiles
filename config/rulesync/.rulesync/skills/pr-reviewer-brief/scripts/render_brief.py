@@ -50,6 +50,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -79,7 +80,7 @@ def blob_link(brief: dict, path: str, lines: str | None, side: str) -> str:
     if lines:
         start, _, end = str(lines).partition("-")
         anchor = f"#L{start}" + (f"-L{end}" if end else "")
-    url = f"https://github.com/{brief['repo']}/blob/{sha}/{path}{anchor}"
+    url = f"https://github.com/{brief['repo']}/blob/{sha}/{quote(path, safe='/')}{anchor}"
     return f'<a href="{esc(url)}"><code>{esc(label)}</code></a>'
 
 
