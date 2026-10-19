@@ -37,7 +37,7 @@ HTML・図の座標・差分の表はスクリプトが作る。各段階の手�
 | `--watch`                 | 新しく作られた PR を監視して資料を作る（`references/watch.md`）               |
 
 番号だけなら PR 番号とみなす（stack 番号のときは `stack` を付けてもらう）。`ABC-123` のように英字と `-` を含む ID、
-Linear・Notion・Jira・GitHub Issue の URL、`ticket <ID>` はチケットとみなす。リポジトリはカレントディレクトリのものとみなす。
+Linear・Notion・Jira・GitHub Issue の URL、`ticket <ID>`（先頭の `ticket ` は除く）はチケットとみなす。リポジトリはカレントディレクトリのものとみなす。
 ほかの指定（スクリーンショットを撮るか、撮る先の URL、使うモデルなど）は、ユーザーの自然文から読み取る。
 
 ## 進め方

@@ -21,11 +21,21 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 
 ## 2. 関連する PR を探す
 
-チケットの ID で PR を探す（タイトル・本文・ブランチ名に ID を含むもの）。チケットに PR へのリンクがあれば、それも使う。
+チケットに PR へのリンクがあれば、それを使う。そのうえで種類ごとに探し、見つかった PR をまとめる（同じ PR は 1 つにする）。
 
-```bash
-gh pr list --state all --search "<チケットの ID>" --json number,title,url,state,headRefName --limit 20
-```
+- **GitHub Issue**: issue に紐づいた PR を使う（番号での全文検索は無関係な PR にも当たるので使わない）
+
+  ```bash
+  gh issue view <番号> --repo <owner>/<repo> --json closedByPullRequestsReferences
+  ```
+
+- **それ以外（`ABC-123` など）**: タイトル・本文に ID を含む PR と、head ブランチ名に ID を含む PR を探す
+
+  ```bash
+  gh pr list --state all --search "<チケットの ID>" --json number,title,url,state,headRefName --limit 20
+  gh pr list --state all --json number,title,url,state,headRefName --limit 200 \
+    --jq '.[] | select(.headRefName | ascii_downcase | contains("<チケットの ID を小文字にしたもの>"))'
+  ```
 
 - 見つかったら、open な PR のうち一番新しいもの（open が無ければ merged のうち一番新しいもの）について `get_stack.py --pr <N>` を実行し、出力に
   `"mode": "ticket"` と `"ticket": "<ID>"` を足して `target.json` を上書きする（stack ならスタック構成が出る）

@@ -20,7 +20,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 
 - `ticket.json` があれば、前提知識の先頭に「チケットの内容」として自動で出る（`brief.json` に書かなくてよい）。チケットの
   目的・やること・受け入れ条件は、`tldr`・`current`・変更前後の比較を書く材料にする。チケットに書かれたことと PR の変更が
-  食い違えば、`focus` にその事実を書く
+  食い違えば、PR モードでは `focus` に、チケットモードでは `changes.before_after` にその事実を書く
 
 - `current`: 変更が関わる機能が、今どの画面で、ユーザーの何の操作で、内部のどこを通って動いているか。画面名・ボタン名は
   i18n の文言などコード上の表示名で書く。**各項目に根拠（`evidence` のファイルと行）を必ず付ける**。根拠が無い説明は書かない。
@@ -95,6 +95,8 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 
 ## 6. HTML を作り、確かめる
 
+チケットモードでは 1 行目（`render_groups.py`）を飛ばす。
+
 ```bash
 python3 <skill>/scripts/render_groups.py --hunks <work>/hunks.json --groups <work>/groups.json --check full
 python3 <skill>/scripts/render_brief.py --workdir <work> --out <出力先の HTML>
@@ -107,10 +109,13 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <出力先の HTM
 PR ではなくチケットを渡されたとき。資料には **TL;DR・スタック構成・前提知識・変更内容だけ**が出る（それ以外は書いても
 出ない）。チケットの内容と、それを理解するための前提知識をつかむための資料にする。
 
-- `brief.json` に `"mode": "ticket"` を入れる。`title` はチケットのタイトルにする
-- `tldr`: このチケットで、誰の・何の課題を・どう変えるのか
+- `brief.json` に `"mode": "ticket"` を入れる。`title` はチケットのタイトルにする（取れなかったときはチケットの ID）
+- `tldr`: このチケットで、誰の・何の課題を・どう変えるのか。チケットの中身が取れなかったときは、そのことと、PR やコードから
+  分かったことを書く
 - `background`: 1 と同じ。チケットに出てくる画面・機能が**今**どう動いているかを、今の default branch のコードを読んで根拠付きで書く
-- 変更内容: 関連する PR があれば、`target.json`（stack なら `prs`・`stack` を `brief.json` にも書く）と各 `pr-<N>.json` から
+- 変更内容: 関連する PR があれば、`target.json` と各 `pr-<N>.json` から
+  `brief.json` の `prs`（書式は `render_brief.py` の冒頭。`changedFiles` は `files` に、`baseRefName`・`headRefName` は
+  `base`・`head` にする）と、stack なら `stack`（`{"number": <stack_number>, "trunk": <trunk>}`）を書き、
   `changes.before_after` を書く。PR ごとの 1 文のまとめは、stack の PR なら `prs[].summary`（スタック構成に出る）、
   それ以外の PR なら `related_prs` に書く。PR が無ければ、チケットに書かれた
   「これから変えること」を `changes.before_after` にまとめる（変更後の列は「チケットでの予定」と分かるように書く）

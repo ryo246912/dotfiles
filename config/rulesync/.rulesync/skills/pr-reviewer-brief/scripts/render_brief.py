@@ -162,7 +162,7 @@ def stack_section(brief: dict) -> str:
 
 
 def ticket_block(ticket: dict) -> str:
-    title = esc(ticket.get("title") or ticket.get("id", ""))
+    title = esc(ticket.get("title") or "")
     label = f"{esc(ticket.get('id', ''))} {title}".strip()
     meta = " · ".join(esc(v) for v in (ticket.get("source"), ticket.get("status")) if v)
     parts = [f'<h3>チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
@@ -293,7 +293,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             groups_html = render_groups(hunks, groups, blob)
 
     pictures = []
-    for i, spec in enumerate(brief.get("pictures", []), start=1):
+    for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
         try:
             pictures.append(render_picture(spec, i))
         except (KeyError, ValueError) as error:
@@ -304,7 +304,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     sections = []
     tldr = "".join(f"<p>{inline(line)}</p>" for line in brief["tldr"])
     sections.append(section("tldr", "TL;DR", f'<div class="tldr">{tldr}</div>'))
-    if pictures and not ticket_mode:
+    if pictures:
         legend = (
             '<div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span>'
             '<span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>'
