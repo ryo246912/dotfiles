@@ -17,8 +17,8 @@ exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE HOST_EN
 
 ## `ZDOTDIR` を外す必要がある理由
 
-`~/.zshenv` は `ZDOTDIR=~/.config/zsh` を export する。zsh は起動時に `ZDOTDIR` が設定されていると
-`~/.zshenv` ではなく `$ZDOTDIR/.zshenv` を読むが、`~/.config/zsh/.zshenv` は存在しない。
+`~/.zshenv` は `ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"` を export する。zsh は起動時に `ZDOTDIR` が設定されていると
+`~/.zshenv` ではなく `$ZDOTDIR/.zshenv` を読むが、この構成では `$ZDOTDIR/.zshenv` は存在しない。
 そのため `exec $SHELL -l` のように現在の環境を引き継いで起動すると `~/.zshenv` が読まれず、
 `HOST_ENV`/`MISE_ENV`/`FNOX_PROFILE` の解決・導出が一切走らない。
 
