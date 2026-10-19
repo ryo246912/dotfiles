@@ -128,6 +128,16 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+  - `mise bootstrap dotfiles apply` が行うのはファイルの配置（と `post-dotfiles` hook）だけで、
+    `mise install` 相当のツール導入は含まれない。ツールは `mise bootstrap` 本体の tools ステップ
+    （上の 3〜5）で入るので、`dotfiles apply` だけで止めずに必ず `mise bootstrap` まで実行する。
+    ツールだけ入れ直したいときは tools ステップだけを実行する（`pre-tools` hook が gh のトークンを
+    `GITHUB_TOKEN` に渡して `mise install` するので、素の `mise install` より GitHub の rate limit に当たりにくい）
+
+    ```sh
+    mise bootstrap --only tools
+    ```
+
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
@@ -759,6 +769,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+  - `dotfiles apply` だけではツールは入らない。ツールだけ入れ直すときは `mise bootstrap --only tools`
+    （Mac 側の同項目参照）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）
 
