@@ -83,6 +83,17 @@ def blob_link(brief: dict, path: str, lines: str | None, side: str) -> str:
     return f'<a href="{esc(url)}"><code>{esc(label)}</code></a>'
 
 
+def safe_url(url: str | None) -> str | None:
+    """href に入れてよい URL（http / https）だけを返す。それ以外（javascript: など）は None。"""
+    return url if url and re.match(r"^https?://", url) else None
+
+
+def link(url: str | None, label: str) -> str:
+    """http(s) の URL ならリンクに、それ以外ならリンクにせず文字だけを出す。"""
+    safe = safe_url(url)
+    return f'<a href="{esc(safe)}">{label}</a>' if safe else label
+
+
 def table(headers: list[str], rows: list[list[str]]) -> str:
     head = "".join(f"<th>{esc(h)}</th>" for h in headers)
     body = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
@@ -103,7 +114,7 @@ def header(brief: dict, has_groups: bool) -> str:
     if brief.get("stack"):
         meta.append(f'<span class="badge">stack #{brief["stack"]["number"]} · {len(prs)} PR</span>')
     for pr in prs[:1] if not brief.get("stack") else []:
-        meta.append(f'<span><a href="{esc(pr["url"])}">{esc(brief.get("repo", ""))}#{pr["number"]}</a></span>')
+        meta.append(f'<span>{link(pr.get("url"), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
         meta.append(f"<span>作成者 {esc(pr.get('author', ''))}</span>")
         meta.append(f'<span><code>{esc(pr.get("base", ""))}</code> ← <code>{esc(pr.get("head", ""))}</code></span>')
     if brief.get("head_sha"):
@@ -128,7 +139,7 @@ def stack_section(brief: dict) -> str:
             f'<span class="removed">−{pr.get("deletions", 0)}</span>'
         )
         blocks.append(
-            f'<li class="{cls}"><div class="stack-head"><a href="{esc(pr["url"])}">#{pr["number"]}</a>'
+            f'<li class="{cls}"><div class="stack-head">{link(pr.get("url"), "#" + str(pr["number"]))}'
             f'<strong>{esc(pr["title"])}</strong><span class="tag">{esc(state)}</span>{size}</div>'
             f'<p class="stack-sum">{inline(pr.get("summary", ""))}</p></li>'
         )
@@ -189,8 +200,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
     for step in test.get("steps", []):
         rows = []
         if step.get("url"):
-            url = esc(step["url"])
-            rows.append(f'<dt>URL</dt><dd><a href="{url}"><code>{url}</code></a></dd>')
+            rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
         rows.append(f"<dt>操作</dt><dd>{inline(step.get('actions', ''))}</dd>")
         rows.append(f"<dt>期待結果</dt><dd>{inline(step.get('expected', ''))}</dd>")
         caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
@@ -219,7 +229,10 @@ def build(workdir: Path) -> tuple[str, list[str]]:
 
     hunks_path, groups_path = workdir / "hunks.json", workdir / "groups.json"
     groups_html = ""
-    if hunks_path.exists() and groups_path.exists():
+    has_hunks, has_groups = hunks_path.exists(), groups_path.exists()
+    if has_hunks != has_groups:
+        errors.append("hunks.json と groups.json は両方そろえる（片方だけでは変更グループを作れない）")
+    elif has_hunks:
         hunks = {h["id"]: h for h in json.loads(hunks_path.read_text())["hunks"]}
         groups = json.loads(groups_path.read_text())["groups"]
         errors += validate_groups(hunks, groups, "full")

@@ -105,6 +105,8 @@ class Canvas:
             self.text(x + w - 4, y + 8, str(node["badge"]), "badge-text", "middle")
 
     def edge(self, path: str, status: str = "same", label: str | None = None, at: tuple[float, float] | None = None) -> None:
+        if status not in STATUSES:
+            raise ValueError(f"edge の status は {' / '.join(STATUSES)} のどれか: {status}")
         cls = "edge" if status == "same" else f"edge {status}"
         self.parts.append(f'<path class="{cls}" d="{path}" marker-end="url(#{self.marker_id}-{status})" />')
         if label and at:

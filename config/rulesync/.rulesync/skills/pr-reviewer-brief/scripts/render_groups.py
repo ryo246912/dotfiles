@@ -56,6 +56,12 @@ def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") ->
     errors: list[str] = []
     owner: dict[str, str] = {}
     keys = ("id", "title", "kind", "hunks") + (("risk", "summary", "intent") if stage == "full" else ())
+    ids = [group.get("id") for group in groups]
+    for group_id in sorted({i for i in ids if ids.count(i) > 1}, key=str):
+        errors.append(f"グループの id が重複している: {group_id}")
+    kinds = [group.get("kind") for group in groups]
+    if "generated" in kinds and any(k != "generated" for k in kinds[kinds.index("generated"):]):
+        errors.append("generated のグループは最後に並べる（並び順がグループ番号になるため）")
     for group in groups:
         for key in keys:
             if key not in group:

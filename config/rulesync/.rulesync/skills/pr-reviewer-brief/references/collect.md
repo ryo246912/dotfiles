@@ -31,9 +31,13 @@ gh pr view <N> --json number,title,url,state,isDraft,author,body,baseRefName,hea
 
 ```bash
 git fetch origin <diff_base> pull/<top_pr>/head
+git rev-parse FETCH_HEAD   # target.json の top_head_sha と一致すること
 git diff origin/<diff_base>...FETCH_HEAD > <work>/diff.patch
 python3 <skill>/scripts/split_hunks.py <work>/diff.patch --out <work>/hunks.json --index > <work>/hunks-index.txt
 ```
+
+`FETCH_HEAD` が `top_head_sha` と違えば、段階 0 のあとに PR が更新されている。`get_stack.py` を同じ引数で実行し直して
+`target.json` を上書きしてから、この手順をやり直す（資料の対象 SHA と解説する差分をそろえるため）。
 
 手元に無ければ、単体の PR は `gh pr diff <N> > <work>/diff.patch`、stack は
 `gh api repos/<owner>/<repo>/compare/<diff_base>...<top_head_sha> -H "Accept: application/vnd.github.diff"` を使う。
@@ -46,7 +50,8 @@ python3 <skill>/scripts/split_hunks.py <work>/diff.patch --out <work>/hunks.json
 - ファイル単位ではない。1 つのファイルの hunk が複数のグループに分かれてよい。迷ったら、変更行の中身を `diff.patch` で見る
 - `title` は何をする変更かが分かる短い名前（「URL 生成の共通化」など）
 - **読む順に並べる**: 土台（共通処理・型・スキーマ）→ それを使う側 → 周辺 → テスト・ドキュメント
-- lockfile・生成物・スナップショットは `kind: "generated"` の 1 グループにまとめる
+- lockfile・生成物・スナップショットは `kind: "generated"` の 1 グループにまとめ、**最後に置く**（並び順がそのまま
+  資料のグループ番号になるため）
 - stack なら `prs` に、そのグループの hunk がどの PR の変更か（各 `pr-<N>.json` の `files` と突き合わせる）を入れる
 - 書いたら検査し、エラーが無くなるまで直す
 
