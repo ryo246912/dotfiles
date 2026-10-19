@@ -260,17 +260,37 @@ def ticket_image(workdir: Path, src: str, alt: str = "", caption: str = "") -> s
     return f'<figure><img src="{image_data_uri(path)}" alt="{esc(alt)}" loading="lazy" />{figcaption}</figure>'
 
 
+def render_list(items: list[tuple[int, str, str, int]]) -> str:
+    """(字下げ, ul / ol, 文字, 番号) の並びを、字下げで入れ子にしたリストにする。番号付きは最初の番号から始める。"""
+    out, stack = [], []  # stack: (字下げ, タグ)
+    for indent, tag, text, number in items:
+        while stack and indent < stack[-1][0]:
+            out.append(f"</li></{stack.pop()[1]}>")
+        if stack and indent == stack[-1][0] and tag != stack[-1][1]:
+            out.append(f"</li></{stack.pop()[1]}>")
+        if not stack or indent > stack[-1][0]:
+            start = f' start="{number}"' if tag == "ol" and number != 1 else ""
+            out.append(f"<{tag}{start}><li>")
+            stack.append((indent, tag))
+        else:
+            out.append("</li><li>")
+        out.append(inline(text))
+    while stack:
+        out.append(f"</li></{stack.pop()[1]}>")
+    return "".join(out)
+
+
 def rich_text(text: str, workdir: Path) -> str:
     """チケットの本文を HTML にする（段落・箇条書き・小見出し・コード・画像）。"""
-    out, para, items, list_tag, code = [], [], [], "", None
+    out, para, items, code = [], [], [], None
 
     def flush() -> None:
-        nonlocal para, items, list_tag
+        nonlocal para, items
         if para:
             out.append("<p>" + "<br />".join(inline(line) for line in para) + "</p>")
         if items:
-            out.append(f"<{list_tag}>" + "".join(f"<li>{inline(i)}</li>" for i in items) + f"</{list_tag}>")
-        para, items, list_tag = [], [], ""
+            out.append(render_list(items))
+        para, items = [], []
 
     for line in text.splitlines():
         if code is not None:
@@ -282,13 +302,14 @@ def rich_text(text: str, workdir: Path) -> str:
             continue
         stripped = line.strip()
         bullet = re.match(r"^[-*] (.*)", stripped)
-        number = re.match(r"^\d+[.)] (.*)", stripped)
+        number = re.match(r"^(\d+)[.)] (.*)", stripped)
         image = re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", stripped)
         if stripped.startswith("```"):
             flush()
             code = []
         elif not stripped:
-            flush()
+            if para:  # 箇条書きは空行をはさんでも続く（番号を振り直さない）
+                flush()
         elif image:
             flush()
             out.append(ticket_image(workdir, image.group(2), image.group(1)))
@@ -296,11 +317,13 @@ def rich_text(text: str, workdir: Path) -> str:
             flush()
             out.append(f"<h5>{inline(stripped.lstrip('#').strip())}</h5>")
         elif bullet or number:
-            tag = "ul" if bullet else "ol"
-            if para or (items and list_tag != tag):
+            if para:
                 flush()
-            list_tag = tag
-            items.append((bullet or number).group(1))
+            indent = len(line.expandtabs(4)) - len(line.expandtabs(4).lstrip())
+            if bullet:
+                items.append((indent, "ul", bullet.group(1), 1))
+            else:
+                items.append((indent, "ol", number.group(2), int(number.group(1))))
         else:
             if items:
                 flush()
