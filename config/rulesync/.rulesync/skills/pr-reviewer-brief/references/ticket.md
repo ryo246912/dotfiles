@@ -79,8 +79,11 @@ ID か URL の種類に合う取り方を使う。
   ```bash
   mkdir -p <work>/ticket-images
   curl -fsSL --proto '=https' --max-filesize 5000000 -o "<work>/ticket-images/<n>.<拡張子>" "<画像の URL>"
-  file --mime-type -b "<work>/ticket-images/<n>.<拡張子>"   # image/ で始まらなければ消す
+  file --mime-type -b "<work>/ticket-images/<n>.<拡張子>"
   ```
+
+  `image/png`・`image/jpeg`・`image/gif`・`image/webp`・`image/svg+xml` だけを残し、拡張子をその種類に合わせる
+  （`.png`・`.jpg`・`.gif`・`.webp`・`.svg`）。それ以外（AVIF・BMP など）は消して、元の URL を書く（資料に埋め込めないため）
 
   - GitHub の添付画像（`https://github.com/user-attachments/...` など github.com の URL）だけは、認証のヘッダ
     `-H "Authorization: Bearer $(gh auth token)"` を付ける。**ほかのホストにはトークンを送らない**

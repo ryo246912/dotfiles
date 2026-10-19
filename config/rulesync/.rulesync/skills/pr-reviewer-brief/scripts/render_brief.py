@@ -238,6 +238,7 @@ def changes_section(brief: dict) -> str:
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
                ".webp": "image/webp", ".svg": "image/svg+xml"}
 MAX_TICKET_IMAGE = 5 * 1024 * 1024
+MAX_TICKET_IMAGES = 20  # 1 つのチケットで埋め込む枚数の上限（HTML が大きくなりすぎないように）
 
 
 def image_data_uri(path: Path) -> str:
@@ -245,8 +246,12 @@ def image_data_uri(path: Path) -> str:
     return f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode()
 
 
-def ticket_image(workdir: Path, src: str, alt: str = "", caption: str = "") -> str:
-    """チケットの画像を埋め込む。<workdir>/ticket-images/ の外のファイルや、大きすぎるものは埋め込まない。"""
+def ticket_image(workdir: Path, src: str, alt: str, caption: str, budget: list[int]) -> str:
+    """チケットの画像を埋め込む。<workdir>/ticket-images/ の外のファイル、大きすぎるもの、上限を超えた分は埋め込まない。
+
+    budget は残りの枚数（[n]）。チケット全体で共有する。
+    """
+    src = src.strip().removeprefix("<").removesuffix(">")
     label = esc(caption or alt or src)
     if safe_url(src):
         return f'<p class="evidence">画像（取り込めなかった）: {link(src, label)}</p>'
@@ -256,6 +261,9 @@ def ticket_image(workdir: Path, src: str, alt: str = "", caption: str = "") -> s
         return f'<p class="evidence">画像が見つからない: <code>{esc(src)}</code></p>'
     if path.stat().st_size > MAX_TICKET_IMAGE:
         return f'<p class="evidence">画像が大きすぎるので載せていない: <code>{esc(src)}</code></p>'
+    if budget[0] <= 0:
+        return f'<p class="evidence">画像が多いので載せていない（{MAX_TICKET_IMAGES} 枚まで）: <code>{esc(src)}</code></p>'
+    budget[0] -= 1
     figcaption = f"<figcaption>{inline(caption)}</figcaption>" if caption else ""
     return f'<figure><img src="{image_data_uri(path)}" alt="{esc(alt)}" loading="lazy" />{figcaption}</figure>'
 
@@ -280,7 +288,7 @@ def render_list(items: list[tuple[int, str, str, int]]) -> str:
     return "".join(out)
 
 
-def rich_text(text: str, workdir: Path) -> str:
+def rich_text(text: str, workdir: Path, budget: list[int]) -> str:
     """チケットの本文を HTML にする（段落・箇条書き・小見出し・コード・画像）。"""
     out, para, items, code = [], [], [], None
 
@@ -303,7 +311,7 @@ def rich_text(text: str, workdir: Path) -> str:
         stripped = line.strip()
         bullet = re.match(r"^[-*] (.*)", stripped)
         number = re.match(r"^(\d+)[.)] (.*)", stripped)
-        image = re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", stripped)
+        image = re.fullmatch(r"!\[([^\]]*)\]\((<[^>\s]+>|[^)\s]+)\)", stripped)
         if stripped.startswith("```"):
             flush()
             code = []
@@ -312,7 +320,7 @@ def rich_text(text: str, workdir: Path) -> str:
                 flush()
         elif image:
             flush()
-            out.append(ticket_image(workdir, image.group(2), image.group(1)))
+            out.append(ticket_image(workdir, image.group(2), image.group(1), "", budget))
         elif stripped.startswith("#"):
             flush()
             out.append(f"<h5>{inline(stripped.lstrip('#').strip())}</h5>")
@@ -336,22 +344,23 @@ def rich_text(text: str, workdir: Path) -> str:
 
 def ticket_body(ticket: dict, workdir: Path) -> str:
     """チケットの本文とコメントを、セクションごとに開閉できる形で出す。"""
-    blocks = []
+    blocks, budget = [], [MAX_TICKET_IMAGES]
     for sec in ticket.get("sections") or []:
+        body = rich_text(sec.get("body", ""), workdir, budget)
         images = "".join(
-            ticket_image(workdir, img.get("path", ""), img.get("alt", ""), img.get("caption", ""))
+            ticket_image(workdir, img.get("path", ""), img.get("alt", ""), img.get("caption", ""), budget)
             for img in sec.get("images") or []
         )
         count = f' <span class="tag">画像 {len(sec["images"])}</span>' if sec.get("images") else ""
         blocks.append(
             f'<details class="ticket-sec"><summary>{inline(sec.get("title") or "本文")}{count}</summary>'
-            f'<div class="ticket-body">{rich_text(sec.get("body", ""), workdir)}{images}</div></details>'
+            f'<div class="ticket-body">{body}{images}</div></details>'
         )
     comments = ticket.get("comments") or []
     if comments:
         items = "".join(
             f'<div class="ticket-comment"><p class="evidence">{esc(c.get("author", ""))}'
-            f'{" · " + esc(c["date"]) if c.get("date") else ""}</p>{rich_text(c.get("body", ""), workdir)}</div>'
+            f'{" · " + esc(c["date"]) if c.get("date") else ""}</p>{rich_text(c.get("body", ""), workdir, budget)}</div>'
             for c in comments
         )
         blocks.append(
