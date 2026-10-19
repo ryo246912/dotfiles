@@ -183,10 +183,15 @@ def layers(spec: dict, canvas: Canvas) -> tuple[float, float]:
         canvas.text(10, y + 12, layer["name"], "small")
         y += 20
         count = len(layer["nodes"])
-        box_w = (width - 20 * (count - 1)) / count
+        room = width - 20 * (count - 1)
+        needs = [node_size(n)[0] for n in layer["nodes"]]
+        # 等分で収まれば等分にし、収まらない箱があれば、必要な幅の比で配る（どの箱も必要な幅を下回らない）
+        widths = [room / count] * count if max(needs) <= room / count else [w * room / sum(needs) for w in needs]
         row_h = max(node_size(n)[1] for n in layer["nodes"])
-        for i, node in enumerate(layer["nodes"]):
-            canvas.node(node, 10 + i * (box_w + 20), y, box_w, row_h)
+        x = 10
+        for node, box_w in zip(layer["nodes"], widths):
+            canvas.node(node, x, y, box_w, row_h)
+            x += box_w + 20
         y += row_h + GAP_Y
     return width + 20, y - GAP_Y + 14
 
@@ -208,11 +213,13 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float]:
         columns.setdefault(rank[node_id], []).append(node_id)
     col_w = {c: max(node_size(nodes[n])[0] for n in ids) for c, ids in columns.items()}
     col_h = {c: sum(node_size(nodes[n])[1] for n in ids) + GAP_Y * (len(ids) - 1) for c, ids in columns.items()}
-    height = max(col_h.values()) + 60
+    # 自分自身へ戻る矢印は箱の上に輪で描くので、その分だけ上を空ける
+    top = 30 + (36 if any(e["from"] == e["to"] for e in spec.get("edges", [])) else 0)
+    height = max(col_h.values()) + top + 30
     pos: dict[str, tuple[float, float, float, float]] = {}
     x = 10
     for c in sorted(columns):
-        y = 30 + (height - 60 - col_h[c]) / 2
+        y = top + (height - top - 30 - col_h[c]) / 2
         for node_id in columns[c]:
             w, h = node_size(nodes[node_id])
             pos[node_id] = (x + (col_w[c] - w) / 2, y, w, h)
@@ -220,23 +227,51 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float]:
         x += col_w[c] + GAP_X * 1.6
     width = x - GAP_X * 1.6 + 10
     bottom = max(y + h for _, y, _, h in pos.values())
+    col_right = {c: max(pos[n][0] + pos[n][2] for n in ids) for c, ids in columns.items()}
+    lowest = {c: ids[-1] for c, ids in columns.items()}  # 列の一番下の箱（その下には何も無い）
+    half_gap = GAP_X * 0.8
     back_edges = 0
+    lanes: dict[int, int] = {}
     for edge in spec.get("edges", []):
-        ax, ay, aw, ah = pos[edge["from"]]
-        bx, by, bw, bh = pos[edge["to"]]
+        a, b = edge["from"], edge["to"]
+        ax, ay, aw, ah = pos[a]
+        bx, by, bw, bh = pos[b]
         status = status_of(edge)
-        if bx > ax + aw:  # 右の列へ
+        if rank[b] > rank[a]:  # 右の列へ
             sx, sy, ex, ey = ax + aw + 2, ay + ah / 2, bx - 4, by + bh / 2
             mx = (sx + ex) / 2
             path = f"M{sx:.0f},{sy:.0f} C{mx:.0f},{sy:.0f} {mx:.0f},{ey:.0f} {ex:.0f},{ey:.0f}"
             at = (mx, (sy + ey) / 2)
-        else:  # 戻る矢印・同じ列: すべての箱の下を回る（複数あれば少しずつずらす）
+        elif a == b:  # 自分自身へ戻る: 箱の上に輪を描く
+            left, right = ax + aw * 0.3, ax + aw * 0.7
+            path = f"M{left:.0f},{ay - 2:.0f} C{left:.0f},{ay - 34:.0f} {right:.0f},{ay - 34:.0f} {right:.0f},{ay - 6:.0f}"
+            at = (ax + aw / 2, ay - 26)
+        elif rank[b] == rank[a]:  # 同じ列: 列の右に通り道を作って回す
+            c = rank[a]
+            lanes[c] = lanes.get(c, 0) + 1
+            lane = col_right[c] + 18 + 14 * (lanes[c] - 1)
+            sy, ey = ay + ah / 2, by + bh / 2
+            path = f"M{ax + aw + 2:.0f},{sy:.0f} C{lane:.0f},{sy:.0f} {lane:.0f},{ey:.0f} {bx + bw + 4:.0f},{ey:.0f}"
+            label_w = text_width(edge["label"], SMALL) + 10 if edge.get("label") else 0
+            at = (lane + 4 + label_w / 2, (sy + ey) / 2)  # ラベルは通り道の右に出す
+            width = max(width, lane + label_w + 20)
+        else:  # 左の列へ戻る: すべての箱の下を回る。下に箱がある箱からは、列の間の隙間を通って下りる
             back_edges += 1
-            sx, sy = ax + aw / 2, ay + ah + 2
-            ex, ey = bx + bw / 2, by + bh + 6
             low = bottom + 30 + 22 * (back_edges - 1)
-            path = f"M{sx:.0f},{sy:.0f} C{sx:.0f},{low:.0f} {ex:.0f},{low:.0f} {ex:.0f},{ey:.0f}"
-            at = ((sx + ex) / 2, low - 6)
+            if lowest[rank[a]] == a:
+                start = f"M{ax + aw / 2:.0f},{ay + ah + 2:.0f} L{ax + aw / 2:.0f},{low:.0f}"
+                start_x = ax + aw / 2
+            else:
+                start_x = ax - half_gap
+                start = f"M{ax - 2:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{low:.0f}"
+            if lowest[rank[b]] == b:
+                end_x = bx + bw / 2
+                end = f"L{end_x:.0f},{low:.0f} L{end_x:.0f},{by + bh + 6:.0f}"
+            else:
+                end_x = col_right[rank[b]] + half_gap
+                end = f"L{end_x:.0f},{low:.0f} L{end_x:.0f},{by + bh / 2:.0f} L{bx + bw + 4:.0f},{by + bh / 2:.0f}"
+            path = f"{start} {end}"
+            at = ((start_x + end_x) / 2, low - 6)
             height = max(height, low + 20)
         canvas.edge(path, status, edge.get("label"), at)
     for node_id, (nx, ny, nw, nh) in pos.items():
