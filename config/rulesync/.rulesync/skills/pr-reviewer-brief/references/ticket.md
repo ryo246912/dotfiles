@@ -18,13 +18,13 @@ GitHub Issue など）の内容を MCP などで取り、`<work>/ticket.json` �
 
 ID か URL の種類に合う取り方を使う。
 
-| 種類         | 取り方                                                                      |
-| ------------ | --------------------------------------------------------------------------- |
-| GitHub Issue | `gh issue view <N> --json number,title,url,state,body,labels,comments`      |
-| Linear       | Linear の MCP の issue を取るツール（ToolSearch で `linear issue` を探す）  |
-| Notion       | Notion の MCP の page を取るツール（ToolSearch で `notion page` を探す）    |
-| Jira         | Atlassian の MCP の issue を取るツール（ToolSearch で `jira issue` を探す） |
-| その他       | 使える MCP を ToolSearch で探す。無ければ取らない                           |
+| 種類         | 取り方                                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Issue | `gh issue view <issue の URL> --json number,title,url,state,body,labels,comments`（番号だけでなく URL を渡す。別のリポジトリの issue でも取れるように） |
+| Linear       | Linear の MCP の issue を取るツール（ToolSearch で `linear issue` を探す）                                                                              |
+| Notion       | Notion の MCP の page を取るツール（ToolSearch で `notion page` を探す）                                                                                |
+| Jira         | Atlassian の MCP の issue を取るツール（ToolSearch で `jira issue` を探す）                                                                             |
+| その他       | 使える MCP を ToolSearch で探す。無ければ取らない                                                                                                       |
 
 - `ABC-123` 形式で種類が分からないときは、使える MCP（Linear → Jira の順）で ID を検索する
 - MCP が無い・認証されていない・取れなかったときは、`fetched: false` にして ID と URL だけを書く。何が足りなかったか
