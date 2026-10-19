@@ -37,11 +37,11 @@
     `templates/zsh/.zshenv.tera` がホスト名から解決し、次の値を導出する
     （どれも export 済みなら上書きしない）
 
-    | 変数                    | 値                                         | 使われる場所                                                         |
-    | ----------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
-    | `MISE_ENV`              | `HOST_ENV` と同じ                          | `config.<os>.toml`・`config.<role>.toml`（`config/mise/`）を読み込む |
-    | `FNOX_PROFILE`          | `HOST_ENV` に `work` を含むときだけ `work` | `config/fnox/config.work.toml` の `[profiles.work.*]`                |
-    | `AGENTSVIEW_PG_MACHINE` | `HOST_ENV` の `,` を `-` にした値          | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）    |
+    | 変数                    | 値                                         | 使われる場所                                                                                                             |
+    | ----------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+    | `MISE_ENV`              | `HOST_ENV` と同じ                          | `~/.config/mise/` の `config.<os>.toml`・`config.<role>.toml` を読み込む（source は `config-mac/mise/`・`config/mise/`） |
+    | `FNOX_PROFILE`          | `HOST_ENV` に `work` を含むときだけ `work` | `config/fnox/config.work.toml` の `[profiles.work.*]`                                                                    |
+    | `AGENTSVIEW_PG_MACHINE` | `HOST_ENV` の `,` を `-` にした値          | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）                                                        |
 
     `HOST_ENV` はほかに `mise run bootstrap:mac` の private/work 限定 cask の分岐でも使う
 
@@ -248,6 +248,9 @@
     ```sh
     ssh-add --apple-use-keychain ~/.ssh/id_ed25519
     ```
+
+    - Linux/WSL では `UseKeychain` と `--apple-use-keychain` は macOS 専用で使えない。`~/.ssh/config` には
+      `UseKeychain yes` の行を書かず、`ssh-add ~/.ssh/id_ed25519` で追加する
 
   - [ ] 秘密鍵の設定
     - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
