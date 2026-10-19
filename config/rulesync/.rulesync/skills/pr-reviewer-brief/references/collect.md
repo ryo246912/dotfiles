@@ -31,8 +31,9 @@ gh pr view <N> --json number,title,url,state,isDraft,author,body,baseRefName,hea
 カレントディレクトリが対象リポジトリなら手元で取る。`<diff_base>` と `<top_pr>` は `target.json` にある。
 
 ```bash
-git fetch origin <diff_base> pull/<top_pr>/head
-git rev-parse FETCH_HEAD   # target.json の top_head_sha と一致すること
+git fetch origin <diff_base>
+git fetch origin pull/<top_pr>/head   # 別々に取る（まとめて取ると FETCH_HEAD の 1 行目が base 側になる）
+git rev-parse FETCH_HEAD              # target.json の top_head_sha と一致すること
 git diff origin/<diff_base>...FETCH_HEAD > <work>/diff.patch
 python3 <skill>/scripts/split_hunks.py <work>/diff.patch --out <work>/hunks.json --index > <work>/hunks-index.txt
 ```

@@ -212,6 +212,13 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     for node_id in nodes:
         columns.setdefault(rank[node_id], []).append(node_id)
     col_w = {c: max(node_size(nodes[n])[0] for n in ids) for c, ids in columns.items()}
+    # 同じ列で戻る矢印は列の右に通り道を作るので、その幅（通り道 + ラベル）を、次の列を置く前に空けておく
+    lane_room: dict[int, float] = {}
+    for c in columns:
+        same = [e for e in spec.get("edges", []) if e["from"] != e["to"] and rank[e["from"]] == rank[e["to"]] == c]
+        if same:
+            labels = max((text_width(e["label"], SMALL) + 10 for e in same if e.get("label")), default=0)
+            lane_room[c] = 18 + 14 * (len(same) - 1) + 4 + labels
     col_h = {c: sum(node_size(nodes[n])[1] for n in ids) + GAP_Y * (len(ids) - 1) for c, ids in columns.items()}
     # 自分自身へ戻る矢印は箱の上に輪で描くので、その分だけ上を空ける
     top = 30 + (36 if any(e["from"] == e["to"] for e in spec.get("edges", [])) else 0)
@@ -224,7 +231,7 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
             w, h = node_size(nodes[node_id])
             pos[node_id] = (x + (col_w[c] - w) / 2, y, w, h)
             y += h + GAP_Y
-        x += col_w[c] + GAP_X * 1.6
+        x += col_w[c] + lane_room.get(c, 0) + GAP_X * 1.6
     width = x - GAP_X * 1.6 + 10
     bottom = max(y + h for _, y, _, h in pos.values())
     col_right = {c: max(pos[n][0] + pos[n][2] for n in ids) for c, ids in columns.items()}
