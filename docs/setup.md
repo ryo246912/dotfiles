@@ -53,15 +53,34 @@
 
   - `config/zsh/host-env.map` に `<ホストID>=<os>,<role>` の行があるか確認する。
     `<role>` は `config/mise/config.<role>.toml` が存在する名前（`private` / `work1` / `work2` / `work3`）にする
-    - 既存の行（例: `ryo-mac-private`）に合わせる場合は、ホスト名の方を変える
-
-      ```sh
-      sudo scutil --set LocalHostName ryo-mac-private
-      ```
-
+    - 既存の行（例: `ryo-mac-private`）に合わせる場合は、ホスト ID の方を変える（下記）
     - 新しいホストなら `host-env.map` に行を追加してコミットする
     - ホスト名を変えずに別の ID で引きたい場合は、`MISE_HOST_ID` を設定するとその値で
       `host-env.map` を引く（`~/.zshenv` より前に読まれる `/etc/zshenv` などで export する）
+  - ホスト ID の変え方
+    - macOS: 「システム設定」→「一般」→「共有」→ 下部の「ローカルホスト名」の「編集」で変える。
+      コマンドでは次のとおり（`LocalHostName` に使えるのは英数字と `-` のみ）。
+      `ComputerName`（共有・AirDrop での表示名）と `HostName` は `HOST_ENV` の解決には使わないが、
+      揃えておくとターミナルのプロンプトなどと食い違わない
+
+      ```sh
+      sudo scutil --set LocalHostName ryo-mac-private
+      sudo scutil --set ComputerName ryo-mac-private # 任意
+      sudo scutil --set HostName ryo-mac-private     # 任意
+      dscacheutil -flushcache
+      ```
+
+    - Linux: `sudo hostnamectl set-hostname <ホストID>`
+    - WSL: Windows 側の PC 名がそのまま使われる。WSL だけ変える場合は `/etc/wsl.conf` に書き、
+      PowerShell で `wsl --shutdown` してから起動し直す
+
+      ```ini
+      [network]
+      hostname = ryo-win
+      ```
+
+    - 変えたあとは新しいシェルを開き、`scutil --get LocalHostName`（Linux/WSL は `hostname -s`）
+      と `echo $HOST_ENV` で反映を確認する
   - 下の初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
     `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
     bootstrap 後に新しいシェルを開いて解決結果を確認し、`mise bootstrap` をもう一度実行する
