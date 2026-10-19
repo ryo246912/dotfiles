@@ -54,7 +54,7 @@
   - `config/zsh/host-env.map` に `<ホストID>=<os>,<role>` の行があるか確認する。
     `<role>` は `config/mise/config.<role>.toml` が存在する名前（`private` / `work1` / `work2` / `work3`）にする
     - 既存の行（例: `ryo-mac-private`）に合わせる場合は、ホスト ID の方を変える（下記）
-    - 新しいホストなら `host-env.map` に行を追加してコミットする
+    - 新しいホストなら `host-env.map` に行を追加する（コミット・push は git の設定の後）
     - ホスト名を変えずに別の ID で引きたい場合は、`MISE_HOST_ID` を設定するとその値で
       `host-env.map` を引く（`~/.zshenv` より前に読まれる `/etc/zshenv` などで export する）
   - ホスト ID の変え方
@@ -81,16 +81,7 @@
 
     - 変えたあとは新しいシェルを開き、`scutil --get LocalHostName`（Linux/WSL は `hostname -s`）
       と `echo $HOST_ENV` で反映を確認する
-  - 下の初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
-    `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
-    bootstrap 後に新しいシェルを開いて解決結果を確認し、`mise bootstrap` をもう一度実行する
-
-    ```sh
-    exec zsh -l
-    echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
-    mise bootstrap
-    ```
-
+  - 反映（新しいシェルでの確認と `mise bootstrap` の再実行）は、bootstrap と git の設定の後に行う（後述）
   - 一時的に別ロールの設定を試す方法は [docs/shell.md](./shell.md) 参照
 
 - [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
@@ -142,99 +133,8 @@
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
     は `MISE_ENV=mac` の明示を省略してよい
 
-- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
-  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
-    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
-    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
-  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
-    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
-    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
-  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
-    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
-    マシンごとに一度だけ接続する
-    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
-    ```sh
-    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
-    ```
-
-- [ ] macOS defaults の適用
-
-  ```sh
-  MISE_ENV=mac mise bootstrap macos defaults apply
-  ```
-
-- [ ] mac 個別セットアップ
-
-  ```sh
-  mise run bootstrap:mac
-  ```
-
-- [ ] karabiner-elements
-  - [ ] 「Default」というProfile名を作成 or リネーム
-  - [ ] `karabiner.ts`を実行
-    ```sh
-    mise run karabiner:apply
-    ```
-
-- [ ] Browser
-  - [ ] Vimium
-    - [ ] 設定で`Vimium Options.json`をインポート
-  - [ ] Tab Position Options
-
-- [ ] Google日本語入力
-  - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
-
-- [ ] システム設定
-  - [ ] キーボードショートカット
-    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
-      ```sh
-      mise run bootstrap:mac-hotkeys
-      ```
-    - [ ] ファンクションキーとして使用するをONにする
-    - [ ] 不要なショートカットはOFFにする
-
-- [ ] VSCode
-  - [ ] settings syncの同期
-  - [ ] 設定ファイルをコピー
-
-### 追加設定
-
-- [ ] システム設定
-  - [ ] 指紋認証
-    - [ ] 「TouchIDとパスワード」→指紋追加
-  - [ ] Dock
-    - [ ] 「システム設定」→「Dockとメニューバー」→「Dockを自動的に隠す」をONにする
-    - [ ] Dockの整理
-  - [ ] トラックパッド
-    - [ ] 不要な設定はOFFにする
-  - [ ] ユーザとグループ
-    - [ ] アイコン写真を設定
-  - [ ] コントロールセンター
-    - [ ] 「バッテリー」→「割合を表示」
-  - [ ] 壁紙
-  - [ ] フルディスクアクセス（ターミナルアプリ）
-    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
-    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
-
-      ```sh
-      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-      ```
-
-    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
-      - `/Applications/Ghostty.app`
-    - [ ] 追加したターミナルアプリを再起動する
-
-- [ ] atuin
-  - [ ] atuin login
-    - atuin keyの内容を入力
-  - [ ] atuin sync
-  - [ ] atuin historyをzsh_historyに反映
-    ```sh
-    atuin history list --reverse --format "{command}" | uniq > ~/.local/state/zsh/restore_zsh_history
-    cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
-    mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
-    ```
-- [ ] git
+- [ ] git（push は SSH、コミットは GPG 署名になるため、コミット・push する前に済ませる。
+      gh と gnupg は上の `mise bootstrap` で入る）
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
     - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
@@ -262,6 +162,59 @@
 
     ```sh
     git config --show-origin --get-regexp '^user\.(email|signingkey)$'
+    ```
+
+  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+    - 秘密鍵の生成
+      1. ssh-keygenで生成→登録
+
+      ```sh
+      ssh-keygen -t ed25519 -C "<mail_address>"
+      ```
+
+      - パスフレーズを入力
+      - Githubに公開鍵を登録
+
+      ```sh
+      gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
+      ```
+
+      2. ghコマンドで生成→登録
+      - sshを選択
+
+      ```sh
+      gh auth login
+      ```
+
+      - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
+
+      ```
+      ? Generate a new SSH key to add to your GitHub account? (Y/n) Y
+      ? Enter a passphrase for your new SSH key (Optional)
+      ? Title for your SSH key: (GitHub CLI)
+      ```
+
+    - ssh-agentにsshキーを追加
+
+    ```sh
+    eval "$(ssh-agent -s)"
+    ```
+
+    ```sh
+    touch ~/.ssh/config
+    ```
+
+    ```sh
+    cat << EOF >> ~/.ssh/config
+    Host github.com
+      AddKeysToAgent yes
+      UseKeychain yes
+      IdentityFile ~/.ssh/id_ed25519
+    EOF
+    ```
+
+    ```sh
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
     ```
 
   - [ ] 秘密鍵の設定
@@ -363,59 +316,111 @@
     - `verified`が`true`ならGitHubでも署名が正しく認識されている
     - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
 
-  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
-    - 秘密鍵の生成
-      1. ssh-keygenで生成→登録
+- [ ] `HOST_ENV` の反映と `mise bootstrap` の再実行
+  - 初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
+    `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
+    新しいシェルを開いて解決結果を確認し、`mise bootstrap` をもう一度実行する
+
+    ```sh
+    exec zsh -l
+    echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
+    mise bootstrap
+    ```
+
+  - `host-env.map` に行を追加した場合は、ここでコミットして push する
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
+  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
+    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
+    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
+  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
+    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
+    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
+  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
+    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
+    マシンごとに一度だけ接続する
+    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
+    ```sh
+    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+    ```
+
+- [ ] macOS defaults の適用
+
+  ```sh
+  MISE_ENV=mac mise bootstrap macos defaults apply
+  ```
+
+- [ ] mac 個別セットアップ
+
+  ```sh
+  mise run bootstrap:mac
+  ```
+
+- [ ] karabiner-elements
+  - [ ] 「Default」というProfile名を作成 or リネーム
+  - [ ] `karabiner.ts`を実行
+    ```sh
+    mise run karabiner:apply
+    ```
+
+- [ ] Browser
+  - [ ] Vimium
+    - [ ] 設定で`Vimium Options.json`をインポート
+  - [ ] Tab Position Options
+
+- [ ] Google日本語入力
+  - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
+
+- [ ] システム設定
+  - [ ] キーボードショートカット
+    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
+      ```sh
+      mise run bootstrap:mac-hotkeys
+      ```
+    - [ ] ファンクションキーとして使用するをONにする
+    - [ ] 不要なショートカットはOFFにする
+
+- [ ] VSCode
+  - [ ] settings syncの同期
+  - [ ] 設定ファイルをコピー
+
+### 追加設定
+
+- [ ] システム設定
+  - [ ] 指紋認証
+    - [ ] 「TouchIDとパスワード」→指紋追加
+  - [ ] Dock
+    - [ ] 「システム設定」→「Dockとメニューバー」→「Dockを自動的に隠す」をONにする
+    - [ ] Dockの整理
+  - [ ] トラックパッド
+    - [ ] 不要な設定はOFFにする
+  - [ ] ユーザとグループ
+    - [ ] アイコン写真を設定
+  - [ ] コントロールセンター
+    - [ ] 「バッテリー」→「割合を表示」
+  - [ ] 壁紙
+  - [ ] フルディスクアクセス（ターミナルアプリ）
+    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
+    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
 
       ```sh
-      ssh-keygen -t ed25519 -C "<mail_address>"
+      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
       ```
 
-      - パスフレーズを入力
-      - Githubに公開鍵を登録
+    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
+      - `/Applications/Ghostty.app`
+    - [ ] 追加したターミナルアプリを再起動する
 
-      ```sh
-      gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
-      ```
-
-      2. ghコマンドで生成→登録
-      - sshを選択
-
-      ```sh
-      gh auth login
-      ```
-
-      - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
-
-      ```
-      ? Generate a new SSH key to add to your GitHub account? (Y/n) Y
-      ? Enter a passphrase for your new SSH key (Optional)
-      ? Title for your SSH key: (GitHub CLI)
-      ```
-
-    - ssh-agentにsshキーを追加
-
+- [ ] atuin
+  - [ ] atuin login
+    - atuin keyの内容を入力
+  - [ ] atuin sync
+  - [ ] atuin historyをzsh_historyに反映
     ```sh
-    eval "$(ssh-agent -s)"
+    atuin history list --reverse --format "{command}" | uniq > ~/.local/state/zsh/restore_zsh_history
+    cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
+    mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
-
-    ```sh
-    touch ~/.ssh/config
-    ```
-
-    ```sh
-    cat << EOF >> ~/.ssh/config
-    Host github.com
-      AddKeysToAgent yes
-      UseKeychain yes
-      IdentityFile ~/.ssh/id_ed25519
-    EOF
-    ```
-
-    ```sh
-    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
-    ```
-
 - [ ] sshの設定(オプション)
   - 秘密鍵を共有してもらって保存
 
@@ -670,7 +675,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
       **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
-      `HOST_ENV` の決め方と初回 bootstrap 後の再実行は Mac 側の「ホストのロール（`HOST_ENV`）を決める」参照
+      `HOST_ENV` の決め方・git（SSH/GPG）の設定・bootstrap の再実行は、Mac 側の
+      「ホストのロール（`HOST_ENV`）を決める」「git」「`HOST_ENV` の反映と `mise bootstrap` の再実行」参照
       （ホスト ID は `hostname -s`）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
