@@ -3,7 +3,9 @@
 pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレクトリ>`（以下 `<work>`）の材料から、資料の中身を
 **JSON で**書く。HTML・図の座標・差分の表はスクリプトが作るので、HTML や SVG は書かない。
 
-入力: `<work>` の `target.json`・`pr-<N>.json`・`hunks-index.txt`・`groups.json`（下書き）・`notes.md`。コードは
+入力: `<work>` の `target.json`・`pr-<N>.json`・`hunks.json`・`hunks-index.txt`・`groups.json`（下書き）・`notes.md`・
+`shas.json`。`hunks.json` は検査と HTML の生成に使うので、消したり書き換えたりしない。`brief.json` の `base_sha`・`head_sha` は
+省けば `shas.json` の値が使われる。コードは
 `notes.md` が挙げた場所から読み、必要な分だけ広げる（`diff.patch` は全部読まず、要る hunk だけ見る）。
 
 出力: `<work>/brief.json`（書式は `<skill>/scripts/render_brief.py` の冒頭）と、仕上げた `<work>/groups.json`。

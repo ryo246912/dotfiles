@@ -196,7 +196,7 @@ def layers(spec: dict, canvas: Canvas) -> tuple[float, float]:
     return width + 20, y - GAP_Y + 14
 
 
-def flow(spec: dict, canvas: Canvas) -> tuple[float, float]:
+def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     nodes = {node["id"]: node for node in spec["nodes"]}
     order = {node_id: i for i, node_id in enumerate(nodes)}
     for edge in spec.get("edges", []):

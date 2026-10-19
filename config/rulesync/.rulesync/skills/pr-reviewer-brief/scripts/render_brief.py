@@ -225,6 +225,10 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
 
 def build(workdir: Path) -> tuple[str, list[str]]:
     brief = json.loads((workdir / "brief.json").read_text())
+    shas_path = workdir / "shas.json"
+    if shas_path.exists():  # 段階 1 が固定した SHA を、brief に無ければ使う
+        for key, value in json.loads(shas_path.read_text()).items():
+            brief.setdefault(key, value)
     errors = [f"brief.json に {key} が無い" for key in ("title", "tldr") if not brief.get(key)]
 
     hunks_path, groups_path = workdir / "hunks.json", workdir / "groups.json"
@@ -293,15 +297,15 @@ def build(workdir: Path) -> tuple[str, list[str]]:
 
     nav = "<nav>" + "".join(f'<a href="#{sid}">{esc(title)}</a>' for sid, title, _ in sections) + "</nav>"
     content = header(brief, bool(groups_html)) + "".join(body for _, _, body in sections)
-    page = PAGE.read_text()
-    for key, value in (
-        ("{{title}}", esc(brief["title"])),
-        ("{{head_sha}}", esc(brief.get("head_sha", ""))),
-        ("{{generated}}", dt.datetime.now().isoformat(timespec="seconds")),
-        ("{{nav}}", nav),
-        ("{{content}}", content),
-    ):
-        page = page.replace(key, value, 1)
+    values = {
+        "title": esc(brief["title"]),
+        "head_sha": esc(brief.get("head_sha", "")),
+        "generated": dt.datetime.now().isoformat(timespec="seconds"),
+        "nav": nav,
+        "content": content,
+    }
+    # 1 回の置換で埋める（差し込んだ値の中に {{...}} があっても、それは置き換えない）
+    page = re.sub(r"\{\{(title|head_sha|generated|nav|content)\}\}", lambda m: values[m.group(1)], PAGE.read_text())
     return page, []
 
 

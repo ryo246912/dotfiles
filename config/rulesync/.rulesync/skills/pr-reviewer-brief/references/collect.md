@@ -16,6 +16,7 @@ pr-reviewer-brief skill の段階 1。軽いモデル（Haiku）で行う前提�
 | `hunks-index.txt` | hunk の一覧（1 hunk 1 行）                                                 |
 | `groups.json`     | 変更グループの下書き（id・title・kind・hunks・prs だけ）                   |
 | `notes.md`        | 段階 2 への引き継ぎメモ（下の書式）                                        |
+| `shas.json`       | 根拠リンク用の SHA（`{"base_sha": "...", "head_sha": "..."}`）             |
 
 ## 1. PR の情報を取る
 
@@ -36,11 +37,19 @@ git diff origin/<diff_base>...FETCH_HEAD > <work>/diff.patch
 python3 <skill>/scripts/split_hunks.py <work>/diff.patch --out <work>/hunks.json --index > <work>/hunks-index.txt
 ```
 
+根拠のリンクがずれないよう、変更前の SHA（merge base）と head の SHA を固定して記録する。
+
+```bash
+printf '{"base_sha": "%s", "head_sha": "%s"}\n' "$(git merge-base origin/<diff_base> FETCH_HEAD)" "$(git rev-parse FETCH_HEAD)" > <work>/shas.json
+```
+
 `FETCH_HEAD` が `top_head_sha` と違えば、段階 0 のあとに PR が更新されている。`get_stack.py` を同じ引数で実行し直して
 `target.json` を上書きしてから、この手順をやり直す（資料の対象 SHA と解説する差分をそろえるため）。
 
 手元に無ければ、単体の PR は `gh pr diff <N> > <work>/diff.patch`、stack は
 `gh api repos/<owner>/<repo>/compare/<diff_base>...<top_head_sha> -H "Accept: application/vnd.github.diff"` を使う。
+`shas.json` の `base_sha` は `gh api repos/<owner>/<repo>/compare/<diff_base>...<top_head_sha> --jq .merge_base_commit.sha`、
+`head_sha` は `top_head_sha` にする。
 
 ## 3. 変更グループの下書きを作る
 
