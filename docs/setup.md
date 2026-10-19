@@ -4,6 +4,18 @@
 
 ### 初期設定
 
+- [ ] Command Line Tools（CLT）のインストール（未導入時のみ）
+  - 未導入のまま `git clone` すると `xcode-select: note: No developer tools were found, requesting install.`
+    と出てダイアログが開くだけで clone は失敗する。先に入れておき、ダイアログの「インストール」を押して
+    完了まで待つ（`brew:felixkratz/formulae/borders` のソースビルドにも CLT が要る）
+  - エラーメッセージ中の `sudo xcode-select --switch path/to/Xcode.app` は Xcode.app を別の場所に置いている場合の
+    例示なので実行しない
+
+  ```sh
+  xcode-select --install
+  xcode-select -p  # /Library/Developer/CommandLineTools と出れば OK
+  ```
+
 - [ ] mise本体のインストール（未導入時のみ）
 
   ```sh
@@ -76,6 +88,13 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+  - `brew:borders` のソースビルドが `ld: ... tapi error: malformed file` /
+    `unknown architecture arm64e.x1-macos` で失敗する場合は、CLT に OS より新しい（beta 版 CLT 由来の）
+    SDK（例: `MacOSX27.0.sdk`）が残っていて、`xcrun` がそれを選ぶ一方で `ld` が古く読めないのが原因。
+    `ls /Library/Developer/CommandLineTools/SDKs/` で確認し、OS に合う SDK を `SDKROOT` で明示して再実行する:
+    ```sh
+    SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk MISE_ENV=mac mise bootstrap packages apply --yes
+    ```
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
@@ -102,18 +121,28 @@
   MISE_ENV=mac mise bootstrap macos defaults apply
   ```
 
-- [ ] mac 個別セットアップ
+- [ ] mac 個別セットアップ（sudo のパスワード入力・Rosetta の同意を求められるので対話端末で実行する。
+      `bootstrap:mac-brew`/`bootstrap:mac-packages` は `raw = true` で TTY を受け取る）
 
   ```sh
   mise run bootstrap:mac
   ```
 
 - [ ] karabiner-elements
-  - [ ] 「Default」というProfile名を作成 or リネーム
+  - [ ] 「Default profile」というProfileがあることを確認（Karabiner-Elements の初回起動時に自動で作られる既定名。無ければ作成 or リネーム）
   - [ ] `karabiner.ts`を実行
     ```sh
     mise run karabiner:apply
     ```
+
+- [ ] Rectangle
+  - [ ] Rectangle を起動し、アクセシビリティの許可を求められたら「システム設定」→「プライバシーとセキュリティ」→
+        「アクセシビリティ」で Rectangle を ON にする
+  - [ ] 設定ファイルをインポートする
+    - メニューバーの Rectangle アイコン →「設定...」→「一般」タブ下部の「インポート」から
+      `~/dotfiles/unmanaged/rectangle/RectangleConfig.json` を選択する
+    - Finder のファイル選択ダイアログで `⇧⌘G` を押してパスを直接入力すると早い
+    - 設定を変えたら同じ画面の「エクスポート」で上記ファイルに上書きし、コミットする
 
 - [ ] Browser
   - [ ] Vimium
@@ -130,7 +159,21 @@
       mise run bootstrap:mac-hotkeys
       ```
     - [ ] ファンクションキーとして使用するをONにする
-    - [ ] 不要なショートカットはOFFにする
+    - [ ] 以下の項目だけをONにし、それ以外のショートカットはすべてOFFにする
+          （「システム設定」→「キーボード」→「キーボードショートカット...」）
+      - Mission Control
+        - 通知センターを表示（`^↓`。`bootstrap:mac-hotkeys` で設定済み）
+      - キーボード
+        - メニューバーを操作対象にする（`^F2`）
+        - Dockを操作対象にする（`^F3`）
+        - ウインドウのツールバーを操作対象にする（`^F5`）
+        - 次のウインドウを操作対象にする（`⌥⇥`。`bootstrap:mac-hotkeys` で設定済み）
+      - スクリーンショット（5項目すべて）
+        - 画面のピクチャをファイルとして保存（`⇧⌘3`）
+        - 画面のピクチャをクリップボードにコピー（`^⇧⌘3`）
+        - 選択部分のピクチャをファイルとして保存（`⇧⌘4`）
+        - 選択部分のピクチャをクリップボードにコピー（`^⇧⌘4`）
+        - スクリーンショットと収録のオプション（`⇧⌘5`）
 
 - [ ] VSCode
   - [ ] settings syncの同期
