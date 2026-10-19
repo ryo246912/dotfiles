@@ -142,8 +142,12 @@
   - [ ] 指紋認証
     - [ ] 「TouchIDとパスワード」→指紋追加
   - [ ] Dock
-    - [ ] 「システム設定」→「Dockとメニューバー」→「Dockを自動的に隠す」をONにする
-    - [ ] Dockの整理
+    - 自動的に隠す設定と並び順は `config-mac/mise/config.mac.toml` の `[bootstrap.macos.dock]` で管理している
+    - [ ] 適用して Dock を再起動する
+
+      ```sh
+      mise bootstrap macos defaults apply && killall Dock
+      ```
   - [ ] トラックパッド
     - [ ] 不要な設定はOFFにする
   - [ ] ユーザとグループ
