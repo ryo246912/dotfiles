@@ -105,6 +105,8 @@ stdout_path = "~/Library/Logs/borders.out.log"
 autohide = true
 # persistent-apps を宣言順に並べる。Finder は常に先頭に固定されるため書かない。
 # 列挙したアプリが 1 つでも存在しないと apply できない。
+# macOS 26 以降が前提: Apps.app は macOS 26 で Launchpad.app を置き換えたもので、
+# Keychain Access は macOS 15 以降 CoreServices/Applications に移っている。
 apps = [
     "/System/Applications/Apps.app",
     "/Applications/Arc.app",
