@@ -418,7 +418,7 @@
     mise run sandbox:mcp-add
     ```
 
-    work2（許可ドメインの雛形はないので MCP だけ。追加したいドメインがあれば `allow-domains.work2.txt` を作る）:
+    work2（許可ドメインの雛形はないので MCP だけ。追加したいドメインがあれば `allow-domains.work2.txt` を作り、`mise run sandbox:setup` も実行する。許可ドメインを読むのは `sandbox:setup` だけ）:
 
     ```sh
     cd ~/dotfiles/config/sbx
