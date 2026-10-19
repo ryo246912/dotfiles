@@ -323,7 +323,9 @@
     - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
 
     ```sh
-    gh gpg-key delete $(gh gpg-key list | awk '{print $3}')
+    # パイプ時の出力はタブ区切りで 2 列目が KEY ID。EMAIL 列は複数メールを ", " で連結するため
+    # awk の空白区切りだと列がずれる
+    gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
     ```
 
     ```sh
