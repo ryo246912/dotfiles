@@ -16,6 +16,9 @@ brief.json の書式:
                "base": "main", "head": "feature", "files": 3, "additions": 10, "deletions": 2,
                "summary": "stack のとき: この PR が受け持つ範囲を 1〜2 行", "current": true}],
       "stack": {"number": 7, "trunk": "main"},           # stack でなければ null か省く
+      "mode": "pr",                                      # "ticket" なら TL;DR・スタック構成・前提知識・変更内容だけを出す
+      "ticket": {...},                                   # 省けば <workdir>/ticket.json を使う（書式は下）
+      "related_prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "summary": "..."}],  # チケットモード用
       "tldr": ["1 行目", "2 行目", "3 行目"],
       "pictures": [<render_pictures.py の指定>],
       "background": {
@@ -40,6 +43,13 @@ brief.json の書式:
 
 evidence と focus の path は、base_sha（evidence）・head_sha（focus）の GitHub のリンクになる。evidence に
 "side": "head" を付けると head 側にする。
+
+ticket（ticket.json）の書式。前提知識の先頭に「チケットの内容」として出る:
+
+    {"id": "ABC-123", "source": "Linear", "url": "https://...", "title": "...", "status": "In Progress",
+     "fetched": true,                       # 取得できなかったら false（id と url だけ出す）
+     "summary": "チケットの要約", "requirements": ["やること"], "acceptance": ["受け入れ条件"],
+     "links": [{"title": "仕様書", "url": "https://..."}]}
 """
 
 import argparse
@@ -112,6 +122,9 @@ def mermaid(code: str) -> str:
 def header(brief: dict, has_groups: bool) -> str:
     prs = brief.get("prs", [])
     meta = []
+    ticket = brief.get("ticket")
+    if ticket:
+        meta.append(f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>')
     if brief.get("stack"):
         meta.append(f'<span class="badge">stack #{brief["stack"]["number"]} · {len(prs)} PR</span>')
     for pr in prs[:1] if not brief.get("stack") else []:
@@ -148,9 +161,28 @@ def stack_section(brief: dict) -> str:
     return f'<ol class="stack-blocks">{"".join(blocks)}</ol><div class="stack-trunk">{trunk}</div>'
 
 
+def ticket_block(ticket: dict) -> str:
+    title = esc(ticket.get("title") or ticket.get("id", ""))
+    label = f"{esc(ticket.get('id', ''))} {title}".strip()
+    meta = " · ".join(esc(v) for v in (ticket.get("source"), ticket.get("status")) if v)
+    parts = [f'<h3>チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
+             + (f' <span class="tag">{meta}</span>' if meta else "") + "</p>"]
+    if not ticket.get("fetched", True):
+        parts.append('<p class="evidence">チケットの内容は取得できなかった（ID と URL だけを載せている）</p>')
+    if ticket.get("summary"):
+        parts.append(f"<p>{inline(ticket['summary'])}</p>")
+    for key, heading in (("requirements", "やること"), ("acceptance", "受け入れ条件")):
+        if ticket.get(key):
+            parts.append(f"<h4>{heading}</h4><ul>" + "".join(f"<li>{inline(i)}</li>" for i in ticket[key]) + "</ul>")
+    if ticket.get("links"):
+        items = "".join(f"<li>{link(l.get('url'), esc(l.get('title') or l.get('url', '')))}</li>" for l in ticket["links"])
+        parts.append(f"<h4>関連リンク</h4><ul>{items}</ul>")
+    return "".join(parts)
+
+
 def background_section(brief: dict) -> str:
     bg = brief.get("background") or {}
-    parts = []
+    parts = [ticket_block(brief["ticket"])] if brief.get("ticket") else []
     if bg.get("current"):
         parts.append("<h3>今の機能</h3>")
         for item in bg["current"]:
@@ -181,6 +213,15 @@ def changes_section(brief: dict) -> str:
         parts.append("<h3>変更前と変更後</h3>" + table(["観点", "変更前", "変更後"], rows))
     for seq in changes.get("sequences", []):
         parts.append(f"<h3>{esc(seq['title'])}</h3>{mermaid(seq['mermaid'])}")
+    if brief.get("related_prs") and not brief.get("stack"):
+        items = "".join(
+            f'<li>{link(pr.get("url"), "#" + str(pr["number"]))} {esc(pr.get("title", ""))}'
+            f' <span class="tag">{esc(pr.get("state", ""))}</span>'
+            + (f" — {inline(pr['summary'])}" if pr.get("summary") else "")
+            + "</li>"
+            for pr in brief["related_prs"]
+        )
+        parts.append(f"<h3>関連する PR</h3><ul>{items}</ul>")
     return "".join(parts)
 
 
@@ -230,6 +271,10 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     if shas_path.exists():  # 段階 1 が固定した SHA を、brief に無ければ使う
         for key, value in json.loads(shas_path.read_text()).items():
             brief.setdefault(key, value)
+    ticket_path = workdir / "ticket.json"
+    if ticket_path.exists() and "ticket" not in brief:
+        brief["ticket"] = json.loads(ticket_path.read_text())
+    ticket_mode = brief.get("mode") == "ticket"
     errors = [f"brief.json に {key} が無い" for key in ("title", "tldr") if not brief.get(key)]
 
     hunks_path, groups_path = workdir / "hunks.json", workdir / "groups.json"
@@ -237,7 +282,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     has_hunks, has_groups = hunks_path.exists(), groups_path.exists()
     if has_hunks != has_groups:
         errors.append("hunks.json と groups.json は両方そろえる（片方だけでは変更グループを作れない）")
-    elif has_hunks:
+    elif has_hunks and not ticket_mode:
         hunks = {h["id"]: h for h in json.loads(hunks_path.read_text())["hunks"]}
         groups = json.loads(groups_path.read_text())["groups"]
         errors += validate_groups(hunks, groups, "full")
@@ -257,7 +302,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     sections = []
     tldr = "".join(f"<p>{inline(line)}</p>" for line in brief["tldr"])
     sections.append(section("tldr", "TL;DR", f'<div class="tldr">{tldr}</div>'))
-    if pictures:
+    if pictures and not ticket_mode:
         legend = (
             '<div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span>'
             '<span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>'
@@ -271,7 +316,8 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     ):
         if body:
             sections.append(section(sid, title, body))
-    interfaces = brief.get("interfaces")
+    # チケットモードは TL;DR・スタック構成・前提知識・変更内容だけ
+    interfaces = None if ticket_mode else brief.get("interfaces")
     if interfaces is not None:
         body = (
             table(
@@ -284,15 +330,15 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         sections.append(section("interfaces", "スキーマ・API・設定の差分", body))
     if groups_html:
         sections.append(section("groups", "変更グループ", groups_html))
-    body = manual_test_section(brief, workdir)
+    body = "" if ticket_mode else manual_test_section(brief, workdir)
     if body:
         sections.append(section("manual-test", "動作確認手順", body))
-    if brief.get("focus"):
+    if brief.get("focus") and not ticket_mode:
         items = "".join(
             f"<li>{blob_link(brief, f['path'], f.get('lines'), 'head')} — {inline(f['why'])}</li>" for f in brief["focus"]
         )
         sections.append(section("focus", "重点的に見る箇所", f"<ul>{items}</ul>"))
-    if brief.get("unknowns"):
+    if brief.get("unknowns") and not ticket_mode:
         items = "".join(f"<li>{inline(u)}</li>" for u in brief["unknowns"])
         sections.append(section("unknowns", "未確認事項", f"<ul>{items}</ul>"))
 

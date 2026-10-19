@@ -7,6 +7,8 @@ description: >-
   並べ、グループごとに確認済みを付けながら読めるようにする。頼まれれば Playwright でブラウザの画面（localhost や
   Preview 環境など）のスクリーンショットを撮って手順に貼る。
   gh stack の stack（分割した PR の連なり）は 1 つの PR とみなして全体を説明し、各 PR は短くまとめる。
+  PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）が MCP などで取れれば、その内容も前提知識に載せる。
+  チケットの ID や URL を渡すと、チケットの内容と前提知識をつかむための資料（TL;DR・スタック構成・前提知識・変更内容）を作る。
   「この PR の解説を作って」「PR の前提から分かるようにまとめて」「stack 全体を把握したい」など、レビュー前に
   内容をつかみたいときに使う。`--watch` で新しく作られた PR を監視し、PR ごとに 1 回だけ資料を自動で作る。
   指摘の洗い出しや draft レビューの投稿は pr-reviewer-comment を使う。
@@ -27,23 +29,25 @@ HTML・図の座標・差分の表はスクリプトが作る。各段階の手�
 
 `/pr-reviewer-brief <対象>` または `/pr-reviewer-brief --watch`
 
-| 書き方                   | 対象                                                            |
-| ------------------------ | --------------------------------------------------------------- |
-| PR の URL、`123`、`#123` | その PR。gh stack の stack に入っていれば、その stack 全体      |
-| `stack 7`、`stack #7`    | gh stack の stack 番号（github.com の stack の UI に出る番号）  |
-| `--watch`                | 新しく作られた PR を監視して資料を作る（`references/watch.md`） |
+| 書き方                    | 対象                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| PR の URL、`123`、`#123`  | その PR。gh stack の stack に入っていれば、その stack 全体                    |
+| `stack 7`、`stack #7`     | gh stack の stack 番号（github.com の stack の UI に出る番号）                |
+| `ABC-123`、チケットの URL | チケット（Linear・Notion・Jira・GitHub Issue など）。**チケットモード**になる |
+| `--watch`                 | 新しく作られた PR を監視して資料を作る（`references/watch.md`）               |
 
-番号だけなら PR 番号とみなす（stack 番号のときは `stack` を付けてもらう）。リポジトリはカレントディレクトリのものとみなす。
+番号だけなら PR 番号とみなす（stack 番号のときは `stack` を付けてもらう）。`ABC-123` のように英字と `-` を含む ID、
+Linear・Notion・Jira・GitHub Issue の URL、`ticket <ID>` はチケットとみなす。リポジトリはカレントディレクトリのものとみなす。
 ほかの指定（スクリーンショットを撮るか、撮る先の URL、使うモデルなど）は、ユーザーの自然文から読み取る。
 
 ## 進め方
 
-| 段階 | 担当                                  | 読む手順                    | 作るもの（作業ディレクトリ）                   |
-| ---- | ------------------------------------- | --------------------------- | ---------------------------------------------- |
-| 0    | メイン                                | この SKILL.md               | `target.json`                                  |
-| 1    | subagent（`haiku`）                   | `references/collect.md`     | 差分・hunk・変更グループの下書き・引き継ぎメモ |
-| 2    | subagent（`sonnet`）                  | `references/write.md`       | `brief.json`・仕上げた `groups.json`・**HTML** |
-| 3    | subagent（`haiku`）。頼まれたときだけ | `references/screenshots.md` | スクリーンショットを撮り、HTML を作り直す      |
+| 段階 | 担当                                  | 読む手順                    | 作るもの（作業ディレクトリ）                             |
+| ---- | ------------------------------------- | --------------------------- | -------------------------------------------------------- |
+| 0    | メイン                                | この SKILL.md               | `target.json`                                            |
+| 1    | subagent（`haiku`）                   | `references/collect.md`     | 差分・hunk・変更グループの下書き・チケット・引き継ぎメモ |
+| 2    | subagent（`sonnet`）                  | `references/write.md`       | `brief.json`・仕上げた `groups.json`・**HTML**           |
+| 3    | subagent（`haiku`）。頼まれたときだけ | `references/screenshots.md` | スクリーンショットを撮り、HTML を作り直す                |
 
 ### 段階 0: 対象を決める（メイン）
 
@@ -57,6 +61,13 @@ python3 <この skill のディレクトリ>/scripts/get_stack.py --pr <PR 番�
 - **作業ディレクトリ** `./plan/.pr-reviewer-brief/<名前>/` を作り、出力をそのまま `target.json` に保存する
 - **出力先**は `./plan/<名前>.html`
 - `warnings` があれば、段階 2 への依頼に「未確認事項に書く」として添える
+
+**チケットモード**（チケットの ID か URL を渡されたとき）は、`get_stack.py` を実行しない。
+
+- 名前は `ticket-<ID>`（URL なら ID の部分。Notion なら page ID の末尾 8 文字。英数字と `-` 以外は `-` にする）
+- 作業ディレクトリを作り、`target.json` に `{"mode": "ticket", "ticket": "<渡された ID か URL>"}` を書く
+- 段階 1 は `references/collect.md` の代わりに `references/collect-ticket.md` を使う。段階 3（スクリーンショット）は行わない
+- 資料には TL;DR・スタック構成・前提知識・変更内容だけが出る
 
 ### 段階 1〜3: subagent に任せる（メイン）
 
@@ -76,7 +87,9 @@ Agent ツールで、段階ごとに subagent を **1 つずつ順に**起動す
 
 ### 終わったら（メイン）
 
-HTML のパスを伝え、`brief.json` の `tldr` と、`groups.json` のグループ一覧（番号・タイトル・risk）を短く出す。
+HTML のパスを伝え、`brief.json` の `tldr` と、`groups.json` のグループ一覧（番号・タイトル・risk）を短く出す
+（チケットモードでは `tldr` と関連する PR）。チケットが取れなかった（`ticket.json` の `fetched` が false、または MCP が
+無かった）ときは、そのことと理由も 1 行で伝える。
 Claude Code で Artifact として公開できる環境なら、ユーザーに確認したうえで公開してよい。
 
 ## 監視モードのルール

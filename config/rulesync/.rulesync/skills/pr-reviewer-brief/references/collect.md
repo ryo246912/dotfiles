@@ -17,6 +17,7 @@ pr-reviewer-brief skill の段階 1。軽いモデル（Haiku）で行う前提�
 | `groups.json`     | 変更グループの下書き（id・title・kind・hunks・prs だけ）                   |
 | `notes.md`        | 段階 2 への引き継ぎメモ（下の書式）                                        |
 | `shas.json`       | 根拠リンク用の SHA（`{"base_sha": "...", "head_sha": "..."}`）             |
+| `ticket.json`     | 関連するチケットの内容（見つかったときだけ。`references/ticket.md`）       |
 
 ## 1. PR の情報を取る
 
@@ -69,7 +70,12 @@ printf '{"base_sha": "%s", "head_sha": "%s"}\n' "$(git merge-base origin/<diff_b
   python3 <skill>/scripts/render_groups.py --hunks <work>/hunks.json --groups <work>/groups.json --check draft
   ```
 
-## 4. 引き継ぎメモを書く
+## 4. 関連するチケットを取る
+
+`<skill>/references/ticket.md` に従い、PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）を探す。見つかって
+中身が取れれば `ticket.json` に書く。見つからなければ何もしない。
+
+## 5. 引き継ぎメモを書く
 
 `<work>/notes.md` に、段階 2 がコードを読む場所を絞れるよう、事実だけを箇条書きで書く。推測は「推測」と書く。
 

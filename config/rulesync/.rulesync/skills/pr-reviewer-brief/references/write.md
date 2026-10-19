@@ -4,7 +4,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 **JSON で**書く。HTML・図の座標・差分の表はスクリプトが作るので、HTML や SVG は書かない。
 
 入力: `<work>` の `target.json`・`pr-<N>.json`・`hunks.json`・`hunks-index.txt`・`groups.json`（下書き）・`notes.md`・
-`shas.json`。`hunks.json` は検査と HTML の生成に使うので、消したり書き換えたりしない。`brief.json` の `base_sha`・`head_sha` は
+`shas.json`、あれば `ticket.json`。`hunks.json` は検査と HTML の生成に使うので、消したり書き換えたりしない。`brief.json` の `base_sha`・`head_sha` は
 省けば `shas.json` の値が使われる。コードは
 `notes.md` が挙げた場所から読み、必要な分だけ広げる（`diff.patch` は全部読まず、要る hunk だけ見る）。
 
@@ -12,9 +12,15 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 
 この skill は**説明に徹する**。良し悪しの指摘はしない（気づいた懸念は「重点的に見る箇所」に事実として書く）。
 
+`target.json` に `"mode": "ticket"` があればチケットモード。下の「チケットモードのとき」も読む。
+
 ## 1. 前提知識（`background`）
 
 資料の中心。**変更前（base 側）のコード**を読み、コードベースを知らない人向けに書く。
+
+- `ticket.json` があれば、前提知識の先頭に「チケットの内容」として自動で出る（`brief.json` に書かなくてよい）。チケットの
+  目的・やること・受け入れ条件は、`tldr`・`current`・変更前後の比較を書く材料にする。チケットに書かれたことと PR の変更が
+  食い違えば、`focus` にその事実を書く
 
 - `current`: 変更が関わる機能が、今どの画面で、ユーザーの何の操作で、内部のどこを通って動いているか。画面名・ボタン名は
   i18n の文言などコード上の表示名で書く。**各項目に根拠（`evidence` のファイルと行）を必ず付ける**。根拠が無い説明は書かない。
@@ -95,6 +101,19 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <出力先の HTM
 ```
 
 エラーが出たら `brief.json`・`groups.json` を直して再実行する。出力先は依頼のときに渡される。
+
+## チケットモードのとき
+
+PR ではなくチケットを渡されたとき。資料には **TL;DR・スタック構成・前提知識・変更内容だけ**が出る（それ以外は書いても
+出ない）。チケットの内容と、それを理解するための前提知識をつかむための資料にする。
+
+- `brief.json` に `"mode": "ticket"` を入れる。`title` はチケットのタイトルにする
+- `tldr`: このチケットで、誰の・何の課題を・どう変えるのか
+- `background`: 1 と同じ。チケットに出てくる画面・機能が**今**どう動いているかを、今の default branch のコードを読んで根拠付きで書く
+- 変更内容: 関連する PR があれば、`target.json`（stack なら `prs`・`stack` を `brief.json` にも書く）と各 `pr-<N>.json` から
+  `changes.before_after` を書き、`related_prs` に PR ごとの 1 文のまとめを書く。PR が無ければ、チケットに書かれた
+  「これから変えること」を `changes.before_after` にまとめる（変更後の列は「チケットでの予定」と分かるように書く）
+- 変更グループ・絵・動作確認手順・重点的に見る箇所は書かない。`render_groups.py` の検査もしない
 
 ## 終わり方
 
