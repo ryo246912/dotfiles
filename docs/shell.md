@@ -6,11 +6,19 @@
 別ロールの設定を一時的なシェルで試せる。
 
 ```sh
-HOST_ENV=mac,work3 MISE_ENV= FNOX_PROFILE= exec $SHELL -l
+exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE HOST_ENV=mac,work3 zsh -l
 ```
 
 - `HOST_ENV=mac,work3` — 試したいロールを明示的に指定し、`host-env.map` の解決をスキップさせる
-- `MISE_ENV=` / `FNOX_PROFILE=` — 空文字で渡すことで、現在のシェルから引き継いだ古い値をクリアする
+- `-u MISE_ENV` / `-u FNOX_PROFILE` — 現在のシェルから引き継いだ古い値を外す
+- `-u ZDOTDIR` — 外さないと `~/.zshenv` 自体が読まれない（下記）
+
+## `ZDOTDIR` を外す必要がある理由
+
+`~/.zshenv` は `ZDOTDIR=~/.config/zsh` を export する。zsh は起動時に `ZDOTDIR` が設定されていると
+`~/.zshenv` ではなく `$ZDOTDIR/.zshenv` を読むが、`~/.config/zsh/.zshenv` は存在しない。
+そのため `exec $SHELL -l` のように現在の環境を引き継いで起動すると `~/.zshenv` が読まれず、
+`HOST_ENV`/`MISE_ENV`/`FNOX_PROFILE` の解決・導出が一切走らない。
 
 ## `MISE_ENV`/`FNOX_PROFILE` を一緒にクリアする必要がある理由
 
@@ -32,12 +40,12 @@ fi
 `exec $SHELL -l` は現在のシェルの環境変数を引き継ぐため、既に通常起動で
 `MISE_ENV`/`FNOX_PROFILE` が export 済みの状態から `HOST_ENV` だけを
 上書きしても、この2つは「未設定」ではないため再導出されず、古いロールの
-値のまま残ってしまう。`MISE_ENV=`/`FNOX_PROFILE=`（空文字）を同時に渡すと
+値のまま残ってしまう。`env -u MISE_ENV -u FNOX_PROFILE` で外すと
 `-z` 判定が真になり、新しい `HOST_ENV` から正しく再導出される。
 
 ## 確認方法
 
 ```sh
-HOST_ENV=mac,work3 MISE_ENV= FNOX_PROFILE= exec $SHELL -l
+exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE HOST_ENV=mac,work3 zsh -l
 echo "$HOST_ENV $MISE_ENV $FNOX_PROFILE"
 ```

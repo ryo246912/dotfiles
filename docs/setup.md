@@ -79,7 +79,7 @@
       hostname = ryo-win
       ```
 
-    - 変えたあとは新しいシェルを開き、`scutil --get LocalHostName`（Linux/WSL は `hostname -s`）
+    - 変えたあとは新しいターミナルを開き（または下の「`HOST_ENV` の反映」の `env -u ...` で起動し直し）、`scutil --get LocalHostName`（Linux/WSL は `hostname -s`）
       と `echo $HOST_ENV` で反映を確認する
   - 反映（新しいシェルでの確認と `mise bootstrap` の再実行）は、bootstrap と git の設定の後に行う（後述）
   - 一時的に別ロールの設定を試す方法は [docs/shell.md](./shell.md) 参照
@@ -319,10 +319,14 @@
 - [ ] `HOST_ENV` の反映と `mise bootstrap` の再実行
   - 初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
     `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
-    新しいシェルを開いて解決結果を確認し、`mise bootstrap` をもう一度実行する
+    シェルを起動し直して解決結果を確認し、`mise bootstrap` をもう一度実行する
+  - 起動し直すときは新しいターミナル（タブ）を開くか、次のように `env -u` で引き継いだ変数を外して起動する。
+    `exec $SHELL -l` だけだと `~/.zshenv` が export した `ZDOTDIR` を引き継ぐため、zsh が
+    `~/.zshenv` ではなく `$ZDOTDIR/.zshenv`（存在しない）を読みに行き、`HOST_ENV` が解決されない。
+    `HOST_ENV` などを外すのは、export 済みの値があると上書きせずにそのまま使われるため
 
     ```sh
-    exec zsh -l
+    exec env -u ZDOTDIR -u HOST_ENV -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE zsh -l
     echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
     mise bootstrap
     ```
