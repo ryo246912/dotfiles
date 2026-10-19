@@ -6,11 +6,13 @@
 別ロールの設定を一時的なシェルで試せる。
 
 ```sh
-exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE HOST_ENV=mac,work3 zsh -l
+exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE HOST_ENV=mac,work3 zsh -l
 ```
 
 - `HOST_ENV=mac,work3` — 試したいロールを明示的に指定し、`host-env.map` の解決をスキップさせる
 - `-u MISE_ENV` / `-u FNOX_PROFILE` — 現在のシェルから引き継いだ古い値を外す
+- `-u AGENTSVIEW_PG_MACHINE` — `HOST_ENV` を明示すると導出処理ごと飛ばされ、元のロールの machine 名が
+  残ってしまうため外す（外した結果、一時シェルでは未設定になる）
 - `-u ZDOTDIR` — 外さないと `~/.zshenv` 自体が読まれない（下記）
 
 ## `ZDOTDIR` を外す必要がある理由
@@ -46,6 +48,11 @@ fi
 ## 確認方法
 
 ```sh
-exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE HOST_ENV=mac,work3 zsh -l
+exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE HOST_ENV=mac,work3 zsh -l
+```
+
+`exec` で今のシェルが置き換わるので、確認は起動し直したシェルで行う。
+
+```sh
 echo "$HOST_ENV $MISE_ENV $FNOX_PROFILE"
 ```

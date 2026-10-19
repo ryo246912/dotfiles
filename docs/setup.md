@@ -48,7 +48,7 @@
   - ホスト ID を確認する（macOS は `LocalHostName`、Linux/WSL は `hostname -s`）
 
     ```sh
-    scutil --get LocalHostName
+    scutil --get LocalHostName # Linux/WSL は hostname -s
     ```
 
   - `config/zsh/host-env.map` に `<ホストID>=<os>,<role>` の行があるか確認する。
@@ -138,6 +138,10 @@
     mise bootstrap --only tools
     ```
 
+    `HOST_ENV` が反映される前のシェル（初回 bootstrap 直後など）では `MISE_ENV` が未設定なので、
+    `MISE_ENV=mac mise bootstrap --only tools` のように明示する（このときロール別のツールは入らない。
+    下の「`HOST_ENV` の反映と `mise bootstrap` の再実行」の後は `MISE_ENV` を付けずに実行する）
+
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
@@ -185,7 +189,7 @@
         `sec   rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろが鍵 ID
 
         ```sh
-        gpg --list-secret-keys --keyid-format LONG <メールアドレス>
+        gpg --list-secret-keys --keyid-format LONG "<メールアドレス>"
         ```
 
         GitHub に登録済みの鍵 ID は `gh gpg-key list` の 2 列目（KEY ID）でも確認できる
@@ -208,7 +212,7 @@
       - Githubに公開鍵を登録
 
       ```sh
-      gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
+      gh ssh-key add ~/.ssh/id_ed25519.pub -t "<title>"
       ```
 
       2. ghコマンドで生成→登録
@@ -362,6 +366,11 @@
 
     ```sh
     exec env -u ZDOTDIR -u HOST_ENV -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE zsh -l
+    ```
+
+    `exec` で今のシェルが置き換わるので、続きは起動し直したシェルで実行する
+
+    ```sh
     echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
     mise bootstrap
     ```
@@ -398,12 +407,23 @@
   - sandbox: `config/sbx/` はリポジトリ（`~/dotfiles`）側に置く。編集後に登録し直す
     （詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md)）
 
+    work3:
+
     ```sh
     cd ~/dotfiles/config/sbx
     cp allow-domains.work3.txt.example allow-domains.work3.txt
-    cp mcp.work3.yml.example mcp.work3.yml # work2 なら mcp.work2.yml.example
+    cp mcp.work3.yml.example mcp.work3.yml
     nvim allow-domains.work3.txt mcp.work3.yml
     mise run sandbox:setup
+    mise run sandbox:mcp-add
+    ```
+
+    work2（許可ドメインの雛形はないので MCP だけ。追加したいドメインがあれば `allow-domains.work2.txt` を作る）:
+
+    ```sh
+    cd ~/dotfiles/config/sbx
+    cp mcp.work2.yml.example mcp.work2.yml
+    nvim mcp.work2.yml
     mise run sandbox:mcp-add
     ```
 
