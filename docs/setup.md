@@ -93,7 +93,7 @@
     SDK（例: `MacOSX27.0.sdk`）が残っていて、`xcrun` がそれを選ぶ一方で `ld` が古く読めないのが原因。
     `ls /Library/Developer/CommandLineTools/SDKs/` で確認し、OS に合う SDK を `SDKROOT` で明示して再実行する:
     ```sh
-    SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk MISE_ENV=mac mise bootstrap packages apply --yes
+    SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX$(sw_vers -productVersion | cut -d. -f1).sdk MISE_ENV=mac mise bootstrap packages apply --yes
     ```
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要

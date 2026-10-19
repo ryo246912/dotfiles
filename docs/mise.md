@@ -383,9 +383,10 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 `borders`（`felixkratz/formulae`）と `thock`（`kamillobinski/thock`。formula から cask に移行済み）は
 どちらも API メタデータ（`api/...json`）が 404 だが、`mise bootstrap packages apply` で
 新規導入できることを実機で確認したため `[bootstrap.packages]` に置いている。
-`opencode-bar`（`opgginc/tap`）は
-実際に `mise bootstrap packages apply` を実行して `api/cask/opencode-bar.json` が
-404 になることを確認したため `bootstrap:mac-packages` 側に残した（上記の挙動を踏まえると再検証の余地あり）。
+`opencode-bar`（`opgginc/tap`）も `api/cask/opencode-bar.json` は 404 だが、こちらは
+tap を宣言しても `mise bootstrap packages apply` が `api/cask/opencode-bar.json` の取得失敗で
+止まり、tap 内の `Casks/*.rb` の直接読み込みにフォールバックしなかったため
+`bootstrap:mac-packages` 側に残した（API 404 だけが理由ではない。mise 更新時に再検証する）。
 `bootstrap:mac-packages` 側では `brew tap` を先に打たず `brew install owner/tap/<name>` の完全修飾名で
 インストールしている（Homebrew の tap trust: `brew tap` 後の短縮名インストールは
 未信頼 tap で失敗しうるが、完全修飾名はその項目単体を暗黙に信任するため安全）。
