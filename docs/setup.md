@@ -18,26 +18,49 @@
   cd ~/dotfiles
   ```
 
-  明示的な `mise trust` は不要。直後の `mise bootstrap dotfiles apply --yes`
-  （後述）の `--yes` 自体が、未trustの `mise.toml` をそのまま自動trustし、
-  `~/.local/state/mise/trusted-configs/` にtrust状態を永続化する（実機確認済み:
-  trustなしの状態から `mise bootstrap dotfiles apply --yes` を直接実行しても
-  成功し、以後 `--yes` を付けずに呼んでもtrustエラーが出ない）。
-  `config/mise/config.toml` 側で宣言している `trusted_config_paths` は、
-  （dotfiles配置後に）この trust 状態を明示的な設定としても持たせるためのもので、
-  初回セットアップの成立自体には不要。
-  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
-  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
-  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
-  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
-  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
+- [ ] ホストのロール（`HOST_ENV`）を決める
+  - `HOST_ENV`（例: `mac,work2`）はログインシェル起動時に `config/zsh/host-env.map` からホスト ID で引かれ、
+    次の変数が導出される
 
-- [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
-      実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
-      `mise.toml`/`mise.mac.toml` 自身が持つ。`MISE_ENV` は通常シェル起動時に
-      `templates/zsh/.zshenv.tera` が `HOST_ENV`（`config/zsh/host-env.map` 由来）から
-      自動導出するが、その `.zshenv` 自体がまだ配置されていない最初の bootstrap では
-      未設定なので、ここでは明示指定が必須）
+    | 変数                    | 値                                                     | 用途                                                                 |
+    | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+    | `MISE_ENV`              | `HOST_ENV` と同じ                                      | `~/.config/mise/` の `config.<os>.toml`・`config.<role>.toml` を読む |
+    | `FNOX_PROFILE`          | work ロールのときだけ `work`                           | `config/fnox/config.work.toml` の `[profiles.work.*]`                |
+    | `AGENTSVIEW_PG_MACHINE` | `,` を `-` にした値（`host-env.map` で引いたときのみ） | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）    |
+
+  - ホスト ID を確認し、`host-env.map` に `<ホストID>=<os>,<role>` の行があるか見る
+    （`<role>` は `config/mise/config.<role>.toml` がある名前）
+
+    ```sh
+    scutil --get LocalHostName # Linux/WSL は hostname -s
+    ```
+
+    - 既存の行に合わせる → ホスト ID を変える（下記）
+    - 新しいホスト → `host-env.map` に行を追加する（コミットは git の設定の後）
+    - ホスト ID を変えずに別の値で引く → `MISE_HOST_ID` を `/etc/zshenv` などで export する
+
+  - ホスト ID の変え方（変えたら新しいターミナルで確認する）
+    - macOS: 「システム設定」→「一般」→「共有」→「ローカルホスト名」か、次のコマンド（英数字と `-` のみ）
+
+      ```sh
+      sudo scutil --set LocalHostName ryo-mac-private
+      sudo scutil --set ComputerName ryo-mac-private # 任意
+      sudo scutil --set HostName ryo-mac-private     # 任意
+      dscacheutil -flushcache
+      ```
+
+    - Linux: `sudo hostnamectl set-hostname <ホストID>`
+    - WSL: 既定は Windows の PC 名。変えるときは `/etc/wsl.conf` に書き、PowerShell で `wsl --shutdown`
+
+      ```ini
+      [network]
+      hostname = ryo-win
+      ```
+
+  - bootstrap 後の反映は後述の「`HOST_ENV` の反映と `mise bootstrap` の再実行」、
+    一時的に別ロールを試す方法は [docs/shell.md](./shell.md) 参照
+
+- [ ] mise bootstrap の実行
   - **最初に `[dotfiles]` だけを適用する**（`[bootstrap.packages]` は
     `config-mac/mise/config.mac.toml` という dotfile の中身なので、他のフェーズより
     先に一度実体化しておく必要がある。`mise bootstrap` 内の packages フェーズは
@@ -47,24 +70,11 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
-    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
-    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
-    track/history の節参照）。
-    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
-    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
-    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
-    巻き込まないため）:
+    既存環境で conflict が出たときだけ:
     ```sh
     MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
     ```
-    force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
-    （確認のしかたと注意点は [docs/mise.md](./mise.md) の
-    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
-    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
-    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
-  - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
-    [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
-    `~/.config/mise/config.mac.toml` を正しく読める:
+  - 続けて `mise bootstrap` 本体を実行する:
     1. `[bootstrap.packages]` の導入（brew/brew-cask）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
     3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
@@ -76,111 +86,22 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
-    手動シンボリックリンク作成は不要
-  - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
-    は `MISE_ENV=mac` の明示を省略してよい
+  - `dotfiles apply` はファイルを配置するだけで、ツールは入らない。ツールだけ入れ直すときは tools ステップだけ実行する
+    （`pre-tools` hook が gh のトークンを渡すので、素の `mise install` より rate limit に当たりにくい）
 
-- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
-  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
-    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
-    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
-  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
-    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
-    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
-  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
-    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
-    マシンごとに一度だけ接続する
-    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
     ```sh
-    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+    mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
     ```
 
-- [ ] macOS defaults の適用
+- [ ] git（push は SSH、コミットは GPG 署名になるので、コミット・push の前に済ませる）
+  - 鍵の登録・削除に使う gh の scope を足しておく（初回 bootstrap の `gh auth login` は `project` だけ）
 
-  ```sh
-  MISE_ENV=mac mise bootstrap macos defaults apply
-  ```
-
-- [ ] mac 個別セットアップ
-
-  ```sh
-  mise run bootstrap:mac
-  ```
-
-- [ ] karabiner-elements
-  - [ ] 「Default」というProfile名を作成 or リネーム
-  - [ ] `karabiner.ts`を実行
     ```sh
-    mise run karabiner:apply
+    gh auth refresh --scopes write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
     ```
 
-- [ ] Browser
-  - [ ] Vimium
-    - [ ] 設定で`Vimium Options.json`をインポート
-  - [ ] Tab Position Options
-
-- [ ] Google日本語入力
-  - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
-
-- [ ] システム設定
-  - [ ] キーボードショートカット
-    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
-      ```sh
-      mise run bootstrap:mac-hotkeys
-      ```
-    - [ ] ファンクションキーとして使用するをONにする
-    - [ ] 不要なショートカットはOFFにする
-
-- [ ] VSCode
-  - [ ] settings syncの同期
-  - [ ] 設定ファイルをコピー
-
-### 追加設定
-
-- [ ] システム設定
-  - [ ] 指紋認証
-    - [ ] 「TouchIDとパスワード」→指紋追加
-  - [ ] Dock
-    - 自動的に隠す設定と並び順は `config-mac/mise/config.mac.toml` の `[bootstrap.macos.dock]` で管理している
-    - [ ] 適用して Dock を再起動する
-
-      ```sh
-      mise bootstrap macos defaults apply && killall Dock
-      ```
-  - [ ] トラックパッド
-    - [ ] 不要な設定はOFFにする
-  - [ ] ユーザとグループ
-    - [ ] アイコン写真を設定
-  - [ ] コントロールセンター
-    - [ ] 「バッテリー」→「割合を表示」
-  - [ ] 壁紙
-  - [ ] フルディスクアクセス（ターミナルアプリ）
-    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
-    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
-
-      ```sh
-      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-      ```
-
-    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
-      - `/Applications/Ghostty.app`
-    - [ ] 追加したターミナルアプリを再起動する
-
-- [ ] atuin
-  - [ ] atuin login
-    - atuin keyの内容を入力
-  - [ ] atuin sync
-  - [ ] atuin historyをzsh_historyに反映
-    ```sh
-    atuin history list --reverse --format "{command}" | uniq > ~/.local/state/zsh/restore_zsh_history
-    cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
-    mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
-    ```
-- [ ] git
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
-    - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
 
     ```sh
     cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
@@ -194,17 +115,97 @@
     nvim ~/.config/git/config.work.secret
     ```
 
-    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる。読み込み確認は `~/Programming/work3/` 配下のリポジトリ内で実行すること）
+    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
     ```sh
     cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
     nvim ~/.config/git/config.work3.secret
     ```
 
+    - 各値の確認方法
+      - `coderabbit.machineId`: CodeRabbit CLI が git config に書き込む値。既存マシンの値に揃えるか、
+        新しいマシンでは CLI を一度実行して書き込まれた値を移す
+
+        ```sh
+        git config --show-origin --get coderabbit.machineId
+        ```
+
+      - `user.email`: GitHub の「Settings」→「Emails」で Verified の仕事用アドレス。
+        GPG 鍵の UID にも同じアドレスが必要（下の「秘密鍵の設定」の `adduid`）
+      - `user.signingkey`: 下の「秘密鍵の設定」の後に埋める。`sec rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろ
+        （`gh gpg-key list` の 2 列目でも確認できる）
+
+        ```sh
+        gpg --list-secret-keys --keyid-format LONG "<メールアドレス>"
+        ```
+
     - 編集後、設定ファイルが読み込まれていることを確認する
 
     ```sh
     git config --show-origin --get-regexp '^user\.(email|signingkey)$'
+    ```
+
+  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+    - 秘密鍵の生成
+      1. ssh-keygenで生成→登録
+
+      ```sh
+      ssh-keygen -t ed25519 -C "<mail_address>"
+      ```
+
+      - パスフレーズを入力
+      - Githubに公開鍵を登録
+
+      ```sh
+      gh ssh-key add ~/.ssh/id_ed25519.pub -t "<title>"
+      ```
+
+      2. ghコマンドで生成→登録
+      - sshを選択（`gh auth login` はトークンを作り直して scope が初期化されるので、必要な scope を渡す）
+
+      ```sh
+      gh auth login --scopes project,write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
+      ```
+
+      - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
+
+      ```
+      ? Generate a new SSH key to add to your GitHub account? (Y/n) Y
+      ? Enter a passphrase for your new SSH key (Optional)
+      ? Title for your SSH key: (GitHub CLI)
+      ```
+
+    - ssh-agentにsshキーを追加
+
+    ```sh
+    eval "$(ssh-agent -s)"
+    ```
+
+    ```sh
+    touch ~/.ssh/config
+    ```
+
+    macOS（`UseKeychain` と `--apple-use-keychain` は macOS 専用）:
+
+    ```sh
+    cat << EOF >> ~/.ssh/config
+    Host github.com
+      AddKeysToAgent yes
+      UseKeychain yes
+      IdentityFile ~/.ssh/id_ed25519
+    EOF
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+    ```
+
+    Linux/WSL:
+
+    ```sh
+    cat << EOF >> ~/.ssh/config
+    Host github.com
+      AddKeysToAgent yes
+      IdentityFile ~/.ssh/id_ed25519
+    EOF
+    ssh-add ~/.ssh/id_ed25519
     ```
 
   - [ ] 秘密鍵の設定
@@ -266,7 +267,7 @@
     - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
 
     ```sh
-    gh gpg-key delete $(gh gpg-key list | awk '{print $3}')
+    gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
     ```
 
     ```sh
@@ -304,59 +305,166 @@
     - `verified`が`true`ならGitHubでも署名が正しく認識されている
     - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
 
-  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
-    - 秘密鍵の生成
-      1. ssh-keygenで生成→登録
+- [ ] `HOST_ENV` の反映と `mise bootstrap` の再実行
+  - 初回 bootstrap は `MISE_ENV=mac` だけで動くので、ロール別のツールや cask は入っていない。
+    シェルを起動し直して確認し、もう一度実行する
+  - 新しいターミナルを開くか、次で起動し直す（`exec $SHELL -l` だけでは引き継いだ `ZDOTDIR` のせいで
+    `~/.zshenv` が読まれない。詳細は [docs/shell.md](./shell.md)）
+
+    ```sh
+    exec env -u ZDOTDIR -u HOST_ENV -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE zsh -l
+    ```
+
+    起動し直したシェルで:
+
+    ```sh
+    echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
+    mise bootstrap
+    ```
+
+  - `host-env.map` を変えた場合はここでコミットして push する
+
+- [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
+  - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
+    git の secret ファイルは上の「git」で用意済み
+
+    | 用途                        | 雛形                                         | コピー先                                         | 対象             |
+    | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
+    | AWS の SSO・aws-vault 設定  | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
+    | sandbox の許可ドメイン      | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
+    | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
+    | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+
+  - AWS: プロファイル名（`XXX`）・`sso_account_id`・`sso_start_url` を書き換える
+    - `sso_start_url`: AWS access portal の URL（`https://xxx.awsapps.com/start`）。社内の案内か管理者から受け取る
+    - `sso_account_id` / `sso_role_name`: access portal にログインすると一覧で出る（`aws configure sso` でも選べる）
+    - プロファイル名: aws-vault・Terraform・`mcp.<role>.yml` の `--profile` と揃える
+
+    ```sh
+    cp ~/.aws/config.example ~/.aws/config
+    nvim ~/.aws/config
+    aws sso login --sso-session work
+    aws-vault list
+    ```
+
+  - sandbox: `~/dotfiles/config/sbx/` に置き、編集後に登録し直す（[docs/docker-sandboxes.md](./docker-sandboxes.md)）
+
+    work3:
+
+    ```sh
+    cd ~/dotfiles/config/sbx
+    cp allow-domains.work3.txt.example allow-domains.work3.txt
+    cp mcp.work3.yml.example mcp.work3.yml
+    nvim allow-domains.work3.txt mcp.work3.yml
+    mise run sandbox:setup
+    mise run sandbox:mcp-add
+    ```
+
+    work2（MCP だけ。許可ドメインを足すなら `allow-domains.work2.txt` を作り、`sandbox:setup` も実行する）:
+
+    ```sh
+    cd ~/dotfiles/config/sbx
+    cp mcp.work2.yml.example mcp.work2.yml
+    nvim mcp.work2.yml
+    mise run sandbox:mcp-add
+    ```
+
+    - `allow-domains.*.txt`: `sbx policy log <sandbox>` でブロックされたドメインを見て足す
+    - `mcp.<role>.yml` の `xxx`: AWS のプロファイル名、work3 リポジトリのパス、社内サービスの URL
+
+  - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形なし。リポジトリに置けないトークンや環境変数を書く（zsh 起動時に読まれる）
+
+- [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
+
+  ```sh
+  mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+  ```
+
+- [ ] macOS defaults の適用
+
+  ```sh
+  MISE_ENV=mac mise bootstrap macos defaults apply
+  ```
+
+- [ ] mac 個別セットアップ
+
+  ```sh
+  mise run bootstrap:mac
+  ```
+
+- [ ] karabiner-elements
+  - [ ] 「Default」というProfile名を作成 or リネーム
+  - [ ] `karabiner.ts`を実行
+    ```sh
+    mise run karabiner:apply
+    ```
+
+- [ ] Browser
+  - [ ] Vimium
+    - [ ] 設定で`Vimium Options.json`をインポート
+  - [ ] Tab Position Options
+  - [ ] Link to Text Fragment
+  - [ ] DeepL
+  - [ ] Obsidian Web Clipper
+    - [ ] 設定をインポート・ショートカットキーの設定
+
+- [ ] Google日本語入力
+  - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
+
+- [ ] システム設定
+  - [ ] キーボードショートカット
+    - [ ] option+tabでアプリ切替・ctrl+downで通知センター表示を設定
+      ```sh
+      mise run bootstrap:mac-hotkeys
+      ```
+    - [ ] ファンクションキーとして使用するをONにする
+    - [ ] 不要なショートカットはOFFにする
+
+- [ ] VSCode
+  - [ ] settings syncの同期
+  - [ ] 設定ファイルをコピー
+
+### 追加設定
+
+- [ ] システム設定
+  - [ ] 指紋認証
+    - [ ] 「TouchIDとパスワード」→指紋追加
+  - [ ] Dock
+    - 自動的に隠す設定と並び順は `config-mac/mise/config.mac.toml` の `[bootstrap.macos.dock]` で管理している
+    - [ ] 適用して Dock を再起動する
 
       ```sh
-      ssh-keygen -t ed25519 -C "<mail_address>"
+      mise bootstrap macos defaults apply && killall Dock
       ```
-
-      - パスフレーズを入力
-      - Githubに公開鍵を登録
+  - [ ] トラックパッド
+    - [ ] 不要な設定はOFFにする
+  - [ ] ユーザとグループ
+    - [ ] アイコン写真を設定
+  - [ ] コントロールセンター
+    - [ ] 「バッテリー」→「割合を表示」
+  - [ ] 壁紙
+  - [ ] フルディスクアクセス（ターミナルアプリ）
+    - Downloads・Desktop・Documents などは macOS のプライバシー保護（TCC）により、許可されたアプリからしか読めない（yazi 等で中身が見えない原因）
+    - [ ] 「システム設定」→「プライバシーとセキュリティ」→「フルディスクアクセス」を開く
 
       ```sh
-      gh ssh-key add ~/.ssh/id_ed25519.pub -t <title>
+      open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
       ```
 
-      2. ghコマンドで生成→登録
-      - sshを選択
+    - [ ] 左下の「＋」から使用するターミナルアプリを追加してONにする
+      - `/Applications/Ghostty.app`
+    - [ ] 追加したターミナルアプリを再起動する
 
-      ```sh
-      gh auth login
-      ```
-
-      - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
-
-      ```
-      ? Generate a new SSH key to add to your GitHub account? (Y/n) Y
-      ? Enter a passphrase for your new SSH key (Optional)
-      ? Title for your SSH key: (GitHub CLI)
-      ```
-
-    - ssh-agentにsshキーを追加
-
+- [ ] atuin
+  - [ ] atuin login
+    - atuin keyの内容を入力
+  - [ ] atuin sync
+  - [ ] atuin historyをzsh_historyに反映
     ```sh
-    eval "$(ssh-agent -s)"
+    atuin history list --reverse --format "{command}" | uniq > ~/.local/state/zsh/restore_zsh_history
+    cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
+    mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
-
-    ```sh
-    touch ~/.ssh/config
-    ```
-
-    ```sh
-    cat << EOF >> ~/.ssh/config
-    Host github.com
-      AddKeysToAgent yes
-      UseKeychain yes
-      IdentityFile ~/.ssh/id_ed25519
-    EOF
-    ```
-
-    ```sh
-    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
-    ```
-
 - [ ] sshの設定(オプション)
   - 秘密鍵を共有してもらって保存
 
@@ -410,6 +518,9 @@
     mkdir -p ~/Programming/repo/repos ~/Programming/repo/worktrees
     mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
     ```
+
+- [ ] obsidian
+  - [ ] syncthingの同期設定
 
 ### カスタムアプリの作成手順
 
@@ -470,10 +581,6 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 - [ ] thunderbird
   - [ ] アカウントの設定
   - [ ] アドオンの設定
-- [ ] obsidian
-  - [ ] google-driveの同期設定
-- [ ] Browser
-  - [ ] obsidian-web-clipperの設定をインポート・ショートカットキーの設定
 
 ## Windows
 
@@ -610,7 +717,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
-      **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
+      **必ず `MISE_ENV=linux` を明示する**。
+      `HOST_ENV`・git・bootstrap の再実行は Mac 側の同名の項目参照（ホスト ID は `hostname -s`）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
   - **最初に `[dotfiles]` だけを適用する**（apt 用の `[bootstrap.packages]` は
@@ -652,6 +760,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
+  - `dotfiles apply` だけではツールは入らない。ツールだけ入れ直すときは `mise bootstrap --only tools`
+    （`HOST_ENV` 反映前は `MISE_ENV=linux` を付ける。ロール別のツールは入らない）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）
 
