@@ -131,6 +131,12 @@
     は `MISE_ENV=mac` の明示を省略してよい
 
 - [ ] git（push は SSH、コミットは GPG 署名になるので、コミット・push の前に済ませる）
+  - 鍵の登録・削除に使う gh の scope を足しておく（初回 bootstrap の `gh auth login` は `project` だけ）
+
+    ```sh
+    gh auth refresh --scopes write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
+    ```
+
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
     - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
