@@ -202,7 +202,7 @@
       - sshを選択（`gh auth login` はトークンを作り直して scope が初期化されるので、必要な scope を渡す）
 
       ```sh
-      gh auth login --scopes project,read:gpg_key,write:gpg_key,admin:gpg_key
+      gh auth login --scopes project,write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
       ```
 
       - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
@@ -802,7 +802,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
   - `dotfiles apply` だけではツールは入らない。ツールだけ入れ直すときは `mise bootstrap --only tools`
-    （Mac 側の同項目参照）
+    （`HOST_ENV` 反映前は `MISE_ENV=linux` を付ける。ロール別のツールは入らない）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）
 
