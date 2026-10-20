@@ -199,10 +199,10 @@
       ```
 
       2. ghコマンドで生成→登録
-      - sshを選択
+      - sshを選択（`gh auth login` はトークンを作り直して scope が初期化されるので、必要な scope を渡す）
 
       ```sh
-      gh auth login
+      gh auth login --scopes project,read:gpg_key,write:gpg_key,admin:gpg_key
       ```
 
       - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
