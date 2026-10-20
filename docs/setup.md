@@ -18,23 +18,9 @@
   cd ~/dotfiles
   ```
 
-  明示的な `mise trust` は不要。直後の `mise bootstrap dotfiles apply --yes`
-  （後述）の `--yes` 自体が、未trustの `mise.toml` をそのまま自動trustし、
-  `~/.local/state/mise/trusted-configs/` にtrust状態を永続化する（実機確認済み:
-  trustなしの状態から `mise bootstrap dotfiles apply --yes` を直接実行しても
-  成功し、以後 `--yes` を付けずに呼んでもtrustエラーが出ない）。
-  `config/mise/config.toml` 側で宣言している `trusted_config_paths` は、
-  （dotfiles配置後に）この trust 状態を明示的な設定としても持たせるためのもので、
-  初回セットアップの成立自体には不要。
-  直後の `mise` は `mise.run` インストーラで入れた最新版なので、`min_version` の
-  更新は初回は不要（`mise bootstrap` は config を読む際に `min_version` 未満だと
-  実行を拒否するが、新規インストール直後は常に満たしている）。2回目以降、
-  リポジトリ側で `min_version` が上がった場合は、後述の `mise bootstrap` 完了後に
-  `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
-
 - [ ] ホストのロール（`HOST_ENV`）を決める
   - `HOST_ENV`（例: `mac,work2`）はログインシェル起動時に `config/zsh/host-env.map` からホスト ID で引かれ、
-    次の変数が導出される（export 済みなら上書きしない）。`bootstrap:mac` の private/work 限定 cask の分岐にも使う
+    次の変数が導出される
 
     | 変数                    | 値                                                     | 用途                                                                 |
     | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
@@ -74,12 +60,7 @@
   - bootstrap 後の反映は後述の「`HOST_ENV` の反映と `mise bootstrap` の再実行」、
     一時的に別ロールを試す方法は [docs/shell.md](./shell.md) 参照
 
-- [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
-      実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
-      `mise.toml`/`mise.mac.toml` 自身が持つ。`MISE_ENV` は通常シェル起動時に
-      `templates/zsh/.zshenv.tera` が `HOST_ENV`（`config/zsh/host-env.map` 由来）から
-      自動導出するが、その `.zshenv` 自体がまだ配置されていない最初の bootstrap では
-      未設定なので、ここでは明示指定が必須）
+- [ ] mise bootstrap の実行
   - **最初に `[dotfiles]` だけを適用する**（`[bootstrap.packages]` は
     `config-mac/mise/config.mac.toml` という dotfile の中身なので、他のフェーズより
     先に一度実体化しておく必要がある。`mise bootstrap` 内の packages フェーズは
@@ -89,24 +70,11 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
-    このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
-    （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
-    track/history の節参照）。
-    既存環境を更新する場合、以前 `copy` で配っていた `~/.config`・`~/.local` や、chezmoi 時代の
-    `~/.aws/config.example` に実ファイルが残っていると conflict で止まる。その場合は一度だけ
-    force が必要。target を並べてこの3エントリだけに force を閉じる（他エントリのライブ編集を
-    巻き込まないため）:
+    既存環境で conflict が出たときだけ:
     ```sh
     MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
     ```
-    force は実ファイルをリンクで置き換えるので、**先に配置先だけにある編集を取り込む**こと
-    （確認のしかたと注意点は [docs/mise.md](./mise.md) の
-    「target → source の逆方向ワークフロー」参照）。`MISE_ENV` を省くと
-    `mise.mac.toml`/`mise.linux.toml` の OS 別 exclude が読まれず、他 OS 向けのファイルまで
-    リンクしてしまうので、ここでも明示する（1つ上のコマンドと同じ理由）。
-  - 続けて `mise bootstrap` 本体を実行する（詳細フェーズ順は
-    [docs/mise.md](./mise.md) 参照）。今度は packages フェーズが上で配置した
-    `~/.config/mise/config.mac.toml` を正しく読める:
+  - 続けて `mise bootstrap` 本体を実行する:
     1. `[bootstrap.packages]` の導入（brew/brew-cask）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
     3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
@@ -125,11 +93,6 @@
     mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
     ```
 
-  - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
-    手動シンボリックリンク作成は不要
-  - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
-    は `MISE_ENV=mac` の明示を省略してよい
-
 - [ ] git（push は SSH、コミットは GPG 署名になるので、コミット・push の前に済ませる）
   - 鍵の登録・削除に使う gh の scope を足しておく（初回 bootstrap の `gh auth login` は `project` だけ）
 
@@ -139,7 +102,6 @@
 
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
-    - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
 
     ```sh
     cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
@@ -153,7 +115,7 @@
     nvim ~/.config/git/config.work.secret
     ```
 
-    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する（`~/Programming/work3/` 配下でのみ読み込まれる。読み込み確認は `~/Programming/work3/` 配下のリポジトリ内で実行すること）
+    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
     ```sh
     cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
@@ -305,7 +267,6 @@
     - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
 
     ```sh
-    # パイプ時はタブ区切り。EMAIL 列に複数メールがあると awk では列がずれるので cut を使う
     gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
     ```
 
@@ -414,19 +375,10 @@
   - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形なし。リポジトリに置けないトークンや環境変数を書く（zsh 起動時に読まれる）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
-  - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
-    checkpoint数・直近checkpoint・自動保存serviceの稼働状態・origin接続先）を
-    確認できる（詳細は [docs/mise.md](./mise.md) の「使い方」参照）
-  - `mise bootstrap` に含まれる `[bootstrap.services.mise-history]` が自動保存の
-    background service を有効化しようとする（`mise bootstrap services status` で確認可能。
-    systemd/launchd が使えない環境では skip されるだけで bootstrap 自体は失敗しない）
-  - 複数マシンで履歴を共有したい場合は、このリポジトリ（`ryo246912/dotfiles`）とは
-    **別の** private 専用 git リポジトリ（`ryo246912/dotfiles-history`）を用意し、
-    マシンごとに一度だけ接続する
-    （詳細は [docs/mise.md](./mise.md) の「複数マシン間での history 同期」参照）
-    ```sh
-    mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
-    ```
+
+  ```sh
+  mise bootstrap dotfiles origin set https://github.com/ryo246912/dotfiles-history.git
+  ```
 
 - [ ] macOS defaults の適用
 
@@ -451,6 +403,10 @@
   - [ ] Vimium
     - [ ] 設定で`Vimium Options.json`をインポート
   - [ ] Tab Position Options
+  - [ ] Link to Text Fragment
+  - [ ] DeepL
+  - [ ] Obsidian Web Clipper
+    - [ ] 設定をインポート・ショートカットキーの設定
 
 - [ ] Google日本語入力
   - [ ] 「システム設定」で「キーボード」→「入力ソース」左下の「+」ボタンをクリックして、「日本語」を追加
@@ -563,6 +519,10 @@
     mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
     ```
 
+- [ ] obsidian
+  - [ ] syncthingの同期設定
+  - [ ] google-driveの同期設定
+
 ### カスタムアプリの作成手順
 
 - 手順
@@ -622,10 +582,6 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 - [ ] thunderbird
   - [ ] アカウントの設定
   - [ ] アドオンの設定
-- [ ] obsidian
-  - [ ] google-driveの同期設定
-- [ ] Browser
-  - [ ] obsidian-web-clipperの設定をインポート・ショートカットキーの設定
 
 ## Windows
 
@@ -762,7 +718,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
   `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
-      **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
+      **必ず `MISE_ENV=linux` を明示する**。
       `HOST_ENV`・git・bootstrap の再実行は Mac 側の同名の項目参照（ホスト ID は `hostname -s`）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
