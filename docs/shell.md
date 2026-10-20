@@ -11,16 +11,13 @@ exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE HOST_EN
 
 - `HOST_ENV=mac,work3` — 試したいロールを明示的に指定し、`host-env.map` の解決をスキップさせる
 - `-u MISE_ENV` / `-u FNOX_PROFILE` — 現在のシェルから引き継いだ古い値を外す
-- `-u AGENTSVIEW_PG_MACHINE` — `HOST_ENV` を明示すると導出処理ごと飛ばされ、元のロールの machine 名が
-  残ってしまうため外す（外した結果、一時シェルでは未設定になる）
+- `-u AGENTSVIEW_PG_MACHINE` — 元のロールの値が残るので外す（一時シェルでは未設定になる）
 - `-u ZDOTDIR` — 外さないと `~/.zshenv` 自体が読まれない（下記）
 
 ## `ZDOTDIR` を外す必要がある理由
 
-`~/.zshenv` は `ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"` を export する。zsh は起動時に `ZDOTDIR` が設定されていると
-`~/.zshenv` ではなく `$ZDOTDIR/.zshenv` を読むが、この構成では `$ZDOTDIR/.zshenv` は存在しない。
-そのため `exec $SHELL -l` のように現在の環境を引き継いで起動すると `~/.zshenv` が読まれず、
-`HOST_ENV`/`MISE_ENV`/`FNOX_PROFILE` の解決・導出が一切走らない。
+`~/.zshenv` が export する `ZDOTDIR`（`${XDG_CONFIG_HOME:-$HOME/.config}/zsh`）を引き継ぐと、zsh は
+`~/.zshenv` ではなく存在しない `$ZDOTDIR/.zshenv` を読むため、`HOST_ENV` などの解決・導出が走らない。
 
 ## `MISE_ENV`/`FNOX_PROFILE` を一緒にクリアする必要がある理由
 
@@ -51,7 +48,7 @@ fi
 exec env -u ZDOTDIR -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE HOST_ENV=mac,work3 zsh -l
 ```
 
-`exec` で今のシェルが置き換わるので、確認は起動し直したシェルで行う。
+起動し直したシェルで:
 
 ```sh
 echo "$HOST_ENV $MISE_ENV $FNOX_PROFILE"

@@ -33,35 +33,28 @@
   `lefthook.yml` の `post-merge` フックが `git pull` のたびに自動で self-update する。
 
 - [ ] ホストのロール（`HOST_ENV`）を決める
-  - `HOST_ENV` は `<os>,<role>`（例: `mac,private` / `mac,work2`）の形で、ログインシェル起動時に
-    `templates/zsh/.zshenv.tera` がホスト名から解決し、次の値を導出する
-    （どれも export 済みなら上書きしない）
+  - `HOST_ENV`（例: `mac,work2`）はログインシェル起動時に `config/zsh/host-env.map` からホスト ID で引かれ、
+    次の変数が導出される（export 済みなら上書きしない）。`bootstrap:mac` の private/work 限定 cask の分岐にも使う
 
-    | 変数                    | 値                                                                           | 使われる場所                                                                                                             |
-    | ----------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-    | `MISE_ENV`              | `HOST_ENV` と同じ                                                            | `~/.config/mise/` の `config.<os>.toml`・`config.<role>.toml` を読み込む（source は `config-mac/mise/`・`config/mise/`） |
-    | `FNOX_PROFILE`          | `HOST_ENV` に `work` を含むときだけ `work`                                   | `config/fnox/config.work.toml` の `[profiles.work.*]`                                                                    |
-    | `AGENTSVIEW_PG_MACHINE` | `HOST_ENV` の `,` を `-` にした値（`host-env.map` から解決したときだけ設定） | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）                                                        |
+    | 変数                    | 値                                                     | 用途                                                                 |
+    | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+    | `MISE_ENV`              | `HOST_ENV` と同じ                                      | `~/.config/mise/` の `config.<os>.toml`・`config.<role>.toml` を読む |
+    | `FNOX_PROFILE`          | work ロールのときだけ `work`                           | `config/fnox/config.work.toml` の `[profiles.work.*]`                |
+    | `AGENTSVIEW_PG_MACHINE` | `,` を `-` にした値（`host-env.map` で引いたときのみ） | agentsview の machine 名（[docs/agentsview.md](./agentsview.md)）    |
 
-    `HOST_ENV` はほかに `mise run bootstrap:mac` の private/work 限定 cask の分岐でも使う
-
-  - ホスト ID を確認する（macOS は `LocalHostName`、Linux/WSL は `hostname -s`）
+  - ホスト ID を確認し、`host-env.map` に `<ホストID>=<os>,<role>` の行があるか見る
+    （`<role>` は `config/mise/config.<role>.toml` がある名前）
 
     ```sh
     scutil --get LocalHostName # Linux/WSL は hostname -s
     ```
 
-  - `config/zsh/host-env.map` に `<ホストID>=<os>,<role>` の行があるか確認する。
-    `<role>` は `config/mise/config.<role>.toml` が存在する名前（`private` / `work1` / `work2` / `work3`）にする
-    - 既存の行（例: `ryo-mac-private`）に合わせる場合は、ホスト ID の方を変える（下記）
-    - 新しいホストなら `host-env.map` に行を追加する（コミット・push は git の設定の後）
-    - ホスト名を変えずに別の ID で引きたい場合は、`MISE_HOST_ID` を設定するとその値で
-      `host-env.map` を引く（`~/.zshenv` より前に読まれる `/etc/zshenv` などで export する）
-  - ホスト ID の変え方
-    - macOS: 「システム設定」→「一般」→「共有」→ 下部の「ローカルホスト名」の「編集」で変える。
-      コマンドでは次のとおり（`LocalHostName` に使えるのは英数字と `-` のみ）。
-      `ComputerName`（共有・AirDrop での表示名）と `HostName` は `HOST_ENV` の解決には使わないが、
-      揃えておくとターミナルのプロンプトなどと食い違わない
+    - 既存の行に合わせる → ホスト ID を変える（下記）
+    - 新しいホスト → `host-env.map` に行を追加する（コミットは git の設定の後）
+    - ホスト ID を変えずに別の値で引く → `MISE_HOST_ID` を `/etc/zshenv` などで export する
+
+  - ホスト ID の変え方（変えたら新しいターミナルで確認する）
+    - macOS: 「システム設定」→「一般」→「共有」→「ローカルホスト名」か、次のコマンド（英数字と `-` のみ）
 
       ```sh
       sudo scutil --set LocalHostName ryo-mac-private
@@ -71,18 +64,15 @@
       ```
 
     - Linux: `sudo hostnamectl set-hostname <ホストID>`
-    - WSL: Windows 側の PC 名がそのまま使われる。WSL だけ変える場合は `/etc/wsl.conf` に書き、
-      PowerShell で `wsl --shutdown` してから起動し直す
+    - WSL: 既定は Windows の PC 名。変えるときは `/etc/wsl.conf` に書き、PowerShell で `wsl --shutdown`
 
       ```ini
       [network]
       hostname = ryo-win
       ```
 
-    - 変えたあとは新しいターミナルを開き（または下の「`HOST_ENV` の反映」の `env -u ...` で起動し直し）、`scutil --get LocalHostName`（Linux/WSL は `hostname -s`）
-      と `echo $HOST_ENV` で反映を確認する
-  - 反映（新しいシェルでの確認と `mise bootstrap` の再実行）は、bootstrap と git の設定の後に行う（後述）
-  - 一時的に別ロールの設定を試す方法は [docs/shell.md](./shell.md) 参照
+  - bootstrap 後の反映は後述の「`HOST_ENV` の反映と `mise bootstrap` の再実行」、
+    一時的に別ロールを試す方法は [docs/shell.md](./shell.md) 参照
 
 - [ ] mise bootstrap の実行（**必ず `MISE_ENV=mac` を明示し**、`~/dotfiles` 直下で
       実行する。`[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の
@@ -128,27 +118,19 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - `mise bootstrap dotfiles apply` が行うのはファイルの配置（と `post-dotfiles` hook）だけで、
-    `mise install` 相当のツール導入は含まれない。ツールは `mise bootstrap` 本体の tools ステップ
-    （上の 3〜5）で入るので、`dotfiles apply` だけで止めずに必ず `mise bootstrap` まで実行する。
-    ツールだけ入れ直したいときは tools ステップだけを実行する（`pre-tools` hook が gh のトークンを
-    `GITHUB_TOKEN` に渡して `mise install` するので、素の `mise install` より GitHub の rate limit に当たりにくい）
+  - `dotfiles apply` はファイルを配置するだけで、ツールは入らない。ツールだけ入れ直すときは tools ステップだけ実行する
+    （`pre-tools` hook が gh のトークンを渡すので、素の `mise install` より rate limit に当たりにくい）
 
     ```sh
-    mise bootstrap --only tools
+    mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
     ```
-
-    `HOST_ENV` が反映される前のシェル（初回 bootstrap 直後など）では `MISE_ENV` が未設定なので、
-    `MISE_ENV=mac mise bootstrap --only tools` のように明示する（このときロール別のツールは入らない。
-    下の「`HOST_ENV` の反映と `mise bootstrap` の再実行」の後は `MISE_ENV` を付けずに実行する）
 
   - `~/.zshenv` は `[dotfiles]` の1エントリとして直接配置されるため、旧 `run_once_setup.sh` 相当の
     手動シンボリックリンク作成は不要
   - 2回目以降（`~/.zshenv` 配置済みでログインシェルが `HOST_ENV`/`MISE_ENV` を自動導出できる状態）
     は `MISE_ENV=mac` の明示を省略してよい
 
-- [ ] git（push は SSH、コミットは GPG 署名になるため、コミット・push する前に済ませる。
-      gh と gnupg は上の `mise bootstrap` で入る）
+- [ ] git（push は SSH、コミットは GPG 署名になるので、コミット・push の前に済ませる）
   - [ ] secret設定ファイルの作成
     - サンプルをコピーし、`machineId`を自分の値に編集する
     - `~/.config/git/config.secret`は`[dotfiles]`管理外のため、秘密情報をリポジトリにコミットしないこと
@@ -173,26 +155,21 @@
     ```
 
     - 各値の確認方法
-      - `coderabbit.machineId`: CodeRabbit CLI が初回実行時に git config へ書き込む値。
-        既存マシンがあればそこで確認して同じ値にする。新しいマシンでは CLI を一度実行して、
-        書き込まれた値を `config.secret` へ移す（どのファイルに書かれたかも `--show-origin` で分かる）
+      - `coderabbit.machineId`: CodeRabbit CLI が git config に書き込む値。既存マシンの値に揃えるか、
+        新しいマシンでは CLI を一度実行して書き込まれた値を移す
 
         ```sh
         git config --show-origin --get coderabbit.machineId
         ```
 
-      - `user.email`: 仕事用に GitHub アカウントへ登録・確認済み（Verified）のメールアドレス。
-        GitHub の「Settings」→「Emails」で確認する。GPG 鍵の UID にも同じアドレスが入っている必要がある
-        （入っていないと GitHub で Verified にならない。追加方法は下の「秘密鍵の設定」の `adduid`）
-      - `user.signingkey`: そのメールアドレスを UID に持つ GPG 鍵の LONG 形式の鍵 ID（16 桁）。
-        鍵の import・作成は下の「秘密鍵の設定」で行うので、そこまで済んでから埋める。
-        `sec   rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろが鍵 ID
+      - `user.email`: GitHub の「Settings」→「Emails」で Verified の仕事用アドレス。
+        GPG 鍵の UID にも同じアドレスが必要（下の「秘密鍵の設定」の `adduid`）
+      - `user.signingkey`: 下の「秘密鍵の設定」の後に埋める。`sec rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろ
+        （`gh gpg-key list` の 2 列目でも確認できる）
 
         ```sh
         gpg --list-secret-keys --keyid-format LONG "<メールアドレス>"
         ```
-
-        GitHub に登録済みの鍵 ID は `gh gpg-key list` の 2 列目（KEY ID）でも確認できる
 
     - 編集後、設定ファイルが読み込まれていることを確認する
 
@@ -322,8 +299,7 @@
     - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
 
     ```sh
-    # パイプ時の出力はタブ区切りで 2 列目が KEY ID。EMAIL 列は複数メールを ", " で連結するため
-    # awk の空白区切りだと列がずれる
+    # パイプ時はタブ区切り。EMAIL 列に複数メールがあると awk では列がずれるので cut を使う
     gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
     ```
 
@@ -363,31 +339,27 @@
     - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
 
 - [ ] `HOST_ENV` の反映と `mise bootstrap` の再実行
-  - 初回 bootstrap は `.zshenv` 配置前なので `MISE_ENV=mac` だけで動き、
-    `config.<role>.toml` のツールや `bootstrap:mac` の private/work 限定 cask は入らない。
-    シェルを起動し直して解決結果を確認し、`mise bootstrap` をもう一度実行する
-  - 起動し直すときは新しいターミナル（タブ）を開くか、次のように `env -u` で引き継いだ変数を外して起動する。
-    `exec $SHELL -l` だけだと `~/.zshenv` が export した `ZDOTDIR` を引き継ぐため、zsh が
-    `~/.zshenv` ではなく `$ZDOTDIR/.zshenv`（存在しない）を読みに行き、`HOST_ENV` が解決されない。
-    `HOST_ENV` などを外すのは、export 済みの値があると上書きせずにそのまま使われるため
+  - 初回 bootstrap は `MISE_ENV=mac` だけで動くので、ロール別のツールや cask は入っていない。
+    シェルを起動し直して確認し、もう一度実行する
+  - 新しいターミナルを開くか、次で起動し直す（`exec $SHELL -l` だけでは引き継いだ `ZDOTDIR` のせいで
+    `~/.zshenv` が読まれない。詳細は [docs/shell.md](./shell.md)）
 
     ```sh
     exec env -u ZDOTDIR -u HOST_ENV -u MISE_ENV -u FNOX_PROFILE -u AGENTSVIEW_PG_MACHINE zsh -l
     ```
 
-    `exec` で今のシェルが置き換わるので、続きは起動し直したシェルで実行する
+    起動し直したシェルで:
 
     ```sh
     echo "HOST_ENV=$HOST_ENV MISE_ENV=$MISE_ENV FNOX_PROFILE=$FNOX_PROFILE"
     mise bootstrap
     ```
 
-  - `host-env.map` に行を追加した場合は、ここでコミットして push する
+  - `host-env.map` を変えた場合はここでコミットして push する
 
 - [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
-  - 雛形（`.sample` / `.example`）をコピーして、`xxx` などのプレースホルダを実際の値に書き換える。
-    コピー先はどれも gitignore 済みか、リポジトリの外にあるため、コミットされない
-  - git の `config.work.secret` / `config.work3.secret` は上の「git」の「secret設定ファイルの作成」で用意済み
+  - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
+    git の secret ファイルは上の「git」で用意済み
 
     | 用途                        | 雛形                                         | コピー先                                         | 対象             |
     | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
@@ -396,13 +368,10 @@
     | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
     | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
 
-  - AWS: `XXX` のプロファイル名・`sso_account_id`・`sso_start_url` を書き換え、ログインできることを確認する
-    - `sso_start_url`: IAM Identity Center の AWS access portal の URL（`https://xxx.awsapps.com/start` の形）。
-      社内の AWS 利用案内か管理者から受け取る。ブラウザで開いてログインできれば正しい
-    - `sso_account_id` / `sso_role_name`: AWS access portal にログインすると、使えるアカウント（12 桁の ID）と
-      ロール名が一覧で出る。CLI では `aws configure sso` を対話で進めると選択肢として表示される
-    - `XXX`（プロファイル名）: 自由に付けてよいが、aws-vault・Terraform・`mcp.<role>.yml` の `--profile` などで
-      同じ名前を参照するので揃える
+  - AWS: プロファイル名（`XXX`）・`sso_account_id`・`sso_start_url` を書き換える
+    - `sso_start_url`: AWS access portal の URL（`https://xxx.awsapps.com/start`）。社内の案内か管理者から受け取る
+    - `sso_account_id` / `sso_role_name`: access portal にログインすると一覧で出る（`aws configure sso` でも選べる）
+    - プロファイル名: aws-vault・Terraform・`mcp.<role>.yml` の `--profile` と揃える
 
     ```sh
     cp ~/.aws/config.example ~/.aws/config
@@ -411,8 +380,7 @@
     aws-vault list
     ```
 
-  - sandbox: `config/sbx/` はリポジトリ（`~/dotfiles`）側に置く。編集後に登録し直す
-    （詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md)）
+  - sandbox: `~/dotfiles/config/sbx/` に置き、編集後に登録し直す（[docs/docker-sandboxes.md](./docker-sandboxes.md)）
 
     work3:
 
@@ -425,7 +393,7 @@
     mise run sandbox:mcp-add
     ```
 
-    work2（許可ドメインの雛形はないので MCP だけ。追加したいドメインがあれば `allow-domains.work2.txt` を作り、`mise run sandbox:setup` も実行する。許可ドメインを読むのは `sandbox:setup` だけ）:
+    work2（MCP だけ。許可ドメインを足すなら `allow-domains.work2.txt` を作り、`sandbox:setup` も実行する）:
 
     ```sh
     cd ~/dotfiles/config/sbx
@@ -434,13 +402,10 @@
     mise run sandbox:mcp-add
     ```
 
-  - sandbox の値
-    - `allow-domains.work3.txt`: sandbox から使う社内ドキュメント・ツールのドメイン。
-      一覧に無いドメインはブロックされるので、作業中に `sbx policy log <sandbox>` でブロックされたものを見て追加する
-    - `mcp.<role>.yml` の `xxx`: `--profile` は上の AWS のプロファイル名、`sbx_options` の `--dir` は
-      `tools/aws-mcp-proxy` がある work3 リポジトリのパス、metabase などの URL は社内の各サービスの URL
-  - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形はない。置いておけば zsh の起動時に読み込まれるので、
-    仕事用のトークンや環境変数など、リポジトリに置けないものを書く
+    - `allow-domains.*.txt`: `sbx policy log <sandbox>` でブロックされたドメインを見て足す
+    - `mcp.<role>.yml` の `xxx`: AWS のプロファイル名、work3 リポジトリのパス、社内サービスの URL
+
+  - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形なし。リポジトリに置けないトークンや環境変数を書く（zsh 起動時に読まれる）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
   - `mise bootstrap dotfiles status` でローカルのhistory状況（追跡entry数・
@@ -788,9 +753,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - [ ] mise bootstrap の実行（**sudo のパスワード入力が要るので対話端末で実行すること**。
       **必ず `MISE_ENV=linux` を明示する**（理由は Mac 側の同項目参照）。
-      `HOST_ENV` の決め方・git（SSH/GPG）の設定・bootstrap の再実行は、Mac 側の
-      「ホストのロール（`HOST_ENV`）を決める」「git」「`HOST_ENV` の反映と `mise bootstrap` の再実行」参照
-      （ホスト ID は `hostname -s`）。
+      `HOST_ENV`・git・bootstrap の再実行は Mac 側の同名の項目参照（ホスト ID は `hostname -s`）。
       `[dotfiles]`・`[bootstrap.hooks.*]` は `~/dotfiles` の `mise.toml`/`mise.linux.toml`
       自身が持つため、必ず `~/dotfiles` 直下で実行する）
   - **最初に `[dotfiles]` だけを適用する**（apt 用の `[bootstrap.packages]` は
