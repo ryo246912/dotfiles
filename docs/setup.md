@@ -521,7 +521,6 @@
 
 - [ ] obsidian
   - [ ] syncthingの同期設定
-  - [ ] google-driveの同期設定
 
 ### カスタムアプリの作成手順
 
