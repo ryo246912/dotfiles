@@ -276,3 +276,42 @@ while [ "$#" -gt 0 ]; do
   done
 done
 '''
+
+# Vicinae の Raycast 拡張を config-mac/vicinae-extensions の flake でビルドし、
+# ~/.local/share/vicinae/extensions/store.raycast.<name> へ symlink する。
+# ディレクトリ名がストア版と同じなので settings.json の providers はそのまま効く（docs/raycast.md 参照）。
+# flake は git 管理下のファイルしか見ないため、flake.nix の変更は commit（最低でも git add）してから実行する。
+["bootstrap:vicinae-extensions"]
+description = "Vicinae の Raycast 拡張を Nix でビルドして ~/.local/share/vicinae/extensions へリンクする"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
+command -v nix >/dev/null || { echo "nix が見つかりません"; exit 1; }
+
+ext_dir="$HOME/.local/share/vicinae/extensions"
+# ビルド結果を GC root として残す（nix-collect-garbage で拡張が消えないように）。
+# 各拡張はこのリンク経由で指すので、再ビルドすればリンクを張り直さなくても新しい版を向く
+gcroot="$HOME/.local/state/vicinae/raycast-extensions"
+mkdir -p "$ext_dir" "$(dirname "$gcroot")"
+nix build "$MISE_PROJECT_ROOT/config-mac/vicinae-extensions#default" --out-link "$gcroot"
+
+for src in "$gcroot"/*; do
+  name=$(basename "$src")
+  dest="$ext_dir/$name"
+  # ストアから入れた実体が残っていると上書きできない（Vicinae 側でアンインストールしてもらう）
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    echo "skip: $dest はストア版の実体です。Vicinae でアンインストールしてから再実行してください"
+    continue
+  fi
+  ln -sfn "$gcroot/$name" "$dest"
+done
+
+# flake から外した拡張のリンク（リンク先が消えたもの）を掃除する
+for dest in "$ext_dir"/*; do
+  [ -L "$dest" ] && [ ! -e "$dest" ] || continue
+  case "$(readlink "$dest")" in
+    "$gcroot"/*) rm "$dest" ;;
+  esac
+done
+'''

@@ -35,6 +35,20 @@ favorite、fallback、provider/entrypoint 設定なども同ファイルへ反�
 例えば keybind と provider を別 JSON に分けて chezmoi 管理できる。password preference、履歴、
 cache、Extension 本体などは設定ファイルとは別であり、秘密情報や生成データを追跡しない。
 
+### Raycast Extension 本体（Nix）
+
+Extension 本体は `config-mac/vicinae-extensions/flake.nix` で宣言し、
+`mise run bootstrap:vicinae-extensions` でビルドして `~/.local/share/vicinae/extensions/` へ symlink する。
+Vicinae の拡張 ID はディレクトリ名で決まるため、ストア版と同じ `store.raycast.<name>` でリンクし、
+`settings.json` の `providers`（`"@author/store.raycast.<name>"`）をそのまま使う。
+
+- 追加: raycast/extensions の `extensions/<name>` を `extensions` に足す。`hash` は空文字でビルドし、
+  エラーの `got:` を貼る。ストア版が入っているなら先に Vicinae でアンインストールしておく
+- 更新: `rev` を上げ、全拡張の `hash` を同じ手順で取り直す。Vicinae から更新しない
+  （ストア版で上書きされ symlink が実体に置き換わる）
+- 削除: `extensions` から外してタスクを再実行すると、リンク切れになったものを掃除する
+- 反映されない場合は Vicinae を再起動する（リンク先の差し替えはディレクトリ監視で検知されない）
+
 ## 参考資料
 
 - [Tinycast repository](https://github.com/abue-ammar/tinycast)
