@@ -217,6 +217,25 @@ account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
 session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 [ -n "$session" ] && session=$(printf '\033[90m%s\033[0m' "$session")
 
+# セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
+# transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
+# isMeta や "<" で始まるもの（slash command・hook 由来の内部メッセージ）は除外する。
+# 時刻は今日なら HH:MM、それ以外は MM/DD HH:MM。
+transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
+first_msg=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+	first_msg=$(jq -nr --arg today "$(date +%Y-%m-%d)" '
+    first(inputs
+      | select(.type == "user" and .isMeta != true)
+      | select(.message.content | type == "string" and (startswith("<") | not)))
+    | (.message.content | split("\n")[0] | if length > 30 then .[0:30] + "…" else . end) as $text
+    | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
+    | (if ($t | strflocaltime("%Y-%m-%d")) == $today then $t | strflocaltime("%H:%M")
+       else $t | strflocaltime("%m/%d %H:%M") end) as $time
+    | "\u001b[33m💬 \($text)\u001b[0m \u001b[90m(\($time)~)\u001b[0m"
+  ' "$transcript" 2>/dev/null)
+fi
+
 # 空でない引数を " · " で連結する。
 join_parts() {
 	local out="" p
@@ -227,8 +246,8 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: アカウント・branch・モデル・コンテキスト・session id / 2 行目: rate limit・cache
-line1=$(join_parts "$account" "$branch" "$model_line" "$ctx_line" "$session")
+# 1 行目: アカウント・branch・モデル・コンテキスト・session id・最初のメッセージ / 2 行目: rate limit・cache
+line1=$(join_parts "$account" "$branch" "$model_line" "$ctx_line" "$session" "$first_msg")
 line2=$(join_parts "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
