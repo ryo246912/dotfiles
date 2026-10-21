@@ -220,7 +220,8 @@ session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 # セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
 # transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
 # content は文字列のほか、画像付きなどでは text ブロックの配列になる（tool_result だけの配列は対象外）。
-# isMeta や、slash command・hook 由来の内部メッセージ（<command-name> などのタグで始まるもの）は除外する。
+# isMeta や、slash command・hook・IDE 拡張由来の内部メッセージ（<command-name> や <ide_opened_file> などのタグで始まるもの）は除外する。
+# 配列形式では内部タグの text ブロックを飛ばし、その後の本文を使う。
 # "<" で始まる普通のメッセージ（HTML の貼り付けなど）は残すため、既知のタグだけを見る。
 # 貼り付けた ANSI エスケープなどで statusline の色が崩れないよう、制御文字（C0・DEL・C1）は取り除く。
 # 時刻は MM/DD HH:MM で 💬 の前に置く。
@@ -228,13 +229,14 @@ transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/nul
 first_msg=""
 if [ -n "$transcript" ] && [ -f "$transcript" ]; then
 	first_msg=$(jq -nr '
+    def internal: test("^<(command-|local-command-|bash-|system-reminder|task-notification|user-prompt-submit-hook|ide_)");
     first(inputs
       | select(.type == "user" and .isMeta != true)
       | (.message.content
          | if type == "string" then .
-           elif type == "array" then [.[] | select(.type == "text") | .text] | first // empty
+           elif type == "array" then [.[] | select(.type == "text") | .text | select(internal | not)] | first // empty
            else empty end) as $content
-      | select($content | test("^<(command-|local-command-|bash-|system-reminder|task-notification|user-prompt-submit-hook)") | not)
+      | select($content | internal | not)
       | {content: $content, timestamp})
     | (.content | split("\n")[0] | explode | map(select(. >= 32 and (. < 127 or . > 159))) | implode | if length > 30 then .[0:30] + "…" else . end) as $text
     | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
