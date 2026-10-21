@@ -1,6 +1,6 @@
 # 指摘候補の洗い出しと出し方
 
-review-pr / crit-pr skill の共通手順。
+pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 diff だけを読まない。変更した関数の呼び出し元・呼び出し先、同じデータを読む別の経路（取得と保存、新旧の API など）、追加されたテストまで読む。`/code-review` を併用してよいが、その出力は**候補**として扱い、下の裏取りを通す。
 

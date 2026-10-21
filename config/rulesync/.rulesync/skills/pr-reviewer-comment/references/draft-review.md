@@ -1,6 +1,6 @@
 # draft レビューの投稿と submit 用の本文例
 
-review-pr / crit-pr skill の共通手順。
+pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 ## インラインコメントの書式
 
@@ -13,18 +13,24 @@ review-pr / crit-pr skill の共通手順。
 
 先頭の行より上は、ユーザーが後から自分のコメントを書き足す場所になる。本文は作成者に向けて書く（理由、起きる条件、直し方の案）。コードの提案は短いコードブロックで添える。
 
+本文でコミット・PR・Issue を参照するときは、GitHub が自動でリンクにする書式で書く（HTML の `<a>` タグや Markdown のリンク記法は使わない）。
+
+- コミット: SHA をそのまま書く（7 文字以上）。別リポジトリなら `owner/repo@<SHA>`
+- PR・Issue: `#123`。別リポジトリなら `owner/repo#123`
+- SHA や `#123` をバッククォートで囲まない（囲むとリンクにならない）
+
 ## 投稿のしかた
 
-review-pr skill の `scripts/post_draft_review.py` を使う（この references/ と同じ review-pr skill の中にある）。次の 3 つをまとめて行う。
+pr-reviewer-comment skill の `scripts/post_draft_review.py` を使う（この references/ と同じ pr-reviewer-comment skill の中にある）。次の 3 つをまとめて行う。
 
 - 指定した行が diff にあるかを検査する
 - 同じユーザーの PENDING のレビューが既にあれば止める（GitHub は 1 人 1 件しか持てない）
 - `event` を付けずに作成する（PENDING のまま。submit しない）
 
 ```bash
-python3 <review-pr skill のディレクトリ>/scripts/post_draft_review.py \
+python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_review.py \
   --repo <owner/name> --pr <N> --input <comments.json> --dry-run   # 検査だけ
-python3 <review-pr skill のディレクトリ>/scripts/post_draft_review.py \
+python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_review.py \
   --repo <owner/name> --pr <N> --input <comments.json>             # 投稿
 ```
 
