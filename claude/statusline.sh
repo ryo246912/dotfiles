@@ -217,6 +217,33 @@ account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
 session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 [ -n "$session" ] && session=$(printf '\033[90m%s\033[0m' "$session")
 
+# セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
+# transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
+# content は文字列のほか、画像付きなどでは text ブロックの配列になる（tool_result だけの配列は対象外）。
+# isMeta や、slash command・hook・IDE 拡張由来の内部メッセージ（<command-name> や <ide_opened_file> などのタグで始まるもの）は除外する。
+# 配列形式では内部タグの text ブロックを飛ばし、その後の本文を使う。
+# "<" で始まる普通のメッセージ（HTML の貼り付けなど）は残すため、既知のタグだけを見る。
+# 貼り付けた ANSI エスケープなどで statusline の色が崩れないよう、制御文字（C0・DEL・C1）は取り除く。
+# 時刻は MM/DD HH:MM で 💬 の前に置く。
+transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
+first_msg=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+	first_msg=$(jq -nr '
+    def internal: test("^<(command-|local-command-|bash-|system-reminder|task-notification|user-prompt-submit-hook|ide_)");
+    first(inputs
+      | select(.type == "user" and .isMeta != true)
+      | (.message.content
+         | if type == "string" then .
+           elif type == "array" then [.[] | select(.type == "text") | .text | select(internal | not)] | first // empty
+           else empty end) as $content
+      | select($content | internal | not)
+      | {content: $content, timestamp})
+    | (.content | split("\n")[0] | explode | map(select(. >= 32 and (. < 127 or . > 159))) | implode | if length > 30 then .[0:30] + "…" else . end) as $text
+    | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
+    | "\u001b[90m\($t | strflocaltime("%m/%d %H:%M"))~\u001b[0m \u001b[33m💬 \($text)\u001b[0m"
+  ' "$transcript" 2>/dev/null)
+fi
+
 # 空でない引数を " · " で連結する。
 join_parts() {
 	local out="" p
@@ -227,9 +254,9 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: アカウント・branch・モデル・コンテキスト・session id / 2 行目: rate limit・cache
-line1=$(join_parts "$account" "$branch" "$model_line" "$ctx_line" "$session")
-line2=$(join_parts "$limit_line" "$cache_line")
+# 1 行目: アカウント・branch・モデル・最初のメッセージ / 2 行目: コンテキスト・session id・rate limit・cache
+line1=$(join_parts "$account" "$branch" "$model_line" "$first_msg")
+line2=$(join_parts "$ctx_line" "$session" "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
 exit 0
