@@ -9,6 +9,9 @@ description = "mac の個別セットアップをまとめて実行（対話操�
 
 ["bootstrap:mac-brew"]
 description = "Homebrew 本体を導入する"
+# Homebrew インストーラの sudo プロンプトに TTY を渡すため raw = true にする
+# （raw でないと stdin が TTY にならず、sudo のパスワードを読めずに失敗する）
+raw = true
 run = '''
 #!/bin/bash
 set -euo pipefail
@@ -24,8 +27,11 @@ fi
 '''
 
 ["bootstrap:mac-packages"]
-depends = ["bootstrap:mac-brew"]
+depends     = ["bootstrap:mac-brew"]
 description = "brew-cask/[bootstrap.packages] では扱えない特殊パッケージ（custom option・tap・postflight）を導入する"
+# softwareupdate --install-rosetta や pkg インストーラ（google-japanese-ime 等）の sudo プロンプトに
+# TTY を渡すため raw = true にする（raw でないと「sudo: a terminal is required to read the password」で失敗する）
+raw = true
 run = '''
 #!/bin/bash
 set -euo pipefail
@@ -33,22 +39,12 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:$PATH"
 
 # google-japanese-ime: Rosetta が前提で brew-cask では表現できない。
-# rosetta のインストール失敗（既に導入済み等）で後続の thock 導入を止めないよう || true にする
+# rosetta のインストール失敗（既に導入済み等）で後続のパッケージ導入を止めないよう || true にする
 if ! brew list --cask google-japanese-ime &>/dev/null; then
   sudo softwareupdate --install-rosetta || true
   brew install --cask google-japanese-ime
 else
   echo "google-japanese-ime is already installed"
-fi
-
-# thock: 独自 tap の formula。インストール後に thock --install という postflight が要る。
-# 完全修飾名でインストールすることで tap 全体ではなくこの formula だけを信任する
-# （Homebrew の tap trust: `brew tap` 後の短縮名インストールは未信頼 tap で失敗しうる）
-if ! brew list thock &>/dev/null; then
-  brew install kamillobinski/thock/thock
-  thock --install
-else
-  echo "thock is already installed"
 fi
 
 # firefox/inkscape: cask 定義が mise 未対応の command_wrapper artifact を使っており、

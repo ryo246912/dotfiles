@@ -35,7 +35,7 @@ Examples:
   process.exit(0);
 }
 
-const writeTarget = isDryRun ? "--dry-run" : "Default";
+const writeTarget = isDryRun ? "--dry-run" : "Default profile";
 
 writeToProfile(
   writeTarget,
