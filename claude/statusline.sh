@@ -220,8 +220,9 @@ session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 # セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
 # transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
 # content は文字列のほか、画像付きなどでは text ブロックの配列になる（tool_result だけの配列は対象外）。
-# isMeta や "<" で始まるもの（slash command・hook 由来の内部メッセージ）は除外する。
-# 貼り付けた ANSI エスケープなどで statusline の色が崩れないよう、制御文字は取り除く。
+# isMeta や、slash command・hook 由来の内部メッセージ（<command-name> などのタグで始まるもの）は除外する。
+# "<" で始まる普通のメッセージ（HTML の貼り付けなど）は残すため、既知のタグだけを見る。
+# 貼り付けた ANSI エスケープなどで statusline の色が崩れないよう、制御文字（C0・DEL・C1）は取り除く。
 # 時刻は MM/DD HH:MM で 💬 の前に置く。
 transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 first_msg=""
@@ -233,9 +234,9 @@ if [ -n "$transcript" ] && [ -f "$transcript" ]; then
          | if type == "string" then .
            elif type == "array" then [.[] | select(.type == "text") | .text] | first // empty
            else empty end) as $content
-      | select($content | startswith("<") | not)
+      | select($content | test("^<(command-|local-command-|bash-|system-reminder|task-notification|user-prompt-submit-hook)") | not)
       | {content: $content, timestamp})
-    | (.content | split("\n")[0] | explode | map(select(. >= 32 and . != 127)) | implode | if length > 30 then .[0:30] + "…" else . end) as $text
+    | (.content | split("\n")[0] | explode | map(select(. >= 32 and (. < 127 or . > 159))) | implode | if length > 30 then .[0:30] + "…" else . end) as $text
     | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
     | "\u001b[90m\($t | strflocaltime("%m/%d %H:%M"))~\u001b[0m \u001b[33m💬 \($text)\u001b[0m"
   ' "$transcript" 2>/dev/null)
