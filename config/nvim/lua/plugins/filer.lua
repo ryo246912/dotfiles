@@ -17,12 +17,17 @@ return {
           return
         end
 
+        local path = node:get_id()
+
+        -- ディレクトリは Finder（OS のファイルマネージャ）で開く
         if node.type == "directory" then
-          require("neo-tree.sources.filesystem.commands").open(state)
+          local obj, err = vim.ui.open(path)
+          if not obj then
+            vim.notify("開けませんでした: " .. (err or "不明なエラー"), vim.log.levels.ERROR)
+          end
           return
         end
 
-        local path = node:get_id()
         local commands = require("neo-tree.sources.common.commands")
         local options = {
           { label = "現在のウィンドウで開く", fn = commands.open },
