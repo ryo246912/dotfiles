@@ -1304,7 +1304,8 @@ mise run sandbox:mcp-add     # mcp*.yml を sbx mcp に反映する（OAuth は�
 - `sbx_options` は APM の書式に無い独自キーで、`sbx mcp add` 固有のオプションを渡すのに使います。
   例：相対パスの `--project` を使う stdio サーバに `--dir <作業ディレクトリ>`、ホストの
   `127.0.0.1` で動くサーバ（Figma デスクトップなど）に `--skip-ssrf-check`（gateway はホストから接続するため
-  ループバックはホストを指しますが、sbx の SSRF チェックで拒否されます）。
+  ループバックはホストを指しますが、sbx の SSRF チェックで拒否されます）。`sbx mcp add` はシェルを通さないため、
+  値の先頭の `~` は `mise run sandbox:mcp-add` が `$HOME` に展開します（`--dir ~/dotfiles` など）。
 - `sbx mcp add` の `--args` は `,` 区切りなので、`,` を含む引数・env はエラーにします。
 - 登録した定義を `~/.local/state/sbx-mcp/<name>` に記録し、バージョンなどが変わったサーバだけ
   `sbx mcp rm` → `sbx mcp add` で登録し直します。remote サーバも定義（URL / headers）が変わると登録し直すため、

@@ -295,17 +295,18 @@ is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
 # - stdio: sbx mcp add に env を渡すオプションが無いため、env があれば `env K=V ... <command>` で包む
 #   （sbx の --args は `,` 区切りなので、`,` を含む引数はエラーにする）
 # - sbx_options（APM の書式には無い独自キー）は sbx mcp add の末尾にそのまま足す
+#   （sbx はシェルを通さないので、先頭の ~ だけここで $HOME に展開する。--dir ~/dotfiles など）
 # - registry 参照（文字列形式や registry: false 以外）は解決後のコマンドが manifest に無いため対象外
 to_specs() {
   # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
   json=$(yq -o=json '.dependencies.mcp // []' "$1") || return 1
-  printf '%s\n' "$json" | jq -r '
+  printf '%s\n' "$json" | jq -r --arg home "$HOME" '
     .[]
     | if (type != "object") or (.registry != false) then
         "skip\t\(if type == "object" then .name else . end)\t"
       else
         .name as $name
-        | (.sbx_options // []) as $sbx_options
+        | ((.sbx_options // []) | map(sub("^~(?=/|$)"; $home))) as $sbx_options
         | if (.transport // "") == "stdio" then
             ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
             | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
