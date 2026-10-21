@@ -246,9 +246,9 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: アカウント・branch・モデル・コンテキスト・session id・最初のメッセージ / 2 行目: rate limit・cache
-line1=$(join_parts "$account" "$branch" "$model_line" "$ctx_line" "$session" "$first_msg")
-line2=$(join_parts "$limit_line" "$cache_line")
+# 1 行目: アカウント・branch・モデル・最初のメッセージ / 2 行目: コンテキスト・session id・rate limit・cache
+line1=$(join_parts "$account" "$branch" "$model_line" "$first_msg")
+line2=$(join_parts "$ctx_line" "$session" "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"
 exit 0
