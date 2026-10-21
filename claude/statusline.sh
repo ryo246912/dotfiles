@@ -220,19 +220,17 @@ session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 # セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
 # transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
 # isMeta や "<" で始まるもの（slash command・hook 由来の内部メッセージ）は除外する。
-# 時刻は今日なら HH:MM、それ以外は MM/DD HH:MM。
+# 時刻は MM/DD HH:MM で 💬 の前に置く。
 transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 first_msg=""
 if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-	first_msg=$(jq -nr --arg today "$(date +%Y-%m-%d)" '
+	first_msg=$(jq -nr '
     first(inputs
       | select(.type == "user" and .isMeta != true)
       | select(.message.content | type == "string" and (startswith("<") | not)))
     | (.message.content | split("\n")[0] | if length > 30 then .[0:30] + "…" else . end) as $text
     | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
-    | (if ($t | strflocaltime("%Y-%m-%d")) == $today then $t | strflocaltime("%H:%M")
-       else $t | strflocaltime("%m/%d %H:%M") end) as $time
-    | "\u001b[33m💬 \($text)\u001b[0m \u001b[90m(\($time)~)\u001b[0m"
+    | "\u001b[90m\($t | strflocaltime("%m/%d %H:%M"))~\u001b[0m \u001b[33m💬 \($text)\u001b[0m"
   ' "$transcript" 2>/dev/null)
 fi
 
