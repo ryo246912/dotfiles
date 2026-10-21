@@ -62,17 +62,21 @@ dependencies:
     # - <port>: ホストに公開したポート（compose の ports: "5432:5432" の左側）
     # - <dbname>: 接続するデータベース名（compose の POSTGRES_DB）
     # パスワードに @ : / , などの記号を含むなら URL エンコードする（, はそのままだと sbx に渡せないので %2C にする）
+    # postgres-mcp 0.3.0 はそのままでは依存を解決できないので、dotfiles の postgres-mcp-overrides.txt を
+    # --overrides で渡す。相対パスなので、sbx_options の --dir に dotfiles のリポジトリを指定する
     - name: postgres-read
       registry: false
       transport: stdio
       command: uvx
-      args: ["postgres-mcp@0.3.0", "--access-mode=restricted"]
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=restricted"]
       env:
         DATABASE_URI: postgresql://<user>:<password>@<host>:<port>/<dbname>
+      sbx_options: ["--dir", "/Users/xxx/dotfiles"]
     - name: postgres-write
       registry: false
       transport: stdio
       command: uvx
-      args: ["postgres-mcp@0.3.0", "--access-mode=unrestricted"]
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=unrestricted"]
       env:
         DATABASE_URI: postgresql://<user>:<password>@<host>:<port>/<dbname>
+      sbx_options: ["--dir", "/Users/xxx/dotfiles"]
