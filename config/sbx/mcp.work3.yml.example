@@ -54,19 +54,25 @@ dependencies:
       url: http://127.0.0.1:3845/mcp
       sbx_options: ["--skip-ssrf-check"]
     # ホストの Docker で起動している PostgreSQL（ポートをホストに公開しておく）。gateway がホストで
-    # 起動するので localhost はホストを指す。DATABASE_URI に , を含めると sbx に渡せない。
-    # 読み取り専用（restricted）と書き込み可（unrestricted）を分け、普段は postgres-read だけ読み込む
+    # 起動するので localhost はホストを指す。
+    # 読み取り専用（restricted）と書き込み可（unrestricted）を分け、普段は postgres-read だけ読み込む。
+    # DATABASE_URI は postgresql://<user>:<password>@<host>:<port>/<dbname>
+    # - <user> / <password>: DB のユーザーとパスワード（docker compose の POSTGRES_USER / POSTGRES_PASSWORD）
+    # - <host>: ホストから見た DB の場所。ホストに公開した Docker のポートなら localhost
+    # - <port>: ホストに公開したポート（compose の ports: "5432:5432" の左側）
+    # - <dbname>: 接続するデータベース名（compose の POSTGRES_DB）
+    # パスワードに @ : / , などの記号を含むなら URL エンコードする（, はそのままだと sbx に渡せないので %2C にする）
     - name: postgres-read
       registry: false
       transport: stdio
       command: uvx
       args: ["postgres-mcp@0.3.0", "--access-mode=restricted"]
       env:
-        DATABASE_URI: postgresql://xxx:xxx@localhost:5432/xxx
+        DATABASE_URI: postgresql://<user>:<password>@<host>:<port>/<dbname>
     - name: postgres-write
       registry: false
       transport: stdio
       command: uvx
       args: ["postgres-mcp@0.3.0", "--access-mode=unrestricted"]
       env:
-        DATABASE_URI: postgresql://xxx:xxx@localhost:5432/xxx
+        DATABASE_URI: postgresql://<user>:<password>@<host>:<port>/<dbname>
