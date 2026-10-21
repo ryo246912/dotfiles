@@ -21,16 +21,59 @@ vim.api.nvim_create_autocmd('VimEnter', {
     local is_no_arg = vim.fn.argc() == 0
     local is_dir_arg = vim.fn.argc() == 1 and vim.fn.isdirectory(argv0) == 1
     if is_no_arg or is_dir_arg then
-      local ok, neo_tree = pcall(require, 'neo-tree.command')
+      local ok, neotree = pcall(require, 'utils.neotree')
       if ok then
-        neo_tree.execute({
-          source = 'filesystem',
-          position = 'left',
-          action = 'show',
-        })
+        neotree.open({ action = 'show' })
         vim.cmd('wincmd l')
       end
+      return
     end
+
+    -- `nvim file` のようにファイルを指定して起動した場合はツリーを出さず、ファイルだけを開く
+    local function show_file_only()
+      local target = vim.fn.fnamemodify(argv0, ':p')
+      local tree_wins, file_win = {}, nil
+      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local buf = vim.api.nvim_win_get_buf(win)
+        if vim.bo[buf].filetype == 'neo-tree' then
+          table.insert(tree_wins, win)
+        elseif vim.api.nvim_buf_get_name(buf) == target then
+          file_win = win
+        end
+      end
+      if #tree_wins == 0 and file_win then
+        return
+      end
+
+      if not file_win then
+        -- ツリーしか無い場合は新しいウィンドウを作ってからファイルを開く
+        -- （neo-tree のウィンドウ内で :edit すると neo-tree 側に横取りされるため）
+        if #tree_wins == #vim.api.nvim_tabpage_list_wins(0) then
+          vim.cmd('botright vnew')
+        else
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= 'neo-tree' then
+              vim.api.nvim_set_current_win(win)
+              break
+            end
+          end
+        end
+        vim.cmd('edit ' .. vim.fn.fnameescape(argv0))
+        file_win = vim.api.nvim_get_current_win()
+      end
+
+      for _, win in ipairs(tree_wins) do
+        if vim.api.nvim_win_is_valid(win) then
+          pcall(vim.api.nvim_win_close, win, true)
+        end
+      end
+      if vim.api.nvim_win_is_valid(file_win) then
+        vim.api.nvim_set_current_win(file_win)
+      end
+    end
+    -- neo-tree は非同期に描画されることがあるため、少し遅れて出てきたツリーも閉じる
+    vim.schedule(show_file_only)
+    vim.defer_fn(show_file_only, 300)
   end,
 })
 

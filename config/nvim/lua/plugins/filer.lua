@@ -189,10 +189,20 @@ return {
 
       local keymap = vim.keymap.set
 
+      local neotree = require("utils.neotree")
+
       -- <leader>e でドロワーを開く/フォーカス（カレントファイルを表示）
-      keymap("n", "<leader>e", ":Neotree filesystem reveal left<CR>", { noremap = true, silent = true, desc = "ファイルツリーを開く" })
+      -- 長時間起動していて neo-tree の状態が壊れていても開けるよう、ヘルパー経由で開く
+      keymap("n", "<leader>e", function()
+        neotree.open({ reveal = true })
+      end, { noremap = true, silent = true, desc = "ファイルツリーを開く" })
       -- <leader>s でファイルツリーをトグル
-      keymap("n", "<leader>s", ":Neotree toggle<CR>", { noremap = true, silent = true, desc = "ファイルツリーをトグル" })
+      keymap("n", "<leader>s", neotree.toggle, { noremap = true, silent = true, desc = "ファイルツリーをトグル" })
+      -- それでもおかしいときに手動で neo-tree の状態をリセットして開き直す
+      vim.api.nvim_create_user_command("NeotreeReset", function()
+        neotree.reset()
+        neotree.open({ reveal = true })
+      end, { desc = "neo-tree の状態をリセットして開き直す" })
       -- <leader>gt でGitステータスパネルを開く
       keymap("n", "<leader>gt", ":Neotree git_status<CR>", { noremap = true, silent = true, desc = "Git ステータスパネル" })
     end,
