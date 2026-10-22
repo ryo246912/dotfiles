@@ -200,7 +200,11 @@ return {
       keymap("n", "<leader>s", neotree.toggle, { noremap = true, silent = true, desc = "ファイルツリーをトグル" })
       -- それでもおかしいときに手動で neo-tree の状態をリセットして開き直す
       vim.api.nvim_create_user_command("NeotreeReset", function()
-        neotree.reset()
+        local ok, err = neotree.reset()
+        if not ok then
+          vim.notify("neo-tree の状態をリセットできませんでした: " .. tostring(err), vim.log.levels.ERROR)
+          return
+        end
         neotree.open({ reveal = true })
       end, { desc = "neo-tree の状態をリセットして開き直す" })
       -- <leader>gt でGitステータスパネルを開く

@@ -17,17 +17,23 @@ function M.find_window()
   return nil
 end
 
----neo-tree の全ソースの状態を破棄する（開いているツリーも閉じる）
+---現在のタブの filesystem ソースの状態を破棄する（このタブの filesystem ツリーも閉じる）
+---他のタブや git_status / buffers ソースの状態には触れない
+---@return boolean ok
+---@return string? err
 function M.reset()
-  local ok, manager = pcall(require, "neo-tree.sources.manager")
-  if ok and manager._clear_state then
-    pcall(manager._clear_state)
-  end
+  return pcall(function()
+    require("neo-tree.sources.manager").dispose("filesystem", vim.api.nvim_get_current_tabpage())
+  end)
 end
 
+---@param args table
+---@return boolean ok
+---@return string? err
 local function execute(args)
-  local ok, err = pcall(require("neo-tree.command").execute, args)
-  return ok, err
+  return pcall(function()
+    require("neo-tree.command").execute(args)
+  end)
 end
 
 ---ツリーを開く。表示されなければ状態をリセットしてもう一度開く。
@@ -35,11 +41,18 @@ end
 function M.open(args)
   args = vim.tbl_extend("force", { source = "filesystem", position = "left", action = "focus" }, args or {})
   execute(args)
-  if M.find_window() then
+  -- 描画が少し遅れることがあるため、短時間待ってから判定する
+  if vim.wait(300, function()
+    return M.find_window() ~= nil
+  end, 20) then
     return
   end
 
-  M.reset()
+  local reset_ok, reset_err = M.reset()
+  if not reset_ok then
+    vim.notify("neo-tree の状態をリセットできませんでした: " .. tostring(reset_err), vim.log.levels.ERROR)
+    return
+  end
   local ok, err = execute(args)
   if not ok or not M.find_window() then
     vim.notify("ファイルツリーを開けませんでした: " .. tostring(err or "ウィンドウが作成されませんでした"), vim.log.levels.ERROR)

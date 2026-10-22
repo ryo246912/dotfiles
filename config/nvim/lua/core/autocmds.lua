@@ -29,9 +29,16 @@ vim.api.nvim_create_autocmd('VimEnter', {
       return
     end
 
-    -- `nvim file` のようにファイルを指定して起動した場合はツリーを出さず、ファイルだけを開く
+    -- `nvim file` のようにファイルを指定して起動したのにツリーだけが表示されてしまう場合がある
+    -- （手元の環境で報告されたが、原因の経路は未特定）。その場合はツリーを閉じてファイルだけを開く。
+    -- ツリーが無ければ何もしないので、`-c bnext` などで選んだバッファや stdin（`nvim -`）には触れない。
+    if argv0 == '' or argv0 == '-' then
+      return
+    end
+    -- 遅延実行の間に cwd が変わっても同じファイルを指すよう、絶対パスは先に一度だけ求める
+    local target = vim.fn.fnamemodify(argv0, ':p')
+
     local function show_file_only()
-      local target = vim.fn.fnamemodify(argv0, ':p')
       local tree_wins, file_win = {}, nil
       for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local buf = vim.api.nvim_win_get_buf(win)
@@ -41,7 +48,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
           file_win = win
         end
       end
-      if #tree_wins == 0 and file_win then
+      if #tree_wins == 0 then
         return
       end
 
@@ -58,7 +65,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
             end
           end
         end
-        vim.cmd('edit ' .. vim.fn.fnameescape(argv0))
+        vim.cmd('edit ' .. vim.fn.fnameescape(target))
         file_win = vim.api.nvim_get_current_win()
       end
 
@@ -71,9 +78,19 @@ vim.api.nvim_create_autocmd('VimEnter', {
         vim.api.nvim_set_current_win(file_win)
       end
     end
-    -- neo-tree は非同期に描画されることがあるため、少し遅れて出てきたツリーも閉じる
+
     vim.schedule(show_file_only)
-    vim.defer_fn(show_file_only, 300)
+    -- neo-tree は非同期に描画されることがあるため、少し遅れて出てきたツリーも閉じる。
+    -- ただし、その間にユーザーが別のバッファやタブへ移っていたら何もしない。
+    local start_tab = vim.api.nvim_get_current_tabpage()
+    vim.defer_fn(function()
+      local cur_buf = vim.api.nvim_get_current_buf()
+      local on_startup_view = vim.api.nvim_get_current_tabpage() == start_tab
+        and (vim.api.nvim_buf_get_name(cur_buf) == target or vim.bo[cur_buf].filetype == 'neo-tree')
+      if on_startup_view then
+        show_file_only()
+      end
+    end, 300)
   end,
 })
 
