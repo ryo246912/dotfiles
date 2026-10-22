@@ -38,7 +38,8 @@ vim.api.nvim_create_autocmd('VimEnter', {
     -- 遅延実行の間に cwd が変わっても同じファイルを指すよう、絶対パスは先に一度だけ求める
     local target = vim.fn.fnamemodify(argv0, ':p')
 
-    local function show_file_only()
+    ---@param allow_edit_beside_tree boolean ツリー以外のウィンドウがあるときにも起動ファイルを開き直してよいか
+    local function show_file_only(allow_edit_beside_tree)
       local tree_wins, file_win = {}, nil
       for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local buf = vim.api.nvim_win_get_buf(win)
@@ -53,9 +54,15 @@ vim.api.nvim_create_autocmd('VimEnter', {
       end
 
       if not file_win then
+        local tree_only = #tree_wins == #vim.api.nvim_tabpage_list_wins(0)
+        -- 遅延実行では、ユーザーが別のファイルに切り替えたウィンドウを上書きしないよう、
+        -- ツリーしか無いときだけファイルを開き直す
+        if not tree_only and not allow_edit_beside_tree then
+          return
+        end
         -- ツリーしか無い場合は新しいウィンドウを作ってからファイルを開く
         -- （neo-tree のウィンドウ内で :edit すると neo-tree 側に横取りされるため）
-        if #tree_wins == #vim.api.nvim_tabpage_list_wins(0) then
+        if tree_only then
           vim.cmd('botright vnew')
         else
           for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -79,7 +86,9 @@ vim.api.nvim_create_autocmd('VimEnter', {
       end
     end
 
-    vim.schedule(show_file_only)
+    vim.schedule(function()
+      show_file_only(true)
+    end)
     -- neo-tree は非同期に描画されることがあるため、少し遅れて出てきたツリーも閉じる。
     -- ただし、その間にユーザーが別のバッファやタブへ移っていたら何もしない。
     local start_tab = vim.api.nvim_get_current_tabpage()
@@ -88,7 +97,7 @@ vim.api.nvim_create_autocmd('VimEnter', {
       local on_startup_view = vim.api.nvim_get_current_tabpage() == start_tab
         and (vim.api.nvim_buf_get_name(cur_buf) == target or vim.bo[cur_buf].filetype == 'neo-tree')
       if on_startup_view then
-        show_file_only()
+        show_file_only(false)
       end
     end, 300)
   end,

@@ -40,11 +40,20 @@ end
 ---@param args table|nil neo-tree.command.execute に渡す引数
 function M.open(args)
   args = vim.tbl_extend("force", { source = "filesystem", position = "left", action = "focus" }, args or {})
-  execute(args)
+  local tab = vim.api.nvim_get_current_tabpage()
   -- 描画が少し遅れることがあるため、短時間待ってから判定する
-  if vim.wait(300, function()
-    return M.find_window() ~= nil
-  end, 20) then
+  local function wait_window()
+    return vim.wait(300, function()
+      return M.find_window() ~= nil
+    end, 20)
+  end
+
+  execute(args)
+  if wait_window() then
+    return
+  end
+  -- 待っている間に別のタブへ移っていたら、そのタブの状態を壊さないよう何もしない
+  if vim.api.nvim_get_current_tabpage() ~= tab then
     return
   end
 
@@ -54,7 +63,7 @@ function M.open(args)
     return
   end
   local ok, err = execute(args)
-  if not ok or not M.find_window() then
+  if not ok or not wait_window() then
     vim.notify("ファイルツリーを開けませんでした: " .. tostring(err or "ウィンドウが作成されませんでした"), vim.log.levels.ERROR)
   end
 end
