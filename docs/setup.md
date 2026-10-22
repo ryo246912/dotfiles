@@ -350,8 +350,9 @@
 - [ ] fnox: Bitwarden Secrets Manager の machine account を用意する
   - `config/fnox/config.toml` の `bws` provider は machine account の access token（`BWS_ACCESS_TOKEN`）で認証する。
     トークンは age で暗号化して `config/fnox/config.toml` に置いてあるので、machine account の作成は
-    初回とトークンを作り直すとき（期限切れ・漏洩時）だけでよい。2台目以降は age 鍵の追加だけで済む
-    （[docs/fnox.md の「複数 PC で使う場合」](./fnox.md#複数-pc-で使う場合2台目以降のセットアップ)）
+    初回とトークンを作り直すとき（期限切れ・漏洩時）だけでよい。2台目以降は machine account は作らず、
+    新しい PC の age 公開鍵を `recipients` に追加し、既存の PC で `fnox reencrypt --provider age` を実行して
+    `BWS_ACCESS_TOKEN` を再暗号化する（[docs/fnox.md の「複数 PC で使う場合」](./fnox.md#複数-pc-で使う場合2台目以降のセットアップ)）
   - Web 保管庫で machine account を追加する
     1. [Web 保管庫](https://vault.bitwarden.com) にログインし、左上の製品切り替えで **Secrets Manager** を開く
        （Organization が必要。Password Manager との違いは [docs/bitwarden.md](./bitwarden.md)）
@@ -371,10 +372,12 @@
     mise bootstrap dotfiles apply
     ```
 
-  - 動作確認してからコミットして push する（新しいシェルで `BWS_ACCESS_TOKEN` が export される）
+  - 動作確認してからコミットして push する。今のシェルには `BWS_ACCESS_TOKEN` が未設定（作り直したときは古い値）
+    なので、age から復号した値を export してから bws の secret を読む（新しいシェルでは
+    `config/zsh/lazy/mise.zsh` が自動で export する）
 
     ```sh
-    fnox get BWS_ACCESS_TOKEN >/dev/null && echo ok
+    export BWS_ACCESS_TOKEN="$(fnox get BWS_ACCESS_TOKEN)"
     fnox get CZ_OPENAI_API_KEY >/dev/null && echo ok  # bws から読めるか
     ```
 
