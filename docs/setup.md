@@ -508,6 +508,24 @@
     cat ~/.local/state/zsh/.zsh_history >> ~/.local/state/zsh/restore_zsh_history
     mv ~/.local/state/zsh/restore_zsh_history ~/.local/state/zsh/.zsh_history
     ```
+  - [ ] zoxideの復元
+    - atuin historyのcwdから実行回数・最終実行時刻を集計し、z形式でzoxide DBに取り込む
+    - `zoxide import atuin` は訪問回数が反映されないため使わない
+    - mac(`/Users/xxx`) ⇔ linux(`/home/xxx`) のホーム差分は書き換え、存在しないディレクトリは除外する
+    ```zsh
+    tmp="$(mktemp)"
+    sqlite3 -separator $'\t' ~/.local/share/atuin/history.db "
+      SELECT cwd, COUNT(*), MAX(timestamp) / 1000000000
+      FROM history
+      WHERE deleted_at IS NULL AND cwd != ''
+      GROUP BY cwd;
+    " | while IFS=$'\t' read -r dir rank ts; do
+      dir="$(print -r -- "$dir" | sed -E "s#^/(Users|home)/[^/]+#${HOME//\#/\\#}#")"
+      [[ -d "$dir" ]] && print -r -- "${dir}|${rank}|${ts}"
+    done > "$tmp"
+    _Z_DATA="$tmp" zoxide import z --merge
+    rm -f "$tmp"
+    ```
 - [ ] sshの設定(オプション)
   - 秘密鍵を共有してもらって保存
 
