@@ -11,28 +11,28 @@
     "name": "email(private)",
     "data": { "text": {{ vars.vicinae_email_private | default(value="") | json_encode }} },
     "createdAt": 1789423144,
-    "expansion": { "keyword": ",adp", "apps": [], "word": true }
+    "expansion": { "keyword": ",adp", "apps": [], "word": false }
   },
   {
     "id": "snp-e79dc2e6308c",
     "name": "email(work)",
     "data": { "text": {{ vars.vicinae_email_work | default(value="") | json_encode }} },
     "createdAt": 1789449986,
-    "expansion": { "keyword": ",adw", "apps": [], "word": true }
+    "expansion": { "keyword": ",adw", "apps": [], "word": false }
   },
   {
     "id": "snp-3891eaa97d69",
     "name": "email(gmail)",
     "data": { "text": {{ vars.vicinae_email_gmail | default(value="") | json_encode }} },
     "createdAt": 1789450001,
-    "expansion": { "keyword": ",ado", "apps": [], "word": true }
+    "expansion": { "keyword": ",ado", "apps": [], "word": false }
   },
   {
     "id": "snp-51edcf139b6c",
     "name": "today",
     "data": { "text": "{date format=\"yyyy/MM/dd\"}" },
     "createdAt": 1789450052,
-    "expansion": { "keyword": ",d", "apps": [], "word": true }
+    "expansion": { "keyword": ",d", "apps": [], "word": false }
   },
   {
     "id": "snp-4f61b9106d0f",
@@ -77,7 +77,7 @@
     "name": {{ vars.vicinae_name_email_other | default(value="email(other)") | json_encode }},
     "data": { "text": {{ vars.vicinae_email_other | json_encode }} },
     "createdAt": 1789449968,
-    "expansion": { "keyword": ",ads", "apps": [], "word": true }
+    "expansion": { "keyword": ",ads", "apps": [], "word": false }
   }
   {%- endif %}
 ]
