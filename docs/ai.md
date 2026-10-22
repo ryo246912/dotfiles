@@ -43,6 +43,30 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## セッションを分岐する（fork）
+
+既存セッションの会話履歴をコピーして、**新しいセッション ID の別セッション**として続けます。
+元のセッションの transcript はそのまま残るので、「A 案と B 案を両方試す」「調査の途中から別の方向に進める」
+といった使い方ができます。
+
+`/fork [name]` で、今開いている会話をこの時点で分岐します。
+
+```text
+/fork 別案を試す
+```
+
+- 実行すると**分岐先のセッションに切り替わります**（`You are now in the fork.`）。
+  元の会話は分岐した時点の状態で残り、`claude -r <元の session-id>` で再開できます（実行時に表示されます）。
+- `name` を省略すると、元のタイトルに `(Fork 1)` のような連番を付けた名前になります。
+- 途中の時点から分岐したいときは、先に `/fork` してから分岐先で `/rewind`（`Esc` 2 回）で巻き戻します。
+  元の会話を `/rewind` すると元側の履歴が巻き戻るので、順番に注意します。
+
+> [!NOTE]
+> 分岐しても**ファイルの作業ツリーは共有**です（`/fork` は worktree を作りません）。
+> 両方のセッションで同じファイルを編集するなら、`multi-worktree` や `git worktree` で作業場所を分けてから起動します。
+> 分けずに片方で編集すると、もう片方の Edit が `File has been modified since read ... Read it again` で
+> 拒否されます（権限エラーではなく、読み直せば書ける）。
+
 ## 複数セッションを並走させる（agent view）
 
 Claude Code には、1 つの画面から複数のセッションを起動・監視・切り替えできる
@@ -61,7 +85,7 @@ Claude Code には、1 つの画面から複数のセッションを起動・監
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
 | agent view を開く                            | `claude agents`（`--cwd <dir>` でそのディレクトリ配下のセッションだけに絞る）  |
 | 今の会話をバックグラウンドに回して一覧を開く | 空のプロンプトで `←`、または `/bg`（`/background`）                            |
-| 今の会話をコピーして別セッションで並走させる | `/fork`（元の会話はそのまま続く）                                              |
+| 今の会話をコピーして別セッションで並走させる | `/fork`（[セッションを分岐する](#セッションを分岐するfork) を参照）            |
 | 一覧から抜ける                               | `Esc`（セッションは止まらない）                                                |
 | `claude` 単体で agent view を開くようにする  | `/config defaultToAgentsView=true`                                             |
 | `←` で一覧に飛ぶ挙動を止める                 | 設定 `leftArrowOpensAgents: false`                                             |
