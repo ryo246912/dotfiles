@@ -562,6 +562,20 @@
     mkdir -p ~/Programming/work3/repos ~/Programming/work3/worktrees
     ```
 
+- [ ] Vicinae の Raycast Extension
+  - Extension 本体は dotfiles 管理外（設定値・alias は `config-mac/vicinae/settings.json` の `providers` に入っている）
+  - [ ] Vicinae の「Raycast Store」で以下を検索してインストールする（ID が `store.raycast.<name>` になり、`providers` の設定がそのまま効く）
+    - [ ] [Apple Notes](https://www.raycast.com/tumtum/apple-notes)
+    - [ ] [Arc](https://www.raycast.com/thomas/arc)
+    - [ ] [GitHub](https://www.raycast.com/thomaslombart/github)
+    - [ ] [Google Meet](https://www.raycast.com/vitoorgomes/google-meet)
+    - [ ] [Miniflux](https://www.raycast.com/SevicheCC/miniflux)
+    - [ ] [Obsidian](https://www.raycast.com/marcjulian/obsidian)
+    - [ ] [Port Manager](https://www.raycast.com/lucaschultz/port-manager)
+    - [ ] [Raindrop.io](https://www.raycast.com/lardissone/raindrop-io)
+    - [ ] [Thock](https://www.raycast.com/shail_antani/thock)
+  - [ ] password 型の preference（API トークン等）は `settings.json` に書き込まれないため、各 Extension の設定画面で入力する
+
 - [ ] obsidian
   - [ ] syncthingの同期設定
 
