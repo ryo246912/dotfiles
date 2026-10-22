@@ -550,7 +550,7 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
         stat, info = stats[key], scope.get(key) or {}
         if key == "other" and not stat["files"]:
             continue
-        changed = bool(stat["files"]) if hunks is not None else bool(info.get("summary"))
+        changed = bool(stat["files"])
         size = (
             f'<span class="tag">{len(stat["files"])} files</span><span class="added">+{stat["added"]}</span>'
             f'<span class="removed">−{stat["removed"]}</span>'
@@ -560,11 +560,12 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
         chips = "".join(
             f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"]
         )
-        summary = inline(info["summary"]) if info.get("summary") else ("変更なし" if not changed else "")
+        known = hunks is not None  # 差分が無いときは、変わるかどうかを決めつけない（summary だけ出す）
+        summary = inline(info["summary"]) if info.get("summary") else ("変更なし" if known and not changed else "")
+        badge = f'<span class="tag">{"変わる" if changed else "変わらない"}</span>' if known else ""
         cards.append(
-            f'<div class="scope-card{"" if changed else " unchanged"}{" other" if key == "other" else ""}">'
-            f'<div class="scope-head"><strong>{name}</strong>'
-            f'<span class="tag">{"変わる" if changed else "変わらない"}</span></div>'
+            f'<div class="scope-card{"" if changed or not known else " unchanged"}{" other" if key == "other" else ""}">'
+            f'<div class="scope-head"><strong>{name}</strong>{badge}</div>'
             f'<p>{summary}</p><div class="scope-meta">{size}{chips}</div></div>'
         )
     return f'<div class="scope">{"".join(cards)}</div>'
