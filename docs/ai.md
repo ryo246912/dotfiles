@@ -43,6 +43,57 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## セッションを分岐する（fork）
+
+既存セッションの会話履歴をコピーして、**新しいセッション ID の別セッション**として続けます。
+元のセッションの transcript はそのまま残るので、「A 案と B 案を両方試す」「調査の途中から別の方向に進める」
+といった使い方ができます。
+
+| やりたいこと                           | 方法                                                      |
+| -------------------------------------- | --------------------------------------------------------- |
+| 今開いている会話をこの時点で分岐する   | `/fork [name]`                                            |
+| 直近のセッションを分岐して開く         | `claude --continue --fork-session`（`-c --fork-session`） |
+| ID / 名前を指定して分岐して開く        | `claude --resume <session-id> --fork-session`             |
+| 一覧から選んで分岐して開く             | `claude --resume --fork-session`                          |
+| 分岐したセッションをバックグラウンドで | `claude --resume <session-id> --fork-session --bg "..."`  |
+
+### `/fork`（会話中に分岐する）
+
+```text
+/fork 別案を試す
+```
+
+- 実行すると**分岐先のセッションに切り替わります**（`You are now in the fork.`）。
+  元の会話は分岐した時点の状態で残り、`claude -r <元の session-id>` で再開できます（実行時に表示されます）。
+- `name` を省略すると、元のタイトルに `(Fork 1)` のような連番を付けた名前になります。
+- 途中の時点から分岐したいときは、先に `/fork` してから分岐先で `/rewind`（`Esc` 2 回）で巻き戻します。
+  元の会話を `/rewind` すると元側の履歴が巻き戻るので、順番に注意します。
+
+### `--fork-session`（起動時に分岐する）
+
+`--fork-session` は `--resume` / `--continue` と組み合わせたときだけ効き、
+**新しいセッション ID を払い出して**履歴を引き継ぎます。付けずに `--resume` すると、
+元のセッションに追記していくことになります。
+
+```bash
+# session-id は /status、claude agents --json、~/.claude/projects/<project>/<id>.jsonl などで確認
+claude --resume 6f1d2c3a-xxxx-xxxx-xxxx-xxxxxxxxxxxx --fork-session
+
+# 名前を付けて分岐（/resume のピッカーやプロンプト欄に表示される）
+claude --resume <session-id> --fork-session --name try-plan-b
+
+# 非対話で分岐先に 1 回だけ投げる
+claude --resume <session-id> --fork-session -p "この方針で別実装を書いて"
+```
+
+> [!NOTE]
+> セッションは**作業ディレクトリ（プロジェクト）ごと**に保存されます。`--resume` は元セッションと同じディレクトリで実行します。
+> `CLAUDE_CONFIG_DIR` でアカウントを切り替えている場合も、そのアカウントの設定ディレクトリにある
+> セッションだけが対象です（[ホスト](#ホスト) の共有 symlink で `projects` を共有していれば相互に見えます）。
+>
+> 分岐しても**ファイルの作業ツリーは共有**です。両方のセッションで同じファイルを編集するなら、
+> `multi-worktree` や `git worktree` で作業場所を分けてから起動します。
+
 ## 複数セッションを並走させる（agent view）
 
 Claude Code には、1 つの画面から複数のセッションを起動・監視・切り替えできる
@@ -61,7 +112,7 @@ Claude Code には、1 つの画面から複数のセッションを起動・監
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
 | agent view を開く                            | `claude agents`（`--cwd <dir>` でそのディレクトリ配下のセッションだけに絞る）  |
 | 今の会話をバックグラウンドに回して一覧を開く | 空のプロンプトで `←`、または `/bg`（`/background`）                            |
-| 今の会話をコピーして別セッションで並走させる | `/fork`（元の会話はそのまま続く）                                              |
+| 今の会話をコピーして別セッションで並走させる | `/fork`（[セッションを分岐する](#セッションを分岐するfork) を参照）            |
 | 一覧から抜ける                               | `Esc`（セッションは止まらない）                                                |
 | `claude` 単体で agent view を開くようにする  | `/config defaultToAgentsView=true`                                             |
 | `←` で一覧に飛ぶ挙動を止める                 | 設定 `leftArrowOpensAgents: false`                                             |
