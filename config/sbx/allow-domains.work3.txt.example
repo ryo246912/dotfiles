@@ -4,5 +4,5 @@
 # 書式は allow-domains.txt と同じ（1行1パターン、`#` 以降はコメント）。
 
 # 社内ドキュメント・ツール
-# docs.example.com
-# **.example.internal
+us.posthog.com
+
