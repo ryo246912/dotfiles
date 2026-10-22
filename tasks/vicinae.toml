@@ -1,0 +1,51 @@
+# Vicinae の shortcuts（~/.local/share/vicinae/shortcuts/shortcuts.json）を
+# 共有分（config-mac/vicinae/shortcuts.shared.json）と PC ごとの分
+# （~/.config/vicinae/shortcuts.local.json、git 管理外）から組み立てる。
+# マージの規則は unmanaged/vicinae/shortcuts-sync.jq を参照（docs/raycast.md にも記載）。
+#
+# Vicinae は shortcuts を起動時にだけ読み、利用のたびにメモリ上の一覧で全件を書き戻すため、
+# 起動中に差し替えても上書きされる。終了させてから書き出し、起動し直す。
+
+["vicinae:shortcuts:sync"]
+description = "Vicinae の shortcuts を shared + local からマージして書き出す（GUI の変更は local に取り込む）"
+run = '''
+#!/bin/bash
+set -euo pipefail
+[ "$(uname)" != "Darwin" ] && { echo "macOS 専用のタスクです"; exit 1; }
+
+shared="$HOME/.config/vicinae/shortcuts.shared.json"
+local_file="$HOME/.config/vicinae/shortcuts.local.json"
+target="$HOME/.local/share/vicinae/shortcuts/shortcuts.json"
+state_dir="$HOME/.local/state/vicinae"
+synced="$state_dir/shortcuts-synced.json"
+[ -f "$shared" ] || { echo "$shared がありません（先に bootstrap:dotfiles:apply を実行）"; exit 1; }
+mkdir -p "$(dirname "$target")" "$state_dir"
+
+json_or_empty() { if [ -s "$1" ]; then cat "$1"; else echo '[]'; fi; }
+is_running() { osascript -e 'application "Vicinae" is running' | grep -q true; }
+
+was_running=false
+if is_running; then
+  was_running=true
+  osascript -e 'tell application "Vicinae" to quit'
+  for _ in $(seq 50); do is_running || break; sleep 0.2; done
+  is_running && { echo "Vicinae が終了しませんでした。手動で終了してから再実行してください"; exit 1; }
+fi
+
+result=$(jq -n \
+  --argjson shared "$(json_or_empty "$shared")" \
+  --argjson local "$(json_or_empty "$local_file")" \
+  --argjson current "$(json_or_empty "$target")" \
+  --argjson synced "$(json_or_empty "$synced")" \
+  --argjson now "$(date +%s)" \
+  -f "$MISE_PROJECT_ROOT/unmanaged/vicinae/shortcuts-sync.jq")
+
+[ -f "$target" ] && cp "$target" "$state_dir/shortcuts.json.bak"
+jq '.shortcuts' <<<"$result" >"$target.tmp" && mv "$target.tmp" "$target"
+jq '.local' <<<"$result" >"$local_file"
+jq '.synced' <<<"$result" >"$synced"
+jq -r '.report[]' <<<"$result"
+echo "書き出し: $(jq '.shortcuts | length' <<<"$result") 件（バックアップ: $state_dir/shortcuts.json.bak）"
+
+if [ "$was_running" = true ]; then open -a Vicinae; fi
+'''

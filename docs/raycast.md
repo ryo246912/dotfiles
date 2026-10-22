@@ -35,6 +35,18 @@ favorite、fallback、provider/entrypoint 設定なども同ファイルへ反�
 例えば keybind と provider を別 JSON に分けて chezmoi 管理できる。password preference、履歴、
 cache、Extension 本体などは設定ファイルとは別であり、秘密情報や生成データを追跡しない。
 
+### Shortcuts（共有分 + PC ごとの分）
+
+shortcuts は `~/.local/share/vicinae/shortcuts/shortcuts.json` に保存され、`imports` のような分割の仕組みがない。
+公開してよいものだけを `config-mac/vicinae/shortcuts.shared.json` に置き、仕事の URL や個人を特定できる ID を含む
+ものは git 管理外の `~/.config/vicinae/shortcuts.local.json` に置いて、`mise run vicinae:shortcuts:sync` でマージする。
+
+- GUI での追加・編集・削除は local に取り込まれる（追加 → local に追記、shared の項目の編集 → local に上書き値、
+  shared の項目の削除 → local に `"hidden": true`）。shared には書き戻さない
+- 共有したいものは local のエントリを shared へ移してコミットし、もう一度 sync する
+- Vicinae は shortcuts を起動時にだけ読み、利用のたびに全件を書き戻すため、タスクは Vicinae を終了させてから書き出し、
+  起動し直す。直前の shortcuts.json は `~/.local/state/vicinae/shortcuts.json.bak` に残る
+
 ## 参考資料
 
 - [Tinycast repository](https://github.com/abue-ammar/tinycast)
