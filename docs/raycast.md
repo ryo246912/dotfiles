@@ -38,29 +38,25 @@ cache、Extension 本体などは設定ファイルとは別であり、秘密�
 ### Shortcuts / Snippets（共有分 + PC ごとの分）
 
 shortcuts・snippets は `~/.local/share/vicinae/{shortcuts,snippets}/*.json` に保存され、`imports` のような分割の
-仕組みがない。公開してよいものだけを `templates/vicinae/{shortcuts,snippets}.json.tera` に書き、mise の template で
-生成する（`mise.mac.toml`）。
+仕組みがない。`templates/vicinae/{shortcuts,snippets}.json.tera` に書き、mise の template で生成する（`mise.mac.toml`）。
 
-- 仕事の URL や個人を特定できる ID を含むものは git 管理外の `templates/vicinae/{shortcuts,snippets}.local.json`
-  （JSON 配列。雛形は `*.sample`）に書く。ファイルがあればテンプレートの後ろに連結される
-- メールアドレスなどの値は git 管理外の `templates/vicinae/vicinae.secret.yaml`（雛形は `*.sample`）に書き、
-  `mise.mac.toml` の `[vars]` で読み込んでテンプレートから `{{ vars.<key> | json_encode }}` で埋める。
-  拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。値は文字列・数値のみで、リストは読めない
-- URL に個人を特定できる ID を含む shortcut（amazon のほしい物リスト・食べログ・Yahoo 乗換・仕事のリポジトリ）は
-  テンプレートに枠だけ置き、URL（仕事用は名前も）を `vicinae.secret.yaml` の `vicinae_url_*` に書く。
-  値を書いた PC でだけ出る
-- GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートか local に書く
+- メールアドレスや、個人・仕事を特定できる URL（amazon のほしい物リスト・食べログ・仕事のリポジトリ）は
+  テンプレートに枠だけ置き、値を git 管理外の `templates/vicinae/vicinae.secret.yaml`（雛形は `*.sample`）に書く。
+  `mise.mac.toml` の `[vars]` で読み込み、テンプレートから `{{ vars.<key> | json_encode }}` で埋める
+- PC ごとに要る・要らないが分かれるもの（仕事用など）は枠を `{% if vars.<key> is defined %}` で囲み、
+  値を書いた PC でだけ出す。名前も公開したくないものは名前ごと YAML に置く
+- `[vars]` で読めるのは文字列・数値だけ（リストは不可）で、拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。
+  そのため項目を増やすときはテンプレートに枠を足し、値だけを YAML に書く
+- GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートに書く
 - apply 後は Vicinae を再起動する（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
 
-初回は、`vicinae.secret.yaml` を埋めたうえで、既存の JSON からテンプレートに無いものを local に移してから
-apply する（apply で上書きされて消えるため。`vicinae_url_*` の枠がある shortcut は local には移らない）。
+初回は apply の前に、既存の JSON にあってテンプレートに無いもの（apply で消えるもの）を確認し、必要ならテンプレートに枠を足す。
 
 ```sh
 for kind in shortcuts snippets; do
   ids=$(grep -oE '"(sct|snp)-[0-9a-f]+"' "templates/vicinae/$kind.json.tera" | jq -s .)
-  jq --argjson ids "$ids" '[.[] | select(.id as $i | $ids | index($i) | not)
-    | if has("openCount") then .openCount = 0 else . end | del(.lastUsedAt)]' \
-    "$HOME/.local/share/vicinae/$kind/$kind.json" >"templates/vicinae/$kind.local.json"
+  jq -r --argjson ids "$ids" '.[] | select(.id as $i | $ids | index($i) | not) | "\(.id)\t\(.name)"' \
+    "$HOME/.local/share/vicinae/$kind/$kind.json"
 done
 ```
 

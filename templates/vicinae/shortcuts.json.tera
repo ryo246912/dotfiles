@@ -1,14 +1,8 @@
 {#- Vicinae の shortcuts（~/.local/share/vicinae/shortcuts/shortcuts.json）。
-    公開してよいものだけをここに書き、仕事の URL や個人を特定できる ID を含むものは
-    git 管理外の templates/vicinae/shortcuts.local.json（JSON 配列。雛形は *.sample）に書く。
-    GUI での追加・編集と利用回数（openCount）は次の apply で消えるため、変更はこのファイルか local に書く。
+    仕事の URL や個人を特定できる ID を含むものは枠だけを書き、値は git 管理外の
+    templates/vicinae/vicinae.secret.yaml（mise.mac.toml の [vars] で読み込む。雛形は *.sample）に置く。
+    GUI での追加・編集と利用回数（openCount）は次の apply で消えるため、変更はこのファイルに書く。
     apply 後は Vicinae を再起動する（起動時にしか読まず、起動中はメモリ上の一覧で書き戻すため）。 -#}
-{%- set local_path = "templates/vicinae/shortcuts.local.json" -%}
-{%- if local_path is file -%}
-  {%- set local = read_file(path=local_path) | trim | trim_start_matches(pat="[") | trim_end_matches(pat="]") | trim -%}
-{%- else -%}
-  {%- set local = "" -%}
-{%- endif -%}
 [
   {
     "id": "sct-083645c29b43",
@@ -79,9 +73,19 @@
     "openCount": 0,
     "createdAt": 1789454023,
     "updatedAt": 1789454023
+  },
+  {
+    "id": "sct-1b76d607552f",
+    "name": "Yahoo",
+    "icon": "icon://favicon/transit.yahoo.co.jp?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://transit.yahoo.co.jp/?from=%E6%AD%A6%E8%94%B5%E5%B0%8F%E6%9D%89&to=",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454049,
+    "updatedAt": 1789454049
   }
-  {#- 以下は URL に個人を特定できる ID などを含むため、URL（仕事用は名前も）を vicinae.secret.yaml に置き、
-      値を書いた PC でだけ出す -#}
+  {#- 以下は URL に個人・仕事を特定できる ID などを含むため、URL（仕事用は名前も）を vicinae.secret.yaml に置き、
+      値を書いた PC でだけ出す。PC ごとに要る・要らないが分かれるものも同じく枠を作って出し分ける -#}
   {%- if vars.vicinae_url_amazon_wishlist is defined %},
   {
     "id": "sct-2c2e220ab43e",
@@ -92,18 +96,6 @@
     "openCount": 0,
     "createdAt": 1789453917,
     "updatedAt": 1789453917
-  }
-  {%- endif %}
-  {%- if vars.vicinae_url_yahoo_transit is defined %},
-  {
-    "id": "sct-1b76d607552f",
-    "name": "Yahoo",
-    "icon": "icon://favicon/transit.yahoo.co.jp?fallback=icon://omnicast/image?fill%3Dprimary-text",
-    "url": {{ vars.vicinae_url_yahoo_transit | json_encode }},
-    "app": "default",
-    "openCount": 0,
-    "createdAt": 1789454049,
-    "updatedAt": 1789454049
   }
   {%- endif %}
   {%- if vars.vicinae_url_tabelog is defined %},
@@ -129,8 +121,5 @@
     "createdAt": 1789454100,
     "updatedAt": 1789454100
   }
-  {%- endif %}
-  {%- if local %},
-  {{ local }}
   {%- endif %}
 ]

@@ -560,21 +560,22 @@
     cp templates/vicinae/vicinae.secret.yaml.sample templates/vicinae/vicinae.secret.yaml
     ```
 
-  - [ ] `vicinae.secret.yaml` に値を書く（その PC で使わない `vicinae_url_*` は消すと、その shortcut は出ない）
+  - [ ] `vicinae.secret.yaml` に値を書く（その PC で使わない `vicinae_url_*`・`vicinae_email_other` は消すと、その項目は出ない）
 
-    | キー                          | 使われる場所                       | 値                                                 |
-    | ----------------------------- | ---------------------------------- | -------------------------------------------------- |
-    | `vicinae_email_private`       | snippet `email(private)`（`,adp`） | 個人のメールアドレス                               |
-    | `vicinae_email_work`          | snippet `email(work)`（`,adw`）    | 仕事のメールアドレス                               |
-    | `vicinae_email_gmail`         | snippet `email(gmail)`（`,ado`）   | Gmail のアドレス                                   |
-    | `vicinae_url_amazon_wishlist` | shortcut `amazon`                  | Amazon の「ほしい物リスト」を開いたときの URL      |
-    | `vicinae_url_yahoo_transit`   | shortcut `Yahoo`                   | Yahoo!乗換案内で出発駅だけ入れて検索したときの URL |
-    | `vicinae_url_tabelog`         | shortcut `tabelog`                 | 食べログのマイページ →「保存したお店」の URL       |
-    | `vicinae_name_work_repo`      | shortcut の名前                    | 仕事のリポジトリ名（省略すると `work repo`）       |
-    | `vicinae_url_work_repo`       | shortcut（仕事のリポジトリ）       | 仕事のリポジトリの URL                             |
+    | キー                          | 使われる場所                       | 値                                            |
+    | ----------------------------- | ---------------------------------- | --------------------------------------------- |
+    | `vicinae_email_private`       | snippet `email(private)`（`,adp`） | 個人のメールアドレス                          |
+    | `vicinae_email_work`          | snippet `email(work)`（`,adw`）    | 仕事のメールアドレス                          |
+    | `vicinae_email_gmail`         | snippet `email(gmail)`（`,ado`）   | Gmail のアドレス                              |
+    | `vicinae_email_other`         | snippet（`,ads`）                  | 名前も公開したくないアドレス                  |
+    | `vicinae_name_email_other`    | 上の snippet の名前                | 省略すると `email(other)`                     |
+    | `vicinae_url_amazon_wishlist` | shortcut `amazon`                  | Amazon の「ほしい物リスト」を開いたときの URL |
+    | `vicinae_url_tabelog`         | shortcut `tabelog`                 | 食べログのマイページ →「保存したお店」の URL  |
+    | `vicinae_name_work_repo`      | shortcut の名前                    | 仕事のリポジトリ名（省略すると `work repo`）  |
+    | `vicinae_url_work_repo`       | shortcut（仕事のリポジトリ）       | 仕事のリポジトリの URL                        |
 
-  - [ ] 既存の Vicinae に shortcuts / snippets があれば、テンプレートに無いものを
-        `templates/vicinae/*.local.json` に移す（apply で上書きされて消えるため。手順は `docs/raycast.md`）
+  - [ ] 既存の Vicinae に shortcuts / snippets があれば、テンプレートに無いもの（apply で上書きされて消えるもの）を
+        確認し、必要ならテンプレートに枠を足す（確認コマンドは `docs/raycast.md`）
   - [ ] Vicinae を終了してから apply し、Vicinae を起動し直す（Vicinae は起動時にしか読まない）
 
     ```sh

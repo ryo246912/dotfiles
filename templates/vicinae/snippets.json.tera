@@ -1,15 +1,10 @@
 {#- Vicinae の snippets（~/.local/share/vicinae/snippets/snippets.json）。
     公開してよいものだけをここに書く。メールアドレスなどの値は git 管理外の
     templates/vicinae/vicinae.secret.yaml（mise.mac.toml の [vars] で読み込む。雛形は *.sample）に置き、
-    {{ vars.<key> | json_encode }} で埋める。PC ごとのものは templates/vicinae/snippets.local.json（JSON 配列）に書く。
-    GUI での追加・編集は次の apply で消えるため、変更はこのファイルか local に書く。
+    {{ vars.<key> | json_encode }} で埋める。PC ごとに要る・要らないが分かれるものは枠を作って
+    {% if vars.<key> is defined %} で囲み、値を書いた PC でだけ出す。
+    GUI での追加・編集は次の apply で消えるため、変更はこのファイルに書く。
     apply 後は Vicinae を再起動する（起動時にしか読まないため）。 -#}
-{%- set local_path = "templates/vicinae/snippets.local.json" -%}
-{%- if local_path is file -%}
-  {%- set local = read_file(path=local_path) | trim | trim_start_matches(pat="[") | trim_end_matches(pat="]") | trim -%}
-{%- else -%}
-  {%- set local = "" -%}
-{%- endif -%}
 [
   {
     "id": "snp-8f86f68fcc5a",
@@ -75,7 +70,14 @@
     "data": { "text": "[表示名][定義名リンク]\n[定義名リンク]:url" },
     "createdAt": 1789450310
   }
-  {%- if local %},
-  {{ local }}
+  {#- 名前も含めて公開したくないものは、名前ごと vicinae.secret.yaml に置いて値を書いた PC でだけ出す -#}
+  {%- if vars.vicinae_email_other is defined %},
+  {
+    "id": "snp-048b28011a37",
+    "name": {{ vars.vicinae_name_email_other | default(value="email(other)") | json_encode }},
+    "data": { "text": {{ vars.vicinae_email_other | json_encode }} },
+    "createdAt": 1789449968,
+    "expansion": { "keyword": ",ads", "apps": [], "word": true }
+  }
   {%- endif %}
 ]

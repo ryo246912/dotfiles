@@ -3,8 +3,8 @@
 # 上書きになるため、共通の exclude（"agentsview/tests"）も繰り返し書くこと。
 # hammerspoon・vicinae は macOS 限定の設定なので config-mac/ から symlink-each で配る。
 # vicinae の shortcuts/snippets は ~/.local/share 配下のデータファイルだが、共有してよい分を
-# templates/vicinae/*.json.tera から生成する。PC ごとの分（*.local.json）と秘密の値（vicinae.secret.yaml、
-# 下の [vars] で読み込む）は git 管理外。GUI での変更と利用回数は apply で上書きされる（docs/raycast.md 参照）。
+# templates/vicinae/*.json.tera から生成する。秘密の値・PC ごとの値（vicinae.secret.yaml、下の [vars] で
+# 読み込む）は git 管理外。GUI での変更と利用回数は apply で上書きされる（docs/raycast.md 参照）。
 [vars]
 _.file = "templates/vicinae/vicinae.secret.yaml"
 
