@@ -21,6 +21,11 @@ brief.json の書式:
       "ticket": {...},                                   # 省けば <workdir>/ticket.json を使う（書式は下）
       "related_prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "summary": "..."}],  # チケットモード用
       "tldr": ["1 行目", "2 行目", "3 行目"],
+      # 変更の範囲: 画面（fe）・サーバー（be）・データベース（db）のどこが変わるか。paths のパスで始まるファイルを
+      # その層に数える（長く一致するほうを優先。どれにも当たらないファイルは「その他」）
+      "scope": {"fe": {"paths": ["web/src/"], "summary": "何が変わるか 1 文"},
+                "be": {"paths": ["api/"], "summary": "..."},
+                "db": {"paths": ["api/migrations/", "api/models/"], "summary": "migration なし など"}},
       "pictures": [<render_pictures.py の指定>],
       "background": {
         # 関係する画面。ほかの項目の "page" はこの id を指す（どの画面の話かを示すため）
@@ -42,9 +47,12 @@ brief.json の書式:
       "interfaces": [{"kind": "DB / API / 設定 / flag", "target": "対象", "change": "変更", "compat": "互換性・移行"}],
       "manual_test": {
         "environment": "どこで確かめるか（起動コマンドなど）",
-        "preconditions": ["feature flag・権限・データなど"],
+        "preconditions": ["feature flag・権限・アカウントなど"],
+        "seed": {"note": "何のデータを入れるか", "run": "流し方（コマンド）", "language": "sql",
+                 "script": "INSERT INTO ...", "cleanup": "後片付けのスクリプト（任意）"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
-                   "actions": "操作", "expected": "期待結果", "caution": "破壊的な操作の注意（任意）"}]
+                   "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
+                   "expected": ["一覧の先頭に test が出る"], "caution": "破壊的な操作の注意（任意）"}]
       },
       "focus": [{"path": "app/x.ts", "lines": "10", "why": "なぜ見るべきか"}],
       "unknowns": ["調べきれなかったこと・置いた仮定"]
@@ -456,6 +464,13 @@ def ticket_body(ticket: dict, workdir: Path) -> str:
     return "<h4>チケットの本文</h4>" + "".join(blocks) if blocks else ""
 
 
+def steps_list(value: str | list[str], tag: str) -> str:
+    """操作・期待結果は 1 つずつの配列でも、1 つの文でも書ける。配列ならリストにする。"""
+    if isinstance(value, list):
+        return f"<{tag}>" + "".join(f"<li>{inline(v)}</li>" for v in value) + f"</{tag}>"
+    return inline(value)
+
+
 def manual_test_section(brief: dict, workdir: Path) -> str:
     test = brief.get("manual_test") or {}
     shots = load_shots(workdir)
@@ -464,13 +479,24 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         parts.append(f"<h3>環境</h3><p>{inline(test['environment'])}</p>")
     if test.get("preconditions"):
         parts.append("<h3>前提</h3><ul>" + "".join(f"<li>{inline(p)}</li>" for p in test["preconditions"]) + "</ul>")
+    seed = test.get("seed")
+    if seed:
+        lang = esc(seed.get("language", ""))
+        parts.append("<h3>テストデータを入れる</h3>")
+        if seed.get("note"):
+            parts.append(f"<p>{inline(seed['note'])}</p>")
+        if seed.get("run"):
+            parts.append(f'<p class="evidence">流し方: <code>{esc(seed["run"])}</code></p>')
+        parts.append(f'<pre class="seed"><code data-lang="{lang}">{esc(seed.get("script", ""))}</code></pre>')
+        if seed.get("cleanup"):
+            parts.append(f'<details><summary>後片付け</summary><pre class="seed"><code data-lang="{lang}">{esc(seed["cleanup"])}</code></pre></details>')
     steps = []
     for step in test.get("steps", []):
         rows = []
         if step.get("url"):
             rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
-        rows.append(f"<dt>操作</dt><dd>{inline(step.get('actions', ''))}</dd>")
-        rows.append(f"<dt>期待結果</dt><dd>{inline(step.get('expected', ''))}</dd>")
+        rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
+        rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
         caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
         figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""))
         steps.append(
@@ -499,6 +525,51 @@ def check_page_refs(brief: dict) -> list[str]:
     ]
 
 
+SCOPE_LAYERS = (("fe", "画面（FE）"), ("be", "サーバー（BE）"), ("db", "データベース（DB）"))
+
+
+def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) -> str:
+    """画面・サーバー・データベースのどこが変わるかを、層ごとのカードで出す。数は差分から数える。"""
+    scope = brief.get("scope") or {}
+    prefixes = [(p, key) for key, _ in SCOPE_LAYERS for p in (scope.get(key) or {}).get("paths", [])]
+    prefixes.sort(key=lambda item: -len(item[0]))
+    stats = {key: {"files": set(), "added": 0, "removed": 0, "groups": []} for key, _ in SCOPE_LAYERS + (("other", ""),)}
+    numbers = {g["id"]: n for n, g in enumerate(groups or [], start=1)}
+    for group in groups or []:
+        for hunk_id in group["hunks"]:
+            hunk = hunks[hunk_id]
+            key = next((k for p, k in prefixes if hunk["path"].startswith(p)), "other")
+            stat = stats[key]
+            stat["files"].add(hunk["path"])
+            stat["added"] += hunk["added"]
+            stat["removed"] += hunk["removed"]
+            if group["id"] not in stat["groups"]:
+                stat["groups"].append(group["id"])
+    cards = []
+    for key, name in SCOPE_LAYERS + (("other", "その他"),):
+        stat, info = stats[key], scope.get(key) or {}
+        if key == "other" and not stat["files"]:
+            continue
+        changed = bool(stat["files"]) if hunks is not None else bool(info.get("summary"))
+        size = (
+            f'<span class="tag">{len(stat["files"])} files</span><span class="added">+{stat["added"]}</span>'
+            f'<span class="removed">−{stat["removed"]}</span>'
+            if stat["files"]
+            else ""
+        )
+        chips = "".join(
+            f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"]
+        )
+        summary = inline(info["summary"]) if info.get("summary") else ("変更なし" if not changed else "")
+        cards.append(
+            f'<div class="scope-card{"" if changed else " unchanged"}{" other" if key == "other" else ""}">'
+            f'<div class="scope-head"><strong>{name}</strong>'
+            f'<span class="tag">{"変わる" if changed else "変わらない"}</span></div>'
+            f'<p>{summary}</p><div class="scope-meta">{size}{chips}</div></div>'
+        )
+    return f'<div class="scope">{"".join(cards)}</div>'
+
+
 def build(workdir: Path) -> tuple[str, list[str]]:
     brief = json.loads((workdir / "brief.json").read_text())
     shas_path = workdir / "shas.json"
@@ -513,6 +584,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
 
     hunks_path, groups_path = workdir / "hunks.json", workdir / "groups.json"
     groups_html = ""
+    hunks, groups = None, None
     has_hunks, has_groups = hunks_path.exists(), groups_path.exists()
     if has_hunks != has_groups:
         errors.append("hunks.json と groups.json は両方そろえる（片方だけでは変更グループを作れない）")
@@ -525,12 +597,9 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             groups_html = render_groups(hunks, groups, blob)
 
     errors += check_page_refs(brief)
-    group_links = {n: g["id"] for n, g in enumerate(groups, start=1)} if groups_html else {}
-    pages = (brief.get("background") or {}).get("pages", [])
+    errors += [f"scope の {key!r} は fe / be / db のどれか" for key in (brief.get("scope") or {}) if key not in dict(SCOPE_LAYERS)]
     pictures = []
     for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
-        if spec.get("type") == "touch_map":
-            spec = {"pages": pages, **spec, "group_links": group_links}
         try:
             pictures.append(render_picture(spec, i))
         except (KeyError, ValueError) as error:
@@ -541,6 +610,8 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     sections = []
     tldr = "".join(f"<p>{inline(line)}</p>" for line in brief["tldr"])
     sections.append(section("tldr", "TL;DR", f'<div class="tldr">{tldr}</div>'))
+    if brief.get("scope") and not ticket_mode:
+        sections.append(section("scope", "変更の範囲", scope_section(brief, hunks if groups_html else None, groups if groups_html else None)))
     if pictures:
         legend = (
             '<div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span>'

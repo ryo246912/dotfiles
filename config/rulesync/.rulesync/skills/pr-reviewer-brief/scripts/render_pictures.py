@@ -1,6 +1,6 @@
 """「絵で見る」の絵を、JSON の指定から inline SVG にする（render_brief.py から使う）。
 
-座標はここで計算するので、指定には「何を描くか」だけを書く。絵の種類は 4 つ。
+座標はここで計算するので、指定には「何を描くか」だけを書く。絵の種類は 3 つ。
 
 before_after: 変更前と変更後を左右に並べる。各側は左から右へ流れる箱の列
 
@@ -13,18 +13,7 @@ before_after: 変更前と変更後を左右に並べる。各側は左から右
                           {"label": "下書き保存", "sub": "DraftService", "status": "added"}],
                 "note": "どう良くなるか"}}
 
-touch_map: 「どこを触る？」の地図。画面（ページ）を列、層（画面の部品・共通部品・API・データなど）を行にして、
-触る部品を色と変更グループの番号で示す。部品は使われている画面の列に置き、複数の画面で使う部品は
-その列をまたいで横に伸ばす（pages を省くと全画面共通）。pages の id は brief.json の background.pages の id。
-touch_map の pages を省くと、render_brief.py が background.pages を使う
-
-    {"type": "touch_map", "title": "どこを触る？", "lead": "1 文",
-     "rows": [{"name": "画面の部品", "items": [{"label": "土地カード", "pages": ["list"], "status": "changed", "groups": [10]},
-                                              {"label": "対象土地列", "pages": ["detail"], "status": "changed", "groups": [10]}]},
-              {"name": "API", "items": [{"label": "CRUD", "sub": "crud/approach.py", "status": "changed", "groups": [2, 4]}]},
-              {"name": "データ", "items": [{"label": "アプローチ記録", "sub": "集計だけ"}]}]}
-
-layers（古い形。新しく描くときは touch_map を使う）: 層ごとに箱を横に並べ、触る箱に色と番号を付ける
+layers: 層ごとに箱を横に並べ、触る箱に色と番号を付ける
 
     {"type": "layers", "title": "どこを触る？", "lead": "1 文",
      "layers": [{"name": "画面", "nodes": [{"label": "設定画面", "status": "changed", "badge": 2},
@@ -316,74 +305,11 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     return width, height, len(columns)
 
 
-def group_chip(number: int, links: dict) -> str:
-    target = links.get(number)
-    label = esc(str(number))
-    if target is None:
-        return f'<span class="gnum">{label}</span>'
-    return f'<a class="gnum" href="#group-{esc(str(target))}" title="変更グループ {label}">{label}</a>'
-
-
-def touch_map(spec: dict) -> str:
-    """画面を列、層を行にした「どこを触る？」の地図を HTML で作る。"""
-    pages = spec.get("pages") or []
-    if not pages:
-        raise ValueError("touch_map には pages（画面）が要る。brief.json の background.pages に書く")
-    ids = [page["id"] for page in pages]
-    if len(ids) != len(set(ids)):
-        raise ValueError(f"touch_map の pages の id が重複している: {ids}")
-    index = {page_id: i for i, page_id in enumerate(ids)}
-    links = spec.get("group_links", {})
-    cols = f'style="--cols:{len(pages)}"'
-    head = "".join(
-        f'<div class="tm-page"><strong>{esc(page.get("name") or page["id"])}</strong>'
-        + (f"<code>{esc(page['url'])}</code>" if page.get("url") else "")
-        + "</div>"
-        for page in pages
-    )
-    rows = []
-    for row in spec["rows"]:
-        items, shared = [], []
-        for item in row["items"]:
-            status = status_of(item)
-            unknown = [p for p in item.get("pages", []) if p not in index]
-            if unknown:
-                raise ValueError(f"touch_map の pages に無い画面: {unknown}")
-            label = "<br />".join(esc(line) for line in item["label"].split("\n"))
-            sub = f'<span class="tm-sub">{esc(item["sub"])}</span>' if item.get("sub") else ""
-            chips = "".join(group_chip(n, links) for n in item.get("groups", []))
-            body = f'<span class="tm-label">{label}</span>{chips}{sub}'
-            spots = sorted({index[p] for p in item.get("pages", [])})
-            if not spots:  # 全画面共通の部品は、全幅の 1 行に横に並べる
-                shared.append(f'<div class="tm-item {status}">{body}</div>')
-                continue
-            # 隣り合う画面はまたいで 1 つに、離れた画面にはそれぞれ置く（間の画面をまたがない）
-            runs = [[spots[0], spots[0]]]
-            for spot in spots[1:]:
-                if spot == runs[-1][1] + 1:
-                    runs[-1][1] = spot
-                else:
-                    runs.append([spot, spot])
-            for start, end in runs:
-                items.append(f'<div class="tm-item {status}" style="grid-column:{start + 1} / {end + 2}">{body}</div>')
-        if shared:
-            items.append(f'<div class="tm-shared" style="grid-column:1 / -1"><span class="tm-note">全画面共通</span>{"".join(shared)}</div>')
-        rows.append(f'<div class="tm-row"><div class="tm-layer">{esc(row["name"])}</div><div class="tm-cells" {cols}>{"".join(items)}</div></div>')
-    return (
-        f'<div class="touch-map"><div class="tm-row tm-head"><div class="tm-layer">画面</div>'
-        f'<div class="tm-cells" {cols}>{head}</div></div>{"".join(rows)}</div>'
-    )
-
-
 def render_picture(spec: dict, index: int) -> str:
     canvas = Canvas(f"arrow-{index}")
     kind = spec.get("type")
     wide_default = False
-    body = None
-    if kind == "touch_map":
-        body = touch_map(spec)
-        wide_default = True
-    elif kind == "before_after":
+    if kind == "before_after":
         width, height = before_after(spec, canvas)
         wide_default = True
     elif kind == "layers":
@@ -392,11 +318,11 @@ def render_picture(spec: dict, index: int) -> str:
         width, height, column_count = flow(spec, canvas)
         wide_default = column_count >= 4
     else:
-        raise ValueError(f"絵の type は before_after / touch_map / flow / layers のどれか: {kind}")
+        raise ValueError(f"絵の type は before_after / layers / flow のどれか: {kind}")
     wide = " wide" if spec.get("wide", wide_default) else ""
     lead = f'<p class="lead">{esc(spec["lead"])}</p>' if spec.get("lead") else ""
     caption = f"<figcaption>{esc(spec['caption'])}</figcaption>" if spec.get("caption") else ""
     return (
         f'<figure class="picture{wide}"><h3>{esc(spec["title"])}</h3>{lead}'
-        f'{body if body is not None else canvas.svg(width, height, spec["title"])}{caption}</figure>'
+        f'{canvas.svg(width, height, spec["title"])}{caption}</figure>'
     )
