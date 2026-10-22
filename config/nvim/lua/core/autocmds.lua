@@ -142,3 +142,26 @@ vim.api.nvim_create_autocmd('TermOpen', {
     end
   end,
 })
+
+-- mise の tera テンプレート（*.tera）は、.tera を外したファイル名から中身の filetype を判定し
+-- "<中身>.tera" の複合 filetype にする（例: alacritty.toml.tera → toml.tera, git/config.tera → gitconfig.tera）。
+-- 中身の syntax の上に after/syntax/tera.vim が tera タグのハイライトを重ねる。
+-- vim-polyglot は読み込み時に Neovim 標準の filetypedetect の autocmd を消し（au! filetypedetect）、
+-- did_load_filetypes を立てて再読み込みも止める。そのため vim.filetype.add や組み込みの tera 検出は
+-- 効かず（v0.12.5 + vim-polyglot で確認済み）、自前の autocmd で設定している。
+-- "toml" 単体にしないのは、テンプレートに taplo の LSP・format・lint を効かせないため。
+local tera_group = vim.api.nvim_create_augroup('TeraTemplate', { clear = true })
+vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
+  group = tera_group,
+  pattern = '*.tera',
+  callback = function(args)
+    local path = vim.fn.fnamemodify(args.file, ':p'):gsub('%.tera$', '')
+    -- templates/git/config のように「置き場所のディレクトリ名/ファイル名」で決まるものは
+    -- フルパスでは判定できないため、~/.config 配下に置いた場合のパスでも判定する
+    local inner = vim.filetype.match({ filename = path })
+      or vim.filetype.match({
+        filename = vim.fs.joinpath(vim.env.HOME, '.config', vim.fs.basename(vim.fs.dirname(path)), vim.fs.basename(path)),
+      })
+    vim.bo[args.buf].filetype = inner and (inner .. '.tera') or 'tera'
+  end,
+})
