@@ -19,6 +19,11 @@ pr-reviewer-brief skill の段階 3。ユーザーが「スクショも撮って
 `manual_test.steps` の各手順を、URL と操作に落として `<work>/shots.json` に書く。`id` は手順の `id` と同じにする
 （資料の手順にそのまま貼られる）。書式は `<skill>/scripts/screenshot.py` の冒頭。
 
+`brief.json` の `background.pages` の各画面も撮る（前提知識の「関係する画面」に「画面を見る」として出る）。`id` は
+`page-<画面の id>` にし、`brief.json` のその画面に `"shot": "page-<画面の id>"` を足す。`/approaches/:id` のような URL は、
+実在する id に置き換えて撮る。撮るのは手元で動いているアプリ（多くは PR の head）なので、変更前の画面と違うことがあれば
+`brief.json` の `unknowns` にそう書く
+
 ```json
 {
   "base_url": "http://localhost:3000",

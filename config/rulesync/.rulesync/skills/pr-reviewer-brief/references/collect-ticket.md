@@ -17,6 +17,7 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 
 ## 1. チケットを取る
 
+前に作った資料の残りを `rm -rf <work>/ticket.json <work>/ticket-images <work>/screenshots` で消してから、
 `<skill>/references/ticket.md` の 2〜4 に従い、`target.json` の `ticket` を取って `ticket.json` を書く。
 
 ## 2. 関連する PR を探す
@@ -26,9 +27,18 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 - **GitHub Issue**: issue に紐づいた PR を使う（番号での全文検索は無関係な PR にも当たるので使わない）
 
   ```bash
-  gh issue view <番号> --repo <owner>/<repo> --json closedByPullRequestsReferences \
-    --jq '.closedByPullRequestsReferences[] | select(.url | startswith("https://github.com/<今のリポジトリの owner/repo>/pull/"))'
+  gh api graphql -F owner=<owner> -F repo=<repo> -F number=<番号> -f query='
+    query($owner: String!, $repo: String!, $number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        issue(number: $number) {
+          closedByPullRequestsReferences(first: 50, includeClosedPrs: true) { nodes { number url state } }
+        }
+      }
+    }' --jq '.data.repository.issue.closedByPullRequestsReferences.nodes[]
+             | select(.url | startswith("https://github.com/<今のリポジトリの owner/repo>/pull/"))'
   ```
+
+  `includeClosedPrs: true` で merged・closed の PR も含める（`gh issue view --json closedByPullRequestsReferences` は含めない）
 
   後の手順は PR 番号を今のリポジトリで引くので、今のリポジトリ（`gh repo view --json nameWithOwner --jq .nameWithOwner`）の
   PR だけを使う。別のリポジトリの PR しか無ければ、PR なしとして進める

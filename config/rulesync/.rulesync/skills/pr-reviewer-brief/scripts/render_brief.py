@@ -4,7 +4,7 @@
 
 モデルは中身（brief.json）だけを書き、HTML・CSS・図の座標・差分の表はすべてここで作る。
 文章の中では `コード`・**強調**・[文字](URL) が使える。書くことが無い項目は省くか空にする（その章は出ない）。
-スクリーンショットは <workdir>/screenshots/manifest.json があれば、手順の id で対応させて埋め込む。
+スクリーンショットは <workdir>/screenshots/manifest.json があれば、手順の id・画面の shot で対応させて埋め込む。
 
 brief.json の書式:
 
@@ -13,7 +13,8 @@ brief.json の書式:
       "repo": "owner/name",
       "base_sha": "変更前の SHA（根拠のリンク用）", "head_sha": "head の SHA（stack なら一番上の PR）",
       "prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "author": "alice",
-               "base": "main", "head": "feature", "files": 3, "additions": 10, "deletions": 2,
+               "base": "main", "head": "feature", "files": 3,  # files は pr-<N>.json の changedFiles（件数）
+               "additions": 10, "deletions": 2,
                "summary": "stack のとき: この PR が受け持つ範囲を 1〜2 行", "current": true}],
       "stack": {"number": 7, "trunk": "main"},           # stack でなければ null か省く
       "mode": "pr",                                      # "ticket" なら TL;DR・スタック構成・前提知識・変更内容だけを出す
@@ -22,12 +23,20 @@ brief.json の書式:
       "tldr": ["1 行目", "2 行目", "3 行目"],
       "pictures": [<render_pictures.py の指定>],
       "background": {
-        "current": [{"text": "今の機能の説明", "evidence": [{"path": "app/x.ts", "lines": "10-20"}]}],
-        "glossary": [{"term": "用語", "meaning": "意味", "code": "コード上の名前"}],
-        "data_model": {"note": "補足", "before": "erDiagram ...", "after": "erDiagram ..."}
+        # 関係する画面。ほかの項目の "page" はこの id を指す（どの画面の話かを示すため）
+        "pages": [{"id": "list", "name": "アプローチ一覧", "url": "/approaches",
+                   "looks": "見た目（レイアウトと主な部品）", "shot": "page-list",  # shot はスクリーンショットの id（任意）
+                   "evidence": [{"path": "app/routes.ts", "lines": "10"}]}],
+        "current": [{"text": "今の機能の説明", "page": "list", "where": "画面のどこか（見た目の言葉で）",
+                     "evidence": [{"path": "app/x.ts", "lines": "10-20"}]}],
+        "glossary": [{"term": "用語", "meaning": "意味", "page": "list", "where": "画面のどこに出るか", "code": "コード上の名前"}],
+        "data_model": {"note": "補足",
+                       "tables": "erDiagram ...",           # 関係する画面に出るデータのテーブルとリレーション
+                       "mapping": [{"page": "list", "ui": "画面の項目", "column": "approaches.status"}],
+                       "before": "erDiagram ...", "after": "erDiagram ..."}  # スキーマが変わるときだけ
       },
       "changes": {
-        "before_after": [{"aspect": "観点", "before": "変更前", "after": "変更後"}],
+        "before_after": [{"aspect": "観点", "page": "list", "where": "画面のどこか", "before": "変更前", "after": "変更後"}],
         "sequences": [{"title": "難しいやりとりの名前", "mermaid": "sequenceDiagram ..."}]
       },
       "interfaces": [{"kind": "DB / API / 設定 / flag", "target": "対象", "change": "変更", "compat": "互換性・移行"}],
@@ -81,11 +90,16 @@ esc = html.escape
 
 def inline(text: str) -> str:
     """`code`・**強調**・[文字](URL) だけを HTML にする。"""
-    out = esc(text)
-    out = re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
+    codes: list[str] = []
+
+    def keep(match: re.Match) -> str:  # コードの中は強調・リンクにしないよう、先に取り出しておく
+        codes.append(match.group(1))
+        return f"\0{len(codes) - 1}\0"
+
+    out = esc(re.sub(r"`([^`]+)`", keep, text))
     out = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
     out = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', out)
-    return out
+    return re.sub(r"\0(\d+)\0", lambda m: f"<code>{esc(codes[int(m.group(1))])}</code>", out)
 
 
 def blob_link(brief: dict, path: str, lines: str | None, side: str) -> str:
@@ -188,26 +202,91 @@ def ticket_block(ticket: dict, workdir: Path) -> str:
     return "".join(parts)
 
 
+def page_ref(brief: dict, page_id: str | None, where: str | None = None) -> str:
+    """「どの画面の・どこか」を、画面の一覧へのリンクと URL つきで出す。"""
+    pages = {p["id"]: p for p in (brief.get("background") or {}).get("pages", [])}
+    parts = []
+    if page_id:
+        page = pages[page_id]
+        url = f" <code>{esc(page['url'])}</code>" if page.get("url") else ""
+        parts.append(f'<a href="#page-{esc(page_id)}">{esc(page.get("name") or page_id)}</a>{url}')
+    if where:
+        parts.append(inline(where))
+    return " · ".join(parts)
+
+
+def evidence_links(brief: dict, evidence: list[dict]) -> str:
+    links = [blob_link(brief, e["path"], e.get("lines"), e.get("side", "base")) for e in evidence]
+    return f'<p class="evidence">根拠: {" / ".join(links)}</p>' if links else ""
+
+
+def load_shots(workdir: Path) -> dict:
+    manifest_path = workdir / "screenshots" / "manifest.json"
+    return {s["id"]: s for s in json.loads(manifest_path.read_text())} if manifest_path.exists() else {}
+
+
+def shot_figure(workdir: Path, shot: dict | None, title: str) -> str:
+    if shot and shot.get("ok") and (workdir / "screenshots" / shot["path"]).exists():
+        uri = image_data_uri(workdir / "screenshots" / shot["path"])
+        return f'<figure><img src="{uri}" alt="{esc(title)}" loading="lazy" /><figcaption>{esc(title)}</figcaption></figure>'
+    if shot:
+        return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error", ""))}</p>'
+    return ""
+
+
+def pages_block(brief: dict, workdir: Path) -> str:
+    """関係する画面の一覧（名前・URL・見た目・スクリーンショット）。"""
+    shots = load_shots(workdir)
+    cards = []
+    for page in (brief.get("background") or {}).get("pages", []):
+        name = page.get("name") or page["id"]
+        url = page.get("url", "")
+        url_html = link(url, f"<code>{esc(url)}</code>") if safe_url(url) else (f"<code>{esc(url)}</code>" if url else "")
+        figure = shot_figure(workdir, shots.get(page.get("shot")), name) if page.get("shot") else ""
+        if figure:
+            figure = f'<details class="page-shot"><summary>画面を見る</summary>{figure}</details>'
+        looks = f"<p>{inline(page['looks'])}</p>" if page.get("looks") else ""
+        cards.append(
+            f'<div class="page-card" id="page-{esc(page["id"])}"><div class="page-head"><strong>{esc(name)}</strong>{url_html}</div>'
+            f'{looks}{evidence_links(brief, page.get("evidence", []))}{figure}</div>'
+        )
+    return f'<h3>関係する画面</h3><div class="page-cards">{"".join(cards)}</div>' if cards else ""
+
+
 def background_section(brief: dict, workdir: Path) -> str:
     bg = brief.get("background") or {}
     parts = [ticket_block(brief["ticket"], workdir)] if brief.get("ticket") else []
+    parts.append(pages_block(brief, workdir))
     if bg.get("current"):
         parts.append("<h3>今の機能</h3>")
         for item in bg["current"]:
+            where = page_ref(brief, item.get("page"), item.get("where"))
+            if where:
+                parts.append(f'<p class="where">📍 {where}</p>')
             parts.append(f"<p>{inline(item['text'])}</p>")
-            links = [blob_link(brief, e["path"], e.get("lines"), e.get("side", "base")) for e in item.get("evidence", [])]
-            if links:
-                parts.append(f'<p class="evidence">根拠: {" / ".join(links)}</p>')
+            parts.append(evidence_links(brief, item.get("evidence", [])))
     if bg.get("glossary"):
-        rows = [[inline(g["term"]), inline(g["meaning"]), f"<code>{esc(g.get('code', ''))}</code>"] for g in bg["glossary"]]
-        parts.append("<h3>用語集</h3>" + table(["用語", "意味", "コード上の名前"], rows))
+        with_where = any(g.get("page") or g.get("where") for g in bg["glossary"])
+        rows = [
+            [inline(g["term"]), inline(g["meaning"])]
+            + ([page_ref(brief, g.get("page"), g.get("where"))] if with_where else [])
+            + [f"<code>{esc(g.get('code', ''))}</code>"]
+            for g in bg["glossary"]
+        ]
+        headers = ["用語", "意味"] + (["画面のどこ"] if with_where else []) + ["コード上の名前"]
+        parts.append("<h3>用語集</h3>" + table(headers, rows))
     model = bg.get("data_model")
     if model:
-        parts.append("<h3>データモデル</h3>")
+        parts.append("<h3>データモデル（画面に出るデータのテーブル）</h3>")
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
+        if model.get("tables"):
+            parts.append(mermaid(model["tables"]))
+        if model.get("mapping"):
+            rows = [[page_ref(brief, m.get("page")), inline(m["ui"]), f"<code>{esc(m['column'])}</code>"] for m in model["mapping"]]
+            parts.append("<h4>画面の項目とテーブルの対応</h4>" + table(["画面", "画面の項目", "テーブル.カラム"], rows))
         if model.get("before") and model.get("after"):
-            parts.append(f"<h4>変更前</h4>{mermaid(model['before'])}<h4>変更後</h4>{mermaid(model['after'])}")
+            parts.append(f"<h4>スキーマの変更前</h4>{mermaid(model['before'])}<h4>スキーマの変更後</h4>{mermaid(model['after'])}")
         elif model.get("before") or model.get("after"):
             parts.append(mermaid(model.get("after") or model["before"]))
     return "".join(parts)
@@ -217,8 +296,15 @@ def changes_section(brief: dict) -> str:
     changes = brief.get("changes") or {}
     parts = []
     if changes.get("before_after"):
-        rows = [[inline(r["aspect"]), inline(r["before"]), inline(r["after"])] for r in changes["before_after"]]
-        parts.append("<h3>変更前と変更後</h3>" + table(["観点", "変更前", "変更後"], rows))
+        with_where = any(r.get("page") or r.get("where") for r in changes["before_after"])
+        rows = [
+            [inline(r["aspect"])]
+            + ([page_ref(brief, r.get("page"), r.get("where"))] if with_where else [])
+            + [inline(r["before"]), inline(r["after"])]
+            for r in changes["before_after"]
+        ]
+        headers = ["観点"] + (["場所"] if with_where else []) + ["変更前", "変更後"]
+        parts.append("<h3>変更前と変更後</h3>" + table(headers, rows))
     for seq in changes.get("sequences", []):
         parts.append(f"<h3>{esc(seq['title'])}</h3>{mermaid(seq['mermaid'])}")
     stacked = {pr["number"] for pr in brief.get("prs", [])} if brief.get("stack") else set()
@@ -372,8 +458,7 @@ def ticket_body(ticket: dict, workdir: Path) -> str:
 
 def manual_test_section(brief: dict, workdir: Path) -> str:
     test = brief.get("manual_test") or {}
-    manifest_path = workdir / "screenshots" / "manifest.json"
-    shots = {s["id"]: s for s in json.loads(manifest_path.read_text())} if manifest_path.exists() else {}
+    shots = load_shots(workdir)
     parts = []
     if test.get("environment"):
         parts.append(f"<h3>環境</h3><p>{inline(test['environment'])}</p>")
@@ -387,16 +472,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         rows.append(f"<dt>操作</dt><dd>{inline(step.get('actions', ''))}</dd>")
         rows.append(f"<dt>期待結果</dt><dd>{inline(step.get('expected', ''))}</dd>")
         caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
-        figure = ""
-        shot = shots.get(step.get("id"))
-        if shot and shot.get("ok") and (workdir / "screenshots" / shot["path"]).exists():
-            uri = image_data_uri(workdir / "screenshots" / shot["path"])
-            figure = (
-                f'<figure><img src="{uri}" alt="{esc(step.get("title", ""))}" loading="lazy" />'
-                f"<figcaption>{esc(step.get('title', ''))}</figcaption></figure>"
-            )
-        elif shot:
-            figure = f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error", ""))}</p>'
+        figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""))
         steps.append(
             f'<li id="{esc(step.get("id", ""))}"><h3>{inline(step.get("title", ""))}</h3>'
             f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
@@ -404,6 +480,21 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
     if steps:
         parts.append(f'<ol class="steps">{"".join(steps)}</ol>')
     return "".join(parts)
+
+
+def check_page_refs(brief: dict) -> list[str]:
+    """page に書いた id が background.pages にあるか確かめる。"""
+    bg = brief.get("background") or {}
+    known = {p["id"] for p in bg.get("pages", [])}
+    places = [("background.current", bg.get("current")), ("background.glossary", bg.get("glossary")),
+              ("background.data_model.mapping", (bg.get("data_model") or {}).get("mapping")),
+              ("changes.before_after", (brief.get("changes") or {}).get("before_after"))]
+    return [
+        f"{name}[{i}] の page {item['page']!r} が background.pages に無い"
+        for name, items in places
+        for i, item in enumerate(items or [])
+        if item.get("page") and item["page"] not in known
+    ]
 
 
 def build(workdir: Path) -> tuple[str, list[str]]:
@@ -431,8 +522,13 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             blob = f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}" if brief.get("repo") and brief.get("head_sha") else None
             groups_html = render_groups(hunks, groups, blob)
 
+    errors += check_page_refs(brief)
+    group_links = {n: g["id"] for n, g in enumerate(groups, start=1)} if groups_html else {}
+    pages = (brief.get("background") or {}).get("pages", [])
     pictures = []
     for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
+        if spec.get("type") == "touch_map":
+            spec = {"pages": pages, **spec, "group_links": group_links}
         try:
             pictures.append(render_picture(spec, i))
         except (KeyError, ValueError) as error:

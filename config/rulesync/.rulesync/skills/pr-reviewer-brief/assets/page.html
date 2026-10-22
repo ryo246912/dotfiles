@@ -180,6 +180,32 @@
       .legend .lg-changed::before { border-color: var(--accent); background: var(--highlight); }
       .legend .lg-added::before { border-color: var(--added); background: var(--diff-add-bg); }
       .legend .lg-removed::before { border-color: var(--removed); background: var(--diff-del-bg); border-style: dashed; }
+      /* どこを触る？の地図（render_pictures.py の touch_map）: 画面を列、層を行にした表 */
+      .touch-map { overflow-x: auto; }
+      .tm-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px dashed var(--border); }
+      .tm-row.tm-head { border-top: none; padding-top: 0; }
+      .tm-layer { font-size: 12px; color: var(--muted); padding-top: 8px; }
+      .tm-cells { display: grid; grid-template-columns: repeat(var(--cols), minmax(150px, 1fr)); grid-auto-flow: row dense; gap: 8px; }
+      .tm-page { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface); font-size: 13px; }
+      .tm-page code { font-size: 12px; background: none; padding: 0; color: var(--muted); overflow-wrap: anywhere; }
+      .tm-item { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 13.5px; color: var(--muted); }
+      .tm-item.changed { border: 2px solid var(--accent); background: var(--highlight); color: var(--text); }
+      .tm-item.added { border: 2px solid var(--added); background: var(--diff-add-bg); color: var(--text); }
+      .tm-item.removed { border: 2px dashed var(--removed); background: var(--diff-del-bg); color: var(--text); }
+      .tm-label { font-weight: 600; }
+      .tm-shared { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+      .tm-shared > .tm-item { flex: 1 1 160px; }
+      .tm-note { flex-basis: 100%; font-size: 11.5px; color: var(--muted); }
+      .tm-sub { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+      .gnum { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; line-height: 20px; text-align: center; text-decoration: none; }
+      /* 関係する画面（前提知識） */
+      .page-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+      .page-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; scroll-margin-top: 16px; }
+      .page-card:target { border-color: var(--accent); box-shadow: 0 0 0 2px var(--highlight); }
+      .page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+      .page-card > p { margin: 6px 0 0; font-size: 14px; }
+      .page-shot > summary { cursor: pointer; font-size: 13px; color: var(--muted); margin-top: 6px; }
+      p.where { margin: 12px 0 -8px; font-size: 13px; color: var(--muted); }
       /* 図の部品（inline SVG の class） */
       .dg text { fill: var(--text); font: 14px system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
       .dg text.small { font-size: 12px; fill: var(--muted); }

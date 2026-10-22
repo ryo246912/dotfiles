@@ -21,10 +21,13 @@ pr-reviewer-brief skill の段階 1。軽いモデル（Haiku）で行う前提�
 
 ## 1. PR の情報を取る
 
+前に作った資料のスクリーンショットが残らないよう、先に `rm -rf <work>/screenshots` で消す（撮るのは段階 3）。
+変更ファイルの数は `changedFiles` を使う（`files` は 100 件までしか返らない）。
+
 `target.json` の `prs` の各 PR について:
 
 ```bash
-gh pr view <N> --json number,title,url,state,isDraft,author,body,baseRefName,headRefName,headRefOid,files,additions,deletions,labels,comments,reviews,closingIssuesReferences > <work>/pr-<N>.json
+gh pr view <N> --json number,title,url,state,isDraft,author,body,baseRefName,headRefName,headRefOid,files,changedFiles,additions,deletions,labels,comments,reviews,closingIssuesReferences > <work>/pr-<N>.json
 ```
 
 ## 2. 差分を取り、hunk に分ける
@@ -92,6 +95,14 @@ PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）を
 # 変更の入口
 
 - 画面・API・ジョブなど、変更が始まる場所と、そのファイル
+
+# 関係する画面
+
+- 変更が関わる画面の名前・URL（ルーティングの定義のファイルと行）・その画面のファイル
+
+# 関係するテーブル
+
+- 関係する画面に出るデータのテーブル・リレーション（モデル・スキーマ定義のファイル）
 
 # 変更前のコードで読むべき場所
 
