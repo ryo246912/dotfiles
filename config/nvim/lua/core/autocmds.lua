@@ -77,8 +77,9 @@ vim.api.nvim_create_autocmd('TermOpen', {
 -- mise の tera テンプレート（*.tera）は、.tera を外したファイル名から中身の filetype を判定し
 -- "<中身>.tera" の複合 filetype にする（例: alacritty.toml.tera → toml.tera, git/config.tera → gitconfig.tera）。
 -- 中身の syntax の上に after/syntax/tera.vim が tera タグのハイライトを重ねる。
--- vim-polyglot が did_load_filetypes を立てて Neovim 標準の filetype.lua（vim.filetype.add や
--- 組み込みの tera 検出を含む）を無効化するため、vim.filetype.add ではなく autocmd で設定している。
+-- vim-polyglot は読み込み時に Neovim 標準の filetypedetect の autocmd を消し（au! filetypedetect）、
+-- did_load_filetypes を立てて再読み込みも止める。そのため vim.filetype.add や組み込みの tera 検出は
+-- 効かず（v0.12.5 + vim-polyglot で確認済み）、自前の autocmd で設定している。
 -- "toml" 単体にしないのは、テンプレートに taplo の LSP・format・lint を効かせないため。
 local tera_group = vim.api.nvim_create_augroup('TeraTemplate', { clear = true })
 vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
