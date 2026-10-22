@@ -1,0 +1,125 @@
+{#- Vicinae の shortcuts（~/.local/share/vicinae/shortcuts/shortcuts.json）。
+    仕事の URL や個人を特定できる ID を含むものは枠だけを書き、値は git 管理外の
+    templates/vicinae/vicinae.secret.yaml（mise.mac.toml の [vars] で読み込む。雛形は *.sample）に置く。
+    GUI での追加・編集と利用回数（openCount）は次の apply で消えるため、変更はこのファイルに書く。
+    apply 後は Vicinae を再起動する（起動時にしか読まず、起動中はメモリ上の一覧で書き戻すため）。 -#}
+[
+  {
+    "id": "sct-083645c29b43",
+    "name": "agentview",
+    "icon": "icon://favicon/127.0.0.1?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "http://127.0.0.1:8080/sessions",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789452400,
+    "updatedAt": 1789452400
+  },
+  {
+    "id": "sct-e1acdecb3508",
+    "name": "Google",
+    "icon": "icon://omnicast/link?fill=primary-text",
+    "url": "https://www.google.com/search?q={selection}",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789452431,
+    "updatedAt": 1789452431
+  },
+  {
+    "id": "sct-53083efabbc3",
+    "name": "dotfiles",
+    "icon": "icon://favicon/github.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://github.com/ryo246912/dotfiles",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453959,
+    "updatedAt": 1789453959
+  },
+  {
+    "id": "sct-6c3bb1a6fd31",
+    "name": "Google Map",
+    "icon": "icon://favicon/www.google.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://www.google.com/maps",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453977,
+    "updatedAt": 1789453977
+  },
+  {
+    "id": "sct-3ac03ebb9625",
+    "name": "Google Calendar",
+    "icon": "icon://favicon/calendar.google.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://calendar.google.com/calendar",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453995,
+    "updatedAt": 1789453995
+  },
+  {
+    "id": "sct-d6136306ddde",
+    "name": "Grok",
+    "icon": "icon://favicon/grok.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://grok.com/automations",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454006,
+    "updatedAt": 1789454006
+  },
+  {
+    "id": "sct-e40190d09c06",
+    "name": "Twitter / X",
+    "icon": "icon://favicon/x.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://x.com/home",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454023,
+    "updatedAt": 1789454023
+  },
+  {
+    "id": "sct-1b76d607552f",
+    "name": "Yahoo",
+    "icon": "icon://favicon/transit.yahoo.co.jp?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://transit.yahoo.co.jp/?from=%E6%AD%A6%E8%94%B5%E5%B0%8F%E6%9D%89&to=",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454049,
+    "updatedAt": 1789454049
+  }
+  {#- 以下は URL に個人・仕事を特定できる ID などを含むため、URL（仕事用は名前も）を vicinae.secret.yaml に置き、
+      値を書いた PC でだけ出す。PC ごとに要る・要らないが分かれるものも同じく枠を作って出し分ける -#}
+  {%- if vars.vicinae_url_amazon_wishlist is defined %},
+  {
+    "id": "sct-2c2e220ab43e",
+    "name": "amazon",
+    "icon": "icon://omnicast/amazonwebservices?fill=primary-text",
+    "url": {{ vars.vicinae_url_amazon_wishlist | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453917,
+    "updatedAt": 1789453917
+  }
+  {%- endif %}
+  {%- if vars.vicinae_url_tabelog is defined %},
+  {
+    "id": "sct-f366ecd41092",
+    "name": "tabelog",
+    "icon": "icon://favicon/tabelog.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": {{ vars.vicinae_url_tabelog | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454061,
+    "updatedAt": 1789454061
+  }
+  {%- endif %}
+  {%- if vars.vicinae_url_work_repo is defined %},
+  {
+    "id": "sct-cfa87ae905c7",
+    "name": {{ vars.vicinae_name_work_repo | default(value="work repo") | json_encode }},
+    "icon": "icon://favicon/github.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": {{ vars.vicinae_url_work_repo | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454100,
+    "updatedAt": 1789454100
+  }
+  {%- endif %}
+]
