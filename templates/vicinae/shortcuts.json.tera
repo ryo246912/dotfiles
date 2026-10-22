@@ -80,6 +80,56 @@
     "createdAt": 1789454023,
     "updatedAt": 1789454023
   }
+  {#- 以下は URL に個人を特定できる ID などを含むため、URL（仕事用は名前も）を vicinae.secret.yaml に置き、
+      値を書いた PC でだけ出す -#}
+  {%- if vars.vicinae_url_amazon_wishlist is defined %},
+  {
+    "id": "sct-2c2e220ab43e",
+    "name": "amazon",
+    "icon": "icon://omnicast/amazonwebservices?fill=primary-text",
+    "url": {{ vars.vicinae_url_amazon_wishlist | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453917,
+    "updatedAt": 1789453917
+  }
+  {%- endif %}
+  {%- if vars.vicinae_url_yahoo_transit is defined %},
+  {
+    "id": "sct-1b76d607552f",
+    "name": "Yahoo",
+    "icon": "icon://favicon/transit.yahoo.co.jp?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": {{ vars.vicinae_url_yahoo_transit | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454049,
+    "updatedAt": 1789454049
+  }
+  {%- endif %}
+  {%- if vars.vicinae_url_tabelog is defined %},
+  {
+    "id": "sct-f366ecd41092",
+    "name": "tabelog",
+    "icon": "icon://favicon/tabelog.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": {{ vars.vicinae_url_tabelog | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454061,
+    "updatedAt": 1789454061
+  }
+  {%- endif %}
+  {%- if vars.vicinae_url_work_repo is defined %},
+  {
+    "id": "sct-cfa87ae905c7",
+    "name": {{ vars.vicinae_name_work_repo | default(value="work repo") | json_encode }},
+    "icon": "icon://favicon/github.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": {{ vars.vicinae_url_work_repo | json_encode }},
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454100,
+    "updatedAt": 1789454100
+  }
+  {%- endif %}
   {%- if local %},
   {{ local }}
   {%- endif %}

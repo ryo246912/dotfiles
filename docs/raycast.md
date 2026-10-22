@@ -46,11 +46,14 @@ shortcuts・snippets は `~/.local/share/vicinae/{shortcuts,snippets}/*.json` �
 - メールアドレスなどの値は git 管理外の `templates/vicinae/vicinae.secret.yaml`（雛形は `*.sample`）に書き、
   `mise.mac.toml` の `[vars]` で読み込んでテンプレートから `{{ vars.<key> | json_encode }}` で埋める。
   拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。値は文字列・数値のみで、リストは読めない
+- URL に個人を特定できる ID を含む shortcut（amazon のほしい物リスト・食べログ・Yahoo 乗換・仕事のリポジトリ）は
+  テンプレートに枠だけ置き、URL（仕事用は名前も）を `vicinae.secret.yaml` の `vicinae_url_*` に書く。
+  値を書いた PC でだけ出る
 - GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートか local に書く
 - apply 後は Vicinae を再起動する（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
 
-初回は、既存の JSON からテンプレートに無いものを local に移してから apply する
-（apply で上書きされて消えるため）。
+初回は、`vicinae.secret.yaml` を埋めたうえで、既存の JSON からテンプレートに無いものを local に移してから
+apply する（apply で上書きされて消えるため。`vicinae_url_*` の枠がある shortcut は local には移らない）。
 
 ```sh
 for kind in shortcuts snippets; do
