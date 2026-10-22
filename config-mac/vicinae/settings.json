@@ -125,6 +125,13 @@
             }
          }
       },
+      "@rolandleth/store.raycast.kill-process": {
+         "entrypoints": {
+            "index": {
+               "alias": "kill"
+            }
+         }
+      },
       "@shail_antani/store.raycast.thock": {
          "entrypoints": {
             "switchKey": {
