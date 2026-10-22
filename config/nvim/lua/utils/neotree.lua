@@ -63,7 +63,12 @@ function M.open(args)
     return
   end
   local ok, err = execute(args)
-  if not ok or not wait_window() then
+  local opened = ok and wait_window()
+  -- 再試行の待ち中に別のタブへ移っていたら、そのタブに誤ったエラーを出さない
+  if vim.api.nvim_get_current_tabpage() ~= tab then
+    return
+  end
+  if not opened then
     vim.notify("ファイルツリーを開けませんでした: " .. tostring(err or "ウィンドウが作成されませんでした"), vim.log.levels.ERROR)
   end
 end
