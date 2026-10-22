@@ -233,6 +233,8 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     col_h = {c: sum(node_size(nodes[n])[1] for n in ids) + GAP_Y * (len(ids) - 1) for c, ids in columns.items()}
     # 列を飛ばして右へ進む矢印は、間の箱を横切らないよう、すべての箱の上を通す。その通り道の分だけ上を空ける
     skips = [e for e in spec.get("edges", []) if rank[e["to"]] - rank[e["from"]] > 1]
+    # 長く飛ぶ矢印ほど上の通り道・箱に近い縦線にする（入れ子になり、矢印同士が交わらない）
+    skip_lane = {id(e): k for k, e in enumerate(sorted(skips, key=lambda e: rank[e["from"]] - rank[e["to"]]))}
     # 自分自身へ戻る矢印は箱の上に輪で描くので、その分だけ上を空ける
     top = 30 + 22 * len(skips) + (36 if any(e["from"] == e["to"] for e in spec.get("edges", [])) else 0)
     height = max(col_h.values()) + top + 30
@@ -252,7 +254,6 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     lowest = {c: ids[-1] for c, ids in columns.items()}  # 列の一番下の箱（その下には何も無い）
     half_gap = GAP_X * 0.8
     back_edges = 0
-    skip_edges = 0
     lanes: dict[int, int] = {}
     for edge in spec.get("edges", []):
         a, b = edge["from"], edge["to"]
@@ -260,10 +261,12 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
         bx, by, bw, bh = pos[b]
         status = status_of(edge)
         if rank[b] - rank[a] > 1:  # 列を飛ばして右へ: 列の間の隙間を上り、すべての箱の上を通って下りる
-            skip_edges += 1
-            lane_y = 22 + 22 * (skip_edges - 1)
-            out_x = col_right[rank[a]] + lane_room.get(rank[a], 0) + GAP_X * 0.5
-            in_x = col_left[rank[b]] - GAP_X * 0.5
+            k = skip_lane[id(edge)]
+            lane_y = 22 + 22 * k
+            # 縦の線も矢印ごとにずらす（同じ列から出る・同じ列へ入る矢印が重ならないように）
+            shift = min(8 * k, GAP_X * 0.4)
+            out_x = col_right[rank[a]] + lane_room.get(rank[a], 0) + GAP_X * 0.3 + shift
+            in_x = col_left[rank[b]] - GAP_X * 0.3 - shift
             sy, ey = ay + ah / 2, by + bh / 2
             path = (
                 f"M{ax + aw + 2:.0f},{sy:.0f} L{out_x:.0f},{sy:.0f} L{out_x:.0f},{lane_y:.0f} "
@@ -315,9 +318,10 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
 
 def group_chip(number: int, links: dict) -> str:
     target = links.get(number)
+    label = esc(str(number))
     if target is None:
-        return f'<span class="gnum">{number}</span>'
-    return f'<a class="gnum" href="#group-{esc(str(target))}" title="変更グループ {number}">{number}</a>'
+        return f'<span class="gnum">{label}</span>'
+    return f'<a class="gnum" href="#group-{esc(str(target))}" title="変更グループ {label}">{label}</a>'
 
 
 def touch_map(spec: dict) -> str:
@@ -325,7 +329,10 @@ def touch_map(spec: dict) -> str:
     pages = spec.get("pages") or []
     if not pages:
         raise ValueError("touch_map には pages（画面）が要る。brief.json の background.pages に書く")
-    index = {page["id"]: i for i, page in enumerate(pages)}
+    ids = [page["id"] for page in pages]
+    if len(ids) != len(set(ids)):
+        raise ValueError(f"touch_map の pages の id が重複している: {ids}")
+    index = {page_id: i for i, page_id in enumerate(ids)}
     links = spec.get("group_links", {})
     cols = f'style="--cols:{len(pages)}"'
     head = "".join(

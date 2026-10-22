@@ -96,7 +96,7 @@ def inline(text: str) -> str:
         codes.append(match.group(1))
         return f"\0{len(codes) - 1}\0"
 
-    out = esc(re.sub(r"`([^`]+)`", keep, text))
+    out = esc(re.sub(r"`([^`]+)`", keep, text.replace("\0", "")))  # 目印に使う NUL は入力から除く
     out = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
     out = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', out)
     return re.sub(r"\0(\d+)\0", lambda m: f"<code>{esc(codes[int(m.group(1))])}</code>", out)
@@ -485,11 +485,13 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
 def check_page_refs(brief: dict) -> list[str]:
     """page に書いた id が background.pages にあるか確かめる。"""
     bg = brief.get("background") or {}
-    known = {p["id"] for p in bg.get("pages", [])}
+    ids = [p["id"] for p in bg.get("pages", [])]
+    known = set(ids)
+    duplicated = sorted({i for i in ids if ids.count(i) > 1})
     places = [("background.current", bg.get("current")), ("background.glossary", bg.get("glossary")),
               ("background.data_model.mapping", (bg.get("data_model") or {}).get("mapping")),
               ("changes.before_after", (brief.get("changes") or {}).get("before_after"))]
-    return [
+    return [f"background.pages の id が重複している: {duplicated}"] * bool(duplicated) + [
         f"{name}[{i}] の page {item['page']!r} が background.pages に無い"
         for name, items in places
         for i, item in enumerate(items or [])
