@@ -21,16 +21,85 @@ vim.api.nvim_create_autocmd('VimEnter', {
     local is_no_arg = vim.fn.argc() == 0
     local is_dir_arg = vim.fn.argc() == 1 and vim.fn.isdirectory(argv0) == 1
     if is_no_arg or is_dir_arg then
-      local ok, neo_tree = pcall(require, 'neo-tree.command')
+      local ok, neotree = pcall(require, 'utils.neotree')
       if ok then
-        neo_tree.execute({
-          source = 'filesystem',
-          position = 'left',
-          action = 'show',
-        })
+        neotree.open({ action = 'show' })
         vim.cmd('wincmd l')
       end
+      return
     end
+
+    -- `nvim file` のようにファイルを指定して起動したのにツリーだけが表示されてしまう場合がある
+    -- （手元の環境で報告されたが、原因の経路は未特定）。その場合はツリーを閉じてファイルだけを開く。
+    -- ツリーが無ければ何もしないので、`-c bnext` などで選んだバッファや stdin（`nvim -`）には触れない。
+    if argv0 == '' or argv0 == '-' then
+      return
+    end
+    -- 遅延実行の間に cwd が変わっても同じファイルを指すよう、絶対パスは先に一度だけ求める
+    local target = vim.fn.fnamemodify(argv0, ':p')
+
+    ---@param allow_edit_beside_tree boolean ツリー以外のウィンドウがあるときにも起動ファイルを開き直してよいか
+    local function show_file_only(allow_edit_beside_tree)
+      local tree_wins, file_win = {}, nil
+      for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local buf = vim.api.nvim_win_get_buf(win)
+        if vim.bo[buf].filetype == 'neo-tree' then
+          table.insert(tree_wins, win)
+        elseif vim.api.nvim_buf_get_name(buf) == target then
+          file_win = win
+        end
+      end
+      if #tree_wins == 0 then
+        return
+      end
+
+      if not file_win then
+        local tree_only = #tree_wins == #vim.api.nvim_tabpage_list_wins(0)
+        -- 遅延実行では、ユーザーが別のファイルに切り替えたウィンドウを上書きしないよう、
+        -- ツリーしか無いときだけファイルを開き直す
+        if not tree_only and not allow_edit_beside_tree then
+          return
+        end
+        -- ツリーしか無い場合は新しいウィンドウを作ってからファイルを開く
+        -- （neo-tree のウィンドウ内で :edit すると neo-tree 側に横取りされるため）
+        if tree_only then
+          vim.cmd('botright vnew')
+        else
+          for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= 'neo-tree' then
+              vim.api.nvim_set_current_win(win)
+              break
+            end
+          end
+        end
+        vim.cmd('edit ' .. vim.fn.fnameescape(target))
+        file_win = vim.api.nvim_get_current_win()
+      end
+
+      for _, win in ipairs(tree_wins) do
+        if vim.api.nvim_win_is_valid(win) then
+          pcall(vim.api.nvim_win_close, win, true)
+        end
+      end
+      if vim.api.nvim_win_is_valid(file_win) then
+        vim.api.nvim_set_current_win(file_win)
+      end
+    end
+
+    vim.schedule(function()
+      show_file_only(true)
+    end)
+    -- neo-tree は非同期に描画されることがあるため、少し遅れて出てきたツリーも閉じる。
+    -- ただし、その間にユーザーが別のバッファやタブへ移っていたら何もしない。
+    local start_tab = vim.api.nvim_get_current_tabpage()
+    vim.defer_fn(function()
+      local cur_buf = vim.api.nvim_get_current_buf()
+      local on_startup_view = vim.api.nvim_get_current_tabpage() == start_tab
+        and (vim.api.nvim_buf_get_name(cur_buf) == target or vim.bo[cur_buf].filetype == 'neo-tree')
+      if on_startup_view then
+        show_file_only(false)
+      end
+    end, 300)
   end,
 })
 
