@@ -46,7 +46,7 @@
   },
   {
     "id": "sct-3ac03ebb9625",
-    "name": "Google Calender",
+    "name": "Google Calendar",
     "icon": "icon://favicon/calendar.google.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
     "url": "https://calendar.google.com/calendar",
     "app": "default",

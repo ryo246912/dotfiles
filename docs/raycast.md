@@ -45,10 +45,10 @@ shortcuts・snippets は `~/.local/share/vicinae/{shortcuts,snippets}/*.json` �
   `mise.mac.toml` の `[vars]` で読み込み、テンプレートから `{{ vars.<key> | json_encode }}` で埋める
 - PC ごとに要る・要らないが分かれるもの（仕事用など）は枠を `{% if vars.<key> is defined %}` で囲み、
   値を書いた PC でだけ出す。名前も公開したくないものは名前ごと YAML に置く
-- `[vars]` で読めるのは文字列・数値だけ（リストは不可）で、拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。
+- `[vars]` で読めるのは文字列・数値・真偽値だけ（リストは不可）で、拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。
   そのため項目を増やすときはテンプレートに枠を足し、値だけを YAML に書く
 - GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートに書く
-- apply 後は Vicinae を再起動する（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
+- Vicinae を終了してから apply し、apply 後に起動し直す（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
 
 初回は apply の前に、既存の JSON にあってテンプレートに無いもの（apply で消えるもの）を確認し、必要ならテンプレートに枠を足す。
 

@@ -557,7 +557,8 @@
   - [ ] 雛形をコピーする
 
     ```sh
-    cp templates/vicinae/vicinae.secret.yaml.sample templates/vicinae/vicinae.secret.yaml
+    cd ~/dotfiles
+    cp -n templates/vicinae/vicinae.secret.yaml.sample templates/vicinae/vicinae.secret.yaml
     ```
 
   - [ ] `vicinae.secret.yaml` に値を書く（その PC で使わない `vicinae_url_*`・`vicinae_email_other` は消すと、その項目は出ない）
