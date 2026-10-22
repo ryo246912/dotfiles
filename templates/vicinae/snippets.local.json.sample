@@ -1,0 +1,9 @@
+[
+  {
+    "id": "snp-local-example",
+    "name": "example",
+    "data": { "text": "example" },
+    "createdAt": 0,
+    "expansion": { "keyword": ",ex", "apps": [], "word": true }
+  }
+]

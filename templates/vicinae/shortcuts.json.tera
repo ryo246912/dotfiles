@@ -1,0 +1,86 @@
+{#- Vicinae の shortcuts（~/.local/share/vicinae/shortcuts/shortcuts.json）。
+    公開してよいものだけをここに書き、仕事の URL や個人を特定できる ID を含むものは
+    git 管理外の templates/vicinae/shortcuts.local.json（JSON 配列。雛形は *.sample）に書く。
+    GUI での追加・編集と利用回数（openCount）は次の apply で消えるため、変更はこのファイルか local に書く。
+    apply 後は Vicinae を再起動する（起動時にしか読まず、起動中はメモリ上の一覧で書き戻すため）。 -#}
+{%- set local_path = "templates/vicinae/shortcuts.local.json" -%}
+{%- if local_path is file -%}
+  {%- set local = read_file(path=local_path) | trim | trim_start_matches(pat="[") | trim_end_matches(pat="]") | trim -%}
+{%- else -%}
+  {%- set local = "" -%}
+{%- endif -%}
+[
+  {
+    "id": "sct-083645c29b43",
+    "name": "agentview",
+    "icon": "icon://favicon/127.0.0.1?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "http://127.0.0.1:8080/sessions",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789452400,
+    "updatedAt": 1789452400
+  },
+  {
+    "id": "sct-e1acdecb3508",
+    "name": "Google",
+    "icon": "icon://omnicast/link?fill=primary-text",
+    "url": "https://www.google.com/search?q={selection}",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789452431,
+    "updatedAt": 1789452431
+  },
+  {
+    "id": "sct-53083efabbc3",
+    "name": "dotfiles",
+    "icon": "icon://favicon/github.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://github.com/ryo246912/dotfiles",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453959,
+    "updatedAt": 1789453959
+  },
+  {
+    "id": "sct-6c3bb1a6fd31",
+    "name": "Google Map",
+    "icon": "icon://favicon/www.google.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://www.google.com/maps",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453977,
+    "updatedAt": 1789453977
+  },
+  {
+    "id": "sct-3ac03ebb9625",
+    "name": "Google Calender",
+    "icon": "icon://favicon/calendar.google.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://calendar.google.com/calendar",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789453995,
+    "updatedAt": 1789453995
+  },
+  {
+    "id": "sct-d6136306ddde",
+    "name": "Grok",
+    "icon": "icon://favicon/grok.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://grok.com/automations",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454006,
+    "updatedAt": 1789454006
+  },
+  {
+    "id": "sct-e40190d09c06",
+    "name": "Twitter / X",
+    "icon": "icon://favicon/x.com?fallback=icon://omnicast/image?fill%3Dprimary-text",
+    "url": "https://x.com/home",
+    "app": "default",
+    "openCount": 0,
+    "createdAt": 1789454023,
+    "updatedAt": 1789454023
+  }
+  {%- if local %},
+  {{ local }}
+  {%- endif %}
+]

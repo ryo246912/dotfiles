@@ -38,18 +38,28 @@ cache、Extension 本体などは設定ファイルとは別であり、秘密�
 ### Shortcuts / Snippets（共有分 + PC ごとの分）
 
 shortcuts・snippets は `~/.local/share/vicinae/{shortcuts,snippets}/*.json` に保存され、`imports` のような分割の
-仕組みがない。公開してよいものだけを `config-mac/vicinae/{shortcuts,snippets}.shared.json` に置き、仕事の URL や
-個人を特定できる ID を含むものは git 管理外の `~/.config/vicinae/{shortcuts,snippets}.local.json` に置いて、
-`mise run vicinae:sync` でマージする。
+仕組みがない。公開してよいものだけを `templates/vicinae/{shortcuts,snippets}.json.tera` に書き、mise の template で
+生成する（`mise.mac.toml`）。
 
-- shared の文字列中の `{{secret.<key>}}` は `config-mac/vicinae/sync.secret.yml`（git 管理外。雛形は
-  `sync.secret.yml.sample`）の値で置き換える。値が無いキーを参照している項目は書き出さない
-- GUI での追加・編集・削除は local に取り込まれる（追加 → local に追記、shared の項目の編集 → local に上書き値、
-  shared の項目の削除 → local に `"hidden": true`）。shared には書き戻さない
-- 共有したいものは local のエントリを shared へ移してコミットし、もう一度 sync する。個人情報を含む値は
-  `{{secret.<key>}}` にして `sync.secret.yml` へ逃がす
-- Vicinae はどちらも起動時にだけ読み、変更のたびに全件を書き戻すため、タスクは Vicinae を終了させてから書き出し、
-  起動し直す。直前の JSON は `~/.local/state/vicinae/<kind>.json.bak` に残る
+- 仕事の URL や個人を特定できる ID を含むものは git 管理外の `templates/vicinae/{shortcuts,snippets}.local.json`
+  （JSON 配列。雛形は `*.sample`）に書く。ファイルがあればテンプレートの後ろに連結される
+- メールアドレスなどの値は git 管理外の `templates/vicinae/vicinae.secret.yaml`（雛形は `*.sample`）に書き、
+  `mise.mac.toml` の `[vars]` で読み込んでテンプレートから `{{ vars.<key> | json_encode }}` で埋める。
+  拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。値は文字列・数値のみで、リストは読めない
+- GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートか local に書く
+- apply 後は Vicinae を再起動する（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
+
+初回は、既存の JSON からテンプレートに無いものを local に移してから apply する
+（apply で上書きされて消えるため）。
+
+```sh
+for kind in shortcuts snippets; do
+  ids=$(grep -oE '"(sct|snp)-[0-9a-f]+"' "templates/vicinae/$kind.json.tera" | jq -s .)
+  jq --argjson ids "$ids" '[.[] | select(.id as $i | $ids | index($i) | not)
+    | if has("openCount") then .openCount = 0 else . end | del(.lastUsedAt)]' \
+    "$HOME/.local/share/vicinae/$kind/$kind.json" >"templates/vicinae/$kind.local.json"
+done
+```
 
 ## 参考資料
 
