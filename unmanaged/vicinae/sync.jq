@@ -1,21 +1,25 @@
-# Vicinae の shortcuts.json を「共有（dotfiles）＋ PC ごとの local」から組み立てる。
-# tasks/vicinae.toml の vicinae:shortcuts:sync から呼ぶ。入力（--argjson）:
-#   $shared  config-mac/vicinae/shortcuts.shared.json（公開してよいものだけ）
-#   $local   ~/.config/vicinae/shortcuts.local.json（git 管理外。同じ id なら shared を上書き、
+# Vicinae の shortcuts / snippets を「共有（dotfiles）＋ PC ごとの local」から組み立てる。
+# tasks/vicinae.toml の vicinae:sync から種類ごとに呼ぶ。入力（--argjson）:
+#   $kind    {defkeys, statkeys, required, defaults} 定義として扱うキー・利用状況のキー・必須キー・
+#            利用状況の既定値（shortcuts と snippets で異なる）
+#   $shared  config-mac/vicinae/<kind>.shared.json（公開してよいものだけ）
+#   $local   ~/.config/vicinae/<kind>.local.json（git 管理外。同じ id なら shared を上書き、
 #            "hidden": true でこの PC では出さない）
-#   $current Vicinae が今持っている shortcuts.json（GUI での変更・利用状況の取得元）
+#   $current Vicinae が今持っている JSON（GUI での変更・利用状況の取得元）
 #   $synced  前回書き出した定義。GUI で変えたのか shared 側が変わったのかを区別するのに使う
-#   $now     作成日時の既定値（epoch 秒）
-# 出力: {shortcuts, local, synced, report}
+#   $secrets config-mac/vicinae/sync.secret.yml（git 管理外）。文字列中の {{secret.<key>}} を置き換える
+# 出力: {items, local, synced, report}
 #
 # GUI での追加・編集・削除はすべて local に取り込み、shared には書き戻さない
 # （仕事の URL などが公開リポジトリへ紛れ込まないように）。
 
-def defkeys: ["name", "icon", "url", "app"];
-def statkeys: ["openCount", "createdAt", "updatedAt", "lastUsedAt"];
+def defkeys: $kind.defkeys;
 def byid: map({key: .id, value: .}) | from_entries;
 def only($ks): . as $o | reduce $ks[] as $k ({}; if $o | has($k) then .[$k] = $o[$k] else . end);
 def ids: map(.id);
+def secret_re: "\\{\\{secret\\.(?<k>[A-Za-z0-9_]+)\\}\\}";
+def secret_refs: [.. | strings | [match(secret_re; "g") | .captures[0].string][]] | unique;
+def render: walk(if type == "string" then gsub(secret_re; $secrets[.k] | tostring) else . end);
 
 ($shared | byid) as $shm
 | ($current | byid) as $curm
@@ -53,21 +57,25 @@ def ids: map(.id);
       | .report += ["local から削除（GUI で削除）: \($p.name)"]
     end)
 
-# 2. shared に local を重ねて書き出す。利用状況は今のファイルから引き継ぐ
+# 2. shared に local を重ねて書き出す。秘密の値を埋め、利用状況は今のファイルから引き継ぐ
 | (.local | byid) as $lom
 | [($shared | ids)[], ((.local | ids)[] | select($shm[.] == null))] as $order
 | [$order[] as $id
     | (($shm[$id] // {}) + ($lom[$id] // {})) as $def
     | select(($def.hidden // false) | not)
-    | select($def.url != null)
-    | {id: $id} + ($def | only(defkeys))
-      + ({openCount: 0, createdAt: $now, updatedAt: $now} + (($curm[$id] // {}) | only(statkeys)))
+    | select($def[$kind.required] != null)
+    | {id: $id, def: ($def | only(defkeys)), missing: ($def | only(defkeys) | secret_refs | map(select($secrets[.] == null)))}
+  ] as $built
+| .report += [$built[] | select(.missing != []) | "書き出さない（sync.secret.yml に \(.missing | join(", ")) がない）: \(.def.name)"]
+| [$built[] | select(.missing == [])
+    | {id} + (.def | render)
+      + ($kind.defaults + (($curm[.id] // {}) | only($kind.statkeys)))
   ] as $out
 | ($out | byid) as $outm
 | .report += [$current[] | select($outm[.id] == null and $shm[.id] == null and $lom[.id] == null)
     | "削除（shared から削除済み）: \(.name)"]
 | {
-    shortcuts: $out,
+    items: $out,
     local: .local,
     synced: [$out[] | {id} + only(defkeys)],
     report: .report

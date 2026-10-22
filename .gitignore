@@ -21,6 +21,7 @@ config/git/config.work.secret
 config/git/config.work3.secret
 config/zsh/.zprofile.secret
 config/zsh/.zshrc.secret
+config-mac/vicinae/sync.secret.yml
 # 環境ごとの sandbox 許可ドメイン・MCP サーバ（雛形は *.<name>.*.example）
 config/sbx/allow-domains.*.txt
 config/sbx/mcp.*.yml
