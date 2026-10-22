@@ -21,11 +21,15 @@ brief.json の書式:
       "ticket": {...},                                   # 省けば <workdir>/ticket.json を使う（書式は下）
       "related_prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "summary": "..."}],  # チケットモード用
       "tldr": ["1 行目", "2 行目", "3 行目"],
-      # 変更の範囲: 画面（fe）・サーバー（be）・データベース（db）のどこが変わるか。paths のパスで始まるファイルを
-      # その層に数える（長く一致するほうを優先。どれにも当たらないファイルは「その他」）
-      "scope": {"fe": {"paths": ["web/src/"], "summary": "何が変わるか 1 文"},
-                "be": {"paths": ["api/"], "summary": "..."},
-                "db": {"paths": ["api/migrations/", "api/models/"], "summary": "migration なし など"}},
+      # 変更の範囲: 画面（fe）・サーバー（be）・データベース（db）・インフラ（infra）のどこが変わるか。
+      # 層と部品（parts）の paths のパスで始まるファイルをそこに数える（長く一致するほうを優先。部品に当たらない層の
+      # ファイルは層の「その他」、どの層にも当たらないファイルは全体の「その他」）
+      "scope": {"fe": {"summary": "層で何が変わるか 1 文", "paths": ["web/src/"],
+                       "parts": [{"name": "アプローチ一覧", "detail": "/approaches", "paths": ["web/src/pages/approaches/"],
+                                  "summary": "部品で何が変わるか 1 文"}]},
+                "be": {"summary": "...", "paths": ["api/"], "parts": [...]},
+                "db": {"summary": "migration なし など", "paths": ["api/migrations/"]},
+                "infra": {"summary": "...", "paths": ["terraform/", ".github/workflows/"], "parts": [...]}},
       "pictures": [<render_pictures.py の指定>],
       "background": {
         # 関係する画面。ほかの項目の "page" はこの id を指す（どの画面の話かを示すため）
@@ -89,6 +93,7 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from render_groups import render as render_groups  # noqa: E402
+from render_groups import size_bar  # noqa: E402
 from render_groups import validate as validate_groups  # noqa: E402
 from render_pictures import render_picture  # noqa: E402
 
@@ -525,50 +530,80 @@ def check_page_refs(brief: dict) -> list[str]:
     ]
 
 
-SCOPE_LAYERS = (("fe", "画面（FE）"), ("be", "サーバー（BE）"), ("db", "データベース（DB）"))
+SCOPE_LAYERS = (("fe", "画面（FE）"), ("be", "サーバー（BE）"), ("db", "データベース（DB）"), ("infra", "インフラ"))
 
 
 def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) -> str:
-    """画面・サーバー・データベースのどこが変わるかを、層ごとのカードで出す。数は差分から数える。"""
+    """画面・サーバー・データベース・インフラのどこが変わるかを、層ごとに部品の行で出す。数は差分から数える。"""
     scope = brief.get("scope") or {}
-    prefixes = [(p, key) for key, _ in SCOPE_LAYERS for p in (scope.get(key) or {}).get("paths", [])]
+    # (パスの先頭, 層, 部品の番号)。部品の番号が None なら、層の paths（どの部品にも当たらない分）
+    prefixes = []
+    for key, _ in SCOPE_LAYERS:
+        layer = scope.get(key) or {}
+        prefixes += [(p, key, None) for p in layer.get("paths", [])]
+        for i, part in enumerate(layer.get("parts", [])):
+            prefixes += [(p, key, i) for p in part.get("paths", [])]
     prefixes.sort(key=lambda item: -len(item[0]))
-    stats = {key: {"files": set(), "added": 0, "removed": 0, "groups": []} for key, _ in SCOPE_LAYERS + (("other", ""),)}
+
+    def new_stat() -> dict:
+        return {"files": set(), "added": 0, "removed": 0, "groups": []}
+
+    stats = {(key, i): new_stat() for key, _ in SCOPE_LAYERS for i in [None, *range(len((scope.get(key) or {}).get("parts", [])))]}
+    stats[("other", None)] = new_stat()
     numbers = {g["id"]: n for n, g in enumerate(groups or [], start=1)}
     for group in groups or []:
         for hunk_id in group["hunks"]:
             hunk = hunks[hunk_id]
-            key = next((k for p, k in prefixes if hunk["path"].startswith(p)), "other")
-            stat = stats[key]
-            stat["files"].add(hunk["path"])
-            stat["added"] += hunk["added"]
-            stat["removed"] += hunk["removed"]
-            if group["id"] not in stat["groups"]:
-                stat["groups"].append(group["id"])
-    cards = []
+            key, part = next(((k, i) for p, k, i in prefixes if hunk["path"].startswith(p)), ("other", None))
+            for target in {(key, part), (key, "total")}:
+                stat = stats.setdefault(target, new_stat())
+                stat["files"].add(hunk["path"])
+                stat["added"] += hunk["added"]
+                stat["removed"] += hunk["removed"]
+                if group["id"] not in stat["groups"]:
+                    stat["groups"].append(group["id"])
+    known = hunks is not None  # 差分が無いときは、変わるかどうかを決めつけない（summary だけ出す）
+    scale = max([s["added"] + s["removed"] for (k, i), s in stats.items() if i != "total"] or [0])
+
+    def chips(stat: dict) -> str:
+        return "".join(f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"])
+
+    def size(stat: dict) -> str:
+        if not stat["files"]:
+            return ""
+        return (
+            f'{size_bar(stat["added"], stat["removed"], scale)}<span class="tag">{len(stat["files"])} files</span>'
+            f'<span class="added">+{stat["added"]}</span><span class="removed">−{stat["removed"]}</span>'
+        )
+
+    blocks = []
     for key, name in SCOPE_LAYERS + (("other", "その他"),):
-        stat, info = stats[key], scope.get(key) or {}
-        if key == "other" and not stat["files"]:
+        layer = scope.get(key) or {}
+        total = stats.get((key, "total"), new_stat())
+        if key == "other" and not total["files"]:
             continue
-        changed = bool(stat["files"])
-        size = (
-            f'<span class="tag">{len(stat["files"])} files</span><span class="added">+{stat["added"]}</span>'
-            f'<span class="removed">−{stat["removed"]}</span>'
-            if stat["files"]
-            else ""
-        )
-        chips = "".join(
-            f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"]
-        )
-        known = hunks is not None  # 差分が無いときは、変わるかどうかを決めつけない（summary だけ出す）
-        summary = inline(info["summary"]) if info.get("summary") else ("変更なし" if known and not changed else "")
+        changed = bool(total["files"])
+        rows = []
+        parts = layer.get("parts", [])
+        for i, part in enumerate(parts + [{"name": "その他"}] if stats[(key, None)]["files"] and parts else parts):
+            stat = stats[(key, i if i < len(parts) else None)]
+            if known and not stat["files"] and not part.get("summary"):
+                continue
+            detail = f'<code>{esc(part["detail"])}</code>' if part.get("detail") else ""
+            rows.append(
+                f'<tr class="{"" if stat["files"] or not known else "unchanged"}"><th>{esc(part["name"])}{detail}</th>'
+                f'<td>{inline(part.get("summary", ""))}</td><td class="scope-size"><span class="scope-meta">{size(stat)}{chips(stat)}</span></td></tr>'
+            )
         badge = f'<span class="tag">{"変わる" if changed else "変わらない"}</span>' if known else ""
-        cards.append(
-            f'<div class="scope-card{"" if changed or not known else " unchanged"}{" other" if key == "other" else ""}">'
-            f'<div class="scope-head"><strong>{name}</strong>{badge}</div>'
-            f'<p>{summary}</p><div class="scope-meta">{size}{chips}</div></div>'
+        summary = inline(layer["summary"]) if layer.get("summary") else ("変更なし" if known and not changed else "")
+        table_html = f'<table class="scope-parts"><tbody>{"".join(rows)}</tbody></table>' if rows else ""
+        cls = "scope-layer" + ("" if changed or not known else " unchanged") + (" other" if key == "other" else "")
+        blocks.append(
+            f'<div class="{cls}"><div class="scope-head"><strong>{name}</strong>{badge}'
+            f'<span class="scope-summary">{summary}</span><span class="scope-meta">{size(total)}{chips(total)}</span></div>'
+            f"{table_html}</div>"
         )
-    return f'<div class="scope">{"".join(cards)}</div>'
+    return f'<div class="scope">{"".join(blocks)}</div>'
 
 
 def build(workdir: Path) -> tuple[str, list[str]]:
@@ -598,7 +633,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             groups_html = render_groups(hunks, groups, blob)
 
     errors += check_page_refs(brief)
-    errors += [f"scope の {key!r} は fe / be / db のどれか" for key in (brief.get("scope") or {}) if key not in dict(SCOPE_LAYERS)]
+    errors += [f"scope の {key!r} は fe / be / db / infra のどれか" for key in (brief.get("scope") or {}) if key not in dict(SCOPE_LAYERS)]
     pictures = []
     for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
         try:

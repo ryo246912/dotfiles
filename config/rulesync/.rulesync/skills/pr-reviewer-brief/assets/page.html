@@ -180,14 +180,23 @@
       .legend .lg-changed::before { border-color: var(--accent); background: var(--highlight); }
       .legend .lg-added::before { border-color: var(--added); background: var(--diff-add-bg); }
       .legend .lg-removed::before { border-color: var(--removed); background: var(--diff-del-bg); border-style: dashed; }
-      /* 変更の範囲（render_brief.py の scope_section）: 画面・サーバー・データベースのカード */
-      .scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
-      .scope-card { border: 2px solid var(--accent); background: var(--highlight); border-radius: 10px; padding: 10px 14px; }
-      .scope-card.other { border: 1px dashed var(--border); background: var(--surface); }
-      .scope-card.unchanged { border: 1px solid var(--border); background: var(--bg); color: var(--muted); }
-      .scope-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-      .scope-card > p { margin: 6px 0; font-size: 14px; }
-      .scope-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; }
+      /* 変更の範囲（render_brief.py の scope_section）: 層ごとに、部品の行を並べる */
+      .scope { display: flex; flex-direction: column; gap: 10px; }
+      .scope-layer { border: 2px solid var(--accent); border-radius: 10px; padding: 10px 14px; }
+      .scope-layer.unchanged { border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; }
+      .scope-layer.other { border: 1px dashed var(--border); }
+      .scope-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+      .scope-summary { flex: 1 1 240px; font-size: 14px; }
+      .scope-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; }
+      table.scope-parts { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+      table.scope-parts th, table.scope-parts td { padding: 6px 8px; border: none; border-top: 1px solid var(--border); background: none; text-align: left; vertical-align: top; }
+      table.scope-parts th { width: 22%; font-weight: 600; }
+      table.scope-parts th code { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--muted); overflow-wrap: anywhere; }
+      table.scope-parts td.scope-size { width: 1%; white-space: nowrap; }
+      table.scope-parts td.scope-size .scope-meta { flex-wrap: nowrap; }
+      .scope-layer { min-width: 0; overflow-wrap: anywhere; }
+      table.scope-parts tr.unchanged { color: var(--muted); }
+      @media (max-width: 640px) { table.scope-parts, table.scope-parts tbody { display: block; } table.scope-parts th, table.scope-parts td { display: block; width: auto; border-top: none; padding: 2px 0; } table.scope-parts tr { display: block; border-top: 1px solid var(--border); padding: 6px 0; } table.scope-parts td.scope-size { white-space: normal; } table.scope-parts td.scope-size .scope-meta { flex-wrap: wrap; } }
       pre.seed { max-height: 360px; overflow: auto; }
       dl.step ol, dl.step ul { margin: 0; padding-left: 20px; }
       .gnum { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; line-height: 20px; text-align: center; text-decoration: none; }
