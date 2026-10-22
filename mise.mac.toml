@@ -2,11 +2,14 @@
 # （**/*win*・.config/atuin/fly.toml）の除外を足して上書きする。同一キーは merge ではなく
 # 上書きになるため、共通の exclude（"agentsview/tests"）も繰り返し書くこと。
 # hammerspoon・vicinae は macOS 限定の設定なので config-mac/ から symlink-each で配る。
+# vicinae の scripts.json はユーザー名を含む絶対パス（Vicinae は customDirs の ~ や $HOME を
+# 展開しない）を apply 時に埋めるため template にし、settings.json の "imports" から読ませる。
 [dotfiles]
 "~/.config/hammerspoon"                   = { source = "config-mac/hammerspoon", mode = "symlink-each" }
 "~/.config/mise/config.mac.toml"          = { source = "config-mac/mise/config.mac.toml", mode = "symlink" }
 "~/.config/mise/tasks/bootstrap-mac.toml" = { source = "config-mac/mise/tasks/bootstrap-mac.toml", mode = "symlink" }
 "~/.config/vicinae"                       = { source = "config-mac/vicinae", mode = "symlink-each" }
+"~/.config/vicinae/scripts.json"          = { source = "templates/vicinae/scripts.json.tera", mode = "template", template = "tera" }
 
 [dotfiles."~/.config"]
 exclude = ["agentsview/tests", "hunk/extensions", "*win*", "atuin/fly.toml"]

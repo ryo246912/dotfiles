@@ -35,6 +35,12 @@ favorite、fallback、provider/entrypoint 設定なども同ファイルへ反�
 例えば keybind と provider を別 JSON に分けて chezmoi 管理できる。password preference、履歴、
 cache、Extension 本体などは設定ファイルとは別であり、秘密情報や生成データを追跡しない。
 
+Script Commands のディレクトリ（`providers.scripts.preferences.customDirs`）は `~` や `$HOME` が
+展開されないため、`settings.json` には書かない。`templates/vicinae/scripts.json.tera` から
+apply 時に `~/.config/vicinae/scripts.json` を生成し、`settings.json` の `imports` で読ませる。
+本体の値が import より優先されるので、GUI でスクリプトのディレクトリを変更しない
+（変更すると `settings.json` に絶対パスが書き戻される）。
+
 ## 参考資料
 
 - [Tinycast repository](https://github.com/abue-ammar/tinycast)

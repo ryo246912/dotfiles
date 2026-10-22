@@ -1,0 +1,9 @@
+{
+  "providers": {
+    "scripts": {
+      "preferences": {
+        "customDirs": ["{{ env.HOME }}/.local/bin"]
+      }
+    }
+  }
+}

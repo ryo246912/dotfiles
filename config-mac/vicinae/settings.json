@@ -10,6 +10,9 @@
 
 {
    "$schema": "https://vicinae.com/schemas/config.json",
+   "imports": [
+      "./scripts.json"
+   ],
    "close_on_focus_loss": false,
    "escape_key_behavior": "",
    "global_shortcuts": {
@@ -709,13 +712,6 @@
                   "alwaysShowIntro": false
                }
             }
-         }
-      },
-      "scripts": {
-         "preferences": {
-            "customDirs": [
-               "/Users/ryo./.local/bin"
-            ]
          }
       },
       "shortcuts": {
