@@ -7,14 +7,14 @@ if get(b:, 'current_syntax', '') ==# 'tera'
 endif
 
 syntax region teraComment start=/{#/ end=/#}/ keepend containedin=ALL contains=@Spell
-syntax region teraStatement matchgroup=teraDelimiter start=/{%-\=/ end=/-\=%}/ keepend containedin=ALL contains=teraKeyword,teraString,teraNumber,teraBoolean,teraFilter
-syntax region teraExpression matchgroup=teraDelimiter start=/{{-\=/ end=/-\=}}/ keepend containedin=ALL contains=teraKeyword,teraString,teraNumber,teraBoolean,teraFilter
+syntax region teraStatement matchgroup=teraDelimiter start=/{%-\=/ end=/-\=%}/ containedin=ALL contains=teraKeyword,teraString,teraNumber,teraBoolean,teraFilter
+syntax region teraExpression matchgroup=teraDelimiter start=/{{-\=/ end=/-\=}}/ containedin=ALL contains=teraKeyword,teraString,teraNumber,teraBoolean,teraFilter
 
 syntax keyword teraKeyword contained if else elif endif for endfor in macro endmacro
 syntax keyword teraKeyword contained block endblock extends include import set endset set_global
 syntax keyword teraKeyword contained break continue filter endfilter raw endraw and or not is as
-syntax region teraString contained start=/"/ skip=/\\"/ end=/"/
-syntax region teraString contained start=/'/ skip=/\\'/ end=/'/
+syntax region teraString contained oneline start=/"/ skip=/\\"/ end=/"/
+syntax region teraString contained oneline start=/'/ skip=/\\'/ end=/'/
 syntax match teraNumber contained /\<\d\+\(\.\d\+\)\=\>/
 syntax keyword teraBoolean contained true false
 syntax match teraFilter contained /|\s*\w\+/
