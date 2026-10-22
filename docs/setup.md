@@ -82,6 +82,9 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
+    初回（apm/rulesync が未導入）は、ファイル配置に続けて `[bootstrap.hooks.post-dotfiles]` が
+    gh 導入（未ログインなら `gh auth login --scopes 'project'` のプロンプト）→ `GITHUB_TOKEN=$(gh auth token) mise install`
+    → APM の user-scope dependencies・rulesync generate まで実行する（導入済みの環境ではスキップ）。
     既存環境で conflict が出たときだけ:
     ```sh
     MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
@@ -89,7 +92,7 @@
   - 続けて `mise bootstrap` 本体を実行する:
     1. `[bootstrap.packages]` の導入（brew/brew-cask）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
-    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`（初回の `dotfiles apply` で導入済みなら差分のみ）
     4. `[tools]` の導入（3 で完了しているため通常は即座に終わる）
     5. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
@@ -105,7 +108,8 @@
     ```sh
     SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX$(sw_vers -productVersion | cut -d. -f1).sdk MISE_ENV=mac mise bootstrap packages apply --yes
     ```
-  - `dotfiles apply` はファイルを配置するだけで、ツールは入らない。ツールだけ入れ直すときは tools ステップだけ実行する
+  - 2回目以降の `dotfiles apply` はファイルを配置するだけで、ツールは入らない（初回の自動 install は apm/rulesync が
+    未導入のときだけ）。ツールだけ入れ直すときは tools ステップだけ実行する
     （`pre-tools` hook が gh のトークンを渡すので、素の `mise install` より rate limit に当たりにくい）
 
     ```sh
@@ -773,6 +777,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     MISE_ENV=linux mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.linux.toml
     ```
+    初回（apm/rulesync が未導入）は、ファイル配置に続けて `[bootstrap.hooks.post-dotfiles]` が
+    gh 導入（未ログインなら `gh auth login --scopes 'project'` のプロンプト）→ `GITHUB_TOKEN=$(gh auth token) mise install`
+    → APM の user-scope dependencies・rulesync generate まで実行する（導入済みの環境ではスキップ）。
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
@@ -792,7 +799,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     `~/.config/mise/config.linux.toml` を正しく読める:
     1. `[bootstrap.packages]` の導入（apt。sudo プロンプトが出る）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
-    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`
+    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`（初回の `dotfiles apply` で導入済みなら差分のみ）
     4. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
     ```sh
@@ -803,7 +810,8 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - `dotfiles apply` だけではツールは入らない。ツールだけ入れ直すときは `mise bootstrap --only tools`
+  - 2回目以降の `dotfiles apply` だけではツールは入らない（初回の自動 install は apm/rulesync が未導入のときだけ）。
+    ツールだけ入れ直すときは `mise bootstrap --only tools`
     （`HOST_ENV` 反映前は `MISE_ENV=linux` を付ける。ロール別のツールは入らない）
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する（Mac 側の同項目参照）

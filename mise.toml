@@ -51,9 +51,36 @@ run      = "lefthook install"
 #    global scopeのtaskを参照するため、必ず`--cd "$HOME"`を付ける。
 #    MISE_LOCKED=1はglobal tool tableのnetwork解決を防ぐ速度対策。lockfile未登録の
 #    無関係なtool警告だけをMISE_LOG_LEVEL=errorで隠す（task自身のstderrは隠れない）。
+#
+#    apm/rulesync が未導入（＝新しいPCの初回 `mise bootstrap dotfiles apply`）のときは、
+#    同期の前に pre-tools hook と同じ手順（gh 導入・認証 → GITHUB_TOKEN 付き mise install）で
+#    ツールを入れる。hook 内の `mise` は別プロセスなので、この apply で配置したばかりの
+#    ~/.config/mise 配下の global config を読める（mise.toml 冒頭のコメントと違い、
+#    同一プロセスの制約を受けない）。これで初回の `dotfiles apply` だけでツール・APM・
+#    rulesync まで揃う。導入済みの環境では何もしない。post-merge の自動 apply
+#    （lefthook.yml）は mise install をしない方針なので DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する。
+#    MISE_LOCKED=1 は lockfile 未登録の tool があると install が失敗するので、install の後で付ける。
 [bootstrap.hooks.post-dotfiles]
 run = """
 set -e
+if [ "${DOTFILES_SKIP_TOOLS_INSTALL:-}" != 1 ] && ! { mise which apm && mise which rulesync; } >/dev/null 2>&1; then
+  echo "apm/rulesync が未導入のため、mise install を実行します"
+  if [ "$(uname)" = "Darwin" ]; then
+    export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
+  else
+    export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+  fi
+  mise install --jobs=1 aqua:cli/cli || true
+  if ! gh auth token >/dev/null 2>&1; then
+    gh auth login --scopes 'project' || true
+  fi
+  github_token=$(gh auth token 2>/dev/null || true)
+  if [ -z "$github_token" ]; then
+    echo "error: gh 未ログインのため中断します。'gh auth login --scopes project' 後に再度 'mise bootstrap dotfiles apply' を実行してください" >&2
+    exit 1
+  fi
+  GITHUB_TOKEN=$github_token mise install --jobs=2
+fi
 export MISE_LOCKED=1 MISE_LOG_LEVEL=error
 if mise which apm >/dev/null 2>&1; then
   mise --cd "$HOME" run apm:sync
