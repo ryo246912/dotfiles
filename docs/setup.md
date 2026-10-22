@@ -349,12 +349,13 @@
 
 - [ ] fnox: Bitwarden Secrets Manager の machine account を用意する
   - `config/fnox/config.toml` の `bws` provider は machine account の access token（`BWS_ACCESS_TOKEN`）で認証する。
-    トークンは age で暗号化して `config/fnox/config.toml` に置いてあるので、machine account の作成は
-    初回とトークンを作り直すとき（期限切れ・漏洩時）だけでよい。2台目以降は machine account は作らず、
+    トークンは age で暗号化して `config/fnox/config.toml` に置いてあるので、machine account の作成は初回だけ、
+    トークンの発行は初回と作り直すとき（期限切れ・漏洩時）だけでよい。2台目以降はどちらも行わず、
     新しい PC の age 公開鍵を `recipients` に追加し、既存の PC で `fnox reencrypt --provider age` を実行して
     `BWS_ACCESS_TOKEN` を再暗号化する（[docs/fnox.md の「複数 PC で使う場合」](./fnox.md#複数-pc-で使う場合2台目以降のセットアップ)）。
     以下の「初回・作り直し時のみ」の手順はスキップし、動作確認だけ行う
-  - （初回・作り直し時のみ）Web 保管庫で machine account を追加する
+  - （初回・作り直し時のみ）Web 保管庫で machine account を追加し、access token を発行する
+    （トークンの作り直し時は machine account は作り直さず、既存の machine account を開いて 4 だけ行う）
     1. [Web 保管庫](https://vault.bitwarden.com) にログインし、左上の製品切り替えで **Secrets Manager** を開く
        （Organization が必要。Password Manager との違いは [docs/bitwarden.md](./bitwarden.md)）
     2. 左メニューの **Machine accounts** →「**New machine account**」で名前（例: `dotfiles-fnox`）を入れて保存する
