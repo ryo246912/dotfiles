@@ -91,8 +91,10 @@ claude --resume <session-id> --fork-session -p "この方針で別実装を書�
 > `CLAUDE_CONFIG_DIR` でアカウントを切り替えている場合も、そのアカウントの設定ディレクトリにある
 > セッションだけが対象です（[ホスト](#ホスト) の共有 symlink で `projects` を共有していれば相互に見えます）。
 >
-> 分岐しても**ファイルの作業ツリーは共有**です。両方のセッションで同じファイルを編集するなら、
-> `multi-worktree` や `git worktree` で作業場所を分けてから起動します。
+> 分岐しても**ファイルの作業ツリーは共有**です（`/fork` / `--fork-session` は worktree を作りません）。
+> 両方のセッションで同じファイルを編集するなら、`multi-worktree` や `git worktree` で作業場所を分けてから起動します。
+> 分けずに片方で編集すると、もう片方の Edit が `File has been modified since read ... Read it again` で
+> 拒否されます（権限エラーではなく、読み直せば書ける）。
 
 ## 複数セッションを並走させる（agent view）
 
