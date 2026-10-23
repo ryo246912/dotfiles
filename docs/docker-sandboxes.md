@@ -1209,13 +1209,6 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `~/.claude/settings.json` の read-only | devcontainer は settings.json だけ ro で重ね mount していたが、sandbox は全体 rw |
 | `~/.config/mise`                       | 既定では渡していない（必要なら `extra_workspaces`）                              |
 
-### まとめ
-
-ツールチェイン・ホスト連携・MCP はすべて移植済みで、
-**残る差分は生成物の分離（mount できないため運用で分ける）と
-`~/.claude/settings.json` の read-only 化**です。
-隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
-
 ## MCP の扱い
 
 sandbox では **MCP サーバへの接続をホスト側（`sbx mcp` の gateway）に寄せます**。
