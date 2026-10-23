@@ -82,6 +82,7 @@
     "pr-author-fix": "name-only",
     "lessons-record": "name-only",
     "pr-reviewer-comment": "name-only",
+    "pr-reviewer-brief": "name-only",
     "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",

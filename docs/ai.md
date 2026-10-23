@@ -43,6 +43,30 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
+## セッションを分岐する（fork）
+
+既存セッションの会話履歴をコピーして、**新しいセッション ID の別セッション**として続けます。
+元のセッションの transcript はそのまま残るので、「A 案と B 案を両方試す」「調査の途中から別の方向に進める」
+といった使い方ができます。
+
+`/fork [name]` で、今開いている会話をこの時点で分岐します。
+
+```text
+/fork 別案を試す
+```
+
+- 実行すると**分岐先のセッションに切り替わります**（`You are now in the fork.`）。
+  元の会話は分岐した時点の状態で残り、`claude -r <元の session-id>` で再開できます（実行時に表示されます）。
+- `name` を省略すると、元のタイトルに `(Fork 1)` のような連番を付けた名前になります。
+- 途中の時点から分岐したいときは、先に `/fork` してから分岐先で `/rewind`（`Esc` 2 回）で巻き戻します。
+  元の会話を `/rewind` すると元側の履歴が巻き戻るので、順番に注意します。
+
+> [!NOTE]
+> 分岐しても**ファイルの作業ツリーは共有**です（`/fork` は worktree を作りません）。
+> 両方のセッションで同じファイルを編集するなら、`multi-worktree` や `git worktree` で作業場所を分けてから起動します。
+> 分けずに片方で編集すると、もう片方の Edit が `File has been modified since read ... Read it again` で
+> 拒否されます（権限エラーではなく、読み直せば書ける）。
+
 ## 複数セッションを並走させる（agent view）
 
 Claude Code には、1 つの画面から複数のセッションを起動・監視・切り替えできる
@@ -61,7 +85,7 @@ Claude Code には、1 つの画面から複数のセッションを起動・監
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
 | agent view を開く                            | `claude agents`（`--cwd <dir>` でそのディレクトリ配下のセッションだけに絞る）  |
 | 今の会話をバックグラウンドに回して一覧を開く | 空のプロンプトで `←`、または `/bg`（`/background`）                            |
-| 今の会話をコピーして別セッションで並走させる | `/fork`（元の会話はそのまま続く）                                              |
+| 今の会話をコピーして別セッションで並走させる | `/fork`（[セッションを分岐する](#セッションを分岐するfork) を参照）            |
 | 一覧から抜ける                               | `Esc`（セッションは止まらない）                                                |
 | `claude` 単体で agent view を開くようにする  | `/config defaultToAgentsView=true`                                             |
 | `←` で一覧に飛ぶ挙動を止める                 | 設定 `leftArrowOpensAgents: false`                                             |
@@ -305,7 +329,7 @@ Claude Code はメッセージを送るたびに会話全体をモデルへ再�
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
-あわせて、git branch・モデルと effort・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
+あわせて、git branch・モデルと effort・最初に送ったメッセージとその時刻・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
 subagent が動いているときは、agent panel の各行にも model と effort を表示します（[subagent の行](#subagent-の行)）。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
@@ -317,44 +341,46 @@ subagent が動いているときは、agent panel の各行にも model と eff
 
 ### 表示の読み方
 
-1 行目にアカウント・branch・モデル・コンテキスト・session id、2 行目に rate limit・cache を表示します。
+1 行目にアカウント・branch・モデル・最初のメッセージ、2 行目にコンテキスト・session id・rate limit・cache を表示します。
 
 ```text
- account2  foo@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
-5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
+ account2  foo@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · 10/21 08:30~ 💬 statusline に最初のメッセージを出したい
+ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d · 5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
 ```
 
 ```text
- work3  bar@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d
-5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
+ work3  bar@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · 10/20 23:05~ 💬 lint エラーを直して
+ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d · 5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
-| 表示                                | 意味                                                                                                                                                                                               |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `account2`（背景色）                | ログイン中のアカウント。config dir 名から決める（`~/.claude` → `account1`、`~/.claude-<name>` → `<name>`）。背景色は account1 青・account2 紫・work3 黄・その他 灰                                 |
-| `foo@example.com`（太字）           | ログイン中のメールアドレス（global config の `oauthAccount.emailAddress`。`CLAUDE_CONFIG_DIR` 指定時は `<dir>/.claude.json`、未指定時は `~/.claude.json`）。API キー利用などで無い場合は表示しない |
-| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                                                            |
-| `Opus 5.5`（紫）                    | モデル名（`model.display_name`）                                                                                                                                                                   |
-| `⚡`（黄）                          | fast mode が有効（`fast_mode`）                                                                                                                                                                    |
-| `▰▰▰▰▱ xhigh`                       | reasoning effort（`effort.level`）。ゲージは low 1〜max 5 マス、色は low 灰・medium 緑・high シアン・xhigh 黄・max 赤。`/effort` の変更は次の更新で反映。effort 非対応モデルでは表示しない         |
-| `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`                                              |
-| `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                                                                     |
-| `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                                                                      |
-| `reset 2h9m`                        | rate limit の枠がリセットされるまでの時間（`rate_limits.*.resets_at` から計算）                                                                                                                    |
-| `✓`                                 | ここまでの消費ペース（使用率 ÷ 経過時間）が続いても、リセットまで枠が持つ                                                                                                                          |
-| `⚠ empty 23m`（黄/赤）              | 今のペースだとリセット前に枠を使い切る。表示はそれまでの時間。リセットまでの半分も持たないときは赤。枠の経過が 10% 未満の間は予測しない                                                            |
-| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                                                               |
-| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                                                                    |
-| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                                                                      |
-| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                                                                |
-| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない）                                            |
-| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                                                                          |
-| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                                                               |
-| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                                                                      |
-| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                                                                |
-| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                                                           |
-| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                                                                   |
-| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                                                                        |
+| 表示                                | 意味                                                                                                                                                                                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account2`（背景色）                | ログイン中のアカウント。config dir 名から決める（`~/.claude` → `account1`、`~/.claude-<name>` → `<name>`）。背景色は account1 青・account2 紫・work3 黄・その他 灰                                                                                                                 |
+| `foo@example.com`（太字）           | ログイン中のメールアドレス（global config の `oauthAccount.emailAddress`。`CLAUDE_CONFIG_DIR` 指定時は `<dir>/.claude.json`、未指定時は `~/.claude.json`）。API キー利用などで無い場合は表示しない                                                                                 |
+| `main`（シアン）                    | 作業ディレクトリの git branch。detached HEAD のときは短縮 SHA、git 管理外では表示しない                                                                                                                                                                                            |
+| `Opus 5.5`（紫）                    | モデル名（`model.display_name`）                                                                                                                                                                                                                                                   |
+| `⚡`（黄）                          | fast mode が有効（`fast_mode`）                                                                                                                                                                                                                                                    |
+| `▰▰▰▰▱ xhigh`                       | reasoning effort（`effort.level`）。ゲージは low 1〜max 5 マス、色は low 灰・medium 緑・high シアン・xhigh 黄・max 赤。`/effort` の変更は次の更新で反映。effort 非対応モデルでは表示しない                                                                                         |
+| `10/21 08:30~`（灰）                | 最初のメッセージを送った時刻（transcript の `timestamp`、ローカル時刻の MM/DD HH:MM）                                                                                                                                                                                              |
+| `💬 statusline に…`（黄）           | セッションで最初に送ったメッセージ（transcript の最初の人間の入力）。1 行目だけを 30 文字まで。slash command・hook・IDE 拡張由来の内部メッセージ（`<command-name>` や `<ide_opened_file>` などのタグで始まるもの）は除外し、制御文字は取り除く。何のセッションか思い出すための目印 |
+| `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`                                                                                                                              |
+| `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                                                                                                                                                     |
+| `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                                                                                                                                                      |
+| `reset 2h9m`                        | rate limit の枠がリセットされるまでの時間（`rate_limits.*.resets_at` から計算）                                                                                                                                                                                                    |
+| `✓`                                 | ここまでの消費ペース（使用率 ÷ 経過時間）が続いても、リセットまで枠が持つ                                                                                                                                                                                                          |
+| `⚠ empty 23m`（黄/赤）              | 今のペースだとリセット前に枠を使い切る。表示はそれまでの時間。リセットまでの半分も持たないときは赤。枠の経過が 10% 未満の間は予測しない                                                                                                                                            |
+| `●`（緑）                           | cache が warm。次のメッセージは cache を再利用できる                                                                                                                                                                                                                               |
+| `●`（黄）                           | warm だが、残り時間が TTL の 20% 未満。続けて聞きたいことがあれば今のうちに送る                                                                                                                                                                                                    |
+| `○ cold`（赤）                      | cache が warm でない（TTL 切れ、または直近の応答に cache token が無い）。次のメッセージで会話全体を処理し直す                                                                                                                                                                      |
+| `– waiting`（灰）                   | まだ `prompt_cache` が届いていない（セッションの最初の応答前、または Claude Code が v2.1.251 未満）                                                                                                                                                                                |
+| `– not observed`（灰）              | このセッションでまだ cache token が報告されていない（`prompt_cache.caching_observed` が `false`。caching が無効、または provider/gateway が報告しない）                                                                                                                            |
+| `1h` / `5m`                         | 現在の cache の TTL（`prompt_cache.ttl`）                                                                                                                                                                                                                                          |
+| `████░░`                            | TTL に対する残り時間の割合（6 マス）                                                                                                                                                                                                                                               |
+| `38m left`                          | cold になるまでの残り時間（`prompt_cache.expires_at` から計算。1 分未満は秒）                                                                                                                                                                                                      |
+| `hit 91%`                           | このセッションの入力トークンのうち cache から読めた割合（`prompt_cache.hit_ratio`）                                                                                                                                                                                                |
+| `misses 0`                          | cache にあるはずの内容を処理し直したリクエスト数（`prompt_cache.misses`）。compaction などによる想定内の再構築は含まない                                                                                                                                                           |
+| `next message re-caches 82k tokens` | cold のとき、次のメッセージで再キャッシュされるトークン数（`prompt_cache.recache_tokens_if_cold`、k 単位で丸め）                                                                                                                                                                   |
+| `last miss: ...`                    | 直近の miss の推定原因（`prompt_cache.last_miss_cause.causes`）。原因が分かったときだけ表示                                                                                                                                                                                        |
 
 `prompt_cache` は main conversation の最初の API 応答後に入力へ現れるため、それまでは
 灰色で `cache – waiting` を表示します（Claude Code が v2.1.251 未満の場合もこの表示のままです）。使っている Claude Code のバージョンに無いフィールドは表示を省きます。
@@ -653,11 +679,11 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 ### 既定の設定（`claude/settings.json`）
 
-| 値                    | skill                                                                                                                                                                                                                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                      |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`suggest-rules`、`lessons-harvest`）                                                                                                                                                                                          |
+| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                           |
+| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`suggest-rules`、`lessons-harvest`）                                                                                                                                                                                                               |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
@@ -1297,3 +1323,48 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## ブラウザ操作（Chrome DevTools MCP と Playwright）
+
+ブラウザを操作させる手段として、Chrome DevTools MCP と Playwright MCP（テストは `dev-webtest` skill が使う
+playwright-cli）を用途で使い分けます。両方の MCP を常に読み込むとツール定義でコンテキストを多く使い、
+エージェントがどちらを使うか迷う原因にもなるため、作業に合わせて片方だけ有効にするのがおすすめです。
+
+| 観点                                 | Chrome DevTools MCP                              | Playwright                                         |
+| ------------------------------------ | ------------------------------------------------ | -------------------------------------------------- |
+| ブラウザ操作（クリック・入力・遷移） | ◯                                                | ◎ アクセシビリティツリーでの要素指定が安定している |
+| コンソールログ                       | ◎ 一覧とスタックトレースまで取れる               | △ メッセージ一覧が中心                             |
+| ネットワーク                         | ◎ リクエスト一覧と各リクエストのヘッダー・ボディ | △ リクエスト一覧が中心                             |
+| パフォーマンス                       | ◎ トレース取得、Core Web Vitals・LCP の分析      | ✕                                                  |
+| CPU・ネットワークの低速化の再現      | ◯                                                | △                                                  |
+| 対応ブラウザ                         | Chrome のみ                                      | Chromium・Firefox・WebKit                          |
+| 起動中の Chrome への接続             | ◯ `--browser-url`                                | ◯ `--cdp-endpoint`                                 |
+| E2E テストへの流用                   | ✕                                                | ◎                                                  |
+
+### 使い分けの指針
+
+- **デバッグ・調査は Chrome DevTools MCP。** 「ボタンを押すと API が 500 を返す原因を調べて」「コンソールの
+  エラーを見て」「表示が遅い理由を調べて」など、人が DevTools を開いてやる作業を任せるときに使います。
+- **対話的な画面操作は Playwright MCP。** 「このフォームに入力して送信して」「この手順で画面を進めて」など、
+  操作そのものが目的のときに使います。要素をアクセシビリティツリーで指定するので操作が安定します。
+- **シナリオ通りのテストは Playwright（skill）。** 画面仕様に沿った動作確認、visual・accessibility・responsive
+  の確認、Chrome 以外のブラウザでの確認、テストコードへの落とし込みは `dev-webtest` 系 skill
+  （[Web UIをtestする](#web-uiをtestする)）を使います。
+
+### MCP の設定
+
+sandbox からは `config/sbx/mcp.yml` の `chrome-devtools` と `playwright` を sbx mcp（gateway）経由で使います
+（登録は `mise run sandbox:mcp-add`。詳細は [docs/docker-sandboxes.md](./docker-sandboxes.md#mcp-の扱い)）。
+どちらもホストで起動している同じ Chrome に CDP で接続する（`chrome-devtools` は `--browser-url`、`playwright` は
+`--cdp-endpoint` に `http://localhost:9222` を指定）ので、先にホストでデバッグポート付きの Chrome を起動しておきます。
+sandbox へ読み込むときは、作業に合わせて片方だけ指定します（`--static-mcp` / `mise run sandbox:mcp-load`）。
+
+```bash
+# macOS
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-profiles/profile1 > /dev/null 2>&1 &
+```
+
+- `--user-data-dir` を普段のプロファイルと分けておくと、そのプロファイルでログインした状態のまま調査できます。
+- 複数の Chrome を並行して使う場合は 9223 / 9224 で起動し、`config/sbx/mcp.work2.yml.example` を参考に
+  `chrome-devtools-2` / `chrome-devtools-3` を追加します。

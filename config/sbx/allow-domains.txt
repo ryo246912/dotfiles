@@ -19,6 +19,9 @@ fastapi.tiangolo.com
 nextjs.org
 www.npmjs.com
 mise.jdx.dev
+deb.debian.org
+apt.postgresql.org
+mise-java.jdx.dev
 
 # Q&A・技術記事
 stackoverflow.com
