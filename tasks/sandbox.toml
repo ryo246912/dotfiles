@@ -406,7 +406,7 @@ fi
 '''
 
 ["sandbox:mcp-load"]
-description = "Load host-registered MCP servers into a running sandbox, selected with fzf"
+description = "Reset loaded MCP servers in a running sandbox, then load only those selected with fzf (none selected = unload all)"
 run = '''
 set -eu
 
@@ -416,6 +416,8 @@ main() {
   # 使い方: mise run sandbox:mcp-load [sandbox-name]
   # sbx-agent の --static-mcp で読み込まなかった MCP を、起動済みの sandbox へ後から足す。
   # sandbox を省略すると fzf で選び、MCP は fzf で複数選択する（Tab で選択）。
+  # 最初に登録済みの MCP を全て unload してから、選択したものだけを load し直す（sbx 0.48.0 以降）。
+  # MCP を何も選ばずに終了（Esc など）すると、全て unload するだけで終わる（unload 専用コマンドは無い）。
   # 選べるのは sbx mcp ls に登録済みのサーバ（登録は mise run sandbox:mcp-add）。
   for cmd in sbx fzf; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
@@ -435,10 +437,38 @@ main() {
   servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
   [ -n "$servers" ] \
     || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp-add）" >&2; exit 1; }
+  # 何も選ばなかった（Esc / Ctrl-C = 130）場合だけ空選択とみなし、全て unload するだけにする。
+  # それ以外の終了コード（fzf の起動失敗など）は既存の MCP を外さずに中止する
+  rc=0
   names=$(printf '%s\n' "$servers" \
     | fzf --multi --prompt="mcp> " \
-        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）") || exit 130
-  [ -n "$names" ] || exit 130
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択。何も選ばず Esc で全て unload）") || rc=$?
+  if [ "$rc" -eq 130 ]; then
+    names=""
+  elif [ "$rc" -ne 0 ]; then
+    echo "error: fzf が失敗しました（終了コード ${rc}）。MCP は変更していません" >&2
+    exit "$rc"
+  fi
+
+  sbx mcp unload --help >/dev/null 2>&1 \
+    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
+  # 引数で渡された sandbox が無いと全ての unload が失敗してしまうため、先に存在を確かめる
+  sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -Fxq -- "$sandbox" \
+    || { echo "error: sandbox $sandbox がありません（sbx ls）" >&2; exit 1; }
+
+  # 読み込み済みのものだけを列挙する手段が sbx に無いため、登録済みの全サーバを unload する。
+  # 読み込んでいないものは失敗するのが正常なので、失敗は止めずにエラー内容を表示して後で一覧する
+  unload_failed=""
+  for name in $servers; do
+    if err=$(sbx mcp unload "$name" --sandbox "$sandbox" 2>&1); then
+      echo "✅ $name を $sandbox から外しました"
+    else
+      unload_failed="${unload_failed}${unload_failed:+, }$name"
+      echo "ℹ️ $name は外れませんでした（読み込んでいない場合は問題ありません）: $(printf '%s' "$err" | tail -n 1)"
+    fi
+  done
+  [ -z "$unload_failed" ] || echo "ℹ️ unload できなかったもの: ${unload_failed}（上のエラーが「未ロード」以外なら、sandbox に残っている可能性があります）"
+  [ -n "$names" ] || exit 0
 
   failed=""
   for name in $names; do
@@ -450,58 +480,6 @@ main() {
     fi
   done
   [ -z "$failed" ] || { echo "error: 読み込めなかった MCP サーバ: ${failed}" >&2; exit 1; }
-}
-
-main "$@"
-'''
-
-["sandbox:mcp-unload"]
-description = "Unload MCP servers from a running sandbox, selected with fzf"
-run = '''
-set -eu
-
-# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
-# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
-main() {
-  # 使い方: mise run sandbox:mcp-unload [sandbox-name]
-  # sandbox:mcp-load の逆。読み込んだ MCP を sandbox から外し、agent のコンテキストを空ける。
-  # 登録（sbx mcp add）は残るので、また sandbox:mcp-load で読み込める（登録ごと消すなら sbx mcp rm）。
-  # sbx mcp unload は sbx 0.48.0 から。ローカルの sandbox で読み込み済みのサーバだけを一覧する
-  # 手段が sbx に無いため、候補は登録済みの全サーバになる（読み込んでいないものは失敗として出る）。
-  for cmd in sbx fzf; do
-    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
-  done
-  sbx mcp unload --help >/dev/null 2>&1 \
-    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
-
-  sandbox="${1:-}"
-  if [ -z "$sandbox" ]; then
-    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
-    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
-    sandbox=$(printf '%s\n' "$sandboxes" \
-      | fzf --header-lines=1 --prompt="sandbox> " --header="MCP を外す sandbox を選択" \
-      | awk '{ print $1 }') || exit 130
-    [ -n "$sandbox" ] || exit 130
-  fi
-
-  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
-  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
-  [ -n "$servers" ] || { echo "error: 登録済みの MCP サーバがありません" >&2; exit 1; }
-  names=$(printf '%s\n' "$servers" \
-    | fzf --multi --prompt="mcp> " \
-        --header="${sandbox} から外す MCP を選択（Tab で複数選択）") || exit 130
-  [ -n "$names" ] || exit 130
-
-  failed=""
-  for name in $names; do
-    if sbx mcp unload "$name" --sandbox "$sandbox"; then
-      echo "✅ $name を $sandbox から外しました"
-    else
-      failed="${failed}${failed:+, }$name"
-      echo "warn: $name を外せませんでした（読み込んでいない可能性があります）" >&2
-    fi
-  done
-  [ -z "$failed" ] || { echo "error: 外せなかった MCP サーバ: ${failed}" >&2; exit 1; }
 }
 
 main "$@"

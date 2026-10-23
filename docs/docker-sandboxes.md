@@ -30,8 +30,7 @@ sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 | `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
 | `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
 | `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
-| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき             |
-| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                              | 要らなくなったとき           |
+| `sandbox:mcp-load`       | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき             |
 | `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
 | `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
 | `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
@@ -1328,21 +1327,13 @@ export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定で読み込むもの�
 ```
 
 起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
+実行すると、まず fzf で読み込む MCP を選び、その後 sandbox の MCP を全て外し（`sbx mcp unload`。sbx 0.48.0 以降）、選んだものだけを読み込み直します。
+MCP の選択で何も選ばずに終了（Esc）すると、全て外すだけです。sandbox の選択で Esc を押した場合は処理を中止し、MCP は変更しません。unload 専用のタスクはありません。登録（`sbx mcp add`）は残ります。
 sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数選択。sandbox は引数でも指定可）。
 
 ```bash
 mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
-mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ
-```
-
-要らなくなった MCP は `mise run sandbox:mcp-unload` で外せます（`sbx mcp unload`。sbx 0.48.0 以降）。
-登録（`sbx mcp add`）は残るので、また `sandbox:mcp-load` で読み込めます。
-sbx にはローカルの sandbox で読み込み済みのサーバを一覧する手段が無いため、候補は登録済みの全サーバです
-（読み込んでいないものを選ぶと失敗として表示されます）。
-
-```bash
-mise run sandbox:mcp-unload              # sandbox も fzf で選ぶ
-mise run sandbox:mcp-unload my-sandbox   # sandbox を指定して MCP だけ選ぶ
+mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ（MCP 選択で Esc すると全て unload）
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-12T15:03:45.782660+00:00'
+generated_at: '2026-10-22T23:40:51.346472+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1539,8 +1539,8 @@ dependencies:
 - repo_url: vercel-labs/skills
   name: find-skills
   host: github.com
-  resolved_commit: 671e8c320810d36fed80fac5f1a2c1bf7e82d812
-  resolved_ref: v1.7.2
+  resolved_commit: a80e4c9d12d607631249d4d7d059f835d4b2f13a
+  resolved_ref: v1.7.4
   version: unknown
   virtual_path: skills/find-skills
   is_virtual: true
