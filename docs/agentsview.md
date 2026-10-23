@@ -510,49 +510,21 @@ mise run agentsview:cockroach:dump:local
 
 **完了確認:** 全PCがCockroachDBへpushし、Cloud Run viewerとbackup／restoreが成功する。
 
-### AgentsView appの実行基盤はどれを選ぶか
+### Cloud Runの運用
 
-調査日: **2026-09-02**
+AgentsView appはCloud Runで動かす（個人用で常時接続が要らずscale-to-zeroと相性がよく、Fly.ioよりログの検索・保持が扱いやすいため）。
 
-#### 結論
+containerのstdout／stderrはCloud Loggingへ自動送信される。browserを開かずに読むには次を使う。
 
-この用途では、**Cloud Runを継続するのが第一候補**。Fly.ioよりログの検索・絞り込み・保持が扱いやすく、現在の実装をそのまま利用できる。個人用AgentsViewは常時接続を必要とせず、閲覧時だけ起動できるため、Cloud Runのscale-to-zeroと相性がよい。
+```sh
+gcloud run services logs read ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --limit=100
 
-「管理画面の分かりやすさ」を最優先してGoogle Cloud自体を避けたいなら、**Northflank Developer Sandboxを第二候補としてPoC**する。ただしDeveloper Sandboxは本番SLAを期待する基盤ではなく、無料枠やresource planの変更リスクがCloud Runより高い。単純なスペック表だけでNorthflankへ即移行せず、cold start、ログ保持期間、CockroachDBへのlatencyを実測してから決める。
+gcloud beta run services logs tail ryo-agentsview \
+  --project="$GCP_PROJECT_ID" --region="$GCP_REGION"
+```
 
-#### 比較表
-
-無料枠は予告なく変わる。契約・移行直前に各公式Pricingを再確認する。ここでいう「スペック」は無料quotaまたは選択可能resourceの上限であり、専有CPU性能を保証しない。
-
-|  順位 | 基盤                                                                                            | 無料computeの目安                                                                  | ログの使いやすさ                                                                            | AgentsViewとの相性                                                          | 判定                    |
-| ----: | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------- |
-| **1** | [Google Cloud Run](https://cloud.google.com/run/pricing)                                        | 月180,000 vCPU秒、360,000 GiB秒、200万request。現在は1 vCPU／512 MiB、min 0、max 2 | Cloud Run画面、Logs Explorer、CLI tail／read。構造化JSON、severity、request traceで検索可能 | 既存image／Secret Manager／deploy taskを実装済み。scale-to-zero可能         | **採用**                |
-| **2** | [Northflank Developer Sandbox](https://northflank.com/pricing)                                  | Sandbox内のservice／CPU／memory quota。現行consoleで利用可能resource planを要確認  | app、build、deployment、logが一つのproject UIにまとまる                                     | OCI imageとsecretを登録しやすい。無料Sandboxの継続性・SLAは弱い             | **UI重視のPoC候補**     |
-| **3** | [Azure Container Apps Consumption](https://azure.microsoft.com/pricing/details/container-apps/) | Consumptionの月次無料grantは公式Pricingで移行直前に確認                            | Portal／CLIでsystem logとconsole logを分離してlive stream可能                               | scale-to-zeroとsecret対応。Cloud Runから移す利益が小さく、Azure構築が増える | 既にAzureを使う場合のみ |
-| **4** | [Koyeb Free](https://www.koyeb.com/pricing)                                                     | Free instanceは小さいCPU／memory枠。現行instance表を要確認                         | service画面でruntime logを見やすい                                                          | deployは簡単だが、CPU余裕とcold startはCloud Runより不利                    | hobby／検証用           |
-| **5** | [Render Free](https://render.com/docs/free)                                                     | Free web service。idle時のspin-downや月間利用条件あり                              | dashboardからdeploy／runtime logを確認しやすい                                              | 操作は簡単だが、cold startと無料resourceが弱い                              | hobby／fallback         |
-| **6** | Oracle Always Free VM                                                                           | VM quota内ならPaaSより大きいCPU／RAMを取れる場合がある                             | journald、rotation、検索、alertをすべて自分で構築                                           | raw specは強いが、今回避けたい運用・ログ監視負担が最大                      | **不採用**              |
-
-#### Cloud Runを選ぶ理由
-
-1. **ログ監視がFly.ioより明確**: containerのstdout／stderrはCloud Loggingへ自動送信される。Cloud Run service画面で直近ログ、Logs Explorerで期間・severity・revision・文字列を絞り込める。
-2. **CLIでも読める**: browserを開かず、次のcommandで直近ログと追従表示を使える。
-
-   ```sh
-   gcloud run services logs read ryo-agentsview \
-     --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --limit=100
-
-   gcloud beta run services logs tail ryo-agentsview \
-     --project="$GCP_PROJECT_ID" --region="$GCP_REGION"
-   ```
-
-   `logs tail`がcomponent不足を返す場合は、gcloudが案内するlog-streaming componentを追加する。CIでは追従表示を使わず、終了する`logs read`だけを使う。
-
-3. **無料ログ枠に余裕がある**: [Cloud Logging pricing](https://cloud.google.com/logging/pricing)は通常log storageについて最初の50 GiB／project／月を無料とし、30日までの保存をingestion料金に含める。個人用AgentsViewのapp logは通常この規模を大幅に下回る。ただしaudit／network logや同一projectの他serviceも合算して監視する。
-4. **必要時だけ高いresourceを使える**: 無料枠は固定の低spec VMを1か月占有する方式ではなく、request処理中のvCPU秒／GiB秒に充当される。現在の1 vCPU／512 MiBで不足したら、memoryを1 GiBへ上げて実測できる。ただし1 GiBは無料memory秒を2倍消費する。
-5. **既存実装を再利用できる**: build、Secret Manager mount、read-only CockroachDB URL、min 0／max 2、deploy taskが既にこのrepositoryにある。別PaaSへ移るとsecret、domain、health check、logging、rollbackをもう一度検証する必要がある。
-
-#### Cloud Runの弱点と対策
+`logs tail`がcomponent不足を返す場合は、gcloudが案内するlog-streaming componentを追加する。CIでは終了する`logs read`だけを使う。
 
 | 弱点                                               | 対策                                                                                                      |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -578,19 +550,6 @@ severity>=ERROR
 - instance countとbillable instance time
 - Cloud Logging ingestion量
 - CockroachDB RU、storage、connection数
-
-#### Northflankへ変更する判断基準
-
-次をすべて満たす場合だけ、Cloud RunからNorthflankへ移す価値がある。
-
-1. 現行Developer SandboxでAgentsView containerに512 MiB以上を割り当てられる。
-2. idle／sleep後の起動時間がCloud Runより短い、または許容範囲である。
-3. runtime logの保持期間、検索、downloadが必要条件を満たす。
-4. CockroachDB regionへのp95 latencyとegress条件がCloud Run以下である。
-5. 無料枠超過時が自動課金、停止、削除のどれになるか確認した。
-6. `require_auth`、secret file mount相当、read-only DB URL、rollback用旧revisionを再現できる。
-
-NorthflankはUIの分かりやすさでは魅力があるが、今回の目的は「無料・ログ改善・十分なspec・安全な移行」を同時に満たすこと。**現状ではCloud Runのままログ操作をCLI／saved queryへ整備する方が、再移行より低リスク**である。
 
 ### 0. 変更前の安全確認
 
@@ -664,59 +623,18 @@ CockroachDB CloudがConsole／APIで作成するSQL userは初期状態で`admin
 
 このdotfilesリポジトリが引き続き担当するのは、CockroachDBへのdata同期（3節・4節）と、clrndによるCloud Run app deploy（このあと）だけである。基盤のprovisioning・変更手順はinfraリポジトリのrunbookを参照する。
 
-#### 2.0 Terraform resourceの意味
-
-infraリポジトリのTerraformは「永続的な基盤」を管理し、Cloud Run自体のapp deployは管理しない（deployはclrndが行う）。各resourceの役割は次のとおり。
-
-| Terraform resource                                  | コード上の主要設定                              | 作成されるもの／必要な理由                                                                                                                                  |
-| --------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `google_project_service.required`                   | `gcp_apis.tf`のAPI名setを`for_each`             | Cloud Run、Artifact Registry、Cloud Build、Secret Manager、IAM、STS等のGoogle Cloud APIをprojectで有効化する。APIを使う前提条件であり、app revisionではない |
-| `data.google_project.current`                       | `gcp_project_id`からprojectを参照               | project numberを取得し、Cloud Buildで使われ得るGoogle管理service account名を組み立てる。resourceは新規作成しない                                            |
-| `google_artifact_registry_repository.agentsview`    | `us-west2`、Docker format                       | AgentsView container imageを保存するrepository。ECR repositoryに相当する                                                                                    |
-| `google_artifact_registry_repository_iam_member.*`  | runtime=`reader`、Cloud Build／deploy=`writer`  | runtimeはimage pullだけ、build／deploy主体はpushできるよう最小権限を分離する                                                                                |
-| `google_service_account.runtime`                    | `agentsview-runtime`                            | Cloud Run containerが実行時に使うidentity。Secret Managerを読むがdeployはしない。ECS task roleに近い                                                        |
-| `google_secret_manager_secret.pg_url`               | secret containerのみ                            | CockroachDB read-only URLの入れ物。値／versionはTerraformへ入れず別taskで追加する                                                                           |
-| `google_secret_manager_secret.config`               | secret containerのみ                            | `/etc/agentsview/config.toml`としてmountするAgentsView configの入れ物                                                                                       |
-| `google_secret_manager_secret_iam_member.runtime_*` | `secretAccessor`                                | runtimeだけがDB URL／configを読めるようにする                                                                                                               |
-| `cockroach_cluster.agentsview`                      | GCP、Basic、`us-west2`、10 GiB／5,000万RU limit | AgentsView用CockroachDB cluster本体。persistent dataを持つためdelete protectionを有効にする                                                                 |
-| `cockroach_database.agentsview`                     | database名`agentsview`                          | app schemaを格納するlogical database                                                                                                                        |
-| `cockroach_sql_user.owner`                          | owner password                                  | schema bootstrap／migration専用user                                                                                                                         |
-| `cockroach_sql_user.push`                           | push password                                   | 各PCからsessionを送るuser。app viewerとは分離する                                                                                                           |
-| `cockroach_sql_user.read`                           | read password                                   | Cloud Run viewer用user。後続SQLでSELECTだけを付与する                                                                                                       |
-| `google_cloud_run_v2_service_iam_member.public`     | `allUsers` + `roles/run.invoker`                | Cloud Run URLへの未認証到達を許可する。AgentsView自身のbearer認証は別途維持する。clrndはIAMを扱わないため、この1件だけCloud Run側に残す                     |
-
-**deploy用service accountとGitHub Workload Identity連携もこの表にない。** GitHub ActionsからTerraformやCloud Run deployを行っていない（`.github/workflows/`に残るのはAtuinのFly.io deployだけ）ため、`agentsview-deploy` service account、そのproject IAM、`secretVersionAdder`、Workload Identity Pool／Providerはいずれも使われていなかった。使わないidentityを置くと権限の棚卸し対象が増えるだけなので削除した。build・deploy・secret登録はoperator自身の認証情報（`gcloud auth login`）で実行する。将来CIから実行する場合はWIFごと作り直す。
-
-**Cloud Run Service本体(`google_cloud_run_v2_service.agentsview`)はこの表にない。** 2.0.2のとおりclrndが所有するため、Terraformコードから削除した。表に残る`google_cloud_run_v2_service_iam_member.public`だけはCloud Run resourceを参照せず、service名と`local.region`を直接指定するので、Terraform stateはCloud Run Serviceに依存しない。
-
 Cloud Run service名はmanifest・`clrnd.yml`・infraリポジトリのTerraformの3箇所で一致している必要がある。image URIとSecret Managerのversionはclrnd manifest側で解決するため、Terraform変数としては扱わない。Cloud Run URLはTerraform outputではなく`clrnd status`または`gcloud run services describe`から取得する。
 
-#### 2.0.1 ECS + ecspressoに相当するCloud Runの分離
+#### 2.0.1 `clrnd`によるdeploy分離
 
-Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがない。Google管理のregional control plane上に**Service**を作成し、templateを更新するたびにimmutableな**Revision**が作られる。
-
-| AWS                        | Cloud Runで近いもの                                                                    |
-| -------------------------- | -------------------------------------------------------------------------------------- |
-| ECS cluster                | 直接の相当物なし。project、region、API有効化が実行基盤の境界                           |
-| ECR repository             | Artifact Registry repository                                                           |
-| task role／execution role  | Cloud Run runtime service accountとdeploy service account                              |
-| task definition            | Cloud Run Service内のrevision template                                                 |
-| ECS Service                | Cloud Run Service                                                                      |
-| ALB／target group          | Cloud Run管理のHTTPS endpointとtraffic split                                           |
-| ecspresso deploy／rollback | `clrnd deploy`／`clrnd rollback`、または`gcloud run services replace`／traffic command |
-
-したがって採用した分離は、**infraリポジトリのTerraformがAPI、Artifact Registry、runtime service account、Secret Manager、CockroachDBを管理し、clrndがCloud Run Service／Revision／trafficを管理する**形である。Cloud Run Serviceを空の「cluster」としてTerraformで先に作り、後から別toolが同じService templateを管理する構成にはしない。同じresourceをTerraformとclrndの両方が所有すると、次回`terraform apply`がclrndのdeployを差し戻す競合を起こす。
-
-#### 2.0.2 `clrnd`によるdeploy分離（採用済み）
-
-[`masasuzu/clrnd`](https://github.com/masasuzu/clrnd)をv0.5.0でpinして採用し、Cloud Run Serviceのownershipをclrndへ移した。TerraformコードからCloud Run Service resourceを削除済みで、**同じresourceを2つのtoolが所有する状態は作らない**。
+[`masasuzu/clrnd`](https://github.com/masasuzu/clrnd)をv0.5.0でpinして採用し、Cloud Run Serviceのownershipをclrndへ移した。TerraformコードからCloud Run Service resourceを削除済みで、**同じresourceを2つのtoolが所有する状態は作らない**（TerraformとclrndがServiceを両方所有すると、次回`terraform apply`がclrndのdeployを差し戻す）。
 
 | 所有者                         | 対象                                                                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Terraform（`infra`リポジトリ） | Google Cloud API有効化、Artifact Registry、runtime service account、Secret Manager container／IAM、CockroachDB、Cloud Run invoker IAM |
 | clrnd（このリポジトリ）        | Cloud Run Service定義（image、CPU／memory、concurrency、timeout、scaling、環境変数、Secret Manager参照）、Revision、traffic、rollback |
 
-ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
+deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
 
 mise taskは次を追加した。いずれもrepository rootでも、mise dotfiles適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
@@ -752,27 +670,27 @@ ARGS> []--projects resume
 - **image tagはcommitで固定する。** `gcloud builds submit --tag`は同じtagを上書きするため、`agentsview:0.38.1`のような可変tagのままだと、同じURIが時期によって別のartifactを指し、CIが検証したimageと手元deployのimageがずれ得る。taskは`<upstream version>-<commit>`をtagにし、CIでは`GITHUB_SHA`を使う。digestを直接指定する場合は`AGENTSVIEW_IMAGE`で上書きする。
 - **v0系のthird-party tool。** version pinを必ず維持し、bumpするときは`verify`→`diff`→`deploy`→`rollback`をrehearsalしてから上げる。
 
-#### 2.0.3 clrnd manifestの各設定
+#### 2.0.2 clrnd manifestの各設定
 
-`config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
+`config/agentsview/cloudrun-service.yaml`の主な設定。
 
-| manifestの位置                                                          | 値                                                                         | 意味／旧Terraform属性                                                                            |
+| manifestの位置                                                          | 値                                                                         | 意味                                                                                             |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `metadata.name`                                                         | `ryo-agentsview`                                                           | service名。`clrnd.yml`の`service`とTerraformの`local.cloud_run_service_name`に一致させる         |
-| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                      | 旧`ingress = "INGRESS_TRAFFIC_ALL"`                                                              |
-| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                        | 旧`scaling.min_instance_count`。idle時は0まで縮む                                                |
-| 同`maxScale`                                                            | `2`                                                                        | 旧`scaling.max_instance_count`。無料枠を超える暴走を防ぐ                                         |
-| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                     | 旧`resources.cpu_idle = true`                                                                    |
-| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                     | 旧`resources.startup_cpu_boost = true`                                                           |
+| `metadata.name`                                                         | `ryo-agentsview`                                                           | service名。`clrnd.yml`の`service`とinfraリポジトリのTerraformに一致させる                        |
+| `metadata.annotations."run.googleapis.com/ingress"`                     | `all`                                                                      | 外部からの到達を許可する                                                                         |
+| `spec.template.metadata.annotations."autoscaling.knative.dev/minScale"` | `0`                                                                        | idle時は0まで縮む                                                                                |
+| 同`maxScale`                                                            | `2`                                                                        | 無料枠を超える暴走を防ぐ                                                                         |
+| 同`run.googleapis.com/cpu-throttling`                                   | `true`                                                                     | idle時のCPU割り当てを絞る                                                                        |
+| 同`run.googleapis.com/startup-cpu-boost`                                | `true`                                                                     | 起動時にCPUを増やす                                                                              |
 | `spec.template.spec.serviceAccountName`                                 | `{{ must_env "GCP_RUNTIME_SERVICE_ACCOUNT" }}`                             | Terraform outputのruntime service account。deploy権限は持たない                                  |
-| `spec.template.spec.containerConcurrency`                               | `20`                                                                       | 旧`max_instance_request_concurrency`                                                             |
-| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                       | 旧`timeout = "60s"`                                                                              |
-| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                        | 旧`var.agentsview_image`。既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）       |
-| `containers[].ports`                                                    | `http1` / `8080`                                                           | 旧`ports.container_port`                                                                         |
-| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                               | 旧`resources.limits`                                                                             |
-| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`      | 旧`env`ブロックと同じ非secret値                                                                  |
-| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}`  | 旧`value_source.secret_key_ref` + `var.pg_url_secret_version`。read-only CockroachDB URL         |
-| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/etc/agentsview/config.toml` | 旧`volumes.secret` + `volume_mounts` + `var.config_secret_version`                               |
+| `spec.template.spec.containerConcurrency`                               | `20`                                                                       | 1 instanceあたりの同時request数                                                                  |
+| `spec.template.spec.timeoutSeconds`                                     | `60`                                                                       | requestのtimeout                                                                                 |
+| `containers[].image`                                                    | `{{ must_env "AGENTSVIEW_IMAGE" }}`                                        | 既定値は`<upstream version>-<commit>`（例`0.38.1-e310d8af1f32`）                                 |
+| `containers[].ports`                                                    | `http1` / `8080`                                                           | container port                                                                                   |
+| `containers[].resources.limits`                                         | `cpu: "1"` / `memory: 512Mi`                                               | CPU／memoryの上限                                                                                |
+| `containers[].env`                                                      | `PG_SERVE`／`AGENTSVIEW_DISABLE_UPDATE_CHECK`／`AGENTSVIEW_PG_SCHEMA`      | 非secretの環境変数                                                                               |
+| `containers[].env[].valueFrom.secretKeyRef`                             | `agentsview-pg-url` / `{{ must_env "AGENTSVIEW_PG_URL_SECRET_VERSION" }}`  | read-only CockroachDB URL                                                                        |
+| `volumes[].secret`                                                      | `agentsview-config-toml`（version pin付き）→ `/etc/agentsview/config.toml` | config.tomlとしてmountするSecret                                                                 |
 | `spec.traffic`                                                          | `latestRevision: true` / 100%                                              | 最新revisionへ100%。`clrnd rollback`はここをrevision名へpinし、`clrnd traffic --to-latest`で戻す |
 
 manifestはGo templateとして必ずrenderされるため、上記2箇所以外に`{`を2つ並べた表記を書かない。書く必要がある場合はclrnd READMEのescape記法を使う。

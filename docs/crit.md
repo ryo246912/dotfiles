@@ -486,14 +486,3 @@ remoteへの投稿はagentに無条件で任せず、最初は`--dry-run`結果�
 
 stdin patchの確認や、GitHub書き戻しを必要としない一時的なlocal diff reviewでは、difitの軽さが有利です。ただし今回の
 主workflowをdifitへ置き換える理由は薄く、critの補助toolとしても用途が重複します。tool数を減らしたい場合は導入を見送ります。
-
-### 最終判断
-
-| 順位 | tool            | 判断                                                                                             |
-| ---- | --------------- | ------------------------------------------------------------------------------------------------ |
-| 1    | **crit**        | 採用継続。必須条件とGitHub双方向連携を最も明確に満たし、既存devcontainer integrationも利用できる |
-| 2    | **Plannotator** | 高機能な比較候補。PR cockpit・AI review・複数VCSが必要になった時に試験導入する                   |
-| 3    | **difit**       | 軽量viewerとしては良いが、GitHubへのwrite-back不足のため今回の主workflowには採用しない           |
-
-したがって、前回案のようにdifitをcritと並ぶ常設review loopとして追加するのではなく、**現状はcritへ一本化**し、
-Plannotatorは上記の再評価条件が生じた時に検証する方針を推奨します。
