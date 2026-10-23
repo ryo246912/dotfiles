@@ -1,7 +1,33 @@
 lockfile_version: '1'
-generated_at: '2026-10-12T15:03:45.782660+00:00'
+generated_at: '2026-10-23T11:33:14.524832+00:00'
 apm_version: 0.33.0
 dependencies:
+- repo_url: ayghri/i-have-adhd
+  name: i-have-adhd
+  host: github.com
+  resolved_commit: 1ecea1993b7fce257ffbd686c070948b5e07eda6
+  resolved_ref: v0.4.1
+  version: unknown
+  virtual_path: skills/i-have-adhd
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/i-have-adhd
+  - .agents/skills/i-have-adhd/SKILL.md
+  - .agents/skills/i-have-adhd/agents/gemini.toml
+  - .agents/skills/i-have-adhd/agents/openai.yaml
+  - .claude/skills/i-have-adhd
+  - .claude/skills/i-have-adhd/SKILL.md
+  - .claude/skills/i-have-adhd/agents/gemini.toml
+  - .claude/skills/i-have-adhd/agents/openai.yaml
+  deployed_file_hashes:
+    .agents/skills/i-have-adhd/SKILL.md: sha256:88955c019bbb1419ff4b49dbb1f80a867467de6233d7865af2e06a7d7b76c7d3
+    .agents/skills/i-have-adhd/agents/gemini.toml: sha256:5108a6123beb9df24846e0dd3f902c652d18522dfbc56e5762032ea383041c62
+    .agents/skills/i-have-adhd/agents/openai.yaml: sha256:2c51291283dcefdca43ca6b0c08172f225c7c26a9783ec444d6bdfa51ca96f8f
+    .claude/skills/i-have-adhd/SKILL.md: sha256:88955c019bbb1419ff4b49dbb1f80a867467de6233d7865af2e06a7d7b76c7d3
+    .claude/skills/i-have-adhd/agents/gemini.toml: sha256:5108a6123beb9df24846e0dd3f902c652d18522dfbc56e5762032ea383041c62
+    .claude/skills/i-have-adhd/agents/openai.yaml: sha256:2c51291283dcefdca43ca6b0c08172f225c7c26a9783ec444d6bdfa51ca96f8f
+  content_hash: sha256:9eabae642eff3104ecd1be7a1f28881bb84548ffe28159481e684bf2e69c1d71
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
   host: github.com
@@ -3947,6 +3973,42 @@ deployments:
   content_hash: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
 - kind: project-relative
   target: claude
+  value: .claude/skills/i-have-adhd
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/i-have-adhd/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:88955c019bbb1419ff4b49dbb1f80a867467de6233d7865af2e06a7d7b76c7d3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/i-have-adhd/agents/gemini.toml
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:5108a6123beb9df24846e0dd3f902c652d18522dfbc56e5762032ea383041c62
+- kind: project-relative
+  target: claude
+  value: .claude/skills/i-have-adhd/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:2c51291283dcefdca43ca6b0c08172f225c7c26a9783ec444d6bdfa51ca96f8f
+- kind: project-relative
+  target: claude
   value: .claude/skills/ipa-security-check
   runtime: null
   scope: project
@@ -6861,6 +6923,42 @@ deployments:
   - plannotator/effective-html/skills/html
   active_owner: plannotator/effective-html/skills/html
   content_hash: sha256:a01ab662dc268442e94cd84310c06e6585e8b2e540ec729b2e99826df6a2733b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/i-have-adhd
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/i-have-adhd/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:88955c019bbb1419ff4b49dbb1f80a867467de6233d7865af2e06a7d7b76c7d3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/i-have-adhd/agents/gemini.toml
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:5108a6123beb9df24846e0dd3f902c652d18522dfbc56e5762032ea383041c62
+- kind: project-relative
+  target: codex
+  value: .agents/skills/i-have-adhd/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - ayghri/i-have-adhd/skills/i-have-adhd
+  active_owner: ayghri/i-have-adhd/skills/i-have-adhd
+  content_hash: sha256:2c51291283dcefdca43ca6b0c08172f225c7c26a9783ec444d6bdfa51ca96f8f
 - kind: project-relative
   target: codex
   value: .agents/skills/ipa-security-check
