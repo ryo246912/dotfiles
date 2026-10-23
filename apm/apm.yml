@@ -33,8 +33,8 @@ dependencies:
     - plannotator/effective-html/skills/html-plan
     - plannotator/effective-html/skills/html-diagram
     # crit（tomasz-tomczyk/crit プラグイン）。
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.19.1
-    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.19.1
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.23.0
+    - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.23.0
     # v0.4.0 以降の skill/ は生成前の SKILL.template.md のみで APM package として無効なため、
     # SKILL.md を含む v0.3.2 に固定する（Renovate では更新しない）。path 末尾が `skill` なので
     # 配置名を skill 名と揃えるため object 形式 + alias で書く。
