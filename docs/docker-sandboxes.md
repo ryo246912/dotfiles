@@ -1327,13 +1327,13 @@ export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定で読み込むもの�
 ```
 
 起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
-実行すると、まず sandbox の MCP を全て外し（`sbx mcp unload`。sbx 0.48.0 以降）、fzf で選んだものだけを読み込み直します。
-何も選ばずに終了（Esc）すると、全て外すだけです。unload 専用のタスクはありません。登録（`sbx mcp add`）は残ります。
+実行すると、まず fzf で読み込む MCP を選び、その後 sandbox の MCP を全て外し（`sbx mcp unload`。sbx 0.48.0 以降）、選んだものだけを読み込み直します。
+MCP の選択で何も選ばずに終了（Esc）すると、全て外すだけです。sandbox の選択で Esc を押した場合は処理を中止し、MCP は変更しません。unload 専用のタスクはありません。登録（`sbx mcp add`）は残ります。
 sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数選択。sandbox は引数でも指定可）。
 
 ```bash
 mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
-mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ（Esc で全て unload）
+mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ（MCP 選択で Esc すると全て unload）
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
