@@ -33,7 +33,9 @@ REJECT = re.compile(
     r"対応しません|対応しない|見送|不要です|意図(どおり|通り)|仕様です|won't fix|wontfix|not (going to|gonna) fix|by design|intended",
     re.I,
 )
-ADOPT = re.compile(r"Addressed in|修正しました|対応しました|直しました|反映しました|\bfixed\b|\bdone\b", re.I)
+ADOPT = re.compile(r"修正しました|対応しました|直しました|反映しました|\bfixed\b|\bdone\b|\baddressed\b", re.I)
+NOT_YET = re.compile(r"まだ|未対応|後で|あとで|別の? ?PR|not yet|later|follow-?up", re.I)
+ADDRESSED_MARK = re.compile(r"Addressed in", re.I)  # bot が修正 commit を確かめたときに付ける印
 
 QUERY = """
 query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
@@ -44,7 +46,7 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
         pageInfo { hasNextPage endCursor }
         nodes {
           isResolved
-          isOutdated
+          resolvedBy { login }
           path
           comments(first: 100) {
             totalCount
@@ -146,16 +148,33 @@ def classify(me: str, pr_author: str, reviewer: str, team: bool) -> str | None:
 
 
 def adopted(thread: dict, pr_author: str) -> bool:
-    replies = thread["comments"]["nodes"][1:]
-    if any(REJECT.search(r["body"]) for r in replies if (r["author"] or {}).get("login") == pr_author):
+    """PR の作者が受け入れたと読めるものだけを採用とみなす。
+
+    コメントした行が変わっただけ（isOutdated）や、作者以外の「fixed?」のような返信では採用としない。
+    採用とみなすのは、作者が却下していないうえで、次のどれかがあるとき:
+      - bot が修正 commit を確かめた印（Addressed in）がある
+      - 作者が「修正しました」などと返信している（「まだ」「別 PR で」などを含む返信は除く）
+      - 作者か指摘者がスレッドを resolve した
+    """
+    comments = thread["comments"]["nodes"]
+    first, replies = comments[0], comments[1:]
+    reviewer = (first["author"] or {}).get("login")
+    by_author = [r["body"] for r in replies if (r["author"] or {}).get("login") == pr_author]
+    if any(REJECT.search(b) for b in by_author):
         return False
-    return thread["isResolved"] or thread["isOutdated"] or any(ADOPT.search(r["body"]) for r in replies)
+    if any(ADDRESSED_MARK.search(c["body"]) for c in comments):
+        return True
+    if any(ADOPT.search(b) and not NOT_YET.search(b) for b in by_author):
+        return True
+    resolver = (thread.get("resolvedBy") or {}).get("login")
+    return bool(thread["isResolved"]) and resolver in (pr_author, reviewer)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
     args = ap.parse_args()
+    L.check_schema(strict=False)
     args.work.mkdir(parents=True, exist_ok=True)
 
     today = dt.date.today()

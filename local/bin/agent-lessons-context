@@ -14,8 +14,9 @@
 # 失敗してもセッションを止めないよう、どの経路でも exit 0 で終わる。
 set -u
 
-readonly LESSONS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons"
-readonly SYNC_STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/agent-lessons/last-sync"
+# 場所は固定（dotfiles は XDG_* に関係なく ~/.config へ配るため、skill のスクリプトと同じく XDG_* には合わせない）
+readonly LESSONS_DIR="$HOME/.local/share/agent-lessons"
+readonly SYNC_STAMP="$HOME/.local/state/agent-lessons/last-sync"
 
 command -v jq >/dev/null 2>&1 || exit 0
 

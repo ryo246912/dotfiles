@@ -21,7 +21,7 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 - 定期タスクで無人で動くため、ユーザーに質問せずに最後まで進める。判断に迷うものは plan.json の `review` に書く
 
 以下で `<skill>` はこの skill のディレクトリ、`<repo>` は `~/.local/share/agent-lessons`、`<work>` は
-`${XDG_CACHE_HOME:-$HOME/.cache}/agent-lessons/<今日の日付>`（リポジトリの外。commit しない中間ファイルを置く）を指す。
+`~/.cache/agent-lessons/<今日の日付>`（リポジトリの外。commit しない中間ファイルを置く）を指す。
 
 ## 進め方
 
@@ -34,28 +34,26 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 
 ### 段階 0: 前提を確かめる（メイン）
 
-```bash
-cd ~/.local/share/agent-lessons
-mise run lessons:sync
-gh pr list --state open --json url,headRefName \
-  --jq '.[] | select(.headRefName | startswith("weekly/")) | .url'
-```
+1. `cd <repo>` し、`git branch --show-current` が `main` でなければ、前回の実行が途中で止まっている。
+   - そのブランチの PR が出ていれば（`gh pr list --head <ブランチ> --state open`）、`git switch main` だけする
+   - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
+     `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で集め直される）
+2. `mise run lessons:sync` で最新にする
+3. 未マージの週次 PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する（未マージの集計の上に重ねると、
+   同じ指摘を二重に数えるため）
 
-`weekly/` で始まる未マージの PR が残っていたら、**何もせずに終了**し、その PR の URL を報告する
-（未マージの集計の上に重ねると、同じ指摘を二重に数えるため）。
+   ```bash
+   gh pr list --state open --json url,headRefName \
+     --jq '.[] | select(.headRefName | startswith("weekly/")) | .url'
+   ```
 
-続けて、教訓・観察の形式（`schema_version`）が古いものを今の形式へ移行する。移行したら、週次 PR とは分けて main に直接 push する
-（機械的な書き換えで、レビューする中身が無いため）。
-
-```bash
-python3 <skill>/scripts/migrate.py --check || {
-  python3 <skill>/scripts/migrate.py
-  git commit -qam "chore: migrate lessons to the current schema" && git push -q
-}
-```
-
-`migrate.py` が「新しい形式がある」で止まったら、この端末の dotfiles が古い。何もせずに終了し、そのことを報告する。無ければ `git switch -c weekly/$(date +%F)` し、
-`<work>` を作る。
+4. 教訓・観察の形式（`schema_version`）を確かめる。`python3 <skill>/scripts/migrate.py --check` の終了コードで分ける
+   - 0: そのまま進む
+   - 1: 古い形式がある。`python3 <skill>/scripts/migrate.py`、`git commit -qam "chore: migrate lessons to the current schema"`、
+     `git push -q` を順に行う。週次 PR とは分けて main に直接 push する（機械的な書き換えで、レビューする中身が無いため）。
+     どれかが失敗したら、週次のブランチを作らずに終了して報告する
+   - 2: この端末の dotfiles より新しい形式がある。何もせずに終了し、dotfiles の更新が要ると報告する
+5. `git switch -c weekly/$(date +%F)` し、`<work>` を作る
 
 ### 段階 1・2: subagent に任せる（メイン）
 
@@ -68,8 +66,14 @@ Agent ツールで段階ごとに subagent を **1 つずつ順に**起動する
 > 最後に、手順の「終わり方」のとおり 1 行だけ返してください。
 
 - 段階 2 のモデルは、段階 1 が返した `pending`（未処理の観察の数）で決める
-- 段階 1 が `pending: 0` を返したら段階 2 を飛ばし、ブランチを消して（`git switch main && git branch -D weekly/<日付>`）
-  「新しい指摘なし」と報告して終える
+- 段階 1 が `pending: 0` を返したら段階 2 を飛ばす。ブランチを消して（`git switch main && git branch -D weekly/<日付>`）、
+  前回の実行日だけを進めて main に push し、「新しい指摘なし」と報告して終える（進めないと、次回も同じ PR を集め直すため）
+
+  ```bash
+  python3 <skill>/scripts/apply_plan.py --work <work> --state-only   # harvest-state.yml だけを変える
+  git commit -qam "chore: advance harvest state" && git push -q
+  ```
+
 - subagent を使えない環境（Codex など）では、メインが同じ順に手順ファイルを読んで進める
 
 ### 段階 3: PR を出す（メイン）
@@ -77,7 +81,7 @@ Agent ツールで段階ごとに subagent を **1 つずつ順に**起動する
 ```bash
 git add --all
 git diff --cached --no-renames --name-only --diff-filter=ACM -z \
-  | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
+  | xargs -0 -r secretlint --secretlintrc ~/.config/secretlint/secretlintrc.json
 git commit -m "weekly: lessons $(date +%F)"
 git push -u origin HEAD
 gh pr create --title "weekly: lessons $(date +%F)" --body-file <work>/pr-body.md

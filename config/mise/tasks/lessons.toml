@@ -5,7 +5,7 @@
 description = "Clone the private agent-lessons repo and register it as a Basic Memory project"
 run = '''
 set -euo pipefail
-dir="${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons"
+dir="$HOME/.local/share/agent-lessons"
 
 if [ ! -d "$dir/.git" ]; then
   gh repo clone ryo246912/agent-lessons "$dir"
@@ -32,7 +32,7 @@ shell = "bash -c"
 description = "Commit local agent-lessons changes, pull, push, and reindex Basic Memory"
 run = '''
 set -euo pipefail
-dir="${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons"
+dir="$HOME/.local/share/agent-lessons"
 cd "$dir"
 
 branch=$(git branch --show-current)
@@ -44,7 +44,7 @@ fi
 git add --all
 if ! git diff --cached --quiet; then
   git diff --cached --no-renames --name-only --diff-filter=ACM -z \
-    | xargs -0 -r secretlint --secretlintrc "${XDG_CONFIG_HOME:-$HOME/.config}/secretlint/secretlintrc.json"
+    | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
 git pull --rebase --quiet

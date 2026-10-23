@@ -169,6 +169,11 @@ trusted_config_paths = [
 [task_config]
 includes = ["tasks/*.toml"]
 
+# 会社のリポジトリを並べた agent-lessons の収集対象（targets.<name>.yml）は、~/.config に実ファイルとして置くため、
+# mise history（dotfiles-history への同期を含む）に記録しない
+[history]
+exclude = ["~/.config/agent-lessons/targets.*.yml"]
+
 [settings.pipx]
 uvx = true
 

@@ -1,5 +1,6 @@
 # 会社のリポジトリ。この端末でだけ集める。
-# `cp targets.work.yml.example ~/.config/agent-lessons/targets.work.yml` でコピーし、xxx を実際の値に置き換える。
+# `cp ~/dotfiles/config/agent-lessons/targets.work.yml.example ~/.config/agent-lessons/targets.work.yml` でコピーし、
+# xxx を実際の値に置き換える。mise の history には残らない（config/mise/config.toml の [history] exclude）。
 # targets.<name>.yml は gitignore 済みで、lessons-harvest skill が ~/.config/agent-lessons/ の targets.yml と一緒に読む。
 # team: true のリポジトリでは、自分が関わっていない PR の指摘（team）も集める。
 repos:

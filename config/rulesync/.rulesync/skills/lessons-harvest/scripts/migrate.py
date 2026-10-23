@@ -1,10 +1,11 @@
 """agent-lessons の教訓・観察を、今の形式（lessonlib.SCHEMA_VERSION）へ移行する。
 
-    python3 migrate.py --check     # 版ごとの件数を出す。移行が要るなら終了コード 1
+    python3 migrate.py --check     # 版ごとの件数を出す。移行が要るなら終了コード 1、新しい版があれば 2
     python3 migrate.py             # 古い版のファイルを今の版まで順に移行して書き換える
 
 ファイルごとに frontmatter の `schema_version` を見て、MIGRATIONS を版の順に当てる（v0 → v1 → v2 …）。
-同じファイルに何度実行しても結果は変わらない。新しい版のファイル（この dotfiles より新しい形式）は触らずに止める。
+同じファイルに何度実行しても結果は変わらない。新しい版のファイル（この dotfiles より新しい形式）があれば、
+何も書かずに終了コード 2 で止める（呼び出し側が「移行が要る（1）」と区別できるようにするため）。
 
 形式を変えるときの手順:
   1. lessonlib.SCHEMA_VERSION を 1 上げる
@@ -53,7 +54,8 @@ def main() -> int:
     files = {p: L.read(p) for p in L.note_files()}
     versions = Counter(L.version_of(meta) for meta, _ in files.values())
     if any(v > L.SCHEMA_VERSION for v in versions):
-        sys.exit(f"error: schema_version {L.SCHEMA_VERSION} より新しい形式がある。dotfiles を更新する")
+        print(f"error: schema_version {L.SCHEMA_VERSION} より新しい形式がある。dotfiles を更新する", file=sys.stderr)
+        return 2
 
     outdated = {p: mb for p, mb in files.items() if L.version_of(mb[0]) < L.SCHEMA_VERSION}
     summary = {"schema_version": L.SCHEMA_VERSION, "files": {f"v{v}": n for v, n in sorted(versions.items())}}

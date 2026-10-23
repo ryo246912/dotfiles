@@ -8,14 +8,17 @@ Basic Memory が足す `permalink` などの未知のキーもそのまま残す
 from __future__ import annotations
 
 import json
-import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-LESSONS_DIR = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "agent-lessons"
-TARGETS_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "agent-lessons"
+# 場所は固定。dotfiles は config/ を XDG_CONFIG_HOME に関係なく ~/.config へ配るため、XDG_* には合わせない
+LESSONS_DIR = Path.home() / ".local/share/agent-lessons"
+TARGETS_DIR = Path.home() / ".config/agent-lessons"
+SOURCES = ("received", "given", "team")
+_SEG = r"(?!\.\.?(?:/|$))[\w.-]+"  # . と .. は通さない
+SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 
 # 教訓・観察の形式のバージョン。形式を変えたら 1 上げ、migrate.py の MIGRATIONS に前の版からの移行を足す。
 # 書き込むスクリプトは、古い版のファイルが残っていると止まる（混ざった形式に書き足さないため）。
@@ -59,6 +62,20 @@ def _inline_list(text: str) -> list:
     return items
 
 
+def _strip_comment(v: str) -> str:
+    """引用符の外にある ` #` 以降をコメントとして落とす。"""
+    quote = None
+    for i, ch in enumerate(v):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#" and (i == 0 or v[i - 1] in " \t"):
+            return v[:i].strip()
+    return v.strip()
+
+
 def parse(text: str) -> tuple[dict, str]:
     """frontmatter と本文に分ける。frontmatter が無ければ ({}, text)。"""
     m = FRONTMATTER.match(text)
@@ -72,11 +89,11 @@ def parse(text: str) -> tuple[dict, str]:
         if line.lstrip().startswith("- ") and key is not None:
             if not isinstance(meta[key], list):
                 meta[key] = []
-            meta[key].append(_scalar(line.split("- ", 1)[1]))
+            meta[key].append(_scalar(_strip_comment(line.split("- ", 1)[1])))
             continue
         k, _, v = line.partition(":")
         key = k.strip()
-        v = v.split(" #", 1)[0].strip()
+        v = _strip_comment(v)
         meta[key] = _inline_list(v) if v.startswith("[") else _scalar(v)
     return meta, m.group(2)
 
@@ -186,6 +203,12 @@ def scope_keys(cwd: str | os.PathLike = ".") -> list[str]:
     if re.fullmatch(r"[^/]+/[^/]+/[^/]+", slug):
         return ["global", slug.rsplit("/", 1)[0], slug]
     return ["global"]
+
+
+def inside(rel: str, sub: str) -> Path | None:
+    """plan などに書かれた相対パスを、LESSONS_DIR/<sub> の中にあるときだけ絶対パスにする（外を書き換えないため）。"""
+    path = (LESSONS_DIR / rel).resolve()
+    return path if path.is_relative_to((LESSONS_DIR / sub).resolve()) else None
 
 
 def lesson_files() -> list[Path]:

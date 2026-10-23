@@ -81,6 +81,9 @@ cp ~/dotfiles/config/agent-lessons/targets.work.yml.example ~/.config/agent-less
 nvim ~/.config/agent-lessons/targets.work.yml
 ```
 
+`~/.config/agent-lessons/` は mise の history（`dotfiles-history` への同期を含む）が記録する範囲にあるが、
+`targets.*.yml` は `config/mise/config.toml` の `[history] exclude` で記録から外している。
+
 ```yaml
 repos:
   - repo: github.com/acme/api
@@ -97,6 +100,7 @@ repos:
 
 ```markdown
 ---
+schema_version: 1
 title: 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する
 type: lesson
 status: active # candidate / active / enforced / retired
@@ -132,8 +136,9 @@ globs: ["docs/**", "**/*.example"]
 - https://github.com/ryo246912/dotfiles/pull/1613#discussion_r4280582150 (2026-10-15)
 ```
 
-タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。`count` から `since_active` までと
-`repos` は `apply_plan.py` が `## Evidence` から数え直して書くので、手で直さない。
+タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。`count`・`since_active`・`repos` は観察を足すたびに、
+`prs`・`sessions` は `## Evidence` から、team の `reviewers` は `reviewer_hashes` から `apply_plan.py` が更新するので、手で直さない。
+`sessions` はセッション ID が残らないため、訂正の日付ごとに 1 と数える（同じ日の訂正をまとめ、早く昇格させないため）。
 
 ### status と昇格の基準
 
@@ -144,16 +149,16 @@ globs: ["docs/**", "**/*.example"]
 | `enforced`  | lint・hook・テストで強制済み（手で付ける）    | しない |
 | `retired`   | 90 日以上出ていない、または他の教訓に統合した | しない |
 
-| 変更               | 条件                                                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| candidate → active | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner       | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
-| owner → global     | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
+| 変更                       | 条件                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| candidate → active         | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
+| repo → owner               | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
+| owner → global             | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
+| active → retired           | `last_seen` から 90 日                                                                                             |
+| lint / hook への格上げ候補 | active になった後も 2 回以上指摘された                                                                             |
 
 会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
 リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
-| active → retired | `last_seen` から 90 日 |
-| lint / hook への格上げ候補 | active になった後も 2 回以上指摘された |
 
 ### 形式のバージョン（schema_version）
 
@@ -192,6 +197,14 @@ gh repo create agent-lessons --private --add-readme --description "Lessons learn
 
 README だけでよい（`main` ブランチを作るため）。中身は週次の集計と記録で増えていく。
 
+既定のブランチ名は GitHub アカウントの設定に従う。`main` でなければ（`lessons:sync` と SessionStart の同期は `main` を前提に
+している）、setup の前に名前を変える。
+
+```bash
+gh repo view ryo246912/agent-lessons --json defaultBranchRef --jq .defaultBranchRef.name
+gh api -X POST repos/ryo246912/agent-lessons/branches/<今の名前>/rename -f new_name=main   # main でなければ
+```
+
 ### 2. 端末ごとの設定
 
 clone 先は `~/.local/share/agent-lessons`、リポジトリは `ryo246912/agent-lessons`、Basic Memory の project 名は
@@ -219,9 +232,10 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | フォルダ     | `~/.local/share/agent-lessons` |
 | Instructions | `/lessons-harvest を実行して`  |
 
-- 作ったら一度 **Run now** で実行し、`gh` / `git` / `basic-memory` / `secretlint` / `mise run lessons:sync` の
-  権限確認で「常に許可」を選んでおく。以後の週次実行は同じコマンドなら確認なしで通り、許可していないコマンドが
-  出たときだけ止まって承認を待つ（サイドバーの **Scheduled** に残る）
+- 作ったら一度 **Run now** で実行し、`gh` / `git` / `python3` / `basic-memory` / `secretlint` / `mise run lessons:sync` の
+  コマンド実行と、`~/.local/share/agent-lessons`・`~/.cache/agent-lessons` へのファイル編集の権限確認で「常に許可」を
+  選んでおく。以後の週次実行は同じ操作なら確認なしで通り、許可していない操作が出たときだけ止まって承認を待つ
+  （サイドバーの **Scheduled** に残る）
 - 権限モードを Auto にしないのは、分類器がセッション履歴から作った要約の commit・push を止めることがあり、
   3 回続けて止まると確認待ちになって、無人の実行がいつ止まるか読めないため
 - 1 時間おきなど細かくしないのは、集めるのがマージ済みの PR だけで新しい指摘がほとんど無く、前回の週次 PR が
@@ -260,6 +274,7 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 echo '{}' | agent-lessons-context
 
 # 作業中のリポジトリに効く教訓を、Rule と Check 付きで見る（skill と同じ出力）
+# Claude Code の skill は ~/.claude/skills、Codex は ~/.agents/skills に配られる（どちらも同じスクリプト）
 python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --full
 
 # 全教訓の一覧（status を問わない）

@@ -54,13 +54,18 @@ def main() -> int:
             continue
         c = cands.get(o.get("from"), {})
         source = c.get("source") or o["source"]
+        scope_key = c.get("scope_key") or o["scope_key"]
+        # source と scope_key はファイルの置き場所になるので、決まった形だけを通す（inbox の外へ書かないため）
+        if source not in L.SOURCES or not L.SCOPE_KEY.fullmatch(scope_key):
+            errors.append(f"observations[{i}]: source か scope_key が不正: {source} / {scope_key}")
+            continue
         meta = {
             "title": f"{today} {o['rule']}"[:120],
             "type": "lesson_observation",
             "status": "pending",
             "date": today,
             "source": source,
-            "scope_key": c.get("scope_key") or o["scope_key"],
+            "scope_key": scope_key,
             "category": o["category"],
             "evidence": c.get("evidence") or f"session: {o['session']}",
             "globs": o.get("globs") or [],

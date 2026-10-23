@@ -48,6 +48,7 @@ def main() -> int:
                     "source": meta.get("source"),
                     "scope_key": meta.get("scope_key"),
                     "category": meta.get("category"),
+                    **{k: meta.get(k) for k in ("count", "prs", "sessions", "reviewers", "last_seen") if k in meta},
                 }
             )
             continue
