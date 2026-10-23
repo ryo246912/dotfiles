@@ -347,6 +347,44 @@
 
   - `host-env.map` を変えた場合はここでコミットして push する
 
+- [ ] fnox: Bitwarden Secrets Manager の machine account を用意する
+  - `config/fnox/config.toml` の `bws` provider は machine account の access token（`BWS_ACCESS_TOKEN`）で認証する。
+    トークンは age で暗号化して `config/fnox/config.toml` に置いてあるので、machine account の作成は初回だけ、
+    トークンの発行は初回と作り直すとき（期限切れ・漏洩時）だけでよい。2台目以降はどちらも行わず、
+    新しい PC の age 公開鍵を `recipients` に追加し、既存の PC で `fnox reencrypt --provider age` を実行して
+    `BWS_ACCESS_TOKEN` を再暗号化する（[docs/fnox.md の「複数 PC で使う場合」](./fnox.md#複数-pc-で使う場合2台目以降のセットアップ)）。
+    以下の「初回・作り直し時のみ」の手順はスキップし、動作確認だけ行う
+  - （初回・作り直し時のみ）Web 保管庫で machine account を追加し、access token を発行する
+    （トークンの作り直し時は machine account は作り直さず、既存の machine account を開いて 4 だけ行う）
+    1. [Web 保管庫](https://vault.bitwarden.com) にログインし、左上の製品切り替えで **Secrets Manager** を開く
+       （Organization が必要。Password Manager との違いは [docs/bitwarden.md](./bitwarden.md)）
+    2. 左メニューの **Machine accounts** →「**New machine account**」で名前（例: `dotfiles-fnox`）を入れて保存する
+    3. 作成した machine account を開き、**Projects** タブで `config/fnox/config.toml` の
+       `[providers.bws].project_id` の project を追加し、権限を **Can read** にする
+       （project ID は **Projects** 一覧で project を開いた URL か設定画面で確認できる）
+    4. **Access tokens** タブ →「**Create access token**」で名前と有効期限（無期限も可）を決めて作成し、
+       表示されたトークンをコピーする（この画面を閉じると二度と表示されない）
+  - （初回・作り直し時のみ）トークンを age で暗号化して git 管理下の設定に書き込む（hidden prompt に貼り付ける。
+    コマンド引数に渡すと shell history や `ps` に残る）。age 鍵（`~/.config/fnox/age.txt`）と
+    `recipients` が未設定なら先に [docs/fnox.md のセットアップ手順](./fnox.md#1-bitwarden-secrets-manager-bitwarden-sm-provider-bws) を行う
+
+    ```sh
+    FNOX_CONFIG_DIR="$HOME/dotfiles/config/fnox" fnox set --global --provider age BWS_ACCESS_TOKEN
+    git -C ~/dotfiles diff config/fnox/config.toml  # BWS_ACCESS_TOKEN の行だけ変わっていることを確認
+    mise bootstrap dotfiles apply
+    ```
+
+  - 動作確認してからコミットして push する。今のシェルには `BWS_ACCESS_TOKEN` が未設定（作り直したときは古い値）
+    なので、age から復号した値を export してから bws の secret を読む（新しいシェルでは
+    `config/zsh/lazy/mise.zsh` が自動で export する）
+
+    ```sh
+    export BWS_ACCESS_TOKEN="$(fnox get BWS_ACCESS_TOKEN)"
+    fnox get CZ_OPENAI_API_KEY >/dev/null && echo ok  # bws から読めるか
+    ```
+
+  - トークンを作り直したときは、Web 保管庫の **Access tokens** タブで古いトークンを **Revoke** する
+
 - [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
   - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
     git の secret ファイルは上の「git」で用意済み
