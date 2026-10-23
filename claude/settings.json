@@ -172,6 +172,17 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Reviewing with CodeRabbit CLI...",
+            "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review-hook.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review-hook.sh\"; [ -x \"$f\" ] && \"$f\"; exit 0",
+            "timeout": 600
+          }
+        ]
       }
     ],
     "PermissionRequest": [
