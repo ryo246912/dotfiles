@@ -29,6 +29,7 @@ def main() -> int:
     ap.add_argument("--full", action="store_true")
     ap.add_argument("--index", action="store_true")
     args = ap.parse_args()
+    L.check_schema(strict=False)
 
     sources = set(args.source.split(","))
     keys = set(L.scope_keys())

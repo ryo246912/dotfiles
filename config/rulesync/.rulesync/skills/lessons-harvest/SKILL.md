@@ -42,7 +42,19 @@ gh pr list --state open --json url,headRefName \
 ```
 
 `weekly/` で始まる未マージの PR が残っていたら、**何もせずに終了**し、その PR の URL を報告する
-（未マージの集計の上に重ねると、同じ指摘を二重に数えるため）。無ければ `git switch -c weekly/$(date +%F)` し、
+（未マージの集計の上に重ねると、同じ指摘を二重に数えるため）。
+
+続けて、教訓・観察の形式（`schema_version`）が古いものを今の形式へ移行する。移行したら、週次 PR とは分けて main に直接 push する
+（機械的な書き換えで、レビューする中身が無いため）。
+
+```bash
+python3 <skill>/scripts/migrate.py --check || {
+  python3 <skill>/scripts/migrate.py
+  git commit -qam "chore: migrate lessons to the current schema" && git push -q
+}
+```
+
+`migrate.py` が「新しい形式がある」で止まったら、この端末の dotfiles が古い。何もせずに終了し、そのことを報告する。無ければ `git switch -c weekly/$(date +%F)` し、
 `<work>` を作る。
 
 ### 段階 1・2: subagent に任せる（メイン）

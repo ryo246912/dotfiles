@@ -11,10 +11,15 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 LESSONS_DIR = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "agent-lessons"
 TARGETS_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "agent-lessons"
+
+# 教訓・観察の形式のバージョン。形式を変えたら 1 上げ、migrate.py の MIGRATIONS に前の版からの移行を足す。
+# 書き込むスクリプトは、古い版のファイルが残っていると止まる（混ざった形式に書き足さないため）。
+SCHEMA_VERSION = 1
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
 
@@ -101,8 +106,36 @@ def read(path: Path) -> tuple[dict, str]:
 
 
 def write(path: Path, meta: dict, body: str) -> None:
+    """常に今の版として書く。古い版のファイルは check_schema(strict=True) で先に止めておくこと。"""
+    meta = {"schema_version": SCHEMA_VERSION, **{k: v for k, v in meta.items() if k != "schema_version"}}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump(meta, body), encoding="utf-8")
+
+
+def version_of(meta: dict) -> int:
+    """schema_version が無いファイルは版を付ける前の形式（0）。"""
+    return int(meta.get("schema_version") or 0)
+
+
+def note_files() -> list[Path]:
+    return sorted(p for sub in ("inbox", "lessons") for p in (LESSONS_DIR / sub).rglob("*.md"))
+
+
+def check_schema(strict: bool) -> None:
+    """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。"""
+    versions = {p: version_of(read(p)[0]) for p in note_files()}
+    newer = [p for p, v in versions.items() if v > SCHEMA_VERSION]
+    older = [p for p, v in versions.items() if v < SCHEMA_VERSION]
+    if newer:
+        sys.exit(
+            f"error: schema_version {SCHEMA_VERSION} より新しい形式のファイルが {len(newer)} 件ある"
+            f"（例: {newer[0]}）。dotfiles を更新して rulesync で skill を配り直す"
+        )
+    if older:
+        msg = f"schema_version {SCHEMA_VERSION} より古い形式のファイルが {len(older)} 件ある。migrate.py で移行する"
+        if strict:
+            sys.exit(f"error: {msg}")
+        print(f"warning: {msg}", file=sys.stderr)
 
 
 def sections(body: str) -> dict[str, str]:

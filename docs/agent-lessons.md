@@ -155,6 +155,33 @@ globs: ["docs/**", "**/*.example"]
 | active → retired | `last_seen` から 90 日 |
 | lint / hook への格上げ候補 | active になった後も 2 回以上指摘された |
 
+### 形式のバージョン（schema_version）
+
+教訓と観察の frontmatter には、形式のバージョン `schema_version` を入れる（今は `1`）。今の版は
+`lessons-harvest/scripts/lessonlib.py` の `SCHEMA_VERSION` で決まり、スクリプトが書くファイルには常にその値が入る。
+`schema_version` が無いファイルは、版を付ける前の形式（v0）として扱う。
+
+| 状況                            | 動き                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 古い版のファイルがある          | 書き込むスクリプト（`write_observations.py`・`apply_plan.py`）は止まる。`lessons_query.py` は警告だけ出して読む |
+| 新しい版のファイルがある        | どのスクリプトも止まる。その端末の dotfiles が古いので、更新して rulesync で skill を配り直す                   |
+| 週次の集計（`lessons-harvest`） | 段階 0 で `migrate.py` が古い版を今の版まで移行し、週次 PR とは別に main へ push する                           |
+
+形式を変えるときは、次の 3 つを同じ PR で行う。
+
+1. `lessonlib.py` の `SCHEMA_VERSION` を 1 上げる
+2. `migrate.py` の `MIGRATIONS` に「前の版 → 今の版」の関数を足す（frontmatter と本文を受け取り、直したものを返す）。
+   古いファイルは版の順に移行される（v0 → v1 → v2 …）。何度実行しても結果は変わらないように書く
+3. 書き込むスクリプトと `lessons-record` skill の雛形（`schema_version` を含む）を新しい形式にする
+
+手で移行するときは次のとおり。
+
+```bash
+python3 ~/.claude/skills/lessons-harvest/scripts/migrate.py --check   # 版ごとの件数。移行が要るなら終了コード 1
+python3 ~/.claude/skills/lessons-harvest/scripts/migrate.py           # 今の版まで移行する
+mise run lessons:sync
+```
+
 ## セットアップ
 
 ### 1. private リポジトリを作る（最初の 1 回）

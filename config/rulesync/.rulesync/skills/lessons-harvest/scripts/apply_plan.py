@@ -136,6 +136,7 @@ def main() -> int:
         print(json.dumps(items, ensure_ascii=False, separators=(",", ":")))
         return 0
 
+    L.check_schema(strict=True)
     work: Path = args.work
     plan = json.loads((work / "plan.json").read_text())
     today = str(dt.date.today())

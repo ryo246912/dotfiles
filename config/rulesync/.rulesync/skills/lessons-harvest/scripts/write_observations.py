@@ -37,6 +37,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
     args = ap.parse_args()
+    L.check_schema(strict=True)
 
     cands = {c["id"]: c for c in json.loads((args.work / "candidates.json").read_text())["candidates"]}
     obs = json.loads((args.work / "observations.json").read_text())["observations"]
