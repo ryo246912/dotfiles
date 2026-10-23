@@ -519,6 +519,8 @@ add_env AI_AGENT 1
 # claude が xterm-256color を必要とするため TERM を設定する
 add_env TERM xterm-256color
 add_env HOST_USER "${USER:-}"
+# claude.ai 側のコネクタ（組み込み MCP）を自動で読み込ませない。MCP は sbx mcp の gateway 経由だけにする
+add_env ENABLE_CLAUDEAI_MCP_SERVERS false
 # devcontainer 専用の lint hook 設定を使う
 add_env LEFTHOOK_CONFIG lefthook.local.yml
 # lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする

@@ -42,6 +42,16 @@ dependencies:
         - -y
         - mcp-remote@0.14.3
         - https://mcp.ap1.datadoghq.com/v1/mcp?toolsets=core%2Capm%2Cdbm%2Cerror-tracking%2Cddsql&omit_tools=create_datadog_notebook%2Cedit_datadog_notebook%2Cupsert_datadog_dashboard%2Cupdate_datadog_error_tracking_issue%2Cmanage_datadog_error_tracking_issue_comments%2Cddsql_upsert_saved_query
+    # OAuth。初回のみブラウザで認可する
+    - name: slack
+      registry: false
+      transport: http
+      url: https://mcp.slack.com/mcp
+    # OAuth。初回のみブラウザで認可する
+    - name: sentry
+      registry: false
+      transport: http
+      url: https://mcp.sentry.dev/mcp
     - name: metabase
       registry: false
       transport: http
