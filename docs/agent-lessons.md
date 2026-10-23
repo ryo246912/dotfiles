@@ -24,7 +24,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | 役割                     | 担うもの                                                                                 |
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | 保存・同期               | private リポジトリ（`agent-lessons`）を `~/.local/share/agent-lessons` に clone したもの |
-| 検索                     | Basic Memory の project `agent-lessons`（frontmatter のメタデータで絞り込む）            |
+| 検索                     | SessionStart は Basic Memory の project `agent-lessons`、skill は `lessons_query.py`     |
 | その場の記録             | `lessons-record` skill（pr-author-fix と COMMON.md のレビュー対応フローから呼ぶ）        |
 | 週次の収集・昇格         | `lessons-harvest` skill を Claude Desktop のローカル定期タスクで実行                     |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
@@ -106,9 +106,12 @@ category: doc-behavior-drift
 count: 4 # 観察の数
 prs: 3 # 異なる PR の数
 sessions: 0 # ユーザーに訂正された異なるセッションの数
-reviewers: 2 # team のときだけ。異なる指摘者の数（名前は残さない）
+reviewers: 2 # team のときだけ。異なる指摘者の数（名前は残さず reviewer_hashes のハッシュで数える）
 first_seen: 2026-10-14
 last_seen: 2026-10-16
+activated: 2026-10-15 # active になった日
+since_active: 1 # active になった後に指摘された回数（2 以上で格上げ候補）
+repos: [github.com/ryo246912/dotfiles] # 根拠のリポジトリ（global に広げてよいかの判定に使う）
 globs: ["docs/**", "**/*.example"]
 ---
 
@@ -129,7 +132,8 @@ globs: ["docs/**", "**/*.example"]
 - https://github.com/ryo246912/dotfiles/pull/1613#discussion_r4280582150 (2026-10-15)
 ```
 
-タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。
+タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。`count` から `since_active` までと
+`repos` は `apply_plan.py` が `## Evidence` から数え直して書くので、手で直さない。
 
 ### status と昇格の基準
 
@@ -163,21 +167,13 @@ README だけでよい（`main` ブランチを作るため）。中身は週次
 
 ### 2. 端末ごとの設定
 
-既定値を変えるときだけ、端末ローカルのシェル設定（dotfiles に commit しない場所）で環境変数を設定する。
-
-| 環境変数             | 既定値                                           | 用途            |
-| -------------------- | ------------------------------------------------ | --------------- |
-| `AGENT_LESSONS_REPO` | なし（`lessons:setup` で必須）                   | 初回の clone 元 |
-| `AGENT_LESSONS_DIR`  | `${XDG_DATA_HOME:-~/.local/share}/agent-lessons` | clone 先        |
-
-Basic Memory の project 名は `agent-lessons` で固定している。
-
-clone 先を `~/.config` の下にしないこと。mise の track モードが `~/.config` の一部を dotfiles に記録するため
-（[docs/mise.md](mise.md) の track の節）。
+clone 先は `~/.local/share/agent-lessons`、リポジトリは `ryo246912/agent-lessons`、Basic Memory の project 名は
+`agent-lessons` で固定している。clone 先を `~/.config` の下にしないのは、mise の track モードが `~/.config` の一部を
+dotfiles に記録するため（[docs/mise.md](mise.md) の track の節）。
 
 ```bash
 mise install pipx:basic-memory
-AGENT_LESSONS_REPO=ryo246912/agent-lessons mise run lessons:setup
+mise run lessons:setup
 mise --cd "$HOME" run rulesync:generate   # SessionStart hook と skill を配る
 ```
 
@@ -236,12 +232,11 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 # 作業中のリポジトリに効く教訓を見る（SessionStart と同じ出力）
 echo '{}' | agent-lessons-context
 
-# 教訓を探す
-basic-memory tool search-notes --type lesson --status active --project agent-lessons
-basic-memory tool search-notes --type lesson --meta scope_key=github.com/acme --project agent-lessons
+# 作業中のリポジトリに効く教訓を、Rule と Check 付きで見る（skill と同じ出力）
+python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --full
 
-# 1 件読む
-basic-memory tool read-note <permalink> --project agent-lessons
+# 全教訓の一覧（status を問わない）
+python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --index
 
 # 手で編集したあと・他の端末の変更を取り込むとき
 mise run lessons:sync
@@ -267,13 +262,21 @@ mise run lessons:sync
 
 ## なぜこの構成か
 
-- **自作のツールを増やさない。** 保存・検索は Basic Memory、セッション履歴は ctx、配布は rulesync に任せ、
-  自作は skill（手順書）と SessionStart hook の小さなスクリプトだけにした
+- **自作のツールを増やさない。** 保存は git と Basic Memory、セッション履歴は ctx、配布は rulesync に任せ、
+  自作は skill（手順書と、skill に同梱するスクリプト）と SessionStart hook の小さなスクリプトだけにした
 - **SessionStart hook だけ自作した理由。** Basic Memory 標準の `basic-memory hook session-start` は、注入するノートの
   種類が task・decision・session に固定されていて、リポジトリや org で絞れない
 - **MCP ではなく CLI で使う理由。** MCP サーバを登録すると、ツール定義が常にコンテキストを使う。skill から CLI を
   呼べば、使うときだけで済み、Claude Code と Codex で同じ手順になる
 - **採用された指摘だけを数える理由。** bot の誤検知や好みの違いまで数えると、守る必要のない教訓が増える
+- **トークンを抑える作り。** `pr-reviewer-brief` と同じく、週次の集計を段階に分けて `haiku` / `sonnet` の subagent に
+  任せ、メインは段階を呼ぶだけにする。GitHub からの収集・source の分類・採用の判定・重複の除外（`collect.py`）、観察の
+  書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
+  一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
+  （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
+- **skill は教訓を 1 回で引く。** `pr-author-self-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
+  scope・source・変更ファイルの glob に合う教訓だけを Rule・Check 付きで 1 回で出す（Basic Memory で 1 件ずつ
+  read-note しない）。SessionStart で注入するのも教訓のタイトルだけにしている
 - **昇格を PR にする理由。** 提案をファイルに溜めて人が見に行く方式は回らなかった。PR なら普段の通知で届き、
   diff で確認できる
 - **教訓を項目単位で更新する理由。** LLM にファイル全体を書き直させると、根拠や細部が少しずつ失われる

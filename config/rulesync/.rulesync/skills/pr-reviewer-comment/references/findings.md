@@ -2,17 +2,13 @@
 
 pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
-agent-lessons が設定済み（`basic-memory tool list-projects` に `agent-lessons` がある）なら、読む前に過去の指摘から
-観点を引いておく。自分がよく書く指摘（`given`）とチームの規約（`team`）が対象。ここで引いた観点も、下の裏取りを通してから候補にする。
+agent-lessons が設定済み（`~/.local/share/agent-lessons` がある）なら、読む前に過去の指摘から観点を引いておく。
+自分がよく書く指摘（`given`）とチームの規約（`team`）のうち、PR の変更ファイルに関係するものが対象。ここで引いた観点も、
+下の裏取りを通してから候補にする。
 
 ```bash
-filter=$(jq -cn --argjson keys "$(agent-lessons-context --scope-keys)" \
-  '{scope_key: {"$in": $keys}, source: {"$in": ["given", "team"]}}')
-basic-memory tool search-notes --type lesson --status active --filter "$filter" \
-  --project agent-lessons --page-size 100 --json
+python3 <skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source given,team --full --paths <PR の変更ファイル>
 ```
-
-結果の `has_more` が true なら、`--page` を増やして最後まで読む。
 
 diff だけを読まない。変更した関数の呼び出し元・呼び出し先、同じデータを読む別の経路（取得と保存、新旧の API など）、追加されたテストまで読む。`/code-review` を併用してよいが、その出力は**候補**として扱い、下の裏取りを通す。
 

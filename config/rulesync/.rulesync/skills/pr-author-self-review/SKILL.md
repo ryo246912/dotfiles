@@ -11,8 +11,7 @@ targets:
 SessionStart で注入されるのは教訓のタイトルだけ。push の前に、diff に関係する教訓の本文（`## Check`）まで読み、
 同じ指摘を受けないかを確かめる。仕組みの全体は dotfiles の `docs/agent-lessons.md` にある。
 
-`basic-memory` が無い、または agent-lessons が未設定（`basic-memory tool list-projects` に `agent-lessons` が無い）
-なら、何もせずに終了する。
+agent-lessons が未設定（`~/.local/share/agent-lessons` が無い）なら、何もせずに終了する。
 
 ## 1. 対象の差分を決める
 
@@ -26,22 +25,12 @@ git diff "$base"...HEAD
 
 ## 2. 関係する教訓を引く
 
-```bash
-filter=$(jq -cn --argjson keys "$(agent-lessons-context --scope-keys)" \
-  '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
-basic-memory tool search-notes --type lesson --status active --filter "$filter" \
-  --project agent-lessons --page-size 100 --json
-```
-
-結果の `has_more` が true なら、`--page` を増やして最後まで読む。
-
-結果の `permalink` ごとに本文と frontmatter を読む。
+作業中のリポジトリに効く active な教訓のうち、`globs` が空か変更ファイルに一致するものだけを、Rule と Check 付きで
+1 回で出す（教訓を 1 件ずつ読まないため）。
 
 ```bash
-basic-memory tool read-note <permalink> --project agent-lessons --json
+python3 <この skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source received,team --full --paths <1. の変更ファイル>
 ```
-
-`frontmatter.globs` が空か無いものと、`globs` が変更ファイルのどれかに一致するものだけを残す。
 
 ## 3. 突き合わせて直す
 

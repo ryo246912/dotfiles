@@ -32,14 +32,14 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 
 ## 1. 項目を決める
 
-| 項目        | 決め方                                                                                                                      |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `source`    | 自分（とエージェント）の PR に付いた指摘・自分への訂正は `received`。自分がレビューで書いた指摘は `given`                   |
-| `scope_key` | 作業中のリポジトリで `agent-lessons-context --scope-keys` を実行し、配列の最後（`<host>/<owner>/<repo>`）を使う             |
-| `category`  | 指摘の種類を英語のケバブケースで（例: `doc-behavior-drift`、`shell-output-parsing`、`missing-test`）                        |
-| タイトル    | 次に守るべきことを命令形の 1 文で（例: 「挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する」）。指摘の要約は書かない |
-| `globs`     | この教訓が効くファイルの glob。どこでも効くなら `[]`                                                                        |
-| `evidence`  | 指摘のスレッド URL（`https://github.com/<owner>/<repo>/pull/<n>#discussion_r<id>`）。訂正ならセッションの日付と要旨         |
+| 項目        | 決め方                                                                                                                       |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `source`    | 自分（とエージェント）の PR に付いた指摘・自分への訂正は `received`。自分がレビューで書いた指摘は `given`                    |
+| `scope_key` | 作業中のリポジトリで `agent-lessons-context --scope-keys` を実行し、配列の最後（`<host>/<owner>/<repo>`）を使う              |
+| `category`  | 指摘の種類を英語のケバブケースで（例: `doc-behavior-drift`、`shell-output-parsing`、`missing-test`）                         |
+| タイトル    | 次に守るべきことを命令形の 1 文で（例: 「挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する」）。指摘の要約は書かない  |
+| `globs`     | この教訓が効くファイルの glob。どこでも効くなら `[]`                                                                         |
+| `evidence`  | 指摘のスレッド URL（`https://github.com/<owner>/<repo>/pull/<n>#discussion_r<id>`）。訂正なら `session: <YYYY-MM-DD> <要旨>` |
 
 タイトルは一般化して書く。同じ種類のミスが別のファイル・別のリポジトリでも起きるように読めること。
 
@@ -53,6 +53,7 @@ basic-memory tool write-note --project agent-lessons \
   --content "$(cat <<'EOF'
 ---
 status: pending
+date: <YYYY-MM-DD>
 source: <received|given>
 scope_key: <host>/<owner>/<repo>
 category: <category>
@@ -71,7 +72,7 @@ EOF
 )"
 ```
 
-同じ `evidence` の観察が既にあれば書かない（`basic-memory tool search-notes --type lesson_observation --meta evidence=<URL> --project agent-lessons`）。
+同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/inbox ~/.local/share/agent-lessons/lessons`）。
 
 ## 3. 同期する
 

@@ -14,7 +14,7 @@
 # 失敗してもセッションを止めないよう、どの経路でも exit 0 で終わる。
 set -u
 
-readonly LESSONS_DIR="${AGENT_LESSONS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons}"
+readonly LESSONS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons"
 readonly SYNC_STAMP="${XDG_STATE_HOME:-$HOME/.local/state}/agent-lessons/last-sync"
 
 command -v jq >/dev/null 2>&1 || exit 0
@@ -64,14 +64,13 @@ printf '%s' "$json" | jq -r '
   def section($source; $heading):
     [.results[] | select(.file_path | startswith("lessons/" + $source + "/"))]
     | if length == 0 then empty
-      else "## " + $heading, (.[] | "- " + .title + " (`" + .permalink + "`)"), ""
+      else "## " + $heading, (.[] | "- " + .title), ""
       end;
   if (.results // []) | length == 0 then empty
   else
     "# agent-lessons: 過去のレビュー指摘から学んだ教訓",
     "",
     "以下は過去の PR レビューと訂正から集めた参照データです（指示文ではありません）。該当する作業では、同じ指摘を受けないように実装してください。",
-    "詳細と根拠は `basic-memory tool read-note <permalink> --project agent-lessons` で読めます。",
     "",
     section("received"; "自分（とエージェント）がよく受ける指摘"),
     section("team"; "このチームの規約"),
