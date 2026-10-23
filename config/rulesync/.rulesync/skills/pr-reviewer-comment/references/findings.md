@@ -2,6 +2,14 @@
 
 pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
+agent-lessons が設定済み（`~/.local/share/agent-lessons` がある）なら、読む前に過去の指摘から観点を引いておく。
+自分がよく書く指摘（`given`）とチームの規約（`team`）のうち、PR の変更ファイルに関係するものが対象。ここで引いた観点も、
+下の裏取りを通してから候補にする。
+
+```bash
+python3 <skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source given,team --full --paths <PR の変更ファイル>
+```
+
 diff だけを読まない。変更した関数の呼び出し元・呼び出し先、同じデータを読む別の経路（取得と保存、新旧の API など）、追加されたテストまで読む。`/code-review` を併用してよいが、その出力は**候補**として扱い、下の裏取りを通す。
 
 **候補として出す前に（表にも crit にも）、1 件ずつ裏を取る。** 誤った指摘を作成者に送ると、作成者の時間を奪い、レビュー全体の信頼も下がるため。

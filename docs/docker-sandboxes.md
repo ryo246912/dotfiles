@@ -485,9 +485,7 @@ skills = "readonly"
 # 公開ポート（host:sandbox）
 # publish_ports = ["7842:7842"]
 # task root に加えてマウントする workspace（sbx-agent の既定分は書かなくてよい）
-extra_workspaces = [
-  "~/.coderabbit",
-]
+extra_workspaces = ["~/.coderabbit"]
 ```
 
 `backend = "devcontainer"` にすると従来どおり `devcontainer up` / `devcontainer exec` が既定になります。

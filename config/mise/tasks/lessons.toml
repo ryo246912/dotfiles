@@ -1,0 +1,54 @@
+# agent-lessons（PR レビュー指摘から教訓を貯める private リポジトリ）の task。
+# 仕組みと使い方は docs/agent-lessons.md。
+
+["lessons:setup"]
+description = "Clone the private agent-lessons repo and register it as a Basic Memory project"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+
+if [ ! -d "$dir/.git" ]; then
+  gh repo clone ryo246912/agent-lessons "$dir"
+fi
+
+registered=$(basic-memory tool list-projects | jq -r '.projects[]? | select(.name == "agent-lessons") | .path')
+if [ -z "$registered" ]; then
+  basic-memory project add agent-lessons "$dir"
+elif [ "$(realpath "$registered")" != "$(realpath "$dir")" ]; then
+  echo "error: Basic Memory の agent-lessons は $registered を指しています。basic-memory project remove agent-lessons で外してから再実行してください" >&2
+  exit 1
+fi
+
+# 教訓は日本語で書くため、英語専用の既定 embedding model（bge-small-en）は使わず、メタデータと全文検索で引く。
+# 初回の model ダウンロードも不要になる。この設定は project ごとではなく Basic Memory 全体に効く。
+basic-memory config set semantic_search_enabled false
+# バージョンは mise で固定しているため、Basic Memory 自身の自動更新は止める。
+basic-memory config set auto_update false
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"
+
+["lessons:sync"]
+description = "Commit local agent-lessons changes, pull, push, and reindex Basic Memory"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+cd "$dir"
+
+branch=$(git branch --show-current)
+if [ "$branch" != "main" ]; then
+  echo "error: $dir は $branch を checkout しています。main に戻してから実行してください" >&2
+  exit 1
+fi
+
+git add --all
+if ! git diff --cached --quiet; then
+  git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+    | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+  git commit --quiet -m "chore: record lessons from $(hostname -s)"
+fi
+git pull --rebase --quiet
+git push --quiet
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"
