@@ -1,0 +1,48 @@
+#!/bin/bash
+# yomiyasu-md-hook
+#
+# Claude Code の PostToolUse hook（Write|Edit|MultiEdit）から呼ばれ、編集した日本語の Markdown を
+# yomiyasu の lint（表現・書式の検査）にかける。見直し候補（warn 以上）があれば、標準エラーへ出して
+# 終了コード 2 で終わり、Claude に推敲を促す。lint は候補を出すだけで、意味の保持や読みやすさは判定しない。
+#
+# 何もしない条件（いずれも exit 0）:
+#   - YOMIYASU_MD_HOOK=0
+#   - 編集したファイルが .md でない／存在しない／日本語を含まない
+#   - yomiyasu の skill（APM が配布する yomiyasu_lint.py）か python3 が無い
+set -uo pipefail
+
+[ "${YOMIYASU_MD_HOOK:-1}" = "0" ] && exit 0
+command -v jq >/dev/null 2>&1 || exit 0
+command -v python3 >/dev/null 2>&1 || exit 0
+
+file=$(jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
+case "$file" in
+*.md) ;;
+*) exit 0 ;;
+esac
+[ -f "$file" ] || exit 0
+case "$file" in
+*/node_modules/* | */.yomiyasu/* | */.git/*) exit 0 ;;
+esac
+python3 -B -c 'import re, sys; sys.exit(0 if re.search("[\u3040-\u30ff\u4e00-\u9fff]", open(sys.argv[1], encoding="utf-8", errors="ignore").read()) else 1)' \
+	"$file" || exit 0
+
+lint=""
+for dir in "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$HOME/.agents"; do
+	if [ -f "$dir/skills/yomiyasu/scripts/yomiyasu_lint.py" ]; then
+		lint="$dir/skills/yomiyasu/scripts/yomiyasu_lint.py"
+		break
+	fi
+done
+[ -n "$lint" ] || exit 0
+
+output=$(python3 -B "$lint" --fail-on warn "$file" 2>&1)
+status=$?
+[ "$status" -eq 1 ] || exit 0
+
+{
+	echo "yomiyasu: $file に見直し候補があります（候補であり、直すかどうかは文脈で判断してください）。"
+	echo "$output" | head -n 40
+	echo "止めるには YOMIYASU_MD_HOOK=0 を設定します。"
+} >&2
+exit 2

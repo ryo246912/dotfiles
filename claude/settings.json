@@ -228,6 +228,11 @@
           {
             "type": "command",
             "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+          },
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.local/bin/yomiyasu-md-hook\"; [ -x \"$f\" ] || exit 0; exec \"$f\"",
+            "timeout": 30
           }
         ]
       }
