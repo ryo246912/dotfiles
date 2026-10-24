@@ -680,22 +680,12 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 
 - 「保存設定」の手順は上記と同様（**名前**は「Claude-Work3.app」など任意の名前に設定）
 
-- [ ] Markdownファイルのデフォルトアプリ設定
-  - `mise bootstrap dotfiles apply`で`~/.local/bin/md-preview-launcher`を配置する
-  - Automatorを起動し、「新規書類」→「アプリケーション」を選択する
-  - 「シェルスクリプトを実行」をワークフローへ追加し、以下のように設定する
-    - シェル: `/bin/zsh`
-    - 入力の引き渡し方法: 「引数として」
-    - スクリプト:
-
-      ```sh
-      "$HOME/.local/bin/md-preview-launcher" "$@"
-      ```
-
-  - `md-preview-launcher.app`という名前で`~/Applications`へ保存する
+- [ ] Markdownファイルのデフォルトアプリ設定（[Markpad](https://github.com/sftwrdotdev/Markpad)）
+  - `brew-cask:markpad`は`mise bootstrap`でインストール済み（未導入なら`brew install --cask markpad`）
   - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
-  - 「このアプリケーションで開く」から`md-preview-launcher`を選択する
+  - 「このアプリケーションで開く」から`Markpad`を選択する
   - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
+  - ターミナルから開く場合は`open -a Markpad <file>.md`
 
 ### プライベート設定
 
