@@ -763,9 +763,7 @@ Claude Code は task の応答の直後に `{ "taskId": ... }` で `tasks/get` �
   "lastUpdatedAt": "2026-10-22T14:09:41Z",
   "ttlMs": null,
   "result": {
-    "content": [
-      { "type": "text", "text": "Build succeeded: 212 files, 0 warnings" }
-    ]
+    "content": [{ "type": "text", "text": "Build succeeded: 212 files, 0 warnings" }]
   }
 }
 ```
