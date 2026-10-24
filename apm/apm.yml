@@ -22,9 +22,9 @@ dependencies:
   #   Renovate の lockFileMaintenance が定期的に最新 commit へ更新する。
   apm:
     # Plannotatorのreview / annotate / last launcher skills。
-    - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.28.6
+    - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.25
+    - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.25
+    - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.28.25
     # Effective HTMLのartifact作成skills（tag なし）。
     - plannotator/effective-html/skills/html
     - plannotator/effective-html/skills/design-artifact
