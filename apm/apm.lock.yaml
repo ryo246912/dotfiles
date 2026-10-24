@@ -1,12 +1,12 @@
 lockfile_version: '1'
-generated_at: '2026-10-22T23:40:51.346472+00:00'
+generated_at: '2026-10-24T04:41:02.542205+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: f3d8f25033d7ea8860a523205601088e91bbefe2
+  resolved_ref: v0.28.25
   version: unknown
   virtual_path: apps/skills/core/plannotator-annotate
   is_virtual: true
@@ -27,8 +27,8 @@ dependencies:
 - repo_url: backnotprop/plannotator
   name: plannotator-last
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: f3d8f25033d7ea8860a523205601088e91bbefe2
+  resolved_ref: v0.28.25
   version: unknown
   virtual_path: apps/skills/core/plannotator-last
   is_virtual: true
@@ -49,8 +49,8 @@ dependencies:
 - repo_url: backnotprop/plannotator
   name: plannotator-review
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: f3d8f25033d7ea8860a523205601088e91bbefe2
+  resolved_ref: v0.28.25
   version: unknown
   virtual_path: apps/skills/core/plannotator-review
   is_virtual: true
