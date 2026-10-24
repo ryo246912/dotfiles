@@ -96,11 +96,11 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 
 ### hooks（`config/rulesync/.rulesync/hooks.json`）
 
-| ブロック           | 生成先                                | 内容                                                               |
-| ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
-| `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、plannotator、rtk、編集後の formatter / type check 等 |
-| `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
-| `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
+| ブロック           | 生成先                                | 内容                                                                                       |
+| ------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、rtk、編集後の formatter / type check 等（plannotator は APM の plugin hook） |
+| `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator                                   |
+| `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）                          |
 
 `rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
 plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は

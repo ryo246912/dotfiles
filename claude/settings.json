@@ -165,16 +165,6 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "EnterPlanMode",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator improve-context; fi",
-            "timeout": 5
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -183,16 +173,14 @@
             "timeout": 5
           }
         ]
-      }
-    ],
-    "PermissionRequest": [
+      },
       {
-        "matcher": "ExitPlanMode",
+        "matcher": "EnterPlanMode",
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
-            "timeout": 345600
+            "command": "plannotator improve-context",
+            "timeout": 5
           }
         ]
       }
@@ -242,6 +230,18 @@
             "statusMessage": "Tracking ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "plannotator",
+            "timeout": 345600
           }
         ]
       }

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-24T05:20:53.616494+00:00'
+generated_at: '2026-10-24T05:31:40.653333+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: ayghri/i-have-adhd
@@ -26,6 +26,16 @@ dependencies:
     .claude/skills/i-have-adhd/agents/gemini.toml: sha256:5108a6123beb9df24846e0dd3f902c652d18522dfbc56e5762032ea383041c62
     .claude/skills/i-have-adhd/agents/openai.yaml: sha256:2c51291283dcefdca43ca6b0c08172f225c7c26a9783ec444d6bdfa51ca96f8f
   content_hash: sha256:ad001ae7ed425f6df1308da66011a24b0888da0db0fafe42a5ddab7b5748c419
+- repo_url: backnotprop/plannotator
+  name: plannotator
+  host: github.com
+  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
+  resolved_ref: v0.28.6
+  version: 0.28.6
+  virtual_path: apps/hook
+  is_virtual: true
+  package_type: apm_package
+  content_hash: sha256:7f4347c04a8fc34d647470b44ffe709b75b8662c19db4c5c2c4377ce2f372ee7
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
   host: github.com

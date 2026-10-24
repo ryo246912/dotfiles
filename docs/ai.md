@@ -756,8 +756,9 @@ mise --cd "$HOME" run apm:install
   APMでuser scopeへ配布します。
 - APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
   Plannotator用のslash command fileを別途管理しません。
-- Claude Codeのplan review hookはRulesyncのglobal hook、Codexのplan review hookは`~/.codex/hooks.json`で
-  設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
+- Claude Codeのplan review hook（`EnterPlanMode` / `ExitPlanMode`）はAPMの`backnotprop/plannotator/apps/hook`
+  plugin（upstream配布）で設定します。Codexのplan review hook（`Stop`）はRulesyncのglobal hookで設定し、
+  どちらもplan終了時にCLIを呼びます。
 - code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
 
 #### HTML artifactを作成してreviewする

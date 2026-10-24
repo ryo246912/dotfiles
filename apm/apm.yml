@@ -25,6 +25,8 @@ dependencies:
     - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
     - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.6
     - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.28.6
+    # Plannotator の plan review hook（EnterPlanMode / ExitPlanMode）を配布する plugin。
+    - backnotprop/plannotator/apps/hook#v0.28.6
     # Effective HTMLのartifact作成skills（tag なし）。
     - plannotator/effective-html/skills/html
     - plannotator/effective-html/skills/design-artifact
