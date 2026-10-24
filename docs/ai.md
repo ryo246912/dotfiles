@@ -596,7 +596,7 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 - **何に使ったかを見る。** `/usage` で、使用量のうち skill・subagent・MCP が占める割合と、
   long context や cache miss が 10% 以上を占めているかの警告が見られます。`/context` で
   今の会話の中身の内訳が見られます。セッションをまたいだ分析は [codeburn](codeburn.md) /
-  [AgentsView](agentsview.md)。
+  [AgentsView](agentsview.md) / [cclens](#cclens-で無駄を診断する)。
 
 参考: [Manage costs effectively](https://code.claude.com/docs/en/costs) /
 [Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
@@ -1323,6 +1323,66 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## cclens で無駄を診断する
+
+[cclens](https://github.com/lambdalisue/cclens) は、Claude Code のセッション transcript と現在の設定を
+読み取って SQLite に蓄積し、時間・トークン・手間がどこで無駄になっているかを報告する CLI です。
+すべてローカルで完結し、外部には何も送信しません。
+
+導入は `config/mise/config.toml` の `"github:lambdalisue/cclens"` で行っています（GitHub Release のバイナリ）。
+`mise install` で `cclens` が使えるようになります。
+
+### 使い方
+
+まず `doctor` で全体を確認します。
+
+```bash
+cclens doctor                    # 1画面の健康診断（global / project 別の指摘）
+cclens doctor --scope global     # ~/.claude 側の設定だけを対象にする
+cclens doctor --scope project    # 今のプロジェクトの設定だけを対象にする
+```
+
+`doctor` の結果を見て、必要な観点のレポートを開きます。
+
+| コマンド                  | 内容                                                           |
+| ------------------------- | -------------------------------------------------------------- |
+| `cclens waste`            | 無駄になっているトークン・手間                                 |
+| `cclens inventory`        | 設定（skill / agent / MCP など）の棚卸し                       |
+| `cclens overhead`         | 毎回の先頭に載る固定コスト                                     |
+| `cclens usage --by month` | 期間別の使用量                                                 |
+| `cclens failures`         | 失敗したツール呼び出し                                         |
+| `cclens prompts`          | プロンプトの傾向                                               |
+| `cclens stuck`            | 行き詰まったセッション                                         |
+| `cclens sql '<query>'`    | ストアに対する読み取り専用 SQL（stdin からも可）               |
+| `cclens optimize`         | 指摘事項を対話的な `claude` セッションに渡して改善案を作らせる |
+
+共通オプション:
+
+- `--scope global | project | project:<slug>`: 対象にする設定のレイヤーを絞る
+  （`doctor` / `failures` / `waste` / `inventory` / `optimize`）
+- `--format markdown | json`: markdown は PR への貼り付け用、json は機械処理用
+- `--db <path>`: DB ファイルを指定する
+- `--frozen`: ストアを更新せず、今ある内容をそのまま読む
+
+読み取り系のコマンドは実行時に `cclens analyze` を自動で走らせてストアを更新します。
+
+### データの場所
+
+- 設定ディレクトリ: `CLAUDE_CONFIG_DIR`（空でなければ）、なければ `~/.claude`。
+  複数アカウントを使うときは `CLAUDE_CONFIG_DIR=~/.claude-account2 cclens doctor` のようにアカウントごとに実行します。
+- DB: `${XDG_STATE_HOME:-~/.local/state}/cclens/cclens.db`。
+  Claude Code が transcript を削除した後も履歴が残るため、DB は消さないでください。
+- 色は `NO_COLOR` を設定するか、パイプすると無効になります。
+
+### Claude Code plugin（任意）
+
+セッション内から使いたい場合は plugin を入れます。`/cclens:doctor` / `/cclens:optimize` / `/cclens:query` の skill が使えます。
+
+```text
+/plugin marketplace add lambdalisue/cclens
+/plugin install cclens@cclens
+```
 
 ## ブラウザ操作（Chrome DevTools MCP と Playwright）
 
