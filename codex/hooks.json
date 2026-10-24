@@ -11,6 +11,22 @@
           },
           {
             "type": "command",
+            "statusMessage": "Tracking ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "statusMessage": "Checking rule update suggestions",
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
             "timeout": 5
           },
@@ -37,11 +53,63 @@
             "type": "command",
             "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
             "timeout": 345600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "statusMessage": "Reviewing recent transcript for rule updates",
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30
+          },
+          {
+            "statusMessage": "Opening plan in Plannotator",
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+            "timeout": 345600
           },
           {
             "type": "command",
             "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
             "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Loading ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Checking i-have-adhd always-on flag...",
+            "command": "node -e \"(async()=>{const root=process.env.CLAUDE_PLUGIN_ROOT||process.env.PLUGIN_ROOT;if(root)await import(require('node:url').pathToFileURL(require('node:path').join(root,'hooks','always-on.mjs')).href)})().catch(()=>{})\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Loading ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
+            "timeout": 5
           }
         ]
       }
@@ -77,37 +145,6 @@
             "type": "command",
             "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
             "timeout": 2
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "statusMessage": "Loading ponytail mode...",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "statusMessage": "Checking i-have-adhd always-on flag...",
-            "command": "node -e \"(async()=>{const root=process.env.CLAUDE_PLUGIN_ROOT||process.env.PLUGIN_ROOT;if(root)await import(require('node:url').pathToFileURL(require('node:path').join(root,'hooks','always-on.mjs')).href)})().catch(()=>{})\"",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "statusMessage": "Loading ponytail mode...",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
-            "timeout": 5
           }
         ]
       }

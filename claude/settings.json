@@ -126,7 +126,12 @@
             "statusMessage": "Loading ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
             "timeout": 5
-          },
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
           {
             "type": "command",
             "statusMessage": "Checking i-have-adhd always-on flag...",
@@ -137,6 +142,15 @@
       }
     ],
     "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
+            "timeout": 30
+          }
+        ]
+      },
       {
         "hooks": [
           {
@@ -175,22 +189,22 @@
         ]
       },
       {
-        "matcher": "^(Bash|mcp__.*)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
-            "timeout": 10
-          }
-        ]
-      },
-      {
         "matcher": "EnterPlanMode",
         "hooks": [
           {
             "type": "command",
             "command": "plannotator improve-context",
             "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^(Bash|mcp__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+            "timeout": 10
           }
         ]
       }
@@ -218,51 +232,6 @@
         ]
       }
     ],
-    "UserPromptExpansion": [
-      {
-        "matcher": "^(yomiyasu|yomiyasu:yomiyasu)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "statusMessage": "Tracking ponytail mode...",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
     "SubagentStart": [
       {
         "matcher": "*",
@@ -276,6 +245,28 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Tracking ponytail mode...",
+            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PermissionRequest": [
       {
         "matcher": "ExitPlanMode",
@@ -284,6 +275,29 @@
             "type": "command",
             "command": "plannotator",
             "timeout": 345600
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "^(yomiyasu|yomiyasu:yomiyasu)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+            "timeout": 30
           }
         ]
       }
