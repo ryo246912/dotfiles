@@ -34,7 +34,8 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 
 ### 段階 0: 前提を確かめる（メイン）
 
-1. `cd <repo>` し、`git branch --show-current` が `main` でなければ、前回の実行が途中で止まっている。
+1. `cd <repo>` し、`git rev-parse --quiet --verify HEAD` が失敗する（まだ commit が無い）なら `mise run lessons:setup` で
+   初期化する。`git branch --show-current` が `main` でなければ、前回の実行が途中で止まっている。
    - そのブランチの PR が出ていれば（`gh pr list --head <ブランチ> --state open`）、`git switch main` だけする
    - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
      `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で集め直される）

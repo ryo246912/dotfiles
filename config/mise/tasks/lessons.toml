@@ -11,6 +11,16 @@ if [ ! -d "$dir/.git" ]; then
   gh repo clone ryo246912/agent-lessons "$dir"
 fi
 
+# 空のリポジトリ（README なしで作ったもの）を clone したときは、main に最初の commit を作って push する。
+# commit が無いと lessons:sync の pull や週次のブランチ作成ができないため。
+if ! git -C "$dir" rev-parse --quiet --verify HEAD >/dev/null; then
+  git -C "$dir" symbolic-ref HEAD refs/heads/main
+  printf '# agent-lessons\n\nPR レビューの指摘から集めた教訓。仕組みと使い方は dotfiles の docs/agent-lessons.md。\n' >"$dir/README.md"
+  git -C "$dir" add README.md
+  git -C "$dir" commit --quiet -m "chore: initialize agent-lessons"
+  git -C "$dir" push --quiet -u origin main
+fi
+
 registered=$(basic-memory tool list-projects | jq -r '.projects[]? | select(.name == "agent-lessons") | .path')
 if [ -z "$registered" ]; then
   basic-memory project add agent-lessons "$dir"
@@ -35,6 +45,10 @@ set -euo pipefail
 dir="$HOME/.local/share/agent-lessons"
 cd "$dir"
 
+if ! git rev-parse --quiet --verify HEAD >/dev/null; then
+  echo "error: $dir にまだ commit がありません。mise run lessons:setup で初期化してください" >&2
+  exit 1
+fi
 branch=$(git branch --show-current)
 if [ "$branch" != "main" ]; then
   echo "error: $dir は $branch を checkout しています。main に戻してから実行してください" >&2

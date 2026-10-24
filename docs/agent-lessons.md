@@ -192,13 +192,14 @@ mise run lessons:sync
 ### 1. private リポジトリを作る（最初の 1 回）
 
 ```bash
-gh repo create agent-lessons --private --add-readme --description "Lessons learned from PR reviews for coding agents"
+gh repo create agent-lessons --private --description "Lessons learned from PR reviews for coding agents"
 ```
 
-README だけでよい（`main` ブランチを作るため）。中身は週次の集計と記録で増えていく。
+空のままでよい。最初の `lessons:setup` が `main` に README だけの commit を作って push する（`lessons:sync` と SessionStart
+の同期は `main` を前提にしている）。中身は週次の集計と記録で増えていく。
 
-既定のブランチ名は GitHub アカウントの設定に従う。`main` でなければ（`lessons:sync` と SessionStart の同期は `main` を前提に
-している）、setup の前に名前を変える。
+`--add-readme` などで最初から commit がある場合は、既定のブランチが `main` かを確かめ、違えば setup の前に名前を変える
+（既定のブランチ名は GitHub アカウントの設定に従う）。
 
 ```bash
 gh repo view ryo246912/agent-lessons --json defaultBranchRef --jq .defaultBranchRef.name
@@ -217,7 +218,7 @@ mise run lessons:setup
 mise --cd "$HOME" run rulesync:generate   # SessionStart hook と skill を配る
 ```
 
-`lessons:setup` は clone、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
+`lessons:setup` は clone（空のリポジトリなら最初の commit と push も）、Basic Memory への project 登録、設定（日本語の教訓を英語専用の embedding で引かないよう
 semantic search を切る・自動更新を切る）、インデックス作成を行う。この 2 つの設定は Basic Memory 全体に効くため、
 Basic Memory を他の用途でも使っていて semantic search が要るなら、`lessons:setup` のあとで戻す。
 
