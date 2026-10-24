@@ -14,6 +14,10 @@
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+          "timeout": 1
         }
       ],
       "preCompact": [
@@ -27,6 +31,11 @@
           "matcher": "Bash",
           "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
           "timeout": 5
+        },
+        {
+          "matcher": "^(Bash|mcp__.*)$",
+          "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+          "timeout": 10
         }
       ],
       "postToolUse": [
@@ -45,6 +54,25 @@
         {
           "matcher": "Write|Edit|MultiEdit",
           "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
+        }
+      ],
+      "userPromptExpansion": [
+        {
+          "matcher": "^(yomiyasu|yomiyasu:yomiyasu)$",
+          "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+          "timeout": 5
+        }
+      ],
+      "beforeSubmitPrompt": [
+        {
+          "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+          "timeout": 5
+        }
+      ],
+      "stop": [
+        {
+          "command": "s=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host claude-code",
+          "timeout": 30
         }
       ]
     }
@@ -72,6 +100,10 @@
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
           "timeout": 30,
           "statusMessage": "Checking rule update suggestions"
+        },
+        {
+          "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
+          "timeout": 5
         }
       ],
       "stop": [
@@ -84,6 +116,30 @@
           "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
           "timeout": 345600,
           "statusMessage": "Opening plan in Plannotator"
+        },
+        {
+          "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
+          "timeout": 30
+        }
+      ],
+      "preToolUse": [
+        {
+          "matcher": "^Bash$|^mcp__.*",
+          "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
+          "timeout": 10
+        }
+      ],
+      "postToolUse": [
+        {
+          "matcher": "^Bash$",
+          "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
+          "timeout": 10
+        }
+      ],
+      "sessionEnd": [
+        {
+          "command": "s=\"$HOME/.agents/skills/yomiyasu/scripts/yomiyasu_hook.py\"; [ -f \"$s\" ] || exit 0; exec python3 -B \"$s\" --host codex",
+          "timeout": 2
         }
       ]
     }

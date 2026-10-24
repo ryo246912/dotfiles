@@ -102,6 +102,10 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 | `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator                                   |
 | `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）                          |
 
+yomiyasu の hook（`yomiyasu_hook.py`）は upstream が plugin として配布しない任意の hook なので、rulesync で設定する。
+APM が配布した `skills/yomiyasu/scripts/yomiyasu_hook.py` を呼び、無い環境では何もせず終了する。登録した原稿
+（`yomiyasu_check.py start`）にだけ作用する。
+
 `rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
 plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
 各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
