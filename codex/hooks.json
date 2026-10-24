@@ -41,21 +41,16 @@
         "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
+            "statusMessage": "Checking i-have-adhd always-on flag",
+            "type": "command",
+            "command": "f=\"$HOME/.claude/.i-have-adhd-always\"; s=\"$HOME/.agents/skills/i-have-adhd/SKILL.md\"; if [ -f \"$f\" ] && [ -f \"$s\" ]; then echo 'ADHD MODE ACTIVE (always-on). The ruleset below applies to every response. \"stop adhd mode\" turns it off for this session; delete '\"$f\"' to turn always-on off for good.'; awk 'NR==1&&/^---/{h=1;next} h&&/^---/{h=0;next} !h' \"$s\"; fi",
+            "timeout": 30
+          },
+          {
             "type": "command",
             "statusMessage": "Loading ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
             "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "statusMessage": "Checking i-have-adhd always-on flag...",
-            "command": "node -e \"(async()=>{const root=process.env.CLAUDE_PLUGIN_ROOT||process.env.PLUGIN_ROOT;if(root)await import(require('node:url').pathToFileURL(require('node:path').join(root,'hooks','always-on.mjs')).href)})().catch(()=>{})\"",
-            "timeout": 30
           }
         ]
       }

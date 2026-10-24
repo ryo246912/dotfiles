@@ -55,9 +55,9 @@ dependencies:
     - vercel-labs/skills/skills/find-skills#v1.7.2
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
     - DietrichGebert/ponytail#v5.1.0
-    # i-have-adhd は skill に加えて SessionStart hook を配布する plugin package として取り込む。
-    # hook は `~/.claude/.i-have-adhd-always` がある場合だけ ruleset を常時注入する。
-    - ayghri/i-have-adhd#v0.4.1
+    # i-have-adhd: ADHD の読み手向けに出力を整形する skill（`/i-have-adhd` で明示的に起動する）。
+    # 常時 ON の SessionStart hook は plugin 経由ではなく rulesync（config/rulesync/.rulesync/hooks.json）で設定する。
+    - ayghri/i-have-adhd/skills/i-have-adhd#v0.4.1
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
   # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
