@@ -213,9 +213,9 @@ age の秘密鍵は PC ごとに別々に生成するのが基本です（同じ
 
   ```toml
   [providers.bws]
-  type       = "bitwarden-sm"
+  type = "bitwarden-sm"
   project_id = "xxx"
-
+  
   [secrets]
   DATABASE_URL = { provider = "bws", value = "DATABASE_URL" }
   ```

@@ -4,6 +4,7 @@
     "DISABLE_AUTOUPDATER": "1",
     "AI_AGENT": "1"
   },
+  "model": "sonnet",
   "cleanupPeriodDays": 36500,
   "autoCompactWindow": 200000,
   "tui": "default",
