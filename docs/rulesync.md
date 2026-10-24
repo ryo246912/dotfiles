@@ -102,11 +102,6 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 | `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
 | `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
 
-i-have-adhd の常時 ON hook（`sessionStart`）も rulesync で設定している。`~/.claude/.i-have-adhd-always` が
-ある場合だけ、APM が配布した `skills/i-have-adhd/SKILL.md`（frontmatter 除く）を標準出力へ出して
-セッションに注入する。APM では plugin ではなく skill 単体で取り込むので、plugin 側の hook は重複しない。
-常時 ON にするには `touch ~/.claude/.i-have-adhd-always` を実行する。
-
 `rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
 plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
 各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
