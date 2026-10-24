@@ -94,7 +94,11 @@ repos:
 
 `team: true` のリポジトリでは、自分が関わっていない PR の指摘も集める。前回の実行日は agent-lessons リポジトリの
 `harvest-state.yml` にファイル名ごとに持ち、週次 PR がマージされたときだけ進む（PR を閉じれば、その期間はもう一度
-集め直される）。
+集め直される）。初回は直近 90 日から集める。
+
+1 回に集める候補は targets ファイルごとに 150 件まで。PR をマージ日の古い順に日単位で処理し、上限に達したら残りの日は
+次回に回す（`harvest-state.yml` は処理し切った日の翌日まで進む）。初回や、チームの PR が多いリポジトリで溜まった分は、
+週次 PR をマージしたあとに手で `/lessons-harvest` を繰り返せば続きから集まる。
 
 ### 教訓（lessons/）の形式
 
@@ -234,7 +238,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | Instructions | `/lessons-harvest を実行して`  |
 
 - 作ったら一度 **Run now** で実行し、`gh` / `git` / `python3` / `basic-memory` / `secretlint` / `mise run lessons:sync` の
-  コマンド実行と、`~/.local/share/agent-lessons`・`~/.cache/agent-lessons` へのファイル編集の権限確認で「常に許可」を
+  コマンド実行と、`~/.local/share/agent-lessons`・`~/.local/state/agent-lessons` へのファイル編集の権限確認で「常に許可」を
   選んでおく。以後の週次実行は同じ操作なら確認なしで通り、許可していない操作が出たときだけ止まって承認を待つ
   （サイドバーの **Scheduled** に残る）
 - 権限モードを Auto にしないのは、分類器がセッション履歴から作った要約の commit・push を止めることがあり、
@@ -267,6 +271,44 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 - 教訓の文面がおかしければ、その PR の上で直してからマージする
 - 「格上げ候補」に挙がった教訓は、文章では防げていない。対象リポジトリに lint・hook・テストを足し、
   教訓の `status` を `enforced` にして、強制した手段を本文に書く
+
+### 何から教訓を作ったかを確かめる
+
+週次の集計の中間ファイルは、端末ごとに `~/.local/state/agent-lessons/runs/<実行日>/` に残る（commit しない）。
+
+| ファイル                                   | 中身                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `raw/<host>/<owner>/<repo>/<番号>.json`    | GitHub から取ったレビュースレッドの生の応答（PR ごと）                               |
+| `candidates.json`                          | 採用された指摘だけを、source・根拠の URL 付きで、本文を短く削ったもの                |
+| `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                  |
+| `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・why・check）。`.done` はそのバッチを書き終えた印 |
+| `plan.json`                                | 観察をどの教訓に入れたか（attach・create・skip・widen）のモデルの割り当て            |
+| `pr-body.md`                               | 週次 PR の本文                                                                       |
+
+流れは `raw` → `candidates.json`（`collect.py` が採用の判定・分類・重複の除外）→ `batches` →
+`observations`（モデル）→ `inbox/`（`write_observations.py`）→ `plan.json`（モデル）→ `lessons/`（`apply_plan.py` が
+件数・昇格・失効を決める）。教訓の `## Evidence` と観察の `evidence` には元の指摘の URL があり、そこから `raw` や
+GitHub のコメントへ辿れる。
+
+### やり直す
+
+直近の週次の結果がおかしいとき（一般化の文面が悪い、割り当てを間違えた、など）は、同じ候補から作り直せる。
+
+1. agent-lessons を集計前に戻す
+   - 週次 PR が未マージなら、PR を閉じてブランチを消す（`git push origin --delete weekly/<実行日>`）。観察も教訓も
+     そのブランチにしか無いので、main は集計前のまま
+   - マージ済みなら、main でマージ commit を戻して push する（教訓・観察・`harvest-state.yml` がまとめて戻る）
+
+     ```bash
+     cd ~/.local/share/agent-lessons
+     git revert -m 1 <マージ commit> && git push
+     ```
+
+2. `/lessons-harvest redo <実行日>` を実行する。その日の `candidates.json` と `batches/` を使い、GitHub から集め直さずに
+   観察と教訓を書き直す
+
+GitHub から集め直したいとき（採用の判定を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
+消す。`raw/` が残っていれば、その PR は GitHub に問い合わせずに読み直す。
 
 ### 手で操作する
 
@@ -313,7 +355,8 @@ mise run lessons:sync
   呼べば、使うときだけで済み、Claude Code と Codex で同じ手順になる
 - **採用された指摘だけを数える理由。** bot の誤検知や好みの違いまで数えると、守る必要のない教訓が増える
 - **トークンを抑える作り。** `pr-reviewer-brief` と同じく、週次の集計を段階に分けて `haiku` / `sonnet` の subagent に
-  任せ、メインは段階を呼ぶだけにする。GitHub からの収集・source の分類・採用の判定・重複の除外（`collect.py`）、観察の
+  任せ、メインは段階を呼ぶだけにする。観察を書く段階は候補 50 件ずつに分けて subagent を順に起動し、1 回の
+  コンテキストに入る量を一定にする。GitHub からの収集・source の分類・採用の判定・重複の除外（`collect.py`）、観察の
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す

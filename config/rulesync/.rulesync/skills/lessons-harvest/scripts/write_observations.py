@@ -1,11 +1,15 @@
-"""モデルが書いた observations.json を、inbox の観察ノート（type: lesson_observation）にする。
+"""モデルが書いた観察（JSON）を、inbox の観察ノート（type: lesson_observation）にする。
 
-    python3 write_observations.py --work <作業ディレクトリ>
+    python3 write_observations.py --work <作業ディレクトリ> --batch 001        # batches/001.json の候補から書いたもの
+    python3 write_observations.py --work <作業ディレクトリ> --batch sessions   # セッションでの訂正から書いたもの
+
+`<work>/observations/<batch>.json` を読み、成功したら `<work>/observations/<batch>.done` を置く（全バッチが済んだかを
+apply_plan.py が確かめるため。済んでいないバッチがあると前回の実行日を進めない）。
 
 モデルは一般化した文章（rule・why・check）と category・globs だけを書き、source・scope_key・根拠の URL などの
 メタデータは candidates.json からこのスクリプトが埋める（モデルの出力を短くし、書き写しの誤りを防ぐ）。
 
-observations.json の書式:
+`observations/<batch>.json` の書式:
 
     {
       "observations": [
@@ -15,8 +19,8 @@ observations.json の書式:
       ]
     }
 
-`from` は candidates.json の id。セッションでの訂正（PR が無いもの）は `session`・`scope_key`・`source` を書く。
-一般化できない候補は書かない（候補から外すだけでよい）。
+`from` はそのバッチの候補の id。セッションでの訂正（PR が無いもの）は `--batch sessions` で、`session`・`scope_key`・
+`source` を書く。一般化できない候補は書かない（候補から外すだけでよい）。1 件も書かないバッチも `{"observations": []}` を書く。
 """
 
 from __future__ import annotations
@@ -36,17 +40,30 @@ REQUIRED = ("category", "rule", "why", "check")
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
+    ap.add_argument("--batch", required=True, help="001 などのバッチ番号か sessions")
     args = ap.parse_args()
     L.check_schema(strict=True)
+    if not re.fullmatch(r"\d{3}|sessions", args.batch):
+        print(f"--batch が不正: {args.batch}", file=sys.stderr)
+        return 1
 
-    cands = {c["id"]: c for c in json.loads((args.work / "candidates.json").read_text())["candidates"]}
-    obs = json.loads((args.work / "observations.json").read_text())["observations"]
+    done = args.work / "observations" / f"{args.batch}.done"
+    if done.is_file():
+        print(f"バッチ {args.batch} は書き出し済み（二重に書かないため止める）", file=sys.stderr)
+        return 1
+    cands = {}
+    if args.batch != "sessions":
+        ids = {c["id"] for c in json.loads((args.work / "batches" / f"{args.batch}.json").read_text())["candidates"]}
+        cands = {
+            c["id"]: c for c in json.loads((args.work / "candidates.json").read_text())["candidates"] if c["id"] in ids
+        }
+    obs = json.loads((args.work / "observations" / f"{args.batch}.json").read_text())["observations"]
     today = str(dt.date.today())
     errors, notes = [], []
     for i, o in enumerate(obs):
         missing = [k for k in REQUIRED if not o.get(k)]
         if "from" in o and o["from"] not in cands:
-            missing.append(f"from={o['from']} が candidates.json に無い")
+            missing.append(f"from={o['from']} がバッチ {args.batch} に無い")
         if "from" not in o and not all(o.get(k) for k in ("session", "scope_key", "source")):
             missing.append("from か session・scope_key・source")
         if missing:
@@ -74,7 +91,7 @@ def main() -> int:
             meta["reviewer_hash"] = c["reviewer_hash"]
         body = f"\n## Rule\n{o['rule']}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
         slug = re.sub(r"[^\w-]+", "-", o.get("from") or o["category"]).strip("-")
-        notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{i:03d}.md", meta, body))
+        notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md", meta, body))
 
     # 1 件でも誤りがあれば何も書かない（直して再実行したときに二重に書かないため）
     if errors:
@@ -82,7 +99,8 @@ def main() -> int:
         return 1
     for path, meta, body in notes:
         L.write(path, meta, body)
-    print(json.dumps({"written": len(notes)}))
+    done.touch()
+    print(json.dumps({"batch": args.batch, "written": len(notes)}))
     return 0
 
 

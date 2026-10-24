@@ -5,7 +5,13 @@
 `~/.config/agent-lessons/targets.yml` と `targets.*.yml` を読み、`harvest-state.yml` の日付（無ければ 90 日前）
 から今日までにマージされた PR のレビュースレッドを取る。指摘者と PR の作者から source（received / given / team）を
 決め、採用されたものだけを、本文を短く削って `<work>/candidates.json` に書く。既に記録済みの指摘（inbox・lessons の
-根拠にある URL）は除く。モデルが読むのはこの JSON だけにして、GitHub の生の応答をコンテキストに入れない。
+根拠にある URL）は除く。
+
+- 1 回に集める候補は targets ファイルごとに MAX_CANDIDATES 件まで。PR をマージ日の古い順に日単位で処理し、上限に
+  達したら残りの日は次回に回す（`next` に次回の開始日を書く。初回や久しぶりの実行で大量に溜まっていても溢れない）
+- モデルには `<work>/batches/<NNN>.json`（BATCH_SIZE 件ずつ、判断に要る項目だけ）を 1 つずつ渡す。GitHub の生の応答は
+  `<work>/raw/<host>/<owner>/<repo>/<番号>.json` に残し（あとで確かめる・集め直すため）、コンテキストには入れない。
+  同じ作業ディレクトリで再実行したときは、raw にある PR を GitHub から取り直さない
 
 最後に 1 行の要約（JSON）を stdout に出す。
 """
@@ -15,6 +21,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import itertools
 import json
 import re
 import subprocess
@@ -24,6 +31,8 @@ from pathlib import Path
 import lessonlib as L
 
 PR_LIMIT = 1000
+MAX_CANDIDATES = 150
+BATCH_SIZE = 50
 DEFAULT_DAYS = 90
 MAX_COMMENTS = 100
 BODY_CHARS = 500
@@ -108,7 +117,7 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
     """期間内にマージされた PR。上限に当たったら期間を半分に分けて取り直す。"""
     search = f"merged:{since}..{until} {qualifier}".strip()
     prs = gh("pr", "list", "-R", f"{host}/{repo}", "--state", "merged", "--search", search,
-             "--limit", str(PR_LIMIT), "--json", "number,author,url")  # fmt: skip
+             "--limit", str(PR_LIMIT), "--json", "number,mergedAt")  # fmt: skip
     if len(prs) < PR_LIMIT or since >= until:
         if len(prs) >= PR_LIMIT:
             print(f"warning: {repo} {since} で {PR_LIMIT} 件を超えた。残りは取れていない", file=sys.stderr)
@@ -119,9 +128,15 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
     )
 
 
-def threads(host: str, owner: str, name: str, number: int) -> tuple[str, list[dict]]:
-    pages = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
-               "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={QUERY}")  # fmt: skip
+def threads(raw: Path, host: str, owner: str, name: str, number: int) -> tuple[str, list[dict]]:
+    path = raw / host / owner / name / f"{number}.json"
+    if path.is_file():
+        pages = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        pages = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
+                   "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={QUERY}")  # fmt: skip
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
     author = pages[0]["data"]["repository"]["pullRequest"]["author"]["login"]
     nodes = [n for p in pages for n in p["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]]
     return author, nodes
@@ -184,21 +199,37 @@ def main() -> int:
     personal: list[str] = []
     candidates: list[dict] = []
     targets_read: dict[str, str] = {}
+    next_since: dict[str, str] = {}
+    left: dict[str, int] = {}
 
     for fname, conf in read_targets():
         since = dt.date.fromisoformat(state[fname]) if fname in state else today - dt.timedelta(days=DEFAULT_DAYS)
         targets_read[fname] = str(since)
+        next_since[fname] = str(today)
+        prs: dict[tuple[str, int], tuple[str, dict]] = {}
         for t in conf["repos"]:
-            host, owner, name = t["repo"].split("/")
+            host = t["repo"].split("/")[0]
             if fname == "targets.yml":
                 personal.append(t["repo"])
             if host not in logins:
                 logins[host] = gh("api", "user", "--hostname", host)["login"]
-            me = logins[host]
             quals = [""] if t["team"] else ["author:@me", "reviewed-by:@me"]
-            numbers = {p["number"] for q in quals for p in list_prs(host, f"{owner}/{name}", since, today, q)}
-            for number in sorted(numbers):
-                pr_author, nodes = threads(host, owner, name, number)
+            for q in quals:
+                for p in list_prs(host, t["repo"].split("/", 1)[1], since, today, q):
+                    prs[(t["repo"], p["number"])] = (p["mergedAt"][:10], t)
+
+        count = 0
+        ordered = sorted(prs.items(), key=lambda kv: (kv[1][0], kv[0]))
+        for day, group in itertools.groupby(ordered, key=lambda kv: kv[1][0]):
+            # 日の途中では止めない（次回はその日から集めるので、途中で止めると同じ日の PR を二重に集める）
+            if count >= MAX_CANDIDATES:
+                next_since[fname] = day
+                left[fname] = sum(1 for _, (d, _) in ordered if d >= day)
+                break
+            for (repo, number), (_, t) in group:
+                host, owner, name = repo.split("/")
+                me = logins[host]
+                pr_author, nodes = threads(args.work / "raw", host, owner, name, number)
                 for th in nodes:
                     comments = th["comments"]
                     if comments["totalCount"] > MAX_COMMENTS or not comments["nodes"]:
@@ -209,11 +240,12 @@ def main() -> int:
                     if not source or first["url"] in seen or not adopted(th, pr_author):
                         continue
                     last = comments["nodes"][-1] if len(comments["nodes"]) > 1 else None
+                    count += 1
                     candidates.append(
                         {
-                            "id": f"c{len(candidates) + 1:03d}",
+                            "id": f"c{len(candidates) + 1:04d}",
                             "source": source,
-                            "scope_key": t["repo"],
+                            "scope_key": repo,
                             "targets_file": fname,
                             "evidence": first["url"],
                             "path": th["path"],
@@ -224,14 +256,33 @@ def main() -> int:
                         }
                     )
 
-    result = {"until": str(today), "targets": targets_read, "personal_repos": personal, "candidates": candidates}
+    # モデルに渡すのは判断に要る項目だけ（根拠の URL・指摘者の hash などは write_observations.py が埋める）
+    batches = [candidates[i : i + BATCH_SIZE] for i in range(0, len(candidates), BATCH_SIZE)]
+    (args.work / "batches").mkdir(exist_ok=True)
+    for old in (args.work / "batches").glob("*.json"):
+        old.unlink()  # 集め直したときに、前回の余ったバッチを残さない
+    for i, batch in enumerate(batches, 1):
+        slim = [
+            {k: c[k] for k in ("id", "source", "scope_key", "path", "reviewer", "comment", "last_reply")} for c in batch
+        ]
+        (args.work / "batches" / f"{i:03d}.json").write_text(
+            json.dumps({"candidates": slim}, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+
+    result = {
+        "until": str(today),
+        "targets": targets_read,
+        "next": next_since,
+        "batches": len(batches),
+        "personal_repos": personal,
+        "candidates": candidates,
+    }
     (args.work / "candidates.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
     by_source: dict[str, int] = {}
     for c in candidates:
         by_source[c["source"]] = by_source.get(c["source"], 0) + 1
-    print(
-        json.dumps({"candidates": len(candidates), "by_source": by_source, "targets": targets_read}, ensure_ascii=False)
-    )
+    summary = {"candidates": len(candidates), "batches": len(batches), "by_source": by_source, "left_prs": left}
+    print(json.dumps(summary, ensure_ascii=False))
     return 0
 
 

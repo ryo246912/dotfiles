@@ -161,8 +161,14 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     return errors
 
 
+def unfinished(work: Path) -> list[str]:
+    """観察を書き終えていないバッチ（write_observations.py が .done を置いていないもの）。"""
+    names = [p.stem for p in sorted((work / "batches").glob("*.json"))] + ["sessions"]
+    return [n for n in names if not (work / "observations" / f"{n}.done").is_file()]
+
+
 def advance_state(work: Path) -> None:
-    """collect.py が読んだ targets ファイルの前回の実行日を、今回の収集日に進める。"""
+    """collect.py が読んだ targets ファイルの前回の実行日を、次回の開始日（上限で持ち越した分があればその日）に進める。"""
     collect = work / "candidates.json"
     if not collect.is_file():
         return
@@ -174,7 +180,7 @@ def advance_state(work: Path) -> None:
             k, _, v = line.partition(":")
             if v.strip():
                 state[k.strip()] = v.strip()
-    state.update({f: data["until"] for f in data["targets"]})
+    state.update({f: data.get("next", {}).get(f, data["until"]) for f in data["targets"]})
     state_path.write_text("".join(f"{k}: {v}\n" for k, v in sorted(state.items())))
 
 
@@ -191,6 +197,13 @@ def main() -> int:
     ap.add_argument("--work", type=Path)
     ap.add_argument("--state-only", action="store_true")
     args = ap.parse_args()
+
+    if args.work and not args.list:
+        # 観察を書いていないバッチが残ったまま日付を進めると、その候補は二度と集まらない
+        left = unfinished(args.work)
+        if left:
+            print(f"観察を書き終えていないバッチがある: {', '.join(left)}", file=sys.stderr)
+            return 1
 
     if args.state_only:
         # 新しい指摘が無い週。教訓には触れず、次回に同じ PR を集め直さないよう前回の実行日だけ進める

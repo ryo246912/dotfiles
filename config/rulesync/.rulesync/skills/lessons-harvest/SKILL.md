@@ -21,18 +21,24 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 - 定期タスクで無人で動くため、ユーザーに質問せずに最後まで進める。判断に迷うものは plan.json の `review` に書く
 
 以下で `<skill>` はこの skill のディレクトリ、`<repo>` は `~/.local/share/agent-lessons`、`<work>` は
-`~/.cache/agent-lessons/<今日の日付>`（リポジトリの外。commit しない中間ファイルを置く）を指す。
+`~/.local/state/agent-lessons/runs/<今日の日付>`（リポジトリの外。commit しない中間ファイルと GitHub の生の応答を置き、
+あとで確かめたりやり直したりできるよう消さずに残す）を指す。
+
+引数に `redo <日付>` が付いていたら、その日の実行のやり直し（agent-lessons を集計前に戻すのはユーザーが済ませている。
+dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をその日のディレクトリにし、段階 0 の 5 の前に
+`rm -rf <work>/observations <work>/plan.json <work>/pr-body.md` で前回の出力を消す。`candidates.json` が残っていれば
+収集は飛ばされ、同じ候補から書き直す。
 
 ## 進め方
 
-| 段階 | 担当                                                       | 読む手順                    | 作るもの                                      |
-| ---- | ---------------------------------------------------------- | --------------------------- | --------------------------------------------- |
-| 0    | メイン                                                     | この SKILL.md               | `<work>`                                      |
-| 1    | subagent（`haiku`）                                        | `references/collect.md`     | `candidates.json`・`observations.json`・inbox |
-| 2    | subagent（`sonnet`。未処理の観察が 20 件以下なら `haiku`） | `references/consolidate.md` | `plan.json`・教訓の更新・`pr-body.md`         |
-| 3    | メイン                                                     | この SKILL.md               | 週次 PR                                       |
+| 段階 | 担当                                                       | 読む手順                    | 作るもの                                          |
+| ---- | ---------------------------------------------------------- | --------------------------- | ------------------------------------------------- |
+| 0    | メイン                                                     | この SKILL.md               | `<work>`・`candidates.json`・`batches/<NNN>.json` |
+| 1    | subagent（`haiku`）をバッチごとに 1 つ                     | `references/observe.md`     | `observations/<NNN>.json`・inbox                  |
+| 2    | subagent（`sonnet`。未処理の観察が 20 件以下なら `haiku`） | `references/consolidate.md` | `plan.json`・教訓の更新・`pr-body.md`             |
+| 3    | メイン                                                     | この SKILL.md               | 週次 PR                                           |
 
-### 段階 0: 前提を確かめる（メイン）
+### 段階 0: 前提を確かめて候補を集める（メイン）
 
 1. `cd <repo>` し、`git rev-parse --quiet --verify HEAD` が失敗する（まだ commit が無い）なら `mise run lessons:setup` で
    初期化する。`git branch --show-current` が `main` でなければ、前回の実行が途中で止まっている。
@@ -54,26 +60,38 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
      `git push -q` を順に行う。週次 PR とは分けて main に直接 push する（機械的な書き換えで、レビューする中身が無いため）。
      どれかが失敗したら、週次のブランチを作らずに終了して報告する
    - 2: この端末の dotfiles より新しい形式がある。何もせずに終了し、dotfiles の更新が要ると報告する
-5. `git switch -c weekly/$(date +%F)` し、`<work>` を作る
+5. `git switch -c weekly/$(date +%F)` し、候補を集める。`<work>/candidates.json` が既にあれば（同じ日の再実行・`redo`）
+   集め直さずにそれを使う
+
+   ```bash
+   python3 <skill>/scripts/collect.py --work <work>
+   ```
+
+   1 行の要約（候補数・バッチ数・持ち越した PR の数 `left_prs`）だけを読む。候補の中身はメインで読まない。
+   候補は 1 回に targets ファイルごとに 150 件までで、超えた分は次回に回る（初回や久しぶりの実行でも溢れない）
 
 ### 段階 1・2: subagent に任せる（メイン）
 
-Agent ツールで段階ごとに subagent を **1 つずつ順に**起動する（フォアグラウンド）。依頼文は次の形にし、候補や教訓の
-中身はメインで読まない。
+Agent ツールで subagent を **1 つずつ順に**起動する（フォアグラウンド）。段階 1 は `batches/` の各バッチ（`001`・`002`…）と、
+最後に `sessions`（セッションでの訂正）について 1 つずつ起動する。依頼文は次の形にする。
 
 > `<skill>/references/<手順ファイル>` を読み、その手順で進めてください。
-> skill のディレクトリ: `<skill>` / 作業ディレクトリ: `<work>`
+> skill のディレクトリ: `<skill>` / 作業ディレクトリ: `<work>` / バッチ: `<NNN か sessions>`（段階 1 のみ）
 > 定期タスクから呼ばれています。ユーザーに質問せず、決められないことは `review` に書いてください。
 > 最後に、手順の「終わり方」のとおり 1 行だけ返してください。
 
-- 段階 2 のモデルは、段階 1 が返した `pending`（未処理の観察の数）で決める
-- 段階 1 が `pending: 0` を返したら段階 2 を飛ばす。ブランチを消して（`git switch main && git branch -D weekly/<日付>`）、
-  前回の実行日だけを進めて main に push し、「新しい指摘なし」と報告して終える（進めないと、次回も同じ PR を集め直すため）
+- 段階 1 がすべて終わったら、`python3 <skill>/scripts/apply_plan.py --list` の件数（未処理の観察の数）を数え、
+  段階 2 のモデルを決める
+- 0 件なら段階 2 を飛ばす。ブランチを消して（`git switch main && git branch -D weekly/<日付>`）、前回の実行日だけを
+  進めて main に push し、「新しい指摘なし」と報告して終える（進めないと、次回も同じ PR を集め直すため）
 
   ```bash
   python3 <skill>/scripts/apply_plan.py --work <work> --state-only   # harvest-state.yml だけを変える
   git commit -qam "chore: advance harvest state" && git push -q
   ```
+
+  観察を書き終えていないバッチがあると、`apply_plan.py` はエラーで止まり日付を進めない。そのバッチの段階 1 をやり直す
+  （subagent の報告だけを信じて進めると、書いていない候補が二度と集まらなくなるため）
 
 - subagent を使えない環境（Codex など）では、メインが同じ順に手順ファイルを読んで進める
 
@@ -91,4 +109,5 @@ basic-memory reindex --search -p agent-lessons
 ```
 
 secretlint で止まったら、該当する観察・教訓の文面を直してから続ける。最後に PR の URL と、`pr-body.md` の見出しごとの
-件数をユーザーに報告する。
+件数をユーザーに報告する。`left_prs` があれば、持ち越した PR の数と、週次 PR をマージしたあとにもう一度実行すれば
+続きを集められることも報告する。
