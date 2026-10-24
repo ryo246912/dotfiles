@@ -602,6 +602,190 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 [Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
 [How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
+## MCP tasks（長時間ジョブをバックグラウンドで走らせる）
+
+MCP task は、レポートのエクスポートやビルドのような**長時間のジョブを MCP server 側が自分で実行する**仕組みです
+（[MCP tasks extension](https://modelcontextprotocol.io/extensions/tasks/overview)）。
+server がジョブを受け付けた時点で Claude のツール呼び出しは返るので、Claude は結果を待たずに作業を続けます。
+終了するとトランスクリプトに通知が出て、結果は Claude に渡されます。
+
+- 実行中はフッターに `1 MCP task` のように件数が出て、`/tasks` で一覧できます。
+- リモート server のタスクは、Claude Code を終了しても動き続けます。
+- public beta で、**Claude Code v2.1.304 以降**が必要です。
+
+### task になる条件
+
+次の条件がすべて揃ったときだけ、ツール呼び出しが task になります。
+
+- server が tasks に対応している。
+- HTTP / stdio / claude.ai connector の server で、プロトコル 2026-07-28（v2 runtime）で接続している
+  （`MCP_SDK_GENERATION=v1` や `MCP_PROTOCOL_NEGOTIATION=legacy` だと対象外）。
+- セッションが feature flag を取得できる。Amazon Bedrock などのサードパーティ provider や、
+  telemetry・flag 取得を切っているセッションは対象外。
+- Anthropic 側で、そのセッション種別の MCP tasks が有効になっている。v2.1.304 以降では
+  ターミナルの CLI・Agent SDK・GitHub Actions が対象で、**VS Code 拡張とデスクトップアプリには無い**。
+- 呼び出しがメインの会話からである（subagent からは task にならない）。
+- インタラクティブなセッションである。非インタラクティブの場合は、Agent SDK か
+  `--input-format stream-json` の `claude -p` で `CLAUDE_AUTO_BACKGROUND_TASKS=1` を設定し、
+  `CLAUDE_CODE_DISABLE_MCP_TASK_BACKGROUND` を `1` にせず、`CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS` を `0` にしない。
+
+> [!NOTE]
+> ワンショットの `claude -p "<prompt>"` では MCP tasks は使えません。Agent SDK や stream-json のセッションは、
+> 入力を閉じると task を待たずに終わるので、入力を開いたままにします。
+
+### 使い方（利用者側）
+
+#### 止める・結果を受け取る
+
+- 止めるときは `/tasks` で選んで `x`、または Claude に頼みます。server にキャンセルを依頼しますが、
+  server が処理を最後まで進めることもあります。切断中の server は先に `/mcp` で再接続しないと、
+  キャンセルが送られません。`Esc` ではバックグラウンドの task は止まりません。
+- 終了すると `MCP task <server task id> (<server>/<tool>) completed.` と表示されます。
+  結果はトランスクリプトではなく Claude に渡されるので、中身は Claude に聞きます。
+  Claude が待機中なら、結果が届いた時点で自分から続きを始めます。
+
+#### task からの elicitation
+
+実行中の task が elicitation（入力ダイアログ）を出すことがあります。`/tasks` を開いている間はダイアログが隠れるので、
+閉じてから答えます。拒否や `Esc` も server への回答になり、task を続けるかは server が決めます。
+非インタラクティブなセッションでは、入力を求めた task は Claude Code がキャンセルを依頼します
+（`Elicitation` hook や Agent SDK の `onElicitation` は呼ばれません）。
+
+#### 終了・clear・resume したとき
+
+| 状況                                                             | 挙動                                                                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/clear`・`/branch`・別セッションへ `/resume`                    | Claude Code が開いている間は、結果は今の会話に届く                                                                                                |
+| Claude Code を終了                                               | リモート server の task は動き続ける。stdio server はプロセスごと止まる（`/tasks` に `runs on the server; survives exiting this session` と出る） |
+| `claude --resume` / `--continue` / `/resume`（インタラクティブ） | server に接続できた時点で、task の追跡を再開する                                                                                                  |
+| `claude -p "<prompt>"` の `--resume` / `--continue`              | 追跡しない。インタラクティブか `--input-format stream-json` で再開する                                                                            |
+| 新しいセッション・`--fork-session`                               | 新しいセッションは追跡しない                                                                                                                      |
+
+resume 後も追跡できるように、server の名前と接続設定は変えないようにします。
+
+#### 結果を待たせる（バックグラウンドにしない）
+
+インタラクティブなセッションでは、`settings.json` の `env` で指定します。
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS": "0"
+  }
+}
+```
+
+- `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS=0`: MCP のツール呼び出しが終わるまで毎回待つ。
+- `CLAUDE_CODE_DISABLE_MCP_TASK_BACKGROUND=1`: task の結果を待つ。ただし自動バックグラウンド（既定 2 分）で
+  普通のバックグラウンド呼び出しに移ることがあり、その場合は MCP task ではなくなるので、セッションを終了すると続かない。
+- 待っている間に `Esc`・wall-clock 上限・idle timeout で呼び出しが終わると、server にキャンセルが依頼される。
+- `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` だけでは待つようにならない。
+
+#### 時間制限
+
+- バックグラウンドの task に Claude Code 側の時間制限は既定ではありません。ツール呼び出しの制限
+  （wall-clock と idle timeout）は、server が task を返すまでの間だけ効きます。
+- 待たせる設定にすると、これらの制限が task 全体にかかります。
+- 応答のあった状況確認（`tasks/get`）は idle timeout の「活動」として数えられます。
+
+#### 状態メッセージ
+
+`/tasks` の項目や、終了時のトランスクリプトに出ます。
+
+| メッセージ                                                                               | 意味・対処                                                                 |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `reconnecting…`                                                                          | resume 後に応答が無い。続くなら `/mcp` で再接続                            |
+| `needs a sign-in to <server>`                                                            | `/mcp` でサインイン                                                        |
+| `server '<name>' did not reconnect within 300s`                                          | `/mcp` で再接続                                                            |
+| `server '<name>' is not configured in this session; the task may still be running on it` | 同じ名前で server を戻してから resume                                      |
+| `... expired on the server: outcome unknown.`                                            | 追跡を打ち切った。再実行すると二重になりうるので、先に何が済んだか確認する |
+
+### 環境変数
+
+| 変数                                      | 効果                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS`      | 自動バックグラウンドまでの時間（既定 2 分）。`0` で無効にして待つ   |
+| `CLAUDE_CODE_DISABLE_MCP_TASK_BACKGROUND` | `1` で task の結果を待つ                                            |
+| `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`    | `1` でバックグラウンドの task・コマンド・subagent をまとめて無効化  |
+| `CLAUDE_AUTO_BACKGROUND_TASKS`            | `1` で非インタラクティブ実行のバックグラウンド化を有効にする        |
+| `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`       | idle timeout（ms。HTTP/SSE/WS は 5 分、stdio は 30 分。`0` で無効） |
+| `MCP_TOOL_TIMEOUT`                        | 全 server 共通のツール呼び出しの wall-clock 上限                    |
+| `MCP_SDK_GENERATION`                      | `v1` / `v2` でクライアント runtime を選ぶ                           |
+| `MCP_PROTOCOL_NEGOTIATION`                | `auto` / `legacy` でプロトコル revision のネゴシエーションを制御    |
+
+`.mcp.json` の server ごとの `timeout`（ms）は、その server に限り `MCP_TOOL_TIMEOUT` より優先されます。
+
+### server 作者向け: task で応答する
+
+2026-07-28 の接続では、各リクエストの `params._meta["io.modelcontextprotocol/clientCapabilities"]` に
+クライアントの capability が入り、`extensions` に `"io.modelcontextprotocol/tasks": {}` があれば tasks に対応しています。
+**この extension がある場合だけ** task で応答します。無いのに task を返すと、Claude 側は
+`Unsupported result type 'task' for tools/call` というエラーになります。
+
+#### task の応答
+
+```json
+{
+  "resultType": "task",
+  "taskId": "build-7f3a9c2e",
+  "status": "working",
+  "statusMessage": "Compiling, 40 of 212 files done",
+  "createdAt": "2026-10-22T14:03:07Z",
+  "lastUpdatedAt": "2026-10-22T14:03:07Z",
+  "ttlMs": null,
+  "pollIntervalMs": 5000
+}
+```
+
+| フィールド                              | 備考                                                                                |
+| --------------------------------------- | ----------------------------------------------------------------------------------- |
+| `resultType`                            | `"task"` にする。無いと通常の結果として読まれる                                     |
+| `taskId`                                | 必須。印字可能な ASCII 128 文字以内、空白なし。接続をまたいでも答えられる ID にする |
+| `status`                                | 必須。`working` / `input_required` / `completed` / `failed` / `cancelled`           |
+| `createdAt` / `lastUpdatedAt` / `ttlMs` | 必須。`ttlMs` は `null` 可。`ttlMs` を過ぎても Claude Code は task を捨てない       |
+| `pollIntervalMs`                        | 任意。250〜30000 ms に丸められる。無ければ 2000                                     |
+| `statusMessage`                         | 任意。最新の `tasks/get` の値が `/tasks` に表示される                               |
+
+HTTP / claude.ai connector の server では、task の応答がリクエストごとのタイマー内に始まる必要があります。
+**先にジョブを受け付けて応答し、そのあとで処理を進めます。**
+
+#### `tasks/get` での状況報告
+
+Claude Code は task の応答の直後に `{ "taskId": ... }` で `tasks/get` を送り、その後はポーリング間隔ごとに送ります。
+応答には `"resultType": "complete"` と `taskId`・`status`・`createdAt`・`lastUpdatedAt`・`ttlMs` が必要です。
+
+```json
+{
+  "resultType": "complete",
+  "taskId": "build-7f3a9c2e",
+  "status": "completed",
+  "createdAt": "2026-10-22T14:03:07Z",
+  "lastUpdatedAt": "2026-10-22T14:09:41Z",
+  "ttlMs": null,
+  "result": {
+    "content": [
+      { "type": "text", "text": "Build succeeded: 212 files, 0 warnings" }
+    ]
+  }
+}
+```
+
+| status           | Claude Code の扱い                                                                                                                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `working`        | ポーリングを続ける                                                                                                                                                                                                                                   |
+| `completed`      | トップレベルの `result` を Claude に渡す。`isError: true` なら失敗として扱う                                                                                                                                                                         |
+| `failed`         | `error.message`、なければ `statusMessage`、なければ `Task failed` を渡す                                                                                                                                                                             |
+| `cancelled`      | `statusMessage`、なければ `Task was cancelled by the server` を渡す                                                                                                                                                                                  |
+| `input_required` | `inputRequests`（キー → `{ method, params }` の map）を読み、キーごとに 1 回 `tasks/update`（`{ taskId, inputResponses }`）で答える。17 個目以降のキーは無視。`elicitation/create` はインタラクティブなターミナルでのみ、`roots/list` はどこでも対応 |
+| 上記以外         | server にキャンセルを依頼し、失敗として扱う                                                                                                                                                                                                          |
+
+- JSON-RPC エラー `-32602` は不明な task ID として扱われます。バックグラウンドの task では最大 5 分リトライします。
+- `tasks/cancel` は、server に接続している間に task を止めたときに送られます（終了時には送られません）。
+- `tasks/result`・`tasks/list`・`notifications/tasks` は使われません。
+
+参考: [MCP tasks](https://code.claude.com/docs/en/mcp#mcp-tasks-for-server-authors) /
+[MCP tasks extension](https://modelcontextprotocol.io/extensions/tasks/overview)
+
 ## skill のコンテキスト管理
 
 skill の本体は APM（[`docs/apm.md`](apm.md)）と rulesync（[`docs/rulesync.md`](rulesync.md)）で global
