@@ -2,8 +2,13 @@
 # yomiyasu-md-hook
 #
 # Claude Code の PostToolUse hook（Write|Edit|MultiEdit）から呼ばれ、編集した日本語の Markdown を
-# yomiyasu の lint（表現・書式の検査）にかける。見直し候補（warn 以上）があれば、標準エラーへ出して
-# 終了コード 2 で終わり、Claude に推敲を促す。lint は候補を出すだけで、意味の保持や読みやすさは判定しない。
+# yomiyasu の lint（表現・書式の検査）にかける。lint は LLM を使わない決定的な Python スクリプトで、
+# 候補を出すだけで意味の保持や読みやすさは判定しない。
+#
+# 見直し候補（warn 以上）があったときの動き（YOMIYASU_MD_HOOK で切り替える）:
+#   - warn（既定）: 利用者の画面に警告（systemMessage）だけ出す。Claude には渡さないので、トークンを
+#                   使わず、直すかどうかは利用者が決める。
+#   - feedback:     標準エラーへ出して終了コード 2 で終わり、Claude に推敲を促す（トークンを使う）。
 #
 # 何もしない条件（いずれも exit 0）:
 #   - YOMIYASU_MD_HOOK=0
@@ -11,7 +16,7 @@
 #   - yomiyasu の skill（APM が配布する yomiyasu_lint.py）か python3 が無い
 set -uo pipefail
 
-[ "${YOMIYASU_MD_HOOK:-1}" = "0" ] && exit 0
+[ "${YOMIYASU_MD_HOOK:-warn}" = "0" ] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
 
@@ -40,9 +45,17 @@ output=$(python3 -B "$lint" --fail-on warn "$file" 2>&1)
 status=$?
 [ "$status" -eq 1 ] || exit 0
 
-{
-	echo "yomiyasu: $file に見直し候補があります（候補であり、直すかどうかは文脈で判断してください）。"
-	echo "$output" | head -n 40
-	echo "止めるには YOMIYASU_MD_HOOK=0 を設定します。"
-} >&2
-exit 2
+summary="yomiyasu: $file に見直し候補があります（候補であり、直すかどうかは文脈で判断してください）。"
+
+if [ "${YOMIYASU_MD_HOOK:-warn}" = "feedback" ]; then
+	{
+		echo "$summary"
+		echo "$output" | head -n 40
+		echo "止めるには YOMIYASU_MD_HOOK=0 を設定します。"
+	} >&2
+	exit 2
+fi
+
+count=$(echo "$output" | sed -n 's/^見直し候補: \([0-9]*\)件.*/\1/p' | head -n 1)
+jq -n --arg msg "$summary 候補 ${count:-?} 件。詳細: python3 -B $lint $file" '{systemMessage: $msg}'
+exit 0

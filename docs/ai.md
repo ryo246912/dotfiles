@@ -1383,12 +1383,19 @@ Codex は `UserPromptSubmit`・`PreToolUse`・`PostToolUse`・`Stop`・`SessionE
 ##### Markdown の編集後 lint（`yomiyasu-md-hook`）
 
 Claude Code が `.md` を `Write`・`Edit`・`MultiEdit` で編集するたびに、`local/bin/yomiyasu-md-hook`
-（適用後は `~/.local/bin/yomiyasu-md-hook`）が `yomiyasu_lint.py --fail-on warn` を実行する。
+（適用後は `~/.local/bin/yomiyasu-md-hook`）が `yomiyasu_lint.py --fail-on warn` を実行する。lint は LLM を
+使わない決定的な Python スクリプトなので、実行そのものにトークンは使わない。
 
 - 日本語を含む `.md` だけが対象。英語だけのファイル、`node_modules/`・`.yomiyasu/`・`.git/` 配下は何もしない。
-- warn 以上の候補があれば、先頭 40 行を標準エラーへ出して終了コード 2 で終わる。Claude に推敲を促すだけで、
-  ファイルは書き換えない。候補なので、直すかどうかは文脈で判断する。
-- 止めるには環境変数 `YOMIYASU_MD_HOOK=0` を設定する。
+- 動きは環境変数 `YOMIYASU_MD_HOOK` で切り替える。
+
+| 値             | 動き                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `warn`（既定） | 候補があれば利用者の画面に警告（`systemMessage`）を出すだけ。Claude には渡さないのでトークンを使わず、直すかは利用者が決める |
+| `feedback`     | 候補の先頭 40 行を標準エラーへ出して終了コード 2 で終わり、Claude に推敲を促す（出力ぶんのトークンを使う）                   |
+| `0`            | 何もしない                                                                                                                   |
+
+- ファイルは書き換えない。候補なので、直すかどうかは文脈で判断する。
 - skill や python3 が無い環境では何もせず終了する。
 
 Codex の編集（`apply_patch`）は入力の形が違うため、この hook は Claude Code のみ。
