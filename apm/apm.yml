@@ -60,6 +60,8 @@ dependencies:
     # i-have-adhd は skill に加えて SessionStart hook を配布する plugin package として取り込む。
     # hook は `~/.claude/.i-have-adhd-always` がある場合だけ ruleset を常時注入する。
     - ayghri/i-have-adhd#v0.4.1
+    # yomiyasu: AIが生成した日本語を読みやすく整える skill。
+    - nanaism/yomiyasu/skills/yomiyasu#v2.3.0
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
   # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
