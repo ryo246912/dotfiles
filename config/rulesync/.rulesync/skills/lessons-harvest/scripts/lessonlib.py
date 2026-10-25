@@ -284,6 +284,30 @@ def scope_keys(cwd: str | os.PathLike = ".") -> list[str]:
     return ["global"]
 
 
+def personal_repos() -> set[str]:
+    """個人のリポジトリ（`targets.yml`）。会社などのものは `targets.*.yml` に書く。"""
+    f = TARGETS_DIR / "targets.yml"
+    if not f.is_file():
+        return set()
+    return set(re.findall(r"-\s*repo:\s*(\S+)", f.read_text(encoding="utf-8")))
+
+
+def covers(outer: str, inner: str) -> bool:
+    return outer == inner or outer == "global" or inner.startswith(outer + "/")
+
+
+def scope_error(outer: str, inners: list[str]) -> str | None:
+    """scope_key が outer の教訓に、inners（観察・教訓の scope_key や repos）の根拠を入れてよくなければ理由を返す。
+
+    global は個人のリポジトリにも注入されるので、会社などのリポジトリの根拠は入れない。
+    """
+    if bad := [s for s in inners if not covers(outer, s)]:
+        return f"{outer} は {bad[0]} を含まない"
+    if outer == "global" and (others := sorted({s for s in inners if s.count("/") == 2} - personal_repos())):
+        return f"個人のリポジトリ（targets.yml）ではない {others[0]} の根拠は global に入れない"
+    return None
+
+
 def inside(rel: str, sub: str) -> Path | None:
     """plan などに書かれた相対パスを、LESSONS_DIR/<sub> の中にあるときだけ絶対パスにする（外を書き換えないため）。"""
     path = (LESSONS_DIR / rel).resolve()

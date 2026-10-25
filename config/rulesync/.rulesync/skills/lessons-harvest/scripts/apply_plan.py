@@ -143,12 +143,15 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     if errors:
         return errors
 
+    bodies: dict[str, str] = {}
+
     def lesson_ok(rel: str, where: str) -> dict | None:
         path = L.inside(rel, "lessons")
         if not path or not path.is_file():
             errors.append(f"{where}: lessons/ の中の既存の教訓ではない: {rel}")
             return None
-        return L.read(path)[0]
+        meta, bodies[rel] = L.read(path)
+        return meta
 
     def spec_ok(spec: dict, where: str, required: tuple[str, ...]) -> None:
         if not L.SCOPE_KEY.fullmatch(str(spec.get("scope_key", ""))):
@@ -163,15 +166,39 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
             errors.append(f"attach[{i}]: retired の教訓には入れない（create にする）: {a['lesson']}")
         if meta and meta.get("source") != obs[a["observation"]][1].get("source"):
             errors.append(f"attach[{i}]: 観察と教訓の source が違う")
+        if meta and (e := L.scope_error(str(meta.get("scope_key")), [str(obs[a["observation"]][1].get("scope_key"))])):
+            errors.append(f"attach[{i}]: {e}")
     for i, c in enumerate(plan.get("create", [])):
         spec_ok(c, f"create[{i}]", ("title", "category", "rule", "why", "check"))
         if len({obs[o][1].get("source") for o in c["observations"]}) != 1:
             errors.append(f"create[{i}]: source の違う観察を 1 つの教訓にまとめない")
+        if e := L.scope_error(str(c.get("scope_key")), [str(obs[o][1].get("scope_key")) for o in c["observations"]]):
+            errors.append(f"create[{i}]: {e}")
+    widened: list[str] = []
     for i, w in enumerate(plan.get("widen", [])):
-        spec_ok(w, f"widen[{i}]", ("title", "rule", "why", "check"))
-        metas = [lesson_ok(p, f"widen[{i}]") for p in w.get("lessons", [])]
-        if len({m.get("source") for m in metas if m}) > 1:
-            errors.append(f"widen[{i}]: source の違う教訓をまとめない")
+        where = f"widen[{i}]"
+        spec_ok(w, where, ("title", "rule", "why", "check"))
+        rels = w.get("lessons") or []
+        widened += rels
+        if len(set(rels)) < 2:
+            errors.append(f"{where}: 異なる 2 つ以上の教訓をまとめる")
+        metas = [m for m in (lesson_ok(p, where) for p in rels) if m]
+        if len({m.get("source") for m in metas}) > 1:
+            errors.append(f"{where}: source の違う教訓をまとめない")
+        target = str(w.get("scope_key"))
+        errors += [f"{where}: {target} は {m.get('scope_key')} より上の scope ではない" for m in metas
+                   if m.get("scope_key") == target or not L.covers(target, str(m.get("scope_key")))]  # fmt: skip
+        errors += [f"{where}: ruled の教訓は仕組みで防いでいるのでまとめない: {m.get('title')}" for m in metas
+                   if m.get("status") == "ruled"]  # fmt: skip
+        if metas and L.SCOPE_KEY.fullmatch(target) and re.fullmatch(r"[\w-]+", str(w.get("key", ""))):
+            dest = lesson_path(str(metas[0].get("source")), target, w["key"])
+            # 既存の教訓を上書きすると根拠と件数が消える。既存の教訓へまとめるのは月次の merge が行う
+            if dest.exists():
+                errors.append(f"{where}: まとめる先が既にある: {dest.relative_to(L.LESSONS_DIR)}")
+    errors += [f"widen に二重に書いた: {rel}" for rel in sorted(set(widened)) if widened.count(rel) > 1]
+    if not isinstance(plan.get("escalate") or {}, dict):
+        errors.append("escalate は教訓のパスから案への対応にする")
+        plan["escalate"] = {}
     for rel, proposal in (plan.get("escalate") or {}).items():
         meta = lesson_ok(rel, "escalate")
         if meta and meta.get("status") != "active":
@@ -191,6 +218,12 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     # Patterns は 1 行ずつ見る（日本語の行に混ざった英語だけの行も拾うため）
     texts += [(f"{rel} の {k}", ln) for rel, (_, _, b) in obs.items() for k, v in L.sections(b).items()
               if k in ("Rule", "Patterns", "Why", "Check") for ln in v.splitlines() if ln.strip()]  # fmt: skip
+    # 既存の教訓のうち書き戻す文章（attach は全体、widen は新しい教訓へ移す Patterns）
+    texts += [(f"{a['lesson']} の {k}", ln) for a in plan.get("attach", []) if a["lesson"] in bodies
+              for k, v in L.sections(bodies[a["lesson"]]).items() if k in ("Rule", "Patterns", "Why", "Check")
+              for ln in v.splitlines() if ln.strip()]  # fmt: skip
+    texts += [(f"{rel} の Patterns", ln) for rel in widened if rel in bodies
+              for ln in L.sections(bodies[rel]).get("Patterns", "").splitlines() if ln.strip()]  # fmt: skip
     errors += [f"{where} は日本語で書く（{e}）" for where, t in texts if (e := L.language_error(t))]
     return errors
 
@@ -218,19 +251,14 @@ def advance_state(work: Path) -> None:
     state_path.write_text("".join(f"{k}: {v}\n" for k, v in sorted(state.items())))
 
 
-def personal_repos() -> set[str]:
-    f = L.TARGETS_DIR / "targets.yml"
-    if not f.is_file():
-        return set()
-    return set(re.findall(r"-\s*repo:\s*(\S+)", f.read_text(encoding="utf-8")))
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--work", type=Path)
     ap.add_argument("--state-only", action="store_true")
     args = ap.parse_args()
+    if not args.list and not args.work:
+        ap.error("--list か --work を指定する")
 
     if args.work and not args.list:
         # 観察を書いていないバッチが残ったまま日付を進めると、その候補は二度と集まらない
@@ -294,7 +322,9 @@ def main() -> int:
         lessons[path] = (meta, body)
 
     widened = []
-    mine = personal_repos()
+    # escalation.md の「未対応」の向け先（まとめた先のパス。外すものは None）
+    moves: dict[str, str | None] = {}
+    mine = L.personal_repos()
     for w in plan.get("widen", []):
         srcs = [load(L.inside(p, "lessons")) for p in w["lessons"]]
         repos = set().union(*(set(m.get("repos") or []) for m, _ in srcs))
@@ -322,6 +352,7 @@ def main() -> int:
         for p in w["lessons"]:
             m, b = load(L.inside(p, "lessons"))
             m["status"], m["merged_into"] = "retired", str(path.relative_to(L.LESSONS_DIR))
+            moves[p] = m["merged_into"]
         widened.append(f"{w['title']}（{w['scope_key']}）")
 
     # 全教訓の件数を数え直し、昇格・失効を判定する
@@ -345,6 +376,7 @@ def main() -> int:
         elif st == "active":
             if str(meta.get("last_seen")) < cutoff:
                 meta["status"] = "retired"
+                moves[str(path.relative_to(L.LESSONS_DIR))] = None
                 retired.append(meta["title"])
             else:
                 rel = str(path.relative_to(L.LESSONS_DIR))
@@ -367,6 +399,8 @@ def main() -> int:
             meta["status"] = "processed"
             L.write(p, meta, body)
 
+    titles = {str(p.relative_to(L.LESSONS_DIR)): m["title"] for p, (m, _) in lessons.items() if m.get("title")}
+    escalation.relink(moves, titles)
     # 既にチェックリストに載っている教訓は足さない（毎週同じ項目が増えないため）
     escalated = escalation.add(escalate)
 
