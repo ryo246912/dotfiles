@@ -15,6 +15,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
                                                                           ↓
                                      lessons/（教訓。candidate → active → retired）
                                        昇格・失効は agent-lessons への PR で人が確認する
+                                       統合・書き直し・不要な教訓の retired は月次の lessons-review
                                                                           │
      ┌────────────────────────────────────────────────────────────────────┤
      ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-self-review（push 前）   ↓ pr-reviewer-comment（観点）
@@ -27,6 +28,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | 検索                     | SessionStart は Basic Memory の project `agent-lessons`、skill は `lessons_query.py`     |
 | その場の記録             | `lessons-record` skill（pr-author-fix と COMMON.md のレビュー対応フローから呼ぶ）        |
 | 週次の収集・昇格         | `lessons-harvest` skill を Claude Desktop のローカル定期タスクで実行                     |
+| 月次の見直し             | `lessons-review` skill を同じく定期タスクで実行（received・given・team のすべて）        |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
 | push 前の突き合わせ      | `pr-author-self-review` skill                                                            |
 | レビュー時の観点         | `pr-reviewer-comment` / `pr-reviewer-comment-crit`（`references/findings.md`）           |
@@ -183,15 +185,17 @@ diff で探すもの（grep する語・コードの形）を書く。
 | `candidate` | まだ 1 回しか出ていない                                                                                  | しない |
 | `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
 | `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
-| `retired`   | 90 日以上出ていない、または他の教訓に統合した。`archived/` へ移す                                        | しない |
+| `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                           | しない |
 
-| 変更               | 条件                                                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| candidate → active | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner       | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
-| owner → global     | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
-| active → retired   | `last_seen` から 90 日                                                                                             |
-| 仕組み化の候補     | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation.md` に足される       |
+| 変更                | 条件                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| candidate → active  | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
+| repo → owner        | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
+| owner → global      | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
+| active → retired    | `last_seen` から 90 日                                                                                             |
+| candidate → retired | `last_seen` から 180 日（月次の lessons-review が行う）                                                            |
+| 統合・retired       | 月次の lessons-review で、根本原因が同じ教訓を 1 つにまとめる・誤りや一度きりの事情の教訓を retired にする         |
+| 仕組み化の候補      | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation.md` に足される       |
 
 会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
 リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
@@ -280,6 +284,22 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 - ローカルの定期タスクは、Desktop アプリが開いていてマシンが起きているときだけ動く。予定の時刻に寝ていた回は
   スキップされ、起動や復帰のときに過去 7 日以内に逃した直近の 1 回だけを実行する。夜間や休日を気にする必要はない
 
+### 4. 月次の見直しの定期タスクを作る（集計を回す端末で 1 回）
+
+3 と同じ手順で、もう 1 つタスクを作る。Schedule と Instructions だけを変える。
+
+| 項目         | 値                                      |
+| ------------ | --------------------------------------- |
+| Schedule     | Weekly（週次と別の曜日。例: 木曜 9:00） |
+| Instructions | `/lessons-review を実行して`            |
+
+- 定期タスクの Schedule には月次が無い（Manual・Hourly・Daily・Weekdays・Weekly だけ）。そのため週 1 回呼び、
+  main の最後の `review: lessons` の commit から 28 日たっていなければ、skill が何もせずに終える
+  （[Desktop の定期タスク](https://code.claude.com/docs/en/desktop-scheduled-tasks)）
+- 週次と曜日を分けるのは、週次 PR が未マージの間は見直しが止まり、見直しの PR が未マージの間は週次が止まるため
+  （統合・retired にする教訓へ観察を足さないため）。週次 PR をマージしてから見直しが動くようにする
+- 直すものが無かった月も、main に空の `review: lessons <日付> (no changes)` を commit して日付を残す
+
 集計は 1 台の端末で回せば十分。他の端末は SessionStart hook が 1 日 1 回 `git pull` と再インデックスを裏で行う。
 
 ## 日々の使い方
@@ -294,6 +314,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
 | 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
+| 毎月                 | `lessons-review` が全教訓を見直し、統合・書き直し・retired を `review/<日付>` の PR に出す                                                                     |
 
 ### 週次の PR を確認する
 
@@ -302,6 +323,15 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 
 - 教訓の文面がおかしければ、その PR の上で直してからマージする
 - 「仕組み化のチェックリストに足した教訓」は、注入しても防げていない。下の「仕組み化する」で対応する
+
+### 見直しの PR を確認する
+
+PR の本文に、統合した教訓（統合先 ← 統合元）・書き直した教訓・retired にした教訓・180 日たって失効させた candidate・
+要確認が並ぶ。diff で文面を確かめてマージする。**マージするまで週次は止まる**。
+
+- 統合元と retired にした教訓は `archived/` へ移る。根拠の URL は残るので、同じ指摘が候補に戻ってくることはない
+- `escalation.md` の「未対応」は、統合元なら統合先へ向け直し、retired なら外す
+- 戻したい統合・retired は、その PR の上で `archived/` から `lessons/` へ戻し、`status` を直してからマージする
 
 ### 仕組み化する（escalation.md）
 
