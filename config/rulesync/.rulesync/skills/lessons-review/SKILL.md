@@ -29,7 +29,10 @@ targets:
 ### 段階 0: 前提を確かめて材料を出す（メイン）
 
 1. `cd <repo>` し、`git branch --show-current` が `main` でなければ、週次か前回の見直しが途中で止まっている。
-   何もせずに終了し、そのブランチ名を報告する
+   - そのブランチの PR が出ていれば（`gh pr list --head <ブランチ> --state open`）、`git switch main` だけする
+     （その PR は下の 3 で見つかって止まる）
+   - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
+     `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で作り直される）
 2. `mise run lessons:sync` で最新にする
 3. 未マージの週次 PR・見直しの PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する（未マージの教訓の上で
    統合すると、PR 同士がぶつかるため）
