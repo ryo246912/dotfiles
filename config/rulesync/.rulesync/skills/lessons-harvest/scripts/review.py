@@ -17,8 +17,10 @@ plan-<source>.json の書式（どれも省略できる。1 つの教訓は merg
     }
 
 merge は lessons の教訓を into へまとめる（`## Patterns`・`## Evidence`・件数を足し、元は retired にする）。
-into は同じ source で、scope_key が同じかその上位（owner・global）の教訓に限る。範囲を広げるのは週次の widen が
-global 化の条件を確かめて行うため、ここでは広げない。rewrite は書いた項目（title・rule・why・check）だけを置き換える。
+into は同じ source で、scope_key が同じかその上位（owner・global）の教訓に限る。global へまとめられるのは、根拠の
+リポジトリがすべて個人のもの（targets.yml）のときだけ。範囲を広げるのは週次の widen が行うため、ここでは広げない。
+ruled の教訓は仕組みで防いでいるので、merge に書かない。plan-<source>.json には、その source の教訓だけを書く。
+rewrite は書いた項目（title・rule・why・check）だけを置き換える。
 `## Patterns`・`## Evidence` は観察から来た根拠なので書き換えない。
 
 candidate のまま `last_seen` から 180 日たった教訓は、plan に関係なく retired にする
@@ -47,11 +49,7 @@ def stale_cutoff() -> str:
 
 
 def is_stale(meta: dict) -> bool:
-    return meta.get("status") == "candidate" and str(meta.get("last_seen")) < stale_cutoff()
-
-
-def covers(outer: str, inner: str) -> bool:
-    return outer == inner or outer == "global" or inner.startswith(outer + "/")
+    return meta.get("status") == "candidate" and str(meta.get("last_seen")) <= stale_cutoff()
 
 
 def material(meta: dict, body: str, rel: str) -> dict:
@@ -61,12 +59,14 @@ def material(meta: dict, body: str, rel: str) -> dict:
         "title": meta.get("title"),
         "status": meta.get("status"),
         "scope_key": meta.get("scope_key"),
+        "repos": meta.get("repos") or [],
         "category": meta.get("category"),
         **{k: meta.get(k) for k in ("prs", "sessions", "reviewers", "last_seen") if k in meta},
         "rule": sec.get("Rule", ""),
         "why": sec.get("Why", ""),
         "check": sec.get("Check", ""),
         "patterns": [b[2:] for b in L.bullets(sec.get("Patterns", ""))],
+        "evidence": [b[2:] for b in L.bullets(sec.get("Evidence", ""))],
     }
 
 
@@ -84,6 +84,10 @@ def list_material(work: Path) -> int:
             continue
         rel = str(path.relative_to(L.LESSONS_DIR))
         groups.setdefault(str(meta.get("source")), []).append(material(meta, body, rel))
+    # source はファイル名になるので、決まった形だけを通す（<work> の外へ書かないため）
+    if bad := sorted(set(groups) - set(L.SOURCES)):
+        print(f"source が不正な教訓がある: {', '.join(bad)}", file=sys.stderr)
+        return 1
     work.mkdir(parents=True, exist_ok=True)
     for source, items in groups.items():
         (work / f"{source}.json").write_text(json.dumps(items, ensure_ascii=False, separators=(",", ":")))
@@ -92,10 +96,12 @@ def list_material(work: Path) -> int:
 
 
 def load_plan(work: Path) -> dict[str, list]:
+    """全 source の plan をまとめる。merge・rewrite・retire の項目には、教訓と照らすよう plan の source を付ける。"""
     plan: dict[str, list] = {"merge": [], "rewrite": [], "retire": [], "review": []}
     for f in sorted(work.glob("plan-*.json")):
+        source = f.stem.removeprefix("plan-")
         for k, v in json.loads(f.read_text()).items():
-            plan.setdefault(k, []).extend(v)
+            plan.setdefault(k, []).extend(v if k == "review" else ({**e, "source": source} for e in v))
     return plan
 
 
@@ -104,7 +110,7 @@ def check_plan(plan: dict[str, list]) -> list[str]:
     errors: list[str] = []
     metas: dict[str, dict] = {}
 
-    def lesson_ok(rel: str, where: str) -> dict | None:
+    def lesson_ok(rel: str, where: str, source: str) -> dict | None:
         path = L.inside(rel, "lessons")
         if not path or not path.is_file():
             errors.append(f"{where}: lessons/ の中の既存の教訓ではない: {rel}")
@@ -114,30 +120,35 @@ def check_plan(plan: dict[str, list]) -> list[str]:
             errors.append(f"{where}: --list が出したパスのまま書く: {rel}")
             return None
         metas[rel] = metas.get(rel) or L.read(path)[0]
+        if metas[rel].get("source") != source:
+            errors.append(f"{where}: plan-{source}.json に {metas[rel].get('source')} の教訓を書かない: {rel}")
         return metas[rel]
 
     used: list[str] = []
     for i, m in enumerate(plan["merge"]):
-        into = lesson_ok(m.get("into", ""), f"merge[{i}].into")
+        into = lesson_ok(m.get("into", ""), f"merge[{i}].into", m["source"])
         used.append(m.get("into", ""))
         if not m.get("lessons"):
             errors.append(f"merge[{i}]: lessons が無い")
         for rel in m.get("lessons", []):
-            src = lesson_ok(rel, f"merge[{i}]")
+            src = lesson_ok(rel, f"merge[{i}]", m["source"])
             used.append(rel)
-            if into and src and src.get("source") != into.get("source"):
-                errors.append(f"merge[{i}]: source の違う教訓をまとめない: {rel}")
-            if into and src and not covers(str(into.get("scope_key")), str(src.get("scope_key"))):
-                errors.append(f"merge[{i}]: into の scope_key が {rel} と同じか上位ではない（広げるのは週次の widen）")
+            scopes = [str(src.get("scope_key")), *(src.get("repos") or [])] if src else []
+            if into and src and (e := L.scope_error(str(into.get("scope_key")), scopes)):
+                errors.append(f"merge[{i}]: {e}（広げるのは週次の widen）: {rel}")
+            if src and src.get("status") == "ruled":
+                errors.append(f"merge[{i}]: ruled の教訓は仕組みで防いでいるのでまとめない: {rel}")
+        if into and into.get("status") == "ruled":
+            errors.append(f"merge[{i}]: ruled の教訓へはまとめない: {m.get('into')}")
     for i, r in enumerate(plan["retire"]):
-        lesson_ok(r.get("lesson", ""), f"retire[{i}]")
+        lesson_ok(r.get("lesson", ""), f"retire[{i}]", r["source"])
         used.append(r.get("lesson", ""))
     errors += [f"merge・retire に二重に書いた: {rel}" for rel in sorted(set(used)) if used.count(rel) > 1]
 
     gone = {rel for m in plan["merge"] for rel in m.get("lessons", [])} | {r.get("lesson") for r in plan["retire"]}
     rewritten = [r.get("lesson", "") for r in plan["rewrite"]]
     for i, r in enumerate(plan["rewrite"]):
-        lesson_ok(r.get("lesson", ""), f"rewrite[{i}]")
+        lesson_ok(r.get("lesson", ""), f"rewrite[{i}]", r["source"])
         if r.get("lesson") in gone:
             errors.append(f"rewrite[{i}]: 統合・retired にする教訓は書き直さない: {r.get('lesson')}")
         if not any(r.get(k) for k in TEXT_KEYS):

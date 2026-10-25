@@ -8,8 +8,8 @@
 ## 材料
 
 `<source>.json` は教訓の配列。各要素は `path`・`title`・`status`（candidate・active・ruled）・`scope_key`・
-`category`・件数（`prs`・`sessions`・`reviewers`・`last_seen`）・`rule`・`why`・`check`・`patterns`（観察した具体例）を
-持つ。`path` は plan にそのまま書く（書き換えたパスは検査で止まる）。
+`repos`（根拠のリポジトリ）・`category`・件数（`prs`・`sessions`・`reviewers`・`last_seen`）・`rule`・`why`・`check`・
+`patterns`（観察した具体例）・`evidence`（根拠の PR の URL・セッション）を持つ。`path` は plan にそのまま書く（書き換えたパスは検査で止まる）。
 
 ## 判断の基準
 
@@ -21,8 +21,10 @@
 根本原因と守ること（Rule）が同じ教訓だけをまとめる。見た目の話題（同じファイル・同じ言語）が近いだけではまとめない。
 
 - `into` は残す教訓。範囲の広いほう（`global`・owner）か、同じ範囲なら根拠（`prs`・`sessions`・`reviewers`）の多いほう
-- `into` の `scope_key` は、まとめる教訓と同じかその上位（`global` は何でも含む。`o` は `o/r` を含む）でなければならない。
-  別のリポジトリ同士（`o/a` と `o/b`）は、上位の教訓が無ければまとめない（範囲を広げるのは週次の widen が行う）
+- `into` の `scope_key` は、まとめる教訓と同じかその上位（`o` は `o/r` を含む）でなければならない。`global` の
+  `into` には、`repos` がすべて個人のリポジトリ（`~/.config/agent-lessons/targets.yml`）の教訓だけをまとめる（`global` は
+  個人のリポジトリにも注入されるため、会社のリポジトリの教訓は入れない）。別のリポジトリ同士（`o/a` と `o/b`）は、
+  上位の教訓が無ければまとめない（範囲を広げるのは週次の widen が行う）
 - ruled の教訓は仕組みで防いでいるので、まとめる側にも into にもしない
 - まとめた結果、into の文面が合わなくなるなら、同じ into を `rewrite` にも書く
 
