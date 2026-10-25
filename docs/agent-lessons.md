@@ -112,11 +112,13 @@ repos:
 
 1 回に集める候補は targets ファイルごとに 150 件まで。PR をマージ日の古い順に日単位で処理し、上限に達したら残りの日は
 次回に回す（`harvest-state.yml` は処理し切った日の翌日まで進む）。初回や、チームの PR が多いリポジトリで溜まった分は、
-`/lessons-harvest --loop` で 1 回の実行のうちに集め切れる。150 件ずつ集計して周ごとに PR を出し、残りが無くなるか
-5 周に達するまで繰り返す。2 周目以降のブランチ（`weekly/<日付>-<n>`）は前の周のブランチから切り、PR の base も前の周の
-ブランチにする（前の周の未マージの教訓・観察・`harvest-state.yml` の上で集計するため）。PR が 2 つ以上なら、最後に
-`gh stack link` で GitHub のスタックとして登録する（拡張 `github/gh-stack` が要る。登録できなくても base で積み上がって
-いる）。PR は下の周から順にマージする。`--loop` を付けなければ 1 周で終わり、週次 PR をマージしたあとに
+`/lessons-harvest --loop` で 1 回の実行のうちに 5 周まで集められる。150 件ずつ集計して周ごとに PR を出し、残りが
+無くなるか 5 周に達するまで繰り返す（5 周で残った分は次の実行で集める）。2 周目以降のブランチ（`weekly/<日付>-<n>`）は
+前の周のブランチから切り、PR の base も前の周のブランチにする（前の周の未マージの教訓・観察・`harvest-state.yml` の上で
+集計するため）。PR が 2 つ以上なら、最後に `gh stack link` で GitHub のスタックとして登録する（拡張 `github/gh-stack` が
+要る。登録できなくても base で積み上がっている）。PR は下の周から順にマージする。スタックに登録できなかったときは、
+マージした PR の head ブランチを消してから次の PR をマージする（消すと GitHub が次の PR の base を main に付け替える。
+消さないと前の周のブランチへマージされる）。`--loop` を付けなければ 1 周で終わり、週次 PR をマージしたあとに
 `/lessons-harvest` を繰り返せば続きから集まる。
 
 ### 教訓（lessons/）の形式
@@ -182,7 +184,7 @@ diff で探すもの（grep する語・コードの形）を書く。
 
 | status      | 意味                                                                                                     | 注入   |
 | ----------- | -------------------------------------------------------------------------------------------------------- | ------ |
-| `candidate` | まだ 1 回しか出ていない                                                                                  | しない |
+| `candidate` | 昇格条件をまだ満たしていない                                                                             | しない |
 | `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
 | `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
 | `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                           | しない |
@@ -369,13 +371,13 @@ ruled の教訓は SessionStart で注入されなくなる。仕組みを入れ
   取ったあとに変わることはほとんど無い。取り直したい PR はそのファイルを、全部取り直したいなら `raw/` ごと消す
 - それ以外: `~/.local/state/agent-lessons/runs/<実行日>/`
 
-| ファイル                                   | 中身                                                                                    |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `candidates.json`                          | 却下されていない指摘を、種類（`kind`）・source・根拠の URL 付きで、本文を短く削ったもの |
-| `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                     |
-| `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・why・check）。`.done` はそのバッチを書き終えた印    |
-| `plan.json`                                | 観察をどの教訓に入れたか（attach・create・skip・widen）のモデルの割り当て               |
-| `pr-body.md`                               | 週次 PR の本文                                                                          |
+| ファイル                                   | 中身                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `candidates.json`                          | 却下されていない指摘を、種類（`kind`）・source・根拠の URL 付きで、本文を短く削ったもの       |
+| `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                           |
+| `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・pattern・why・check）。`.done` はそのバッチを書き終えた印 |
+| `plan.json`                                | 観察をどの教訓に入れたか（attach・create・skip・widen）のモデルの割り当て                     |
+| `pr-body.md`                               | 週次 PR の本文                                                                                |
 
 流れは `raw` → `candidates.json`（`collect.py` が却下の除外・分類・重複の除外）→ `batches` →
 `observations`（モデル）→ `inbox/`（`write_observations.py`）→ `plan.json`（モデル）→ `lessons/`（`apply_plan.py` が
@@ -391,9 +393,16 @@ GitHub のコメントへ辿れる。
 根拠の URL がある指摘を「記録済み」として除くので、集め直しても候補に出てこない。
 
 1. agent-lessons を集計前に戻す
-   - 週次 PR が未マージなら、PR を閉じてブランチを消す（`git push origin --delete weekly/<実行日>`）。観察も教訓も
+   - 週次 PR が未マージなら、リモートとローカルのブランチを消す（head を消すと PR も閉じる）。観察も教訓も
      そのブランチにしか無いので、main は集計前のまま。`--loop` で積み上げた PR（`weekly/<実行日>-<n>`）も、後の周は
-     前の周の集計の上にあるので、すべて閉じて消す
+     前の周の集計の上にあるので、すべて消す。ブランチが残ると、次の実行が未マージの PR やブランチの重複で止まる
+
+     ```bash
+     cd ~/.local/share/agent-lessons && git switch main
+     git ls-remote --heads origin 'weekly/<実行日>*' | sed 's|.*refs/heads/||' | xargs -r git push origin --delete
+     git branch --list 'weekly/<実行日>*' | xargs -r git branch -D
+     ```
+
    - マージ済みなら、main でマージ commit を戻して push する（教訓・観察・`harvest-state.yml` がまとめて戻る）。
      積み上げた PR は新しい周のマージ commit から順に戻す
 
@@ -430,8 +439,8 @@ mise run lessons:sync
 - **devcontainer・sandbox の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
-- **注入する教訓は 40 件まで。** コンテキストを抑えるため。超えた分は push 前の `pr-author-self-review` が diff に
-  関係するものだけ読む。常に 40 件を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
+- **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
+  push 前の `pr-author-self-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに
