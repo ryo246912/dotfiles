@@ -176,8 +176,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", required=True)
     ap.parse_args()
-    # lessons:sync から毎回呼ばれるので、移行前の端末では止めずに飛ばす（移行は週次の段階 0 が行う）
+    # lessons:sync から毎回呼ばれるので、移行前の端末では止めずに飛ばす（週次の段階 0 が移行してから sync し直す）
     if not L.check_schema(strict=False):
+        print(
+            "warning: 古い形式の教訓があるため escalation.md の印を処理しなかった（migrate.py の後に再実行する）",
+            file=sys.stderr,
+        )
         return 0
     result = apply()
     print(json.dumps(result, ensure_ascii=False))

@@ -74,7 +74,8 @@ dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をそ�
 4. 教訓・観察の形式（`schema_version`）を確かめる。`python3 <skill>/scripts/migrate.py --check` の終了コードで分ける
    - 0: そのまま進む
    - 1: 古い形式がある。`python3 <skill>/scripts/migrate.py`、`git commit -qam "chore: migrate lessons to the current schema"`、
-     `git push -q` を順に行う。週次 PR とは分けて main に直接 push する（機械的な書き換えで、レビューする中身が無いため）。
+     `git push -q`、`mise run lessons:sync` を順に行う。週次 PR とは分けて main に直接 push する（機械的な書き換えで、
+     レビューする中身が無いため）。sync し直すのは、移行前の 2 の sync が `escalation.md` の印を処理しないため。
      どれかが失敗したら、週次のブランチを作らずに終了して報告する
    - 2: この端末の dotfiles より新しい形式がある。何もせずに終了し、dotfiles の更新が要ると報告する
 5. `git switch -c <branch>` し、前回の出力を消してから候補を集める。同じ日の再実行・`redo` で前回の
