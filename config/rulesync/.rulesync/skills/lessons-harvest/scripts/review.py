@@ -133,9 +133,10 @@ def check_plan(plan: dict[str, list]) -> list[str]:
         for rel in m.get("lessons", []):
             src = lesson_ok(rel, f"merge[{i}]", m["source"])
             used.append(rel)
-            scopes = [str(src.get("scope_key")), *(src.get("repos") or [])] if src else []
-            if into and src and (e := L.scope_error(str(into.get("scope_key")), scopes)):
-                errors.append(f"merge[{i}]: {e}（広げるのは週次の widen）: {rel}")
+            if into and src:
+                scopes = [str(src.get("scope_key")), *(src.get("repos") or []), *(into.get("repos") or [])]
+                if e := L.scope_error(str(into.get("scope_key")), scopes):
+                    errors.append(f"merge[{i}]: {e}（広げるのは週次の widen）: {rel}")
             if src and src.get("status") == "ruled":
                 errors.append(f"merge[{i}]: ruled の教訓は仕組みで防いでいるのでまとめない: {rel}")
         if into and into.get("status") == "ruled":
