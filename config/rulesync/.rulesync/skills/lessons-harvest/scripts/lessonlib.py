@@ -33,7 +33,10 @@ MAX_PATTERNS = 8
 # 観察・教訓の文章は日本語で書く。コード・識別子・固有名詞は `` で囲めば原文のままでよいので、その中は見ない
 _HANGUL = re.compile(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]")
 _KANA = re.compile(r"[\u3040-\u30ff]")
+_HAN = re.compile(r"[\u3005\u3400-\u4dbf\u4e00-\u9fff]")
 _CODE = re.compile(r"`[^`]*`")
+_FENCE = re.compile(r" {0,3}(`{3,}|~{3,})")
+_BRACE = re.compile(r"\{([^{}]*,[^{}]*)\}")
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
 
@@ -55,11 +58,15 @@ def _inline_list(text: str) -> list:
     inner = text.strip()[1:-1].strip()
     if not inner:
         return []
-    items, buf, quote = [], "", None
+    items, buf, quote, escaped = [], "", None, False
     for ch in inner:
         if quote:
             buf += ch
-            if ch == quote:
+            if escaped:
+                escaped = False
+            elif ch == "\\" and quote == '"':
+                escaped = True
+            elif ch == quote:
                 quote = None
         elif ch in "\"'":
             quote = ch
@@ -75,10 +82,14 @@ def _inline_list(text: str) -> list:
 
 def _strip_comment(v: str) -> str:
     """引用符の外にある ` #` 以降をコメントとして落とす。"""
-    quote = None
+    quote, escaped = None, False
     for i, ch in enumerate(v):
         if quote:
-            if ch == quote:
+            if escaped:
+                escaped = False
+            elif ch == "\\" and quote == '"':
+                escaped = True
+            elif ch == quote:
                 quote = None
         elif ch in "\"'":
             quote = ch
@@ -168,12 +179,31 @@ def check_schema(strict: bool) -> bool:
     return not older
 
 
+def _headings(body: str) -> list[tuple[int, int, str]]:
+    """フェンス（``` か ~~~）の外にある `## 見出し` の（行の開始位置, 本文の開始位置, 名前）。"""
+    out, fence, pos = [], None, 0
+    for line in body.splitlines(keepends=True):
+        m = _FENCE.match(line)
+        if fence is None and m:
+            fence = m[1]
+        elif fence and m and m[1][0] == fence[0] and len(m[1]) >= len(fence) and not line[m.end() :].strip():
+            fence = None
+        elif fence is None and line.startswith("## "):
+            out.append((pos, pos + len(line), line[3:].strip()))
+        pos += len(line)
+    return out
+
+
+def _spans(body: str) -> dict[str, tuple[int, int, int]]:
+    """見出しの名前ごとの（見出しの開始位置, 本文の開始位置, 節の終わり）。"""
+    hs = _headings(body)
+    ends = [start for start, _, _ in hs[1:]] + [len(body)]
+    return {name: (start, head, end) for (start, head, name), end in zip(hs, ends)}
+
+
 def sections(body: str) -> dict[str, str]:
     """`## 見出し` ごとの本文。"""
-    out: dict[str, str] = {}
-    for m in re.finditer(r"^## (.+?)\n(.*?)(?=^## |\Z)", body, re.M | re.S):
-        out[m.group(1).strip()] = m.group(2).strip()
-    return out
+    return {name: body[head:end].strip() for name, (_, head, end) in _spans(body).items()}
 
 
 def bullets(text: str) -> list[str]:
@@ -184,21 +214,29 @@ def bullets(text: str) -> list[str]:
 def set_section(body: str, name: str, content: str, before: str | None = None) -> str:
     """`## name` の本文を content にする。無ければ `## before` の前に（それも無ければ末尾に）足す。"""
     block = f"## {name}\n{content.strip()}\n\n"
-    m = re.search(rf"^## {re.escape(name)}\n.*?(?=^## |\Z)", body, re.M | re.S)
-    if m:
-        body = body[: m.start()] + block + body[m.end() :]
-    elif before and (m := re.search(rf"^## {re.escape(before)}\n", body, re.M)):
-        body = body[: m.start()] + block + body[m.start() :]
+    spans = _spans(body)
+    if name in spans:
+        start, _, end = spans[name]
+        body = body[:start] + block + body[end:]
+    elif before in spans:
+        start = spans[before][0]
+        body = body[:start] + block + body[start:]
     else:
         body = body.rstrip() + "\n\n" + block
     return re.sub(r"\n{3,}", "\n\n", body).rstrip() + "\n"
 
 
 def glob_regex(pattern: str) -> re.Pattern:
-    """`**` はディレクトリをまたぐ、`*` はまたがない glob を正規表現にする。"""
+    """`**` はディレクトリをまたぐ、`*` はまたがない glob を正規表現にする。`{a,b}` はそのどれか。"""
+    return re.compile(_glob(pattern) + r"\Z")
+
+
+def _glob(pattern: str) -> str:
     out, i = "", 0
     while i < len(pattern):
-        if pattern.startswith("**/", i):
+        if m := _BRACE.match(pattern, i):
+            out, i = out + "(?:" + "|".join(_glob(alt) for alt in m[1].split(",")) + ")", m.end()
+        elif pattern.startswith("**/", i):
             out, i = out + "(?:.*/)?", i + 3
         elif pattern.startswith("**", i):
             out, i = out + ".*", i + 2
@@ -208,13 +246,13 @@ def glob_regex(pattern: str) -> re.Pattern:
             out, i = out + "[^/]", i + 1
         else:
             out, i = out + re.escape(pattern[i]), i + 1
-    return re.compile(out + r"\Z")
+    return out
 
 
-def normalize_globs(globs: list | None) -> list[str]:
+def normalize_globs(globs: list | str | None) -> list[str]:
     """モデルが付けがちな囲みの引用符を外し、`/` を含まない glob は入れ子のパスにも効くよう `**/` を付ける。"""
     out = []
-    for g in globs or []:
+    for g in [globs] if isinstance(globs, str) else globs or []:
         g = str(g).strip().strip("\"'").strip()
         if g:
             out.append(g if "/" in g else f"**/{g}")
@@ -256,11 +294,14 @@ def lesson_files() -> list[Path]:
     return sorted((LESSONS_DIR / "lessons").rglob("*.md"))
 
 
-def language_error(text: str) -> str | None:
-    """日本語の文章でなければ理由を返す。かなの有無で見る（漢字だけでは中国語と区別できないため）。"""
-    prose = _CODE.sub("", str(text))
+def language_error(text: object) -> str | None:
+    """日本語の文章でなければ理由を返す。かなの無い文は、漢字以外の文字（英字など）があれば日本語とみなさない。"""
+    if not isinstance(text, str):
+        return "文字列ではない"
+    prose = _CODE.sub("", text)
     if _HANGUL.search(prose):
         return "ハングルが含まれる"
-    if re.search(r"[^\W\d_]", prose) and not _KANA.search(prose):
+    # 漢字だけの文は中国語と区別できないが、「型検査の徹底」のような漢字だけの日本語の見出しを弾かないため通す
+    if not _KANA.search(prose) and re.search(r"[^\W\d_]", _HAN.sub("", prose)):
         return "日本語（ひらがな・カタカナ）が含まれない"
     return None
