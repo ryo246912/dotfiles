@@ -82,18 +82,11 @@
     MISE_ENV=mac mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.mac.toml
     ```
-    初回（apm/rulesync が未導入）は、ファイル配置に続けて `[bootstrap.hooks.post-dotfiles]` が
-    gh 導入（未ログインなら `gh auth login --scopes 'project'` のプロンプト）→ `GITHUB_TOKEN=$(gh auth token) mise install`
-    → APM の user-scope dependencies・rulesync generate まで実行する（導入済みの環境ではスキップ）。
-    既存環境で conflict が出たときだけ:
-    ```sh
-    MISE_ENV=mac mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws"
-    ```
   - 続けて `mise bootstrap` 本体を実行する:
     1. `[bootstrap.packages]` の導入（brew/brew-cask）
     2. `[dotfiles]` の再適用（既に適用済みなので通常は no-op）
-    3. `[bootstrap.hooks.pre-tools]`: gh 導入（`mise install aqua:cli/cli`）→ 未ログインなら `gh auth login --scopes 'project'` のプロンプトが出るので対話でログイン → `GITHUB_TOKEN=$(gh auth token) mise install`（初回の `dotfiles apply` で導入済みなら差分のみ）
-    4. `[tools]` の導入（3 で完了しているため通常は即座に終わる）
+    3. `[bootstrap.hooks.pre-tools]`
+    4. `[tools]` の導入
     5. `[bootstrap.hooks.post-tools]`: APM の user-scope dependencies・rulesync generate を差分があるときだけ実行
 
     ```sh
@@ -101,16 +94,8 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - `brew:borders` のソースビルドが `ld: ... tapi error: malformed file` /
-    `unknown architecture arm64e.x1-macos` で失敗する場合は、CLT に OS より新しい（beta 版 CLT 由来の）
-    SDK（例: `MacOSX27.0.sdk`）が残っていて、`xcrun` がそれを選ぶ一方で `ld` が古く読めないのが原因。
-    `ls /Library/Developer/CommandLineTools/SDKs/` で確認し、OS に合う SDK を `SDKROOT` で明示して再実行する:
-    ```sh
-    SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX$(sw_vers -productVersion | cut -d. -f1).sdk MISE_ENV=mac mise bootstrap packages apply --yes
-    ```
   - 2回目以降の `dotfiles apply` はファイルを配置するだけで、ツールは入らない（初回の自動 install は apm/rulesync が
     未導入のときだけ）。ツールだけ入れ直すときは tools ステップだけ実行する
-    （`pre-tools` hook が gh のトークンを渡すので、素の `mise install` より rate limit に当たりにくい）
 
     ```sh
     mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
@@ -135,12 +120,6 @@
 
     ```sh
     cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-    nvim ~/.config/git/config.work.secret
-    ```
-
-    - work3 用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
-
-    ```sh
     cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
     nvim ~/.config/git/config.work3.secret
     ```
@@ -681,11 +660,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
 - 「保存設定」の手順は上記と同様（**名前**は「Claude-Work3.app」など任意の名前に設定）
 
 - [ ] Markdownファイルのデフォルトアプリ設定（[Markpad](https://github.com/sftwrdotdev/Markpad)）
-  - `brew-cask:markpad`は`mise bootstrap`でインストール済み（未導入なら`brew install --cask markpad`）
   - Finderで任意の`.md`ファイルを選択し、`Command + I`（「情報を見る」）を開く
   - 「このアプリケーションで開く」から`Markpad`を選択する
   - 「すべてを変更...」をクリックし、確認ダイアログで「続ける」を選択する
-  - ターミナルから開く場合は`open -a Markpad <file>.md`
 
 ### プライベート設定
 
