@@ -71,20 +71,29 @@ def save(items: dict[str, list[dict]]) -> None:
             trim()
             out.extend(render(name))
 
-    out, section, in_item = [], None, False
+    # 空行やメモで項目を区切らないのは、load() が次の項目か節までの字下げ行を項目に付けるため（区切ると二重に書く）
+    out, section, in_item, blanks = [], None, False, []
     for line in (PATH.read_text(encoding="utf-8") if PATH.is_file() else HEADER).splitlines():
         if line.startswith("## "):
             close(section)
-            section, in_item = line[3:].strip(), False
+            section, in_item, blanks = line[3:].strip(), False, []
             out.append(line)
             continue
         if section in items:
             if ITEM.match(line):
-                in_item = True
+                in_item, blanks = True, []
                 continue
-            if (in_item and line.startswith("  ")) or line.strip() == "なし":
+            if line.strip() == "なし":
                 continue
-            in_item = False
+            if in_item:
+                if not line.strip():
+                    blanks.append(line)
+                    continue
+                if line.startswith("  "):
+                    blanks = []
+                    continue
+                out += blanks if out and out[-1].strip() else []
+                blanks = []
         out.append(line)
     close(section)
     for name in (TODO, DONE):
