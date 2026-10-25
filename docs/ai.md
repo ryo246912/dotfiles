@@ -602,30 +602,6 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 [Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
 [How Claude Code uses prompt caching](https://code.claude.com/docs/en/prompt-caching)
 
-## CodeRabbit CLI によるローカル事前レビュー
-
-`git push` の直前に [CodeRabbit CLI](https://docs.coderabbit.ai/cli) でデフォルトブランチとの差分をレビューし、
-PR を作る前に指摘へ対応できるようにします。スクリプトは使わず、`claude/settings.json` の `PreToolUse`（`Bash`）hook が
-`"if": "Bash(git push*)"` で絞って、コマンドを直接実行します。
-
-次をすべて満たすときだけ動き、満たさなければ何もしません（push はそのまま通ります）。
-
-- リポジトリ直下に `.coderabbit.yaml` があり、`enabled: false` の行がない（`reviews.auto_review.enabled: false` で無効）
-- `coderabbit` が PATH にある（未導入・未ログインの端末では黙ってスキップ）
-
-動作:
-
-- HEAD ごとに 1 回だけレビューします。レビュー結果を Claude に返して**その 1 回は push をブロック**する（exit 2）ので、
-  修正してコミットしてから再実行します。対応不要なら同じコマンドをもう一度実行すれば通ります。
-  レビュー済みの HEAD は `.git/coderabbit-reviewed` に記録します。
-- CLI の失敗（認証切れ・ネットワーク）は push を止めません。
-
-導入:
-
-- ホスト: `brew install coderabbit` などで入れ、`coderabbit auth login` でログインします。
-- sbx（`config/devcontainer/Dockerfile.sandbox`）: image ビルド時に公式 install script で入れます。認証はホストの
-  `~/.coderabbit` を共有し、`api.coderabbit.ai` は `config/sbx/allow-domains.txt` で許可しています。
-
 ## skill のコンテキスト管理
 
 skill の本体は APM（[`docs/apm.md`](apm.md)）と rulesync（[`docs/rulesync.md`](rulesync.md)）で global
