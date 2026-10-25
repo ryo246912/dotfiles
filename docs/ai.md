@@ -604,25 +604,27 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 
 ## CodeRabbit CLI によるローカル事前レビュー
 
-`git push` / `gh pr create` の直前に [CodeRabbit CLI](https://docs.coderabbit.ai/cli) でデフォルトブランチとの
-差分をレビューし、PR を作る前に指摘へ対応できるようにします。`claude/settings.json` の `PreToolUse`（`Bash`）hook が
-`claude/coderabbit-review-hook.sh`（`~/.claude/coderabbit-review-hook.sh` に配置）を呼びます。
+`git push` の直前に [CodeRabbit CLI](https://docs.coderabbit.ai/cli) でデフォルトブランチとの差分をレビューし、
+PR を作る前に指摘へ対応できるようにします。スクリプトは使わず、`claude/settings.json` の `PreToolUse`（`Bash`）hook が
+`"if": "Bash(git push*)"` で絞って、コマンドを直接実行します。
 
 次をすべて満たすときだけ動き、満たさなければ何もしません（push はそのまま通ります）。
 
-- リポジトリ直下に `.coderabbit.yaml`（`.yml`）があり、`reviews.auto_review.enabled` が `false` でない
-- `coderabbit`（または `cr`）が PATH にある（未導入・未ログインの端末では黙ってスキップ）
-- `CODERABBIT_LOCAL_REVIEW=0` で無効化していない
+- リポジトリ直下に `.coderabbit.yaml` があり、`enabled: false` の行がない（`reviews.auto_review.enabled: false` で無効）
+- `coderabbit` が PATH にある（未導入・未ログインの端末では黙ってスキップ）
 
 動作:
 
-- HEAD ごとに 1 回だけレビューします。指摘の出力を返して**その 1 回は push をブロック**するので、修正してコミットしてから
-  再実行します。対応不要なら同じコマンドをもう一度実行すれば通ります（同じ HEAD は再レビューしません）。
-- CLI の失敗（認証切れ・ネットワーク・タイムアウト）は push を止めません。タイムアウトは
-  `CODERABBIT_LOCAL_REVIEW_TIMEOUT`（秒、既定 540）で変えられます。
-- 実行済みの HEAD は `${XDG_STATE_HOME:-~/.local/state}/coderabbit-review-hook/` に記録します。
+- HEAD ごとに 1 回だけレビューします。レビュー結果を Claude に返して**その 1 回は push をブロック**する（exit 2）ので、
+  修正してコミットしてから再実行します。対応不要なら同じコマンドをもう一度実行すれば通ります。
+  レビュー済みの HEAD は `.git/coderabbit-reviewed` に記録します。
+- CLI の失敗（認証切れ・ネットワーク）は push を止めません。
 
-CodeRabbit CLI のインストールとログイン（`coderabbit auth login`）は端末ごとに行います。
+導入:
+
+- ホスト: `brew install coderabbit` などで入れ、`coderabbit auth login` でログインします。
+- sbx（`config/devcontainer/Dockerfile.sandbox`）: image ビルド時に公式 install script で入れます。認証はホストの
+  `~/.coderabbit` を共有し、`api.coderabbit.ai` は `config/sbx/allow-domains.txt` で許可しています。
 
 ## skill のコンテキスト管理
 

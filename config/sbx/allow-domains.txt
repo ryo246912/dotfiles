@@ -23,6 +23,9 @@ deb.debian.org
 apt.postgresql.org
 mise-java.jdx.dev
 
+# CodeRabbit CLI（sandbox 内の coderabbit review が API を呼ぶ）
+api.coderabbit.ai
+
 # Q&A・技術記事
 stackoverflow.com
 zenn.dev

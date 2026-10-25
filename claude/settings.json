@@ -178,8 +178,9 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(git push*)",
             "statusMessage": "Reviewing with CodeRabbit CLI...",
-            "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review-hook.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review-hook.sh\"; [ -x \"$f\" ] && \"$f\"; exit 0",
+            "command": "cd \"$(git rev-parse --show-toplevel)\" 2>/dev/null || exit 0; [ -f .coderabbit.yaml ] && ! grep -Eq '^[[:space:]]+enabled:[[:space:]]*false' .coderabbit.yaml && command -v coderabbit >/dev/null 2>&1 || exit 0; m=\"$(git rev-parse --git-dir)/coderabbit-reviewed\"; h=$(git rev-parse HEAD); [ \"$(cat \"$m\" 2>/dev/null)\" = \"$h\" ] && exit 0; out=$(coderabbit review --plain --type committed 2>&1) || exit 0; echo \"$h\" > \"$m\"; echo \"$out\" >&2; exit 2",
             "timeout": 600
           }
         ]

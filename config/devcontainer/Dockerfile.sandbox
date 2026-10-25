@@ -144,6 +144,14 @@ RUN --mount=type=secret,id=github_token \
     rm -rf "$gh_config"; \
     chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
 
+# CodeRabbit CLI は mise の backend（aqua / github）にないため、公式の install script で agent の
+# ~/.local/bin に入れる（claude の hook が git push 前のローカルレビューに使う。docs/ai.md 参照）。
+# 認証情報はホストの ~/.coderabbit を mount して共有する。バージョンは固定できないので、
+# 更新したいときはこの層を --no-cache で作り直す。失敗してもビルドは止めない。
+RUN install -d -o agent -g agent "${AGENT_HOME}/.local" "${AGENT_HOME}/.local/bin"; \
+    su agent -c 'curl -fsSL https://cli.coderabbit.ai/install.sh | sh' \
+    || echo "warn: CodeRabbit CLI のインストールに失敗しました" >&2
+
 # tasks と設定ツリーは install の後に COPY する（上記の理由でキャッシュを守るため）。
 # devcontainer が bind mount していたのと同じ ~/.config/devcontainer 配下へ置くので、
 # tasks が参照する ${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/... がそのまま解決する。
