@@ -17,6 +17,7 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 - コミット: SHA をそのまま書く（7 文字以上）。別リポジトリなら `owner/repo@<SHA>`
 - PR・Issue: `#123`。別リポジトリなら `owner/repo#123`
+- SHA や `#123` の前後には半角スペースを入れる（日本語や全角括弧と隣り合うとリンクにならない）
 - SHA や `#123` をバッククォートで囲まない（囲むとリンクにならない）
 
 ## 投稿のしかた

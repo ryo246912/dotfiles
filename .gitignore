@@ -26,6 +26,8 @@ templates/vicinae/vicinae.secret.yaml
 # 環境ごとの sandbox 許可ドメイン・MCP サーバ（雛形は *.<name>.*.example）
 config/sbx/allow-domains.*.txt
 config/sbx/mcp.*.yml
+# 会社などのリポジトリを並べた agent-lessons の収集対象（雛形は targets.work.yml.example）
+config/agent-lessons/targets.*.yml
 
 ## APM: Renovate の apm manager が lockfile 更新時に apm/ で実行する project scope の
 ## `apm install` の生成物（.claude/・.agents/・apm_modules/ など）を PR に含めない。
