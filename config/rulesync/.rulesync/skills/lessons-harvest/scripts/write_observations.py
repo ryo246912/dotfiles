@@ -39,10 +39,11 @@ import lessonlib as L
 REQUIRED = ("category", "rule", "pattern", "why", "check")
 
 
-def free_path(path: Path) -> Path:
-    # 候補の id は実行ごとの連番なので、同じ日の 2 周目では別の指摘が同じ名前になる。前回の観察を上書きしない
+def free_path(path: Path, evidence: str) -> Path:
+    # 候補の id は実行ごとの連番なので、同じ日の 2 周目では別の指摘が同じ名前になる。前回の観察は上書きしないが、
+    # 途中で止まったバッチを再実行したときの同じ根拠のものは上書きする（-2 として二重に書かないため）
     out, n = path, 2
-    while out.exists():
+    while out.exists() and L.read(out)[0].get("evidence") != evidence:
         out, n = path.with_stem(f"{path.stem}-{n}"), n + 1
     return out
 
@@ -72,12 +73,17 @@ def main() -> int:
     errors, notes = [], []
     for i, o in enumerate(obs):
         missing = [k for k in REQUIRED if not o.get(k)]
-        if "from" in o and o["from"] not in cands:
-            missing.append(f"from={o['from']} がバッチ {args.batch} に無い")
-        if "from" not in o and not all(o.get(k) for k in ("session", "scope_key", "source")):
-            missing.append("from か session・scope_key・source")
+        if args.batch == "sessions":
+            missing += [k for k in ("session", "scope_key", "source") if not o.get(k)]
+            if "from" in o:
+                missing.append("sessions のバッチに from は書かない")
+        elif o.get("from") not in cands:
+            missing.append(f"from={o.get('from')} がバッチ {args.batch} に無い")
         missing += [
-            f"{k} は日本語で書く（{e}）" for k in (*REQUIRED[1:], "session") if (e := L.language_error(o.get(k, "")))
+            f"{k} は日本語で書く（{e}）"
+            for k in (*REQUIRED[1:], "session")
+            for line in str(o.get(k, "")).splitlines()
+            if (e := L.language_error(line))
         ]
         if missing:
             errors.append(f"observations[{i}]: {', '.join(missing)}")
@@ -102,7 +108,7 @@ def main() -> int:
         }
         if c.get("reviewer_hash") and source == "team":
             meta["reviewer_hash"] = c["reviewer_hash"]
-        pattern = re.sub(r"^-\s*", "", " ".join(str(o["pattern"]).split()))
+        pattern = re.sub(r"^-\s+", "", " ".join(str(o["pattern"]).split()))
         body = f"\n## Rule\n{o['rule']}\n\n## Patterns\n- {pattern}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
         slug = re.sub(r"[^\w-]+", "-", o.get("from") or o["category"]).strip("-")
         notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md", meta, body))
@@ -112,7 +118,7 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
     for path, meta, body in notes:
-        L.write(free_path(path), meta, body)
+        L.write(free_path(path, meta["evidence"]), meta, body)
     done.touch()
     print(json.dumps({"batch": args.batch, "written": len(notes)}))
     return 0
