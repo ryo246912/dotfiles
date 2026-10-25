@@ -86,7 +86,8 @@ python3 <harvest>/scripts/review.py --work <work>
 ### 段階 3: PR を出す（メイン）
 
 `git status --porcelain` が空なら（直すものが無かった）、ブランチを消し、次の見直しまで間を空けるため日付だけを main に
-残して終える。「直すものなし」と報告する
+残して終える。「直すものなし」と報告する。`review.py` の要約の `review` が 1 以上なら、`<work>/pr-body.md` の「要確認」を
+報告にそのまま載せる（PR を出さないので、ここで伝えないと失われる）
 
 ```bash
 git switch main && git branch -D <branch>
