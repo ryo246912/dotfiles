@@ -1,17 +1,18 @@
-"""targets のリポジトリから、前回以降にマージされた PR の「採用されたレビュー指摘」を集めて候補にする。
+"""targets のリポジトリから、前回以降にマージされた PR のレビュー指摘を集めて候補にする。
 
     python3 collect.py --work <作業ディレクトリ>
 
 `~/.config/agent-lessons/targets.yml` と `targets.*.yml` を読み、`harvest-state.yml` の日付（無ければ 90 日前）
-から今日までにマージされた PR のレビュースレッドを取る。指摘者と PR の作者から source（received / given / team）を
-決め、採用されたものだけを、本文を短く削って `<work>/candidates.json` に書く。既に記録済みの指摘（inbox・lessons の
-根拠にある URL）は除く。
+から今日までにマージされた PR の、レビュースレッド・レビュー本文・会話タブのコメントを取る（bot のものも含む）。
+指摘者と PR の作者から source（received / given / team）を決め、本文を短く削って `<work>/candidates.json` に書く。
+除くのは、PR の作者がスレッドで却下した指摘（「対応しません」「仕様です」など）、作者自身のレビュー本文・会話タブの
+コメント、既に記録済みの指摘（inbox・lessons の根拠にある URL）。どれを教訓にするかは段階 1 のモデルが決める。
 
 - 1 回に集める候補は targets ファイルごとに MAX_CANDIDATES 件まで。PR をマージ日の古い順に日単位で処理し、上限に
   達したら残りの日は次回に回す（`next` に次回の開始日を書く。初回や久しぶりの実行で大量に溜まっていても溢れない）
 - モデルには `<work>/batches/<NNN>.json`（BATCH_SIZE 件ずつ、判断に要る項目だけ）を 1 つずつ渡す
-- GitHub から取ったレビュースレッドの生の応答は、実行日に関係なく RAW_DIR（`<host>/<owner>/<repo>/<番号>.json`）に
-  貯め、コンテキストには入れない。集め直すとき（やり直し・採用の判定を変えたとき・別の日の実行）は、RAW_DIR にある PR を
+- GitHub から取った生の応答は、実行日に関係なく RAW_DIR（`<host>/<owner>/<repo>/<PR の番号>.json`）に
+  貯め、コンテキストには入れない。集め直すとき（やり直し・除く条件を変えたとき・別の日の実行）は、RAW_DIR にある PR を
   GitHub から取り直さない。対象はマージ済みの PR なので、取ったあとに変わることはほとんど無い。取り直したい PR は
   そのファイルを消す
 
@@ -45,11 +46,9 @@ REJECT = re.compile(
     r"対応しません|対応しない|見送|不要です|意図(どおり|通り)|仕様です|won't fix|wontfix|not (going to|gonna) fix|by design|intended",
     re.I,
 )
-ADOPT = re.compile(r"修正しました|対応しました|直しました|反映しました|\bfixed\b|\bdone\b|\baddressed\b", re.I)
-NOT_YET = re.compile(r"まだ|未対応|後で|あとで|別の? ?PR|not yet|later|follow-?up", re.I)
-ADDRESSED_MARK = re.compile(r"Addressed in", re.I)  # bot が修正 commit を確かめたときに付ける印
+RAW_VERSION = 2  # 1（レビュースレッドだけ）のファイルは会話タブ・レビュー本文が無いので取り直す
 
-QUERY = """
+QUERY_THREADS = """
 query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -57,14 +56,39 @@ query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
       reviewThreads(first: 100, after: $endCursor) {
         pageInfo { hasNextPage endCursor }
         nodes {
-          isResolved
-          resolvedBy { login }
           path
           comments(first: 100) {
             totalCount
             nodes { author { login __typename } body url }
           }
         }
+      }
+    }
+  }
+}
+"""
+
+# --paginate は最初に見つけた pageInfo しか辿らないので、ページを送る一覧ごとに問い合わせを分ける
+QUERY_COMMENTS = """
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      comments(first: 100, after: $endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { author { login __typename } body url }
+      }
+    }
+  }
+}
+"""
+
+QUERY_REVIEWS = """
+query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviews(first: 100, after: $endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { author { login __typename } body url }
       }
     }
   }
@@ -112,7 +136,8 @@ def known_evidence() -> set[str]:
     urls: set[str] = set()
     for sub in ("inbox", "lessons"):
         for p in (L.LESSONS_DIR / sub).rglob("*.md"):
-            urls.update(re.findall(r"https?://\S+?#discussion_r\d+", p.read_text(encoding="utf-8")))
+            text = p.read_text(encoding="utf-8")
+            urls.update(re.findall(r"https?://\S+?#(?:discussion_r|issuecomment-|pullrequestreview-)\d+", text))
     return urls
 
 
@@ -131,20 +156,29 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
     )
 
 
-def threads(host: str, owner: str, name: str, number: int) -> tuple[str, list[dict]]:
+def fetch(host: str, owner: str, name: str, number: int) -> dict:
+    """PR の作者と、レビュースレッド・会話タブのコメント・レビュー本文。"""
     path = RAW_DIR / host / owner / name / f"{number}.json"
-    if path.is_file():
-        pages = json.loads(path.read_text(encoding="utf-8"))
-    else:
-        pages = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
-                   "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={QUERY}")  # fmt: skip
+    raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+    if not isinstance(raw, dict) or raw.get("version") != RAW_VERSION:
+        raw = {"version": RAW_VERSION}
+        for key, query in (("threads", QUERY_THREADS), ("comments", QUERY_COMMENTS), ("reviews", QUERY_REVIEWS)):
+            raw[key] = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
+                          "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={query}")  # fmt: skip
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")  # 途中で止まっても、壊れたファイルを取得済みとして読まない
-        tmp.write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
+        tmp.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
         tmp.replace(path)
-    author = pages[0]["data"]["repository"]["pullRequest"]["author"]["login"]
-    nodes = [n for p in pages for n in p["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]]
-    return author, nodes
+
+    def nodes(key: str, field: str) -> list[dict]:
+        return [n for p in raw[key] for n in p["data"]["repository"]["pullRequest"][field]["nodes"]]
+
+    return {
+        "author": raw["threads"][0]["data"]["repository"]["pullRequest"]["author"]["login"],
+        "threads": nodes("threads", "reviewThreads"),
+        "comments": nodes("comments", "comments"),
+        "reviews": nodes("reviews", "reviews"),
+    }
 
 
 def trim(body: str, limit: int) -> str:
@@ -167,27 +201,11 @@ def classify(me: str, pr_author: str, reviewer: str, team: bool) -> str | None:
     return None
 
 
-def adopted(thread: dict, pr_author: str) -> bool:
-    """PR の作者が受け入れたと読めるものだけを採用とみなす。
-
-    コメントした行が変わっただけ（isOutdated）や、作者以外の「fixed?」のような返信では採用としない。
-    採用とみなすのは、作者が却下していないうえで、次のどれかがあるとき:
-      - bot が修正 commit を確かめた印（Addressed in）がある
-      - 作者が「修正しました」などと返信している（「まだ」「別 PR で」などを含む返信は除く）
-      - 作者か指摘者がスレッドを resolve した
-    """
-    comments = thread["comments"]["nodes"]
-    first, replies = comments[0], comments[1:]
-    reviewer = (first["author"] or {}).get("login")
-    by_author = [r["body"] for r in replies if (r["author"] or {}).get("login") == pr_author]
-    if any(REJECT.search(b) for b in by_author):
-        return False
-    if any(ADDRESSED_MARK.search(c["body"]) for c in comments):
-        return True
-    if any(ADOPT.search(b) and not NOT_YET.search(b) for b in by_author):
-        return True
-    resolver = (thread.get("resolvedBy") or {}).get("login")
-    return bool(thread["isResolved"]) and resolver in (pr_author, reviewer)
+def rejected(thread: dict, pr_author: str) -> bool:
+    """PR の作者がスレッドで却下した指摘。採用されたかは判定しない（返信・resolve・Addressed in などの印が無いまま
+    直された指摘も拾うため。誤った指摘や好みの違いは段階 1 のモデルが外す）。"""
+    replies = thread["comments"]["nodes"][1:]
+    return any(REJECT.search(r["body"]) for r in replies if (r["author"] or {}).get("login") == pr_author)
 
 
 def main() -> int:
@@ -234,26 +252,35 @@ def main() -> int:
             for (repo, number), (_, t) in group:
                 host, owner, name = repo.split("/")
                 me = logins[host]
-                pr_author, nodes = threads(host, owner, name, number)
-                for th in nodes:
+                pr = fetch(host, owner, name, number)
+                pr_author = pr["author"]
+                # 会話タブとレビュー本文は、作者の返信がどの指摘への却下か決められないので、却下では除かない
+                items = []
+                for th in pr["threads"]:
                     comments = th["comments"]
-                    if comments["totalCount"] > MAX_COMMENTS or not comments["nodes"]:
-                        continue
-                    first = comments["nodes"][0]
-                    reviewer = (first["author"] or {}).get("login", "")
-                    source = classify(me, pr_author, reviewer, t["team"])
-                    if not source or first["url"] in seen or not adopted(th, pr_author):
+                    if comments["totalCount"] > MAX_COMMENTS or not comments["nodes"] or rejected(th, pr_author):
                         continue
                     last = comments["nodes"][-1] if len(comments["nodes"]) > 1 else None
+                    items.append(("thread", comments["nodes"][0], th["path"], last))
+                for kind in ("review", "comment"):
+                    for c in pr[f"{kind}s"]:
+                        if (c["author"] or {}).get("login") != pr_author and trim(c["body"], BODY_CHARS):
+                            items.append((kind, c, "", None))
+                for kind, first, path, last in items:
+                    reviewer = (first["author"] or {}).get("login", "")
+                    source = classify(me, pr_author, reviewer, t["team"])
+                    if not source or first["url"] in seen:
+                        continue
                     count += 1
                     candidates.append(
                         {
                             "id": f"c{len(candidates) + 1:04d}",
+                            "kind": kind,
                             "source": source,
                             "scope_key": repo,
                             "targets_file": fname,
                             "evidence": first["url"],
-                            "path": th["path"],
+                            "path": path,
                             "reviewer": "bot" if (first["author"] or {}).get("__typename") == "Bot" else "user",
                             "reviewer_hash": hashlib.sha1(f"{host}/{reviewer}".encode()).hexdigest()[:8],
                             "comment": trim(first["body"], BODY_CHARS),
@@ -268,7 +295,8 @@ def main() -> int:
         old.unlink()  # 集め直したときに、前回の余ったバッチを残さない
     for i, batch in enumerate(batches, 1):
         slim = [
-            {k: c[k] for k in ("id", "source", "scope_key", "path", "reviewer", "comment", "last_reply")} for c in batch
+            {k: c[k] for k in ("id", "kind", "source", "scope_key", "path", "reviewer", "comment", "last_reply")}
+            for c in batch
         ]
         (args.work / "batches" / f"{i:03d}.json").write_text(
             json.dumps({"candidates": slim}, ensure_ascii=False, indent=1), encoding="utf-8"

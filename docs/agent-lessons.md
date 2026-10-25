@@ -98,6 +98,11 @@ repos:
     team: true
 ```
 
+集めるのは、マージ済みの PR のレビュースレッド（行へのコメント）・レビュー本文・会話タブのコメントで、bot のものも
+含む。除くのは、PR の作者がスレッドで却下した指摘（「対応しません」「仕様です」など）と、作者自身のレビュー本文・会話タブの
+コメントだけ。採用されたかはスクリプトでは判定せず、誤った指摘・好みの違い・指摘を含まないコメント（デプロイの通知など）は
+観察を書く段階でモデルが外す。
+
 `team: true` のリポジトリでは、自分が関わっていない PR の指摘も集める。前回の実行日は agent-lessons リポジトリの
 `harvest-state.yml` にファイル名ごとに持ち、週次 PR がマージされたときだけ進む（PR を閉じれば、その期間はもう一度
 集め直される）。初回は直近 90 日から集める。
@@ -323,20 +328,20 @@ ruled の教訓は SessionStart で注入されなくなる。仕組みを入れ
 
 週次の集計の中間ファイルは、端末ごとに次の場所に残る（commit しない）。
 
-- GitHub から取ったレビュースレッドの生の応答: `~/.cache/agent-lessons/raw/<host>/<owner>/<repo>/<番号>.json`（PR ごと）。
+- GitHub から取った生の応答（レビュースレッド・会話タブ・レビュー本文）: `~/.cache/agent-lessons/raw/<host>/<owner>/<repo>/<PR の番号>.json`（PR ごと）。
   実行日に関係なく貯まり、集め直すときはここにある PR を GitHub に問い合わせない。対象はマージ済みの PR なので、
   取ったあとに変わることはほとんど無い。取り直したい PR はそのファイルを、全部取り直したいなら `raw/` ごと消す
 - それ以外: `~/.local/state/agent-lessons/runs/<実行日>/`
 
-| ファイル                                   | 中身                                                                                 |
-| ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `candidates.json`                          | 採用された指摘だけを、source・根拠の URL 付きで、本文を短く削ったもの                |
-| `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                  |
-| `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・why・check）。`.done` はそのバッチを書き終えた印 |
-| `plan.json`                                | 観察をどの教訓に入れたか（attach・create・skip・widen）のモデルの割り当て            |
-| `pr-body.md`                               | 週次 PR の本文                                                                       |
+| ファイル                                   | 中身                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `candidates.json`                          | 却下されていない指摘を、種類（`kind`）・source・根拠の URL 付きで、本文を短く削ったもの |
+| `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                     |
+| `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・why・check）。`.done` はそのバッチを書き終えた印    |
+| `plan.json`                                | 観察をどの教訓に入れたか（attach・create・skip・widen）のモデルの割り当て               |
+| `pr-body.md`                               | 週次 PR の本文                                                                          |
 
-流れは `raw` → `candidates.json`（`collect.py` が採用の判定・分類・重複の除外）→ `batches` →
+流れは `raw` → `candidates.json`（`collect.py` が却下の除外・分類・重複の除外）→ `batches` →
 `observations`（モデル）→ `inbox/`（`write_observations.py`）→ `plan.json`（モデル）→ `lessons/`（`apply_plan.py` が
 件数・昇格・失効を決める）。教訓の `## Evidence` と観察の `evidence` には元の指摘の URL があり、そこから `raw` や
 GitHub のコメントへ辿れる。
@@ -362,7 +367,7 @@ GitHub のコメントへ辿れる。
 2. `/lessons-harvest redo <実行日>` を実行する。その日の `candidates.json` と `batches/` を使い、GitHub から集め直さずに
    観察と教訓を書き直す
 
-候補から選び直したいとき（採用の判定を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
+候補から選び直したいとき（除く条件を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
 消す。`collect.py` が候補を作り直すが、レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、GitHub には
 PR の一覧だけを問い合わせる。
 
@@ -398,7 +403,7 @@ mise run lessons:sync
   従わない。教訓が注入されるのは週次 PR を人がマージした後だけ
 - **会社の情報の扱いは会社の規程に従う。** 会社のリポジトリの指摘を個人の private リポジトリに置いてよいか、
   Claude に送ってよいかは確認しておく
-- 週次 skill が使う GitHub GraphQL（レビュースレッドの取得）は、ローカルの `gh` で動く前提。Claude Code の
+- 週次 skill が使う GitHub GraphQL（レビュースレッド・会話タブ・レビュー本文の取得）は、ローカルの `gh` で動く前提。Claude Code の
   クラウドセッションからは GraphQL が使えないため、クラウドでは動作を確かめていない
 
 ## なぜこの構成か
@@ -409,10 +414,12 @@ mise run lessons:sync
   種類が task・decision・session に固定されていて、リポジトリや org で絞れない
 - **MCP ではなく CLI で使う理由。** MCP サーバを登録すると、ツール定義が常にコンテキストを使う。skill から CLI を
   呼べば、使うときだけで済み、Claude Code と Codex で同じ手順になる
-- **採用された指摘だけを数える理由。** bot の誤検知や好みの違いまで数えると、守る必要のない教訓が増える
+- **却下されたものだけを機械的に除く理由。** 指摘は返信や resolve をせずに直されることも多く、採用の印で絞ると
+  取りこぼす。bot の誤検知や好みの違いまで数えると守る必要のない教訓が増えるが、それは文面を読まないと決められないので、
+  観察を書く段階でモデルが外す
 - **トークンを抑える作り。** `pr-reviewer-brief` と同じく、週次の集計を段階に分けて `haiku` / `sonnet` の subagent に
   任せ、メインは段階を呼ぶだけにする。観察を書く段階は候補 50 件ずつに分けて subagent を順に起動し、1 回の
-  コンテキストに入る量を一定にする。GitHub からの収集・source の分類・採用の判定・重複の除外（`collect.py`）、観察の
+  コンテキストに入る量を一定にする。GitHub からの収集・source の分類・却下の除外・重複の除外（`collect.py`）、観察の
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
