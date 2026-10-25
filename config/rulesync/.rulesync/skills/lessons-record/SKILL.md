@@ -77,7 +77,7 @@ EOF
 )"
 ```
 
-同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/inbox ~/.local/share/agent-lessons/lessons`）。
+同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/{inbox,lessons,archived}`）。
 
 ## 3. 同期する
 

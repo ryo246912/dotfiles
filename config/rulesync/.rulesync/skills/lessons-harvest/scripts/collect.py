@@ -134,7 +134,7 @@ def read_state() -> dict[str, str]:
 
 def known_evidence() -> set[str]:
     urls: set[str] = set()
-    for sub in ("inbox", "lessons"):
+    for sub in ("inbox", "lessons", "archived"):
         for p in (L.LESSONS_DIR / sub).rglob("*.md"):
             text = p.read_text(encoding="utf-8")
             urls.update(re.findall(r"https?://\S+?#(?:discussion_r|issuecomment-|pullrequestreview-)\d+", text))

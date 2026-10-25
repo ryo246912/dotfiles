@@ -44,6 +44,7 @@ agent-lessons/
   escalation.md                  # 仕組み化のチェックリスト（lint・hook・テスト・ルールファイルで防ぐ教訓）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
+  archived/                      # 週次で skip した観察（status: skipped）と retired の教訓。inbox/・lessons/ と同じ相対パスで置く
 ```
 
 ### scope_key（どこで効くか）
@@ -177,7 +178,7 @@ diff で探すもの（grep する語・コードの形）を書く。
 | `candidate` | まだ 1 回しか出ていない                                                                                  | しない |
 | `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
 | `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
-| `retired`   | 90 日以上出ていない、または他の教訓に統合した                                                            | しない |
+| `retired`   | 90 日以上出ていない、または他の教訓に統合した。`archived/` へ移す                                        | しない |
 
 | 変更               | 条件                                                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------ |

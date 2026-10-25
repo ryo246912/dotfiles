@@ -146,7 +146,7 @@ def version_of(meta: dict) -> int:
 
 
 def note_files() -> list[Path]:
-    return sorted(p for sub in ("inbox", "lessons") for p in (LESSONS_DIR / sub).rglob("*.md"))
+    return sorted(p for sub in ("inbox", "lessons", "archived") for p in (LESSONS_DIR / sub).rglob("*.md"))
 
 
 def check_schema(strict: bool) -> bool:

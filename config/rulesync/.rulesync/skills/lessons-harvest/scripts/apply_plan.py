@@ -27,6 +27,8 @@ targets.yml（個人）にあるときだけで、それ以外は行わずに「
 昇格の規則:
   candidate → active  received・given は異なる PR とセッションの合計が 2 以上、team は異なる PR が 3 以上か指摘者が 2 人以上
   active → retired    last_seen から 90 日
+
+skip した観察と retired にした教訓は、同じ相対パスのまま archived/ の下へ移す（注入・集計・plan の材料から外すため）。
   仕組み化の候補       active になった後に 2 回以上また指摘された（plan.json の escalate に案がある教訓も）。
                        escalation.md（チェックリスト）の「未対応」に足す。印が付いたら escalation.py が ruled にする
 """
@@ -120,6 +122,12 @@ def lesson_path(source: str, scope_key: str, key: str) -> Path:
     return L.LESSONS_DIR / "lessons" / source / scope_key / f"{re.sub(r'[^\w-]+', '-', key).strip('-')}.md"
 
 
+def archive_path(path: Path, today: str) -> Path:
+    dest = L.LESSONS_DIR / "archived" / path.relative_to(L.LESSONS_DIR)
+    # 同じ key で作り直した教訓がまた retired になると同じパスになるので、前のものを上書きしない
+    return dest.with_stem(f"{dest.stem}-{today}") if dest.exists() else dest
+
+
 def check_plan(plan: dict, obs: dict) -> list[str]:
     """plan.json はモデルが書くので、書き込む前に割り当てと書き込み先をすべて検査する。
 
@@ -178,6 +186,7 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     texts = [(f"{w}[{i}].{k}", s.get(k, "")) for w in ("create", "widen") for i, s in enumerate(plan.get(w, []))
              for k in ("title", "rule", "why", "check")]  # fmt: skip
     texts += [(f"review[{i}]", r) for i, r in enumerate(plan.get("review", []))]
+    texts += [(f"skip[{i}].reason", s.get("reason", "")) for i, s in enumerate(plan.get("skip", []))]
     texts += [(f"escalate: {rel}", p) for rel, p in (plan.get("escalate") or {}).items()]
     # Patterns は 1 行ずつ見る（日本語の行に混ざった英語だけの行も拾うため）
     texts += [(f"{rel} の {k}", ln) for rel, (_, _, b) in obs.items() for k, v in L.sections(b).items()
@@ -343,10 +352,20 @@ def main() -> int:
                     escalate.append((rel, meta["title"], proposals.get(rel, "")))
 
     for path, (meta, body) in lessons.items():
-        L.write(path, meta, body)
-    for p, meta, body in obs.values():
-        meta["status"] = "processed"
-        L.write(p, meta, body)
+        if meta.get("status") == "retired":
+            L.write(archive_path(path, today), meta, body)
+            path.unlink(missing_ok=True)
+        else:
+            L.write(path, meta, body)
+    skipped = {s["observation"]: s.get("reason", "") for s in plan.get("skip", [])}
+    for rel, (p, meta, body) in obs.items():
+        if rel in skipped:
+            meta.update(status="skipped", skip_reason=skipped[rel])
+            L.write(archive_path(p, today), meta, body)
+            p.unlink()
+        else:
+            meta["status"] = "processed"
+            L.write(p, meta, body)
 
     # 既にチェックリストに載っている教訓は足さない（毎週同じ項目が増えないため）
     escalated = escalation.add(escalate)
