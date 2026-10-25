@@ -56,6 +56,11 @@ agent-lessons/
 作業中のリポジトリの scope_key は `origin` の URL から決まる（`agent-lessons-context --scope-keys`）。
 会社のリポジトリの教訓は会社のリポジトリでしか注入されない。
 
+教訓は最初はすべて指摘を受けたリポジトリの scope_key で作られ、同じ教訓が 2 リポジトリ以上に貯まったものだけが
+owner・global へ広がる。そのリポジトリの領域に固有の教訓（地図アプリの座標の順序・タイルの扱いなど）は、一般化できない
+からと捨てずにリポジトリの scope_key のまま残し、広げない。SessionStart では、広く効く教訓に押し出されないよう
+「このリポジトリ固有の教訓」として別に引いて先に注入する。
+
 ### source（誰の指摘か）
 
 | source     | 内容                                       | 使う場所                                                        |
@@ -254,14 +259,14 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 
 ほとんど自動で動く。
 
-| タイミング           | 起きること                                                                                                     |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される |
-| 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                        |
-| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Check` を突き合わせ、当てはまる箇所を直す                   |
-| 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                            |
-| 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                   |
-| 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                                      |
+| タイミング           | 起きること                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される（リポジトリ固有 20 件・広く効くもの 30 件まで） |
+| 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
+| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Check` を突き合わせ、当てはまる箇所を直す                                                                   |
+| 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
+| 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
+| 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                                                                                      |
 
 ### 週次の PR を確認する
 
@@ -274,11 +279,15 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 
 ### 何から教訓を作ったかを確かめる
 
-週次の集計の中間ファイルは、端末ごとに `~/.local/state/agent-lessons/runs/<実行日>/` に残る（commit しない）。
+週次の集計の中間ファイルは、端末ごとに次の場所に残る（commit しない）。
+
+- GitHub から取ったレビュースレッドの生の応答: `~/.cache/agent-lessons/raw/<host>/<owner>/<repo>/<番号>.json`（PR ごと）。
+  実行日に関係なく貯まり、集め直すときはここにある PR を GitHub に問い合わせない。対象はマージ済みの PR なので、
+  取ったあとに変わることはほとんど無い。取り直したい PR はそのファイルを、全部取り直したいなら `raw/` ごと消す
+- それ以外: `~/.local/state/agent-lessons/runs/<実行日>/`
 
 | ファイル                                   | 中身                                                                                 |
 | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| `raw/<host>/<owner>/<repo>/<番号>.json`    | GitHub から取ったレビュースレッドの生の応答（PR ごと）                               |
 | `candidates.json`                          | 採用された指摘だけを、source・根拠の URL 付きで、本文を短く削ったもの                |
 | `batches/<NNN>.json`                       | モデルに渡した候補（50 件ずつ、判断に要る項目だけ）                                  |
 | `observations/<NNN>.json`・`sessions.json` | モデルが一般化して書いた観察（rule・why・check）。`.done` はそのバッチを書き終えた印 |
@@ -294,6 +303,10 @@ GitHub のコメントへ辿れる。
 
 直近の週次の結果がおかしいとき（一般化の文面が悪い、割り当てを間違えた、など）は、同じ候補から作り直せる。
 
+先に agent-lessons を集計前に戻すのは、集計の結果（教訓の件数・昇格、観察、`harvest-state.yml` の日付）を取り消すため
+（GitHub から集め直すわけではない）。戻さずに作り直すと同じ指摘を二重に数え、さらに `collect.py` は教訓・観察に
+根拠の URL がある指摘を「記録済み」として除くので、集め直しても候補に出てこない。
+
 1. agent-lessons を集計前に戻す
    - 週次 PR が未マージなら、PR を閉じてブランチを消す（`git push origin --delete weekly/<実行日>`）。観察も教訓も
      そのブランチにしか無いので、main は集計前のまま
@@ -307,8 +320,9 @@ GitHub のコメントへ辿れる。
 2. `/lessons-harvest redo <実行日>` を実行する。その日の `candidates.json` と `batches/` を使い、GitHub から集め直さずに
    観察と教訓を書き直す
 
-GitHub から集め直したいとき（採用の判定を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
-消す。`raw/` が残っていれば、その PR は GitHub に問い合わせずに読み直す。
+候補から選び直したいとき（採用の判定を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
+消す。`collect.py` が候補を作り直すが、レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、GitHub には
+PR の一覧だけを問い合わせる。
 
 ### 手で操作する
 

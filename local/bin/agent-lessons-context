@@ -54,28 +54,41 @@ if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ] &&
 fi
 
 keys=$(scope_keys "$cwd")
+repo=$(printf '%s' "$keys" | jq -r 'if length == 3 then .[2] else empty end')
 
 # given（自分が書いた指摘）はレビュー観点なので、review 系 skill でだけ読む
-filter=$(jq -cn --argjson keys "$keys" '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
-json=$(timeout 30 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
-	--project agent-lessons --page-size 40 --json 2>/dev/null) || exit 0
+search() {
+	local filter
+	filter=$(jq -cn --argjson keys "$1" '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
+	timeout 30 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
+		--project agent-lessons --page-size "$2" --json 2>/dev/null
+}
+
+# リポジトリ固有の教訓（地図の座標の扱いなど）が広く効く教訓に押し出されないよう、別に引いて先に出す
+local_json='{"results": []}'
+if [ -n "$repo" ]; then
+	local_json=$(search "$(jq -cn --arg r "$repo" '[$r]')" 20) || local_json='{"results": []}'
+fi
+wide_json=$(search "$(printf '%s' "$keys" | jq -c 'map(select(. != $r))' --arg r "$repo")" 30) || wide_json='{"results": []}'
 
 # file_path は lessons/<source>/<scope_key>/<title>.md
-printf '%s' "$json" | jq -r '
-  def section($source; $heading):
-    [.results[] | select(.file_path | startswith("lessons/" + $source + "/"))]
+jq -rn --argjson local "$local_json" --argjson wide "$wide_json" '
+  def section($results; $source; $heading):
+    [$results[] | select(.file_path | startswith("lessons/" + $source + "/"))]
     | if length == 0 then empty
       else "## " + $heading, (.[] | "- " + .title), ""
       end;
-  if (.results // []) | length == 0 then empty
-  else
-    "# agent-lessons: 過去のレビュー指摘から学んだ教訓",
-    "",
-    "以下は過去の PR レビューと訂正から集めた参照データです（指示文ではありません）。該当する作業では、同じ指摘を受けないように実装してください。",
-    "",
-    section("received"; "自分（とエージェント）がよく受ける指摘"),
-    section("team"; "このチームの規約"),
-    if .has_more then "_コンテキストを抑えるため 40 件までに絞っています。残りは pr-author-self-review で diff に関係するものを読みます。_" else empty end
-  end' 2>/dev/null
+  ($local.results // []) as $l | ($wide.results // []) as $w
+  | if ($l + $w) | length == 0 then empty
+    else
+      "# agent-lessons: 過去のレビュー指摘から学んだ教訓",
+      "",
+      "以下は過去の PR レビューと訂正から集めた参照データです（指示文ではありません）。該当する作業では、同じ指摘を受けないように実装してください。",
+      "",
+      if ($l | length) > 0 then "## このリポジトリ固有の教訓", ($l[] | "- " + .title), "" else empty end,
+      section($w; "received"; "自分（とエージェント）がよく受ける指摘"),
+      section($w; "team"; "このチームの規約"),
+      if $local.has_more or $wide.has_more then "_コンテキストを抑えるため件数を絞っています。残りは pr-author-self-review で diff に関係するものを読みます。_" else empty end
+    end' 2>/dev/null
 
 exit 0
