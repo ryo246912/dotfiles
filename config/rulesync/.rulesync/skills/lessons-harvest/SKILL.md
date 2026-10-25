@@ -131,11 +131,17 @@ git diff --cached --no-renames --name-only --diff-filter=ACM -z \
 git commit -m "weekly: lessons $(date +%F)"   # 2 周目以降は末尾に " (<n>)" を付ける。PR のタイトルも同じ
 git push -u origin HEAD
 gh pr create --base <base> --title "weekly: lessons $(date +%F)" --body-file <work>/pr-body.md
+```
+
+最後の周（`--loop` でなければこの周）の後にだけ、main に戻して再インデックスする。途中の周で戻すと、次の周の
+ブランチが前の周ではなく main から切られるため。
+
+```bash
 git switch main
 basic-memory reindex --search -p agent-lessons
 ```
 
 secretlint で止まったら、該当する観察・教訓の文面を直してから続ける。最後に PR の URL と、`pr-body.md` の見出しごとの
 件数をユーザーに報告する（`--loop` なら周ごとに。PR は下の周から順にマージする）。「仕組み化のチェックリスト」に
-足した教訓があれば、`<repo>/escalation.md` で仕組みを入れてから印を付けるよう添える。`left_prs` があれば、持ち越した PR の数と、週次 PR をマージしたあとにもう一度実行すれば
-（または `--loop` で）続きを集められることも報告する。
+足した教訓があれば、`<repo>/escalation.md` で仕組みを入れてから印を付けるよう添える。`left_prs` があれば、持ち越した
+PR の数と、週次 PR をマージしたあとにもう一度実行すれば（または `--loop` で）続きを集められることも報告する。
