@@ -41,6 +41,9 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 | `globs`     | この教訓が効くファイルの glob。どこでも効くなら `[]`                                                                         |
 | `evidence`  | 指摘のスレッド URL（`https://github.com/<owner>/<repo>/pull/<n>#discussion_r<id>`）。訂正なら `session: <YYYY-MM-DD> <要旨>` |
 
+タイトル・本文は、元のコメントが英語でも日本語で書く（日本語でない観察は lessons-harvest の検査で止まる）。コード・識別子は
+原文のままでよく、`` ` `` で囲む。
+
 タイトルは仕組みの水準まで一般化して書く。同じ種類のミスが別のファイル・別のリポジトリ・別の形でも起きるように
 読めること。今回指摘された具体的な形は `## Patterns` に 1 行で残す（固有名詞は外し、コードの形は残す）。
 
@@ -59,7 +62,7 @@ date: <YYYY-MM-DD>
 source: <received|given>
 scope_key: <host>/<owner>/<repo>
 category: <category>
-evidence: <URL>
+evidence: "<URL か session: <YYYY-MM-DD> <要旨>>" # 引用符で囲む（session: の値は `: ` を含む）
 globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると YAML のエイリアスとして読まれる）
 ---
 ## Rule
