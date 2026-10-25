@@ -82,7 +82,8 @@ def main() -> int:
         missing += [
             f"{k} は日本語で書く（{e}）"
             for k in (*REQUIRED[1:], "session")
-            for line in str(o.get(k, "")).splitlines()
+            for v in [o.get(k, "")]
+            for line in (v.splitlines() if isinstance(v, str) else [v])
             if (e := L.language_error(line))
         ]
         if missing:
