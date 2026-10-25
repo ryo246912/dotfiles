@@ -11,11 +11,13 @@ if [ ! -d "$dir/.git" ]; then
   gh repo clone ryo246912/agent-lessons "$dir"
 fi
 # 既存の checkout を使い回すときに、別のリポジトリへ教訓を push しないため
-origin=$(git -C "$dir" remote get-url origin)
-if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
-  echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
-  exit 1
-fi
+# （push 先は pushurl で fetch 先と別にできるので両方を見る）
+for origin in "$(git -C "$dir" remote get-url origin)" "$(git -C "$dir" remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
 
 # 空のリポジトリ（README なしで作ったもの）を clone したときは、main に最初の commit を作って push する。
 # commit が無いと lessons:sync の pull や週次のブランチ作成ができないため。
@@ -66,6 +68,13 @@ if [ "$branch" != "main" ]; then
   echo "error: $dir は $branch を checkout しています。main に戻してから実行してください" >&2
   exit 1
 fi
+# lessons:setup の後で remote が変えられても、別のリポジトリへ教訓を push しないため
+for origin in "$(git remote get-url origin)" "$(git remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
 
 git add --all
 if ! git diff --cached --quiet; then
