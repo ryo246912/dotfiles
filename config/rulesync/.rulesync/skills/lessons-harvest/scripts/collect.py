@@ -26,9 +26,11 @@ import datetime as dt
 import hashlib
 import itertools
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import lessonlib as L
@@ -43,7 +45,7 @@ BODY_CHARS = 500
 REPLY_CHARS = 200
 
 REJECT = re.compile(
-    r"対応しません|対応しない|見送|不要です|意図(どおり|通り)|仕様です|won't fix|wontfix|not (going to|gonna) fix|by design|intended",
+    r"対応しません|対応しない|見送|不要です|意図(どおり|通り)|仕様です|won't fix|wontfix|not (going to|gonna) fix|by design|\bintended\b",
     re.I,
 )
 RAW_VERSION = 2  # 1（レビュースレッドだけ）のファイルは会話タブ・レビュー本文が無いので取り直す
@@ -159,22 +161,29 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
 def fetch(host: str, owner: str, name: str, number: int) -> dict:
     """PR の作者と、レビュースレッド・会話タブのコメント・レビュー本文。"""
     path = RAW_DIR / host / owner / name / f"{number}.json"
+    RAW_DIR.parent.mkdir(parents=True, exist_ok=True)
+    for d in reversed([path.parent, *itertools.takewhile(lambda d: d != RAW_DIR.parent, path.parent.parents)]):
+        d.mkdir(mode=0o700, exist_ok=True)
+        d.chmod(0o700)
+    if path.is_file():
+        path.chmod(0o600)
     raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
     if not isinstance(raw, dict) or raw.get("version") != RAW_VERSION:
         raw = {"version": RAW_VERSION}
         for key, query in (("threads", QUERY_THREADS), ("comments", QUERY_COMMENTS), ("reviews", QUERY_REVIEWS)):
             raw[key] = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
                           "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={query}")  # fmt: skip
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")  # 途中で止まっても、壊れたファイルを取得済みとして読まない
-        tmp.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(path)
+        # 途中で止まっても壊れたファイルを取得済みとして読まず、同時に動く別の実行とも一時ファイルを共有しない
+        fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(raw, f, ensure_ascii=False)
+        os.replace(tmp, path)
 
     def nodes(key: str, field: str) -> list[dict]:
         return [n for p in raw[key] for n in p["data"]["repository"]["pullRequest"][field]["nodes"]]
 
     return {
-        "author": raw["threads"][0]["data"]["repository"]["pullRequest"]["author"]["login"],
+        "author": (raw["threads"][0]["data"]["repository"]["pullRequest"]["author"] or {}).get("login", ""),
         "threads": nodes("threads", "reviewThreads"),
         "comments": nodes("comments", "comments"),
         "reviews": nodes("reviews", "reviews"),
