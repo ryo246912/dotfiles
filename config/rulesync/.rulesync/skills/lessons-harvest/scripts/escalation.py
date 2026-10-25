@@ -53,14 +53,46 @@ def load() -> dict[str, list[dict]]:
 
 
 def save(items: dict[str, list[dict]]) -> None:
-    def render(it: dict) -> str:
-        head = f"- [{'x' if it['checked'] else ' '}] {it['title']} — `{it['path']}`{it['tail']}"
-        return "\n".join([head, *it["lines"]])
+    """2 つの節の項目だけを書き直す。ユーザーが書き足したメモや節はそのまま残す。"""
 
-    parts = [HEADER]
+    def render(name: str) -> list[str]:
+        lines = [
+            "\n".join([f"- [{'x' if it['checked'] else ' '}] {it['title']} — `{it['path']}`{it['tail']}", *it["lines"]])
+            for it in items[name]
+        ]
+        return ["", *(lines or ["なし"]), ""]
+
+    def trim() -> None:
+        while out and not out[-1].strip():
+            out.pop()
+
+    def close(name: str | None) -> None:
+        if name in items:
+            trim()
+            out.extend(render(name))
+
+    out, section, in_item = [], None, False
+    for line in (PATH.read_text(encoding="utf-8") if PATH.is_file() else HEADER).splitlines():
+        if line.startswith("## "):
+            close(section)
+            section, in_item = line[3:].strip(), False
+            out.append(line)
+            continue
+        if section in items:
+            if ITEM.match(line):
+                in_item = True
+                continue
+            if (in_item and line.startswith("  ")) or line.strip() == "なし":
+                continue
+            in_item = False
+        out.append(line)
+    close(section)
     for name in (TODO, DONE):
-        parts.append(f"## {name}\n\n" + ("\n".join(render(it) for it in items[name]) or "なし") + "\n")
-    PATH.write_text("\n".join(parts), encoding="utf-8")
+        if f"## {name}" not in out:
+            trim()
+            out += ["", f"## {name}"]
+            close(name)
+    PATH.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
 
 
 def add(entries: list[tuple[str, str, str]]) -> list[str]:
@@ -69,6 +101,8 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
     listed = {it["path"] for its in items.values() for it in its}
     added = []
     for path, title, proposal in entries:
+        # 項目は 1 行目で区切って読むので、改行の入ったタイトルは 1 行にする
+        title = " ".join(title.split())
         if path in listed:
             continue
         lines = [f"  - 案: {' '.join(proposal.split()) or '（週次で案を書けなかった。Check と Patterns から考える）'}"]
@@ -93,7 +127,7 @@ def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
         if path is None or path in seen:
             continue
         seen.add(path)
-        todo.append({**it, "path": path, "title": titles.get(path, it["title"])})
+        todo.append({**it, "path": path, "title": " ".join(titles.get(path, it["title"]).split())})
     if todo != items[TODO]:
         items[TODO] = todo
         save(items)
@@ -121,10 +155,14 @@ def apply() -> dict:
             errors.append(f"lessons/ の中の教訓ではない: {it['path']}")
             keep.append(it)
             continue
+        if not mechanism(it):
+            errors.append(f"`仕組み:` に入れた仕組みを書く: {it['title']}")
+            keep.append(it)
+            continue
         meta, body = L.read(path)
         if meta.get("status") != "ruled":
             meta.update(status="ruled", ruled=today)
-            body = L.set_section(body, "Mechanism", mechanism(it) or "（記入なし）", before="Evidence")
+            body = L.set_section(body, "Mechanism", mechanism(it), before="Evidence")
             L.write(path, meta, body)
         items[DONE].append({**it, "tail": f" (ruled {today})"})
         ruled.append(it["title"])
