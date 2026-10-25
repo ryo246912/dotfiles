@@ -63,12 +63,12 @@ dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をそ�
    - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
      `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で集め直される）
 2. `mise run lessons:sync` で最新にする（仕組み化のチェックリスト `escalation.md` で印を付けた教訓も、ここで ruled になる）
-3. 未マージの週次 PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する（未マージの集計の上に重ねると、
-   同じ指摘を二重に数えるため）
+3. 未マージの週次 PR・月次の見直し（lessons-review）の PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する
+   （未マージの集計の上に重ねると、同じ指摘を二重に数えたり、統合・retired にした教訓へ観察を足したりするため）
 
    ```bash
    gh pr list --state open --json url,headRefName \
-     --jq '.[] | select(.headRefName | startswith("weekly/")) | .url'
+     --jq '.[] | select(.headRefName | test("^(weekly|review)/")) | .url'
    ```
 
 4. 教訓・観察の形式（`schema_version`）を確かめる。`python3 <skill>/scripts/migrate.py --check` の終了コードで分ける
