@@ -9,9 +9,11 @@
 
 - 1 回に集める候補は targets ファイルごとに MAX_CANDIDATES 件まで。PR をマージ日の古い順に日単位で処理し、上限に
   達したら残りの日は次回に回す（`next` に次回の開始日を書く。初回や久しぶりの実行で大量に溜まっていても溢れない）
-- モデルには `<work>/batches/<NNN>.json`（BATCH_SIZE 件ずつ、判断に要る項目だけ）を 1 つずつ渡す。GitHub の生の応答は
-  `<work>/raw/<host>/<owner>/<repo>/<番号>.json` に残し（あとで確かめる・集め直すため）、コンテキストには入れない。
-  同じ作業ディレクトリで再実行したときは、raw にある PR を GitHub から取り直さない
+- モデルには `<work>/batches/<NNN>.json`（BATCH_SIZE 件ずつ、判断に要る項目だけ）を 1 つずつ渡す
+- GitHub から取ったレビュースレッドの生の応答は、実行日に関係なく RAW_DIR（`<host>/<owner>/<repo>/<番号>.json`）に
+  貯め、コンテキストには入れない。集め直すとき（やり直し・採用の判定を変えたとき・別の日の実行）は、RAW_DIR にある PR を
+  GitHub から取り直さない。対象はマージ済みの PR なので、取ったあとに変わることはほとんど無い。取り直したい PR は
+  そのファイルを消す
 
 最後に 1 行の要約（JSON）を stdout に出す。
 """
@@ -30,6 +32,7 @@ from pathlib import Path
 
 import lessonlib as L
 
+RAW_DIR = Path.home() / ".cache/agent-lessons/raw"
 PR_LIMIT = 1000
 MAX_CANDIDATES = 150
 BATCH_SIZE = 50
@@ -128,15 +131,17 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
     )
 
 
-def threads(raw: Path, host: str, owner: str, name: str, number: int) -> tuple[str, list[dict]]:
-    path = raw / host / owner / name / f"{number}.json"
+def threads(host: str, owner: str, name: str, number: int) -> tuple[str, list[dict]]:
+    path = RAW_DIR / host / owner / name / f"{number}.json"
     if path.is_file():
         pages = json.loads(path.read_text(encoding="utf-8"))
     else:
         pages = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
                    "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={QUERY}")  # fmt: skip
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
+        tmp = path.with_suffix(".tmp")  # 途中で止まっても、壊れたファイルを取得済みとして読まない
+        tmp.write_text(json.dumps(pages, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(path)
     author = pages[0]["data"]["repository"]["pullRequest"]["author"]["login"]
     nodes = [n for p in pages for n in p["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]]
     return author, nodes
@@ -229,7 +234,7 @@ def main() -> int:
             for (repo, number), (_, t) in group:
                 host, owner, name = repo.split("/")
                 me = logins[host]
-                pr_author, nodes = threads(args.work / "raw", host, owner, name, number)
+                pr_author, nodes = threads(host, owner, name, number)
                 for th in nodes:
                     comments = th["comments"]
                     if comments["totalCount"] > MAX_COMMENTS or not comments["nodes"]:

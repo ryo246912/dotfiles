@@ -21,8 +21,9 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 - 定期タスクで無人で動くため、ユーザーに質問せずに最後まで進める。判断に迷うものは plan.json の `review` に書く
 
 以下で `<skill>` はこの skill のディレクトリ、`<repo>` は `~/.local/share/agent-lessons`、`<work>` は
-`~/.local/state/agent-lessons/runs/<今日の日付>`（リポジトリの外。commit しない中間ファイルと GitHub の生の応答を置き、
-あとで確かめたりやり直したりできるよう消さずに残す）を指す。
+`~/.local/state/agent-lessons/runs/<今日の日付>`（リポジトリの外。commit しない中間ファイルを置き、あとで確かめたり
+やり直したりできるよう消さずに残す）を指す。GitHub の生の応答は `collect.py` が実行日に関係なく
+`~/.cache/agent-lessons/raw/` に貯め、取得済みの PR は取り直さない。
 
 引数に `redo <日付>` が付いていたら、その日の実行のやり直し（agent-lessons を集計前に戻すのはユーザーが済ませている。
 dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をその日のディレクトリにし、段階 0 の 5 の前に
