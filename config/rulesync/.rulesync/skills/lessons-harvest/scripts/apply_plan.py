@@ -173,6 +173,16 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     for o in obs.values():
         if o[1].get("source") not in L.SOURCES:
             errors.append(f"観察の source が不正: {o[0]}")
+
+    # 教訓と pr-body.md に載る文章。日本語でない観察が inbox に残っていても、教訓へ移す前にここで止める
+    texts = [(f"{w}[{i}].{k}", s.get(k, "")) for w in ("create", "widen") for i, s in enumerate(plan.get(w, []))
+             for k in ("title", "rule", "why", "check")]  # fmt: skip
+    texts += [(f"review[{i}]", r) for i, r in enumerate(plan.get("review", []))]
+    texts += [(f"escalate: {rel}", p) for rel, p in (plan.get("escalate") or {}).items()]
+    # Patterns は 1 行ずつ見る（日本語の行に混ざった英語だけの行も拾うため）
+    texts += [(f"{rel} の {k}", ln) for rel, (_, _, b) in obs.items() for k, v in L.sections(b).items()
+              if k in ("Rule", "Patterns", "Why", "Check") for ln in v.splitlines() if ln.strip()]  # fmt: skip
+    errors += [f"{where} は日本語で書く（{e}）" for where, t in texts if (e := L.language_error(t))]
     return errors
 
 

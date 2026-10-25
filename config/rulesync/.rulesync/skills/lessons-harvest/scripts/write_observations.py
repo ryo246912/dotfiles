@@ -68,6 +68,9 @@ def main() -> int:
             missing.append(f"from={o['from']} がバッチ {args.batch} に無い")
         if "from" not in o and not all(o.get(k) for k in ("session", "scope_key", "source")):
             missing.append("from か session・scope_key・source")
+        missing += [
+            f"{k} は日本語で書く（{e}）" for k in (*REQUIRED[1:], "session") if (e := L.language_error(o.get(k, "")))
+        ]
         if missing:
             errors.append(f"observations[{i}]: {', '.join(missing)}")
             continue

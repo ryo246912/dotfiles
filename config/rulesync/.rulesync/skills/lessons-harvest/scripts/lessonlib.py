@@ -30,6 +30,11 @@ STATUSES = ("candidate", "active", "ruled", "retired")
 # 教訓の `## Patterns`（よく出た形）に残す数。超えたら古いものから落とす（push 前に読む量を抑えるため）
 MAX_PATTERNS = 8
 
+# 観察・教訓の文章は日本語で書く。コード・識別子・固有名詞は `` で囲めば原文のままでよいので、その中は見ない
+_HANGUL = re.compile(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]")
+_KANA = re.compile(r"[\u3040-\u30ff]")
+_CODE = re.compile(r"`[^`]*`")
+
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
 
 
@@ -239,3 +244,13 @@ def inside(rel: str, sub: str) -> Path | None:
 
 def lesson_files() -> list[Path]:
     return sorted((LESSONS_DIR / "lessons").rglob("*.md"))
+
+
+def language_error(text: str) -> str | None:
+    """日本語の文章でなければ理由を返す。かなの有無で見る（漢字だけでは中国語と区別できないため）。"""
+    prose = _CODE.sub("", str(text))
+    if _HANGUL.search(prose):
+        return "ハングルが含まれる"
+    if re.search(r"[^\W\d_]", prose) and not _KANA.search(prose):
+        return "日本語（ひらがな・カタカナ）が含まれない"
+    return None
