@@ -21,7 +21,13 @@ python3 <skill>/scripts/lessons_query.py --index      # 既存の教訓の一覧
 | `create` | 同じ source・scope_key の範囲に同じ種類の教訓が無い。その範囲の似た観察はまとめて 1 つの `create` に入れる。`key` は英語のケバブケース。別のリポジトリにまたがるものは、それぞれ作ってから `widen` でまとめる |
 | `skip`   | 次の変更で効かない（その場限りの事情・好みの違い・誤った指摘）。理由を書く。リポジトリ固有なだけなら skip せず、そのリポジトリの `create`・`attach` にする                                                    |
 
-`create` の `title` は命令形の 1 文にする（そのまま SessionStart で注入される）。
+`create` の `title`・`rule` は仕組みの水準の命令形の 1 文にする（title はそのまま SessionStart で注入される）。
+形の違いはタイトルに並べない。観察の `pattern` はスクリプトが教訓の `## Patterns` に足すので、同じ仕組みの別の形
+（UPDATE の条件漏れとロック漏れなど）は別の教訓を作らず `attach` する。`check` は diff で探すもの（grep する語・
+コードの形）にし、「〜を考慮したか」とは書かない。
+
+status が `ruled`（仕組みに移した）の教訓にも `attach` してよい。仕組みを入れた後にまた指摘されたことになるので、
+スクリプトが「要確認」に回す。
 
 次の場合だけ `widen` を書く。
 
@@ -31,6 +37,15 @@ python3 <skill>/scripts/lessons_query.py --index      # 既存の教訓の一覧
   リポジトリ名を取り除いた文面案を `review` に書く
 
 リポジトリの領域に固有の教訓（地図の座標の扱いなど）は、似た教訓が別のリポジトリにあっても `widen` しない。
+
+次の active な教訓には `escalate` に仕組み化の案を書く。注入より lint・hook・テスト・ルールファイルで防ぐほうが確実なため。
+
+- 今週 `attach` する教訓で、`--index` の `since_active` が 1 以上（active になった後にまた指摘された）
+- diff の形で機械的に見つけられる（`## Patterns` が grep や lint のルールで表せる）
+
+案は具体に書く（どの lint のどのルールか、どの hook で何を grep するか、どんなテストを足すか、CLAUDE.md・AGENTS.md の
+どこに何を書くか）。スクリプトは `since_active` が 2 以上の教訓も案なしで足す。足した先は agent-lessons の
+`escalation.md`（仕組み化のチェックリスト）で、ユーザーが仕組みを入れて印を付けると ruled になる。
 
 件数・昇格・失効はスクリプトが決めるので、plan.json には書かない。
 

@@ -6,15 +6,17 @@
 `<work>/observations/<batch>.json` を読み、成功したら `<work>/observations/<batch>.done` を置く（全バッチが済んだかを
 apply_plan.py が確かめるため。済んでいないバッチがあると前回の実行日を進めない）。
 
-モデルは一般化した文章（rule・why・check）と category・globs だけを書き、source・scope_key・根拠の URL などの
+モデルは一般化した文章（rule・pattern・why・check）と category・globs だけを書き、source・scope_key・根拠の URL などの
 メタデータは candidates.json からこのスクリプトが埋める（モデルの出力を短くし、書き写しの誤りを防ぐ）。
 
 `observations/<batch>.json` の書式:
 
     {
       "observations": [
-        {"from": "c001", "category": "doc-behavior-drift", "globs": ["docs/**"],
-         "rule": "次に守ること（命令形の 1 文）", "why": "書く時点で防げなかった理由", "check": "push 前に確かめること"},
+        {"from": "c0001", "category": "shell-error-masking", "globs": ["**/*.sh"],
+         "rule": "仕組みの単位で次に守ること（命令形の 1 文）",
+         "pattern": "`x=$(a | b)` で a の失敗が消える → 先に変数へ受けてから加工する",
+         "why": "書く時点で防げなかった理由", "check": "diff で何を探すか（`$(` の中の `|` など）"},
         {"session": "2026-10-20 dotfiles で ○○ を訂正された", "scope_key": "github.com/o/r", "source": "received", ...}
       ]
     }
@@ -34,7 +36,7 @@ from pathlib import Path
 
 import lessonlib as L
 
-REQUIRED = ("category", "rule", "why", "check")
+REQUIRED = ("category", "rule", "pattern", "why", "check")
 
 
 def main() -> int:
@@ -89,7 +91,8 @@ def main() -> int:
         }
         if c.get("reviewer_hash") and source == "team":
             meta["reviewer_hash"] = c["reviewer_hash"]
-        body = f"\n## Rule\n{o['rule']}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
+        pattern = re.sub(r"^-\s*", "", " ".join(str(o["pattern"]).split()))
+        body = f"\n## Rule\n{o['rule']}\n\n## Patterns\n- {pattern}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
         slug = re.sub(r"[^\w-]+", "-", o.get("from") or o["category"]).strip("-")
         notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md", meta, body))
 

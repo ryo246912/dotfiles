@@ -9,7 +9,7 @@ Basic Memory を 1 件ずつ read-note するとトークンも時間もかか�
 
   --source   received / given / team をカンマ区切りで（既定はすべて）
   --paths    変更ファイル。教訓の globs が空か、どれかに一致するものだけ残す
-  --full     Rule・Check まで出す（既定はタイトルと場所だけ）
+  --full     Rule・Patterns（よく出たダメな形 → 直し方）・Check まで出す（既定はタイトルと場所だけ）
   --index    scope・status で絞らず、全教訓を集計用の項目（件数など）付きで出す
 """
 
@@ -48,7 +48,11 @@ def main() -> int:
                     "source": meta.get("source"),
                     "scope_key": meta.get("scope_key"),
                     "category": meta.get("category"),
-                    **{k: meta.get(k) for k in ("count", "prs", "sessions", "reviewers", "last_seen") if k in meta},
+                    **{
+                        k: meta.get(k)
+                        for k in ("count", "prs", "sessions", "reviewers", "last_seen", "since_active")
+                        if k in meta
+                    },
                 }
             )
             continue
@@ -60,6 +64,7 @@ def main() -> int:
         if args.full:
             sec = L.sections(body)
             item["rule"] = sec.get("Rule", "")
+            item["patterns"] = [b[2:] for b in L.bullets(sec.get("Patterns", ""))]
             item["check"] = sec.get("Check", "")
         out.append(item)
 

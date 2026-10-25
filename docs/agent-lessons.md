@@ -41,6 +41,7 @@ commit 前に secretlint を通す。
 ```text
 agent-lessons/
   harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
+  escalation.md                  # 仕組み化のチェックリスト（lint・hook・テスト・ルールファイルで防ぐ教訓）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
 ```
@@ -109,10 +110,10 @@ repos:
 
 ```markdown
 ---
-schema_version: 1
+schema_version: 2
 title: 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する
 type: lesson
-status: active # candidate / active / enforced / retired
+status: active # candidate / active / ruled / retired
 source: received
 scope_key: global
 category: doc-behavior-drift
@@ -123,7 +124,7 @@ reviewers: 2 # team のときだけ。異なる指摘者の数（名前は残さ
 first_seen: 2026-10-14
 last_seen: 2026-10-16
 activated: 2026-10-15 # active になった日
-since_active: 1 # active になった後に指摘された回数（2 以上で格上げ候補）
+since_active: 1 # active になった後に指摘された回数（2 以上で仕組み化の候補）
 repos: [github.com/ryo246912/dotfiles] # 根拠のリポジトリ（global に広げてよいかの判定に使う）
 globs: ["docs/**", "**/*.example"]
 ---
@@ -132,46 +133,57 @@ globs: ["docs/**", "**/*.example"]
 
 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する。
 
+## Patterns
+
+- task 名を変えたが docs の実行例が旧名のまま → 旧名で `git grep` して docs・example も直す
+- オプションの既定値を変えたがコメントが旧既定値のまま → 既定値を書いたコメントも同じ commit で直す
+
 ## Why
 
 挙動を変えたファイルだけを直し、同じ挙動を説明している別ファイル（docs・example・コメント）を探していなかった。
 
 ## Check
 
-変更したタスク名・オプション名・挙動を表す語で `git grep` し、ヒットしたファイルが diff に含まれているか確かめる。
+diff で消した名前・既定値を `git grep` し、ヒットしたのに diff に無いファイル（docs・example・コメント）。
 
 ## Evidence
 
 - https://github.com/ryo246912/dotfiles/pull/1613#discussion_r4280582150 (2026-10-15)
 ```
 
-タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。`count`・`since_active`・`repos` は観察を足すたびに、
+タイトルがそのまま SessionStart で注入されるので、命令形の 1 文にする。タイトルと `## Rule` は仕組みの水準で書き
+（形の違う同じ指摘も 1 つの教訓で覆う）、実際に指摘された形は `## Patterns` に「ダメな形 → 直し方」で残す。
+`## Patterns` は観察が入るたびに `apply_plan.py` が足す（新しい順に 8 件まで）。`## Check` には「〜を確認したか」ではなく、
+diff で探すもの（grep する語・コードの形）を書く。ruled にした教訓には、入れた仕組みを書いた `## Mechanism` が
+`## Evidence` の前に付く。
+
+`count`・`since_active`・`repos` は観察を足すたびに、
 `prs`・`sessions` は `## Evidence` から、team の `reviewers` は `reviewer_hashes` から `apply_plan.py` が更新するので、手で直さない。
 `sessions` はセッション ID が残らないため、訂正の日付ごとに 1 と数える（同じ日の訂正をまとめ、早く昇格させないため）。
 
 ### status と昇格の基準
 
-| status      | 意味                                          | 注入   |
-| ----------- | --------------------------------------------- | ------ |
-| `candidate` | まだ 1 回しか出ていない                       | しない |
-| `active`    | 繰り返し出た。守るべき教訓                    | する   |
-| `enforced`  | lint・hook・テストで強制済み（手で付ける）    | しない |
-| `retired`   | 90 日以上出ていない、または他の教訓に統合した | しない |
+| status      | 意味                                                                                                     | 注入   |
+| ----------- | -------------------------------------------------------------------------------------------------------- | ------ |
+| `candidate` | まだ 1 回しか出ていない                                                                                  | しない |
+| `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
+| `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
+| `retired`   | 90 日以上出ていない、または他の教訓に統合した                                                            | しない |
 
-| 変更                       | 条件                                                                                                               |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| candidate → active         | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner               | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
-| owner → global             | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
-| active → retired           | `last_seen` から 90 日                                                                                             |
-| lint / hook への格上げ候補 | active になった後も 2 回以上指摘された                                                                             |
+| 変更               | 条件                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| candidate → active | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
+| repo → owner       | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
+| owner → global     | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
+| active → retired   | `last_seen` から 90 日                                                                                             |
+| 仕組み化の候補     | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation.md` に足される       |
 
 会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
 リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
 
 ### 形式のバージョン（schema_version）
 
-教訓と観察の frontmatter には、形式のバージョン `schema_version` を入れる（今は `1`）。今の版は
+教訓と観察の frontmatter には、形式のバージョン `schema_version` を入れる（今は `2`。v2 で `## Patterns` を足し、`enforced` を `ruled` に改めた）。今の版は
 `lessons-harvest/scripts/lessonlib.py` の `SCHEMA_VERSION` で決まり、スクリプトが書くファイルには常にその値が入る。
 `schema_version` が無いファイルは、版を付ける前の形式（v0）として扱う。
 
@@ -263,7 +275,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される（リポジトリ固有 20 件・広く効くもの 30 件まで） |
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
-| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Check` を突き合わせ、当てはまる箇所を直す                                                                   |
+| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                    |
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
 | 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                                                                                      |
@@ -274,8 +286,34 @@ PR の diff で、active にする教訓・範囲を広げる教訓・retired �
 **マージするまで次の週次は止まる**（二重に数えないため）。
 
 - 教訓の文面がおかしければ、その PR の上で直してからマージする
-- 「格上げ候補」に挙がった教訓は、文章では防げていない。対象リポジトリに lint・hook・テストを足し、
-  教訓の `status` を `enforced` にして、強制した手段を本文に書く
+- 「仕組み化のチェックリストに足した教訓」は、注入しても防げていない。下の「仕組み化する」で対応する
+
+### 仕組み化する（escalation.md）
+
+教訓を読ませて守らせるより、lint・hook・テスト・ルールファイルで機械的に防ぐほうが確実。active になった後も指摘され
+続ける教訓は、週次の集計が agent-lessons の `escalation.md` の「未対応」に、モデルが書いた仕組みの案付きで足す。
+
+```markdown
+## 未対応
+
+- [ ] 読んだ値で更新する処理は、行ロックか条件付き UPDATE で守る — `lessons/team/github.com/o/r/db-row-locking.md`
+  - 案: semgrep で WHERE が id だけの UPDATE を検出する。同時に 2 回呼ぶテストを足す
+  - 仕組み:
+
+## 済み
+
+- [x] 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する — `lessons/received/global/doc-behavior-drift.md` (ruled 2026-11-01)
+  - 案: …
+  - 仕組み: pre-commit で旧名を grep する hook（https://github.com/o/r/pull/12）
+```
+
+1. 「未対応」を見て、対象リポジトリに仕組みを入れる（案はたたき台。ほかの方法でもよい）
+2. 入れたら `[ ]` を `[x]` にし、`仕組み:` に入れたもの（PR の URL など）を書く。GitHub 上で直接直してもよい
+3. `mise run lessons:sync`（週次の段階 0 でも呼ばれる）が、印の付いた教訓を `ruled` にして `## Mechanism` を書き、
+   項目を「済み」へ移して commit・push する
+
+ruled の教訓は SessionStart で注入されなくなる。仕組みを入れた後にまた同じ指摘を受けたら、週次 PR の「要確認」に載る
+（仕組みが効いていないか、穴がある）。
 
 ### 何から教訓を作ったかを確かめる
 
@@ -330,7 +368,7 @@ PR の一覧だけを問い合わせる。
 # 作業中のリポジトリに効く教訓を見る（SessionStart と同じ出力）
 echo '{}' | agent-lessons-context
 
-# 作業中のリポジトリに効く教訓を、Rule と Check 付きで見る（skill と同じ出力）
+# 作業中のリポジトリに効く教訓を、Rule・Patterns・Check 付きで見る（skill と同じ出力）
 # Claude Code の skill は ~/.claude/skills、Codex は ~/.agents/skills に配られる（どちらも同じスクリプト）
 python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --full
 
@@ -349,7 +387,7 @@ mise run lessons:sync
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 40 件まで。** コンテキストを抑えるため。超えた分は push 前の `pr-author-self-review` が diff に
-  関係するものだけ読む。常に 40 件を超えるなら、lint などで強制できる教訓を `enforced` にして減らす
+  関係するものだけ読む。常に 40 件を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに

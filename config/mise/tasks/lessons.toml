@@ -39,7 +39,7 @@ basic-memory reindex --search -p agent-lessons
 shell = "bash -c"
 
 ["lessons:sync"]
-description = "Commit local agent-lessons changes, pull, push, and reindex Basic Memory"
+description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation.md, push, and reindex Basic Memory"
 run = '''
 set -euo pipefail
 dir="$HOME/.local/share/agent-lessons"
@@ -62,6 +62,22 @@ if ! git diff --cached --quiet; then
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
 git pull --rebase --quiet
+
+# 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
+# pull の後に拾う。skill は rulesync が配る先のどちらかにある。
+for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lessons-harvest"; do
+  if [ -f "$skill/scripts/escalation.py" ]; then
+    python3 "$skill/scripts/escalation.py" --apply
+    git add --all
+    if ! git diff --cached --quiet; then
+      git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+        | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+      git commit --quiet -m "chore: rule lessons checked in escalation.md"
+    fi
+    break
+  fi
+done
+
 git push --quiet
 basic-memory reindex --search -p agent-lessons
 '''

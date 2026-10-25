@@ -8,6 +8,7 @@ Basic Memory が足す `permalink` などの未知のキーもそのまま残す
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,7 +23,12 @@ SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 
 # 教訓・観察の形式のバージョン。形式を変えたら 1 上げ、migrate.py の MIGRATIONS に前の版からの移行を足す。
 # 書き込むスクリプトは、古い版のファイルが残っていると止まる（混ざった形式に書き足さないため）。
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+# 教訓の status。注入されるのは active だけ（ruled は仕組みに移したので注入しない）
+STATUSES = ("candidate", "active", "ruled", "retired")
+# 教訓の `## Patterns`（よく出た形）に残す数。超えたら古いものから落とす（push 前に読む量を抑えるため）
+MAX_PATTERNS = 8
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
 
@@ -138,8 +144,9 @@ def note_files() -> list[Path]:
     return sorted(p for sub in ("inbox", "lessons") for p in (LESSONS_DIR / sub).rglob("*.md"))
 
 
-def check_schema(strict: bool) -> None:
-    """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。"""
+def check_schema(strict: bool) -> bool:
+    """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。
+    すべて今の版なら True。"""
     versions = {p: version_of(read(p)[0]) for p in note_files()}
     newer = [p for p, v in versions.items() if v > SCHEMA_VERSION]
     older = [p for p, v in versions.items() if v < SCHEMA_VERSION]
@@ -153,6 +160,7 @@ def check_schema(strict: bool) -> None:
         if strict:
             sys.exit(f"error: {msg}")
         print(f"warning: {msg}", file=sys.stderr)
+    return not older
 
 
 def sections(body: str) -> dict[str, str]:
@@ -161,6 +169,24 @@ def sections(body: str) -> dict[str, str]:
     for m in re.finditer(r"^## (.+?)\n(.*?)(?=^## |\Z)", body, re.M | re.S):
         out[m.group(1).strip()] = m.group(2).strip()
     return out
+
+
+def bullets(text: str) -> list[str]:
+    """`- ` で始まる行（`## Patterns` の 1 件ずつなど）。"""
+    return [ln.strip() for ln in text.splitlines() if ln.startswith("- ")]
+
+
+def set_section(body: str, name: str, content: str, before: str | None = None) -> str:
+    """`## name` の本文を content にする。無ければ `## before` の前に（それも無ければ末尾に）足す。"""
+    block = f"## {name}\n{content.strip()}\n\n"
+    m = re.search(rf"^## {re.escape(name)}\n.*?(?=^## |\Z)", body, re.M | re.S)
+    if m:
+        body = body[: m.start()] + block + body[m.end() :]
+    elif before and (m := re.search(rf"^## {re.escape(before)}\n", body, re.M)):
+        body = body[: m.start()] + block + body[m.start() :]
+    else:
+        body = body.rstrip() + "\n\n" + block
+    return re.sub(r"\n{3,}", "\n\n", body).rstrip() + "\n"
 
 
 def glob_regex(pattern: str) -> re.Pattern:

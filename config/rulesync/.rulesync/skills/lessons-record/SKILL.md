@@ -41,7 +41,8 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 | `globs`     | この教訓が効くファイルの glob。どこでも効くなら `[]`                                                                         |
 | `evidence`  | 指摘のスレッド URL（`https://github.com/<owner>/<repo>/pull/<n>#discussion_r<id>`）。訂正なら `session: <YYYY-MM-DD> <要旨>` |
 
-タイトルは一般化して書く。同じ種類のミスが別のファイル・別のリポジトリでも起きるように読めること。
+タイトルは仕組みの水準まで一般化して書く。同じ種類のミスが別のファイル・別のリポジトリ・別の形でも起きるように
+読めること。今回指摘された具体的な形は `## Patterns` に 1 行で残す（固有名詞は外し、コードの形は残す）。
 
 ## 2. inbox に書く
 
@@ -52,7 +53,7 @@ basic-memory tool write-note --project agent-lessons \
   --type lesson_observation \
   --content "$(cat <<'EOF'
 ---
-schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
+schema_version: 2 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
 status: pending
 date: <YYYY-MM-DD>
 source: <received|given>
@@ -64,11 +65,14 @@ globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると 
 ## Rule
 <タイトルと同じ 1 文。必要なら 1〜2 行の補足>
 
+## Patterns
+- <指摘されたダメな形> → <直し方>
+
 ## Why
 <なぜ書く時点で防げなかったか。確認しなかったこと・思い込んだこと>
 
 ## Check
-<push 前に diff に対して確かめること。コマンドで確かめられるならそのコマンド>
+<push 前に diff で探すもの（grep する語・コードの形）。「〜を確認したか」とは書かない>
 EOF
 )"
 ```

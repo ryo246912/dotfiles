@@ -46,7 +46,7 @@ dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をそ�
    - そのブランチの PR が出ていれば（`gh pr list --head <ブランチ> --state open`）、`git switch main` だけする
    - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
      `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で集め直される）
-2. `mise run lessons:sync` で最新にする
+2. `mise run lessons:sync` で最新にする（仕組み化のチェックリスト `escalation.md` で印を付けた教訓も、ここで ruled になる）
 3. 未マージの週次 PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する（未マージの集計の上に重ねると、
    同じ指摘を二重に数えるため）
 
@@ -110,5 +110,6 @@ basic-memory reindex --search -p agent-lessons
 ```
 
 secretlint で止まったら、該当する観察・教訓の文面を直してから続ける。最後に PR の URL と、`pr-body.md` の見出しごとの
-件数をユーザーに報告する。`left_prs` があれば、持ち越した PR の数と、週次 PR をマージしたあとにもう一度実行すれば
+件数をユーザーに報告する。「仕組み化のチェックリスト」に足した教訓があれば、`<repo>/escalation.md` で仕組みを入れてから
+印を付けるよう添える。`left_prs` があれば、持ち越した PR の数と、週次 PR をマージしたあとにもう一度実行すれば
 続きを集められることも報告する。

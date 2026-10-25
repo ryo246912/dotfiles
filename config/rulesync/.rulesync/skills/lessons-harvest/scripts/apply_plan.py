@@ -15,8 +15,11 @@ plan.json の書式（未処理の観察は、attach・create・skip のどれ�
       "widen":  [{"lessons": ["lessons/received/github.com/o/a/x.md", "lessons/received/github.com/o/b/x.md"],
                   "scope_key": "github.com/o", "key": "...", "title": "...", "rule": "...", "why": "...", "check": "...",
                   "globs": []}],
+      "escalate": {"lessons/received/global/y.md": "仕組みの案（どの lint のどのルール・どの hook・どのテストか）"},
       "review": ["ユーザーに判断してほしいこと"]
     }
+
+教訓の `## Patterns`（よく出た形）は、観察の `## Patterns` をこのスクリプトが足していくので、plan.json には書かない。
 
 widen は同じ教訓を上の scope（owner か global）にまとめる。global にまとめられるのは、根拠のリポジトリがすべて
 targets.yml（個人）にあるときだけで、それ以外は行わずに「要確認」へ回す（global は個人のリポジトリにも注入されるため）。
@@ -24,7 +27,8 @@ targets.yml（個人）にあるときだけで、それ以外は行わずに「
 昇格の規則:
   candidate → active  received・given は異なる PR とセッションの合計が 2 以上、team は異なる PR が 3 以上か指摘者が 2 人以上
   active → retired    last_seen から 90 日
-  格上げ候補           active になった後に 2 回以上また指摘された
+  仕組み化の候補       active になった後に 2 回以上また指摘された（plan.json の escalate に案がある教訓も）。
+                       escalation.md（チェックリスト）の「未対応」に足す。印が付いたら escalation.py が ruled にする
 """
 
 from __future__ import annotations
@@ -36,6 +40,7 @@ import re
 import sys
 from pathlib import Path
 
+import escalation
 import lessonlib as L
 
 RETIRE_DAYS = 90
@@ -72,7 +77,7 @@ def recount(meta: dict, body: str) -> None:
         meta["reviewers"] = len(set(meta.get("reviewer_hashes") or []))
 
 
-def add_observation(meta: dict, body: str, obs: dict) -> str:
+def add_observation(meta: dict, body: str, obs: dict, obs_body: str) -> str:
     meta["count"] = int(meta.get("count") or 0) + 1
     meta["last_seen"] = max(str(meta.get("last_seen") or ""), obs_date(obs))
     meta["first_seen"] = min(str(meta.get("first_seen") or "9999"), obs_date(obs))
@@ -82,6 +87,10 @@ def add_observation(meta: dict, body: str, obs: dict) -> str:
     if meta.get("status") == "active":
         meta["since_active"] = int(meta.get("since_active") or 0) + 1
     meta["globs"] = sorted(set(meta.get("globs") or []) | set(obs.get("globs") or []))
+    have = L.bullets(L.sections(body).get("Patterns", ""))
+    new = [b for b in L.bullets(L.sections(obs_body).get("Patterns", "")) if b not in have]
+    if new:
+        body = L.set_section(body, "Patterns", "\n".join((have + new)[-L.MAX_PATTERNS :]), before="Why")
     line = evidence_line(obs)
     if "## Evidence" not in body:
         body = body.rstrip() + "\n\n## Evidence\n"
@@ -155,6 +164,12 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
         metas = [lesson_ok(p, f"widen[{i}]") for p in w.get("lessons", [])]
         if len({m.get("source") for m in metas if m}) > 1:
             errors.append(f"widen[{i}]: source の違う教訓をまとめない")
+    for rel, proposal in (plan.get("escalate") or {}).items():
+        meta = lesson_ok(rel, "escalate")
+        if meta and meta.get("status") != "active":
+            errors.append(f"escalate: active ではない教訓は仕組み化の候補にしない: {rel}")
+        if not isinstance(proposal, str):
+            errors.append(f"escalate: 案は文字列にする: {rel}")
     for o in obs.values():
         if o[1].get("source") not in L.SOURCES:
             errors.append(f"観察の source が不正: {o[0]}")
@@ -243,19 +258,22 @@ def main() -> int:
             lessons[path] = L.read(path)
         return lessons[path]
 
+    review = list(plan.get("review", []))
     for a in plan.get("attach", []):
         path = L.inside(a["lesson"], "lessons")
         meta, body = load(path)
-        lessons[path] = (meta, add_observation(meta, body, obs[a["observation"]][1]))
+        _, o_meta, o_body = obs[a["observation"]]
+        if meta.get("status") == "ruled":
+            review.append(f"仕組み化した後にまた指摘された（仕組みが拾えない形かもしれない）: {meta['title']}")
+        lessons[path] = (meta, add_observation(meta, body, o_meta, o_body))
     for c in plan.get("create", []):
         source = obs[c["observations"][0]][1]["source"]
         path = lesson_path(source, c["scope_key"], c["key"])
         meta, body = lessons.get(path) or (L.read(path) if path.is_file() else new_lesson(c, source, today))
         for o in c["observations"]:
-            body = add_observation(meta, body, obs[o][1])
+            body = add_observation(meta, body, obs[o][1], obs[o][2])
         lessons[path] = (meta, body)
 
-    review = list(plan.get("review", []))
     widened = []
     mine = personal_repos()
     for w in plan.get("widen", []):
@@ -276,6 +294,9 @@ def main() -> int:
             reviewer_hashes=sorted(set().union(*(set(m.get("reviewer_hashes") or []) for m, _ in srcs))),
             status="active" if any(m.get("status") == "active" for m, _ in srcs) else "candidate",
         )
+        patterns = list(dict.fromkeys(b for _, src in srcs for b in L.bullets(L.sections(src).get("Patterns", ""))))
+        if patterns:
+            body = L.set_section(body, "Patterns", "\n".join(patterns[-L.MAX_PATTERNS :]), before="Why")
         evidence = {ln for _, b in srcs for ln in L.sections(b).get("Evidence", "").splitlines() if ln.strip()}
         body = body.rstrip() + "\n" + "\n".join(sorted(evidence)) + "\n"
         lessons[path] = (meta, body)
@@ -288,8 +309,9 @@ def main() -> int:
     for path in L.lesson_files():
         load(path)
     activated, retired, escalate = [], [], []
+    proposals = plan.get("escalate") or {}
     cutoff = str(dt.date.today() - dt.timedelta(days=RETIRE_DAYS))
-    for meta, body in lessons.values():
+    for path, (meta, body) in lessons.items():
         if meta.get("type") != "lesson":
             continue
         recount(meta, body)
@@ -305,14 +327,19 @@ def main() -> int:
             if str(meta.get("last_seen")) < cutoff:
                 meta["status"] = "retired"
                 retired.append(meta["title"])
-            elif int(meta.get("since_active") or 0) >= ESCALATE_AFTER:
-                escalate.append(f"{meta['title']}（Check: {L.sections(body).get('Check', '')[:120]}）")
+            else:
+                rel = str(path.relative_to(L.LESSONS_DIR))
+                if rel in proposals or int(meta.get("since_active") or 0) >= ESCALATE_AFTER:
+                    escalate.append((rel, meta["title"], proposals.get(rel, "")))
 
     for path, (meta, body) in lessons.items():
         L.write(path, meta, body)
     for p, meta, body in obs.values():
         meta["status"] = "processed"
         L.write(p, meta, body)
+
+    # 既にチェックリストに載っている教訓は足さない（毎週同じ項目が増えないため）
+    escalated = escalation.add(escalate)
 
     # 前回の実行日は、この週次 PR と一緒にだけ進める
     advance_state(work)
@@ -328,13 +355,13 @@ def main() -> int:
             section("active になった教訓", activated),
             section("範囲を広げた教訓", widened),
             section("retired にした教訓", retired),
-            section("格上げ候補（lint / hook にすべき）", escalate),
+            section("仕組み化のチェックリスト（escalation.md）に足した教訓", escalated),
             section("要確認", review),
         ]
     )
     (work / "pr-body.md").write_text(body)
     print(json.dumps({"observations": len(obs), "activated": len(activated), "retired": len(retired),
-                      "escalate": len(escalate), "review": len(review)}))  # fmt: skip
+                      "escalate": len(escalated), "review": len(review)}))  # fmt: skip
     return 0
 
 

@@ -36,9 +36,18 @@ def v0_to_v1(meta: dict, body: str) -> tuple[dict, str]:
     return meta, body
 
 
+def v1_to_v2(meta: dict, body: str) -> tuple[dict, str]:
+    """v1 から v2 へ。status の enforced を ruled に改める。`## Patterns`（よく出た形）は v1 の観察に無いので足さない
+    （次に観察が入ったときに apply_plan.py が作る）。"""
+    if meta.get("status") == "enforced":
+        meta["status"] = "ruled"
+    return meta, body
+
+
 # キーは移行元の版。MIGRATIONS[n] は v{n} を v{n+1} にする
 MIGRATIONS: dict[int, Migration] = {
     0: v0_to_v1,
+    1: v1_to_v2,
 }
 
 
