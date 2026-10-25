@@ -79,7 +79,9 @@ def main() -> int:
                 missing.append("sessions のバッチに from は書かない")
         elif o.get("from") not in cands:
             missing.append(f"from={o.get('from')} がバッチ {args.batch} に無い")
-        missing += [f"{k} は文字列で書く" for k in ("category", "scope_key", "source") if k in o and not isinstance(o[k], str)]
+        missing += [
+            f"{k} は文字列で書く" for k in ("category", "scope_key", "source") if k in o and not isinstance(o[k], str)
+        ]
         missing += [
             f"{k} は日本語で書く（{e}）"
             for k in (*REQUIRED[1:], "session")
