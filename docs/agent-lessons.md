@@ -110,7 +110,12 @@ repos:
 
 1 回に集める候補は targets ファイルごとに 150 件まで。PR をマージ日の古い順に日単位で処理し、上限に達したら残りの日は
 次回に回す（`harvest-state.yml` は処理し切った日の翌日まで進む）。初回や、チームの PR が多いリポジトリで溜まった分は、
-週次 PR をマージしたあとに手で `/lessons-harvest` を繰り返せば続きから集まる。
+`/lessons-harvest --loop` で 1 回の実行のうちに集め切れる。150 件ずつ集計して周ごとに PR を出し、残りが無くなるか
+5 周に達するまで繰り返す。2 周目以降のブランチ（`weekly/<日付>-<n>`）は前の周のブランチから切り、PR の base も前の周の
+ブランチにする（前の周の未マージの教訓・観察・`harvest-state.yml` の上で集計するため）。PR が 2 つ以上なら、最後に
+`gh stack link` で GitHub のスタックとして登録する（拡張 `github/gh-stack` が要る。登録できなくても base で積み上がって
+いる）。PR は下の周から順にマージする。`--loop` を付けなければ 1 周で終わり、週次 PR をマージしたあとに
+`/lessons-harvest` を繰り返せば続きから集まる。
 
 ### 教訓（lessons/）の形式
 
@@ -288,7 +293,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                    |
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
 | 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
-| 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す                                                                                      |
+| 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
 
 ### 週次の PR を確認する
 
@@ -357,17 +362,19 @@ GitHub のコメントへ辿れる。
 
 1. agent-lessons を集計前に戻す
    - 週次 PR が未マージなら、PR を閉じてブランチを消す（`git push origin --delete weekly/<実行日>`）。観察も教訓も
-     そのブランチにしか無いので、main は集計前のまま
-   - マージ済みなら、main でマージ commit を戻して push する（教訓・観察・`harvest-state.yml` がまとめて戻る）
+     そのブランチにしか無いので、main は集計前のまま。`--loop` で積み上げた PR（`weekly/<実行日>-<n>`）も、後の周は
+     前の周の集計の上にあるので、すべて閉じて消す
+   - マージ済みなら、main でマージ commit を戻して push する（教訓・観察・`harvest-state.yml` がまとめて戻る）。
+     積み上げた PR は新しい周のマージ commit から順に戻す
 
      ```bash
      cd ~/.local/share/agent-lessons
      git revert -m 1 <マージ commit> && git push
      ```
 
-2. `/lessons-harvest redo <実行日>` を実行する。その日の前回の出力を消し、`collect.py` が候補を作り直してから
-   観察と教訓を書き直す。レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、GitHub には PR の一覧だけを
-   問い合わせる
+2. `/lessons-harvest redo <実行日>` を実行する（積み上げていたなら `--loop` も付ける）。その日の前回の出力を消し、
+   `collect.py` が候補を作り直してから観察と教訓を書き直す。レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、
+   GitHub には PR の一覧だけを問い合わせる
 
 ### 手で操作する
 
