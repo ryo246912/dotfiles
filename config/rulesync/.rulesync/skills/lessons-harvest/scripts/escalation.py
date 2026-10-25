@@ -82,6 +82,23 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
     return added
 
 
+def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
+    """統合・retired で動いた教訓の「未対応」の項目を統合先へ向け直すか外し、タイトルを titles に合わせる。"""
+    items = load()
+    todo, seen = [], set()
+    for it in items[TODO]:
+        path = it["path"]
+        while path is not None and path in moves:
+            path = moves[path]
+        if path is None or path in seen:
+            continue
+        seen.add(path)
+        todo.append({**it, "path": path, "title": titles.get(path, it["title"])})
+    if todo != items[TODO]:
+        items[TODO] = todo
+        save(items)
+
+
 def mechanism(it: dict) -> str:
     for line in it["lines"]:
         if m := re.match(r"\s*- 仕組み:\s*(.*)", line):
