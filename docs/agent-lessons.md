@@ -110,7 +110,7 @@ repos:
 
 ```markdown
 ---
-schema_version: 2
+schema_version: 1
 title: 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する
 type: lesson
 status: active # candidate / active / ruled / retired
@@ -183,7 +183,7 @@ diff で探すもの（grep する語・コードの形）を書く。ruled に�
 
 ### 形式のバージョン（schema_version）
 
-教訓と観察の frontmatter には、形式のバージョン `schema_version` を入れる（今は `2`。v2 で `## Patterns` を足し、`enforced` を `ruled` に改めた）。今の版は
+教訓と観察の frontmatter には、形式のバージョン `schema_version` を入れる（今は `1`）。今の版は
 `lessons-harvest/scripts/lessonlib.py` の `SCHEMA_VERSION` で決まり、スクリプトが書くファイルには常にその値が入る。
 `schema_version` が無いファイルは、版を付ける前の形式（v0）として扱う。
 

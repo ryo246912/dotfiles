@@ -23,7 +23,7 @@ SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 
 # 教訓・観察の形式のバージョン。形式を変えたら 1 上げ、migrate.py の MIGRATIONS に前の版からの移行を足す。
 # 書き込むスクリプトは、古い版のファイルが残っていると止まる（混ざった形式に書き足さないため）。
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 1
 
 # 教訓の status。注入されるのは active だけ（ruled は仕組みに移したので注入しない）
 STATUSES = ("candidate", "active", "ruled", "retired")

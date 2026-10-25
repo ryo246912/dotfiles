@@ -53,7 +53,7 @@ basic-memory tool write-note --project agent-lessons \
   --type lesson_observation \
   --content "$(cat <<'EOF'
 ---
-schema_version: 2 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
+schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
 status: pending
 date: <YYYY-MM-DD>
 source: <received|given>
