@@ -54,7 +54,10 @@ def main() -> int:
     files = {p: L.read(p) for p in L.note_files()}
     versions = Counter(L.version_of(meta) for meta, _ in files.values())
     if any(v > L.SCHEMA_VERSION for v in versions):
-        print(f"error: schema_version {L.SCHEMA_VERSION} より新しい形式がある。dotfiles を更新する", file=sys.stderr)
+        print(
+            f"error: schema_version {L.SCHEMA_VERSION} より新しい形式がある。dotfiles を更新する",
+            file=sys.stderr,
+        )
         return 2
 
     outdated = {p: mb for p, mb in files.items() if L.version_of(mb[0]) < L.SCHEMA_VERSION}
