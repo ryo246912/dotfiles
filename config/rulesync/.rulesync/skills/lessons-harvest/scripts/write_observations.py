@@ -82,7 +82,7 @@ def main() -> int:
             errors.append(f"observations[{i}]: source か scope_key が不正: {source} / {scope_key}")
             continue
         meta = {
-            "title": f"{today} {o['rule']}"[:120],
+            "title": f"{today} {o['rule']}",
             "type": "lesson_observation",
             "status": "pending",
             "date": today,
@@ -90,7 +90,7 @@ def main() -> int:
             "scope_key": scope_key,
             "category": o["category"],
             "evidence": c.get("evidence") or f"session: {o['session']}",
-            "globs": o.get("globs") or [],
+            "globs": L.normalize_globs(o.get("globs")),
         }
         if c.get("reviewer_hash") and source == "team":
             meta["reviewer_hash"] = c["reviewer_hash"]

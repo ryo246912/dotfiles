@@ -86,7 +86,7 @@ def add_observation(meta: dict, body: str, obs: dict, obs_body: str) -> str:
         meta["reviewer_hashes"] = sorted(set(meta.get("reviewer_hashes") or []) | {obs["reviewer_hash"]})
     if meta.get("status") == "active":
         meta["since_active"] = int(meta.get("since_active") or 0) + 1
-    meta["globs"] = sorted(set(meta.get("globs") or []) | set(obs.get("globs") or []))
+    meta["globs"] = L.normalize_globs([*(meta.get("globs") or []), *(obs.get("globs") or [])])
     have = L.bullets(L.sections(body).get("Patterns", ""))
     new = [b for b in L.bullets(L.sections(obs_body).get("Patterns", "")) if b not in have]
     if new:
@@ -110,7 +110,7 @@ def new_lesson(spec: dict, source: str, today: str) -> tuple[dict, str]:
         "count": 0,
         "first_seen": today,
         "last_seen": today,
-        "globs": spec.get("globs") or [],
+        "globs": L.normalize_globs(spec.get("globs")),
     }
     body = f"\n## Rule\n{spec['rule']}\n\n## Why\n{spec['why']}\n\n## Check\n{spec['check']}\n\n## Evidence\n"
     return meta, body

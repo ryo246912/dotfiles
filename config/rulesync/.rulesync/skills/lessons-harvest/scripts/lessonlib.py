@@ -211,6 +211,16 @@ def glob_regex(pattern: str) -> re.Pattern:
     return re.compile(out + r"\Z")
 
 
+def normalize_globs(globs: list | None) -> list[str]:
+    """モデルが付けがちな囲みの引用符を外し、`/` を含まない glob は入れ子のパスにも効くよう `**/` を付ける。"""
+    out = []
+    for g in globs or []:
+        g = str(g).strip().strip("\"'").strip()
+        if g:
+            out.append(g if "/" in g else f"**/{g}")
+    return sorted(set(out))
+
+
 def matches(globs: list | None, paths: list[str]) -> bool:
     """globs が空なら常に一致。paths が空なら（変更ファイルを指定しないなら）一致とみなす。"""
     if not globs or not paths:
