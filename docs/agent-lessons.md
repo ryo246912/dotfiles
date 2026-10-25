@@ -399,8 +399,10 @@ GitHub のコメントへ辿れる。
 
      ```bash
      cd ~/.local/share/agent-lessons && git switch main
-     git ls-remote --heads origin 'weekly/<実行日>*' | sed 's|.*refs/heads/||' | xargs -r git push origin --delete
-     git branch --list 'weekly/<実行日>*' | xargs -r git branch -D
+     git ls-remote --heads origin 'weekly/<実行日>*' | sed 's|.*refs/heads/||' \
+       | while IFS= read -r b; do git push origin --delete "$b"; done
+     git for-each-ref --format='%(refname:short)' 'refs/heads/weekly/<実行日>*' \
+       | while IFS= read -r b; do git branch -D "$b"; done
      ```
 
    - マージ済みなら、main でマージ commit を戻して push する（教訓・観察・`harvest-state.yml` がまとめて戻る）。
