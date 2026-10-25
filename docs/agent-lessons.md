@@ -349,7 +349,7 @@ GitHub のコメントへ辿れる。
 
 ### やり直す
 
-直近の週次の結果がおかしいとき（一般化の文面が悪い、割り当てを間違えた、など）は、同じ候補から作り直せる。
+直近の週次の結果がおかしいとき（一般化の文面が悪い、割り当てを間違えた、など）は、作り直せる。
 
 先に agent-lessons を集計前に戻すのは、集計の結果（教訓の件数・昇格、観察、`harvest-state.yml` の日付）を取り消すため
 （GitHub から集め直すわけではない）。戻さずに作り直すと同じ指摘を二重に数え、さらに `collect.py` は教訓・観察に
@@ -365,12 +365,9 @@ GitHub のコメントへ辿れる。
      git revert -m 1 <マージ commit> && git push
      ```
 
-2. `/lessons-harvest redo <実行日>` を実行する。その日の `candidates.json` と `batches/` を使い、GitHub から集め直さずに
-   観察と教訓を書き直す
-
-候補から選び直したいとき（除く条件を変えた、など）は、手順 2 の前にその日の `candidates.json` と `batches/` を
-消す。`collect.py` が候補を作り直すが、レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、GitHub には
-PR の一覧だけを問い合わせる。
+2. `/lessons-harvest redo <実行日>` を実行する。その日の前回の出力を消し、`collect.py` が候補を作り直してから
+   観察と教訓を書き直す。レビュースレッドは `~/.cache/agent-lessons/raw/` から読み、GitHub には PR の一覧だけを
+   問い合わせる
 
 ### 手で操作する
 

@@ -39,6 +39,14 @@ import lessonlib as L
 REQUIRED = ("category", "rule", "pattern", "why", "check")
 
 
+def free_path(path: Path) -> Path:
+    # 候補の id は実行ごとの連番なので、同じ日の 2 周目では別の指摘が同じ名前になる。前回の観察を上書きしない
+    out, n = path, 2
+    while out.exists():
+        out, n = path.with_stem(f"{path.stem}-{n}"), n + 1
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
@@ -104,7 +112,7 @@ def main() -> int:
         print("\n".join(errors), file=sys.stderr)
         return 1
     for path, meta, body in notes:
-        L.write(path, meta, body)
+        L.write(free_path(path), meta, body)
     done.touch()
     print(json.dumps({"batch": args.batch, "written": len(notes)}))
     return 0

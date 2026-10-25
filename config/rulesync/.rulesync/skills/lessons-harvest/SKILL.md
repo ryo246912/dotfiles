@@ -26,9 +26,8 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 `~/.cache/agent-lessons/raw/` に貯め、取得済みの PR は取り直さない。
 
 引数に `redo <日付>` が付いていたら、その日の実行のやり直し（agent-lessons を集計前に戻すのはユーザーが済ませている。
-dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をその日のディレクトリにし、段階 0 の 5 の前に
-`rm -rf <work>/observations <work>/plan.json <work>/pr-body.md` で前回の出力を消す。`candidates.json` が残っていれば
-収集は飛ばされ、同じ候補から書き直す。
+dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をその日のディレクトリにする。前回の出力は段階 0 の 5 で
+消え、候補は集め直される。
 
 ## 進め方
 
@@ -61,10 +60,12 @@ dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をそ�
      `git push -q` を順に行う。週次 PR とは分けて main に直接 push する（機械的な書き換えで、レビューする中身が無いため）。
      どれかが失敗したら、週次のブランチを作らずに終了して報告する
    - 2: この端末の dotfiles より新しい形式がある。何もせずに終了し、dotfiles の更新が要ると報告する
-5. `git switch -c weekly/$(date +%F)` し、候補を集める。`<work>/candidates.json` が既にあれば（同じ日の再実行・`redo`）
-   集め直さずにそれを使う
+5. `git switch -c weekly/$(date +%F)` し、前回の出力を消してから候補を集める。同じ日の再実行・`redo` で前回の
+   `.done` や `plan.json` が残ると、書き出し済みとして止まったり古い割り当てを使ったりするため、毎回消す。
+   記録済みの指摘は `collect.py` が inbox・lessons・archived の根拠 URL で候補から除く
 
    ```bash
+   rm -rf <work>/observations <work>/plan.json <work>/pr-body.md <work>/review.md <work>/candidates.json
    python3 <skill>/scripts/collect.py --work <work>
    ```
 
