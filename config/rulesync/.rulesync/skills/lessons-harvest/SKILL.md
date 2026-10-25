@@ -26,7 +26,8 @@ agent-lessons（`~/.local/share/agent-lessons` に clone した private リポ�
 `collect.py` が実行日に関係なく `~/.cache/agent-lessons/raw/` に貯め、取得済みの PR は取り直さない。
 
 引数に `redo <日付>` が付いていたら、その日の実行のやり直し（agent-lessons を集計前に戻すのはユーザーが済ませている。
-dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<work>` をその日のディレクトリにする。前回の出力は段階 0 の 5 で
+dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<日付>` が `YYYY-MM-DD` の形でなければ、何もせずに終了して報告する
+（段階 0 の 5 で `<work>` の下を `rm -rf` するため）。`<work>` をその日のディレクトリにする。前回の出力は段階 0 の 5 で
 消え、候補は集め直される。
 
 引数に `--loop` が付いていたら、段階 0 の 5 から段階 3 までを 1 周として、`left_prs` が空になるか 5 周に達するまで
