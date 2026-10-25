@@ -110,7 +110,7 @@ Agent ツールで subagent を **1 つずつ順に**起動する（フォアグ
 
   ```bash
   python3 <skill>/scripts/apply_plan.py --work <work> --state-only   # harvest-state.yml だけを変える
-  git commit -qam "chore: advance harvest state" && git push -q
+  git add harvest-state.yml && git commit -qm "chore: advance harvest state" && git push -q   # 初回は未追跡
   ```
 
   `<base>` が前の周のブランチなら、ブランチを消さず、`--state-only` だけを実行して `<work>/pr-body.md` に
