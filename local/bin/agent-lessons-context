@@ -60,7 +60,8 @@ repo=$(printf '%s' "$keys" | jq -r 'if length == 3 then .[2] else empty end')
 search() {
 	local filter
 	filter=$(jq -cn --argjson keys "$1" '{scope_key: {"$in": $keys}, source: {"$in": ["received", "team"]}}')
-	timeout 30 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
+	# 2 回直列に呼ぶので、合計が hook の打ち切り（40 秒）に収まるようにする
+	timeout 15 basic-memory tool search-notes --type lesson --status active --filter "$filter" \
 		--project agent-lessons --page-size "$2" --json 2>/dev/null
 }
 
