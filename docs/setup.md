@@ -280,6 +280,34 @@
     ```
     setup-git-gpg
     ```
+  - [ ] (仕事用のコミットを Verified にする場合) GitHub に仕事用メールアドレスを設定する
+    - コミットの `user.email` が GitHub アカウントに登録・認証済みでないと、署名が正しくても `Verified` にならない（`reason` が `unverified_email` になる）
+    - GitHub の「Settings」→「Emails」→「Add email address」で仕事用アドレスを追加する
+    - 仕事用アドレスに届く認証メールのリンクを開き、「Verified」になったことを確認する
+
+    ```sh
+    gh api user/emails --jq '.[] | {email, verified, primary}'
+    ```
+
+    - `user:email` scope が足りない場合は付与する
+
+    ```sh
+    gh auth refresh --scopes user
+    ```
+
+    - 仕事用アドレスをコミットに載せたくない場合は、「Settings」→「Emails」の「Keep my email addresses private」と「Block command line pushes that expose my email」は個人用と仕事用の運用に合わせて設定する
+    - 署名に使う GPG 鍵の UID に同じ仕事用アドレスが含まれていることを確認する（無ければ上の `adduid` で追加し、GitHub に鍵を登録し直す）
+
+    ```sh
+    gpg --list-keys --keyid-format LONG "<仕事用メールアドレス>"
+    ```
+
+    - `~/.config/git/config.work.secret` の `user.email` が同じアドレスであることを確認する
+
+    ```sh
+    git config --show-origin --get user.email
+    ```
+
   - [ ] GPG署名の確認
     - ローカルでは、署名済みコミットを検証する
 
