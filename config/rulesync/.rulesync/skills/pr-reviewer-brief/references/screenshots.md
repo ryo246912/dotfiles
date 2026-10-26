@@ -24,6 +24,9 @@ pr-reviewer-brief skill の段階 3。ユーザーが「スクショも撮って
 実在する id に置き換えて撮る。撮るのは手元で動いているアプリ（多くは PR の head）なので、変更前の画面と違うことがあれば
 `brief.json` の `unknowns` にそう書く
 
+撮った画像に映る内容がどのテーブルのレコードか分かるよう、撮る前に `brief.json` のその画面・手順に `records`
+（`ui`・`table`・`record`・`column`）が書かれているか確かめる。無ければ `data_model.mapping` とコードから補う。
+
 ```json
 {
   "base_url": "http://localhost:3000",
