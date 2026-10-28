@@ -610,6 +610,15 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     また、mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
     引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。job 内で
     `ulimit -n 10240` に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
+  - `mise-install` の後には `ai-config-sync` job で `mise --cd "$HOME" run apm:sync` と
+    `mise --cd "$HOME" run rulesync:sync` をもう一度実行する（`AI_AGENT` 設定時は skip）。
+    `dotfiles-apply` の `post-dotfiles` hook は install 前に走るため、pull で apm/rulesync の
+    バージョンが上がった場合や、未導入だった apm/rulesync がこの install で入った場合でも、
+    新しいバージョンで APM 配布・rulesync generate が行われるようにするため。
+    どちらもハッシュマーカーで変更が無ければ skip するので、通常の pull/checkout ではほぼ即座に終わる。
+    つまり `git pull`/`git checkout` のたびに
+    `ensure-mise-version` → `dotfiles-apply`（APM/rulesync 同期を含む）→ `mise-install` →
+    `ai-config-sync` → `lefthook-install` の順に実行される。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの

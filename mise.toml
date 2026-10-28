@@ -58,7 +58,9 @@ run      = "lefthook install"
 #    ~/.config/mise 配下の global config を読める（mise.toml 冒頭のコメントと違い、
 #    同一プロセスの制約を受けない）。これで初回の `dotfiles apply` だけでツール・APM・
 #    rulesync まで揃う。導入済みの環境では何もしない。post-merge の自動 apply
-#    （lefthook.yml）は mise install をしない方針なので DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する。
+#    （lefthook.yml）は gh 認証を伴うこの初回 install を DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止し、
+#    代わりに後続の mise-install job（GITHUB_TOKEN 付き mise install）と ai-config-sync job
+#    （install 後の APM/rulesync 再同期）で同じことを行う。
 #    MISE_LOCKED=1 は lockfile 未登録の tool があると install が失敗するので、install の後で付ける。
 [bootstrap.hooks.post-dotfiles]
 run = """

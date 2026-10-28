@@ -59,7 +59,8 @@ post-merge:
       # full bootstrapの履歴は維持される）。ensure-mise-version の後に実行する
       # （min_version を満たした mise で実行するため）。
       # apm/rulesync 未導入時に post-dotfiles フックが行う mise install（初回 bootstrap 用）は
-      # DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する（下の mise-install と同じく自動では入れない）。
+      # DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する（gh 認証を伴うため。install は下の mise-install job が
+      # 毎回行い、その後の ai-config-sync job で APM/rulesync を同期する）。
       run: MISE_HISTORY_ENABLED=0 DOTFILES_SKIP_TOOLS_INSTALL=1 mise bootstrap dotfiles apply --yes
       # symlink-each へ変えた・新しく登録したエントリ（`~/.config`・`~/.local`・`~/.aws`）は、
       # copy 時代や chezmoi 時代の実ファイルが残っている間だけ conflict で落ちる。force は
@@ -68,26 +69,45 @@ post-merge:
       fail_text: '❌ [post-merge] dotfiles apply failed. 既存の実ファイルとの conflict なら: mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws" （先に配置先だけにある編集を repo へ取り込むこと。docs/mise.md 参照）'
     # dotfiles-apply で反映した [tools] のバージョン変更を、git pull / checkout のたびに導入する。
     # GitHub API の rate limit を避けるため、pre-tools hook（mise.toml）と同じく gh の token を渡す。
-    # - name: mise-install
-    #   skip:
-    #     - run: test -n "${AI_AGENT:-}"
-    #   run: |
-    #     set -e
-    #     # 環境変数で GITHUB_TOKEN を渡している場合はそれを優先する。
-    #     github_token=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}
-    #     if [ -z "$github_token" ]; then
-    #       echo "warning: GITHUB_TOKEN も gh auth token も取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
-    #     fi
-    #
-    #     # mise に組み込まれた aube（npm backend）は、aube CLI と違い RLIMIT_NOFILE を引き上げないため、
-    #     # macOS の既定値（256）のままだと npm:renovate 等で "Too many open files (os error 24)" になる。
-    #     nofile=$(ulimit -n)
-    #     if [ "$nofile" != unlimited ] && [ "$nofile" -lt 10240 ]; then
-    #       ulimit -n 10240 2>/dev/null || true
-    #     fi
-    #
-    #     GITHUB_TOKEN=$github_token mise install --jobs=2
-    #   fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
+    - name: mise-install
+      skip:
+        - run: test -n "${AI_AGENT:-}"
+      run: |
+        set -e
+        # 環境変数で GITHUB_TOKEN を渡している場合はそれを優先する。
+        github_token=${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}
+        if [ -z "$github_token" ]; then
+          echo "warning: GITHUB_TOKEN も gh auth token も取得できないため token なしで mise install します（GitHub API の rate limit に当たる可能性があります）" >&2
+        fi
+
+        # mise に組み込まれた aube（npm backend）は、aube CLI と違い RLIMIT_NOFILE を引き上げないため、
+        # macOS の既定値（256）のままだと npm:renovate 等で "Too many open files (os error 24)" になる。
+        nofile=$(ulimit -n)
+        if [ "$nofile" != unlimited ] && [ "$nofile" -lt 10240 ]; then
+          ulimit -n 10240 2>/dev/null || true
+        fi
+
+        GITHUB_TOKEN=$github_token mise install --jobs=2
+      fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
+    # mise-install で apm/rulesync の新しいバージョンや未導入だったツールが入った場合に備え、
+    # install 後にもう一度 APM/rulesync を同期する（dotfiles-apply の post-dotfiles hook は
+    # install 前に走るため）。どちらもハッシュマーカーで変更が無ければ skip するので、
+    # 変更が無い pull/checkout ではほぼ即座に終わる。rulesync:sync のハッシュには
+    # `rulesync --version` を含むため、rulesync の更新だけでも再生成される。
+    # post-dotfiles hook と同じく global scope の task を参照するため `--cd "$HOME"` を付ける。
+    - name: ai-config-sync
+      skip:
+        - run: test -n "${AI_AGENT:-}"
+      run: |
+        set -e
+        export MISE_LOCKED=1 MISE_LOG_LEVEL=error
+        if mise which apm >/dev/null 2>&1; then
+          mise --cd "$HOME" run apm:sync
+        fi
+        if mise which rulesync >/dev/null 2>&1; then
+          mise --cd "$HOME" run rulesync:sync
+        fi
+      fail_text: '❌ [post-merge] APM/rulesync sync failed. Run: mise --cd "$HOME" run apm:sync && mise --cd "$HOME" run rulesync:sync'
     - name: lefthook-install
       run: mise exec -- lefthook install
 
