@@ -432,9 +432,9 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
         dotfiles_repo_real=""
         [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
-        # settings.json を先に処理する。下で親ディレクトリ（~/.claude）を read-only で足すため、
-        # その中の skills / projects などの書き込み可マウントより前に積んでおく
-        # （claude-share-config --list-entries は settings.json を先頭に返す）。
+        # settings.json などのファイルを先に処理する。下で親ディレクトリ（~/.claude）を read-only で
+        # 足すため、その中の skills / projects などの書き込み可マウントより前に積んでおく
+        # （claude-share-config --list-entries はファイル群を先、ディレクトリを後に返す）。
         shared_entries=()
         share_config_cmd="$(dirname "${BASH_SOURCE[0]}")/claude-share-config"
         [[ -x "$share_config_cmd" ]] || share_config_cmd=$(command -v claude-share-config || true)

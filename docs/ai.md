@@ -4,16 +4,21 @@
 
 ### ホスト
 
-初回は `~/.claude` の設定（`projects` / `settings.json` / `agents` / `skills` / `plugins`）を共有する symlink を作ります。
+初回は `~/.claude` の設定を各アカウントへ共有する symlink を作ります。
 devcontainer の initialize でも同じコマンドを実行するので、一度 devcontainer を起動していれば不要です。
 
 ```bash
 claude-share-config
 ```
 
-共有する entry とアカウントは [`local/bin/claude-share-config`](../local/bin/claude-share-config) の
-`SHARED_ENTRIES` / `DEFAULT_ACCOUNTS` だけで管理しています（devcontainer の initialize.sh と sbx-agent も
-ここを参照します）。entry を増やしたら再実行すると、既存の `~/.claude-*` にも追加分だけリンクが張られます。
+共有する entry は [`local/bin/claude-share-config`](../local/bin/claude-share-config) が決めています
+（devcontainer の initialize.sh と sbx-agent も `claude-share-config --list-entries` を参照します）。
+
+- dotfiles の [`claude/`](../claude) 配下（`settings.json` / `statusline.sh` / `subagent-statusline.sh` など）:
+  mise の symlink-each で `~/.claude` に置かれるファイルを自動で拾う
+- dotfiles 管理外の実行時データ（`projects` / `agents` / `skills` / `plugins`）: `EXTRA_SHARED_ENTRIES` に列挙
+
+`claude/` にファイルを足したら再実行すると、既存の `~/.claude-*` にも追加分だけリンクが張られます。
 既にあるファイル・ディレクトリは上書きしません。
 
 ```bash

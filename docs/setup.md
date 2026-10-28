@@ -557,13 +557,15 @@
     ```
 
 - [ ] claude（account2 / work3 用の追加アカウント）
-  - `~/.claude-account2`・`~/.claude-work3`を作成し、`~/.claude`の設定（`projects`/`settings.json`/`agents`/`skills`/`plugins`）をシンボリックリンクで共有する（既に存在するものは上書きしない。devcontainerのinitializeでも同じコマンドを実行するので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
+  - `~/.claude-account2`・`~/.claude-work3`を作成し、`~/.claude`の設定をシンボリックリンクで共有する（既に存在するものは上書きしない。devcontainerのinitializeでも同じコマンドを実行するので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
+    - dotfilesの[`claude/`](../claude)配下（`settings.json`/`statusline.sh`/`subagent-statusline.sh`など）は自動で対象になる
+    - それ以外の`projects`/`agents`/`skills`/`plugins`はスクリプト内の`EXTRA_SHARED_ENTRIES`で指定している
 
     ```sh
     claude-share-config
     ```
 
-  - 共有する entry とアカウントの一覧は [`local/bin/claude-share-config`](../local/bin/claude-share-config) の `SHARED_ENTRIES` / `DEFAULT_ACCOUNTS` で一元管理している。entry を増やしたら、同じコマンドを再実行すれば既存アカウントにも追加分だけリンクが張られる（既存の `~/.claude-*` ディレクトリも自動で対象になる）
+  - `claude/`にファイルを足したときや`EXTRA_SHARED_ENTRIES`/`DEFAULT_ACCOUNTS`（[`local/bin/claude-share-config`](../local/bin/claude-share-config)）を変えたときは、同じコマンドを再実行すれば既存アカウントにも追加分だけリンクが張られる（既存の`~/.claude-*`ディレクトリも自動で対象になる）
   - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従って各アカウントでログインする
 
     ```sh

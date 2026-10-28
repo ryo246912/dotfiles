@@ -2,9 +2,9 @@
 #
 # claude-share-config: 追加アカウント（~/.claude-<name>）から ~/.claude の設定を symlink で共有する
 #
-# 共有する entry とアカウントの一覧はこのスクリプトだけで管理する。
+# 共有する entry（dotfiles の claude/ 配下は自動）とアカウントの一覧はこのスクリプトだけで管理する。
 # ホスト（docs/setup.md）・devcontainer の initialize.sh・sbx-agent はここを参照するので、
-# 共有したい entry やアカウントを増やすときはこのファイルだけを直せばよい。
+# claude/ にファイルを足したときは再実行するだけでよい。
 #
 # Usage:
 #   claude-share-config [<name>...]   # 例: claude-share-config account2 work3
@@ -15,17 +15,55 @@
 
 set -euo pipefail
 
-# 共有する ~/.claude 配下の entry。認証情報（.credentials.json）や履歴などアカウント固有の
-# ものは含めないこと。settings.json は先頭に置く（sbx-agent がこの順でマウントを積むため）。
-SHARED_ENTRIES=(settings.json projects agents skills plugins)
+# dotfiles の claude/ 配下（settings.json・statusline.sh など）は mise の symlink-each で
+# ~/.claude に置かれるので、そのディレクトリの中身を共有 entry として自動で拾う。
+# claude/ にファイルを足せば、再実行するだけで各アカウントにも共有される。
+# それ以外に共有したい ~/.claude 配下の実行時データ（dotfiles 管理外）は下に列挙する。
+# 認証情報（.credentials.json）や履歴などアカウント固有のものは含めないこと。
+EXTRA_SHARED_ENTRIES=(projects agents skills plugins)
 
 # 引数なしで作成するアカウント
 DEFAULT_ACCOUNTS=(account2 work3)
 
 CLAUDE_DIR="${HOME}/.claude"
 
+# symlink を辿りきった実体の絶対パスを返す（macOS の bash 3.2 / BSD readlink でも動くように自前で解決する）
+resolve_path() {
+    local path="$1" target
+    while [[ -L "$path" ]]; do
+        target=$(readlink "$path")
+        case "$target" in
+        /*) path="$target" ;;
+        *) path="$(dirname "$path")/${target}" ;;
+        esac
+    done
+    echo "$(cd "$(dirname "$path")" && pwd -P)/$(basename "$path")"
+}
+
+# このスクリプトの実体（<dotfiles>/local/bin/claude-share-config）から dotfiles の claude/ を求める
+DOTFILES_CLAUDE_DIR="$(dirname "$(resolve_path "$0")")/../../claude"
+
+# 共有 entry の一覧。sbx-agent はこの順でマウントを積み、ファイルのリンク先の親（~/.claude）を
+# read-only で足すため、dotfiles のファイル群を先に、ディレクトリ（実行時データ）を後に出す。
+list_entries() {
+    local file name extra
+    if [[ -d "$DOTFILES_CLAUDE_DIR" ]]; then
+        for file in "$DOTFILES_CLAUDE_DIR"/*; do
+            [[ -e "$file" ]] || continue
+            name="${file##*/}"
+            for extra in "${EXTRA_SHARED_ENTRIES[@]}"; do
+                [[ "$name" == "$extra" ]] && continue 2
+            done
+            echo "$name"
+        done
+    else
+        echo "⚠️ dotfiles の claude/ が見つからないため、${DOTFILES_CLAUDE_DIR} 配下の共有はスキップしました" >&2
+    fi
+    printf '%s\n' "${EXTRA_SHARED_ENTRIES[@]}"
+}
+
 if [[ "${1:-}" == "--list-entries" ]]; then
-    printf '%s\n' "${SHARED_ENTRIES[@]}"
+    list_entries
     exit 0
 fi
 
@@ -44,10 +82,15 @@ if [[ ${#accounts[@]} -eq 0 ]]; then
     done
 fi
 
+entries=()
+while IFS= read -r entry; do
+    entries+=("$entry")
+done < <(list_entries)
+
 for name in "${accounts[@]}"; do
     account_dir="${HOME}/.claude-${name}"
     mkdir -p "$account_dir"
-    for entry in "${SHARED_ENTRIES[@]}"; do
+    for entry in "${entries[@]}"; do
         if [[ -L "${account_dir}/${entry}" || -e "${account_dir}/${entry}" ]]; then
             echo "ℹ️ .claude-${name}/${entry} は既に存在するのでスキップしました"
         elif [[ ! -e "${CLAUDE_DIR}/${entry}" ]]; then
