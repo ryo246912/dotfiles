@@ -19,20 +19,17 @@ docker compose run --rm <service> alembic revision --autogenerate -m "<message>"
 # alembic : upgrade to head
 docker compose run --rm <service> alembic upgrade head
 
-# alembic : downgrade one revision
-docker compose run --rm <service> alembic downgrade -1
-
 # alembic : downgrade to selected revision (fzf)
 docker compose run --rm <service> alembic downgrade <revision>
 
 # alembic : downgrade all (base)
 docker compose run --rm <service> alembic downgrade base
 
-# alembic : recreate dev db [down -v:remove volume] (dev only)
+# alembic : recreate dev db [down -v:remove volume = all existing data is lost] (dev only)
 docker compose down -v && docker compose up -d <db_service> && docker compose run --rm <service> alembic upgrade head
 ```
 
-$ service: docker compose config --services
+$ service: { echo app; docker compose config --services; } | awk '!seen[$0]++'
 $ db_service: docker compose config --services
 $ revision: docker compose run --rm -T <service> alembic history \
   --- --fzf-overrides '--reverse' --map "sed -E 's/^([^ ]+) -> ([^ ,]+).*/\2/'"
