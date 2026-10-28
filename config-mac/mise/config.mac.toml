@@ -5,7 +5,6 @@
 PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [tools]
-"cargo:https://github.com/vorojar/md-preview" = { version = "tag:v1.4.0", bin = "md-preview" }
 # Docker Sandboxes (sbx)。Apple Silicon 専用
 "github:docker/sbx-releases" = { version = "0.48.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 "github:hzqtc/taproom"       = { version = "0.6.2", bin = "taproom" }

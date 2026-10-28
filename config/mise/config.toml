@@ -22,7 +22,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:anthropics/claude-code"                               = "2.1.292"
 "aqua:antonmedv/fx"                                         = "40.0.0"
 "aqua:aquasecurity/trivy"                                   = "0.75.0"
-"aqua:astral-sh/uv"                                         = "0.13.3"
+"aqua:astral-sh/uv"                                         = "0.13.5"
 "aqua:atuinsh/atuin"                                        = "18.17.1"
 "aqua:awslabs/git-secrets"                                  = "1.3.0"
 "aqua:azu/dockerfile-pin"                                   = "1.5.0"
@@ -65,8 +65,8 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:suzuki-shunsuke/disable-checkout-persist-credentials" = "1.0.0"
 "aqua:suzuki-shunsuke/ghalint"                              = "1.5.6"
 "aqua:suzuki-shunsuke/ghatm"                                = "1.0.0"
-"aqua:suzuki-shunsuke/ghtkn"                                = "0.4.1"
-"aqua:suzuki-shunsuke/pinact"                               = "5.0.0"
+"aqua:suzuki-shunsuke/ghtkn"                                = "0.4.2"
+"aqua:suzuki-shunsuke/pinact"                               = "5.0.1"
 "aqua:sxyazi/yazi"                                          = "26.9.1"
 "aqua:tamasfe/taplo"                                        = "0.10.0"
 "aqua:terraform-linters/tflint"                             = "0.64.0"
@@ -103,7 +103,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:kenn-io/agentsview"                                 = "0.44.0"
 "github:kyu08/fzf-make"                                     = "0.75.0"
 "github:masasuzu/clrnd"                                     = "0.5.1"
-"github:max-sixty/worktrunk"                                = "0.80.0"
+"github:max-sixty/worktrunk"                                = "0.81.0"
 "github:microsoft/apm"                                      = "0.33.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
 "github:rcieri/glab-tui"                                    = "0.9.3"
@@ -145,6 +145,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:oxlint"                                                = "1.87.0"
 "npm:renovate"                                              = { version = "44.0.1", trust_policy_excludes = ["@yarnpkg/libzip@3.2.2"] }
 "npm:ulid"                                                  = "3.0.2"
+"pipx:basic-memory"                                         = { version = "0.23.2", uvx_args = "--prerelease=allow" }
 "pipx:context-tracker"                                      = "1.0.0"
 "pipx:grip"                                                 = "4.6.2"
 "pipx:tftui"                                                = "0.14.1"
@@ -167,6 +168,11 @@ trusted_config_paths = [
 
 [task_config]
 includes = ["tasks/*.toml"]
+
+# 会社のリポジトリを並べた agent-lessons の収集対象（targets.<name>.yml）は、~/.config に実ファイルとして置くため、
+# mise history（dotfiles-history への同期を含む）に記録しない
+[history]
+exclude = ["~/.config/agent-lessons/targets.*.yml"]
 
 [settings.pipx]
 uvx = true

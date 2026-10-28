@@ -35,12 +35,14 @@ brief.json の書式:
         # 関係する画面。ほかの項目の "page" はこの id を指す（どの画面の話かを示すため）
         "pages": [{"id": "list", "name": "アプローチ一覧", "url": "/approaches",
                    "looks": "見た目（レイアウトと主な部品）", "shot": "page-list",  # shot はスクリーンショットの id（任意）
+                   # 画像に映る内容が、どのテーブルのどのレコード・カラムか（画像の下に出る。manual_test.steps[] にも書ける）
+                   "records": [{"ui": "カードの見出し", "table": "approaches", "record": "id=1（seed の test-land-1）", "column": "name"}],
                    "evidence": [{"path": "app/routes.ts", "lines": "10"}]}],
         "current": [{"text": "今の機能の説明", "page": "list", "where": "画面のどこか（見た目の言葉で）",
                      "evidence": [{"path": "app/x.ts", "lines": "10-20"}]}],
         "glossary": [{"term": "用語", "meaning": "意味", "page": "list", "where": "画面のどこに出るか", "code": "コード上の名前"}],
         "data_model": {"note": "補足",
-                       "tables": "erDiagram ...",           # 関係する画面に出るデータのテーブルとリレーション
+                       "tables": "erDiagram ...",           # 今回の変更に関わるテーブルの構造（カラム・PK/FK・リレーション）
                        "mapping": [{"page": "list", "ui": "画面の項目", "column": "approaches.status"}],
                        "before": "erDiagram ...", "after": "erDiagram ..."}  # スキーマが変わるときだけ
       },
@@ -238,10 +240,27 @@ def load_shots(workdir: Path) -> dict:
     return {s["id"]: s for s in json.loads(manifest_path.read_text())} if manifest_path.exists() else {}
 
 
-def shot_figure(workdir: Path, shot: dict | None, title: str) -> str:
+def records_html(records: list | None) -> str:
+    """画面に映る内容が、どのテーブルのどのレコード（カラム）かの一覧。"""
+    if not records:
+        return ""
+    items = "".join(
+        f'<li>{inline(r["ui"])} ← <code>{esc(r["table"])}</code>'
+        + (f' {inline(r["record"])}' if r.get("record") else "")
+        + (f' の <code>{esc(r["column"])}</code>' if r.get("column") else "")
+        + "</li>"
+        for r in records
+    )
+    return f'<ul class="records">{items}</ul>'
+
+
+def shot_figure(workdir: Path, shot: dict | None, title: str, records: list | None = None) -> str:
     if shot and shot.get("ok") and (workdir / "screenshots" / shot["path"]).exists():
         uri = image_data_uri(workdir / "screenshots" / shot["path"])
-        return f'<figure><img src="{uri}" alt="{esc(title)}" loading="lazy" /><figcaption>{esc(title)}</figcaption></figure>'
+        return (
+            f'<figure><img src="{uri}" alt="{esc(title)}" loading="lazy" />'
+            f'<figcaption>{esc(title)}{records_html(records)}</figcaption></figure>'
+        )
     if shot:
         return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error", ""))}</p>'
     return ""
@@ -255,7 +274,7 @@ def pages_block(brief: dict, workdir: Path) -> str:
         name = page.get("name") or page["id"]
         url = page.get("url", "")
         url_html = link(url, f"<code>{esc(url)}</code>") if safe_url(url) else (f"<code>{esc(url)}</code>" if url else "")
-        figure = shot_figure(workdir, shots.get(page.get("shot")), name) if page.get("shot") else ""
+        figure = shot_figure(workdir, shots.get(page.get("shot")), name, page.get("records")) if page.get("shot") else ""
         if figure:
             figure = f'<details class="page-shot"><summary>画面を見る</summary>{figure}</details>'
         looks = f"<p>{inline(page['looks'])}</p>" if page.get("looks") else ""
@@ -290,7 +309,7 @@ def background_section(brief: dict, workdir: Path) -> str:
         parts.append("<h3>用語集</h3>" + table(headers, rows))
     model = bg.get("data_model")
     if model:
-        parts.append("<h3>データモデル（画面に出るデータのテーブル）</h3>")
+        parts.append("<h3>データモデル（今回の変更に関わるテーブル）</h3>")
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
         if model.get("tables"):
@@ -503,7 +522,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
         rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
         caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
-        figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""))
+        figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
         steps.append(
             f'<li id="{esc(step.get("id", ""))}"><h3>{inline(step.get("title", ""))}</h3>'
             f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'

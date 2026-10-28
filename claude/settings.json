@@ -4,6 +4,7 @@
     "DISABLE_AUTOUPDATER": "1",
     "AI_AGENT": "1"
   },
+  "model": "sonnet",
   "cleanupPeriodDays": 36500,
   "autoCompactWindow": 200000,
   "tui": "default",
@@ -64,6 +65,7 @@
     "ponytail-review": "on",
     "memo": "on",
     "planning": "on",
+    "pr-author-self-review": "on",
     "plannotator-review": "name-only",
     "plannotator-annotate": "name-only",
     "plannotator-last": "name-only",
@@ -79,6 +81,7 @@
     "diagram-design": "name-only",
     "pr-reviewer-comment-crit": "name-only",
     "pr-author-fix": "name-only",
+    "lessons-record": "name-only",
     "pr-reviewer-comment": "name-only",
     "pr-reviewer-brief": "name-only",
     "tmux": "name-only",
@@ -98,7 +101,9 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
-    "suggest-rules": "user-invocable-only"
+    "suggest-rules": "user-invocable-only",
+    "lessons-harvest": "user-invocable-only",
+    "lessons-review": "user-invocable-only"
   },
   "git": {
     "includeCoAuthor": false
@@ -115,6 +120,15 @@
             "type": "command",
             "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+            "timeout": 40
           }
         ]
       },

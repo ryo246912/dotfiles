@@ -7,6 +7,7 @@
 docs.anthropic.com
 docs.claude.com
 code.claude.com
+skills.sh
 
 # 言語・フレームワーク・ツールの公式ドキュメント
 developer.mozilla.org
@@ -22,6 +23,8 @@ mise.jdx.dev
 deb.debian.org
 apt.postgresql.org
 mise-java.jdx.dev
+aws.amazon.com
+developers.openai.com
 
 # CodeRabbit CLI（sandbox 内の coderabbit review が API を呼ぶ）
 api.coderabbit.ai

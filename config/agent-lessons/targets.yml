@@ -1,0 +1,5 @@
+# lessons-harvest skill が週次でレビュー指摘を集める、個人のリポジトリ。
+# 会社のリポジトリはここに書かず、targets.<name>.yml（gitignore 済み）に書く（雛形は targets.work.yml.example）。
+# team: true のリポジトリでは、自分が関わっていない PR の指摘（team）も集める。
+repos:
+  - repo: github.com/ryo246912/dotfiles

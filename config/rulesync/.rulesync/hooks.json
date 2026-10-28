@@ -8,6 +8,10 @@
           "matcher": "clear",
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+          "timeout": 40
         }
       ],
       "sessionEnd": [
@@ -79,6 +83,12 @@
   },
   "codexcli": {
     "hooks": {
+      "sessionStart": [
+        {
+          "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+          "timeout": 40
+        }
+      ],
       "beforeSubmitPrompt": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",

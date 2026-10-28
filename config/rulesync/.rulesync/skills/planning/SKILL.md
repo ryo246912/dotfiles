@@ -31,6 +31,8 @@ targets:
 
 - エージェントがユーザーから伝えられたタスクの概要を分析する
 - タスクの概要が`00-spec-*.md`等に保存されている場合は、その内容を参照する
+- agent-lessons が設定済み（`~/.local/share/agent-lessons` がある）なら、変更予定のファイルに関係する教訓を
+  `python3 <この skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source received,team --full --paths <変更予定のファイル>` で 1 回で出し、「制約条件」に入れる
 - 以下の観点で要件を整理する
   - タスクの目的・背景
   - 満たすべき機能要件
