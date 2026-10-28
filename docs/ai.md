@@ -12,7 +12,8 @@ claude-share-config
 ```
 
 共有する entry は [`local/bin/claude-share-config`](../local/bin/claude-share-config) が決めています
-（devcontainer の initialize.sh と sbx-agent も `claude-share-config --list-entries` を参照します）。
+（devcontainer の initialize.sh は `claude-share-config` を実行し、sbx-agent は `claude-share-config --list-entries`
+で共有 entry を取得します）。
 
 - dotfiles の [`claude/`](../claude) 直下（`settings.json` / `statusline.sh` / `subagent-statusline.sh` など。隠しファイルは除く）:
   mise の symlink-each で `~/.claude` に置かれるファイルを自動で拾う
