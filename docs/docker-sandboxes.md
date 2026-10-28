@@ -555,7 +555,7 @@ mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホスト�
 > 向けるため、**Claude Code が実際に読むのは `$CLAUDE_CONFIG_DIR/skills`（ホストの実体）**です。
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
-> 同じパスへマウントします（`projects` / `agents` / `skills` / `plugins` のディレクトリのみ）。基本は**書き込み可**ですが、
+> 同じパスへマウントします（対象は `claude-share-config --list-entries` が返す共有 entry のみ）。基本は**書き込み可**ですが、
 > リンクを辿った先が dotfiles リポジトリ内のものは read-only です。`settings.json` はファイルへの symlink で、
 > sbx はこれを直接マウントできない（`workspace path exists but is not a directory` で作成に失敗する）ため、
 > 代わりにリンク先のあるディレクトリ（`~/.claude`）を **read-only** で足して、symlink の連鎖ごと解決させます。
