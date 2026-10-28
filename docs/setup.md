@@ -556,21 +556,27 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
-- [ ] claude（work3用の追加アカウント）
-  - `~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（devcontainerのpost-createでも同じsymlinkを作るので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
+- [ ] claude（account2 / work3 用の追加アカウント）
+  - `~/.claude`の設定を各アカウントへ共有する
 
     ```sh
-    mkdir -p ~/.claude-work3
-    for entry in projects settings.json agents skills plugins; do
-      [ -e ~/.claude-work3/"$entry" ] || [ -L ~/.claude-work3/"$entry" ] || ln -s ../.claude/"$entry" ~/.claude-work3/"$entry"
-    done
+    claude-share-config
     ```
 
-  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
+  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従って各アカウントでログインする
+
+    ```sh
+    CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
+    ```
 
     ```sh
     CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
     ```
+
+  - アカウント（例: `~/.claude-work4`）を追加するとき
+    - [`local/bin/claude-share-config`](../local/bin/claude-share-config) の`DEFAULT_ACCOUNTS`に`work4`を足し、`claude-share-config`を実行する（ディレクトリ作成とsymlink共有をまとめて行う）
+    - devcontainerで使う場合は[`config/devcontainer/devcontainer.json`](../config/devcontainer/devcontainer.json)の`mounts`に`~/.claude-work4`のbind mountを足す
+    - ccmanagerのpresetで使う場合は[`config/ccmanager/config.json`](../config/ccmanager/config.json)に`CLAUDE_CONFIG_DIR="$HOME/.claude-work4"`のpresetを足す
 
 - [ ] Vicinae の shortcuts / snippets（詳細は [`docs/raycast.md`](raycast.md)）
   - `templates/vicinae/*.json.tera` から `~/.local/share/vicinae/{shortcuts,snippets}/*.json` を生成する。

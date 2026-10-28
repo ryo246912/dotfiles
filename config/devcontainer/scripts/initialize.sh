@@ -417,8 +417,12 @@ fi
 ensure_dir ~/.claude
 ensure_json_file ~/.claude/settings.json
 ensure_json_file ~/.claude.json
-ensure_dir ~/.claude-account2
-ensure_dir ~/.claude-work3
+# 追加アカウント（~/.claude-account2 など）の作成と ~/.claude の設定の symlink 共有
+if [ -x ~/.local/bin/claude-share-config ]; then
+	~/.local/bin/claude-share-config || echo "⚠️ ~/.claude-* への設定の共有に失敗しました" >&2
+else
+	echo "⚠️ ~/.local/bin/claude-share-config が無いため、~/.claude-* への設定の共有をスキップしました（dotfiles を適用してください）" >&2
+fi
 ensure_dir ~/.agents
 ensure_dir ~/.codex
 # ~/.codex 配下の設定は symlink-each で配置されるため、ディレクトリごとの mount では
