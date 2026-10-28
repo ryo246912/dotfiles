@@ -13,5 +13,5 @@ docker compose run --rm <service> alembic downgrade base
 
 $ service: { echo app; docker compose config --services; } | awk '!seen[$0]++'
 $ revision: docker compose run --rm -T <service> alembic history \
-  --- --fzf-overrides '--reverse' --map "sed -E 's/^([^ ]+) -> ([^ ,]+).*/\2/'"
+  --- --fzf-overrides '--reverse' --map "sed -E 's/^([^, ]+(, [^, ]+)*) -> ([^ ,]+).*/\3/'"
 ;$
