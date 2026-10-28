@@ -243,7 +243,82 @@ setup_nvim() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# agent-lessons
+# ---------------------------------------------------------------------------
+# ホストの ~/.local/share/agent-lessons は書き込み可でホストと同じ絶対パスにマウントされる。
+# skill（lessons_query.py / lessons-record）と SessionStart hook（agent-lessons-context）は
+# ~/.local/share/agent-lessons を固定で読み書きするため、ホストと同じ形に揃える。
+#   - ~/.local/share/agent-lessons → ホストの clone への symlink
+#   - ~/.local/bin/agent-lessons-context → dotfiles リポジトリの実体への symlink
+#   - Basic Memory の project agent-lessons を登録して索引を作る
+# Basic Memory の設定と索引（~/.basic-memory）は sandbox ごとに持つ。ホストの SQLite を
+# VM 越しに共有すると lock が効かず壊れうるため、索引はアタッチのたびに作り直して追従する。
+setup_agent_lessons() {
+    local host_lessons="${SBX_HOST_AGENT_LESSONS:-}"
+    local target="${HOME}/.local/share/agent-lessons"
+
+    if [ -z "$host_lessons" ] || [ ! -d "$host_lessons" ]; then
+        log_skip "agent-lessons が渡されていないためスキップしました（SBX_HOST_AGENT_LESSONS=${host_lessons:-未設定}）"
+        return 0
+    fi
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$host_lessons" ]; then
+        log_skip "agent-lessons の symlink は既に存在します"
+    elif [ -e "$target" ] && [ ! -L "$target" ]; then
+        log_warn "既存の ${target} があるため agent-lessons の symlink を張りませんでした"
+        return 1
+    elif mkdir -p "$(dirname "$target")" && ln -sfn "$host_lessons" "$target"; then
+        log_ok "agent-lessons を共有しました: ${target} -> ${host_lessons}"
+    else
+        log_warn "agent-lessons の symlink に失敗しました"
+        return 1
+    fi
+
+    local host_context="${SBX_HOST_AGENT_LESSONS_CONTEXT:-}"
+    local context_link="${HOME}/.local/bin/agent-lessons-context"
+    if [ -z "$host_context" ] || [ ! -x "$host_context" ]; then
+        log_skip "agent-lessons-context が渡されていないため SessionStart の注入は無効です"
+    elif [ -L "$context_link" ] && [ "$(readlink "$context_link")" = "$host_context" ]; then
+        log_skip "agent-lessons-context の symlink は既に存在します"
+    elif [ -e "$context_link" ] && [ ! -L "$context_link" ]; then
+        log_warn "既存の ${context_link} があるため agent-lessons-context の symlink を張りませんでした"
+    elif mkdir -p "$(dirname "$context_link")" && ln -sfn "$host_context" "$context_link"; then
+        log_ok "agent-lessons-context を配置しました: ${context_link} -> ${host_context}"
+    else
+        log_warn "agent-lessons-context の symlink に失敗しました"
+    fi
+
+    if ! command -v basic-memory >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        log_skip "basic-memory / jq が無いため Basic Memory の登録をスキップしました（template をビルドしてください）"
+        return 0
+    fi
+    # 登録先はホストと同じ絶対パスにする（ホストの lessons:setup と同じ判定）
+    local registered
+    registered=$(basic-memory tool list-projects 2>/dev/null \
+        | jq -r '[.projects[]? | select(.name == "agent-lessons") | .local_path // empty] | first // empty') || registered=""
+    if [ -z "$registered" ]; then
+        # 設定は lessons:setup と同じ（日本語の教訓のため embedding を使わない / 自動更新しない）
+        basic-memory config set semantic_search_enabled false >/dev/null 2>&1 || true
+        basic-memory config set auto_update false >/dev/null 2>&1 || true
+        if basic-memory project add agent-lessons "$host_lessons" >/dev/null 2>&1; then
+            log_ok "Basic Memory に project agent-lessons を登録しました"
+        else
+            log_warn "Basic Memory への project agent-lessons の登録に失敗しました"
+            return 1
+        fi
+    elif [ "$(realpath "$registered")" != "$(realpath "$host_lessons")" ]; then
+        log_warn "Basic Memory の agent-lessons が ${registered} を指しているため登録し直しませんでした"
+        return 1
+    fi
+    if timeout 120 basic-memory reindex --search -p agent-lessons >/dev/null 2>&1; then
+        log_ok "Basic Memory の agent-lessons を索引し直しました"
+    else
+        log_warn "Basic Memory の agent-lessons の索引に失敗しました"
+    fi
+}
+
 setup_nvim
+setup_agent_lessons
 setup_no_proxy
 setup_ssh_config
 setup_crit
