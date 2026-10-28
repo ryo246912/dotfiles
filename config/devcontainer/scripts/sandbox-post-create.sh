@@ -280,6 +280,8 @@ setup_agent_lessons() {
         log_skip "agent-lessons-context が渡されていないため SessionStart の注入は無効です"
     elif [ -L "$context_link" ] && [ "$(readlink "$context_link")" = "$host_context" ]; then
         log_skip "agent-lessons-context の symlink は既に存在します"
+    elif [ -e "$context_link" ] && [ ! -L "$context_link" ]; then
+        log_warn "既存の ${context_link} があるため agent-lessons-context の symlink を張りませんでした"
     elif mkdir -p "$(dirname "$context_link")" && ln -sfn "$host_context" "$context_link"; then
         log_ok "agent-lessons-context を配置しました: ${context_link} -> ${host_context}"
     else
