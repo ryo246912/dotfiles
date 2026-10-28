@@ -187,9 +187,6 @@ else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
-# claude-account2 / claude-work3 から ~/.claude の設定を共有する symlink は、ホスト側の
-# initialize.sh が local/bin/claude-share-config で作る（~/.claude-* はホストから mount している）。
-
 if [ ! -f ~/.crit.config.json ]; then
 	cat >~/.crit.config.json <<'EOF'
 {

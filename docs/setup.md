@@ -565,7 +565,6 @@
     claude-share-config
     ```
 
-  - `claude/`にファイルを足したとき（先に`mise bootstrap dotfiles apply`で`~/.claude`へ配置しておく）や`EXTRA_SHARED_ENTRIES`/`DEFAULT_ACCOUNTS`（[`local/bin/claude-share-config`](../local/bin/claude-share-config)）を変えたときは、同じコマンドを再実行すれば既存アカウントにも追加分だけリンクが張られる（既存の`~/.claude-*`ディレクトリも自動で対象になる）
   - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従って各アカウントでログインする
 
     ```sh
@@ -575,6 +574,11 @@
     ```sh
     CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions
     ```
+
+  - アカウント（例: `~/.claude-work4`）を追加するとき
+    - [`local/bin/claude-share-config`](../local/bin/claude-share-config) の`DEFAULT_ACCOUNTS`に`work4`を足し、`claude-share-config`を実行する（ディレクトリ作成とsymlink共有をまとめて行う）
+    - devcontainerで使う場合は[`config/devcontainer/devcontainer.json`](../config/devcontainer/devcontainer.json)の`mounts`に`~/.claude-work4`のbind mountを足す
+    - ccmanagerのpresetで使う場合は[`config/ccmanager/config.json`](../config/ccmanager/config.json)に`CLAUDE_CONFIG_DIR="$HOME/.claude-work4"`のpresetを足す
 
 - [ ] Vicinae の shortcuts / snippets（詳細は [`docs/raycast.md`](raycast.md)）
   - `templates/vicinae/*.json.tera` から `~/.local/share/vicinae/{shortcuts,snippets}/*.json` を生成する。

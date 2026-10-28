@@ -11,19 +11,6 @@ devcontainer の initialize でも同じコマンドを実行するので、一�
 claude-share-config
 ```
 
-共有する entry は [`local/bin/claude-share-config`](../local/bin/claude-share-config) が決めています
-（devcontainer の initialize.sh は `claude-share-config` を実行し、sbx-agent は `claude-share-config --list-entries`
-で共有 entry を取得します）。
-
-- dotfiles の [`claude/`](../claude) 直下（`settings.json` / `statusline.sh` / `subagent-statusline.sh` など。隠しファイルは除く）:
-  mise の symlink-each で `~/.claude` に置かれるファイルを自動で拾う
-- dotfiles 管理外の実行時データ（`projects` / `agents` / `skills` / `plugins`）: `EXTRA_SHARED_ENTRIES` に列挙
-
-`claude/` にファイルを足したら、まず `mise bootstrap dotfiles apply` で `~/.claude` に配置してから
-`claude-share-config` を再実行すると、既存の `~/.claude-*` にも追加分だけリンクが張られます
-（`~/.claude/<entry>` が無いものはスキップします）。
-既にあるファイル・ディレクトリは上書きしません。
-
 ```bash
 # account2 のアカウント
 CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
