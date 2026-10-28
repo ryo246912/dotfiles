@@ -557,9 +557,7 @@
     ```
 
 - [ ] claude（account2 / work3 用の追加アカウント）
-  - `~/.claude-account2`・`~/.claude-work3`を作成し、`~/.claude`の設定をシンボリックリンクで共有する（既に存在するものは上書きしない。devcontainerのinitializeでも同じコマンドを実行するので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
-    - dotfilesの[`claude/`](../claude)直下（`settings.json`/`statusline.sh`/`subagent-statusline.sh`など。隠しファイルは除く）は自動で対象になる
-    - それ以外の`projects`/`agents`/`skills`/`plugins`はスクリプト内の`EXTRA_SHARED_ENTRIES`で指定している
+  - `~/.claude`の設定を各アカウントへ共有する
 
     ```sh
     claude-share-config
