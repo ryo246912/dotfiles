@@ -426,7 +426,7 @@ sbx-agent --help
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
    `~/.local/share/agent-lessons`（書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
-   マウントは作成時にしか付かないため、追加したマウントを既存の sandbox に反映するには `sbx-agent --new` で作り直す
+   マウントは作成時にしか付かないため、追加したマウントを既存の sandbox に反映するには `sbx-agent <agent> --new` で作り直す
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）

@@ -367,10 +367,19 @@ add_mount() {
         return
     fi
 
+    # 同じパスが既にあれば足さない。ただし read-only の指定は書き込み可より優先する
+    # （先に --mount などで書き込み可が渡されても、agent-lessons の .git:ro などを無効にさせない）。
+    # 親ディレクトリのマウントより後ろに積むため、既存の指定は外して末尾に足し直す。
     local existing
+    local -a kept=()
     for existing in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
-        [[ "${existing%:ro}" == "$path" ]] && return
+        if [[ "${existing%:ro}" == "$path" ]]; then
+            [[ -z "$suffix" || "$existing" == *:ro ]] && return
+            continue
+        fi
+        kept+=("$existing")
     done
+    MOUNTS=(${kept[@]+"${kept[@]}"})
 
     MOUNTS+=("${path}${suffix}")
 }
