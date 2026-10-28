@@ -4,7 +4,7 @@
 #
 # 共有する entry（dotfiles の claude/ 配下は自動）とアカウントの一覧はこのスクリプトだけで管理する。
 # ホスト（docs/setup.md）・devcontainer の initialize.sh・sbx-agent はここを参照するので、
-# claude/ にファイルを足したときは再実行するだけでよい。
+# claude/ にファイルを足したときは dotfiles apply 後に再実行するだけでよい。
 #
 # Usage:
 #   claude-share-config [<name>...]   # 例: claude-share-config account2 work3
@@ -15,9 +15,9 @@
 
 set -euo pipefail
 
-# dotfiles の claude/ 配下（settings.json・statusline.sh など）は mise の symlink-each で
-# ~/.claude に置かれるので、そのディレクトリの中身を共有 entry として自動で拾う。
-# claude/ にファイルを足せば、再実行するだけで各アカウントにも共有される。
+# dotfiles の claude/ 直下（settings.json・statusline.sh など。隠しファイルは除く）は mise の
+# symlink-each で ~/.claude に置かれるので、そのディレクトリの中身を共有 entry として自動で拾う。
+# claude/ にファイルを足したら、mise bootstrap dotfiles apply で ~/.claude に配置してから再実行する。
 # それ以外に共有したい ~/.claude 配下の実行時データ（dotfiles 管理外）は下に列挙する。
 # 認証情報（.credentials.json）や履歴などアカウント固有のものは含めないこと。
 EXTRA_SHARED_ENTRIES=(projects agents skills plugins)
