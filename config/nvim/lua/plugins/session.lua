@@ -8,24 +8,16 @@ return {
       local auto_session_lib = require("auto-session.lib")
       local restored_treesitter_state = {}
 
-      -- Older snapshots used the already percent-encoded filename as their
-      -- session name. Each restore/save cycle encoded it again (%2F -> %252F).
-      local function canonical_session_name(name)
-        for _ = 1, 20 do
-          local decoded = auto_session_lib.unescape_session_name(name)
-          if decoded == name then
-            break
-          end
-          name = decoded
-        end
-        return name
-      end
-
+      ---Get the logical session name from auto-session's encoded file path.
+      ---Decode exactly once so literal percent sequences in names remain intact.
+      ---@param path string
+      ---@return string
       local function session_name_from_path(path)
         local filename = vim.fn.fnamemodify(path, ":t")
-        return canonical_session_name(auto_session_lib.escaped_session_name_to_session_name(filename))
+        return auto_session_lib.escaped_session_name_to_session_name(filename)
       end
 
+      ---Reopen neo-tree after restoring a session without stealing editor focus.
       local function restore_filetree()
         vim.schedule(function()
           local current_win = vim.api.nvim_get_current_win()
@@ -142,7 +134,7 @@ return {
           vim.schedule(function()
             local latest = latest_session()
             if latest then
-              local session_name = canonical_session_name(latest):gsub(TIMESTAMP_PATTERN, "")
+              local session_name = latest:gsub(TIMESTAMP_PATTERN, "")
               local choice = vim.fn.confirm(
                 "セッションを復元しますか？\n[" .. session_name .. "]",
                 "&Yes\n&No",
@@ -152,12 +144,6 @@ return {
                 local ok, restored = pcall(auto_session.restore_session, latest, { show_message = false })
                 if not ok then
                   vim.notify("セッションの復元に失敗しました: " .. tostring(restored), vim.log.levels.ERROR)
-                elseif restored then
-                  -- Point subsequent auto-saves at a once-encoded path so an
-                  -- existing repeatedly encoded snapshot heals itself.
-                  vim.v.this_session = auto_session.get_root_dir()
-                    .. auto_session_lib.escape_session_name(canonical_session_name(latest))
-                    .. ".vim"
                 end
               end
             end
@@ -215,15 +201,14 @@ return {
           vim.notify("復元できるセッションがありません", vim.log.levels.WARN)
           return
         end
-        local restored = auto_session.restore_session(latest)
-        if restored then
-          vim.v.this_session = auto_session.get_root_dir()
-            .. auto_session_lib.escape_session_name(canonical_session_name(latest))
-            .. ".vim"
-        end
+        auto_session.restore_session(latest)
       end, {})
 
       vim.api.nvim_create_user_command("SessionVisibleOnly", function(opts)
+        if opts.args ~= "" and opts.args ~= "on" and opts.args ~= "off" then
+          vim.notify("引数は on または off を指定してください", vim.log.levels.ERROR)
+          return
+        end
         local enabled = opts.args == "" and not vim.g.session_visible_only or opts.args == "on"
         vim.g.session_visible_only = enabled
         if enabled then
