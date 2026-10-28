@@ -18,7 +18,7 @@ set -euo pipefail
 # dotfiles の claude/ 直下（settings.json・statusline.sh など。隠しファイルは除く）は mise の
 # symlink-each で ~/.claude に置かれるので、そのディレクトリの中身を共有 entry として自動で拾う。
 # claude/ にファイルを足したら、mise bootstrap dotfiles apply で ~/.claude に配置してから再実行する。
-# それ以外に共有したい ~/.claude 配下の実行時データ（dotfiles 管理外）は下に列挙する。
+# それ以外に共有したい ~/.claude 配下の実行時データ（dotfiles 管理外。ディレクトリに限る）は下に列挙する。
 # 認証情報（.credentials.json）や履歴などアカウント固有のものは含めないこと。
 EXTRA_SHARED_ENTRIES=(projects agents skills plugins)
 
@@ -49,7 +49,9 @@ list_entries() {
     local file name extra
     if [[ -d "$DOTFILES_CLAUDE_DIR" ]]; then
         for file in "$DOTFILES_CLAUDE_DIR"/*; do
-            [[ -e "$file" ]] || continue
+            # claude/ 内の symlink は辿らない（リポジトリ外を指していると、sbx-agent がリンク先を
+            # 書き込み可で sandbox にマウントしてしまうため）
+            [[ -e "$file" && ! -L "$file" ]] || continue
             name="${file##*/}"
             for extra in "${EXTRA_SHARED_ENTRIES[@]}"; do
                 [[ "$name" == "$extra" ]] && continue 2
@@ -86,6 +88,12 @@ entries=()
 while IFS= read -r entry; do
     entries+=("$entry")
 done < <(list_entries)
+
+# 実行時データのディレクトリは共有元を先に作っておく。無いままだと初回はリンクを張れず、
+# 追加アカウント側に同名の実ディレクトリができて以降も共有されなくなるため。
+for entry in "${EXTRA_SHARED_ENTRIES[@]}"; do
+    [[ -e "${CLAUDE_DIR}/${entry}" || -L "${CLAUDE_DIR}/${entry}" ]] || mkdir -p "${CLAUDE_DIR}/${entry}"
+done
 
 for name in "${accounts[@]}"; do
     account_dir="${HOME}/.claude-${name}"
