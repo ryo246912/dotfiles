@@ -438,7 +438,11 @@ mise run lessons:sync
 
 ## 制約と注意
 
-- **devcontainer・sandbox の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
+- **devcontainer の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
+- **Docker Sandboxes（`sbx-agent`）ではホストと同じように動く。** ホストの clone を書き込み可でマウントし、sandbox 内の
+  `~/.local/share/agent-lessons` から symlink を張る。Basic Memory は template に入れ、project `agent-lessons` を
+  sandbox ごとに登録して、アタッチのたびに索引を作り直す（索引の SQLite はホストと共有しない）。sandbox で書いた観察は
+  ホストの clone に直接入るので、ホストの `mise run lessons:sync` で commit / push される
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は

@@ -11,6 +11,7 @@ experimental = true
 "aqua:cli/cli"                                              = "2.102.0"
 "aqua:evilmartians/lefthook"                                = "2.2.1"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
+"aqua:jqlang/jq"                                            = "1.6"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:mvdan/sh"                                             = "3.14.1"
 "aqua:neovim/neovim"                                        = "0.12.6"
@@ -35,6 +36,8 @@ experimental = true
 "go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 "npm:oxfmt"                                                 = "0.74.0"
 "npm:oxlint"                                                = "1.87.0"
+# agent-lessons（教訓の記録・検索）。バージョンはホスト（config/mise/config.toml）と揃える
+"pipx:basic-memory"                                         = { version = "0.23.2", uvx_args = "--prerelease=allow" }
 
 [settings.pipx]
 uvx = true

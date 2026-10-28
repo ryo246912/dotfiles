@@ -399,11 +399,11 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
     add_mount "${HOME}/.config/nvim:ro"
-    # agent-lessons（pr-author-self-review などが lessons_query.py で読む教訓）。skill は
-    # ~/.local/share/agent-lessons 固定で読むため、sandbox 内の $HOME から symlink を張る
-    # （sandbox-post-create.sh）。読むだけなので read-only にし、sandbox からホストの教訓を
-    # 書き換えさせない。
-    [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_mount "${HOME}/.local/share/agent-lessons:ro"
+    # agent-lessons（教訓の private リポジトリ）。skill / hook は ~/.local/share/agent-lessons 固定で
+    # 読み書きするため、sandbox 内の $HOME から symlink を張る（sandbox-post-create.sh）。
+    # lessons-record が sandbox から観察を書き込めるよう書き込み可で渡す（ホストの clone を直接
+    # 書き換えるので、書いた観察はホストの lessons:sync でそのまま commit / push される）。
+    [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_mount "${HOME}/.local/share/agent-lessons"
     # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
@@ -552,6 +552,10 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
     [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
     [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_env SBX_HOST_AGENT_LESSONS "${HOME}/.local/share/agent-lessons"
+    # SessionStart hook（agent-lessons-context）は image に入っていないため、マウント済みの
+    # dotfiles リポジトリにある実体を sandbox 内の ~/.local/bin から参照させる
+    [[ -n "${dotfiles_repo:-}" && -x "${dotfiles_repo}/local/bin/agent-lessons-context" ]] \
+        && add_env SBX_HOST_AGENT_LESSONS_CONTEXT "${dotfiles_repo}/local/bin/agent-lessons-context"
 fi
 
 # 設定ディレクトリをマウントしていない場合は env を設定しない。
