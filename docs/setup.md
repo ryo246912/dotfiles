@@ -101,53 +101,23 @@
     mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
     ```
 
-- [ ] git（push は SSH、コミットは GPG 署名になるので、コミット・push の前に済ませる）
+- [ ] git（コミット・push の前に済ませる）
+  - git で使う鍵は用途ごとに 3 つに分かれる
+
+    | 用途                               | 方式                             | 使う鍵                          | GitHub の登録枠    |
+    | ---------------------------------- | -------------------------------- | ------------------------------- | ------------------ |
+    | push（GitHub への認証）            | SSH                              | `~/.ssh/id_ed25519`             | Authentication key |
+    | ホストで直接コミットするときの署名 | GPG 署名                         | GPG 秘密鍵                      | GPG key            |
+    | sandbox（sbx）内のコミットの署名   | SSH 署名（ssh-agent forwarding） | `~/.ssh/id_ed25519`（ホスト側） | Signing key        |
+
   - 鍵の登録・削除に使う gh の scope を足しておく（初回 bootstrap の `gh auth login` は `project` だけ）
 
     ```sh
-    gh auth refresh --scopes write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
+    gh auth refresh --scopes write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key,admin:ssh_signing_key
     ```
 
-  - [ ] secret設定ファイルの作成
-    - サンプルをコピーし、`machineId`を自分の値に編集する
-
-    ```sh
-    cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
-    nvim ~/.config/git/config.secret
-    ```
-
-    - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
-
-    ```sh
-    cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-    cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
-    nvim ~/.config/git/config.work3.secret
-    ```
-
-    - 各値の確認方法
-      - `coderabbit.machineId`: CodeRabbit CLI が git config に書き込む値。既存マシンの値に揃えるか、
-        新しいマシンでは CLI を一度実行して書き込まれた値を移す
-
-        ```sh
-        git config --show-origin --get coderabbit.machineId
-        ```
-
-      - `user.email`: GitHub の「Settings」→「Emails」で Verified の仕事用アドレス。
-        GPG 鍵の UID にも同じアドレスが必要（下の「秘密鍵の設定」の `adduid`）
-      - `user.signingkey`: 下の「秘密鍵の設定」の後に埋める。`sec rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろ
-        （`gh gpg-key list` の 2 列目でも確認できる）
-
-        ```sh
-        gpg --list-secret-keys --keyid-format LONG "<メールアドレス>"
-        ```
-
-    - 編集後、設定ファイルが読み込まれていることを確認する
-
-    ```sh
-    git config --show-origin --get-regexp '^user\.(email|signingkey)$'
-    ```
-
-  - [ ] [sshの設定](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+  - [ ] push 用の SSH 設定（[GitHub docs](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)）
+    - ここで登録する鍵は GitHub への認証（Authentication key）用。コミット署名には使われない
     - 秘密鍵の生成
       1. ssh-keygenで生成→登録
 
@@ -156,7 +126,7 @@
       ```
 
       - パスフレーズを入力
-      - Githubに公開鍵を登録
+      - Githubに公開鍵を登録（`--type` を省くと Authentication key としてだけ登録される）
 
       ```sh
       gh ssh-key add ~/.ssh/id_ed25519.pub -t "<title>"
@@ -166,7 +136,7 @@
       - sshを選択（`gh auth login` はトークンを作り直して scope が初期化されるので、必要な scope を渡す）
 
       ```sh
-      gh auth login --scopes project,write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key
+      gh auth login --scopes project,write:public_key,read:gpg_key,write:gpg_key,admin:gpg_key,admin:ssh_signing_key
       ```
 
       - 途中の画面で新しいキーを生成する→ghコマンドが自動で公開鍵をGitHubに登録
@@ -210,102 +180,159 @@
     ssh-add ~/.ssh/id_ed25519
     ```
 
-  - [ ] 秘密鍵の設定
-    - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
-      export済みの`secret_key.asc`を`.gnupg`にコピーしてきて、importする
-
-    ```sh
-    gpg --import ~/.gnupg/secret_key.asc
-    ```
-
-    もし再度exportしたい場合は、以下のコマンドを実行
-
-    ```sh
-    gpg --export-secret-keys --armor <fingerprint> > ~/.secret_key.asc
-    ```
-
-    - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
-
-    ```sh
-    gpg --list-secret-keys --keyid-format LONG
-    # ----------------------------------
-    # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
-    #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
-    # uid                 [ultimate] Your Name <your.email@example.com>
-    # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
-    ```
-    - パスフレーズは、パスワードマネージャーに保存しているものを参照
-
-    - 新規に秘密鍵を作成する場合は、以下のコマンドを実行
-      - 基本そのままEnterを押していく
-      - 名前・メールアドレスは、gitの設定と同じものを使用
-
-    ```sh
-    gpg --full-generate-key
-    ```
-
-    - 作成後、以下のコマンドでfingerprintを確認
-      - GPG_KEY_IDの内容をgitconfigに設定する
-
-    ```sh
-    gpg --list-secret-keys --keyid-format LONG
-    ```
-
-    - (新しいメールアドレスを紐づける場合)GPGキーにメールアドレスを追加
+  - [ ] git 署名用の GPG 設定（ホストで直接コミットするとき）
+    - [ ] secret設定ファイルの作成
+      - サンプルをコピーし、`machineId`を自分の値に編集する
 
       ```sh
-      gpg --edit-key XXXXXXXXXXXXXXXX
+      cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
+      nvim ~/.config/git/config.secret
       ```
 
-      - adduidで編集、以下を入力して新しいメールアドレスを追加
-        - Real name: 登録したい名前
-        - Email address: 登録したいメールアドレス
-        - Comment: コメント（任意）
+      - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
-      gpg> adduid
+      cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
+      cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+      nvim ~/.config/git/config.work3.secret
       ```
 
-    - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
+      - 各値の確認方法
+        - `coderabbit.machineId`: CodeRabbit CLI が git config に書き込む値。既存マシンの値に揃えるか、
+          新しいマシンでは CLI を一度実行して書き込まれた値を移す
+
+          ```sh
+          git config --show-origin --get coderabbit.machineId
+          ```
+
+        - `user.email`: GitHub の「Settings」→「Emails」で Verified の仕事用アドレス。
+          GPG 鍵の UID にも同じアドレスが必要（下の「秘密鍵の設定」の `adduid`）
+        - `user.signingkey`: 下の「秘密鍵の設定」の後に埋める。`sec rsa4096/XXXXXXXXXXXXXXXX` の `/` の後ろ
+          （`gh gpg-key list` の 2 列目でも確認できる）
+
+          ```sh
+          gpg --list-secret-keys --keyid-format LONG "<メールアドレス>"
+          ```
+
+      - 編集後、設定ファイルが読み込まれていることを確認する
+
+      ```sh
+      git config --show-origin --get-regexp '^user\.(email|signingkey)$'
+      ```
+
+    - [ ] 秘密鍵の設定
+      - 既存の秘密鍵を使用する場合は、以下のコマンドを実行
+        export済みの`secret_key.asc`を`.gnupg`にコピーしてきて、importする
+
+      ```sh
+      gpg --import ~/.gnupg/secret_key.asc
+      ```
+
+      もし再度exportしたい場合は、以下のコマンドを実行
+
+      ```sh
+      gpg --export-secret-keys --armor <fingerprint> > ~/.secret_key.asc
+      ```
+
+      - fingerprintは、以下のコマンドの`YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY`の内容
+
+      ```sh
+      gpg --list-secret-keys --keyid-format LONG
+      # ----------------------------------
+      # sec   rsa4096/XXXXXXXXXXXXXXXX  2023-01-01 [SC]
+      #       YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+      # uid                 [ultimate] Your Name <your.email@example.com>
+      # ssb   rsa4096/ZZZZZZZZZZZZZZZZ  2023-01-01 [E]
+      ```
+
+      - パスフレーズは、パスワードマネージャーに保存しているものを参照
+
+      - 新規に秘密鍵を作成する場合は、以下のコマンドを実行
+        - 基本そのままEnterを押していく
+        - 名前・メールアドレスは、gitの設定と同じものを使用
+
+      ```sh
+      gpg --full-generate-key
+      ```
+
+      - 作成後、以下のコマンドでfingerprintを確認
+        - GPG_KEY_IDの内容をgitconfigに設定する
+
+      ```sh
+      gpg --list-secret-keys --keyid-format LONG
+      ```
+
+      - (新しいメールアドレスを紐づける場合)GPGキーにメールアドレスを追加
+
+        ```sh
+        gpg --edit-key XXXXXXXXXXXXXXXX
+        ```
+
+        - adduidで編集、以下を入力して新しいメールアドレスを追加
+          - Real name: 登録したい名前
+          - Email address: 登録したいメールアドレス
+          - Comment: コメント（任意）
+
+        ```sh
+        gpg> adduid
+        ```
+
+      - 登録済みのGPGキーを削除後、GitHubに新しいGPGキーを登録
+
+      ```sh
+      gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
+      ```
+
+      ```sh
+      gpg --armor --export XXXXXXXXXXXXXXXX | gh gpg-key add
+      ```
+
+    - [ ] gpg_agent・gitの設定
+      ```
+      setup-git-gpg
+      ```
+    - [ ] GPG署名の確認
+      - ローカルでは、署名済みコミットを検証する
+
+      ```sh
+      git verify-commit HEAD
+      ```
+
+      - `Good signature`と表示されれば署名自体の検証は成功している
+      - コミットのauthor・committerと、署名に使用したGPG鍵のUIDは別の情報である。`git verify-commit`が表示する名前とメールアドレスはGPG鍵のUIDであり、commit authorとの一致を検証しているわけではない
+      - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
+      - author・committerと署名をまとめて確認する場合は、以下を実行する
+
+      ```sh
+      git show --no-patch --show-signature --format=fuller HEAD
+      ```
+
+      - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
+
+      ```sh
+      git push origin HEAD
+      gh api "repos/{owner}/{repo}/commits/$(git rev-parse HEAD)" \
+        --jq '.commit.verification | {verified, reason, verified_at}'
+      ```
+
+      - `verified`が`true`ならGitHubでも署名が正しく認識されている
+      - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
+
+  - [ ] sbx での git 署名用の SSH 設定（sandbox 内でコミットするとき）
+    - sandbox 内のコミットは GPG ではなく、ホストの ssh-agent を forwarding した SSH 署名
+      （[docs/docker-sandboxes.md](./docker-sandboxes.md) の「コミット署名用の SSH 鍵を ssh-agent に登録する」と同じ内容）
+    - 署名に使う鍵は既定でホストの `~/.ssh/id_ed25519`（`SBX_AGENT_SIGNING_KEY` で変更可）
+    - GitHub に **Signing key** として登録しないと Verified にならない。push 用の SSH 設定で
+      Authentication key として登録済みでも、署名用は別枠なので追加が必要
+      （`gh auth refresh` に `admin:ssh_signing_key` scope が無いと登録できない）
 
     ```sh
-    gh gpg-key list | cut -f2 | xargs -n1 gh gpg-key delete --yes
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+    ssh-add -L   # 公開鍵が 1 行出ることを確認
+    gh auth refresh -h github.com -s admin:ssh_signing_key
+    gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s) workN)"
+    gh ssh-key list   # TYPE が signing の行があることを確認
     ```
-
-    ```sh
-    gpg --armor --export XXXXXXXXXXXXXXXX | gh gpg-key add
-    ```
-
-  - [ ] gpg_agent・gitの設定
-    ```
-    setup-git-gpg
-    ```
-  - [ ] GPG署名の確認
-    - ローカルでは、署名済みコミットを検証する
-
-    ```sh
-    git verify-commit HEAD
-    ```
-
-    - `Good signature`と表示されれば署名自体の検証は成功している
-    - コミットのauthor・committerと、署名に使用したGPG鍵のUIDは別の情報である。`git verify-commit`が表示する名前とメールアドレスはGPG鍵のUIDであり、commit authorとの一致を検証しているわけではない
-    - 自分の鍵に対する`This key is not certified with a trusted signature`という警告は、ローカルのGPGで所有者信頼度を設定していないという意味で、署名の失敗ではない
-    - author・committerと署名をまとめて確認する場合は、以下を実行する
-
-    ```sh
-    git show --no-patch --show-signature --format=fuller HEAD
-    ```
-
-    - GitHub上の`Verified`判定はローカルの信頼度とは別である。PRを作成せずに確認する場合は、コミットをブランチへpushした後、GitHub APIで確認する
-
-    ```sh
-    git push origin HEAD
-    gh api "repos/{owner}/{repo}/commits/$(git rev-parse HEAD)" \
-      --jq '.commit.verification | {verified, reason, verified_at}'
-    ```
-
-    - `verified`が`true`ならGitHubでも署名が正しく認識されている
-    - `false`の場合は、`reason`を確認し、公開鍵がGitHubアカウントに登録されているか、コミットのメールアドレスがGitHubアカウントと紐づいているかを確認する
 
 - [ ] `HOST_ENV` の反映と `mise bootstrap` の再実行
   - 初回 bootstrap は `MISE_ENV=mac` だけで動くので、ロール別のツールや cask は入っていない。
