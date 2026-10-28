@@ -243,7 +243,39 @@ setup_nvim() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# agent-lessons
+# ---------------------------------------------------------------------------
+# ホストの ~/.local/share/agent-lessons は read-only でホストと同じ絶対パスにマウントされる。
+# pr-author-self-review などの skill（lessons_query.py）は ~/.local/share/agent-lessons を
+# 固定で読むため、sandbox 内の $HOME からそこへ symlink を張る。
+setup_agent_lessons() {
+    local host_lessons="${SBX_HOST_AGENT_LESSONS:-}"
+    local target="${HOME}/.local/share/agent-lessons"
+
+    if [ -z "$host_lessons" ] || [ ! -d "$host_lessons" ]; then
+        log_skip "agent-lessons が渡されていないためスキップしました（SBX_HOST_AGENT_LESSONS=${host_lessons:-未設定}）"
+        return 0
+    fi
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$host_lessons" ]; then
+        log_skip "agent-lessons の symlink は既に存在します"
+        return 0
+    fi
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        log_warn "既存の ${target} があるため agent-lessons の symlink を張りませんでした"
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    if ln -sfn "$host_lessons" "$target"; then
+        log_ok "agent-lessons を共有しました: ${target} -> ${host_lessons}"
+    else
+        log_warn "agent-lessons の symlink に失敗しました"
+    fi
+}
+
 setup_nvim
+setup_agent_lessons
 setup_no_proxy
 setup_ssh_config
 setup_crit

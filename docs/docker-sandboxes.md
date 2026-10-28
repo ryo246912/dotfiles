@@ -424,8 +424,8 @@ sbx-agent --help
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
-   `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` と
-   agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
+   `~/.local/share/agent-lessons:ro` と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
@@ -601,13 +601,13 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から決める（claude の preset は `a1` / `a2` / `w3` が prefix。既にあれば再利用）
 2. ホスト側の前提条件（github secret / `localhost:22` の policy）を冪等に整える
 3. ツールチェイン入り template があれば使って `sbx create`
-   - ホストの git / aws / nvim 設定（read-only）と agent 設定ディレクトリをマウント
+   - ホストの git / aws / nvim 設定・agent-lessons（read-only）と agent 設定ディレクトリをマウント
      （gh のトークンファイルは渡さず `sbx secret` 経由にする）
    - 各 worktree の common git dir をマウント
    - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
    - crit / plannotator のポートを公開（host port は自動採番）
    - `--static-mcp` で登録済み MCP を読み込む（既定は読み込まない）
-4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
+4. sandbox 内で初期化（nvim / agent-lessons の symlink / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
 `multi-worktree dev` から直接起動することもできます。
@@ -747,11 +747,12 @@ sandbox では**その工夫が標準動作**です。パスがずれないの�
 ただし **`$HOME` は別物**なので、`~/.config/...` や `~/.claude` を前提にしているものは
 そのままでは解決しません。`sbx-agent` はここを 2 通りで埋めています。
 
-| 対象                       | 方法                                                                        |
-| -------------------------- | --------------------------------------------------------------------------- |
-| git 設定                   | `GIT_CONFIG_COUNT` / `KEY` / `VALUE` でホストのパスを直接指定               |
-| agent 設定（claude/codex） | `CLAUDE_CONFIG_DIR` / `CODEX_HOME` にホストのパスを設定                     |
-| nvim                       | `~/.config/nvim` → ホストのパスへ symlink（nvim は XDG パスしか見ないため） |
+| 対象                       | 方法                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| git 設定                   | `GIT_CONFIG_COUNT` / `KEY` / `VALUE` でホストのパスを直接指定                         |
+| agent 設定（claude/codex） | `CLAUDE_CONFIG_DIR` / `CODEX_HOME` にホストのパスを設定                               |
+| nvim                       | `~/.config/nvim` → ホストのパスへ symlink（nvim は XDG パスしか見ないため）           |
+| agent-lessons              | `~/.local/share/agent-lessons` → ホストのパスへ symlink（skill が固定パスで読むため） |
 
 ### git 操作で残る注意点は 1 つだけ
 
