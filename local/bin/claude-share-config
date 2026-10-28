@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#
+# claude-share-config: 追加アカウント（~/.claude-<name>）から ~/.claude の設定を symlink で共有する
+#
+# 共有する entry とアカウントの一覧はこのスクリプトだけで管理する。
+# ホスト（docs/setup.md）・devcontainer の initialize.sh・sbx-agent はここを参照するので、
+# 共有したい entry やアカウントを増やすときはこのファイルだけを直せばよい。
+#
+# Usage:
+#   claude-share-config [<name>...]   # 例: claude-share-config account2 work3
+#   claude-share-config --list-entries
+#
+#   <name> を省略すると DEFAULT_ACCOUNTS と、既に存在する ~/.claude-* ディレクトリが対象になる。
+#   既存のファイル・ディレクトリ・symlink は上書きしない（冪等）。
+
+set -euo pipefail
+
+# 共有する ~/.claude 配下の entry。認証情報（.credentials.json）や履歴などアカウント固有の
+# ものは含めないこと。settings.json は先頭に置く（sbx-agent がこの順でマウントを積むため）。
+SHARED_ENTRIES=(settings.json projects agents skills plugins)
+
+# 引数なしで作成するアカウント
+DEFAULT_ACCOUNTS=(account2 work3)
+
+CLAUDE_DIR="${HOME}/.claude"
+
+if [[ "${1:-}" == "--list-entries" ]]; then
+    printf '%s\n' "${SHARED_ENTRIES[@]}"
+    exit 0
+fi
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+accounts=("$@")
+if [[ ${#accounts[@]} -eq 0 ]]; then
+    accounts=("${DEFAULT_ACCOUNTS[@]}")
+    for dir in "${HOME}"/.claude-*; do
+        [[ -d "$dir" && ! -L "$dir" ]] || continue
+        name="${dir##*/.claude-}"
+        [[ " ${accounts[*]} " == *" ${name} "* ]] || accounts+=("$name")
+    done
+fi
+
+for name in "${accounts[@]}"; do
+    account_dir="${HOME}/.claude-${name}"
+    mkdir -p "$account_dir"
+    for entry in "${SHARED_ENTRIES[@]}"; do
+        if [[ -L "${account_dir}/${entry}" || -e "${account_dir}/${entry}" ]]; then
+            echo "ℹ️ .claude-${name}/${entry} は既に存在するのでスキップしました"
+        elif [[ ! -e "${CLAUDE_DIR}/${entry}" ]]; then
+            echo "ℹ️ ~/.claude/${entry} が無いので .claude-${name}/${entry} の共有はスキップしました"
+        else
+            ln -s "../.claude/${entry}" "${account_dir}/${entry}"
+            echo "✓ .claude-${name}/${entry} を共有しました"
+        fi
+    done
+done

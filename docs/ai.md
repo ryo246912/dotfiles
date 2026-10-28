@@ -5,17 +5,16 @@
 ### ホスト
 
 初回は `~/.claude` の設定（`projects` / `settings.json` / `agents` / `skills` / `plugins`）を共有する symlink を作ります。
-devcontainer の post-create でも同じ symlink を作るので、一度 devcontainer を起動していれば不要です。
+devcontainer の initialize でも同じコマンドを実行するので、一度 devcontainer を起動していれば不要です。
 
 ```bash
-for account in claude-account2 claude-work3; do
-  mkdir -p ~/."$account"
-  for entry in projects settings.json agents skills plugins; do
-    [ -e ~/.claude/"$entry" ] || continue
-    [ -e ~/."$account"/"$entry" ] || [ -L ~/."$account"/"$entry" ] || ln -s ../.claude/"$entry" ~/."$account"/"$entry"
-  done
-done
+claude-share-config
 ```
+
+共有する entry とアカウントは [`local/bin/claude-share-config`](../local/bin/claude-share-config) の
+`SHARED_ENTRIES` / `DEFAULT_ACCOUNTS` だけで管理しています（devcontainer の initialize.sh と sbx-agent も
+ここを参照します）。entry を増やしたら再実行すると、既存の `~/.claude-*` にも追加分だけリンクが張られます。
+既にあるファイル・ディレクトリは上書きしません。
 
 ```bash
 # account2 のアカウント

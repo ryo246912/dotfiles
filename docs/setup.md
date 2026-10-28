@@ -556,17 +556,19 @@
     ssh -i ~/.ssh/xx.pem -p <port> -L <local_port>:<target_host>:<target_port> <user>@<bastion_host>
     ```
 
-- [ ] claude（work3用の追加アカウント）
-  - `~/.claude-work3`を作成し、`~/.claude`配下の`projects`/`settings.json`/`agents`/`skills`/`plugins`を（未作成なら）シンボリックリンクで共有する（devcontainerのpost-createでも同じsymlinkを作るので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
+- [ ] claude（account2 / work3 用の追加アカウント）
+  - `~/.claude-account2`・`~/.claude-work3`を作成し、`~/.claude`の設定（`projects`/`settings.json`/`agents`/`skills`/`plugins`）をシンボリックリンクで共有する（既に存在するものは上書きしない。devcontainerのinitializeでも同じコマンドを実行するので、一度devcontainerを起動していれば不要。詳細は[`docs/ai.md`](ai.md)参照）
 
     ```sh
-    mkdir -p ~/.claude-work3
-    for entry in projects settings.json agents skills plugins; do
-      [ -e ~/.claude-work3/"$entry" ] || [ -L ~/.claude-work3/"$entry" ] || ln -s ../.claude/"$entry" ~/.claude-work3/"$entry"
-    done
+    claude-share-config
     ```
 
-  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従ってwork3用アカウントでログインする
+  - 共有する entry とアカウントの一覧は [`local/bin/claude-share-config`](../local/bin/claude-share-config) の `SHARED_ENTRIES` / `DEFAULT_ACCOUNTS` で一元管理している。entry を増やしたら、同じコマンドを再実行すれば既存アカウントにも追加分だけリンクが張られる（既存の `~/.claude-*` ディレクトリも自動で対象になる）
+  - 初回はアカウント未ログインの状態で起動するので、そのままプロンプトに従って各アカウントでログインする
+
+    ```sh
+    CLAUDE_CONFIG_DIR=~/.claude-account2 claude --dangerously-skip-permissions
+    ```
 
     ```sh
     CLAUDE_CONFIG_DIR=~/.claude-work3 claude --dangerously-skip-permissions

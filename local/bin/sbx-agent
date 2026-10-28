@@ -419,11 +419,11 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     fi
 
     # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
-    # symlink で共有している（devcontainer の post-create.sh が作る）。sandbox 内では
+    # symlink で共有している（claude-share-config が作る）。sandbox 内では
     # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
     # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
     # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
-    # 対象は post-create.sh が共有する entry に限る（任意の symlink を辿ると、認証情報など
+    # 対象は claude-share-config が共有する entry に限る（任意の symlink を辿ると、認証情報など
     # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
     # 最終的に dotfiles リポジトリ内を指すディレクトリは read-only にする。書き込み可で渡すと、
     # 上の `${dotfiles_repo}:ro` より子のマウントが優先され、sandbox からホストの dotfiles を
@@ -433,8 +433,19 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         dotfiles_repo_real=""
         [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
         # settings.json を先に処理する。下で親ディレクトリ（~/.claude）を read-only で足すため、
-        # その中の skills / projects などの書き込み可マウントより前に積んでおく。
-        for shared_entry in settings.json projects agents skills plugins; do
+        # その中の skills / projects などの書き込み可マウントより前に積んでおく
+        # （claude-share-config --list-entries は settings.json を先頭に返す）。
+        shared_entries=()
+        share_config_cmd="$(dirname "${BASH_SOURCE[0]}")/claude-share-config"
+        [[ -x "$share_config_cmd" ]] || share_config_cmd=$(command -v claude-share-config || true)
+        if [[ -n "$share_config_cmd" ]]; then
+            while IFS= read -r shared_entry; do
+                shared_entries+=("$shared_entry")
+            done < <("$share_config_cmd" --list-entries)
+        else
+            log_warn "claude-share-config が見つからないため、共有設定のリンク先をマウントしません"
+        fi
+        for shared_entry in ${shared_entries[@]+"${shared_entries[@]}"}; do
             entry="${CONFIG_DIR}/${shared_entry}"
             [[ -L "$entry" && -e "$entry" ]] || continue
             target=$(resolve_symlink "$entry") || continue

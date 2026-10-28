@@ -419,6 +419,14 @@ ensure_json_file ~/.claude/settings.json
 ensure_json_file ~/.claude.json
 ensure_dir ~/.claude-account2
 ensure_dir ~/.claude-work3
+# 追加アカウントから ~/.claude の設定（skills など）を symlink で共有する。~/.claude-* はコンテナへ
+# そのまま mount するので、ホスト側で ../.claude/<entry> への相対 symlink を張っておけばコンテナ内でも
+# 解決する。共有する entry は local/bin/claude-share-config で一元管理している。
+if [ -x ~/.local/bin/claude-share-config ]; then
+	~/.local/bin/claude-share-config || echo "⚠️ ~/.claude-* への設定の共有に失敗しました" >&2
+else
+	echo "⚠️ ~/.local/bin/claude-share-config が無いため、~/.claude-* への設定の共有をスキップしました（dotfiles を適用してください）" >&2
+fi
 ensure_dir ~/.agents
 ensure_dir ~/.codex
 # ~/.codex 配下の設定は symlink-each で配置されるため、ディレクトリごとの mount では

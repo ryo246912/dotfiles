@@ -187,19 +187,8 @@ else
 	echo "ℹ️ .claude.json のコピーはスキップしました"
 fi
 
-# claude-account2 / claude-work3 ディレクトリを作成し、~/.claude の設定を共有する
-for account in claude-account2 claude-work3; do
-	account_dir="${HOME}/.${account}"
-	mkdir -p "${account_dir}"
-	for shared_entry in projects settings.json agents skills plugins; do
-		if [ ! -e "${account_dir}/${shared_entry}" ] && [ ! -L "${account_dir}/${shared_entry}" ] && [ -e "${HOME}/.claude/${shared_entry}" ]; then
-			ln -s "../.claude/${shared_entry}" "${account_dir}/${shared_entry}"
-			echo "✓ .${account}/${shared_entry} を共有しました"
-		else
-			echo "ℹ️ .${account}/${shared_entry} の共有はスキップしました"
-		fi
-	done
-done
+# claude-account2 / claude-work3 から ~/.claude の設定を共有する symlink は、ホスト側の
+# initialize.sh が local/bin/claude-share-config で作る（~/.claude-* はホストから mount している）。
 
 if [ ! -f ~/.crit.config.json ]; then
 	cat >~/.crit.config.json <<'EOF'
