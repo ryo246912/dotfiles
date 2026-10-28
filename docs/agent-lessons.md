@@ -439,7 +439,8 @@ mise run lessons:sync
 ## 制約と注意
 
 - **devcontainer の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
-- **Docker Sandboxes（`sbx-agent`）ではホストと同じように動く。** ホストの clone を書き込み可でマウントし、sandbox 内の
+- **Docker Sandboxes（`sbx-agent`）ではホストと同じように動く。** ホストの clone を書き込み可（`.git` だけは read-only。
+  sandbox から git hook などを仕込ませないため、pull / commit はホストで行う）でマウントし、sandbox 内の
   `~/.local/share/agent-lessons` から symlink を張る。Basic Memory は template に入れ、project `agent-lessons` を
   sandbox ごとに登録して、アタッチのたびに索引を作り直す（索引の SQLite はホストと共有しない）。sandbox で書いた観察は
   ホストの clone に直接入るので、ホストの `mise run lessons:sync` で commit / push される。この仕組みより前に作った

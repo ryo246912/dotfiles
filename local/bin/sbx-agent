@@ -403,7 +403,13 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # 読み書きするため、sandbox 内の $HOME から symlink を張る（sandbox-post-create.sh）。
     # lessons-record が sandbox から観察を書き込めるよう書き込み可で渡す（ホストの clone を直接
     # 書き換えるので、書いた観察はホストの lessons:sync でそのまま commit / push される）。
-    [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_mount "${HOME}/.local/share/agent-lessons"
+    # ただし .git は read-only で重ねる。書き込み可だと sandbox から hooks や .git/config
+    # （core.hooksPath / core.fsmonitor など）を仕込め、ホストの lessons:sync や SessionStart の
+    # git pull でそれがホスト上で実行されてしまうため。
+    if [[ -d "${HOME}/.local/share/agent-lessons" ]]; then
+        add_mount "${HOME}/.local/share/agent-lessons"
+        add_mount "${HOME}/.local/share/agent-lessons/.git:ro"
+    fi
     # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
     # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
     # 送信時に注入する）で行う。
