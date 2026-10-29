@@ -107,24 +107,27 @@ url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/3849248
 provenance = "github-attestations"
 
 [[tools."aqua:secretlint/secretlint"]]
-version = "13.0.7"
+version = "13.1.0"
 backend = "aqua:secretlint/secretlint"
-specifiers = ["13.0.7"]
+specifiers = ["13.1.0"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-arm64"]
-checksum = "sha256:4e5042e06eae3b08e402509f0fa2bca91d78f63ebf27ce6441bb734e88236ae6"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-linux-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842668"
+checksum = "sha256:5e6d576d831f78939fea856332fa9e44eca7d1b49205e4065d0f1d3accec7b64"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571715"
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
-checksum = "sha256:05682b7062f30631b35ea3ef29f237f954815b480dfea435b49bdc3ec15a1573"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-linux-x64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842667"
+checksum = "sha256:dfecc90fb338abe2b7be6d7c7a9d4ada7d0315204be5ea8f1c22a411fa2252d7"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-x64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571711"
 
 [tools."aqua:secretlint/secretlint"."platforms.macos-arm64"]
-checksum = "sha256:a034ca69f5fdc055d26e16b0c773d66924746807dc1fd64ed0e29377a05fa31c"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-darwin-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842665"
+checksum = "sha256:21ff006570411a3392a8ae489feb3d2f2813a9361f2f8ec0d36e21ec4605ab28"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-darwin-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571712"
 
 [[tools."aqua:suzuki-shunsuke/ghalint"]]
 version = "1.5.6"
