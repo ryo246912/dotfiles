@@ -485,7 +485,7 @@ skills = "readonly"
 # 公開ポート（host:sandbox）
 # publish_ports = ["7842:7842"]
 # task root に加えてマウントする workspace（sbx-agent の既定分は書かなくてよい）
-extra_workspaces = ["~/.coderabbit"]
+extra_workspaces = []
 ```
 
 `backend = "devcontainer"` にすると従来どおり `devcontainer up` / `devcontainer exec` が既定になります。
@@ -1150,7 +1150,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
 | `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | ⚠️ `extra_workspaces` で追加する                                                                                  |
+| `~/.coderabbit`                           | ✅ ホストに存在するとき自動共有（`--no-config` で無効）                                                           |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
@@ -1650,3 +1650,23 @@ input/output error
 - [kits（カスタマイズ）](https://docs.docker.com/ai/sandboxes/customize/)
 - [docs/multi-worktree.md](multi-worktree.md) - multi-worktree との統合
 - [docs/devcontainer.md](devcontainer.md) - 旧バックエンド（devcontainer）の仕組み
+
+### CodeRabbit CLI のホスト認証を共有する
+
+ホスト用の mise 設定にも CodeRabbit CLI を登録しています（macOS / Linux、x64 / arm64）。
+ホストで dotfiles を適用後、次を実行します。
+
+```bash
+mise install http:coderabbit
+coderabbit auth login
+coderabbit auth status
+```
+
+`sbx-agent` はホストに `~/.coderabbit` があると自動で書き込み可能な workspace として共有し、
+sandbox の `~/.coderabbit` からリンクします。認証情報・トークン更新をホストと共有するため、
+sandbox 内でのログインは不要です。`--no-config` では共有しません。
+ホストでログインする前に作成した sandbox や、この変更前の sandbox は、
+`sbx-agent claude --new`（利用中の agent / オプションに合わせる）で作り直してください。
+共有先に既存のディレクトリがある場合は上書きせず警告します。
+sandbox 内の `coderabbit auth status` で認証を確認できます。
+CLI の導入前からある template は `mise run sandbox:build-template` で再ビルドしてください。
