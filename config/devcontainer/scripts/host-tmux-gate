@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# ホスト側で動く host-tmux の gate。sandbox / devcontainer から SSH で呼ばれ、
+# ~/.config/host-tmux/commands.sh に定義した tmux コマンドだけを実行する。
+#
+# 専用鍵の authorized_keys に `restrict,command="<この gate の絶対パス>"` を付けて登録すると、
+# その鍵では要求したコマンドに関係なくこの gate しか動かず、gate は SSH_ORIGINAL_COMMAND を
+# シェルに通さずに解釈する（mise run sandbox:host-tmux-authorize が登録する）。
+# 制限の無い mac-host 経由では、引数として直接渡される。
+#
+# macOS 標準の bash 3.2 でも動くように書く（連想配列や ${var,,} は使わない）。
+set -euo pipefail
+
+commands_file="${HOST_TMUX_COMMANDS:-${XDG_CONFIG_HOME:-$HOME/.config}/host-tmux/commands.sh}"
+max_args=8
+
+host_tmux_die() {
+	echo "host-tmux: $*" >&2
+	exit 2
+}
+
+# pane は %3 のような pane ID だけを受け付ける。
+host_tmux_require_pane() {
+	case "${1-}" in
+	%[0-9]*) ;;
+	*) host_tmux_die "pane must be an ID such as %3 (run: host-tmux list)" ;;
+	esac
+	case "${1#%}" in
+	'' | *[!0-9]*) host_tmux_die "pane must be an ID such as %3 (run: host-tmux list)" ;;
+	esac
+}
+
+# 正の整数（上限付き）を受け付ける。
+host_tmux_require_count() {
+	local value="${1-}" max="${2:-10000}"
+	case "${value}" in
+	'' | *[!0-9]*) host_tmux_die "count must be a positive integer" ;;
+	esac
+	[ "${#value}" -le 6 ] && [ "${value}" -gt 0 ] && [ "${value}" -le "${max}" ] \
+		|| host_tmux_die "count must be between 1 and ${max}"
+}
+
+# 非対話 SSH では Homebrew/mise の PATH が通らない場合があるため、代表的な配置も探索する。
+resolve_tmux() {
+	if command -v tmux >/dev/null 2>&1; then
+		command -v tmux
+	elif [ -x "${HOME}/.local/share/mise/shims/tmux" ]; then
+		echo "${HOME}/.local/share/mise/shims/tmux"
+	elif [ -x /opt/homebrew/bin/tmux ]; then
+		echo /opt/homebrew/bin/tmux
+	elif [ -x /usr/local/bin/tmux ]; then
+		echo /usr/local/bin/tmux
+	else
+		return 1
+	fi
+}
+
+tmux_bin="$(resolve_tmux)" || {
+	echo "host-tmux: tmux was not found on the host" >&2
+	exit 127
+}
+# commands.sh からは `tmux ...` で呼べるようにする。
+tmux() { "${tmux_bin}" "$@"; }
+
+[ -f "${commands_file}" ] || {
+	echo "host-tmux: command definitions not found on the host: ${commands_file}" >&2
+	exit 1
+}
+# shellcheck source=/dev/null
+. "${commands_file}"
+
+list_commands() {
+	declare -F | sed -n 's/^declare -f host_tmux_cmd_//p' | tr '_' '-'
+}
+
+if [ "$#" -gt 0 ]; then
+	args=("$@")
+else
+	# SSH_ORIGINAL_COMMAND はシェルに通さず、空白で分割するだけにする（クォートや展開は解釈しない）。
+	read -r -a args <<<"${SSH_ORIGINAL_COMMAND-}" || true
+fi
+
+if [ "${#args[@]}" -eq 0 ]; then
+	echo "host-tmux: no command given. Available commands:" >&2
+	list_commands >&2
+	exit 2
+fi
+[ "${#args[@]}" -le "$((max_args + 1))" ] || host_tmux_die "too many arguments"
+
+# 引数は pane ID・数値・session:window.pane 程度に使う文字だけに制限する。
+safe_re='^[A-Za-z0-9%@._:-]{1,128}$'
+for arg in "${args[@]}"; do
+	[[ "${arg}" =~ ${safe_re} ]] || host_tmux_die "argument contains unsupported characters: ${arg}"
+done
+
+name="${args[0]}"
+[[ "${name}" =~ ^[a-z][a-z0-9-]*$ ]] || host_tmux_die "invalid command name: ${name}"
+
+if [ "${name}" = help ]; then
+	list_commands
+	exit 0
+fi
+
+fn="host_tmux_cmd_$(printf '%s' "${name}" | tr '-' '_')"
+if ! declare -F "${fn}" >/dev/null; then
+	echo "host-tmux: command not allowed: ${name}. Available commands:" >&2
+	list_commands >&2
+	exit 126
+fi
+
+# bash 3.2 は set -u 下で空配列の展開をエラーにするため、位置引数に移してから渡す。
+set -- "${args[@]}"
+shift
+"${fn}" "$@"

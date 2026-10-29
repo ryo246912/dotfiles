@@ -25,16 +25,17 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 
-| タスク                   | 用途                                                                                                                                              | 使うタイミング               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
-| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
-| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
-| `sandbox:mcp-load`       | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき             |
-| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
-| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
-| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
-| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
+| タスク                        | 用途                                                                                                                                              | 使うタイミング               |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `sandbox:setup`               | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
+| `sandbox:build-template`      | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
+| `sandbox:host-tmux-authorize` | tmux 専用鍵を生成し、`host-tmux-gate` に固定してホストの `authorized_keys` へ登録する（[詳細](#host-tmux-の実行コマンド制限)）                    | 初回だけ                     |
+| `sandbox:mcp-add`             | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
+| `sandbox:mcp-load`            | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき             |
+| `sandbox:template-ls`         | 保存済み template の一覧                                                                                                                          | 随時                         |
+| `sandbox:template-rm`         | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
+| `sandbox:disk`                | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
+| `sandbox:prune`               | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
 
 ## devcontainer に対する利点
 
@@ -1062,6 +1063,36 @@ sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
 共通の手順です（[docs/devcontainer.md](./devcontainer.md) 参照）。`mise run sandbox:setup` が
 `initialize.sh` を流用して鍵を用意します。
 
+### host-tmux の実行コマンド制限
+
+`host-tmux`（tmux skill）は、通知用鍵とは別の **tmux 専用鍵**（`~/.ssh/id_host_tmux`）で
+`mac-host-tmux` という host 名へ接続します。この鍵はホストの `authorized_keys` に
+`restrict,command="<~/.config/devcontainer/scripts/host-tmux-gate>"` 付きで登録するため、
+sandbox が何を要求してもホストでは gate しか動きません。
+
+```bash
+mise run sandbox:host-tmux-authorize   # 鍵の生成と authorized_keys への登録（ホストで実行）
+mise run sandbox:build-template        # host-tmux 本体は template に入っている
+sbx-agent claude --new                 # 鍵のマウントと mac-host-tmux の設定は作成時だけ
+```
+
+- gate は `SSH_ORIGINAL_COMMAND` をシェルに通さず空白で分割し、`[A-Za-z0-9%@._:-]` 以外を含む引数や
+  9 個以上の引数を拒否します。
+- 1 語目をコマンド名として、`~/.config/host-tmux/commands.sh`（`config/host-tmux/commands.sh`）の
+  `host_tmux_cmd_<name>` 関数だけを実行します。既定は `list` と `capture` で、`host-tmux help` で一覧できます。
+- `restrict` により port forwarding・agent forwarding・pty・X11 も無効です。scp / sftp も通りません。
+- 許可コマンドを変えるときは `commands.sh` を編集します。ホストで次の呼び出しから反映され、
+  sandbox の作り直しは要りません。ホストの状態を変える tmux コマンド（`send-keys` など）は足さないでください。
+- 専用鍵が無い環境（devcontainer や、鍵の登録前に作った sandbox）では、`host-tmux` は `mac-host` 経由で
+  同じ gate を引数付きで呼びます。この場合も実行内容は `commands.sh` の定義どおりですが、
+  鍵自体の制限はありません。
+
+> [!WARNING]
+> 通知・plannotator・crit が使う通知用鍵（`~/.ssh/id_docker_devcontainer` → sandbox 内の
+> `~/.ssh/id_mac_host`）は `authorized_keys` でコマンドを制限していません。これを登録している限り、
+> sandbox からホストで任意のコマンドを実行できます。tmux skill だけ使う場合は、通知用鍵を
+> `authorized_keys` に登録しないでください（sandbox からの通知・plannotator・crit の再レビュー通知は届かなくなります）。
+
 ### 初期化の流れ
 
 sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-agent` が sandbox 作成直後に
@@ -1071,6 +1102,7 @@ sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-ag
 | 処理                          | 内容                                                                                                                 |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                                                   |
+| `mac-host-tmux` の生成        | tmux 専用鍵（`SBX_HOST_TMUX_SSH_KEY`）があるときだけ。`host-tmux` がこちらを優先する                                 |
 | `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                                                   |
 | `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す                               |
 | NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記）                         |
@@ -1196,7 +1228,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ） |
 | 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                                                     |
 | ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）                                             |
-| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                                                           |
+| `host-tmux`（ホスト tmux pane の参照）               | ✅ tmux 専用鍵の `mac-host-tmux` 経由（無ければ `mac-host`）。実行できるのは `commands.sh` の定義だけ            |
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
 | `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている                                                   |

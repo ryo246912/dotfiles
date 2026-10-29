@@ -80,10 +80,12 @@ AI エージェントには `/tmux %3`（Codex では `$tmux %3`）と指示す�
 必要なら、同じ capture コマンドを一定間隔で再実行させます。pane ID は tmux の session/window 構成を
 変えると変わり得るため、固定値を設定へ埋め込まず、その都度 `list` で確認してください。
 
-この経路は読み取り専用のラッパーですが、利用する SSH 鍵自体は通常のホストログイン権限を持ちます。
-鍵をより厳密に制限したい場合は、ホスト側 `authorized_keys` の `command=` で許可コマンドを制限する
-専用鍵・専用 dispatcher を別途用意してください。また、後述のリモートログイン、公開鍵登録、
-`mac-host` 設定が完了している必要があります。
+ホスト側では `host-tmux-gate` が `config/host-tmux/commands.sh` に定義した tmux コマンド
+（既定は `list` と `capture`。`host-tmux help` で一覧）だけを実行します。ただし devcontainer は通知用鍵の
+`mac-host` 経由で gate を呼ぶため、鍵自体は通常のホストログイン権限を持ちます。鍵ごと制限する
+tmux 専用鍵（`authorized_keys` の `command=` で gate に固定）は sandbox で使えます
+（[docs/docker-sandboxes.md](./docker-sandboxes.md#host-tmux-の実行コマンド制限)）。
+また、後述のリモートログイン、公開鍵登録、`mac-host` 設定が完了している必要があります。
 
 ## ホストと共有しないプロジェクト生成物
 

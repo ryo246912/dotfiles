@@ -439,6 +439,65 @@
 
   - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形なし。リポジトリに置けないトークンや環境変数を書く（zsh 起動時に読まれる）
 
+- [ ] sbx（sandbox）からホストの tmux pane を読めるようにする（tmux スキル / `host-tmux`）
+  - sandbox 内の agent が `/tmux %3`（Codex は `$tmux %3`）でホストの開発サーバーなどのログを読むための設定。
+    sandbox からホストの sshd へ SSH し、ホストの tmux を実行する
+  - 実行できるのは `config/host-tmux/commands.sh` に定義した tmux コマンドだけ（既定は `list` と `capture`）。
+    tmux 専用鍵をホストの `authorized_keys` で `host-tmux-gate` に固定するため、
+    その鍵では他のコマンド・port forwarding・pty は使えない（[詳細](./docker-sandboxes.md#host-tmux-の実行コマンド制限)）
+  - 前提: `mise bootstrap dotfiles apply` 済み（gate と `commands.sh` が `~/.config` に配置される）、
+    `mise run sandbox:setup` 済み（`localhost:22` の network policy 許可）
+  - [ ] リモートログイン（sshd）を有効にする。Off のままだと `sbx policy log` に `localhost:22` が
+        `<dial failed>` と出て、SSH はバナー交換前に切れる
+
+    ```sh
+    sudo systemsetup -setremotelogin on
+    sudo systemsetup -getremotelogin   # Remote Login: On
+    ```
+
+    - `systemsetup` が使えない場合は「システム設定」→「一般」→「共有」→「リモートログイン」を ON にする
+      （フルディスクアクセスの許可を求められることがある）
+    - LAN など外部からの SSH を受けたくない場合は「リモートログイン」の「アクセスを許可」を自分のユーザーだけにする
+
+  - [ ] tmux 専用鍵を生成し、gate 固定で `authorized_keys` へ登録する（何度実行しても 1 行に置き換わる）
+
+    ```sh
+    mise run sandbox:host-tmux-authorize
+    ```
+
+    - 最後に許可コマンドの一覧（`capture` / `list`）が出れば OK
+
+  - [ ] 通知・plannotator・crit もホストへ届けたい場合は、通知用鍵（`~/.ssh/id_docker_devcontainer`）も
+        `authorized_keys` に登録する（[docs/devcontainer.md](./devcontainer.md) の手順）。
+        tmux スキルだけなら不要。この鍵はコマンドを制限しないので、使わないなら登録しない
+  - [ ] template を作り直してから sandbox を作り直す（`host-tmux` 本体は template に入っており、
+        鍵のマウントと `mac-host-tmux` の SSH 設定は sandbox 作成時にだけ行われる）
+
+    ```sh
+    mise run sandbox:build-template
+    sbx-agent claude --new
+    ```
+
+  - [ ] sandbox 内で確認する
+
+    ```sh
+    host-tmux help    # 許可されているコマンドの一覧
+    host-tmux list    # pane ID（%3 など）の一覧
+    ```
+
+  - 許可するコマンドを増やす・減らすときは `config/host-tmux/commands.sh` を編集する
+    （`host_tmux_cmd_<name>` 関数を定義すると `host-tmux <name>` で呼べる）。ホスト側で次の呼び出しから反映され、
+    sandbox の作り直しは不要
+  - うまくいかないとき
+
+    | 症状                                         | 原因と対処                                                                                      |
+    | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+    | `Connection closed` / `<dial failed>`        | リモートログインが Off。上の手順で On にする                                                    |
+    | `Permission denied (publickey,...)`          | 鍵が未登録。`mise run sandbox:host-tmux-authorize` を実行する                                   |
+    | `command not allowed: <name>`                | `commands.sh` に未定義。必要なら定義を足す                                                      |
+    | `command definitions not found on the host`  | ホストで `mise bootstrap dotfiles apply` を実行する                                             |
+    | `mac-host-tmux` が無く `mac-host` 経由で動く | sandbox 作成時に `~/.ssh/id_host_tmux` が無かった。登録後に `sbx-agent claude --new` で作り直す |
+
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
 
   ```sh

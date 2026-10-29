@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# devcontainer から SSH 経由でホスト側 tmux の pane を参照する。
+# devcontainer / sandbox から SSH 経由でホスト側 tmux の pane を参照する。
+# 実際に何を実行できるかはホスト側の gate（host-tmux-gate）と
+# ~/.config/host-tmux/commands.sh の定義で決まる。
 set -euo pipefail
 
 usage() {
@@ -7,6 +9,8 @@ usage() {
 Usage:
   host-tmux list
   host-tmux capture <pane> [lines]
+  host-tmux help                  ホスト側で許可されているコマンドの一覧
+  host-tmux <command> [args...]   ホスト側の commands.sh で定義したコマンド
 
 Examples:
   host-tmux list
@@ -15,34 +19,23 @@ EOF
 }
 
 case "${1-}" in
-list)
-	[ "$#" -eq 1 ] || { usage >&2; exit 2; }
-	;;
-capture)
-	[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { usage >&2; exit 2; }
-	case "$2" in
-	%[0-9]*) ;;
-	*) echo "host-tmux: pane must be an ID such as %3 (run: host-tmux list)" >&2; exit 2 ;;
-	esac
-	case "${2#%}" in
-	'' | *[!0-9]*) echo "host-tmux: pane must be an ID such as %3 (run: host-tmux list)" >&2; exit 2 ;;
-	esac
-	lines="${3:-200}"
-	case "${lines}" in
-	'' | *[!0-9]*) echo "host-tmux: lines must be a positive integer" >&2; exit 2 ;;
-	esac
-	[ "${lines}" -gt 0 ] || { echo "host-tmux: lines must be a positive integer" >&2; exit 2; }
-	set -- "$1" "$2" "$lines"
+'')
+	usage >&2
+	exit 2
 	;;
 -h | --help)
 	usage
 	exit 0
 	;;
-*)
-	usage >&2
-	exit 2
-	;;
 esac
+
+# リモートへ渡す引数は安全な文字だけに制限する（gate でも同じ検証をする）。
+for arg in "$@"; do
+	[[ "${arg}" =~ ^[A-Za-z0-9%@._:-]{1,128}$ ]] || {
+		echo "host-tmux: argument contains unsupported characters: ${arg}" >&2
+		exit 2
+	}
+done
 
 ssh_config="${HOME}/.config/ssh/config"
 [ -f "${ssh_config}" ] || {
@@ -50,33 +43,12 @@ ssh_config="${HOME}/.config/ssh/config"
 	exit 1
 }
 
-# リモートへ渡す pane ID と行数は上で安全な文字だけに制限する。
-# 非対話 SSH では Homebrew/mise の PATH が通らない場合があるため、代表的な配置も探索する。
-timeout 15 ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5 mac-host \
-	bash -s -- "$@" <<'REMOTE_SCRIPT'
-set -euo pipefail
-
-if command -v tmux >/dev/null 2>&1; then
-	tmux_bin="$(command -v tmux)"
-elif [ -x "${HOME}/.local/share/mise/shims/tmux" ]; then
-	tmux_bin="${HOME}/.local/share/mise/shims/tmux"
-elif [ -x /opt/homebrew/bin/tmux ]; then
-	tmux_bin=/opt/homebrew/bin/tmux
-elif [ -x /usr/local/bin/tmux ]; then
-	tmux_bin=/usr/local/bin/tmux
-else
-	echo "host-tmux: tmux was not found on the host" >&2
-	exit 127
+ssh_opts=(-F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5)
+if grep -q '^Host mac-host-tmux$' "${ssh_config}"; then
+	# tmux 専用鍵。ホストの authorized_keys の command= で gate に固定されているため、
+	# 送ったコマンド文字列は SSH_ORIGINAL_COMMAND として gate が解釈する。
+	exec timeout 15 ssh "${ssh_opts[@]}" mac-host-tmux "$*"
 fi
-
-case "$1" in
-list)
-	separator="$(printf '\t')"
-	"${tmux_bin}" list-panes -a \
-		-F "#{pane_id}${separator}#{session_name}:#{window_index}.#{pane_index}${separator}#{pane_current_command}${separator}#{pane_current_path}${separator}#{pane_width}x#{pane_height}"
-	;;
-capture)
-	"${tmux_bin}" capture-pane -p -J -S "-$3" -t "$2" | tail -n "$3"
-	;;
-esac
-REMOTE_SCRIPT
+# 専用鍵が無い環境（devcontainer など）は通常の mac-host 経由で同じ gate を呼ぶ。
+exec timeout 15 ssh "${ssh_opts[@]}" mac-host \
+	'"${XDG_CONFIG_HOME:-$HOME/.config}"/devcontainer/scripts/host-tmux-gate' "$@"

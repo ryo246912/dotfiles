@@ -262,6 +262,55 @@ sbx secret ls || true
 sbx policy ls || true
 '''
 
+["sandbox:host-tmux-authorize"]
+description = "Register the host-tmux key in ~/.ssh/authorized_keys, locked to the tmux commands in ~/.config/host-tmux/commands.sh"
+run = '''
+set -eu
+
+# sandbox の host-tmux（tmux skill）が使う専用鍵を、ホストの authorized_keys へ
+# `restrict,command="<host-tmux-gate>"` 付きで登録する。この鍵では gate しか動かず、gate は
+# ~/.config/host-tmux/commands.sh に定義した tmux コマンド以外を拒否する。
+# port forwarding / agent forwarding / pty も restrict で無効になる。
+# 何度実行しても同じ鍵の行は 1 行に置き換わる。詳細は docs/docker-sandboxes.md 参照。
+key="$HOME/.ssh/id_host_tmux"
+gate="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/host-tmux-gate"
+commands="${XDG_CONFIG_HOME:-$HOME/.config}/host-tmux/commands.sh"
+auth="$HOME/.ssh/authorized_keys"
+
+[ -x "$gate" ] || { echo "error: $gate が見つかりません（mise bootstrap dotfiles apply を実行してください）" >&2; exit 1; }
+[ -f "$commands" ] || { echo "error: $commands が見つかりません（mise bootstrap dotfiles apply を実行してください）" >&2; exit 1; }
+
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+if [ ! -f "$key" ]; then
+  echo "==> host-tmux 用の SSH 鍵を生成: $key"
+  ssh-keygen -q -t ed25519 -N "" -C "sandbox host-tmux" -f "$key"
+fi
+
+key_body=$(awk '{ print $2 }' "$key.pub")
+[ -n "$key_body" ] || { echo "error: $key.pub を読めません" >&2; exit 1; }
+
+echo "==> $auth に gate 固定で登録"
+touch "$auth"
+tmp=$(mktemp "$auth.XXXXXX")
+# 同じ鍵の既存行（制限なしで登録したものを含む）を取り除いてから追記する。
+# 公開鍵は + や / を含むため、固定文字列で照合する。
+grep -vF -- "$key_body" "$auth" >"$tmp" || true
+printf 'restrict,command="%s" %s\n' "$gate" "$(cat "$key.pub")" >>"$tmp"
+chmod 600 "$tmp"
+mv "$tmp" "$auth"
+
+echo "==> 確認（リモートログインが有効なら、許可されたコマンドの一覧が出る）"
+if ssh -i "$key" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=5 \
+  -o StrictHostKeyChecking=accept-new "$USER@localhost" help; then
+  echo "OK: この鍵では commands.sh に定義したコマンドだけが実行できます"
+else
+  echo "warn: localhost への SSH に失敗しました。リモートログインが On か確認してください" >&2
+  echo "      （sudo systemsetup -getremotelogin / システム設定 > 一般 > 共有 > リモートログイン）" >&2
+fi
+echo "sandbox へ反映するには sandbox を作り直してください（鍵のマウントは作成時だけ設定されるため）"
+'''
+
 ["sandbox:mcp-add"]
 description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
 run = '''
