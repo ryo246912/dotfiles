@@ -8,6 +8,8 @@ docs.anthropic.com
 docs.claude.com
 code.claude.com
 skills.sh
+deepwiki.com
+mcp.deepwiki.com
 
 # 言語・フレームワーク・ツールの公式ドキュメント
 developer.mozilla.org
@@ -25,6 +27,38 @@ apt.postgresql.org
 mise-java.jdx.dev
 aws.amazon.com
 developers.openai.com
+cli.github.com
+git-scm.com
+neovim.io
+www.chezmoi.io
+aquaproj.github.io
+usage.jdx.dev
+fnox.jdx.dev
+docs.astral.sh
+pnpm.io
+bun.sh
+www.typescriptlang.org
+react.dev
+vite.dev
+vitest.dev
+playwright.dev
+docs.pytest.org
+docs.pydantic.dev
+docs.rs
+doc.rust-lang.org
+pkg.go.dev
+developer.hashicorp.com
+containers.dev
+docs.renovatebot.com
+lefthook.dev
+www.shellcheck.net
+zsh.sourceforge.io
+starship.rs
+atuin.sh
+docs.atuin.sh
+gh-dash.dev
+lnav.org
+yazi-rs.github.io
 
 # Q&A・技術記事
 stackoverflow.com
@@ -33,5 +67,16 @@ qiita.com
 **.wikipedia.org
 
 # パッケージ・ビルドツールの取得元（Balanced preset に無いもの）
+# mise のバージョン解決・インストール
+mise-versions.jdx.dev
+mise.run
+# GitHub のリリース・メタデータ取得
+api.github.com
+# Homebrew のパッケージ定義・ボトル情報
+formulae.brew.sh
+# 署名検証（mise / aqua / cosign）
+fulcio.sigstore.dev
+rekor.sigstore.dev
+tuf-repo-cdn.sigstore.dev
 # FE の openapi-generator-cli が初回起動時にジェネレータ本体（jar）を Maven Central からダウンロードする
 repo1.maven.org
