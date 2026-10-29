@@ -11,3 +11,7 @@ run         = "python3 config/agentsview/tests/prepare-dump-auth_test.py"
 description = "Run the batch-insert-dump regression"
 hide        = true
 run         = "python3 config/agentsview/tests/batch-insert-dump_test.py"
+
+["test:pr-author-fix"]
+description = "Run PR feedback watcher regressions (no GitHub or LLM calls)"
+run         = "python3 scripts/tests/pr-author-fix_test.py"
