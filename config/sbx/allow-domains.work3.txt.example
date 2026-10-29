@@ -3,6 +3,38 @@
 # allow-domains.<name>.txt は gitignore 済みで、mise run sandbox:setup が allow-domains.txt と一緒に読み込む。
 # 書式は allow-domains.txt と同じ（1行1パターン、`#` 以降はコメント）。
 
-# 社内ドキュメント・ツール
+# 公開ドキュメント（業務リポジトリで使う AWS / Java / PostgreSQL）
+# docs.aws.amazon.com / aws.amazon.com は共通リストで許可済み。
+repost.aws
+docs.oracle.com
+adoptium.net
+www.postgresql.org
+www.jooq.org
+openapi-generator.tech
+docs.sqlalchemy.org
+alembic.sqlalchemy.org
+
+# Java / PostgreSQL の取得元
+# mise-java.jdx.dev / apt.postgresql.org は共通リストで許可済み。
+api.adoptium.net
+repo.maven.apache.org
+services.gradle.org
+downloads.gradle.org
+
+# 業務で使う SaaS の公開ドキュメント・API（組織固有のホストは手元のコピーに追加）
+posthog.com
 us.posthog.com
+docs.datadoghq.com
+ap1.datadoghq.com
+api.ap1.datadoghq.com
+mcp.ap1.datadoghq.com
+developers.notion.com
+www.notion.so
+mcp.notion.com
+www.metabase.com
+www.figma.com
+developers.figma.com
+
+# AWS remote MCP（ホスト側 proxy と別に sandbox から直接接続する場合）
+aws-mcp.us-east-1.api.aws
 
