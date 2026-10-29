@@ -11,7 +11,8 @@
 #   claude-share-config --list-entries
 #
 #   <name> を省略すると DEFAULT_ACCOUNTS と、既に存在する ~/.claude-* ディレクトリが対象になる。
-#   既存のファイル・ディレクトリ・symlink は上書きしない（冪等）。
+#   settings.json の既存ファイル・異なる symlink は .bak（重複時は連番）へ退避して共有する。
+#   それ以外の既存ファイル・ディレクトリ・symlink は上書きしない（冪等）。
 
 set -euo pipefail
 
@@ -70,7 +71,7 @@ if [[ "${1:-}" == "--list-entries" ]]; then
 fi
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-    sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 fi
 
@@ -99,6 +100,21 @@ for name in "${accounts[@]}"; do
     account_dir="${HOME}/.claude-${name}"
     mkdir -p "$account_dir"
     for entry in "${entries[@]}"; do
+        # settings.json は既存のアカウントにも共有を適用する。共有元が無い場合や
+        # 既に同じファイルを指す symlink の場合は、退避・置き換えを行わない。
+        if [[ "$entry" == "settings.json" && -f "${CLAUDE_DIR}/${entry}" &&
+            ( -f "${account_dir}/${entry}" || -L "${account_dir}/${entry}" ) ]]; then
+            if [[ ! -L "${account_dir}/${entry}" || ! "${account_dir}/${entry}" -ef "${CLAUDE_DIR}/${entry}" ]]; then
+                backup="${account_dir}/${entry}.bak"
+                suffix=0
+                while [[ -e "$backup" || -L "$backup" ]]; do
+                    suffix=$((suffix + 1))
+                    backup="${account_dir}/${entry}.bak.${suffix}"
+                done
+                mv "${account_dir}/${entry}" "$backup"
+                echo "✓ .claude-${name}/${entry} を ${backup} に退避しました"
+            fi
+        fi
         if [[ -L "${account_dir}/${entry}" || -e "${account_dir}/${entry}" ]]; then
             echo "ℹ️ .claude-${name}/${entry} は既に存在するのでスキップしました"
         elif [[ ! -e "${CLAUDE_DIR}/${entry}" ]]; then
