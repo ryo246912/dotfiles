@@ -16,7 +16,7 @@ brief.json の書式:
                "base": "main", "head": "feature", "files": 3,  # files は pr-<N>.json の changedFiles（件数）
                "additions": 10, "deletions": 2,
                "summary": "stack のとき: この PR が受け持つ範囲を 1〜2 行", "current": true}],
-      "stack": {"number": 7, "trunk": "main"},           # stack でなければ null か省く
+      "stack": {"number": 7, "trunk": "main", "url": "https://..."},           # stack でなければ null か省く
       "mode": "pr",                                      # "ticket" なら TL;DR・スタック構成・前提知識・変更内容だけを出す
       "ticket": {...},                                   # 省けば <workdir>/ticket.json を使う（書式は下）
       "related_prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "summary": "..."}],  # チケットモード用
@@ -55,7 +55,7 @@ brief.json の書式:
         "environment": "どこで確かめるか（起動コマンドなど）",
         "preconditions": ["feature flag・権限・アカウントなど"],
         "seed": {"note": "何のデータを入れるか", "run": "流し方（コマンド）", "language": "sql",
-                 "script": "INSERT INTO ...", "cleanup": "後片付けのスクリプト（任意）"},
+                 "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
                    "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
                    "expected": ["一覧の先頭に test が出る"], "caution": "破壊的な操作の注意（任意）"}]
@@ -141,6 +141,15 @@ def link(url: str | None, label: str) -> str:
     return f'<a href="{esc(safe)}">{label}</a>' if safe else label
 
 
+def pr_url(brief: dict, pr: dict) -> str | None:
+    """取得した URL を優先し、省略時はリポジトリと PR 番号から補う。"""
+    if pr.get("url"):
+        return safe_url(pr["url"])
+    if brief.get("repo") and pr.get("number"):
+        return f"https://github.com/{brief['repo']}/pull/{pr['number']}"
+    return None
+
+
 def table(headers: list[str], rows: list[list[str]]) -> str:
     head = "".join(f"<th>{esc(h)}</th>" for h in headers)
     body = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
@@ -162,13 +171,14 @@ def header(brief: dict, has_groups: bool) -> str:
     if ticket:
         meta.append(f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>')
     if brief.get("stack"):
-        meta.append(f'<span class="badge">stack #{brief["stack"]["number"]} · {len(prs)} PR</span>')
+        meta.append(f'<span class="badge">{link(brief["stack"].get("url"), "stack #" + str(brief["stack"]["number"]))} · {len(prs)} PR</span>')
     for pr in prs[:1] if not brief.get("stack") else []:
-        meta.append(f'<span>{link(pr.get("url"), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
+        meta.append(f'<span>{link(pr_url(brief, pr), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
         meta.append(f"<span>作成者 {esc(pr.get('author', ''))}</span>")
         meta.append(f'<span><code>{esc(pr.get("base", ""))}</code> ← <code>{esc(pr.get("head", ""))}</code></span>')
     if brief.get("head_sha"):
-        meta.append(f'<span>head <code>{esc(brief["head_sha"][:7])}</code></span>')
+        commit_url = f"https://github.com/{brief['repo']}/commit/{brief['head_sha']}" if brief.get("repo") else None
+        meta.append(f'<span>head {link(commit_url, "<code>" + esc(brief["head_sha"][:7]) + "</code>")}</span>')
     meta.append(f"<span>生成 {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}</span>")
     progress = (
         '<div class="meta"><span class="tag" id="diff-stats"></span><span class="progress">確認 '
@@ -189,8 +199,8 @@ def stack_section(brief: dict) -> str:
             f'<span class="removed">−{pr.get("deletions", 0)}</span>'
         )
         blocks.append(
-            f'<li class="{cls}"><div class="stack-head">{link(pr.get("url"), "#" + str(pr["number"]))}'
-            f'<strong>{esc(pr["title"])}</strong><span class="tag">{esc(state)}</span>{size}</div>'
+            f'<li class="{cls}"><div class="stack-head">{link(pr_url(brief, pr), "#" + str(pr["number"]))}'
+            f'<strong>{link(pr_url(brief, pr), esc(pr["title"]))}</strong><span class="tag">{esc(state)}</span>{size}</div>'
             f'<p class="stack-sum">{inline(pr.get("summary", ""))}</p></li>'
         )
     trunk = esc(brief["stack"].get("trunk", ""))
@@ -343,7 +353,7 @@ def changes_section(brief: dict) -> str:
     related = [pr for pr in brief.get("related_prs") or [] if pr["number"] not in stacked]
     if related:
         items = "".join(
-            f'<li>{link(pr.get("url"), "#" + str(pr["number"]))} {esc(pr.get("title", ""))}'
+            f'<li>{link(pr_url(brief, pr), "#" + str(pr["number"]))} {esc(pr.get("title", ""))}'
             f' <span class="tag">{esc(pr.get("state", ""))}</span>'
             + (f" — {inline(pr['summary'])}" if pr.get("summary") else "")
             + "</li>"
