@@ -439,14 +439,15 @@
 
   - `~/.zshrc.secret` / `~/.zprofile.secret`: 雛形なし。リポジトリに置けないトークンや環境変数を書く（zsh 起動時に読まれる）
 
-- [ ] sbx（sandbox）からホストの tmux pane を読めるようにする（tmux スキル / `host-tmux`）
-  - sandbox 内の agent が `/tmux %3`（Codex は `$tmux %3`）でホストの開発サーバーなどのログを読むための設定。
-    sandbox からホストの sshd へ SSH し、ホストの tmux を実行する
-  - 実行できるのは `config/host-tmux/commands.sh` に定義した tmux コマンドだけ（既定は `list` と `capture`）。
-    tmux 専用鍵をホストの `authorized_keys` で `host-tmux-gate` に固定するため、
-    その鍵では他のコマンド・port forwarding・pty は使えない（[詳細](./docker-sandboxes.md#host-tmux-の実行コマンド制限)）
+- [ ] sbx（sandbox）/ devcontainer からホストへの SSH 経路を用意する（通知・tmux スキル・plannotator・crit）
+  - sandbox からホストの sshd へ SSH し、ホストで決められたコマンドだけを実行させる仕組み。
+    sandbox 側は `host-exec <name> [args...]` で呼び、ホスト側の `host-exec-gate` が
+    `config/host-exec/commands.sh` に定義したコマンド（`notify` / `open-url` / `port-check` / `docker-port` /
+    `tmux-list` / `tmux-capture`）だけを実行する。それ以外（`ssh mac-host id` など）はホストでは動かない
+    （[詳細](./devcontainer.md#ホストで実行できるコマンドの制限)）
+  - tmux スキル（`/tmux %3`、Codex は `$tmux %3`）もこの経路を使う（`host-tmux` → `host-exec tmux-capture`）
   - 前提: `mise bootstrap dotfiles apply` 済み（gate と `commands.sh` が `~/.config` に配置される）、
-    `mise run sandbox:setup` 済み（`localhost:22` の network policy 許可）
+    `mise run sandbox:setup` 済み（SSH 鍵 `~/.ssh/id_docker_devcontainer` の生成と `localhost:22` の network policy 許可）
   - [ ] リモートログイン（sshd）を有効にする。Off のままだと `sbx policy log` に `localhost:22` が
         `<dial failed>` と出て、SSH はバナー交換前に切れる
 
@@ -459,19 +460,17 @@
       （フルディスクアクセスの許可を求められることがある）
     - LAN など外部からの SSH を受けたくない場合は「リモートログイン」の「アクセスを許可」を自分のユーザーだけにする
 
-  - [ ] tmux 専用鍵を生成し、gate 固定で `authorized_keys` へ登録する（何度実行しても 1 行に置き換わる）
+  - [ ] 鍵を gate 固定で `authorized_keys` へ登録する（何度実行しても 1 行に置き換わる。
+        制限なしで登録済みの行も置き換える）
 
     ```sh
-    mise run sandbox:host-tmux-authorize
+    mise run sandbox:host-exec-authorize
     ```
 
-    - 最後に許可コマンドの一覧（`capture` / `list`）が出れば OK
+    - 最後に許可コマンドの一覧が出れば OK
+    - 公開鍵を `echo ... >> ~/.ssh/authorized_keys` で手で追記しないこと（制限なしになり、sandbox からホストで任意のコマンドが動く）
 
-  - [ ] 通知・plannotator・crit もホストへ届けたい場合は、通知用鍵（`~/.ssh/id_docker_devcontainer`）も
-        `authorized_keys` に登録する（[docs/devcontainer.md](./devcontainer.md) の手順）。
-        tmux スキルだけなら不要。この鍵はコマンドを制限しないので、使わないなら登録しない
-  - [ ] template を作り直してから sandbox を作り直す（`host-tmux` 本体は template に入っており、
-        鍵のマウントと `mac-host-tmux` の SSH 設定は sandbox 作成時にだけ行われる）
+  - [ ] template を作り直してから sandbox を作り直す（`host-exec` などのスクリプトは template に入っている）
 
     ```sh
     mise run sandbox:build-template
@@ -481,22 +480,26 @@
   - [ ] sandbox 内で確認する
 
     ```sh
-    host-tmux help    # 許可されているコマンドの一覧
-    host-tmux list    # pane ID（%3 など）の一覧
+    host-exec help                     # 許可されているコマンドの一覧
+    host-exec notify test hello Glass  # ホストに通知が出るか
+    host-tmux list                     # pane ID（%3 など）の一覧
     ```
 
-  - 許可するコマンドを増やす・減らすときは `config/host-tmux/commands.sh` を編集する
-    （`host_tmux_cmd_<name>` 関数を定義すると `host-tmux <name>` で呼べる）。ホスト側で次の呼び出しから反映され、
-    sandbox の作り直しは不要
+  - 許可するコマンドを増やす・減らすときは `config/host-exec/commands.sh` を編集する
+    （`host_exec_cmd_<name>` 関数を定義すると `host-exec <name>` で呼べる。`pytest` の例がコメントで入っている）。
+    ホスト側で次の呼び出しから反映され、sandbox の作り直しは不要
+    - `pytest` など workspace のコードを実行するコマンドは、sandbox が workspace を書き換えられる以上、
+      ホストで任意のコードを実行できるのと同じになる。許可するならディレクトリを固定し、影響を理解した上で
   - うまくいかないとき
 
-    | 症状                                         | 原因と対処                                                                                      |
-    | -------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-    | `Connection closed` / `<dial failed>`        | リモートログインが Off。上の手順で On にする                                                    |
-    | `Permission denied (publickey,...)`          | 鍵が未登録。`mise run sandbox:host-tmux-authorize` を実行する                                   |
-    | `command not allowed: <name>`                | `commands.sh` に未定義。必要なら定義を足す                                                      |
-    | `command definitions not found on the host`  | ホストで `mise bootstrap dotfiles apply` を実行する                                             |
-    | `mac-host-tmux` が無く `mac-host` 経由で動く | sandbox 作成時に `~/.ssh/id_host_tmux` が無かった。登録後に `sbx-agent claude --new` で作り直す |
+    | 症状                                        | 原因と対処                                                                    |
+    | ------------------------------------------- | ----------------------------------------------------------------------------- |
+    | `Connection closed` / `<dial failed>`       | リモートログインが Off。上の手順で On にする                                  |
+    | `Permission denied (publickey,...)`         | 鍵が未登録。`mise run sandbox:host-exec-authorize` を実行する                 |
+    | `command not allowed: <name>`               | `commands.sh` に未定義。必要なら定義を足す                                    |
+    | `command definitions not found on the host` | ホストで `mise bootstrap dotfiles apply` を実行する                           |
+    | `host-exec: command not found`（sandbox）   | template が古い。`mise run sandbox:build-template` → `sbx-agent claude --new` |
+    | multi-worktree の通知だけ出ない             | 生成済みの `.claude/settings.local.json` が旧形式。multi-worktree で作り直す  |
 
 - [ ] （任意）`~/.config` の track mode 履歴を他マシンと同期する
 

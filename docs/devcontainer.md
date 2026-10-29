@@ -80,11 +80,8 @@ AI エージェントには `/tmux %3`（Codex では `$tmux %3`）と指示す�
 必要なら、同じ capture コマンドを一定間隔で再実行させます。pane ID は tmux の session/window 構成を
 変えると変わり得るため、固定値を設定へ埋め込まず、その都度 `list` で確認してください。
 
-ホスト側では `host-tmux-gate` が `config/host-tmux/commands.sh` に定義した tmux コマンド
-（既定は `list` と `capture`。`host-tmux help` で一覧）だけを実行します。ただし devcontainer は通知用鍵の
-`mac-host` 経由で gate を呼ぶため、鍵自体は通常のホストログイン権限を持ちます。鍵ごと制限する
-tmux 専用鍵（`authorized_keys` の `command=` で gate に固定）は sandbox で使えます
-（[docs/docker-sandboxes.md](./docker-sandboxes.md#host-tmux-の実行コマンド制限)）。
+`host-tmux` は `host-exec tmux-list` / `host-exec tmux-capture` の薄いラッパーです。ホストで実行できるのは
+`config/host-exec/commands.sh` に定義したコマンドだけです（[後述](#ホストで実行できるコマンドの制限)）。
 また、後述のリモートログイン、公開鍵登録、`mac-host` 設定が完了している必要があります。
 
 ## ホストと共有しないプロジェクト生成物
@@ -478,39 +475,73 @@ JSON は既に存在するものには触れませんが、SSH 鍵だけは例�
 ## devcontainer からホストへの通知設定（macOS のみ）
 
 devcontainer 内から macOS ホストに通知を送る場合、SSH 経由で通知を行います。
-通知経路は「コンテナ → SSH → ホストで `macos-notify-cli` 実行 → 通知センター」で、
-コンテナは `host.docker.internal`（SSH config 上の `mac-host`）へ接続し、ホスト上の
-`macos-notify-cli` を実行します。初回セットアップ時に以下の設定が必要です：
+通知経路は「コンテナ → SSH → ホストの `host-exec-gate` → `macos-notify-cli` → 通知センター」で、
+コンテナは `host.docker.internal`（SSH config 上の `mac-host`）へ接続し、`host-exec notify` を呼びます。
+初回セットアップ時に以下の設定が必要です：
 
 ```bash
-# 1. devcontainer 専用の SSH 鍵を生成（既に存在する場合はスキップ）
+# 1. devcontainer 専用の SSH 鍵を生成（initialize.sh / mise run sandbox:setup でも生成される）
 if [ ! -f ~/.ssh/id_docker_devcontainer ]; then
   ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_docker_devcontainer
 fi
 
-# 2. 公開鍵を authorized_keys に追加（重複チェック付き）
-#    ※ 公開鍵は + や / を含むため、grep は必ず -F（固定文字列）で照合する
-if ! grep -Fq "$(cat ~/.ssh/id_docker_devcontainer.pub)" ~/.ssh/authorized_keys 2>/dev/null; then
-  cat ~/.ssh/id_docker_devcontainer.pub >> ~/.ssh/authorized_keys
-fi
-
-# 3. 権限設定（~/.ssh が 700・authorized_keys が 600 でないと sshd は公開鍵を無視する）
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/id_docker_devcontainer
-
-# 4. リモートログイン（SSH サーバ）を有効化
+# 2. リモートログイン（SSH サーバ）を有効化
 #    「システム設定 > 一般 > 共有 > リモートログイン」でも可
 sudo systemsetup -setremotelogin on
 sudo systemsetup -getremotelogin          # → Remote Login: On
 
-# 5. 確認
-#    鍵の「中身」で照合すること。ファイル名の docker_devcontainer は鍵のコメント
-#    (例: user@host.local) には含まれないため、`grep docker_devcontainer` ではヒットしない
-ls -la ~/.ssh/id_docker_devcontainer*
-grep -Fq "$(cat ~/.ssh/id_docker_devcontainer.pub)" ~/.ssh/authorized_keys \
-  && echo "REGISTERED" || echo "MISSING"
+# 3. 公開鍵を gate 固定で authorized_keys に登録する（権限設定と確認まで行う。何度実行してもよい）
+#    鍵を `cat >> ~/.ssh/authorized_keys` で制限なしに登録しないこと（コンテナからホストで任意のコマンドが動く）
+mise run sandbox:host-exec-authorize
 ```
+
+### ホストで実行できるコマンドの制限
+
+コンテナ / sandbox からホストへの SSH はすべて `host-exec` を通り、ホスト側の
+`host-exec-gate`（`config/devcontainer/scripts/host-exec-gate`）が
+`config/host-exec/commands.sh` に定義したコマンドだけを実行します。
+
+`mise run sandbox:host-exec-authorize` は鍵を次の形で `authorized_keys` に登録します。
+
+```text
+restrict,command="~/.config/devcontainer/scripts/host-exec-gate（絶対パス）",port-forwarding,permitopen="127.0.0.1:1",permitlisten="127.0.0.1:*" ssh-ed25519 AAAA...
+```
+
+- `command=`: クライアントが何を要求しても gate しか動きません。`ssh mac-host id` も scp / sftp も拒否されます。
+- `restrict`: pty・agent forwarding・X11 を無効にします。
+- `port-forwarding` + `permitlisten="127.0.0.1:*"`: plannotator の reverse tunnel（`ssh -R`）用に、
+  ホストの loopback での待ち受けだけ許可します。`0.0.0.0` での待ち受けは拒否されます。
+- `permitopen="127.0.0.1:1"`: `ssh -L` で sandbox からホストのサービスへ接続するのを実質禁止します
+  （`port-forwarding` は -L も許してしまうため、存在しない宛先だけに絞る）。
+- tunnel も不要なら `HOST_EXEC_PERMITLISTEN= mise run sandbox:host-exec-authorize` で port forwarding を全て禁止できます
+  （plannotator はホストのブラウザで開けなくなります）。
+
+既定で許可しているコマンド（`host-exec help` で一覧できます）:
+
+| コマンド       | 用途                                      | 呼び出し元                                   |
+| -------------- | ----------------------------------------- | -------------------------------------------- |
+| `notify`       | macOS 通知（`macos-notify-cli`）          | Claude Code の hooks（multi-worktree）・crit |
+| `open-url`     | localhost の URL をホストのブラウザで開く | `plannotator-browser`                        |
+| `port-check`   | ホストの 127.0.0.1:<port> の待ち受け確認  | `ensure-plannotator-tunnel`                  |
+| `docker-port`  | devcontainer の公開 port の取得           | `post-start.sh`（crit の host port）         |
+| `tmux-list`    | tmux の pane 一覧                         | `host-tmux list`（tmux skill）               |
+| `tmux-capture` | pane の直近 N 行を取得                    | `host-tmux capture`（tmux skill）            |
+
+コマンドを足すときは `commands.sh` に `host_exec_cmd_<name>` 関数を定義します（`pytest` の例がコメントで
+入っています）。引数は base64 で運ばれ、シェルを通らずに文字列のまま関数へ届くので、関数の中で検証してから
+コマンドの引数としてだけ使ってください。ホストで次の呼び出しから反映され、コンテナ / sandbox の作り直しは不要です。
+
+> [!WARNING]
+> `pytest` / `npm test` / `make` のように workspace のコードを実行するコマンドを許可すると、
+> コンテナ / sandbox は workspace を書き換えられるため、実質的にホストで任意のコードを実行できるようになります。
+> 許可する場合は対象ディレクトリを固定し、この影響を理解した上で足してください。
+
+> [!NOTE]
+> 以前の手順で `id_docker_devcontainer.pub` を制限なしで `authorized_keys` に追記している場合も、
+> `mise run sandbox:host-exec-authorize` がその行を gate 固定の行に置き換えます。
+> multi-worktree で生成済みの `.claude/settings.local.json` は旧形式の通知 hook（生の `ssh mac-host ...`）
+> のままなので、gate に拒否されて通知が出ません。`multi-worktree` で作り直すか、該当 hook を
+> `host-exec notify` を使う形に書き換えてください。
 
 ## 通知の表示許可（macOS のみ・初回のみ）
 
@@ -543,18 +574,20 @@ SSH 認証が通っても、macOS 側で通知の表示が許可されていな�
 
 ```bash
 # ① ホスト自身に鍵で SSH できるか（authorized_keys 登録・権限・リモートログインの確認）
-ssh -i ~/.ssh/id_docker_devcontainer -o BatchMode=yes "$USER@localhost" "echo ok"
+#    許可されたコマンドの一覧が出れば OK
+ssh -i ~/.ssh/id_docker_devcontainer -o BatchMode=yes "$USER@localhost" help
 
 # ② コンテナ内から mac-host 経由で疎通するか（エラーを握りつぶさずに実行）
-ssh -F ~/.config/ssh/config mac-host "echo ok; which macos-notify-cli"
+host-exec help
 
-# ③ コンテナ内からホストの通知を直接鳴らせるか
-ssh -F ~/.config/ssh/config mac-host \
-  "macos-notify-cli --title 'test' --message 'from container' --sound Glass"
+# ③ コンテナ内からホストの通知を鳴らせるか
+host-exec notify test "from container" Glass
 ```
 
-- ①が失敗 → 公開鍵の未登録 / `~/.ssh` の権限 / リモートログイン無効を疑う
-- ①は通るが②の `which` が空 → 非対話 SSH シェルの PATH に mise の shim が無い
+- ①が `Permission denied` → 公開鍵の未登録 / `~/.ssh` の権限。`mise run sandbox:host-exec-authorize` を実行する
+- ①が `Connection refused` / `Connection closed` → リモートログインが無効
+- ①が `command definitions not found` → ホストで `mise bootstrap dotfiles apply` を実行する
+- ③が `macos-notify-cli: command not found` → ホストに mise の shim / Homebrew の配置で入っていない
 - ③まで通るのに画面に出ない → 上記「通知の表示許可」（集中モード・通知許可）を確認
 
 ## AIエージェント向けpre-commit

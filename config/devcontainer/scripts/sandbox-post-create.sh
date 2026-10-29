@@ -62,44 +62,6 @@ EOF
     log_ok "SSH config を生成しました: ${ssh_config} (User: ${HOST_USER:-$(id -un)})"
 }
 
-# host-tmux 専用の `mac-host-tmux`。鍵はホストの authorized_keys で host-tmux-gate に固定され、
-# ホストの ~/.config/host-tmux/commands.sh に定義した tmux コマンドしか実行できない。
-# この host があると host-tmux は mac-host ではなくこちらを使う。
-setup_host_tmux_ssh_config() {
-    local ssh_config="${HOME}/.config/ssh/config"
-    local key="${SBX_HOST_TMUX_SSH_KEY:-}"
-
-    if [ -z "$key" ] || [ ! -f "$key" ]; then
-        log_skip "host-tmux 用の SSH 鍵が無いため mac-host-tmux の設定をスキップしました（host-tmux は mac-host 経由で動きます）"
-        return 0
-    fi
-
-    mkdir -p "${HOME}/.ssh"
-    chmod 700 "${HOME}/.ssh"
-    local local_key="${HOME}/.ssh/id_mac_host_tmux"
-    if ! install -m 600 "$key" "$local_key" 2>/dev/null; then
-        log_warn "SSH 鍵のコピーに失敗しました: $key"
-        return 1
-    fi
-    mkdir -p "$(dirname "$ssh_config")"
-    touch "$ssh_config"
-    chmod 600 "$ssh_config"
-    if grep -q '^Host mac-host-tmux$' "$ssh_config" 2>/dev/null; then
-        log_skip "SSH config (mac-host-tmux) は既に存在します"
-        return 0
-    fi
-
-    cat >>"$ssh_config" <<EOF
-Host mac-host-tmux
-    HostName host.docker.internal
-    User ${HOST_USER:-$(id -un)}
-    IdentityFile ${local_key}
-    IdentitiesOnly yes
-    StrictHostKeyChecking accept-new
-EOF
-    log_ok "SSH config を生成しました: ${ssh_config} (mac-host-tmux)"
-}
-
 # ---------------------------------------------------------------------------
 # ローカル宛ての通信を sandbox のプロキシに通さない
 # ---------------------------------------------------------------------------
@@ -359,7 +321,6 @@ setup_nvim
 setup_agent_lessons
 setup_no_proxy
 setup_ssh_config
-setup_host_tmux_ssh_config
 setup_crit
 setup_agent_configs
 install_lefthook_all

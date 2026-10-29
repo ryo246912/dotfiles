@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# devcontainer / sandbox から SSH 経由でホスト側 tmux の pane を参照する。
-# 実際に何を実行できるかはホスト側の gate（host-tmux-gate）と
-# ~/.config/host-tmux/commands.sh の定義で決まる。
+# devcontainer / sandbox からホスト側 tmux の pane を参照する（tmux skill 用）。
+# 実体は host-exec の tmux-list / tmux-capture で、ホスト側 gate が許可したものだけ動く。
 set -euo pipefail
 
 usage() {
@@ -9,8 +8,6 @@ usage() {
 Usage:
   host-tmux list
   host-tmux capture <pane> [lines]
-  host-tmux help                  ホスト側で許可されているコマンドの一覧
-  host-tmux <command> [args...]   ホスト側の commands.sh で定義したコマンド
 
 Examples:
   host-tmux list
@@ -18,37 +15,24 @@ Examples:
 EOF
 }
 
+host_exec="$(dirname "$0")/host-exec"
+
 case "${1-}" in
-'')
-	usage >&2
-	exit 2
+list)
+	[ "$#" -eq 1 ] || { usage >&2; exit 2; }
+	exec "${host_exec}" tmux-list
+	;;
+capture)
+	[ "$#" -ge 2 ] && [ "$#" -le 3 ] || { usage >&2; exit 2; }
+	shift
+	exec "${host_exec}" tmux-capture "$@"
 	;;
 -h | --help)
 	usage
 	exit 0
 	;;
+*)
+	usage >&2
+	exit 2
+	;;
 esac
-
-# リモートへ渡す引数は安全な文字だけに制限する（gate でも同じ検証をする）。
-for arg in "$@"; do
-	[[ "${arg}" =~ ^[A-Za-z0-9%@._:-]{1,128}$ ]] || {
-		echo "host-tmux: argument contains unsupported characters: ${arg}" >&2
-		exit 2
-	}
-done
-
-ssh_config="${HOME}/.config/ssh/config"
-[ -f "${ssh_config}" ] || {
-	echo "host-tmux: SSH config not found: ${ssh_config}" >&2
-	exit 1
-}
-
-ssh_opts=(-F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=5)
-if grep -q '^Host mac-host-tmux$' "${ssh_config}"; then
-	# tmux 専用鍵。ホストの authorized_keys の command= で gate に固定されているため、
-	# 送ったコマンド文字列は SSH_ORIGINAL_COMMAND として gate が解釈する。
-	exec timeout 15 ssh "${ssh_opts[@]}" mac-host-tmux "$*"
-fi
-# 専用鍵が無い環境（devcontainer など）は通常の mac-host 経由で同じ gate を呼ぶ。
-exec timeout 15 ssh "${ssh_opts[@]}" mac-host \
-	'"${XDG_CONFIG_HOME:-$HOME/.config}"/devcontainer/scripts/host-tmux-gate' "$@"

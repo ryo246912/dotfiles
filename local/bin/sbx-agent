@@ -524,14 +524,6 @@ if [[ "$HOST_BRIDGE" == true ]] && [[ -f "$HOST_SSH_KEY" ]]; then
 else
     HOST_SSH_KEY=""
 fi
-# host-tmux 専用鍵。ホストの authorized_keys で host-tmux-gate に固定し、定義した tmux コマンド
-# 以外は実行できないようにする（mise run sandbox:host-tmux-authorize）。
-HOST_TMUX_SSH_KEY="${HOME}/.ssh/id_host_tmux"
-if [[ "$HOST_BRIDGE" == true ]] && [[ -f "$HOST_TMUX_SSH_KEY" ]]; then
-    add_mount "${HOST_TMUX_SSH_KEY}:ro"
-else
-    HOST_TMUX_SSH_KEY=""
-fi
 
 # workspace が linked worktree の場合、.git file は common git dir を絶対パスで参照する。
 # sbx はホストと同じ絶対パスにマウントするため、これも渡さないと sandbox 内で git が壊れる
@@ -578,7 +570,6 @@ if [[ "$HOST_BRIDGE" == true ]]; then
     add_env PLANNOTATOR_PORT "$PLANNOTATOR_SANDBOX_PORT"
     add_env PLANNOTATOR_BROWSER "${SANDBOX_SCRIPTS_DIR}/plannotator-browser"
     [[ -n "$HOST_SSH_KEY" ]] && add_env SBX_HOST_SSH_KEY "$HOST_SSH_KEY"
-    [[ -n "$HOST_TMUX_SSH_KEY" ]] && add_env SBX_HOST_TMUX_SSH_KEY "$HOST_TMUX_SSH_KEY"
 fi
 
 # nvim / .claude.json はホスト設定のマウント（--no-config で止まる側）に属するため、

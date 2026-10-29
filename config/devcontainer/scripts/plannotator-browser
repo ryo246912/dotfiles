@@ -39,9 +39,8 @@ if [ -n "$app_url" ]; then
 	"$tunnel" "$proxy_port"
 fi
 
-printf -v url_escaped '%q' "$url"
-if timeout 5 ssh -F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=2 \
-	mac-host "open ${url_escaped}" 2>/dev/null; then
+if HOST_EXEC_CONNECT_TIMEOUT=2 HOST_EXEC_TIMEOUT=5 \
+	"$(dirname "$0")/host-exec" open-url "$url" 2>/dev/null; then
 	printf 'Plannotator reviewをhost browserで開きました: %s\n' "$url"
 else
 	printf '自動でbrowserを開けませんでした。次のURLを開いてください: %s\n' "$url" >&2

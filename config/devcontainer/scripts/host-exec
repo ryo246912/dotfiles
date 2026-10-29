@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# devcontainer / sandbox からホスト（mac-host）でコマンドを実行する。
+# 実行できるのは、ホスト側の gate（host-exec-gate）が ~/.config/host-exec/commands.sh で
+# 許可しているコマンドだけ（一覧は `host-exec help`）。
+#
+# 引数は 1 つずつ base64 にして送る。gate はシェルを通さずに戻すため、空白や記号を含む
+# 文字列（通知のメッセージや URL）もそのまま 1 引数として届く。
+#
+# 環境変数:
+#   HOST_EXEC_CONNECT_TIMEOUT  SSH の接続タイムアウト秒（既定 5）
+#   HOST_EXEC_TIMEOUT          全体のタイムアウト秒（既定 30）
+set -euo pipefail
+
+usage() {
+	cat <<'EOF_USAGE'
+Usage:
+  host-exec help                  ホスト側で許可されているコマンドの一覧
+  host-exec <command> [args...]
+
+Examples:
+  host-exec notify "Claude Code" "作業が完了しました" Hero
+  host-exec tmux-list
+EOF_USAGE
+}
+
+case "${1-}" in
+'')
+	usage >&2
+	exit 2
+	;;
+-h | --help)
+	usage
+	exit 0
+	;;
+esac
+
+name="$1"
+shift
+[[ "${name}" =~ ^[a-z][a-z0-9-]{0,63}$ ]] || {
+	echo "host-exec: invalid command name: ${name}" >&2
+	exit 2
+}
+
+ssh_config="${HOME}/.config/ssh/config"
+[ -f "${ssh_config}" ] || {
+	echo "host-exec: SSH config not found: ${ssh_config}" >&2
+	exit 1
+}
+
+remote_command="${name}"
+for arg in "$@"; do
+	if [ -z "${arg}" ]; then
+		remote_command+=" -"
+	else
+		remote_command+=" $(printf '%s' "${arg}" | base64 | tr -d '\n')"
+	fi
+done
+
+exec timeout "${HOST_EXEC_TIMEOUT:-30}" ssh -F "${ssh_config}" -o BatchMode=yes \
+	-o ConnectTimeout="${HOST_EXEC_CONNECT_TIMEOUT:-5}" mac-host "${remote_command}"

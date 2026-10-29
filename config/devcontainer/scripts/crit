@@ -55,8 +55,8 @@ daemon_running() {
 
 notify_host() { # $1: 通知メッセージ
 	[ -f "${ssh_config}" ] || return 0
-	timeout 5 ssh -F "${ssh_config}" -o BatchMode=yes -o ConnectTimeout=2 mac-host \
-		"macos-notify-cli --title 'crit' --message '$1' --sound Glass" >/dev/null 2>&1 || true
+	HOST_EXEC_CONNECT_TIMEOUT=2 HOST_EXEC_TIMEOUT=5 \
+		"$(dirname "$0")/host-exec" notify crit "$1" Glass >/dev/null 2>&1 || true
 }
 
 if is_review_launch "${1-}"; then

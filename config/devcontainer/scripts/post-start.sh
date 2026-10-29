@@ -32,23 +32,17 @@ echo "✓ mise trust を実行しました"
 # ~/.crit-host-port に記録した上でホストへ通知する（devcontainer を複数同時起動しても
 # ポート衝突が起きないようにするため。詳細は docs/crit.md 参照）。
 # HOSTNAME はコンテナの short ID（Docker のデフォルトのホスト名）と一致する。
-#
-# SSH オプションについて:
-# - BatchMode=yes: 鍵認証が使えない場合にパスワード入力待ちで固まらないようにする
-# - StrictHostKeyChecking は指定しない: ~/.config/ssh/config の mac-host 側で
-#   accept-new を設定済みのため、ここで no を指定すると host key の変更検知が無効化されてしまう
-# - timeout でラップ: ConnectTimeout は接続確立までしかカバーしないため、接続後に
-#   リモートコマンドが固まった場合に備える
+# ホストでは host-exec の docker-port だけが実行できる（config/host-exec/commands.sh）。
 CRIT_HOST_PORT_FILE=~/.crit-host-port
-SSH_OPTS=(-F ~/.config/ssh/config -o BatchMode=yes -o ConnectTimeout=2)
 
 # docker port の取得はネットワークの一時的な不調で失敗することがあるため数回リトライする。
 # （再起動直後で docker port さえ引ければ port 番号自体は同一コンテナである限り変わらないため、
 # 一時的な失敗で ~/.crit-host-port を消して有効なキャッシュを失わないようにする）
 CRIT_HOST_PORT=""
 for _ in 1 2; do
-	CRIT_HOST_PORT=$(timeout 5 ssh "${SSH_OPTS[@]}" mac-host \
-		"docker port '${HOSTNAME}' 7842/tcp" 2>/dev/null | tail -n1 | sed -E 's/.*://') || true
+	CRIT_HOST_PORT=$(HOST_EXEC_CONNECT_TIMEOUT=2 HOST_EXEC_TIMEOUT=5 \
+		~/.config/devcontainer/scripts/host-exec docker-port "${HOSTNAME}" 7842/tcp 2>/dev/null |
+		tail -n1 | sed -E 's/.*://') || true
 	[ -n "$CRIT_HOST_PORT" ] && break
 	sleep 1
 done

@@ -22,7 +22,6 @@ host-tmux capture <pane-id>
 
 1. pane ID が `%` と数字からなることを確認する。
 2. pane ID がない、または形式が不正な場合は `host-tmux list` を実行し、候補を示して確認する。
-   `list` / `capture` 以外に使えるコマンドは `host-tmux help` で確認できる（ホスト側で許可されたものだけ）。
 3. `host-tmux capture <pane-id>` を実行する。既定で直近 200 行まで取得される。
 4. ログの末尾を優先して分析する。過去に出た解消済みエラーと、現在のエラーを混同しない。
 5. 情報が不足する場合だけ、必要な行数を指定して再取得する。
@@ -35,6 +34,7 @@ host-tmux capture <pane-id> 500
 
 - pane 内容の取得には必ず読み取り専用の `host-tmux` を使う。SSH やホスト側 `tmux` を直接実行しない。
 - `host-tmux` が `command not allowed`・`Permission denied`・接続エラーを返した場合は、別の経路で回避せず、
-  エラー内容をユーザーに伝えて止まる（ホスト側の設定は docs/setup.md の tmux スキルの項目）。
+  エラー内容をユーザーに伝えて止まる（ホスト側で実行できるのは許可されたコマンドだけ。設定は docs/setup.md の
+  「ホストへの SSH 経路」の項目）。
 - `send-keys`、`kill-pane`、`respawn-pane` など、ホスト側 tmux の状態を変更する操作は行わない。
 - ログに認証情報や秘密情報が含まれる可能性があるため、必要な箇所だけを回答に要約する。

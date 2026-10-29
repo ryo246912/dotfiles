@@ -404,11 +404,6 @@ ensure_empty_file ~/.ssh/known_hosts
 notify_rc=0
 ensure_ssh_key ~/.ssh/id_docker_devcontainer "devcontainer host notify" || notify_rc=$?
 [ "$notify_rc" -eq 2 ] && exit 1
-# sandbox からホスト tmux を参照する専用鍵（host-tmux 用。authorized_keys で host-tmux-gate に固定する。
-# docs/docker-sandboxes.md 参照）。無くても他の機能には影響しないため、失敗しても止めない。
-host_tmux_rc=0
-ensure_ssh_key ~/.ssh/id_host_tmux "sandbox host-tmux" || host_tmux_rc=$?
-[ "$host_tmux_rc" -eq 2 ] && echo "⚠️ host-tmux 用の SSH 鍵を用意できませんでした（host-tmux は mac-host 経由で動きます）" >&2
 # devcontainer専用のSSH鍵（コミット署名用。docs/devcontainer.md 参照）
 sign_rc=0
 ensure_ssh_key ~/.ssh/id_docker_devcontainer_sign "devcontainer commit signing" || sign_rc=$?

@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# ホスト側で動く host-exec の gate。sandbox / devcontainer から mac-host への SSH は
+# すべてここを通り、~/.config/host-exec/commands.sh に定義したコマンドだけを実行する。
+#
+# mac-host 用の鍵（~/.ssh/id_docker_devcontainer）を authorized_keys に
+# `restrict,command="<この gate の絶対パス>",...` で登録すると、その鍵では要求したコマンドに
+# 関係なくこの gate しか動かない（mise run sandbox:host-exec-authorize が登録する）。
+#
+# SSH_ORIGINAL_COMMAND の形式（host-exec が組み立てる）:
+#   <name> <base64(arg1)> <base64(arg2)> ...    空の引数は "-"
+# シェルには一切通さず、空白で分割して base64 を戻すだけなので、引数に何が入っていても
+# 引数のまま関数に渡る。ホストで手元から試すときは `host-exec-gate <name> <arg>...` と
+# 生の引数で呼べる。
+#
+# macOS 標準の bash 3.2 でも動くように書く（連想配列や ${var,,} は使わない）。
+set -euo pipefail
+
+commands_file="${HOST_EXEC_COMMANDS:-${XDG_CONFIG_HOME:-$HOME/.config}/host-exec/commands.sh}"
+max_args=16
+
+# 非対話 SSH では Homebrew/mise の PATH が通らないため、代表的な配置を足す。
+PATH="${HOME}/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:${PATH}"
+export PATH
+
+host_exec_die() {
+	echo "host-exec: $*" >&2
+	exit 2
+}
+
+# 正の整数（上限付き）か。
+host_exec_require_int() {
+	local value="${1-}" max="${2:-65535}"
+	case "${value}" in
+	'' | *[!0-9]*) host_exec_die "expected a positive integer: ${value}" ;;
+	esac
+	[ "${#value}" -le 6 ] && [ "${value}" -gt 0 ] && [ "${value}" -le "${max}" ] \
+		|| host_exec_die "expected an integer between 1 and ${max}: ${value}"
+}
+
+# 正規表現（bash の =~）に一致するか。
+host_exec_require_match() {
+	local value="${1-}" re="$2" what="${3:-argument}"
+	[[ "${value}" =~ ${re} ]] || host_exec_die "invalid ${what}: ${value}"
+}
+
+[ -f "${commands_file}" ] || {
+	echo "host-exec: command definitions not found on the host: ${commands_file}" >&2
+	exit 1
+}
+# shellcheck source=/dev/null
+. "${commands_file}"
+
+list_commands() {
+	declare -F | sed -n 's/^declare -f host_exec_cmd_//p' | tr '_' '-'
+}
+
+b64_decode() {
+	printf '%s' "$1" | base64 -d 2>/dev/null || printf '%s' "$1" | base64 -D
+}
+
+args=()
+if [ "$#" -gt 0 ]; then
+	args=("$@")
+else
+	tokens=()
+	read -r -a tokens <<<"${SSH_ORIGINAL_COMMAND-}" || true
+	if [ "${#tokens[@]}" -gt 0 ]; then
+		[ "${#tokens[@]}" -le "$((max_args + 1))" ] || host_exec_die "too many arguments"
+		args=("${tokens[0]}")
+		set -- "${tokens[@]}"
+		shift
+		for token in "$@"; do
+			if [ "${token}" = - ]; then
+				args+=("")
+				continue
+			fi
+			# macOS の regex は {m,n} の上限が 255 のため、長さは別に確かめる。
+			[[ "${token}" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] && [ "${#token}" -le 8192 ] \
+				|| host_exec_die "malformed argument encoding"
+			args+=("$(b64_decode "${token}")") || host_exec_die "malformed argument encoding"
+		done
+	fi
+fi
+
+if [ "${#args[@]}" -eq 0 ]; then
+	echo "host-exec: no command given. Available commands:" >&2
+	list_commands >&2
+	exit 2
+fi
+
+name="${args[0]}"
+[[ "${name}" =~ ^[a-z][a-z0-9-]{0,63}$ ]] || host_exec_die "invalid command name: ${name}"
+
+if [ "${name}" = help ]; then
+	list_commands
+	exit 0
+fi
+
+fn="host_exec_cmd_$(printf '%s' "${name}" | tr '-' '_')"
+if ! declare -F "${fn}" >/dev/null; then
+	echo "host-exec: command not allowed: ${name}. Available commands:" >&2
+	list_commands >&2
+	exit 126
+fi
+
+# bash 3.2 は set -u 下で空配列の展開をエラーにするため、位置引数に移してから渡す。
+set -- "${args[@]}"
+shift
+"${fn}" "$@"
