@@ -54,7 +54,7 @@ brief.json の書式:
       "manual_test": {
         "environment": "どこで確かめるか（起動コマンドなど）",
         "preconditions": ["feature flag・権限・アカウントなど"],
-        "seed": {"note": "何のデータを入れるか", "run": "流し方（コマンド）", "language": "sql",
+        "seed": {"note": "何のデータを入れるか", "run": "SQL クライアントで対象 DB に接続し、下の SQL を貼り付けて直接実行する手順", "language": "sql",
                  "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
                    "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
@@ -520,7 +520,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         if seed.get("note"):
             parts.append(f"<p>{inline(seed['note'])}</p>")
         if seed.get("run"):
-            parts.append(f'<p class="evidence">流し方: <code>{esc(seed["run"])}</code></p>')
+            parts.append(f'<p class="evidence">実行手順: {inline(seed["run"])}</p>')
         parts.append(f'<pre class="seed"><code data-lang="{lang}">{esc(seed.get("script", ""))}</code></pre>')
         if seed.get("cleanup"):
             parts.append(f'<details><summary>後片付け</summary><pre class="seed"><code data-lang="{lang}">{esc(seed["cleanup"])}</code></pre></details>')
@@ -717,7 +717,17 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         items = "".join(f"<li>{inline(u)}</li>" for u in brief["unknowns"])
         sections.append(section("unknowns", "未確認事項", f"<ul>{items}</ul>"))
 
-    nav = "<nav>" + "".join(f'<a href="#{sid}">{esc(title)}</a>' for sid, title, _ in sections) + "</nav>"
+    nav_items = []
+    for sid, title, _ in sections:
+        nav_items.append(f'<a href="#{sid}">{esc(title)}</a>')
+        if sid == "groups":
+            ordered_groups = sorted(groups, key=lambda g: g["kind"] == "generated")
+            links = "".join(
+                f'<li><a href="#group-{esc(group["id"])}">{number}. {esc(group["title"])}</a></li>'
+                for number, group in enumerate(ordered_groups, start=1)
+            )
+            nav_items.append(f'<ol class="nav-groups">{links}</ol>')
+    nav = '<nav aria-label="目次">' + "".join(nav_items) + "</nav>"
     content = header(brief, bool(groups_html)) + "".join(body for _, _, body in sections)
     values = {
         "title": esc(brief["title"]),
