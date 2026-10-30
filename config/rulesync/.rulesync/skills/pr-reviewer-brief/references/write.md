@@ -14,6 +14,9 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 
 `target.json` に `"mode": "ticket"` があればチケットモード。下の「チケットモードのとき」も読む。
 
+`prs`・`related_prs` の `url` は取得した PR の URL を必ず転記する。`stack.url` は `target.json` の
+`stack_url` を転記する。本文で PR 番号やチケット ID に言及するときも `[#123](https://...)` のようなリンクにする。
+
 ## 1. 前提知識（`background`）
 
 資料の中心。**変更前（base 側）のコード**を読み、コードベースを知らない人向けに書く。
@@ -117,10 +120,14 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 - `preconditions`: feature flag、権限・ロール、ログインするアカウント
 - `seed`（テストデータ）: 手順に要るデータを入れるスクリプト。画面だけでは用意できないデータ（別のユーザーの記録、過去の日付、
   件数の多いデータなど）があれば必ず書く
-  - リポジトリにシードやファクトリの仕組み（`db/seeds`、fixture、factory、管理コマンドなど）があればそれを使い、無ければ
-    スキーマ（モデル・migration）に合わせた SQL の `INSERT` を書く。カラム名・必須の項目・外部キーはコードで確かめる
-  - `run` に流し方（`psql ... -f`、`bin/rails runner`、`python manage.py shell` など）、`language` にスクリプトの言語、
-    `script` に本体、`cleanup` に後片付け（入れたデータを消すスクリプト）を書く
+  - **標準 SQL で準備できるようにする**。`language` は `sql`、`script` はカラムを明示した `INSERT INTO ... VALUES ...` を
+    基本とし、ORM・factory・アプリの seed コマンドへの依存を避ける。既存の seed や factory は必要な値を調べる参考にする。
+    カラム名・型・必須項目・外部キーをモデル・migration で確認し、参照される親レコードから順に作る
+  - DB 固有の構文（`ON CONFLICT`、`INSERT IGNORE`、`RETURNING`、`::` キャストなど）、CLI のメタコマンド、
+    アプリ側の変数展開は SQL 本体に含めない。固定の ID・日時・文字列で、そのまま実行できる SQL にする（ID は自動採番と衝突しない大きな値を選ぶ）。
+    固有機能やアプリ側の生成処理が不可欠なら、必要な理由と追加の準備を `note`・`preconditions` に明記する
+  - `run` に対象 DB と SQL ファイルの流し方（`psql ... -f seed.sql`、`mysql ... < seed.sql` など）を記載する。
+    `cleanup` も標準 SQL の `DELETE` とし、事前に未使用と確認したテスト専用の固定 ID で今回入れた行だけを対象にし、投入に失敗した場合は実行せず、子レコードから順に消す
   - 手順で使う値（ID・名前）はスクリプトで固定し、手順の中でもその値を使う（「名前が `test-land-1` の土地カード」など）
 - `steps`: 1 つの手順は 1 つの確認。`id` は `step-1` から順に振る（スクリーンショットとの対応に使う）
   - 画面のある変更（`background.pages` がある）は**画面の操作だけで書く**。API を直接呼ぶ・DB を見るといった確かめ方は
@@ -159,7 +166,7 @@ PR ではなくチケットを渡されたとき。資料には **TL;DR・スタ
 - `background`: 1 と同じ。チケットに出てくる画面・機能が**今**どう動いているかを、今の default branch のコードを読んで根拠付きで書く
 - 変更内容: 関連する PR があれば、`target.json` と各 `pr-<N>.json` から
   `brief.json` の `prs`（書式は `render_brief.py` の冒頭。`changedFiles` は `files` に、`baseRefName`・`headRefName` は
-  `base`・`head` にする）と、stack なら `stack`（`{"number": <stack_number>, "trunk": <trunk>}`）を書き、
+  `base`・`head` にする）と、stack なら `stack`（`{"number": <stack_number>, "trunk": <trunk>, "url": <stack_url>}`）を書き、
   `changes.before_after` を書く。PR ごとの 1 文のまとめは、stack の PR なら `prs[].summary`（スタック構成に出る）、
   それ以外の PR なら `related_prs` に書く。PR が無ければ、チケットに書かれた
   「これから変えること」を `changes.before_after` にまとめる（変更後の列は「チケットでの予定」と分かるように書く）
