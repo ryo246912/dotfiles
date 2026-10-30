@@ -131,7 +131,7 @@ RUN --mount=type=secret,id=github_token \
 # 入り先は agent の ~/.local/share/gh/extensions（~/.config/gh とは別）。token は API の
 # レート制限回避用で、GH_CONFIG_DIR を使い捨てにして image には残さない。
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=v0.2.0
+ARG GH_STACK_VERSION=v0.3.0
 RUN --mount=type=secret,id=github_token \
     set -eu; \
     if [ -s /run/secrets/github_token ]; then \
