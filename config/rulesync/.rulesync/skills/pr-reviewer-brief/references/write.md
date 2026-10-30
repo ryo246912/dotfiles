@@ -124,7 +124,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
     基本とし、ORM・factory・アプリの seed コマンドへの依存を避ける。既存の seed や factory は必要な値を調べる参考にする。
     カラム名・型・必須項目・外部キーをモデル・migration で確認し、参照される親レコードから順に作る
   - DB 固有の構文（`ON CONFLICT`、`INSERT IGNORE`、`RETURNING`、`::` キャストなど）、CLI のメタコマンド、
-    アプリ側の変数展開は SQL 本体に含めない。固定の ID・日時・文字列で、そのまま実行できる SQL にする。
+    アプリ側の変数展開は SQL 本体に含めない。固定の ID・日時・文字列で、そのまま実行できる SQL にする（ID は自動採番と衝突しない大きな値を選ぶ）。
     固有機能やアプリ側の生成処理が不可欠なら、必要な理由と追加の準備を `note`・`preconditions` に明記する
   - `run` に対象 DB と SQL ファイルの流し方（`psql ... -f seed.sql`、`mysql ... < seed.sql` など）を記載する。
     `cleanup` も標準 SQL の `DELETE` とし、固定した ID などで今回入れた行だけを対象に、子レコードから順に消す
