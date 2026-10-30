@@ -15,7 +15,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 `target.json` に `"mode": "ticket"` があればチケットモード。下の「チケットモードのとき」も読む。
 
 `prs`・`related_prs` の `url` は取得した PR の URL を必ず転記する。`stack.url` は `target.json` の
-`stack_url` を転記する。本文で PR 番号やチケット ID に言及するときも `[＃123](https://...)` のようなリンクにする。
+`stack_url` を転記する。本文で PR 番号やチケット ID に言及するときも `[#123](https://...)` のようなリンクにする。
 
 ## 1. 前提知識（`background`）
 
