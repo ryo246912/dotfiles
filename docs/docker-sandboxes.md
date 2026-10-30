@@ -500,9 +500,9 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 
 | preset id      | 起動内容                                                            |
 | -------------- | ------------------------------------------------------------------- |
-| `sbx`          | `sbx-agent claude --name-prefix a1`（`~/.claude`）                  |
-| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --name-prefix a2` |
-| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --name-prefix w3`    |
+| `sbx`          | `sbx-agent claude --claude-account account1 --name-prefix a1`（`~/.claude`）                  |
+| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --claude-account account2 --name-prefix a2` |
+| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --claude-account work3 --name-prefix w3`    |
 | `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
 | `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
 
@@ -524,6 +524,136 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
   ときだけなので（同 4.1.25 の `dist/utils/commandArgs.js` の `injectTeammateMode`）、
   `zsh` 経由のこれらの preset には付かない（`sh` 経由の既存 preset「Claude account2」
   「Claude Work3」も同様）。
+
+### Claude サブスクを account ごとに固定する kit（実験的）
+
+ccmanager の Claude Docker Sandbox preset は `--claude-account` を使います。
+**設定ディレクトリと sandbox 名を分けるだけでは OAuth アカウントは分かれません。**
+標準 Claude agent の `/login` はホスト側の共通認証を更新します。
+このため専用の v2 kit [`config/sbx/claude-subscription/spec.yaml`](../config/sbx/claude-subscription/spec.yaml)
+を使用し、sandbox 固有の secret を `Authorization: Bearer` として送ります。
+API キーの登録インターフェースを使いますが、登録するのは `claude setup-token` の
+サブスク用 token です。API キー課金への切り替えを意図したものではありません。
+
+これは [公式 issue #144 の回避策](https://github.com/docker/sbx-releases/issues/144#issuecomment-6372651627)
+に基づきます。報告された動作環境は sbx v0.45.1、global anthropic secret なしです。
+このリポジトリでは実 sbx による認証検証は未実施です。更新後の sbx での互換性や
+サブスクの全機能を保証するものではありません。まず専用の検証 sandbox で確認してください。
+
+#### 1. ホストで token を登録する
+
+各アカウントで `claude setup-token` を実行し、ブラウザでも目的のアカウントを選びます。
+既存の設定の選択には次の環境変数を使えます（ブラウザのログイン先も確認してください）。
+
+```bash
+CLAUDE_CONFIG_DIR="$HOME/.claude" claude setup-token
+CLAUDE_CONFIG_DIR="$HOME/.claude-account2" claude setup-token
+CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude setup-token
+```
+
+表示された token を対応するファイルへ保存します。以下は account2 の例です。
+token 自体をコマンドに貼らないため、履歴・プロセス引数には残りません。
+ホストの bash で実行してください。
+
+```bash
+(umask 077
+ mkdir -p "$HOME/.local/state/sbx-agent-credentials"
+ read -r -s -p 'account2 setup-token: ' subscription_token
+ printf '\n'
+ printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account2.token"
+ unset subscription_token
+)
+chmod 600 "$HOME/.local/state/sbx-agent-credentials/account2.token"
+```
+
+account1 / work3 もファイル名を変えて登録します。この保存先は dotfiles の管理対象にも
+通常の sandbox mount にも含めません。`sbx-agent` はファイルの所有者・権限・形式を検証し、
+stdin 経由で毎回 sandbox 固有 secret に登録します。token はホスト上では平文なので、
+バックアップ・同期対象からも外してください。sandbox には本物の token ではなく sentinel が渡ります。
+token の期限切れや失効時は再生成してファイルを更新し、preset から起動し直します。
+
+#### 2. 共通認証と競合する設定を解消する
+
+```bash
+sbx version
+sbx secret ls
+```
+
+`(global) anthropic` があればラッパーは停止します。他の sandbox への影響を確認し、
+必要なアカウントの token を上で準備してから、**手動で**共通 secret を解除します。
+
+```bash
+sbx secret rm anthropic --force
+```
+
+ラッパーが自動で共通認証を削除することはありません。この方式の sandbox では
+`/login` を使わないでください。共通認証が再作成されると、この方式で次回起動できなくなります。
+すでに稼働している sandbox の通信はラッパーでは監視できないため、認証設定を変える際は
+関連セッションを終了してからやり直してください。
+
+専用 kit は、親 image が生成した `/home/agent/.claude/settings.json` の `apiKeyHelper`
+を削除します。ホストの共有設定は編集しません。`--config-dir` の `settings.json` に
+`apiKeyHelper` や認証を上書きする env があればラッパーが停止します。
+プロジェクトの `.claude/settings*.json` や追加の CLI 引数にも認証の上書きを置かないでください。
+
+#### 3. kit の認証利用を許可して起動する
+
+カスタム kit は組み込み agent と異なり、credential binding の承認が必要です。
+初回はホストの対話端末から起動し、`anthropic` / `api.anthropic.com` の利用を承認してください。
+非対話起動で認証が withheld になる場合は、ホストの `~/.config/sbx/credentials.yaml`
+の既存内容を保って次の binding を追加してください（token は書きません）。
+
+```yaml
+bindings:
+  anthropic:
+    apiKey:
+      domains: [api.anthropic.com]
+```
+
+```bash
+# 最初は旧 sandbox と異なる名前で検証する
+sbx-agent claude --claude-account account2 \
+  --config-dir "$HOME/.claude-account2" --name subscription-account2-check
+```
+
+`--claude-account` 指定時は組み込み `claude` の代わりに kit のパスを `sbx create` に渡します。
+ツール入り template・workspace・設定 mount・初期化処理は従来どおり併用します。
+`--no-config` は併用できません。token の保存先を含むディレクトリを workspace / mount に
+指定すると、本物の token が sandbox に見えるため起動を止めます。
+
+ccmanager の既存 a1 / a2 / w3 sandbox は組み込み Claude agent なので、そのままは再利用しません。
+初回の旧 sandbox は「kit/account を確認できない」として停止します。
+必要な sandbox 内のデータを保存し、同じ preset と同じ workspace で使うコマンドに
+`--new` を付けて作り直してください。`--new` は旧 sandbox を削除します。
+以降は ccmanager の preset を選ぶだけです。削除・再作成で scoped secret が失われても
+ラッパーが起動時に再登録します。
+
+```bash
+sbx-agent claude --claude-account account2 \
+  --config-dir "$HOME/.claude-account2" --name-prefix a2 --new
+```
+
+#### 4. 実機で確認する
+
+まず別々の token を登録した２つの検証 sandbox を作ります。`sbx secret ls` で
+各 sandbox の anthropic secret があることと、global anthropic がないことを確認します。
+Claude の `/status` の表示だけでは、プロキシが実際に使ったアカウントを証明できません。
+小さいリクエストを各 sandbox から実行し、アカウント側の利用記録も照合してください。
+さらに切り分ける場合は、issue の検証と同じく `/v1/messages` のレスポンスの
+`anthropic-organization-id` を対応する組織と照合します。本物の token を出力する必要はありません。
+
+`setup-token` は通常の `/login` と同等の全機能ではなく、managed settings の 401 や
+`/usage` などの制約が報告されています。認証失敗時に `/login` で直そうとせず、
+kit・binding・token・sbx バージョンを確認してください。
+
+#### 回帰テスト
+
+```bash
+python3 config/sbx/tests/subscription_test.py
+```
+
+実認証や Docker を使わず、kit の選択・scoped secret の登録順・引数転送・再利用・
+共通認証の拒否・登録失敗時の停止・token mount と権限の拒否を確認します。
 
 ## ccmanager での開発の段取り
 

@@ -15,6 +15,7 @@
 #   --name NAME        sandbox 名（既定: <repo>-[<prefix>-]<branch>-<agent>）
 #   --name-prefix PFX  既定の sandbox 名で branch の前に付ける識別子（--config-dir と併用する）
 #   --workspace DIR    primary workspace（既定: カレントディレクトリ）
+#   --claude-account ID Claude サブスクを sandbox ごとに固定（account1/account2/work3 など）
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
@@ -78,6 +79,7 @@ SANDBOX_NAME=""
 NAME_PREFIX=""
 WORKSPACE="$PWD"
 CONFIG_DIR=""
+CLAUDE_ACCOUNT=""
 BRANCH=""
 TEMPLATE=""
 NO_TEMPLATE=false
@@ -176,6 +178,11 @@ while [[ $# -gt 0 ]]; do
             WORKSPACE="$1"
             ;;
         --workspace=*) WORKSPACE="${1#*=}" ;;
+        --claude-account)
+            shift && require_value --claude-account $#
+            CLAUDE_ACCOUNT="$1"
+            ;;
+        --claude-account=*) CLAUDE_ACCOUNT="${1#*=}" ;;
         --config-dir)
             shift && require_value --config-dir $#
             CONFIG_DIR="$1"
@@ -343,6 +350,33 @@ fi
 if ((${#SANDBOX_NAME} > 63)); then
     SANDBOX_NAME="${SANDBOX_NAME:0:63}"
     SANDBOX_NAME="${SANDBOX_NAME%%[-.]}"
+fi
+
+# Subscription kit uses scoped secrets with Bearer injection, not built-in OAuth.
+SUBSCRIPTION_KIT=""
+SUBSCRIPTION_TOKEN=""
+SUBSCRIPTION_MARKER=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    if [[ "$AGENT" != claude || ! "$CLAUDE_ACCOUNT" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+        log_error "--claude-account は claude 専用です。ID は小文字英数字とハイフンで指定してください"
+        exit 1
+    fi
+    if [[ "$MOUNT_CONFIG" != true ]]; then
+        log_error "--claude-account と --no-config は併用できません"
+        exit 1
+    fi
+    subscription_repo=$(find_dotfiles_repo) || {
+        log_error "subscription kit のため dotfiles の配置が必要です（DOTFILES_DIR）"
+        exit 1
+    }
+    SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/claude-subscription"
+    [[ -f "$SUBSCRIPTION_KIT/spec.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
+    SUBSCRIPTION_TOKEN="${HOME}/.local/state/sbx-agent-credentials/${CLAUDE_ACCOUNT}.token"
+    SUBSCRIPTION_MARKER="${HOME}/.local/state/sbx-agent-credentials/sandboxes/${SANDBOX_NAME}"
+    if [[ ! -s "$SUBSCRIPTION_TOKEN" || -L "$SUBSCRIPTION_TOKEN" ]]; then
+        log_error "サブスク用 token が未登録です: $SUBSCRIPTION_TOKEN（docs/docker-sandboxes.md 参照）"
+        exit 1
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -808,6 +842,72 @@ run_post_create() {
     fi
 }
 
+# Re-register on every attach: deletion/recreation also removes scoped secrets.
+# Never adopt a built-in Claude sandbox with the same name.
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
+        if [[ ! -f "$SUBSCRIPTION_MARKER" || "$(cat "$SUBSCRIPTION_MARKER")" != "$CLAUDE_ACCOUNT" ]]; then
+            log_error "既存 sandbox の kit/account を確認できません。別の --name を使うか、必要なデータを保存して --new で作り直してください"
+            exit 1
+        fi
+    fi
+    # Known-working kit configuration requires no global Anthropic credential.
+    # Do not delete it automatically: other sandboxes may depend on it.
+    if ! subscription_secrets=$(sbx secret ls 2>/dev/null); then
+        log_error "sbx の secret 一覧を確認できないため起動を中止します"
+        exit 1
+    fi
+    if printf '%s\n' "$subscription_secrets" | grep -Eq '^[[:space:]]*\(global\)[[:space:]]+anthropic([[:space:]]|$)'; then
+        unset subscription_secrets
+        log_error "global anthropic 認証が存在します。影響を確認して手動で解除してください（docs/docker-sandboxes.md）"
+        exit 1
+    fi
+    unset subscription_secrets
+    if ! python3 - "$CONFIG_DIR/settings.json" <<'PYSETTINGS'
+import json, pathlib, sys
+p = pathlib.Path(sys.argv[1])
+d = json.loads(p.read_text()) if p.exists() else {}
+env = d.get("env", {})
+if d.get("apiKeyHelper") or any(env.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL")):
+    sys.exit("settings.json contains a conflicting authentication override")
+PYSETTINGS
+    then
+        log_error "Claude 設定の認証上書きを解消してから起動してください"
+        exit 1
+    fi
+    # Resolve physical paths so a symlinked workspace/mount cannot expose tokens.
+    private_dir=$(cd "$(dirname "$SUBSCRIPTION_TOKEN")" && pwd -P) || exit 1
+    for mount_spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        mount_path="${mount_spec%:ro}"
+        [[ -d "$mount_path" ]] || mount_path=$(dirname "$mount_path")
+        mount_path=$(cd "$mount_path" && pwd -P) || exit 1
+        if [[ "$mount_path" == / || "$private_dir/" == "$mount_path/"* ]]; then
+            log_error "token 保存先を含む workspace/mount は使えません: $mount_path"
+            exit 1
+        fi
+    done
+fi
+
+register_subscription_secret() {
+    # Validate without printing a credential or putting it in argv/environment.
+    # pipefail ensures a failed validation/registration stops before sbx run.
+    if ! python3 - "$SUBSCRIPTION_TOKEN" <<'PYTOKEN' | sbx secret set anthropic --sandbox "$SANDBOX_NAME" >/dev/null
+import os, stat, sys
+p = sys.argv[1]
+st = os.stat(p)
+if st.st_uid != os.getuid() or stat.S_IMODE(st.st_mode) & 0o077:
+    sys.exit("token file must be owned by you with mode 600 (or 400)")
+token = open(p).read().strip()
+if not token.startswith("sk-ant-oat01-") or any(c.isspace() for c in token):
+    sys.exit("invalid subscription setup-token")
+sys.stdout.write(token)
+PYTOKEN
+    then
+        log_error "sandbox 専用 token の登録に失敗しました。起動を中止します"
+        exit 1
+    fi
+}
+
 # --new は「作り直す」なので、既存があれば先に消す（消さないと sbx create が名前の衝突で
 # 失敗し、結果として古い sandbox が再利用されてしまう）
 if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
@@ -820,6 +920,7 @@ fi
 
 if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     ensure_host_prerequisites
+    [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
 
     create_cmd=(sbx create --name="$SANDBOX_NAME" --skills="$SKILLS")
     for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
@@ -842,7 +943,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         create_cmd+=(--publish "$spec")
     done
     create_cmd+=(${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
-    create_cmd+=("$AGENT" "$WORKSPACE")
+    create_cmd+=("${SUBSCRIPTION_KIT:-$AGENT}" "$WORKSPACE")
     create_cmd+=(${MOUNTS[@]+"${MOUNTS[@]}"})
 
     log_info "sandbox を作成します: $SANDBOX_NAME"
@@ -865,9 +966,15 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     fi
 
 else
+    [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
     log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
     republish_ports
     load_static_mcp
+fi
+
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    (umask 077; mkdir -p "$(dirname "$SUBSCRIPTION_MARKER")" && printf '%s\n' "$CLAUDE_ACCOUNT" >"$SUBSCRIPTION_MARKER") || exit 1
+    log_info "Claude subscription account: $CLAUDE_ACCOUNT (scoped Bearer kit)"
 fi
 
 # 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と
