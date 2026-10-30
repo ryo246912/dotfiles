@@ -55,6 +55,7 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 | プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                             | する     | 生成物の正本だから                                                                                                                |
 | プロジェクト単位の生成物           | `CLAUDE.md`                                                                     | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
 | プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`                                    | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
+| Codex の起動指示の生成物          | `AGENTS.md`                                                                     | する     | SessionStart を実行しない環境でも、初回セッションでセットアップ手順を読めるようにするため |
 | グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                                | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
 | グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md`            | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
 | グローバル生成物                   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` 配下へ生成されるファイル | しない   | `rulesync generate` で実ホームへ再生成される出力だから                                                                            |
@@ -192,6 +193,13 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
 
 ### プロジェクト単位の `.codex/config.toml` について
+
+このリポジトリの `.codex/hooks.json` は `startup` / `resume` 時に
+`scripts/ai-session-setup.sh` を実行します。mise のツール導入と
+`lefthook install`（pre-commit を含む Git hook の登録）は Claude Code と共通です。
+SessionStart を実行しない Codex 環境では、`AGENTS.md` の指示で同じスクリプトを実行します。
+これはエージェントへの実行指示であり、ホスト側の起動フックではありません。
+正本は `.rulesync/rules/AGENTS.md` で、生成した `AGENTS.md` も git 管理します。
 
 以前は Codex CLI の hooks を有効化するため `.codex/config.toml` に `[features] hooks = true` が生成されていましたが、
 Codex CLI の hooks が GA（デフォルト有効）になったため、rulesync は生成しなくなりました。
