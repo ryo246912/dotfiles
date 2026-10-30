@@ -192,20 +192,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git push*)",
-            "statusMessage": "Reviewing with CodeRabbit CLI...",
-            "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
-            "timeout": 600
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "if": "Bash(gh pr create*)",
-            "statusMessage": "Reviewing with CodeRabbit CLI...",
             "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
             "timeout": 600
           }

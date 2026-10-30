@@ -36,6 +36,11 @@
           "matcher": "Bash",
           "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
           "timeout": 5
+        },
+        {
+          "matcher": "Bash",
+          "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "timeout": 600
         }
       ],
       "permissionRequest": [
