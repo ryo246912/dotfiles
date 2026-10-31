@@ -898,7 +898,7 @@ fi
 register_subscription_secret() {
     # Validate without printing a credential or putting it in argv/environment.
     # pipefail ensures a failed validation/registration stops before sbx run.
-    if ! python3 - "$SUBSCRIPTION_TOKEN" <<'PYTOKEN' | sbx secret set anthropic --sandbox "$SANDBOX_NAME" >/dev/null
+    if ! python3 - "$SUBSCRIPTION_TOKEN" <<'PYTOKEN' | sbx secret set anthropic --sandbox "$SANDBOX_NAME" --force >/dev/null
 import os, stat, sys
 p = sys.argv[1]
 st = os.stat(p)
