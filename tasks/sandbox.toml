@@ -195,6 +195,22 @@ echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].templat
 main "$@"
 '''
 
+["sandbox:coderabbit"]
+description = "Register CodeRabbit API key from host fnox as an sbx custom secret"
+run = '''
+set -eu
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
+fnox_bin=$(command -v fnox) || { echo "error: ホストに fnox が必要です" >&2; exit 127; }
+# 実キーは出力せず、ホストの resolver を登録する。fnox の設定・provider は共有 mount の外に置く。
+printf -v resolver '%q get CODERABBIT_API_KEY' "$fnox_bin"
+sbx secret set-custom \
+  --host '*.coderabbit.ai' \
+  --env CODERABBIT_API_KEY \
+  --placeholder 'cr-{rand}' \
+  --command "$resolver"
+echo "CodeRabbit secret を登録しました。network policy を反映し、sandbox を新規作成してください。"
+'''
+
 ["sandbox:setup"]
 description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills, settings)"
 run = '''

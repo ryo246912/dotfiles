@@ -28,7 +28,12 @@ head_sha=$(git rev-parse HEAD)
 [ "$(cat "$marker" 2>/dev/null)" = "$head_sha" ] && exit 0
 
 echo "Reviewing with CodeRabbit CLI..." >&2
-output=$(coderabbit review --committed 2>&1) || exit 0
+# sbx custom secret の場合はプレースホルダー。実キーへの置換はホストのプロキシが行う。
+review_args=(review --committed)
+if [ -n "${CODERABBIT_API_KEY:-}" ]; then
+    review_args+=(--api-key "$CODERABBIT_API_KEY")
+fi
+output=$(coderabbit "${review_args[@]}" 2>&1) || exit 0
 echo "$head_sha" >"$marker"
 echo "$output" >&2
 exit 2

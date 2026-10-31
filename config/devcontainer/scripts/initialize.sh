@@ -431,7 +431,6 @@ ensure_dir ~/.codex
 ensure_empty_file ~/.codex/config.toml
 ensure_json_file ~/.codex/hooks.json
 ensure_dir ~/.copilot
-ensure_dir ~/.coderabbit
 
 # .aws（config だけを mount する。AWS を使わないホストには無いため、無ければ空ファイルを用意する）
 ensure_empty_file ~/.aws/config

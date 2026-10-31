@@ -62,6 +62,9 @@ yazi-rs.github.io
 
 # CodeRabbit CLI（sandbox 内の coderabbit review が API を呼ぶ）
 api.coderabbit.ai
+app.coderabbit.ai
+ide.coderabbit.ai
+cli.coderabbit.ai
 
 # Q&A・技術記事
 stackoverflow.com

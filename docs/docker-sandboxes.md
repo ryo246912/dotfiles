@@ -1153,7 +1153,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
 | `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | ✅ ホストに存在するとき自動共有（`--no-config` で無効）                                                           |
+| `~/.coderabbit`                           | マウントしない。API key を sbx custom secret で渡す |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
@@ -1654,22 +1654,43 @@ input/output error
 - [docs/multi-worktree.md](multi-worktree.md) - multi-worktree との統合
 - [docs/devcontainer.md](devcontainer.md) - 旧バックエンド（devcontainer）の仕組み
 
-### CodeRabbit CLI のホスト認証を共有する
+### CodeRabbit CLI の API key を使う
 
-ホスト用の mise 設定にも CodeRabbit CLI を登録しています（macOS / Linux、x64 / arm64）。
-ホストで dotfiles を適用後、次を実行します。
+macOS の OAuth token は Keychain にあるため、`~/.coderabbit` の共有では Linux sandbox に
+認証を引き継げません。このディレクトリはマウントせず、API key を利用します。
+
+1. CodeRabbit のダッシュボードで API key を発行します。
+2. ホストの fnox に `CODERABBIT_API_KEY` として登録します（provider の設定は
+   [fnox.md](fnox.md) を参照）。シェルへ常時 export する必要はありません。
+   fnox の実行ファイル・設定・provider の依存ファイルは sandbox の書き込み可能な
+   mount の外に置いてください。resolver はプロジェクト外の一時ディレクトリで実行されます。
+3. ホストで以下を実行します。キーの値をコマンドラインに直接貼り付けないでください。
 
 ```bash
-mise install http:coderabbit
-coderabbit auth login
-coderabbit auth status
+mise run sandbox:coderabbit
+sbx policy allow network api.coderabbit.ai app.coderabbit.ai ide.coderabbit.ai cli.coderabbit.ai
+sbx-agent claude --new  # codex / copilot でも同じ
 ```
 
-`sbx-agent` はホストに `~/.coderabbit` があると自動で書き込み可能な workspace として共有し、
-sandbox の `~/.coderabbit` からリンクします。認証情報・トークン更新をホストと共有するため、
-sandbox 内でのログインは不要です。`--no-config` では共有しません。
-ホストでログインする前に作成した sandbox や、この変更前の sandbox は、
-`sbx-agent claude --new`（利用中の agent / オプションに合わせる）で作り直してください。
-共有先に既存のディレクトリがある場合は上書きせず警告します。
-sandbox 内の `coderabbit auth status` で認証を確認できます。
-CLI の導入前からある template は `mise run sandbox:build-template` で再ビルドしてください。
+`sandbox:coderabbit` は `fnox get CODERABBIT_API_KEY` をホストで解決する
+`sbx secret set-custom` を登録します。実キーは sandbox に渡さず、
+`CODERABBIT_API_KEY` には `cr-...` 形式のプレースホルダーだけを注入します。
+`*.coderabbit.ai` 宛ての HTTP ヘッダー内でのみプロキシが実キーに置換します。
+この登録は全 sandbox 共通です。キーを変更した場合も resolver が新しい値を取得します。
+
+共通 review hook はこの変数を `coderabbit review --committed --api-key` に明示的に渡します。
+CLI 自体に API-key 環境変数の自動読み込みはありません。
+`auth login` や認証ファイルの永続化は不要です。sandbox 内での確認は次のとおりです。
+
+```bash
+coderabbit review --committed --api-key "$CODERABBIT_API_KEY"
+```
+
+既存 sandbox のマウント・環境変数は自動で置き換わらないため、上記のように作り直してください。
+template に CLI がなければ `mise run sandbox:build-template` で再ビルドします。
+旧 devcontainer バックエンドでも `~/.coderabbit` の共有は廃止しています。
+そちらは使用する secret 注入機構で `CODERABBIT_API_KEY` を渡してください。
+API key を渡さないホスト上では、既存の CLI ログインを引き続き利用できます。
+
+参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)、
+[Docker custom secrets](https://docs.docker.com/ai/sandboxes/configuration/credentials#custom-secrets)。

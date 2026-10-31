@@ -243,29 +243,6 @@ setup_nvim() {
     fi
 }
 
-# CodeRabbit は sandbox の $HOME を参照するため、ホストと同じ絶対パスの
-# マウントへリンクする。ディレクトリ全体を共有してトークンの更新も反映する。
-setup_coderabbit() {
-    local host_dir="${SBX_HOST_CODERABBIT_DIR:-}"
-    local target="${HOME}/.coderabbit"
-
-    [ -n "$host_dir" ] && [ -d "$host_dir" ] || return 0
-    [ "$target" != "$host_dir" ] || return 0
-    if [ -L "$target" ] && [ "$(readlink "$target")" = "$host_dir" ]; then
-        return 0
-    fi
-    if [ -e "$target" ] || [ -L "$target" ]; then
-        log_warn "既存の ${target} があるため CodeRabbit 認証の symlink を張りませんでした"
-        return 1
-    fi
-    if ln -s "$host_dir" "$target"; then
-        log_ok "CodeRabbit 認証をホストと共有しました"
-    else
-        log_warn "CodeRabbit 認証の symlink に失敗しました"
-        return 1
-    fi
-}
-
 # ---------------------------------------------------------------------------
 # agent-lessons
 # ---------------------------------------------------------------------------
@@ -364,7 +341,6 @@ if [ "${1:-}" = --agent-lessons-index ]; then
     exit $?
 fi
 
-setup_coderabbit
 setup_nvim
 setup_agent_lessons
 setup_no_proxy

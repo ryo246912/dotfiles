@@ -404,8 +404,6 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
     add_mount "${HOME}/.claude.json:ro"
-    # 認証・トークン更新をホストと共有する。未ログインならマウントしない。
-    [[ -d "${HOME}/.coderabbit" ]] && add_mount "${HOME}/.coderabbit"
     # nvim 設定は read-only。書き込み可にすると agent がホストの init.lua を書き換えられてしまう。
     # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
@@ -577,7 +575,6 @@ fi
 # nvim / .claude.json はホスト設定のマウント（--no-config で止まる側）に属するため、
 # ホスト連携の有無ではなく MOUNT_CONFIG で判定する。
 if [[ "$MOUNT_CONFIG" == true ]]; then
-    [[ -d "${HOME}/.coderabbit" ]] && add_env SBX_HOST_CODERABBIT_DIR "${HOME}/.coderabbit"
     [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
     [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
     [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_env SBX_HOST_AGENT_LESSONS "${HOME}/.local/share/agent-lessons"
