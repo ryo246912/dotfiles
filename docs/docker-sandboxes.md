@@ -553,14 +553,15 @@ CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude setup-token
 
 表示された token を対応するファイルへ保存します。アカウントごとに次のコマンドを使います。
 token 自体をコマンドに貼らないため、履歴・プロセス引数には残りません。
-ホストの bash で実行し、それぞれ対応する `setup-token` の結果を入力してください。
+ホストの bash または zsh で実行し、それぞれ対応する `setup-token` の結果を入力してください。
 
 **account1**
 
 ```bash
 (umask 077
  mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- read -r -s -p 'account1 setup-token: ' subscription_token
+ printf '%s' 'account1 setup-token: ' >&2
+ read -r -s subscription_token
  printf '\n'
  printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account1.token"
  unset subscription_token
@@ -573,7 +574,8 @@ chmod 600 "$HOME/.local/state/sbx-agent-credentials/account1.token"
 ```bash
 (umask 077
  mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- read -r -s -p 'account2 setup-token: ' subscription_token
+ printf '%s' 'account2 setup-token: ' >&2
+ read -r -s subscription_token
  printf '\n'
  printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account2.token"
  unset subscription_token
@@ -586,7 +588,8 @@ chmod 600 "$HOME/.local/state/sbx-agent-credentials/account2.token"
 ```bash
 (umask 077
  mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- read -r -s -p 'work3 setup-token: ' subscription_token
+ printf '%s' 'work3 setup-token: ' >&2
+ read -r -s subscription_token
  printf '\n'
  printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/work3.token"
  unset subscription_token
