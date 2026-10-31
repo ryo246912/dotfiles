@@ -236,7 +236,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.48.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+#   "github:docker/sbx-releases" = { version = "0.50.1", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
 mise install
 sbx version
 ```
@@ -1064,7 +1064,7 @@ sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
 
 ### 初期化の流れ
 
-sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-agent` が sandbox 作成直後に
+従来の `sbx create` 経路では、`sbx-agent` が sandbox 作成直後に
 `sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
@@ -1415,7 +1415,7 @@ tmux からは `prefix + C-d` のツール選択（`config/tmux/tmux.conf`）に
 
 ## まだ使っていない sbx の機能
 
-必要になったら使えるもののうち、現時点で `sbx-agent` に組み込んでいないもの。
+既存の CLI 引数方式に加えて、環境ファイル方式も選択できます。
 
 ### `sbxenv.yaml`（宣言的な環境定義）
 
@@ -1445,17 +1445,69 @@ sandboxOptions:
   skills: readonly
 ```
 
-採用していない理由は、**`sbx env` が experimental で、かつ lifecycle コマンドや
-credential command を含む plan は毎回承認が必要**なため、ccmanager から非対話で起動する
-経路と相性が悪いことです（`--auto-approve` / `env.rememberHostCommands` で緩められますが、
-CLI 引数の方が挙動が読めます）。安定したら移行候補です。
+`sbx-agent` の既定は従来の `sbx create` 方式のままです。`--env-file` を指定すると、
+共通定義を読み、worktree・agent・template・追加 mount・環境変数・ports・リソース制限を
+JSON（YAML として有効）の runtime overlay にして `sbx env create` に渡します。
+これにより ccmanager の既存 preset や `--config-dir` をそのまま利用できます。
+agent の引数は従来どおり末尾の `--` から渡します。
+
+```bash
+# 最新設定を配置後、ホストの sbx を更新する（この方式は 0.50.1 以上）。
+mise install github:docker/sbx-releases
+sbx version
+
+# fnox に CODERABBIT_API_KEY を登録してから、作成内容を確認する。
+# 別名を使えば従来方式の sandbox と並行して比較できる。
+sbx-agent claude --name my-project-claude-env \
+  --env-file ~/.config/sbx/sbxenv.yaml --env-plan
+
+# 初回は plan を確認して承認する。codex / copilot も agent 名を替えるだけ。
+sbx-agent claude --name my-project-claude-env \
+  --env-file ~/.config/sbx/sbxenv.yaml
+```
+
+正本は `config/sbx/sbxenv.yaml` と `config/sbx/kits/coderabbit/spec.yaml` です。
+環境ファイルには fnox の取得元と credential binding を置き、kit には CLI の導入・認証の
+受け取り方・network policy を置いています。既存 template に CLI があれば再導入しません。
+この組み合わせでは `mise run sandbox:coderabbit` による custom secret 登録は不要です。
+`sbx env plan` は source の宣言を表示し、secret の取得・登録や sandbox の作成を行いません。
+
+**認証方式の違い:** 従来の custom secret はプレースホルダーを HTTP ヘッダー内で
+実キーに置換します。新 kit は `proxyManaged: false` で、fnox から取得した実キーを
+sandbox 内の `CODERABBIT_API_KEY` に渡します。CLI の認証ヘッダーや token 交換を
+推測して書き換えず、CLI の `--api-key` に任せるためです。agent はこのキーを読めます。
+新方式は sandbox ごとの service secret を利用し、`--new` / `--rm` では
+`sbx env rm` を経由して scoped secret も片付けます。
+
+runtime overlay は `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/environments/<name>/runtime.yaml`
+に保存します。環境ファイルと overlay が primary workspace や書き込み可能な追加 mount の
+内側にある場合は起動を拒否します。fnox の実行ファイル・設定・provider の依存先も
+sandbox の書き込み可能な共有領域の外に置いてください。
+
+既存 sandbox へのアタッチは従来どおり `sbx run` を使い、ポート復旧・設定の分離・
+初期化を毎回実行します。YAML / kit / mount / secret の作成設定を変えたら、同じ
+`--env-file` と `--name` を付けて `--new` で作り直してください。
+static MCP は既存の登録済みサーバを作成後に読み込みます。
+`--env-plan` は `--new` を併記しても削除しません。
+
+credential command を含む plan は既定で毎回承認が必要です。
+`sbx settings set env.rememberHostCommands true` で承認を記憶できます。
+ccmanager などの無人起動で今回の plan を承認する場合のみ `--env-force` を付けます
+（`sbx env create --force` に対応）。自動でこの設定を有効にはしません。
+`sbx env` は引き続き experimental です。
+
+0.50.1 は起動不具合の修正、0.50.0 は kit の host mount、永続 volume の保持、
+host command / credential の保護を含みます。詳細は
+[0.50.0](https://github.com/docker/sbx-releases/releases/tag/v0.50.0) と
+[0.50.1](https://github.com/docker/sbx-releases/releases/tag/v0.50.1) を参照してください。
 
 ### kits（v3）
 
 OCI パッケージで「workload（ベース環境とコマンド）＋ mixin（ツール・設定・認証・network 許可・
 エージェント向け指示）」を合成する仕組み。devcontainer の Dockerfile + features に相当します。
-このリポジトリはカスタム template で済ませていますが、kit なら network 許可や
-エージェント向け指示までパッケージに含められ、チームへ配布しやすくなります。
+今回の CodeRabbit kit は、既存の組み込み agent / カスタム template と合成するため v2 を使用します。
+v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在できません。
+既存ツールチェーン全体の v3 workload 化はこの追加から分離しています。
 `sbx kit validate` でチェックし、kit set として publish できます。
 
 コミット署名を自動設定する

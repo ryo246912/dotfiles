@@ -1,0 +1,12 @@
+schemaVersion: "1"
+# agent / workspace / template / mounts / env / ports are supplied by sbx-agent's runtime overlay.
+agent: claude
+kits:
+  - ./kits/coderabbit
+secrets:
+  coderabbit:
+    command: fnox get CODERABBIT_API_KEY
+bindings:
+  coderabbit:
+    apiKey:
+      domains: []

@@ -20,6 +20,9 @@
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
 #   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
 #   --no-template      template を指定せず sbx の既定 template で起動する
+#   --env-file FILE    sbxenv.yaml + kit 方式で作成する（未指定なら従来方式）
+#   --env-plan         環境ファイル方式の plan だけ表示する（作成・削除しない）
+#   --env-force        環境ファイルの plan を今回だけ非対話で承認する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
@@ -88,6 +91,9 @@ FORCE_NEW=false
 REMOVE_ON_EXIT=false
 MOUNT_CONFIG=true
 HOST_BRIDGE=true
+ENV_FILE=""
+ENV_PLAN=false
+ENV_FORCE=false
 EXTRA_MOUNTS=()
 PUBLISH_PORTS=()
 STATIC_MCP=()
@@ -192,6 +198,13 @@ while [[ $# -gt 0 ]]; do
             ;;
         --template=*) TEMPLATE="${1#*=}" ;;
         --no-template) NO_TEMPLATE=true ;;
+        --env-file)
+            shift && require_value --env-file $#
+            ENV_FILE="$1"
+            ;;
+        --env-file=*) ENV_FILE="${1#*=}" ;;
+        --env-plan) ENV_PLAN=true ;;
+        --env-force) ENV_FORCE=true ;;
         --mount)
             shift && require_value --mount $#
             EXTRA_MOUNTS+=("$1")
@@ -808,11 +821,98 @@ run_post_create() {
     fi
 }
 
+# 環境ファイル方式でも既存の worktree / 設定 / port の組み立てを再利用する。
+# JSON は YAML のサブセットなので、jq で安全に値を符号化した overlay を sbx に渡す。
+prepare_env_files() {
+    command -v jq >/dev/null 2>&1 || {
+        log_error "--env-file には jq が必要です"
+        exit 127
+    }
+    local version major minor patch state_dir spec path item key value hops=0
+    version=$(sbx version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
+    IFS=. read -r major minor patch <<<"$version"
+    if [[ -z "$version" ]] || ((major == 0 && (minor < 50 || (minor == 50 && patch < 1)))); then
+        log_error "環境ファイル方式には sbx 0.50.1 以上が必要です"
+        exit 1
+    fi
+    ENV_FILE=$(expand_tilde "$ENV_FILE")
+    [[ -f "$ENV_FILE" ]] || {
+        log_error "環境ファイルがありません: $ENV_FILE"
+        exit 1
+    }
+    while [[ -L "$ENV_FILE" ]]; do
+        hops=$((hops + 1))
+        ((hops <= 40)) || {
+            log_error "環境ファイルの symlink が深すぎます"
+            exit 1
+        }
+        ENV_FILE=$(resolve_symlink "$ENV_FILE") || exit 1
+    done
+    ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd -P)/$(basename "$ENV_FILE")"
+    state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent/environments/$SANDBOX_NAME"
+    mkdir -p "$state_dir" || exit 1
+    state_dir=$(cd "$state_dir" && pwd -P)
+    # resolver を含むファイルと overlay を sandbox から書き換えられる場所に置かない。
+    for spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        [[ "$spec" == *:ro ]] && continue
+        path="$spec"
+        if [[ -d "$path" ]]; then path=$(cd "$path" && pwd -P); fi
+        path="${path%/}"
+        for item in "$ENV_FILE" "$state_dir"; do
+            if [[ "$item" == "$path" || "$item" == "$path/"* ]]; then
+                log_error "環境ファイルと state は書き込み可能な mount の外に置いてください: $item"
+                exit 1
+            fi
+        done
+    done
+    ENV_OVERLAY="$state_dir/runtime.yaml"
+    local env_json='{}' mounts_json='[]' ports_json='[]' options_json
+    local i=0
+    while [[ $i -lt ${#ENV_ARGS[@]} ]]; do
+        item="${ENV_ARGS[i + 1]}"
+        key="${item%%=*}"
+        value="${item#*=}"
+        env_json=$(jq -cn --argjson e "$env_json" --arg k "$key" --arg v "$value" '$e + {($k):$v}') || exit 1
+        i=$((i + 2))
+    done
+    for spec in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        path="${spec%:ro}"
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
+    done
+    if [[ "$HOST_BRIDGE" == true ]]; then
+        PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
+    fi
+    for spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do
+        ports_json=$(jq -cn --argjson p "$ports_json" --arg s "$spec" '$p + [($s | split(":") | if length == 1 then {sandbox:(.[0]|tonumber)} else {host:(.[0]|tonumber),sandbox:(.[1]|tonumber)} end)]') || exit 1
+    done
+    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s} + (if $t=="" then {} else {template:$t,pullPolicy:"missing"} end) + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
+    # 引数をそのまま shell へ連結しない。特に空白・改行・引用符を保持する。
+    (
+        umask 077
+        jq -n --arg a "$AGENT" --arg w "$WORKSPACE" --argjson e "$env_json" --argjson m "$mounts_json" --argjson p "$ports_json" --argjson o "$options_json" \
+            '{schemaVersion:"1",agent:$a,workspace:$w,env:$e,additionalWorkspaces:$m,ports:$p,sandboxOptions:$o}' >"$ENV_OVERLAY"
+    ) || exit 1
+    # static MCP は従来の load_static_mcp で作成後に適用する。
+}
+
+if [[ "$ENV_PLAN" == true || "$ENV_FORCE" == true ]] && [[ -z "$ENV_FILE" ]]; then
+    log_error "--env-plan / --env-force には --env-file が必要です"
+    exit 1
+fi
+if [[ -n "$ENV_FILE" ]]; then
+    prepare_env_files
+    if [[ "$ENV_PLAN" == true ]]; then
+        exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
+    fi
+fi
+
 # --new は「作り直す」なので、既存があれば先に消す（消さないと sbx create が名前の衝突で
 # 失敗し、結果として古い sandbox が再利用されてしまう）
 if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
     log_info "既存の sandbox を削除します: $SANDBOX_NAME"
-    if ! sbx rm --force "$SANDBOX_NAME"; then
+    remove_cmd=(sbx rm --force "$SANDBOX_NAME")
+    [[ -n "$ENV_FILE" ]] && remove_cmd=(sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY")
+    if ! "${remove_cmd[@]}"; then
         log_error "既存 sandbox の削除に失敗しました: $SANDBOX_NAME"
         exit 1
     fi
@@ -833,7 +933,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     [[ -n "$TEMPLATE" ]] && create_cmd+=(--template "$TEMPLATE" --pull missing)
     [[ -n "$CPUS" ]] && create_cmd+=(--cpus "$CPUS")
     [[ -n "$MEMORY" ]] && create_cmd+=(--memory "$MEMORY")
-    if [[ "$HOST_BRIDGE" == true ]]; then
+    if [[ "$HOST_BRIDGE" == true && -z "$ENV_FILE" ]]; then
         # host port は固定せず sbx に採番させる（sandbox を複数同時起動しても衝突しない）。
         # 実際に割り当てられた port は作成後に sbx ports で調べて sandbox 内へ渡す。
         PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
@@ -850,6 +950,11 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     [[ ${#MOUNTS[@]} -gt 0 ]] && log_info "  追加 workspace: ${MOUNTS[*]}"
     [[ ${#PUBLISH_PORTS[@]} -gt 0 ]] && log_info "  公開ポート: ${PUBLISH_PORTS[*]}"
 
+    if [[ -n "$ENV_FILE" ]]; then
+        create_cmd=(sbx env create --name "$SANDBOX_NAME")
+        [[ "$ENV_FORCE" == true ]] && create_cmd+=(--force)
+        create_cmd+=("$ENV_FILE" "$ENV_OVERLAY")
+    fi
     if ! "${create_cmd[@]}"; then
         log_error "sandbox の作成に失敗しました"
         if [[ -n "$TEMPLATE" ]]; then
@@ -863,6 +968,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         fi
         exit 1
     fi
+    [[ -n "$ENV_FILE" ]] && load_static_mcp
 
 else
     log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
@@ -878,7 +984,14 @@ run_post_create
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
 run_cmd=(sbx run --name "$SANDBOX_NAME")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
-[[ "$REMOVE_ON_EXIT" == true ]] && run_cmd+=(--rm)
+[[ "$REMOVE_ON_EXIT" == true && -z "$ENV_FILE" ]] && run_cmd+=(--rm)
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
 
+if [[ "$REMOVE_ON_EXIT" == true && -n "$ENV_FILE" ]]; then
+    # sbx env が作った scoped secret も含めて削除する。
+    rc=0
+    "${run_cmd[@]}" || rc=$?
+    sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY" || exit 1
+    exit "$rc"
+fi
 exec "${run_cmd[@]}"

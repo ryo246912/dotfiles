@@ -1,0 +1,39 @@
+schemaVersion: "2"
+kind: mixin
+name: coderabbit
+version: "0.9.0"
+description: CodeRabbit CLI with a sandbox-scoped API key and network policy
+# Use v2 to compose with the existing built-in agents and sbx-agent:<agent> templates.
+credentials:
+  - service: coderabbit
+    required: true
+    apiKey:
+      name: CODERABBIT_API_KEY
+      # CLI chooses its own auth headers. The real key is available inside this sandbox.
+      # The existing custom-secret backend remains available for header-only proxy isolation.
+      proxyManaged: false
+permissions:
+  network:
+    allow:
+      - api.coderabbit.ai
+      - app.coderabbit.ai
+      - ide.coderabbit.ai
+      - cli.coderabbit.ai
+setup:
+  install:
+    - command: |
+        set -eu
+        command -v coderabbit >/dev/null 2>&1 && exit 0
+        command -v curl >/dev/null
+        command -v unzip >/dev/null
+        case "$(uname -m)" in
+          x86_64) arch=x64 ;;
+          aarch64|arm64) arch=arm64 ;;
+          *) echo "Unsupported CodeRabbit architecture" >&2; exit 1 ;;
+        esac
+        tmp=$(mktemp -d)
+        trap 'rm -rf "$tmp"' EXIT
+        curl -fsSL "https://cli.coderabbit.ai/releases/0.9.0/coderabbit-linux-${arch}.zip" -o "$tmp/cli.zip"
+        unzip -q "$tmp/cli.zip" -d "$tmp"
+        install -m 0755 "$tmp/coderabbit" /usr/local/bin/coderabbit
+      user: "0"
