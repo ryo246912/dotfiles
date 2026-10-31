@@ -27,11 +27,13 @@ sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 
 | タスク                   | 用途                                                                                                                                              | 使うタイミング               |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
+| `sandbox:setup`          | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                              | 初回だけ                     |
+| `sandbox:claude-setup` | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成 | Claude 設定だけ再実行するとき |
+| `sandbox:claude-token` | 指定アカウントの setup-token を y/n 確認付きで生成・保存 | token 登録・更新のみ |
+| `sandbox:secret-rm` | 指定した sbx secret を削除（`--sandbox` で対象限定） | 不要な secret を削除するとき |
 | `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
 | `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
 | `sandbox:mcp-load`       | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき             |
-| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
 | `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
 | `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
 | `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
@@ -540,28 +542,51 @@ API キーの登録インターフェースを使いますが、登録するの�
 このリポジトリでは実 sbx による認証検証は未実施です。更新後の sbx での互換性や
 サブスクの全機能を保証するものではありません。まず専用の検証 sandbox で確認してください。
 
-#### 1. ホストで token を登録する
+#### 1. sandbox:setup でまとめて設定する
 
-ホストの対話端末で次を実行します（Python 3 と Claude CLI が必要です）。
+ホストの対話端末で実行します（Python 3、Claude CLI、yq が必要です）。
 
 ```bash
-# account1 → account2 → work3 の順に確認して登録
-sbx-claude-setup
+mise run sandbox:setup
 ```
 
-各アカウントの `claude setup-token` を実行する直前に y/n を確認します。
-`y` で実行、`n` または Enter でスキップします。ブラウザでのログイン・アカウント選択は手動です。
-成功時は出力から token を抽出し、対応ファイルへ権限 600 で自動保存します。
-既存ファイルは成功時だけ置き換え、失敗・中断・token を一意に抽出できない場合は保存しません。
-CLI の出力形式に依存するため、形式変更時は抽出に失敗する場合があります。
-CLI が表示する token は端末にも表示されますが、端末ログのファイルは作りません。
+既存の network policy・GitHub secret・skills・SSH 鍵の準備に続けて、以下を順に処理します。
 
-アカウントごとに実行する場合も、それぞれ y/n 確認が入ります。
+1. account1 → account2 → work3 の `claude setup-token` を実行し、token を保存する。
+   実行直前にアカウントごとに y/n を確認し、`n` または Enter はスキップする。
+   ブラウザでのログイン・アカウント選択は手動。
+2. 共通の anthropic secret がある場合、他の sandbox にも影響することを表示して削除の y/n を確認する。
+   残す場合は Claude の設定をそこで終了する。GitHub や sandbox 固有の secret は削除しない。
+3. `~/.config/sbx/credentials.yaml` に `anthropic` / `apiKey` / `api.anthropic.com` の binding を追加する。
+   既存の service・認証方式・domain を保持し、変更前に `.bak`（重複時は連番）へバックアップする。
+   この設定により、通常は ccmanager 起動時の kit 承認が不要になる。
+4. 対象 workspace とコマンドを表示し、account ごとに sandbox 作成/再作成の y/n を確認する。
+   **既存 sandbox がある場合は削除するため、sandbox 内だけの必要なデータを保存し、関連セッションを終了してから `y` を選ぶ。**
+   token 未登録の account はスキップする。Claude template がなければ、ビルドの y/n を確認する。
+5. `sbx-agent --setup-only --new` で作成・初期化と初回の組織 ID 取得まで行う。
+   Claude の TUI は開かず、次の account の確認へ進む。終了後は ccmanager の preset から起動する。
+
+sandbox の準備は表示された workspace だけが対象です。他の repository の sandbox は変更しません。
+Claude の設定だけ再実行する場合や、workspace を明示する場合は次を使います。
 
 ```bash
-sbx-claude-setup account1
-sbx-claude-setup account2
-sbx-claude-setup work3
+mise run sandbox:claude-setup
+mise run sandbox:claude-setup --workspace /path/to/project
+mise run sandbox:claude-setup account1 --workspace /path/to/project
+```
+
+#### 2. token 登録だけをやり直す
+
+token 更新だけなら sandbox の再作成は不要です。次のタスクで登録後、対象 Claude を終了して
+ccmanager の preset から再起動すると sandbox 固有 secret を上書きします。
+
+```bash
+# 全 account を順に確認
+mise run sandbox:claude-token
+# account ごとの更新
+mise run sandbox:claude-token account1
+mise run sandbox:claude-token account2
+mise run sandbox:claude-token work3
 ```
 
 | アカウント | 使用する設定 | 自動保存先 |
@@ -570,104 +595,35 @@ sbx-claude-setup work3
 | account2 | `~/.claude-account2` | `~/.local/state/sbx-agent-credentials/account2.token` |
 | work3 | `~/.claude-work3` | `~/.local/state/sbx-agent-credentials/work3.token` |
 
-コマンドがまだ PATH にない場合は dotfiles root で `python3 local/bin/sbx-claude-setup` を実行できます。
-token の生成と保存を自動化するコマンドで、共通 secret の削除や sandbox の作り直しは行いません。
+成功時だけ token を権限 600 で保存します。失敗・中断・出力から一意に抽出できない場合は
+既存ファイルを置き換えません。CLI の token 出力は端末にも表示されますが、ログファイルは作りません。
+保存先は dotfiles 管理・sandbox mount・バックアップ・同期対象に含めないでください。
+token はホスト上では平文ですが、sandbox 内には sentinel だけが渡ります。
 
-この保存先は dotfiles の管理対象にも
-通常の sandbox mount にも含めません。`sbx-agent` はファイルの所有者・権限・形式を検証し、
-stdin 経由で毎回 sandbox 固有 secret に登録します。token はホスト上では平文なので、
-バックアップ・同期対象からも外してください。sandbox には本物の token ではなく sentinel が渡ります。
-token の期限切れや失効時は `sbx-claude-setup <account>` を再実行し、preset から起動し直します。
+#### 3. secret の削除と運用上の注意
 
-#### 2. 共通認証と競合する設定を解消する
-
-```bash
-sbx version
-sbx secret ls
-```
-
-`(global) anthropic` があればラッパーは停止します。他の sandbox への影響を確認し、
-必要なアカウントの token を上で準備してから、**手動で**共通 secret を解除します。
+共通認証の解消と binding の追加は `sandbox:setup` に含まれます。手動で secret だけを
+削除する場合は次のタスクを使います。`--force` を付けない場合は sbx の確認に従います。
 
 ```bash
-sbx secret rm anthropic --force
+# 共通 anthropic 認証のみ削除（他の sandbox にも影響）
+mise run sandbox:secret-rm anthropic
+# 検証用 sandbox の認証だけ削除
+mise run sandbox:secret-rm anthropic --sandbox subscription-account1-check
+mise run sandbox:secret-rm anthropic --sandbox subscription-account2-check
+mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
 ```
 
-ラッパーが自動で共通認証を削除することはありません。この方式の sandbox では
-`/login` を使わないでください。共通認証が再作成されると、この方式で次回起動できなくなります。
-すでに稼働している sandbox の通信はラッパーでは監視できないため、認証設定を変える際は
-関連セッションを終了してからやり直してください。
+この方式の sandbox 内で `/login` は使わないでください。共通認証が再作成されると、
+次回起動時にラッパーが停止します。`sbx login` の Docker 認証切れや OS キーチェーンのロックは
+ホストで解消してください。service・認証方式・domain を追加した場合は対応する binding の再設定が必要です。
 
-専用 kit は、親 image が生成した `/home/agent/.claude/settings.json` の `apiKeyHelper`
-を削除します。ホストの共有設定は編集しません。`--config-dir` の `settings.json` に
-`apiKeyHelper` や認証を上書きする env があればラッパーが停止します。
-プロジェクトの `.claude/settings*.json` や追加の CLI 引数にも認証の上書きを置かないでください。
+専用 kit は親 image の `/home/agent/.claude/settings.json` の `apiKeyHelper` を削除し、
+ホストの共有設定は編集しません。`--config-dir` の `settings.json` に認証を上書きする env や
+`apiKeyHelper` があると停止します。プロジェクト設定や CLI 引数でも認証を上書きしないでください。
+`--no-config` は併用できず、token 保存先を含むディレクトリを workspace / mount に指定すると停止します。
 
-#### 3. kit の認証利用を許可して起動する
-
-カスタム kit は組み込み agent と異なり、credential binding の承認が必要です。
-**初回だけホストの対話端末で承認すれば、以降の ccmanager 起動では同じ承認を毎回求めません。**
-`anthropic` / `api.anthropic.com` の承認はホストの `~/.config/sbx/credentials.yaml` に保存され、
-同じ service・認証方式・domain を使う別アカウントや新しい sandbox でも使えます。
-アカウントごとの token と sandbox の対応は別に管理するので、この承認によって token が共通化されることはありません。
-
-初回は下の検証コマンドをホストの対話端末で実行し、利用を承認してください。
-ccmanager から先に起動すると、未承認でも sbx が作成を続け、認証だけ withheld にする場合があります。
-その場合は対話端末で承認してから sandbox を作り直すか、次の binding をホストに事前設定します。
-既存の `bindings` と `anthropic` の内容を保ってマージしてください（token は書きません）。
-
-```yaml
-bindings:
-  anthropic:
-    apiKey:
-      domains: [api.anthropic.com]
-```
-
-```bash
-# 最初は旧 sandbox と異なる名前で検証する（各 Claude を終了してから次を実行）
-sbx-agent claude --claude-account account1 \
-  --config-dir "$HOME/.claude" --name subscription-account1-check
-sbx-agent claude --claude-account account2 \
-  --config-dir "$HOME/.claude-account2" --name subscription-account2-check
-sbx-agent claude --claude-account work3 \
-  --config-dir "$HOME/.claude-work3" --name subscription-work3-check
-```
-
-`--claude-account` 指定時は組み込み `claude` の代わりに kit のパスを `sbx create` に渡します。
-ツール入り template・workspace・設定 mount・初期化処理は従来どおり併用します。
-`--no-config` は併用できません。token の保存先を含むディレクトリを workspace / mount に
-指定すると、本物の token が sandbox に見えるため起動を止めます。
-
-ccmanager の既存 a1 / a2 / w3 sandbox は組み込み Claude agent なので、そのままは再利用しません。
-初回の旧 sandbox は「kit/account を確認できない」として停止します。
-必要な sandbox 内のデータを保存し、同じ preset と同じ workspace で使うコマンドに
-`--new` を付けて作り直してください。`--new` は旧 sandbox を削除します。
-以降は ccmanager の preset を選ぶだけです。削除・再作成で scoped secret が失われても
-ラッパーが起動時に再登録します。
-
-```bash
-# 対象 workspace で実行。各コマンドは対応する旧 sandbox を削除する
-sbx-agent claude --claude-account account1 \
-  --config-dir "$HOME/.claude" --name-prefix a1 --new
-sbx-agent claude --claude-account account2 \
-  --config-dir "$HOME/.claude-account2" --name-prefix a2 --new
-sbx-agent claude --claude-account work3 \
-  --config-dir "$HOME/.claude-work3" --name-prefix w3 --new
-```
-
-承認後は ccmanager の preset から起動できます。ラッパーによる token 再登録は stdin 経由なので、
-通常の token 入力は不要です。`sbx env` の plan / host lifecycle 承認は使用していません。
-ここでいう非対話は「起動時の認証・承認操作が不要」という意味で、Claude の TUI 自体は通常どおり対話で使います。
-
-以下の場合はホスト側での対応が再び必要です。
-
-- kit の service・認証方式・domain を増やした、または binding を削除した場合: 再承認
-- token の期限切れ・失効: ホストで再生成して対応ファイルを更新
-- `sbx login` の Docker ログイン切れ、OS キーチェーンのロック: ホストで再認証・解除
-- 旧 kit の sandbox からの移行: 必要なデータを保存して再作成
-
-実 sbx での起動検証は未実施のため、初回セットアップ時に一度終了して ccmanager から再起動し、
-認証入力なしで使えることを確認してください。
+初回セットアップ後は、一度 ccmanager から起動して認証入力なしで会話できることを確認してください。
 
 #### 4. 実際の認証先と statusline の表示を確認する
 
@@ -715,7 +671,7 @@ sbx-claude-auth-check dotfiles-a1-main-claude --refresh
 認証設定はラッパー経由で更新してください。メールアドレスとの対応を手元で控えれば識別に使えますが、
 同じ組織に所属するメールアドレス同士は区別できません。
 
-個人の認証先を確実に合わせるには、`sbx-claude-setup <account>` のブラウザ認証で
+個人の認証先を確実に合わせるには、`mise run sandbox:claude-token <account>` のブラウザ認証で
 目的のアカウントを選び、その token を保存して再起動します。併せてアカウント側の利用記録を照合します。
 `sbx secret ls` は保存先の確認であって、token が属する個人の確認ではありません。
 

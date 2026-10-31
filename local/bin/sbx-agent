@@ -29,6 +29,7 @@
 #   --cpus N           CPU 数
 #   --memory SIZE      メモリ上限（例: 8g）
 #   --rm               agent セッション終了時に sandbox を削除する
+#   --setup-only       sandbox の作成・初期化だけ行い、Claude の TUI は起動しない
 #   --new              既存 sandbox を削除してから新規作成する
 #   --no-config        ホスト設定の自動マウント・自動 git 設定を行わない
 #   --no-host-bridge   ホスト連携（mac-host への SSH 経路・crit ポート公開）を設定しない
@@ -86,6 +87,7 @@ NO_TEMPLATE=false
 SKILLS="readonly"
 CPUS=""
 MEMORY=""
+SETUP_ONLY=false
 FORCE_NEW=false
 REMOVE_ON_EXIT=false
 MOUNT_CONFIG=true
@@ -231,6 +233,7 @@ while [[ $# -gt 0 ]]; do
         --memory=*) MEMORY="${1#*=}" ;;
         --rm) REMOVE_ON_EXIT=true ;;
         --new) FORCE_NEW=true ;;
+        --setup-only) SETUP_ONLY=true ;;
         --no-config) MOUNT_CONFIG=false ;;
         --no-host-bridge) HOST_BRIDGE=false ;;
         -h | --help)
@@ -1005,6 +1008,11 @@ except (OSError, ValueError):
     pass
 PYORG
     )
+fi
+
+if [[ "$SETUP_ONLY" == true ]]; then
+    log_info "sandbox の準備が完了しました: $SANDBOX_NAME"
+    exit 0
 fi
 
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）

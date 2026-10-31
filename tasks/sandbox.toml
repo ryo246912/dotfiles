@@ -216,7 +216,7 @@ bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; e
 
 echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
 if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-  sbx secret set github --command 'gh auth token' || echo "warn: secret の登録に失敗しました" >&2
+  sbx secret set github --command 'gh auth token' --force || echo "warn: secret の登録に失敗しました" >&2
 else
   echo "warn: gh が未ログインのためスキップしました（gh auth login 後に再実行）" >&2
 fi
@@ -256,6 +256,9 @@ echo "==> ホストの agent skills を共有 store へ取り込む"
 #   sbx skills import              # skill ごとに確認する
 #   sbx skills import --dry-run    # 何が入れ替わるか見るだけ
 sbx skills import --force || echo "warn: skills の取り込みに失敗しました" >&2
+
+echo "==> Claude account / binding / workspace sandbox を準備"
+python3 "$MISE_PROJECT_ROOT/local/bin/sbx-claude-configure" --workspace "${MISE_ORIGINAL_CWD:-$PWD}"
 
 echo "==> 現在の設定"
 sbx secret ls || true
@@ -485,10 +488,6 @@ main() {
 main "$@"
 '''
 
-["sandbox:template-ls"]
-description = "List saved Docker Sandboxes templates"
-run         = "sbx template ls"
-
 ["sandbox:template-rm"]
 description = "Remove a saved Docker Sandboxes template"
 run = '''
@@ -675,5 +674,36 @@ main() {
   [ "$failed" -eq 0 ] || { echo "error: 一部の削除に失敗しました（上の warn を確認してください）" >&2; exit 1; }
 }
 
+main "$@"
+'''
+
+["sandbox:claude-setup"]
+description = "Configure Claude tokens, credential binding and confirmed workspace sandbox recreation"
+run = '''
+set -eu
+main() {
+  python3 "$MISE_PROJECT_ROOT/local/bin/sbx-claude-configure" "$@"
+}
+main "$@"
+'''
+
+["sandbox:claude-token"]
+description = "Generate and save Claude setup-tokens with per-account y/n confirmation"
+run = '''
+set -eu
+main() {
+  python3 "$MISE_PROJECT_ROOT/local/bin/sbx-claude-setup" "$@"
+}
+main "$@"
+'''
+
+["sandbox:secret-rm"]
+description = "Remove a named sbx secret (global by default; --sandbox scopes removal)"
+run = '''
+set -eu
+main() {
+  [ $# -gt 0 ] || { echo "usage: mise run sandbox:secret-rm <service> [--sandbox NAME] [--force]" >&2; exit 2; }
+  sbx secret rm "$@"
+}
 main "$@"
 '''

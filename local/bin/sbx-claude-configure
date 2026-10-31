@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Configure Claude subscription tokens, kit binding, and selected workspace sandboxes."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ACCOUNTS = {"account1": (".claude", "a1"), "account2": (".claude-account2", "a2"), "work3": (".claude-work3", "w3")}
+
+
+def confirm(message):
+    while True:
+        answer = input(message + " [y/n] ").strip().lower()
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("", "n", "no"):
+            return False
+
+
+def binding():
+    path = Path.home() / ".config/sbx/credentials.yaml"
+    # Preserve a pre-existing symlink, other services/mechanisms, and domains.
+    path = path.resolve()
+    if path.exists():
+        parsed = subprocess.run(["yq", "-o=json", ".", str(path)], capture_output=True, text=True, check=True)
+        data = json.loads(parsed.stdout)
+        if data is None:
+            data = {}
+    else:
+        data = {}
+    if not isinstance(data, dict):
+        sys.exit("credentials.yaml must contain a mapping")
+    original = json.dumps(data, sort_keys=True)
+    node = data
+    for key in ("bindings", "anthropic", "apiKey"):
+        node = node.setdefault(key, {})
+        if not isinstance(node, dict):
+            sys.exit("invalid credential binding mapping; existing file left unchanged")
+    domains = node.setdefault("domains", [])
+    if not isinstance(domains, list):
+        sys.exit("binding domains must be a list; existing file left unchanged")
+    if "api.anthropic.com" not in domains:
+        domains.append("api.anthropic.com")
+    if original == json.dumps(data, sort_keys=True):
+        print("==> Anthropic binding は設定済みです")
+        return
+    converted = subprocess.run(["yq", "-P", "-p=json", "."], input=json.dumps(data), capture_output=True, text=True, check=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        backup = Path(str(path) + ".bak")
+        count = 1
+        while backup.exists():
+            backup = Path(str(path) + f".bak.{count}")
+            count += 1
+        shutil.copy2(path, backup)
+        print("==> 既存 binding のバックアップ:", backup)
+    fd, temporary = tempfile.mkstemp(prefix=".credentials-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(converted.stdout)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    print("==> Anthropic binding を追加しました:", path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("accounts", nargs="*", help="account1 account2 work3 (default: all)")
+    parser.add_argument("--workspace", default=os.environ.get("MISE_ORIGINAL_CWD", os.getcwd()))
+    args = parser.parse_args()
+    accounts = list(dict.fromkeys(args.accounts or ACCOUNTS))
+    if any(account not in ACCOUNTS for account in accounts):
+        parser.error("unknown account")
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        parser.error("run sandbox:setup from an interactive host terminal")
+    for tool in ("sbx", "yq", "claude"):
+        if not shutil.which(tool):
+            parser.error(tool + " is required (mise install)")
+    workspace = Path(args.workspace).expanduser().resolve(strict=True)
+    if not workspace.is_dir():
+        parser.error("workspace must be a directory")
+    scripts = Path(__file__).resolve().parent
+    subprocess.run([sys.executable, str(scripts / "sbx-claude-setup"), *accounts], check=True)
+    # Remove only the conflicting global Anthropic secret, never GitHub/scoped ones.
+    secrets = subprocess.run(["sbx", "secret", "ls"], capture_output=True, text=True, check=True)
+    if any(line.split()[:3] == ["(global)", "service", "anthropic"] or
+           line.split()[:2] == ["(global)", "anthropic"] for line in secrets.stdout.splitlines()):
+        if not confirm("global anthropic 認証を削除しますか？ 他の sandbox にも影響します"):
+            print("共通認証を残して終了します。解除後に sandbox:claude-setup を再実行してください")
+            return
+        subprocess.run(["sbx", "secret", "rm", "anthropic", "--force"], check=True)
+    binding()
+    print("==> sandbox を準備する workspace:", workspace)
+    print("既存 sandbox を作り直す場合、sandbox 内だけのデータは失われます。必要なデータを保存し、関連セッションを終了してください。")
+    for account in accounts:
+        config, prefix = ACCOUNTS[account]
+        token = Path.home() / ".local/state/sbx-agent-credentials" / (account + ".token")
+        if not token.is_file() or not token.stat().st_size:
+            print(account + ": token 未登録のため sandbox 準備をスキップ")
+            continue
+        command = [str(scripts / "sbx-agent"), "claude", "--claude-account", account,
+                   "--config-dir", str(Path.home() / config), "--name-prefix", prefix,
+                   "--workspace", str(workspace), "--setup-only", "--new"]
+        print(shlex.join(command))
+        if confirm(account + ": この workspace の sandbox を作成/再作成しますか？（既存があれば削除）"):
+            if not os.environ.get("SBX_AGENT_TEMPLATE"):
+                templates = subprocess.run(["sbx", "template", "ls"], capture_output=True, text=True, check=True)
+                if "sbx-agent:claude" not in templates.stdout:
+                    if not confirm("Claude template がありません。sandbox:build-template claude でビルドしますか？"):
+                        print("template を用意してから sandbox:claude-setup を再実行してください")
+                        continue
+                    subprocess.run(["mise", "run", "sandbox:build-template", "claude"], cwd=scripts.parents[1], check=True)
+            subprocess.run(command, check=True)
+    print("==> 完了。準備した sandbox は ccmanager の preset から起動できます")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (EOFError, KeyboardInterrupt):
+        sys.exit("\n中止しました")
+    except subprocess.CalledProcessError:
+        sys.exit("設定コマンドが失敗したため停止しました。表示されたエラーを解消して再実行してください")
