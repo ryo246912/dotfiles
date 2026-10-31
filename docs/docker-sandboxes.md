@@ -1467,8 +1467,11 @@ sbx-agent claude --name my-project-claude-env \
 ```
 
 正本は `config/sbx/sbxenv.yaml` と `config/sbx/kits/coderabbit/spec.yaml` です。
-環境ファイルには fnox の取得元と credential binding を置き、kit には CLI の導入・認証の
-受け取り方・network policy を置いています。既存 template に CLI があれば再導入しません。
+環境ファイルには GitHub（`gh auth token`）・CodeRabbit（fnox）の取得元と credential binding を置き、
+common kit に共通環境変数と許可ドメイン、CodeRabbit kit に認証の受け取り方と通信先を置いています。
+CLI の導入は既存の `Dockerfile.sandbox` → `mise install` → `config/devcontainer/mise.toml` に
+一本化し、kit ではダウンロードも再インストールもしません。template を使わない場合は
+必要な CLI を利用者側で用意する必要があります。
 この組み合わせでは `mise run sandbox:coderabbit` による custom secret 登録は不要です。
 `sbx env plan` は source の宣言を表示し、secret の取得・登録や sandbox の作成を行いません。
 
@@ -1495,6 +1498,26 @@ credential command を含む plan は既定で毎回承認が必要です。
 ccmanager などの無人起動で今回の plan を承認する場合のみ `--env-force` を付けます
 （`sbx env create --force` に対応）。自動でこの設定を有効にはしません。
 `sbx env` は引き続き experimental です。
+
+ccmanager では、既存の `(Docker Sandbox)` preset に加えて、
+`(Sandbox env + kit)` の5件（Claude account1 / account2 / Work3、Codex、Copilot）を選べます。
+新 preset は `--env-file` を付け、sandbox 名の prefix に `env` を入れて既存方式との衝突を避けます。
+Claude の設定ディレクトリ、Codex / Copilot の再開・fallback 引数、初期プロンプトの転送は維持します。
+plan の自動承認は preset に入れていません。初回起動で承認するか、前述の
+`env.rememberHostCommands` を設定してから各 preset と同じ引数で一度手動起動してください。
+
+| 設定 | 新方式での正本・処理 |
+| --- | --- |
+| 共通の `AI_AGENT` / lefthook 環境変数、許可ドメイン、host bridge の SSH 通信先 | `kits/common/spec.yaml`。従来の `allow-domains.txt` との一致をテスト |
+| CodeRabbit の認証・通信先 | `kits/coderabbit/spec.yaml` |
+| GitHub / CodeRabbit の secret 取得元 | `sbxenv.yaml`。新方式では GitHub secret を global に重複登録しない |
+| agent・template・worktree・アカウント別 mount・Git 設定・port | `sbx-agent` が runtime overlay に反映 |
+| CLI とツールチェーンのバージョン・インストール | Dockerfile と mise。kit に別の導入経路を作らない |
+| ホストの clipboard 設定・skills import・SSH 鍵の準備 | 引き続きホストの `sandbox:setup`。sandbox 内の kit 設定には移さない |
+| 環境別の許可ドメインや追加 MCP の登録 | 既存の `sandbox:setup` / MCP タスク。必要な設定のみ利用者の kit / 環境ファイルに追加可能 |
+
+Claude / Codex のモデル用 OAuth は引き続き組み込み agent kit の認証方式を使います。
+取得元が設定されていないモデル用 API key を、環境ファイルに必須 secret として追加はしていません。
 
 0.50.1 は起動不具合の修正、0.50.0 は kit の host mount、永続 volume の保持、
 host command / credential の保護を含みます。詳細は

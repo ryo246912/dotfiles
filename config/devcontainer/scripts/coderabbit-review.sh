@@ -8,6 +8,8 @@ set -uo pipefail
 
 # PreToolUse の matcher は tool 名に対するものなので、コマンドは stdin で判定する。
 # 単独のコマンドと「cd repo && git push」などを対象にする。
+# Codex も tool_input を渡す（exec_command は cmd、shell_command は command）。
+# Copilot の toolArgs はオブジェクトと JSON 文字列の両方を受け付ける。
 cmd=$(jq -er '
     (.tool_input // .toolArgs // empty)
     | if type == "string" then fromjson else . end

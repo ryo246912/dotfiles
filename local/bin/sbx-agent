@@ -743,6 +743,9 @@ sandbox_exists() {
 ensure_host_prerequisites() {
     [[ "$HOST_BRIDGE" != true ]] && return 0
 
+    # 新方式は secrets.github と common kit が管理するため、global な登録は行わない。
+    [[ -n "$ENV_FILE" ]] && return 0
+
     # GitHub トークン: プロキシが注入するため agent は生トークンを読めない。
     # 登録済みでも毎回登録し直す。`gh auth refresh` などでホストのトークンが入れ替わると、
     # sbx に保存された古い値のままでは sandbox 内の gh が "token expired or invalid" になる。

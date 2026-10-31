@@ -44,10 +44,12 @@ elif args[:1] == ['run']:
                     'PATH': str(bin_dir)+':'+os.environ['PATH'],
                     'TEST_ROOT': str(self.root)}
 
-    def run_agent(self, *args, env_backend=True):
+    def run_agent(self, *args, env_backend=True, host_bridge=False):
         cmd = ['bash', str(ROOT/'local/bin/sbx-agent'), 'claude',
                '--name', 'test', '--workspace', str(self.workspace),
-               '--no-config', '--no-host-bridge']
+               '--no-config']
+        if not host_bridge:
+            cmd += ['--no-host-bridge']
         if env_backend:
             cmd += ['--env-file', str(self.base)]
         return subprocess.run(cmd+list(args), env=self.env,
@@ -92,6 +94,13 @@ elif args[:1] == ['run']:
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(any(c[:2] == ['env', 'create'] for c in self.calls()))
         self.assertTrue(any(c[0] == 'exec' for c in self.calls()))
+
+    def test_env_backend_uses_declarative_secrets_and_network(self):
+        r = self.run_agent(host_bridge=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(any(c[0] in ('secret', 'policy') for c in self.calls()))
+        overlay = json.loads((self.root/'overlay.json').read_text())
+        self.assertEqual(len(overlay['ports']), 2)
 
     def test_new_and_rm_use_environment_cleanup(self):
         self.env.update(TEST_EXISTS='1', TEST_RUN_RC='7')
