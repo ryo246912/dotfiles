@@ -746,7 +746,7 @@ mise --cd "$HOME" run apm:install
 
 #### 導入構成
 
-- Plannotator CLIはdevcontainer imageのmise toolとしてインストールします。
+- Plannotator CLIはhostとdevcontainer / sbxの両方でmise toolとしてインストールします。
 - `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
   APMでuser scopeへ配布します。
 - APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
