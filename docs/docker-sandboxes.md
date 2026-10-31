@@ -26,19 +26,19 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、このファイルの各タスク内に定義しています。
 
-| タスク                   | 用途                                                                                                                                              | 使うタイミング               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `sandbox:setup`          | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                              | 初回だけ                     |
-| `sandbox:claude-setup` | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成 | Claude 設定だけ再実行するとき |
-| `sandbox:claude-token` | 指定アカウントの setup-token を y/n 確認付きで生成・保存 | token 登録・更新のみ |
-| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得） | 認証先を確認するとき |
-| `sandbox:secret-rm` | 指定した sbx secret を削除（`--sandbox` で対象限定） | 不要な secret を削除するとき |
-| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
-| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
-| `sandbox:mcp-load`       | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき             |
-| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
-| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
-| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
+| タスク                      | 用途                                                                                                                                              | 使うタイミング                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
+| `sandbox:claude-setup`      | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                | Claude 設定だけ再実行するとき |
+| `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
+| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得）                                                              | 認証先を確認するとき          |
+| `sandbox:secret-rm`         | 指定した sbx secret を削除（`--sandbox` で対象限定）                                                                                              | 不要な secret を削除するとき  |
+| `sandbox:build-template`    | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき  |
+| `sandbox:mcp-add`           | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき        |
+| `sandbox:mcp-load`          | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき              |
+| `sandbox:template-rm`       | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                          |
+| `sandbox:disk`              | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき          |
+| `sandbox:prune`             | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき            |
 
 ## devcontainer に対する利点
 
@@ -502,13 +502,13 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 （env は作成時に固定されるため、`--name-prefix` で branch 名の前に account の識別子
 （`a1` / `a2` / `w3`）を入れて名前を分けています）。
 
-| preset id      | 起動内容                                                            |
-| -------------- | ------------------------------------------------------------------- |
+| preset id      | 起動内容                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------- |
 | `sbx`          | `sbx-agent claude --claude-account account1 --name-prefix a1`（`~/.claude`）                  |
 | `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --claude-account account2 --name-prefix a2` |
-| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --claude-account work3 --name-prefix w3`    |
-| `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
-| `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
+| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --claude-account work3 --name-prefix w3`       |
+| `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                                            |
+| `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                                                        |
 
 実際の preset は上の表のコマンドを直接 `command` に書くのではなく、
 `command: "zsh"` + `args: ["-c", "exec sbx-agent … -- \"$@\"", "sbx-agent"]` の形にしています。
@@ -591,11 +591,11 @@ mise run sandbox:claude-token account2
 mise run sandbox:claude-token work3
 ```
 
-| アカウント | 使用する設定 | 自動保存先 |
-| --- | --- | --- |
-| account1 | `~/.claude` | `~/.local/state/sbx-agent-credentials/account1.token` |
-| account2 | `~/.claude-account2` | `~/.local/state/sbx-agent-credentials/account2.token` |
-| work3 | `~/.claude-work3` | `~/.local/state/sbx-agent-credentials/work3.token` |
+| アカウント | 使用する設定         | 自動保存先                                            |
+| ---------- | -------------------- | ----------------------------------------------------- |
+| account1   | `~/.claude`          | `~/.local/state/sbx-agent-credentials/account1.token` |
+| account2   | `~/.claude-account2` | `~/.local/state/sbx-agent-credentials/account2.token` |
+| work3      | `~/.claude-work3`    | `~/.local/state/sbx-agent-credentials/work3.token`    |
 
 成功時だけ token を権限 600 で保存します。失敗・中断・出力から一意に抽出できない場合は
 既存ファイルを置き換えません。CLI の token 出力は端末にも表示されますが、ログファイルは作りません。
@@ -632,10 +632,10 @@ mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
 ホストで直接起動した Claude では、通常どおり `/login` を使えます。
 避けるのは、この専用 kit を使う **sandbox 内**での `/login` です。
 
-| 起動場所 | `/login` の扱い |
-| --- | --- |
-| ホストの Claude / account 別ラッパー | 使用可能。選択した設定先に対応する通常の Claude 認証を更新する |
-| 専用 kit の sandbox 内 | 使用しない。sbx の共通 anthropic 認証を再作成・更新する可能性がある |
+| 起動場所                             | `/login` の扱い                                                     |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| ホストの Claude / account 別ラッパー | 使用可能。選択した設定先に対応する通常の Claude 認証を更新する      |
+| 専用 kit の sandbox 内               | 使用しない。sbx の共通 anthropic 認証を再作成・更新する可能性がある |
 
 ホストでは設定先を明示して起動します。起動後に `/login` を実行し、ブラウザでも対応するアカウントを選んでください。
 
@@ -1660,16 +1660,16 @@ kit なら network 許可やエージェント向け指示もパッケージ化�
 
 #### 既存設定を kit に移す候補
 
-| 対象 | 移行の向き不向き | 理由 |
-| --- | --- | --- |
-| `AI_AGENT`・`TERM` など固定の環境変数 | 向いている | v2 の `environment` や v3 の対応 capability で共通化できる |
-| sandbox 内の固定設定・symlink 作成 | 候補 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する |
-| 固定ツールセット | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
-| 固定の network 許可 | 表現可能だが現状維持 | kit 更新は sandbox 再作成が必要。現在は既存 sandbox にも反映できるホスト policy を使用 |
-| Git 設定・コミット署名 | 一部候補 | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する |
-| account 別 token の読み取り・登録 | ホストに残す | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため |
-| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す | 起動する repository・branch・account・ホスト環境ごとに値が変わるため |
-| SSH 経路・crit / plannotator の採番ポート | ラッパー中心で維持 | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要 |
+| 対象                                         | 移行の向き不向き     | 理由                                                                                                       |
+| -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `AI_AGENT`・`TERM` など固定の環境変数        | 向いている           | v2 の `environment` や v3 の対応 capability で共通化できる                                                 |
+| sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する      |
+| 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
+| 固定の network 許可                          | 表現可能だが現状維持 | kit 更新は sandbox 再作成が必要。現在は既存 sandbox にも反映できるホスト policy を使用                     |
+| Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する    |
+| account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                           |
+| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                       |
+| SSH 経路・crit / plannotator の採番ポート    | ラッパー中心で維持   | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要                                                 |
 
 次に進めるなら、まず固定の環境変数を共通の mixin kit へまとめる小さい変更が候補です。
 今回は認証分離の変更に限定し、これらは移していません。kit の承認は service/domain の変更時に必要で、

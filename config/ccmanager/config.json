@@ -78,8 +78,16 @@
         "id": "sbx",
         "name": "Claude account1 (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"", "sbx-agent"],
-        "fallbackArgs": ["-c", "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"", "sbx-agent"],
+        "args": [
+          "-c",
+          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "sbx-agent"
+        ],
         "detectionStrategy": "claude"
       },
       {
