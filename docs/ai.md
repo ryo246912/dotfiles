@@ -1405,7 +1405,8 @@ desloppify を求めたときだけ使う」と書かれています。普段の
 
 `apm/apm.yml` で、CLI に同梱されている `SKILL.md` を `v1.0` tag に pin して配布しています。
 パスの末尾が `global` で配置名が skill 名にならないため、`alias: desloppify` を付けた object 形式で書いています
-（Renovate は更新しないので、`ref` は mise の `pipx:desloppify` の version と手動で揃えます）。
+（Renovate の regex manager が `ref` を読み、mise の `pipx:desloppify` と同じ PR で更新します。ただし object 形式は
+`apm.lock.yaml` を再生成しないため、その PR で `apm install -g --update` と `apm:sync-lock` を手動で実行します）。
 
 ```bash
 mise bootstrap dotfiles apply

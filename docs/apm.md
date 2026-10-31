@@ -87,14 +87,17 @@ dependencies:
 
 - **release tag がある依存**は `#<tag>` に pin します。Renovate（`github-tags` datasource）が新しい tag を
   見つけると `apm.yml` を更新し、同じPRで `apm install` を実行して `apm.lock.yaml` も更新します。
-  CLI も配布するリポジトリ（plannotator・crit・ctx など）は `.github/renovate.json` の `groupName` で mise の
+  CLI も配布するリポジトリ（plannotator・crit・ctx・desloppify など）は `.github/renovate.json` の `groupName` で mise の
   CLI 更新と同一PRにまとめます。
 - **release tag が無い依存**（effective-html・tsumiki・diagram-design）は ref を書きません。`apm.lock.yaml`
   の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
   Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
   週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。
 - **Renovate で更新しない依存**: `resolving-merge-conflicts`（v1.3.0 で upstream から削除）は
-  `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。
+  `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
+  `.github/renovate.json` の regex manager が `ref` だけを更新し、mise の `pipx:desloppify` と同じPRにまとめます。
+  組み込みの apm manager ではないため lockfile は再生成されず、そのPRで手動の `apm install -g --update` と
+  `mise --cd "$HOME" run apm:sync-lock` が必要です。
 - 詳細なfieldと判別規則はAPM公式の[Manifest Schema](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/manifest-schema.md#41-dependenciesapm----listapmdependency)を参照してください。
 
 ### Renovate が lockfile を生成する仕組みと制約

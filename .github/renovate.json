@@ -120,6 +120,11 @@
       "groupName": "plannotator"
     },
     {
+      "description": "desloppify の skill（apm/apm.yml の ref）と CLI（mise の pipx:desloppify）を同じPRで更新する",
+      "matchPackageNames": ["desloppify", "peteromallet/desloppify"],
+      "groupName": "desloppify"
+    },
+    {
       "matchPackageNames": [
         "http:terminal-browser",
         "zenbu-labs/terminal-browser",
@@ -152,6 +157,16 @@
       "depNameTemplate": "opencode/deepseek-flash-free",
       "datasourceTemplate": "custom.opencode-deepseek-flash-free",
       "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "description": "object 形式（git:/path:/ref:）の apm 依存は組み込みの apm manager が読めないため、desloppify の ref だけを扱う",
+      "managerFilePatterns": ["apm/apm.yml"],
+      "matchStrings": [
+        "git:\\s*(?<depName>peteromallet/desloppify)\\s*\\n\\s*path:[^\\n]*\\n\\s*ref:\\s*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "github-tags",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
     },
     {
       "customType": "regex",
