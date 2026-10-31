@@ -724,6 +724,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `desloppify`
 
 ### インストール
 
@@ -1381,16 +1382,39 @@ desloppify --help
 スキャン結果などのローカル状態は各プロジェクトの `.desloppify/` に保存されます。
 `config/git/gitignore`（グローバル gitignore）に追加済みなので、プロジェクトごとの設定は不要です。
 
-### エージェントに手順を教える
+### 仕組み: CLI が本体、skill は手順書
 
-プロジェクトで一度だけ、使うエージェント向けのワークフローガイドを配置します。
+desloppify は skill ではなく CLI が本体です。CLI が検出・状態管理・キュー管理を行い、LLM の判断が必要な部分だけを
+エージェントに任せます。CLI 自身は LLM の API を呼びません。
+
+1. `scan`: 重複、未使用、結合度、命名、セキュリティ、テストカバレッジなどを機械的な検出器で調べ、結果を
+   `.desloppify/` に保存します（LLM は使いません）。
+2. `review`: 命名、抽象化、エラー処理、境界といった主観的な品質を評価します。`review --prepare` が評価用データを作り、
+   エージェントが並列のサブエージェントで採点して、`review --import` で取り込みます。
+3. `plan`: 問題を整理（triage）してクラスタ化し、優先度を並べ替えて実行キューを作ります。
+4. `next`: キューの先頭の 1 件と、完了時に実行する `resolve` コマンドを返します。
+5. エージェントが修正して `resolve` し、キューが空になったら再度 `scan` します。
+
+スコアは「機械的 25% + 主観 75%」です。主観スコアはレビューするまで 0 点から始まります。`strict score` は wontfix
+（直さないと決めた項目）も未解決として数えるので、「直さないことにして点を稼ぐ」ことはできません。
+
+skill（`SKILL.md`）の中身は「`next` を実行して、その指示に従う」という手順書で、description には「ユーザーが明示的に
+desloppify を求めたときだけ使う」と書かれています。普段のレビューや単発のバグ修正では発火しません。
+
+### skill のインストール
+
+`apm/apm.yml` で、CLI に同梱されている `SKILL.md` を `v1.0` tag に pin して配布しています。
+パスの末尾が `global` で配置名が skill 名にならないため、`alias: desloppify` を付けた object 形式で書いています
+（Renovate は更新しないので、`ref` は mise の `pipx:desloppify` の version と手動で揃えます）。
 
 ```bash
-desloppify update-skill claude   # Claude Code 用
-desloppify update-skill codex    # Codex 用（cursor / copilot / gemini なども指定可）
+mise bootstrap dotfiles apply
+mise --cd "$HOME" run apm:install
 ```
 
-生成物はプロジェクトに入るため、チームで使わない場合はコミットしないでください。
+`~/.claude/skills/desloppify/` と `~/.agents/skills/desloppify/` に配置されます。
+`desloppify update-skill claude` でもプロジェクト直下の `.claude/skills/desloppify/SKILL.md` に同じ手順書を生成できますが、
+APM で配布しているため通常は不要です。使うと同名の skill が二重になるので、どちらか一方にしてください。
 
 ### 基本の使い方
 
@@ -1416,5 +1440,8 @@ desloppify status --json   # 状態を JSON で出力
 ### 注意点
 
 - 複数プロジェクトを含むリポジトリでは、プロジェクトごとに個別にスキャンします。
+- サブエージェントによるレビューは 3〜5 個ずつの波に分けて実行します。20 個以上を同時に起動すると、クォータ切れで
+  空の結果になります。
+- 専用ブランチ（`desloppify/code-health` など）で作業し、main に直接コミットしません。
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
