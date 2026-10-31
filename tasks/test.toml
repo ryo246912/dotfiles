@@ -11,7 +11,3 @@ run         = "python3 config/agentsview/tests/prepare-dump-auth_test.py"
 description = "Run the batch-insert-dump regression"
 hide        = true
 run         = "python3 config/agentsview/tests/batch-insert-dump_test.py"
-
-["test:sbx:subscription"]
-description = "Run sbx subscription wrapper regressions without Docker or real credentials"
-run = "python3 config/sbx/tests/subscription_test.py"

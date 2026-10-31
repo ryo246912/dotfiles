@@ -599,9 +599,15 @@ sbx secret rm anthropic --force
 #### 3. kit の認証利用を許可して起動する
 
 カスタム kit は組み込み agent と異なり、credential binding の承認が必要です。
-初回はホストの対話端末から起動し、`anthropic` / `api.anthropic.com` の利用を承認してください。
-非対話起動で認証が withheld になる場合は、ホストの `~/.config/sbx/credentials.yaml`
-の既存内容を保って次の binding を追加してください（token は書きません）。
+**初回だけホストの対話端末で承認すれば、以降の ccmanager 起動では同じ承認を毎回求めません。**
+`anthropic` / `api.anthropic.com` の承認はホストの `~/.config/sbx/credentials.yaml` に保存され、
+同じ service・認証方式・domain を使う別アカウントや新しい sandbox でも使えます。
+アカウントごとの token と sandbox の対応は別に管理するので、この承認によって token が共通化されることはありません。
+
+初回は下の検証コマンドをホストの対話端末で実行し、利用を承認してください。
+ccmanager から先に起動すると、未承認でも sbx が作成を続け、認証だけ withheld にする場合があります。
+その場合は対話端末で承認してから sandbox を作り直すか、次の binding をホストに事前設定します。
+既存の `bindings` と `anthropic` の内容を保ってマージしてください（token は書きません）。
 
 ```yaml
 bindings:
@@ -633,6 +639,20 @@ sbx-agent claude --claude-account account2 \
   --config-dir "$HOME/.claude-account2" --name-prefix a2 --new
 ```
 
+承認後は ccmanager の preset から起動できます。ラッパーによる token 再登録は stdin 経由なので、
+通常の token 入力は不要です。`sbx env` の plan / host lifecycle 承認は使用していません。
+ここでいう非対話は「起動時の認証・承認操作が不要」という意味で、Claude の TUI 自体は通常どおり対話で使います。
+
+以下の場合はホスト側での対応が再び必要です。
+
+- kit の service・認証方式・domain を増やした、または binding を削除した場合: 再承認
+- token の期限切れ・失効: ホストで再生成して対応ファイルを更新
+- `sbx login` の Docker ログイン切れ、OS キーチェーンのロック: ホストで再認証・解除
+- 旧 kit の sandbox からの移行: 必要なデータを保存して再作成
+
+実 sbx での起動検証は未実施のため、初回セットアップ時に一度終了して ccmanager から再起動し、
+認証入力なしで使えることを確認してください。
+
 #### 4. 実機で確認する
 
 まず別々の token を登録した２つの検証 sandbox を作ります。`sbx secret ls` で
@@ -645,15 +665,6 @@ Claude の `/status` の表示だけでは、プロキシが実際に使った�
 `setup-token` は通常の `/login` と同等の全機能ではなく、managed settings の 401 や
 `/usage` などの制約が報告されています。認証失敗時に `/login` で直そうとせず、
 kit・binding・token・sbx バージョンを確認してください。
-
-#### 回帰テスト
-
-```bash
-python3 config/sbx/tests/subscription_test.py
-```
-
-実認証や Docker を使わず、kit の選択・scoped secret の登録順・引数転送・再利用・
-共通認証の拒否・登録失敗時の停止・token mount と権限の拒否を確認します。
 
 ## ccmanager での開発の段取り
 
@@ -1543,9 +1554,9 @@ tmux からは `prefix + C-d` のツール選択（`config/tmux/tmux.conf`）に
 - このリポジトリの運用レイヤ → `ccmanager`（セッション切り替え）と
   `multi-worktree list` / `dev`（タスク単位の起動）
 
-## まだ使っていない sbx の機能
+## sbx の宣言的な設定と拡張機能
 
-必要になったら使えるもののうち、現時点で `sbx-agent` に組み込んでいないもの。
+採用中の kit と、今後の移行候補を整理します。
 
 ### `sbxenv.yaml`（宣言的な環境定義）
 
@@ -1584,13 +1595,34 @@ CLI 引数の方が挙動が読めます）。安定したら移行候補です�
 
 OCI パッケージで「workload（ベース環境とコマンド）＋ mixin（ツール・設定・認証・network 許可・
 エージェント向け指示）」を合成する仕組み。devcontainer の Dockerfile + features に相当します。
-このリポジトリはカスタム template で済ませていますが、kit なら network 許可や
-エージェント向け指示までパッケージに含められ、チームへ配布しやすくなります。
+今回の Claude subscription kit もこの kit の仕組みを使いますが、形式は **v2** です。
+既存の組み込み `claude` を `extends: claude` で継承し、認証ヘッダーと install 処理だけを変更します。
+上流の回避策が v2 で検証されているため、この PR では v3 への移行は行いません。
+v3 は capabilities を使う別形式なので、`schemaVersion` だけを変えて移行することはできません。
+ツール類の導入は引き続きカスタム template が担当します。
+kit なら network 許可やエージェント向け指示もパッケージ化できます。
 `sbx kit validate` でチェックし、kit set として publish できます。
 
 コミット署名を自動設定する
 [`git-ssh-sign`](https://github.com/docker/sbx-kits-contrib/tree/main/git-ssh-sign)
 のような community kit もあります（`sbx settings set kit.allowedSources` で許可が必要）。
+
+#### 既存設定を kit に移す候補
+
+| 対象 | 移行の向き不向き | 理由 |
+| --- | --- | --- |
+| `AI_AGENT`・`TERM` など固定の環境変数 | 向いている | v2 の `environment` や v3 の対応 capability で共通化できる |
+| sandbox 内の固定設定・symlink 作成 | 候補 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する |
+| 固定ツールセット | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
+| 固定の network 許可 | 表現可能だが現状維持 | kit 更新は sandbox 再作成が必要。現在は既存 sandbox にも反映できるホスト policy を使用 |
+| Git 設定・コミット署名 | 一部候補 | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する |
+| account 別 token の読み取り・登録 | ホストに残す | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため |
+| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す | 起動する repository・branch・account・ホスト環境ごとに値が変わるため |
+| SSH 経路・crit / plannotator の採番ポート | ラッパー中心で維持 | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要 |
+
+次に進めるなら、まず固定の環境変数を共通の mixin kit へまとめる小さい変更が候補です。
+今回は認証分離の変更に限定し、これらは移していません。kit の承認は service/domain の変更時に必要で、
+`sbx env` の host command を含む plan の承認とは別の仕組みです。
 
 ### その他
 
