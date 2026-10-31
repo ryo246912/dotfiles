@@ -1,12 +1,12 @@
 lockfile_version: '1'
-generated_at: '2026-10-31T08:38:15.398648+00:00'
+generated_at: '2026-10-31T09:14:14.806001+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: 57e583aef9195e123f789fa40ad6fde7a00bf2b4
+  resolved_ref: v0.28.35
   version: unknown
   virtual_path: apps/skills/core/plannotator-annotate
   is_virtual: true
@@ -19,16 +19,16 @@ dependencies:
   - .claude/skills/plannotator-annotate/SKILL.md
   - .claude/skills/plannotator-annotate/agents/openai.yaml
   deployed_file_hashes:
-    .agents/skills/plannotator-annotate/SKILL.md: sha256:c873d0a69f0ebf57340ed37f1c2993b112ee2a9f0993d6525fbd8b2d0796b835
+    .agents/skills/plannotator-annotate/SKILL.md: sha256:e98b13cdcb24157a58921dd5ebaed5428915e08aee4a8e6e14ca666a048425e6
     .agents/skills/plannotator-annotate/agents/openai.yaml: sha256:49137b906b17bfd19a205dc482146d222439a89cee5dfd8b3a634626779b95a0
-    .claude/skills/plannotator-annotate/SKILL.md: sha256:c873d0a69f0ebf57340ed37f1c2993b112ee2a9f0993d6525fbd8b2d0796b835
+    .claude/skills/plannotator-annotate/SKILL.md: sha256:e98b13cdcb24157a58921dd5ebaed5428915e08aee4a8e6e14ca666a048425e6
     .claude/skills/plannotator-annotate/agents/openai.yaml: sha256:49137b906b17bfd19a205dc482146d222439a89cee5dfd8b3a634626779b95a0
-  content_hash: sha256:e5808aeba6bdea6419da0d02c6e4a52158d69e7fd4d493ec1f9ac88a32bd7a36
+  content_hash: sha256:fe03011fbc27c732ed5dd71ce854a7059729ddd34339c00cb6f7d66f652584a6
 - repo_url: backnotprop/plannotator
   name: plannotator-last
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: 57e583aef9195e123f789fa40ad6fde7a00bf2b4
+  resolved_ref: v0.28.35
   version: unknown
   virtual_path: apps/skills/core/plannotator-last
   is_virtual: true
@@ -41,16 +41,16 @@ dependencies:
   - .claude/skills/plannotator-last/SKILL.md
   - .claude/skills/plannotator-last/agents/openai.yaml
   deployed_file_hashes:
-    .agents/skills/plannotator-last/SKILL.md: sha256:d861a1ba8a5ef50ebec28b8936cfcafa705cb90efda4a7089a6606c37715c683
+    .agents/skills/plannotator-last/SKILL.md: sha256:60264acd7d328a8a696a4b84278bc2066e2e7e3ef07d64cfee179b9bcde9abcc
     .agents/skills/plannotator-last/agents/openai.yaml: sha256:bd5d6af4ff01937b5e1ea1ddc88b3323f47a0babcd2c57c5c189fc74d7887252
-    .claude/skills/plannotator-last/SKILL.md: sha256:d861a1ba8a5ef50ebec28b8936cfcafa705cb90efda4a7089a6606c37715c683
+    .claude/skills/plannotator-last/SKILL.md: sha256:60264acd7d328a8a696a4b84278bc2066e2e7e3ef07d64cfee179b9bcde9abcc
     .claude/skills/plannotator-last/agents/openai.yaml: sha256:bd5d6af4ff01937b5e1ea1ddc88b3323f47a0babcd2c57c5c189fc74d7887252
-  content_hash: sha256:2f22274e82dd727474b2fd974c97721cedd05622ffaa5d68eb7fcf9aabb89b0c
+  content_hash: sha256:b2f959fcf103a4bf7c484cd2abcb64f9ead07db987bd85e62c5ba13b78a809a0
 - repo_url: backnotprop/plannotator
   name: plannotator-review
   host: github.com
-  resolved_commit: b145393b49d34b490f7dd39f7b0092b60267af2f
-  resolved_ref: v0.28.6
+  resolved_commit: 57e583aef9195e123f789fa40ad6fde7a00bf2b4
+  resolved_ref: v0.28.35
   version: unknown
   virtual_path: apps/skills/core/plannotator-review
   is_virtual: true
@@ -63,11 +63,11 @@ dependencies:
   - .claude/skills/plannotator-review/SKILL.md
   - .claude/skills/plannotator-review/agents/openai.yaml
   deployed_file_hashes:
-    .agents/skills/plannotator-review/SKILL.md: sha256:c331f8abba63066968153bb40a17690d5185a158160dd9c7560233b802c04a1c
+    .agents/skills/plannotator-review/SKILL.md: sha256:a8825021da1fca8d31447081af0c20f626be462e3bb7d923fd49e5f546d7c68a
     .agents/skills/plannotator-review/agents/openai.yaml: sha256:9e928f07b26f69d78f92ce3fb2d16efc427e4daa5f640d01a19cc23131b8be24
-    .claude/skills/plannotator-review/SKILL.md: sha256:c331f8abba63066968153bb40a17690d5185a158160dd9c7560233b802c04a1c
+    .claude/skills/plannotator-review/SKILL.md: sha256:a8825021da1fca8d31447081af0c20f626be462e3bb7d923fd49e5f546d7c68a
     .claude/skills/plannotator-review/agents/openai.yaml: sha256:9e928f07b26f69d78f92ce3fb2d16efc427e4daa5f640d01a19cc23131b8be24
-  content_hash: sha256:51e265575de25eb99dce7689f81c01ee8f45dd2d253b054c1d42494298342248
+  content_hash: sha256:91ac4f7d94e27e16a58b072d7093aa362bbcdfbf2fee813201507adaa9c4d9e4
 - repo_url: cathrynlavery/diagram-design
   name: diagram-design
   host: github.com
@@ -4766,7 +4766,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-annotate
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-annotate
-  content_hash: sha256:c873d0a69f0ebf57340ed37f1c2993b112ee2a9f0993d6525fbd8b2d0796b835
+  content_hash: sha256:e98b13cdcb24157a58921dd5ebaed5428915e08aee4a8e6e14ca666a048425e6
 - kind: project-relative
   target: claude
   value: .claude/skills/plannotator-annotate/agents/openai.yaml
@@ -4793,7 +4793,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-last
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-last
-  content_hash: sha256:d861a1ba8a5ef50ebec28b8936cfcafa705cb90efda4a7089a6606c37715c683
+  content_hash: sha256:60264acd7d328a8a696a4b84278bc2066e2e7e3ef07d64cfee179b9bcde9abcc
 - kind: project-relative
   target: claude
   value: .claude/skills/plannotator-last/agents/openai.yaml
@@ -4820,7 +4820,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-review
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-review
-  content_hash: sha256:c331f8abba63066968153bb40a17690d5185a158160dd9c7560233b802c04a1c
+  content_hash: sha256:a8825021da1fca8d31447081af0c20f626be462e3bb7d923fd49e5f546d7c68a
 - kind: project-relative
   target: claude
   value: .claude/skills/plannotator-review/agents/openai.yaml
@@ -7826,7 +7826,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-annotate
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-annotate
-  content_hash: sha256:c873d0a69f0ebf57340ed37f1c2993b112ee2a9f0993d6525fbd8b2d0796b835
+  content_hash: sha256:e98b13cdcb24157a58921dd5ebaed5428915e08aee4a8e6e14ca666a048425e6
 - kind: project-relative
   target: codex
   value: .agents/skills/plannotator-annotate/agents/openai.yaml
@@ -7853,7 +7853,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-last
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-last
-  content_hash: sha256:d861a1ba8a5ef50ebec28b8936cfcafa705cb90efda4a7089a6606c37715c683
+  content_hash: sha256:60264acd7d328a8a696a4b84278bc2066e2e7e3ef07d64cfee179b9bcde9abcc
 - kind: project-relative
   target: codex
   value: .agents/skills/plannotator-last/agents/openai.yaml
@@ -7880,7 +7880,7 @@ deployments:
   owners:
   - backnotprop/plannotator/apps/skills/core/plannotator-review
   active_owner: backnotprop/plannotator/apps/skills/core/plannotator-review
-  content_hash: sha256:c331f8abba63066968153bb40a17690d5185a158160dd9c7560233b802c04a1c
+  content_hash: sha256:a8825021da1fca8d31447081af0c20f626be462e3bb7d923fd49e5f546d7c68a
 - kind: project-relative
   target: codex
   value: .agents/skills/plannotator-review/agents/openai.yaml
