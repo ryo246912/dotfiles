@@ -38,6 +38,7 @@ experimental = true
 "github:philschmid/mcp-cli"                      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
 "github:tomasz-tomczyk/crit"                     = "0.19.1"
 "go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+"http:coderabbit"                                           = { version = "0.9.0", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip" }
 "npm:oxfmt"                                      = "0.74.0"
 "npm:oxlint"                                     = "1.87.0"
 "pipx:basic-memory"                              = { version = "0.24.1", uvx_args = "--prerelease=allow" }

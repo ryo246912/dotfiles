@@ -1,7 +1,7 @@
 # 特定の環境（work3 / private など）でだけ許可したいドメイン。
 # `cp allow-domains.work3.txt.example allow-domains.work3.txt` のように .example を外してコピーして使う。
-# allow-domains.<name>.txt は gitignore 済みで、mise run sandbox:setup が allow-domains.txt と一緒に読み込む。
-# 書式は allow-domains.txt と同じ（1行1パターン、`#` 以降はコメント）。
+# allow-domains.<name>.txt は gitignore 済みで、mise run sandbox:setup が追加分として読み込む。
+# 共通の許可先は kits/common/spec.yaml。ここは1行1パターン（`#` 以降はコメント）。
 
 # 公開ドキュメント（業務リポジトリで使う AWS / Java / PostgreSQL）
 # docs.aws.amazon.com / aws.amazon.com は共通リストで許可済み。

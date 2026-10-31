@@ -1,0 +1,21 @@
+schemaVersion: "2"
+kind: mixin
+name: coderabbit
+version: "1.0.0"
+description: CodeRabbit authentication and network policy for the mise-based template
+# Use v2 to compose with the existing built-in agents and sbx-agent:<agent> templates.
+credentials:
+  - service: coderabbit
+    required: true
+    apiKey:
+      name: CODERABBIT_API_KEY
+      # CLI chooses its own auth headers. The real key is available inside this sandbox.
+      proxyManaged: false
+permissions:
+  network:
+    allow:
+      - api.coderabbit.ai
+      - app.coderabbit.ai
+      - ide.coderabbit.ai
+      - cli.coderabbit.ai
+# CLI installation is owned by Dockerfile.sandbox and config/devcontainer/mise.toml.
