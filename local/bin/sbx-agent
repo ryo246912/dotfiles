@@ -875,17 +875,24 @@ PYSETTINGS
         log_error "Claude 設定の認証上書きを解消してから起動してください"
         exit 1
     fi
-    # Resolve physical paths so a symlinked workspace/mount cannot expose tokens.
-    private_dir=$(cd "$(dirname "$SUBSCRIPTION_TOKEN")" && pwd -P) || exit 1
-    for mount_spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
-        mount_path="${mount_spec%:ro}"
-        [[ -d "$mount_path" ]] || mount_path=$(dirname "$mount_path")
-        mount_path=$(cd "$mount_path" && pwd -P) || exit 1
-        if [[ "$mount_path" == / || "$private_dir/" == "$mount_path/"* ]]; then
-            log_error "token 保存先を含む workspace/mount は使えません: $mount_path"
-            exit 1
-        fi
-    done
+    # File mounts expose that file, not its parent (e.g. ~/.claude.json).
+    if ! python3 - "$SUBSCRIPTION_TOKEN" "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYMOUNTS'
+import os, sys
+secret = os.path.realpath(sys.argv[1])
+private = os.path.dirname(secret)
+for spec in sys.argv[2:]:
+    path = os.path.realpath((spec[:-3] if spec.endswith(":ro") else spec))
+    exposes = os.path.commonpath([private, path]) == private
+    if os.path.isdir(path):
+        exposes |= os.path.commonpath([private, path]) == path
+    elif os.path.exists(path):
+        exposes |= os.path.samefile(path, secret)
+    if exposes:
+        sys.exit("token 保存先を含む workspace/mount は使えません: " + path)
+PYMOUNTS
+    then
+        exit 1
+    fi
 fi
 
 register_subscription_secret() {

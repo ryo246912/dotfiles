@@ -542,66 +542,42 @@ API キーの登録インターフェースを使いますが、登録するの�
 
 #### 1. ホストで token を登録する
 
-各アカウントで `claude setup-token` を実行し、ブラウザでも目的のアカウントを選びます。
-既存の設定の選択には次の環境変数を使えます（ブラウザのログイン先も確認してください）。
+ホストの対話端末で次を実行します（Python 3 と Claude CLI が必要です）。
 
 ```bash
-CLAUDE_CONFIG_DIR="$HOME/.claude" claude setup-token
-CLAUDE_CONFIG_DIR="$HOME/.claude-account2" claude setup-token
-CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude setup-token
+# account1 → account2 → work3 の順に確認して登録
+sbx-claude-setup
 ```
 
-表示された token を対応するファイルへ保存します。アカウントごとに次のコマンドを使います。
-token 自体をコマンドに貼らないため、履歴・プロセス引数には残りません。
-ホストの bash または zsh で実行し、それぞれ対応する `setup-token` の結果を入力してください。
+各アカウントの `claude setup-token` を実行する直前に y/n を確認します。
+`y` で実行、`n` または Enter でスキップします。ブラウザでのログイン・アカウント選択は手動です。
+成功時は出力から token を抽出し、対応ファイルへ権限 600 で自動保存します。
+既存ファイルは成功時だけ置き換え、失敗・中断・token を一意に抽出できない場合は保存しません。
+CLI の出力形式に依存するため、形式変更時は抽出に失敗する場合があります。
+CLI が表示する token は端末にも表示されますが、端末ログのファイルは作りません。
 
-**account1**
+アカウントごとに実行する場合も、それぞれ y/n 確認が入ります。
 
 ```bash
-(umask 077
- mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- printf '%s' 'account1 setup-token: ' >&2
- read -r -s subscription_token
- printf '\n'
- printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account1.token"
- unset subscription_token
-)
-chmod 600 "$HOME/.local/state/sbx-agent-credentials/account1.token"
+sbx-claude-setup account1
+sbx-claude-setup account2
+sbx-claude-setup work3
 ```
 
-**account2**
+| アカウント | 使用する設定 | 自動保存先 |
+| --- | --- | --- |
+| account1 | `~/.claude` | `~/.local/state/sbx-agent-credentials/account1.token` |
+| account2 | `~/.claude-account2` | `~/.local/state/sbx-agent-credentials/account2.token` |
+| work3 | `~/.claude-work3` | `~/.local/state/sbx-agent-credentials/work3.token` |
 
-```bash
-(umask 077
- mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- printf '%s' 'account2 setup-token: ' >&2
- read -r -s subscription_token
- printf '\n'
- printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account2.token"
- unset subscription_token
-)
-chmod 600 "$HOME/.local/state/sbx-agent-credentials/account2.token"
-```
-
-**work3**
-
-```bash
-(umask 077
- mkdir -p "$HOME/.local/state/sbx-agent-credentials"
- printf '%s' 'work3 setup-token: ' >&2
- read -r -s subscription_token
- printf '\n'
- printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/work3.token"
- unset subscription_token
-)
-chmod 600 "$HOME/.local/state/sbx-agent-credentials/work3.token"
-```
+コマンドがまだ PATH にない場合は dotfiles root で `python3 local/bin/sbx-claude-setup` を実行できます。
+token の生成と保存を自動化するコマンドで、共通 secret の削除や sandbox の作り直しは行いません。
 
 この保存先は dotfiles の管理対象にも
 通常の sandbox mount にも含めません。`sbx-agent` はファイルの所有者・権限・形式を検証し、
 stdin 経由で毎回 sandbox 固有 secret に登録します。token はホスト上では平文なので、
 バックアップ・同期対象からも外してください。sandbox には本物の token ではなく sentinel が渡ります。
-token の期限切れや失効時は再生成してファイルを更新し、preset から起動し直します。
+token の期限切れや失効時は `sbx-claude-setup <account>` を再実行し、preset から起動し直します。
 
 #### 2. 共通認証と競合する設定を解消する
 
@@ -648,9 +624,13 @@ bindings:
 ```
 
 ```bash
-# 最初は旧 sandbox と異なる名前で検証する
+# 最初は旧 sandbox と異なる名前で検証する（各 Claude を終了してから次を実行）
+sbx-agent claude --claude-account account1 \
+  --config-dir "$HOME/.claude" --name subscription-account1-check
 sbx-agent claude --claude-account account2 \
   --config-dir "$HOME/.claude-account2" --name subscription-account2-check
+sbx-agent claude --claude-account work3 \
+  --config-dir "$HOME/.claude-work3" --name subscription-work3-check
 ```
 
 `--claude-account` 指定時は組み込み `claude` の代わりに kit のパスを `sbx create` に渡します。
@@ -666,8 +646,13 @@ ccmanager の既存 a1 / a2 / w3 sandbox は組み込み Claude agent なので�
 ラッパーが起動時に再登録します。
 
 ```bash
+# 対象 workspace で実行。各コマンドは対応する旧 sandbox を削除する
+sbx-agent claude --claude-account account1 \
+  --config-dir "$HOME/.claude" --name-prefix a1 --new
 sbx-agent claude --claude-account account2 \
   --config-dir "$HOME/.claude-account2" --name-prefix a2 --new
+sbx-agent claude --claude-account work3 \
+  --config-dir "$HOME/.claude-work3" --name-prefix w3 --new
 ```
 
 承認後は ccmanager の preset から起動できます。ラッパーによる token 再登録は stdin 経由なので、
