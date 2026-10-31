@@ -55,6 +55,14 @@ dependencies:
     - vercel-labs/skills/skills/find-skills#v1.7.4
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
     - DietrichGebert/ponytail#v5.1.0
+    # desloppify は CLI（mise の pipx:desloppify）に同梱された SKILL.md を配布する。skill は CLI と
+    # 対で更新される（古いと CLI が警告する）ため、ref は mise の version と手動で揃えること。
+    # path 末尾が `global` で配置名が skill 名にならないため、object 形式 + alias で書く
+    # （Renovate では更新しない）。
+    - git: peteromallet/desloppify
+      path: desloppify/data/global
+      ref: v1.0
+      alias: desloppify
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
   # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
