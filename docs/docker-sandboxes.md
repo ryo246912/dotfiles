@@ -669,14 +669,36 @@ sbx-agent claude --claude-account work3 \
 実 sbx での起動検証は未実施のため、初回セットアップ時に一度終了して ccmanager から再起動し、
 認証入力なしで使えることを確認してください。
 
-#### 4. 実機で確認する
+#### 4. 実際の認証先と statusline の表示を確認する
 
-まず別々の token を登録した２つの検証 sandbox を作ります。`sbx secret ls` で
-各 sandbox の anthropic secret があることと、global anthropic がないことを確認します。
-Claude の `/status` の表示だけでは、プロキシが実際に使ったアカウントを証明できません。
-小さいリクエストを各 sandbox から実行し、アカウント側の利用記録も照合してください。
-さらに切り分ける場合は、issue の検証と同じく `/v1/messages` のレスポンスの
-`anthropic-organization-id` を対応する組織と照合します。本物の token を出力する必要はありません。
+この方式では `/status` や Claude への「アカウントを教えて」という質問から、プロキシが使う
+メールアドレスを確定できません。`oauthAccount.emailAddress` はローカル設定に残る情報で、
+`setup-token` と sandbox 専用 secret の更新には連動しません。
+
+ラッパーは起動時に `SBX_CLAUDE_ACCOUNT` を渡します。statusline はこの環境で古いメールを
+表示せず、`account1 [sbx: 認証先未確認]` のように表示します。account1 は選択した preset の
+識別子であり、プロバイダが確認した個人アカウントではありません。通常のホスト起動は従来の
+メール表示のままです。反映には Claude を終了して preset から起動し直してください。
+
+実際の通信に認証が適用されるかは、ホストから次を実行します。各コマンドは sandbox 経由で
+`max_tokens=1` の推論リクエストを１回送ります。少量の利用枠を消費し、認証方式によっては課金されます。
+本物の token や生成内容は出力しません。
+
+```bash
+sbx-claude-auth-check dotfiles-a1-main-claude
+sbx-claude-auth-check dotfiles-a2-main-claude
+sbx-claude-auth-check dotfiles-w3-main-claude
+```
+
+`HTTP: 200` は、その sandbox の通信経路で推論の認証が成功したことを示します。
+`anthropic-organization-id` が返れば、利用予定の組織 ID と照合します。
+未返却の場合や、複数アカウントが同じ組織の場合はこれだけで本人を区別できません。
+メールアドレスや契約プランはこのコマンドから取得できません。
+使用モデルにアクセスできない場合は `--model <利用可能なモデルID>` を付けてください。
+
+個人の認証先を確実に合わせるには、`sbx-claude-setup <account>` のブラウザ認証で
+目的のアカウントを選び、その token を保存して再起動します。併せてアカウント側の利用記録を照合します。
+`sbx secret ls` は保存先の確認であって、token が属する個人の確認ではありません。
 
 `setup-token` は通常の `/login` と同等の全機能ではなく、managed settings の 401 や
 `/usage` などの制約が報告されています。認証失敗時に `/login` で直そうとせず、

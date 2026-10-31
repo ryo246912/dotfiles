@@ -186,6 +186,8 @@ case "$config_name" in
 .claude-*) account_label="${config_name#.claude-}" ;;
 *) account_label="$config_name" ;;
 esac
+# sbx labels identify the selected preset, not a verified OAuth identity.
+[ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account_label="$SBX_CLAUDE_ACCOUNT"
 case "$account_label" in
 account1) account_color='\033[1;97;44m' ;;
 account2) account_color='\033[1;97;45m' ;;
@@ -200,7 +202,12 @@ fi
 # global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
 # config dir に保存したメールアドレスを global config が更新されるまで使う。
 email_cache="$config_dir/statusline-account-email"
-if [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
+email=""
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	# Proxy credentials differ from the local Claude login metadata.
+	# Never present a stale oauthAccount email as the active proxy identity.
+	email=""
+elif [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
 	email=$(cat "$email_cache" 2>/dev/null)
 else
 	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
@@ -211,6 +218,7 @@ else
 	fi
 fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
+[ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account="$account [sbx: 認証先未確認]"
 [ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
 
 # session id（`claude --resume <id>` 用）を灰色で表示する。

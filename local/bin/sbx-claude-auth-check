@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Check actual proxy authentication with one small, billable model request."""
+import argparse
+import subprocess
+import sys
+
+CHECK = r'''
+import json, os, sys, urllib.request, urllib.error
+credential = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+if not credential:
+    sys.exit("CLAUDE_CODE_OAUTH_TOKEN is unset; check kit/binding and recreate the sandbox if necessary")
+request = urllib.request.Request(
+    "https://api.anthropic.com/v1/messages",
+    data=json.dumps({"model": sys.argv[1], "max_tokens": 1,
+                     "messages": [{"role": "user", "content": "Hi"}]}).encode(),
+    headers={"Authorization": "Bearer " + credential,
+             "anthropic-version": "2023-06-01",
+             "anthropic-beta": "oauth-2025-04-20",
+             "content-type": "application/json"})
+try:
+    with urllib.request.urlopen(request, timeout=60) as response:
+        print("HTTP:", response.status)
+        print("anthropic-organization-id:", response.headers.get("anthropic-organization-id", "(not returned)"))
+        print("Inference authentication succeeded. This does not identify an individual email address.")
+except urllib.error.HTTPError as error:
+    print("HTTP:", error.code)
+    print("request-id:", error.headers.get("request-id", "(not returned)"))
+    sys.exit(1)
+except urllib.error.URLError:
+    sys.exit("Network/TLS connection failed (credential values are not printed)")
+'''
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("sandbox")
+    parser.add_argument("--model", default="claude-haiku-4-5-20251001",
+                        help="available Claude model (default: claude-haiku-4-5-20251001)")
+    args = parser.parse_args()
+    print("Sending one max_tokens=1 inference request through the sandbox proxy.", flush=True)
+    return subprocess.call(["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model])
+
+
+if __name__ == "__main__":
+    sys.exit(main())
