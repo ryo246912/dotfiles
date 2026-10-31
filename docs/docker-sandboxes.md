@@ -625,6 +625,40 @@ mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
 
 初回セットアップ後は、一度 ccmanager から起動して認証入力なしで会話できることを確認してください。
 
+##### ホストの Claude と併用する場合
+
+ホストで直接起動した Claude では、通常どおり `/login` を使えます。
+避けるのは、この専用 kit を使う **sandbox 内**での `/login` です。
+
+| 起動場所 | `/login` の扱い |
+| --- | --- |
+| ホストの Claude / account 別ラッパー | 使用可能。選択した設定先に対応する通常の Claude 認証を更新する |
+| 専用 kit の sandbox 内 | 使用しない。sbx の共通 anthropic 認証を再作成・更新する可能性がある |
+
+ホストでは設定先を明示して起動します。起動後に `/login` を実行し、ブラウザでも対応するアカウントを選んでください。
+
+```bash
+# account1
+CLAUDE_CONFIG_DIR="$HOME/.claude" claude
+# account2
+CLAUDE_CONFIG_DIR="$HOME/.claude-account2" claude
+# work3
+CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude
+```
+
+`claude-account2` などのラッパーが同じ `CLAUDE_CONFIG_DIR` を指定するなら、そのコマンドも使えます。
+ホストでの `/login` は、保存済みの `account1.token` などや sbx の sandbox 固有 secret を自動更新しません。
+sandbox 用 token を更新する場合は、別途対応するタスクを実行し、対象セッションを終了して preset から再起動します。
+
+```bash
+mise run sandbox:claude-token account1
+mise run sandbox:claude-token account2
+mise run sandbox:claude-token work3
+```
+
+ホストの通常ログインと sandbox 用 token は別管理です。ホストのログインに伴って共有設定のメール情報が
+変わっても、sandbox の statusline は取得済み組織 ID から名前を判定するため、そのメールを認証先として表示しません。
+
 #### 4. 実際の認証先と statusline の表示を確認する
 
 この方式では `/status` や Claude への「アカウントを教えて」という質問から、プロキシが使う
