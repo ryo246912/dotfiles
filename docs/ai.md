@@ -673,11 +673,11 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 ### 既定の設定（`claude/settings.json`）
 
-| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                           |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                             |
+| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                                         |
+| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                           |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
@@ -724,6 +724,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `desloppify`
 
 ### インストール
 
@@ -745,7 +746,7 @@ mise --cd "$HOME" run apm:install
 
 #### 導入構成
 
-- Plannotator CLIはdevcontainer imageのmise toolとしてインストールします。
+- Plannotator CLIはhostとdevcontainer / sbxの両方でmise toolとしてインストールします。
 - `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
   APMでuser scopeへ配布します。
 - APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
@@ -1362,3 +1363,88 @@ sandbox へ読み込むときは、作業に合わせて片方だけ指定しま
 - `--user-data-dir` を普段のプロファイルと分けておくと、そのプロファイルでログインした状態のまま調査できます。
 - 複数の Chrome を並行して使う場合は 9223 / 9224 で起動し、`config/sbx/mcp.work2.yml.example` を参考に
   `chrome-devtools-2` / `chrome-devtools-3` を追加します。
+
+## desloppify（コードベースの品質改善ループ）
+
+[desloppify](https://github.com/peteromallet/desloppify) は、コードベースをスキャンして「雑な実装（slop）」を検出し、
+優先度付きの修正キューを作ってエージェントに順番に直させる CLI です。
+
+### 導入
+
+`config/mise/config.toml` に `pipx:desloppify`（extras は `full`）を pin しています。Python 3.11 以上が必要です。
+
+```bash
+mise bootstrap dotfiles apply
+mise --cd "$HOME" install pipx:desloppify
+desloppify --help
+```
+
+スキャン結果などのローカル状態は各プロジェクトの `.desloppify/` に保存されます。
+`config/git/gitignore`（グローバル gitignore）に追加済みなので、プロジェクトごとの設定は不要です。
+
+### 仕組み: CLI が本体、skill は手順書
+
+desloppify は skill ではなく CLI が本体です。CLI が検出・状態管理・キュー管理を行い、LLM の判断が必要な部分だけを
+エージェントに任せます。CLI 自身は LLM の API を呼びません。
+
+1. `scan`: 重複、未使用、結合度、命名、セキュリティ、テストカバレッジなどを機械的な検出器で調べ、結果を
+   `.desloppify/` に保存します（LLM は使いません）。
+2. `review`: 命名、抽象化、エラー処理、境界といった主観的な品質を評価します。`review --prepare` が評価用データを作り、
+   エージェントが並列のサブエージェントで採点して、`review --import` で取り込みます。
+3. `plan`: 問題を整理（triage）してクラスタ化し、優先度を並べ替えて実行キューを作ります。
+4. `next`: キューの先頭の 1 件と、完了時に実行する `resolve` コマンドを返します。
+5. エージェントが修正して `resolve` し、キューが空になったら再度 `scan` します。
+
+スコアは「機械的 25% + 主観 75%」です。主観スコアはレビューするまで 0 点から始まります。`strict score` は wontfix
+（直さないと決めた項目）も未解決として数えるので、「直さないことにして点を稼ぐ」ことはできません。
+
+skill（`SKILL.md`）の中身は「`next` を実行して、その指示に従う」という手順書で、description には「ユーザーが明示的に
+desloppify を求めたときだけ使う」と書かれています。普段のレビューや単発のバグ修正では発火しません。
+
+### skill のインストール
+
+`apm/apm.yml` で、CLI に同梱されている `SKILL.md` を `v1.0` tag に pin して配布しています。
+パスの末尾が `global` で配置名が skill 名にならないため、`alias: desloppify` を付けた object 形式で書いています
+（Renovate の regex manager が `ref` を読み、mise の `pipx:desloppify` と同じ PR で更新します。ただし object 形式は
+`apm.lock.yaml` を再生成しないため、その PR のブランチで `mise run apm:lock-local` を実行します）。
+
+```bash
+mise bootstrap dotfiles apply
+mise --cd "$HOME" run apm:install
+```
+
+`~/.claude/skills/desloppify/` と `~/.agents/skills/desloppify/` に配置されます。
+`desloppify update-skill claude` でもプロジェクト直下の `.claude/skills/desloppify/SKILL.md` に同じ手順書を生成できますが、
+APM で配布しているため通常は不要です。使うと同名の skill が二重になるので、どちらか一方にしてください。
+
+### 基本の使い方
+
+```bash
+desloppify scan --path .   # コードベース全体をスキャン
+desloppify next            # 実行キューから次のタスクを表示
+desloppify backlog         # 優先度外の未対応項目を確認
+desloppify plan            # 優先度を並べ替える
+desloppify exclude <path>  # スキャン対象から外す（生成物・vendor など）
+desloppify status --json   # 状態を JSON で出力
+```
+
+改善ループは次の流れです。
+
+1. `scan` でスキャンする
+2. 初回は主観レビュー（`review --prepare` → サブエージェントで採点 → `review --import`）と `plan`（triage）を行う。
+   主観スコアは総合スコアの 75% を占め、レビューするまで 0 点のままです
+3. `next` で次のタスクを確認する
+4. コードを修正する
+5. `resolve` で完了を報告する
+6. キューが残っていれば 3 に戻る。空になったら 1 に戻って再スキャンする
+
+エージェントには「desloppify の `next` を見て、キューが空になるまで直して」のように依頼します。
+
+### 注意点
+
+- 複数プロジェクトを含むリポジトリでは、プロジェクトごとに個別にスキャンします。
+- サブエージェントによるレビューは 3〜5 個ずつの波に分けて実行します。20 個以上を同時に起動すると、クォータ切れで
+  空の結果になります。
+- 専用ブランチ（`desloppify/code-health` など）で作業し、main に直接コミットしません。
+- CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
+- 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
