@@ -280,7 +280,13 @@ if [ "${usage_update:-false}" = "true" ]; then
 else
   apm install --only apm
 fi
-cp "$workdir/apm.lock.yaml" "$root/apm/apm.lock.yaml"
+# 中断時に tracked な lockfile が途中まで書かれた状態にならないよう、同じディレクトリの
+# 一時ファイルへコピーしてから rename する。
+temporary_lock=$(mktemp "$root/apm/apm.lock.yaml.XXXXXX")
+trap 'rm -rf "$workdir" "$temporary_lock"' EXIT
+cp "$workdir/apm.lock.yaml" "$temporary_lock"
+chmod 0644 "$temporary_lock"
+mv "$temporary_lock" "$root/apm/apm.lock.yaml"
 git -C "$root" diff --stat -- apm/apm.lock.yaml
 '''
 shell = "bash -c"
