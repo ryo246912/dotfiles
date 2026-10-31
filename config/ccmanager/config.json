@@ -78,8 +78,16 @@
         "id": "sbx",
         "name": "Claude account1 (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent claude --name-prefix a1 -- \"$@\"", "sbx-agent"],
-        "fallbackArgs": ["-c", "exec sbx-agent claude --name-prefix a1 -- \"$@\"", "sbx-agent"],
+        "args": [
+          "-c",
+          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "sbx-agent"
+        ],
         "detectionStrategy": "claude"
       },
       {
@@ -88,12 +96,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-prefix a2 -- \"$@\"",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --name-prefix a2 -- \"$@\"",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
@@ -104,12 +112,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-prefix w3 -- \"$@\"",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --name-prefix w3 -- \"$@\"",
+          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
