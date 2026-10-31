@@ -37,3 +37,13 @@ Session Actions では次の操作もできます。
 
 同じディレクトリで複数のエージェントが同時にファイルを編集すると衝突しやすいため、
 2つ目以降は調査・レビュー専用にするなど役割を分けて使います。
+
+## Docker Sandbox で Claude アカウントを切り替える
+
+Docker Sandbox の Claude preset は `--claude-account account1/account2/work3` を渡し、
+専用 kit と sandbox 固有のサブスク用 token を使います。初回登録が済むまでは起動しません。
+設定ディレクトリだけを分ける方式では sbx の共通 OAuth が優先されるためです。
+
+登録・credential binding・旧 sandbox の移行・制約は
+[Claude サブスクを account ごとに固定する kit](docker-sandboxes.md#claude-サブスクを-account-ごとに固定する-kit実験的)
+を参照してください。sandbox 内で `/login` は使わず、token の更新もホストで行います。

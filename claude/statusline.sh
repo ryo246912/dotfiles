@@ -186,6 +186,8 @@ case "$config_name" in
 .claude-*) account_label="${config_name#.claude-}" ;;
 *) account_label="$config_name" ;;
 esac
+# sbx labels identify the selected preset, not a verified OAuth identity.
+[ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account_label="$SBX_CLAUDE_ACCOUNT"
 case "$account_label" in
 account1) account_color='\033[1;97;44m' ;;
 account2) account_color='\033[1;97;45m' ;;
@@ -200,7 +202,12 @@ fi
 # global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
 # config dir に保存したメールアドレスを global config が更新されるまで使う。
 email_cache="$config_dir/statusline-account-email"
-if [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
+email=""
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	# Proxy credentials differ from the local Claude login metadata.
+	# Never present a stale oauthAccount email as the active proxy identity.
+	email=""
+elif [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
 	email=$(cat "$email_cache" 2>/dev/null)
 else
 	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
@@ -211,6 +218,20 @@ else
 	fi
 fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	if [ -n "${SBX_CLAUDE_ORG_ID:-}" ]; then
+		# Names are resolved from the observed organization ID, never the preset.
+		case "$SBX_CLAUDE_ORG_ID" in
+		e0076032-6106-4cfc-bc96-3d6979b65bab) org_label="account1" ;;
+		8f7aef31-aba6-4818-ae21-0c05f2a275c7) org_label="account2" ;;
+		b66e7858-51ce-459c-b706-aea172801fe7) org_label="work3" ;;
+		*) org_label="不明" ;;
+		esac
+		account="$account org: $org_label"
+	else
+		account="$account [sbx: 組織ID未取得]"
+	fi
+fi
 [ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
 
 # session id（`claude --resume <id>` 用）を灰色で表示する。

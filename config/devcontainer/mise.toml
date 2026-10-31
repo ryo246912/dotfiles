@@ -6,9 +6,9 @@ experimental = true
 "aqua:BurntSushi/ripgrep"                                   = "15.2.0"
 "aqua:anthropics/claude-code"                               = "2.1.292"
 "aqua:astral-sh/ruff"                                       = "0.16.10"
-"aqua:astral-sh/uv"                                         = "0.13.5"
+"aqua:astral-sh/uv"                                         = "0.13.6"
 "aqua:awslabs/git-secrets"                                  = "1.3.0"
-"aqua:cli/cli"                                              = "2.103.2"
+"aqua:cli/cli"                                              = "2.103.3"
 "aqua:evilmartians/lefthook"                                = "2.2.1"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
 "aqua:jqlang/jq"                                            = "1.7.1"
@@ -17,10 +17,11 @@ experimental = true
 "aqua:neovim/neovim"                                        = "0.12.6"
 "aqua:openai/codex"                                         = "0.160.1"
 "aqua:rhysd/actionlint"                                     = "1.7.12"
+"aqua:rtk-ai/rtk"                                           = "0.50.0"
 "aqua:secretlint/secretlint"                                = "13.1.0"
-"aqua:suzuki-shunsuke/disable-checkout-persist-credentials" = "1.0.0"
+"aqua:suzuki-shunsuke/disable-checkout-persist-credentials" = "1.0.2"
 "aqua:suzuki-shunsuke/ghalint"                              = "1.5.6"
-"aqua:suzuki-shunsuke/ghtkn"                                = "0.4.2"
+"aqua:suzuki-shunsuke/ghtkn"                                = "0.4.3"
 "aqua:suzuki-shunsuke/pinact"                               = "5.0.2"
 "aqua:tamasfe/taplo"                                        = "0.10.0"
 "aqua:zizmorcore/zizmor"                                    = "1.31.1"
@@ -31,13 +32,17 @@ experimental = true
 "github:backnotprop/plannotator"                            = "0.28.6"
 "github:betterleaks/betterleaks"                            = "1.3.1"
 "github:github/copilot-cli"                                 = "1.0.88"
-"github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"github:tomasz-tomczyk/crit"                                = "0.19.1"
-"go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+# gh-stack は mise ではなく Dockerfile / Dockerfile.sandbox が gh extension として入れる
+# （`gh stack` を extension 経由で動かすため。mise と二重に入れると version がずれる）。
+# "github:github/gh-stack"                                    = { version = "0.3.0", bin = "gh-stack" }
+"github:philschmid/mcp-cli"                      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
+"github:tomasz-tomczyk/crit"                     = "0.19.1"
+"go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 "http:coderabbit"                                           = { version = "0.9.0", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip" }
-"npm:oxfmt"                                                 = "0.74.0"
-"npm:oxlint"                                                = "1.87.0"
-"pipx:basic-memory"                                         = { version = "0.24.1", uvx_args = "--prerelease=allow" }
+"npm:oxfmt"                                      = "0.74.0"
+"npm:oxlint"                                     = "1.87.0"
+"pipx:basic-memory"                              = { version = "0.24.1", uvx_args = "--prerelease=allow" }
+"pipx:desloppify"                                = { version = "1.0", extras = "full" }
 
 [settings.pipx]
 uvx = true

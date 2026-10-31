@@ -1,0 +1,27 @@
+schemaVersion: "2"
+kind: sandbox
+name: claude-subscription
+extends: claude
+
+# This is intentionally the API-key secret storage interface with a Bearer
+# presentation: setup-token is a subscription token, not an Anthropic API key.
+credentials:
+  - service: anthropic
+    apiKey:
+      name: CLAUDE_CODE_OAUTH_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: api.anthropic.com
+          header: Authorization
+          format: "Bearer %s"
+
+permissions:
+  network:
+    allow:
+      - api.anthropic.com
+
+setup:
+  install:
+    - command: >-
+        python3 -c 'import json,pathlib; p=pathlib.Path("/home/agent/.claude/settings.json"); d=json.loads(p.read_text()) if p.exists() else {}; d.pop("apiKeyHelper",None); p.write_text(json.dumps(d))'
+      user: agent
