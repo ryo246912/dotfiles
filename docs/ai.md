@@ -1362,3 +1362,59 @@ sandbox へ読み込むときは、作業に合わせて片方だけ指定しま
 - `--user-data-dir` を普段のプロファイルと分けておくと、そのプロファイルでログインした状態のまま調査できます。
 - 複数の Chrome を並行して使う場合は 9223 / 9224 で起動し、`config/sbx/mcp.work2.yml.example` を参考に
   `chrome-devtools-2` / `chrome-devtools-3` を追加します。
+
+## desloppify（コードベースの品質改善ループ）
+
+[desloppify](https://github.com/peteromallet/desloppify) は、コードベースをスキャンして「雑な実装（slop）」を検出し、
+優先度付きの修正キューを作ってエージェントに順番に直させる CLI です。
+
+### 導入
+
+`config/mise/config.toml` に `pipx:desloppify`（extras は `full`）を pin しています。Python 3.11 以上が必要です。
+
+```bash
+mise bootstrap dotfiles apply
+mise --cd "$HOME" install pipx:desloppify
+desloppify --help
+```
+
+スキャン結果などのローカル状態は各プロジェクトの `.desloppify/` に保存されます。
+`config/git/gitignore`（グローバル gitignore）に追加済みなので、プロジェクトごとの設定は不要です。
+
+### エージェントに手順を教える
+
+プロジェクトで一度だけ、使うエージェント向けのワークフローガイドを配置します。
+
+```bash
+desloppify update-skill claude   # Claude Code 用
+desloppify update-skill codex    # Codex 用（cursor / copilot / gemini なども指定可）
+```
+
+生成物はプロジェクトに入るため、チームで使わない場合はコミットしないでください。
+
+### 基本の使い方
+
+```bash
+desloppify scan --path .   # コードベース全体をスキャン
+desloppify next            # 実行キューから次のタスクを表示
+desloppify backlog         # 優先度外の未対応項目を確認
+desloppify plan            # 優先度を並べ替える
+desloppify exclude <path>  # スキャン対象から外す（生成物・vendor など）
+desloppify status --json   # 状態を JSON で出力
+```
+
+改善ループは次の流れです。
+
+1. `scan` でスキャンする
+2. `next` で次のタスクを確認する
+3. コードを修正する
+4. `resolve` で完了を報告する
+5. 2 に戻る
+
+エージェントには「desloppify の `next` を見て、キューが空になるまで直して」のように依頼します。
+
+### 注意点
+
+- 複数プロジェクトを含むリポジトリでは、プロジェクトごとに個別にスキャンします。
+- CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
+- 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
