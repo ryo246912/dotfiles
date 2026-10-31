@@ -1,6 +1,6 @@
 lockfile_version: '1'
 generated_at: '2026-10-31T08:38:15.398648+00:00'
-apm_version: 0.33.0
+apm_version: 0.35.0
 dependencies:
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
