@@ -147,6 +147,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:ulid"                                                  = "3.0.2"
 "pipx:basic-memory"                                         = { version = "0.24.1", uvx_args = "--prerelease=allow" }
 "pipx:context-tracker"                                      = "1.0.0"
+"pipx:desloppify"                                           = { version = "1.0", extras = "full" }
 "pipx:grip"                                                 = "4.6.2"
 "pipx:tftui"                                                = "0.14.1"
 
