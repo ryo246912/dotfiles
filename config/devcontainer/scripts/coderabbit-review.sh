@@ -30,7 +30,7 @@ head_sha=$(git rev-parse HEAD)
 [ "$(cat "$marker" 2>/dev/null)" = "$head_sha" ] && exit 0
 
 echo "Reviewing with CodeRabbit CLI..." >&2
-# sbx custom secret の場合はプレースホルダー。実キーへの置換はホストのプロキシが行う。
+# sandbox では sbxenv.yaml の service secret が API key を環境変数へ渡す。
 review_args=(review --committed)
 if [ -n "${CODERABBIT_API_KEY:-}" ]; then
     review_args+=(--api-key "$CODERABBIT_API_KEY")

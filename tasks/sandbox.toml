@@ -195,24 +195,8 @@ echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].templat
 main "$@"
 '''
 
-["sandbox:coderabbit"]
-description = "Register CodeRabbit API key from host fnox as an sbx custom secret"
-run = '''
-set -eu
-command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です" >&2; exit 127; }
-fnox_bin=$(command -v fnox) || { echo "error: ホストに fnox が必要です" >&2; exit 127; }
-# 実キーは出力せず、ホストの resolver を登録する。fnox の設定・provider は共有 mount の外に置く。
-printf -v resolver '%q get CODERABBIT_API_KEY' "$fnox_bin"
-sbx secret set-custom \
-  --host '*.coderabbit.ai' \
-  --env CODERABBIT_API_KEY \
-  --placeholder 'cr-{rand}' \
-  --command "$resolver"
-echo "CodeRabbit secret を登録しました。network policy を反映し、sandbox を新規作成してください。"
-'''
-
 ["sandbox:setup"]
-description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills, settings)"
+description = "One-time host-side setup for Docker Sandboxes (SSH, skills, settings)"
 run = '''
 set -eu
 
@@ -230,24 +214,9 @@ initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh
 echo "==> マウント元と SSH 鍵を準備"
 bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; exit 1; }
 
-echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
-if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-  sbx secret set github --command 'gh auth token' --force || echo "warn: secret の登録に失敗しました" >&2
-else
-  echo "warn: gh が未ログインのためスキップしました（gh auth login 後に再実行）" >&2
-fi
-
-echo "==> ホスト連携に必要な network policy を許可"
-# mac-host への SSH（通知 / host-tmux / plannotator tunnel）。
-# sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
-sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
-
-echo "==> 許可リストのドメインを全 sandbox で許可"
-# 一覧は config/sbx/allow-domains.txt（共通）と allow-domains.<name>.txt（work3 / private など
-# 環境ごと。gitignore 済み）。kit ではなく global な policy で許可する理由は
-# docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
-for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.txt "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
-  # allow-domains.*.txt が 1 つも無いとき glob がそのまま残るため存在確認する
+# 共通の secret と network policy は sbxenv.yaml / kits/common が管理する。
+# 個人用の追加許可だけは、既存のローカルファイルを引き続き読み込む。
+for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
   [ -f "$allow_file" ] || continue
   allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow_file" | grep -v '^$' | paste -sd, -) || true
   if [ -n "$allow_domains" ]; then

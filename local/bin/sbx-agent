@@ -21,7 +21,7 @@
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
 #   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
 #   --no-template      template を指定せず sbx の既定 template で起動する
-#   --env-file FILE    sbxenv.yaml + kit 方式で作成する（未指定なら従来方式）
+#   --env-file FILE    環境定義（既定: ~/.config/sbx/sbxenv.yaml）
 #   --env-plan         環境ファイル方式の plan だけ表示する（作成・削除しない）
 #   --env-force        環境ファイルの plan を今回だけ非対話で承認する
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
@@ -95,7 +95,7 @@ FORCE_NEW=false
 REMOVE_ON_EXIT=false
 MOUNT_CONFIG=true
 HOST_BRIDGE=true
-ENV_FILE=""
+ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/sbx/sbxenv.yaml"
 ENV_PLAN=false
 ENV_FORCE=false
 EXTRA_MOUNTS=()
@@ -305,7 +305,7 @@ for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
 done
 
 # template は常に DEFAULT_TEMPLATE を使う。--template / SBX_AGENT_TEMPLATE で上書きでき、
-# --no-template で sbx の既定 template に戻せる。未ビルドなら sbx create が失敗し、
+# --no-template で sbx の既定 template に戻せる。未ビルドなら環境の作成が失敗し、
 # そこで原因と build 手順を出す。
 if [[ "$NO_TEMPLATE" == true ]]; then
     [[ -n "$TEMPLATE" ]] && log_warn "--no-template が指定されたため --template を無視します"
@@ -385,7 +385,7 @@ if [[ -n "$CLAUDE_ACCOUNT" ]]; then
         log_error "subscription kit のため dotfiles の配置が必要です（DOTFILES_DIR）"
         exit 1
     }
-    SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/claude-subscription"
+    SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/kits/claude-subscription"
     [[ -f "$SUBSCRIPTION_KIT/spec.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
     SUBSCRIPTION_TOKEN="${HOME}/.local/state/sbx-agent-credentials/${CLAUDE_ACCOUNT}.token"
     SUBSCRIPTION_MARKER="${HOME}/.local/state/sbx-agent-credentials/sandboxes/${SANDBOX_NAME}"
@@ -596,12 +596,7 @@ add_env() { ENV_ARGS+=(--env "$1=$2"); }
 GIT_CONFIG_PAIRS=()
 add_git_config() { GIT_CONFIG_PAIRS+=("$1" "$2"); }
 
-add_env AI_AGENT 1
-# claude が xterm-256color を必要とするため TERM を設定する
-add_env TERM xterm-256color
 add_env HOST_USER "${USER:-}"
-# devcontainer 専用の lint hook 設定を使う
-add_env LEFTHOOK_CONFIG lefthook.local.yml
 # lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
 add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
@@ -775,36 +770,6 @@ sandbox_exists() {
     sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$SANDBOX_NAME"
 }
 
-# ホスト側の前提条件を冪等に整える（sandbox を作るときだけ呼ぶ）。
-# `mise run sandbox:setup` を手で打たなくても普段の起動で揃うようにしている。
-ensure_host_prerequisites() {
-    [[ "$HOST_BRIDGE" != true ]] && return 0
-
-    # 新方式は secrets.github と common kit が管理するため、global な登録は行わない。
-    [[ -n "$ENV_FILE" ]] && return 0
-
-    # GitHub トークン: プロキシが注入するため agent は生トークンを読めない。
-    # 登録済みでも毎回登録し直す。`gh auth refresh` などでホストのトークンが入れ替わると、
-    # sbx に保存された古い値のままでは sandbox 内の gh が "token expired or invalid" になる。
-    # secret は sandbox 作成時に注入されるため、ここ（作成時だけ呼ばれる）で揃えれば足りる。
-    if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-        if sbx secret set github --command 'gh auth token' >/dev/null 2>&1; then
-            log_info "github の secret をホストの gh から登録し直しました"
-        else
-            log_warn "github の secret の登録に失敗しました（sandbox 内の gh が認証できない可能性があります）"
-        fi
-    else
-        log_warn "ホストの gh が未ログインのため github の secret を更新できませんでした（gh auth login）"
-    fi
-
-    # mac-host への SSH。sandbox プロキシは host.docker.internal を localhost に
-    # 書き換えて転送するため、許可ルールは localhost:<port> で書く
-    if ! sbx policy ls 2>/dev/null | grep -q 'localhost:22'; then
-        sbx policy allow network localhost:22 >/dev/null 2>&1 \
-            && log_info "network policy に localhost:22 を追加しました"
-    fi
-}
-
 # 停止・再起動で公開ポートは消えるため、アタッチ前に張り直す（sbx run の --publish は
 # 既存 sandbox に対しては無視されるため、sbx ports を使う）
 republish_ports() {
@@ -832,7 +797,7 @@ sandbox_host_port() {
         | awk -v p="$sandbox_port" 'NR > 1 && $3 == p { print $2; exit }'
 }
 
-# sbx には postCreateCommand が無いため、作成直後に sbx exec で初期化スクリプトを実行する
+# アタッチ時の port / mount 復旧も必要なので、作成時 lifecycle だけに任せず毎回実行する
 # （sbx exec -d は 0.45.0 で非対応になったので前景で実行する）
 #
 # --no-host-bridge でもスキップしない。初期化スクリプトの中身は nvim 設定の共有・生成物の
@@ -925,7 +890,7 @@ prepare_env_files() {
     for spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do
         ports_json=$(jq -cn --argjson p "$ports_json" --arg s "$spec" '$p + [($s | split(":") | if length == 1 then {sandbox:(.[0]|tonumber)} else {host:(.[0]|tonumber),sandbox:(.[1]|tonumber)} end)]') || exit 1
     done
-    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s} + (if $t=="" then {} else {template:$t,pullPolicy:"missing"} end) + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
+    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s,template:$t,pullPolicy:"missing"} + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
     # 引数をそのまま shell へ連結しない。特に空白・改行・引用符を保持する。
     (
         umask 077
@@ -935,15 +900,15 @@ prepare_env_files() {
     # static MCP は従来の load_static_mcp で作成後に適用する。
 }
 
-if [[ "$ENV_PLAN" == true || "$ENV_FORCE" == true ]] && [[ -z "$ENV_FILE" ]]; then
-    log_error "--env-plan / --env-force には --env-file が必要です"
-    exit 1
+prepare_env_files
+if [[ "$ENV_PLAN" == true ]]; then
+    exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
 fi
-if [[ -n "$ENV_FILE" ]]; then
-    prepare_env_files
-    if [[ "$ENV_PLAN" == true ]]; then
-        exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
-    fi
+
+# 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
+if sandbox_exists && [[ "$FORCE_NEW" != true && ! -f "${ENV_OVERLAY%/*}/created" ]]; then
+    log_error "この sandbox は環境ファイル方式での作成を確認できません。必要なデータを保存して --new で作り直してください"
+    exit 1
 fi
 
 # Re-register on every attach: deletion/recreation also removes scoped secrets.
@@ -1019,56 +984,23 @@ PYTOKEN
     fi
 }
 
-# --new は「作り直す」なので、既存があれば先に消す（消さないと sbx create が名前の衝突で
-# 失敗し、結果として古い sandbox が再利用されてしまう）
+# --new は既存の環境と scoped secret を先に削除する。
 if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
     log_info "既存の sandbox を削除します: $SANDBOX_NAME"
-    remove_cmd=(sbx rm --force "$SANDBOX_NAME")
-    [[ -n "$ENV_FILE" ]] && remove_cmd=(sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY")
-    if ! "${remove_cmd[@]}"; then
+    if ! sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"; then
         log_error "既存 sandbox の削除に失敗しました: $SANDBOX_NAME"
         exit 1
     fi
+    rm -f "${ENV_OVERLAY%/*}/created"
 fi
 
 if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
-    ensure_host_prerequisites
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
 
-    create_cmd=(sbx create --name="$SANDBOX_NAME" --skills="$SKILLS")
-    for spec in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
-        create_cmd+=(--static-mcp "$spec")
-    done
-    # sbx create の --pull は既定が always なので、そのままでは `sbx-agent:claude` のような
-    # ローカルにしか無い template をレジストリから引こうとしてしまう（sbx 0.47.0 の
-    # `sbx create --help` で確認。docs も `sbx run --pull never -t TAG` を例示している）。
-    # never ではなく missing にするのは、SBX_AGENT_TEMPLATE にレジストリ上の参照を
-    # 指定された場合に取得できなくなるのを避けるため（ローカルに有れば引かない）。
-    [[ -n "$TEMPLATE" ]] && create_cmd+=(--template "$TEMPLATE" --pull missing)
-    [[ -n "$CPUS" ]] && create_cmd+=(--cpus "$CPUS")
-    [[ -n "$MEMORY" ]] && create_cmd+=(--memory "$MEMORY")
-    if [[ "$HOST_BRIDGE" == true && -z "$ENV_FILE" ]]; then
-        # host port は固定せず sbx に採番させる（sandbox を複数同時起動しても衝突しない）。
-        # 実際に割り当てられた port は作成後に sbx ports で調べて sandbox 内へ渡す。
-        PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
-    fi
-    for spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do
-        create_cmd+=(--publish "$spec")
-    done
-    create_cmd+=(${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
-    create_cmd+=("${SUBSCRIPTION_KIT:-$AGENT}" "$WORKSPACE")
-    create_cmd+=(${MOUNTS[@]+"${MOUNTS[@]}"})
-
-    log_info "sandbox を作成します: $SANDBOX_NAME"
-    log_info "  workspace: $WORKSPACE"
-    [[ ${#MOUNTS[@]} -gt 0 ]] && log_info "  追加 workspace: ${MOUNTS[*]}"
-    [[ ${#PUBLISH_PORTS[@]} -gt 0 ]] && log_info "  公開ポート: ${PUBLISH_PORTS[*]}"
-
-    if [[ -n "$ENV_FILE" ]]; then
-        create_cmd=(sbx env create --name "$SANDBOX_NAME")
-        [[ "$ENV_FORCE" == true ]] && create_cmd+=(--force)
-        create_cmd+=("$ENV_FILE" "$ENV_OVERLAY")
-    fi
+    create_cmd=(sbx env create --name "$SANDBOX_NAME")
+    [[ "$ENV_FORCE" == true ]] && create_cmd+=(--force)
+    create_cmd+=("$ENV_FILE" "$ENV_OVERLAY")
+    log_info "環境ファイルから sandbox を作成します: $SANDBOX_NAME"
     if ! "${create_cmd[@]}"; then
         log_error "sandbox の作成に失敗しました"
         if [[ -n "$TEMPLATE" ]]; then
@@ -1082,7 +1014,8 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         fi
         exit 1
     fi
-    [[ -n "$ENV_FILE" ]] && load_static_mcp
+    (umask 077; touch "${ENV_OVERLAY%/*}/created") || exit 1
+    load_static_mcp
 
 else
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
@@ -1129,14 +1062,14 @@ fi
 run_cmd=(sbx run --name "$SANDBOX_NAME")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
-[[ "$REMOVE_ON_EXIT" == true && -z "$ENV_FILE" ]] && run_cmd+=(--rm)
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
 
-if [[ "$REMOVE_ON_EXIT" == true && -n "$ENV_FILE" ]]; then
+if [[ "$REMOVE_ON_EXIT" == true ]]; then
     # sbx env が作った scoped secret も含めて削除する。
     rc=0
     "${run_cmd[@]}" || rc=$?
     sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY" || exit 1
+    rm -f "${ENV_OVERLAY%/*}/created"
     exit "$rc"
 fi
 exec "${run_cmd[@]}"

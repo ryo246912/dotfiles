@@ -10,7 +10,6 @@ credentials:
     apiKey:
       name: CODERABBIT_API_KEY
       # CLI chooses its own auth headers. The real key is available inside this sandbox.
-      # The existing custom-secret backend remains available for header-only proxy isolation.
       proxyManaged: false
 permissions:
   network:

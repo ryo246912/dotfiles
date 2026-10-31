@@ -7,13 +7,13 @@ description: Shared sandbox environment and network policy for dotfiles template
 environment:
   variables:
     AI_AGENT: "1"
+    TERM: xterm-256color
     LEFTHOOK_CONFIG: lefthook.local.yml
     INSTALL_LOCAL_LEFTHOOK: "0"
 permissions:
   network:
-    # Keep in sync with allow-domains.txt for the legacy backend (tested).
     allow:
-      # Host bridge (also permitted globally by legacy sandbox:setup).
+      # Host bridge for notifications / plannotator / host-tmux.
       - "localhost:22"
       - "docs.anthropic.com"
       - "docs.claude.com"
