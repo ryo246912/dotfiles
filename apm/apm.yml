@@ -54,7 +54,7 @@ dependencies:
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.7.4
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
-    - DietrichGebert/ponytail#v5.1.0
+    - DietrichGebert/ponytail#v5.3.2
     # desloppify は CLI（mise の pipx:desloppify）に同梱された SKILL.md を配布する。skill は CLI と
     # 対で更新される（古いと CLI が警告する）ため、ref は mise の version と揃える。
     # path 末尾が `global` で配置名が skill 名にならないため、object 形式 + alias で書く。

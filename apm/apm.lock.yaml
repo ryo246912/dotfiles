@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-31T08:38:15.398648+00:00'
+generated_at: '2026-10-31T09:15:42.518837+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1245,9 +1245,9 @@ dependencies:
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
-  version: 9cc65d0
+  resolved_commit: 16352ac229eb08a9598dcae48fe9f2b342567d86
+  resolved_ref: v5.3.2
+  version: 16352ac
   package_type: marketplace_plugin
   deployed_files:
   - .agents/skills/ponytail
@@ -1276,18 +1276,18 @@ dependencies:
   - .claude/skills/ponytail/SKILL.md
   deployed_file_hashes:
     .agents/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
-    .agents/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .agents/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-    .agents/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+    .agents/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+    .agents/skills/ponytail-gain/SKILL.md: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
+    .agents/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
     .agents/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
-    .agents/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+    .agents/skills/ponytail/SKILL.md: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
     .claude/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
-    .claude/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .claude/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-    .claude/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+    .claude/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+    .claude/skills/ponytail-gain/SKILL.md: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
+    .claude/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
     .claude/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
-    .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
-  content_hash: sha256:3133b97b1d13e831e316574c3dc9634c219ee209b075874813dc2d25492130fb
+    .claude/skills/ponytail/SKILL.md: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
+  content_hash: sha256:20569f2d8766157e19d89f862d04de06c604ae26283d3b0237ec3897b86d7dcd
 - repo_url: mattpocock/skills
   name: resolving-merge-conflicts
   host: github.com
@@ -4874,7 +4874,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-gain
@@ -4892,7 +4892,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+  content_hash: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-help
@@ -4910,7 +4910,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-review
@@ -4937,7 +4937,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+  content_hash: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
 - kind: project-relative
   target: claude
   value: .claude/skills/resolving-merge-conflicts
@@ -7934,7 +7934,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-gain
@@ -7952,7 +7952,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+  content_hash: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-help
@@ -7970,7 +7970,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-review
@@ -7997,7 +7997,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
-  content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+  content_hash: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
 - kind: project-relative
   target: codex
   value: .agents/skills/resolving-merge-conflicts
