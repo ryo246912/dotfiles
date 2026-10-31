@@ -24,12 +24,14 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 ## mise タスク一覧
 
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
+Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、このファイルの各タスク内に定義しています。
 
 | タスク                   | 用途                                                                                                                                              | 使うタイミング               |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `sandbox:setup`          | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                              | 初回だけ                     |
 | `sandbox:claude-setup` | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成 | Claude 設定だけ再実行するとき |
 | `sandbox:claude-token` | 指定アカウントの setup-token を y/n 確認付きで生成・保存 | token 登録・更新のみ |
+| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得） | 認証先を確認するとき |
 | `sandbox:secret-rm` | 指定した sbx secret を削除（`--sandbox` で対象限定） | 不要な secret を削除するとき |
 | `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
 | `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
@@ -686,16 +688,16 @@ statusline は起動時に渡された保存値だけを読み、ネットワー
 ホストで保存値を確認するには次を実行します。すでに取得を試みた token では追加リクエストを送りません。
 
 ```bash
-sbx-claude-auth-check dotfiles-a1-main-claude
-sbx-claude-auth-check dotfiles-a2-main-claude
-sbx-claude-auth-check dotfiles-w3-main-claude
+mise run sandbox:claude-auth-check dotfiles-a1-main-claude
+mise run sandbox:claude-auth-check dotfiles-a2-main-claude
+mise run sandbox:claude-auth-check dotfiles-w3-main-claude
 ```
 
 モデル非対応や一時エラーを解消して、明示的に再取得する場合だけ `--refresh` を指定します。
 この場合は追加で１回リクエストを送ります。実行後は Claude を終了して preset から再起動すると表示に反映されます。
 
 ```bash
-sbx-claude-auth-check dotfiles-a1-main-claude --refresh
+mise run sandbox:claude-auth-check dotfiles-a1-main-claude --refresh
 ```
 
 `HTTP: 200` は、その sandbox の通信経路で推論の認証が成功したことを示します。
