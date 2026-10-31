@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-31T08:38:15.398648+00:00'
+generated_at: '2026-10-31T09:14:53.625248+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1578,8 +1578,8 @@ dependencies:
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
-  resolved_commit: de61b1bb07d92df4869ea7b4438592d7105d9113
-  resolved_ref: v0.19.1
+  resolved_commit: ad3e10fbc864ca613eb084cf9a7b23c25f5317b3
+  resolved_ref: v0.23.1
   version: unknown
   virtual_path: integrations/claude-code/skills/crit
   is_virtual: true
@@ -1590,14 +1590,14 @@ dependencies:
   - .claude/skills/crit
   - .claude/skills/crit/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit/SKILL.md: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
-    .claude/skills/crit/SKILL.md: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
-  content_hash: sha256:87e2d574596b15e795e395151f8dac09c2f5c72a08adb2184117ee77d691e8b9
+    .agents/skills/crit/SKILL.md: sha256:a587ea95d8cb510e344eecbb3053607778fbfad9249bb72887b2aa09fae2bd7a
+    .claude/skills/crit/SKILL.md: sha256:a587ea95d8cb510e344eecbb3053607778fbfad9249bb72887b2aa09fae2bd7a
+  content_hash: sha256:0013ea0547b7d8de0f2e5efd0185d47b936fb1fe40dc86ef7aa2cba20e3287e2
 - repo_url: tomasz-tomczyk/crit
   name: crit-cli
   host: github.com
-  resolved_commit: de61b1bb07d92df4869ea7b4438592d7105d9113
-  resolved_ref: v0.19.1
+  resolved_commit: ad3e10fbc864ca613eb084cf9a7b23c25f5317b3
+  resolved_ref: v0.23.1
   version: unknown
   virtual_path: integrations/claude-code/skills/crit-cli
   is_virtual: true
@@ -1608,9 +1608,9 @@ dependencies:
   - .claude/skills/crit-cli
   - .claude/skills/crit-cli/SKILL.md
   deployed_file_hashes:
-    .agents/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
-    .claude/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
-  content_hash: sha256:7a9756c98a7838e87ac532a5e4d3387f71d61eaf52051be919dfdbe588e1d4fa
+    .agents/skills/crit-cli/SKILL.md: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
+    .claude/skills/crit-cli/SKILL.md: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
+  content_hash: sha256:1ffa9e4e745d889e5ca8c2c8161b951dcfe871623bc2e57b31d54297aa01ee64
 - repo_url: vercel-labs/skills
   name: find-skills
   host: github.com
@@ -1958,7 +1958,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
+  content_hash: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
 - kind: project-relative
   target: claude
   value: .claude/skills/crit/SKILL.md
@@ -1967,7 +1967,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
+  content_hash: sha256:a587ea95d8cb510e344eecbb3053607778fbfad9249bb72887b2aa09fae2bd7a
 - kind: project-relative
   target: claude
   value: .claude/skills/ctx-agent-history-search
@@ -5018,7 +5018,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli
-  content_hash: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
+  content_hash: sha256:5ce67dca507ee5a9098b7735f1a87c497ec2eed24268a02df516ee3db713bf4a
 - kind: project-relative
   target: codex
   value: .agents/skills/crit/SKILL.md
@@ -5027,7 +5027,7 @@ deployments:
   owners:
   - tomasz-tomczyk/crit/integrations/claude-code/skills/crit
   active_owner: tomasz-tomczyk/crit/integrations/claude-code/skills/crit
-  content_hash: sha256:b14ecc0ef268c6703e214ca450acb9f8fd4e3c73f1fed5b697731cc959eccf0d
+  content_hash: sha256:a587ea95d8cb510e344eecbb3053607778fbfad9249bb72887b2aa09fae2bd7a
 - kind: project-relative
   target: codex
   value: .agents/skills/ctx-agent-history-search
