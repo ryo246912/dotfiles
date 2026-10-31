@@ -69,6 +69,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|exec_command|shell_command|shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+            "timeout": 600
+          }
+        ]
+      }
     ]
   }
 }

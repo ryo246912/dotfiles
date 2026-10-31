@@ -192,7 +192,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+            "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
             "timeout": 600
           }
         ]

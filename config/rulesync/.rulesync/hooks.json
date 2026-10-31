@@ -39,7 +39,7 @@
         },
         {
           "matcher": "Bash",
-          "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/coderabbit-review.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
           "timeout": 600
         }
       ],
@@ -111,6 +111,23 @@
           "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
           "timeout": 345600,
           "statusMessage": "Opening plan in Plannotator"
+        }
+      ],
+      "preToolUse": [
+        {
+          "matcher": "Bash|exec_command|shell_command|shell",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "timeout": 600
+        }
+      ]
+    }
+  },
+  "copilotcli": {
+    "hooks": {
+      "preToolUse": [
+        {
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "timeout": 600
         }
       ]
     }

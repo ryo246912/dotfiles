@@ -96,6 +96,18 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 
 ### hooks（`config/rulesync/.rulesync/hooks.json`）
 
+CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot CLI の
+`preToolUse` に登録しています。共通の実体は
+`config/devcontainer/scripts/coderabbit-review.sh`（配置先は
+`~/.config/devcontainer/scripts/coderabbit-review.sh`）です。
+Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
+コマンドを読み、`git push`・`gh pr create`（単独、または `&&` の後）だけを対象にします。
+`.coderabbit.yaml` と CLI がある場合に HEAD ごとに一度レビューし、結果を agent に返して
+その実行を止めます。CLI の失敗時は続行します。
+Copilot CLI は rulesync 32.0.0 の matcher 制限を避けてスクリプト側で判定します。
+変更後は `mise run rulesync:generate` を実行し、各 CLI を再起動してください。
+`claude/coderabbit-review.sh` は更新前の hook 設定用の互換入口として残しています。
+
 | ブロック           | 生成先                                | 内容                                                               |
 | ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
 | `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、plannotator、rtk、編集後の formatter / type check 等 |
