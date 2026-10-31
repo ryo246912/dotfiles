@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """Check actual proxy authentication with one small, billable model request."""
 import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
 import subprocess
 import sys
+import tempfile
 
 CHECK = r'''
 import json, os, sys, urllib.request, urllib.error
@@ -19,12 +26,9 @@ request = urllib.request.Request(
              "content-type": "application/json"})
 try:
     with urllib.request.urlopen(request, timeout=60) as response:
-        print("HTTP:", response.status)
-        print("anthropic-organization-id:", response.headers.get("anthropic-organization-id", "(not returned)"))
-        print("Inference authentication succeeded. This does not identify an individual email address.")
+        print(json.dumps({"http": response.status, "organization_id": response.headers.get("anthropic-organization-id", "")}))
 except urllib.error.HTTPError as error:
-    print("HTTP:", error.code)
-    print("request-id:", error.headers.get("request-id", "(not returned)"))
+    print(json.dumps({"http": error.code, "organization_id": ""}))
     sys.exit(1)
 except urllib.error.URLError:
     sys.exit("Network/TLS connection failed (credential values are not printed)")
@@ -36,9 +40,65 @@ def main():
     parser.add_argument("sandbox")
     parser.add_argument("--model", default="claude-haiku-4-5-20251001",
                         help="available Claude model (default: claude-haiku-4-5-20251001)")
+    parser.add_argument("--refresh", action="store_true", help="explicitly retry the one-time lookup")
     args = parser.parse_args()
-    print("Sending one max_tokens=1 inference request through the sandbox proxy.", flush=True)
-    return subprocess.call(["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model])
+    private = Path.home() / ".local/state/sbx-agent-credentials"
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.sandbox) or args.sandbox in (".", ".."):
+        parser.error("invalid sandbox name")
+    marker = private / "sandboxes" / args.sandbox
+    if not marker.is_file():
+        parser.error("start this sandbox with sbx-agent --claude-account first")
+    account = marker.read_text().strip()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", account):
+        parser.error("invalid account marker")
+    token_file = private / (account + ".token")
+    fingerprint = hashlib.sha256(token_file.read_bytes().strip()).hexdigest()
+    directory = private / "organizations"
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    cache = directory / (account + ".json")
+    # Serialize simultaneous ccmanager launches; the second caller reads cache.
+    lock_fd = os.open(str(directory / (account + ".lock")), os.O_CREAT | os.O_RDWR, 0o600)
+    with os.fdopen(lock_fd, "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            saved = json.loads(cache.read_text())
+        except (OSError, ValueError):
+            saved = {}
+        if saved.get("token_sha256") == fingerprint and not args.refresh:
+            print("Cached organization ID:", saved.get("organization_id") or "(unavailable; no new request)")
+            return 0
+        # Persist an attempt BEFORE requesting: even failures are not auto-retried.
+        record = {"account": account, "token_sha256": fingerprint,
+                  "sandbox": args.sandbox, "organization_id": "", "http": None}
+
+        def save():
+            fd, path = tempfile.mkstemp(prefix=".org-", dir=directory)
+            try:
+                with os.fdopen(fd, "w") as handle:
+                    json.dump(record, handle)
+                os.replace(path, cache)
+            finally:
+                if os.path.exists(path):
+                    os.unlink(path)
+
+        save()
+        print("One-time max_tokens=1 inference request through the sandbox proxy.", flush=True)
+        result = subprocess.run(["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model],
+                                capture_output=True, text=True)
+        try:
+            observed = json.loads(result.stdout)
+        except ValueError:
+            observed = {}
+        if hashlib.sha256(token_file.read_bytes().strip()).hexdigest() != fingerprint:
+            sys.exit("token changed during lookup; result discarded")
+        org = observed.get("organization_id", "")
+        if result.returncode == 0 and observed.get("http") == 200 and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", org):
+            record["organization_id"] = org
+        record["http"] = observed.get("http")
+        save()
+        print("HTTP:", record["http"] or "unavailable")
+        print("anthropic-organization-id:", record["organization_id"] or "(not returned)")
+        return 0 if record["organization_id"] else 1
 
 
 if __name__ == "__main__":

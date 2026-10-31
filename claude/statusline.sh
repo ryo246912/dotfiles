@@ -218,7 +218,13 @@ else
 	fi
 fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
-[ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account="$account [sbx: 認証先未確認]"
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	if [ -n "${SBX_CLAUDE_ORG_ID:-}" ]; then
+		account="$account org:$SBX_CLAUDE_ORG_ID"
+	else
+		account="$account [sbx: 組織ID未取得]"
+	fi
+fi
 [ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
 
 # session id（`claude --resume <id>` 用）を灰色で表示する。

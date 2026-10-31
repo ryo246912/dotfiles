@@ -988,10 +988,29 @@ fi
 # 公開ポートは sandbox の停止で失われるため、毎回張り直す必要がある（全処理は冪等）。
 run_post_create
 
+# One lookup per account/token, including failed attempts; statusline never calls APIs.
+SUBSCRIPTION_ORG_ID=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    python3 "$subscription_repo/local/bin/sbx-claude-auth-check" "$SANDBOX_NAME" \
+        || log_warn "組織 ID を取得できませんでした。自動再取得はしません（docs 参照）"
+    SUBSCRIPTION_ORG_ID=$(python3 - "$SUBSCRIPTION_TOKEN" "$CLAUDE_ACCOUNT" <<'PYORG'
+import hashlib, json, pathlib, re, sys
+p = pathlib.Path(sys.argv[1])
+try:
+    d = json.loads((p.parent / "organizations" / (sys.argv[2] + ".json")).read_text())
+    org = d.get("organization_id", "")
+    if d.get("token_sha256") == hashlib.sha256(p.read_bytes().strip()).hexdigest() and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", org):
+        print(org)
+except (OSError, ValueError):
+    pass
+PYORG
+    )
+fi
+
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
 run_cmd=(sbx run --name "$SANDBOX_NAME")
-[[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT")
+[[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
 [[ "$REMOVE_ON_EXIT" == true ]] && run_cmd+=(--rm)
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")

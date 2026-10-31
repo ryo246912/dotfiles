@@ -676,13 +676,22 @@ sbx-agent claude --claude-account work3 \
 `setup-token` と sandbox 専用 secret の更新には連動しません。
 
 ラッパーは起動時に `SBX_CLAUDE_ACCOUNT` を渡します。statusline はこの環境で古いメールを
-表示せず、`account1 [sbx: 認証先未確認]` のように表示します。account1 は選択した preset の
-識別子であり、プロバイダが確認した個人アカウントではありません。通常のホスト起動は従来の
+表示せず、初回の推論応答から取得した組織 ID を `account1 org:<organization-id>` と表示します。
+account1 は選択した preset の識別子、組織 ID は実際の応答で観測した値です。
+組織 ID が取れない場合は `account1 [sbx: 組織ID未取得]` と表示します。通常のホスト起動は従来の
 メール表示のままです。反映には Claude を終了して preset から起動し直してください。
 
-実際の通信に認証が適用されるかは、ホストから次を実行します。各コマンドは sandbox 経由で
-`max_tokens=1` の推論リクエストを１回送ります。少量の利用枠を消費し、認証方式によっては課金されます。
+`sbx-agent` はアカウントごと・token ごとに初回だけ、sandbox 経由で `max_tokens=1` の
+推論リクエストを１回送り、組織 ID を取得します。少量の利用枠を消費し、認証方式によっては課金されます。
 本物の token や生成内容は出力しません。
+
+結果はホストの `~/.local/state/sbx-agent-credentials/organizations/<account>.json` に保存します。
+statusline は起動時に渡された保存値だけを読み、ネットワーク通信は行いません。
+同じ token では別 sandbox・再起動でも再取得しません。token が変わった場合は古い ID を使わず、
+新しい token の初回だけ取得します。取得失敗・ヘッダー未返却時も試行を記録し、自動再試行しません。
+同時起動はアカウントごとのロックで二重取得を防ぎます。
+
+ホストで保存値を確認するには次を実行します。すでに取得を試みた token では追加リクエストを送りません。
 
 ```bash
 sbx-claude-auth-check dotfiles-a1-main-claude
@@ -690,11 +699,21 @@ sbx-claude-auth-check dotfiles-a2-main-claude
 sbx-claude-auth-check dotfiles-w3-main-claude
 ```
 
+モデル非対応や一時エラーを解消して、明示的に再取得する場合だけ `--refresh` を指定します。
+この場合は追加で１回リクエストを送ります。実行後は Claude を終了して preset から再起動すると表示に反映されます。
+
+```bash
+sbx-claude-auth-check dotfiles-a1-main-claude --refresh
+```
+
 `HTTP: 200` は、その sandbox の通信経路で推論の認証が成功したことを示します。
 `anthropic-organization-id` が返れば、利用予定の組織 ID と照合します。
 未返却の場合や、複数アカウントが同じ組織の場合はこれだけで本人を区別できません。
 メールアドレスや契約プランはこのコマンドから取得できません。
-使用モデルにアクセスできない場合は `--model <利用可能なモデルID>` を付けてください。
+使用モデルにアクセスできない場合は `--refresh --model <利用可能なモデルID>` を付けてください。
+この ID は初回の観測結果です。後から外部で sbx secret を変更した場合は追跡しないため、
+認証設定はラッパー経由で更新してください。メールアドレスとの対応を手元で控えれば識別に使えますが、
+同じ組織に所属するメールアドレス同士は区別できません。
 
 個人の認証先を確実に合わせるには、`sbx-claude-setup <account>` のブラウザ認証で
 目的のアカウントを選び、その token を保存して再起動します。併せてアカウント側の利用記録を照合します。
