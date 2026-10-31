@@ -220,7 +220,14 @@ fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
 if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
 	if [ -n "${SBX_CLAUDE_ORG_ID:-}" ]; then
-		account="$account org:$SBX_CLAUDE_ORG_ID"
+		# Names are resolved from the observed organization ID, never the preset.
+		case "$SBX_CLAUDE_ORG_ID" in
+		e0076032-6106-4cfc-bc96-3d6979b65bab) org_label="account1" ;;
+		8f7aef31-aba6-4818-ae21-0c05f2a275c7) org_label="account2" ;;
+		b66e7858-51ce-459c-b706-aea172801fe7) org_label="work3" ;;
+		*) org_label="不明" ;;
+		esac
+		account="$account org: $org_label"
 	else
 		account="$account [sbx: 組織ID未取得]"
 	fi

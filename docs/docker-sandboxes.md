@@ -632,8 +632,10 @@ mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
 `setup-token` と sandbox 専用 secret の更新には連動しません。
 
 ラッパーは起動時に `SBX_CLAUDE_ACCOUNT` を渡します。statusline はこの環境で古いメールを
-表示せず、初回の推論応答から取得した組織 ID を `account1 org:<organization-id>` と表示します。
-account1 は選択した preset の識別子、組織 ID は実際の応答で観測した値です。
+表示せず、初回の推論応答から取得した組織 ID を登録済みの対応表で名前に変換し、`account1 org: account1` のように表示します。
+先頭は選択した preset、`org:` の後ろは取得した組織 ID に対応する account1 / account2 / work3 です。
+例えば account1 の preset で account2 の組織が観測された場合は `account1 org: account2` となります。
+未登録の組織 ID は `org: 不明` と表示し、preset 名から認証先を推測しません。
 組織 ID が取れない場合は `account1 [sbx: 組織ID未取得]` と表示します。通常のホスト起動は従来の
 メール表示のままです。反映には Claude を終了して preset から起動し直してください。
 
