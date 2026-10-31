@@ -31,7 +31,7 @@ experimental = true
 "core:python"                                               = "3.14.7"
 "github:backnotprop/plannotator"                            = "0.28.6"
 "github:betterleaks/betterleaks"                            = "1.3.1"
-"github:github/copilot-cli"                                 = "1.0.88"
+"github:github/copilot-cli"                                 = "1.0.105"
 # gh-stack は mise ではなく Dockerfile / Dockerfile.sandbox が gh extension として入れる
 # （`gh stack` を extension 経由で動かすため。mise と二重に入れると version がずれる）。
 # "github:github/gh-stack"                                    = { version = "0.3.0", bin = "gh-stack" }
