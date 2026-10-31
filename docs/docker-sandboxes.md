@@ -551,9 +551,24 @@ CLAUDE_CONFIG_DIR="$HOME/.claude-account2" claude setup-token
 CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude setup-token
 ```
 
-表示された token を対応するファイルへ保存します。以下は account2 の例です。
+表示された token を対応するファイルへ保存します。アカウントごとに次のコマンドを使います。
 token 自体をコマンドに貼らないため、履歴・プロセス引数には残りません。
-ホストの bash で実行してください。
+ホストの bash で実行し、それぞれ対応する `setup-token` の結果を入力してください。
+
+**account1**
+
+```bash
+(umask 077
+ mkdir -p "$HOME/.local/state/sbx-agent-credentials"
+ read -r -s -p 'account1 setup-token: ' subscription_token
+ printf '\n'
+ printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/account1.token"
+ unset subscription_token
+)
+chmod 600 "$HOME/.local/state/sbx-agent-credentials/account1.token"
+```
+
+**account2**
 
 ```bash
 (umask 077
@@ -566,7 +581,20 @@ token 自体をコマンドに貼らないため、履歴・プロセス引数�
 chmod 600 "$HOME/.local/state/sbx-agent-credentials/account2.token"
 ```
 
-account1 / work3 もファイル名を変えて登録します。この保存先は dotfiles の管理対象にも
+**work3**
+
+```bash
+(umask 077
+ mkdir -p "$HOME/.local/state/sbx-agent-credentials"
+ read -r -s -p 'work3 setup-token: ' subscription_token
+ printf '\n'
+ printf '%s' "$subscription_token" > "$HOME/.local/state/sbx-agent-credentials/work3.token"
+ unset subscription_token
+)
+chmod 600 "$HOME/.local/state/sbx-agent-credentials/work3.token"
+```
+
+この保存先は dotfiles の管理対象にも
 通常の sandbox mount にも含めません。`sbx-agent` はファイルの所有者・権限・形式を検証し、
 stdin 経由で毎回 sandbox 固有 secret に登録します。token はホスト上では平文なので、
 バックアップ・同期対象からも外してください。sandbox には本物の token ではなく sentinel が渡ります。
