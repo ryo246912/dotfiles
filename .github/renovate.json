@@ -165,8 +165,7 @@
       "matchStrings": [
         "git:\\s*(?<depName>peteromallet/desloppify)\\s*\\n\\s*path:[^\\n]*\\n\\s*ref:\\s*(?<currentValue>\\S+)"
       ],
-      "datasourceTemplate": "github-tags",
-      "extractVersionTemplate": "^v?(?<version>.*)$"
+      "datasourceTemplate": "github-tags"
     },
     {
       "customType": "regex",
