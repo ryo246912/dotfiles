@@ -254,6 +254,38 @@ ln -sfn "$(cd "$destination_dir" && pwd -P)/apm.lock.yaml" "$source_lock"
 '''
 shell = "bash -c"
 
+["apm:lock-local"]
+description = "Regenerate apm/apm.lock.yaml in the current checkout (worktree) without touching ~/.apm"
+# apm:sync-lock は ~/.apm（メイン checkout 由来）を SOT とするため、feature ブランチの worktree で
+# apm/apm.yml を変えても反映できない。Renovate と同じ project scope の `apm install` を一時
+# ディレクトリで実行し、user scope と同じ内容になる lockfile だけを現在の checkout へ書き戻す
+# （docs/apm.md 参照）。~/.apm や agent の配布先は変更しない。
+run = '''
+set -eu
+
+root=$(git rev-parse --show-toplevel)
+if [ ! -f "$root/apm/apm.yml" ]; then
+  echo "error: $root/apm/apm.yml not found; run this inside the dotfiles checkout." >&2
+  exit 1
+fi
+
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+cp "$root/apm/apm.yml" "$workdir/"
+[ -f "$root/apm/apm.lock.yaml" ] && cp "$root/apm/apm.lock.yaml" "$workdir/"
+
+cd "$workdir"
+if [ "${usage_update:-false}" = "true" ]; then
+  apm install --only apm --update
+else
+  apm install --only apm
+fi
+cp "$workdir/apm.lock.yaml" "$root/apm/apm.lock.yaml"
+git -C "$root" diff --stat -- apm/apm.lock.yaml
+'''
+shell = "bash -c"
+usage = 'flag "--update" help "依存を最新の ref/commit に解決し直す（既定は lockfile の pin を維持）"'
+
 ["apm:sync-commands"]
 description = "Sync namespaced commands from APM modules into Rulesync sources"
 run = '''

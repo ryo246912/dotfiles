@@ -96,8 +96,8 @@ dependencies:
 - **Renovate で更新しない依存**: `resolving-merge-conflicts`（v1.3.0 で upstream から削除）は
   `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
   `.github/renovate.json` の regex manager が `ref` だけを更新し、mise の `pipx:desloppify` と同じPRにまとめます。
-  組み込みの apm manager ではないため lockfile は再生成されず、そのPRで手動の `apm install -g --update` と
-  `mise --cd "$HOME" run apm:sync-lock` が必要です。
+  組み込みの apm manager ではないため lockfile は再生成されず、そのPRのブランチで
+  `mise run apm:lock-local` を実行して lockfile を再生成し、commit します。
 - 詳細なfieldと判別規則はAPM公式の[Manifest Schema](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/manifest-schema.md#41-dependenciesapm----listapmdependency)を参照してください。
 
 ### Renovate が lockfile を生成する仕組みと制約
@@ -117,8 +117,9 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
   APM による lockfile の再生成はできず、`apm_version` の値だけを書き換えます（0.32.0 → 0.33.0 では、
   書き換えた lockfile で `apm install -g --frozen` が成功し、lockfile の内容も変わらないことを確認済み）。
   新しい APM で content hash の計算方法などが変わり install が失敗する場合は、ローカルで
-  `apm install -g --update` を実行して lockfile を再生成し、`mise --cd "$HOME" run apm:sync-lock` で
-  `apm/apm.lock.yaml` に同期してから commit してください。
+  `mise run apm:lock-local --update` を実行して `apm/apm.lock.yaml` を再生成してから commit してください。
+  このタスクは一時ディレクトリで project scope の `apm install` を実行するだけで、`~/.apm` には触れないため、
+  feature ブランチの worktree でも現在の checkout の `apm/apm.yml` から lockfile を作れます。
 - **project scope の生成物を commit しない**: `apm install` は `apm/` 配下に `.claude/`・`.agents/`・
   `apm_modules/` などを生成します。Renovate は変更・未追跡ファイルをすべてPRに含めるため、`.gitignore` で
   `apm/apm.yml`・`apm/apm.lock.yaml` 以外を除外しています。
