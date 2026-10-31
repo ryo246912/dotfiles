@@ -32,14 +32,16 @@ experimental = true
 "github:backnotprop/plannotator"                            = "0.28.6"
 "github:betterleaks/betterleaks"                            = "1.3.1"
 "github:github/copilot-cli"                                 = "1.0.88"
-"github:github/gh-stack"                                    = { version = "0.3.0", bin = "gh-stack" }
-"github:philschmid/mcp-cli"                                 = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
-"github:tomasz-tomczyk/crit"                                = "0.19.1"
-"go:github.com/microsoft/typescript-go/cmd/tsgo"            = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
-"npm:oxfmt"                                                 = "0.74.0"
-"npm:oxlint"                                                = "1.87.0"
-"pipx:basic-memory"                                         = { version = "0.24.1", uvx_args = "--prerelease=allow" }
-"pipx:desloppify"                                           = { version = "1.0", extras = "full" }
+# gh-stack は mise ではなく Dockerfile / Dockerfile.sandbox が gh extension として入れる
+# （`gh stack` を extension 経由で動かすため。mise と二重に入れると version がずれる）。
+# "github:github/gh-stack"                                    = { version = "0.3.0", bin = "gh-stack" }
+"github:philschmid/mcp-cli"                      = { version = "0.3.0", asset_pattern = "mcp-cli-linux-x64" }
+"github:tomasz-tomczyk/crit"                     = "0.19.1"
+"go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+"npm:oxfmt"                                      = "0.74.0"
+"npm:oxlint"                                     = "1.87.0"
+"pipx:basic-memory"                              = { version = "0.24.1", uvx_args = "--prerelease=allow" }
+"pipx:desloppify"                                = { version = "1.0", extras = "full" }
 
 [settings.pipx]
 uvx = true
