@@ -323,7 +323,7 @@ Claude Code はメッセージを送るたびに会話全体をモデルへ再�
 小さくなります。cache は TTL で期限切れ（cold）になり、その後の最初のメッセージは
 会話全体を最初から処理し直します。ステータスラインには cache の残り時間を表示し、
 cold になったら次のメッセージで再キャッシュされるトークン数を表示します。
-あわせて、git branch・モデルと effort・最初に送ったメッセージとその時刻・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
+あわせて、git branch・モデルと effort・コンテキストの残り・session id・rate limit（5h / weekly）の残りを表示します。
 subagent が動いているときは、agent panel の各行にも model と effort を表示します（[subagent の行](#subagent-の行)）。
 
 `claude/statusline.sh`（`~/.claude/statusline.sh` に配置）が描画します。
@@ -335,15 +335,15 @@ subagent が動いているときは、agent panel の各行にも model と eff
 
 ### 表示の読み方
 
-1 行目にアカウント・branch・モデル・最初のメッセージ、2 行目にコンテキスト・session id・rate limit・cache を表示します。
+1 行目にアカウント・branch・モデル、2 行目にコンテキスト・session id・rate limit・cache を表示します。
 
 ```text
- account2  foo@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · 10/21 08:30~ 💬 statusline に最初のメッセージを出したい
+ account2  foo@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh
 ctx ████░░ 62% left 76k/200k · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d · 5h ████░░ 58% left reset 2h9m ✓ · week ██████ 84% left reset 3d21h ✓ · cache ● 1h ████░░ 38m left · hit 91% · misses 0
 ```
 
 ```text
- work3  bar@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh · 10/20 23:05~ 💬 lint エラーを直して
+ work3  bar@example.com · main · Opus 5.5 ▰▰▰▰▱ xhigh
 ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d · 5h █░░░░░ 12% left reset 2h9m ⚠ empty 23m · week ██████ 84% left reset 3d21h ✓ · cache ○ cold · next message re-caches 82k tokens · last miss: ttl_expired_5m
 ```
 
@@ -355,8 +355,6 @@ ctx – waiting · 6f1d2c3a-8b4e-4f5a-9c7d-2e1b0a9f8c7d · 5h █░░░░░
 | `Opus 5.5`（紫）                    | モデル名（`model.display_name`）                                                                                                                                                                                                                                                   |
 | `⚡`（黄）                          | fast mode が有効（`fast_mode`）                                                                                                                                                                                                                                                    |
 | `▰▰▰▰▱ xhigh`                       | reasoning effort（`effort.level`）。ゲージは low 1〜max 5 マス、色は low 灰・medium 緑・high シアン・xhigh 黄・max 赤。`/effort` の変更は次の更新で反映。effort 非対応モデルでは表示しない                                                                                         |
-| `10/21 08:30~`（灰）                | 最初のメッセージを送った時刻（transcript の `timestamp`、ローカル時刻の MM/DD HH:MM）                                                                                                                                                                                              |
-| `💬 statusline に…`（黄）           | セッションで最初に送ったメッセージ（transcript の最初の人間の入力）。1 行目だけを 30 文字まで。slash command・hook・IDE 拡張由来の内部メッセージ（`<command-name>` や `<ide_opened_file>` などのタグで始まるもの）は除外し、制御文字は取り除く。何のセッションか思い出すための目印 |
 | `ctx ████░░ 62% left 76k/200k`      | コンテキストウィンドウの残り割合と使用量/上限（`context_window.*`）。残り 20% 未満で黄、10% 未満で赤。最初の応答前・`/compact` 直後は `ctx – waiting`                                                                                                                              |
 | `6f1d2c3a-…`（灰）                  | セッション ID（`session_id`）。`claude --resume <id>` で再開するときに使う。表示は省略せず全桁                                                                                                                                                                                     |
 | `5h` / `week`（青）                 | rate limit の 5 時間枠・週枠の残り割合（`rate_limits.five_hour` / `seven_day`）。残り 20% 未満で黄、5% 未満で赤。Pro/Max のみ                                                                                                                                                      |
