@@ -1632,16 +1632,16 @@ sbx-agent claude --claude-account account1 --new
 ホストに保存済みの secret はこの変更で自動削除しません。
 `--env-plan` は secret を登録せず、`--new` を付けても作成・削除しません。
 
-| 設定                                         | 正本・処理                                                |
-| -------------------------------------------- | --------------------------------------------------------- |
-| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                                   |
-| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                               |
-| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`                      |
-| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`                         |
-| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login` / `sandbox:coderabbit-forward` |
-| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                            |
-| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない           |
-| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                                  |
+| 設定                                         | 正本・処理                                      |
+| -------------------------------------------- | ----------------------------------------------- |
+| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
+| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
+| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
+| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
+| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                      |
+| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
+| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
+| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
 
 GitHub は `gh auth token` で取得します。
 CodeRabbit は private / work3 とも、作成後に `sandbox:coderabbit-login` でブラウザーログインします。
@@ -1897,46 +1897,38 @@ CodeRabbit の callback は sandbox の localhost で待ち受けます。
 ホストのブラウザーから届くように、sbx の SSH 転送で同じポート番号をつなぎます。
 `sbx ports` は loopback だけで待ち受けるサービスには届かないため、ここでは使いません。
 
-### 1. ホストの SSH 設定（初回だけ）
+ホストのターミナルで次を実行します。
 
 ```bash
-sbx setup ssh
+mise run sandbox:coderabbit-login
 ```
 
-### 2. sandbox 内のログインを開始
+1. `fzf` で対象の sandbox を選択する（停止中のものも選択可能）。
+2. task が `sbx setup ssh` を実行し、SSH 接続で CLI の `auth login --agent --no-browser` を起動する。
+3. CLI のログイン URL に含まれる `redirect_uri` から callback ポートを取得し、
+   同じ SSH 接続へ loopback の転送を追加する。
+4. 転送が成功してからホストのブラウザーを開く。個人用または会社用のアカウントで認証する。
+5. CLI の認証成功を確認して終了する。認証完了・エラー・Ctrl-C 時は接続と転送を閉じる。
 
-ホストのターミナルで実行し、このターミナルは認証が終わるまで開いておきます。
-以下の sandbox 名は対象に置き換えてください。EU アカウントなら末尾に `eu` を指定します（既定 `us`）。
+ポート指定、別ターミナルでの転送、`sandbox:coderabbit-forward` の実行は不要です。
+SSH 接続の制御用ソケットは一時ディレクトリに置き、終了時に削除します。認証情報は扱いません。
+ホスト側で callback ポートが使用中の場合はブラウザーを開かずにエラーを表示します。
+ブラウザーの自動起動だけが失敗した場合は、今回の URL を表示して手動で開けるようにします。
+
+対象を明示する場合や EU アカウントの場合は、以下のように指定できます。
 
 ```bash
 mise run sandbox:coderabbit-login dotfiles-a1-main-claude
+mise run sandbox:coderabbit-login -- --region eu
 ```
 
-task は `sbx exec -it -u agent ... coderabbit auth login --no-browser` を実行します。
-自動でブラウザーを開かず、今回のログイン URL を表示して callback を待ちます。
-
-### 3. 別のホスト側ターミナルで callback を転送
-
-`PORT` を、今回の callback のポート番号に置き換えます。
-CLI 出力またはブラウザーが戻ろうとする `http://localhost:PORT/...` の番号を使い、固定値は推測しません。
-
-```bash
-mise run sandbox:coderabbit-forward dotfiles-a1-main-claude PORT
-```
-
-task は `ssh -N -o ExitOnForwardFailure=yes -L localhost:PORT:localhost:PORT <sandbox>.sbx`
-で、ホストと sandbox の loopback だけを接続します。転送を開いてから今回のログイン URL を
-ホストのブラウザーで開き、個人用または会社用のアカウントを選んで認証します。
-先にブラウザー認証を済ませて callback が接続エラーになった場合は、ログイン処理が待機中のままなら
-転送を開いて callback ページを再読み込みします。終了したログイン試行の URL は再利用しません。
-
-### 4. 認証状態を確認
+### 認証状態を確認
 
 ```bash
 sbx exec -u agent dotfiles-a1-main-claude coderabbit auth status
 ```
 
-認証後、転送用のターミナルは Ctrl-C で終了できます。以後の review hook / 手動操作は
+認証後の review hook / 手動操作は
 保存済みログインで `coderabbit review --committed` を実行します。
 `CODERABBIT_API_KEY` / `CODERABBIT_REGION` が unset でも正常です。
 
