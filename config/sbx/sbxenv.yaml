@@ -17,11 +17,8 @@ env:
 secrets:
   github:
     command: gh auth token
-  coderabbit:
-    command: fnox get --profile ${{ env.args.coderabbitProfile }} CODERABBIT_API_KEY
-bindings:
-  coderabbit:
-    apiKey:
-      domains:
-        - api.coderabbit.ai
-        - ide.coderabbit.ai
+lifecycle:
+  postCreate:
+    - name: Provision sandbox-local CodeRabbit API key
+      command: python3 ./scripts/coderabbit-credentials.py --profile ${{ env.args.coderabbitProfile }}
+      workdir: ${{ env.fileDir }}

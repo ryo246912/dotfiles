@@ -187,6 +187,17 @@ def main():
         pass
     args = ['coderabbit', 'review', '--committed']
     key = os.environ.get('CODERABBIT_API_KEY')
+    if not key or key == 'proxy-managed':
+        key_file = os.environ.get('CODERABBIT_API_KEY_FILE')
+        if key_file:
+            try:
+                key = Path(key_file).read_text().strip()
+            except OSError:
+                print('CodeRabbit: API key ファイルを読めません。sandbox の postCreate 設定を確認してください。', file=sys.stderr)
+                return 0
+    if key == 'proxy-managed':
+        print('CodeRabbit: プロキシ用のダミーキーではレビューできません。sandbox を新しい設定で再作成してください。', file=sys.stderr)
+        return 0
     if key:
         region = os.environ.get('CODERABBIT_REGION', 'us')
         if region not in ('us', 'eu'):
@@ -195,12 +206,18 @@ def main():
     print('Reviewing with CodeRabbit CLI...', file=sys.stderr)
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if result.returncode:
+        output = result.stdout or '(CLI output unavailable)'
+        if key:
+            output = output.replace(key, '[REDACTED]')
+        print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
+        print(output, file=sys.stderr)
         return 0
     try:
         marker.write_text(head + '\n')
     except OSError:
         pass
-    return block(result.stdout or 'CodeRabbit review completed. 結果を確認してから再実行してください。', copilot)
+    output = result.stdout.replace(key, '[REDACTED]') if key else result.stdout
+    return block(output or 'CodeRabbit review completed. 結果を確認してから再実行してください。', copilot)
 
 
 if __name__ == '__main__':
