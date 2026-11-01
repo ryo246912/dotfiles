@@ -1329,7 +1329,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | devcontainer                                                                              | sandbox                                                       |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/spec.yaml` の `environment`                   |
-| `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS`                                                 | ✅ `--env` で渡す                                             |
+| `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`                      | ✅ `--env` で渡す                                             |
 | `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
 | `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
 | `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替 |
