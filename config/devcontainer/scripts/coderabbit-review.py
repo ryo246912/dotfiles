@@ -187,17 +187,6 @@ def main():
         pass
     args = ['coderabbit', 'review', '--committed']
     key = os.environ.get('CODERABBIT_API_KEY')
-    if not key or key == 'proxy-managed':
-        key_file = os.environ.get('CODERABBIT_API_KEY_FILE')
-        if key_file:
-            try:
-                key = Path(key_file).read_text().strip()
-            except OSError:
-                print('CodeRabbit: API key ファイルを読めません。sandbox の postCreate 設定を確認してください。', file=sys.stderr)
-                return 0
-    if key == 'proxy-managed':
-        print('CodeRabbit: プロキシ用のダミーキーではレビューできません。sandbox を新しい設定で再作成してください。', file=sys.stderr)
-        return 0
     if key:
         region = os.environ.get('CODERABBIT_REGION', 'us')
         if region not in ('us', 'eu'):

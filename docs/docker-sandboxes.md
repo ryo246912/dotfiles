@@ -1320,7 +1320,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
 | `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | マウントしない。API key を sbxenv.yaml の postCreate で sandbox 専用ファイルへ渡す                                |
+| `~/.coderabbit`                           | マウントしない。sbxenv.yaml の postCreate で sandbox 内の CLI にログインする                                      |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
@@ -1637,15 +1637,15 @@ sbx-agent claude --claude-account account1 --new
 | CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
 | Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
 | GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
-| CodeRabbit の取得・配置                      | `sbxenv.yaml` の `postCreate` と専用 helper     |
+| CodeRabbit の取得・配置                      | `sbxenv.yaml` の `postCreate`                   |
 | アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
 | CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
 | clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
 
 GitHub は `gh auth token`、CodeRabbit は `fnox get --profile <private|work3> CODERABBIT_API_KEY` で取得します。
 CodeRabbit の profile はホスト種別から選び、`--coderabbit-profile private|work3` で上書きできます。
-CodeRabbit の実キーはホストの fnox から stdin 経由で sandbox 専用ファイルに渡します。
-HTTP ヘッダーの置換には依存しません。
+CodeRabbit はホストの fnox から stdin 経由でキーを渡し、sandbox 内で CLI 標準の
+`auth login --api-key` を実行します。認証情報は CLI が sandbox 内に保存します。
 Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
 subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
 `--new` / `--rm` は `sbx env rm` で scoped secret も削除します。
@@ -1892,45 +1892,43 @@ input/output error
 Bitwarden Secrets Manager に `CODERABBIT_API_KEY_PRIVATE` / `CODERABBIT_API_KEY_WORK3` を登録し
 （[fnox.md](fnox.md#coderabbit-の-private--work3-切り替え)）、
 設定を反映して `sbx-agent <agent> --new` で作成します。
-`sbxenv.yaml` の `lifecycle.postCreate` が、ホスト側の
-`scripts/coderabbit-credentials.py` を実行します。helper はホストのグローバル fnox 設定を
-`--config` で明示し、選択した profile から取得した実キーを `sbx exec -i` の stdin で渡します。
-キーをホストのコマンド引数・一時ファイル・環境 YAML・plan に埋め込みません。
-取得または配置に失敗した場合は、作成コマンドも失敗します。
+`sbxenv.yaml` の `lifecycle.postCreate` が、ホストの fnox から選択した profile のキーを取得し、
+`sbx exec -i` の stdin 経由で sandbox 内の `coderabbit auth login --api-key` に渡します。
+ホストのグローバル fnox 設定は `--config` で明示します。取得またはログインが失敗すると作成も失敗します。
 
-sandbox 内では `/etc/coderabbit-api-key` に agent 所有・mode 0600 で保存します。
-このファイルはホストの共有 mount 外にあり、`~/.coderabbit` は共有しません。
-kit は `CODERABBIT_API_KEY_FILE` で保存先を伝えます。review hook は環境変数のキーがなければ
-このファイルを直接読みます。Bash では `/etc/sandbox-persistent.sh` から
-`CODERABBIT_API_KEY` も export します。
-実キーは sandbox 内の agent から読める構成です。
+これは [CodeRabbit の headless 認証手順](https://docs.coderabbit.ai/cli/headless-cli-integration)と
+[sbx の postCreate](https://docs.docker.com/ai/sandboxes/configuration/environment-files/#lifecycle)を
+組み合わせたものです。認証情報の検証・保存は CLI に任せ、独自のキーファイルや export 処理は作りません。
+ホストの `~/.coderabbit` は共有せず、sandbox 内で保存された認証情報を利用します。
+実キーはホストのコマンド引数・環境 YAML・plan・共有 mount に埋め込みません。
+sandbox 内の CLI が保存した認証情報は agent から参照できるため、認証情報を含む template の保存は避けてください。
 
-API key を使う review hook は
-`coderabbit review --committed --api-key "$CODERABBIT_API_KEY" --region "${CODERABBIT_REGION:-us}"`
-を実行します。キーがないホスト環境では保存済みログインを使います。
-CLI 自体に API-key 環境変数の自動読み込みはないため、手動実行でも `--api-key` を付けます。
-接続先を EU リージョンにする場合は `sbxenv.yaml` の `env.CODERABBIT_REGION` を `eu` に設定します
-（既定は `us`）。kit は明示した CLI ホストだけを許可します。
-追加の地域別ホストが必要な場合は、実際の接続先を確認してから kit の allow に追加してください。
+CodeRabbit CLI は `CODERABBIT_API_KEY` を自動で読みません。ログイン後の hook / 手動操作は
+`coderabbit review --committed` で動きます。ホストなどで inline key を使う場合は、hook が
+`CODERABBIT_API_KEY` を `--api-key` に渡します。
+リージョンは `sbxenv.yaml` の `args.coderabbitRegion.default`（既定 `us`）で指定し、CLI が保存します。
+EU を使う場合は、実際の API 接続先を kit の network allow に追加してください。
 
-以前の `proxy-managed` を使う方式は廃止しました。HTTP ヘッダーの注入だけでは
-CLI の認証通信を保証できず、ダミーキーが拒否される場合があります。
-変更後は sandbox の必要なデータを保存して `--new` で再作成してください。
-キーをローテーションした場合も再作成が必要です。
-CLI を 0.9.2 に更新するにはホストの mise install と sandbox template の再ビルドも必要です。
+`fnox get ...` の成功は「値を取得できた」ことだけを示し、CodeRabbit によるキーの有効性確認ではありません。
+CLI 用には Agentic API key を登録してください。HTTP ヘッダー名や通信形式を確認しないまま
+`proxy-managed` を渡す方式は使いません。sbx の secret プロキシは HTTP ヘッダー向けであり、
+CLI 認証との互換性を確認できていないためです。
 
-API key 方式では CLI の保存済みログインを使わないため、`coderabbit auth status` の
-`signed out` だけでは認証の成否を判断できません。キーの配置は値を表示せず確認できます。
+必要なデータを保存して `--new` で再作成してください。キーをローテーションした場合も再作成が必要です。
+CLI 0.9.2 の導入にはホストの mise install と sandbox template の再ビルドも必要です。
+作成後の確認は、コードをレビューに送らずに実行できます。
 
 ```bash
-sbx exec <sandbox-name> sh -c 'test -s /etc/coderabbit-api-key && echo "CodeRabbit credential configured"'
+sbx exec <sandbox-name> coderabbit auth status
+sbx exec <sandbox-name> coderabbit doctor
 ```
 
-この確認は配置だけを検証します。CLI からの実際の認証・レビュー成功は別途確認が必要です。
+ここで認証が確認できれば、次に任意のレビューを実行します。
 review hook の CLI 失敗は push / PR 作成を止めませんが、終了コードと失敗理由を stderr に出し、
-キーの値は伏せます。失敗した HEAD はレビュー済みとして記録しません。
+inline key の値は伏せます。失敗した HEAD はレビュー済みとして記録しません。
 
-参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)。
+参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)、
+[Docker Sandboxes credentials](https://docs.docker.com/ai/sandboxes/configuration/credentials/)。
 
 ## 参考
 

@@ -129,9 +129,10 @@ sbx-agent claude --claude-account account1 --env-plan
 sbx-agent claude --claude-account account1 --coderabbit-profile work3 --env-plan
 ```
 
-選択は `sbxenv.yaml` の `coderabbitProfile` 引数を通じて、ホストの `postCreate` helper の
+選択は `sbxenv.yaml` の `coderabbitProfile` 引数を通じて、ホストの `postCreate` コマンドの
 `fnox --config ... get --profile ...` に明示します。sbx daemon が起動シェルの profile を継承することには依存しません。
-helper は取得した実キーを stdin 経由で sandbox 内の専用ファイルへ配置します。
+取得したキーは stdin 経由で sandbox 内の `coderabbit auth login --api-key` に渡し、
+CLI 標準の認証情報として保存します。独自のキーファイルや常時 export は不要です。
 既存の `FNOX_PROFILE=work` と、ほかの secret の解決方法は変更しません。
 Claude の `--claude-account` と CodeRabbit の profile は独立しています。
 

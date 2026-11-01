@@ -2,13 +2,9 @@ schemaVersion: "2"
 kind: mixin
 name: coderabbit
 version: "1.0.0"
-description: CodeRabbit authentication and network policy for the mise-based template
+description: CodeRabbit CLI network policy for the mise-based template
 # Use v2 to compose with the existing built-in agents and sbx-agent:<agent> templates.
-# CLI authentication may use more than HTTP headers; pass the real key locally.
-# The host postCreate helper writes this file via stdin, never a shared mount.
-environment:
-  variables:
-    CODERABBIT_API_KEY_FILE: /etc/coderabbit-api-key
+# Authentication is saved by the CLI's native auth login in sbxenv.yaml postCreate.
 permissions:
   network:
     allow:

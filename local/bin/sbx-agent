@@ -907,7 +907,7 @@ prepare_env_files() {
     env_repo=$(cd "$env_dir/../.." && pwd -P)
     if [[ "$ENV_FILE" == "$env_repo/config/sbx/sbxenv.yaml" ]] && looks_like_dotfiles_repo "$env_repo"; then
         snapshot=$(umask 077; mktemp -d "$state_dir/config.XXXXXX") || exit 1
-        if ! (umask 077; cp "$ENV_FILE" "$snapshot/sbxenv.yaml" && cp -RL "$env_dir/kits" "$snapshot/kits" && cp -RL "$env_dir/scripts" "$snapshot/scripts"); then
+        if ! (umask 077; cp "$ENV_FILE" "$snapshot/sbxenv.yaml" && cp -RL "$env_dir/kits" "$snapshot/kits"); then
             rm -rf "$snapshot"
             log_error "環境ファイルと kit の snapshot 作成に失敗しました"
             exit 1

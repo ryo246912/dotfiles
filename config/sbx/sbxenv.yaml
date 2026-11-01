@@ -5,6 +5,9 @@ args:
   coderabbitProfile:
     default: private
     enum: [private, work3]
+  coderabbitRegion:
+    default: us
+    enum: [us, eu]
 kits:
   - ./kits/common
   - ./kits/coderabbit
@@ -12,13 +15,16 @@ sandboxOptions:
   template: sbx-agent:claude
   pullPolicy: missing
   skills: readonly
-env:
-  CODERABBIT_REGION: us
 secrets:
   github:
     command: gh auth token
 lifecycle:
   postCreate:
-    - name: Provision sandbox-local CodeRabbit API key
-      command: python3 ./scripts/coderabbit-credentials.py --profile ${{ env.args.coderabbitProfile }}
-      workdir: ${{ env.fileDir }}
+    - name: Sign in to CodeRabbit with the selected fnox profile
+      command: |
+        set -eu
+        key=$(fnox --config "${XDG_CONFIG_HOME:-$HOME/.config}/fnox/config.toml" get --profile ${{ env.args.coderabbitProfile }} CODERABBIT_API_KEY)
+        test -n "$key"
+        printf '%s' "$key" | sbx exec -i "$SBX_SANDBOX_NAME" sh -c '
+          exec coderabbit auth login --api-key "$(cat)" --region "$1"
+        ' sh ${{ env.args.coderabbitRegion }}
