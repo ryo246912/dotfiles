@@ -687,4 +687,4 @@ main "$@"
 
 ["sandbox:claude-auth-check"]
 description = "Look up and cache the observed organization ID once per account/token"
-run = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-auth-check.py"'
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-auth-check.py"'
