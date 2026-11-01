@@ -413,9 +413,9 @@ sbx-agent --help
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
-4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
-   `LEFTHOOK_CONFIG` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`）と agent の設定ディレクトリ
-   （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を渡す
+4. devcontainer の `remoteEnv` 相当のうち、`AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG` は common kit が設定する。
+   `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS` と agent の設定ディレクトリ
+   （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）は `--env` で渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
 6. `sbx run --name <name>` でアタッチする（位置引数で名前を渡す形は sbx 0.47 で deprecated）
@@ -1305,34 +1305,35 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### mounts
 
-| devcontainer の mount                     | sandbox                                                                                                           |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                        |
-| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                       |
-| `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbx secret set github` でプロキシが注入する |
-| `~/.aws/config`                           | ✅ `:ro`                                                                                                          |
-| `~/.agents`                               | ✅ `:ro`                                                                                                          |
-| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                                                                          |
-| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                                                                     |
-| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                                                                             |
-| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                                                                         |
-| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）                                                           |
-| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                 |
-| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
-| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
-| `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | マウントしない。sandbox 内でブラウザーログインし、ホストの認証情報は共有しない                                    |
-| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
+| devcontainer の mount                     | sandbox                                                                                                                                       |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                                                    |
+| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                                                   |
+| `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbxenv.yaml` の `secrets.github`（`gh auth token`）でプロキシが注入する |
+| `~/.aws/config`                           | ✅ `:ro`                                                                                                                                      |
+| `~/.agents`                               | ✅ `:ro`                                                                                                                                      |
+| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                                                                                                      |
+| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                                                                                                 |
+| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                                                                                                         |
+| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                                                                                                     |
+| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）                                                                                       |
+| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                                             |
+| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                                            |
+| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                                                        |
+| `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                                                        |
+| `~/.coderabbit`                           | マウントしない。sandbox 内でブラウザーログインし、ホストの認証情報は共有しない                                                                |
+| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                                                         |
 
 ### remoteEnv / ポート
 
-| devcontainer                                                                              | sandbox                                                     |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `AI_AGENT` / `TERM` / `HOST_USER` / `LEFTHOOK_CONFIG` / `MISE_TRUSTED_CONFIG_PATHS`       | ✅ `--env` で渡す                                           |
-| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                           |
-| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                           |
-| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbx secret set github --command 'gh auth token'` で代替 |
-| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `--publish 7842` で採番させ、`sbx ports` で調べて渡す    |
+| devcontainer                                                                              | sandbox                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/spec.yaml` の `environment`                   |
+| `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS`                                                 | ✅ `--env` で渡す                                             |
+| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
+| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
+| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替 |
+| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `--publish 7842` で採番させ、`sbx ports` で調べて渡す      |
 
 ### postCreateCommand（`post-create.sh`）
 
@@ -1363,7 +1364,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                                                              |
 | lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ） |
 | 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                                                     |
-| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）                                             |
+| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`localhost:22` は `kits/common` が許可）                                                     |
 | `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                                                           |
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
@@ -1693,10 +1694,10 @@ v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在で�
 
 | 対象                                         | 移行の向き不向き     | 理由                                                                                                       |
 | -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `AI_AGENT`・`TERM` など固定の環境変数        | 向いている           | v2 の `environment` や v3 の対応 capability で共通化できる                                                 |
+| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/spec.yaml` の `environment` で共通化している                                                  |
 | sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する      |
 | 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
-| 固定の network 許可                          | 表現可能だが現状維持 | kit 更新は sandbox 再作成が必要。現在は既存 sandbox にも反映できるホスト policy を使用                     |
+| 固定の network 許可                          | 移行済み             | `kits/common/spec.yaml` の `permissions.network`。kit の更新は sandbox 再作成（`--new`）で反映する         |
 | Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する    |
 | account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                           |
 | sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                       |
@@ -1754,7 +1755,7 @@ v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在で�
 | 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                                                                                                                         |
 | crit / plannotator が `Approval required…` で起動しない          | `NO_PROXY` に `0.0.0.0` が無い。template を作り直して `sbx-agent --new`（暫定なら `NO_PROXY="$NO_PROXY,0.0.0.0" crit ...`）                                                                             |
 | lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                                                                                                                               |
-| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認                                                                                                       |
+| ホストへの通知が飛ばない                                         | `kits/common` の許可が未反映なら `--new` で作り直す。ホスト側のリモートログイン / `authorized_keys` も確認                                                                                              |
 | 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                                                                                                                              |
 | `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                                                                                                                            |
 | `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                                                                                                                           |
