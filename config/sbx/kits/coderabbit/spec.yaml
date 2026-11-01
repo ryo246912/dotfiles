@@ -14,6 +14,7 @@ credentials:
 permissions:
   network:
     allow:
+      # CodeRabbit CLI（sandbox 内の coderabbit review が API を呼ぶ）
       - api.coderabbit.ai
       - app.coderabbit.ai
       - ide.coderabbit.ai
