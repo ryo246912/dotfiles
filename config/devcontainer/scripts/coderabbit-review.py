@@ -7,6 +7,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 
 
 def block(reason, copilot):
@@ -191,12 +192,28 @@ def main():
     marker = Path(git(cwd, 'rev-parse', '--git-path', 'coderabbit-reviewed'))
     if not marker.is_absolute():
         marker = cwd / marker
+    reviewed, reviewed_at = '', 0
     try:
-        if marker.read_text().strip() == head:
-            return 0
-    except OSError:
+        reviewed, *rest = marker.read_text().split()
+        reviewed_at = int(rest[0]) if rest else 0
+    except (OSError, ValueError):
         pass
+    if reviewed == head:
+        return 0
     args = ['coderabbit', 'review', '--committed']
+    # rebase や force push で前回の HEAD が祖先でなくなったら、増分ではなく全体をレビューする。
+    if reviewed and subprocess.run(['git', '-C', str(cwd), 'merge-base', '--is-ancestor', reviewed, head]).returncode == 0:
+        args += ['--base-commit', reviewed]
+        # スキップしてもマーカーは更新しない。小さい変更も次のレビューに累積して必ず対象になる。
+        # gh pr create は最後の関門なので間引かない。
+        if words[:2] == ['git', 'push']:
+            numstat = git(cwd, 'diff', '--numstat', reviewed, head)
+            changed = sum(int(n) for line in numstat.splitlines() for n in line.split('\t')[:2] if n.isdigit())
+            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '50'))
+            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '10')) * 60
+            if changed < min_lines or time.time() - reviewed_at < min_seconds:
+                print(f'CodeRabbit: 前回レビューからの変更が小さい、または直後のためスキップします（{changed} 行）。', file=sys.stderr)
+                return 0
     print('Reviewing with CodeRabbit CLI...', file=sys.stderr)
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if result.returncode:
@@ -205,7 +222,7 @@ def main():
         print(output, file=sys.stderr)
         return 0
     try:
-        marker.write_text(head + '\n')
+        marker.write_text(f'{head} {int(time.time())}\n')
     except OSError:
         pass
     output = result.stdout

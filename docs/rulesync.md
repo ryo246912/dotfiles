@@ -108,6 +108,12 @@ push の送信元 / PR の `--head` が現在の HEAD と異なる場合や、�
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に HEAD ごとに一度レビューし、結果を agent に返して
 その実行を止めます。CLI の失敗時は続行します。
+2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
+前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
+`git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
+スキップではレビュー済みの印を更新しないため、小さい変更は次のレビューに累積します。
+`gh pr create` は最後の関門なのでスキップしません。
+閾値は環境変数 `CODERABBIT_SKIP_LINES`・`CODERABBIT_SKIP_MINUTES` で変更でき、`0` で無効になります。
 Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
 Claude / Codex は stderr と終了コード 2 で止めます。
 認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
