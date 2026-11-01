@@ -69,7 +69,8 @@ devcontainer はホストのネットワークをそのまま使うため、エ�
 devcontainer は `GH_TOKEN` を `remoteEnv` で渡し、`~/.config/gh` を mount するため、
 **エージェントが生トークンを読めます**。sandbox は `sbx secret` で OS キーチェーンに保存し、
 GitHub の credential はホスト側プロキシが送信時に注入するため、エージェントは GitHub トークンを読めません。
-CodeRabbit の API key は CLI に渡すため sandbox の環境変数へ入り、エージェントからも読めます。
+CodeRabbit は sandbox 内で API key による CLI 標準のログインを行い、認証情報を保存します。
+キーの環境変数は常時 export しませんが、保存された認証情報はエージェントからも参照できます。
 
 ```yaml
 # sbxenv.yaml
@@ -1922,6 +1923,28 @@ CLI 0.9.2 の導入にはホストの mise install と sandbox template の再�
 sbx exec <sandbox-name> coderabbit auth status
 sbx exec <sandbox-name> coderabbit doctor
 ```
+
+`CODERABBIT_API_KEY` / `CODERABBIT_REGION` が unset でも、保存済みログインが有効なら正常です。
+`signed out` の場合は認証が保存されていません。`postCreate` は新規作成時だけ実行され、
+既存 sandbox への再接続では実行されません。設定の更新だけでは既存 sandbox にログインしません。
+
+既存 sandbox の認証だけをやり直す場合は、ホストで以下を実行できます。
+`<sandbox-name>` と profile / region を対象環境に合わせて指定してください。
+ブラウザーや callback は使わず、ログイン自体の結果でキーの有効性を確認できます。
+
+```bash
+(
+  set -eu
+  key=$(fnox get --profile private CODERABBIT_API_KEY)
+  test -n "$key"
+  printf '%s' "$key" | sbx exec -i -u agent <sandbox-name> sh -c '
+    exec coderabbit auth login --region us --api-key "$(cat)"
+  '
+)
+```
+
+失敗した場合は、このログインのエラーを確認します。環境変数が unset であることや、
+ブラウザーログインの callback が届かないことだけでは、API key 認証の失敗原因は判断できません。
 
 ここで認証が確認できれば、次に任意のレビューを実行します。
 review hook の CLI 失敗は push / PR 作成を止めませんが、終了コードと失敗理由を stderr に出し、
