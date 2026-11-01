@@ -64,6 +64,10 @@ def main():
         if isinstance(tool, str):
             tool = json.loads(tool)
         command = tool.get('command', tool.get('cmd', ''))
+        # Codex の shell ツールは ["bash", "-lc", "<script>"] の配列で渡すことがある。
+        if (isinstance(command, list) and len(command) == 3 and all(isinstance(c, str) for c in command)
+                and command[1] in ('-c', '-lc')):
+            command = command[2]
         if not isinstance(command, str) or not shutil.which('coderabbit'):
             return 0
         command, expansion = shell_text(command)
@@ -216,7 +220,10 @@ def main():
                 return 0
     print('Reviewing with CodeRabbit CLI...', file=sys.stderr)
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    if result.returncode:
+    # exit 1 は「一部のファイルしかレビューできなかった」場合にも指摘を出力して返る。
+    # 未完了扱いにすると指摘が agent に届かず、マーカーも残らず毎回ブロックされるため、
+    # 出力があれば通常の指摘と同じく block してマーカーを更新する。
+    if result.returncode and not (result.returncode == 1 and result.stdout.strip()):
         output = result.stdout or '(CLI output unavailable)'
         print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
         print(output, file=sys.stderr)
