@@ -84,6 +84,9 @@ def main():
         print("One-time max_tokens=1 inference request through the sandbox proxy.", flush=True)
         result = subprocess.run(["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model],
                                 capture_output=True, text=True)
+        # CHECK の診断は stderr に出る。token は出力しないので、そのまま見せて失敗原因を追えるようにする。
+        if result.stderr:
+            print(result.stderr.rstrip(), file=sys.stderr)
         try:
             observed = json.loads(result.stdout)
         except ValueError:
