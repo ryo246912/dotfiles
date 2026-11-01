@@ -98,8 +98,8 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 
 CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot CLI の
 `preToolUse` に登録しています。共通の実体は
-`config/devcontainer/scripts/coderabbit-review.sh`（配置先は
-`~/.config/devcontainer/scripts/coderabbit-review.sh`）です。
+`config/devcontainer/scripts/coderabbit-review.py`（配置先は
+`~/.config/devcontainer/scripts/coderabbit-review.py`）です。
 Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
 コマンドを安全に分割して `git push`・`gh pr create` を判定します。
 単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。

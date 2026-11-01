@@ -39,7 +39,7 @@
         },
         {
           "matcher": "Bash",
-          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
           "timeout": 600
         }
       ],
@@ -116,7 +116,7 @@
       "preToolUse": [
         {
           "matcher": "Bash|exec_command|shell_command|shell",
-          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
           "timeout": 600
         }
       ]
@@ -126,7 +126,7 @@
     "hooks": {
       "preToolUse": [
         {
-          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\" --copilot",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\" --copilot",
           "timeout": 600,
           "matcher": "bash"
         }
