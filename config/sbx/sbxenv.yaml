@@ -5,7 +5,6 @@ kits:
   - ./kits/common
   - ./kits/coderabbit
 sandboxOptions:
-  template: sbx-agent:claude
   pullPolicy: missing
   skills: readonly
 secrets:

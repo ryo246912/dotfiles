@@ -916,7 +916,7 @@ prepare_env_files() {
     for spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do
         ports_json=$(jq -cn --argjson p "$ports_json" --arg s "$spec" '$p + [($s | split(":") | if length == 1 then {sandbox:(.[0]|tonumber)} else {host:(.[0]|tonumber),sandbox:(.[1]|tonumber)} end)]') || exit 1
     done
-    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s,template:$t,pullPolicy:"missing"} + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
+    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s,pullPolicy:"missing"} + (if $t=="" then {} else {template:$t} end) + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
     # 引数をそのまま shell へ連結しない。特に空白・改行・引用符を保持する。
     (
         umask 077
