@@ -76,7 +76,18 @@ def main():
 
     # Recognize command boundaries, including semicolons and newlines. Never execute shell text.
     groups, separators, group = [], [], []
+    # 2>&1 や > file は区切りではない。shlex は '2' '>&' '1' に分けるため、演算子と対象語を読み飛ばす。
+    redirects = {'>', '>>', '>&', '<', '<&', '&>', '&>>', '>|'}
+    skip_next = False
     for token in tokens:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in redirects:
+            if group and group[-1].isdigit():
+                group.pop()
+            skip_next = True
+            continue
         if token and all(c in ';&|()<>\n' for c in token):
             if group:
                 groups.append(group)
