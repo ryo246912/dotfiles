@@ -62,19 +62,40 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 
 ## グローバル設定と work profile の分割
 
-`config/fnox/config.toml`（グローバル）と `config/fnox/config.work.toml`（work profile）の
-2ファイルに分けています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
+`config/fnox/config.toml`（グローバル）から、`config.work.toml`（共通 work profile）と
+`fnox.private.toml` / `fnox.work3.toml`（CodeRabbit の各 profile）を import しています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
 分けているのと揃える狙いです。ただし fnox には `MISE_ENV` に相当する「ホスト種別で自動的にファイルを
-選ぶ」機能が無いため、次の2つを組み合わせて実現しています。
+選ぶ」機能が無いため、次の設定を組み合わせて実現しています。
 
-- `config.toml` の先頭で `import = ["config.work.toml"]` を宣言し、同じディレクトリ
-  （`$FNOX_CONFIG_DIR`）にある `config.work.toml` を明示的に取り込む（fnox の `import` は
+- `config.toml` の先頭で `import = ["config.work.toml", "fnox.private.toml", "fnox.work3.toml"]` を宣言し、同じディレクトリ
+  （`$FNOX_CONFIG_DIR`）にあるファイルを明示的に取り込む（fnox の `import` は
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
-- `config.work.toml` 側は中身をすべて `[profiles.work.*]` の下に置く。これは
+- `config.work.toml` 側は work の設定を `[profiles.work]` 配下に置く。これは
   `FNOX_PROFILE=work` のときだけ有効になるので、import されているだけでは何も起きない。
 - `templates/zsh/.zshenv.tera` が `HOST_ENV` に work ロール（`work1` / `work2` / `work3`）が含まれる
   ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
   同じ仕組み）。
+
+## fnox 1.45.0 への更新
+
+グローバル設定の `import` は [1.35.2 の修正](https://github.com/jdx/fnox/pull/818)で対応済みです。1.45.0 では profile の定義を
+上記ファイルへ分離しても、通常の `fnox get --profile ...` で読み込めます。
+`--config` の追加指定は不要です。
+
+```bash
+mise bootstrap dotfiles apply
+mise install github:jdx/fnox
+exec zsh
+```
+
+既存の age 暗号文、鍵ファイル、Bitwarden Secrets Manager の provider / access token は
+そのまま利用でき、今回の更新のための再暗号化・再登録は不要です。
+fnox daemon を有効にしている場合は、更新前に `fnox daemon stop` で停止してください。
+更新後に必要に応じて自動起動されます。
+
+`fnox exec` の出力マスクは `--redact` / `redact_exec = true` / `FNOX_EXEC_REDACT=1` で
+明示的に有効化する機能です。既定では既存の出力を変えません。
+新しい MCP / proxy 機能も、今回の sbx の設定に追加する必要はありません。
 
 ## CodeRabbit の private / work3 切り替え
 
@@ -86,8 +107,8 @@ Bitwarden Secrets Manager の既存 provider が参照するプロジェクト�
 | private      | `CODERABBIT_API_KEY_PRIVATE` |
 | work3        | `CODERABBIT_API_KEY_WORK3`   |
 
-参照定義は `config/fnox/config.toml` の `[profiles.private.secrets]` と
-`[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
+参照定義は `config/fnox/fnox.private.toml` の `[profiles.private.secrets]` と
+`config/fnox/fnox.work3.toml` の `[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
 `env = false` によりシェルへの常時 export はしません。
 既存の `bws` provider と、その認証用 `BWS_ACCESS_TOKEN` の設定を利用します。
 実際の API key を dotfiles に書き込む必要はありません。

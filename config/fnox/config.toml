@@ -1,18 +1,6 @@
 # import で明示的に取り込み、有効化は FNOX_PROFILE で行う。HOST_ENV に work ロールが
 # 含まれるホストだけ dot_zshenv.tmpl が FNOX_PROFILE=work を export する。
-import = ["config.work.toml"]
-
-# fnox 1.34.0 以降は、選択した profile のテーブルが存在しない場合にエラーになる。
-# グローバル設定では import が読み込まれないため、work profile 自体はここで定義する。
-[profiles.work]
-
-# CodeRabbit はホスト側 resolver から明示的に profile を指定して取得する。
-# 既存の FNOX_PROFILE=work は変更しない。value は Bitwarden Secrets Manager の secret 名。
-[profiles.private.secrets]
-CODERABBIT_API_KEY = { provider = "bws", value = "CODERABBIT_API_KEY_PRIVATE", env = false }
-
-[profiles.work3.secrets]
-CODERABBIT_API_KEY = { provider = "bws", value = "CODERABBIT_API_KEY_WORK3", env = false }
+import = ["config.work.toml", "fnox.private.toml", "fnox.work3.toml"]
 
 [providers.bitwarden]
 type = "bitwarden"

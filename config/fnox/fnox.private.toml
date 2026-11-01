@@ -1,0 +1,4 @@
+# CodeRabbit のホスト側 resolver が --profile private で参照する。
+# value は Bitwarden Secrets Manager の secret 名。実キーはリポジトリに保存しない。
+[profiles.private.secrets]
+CODERABBIT_API_KEY = { provider = "bws", value = "CODERABBIT_API_KEY_PRIVATE", env = false }
