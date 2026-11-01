@@ -110,9 +110,9 @@ push の送信元 / PR の `--head` が現在の HEAD と異なる場合や、�
 その実行を止めます。CLI の失敗時は続行します。
 Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
 Claude / Codex は stderr と終了コード 2 で止めます。
-`CODERABBIT_API_KEY` を指定したときだけ `--api-key` と `--region` を渡します。
-キーは `CODERABBIT_API_KEY` から読み、`CODERABBIT_REGION=eu` は接続リージョンを EU に指定します
-（既定は `us`）。キーがない場合は保存済みログインを使い、`--region` は渡しません。
+認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
+hook は API key の環境変数やファイルを読みません。
+ログイン手順は [Docker Sandboxes](docker-sandboxes.md#coderabbit-cli-のブラウザーログイン) を参照してください。
 通信先が追加で必要な場合は kit の network policy に許可してください。
 変更後は `mise run rulesync:generate` を実行し、各 CLI を再起動してください。
 

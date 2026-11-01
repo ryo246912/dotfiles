@@ -195,6 +195,44 @@ echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].templat
 main "$@"
 '''
 
+["sandbox:coderabbit-login"]
+description = "Sign in to CodeRabbit inside a sandbox through a browser (private/work use the same flow)"
+run = '''
+main() {
+  set -eu
+  if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    echo "usage: mise run sandbox:coderabbit-login <sandbox> [us|eu]" >&2
+    return 2
+  fi
+  region="${2:-us}"
+  case "$region" in us|eu) ;; *) echo "error: region は us または eu です" >&2; return 2 ;; esac
+  echo "別のターミナルで sandbox:coderabbit-forward <sandbox> <callback-port> を実行してから、ログイン URL を開いてください。"
+  sbx exec -it -u agent "$1" coderabbit auth login --no-browser --region "$region"
+}
+main "$@"
+'''
+
+["sandbox:coderabbit-forward"]
+description = "Forward the CodeRabbit localhost callback over sandbox SSH until Ctrl-C"
+run = '''
+main() {
+  set -eu
+  if [ "$#" -ne 2 ]; then
+    echo "usage: mise run sandbox:coderabbit-forward <sandbox> <callback-port>" >&2
+    return 2
+  fi
+  port="$2"
+  case "$port" in ''|*[!0-9]*) echo "error: callback-port は数値で指定してください" >&2; return 2 ;; esac
+  if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+    echo "error: callback-port は 1..65535 です" >&2
+    return 2
+  fi
+  echo "callback を SSH 転送します。認証完了後は Ctrl-C で終了してください。"
+  ssh -N -o ExitOnForwardFailure=yes -L "localhost:${port}:localhost:${port}" -- "$1.sbx"
+}
+main "$@"
+'''
+
 ["sandbox:setup"]
 description = "One-time host-side setup for Docker Sandboxes (SSH, skills, settings)"
 run = '''

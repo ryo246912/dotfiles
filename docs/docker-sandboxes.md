@@ -69,7 +69,7 @@ devcontainer はホストのネットワークをそのまま使うため、エ�
 devcontainer は `GH_TOKEN` を `remoteEnv` で渡し、`~/.config/gh` を mount するため、
 **エージェントが生トークンを読めます**。sandbox は `sbx secret` で OS キーチェーンに保存し、
 GitHub の credential はホスト側プロキシが送信時に注入するため、エージェントは GitHub トークンを読めません。
-CodeRabbit は sandbox 内で API key による CLI 標準のログインを行い、認証情報を保存します。
+CodeRabbit は sandbox 内でブラウザーログインを行い、CLI 標準の認証情報を保存します。
 キーの環境変数は常時 export しませんが、保存された認証情報はエージェントからも参照できます。
 
 ```yaml
@@ -1321,7 +1321,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
 | `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | マウントしない。sbxenv.yaml の postCreate で sandbox 内の CLI にログインする                                      |
+| `~/.coderabbit`                           | マウントしない。sandbox 内でブラウザーログインし、ホストの認証情報は共有しない                                    |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
@@ -1632,21 +1632,20 @@ sbx-agent claude --claude-account account1 --new
 ホストに保存済みの secret はこの変更で自動削除しません。
 `--env-plan` は secret を登録せず、`--new` を付けても作成・削除しません。
 
-| 設定                                         | 正本・処理                                      |
-| -------------------------------------------- | ----------------------------------------------- |
-| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
-| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
-| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
-| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
-| CodeRabbit の取得・配置                      | `sbxenv.yaml` の `postCreate`                   |
-| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
-| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
-| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
+| 設定                                         | 正本・処理                                                |
+| -------------------------------------------- | --------------------------------------------------------- |
+| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                                   |
+| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                               |
+| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`                      |
+| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`                         |
+| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login` / `sandbox:coderabbit-forward` |
+| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                            |
+| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない           |
+| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                                  |
 
-GitHub は `gh auth token`、CodeRabbit は `fnox get --profile <private|work3> CODERABBIT_API_KEY` で取得します。
-CodeRabbit の profile はホスト種別から選び、`--coderabbit-profile private|work3` で上書きできます。
-CodeRabbit はホストの fnox から stdin 経由でキーを渡し、sandbox 内で CLI 標準の
-`auth login --api-key` を実行します。認証情報は CLI が sandbox 内に保存します。
+GitHub は `gh auth token` で取得します。
+CodeRabbit は private / work3 とも、作成後に `sandbox:coderabbit-login` でブラウザーログインします。
+API key / fnox profile は使わず、認証情報は CLI が各 sandbox 内に保存します。
 Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
 subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
 `--new` / `--rm` は `sbx env rm` で scoped secret も削除します。
@@ -1888,70 +1887,72 @@ input/output error
 `/var/folders/...`）側にも同等の空きが必要です。足りない場合は `TMPDIR` を
 空きのあるパスに向けて実行してください。
 
-## CodeRabbit CLI の API key を使う
+## CodeRabbit CLI のブラウザーログイン
 
-Bitwarden Secrets Manager に `CODERABBIT_API_KEY_PRIVATE` / `CODERABBIT_API_KEY_WORK3` を登録し
-（[fnox.md](fnox.md#coderabbit-の-private--work3-切り替え)）、
-設定を反映して `sbx-agent <agent> --new` で作成します。
-`sbxenv.yaml` の `lifecycle.postCreate` が、ホストの fnox から選択した profile のキーを取得し、
-`sbx exec -i` の stdin 経由で sandbox 内の `coderabbit auth login --api-key` に渡します。
-ホストのグローバル fnox 設定は `--config` で明示します。取得またはログインが失敗すると作成も失敗します。
+private / work3 とも同じブラウザーログインを使います。API key、fnox の profile、
+独自の認証ファイルは不要です。sandbox の作成中にはログインせず、作成後に明示的に実行します。
+既存 sandbox も再作成せずにログインできます。
 
-これは [CodeRabbit の headless 認証手順](https://docs.coderabbit.ai/cli/headless-cli-integration)と
-[sbx の postCreate](https://docs.docker.com/ai/sandboxes/configuration/environment-files/#lifecycle)を
-組み合わせたものです。認証情報の検証・保存は CLI に任せ、独自のキーファイルや export 処理は作りません。
-ホストの `~/.coderabbit` は共有せず、sandbox 内で保存された認証情報を利用します。
-実キーはホストのコマンド引数・環境 YAML・plan・共有 mount に埋め込みません。
-sandbox 内の CLI が保存した認証情報は agent から参照できるため、認証情報を含む template の保存は避けてください。
+CodeRabbit の callback は sandbox の localhost で待ち受けます。
+ホストのブラウザーから届くように、sbx の SSH 転送で同じポート番号をつなぎます。
+`sbx ports` は loopback だけで待ち受けるサービスには届かないため、ここでは使いません。
 
-CodeRabbit CLI は `CODERABBIT_API_KEY` を自動で読みません。ログイン後の hook / 手動操作は
-`coderabbit review --committed` で動きます。ホストなどで inline key を使う場合は、hook が
-`CODERABBIT_API_KEY` を `--api-key` に渡します。
-リージョンは `sbxenv.yaml` の `args.coderabbitRegion.default`（既定 `us`）で指定し、CLI が保存します。
-EU を使う場合は、実際の API 接続先を kit の network allow に追加してください。
-
-`fnox get ...` の成功は「値を取得できた」ことだけを示し、CodeRabbit によるキーの有効性確認ではありません。
-CLI 用には Agentic API key を登録してください。HTTP ヘッダー名や通信形式を確認しないまま
-`proxy-managed` を渡す方式は使いません。sbx の secret プロキシは HTTP ヘッダー向けであり、
-CLI 認証との互換性を確認できていないためです。
-
-必要なデータを保存して `--new` で再作成してください。キーをローテーションした場合も再作成が必要です。
-CLI 0.9.2 の導入にはホストの mise install と sandbox template の再ビルドも必要です。
-作成後の確認は、コードをレビューに送らずに実行できます。
+### 1. ホストの SSH 設定（初回だけ）
 
 ```bash
-sbx exec <sandbox-name> coderabbit auth status
-sbx exec <sandbox-name> coderabbit doctor
+sbx setup ssh
 ```
 
-`CODERABBIT_API_KEY` / `CODERABBIT_REGION` が unset でも、保存済みログインが有効なら正常です。
-`signed out` の場合は認証が保存されていません。`postCreate` は新規作成時だけ実行され、
-既存 sandbox への再接続では実行されません。設定の更新だけでは既存 sandbox にログインしません。
+### 2. sandbox 内のログインを開始
 
-既存 sandbox の認証だけをやり直す場合は、ホストで以下を実行できます。
-`<sandbox-name>` と profile / region を対象環境に合わせて指定してください。
-ブラウザーや callback は使わず、ログイン自体の結果でキーの有効性を確認できます。
+ホストのターミナルで実行し、このターミナルは認証が終わるまで開いておきます。
+以下の sandbox 名は対象に置き換えてください。EU アカウントなら末尾に `eu` を指定します（既定 `us`）。
 
 ```bash
-(
-  set -eu
-  key=$(fnox get --profile private CODERABBIT_API_KEY)
-  test -n "$key"
-  printf '%s' "$key" | sbx exec -i -u agent <sandbox-name> sh -c '
-    exec coderabbit auth login --region us --api-key "$(cat)"
-  '
-)
+mise run sandbox:coderabbit-login dotfiles-a1-main-claude
 ```
 
-失敗した場合は、このログインのエラーを確認します。環境変数が unset であることや、
-ブラウザーログインの callback が届かないことだけでは、API key 認証の失敗原因は判断できません。
+task は `sbx exec -it -u agent ... coderabbit auth login --no-browser` を実行します。
+自動でブラウザーを開かず、今回のログイン URL を表示して callback を待ちます。
 
-ここで認証が確認できれば、次に任意のレビューを実行します。
-review hook の CLI 失敗は push / PR 作成を止めませんが、終了コードと失敗理由を stderr に出し、
-inline key の値は伏せます。失敗した HEAD はレビュー済みとして記録しません。
+### 3. 別のホスト側ターミナルで callback を転送
 
-参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)、
-[Docker Sandboxes credentials](https://docs.docker.com/ai/sandboxes/configuration/credentials/)。
+`PORT` を、今回の callback のポート番号に置き換えます。
+CLI 出力またはブラウザーが戻ろうとする `http://localhost:PORT/...` の番号を使い、固定値は推測しません。
+
+```bash
+mise run sandbox:coderabbit-forward dotfiles-a1-main-claude PORT
+```
+
+task は `ssh -N -o ExitOnForwardFailure=yes -L localhost:PORT:localhost:PORT <sandbox>.sbx`
+で、ホストと sandbox の loopback だけを接続します。転送を開いてから今回のログイン URL を
+ホストのブラウザーで開き、個人用または会社用のアカウントを選んで認証します。
+先にブラウザー認証を済ませて callback が接続エラーになった場合は、ログイン処理が待機中のままなら
+転送を開いて callback ページを再読み込みします。終了したログイン試行の URL は再利用しません。
+
+### 4. 認証状態を確認
+
+```bash
+sbx exec -u agent dotfiles-a1-main-claude coderabbit auth status
+```
+
+認証後、転送用のターミナルは Ctrl-C で終了できます。以後の review hook / 手動操作は
+保存済みログインで `coderabbit review --committed` を実行します。
+`CODERABBIT_API_KEY` / `CODERABBIT_REGION` が unset でも正常です。
+
+認証情報は sandbox 内の CLI の保存先にあり、ホストの `~/.coderabbit` や macOS Keychain は共有しません。
+sandbox ごとにログインするため、個人用と会社用を分けられます。sandbox を削除すると認証情報も失われ、
+再作成後はログインが必要です。認証情報を含む sandbox の template 保存は避けてください。
+過去に Bitwarden に登録した CodeRabbit API key は自動では削除しません。
+
+Free プランでも CLI は利用できますが、レビュー回数などに制限があります。
+ブラウザー認証の検証は `auth status` で行い、レビューを動かす確認は別途実行します。
+CLI の失敗時は hook が理由を stderr に出し、push / PR 作成は続行します。
+失敗した HEAD はレビュー済みとして記録しません。
+
+参考: [CodeRabbit auth login](https://docs.coderabbit.ai/cli/reference#auth-login)、
+[sbx SSH port forwarding](https://docs.docker.com/ai/sandboxes/integrations/#port-forwarding)、
+[CodeRabbit の料金・制限](https://docs.coderabbit.ai/management/plans)。
 
 ## 参考
 

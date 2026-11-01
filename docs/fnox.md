@@ -62,12 +62,11 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 
 ## グローバル設定と work profile の分割
 
-`config/fnox/config.toml`（グローバル）から、`config.work.toml`（共通 work profile）と
-`config.private.toml` / `config.work3.toml`（CodeRabbit の各 profile）を import しています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
+`config/fnox/config.toml`（グローバル）から、`config.work.toml`（共通 work profile）を import しています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
 分けているのと揃える狙いです。ただし fnox には `MISE_ENV` に相当する「ホスト種別で自動的にファイルを
 選ぶ」機能が無いため、次の設定を組み合わせて実現しています。
 
-- `config.toml` の先頭で `import = ["config.work.toml", "config.private.toml", "config.work3.toml"]` を宣言し、同じディレクトリ
+- `config.toml` の先頭で `import = ["config.work.toml"]` を宣言し、同じディレクトリ
   （`$FNOX_CONFIG_DIR`）にあるファイルを明示的に取り込む（fnox の `import` は
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
 - `config.work.toml` 側は work の設定を `[profiles.work]` 配下に置く。これは
@@ -97,47 +96,13 @@ fnox daemon を有効にしている場合は、更新前に `fnox daemon stop` 
 明示的に有効化する機能です。既定では既存の出力を変えません。
 新しい MCP / proxy 機能も、今回の sbx の設定に追加する必要はありません。
 
-## CodeRabbit の private / work3 切り替え
+## CodeRabbit
 
-CodeRabbit の API key は、同じ `bws` provider から profile ごとに異なる secret を参照します。
-Bitwarden Secrets Manager の既存 provider が参照するプロジェクトに、次の2件を作成してください。
-
-| fnox profile | Bitwarden の secret 名       |
-| ------------ | ---------------------------- |
-| private      | `CODERABBIT_API_KEY_PRIVATE` |
-| work3        | `CODERABBIT_API_KEY_WORK3`   |
-
-参照定義は `config/fnox/config.private.toml` の `[profiles.private.secrets]` と
-`config/fnox/config.work3.toml` の `[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
-`env = false` によりシェルへの常時 export はしません。
-既存の `bws` provider と、その認証用 `BWS_ACCESS_TOKEN` の設定を利用します。
-実際の API key を dotfiles に書き込む必要はありません。
-
-```bash
-mise bootstrap dotfiles apply
-fnox get --profile private CODERABBIT_API_KEY >/dev/null && echo OK
-fnox get --profile work3 CODERABBIT_API_KEY >/dev/null && echo OK
-```
-
-`sbx-agent` は `HOST_ENV`（未設定なら `MISE_ENV`）のカンマ区切りタグに `work3` があれば
-work3、それ以外の非 work ホストでは private を選択します。work1 / work2 などは
-private のキーを暗黙に使わず、明示指定を求めます。
-`--coderabbit-profile`、次に `SBX_CODERABBIT_PROFILE` が自動選択より優先されます。
-
-```bash
-sbx-agent claude --claude-account account1 --env-plan
-sbx-agent claude --claude-account account1 --coderabbit-profile work3 --env-plan
-```
-
-選択は `sbxenv.yaml` の `coderabbitProfile` 引数を通じて、ホストの `postCreate` コマンドの
-`fnox --config ... get --profile ...` に明示します。sbx daemon が起動シェルの profile を継承することには依存しません。
-取得したキーは stdin 経由で sandbox 内の `coderabbit auth login --api-key` に渡し、
-CLI 標準の認証情報として保存します。独自のキーファイルや常時 export は不要です。
-既存の `FNOX_PROFILE=work` と、ほかの secret の解決方法は変更しません。
-Claude の `--claude-account` と CodeRabbit の profile は独立しています。
-
-profile を変更した場合や、この切り替えの導入前に作った sandbox は、必要なデータを保存して
-`--new` で作り直してください。保存された profile と一致しない sandbox の再利用は拒否します。
+private / work3 とも、sandbox 内のブラウザーログインを利用します。
+CodeRabbit の API key は fnox / Bitwarden に登録しません。
+ログインと callback の転送手順は
+[Docker Sandboxes の CodeRabbit 設定](docker-sandboxes.md#coderabbit-cli-のブラウザーログイン)を参照してください。
+既に Bitwarden に保存したキーは自動では削除しません。不要なら自身で削除してください。
 
 ## aws-vault との併用
 

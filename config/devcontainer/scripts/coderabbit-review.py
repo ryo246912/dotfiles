@@ -186,18 +186,10 @@ def main():
     except OSError:
         pass
     args = ['coderabbit', 'review', '--committed']
-    key = os.environ.get('CODERABBIT_API_KEY')
-    if key:
-        region = os.environ.get('CODERABBIT_REGION', 'us')
-        if region not in ('us', 'eu'):
-            return block('CodeRabbit: CODERABBIT_REGION は us または eu を指定してください。', copilot)
-        args += ['--region', region, '--api-key', key]
     print('Reviewing with CodeRabbit CLI...', file=sys.stderr)
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if result.returncode:
         output = result.stdout or '(CLI output unavailable)'
-        if key:
-            output = output.replace(key, '[REDACTED]')
         print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
         print(output, file=sys.stderr)
         return 0
@@ -205,7 +197,7 @@ def main():
         marker.write_text(head + '\n')
     except OSError:
         pass
-    output = result.stdout.replace(key, '[REDACTED]') if key else result.stdout
+    output = result.stdout
     return block(output or 'CodeRabbit review completed. 結果を確認してから再実行してください。', copilot)
 
 
