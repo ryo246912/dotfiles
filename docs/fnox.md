@@ -63,11 +63,11 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
 ## グローバル設定と work profile の分割
 
 `config/fnox/config.toml`（グローバル）から、`config.work.toml`（共通 work profile）と
-`fnox.private.toml` / `fnox.work3.toml`（CodeRabbit の各 profile）を import しています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
+`config.private.toml` / `config.work3.toml`（CodeRabbit の各 profile）を import しています。mise が `config.toml` + `config.work2.toml` のように役割ごとにファイルを
 分けているのと揃える狙いです。ただし fnox には `MISE_ENV` に相当する「ホスト種別で自動的にファイルを
 選ぶ」機能が無いため、次の設定を組み合わせて実現しています。
 
-- `config.toml` の先頭で `import = ["config.work.toml", "fnox.private.toml", "fnox.work3.toml"]` を宣言し、同じディレクトリ
+- `config.toml` の先頭で `import = ["config.work.toml", "config.private.toml", "config.work3.toml"]` を宣言し、同じディレクトリ
   （`$FNOX_CONFIG_DIR`）にあるファイルを明示的に取り込む（fnox の `import` は
   「現在の config ファイルからの相対パスで他の TOML を merge する」機能）。
 - `config.work.toml` 側は work の設定を `[profiles.work]` 配下に置く。これは
@@ -107,8 +107,8 @@ Bitwarden Secrets Manager の既存 provider が参照するプロジェクト�
 | private      | `CODERABBIT_API_KEY_PRIVATE` |
 | work3        | `CODERABBIT_API_KEY_WORK3`   |
 
-参照定義は `config/fnox/fnox.private.toml` の `[profiles.private.secrets]` と
-`config/fnox/fnox.work3.toml` の `[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
+参照定義は `config/fnox/config.private.toml` の `[profiles.private.secrets]` と
+`config/fnox/config.work3.toml` の `[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
 `env = false` によりシェルへの常時 export はしません。
 既存の `bws` provider と、その認証用 `BWS_ACCESS_TOKEN` の設定を利用します。
 実際の API key を dotfiles に書き込む必要はありません。

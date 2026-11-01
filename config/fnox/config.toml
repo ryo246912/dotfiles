@@ -1,6 +1,6 @@
 # import で明示的に取り込み、有効化は FNOX_PROFILE で行う。HOST_ENV に work ロールが
 # 含まれるホストだけ dot_zshenv.tmpl が FNOX_PROFILE=work を export する。
-import = ["config.work.toml", "fnox.private.toml", "fnox.work3.toml"]
+import = ["config.work.toml", "config.private.toml", "config.work3.toml"]
 
 [providers.bitwarden]
 type = "bitwarden"
