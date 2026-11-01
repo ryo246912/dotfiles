@@ -1,6 +1,10 @@
 schemaVersion: "1"
 # agent / workspace / template / mounts / env / ports are supplied by sbx-agent's runtime overlay.
 agent: claude
+args:
+  coderabbitProfile:
+    default: private
+    enum: [private, work3]
 kits:
   - ./kits/common
   - ./kits/coderabbit
@@ -14,7 +18,7 @@ secrets:
   github:
     command: gh auth token
   coderabbit:
-    command: fnox get CODERABBIT_API_KEY
+    command: fnox get --profile ${{ env.args.coderabbitProfile }} CODERABBIT_API_KEY
 bindings:
   coderabbit:
     apiKey:

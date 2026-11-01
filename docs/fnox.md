@@ -76,6 +76,46 @@ Bitwarden は 2 系統あります（Password Manager と Secrets Manager の違
   ホストだけ `FNOX_PROFILE=work` を export する（`MISE_ENV` を `HOST_ENV` から導出しているのと
   同じ仕組み）。
 
+## CodeRabbit の private / work3 切り替え
+
+CodeRabbit の API key は、同じ `bws` provider から profile ごとに異なる secret を参照します。
+Bitwarden Secrets Manager の既存 provider が参照するプロジェクトに、次の2件を作成してください。
+
+| fnox profile | Bitwarden の secret 名       |
+| ------------ | ---------------------------- |
+| private      | `CODERABBIT_API_KEY_PRIVATE` |
+| work3        | `CODERABBIT_API_KEY_WORK3`   |
+
+参照定義は `config/fnox/config.toml` の `[profiles.private.secrets]` と
+`[profiles.work3.secrets]` にあります。どちらも fnox からは `CODERABBIT_API_KEY` として取得し、
+`env = false` によりシェルへの常時 export はしません。
+既存の `bws` provider と、その認証用 `BWS_ACCESS_TOKEN` の設定を利用します。
+実際の API key を dotfiles に書き込む必要はありません。
+
+```bash
+mise bootstrap dotfiles apply
+fnox get --profile private CODERABBIT_API_KEY >/dev/null && echo OK
+fnox get --profile work3 CODERABBIT_API_KEY >/dev/null && echo OK
+```
+
+`sbx-agent` は `HOST_ENV`（未設定なら `MISE_ENV`）のカンマ区切りタグに `work3` があれば
+work3、それ以外の非 work ホストでは private を選択します。work1 / work2 などは
+private のキーを暗黙に使わず、明示指定を求めます。
+`--coderabbit-profile`、次に `SBX_CODERABBIT_PROFILE` が自動選択より優先されます。
+
+```bash
+sbx-agent claude --claude-account account1 --env-plan
+sbx-agent claude --claude-account account1 --coderabbit-profile work3 --env-plan
+```
+
+選択は `sbxenv.yaml` の `coderabbitProfile` 引数を通じて、ホストの resolver の
+`fnox get --profile ...` に明示します。sbx daemon が起動シェルの profile を継承することには依存しません。
+既存の `FNOX_PROFILE=work` と、ほかの secret の解決方法は変更しません。
+Claude の `--claude-account` と CodeRabbit の profile は独立しています。
+
+profile を変更した場合や、この切り替えの導入前に作った sandbox は、必要なデータを保存して
+`--new` で作り直してください。保存された profile と一致しない sandbox の再利用は拒否します。
+
 ## aws-vault との併用
 
 `fnox` の `aws-sm` provider は AWS credential chain（環境変数 / `AWS_PROFILE` / IAM role）で認証するため、

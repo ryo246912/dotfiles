@@ -6,6 +6,14 @@ import = ["config.work.toml"]
 # グローバル設定では import が読み込まれないため、work profile 自体はここで定義する。
 [profiles.work]
 
+# CodeRabbit はホスト側 resolver から明示的に profile を指定して取得する。
+# 既存の FNOX_PROFILE=work は変更しない。value は Bitwarden Secrets Manager の secret 名。
+[profiles.private.secrets]
+CODERABBIT_API_KEY = { provider = "bws", value = "CODERABBIT_API_KEY_PRIVATE", env = false }
+
+[profiles.work3.secrets]
+CODERABBIT_API_KEY = { provider = "bws", value = "CODERABBIT_API_KEY_WORK3", env = false }
+
 [providers.bitwarden]
 type = "bitwarden"
 

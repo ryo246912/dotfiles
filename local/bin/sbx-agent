@@ -24,6 +24,7 @@
 #   --env-file FILE    環境定義（既定: ~/.config/sbx/sbxenv.yaml）
 #   --env-plan         環境ファイル方式の plan だけ表示する（作成・削除しない）
 #   --env-force        環境ファイルの plan を今回だけ非対話で承認する
+#   --coderabbit-profile NAME  CodeRabbit の fnox profile（private|work3。既定は HOST_ENV で選択）
 #   --publish SPEC     ポート公開（host:sandbox、複数指定可）
 #   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
 #   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
@@ -43,6 +44,7 @@
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
+#   SBX_CODERABBIT_PROFILE  CodeRabbit profile の明示指定（--coderabbit-profile が優先）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
 # 参考: https://docs.docker.com/reference/cli/sbx/
@@ -98,6 +100,7 @@ HOST_BRIDGE=true
 ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/sbx/sbxenv.yaml"
 ENV_PLAN=false
 ENV_FORCE=false
+CODERABBIT_PROFILE="${SBX_CODERABBIT_PROFILE:-}"
 EXTRA_MOUNTS=()
 PUBLISH_PORTS=()
 STATIC_MCP=()
@@ -214,6 +217,11 @@ while [[ $# -gt 0 ]]; do
         --env-file=*) ENV_FILE="${1#*=}" ;;
         --env-plan) ENV_PLAN=true ;;
         --env-force) ENV_FORCE=true ;;
+        --coderabbit-profile)
+            shift && require_value --coderabbit-profile $#
+            CODERABBIT_PROFILE="$1"
+            ;;
+        --coderabbit-profile=*) CODERABBIT_PROFILE="${1#*=}" ;;
         --mount)
             shift && require_value --mount $#
             EXTRA_MOUNTS+=("$1")
@@ -262,6 +270,23 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
+
+# CodeRabbit のみ profile を明示する。ほかの secret の FNOX_PROFILE は変更しない。
+if [[ -z "$CODERABBIT_PROFILE" ]]; then
+    case ",${HOST_ENV:-${MISE_ENV:-}}," in
+        *,work3,*) CODERABBIT_PROFILE=work3 ;;
+        *,work*,*)
+            log_error "この work 環境の CodeRabbit profile は未定義です。--coderabbit-profile private|work3 を明示してください"
+            exit 1
+            ;;
+        *) CODERABBIT_PROFILE=private ;;
+    esac
+fi
+case "$CODERABBIT_PROFILE" in
+    private | work3) ;;
+    *) log_error "--coderabbit-profile は private または work3 を指定してください"; exit 1 ;;
+esac
+ENV_COMMAND_ARGS=(--env-arg "coderabbitProfile=$CODERABBIT_PROFILE")
 
 # sandbox 内の固定パス・固定ポート
 # scripts は Dockerfile.sandbox が image 内の agent ホーム配下へ COPY している
@@ -902,13 +927,15 @@ prepare_env_files() {
 
 prepare_env_files
 if [[ "$ENV_PLAN" == true ]]; then
-    exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
+    exec sbx env plan --name "$SANDBOX_NAME" "${ENV_COMMAND_ARGS[@]}" "$ENV_FILE" "$ENV_OVERLAY"
 fi
 
 # 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
-if sandbox_exists && [[ "$FORCE_NEW" != true && ! -f "${ENV_OVERLAY%/*}/created" ]]; then
-    log_error "この sandbox は環境ファイル方式での作成を確認できません。必要なデータを保存して --new で作り直してください"
-    exit 1
+if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
+    if [[ ! -f "${ENV_OVERLAY%/*}/created" || "$(cat "${ENV_OVERLAY%/*}/created")" != "$CODERABBIT_PROFILE" ]]; then
+        log_error "この sandbox の作成環境または CodeRabbit profile が一致しません。必要なデータを保存して --new で作り直してください"
+        exit 1
+    fi
 fi
 
 # Re-register on every attach: deletion/recreation also removes scoped secrets.
@@ -987,7 +1014,7 @@ PYTOKEN
 # --new は既存の環境と scoped secret を先に削除する。
 if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
     log_info "既存の sandbox を削除します: $SANDBOX_NAME"
-    if ! sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"; then
+    if ! sbx env rm --force --name "$SANDBOX_NAME" "${ENV_COMMAND_ARGS[@]}" "$ENV_FILE" "$ENV_OVERLAY"; then
         log_error "既存 sandbox の削除に失敗しました: $SANDBOX_NAME"
         exit 1
     fi
@@ -997,7 +1024,7 @@ fi
 if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
 
-    create_cmd=(sbx env create --name "$SANDBOX_NAME")
+    create_cmd=(sbx env create --name "$SANDBOX_NAME" "${ENV_COMMAND_ARGS[@]}")
     [[ "$ENV_FORCE" == true ]] && create_cmd+=(--force)
     create_cmd+=("$ENV_FILE" "$ENV_OVERLAY")
     log_info "環境ファイルから sandbox を作成します: $SANDBOX_NAME"
@@ -1014,7 +1041,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         fi
         exit 1
     fi
-    (umask 077; touch "${ENV_OVERLAY%/*}/created") || exit 1
+    (umask 077; printf '%s\n' "$CODERABBIT_PROFILE" >"${ENV_OVERLAY%/*}/created") || exit 1
     load_static_mcp
 
 else
@@ -1068,7 +1095,7 @@ if [[ "$REMOVE_ON_EXIT" == true ]]; then
     # sbx env が作った scoped secret も含めて削除する。
     rc=0
     "${run_cmd[@]}" || rc=$?
-    sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY" || exit 1
+    sbx env rm --force --name "$SANDBOX_NAME" "${ENV_COMMAND_ARGS[@]}" "$ENV_FILE" "$ENV_OVERLAY" || exit 1
     rm -f "${ENV_OVERLAY%/*}/created"
     exit "$rc"
 fi

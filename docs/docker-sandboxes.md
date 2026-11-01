@@ -1641,7 +1641,8 @@ sbx-agent claude --claude-account account1 --new
 | CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
 | clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
 
-GitHub は `gh auth token`、CodeRabbit は `fnox get CODERABBIT_API_KEY` で取得します。
+GitHub は `gh auth token`、CodeRabbit は `fnox get --profile <private|work3> CODERABBIT_API_KEY` で取得します。
+CodeRabbit の profile はホスト種別から選び、`--coderabbit-profile private|work3` で上書きできます。
 CodeRabbit の実キーは sandbox の環境変数に入り、agent からも参照できます。
 Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
 subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
@@ -1879,7 +1880,8 @@ input/output error
 
 ## CodeRabbit CLI の API key を使う
 
-ホストの fnox に `CODERABBIT_API_KEY` を登録し（[fnox.md](fnox.md)）、
+Bitwarden Secrets Manager に `CODERABBIT_API_KEY_PRIVATE` / `CODERABBIT_API_KEY_WORK3` を登録し
+（[fnox.md](fnox.md#coderabbit-の-private--work3-切り替え)）、
 設定を反映して `sbx-agent <agent> --new` で作成します。
 `sbxenv.yaml` が service secret として取得するため、個別の secret 登録タスクや
 sandbox 内の `auth login` は不要です。`~/.coderabbit` は共有しません。
