@@ -1652,8 +1652,15 @@ ccmanager の `(Docker Sandbox)` preset はすべてこの方式を使います�
 Claude の設定ディレクトリとアカウント指定、Codex / Copilot の resume / fallback、
 初期プロンプトの転送は維持しています。重複する env 専用 preset は廃止しました。
 
-環境ファイルと runtime overlay は、sandbox が書き込める mount の外に置いてください。
-overlay の保存先は `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/environments/<name>/` です。
+標準の `sbxenv.yaml` と kit は、起動時にホストの
+`${XDG_STATE_HOME:-~/.local/state}/sbx-agent/environments/<name>/config/` へコピーして利用します。
+mise の symlink が dotfiles を指していても、dotfiles 自身を workspace にできます。
+相対 kit 参照と Claude subscription kit も、この snapshot 内で解決します。
+
+runtime overlay は同じ `<name>/` ディレクトリに保存します。この state ディレクトリと、
+独自の `--env-file` は sandbox が書き込める mount の外に置いてください。
+state まで共有している場合は、`XDG_STATE_HOME` を共有領域の外に変更してください。
+エラーには、該当するファイルまたは state のパスと mount を表示します。
 fnox の実行ファイル・設定・provider の依存先も書き込み可能な共有領域の外に配置します。
 
 初回は plan の承認が必要です。`sbx settings set env.rememberHostCommands true` で

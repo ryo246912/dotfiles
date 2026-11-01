@@ -853,12 +853,29 @@ run_post_create() {
 
 # 環境ファイル方式でも既存の worktree / 設定 / port の組み立てを再利用する。
 # JSON は YAML のサブセットなので、jq で安全に値を符号化した overlay を sbx に渡す。
+# resolver / overlay を sandbox から変更できる配置で使わない。
+assert_env_path_unmounted() {
+    local item="$1" spec path
+    for spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        [[ "$spec" == *:ro ]] && continue
+        path="$spec"
+        if [[ -d "$path" ]]; then path=$(cd "$path" && pwd -P); fi
+        path="${path%/}"
+        if [[ "$item" == "$path" || "$item" == "$path/"* ]]; then
+            log_error "環境ファイルと state は書き込み可能な mount の外に置いてください: $item"
+            log_error "該当する mount: $spec"
+            log_error "state が含まれる場合は XDG_STATE_HOME を共有領域の外へ変更してください"
+            exit 1
+        fi
+    done
+}
+
 prepare_env_files() {
     command -v jq >/dev/null 2>&1 || {
         log_error "--env-file には jq が必要です"
         exit 127
     }
-    local version major minor patch state_dir spec path item key value hops=0
+    local version major minor patch state_dir spec path item key value env_dir env_repo snapshot hops=0
     version=$(sbx version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
     IFS=. read -r major minor patch <<<"$version"
     if [[ -z "$version" ]] || ((major == 0 && (minor < 50 || (minor == 50 && patch < 1)))); then
@@ -882,19 +899,28 @@ prepare_env_files() {
     state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent/environments/$SANDBOX_NAME"
     mkdir -p "$state_dir" || exit 1
     state_dir=$(cd "$state_dir" && pwd -P)
-    # resolver を含むファイルと overlay を sandbox から書き換えられる場所に置かない。
-    for spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
-        [[ "$spec" == *:ro ]] && continue
-        path="$spec"
-        if [[ -d "$path" ]]; then path=$(cd "$path" && pwd -P); fi
-        path="${path%/}"
-        for item in "$ENV_FILE" "$state_dir"; do
-            if [[ "$item" == "$path" || "$item" == "$path/"* ]]; then
-                log_error "環境ファイルと state は書き込み可能な mount の外に置いてください: $item"
-                exit 1
-            fi
-        done
-    done
+    assert_env_path_unmounted "$state_dir"
+    # mise の symlink-each で配った標準設定は dotfiles 自身を指す。
+    # dotfiles を workspace にしても使えるよう、相対 kit 参照を保ってホスト専用の
+    # snapshot に展開する。任意の --env-file は参照先の構成を推測せず、そのまま検証する。
+    env_dir=$(dirname "$ENV_FILE")
+    env_repo=$(cd "$env_dir/../.." && pwd -P)
+    if [[ "$ENV_FILE" == "$env_repo/config/sbx/sbxenv.yaml" ]] && looks_like_dotfiles_repo "$env_repo"; then
+        snapshot=$(umask 077; mktemp -d "$state_dir/config.XXXXXX") || exit 1
+        if ! (umask 077; cp "$ENV_FILE" "$snapshot/sbxenv.yaml" && cp -RL "$env_dir/kits" "$snapshot/kits"); then
+            rm -rf "$snapshot"
+            log_error "環境ファイルと kit の snapshot 作成に失敗しました"
+            exit 1
+        fi
+        rm -rf "$state_dir/config"
+        mv "$snapshot" "$state_dir/config" || exit 1
+        ENV_FILE="$state_dir/config/sbxenv.yaml"
+        if [[ -n "$SUBSCRIPTION_KIT" ]]; then
+            SUBSCRIPTION_KIT="$state_dir/config/kits/claude-subscription"
+        fi
+    fi
+    assert_env_path_unmounted "$ENV_FILE"
+    [[ -z "$SUBSCRIPTION_KIT" ]] || assert_env_path_unmounted "$SUBSCRIPTION_KIT"
     ENV_OVERLAY="$state_dir/runtime.yaml"
     local env_json='{}' mounts_json='[]' ports_json='[]' options_json
     local i=0
