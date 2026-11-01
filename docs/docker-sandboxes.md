@@ -69,7 +69,7 @@ devcontainer はホストのネットワークをそのまま使うため、エ�
 devcontainer は `GH_TOKEN` を `remoteEnv` で渡し、`~/.config/gh` を mount するため、
 **エージェントが生トークンを読めます**。sandbox は `sbx secret` で OS キーチェーンに保存し、
 GitHub の credential はホスト側プロキシが送信時に注入するため、エージェントは GitHub トークンを読めません。
-CodeRabbit の API key は CLI に渡すため sandbox の環境変数へ入ります。
+CodeRabbit の API key は CLI に渡すため sandbox の環境変数へ入り、エージェントからも読めます。
 
 ```yaml
 # sbxenv.yaml
@@ -109,7 +109,7 @@ devcontainer の方が有利**です。後述の「[リソース使用量](#リ�
 | 項目           | devcontainer                            | Docker Sandboxes (sbx)                                        |
 | -------------- | --------------------------------------- | ------------------------------------------------------------- |
 | 隔離境界       | コンテナ（ホストと kernel 共有）        | microVM（専用 kernel）                                        |
-| 起動方法       | `devcontainer up` + `devcontainer exec` | `sbx env create` + `sbx run`                                      |
+| 起動方法       | `devcontainer up` + `devcontainer exec` | `sbx env create` + `sbx run`                                  |
 | ホスト連携     | `mounts` で任意のパスを bind mount      | workspace として渡したディレクトリのみ                        |
 | マウント先パス | `devcontainer.json` の `target` で指定  | **ホストと同じ絶対パス**に固定                                |
 | docker 利用    | docker-in-docker feature を有効化       | 標準で sandbox 専用 docker daemon を持つ                      |
@@ -328,8 +328,8 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 
 共通の許可ドメインは `config/sbx/kits/common/spec.yaml` の
 `permissions.network.allow` に宣言しています。変更後は sandbox を作り直します。
-環境固有の追加許可は、gitignore 済みの `config/sbx/allow-domains.<name>.txt`
-（1行1パターン、`#` 以降はコメント）に書き、`mise run sandbox:setup` で反映できます。
+追加許可は、gitignore 済みの `config/sbx/allow-domains.<name>.txt`
+（1行1パターン、`#` 以降はコメント）に書き、`mise run sandbox:setup` で全 sandbox 共通の policy に反映します。
 雛形は `allow-domains.work3.txt.example` です。
 一時的な許可は `sbx policy allow network <host>`、未許可通信の確認は
 `sbx policy approval ls` を使います。
@@ -1221,9 +1221,7 @@ devcontainer との違いは 2 点です。
 2. **network policy で明示的に許可が必要。** sandbox プロキシは `host.docker.internal` を
    `localhost` に書き換えて転送するため、許可ルールは `localhost:<port>` の形で書きます。
 
-```bash
-sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
-```
+`localhost:22` は `kits/common/spec.yaml` が sandbox 作成時に許可します。
 
 鍵は devcontainer と同じ専用鍵（`~/.ssh/id_docker_devcontainer`）を read-only でマウントします。
 個人鍵は渡しません（コミット署名は別途 ssh-agent forwarding を使います）。
@@ -1234,7 +1232,7 @@ sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
 ### 初期化の流れ
 
 `sbx-agent` が sandbox 作成後と再アタッチ時に
-`sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
+`sbx exec` で `scripts/sandbox-post-create.sh` を実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
 | 処理                          | 内容                                                                                                                 |
@@ -1322,7 +1320,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
 | `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
 | `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | マウントしない。API key を sbxenv.yaml の service secret で渡す |
+| `~/.coderabbit`                           | マウントしない。API key を sbxenv.yaml の service secret で渡す                                                   |
 | `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
 
 ### remoteEnv / ポート
@@ -1584,7 +1582,7 @@ tmux からは `prefix + C-d` のツール選択（`config/tmux/tmux.conf`）に
 
 ## sbx の宣言的な設定と拡張機能
 
-既存の CLI 引数方式と環境ファイル方式に加え、Claude subscription 用 kit も利用できます。
+環境ファイル方式と、Claude subscription 用 kit を利用できます。
 
 ### `sbxenv.yaml`（宣言的な環境定義）
 
@@ -1633,15 +1631,15 @@ sbx-agent claude --claude-account account1 --new
 ホストに保存済みの secret はこの変更で自動削除しません。
 `--env-plan` は secret を登録せず、`--new` を付けても作成・削除しません。
 
-| 設定 | 正本・処理 |
-| --- | --- |
-| 共通環境変数、許可ドメイン、SSH 通信先 | `kits/common/spec.yaml` |
-| CodeRabbit の認証・通信先 | `kits/coderabbit/spec.yaml` |
-| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml` |
-| GitHub / CodeRabbit の取得元 | `sbxenv.yaml` の `secrets` |
-| アカウント・worktree・mount・Git 設定・port | `sbx-agent` の runtime overlay |
-| CLI の導入とバージョン | Dockerfile → mise。kit で別途インストールしない |
-| clipboard・skills import・SSH 鍵の準備 | ホストの `sandbox:setup` |
+| 設定                                         | 正本・処理                                      |
+| -------------------------------------------- | ----------------------------------------------- |
+| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
+| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
+| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
+| GitHub / CodeRabbit の取得元                 | `sbxenv.yaml` の `secrets`                      |
+| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
+| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
+| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
 
 GitHub は `gh auth token`、CodeRabbit は `fnox get CODERABBIT_API_KEY` で取得します。
 CodeRabbit の実キーは sandbox の環境変数に入り、agent からも参照できます。
@@ -1879,6 +1877,22 @@ input/output error
 `/var/folders/...`）側にも同等の空きが必要です。足りない場合は `TMPDIR` を
 空きのあるパスに向けて実行してください。
 
+## CodeRabbit CLI の API key を使う
+
+ホストの fnox に `CODERABBIT_API_KEY` を登録し（[fnox.md](fnox.md)）、
+設定を反映して `sbx-agent <agent> --new` で作成します。
+`sbxenv.yaml` が service secret として取得するため、個別の secret 登録タスクや
+sandbox 内の `auth login` は不要です。`~/.coderabbit` は共有しません。
+
+review hook は `coderabbit review --committed --api-key "$CODERABBIT_API_KEY"` を実行します。
+CLI 自体に API-key 環境変数の自動読み込みはないため、手動実行でも `--api-key` を付けます。
+EU の API key は `sbxenv.yaml` の `env.CODERABBIT_REGION` を `eu` に設定します
+（既定は `us`）。CodeRabbit kit は地域別の `coderabbit.ai` 配下も許可します。
+実キーは sandbox の環境変数から読めるため、信頼する環境で使用してください。
+ホスト上で API key を渡さない場合は、既存の CLI ログインを利用します。
+
+参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)。
+
 ## 参考
 
 - [Docker Sandboxes（製品ページ）](https://www.docker.com/products/docker-sandboxes/)
@@ -1889,17 +1903,3 @@ input/output error
 - [kits（カスタマイズ）](https://docs.docker.com/ai/sandboxes/customize/)
 - [docs/multi-worktree.md](multi-worktree.md) - multi-worktree との統合
 - [docs/devcontainer.md](devcontainer.md) - 旧バックエンド（devcontainer）の仕組み
-
-### CodeRabbit CLI の API key を使う
-
-ホストの fnox に `CODERABBIT_API_KEY` を登録し（[fnox.md](fnox.md)）、
-設定を反映して `sbx-agent <agent> --new` で作成します。
-`sbxenv.yaml` が service secret として取得するため、個別の secret 登録タスクや
-sandbox 内の `auth login` は不要です。`~/.coderabbit` は共有しません。
-
-review hook は `coderabbit review --committed --api-key "$CODERABBIT_API_KEY"` を実行します。
-CLI 自体に API-key 環境変数の自動読み込みはないため、手動実行でも `--api-key` を付けます。
-実キーは sandbox の環境変数から読めるため、信頼する環境で使用してください。
-ホスト上で API key を渡さない場合は、既存の CLI ログインを利用します。
-
-参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)。

@@ -14,8 +14,6 @@ credentials:
 permissions:
   network:
     allow:
-      - api.coderabbit.ai
-      - app.coderabbit.ai
-      - ide.coderabbit.ai
-      - cli.coderabbit.ai
+      # Include regional API / review endpoints selected by --region.
+      - "**.coderabbit.ai"
 # CLI installation is owned by Dockerfile.sandbox and config/devcontainer/mise.toml.

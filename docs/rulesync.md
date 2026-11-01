@@ -101,10 +101,17 @@ CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot 
 `config/devcontainer/scripts/coderabbit-review.sh`（配置先は
 `~/.config/devcontainer/scripts/coderabbit-review.sh`）です。
 Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
-コマンドを読み、`git push`・`gh pr create`（単独、または `&&` の後）だけを対象にします。
+コマンドを安全に分割して `git push`・`gh pr create` を判定します。
+単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
+commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
+push の送信元 / PR の `--head` が現在の HEAD と異なる場合や、複数 ref の push も拒否します。
+レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に HEAD ごとに一度レビューし、結果を agent に返して
 その実行を止めます。CLI の失敗時は続行します。
-Copilot CLI は rulesync 32.0.0 の matcher 制限を避けてスクリプト側で判定します。
+Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
+Claude / Codex は stderr と終了コード 2 で止めます。
+`CODERABBIT_REGION=eu` を指定すると EU の API key を利用できます（既定は `us`）。
+通信先が追加で必要な場合は kit の network policy に許可してください。
 変更後は `mise run rulesync:generate` を実行し、各 CLI を再起動してください。
 
 | ブロック           | 生成先                                | 内容                                                               |

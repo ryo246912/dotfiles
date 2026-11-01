@@ -97,6 +97,8 @@ sandboxOptions:
   template: sbx-agent:claude
   pullPolicy: missing
   skills: readonly
+env:
+  CODERABBIT_REGION: us
 secrets:
   github:
     command: gh auth token

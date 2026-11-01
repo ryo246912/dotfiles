@@ -126,8 +126,9 @@
     "hooks": {
       "preToolUse": [
         {
-          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\"",
-          "timeout": 600
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.sh\"; [ -x \"$f\" ] || exit 0; \"$f\" --copilot",
+          "timeout": 600,
+          "matcher": "bash"
         }
       ]
     }
