@@ -22,6 +22,38 @@ def git(cwd, *args):
     return result.stdout.strip() if result.returncode == 0 else ''
 
 
+def shell_text(text):
+    """Preserve quoted literals; remove shell comments and flag active expansions."""
+    out, quote, word_start, expansion, i = [], None, True, False, 0
+    while i < len(text):
+        c = text[i]
+        if quote == "'":
+            out.append(c)
+            if c == "'":
+                quote = None
+            i += 1
+            continue
+        if c == "\\" and i + 1 < len(text) and (quote is None or text[i + 1] in '$`"\\\n'):
+            out.extend(text[i:i + 2])
+            word_start = False
+            i += 2
+            continue
+        if quote is None and c == '#' and word_start:
+            while i < len(text) and text[i] != "\n":
+                i += 1
+            continue
+        if c == '"':
+            quote = None if quote == '"' else '"'
+        elif c == "'" and quote is None:
+            quote = "'"
+        elif c == '`' or (c == '$' and i + 1 < len(text) and text[i + 1] in '({abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@*#?$!-'):
+            expansion = True
+        out.append(c)
+        word_start = quote is None and (c.isspace() or c in ';&|()<>')
+        i += 1
+    return ''.join(out), expansion
+
+
 def main():
     copilot = '--copilot' in sys.argv[1:]
     try:
@@ -33,9 +65,11 @@ def main():
         command = tool.get('command', tool.get('cmd', ''))
         if not isinstance(command, str) or not shutil.which('coderabbit'):
             return 0
+        command, expansion = shell_text(command)
         lexer = shlex.shlex(command.strip(), posix=True, punctuation_chars=';&|()<>\n')
         lexer.whitespace = ' \t\r'
         lexer.whitespace_split = True
+        lexer.commenters = ''
         tokens = list(lexer)
     except (ValueError, TypeError, AttributeError):
         return 0
@@ -74,6 +108,7 @@ def main():
     cwd = Path(tool.get('workdir') or event.get('cwd') or os.getcwd())
     if not cwd.is_absolute():
         cwd = Path.cwd() / cwd
+    compound = False
     # Only a literal leading cd may precede the target. Commits and other mutations must run separately.
     if len(groups) == 2 and len(groups[0]) == 2 and groups[0][0] == 'cd' and separators == ['&&']:
         directory = groups[0][1]
@@ -81,14 +116,19 @@ def main():
             return block('CodeRabbit: cd を別の呼び出しで実行してから push / PR 作成を実行してください。', copilot)
         cwd = cwd / directory
     elif len(groups) != 1 or separators:
-        return block('CodeRabbit: commit・複合コマンドと push / PR 作成を別の呼び出しに分けてください。', copilot)
-    if any(c in command for c in '$`'):
-        return block('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
+        # An unknown directory change cannot be assumed to target this repository.
+        if any(g[:1] == ['cd'] for g in groups):
+            return block('CodeRabbit: cd と push / PR 作成を別の呼び出しに分けてください。', copilot)
+        compound = True
 
     repo = git(cwd, 'rev-parse', '--show-toplevel')
     if not repo or not (Path(repo) / '.coderabbit.yaml').is_file():
         return 0
     cwd = Path(repo)
+    if compound:
+        return block('CodeRabbit: commit・複合コマンドと push / PR 作成を別の呼び出しに分けてください。', copilot)
+    if expansion:
+        return block('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
     if not head:
         return 0
@@ -145,13 +185,13 @@ def main():
             return 0
     except OSError:
         pass
-    region = os.environ.get('CODERABBIT_REGION', 'us')
-    if region not in ('us', 'eu'):
-        return block('CodeRabbit: CODERABBIT_REGION は us または eu を指定してください。', copilot)
-    args = ['coderabbit', 'review', '--committed', '--region', region]
+    args = ['coderabbit', 'review', '--committed']
     key = os.environ.get('CODERABBIT_API_KEY')
     if key:
-        args += ['--api-key', key]
+        region = os.environ.get('CODERABBIT_REGION', 'us')
+        if region not in ('us', 'eu'):
+            return block('CodeRabbit: CODERABBIT_REGION は us または eu を指定してください。', copilot)
+        args += ['--region', region, '--api-key', key]
     print('Reviewing with CodeRabbit CLI...', file=sys.stderr)
     result = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if result.returncode:

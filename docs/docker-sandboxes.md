@@ -1884,10 +1884,14 @@ input/output error
 `sbxenv.yaml` が service secret として取得するため、個別の secret 登録タスクや
 sandbox 内の `auth login` は不要です。`~/.coderabbit` は共有しません。
 
-review hook は `coderabbit review --committed --api-key "$CODERABBIT_API_KEY"` を実行します。
+API key を使う review hook は
+`coderabbit review --committed --api-key "$CODERABBIT_API_KEY" --region "${CODERABBIT_REGION:-us}"`
+を実行します。キーがない場合は `coderabbit review --committed` で保存済みログインを使います。
 CLI 自体に API-key 環境変数の自動読み込みはないため、手動実行でも `--api-key` を付けます。
-EU の API key は `sbxenv.yaml` の `env.CODERABBIT_REGION` を `eu` に設定します
-（既定は `us`）。CodeRabbit kit は地域別の `coderabbit.ai` 配下も許可します。
+接続先を EU リージョンにする場合は `sbxenv.yaml` の `env.CODERABBIT_REGION` を `eu` に設定します
+（既定は `us`）。API key の取得元は引き続き `CODERABBIT_API_KEY` です。
+kit は明示した CLI ホストだけを許可します。追加の地域別ホストが必要な場合は、
+実際の接続先を確認してから kit の allow に追加してください。
 実キーは sandbox の環境変数から読めるため、信頼する環境で使用してください。
 ホスト上で API key を渡さない場合は、既存の CLI ログインを利用します。
 
