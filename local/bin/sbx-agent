@@ -263,6 +263,8 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+log_info "sbx-agent の準備を開始します"
+
 # sandbox 内の固定パス・固定ポート
 # scripts は Dockerfile.sandbox が image 内の agent ホーム配下へ COPY している
 readonly SANDBOX_SCRIPTS_DIR="/home/agent/.config/devcontainer/scripts"
@@ -400,6 +402,7 @@ fi
 #   - 環境変数 SBX_AGENT_MOUNTS（`,` 区切り）→ --mount → ホスト設定 → agent 設定 の順
 #   - `<path>:ro` は sbx の read-only マウント指定なので接尾辞として温存する
 # ---------------------------------------------------------------------------
+log_info "ホスト設定と共有 mount を確認します"
 MOUNTS=()
 add_mount() {
     local spec="$1"
@@ -687,6 +690,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # - パスフレーズ付きの鍵: --apple-use-keychain により Keychain に保存済みなら非対話で、
     #   未保存なら端末で一度だけパスフレーズを聞いて Keychain に保存する
     # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
+    log_info "SSH 署名鍵を確認します"
     signing_key="${SBX_AGENT_SIGNING_KEY:-${HOME}/.ssh/id_ed25519}"
     signing_key="${signing_key%.pub}"
     # agent 内の鍵との照合は「鍵種別 + 鍵本体」で行う（comment は agent 側と異なりうる）
@@ -699,6 +703,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     agent_rc=0
     ssh-add -L >/dev/null 2>&1 || agent_rc=$?
     if [[ $agent_rc -ne 2 && -n "$signing_key_id" ]] && ! agent_has_signing_key; then
+        log_info "SSH 鍵を agent に登録します（パスフレーズや Keychain の確認待ちになる場合があります）"
         if [[ "$(uname -s)" == Darwin ]]; then
             ssh-add -q --apple-load-keychain >/dev/null 2>&1 || true
             agent_has_signing_key || ssh-add -q --apple-use-keychain "$signing_key" 2>/dev/null || true
@@ -851,6 +856,7 @@ prepare_env_files() {
         exit 127
     }
     local version major minor patch state_dir spec path item key value env_dir env_repo snapshot hops=0
+    log_info "sbx のバージョンと環境ファイルを確認します"
     version=$(sbx version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
     IFS=. read -r major minor patch <<<"$version"
     if [[ -z "$version" ]] || ((major == 0 && (minor < 50 || (minor == 50 && patch < 1)))); then
@@ -931,6 +937,7 @@ if [[ "$ENV_PLAN" == true ]]; then
     exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
 fi
 
+log_info "既存 sandbox と認証設定を確認します"
 # 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
 if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
     if [[ ! -f "${ENV_OVERLAY%/*}/created" ]]; then
@@ -993,6 +1000,7 @@ PYMOUNTS
 fi
 
 register_subscription_secret() {
+    log_info "Claude の sandbox 専用認証を登録します"
     # Validate without printing a credential or putting it in argv/environment.
     # pipefail ensures a failed validation/registration stops before sbx run.
     if ! python3 - "$SUBSCRIPTION_TOKEN" <<'PYTOKEN' | sbx secret set anthropic --sandbox "$SANDBOX_NAME" --force >/dev/null
@@ -1064,6 +1072,7 @@ run_post_create
 # One lookup per account/token, including failed attempts; statusline never calls APIs.
 SUBSCRIPTION_ORG_ID=""
 if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    log_info "Claude の組織情報を確認します（初回は API 接続を行います）"
     mise -C "$subscription_repo" run sandbox:claude-auth-check "$SANDBOX_NAME" \
         || log_warn "組織 ID を取得できませんでした。自動再取得はしません（docs 参照）"
     SUBSCRIPTION_ORG_ID=$(python3 - "$SUBSCRIPTION_TOKEN" "$CLAUDE_ACCOUNT" <<'PYORG'
@@ -1087,6 +1096,7 @@ fi
 
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
+log_info "${AGENT} を起動します"
 run_cmd=(sbx run --name "$SANDBOX_NAME")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
