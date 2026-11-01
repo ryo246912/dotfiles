@@ -1643,7 +1643,7 @@ sbx-agent claude --claude-account account1 --new
 
 GitHub は `gh auth token`、CodeRabbit は `fnox get --profile <private|work3> CODERABBIT_API_KEY` で取得します。
 CodeRabbit の profile はホスト種別から選び、`--coderabbit-profile private|work3` で上書きできます。
-CodeRabbit の実キーは sandbox の環境変数に入り、agent からも参照できます。
+CodeRabbit の環境変数には `proxy-managed` が入り、実キーはホストのプロキシが API リクエストに付与します。
 Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
 subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
 `--new` / `--rm` は `sbx env rm` で scoped secret も削除します。
@@ -1901,7 +1901,21 @@ CLI 自体に API-key 環境変数の自動読み込みはないため、手動�
 （既定は `us`）。API key の取得元は引き続き `CODERABBIT_API_KEY` です。
 kit は明示した CLI ホストだけを許可します。追加の地域別ホストが必要な場合は、
 実際の接続先を確認してから kit の allow に追加してください。
-実キーは sandbox の環境変数から読めるため、信頼する環境で使用してください。
+kit の `proxyManaged: true` により sandbox 内の `CODERABBIT_API_KEY` には
+`proxy-managed` が設定されます。実キーはホストに保持され、承認した API ホストへの通信で
+`x-coderabbitai-api-key` ヘッダーとしてプロキシが付与します。
+`proxyManaged: false` は実キーを環境変数へ渡す指定ではありません。
+この修正より前に作った sandbox は `--new` で再作成してください。
+API key 方式では CLI の保存済みログインを使わないため、`coderabbit auth status` の
+`signed out` だけでは認証の成否を判断できません。
+
+環境変数の有無は、値を表示せずに確認できます。
+
+```bash
+sbx exec <sandbox-name> sh -c 'test -n "${CODERABBIT_API_KEY:-}" && echo "CodeRabbit credential configured"'
+```
+
+この確認は注入設定だけを検証します。CLI からの実際の認証・レビュー成功は別途確認が必要です。
 ホスト上で API key を渡さない場合は、既存の CLI ログインを利用します。
 
 参考: [CodeRabbit CLI reference](https://docs.coderabbit.ai/cli/reference)。

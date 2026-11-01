@@ -9,8 +9,15 @@ credentials:
     required: true
     apiKey:
       name: CODERABBIT_API_KEY
-      # CLI chooses its own auth headers. The real key is available inside this sandbox.
-      proxyManaged: false
+      # sbx sets CODERABBIT_API_KEY=proxy-managed; the real key stays on the host.
+      proxyManaged: true
+      inject:
+        - domain: api.coderabbit.ai
+          header: x-coderabbitai-api-key
+          format: "%s"
+        - domain: ide.coderabbit.ai
+          header: x-coderabbitai-api-key
+          format: "%s"
 permissions:
   network:
     allow:

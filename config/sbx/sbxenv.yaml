@@ -22,4 +22,6 @@ secrets:
 bindings:
   coderabbit:
     apiKey:
-      domains: []
+      domains:
+        - api.coderabbit.ai
+        - ide.coderabbit.ai
