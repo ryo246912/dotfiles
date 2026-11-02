@@ -5,7 +5,7 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 ## インラインコメントの書式
 
 ```markdown
-**以下、AIによる返信**
+**以下、AIでの返信**
 [<区分>] <一言>
 
 <本文>
@@ -47,7 +47,7 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
       "path": "app/usecases/orders.py",
       "start_line": 120,
       "line": 128,
-      "body": "**以下、AIによる返信**\n[should] ..."
+      "body": "**以下、AIでの返信**\n[should] ..."
     }
   ]
 }
