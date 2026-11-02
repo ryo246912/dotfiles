@@ -152,6 +152,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "pipx:context-tracker"                                      = "1.0.0"
 "pipx:desloppify"                                           = { version = "1.0", extras = "full" }
 "pipx:grip"                                                 = "4.6.2"
+"pipx:playwright"                                           = "1.62.0"
 "pipx:tftui"                                                = "0.14.1"
 
 [settings]
@@ -183,6 +184,11 @@ uvx = true
 
 [hooks]
 postinstall = """
+# Playwright の version に対応する Chromium と OS 依存を導入する。
+# install は再実行可能。Linux の OS 依存導入では sudo が必要な場合がある。
+if command -v playwright >/dev/null 2>&1; then
+  playwright install --with-deps chromium || exit $?
+fi
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -f "$root/lefthook.yml" ] || exit 0
