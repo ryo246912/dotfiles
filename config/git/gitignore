@@ -50,3 +50,6 @@ plan/**
 ## crit
 .crit/
 lefthook.local.yml
+
+## desloppify
+.desloppify/

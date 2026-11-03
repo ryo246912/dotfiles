@@ -1,0 +1,12 @@
+schemaVersion: "1"
+# agent / workspace / template / mounts / env / ports are supplied by sbx-agent's runtime overlay.
+agent: claude
+kits:
+  - ./kits/common
+  - ./kits/coderabbit
+sandboxOptions:
+  pullPolicy: missing
+  skills: readonly
+secrets:
+  github:
+    command: gh auth token

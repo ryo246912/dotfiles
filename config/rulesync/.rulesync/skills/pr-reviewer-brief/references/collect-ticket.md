@@ -60,6 +60,9 @@ pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチ
 
 ## 3. 引き継ぎメモと SHA を書く
 
+- `collect.md` の 5 と同じ書式で `<work>/api_calls.json` を必ず作る（候補なしでも `[]`）。関連 PR の変更ファイルと、そこから呼ばれる差分外の既存 API・query hook・生成クライアントも検索対象にする。
+  関連 PR がなければ、チケットに関係する画面・API・ジョブを default branch 上で探し、呼び出し候補を集める。候補を notes の `api_calls` にも残す。
+
 - `notes.md` は `collect.md` の 5 と同じ書式で書く。「目的・背景」にはチケットから分かることを、「変更前のコードで読むべき場所」には
   チケットに出てくる画面・機能に当たるコードの場所を書く
 - `shas.json` には、今の default branch の SHA を `base_sha` に入れる（前提知識の根拠リンクに使う）
