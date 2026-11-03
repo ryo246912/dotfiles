@@ -1,6 +1,6 @@
 """作業ディレクトリの brief.json・hunks.json・groups.json・スクリーンショットから、資料の HTML を 1 ファイルで作る。
 
-    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out "./plan/pr-123_土地一覧の検索条件を追加.html"
+    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out './plan/pr-123_土地一覧の検索条件を追加.html'
 
 モデルは中身（brief.json）だけを書き、HTML・CSS・図の座標・差分の表はすべてここで作る。
 文章の中では `コード`・**強調**・[文字](URL) が使える。書くことが無い項目は省くか空にする（その章は出ない）。
@@ -174,6 +174,7 @@ def header(brief: dict, has_groups: bool) -> str:
         meta.append(f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>')
     if brief.get("stack"):
         meta.append(f'<span class="badge"><a href="#stack">stack #{esc(str(brief["stack"]["number"]))} · {len(prs)} PR</a></span>')
+        meta.append(f'<span>{link(brief["stack"].get("url"), "stack を GitHub で開く")}</span>')
     for pr in prs[:1] if not brief.get("stack") else []:
         meta.append(f'<span>{link(pr_url(brief, pr), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
         meta.append(f"<span>作成者 {esc(pr.get('author', ''))}</span>")
@@ -183,6 +184,8 @@ def header(brief: dict, has_groups: bool) -> str:
         sha_label = "<code>" + esc(brief["head_sha"][:7]) + "</code>"
         head_link = f'<a href="#groups">{sha_label}</a>' if has_groups else link(commit_url, sha_label)
         meta.append(f'<span>head {head_link}</span>')
+        if has_groups:
+            meta.append(f'<span>{link(commit_url, "commit を GitHub で開く")}</span>')
     meta.append(f"<span>生成 {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}</span>")
     meta.append(f"<span>skills schema v{SCHEMA_VERSION}</span>")
     progress = (
@@ -328,7 +331,8 @@ def background_section(brief: dict, workdir: Path) -> str:
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
         if model.get("tables"):
-            parts.append(mermaid(model["tables"]))
+            caption = evidence_links(brief, model.get("evidence", []))
+            parts.append(f'<figure>{mermaid(model["tables"])}<figcaption>{caption}</figcaption></figure>')
         if model.get("mapping"):
             rows = [[page_ref(brief, m.get("page")), inline(m["ui"]), f"<code>{esc(m['column'])}</code>"] for m in model["mapping"]]
             parts.append("<h4>画面の項目とテーブルの対応</h4>" + table(["画面", "画面の項目", "テーブル.カラム"], rows))
@@ -660,6 +664,14 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             groups_html = render_groups(hunks, groups, blob)
 
     errors += check_page_refs(brief)
+    for i, focus in enumerate([] if ticket_mode else brief.get("focus", []), start=1):
+        if focus.get("side", "head") not in ("base", "head"):
+            errors.append(f"focus[{i}].side は base または head にする")
+        if "lines" in focus:
+            value = focus["lines"]
+            match = re.fullmatch(r"([1-9][0-9]*)(?:-([1-9][0-9]*))?", str(value)) if type(value) in (str, int) else None
+            if not match or int(match[1]) > int(match[2] or match[1]):
+                errors.append(f"focus[{i}].lines は正の行番号 N または昇順の N-N にする: {value!r}")
     errors += [f"scope の {key!r} は fe / be / db / infra のどれか" for key in (brief.get("scope") or {}) if key not in dict(SCOPE_LAYERS)]
     pictures = []
     for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
@@ -710,19 +722,20 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         items = []
         blob = f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}" if brief.get("repo") and brief.get("head_sha") else None
         for index, focus in enumerate(brief["focus"], start=1):
+            file_hunks = [h for h in (hunks or {}).values() if focus["path"] in (h["path"], h["old_path"])]
+            side = focus.get("side", "base" if file_hunks and all(h["status"] == "deleted" for h in file_hunks) else "head")
             line_range = str(focus.get("lines", ""))
             match = re.fullmatch(r"(\d+)(?:-(\d+))?", line_range)
             start, end = (int(match[1]), int(match[2] or match[1])) if match else (None, None)
             matches = []
-            for hunk in (hunks or {}).values():
-                if hunk["path"] != focus["path"]:
-                    continue
-                rows = [row[2] for row in hunk["lines"] if row[2] is not None]
+            for hunk in file_hunks:
+                column = 1 if side == "base" else 2
+                rows = [row[column] for row in hunk["lines"] if row[column] is not None]
                 if start is None or (rows and min(rows) <= end and max(rows) >= start) or (not rows and start <= hunk["new_start"] <= end):
                     # 同じ hunk が変更グループにも出るため、この表示用の ID にする
                     matches.append(render_hunk({**hunk, "id": f"focus-{index}-{hunk['id']}"}, None, blob))
             diff = "".join(matches) or '<p class="evidence">該当する差分なし（指定範囲はソースリンクで確認）</p>'
-            items.append(f'<article class="focus-item"><h3>{blob_link(brief, focus["path"], focus.get("lines"), "head")}</h3><p>{inline(focus["why"])}</p>{diff}</article>')
+            items.append(f'<article class="focus-item"><h3>{blob_link(brief, focus["path"], focus.get("lines"), side)}</h3><p>{inline(focus["why"])}</p>{diff}</article>')
         sections.append(section("focus", "重点的に見る箇所", "".join(items)))
     if brief.get("unknowns") and not ticket_mode:
         items = "".join(f"<li>{inline(u)}</li>" for u in brief["unknowns"])
