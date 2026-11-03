@@ -42,6 +42,8 @@ brief.json の書式:
                      "evidence": [{"path": "app/x.ts", "lines": "10-20"}]}],
         "glossary": [{"term": "用語", "meaning": "意味", "page": "list", "where": "画面のどこに出るか", "code": "コード上の名前"}],
         "data_model": {"note": "補足",
+                       "trace": [{"entry": "画面の呼び出し元 path:line", "steps": ["router.py:10", "model.py:20"], "result": "参照するテーブル"}],
+                       "evidence": [{"path": "schema.sql", "lines": "10-20", "side": "base"}],
                        "tables": "erDiagram ...",           # 今回の変更に関わるテーブルの構造（カラム・PK/FK・リレーション）
                        "mapping": [{"page": "list", "ui": "画面の項目", "column": "approaches.status"}],
                        "before": "erDiagram ...", "after": "erDiagram ..."}  # スキーマが変わるときだけ
@@ -330,6 +332,11 @@ def background_section(brief: dict, workdir: Path) -> str:
         parts.append("<h3 id=\"background-data-model\">データモデル（今回の変更に関わるテーブル）</h3>")
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
+        if model.get("trace"):
+            rows = [[inline(t["entry"]), " → ".join(inline(step) for step in t["steps"]), inline(t["result"])] for t in model["trace"]]
+            parts.append("<h4>データの追跡結果</h4>" + table(["入口", "追跡経路", "結果"], rows))
+        if not model.get("tables"):
+            parts.append(evidence_links(brief, model.get("evidence", [])))
         if model.get("tables"):
             caption = evidence_links(brief, model.get("evidence", []))
             parts.append(f'<figure>{mermaid(model["tables"])}<figcaption>{caption}</figcaption></figure>')
@@ -637,6 +644,41 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
     return f'<div class="scope">{"".join(blocks)}</div>'
 
 
+def check_data_model(brief: dict, api_calls: list) -> list[str]:
+    """ER 図の省略には追跡結果と根拠が必要。API の利用を省略理由にしない。"""
+    bg = brief.get("background") or {}
+    model = bg.get("data_model") or {}
+    tables = model.get("tables")
+    errors = []
+    # API の変更だけでなく、既存 API の呼び出しも拾う。
+    api_pattern = r"(?i)(\bAPI\b|fetch|mutation|\b(?:GET|POST|PUT|PATCH|DELETE)\s+/|生成クライアント|クライアント.*呼び出し)"
+    api_context = json.dumps({"interfaces": brief.get("interfaces"), "changes": brief.get("changes")}, ensure_ascii=False)
+    needs_tables = bool(api_calls) or bool(re.search(api_pattern, api_context))
+    trace = model.get("trace")
+    if trace and (not isinstance(trace, list) or any(not isinstance(t, dict) or not t.get("entry") or not isinstance(t.get("steps"), list) or not t["steps"] or not t.get("result") for t in trace)):
+        errors.append("data_model.trace の各項目に entry・空でない steps 配列・result が必要")
+    if tables:
+        if not isinstance(tables, str) or not re.match(r"^\s*erDiagram\b", tables):
+            errors.append("background.data_model.tables は Mermaid の erDiagram ソースにする")
+        return errors
+    if needs_tables:
+        errors.append("API 呼び出し・変更があるため background.data_model.tables の ER 図が必要")
+    if model or bg.get("pages") or needs_tables:
+        if not model.get("note"):
+            errors.append("ER 図を省略する場合は background.data_model.note に調査結果を書く")
+        elif re.search(r"(?i)(API|テーブル|DB|downloaded_)", str(model["note"])):
+            errors.append("data_model.note に API・テーブル・DB・downloaded_ の言及があるため ER 図を省略できない")
+        trace = model.get("trace")
+        if not isinstance(trace, list) or not trace:
+            errors.append("ER 図を省略する場合は data_model.trace に入口・追跡経路・結果が必要")
+        elif any(not isinstance(t, dict) or not t.get("entry") or not isinstance(t.get("steps"), list) or not t["steps"] or not t.get("result") for t in trace):
+            errors.append("data_model.trace の各項目に entry・空でない steps 配列・result が必要")
+        evidence = model.get("evidence")
+        if not isinstance(evidence, list) or not evidence or any(not isinstance(e, dict) or not e.get("path") or not e.get("lines") for e in evidence):
+            errors.append("ER 図を省略する場合は data_model.evidence に辿ったファイルの path と lines が必要")
+    return errors
+
+
 def build(workdir: Path) -> tuple[str, list[str]]:
     brief = json.loads((workdir / "brief.json").read_text())
     shas_path = workdir / "shas.json"
@@ -663,6 +705,17 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             blob = f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}" if brief.get("repo") and brief.get("head_sha") else None
             groups_html = render_groups(hunks, groups, blob)
 
+    api_calls = []
+    api_calls_path = workdir / "api_calls.json"
+    if api_calls_path.exists():
+        try:
+            api_calls = json.loads(api_calls_path.read_text())
+            if not isinstance(api_calls, list):
+                errors.append("api_calls.json は API 呼び出し候補の配列にする")
+                api_calls = []
+        except (ValueError, OSError) as error:
+            errors.append(f"api_calls.json を読めない: {error}")
+    errors += check_data_model(brief, api_calls)
     errors += check_page_refs(brief)
     for i, focus in enumerate([] if ticket_mode else brief.get("focus", []), start=1):
         if focus.get("side", "head") not in ("base", "head"):

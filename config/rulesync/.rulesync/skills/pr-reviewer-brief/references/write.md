@@ -43,7 +43,13 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
     状態を対象とする。画面がある場合は表示部分から API・取得処理をたどり、画面のない API・ジョブ・migration は入口とモデル・スキーマから、読み書きする元テーブル・中間テーブル・外部キーを調べる。
     DB の変更がない PR でも、関係する表示部分に DB 由来のデータがあれば ER 図を必ず載せる。
     Mermaid の `erDiagram` ソース（HTML・SVG・コードフェンスは含めない）を `data_model.tables` に、画面の表示項目との対応は `mapping` に入れる。
-  - 表示データが固定値・外部 API のみで DB と無関係なら、`data_model.note` にその事実と根拠を書く。存在しないテーブルは描かない。
+  - **書く前に必ず追跡する**: (1) 変更ファイルの mutation・fetch・生成クライアントなど API 呼び出しを列挙し、段階 1 の `api_calls.json` と照合する。(2) 各呼び出しを where-api のルーター → usecase → CRUD → モデル・スキーマまで辿る。(3) 結果を `data_model.trace` に残す。
+    `trace` は `[{"entry": "web/foo.ts:20 の mutation", "steps": ["where-api/router.py:10", "usecase.py:30", "crud.py:40", "models.py:50"], "result": "addresses を読み書きする"}]` の配列。
+    画面なしでは API・ジョブ・migration の入口から同様に追跡する。追加された入口が base に無ければ、head から既存処理へ辿り、base のモデル・スキーマと照合する。
+  - フロントから API を呼ぶ処理が 1 つでもあればバックエンドの DB に到達するとみなし、ER 図を必須とする。
+    **「テーブル・API を変更していない」は ER 図を省く理由にならない**。既存の呼び出しや diff 外の関連処理も対象にする。
+  - `note` だけで済ませられるのは、固定表示など永続データに関わらない場合だけ。どの入口からどこまで辿り、読み書きするコードがないと確認したかを `trace` と `note` に書き、辿ったファイル・行を `evidence` に必ず付ける。空の `trace` での省略は禁止する。
+    `tables` のない `note` に `API`・`テーブル`・`DB`・`downloaded_` を含む場合や、`interfaces`・`changes`・`api_calls.json` に API 呼び出しがある場合は検査エラーとなる。存在しないテーブルは描かず、該当する実テーブルを調べ直す。
   - `tables`: 変更で読み書きするテーブル、migration やモデルが変わるテーブル、画面に出るデータの元のテーブルを、
     mermaid `erDiagram` で書く。各テーブルに PK / FK・型・変更に関わるカラム・画面に出るカラムを載せ、リレーション
     （多重度）でつなぐ（モデル・スキーマの定義から。関係しないテーブルは描かない）
