@@ -1,6 +1,6 @@
 """作業ディレクトリの brief.json・hunks.json・groups.json・スクリーンショットから、資料の HTML を 1 ファイルで作る。
 
-    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out ./plan/pr-123.html
+    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out "./plan/pr-123_土地一覧の検索条件を追加.html"
 
 モデルは中身（brief.json）だけを書き、HTML・CSS・図の座標・差分の表はすべてここで作る。
 文章の中では `コード`・**強調**・[文字](URL) が使える。書くことが無い項目は省くか空にする（その章は出ない）。
@@ -95,9 +95,11 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from render_groups import render as render_groups  # noqa: E402
-from render_groups import size_bar  # noqa: E402
+from render_groups import render_hunk  # noqa: E402
 from render_groups import validate as validate_groups  # noqa: E402
 from render_pictures import render_picture  # noqa: E402
+
+SCHEMA_VERSION = "1.1"
 
 PAGE = Path(__file__).resolve().parent.parent / "assets" / "page.html"
 esc = html.escape
@@ -171,15 +173,18 @@ def header(brief: dict, has_groups: bool) -> str:
     if ticket:
         meta.append(f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>')
     if brief.get("stack"):
-        meta.append(f'<span class="badge">{link(brief["stack"].get("url"), "stack #" + str(brief["stack"]["number"]))} · {len(prs)} PR</span>')
+        meta.append(f'<span class="badge"><a href="#stack">stack #{esc(str(brief["stack"]["number"]))} · {len(prs)} PR</a></span>')
     for pr in prs[:1] if not brief.get("stack") else []:
         meta.append(f'<span>{link(pr_url(brief, pr), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
         meta.append(f"<span>作成者 {esc(pr.get('author', ''))}</span>")
         meta.append(f'<span><code>{esc(pr.get("base", ""))}</code> ← <code>{esc(pr.get("head", ""))}</code></span>')
     if brief.get("head_sha"):
         commit_url = f"https://github.com/{brief['repo']}/commit/{brief['head_sha']}" if brief.get("repo") else None
-        meta.append(f'<span>head {link(commit_url, "<code>" + esc(brief["head_sha"][:7]) + "</code>")}</span>')
+        sha_label = "<code>" + esc(brief["head_sha"][:7]) + "</code>"
+        head_link = f'<a href="#groups">{sha_label}</a>' if has_groups else link(commit_url, sha_label)
+        meta.append(f'<span>head {head_link}</span>')
     meta.append(f"<span>生成 {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}</span>")
+    meta.append(f"<span>skills schema v{SCHEMA_VERSION}</span>")
     progress = (
         '<div class="meta"><span class="tag" id="diff-stats"></span><span class="progress">確認 '
         '<span id="progress-text">0/0</span><span class="progress-bar"><span id="progress-fill"></span></span></span></div>'
@@ -579,7 +584,6 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
 
     stats = {(key, i): new_stat() for key, _ in SCOPE_LAYERS for i in [None, *range(len((scope.get(key) or {}).get("parts", [])))]}
     stats[("other", None)] = new_stat()
-    numbers = {g["id"]: n for n, g in enumerate(groups or [], start=1)}
     for group in groups or []:
         for hunk_id in group["hunks"]:
             hunk = hunks[hunk_id]
@@ -592,16 +596,11 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
                 if group["id"] not in stat["groups"]:
                     stat["groups"].append(group["id"])
     known = hunks is not None  # 差分が無いときは、変わるかどうかを決めつけない（summary だけ出す）
-    scale = max([s["added"] + s["removed"] for (k, i), s in stats.items() if i != "total"] or [0])
-
-    def chips(stat: dict) -> str:
-        return "".join(f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"])
-
     def size(stat: dict) -> str:
         if not stat["files"]:
             return ""
         return (
-            f'{size_bar(stat["added"], stat["removed"], scale)}<span class="tag">{len(stat["files"])} files</span>'
+            f'<span class="tag">{len(stat["files"])} files</span>'
             f'<span class="added">+{stat["added"]}</span><span class="removed">−{stat["removed"]}</span>'
         )
 
@@ -621,15 +620,14 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
             detail = f'<code>{esc(part["detail"])}</code>' if part.get("detail") else ""
             rows.append(
                 f'<tr class="{"" if stat["files"] or not known else "unchanged"}"><th>{esc(part["name"])}{detail}</th>'
-                f'<td>{inline(part.get("summary", ""))}</td><td class="scope-size"><span class="scope-meta">{size(stat)}{chips(stat)}</span></td></tr>'
+                f'<td>{inline(part.get("summary", ""))}</td><td class="scope-size"><span class="scope-meta">{size(stat)}</span></td></tr>'
             )
-        badge = f'<span class="tag">{"変わる" if changed else "変わらない"}</span>' if known else ""
         summary = inline(layer["summary"]) if layer.get("summary") else ("変更なし" if known and not changed else "")
         table_html = f'<table class="scope-parts"><tbody>{"".join(rows)}</tbody></table>' if rows else ""
         cls = "scope-layer" + ("" if changed or not known else " unchanged") + (" other" if key == "other" else "")
         blocks.append(
-            f'<div class="{cls}"><div class="scope-head"><strong>{name}</strong>{badge}'
-            f'<span class="scope-summary">{summary}</span><span class="scope-meta">{size(total)}{chips(total)}</span></div>'
+            f'<div class="{cls}"><div class="scope-head"><strong>{name}</strong>'
+            f'<span class="scope-summary">{summary}</span><span class="scope-meta">{size(total)}</span></div>'
             f"{table_html}</div>"
         )
     return f'<div class="scope">{"".join(blocks)}</div>'
@@ -683,8 +681,6 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             '<span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>'
         )
         sections.append(section("pictures", "絵で見る", legend + f'<div class="pictures">{"".join(pictures)}</div>'))
-    if brief.get("stack"):
-        sections.append(section("stack", "スタック構成", stack_section(brief)))
     for sid, title, body in (
         ("background", "前提知識", background_section(brief, workdir)),
         ("changes", "変更内容", changes_section(brief)),
@@ -703,16 +699,31 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             else "<p>なし</p>"
         )
         sections.append(section("interfaces", "スキーマ・API・設定の差分", body))
-    if groups_html:
-        sections.append(section("groups", "変更グループ", groups_html))
     body = "" if ticket_mode else manual_test_section(brief, workdir)
     if body:
         sections.append(section("manual-test", "動作確認手順", body))
+    if brief.get("stack"):
+        sections.append(section("stack", "スタック構成", stack_section(brief)))
+    if groups_html:
+        sections.append(section("groups", "変更グループ", groups_html))
     if brief.get("focus") and not ticket_mode:
-        items = "".join(
-            f"<li>{blob_link(brief, f['path'], f.get('lines'), 'head')} — {inline(f['why'])}</li>" for f in brief["focus"]
-        )
-        sections.append(section("focus", "重点的に見る箇所", f"<ul>{items}</ul>"))
+        items = []
+        blob = f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}" if brief.get("repo") and brief.get("head_sha") else None
+        for index, focus in enumerate(brief["focus"], start=1):
+            line_range = str(focus.get("lines", ""))
+            match = re.fullmatch(r"(\d+)(?:-(\d+))?", line_range)
+            start, end = (int(match[1]), int(match[2] or match[1])) if match else (None, None)
+            matches = []
+            for hunk in (hunks or {}).values():
+                if hunk["path"] != focus["path"]:
+                    continue
+                rows = [row[2] for row in hunk["lines"] if row[2] is not None]
+                if start is None or (rows and min(rows) <= end and max(rows) >= start) or (not rows and start <= hunk["new_start"] <= end):
+                    # 同じ hunk が変更グループにも出るため、この表示用の ID にする
+                    matches.append(render_hunk({**hunk, "id": f"focus-{index}-{hunk['id']}"}, None, blob))
+            diff = "".join(matches) or '<p class="evidence">該当する差分なし（指定範囲はソースリンクで確認）</p>'
+            items.append(f'<article class="focus-item"><h3>{blob_link(brief, focus["path"], focus.get("lines"), "head")}</h3><p>{inline(focus["why"])}</p>{diff}</article>')
+        sections.append(section("focus", "重点的に見る箇所", "".join(items)))
     if brief.get("unknowns") and not ticket_mode:
         items = "".join(f"<li>{inline(u)}</li>" for u in brief["unknowns"])
         sections.append(section("unknowns", "未確認事項", f"<ul>{items}</ul>"))
