@@ -81,11 +81,10 @@ PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）を
 
 ## 5. 引き継ぎメモを書く
 
-差分内の API 呼び出し候補（`fetch`・`mutation`・生成クライアント・HTTP メソッド・query hook）を機械検索し、呼び出し箇所を読み直して `<work>/api_calls.json` に配列で保存する。
+変更した画面・API・ジョブから呼ばれる差分外の既存処理（query hook・既存クライアント・stack 内の他 PR を含む）も辿り、API 呼び出し候補（`fetch`・`mutation`・生成クライアント・HTTP メソッド・query hook）を機械検索し、呼び出し箇所を読み直して `<work>/api_calls.json` に配列で保存する。
 書式: `[{"path": "web/foo.ts", "lines": "20-25", "call": "client.addresses.create", "endpoint": "POST /addresses"}]`。
 該当なしでも `[]` を保存する。単なる変数名などは除き、未解決の呼び出しは候補として残す。notes にも `api_calls` の見出しを作り、候補・関連する既存処理を渡す。
 この一覧は ER 図の必須判定にも使われるため、最上位 PR だけに絞らず stack 全体を確認する。
-
 
 `<work>/notes.md` に、段階 2 がコードを読む場所を絞れるよう、事実だけを箇条書きで書く。推測は「推測」と書く。
 

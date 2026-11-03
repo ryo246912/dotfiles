@@ -44,7 +44,44 @@ class DataModelTest(unittest.TestCase):
     def test_mermaid_required_and_accepted(self):
         for tables in ('<svg>図</svg>', '```mermaid\nerDiagram\n```'):
             self.assertTrue(check_data_model(self.brief({'tables': tables}), []))
-        self.assertEqual(check_data_model(self.brief({'tables': 'erDiagram\n ITEMS { int id PK }'}), [{'call': 'fetch'}]), [])
+        self.assertEqual(check_data_model(self.brief({**self.exemption(), 'tables': 'erDiagram\n ITEMS { int id PK }'}), [{'call': 'fetch'}]), [])
+
+    def test_diagram_requires_trace_and_evidence(self):
+        model = {**self.exemption(), 'tables': 'erDiagram\n ITEMS { int id PK }'}
+        for key in ('trace', 'evidence'):
+            with self.subTest(key=key):
+                incomplete = {k: v for k, v in model.items() if k != key}
+                self.assertTrue(check_data_model(self.brief(incomplete), [{'call': 'fetch'}]))
+
+    def test_trace_types_are_errors_not_render_crashes(self):
+        for trace in (None, {}, 123, [{'entry': 12, 'steps': ['x:1'], 'result': 'ok'}],
+                      [{'entry': 'x:1', 'steps': [12], 'result': 'ok'}],
+                      [{'entry': 'x:1', 'steps': ['x:1'], 'result': 12}]):
+            with self.subTest(trace=trace):
+                model = {**self.exemption(), 'trace': trace, 'tables': 'erDiagram\n ITEMS { int id PK }'}
+                errors = check_data_model(self.brief(model), [])
+                self.assertEqual(sum('trace' in error for error in errors), 1)
+                with tempfile.TemporaryDirectory() as directory:
+                    work = Path(directory)
+                    (work / 'brief.json').write_text(json.dumps(self.brief(model)))
+                    page, errors = build(work)
+                    self.assertFalse(page)
+                    self.assertTrue(errors)
+
+    def test_missing_handoff_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            brief = self.brief(self.exemption())
+            for ticket in (False, True):
+                with self.subTest(ticket=ticket):
+                    brief['mode'] = 'ticket' if ticket else 'pr'
+                    (work / 'brief.json').write_text(json.dumps(brief))
+                    (work / 'hunks.json').write_text('{"hunks": []}')
+                    (work / 'groups.json').write_text('{"groups": []}')
+                    self.assertTrue(any('api_calls.json が必要' in error for error in build(work)[1]))
+                    (work / 'api_calls.json').write_text('[]')
+                    self.assertFalse(build(work)[1])
+                    (work / 'api_calls.json').unlink()
 
     def test_build_reads_handoff_and_displays_trace(self):
         with tempfile.TemporaryDirectory() as directory:

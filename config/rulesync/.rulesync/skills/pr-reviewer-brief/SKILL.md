@@ -47,7 +47,7 @@ Linear・Notion・Jira・GitHub Issue の URL、`ticket <ID>`（先頭の `ticke
 
 ## 前提知識の調査範囲
 
-前提知識（ER 図を含む）は表示する diff の範囲に限らず、stack 全体の base（trunk）を対象とする。
+前提知識（ER 図を含む）は表示する diff の範囲に限らず、PR モードでは PR の base、stack モードでは stack 全体の base（trunk）、チケットモードでは default branch を対象とする。
 最上位 PR の diff だけで DB との関連を判断しない。stack 内の他 PR と、関連する既存 API・取得処理・モデルまで辿る。
 
 ## 進め方

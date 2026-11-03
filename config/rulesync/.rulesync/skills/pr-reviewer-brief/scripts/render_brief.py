@@ -655,8 +655,23 @@ def check_data_model(brief: dict, api_calls: list) -> list[str]:
     api_context = json.dumps({"interfaces": brief.get("interfaces"), "changes": brief.get("changes")}, ensure_ascii=False)
     needs_tables = bool(api_calls) or bool(re.search(api_pattern, api_context))
     trace = model.get("trace")
-    if trace and (not isinstance(trace, list) or any(not isinstance(t, dict) or not t.get("entry") or not isinstance(t.get("steps"), list) or not t["steps"] or not t.get("result") for t in trace)):
-        errors.append("data_model.trace の各項目に entry・空でない steps 配列・result が必要")
+    required = bool(tables) or bool(model) or bool(bg.get("pages")) or needs_tables
+    text = lambda value: isinstance(value, str) and bool(value.strip())
+    valid_trace = isinstance(trace, list) and bool(trace) and all(
+        isinstance(item, dict) and text(item.get("entry")) and text(item.get("result"))
+        and isinstance(item.get("steps"), list) and bool(item["steps"])
+        and all(text(step) for step in item["steps"])
+        for item in trace
+    )
+    if required and not valid_trace:
+        errors.append("data_model.trace に空でない文字列の entry・result と、空でない文字列配列 steps が必要")
+    evidence = model.get("evidence")
+    if required and (not isinstance(evidence, list) or not evidence or any(
+        not isinstance(e, dict) or not text(e.get("path"))
+        or type(e.get("lines")) not in (str, int) or not str(e["lines"]).strip()
+        or e.get("side", "base") not in ("base", "head") for e in evidence
+    )):
+        errors.append("data_model.evidence に辿ったファイルの path と lines が必要（side は base または head）")
     if tables:
         if not isinstance(tables, str) or not re.match(r"^\s*erDiagram\b", tables):
             errors.append("background.data_model.tables は Mermaid の erDiagram ソースにする")
@@ -668,14 +683,6 @@ def check_data_model(brief: dict, api_calls: list) -> list[str]:
             errors.append("ER 図を省略する場合は background.data_model.note に調査結果を書く")
         elif re.search(r"(?i)(API|テーブル|DB|downloaded_)", str(model["note"])):
             errors.append("data_model.note に API・テーブル・DB・downloaded_ の言及があるため ER 図を省略できない")
-        trace = model.get("trace")
-        if not isinstance(trace, list) or not trace:
-            errors.append("ER 図を省略する場合は data_model.trace に入口・追跡経路・結果が必要")
-        elif any(not isinstance(t, dict) or not t.get("entry") or not isinstance(t.get("steps"), list) or not t["steps"] or not t.get("result") for t in trace):
-            errors.append("data_model.trace の各項目に entry・空でない steps 配列・result が必要")
-        evidence = model.get("evidence")
-        if not isinstance(evidence, list) or not evidence or any(not isinstance(e, dict) or not e.get("path") or not e.get("lines") for e in evidence):
-            errors.append("ER 図を省略する場合は data_model.evidence に辿ったファイルの path と lines が必要")
     return errors
 
 
@@ -707,6 +714,8 @@ def build(workdir: Path) -> tuple[str, list[str]]:
 
     api_calls = []
     api_calls_path = workdir / "api_calls.json"
+    if not api_calls_path.exists() and (has_hunks or ticket_mode):
+        errors.append("api_calls.json が必要（候補なしでも [] を保存する）")
     if api_calls_path.exists():
         try:
             api_calls = json.loads(api_calls_path.read_text())
