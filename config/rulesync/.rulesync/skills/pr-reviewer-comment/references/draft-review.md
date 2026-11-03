@@ -4,8 +4,10 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 ## インラインコメントの書式
 
+見出し「以下、AIからの返信」は必ず `**` で囲み、Markdown の太字にする。
+
 ```markdown
-**以下、AIでの返信**
+**以下、AIからの返信**
 [<区分>] <一言>
 
 <本文>
@@ -47,7 +49,7 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
       "path": "app/usecases/orders.py",
       "start_line": 120,
       "line": 128,
-      "body": "**以下、AIでの返信**\n[should] ..."
+      "body": "**以下、AIからの返信**\n[should] ..."
     }
   ]
 }
