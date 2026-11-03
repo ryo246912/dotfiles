@@ -1,0 +1,105 @@
+# agent-lessons（PR レビュー指摘から教訓を貯める private リポジトリ）の task。
+# 仕組みと使い方は docs/agent-lessons.md。
+
+["lessons:setup"]
+description = "Clone the private agent-lessons repo and register it as a Basic Memory project"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+
+if [ ! -d "$dir/.git" ]; then
+  gh repo clone ryo246912/agent-lessons "$dir"
+fi
+# 既存の checkout を使い回すときに、別のリポジトリへ教訓を push しないため
+# （push 先は pushurl で fetch 先と別にできるので両方を見る）
+for origin in "$(git -C "$dir" remote get-url origin)" "$(git -C "$dir" remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
+
+# 空のリポジトリ（README なしで作ったもの）を clone したときは、main に最初の commit を作って push する。
+# commit が無いと lessons:sync の pull や週次のブランチ作成ができないため。
+if ! git -C "$dir" rev-parse --quiet --verify HEAD >/dev/null; then
+  git -C "$dir" symbolic-ref HEAD refs/heads/main
+  if [ ! -e "$dir/README.md" ]; then
+    printf '# agent-lessons\n\nPR レビューの指摘から集めた教訓。仕組みと使い方は dotfiles の docs/agent-lessons.md。\n' >"$dir/README.md"
+  fi
+  git -C "$dir" add README.md
+  git -C "$dir" commit --quiet -m "chore: initialize agent-lessons"
+fi
+# 最初の push が失敗した後の再実行でも push し直す
+if ! git -C "$dir" ls-remote --exit-code origin refs/heads/main >/dev/null; then
+  git -C "$dir" push --quiet -u origin main
+fi
+
+# 同名のクラウド project が複数の workspace にあると行が増えるので、ローカルの登録先だけを見る
+registered=$(basic-memory tool list-projects | jq -r '[.projects[]? | select(.name == "agent-lessons") | .local_path // empty] | first // empty')
+if [ -z "$registered" ]; then
+  basic-memory project add agent-lessons "$dir"
+elif [ "$(realpath "$registered")" != "$(realpath "$dir")" ]; then
+  echo "error: Basic Memory の agent-lessons は $registered を指しています。basic-memory project remove agent-lessons で外してから再実行してください" >&2
+  exit 1
+fi
+
+# 教訓は日本語で書くため、英語専用の既定 embedding model（bge-small-en）は使わず、メタデータと全文検索で引く。
+# 初回の model ダウンロードも不要になる。この設定は project ごとではなく Basic Memory 全体に効く。
+basic-memory config set semantic_search_enabled false
+# バージョンは mise で固定しているため、Basic Memory 自身の自動更新は止める。
+basic-memory config set auto_update false
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"
+
+["lessons:sync"]
+description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation.md, push, and reindex Basic Memory"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+cd "$dir"
+
+if ! git rev-parse --quiet --verify HEAD >/dev/null; then
+  echo "error: $dir にまだ commit がありません。mise run lessons:setup で初期化してください" >&2
+  exit 1
+fi
+branch=$(git branch --show-current)
+if [ "$branch" != "main" ]; then
+  echo "error: $dir は $branch を checkout しています。main に戻してから実行してください" >&2
+  exit 1
+fi
+# lessons:setup の後で remote が変えられても、別のリポジトリへ教訓を push しないため
+for origin in "$(git remote get-url origin)" "$(git remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
+
+git add --all
+if ! git diff --cached --quiet; then
+  git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+    | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+  git commit --quiet -m "chore: record lessons from $(hostname -s)"
+fi
+git pull --rebase --quiet
+
+# 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
+# pull の後に拾う。skill は rulesync が配る先のどちらかにある。
+for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lessons-harvest"; do
+  if [ -f "$skill/scripts/escalation.py" ]; then
+    python3 "$skill/scripts/escalation.py" --apply
+    git add --all
+    if ! git diff --cached --quiet; then
+      git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+        | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+      git commit --quiet -m "chore: rule lessons checked in escalation.md"
+    fi
+    break
+  fi
+done
+
+git push --quiet
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"

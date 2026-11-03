@@ -16,7 +16,7 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > 普段の開発フローは [ccmanager での開発の段取り](#ccmanager-での開発の段取り) を参照してください。
 >
 > ```bash
-> mise run sandbox:setup           # secret / network policy / skills / SSH 鍵
+> mise run sandbox:setup           # ホスト設定 / skills / SSH 鍵
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
 > mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 > ```
@@ -24,18 +24,21 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 ## mise タスク一覧
 
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
+Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、このファイルの各タスク内に定義しています。
 
-| タスク                   | 用途                                                                                                                                              | 使うタイミング               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                     |
-| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき |
-| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき       |
-| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき             |
-| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                              | 要らなくなったとき           |
-| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                         |
-| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                         |
-| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき         |
-| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき           |
+| タスク                      | 用途                                                                                                                                              | 使うタイミング                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
+| `sandbox:claude-setup`      | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                | Claude 設定だけ再実行するとき |
+| `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
+| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得）                                                              | 認証先を確認するとき          |
+| `sandbox:secret-rm`         | 指定した sbx secret を削除（`--sandbox` で対象限定）                                                                                              | 不要な secret を削除するとき  |
+| `sandbox:build-template`    | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき  |
+| `sandbox:mcp-add`           | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき        |
+| `sandbox:mcp-load`          | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき              |
+| `sandbox:template-rm`       | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                          |
+| `sandbox:disk`              | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき          |
+| `sandbox:prune`             | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき            |
 
 ## devcontainer に対する利点
 
@@ -65,10 +68,15 @@ devcontainer はホストのネットワークをそのまま使うため、エ�
 
 devcontainer は `GH_TOKEN` を `remoteEnv` で渡し、`~/.config/gh` を mount するため、
 **エージェントが生トークンを読めます**。sandbox は `sbx secret` で OS キーチェーンに保存し、
-ホスト側プロキシが送信時に注入するため、エージェントはトークンを読めません。
+GitHub の credential はホスト側プロキシが送信時に注入するため、エージェントは GitHub トークンを読めません。
+CodeRabbit は sandbox 内でブラウザーログインを行い、CLI 標準の認証情報を保存します。
+キーの環境変数は常時 export しませんが、保存された認証情報はエージェントからも参照できます。
 
-```bash
-sbx secret set github --command 'gh auth token'
+```yaml
+# sbxenv.yaml
+secrets:
+  github:
+    command: gh auth token
 ```
 
 コミット署名も同じ発想で、**SSH agent forwarding が既定で有効**です。devcontainer では
@@ -102,7 +110,7 @@ devcontainer の方が有利**です。後述の「[リソース使用量](#リ�
 | 項目           | devcontainer                            | Docker Sandboxes (sbx)                                        |
 | -------------- | --------------------------------------- | ------------------------------------------------------------- |
 | 隔離境界       | コンテナ（ホストと kernel 共有）        | microVM（専用 kernel）                                        |
-| 起動方法       | `devcontainer up` + `devcontainer exec` | `sbx create` + `sbx run`                                      |
+| 起動方法       | `devcontainer up` + `devcontainer exec` | `sbx env create` + `sbx run`                                  |
 | ホスト連携     | `mounts` で任意のパスを bind mount      | workspace として渡したディレクトリのみ                        |
 | マウント先パス | `devcontainer.json` の `target` で指定  | **ホストと同じ絶対パス**に固定                                |
 | docker 利用    | docker-in-docker feature を有効化       | 標準で sandbox 専用 docker daemon を持つ                      |
@@ -237,7 +245,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.48.0", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+#   "github:docker/sbx-releases" = { version = "0.50.1", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
 mise install
 sbx version
 ```
@@ -263,7 +271,7 @@ sbx login
 sbx policy set-default balanced
 ```
 
-GitHub トークンは secret として登録しておきます。ホストの `gh` から都度解決され、
+GitHub トークンの取得元は `sbxenv.yaml` の `secrets.github` に定義しています。ホストの `gh` から解決され、
 送信時にホスト側プロキシが注入するので、**生トークンはエージェントから読めません**。
 
 sandbox には `~/.config/gh` をマウントしません。`gh` が OS のキーチェーンを使えない環境だと
@@ -271,13 +279,12 @@ sandbox には `~/.config/gh` をマウントしません。`gh` が OS のキ�
 sandbox 内の `gh` と git の GitHub 認証はこの secret 経由で通ります。
 
 ```bash
-sbx secret set github --command 'gh auth token'
 sbx secret ls
 ```
 
-ここまでと、ホストへの SSH 経路に必要な network policy・skills の取り込み（`~/.claude/skills` /
-`~/.agents/skills` / `~/.copilot/skills` を走査）・通知用 SSH 鍵の生成・ドキュメントサイトの許可
-（[後述](#ドキュメントサイトの許可)）・ホスト設定（`clipboard.imagePaste`）は 1 つの task にまとめてあります。
+secret と共通 network policy は環境ファイルと kit から sandbox 作成時に反映します。
+skills の取り込み・通知用 SSH 鍵の生成・ホスト設定（`clipboard.imagePaste`）は
+次の task で準備します。
 
 ```bash
 mise run sandbox:setup
@@ -315,42 +322,18 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 ```
 
 > [!NOTE]
-> このうち **github の secret 登録と `localhost:22` の policy 許可は、`sbx-agent` が sandbox を
-> 作るときに自動でも実行**します。github の secret は毎回ホストの `gh` から登録し直すので、
-> `gh auth refresh` などでトークンが入れ替わっても、sandbox を作り直せば追従します。
-> ドキュメントサイトの許可とホスト設定は `sandbox:setup` でだけ反映するため、
-> `config/sbx/allow-domains*.txt` を変更したら `mise run sandbox:setup` を再実行してください。
+> GitHub の secret は sandbox ごとに登録されます。取得元や kit の設定を変えた場合は
+> `sbx-agent <agent> --new` で作り直してください。ホスト設定の変更は `sandbox:setup` で反映します。
 
 ### ドキュメントサイトの許可
 
-`Balanced` の allowlist には AI API・パッケージレジストリ・GitHub などが入っていますが、
-docs.anthropic.com・MDN・Zenn・Qiita・Stack Overflow のような**ドキュメント・技術情報サイトは
-入っていません**。調査中に毎回ブロックされないよう、よく読むサイトを
-`config/sbx/allow-domains.txt`（1 行 1 パターン、`#` 以降はコメント）に並べ、
-`sandbox:setup` が `sbx policy allow network` で全 sandbox に許可します。
-
-- 特定の環境（work3 / private など）でだけ許可したいドメインは `config/sbx/allow-domains.<name>.txt` に
-  書きます。gitignore 済みなのでコミットされず、`sandbox:setup` が `allow-domains.txt` と一緒に読み込みます。
-  雛形の `allow-domains.work3.txt.example` を `.example` を外してコピーして使ってください。
-- 一覧に無いドメインは、ブロック時に出る承認リクエストで個別に許可します
-  （`sbx policy approval ls` → `sbx policy approval respond <id> --option <option-id>`）。
-- preset を `allow-all` にすれば許可の手間は無くなりますが、プロキシが GitHub トークンなどを
-  注入している以上、外部への持ち出しを防ぐ効果が失われるため `Balanced` のまま必要な分だけ許可します。
-- kit の `permissions.network.allow` でも宣言できますが採用していません。kit は sandbox 作成時にしか
-  反映されず、許可を足すたびに sandbox の作り直しが必要になるためです。global な policy なら
-  起動中の sandbox にも即座に反映されます。
-- 一覧から行を消しても反映済みのルールは残ります。`sbx policy rm network --resource <domain>` で
-  個別に削除してください。
-
-続いて、devcontainer と同じツールチェインが入った template をビルドします
-（[後述](#ツールチェインカスタム-template)）。これをやらないと sandbox 内に lint 群や crit が入りません。
-
-```bash
-mise run sandbox:build-template
-```
-
-ホストの sshd 側の準備（`authorized_keys` への登録・リモートログインの有効化・通知の表示許可）は
-devcontainer と共通です。[docs/devcontainer.md](./devcontainer.md) の手順に従ってください。
+共通の許可ドメインは `config/sbx/kits/common/spec.yaml` の
+`permissions.network.allow` に宣言しています。変更後は sandbox を作り直します。
+追加許可は、gitignore 済みの `config/sbx/allow-domains.<name>.txt`
+（1行1パターン、`#` 以降はコメント）に書き、`mise run sandbox:setup` で全 sandbox 共通の policy に反映します。
+雛形は `allow-domains.work3.txt.example` です。
+一時的な許可は `sbx policy allow network <host>`、未許可通信の確認は
+`sbx policy approval ls` を使います。
 
 ## 基本操作
 
@@ -385,7 +368,6 @@ sbx policy log my-sbx                # 何がブロックされたかを確認
 sbx policy allow network "*.npmjs.org,*.pypi.org"
 
 # ── 認証情報 / skills / MCP ────────────────────────────────────
-sbx secret set github --command 'gh auth token'
 sbx skills import --force            # ホストの skills を共有 store へ取り込む（確認を飛ばす）
 sbx mcp add <name> --url <url>       # MCP サーバを gateway 経由で共有
 
@@ -423,16 +405,17 @@ sbx-agent --help
 
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
-2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
+2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
-   `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` と
-   agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
+   `~/.local/share/agent-lessons`（書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   マウントは作成時にしか付かないため、追加したマウントを既存の sandbox に反映するには `sbx-agent <agent> --new` で作り直す
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
-4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
-   `LEFTHOOK_CONFIG` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`）と agent の設定ディレクトリ
-   （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）を渡す
+4. devcontainer の `remoteEnv` 相当のうち、`AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG` は common kit が設定する。
+   `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS` と agent の設定ディレクトリ
+   （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）は `--env` で渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
 6. `sbx run --name <name>` でアタッチする（位置引数で名前を渡す形は sbx 0.47 で deprecated）
@@ -486,9 +469,7 @@ skills = "readonly"
 # 公開ポート（host:sandbox）
 # publish_ports = ["7842:7842"]
 # task root に加えてマウントする workspace（sbx-agent の既定分は書かなくてよい）
-extra_workspaces = [
-  "~/.coderabbit",
-]
+extra_workspaces = []
 ```
 
 `backend = "devcontainer"` にすると従来どおり `devcontainer up` / `devcontainer exec` が既定になります。
@@ -500,13 +481,13 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 （env は作成時に固定されるため、`--name-prefix` で branch 名の前に account の識別子
 （`a1` / `a2` / `w3`）を入れて名前を分けています）。
 
-| preset id      | 起動内容                                                            |
-| -------------- | ------------------------------------------------------------------- |
-| `sbx`          | `sbx-agent claude --name-prefix a1`（`~/.claude`）                  |
-| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --name-prefix a2` |
-| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --name-prefix w3`    |
-| `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                  |
-| `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                              |
+| preset id      | 起動内容                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| `sbx`          | `sbx-agent claude --claude-account account1 --name-prefix a1`（`~/.claude`）                  |
+| `sbx-account2` | `sbx-agent claude --config-dir ~/.claude-account2 --claude-account account2 --name-prefix a2` |
+| `sbx-work3`    | `sbx-agent claude --config-dir ~/.claude-work3 --claude-account work3 --name-prefix w3`       |
+| `sbx-codex`    | `sbx-agent codex -- resume --yolo`                                                            |
+| `sbx-copilot`  | `sbx-agent copilot -- --resume --yolo`                                                        |
 
 実際の preset は上の表のコマンドを直接 `command` に書くのではなく、
 `command: "zsh"` + `args: ["-c", "exec sbx-agent … -- \"$@\"", "sbx-agent"]` の形にしています。
@@ -527,6 +508,194 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
   `zsh` 経由のこれらの preset には付かない（`sh` 経由の既存 preset「Claude account2」
   「Claude Work3」も同様）。
 
+### Claude サブスクを account ごとに固定する kit（実験的）
+
+ccmanager の Claude Docker Sandbox preset は `--claude-account` を使います。
+**設定ディレクトリと sandbox 名を分けるだけでは OAuth アカウントは分かれません。**
+標準 Claude agent の `/login` はホスト側の共通認証を更新します。
+このため専用の v2 kit [`config/sbx/kits/claude-subscription/spec.yaml`](../config/sbx/kits/claude-subscription/spec.yaml)
+を使用し、sandbox 固有の secret を `Authorization: Bearer` として送ります。
+API キーの登録インターフェースを使いますが、登録するのは `claude setup-token` の
+サブスク用 token です。API キー課金への切り替えを意図したものではありません。
+
+これは [公式 issue #144 の回避策](https://github.com/docker/sbx-releases/issues/144#issuecomment-6372651627)
+に基づきます。報告された動作環境は sbx v0.45.1、global anthropic secret なしです。
+このリポジトリでは実 sbx による認証検証は未実施です。更新後の sbx での互換性や
+サブスクの全機能を保証するものではありません。まず専用の検証 sandbox で確認してください。
+
+#### 1. sandbox:setup でまとめて設定する
+
+ホストの対話端末で実行します（Python 3、Claude CLI、yq が必要です）。
+
+```bash
+mise run sandbox:setup
+```
+
+skills・SSH 鍵などのホスト準備に続けて、以下を順に処理します。
+
+1. account1 → account2 → work3 の `claude setup-token` を実行し、token を保存する。
+   実行直前にアカウントごとに y/n を確認し、`n` または Enter はスキップする。
+   ブラウザでのログイン・アカウント選択は手動。
+2. 共通の anthropic secret がある場合、他の sandbox にも影響することを表示して削除の y/n を確認する。
+   残す場合は Claude の設定をそこで終了する。GitHub や sandbox 固有の secret は削除しない。
+3. `~/.config/sbx/credentials.yaml` に `anthropic` / `apiKey` / `api.anthropic.com` の binding を追加する。
+   既存の service・認証方式・domain を保持し、変更前に `.bak`（重複時は連番）へバックアップする。
+   この設定により、通常は ccmanager 起動時の kit 承認が不要になる。
+4. 対象 workspace とコマンドを表示し、account ごとに sandbox 作成/再作成の y/n を確認する。
+   **既存 sandbox がある場合は削除するため、sandbox 内だけの必要なデータを保存し、関連セッションを終了してから `y` を選ぶ。**
+   token 未登録の account はスキップする。Claude template がなければ、ビルドの y/n を確認する。
+5. `sbx-agent --setup-only --new` で作成・初期化と初回の組織 ID 取得まで行う。
+   Claude の TUI は開かず、次の account の確認へ進む。終了後は ccmanager の preset から起動する。
+
+sandbox の準備は表示された workspace だけが対象です。他の repository の sandbox は変更しません。
+Claude の設定だけ再実行する場合や、workspace を明示する場合は次を使います。
+
+```bash
+mise run sandbox:claude-setup
+mise run sandbox:claude-setup --workspace /path/to/project
+mise run sandbox:claude-setup account1 --workspace /path/to/project
+```
+
+#### 2. token 登録だけをやり直す
+
+token 更新だけなら sandbox の再作成は不要です。次のタスクで登録後、対象 Claude を終了して
+ccmanager の preset から再起動すると sandbox 固有 secret を上書きします。
+
+```bash
+# 全 account を順に確認
+mise run sandbox:claude-token
+# account ごとの更新
+mise run sandbox:claude-token account1
+mise run sandbox:claude-token account2
+mise run sandbox:claude-token work3
+```
+
+| アカウント | 使用する設定         | 自動保存先                                            |
+| ---------- | -------------------- | ----------------------------------------------------- |
+| account1   | `~/.claude`          | `~/.local/state/sbx-agent-credentials/account1.token` |
+| account2   | `~/.claude-account2` | `~/.local/state/sbx-agent-credentials/account2.token` |
+| work3      | `~/.claude-work3`    | `~/.local/state/sbx-agent-credentials/work3.token`    |
+
+成功時だけ token を権限 600 で保存します。失敗・中断・出力から一意に抽出できない場合は
+既存ファイルを置き換えません。CLI の token 出力は端末にも表示されますが、ログファイルは作りません。
+保存先は dotfiles 管理・sandbox mount・バックアップ・同期対象に含めないでください。
+token はホスト上では平文ですが、sandbox 内には sentinel だけが渡ります。
+
+#### 3. secret の削除と運用上の注意
+
+共通認証の解消と binding の追加は `sandbox:setup` に含まれます。手動で secret だけを
+削除する場合は次のタスクを使います。`--force` を付けない場合は sbx の確認に従います。
+
+```bash
+# 共通 anthropic 認証のみ削除（他の sandbox にも影響）
+mise run sandbox:secret-rm anthropic
+# 検証用 sandbox の認証だけ削除
+mise run sandbox:secret-rm anthropic --sandbox subscription-account1-check
+mise run sandbox:secret-rm anthropic --sandbox subscription-account2-check
+mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
+```
+
+この方式の sandbox 内で `/login` は使わないでください。共通認証が再作成されると、
+次回起動時にラッパーが停止します。`sbx login` の Docker 認証切れや OS キーチェーンのロックは
+ホストで解消してください。service・認証方式・domain を追加した場合は対応する binding の再設定が必要です。
+
+専用 kit は親 image の `/home/agent/.claude/settings.json` の `apiKeyHelper` を削除し、
+ホストの共有設定は編集しません。`--config-dir` の `settings.json` に認証を上書きする env や
+`apiKeyHelper` があると停止します。プロジェクト設定や CLI 引数でも認証を上書きしないでください。
+`--no-config` は併用できず、token 保存先を含むディレクトリを workspace / mount に指定すると停止します。
+
+初回セットアップ後は、一度 ccmanager から起動して認証入力なしで会話できることを確認してください。
+
+##### ホストの Claude と併用する場合
+
+ホストで直接起動した Claude では、通常どおり `/login` を使えます。
+避けるのは、この専用 kit を使う **sandbox 内**での `/login` です。
+
+| 起動場所                             | `/login` の扱い                                                     |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| ホストの Claude / account 別ラッパー | 使用可能。選択した設定先に対応する通常の Claude 認証を更新する      |
+| 専用 kit の sandbox 内               | 使用しない。sbx の共通 anthropic 認証を再作成・更新する可能性がある |
+
+ホストでは設定先を明示して起動します。起動後に `/login` を実行し、ブラウザでも対応するアカウントを選んでください。
+
+```bash
+# account1
+CLAUDE_CONFIG_DIR="$HOME/.claude" claude
+# account2
+CLAUDE_CONFIG_DIR="$HOME/.claude-account2" claude
+# work3
+CLAUDE_CONFIG_DIR="$HOME/.claude-work3" claude
+```
+
+`claude-account2` などのラッパーが同じ `CLAUDE_CONFIG_DIR` を指定するなら、そのコマンドも使えます。
+ホストでの `/login` は、保存済みの `account1.token` などや sbx の sandbox 固有 secret を自動更新しません。
+sandbox 用 token を更新する場合は、別途対応するタスクを実行し、対象セッションを終了して preset から再起動します。
+
+```bash
+mise run sandbox:claude-token account1
+mise run sandbox:claude-token account2
+mise run sandbox:claude-token work3
+```
+
+ホストの通常ログインと sandbox 用 token は別管理です。ホストのログインに伴って共有設定のメール情報が
+変わっても、sandbox の statusline は取得済み組織 ID から名前を判定するため、そのメールを認証先として表示しません。
+
+#### 4. 実際の認証先と statusline の表示を確認する
+
+この方式では `/status` や Claude への「アカウントを教えて」という質問から、プロキシが使う
+メールアドレスを確定できません。`oauthAccount.emailAddress` はローカル設定に残る情報で、
+`setup-token` と sandbox 専用 secret の更新には連動しません。
+
+ラッパーは起動時に `SBX_CLAUDE_ACCOUNT` を渡します。statusline はこの環境で古いメールを
+表示せず、初回の推論応答から取得した組織 ID を登録済みの対応表で名前に変換し、`account1 org: account1` のように表示します。
+先頭は選択した preset、`org:` の後ろは取得した組織 ID に対応する account1 / account2 / work3 です。
+例えば account1 の preset で account2 の組織が観測された場合は `account1 org: account2` となります。
+未登録の組織 ID は `org: 不明` と表示し、preset 名から認証先を推測しません。
+組織 ID が取れない場合は `account1 [sbx: 組織ID未取得]` と表示します。通常のホスト起動は従来の
+メール表示のままです。反映には Claude を終了して preset から起動し直してください。
+
+`sbx-agent` はアカウントごと・token ごとに初回だけ、sandbox 経由で `max_tokens=1` の
+推論リクエストを１回送り、組織 ID を取得します。少量の利用枠を消費し、認証方式によっては課金されます。
+本物の token や生成内容は出力しません。
+
+結果はホストの `~/.local/state/sbx-agent-credentials/organizations/<account>.json` に保存します。
+statusline は起動時に渡された保存値だけを読み、ネットワーク通信は行いません。
+同じ token では別 sandbox・再起動でも再取得しません。token が変わった場合は古い ID を使わず、
+新しい token の初回だけ取得します。取得失敗・ヘッダー未返却時も試行を記録し、自動再試行しません。
+同時起動はアカウントごとのロックで二重取得を防ぎます。
+
+ホストで保存値を確認するには次を実行します。すでに取得を試みた token では追加リクエストを送りません。
+
+```bash
+mise run sandbox:claude-auth-check dotfiles-a1-main-claude
+mise run sandbox:claude-auth-check dotfiles-a2-main-claude
+mise run sandbox:claude-auth-check dotfiles-w3-main-claude
+```
+
+モデル非対応や一時エラーを解消して、明示的に再取得する場合だけ `--refresh` を指定します。
+この場合は追加で１回リクエストを送ります。実行後は Claude を終了して preset から再起動すると表示に反映されます。
+
+```bash
+mise run sandbox:claude-auth-check dotfiles-a1-main-claude --refresh
+```
+
+`HTTP: 200` は、その sandbox の通信経路で推論の認証が成功したことを示します。
+`anthropic-organization-id` が返れば、利用予定の組織 ID と照合します。
+未返却の場合や、複数アカウントが同じ組織の場合はこれだけで本人を区別できません。
+メールアドレスや契約プランはこのコマンドから取得できません。
+使用モデルにアクセスできない場合は `--refresh --model <利用可能なモデルID>` を付けてください。
+この ID は初回の観測結果です。後から外部で sbx secret を変更した場合は追跡しないため、
+認証設定はラッパー経由で更新してください。メールアドレスとの対応を手元で控えれば識別に使えますが、
+同じ組織に所属するメールアドレス同士は区別できません。
+
+個人の認証先を確実に合わせるには、`mise run sandbox:claude-token <account>` のブラウザ認証で
+目的のアカウントを選び、その token を保存して再起動します。併せてアカウント側の利用記録を照合します。
+`sbx secret ls` は保存先の確認であって、token が属する個人の確認ではありません。
+
+`setup-token` は通常の `/login` と同等の全機能ではなく、managed settings の 401 や
+`/usage` などの制約が報告されています。認証失敗時に `/login` で直そうとせず、
+kit・binding・token・sbx バージョンを確認してください。
+
 ## ccmanager での開発の段取り
 
 ### 最初の 1 回だけ（ホスト側のセットアップ）
@@ -534,7 +703,7 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 ```bash
 mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
-mise run sandbox:setup           # secret / network policy / skills / 通知用 SSH 鍵
+mise run sandbox:setup           # ホスト設定 / skills / 通知用 SSH 鍵
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
@@ -557,7 +726,7 @@ mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホスト�
 > 向けるため、**Claude Code が実際に読むのは `$CLAUDE_CONFIG_DIR/skills`（ホストの実体）**です。
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
-> 同じパスへマウントします（`projects` / `agents` / `skills` / `plugins` のディレクトリのみ）。基本は**書き込み可**ですが、
+> 同じパスへマウントします（対象は `claude-share-config --list-entries` が返す共有 entry のみ）。基本は**書き込み可**ですが、
 > リンクを辿った先が dotfiles リポジトリ内のものは read-only です。`settings.json` はファイルへの symlink で、
 > sbx はこれを直接マウントできない（`workspace path exists but is not a directory` で作成に失敗する）ため、
 > 代わりにリンク先のあるディレクトリ（`~/.claude`）を **read-only** で足して、symlink の連鎖ごと解決させます。
@@ -575,9 +744,8 @@ mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホスト�
 > `hooks.json` を書き換えると、次にホストで codex を起動したときにその hooks や MCP の起動コマンドが
 > 実行されます。sandbox の外に影響し得る経路なので、変更は `git diff codex/` で確認してください。
 
-`sandbox:setup` の内容のうち secret 登録と `localhost:22` の network policy は **`sbx-agent` が sandbox を作るときに
-自動でも実行**します。手で打たなくても普段の起動で揃うので、`sandbox:setup` は
-「SSH 鍵・skills・ドキュメントサイトの許可・ホスト設定をまとめて用意したいとき」に使う入り口です。
+secret の取得元と共通 network policy は `sbxenv.yaml` と kit に宣言しています。
+`sandbox:setup` は SSH 鍵・skills・個人用の追加通信許可・ホスト設定を準備する入り口です。
 
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
@@ -602,15 +770,15 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
 `sbx-agent` が次を自動でやってから agent にアタッチします。
 
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から決める（claude の preset は `a1` / `a2` / `w3` が prefix。既にあれば再利用）
-2. ホスト側の前提条件（github secret / `localhost:22` の policy）を冪等に整える
-3. ツールチェイン入り template があれば使って `sbx create`
-   - ホストの git / aws / nvim 設定（read-only）と agent 設定ディレクトリをマウント
+2. 環境定義と kit を読み、sandbox ごとの secret と network policy を用意する
+3. ツールチェイン入り template を環境ファイルへ指定して `sbx env create`
+   - ホストの git / aws / nvim 設定（read-only）・agent-lessons と agent 設定ディレクトリをマウント
      （gh のトークンファイルは渡さず `sbx secret` 経由にする）
    - 各 worktree の common git dir をマウント
-   - git 設定・コミット署名・`AI_AGENT` などを `--env` で注入
+   - git 設定・コミット署名を runtime overlay、`AI_AGENT` などを common kit で設定
    - crit / plannotator のポートを公開（host port は自動採番）
    - `--static-mcp` で登録済み MCP を読み込む（既定は読み込まない）
-4. sandbox 内で初期化（nvim symlink / `mac-host` SSH config / lefthook / crit）
+4. sandbox 内で初期化（nvim / agent-lessons の symlink と Basic Memory の登録 / `mac-host` SSH config / lefthook / crit）
 5. `sbx run` でアタッチ
 
 `multi-worktree dev` から直接起動することもできます。
@@ -750,11 +918,13 @@ sandbox では**その工夫が標準動作**です。パスがずれないの�
 ただし **`$HOME` は別物**なので、`~/.config/...` や `~/.claude` を前提にしているものは
 そのままでは解決しません。`sbx-agent` はここを 2 通りで埋めています。
 
-| 対象                       | 方法                                                                        |
-| -------------------------- | --------------------------------------------------------------------------- |
-| git 設定                   | `GIT_CONFIG_COUNT` / `KEY` / `VALUE` でホストのパスを直接指定               |
-| agent 設定（claude/codex） | `CLAUDE_CONFIG_DIR` / `CODEX_HOME` にホストのパスを設定                     |
-| nvim                       | `~/.config/nvim` → ホストのパスへ symlink（nvim は XDG パスしか見ないため） |
+| 対象                       | 方法                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| git 設定                   | `GIT_CONFIG_COUNT` / `KEY` / `VALUE` でホストのパスを直接指定                         |
+| agent 設定（claude/codex） | `CLAUDE_CONFIG_DIR` / `CODEX_HOME` にホストのパスを設定                               |
+| nvim                       | `~/.config/nvim` → ホストのパスへ symlink（nvim は XDG パスしか見ないため）           |
+| agent-lessons              | `~/.local/share/agent-lessons` → ホストのパスへ symlink（skill が固定パスで読むため） |
+| agent-lessons-context      | `~/.local/bin/agent-lessons-context` → dotfiles の実体へ symlink（hook が呼ぶため）   |
 
 ### git 操作で残る注意点は 1 つだけ
 
@@ -997,7 +1167,7 @@ SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 ```
 
 ビルドしていない agent の preset（ccmanager の codex など）を選んだ場合、その場でビルドはされず
-`sbx create` が失敗します。`sbx-agent` が `mise run sandbox:build-template <agent>` の手順を表示するので、
+環境の作成が失敗します。`sbx-agent` が `mise run sandbox:build-template <agent>` の手順を表示するので、
 ビルドしてから選び直してください（`--no-template` を付ければツールチェイン無しで起動はできます）。
 
 やっていること:
@@ -1052,9 +1222,7 @@ devcontainer との違いは 2 点です。
 2. **network policy で明示的に許可が必要。** sandbox プロキシは `host.docker.internal` を
    `localhost` に書き換えて転送するため、許可ルールは `localhost:<port>` の形で書きます。
 
-```bash
-sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
-```
+`localhost:22` は `kits/common/spec.yaml` が sandbox 作成時に許可します。
 
 鍵は devcontainer と同じ専用鍵（`~/.ssh/id_docker_devcontainer`）を read-only でマウントします。
 個人鍵は渡しません（コミット署名は別途 ssh-agent forwarding を使います）。
@@ -1064,8 +1232,8 @@ sbx policy allow network localhost:22   # mise run sandbox:setup が実行する
 
 ### 初期化の流れ
 
-sbx には `postCreateCommand` に相当する仕組みが無いため、`sbx-agent` が sandbox 作成直後に
-`sbx exec` で `scripts/sandbox-post-create.sh` を 1 度だけ実行します
+`sbx-agent` が sandbox 作成後と再アタッチ時に
+`sbx exec` で `scripts/sandbox-post-create.sh` を実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
 | 処理                          | 内容                                                                                                                 |
@@ -1137,34 +1305,35 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### mounts
 
-| devcontainer の mount                     | sandbox                                                                                                           |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                        |
-| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                       |
-| `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbx secret set github` でプロキシが注入する |
-| `~/.aws/config`                           | ✅ `:ro`                                                                                                          |
-| `~/.agents`                               | ✅ `:ro`                                                                                                          |
-| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                                                                          |
-| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                                                                     |
-| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                                                                             |
-| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                                                                         |
-| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）                                                           |
-| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                 |
-| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                |
-| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                            |
-| `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                            |
-| `~/.coderabbit`                           | ⚠️ `extra_workspaces` で追加する                                                                                  |
-| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                             |
+| devcontainer の mount                     | sandbox                                                                                                                                       |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                                                    |
+| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                                                   |
+| `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbxenv.yaml` の `secrets.github`（`gh auth token`）でプロキシが注入する |
+| `~/.aws/config`                           | ✅ `:ro`                                                                                                                                      |
+| `~/.agents`                               | ✅ `:ro`                                                                                                                                      |
+| `~/.ssh/known_hosts`                      | ✅ `:ro`                                                                                                                                      |
+| 通知用 SSH 鍵                             | ✅ `:ro`（sandbox 内で 600 にコピーして使う）                                                                                                 |
+| `~/.claude.json`                          | ✅ `:ro` で渡し、post-create でコピー                                                                                                         |
+| `~/.claude` / `~/.codex` / `~/.copilot`   | ✅ agent ごとに rw で渡す                                                                                                                     |
+| `~/.claude-account2` / `~/.claude-work3`  | ✅ `--config-dir` で切り替え（preset ごとに別 sandbox）                                                                                       |
+| workspace をホストと同じ絶対パスに mount  | ✅ sbx の標準動作                                                                                                                             |
+| common git dir（実体リポジトリの `.git`） | ✅ 追加 workspace として自動で渡す                                                                                                            |
+| `~/.config/devcontainer`（設定ツリー）    | ✅ マウントではなく template に COPY（再ビルドで更新）                                                                                        |
+| `~/.config/mise`                          | ⚠️ 既定では渡していない（`extra_workspaces` で追加可）                                                                                        |
+| `~/.coderabbit`                           | マウントしない。sandbox 内でブラウザーログインし、ホストの認証情報は共有しない                                                                |
+| `~/.claude/settings.json` だけ read-only  | ❌ ディレクトリ全体を rw で渡している                                                                                                         |
 
 ### remoteEnv / ポート
 
-| devcontainer                                                                              | sandbox                                                     |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `AI_AGENT` / `TERM` / `HOST_USER` / `LEFTHOOK_CONFIG` / `MISE_TRUSTED_CONFIG_PATHS`       | ✅ `--env` で渡す                                           |
-| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                           |
-| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                           |
-| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbx secret set github --command 'gh auth token'` で代替 |
-| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `--publish 7842` で採番させ、`sbx ports` で調べて渡す    |
+| devcontainer                                                                              | sandbox                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/spec.yaml` の `environment`                   |
+| `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`                      | ✅ `--env` で渡す                                             |
+| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
+| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
+| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替 |
+| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `--publish 7842` で採番させ、`sbx ports` で調べて渡す      |
 
 ### postCreateCommand（`post-create.sh`）
 
@@ -1195,7 +1364,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                                                              |
 | lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ） |
 | 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                                                     |
-| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`sbx policy allow network localhost:22` が必要）                                             |
+| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`localhost:22` は `kits/common` が許可）                                                     |
 | `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                                                           |
 | crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
 | plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
@@ -1329,21 +1498,13 @@ export SBX_AGENT_STATIC_MCP=deepwiki,context7    # 既定で読み込むもの�
 ```
 
 起動時に読み込まなかった MCP は、`mise run sandbox:mcp-load` で後から足せます。
+実行すると、まず fzf で読み込む MCP を選び、その後 sandbox の MCP を全て外し（`sbx mcp unload`。sbx 0.48.0 以降）、選んだものだけを読み込み直します。
+MCP の選択で何も選ばずに終了（Esc）すると、全て外すだけです。sandbox の選択で Esc を押した場合は処理を中止し、MCP は変更しません。unload 専用のタスクはありません。登録（`sbx mcp add`）は残ります。
 sandbox と登録済みの MCP を fzf で選びます（MCP は Tab で複数選択。sandbox は引数でも指定可）。
 
 ```bash
 mise run sandbox:mcp-load              # sandbox も fzf で選ぶ
-mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ
-```
-
-要らなくなった MCP は `mise run sandbox:mcp-unload` で外せます（`sbx mcp unload`。sbx 0.48.0 以降）。
-登録（`sbx mcp add`）は残るので、また `sandbox:mcp-load` で読み込めます。
-sbx にはローカルの sandbox で読み込み済みのサーバを一覧する手段が無いため、候補は登録済みの全サーバです
-（読み込んでいないものを選ぶと失敗として表示されます）。
-
-```bash
-mise run sandbox:mcp-unload              # sandbox も fzf で選ぶ
-mise run sandbox:mcp-unload my-sandbox   # sandbox を指定して MCP だけ選ぶ
+mise run sandbox:mcp-load my-sandbox   # sandbox を指定して MCP だけ選ぶ（MCP 選択で Esc すると全て unload）
 ```
 
 multi-worktree からは `[settings.sandbox].static_mcp` でも指定できます。
@@ -1422,9 +1583,9 @@ tmux からは `prefix + C-d` のツール選択（`config/tmux/tmux.conf`）に
 - このリポジトリの運用レイヤ → `ccmanager`（セッション切り替え）と
   `multi-worktree list` / `dev`（タスク単位の起動）
 
-## まだ使っていない sbx の機能
+## sbx の宣言的な設定と拡張機能
 
-必要になったら使えるもののうち、現時点で `sbx-agent` に組み込んでいないもの。
+環境ファイル方式と、Claude subscription 用 kit を利用できます。
 
 ### `sbxenv.yaml`（宣言的な環境定義）
 
@@ -1454,22 +1615,98 @@ sandboxOptions:
   skills: readonly
 ```
 
-採用していない理由は、**`sbx env` が experimental で、かつ lifecycle コマンドや
-credential command を含む plan は毎回承認が必要**なため、ccmanager から非対話で起動する
-経路と相性が悪いことです（`--auto-approve` / `env.rememberHostCommands` で緩められますが、
-CLI 引数の方が挙動が読めます）。安定したら移行候補です。
+`sbx-agent` は `~/.config/sbx/sbxenv.yaml` を読み、`sbx env create` で作成します。
+`--env-file` は別の環境定義に切り替える場合だけ指定します。
+worktree・agent・template・mount・環境変数・port・リソース制限は runtime overlay として
+合成し、アタッチ時には port と設定分離の復旧処理を実行します。
+
+```bash
+mise install github:docker/sbx-releases
+sbx version  # 0.50.1 以上
+sbx-agent claude --claude-account account1 --env-plan
+sbx-agent claude --claude-account account1 --new
+```
+
+既存の sandbox は kit 構成を自動で差し替えません。必要なデータを保存して、最初に
+`--new` で作り直してください。移行を確認できない sandbox の再利用は拒否します。
+以前 CodeRabbit の custom secret を登録した場合は、ホストで `sbx secret rm` を実行し、
+該当する CodeRabbit custom secret だけを選んで削除してから移行します。
+ホストに保存済みの secret はこの変更で自動削除しません。
+`--env-plan` は secret を登録せず、`--new` を付けても作成・削除しません。
+
+| 設定                                         | 正本・処理                                      |
+| -------------------------------------------- | ----------------------------------------------- |
+| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
+| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
+| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
+| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
+| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                      |
+| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
+| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
+| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
+
+GitHub は `gh auth token` で取得します。
+CodeRabbit は private / work3 とも、作成後に `sandbox:coderabbit-login` でブラウザーログインします。
+API key / fnox profile は使わず、認証情報は CLI が各 sandbox 内に保存します。
+Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
+subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
+`--new` / `--rm` は `sbx env rm` で scoped secret も削除します。
+
+ccmanager の `(Docker Sandbox)` preset はすべてこの方式を使います。
+Claude の設定ディレクトリとアカウント指定、Codex / Copilot の resume / fallback、
+初期プロンプトの転送は維持しています。重複する env 専用 preset は廃止しました。
+
+標準の `sbxenv.yaml` と kit は、起動時にホストの
+`${XDG_STATE_HOME:-~/.local/state}/sbx-agent/environments/<name>/config/` へコピーして利用します。
+mise の symlink が dotfiles を指していても、dotfiles 自身を workspace にできます。
+相対 kit 参照と Claude subscription kit も、この snapshot 内で解決します。
+
+runtime overlay は同じ `<name>/` ディレクトリに保存します。この state ディレクトリと、
+独自の `--env-file` は sandbox が書き込める mount の外に置いてください。
+state まで共有している場合は、`XDG_STATE_HOME` を共有領域の外に変更してください。
+エラーには、該当するファイルまたは state のパスと mount を表示します。
+fnox の実行ファイル・設定・provider の依存先も書き込み可能な共有領域の外に配置します。
+
+初回は plan の承認が必要です。`sbx settings set env.rememberHostCommands true` で
+承認を記憶でき、今回の plan を非対話で承認する場合は `--env-force` を使います。
+どちらも自動では有効にしません。`sbx env` は引き続き experimental です。
+
+0.50.1 は起動不具合の修正、0.50.0 は kit の host mount、永続 volume の保持、
+host command / credential の保護を含みます。詳細は
+[0.50.0](https://github.com/docker/sbx-releases/releases/tag/v0.50.0) と
+[0.50.1](https://github.com/docker/sbx-releases/releases/tag/v0.50.1) を参照してください。
 
 ### kits（v3）
 
 OCI パッケージで「workload（ベース環境とコマンド）＋ mixin（ツール・設定・認証・network 許可・
 エージェント向け指示）」を合成する仕組み。devcontainer の Dockerfile + features に相当します。
-このリポジトリはカスタム template で済ませていますが、kit なら network 許可や
-エージェント向け指示までパッケージに含められ、チームへ配布しやすくなります。
+CodeRabbit・common・Claude subscription の kit は、既存の組み込み agent / カスタム template と
+合成するため v2 を使用します。Claude subscription kit は `extends: claude` で継承し、
+認証ヘッダーと install 時の設定調整を変更します。ツール類の導入は Dockerfile と mise が担当します。
+v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在できません。
+既存ツールチェーン全体の v3 workload 化は今回の変更から分離しています。
 `sbx kit validate` でチェックし、kit set として publish できます。
 
 コミット署名を自動設定する
 [`git-ssh-sign`](https://github.com/docker/sbx-kits-contrib/tree/main/git-ssh-sign)
 のような community kit もあります（`sbx settings set kit.allowedSources` で許可が必要）。
+
+#### 既存設定を kit に移す候補
+
+| 対象                                         | 移行の向き不向き     | 理由                                                                                                       |
+| -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/spec.yaml` の `environment` で共通化している                                                  |
+| sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する      |
+| 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
+| 固定の network 許可                          | 移行済み             | `kits/common/spec.yaml` の `permissions.network`。kit の更新は sandbox 再作成（`--new`）で反映する         |
+| Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する    |
+| account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                           |
+| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                       |
+| SSH 経路・crit / plannotator の採番ポート    | ラッパー中心で維持   | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要                                                 |
+
+次に進めるなら、まず固定の環境変数を共通の mixin kit へまとめる小さい変更が候補です。
+今回は認証分離の変更に限定し、これらは移していません。kit の承認は service/domain の変更時に必要で、
+`sbx env` の host command を含む plan の承認とは別の仕組みです。
 
 ### その他
 
@@ -1519,7 +1756,7 @@ OCI パッケージで「workload（ベース環境とコマンド）＋ mixin�
 | 時刻ずれでトークンが失敗する                                     | `sbx stop` → `sbx run` で再起動                                                                                                                                                                         |
 | crit / plannotator が `Approval required…` で起動しない          | `NO_PROXY` に `0.0.0.0` が無い。template を作り直して `sbx-agent --new`（暫定なら `NO_PROXY="$NO_PROXY,0.0.0.0" crit ...`）                                                                             |
 | lint / crit が sandbox に無い                                    | `mise run sandbox:build-template` でビルドし `sbx-agent --new` で作り直す                                                                                                                               |
-| ホストへの通知が飛ばない                                         | `sbx policy allow network localhost:22` と、ホスト側のリモートログイン / `authorized_keys` を確認                                                                                                       |
+| ホストへの通知が飛ばない                                         | `kits/common` の許可が未反映なら `--new` で作り直す。ホスト側のリモートログイン / `authorized_keys` も確認                                                                                              |
 | 初期化スクリプトが見つからない                                   | カスタム template を使っていない。`mise run sandbox:build-template` を実行                                                                                                                              |
 | `PATH` に mise の shim が無い / lint・nvim・crit が無い          | `--no-template` を付けていないか確認。付けていなければ template のビルド漏れ                                                                                                                            |
 | `sbx create` が image 系のエラーで失敗する                       | template が未ビルド。下記参照                                                                                                                                                                           |
@@ -1651,6 +1888,65 @@ input/output error
 `docker image save` が書く tar も数 GB になるため、`$TMPDIR`（macOS では
 `/var/folders/...`）側にも同等の空きが必要です。足りない場合は `TMPDIR` を
 空きのあるパスに向けて実行してください。
+
+## CodeRabbit CLI のブラウザーログイン
+
+private / work3 とも同じブラウザーログインを使います。API key、fnox の profile、
+独自の認証ファイルは不要です。sandbox の作成中にはログインせず、作成後に明示的に実行します。
+既存 sandbox も再作成せずにログインできます。
+
+CodeRabbit の callback は sandbox の localhost で待ち受けます。
+ホストのブラウザーから届くように、sbx の SSH 転送で同じポート番号をつなぎます。
+`sbx ports` は loopback だけで待ち受けるサービスには届かないため、ここでは使いません。
+
+ホストのターミナルで次を実行します。
+
+```bash
+mise run sandbox:coderabbit-login
+```
+
+1. `fzf` で対象の sandbox を選択する（停止中のものも選択可能）。
+2. task が `sbx setup ssh` を実行し、SSH 接続で CLI の `auth login --agent --no-browser` を起動する。
+3. CLI のログイン URL に含まれる `redirect_uri` から callback ポートを取得し、
+   同じ SSH 接続へ loopback の転送を追加する。
+4. 転送が成功してからホストのブラウザーを開く。個人用または会社用のアカウントで認証する。
+5. CLI の認証成功を確認して終了する。認証完了・エラー・Ctrl-C 時は接続と転送を閉じる。
+
+ポート指定、別ターミナルでの転送、`sandbox:coderabbit-forward` の実行は不要です。
+SSH 接続の制御用ソケットは一時ディレクトリに置き、終了時に削除します。認証情報は扱いません。
+ホスト側で callback ポートが使用中の場合はブラウザーを開かずにエラーを表示します。
+ブラウザーの自動起動だけが失敗した場合は、今回の URL を表示して手動で開けるようにします。
+
+対象を明示する場合や EU アカウントの場合は、以下のように指定できます。
+
+```bash
+mise run sandbox:coderabbit-login dotfiles-a1-main-claude
+mise run sandbox:coderabbit-login -- --region eu
+```
+
+### 認証状態を確認
+
+```bash
+sbx exec -u agent dotfiles-a1-main-claude coderabbit auth status
+```
+
+認証後の review hook / 手動操作は
+保存済みログインで `coderabbit review --committed` を実行します。
+`CODERABBIT_API_KEY` / `CODERABBIT_REGION` が unset でも正常です。
+
+認証情報は sandbox 内の CLI の保存先にあり、ホストの `~/.coderabbit` や macOS Keychain は共有しません。
+sandbox ごとにログインするため、個人用と会社用を分けられます。sandbox を削除すると認証情報も失われ、
+再作成後はログインが必要です。認証情報を含む sandbox の template 保存は避けてください。
+過去に Bitwarden に登録した CodeRabbit API key は自動では削除しません。
+
+Free プランでも CLI は利用できますが、レビュー回数などに制限があります。
+ブラウザー認証の検証は `auth status` で行い、レビューを動かす確認は別途実行します。
+CLI の失敗時は hook が理由を stderr に出し、push / PR 作成は続行します。
+失敗した HEAD はレビュー済みとして記録しません。
+
+参考: [CodeRabbit auth login](https://docs.coderabbit.ai/cli/reference#auth-login)、
+[sbx SSH port forwarding](https://docs.docker.com/ai/sandboxes/integrations/#port-forwarding)、
+[CodeRabbit の料金・制限](https://docs.coderabbit.ai/management/plans)。
 
 ## 参考
 

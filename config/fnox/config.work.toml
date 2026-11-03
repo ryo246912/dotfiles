@@ -1,3 +1,6 @@
+# work profile は既存の work1 / work2 / work3 ホストの共通設定。
+[profiles.work]
+
 # [profiles.work.providers.bws]
 # type       = "bitwarden-sm"
 # project_id = "xxx"

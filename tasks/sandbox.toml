@@ -195,8 +195,12 @@ echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].templat
 main "$@"
 '''
 
+["sandbox:coderabbit-login"]
+description = "Select a sandbox with fzf, forward its callback and open CodeRabbit browser login"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-coderabbit-login.py"'
+
 ["sandbox:setup"]
-description = "One-time host-side setup for Docker Sandboxes (policy, secrets, skills, settings)"
+description = "One-time host-side setup for Docker Sandboxes (SSH, skills, settings)"
 run = '''
 set -eu
 
@@ -214,24 +218,9 @@ initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh
 echo "==> マウント元と SSH 鍵を準備"
 bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; exit 1; }
 
-echo "==> GitHub トークンを secret として登録（ホストの gh から都度解決される）"
-if command -v gh >/dev/null 2>&1 && gh auth token >/dev/null 2>&1; then
-  sbx secret set github --command 'gh auth token' || echo "warn: secret の登録に失敗しました" >&2
-else
-  echo "warn: gh が未ログインのためスキップしました（gh auth login 後に再実行）" >&2
-fi
-
-echo "==> ホスト連携に必要な network policy を許可"
-# mac-host への SSH（通知 / host-tmux / plannotator tunnel）。
-# sandbox から見たホストは host.docker.internal だが、policy は localhost:<port> で書く。
-sbx policy allow network localhost:22 || echo "warn: localhost:22 の許可に失敗しました" >&2
-
-echo "==> 許可リストのドメインを全 sandbox で許可"
-# 一覧は config/sbx/allow-domains.txt（共通）と allow-domains.<name>.txt（work3 / private など
-# 環境ごと。gitignore 済み）。kit ではなく global な policy で許可する理由は
-# docs/docker-sandboxes.md の「ドキュメントサイトの許可」参照。
-for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.txt "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
-  # allow-domains.*.txt が 1 つも無いとき glob がそのまま残るため存在確認する
+# 共通の secret と network policy は sbxenv.yaml / kits/common が管理する。
+# 個人用の追加許可だけは、既存のローカルファイルを引き続き読み込む。
+for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
   [ -f "$allow_file" ] || continue
   allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow_file" | grep -v '^$' | paste -sd, -) || true
   if [ -n "$allow_domains" ]; then
@@ -256,6 +245,9 @@ echo "==> ホストの agent skills を共有 store へ取り込む"
 #   sbx skills import              # skill ごとに確認する
 #   sbx skills import --dry-run    # 何が入れ替わるか見るだけ
 sbx skills import --force || echo "warn: skills の取り込みに失敗しました" >&2
+
+echo "==> Claude account / binding / workspace sandbox を準備"
+mise -C "$MISE_PROJECT_ROOT" run sandbox:claude-setup --workspace "${MISE_ORIGINAL_CWD:-$PWD}"
 
 echo "==> 現在の設定"
 sbx secret ls || true
@@ -407,7 +399,7 @@ fi
 '''
 
 ["sandbox:mcp-load"]
-description = "Load host-registered MCP servers into a running sandbox, selected with fzf"
+description = "Reset loaded MCP servers in a running sandbox, then load only those selected with fzf (none selected = unload all)"
 run = '''
 set -eu
 
@@ -417,6 +409,8 @@ main() {
   # 使い方: mise run sandbox:mcp-load [sandbox-name]
   # sbx-agent の --static-mcp で読み込まなかった MCP を、起動済みの sandbox へ後から足す。
   # sandbox を省略すると fzf で選び、MCP は fzf で複数選択する（Tab で選択）。
+  # 最初に登録済みの MCP を全て unload してから、選択したものだけを load し直す（sbx 0.48.0 以降）。
+  # MCP を何も選ばずに終了（Esc など）すると、全て unload するだけで終わる（unload 専用コマンドは無い）。
   # 選べるのは sbx mcp ls に登録済みのサーバ（登録は mise run sandbox:mcp-add）。
   for cmd in sbx fzf; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
@@ -436,10 +430,38 @@ main() {
   servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
   [ -n "$servers" ] \
     || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp-add）" >&2; exit 1; }
+  # 何も選ばなかった（Esc / Ctrl-C = 130）場合だけ空選択とみなし、全て unload するだけにする。
+  # それ以外の終了コード（fzf の起動失敗など）は既存の MCP を外さずに中止する
+  rc=0
   names=$(printf '%s\n' "$servers" \
     | fzf --multi --prompt="mcp> " \
-        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択）") || exit 130
-  [ -n "$names" ] || exit 130
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択。何も選ばず Esc で全て unload）") || rc=$?
+  if [ "$rc" -eq 130 ]; then
+    names=""
+  elif [ "$rc" -ne 0 ]; then
+    echo "error: fzf が失敗しました（終了コード ${rc}）。MCP は変更していません" >&2
+    exit "$rc"
+  fi
+
+  sbx mcp unload --help >/dev/null 2>&1 \
+    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
+  # 引数で渡された sandbox が無いと全ての unload が失敗してしまうため、先に存在を確かめる
+  sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -Fxq -- "$sandbox" \
+    || { echo "error: sandbox $sandbox がありません（sbx ls）" >&2; exit 1; }
+
+  # 読み込み済みのものだけを列挙する手段が sbx に無いため、登録済みの全サーバを unload する。
+  # 読み込んでいないものは失敗するのが正常なので、失敗は止めずにエラー内容を表示して後で一覧する
+  unload_failed=""
+  for name in $servers; do
+    if err=$(sbx mcp unload "$name" --sandbox "$sandbox" 2>&1); then
+      echo "✅ $name を $sandbox から外しました"
+    else
+      unload_failed="${unload_failed}${unload_failed:+, }$name"
+      echo "ℹ️ $name は外れませんでした（読み込んでいない場合は問題ありません）: $(printf '%s' "$err" | tail -n 1)"
+    fi
+  done
+  [ -z "$unload_failed" ] || echo "ℹ️ unload できなかったもの: ${unload_failed}（上のエラーが「未ロード」以外なら、sandbox に残っている可能性があります）"
+  [ -n "$names" ] || exit 0
 
   failed=""
   for name in $names; do
@@ -455,62 +477,6 @@ main() {
 
 main "$@"
 '''
-
-["sandbox:mcp-unload"]
-description = "Unload MCP servers from a running sandbox, selected with fzf"
-run = '''
-set -eu
-
-# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
-# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
-main() {
-  # 使い方: mise run sandbox:mcp-unload [sandbox-name]
-  # sandbox:mcp-load の逆。読み込んだ MCP を sandbox から外し、agent のコンテキストを空ける。
-  # 登録（sbx mcp add）は残るので、また sandbox:mcp-load で読み込める（登録ごと消すなら sbx mcp rm）。
-  # sbx mcp unload は sbx 0.48.0 から。ローカルの sandbox で読み込み済みのサーバだけを一覧する
-  # 手段が sbx に無いため、候補は登録済みの全サーバになる（読み込んでいないものは失敗として出る）。
-  for cmd in sbx fzf; do
-    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
-  done
-  sbx mcp unload --help >/dev/null 2>&1 \
-    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
-
-  sandbox="${1:-}"
-  if [ -z "$sandbox" ]; then
-    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
-    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
-    sandbox=$(printf '%s\n' "$sandboxes" \
-      | fzf --header-lines=1 --prompt="sandbox> " --header="MCP を外す sandbox を選択" \
-      | awk '{ print $1 }') || exit 130
-    [ -n "$sandbox" ] || exit 130
-  fi
-
-  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
-  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
-  [ -n "$servers" ] || { echo "error: 登録済みの MCP サーバがありません" >&2; exit 1; }
-  names=$(printf '%s\n' "$servers" \
-    | fzf --multi --prompt="mcp> " \
-        --header="${sandbox} から外す MCP を選択（Tab で複数選択）") || exit 130
-  [ -n "$names" ] || exit 130
-
-  failed=""
-  for name in $names; do
-    if sbx mcp unload "$name" --sandbox "$sandbox"; then
-      echo "✅ $name を $sandbox から外しました"
-    else
-      failed="${failed}${failed:+, }$name"
-      echo "warn: $name を外せませんでした（読み込んでいない可能性があります）" >&2
-    fi
-  done
-  [ -z "$failed" ] || { echo "error: 外せなかった MCP サーバ: ${failed}" >&2; exit 1; }
-}
-
-main "$@"
-'''
-
-["sandbox:template-ls"]
-description = "List saved Docker Sandboxes templates"
-run         = "sbx template ls"
 
 ["sandbox:template-rm"]
 description = "Remove a saved Docker Sandboxes template"
@@ -700,3 +666,26 @@ main() {
 
 main "$@"
 '''
+
+["sandbox:claude-setup"]
+description = "Configure Claude tokens, credential binding and confirmed workspace sandbox recreation"
+run         = 'SBX_DOTFILES_ROOT="$MISE_PROJECT_ROOT" python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-setup.py"'
+
+["sandbox:claude-token"]
+description = "Generate and save Claude setup-tokens with per-account y/n confirmation"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-token.py"'
+
+["sandbox:secret-rm"]
+description = "Remove a named sbx secret (global by default; --sandbox scopes removal)"
+run = '''
+set -eu
+main() {
+  [ $# -gt 0 ] || { echo "usage: mise run sandbox:secret-rm <service> [--sandbox NAME] [--force]" >&2; exit 2; }
+  sbx secret rm "$@"
+}
+main "$@"
+'''
+
+["sandbox:claude-auth-check"]
+description = "Look up and cache the observed organization ID once per account/token"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-auth-check.py"'

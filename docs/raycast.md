@@ -35,6 +35,31 @@ favorite、fallback、provider/entrypoint 設定なども同ファイルへ反�
 例えば keybind と provider を別 JSON に分けて chezmoi 管理できる。password preference、履歴、
 cache、Extension 本体などは設定ファイルとは別であり、秘密情報や生成データを追跡しない。
 
+### Shortcuts / Snippets（共有分 + PC ごとの分）
+
+shortcuts・snippets は `~/.local/share/vicinae/{shortcuts,snippets}/*.json` に保存され、`imports` のような分割の
+仕組みがない。`templates/vicinae/{shortcuts,snippets}.json.tera` に書き、mise の template で生成する（`mise.mac.toml`）。
+
+- メールアドレスや、個人・仕事を特定できる URL（amazon のほしい物リスト・食べログ・仕事のリポジトリ）は
+  テンプレートに枠だけ置き、値を git 管理外の `templates/vicinae/vicinae.secret.yaml`（雛形は `*.sample`）に書く。
+  `mise.mac.toml` の `[vars]` で読み込み、テンプレートから `{{ vars.<key> | json_encode }}` で埋める
+- PC ごとに要る・要らないが分かれるもの（仕事用など）は枠を `{% if vars.<key> is defined %}` で囲み、
+  値を書いた PC でだけ出す。名前も公開したくないものは名前ごと YAML に置く
+- `[vars]` で読めるのは文字列・数値・真偽値だけ（リストは不可）で、拡張子は `.yaml` にする（`.yml` は dotenv として読まれて失敗する）。
+  そのため項目を増やすときはテンプレートに枠を足し、値だけを YAML に書く
+- GUI での追加・編集と利用回数（`openCount`）は次の apply で上書きされる。変更はテンプレートに書く
+- Vicinae を終了してから apply し、apply 後に起動し直す（起動時にしか読まず、起動中は shortcuts を利用のたびにメモリ上の一覧で書き戻すため）
+
+初回は apply の前に、既存の JSON にあってテンプレートに無いもの（apply で消えるもの）を確認し、必要ならテンプレートに枠を足す。
+
+```sh
+for kind in shortcuts snippets; do
+  ids=$(grep -oE '"(sct|snp)-[0-9a-f]+"' "templates/vicinae/$kind.json.tera" | jq -s .)
+  jq -r --argjson ids "$ids" '.[] | select(.id as $i | $ids | index($i) | not) | "\(.id)\t\(.name)"' \
+    "$HOME/.local/share/vicinae/$kind/$kind.json"
+done
+```
+
 ## 参考資料
 
 - [Tinycast repository](https://github.com/abue-ammar/tinycast)

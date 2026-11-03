@@ -8,6 +8,7 @@ backend = "aqua:awslabs/git-secrets"
 specifiers = ["1.3.0"]
 
 [tools."aqua:awslabs/git-secrets"."platforms.linux-arm64"]
+checksum = "sha256:df9a5d2beeda1c83e23105f46efe464bb4c97f8328e1e66754d7daacfaf7272b"
 url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
@@ -17,6 +18,7 @@ url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
 [tools."aqua:awslabs/git-secrets"."platforms.macos-arm64"]
+checksum = "sha256:df9a5d2beeda1c83e23105f46efe464bb4c97f8328e1e66754d7daacfaf7272b"
 url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
@@ -107,24 +109,27 @@ url_api = "https://api.github.com/repos/rhysd/actionlint/releases/assets/3849248
 provenance = "github-attestations"
 
 [[tools."aqua:secretlint/secretlint"]]
-version = "13.0.7"
+version = "13.1.0"
 backend = "aqua:secretlint/secretlint"
-specifiers = ["13.0.7"]
+specifiers = ["13.1.0"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-arm64"]
-checksum = "sha256:4e5042e06eae3b08e402509f0fa2bca91d78f63ebf27ce6441bb734e88236ae6"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-linux-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842668"
+checksum = "sha256:5e6d576d831f78939fea856332fa9e44eca7d1b49205e4065d0f1d3accec7b64"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571715"
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
-checksum = "sha256:05682b7062f30631b35ea3ef29f237f954815b480dfea435b49bdc3ec15a1573"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-linux-x64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842667"
+checksum = "sha256:dfecc90fb338abe2b7be6d7c7a9d4ada7d0315204be5ea8f1c22a411fa2252d7"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-x64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571711"
 
 [tools."aqua:secretlint/secretlint"."platforms.macos-arm64"]
-checksum = "sha256:a034ca69f5fdc055d26e16b0c773d66924746807dc1fd64ed0e29377a05fa31c"
-url = "https://github.com/secretlint/secretlint/releases/download/v13.0.7/secretlint-13.0.7-darwin-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/606842665"
+checksum = "sha256:21ff006570411a3392a8ae489feb3d2f2813a9361f2f8ec0d36e21ec4605ab28"
+checksum_source = "mise-versions"
+url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-darwin-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571712"
 
 [[tools."aqua:suzuki-shunsuke/ghalint"]]
 version = "1.5.6"
@@ -147,26 +152,26 @@ url = "https://github.com/suzuki-shunsuke/ghalint/releases/download/v1.5.6/ghali
 url_api = "https://api.github.com/repos/suzuki-shunsuke/ghalint/releases/assets/409631219"
 
 [[tools."aqua:suzuki-shunsuke/pinact"]]
-version = "5.0.0"
+version = "5.0.2"
 backend = "aqua:suzuki-shunsuke/pinact"
-specifiers = ["5.0.0"]
+specifiers = ["5.0.2"]
 
 [tools."aqua:suzuki-shunsuke/pinact"."platforms.linux-arm64"]
-checksum = "sha256:d28ca5e9ddd7950da4a808288f8a83f84fc3ca40e86bab970f3adeef33578c0b"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.0/pinact_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/558638070"
+checksum = "sha256:326e27f5b3b5fca21e6a169b2785ba2023df3dd9ee82dd0f4e438cb1220b68d7"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.2/pinact_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/675205656"
 provenance = "github-attestations"
 
 [tools."aqua:suzuki-shunsuke/pinact"."platforms.linux-x64"]
-checksum = "sha256:d005bbb85da80dacdc07816f24a5da723a9f6d1e9f3d3e7e73df33f9caa1358f"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.0/pinact_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/558638065"
+checksum = "sha256:7f003d8f51e984c2264d2009d430e3e0e87ae404a0e2dc2a9a277b0f731bf5b7"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.2/pinact_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/675205650"
 provenance = "github-attestations"
 
 [tools."aqua:suzuki-shunsuke/pinact"."platforms.macos-arm64"]
-checksum = "sha256:3437ebfc9db720e431e86fd03ed19173b88dcb80b0f177d11a892126108661b5"
-url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.0/pinact_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/558638064"
+checksum = "sha256:9b9545d53376654005daaee5ab736d579887205ca3df99925c8fe8358c6e7fdb"
+url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.2/pinact_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/675205643"
 provenance = "github-attestations"
 
 [[tools."aqua:tamasfe/taplo"]]
@@ -175,6 +180,7 @@ backend = "aqua:tamasfe/taplo"
 specifiers = ["0.10.0"]
 
 [tools."aqua:tamasfe/taplo"."platforms.linux-arm64"]
+checksum = "sha256:033681d01eec8376c3fd38fa3703c79316f5e14bb013d859943b60a07bccdcc3"
 url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz"
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322597"
 
@@ -184,30 +190,31 @@ url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322600"
 
 [tools."aqua:tamasfe/taplo"."platforms.macos-arm64"]
+checksum = "sha256:713734314c3e71894b9e77513c5349835eefbd52908445a0d73b0c7dc469347d"
 url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-aarch64.gz"
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257323110"
 
 [[tools."aqua:zizmorcore/zizmor"]]
-version = "1.30.1"
+version = "1.31.1"
 backend = "aqua:zizmorcore/zizmor"
-specifiers = ["1.30.1"]
+specifiers = ["1.31.1"]
 
 [tools."aqua:zizmorcore/zizmor"."platforms.linux-arm64"]
-checksum = "sha256:7ff1dce33bdd18fd2a4affe63bdd47efcccca97b2cec1c1863ec26e9e2647540"
-url = "https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/552067643"
+checksum = "sha256:37eebbd5762a44f262d94875431b14a6d2402991e90a685113ea97b8b41be833"
+url = "https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/645467282"
 provenance = "github-attestations"
 
 [tools."aqua:zizmorcore/zizmor"."platforms.linux-x64"]
-checksum = "sha256:e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a"
-url = "https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/552067642"
+checksum = "sha256:d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99"
+url = "https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/645467284"
 provenance = "github-attestations"
 
 [tools."aqua:zizmorcore/zizmor"."platforms.macos-arm64"]
-checksum = "sha256:e28d22b087f9ebb8d99da6e740d348c930f559961c7c3f12badda54f882195a2"
-url = "https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/552067640"
+checksum = "sha256:ad5aa633cd56215b11e6c51d51f90c7e6b22904a75047d1215abbd422f61d698"
+url = "https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/645467283"
 provenance = "github-attestations"
 
 [[tools."github:betterleaks/betterleaks"]]
@@ -254,10 +261,10 @@ url = "https://github.com/superfly/flyctl/releases/download/v0.4.29/flyctl_0.4.2
 url_api = "https://api.github.com/repos/superfly/flyctl/releases/assets/385745065"
 
 [[tools."npm:oxfmt"]]
-version = "0.72.0"
-aube = { path = ".mise/locks/npm-oxfmt/0.72.0", digest = "sha256:8cff19be82a82e83efe243f08fd8bf1a2a2f635f10384d070d7956209ddd9b44" }
+version = "0.75.0"
+aube = { path = ".mise/locks/npm-oxfmt/0.75.0", digest = "sha256:1d4f470a5dbba272218132db6ff9ba1911075d29dcd3253a0e02b4a5037a8a23" }
 backend = "npm:oxfmt"
-specifiers = ["0.72.0"]
+specifiers = ["0.75.0"]
 
 [[tools."npm:oxlint"]]
 version = "1.87.0"

@@ -49,7 +49,7 @@ def in_working_hours(hours: str, weekdays: str) -> bool:
 
 
 def open_prs(repo: str, me: str) -> list[dict]:
-    prs = gh_json("pr", "list", "--repo", repo, "--state", "open", "--limit", "100",
+    prs = gh_json("pr", "list", "--repo", repo, "--state", "open", "--limit", "1000",
                   "--json", "number,author,isDraft")
     return [pr for pr in prs if not pr["isDraft"] and pr["author"]["login"] != me]
 

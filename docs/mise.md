@@ -108,15 +108,15 @@ mise bootstrap macos defaults apply --dry-run
 ```toml
 [bootstrap.macos.finder]
 show_all_files = true
-show_pathbar    = true
+show_pathbar = true
 
 [bootstrap.macos.keyboard]
-key_repeat         = 2
+key_repeat = 2
 initial_key_repeat = 15
 
 [bootstrap.macos.defaults]
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
-"NSGlobalDomain"    = { "com.apple.swipescrolldirection" = false }
+"NSGlobalDomain" = { "com.apple.swipescrolldirection" = false }
 ```
 
 **制約**（このリポジトリで実際に踏んだもの）:

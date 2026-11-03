@@ -1,7 +1,10 @@
-"""hunks.json と groups.json から「変更グループ」の HTML を作り、HTML に差し込む。
+"""変更グループ（groups.json）を検査し、差分付きの HTML 片を作る（HTML は render_brief.py が組み立てる）。
 
-HTML の `<!-- pr-reviewer-brief:groups:start -->` と `<!-- pr-reviewer-brief:groups:end -->` の間を置き換える。
-すべての hunk がちょうど 1 つのグループに入っていなければ、何も書き換えずに終了コード 1 で終わる。
+    python3 render_groups.py --hunks hunks.json --groups groups.json --check draft   # 振り分けだけ検査
+    python3 render_groups.py --hunks hunks.json --groups groups.json --check full    # 解説まで検査
+
+draft はすべての hunk がちょうど 1 つのグループに入っているかと id・title・kind を、full はさらに
+risk・summary・intent を検査する。問題があれば終了コード 1。
 
 groups.json の書式（グループは読む順に並べる）:
 
@@ -11,13 +14,14 @@ groups.json の書式（グループは読む順に並べる）:
           "id": "g1",
           "title": "URL・ホスト判定の共通基盤",
           "kind": "feature",          # feature / fix / refactor / test / docs / config / chore / generated
+          "hunks": ["h001", "h002"],
+          "prs": [123],               # stack のとき、どの PR の変更か（任意）
+          # ここまでを情報集めの段階で書く。以下は文章の段階で足す
           "risk": "high",             # high（要注意）/ medium（注意）/ low（低リスク）
           "summary": "一覧に出す 1 文",
           "intent": "なぜこの変更をするのか",
           "impact": "影響範囲（任意）",
           "checkpoints": ["レビューで確かめること（任意）"],
-          "prs": [123],               # stack のとき、どの PR の変更か（任意）
-          "hunks": ["h001", "h002"],
           "hunk_notes": {"h002": "この hunk だけの補足（任意）"}
         }
       ]
@@ -29,7 +33,6 @@ kind が generated のグループ（lockfile・生成物・スナップショ�
 import argparse
 import html
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -44,33 +47,39 @@ KIND_LABELS = {
     "chore": "chore",
     "generated": "generated",
 }
-MARKER = re.compile(r"(<!-- pr-reviewer-brief:groups:start -->)(.*?)(<!-- pr-reviewer-brief:groups:end -->)", re.S)
 LARGE_HUNK_LINES = 300
 
 esc = html.escape
 
 
-def validate(hunks: dict[str, dict], groups: list[dict]) -> list[str]:
+def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") -> list[str]:
     errors: list[str] = []
     owner: dict[str, str] = {}
+    keys = ("id", "title", "kind", "hunks") + (("risk", "summary", "intent") if stage == "full" else ())
+    ids = [group.get("id") for group in groups]
+    for group_id in sorted({i for i in ids if ids.count(i) > 1}, key=str):
+        errors.append(f"グループの id が重複している: {group_id}")
+    kinds = [group.get("kind") for group in groups]
+    if "generated" in kinds and any(k != "generated" for k in kinds[kinds.index("generated"):]):
+        errors.append("generated のグループは最後に並べる（並び順がグループ番号になるため）")
     for group in groups:
-        for key in ("id", "title", "kind", "risk", "summary", "intent", "hunks"):
+        for key in keys:
             if key not in group:
                 errors.append(f"{group.get('id', '?')}: {key} が無い")
-        if group.get("risk") not in RISK_LABELS:
+        if stage == "full" and group.get("risk") not in RISK_LABELS:
             errors.append(f"{group.get('id')}: risk は {'/'.join(RISK_LABELS)} のどれか")
         if group.get("kind") not in KIND_LABELS:
             errors.append(f"{group.get('id')}: kind は {'/'.join(KIND_LABELS)} のどれか")
         for hunk_id in group.get("hunks", []):
             if hunk_id not in hunks:
-                errors.append(f"{group['id']}: 存在しない hunk {hunk_id}")
+                errors.append(f"{group.get('id', '?')}: 存在しない hunk {hunk_id}")
             elif hunk_id in owner:
-                errors.append(f"{hunk_id} が {owner[hunk_id]} と {group['id']} の両方に入っている")
+                errors.append(f"{hunk_id} が {owner[hunk_id]} と {group.get('id', '?')} の両方に入っている")
             else:
-                owner[hunk_id] = group["id"]
+                owner[hunk_id] = group.get("id", "?")
         for hunk_id in group.get("hunk_notes", {}):
             if hunk_id not in group.get("hunks", []):
-                errors.append(f"{group['id']}: hunk_notes の {hunk_id} がグループの hunks に無い")
+                errors.append(f"{group.get('id', '?')}: hunk_notes の {hunk_id} がグループの hunks に無い")
     missing = [hunk_id for hunk_id in hunks if hunk_id not in owner]
     if missing:
         errors.append(f"どのグループにも入っていない hunk: {', '.join(missing)}")
@@ -105,11 +114,57 @@ def render_hunk(hunk: dict, note: str | None, blob_url: str | None) -> str:
     )
 
 
+def size_bar(added: int, removed: int, scale: int) -> str:
+    """追加・削除の行数を、scale 行を 100% とした横棒にする。"""
+    add = 100 * added / scale if scale else 0
+    rem = 100 * removed / scale if scale else 0
+    return (
+        f'<span class="sizebar" title="+{added} −{removed}"><span class="add" style="width:{add:.1f}%"></span>'
+        f'<span class="del" style="width:{rem:.1f}%"></span></span>'
+    )
+
+
+def render_file_map(hunks: dict[str, dict], groups: list[dict], numbers: dict[str, int]) -> str:
+    """変更ファイルをディレクトリごとに並べ、ファイルごとの変更量と、どのグループに入っているかを示す。"""
+    files: dict[str, dict] = {}
+    for group in groups:
+        for hunk_id in group["hunks"]:
+            hunk = hunks[hunk_id]
+            entry = files.setdefault(hunk["path"], {"added": 0, "removed": 0, "groups": []})
+            entry["added"] += hunk["added"]
+            entry["removed"] += hunk["removed"]
+            if group["id"] not in [g["id"] for g in entry["groups"]]:
+                entry["groups"].append(group)
+    scale = max((f["added"] + f["removed"] for f in files.values()), default=0)
+    rows, current_dir = [], None
+    for path in sorted(files):
+        directory, _, name = path.rpartition("/")
+        if directory != current_dir:
+            rows.append(f'<div class="dir">{esc(directory or ".")}/</div>')
+            current_dir = directory
+        entry = files[path]
+        chips = "".join(
+            f'<a class="chip risk-{g["risk"]}" href="#group-{esc(g["id"])}">{numbers[g["id"]]}. {esc(g["title"])}</a>'
+            for g in entry["groups"]
+        )
+        rows.append(
+            f'<div class="file"><code title="{esc(path)}">{esc(name)}</code>'
+            f'{size_bar(entry["added"], entry["removed"], scale)}<span class="chips">{chips}</span></div>'
+        )
+    return (
+        f'<details class="file-map"><summary>変更ファイルの地図（{len(files)} files）</summary>{"".join(rows)}</details>'
+    )
+
+
 def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> str:
     groups = [g for g in groups if g["kind"] != "generated"] + [g for g in groups if g["kind"] == "generated"]
+    numbers = {group["id"]: index for index, group in enumerate(groups, start=1)}
+    scale = max((sum(hunks[h]["added"] + hunks[h]["removed"] for h in g["hunks"]) for g in groups), default=0)
     overview, details = [], []
     for group in groups:
         members = [hunks[hunk_id] for hunk_id in group["hunks"]]
+        added = sum(hunk["added"] for hunk in members)
+        removed = sum(hunk["removed"] for hunk in members)
         files = len({hunk["path"] for hunk in members})
         risk = f'<span class="risk risk-{group["risk"]}">{RISK_LABELS[group["risk"]]}</span>'
         kind = f'<span class="tag">{KIND_LABELS[group["kind"]]}</span>'
@@ -118,9 +173,10 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
         count = f'<span class="checkpoint-count">確認ポイント {len(checkpoints)}</span>' if checkpoints else ""
         overview.append(
             f'<li class="group-row risk-border-{group["risk"]}" data-group="{esc(group["id"])}">'
-            f'<a href="#group-{esc(group["id"])}"><span class="group-title">{esc(group["title"])}</span>'
+            f'<a href="#group-{esc(group["id"])}"><span class="group-title">{numbers[group["id"]]}. {esc(group["title"])}</span>'
             f'<span class="group-summary">{esc(group["summary"])}</span></a>'
-            f'<span class="group-tags">{count}{kind}{prs}<span class="tag">{files} files / {len(members)} hunks</span>{risk}'
+            f'<span class="group-tags">{count}{kind}{prs}<span class="tag">{files} files / {len(members)} hunks</span>'
+            f'{size_bar(added, removed, scale)}{risk}'
             f'<span class="done-mark" aria-label="確認済み">✓</span></span></li>'
         )
         impact = f'<p><strong>影響範囲:</strong> {esc(group["impact"])}</p>' if group.get("impact") else ""
@@ -134,7 +190,7 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
         open_attr = "" if group["kind"] == "generated" else " open"
         details.append(
             f'<article class="group risk-border-{group["risk"]}" id="group-{esc(group["id"])}">'
-            f'<header class="group-head"><div>{risk} <h3>{esc(group["title"])}</h3>'
+            f'<header class="group-head"><div>{risk} <h3>{numbers[group["id"]]}. {esc(group["title"])}</h3>'
             f'<p class="intent"><strong>意図:</strong> {esc(group["intent"])}</p>{impact}{checklist}</div>'
             f'<label class="approve"><input type="checkbox" data-group="{esc(group["id"])}" /> 確認済み</label></header>'
             f'<details class="group-diff"{open_attr}><summary>差分 {files} files / {len(members)} hunks</summary>'
@@ -147,6 +203,7 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
     )
     return (
         f'\n<div id="diff-groups" {stats}>'
+        f'{render_file_map(hunks, groups, numbers)}'
         f'<ol class="group-list">{"".join(overview)}</ol>'
         f'<h3 class="sub">変更グループ詳細</h3>{"".join(details)}</div>\n'
     )
@@ -156,26 +213,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--hunks", required=True, type=Path)
     parser.add_argument("--groups", required=True, type=Path)
-    parser.add_argument("--html", required=True, type=Path, help="差し込み先の HTML")
-    parser.add_argument("--blob-url", help="https://github.com/<owner>/<repo>/blob/<head SHA>（ファイルへのリンク用）")
+    parser.add_argument("--check", choices=["draft", "full"], default="full")
     args = parser.parse_args()
 
     hunks = {hunk["id"]: hunk for hunk in json.loads(args.hunks.read_text())["hunks"]}
     groups = json.loads(args.groups.read_text())["groups"]
-    errors = validate(hunks, groups)
-    if errors:
-        for error in errors:
-            print(error, file=sys.stderr)
-        return 1
-
-    page = args.html.read_text()
-    if not MARKER.search(page):
-        print("HTML に pr-reviewer-brief:groups のマーカーが無い", file=sys.stderr)
-        return 1
-    fragment = render(hunks, groups, args.blob_url)
-    args.html.write_text(MARKER.sub(lambda m: m.group(1) + fragment + m.group(3), page, count=1))
-    print(f"{len(groups)} groups / {len(hunks)} hunks を差し込んだ")
-    return 0
+    errors = validate(hunks, groups, args.check)
+    for error in errors:
+        print(error, file=sys.stderr)
+    if not errors:
+        print(f"ok: {len(groups)} groups / {len(hunks)} hunks")
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

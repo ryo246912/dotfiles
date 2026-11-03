@@ -17,12 +17,17 @@ return {
           return
         end
 
+        local path = node:get_id()
+
+        -- ディレクトリは Finder（OS のファイルマネージャ）で開く
         if node.type == "directory" then
-          require("neo-tree.sources.filesystem.commands").open(state)
+          local obj, err = vim.ui.open(path)
+          if not obj then
+            vim.notify("開けませんでした: " .. (err or "不明なエラー"), vim.log.levels.ERROR)
+          end
           return
         end
 
-        local path = node:get_id()
         local commands = require("neo-tree.sources.common.commands")
         local options = {
           { label = "現在のウィンドウで開く", fn = commands.open },
@@ -184,10 +189,24 @@ return {
 
       local keymap = vim.keymap.set
 
+      local neotree = require("utils.neotree")
+
       -- <leader>e でドロワーを開く/フォーカス（カレントファイルを表示）
-      keymap("n", "<leader>e", ":Neotree filesystem reveal left<CR>", { noremap = true, silent = true, desc = "ファイルツリーを開く" })
+      -- 長時間起動していて neo-tree の状態が壊れていても開けるよう、ヘルパー経由で開く
+      keymap("n", "<leader>e", function()
+        neotree.open({ reveal = true })
+      end, { noremap = true, silent = true, desc = "ファイルツリーを開く" })
       -- <leader>s でファイルツリーをトグル
-      keymap("n", "<leader>s", ":Neotree toggle<CR>", { noremap = true, silent = true, desc = "ファイルツリーをトグル" })
+      keymap("n", "<leader>s", neotree.toggle, { noremap = true, silent = true, desc = "ファイルツリーをトグル" })
+      -- それでもおかしいときに手動で neo-tree の状態をリセットして開き直す
+      vim.api.nvim_create_user_command("NeotreeReset", function()
+        local ok, err = neotree.reset()
+        if not ok then
+          vim.notify("neo-tree の状態をリセットできませんでした: " .. tostring(err), vim.log.levels.ERROR)
+          return
+        end
+        neotree.open({ reveal = true })
+      end, { desc = "neo-tree の状態をリセットして開き直す" })
       -- <leader>gt でGitステータスパネルを開く
       keymap("n", "<leader>gt", ":Neotree git_status<CR>", { noremap = true, silent = true, desc = "Git ステータスパネル" })
     end,
