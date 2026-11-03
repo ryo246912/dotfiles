@@ -25,6 +25,11 @@ permissions:
       - "skills.sh"
       - "deepwiki.com"
       - "mcp.deepwiki.com"
+      # stack-diagram の公式ロゴ取得（aws.amazon.com は下の共通許可を使用）
+      - "svgl.app"
+      - "raw.githubusercontent.com"
+      - "cdn.jsdelivr.net"
+      - "d1.awsstatic.com"
       # 言語・フレームワーク・ツールの公式ドキュメント
       - "developer.mozilla.org"
       - "docs.docker.com"
