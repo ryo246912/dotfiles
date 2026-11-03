@@ -1030,6 +1030,7 @@ if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
     rm -f "${ENV_OVERLAY%/*}/created"
 fi
 
+SANDBOX_CREATED=false
 if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
 
@@ -1051,6 +1052,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         exit 1
     fi
     (umask 077; touch "${ENV_OVERLAY%/*}/created") || exit 1
+    SANDBOX_CREATED=true
     load_static_mcp
 
 else
@@ -1068,6 +1070,17 @@ fi
 # 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と
 # 公開ポートは sandbox の停止で失われるため、毎回張り直す必要がある（全処理は冪等）。
 run_post_create
+
+# ブラウザーログインは新規作成時だけ試し、失敗しても sandbox の利用を続ける。
+if [[ "$SANDBOX_CREATED" == true ]]; then
+    if coderabbit_repo=$(find_dotfiles_repo); then
+        log_info "CodeRabbit のブラウザーログインを開始します"
+        mise -C "$coderabbit_repo" run sandbox:coderabbit-login "$SANDBOX_NAME" \
+            || log_warn "CodeRabbit のログインに失敗しました。sandbox の作成は完了しています。後から mise run sandbox:coderabbit-login $SANDBOX_NAME で再実行してください"
+    else
+        log_warn "dotfiles の配置が見つからないため CodeRabbit のログインをスキップします（DOTFILES_DIR）"
+    fi
+fi
 
 # One lookup per account/token, including failed attempts; statusline never calls APIs.
 SUBSCRIPTION_ORG_ID=""
