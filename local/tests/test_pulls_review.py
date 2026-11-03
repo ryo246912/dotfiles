@@ -71,7 +71,9 @@ class PullsReviewTests(unittest.TestCase):
     def test_every_stack_layer_opens_full_comparison(self):
         for number in (123, 124, 125):
             with self.subTest(number=number):
+                self.paths.clear()
                 command = self.run_cli(str(number))
+                self.assertEqual(self.paths[0], f"repos/owner/repo/pulls/{number}")
                 self.assertEqual(command.call_args.args[0], [
                     "pulls.review",
                     f"https://github.com/owner/repo/compare/{self.base}...{self.head}",

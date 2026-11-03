@@ -14,6 +14,13 @@ pulls.review --help
 "$HOME/.local/bin/pulls-review" --help
 ```
 
+旧copy方式の `~/.local/bin` が残っている環境ではapplyが衝突する場合があります。
+その場合は配置先だけにある編集を先にdotfilesへ取り込み、対象を限定して再実行します。
+
+```bash
+mise bootstrap dotfiles apply --force --yes "~/.local"
+```
+
 公式packageにも `pulls-review` aliasがあります。zshでは同名functionで `~/.local/bin/pulls-review` を
 優先します。設定反映後にshellを開き直してください。ほかのshellでは `~/.local/bin` をmise shimsより前に
 PATHへ置くか、補助コマンドを絶対パスで呼びます。`command -v pulls-review` で確認できます。
