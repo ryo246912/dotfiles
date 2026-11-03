@@ -5,7 +5,6 @@
     "DISABLE_AUTOUPDATER": "1",
     "AI_AGENT": "1"
   },
-  "model": "sonnet",
   "permissions": {
     "deny": [
       "Bash(rm -rf *)",
@@ -166,12 +165,7 @@
             "type": "command",
             "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
             "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
+          },
           {
             "type": "command",
             "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
@@ -260,5 +254,6 @@
   "remoteControlAtStartup": true,
   "git": {
     "includeCoAuthor": false
-  }
+  },
+  "agentPushNotifEnabled": true
 }
