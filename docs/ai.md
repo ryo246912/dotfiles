@@ -1289,7 +1289,7 @@ Claude Code・Codex・Cursor に配布します。skill 本文やフォントは
 
 #### 導入
 
-既存の APM 導入と mise のツール導入を使います。専用の mise tasks はありません。
+既存の APM 導入と mise のツール導入を使います。
 
 ```sh
 mise run apm:install
@@ -1309,16 +1309,17 @@ Claude Code では `/stack-diagram`、Codex では `$stack-diagram` で明示で
 
 ```text
 $stack-diagram を使って、Next.js と Hono を Vercel、PostgreSQL を Neon に配置した
-構成図を作って。認証は Clerk、決済は Stripe。HTML と PNG で出力して。
+構成図を作って。認証は Clerk、決済は Stripe。HTML は plan/out.html に保存し、
+mise run stack-diagram:render で PNG も出力して。
 ```
 
 Playwright はグローバル Python に入れないため、`python3` で直接 PNG script を実行すると
-import できません。mise が uv で作った Playwright 環境の Python を使います。
+import できません。描画 task が mise 管理の Playwright 環境の Python を使います。
+対象プロジェクトのディレクトリで実行すると、`plan/out.html` を読み込み、
+`plan/out.png`（light）と `plan/out-dark.png`（dark）を生成します。
 
 ```sh
-"$(mise where pipx:playwright)/playwright/bin/python" \
-  "$HOME/.agents/skills/stack-diagram/scripts/render_png.py" \
-  out.html out.png --selector .canvas --scale 2
+mise run stack-diagram:render
 ```
 
 ### `find-skills`
