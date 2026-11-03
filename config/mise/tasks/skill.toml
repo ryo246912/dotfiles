@@ -1,5 +1,5 @@
-["stack-diagram:render"]
-description = "Render plan/out.html as light/dark PNGs under plan/"
+["skill:stack-diagram:render"]
+description = "plan/out.html をライト・ダーク両テーマの PNG として plan/ 配下に出力する"
 run = '''
 set -eu
 cd "${MISE_ORIGINAL_CWD:-$PWD}"

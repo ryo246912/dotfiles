@@ -1310,7 +1310,7 @@ Claude Code では `/stack-diagram`、Codex では `$stack-diagram` で明示で
 ```text
 $stack-diagram を使って、Next.js と Hono を Vercel、PostgreSQL を Neon に配置した
 構成図を作って。認証は Clerk、決済は Stripe。HTML は plan/out.html に保存し、
-mise run stack-diagram:render で PNG も出力して。
+mise run skill:stack-diagram:render で PNG も出力して。
 ```
 
 Playwright はグローバル Python に入れないため、`python3` で直接 PNG script を実行すると
@@ -1319,7 +1319,7 @@ import できません。描画 task が mise 管理の Playwright 環境の Pyt
 `plan/out.png`（light）と `plan/out-dark.png`（dark）を生成します。
 
 ```sh
-mise run stack-diagram:render
+mise run skill:stack-diagram:render
 ```
 
 ### `find-skills`
