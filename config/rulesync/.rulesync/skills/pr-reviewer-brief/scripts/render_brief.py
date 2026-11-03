@@ -216,7 +216,7 @@ def ticket_block(ticket: dict, workdir: Path) -> str:
     title = esc(ticket.get("title") or "")
     label = f"{esc(ticket.get('id', ''))} {title}".strip()
     meta = " · ".join(esc(v) for v in (ticket.get("source"), ticket.get("status")) if v)
-    parts = [f'<h3>チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
+    parts = [f'<h3 id="background-ticket">チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
              + (f' <span class="tag">{meta}</span>' if meta else "") + "</p>"]
     if not ticket.get("fetched", True):
         parts.append('<p class="evidence">チケットの内容は取得できなかった（ID と URL だけを載せている）</p>')
@@ -297,7 +297,7 @@ def pages_block(brief: dict, workdir: Path) -> str:
             f'<div class="page-card" id="page-{esc(page["id"])}"><div class="page-head"><strong>{esc(name)}</strong>{url_html}</div>'
             f'{looks}{evidence_links(brief, page.get("evidence", []))}{figure}</div>'
         )
-    return f'<h3>関係する画面</h3><div class="page-cards">{"".join(cards)}</div>' if cards else ""
+    return f'<h3 id="background-pages">関係する画面</h3><div class="page-cards">{"".join(cards)}</div>' if cards else ""
 
 
 def background_section(brief: dict, workdir: Path) -> str:
@@ -305,7 +305,7 @@ def background_section(brief: dict, workdir: Path) -> str:
     parts = [ticket_block(brief["ticket"], workdir)] if brief.get("ticket") else []
     parts.append(pages_block(brief, workdir))
     if bg.get("current"):
-        parts.append("<h3>今の機能</h3>")
+        parts.append("<h3 id=\"background-current\">今の機能</h3>")
         for item in bg["current"]:
             where = page_ref(brief, item.get("page"), item.get("where"))
             if where:
@@ -321,10 +321,10 @@ def background_section(brief: dict, workdir: Path) -> str:
             for g in bg["glossary"]
         ]
         headers = ["用語", "意味"] + (["画面のどこ"] if with_where else []) + ["コード上の名前"]
-        parts.append("<h3>用語集</h3>" + table(headers, rows))
+        parts.append("<h3 id=\"background-glossary\">用語集</h3>" + table(headers, rows))
     model = bg.get("data_model")
     if model:
-        parts.append("<h3>データモデル（今回の変更に関わるテーブル）</h3>")
+        parts.append("<h3 id=\"background-data-model\">データモデル（今回の変更に関わるテーブル）</h3>")
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
         if model.get("tables"):
@@ -731,6 +731,18 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     nav_items = []
     for sid, title, _ in sections:
         nav_items.append(f'<a href="#{sid}">{esc(title)}</a>')
+        if sid == "background":
+            bg = brief.get("background") or {}
+            headings = [
+                ("background-ticket", "チケット内容", brief.get("ticket")),
+                ("background-pages", "関係する画面", bg.get("pages")),
+                ("background-current", "今の機能", bg.get("current")),
+                ("background-glossary", "用語集", bg.get("glossary")),
+                ("background-data-model", "ER図・データモデル", bg.get("data_model")),
+            ]
+            links = "".join(f'<li><a href="#{anchor}">{label}</a></li>' for anchor, label, present in headings if present)
+            if links:
+                nav_items.append(f'<ul class="nav-groups">{links}</ul>')
         if sid == "groups":
             ordered_groups = sorted(groups, key=lambda g: g["kind"] == "generated")
             links = "".join(
