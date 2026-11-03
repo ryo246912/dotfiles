@@ -1328,7 +1328,8 @@ dotfilesで継続管理する場合は、提案された`npx skills add`を直�
 
 [cclens](https://github.com/lambdalisue/cclens) は、Claude Code のセッション transcript と現在の設定を
 読み取って SQLite に蓄積し、時間・トークン・手間がどこで無駄になっているかを報告する CLI です。
-すべてローカルで完結し、外部には何も送信しません。
+解析・レポートはすべてローカルで完結し、外部には何も送信しません。
+ただし `cclens optimize` は、指摘事項を `claude`（Claude Code）のセッションに渡します。
 
 導入は `config/mise/config.toml` の `"github:lambdalisue/cclens"` で行っています（GitHub Release のバイナリ）。
 `mise install` で `cclens` が使えるようになります。
@@ -1340,7 +1341,8 @@ dotfilesで継続管理する場合は、提案された`npx skills add`を直�
 ```bash
 cclens doctor                    # 1画面の健康診断（global / project 別の指摘）
 cclens doctor --scope global     # ~/.claude 側の設定だけを対象にする
-cclens doctor --scope project    # 今のプロジェクトの設定だけを対象にする
+cclens doctor --scope project    # プロジェクト側の設定だけを対象にする（全プロジェクトが対象）
+cclens doctor --scope project:<slug>  # 特定の1プロジェクトだけを対象にする
 ```
 
 `doctor` の結果を見て、必要な観点のレポートを開きます。
@@ -1361,11 +1363,14 @@ cclens doctor --scope project    # 今のプロジェクトの設定だけを対
 
 - `--scope global | project | project:<slug>`: 対象にする設定のレイヤーを絞る
   （`doctor` / `failures` / `waste` / `inventory` / `optimize`）
-- `--format markdown | json`: markdown は PR への貼り付け用、json は機械処理用
+- `--format markdown | json`: markdown は PR への貼り付け用、json は機械処理用。
+  対応形式はコマンドごとに異なる（例: `usage` は `table | markdown`、`doctor` は `table | json`）ので、
+  `cclens <command> --help` で確認する
 - `--db <path>`: DB ファイルを指定する
 - `--frozen`: ストアを更新せず、今ある内容をそのまま読む
 
 読み取り系のコマンドは実行時に `cclens analyze` を自動で走らせてストアを更新します。
+ただし `sql` は自動で更新しないため、最新の内容を対象にしたいときは先に `doctor` か `analyze` を実行します。
 
 ### データの場所
 
