@@ -91,12 +91,32 @@ class PullsReviewTests(unittest.TestCase):
         self.assertEqual(self.paths, ["repos/owner/repo/pulls/99"])
 
     def test_explicit_url_and_shorthand(self):
-        for value in ("owner/repo#124", "https://github.com/owner/repo/pull/124"):
+        for value in ("other/project#99", "https://github.com/other/project/pull/99"):
             with self.subTest(value=value):
-                self.assertTrue(self.run_cli(value).called)
+                command = self.run_cli(value)
+                self.assertEqual(command.call_args.args[0], [
+                    "pulls.review", "https://github.com/other/project/pull/99",
+                ])
+                self.assertEqual(self.paths[-1], "repos/other/project/pulls/99")
 
     def test_dry_run_does_not_launch(self):
         self.run_cli("124", "--dry-run").assert_not_called()
+
+    def test_dry_run_prints_stack_and_target(self):
+        with (
+            patch.object(sys, "argv", ["pulls-review", "124", "--dry-run"]),
+            patch.object(review, "api", self.api),
+            patch.object(review, "gh", self.gh),
+            patch.object(review.subprocess, "run") as command,
+            contextlib.redirect_stderr(io.StringIO()) as output,
+        ):
+            review.main()
+        command.assert_not_called()
+        self.assertIn("Stack #9: #123 -> #124 -> #125", output.getvalue())
+        self.assertIn(
+            f"Review: https://github.com/owner/repo/compare/{self.base}...{self.head}",
+            output.getvalue(),
+        )
 
     def test_diff_uses_combined_compare_endpoint(self):
         command = self.run_cli("124", "--diff")
