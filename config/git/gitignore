@@ -48,6 +48,10 @@ mcp.json
 plan/**
 CLAUDE.local.md
 
+## ccmanager
+.ccmanager.json
+.ccmanager/
+
 ## crit
 .crit/
 lefthook.local.yml
