@@ -68,7 +68,15 @@ fi
 : "${AGENTSVIEW_COCKROACH_PUSH_PG_URL:?fnox が未解決です}"
 # AGENTSVIEW_PG_URL だけはfnoxが解決したsecretなのでここで渡す。schemaは
 # ["agentsview:cockroach:push:remote".env] に置いている。
-AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" agentsview pg push --no-vectors "$@"
+# simple_protocolを足す理由は localdb.sh の host_url のcommentにある
+# （CockroachDBが型の無いplaceholderを推論できない）。
+pg_url="$AGENTSVIEW_COCKROACH_PUSH_PG_URL"
+case "$pg_url" in
+  *default_query_exec_mode=*) ;;
+  *\?*) pg_url="${pg_url}&default_query_exec_mode=simple_protocol" ;;
+  *) pg_url="${pg_url}?default_query_exec_mode=simple_protocol" ;;
+esac
+AGENTSVIEW_PG_URL="$pg_url" agentsview pg push --no-vectors "$@"
 '''
 shell = "bash -c"
 
