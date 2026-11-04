@@ -8,6 +8,7 @@ backend = "aqua:awslabs/git-secrets"
 specifiers = ["1.3.0"]
 
 [tools."aqua:awslabs/git-secrets"."platforms.linux-arm64"]
+checksum = "sha256:df9a5d2beeda1c83e23105f46efe464bb4c97f8328e1e66754d7daacfaf7272b"
 url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
@@ -17,6 +18,7 @@ url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
 [tools."aqua:awslabs/git-secrets"."platforms.macos-arm64"]
+checksum = "sha256:df9a5d2beeda1c83e23105f46efe464bb4c97f8328e1e66754d7daacfaf7272b"
 url = "https://raw.githubusercontent.com/awslabs/git-secrets/1.3.0/git-secrets"
 url_api = "https://api.github.com/repos/awslabs/git-secrets/contents/git-secrets?ref=1.3.0"
 
@@ -178,6 +180,7 @@ backend = "aqua:tamasfe/taplo"
 specifiers = ["0.10.0"]
 
 [tools."aqua:tamasfe/taplo"."platforms.linux-arm64"]
+checksum = "sha256:033681d01eec8376c3fd38fa3703c79316f5e14bb013d859943b60a07bccdcc3"
 url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz"
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322597"
 
@@ -187,6 +190,7 @@ url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-x86
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322600"
 
 [tools."aqua:tamasfe/taplo"."platforms.macos-arm64"]
+checksum = "sha256:713734314c3e71894b9e77513c5349835eefbd52908445a0d73b0c7dc469347d"
 url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-aarch64.gz"
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257323110"
 
@@ -257,10 +261,10 @@ url = "https://github.com/superfly/flyctl/releases/download/v0.4.29/flyctl_0.4.2
 url_api = "https://api.github.com/repos/superfly/flyctl/releases/assets/385745065"
 
 [[tools."npm:oxfmt"]]
-version = "0.74.0"
-aube = { path = ".mise/locks/npm-oxfmt/0.74.0", digest = "sha256:b7977a181c0e11736ab44f83b24a4b862754204c253477e29d1758b0f898aad7" }
+version = "0.75.0"
+aube = { path = ".mise/locks/npm-oxfmt/0.75.0", digest = "sha256:1d4f470a5dbba272218132db6ff9ba1911075d29dcd3253a0e02b4a5037a8a23" }
 backend = "npm:oxfmt"
-specifiers = ["0.74.0"]
+specifiers = ["0.75.0"]
 
 [[tools."npm:oxlint"]]
 version = "1.87.0"
