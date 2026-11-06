@@ -1269,17 +1269,58 @@ PNG または SVG が必要な場合は、生成後に自然言語で対象フ�
 docs/architecture.html の図を SVG と PNG に export してください。
 ```
 
-SVG は standalone file として生成されます。PNG export には Python 版 Playwright と Chromium が必要です。
-未導入の場合は、export を依頼する前に次のコマンドを実行します。
+SVG は standalone file として生成されます。PNG export に必要な Python 版 Playwright と Chromium は
+mise で管理します（次の `stack-diagram` の導入を参照）。Python script は Playwright の隔離環境の
+Python で実行してください。
 
-```bash
-pip install playwright
-playwright install chromium
-```
 
 SVG は Google Fonts を外部参照するため、font を取得しない offline viewer などでは代替 font で表示される可能性が
 あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
 複雑な場合は overview と detail に分割してください。
+
+### `stack-diagram`
+
+#### 用途
+
+公式ロゴを使い、サービスの接続関係やグループを構成図にする skill です。
+self-contained HTML、light/dark の PNG、React/TSX に対応します。
+APM の `caru-ini/stack-diagram/skills/stack-diagram#v0.3.0` で管理し、
+Claude Code・Codex・Cursor に配布します。skill 本文やフォントは vendor しません。
+
+#### 導入
+
+既存の APM 導入と mise のツール導入を使います。
+
+```sh
+mise run apm:install
+mise install pipx:playwright
+```
+
+`config/mise/config.toml` の `pipx:playwright` が Python 版 Playwright を隔離環境に導入し、
+`postinstall` hook の `playwright install --with-deps chromium` が対応する Chromium と
+システム依存を導入します。Linux では sudo を求められる場合があるため、対話端末で実行してください。
+日本語の PNG には Noto Sans CJK JP などの日本語フォントも必要です。
+ロゴ取得にはネットワーク接続が必要ですが、生成した HTML はオフラインで表示できます。
+
+#### 使い方
+
+導入後はエージェントを再起動し、自然言語で構成を伝えます。
+Claude Code では `/stack-diagram`、Codex では `$stack-diagram` で明示できます。
+
+```text
+$stack-diagram を使って、Next.js と Hono を Vercel、PostgreSQL を Neon に配置した
+構成図を作って。認証は Clerk、決済は Stripe。HTML は plan/out.html に保存し、
+mise run skill:stack-diagram:render で PNG も出力して。
+```
+
+Playwright はグローバル Python に入れないため、`python3` で直接 PNG script を実行すると
+import できません。描画 task が mise 管理の Playwright 環境の Python を使います。
+対象プロジェクトのディレクトリで実行すると、`plan/out.html` を読み込み、
+`plan/out.png`（light）と `plan/out-dark.png`（dark）を生成します。
+
+```sh
+mise run skill:stack-diagram:render
+```
 
 ### `find-skills`
 

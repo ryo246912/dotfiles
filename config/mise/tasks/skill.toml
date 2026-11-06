@@ -1,0 +1,18 @@
+["skill:stack-diagram:render"]
+description = "plan/out.html をライト・ダーク両テーマの PNG として plan/ 配下に出力する"
+run = '''
+set -eu
+cd "${MISE_ORIGINAL_CWD:-$PWD}"
+script="$HOME/.agents/skills/stack-diagram/scripts/render_png.py"
+if [ ! -f "$script" ]; then
+  echo "error: stack-diagram is not installed; run mise run apm:install first." >&2
+  exit 1
+fi
+if [ ! -f plan/out.html ]; then
+  echo "error: create plan/out.html with stack-diagram first." >&2
+  exit 1
+fi
+python="$(mise where pipx:playwright)/playwright/bin/python"
+exec "$python" "$script" plan/out.html plan/out.png --selector .canvas --scale 2
+'''
+shell = "bash -c"
