@@ -1,15 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "cleanupPeriodDays": 36500,
   "env": {
     "DISABLE_AUTOUPDATER": "1",
     "AI_AGENT": "1"
   },
-  "model": "sonnet",
-  "cleanupPeriodDays": 36500,
-  "autoCompactWindow": 200000,
-  "tui": "default",
-  "remoteControlAtStartup": true,
-  "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "deny": [
       "Bash(rm -rf *)",
@@ -43,15 +38,6 @@
       "Read(~/.ssh/id_ed25519)",
       "Read(~/.ssh/id_rsa)"
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/statusline.sh\"; \"$f\"",
-    "refreshInterval": 30
-  },
-  "subagentStatusLine": {
-    "type": "command",
-    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/subagent-statusline.sh\"; \"$f\""
   },
   "skillOverrides": {
     "crit": "on",
@@ -106,12 +92,6 @@
     "lessons-harvest": "user-invocable-only",
     "lessons-review": "user-invocable-only"
   },
-  "git": {
-    "includeCoAuthor": false
-  },
-  "worktree": {
-    "bgIsolation": "none"
-  },
   "hooks": {
     "SessionStart": [
       {
@@ -138,9 +118,9 @@
         "hooks": [
           {
             "type": "command",
-            "statusMessage": "Loading ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "Loading ponytail mode..."
           }
         ]
       }
@@ -185,12 +165,7 @@
             "type": "command",
             "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
             "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
+          },
           {
             "type": "command",
             "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
@@ -240,9 +215,9 @@
         "hooks": [
           {
             "type": "command",
-            "statusMessage": "Loading ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "Loading ponytail mode..."
           }
         ]
       }
@@ -253,12 +228,32 @@
         "hooks": [
           {
             "type": "command",
-            "statusMessage": "Tracking ponytail mode...",
             "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "Tracking ponytail mode..."
           }
         ]
       }
     ]
-  }
+  },
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/statusline.sh\"; \"$f\"",
+    "refreshInterval": 30
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "f=\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"${CLAUDE_CONFIG_DIR%/*}/.claude/subagent-statusline.sh\"; [ -x \"$f\" ] || f=\"$HOME/.claude/subagent-statusline.sh\"; \"$f\""
+  },
+  "autoCompactWindow": 200000,
+  "tui": "default",
+  "skipDangerousModePermissionPrompt": true,
+  "remoteControlAtStartup": true,
+  "git": {
+    "includeCoAuthor": false
+  },
+  "agentPushNotifEnabled": true
 }

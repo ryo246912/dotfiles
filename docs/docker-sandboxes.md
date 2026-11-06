@@ -1646,7 +1646,8 @@ sbx-agent claude --claude-account account1 --new
 | clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
 
 GitHub は `gh auth token` で取得します。
-CodeRabbit は private / work3 とも、作成後に `sandbox:coderabbit-login` でブラウザーログインします。
+CodeRabbit は private / work3 とも、`sbx-agent` で新規作成した sandbox の初期化後に
+`sandbox:coderabbit-login` でブラウザーログインします。失敗しても sandbox の作成はエラーにしません。
 API key / fnox profile は使わず、認証情報は CLI が各 sandbox 内に保存します。
 Claude の `--claude-account` は検証済みの専用 token を scoped secret に登録し、
 subscription kit を overlay に追加します。アカウントの検証・組織 ID の取得処理は維持しています。
@@ -1892,8 +1893,10 @@ input/output error
 ## CodeRabbit CLI のブラウザーログイン
 
 private / work3 とも同じブラウザーログインを使います。API key、fnox の profile、
-独自の認証ファイルは不要です。sandbox の作成中にはログインせず、作成後に明示的に実行します。
-既存 sandbox も再作成せずにログインできます。
+独自の認証ファイルは不要です。`sbx-agent` は新規作成した sandbox の初期化後に、
+対象名を指定して `mise run sandbox:coderabbit-login` を自動実行します（`--setup-only` も対象）。
+ログインに失敗しても警告を表示して続行し、sandbox の作成はエラーにしません。
+既存 sandbox への再接続時には自動実行しません。手動で再実行すれば、再作成せずにログインできます。
 
 CodeRabbit の callback は sandbox の localhost で待ち受けます。
 ホストのブラウザーから届くように、sbx の SSH 転送で同じポート番号をつなぎます。
