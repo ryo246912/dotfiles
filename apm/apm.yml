@@ -44,7 +44,7 @@ dependencies:
       alias: terminal-browser
     # tsumiki はリポジトリ全体を plugin package として取り込み、skills 14種と commands を配布する（tag なし）。
     - classmethod/tsumiki
-    - ctxrs/ctx/skills/ctx-agent-history-search#v0.25.0
+    - ctxrs/ctx/skills/ctx-agent-history-search#v2.3.0
     # resolving-merge-conflicts は v1.3.0 で upstream から削除されたため v1.2.3 に固定する
     # （Renovate では更新しない）。
     - mattpocock/skills/skills/engineering/resolving-merge-conflicts#v1.2.3
