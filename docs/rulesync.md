@@ -104,10 +104,21 @@ Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクト�
 コマンドを安全に分割して `git push`・`gh pr create` を判定します。
 単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
 commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
-push の送信元 / PR の `--head` が現在の HEAD と異なる場合や、複数 ref の push も拒否します。
+`git -C <path> push` と、別ブランチ・コミットを送信元にした push / PR の `--head` に対応します。
+送信元が実行ディレクトリの HEAD と異なる場合は、一時的な detached worktree でそのコミットをレビューします。
+現在のブランチや未コミットの編集は変更しません。レビュー後は一時 worktree を削除します。
+複数 ref、削除 push、ローカルで解決できない送信元、`-C` 以外の git グローバルオプションは拒否します。
+
+```bash
+git push origin other-branch:refs/heads/other-branch
+git -C /path/to/other-worktree push origin HEAD
+gh pr create --head other-branch
+```
+
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
-`.coderabbit.yaml` と CLI がある場合に HEAD ごとに一度レビューし、結果を agent に返して
+`.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
 その実行を止めます。CLI の失敗時は続行します。
+レビュー記録は Git の共通ディレクトリ内に送信元 ref ごとに保存し、別ブランチのレビューと混同しません。
 2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
 前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
 `git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
