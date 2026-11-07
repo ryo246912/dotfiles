@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Wait for authored PR feedback and return changes to the current AI session."""
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+
+def run(*args):
+    return subprocess.check_output(args, text=True).strip()
+
+
+def api(path):
+    pages = json.loads(run('gh', 'api', path, '--paginate', '--slurp'))
+    return [item for page in pages for item in page]
+
+
+def feedback(repo, number, login):
+    result = {}
+    for kind, path in (
+        ('inline', f'pulls/{number}/comments'),
+        ('review', f'pulls/{number}/reviews'),
+        ('conversation', f'issues/{number}/comments'),
+    ):
+        for item in api(f'repos/{repo}/{path}?per_page=100'):
+            body = item.get('body') or ''
+            if (item.get('user', {}).get('login') == login
+                    or not body.strip() or body.startswith('**AIによる返信**')
+                    or item.get('state') in ('PENDING', 'DISMISSED')):
+                continue
+            key = f'{kind}:{item["id"]}'
+            result[key] = hashlib.sha256(json.dumps(
+                [body, item.get('updated_at'), item.get('state')],
+                ensure_ascii=False).encode()).hexdigest()
+    return result
+
+
+def save(path, state):
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(state))
+    temporary.replace(path)
+
+
+def poll(repo, login, state, pending, path, number=None):
+    # Keep delivered snapshots until explicitly acknowledged by the current session.
+    events = []
+    pulls = api(f'repos/{repo}/pulls?state=open&per_page=100')
+    for pr in pulls:
+        if pr['user']['login'] != login or (number and pr['number'] != number):
+            continue
+        key = str(pr['number'])
+        current = feedback(repo, pr['number'], login)
+        previous = state.get(key, {})
+        changed = [k for k, value in current.items() if previous.get(k) != value]
+        if not changed:
+            continue
+        token = hashlib.sha256(json.dumps(
+            [key, current], sort_keys=True).encode()).hexdigest()
+        pending[token] = {'pr': key, 'feedback': current}
+        events.append({'pr': pr['number'], 'url': pr['html_url'],
+                       'comments': changed, 'ack': token})
+    if events:
+        save(path, pending)
+    return events
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--loop', action='store_true', help='wait silently until feedback changes')
+    parser.add_argument('--interval', type=int, default=300, help='seconds (default: 300)')
+    parser.add_argument('--pr', type=int, help='limit to one authored PR')
+    parser.add_argument('--ack', metavar='TOKEN', help='acknowledge a delivered snapshot after handling it')
+    args = parser.parse_args()
+    if args.interval < 30:
+        parser.error('--interval must be at least 30 seconds')
+    repo = json.loads(run('gh', 'repo', 'view', '--json', 'nameWithOwner,url'))
+    login = run('gh', 'api', 'user', '--jq', '.login')
+    identity = hashlib.sha256(f'{repo["url"]}:{login}'.encode()).hexdigest()
+    root = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'pr-author-fix'
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / f'{identity}.json'
+    pending_path = root / f'{identity}.pending.json'
+    with (root / f'{identity}.lock').open('w') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            parser.error('another watcher is already running for this repository/account')
+        state = json.loads(path.read_text()) if path.exists() else {}
+        pending = json.loads(pending_path.read_text()) if pending_path.exists() else {}
+        if args.ack:
+            snapshot = pending.get(args.ack)
+            if snapshot is None:
+                parser.error('unknown acknowledgement token')
+            key = snapshot['pr']
+            state[key] = snapshot['feedback']
+            save(path, state)
+            pending = {token: item for token, item in pending.items() if item['pr'] != key}
+            save(pending_path, pending)
+            return 0
+        delay = args.interval
+        while True:
+            try:
+                events = poll(repo['nameWithOwner'], login, state, pending,
+                              pending_path, args.pr)
+                if events:
+                    print(json.dumps(events, ensure_ascii=False), flush=True)
+                    return 0
+                delay = args.interval
+            except (subprocess.CalledProcessError, OSError, ValueError) as error:
+                print(f'pr-author-fix: {error}', file=sys.stderr)
+                if not args.loop:
+                    return 1
+                delay = min(max(delay * 2, 60), 3600)
+            if not args.loop:
+                return 0
+            time.sleep(delay)
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)
+
