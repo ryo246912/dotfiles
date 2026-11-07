@@ -120,6 +120,11 @@
       "groupName": "plannotator"
     },
     {
+      "description": "MemPalace の mise CLI と sandbox MCP を同じPRで更新する",
+      "matchPackageNames": ["mempalace"],
+      "groupName": "mempalace"
+    },
+    {
       "description": "desloppify の skill（apm/apm.yml の ref）と CLI（mise の pipx:desloppify）を同じPRで更新する",
       "matchPackageNames": ["desloppify", "peteromallet/desloppify"],
       "groupName": "desloppify"
