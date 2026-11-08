@@ -14,7 +14,7 @@
 "pipx:tftui"                                = "0.14.1"
 
 [bootstrap.packages]
-"brew-cask:sequel-ace" = "latest"
+"brew-cask:sequel-ace" = "latest" # 6.1.0,20117
 
 [settings]
 trusted_config_paths = [

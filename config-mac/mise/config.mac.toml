@@ -51,7 +51,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:arc"               = "latest" # 1.158.1,84367
 "brew-cask:battery"           = "latest" # 1.4.0
 "brew-cask:bitwarden"         = "latest" # 2026.7.0
-"brew-cask:capso"             = "latest"
+"brew-cask:capso"             = "latest" # 1.2.7
 "brew-cask:chatgpt"           = "latest" # 26.727.51351
 "brew-cask:claude"            = "latest" # 1.24012.11,09114b681f6f333d10cf1a08df130fe7080ddc9b
 "brew-cask:codexbar"          = "latest" # 0.47.0
@@ -62,7 +62,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:google-chrome"     = "latest" # 151.0.7922.72
 "brew-cask:hammerspoon"       = "latest" # 1.1.1
 # 独自 tap（[bootstrap.brew.taps]）の cask。API メタデータは無いが mise が tap の Casks/thock.rb を直接読む
-"brew-cask:kamillobinski/thock/thock" = "latest"
+"brew-cask:kamillobinski/thock/thock" = "latest" # 1.23.0
 "brew-cask:karabiner-elements"        = "latest" # 13.7.0
 "brew-cask:keyboardcleantool"         = "latest" # 7
 "brew-cask:markpad"                   = "latest" # 2.8.4
@@ -75,7 +75,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
 "brew-cask:vicinae"                   = "latest" # 0.28.2
 "brew-cask:visual-studio-code"        = "latest" # 1.106.3
-"brew-cask:wezterm@nightly"           = "latest"
+"brew-cask:wezterm@nightly"           = "latest" # Cask は version :latest（固定バージョンなし）
 
 [bootstrap.brew.taps]
 "felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
