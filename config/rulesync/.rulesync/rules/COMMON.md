@@ -28,11 +28,6 @@ globs:
 - リファクタリングや実装方針の「案」を求められた場合は、コードを変更せずに提案のみを行う
 - 実装（ファイル編集）は「実装して」「コードに反映して」など、変更を明示的に依頼された場合のみ行う
 
-## Homebrew 系パッケージの導入設定
-
-- brew / brew-cask の導入設定を追加・変更する際は、まず mise bootstrap の `[bootstrap.packages]` で管理できるか検討する。対象の Mac で `mise bootstrap packages apply brew:<formula>` または `mise bootstrap packages apply brew-cask:<cask>` による導入を確認し、利用可能ならこの方式を優先する
-- 過去のコメントや Cask の `auto_updates` 宣言だけを根拠に mise bootstrap が未対応と判断しない。実行環境がなく確認できない場合は未検証と明記する。直接の `brew install` を呼ぶ例外タスクは、現在の mise で導入できない具体的な理由を確認してから追加する
-
 ## コードの書き方
 
 - コードにはHow、テストコードにはWhat、コミットログにはWhy、コードコメントにはWhy notを書く
