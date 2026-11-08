@@ -675,7 +675,7 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                                         |
 | `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                           |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                          |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
@@ -722,6 +722,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `prompt-master`
 - `desloppify`
 
 ### インストール
@@ -1280,6 +1281,19 @@ playwright install chromium
 SVG は Google Fonts を外部参照するため、font を取得しない offline viewer などでは代替 font で表示される可能性が
 あります。pixel-perfect な持ち運びが必要な場合は PNG を使用してください。diagram 生成時は、要素を詰め込みすぎず、
 複雑な場合は overview と detail に分割してください。
+
+### `prompt-master`
+
+[Prompt Master](https://github.com/nidhinjs/prompt-master) は、利用するAI toolに合わせてpromptを生成・改善するskillです。
+APMでupstreamを取得し、tagが無いためlockfileのcommitでpinします。追加のAPI keyやCLIは不要です。
+Claude Codeでは`skillOverrides`を`user-invocable-only`にしているため、`/prompt-master`で明示的に呼び出します。
+Codexでは`$prompt-master`で呼び出せます。
+
+```text
+/prompt-master
+CodexにReactアプリのログイン不具合を修正させるpromptを作ってください。
+必要な情報が足りなければ質問してください。
+```
 
 ### `find-skills`
 

@@ -53,6 +53,8 @@ dependencies:
     - mattpocock/skills/skills/productivity/grilling#v1.2.3
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.7.4
+    # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
+    - nidhinjs/prompt-master
     # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
     - DietrichGebert/ponytail#v5.1.0
     # desloppify は CLI（mise の pipx:desloppify）に同梱された SKILL.md を配布する。skill は CLI と
