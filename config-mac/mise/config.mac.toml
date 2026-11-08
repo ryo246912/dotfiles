@@ -75,7 +75,8 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
 "brew-cask:vicinae"                   = "latest" # 0.28.2
 "brew-cask:visual-studio-code"        = "latest" # 1.106.3
-"brew-cask:wezterm@nightly"           = "latest" # Cask は version :latest（固定バージョンなし）
+# Cask は version :latest（固定バージョンなし）のため renovate のバージョンマーカーは付けない
+"brew-cask:wezterm@nightly"           = "latest"
 
 [bootstrap.brew.taps]
 "felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
