@@ -51,6 +51,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:arc"               = "latest" # 1.158.1,84367
 "brew-cask:battery"           = "latest" # 1.4.0
 "brew-cask:bitwarden"         = "latest" # 2026.7.0
+"brew-cask:capso"             = "latest" # 1.2.7
 "brew-cask:chatgpt"           = "latest" # 26.727.51351
 "brew-cask:claude"            = "latest" # 1.24012.11,09114b681f6f333d10cf1a08df130fe7080ddc9b
 "brew-cask:codexbar"          = "latest" # 0.47.0
