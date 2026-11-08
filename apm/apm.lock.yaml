@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-06T01:09:19.401843+00:00'
+generated_at: '2026-11-08T05:55:12.191259+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1354,6 +1354,37 @@ dependencies:
     .claude/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
     .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
   content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
+- repo_url: nidhinjs/prompt-master
+  name: prompt-master
+  host: github.com
+  resolved_commit: 49b3a72469b1e7287d66387004ccfcca90e5968a
+  version: unknown
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/prompt-master
+  - .agents/skills/prompt-master/LICENSE
+  - .agents/skills/prompt-master/README.md
+  - .agents/skills/prompt-master/SKILL.md
+  - .agents/skills/prompt-master/references/patterns.md
+  - .agents/skills/prompt-master/references/templates.md
+  - .claude/skills/prompt-master
+  - .claude/skills/prompt-master/LICENSE
+  - .claude/skills/prompt-master/README.md
+  - .claude/skills/prompt-master/SKILL.md
+  - .claude/skills/prompt-master/references/patterns.md
+  - .claude/skills/prompt-master/references/templates.md
+  deployed_file_hashes:
+    .agents/skills/prompt-master/LICENSE: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+    .agents/skills/prompt-master/README.md: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+    .agents/skills/prompt-master/SKILL.md: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+    .agents/skills/prompt-master/references/patterns.md: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+    .agents/skills/prompt-master/references/templates.md: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+    .claude/skills/prompt-master/LICENSE: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+    .claude/skills/prompt-master/README.md: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+    .claude/skills/prompt-master/SKILL.md: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+    .claude/skills/prompt-master/references/patterns.md: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+    .claude/skills/prompt-master/references/templates.md: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+  content_hash: sha256:1ae0c2483ce2478e428078907f3e5d195201db42609b5bdc83cf75c46ed83671
 - repo_url: peteromallet/desloppify
   alias: desloppify
   name: desloppify
@@ -4940,6 +4971,60 @@ deployments:
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
 - kind: project-relative
   target: claude
+  value: .claude/skills/prompt-master
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/README.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/references/patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/references/templates.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+- kind: project-relative
+  target: claude
   value: .claude/skills/resolving-merge-conflicts
   runtime: null
   scope: project
@@ -7998,6 +8083,60 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/README.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/references/patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/references/templates.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
 - kind: project-relative
   target: codex
   value: .agents/skills/resolving-merge-conflicts
