@@ -24,4 +24,7 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
 fi
 mise trust --yes
 mise install --yes
-mise exec -- lefthook install
+# 参照先が無いと install が既存の lefthook.yml を初期化するため、実行しない。
+if [ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ]; then
+	mise exec -- lefthook install
+fi

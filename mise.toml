@@ -28,12 +28,17 @@ includes = ["tasks/*.toml"]
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
+# LEFTHOOK_CONFIG の参照先が無いと install が既存の lefthook.yml を初期化するため、実行しない。
+[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
 lefthook install
 """
 
 [[watch_files]]
 patterns = ["lefthook.yml"]
-run      = "lefthook install"
+run = '''
+[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
+lefthook install
+'''
 
 # `mise bootstrap` は必ずこのリポジトリの checkout ルートで実行すること
 # （hook 内は相対パス・$(pwd) 前提。$MISE_PROJECT_ROOT はフックの中では未設定）。

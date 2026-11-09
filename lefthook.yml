@@ -89,7 +89,9 @@ post-merge:
     #     GITHUB_TOKEN=$github_token mise install --jobs=2
     #   fail_text: "❌ [post-merge] mise install failed. Run: GITHUB_TOKEN=$(gh auth token) mise install --jobs=2"
     - name: lefthook-install
-      run: mise exec -- lefthook install
+      run: |
+        [ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
+        mise exec -- lefthook install
 
 post-checkout:
   jobs: *sync-jobs
