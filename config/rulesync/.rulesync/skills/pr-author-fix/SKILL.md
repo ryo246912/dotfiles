@@ -46,8 +46,8 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>
 gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments --paginate --slurp
 ```
 
-  - 指定レビューの本文とインラインをすべて読み、指摘を全件表にする。PR 全体のフィルターで指定レビューの項目を落とさない
-  - 続いて PR 全体のレビュー・会話・スレッドを取得し、返信や後続レビューによる状態更新も確認する
+- 指定レビューの本文とインラインをすべて読み、指摘を全件表にする。PR 全体のフィルターで指定レビューの項目を落とさない
+- 続いて PR 全体のレビュー・会話・スレッドを取得し、返信や後続レビューによる状態更新も確認する
 
 - レビューコメントの取得（インラインコメント含む）
 
@@ -128,19 +128,35 @@ PR 全体の情報のデータ構造:
 3. GraphQL によるスレッド状態の取得
 
 ```graphql
-query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+query ($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       reviewThreads(first: 100, after: $cursor) {
-        pageInfo { hasNextPage endCursor }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
-          id isResolved isOutdated
+          id
+          isResolved
+          isOutdated
           comments(first: 100) {
-            pageInfo { hasNextPage endCursor }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
-              id databaseId url body createdAt
-              author { login }
-              pullRequestReview { databaseId }
+              id
+              databaseId
+              url
+              body
+              createdAt
+              author {
+                login
+              }
+              pullRequestReview {
+                databaseId
+              }
             }
           }
         }
