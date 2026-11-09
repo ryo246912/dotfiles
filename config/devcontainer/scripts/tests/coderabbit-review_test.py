@@ -13,17 +13,27 @@ hook = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hook)
 real_run = subprocess.run
 reviews = []
+review_exit = 0
+cli_available = True
 def run(args, **kwargs):
     if args[0] == 'coderabbit':
         reviews.append(hook.git(kwargs['cwd'], 'rev-parse', 'HEAD'))
-        return subprocess.CompletedProcess(args, 0, 'No findings\n')
+        return subprocess.CompletedProcess(args, review_exit, 'No findings\n')
     return real_run(args, **kwargs)
 
-def invoke(repo, command, copilot=False):
+def invoke(repo, command, copilot=False, blocked=False):
     event = {'cwd': str(repo), 'toolArgs' if copilot else 'tool_input': {'command': command}}
     out, err = io.StringIO(), io.StringIO()
-    with patch.object(sys, 'stdin', io.StringIO(json.dumps(event))), patch.object(sys, 'argv', ['hook']), patch.object(hook.shutil, 'which', return_value='/fake/coderabbit'), patch.object(hook.subprocess, 'run', side_effect=run), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    with patch.object(sys, 'stdin', io.StringIO(json.dumps(event))), patch.object(sys, 'argv', ['hook']), patch.object(hook.shutil, 'which', return_value='/fake/coderabbit' if cli_available else None), patch.object(hook.subprocess, 'run', side_effect=run), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = hook.main()
+    if blocked:
+        if copilot:
+            assert code == 0
+            result = json.loads(out.getvalue())
+            assert result['permissionDecision'] == 'deny'
+            return result['permissionDecisionReason']
+        assert code == 2, (command, code, out.getvalue())
+        return err.getvalue()
     assert code == 0, (command, code, err.getvalue())
     if out.getvalue() and not copilot:
         result = json.loads(out.getvalue())['hookSpecificOutput']
@@ -71,9 +81,10 @@ with tempfile.TemporaryDirectory() as tmp:
         for command in ('git push origin "$SOURCE":other',
                         'git push origin HEAD:one HEAD:two',
                         'git push origin --delete other',
-                        'git commit -m next && git push origin HEAD:other'):
+                        'git commit -m next && git push origin HEAD:other',
+                        'git push origin HEAD:one; git push origin HEAD:two'):
             count = len(reviews)
-            assert '操作は続行' in invoke(repo, command, copilot)
+            assert '操作を停止' in invoke(repo, command, copilot, blocked=True)
             assert len(reviews) == count
     # Small changes immediately after review are reviewed by default too.
     invoke(repo, 'git push origin HEAD:other')
@@ -83,4 +94,25 @@ with tempfile.TemporaryDirectory() as tmp:
     count = len(reviews)
     assert 'No findings' in invoke(repo, 'git push origin HEAD:other')
     assert len(reviews) == count + 1
-print('PASS: actual source review, compound commands, both hook formats, nonblocking skips, cache, worktree cleanup, and small follow-up')
+    # Real linked worktree and a branch whose source differs from current HEAD.
+    other = repo / 'linked'
+    git('-c', 'core.hooksPath=/dev/null', 'worktree', 'add', '-b', 'other-source', str(other), first)
+    for marker in (repo / '.git/coderabbit-reviews').iterdir():
+        marker.unlink()
+    assert 'No findings' in invoke(repo, f'cd {other} && git push origin HEAD:destination; echo done')
+    assert reviews[-1] == first
+    for marker in (repo / '.git/coderabbit-reviews').iterdir():
+        marker.unlink()
+    assert 'No findings' in invoke(repo, 'git push origin other-source:destination')
+    assert reviews[-1] == first
+    for copilot in (False, True):
+        for review_exit in (1, 2):
+            for marker in (repo / '.git/coderabbit-reviews').iterdir():
+                marker.unlink()
+            assert '操作を停止' in invoke(repo, 'git push origin HEAD:other', copilot, blocked=True)
+            assert not list((repo / '.git/coderabbit-reviews').iterdir())
+        review_exit = 0
+        cli_available = False
+        assert 'CLI が見つかりません' in invoke(repo, 'git push origin HEAD:other', copilot, blocked=True)
+        cli_available = True
+print('PASS: actual source review, compound commands, both hook formats, required review failures and unresolved targets, cache, worktree cleanup, and small follow-up')

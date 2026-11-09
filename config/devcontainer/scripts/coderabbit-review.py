@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Advisory PreToolUse review for git push / gh pr create, without eval.
+"""Required PreToolUse review for git push / gh pr create, without eval.
 
 Review only commands whose repository and source can be resolved statically.
-Unsupported commands and review results never block the requested operation.
+Unresolved targets and failed reviews block; successful reviews return context.
 """
 from contextlib import contextmanager
 import hashlib
@@ -29,8 +29,13 @@ def report(message, copilot):
     return 0
 
 
-def skip_review(reason, copilot):
-    return report(f'CodeRabbit: 自動レビューをスキップします。操作は続行します。\n{reason}', copilot)
+def block(reason, copilot):
+    message = f'CodeRabbit: レビューを完了できないため操作を停止します。\n{reason}'
+    if copilot:
+        print(json.dumps({'permissionDecision': 'deny', 'permissionDecisionReason': message}, ensure_ascii=False))
+        return 0
+    print(message, file=sys.stderr)
+    return 2
 
 
 def git(cwd, *args):
@@ -104,7 +109,7 @@ def main():
         if (isinstance(command, list) and len(command) == 3 and all(isinstance(c, str) for c in command)
                 and command[1] in ('-c', '-lc')):
             command = command[2]
-        if not isinstance(command, str) or not shutil.which('coderabbit'):
+        if not isinstance(command, str):
             return 0
         command, expansion = shell_text(command)
         lexer = shlex.shlex(command.strip(), posix=True, punctuation_chars=';&|()<>\n')
@@ -154,6 +159,8 @@ def main():
     targets = [words for words in groups if is_target(words)]
     if not targets:
         return 0
+    if len(targets) != 1:
+        return block('push / PR 作成は1回の呼び出しにつき1コマンドに分けてください。', copilot)
     words = targets[0]
     cwd = Path(tool.get('workdir') or event.get('cwd') or os.getcwd())
     if not cwd.is_absolute():
@@ -163,22 +170,22 @@ def main():
     for preceding in groups[:groups.index(words)]:
         if preceding[:1] == ['cd']:
             if len(preceding) != 2 or any(c in preceding[1] for c in '$`') or preceding[1].startswith('-'):
-                return skip_review('cd の移動先を静的に解決できません。', copilot)
+                return block('cd の移動先を静的に解決できません。', copilot)
             cwd = cwd / Path(preceding[1]).expanduser()
-        elif preceding[:2] == ['git', 'commit'] or preceding[:1] in (['popd'], ['pushd']):
-            return skip_review('先行コマンドが変更するレビュー対象を実行前に確定できません。', copilot)
+        elif preceding[:1] not in (['echo'], ['printf'], ['pwd'], ['true']) or any(c in ' '.join(preceding) for c in '$`'):
+            return block('先行コマンドが変更するレビュー対象を実行前に確定できません。', copilot)
 
     if words[:1] == ['git']:
         i = 1
         while i < len(words) and words[i].startswith('-'):
             if words[i] == '-C' and i + 1 < len(words):
                 if any(c in words[i + 1] for c in '$`~'):
-                    return skip_review('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
+                    return block('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
                 cwd = cwd / words[i + 1]
                 i += 2
             elif words[i].startswith('-C') and len(words[i]) > 2:
                 if any(c in words[i][2:] for c in '$`~'):
-                    return skip_review('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
+                    return block('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
                 cwd = cwd / words[i][2:]
                 i += 1
             elif words[i] == '-c' and i + 1 < len(words):
@@ -187,16 +194,20 @@ def main():
             elif words[i].startswith(('-c', '--config-env=')) or words[i] in ('--no-pager', '--paginate', '--no-optional-locks'):
                 i += 1
             else:
-                return skip_review('Git のリポジトリ指定を静的に解決できません。', copilot)
+                return block('Git のリポジトリ指定を静的に解決できません。', copilot)
         words = ['git'] + words[i:]
 
     repo = git(cwd, 'rev-parse', '--show-toplevel')
-    if not repo or not (Path(repo) / '.coderabbit.yaml').is_file():
+    if not repo:
+        return block('対象の Git リポジトリを特定できません。', copilot)
+    if not (Path(repo) / '.coderabbit.yaml').is_file():
         return 0
+    if not shutil.which('coderabbit'):
+        return block('CodeRabbit CLI が見つかりません。', copilot)
     cwd = Path(repo)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
     if not head:
-        return 0
+        return block('レビュー可能な HEAD がありません。', copilot)
     source = 'HEAD'
     if words[:2] == ['git', 'push']:
         positional = []
@@ -207,10 +218,10 @@ def main():
             if word in flags or word.startswith('--force-with-lease='):
                 continue
             if word.startswith('-'):
-                return skip_review('CodeRabbit: 複数 ref や未対応オプションの push は対象を確定できません。送信元を明示して push してください。', copilot)
+                return block('CodeRabbit: 複数 ref や未対応オプションの push は対象を確定できません。送信元を明示して push してください。', copilot)
             positional.append(word)
         if len(positional) > 2:
-            return skip_review('CodeRabbit: 一度に複数 ref を push せず、送信元を1つ指定してください。', copilot)
+            return block('CodeRabbit: 一度に複数 ref を push せず、送信元を1つ指定してください。', copilot)
         branch = git(cwd, 'symbolic-ref', '--quiet', '--short', 'HEAD')
         remote = (positional[0] if positional else
                   git(cwd, 'config', 'branch.' + branch + '.pushRemote') or
@@ -218,19 +229,19 @@ def main():
                   git(cwd, 'config', 'branch.' + branch + '.remote') or 'origin')
         if (git(cwd, 'config', '--bool', 'remote.' + remote + '.mirror') == 'true' or
                 git(cwd, 'config', '--bool', 'push.followTags') == 'true'):
-            return skip_review('CodeRabbit: mirror / followTags の push 設定を無効にし、送信元を1つ指定してください。', copilot)
+            return block('CodeRabbit: mirror / followTags の push 設定を無効にし、送信元を1つ指定してください。', copilot)
         if len(positional) == 2:
             source = positional[1].lstrip('+').split(':', 1)[0]
             if not source:
-                return skip_review('CodeRabbit: 削除 push はレビュー対象を確定できません。', copilot)
+                return block('CodeRabbit: 削除 push はレビュー対象を確定できません。', copilot)
         elif (git(cwd, 'config', '--get-all', 'remote.' + remote + '.push') or
                 git(cwd, 'config', 'push.default') not in ('', 'simple', 'current', 'upstream', 'nothing')):
-            return skip_review('CodeRabbit: push 設定から送信対象を確定できません。git push <remote> HEAD:<branch> と明示してください。', copilot)
+            return block('CodeRabbit: push 設定から送信対象を確定できません。git push <remote> HEAD:<branch> と明示してください。', copilot)
     elif words[:3] == ['gh', 'pr', 'create']:
         args = words[3:]
         for i, word in enumerate(args):
             if word in ('--repo', '-R') or word.startswith('--repo=') or word.startswith('-R'):
-                return skip_review('CodeRabbit: --repo を使わず、対象リポジトリで PR を作成してください。', copilot)
+                return block('CodeRabbit: --repo を使わず、対象リポジトリで PR を作成してください。', copilot)
             candidate = None
             if word in ('--head', '-H'):
                 candidate = args[i + 1] if i + 1 < len(args) else ''
@@ -240,16 +251,16 @@ def main():
                 candidate = word[2:]
             if candidate is not None:
                 if ':' in candidate or not candidate:
-                    return skip_review('CodeRabbit: --head にはローカルで解決できるブランチを指定してください。', copilot)
+                    return block('CodeRabbit: --head にはローカルで解決できるブランチを指定してください。', copilot)
                 source = candidate
     else:
-        return skip_review('CodeRabbit: git のグローバルオプションを外し、対象ディレクトリで git push を実行してください。', copilot)
+        return block('CodeRabbit: git のグローバルオプションを外し、対象ディレクトリで git push を実行してください。', copilot)
 
     if any(c in source for c in '$`'):
-        return skip_review('送信元の変数展開・コマンド置換は実行しません。', copilot)
+        return block('送信元の変数展開・コマンド置換は実行しません。', copilot)
     head = git(cwd, 'rev-parse', '--verify', '--end-of-options', source + '^{commit}')
     if not head:
-        return skip_review('CodeRabbit: 送信元をローカルのコミットとして解決できません。ブランチ名またはコミットを確認してください。', copilot)
+        return block('CodeRabbit: 送信元をローカルのコミットとして解決できません。ブランチ名またはコミットを確認してください。', copilot)
     identity = git(cwd, 'rev-parse', '--symbolic-full-name', '--verify', '--end-of-options', source)
     if not identity.startswith('refs/'):
         identity = head
@@ -260,7 +271,7 @@ def main():
     try:
         marker.parent.mkdir(exist_ok=True)
     except OSError:
-        return skip_review('CodeRabbit: レビュー記録の保存先を作成できません。git ディレクトリの権限を確認してください。', copilot)
+        return block('CodeRabbit: レビュー記録の保存先を作成できません。git ディレクトリの権限を確認してください。', copilot)
     reviewed, reviewed_at = '', 0
     try:
         reviewed, *rest = marker.read_text().split()
@@ -273,30 +284,15 @@ def main():
     # rebase や force push で前回の HEAD が祖先でなくなったら、増分ではなく全体をレビューする。
     if reviewed and subprocess.run(['git', '-C', str(cwd), 'merge-base', '--is-ancestor', reviewed, head]).returncode == 0:
         args += ['--base-commit', reviewed]
-        # スキップしてもマーカーは更新しない。小さい変更も次のレビューに累積して必ず対象になる。
-        # gh pr create は最後の関門なので間引かない。
-        if words[:2] == ['git', 'push']:
-            numstat = git(cwd, 'diff', '--numstat', reviewed, head)
-            changed = sum(int(n) for line in numstat.splitlines() for n in line.split('\t')[:2] if n.isdigit())
-            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '0'))
-            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '0')) * 60
-            if changed < min_lines or time.time() - reviewed_at < min_seconds:
-                print(f'CodeRabbit: 前回レビューからの変更が小さい、または直後のためスキップします（{changed} 行）。', file=sys.stderr)
-                return 0
     print(f'Reviewing with CodeRabbit CLI... {source} ({head[:12]})', file=sys.stderr)
     try:
         with review_checkout(cwd, head) as checkout:
             result = subprocess.run(args, cwd=checkout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     except (OSError, RuntimeError) as error:
-        return skip_review(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
-    # exit 1 は「一部のファイルしかレビューできなかった」場合にも指摘を出力して返る。
-    # 一部のファイルの指摘も agent に届け、レビュー記録を残すため、
-    # 出力があれば通常の指摘と同じく情報として返し、マーカーを更新する。
-    if result.returncode and not (result.returncode == 1 and result.stdout.strip()):
+        return block(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
+    if result.returncode:
         output = result.stdout or '(CLI output unavailable)'
-        print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
-        print(output, file=sys.stderr)
-        return 0
+        return block(f'CodeRabbit review failed (exit {result.returncode}).\n{output}', copilot)
     try:
         marker.write_text(f'{head} {int(time.time())}\n')
     except OSError:
