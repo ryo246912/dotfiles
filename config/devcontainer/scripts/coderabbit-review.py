@@ -158,18 +158,15 @@ def main():
     cwd = Path(tool.get('workdir') or event.get('cwd') or os.getcwd())
     if not cwd.is_absolute():
         cwd = Path.cwd() / cwd
-    compound = False
-    # Resolve a literal leading cd; skip review if the command context is ambiguous.
-    if len(groups) == 2 and len(groups[0]) == 2 and groups[0][0] == 'cd' and separators == ['&&']:
-        directory = groups[0][1]
-        if directory.startswith('-') or any(c in directory for c in '$`~'):
-            return skip_review('CodeRabbit: cd を別の呼び出しで実行してから push / PR 作成を実行してください。', copilot)
-        cwd = cwd / directory
-    elif len(groups) != 1 or separators:
-        # An unknown directory change cannot be assumed to target this repository.
-        if any(g[:1] == ['cd'] for g in groups):
-            return skip_review('CodeRabbit: cd と push / PR 作成を別の呼び出しに分けてください。', copilot)
-        compound = True
+    # Track literal directory changes before the target, ignoring logging commands
+    # after it. Never execute command substitutions or any supplied shell text.
+    for preceding in groups[:groups.index(words)]:
+        if preceding[:1] == ['cd']:
+            if len(preceding) != 2 or any(c in preceding[1] for c in '$`') or preceding[1].startswith('-'):
+                return skip_review('cd の移動先を静的に解決できません。', copilot)
+            cwd = cwd / Path(preceding[1]).expanduser()
+        elif preceding[:2] == ['git', 'commit'] or preceding[:1] in (['popd'], ['pushd']):
+            return skip_review('先行コマンドが変更するレビュー対象を実行前に確定できません。', copilot)
 
     if words[:1] == ['git']:
         i = 1
@@ -184,18 +181,19 @@ def main():
                     return skip_review('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
                 cwd = cwd / words[i][2:]
                 i += 1
+            elif words[i] == '-c' and i + 1 < len(words):
+                # Command-local configuration does not change the explicit source commit.
+                i += 2
+            elif words[i].startswith(('-c', '--config-env=')) or words[i] in ('--no-pager', '--paginate', '--no-optional-locks'):
+                i += 1
             else:
-                return skip_review('CodeRabbit: git のグローバルオプションは -C のみ対応しています。', copilot)
+                return skip_review('Git のリポジトリ指定を静的に解決できません。', copilot)
         words = ['git'] + words[i:]
 
     repo = git(cwd, 'rev-parse', '--show-toplevel')
     if not repo or not (Path(repo) / '.coderabbit.yaml').is_file():
         return 0
     cwd = Path(repo)
-    if compound:
-        return skip_review('CodeRabbit: commit・複合コマンドと push / PR 作成を別の呼び出しに分けてください。', copilot)
-    if expansion:
-        return skip_review('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
     if not head:
         return 0
@@ -247,6 +245,8 @@ def main():
     else:
         return skip_review('CodeRabbit: git のグローバルオプションを外し、対象ディレクトリで git push を実行してください。', copilot)
 
+    if any(c in source for c in '$`'):
+        return skip_review('送信元の変数展開・コマンド置換は実行しません。', copilot)
     head = git(cwd, 'rev-parse', '--verify', '--end-of-options', source + '^{commit}')
     if not head:
         return skip_review('CodeRabbit: 送信元をローカルのコミットとして解決できません。ブランチ名またはコミットを確認してください。', copilot)
@@ -278,8 +278,8 @@ def main():
         if words[:2] == ['git', 'push']:
             numstat = git(cwd, 'diff', '--numstat', reviewed, head)
             changed = sum(int(n) for line in numstat.splitlines() for n in line.split('\t')[:2] if n.isdigit())
-            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '50'))
-            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '10')) * 60
+            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '0'))
+            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '0')) * 60
             if changed < min_lines or time.time() - reviewed_at < min_seconds:
                 print(f'CodeRabbit: 前回レビューからの変更が小さい、または直後のためスキップします（{changed} 行）。', file=sys.stderr)
                 return 0
@@ -290,7 +290,7 @@ def main():
     except (OSError, RuntimeError) as error:
         return skip_review(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
     # exit 1 は「一部のファイルしかレビューできなかった」場合にも指摘を出力して返る。
-    # 未完了扱いにすると指摘が agent に届かず、マーカーも残らず毎回ブロックされるため、
+    # 一部のファイルの指摘も agent に届け、レビュー記録を残すため、
     # 出力があれば通常の指摘と同じく情報として返し、マーカーを更新する。
     if result.returncode and not (result.returncode == 1 and result.stdout.strip()):
         output = result.stdout or '(CLI output unavailable)'
