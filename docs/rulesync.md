@@ -110,10 +110,26 @@ commit と push の連結、その他の複合コマンド、展開を含む対�
 複数 ref、削除 push、ローカルで解決できない送信元、`-C` 以外の git グローバルオプションは拒否します。
 
 ```bash
-git push origin other-branch:refs/heads/other-branch
-git -C /path/to/other-worktree push origin HEAD
+# 現在の HEAD と異なるローカルブランチから、別名のリモートブランチへ送る
+git push origin other-branch:refs/heads/destination
+# ローカルで解決できるコミット SHA も送信元にできる（abc1234 は実際の SHA に置換）
+git push origin abc1234:refs/heads/destination
+# 別 worktree の HEAD を送る。cd と push だけを1回の呼び出しで実行する
+cd /path/to/other-worktree && git push origin HEAD:refs/heads/destination
+# -C でも同じ worktree を指定できる
+git -C /path/to/other-worktree push origin HEAD:refs/heads/destination
 gh pr create --head other-branch
 ```
+
+`<source>:<destination>` の source は現在の HEAD や destination と一致する必要はありません。
+レビュー対象は destination 側のコミットではなく、source を解決したローカルコミットです。
+レビュー結果で一度停止した場合は、結果を確認・対応したうえで同じコマンドを再実行します。
+この対応でも、複合コマンドの制限・レビュー後の停止・間引き条件は従来どおりです。
+
+sandbox 内のフックは template に COPY されます。古いフックが HEAD 以外を拒否する場合、
+ホストでの checkout / dotfiles apply だけでは更新されません。
+`mise run sandbox:build-template <agent>` で template を更新し、必要な sandbox 内データを退避してから、
+対象プロジェクトで `sbx-agent <agent> --new` により sandbox を再作成してください。
 
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
