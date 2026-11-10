@@ -1917,7 +1917,7 @@ mise run sandbox:coderabbit-login
    ブラウザーの keep-alive 接続が残っても、ログイン完了後に待機し続けない。
    エラー・Ctrl-C 時も接続と転送を閉じる。
 
-ログイン待機は既定で 300 秒までです。callback が届かない場合はタイムアウトして警告を表示し、
+ログイン待機は既定で 90 秒までです。callback が届かない場合はタイムアウトして警告を表示し、
 `sbx-agent` は sandbox の利用へ進みます。手動実行では
 `mise run sandbox:coderabbit-login -- --timeout 600` のように待機時間を変更できます。
 `sbx-agent` からの自動実行では既定値を使います。

@@ -65,7 +65,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('sandbox', nargs='?', help='省略すると fzf で選択')
     parser.add_argument('--region', choices=['us', 'eu'], default='us')
-    parser.add_argument('--timeout', type=float, default=300, help='ログイン待機の上限秒数（既定: 300）')
+    parser.add_argument('--timeout', type=float, default=90, help='ログイン待機の上限秒数（既定: 90）')
     args = parser.parse_args()
     if not 0 < args.timeout < float('inf'):
         parser.error('--timeout は正の有限数が必要です')
