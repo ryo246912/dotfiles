@@ -3,12 +3,45 @@
 import argparse
 import json
 from pathlib import Path
+import queue
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
+
+
+def login_lines(stream, timeout):
+    """Bound the login wait even when SSH keeps stdout open without new events."""
+    lines = queue.Queue()
+
+    def read():
+        """Queue output until EOF, tolerating the stream being closed on cleanup."""
+        try:
+            for line in stream:
+                lines.put(line)
+        except ValueError:
+            if not stream.closed:
+                raise
+        finally:
+            lines.put(None)
+
+    threading.Thread(target=read, daemon=True).start()
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise queue.Empty
+            line = lines.get(timeout=remaining)
+        except queue.Empty:
+            raise ValueError('CodeRabbit のログインがタイムアウトしました。ブラウザーの callback 接続を確認して再実行してください。') from None
+        if line is None:
+            return
+        yield line
 
 
 def callback_forward(auth_url):
@@ -32,7 +65,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('sandbox', nargs='?', help='省略すると fzf で選択')
     parser.add_argument('--region', choices=['us', 'eu'], default='us')
+    parser.add_argument('--timeout', type=float, default=90, help='ログイン待機の上限秒数（既定: 90）')
     args = parser.parse_args()
+    if not 0 < args.timeout < float('inf'):
+        parser.error('--timeout は正の有限数が必要です')
     for cmd in ['sbx', 'ssh'] + ([] if args.sandbox else ['fzf']):
         if not shutil.which(cmd):
             parser.error(f'{cmd} が必要です')
@@ -60,13 +96,17 @@ def main():
     with tempfile.TemporaryDirectory(prefix='sbx-cr-') as tmp:
         control = str(Path(tmp) / 'ssh')
         ssh = ['ssh', '-S', control]
-        command = ssh + ['-M', '-o', 'ControlPersist=no', '--', host,
-                         'coderabbit', 'auth', 'login', '--agent', '--no-browser', '--region', args.region]
+        # Report the remote CLI's exit before SSH waits for forwarding channels.
+        remote_command = (
+            f'coderabbit auth login --agent --no-browser --region {args.region}; '
+            'rc=$?; printf \'\\n{"type":"sbx_cli_exit","exitCode":%s}\\n\' "$rc"; exit "$rc"'
+        )
+        command = ssh + ['-M', '-o', 'ControlPersist=no', '--', host, remote_command]
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
         authenticated = False
         forwarded = None
         try:
-            for line in process.stdout:
+            for line in login_lines(process.stdout, args.timeout):
                 try:
                     event = json.loads(line)
                 except ValueError:
@@ -75,6 +115,13 @@ def main():
                     continue
                 if not isinstance(event, dict):
                     continue
+                if event.get('type') == 'sbx_cli_exit':
+                    rc = event.get('exitCode')
+                    if type(rc) is not int or not 0 <= rc <= 255:
+                        raise ValueError('CLI の終了コードが想定外です。')
+                    if rc:
+                        return rc
+                    raise ValueError('CLI の認証成功を確認できませんでした。')
                 if event.get('type') == 'error' or event.get('status') in ('authentication_failed', 'automatic_login_failed'):
                     raise ValueError(event.get('message') or 'CodeRabbit のログインに失敗しました。')
                 if event.get('status') == 'awaiting_browser_auth':
@@ -91,10 +138,14 @@ def main():
                             print(f'ブラウザーを開けませんでした。次の URL を開いてください:\n{url}', flush=True)
                 if event.get('status') == 'authenticated' or event.get('authenticated') is True:
                     authenticated = True
-            rc = process.wait()
-            if rc:
-                return rc
+                    # SSH can wait for browser keep-alive/forwarding channels after
+                    # the remote CLI exits. Do not wait for EOF after success;
+                    # finally closes the master and its forwarding channels.
+                    break
             if not authenticated:
+                rc = process.wait(timeout=5)
+                if rc:
+                    return rc
                 raise ValueError('CLI の認証成功を確認できませんでした。')
             print('CodeRabbit にログインしました。callback の転送を終了します。')
             return 0
@@ -103,6 +154,7 @@ def main():
                 try:
                     subprocess.run(ssh + ['-O', 'exit', '--', host], stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL, timeout=5, check=False)
+                    process.terminate()
                 except (OSError, subprocess.TimeoutExpired):
                     process.terminate()
                 try:
