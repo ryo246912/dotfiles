@@ -26,18 +26,15 @@ includes = ["tasks/*.toml"]
 
 [hooks]
 postinstall = """
-command -v lefthook >/dev/null 2>&1 || exit 0
-[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ] || exit 0
-# LEFTHOOK_CONFIG の参照先が無いと install が既存の lefthook.yml を初期化するため、実行しない。
-[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
-lefthook install
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+"$root/local/bin/lefthook-install-safe"
 """
 
 [[watch_files]]
 patterns = ["lefthook.yml"]
 run = '''
-[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
-lefthook install
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+"$root/local/bin/lefthook-install-safe"
 '''
 
 # `mise bootstrap` は必ずこのリポジトリの checkout ルートで実行すること

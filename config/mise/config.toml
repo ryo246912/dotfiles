@@ -184,13 +184,8 @@ uvx = true
 
 [hooks]
 postinstall = """
-command -v lefthook >/dev/null 2>&1 || exit 0
-root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || exit 0
-cd "$root" || exit 0
-# 参照先が無いと install が既存の lefthook.yml を初期化するため、実行しない。
-[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
-lefthook install
+command -v lefthook-install-safe >/dev/null 2>&1 || exit 0
+lefthook-install-safe
 """
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
