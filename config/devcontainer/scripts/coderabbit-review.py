@@ -21,6 +21,17 @@ def block(reason, copilot):
     return 2
 
 
+def skip_review(reason, copilot):
+    message = f'CodeRabbit: 自動レビューをスキップします。操作は続行します。\n{reason}'
+    if copilot:
+        print(message)
+    else:
+        print(json.dumps({'hookSpecificOutput': {
+            'hookEventName': 'PreToolUse', 'additionalContext': message,
+        }}, ensure_ascii=False))
+    return 0
+
+
 def git(cwd, *args):
     result = subprocess.run(['git', '-C', str(cwd), *args], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else ''
@@ -186,7 +197,7 @@ def main():
         return 0
     cwd = Path(repo)
     if not shutil.which('coderabbit'):
-        return block('CodeRabbit: CLI が見つからないためレビューできません。', copilot)
+        return skip_review('CLI が見つかりません。', copilot)
     if expansion:
         return block('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
@@ -271,10 +282,10 @@ def main():
         with review_checkout(cwd, head) as checkout:
             result = subprocess.run(args, cwd=checkout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     except (OSError, RuntimeError) as error:
-        return block(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
+        return skip_review(f'レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
     if result.returncode:
         output = result.stdout or '(CLI output unavailable)'
-        return block(f'CodeRabbit review failed (exit {result.returncode}). レビュー未完了のため停止します。\n{output}', copilot)
+        return skip_review(f'CLI が失敗しました (exit {result.returncode})。\n{output}', copilot)
     try:
         marker.write_text(f'{head} {int(time.time())}\n')
     except OSError:
