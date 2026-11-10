@@ -79,7 +79,12 @@ return {
       end
 
       -- ファイル名で検索（VSCode Ctrl+P 相当）
-      keymap("n", "<leader>p", fzf.files, { noremap = true, silent = true, desc = "ファイル名検索" })
+      keymap("n", "<leader>p", function()
+        fzf.files({
+          -- gitignore・隠しファイルも含め、依存環境と Git 内部ファイルは除外する
+          cmd = "rg --files --hidden --no-ignore --glob '!node_modules' --glob '!.venv' --glob '!.git'",
+        })
+      end, { noremap = true, silent = true, desc = "ファイル名検索" })
 
       -- 現在のファイル内でワード検索 → マッチ位置にジャンプ
       keymap("n", "<leader>f", function()
