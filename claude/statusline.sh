@@ -186,6 +186,8 @@ case "$config_name" in
 .claude-*) account_label="${config_name#.claude-}" ;;
 *) account_label="$config_name" ;;
 esac
+# sbx labels identify the selected preset, not a verified OAuth identity.
+[ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account_label="$SBX_CLAUDE_ACCOUNT"
 case "$account_label" in
 account1) account_color='\033[1;97;44m' ;;
 account2) account_color='\033[1;97;45m' ;;
@@ -200,7 +202,12 @@ fi
 # global config は projects の履歴などで数 MB になりうるため、毎回 parse せず、
 # config dir に保存したメールアドレスを global config が更新されるまで使う。
 email_cache="$config_dir/statusline-account-email"
-if [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
+email=""
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	# Proxy credentials differ from the local Claude login metadata.
+	# Never present a stale oauthAccount email as the active proxy identity.
+	email=""
+elif [ -f "$email_cache" ] && [ -f "$account_file" ] && [ "$email_cache" -nt "$account_file" ]; then
 	email=$(cat "$email_cache" 2>/dev/null)
 else
 	email=$(jq -r '.oauthAccount.emailAddress // empty' "$account_file" 2>/dev/null)
@@ -211,38 +218,25 @@ else
 	fi
 fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
+if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
+	if [ -n "${SBX_CLAUDE_ORG_ID:-}" ]; then
+		# Names are resolved from the observed organization ID, never the preset.
+		case "$SBX_CLAUDE_ORG_ID" in
+		e0076032-6106-4cfc-bc96-3d6979b65bab) org_label="account1" ;;
+		8f7aef31-aba6-4818-ae21-0c05f2a275c7) org_label="account2" ;;
+		b66e7858-51ce-459c-b706-aea172801fe7) org_label="work3" ;;
+		*) org_label="不明" ;;
+		esac
+		account="$account org: $org_label"
+	else
+		account="$account [sbx: 組織ID未取得]"
+	fi
+fi
 [ -n "$email" ] && account="$account $(printf '\033[1m%s\033[0m' "$email")"
 
 # session id（`claude --resume <id>` 用）を灰色で表示する。
 session=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
 [ -n "$session" ] && session=$(printf '\033[90m%s\033[0m' "$session")
-
-# セッションで最初に送ったメッセージ（1 行目を 30 文字まで）とその時刻を表示し、何のセッションか分かるようにする。
-# transcript の先頭から最初の人間の入力だけを読む（first で打ち切るため長いセッションでも軽い）。
-# content は文字列のほか、画像付きなどでは text ブロックの配列になる（tool_result だけの配列は対象外）。
-# isMeta や、slash command・hook・IDE 拡張由来の内部メッセージ（<command-name> や <ide_opened_file> などのタグで始まるもの）は除外する。
-# 配列形式では内部タグの text ブロックを飛ばし、その後の本文を使う。
-# "<" で始まる普通のメッセージ（HTML の貼り付けなど）は残すため、既知のタグだけを見る。
-# 貼り付けた ANSI エスケープなどで statusline の色が崩れないよう、制御文字（C0・DEL・C1）は取り除く。
-# 時刻は MM/DD HH:MM で 💬 の前に置く。
-transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
-first_msg=""
-if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-	first_msg=$(jq -nr '
-    def internal: test("^<(command-|local-command-|bash-|system-reminder|task-notification|user-prompt-submit-hook|ide_)");
-    first(inputs
-      | select(.type == "user" and .isMeta != true)
-      | (.message.content
-         | if type == "string" then .
-           elif type == "array" then [.[] | select(.type == "text") | .text | select(internal | not)] | first // empty
-           else empty end) as $content
-      | select($content | internal | not)
-      | {content: $content, timestamp})
-    | (.content | split("\n")[0] | explode | map(select(. >= 32 and (. < 127 or . > 159))) | implode | if length > 30 then .[0:30] + "…" else . end) as $text
-    | (.timestamp // empty | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
-    | "\u001b[90m\($t | strflocaltime("%m/%d %H:%M"))~\u001b[0m \u001b[33m💬 \($text)\u001b[0m"
-  ' "$transcript" 2>/dev/null)
-fi
 
 # 空でない引数を " · " で連結する。
 join_parts() {
@@ -254,8 +248,8 @@ join_parts() {
 	printf '%s' "$out"
 }
 
-# 1 行目: アカウント・branch・モデル・最初のメッセージ / 2 行目: コンテキスト・session id・rate limit・cache
-line1=$(join_parts "$account" "$branch" "$model_line" "$first_msg")
+# 1 行目: アカウント・branch・モデル / 2 行目: コンテキスト・session id・rate limit・cache
+line1=$(join_parts "$account" "$branch" "$model_line")
 line2=$(join_parts "$ctx_line" "$session" "$limit_line" "$cache_line")
 [ -n "$line1" ] && printf '%s\n' "$line1"
 [ -n "$line2" ] && printf '%s\n' "$line2"

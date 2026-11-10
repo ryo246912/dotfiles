@@ -4,8 +4,10 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 ## インラインコメントの書式
 
+見出し「以下、AIでの返信」は必ず `**` で囲み、Markdown の太字にする。
+
 ```markdown
-**以下、AIによる返信**
+**以下、AIでの返信**
 [<区分>] <一言>
 
 <本文>
@@ -17,6 +19,7 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 - コミット: SHA をそのまま書く（7 文字以上）。別リポジトリなら `owner/repo@<SHA>`
 - PR・Issue: `#123`。別リポジトリなら `owner/repo#123`
+- SHA や `#123` の前後には半角スペースを入れる（日本語や全角括弧と隣り合うとリンクにならない）
 - SHA や `#123` をバッククォートで囲まない（囲むとリンクにならない）
 
 ## 投稿のしかた
@@ -46,7 +49,7 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
       "path": "app/usecases/orders.py",
       "start_line": 120,
       "line": 128,
-      "body": "**以下、AIによる返信**\n[should] ..."
+      "body": "**以下、AIでの返信**\n[should] ..."
     }
   ]
 }

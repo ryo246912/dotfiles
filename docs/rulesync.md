@@ -96,6 +96,43 @@ chezmoi が `~/.config/rulesync/.rulesync/` へ展開します。実ホーム側
 
 ### hooks（`config/rulesync/.rulesync/hooks.json`）
 
+CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot CLI の
+`preToolUse` に登録しています。共通の実体は
+`config/devcontainer/scripts/coderabbit-review.py`（配置先は
+`~/.config/devcontainer/scripts/coderabbit-review.py`）です。
+Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
+コマンドを安全に分割して `git push`・`gh pr create` を判定します。
+単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
+commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
+`git -C <path> push` と、別ブランチ・コミットを送信元にした push / PR の `--head` に対応します。
+送信元が実行ディレクトリの HEAD と異なる場合は、一時的な detached worktree でそのコミットをレビューします。
+現在のブランチや未コミットの編集は変更しません。レビュー後は一時 worktree を削除します。
+複数 ref、削除 push、ローカルで解決できない送信元、`-C` 以外の git グローバルオプションは拒否します。
+
+```bash
+git push origin other-branch:refs/heads/other-branch
+git -C /path/to/other-worktree push origin HEAD
+gh pr create --head other-branch
+```
+
+レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
+`.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
+その実行を止めます。CLI の失敗時は続行します。
+レビュー記録は Git の共通ディレクトリ内に送信元 ref ごとに保存し、別ブランチのレビューと混同しません。
+2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
+前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
+`git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
+スキップではレビュー済みの印を更新しないため、小さい変更は次のレビューに累積します。
+`gh pr create` は最後の関門なのでスキップしません。
+閾値は環境変数 `CODERABBIT_SKIP_LINES`・`CODERABBIT_SKIP_MINUTES` で変更でき、`0` で無効になります。
+Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
+Claude / Codex は stderr と終了コード 2 で止めます。
+認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
+hook は API key の環境変数やファイルを読みません。
+ログイン手順は [Docker Sandboxes](docker-sandboxes.md#coderabbit-cli-のブラウザーログイン) を参照してください。
+通信先が追加で必要な場合は kit の network policy に許可してください。
+変更後は `mise run rulesync:generate` を実行し、各 CLI を再起動してください。
+
 | ブロック           | 生成先                                | 内容                                                               |
 | ------------------ | ------------------------------------- | ------------------------------------------------------------------ |
 | `claudecode.hooks` | `~/.claude/settings.json`             | ai-rule-hook、plannotator、rtk、編集後の formatter / type check 等 |

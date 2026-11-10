@@ -46,7 +46,11 @@ mcp.json
 
 ## AI
 plan/**
+CLAUDE.local.md
 
 ## crit
 .crit/
 lefthook.local.yml
+
+## desloppify
+.desloppify/

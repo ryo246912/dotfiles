@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-22T23:40:51.346472+00:00'
+generated_at: '2026-11-08T05:55:12.191259+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1354,6 +1354,112 @@ dependencies:
     .claude/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
     .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
   content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
+- repo_url: nidhinjs/prompt-master
+  name: prompt-master
+  host: github.com
+  resolved_commit: 49b3a72469b1e7287d66387004ccfcca90e5968a
+  version: unknown
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/prompt-master
+  - .agents/skills/prompt-master/LICENSE
+  - .agents/skills/prompt-master/README.md
+  - .agents/skills/prompt-master/SKILL.md
+  - .agents/skills/prompt-master/references/patterns.md
+  - .agents/skills/prompt-master/references/templates.md
+  - .claude/skills/prompt-master
+  - .claude/skills/prompt-master/LICENSE
+  - .claude/skills/prompt-master/README.md
+  - .claude/skills/prompt-master/SKILL.md
+  - .claude/skills/prompt-master/references/patterns.md
+  - .claude/skills/prompt-master/references/templates.md
+  deployed_file_hashes:
+    .agents/skills/prompt-master/LICENSE: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+    .agents/skills/prompt-master/README.md: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+    .agents/skills/prompt-master/SKILL.md: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+    .agents/skills/prompt-master/references/patterns.md: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+    .agents/skills/prompt-master/references/templates.md: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+    .claude/skills/prompt-master/LICENSE: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+    .claude/skills/prompt-master/README.md: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+    .claude/skills/prompt-master/SKILL.md: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+    .claude/skills/prompt-master/references/patterns.md: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+    .claude/skills/prompt-master/references/templates.md: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+  content_hash: sha256:1ae0c2483ce2478e428078907f3e5d195201db42609b5bdc83cf75c46ed83671
+- repo_url: peteromallet/desloppify
+  alias: desloppify
+  name: desloppify
+  host: github.com
+  resolved_commit: 3a7735d531a96b6a226bfbdc9fd662b14195f857
+  resolved_ref: v1.0
+  version: unknown
+  virtual_path: desloppify/data/global
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/desloppify
+  - .agents/skills/desloppify/AMP.md
+  - .agents/skills/desloppify/CLAUDE.md
+  - .agents/skills/desloppify/CODEX.md
+  - .agents/skills/desloppify/COPILOT.md
+  - .agents/skills/desloppify/CURSOR.md
+  - .agents/skills/desloppify/DROID.md
+  - .agents/skills/desloppify/GEMINI.md
+  - .agents/skills/desloppify/HERMES.md
+  - .agents/skills/desloppify/OPENCODE.md
+  - .agents/skills/desloppify/QWEN.md
+  - .agents/skills/desloppify/ROVODEV.md
+  - .agents/skills/desloppify/SKILL.md
+  - .agents/skills/desloppify/WINDSURF.md
+  - .agents/skills/desloppify/__init__.py
+  - .agents/skills/desloppify/scoring.md
+  - .claude/skills/desloppify
+  - .claude/skills/desloppify/AMP.md
+  - .claude/skills/desloppify/CLAUDE.md
+  - .claude/skills/desloppify/CODEX.md
+  - .claude/skills/desloppify/COPILOT.md
+  - .claude/skills/desloppify/CURSOR.md
+  - .claude/skills/desloppify/DROID.md
+  - .claude/skills/desloppify/GEMINI.md
+  - .claude/skills/desloppify/HERMES.md
+  - .claude/skills/desloppify/OPENCODE.md
+  - .claude/skills/desloppify/QWEN.md
+  - .claude/skills/desloppify/ROVODEV.md
+  - .claude/skills/desloppify/SKILL.md
+  - .claude/skills/desloppify/WINDSURF.md
+  - .claude/skills/desloppify/__init__.py
+  - .claude/skills/desloppify/scoring.md
+  deployed_file_hashes:
+    .agents/skills/desloppify/AMP.md: sha256:4535157cdc2eb697dcf0c2c31ce1ee236ddc9544d39ecca602db513cd75ef7cc
+    .agents/skills/desloppify/CLAUDE.md: sha256:1c042225dee3a35e8f9e3da428aa22bef4f05935ca4e2901a2f2676898772b8d
+    .agents/skills/desloppify/CODEX.md: sha256:56b9b3e6ad5a0b3f752a88f33a4e370c6cfece05d0180721b58ee80d02791293
+    .agents/skills/desloppify/COPILOT.md: sha256:40d675853a73df53f264f4ead065919d30784c4ec287637c41d3b1071963d91c
+    .agents/skills/desloppify/CURSOR.md: sha256:8dd33eb65bff7b87d8adf5b552176ff1410672b434b2fe270e4a71f3100afba5
+    .agents/skills/desloppify/DROID.md: sha256:3e4225eafd2893d388f34af2cdc1508e2d46fa36d57a5059f6f4be483f5ea026
+    .agents/skills/desloppify/GEMINI.md: sha256:bc06d2cd9ca50ee0fad8139f51e5dad8d6efb20a6632c249e1ba74d3d406248d
+    .agents/skills/desloppify/HERMES.md: sha256:9c19444dd313d00e9fe4ff864138e0bdb7cf01c7b5fea2b4c914b2e55700fab4
+    .agents/skills/desloppify/OPENCODE.md: sha256:3e2025075ad4a991e8eebe7496b09a6754047cccef0433ed53d5f7311863b6b9
+    .agents/skills/desloppify/QWEN.md: sha256:d50f3c5812d348881d65ac38a68887ea16008f4577bbab7dce9896c1666f4834
+    .agents/skills/desloppify/ROVODEV.md: sha256:ff560934f861981d03d128f5cdbdd86534115fa36cfee21071422eef5ac09383
+    .agents/skills/desloppify/SKILL.md: sha256:8a8ad97d4299f476205d68c84368235722007c3f76f336f9ec021efa96f4cacb
+    .agents/skills/desloppify/WINDSURF.md: sha256:0ee7d85457688cdc7cf3a3404e482c1c971345eace1b65e80ffad56f1bc93088
+    .agents/skills/desloppify/__init__.py: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    .agents/skills/desloppify/scoring.md: sha256:eeb9848fe8f7d2239c264709c62e49bec3736c18b1b8de3dc4644a3407138b61
+    .claude/skills/desloppify/AMP.md: sha256:4535157cdc2eb697dcf0c2c31ce1ee236ddc9544d39ecca602db513cd75ef7cc
+    .claude/skills/desloppify/CLAUDE.md: sha256:1c042225dee3a35e8f9e3da428aa22bef4f05935ca4e2901a2f2676898772b8d
+    .claude/skills/desloppify/CODEX.md: sha256:56b9b3e6ad5a0b3f752a88f33a4e370c6cfece05d0180721b58ee80d02791293
+    .claude/skills/desloppify/COPILOT.md: sha256:40d675853a73df53f264f4ead065919d30784c4ec287637c41d3b1071963d91c
+    .claude/skills/desloppify/CURSOR.md: sha256:8dd33eb65bff7b87d8adf5b552176ff1410672b434b2fe270e4a71f3100afba5
+    .claude/skills/desloppify/DROID.md: sha256:3e4225eafd2893d388f34af2cdc1508e2d46fa36d57a5059f6f4be483f5ea026
+    .claude/skills/desloppify/GEMINI.md: sha256:bc06d2cd9ca50ee0fad8139f51e5dad8d6efb20a6632c249e1ba74d3d406248d
+    .claude/skills/desloppify/HERMES.md: sha256:9c19444dd313d00e9fe4ff864138e0bdb7cf01c7b5fea2b4c914b2e55700fab4
+    .claude/skills/desloppify/OPENCODE.md: sha256:3e2025075ad4a991e8eebe7496b09a6754047cccef0433ed53d5f7311863b6b9
+    .claude/skills/desloppify/QWEN.md: sha256:d50f3c5812d348881d65ac38a68887ea16008f4577bbab7dce9896c1666f4834
+    .claude/skills/desloppify/ROVODEV.md: sha256:ff560934f861981d03d128f5cdbdd86534115fa36cfee21071422eef5ac09383
+    .claude/skills/desloppify/SKILL.md: sha256:8a8ad97d4299f476205d68c84368235722007c3f76f336f9ec021efa96f4cacb
+    .claude/skills/desloppify/WINDSURF.md: sha256:0ee7d85457688cdc7cf3a3404e482c1c971345eace1b65e80ffad56f1bc93088
+    .claude/skills/desloppify/__init__.py: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    .claude/skills/desloppify/scoring.md: sha256:eeb9848fe8f7d2239c264709c62e49bec3736c18b1b8de3dc4644a3407138b61
+  content_hash: sha256:40151f060da9f3f1c6a55f34fffa093bb31b219d56e448d30c1f1cb85c3992a0
 - repo_url: plannotator/effective-html
   name: design-artifact
   host: github.com
@@ -1539,8 +1645,8 @@ dependencies:
 - repo_url: vercel-labs/skills
   name: find-skills
   host: github.com
-  resolved_commit: a80e4c9d12d607631249d4d7d059f835d4b2f13a
-  resolved_ref: v1.7.4
+  resolved_commit: 7a5e920bead4b1039a6d6df5d7e1163b7b09423a
+  resolved_ref: v1.7.6
   version: unknown
   virtual_path: skills/find-skills
   is_virtual: true
@@ -1938,6 +2044,150 @@ deployments:
   - plannotator/effective-html/skills/design-artifact
   active_owner: plannotator/effective-html/skills/design-artifact
   content_hash: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/AMP.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:4535157cdc2eb697dcf0c2c31ce1ee236ddc9544d39ecca602db513cd75ef7cc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/CLAUDE.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:1c042225dee3a35e8f9e3da428aa22bef4f05935ca4e2901a2f2676898772b8d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/CODEX.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:56b9b3e6ad5a0b3f752a88f33a4e370c6cfece05d0180721b58ee80d02791293
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/COPILOT.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:40d675853a73df53f264f4ead065919d30784c4ec287637c41d3b1071963d91c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/CURSOR.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:8dd33eb65bff7b87d8adf5b552176ff1410672b434b2fe270e4a71f3100afba5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/DROID.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:3e4225eafd2893d388f34af2cdc1508e2d46fa36d57a5059f6f4be483f5ea026
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/GEMINI.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:bc06d2cd9ca50ee0fad8139f51e5dad8d6efb20a6632c249e1ba74d3d406248d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/HERMES.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:9c19444dd313d00e9fe4ff864138e0bdb7cf01c7b5fea2b4c914b2e55700fab4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/OPENCODE.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:3e2025075ad4a991e8eebe7496b09a6754047cccef0433ed53d5f7311863b6b9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/QWEN.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:d50f3c5812d348881d65ac38a68887ea16008f4577bbab7dce9896c1666f4834
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/ROVODEV.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:ff560934f861981d03d128f5cdbdd86534115fa36cfee21071422eef5ac09383
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:8a8ad97d4299f476205d68c84368235722007c3f76f336f9ec021efa96f4cacb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/WINDSURF.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:0ee7d85457688cdc7cf3a3404e482c1c971345eace1b65e80ffad56f1bc93088
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/__init__.py
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- kind: project-relative
+  target: claude
+  value: .claude/skills/desloppify/scoring.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:eeb9848fe8f7d2239c264709c62e49bec3736c18b1b8de3dc4644a3407138b61
 - kind: project-relative
   target: claude
   value: .claude/skills/dev-context
@@ -4721,6 +4971,60 @@ deployments:
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
 - kind: project-relative
   target: claude
+  value: .claude/skills/prompt-master
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/README.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/references/patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+- kind: project-relative
+  target: claude
+  value: .claude/skills/prompt-master/references/templates.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
+- kind: project-relative
+  target: claude
   value: .claude/skills/resolving-merge-conflicts
   runtime: null
   scope: project
@@ -4854,6 +5158,150 @@ deployments:
   - plannotator/effective-html/skills/design-artifact
   active_owner: plannotator/effective-html/skills/design-artifact
   content_hash: sha256:c174292aa7485778c04f498ce2a6697b65c66dd0bfe014332053eda43e95ff4a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/AMP.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:4535157cdc2eb697dcf0c2c31ce1ee236ddc9544d39ecca602db513cd75ef7cc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/CLAUDE.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:1c042225dee3a35e8f9e3da428aa22bef4f05935ca4e2901a2f2676898772b8d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/CODEX.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:56b9b3e6ad5a0b3f752a88f33a4e370c6cfece05d0180721b58ee80d02791293
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/COPILOT.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:40d675853a73df53f264f4ead065919d30784c4ec287637c41d3b1071963d91c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/CURSOR.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:8dd33eb65bff7b87d8adf5b552176ff1410672b434b2fe270e4a71f3100afba5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/DROID.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:3e4225eafd2893d388f34af2cdc1508e2d46fa36d57a5059f6f4be483f5ea026
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/GEMINI.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:bc06d2cd9ca50ee0fad8139f51e5dad8d6efb20a6632c249e1ba74d3d406248d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/HERMES.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:9c19444dd313d00e9fe4ff864138e0bdb7cf01c7b5fea2b4c914b2e55700fab4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/OPENCODE.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:3e2025075ad4a991e8eebe7496b09a6754047cccef0433ed53d5f7311863b6b9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/QWEN.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:d50f3c5812d348881d65ac38a68887ea16008f4577bbab7dce9896c1666f4834
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/ROVODEV.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:ff560934f861981d03d128f5cdbdd86534115fa36cfee21071422eef5ac09383
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:8a8ad97d4299f476205d68c84368235722007c3f76f336f9ec021efa96f4cacb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/WINDSURF.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:0ee7d85457688cdc7cf3a3404e482c1c971345eace1b65e80ffad56f1bc93088
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/__init__.py
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- kind: project-relative
+  target: codex
+  value: .agents/skills/desloppify/scoring.md
+  runtime: null
+  scope: project
+  owners:
+  - peteromallet/desloppify/desloppify/data/global
+  active_owner: peteromallet/desloppify/desloppify/data/global
+  content_hash: sha256:eeb9848fe8f7d2239c264709c62e49bec3736c18b1b8de3dc4644a3407138b61
 - kind: project-relative
   target: codex
   value: .agents/skills/dev-context
@@ -7635,6 +8083,60 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:29e8ba0b54274eaa92b7cb074fe1765ba7b83993e0d2605e5308c6972a47daa7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/README.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:3a43506bd5d3c19e39fd16cdacfc8b199107291801867099dbf330c5da5a38e7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:36e68cdcd62c38b2f99c2538c83fefb8c8837ea9b7eed75297fe76e45c452e75
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/references/patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:95e7b16c32cdf7a5971a952cd40841875dea97fa7c96154e42f1afd2cf468d91
+- kind: project-relative
+  target: codex
+  value: .agents/skills/prompt-master/references/templates.md
+  runtime: null
+  scope: project
+  owners:
+  - nidhinjs/prompt-master
+  active_owner: nidhinjs/prompt-master
+  content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
 - kind: project-relative
   target: codex
   value: .agents/skills/resolving-merge-conflicts

@@ -53,3 +53,35 @@ dependencies:
       transport: http
       url: http://127.0.0.1:3845/mcp
       sbx_options: ["--skip-ssrf-check"]
+    # ホストの Docker で起動している PostgreSQL（ポートをホストに公開しておく）。gateway がホストで
+    # 起動するので localhost はホストを指す。
+    # 読み取り専用（restricted）と書き込み可（unrestricted）を分け、普段は postgres-read だけ読み込む。
+    # DATABASE_URI は postgresql://<user>@<host>:<port>/<dbname>、パスワードは PGPASSWORD に分ける
+    # （libpq が読む。URI に含めないので URL エンコードが要らず、secretlint にも検出されない）
+    # - <user>: DB のユーザー（docker compose の POSTGRES_USER）
+    # - <password>: DB のパスワード（compose の POSTGRES_PASSWORD）
+    # - <host>: ホストから見た DB の場所。ホストに公開した Docker のポートなら localhost
+    # - <port>: ホストに公開したポート（compose の ports: "5432:5432" の左側）
+    # - <dbname>: 接続するデータベース名（compose の POSTGRES_DB）
+    # 値に , を含むと sbx に渡せない（mise run sandbox:mcp-add がエラーにする）
+    # postgres-mcp 0.3.0 はそのままでは依存を解決できないので、dotfiles の postgres-mcp-overrides.txt を
+    # --overrides で渡す。相対パスなので、sbx_options の --dir に dotfiles のリポジトリを指定する
+    # （先頭の ~ は mise run sandbox:mcp-add が $HOME に展開する）
+    - name: postgres-read
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=restricted"]
+      env:
+        DATABASE_URI: postgresql://<user>@<host>:<port>/<dbname>
+        PGPASSWORD: <password>
+      sbx_options: ["--dir", "~/dotfiles"]
+    - name: postgres-write
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=unrestricted"]
+      env:
+        DATABASE_URI: postgresql://<user>@<host>:<port>/<dbname>
+        PGPASSWORD: <password>
+      sbx_options: ["--dir", "~/dotfiles"]

@@ -1,0 +1,16 @@
+schemaVersion: "2"
+kind: mixin
+name: coderabbit
+version: "1.0.0"
+description: CodeRabbit CLI network policy for the mise-based template
+# Use v2 to compose with the existing built-in agents and sbx-agent:<agent> templates.
+# Authentication is saved by the CLI's native auth login in sbxenv.yaml postCreate.
+permissions:
+  network:
+    allow:
+      # CodeRabbit CLI（sandbox 内の coderabbit review が API を呼ぶ）
+      - api.coderabbit.ai
+      - app.coderabbit.ai
+      - ide.coderabbit.ai
+      - cli.coderabbit.ai
+# CLI installation is owned by Dockerfile.sandbox and config/devcontainer/mise.toml.
