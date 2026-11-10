@@ -102,12 +102,12 @@ CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot 
 `~/.config/devcontainer/scripts/coderabbit-review.py`）です。
 Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
 コマンドを安全に分割して `git push`・`gh pr create` を判定します。
-単独のコマンドに加え、リテラルの `cd <path>` に続く push、後続の echo / tail、リダイレクトを扱います。
-対象を静的に特定できる場合はレビューし、特定できない場合は理由を通知して操作を停止します。
+単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
+commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
 `git -C <path> push` と、別ブランチ・コミットを送信元にした push / PR の `--head` に対応します。
 送信元が実行ディレクトリの HEAD と異なる場合は、一時的な detached worktree でそのコミットをレビューします。
 現在のブランチや未コミットの編集は変更しません。レビュー後は一時 worktree を削除します。
-`git -c` にも対応します。複数 ref、削除 push、ローカルで解決できない送信元などは対象を確定できないため停止します。
+複数 ref、削除 push、ローカルで解決できない送信元、`-C` 以外の git グローバルオプションは拒否します。
 
 ```bash
 git push origin other-branch:refs/heads/other-branch
@@ -117,21 +117,16 @@ gh pr create --head other-branch
 
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
-正常終了時は操作を続行します。CLI 不在・失敗・一部のみのレビュー（非ゼロ終了）では停止し、レビュー記録を更新しません。
+その実行を止めます。CLI の失敗時は続行します。
 レビュー記録は Git の共通ディレクトリ内に送信元 ref ごとに保存し、別ブランチのレビューと混同しません。
 2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
 前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
-新しいコミットは変更量や経過時間によらず、既定でレビューします。
-変更量や経過時間による間引きはありません。レビュー済みの同一コミットのみ再実行を省略します。
-Copilot CLI は `bash` matcher を使用し、レビュー結果を通常の stdout として返します。
-Claude / Codex は正常終了した結果を `PreToolUse` の `additionalContext` として返します（終了コード `0`）。
-停止時は Claude / Codex では stderr と終了コード `2`、Copilot では deny JSON を返します。
-
-フック設定は `~/.config/devcontainer/scripts/coderabbit-review.py` を実行します。
-別の checkout / worktree のスクリプトを修正しただけでは、その配置先が旧版のままの場合があります。
-SHA 指定が「現在の HEAD 以外」として拒否される場合は、まず実際の配置先と symlink の参照先を確認してください。
-この版はローカルで解決できる SHA を一時 worktree でレビューし、拒否しません。
-
+`git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
+スキップではレビュー済みの印を更新しないため、小さい変更は次のレビューに累積します。
+`gh pr create` は最後の関門なのでスキップしません。
+閾値は環境変数 `CODERABBIT_SKIP_LINES`・`CODERABBIT_SKIP_MINUTES` で変更でき、`0` で無効になります。
+Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
+Claude / Codex は stderr と終了コード 2 で止めます。
 認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
 hook は API key の環境変数やファイルを読みません。
 ログイン手順は [Docker Sandboxes](docker-sandboxes.md#coderabbit-cli-のブラウザーログイン) を参照してください。

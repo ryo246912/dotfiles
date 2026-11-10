@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Required PreToolUse review for git push / gh pr create, without eval.
-
-Review only commands whose repository and source can be resolved statically.
-Unresolved targets and failed reviews block; successful reviews return context.
-"""
+"""PreToolUse review for literal git push / gh pr create commands, without eval."""
 from contextlib import contextmanager
 import hashlib
 import json
@@ -17,24 +13,11 @@ import time
 import tempfile
 
 
-def report(message, copilot):
-    """Return review context without denying or pre-approving the operation."""
-    if copilot:
-        print(message)
-    else:
-        print(json.dumps({'hookSpecificOutput': {
-            'hookEventName': 'PreToolUse',
-            'additionalContext': message,
-        }}, ensure_ascii=False))
-    return 0
-
-
 def block(reason, copilot):
-    message = f'CodeRabbit: レビューを完了できないため操作を停止します。\n{reason}'
     if copilot:
-        print(json.dumps({'permissionDecision': 'deny', 'permissionDecisionReason': message}, ensure_ascii=False))
+        print(json.dumps({'permissionDecision': 'deny', 'permissionDecisionReason': reason}))
         return 0
-    print(message, file=sys.stderr)
+    print(reason, file=sys.stderr)
     return 2
 
 
@@ -109,7 +92,7 @@ def main():
         if (isinstance(command, list) and len(command) == 3 and all(isinstance(c, str) for c in command)
                 and command[1] in ('-c', '-lc')):
             command = command[2]
-        if not isinstance(command, str):
+        if not isinstance(command, str) or not shutil.which('coderabbit'):
             return 0
         command, expansion = shell_text(command)
         lexer = shlex.shlex(command.strip(), posix=True, punctuation_chars=';&|()<>\n')
@@ -147,7 +130,7 @@ def main():
     def is_target(words):
         if words[:2] == ['git', 'push'] or words[:3] == ['gh', 'pr', 'create']:
             return True
-        # Resolve literal -C below; skip review for other repository/config overrides.
+        # Resolve literal -C below; other repository/config overrides remain blocked.
         if words[:1] == ['git']:
             i = 1
             while i < len(words) and words[i].startswith('-'):
@@ -159,21 +142,22 @@ def main():
     targets = [words for words in groups if is_target(words)]
     if not targets:
         return 0
-    if len(targets) != 1:
-        return block('push / PR 作成は1回の呼び出しにつき1コマンドに分けてください。', copilot)
     words = targets[0]
     cwd = Path(tool.get('workdir') or event.get('cwd') or os.getcwd())
     if not cwd.is_absolute():
         cwd = Path.cwd() / cwd
-    # Track literal directory changes before the target, ignoring logging commands
-    # after it. Never execute command substitutions or any supplied shell text.
-    for preceding in groups[:groups.index(words)]:
-        if preceding[:1] == ['cd']:
-            if len(preceding) != 2 or any(c in preceding[1] for c in '$`') or preceding[1].startswith('-'):
-                return block('cd の移動先を静的に解決できません。', copilot)
-            cwd = cwd / Path(preceding[1]).expanduser()
-        elif preceding[:1] not in (['echo'], ['printf'], ['pwd'], ['true']) or any(c in ' '.join(preceding) for c in '$`'):
-            return block('先行コマンドが変更するレビュー対象を実行前に確定できません。', copilot)
+    compound = False
+    # Only a literal leading cd may precede the target. Commits and other mutations must run separately.
+    if len(groups) == 2 and len(groups[0]) == 2 and groups[0][0] == 'cd' and separators == ['&&']:
+        directory = groups[0][1]
+        if directory.startswith('-') or any(c in directory for c in '$`~'):
+            return block('CodeRabbit: cd を別の呼び出しで実行してから push / PR 作成を実行してください。', copilot)
+        cwd = cwd / directory
+    elif len(groups) != 1 or separators:
+        # An unknown directory change cannot be assumed to target this repository.
+        if any(g[:1] == ['cd'] for g in groups):
+            return block('CodeRabbit: cd と push / PR 作成を別の呼び出しに分けてください。', copilot)
+        compound = True
 
     if words[:1] == ['git']:
         i = 1
@@ -188,26 +172,21 @@ def main():
                     return block('CodeRabbit: -C には展開を含まないパスを指定してください。', copilot)
                 cwd = cwd / words[i][2:]
                 i += 1
-            elif words[i] == '-c' and i + 1 < len(words):
-                # Command-local configuration does not change the explicit source commit.
-                i += 2
-            elif words[i].startswith(('-c', '--config-env=')) or words[i] in ('--no-pager', '--paginate', '--no-optional-locks'):
-                i += 1
             else:
-                return block('Git のリポジトリ指定を静的に解決できません。', copilot)
+                return block('CodeRabbit: git のグローバルオプションは -C のみ対応しています。', copilot)
         words = ['git'] + words[i:]
 
     repo = git(cwd, 'rev-parse', '--show-toplevel')
-    if not repo:
-        return block('対象の Git リポジトリを特定できません。', copilot)
-    if not (Path(repo) / '.coderabbit.yaml').is_file():
+    if not repo or not (Path(repo) / '.coderabbit.yaml').is_file():
         return 0
-    if not shutil.which('coderabbit'):
-        return block('CodeRabbit CLI が見つかりません。', copilot)
     cwd = Path(repo)
+    if compound:
+        return block('CodeRabbit: commit・複合コマンドと push / PR 作成を別の呼び出しに分けてください。', copilot)
+    if expansion:
+        return block('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
     if not head:
-        return block('レビュー可能な HEAD がありません。', copilot)
+        return 0
     source = 'HEAD'
     if words[:2] == ['git', 'push']:
         positional = []
@@ -256,8 +235,6 @@ def main():
     else:
         return block('CodeRabbit: git のグローバルオプションを外し、対象ディレクトリで git push を実行してください。', copilot)
 
-    if any(c in source for c in '$`'):
-        return block('送信元の変数展開・コマンド置換は実行しません。', copilot)
     head = git(cwd, 'rev-parse', '--verify', '--end-of-options', source + '^{commit}')
     if not head:
         return block('CodeRabbit: 送信元をローカルのコミットとして解決できません。ブランチ名またはコミットを確認してください。', copilot)
@@ -284,21 +261,36 @@ def main():
     # rebase や force push で前回の HEAD が祖先でなくなったら、増分ではなく全体をレビューする。
     if reviewed and subprocess.run(['git', '-C', str(cwd), 'merge-base', '--is-ancestor', reviewed, head]).returncode == 0:
         args += ['--base-commit', reviewed]
+        # スキップしてもマーカーは更新しない。小さい変更も次のレビューに累積して必ず対象になる。
+        # gh pr create は最後の関門なので間引かない。
+        if words[:2] == ['git', 'push']:
+            numstat = git(cwd, 'diff', '--numstat', reviewed, head)
+            changed = sum(int(n) for line in numstat.splitlines() for n in line.split('\t')[:2] if n.isdigit())
+            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '50'))
+            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '10')) * 60
+            if changed < min_lines or time.time() - reviewed_at < min_seconds:
+                print(f'CodeRabbit: 前回レビューからの変更が小さい、または直後のためスキップします（{changed} 行）。', file=sys.stderr)
+                return 0
     print(f'Reviewing with CodeRabbit CLI... {source} ({head[:12]})', file=sys.stderr)
     try:
         with review_checkout(cwd, head) as checkout:
             result = subprocess.run(args, cwd=checkout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     except (OSError, RuntimeError) as error:
         return block(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
-    if result.returncode:
+    # exit 1 は「一部のファイルしかレビューできなかった」場合にも指摘を出力して返る。
+    # 未完了扱いにすると指摘が agent に届かず、マーカーも残らず毎回ブロックされるため、
+    # 出力があれば通常の指摘と同じく block してマーカーを更新する。
+    if result.returncode and not (result.returncode == 1 and result.stdout.strip()):
         output = result.stdout or '(CLI output unavailable)'
-        return block(f'CodeRabbit review failed (exit {result.returncode}).\n{output}', copilot)
+        print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
+        print(output, file=sys.stderr)
+        return 0
     try:
         marker.write_text(f'{head} {int(time.time())}\n')
     except OSError:
         pass
     output = result.stdout
-    return report(output or 'CodeRabbit review completed.', copilot)
+    return block(output or 'CodeRabbit review completed. 結果を確認してから再実行してください。', copilot)
 
 
 if __name__ == '__main__':
