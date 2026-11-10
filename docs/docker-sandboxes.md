@@ -1918,7 +1918,9 @@ mise run sandbox:coderabbit-login
    エラー・Ctrl-C 時も接続と転送を閉じる。
 
 ログイン待機は既定で 300 秒までです。callback が届かない場合はタイムアウトして警告を表示し、
-`sbx-agent` は sandbox の利用へ進みます。待機時間は `--timeout 600` のように変更できます。
+`sbx-agent` は sandbox の利用へ進みます。手動実行では
+`mise run sandbox:coderabbit-login -- --timeout 600` のように待機時間を変更できます。
+`sbx-agent` からの自動実行では既定値を使います。
 
 ポート指定、別ターミナルでの転送、`sandbox:coderabbit-forward` の実行は不要です。
 SSH 接続の制御用ソケットは一時ディレクトリに置き、終了時に削除します。認証情報は扱いません。

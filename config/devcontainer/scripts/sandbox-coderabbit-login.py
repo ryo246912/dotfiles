@@ -19,9 +19,13 @@ def login_lines(stream, timeout):
     lines = queue.Queue()
 
     def read():
+        """Queue output until EOF, tolerating the stream being closed on cleanup."""
         try:
             for line in stream:
                 lines.put(line)
+        except ValueError:
+            if not stream.closed:
+                raise
         finally:
             lines.put(None)
 
@@ -29,7 +33,10 @@ def login_lines(stream, timeout):
     deadline = time.monotonic() + timeout
     while True:
         try:
-            line = lines.get(timeout=max(0, deadline - time.monotonic()))
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise queue.Empty
+            line = lines.get(timeout=remaining)
         except queue.Empty:
             raise ValueError('CodeRabbit のログインがタイムアウトしました。ブラウザーの callback 接続を確認して再実行してください。') from None
         if line is None:
@@ -89,8 +96,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix='sbx-cr-') as tmp:
         control = str(Path(tmp) / 'ssh')
         ssh = ['ssh', '-S', control]
-        command = ssh + ['-M', '-o', 'ControlPersist=no', '--', host,
-                         'coderabbit', 'auth', 'login', '--agent', '--no-browser', '--region', args.region]
+        # Report the remote CLI's exit before SSH waits for forwarding channels.
+        remote_command = (
+            f'coderabbit auth login --agent --no-browser --region {args.region}; '
+            'rc=$?; printf \'\\n{"type":"sbx_cli_exit","exitCode":%s}\\n\' "$rc"; exit "$rc"'
+        )
+        command = ssh + ['-M', '-o', 'ControlPersist=no', '--', host, remote_command]
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
         authenticated = False
         forwarded = None
@@ -104,6 +115,13 @@ def main():
                     continue
                 if not isinstance(event, dict):
                     continue
+                if event.get('type') == 'sbx_cli_exit':
+                    rc = event.get('exitCode')
+                    if type(rc) is not int or not 0 <= rc <= 255:
+                        raise ValueError('CLI の終了コードが想定外です。')
+                    if rc:
+                        return rc
+                    raise ValueError('CLI の認証成功を確認できませんでした。')
                 if event.get('type') == 'error' or event.get('status') in ('authentication_failed', 'automatic_login_failed'):
                     raise ValueError(event.get('message') or 'CodeRabbit のログインに失敗しました。')
                 if event.get('status') == 'awaiting_browser_auth':
