@@ -103,7 +103,8 @@ CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot 
 Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
 コマンドを安全に分割して `git push`・`gh pr create` を判定します。
 単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
-commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
+push 後の echo / printf / tail とリダイレクトにも対応します。
+commit と push の連結、その他の状態を変更する複合コマンド、展開を含むコマンドは分割を促して止めます。
 `git -C <path> push` と、別ブランチ・コミットを送信元にした push / PR の `--head` に対応します。
 送信元が実行ディレクトリの HEAD と異なる場合は、一時的な detached worktree でそのコミットをレビューします。
 現在のブランチや未コミットの編集は変更しません。レビュー後は一時 worktree を削除します。
@@ -124,7 +125,7 @@ gh pr create --head other-branch
 `<source>:<destination>` の source は現在の HEAD や destination と一致する必要はありません。
 レビュー対象は destination 側のコミットではなく、source を解決したローカルコミットです。
 レビュー結果で一度停止した場合は、結果を確認・対応したうえで同じコマンドを再実行します。
-この対応でも、複合コマンドの制限・レビュー後の停止・間引き条件は従来どおりです。
+レビュー後に一度停止し、結果を確認してから同じコマンドを再実行する動作は従来どおりです。
 
 sandbox 内のフックは template に COPY されます。古いフックが HEAD 以外を拒否する場合、
 ホストでの checkout / dotfiles apply だけでは更新されません。
@@ -133,14 +134,11 @@ sandbox 内のフックは template に COPY されます。古いフックが H
 
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
-その実行を止めます。CLI の失敗時は続行します。
+その実行を止めます。CLI 不在・失敗時は、レビュー未完了のため停止します。
 レビュー記録は Git の共通ディレクトリ内に送信元 ref ごとに保存し、別ブランチのレビューと混同しません。
 2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
 前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
-`git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
-スキップではレビュー済みの印を更新しないため、小さい変更は次のレビューに累積します。
-`gh pr create` は最後の関門なのでスキップしません。
-閾値は環境変数 `CODERABBIT_SKIP_LINES`・`CODERABBIT_SKIP_MINUTES` で変更でき、`0` で無効になります。
+変更量・経過時間によるレビューの間引きは行いません。正常にレビュー済みの同一コミットのみ再実行を省略します。
 Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
 Claude / Codex は stderr と終了コード 2 で止めます。
 認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
