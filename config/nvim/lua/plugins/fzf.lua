@@ -81,8 +81,8 @@ return {
       -- ファイル名で検索（VSCode Ctrl+P 相当）
       keymap("n", "<leader>p", function()
         fzf.files({
-          -- gitignore・隠しファイルも含め、依存環境と Git 内部ファイルは除外する
-          cmd = "rg --files --hidden --no-ignore --glob '!node_modules' --glob '!.venv' --glob '!.git'",
+          -- gitignore・隠しファイルも含め、devcontainer で分離する生成物と Git 内部ファイルは除外する
+          cmd = "rg --files --hidden --no-ignore --glob '!node_modules' --glob '!.venv' --glob '!target' --glob '!.gradle' --glob '!.terraform' --glob '!.git'",
         })
       end, { noremap = true, silent = true, desc = "ファイル名検索" })
 
