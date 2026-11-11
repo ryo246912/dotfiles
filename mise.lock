@@ -115,16 +115,19 @@ specifiers = ["13.1.0"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-arm64"]
 checksum = "sha256:5e6d576d831f78939fea856332fa9e44eca7d1b49205e4065d0f1d3accec7b64"
+checksum_source = "mise-versions"
 url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-arm64"
 url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571715"
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
 checksum = "sha256:dfecc90fb338abe2b7be6d7c7a9d4ada7d0315204be5ea8f1c22a411fa2252d7"
+checksum_source = "mise-versions"
 url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-linux-x64"
 url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571711"
 
 [tools."aqua:secretlint/secretlint"."platforms.macos-arm64"]
 checksum = "sha256:21ff006570411a3392a8ae489feb3d2f2813a9361f2f8ec0d36e21ec4605ab28"
+checksum_source = "mise-versions"
 url = "https://github.com/secretlint/secretlint/releases/download/v13.1.0/secretlint-13.1.0-darwin-arm64"
 url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/676571712"
 
