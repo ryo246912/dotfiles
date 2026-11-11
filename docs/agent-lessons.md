@@ -423,8 +423,11 @@ GitHub のコメントへ辿れる。
 # 作業中のリポジトリに効く教訓を見る（SessionStart と同じ出力）
 echo '{}' | agent-lessons-context
 
-# 作業中のリポジトリに効く教訓を、Rule・Patterns・Check 付きで見る（skill と同じ出力）
+# 作業中のリポジトリに効く教訓を、タイトル・場所・Check で選別する（skill の一次選別と同じ出力）
 # Claude Code の skill は ~/.claude/skills、Codex は ~/.agents/skills に配られる（どちらも同じスクリプト）
+python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --summary
+
+# 全候補の Rule・Patterns・Check が必要な場合
 python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --full
 
 # 全教訓の一覧（status を問わない）
@@ -476,9 +479,9 @@ mise run lessons:sync
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
-- **skill は教訓を 1 回で引く。** `pr-author-self-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
-  scope・source・変更ファイルの glob に合う教訓だけを Rule・Check 付きで 1 回で出す（Basic Memory で 1 件ずつ
-  read-note しない）。SessionStart で注入するのも教訓のタイトルだけにしている
+- **skill は教訓を段階的に読む。** `pr-author-self-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
+  scope・source・変更ファイルの glob に合う教訓をタイトル・場所・Check で一覧にし、関係するものと適用可否が不明なものだけ
+  clone の本文（Rule・Patterns・Check）を読む。タイトルだけで除外せず、調査で新たな論点が見つかれば候補を追加する。SessionStart で注入するのも教訓のタイトルだけにしている
 - **昇格を PR にする理由。** 提案をファイルに溜めて人が見に行く方式は回らなかった。PR なら普段の通知で届き、
   diff で確認できる
 - **教訓を項目単位で更新する理由。** LLM にファイル全体を書き直させると、根拠や細部が少しずつ失われる
