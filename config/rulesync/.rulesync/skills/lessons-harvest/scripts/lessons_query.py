@@ -9,6 +9,7 @@ Basic Memory を 1 件ずつ read-note するとトークンも時間もかか�
 
   --source   received / given / team をカンマ区切りで（既定はすべて）
   --paths    変更ファイル。教訓の globs が空か、どれかに一致するものだけ残す
+  --summary  タイトル・場所・Check を出す（候補の選別用）
   --full     Rule・Patterns（よく出たダメな形 → 直し方）・Check まで出す（既定はタイトルと場所だけ）
   --index    scope・status で絞らず、全教訓を集計用の項目（件数など）付きで出す
 """
@@ -26,7 +27,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="received,given,team")
     ap.add_argument("--paths", nargs="*", default=[])
-    ap.add_argument("--full", action="store_true")
+    detail = ap.add_mutually_exclusive_group()
+    detail.add_argument("--summary", action="store_true")
+    detail.add_argument("--full", action="store_true")
     ap.add_argument("--index", action="store_true")
     args = ap.parse_args()
     L.check_schema(strict=False)
@@ -61,11 +64,12 @@ def main() -> int:
         if not L.matches(meta.get("globs"), args.paths):
             continue
         item = {"path": rel, "title": meta.get("title"), "source": meta.get("source")}
-        if args.full:
+        if args.summary or args.full:
             sec = L.sections(body)
+            item["check"] = sec.get("Check", "")
+        if args.full:
             item["rule"] = sec.get("Rule", "")
             item["patterns"] = [b[2:] for b in L.bullets(sec.get("Patterns", ""))]
-            item["check"] = sec.get("Check", "")
         out.append(item)
 
     json.dump(out, sys.stdout, ensure_ascii=False, separators=(",", ":"))
