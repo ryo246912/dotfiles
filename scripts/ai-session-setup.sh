@@ -24,4 +24,8 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
 fi
 mise trust --yes
 mise install --yes
-mise exec -- lefthook install
+# mise の環境変数を適用した子プロセス内で設定を確認する。
+mise exec -- sh -c '
+[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
+lefthook install
+'
