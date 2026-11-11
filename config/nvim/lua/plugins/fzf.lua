@@ -80,9 +80,22 @@ return {
 
       -- ファイル名で検索（VSCode Ctrl+P 相当）
       keymap("n", "<leader>p", function()
+        local cmd = "rg --files --hidden --no-ignore --follow --glob '!node_modules/' --glob '!.venv/' --glob '!.gradle/' --glob '!.terraform/' --glob '!.git/'"
+        -- devcontainer と同じく、Rust/Maven の manifest がある場所の target だけ除外する。
+        local manifests = vim.fn.systemlist(cmd .. " --glob '!target/' --glob Cargo.toml --glob pom.xml")
+        if vim.v.shell_error > 1 then
+          vim.notify("生成物の除外対象を取得できませんでした", vim.log.levels.ERROR)
+          return
+        end
+        for _, manifest in ipairs(manifests) do
+          local directory = manifest:match("^(.*)/[^/]+$")
+          local target = directory and (directory .. "/target/") or "target/"
+          local glob = "!/" .. vim.fn.escape(target, "\\*?[]{}")
+          cmd = cmd .. " --glob " .. vim.fn.shellescape(glob)
+        end
         fzf.files({
           -- gitignore・隠しファイルも含め、devcontainer で分離する生成物と Git 内部ファイルは除外する
-          cmd = "rg --files --hidden --no-ignore --glob '!node_modules' --glob '!.venv' --glob '!target' --glob '!.gradle' --glob '!.terraform' --glob '!.git'",
+          cmd = cmd,
         })
       end, { noremap = true, silent = true, desc = "ファイル名検索" })
 
