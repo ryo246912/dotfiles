@@ -80,12 +80,17 @@ return {
 
       -- ファイル名で検索（VSCode Ctrl+P 相当）
       keymap("n", "<leader>p", function()
-        local cmd = "rg --files --hidden --no-ignore --follow --glob '!node_modules/' --glob '!.venv/' --glob '!.gradle/' --glob '!.terraform/' --glob '!.git/'"
+        if vim.fn.executable("rg") == 0 then
+          vim.notify("rg がないため、標準のファイル検索を使用します", vim.log.levels.WARN)
+          fzf.files()
+          return
+        end
+        local cmd = "rg --files --hidden --no-ignore --follow --glob '!node_modules/' --glob '!.venv/' --glob '!.gradle/' --glob '!.terraform/' --glob '!.git'"
         -- devcontainer と同じく、Rust/Maven の manifest がある場所の target だけ除外する。
         local manifests = vim.fn.systemlist(cmd .. " --glob '!target/' --glob Cargo.toml --glob pom.xml")
         if vim.v.shell_error > 1 then
-          vim.notify("生成物の除外対象を取得できませんでした", vim.log.levels.ERROR)
-          return
+          vim.notify("生成物の除外対象を取得できなかったため、target の追加除外をスキップします", vim.log.levels.WARN)
+          manifests = {}
         end
         for _, manifest in ipairs(manifests) do
           local directory = manifest:match("^(.*)/[^/]+$")
