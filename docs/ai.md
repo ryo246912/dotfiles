@@ -1379,6 +1379,69 @@ cclens doctor --scope project:<slug>  # 特定の1プロジェクトだけを対
 読み取り系のコマンドは実行時に `cclens analyze` を自動で走らせてストアを更新します。
 ただし `sql` は自動で更新しないため、最新の内容を対象にしたいときは先に `doctor` か `analyze` を実行します。
 
+### 分析の進め方
+
+`doctor` の出力は 4 つのブロックに分かれます。上から順に、次のように掘り下げます。
+
+| ブロック             | 読み方                                                                                                                                            | 掘り下げるコマンド                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| WHAT TO FIX FIRST    | 優先度順の失敗。複数プロジェクトで起きているものは `~/.claude`（グローバル設定）、1 プロジェクトに偏るものはそのプロジェクトの `CLAUDE.md` で直す | `cclens failures --scope global` / `project:<slug>` |
+| COST                 | 毎セッションの固定コスト。自分の設定ぶんは削れるが、Claude Code 本体（system prompt・組み込みツール・MCP スキーマ）は削れない                     | `cclens overhead` / `cclens usage`                  |
+| CONFIG WORTH PRUNING | 一度も使われていない surface。「解析対象のセッションで使っていない」だけなので、消す前に中身と用途を確認する                                      | `cclens waste --scope global`                       |
+| LOOKS HEALTHY        | 問題なしの観点。steering / corrections の割合が低ければ、自律的に進められている                                                                   | `cclens prompts`                                    |
+
+#### 失敗（`failures`）の分析
+
+1. `cclens failures --scope global` でカテゴリ別の件数を見る。
+2. 件数の多いカテゴリは、`cclens sql` で生のエラー文を集計して中身を確認する。
+   カテゴリ名だけでは原因が分からないため（特に `command-failed` / `other` は未分類）。
+3. 原因に応じて、ルール・hook・環境のどこで直すかを決める。
+
+```bash
+cclens analyze   # sql は自動更新しないので、先にストアを最新にする
+cclens sql "SELECT category, tool, COUNT(*) n FROM tool_errors GROUP BY 1,2 ORDER BY n DESC"
+cclens sql "SELECT substr(excerpt,1,110) e, COUNT(*) n FROM tool_errors WHERE category='blocked-by-hook' GROUP BY 1 ORDER BY n DESC LIMIT 10"
+```
+
+`tool_errors` ビューのカラムは `category` / `excerpt` / `tool` / `project`。DB は読み取り専用で開かれます。
+
+| カテゴリ             | 主な原因                           | 対応                                                                                   |
+| -------------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| `blocked-by-hook`    | 権限拒否、hook による拒否          | 内訳を `sql` で確認する。権限拒否はルールでは減らせない。hook 起因はルールで先回りする |
+| `path-not-found`     | パスの推測                         | Glob / `git ls-files` で実在を確認させるルール                                         |
+| `command-not-found`  | その環境に無いツール               | `mise ls` / `which` で確認して報告させるルール。常用するなら mise で入れる             |
+| `edit-precondition`  | 古い内容のまま Edit                | Read し直してから Edit させるルール                                                    |
+| `tool-not-available` | 存在しない、または未ロードのツール | 一覧にあるツールだけ呼ばせる。遅延ロードは ToolSearch で先に読み込む                   |
+| `timeout`            | 長時間のコマンド                   | `timeout` を明示、または分割                                                           |
+| `cancelled`          | ユーザー停止、並列キャンセル       | 対応不要                                                                               |
+
+#### Bash の `cd` 比率
+
+`doctor` は「Bash の N% が `cd` だけ」も指摘します。毎回 `cd <dir> && ...` を前置している状態なので、
+グローバルのルールに「絶対パスか `git -C` を使う」と書くと下がります（このリポジトリでは 46% から 30% に低下）。
+
+#### ルールを足したあとの確認
+
+ルールはどれも毎セッション数百バイトのコンテキストを増やします。足したあとは、数日分のセッションが溜まってから
+`cclens doctor` を再実行し、該当カテゴリの件数が減っているかを見ます。減っていなければルールを削ります。
+
+#### プロジェクトのスラッグ
+
+`--scope project:<slug>` の `<slug>` は、`~/.claude/projects/` 配下のディレクトリ名と一致します。
+`doctor` の WHAT TO FIX FIRST が、そのまま貼れる形で `--scope project:<slug>` を出してくれます。
+fzf で選ぶなら次の関数が使えます。
+
+```zsh
+cclens-failures() {
+  local slug
+  slug=$(ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" \
+    | fzf --prompt='project> ' \
+          --preview 'cclens failures --scope project:{} --frozen' \
+          --preview-window=right:70%) || return
+  cclens failures --scope "project:$slug" "$@"
+}
+```
+
 ### データの場所
 
 - 設定ディレクトリ: `CLAUDE_CONFIG_DIR`（空でなければ）、なければ `~/.claude`。
