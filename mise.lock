@@ -261,10 +261,10 @@ url = "https://github.com/superfly/flyctl/releases/download/v0.4.29/flyctl_0.4.2
 url_api = "https://api.github.com/repos/superfly/flyctl/releases/assets/385745065"
 
 [[tools."npm:oxfmt"]]
-version = "0.76.0"
-aube = { path = ".mise/locks/npm-oxfmt/0.76.0", digest = "sha256:313fdba84da0438bbd7e107264cd28a393498936d62648223b078a3fdb990dac" }
+version = "0.78.0"
+aube = { path = ".mise/locks/npm-oxfmt/0.78.0", digest = "sha256:0da2508ef998e667c28c917c70d56e9d70b8513831de5663f0e0bdfae343bf2b" }
 backend = "npm:oxfmt"
-specifiers = ["0.76.0"]
+specifiers = ["0.78.0"]
 
 [[tools."npm:oxlint"]]
 version = "1.87.0"
