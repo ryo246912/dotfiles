@@ -1289,28 +1289,6 @@ dependencies:
     .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
   content_hash: sha256:3133b97b1d13e831e316574c3dc9634c219ee209b075874813dc2d25492130fb
 - repo_url: mattpocock/skills
-  name: resolving-merge-conflicts
-  host: github.com
-  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-  resolved_ref: v1.2.3
-  version: unknown
-  virtual_path: skills/engineering/resolving-merge-conflicts
-  is_virtual: true
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/resolving-merge-conflicts
-  - .agents/skills/resolving-merge-conflicts/SKILL.md
-  - .agents/skills/resolving-merge-conflicts/agents/openai.yaml
-  - .claude/skills/resolving-merge-conflicts
-  - .claude/skills/resolving-merge-conflicts/SKILL.md
-  - .claude/skills/resolving-merge-conflicts/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/resolving-merge-conflicts/SKILL.md: sha256:c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24
-    .agents/skills/resolving-merge-conflicts/agents/openai.yaml: sha256:a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf
-    .claude/skills/resolving-merge-conflicts/SKILL.md: sha256:c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24
-    .claude/skills/resolving-merge-conflicts/agents/openai.yaml: sha256:a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf
-  content_hash: sha256:bfafce942f3d1264eb6bb931cd39b66cf8889f08072ba6264b5b111b141d2354
-- repo_url: mattpocock/skills
   name: grill-me
   host: github.com
   resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
@@ -5025,33 +5003,6 @@ deployments:
   content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
 - kind: project-relative
   target: claude
-  value: .claude/skills/resolving-merge-conflicts
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/resolving-merge-conflicts/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: sha256:c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24
-- kind: project-relative
-  target: claude
-  value: .claude/skills/resolving-merge-conflicts/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: sha256:a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf
-- kind: project-relative
-  target: claude
   value: .claude/skills/terminal-browser
   runtime: null
   scope: project
@@ -8137,33 +8088,6 @@ deployments:
   - nidhinjs/prompt-master
   active_owner: nidhinjs/prompt-master
   content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
-- kind: project-relative
-  target: codex
-  value: .agents/skills/resolving-merge-conflicts
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: null
-- kind: project-relative
-  target: codex
-  value: .agents/skills/resolving-merge-conflicts/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: sha256:c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24
-- kind: project-relative
-  target: codex
-  value: .agents/skills/resolving-merge-conflicts/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  active_owner: mattpocock/skills/skills/engineering/resolving-merge-conflicts
-  content_hash: sha256:a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf
 - kind: project-relative
   target: codex
   value: .agents/skills/terminal-browser
