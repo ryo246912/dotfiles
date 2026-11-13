@@ -673,7 +673,7 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 | 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                                         |
+| `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-self-review`                                                                                                                                                                                                                                                                      |
 | `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
 | `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                          |
 
@@ -718,7 +718,6 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - Tsumiki skills
 - Ponytailの6 skill
 - `ctx-agent-history-search`
-- `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
@@ -1153,39 +1152,6 @@ $ctx-agent-history-search を使って、以前database migrationに失敗した
 
 手動検索では`ctx search "query"`、詳細表示では`ctx show session <session-id>`などを使用します。setup、主要command、
 local historyに含まれる秘密情報の注意点は[`docs/ctx.md`](ctx.md)を参照してください。
-
-### `resolving-merge-conflicts`
-
-#### 用途
-
-進行中の `git merge` または `git rebase` で発生した conflict を、両方の変更意図を調べながら解消する skill です。
-単に片側を採用するのではなく、commit・PR・issue などの一次情報を確認し、可能な限り双方の意図を保ちます。
-
-#### 使い方
-
-conflict が発生した状態で、エージェントに自然言語で依頼します。明示的に指定する場合は、Claude Code では
-`/resolving-merge-conflicts`、Codex では `$resolving-merge-conflicts` を使用します。
-
-```text
-/resolving-merge-conflicts
-現在の rebase conflict を、各 commit の意図を確認して解消してください。
-```
-
-```text
-$resolving-merge-conflicts を使って、この merge conflict を解消してください。
-```
-
-skill は次の順に作業します。
-
-1. merge/rebase の状態、履歴、conflict 対象を確認する。
-2. 各変更の commit・PR・issue を調べ、意図を特定する。
-3. conflict を hunk 単位で解消する。
-4. リポジトリの typecheck・test・format などを実行する。
-5. ファイルを stage し、merge commit または `git rebase --continue` まで完了する。
-
-> [!IMPORTANT]
-> この skill は進行中の merge/rebase を `--abort` せず、最後まで完了させる方針です。中断したい場合は、実行前に
-> その旨を明示してください。また、作業ツリーに退避していない変更がないか事前に確認してください。
 
 ### `grill-me`
 
