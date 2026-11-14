@@ -119,7 +119,7 @@ def new_lesson(spec: dict, source: str, today: str) -> tuple[dict, str]:
 
 
 def lesson_path(source: str, scope_key: str, key: str) -> Path:
-    return L.LESSONS_DIR / "lessons" / source / scope_key / f"{re.sub(r'[^\w-]+', '-', key).strip('-')}.md"
+    return L.LESSONS_DIR / "lessons" / source / scope_key / f"{L.ascii_slug(key)}.md"
 
 
 def archive_path(path: Path, today: str) -> Path:
@@ -156,7 +156,7 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     def spec_ok(spec: dict, where: str, required: tuple[str, ...]) -> None:
         if not L.SCOPE_KEY.fullmatch(str(spec.get("scope_key", ""))):
             errors.append(f"{where}: scope_key が不正: {spec.get('scope_key')}")
-        if not re.fullmatch(r"[\w-]+", str(spec.get("key", ""))):
+        if not L.KEY.fullmatch(str(spec.get("key", ""))):
             errors.append(f"{where}: key は英数字と - だけにする: {spec.get('key')}")
         errors.extend(f"{where}: {k} が無い" for k in required if not spec.get(k))
 
@@ -190,7 +190,7 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
                    if m.get("scope_key") == target or not L.covers(target, str(m.get("scope_key")))]  # fmt: skip
         errors += [f"{where}: ruled の教訓は仕組みで防いでいるのでまとめない: {m.get('title')}" for m in metas
                    if m.get("status") == "ruled"]  # fmt: skip
-        if metas and L.SCOPE_KEY.fullmatch(target) and re.fullmatch(r"[\w-]+", str(w.get("key", ""))):
+        if metas and L.SCOPE_KEY.fullmatch(target) and L.KEY.fullmatch(str(w.get("key", ""))):
             dest = lesson_path(str(metas[0].get("source")), target, w["key"])
             # 既存の教訓を上書きすると根拠と件数が消える。既存の教訓へまとめるのは月次の merge が行う
             if dest.exists():

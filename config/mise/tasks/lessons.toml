@@ -78,11 +78,39 @@ done
 
 git add --all
 if ! git diff --cached --quiet; then
+  # 衝突マーカーは frontmatter を壊し、日本語のファイル名は Basic Memory が壊れた permalink を作る。どちらも commit しない。
+  # grep -q は最初の一致で閉じて git diff が SIGPIPE になり、pipefail で検査が素通りするうえ、-P は macOS の grep に無い
+  python3 - <<'PY'
+import re
+import subprocess
+import sys
+
+CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
+FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
+git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True).stdout
+names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z").decode().split("\0")
+errors = []
+for name in filter(None, names):
+    if not name.isascii():
+        errors.append(f"ASCII でないファイル名: {name}（<日付>-<category>-<hash>.md の形に改名する）")
+    if name.endswith(".md"):
+        m = FRONTMATTER.match(git("show", f":{name}").decode(errors="replace"))
+        if m and CONFLICT.search(m[1]):
+            errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
+if errors:
+    sys.exit("error: " + "\nerror: ".join(errors))
+PY
   git diff --cached --no-renames --name-only --diff-filter=ACM -z \
     | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
-git pull --rebase --quiet
+# 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
+# マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
+if ! git -c rebase.autoStash=false pull --rebase --quiet; then
+  git rebase --abort 2>/dev/null || true
+  echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
+  exit 1
+fi
 
 # 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
 # pull の後に拾う。skill は rulesync が配る先のどちらかにある。

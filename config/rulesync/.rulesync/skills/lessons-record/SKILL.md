@@ -41,6 +41,8 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 | `globs`     | この教訓が効くファイルの glob。どこでも効くなら `[]`                                                                         |
 | `evidence`  | 指摘のスレッド URL（`https://github.com/<owner>/<repo>/pull/<n>#discussion_r<id>`）。訂正なら `session: <YYYY-MM-DD> <要旨>` |
 
+`title` と `evidence` は YAML の二重引用符で囲むので、中の `"` は `\"`、`\` は `\\` にエスケープする（避けられるなら使わない）。
+
 タイトル・本文は、元のコメントが英語でも日本語で書く（日本語でない観察は lessons-harvest の検査で止まる）。コード・識別子は
 原文のままでよく、`` ` `` で囲む。
 
@@ -49,14 +51,29 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 
 ## 2. inbox に書く
 
+ファイル名は ASCII の `<YYYY-MM-DD>-<category>-<evidence の hash 6 桁>.md` にして、ファイルを直接書く。
+`basic-memory tool write-note` は使わない。ファイル名と permalink をタイトルから作るため、日本語のタイトルだと
+ローマ字混じりの壊れた permalink になる。
+
+`evidence` は `'` を含み得るので、シェルの引用符に直接入れず、引用符なしの heredoc（`'EOF'`）で変数に取ってから hash する。
+hash のコマンドは環境で違う（Linux は `sha1sum`、macOS は `shasum`）ので、どちらも無ければ止める。
+
 ```bash
-basic-memory tool write-note --project agent-lessons \
-  --folder "inbox/<source>" \
-  --title "<YYYY-MM-DD> <タイトル>" \
-  --type lesson_observation \
-  --content "$(cat <<'EOF'
+evidence=$(cat <<'EOF'
+<evidence>
+EOF
+)
+if command -v sha1sum >/dev/null; then sha() { sha1sum; }
+elif command -v shasum >/dev/null; then sha() { shasum -a 1; }
+else echo "error: sha1sum も shasum も無い" >&2; exit 1; fi
+hash=$(printf %s "$evidence" | sha | cut -c1-6)
+dir=~/.local/share/agent-lessons/inbox/<source>
+mkdir -p "$dir"
+cat > "$dir/<YYYY-MM-DD>-<category>-$hash.md" <<'EOF'
 ---
 schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
+title: "<YYYY-MM-DD> <タイトル>"
+type: lesson_observation
 status: pending
 date: <YYYY-MM-DD>
 source: <received|given>
@@ -77,7 +94,6 @@ globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると 
 ## Check
 <push 前に diff で探すもの（grep する語・コードの形）。「〜を確認したか」とは書かない>
 EOF
-)"
 ```
 
 同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/{inbox,lessons,archived}`）。
