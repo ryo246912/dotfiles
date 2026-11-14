@@ -1681,7 +1681,7 @@ sbx-agent claude --claude-account account1 --new
 
 setup-token 用と通常の OAuth 用の Sandbox は併用できます。
 普段は既存の `Claude account1 (Docker Sandbox)` などを使い、Chrome が必要なときだけ
-ccmanager の **Claude OAuth + Chrome (Docker Sandbox)** を選んでください。
+ccmanager の **Claude OAuth(Docker Sandbox)** を選んでください。
 この preset は `--claude-oauth --name-prefix oauth -- --chrome` で起動し、
 setup-token の account1 / account2 / work3 とは別名の Sandbox を使います。
 共通の `sbxenv.yaml` では Chrome を有効にせず、OAuth preset だけで明示的に有効化します。

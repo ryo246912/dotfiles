@@ -92,7 +92,7 @@
       },
       {
         "id": "sbx-oauth-chrome",
-        "name": "Claude OAuth + Chrome (Docker Sandbox)",
+        "name": "Claude OAuth(Docker Sandbox)",
         "command": "zsh",
         "args": [
           "-c",
