@@ -96,7 +96,7 @@ gh run view <run-ID> --log-failed
 
 ```bash
 gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>
-gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments --paginate --slurp
+gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments --paginate | jq -s 'add'
 ```
 
 - 指定レビューの本文とインラインをすべて読み、指摘を全件表にする。PR 全体のフィルターで指定レビューの項目を落とさない
@@ -107,12 +107,13 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments -
 1. インラインコメント（Review Comments）の取得
 
 ```bash
+set -o pipefail
 # リポジトリのowner/nameを取得
 gh repo view --json owner,name --jq '{owner: .owner.login, name: .name}'
 
 # インラインコメントを作成日時順で取得
-gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --slurp \
-  --jq 'add | sort_by(.created_at) | .[] | {
+gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate |
+  jq -s 'add | sort_by(.created_at) | .[] | {
     id: .id,
     author: .user.login,
     body: .body,
@@ -140,11 +141,12 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --slurp \
 2. PR 全体の情報（会話コメント、レビューサマリー）の取得
 
 ```bash
-gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews --paginate --slurp --jq 'add'
-gh api repos/<owner>/<repo>/issues/<PR番号>/comments --paginate --slurp --jq 'add'
+set -o pipefail
+gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews --paginate | jq -s 'add'
+gh api repos/<owner>/<repo>/issues/<PR番号>/comments --paginate | jq -s 'add'
 ```
 
-REST の各配列を下記の表示用構造へ正規化する（`user.login` → `author.login`、`submitted_at` → `submittedAt`、`created_at` → `createdAt`）。`gh pr view` の reviews/comments は全件取得の代わりにしない。`--slurp` 未対応の gh では `--paginate --jq ".[]"` の全出力をローカル JSON パーサで配列化し、ページをまたいでソートする。
+REST の各配列を下記の表示用構造へ正規化する（`user.login` → `author.login`、`submitted_at` → `submittedAt`、`created_at` → `createdAt`）。`gh pr view` の reviews/comments は全件取得の代わりにしない。`jq -s` で全ページをまとめてから `add` で配列を結合する。CLI の失敗時は処理を止め、空の成功結果として扱わない。
 
 PR 全体の情報のデータ構造:
 
