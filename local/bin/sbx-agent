@@ -388,7 +388,7 @@ if [[ -n "$CLAUDE_ACCOUNT" ]]; then
         exit 1
     }
     SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/kits/claude-subscription"
-    [[ -f "$SUBSCRIPTION_KIT/spec.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
+    [[ -f "$SUBSCRIPTION_KIT/claude-subscription.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
     SUBSCRIPTION_TOKEN="${HOME}/.local/state/sbx-agent-credentials/${CLAUDE_ACCOUNT}.token"
     SUBSCRIPTION_MARKER="${HOME}/.local/state/sbx-agent-credentials/sandboxes/${SANDBOX_NAME}"
     if [[ ! -s "$SUBSCRIPTION_TOKEN" || -L "$SUBSCRIPTION_TOKEN" ]]; then

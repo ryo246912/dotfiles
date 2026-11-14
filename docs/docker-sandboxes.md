@@ -365,7 +365,7 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 
 ### ドキュメントサイトの許可
 
-共通の許可ドメインは `config/sbx/kits/common/spec.yaml` の
+共通の許可ドメインは `config/sbx/kits/common/common.yaml` の
 `permissions.network.allow` に宣言しています。変更後は sandbox を作り直します。
 追加許可は、gitignore 済みの `config/sbx/allow-domains.<name>.txt`
 （1行1パターン、`#` 以降はコメント）に書き、`mise run sandbox:setup` で全 sandbox 共通の policy に反映します。
@@ -551,7 +551,7 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 ccmanager の Claude Docker Sandbox preset は `--claude-account` を使います。
 **設定ディレクトリと sandbox 名を分けるだけでは OAuth アカウントは分かれません。**
 標準 Claude agent の `/login` はホスト側の共通認証を更新します。
-このため専用の v3 workload kit [`config/sbx/kits/claude-subscription/spec.yaml`](../config/sbx/kits/claude-subscription/spec.yaml)
+このため専用の v3 workload kit [`config/sbx/kits/claude-subscription/claude-subscription.yaml`](../config/sbx/kits/claude-subscription/claude-subscription.yaml)
 を使用し、sandbox 固有の secret を `Authorization: Bearer` として送ります。
 API キーの登録インターフェースを使いますが、登録するのは `claude setup-token` の
 サブスク用 token です。API キー課金への切り替えを意図したものではありません。
@@ -1260,7 +1260,7 @@ devcontainer との違いは 2 点です。
 2. **network policy で明示的に許可が必要。** sandbox プロキシは `host.docker.internal` を
    `localhost` に書き換えて転送するため、許可ルールは `localhost:<port>` の形で書きます。
 
-`localhost:22` は `kits/common/spec.yaml` が sandbox 作成時に許可します。
+`localhost:22` は `kits/common/common.yaml` が sandbox 作成時に許可します。
 
 鍵は devcontainer と同じ専用鍵（`~/.ssh/id_docker_devcontainer`）を read-only でマウントします。
 個人鍵は渡しません（コミット署名は別途 ssh-agent forwarding を使います）。
@@ -1366,7 +1366,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 | devcontainer                                                                              | sandbox                                                       |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/spec.yaml` の `environment`                   |
+| `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/common.yaml` の `args.*.env`                  |
 | `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`                      | ✅ `--env` で渡す                                             |
 | `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
 | `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
@@ -1702,17 +1702,17 @@ Chrome 連携の認証要件を満たしません。ホストの保存済み OAu
 
 ### 設定の正本
 
-| 設定                                         | 正本・処理                                      |
-| -------------------------------------------- | ----------------------------------------------- |
-| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
-| CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
-| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
-| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
-| Claude の Chrome 連携の既定値                | `sbxenv.yaml` の `env.CLAUDE_CODE_ENABLE_CFC`   |
-| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                      |
-| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
-| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
-| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                        |
+| 設定                                         | 正本・処理                                          |
+| -------------------------------------------- | --------------------------------------------------- |
+| 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/common.yaml`                           |
+| CodeRabbit の認証・通信先                    | `kits/coderabbit/coderabbit.yaml`                   |
+| Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/claude-subscription.yaml` |
+| GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`                   |
+| Claude の Chrome 連携の既定値                | `sbxenv.yaml` の `env.CLAUDE_CODE_ENABLE_CFC`       |
+| CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                          |
+| アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                      |
+| CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない     |
+| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                            |
 
 GitHub は `gh auth token` で取得します。
 CodeRabbit は private / work3 とも、`sbx-agent` で新規作成した sandbox の初期化後に
@@ -1765,16 +1765,16 @@ v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在で�
 
 #### 既存設定を kit に移す候補
 
-| 対象                                         | 移行の向き不向き     | 理由                                                                                                       |
-| -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/spec.yaml` の `args.*.env` で共通化している                                                   |
-| sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する      |
-| 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
-| 固定の network 許可                          | 移行済み             | `kits/common/spec.yaml` の `network-policy@1` capability。kit の更新は sandbox 再作成（`--new`）で反映する |
-| Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する    |
-| account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                           |
-| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                       |
-| SSH 経路・crit / plannotator の採番ポート    | ラッパー中心で維持   | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要                                                 |
+| 対象                                         | 移行の向き不向き     | 理由                                                                                                         |
+| -------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/common.yaml` の `args.*.env` で共通化している                                                   |
+| sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する        |
+| 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない   |
+| 固定の network 許可                          | 移行済み             | `kits/common/common.yaml` の `network-policy@1` capability。kit の更新は sandbox 再作成（`--new`）で反映する |
+| Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する      |
+| account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                             |
+| sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                         |
+| SSH 経路・crit / plannotator の採番ポート    | ラッパー中心で維持   | 作成後に決まるホスト port の取得や、再接続ごとの設定が必要                                                   |
 
 次に進めるなら、まず固定の環境変数を共通の mixin kit へまとめる小さい変更が候補です。
 今回は認証分離の変更に限定し、これらは移していません。kit の承認は service/domain の変更時に必要で、
