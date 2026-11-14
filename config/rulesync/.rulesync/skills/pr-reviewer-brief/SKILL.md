@@ -28,6 +28,8 @@ targets:
 | `-h`, `--help` | ヘルプのみ表示して終了                                           |
 | `--watch`      | 新しく作られた PR を継続監視して説明資料を作る。Claude Code 専用 |
 
+通常実行は指定対象の資料を 1 件作成して終了する。`--watch` はユーザーが停止するまで監視を繰り返す。1 回の監視プロセスは対象がなければ既定 110 分で終了し、監視モードは再開する。
+
 # pr-reviewer-brief — レビュー前に読む PR の解説資料を HTML で作る
 
 skills schema version: **1.1**（生成 HTML の生成日時の横にも表示）。
@@ -45,12 +47,12 @@ HTML・図の座標・差分の表はスクリプトが作る。各段階の手�
 
 `/pr-reviewer-brief <対象>` または `/pr-reviewer-brief --watch`
 
-| 書き方                    | 対象                                                                          |
-| ------------------------- | ----------------------------------------------------------------------------- |
-| PR の URL、`123`、`#123`  | その PR。gh stack の stack に入っていれば、その stack 全体                    |
-| `stack 7`、`stack #7`     | gh stack の stack 番号（github.com の stack の UI に出る番号）                |
-| `ABC-123`、チケットの URL | チケット（Linear・Notion・Jira・GitHub Issue など）。**チケットモード**になる |
-| `--watch`                 | 新しく作られた PR を監視して資料を作る（`references/watch.md`）               |
+| 書き方                    | 対象                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| PR の URL、`123`、`#123`  | その PR。gh stack の stack に入っていれば、その stack 全体                        |
+| `stack 7`、`stack #7`     | gh stack の stack 番号（github.com の stack の UI に出る番号）                    |
+| `ABC-123`、チケットの URL | チケット（Linear・Notion・Jira・GitHub Issue など）。**チケットモード**になる     |
+| `--watch`                 | 新しく作られた PR を監視して資料を作る。Claude Code 専用（`references/watch.md`） |
 
 番号だけなら PR 番号とみなす（stack 番号のときは `stack` を付けてもらう）。`ABC-123` のように英字と `-` を含む ID、
 Linear・Notion・Jira・GitHub Issue の URL、`ticket <ID>`（先頭の `ticket ` は除く）はチケットとみなす。リポジトリはカレントディレクトリのものとみなす。

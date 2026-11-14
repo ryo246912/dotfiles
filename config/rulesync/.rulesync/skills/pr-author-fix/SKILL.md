@@ -18,6 +18,8 @@ targets:
 | `-h`, `--help` | ヘルプのみ表示して終了                                                |
 | `--auto`       | 指摘の採否・修正・commit・push・CI と再レビュー待ちを自律的に繰り返す |
 
+既定は各レビュー修正と commit を確認する通常モード。`--auto` は最新 head の CI とレビューの完了まで反復し、head ごとに既定 30 分で未完了を報告して終了する。PR が closed / merged の場合も終了する。
+
 あなたは、GitHub の Pull Request のレビューコメント（インラインコメント含む）に対応するための高度な AI アシスタントです。
 
 目的:
@@ -37,14 +39,14 @@ PR のレビューコメント（インラインコメント、会話コメン�
 レビュー指摘がゼロでも、対象 PR の特定直後と修正後に CI を確認する。
 
 ```bash
-gh pr view <PR番号> --json headRefName,headRefOid,baseRefName,state,statusCheckRollup,reviewRequests,reviews
+gh pr view <PR番号> --json headRepository,headRepositoryOwner,headRefName,headRefOid,baseRefName,state,statusCheckRollup,reviewRequests,reviews
 gh pr checks <PR番号> --json name,state,bucket,link,workflow
 # Actions の失敗は check のリンクから run ID を特定して調べる
 gh run view <run-ID> --json headSha,event,status,conclusion,jobs
 gh run view <run-ID> --log-failed
 ```
 
-- 対象 PR のリポジトリと head ブランチを確認する。ローカル HEAD とリモート head SHA が異なる場合は原因を確認してから編集・push する。他者の未コミット変更は混ぜない
+- PR の head リポジトリ（fork を含む）・所有者・head ref・SHA を取得する。未コミット変更を保護し、必要なら別 worktree に PR head を checkout して `HEAD == headRefOid` を検証してから編集する。push は検証した head リポジトリの URL と `HEAD:refs/heads/<headRefName>` を明示する。既定の origin や現在のブランチを推測で使わず、他者の変更を混ぜない。書き込み権限がなければ push せず報告する
 - 最新 head SHA に対応する実行を調べる。古い SHA の成功で完了と判断しない。PR の merge commit を検査する workflow は、その実行が現在の head と base に対応することを確認する
 - pending / queued / in_progress は失敗と区別して待つ。check が未登録・空の場合も即座に成功扱いしない。想定する workflow の paths / event 条件を確認し、実行不要なのか、開始待ちなのかを判定する
 - lint・型・テスト・ビルド等の失敗ログと PR 差分を突き合わせる。必要なら base 側の同じ失敗や再現結果と比較し、PR に起因するものを修正して関連する検証を実行する
@@ -54,11 +56,11 @@ gh run view <run-ID> --log-failed
 
 ## `--auto`: 修正・push・待機のループ
 
-1. 初回に head SHA、CI の run/check ID、レビュー・コメント・スレッド ID と更新日時、依頼中のレビュアーを記録する。インラインスレッドの解決状態と返信も取得する（GraphQL の `reviewThreads` / `comments` を `pageInfo.hasNextPage` と `endCursor` で最後までページングする）。レビューの `commit_id` / `commit.oid` と提出時刻も取得する
-2. 未対応の指摘を現コードで評価し、妥当なものを修正する。解決済み・対応済みの指摘は繰り返し処理しないが、新しい返信・本文の編集・再オープンは再評価する。古い SHA の指摘も未解決なら確認する。対応しない判断は根拠を返信し、判断済みとして記録する。同じ返信を重複投稿しない
+1. 初回に head SHA、CI の run/check ID、レビュー・コメント・スレッド ID と更新日時、依頼中のレビュアーを記録する。インラインスレッドの解決状態と返信も取得する（GraphQL の `reviewThreads` を外側のカーソルで、各スレッドの `comments` をスレッド ID ごとの独立したカーソルで、`pageInfo.hasNextPage` と `endCursor` に従って最後までページングする。数値のコメント ID は `fullDatabaseId` を取得し、32bit の `databaseId` に依存しない）。レビューの `commit_id` / `commit.oid` と提出時刻も取得する
+2. 未対応の指摘をコード修正・返信のみ・確認のみ・保留に分類し、現コードで妥当なコード修正だけを行う。返信のみ・確認のみでコードを変えず、保留は未対応として理由を報告する。解決済み・対応済みの指摘は繰り返し処理しないが、新しい返信・本文の編集・再オープンは再評価する。古い SHA の指摘も未解決なら確認する。対応しない判断は根拠を返信し、判断済みとして記録する。同じ返信を重複投稿しない
 3. CI の確認と PR に起因する失敗の修正を実行する。関連テスト・lint と pr-author-lessons-review を行い、意図した変更だけをコミットして push する。レビュー返信は下記の書式に従い、修正 SHA を含む返信は push 成功後に投稿する。変更がなければ空コミットや不要な push は行わない
-4. push 成功後にリモートの head SHA を再取得し、その SHA に対する CI とレビューを待つ。push しただけで再レビューが開始されたと仮定せず、bot の自動再レビュー設定・実行状態を確認し、必要ならリポジトリで定められた方法で再レビューを依頼する。人間への再依頼は各 push 後に必要な場合だけ行う。古い SHA への承認や前回の bot 完了コメントを、今回のレビュー完了として使わない
-5. 待機中も CI と全種類のコメント・レビュー・スレッドを再取得する。新しい指摘・返信・更新があれば 2 に、CI 失敗なら 3 に戻る。他者が head を更新した場合も新しい SHA を対象に取り直し、古い終了判定を破棄する
+4. push の有無にかかわらずリモートの head SHA を再取得し、その SHA に対する CI とレビューを待つ。変更不要の初回もここへ進む。push しただけで再レビューが開始されたと仮定せず、bot の自動再レビュー設定・実行状態を確認し、必要ならリポジトリで定められた方法で再レビューを依頼する。人間への再依頼は各 push 後に必要な場合だけ行う。古い SHA への承認や前回の bot 完了コメントを、今回のレビュー完了として使わない
+5. 待機中も CI と全種類のコメント・レビュー・スレッドを再取得する。新しい指摘・返信・更新があれば 2 に、CI 失敗は原因を分類し、PR 起因なら 3 に戻る。base 由来・外部障害・原因不明で修正対象と判断できない失敗は未解決として根拠を報告し、同じ失敗を再処理せずループを終了する。他者が head を更新した場合も新しい SHA を対象に取り直し、古い終了判定を破棄する
 6. 同じ最新 head に対して、必要な CI が成功し、依頼した人間・bot のレビューが届き、未対応指摘がなくなったら、最後に head・CI・レビューを再取得して変化がないことを確認して終了する。レビュー依頼がない場合も、push 後に bot が開始待ちでないことと、新しいコメントがないことを再取得して確認する。レビュー結果が changes requested のままなら再承認待ちとして扱う
 
 待機は既定で 60 秒間隔とし、API の rate limit / Retry-After に従って間隔を広げる。待機状況はユーザーへ随時報告する。各 head の CI・レビュー待ちは既定 30 分を上限とし、ユーザー指定があればそれを優先する。時間切れ・取得不能・外部障害の場合は成功とせず、対象 SHA、未着レビュー、未完了 CI、残る指摘、再開方法を報告して終了する。同じ原因の修正が 2 回続けて失敗した場合は、追加の試行前に根拠と選択肢をまとめて確認する。PR が closed / merged になった場合は新たな push を止めて状態を報告する。自動マージはしない。
@@ -109,8 +111,8 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments -
 gh repo view --json owner,name --jq '{owner: .owner.login, name: .name}'
 
 # インラインコメントを作成日時順で取得
-gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate \
-  --jq 'sort_by(.created_at) | .[] | {
+gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate --slurp \
+  --jq 'add | sort_by(.created_at) | .[] | {
     id: .id,
     author: .user.login,
     body: .body,
@@ -138,8 +140,11 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate \
 2. PR 全体の情報（会話コメント、レビューサマリー）の取得
 
 ```bash
-gh pr view <PR番号> --json reviews,comments
+gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews --paginate --slurp --jq 'add'
+gh api repos/<owner>/<repo>/issues/<PR番号>/comments --paginate --slurp --jq 'add'
 ```
+
+REST の各配列を下記の表示用構造へ正規化する（`user.login` → `author.login`、`submitted_at` → `submittedAt`、`created_at` → `createdAt`）。`gh pr view` の reviews/comments は全件取得の代わりにしない。`--slurp` 未対応の gh では `--paginate --jq ".[]"` の全出力をローカル JSON パーサで配列化し、ページをまたいでソートする。
 
 PR 全体の情報のデータ構造:
 

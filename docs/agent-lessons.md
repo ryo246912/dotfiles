@@ -489,7 +489,7 @@ mise run lessons:sync
 
 ## 作者向けレビューの実行
 
-`/pr-author-lessons-review` は旧 `pr-author-lessons-review` の新しい名前です。差分と教訓の照合を担当します。
+`/pr-author-lessons-review` は旧 `pr-author-self-review` の新しい名前です。差分と教訓の照合を担当します。
 
 `/pr-author-all-review` は教訓照合 → code-review → pr-author-fix を 1 回ずつ実行します。
 `/pr-author-all-review --loop` は修正・検証・commit・push・CI と再レビュー待ちまで繰り返します。
@@ -501,4 +501,4 @@ mise run lessons:sync
 pr-author-lessons-review も同じヘルプを受け付けます。
 
 配布時は rulesync の生成に加え、旧名の生成済み skill を配布先から手動で削除してください。
-`delete: false` のため、改名だけでは旧 `pr-author-lessons-review` が残ります（`docs/rulesync.md` の「自作 skill を消しても配布先に残る」を参照）。
+`delete: false` のため、改名だけでは旧 `pr-author-self-review` が残ります（`docs/rulesync.md` の「自作 skill を消しても配布先に残る」を参照）。
