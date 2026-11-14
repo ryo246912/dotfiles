@@ -119,7 +119,7 @@ def new_lesson(spec: dict, source: str, today: str) -> tuple[dict, str]:
 
 
 def lesson_path(source: str, scope_key: str, key: str) -> Path:
-    return L.LESSONS_DIR / "lessons" / source / scope_key / f"{re.sub(r'[^\w-]+', '-', key).strip('-')}.md"
+    return L.LESSONS_DIR / "lessons" / source / scope_key / f"{L.ascii_slug(key)}.md"
 
 
 def archive_path(path: Path, today: str) -> Path:

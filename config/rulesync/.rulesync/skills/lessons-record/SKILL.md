@@ -49,14 +49,18 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 
 ## 2. inbox に書く
 
+ファイル名は ASCII の `<YYYY-MM-DD>-<category>-<evidence の hash 6 桁>.md` にして、ファイルを直接書く。
+`basic-memory tool write-note` は使わない。ファイル名と permalink をタイトルから作るため、日本語のタイトルだと
+ローマ字混じりの壊れた permalink になる。
+
 ```bash
-basic-memory tool write-note --project agent-lessons \
-  --folder "inbox/<source>" \
-  --title "<YYYY-MM-DD> <タイトル>" \
-  --type lesson_observation \
-  --content "$(cat <<'EOF'
+dir=~/.local/share/agent-lessons/inbox/<source>
+mkdir -p "$dir"
+cat > "$dir/<YYYY-MM-DD>-<category>-$(printf %s '<evidence>' | shasum | cut -c1-6).md" <<'EOF'
 ---
 schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
+title: "<YYYY-MM-DD> <タイトル>"
+type: lesson_observation
 status: pending
 date: <YYYY-MM-DD>
 source: <received|given>
@@ -77,7 +81,6 @@ globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると 
 ## Check
 <push 前に diff で探すもの（grep する語・コードの形）。「〜を確認したか」とは書かない>
 EOF
-)"
 ```
 
 同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/{inbox,lessons,archived}`）。

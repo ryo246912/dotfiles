@@ -453,6 +453,14 @@ mise run lessons:sync
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
   push 前の `pr-author-self-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
+- **ファイル名は ASCII にする。** Basic Memory はパスから permalink を作るため、日本語のファイル名だとローマ字混じりの
+  壊れた permalink になる。観察は `<日付>-<category>-<hash>.md`、教訓は英語のケバブケースの key で名付ける（タイトルは
+  frontmatter の `title` に日本語で書く）。`lessons-record` が `basic-memory tool write-note` を使わず直接書くのもこのため
+- **clone の作業ツリーを `--autostash` で pull しない。** Basic Memory は索引のたびに frontmatter へ permalink を足し、
+  書式も書き換える。その状態で autostash すると upstream と衝突し、衝突マーカーが frontmatter に残ったまま次の
+  `lessons:sync` に commit される（過去に 154 ファイルが壊れた）。pull は `--no-autostash` で行い、衝突したら rebase を
+  中止する。`lessons:sync` は commit 前に衝突マーカーと非 ASCII のファイル名を検査し、`collect.py` などの書き込み側は
+  frontmatter に衝突マーカーがあると止まる
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに

@@ -78,11 +78,27 @@ done
 
 git add --all
 if ! git diff --cached --quiet; then
+  # 衝突マーカーは frontmatter を壊し、書き込む側のスクリプトが止まるため commit しない
+  if git diff --cached -U0 --no-renames -- '*.md' | grep -qE '^\+(<<<<<<<|\|\|\|\|\|\|\||>>>>>>>) '; then
+    echo "error: 衝突マーカーが残っています。解消してから再実行してください" >&2
+    exit 1
+  fi
+  # 日本語のファイル名だと、Basic Memory がローマ字混じりの壊れた permalink を作る
+  if git diff --cached --name-only --diff-filter=AR -z | grep -zqP '[^\x00-\x7F]'; then
+    echo "error: ASCII でないファイル名があります。<日付>-<category>-<hash>.md の形に改名してください" >&2
+    exit 1
+  fi
   git diff --cached --no-renames --name-only --diff-filter=ACM -z \
     | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
-git pull --rebase --quiet
+# 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
+# マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
+if ! git -c rebase.autoStash=false pull --rebase --quiet; then
+  git rebase --abort 2>/dev/null || true
+  echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
+  exit 1
+fi
 
 # 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
 # pull の後に拾う。skill は rulesync が配る先のどちらかにある。

@@ -114,7 +114,7 @@ def main() -> int:
             meta["reviewer_hash"] = c["reviewer_hash"]
         pattern = re.sub(r"^-\s+", "", " ".join(str(o["pattern"]).split()))
         body = f"\n## Rule\n{o['rule']}\n\n## Patterns\n- {pattern}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
-        slug = re.sub(r"[^\w-]+", "-", o.get("from") or o["category"]).strip("-")
+        slug = L.ascii_slug(o.get("from") or o["category"])
         notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md", meta, body))
 
     # 1 件でも誤りがあれば何も書かない（直して再実行したときに二重に書かないため）

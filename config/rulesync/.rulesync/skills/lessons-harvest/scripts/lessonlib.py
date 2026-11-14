@@ -20,6 +20,14 @@ TARGETS_DIR = Path.home() / ".config/agent-lessons"
 SOURCES = ("received", "given", "team")
 _SEG = r"(?!\.\.?(?:/|$))[\w.-]+"  # . と .. は通さない
 SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
+# frontmatter に残った git の衝突マーカー。本文のコード例に書かれうるので frontmatter の中だけを見る
+_CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
+
+
+def ascii_slug(text: str, fallback: str = "note") -> str:
+    """ファイル名用の slug。`\\w` は日本語も通すが、日本語のパスだと Basic Memory がローマ字混じりの壊れた permalink を作るため ASCII に限る。"""
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", text).strip("-") or fallback
+
 
 # 教訓・観察の形式のバージョン。形式を変えたら 1 上げ、migrate.py の MIGRATIONS に前の版からの移行を足す。
 # 書き込むスクリプトは、古い版のファイルが残っていると止まる（混ざった形式に書き足さないため）。
@@ -163,8 +171,18 @@ def note_files() -> list[Path]:
 def check_schema(strict: bool) -> bool:
     """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。
     すべて今の版なら True。"""
+    # git pull の autostash が衝突すると、マーカーが frontmatter に残ったまま commit される。parse は黙って壊れた値を読むため、先に止める
+    broken = [p for p in note_files() if (m := FRONTMATTER.match(p.read_text(encoding="utf-8"))) and _CONFLICT.search(m[1])]
+    ugly = [p for p in note_files() if not p.name.isascii()]
+    if broken:
+        msg = f"frontmatter に衝突マーカーが残っているファイルが {len(broken)} 件ある（例: {broken[0]}）。マーカーを解消する"
+        if strict:
+            sys.exit(f"error: {msg}")
+        print(f"warning: {msg}", file=sys.stderr)
+    if ugly:
+        print(f"warning: ファイル名が ASCII でないファイルが {len(ugly)} 件ある（例: {ugly[0]}）。permalink が壊れる", file=sys.stderr)
     versions = {p: version_of(read(p)[0]) for p in note_files()}
-    newer = [p for p, v in versions.items() if v > SCHEMA_VERSION]
+    newer =[p for p, v in versions.items() if v > SCHEMA_VERSION]
     older = [p for p, v in versions.items() if v < SCHEMA_VERSION]
     if newer:
         sys.exit(
@@ -176,7 +194,7 @@ def check_schema(strict: bool) -> bool:
         if strict:
             sys.exit(f"error: {msg}")
         print(f"warning: {msg}", file=sys.stderr)
-    return not older
+    return not older and not broken
 
 
 def _headings(body: str) -> list[tuple[int, int, str]]:
