@@ -457,7 +457,7 @@ mise run lessons:sync
   push 前の `pr-author-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
 - **ファイル名は ASCII にする。** Basic Memory はパスから permalink を作るため、日本語のファイル名だとローマ字混じりの
   壊れた permalink になる。名付けは書き手ごとに違う。タイトルは frontmatter の `title` に日本語で書く
-  - `lessons-record`: `<日付>-<category>-<evidence の hash 6 桁>.md`。`basic-memory tool write-note` を使わず直接書くのもこのため
+  - `lessons-record`: `<日付>-<category>-<evidence の sha1>.md`。`basic-memory tool write-note` を使わず直接書くのもこのため
   - 週次の `lessons-harvest`（`write_observations.py`）: `<日付>-<from か category の ASCII slug>-<バッチ>-<連番>.md`
   - 教訓: 英語のケバブケースの key（`apply_plan.py` は `[A-Za-z0-9_-]` 以外を拒否する）
 

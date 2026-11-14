@@ -51,7 +51,7 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 
 ## 2. inbox に書く
 
-ファイル名は ASCII の `<YYYY-MM-DD>-<category>-<evidence の hash 6 桁>.md` にして、ファイルを直接書く。
+ファイル名は ASCII の `<YYYY-MM-DD>-<category>-<evidence の sha1>.md` にして、ファイルを直接書く。
 `basic-memory tool write-note` は使わない。ファイル名と permalink をタイトルから作るため、日本語のタイトルだと
 ローマ字混じりの壊れた permalink になる。
 
@@ -66,10 +66,12 @@ EOF
 if command -v sha1sum >/dev/null; then sha() { sha1sum; }
 elif command -v shasum >/dev/null; then sha() { shasum -a 1; }
 else echo "error: sha1sum も shasum も無い" >&2; exit 1; fi
-hash=$(printf %s "$evidence" | sha | cut -c1-6)
+hash=$(printf %s "$evidence" | sha | cut -c1-40)
 dir=~/.local/share/agent-lessons/inbox/<source>
 mkdir -p "$dir"
-cat > "$dir/<YYYY-MM-DD>-<category>-$hash.md" <<'EOF'
+path="$dir/<YYYY-MM-DD>-<category>-$hash.md"
+if [ -e "$path" ]; then echo "error: $path は既にある。同じ evidence を二重に記録しない" >&2; exit 1; fi
+cat > "$path" <<'EOF'
 ---
 schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
 title: "<YYYY-MM-DD> <タイトル>"
