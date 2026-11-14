@@ -76,6 +76,20 @@ for origin in "$(git remote get-url origin)" "$(git remote get-url --push origin
   fi
 done
 
+# agent-lessons-context の裏の pull と同じロックを、git add より前に取る。取らないと、そちらの rebase 中の index を
+# 触ったり、下の rebase --abort で中止したりする。古いロックは、持ち主のプロセスが死んでいるときだけ捨てる
+lock="$HOME/.local/state/agent-lessons/last-sync.lock"
+mkdir -p "$(dirname "$lock")"
+if [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ] && ! kill -0 "$(cat "$lock/pid" 2>/dev/null)" 2>/dev/null; then
+  rm -rf "$lock"
+fi
+if ! mkdir "$lock" 2>/dev/null; then
+  echo "error: 別の同期が進行中です（$lock）。終わってから再実行してください" >&2
+  exit 1
+fi
+echo $$ >"$lock/pid"
+trap 'rm -rf "$lock"' EXIT
+
 git add --all
 if ! git diff --cached --quiet; then
   # 衝突マーカーは frontmatter を壊し、日本語のファイル名は Basic Memory が壊れた permalink を作る。どちらも commit しない。
@@ -109,15 +123,6 @@ PY
 fi
 # 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
 # マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
-lock="$HOME/.local/state/agent-lessons/last-sync.lock"
-mkdir -p "$(dirname "$lock")"
-find "$lock" -maxdepth 0 -mmin +60 -exec rmdir {} \; 2>/dev/null || true
-# agent-lessons-context の裏の pull と同じロックを取る。取らないと、そちらの rebase を下の abort が中止してしまう
-if ! mkdir "$lock" 2>/dev/null; then
-  echo "error: 別の同期が進行中です（$lock）。終わってから再実行してください" >&2
-  exit 1
-fi
-trap 'rmdir "$lock"' EXIT
 if ! git -c rebase.autoStash=false pull --rebase --quiet; then
   git rebase --abort 2>/dev/null || true
   echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
