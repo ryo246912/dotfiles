@@ -89,7 +89,7 @@ jq -rn --argjson local "$local_json" --argjson wide "$wide_json" '
       if ($l | length) > 0 then "## このリポジトリ固有の教訓", ($l[] | "- " + .title), "" else empty end,
       section($w; "received"; "自分（とエージェント）がよく受ける指摘"),
       section($w; "team"; "このチームの規約"),
-      if $local.has_more or $wide.has_more then "_コンテキストを抑えるため件数を絞っています。残りは pr-author-self-review で diff に関係するものを読みます。_" else empty end
+      if $local.has_more or $wide.has_more then "_コンテキストを抑えるため件数を絞っています。残りは pr-author-lessons-review で diff に関係するものを読みます。_" else empty end
     end' 2>/dev/null
 
 exit 0
