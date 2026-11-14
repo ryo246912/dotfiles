@@ -493,7 +493,7 @@ mise run lessons:sync
 各レビューの責務は個別 skill に残し、追加するレビューは
 `config/rulesync/.rulesync/skills/pr-author-all-review/references/stages.md` の一覧で管理します。
 
-オプションを持つ skill は `-h` / `--help`（`--hlep` も可）で、処理を開始せず使い方を説明します。
+オプションを持つ skill は `-h` / `--help`で、処理を開始せず使い方を説明します。
 対象は pr-author-fix、pr-author-all-review、lessons-harvest、pr-reviewer-brief です。
 pr-author-lessons-review も同じヘルプを受け付けます。
 
