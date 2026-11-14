@@ -16,6 +16,7 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > 普段の開発フローは [ccmanager での開発の段取り](#ccmanager-での開発の段取り) を参照してください。
 >
 > ```bash
+> mise run sandbox:sbx-settings    # 初回の sbx ホスト設定（setup とは独立）
 > mise run sandbox:setup           # skills / SSH 鍵 / Claude 認証
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
 > mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
@@ -30,7 +31,7 @@ Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | `sandbox:sbx-settings`      | おすすめのホスト設定を反映してデーモン再起動                                                                                                      | 初回・設定を揃えるとき        |
 | `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
-| `sandbox:claude-setup`      | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                | Claude 設定だけ再実行するとき |
+| `sandbox:claude-setup`      | Claude token 登録 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                                 | Claude 設定だけ再実行するとき |
 | `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
 | `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得）                                                              | 認証先を確認するとき          |
 | `sandbox:secret-rm`         | 指定した sbx secret を削除（`--sandbox` で対象限定）                                                                                              | 不要な secret を削除するとき  |
@@ -323,8 +324,8 @@ sbx secret ls
 ```
 
 secret と共通 network policy は環境ファイルと kit から sandbox 作成時に反映します。
-skills の取り込み・通知用 SSH 鍵の生成・ホスト設定（`clipboard.imagePaste`）は
-次の task で準備します。
+skills の取り込み・通知用 SSH 鍵の生成は `sandbox:setup`、
+画像貼り付けなどのホスト設定は独立した `sandbox:sbx-settings` で準備します。
 
 ```bash
 mise run sandbox:setup
@@ -368,7 +369,7 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 ### ドキュメントサイトの許可
 
 共通の許可ドメインは `config/sbx/kits/common/common.yaml` の
-`permissions.network.allow` に宣言しています。変更後は sandbox を作り直します。
+`com.docker.sandbox/network-policy@1` capability の `config.runtime.allow` に宣言しています。変更後は sandbox を作り直します。
 追加許可は、gitignore 済みの `config/sbx/allow-domains.<name>.txt`
 （1行1パターン、`#` 以降はコメント）に書き、`mise run sandbox:setup` で全 sandbox 共通の policy に反映します。
 雛形は `allow-domains.work3.txt.example` です。
@@ -622,7 +623,7 @@ token はホスト上では平文ですが、sandbox 内には sentinel だけ�
 
 #### 3. secret の削除と運用上の注意
 
-共通認証の解消と binding の追加は `sandbox:setup` に含まれます。手動で secret だけを
+binding の追加は `sandbox:setup` に含まれます。共通 OAuth 認証は保持します。不要な secret を手動で
 削除する場合は次のタスクを使います。`--force` を付けない場合は sbx の確認に従います。
 
 ```bash
@@ -634,8 +635,8 @@ mise run sandbox:secret-rm anthropic --sandbox subscription-account2-check
 mise run sandbox:secret-rm anthropic --sandbox subscription-work3-check
 ```
 
-この方式の sandbox 内で `/login` は使わないでください。共通認証が再作成されると、
-次回起動時にラッパーが停止します。`sbx login` の Docker 認証切れや OS キーチェーンのロックは
+setup-token 用 sandbox 内で `/login` は使わず、通常の OAuth ログインは専用 preset で行ってください。
+共通 OAuth の存在を理由にアカウント別 preset が停止することはありません。`sbx login` の Docker 認証切れや OS キーチェーンのロックは
 ホストで解消してください。service・認証方式・domain を追加した場合は対応する binding の再設定が必要です。
 
 専用 kit は親 image の `/home/agent/.claude/settings.json` の `apiKeyHelper` を削除し、
@@ -742,6 +743,7 @@ kit・binding・token・sbx バージョンを確認してください。
 ```bash
 mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
+mise run sandbox:sbx-settings    # 初回の sbx ホスト設定（setup とは独立）
 mise run sandbox:setup           # skills / 通知用 SSH 鍵 / Claude 認証
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
@@ -1214,10 +1216,9 @@ SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 0. build context は **dotfiles リポジトリの `config/devcontainer/`**（配置先の
    `~/.config/devcontainer` ではない）。配置先が実体ファイルでない場合、BuildKit は
    コンテキスト外を指す symlink を辿らず `COPY` が "not found" で失敗するため
-1. `FROM docker/sandbox-templates:<agent>-docker`（上の表。Ubuntu + 非 root の `agent` ユーザー + sudo）。
-   **`-docker` 版でないと sandbox 内に dockerd がありません**（通常版は docker CLI だけ）。
-   `-docker` 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードになり、
-   `/var/lib/docker` に専用ボリュームが付いて dockerd が自動起動します
+1. `FROM docker.io/sbx/${VARIANT}:latest`（上の表。非 root の `agent` ユーザーを含む公開 v3 workload）。
+   Docker 起動のラベルは公開 workload から継承します。旧 `-docker` タグは使用しません。
+   Docker の利用可否は選択した公開イメージに依存するため、作成後に `docker info` で確認してください
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
 3. `mise install` で devcontainer と同じツール群を入れる（BuildKit の cache mount で差分ビルド、
    `GH_TOKEN` は build secret で渡してレート制限を避ける）
@@ -1340,7 +1341,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | `tasks/` / `lint/` を `~/.config/devcontainer` 配下に置く        | ✅ 同じパスへ COPY（tasks の config 参照がそのまま解決する）                                                                                          |
 | claude / codex / copilot の CLI                                  | ✅ mise で入れる（base image には claude しか無いため。バージョンは `config/devcontainer/mise.toml`）                                                 |
 | nvim（設定をホストと共有）                                       | ✅ `aqua:neovim/neovim` を同じ `mise.toml` に追加し、`~/.config/nvim` を `:ro` で渡して symlink（lockfile は `AI_AGENT=1` のとき state dir へ逃がす） |
-| Ubuntu 24.04 + zsh を既定シェルに                                | ✅ `chsh -s /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む                                                           |
+| 公開 workload の Linux + zsh を既定シェルに                      | ✅ `usermod --shell /usr/bin/zsh agent`。`/etc/zsh/zshenv` から `/etc/sandbox-persistent.sh` も読む                                                   |
 
 ### mounts
 
@@ -1715,7 +1716,8 @@ sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome
 
 `--claude-oauth` は `--claude-account` / `--config-dir` と併用できません。
 既存 Sandbox と認証方式が異なる場合は起動を拒否します。別名を選ぶか、必要なデータを保存して
-`--new` で再作成してください。template の再ビルドは不要です。
+`--new` で再作成してください。v3 移行後の template をビルド済みなら追加の再ビルドは不要です。
+旧 template の場合は先に `mise run sandbox:build-template` を実行してください。
 
 詳細は [Docker の Claude in Chrome 設定](https://docs.docker.com/ai/sandboxes/agents/claude-code/#claude-in-chrome) と
 [Claude Code の Chrome 連携](https://code.claude.com/docs/en/chrome) を参照してください。
@@ -1731,7 +1733,8 @@ sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome
 | CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                          |
 | アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                      |
 | CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない     |
-| clipboard・skills import・SSH 鍵の準備       | ホストの `sandbox:setup`                            |
+| clipboard など sbx ホスト設定                | ホストの `sandbox:sbx-settings`                     |
+| skills import・SSH 鍵の準備                  | ホストの `sandbox:setup`                            |
 
 GitHub は `gh auth token` で取得します。
 CodeRabbit は private / work3 とも、`sbx-agent` で新規作成した sandbox の初期化後に

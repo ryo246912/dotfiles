@@ -13,3 +13,6 @@ capabilities:
           - app.coderabbit.ai
           - ide.coderabbit.ai
           - cli.coderabbit.ai
+          # EU login and review endpoints: https://docs.coderabbit.ai/cli/network-requirements
+          - app.eu.coderabbit.ai
+          - ide.eu.coderabbit.ai

@@ -49,9 +49,11 @@ capabilities:
             d.pop('apiKeyHelper', None)
             p.write_text(json.dumps(d))
             p = home / '.claude.json'
-            d = json.loads(p.read_text()) if p.exists() else {}
-            d['hasCompletedOnboarding'] = True
-            p.write_text(json.dumps(d))
+            # Leave an absent file for sandbox-post-create.sh to copy from the host.
+            if p.exists():
+                d = json.loads(p.read_text())
+                d['hasCompletedOnboarding'] = True
+                p.write_text(json.dumps(d))
             PYSETTINGS
           user: agent
           # v3 hooks filter the environment; mise shims need the image's config and trust paths.

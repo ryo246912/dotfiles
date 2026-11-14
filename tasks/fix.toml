@@ -30,7 +30,7 @@ run         = ["disable-checkout-persist-credentials"]
 
 ["fix:dockerfile-pin"]
 description = "Run dockerfile-pin (fix)"
-run         = "dockerfile-pin run --write --ignore-images docker/sandbox-templates:*"
+run         = "dockerfile-pin run --write --ignore-images docker/sandbox-templates:* --ignore-images docker.io/sbx/*"
 
 ["fix:toml"]
 description = "Run fix TOML files"
