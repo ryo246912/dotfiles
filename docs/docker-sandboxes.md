@@ -1634,12 +1634,39 @@ sbx-agent claude --claude-account account1 --new
 ホストに保存済みの secret はこの変更で自動削除しません。
 `--env-plan` は secret を登録せず、`--new` を付けても作成・削除しません。
 
+### Claude in Chrome
+
+標準の `sbxenv.yaml` は `env.CLAUDE_CODE_ENABLE_CFC: "1"` を設定し、Claude の Chrome
+連携を既定で有効にします。`sbx-agent claude` や、それを呼ぶ起動経路から毎回 `--chrome` を
+渡す必要はありません。Claude 以外の agent の起動引数は変更しません。
+環境変数は sandbox 作成時に反映するため、既存の sandbox は必要なデータを保存してから
+`sbx-agent claude --new`（アカウント指定など普段のオプションも併用）で作り直してください。
+
+ホストでは一度だけ次を実行します。この設定は再起動後も保存されます。
+
+```bash
+sbx settings set claude.chrome true
+```
+
+普段使う Chrome に Claude in Chrome 拡張をインストールし、Claude Code と同じアカウントで
+ログインしてください。接続には Claude サブスクリプションの通常の OAuth ログインが必要です。
+API キーや `claude setup-token` の長期トークンだけでは Chrome 連携は有効になりません。
+このリポジトリの `--claude-account` は setup-token を使うため、この設定追加だけでは
+Chrome 連携の認証要件を満たしません。ホストの保存済み OAuth ログインも確認してください。
+起動後は `/chrome` で接続状態を確認できます。
+
+詳細は [Docker の Claude in Chrome 設定](https://docs.docker.com/ai/sandboxes/agents/claude-code/#claude-in-chrome) と
+[Claude Code の Chrome 連携](https://code.claude.com/docs/en/chrome) を参照してください。
+
+### 設定の正本
+
 | 設定                                         | 正本・処理                                      |
 | -------------------------------------------- | ----------------------------------------------- |
 | 共通環境変数、許可ドメイン、SSH 通信先       | `kits/common/spec.yaml`                         |
 | CodeRabbit の認証・通信先                    | `kits/coderabbit/spec.yaml`                     |
 | Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/spec.yaml`            |
 | GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`               |
+| Claude の Chrome 連携の既定値                | `sbxenv.yaml` の `env.CLAUDE_CODE_ENABLE_CFC`   |
 | CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                      |
 | アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                  |
 | CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない |
