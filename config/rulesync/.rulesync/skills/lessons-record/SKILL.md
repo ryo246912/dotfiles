@@ -70,8 +70,7 @@ hash=$(printf %s "$evidence" | sha | cut -c1-40)
 dir=~/.local/share/agent-lessons/inbox/<source>
 mkdir -p "$dir"
 path="$dir/<YYYY-MM-DD>-<category>-$hash.md"
-if [ -e "$path" ]; then echo "error: $path は既にある。同じ evidence を二重に記録しない" >&2; exit 1; fi
-cat > "$path" <<'EOF'
+(set -C; cat > "$path" <<'EOF'
 ---
 schema_version: 1 # lessons-harvest/scripts/lessonlib.py の SCHEMA_VERSION と同じ値
 title: "<YYYY-MM-DD> <タイトル>"
@@ -96,7 +95,11 @@ globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると 
 ## Check
 <push 前に diff で探すもの（grep する語・コードの形）。「〜を確認したか」とは書かない>
 EOF
+) || { echo "error: $path を作れない。同じ evidence を二重に記録していないか確かめる" >&2; exit 1; }
 ```
+
+`set -C`（noclobber）で、存在確認と作成を 1 回の操作にしている。別の端末・セッションが同じ evidence を同時に記録しても、
+先に作られた観察を切り詰めない。
 
 同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/{inbox,lessons,archived}`）。
 
