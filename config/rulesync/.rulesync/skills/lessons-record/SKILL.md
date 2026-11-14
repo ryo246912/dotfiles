@@ -53,7 +53,8 @@ agent-lessons の inbox に観察（`type: lesson_observation`）として書き
 
 ファイル名は ASCII の `<YYYY-MM-DD>-<category>-<evidence の sha1>.md` にして、ファイルを直接書く。
 `basic-memory tool write-note` は使わない。ファイル名と permalink をタイトルから作るため、日本語のタイトルだと
-ローマ字混じりの壊れた permalink になる。
+ローマ字混じりの壊れた permalink になる。frontmatter の `permalink` は必ず自分で書く。無いと Basic Memory が索引のたびに
+足し、YAML 全体を書き直して clone の作業ツリーを汚す（permalink があれば書き直さない）。
 
 `evidence` は `'` を含み得るので、シェルの引用符に直接入れず、引用符なしの heredoc（`'EOF'`）で変数に取ってから hash する。
 hash のコマンドは環境で違う（Linux は `sha1sum`、macOS は `shasum`）ので、どちらも無ければ止める。
@@ -82,6 +83,7 @@ scope_key: <host>/<owner>/<repo>
 category: <category>
 evidence: "<URL か session: <YYYY-MM-DD> <要旨>>" # 引用符で囲む（session: の値は `: ` を含む）
 globs: ["<glob>", ...] # glob は必ず引用符で囲む（`*` で始まると YAML のエイリアスとして読まれる）
+permalink: agent-lessons/inbox/<source>/<YYYY-MM-DD>-<category>-<hash> # 上の $path から .md を除いたもの。<category> に大文字や _ があれば小文字と - にする
 ---
 ## Rule
 <タイトルと同じ 1 文。必要なら 1〜2 行の補足>

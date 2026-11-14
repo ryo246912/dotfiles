@@ -156,9 +156,18 @@ def read(path: Path) -> tuple[dict, str]:
     return parse(path.read_text(encoding="utf-8"))
 
 
+def permalink_of(path: Path) -> str:
+    """Basic Memory の permalink。frontmatter に無いと索引のたびに足され、YAML 全体が書き直されて作業ツリーが汚れる。
+    slug 化の規則は再現しない。Basic Memory は frontmatter の permalink が他と重ならなければそのまま使い、書き直さないため。"""
+    rel = path.relative_to(LESSONS_DIR).with_suffix("").as_posix()
+    return f"agent-lessons/{rel.lower().replace('_', '-')}"
+
+
 def write(path: Path, meta: dict, body: str) -> None:
     """常に今の版として書く。古い版のファイルは check_schema(strict=True) で先に止めておくこと。"""
     meta = {"schema_version": SCHEMA_VERSION, **{k: v for k, v in meta.items() if k != "schema_version"}}
+    if not meta.get("permalink") and path.is_relative_to(LESSONS_DIR):
+        meta["permalink"] = permalink_of(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(dump(meta, body), encoding="utf-8")
 
