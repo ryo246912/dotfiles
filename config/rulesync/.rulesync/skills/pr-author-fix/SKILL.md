@@ -58,7 +58,7 @@ gh run view <run-ID> --log-failed
 
 1. 初回に head SHA、CI の run/check ID、レビュー・コメント・スレッド ID と更新日時、依頼中のレビュアーを記録する。インラインスレッドの解決状態と返信も取得する（GraphQL の `reviewThreads` を外側のカーソルで、各スレッドの `comments` をスレッド ID ごとの独立したカーソルで、`pageInfo.hasNextPage` と `endCursor` に従って最後までページングする。数値のコメント ID は `fullDatabaseId` を取得し、32bit の `databaseId` に依存しない）。レビューの `commit_id` / `commit.oid` と提出時刻も取得する
 2. 未対応の指摘をコード修正・返信のみ・確認のみ・保留に分類し、現コードで妥当なコード修正だけを行う。返信のみ・確認のみでコードを変えず、保留は未対応として理由を報告する。解決済み・対応済みの指摘は繰り返し処理しないが、新しい返信・本文の編集・再オープンは再評価する。古い SHA の指摘も未解決なら確認する。対応しない判断は根拠を返信し、判断済みとして記録する。同じ返信を重複投稿しない
-3. CI の確認と PR に起因する失敗の修正を実行する。関連テスト・lint と pr-author-lessons-review を行い、意図した変更だけをコミットして push する。レビュー返信は下記の書式に従い、修正 SHA を含む返信は push 成功後に投稿する。変更がなければ空コミットや不要な push は行わない
+3. CI の確認と PR に起因する失敗の修正を実行する。関連テスト・lint と pr-author-lessons-review（`--base <対象PRの解決済みbase SHA> --head <現在のローカルHEAD SHA>` を明示し、一時ブランチからの PR 自動検出に依存しない）を行い、意図した変更だけをコミットして push する。レビュー返信は下記の書式に従い、修正 SHA を含む返信は push 成功後に投稿する。変更がなければ空コミットや不要な push は行わない
 4. push の有無にかかわらずリモートの head SHA を再取得し、その SHA に対する CI とレビューを待つ。変更不要の初回もここへ進む。push しただけで再レビューが開始されたと仮定せず、bot の自動再レビュー設定・実行状態を確認し、必要ならリポジトリで定められた方法で再レビューを依頼する。人間への再依頼は各 push 後に必要な場合だけ行う。古い SHA への承認や前回の bot 完了コメントを、今回のレビュー完了として使わない
 5. 待機中も CI と全種類のコメント・レビュー・スレッドを再取得する。新しい指摘・返信・更新があれば 2 に、CI 失敗は原因を分類し、PR 起因なら 3 に戻る。base 由来・外部障害・原因不明で修正対象と判断できない失敗は未解決として根拠を報告し、同じ失敗を再処理せずループを終了する。他者が head を更新した場合も新しい SHA を対象に取り直し、古い終了判定を破棄する
 6. 同じ最新 head に対して、必要な CI が成功し、依頼した人間・bot のレビューが届き、未対応指摘がなくなったら、最後に head・CI・レビューを再取得して変化がないことを確認して終了する。レビュー依頼がない場合も、push 後に bot が開始待ちでないことと、新しいコメントがないことを再取得して確認する。レビュー結果が changes requested のままなら再承認待ちとして扱う
@@ -95,6 +95,7 @@ gh run view <run-ID> --log-failed
   - PR 番号に加えて数値のレビュー ID を抽出し、最初に以下を取得する
 
 ```bash
+set -euo pipefail
 gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>
 gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments --paginate | jq -s 'add'
 ```
@@ -107,7 +108,7 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews/<レビューID>/comments -
 1. インラインコメント（Review Comments）の取得
 
 ```bash
-set -o pipefail
+set -euo pipefail
 # リポジトリのowner/nameを取得
 gh repo view --json owner,name --jq '{owner: .owner.login, name: .name}'
 
@@ -141,7 +142,7 @@ gh api repos/<owner>/<repo>/pulls/<PR番号>/comments --paginate |
 2. PR 全体の情報（会話コメント、レビューサマリー）の取得
 
 ```bash
-set -o pipefail
+set -euo pipefail
 gh api repos/<owner>/<repo>/pulls/<PR番号>/reviews --paginate | jq -s 'add'
 gh api repos/<owner>/<repo>/issues/<PR番号>/comments --paginate | jq -s 'add'
 ```

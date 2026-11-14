@@ -32,12 +32,15 @@ agent-lessons が未設定（`~/.local/share/agent-lessons` が無い）なら�
 
 `--base` が指定されたらその ref を取得・解決して使う。指定がない場合も現在のブランチに PR があればその `baseRefName` を使い、PR がない場合だけリモートのデフォルトブランチを使う。`--head` が未指定なら HEAD。解決できない ref はデフォルトへ置き換えず報告して終了する。呼び出し元の指定した head とローカル HEAD が異なる場合は編集せず、先に適切な worktree を準備する。
 
-以下の `<base-ref>` / `<head-ref>` はその解決済みの値とする。
+外部の ref をシェルコードへ直接埋め込まない。API 応答を JSON パーサで読むなどして `base_ref` / `head_ref` 変数に安全に保持し、以下で commit SHA として検証・解決する。検証失敗時は中止する。以降の Git コマンドには解決済み SHA だけを渡す。
 
 ```bash
-base=$(git merge-base "<head-ref>" "<base-ref>")
-git diff --name-only "$base" "<head-ref>"
-git diff "$base" "<head-ref>"
+set -euo pipefail
+base_sha=$(git rev-parse --verify --end-of-options "${base_ref}^{commit}")
+head_sha=$(git rev-parse --verify --end-of-options "${head_ref}^{commit}")
+base=$(git merge-base "$head_sha" "$base_sha")
+git diff --name-only "$base" "$head_sha" --
+git diff "$base" "$head_sha" --
 ```
 
 未コミットの変更（未追跡ファイルを含む）があれば、`git diff` / `git diff --cached` と `git ls-files --others --exclude-standard` で列挙した未追跡ファイルの内容も含める。
