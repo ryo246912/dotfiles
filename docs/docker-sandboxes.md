@@ -408,7 +408,12 @@ sbx-agent --help
 2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
-   `~/.local/share/agent-lessons`（書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   `~/.local/share/agent-lessons`（`.git` を含めて書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
+   これにより sandbox 内でも `lessons:sync` と週次収集の pull / ブランチ作成 / commit / push ができる。
+   ホストの clone を直接共有するため、Git 設定や hooks の変更もホストへ反映される。
+   `.git/hooks` や `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）の変更は、
+   後続のホスト側 Git 操作（SessionStart の pull や `lessons:sync`）でコード実行につながる。
+   この共有 clone はホストでのコード実行を許容できる信頼済み agent に限って使い、sandbox をホスト実行の信頼境界の内側として扱う。
    マウントは作成時にしか付かないため、追加したマウントを既存の sandbox に反映するには `sbx-agent <agent> --new` で作り直す
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
