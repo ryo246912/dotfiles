@@ -40,7 +40,7 @@ experimental = true
 "go:github.com/microsoft/typescript-go/cmd/tsgo" = "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
 "http:coderabbit"                                = { version = "0.9.2", url = "https://cli.coderabbit.ai/releases/{{ version }}/coderabbit-linux-{{ arch() }}.zip" }
 "npm:oxfmt"                                      = "0.78.0"
-"npm:oxlint"                                     = "1.87.0"
+"npm:oxlint"                                     = "1.93.0"
 "pipx:basic-memory"                              = { version = "0.24.1", uvx_args = "--prerelease=allow" }
 "pipx:desloppify"                                = { version = "1.0", extras = "full" }
 
