@@ -85,8 +85,8 @@ import re
 import subprocess
 import sys
 
-CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
+CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.M)
+FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", re.S)
 git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True).stdout
 names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z").decode().split("\0")
 errors = []

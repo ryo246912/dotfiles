@@ -18,10 +18,10 @@ from pathlib import Path
 LESSONS_DIR = Path.home() / ".local/share/agent-lessons"
 TARGETS_DIR = Path.home() / ".config/agent-lessons"
 SOURCES = ("received", "given", "team")
-_SEG = r"(?!\.\.?(?:/|$))[\w.-]+"  # . と .. は通さない
+_SEG = r"(?!\.\.?(?:/|$))[A-Za-z0-9_.-]+"  # . と .. は通さない
 SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 # frontmatter に残った git の衝突マーカー。本文のコード例に書かれうるので frontmatter の中だけを見る
-_CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
+_CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.M)
 
 
 # 教訓の key。ASCII に限るのは、別の日本語の key が同じ slug に潰れて、別の教訓が同じファイルに入るのを防ぐため
@@ -176,8 +176,8 @@ def check_schema(strict: bool) -> bool:
     """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。
     すべて今の版なら True。"""
     # git pull の autostash が衝突すると、マーカーが frontmatter に残ったまま commit される。parse は黙って壊れた値を読むため、先に止める
-    broken = [p for p in note_files() if (m := FRONTMATTER.match(p.read_text(encoding="utf-8"))) and _CONFLICT.search(m[1])]
-    ugly = [p for p in note_files() if not p.name.isascii()]
+    broken = [p for p in note_files() if (m := FRONTMATTER.match(p.read_text(encoding="utf-8").replace("\r\n", "\n"))) and _CONFLICT.search(m[1])]
+    ugly = [p for p in note_files() if not str(p.relative_to(LESSONS_DIR)).isascii()]
     if broken:
         msg = f"frontmatter に衝突マーカーが残っているファイルが {len(broken)} 件ある（例: {broken[0]}）。マーカーを解消する"
         if strict:
