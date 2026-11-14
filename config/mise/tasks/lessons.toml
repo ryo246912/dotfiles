@@ -97,6 +97,9 @@ for name in filter(None, names):
         m = FRONTMATTER.match(git("show", f":{name}").decode(errors="replace"))
         if m and CONFLICT.search(m[1]):
             errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
+        # マーカーが先頭の --- より前にある・終わりの --- が欠けると match できず、検査が素通りするため
+        elif not m and name.split("/")[0] in ("inbox", "lessons", "archived"):
+            errors.append(f"frontmatter を読み取れない（衝突マーカーの可能性）: {name}")
 if errors:
     sys.exit("error: " + "\nerror: ".join(errors))
 PY
@@ -106,6 +109,15 @@ PY
 fi
 # 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
 # マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
+lock="$HOME/.local/state/agent-lessons/last-sync.lock"
+mkdir -p "$(dirname "$lock")"
+find "$lock" -maxdepth 0 -mmin +60 -exec rmdir {} \; 2>/dev/null || true
+# agent-lessons-context の裏の pull と同じロックを取る。取らないと、そちらの rebase を下の abort が中止してしまう
+if ! mkdir "$lock" 2>/dev/null; then
+  echo "error: 別の同期が進行中です（$lock）。終わってから再実行してください" >&2
+  exit 1
+fi
+trap 'rmdir "$lock"' EXIT
 if ! git -c rebase.autoStash=false pull --rebase --quiet; then
   git rebase --abort 2>/dev/null || true
   echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
