@@ -82,13 +82,15 @@ globs:
 ## 過去の指摘から学ぶ（agent-lessons）
 
 - SessionStart で「agent-lessons: 過去のレビュー指摘から学んだ教訓」が注入されていたら、該当する作業ではそれに従って実装する
-- Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
+- Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-lessons-review skill で diff と過去の指摘を突き合わせる
 - Claude Code / Codex CLI でレビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
 
 ## PR作成後のレビュー対応
 
 - git push と PR 作成までを依頼された場合は、PR を作成した時点で完了とせず、レビュー対応が終わるまで自律的に対応を続ける
-  - この自律対応では、修正・コミット・push のたびにユーザーの承認を求めない。ユーザーが `pr-author-fix` skill を明示的に呼び出した場合は、skill の確認手順に従う
+  - この自律対応では、修正・コミット・push のたびにユーザーの承認を求めない
+  - ユーザーが `pr-author-fix --auto` を明示した場合も、修正・コミット・push・CI と再レビュー待ちを自律的に行う
+  - `pr-author-fix` の通常実行では skill の確認手順に従う。PR に起因する CI エラーの調査・修正は自律的に行い、コミット・push は既存のユーザーの許可範囲に従う
   1. PR のレビューコメント（人間・bot の両方）と CI の結果を監視する
   2. レビュー指摘ごとに妥当性を確認し、妥当なものは修正してコミット・push し、lessons-record skill で記録する。修正しない指摘には、その理由をレビューのスレッドに返信する
   3. CI が失敗した場合は、ログから原因を調査して修正し、コミット・push する

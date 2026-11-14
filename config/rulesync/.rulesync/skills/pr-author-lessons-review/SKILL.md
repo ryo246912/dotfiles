@@ -1,10 +1,25 @@
 ---
-name: pr-author-self-review
+name: pr-author-lessons-review
 description: push や PR 作成の前に、agent-lessons に貯めた過去のレビュー指摘（自分が受けた指摘・チームの規約）と現在の diff を突き合わせ、同じ指摘を受けそうな箇所を直す skill。実装が一区切りして push・PR 作成に進む前に使う。
 targets:
   - claudecode
   - codexcli
 ---
+
+## ヘルプ・引数
+
+`-h` / `--help` があれば、他の引数より優先してこの節の使い方・全オプション・既定動作と終了条件を説明し、その場で終了する。PR の取得、監視、編集、スクリプト実行、commit・push・投稿は行わない。これらは skill の引数であり、内部 CLI のオプションは含めない。不明なオプションでは処理を開始せず、このヘルプを表示する。
+
+使い方: `/pr-author-lessons-review [--base <refまたはSHA>] [--head <refまたはSHA>]`
+
+| 引数                    | 意味                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `-h`, `--help`          | ヘルプのみ表示して終了                                                  |
+| `--base <refまたはSHA>` | PR の比較元。省略時は現在の PR の base、PR がなければデフォルトブランチ |
+| `--head <refまたはSHA>` | 比較先。省略時は HEAD                                                   |
+| 引数なし                | 現在の差分と過去の教訓を照合する。agent-lessons が未設定なら省略する    |
+
+`--base` / `--head` は比較対象の ref または SHA。呼び出し元が選択した PR の base/head を優先し、head 省略時は HEAD を使う。適用する教訓があれば修正して通常の commit に含める。agent-lessons 未設定なら何もせず終了する。
 
 # push 前のセルフレビュー（過去の指摘との突き合わせ）
 
@@ -15,10 +30,17 @@ agent-lessons が未設定（`~/.local/share/agent-lessons` が無い）なら�
 
 ## 1. 対象の差分を決める
 
+`--base` が指定されたらその ref を取得・解決して使う。指定がない場合も現在のブランチに PR があればその `baseRefName` を使い、PR がない場合だけリモートのデフォルトブランチを使う。`--head` が未指定なら HEAD。解決できない ref はデフォルトへ置き換えず報告して終了する。呼び出し元の指定した head とローカル HEAD が異なる場合は編集せず、先に適切な worktree を準備する。
+
+外部の ref をシェルコードへ直接埋め込まない。API 応答を JSON パーサで読むなどして `base_ref` / `head_ref` 変数に安全に保持し、以下で commit SHA として検証・解決する。検証失敗時は中止する。以降の Git コマンドには解決済み SHA だけを渡す。
+
 ```bash
-base=$(git merge-base HEAD "origin/$(git remote show origin | sed -n 's/.*HEAD branch: //p')")
-git diff --name-only "$base"...HEAD
-git diff "$base"...HEAD
+set -euo pipefail
+base_sha=$(git rev-parse --verify --end-of-options "${base_ref}^{commit}")
+head_sha=$(git rev-parse --verify --end-of-options "${head_ref}^{commit}")
+base=$(git merge-base "$head_sha" "$base_sha")
+git diff --name-only "$base" "$head_sha" --
+git diff "$base" "$head_sha" --
 ```
 
 未コミットの変更（未追跡ファイルを含む）があれば、`git diff` / `git diff --cached` と `git ls-files --others --exclude-standard` で列挙した未追跡ファイルの内容も含める。
