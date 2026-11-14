@@ -24,6 +24,10 @@ SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 _CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
 
 
+# 教訓の key。ASCII に限るのは、別の日本語の key が同じ slug に潰れて、別の教訓が同じファイルに入るのを防ぐため
+KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
+
+
 def ascii_slug(text: str, fallback: str = "note") -> str:
     """ファイル名用の slug。`\\w` は日本語も通すが、日本語のパスだと Basic Memory がローマ字混じりの壊れた permalink を作るため ASCII に限る。"""
     return re.sub(r"[^A-Za-z0-9_-]+", "-", text).strip("-") or fallback
@@ -180,7 +184,10 @@ def check_schema(strict: bool) -> bool:
             sys.exit(f"error: {msg}")
         print(f"warning: {msg}", file=sys.stderr)
     if ugly:
-        print(f"warning: ファイル名が ASCII でないファイルが {len(ugly)} 件ある（例: {ugly[0]}）。permalink が壊れる", file=sys.stderr)
+        msg = f"ファイル名が ASCII でないファイルが {len(ugly)} 件ある（例: {ugly[0]}）。permalink が壊れるので改名する"
+        if strict:
+            sys.exit(f"error: {msg}")
+        print(f"warning: {msg}", file=sys.stderr)
     versions = {p: version_of(read(p)[0]) for p in note_files()}
     newer =[p for p, v in versions.items() if v > SCHEMA_VERSION]
     older = [p for p, v in versions.items() if v < SCHEMA_VERSION]
@@ -194,7 +201,7 @@ def check_schema(strict: bool) -> bool:
         if strict:
             sys.exit(f"error: {msg}")
         print(f"warning: {msg}", file=sys.stderr)
-    return not older and not broken
+    return not older and not broken and not ugly
 
 
 def _headings(body: str) -> list[tuple[int, int, str]]:
