@@ -245,7 +245,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.50.1", asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" }
+#   "github:docker/sbx-releases" = { version = "0.53.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 mise install
 sbx version
 ```
@@ -253,6 +253,40 @@ sbx version
 aqua registry には `sbx` が未登録のため、github backend で
 [docker/sbx-releases](https://github.com/docker/sbx-releases) のリリース資産を直接取得しています。
 バージョンは renovate が追従します。
+
+### 0.53.0 への更新
+
+dotfiles を反映後、ホストで以下を実行してください。
+
+```bash
+mise install github:docker/sbx-releases
+sbx --version  # 0.53.0
+sbx daemon restart
+sbx settings set claude.chrome true
+```
+
+0.51.0 以降、組み込み agent は公開 kit (`docker.io/sbx/<agent>:latest`) を使います。
+このリポジトリの common / CodeRabbit / Claude subscription は v2 kit のため、
+v3 の組み込み agent と合成する新規作成には、workload を含めた kit の移行が必要です。
+CLI の更新だけで kit の移行が完了するわけではありません。既存 sandbox は引き続き実行できますが、
+古い組み込み仕様で作成した sandbox で `sbx kit add` / `sbx run --model` / `sbx move` を使うには
+再作成が必要です。kit の互換性を確認し、未 push のコミットや必要なファイルを保存してから
+再作成してください。リリースノートの [0.51.0 の破壊的変更](https://docs.docker.com/ai/sandboxes/release-notes/#0510) も参照してください。
+
+0.53.0 までの機能では、今の構成には次の設定が候補になります。必要なものだけホストで設定します。
+
+| 設定                                             | おすすめする用途                                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `sbx settings set claude.chrome true`            | 普段の Chrome を Claude から操作する。通常の OAuth ログインが必要                                         |
+| `sbx settings set model.server.enabled false`    | ローカルモデルを使わない場合に、内蔵モデルサービスと runtime のダウンロードを止める。デーモン再起動が必要 |
+| `sbx settings set clipboard.textCopy true`       | sandbox からホストへテキストをコピーする。0.51.0 から opt-in が必要                                       |
+| `sbx settings set claude.remoteControl true`     | sandbox 内の Claude で `/remote-control` を使う場合                                                       |
+| `sbx settings set telemetry.disabled true`       | CLI / デーモンの telemetry を無効にしたい場合。デーモン再起動が必要                                       |
+| `sbx settings set env.rememberHostCommands true` | 信頼する環境定義のホストコマンドを初回承認後に記憶したい場合。コマンド変更時には再承認が必要              |
+
+設定以外では、0.53.0 の `sbx df` / `sbx df --verbose` でローカルの容量内訳を確認できます。
+ホスト設定は自動では変更しません。上記は「0.53.0 で使える候補」であり、すべてが
+0.53.0 で初めて追加された設定という意味ではありません。
 
 > [!NOTE]
 > Windows(WSL2) では `sbx` を導入していません。microVM は Windows ホスト側の
