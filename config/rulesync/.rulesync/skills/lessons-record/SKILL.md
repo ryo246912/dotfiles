@@ -102,6 +102,7 @@ EOF
 先に作られた観察を切り詰めない。
 
 同じ `evidence` の観察が既にあれば書かない（`grep -rlF '<URL>' ~/.local/share/agent-lessons/{inbox,lessons,archived}`）。
+`evidence` に `"` や `\` があるとファイルにはエスケープして保存されるので、生の値に加えて、エスケープした値でも検索する。
 
 ## 3. 同期する
 
