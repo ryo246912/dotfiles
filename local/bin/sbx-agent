@@ -859,8 +859,8 @@ prepare_env_files() {
     log_info "sbx のバージョンと環境ファイルを確認します"
     version=$(sbx version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
     IFS=. read -r major minor patch <<<"$version"
-    if [[ -z "$version" ]] || ((major == 0 && (minor < 50 || (minor == 50 && patch < 1)))); then
-        log_error "環境ファイル方式には sbx 0.50.1 以上が必要です"
+    if [[ -z "$version" ]] || ((major == 0 && minor < 53)); then
+        log_error "v3 kit と Chrome 連携には sbx 0.53.0 以上が必要です"
         exit 1
     fi
     ENV_FILE=$(expand_tilde "$ENV_FILE")
@@ -940,8 +940,8 @@ fi
 log_info "既存 sandbox と認証設定を確認します"
 # 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
 if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
-    if [[ ! -f "${ENV_OVERLAY%/*}/created" ]]; then
-        log_error "この sandbox は環境ファイル方式での作成を確認できません。必要なデータを保存して --new で作り直してください"
+    if [[ ! -f "${ENV_OVERLAY%/*}/created" || "$(cat "${ENV_OVERLAY%/*}/created")" != v3 ]]; then
+        log_error "この sandbox は v3 kit での作成を確認できません。必要なデータを保存して --new で作り直してください"
         exit 1
     fi
 fi
@@ -1051,7 +1051,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         fi
         exit 1
     fi
-    (umask 077; touch "${ENV_OVERLAY%/*}/created") || exit 1
+    (umask 077; printf 'v3\n' >"${ENV_OVERLAY%/*}/created") || exit 1
     SANDBOX_CREATED=true
     load_static_mcp
 

@@ -1,27 +1,64 @@
-schemaVersion: "2"
-kind: sandbox
-name: claude-subscription
-extends: claude
-
-# This is intentionally the API-key secret storage interface with a Bearer
-# presentation: setup-token is a subscription token, not an Anthropic API key.
-credentials:
-  - service: anthropic
-    apiKey:
-      name: CLAUDE_CODE_OAUTH_TOKEN
-      proxyManaged: true
-      inject:
-        - domain: api.anthropic.com
-          header: Authorization
-          format: "Bearer %s"
-
-permissions:
-  network:
-    allow:
-      - api.anthropic.com
-
-setup:
-  install:
-    - command: >-
-        python3 -c 'import json,pathlib; p=pathlib.Path("/home/agent/.claude/settings.json"); d=json.loads(p.read_text()) if p.exists() else {}; d.pop("apiKeyHelper",None); p.write_text(json.dumps(d))'
-      user: agent
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: workload
+displayName: Claude subscription
+description: Claude Code with sandbox-scoped subscription Bearer authentication
+build: |
+  FROM docker.io/sbx/claude:latest
+  USER agent
+  WORKDIR /home/agent/workspace
+  ENTRYPOINT ["claude", "--dangerously-skip-permissions"]
+  CMD []
+capabilities:
+  - type: com.docker.sandbox/sbx@1
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - api.anthropic.com
+          - bridge.claudeusercontent.com
+          - mcp-proxy.anthropic.com
+          - platform.claude.com
+          - claude.ai
+          - claude.com
+  - type: com.docker.sandbox/credential@1
+    config:
+      service: anthropic
+      apiKey:
+        name: CLAUDE_CODE_OAUTH_TOKEN
+        proxyManaged: true
+        inject:
+          - domain: api.anthropic.com
+            header: Authorization
+            format: Bearer %s
+      phase: runtime
+  - type: com.docker.sandbox/agent-skills@1
+    optional: true
+    config:
+      path: /home/agent/.claude/skills
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      install:
+        - command: |
+            python3 - <<'PYSETTINGS'
+            import json, pathlib
+            home = pathlib.Path('/home/agent')
+            p = home / '.claude/settings.json'
+            p.parent.mkdir(parents=True, exist_ok=True)
+            d = json.loads(p.read_text()) if p.exists() else {}
+            d.pop('apiKeyHelper', None)
+            p.write_text(json.dumps(d))
+            p = home / '.claude.json'
+            d = json.loads(p.read_text()) if p.exists() else {}
+            d['hasCompletedOnboarding'] = True
+            p.write_text(json.dumps(d))
+            PYSETTINGS
+          user: agent
+        - command: |
+            set -eu
+            [ -n "${MCP_GATEWAY_URL:-}" ] || exit 0
+            claude mcp add mcp-gateway "$MCP_GATEWAY_URL" --transport http --scope user --header "Authorization: Bearer $MCP_SENTINEL_TOKEN_NAME" || true
+          user: agent
+          env:
+            - MCP_GATEWAY_URL
+            - MCP_SENTINEL_TOKEN_NAME

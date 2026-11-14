@@ -28,6 +28,7 @@ Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、
 
 | タスク                      | 用途                                                                                                                                              | 使うタイミング                |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `sandbox:settings`          | おすすめのホスト設定を反映してデーモン再起動                                                                                                      | 初回・設定を揃えるとき        |
 | `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
 | `sandbox:claude-setup`      | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                | Claude 設定だけ再実行するとき |
 | `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
@@ -265,15 +266,17 @@ sbx daemon restart
 sbx settings set claude.chrome true
 ```
 
-0.51.0 以降、組み込み agent は公開 kit (`docker.io/sbx/<agent>:latest`) を使います。
-このリポジトリの common / CodeRabbit / Claude subscription は v2 kit のため、
-v3 の組み込み agent と合成する新規作成には、workload を含めた kit の移行が必要です。
-CLI の更新だけで kit の移行が完了するわけではありません。既存 sandbox は引き続き実行できますが、
-古い組み込み仕様で作成した sandbox で `sbx kit add` / `sbx run --model` / `sbx move` を使うには
-再作成が必要です。kit の互換性を確認し、未 push のコミットや必要なファイルを保存してから
-再作成してください。リリースノートの [0.51.0 の破壊的変更](https://docs.docker.com/ai/sandboxes/release-notes/#0510) も参照してください。
+common / CodeRabbit / Claude subscription は v3 に移行済みです。
+既存の v2 sandbox は必要なデータ・未 push のコミットを保存してから、template を再ビルドし、
+普段のアカウント指定などを付けて `sbx-agent claude --new` で作り直してください。
+ラッパーは作成済みマーカーで v3 を確認し、v2 sandbox の暗黙の再利用を拒否します。
 
-0.53.0 までの機能では、今の構成には次の設定が候補になります。必要なものだけホストで設定します。
+```bash
+mise run sandbox:settings        # おすすめ設定だけ反映（デーモン再起動を含む）
+mise run sandbox:build-template  # 公開 v3 workload をベースに再ビルド
+```
+
+0.53.0 までの機能では、今の構成には次の設定が候補になります。`sandbox:settings` と `sandbox:setup` で以下を反映します。
 
 | 設定                                             | おすすめする用途                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -285,7 +288,8 @@ CLI の更新だけで kit の移行が完了するわけではありません�
 | `sbx settings set env.rememberHostCommands true` | 信頼する環境定義のホストコマンドを初回承認後に記憶したい場合。コマンド変更時には再承認が必要              |
 
 設定以外では、0.53.0 の `sbx df` / `sbx df --verbose` でローカルの容量内訳を確認できます。
-ホスト設定は自動では変更しません。上記は「0.53.0 で使える候補」であり、すべてが
+画像貼り付け (`clipboard.imagePaste true`) も維持し、すべての設定後にデーモンを一度再起動します。
+`sandbox:settings` は何度実行しても同じ値になります。上記は「0.53.0 で使える候補」であり、すべてが
 0.53.0 で初めて追加された設定という意味ではありません。
 
 > [!NOTE]
@@ -547,7 +551,7 @@ sandbox preset を用意しています。claude は account ごとに別 sandbo
 ccmanager の Claude Docker Sandbox preset は `--claude-account` を使います。
 **設定ディレクトリと sandbox 名を分けるだけでは OAuth アカウントは分かれません。**
 標準 Claude agent の `/login` はホスト側の共通認証を更新します。
-このため専用の v2 kit [`config/sbx/kits/claude-subscription/spec.yaml`](../config/sbx/kits/claude-subscription/spec.yaml)
+このため専用の v3 workload kit [`config/sbx/kits/claude-subscription/spec.yaml`](../config/sbx/kits/claude-subscription/spec.yaml)
 を使用し、sandbox 固有の secret を `Authorization: Bearer` として送ります。
 API キーの登録インターフェースを使いますが、登録するのは `claude setup-token` の
 サブスク用 token です。API キー課金への切り替えを意図したものではありません。
@@ -1180,11 +1184,11 @@ sandbox 用の image をビルドします。**agent ごとに、中身は同じ
 （既定では `sbx-agent:claude` / `sbx-agent:codex`。`sbx-agent:copilot` は指定時のみ。下記）を作り、`sbx-agent` が
 agent に合ったものを自動で選びます。ccmanager などから agent を切り替える側は何も意識しません。
 
-| agent   | template            | base image（FLAVOR）                          |
-| ------- | ------------------- | --------------------------------------------- |
-| claude  | `sbx-agent:claude`  | `docker/sandbox-templates:claude-code-docker` |
-| codex   | `sbx-agent:codex`   | `docker/sandbox-templates:codex-docker`       |
-| copilot | `sbx-agent:copilot` | `docker/sandbox-templates:copilot-docker`     |
+| agent   | template            | base image（FLAVOR）           |
+| ------- | ------------------- | ------------------------------ |
+| claude  | `sbx-agent:claude`  | `docker.io/sbx/claude:latest`  |
+| codex   | `sbx-agent:codex`   | `docker.io/sbx/codex:latest`   |
+| copilot | `sbx-agent:copilot` | `docker.io/sbx/copilot:latest` |
 
 1 つの template を全 agent で使い回せないのは、sbx が template の base（FLAVOR）を記録し、
 `sbx create <agent>` がその agent 用の kit（認証の注入・network policy など）を当てるためです。
@@ -1656,7 +1660,7 @@ worktree・agent・template・mount・環境変数・port・リソース制限�
 
 ```bash
 mise install github:docker/sbx-releases
-sbx version  # 0.50.1 以上
+sbx version  # 0.53.0 以上
 sbx-agent claude --claude-account account1 --env-plan
 sbx-agent claude --claude-account account1 --new
 ```
@@ -1735,7 +1739,8 @@ fnox の実行ファイル・設定・provider の依存先も書き込み可能
 
 初回は plan の承認が必要です。`sbx settings set env.rememberHostCommands true` で
 承認を記憶でき、今回の plan を非対話で承認する場合は `--env-force` を使います。
-どちらも自動では有効にしません。`sbx env` は引き続き experimental です。
+`sandbox:settings` は承認の記憶を有効にします。`--env-force` は明示した場合だけ使います。
+`sbx env` は引き続き experimental です。
 
 0.50.1 は起動不具合の修正、0.50.0 は kit の host mount、永続 volume の保持、
 host command / credential の保護を含みます。詳細は
@@ -1746,12 +1751,13 @@ host command / credential の保護を含みます。詳細は
 
 OCI パッケージで「workload（ベース環境とコマンド）＋ mixin（ツール・設定・認証・network 許可・
 エージェント向け指示）」を合成する仕組み。devcontainer の Dockerfile + features に相当します。
-CodeRabbit・common・Claude subscription の kit は、既存の組み込み agent / カスタム template と
-合成するため v2 を使用します。Claude subscription kit は `extends: claude` で継承し、
-認証ヘッダーと install 時の設定調整を変更します。ツール類の導入は Dockerfile と mise が担当します。
+common / CodeRabbit は v3 mixin として network-policy capability を宣言します。
+共通環境変数は create-phase の `args.*.env` で渡します。
+Claude subscription は独立した v3 workload とし、公開 Claude イメージをベースに、
+scoped Bearer 認証・初期設定・MCP gateway 登録・共有 skills の discovery を宣言します。
+通常の Claude は公開 workload の OAuth を使い、アカウント別起動は従来どおり setup-token を使います。
+ツール類の導入は Dockerfile と mise が担当し、`--template` によるローカル template の選択は維持します。
 v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在できません。
-既存ツールチェーン全体の v3 workload 化は今回の変更から分離しています。
-`sbx kit validate` でチェックし、kit set として publish できます。
 
 コミット署名を自動設定する
 [`git-ssh-sign`](https://github.com/docker/sbx-kits-contrib/tree/main/git-ssh-sign)
@@ -1761,10 +1767,10 @@ v3 は全 workload / mixin を v3 で揃える必要があり、v2 と混在で�
 
 | 対象                                         | 移行の向き不向き     | 理由                                                                                                       |
 | -------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/spec.yaml` の `environment` で共通化している                                                  |
+| `AI_AGENT`・`TERM` など固定の環境変数        | 移行済み             | `kits/common/spec.yaml` の `args.*.env` で共通化している                                                   |
 | sandbox 内の固定設定・symlink 作成           | 候補                 | install / startup 処理にまとめられる。ただし mount 完了後に必要な処理や再接続時の再実行条件を検証する      |
 | 固定ツールセット                             | 配布単位としては候補 | kit で image を選べるが、mise の導入・キャッシュを使う重いビルドは template に残す方が起動時の負担が少ない |
-| 固定の network 許可                          | 移行済み             | `kits/common/spec.yaml` の `permissions.network`。kit の更新は sandbox 再作成（`--new`）で反映する         |
+| 固定の network 許可                          | 移行済み             | `kits/common/spec.yaml` の `network-policy@1` capability。kit の更新は sandbox 再作成（`--new`）で反映する |
 | Git 設定・コミット署名                       | 一部候補             | 固定の Git 設定は共通化できるが、workspace ごとのメール・ホストの署名鍵選択は引き続きラッパーで判断する    |
 | account 別 token の読み取り・登録            | ホストに残す         | sandbox 内の setup に本物の token を渡さず、ホストの secret store に登録するため                           |
 | sandbox 名・worktree・ホストの絶対パス mount | ラッパーに残す       | 起動する repository・branch・account・ホスト環境ごとに値が変わるため                                       |
