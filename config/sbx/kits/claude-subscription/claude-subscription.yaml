@@ -54,11 +54,23 @@ capabilities:
             p.write_text(json.dumps(d))
             PYSETTINGS
           user: agent
+          # v3 hooks filter the environment; mise shims need the image's config and trust paths.
+          env:
+            - MISE_DATA_DIR
+            - MISE_CONFIG_DIR
+            - MISE_STATE_DIR
+            - MISE_CACHE_DIR
+            - MISE_TRUSTED_CONFIG_PATHS
         - command: |
             set -eu
             [ -n "${MCP_GATEWAY_URL:-}" ] || exit 0
             claude mcp add mcp-gateway "$MCP_GATEWAY_URL" --transport http --scope user --header "Authorization: Bearer $MCP_SENTINEL_TOKEN_NAME" || true
           user: agent
           env:
+            - MISE_DATA_DIR
+            - MISE_CONFIG_DIR
+            - MISE_STATE_DIR
+            - MISE_CACHE_DIR
+            - MISE_TRUSTED_CONFIG_PATHS
             - MCP_GATEWAY_URL
             - MCP_SENTINEL_TOKEN_NAME
