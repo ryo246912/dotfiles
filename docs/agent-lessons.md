@@ -462,6 +462,7 @@ mise run lessons:sync
   - 教訓: 英語のケバブケースの key（`apply_plan.py` は `[A-Za-z0-9_-]` 以外を拒否する）
 
   非 ASCII のファイル名があると、`collect.py` などの strict な書き込み側は止まる
+
 - **clone の作業ツリーを `--autostash` で pull しない。** Basic Memory は索引のたびに frontmatter へ permalink を足し、
   書式も書き換える。その状態で autostash すると upstream と衝突し、衝突マーカーが frontmatter に残ったまま次の
   `lessons:sync` に commit される（過去に 154 ファイルが壊れた）。pull は `--no-autostash` で行い、衝突したら rebase を
