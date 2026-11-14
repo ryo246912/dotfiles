@@ -1913,7 +1913,14 @@ mise run sandbox:coderabbit-login
 3. CLI のログイン URL に含まれる `redirect_uri` から callback ポートを取得し、
    同じ SSH 接続へ loopback の転送を追加する。
 4. 転送が成功してからホストのブラウザーを開く。個人用または会社用のアカウントで認証する。
-5. CLI の認証成功を確認して終了する。認証完了・エラー・Ctrl-C 時は接続と転送を閉じる。
+5. CLI の認証成功通知を受け取ったら、SSH の出力終了を待たずに接続と転送を閉じる。
+   ブラウザーの keep-alive 接続が残っても、ログイン完了後に待機し続けない。
+   エラー・Ctrl-C 時も接続と転送を閉じる。
+
+ログイン待機は既定で 90 秒までです。callback が届かない場合はタイムアウトして警告を表示し、
+`sbx-agent` は sandbox の利用へ進みます。手動実行では
+`mise run sandbox:coderabbit-login -- --timeout 600` のように待機時間を変更できます。
+`sbx-agent` からの自動実行では既定値を使います。
 
 ポート指定、別ターミナルでの転送、`sandbox:coderabbit-forward` の実行は不要です。
 SSH 接続の制御用ソケットは一時ディレクトリに置き、終了時に削除します。認証情報は扱いません。

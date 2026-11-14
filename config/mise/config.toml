@@ -43,7 +43,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:jesseduffield/lazydocker"                             = "0.25.2"
 "aqua:jesseduffield/lazygit"                                = "0.60.0"
 "aqua:jqlang/jq"                                            = "1.6"
-"aqua:junegunn/fzf"                                         = "0.74.5"
+"aqua:junegunn/fzf"                                         = "0.75.0"
 "aqua:k1LoW/roots"                                          = "0.4.2"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:leg100/pug"                                           = "0.6.5"
@@ -103,6 +103,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:jr-k/d4s"                                           = "0.49.114"
 "github:kenn-io/agentsview"                                 = "0.44.0"
 "github:kyu08/fzf-make"                                     = "0.76.0"
+"github:lambdalisue/cclens"                                 = "0.4.0"
 "github:masasuzu/clrnd"                                     = "0.5.1"
 "github:max-sixty/worktrunk"                                = "0.81.0"
 "github:microsoft/apm"                                      = "0.33.0"
@@ -137,7 +138,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "npm:agentlytics"                                           = "0.2.13"
 "npm:ccmanager"                                             = "4.4.4"
 "npm:codeburn"                                              = "0.9.25"
-"npm:concurrently"                                          = "10.0.6"
+"npm:concurrently"                                          = "10.0.7"
 "npm:cspell"                                                = "10.3.3"
 "npm:czg"                                                   = "1.14.0"
 "npm:editprompt"                                            = "1.8.1"
@@ -186,8 +187,8 @@ uvx = true
 postinstall = """
 command -v lefthook >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-[ -f "$root/lefthook.yml" ] || exit 0
-cd "$root"
+cd "$root" || exit 0
+[ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
 lefthook install
 """
 

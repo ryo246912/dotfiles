@@ -588,7 +588,7 @@ auto-compact は作業の途中で発動します。区切りがついた時点�
 - **何に使ったかを見る。** `/usage` で、使用量のうち skill・subagent・MCP が占める割合と、
   long context や cache miss が 10% 以上を占めているかの警告が見られます。`/context` で
   今の会話の中身の内訳が見られます。セッションをまたいだ分析は [codeburn](codeburn.md) /
-  [AgentsView](agentsview.md)。
+  [AgentsView](agentsview.md) / [cclens](#cclens-で無駄を診断する)。
 
 参考: [Manage costs effectively](https://code.claude.com/docs/en/costs) /
 [Model configuration — Context window and auto-compaction](https://code.claude.com/docs/en/model-config#context-window-and-auto-compaction) /
@@ -673,7 +673,7 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 | 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `on`                  | crit（`crit` / `crit-cli`）、`resolving-merge-conflicts`、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                              |
+| `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                           |
 | `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
 | `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                                  |
 
@@ -718,7 +718,6 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - Tsumiki skills
 - Ponytailの6 skill
 - `ctx-agent-history-search`
-- `resolving-merge-conflicts`
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
@@ -1154,39 +1153,6 @@ $ctx-agent-history-search を使って、以前database migrationに失敗した
 手動検索では`ctx search "query"`、詳細表示では`ctx show session <session-id>`などを使用します。setup、主要command、
 local historyに含まれる秘密情報の注意点は[`docs/ctx.md`](ctx.md)を参照してください。
 
-### `resolving-merge-conflicts`
-
-#### 用途
-
-進行中の `git merge` または `git rebase` で発生した conflict を、両方の変更意図を調べながら解消する skill です。
-単に片側を採用するのではなく、commit・PR・issue などの一次情報を確認し、可能な限り双方の意図を保ちます。
-
-#### 使い方
-
-conflict が発生した状態で、エージェントに自然言語で依頼します。明示的に指定する場合は、Claude Code では
-`/resolving-merge-conflicts`、Codex では `$resolving-merge-conflicts` を使用します。
-
-```text
-/resolving-merge-conflicts
-現在の rebase conflict を、各 commit の意図を確認して解消してください。
-```
-
-```text
-$resolving-merge-conflicts を使って、この merge conflict を解消してください。
-```
-
-skill は次の順に作業します。
-
-1. merge/rebase の状態、履歴、conflict 対象を確認する。
-2. 各変更の commit・PR・issue を調べ、意図を特定する。
-3. conflict を hunk 単位で解消する。
-4. リポジトリの typecheck・test・format などを実行する。
-5. ファイルを stage し、merge commit または `git rebase --continue` まで完了する。
-
-> [!IMPORTANT]
-> この skill は進行中の merge/rebase を `--abort` せず、最後まで完了させる方針です。中断したい場合は、実行前に
-> その旨を明示してください。また、作業ツリーに退避していない変更がないか事前に確認してください。
-
 ### `grill-me`
 
 #### 用途
@@ -1330,6 +1296,134 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## cclens で無駄を診断する
+
+[cclens](https://github.com/lambdalisue/cclens) は、Claude Code のセッション transcript と現在の設定を
+読み取って SQLite に蓄積し、時間・トークン・手間がどこで無駄になっているかを報告する CLI です。
+解析・レポートはすべてローカルで完結し、外部には何も送信しません。
+ただし `cclens optimize` は、指摘事項を `claude`（Claude Code）のセッションに渡します。
+
+導入は `config/mise/config.toml` の `"github:lambdalisue/cclens"` で行っています（GitHub Release のバイナリ）。
+`mise install` で `cclens` が使えるようになります。
+
+### 使い方
+
+まず `doctor` で全体を確認します。
+
+```bash
+cclens doctor                    # 1画面の健康診断（global / project 別の指摘）
+cclens doctor --scope global     # ~/.claude 側の設定だけを対象にする
+cclens doctor --scope project    # プロジェクト側の設定だけを対象にする（全プロジェクトが対象）
+cclens doctor --scope project:<slug>  # 特定の1プロジェクトだけを対象にする
+```
+
+`doctor` の結果を見て、必要な観点のレポートを開きます。
+
+| コマンド                  | 内容                                                           |
+| ------------------------- | -------------------------------------------------------------- |
+| `cclens waste`            | 無駄になっているトークン・手間                                 |
+| `cclens inventory`        | 設定（skill / agent / MCP など）の棚卸し                       |
+| `cclens overhead`         | 毎回の先頭に載る固定コスト                                     |
+| `cclens usage --by month` | 期間別の使用量                                                 |
+| `cclens failures`         | 失敗したツール呼び出し                                         |
+| `cclens prompts`          | プロンプトの傾向                                               |
+| `cclens stuck`            | 行き詰まったセッション                                         |
+| `cclens sql '<query>'`    | ストアに対する読み取り専用 SQL（stdin からも可）               |
+| `cclens optimize`         | 指摘事項を対話的な `claude` セッションに渡して改善案を作らせる |
+
+共通オプション:
+
+- `--scope global | project | project:<slug>`: 対象にする設定のレイヤーを絞る
+  （`doctor` / `failures` / `waste` / `inventory` / `optimize`）
+- `--format markdown | json`: markdown は PR への貼り付け用、json は機械処理用。
+  対応形式はコマンドごとに異なる（例: `usage` は `table | markdown`、`doctor` は `table | json`）ので、
+  `cclens <command> --help` で確認する
+- `--db <path>`: DB ファイルを指定する
+- `--frozen`: ストアを更新せず、今ある内容をそのまま読む
+
+読み取り系のコマンドは実行時に `cclens analyze` を自動で走らせてストアを更新します。
+ただし `sql` は自動で更新しないため、最新の内容を対象にしたいときは先に `doctor` か `analyze` を実行します。
+
+### 分析の進め方
+
+`doctor` の出力は 4 つのブロックに分かれます。上から順に、次のように掘り下げます。
+
+| ブロック             | 読み方                                                                                                                                            | 掘り下げるコマンド                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| WHAT TO FIX FIRST    | 優先度順の失敗。複数プロジェクトで起きているものは `~/.claude`（グローバル設定）、1 プロジェクトに偏るものはそのプロジェクトの `CLAUDE.md` で直す | `cclens failures --scope global` / `project:<slug>` |
+| COST                 | 毎セッションの固定コスト。自分の設定ぶんは削れるが、Claude Code 本体（system prompt・組み込みツール・MCP スキーマ）は削れない                     | `cclens overhead` / `cclens usage`                  |
+| CONFIG WORTH PRUNING | 一度も使われていない surface。「解析対象のセッションで使っていない」だけなので、消す前に中身と用途を確認する                                      | `cclens waste --scope global`                       |
+| LOOKS HEALTHY        | 問題なしの観点。steering / corrections の割合が低ければ、自律的に進められている                                                                   | `cclens prompts`                                    |
+
+#### 失敗（`failures`）の分析
+
+1. `cclens failures --scope global` でカテゴリ別の件数を見る。
+2. 件数の多いカテゴリは、`cclens sql` で生のエラー文を集計して中身を確認する。
+   カテゴリ名だけでは原因が分からないため（特に `command-failed` / `other` は未分類）。
+3. 原因に応じて、ルール・hook・環境のどこで直すかを決める。
+
+```bash
+cclens analyze   # sql は自動更新しないので、先にストアを最新にする
+cclens sql "SELECT category, tool, COUNT(*) n FROM tool_errors GROUP BY 1,2 ORDER BY n DESC"
+cclens sql "SELECT substr(excerpt,1,110) e, COUNT(*) n FROM tool_errors WHERE category='blocked-by-hook' GROUP BY 1 ORDER BY n DESC LIMIT 10"
+```
+
+`tool_errors` ビューのカラムは `category` / `excerpt` / `tool` / `project`。DB は読み取り専用で開かれます。
+
+| カテゴリ             | 主な原因                           | 対応                                                                                   |
+| -------------------- | ---------------------------------- | -------------------------------------------------------------------------------------- |
+| `blocked-by-hook`    | 権限拒否、hook による拒否          | 内訳を `sql` で確認する。権限拒否はルールでは減らせない。hook 起因はルールで先回りする |
+| `path-not-found`     | パスの推測                         | Glob / `git ls-files` で実在を確認させるルール                                         |
+| `command-not-found`  | その環境に無いツール               | `mise ls` / `which` で確認して報告させるルール。常用するなら mise で入れる             |
+| `edit-precondition`  | 古い内容のまま Edit                | Read し直してから Edit させるルール                                                    |
+| `tool-not-available` | 存在しない、または未ロードのツール | 一覧にあるツールだけ呼ばせる。遅延ロードは ToolSearch で先に読み込む                   |
+| `timeout`            | 長時間のコマンド                   | `timeout` を明示、または分割                                                           |
+| `cancelled`          | ユーザー停止、並列キャンセル       | 対応不要                                                                               |
+
+#### Bash の `cd` 比率
+
+`doctor` は「Bash の N% が `cd` だけ」も指摘します。毎回 `cd <dir> && ...` を前置している状態なので、
+グローバルのルールに「絶対パスか `git -C` を使う」と書くと下がります（このリポジトリでは 46% から 30% に低下）。
+
+#### ルールを足したあとの確認
+
+ルールはどれも毎セッション数百バイトのコンテキストを増やします。足したあとは、数日分のセッションが溜まってから
+`cclens doctor` を再実行し、該当カテゴリの件数が減っているかを見ます。減っていなければルールを削ります。
+
+#### プロジェクトのスラッグ
+
+`--scope project:<slug>` の `<slug>` は、`~/.claude/projects/` 配下のディレクトリ名と一致します。
+`doctor` の WHAT TO FIX FIRST が、そのまま貼れる形で `--scope project:<slug>` を出してくれます。
+fzf で選ぶなら次の関数が使えます。
+
+```zsh
+cclens-failures() {
+  local slug
+  slug=$(ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" \
+    | fzf --prompt='project> ' \
+          --preview 'cclens failures --scope project:{} --frozen' \
+          --preview-window=right:70%) || return
+  cclens failures --scope "project:$slug" "$@"
+}
+```
+
+### データの場所
+
+- 設定ディレクトリ: `CLAUDE_CONFIG_DIR`（空でなければ）、なければ `~/.claude`。
+  複数アカウントを使うときは `CLAUDE_CONFIG_DIR=~/.claude-account2 cclens doctor` のようにアカウントごとに実行します。
+- DB: `${XDG_STATE_HOME:-~/.local/state}/cclens/cclens.db`。
+  Claude Code が transcript を削除した後も履歴が残るため、DB は消さないでください。
+- 色は `NO_COLOR` を設定するか、パイプすると無効になります。
+
+### Claude Code plugin（任意）
+
+セッション内から使いたい場合は plugin を入れます。`/cclens:doctor` / `/cclens:optimize` / `/cclens:query` の skill が使えます。
+
+```text
+/plugin marketplace add lambdalisue/cclens
+/plugin install cclens@cclens
+```
 
 ## ブラウザ操作（Chrome DevTools MCP と Playwright）
 

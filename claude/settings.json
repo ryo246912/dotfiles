@@ -42,7 +42,6 @@
   "skillOverrides": {
     "crit": "on",
     "crit-cli": "on",
-    "resolving-merge-conflicts": "on",
     "ponytail": "on",
     "ponytail-audit": "on",
     "ponytail-debt": "on",
