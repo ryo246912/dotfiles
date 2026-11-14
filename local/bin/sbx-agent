@@ -388,7 +388,7 @@ if [[ -n "$CLAUDE_ACCOUNT" ]]; then
         exit 1
     }
     SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/kits/claude-subscription"
-    [[ -f "$SUBSCRIPTION_KIT/workload.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
+    [[ -f "$SUBSCRIPTION_KIT/spec.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
     SUBSCRIPTION_TOKEN="${HOME}/.local/state/sbx-agent-credentials/${CLAUDE_ACCOUNT}.token"
     SUBSCRIPTION_MARKER="${HOME}/.local/state/sbx-agent-credentials/sandboxes/${SANDBOX_NAME}"
     if [[ ! -s "$SUBSCRIPTION_TOKEN" || -L "$SUBSCRIPTION_TOKEN" ]]; then
@@ -893,6 +893,16 @@ prepare_env_files() {
             log_error "環境ファイルと kit の snapshot 作成に失敗しました"
             exit 1
         fi
+        # 管理する descriptor は spec.yaml に統一する。v3 frontend はファイル名を
+        # イメージ内の配置先に使うため、ビルドする snapshot 内だけ一意名にする。
+        for path in "$snapshot"/kits/*/spec.yaml; do
+            [[ -f "$path" ]] || continue
+            if ! mv "$path" "${path%/*}/$(basename "${path%/*}").yaml"; then
+                rm -rf "$snapshot"
+                log_error "kit descriptor のビルド用コピーを準備できませんでした"
+                exit 1
+            fi
+        done
         rm -rf "$state_dir/config"
         mv "$snapshot" "$state_dir/config" || exit 1
         ENV_FILE="$state_dir/config/sbxenv.yaml"
