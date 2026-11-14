@@ -14,17 +14,11 @@
 #   - mise.toml / tasks/ / lint/ / scripts/ / lefthook.local.yml は devcontainer と共有する。
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
-#   - base image は Docker 提供の sandbox template（Ubuntu + 非 root の agent ユーザー + sudo）。
-#     agent ごとの `-docker` 版（claude-code-docker / codex-docker / copilot-docker）を
-#     VARIANT で切り替えて、中身が同じ template を agent の数だけ作る（sandbox:build-template）。
-#     sbx は template の base（FLAVOR）を記録し、`sbx create <agent>` はその agent 用の kit
-#     （認証など）を当てるため、FLAVOR と agent が合わないと "failed to apply kit to sandbox"
-#     で失敗するか、kit が当たらずログインを求められる（agent を含まない shell-docker も同じ。
-#     実機で確認）。sandbox 内に dockerd を持つのは `-docker` 版だけで、通常版には docker CLI
-#     しか無い。-docker 版から作った sandbox はエージェントのコンテナが microVM 内で特権モードに
-#     なり、/var/lib/docker に専用ボリュームが付いて dockerd が自動起動する。
-ARG VARIANT=claude-code-docker
-FROM docker/sandbox-templates:${VARIANT}
+#   - base image は v3 の公開 workload (docker.io/sbx/<agent>:latest)。
+#     VARIANT で agent を切り替え、ツール群入りの template を agent ごとに作る。
+#     公開 workload の agent ユーザー・Docker 起動ラベルを継承する。
+ARG VARIANT=claude
+FROM docker.io/sbx/${VARIANT}:latest
 
 ARG AGENT_HOME=/home/agent
 
@@ -47,6 +41,7 @@ RUN \
     ca-certificates \
     curl \
     git \
+    passwd \
     rsync \
     zsh
 
@@ -54,7 +49,8 @@ RUN \
 # sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
 # zsh でも同じ内容を読むよう /etc/zsh/zshenv からも source する。
 ENV SHELL=/usr/bin/zsh
-RUN chsh -s /usr/bin/zsh agent \
+# 公開 workload の PAM 設定に依存せず、root としてログインシェルを変更する。
+RUN usermod --shell /usr/bin/zsh agent \
     && install -d /etc/zsh \
     && printf '%s\n' \
       '# sbx が書き込む永続環境変数を zsh でも読む（bash 側は sbx 本体が source する）' \
