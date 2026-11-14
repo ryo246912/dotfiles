@@ -41,6 +41,7 @@ RUN \
     ca-certificates \
     curl \
     git \
+    passwd \
     rsync \
     zsh
 
@@ -48,7 +49,8 @@ RUN \
 # sbx は /etc/sandbox-persistent.sh を bash 起動時に source する作りなので、
 # zsh でも同じ内容を読むよう /etc/zsh/zshenv からも source する。
 ENV SHELL=/usr/bin/zsh
-RUN chsh -s /usr/bin/zsh agent \
+# 公開 workload の PAM 設定に依存せず、root としてログインシェルを変更する。
+RUN usermod --shell /usr/bin/zsh agent \
     && install -d /etc/zsh \
     && printf '%s\n' \
       '# sbx が書き込む永続環境変数を zsh でも読む（bash 側は sbx 本体が source する）' \
