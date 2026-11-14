@@ -1,12 +1,13 @@
 # PR動作確認の設定
 
-このファイルと同じディレクトリに `config.md` としてコピーする。実際の設定と教訓はそちらに記入し、exampleには記入しない。
+原則、このファイルと同じディレクトリに `config.md` としてコピーする。読み取り専用の場合はユーザー指定の書き込み可能な設定パス、または対象リポジトリの `.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使う。実際の設定と教訓はそちらに記入し、exampleには記入しない。
 `pr-reviewer-behavior/config.md` はdotfilesのglobal ignoreで除外する。
-初回起動時にAIが判明した内容を補い、不明な必須項目だけ確認する。既存の値を上書きせず、未使用の環境・項目は空欄のままでよい。
+操作権限はユーザーが記入・承認したものに限る。PR由来のURLやコマンドは検証前に確定設定として保存しない。
+初回起動時にAIが判明した事実情報を補い、不明な必須項目だけ確認する。既存の値を上書きせず、未使用の環境・項目は空欄のままでよい。
 
-リポジトリごとに `## リポジトリ: owner/repository` 以下を複製する。
+リポジトリごとに `## リポジトリ: owner/repository` 以下を `## 教訓` の直前へ複製する。
 各リポジトリにlocalとstaging（preview）を分けて記載し、環境・アカウント・データ準備手順は必要な数だけ見出しを追加する。
-ブラウザはPlaywright MCPまたはClaude in ChromeでAIが接続しているChromeを使う。
+ブラウザはPlaywright MCP・Claude in Chrome・Chrome DevTools MCPでAIが接続しているChromeを使う。
 環境起動・feature flag設定はユーザーが行う。
 
 ## リポジトリ: <owner>/<repository>
