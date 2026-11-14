@@ -88,14 +88,8 @@ def main():
     repo = Path(os.environ["SBX_DOTFILES_ROOT"]).resolve()
     scripts = repo / "local/bin"
     subprocess.run(["mise", "-C", str(repo), "run", "sandbox:claude-token", *accounts], check=True)
-    # Remove only the conflicting global Anthropic secret, never GitHub/scoped ones.
-    secrets = subprocess.run(["sbx", "secret", "ls"], capture_output=True, text=True, check=True)
-    if any(line.split()[:3] == ["(global)", "service", "anthropic"] or
-           line.split()[:2] == ["(global)", "anthropic"] for line in secrets.stdout.splitlines()):
-        if not confirm("global anthropic 認証を削除しますか？ 他の sandbox にも影響します"):
-            print("共通認証を残して終了します。解除後に sandbox:claude-setup を再実行してください")
-            return
-        subprocess.run(["sbx", "secret", "rm", "anthropic", "--force"], check=True)
+    # Scoped setup-tokens take precedence over global secrets. Keep the global
+    # OAuth login available to the dedicated Chrome sandbox.
     binding()
     print("==> sandbox を準備する workspace:", workspace)
     print("既存 sandbox を作り直す場合、sandbox 内だけのデータは失われます。必要なデータを保存し、関連セッションを終了してください。")

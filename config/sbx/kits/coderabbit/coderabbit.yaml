@@ -1,0 +1,18 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: mixin
+displayName: coderabbit
+version: 2.0.0
+description: CodeRabbit CLI network policy for the mise-based template
+capabilities:
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - api.coderabbit.ai
+          - app.coderabbit.ai
+          - ide.coderabbit.ai
+          - cli.coderabbit.ai
+          # EU login and review endpoints: https://docs.coderabbit.ai/cli/network-requirements
+          - app.eu.coderabbit.ai
+          - ide.eu.coderabbit.ai
