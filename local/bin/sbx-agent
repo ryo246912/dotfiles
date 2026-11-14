@@ -466,6 +466,8 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # lessons-record の観察記録と lessons-harvest の週次収集（pull / branch / commit / push）を
     # sandbox 内で実行できるよう、.git を含めて書き込み可で渡す。
     # ホストの clone を直接共有するため、Git 設定や hooks の変更もホストへ反映される。
+    # 後続のホスト側 Git 操作でコードを実行しうるため、ホスト実行を許容できる信頼済み agent 向け。
+    # この共有 clone では sandbox をホスト実行の信頼境界の内側として扱う（docs/agent-lessons.md）。
     if [[ -d "${HOME}/.local/share/agent-lessons" ]]; then
         add_mount "${HOME}/.local/share/agent-lessons"
     fi

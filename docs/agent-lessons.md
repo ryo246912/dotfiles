@@ -439,13 +439,15 @@ mise run lessons:sync
 ## 制約と注意
 
 - **devcontainer の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
-- **Docker Sandboxes（`sbx-agent`）では、同期（pull / commit）以外はホストと同じように動く。** ホストの clone を書き込み可
-  （`.git` だけは read-only。sandbox から git hook などを仕込ませないため。SessionStart の裏の `git pull` と、それに続く
-  reindex は sandbox では失敗するので、pull / commit はホストで行う）でマウントし、sandbox 内の
+- **Docker Sandboxes（`sbx-agent`）では、同期と週次収集も sandbox 内で実行できる。** ホストの clone を `.git` を含めて
+  書き込み可でマウントするため、pull / ブランチ作成 / commit / push ができる。sandbox 内の
   `~/.local/share/agent-lessons` から symlink を張る。Basic Memory は template に入れ、project `agent-lessons` を
   sandbox ごとに登録して、アタッチのたびに索引を作り直す（索引の SQLite はホストと共有しない）。sandbox で書いた観察は
-  ホストの clone に直接入るので、ホストの `mise run lessons:sync` で commit / push される。この仕組みより前に作った
-  sandbox にはマウントが無いため、`sbx-agent <agent> --new` で作り直す
+  ホストの clone に直接入り、`mise run lessons:sync` はホストでも sandbox でも実行できる。週次収集は skill のブランチ・PR 手順に従う。
+  以前の `.git` が read-only の sandbox やマウントの無い sandbox は、`sbx-agent <agent> --new` で作り直す。
+  **この共有 clone は、ホストでのコード実行を許容できる信頼済み agent に限って使う。** sandbox が変更した `.git/hooks` や
+  `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）は、後続のホスト側 Git 操作
+  （SessionStart の pull や `lessons:sync`）でコードを実行しうる。この clone については sandbox をホスト実行の信頼境界の内側として扱う。
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
