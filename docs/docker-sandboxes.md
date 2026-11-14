@@ -559,7 +559,7 @@ API キーの登録インターフェースを使いますが、登録するの�
 サブスク用 token です。API キー課金への切り替えを意図したものではありません。
 
 これは [公式 issue #144 の回避策](https://github.com/docker/sbx-releases/issues/144#issuecomment-6372651627)
-に基づきます。報告された動作環境は sbx v0.45.1、global anthropic secret なしです。
+に基づきます。報告された動作環境は sbx v0.45.1、global anthropic secret なしです。sbx 0.53.0 では scoped secret の優先により、共通 OAuth と併用します。
 このリポジトリでは実 sbx による認証検証は未実施です。更新後の sbx での互換性や
 サブスクの全機能を保証するものではありません。まず専用の検証 sandbox で確認してください。
 
@@ -576,8 +576,7 @@ skills・SSH 鍵などのホスト準備に続けて、以下を順に処理し�
 1. account1 → account2 → work3 の `claude setup-token` を実行し、token を保存する。
    実行直前にアカウントごとに y/n を確認し、`n` または Enter はスキップする。
    ブラウザでのログイン・アカウント選択は手動。
-2. 共通の anthropic secret がある場合、他の sandbox にも影響することを表示して削除の y/n を確認する。
-   残す場合は Claude の設定をそこで終了する。GitHub や sandbox 固有の secret は削除しない。
+2. 共通の anthropic 認証は保持する。Sandbox 固有の setup-token を使うため、OAuth 用の共通認証と併用できる。
 3. `~/.config/sbx/credentials.yaml` に `anthropic` / `apiKey` / `api.anthropic.com` の binding を追加する。
    既存の service・認証方式・domain を保持し、変更前に `.bak`（重複時は連番）へバックアップする。
    この設定により、通常は ccmanager 起動時の kit 承認が不要になる。
@@ -1680,24 +1679,43 @@ sbx-agent claude --claude-account account1 --new
 `setting "claude.chrome" is not defined` と表示される場合は、sbx を更新し、
 `sbx daemon restart` でデーモンも再起動してから設定してください。
 
-標準の `sbxenv.yaml` は `env.CLAUDE_CODE_ENABLE_CFC: "1"` を設定し、Claude の Chrome
-連携を既定で有効にします。`sbx-agent claude` や、それを呼ぶ起動経路から毎回 `--chrome` を
-渡す必要はありません。Claude 以外の agent の起動引数は変更しません。
-環境変数は sandbox 作成時に反映するため、既存の sandbox は必要なデータを保存してから
-`sbx-agent claude --new`（アカウント指定など普段のオプションも併用）で作り直してください。
+setup-token 用と通常の OAuth 用の Sandbox は併用できます。
+普段は既存の `Claude account1 (Docker Sandbox)` などを使い、Chrome が必要なときだけ
+ccmanager の **Claude OAuth + Chrome (Docker Sandbox)** を選んでください。
+この preset は `--claude-oauth --name-prefix oauth -- --chrome` で起動し、
+setup-token の account1 / account2 / work3 とは別名の Sandbox を使います。
+共通の `sbxenv.yaml` では Chrome を有効にせず、OAuth preset だけで明示的に有効化します。
 
-ホストでは一度だけ次を実行します。この設定は再起動後も保存されます。
+ホストでは初回に `mise run sandbox:sbx-settings`（または次の設定）を実行します。
 
 ```bash
 sbx settings set claude.chrome true
 ```
 
-普段使う Chrome に Claude in Chrome 拡張をインストールし、Claude Code と同じアカウントで
-ログインしてください。接続には Claude サブスクリプションの通常の OAuth ログインが必要です。
-API キーや `claude setup-token` の長期トークンだけでは Chrome 連携は有効になりません。
-このリポジトリの `--claude-account` は setup-token を使うため、この設定追加だけでは
-Chrome 連携の認証要件を満たしません。ホストの保存済み OAuth ログインも確認してください。
-起動後は `/chrome` で接続状態を確認できます。
+OAuth preset の Claude で初回に `/login` を実行し、普段の Chrome 拡張と同じアカウントで
+ログインしてください。その後 `/chrome` で接続を確認します。
+OAuth 用の `--claude-oauth` は、ホストの `~/.claude` / `.claude.json` を自動共有せず、
+Sandbox 内の標準設定ディレクトリを使います。Git・ツール・共有 skills の設定は維持します。
+statusline は account の横に起動時の認証方式を表示します（例: `account1 setup-token` / `sbx OAuth`）。
+OAuth preset は statusline だけを CLI 設定として追加し、ホストの認証ファイルをコピーしません。
+表示は起動モードを示し、トークンを読んだり API でログイン先を検証したりはしません。
+通常の OAuth ログインは sbx のホスト共通認証なので、他の通常 OAuth Sandbox と共有されます。
+OAuth Sandbox ごとに別アカウントへ分離する仕組みではありません。
+
+アカウント別 preset は引き続き Sandbox 固有の setup-token を使います。
+sbx 0.53.0 の scoped secret は共通認証より優先されるため、共通 OAuth を削除する必要はありません。
+API キーや setup-token だけでは公式 Chrome 連携は使えず、`--chrome` でも解除できません。
+setup-token 用 Sandbox の中で `/login` を実行して認証方式を変更せず、OAuth preset を使ってください。
+
+手動での起動は次のとおりです。
+
+```bash
+sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome
+```
+
+`--claude-oauth` は `--claude-account` / `--config-dir` と併用できません。
+既存 Sandbox と認証方式が異なる場合は起動を拒否します。別名を選ぶか、必要なデータを保存して
+`--new` で再作成してください。template の再ビルドは不要です。
 
 詳細は [Docker の Claude in Chrome 設定](https://docs.docker.com/ai/sandboxes/agents/claude-code/#claude-in-chrome) と
 [Claude Code の Chrome 連携](https://code.claude.com/docs/en/chrome) を参照してください。
@@ -1710,7 +1728,6 @@ Chrome 連携の認証要件を満たしません。ホストの保存済み OAu
 | CodeRabbit の認証・通信先                    | `kits/coderabbit/coderabbit.yaml`                   |
 | Claude subscription の Bearer 認証と設定調整 | `kits/claude-subscription/claude-subscription.yaml` |
 | GitHub の取得元                              | `sbxenv.yaml` の `secrets.github`                   |
-| Claude の Chrome 連携の既定値                | `sbxenv.yaml` の `env.CLAUDE_CODE_ENABLE_CFC`       |
 | CodeRabbit のブラウザーログイン              | `sandbox:coderabbit-login`                          |
 | アカウント・worktree・mount・Git 設定・port  | `sbx-agent` の runtime overlay                      |
 | CLI の導入とバージョン                       | Dockerfile → mise。kit で別途インストールしない     |

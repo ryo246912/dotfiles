@@ -1,10 +1,6 @@
 schemaVersion: "1"
 # agent / workspace / template / mounts / env / ports are supplied by sbx-agent's runtime overlay.
 agent: claude
-env:
-  # Enable Claude in Chrome without requiring --chrome on each launch.
-  # The host must also enable claude.chrome and store a subscription OAuth login.
-  CLAUDE_CODE_ENABLE_CFC: "1"
 kits:
   - ./kits/common
   - ./kits/coderabbit

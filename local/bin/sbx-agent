@@ -16,6 +16,7 @@
 #   --name-prefix PFX  既定の sandbox 名で branch の前に付ける識別子（--config-dir と併用する）
 #   --workspace DIR    primary workspace（既定: カレントディレクトリ）
 #   --claude-account ID Claude サブスクを sandbox ごとに固定（account1/account2/work3 など）
+#   --claude-oauth      通常の OAuth 用。ホストの Claude 設定・認証を共有しない
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
@@ -84,6 +85,7 @@ NAME_PREFIX=""
 WORKSPACE="$PWD"
 CONFIG_DIR=""
 CLAUDE_ACCOUNT=""
+CLAUDE_OAUTH=false
 BRANCH=""
 TEMPLATE=""
 NO_TEMPLATE=false
@@ -191,6 +193,7 @@ while [[ $# -gt 0 ]]; do
             CLAUDE_ACCOUNT="$1"
             ;;
         --claude-account=*) CLAUDE_ACCOUNT="${1#*=}" ;;
+        --claude-oauth) CLAUDE_OAUTH=true ;;
         --config-dir)
             shift && require_value --config-dir $#
             CONFIG_DIR="$1"
@@ -328,10 +331,16 @@ esac
 # sandbox 内でそれを参照させる環境変数。sbx はホストと同じ絶対パスに workspace を
 # マウントするため、sandbox 内の $HOME はホストとは別物になる。
 AGENT_CONFIG_ENV=""
+if [[ "$CLAUDE_OAUTH" == true ]] && [[ "$AGENT" != claude || -n "$CLAUDE_ACCOUNT" || -n "$CONFIG_DIR" ]]; then
+    log_error "--claude-oauth は claude 専用で、--claude-account / --config-dir と併用できません"
+    exit 1
+fi
 case "$AGENT" in
     claude)
-        : "${CONFIG_DIR:=${HOME}/.claude}"
-        AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
+        if [[ "$CLAUDE_OAUTH" != true ]]; then
+            : "${CONFIG_DIR:=${HOME}/.claude}"
+            AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
+        fi
         ;;
     codex)
         : "${CONFIG_DIR:=${HOME}/.codex}"
@@ -456,7 +465,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
-    add_mount "${HOME}/.claude.json:ro"
+    [[ "$CLAUDE_OAUTH" != true ]] && add_mount "${HOME}/.claude.json:ro"
     # nvim 設定は read-only。書き込み可にすると agent がホストの init.lua を書き換えられてしまう。
     # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
     # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
@@ -600,6 +609,13 @@ GIT_CONFIG_PAIRS=()
 add_git_config() { GIT_CONFIG_PAIRS+=("$1" "$2"); }
 
 add_env HOST_USER "${USER:-}"
+CLAUDE_AUTH_METHOD=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    CLAUDE_AUTH_METHOD=setup-token
+elif [[ "$CLAUDE_OAUTH" == true ]]; then
+    CLAUDE_AUTH_METHOD=oauth
+fi
+[[ -n "$CLAUDE_AUTH_METHOD" ]] && add_env SBX_CLAUDE_AUTH_METHOD "$CLAUDE_AUTH_METHOD"
 # lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
 add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
@@ -624,7 +640,7 @@ fi
 # ホスト連携の有無ではなく MOUNT_CONFIG で判定する。
 if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
-    [[ -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
+    [[ "$CLAUDE_OAUTH" != true && -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
     [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_env SBX_HOST_AGENT_LESSONS "${HOME}/.local/share/agent-lessons"
     # SessionStart hook（agent-lessons-context）は image に入っていないため、マウント済みの
     # dotfiles リポジトリにある実体を sandbox 内の ~/.local/bin から参照させる
@@ -937,11 +953,13 @@ if [[ "$ENV_PLAN" == true ]]; then
     exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
 fi
 
+CREATED_MARKER_VERSION=v3
+[[ "$CLAUDE_OAUTH" == true ]] && CREATED_MARKER_VERSION=v3-oauth
 log_info "既存 sandbox と認証設定を確認します"
 # 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
 if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
-    if [[ ! -f "${ENV_OVERLAY%/*}/created" || "$(cat "${ENV_OVERLAY%/*}/created")" != v3 ]]; then
-        log_error "この sandbox は v3 kit での作成を確認できません。必要なデータを保存して --new で作り直してください"
+    if [[ ! -f "${ENV_OVERLAY%/*}/created" || "$(cat "${ENV_OVERLAY%/*}/created")" != "$CREATED_MARKER_VERSION" ]]; then
+        log_error "この sandbox は選択した認証方式の v3 kit での作成を確認できません。必要なデータを保存して --new で作り直してください"
         exit 1
     fi
 fi
@@ -955,18 +973,8 @@ if [[ -n "$CLAUDE_ACCOUNT" ]]; then
             exit 1
         fi
     fi
-    # Known-working kit configuration requires no global Anthropic credential.
-    # Do not delete it automatically: other sandboxes may depend on it.
-    if ! subscription_secrets=$(sbx secret ls 2>/dev/null); then
-        log_error "sbx の secret 一覧を確認できないため起動を中止します"
-        exit 1
-    fi
-    if printf '%s\n' "$subscription_secrets" | grep -Eq '^[[:space:]]*\(global\)[[:space:]]+anthropic([[:space:]]|$)'; then
-        unset subscription_secrets
-        log_error "global anthropic 認証が存在します。影響を確認して手動で解除してください（docs/docker-sandboxes.md）"
-        exit 1
-    fi
-    unset subscription_secrets
+    # sbx 0.53.0: sandbox-scoped secrets override global credentials, including
+    # the OAuth login used by a separate Chrome sandbox. Never delete that login.
     if ! python3 - "$CONFIG_DIR/settings.json" <<'PYSETTINGS'
 import json, pathlib, sys
 p = pathlib.Path(sys.argv[1])
@@ -1051,7 +1059,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
         fi
         exit 1
     fi
-    (umask 077; printf 'v3\n' >"${ENV_OVERLAY%/*}/created") || exit 1
+    (umask 077; printf '%s\n' "$CREATED_MARKER_VERSION" >"${ENV_OVERLAY%/*}/created") || exit 1
     SANDBOX_CREATED=true
     load_static_mcp
 
@@ -1111,8 +1119,15 @@ fi
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
 log_info "${AGENT} を起動します"
 run_cmd=(sbx run --name "$SANDBOX_NAME")
+[[ -n "$CLAUDE_AUTH_METHOD" ]] && run_cmd+=(--env "SBX_CLAUDE_AUTH_METHOD=$CLAUDE_AUTH_METHOD")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
+# OAuth はホストの Claude 設定を共有しない。statusLine だけ CLI の settings で追加し、
+# Sandbox 内の OAuth credential file や built-in settings は置き換えない。
+if [[ "$CLAUDE_OAUTH" == true && "$MOUNT_CONFIG" == true && -f "${dotfiles_repo:-}/claude/statusline.sh" ]]; then
+    oauth_settings=$(jq -cn --arg p "$dotfiles_repo/claude/statusline.sh" '{statusLine:{type:"command",command:("bash " + ($p|@sh))}}') || exit 1
+    AGENT_ARGS=(--settings "$oauth_settings" ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
+fi
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
 
 if [[ "$REMOVE_ON_EXIT" == true ]]; then
