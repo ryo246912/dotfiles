@@ -1636,6 +1636,10 @@ sbx-agent claude --claude-account account1 --new
 
 ### Claude in Chrome
 
+この連携には **sbx 0.53.0 以上**が必要です。`sbx --version` で確認してください。
+`setting "claude.chrome" is not defined` と表示される場合は、sbx を更新し、
+`sbx daemon restart` でデーモンも再起動してから設定してください。
+
 標準の `sbxenv.yaml` は `env.CLAUDE_CODE_ENABLE_CFC: "1"` を設定し、Claude の Chrome
 連携を既定で有効にします。`sbx-agent claude` や、それを呼ぶ起動経路から毎回 `--chrome` を
 渡す必要はありません。Claude 以外の agent の起動引数は変更しません。
