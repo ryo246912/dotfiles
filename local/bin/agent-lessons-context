@@ -50,9 +50,16 @@ if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ] &&
 	mkdir -p "$(dirname "$SYNC_STAMP")"
 	# autostash は使わない。Basic Memory が書き換えた作業ツリーと upstream が衝突すると、マーカーが frontmatter に残り、
 	# 次の lessons:sync の git add --all で commit されるため。汚れていれば pull は何もせず失敗し、次のセッションで再試行する。
-	# shellcheck disable=SC2016 # $1 / $2 は子の sh で展開する
-	nohup sh -c 'git -C "$1" pull --rebase --no-autostash --quiet || { git -C "$1" rebase --abort; exit 1; }; basic-memory reindex --search -p agent-lessons && touch "$2"' \
-		sh "$LESSONS_DIR" "$SYNC_STAMP" >/dev/null 2>&1 &
+	# rebase --abort は別セッションが進行中の rebase も中止してしまうので、mkdir のロックを持つ間だけ pull と abort を行う。
+	# 異常終了で残ったロックは 1 時間で捨てる。
+	# shellcheck disable=SC2016 # $1 / $2 / $3 は子の sh で展開する
+	nohup sh -c '
+		find "$3" -maxdepth 0 -mmin +60 -exec rmdir {} \; 2>/dev/null
+		mkdir "$3" 2>/dev/null || exit 0
+		trap "rmdir \"$3\"" EXIT
+		git -C "$1" pull --rebase --no-autostash --quiet || { git -C "$1" rebase --abort; exit 1; }
+		basic-memory reindex --search -p agent-lessons && touch "$2"
+	' sh "$LESSONS_DIR" "$SYNC_STAMP" "$SYNC_STAMP.lock" >/dev/null 2>&1 &
 fi
 
 keys=$(scope_keys "$cwd")

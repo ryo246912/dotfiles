@@ -78,16 +78,28 @@ done
 
 git add --all
 if ! git diff --cached --quiet; then
-  # 衝突マーカーは frontmatter を壊し、書き込む側のスクリプトが止まるため commit しない
-  if git diff --cached -U0 --no-renames -- '*.md' | grep -qE '^\+(<<<<<<<|\|\|\|\|\|\|\||>>>>>>>) '; then
-    echo "error: 衝突マーカーが残っています。解消してから再実行してください" >&2
-    exit 1
-  fi
-  # 日本語のファイル名だと、Basic Memory がローマ字混じりの壊れた permalink を作る
-  if git diff --cached --name-only --diff-filter=AR -z | grep -zqP '[^\x00-\x7F]'; then
-    echo "error: ASCII でないファイル名があります。<日付>-<category>-<hash>.md の形に改名してください" >&2
-    exit 1
-  fi
+  # 衝突マーカーは frontmatter を壊し、日本語のファイル名は Basic Memory が壊れた permalink を作る。どちらも commit しない。
+  # grep -q は最初の一致で閉じて git diff が SIGPIPE になり、pipefail で検査が素通りするうえ、-P は macOS の grep に無い
+  python3 - <<'PY'
+import re
+import subprocess
+import sys
+
+CONFLICT = re.compile(r"^(?:<{7}|\|{7}|>{7})(?: |$)", re.M)
+FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
+git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True).stdout
+names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z").decode().split("\0")
+errors = []
+for name in filter(None, names):
+    if not name.isascii():
+        errors.append(f"ASCII でないファイル名: {name}（<日付>-<category>-<hash>.md の形に改名する）")
+    if name.endswith(".md"):
+        m = FRONTMATTER.match(git("show", f":{name}").decode(errors="replace"))
+        if m and CONFLICT.search(m[1]):
+            errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
+if errors:
+    sys.exit("error: " + "\nerror: ".join(errors))
+PY
   git diff --cached --no-renames --name-only --diff-filter=ACM -z \
     | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
