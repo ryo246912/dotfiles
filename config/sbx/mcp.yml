@@ -14,6 +14,12 @@
 #   雛形は mcp.<name>.yml.example）。同じ name を複数のファイルに書いた場合は先に読んだ方を使う。
 dependencies:
   mcp:
+    # CLI と同じ公開版を使用。palace はホストに保存し、必要な sandbox だけに読み込む。
+    - name: mempalace
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["--from", "mempalace@3.11.0", "mempalace-mcp"]
     - name: deepwiki
       registry: false
       transport: http

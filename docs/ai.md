@@ -1470,6 +1470,125 @@ sandbox へ読み込むときは、作業に合わせて片方だけ指定しま
 - 複数の Chrome を並行して使う場合は 9223 / 9224 で起動し、`config/sbx/mcp.work2.yml.example` を参考に
   `chrome-devtools-2` / `chrome-devtools-3` を追加します。
 
+## MemPalace（会話・プロジェクトの記憶と検索）
+
+[MemPalace](https://github.com/MemPalace/mempalace) は、会話やプロジェクトのファイルを原文のまま保存し、
+意味で検索するローカルの記憶ストアです。プロジェクト・人物を **wing**、話題を **room**、
+保存した原文の単位を **drawer** として整理します。基本の保存・検索には API キーは不要です。
+
+### 導入と初期化
+
+CLI は `config/mise/config.toml` の `pipx:mempalace`、sandbox 用 MCP は `config/sbx/mcp.yml` で
+公開版 **3.11.0** に固定しています。mise の pipx backend は `uvx = true` なので、依存ライブラリは
+uv の隔離環境へ入ります。GitHub の既定ブランチは開発版のため、公開版とオプションが異なることがあります。
+
+ホストで dotfiles を反映し、CLI をインストールします。
+
+```bash
+mise bootstrap dotfiles apply
+mise --cd "$HOME" install pipx:mempalace
+mempalace --version
+
+# 記憶させたいプロジェクトで初期化（この段階では mine しない）
+cd ~/projects/myapp
+mempalace init . --yes --no-llm
+```
+
+`--no-llm` は entity 検出時の LLM 補助を無効にします。`init` はプロジェクトに
+`mempalace.yaml` を生成し、entity を検出した場合は `entities.json` も生成します。
+Git リポジトリでは ignore 設定も追加します。初期化は必要なプロジェクトごとに行います。
+取り込みの確認が表示された場合、この段階では `n` を選びます。
+
+3.11.0 のグローバル設定は、`MEMPALACE_CONFIG_DIR` → 既存の `~/.mempalace` →
+`${XDG_CONFIG_HOME:-~/.config}/mempalace` の順でディレクトリを選び、その中の `config.json` を読みます。
+データの既定保存先は選ばれた設定ディレクトリの `palace/` です。
+`palace_path` または `MEMPALACE_PALACE_PATH` で保存先を変えられます。
+3.11.0 はこれとは別に `~/.mempalace/locks` を使うため、ホストのホームへの書き込み権限も必要です。
+個人の記憶・索引・モデルキャッシュは dotfiles にコミットしません。
+
+既定の embedding model は `minilm`（英語向け）です。日本語中心なら、**初めて mine する前に**
+有効な `config.json` の既存キーを残したまま `"embedding_model": "embeddinggemma"` を追加します。
+これは多言語モデルで、初回使用時に約 300 MB のダウンロードが必要です。
+既にデータがある palace のモデル変更には再索引が必要なので、先にバックアップを取ってください。
+CLI と MCP は同じホストの設定を読みます。別々のモデルや保存先を指定しないようにします。
+
+### 取り込み・検索
+
+```bash
+# 対象を確認してから取り込む
+mempalace mine . --wing myapp --dry-run
+mempalace mine . --wing myapp
+
+# 意味で検索。wing を指定するとプロジェクトを絞れる
+mempalace search "認証方式を変更した理由" --wing myapp --results 5
+
+# 新しいセッションへ渡す文脈・保存状態を表示
+mempalace wake-up --wing myapp
+mempalace status
+mempalace audit
+
+# Markdown としてエクスポート
+mempalace export ~/palace-export
+```
+
+会話履歴を取り込む場合は、対象プロジェクトの transcript ディレクトリだけを指定します。
+Claude Code のディレクトリ名は `~/.claude/projects/` の中で確認してください。
+別アカウントは `~/.claude-account2/projects/` など、そのアカウントの保存先を使用します。
+
+```bash
+mempalace mine ~/.claude/projects/<対象プロジェクトのディレクトリ> --mode convos --wing myapp
+```
+
+保存するのは要約ではなく原文です。取り込み対象に認証情報や業務上の機密が含まれないか確認します。
+この設定はローカルの ChromaDB を利用しますが、MCP の検索結果は接続した AI に渡されます。
+wing は検索の分類であり、アクセス権限の境界ではありません。業務・個人など記憶を分離する場合は
+palace と MCP 登録自体を分けます。
+
+### sandbox から AI に使わせる
+
+既存の MCP 方針に合わせ、ホストの agent には自動登録せず、ホストの sbx gateway 経由で使います。
+
+```bash
+# dotfiles リポジトリで登録（初回・mcp.yml 変更時）
+mise run sandbox:mcp-add
+
+# 必要な sandbox にだけ読み込む
+sbx-agent claude --static-mcp mempalace
+sbx-agent codex --static-mcp mempalace
+
+# 起動済み sandbox には一覧から mempalace を選んで読み込む
+mise run sandbox:mcp-load
+```
+
+MCP はホストで `uvx --from mempalace@3.11.0 mempalace-mcp` として起動します。
+データやモデルはホスト側にあり、sandbox 内への CLI インストールや DB の mount は不要です。
+MCP に渡す mine のパスは **ホストから見えるパス**を使います。
+コンテナ内だけのファイルは、ホストから取り込める場所へ出すか、ホストの元ファイルを取り込みます。
+
+接続後は、たとえば次のように依頼します。
+
+```text
+MemPalace の status を確認してください。
+myapp の認証に関する過去の決定を MemPalace で検索し、原文を根拠に説明してください。
+この作業で決まった内容を myapp の記憶に保存してください。
+```
+
+設定の追加だけで会話履歴が自動保存されるわけではありません。この構成では auto-save hook は追加していないため、
+必要な履歴を `mine --mode convos` で取り込みます。自動保存が必要な場合は
+[公式の hooks 手順](https://mempalaceofficial.com/guide/hooks.html) に従い、既存の Claude / Codex hooks と
+併合して設定します。公式 skill の追加もこの設定の必須条件ではありません。
+
+### 更新・トラブル時
+
+- 更新は `config/mise/config.toml` と `config/sbx/mcp.yml` のバージョンを揃えて変更し、
+  CLI の再インストールと `mise run sandbox:mcp-add`、sandbox の MCP 再読み込みを行います。
+  更新は mise / Renovate で管理し、MemPalace 独自の自動更新チェックは有効にしません。
+- MCP が見つからなければ、ホストの `sbx mcp ls` と agent の `/mcp` で登録・読み込みを確認します。
+- 初回の検索や取り込みでは embedding model を取得するため、ネットワーク接続が必要です。
+  `mempalace status` で保存先と model / device を確認し、CLI と MCP で同じ設定を使っているか確認します。
+- バックアップは書き込みを止めてから palace ディレクトリと有効な設定ディレクトリを一緒にコピーします。
+  エクスポートした Markdown は閲覧用であり、DB の完全なバックアップとは別です。
+
 ## desloppify（コードベースの品質改善ループ）
 
 [desloppify](https://github.com/peteromallet/desloppify) は、コードベースをスキャンして「雑な実装（slop）」を検出し、
