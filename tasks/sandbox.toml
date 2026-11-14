@@ -197,7 +197,7 @@ main "$@"
 description = "Select a sandbox with fzf, forward its callback and open CodeRabbit browser login"
 run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-coderabbit-login.py"'
 
-["sandbox:settings"]
+["sandbox:sbx-settings"]
 description = "Apply recommended sbx 0.53.0 host settings and restart the daemon"
 run = '''
 set -eu
@@ -223,7 +223,7 @@ sbx daemon restart
 '''
 
 ["sandbox:setup"]
-description = "One-time host-side setup for Docker Sandboxes (SSH, skills, settings)"
+description = "One-time host-side setup for Docker Sandboxes (SSH, skills, Claude accounts)"
 run = '''
 set -eu
 
@@ -250,8 +250,6 @@ for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
     sbx policy allow network "$allow_domains" || echo "warn: $(basename "$allow_file") のドメインの許可に失敗しました" >&2
   fi
 done
-
-mise run sandbox:settings
 
 echo "==> ホストの agent skills を共有 store へ取り込む"
 # --force で skill ごとの Overwrite 確認（[y/N]）を飛ばす。プロンプトは sbx 自身の行入力で

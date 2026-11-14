@@ -16,7 +16,7 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 > 普段の開発フローは [ccmanager での開発の段取り](#ccmanager-での開発の段取り) を参照してください。
 >
 > ```bash
-> mise run sandbox:setup           # ホスト設定 / skills / SSH 鍵
+> mise run sandbox:setup           # skills / SSH 鍵 / Claude 認証
 > mise run sandbox:build-template  # devcontainer と同じツール群入りの template をビルド
 > mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホストの sbx mcp へ登録
 > ```
@@ -28,7 +28,7 @@ Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、
 
 | タスク                      | 用途                                                                                                                                              | 使うタイミング                |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `sandbox:settings`          | おすすめのホスト設定を反映してデーモン再起動                                                                                                      | 初回・設定を揃えるとき        |
+| `sandbox:sbx-settings`      | おすすめのホスト設定を反映してデーモン再起動                                                                                                      | 初回・設定を揃えるとき        |
 | `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
 | `sandbox:claude-setup`      | Claude token 登録 → 共通認証の確認 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                | Claude 設定だけ再実行するとき |
 | `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
@@ -272,11 +272,13 @@ common / CodeRabbit / Claude subscription は v3 に移行済みです。
 ラッパーは作成済みマーカーで v3 を確認し、v2 sandbox の暗黙の再利用を拒否します。
 
 ```bash
-mise run sandbox:settings        # おすすめ設定だけ反映（デーモン再起動を含む）
+mise run sandbox:sbx-settings        # おすすめ設定だけ反映（デーモン再起動を含む）
 mise run sandbox:build-template  # 公開 v3 workload をベースに再ビルド
 ```
 
-0.53.0 までの機能では、今の構成には次の設定が候補になります。`sandbox:settings` と `sandbox:setup` で以下を反映します。
+0.53.0 までの機能では、今の構成には次の設定が候補になります。`sandbox:sbx-settings` を明示的に実行して以下を反映します。
+設定は CLI・デーモン再起動後も保存されるため、初回と設定を変更したいときだけ実行します。
+`sandbox:setup` からは呼びません。
 
 | 設定                                             | おすすめする用途                                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -289,7 +291,7 @@ mise run sandbox:build-template  # 公開 v3 workload をベースに再ビル�
 
 設定以外では、0.53.0 の `sbx df` / `sbx df --verbose` でローカルの容量内訳を確認できます。
 画像貼り付け (`clipboard.imagePaste true`) も維持し、すべての設定後にデーモンを一度再起動します。
-`sandbox:settings` は何度実行しても同じ値になります。上記は「0.53.0 で使える候補」であり、すべてが
+`sandbox:sbx-settings` は何度実行しても同じ値になります。上記は「0.53.0 で使える候補」であり、すべてが
 0.53.0 で初めて追加された設定という意味ではありません。
 
 > [!NOTE]
@@ -361,7 +363,7 @@ gh ssh-key list   # TYPE が signing の行があれば OK
 
 > [!NOTE]
 > GitHub の secret は sandbox ごとに登録されます。取得元や kit の設定を変えた場合は
-> `sbx-agent <agent> --new` で作り直してください。ホスト設定の変更は `sandbox:setup` で反映します。
+> `sbx-agent <agent> --new` で作り直してください。sbx のホスト設定は `sandbox:sbx-settings`、追加通信許可は `sandbox:setup` で反映します。
 
 ### ドキュメントサイトの許可
 
@@ -741,7 +743,7 @@ kit・binding・token・sbx バージョンを確認してください。
 ```bash
 mise install                     # sbx を導入
 sbx login                        # Docker ID でサインイン
-mise run sandbox:setup           # ホスト設定 / skills / 通知用 SSH 鍵
+mise run sandbox:setup           # skills / 通知用 SSH 鍵 / Claude 認証
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519  # コミット署名用の鍵を ssh-agent / Keychain へ
 gh auth refresh -h github.com -s admin:ssh_signing_key  # signing key 登録用の scope を追加
 gh ssh-key add ~/.ssh/id_ed25519.pub --type signing --title "sbx signing ($(hostname -s))"  # GitHub に Signing key として登録
@@ -783,7 +785,7 @@ mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホスト�
 > 実行されます。sandbox の外に影響し得る経路なので、変更は `git diff codex/` で確認してください。
 
 secret の取得元と共通 network policy は `sbxenv.yaml` と kit に宣言しています。
-`sandbox:setup` は SSH 鍵・skills・個人用の追加通信許可・ホスト設定を準備する入り口です。
+`sandbox:setup` は SSH 鍵・skills・個人用の追加通信許可・Claude 認証を準備する入り口です。
 
 ホストの sshd 側（`authorized_keys` 登録・リモートログイン・通知の表示許可）は
 devcontainer と共通なので、[docs/devcontainer.md](./devcontainer.md) を一度だけ済ませてください。
@@ -1740,7 +1742,7 @@ fnox の実行ファイル・設定・provider の依存先も書き込み可能
 
 初回は plan の承認が必要です。`sbx settings set env.rememberHostCommands true` で
 承認を記憶でき、今回の plan を非対話で承認する場合は `--env-force` を使います。
-`sandbox:settings` は承認の記憶を有効にします。`--env-force` は明示した場合だけ使います。
+`sandbox:sbx-settings` は承認の記憶を有効にします。`--env-force` は明示した場合だけ使います。
 `sbx env` は引き続き experimental です。
 
 0.50.1 は起動不具合の修正、0.50.0 は kit の host mount、永続 volume の保持、
