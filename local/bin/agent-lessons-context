@@ -54,10 +54,12 @@ if [ -z "$(find "$SYNC_STAMP" -mmin -1440 2>/dev/null)" ] &&
 	# 異常終了で残ったロックは、1 時間たち持ち主のプロセスも死んでいるときだけ捨てる（lessons:sync も同じロックを取る）。
 	# shellcheck disable=SC2016 # $1 / $2 / $3 は子の sh で展開する
 	nohup sh -c '
-		if [ -n "$(find "$3" -maxdepth 0 -mmin +60 2>/dev/null)" ] && ! kill -0 "$(cat "$3/pid" 2>/dev/null)" 2>/dev/null; then rm -rf "$3"; fi
-		mkdir "$3" 2>/dev/null || exit 0
-		echo $$ >"$3/pid"
-		trap "rm -rf \"$3\"" EXIT
+		lock=$3
+		stale() { [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ] && ! kill -0 "$(cat "$lock/pid" 2>/dev/null)" 2>/dev/null; }
+		if stale && mkdir "$lock.reclaim" 2>/dev/null; then stale && rm -rf "$lock"; rmdir "$lock.reclaim"; fi
+		mkdir "$lock" 2>/dev/null || exit 0
+		echo $$ >"$lock/pid"
+		trap "rm -rf \"\$lock\"" EXIT
 		git -C "$1" pull --rebase --no-autostash --quiet || { git -C "$1" rebase --abort; exit 1; }
 		basic-memory reindex --search -p agent-lessons && touch "$2"
 	' sh "$LESSONS_DIR" "$SYNC_STAMP" "$SYNC_STAMP.lock" >/dev/null 2>&1 &

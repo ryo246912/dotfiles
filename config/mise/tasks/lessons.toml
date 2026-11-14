@@ -80,8 +80,11 @@ done
 # 触ったり、下の rebase --abort で中止したりする。古いロックは、持ち主のプロセスが死んでいるときだけ捨てる
 lock="$HOME/.local/state/agent-lessons/last-sync.lock"
 mkdir -p "$(dirname "$lock")"
-if [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ] && ! kill -0 "$(cat "$lock/pid" 2>/dev/null)" 2>/dev/null; then
-  rm -rf "$lock"
+# 回収も mkdir で排他にする。しないと、別の同期が取り直した直後のロックを内容ごと消してしまう
+stale() { [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ] && ! kill -0 "$(cat "$lock/pid" 2>/dev/null)" 2>/dev/null; }
+if stale && mkdir "$lock.reclaim" 2>/dev/null; then
+  if stale; then rm -rf "$lock"; fi
+  rmdir "$lock.reclaim"
 fi
 if ! mkdir "$lock" 2>/dev/null; then
   echo "error: 別の同期が進行中です（$lock）。終わってから再実行してください" >&2
