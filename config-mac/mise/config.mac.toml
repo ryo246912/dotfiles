@@ -61,6 +61,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:ghostty"           = "latest" # 1.3.1
 "brew-cask:google-chrome"     = "latest" # 151.0.7922.72
 "brew-cask:hammerspoon"       = "latest" # 1.1.1
+"brew-cask:handy"             = "latest" # 0.10.1
 # 独自 tap（[bootstrap.brew.taps]）の cask。API メタデータは無いが mise が tap の Casks/thock.rb を直接読む
 "brew-cask:kamillobinski/thock/thock" = "latest"
 "brew-cask:karabiner-elements"        = "latest" # 13.7.0
