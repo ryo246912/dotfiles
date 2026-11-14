@@ -1,3 +1,0 @@
-# 対象リポジトリの .gitignore または .git/info/exclude に追加
-.pr-reviewer.local.md
-.pr-reviewer-artifacts/
