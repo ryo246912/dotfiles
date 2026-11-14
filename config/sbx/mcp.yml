@@ -36,4 +36,4 @@ dependencies:
       registry: false
       transport: stdio
       command: npx
-      args: ["-y", "@playwright/mcp@0.0.84", "--cdp-endpoint=http://localhost:9222"]
+      args: ["-y", "@playwright/mcp@0.0.85", "--cdp-endpoint=http://localhost:9222"]
