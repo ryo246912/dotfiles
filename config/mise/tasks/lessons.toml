@@ -53,7 +53,7 @@ basic-memory reindex --search -p agent-lessons
 shell = "bash -c"
 
 ["lessons:sync"]
-description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation.md, push, and reindex Basic Memory"
+description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation/<scope_key>.md, push, and reindex Basic Memory"
 run = '''
 set -euo pipefail
 dir="$HOME/.local/share/agent-lessons"
@@ -129,7 +129,7 @@ if ! git pull --rebase --no-autostash --quiet; then
   exit 1
 fi
 
-# 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
+# 仕組み化のチェックリスト（escalation/<scope_key>.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
 # pull の後に拾う。skill は rulesync が配る先のどちらかにある。
 for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lessons-harvest"; do
   if [ -f "$skill/scripts/escalation.py" ]; then
@@ -138,7 +138,7 @@ for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lesson
     if ! git diff --cached --quiet; then
       git diff --cached --no-renames --name-only --diff-filter=ACM -z \
         | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
-      git commit --quiet -m "chore: rule lessons checked in escalation.md"
+      git commit --quiet -m "chore: rule lessons checked in escalation/<scope_key>.md"
     fi
     break
   fi
