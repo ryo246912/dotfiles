@@ -1,14 +1,15 @@
 """Check actual proxy authentication with one small, billable model request."""
+
 import argparse
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 CHECK = r"""
 import json, os, sys, urllib.request, urllib.error
@@ -37,9 +38,14 @@ except urllib.error.URLError:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sandbox")
-    parser.add_argument("--model", default="claude-haiku-4-5-20251001",
-                        help="available Claude model (default: claude-haiku-4-5-20251001)")
-    parser.add_argument("--refresh", action="store_true", help="explicitly retry the one-time lookup")
+    parser.add_argument(
+        "--model",
+        default="claude-haiku-4-5-20251001",
+        help="available Claude model (default: claude-haiku-4-5-20251001)",
+    )
+    parser.add_argument(
+        "--refresh", action="store_true", help="explicitly retry the one-time lookup"
+    )
     args = parser.parse_args()
     private = Path.home() / ".local/state/sbx-agent-credentials"
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.sandbox) or args.sandbox in (".", ".."):
@@ -64,11 +70,19 @@ def main():
         except (OSError, ValueError):
             saved = {}
         if saved.get("token_sha256") == fingerprint and not args.refresh:
-            print("Cached organization ID:", saved.get("organization_id") or "(unavailable; no new request)")
+            print(
+                "Cached organization ID:",
+                saved.get("organization_id") or "(unavailable; no new request)",
+            )
             return 0
         # Persist an attempt BEFORE requesting: even failures are not auto-retried.
-        record = {"account": account, "token_sha256": fingerprint,
-                  "sandbox": args.sandbox, "organization_id": "", "http": None}
+        record = {
+            "account": account,
+            "token_sha256": fingerprint,
+            "sandbox": args.sandbox,
+            "organization_id": "",
+            "http": None,
+        }
 
         def save():
             fd, path = tempfile.mkstemp(prefix=".org-", dir=directory)
@@ -82,8 +96,12 @@ def main():
 
         save()
         print("One-time max_tokens=1 inference request through the sandbox proxy.", flush=True)
-        result = subprocess.run(["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model],
-                                capture_output=True, text=True)
+        result = subprocess.run(
+            ["sbx", "exec", args.sandbox, "--", "python3", "-c", CHECK, args.model],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         # CHECK の診断は stderr に出る。token は出力しないので、そのまま見せて失敗原因を追えるようにする。
         if result.stderr:
             print(result.stderr.rstrip(), file=sys.stderr)
@@ -94,7 +112,11 @@ def main():
         if hashlib.sha256(token_file.read_bytes().strip()).hexdigest() != fingerprint:
             sys.exit("token changed during lookup; result discarded")
         org = observed.get("organization_id", "")
-        if result.returncode == 0 and observed.get("http") == 200 and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", org):
+        if (
+            result.returncode == 0
+            and observed.get("http") == 200
+            and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", org)
+        ):
             record["organization_id"] = org
         record["http"] = observed.get("http")
         save()

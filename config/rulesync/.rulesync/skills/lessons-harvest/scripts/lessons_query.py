@@ -53,7 +53,14 @@ def main() -> int:
                     "category": meta.get("category"),
                     **{
                         k: meta.get(k)
-                        for k in ("count", "prs", "sessions", "reviewers", "last_seen", "since_active")
+                        for k in (
+                            "count",
+                            "prs",
+                            "sessions",
+                            "reviewers",
+                            "last_seen",
+                            "since_active",
+                        )
                         if k in meta
                     },
                 }

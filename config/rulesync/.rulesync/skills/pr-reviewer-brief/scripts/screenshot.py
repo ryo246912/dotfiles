@@ -82,10 +82,14 @@ def take(page: Page, shot: dict, base_url: str | None, out_dir: Path) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--plan", required=True, type=Path)
     parser.add_argument("--out-dir", required=True, type=Path)
-    parser.add_argument("--storage-state", type=Path, help="ログイン済みの Playwright storage state")
+    parser.add_argument(
+        "--storage-state", type=Path, help="ログイン済みの Playwright storage state"
+    )
     parser.add_argument(
         "--executable-path",
         default=os.environ.get("PR_REVIEWER_BRIEF_CHROMIUM"),
@@ -116,7 +120,9 @@ def main() -> int:
                 page.close()
         browser.close()
 
-    (args.out_dir / "manifest.json").write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n")
+    (args.out_dir / "manifest.json").write_text(
+        json.dumps(results, ensure_ascii=False, indent=2) + "\n"
+    )
     for result in results:
         status = "ok  " if result["ok"] else "FAIL"
         print(f"{status} {result['id']}: {result.get('path') or result.get('error')}")
