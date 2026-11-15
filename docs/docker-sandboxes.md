@@ -1082,9 +1082,11 @@ commit.gpgsign  = true
 `ssh-add -L` の先頭の鍵を使うと、再起動後に agent へ鍵が入る順番が変わったとき（他の SSH 接続で
 別の鍵が先に登録された等）に GitHub 未登録の鍵で署名して Unverified になるためです。
 
-署名用の鍵を ssh-agent に登録できない場合は `commit.gpgsign = false` にして警告します。
-ホストの gitconfig が GPG 署名を有効にしていても GPG 秘密鍵は sandbox に渡らないため、
-無効化しないと commit が毎回失敗するからです。
+署名用の鍵を ssh-agent に登録できない場合は起動を中止します。署名は自動で無効化しません。
+指定した鍵の `.pub` が無い場合も停止し、agent の先頭の鍵には切り替えません。
+アタッチごとに sandbox 内で agent ユーザーによる試験署名を実行し、成功した
+`SSH_AUTH_SOCK` と現在の Git 設定を `sbx run --env` で渡します。
+ホスト側の鍵確認だけでは、sandbox 側の relay socket の不在を検出できないためです。
 
 macOS の ssh-agent は再起動のたびに空になり、`~/.ssh/config` の `AddKeysToAgent yes` も
 「SSH で鍵を使った時点」でしか登録しません。ホストの git が GPG 署名・HTTPS push だと
@@ -1104,6 +1106,29 @@ ssh-add -L   # 公開鍵が表示されれば OK
 
 `ssh-add -L` が `Could not open a connection to your authentication agent` になる場合は
 `SSH_AUTH_SOCK` が古い（tmux の古いセッションなど）ので、新しいシェルから実行してください。
+
+### `Couldn't get agent socket` の復旧
+
+PC ごとに forwarding 設定と daemon が保持する socket が異なることがあります。
+ホスト側で次を確認してください。
+
+```bash
+sbx settings get ssh.agentForwardingEnabled  # true が必要
+ssh-add -l                                  # 署名鍵が読み込まれていること
+```
+
+forwarding が false なら `sbx settings set ssh.agentForwardingEnabled true` を実行します。
+`ssh.agentSocketPath` を設定している場合は、そのパスが現在も有効か確認してください。
+設定を変更した場合は `sbx daemon restart` が必要です（他の稼働中 sandbox への影響も確認）。
+その後、作業を保存し、ホストで有効な `SSH_AUTH_SOCK` を持つ同じシェルから再接続します。
+
+```bash
+sbx stop <sandbox-name>
+sbx-agent <agent> --name <sandbox-name>
+```
+
+`--new` や sandbox の削除は不要です。ステージ済み変更を保持したまま復旧します。
+sandbox 内では `test -S "$SSH_AUTH_SOCK"` と `ssh-add -l` の両方が成功することを確認します。
 
 ### 署名の検証（`allowed_signers`）
 
