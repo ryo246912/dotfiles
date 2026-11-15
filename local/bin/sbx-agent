@@ -801,6 +801,7 @@ run_post_create() {
 # 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
 # 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --no-attach を後から足せる。
 # 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK)
 record_invocation() {
     local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
     file="${dir}/${SANDBOX_NAME}.sh"
@@ -811,12 +812,12 @@ record_invocation() {
         printf 'exec env'
         # 作成時に未設定だった変数は -u で外す。外さないと、作り直しを実行したシェルの値を
         # 引き継ぎ、元の sandbox に無かったマウント（SBX_AGENT_MOUNTS）などが足されてしまう。
-        for var in SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK; do
-            if [[ -n "${!var:-}" ]]; then
-                printf ' %q' "${var}=${!var}"
-            else
-                printf ' -u %s' "$var"
-            fi
+        # env は最初の NAME=VALUE 以降をコマンドとして扱うため、-u は代入より前にまとめて書く。
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -z "${!var:-}" ]] && printf ' -u %s' "$var"
+        done
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -n "${!var:-}" ]] && printf ' %q' "${var}=${!var}"
         done
         printf ' sbx-agent'
         printf ' %q' "${REPLAY_ARGS[@]}" --name "$SANDBOX_NAME" --workspace "$WORKSPACE"
