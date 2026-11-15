@@ -57,4 +57,5 @@ lefthook.local.yml
 
 ## PRの動作確認
 **/pr-reviewer-behavior/config.md
+**/pr-reviewer-behavior/lessons/
 /.pr-reviewer-artifacts/

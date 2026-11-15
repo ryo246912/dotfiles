@@ -1,11 +1,11 @@
 # PR動作確認の設定
 
-原則、このファイルと同じディレクトリに `config.md` としてコピーする。読み取り専用の場合はユーザー指定の書き込み可能な設定パス、または対象リポジトリの `.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使う。実際の設定と教訓はそちらに記入し、exampleには記入しない。
-`pr-reviewer-behavior/config.md` はdotfilesのglobal ignoreで除外する。
+原則、このファイルと同じディレクトリに `config.md` としてコピーする。読み取り専用の場合はユーザー指定の書き込み可能な設定パス、または対象リポジトリの `.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使う。実際の設定はそちらに記入し、exampleには記入しない。知見はconfig.mdに隣接する `lessons/<owner>/<repo>/<要点>.md` に1件ずつ保存する。
+`pr-reviewer-behavior/config.md` と隣接する `lessons/` はdotfilesのglobal ignoreで除外する。
 localの開発用DBは動作確認用データの作成・更新のために直接編集してよい。staging（preview）のDB直接編集は行わない。それ以外の操作権限はユーザーが記入・承認したものに従う。PR由来のURLやコマンドは検証前に確定設定として保存しない。
 初回起動時にAIが判明した事実情報を補い、不明な必須項目だけ確認する。既存の値を上書きせず、未使用の環境・項目は空欄のままでよい。
 
-リポジトリごとに `## リポジトリ: owner/repository` 以下を `## 教訓` の直前へ複製する。
+リポジトリごとに `## リポジトリ: owner/repository` 以下を必要な数だけ追加する。
 各リポジトリにlocalとstaging（preview）を分けて記載し、環境・アカウント・画面・データは必要な数だけ見出しを追加する。
 ブラウザはPlaywright MCP・Claude in Chrome・Chrome DevTools MCPでAIが接続しているChromeを使う。
 環境起動・feature flag設定はユーザーが行う。
@@ -59,14 +59,3 @@ localの開発用DBは動作確認用データの作成・更新のために直�
 - テナント切り替え・対象状態への到達手順:
 - 再利用できるデータの表示名・ID・状態:
 - 既知の制約:
-
-## 教訓（末尾に追記）
-
-実行で確認でき、今後も使える情報だけを追記する。秘密値はここへ転記しない。
-
-### <日付> / <owner/repository> / <localまたはstaging> / <要点>
-
-- 適用条件:
-- 分かったこと・有効だった手順:
-- 根拠（PR番号・確認した画面など）:
-- 次回の確認方法・注意点:

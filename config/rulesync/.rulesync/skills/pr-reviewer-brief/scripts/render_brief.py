@@ -62,12 +62,14 @@ brief.json の書式:
         "data": [{"purpose": "表示確認", "record": "id=1 / テスト項目", "state": "下書き",
                   "url": "http://localhost:3000/items/1", "source": "作成"}],
         "cleanup": ["手動確認用にデータを保持。削除方法: ..."],
+        "lesson_capture": {"status": "SAVED", "files": ["lessons/owner/repo/preview-login.md"], "note": "保存後に内容を確認"},
         "preconditions": ["feature flag・権限・アカウントなど"],
         "seed": {"note": "何のデータを入れるか", "run": "SQL クライアントで対象 DB に接続し、下の SQL を貼り付けて直接実行する手順", "language": "sql",
                  "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
                    "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
                    "expected": ["一覧の先頭に test が出る"], "status": "NOT RUN", "actual": "",
+                   "pending": ["未確認の条件と、確認に必要な次の操作"],
                    "image_note": "未実行のため未撮影", "caution": "破壊的な操作の注意（任意）"}]
       },
       "focus": [{"path": "app/x.ts", "lines": "10", "why": "なぜ見るべきか"}],
@@ -109,7 +111,7 @@ from render_groups import render_hunk  # noqa: E402
 from render_groups import validate as validate_groups  # noqa: E402
 from render_pictures import render_picture  # noqa: E402
 
-SCHEMA_VERSION = "1.2"
+SCHEMA_VERSION = "1.3"
 
 PAGE = Path(__file__).resolve().parent.parent / "assets" / "page.html"
 esc = html.escape
@@ -531,6 +533,12 @@ def steps_list(value: str | list[str], tag: str) -> str:
     return inline(value)
 
 
+def status_badge(status: str) -> str:
+    """判定は文言と色の両方で区別する。classへ任意の入力を入れない。"""
+    colors = {"PASS": "pass", "FAIL": "fail", "BLOCKED": "blocked", "NOT RUN": "not-run"}
+    return f'<span class="test-status test-status-{colors.get(status, "not-run")}">{esc(status)}</span>'
+
+
 def manual_test_section(brief: dict, workdir: Path) -> str:
     test = brief.get("manual_test") or {}
     shots = load_shots(workdir)
@@ -541,7 +549,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         parts.append("<h3>前提</h3><ul>" + "".join(f"<li>{inline(p)}</li>" for p in test["preconditions"]) + "</ul>")
     execution = test.get("execution") or {}
     if execution:
-        rows = [[label, inline(str(execution[key]))] for key, label in (
+        rows = [[label, status_badge(execution[key]) if key == "status" else inline(str(execution[key]))] for key, label in (
             ("status", "状況"), ("head_sha", "確認したSHA"), ("url", "確認先URL"),
             ("account", "アカウント・ロール"), ("run_at", "実行日時"), ("note", "補足"),
         ) if execution.get(key)]
@@ -565,9 +573,11 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
                 rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
             rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
             rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
-            rows.append(f"<dt>判定</dt><dd>{esc(step.get('status', 'NOT RUN'))}</dd>")
+            rows.append(f"<dt>判定</dt><dd>{status_badge(step.get('status', 'NOT RUN'))}</dd>")
             if step.get("actual"):
                 rows.append(f"<dt>実結果</dt><dd>{inline(step['actual'])}</dd>")
+            if step.get("pending"):
+                rows.append(f"<dt>未確認・続行条件</dt><dd>{steps_list(step['pending'], 'ul')}</dd>")
             caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
             figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
             if not figure:
@@ -588,6 +598,14 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
     parts.append(render_steps(test.get("steps", []), "動作確認"))
     if test.get("cleanup"):
         parts.append("<h3>後片付け・手動確認への引き継ぎ</h3>" + steps_list(test["cleanup"], "ul"))
+    lesson = test.get("lesson_capture") or ({"status": "未記録", "note": "終了前の知見保存確認は未記録"} if execution else {})
+    if lesson:
+        rows = [[label, inline(str(lesson[key]))] for key, label in (
+            ("status", "保存状況"), ("note", "確認内容"),
+        ) if lesson.get(key)]
+        if lesson.get("files"):
+            rows.append(["知見ファイル", steps_list(lesson["files"], "ul")])
+        parts.append("<h3>終了前の知見保存確認</h3>" + table(["項目", "記録"], rows))
     return "".join(parts)
 
 
@@ -608,6 +626,11 @@ def check_manual_test(brief: dict) -> list[str]:
             status = step.get("status", "NOT RUN")
             if status not in statuses:
                 errors.append(f"{name}: 判定はPASS / FAIL / BLOCKED / NOT RUN")
+            pending = step.get("pending", [])
+            if not isinstance(pending, list) or any(not isinstance(item, str) for item in pending):
+                errors.append(f"{name}: pendingは未確認事項の文字列配列にする")
+            if status == "PASS" and pending:
+                errors.append(f"{name}: 未確認事項が残る場合はPASSにしない")
             if status in {"PASS", "FAIL"} and not step.get("actual"):
                 errors.append(f"{name}: 実行済みの判定にはactualが必要")
     execution = test.get("execution") or {}
@@ -619,6 +642,21 @@ def check_manual_test(brief: dict) -> list[str]:
                 errors.append("実行済みの結果には確認したhead_shaが必要")
             elif brief.get("head_sha") and execution["head_sha"] != brief["head_sha"]:
                 errors.append("動作確認のSHAがbriefのSHAと異なる。現行版のPASS/FAILとして統合しない")
+    lesson = test.get("lesson_capture")
+    if lesson is not None:
+        if not isinstance(lesson, dict):
+            errors.append("manual_test.lesson_captureはオブジェクトにする")
+        else:
+            if lesson.get("status") not in {"SAVED", "NO_CHANGE", "FAILED", "NOT_RUN"}:
+                errors.append("manual_test.lesson_capture.statusが不正")
+            files = lesson.get("files", [])
+            valid_files = isinstance(files, list) and all(isinstance(path, str) and path.strip() for path in files)
+            if not valid_files:
+                errors.append("lesson_capture.filesは知見ファイルパスの文字列配列にする")
+            if lesson.get("status") == "SAVED" and (not valid_files or not files):
+                errors.append("知見保存済みの場合は確認したファイルパスが必要")
+            if not isinstance(lesson.get("note"), str) or not lesson["note"].strip():
+                errors.append("lesson_capture.noteに保存確認・不要・失敗等の理由を書く")
     return errors
 
 

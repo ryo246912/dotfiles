@@ -98,6 +98,10 @@
       tr.merged td { color: var(--muted); }
       .tldr { background: var(--surface); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 0 8px 8px 0; }
       .tldr p { margin: 4px 0; }
+      .test-status { display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: 2px 10px; font-weight: 700; white-space: nowrap; }
+      .test-status-pass { color: var(--added); background: var(--diff-add-bg); }
+      .test-status-fail, .test-status-blocked { color: var(--removed); background: var(--diff-del-bg); }
+      .test-status-not-run { color: var(--muted); background: var(--surface); }
       .callout { background: var(--warn-bg); border: 1px solid var(--warn-border); padding: 10px 14px; border-radius: 8px; }
       .evidence { color: var(--muted); font-size: 13px; }
       .added { color: var(--added); }
