@@ -237,7 +237,7 @@ def apply(work: Path) -> int:
             lessons[rel] = (path, *L.read(path))
         return lessons[rel]
 
-    # escalation.md の「未対応」の向け先（統合先のパス。外すものは None）
+    # escalation/<scope_key>.md の「未対応」の向け先（統合先のパス。外すものは None）
     moves: dict[str, str | None] = {}
     merged, rewritten, retired, stale = [], [], [], []
     for m in plan["merge"]:

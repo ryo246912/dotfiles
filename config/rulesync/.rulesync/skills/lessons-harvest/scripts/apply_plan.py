@@ -30,7 +30,7 @@ targets.yml（個人）にあるときだけで、それ以外は行わずに「
 
 skip した観察と retired にした教訓は、同じ相対パスのまま archived/ の下へ移す（注入・集計・plan の材料から外すため）。
   仕組み化の候補       active になった後に 2 回以上また指摘された（plan.json の escalate に案がある教訓も）。
-                       escalation.md（チェックリスト）の「未対応」に足す。印が付いたら escalation.py が ruled にする
+                       escalation/<scope_key>.md（チェックリスト）の「未対応」に足す。印が付いたら escalation.py が ruled にする
 """
 
 from __future__ import annotations
@@ -342,7 +342,7 @@ def main() -> int:
         lessons[path] = (meta, body)
 
     widened = []
-    # escalation.md の「未対応」の向け先（まとめた先のパス。外すものは None）
+    # escalation/<scope_key>.md の「未対応」の向け先（まとめた先のパス。外すものは None）
     moves: dict[str, str | None] = {}
     mine = L.personal_repos()
     for w in plan.get("widen", []):
@@ -459,7 +459,7 @@ def main() -> int:
             section("active になった教訓", activated),
             section("範囲を広げた教訓", widened),
             section("retired にした教訓", retired),
-            section("仕組み化のチェックリスト（escalation.md）に足した教訓", escalated),
+            section("仕組み化のチェックリスト（escalation/<scope_key>.md）に足した教訓", escalated),
             section("要確認", review),
         ]
     )
