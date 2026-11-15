@@ -186,20 +186,27 @@ def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
     """
     loaded = {f: load(f) for f in files()}
     new_todo: dict[Path, list[dict]] = {f: [] for f in loaded}
-    seen = set()
+    # 統合元と統合先が両方載っているときは、印か仕組みを書いた項目を残す（先に走査した側で上書きして失わないため）
+    chosen: dict[str, tuple[Path, dict]] = {}
     for f, items in loaded.items():
         for it in items[TODO]:
             path = it["path"]
             while path is not None and path in moves:
                 path = moves[path]
-            if path is None or path in seen:
+            if path is None:
                 continue
-            seen.add(path)
+            filled = it["checked"] or mechanism(it)
+            if path in chosen and not (
+                filled and not chosen[path][1]["checked"] and not mechanism(chosen[path][1])
+            ):
+                continue
             scope = scope_of(path)
-            target = path_for(scope) if scope else f
-            new_todo.setdefault(target, []).append(
-                {**it, "path": path, "title": " ".join(titles.get(path, it["title"]).split())}
+            chosen[path] = (
+                path_for(scope) if scope else f,
+                {**it, "path": path, "title": " ".join(titles.get(path, it["title"]).split())},
             )
+    for target, it in chosen.values():
+        new_todo.setdefault(target, []).append(it)
 
     # 保存の途中で失敗しても項目を失わないよう、先に全ファイルへ「元の項目 + 増える項目」を保存してから、移動元の項目を外す。
     # 途中で止まると同じ項目が 2 つのファイルに残るが、add() は載っている教訓を足さないので、再実行で片付く。
