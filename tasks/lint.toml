@@ -15,12 +15,12 @@ depends = [
 description = "Run all linters"
 
 ["lint:action"]
-depends     = ["lint:actionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
+depends     = ["lint:jactionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
 description = "Run all action linters"
 
-["lint:actionlint"]
-description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:'"
+["lint:jactionlint"]
+description = "Run jactionlint"
+run         = "jactionlint --profile correctness --ignore 'SC2016:'"
 
 ["lint:ghalint"]
 description = "Run ghalint"

@@ -39,6 +39,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
 "aqua:hadolint/hadolint"                                    = "2.15.1"
 "aqua:hashicorp/terraform"                                  = "1.17.2"
+"aqua:jdx/jactionlint"                                      = "2.6.0"
 "aqua:jdx/usage"                                            = "5.1.0"
 "aqua:jesseduffield/lazydocker"                             = "0.25.2"
 "aqua:jesseduffield/lazygit"                                = "0.60.0"
@@ -54,7 +55,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:neovim/neovim"                                        = "0.12.6"
 "aqua:openai/codex"                                         = "0.160.1"
 "aqua:pnpm/pnpm"                                            = "11.19.0"
-"aqua:rhysd/actionlint"                                     = "1.7.12"
 "aqua:rtk-ai/rtk"                                           = "0.50.0"
 "aqua:samwho/spacer"                                        = "0.5.0"
 "aqua:secretlint/secretlint"                                = "13.1.0"
@@ -157,6 +157,8 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "pipx:tftui"                                                = "0.14.1"
 
 [settings]
+# 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
+aqua.registries = ["https://github.com/aquaproj/aqua-registry"]
 auto_install = false
 auto_update = true
 auto_update_check_duration = "7d"
