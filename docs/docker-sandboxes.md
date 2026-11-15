@@ -27,20 +27,21 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、このファイルの各タスク内に定義しています。
 
-| タスク                      | 用途                                                                                                                                              | 使うタイミング                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `sandbox:sbx-settings`      | おすすめのホスト設定を反映してデーモン再起動                                                                                                      | 初回・設定を揃えるとき        |
-| `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                               | 初回だけ                      |
-| `sandbox:claude-setup`      | Claude token 登録 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                                 | Claude 設定だけ再実行するとき |
-| `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                          | token 登録・更新のみ          |
-| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得）                                                              | 認証先を確認するとき          |
-| `sandbox:secret-rm`         | 指定した sbx secret を削除（`--sandbox` で対象限定）                                                                                              | 不要な secret を削除するとき  |
-| `sandbox:build-template`    | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき  |
-| `sandbox:mcp-add`           | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき        |
-| `sandbox:mcp-load`          | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）               | 必要になったとき              |
-| `sandbox:template-rm`       | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                          |
-| `sandbox:disk`              | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき          |
-| `sandbox:prune`             | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき            |
+| タスク                      | 用途                                                                                                                                                                                     | 使うタイミング                             |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `sandbox:sbx-settings`      | おすすめのホスト設定を反映してデーモン再起動                                                                                                                                             | 初回・設定を揃えるとき                     |
+| `sandbox:setup`             | ホスト初期設定 + Claude token / kit binding / 確認付き sandbox 準備                                                                                                                      | 初回だけ                                   |
+| `sandbox:claude-setup`      | Claude token 登録 → binding の追加 → workspace の sandbox を確認付きで作成/再作成                                                                                                        | Claude 設定だけ再実行するとき              |
+| `sandbox:claude-token`      | 指定アカウントの setup-token を y/n 確認付きで生成・保存                                                                                                                                 | token 登録・更新のみ                       |
+| `sandbox:claude-auth-check` | 初回取得した組織 ID の確認（保存済みなら再取得しない。`--refresh` で明示的に再取得）                                                                                                     | 認証先を確認するとき                       |
+| `sandbox:secret-rm`         | 指定した sbx secret を削除（`--sandbox` で対象限定）                                                                                                                                     | 不要な secret を削除するとき               |
+| `sandbox:build-template`    | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み）                                        | 初回・ツール構成を変えたとき               |
+| `sandbox:mcp-add`           | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                                                            | 初回・yml を変えたとき                     |
+| `sandbox:mcp-load`          | 読み込み済み MCP を全て外してから、fzf で複数選択した登録済み MCP だけを起動中の sandbox へ読み込む（何も選ばなければ全て外すだけ）                                                      | 必要になったとき                           |
+| `sandbox:recreate`          | sandbox を fzf で複数選択し、作成時と同じ `sbx-agent` の引数で作り直す（`--new --setup-only`。workspace 外のデータは消えるため実行前に確認する。`--yes` で省略、引数で名前も指定できる） | マウント・template・ホスト設定を変えたとき |
+| `sandbox:template-rm`       | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                                                              | 随時                                       |
+| `sandbox:disk`              | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                                                           | 容量が気になったとき                       |
+| `sandbox:prune`             | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                                                          | 容量が足りないとき                         |
 
 ## devcontainer に対する利点
 
@@ -447,7 +448,7 @@ sbx-agent --help
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
+   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
    `~/.local/share/agent-lessons`（`.git` を含めて書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    これにより sandbox 内でも `lessons:sync` と週次収集の pull / ブランチ作成 / commit / push ができる。
@@ -455,7 +456,11 @@ sbx-agent --help
    `.git/hooks` や `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）の変更は、
    後続のホスト側 Git 操作（SessionStart の pull や `lessons:sync`）でコード実行につながる。
    この共有 clone はホストでのコード実行を許容できる信頼済み agent に限って使い、sandbox をホスト実行の信頼境界の内側として扱う。
-   マウントは作成時にしか付かないため、追加したマウントを既存の sandbox に反映するには `sbx-agent <agent> --new` で作り直す
+   マウントは作成時にしか付かないため、追加したマウント（例: mergiraf 用の `git/attributes`）を既存の sandbox に反映するには
+   `sbx-agent <agent> --new`（`multi-worktree dev ... --new`）で作り直す。
+   作成時の呼び出しは `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh` に記録され、
+   `mise run sandbox:recreate` で選んだ sandbox をまとめて同じ指定で作り直せる。記録を始める前に作った
+   sandbox は記録が無いため、元のコマンドに `--new` を付けて一度だけ作り直す必要がある。
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
@@ -1109,6 +1114,7 @@ devcontainer は SSH で GitHub に出られるため `pushInsteadOf` の打ち�
 | --------------------------------------- | ------------------------------------------------------------ |
 | `include.path`                          | ホストの `~/.config/git/config`（`user.name` 等）を取り込む  |
 | `core.excludesfile`                     | ホストのグローバル gitignore を使う                          |
+| `core.attributesfile`                   | ホストのグローバル gitattributes（mergiraf の適用先）を使う  |
 | `credential.https://github.com.helper`  | `!gh auth git-credential` で gh の認証を使う                 |
 | `url.https://github.com/.insteadOf`     | SSH 形式の remote を HTTPS に書き換える                      |
 | `url.https://github.com/.pushInsteadOf` | ホスト設定の push を SSH に寄せる `pushInsteadOf` を打ち消す |
@@ -1354,6 +1360,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                                                    |
 | `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                                                   |
+| `~/.config/git/attributes`                | ✅ `:ro` で渡し、`core.attributesfile` に設定                                                                                                 |
 | `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbxenv.yaml` の `secrets.github`（`gh auth token`）でプロキシが注入する |
 | `~/.aws/config`                           | ✅ `:ro`                                                                                                                                      |
 | `~/.agents`                               | ✅ `:ro`                                                                                                                                      |

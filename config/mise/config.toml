@@ -14,6 +14,10 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 # 同日に @yarnpkg/fslib@3.1.3 も同様に手動公開され、fslib は以降の版で provenance 付き公開に戻っている。
 # 3.2.1 との tarball 差分は Dirent の parentPath 追加と型定義の更新のみで install script も無いため、この版だけ除外する。
 # renovate の更新で @yarnpkg/libzip が provenance 付きの版に上がったら除外を外すこと。
+#
+# aqua:codeberg.org/mergiraf/mergiraf は Codeberg 配布（aqua registry で type: http、repo_owner なし）のため、
+# mise は version 一覧を取れない（ls-remote/outdated/upgrade 不可）。version は tag 名（v 付き）で固定し、
+# 更新は .github/renovate.json の customManager（gitea-releases datasource）に任せる。
 
 "aqua:BurntSushi/ripgrep"                                   = "15.2.0"
 "aqua:FiloSottile/age"                                      = "1.3.2"
@@ -29,6 +33,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:bitwarden/clients"                                    = "2025.9.0"
 "aqua:bitwarden/sdk-sm"                                     = "2.1.0"
 "aqua:cli/cli"                                              = "2.103.3"
+"aqua:codeberg.org/mergiraf/mergiraf"                       = "v0.20.0"
 "aqua:dandavison/delta"                                     = "0.20.1"
 "aqua:denisidoro/navi"                                      = "2.23.0"
 "aqua:dlvhdr/diffnav"                                       = "0.12.0"
@@ -39,6 +44,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
 "aqua:hadolint/hadolint"                                    = "2.15.1"
 "aqua:hashicorp/terraform"                                  = "1.17.2"
+"aqua:jdx/jactionlint"                                      = "2.6.0"
 "aqua:jdx/usage"                                            = "5.1.0"
 "aqua:jesseduffield/lazydocker"                             = "0.25.2"
 "aqua:jesseduffield/lazygit"                                = "0.60.0"
@@ -47,6 +53,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:k1LoW/roots"                                          = "0.4.2"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:leg100/pug"                                           = "0.6.5"
+"aqua:microsoft/apm"                                        = "0.33.0"
 "aqua:mikefarah/yq"                                         = "4.54.3"
 "aqua:mvdan/sh"                                             = "3.14.1"
 "aqua:nektos/act"                                           = "0.2.97"
@@ -54,7 +61,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "aqua:noborus/ov"                                           = "0.55.0"
 "aqua:openai/codex"                                         = "0.160.1"
 "aqua:pnpm/pnpm"                                            = "11.19.0"
-"aqua:rhysd/actionlint"                                     = "1.7.12"
 "aqua:rtk-ai/rtk"                                           = "0.50.0"
 "aqua:samwho/spacer"                                        = "0.5.0"
 "aqua:secretlint/secretlint"                                = "13.1.0"
@@ -107,7 +113,6 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:lambdalisue/cclens"                                 = "0.4.0"
 "github:masasuzu/clrnd"                                     = "0.8.2"
 "github:max-sixty/worktrunk"                                = "0.81.0"
-"github:microsoft/apm"                                      = "0.33.0"
 "github:philschmid/mcp-cli"                                 = "0.3.0"
 "github:rcieri/glab-tui"                                    = "0.9.4"
 "github:rivolink/leaf"                                      = { version = "1.29.2", bin = "leaf" }
@@ -158,6 +163,8 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "pipx:tftui"                                                = "0.14.1"
 
 [settings]
+# 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
+aqua.registries = ["https://github.com/aquaproj/aqua-registry"]
 auto_install = false
 auto_update = true
 auto_update_check_duration = "7d"
@@ -192,6 +199,19 @@ cd "$root" || exit 0
 [ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
 lefthook install
 """
+
+# メニューバーの余白を、このMacのグローバル設定（defaults -currentHost）へ適用する。
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host   = "current"
+key    = "NSStatusItemSelectionPadding"
+value  = 6
+
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host   = "current"
+key    = "NSStatusItemSpacing"
+value  = 10
 
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
 # ここ（deploy先: ~/.config/mise/config.toml）で宣言する。

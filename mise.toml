@@ -1,6 +1,8 @@
 min_version = "2026.9.16"
 
 [settings]
+# 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
+aqua.registries        = ["https://github.com/aquaproj/aqua-registry"]
 auto_install           = false
 disable_update_warning = true
 experimental           = true
@@ -12,14 +14,15 @@ includes = ["tasks/*.toml"]
 "aqua:awslabs/git-secrets"       = "1.3.0"
 "aqua:azu/dockerfile-pin"        = "1.5.0"
 "aqua:evilmartians/lefthook"     = "2.2.1"
+"aqua:jdx/jactionlint"           = "2.6.0"
 "aqua:mvdan/sh"                  = "3.14.1"
-"aqua:rhysd/actionlint"          = "1.7.12"
 "aqua:secretlint/secretlint"     = "13.1.0"
 "aqua:suzuki-shunsuke/ghalint"   = "1.6.0"
 "aqua:suzuki-shunsuke/pinact"    = "5.0.2"
 "aqua:tamasfe/taplo"             = "0.10.0"
 "aqua:zizmorcore/zizmor"         = "1.32.0"
 "github:betterleaks/betterleaks" = "1.3.1"
+"github:dyoshikawa/rulesync"     = "32.0.0"
 "github:superfly/flyctl"         = "0.4.29"
 "npm:oxfmt"                      = "0.78.0"
 "npm:oxlint"                     = "1.87.0"

@@ -50,7 +50,7 @@ ruled の教訓と、まとめる先（`scope_key`・`key`）に既に教訓が�
 
 案は具体に書く（どの lint のどのルールか、どの hook で何を grep するか、どんなテストを足すか、CLAUDE.md・AGENTS.md の
 どこに何を書くか）。スクリプトは `since_active` が 2 以上の教訓も案なしで足す。足した先は agent-lessons の
-`escalation.md`（仕組み化のチェックリスト）で、ユーザーが仕組みを入れて印を付けると ruled になる。
+`escalation/<scope_key>.md`（仕組み化のチェックリスト）で、ユーザーが仕組みを入れて印を付けると ruled になる。
 
 件数・昇格・失効はスクリプトが決めるので、plan.json には書かない。
 

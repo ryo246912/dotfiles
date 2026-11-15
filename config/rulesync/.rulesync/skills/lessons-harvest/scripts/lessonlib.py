@@ -21,7 +21,7 @@ SOURCES = ("received", "given", "team")
 _SEG = r"(?!\.\.?(?:/|$))[A-Za-z0-9_.-]+"  # . と .. は通さない
 SCOPE_KEY = re.compile(rf"global|{_SEG}/{_SEG}(?:/{_SEG})?")
 # frontmatter に残った git の衝突マーカー。本文のコード例に書かれうるので frontmatter の中だけを見る
-_CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.M)
+_CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.MULTILINE)
 
 
 # 教訓の key。ASCII に限るのは、別の日本語の key が同じ slug に潰れて、別の教訓が同じファイルに入るのを防ぐため
@@ -50,7 +50,7 @@ _CODE = re.compile(r"`[^`]*`")
 _FENCE = re.compile(r" {0,3}(`{3,}|~{3,})")
 _BRACE = re.compile(r"\{([^{}]*,[^{}]*)\}")
 
-FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.S)
+FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?(.*)\Z", re.DOTALL)
 
 
 def _scalar(text: str) -> object:
@@ -111,7 +111,7 @@ def _strip_comment(v: str) -> str:
 
 
 def parse(text: str) -> tuple[dict, str]:
-    """frontmatter と本文に分ける。frontmatter が無ければ ({}, text)。"""
+    """Frontmatter と本文に分ける。frontmatter が無ければ ({}, text)。"""
     m = FRONTMATTER.match(text)
     if not m:
         return {}, text
@@ -142,7 +142,11 @@ def _dump_value(v: object) -> str:
     if v is None:
         return ""
     s = str(v)
-    if re.fullmatch(r"[\w./@+-]+", s) and s not in ("true", "false") and not re.fullmatch(r"-?\d+", s):
+    if (
+        re.fullmatch(r"[\w./@+-]+", s)
+        and s not in ("true", "false")
+        and not re.fullmatch(r"-?\d+", s)
+    ):
         return s
     return json.dumps(s, ensure_ascii=False)
 
@@ -158,14 +162,18 @@ def read(path: Path) -> tuple[dict, str]:
 
 def permalink_of(path: Path) -> str:
     """Basic Memory の permalink。frontmatter に無いと索引のたびに足され、YAML 全体が書き直されて作業ツリーが汚れる。
-    slug 化の規則は再現しない。Basic Memory は frontmatter の permalink が他と重ならなければそのまま使い、書き直さないため。"""
+    slug 化の規則は再現しない。Basic Memory は frontmatter の permalink が他と重ならなければそのまま使い、書き直さないため。
+    """
     rel = path.relative_to(LESSONS_DIR).with_suffix("").as_posix()
     return f"agent-lessons/{rel.lower().replace('_', '-')}"
 
 
 def write(path: Path, meta: dict, body: str) -> None:
     """常に今の版として書く。古い版のファイルは check_schema(strict=True) で先に止めておくこと。"""
-    meta = {"schema_version": SCHEMA_VERSION, **{k: v for k, v in meta.items() if k != "schema_version"}}
+    meta = {
+        "schema_version": SCHEMA_VERSION,
+        **{k: v for k, v in meta.items() if k != "schema_version"},
+    }
     if not meta.get("permalink") and path.is_relative_to(LESSONS_DIR):
         meta["permalink"] = permalink_of(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -178,14 +186,22 @@ def version_of(meta: dict) -> int:
 
 
 def note_files() -> list[Path]:
-    return sorted(p for sub in ("inbox", "lessons", "archived") for p in (LESSONS_DIR / sub).rglob("*.md"))
+    return sorted(
+        p for sub in ("inbox", "lessons", "archived") for p in (LESSONS_DIR / sub).rglob("*.md")
+    )
 
 
 def check_schema(strict: bool) -> bool:
     """新しい版のファイルがあれば止める（この dotfiles が古い）。古い版は strict なら止め、そうでなければ警告だけ出す。
-    すべて今の版なら True。"""
+    すべて今の版なら True。
+    """
     # git pull の autostash が衝突すると、マーカーが frontmatter に残ったまま commit される。parse は黙って壊れた値を読むため、先に止める
-    broken = [p for p in note_files() if (m := FRONTMATTER.match(p.read_text(encoding="utf-8").replace("\r\n", "\n"))) and _CONFLICT.search(m[1])]
+    broken = [
+        p
+        for p in note_files()
+        if (m := FRONTMATTER.match(p.read_text(encoding="utf-8").replace("\r\n", "\n")))
+        and _CONFLICT.search(m[1])
+    ]
     ugly = [p for p in note_files() if not str(p.relative_to(LESSONS_DIR)).isascii()]
     if broken:
         msg = f"frontmatter に衝突マーカーが残っているファイルが {len(broken)} 件ある（例: {broken[0]}）。マーカーを解消する"
@@ -198,7 +214,7 @@ def check_schema(strict: bool) -> bool:
             sys.exit(f"error: {msg}")
         print(f"warning: {msg}", file=sys.stderr)
     versions = {p: version_of(read(p)[0]) for p in note_files()}
-    newer =[p for p, v in versions.items() if v > SCHEMA_VERSION]
+    newer = [p for p, v in versions.items() if v > SCHEMA_VERSION]
     older = [p for p, v in versions.items() if v < SCHEMA_VERSION]
     if newer:
         sys.exit(
@@ -220,7 +236,13 @@ def _headings(body: str) -> list[tuple[int, int, str]]:
         m = _FENCE.match(line)
         if fence is None and m:
             fence = m[1]
-        elif fence and m and m[1][0] == fence[0] and len(m[1]) >= len(fence) and not line[m.end() :].strip():
+        elif (
+            fence
+            and m
+            and m[1][0] == fence[0]
+            and len(m[1]) >= len(fence)
+            and not line[m.end() :].strip()
+        ):
             fence = None
         elif fence is None and line.startswith("## "):
             out.append((pos, pos + len(line), line[3:].strip()))
@@ -232,7 +254,7 @@ def _spans(body: str) -> dict[str, tuple[int, int, int]]:
     """見出しの名前ごとの（見出しの開始位置, 本文の開始位置, 節の終わり）。"""
     hs = _headings(body)
     ends = [start for start, _, _ in hs[1:]] + [len(body)]
-    return {name: (start, head, end) for (start, head, name), end in zip(hs, ends)}
+    return {name: (start, head, end) for (start, head, name), end in zip(hs, ends, strict=False)}
 
 
 def sections(body: str) -> dict[str, str]:
@@ -294,7 +316,7 @@ def normalize_globs(globs: list | str | None) -> list[str]:
 
 
 def matches(globs: list | None, paths: list[str]) -> bool:
-    """globs が空なら常に一致。paths が空なら（変更ファイルを指定しないなら）一致とみなす。"""
+    """Globs が空なら常に一致。paths が空なら（変更ファイルを指定しないなら）一致とみなす。"""
     if not globs or not paths:
         return True
     regs = [glob_regex(g) for g in globs]
@@ -305,7 +327,10 @@ def scope_keys(cwd: str | os.PathLike = ".") -> list[str]:
     """`origin` の URL から、作業中のリポジトリに効く scope_key を返す（global・owner・repo）。"""
     try:
         remote = subprocess.run(
-            ["git", "-C", str(cwd), "remote", "get-url", "origin"], capture_output=True, text=True, check=True
+            ["git", "-C", str(cwd), "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return ["global"]
@@ -337,13 +362,15 @@ def scope_error(outer: str, inners: list[str]) -> str | None:
     """
     if bad := [s for s in inners if not covers(outer, s)]:
         return f"{outer} は {bad[0]} を含まない"
-    if outer == "global" and (others := sorted({s for s in inners if s.count("/") == 2} - personal_repos())):
+    if outer == "global" and (
+        others := sorted({s for s in inners if s.count("/") == 2} - personal_repos())
+    ):
         return f"個人のリポジトリ（targets.yml）ではない {others[0]} の根拠は global に入れない"
     return None
 
 
 def inside(rel: str, sub: str) -> Path | None:
-    """plan などに書かれた相対パスを、LESSONS_DIR/<sub> の中にあるときだけ絶対パスにする（外を書き換えないため）。"""
+    """Plan などに書かれた相対パスを、LESSONS_DIR/<sub> の中にあるときだけ絶対パスにする（外を書き換えないため）。"""
     path = (LESSONS_DIR / rel).resolve()
     return path if path.is_relative_to((LESSONS_DIR / sub).resolve()) else None
 

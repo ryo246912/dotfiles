@@ -35,7 +35,6 @@ TOKEN = re.compile(r"'|\"|--|/\*|;|\$[^\W\d]\w*\$|\$\$")
 
 def chunk_size() -> int:
     """1 transactionへ入れるINSERTの件数を環境変数から読む。"""
-
     raw = os.environ.get(CHUNK_ENV, "500")
     try:
         value = int(raw)
@@ -48,7 +47,6 @@ def chunk_size() -> int:
 
 def progress_rows() -> int:
     """進捗を出す間隔（INSERT件数）を環境変数から読む。0で無効。"""
-
     raw = os.environ.get(PROGRESS_ENV, "2000")
     try:
         value = int(raw)
@@ -64,7 +62,6 @@ class Splitter:
 
     def __init__(self) -> None:
         """まだ何も読んでいない状態を作る。"""
-
         self.buffer: list[str] = []
         # bufferと同じ長さで、literal／commentの中身を空白へ置き換えたもの。SQLの句を
         # dataの中の同じ文字列と区別したいときに使う（ON CONFLICTの判定）。
@@ -80,14 +77,12 @@ class Splitter:
 
     def reset(self) -> None:
         """溜まっているstatementを捨てる。"""
-
         self.buffer = []
         self.code = []
         self.recent = ""
 
     def _push(self, text: str) -> None:
         """SQLとして読む部分を、bufferとcodeへそのまま足す。"""
-
         if not text:
             return
         self.buffer.append(text)
@@ -96,7 +91,6 @@ class Splitter:
 
     def _hide(self, text: str) -> None:
         """literal／commentの中身として、bufferへ足しcode側は空白にする。"""
-
         if not text:
             return
         self.buffer.append(text)
@@ -105,14 +99,12 @@ class Splitter:
 
     def _context(self, line: str, index: int) -> str:
         """lineのindexの直前2文字を返す。行頭では前の行の末尾を使う。"""
-
         if index >= 2:
             return line[index - 2 : index]
         return (self.recent + line[:index])[-2:]
 
     def feed(self, line: str):
         """1行を読み、完成したstatementとそのcode部分をyieldする。"""
-
         pos = 0
         while pos < len(line):
             if self.pending:
@@ -165,7 +157,6 @@ class Splitter:
 
     def _consume_pending(self, line: str, pos: int) -> int:
         """literal／comment内を、閉じtokenまで読み進める。"""
-
         if self.pending == "\n":
             self._hide(line[pos:])
             self.pending = ""
@@ -194,7 +185,6 @@ class Splitter:
 
     def _consume_block_comment(self, line: str, pos: int) -> int:
         """入れ子を数えながらblock commentを読む。"""
-
         index = pos
         while self.block_depth:
             opening = line.find("/*", index)
@@ -215,7 +205,6 @@ class Splitter:
     @staticmethod
     def _find_quote_with_escapes(line: str, start: int) -> int:
         """E'...' 内で、backslash escapeを飛ばして次の ' を探す。"""
-
         index = start
         while index < len(line):
             char = line[index]
@@ -229,13 +218,11 @@ class Splitter:
 
     def tail(self) -> str:
         """statementとして閉じきらずに残っている文字列を返す。"""
-
         return "".join(self.buffer)
 
 
 def strip_leading_noise(text: str) -> str:
     """先頭のcommentと空白を落として、statement本体の先頭を返す。"""
-
     while True:
         text = text.lstrip()
         if text.startswith("--"):
@@ -268,7 +255,6 @@ def strip_leading_noise(text: str) -> str:
 
 def pending_kind(pending: str) -> str:
     """閉じ待ちのtokenを、dump本文を晒さない呼び名へ変える。"""
-
     if pending == "'":
         return "string literal"
     if pending == '"':
@@ -297,7 +283,6 @@ def ensure_on_conflict(body: str, code: str) -> str | None:
     dumpは指定なしのINSERTを含みうるため、同じfileを再実行するとduplicate keyで
     止まる。VALUESの閉じ括弧で終わるstatementには安全に足せる。
     """
-
     # 生成dumpのINSERTはすべてこの形で終わる。ここで返せば、statementと同じ長さの
     # 文字列（maskしたcodeとその大文字化）を作らずに済む。下の一般の経路はstatement
     # 全体を2度大文字化して走るため、大きなrowでは目に見えて遅い（PostgreSQL 16で
@@ -348,7 +333,6 @@ def ensure_on_conflict(body: str, code: str) -> str | None:
 
 def main() -> int:
     """標準入力のdumpを読み、INSERTだけのchunkを標準出力へ書く。"""
-
     limit = chunk_size()
     # 大きなdumpでは取り込みに時間がかかる。件数を時々出して、止まっているのか
     # 進んでいるのか分かるようにする。
@@ -490,8 +474,7 @@ def main() -> int:
         )
     if tables is None and skipped_statements:
         print(
-            f"INSERT statements: {kept}"
-            f" (skipped {skipped} non-INSERT statements)",
+            f"INSERT statements: {kept} (skipped {skipped} non-INSERT statements)",
             file=sys.stderr,
         )
         print(
@@ -527,8 +510,7 @@ def main() -> int:
         )
         return 1
     print(
-        f"INSERT statements: {kept} from {tables} tables"
-        f" (skipped {skipped} non-INSERT statements)",
+        f"INSERT statements: {kept} from {tables} tables (skipped {skipped} non-INSERT statements)",
         file=sys.stderr,
     )
     return 0

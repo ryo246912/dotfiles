@@ -26,7 +26,12 @@ def parse(diff: str) -> list[dict]:
     for row in diff.splitlines():
         match = DIFF_GIT.match(row)
         if match:
-            current = {"old_path": match.group(1), "path": match.group(2), "status": "modified", "hunks": []}
+            current = {
+                "old_path": match.group(1),
+                "path": match.group(2),
+                "status": "modified",
+                "hunks": [],
+            }
             files.append(current)
             hunk = None
             continue
@@ -40,12 +45,19 @@ def parse(diff: str) -> list[dict]:
             elif row.startswith("rename from "):
                 current["status"] = "renamed"
             elif row.startswith("Binary files "):
-                current["status"] = "binary" if current["status"] == "modified" else current["status"]
+                current["status"] = (
+                    "binary" if current["status"] == "modified" else current["status"]
+                )
                 current["binary"] = True
         match = HUNK_HEADER.match(row)
         if match:
             old_no, new_no = int(match.group(1)), int(match.group(2))
-            hunk = {"header": row, "context": match.group(3).strip(), "new_start": new_no, "lines": []}
+            hunk = {
+                "header": row,
+                "context": match.group(3).strip(),
+                "new_start": new_no,
+                "lines": [],
+            }
             current["hunks"].append(hunk)
             continue
         if hunk is None:
@@ -66,7 +78,9 @@ def parse(diff: str) -> list[dict]:
 
     hunks: list[dict] = []
     for file in files:
-        entries = file["hunks"] or [{"header": f"({file['status']})", "context": "", "new_start": 1, "lines": []}]
+        entries = file["hunks"] or [
+            {"header": f"({file['status']})", "context": "", "new_start": 1, "lines": []}
+        ]
         for entry in entries:
             hunks.append(
                 {
@@ -83,14 +97,22 @@ def parse(diff: str) -> list[dict]:
 
 
 def index_line(hunk: dict) -> str:
-    first = next((line[3].strip() for line in hunk["lines"] if line[0] in "+-" and line[3].strip()), "")
-    path = hunk["path"] if hunk["old_path"] == hunk["path"] else f"{hunk['old_path']} -> {hunk['path']}"
+    first = next(
+        (line[3].strip() for line in hunk["lines"] if line[0] in "+-" and line[3].strip()), ""
+    )
+    path = (
+        hunk["path"]
+        if hunk["old_path"] == hunk["path"]
+        else f"{hunk['old_path']} -> {hunk['path']}"
+    )
     head = hunk["header"].split(" @@")[0] + " @@" if hunk["lines"] else hunk["header"]
     return f"{hunk['id']} {path} {head} +{hunk['added']} -{hunk['removed']} | {first[:100]}"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("diff", nargs="?", type=Path, help="diff のファイル（省略時は標準入力）")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--index", action="store_true", help="hunk の一覧を標準出力に出す")

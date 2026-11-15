@@ -71,6 +71,7 @@
     "lessons-record": "name-only",
     "pr-reviewer-comment": "name-only",
     "pr-reviewer-brief": "name-only",
+    "pr-reviewer-behavior": "name-only",
     "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",
@@ -89,6 +90,8 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
+    "task-breakdown": "user-invocable-only",
+    "uat-test-design": "user-invocable-only",
     "suggest-rules": "user-invocable-only",
     "lessons-harvest": "user-invocable-only",
     "lessons-review": "user-invocable-only"

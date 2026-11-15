@@ -43,7 +43,7 @@ commit 前に secretlint を通す。
 ```text
 agent-lessons/
   harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
-  escalation.md                  # 仕組み化のチェックリスト（lint・hook・テスト・ルールファイルで防ぐ教訓）
+  escalation/<scope_key>.md      # 仕組み化のチェックリスト。scope_key ごとに分ける（lint・hook・テスト・ルールファイルで防ぐ教訓）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
   archived/                      # 週次で skip した観察（status: skipped）と retired の教訓。inbox/・lessons/ と同じ相対パスで置く
@@ -182,22 +182,22 @@ diff で探すもの（grep する語・コードの形）を書く。
 
 ### status と昇格の基準
 
-| status      | 意味                                                                                                     | 注入   |
-| ----------- | -------------------------------------------------------------------------------------------------------- | ------ |
-| `candidate` | 昇格条件をまだ満たしていない                                                                             | しない |
-| `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
-| `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
-| `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                           | しない |
+| status      | 意味                                                                                                                 | 注入   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| `candidate` | 昇格条件をまだ満たしていない                                                                                         | しない |
+| `active`    | 繰り返し出た。守るべき教訓                                                                                           | する   |
+| `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation/<scope_key>.md` で印を付けると付く | しない |
+| `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                                       | しない |
 
-| 変更                | 条件                                                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| candidate → active  | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner        | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
-| owner → global      | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
-| active → retired    | `last_seen` から 90 日                                                                                             |
-| candidate → retired | `last_seen` から 180 日（月次の lessons-review が行う）                                                            |
-| 統合・retired       | 月次の lessons-review で、根本原因が同じ教訓を 1 つにまとめる・誤りや一度きりの事情の教訓を retired にする         |
-| 仕組み化の候補      | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation.md` に足される       |
+| 変更                | 条件                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| candidate → active  | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上       |
+| repo → owner        | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                                 |
+| owner → global      | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                                    |
+| active → retired    | `last_seen` から 90 日                                                                                                   |
+| candidate → retired | `last_seen` から 180 日（月次の lessons-review が行う）                                                                  |
+| 統合・retired       | 月次の lessons-review で、根本原因が同じ教訓を 1 つにまとめる・誤りや一度きりの事情の教訓を retired にする               |
+| 仕組み化の候補      | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation/<scope_key>.md` に足される |
 
 会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
 リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
@@ -332,13 +332,15 @@ PR の本文に、統合した教訓（統合先 ← 統合元）・書き直し
 要確認が並ぶ。diff で文面を確かめてマージする。**マージするまで週次は止まる**。
 
 - 統合元と retired にした教訓は `archived/` へ移る。根拠の URL は残るので、同じ指摘が候補に戻ってくることはない
-- `escalation.md` の「未対応」は、統合元なら統合先へ向け直し、retired なら外す
+- `escalation/<scope_key>.md` の「未対応」は、統合元なら統合先へ向け直し、retired なら外す
 - 戻したい統合・retired は、その PR の上で `archived/` から `lessons/` へ戻し、`status` を直してからマージする
 
-### 仕組み化する（escalation.md）
+### 仕組み化する（escalation/<scope_key>.md）
 
 教訓を読ませて守らせるより、lint・hook・テスト・ルールファイルで機械的に防ぐほうが確実。active になった後も指摘され
-続ける教訓は、週次の集計が agent-lessons の `escalation.md` の「未対応」に、モデルが書いた仕組みの案付きで足す。
+続ける教訓は、週次の集計が agent-lessons の `escalation/<scope_key>.md` の「未対応」に、モデルが書いた仕組みの案付きで足す。
+ファイルは教訓の scope_key ごとに分ける（`escalation/global.md`・`escalation/github.com/acme.md`・`escalation/github.com/acme/api.md`）。
+会社のリポジトリの項目を、個人のリポジトリの項目と混ぜないため。
 
 ```markdown
 ## 未対応
@@ -454,7 +456,7 @@ mise run lessons:sync
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
-  push 前の `pr-author-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
+  push 前の `pr-author-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation/<scope_key>.md` から仕組み化して `ruled` にし、減らす
 - **ファイル名は ASCII にする。** Basic Memory はパスから permalink を作るため、日本語のファイル名だとローマ字混じりの
   壊れた permalink になる。名付けは書き手ごとに違う。タイトルは frontmatter の `title` に日本語で書く
   - `lessons-record`: `<日付>-<category>-<evidence の sha1>.md`。`basic-memory tool write-note` を使わず直接書くのもこのため
