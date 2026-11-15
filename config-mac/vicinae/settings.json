@@ -120,8 +120,18 @@
             "searchMedia": {
                "enabled": false
             },
+            "searchNoteCommand": {
+               "shortcut": "alt+shift+O"
+            },
             "starredNotesCommand": {
                "enabled": false
+            }
+         }
+      },
+      "@rolandleth/store.raycast.kill-process": {
+         "entrypoints": {
+            "index": {
+               "alias": "kill"
             }
          }
       },
@@ -136,6 +146,7 @@
          }
       },
       "@thomas/store.raycast.arc": {
+         "enabled": false,
          "entrypoints": {
             "new-blank-window": {
                "enabled": false
@@ -255,9 +266,6 @@
             "com.anthropic.claude-code-url-handler": {
                "enabled": false
             },
-            "com.anthropic.claudefordesktop": {
-               "shortcut": "alt+D"
-            },
             "com.apple.AboutThisMacLauncher": {
                "enabled": false
             },
@@ -374,9 +382,6 @@
             },
             "com.apple.ScreenSharing": {
                "enabled": false
-            },
-            "com.apple.ScriptEditor.id.Claude2": {
-               "shortcut": "alt+shift+D"
             },
             "com.apple.Stickies": {
                "enabled": false
@@ -539,6 +544,9 @@
             "com.google.Chrome.app.gjcmcplpgihbecacndmmbaenpfgimlec": {
                "enabled": true
             },
+            "com.google.Chrome.app.lodlkdfmihgonocnmddehnfgiljnadcf": {
+               "shortcut": "control+alt+X"
+            },
             "com.google.android.studio": {
                "enabled": true
             },
@@ -578,16 +586,13 @@
             "com.mitchellh.ghostty": {
                "shortcut": "alt+T"
             },
-            "com.openai.codex": {
-               "shortcut": "alt+C"
-            },
             "com.tinyspeck.slackmacgap": {
                "shortcut": "alt+S"
             },
             "com.vorssaint.utils": {
                "enabled": false
             },
-            "company.thebrowser.Browser": {
+            "dev.serafim.fast": {
                "shortcut": "alt+A"
             },
             "jp.kiok.nani": {
@@ -595,6 +600,12 @@
             },
             "md.obsidian": {
                "shortcut": "alt+O"
+            },
+            "org.jkiss.dbeaver.core.product": {
+               "shortcut": "alt+D"
+            },
+            "org.mozilla.thunderbird": {
+               "shortcut": "alt+shift+T"
             },
             "org.pqrs.Karabiner-EventViewer": {
                "enabled": false
@@ -616,7 +627,7 @@
                "enabled": false
             },
             "history": {
-               "shortcut": "alt+X"
+               "shortcut": "alt+shift+X"
             }
          }
       },

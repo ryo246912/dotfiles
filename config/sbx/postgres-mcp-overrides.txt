@@ -1,0 +1,7 @@
+# postgres-mcp（mcp.work3.yml.example の postgres-read / postgres-write）を uvx で起動するときの依存の上書き。
+# postgres-mcp 0.3.0 が固定している依存がそのままでは動かないため、uvx --overrides で差し替える。
+# - pglast: 0.3.0 は pglast==7.2.0 に固定しているが、pglast は古いバージョンのファイルを PyPI から消していて
+#   7.2 は解決できない。同じ PostgreSQL 17 パーサの 7.x 系の最新にする
+# - mcp: 0.3.0 は mcp>=1.5.0 としか書いておらず、mcp 2.x が入ると FastMCP が無くて起動しない
+pglast==7.21
+mcp[cli]<2

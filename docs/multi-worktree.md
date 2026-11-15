@@ -69,19 +69,12 @@ devcontainer 内から macOS ホストへ SSH 経由で通知を送るための�
 
 ```toml
 [groups.default]
-repos = [
-  "~/dev/repo-a",
-  "~/dev/repo-b",
-]
+repos = ["~/dev/repo-a", "~/dev/repo-b"]
 base_dir = "../worktrees"
 worktree_prefix = "multi-worktree"
 
 [groups.work]
-repos = [
-  "~/work/frontend",
-  "~/work/backend",
-  "~/work/infra",
-]
+repos = ["~/work/frontend", "~/work/backend", "~/work/infra"]
 base_dir = "../worktrees"
 worktree_prefix = "multi-worktree"
 
@@ -93,9 +86,7 @@ backend = "sbx"
 default_agent = "claude"
 name_prefix = "mw"
 skills = "readonly"
-extra_workspaces = [
-  "~/.coderabbit",
-]
+extra_workspaces = ["~/.coderabbit"]
 ```
 
 ### 設定項目
@@ -487,10 +478,7 @@ devcontainer で起動する `ccmcm` は `--config` を指定しません。ccma
 
 ```toml
 [groups.default]
-repos = [
-  "~/dev/repo-a",
-  "~/dev/repo-b",
-]
+repos = ["~/dev/repo-a", "~/dev/repo-b"]
 base_dir = "../worktrees"
 worktree_prefix = "multi-worktree"
 ```

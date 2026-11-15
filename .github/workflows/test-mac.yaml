@@ -11,7 +11,9 @@ name: test-mac
 #     注入する。/test-mac は OWNER/MEMBER/COLLABORATOR のみ発火。write 権限は PR コードを実行しない
 #     comment ジョブに限定する。public repo なので macOS ランナーは無料・分数無制限。
 on:
-  issue_comment:
+  # 実行は OWNER/MEMBER/COLLABORATOR のみに限定し、PR コードには read 権限だけを渡す。
+  # write 権限の結果通知は別ジョブで実行し、PR コードを checkout しない。
+  issue_comment: # zizmor: ignore[dangerous-triggers]
     types:
       - created
   workflow_dispatch: {}

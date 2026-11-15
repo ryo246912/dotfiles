@@ -100,7 +100,7 @@ zinit wait lucid light-mode blockf for \
     as"completion" "https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/zsh/_docker-compose"
 
 zinit wait lucid light-mode blockf for \
-    as"completion" "https://github.com/Homebrew/brew/blob/master/completions/zsh/_brew"
+    as"completion" "https://github.com/Homebrew/brew/blob/main/completions/zsh/_brew"
 
 zinit wait lucid light-mode blockf for \
     src"tmux" \

@@ -1,0 +1,150 @@
+# agent-lessons（PR レビュー指摘から教訓を貯める private リポジトリ）の task。
+# 仕組みと使い方は docs/agent-lessons.md。
+
+["lessons:setup"]
+description = "Clone the private agent-lessons repo and register it as a Basic Memory project"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+
+if [ ! -d "$dir/.git" ]; then
+  gh repo clone ryo246912/agent-lessons "$dir"
+fi
+# 既存の checkout を使い回すときに、別のリポジトリへ教訓を push しないため
+# （push 先は pushurl で fetch 先と別にできるので両方を見る）
+for origin in "$(git -C "$dir" remote get-url origin)" "$(git -C "$dir" remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
+
+# 空のリポジトリ（README なしで作ったもの）を clone したときは、main に最初の commit を作って push する。
+# commit が無いと lessons:sync の pull や週次のブランチ作成ができないため。
+if ! git -C "$dir" rev-parse --quiet --verify HEAD >/dev/null; then
+  git -C "$dir" symbolic-ref HEAD refs/heads/main
+  if [ ! -e "$dir/README.md" ]; then
+    printf '# agent-lessons\n\nPR レビューの指摘から集めた教訓。仕組みと使い方は dotfiles の docs/agent-lessons.md。\n' >"$dir/README.md"
+  fi
+  git -C "$dir" add README.md
+  git -C "$dir" commit --quiet -m "chore: initialize agent-lessons"
+fi
+# 最初の push が失敗した後の再実行でも push し直す
+if ! git -C "$dir" ls-remote --exit-code origin refs/heads/main >/dev/null; then
+  git -C "$dir" push --quiet -u origin main
+fi
+
+# 同名のクラウド project が複数の workspace にあると行が増えるので、ローカルの登録先だけを見る
+registered=$(basic-memory tool list-projects | jq -r '[.projects[]? | select(.name == "agent-lessons") | .local_path // empty] | first // empty')
+if [ -z "$registered" ]; then
+  basic-memory project add agent-lessons "$dir"
+elif [ "$(realpath "$registered")" != "$(realpath "$dir")" ]; then
+  echo "error: Basic Memory の agent-lessons は $registered を指しています。basic-memory project remove agent-lessons で外してから再実行してください" >&2
+  exit 1
+fi
+
+# 教訓は日本語で書くため、英語専用の既定 embedding model（bge-small-en）は使わず、メタデータと全文検索で引く。
+# 初回の model ダウンロードも不要になる。この設定は project ごとではなく Basic Memory 全体に効く。
+basic-memory config set semantic_search_enabled false
+# バージョンは mise で固定しているため、Basic Memory 自身の自動更新は止める。
+basic-memory config set auto_update false
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"
+
+["lessons:sync"]
+description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation/<scope_key>.md, push, and reindex Basic Memory"
+run = '''
+set -euo pipefail
+dir="$HOME/.local/share/agent-lessons"
+cd "$dir"
+
+if ! git rev-parse --quiet --verify HEAD >/dev/null; then
+  echo "error: $dir にまだ commit がありません。mise run lessons:setup で初期化してください" >&2
+  exit 1
+fi
+branch=$(git branch --show-current)
+if [ "$branch" != "main" ]; then
+  echo "error: $dir は $branch を checkout しています。main に戻してから実行してください" >&2
+  exit 1
+fi
+# lessons:setup の後で remote が変えられても、別のリポジトリへ教訓を push しないため
+for origin in "$(git remote get-url origin)" "$(git remote get-url --push origin)"; do
+  if ! [[ "$origin" =~ ^(https://github\.com/|git@github\.com:|ssh://git@github\.com/)ryo246912/agent-lessons(\.git)?$ ]]; then
+    echo "error: $dir の origin が ryo246912/agent-lessons ではありません: $origin" >&2
+    exit 1
+  fi
+done
+
+# agent-lessons-context の裏の pull と同じロックを、git add より前に取る。取らないと、そちらの rebase 中の index を
+# 触ったり、下の rebase --abort で中止したりする。ロックは clone の .git 内に置く（sandbox とホストで共有するのは
+# clone だけで、$HOME 配下の state は共有しない）。別の namespace の pid は判定できないので、異常終了で残った
+# ロックは経過時間（1 時間）だけで捨てる。回収は mv で行い、同時に回収しても片方しか成功しない
+lock="$(git rev-parse --absolute-git-dir)/sync.lock"
+if [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+  mv "$lock" "$lock.stale.$$" 2>/dev/null && rm -rf "$lock.stale.$$"
+fi
+if ! mkdir "$lock" 2>/dev/null; then
+  echo "error: 別の同期が進行中です（$lock）。1 時間以上前の異常終了なら、$lock を消して再実行してください" >&2
+  exit 1
+fi
+trap 'rmdir "$lock"' EXIT
+
+git add --all
+if ! git diff --cached --quiet; then
+  # 衝突マーカーは frontmatter を壊し、日本語のファイル名は Basic Memory が壊れた permalink を作る。どちらも commit しない。
+  # grep -q は最初の一致で閉じて git diff が SIGPIPE になり、pipefail で検査が素通りするうえ、-P は macOS の grep に無い
+  python3 - <<'PY'
+import re
+import subprocess
+import sys
+
+CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.M)
+FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", re.S)
+git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True).stdout
+names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z").decode().split("\0")
+errors = []
+for name in filter(None, names):
+    if not name.isascii():
+        errors.append(f"ASCII でないファイル名: {name}（<日付>-<category>-<hash>.md の形に改名する）")
+    if name.endswith(".md"):
+        m = FRONTMATTER.match(git("show", f":{name}").decode(errors="replace"))
+        if m and CONFLICT.search(m[1]):
+            errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
+        # マーカーが先頭の --- より前にある・終わりの --- が欠けると match できず、検査が素通りするため
+        elif not m and name.split("/")[0] in ("inbox", "lessons", "archived"):
+            errors.append(f"frontmatter を読み取れない（衝突マーカーの可能性）: {name}")
+if errors:
+    sys.exit("error: " + "\nerror: ".join(errors))
+PY
+  git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+    | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+  git commit --quiet -m "chore: record lessons from $(hostname -s)"
+fi
+# 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
+# マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
+if ! git pull --rebase --no-autostash --quiet; then
+  git rebase --abort 2>/dev/null || true
+  echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
+  exit 1
+fi
+
+# 仕組み化のチェックリスト（escalation/<scope_key>.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
+# pull の後に拾う。skill は rulesync が配る先のどちらかにある。
+for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lessons-harvest"; do
+  if [ -f "$skill/scripts/escalation.py" ]; then
+    python3 "$skill/scripts/escalation.py" --apply
+    git add --all
+    if ! git diff --cached --quiet; then
+      git diff --cached --no-renames --name-only --diff-filter=ACM -z \
+        | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
+      git commit --quiet -m "chore: rule lessons checked in escalation/<scope_key>.md"
+    fi
+    break
+  fi
+done
+
+git push --quiet
+basic-memory reindex --search -p agent-lessons
+'''
+shell = "bash -c"

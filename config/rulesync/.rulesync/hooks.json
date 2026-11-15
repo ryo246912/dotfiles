@@ -8,6 +8,10 @@
           "matcher": "clear",
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool claude",
           "timeout": 30
+        },
+        {
+          "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+          "timeout": 40
         }
       ],
       "sessionEnd": [
@@ -32,6 +36,11 @@
           "matcher": "Bash",
           "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi",
           "timeout": 5
+        },
+        {
+          "matcher": "Bash",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "timeout": 600
         }
       ],
       "permissionRequest": [
@@ -79,6 +88,12 @@
   },
   "codexcli": {
     "hooks": {
+      "sessionStart": [
+        {
+          "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+          "timeout": 40
+        }
+      ],
       "beforeSubmitPrompt": [
         {
           "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
@@ -96,6 +111,24 @@
           "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
           "timeout": 345600,
           "statusMessage": "Opening plan in Plannotator"
+        }
+      ],
+      "preToolUse": [
+        {
+          "matcher": "Bash|exec_command|shell_command|shell",
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+          "timeout": 600
+        }
+      ]
+    }
+  },
+  "copilotcli": {
+    "hooks": {
+      "preToolUse": [
+        {
+          "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\" --copilot",
+          "timeout": 600,
+          "matcher": "bash"
         }
       ]
     }

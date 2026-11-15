@@ -108,20 +108,42 @@ mise bootstrap macos defaults apply --dry-run
 ```toml
 [bootstrap.macos.finder]
 show_all_files = true
-show_pathbar    = true
+show_pathbar = true
 
 [bootstrap.macos.keyboard]
-key_repeat         = 2
+key_repeat = 2
 initial_key_repeat = 15
 
 [bootstrap.macos.defaults]
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
-"NSGlobalDomain"    = { "com.apple.swipescrolldirection" = false }
+"NSGlobalDomain" = { "com.apple.swipescrolldirection" = false }
 ```
+
+`defaults -currentHost` 相当のホスト固有設定は、
+`[[bootstrap.macos.defaults_entries]]` に `host = "current"` を指定する。
+メニューバーの余白は `config/mise/config.toml`（配置先:
+`~/.config/mise/config.toml`）で次のように管理している。
+
+```toml
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSelectionPadding"
+value = 6
+
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSpacing"
+value = 10
+```
+
+これらも `mise bootstrap macos defaults apply` で適用する。
+`bootstrap:mac-defaults` タスクはログイン項目を設定し、メニューバーの余白は変更しない。
+反映されない場合はログアウトして再ログインする。
 
 **制約**（このリポジトリで実際に踏んだもの）:
 
-- `defaults -currentHost` 相当（ホスト固有の設定。メニューバーのアイコン間隔など）は非対応。
 - 値は bool/int/float/string のみ。array/dict（キーボードショートカットの割り当てなど）は非対応。
 - macOS の「ログイン項目」に相当する設定はない。`[bootstrap.macos.launchd.agents]` は
   実行ファイル起動用の LaunchAgent 定義で、`.app` バンドルを「ログイン項目」として登録する
@@ -378,12 +400,16 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 古い/小規模な tap では未対応なことがあり、その場合 `mise bootstrap packages apply` は
 インストールできずに失敗する。
 
-このリポジトリでは `thock`（`kamillobinski/thock`）について API メタデータの公開有無を
-確認できなかったため、`[bootstrap.packages]` には移行せず `mise run bootstrap:mac-packages`
-（実 `brew install`）のまま残している。`opencode-bar`（`opgginc/tap`）は
-実際に `mise bootstrap packages apply` を実行して `api/cask/opencode-bar.json` が
-404 になることを確認したため、同様に `bootstrap:mac-packages` 側に残した。
-いずれも `brew tap` を先に打たず `brew install owner/tap/<name>` の完全修飾名で
+ただし mise 2026.10 時点では、API メタデータが無くても `[bootstrap.brew.taps]` に tap を
+宣言しておけば tap 内の `Formula/*.rb`・`Casks/*.rb` を直接読んで導入できるケースがある。
+`borders`（`felixkratz/formulae`）と `thock`（`kamillobinski/thock`。formula から cask に移行済み）は
+どちらも API メタデータ（`api/...json`）が 404 だが、`mise bootstrap packages apply` で
+新規導入できることを実機で確認したため `[bootstrap.packages]` に置いている。
+`opencode-bar`（`opgginc/tap`）も `api/cask/opencode-bar.json` は 404 だが、こちらは
+tap を宣言しても `mise bootstrap packages apply` が `api/cask/opencode-bar.json` の取得失敗で
+止まり、tap 内の `Casks/*.rb` の直接読み込みにフォールバックしなかったため
+`bootstrap:mac-packages` 側に残した（API 404 だけが理由ではない。mise 更新時に再検証する）。
+`bootstrap:mac-packages` 側では `brew tap` を先に打たず `brew install owner/tap/<name>` の完全修飾名で
 インストールしている（Homebrew の tap trust: `brew tap` 後の短縮名インストールは
 未信頼 tap で失敗しうるが、完全修飾名はその項目単体を暗黙に信任するため安全）。
 **`mise bootstrap packages apply` の失敗はそのまま `mise bootstrap` 全体を止める**ため、

@@ -1,3 +1,8 @@
+# 公式npm packageの同名aliasより、stack自動検出用の補助コマンドを優先する。
+pulls-review() {
+  "$HOME/.local/bin/pulls-review" "$@"
+}
+
 cb() {
   if command -v pbcopy &> /dev/null; then
     command pbcopy
