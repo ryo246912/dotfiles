@@ -337,32 +337,71 @@ PR の本文に、統合した教訓（統合先 ← 統合元）・書き直し
 
 ### 仕組み化する（escalation/<scope_key>.md）
 
-教訓を読ませて守らせるより、lint・hook・テスト・ルールファイルで機械的に防ぐほうが確実。active になった後も指摘され
-続ける教訓は、週次の集計が agent-lessons の `escalation/<scope_key>.md` の「未対応」に、モデルが書いた仕組みの案付きで足す。
-ファイルは教訓の scope_key ごとに分ける（`escalation/global.md`・`escalation/github.com/acme.md`・`escalation/github.com/acme/api.md`）。
-会社のリポジトリの項目を、個人のリポジトリの項目と混ぜないため。
+active になった後も指摘され続ける教訓は、週次の集計が Check と Patterns を根拠に仕組みを提案する。
+案は種別・検知点・ツールに分け、同じツールの設定を 1 PR にまとめられるようにする。
+ファイルは教訓の scope_key ごとに分け、会社と個人のリポジトリの項目を混ぜない。
 
 ```markdown
 ## 未対応
 
-- [ ] 読んだ値で更新する処理は、行ロックか条件付き UPDATE で守る — `lessons/team/github.com/o/r/db-row-locking.md`
-  - 案: semgrep で WHERE が id だけの UPDATE を検出する。同時に 2 回呼ぶテストを足す
-  - 仕組み:
-
-## 済み
-
-- [x] 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する — `lessons/received/global/doc-behavior-drift.md` (ruled 2026-11-01)
-  - 案: …
-  - 仕組み: pre-commit で旧名を grep する hook（https://github.com/o/r/pull/12）
+- [ ] 外部モジュールの非公開名を参照しない — `lessons/received/global/private-import.md`
+  - 種別: lint
+  - 検知点: CI
+  - ツール: ruff:PLC2701
+  - 案: 外部モジュールの非公開名の参照を検出するルールを有効にする
+  - 仕組み: https://github.com/o/r/pull/12
+  - 検証: fixtures/private-import.json
 ```
 
-1. 「未対応」を見て、対象リポジトリに仕組みを入れる（案はたたき台。ほかの方法でもよい）
-2. 入れたら `[ ]` を `[x]` にし、`仕組み:` に入れたもの（PR の URL など）を書く。GitHub 上で直接直してもよい
-3. `mise run lessons:sync`（週次の段階 0 でも呼ばれる）が、印の付いた教訓を `ruled` にして `## Mechanism` を書き、
-   項目を「済み」へ移して commit・push する
+種別は `lint | custom-check | test | hook | rule-file`、検知点は `editor | pre-commit | CI | review-bot`。
+ツールには `ruff:PLC2701` のような既存ルールの識別子、または追加するチェック・テスト・hook・ファイル名を書く。
+週次の `plan.json` も `kind`・`detection`・`tool`・`proposal` を持つオブジェクトにする。
+具体案が無い教訓は、空の案を足さず週次 PR の「要確認」に回す。
 
-ruled の教訓は SessionStart で注入されなくなる。仕組みを入れた後にまた同じ指摘を受けたら、週次 PR の「要確認」に載る
-（仕組みが効いていないか、穴がある）。
+1. 対象リポジトリに仕組みを入れ、`仕組み:` に内容や PR の URL を書く
+2. Patterns の各「→」の左側を違反例とし、一般化した実行可能な違反 fixture と修正版 fixture を用意する
+3. `検証:` に agent-lessons 内の検証 JSON の相対パスを書き、`[ ]` を `[x]` にする
+4. `mise run lessons:sync` が検証を実行する。全違反例の検出と全修正版の成功を確認できた教訓だけ `ruled` にして「済み」へ移す
+
+検証 JSON の例（`fixtures/private-import.json`）:
+
+```json
+{
+  "cwd": "/absolute/local/target/checkout",
+  "command": [
+    "ruff",
+    "check",
+    "--config",
+    "/absolute/local/target/checkout/ruff.toml",
+    "{fixture}"
+  ],
+  "cases": [
+    {
+      "pattern": "外部モジュールの非公開名を参照する",
+      "bad": "fixtures/private-import-bad.py",
+      "good": "fixtures/private-import-good.py",
+      "diagnostic": "PLC2701"
+    }
+  ]
+}
+```
+
+`pattern` は対象教訓の Patterns の「→」の左側全文に一致させ、すべての Patterns を `cases` で覆う。
+`bad`・`good` は agent-lessons 内の fixture の相対パス。`cwd` は仕組みを入れたローカル checkout の絶対パス。
+`command` はシェル文字列でなく引数の配列で指定し、`{fixture}` に各 fixture のパスが入る。
+導入した実際のチェックと設定を使う。fixture は別リポジトリにあるため、lint の設定ファイルは上の例のように明示する。
+検証時だけ `--select` でルールを有効化すると、実際の設定漏れを見逃すため使わない。
+違反 fixture は終了コード 1 かつ `diagnostic` の出力、修正版は終了コード 0 が必要で、各実行は 30 秒で打ち切る。
+fixture は元の会社コードをコピーせず、教訓の違反パターンを再現する一般化した例を書く。
+
+検証未設定・不一致・ツール未導入・タイムアウトなどは active のまま残り、sync はエラーを返す。
+`仕組み:` に URL があるだけでは ruled にしない。ルールファイルの種別でも検知を実証する検証が必要。
+ruled の教訓は SessionStart で注入されなくなる。仕組みを入れた後に再び同じ指摘を受けたら、週次 PR の「要確認」に載る。
+
+ツール別のバンドル作業には `escalation.py --list` の JSON 出力を使う。例えば
+`python3 <skill>/scripts/escalation.py --list | jq 'group_by(.tool) | map({tool: .[0].tool, items: .})'`
+で同じツールの案をまとめられる。チェックリストは `escalation/<scope_key>.md` に分け、
+新規項目も教訓の `scope_key` に対応するファイルへ追加する。
 
 ### 何から教訓を作ったかを確かめる
 

@@ -15,7 +15,8 @@ plan.json の書式（未処理の観察は、attach・create・skip のどれ�
       "widen":  [{"lessons": ["lessons/received/github.com/o/a/x.md", "lessons/received/github.com/o/b/x.md"],
                   "scope_key": "github.com/o", "key": "...", "title": "...", "rule": "...", "why": "...", "check": "...",
                   "globs": []}],
-      "escalate": {"lessons/received/global/y.md": "仕組みの案（どの lint のどのルール・どの hook・どのテストか）"},
+      "escalate": {"lessons/received/global/y.md": {"kind": "lint", "detection": "CI",
+                     "tool": "ruff:PLC2701", "proposal": "対象のルールを有効にする"}},
       "review": ["ユーザーに判断してほしいこと"]
     }
 
@@ -30,7 +31,8 @@ targets.yml（個人）にあるときだけで、それ以外は行わずに「
 
 skip した観察と retired にした教訓は、同じ相対パスのまま archived/ の下へ移す（注入・集計・plan の材料から外すため）。
   仕組み化の候補       active になった後に 2 回以上また指摘された（plan.json の escalate に案がある教訓も）。
-                       escalation/<scope_key>.md（チェックリスト）の「未対応」に足す。印が付いたら escalation.py が ruled にする
+                       構造化した案があれば escalation/<scope_key>.md の「未対応」に足す。案が無ければ「要確認」に回す。
+                       印が付いたら escalation.py が fixture で検証して ruled にする
 """
 
 from __future__ import annotations
@@ -210,15 +212,16 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     errors += [
         f"widen に二重に書いた: {rel}" for rel in sorted(set(widened)) if widened.count(rel) > 1
     ]
-    if not isinstance(plan.get("escalate") or {}, dict):
+    if plan.get("escalate") is not None and not isinstance(plan["escalate"], dict):
         errors.append("escalate は教訓のパスから案への対応にする")
         plan["escalate"] = {}
     for rel, proposal in (plan.get("escalate") or {}).items():
         meta = lesson_ok(rel, "escalate")
         if meta and meta.get("status") != "active":
             errors.append(f"escalate: active ではない教訓は仕組み化の候補にしない: {rel}")
-        if not isinstance(proposal, str):
-            errors.append(f"escalate: 案は文字列にする: {rel}")
+        errors.extend(
+            f"escalate: {rel}: {error}" for error in escalation.validate_proposal(proposal)
+        )
     for o in obs.values():
         if o[1].get("source") not in L.SOURCES:
             errors.append(f"観察の source が不正: {o[0]}")
@@ -230,7 +233,8 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
     texts += [
         (f"skip[{i}].reason", s.get("reason", "")) for i, s in enumerate(plan.get("skip", []))
     ]
-    texts += [(f"escalate: {rel}", p) for rel, p in (plan.get("escalate") or {}).items()]
+    texts += [(f"escalate: {rel}", p.get("proposal", ""))
+              for rel, p in (plan.get("escalate") or {}).items() if isinstance(p, dict)]  # fmt: skip
     # Patterns は 1 行ずつ見る（日本語の行に混ざった英語だけの行も拾うため）
     texts += [(f"{rel} の {k}", ln) for rel, (_, _, b) in obs.items() for k, v in L.sections(b).items()
               if k in ("Rule", "Patterns", "Why", "Check") for ln in v.splitlines() if ln.strip()]  # fmt: skip
@@ -417,8 +421,12 @@ def main() -> int:
                 retired.append(meta["title"])
             else:
                 rel = str(path.relative_to(L.LESSONS_DIR))
-                if rel in proposals or int(meta.get("since_active") or 0) >= ESCALATE_AFTER:
-                    escalate.append((rel, meta["title"], proposals.get(rel, "")))
+                if rel in proposals:
+                    escalate.append((rel, meta["title"], proposals[rel]))
+                elif int(meta.get("since_active") or 0) >= ESCALATE_AFTER:
+                    review.append(
+                        f"仕組み化の構造化した案が無い。Check と Patterns から案を書く: {meta['title']}（{rel}）"
+                    )
 
     for path, (meta, body) in lessons.items():
         if meta.get("status") == "retired":

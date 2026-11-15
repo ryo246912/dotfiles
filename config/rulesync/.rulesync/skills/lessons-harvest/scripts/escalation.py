@@ -4,7 +4,7 @@
 
 教訓は注入して守らせるより、lint・hook・テスト・ルールファイルで機械的に防ぐほうが確実。active になった後も
 指摘され続ける教訓を、週次の apply_plan.py がこのチェックリストの「未対応」に足す（モデルが書いた仕組みの案付き）。
-ユーザーが仕組みを入れたら `[ ]` を `[x]` にし、`仕組み:` に入れたもの（PR の URL など）を書く。`mise run lessons:sync`
+ユーザーが仕組みを入れたら `仕組み:` と `検証:` を書いて `[x]` にする。違反・修正 fixture の検証が必要。`mise run lessons:sync`
 （週次の段階 0 でも呼ばれる）がこのスクリプトを呼び、その教訓を ruled（注入しない）にする。
 
 チェックリストは教訓の scope_key ごとのファイルに分ける（`escalation/global.md`・`escalation/github.com/acme.md`・
@@ -13,8 +13,12 @@
 項目の書式（`## 未対応` と `## 済み` の下に並ぶ。2 行目以降は 2 文字下げ）:
 
     - [ ] <教訓のタイトル> — `lessons/<source>/<scope_key>/<key>.md`
+      - 種別: lint | custom-check | test | hook | rule-file
+      - 検知点: editor | pre-commit | CI | review-bot
+      - ツール: ruff:PLC2701
       - 案: <仕組みの案>
       - 仕組み: <入れた仕組み。ユーザーが書く>
+      - 検証: fixtures/<name>.json
 """
 
 from __future__ import annotations
@@ -23,6 +27,7 @@ import argparse
 import datetime as dt
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -33,8 +38,8 @@ TODO, DONE = "未対応", "済み"
 HEADER = """# 仕組み化のチェックリスト（{scope}）
 
 注入しても指摘され続ける教訓を、lint・hook・テスト・ルールファイル（CLAUDE.md・AGENTS.md など）で防ぐための一覧。
-仕組みを入れたら `[ ]` を `[x]` にし、`仕組み:` に入れたもの（PR の URL など）を書いて `mise run lessons:sync` する。
-その教訓は ruled になり、SessionStart で注入されなくなる。項目は週次の lessons-harvest が足す。
+仕組みを入れたら `仕組み:` と `検証:` を書いて `[x]` にし、`mise run lessons:sync` する。
+違反 fixture の検出と修正版の成功を確認できた教訓だけ ruled になり、SessionStart で注入されなくなる。項目は週次の lessons-harvest が足す。
 """
 ITEM = re.compile(r"^- \[([ xX])\] (.*?) — `([^`]+)`(.*)$")
 
@@ -141,7 +146,88 @@ def save(path: Path, items: dict[str, list[dict]]) -> None:
     path.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
 
 
-def add(entries: list[tuple[str, str, str]]) -> list[str]:
+KINDS = ("lint", "custom-check", "test", "hook", "rule-file")
+DETECTIONS = ("editor", "pre-commit", "CI", "review-bot")
+FIELDS = {"kind": "種別", "detection": "検知点", "tool": "ツール", "proposal": "案"}
+
+
+def validate_proposal(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return ["案は kind・detection・tool・proposal を持つオブジェクトにする"]
+    errors = []
+    for key in FIELDS:
+        if not isinstance(value.get(key), str) or not value[key].strip() or "\n" in value[key]:
+            errors.append(f"{key} は空でない1行の文字列にする")
+    if value.get("kind") not in KINDS:
+        errors.append("kind: " + " | ".join(KINDS))
+    if value.get("detection") not in DETECTIONS:
+        errors.append("detection: " + " | ".join(DETECTIONS))
+    return errors
+
+
+def field(it: dict, name: str) -> str:
+    for line in it["lines"]:
+        match = re.fullmatch(r"\s*- " + re.escape(name) + r":\s*(.*)", line)
+        if match:
+            return match[1].strip()
+    return ""
+
+
+def verify(it: dict, body: str) -> str:
+    """明示した検証設定で全 Patterns の違反を検出し、修正版が通ることを確かめる。"""
+    rel = field(it, "検証")
+    manifest = L.inside(rel, "fixtures") if rel else None
+    if not manifest or not manifest.is_file():
+        raise ValueError("検証: に fixtures/ 内の JSON 設定を書く")
+    config = json.loads(manifest.read_text(encoding="utf-8"))
+    patterns = L.sections(body).get("Patterns", "")
+    violations = [
+        line.strip()[2:].split("→", 1)[0].strip()
+        for line in patterns.splitlines()
+        if line.strip().startswith("- ") and "→" in line
+    ]
+    cases = config.get("cases", [])
+    if not violations or not isinstance(cases, list) or not cases:
+        raise ValueError("Patterns の違反例と cases が必要")
+    if any(not isinstance(case, dict) for case in cases):
+        raise ValueError("cases はオブジェクトの配列にする")
+    if sorted(case.get("pattern", "") for case in cases) != sorted(violations):
+        raise ValueError("cases は Patterns の → 左側を全件、重複なく対応させる")
+    cwd = Path(config["cwd"]).expanduser()
+    if not cwd.is_absolute() or not cwd.is_dir():
+        raise ValueError("cwd は仕組みを入れたローカル checkout の絶対パスにする")
+    argv = config["command"]
+    if not isinstance(argv, list) or not argv or not all(isinstance(a, str) for a in argv):
+        raise ValueError("command は引数の配列にする")
+    if not any("{fixture}" in a for a in argv):
+        raise ValueError("command に {fixture} が必要")
+    for case in cases:
+        if case.get("bad") == case.get("good"):
+            raise ValueError("bad と good は別の fixture にする")
+        diagnostic = case.get("diagnostic")
+        if not isinstance(diagnostic, str) or not diagnostic.strip():
+            raise ValueError("違反の diagnostic（ルール ID など）が必要")
+        for key, expected in (("bad", 1), ("good", 0)):
+            fixture = L.inside(case[key], "fixtures")
+            if not fixture or not fixture.is_file() or fixture == manifest:
+                raise ValueError("bad/good は fixtures/ 内の別のファイルにする")
+            result = subprocess.run(
+                [a.replace("{fixture}", str(fixture)) for a in argv],
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                stdin=subprocess.DEVNULL,
+                check=False,
+            )
+            if result.returncode != expected:
+                raise ValueError(f"{key}: 終了コード {result.returncode}（期待 {expected}）")
+            if key == "bad" and diagnostic not in result.stdout + result.stderr:
+                raise ValueError("bad: 指定した diagnostic が出ていない")
+    return f"{rel}（違反 {len(cases)} 件を検出・修正版は成功）"
+
+
+def add(entries: list[tuple[str, str, dict]]) -> list[str]:
     """(教訓のパス, タイトル, 仕組みの案) を、教訓の scope_key のファイルの「未対応」に足す。
 
     どこかのファイルに既に載っている教訓は足さない。足したタイトルを返す。
@@ -158,9 +244,10 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
             continue
         # 項目は 1 行目で区切って読むので、改行の入ったタイトルは 1 行にする
         title = " ".join(title.split())
-        lines = [
-            f"  - 案: {' '.join(proposal.split()) or '（週次で案を書けなかった。Check と Patterns から考える）'}"
-        ]
+        errors = validate_proposal(proposal)
+        if errors:
+            raise ValueError(f"{path}: {'; '.join(errors)}")
+        lines = [f"  - {label}: {proposal[key].strip()}" for key, label in FIELDS.items()]
         target = path_for(scope)
         loaded.setdefault(target, {TODO: [], DONE: []})[TODO].append(
             {
@@ -168,7 +255,7 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
                 "title": title,
                 "path": path,
                 "tail": "",
-                "lines": [*lines, "  - 仕組み:"],
+                "lines": [*lines, "  - 仕組み:", "  - 検証:"],
             }
         )
         touched.add(target)
@@ -250,9 +337,28 @@ def apply() -> dict:
                 keep.append(it)
                 continue
             meta, body = L.read(path)
+            if meta.get("status") not in ("active", "ruled"):
+                errors.append(f"active ではない教訓は ruled にしない: {it['path']}")
+                keep.append(it)
+                continue
+            try:
+                evidence = verify(it, body)
+            except (
+                ValueError,
+                OSError,
+                KeyError,
+                TypeError,
+                AttributeError,
+                subprocess.SubprocessError,
+            ) as exc:
+                errors.append(f"検証失敗: {it['title']}: {exc}")
+                keep.append(it)
+                continue
             if meta.get("status") != "ruled":
                 meta.update(status="ruled", ruled=today)
-                body = L.set_section(body, "Mechanism", mechanism(it), before="Evidence")
+                body = L.set_section(
+                    body, "Mechanism", mechanism(it) + "\n\n検証: " + evidence, before="Evidence"
+                )
                 L.write(path, meta, body)
             done.append({**it, "tail": f" (ruled {today})"})
             ruled.append(it["title"])
@@ -263,8 +369,30 @@ def apply() -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--apply", action="store_true", required=True)
-    ap.parse_args()
+    group = ap.add_mutually_exclusive_group(required=True)
+    group.add_argument("--apply", action="store_true")
+    group.add_argument(
+        "--list", action="store_true", help="構造化した一覧を JSON で出す（ツール別の集計用）"
+    )
+    args = ap.parse_args()
+    if args.list:
+        print(
+            json.dumps(
+                [
+                    {
+                        **{key: field(it, label) for key, label in FIELDS.items()},
+                        "path": it["path"],
+                        "section": section,
+                        "checked": it["checked"],
+                    }
+                    for path in files()
+                    for section, entries in load(path).items()
+                    for it in entries
+                ],
+                ensure_ascii=False,
+            )
+        )
+        return 0
     # lessons:sync から毎回呼ばれるので、移行前の端末では止めずに飛ばす（週次の段階 0 が移行してから sync し直す）
     if not L.check_schema(strict=False):
         print(
@@ -276,7 +404,7 @@ def main() -> int:
     print(json.dumps(result, ensure_ascii=False))
     for e in result["errors"]:
         print(f"warning: {e}", file=sys.stderr)
-    return 0
+    return 1 if result["errors"] else 0
 
 
 if __name__ == "__main__":

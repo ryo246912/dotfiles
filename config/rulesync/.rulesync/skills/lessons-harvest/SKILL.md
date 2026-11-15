@@ -77,7 +77,7 @@ dotfiles の `docs/agent-lessons.md` の「やり直す」）。`<日付>` が `
    - そのブランチの PR が出ていれば（`gh pr list --head <ブランチ> --state open`）、`git switch main` だけする
    - 出ていなければ、途中の変更を `git stash push -u -m "aborted <ブランチ>"` で退避し、`git switch main` して
      `git branch -D <ブランチ>` で消す。退避したことは最後に報告する（中身は次の実行で集め直される）
-2. `mise run lessons:sync` で最新にする（仕組み化のチェックリスト `escalation/<scope_key>.md` で印を付けた教訓も、ここで ruled になる）
+2. `mise run lessons:sync` で最新にする（仕組み化のチェックリスト `escalation/<scope_key>.md` で印を付けた教訓は、全 Patterns の違反 fixture の検出と修正版の成功を検証できた場合だけ ruled になる。検証の失敗は sync のエラーとして扱い、先へ進まない）
 3. 未マージの週次 PR・月次の見直し（lessons-review）の PR を探す。あれば**何もせずに終了**し、その PR の URL を報告する
    （未マージの集計の上に重ねると、同じ指摘を二重に数えたり、統合・retired にした教訓へ観察を足したりするため）
 
@@ -157,5 +157,5 @@ basic-memory reindex --search -p agent-lessons
 
 secretlint で止まったら、該当する観察・教訓の文面を直してから続ける。最後に PR の URL と、`pr-body.md` の見出しごとの
 件数をユーザーに報告する（`--loop` なら周ごとに。PR は下の周から順にマージする）。「仕組み化のチェックリスト」に
-足した教訓があれば、足した教訓の scope_key ごとのファイル（例: `escalation/github.com/acme.md`）を名指しし、仕組みを入れてから印を付けるよう添える。`left_prs` があれば、持ち越した
+足した教訓があれば、`<repo>/escalation/<scope_key>.md` の種別・検知点・ツールでまとめて対応できる案を示し、仕組みと検証 JSON（Patterns ごとの違反・修正 fixture）を入れてから印を付けるよう添える。`left_prs` があれば、持ち越した
 PR の数と、週次 PR をマージしたあとにもう一度実行すれば（または `--loop` で）続きを集められることも報告する。

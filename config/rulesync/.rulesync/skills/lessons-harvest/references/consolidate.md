@@ -21,7 +21,7 @@ python3 <skill>/scripts/lessons_query.py --index      # 既存の教訓の一覧
 | `create` | 同じ source・scope_key の範囲に同じ種類の教訓が無い。その範囲の似た観察はまとめて 1 つの `create` に入れる。`key` は英語のケバブケース。別のリポジトリにまたがるものは、それぞれ作ってから `widen` でまとめる |
 | `skip`   | 次の変更で効かない（その場限りの事情・好みの違い・誤った指摘）。理由を書く。リポジトリ固有なだけなら skip せず、そのリポジトリの `create`・`attach` にする                                                    |
 
-plan.json の文章（`create`・`widen` の `title`・`rule`・`why`・`check`、`skip` の `reason`、`review`、`escalate` の案）は、
+plan.json の文章（`create`・`widen` の `title`・`rule`・`why`・`check`、`skip` の `reason`、`review`、`escalate` の `proposal`）は、
 元のコメントや観察の言語に関わらず日本語で書く（そのまま教訓・`archived/` の観察・`pr-body.md` になる）。コード・識別子・固有名詞は
 原文のままでよく、`` ` `` で囲む。
 
@@ -48,9 +48,31 @@ ruled の教訓と、まとめる先（`scope_key`・`key`）に既に教訓が�
 - 今週 `attach` する教訓で、`--index` の `since_active` が 1 以上（active になった後にまた指摘された）
 - diff の形で機械的に見つけられる（`## Patterns` が grep や lint のルールで表せる）
 
-案は具体に書く（どの lint のどのルールか、どの hook で何を grep するか、どんなテストを足すか、CLAUDE.md・AGENTS.md の
-どこに何を書くか）。スクリプトは `since_active` が 2 以上の教訓も案なしで足す。足した先は agent-lessons の
-`escalation/<scope_key>.md`（仕組み化のチェックリスト）で、ユーザーが仕組みを入れて印を付けると ruled になる。
+`escalate` は教訓のパスから、次の構造化したオブジェクトへの対応にする。空の案や自由記述の文字列は受け付けない。
+
+```json
+{
+  "escalate": {
+    "lessons/received/global/private-import.md": {
+      "kind": "lint",
+      "detection": "CI",
+      "tool": "ruff:PLC2701",
+      "proposal": "外部モジュールの非公開名の参照を検出するルールを有効にする"
+    }
+  }
+}
+```
+
+- `kind`（種別）: `lint` / `custom-check` / `test` / `hook` / `rule-file`
+- `detection`（検知点）: `editor` / `pre-commit` / `CI` / `review-bot`
+- `tool`（ツール）: 既存ルールなら `ruff:PLC2701` のようにツールとルール名を書く。独自チェック・テスト・hook・ルールファイルなら、追加するスクリプト名・テスト名・ファイル名を書く
+- `proposal`（案）: 何を検出するか、どのルール・hook・テストをどこへ追加するかを日本語で具体に書く
+
+各教訓の `## Check` と `## Patterns` を根拠に分類する。同じ `tool`・`detection` の案はまとめて実装できるよう、表記を揃える。
+`since_active` が 2 以上でも案が無ければ、スクリプトは空案の項目を作らず PR の「要確認」に回す。
+足した先は agent-lessons の `escalation/<scope_key>.md`。ユーザーが仕組みと検証設定を入れて印を付け、
+`lessons:sync` が Patterns の違反例を fixture として仕組みの検出を検証できたときだけ ruled になる。
+ルールファイルも URL を置くだけでは ruled にせず、検知できる検証方法が必要。
 
 件数・昇格・失効はスクリプトが決めるので、plan.json には書かない。
 
