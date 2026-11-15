@@ -89,7 +89,7 @@ cp -R .rulesync "$check_dir/"
 (cd "$check_dir" && rulesync generate)
 
 status=0
-for file in CLAUDE.md AGENTS.md; do
+for file in CLAUDE.md AGENTS.md .claude/settings.json .codex/hooks.json; do
 	diff -u "$repo_dir/$file" "$check_dir/$file" || status=1
 done
 if [ "$status" -ne 0 ]; then
