@@ -11,6 +11,7 @@ experimental    = true
 "aqua:astral-sh/uv"                                         = "0.13.7"
 "aqua:awslabs/git-secrets"                                  = "1.3.0"
 "aqua:cli/cli"                                              = "2.103.3"
+"aqua:codeberg.org/mergiraf/mergiraf"                       = "v0.20.0"
 "aqua:evilmartians/lefthook"                                = "2.2.1"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
 "aqua:jdx/jactionlint"                                      = "2.6.0"

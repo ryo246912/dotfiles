@@ -358,6 +358,9 @@ materialize_all() {
 	# ここが読めないと core.excludesfile の解決に失敗して git status 系が全部死ぬ。
 	materialize_file gitconfig-host "$HOME/.config/git/config" || return 1
 	materialize_file gitignore-host "$HOME/.config/git/gitignore" || return 1
+	# mergiraf を適用するファイルの指定。無くても通常の merge になるだけなので warning 止まりにする
+	materialize_file gitattributes-host "$HOME/.config/git/attributes" \
+		|| echo "⚠️ git/attributes の実体化に失敗しました" >&2
 
 	# agent の設定。無くても起動はできるので warning 止まりにする
 	materialize_file claude-config-host.json "$HOME/.claude.json" '{}' \

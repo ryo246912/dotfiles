@@ -46,6 +46,10 @@
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #
+# sandbox を作成したときの呼び出しを ${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh に
+# 記録する。`mise run sandbox:recreate` はこれに --new --setup-only を付けて再実行し、
+# マウントや template の変更を既存の sandbox に反映する。
+#
 # 参考: https://docs.docker.com/reference/cli/sbx/
 set -uo pipefail
 
@@ -268,6 +272,25 @@ done
 
 log_info "sbx-agent の準備を開始します"
 
+# sandbox:recreate が作成時と同じ指定で作り直せるよう、解釈した引数を記録用に控えておく
+# （下で既定値が埋まる前の、呼び出し側が明示した値だけにする）。--name / --workspace は
+# 解決後の値を記録時に足す。--new / --rm / --setup-only / --env-plan / --env-force はその回だけの指定なので含めない。
+REPLAY_ARGS=("$AGENT" --skills "$SKILLS")
+[[ -n "$CONFIG_DIR" ]] && REPLAY_ARGS+=(--config-dir "$CONFIG_DIR")
+[[ -n "$CLAUDE_ACCOUNT" ]] && REPLAY_ARGS+=(--claude-account "$CLAUDE_ACCOUNT")
+[[ "$CLAUDE_OAUTH" == true ]] && REPLAY_ARGS+=(--claude-oauth)
+REPLAY_ARGS+=(--env-file "$ENV_FILE")
+[[ -n "$BRANCH" ]] && REPLAY_ARGS+=(--branch "$BRANCH")
+[[ -n "$TEMPLATE" ]] && REPLAY_ARGS+=(--template "$TEMPLATE")
+[[ "$NO_TEMPLATE" == true ]] && REPLAY_ARGS+=(--no-template)
+for _spec in ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"}; do REPLAY_ARGS+=(--mount "$_spec"); done
+for _spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do REPLAY_ARGS+=(--publish "$_spec"); done
+for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do REPLAY_ARGS+=(--static-mcp "$_spec"); done
+[[ -n "$CPUS" ]] && REPLAY_ARGS+=(--cpus "$CPUS")
+[[ -n "$MEMORY" ]] && REPLAY_ARGS+=(--memory "$MEMORY")
+[[ "$MOUNT_CONFIG" == false ]] && REPLAY_ARGS+=(--no-config)
+[[ "$HOST_BRIDGE" == false ]] && REPLAY_ARGS+=(--no-host-bridge)
+
 # sandbox 内の固定パス・固定ポート
 # scripts は Dockerfile.sandbox が image 内の agent ホーム配下へ COPY している
 readonly SANDBOX_SCRIPTS_DIR="/home/agent/.config/devcontainer/scripts"
@@ -462,6 +485,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
     add_mount "${HOME}/.config/git/config:ro"
     add_mount "${HOME}/.config/git/gitignore:ro"
+    add_mount "${HOME}/.config/git/attributes:ro"
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
@@ -663,6 +687,8 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # ホストの gitconfig を include する（post-create.sh の include.path 相当）
     [[ -f "${HOME}/.config/git/config" ]] && add_git_config include.path "${HOME}/.config/git/config"
     [[ -f "${HOME}/.config/git/gitignore" ]] && add_git_config core.excludesfile "${HOME}/.config/git/gitignore"
+    # mergiraf を適用するファイルの指定。sandbox の HOME はホストと違い既定パスでは読まれないため明示する
+    [[ -f "${HOME}/.config/git/attributes" ]] && add_git_config core.attributesfile "${HOME}/.config/git/attributes"
     # ホストの gitconfig は pager と interactive.diffFilter に delta を指定しているが、
     # delta は sandbox のツールチェインに無いため、そのままだと git log / diff / show が
     # "cannot run delta" で失敗する。エージェント環境では pager は不要なので無効化する。
@@ -843,6 +869,41 @@ run_post_create() {
         else
             log_warn "sandbox の初期化に失敗しました（終了コード: $rc）。セッションは続行します"
         fi
+    fi
+}
+
+# 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
+# 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
+# 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK)
+record_invocation() {
+    local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
+    file="${dir}/${SANDBOX_NAME}.sh"
+    if ! mkdir -p "$dir" || ! {
+        printf '#!/usr/bin/env bash\n'
+        printf '# %s を作成した sbx-agent の呼び出し（mise run sandbox:recreate が使う）\n' "$SANDBOX_NAME"
+        printf 'cd %q || exit 1\n' "$PWD"
+        printf 'exec env'
+        # 作成時に未設定だった変数は -u で外す。外さないと、作り直しを実行したシェルの値を
+        # 引き継ぎ、元の sandbox に無かったマウント（SBX_AGENT_MOUNTS）などが足されてしまう。
+        # env は最初の NAME=VALUE 以降をコマンドとして扱うため、-u は代入より前にまとめて書く。
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -z "${!var:-}" ]] && printf ' -u %s' "$var"
+        done
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -n "${!var:-}" ]] && printf ' %q' "${var}=${!var}"
+        done
+        printf ' sbx-agent'
+        printf ' %q' "${REPLAY_ARGS[@]}" --name "$SANDBOX_NAME" --workspace "$WORKSPACE"
+        printf ' "$@"'
+        if [[ ${#AGENT_ARGS[@]} -gt 0 ]]; then
+            printf ' --'
+            printf ' %q' "${AGENT_ARGS[@]}"
+        fi
+        printf '\n'
+    } >"${file}.tmp" || ! mv -f "${file}.tmp" "$file"; then
+        rm -f "${file}.tmp"
+        log_warn "sandbox の作成時の引数を記録できませんでした（mise run sandbox:recreate で作り直せません）: $file"
     fi
 }
 
@@ -1061,6 +1122,7 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
     (umask 077; printf '%s\n' "$CREATED_MARKER_VERSION" >"${ENV_OVERLAY%/*}/created") || exit 1
     SANDBOX_CREATED=true
     load_static_mcp
+    record_invocation
 
 else
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret

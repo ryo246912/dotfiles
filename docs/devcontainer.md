@@ -231,11 +231,11 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 コンテナ内へ渡り、リンク先（ホストのリポジトリのパス）がコンテナ内に無いため
 **リンク切れ**になります。対処は mount の性質によって分けています。
 
-| mount                                                                                                                       | 対処                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `~/.config/devcontainer` / `nvim` / `mise`（ディレクトリ・readonly）                                                        | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
-| `~/.config/git/config` / `gitignore` / `~/.claude.json` / `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json` | 実体化したファイル（`~/.cache/devcontainer/host-config/files/<name>`）を source にする |
-| `~/.config/gh` / `~/.agents` / `~/.copilot` など                                                                            | dotfiles 管理外（実ファイル）なので対処不要                                            |
+| mount                                                                                                                                      | 対処                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `~/.config/devcontainer` / `nvim` / `mise`（ディレクトリ・readonly）                                                                       | 実体化したツリー（`~/.cache/devcontainer/host-config/<name>`）を source にする         |
+| `~/.config/git/config` / `gitignore` / `attributes` / `~/.claude.json` / `~/.claude/settings.json` / `~/.codex/config.toml` / `hooks.json` | 実体化したファイル（`~/.cache/devcontainer/host-config/files/<name>`）を source にする |
+| `~/.config/gh` / `~/.agents` / `~/.copilot` など                                                                                           | dotfiles 管理外（実ファイル）なので対処不要                                            |
 
 > [!IMPORTANT]
 > **ファイル単位の mount でも Docker の symlink 解決に頼ってはいけません。**

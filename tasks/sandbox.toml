@@ -497,6 +497,83 @@ main() {
 main "$@"
 '''
 
+["sandbox:recreate"]
+description = "Recreate sandboxes (selected with fzf) with the sbx-agent arguments they were created with"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:recreate [--yes] [sandbox-name...]
+  # マウント・template・ホストの設定ファイルの変更は作成時に固定されるため、既存の sandbox には
+  # 作り直さないと反映されない。sbx-agent が作成時に記録した呼び出し
+  # （${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<name>.sh）に --new --setup-only を付けて再実行し、
+  # 同じ指定で作り直す。アタッチはしないので、続けて使うときは multi-worktree dev 等で入る。
+  # sandbox を省略すると sbx ls から fzf で複数選択する（Tab で選択）。
+  # 作り直すと workspace（ホストと共有するディレクトリ）以外の sandbox 内のデータ（$HOME の中身や
+  # 後から入れたパッケージなど）は消えるため、実行前に確認する（--yes で省略）。
+  assume_yes=false
+  names=""
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) assume_yes=true ;;
+      -*) echo "error: 不明なオプション: $arg（usage: mise run sandbox:recreate [--yes] [sandbox-name...]）" >&2; exit 2 ;;
+      *) names="${names}${names:+ }$arg" ;;
+    esac
+  done
+  command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+  state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent"
+
+  if [ -z "$names" ]; then
+    command -v fzf >/dev/null 2>&1 \
+      || { echo "usage: mise run sandbox:recreate <sandbox-name>...（fzf があれば省略可）" >&2; exit 2; }
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    names=$(printf '%s\n' "$sandboxes" \
+      | fzf --multi --header-lines=1 --prompt="sandbox> " \
+          --header="作り直す sandbox を選択（Tab で複数選択。セッションは終了し、workspace 外のデータは消えます）" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$names" ] || exit 130
+  fi
+
+  if [ "$assume_yes" != true ]; then
+    echo "次の sandbox を削除して作り直します:"
+    for name in $names; do echo "  - $name"; done
+    echo "実行中のセッションは終了し、workspace 以外の sandbox 内のデータ（\$HOME の中身や後から入れたパッケージなど）は消えます。"
+    printf '続けますか? [y/N] '
+    read -r answer || answer=""
+    case "$answer" in
+      y | Y | yes) ;;
+      *) echo "中止しました" >&2; exit 130 ;;
+    esac
+  fi
+
+  failed=""
+  for name in $names; do
+    record="${state_dir}/${name}.sh"
+    if [ ! -f "$record" ]; then
+      # 記録は sbx-agent が sandbox を作成したときに書く。記録を始める前に作った sandbox は、
+      # 一度だけ元のコマンドで作り直せば以降はここで作り直せる。
+      echo "warn: ${name} の作成時の記録がありません。元のコマンドに --new を付けて作り直してください" \
+        "（例: multi-worktree dev <task> --new / sbx-agent <agent> --new）" >&2
+      failed="${failed}${failed:+, }$name"
+      continue
+    fi
+    echo "==> ${name} を作り直します"
+    if bash "$record" --new --setup-only; then
+      echo "✅ ${name} を作り直しました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: ${name} の作り直しに失敗しました" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 作り直せなかった sandbox: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
 ["sandbox:template-rm"]
 description = "Remove a saved Docker Sandboxes template"
 run = '''
