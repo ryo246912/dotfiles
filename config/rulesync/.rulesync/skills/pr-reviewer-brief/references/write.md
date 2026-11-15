@@ -134,10 +134,14 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 - `preparation`: 画面への到達とデータ準備を一操作ずつ並べた配列。`id`は`prep-1`等、`title`・`url`・`actions`・`expected`を記載する。データ作成不要ならその理由を前提に書く。
 - `data`: 準備済みデータの配列。`purpose`・`record`（ID・表示名）・`state`・`url`・`source`（作成／再利用）。段階2では実在が未確認のデータを準備済みとして書かない。
 - `steps`: 一操作ごとの確認計画。`id`は`step-1`等とし、preparationと重複しない。`title`・`url`・`actions`・`expected`を記載する。
+- `records`: データが映る`preparation`・`steps`の各画像に、`ui`・`table`・`record`・`column`を記録する。`background.data_model.mapping`とコード・観測結果から対応を調べ、未取得のID等は推測で埋めない。対応が未確認ならその理由をステップへ記載する。
+- `caution`: 削除など元に戻せない操作では必須。専用のテストデータを使うこと、変更・削除する対象、影響と復元可否を明記する。計画に書いたことだけを実行許可とみなさず、behaviorの許可範囲を守る。
 - `status`: 各ステップは段階2では`NOT RUN`。`PASS / FAIL / BLOCKED / NOT RUN`は段階3の観測に従って更新する。
 - `actual`: 実際の結果。段階2で成功例を捏造しない。`image_note`は未実行・撮影不可の理由。
 - `execution`: 段階3で記録する全体の状況。`status`・`head_sha`・`url`・`account`（別名・ロール）・`run_at`・`note`。途中更新があれば元のSHAでの結果であることを記す。
 - `cleanup`: 残したデータと削除・復元方法の文字列配列。
+
+`background.pages`がある変更の確認ステップは、画面の表示名を使ったUI操作と、画面で見える期待結果で書く。データ準備にDB/APIを使う場合も、動作確認自体はUIで行う。画面のないAPI・ジョブのみの変更は、API呼び出し・ジョブ実行・DB確認等の実際に可能な手段を`actions`、レスポンス・出力・値を`expected`に書き、画面の`url`は省く。
 
 データ準備の方法・実行権限・DB編集はbehaviorの手順に従う。localでは必要なSQL／ORM操作を組み立てられるが、staging／previewのDB直接編集は行わない。
 旧形式の`seed`は既存レポートの互換性のため表示できるが、新規レポートでは`preparation`を使い、未実行のSQLを投入済みとして扱わない。

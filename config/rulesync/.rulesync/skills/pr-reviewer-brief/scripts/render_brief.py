@@ -582,7 +582,7 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
     parts.append(render_steps(test.get("preparation", []), "手動準備・データ準備"))
     if test.get("data"):
         rows = [[inline(str(item.get(k, ""))) for k in ("purpose", "record", "state")] + [
-            link(item.get("url"), esc(item.get("url", ""))), inline(str(item.get("source", "")))
+            link(item.get("url"), esc(item.get("url") or "")), inline(str(item.get("source", "")))
         ] for item in test["data"]]
         parts.append("<h3>準備済みデータ</h3>" + table(["用途", "ID・表示名", "状態", "開くURL", "作成／再利用"], rows))
     parts.append(render_steps(test.get("steps", []), "動作確認"))

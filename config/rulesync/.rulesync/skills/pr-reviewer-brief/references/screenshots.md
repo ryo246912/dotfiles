@@ -11,10 +11,10 @@ stackでは最上位PRの環境を使い、briefと同じstack全体を確認対
 behaviorに次を依頼する。
 
 - 起動済みのlocal／previewと、AIが接続しているChromeで、確認データの準備・画面への到達・実操作まで進める。
-- behaviorの設定先・許可範囲・接続先検証・SHA確認・localのみのDB直接編集・秘密値除外・教訓追記をそのまま守る。環境起動や独立したChromiumの起動はしない。この段階では旧`scripts/screenshot.py`は使わない。
+- behaviorの設定先・許可範囲・接続先検証・SHA確認・localのみのDB直接編集・秘密値除外・教訓追記をそのまま守る。環境起動や独立したChromiumの起動はしない。独立したPlaywrightのブラウザを別途起動して撮影しない。
 - 準備・確認の各ステップを実行時に記録し、操作説明の直下に貼るための画像を一操作ずつ撮る。認証入力や秘密値は撮影しない。
 - 必要なログイン・設定が不足したらbehaviorの手順で確認・引き継ぎを行う。実施できた範囲を保存し、不足条件だけBLOCKEDとする。
-- behavior自身のHTMLに加え、briefへ転記する準備手順・実在するデータ・操作・期待結果・実結果・判定・画像・未確認事項・削除手順を構造化して引き継ぐ。HTMLから文字列をスクレイピングせず、観測記録からJSONを作る。
+- behavior自身のHTMLに加え、briefへ転記する準備手順・実在するデータ・操作・期待結果・実結果・判定・画像・各画像が示す`records`（`ui`・`table`・`record`・`column`）・`caution`・未確認事項・削除手順を構造化して引き継ぐ。HTMLから文字列をスクレイピングせず、観測記録からJSONを作る。
 
 ## 2. brief.jsonへ結果を取り込む
 
@@ -30,9 +30,15 @@ behaviorに次を依頼する。
   "expected": ["対象組織の一覧が表示される"],
   "status": "PASS",
   "actual": "対象組織の一覧表示を確認した",
-  "image_note": ""
+  "image_note": "",
+  "records": [
+    { "ui": "一覧の名前", "table": "items", "record": "id=7 / 確認用データ", "column": "name" }
+  ]
 }
 ```
+
+データを映す画像のある`preparation`・`steps`には、`records`を必ず転記する。記録がなければ`background.data_model.mapping`、コード、観測したID・表示値から補う。対応を確認できない場合は推測せず、当該ステップの`actual`または`image_note`に理由を書く。DBとは無関係な画面では`records`を省いてよい。
+削除等の元に戻せない操作は、専用テストデータと`caution`を段階2から保持し、実行時の対象と一致させる。
 
 準備と確認のIDは全体で一意にする。一つの要素に複数操作を詰め込まず、撮影した状態と一致させる。
 撮影できなかった場合は`image_note`へ理由を記載する。未実行の項目はNOT RUNまたはBLOCKEDとし、スクリーンショットがあるだけではPASSにしない。
