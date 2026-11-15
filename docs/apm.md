@@ -110,7 +110,7 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
   user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
   scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
-  `mise run apm:validate-lock-version` が失敗します。そのため mise の `github:microsoft/apm`、
+  `mise run apm:validate-lock-version` が失敗します。そのため mise の `aqua:microsoft/apm`、
   `.github/renovate.json` の `constraints.apm`（Renovate が `apm install` に使う version）、
   `apm/apm.lock.yaml` の `apm_version` をすべて `microsoft/apm` として抽出し（`constraints.apm` は組み込みの
   renovate-config manager、`apm_version` は regex manager）、`apm` group の同じPRで揃えて更新します。Renovate は `constraints` を base branch の設定から読むため、このPRで新しい
@@ -167,8 +167,8 @@ lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles a
 
 - 配布先（`~/.claude/skills/` 等）は生成物です。skill 本文はこのリポジトリに持たないため、内容を変えたい
   場合は upstream を fork するか、`dependencies.apm` の pin を差し替えます。
-- `apm` 本体はグローバルの mise（`config/mise/config.toml`）の `github:microsoft/apm`
-  バックエンド（GitHub リリースのバイナリ）で管理しています。
+- `apm` 本体はグローバルの mise（`config/mise/config.toml`）の `aqua:microsoft/apm`
+  バックエンド（aqua レジストリ経由の GitHub リリースのバイナリ）で管理しています。
 - `targets` は `claude` / `codex` / `cursor`。`claude` は `~/.claude/skills/`、
   それ以外は共通の `~/.agents/skills/` へ配布されます。`copilot` を外している理由は
   「Renovate が lockfile を生成する仕組みと制約」を参照してください。
