@@ -427,7 +427,9 @@ sbx-agent --help
    `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` と
    agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
-   `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
+   `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）。
+   マウントは作成時に固定されるため、ここに追加したもの（例: mergiraf 用の `git/attributes`）を
+   既存の sandbox に反映するには `sbx-agent --new`（`multi-worktree dev ... --new`）で作り直す
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
 4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
