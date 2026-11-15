@@ -22,8 +22,7 @@ SCRIPT = AGENTSVIEW / "prepare-dump-auth"
 
 
 def run(url, **extra):
-    """remote dumpと同じ環境でscriptを動かし、出力fileを読む。"""
-
+    """Remote dumpと同じ環境でscriptを動かし、出力fileを読む。"""
     with tempfile.TemporaryDirectory() as tmp:
         env = {
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
@@ -48,7 +47,6 @@ cases = []
 
 def case(name, url, *, rc=0, files=None, absent=(), stderr=None, env=None):
     """1 caseを登録する。filesは「file名 -> 期待する中身」。"""
-
     cases.append((name, url, rc, files or {}, absent, stderr, env or {}))
 
 
@@ -102,9 +100,15 @@ case(
     rc=1,
     stderr="must not contain sslpassword",
 )
-case("hostname is required", "postgres://ryo:pw@/agentsview", rc=1, stderr="must contain a hostname")
-case("port is validated", "postgres://ryo:pw@remote.example:99999/agentsview", rc=1,
-     stderr="invalid port")
+case(
+    "hostname is required", "postgres://ryo:pw@/agentsview", rc=1, stderr="must contain a hostname"
+)
+case(
+    "port is validated",
+    "postgres://ryo:pw@remote.example:99999/agentsview",
+    rc=1,
+    stderr="invalid port",
+)
 # remoteを明示していない場合は、Fly proxy以外へ向けられない。
 case(
     "remote requires the explicit flag",

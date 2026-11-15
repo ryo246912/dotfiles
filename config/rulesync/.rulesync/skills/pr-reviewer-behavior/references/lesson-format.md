@@ -69,7 +69,7 @@ python3 <skill>/scripts/list_lessons.py --config <今回のconfig.md> --repo <ow
 2. `root = (base / "lessons").resolve(strict=True)` を求め、設定と同じ保存先検査で許可範囲を確認する。
 3. 信頼できる対象owner/repoから、一覧取得と同じ大小文字を区別しない方法で対象repoの実体ディレクトリを確定する。owner/repoディレクトリのsymlinkは拒否する。候補ファイルの親から許可範囲を逆算しない。
 4. 相対参照は `candidate = base / reference`、絶対参照はそのままcandidateとし、**候補全体**を `resolved = candidate.resolve(strict=True)` で解決する。
-5. `resolved.is_relative_to(expected_repo.resolve(strict=True))` で、対象repoの実体配下か確認する。同じlessons内でも別repoなら拒否する。未存在、解決エラー、範囲外、ファイルでない場合は本文を読まず、保存確認を失敗として記録する。
+5. `expected = expected_repo.resolve(strict=True)` とし、`resolved.is_relative_to(expected)` に加え、`resolved.parent == expected`、`resolved.is_file()`、`resolved.suffix == ".md"` をすべて確認する。読み取れるのは対象repo直下の通常のMarkdownファイルだけ。同じlessons内の別repo、ネストしたファイル、Markdown以外、ディレクトリは拒否する。未存在・解決エラー・条件不一致の場合は本文を読まず、保存確認を失敗として記録する。
 6. 検査を通ったresolvedだけを読み直しに使う。HTMLのfilesへは `lessons/` と `resolved.relative_to(root)` を結合した相対POSIXパスを渡す。絶対参照もこの同じ検査を通してから相対化する。
 
 一覧で安全と確認できたパスも、引き継ぎ後の読み直し直前に同じ検査を行う。

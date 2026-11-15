@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 
-class UnsupportedSchemaVersion(ValueError):
+class UnsupportedSchemaVersionError(ValueError):
     """新しい形式の知見を読み飛ばした一覧は返さない。"""
 
 
@@ -41,7 +41,9 @@ def metadata(path: Path) -> dict:
             try:
                 result[key] = json.loads(value)
             except ValueError:
-                raise ValueError("frontmatterの値は引用符付き文字列・数値・1行配列で記述する") from None
+                raise ValueError(
+                    "frontmatterの値は引用符付き文字列・数値・1行配列で記述する"
+                ) from None
     raise ValueError("frontmatterの終端がない、または行数が多すぎる")
 
 
@@ -63,7 +65,9 @@ def repository_directories(root: Path, components: list[str]) -> list[Path]:
     return directories
 
 
-def lesson_index(config: Path, repository: str, environment: str | None = None, query: str = "") -> dict:
+def lesson_index(
+    config: Path, repository: str, environment: str | None = None, query: str = ""
+) -> dict:
     components = repository.split("/")
     if len(components) != 2 or any(
         part in {".", ".."} or not re.fullmatch(r"[A-Za-z0-9_.-]+", part) for part in components
@@ -75,8 +79,12 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
         raise ValueError("lessonsの実体が設定ディレクトリの外にある")
     directories = repository_directories(root, components)
     rows, warnings = [], []
-    paths = sorted((path, directory) for directory in directories
-                   for path in directory.iterdir() if path.suffix == ".md")
+    paths = sorted(
+        (path, directory)
+        for directory in directories
+        for path in directory.iterdir()
+        if path.suffix == ".md"
+    )
     for path, directory in paths:
         relative_path = (Path("lessons") / path.relative_to(root)).as_posix()
         try:
@@ -85,16 +93,31 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
             item = metadata(path)
             version = item.get("schema_version")
             if type(version) is int and version > 1:
-                raise UnsupportedSchemaVersion(f"{relative_path}: schema_version={version}は未対応。一覧取得を停止する")
-            for key in ("title", "summary", "repository", "environment", "status", "created_at", "updated_at"):
+                raise UnsupportedSchemaVersionError(
+                    f"{relative_path}: schema_version={version}は未対応。一覧取得を停止する"
+                )
+            for key in (
+                "title",
+                "summary",
+                "repository",
+                "environment",
+                "status",
+                "created_at",
+                "updated_at",
+            ):
                 if not isinstance(item.get(key), str) or not item[key].strip():
                     raise ValueError(f"frontmatterの{key}は空でない文字列にする")
             if type(item.get("schema_version")) is not int or item["schema_version"] != 1:
                 raise ValueError("未対応のschema_version")
-            if item["environment"] not in {"local", "staging", "all"} or item["status"] not in {"active", "retired"}:
+            if item["environment"] not in {"local", "staging", "all"} or item["status"] not in {
+                "active",
+                "retired",
+            }:
                 raise ValueError("environmentまたはstatusが不正")
             for key in ("tags", "evidence"):
-                if not isinstance(item.get(key), list) or any(not isinstance(value, str) for value in item[key]):
+                if not isinstance(item.get(key), list) or any(
+                    not isinstance(value, str) for value in item[key]
+                ):
                     raise ValueError(f"frontmatterの{key}は文字列配列にする")
             if item["repository"].casefold() != repository.casefold():
                 raise ValueError("配置先とrepositoryが一致しない")
@@ -105,10 +128,16 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
             search = " ".join([item["title"], item["summary"], *item["tags"]]).casefold()
             if query.casefold() not in search:
                 continue
-            rows.append({"path": relative_path, **{key: item[key] for key in (
-                "title", "summary", "environment", "tags", "updated_at"
-            )}})
-        except UnsupportedSchemaVersion:
+            rows.append(
+                {
+                    "path": relative_path,
+                    **{
+                        key: item[key]
+                        for key in ("title", "summary", "environment", "tags", "updated_at")
+                    },
+                }
+            )
+        except UnsupportedSchemaVersionError:
             raise
         except (ValueError, OSError, UnicodeError) as error:
             warnings.append({"path": relative_path, "reason": str(error)})

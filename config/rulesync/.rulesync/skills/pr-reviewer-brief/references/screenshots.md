@@ -91,7 +91,7 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <段階2で作っ
 `manual_test.lesson_capture`に`status`、`files`、`note`を残し、HTMLを再生成する。
 `files`の基準は今回behaviorが選択したconfig.mdの実体ディレクトリで、知見一覧の`path`と同じ `lessons/owner/repo/要点.md` 形式にする。workやbrief.jsonの場所を基準にしない。
 メインはbehaviorの `references/lesson-format.md` の「最終パスの実体検査」を、絶対パス・相対パスの両方へ適用する。相対参照なら `(Path(config).resolve(strict=True).parent / file).resolve(strict=True)` とし、設定ファイルだけでなく最終ファイル全体を解決する。絶対参照も `Path(file).resolve(strict=True)` を使う。
-対象repoの許可ディレクトリは今回のowner/repoから独立に確定し、owner/repoディレクトリのsymlinkは拒否する。最終実体がその対象repoの実体配下であることを `is_relative_to` で検査してから、その実体パスを読み直す。同じlessons内の別repoや、worktree外へ出るsymlinkも読み取らない。
+対象repoの許可ディレクトリは今回のowner/repoから独立に確定し、owner/repoディレクトリのsymlinkは拒否する。最終実体がその対象repoの実体配下であることを `is_relative_to` で確認し、さらに `resolved.parent == expected_repo.resolve(strict=True)`、`resolved.is_file()`、`resolved.suffix == ".md"` をすべて検査してから読み直す。対象repo直下の通常のMarkdownファイルだけを許可し、ネストしたファイルやMarkdown以外は読まない。同じlessons内の別repoや、worktree外へ出るsymlinkも読み取らない。
 未存在・解決エラー・範囲外・ファイルでない場合は保存確認を失敗として扱い、本文を読まず、SAVEDと記録しない。検査を通った実体だけ、lessonsの実体からの相対部分に `lessons/` を付けてfilesへ転記する。絶対パスをそのままfilesへ渡したり、相対参照だけ検査を省略したりしない。
 
 ```json
