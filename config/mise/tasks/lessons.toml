@@ -1,4 +1,5 @@
 # agent-lessons（PR レビュー指摘から教訓を貯める private リポジトリ）の task。
+# behavor/ の動作確認知見も同じ clone で管理し、lessons:sync でまとめて同期する。
 # 仕組みと使い方は docs/agent-lessons.md。
 
 ["lessons:setup"]

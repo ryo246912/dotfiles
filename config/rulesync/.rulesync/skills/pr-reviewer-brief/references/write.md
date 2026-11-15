@@ -139,7 +139,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 - `status`: 各ステップは段階2では`NOT RUN`。`PASS / FAIL / BLOCKED / NOT RUN`は段階3の観測に従って更新する。
 - `actual`: 実際に観測できた事実だけを書く。「未確認」「ただし条件が不明」等の留保を混在させない。段階2で成功例を捏造しない。
 - `pending`: 未確認事項と続行条件の文字列配列。契約・権限・SHA・flagの確認不足や、その確認方法はここへ分ける。期待結果に必要な条件が残るならPASSにしない。`image_note`は未実行・撮影不可の理由。
-- `lesson_capture`: 段階3の終了前確認。`status`は`SAVED / NO_CHANGE / FAILED / NOT_RUN`、`files`は今回のbehavior設定config.mdの実体ディレクトリを基準にした相対POSIXパスの配列（例: `lessons/owner/repo/preview-login.md`）。一覧の`path`と同じ形式で、workやbrief.jsonからの相対パスではない。保存を確認したファイルだけを記録する。`note`は保存・追記不要・保存失敗等の理由。設定パスや秘密値は転記しない。
+- `lesson_capture`: 段階3の終了前確認。`status`は`SAVED / NO_CHANGE / FAILED / NOT_RUN`、`files`はagent-lessonsの実体ルートを基準にした相対POSIXパスの配列（例: `behavor/owner/repo/preview-login.md`）。一覧の`path`と同じ形式で、workやbrief.jsonからの相対パスではない。保存を確認したファイルだけを記録する。`note`は保存・追記不要・保存失敗等の理由。設定パスや秘密値は転記しない。
 - `execution`: 段階3で記録する全体の状況。`status`・`head_sha`・`url`・`account`（別名・ロール）・`run_at`・`note`。途中更新があれば元のSHAでの結果であることを記す。
 - `cleanup`: 残したデータと削除・復元方法の文字列配列。
 

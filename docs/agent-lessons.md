@@ -42,12 +42,29 @@ commit 前に secretlint を通す。
 
 ```text
 agent-lessons/
+  behavor/<owner>/<repo>/        # 動作確認の知見（pr-reviewer-behavior専用）
   harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
   escalation/<scope_key>.md      # 仕組み化のチェックリスト。scope_key ごとに分ける（lint・hook・テスト・ルールファイルで防ぐ教訓）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
   archived/                      # 週次で skip した観察（status: skipped）と retired の教訓。inbox/・lessons/ と同じ相対パスで置く
 ```
+
+### 動作確認の知見（behavor/）
+
+`pr-reviewer-behavior` の動作確認で分かった到達手順・データ準備・環境の注意点は、
+`behavor/<owner>/<repo>/<要点>.md` に1知見1ファイルで保存する。設定・認証情報を含む
+`config.md` はローカルのGit除外対象のままにする。保存形式・移行手順はスキルの
+`references/lesson-format.md` を参照する。
+
+`mise run lessons:setup` で用意した同じcloneを使い、`mise run lessons:sync` で既存教訓と一緒に
+secretlint・commit・pull/rebase・pushする。スキルはローカル保存までを行い、自動pushしない。
+`behavor/` が未作成なら最初の知見保存時に作る。空ディレクトリのcommitは不要。
+
+この知見はレビュー指摘の教訓とは異なる形式で、harvest/review/escalationの対象にしない。
+Basic Memoryのreindexはリポジトリ全体に行うが、`type: lesson` を付けないためSessionStartには注入しない。
+動作確認時に一覧のタイトル・要約・環境・タグから必要な本文だけを読む。
+旧設定に隣接する `lessons/` は対象repoの知見だけを確認・移行し、保存確認後も旧ファイルは削除しない。
 
 ### scope_key（どこで効くか）
 
