@@ -3,6 +3,7 @@
 # shellの検査をhookで強制するのはAI用devcontainerだけとする。
 depends = [
     "lint:rulesync",
+    "lint:contracts",
     "lint:action",
     "lint:toml",
     "lint:yaml",
@@ -99,3 +100,11 @@ fi
 exit "$status"
 '''
 shell = "bash -c"
+
+["lint:contracts"]
+description = "Check pinned schemas and task dependency contracts (Python 3.11+)"
+run         = "python3 scripts/check-config-contracts.py"
+
+["test:contracts"]
+description = "Run configuration contract regressions (Python 3.11+)"
+run         = "python3 -m unittest discover -s scripts/tests -v"

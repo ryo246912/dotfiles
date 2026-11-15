@@ -48,3 +48,6 @@ mcp.json
 # mcp.json 自体が存在しない。上の `mcp.json` ignore に対する !negation は実質使っていないが、
 # 該当パスに mcp.json を置いたときに ignore されないよう残している
 # （旧 dot_config/.../mcp.json.tmpl・templates/rulesync/mcp.json.tera 時代の名残）。
+
+# Python regression checks
+__pycache__/
