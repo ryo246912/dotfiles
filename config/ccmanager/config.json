@@ -91,6 +91,22 @@
         "detectionStrategy": "claude"
       },
       {
+        "id": "sbx-oauth-chrome",
+        "name": "Claude OAuth(Docker Sandbox)",
+        "command": "zsh",
+        "args": [
+          "-c",
+          "exec sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "exec sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome \"$@\"",
+          "sbx-agent"
+        ],
+        "detectionStrategy": "claude"
+      },
+      {
         "id": "sbx-account2",
         "name": "Claude account2 (Docker Sandbox)",
         "command": "zsh",
