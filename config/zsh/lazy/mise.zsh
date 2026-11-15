@@ -47,6 +47,10 @@ __generate_and_load_completion() {
             [ ! -f "$completion_file" ] && mise completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
             ;;
+        "ov")
+            [ ! -s "$completion_file" ] && ov --completion zsh > "$completion_file" 2>/dev/null
+            fpath=("$MISE_COMPLETIONS_DIR" $fpath)
+            ;;
         "taws")
             taws completion zsh > "$completion_file" 2>/dev/null
             fpath=("$MISE_COMPLETIONS_DIR" $fpath)
@@ -128,6 +132,11 @@ fi
 # mise
 if command -v mise >/dev/null 2>&1; then
     __generate_and_load_completion "mise"
+fi
+
+# ov
+if command -v ov >/dev/null 2>&1; then
+    __generate_and_load_completion "ov"
 fi
 
 # taws
