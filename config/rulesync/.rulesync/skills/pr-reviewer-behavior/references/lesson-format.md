@@ -57,6 +57,7 @@ python3 <skill>/scripts/list_lessons.py --config <今回のconfig.md> --repo <ow
 ```
 
 出力はパス・タイトル・要約・環境・タグ・更新日だけ。本文・認証設定は出力しない。
+`path`は今回選択したconfig.mdの実体ディレクトリを基準にした相対POSIXパス。例: `lessons/example-org/example-app/preview-login.md`。本文を開くときは `Path(config).resolve().parent / path` として解決し、保存先検査も行う。作業ディレクトリやbrief.jsonの場所を基準にしない。
 `--query <検索語>`でタイトル・要約・タグを絞れる。該当候補だけファイルを開いて本文を読む。
 壊れたfrontmatterはwarningsに出るため、そのファイルだけ形式を直す。読み取れない知見を「存在しない」とみなさない。新しいschema_versionは警告に落とさず一覧取得を停止する。未対応の知見を飛ばした一覧で重複判断や保存をせず、対応するツール版で再確認する。
 

@@ -89,6 +89,17 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <段階2で作っ
 - 保存を試して失敗した場合は`FAILED`と、試行内容・観測したエラー・続行条件を記録したか。書き込み可能な設定先を確保できず未試行なら`NOT_RUN`と未試行の理由を記録する。「未実施」と「書き込み失敗」を区別し、勝手に別の保存先へ散らさない。
 
 `manual_test.lesson_capture`に`status`、`files`、`note`を残し、HTMLを再生成する。
+`files`の基準は今回behaviorが選択したconfig.mdの実体ディレクトリで、知見一覧の`path`と同じ `lessons/owner/repo/要点.md` 形式にする。メインの保存確認は `Path(config).resolve().parent / file` で解決して行い、workやbrief.jsonの場所を基準にしない。
+behaviorの引き継ぎが絶対パスの場合は、その実体が今回の設定に隣接するlessonsと対象repoの範囲内か確認し、lessonsの実体からの相対部分に `lessons/` を付けて正規化する。範囲外のパスは転記せずエラーとして扱う。絶対パスをそのままfilesに渡したり、検査を緩めたりしない。
+
+```json
+{
+  "status": "SAVED",
+  "files": ["lessons/example-org/example-app/preview-login.md"],
+  "note": "今回の設定先から解決したファイルを読み直し、保存を確認した"
+}
+```
+
 メインはこの記録と保存先の確認結果がそろってから完了を返す。実操作を省略したモードでは`NOT_RUN`とし、知見保存を実施したように書かない。
 
 ## 終わり方

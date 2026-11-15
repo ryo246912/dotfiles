@@ -3,6 +3,7 @@
     python3 list_lessons.py --config /path/pr-reviewer-behavior/config.md --repo owner/repo --environment local
 
 frontmatterの値はJSON互換のスカラーまたは1行配列。本文は出力しない。
+pathはconfig.mdの実体ディレクトリ基準の相対POSIXパス（lessons/...）を返す。
 """
 
 import argparse
@@ -77,13 +78,14 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
     paths = sorted((path, directory) for directory in directories
                    for path in directory.iterdir() if path.suffix == ".md")
     for path, directory in paths:
+        relative_path = (Path("lessons") / path.relative_to(root)).as_posix()
         try:
             if not path.resolve().is_relative_to(directory):
                 raise ValueError("知見ファイルの実体が対象repoの外にある")
             item = metadata(path)
             version = item.get("schema_version")
             if type(version) is int and version > 1:
-                raise UnsupportedSchemaVersion(f"{path}: schema_version={version}は未対応。一覧取得を停止する")
+                raise UnsupportedSchemaVersion(f"{relative_path}: schema_version={version}は未対応。一覧取得を停止する")
             for key in ("title", "summary", "repository", "environment", "status", "created_at", "updated_at"):
                 if not isinstance(item.get(key), str) or not item[key].strip():
                     raise ValueError(f"frontmatterの{key}は空でない文字列にする")
@@ -103,13 +105,13 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
             search = " ".join([item["title"], item["summary"], *item["tags"]]).casefold()
             if query.casefold() not in search:
                 continue
-            rows.append({"path": str(path), **{key: item[key] for key in (
+            rows.append({"path": relative_path, **{key: item[key] for key in (
                 "title", "summary", "environment", "tags", "updated_at"
             )}})
         except UnsupportedSchemaVersion:
             raise
         except (ValueError, OSError, UnicodeError) as error:
-            warnings.append({"path": str(path), "reason": str(error)})
+            warnings.append({"path": relative_path, "reason": str(error)})
     return {"lessons": rows, "warnings": warnings}
 
 

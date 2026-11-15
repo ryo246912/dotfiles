@@ -877,6 +877,7 @@ rulesyncで配布したClaude Code用・Codex用のディレクトリは別々�
 exampleの更新で既存の `config.md` は上書きしません。
 
 知見の一覧は次のコマンドで取得します。本文や認証設定は出力しません。
+一覧のpathとbriefの知見保存記録は、今回のconfig.mdの実体ディレクトリを基準にした `lessons/owner/repo/要点.md` 形式に統一します。
 
 ```bash
 python3 <pr-reviewer-behavior>/scripts/list_lessons.py --config <今回のconfig.md> --repo <owner/repo> --environment local
