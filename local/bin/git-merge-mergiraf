@@ -1,0 +1,16 @@
+#!/bin/sh
+# git の merge driver（templates/git/config.tera の [merge "mergiraf"]）から呼ばれ、mergiraf に委譲する。
+# 引数: <base> <ours> <theirs> <base label> <ours label> <theirs label> <path> <marker size>
+#
+# mergiraf が実行できない（未インストール、mise shim で version 未解決など）まま driver を直接 mergiraf に
+# 向けると、git はファイルを ours のまま conflict marker なしで conflict 扱いにし、theirs の変更が
+# 気づかれず失われる。そのため実行できない場合は git 標準の line-based merge（git merge-file）に切り替える。
+# `mergiraf=0` で無効化した場合は mergiraf 自身が git merge-file にフォールバックする。
+base=$1 ours=$2 theirs=$3 base_label=$4 ours_label=$5 theirs_label=$6 path=$7 marker_size=$8
+
+if mergiraf --version >/dev/null 2>&1; then
+	exec mergiraf merge --git "$base" "$ours" "$theirs" \
+		-s "$base_label" -x "$ours_label" -y "$theirs_label" -p "$path" -l "$marker_size"
+fi
+exec git merge-file -L "$ours_label" -L "$base_label" -L "$theirs_label" \
+	--marker-size "$marker_size" "$ours" "$base" "$theirs"

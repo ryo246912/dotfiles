@@ -29,8 +29,10 @@
 [merge "mergiraf"]
   # 構文を理解する merge driver。適用するファイルは ~/.config/git/attributes（config/git/attributes）で指定。
   # 解決結果は `mergiraf review <file>_<id>`（merge 時に表示される）で line-based merge との差分を確認できる。
+  # mergiraf が実行できない環境では git 標準の merge に切り替えるため wrapper 経由で呼ぶ（local/bin/git-merge-mergiraf）。
+  # 一時的に無効にするときは `mergiraf=0 git rebase ...` のように環境変数を付ける。
   name = mergiraf
-  driver = mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L
+  driver = ~/.local/bin/git-merge-mergiraf %O %A %B %S %X %Y %P %L
 [pager]
   diff = delta
   log = delta
