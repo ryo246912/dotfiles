@@ -98,7 +98,7 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <段階2で作っ
 {
   "status": "SAVED",
   "files": ["behavor/example-org/example-app/preview-login.md"],
-  "note": "今回の設定先から解決したファイルを読み直し、保存を確認した"
+  "note": "agent-lessonsのbehavorから解決したファイルを読み直し、保存を確認した"
 }
 ```
 
