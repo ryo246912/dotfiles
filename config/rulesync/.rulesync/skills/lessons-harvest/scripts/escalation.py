@@ -151,7 +151,10 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
     added, touched = [], set()
     for path, title, proposal in entries:
         scope = scope_of(path)
-        if path in listed or not scope:
+        if path in listed:
+            continue
+        if not scope:
+            print(f"warning: scope_key を読めない教訓のパスを飛ばした: {path}", file=sys.stderr)
             continue
         # 項目は 1 行目で区切って読むので、改行の入ったタイトルは 1 行にする
         title = " ".join(title.split())

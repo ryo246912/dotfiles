@@ -157,5 +157,5 @@ basic-memory reindex --search -p agent-lessons
 
 secretlint で止まったら、該当する観察・教訓の文面を直してから続ける。最後に PR の URL と、`pr-body.md` の見出しごとの
 件数をユーザーに報告する（`--loop` なら周ごとに。PR は下の周から順にマージする）。「仕組み化のチェックリスト」に
-足した教訓があれば、`<repo>/escalation/<scope_key>.md` で仕組みを入れてから印を付けるよう添える。`left_prs` があれば、持ち越した
+足した教訓があれば、足した教訓の scope_key ごとのファイル（例: `escalation/github.com/acme.md`）を名指しし、仕組みを入れてから印を付けるよう添える。`left_prs` があれば、持ち越した
 PR の数と、週次 PR をマージしたあとにもう一度実行すれば（または `--loop` で）続きを集められることも報告する。
