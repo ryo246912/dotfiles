@@ -424,7 +424,7 @@ sbx-agent --help
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.aws/config:ro` /
+   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` と
    agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
@@ -893,6 +893,7 @@ devcontainer は SSH で GitHub に出られるため `pushInsteadOf` の打ち�
 | --------------------------------------- | ------------------------------------------------------------ |
 | `include.path`                          | ホストの `~/.config/git/config`（`user.name` 等）を取り込む  |
 | `core.excludesfile`                     | ホストのグローバル gitignore を使う                          |
+| `core.attributesfile`                   | ホストのグローバル gitattributes（mergiraf の適用先）を使う  |
 | `credential.https://github.com.helper`  | `!gh auth git-credential` で gh の認証を使う                 |
 | `url.https://github.com/.insteadOf`     | SSH 形式の remote を HTTPS に書き換える                      |
 | `url.https://github.com/.pushInsteadOf` | ホスト設定の push を SSH に寄せる `pushInsteadOf` を打ち消す |
@@ -1141,6 +1142,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                        |
 | `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                       |
+| `~/.config/git/attributes`                | ✅ `:ro` で渡し、`core.attributesfile` に設定                                                                     |
 | `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbx secret set github` でプロキシが注入する |
 | `~/.aws/config`                           | ✅ `:ro`                                                                                                          |
 | `~/.agents`                               | ✅ `:ro`                                                                                                          |

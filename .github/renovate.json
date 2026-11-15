@@ -242,7 +242,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config/devcontainer/mise.toml"],
       "matchStrings": [
         "\"aqua:codeberg\\.org/mergiraf/mergiraf\"\\s*=\\s*\"(?<currentValue>[^\"]+)\""
       ],

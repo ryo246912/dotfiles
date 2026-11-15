@@ -391,6 +391,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
     add_mount "${HOME}/.config/git/config:ro"
     add_mount "${HOME}/.config/git/gitignore:ro"
+    add_mount "${HOME}/.config/git/attributes:ro"
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
@@ -564,6 +565,8 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # ホストの gitconfig を include する（post-create.sh の include.path 相当）
     [[ -f "${HOME}/.config/git/config" ]] && add_git_config include.path "${HOME}/.config/git/config"
     [[ -f "${HOME}/.config/git/gitignore" ]] && add_git_config core.excludesfile "${HOME}/.config/git/gitignore"
+    # mergiraf を適用するファイルの指定。sandbox の HOME はホストと違い既定パスでは読まれないため明示する
+    [[ -f "${HOME}/.config/git/attributes" ]] && add_git_config core.attributesfile "${HOME}/.config/git/attributes"
     # ホストの gitconfig は pager と interactive.diffFilter に delta を指定しているが、
     # delta は sandbox のツールチェインに無いため、そのままだと git log / diff / show が
     # "cannot run delta" で失敗する。エージェント環境では pager は不要なので無効化する。

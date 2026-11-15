@@ -60,6 +60,9 @@ fi
 # host config の core.excludesfile（~/.config/git/gitignore）はコンテナ内に無いため、mount した実体へ向ける。
 # 無視されないと、bind mount した .venv 等が未追跡に見えて pre-commit の stash -u が失敗する。
 git config --global core.excludesfile ~/.config/gitignore-host
+# グローバル gitattributes（mergiraf を適用するファイルの指定）も同様に、host の既定パス
+# （~/.config/git/attributes）はコンテナ内に無いため mount した実体へ向ける。
+git config --global core.attributesfile ~/.config/gitattributes-host
 # interactive.diffFilter もホスト設定では delta を指す（git add -p 等で使われる）。
 # pager 側は remoteEnv の GIT_PAGER=cat で潰しているが、こちらは env では上書きできない。
 git config --global interactive.diffFilter cat
