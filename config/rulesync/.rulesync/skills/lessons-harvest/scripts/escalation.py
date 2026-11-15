@@ -206,11 +206,10 @@ def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
     changed = [f for f in new_todo if new_todo[f] != loaded.get(f, {TODO: []})[TODO]]
     for f in changed:
         items = loaded.get(f, {TODO: [], DONE: []})
-        have = {it["path"] for it in items[TODO]}
-        save(
-            f,
-            {**items, TODO: [*items[TODO], *(it for it in new_todo[f] if it["path"] not in have)]},
-        )
+        # 同じパスの項目は採用した内容に置き換える。移動元の項目を外す前に、採用した印と仕組みを保存しておくため
+        adopted = {it["path"]: it for it in new_todo[f]}
+        kept = [adopted.pop(it["path"], it) for it in items[TODO]]
+        save(f, {**items, TODO: [*kept, *adopted.values()]})
     for f in changed:
         save(f, {**loaded.get(f, {TODO: [], DONE: []}), TODO: new_todo[f]})
 
