@@ -371,7 +371,7 @@ def main():
     reviewed = ""
     try:
         reviewed = marker.read_text().split()[0]
-    except (OSError, IndexError):
+    except (OSError, ValueError, IndexError):
         pass
     if reviewed == head:
         return 0

@@ -5,13 +5,11 @@ target-version = "py311"
 [lint]
 ignore = [
     "COM812", # Conflicts with the formatter.
-    "D203",   # Prefer D211: no blank line before a class docstring.
-    "D213",   # Prefer D212: summary on the first docstring line.
     # 日本語のコメントと CLI スクリプトを書く前提で合わない規則。
     "RUF001",  # 全角記号は日本語の文章に必要。
     "RUF002",
     "RUF003",
-    "E501",    # 日本語は 100 桁だと窮屈なので、折り返しは formatter に任せる。
+    "E501",    # ruff format は長い日本語のコメントや文字列を折り返さず、100 桁に収めると読みにくくなる。
     "D",       # docstring は Why not だけを書く方針で、網羅を求めない。
     "ANN",     # 小さなスクリプトに型注釈を網羅させない。
     "T201",    # CLI の出力は print で行う。
