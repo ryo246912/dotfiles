@@ -197,10 +197,15 @@ def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
             new_todo.setdefault(target, []).append(
                 {**it, "path": path, "title": " ".join(titles.get(path, it["title"]).split())}
             )
-    for f, todo in new_todo.items():
+
+    # 移動先の保存に失敗しても項目を失わないよう、項目が増えるファイル（移動先）を先に保存する
+    def gained(f: Path) -> int:
+        return len(new_todo[f]) - len(loaded.get(f, {TODO: []})[TODO])
+
+    for f in sorted(new_todo, key=gained, reverse=True):
         items = loaded.get(f, {TODO: [], DONE: []})
-        if todo != items[TODO]:
-            save(f, {**items, TODO: todo})
+        if new_todo[f] != items[TODO]:
+            save(f, {**items, TODO: new_todo[f]})
 
 
 def mechanism(it: dict) -> str:
