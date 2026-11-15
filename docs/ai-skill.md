@@ -791,6 +791,26 @@ desloppify status --json   # 状態を JSON で出力
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
 
+## `pr-reviewer-brief` — PR解説と動作確認のレポート
+
+PRのURL・番号またはstackを渡すと、前提知識・変更内容を整理したHTMLを作り、通常実行では
+`pr-reviewer-behavior`を使って確認データの準備・画面への到達・実画面での動作確認まで進めます。
+stackは最上位PRの起動済み環境で、stack全体の変更を確認します。
+
+```text
+/pr-reviewer-brief https://github.com/<owner>/<repository>/pull/123
+
+$pr-reviewer-brief PR #123。localで確認して
+```
+
+レポートの「動作確認方法」には、環境・ロール、準備済みデータ、準備・操作の各ステップと画像、
+期待結果・実結果・PASS／FAIL／BLOCKED／NOT RUN、残したデータと削除手順を組み込みます。
+behaviorの別HTMLへのリンクだけでなく、briefのHTML内で準備から確認まで追えます。
+環境やログインが不足しても資料作成は続け、到達できた範囲と手動で続けるための不足条件を残します。
+
+ブラウザ接続・設定補完・データ操作はbehaviorと同じルールです。環境起動・flag設定・base比較は行いません。
+「説明だけ」「動作確認不要」の指定、チケットモード、`--watch`では実操作せず、確認計画を未実行として扱います。
+
 ## `pr-reviewer-behavior` — PRの動作確認
 
 起動済みのlocalやstaging（preview）でPRの変更を操作して確認する自作スキルです。

@@ -104,8 +104,8 @@
       .removed { color: var(--removed); }
       ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
       ol.steps > li { counter-increment: step; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
-      ol.steps > li > h3::before { content: counter(step) ". "; color: var(--muted); }
-      ol.steps > li > h3 { margin-top: 0; }
+      ol.steps > li > h4::before { content: counter(step) ". "; color: var(--muted); }
+      ol.steps > li > h4 { margin-top: 0; }
       dl.step { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 4px 12px; margin: 0; }
       dl.step dt { color: var(--muted); font-size: 13px; }
       dl.step dd { margin: 0; }

@@ -54,13 +54,21 @@ brief.json の書式:
       },
       "interfaces": [{"kind": "DB / API / 設定 / flag", "target": "対象", "change": "変更", "compat": "互換性・移行"}],
       "manual_test": {
-        "environment": "どこで確かめるか（起動コマンドなど）",
+        "environment": "ユーザーが用意した起動済みのlocal／preview",
+        "execution": {"status": "BLOCKED", "head_sha": "確認したSHA", "url": "http://localhost:3000",
+                      "account": "テスト管理者 / admin", "run_at": "実行日時", "note": "全体の状況"},
+        "preparation": [{"id": "prep-1", "title": "確認データを作る", "actions": ["データ作成操作"],
+                         "expected": ["目的の状態になる"], "status": "PASS", "actual": "実際に確認した結果"}],
+        "data": [{"purpose": "表示確認", "record": "id=1 / テスト項目", "state": "下書き",
+                  "url": "http://localhost:3000/items/1", "source": "作成"}],
+        "cleanup": ["手動確認用にデータを保持。削除方法: ..."],
         "preconditions": ["feature flag・権限・アカウントなど"],
         "seed": {"note": "何のデータを入れるか", "run": "SQL クライアントで対象 DB に接続し、下の SQL を貼り付けて直接実行する手順", "language": "sql",
                  "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
                    "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
-                   "expected": ["一覧の先頭に test が出る"], "caution": "破壊的な操作の注意（任意）"}]
+                   "expected": ["一覧の先頭に test が出る"], "status": "NOT RUN", "actual": "",
+                   "image_note": "未実行のため未撮影", "caution": "破壊的な操作の注意（任意）"}]
       },
       "focus": [{"path": "app/x.ts", "lines": "10", "why": "なぜ見るべきか"}],
       "unknowns": ["調べきれなかったこと・置いた仮定"]
@@ -101,7 +109,7 @@ from render_groups import render_hunk  # noqa: E402
 from render_groups import validate as validate_groups  # noqa: E402
 from render_pictures import render_picture  # noqa: E402
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 PAGE = Path(__file__).resolve().parent.parent / "assets" / "page.html"
 esc = html.escape
@@ -275,14 +283,16 @@ def records_html(records: list | None) -> str:
 
 
 def shot_figure(workdir: Path, shot: dict | None, title: str, records: list | None = None) -> str:
-    if shot and shot.get("ok") and (workdir / "screenshots" / shot["path"]).exists():
-        uri = image_data_uri(workdir / "screenshots" / shot["path"])
+    base = (workdir / "screenshots").resolve()
+    path = (base / shot.get("path", "")).resolve() if shot else base
+    if shot and shot.get("ok") and path.is_relative_to(base) and path.is_file() and path.suffix.lower() in IMAGE_TYPES:
+        uri = image_data_uri(path)
         return (
             f'<figure><img src="{uri}" alt="{esc(title)}" loading="lazy" />'
             f'<figcaption>{esc(title)}{records_html(records)}</figcaption></figure>'
         )
     if shot:
-        return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error", ""))}</p>'
+        return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error") or "画像ファイルが無い、または保存先・形式が不正")}</p>'
     return ""
 
 
@@ -529,6 +539,13 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         parts.append(f"<h3>環境</h3><p>{inline(test['environment'])}</p>")
     if test.get("preconditions"):
         parts.append("<h3>前提</h3><ul>" + "".join(f"<li>{inline(p)}</li>" for p in test["preconditions"]) + "</ul>")
+    execution = test.get("execution") or {}
+    if execution:
+        rows = [[label, inline(str(execution[key]))] for key, label in (
+            ("status", "状況"), ("head_sha", "確認したSHA"), ("url", "確認先URL"),
+            ("account", "アカウント・ロール"), ("run_at", "実行日時"), ("note", "補足"),
+        ) if execution.get(key)]
+        parts.append("<h3>実施状況</h3>" + table(["項目", "記録"], rows))
     seed = test.get("seed")
     if seed:
         lang = esc(seed.get("language", ""))
@@ -540,22 +557,69 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         parts.append(f'<pre class="seed"><code data-lang="{lang}">{esc(seed.get("script", ""))}</code></pre>')
         if seed.get("cleanup"):
             parts.append(f'<details><summary>後片付け</summary><pre class="seed"><code data-lang="{lang}">{esc(seed["cleanup"])}</code></pre></details>')
-    steps = []
-    for step in test.get("steps", []):
-        rows = []
-        if step.get("url"):
-            rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
-        rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
-        rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
-        caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
-        figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
-        steps.append(
-            f'<li id="{esc(step.get("id", ""))}"><h3>{inline(step.get("title", ""))}</h3>'
-            f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
-        )
-    if steps:
-        parts.append(f'<ol class="steps">{"".join(steps)}</ol>')
+    def render_steps(items: list, heading: str) -> str:
+        steps = []
+        for step in items:
+            rows = []
+            if step.get("url"):
+                rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
+            rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
+            rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
+            rows.append(f"<dt>判定</dt><dd>{esc(step.get('status', 'NOT RUN'))}</dd>")
+            if step.get("actual"):
+                rows.append(f"<dt>実結果</dt><dd>{inline(step['actual'])}</dd>")
+            caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
+            figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
+            if not figure:
+                note = step.get("image_note") or "画像なし（未実行、または証拠画像を取得できなかった）"
+                figure = f'<p class="evidence">{inline(note)}</p>'
+            steps.append(
+                f'<li id="{esc(step.get("id", ""))}"><h4>{inline(step.get("title", ""))}</h4>'
+                f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
+            )
+        return f'<h3>{heading}</h3><ol class="steps">{"".join(steps)}</ol>' if steps else ""
+
+    parts.append(render_steps(test.get("preparation", []), "手動準備・データ準備"))
+    if test.get("data"):
+        rows = [[inline(str(item.get(k, ""))) for k in ("purpose", "record", "state")] + [
+            link(item.get("url"), esc(item.get("url", ""))), inline(str(item.get("source", "")))
+        ] for item in test["data"]]
+        parts.append("<h3>準備済みデータ</h3>" + table(["用途", "ID・表示名", "状態", "開くURL", "作成／再利用"], rows))
+    parts.append(render_steps(test.get("steps", []), "動作確認"))
+    if test.get("cleanup"):
+        parts.append("<h3>後片付け・手動確認への引き継ぎ</h3>" + steps_list(test["cleanup"], "ul"))
     return "".join(parts)
+
+
+def check_manual_test(brief: dict) -> list[str]:
+    """準備・確認のID、判定、実行結果とSHAの対応を検査する。"""
+    test = brief.get("manual_test") or {}
+    errors = []
+    ids = set()
+    statuses = {"PASS", "FAIL", "BLOCKED", "NOT RUN"}
+    for kind in ("preparation", "steps"):
+        for i, step in enumerate(test.get(kind, [])):
+            name = f"manual_test.{kind}[{i}]"
+            step_id = step.get("id")
+            if not isinstance(step_id, str) or not step_id or step_id in ids:
+                errors.append(f"{name}: idは準備・確認全体で一意の文字列にする")
+            else:
+                ids.add(step_id)
+            status = step.get("status", "NOT RUN")
+            if status not in statuses:
+                errors.append(f"{name}: 判定はPASS / FAIL / BLOCKED / NOT RUN")
+            if status in {"PASS", "FAIL"} and not step.get("actual"):
+                errors.append(f"{name}: 実行済みの判定にはactualが必要")
+    execution = test.get("execution") or {}
+    if execution:
+        if execution.get("status") not in statuses:
+            errors.append("manual_test.execution.statusが不正")
+        if execution.get("status") in {"PASS", "FAIL"}:
+            if not execution.get("head_sha"):
+                errors.append("実行済みの結果には確認したhead_shaが必要")
+            elif brief.get("head_sha") and execution["head_sha"] != brief["head_sha"]:
+                errors.append("動作確認のSHAがbriefのSHAと異なる。現行版のPASS/FAILとして統合しない")
+    return errors
 
 
 def check_page_refs(brief: dict) -> list[str]:
@@ -726,6 +790,8 @@ def build(workdir: Path) -> tuple[str, list[str]]:
             errors.append(f"api_calls.json を読めない: {error}")
     errors += check_data_model(brief, api_calls)
     errors += check_page_refs(brief)
+    if not ticket_mode:
+        errors += check_manual_test(brief)
     for i, focus in enumerate([] if ticket_mode else brief.get("focus", []), start=1):
         if focus.get("side", "head") not in ("base", "head"):
             errors.append(f"focus[{i}].side は base または head にする")
@@ -775,7 +841,7 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         sections.append(section("interfaces", "スキーマ・API・設定の差分", body))
     body = "" if ticket_mode else manual_test_section(brief, workdir)
     if body:
-        sections.append(section("manual-test", "動作確認手順", body))
+        sections.append(section("manual-test", "動作確認方法", body))
     if brief.get("stack"):
         sections.append(section("stack", "スタック構成", stack_section(brief)))
     if groups_html:
