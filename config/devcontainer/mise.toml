@@ -1,6 +1,8 @@
 [settings]
-auto_install = false
-experimental = true
+# 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
+aqua.registries = ["https://github.com/aquaproj/aqua-registry"]
+auto_install    = false
+experimental    = true
 
 [tools]
 "aqua:BurntSushi/ripgrep"                                   = "15.2.0"
@@ -9,14 +11,15 @@ experimental = true
 "aqua:astral-sh/uv"                                         = "0.13.7"
 "aqua:awslabs/git-secrets"                                  = "1.3.0"
 "aqua:cli/cli"                                              = "2.103.3"
+"aqua:codeberg.org/mergiraf/mergiraf"                       = "v0.20.0"
 "aqua:evilmartians/lefthook"                                = "2.2.1"
 "aqua:golangci/golangci-lint"                               = "2.15.0"
+"aqua:jdx/jactionlint"                                      = "2.6.0"
 "aqua:jqlang/jq"                                            = "1.7.1"
 "aqua:koalaman/shellcheck"                                  = "0.11.0"
 "aqua:mvdan/sh"                                             = "3.14.1"
 "aqua:neovim/neovim"                                        = "0.12.6"
 "aqua:openai/codex"                                         = "0.160.1"
-"aqua:rhysd/actionlint"                                     = "1.7.12"
 "aqua:rtk-ai/rtk"                                           = "0.50.0"
 "aqua:secretlint/secretlint"                                = "13.1.0"
 "aqua:suzuki-shunsuke/disable-checkout-persist-credentials" = "1.0.2"
