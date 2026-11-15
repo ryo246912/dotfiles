@@ -55,7 +55,7 @@ jobs:
 
       - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
         with:
-          install_args: "aqua:azu/dockerfile-pin github:jdx/jactionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
+          install_args: "aqua:azu/dockerfile-pin aqua:jdx/jactionlint aqua:secretlint/secretlint aqua:suzuki-shunsuke/ghalint aqua:suzuki-shunsuke/pinact aqua:tamasfe/taplo aqua:zizmorcore/zizmor npm:oxfmt"
         env:
           MISE_FETCH_REMOTE_VERSIONS_TIMEOUT: 30s
 
