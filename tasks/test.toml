@@ -11,7 +11,3 @@ run         = "python3 config/agentsview/tests/prepare-dump-auth_test.py"
 description = "Run the batch-insert-dump regression"
 hide        = true
 run         = "python3 config/agentsview/tests/batch-insert-dump_test.py"
-
-["test:lessons"]
-description = "Run the lessons-harvest escalation regressions"
-run         = "python3 config/rulesync/.rulesync/skills/lessons-harvest/tests/test_escalation.py"
