@@ -21,6 +21,17 @@ def block(reason, copilot):
     return 2
 
 
+def skip_review(reason, copilot):
+    message = f'CodeRabbit: 自動レビューをスキップします。操作は続行します。\n{reason}'
+    if copilot:
+        print(message)
+    else:
+        print(json.dumps({'hookSpecificOutput': {
+            'hookEventName': 'PreToolUse', 'additionalContext': message,
+        }}, ensure_ascii=False))
+    return 0
+
+
 def git(cwd, *args):
     result = subprocess.run(['git', '-C', str(cwd), *args], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else ''
@@ -92,7 +103,7 @@ def main():
         if (isinstance(command, list) and len(command) == 3 and all(isinstance(c, str) for c in command)
                 and command[1] in ('-c', '-lc')):
             command = command[2]
-        if not isinstance(command, str) or not shutil.which('coderabbit'):
+        if not isinstance(command, str):
             return 0
         command, expansion = shell_text(command)
         lexer = shlex.shlex(command.strip(), posix=True, punctuation_chars=';&|()<>\n')
@@ -146,18 +157,23 @@ def main():
     cwd = Path(tool.get('workdir') or event.get('cwd') or os.getcwd())
     if not cwd.is_absolute():
         cwd = Path.cwd() / cwd
-    compound = False
-    # Only a literal leading cd may precede the target. Commits and other mutations must run separately.
-    if len(groups) == 2 and len(groups[0]) == 2 and groups[0][0] == 'cd' and separators == ['&&']:
-        directory = groups[0][1]
+    if len(targets) != 1:
+        return block('CodeRabbit: push / PR 作成は1回ずつ実行してください。', copilot)
+    target_index = groups.index(words)
+    prefix, suffix = groups[:target_index], groups[target_index + 1:]
+    # Resolve the worktree before review; trailing log commands do not change
+    # the commit being pushed. Never evaluate the supplied shell command.
+    if prefix:
+        if (len(prefix) != 1 or len(prefix[0]) != 2 or prefix[0][0] != 'cd'
+                or not separators or separators[0] != '&&'):
+            return block('CodeRabbit: push 前のコマンドは cd <path> && のみ対応しています。', copilot)
+        directory = prefix[0][1]
         if directory.startswith('-') or any(c in directory for c in '$`~'):
-            return block('CodeRabbit: cd を別の呼び出しで実行してから push / PR 作成を実行してください。', copilot)
+            return block('CodeRabbit: cd には展開を含まないパスを指定してください。', copilot)
         cwd = cwd / directory
-    elif len(groups) != 1 or separators:
-        # An unknown directory change cannot be assumed to target this repository.
-        if any(g[:1] == ['cd'] for g in groups):
-            return block('CodeRabbit: cd と push / PR 作成を別の呼び出しに分けてください。', copilot)
-        compound = True
+    if (any(group[:1] not in (['echo'], ['printf'], ['tail']) for group in suffix)
+            or any(separator not in ('&&', '||', ';', '\n') for separator in separators)):
+        return block('CodeRabbit: push と状態を変更する複合コマンドは分けてください。', copilot)
 
     if words[:1] == ['git']:
         i = 1
@@ -180,8 +196,8 @@ def main():
     if not repo or not (Path(repo) / '.coderabbit.yaml').is_file():
         return 0
     cwd = Path(repo)
-    if compound:
-        return block('CodeRabbit: commit・複合コマンドと push / PR 作成を別の呼び出しに分けてください。', copilot)
+    if not shutil.which('coderabbit'):
+        return skip_review('CLI が見つかりません。', copilot)
     if expansion:
         return block('CodeRabbit: 展開やコマンド置換を含めず、push / PR 作成を単独で実行してください。', copilot)
     head = git(cwd, 'rev-parse', '--verify', 'HEAD')
@@ -261,30 +277,15 @@ def main():
     # rebase や force push で前回の HEAD が祖先でなくなったら、増分ではなく全体をレビューする。
     if reviewed and subprocess.run(['git', '-C', str(cwd), 'merge-base', '--is-ancestor', reviewed, head]).returncode == 0:
         args += ['--base-commit', reviewed]
-        # スキップしてもマーカーは更新しない。小さい変更も次のレビューに累積して必ず対象になる。
-        # gh pr create は最後の関門なので間引かない。
-        if words[:2] == ['git', 'push']:
-            numstat = git(cwd, 'diff', '--numstat', reviewed, head)
-            changed = sum(int(n) for line in numstat.splitlines() for n in line.split('\t')[:2] if n.isdigit())
-            min_lines = int(os.environ.get('CODERABBIT_SKIP_LINES', '50'))
-            min_seconds = int(os.environ.get('CODERABBIT_SKIP_MINUTES', '10')) * 60
-            if changed < min_lines or time.time() - reviewed_at < min_seconds:
-                print(f'CodeRabbit: 前回レビューからの変更が小さい、または直後のためスキップします（{changed} 行）。', file=sys.stderr)
-                return 0
     print(f'Reviewing with CodeRabbit CLI... {source} ({head[:12]})', file=sys.stderr)
     try:
         with review_checkout(cwd, head) as checkout:
             result = subprocess.run(args, cwd=checkout, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     except (OSError, RuntimeError) as error:
-        return block(f'CodeRabbit: レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
-    # exit 1 は「一部のファイルしかレビューできなかった」場合にも指摘を出力して返る。
-    # 未完了扱いにすると指摘が agent に届かず、マーカーも残らず毎回ブロックされるため、
-    # 出力があれば通常の指摘と同じく block してマーカーを更新する。
-    if result.returncode and not (result.returncode == 1 and result.stdout.strip()):
+        return skip_review(f'レビュー用 worktree を準備・実行できませんでした: {error}', copilot)
+    if result.returncode:
         output = result.stdout or '(CLI output unavailable)'
-        print(f'CodeRabbit review failed (exit {result.returncode}). レビューは未完了です。push / PR 作成は続行します。', file=sys.stderr)
-        print(output, file=sys.stderr)
-        return 0
+        return skip_review(f'CLI が失敗しました (exit {result.returncode})。\n{output}', copilot)
     try:
         marker.write_text(f'{head} {int(time.time())}\n')
     except OSError:

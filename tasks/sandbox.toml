@@ -58,11 +58,9 @@ if [ -z "$repo_root" ]; then
 fi
 context="${repo_root}/config/devcontainer"
 dockerfile="${context}/Dockerfile.sandbox"
-# agent ごとに、中身は同じで base image だけが違う template を作る（sbx-agent:<agent>）。
-# sbx は template の base（FLAVOR）を記録し、`sbx create <agent>` はその agent 用の kit
-# （認証・network policy など）を当てるため、agent と FLAVOR が合わないと作成に失敗するか、
-# kit が当たらずログインを求められる。agent を含まない shell-docker も同じ理由で使えない。
-# -docker 版でないと sandbox 内に dockerd が無い。sbx-agent は agent に合った template を選ぶ。
+# agent ごとに公開 v3 workload をベースに template (sbx-agent:<agent>) を作る。
+# workload の認証・network capability は sbx が合成し、Dockerfile はツール群だけを追加する。
+# エージェントを含まない別の image に置き換えず、対応する公開 image を使う。
 #
 # 作る agent は 引数 → SBX_TEMPLATE_AGENTS → fzf で複数選択（claude を選択済み）の順で決める。
 # template は 1 つ数 GB になるため、使う agent だけ作る。fzf が無い・端末でないときは claude だけ。
@@ -84,9 +82,9 @@ if [ -z "$agents" ]; then
 fi
 variant_for() {
   case "$1" in
-    claude) echo claude-code-docker ;;
-    codex) echo codex-docker ;;
-    copilot) echo copilot-docker ;;
+    claude) echo claude ;;
+    codex) echo codex ;;
+    copilot) echo copilot ;;
     *) return 1 ;;
   esac
 }
@@ -199,8 +197,33 @@ main "$@"
 description = "Select a sandbox with fzf, forward its callback and open CodeRabbit browser login"
 run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-coderabbit-login.py"'
 
+["sandbox:sbx-settings"]
+description = "Apply recommended sbx 0.53.0 host settings and restart the daemon"
+run = '''
+set -eu
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+version=$(sbx --version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
+printf '%s\n' "$version" | awk -F. 'NF == 3 && ($1 > 0 || $2 >= 53) { ok=1 } END { exit !ok }' || {
+  echo "error: sbx 0.53.0 以上が必要です（mise install github:docker/sbx-releases）" >&2
+  exit 1
+}
+echo "==> ホスト設定を反映"
+# ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
+sbx settings set clipboard.imagePaste true
+# 0.53.0 のホスト連携と、クラウドモデルを使う開発環境向けの既定値。
+# 失敗時は不完全な設定を成功扱いにしない。再実行しても同じ値に収束する。
+sbx settings set clipboard.textCopy true
+sbx settings set claude.chrome true
+sbx settings set claude.remoteControl true
+sbx settings set env.rememberHostCommands true
+sbx settings set telemetry.disabled true
+sbx settings set model.server.enabled false
+sbx daemon restart
+
+'''
+
 ["sandbox:setup"]
-description = "One-time host-side setup for Docker Sandboxes (SSH, skills, settings)"
+description = "One-time host-side setup for Docker Sandboxes (SSH, skills, Claude accounts)"
 run = '''
 set -eu
 
@@ -227,10 +250,6 @@ for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
     sbx policy allow network "$allow_domains" || echo "warn: $(basename "$allow_file") のドメインの許可に失敗しました" >&2
   fi
 done
-
-echo "==> ホスト設定を反映"
-# ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
-sbx settings set clipboard.imagePaste true || echo "warn: clipboard.imagePaste の設定に失敗しました" >&2
 
 echo "==> ホストの agent skills を共有 store へ取り込む"
 # --force で skill ごとの Overwrite 確認（[y/N]）を飛ばす。プロンプトは sbx 自身の行入力で

@@ -221,7 +221,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
     args = ap.parse_args()
-    L.check_schema(strict=False)
+    L.check_schema(strict=True)  # 書き込み側が止まる状態なら、subagent を回す前にここで止める
     args.work.mkdir(parents=True, exist_ok=True)
 
     today = dt.date.today()

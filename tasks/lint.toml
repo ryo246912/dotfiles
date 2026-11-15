@@ -35,7 +35,8 @@ run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn 
 
 ["lint:dockerfile-pin"]
 description = "Run dockerfile-pin check"
-run         = "dockerfile-pin check --ignore-images docker/sandbox-templates:*"
+# sandbox template の agent は VARIANT で選び、公開 workload の latest を追従する。
+run = "dockerfile-pin check --ignore-images docker/sandbox-templates:* --ignore-images docker.io/sbx/*"
 
 ["lint:toml"]
 description = "Run lint TOML files"

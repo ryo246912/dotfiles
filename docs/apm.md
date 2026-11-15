@@ -93,8 +93,7 @@ dependencies:
   の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
   Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
   週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。
-- **Renovate で更新しない依存**: `resolving-merge-conflicts`（v1.3.0 で upstream から削除）は
-  `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
+- **Renovate の apm manager で更新しない依存**: `terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
   `.github/renovate.json` の regex manager が `ref` だけを更新し、mise の `pipx:desloppify` と同じPRにまとめます。
   組み込みの apm manager ではないため lockfile は再生成されず、そのPRのブランチで
   `mise run apm:lock-local` を実行して lockfile を再生成し、commit します。

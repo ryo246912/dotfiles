@@ -140,12 +140,6 @@
     {
       "matchPackageNames": ["mattpocock/skills"],
       "groupName": "mattpocock/skills"
-    },
-    {
-      "description": "resolving-merge-conflicts は v1.3.0 で upstream から削除されたため v1.2.3 に固定する（apm/apm.yml 参照）",
-      "matchManagers": ["apm"],
-      "matchDepNames": ["mattpocock/skills/skills/engineering/resolving-merge-conflicts"],
-      "enabled": false
     }
   ],
   "customManagers": [
