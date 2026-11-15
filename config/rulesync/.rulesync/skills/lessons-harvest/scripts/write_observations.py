@@ -64,11 +64,20 @@ def main() -> int:
         return 1
     cands = {}
     if args.batch != "sessions":
-        ids = {c["id"] for c in json.loads((args.work / "batches" / f"{args.batch}.json").read_text())["candidates"]}
-        cands = {
-            c["id"]: c for c in json.loads((args.work / "candidates.json").read_text())["candidates"] if c["id"] in ids
+        ids = {
+            c["id"]
+            for c in json.loads((args.work / "batches" / f"{args.batch}.json").read_text())[
+                "candidates"
+            ]
         }
-    obs = json.loads((args.work / "observations" / f"{args.batch}.json").read_text())["observations"]
+        cands = {
+            c["id"]: c
+            for c in json.loads((args.work / "candidates.json").read_text())["candidates"]
+            if c["id"] in ids
+        }
+    obs = json.loads((args.work / "observations" / f"{args.batch}.json").read_text())[
+        "observations"
+    ]
     today = str(dt.date.today())
     errors, notes = [], []
     for i, o in enumerate(obs):
@@ -80,7 +89,9 @@ def main() -> int:
         elif o.get("from") not in cands:
             missing.append(f"from={o.get('from')} がバッチ {args.batch} に無い")
         missing += [
-            f"{k} は文字列で書く" for k in ("category", "scope_key", "source") if k in o and not isinstance(o[k], str)
+            f"{k} は文字列で書く"
+            for k in ("category", "scope_key", "source")
+            if k in o and not isinstance(o[k], str)
         ]
         missing += [
             f"{k} は日本語で書く（{e}）"
@@ -115,7 +126,13 @@ def main() -> int:
         pattern = re.sub(r"^-\s+", "", " ".join(str(o["pattern"]).split()))
         body = f"\n## Rule\n{o['rule']}\n\n## Patterns\n- {pattern}\n\n## Why\n{o['why']}\n\n## Check\n{o['check']}\n"
         slug = L.ascii_slug(o.get("from") or o["category"])
-        notes.append((L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md", meta, body))
+        notes.append(
+            (
+                L.LESSONS_DIR / "inbox" / source / f"{today}-{slug}-{args.batch}-{i:03d}.md",
+                meta,
+                body,
+            )
+        )
 
     # 1 件でも誤りがあれば何も書かない（直して再実行したときに二重に書かないため）
     if errors:

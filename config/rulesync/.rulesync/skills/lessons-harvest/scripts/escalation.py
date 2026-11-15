@@ -57,7 +57,12 @@ def save(items: dict[str, list[dict]]) -> None:
 
     def render(name: str) -> list[str]:
         lines = [
-            "\n".join([f"- [{'x' if it['checked'] else ' '}] {it['title']} — `{it['path']}`{it['tail']}", *it["lines"]])
+            "\n".join(
+                [
+                    f"- [{'x' if it['checked'] else ' '}] {it['title']} — `{it['path']}`{it['tail']}",
+                    *it["lines"],
+                ]
+            )
             for it in items[name]
         ]
         return ["", *(lines or ["なし"]), ""]
@@ -114,9 +119,17 @@ def add(entries: list[tuple[str, str, str]]) -> list[str]:
         title = " ".join(title.split())
         if path in listed:
             continue
-        lines = [f"  - 案: {' '.join(proposal.split()) or '（週次で案を書けなかった。Check と Patterns から考える）'}"]
+        lines = [
+            f"  - 案: {' '.join(proposal.split()) or '（週次で案を書けなかった。Check と Patterns から考える）'}"
+        ]
         items[TODO].append(
-            {"checked": False, "title": title, "path": path, "tail": "", "lines": [*lines, "  - 仕組み:"]}
+            {
+                "checked": False,
+                "title": title,
+                "path": path,
+                "tail": "",
+                "lines": [*lines, "  - 仕組み:"],
+            }
         )
         listed.add(path)
         added.append(title)

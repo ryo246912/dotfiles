@@ -26,7 +26,7 @@ def gh(*args: str) -> object:
 
 def stacks_api(path: str) -> object | None:
     """Stacks REST API を呼ぶ。404（stack が無い・機能が無効）なら None を返す。"""
-    result = subprocess.run(["gh", "api", path], capture_output=True, text=True)
+    result = subprocess.run(["gh", "api", path], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         if "HTTP 404" in result.stderr:
             return None
@@ -35,9 +35,13 @@ def stacks_api(path: str) -> object | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     target = parser.add_mutually_exclusive_group(required=True)
-    target.add_argument("--stack", type=int, help="stack 番号（github.com の stack の UI に出る番号）")
+    target.add_argument(
+        "--stack", type=int, help="stack 番号（github.com の stack の UI に出る番号）"
+    )
     target.add_argument("--pr", type=int, help="PR 番号")
     parser.add_argument("--repo", help="owner/name（省略時はカレントディレクトリのリポジトリ）")
     args = parser.parse_args()
@@ -48,7 +52,9 @@ def main() -> int:
     if args.stack is not None:
         stack = stacks_api(f"repos/{repo}/stacks/{args.stack}")
         if stack is None:
-            sys.exit(f"stack #{args.stack} が見つからない（Stacked PRs が無効な repository かもしれない）")
+            sys.exit(
+                f"stack #{args.stack} が見つからない（Stacked PRs が無効な repository かもしれない）"
+            )
     else:
         found = stacks_api(f"repos/{repo}/stacks?pull_request={args.pr}")
         stack = found[0] if found else None
