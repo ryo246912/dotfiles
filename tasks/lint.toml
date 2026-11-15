@@ -76,7 +76,7 @@ description = "Check shell script formatting with shfmt"
 run = "shfmt -l $(git ls-files '*.sh')"
 
 ["lint:rulesync"]
-description = "rulesync のソースと生成済みルールの差分を検査する"
+description = "rulesync のソースと生成済みルール・hooks の差分を検査する"
 run = '''
 set -euo pipefail
 

@@ -49,7 +49,8 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 ただし、プロジェクト単位の `CLAUDE.md` と `AGENTS.md` は、初回 clone やクラウド環境で
 生成前から指示を参照できるよう、実ファイルを Git 管理します。正本は `.rulesync/rules/CLAUDE.md` です。
 変更後はリポジトリ直下で `rulesync generate` を実行してください。
-`mise run lint:rulesync` は一時ディレクトリで再生成して両ファイルを比較し、不足や差分で失敗します。
+`mise run lint:rulesync` は一時ディレクトリで再生成し、`CLAUDE.md`・`AGENTS.md`・
+`.claude/settings.json`・`.codex/hooks.json` の4ファイルを比較して、不足や差分で失敗します。
 CI でも毎回実行するため、ソース・設定・生成物の更新漏れを検知できます。
 
 | 種類                               | 例                                                                              | git 管理 | 理由                                                                                                                              |
