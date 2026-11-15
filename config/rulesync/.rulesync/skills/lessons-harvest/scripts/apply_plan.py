@@ -219,6 +219,8 @@ def check_plan(plan: dict, obs: dict) -> list[str]:
         meta = lesson_ok(rel, "escalate")
         if meta and meta.get("status") != "active":
             errors.append(f"escalate: active ではない教訓は仕組み化の候補にしない: {rel}")
+        if rel in widened:
+            errors.append(f"escalate: まとめる教訓には仕組み化の案を書かない: {rel}")
         errors.extend(
             f"escalate: {rel}: {error}" for error in escalation.validate_proposal(proposal)
         )
@@ -401,6 +403,21 @@ def main() -> int:
         load(path)
     activated, retired, escalate = [], [], []
     proposals = plan.get("escalate") or {}
+    listed_proposals = {
+        it["path"]
+        for path in escalation.files()
+        for it in escalation.load(path)[escalation.TODO]
+        if not escalation.validate_proposal(
+            {key: escalation.field(it, label) for key, label in escalation.FIELDS.items()}
+        )
+    }
+    # 統合後も、既存案を持つ項目が指す統合先には再提案を求めない。
+    for old in list(listed_proposals):
+        target = old
+        while target in moves and target is not None:
+            target = moves[target]
+        if target:
+            listed_proposals.add(target)
     cutoff = str(dt.date.today() - dt.timedelta(days=RETIRE_DAYS))
     for path, (meta, body) in lessons.items():
         if meta.get("type") != "lesson":
@@ -423,7 +440,10 @@ def main() -> int:
                 rel = str(path.relative_to(L.LESSONS_DIR))
                 if rel in proposals:
                     escalate.append((rel, meta["title"], proposals[rel]))
-                elif int(meta.get("since_active") or 0) >= ESCALATE_AFTER:
+                elif (
+                    rel not in listed_proposals
+                    and int(meta.get("since_active") or 0) >= ESCALATE_AFTER
+                ):
                     review.append(
                         f"仕組み化の構造化した案が無い。Check と Patterns から案を書く: {meta['title']}（{rel}）"
                     )

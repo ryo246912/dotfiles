@@ -21,6 +21,9 @@ class ProposalTests(unittest.TestCase):
         self.patch = patch.object(L, "LESSONS_DIR", self.root)
         self.patch.start()
         self.addCleanup(self.patch.stop)
+        self.dir_patch = patch.object(escalation, "DIR", self.root / "escalation")
+        self.dir_patch.start()
+        self.addCleanup(self.dir_patch.stop)
         self.path = "lessons/received/global/private-import.md"
         L.write(
             self.root / self.path,
@@ -70,7 +73,7 @@ class ProposalTests(unittest.TestCase):
             )
         )
 
-    def test_repeated_lesson_without_proposal_goes_to_review(self):
+    def run_empty_plan(self):
         work = self.root / "work"
         (work / "observations").mkdir(parents=True)
         (work / "observations/sessions.done").touch()
@@ -82,8 +85,59 @@ class ProposalTests(unittest.TestCase):
             add.return_value = []
             self.assertEqual(apply_plan.main(), 0)
         add.assert_called_once_with([])
-        self.assertIn("構造化した案が無い", (work / "pr-body.md").read_text())
         self.assertEqual(L.read(self.root / self.path)[0]["status"], "active")
+        return (work / "pr-body.md").read_text()
+
+    def test_repeated_lesson_without_proposal_goes_to_review(self):
+        self.assertIn("構造化した案が無い", self.run_empty_plan())
+
+    def test_existing_proposal_is_not_requested_again(self):
+        escalation.add([(self.path, "非公開の名前を参照しない", self.proposal)])
+        self.assertNotIn("構造化した案が無い", self.run_empty_plan())
+
+    def test_incomplete_existing_proposal_still_goes_to_review(self):
+        target = escalation.path_for("global")
+        escalation.save(
+            target,
+            {
+                escalation.TODO: [
+                    {
+                        "checked": False,
+                        "title": "非公開の名前を参照しない",
+                        "path": self.path,
+                        "tail": "",
+                        "lines": ["  - 案:"],
+                    }
+                ],
+                escalation.DONE: [],
+            },
+        )
+        self.assertIn("構造化した案が無い", self.run_empty_plan())
+
+    def test_widened_lesson_cannot_have_proposal(self):
+        meta, body = L.read(self.root / self.path)
+        first = "lessons/received/github.com/o/one/private-import.md"
+        second = "lessons/received/github.com/o/two/private-import.md"
+        L.write(self.root / first, {**meta, "scope_key": "github.com/o/one"}, body)
+        L.write(self.root / second, {**meta, "scope_key": "github.com/o/two"}, body)
+        plan = {
+            "widen": [
+                {
+                    "lessons": [first, second],
+                    "scope_key": "github.com/o",
+                    "key": "private-import",
+                    "title": "非公開名を参照しない",
+                    "rule": "公開名を使う",
+                    "why": "仕様を守るため",
+                    "check": "非公開名を探す",
+                }
+            ],
+            "escalate": {first: self.proposal},
+        }
+        self.assertEqual(apply_plan.check_plan({"widen": plan["widen"]}, {}), [])
+        self.assertTrue(
+            any("まとめる教訓には" in error for error in apply_plan.check_plan(plan, {}))
+        )
 
 
 if __name__ == "__main__":

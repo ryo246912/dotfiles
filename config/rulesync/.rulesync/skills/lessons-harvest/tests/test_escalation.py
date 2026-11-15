@@ -63,6 +63,13 @@ class VerificationTests(unittest.TestCase):
         (self.root / "fixtures/check.json").write_text(json.dumps(self.config))
         return E.apply()
 
+    def assert_rejected(self):
+        self.assertTrue(self.apply()["errors"])
+        self.assertEqual(L.read(self.lesson)[0]["status"], "active")
+        items = E.load(self.checklist)
+        self.assertEqual([it["path"] for it in items[E.TODO]], [self.item["path"]])
+        self.assertEqual(items[E.DONE], [])
+
     def test_detects_bad_accepts_good_and_rules(self):
         self.assertEqual(self.apply(), {"ruled": 1, "errors": []})
         self.assertEqual(L.read(self.lesson)[0]["status"], "ruled")
@@ -75,25 +82,25 @@ class VerificationTests(unittest.TestCase):
             "import sys; print(sys.argv[1]); sys.exit(0)",
             "{fixture}",
         ]
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
         self.assertEqual(L.read(self.lesson)[0]["status"], "active")
         self.assertEqual(len(E.load(self.checklist)[E.TODO]), 1)
 
     def test_unrelated_failure_stays_active(self):
         self.config["command"] = [sys.executable, "-c", "import sys; sys.exit(1)", "{fixture}"]
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
 
     def test_good_failure_stays_active(self):
         (self.root / "fixtures/good.txt").write_text("bad")
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
 
     def test_missing_pattern_coverage_stays_active(self):
         self.config["cases"][0]["pattern"] = "別の違反"
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
 
     def test_path_escape_is_rejected(self):
         self.config["cases"][0]["bad"] = "../outside.txt"
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
 
     def test_split_checklist(self):
         target = self.root / "escalation/github.com/o/r.md"
@@ -107,18 +114,18 @@ class VerificationTests(unittest.TestCase):
         with patch.object(
             E.subprocess, "run", side_effect=subprocess.TimeoutExpired("checker", 30)
         ):
-            self.assertTrue(self.apply()["errors"])
+            self.assert_rejected()
         self.assertEqual(L.read(self.lesson)[0]["status"], "active")
 
     def test_url_without_verification_stays_active(self):
         self.item["lines"] = ["  - 仕組み: https://github.com/o/r/pull/1"]
         E.save(self.checklist, {E.TODO: [self.item], E.DONE: []})
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
         self.assertEqual(L.read(self.lesson)[0]["status"], "active")
 
     def test_invalid_manifest_stays_active(self):
         self.config["cases"] = [42]
-        self.assertTrue(self.apply()["errors"])
+        self.assert_rejected()
 
     def test_split_add_uses_scope(self):
         meta, body = L.read(self.lesson)
@@ -139,8 +146,36 @@ class VerificationTests(unittest.TestCase):
                 )
             ]
         )
-        self.assertTrue((self.root / "escalation/github.com/o/r.md").is_file())
+        target = self.root / "escalation/github.com/o/r.md"
+        self.assertEqual(
+            [it["path"] for it in E.load(target)[E.TODO]],
+            ["lessons/received/github.com/o/r/example.md"],
+        )
         self.assertFalse((self.root / "escalation.md").exists())
+
+    def test_unreadable_pattern_prevents_ruling(self):
+        for pattern in ("矢印のない違反例", " → 修正する", "違反する → "):
+            with self.subTest(pattern=pattern):
+                meta, body = L.read(self.lesson)
+                body = L.set_section(
+                    body, "Patterns", "- 危険な値を渡す → 安全な値を渡す\n- " + pattern
+                )
+                L.write(self.lesson, meta, body)
+                self.assert_rejected()
+
+    def test_proposal_line_separators_are_normalized(self):
+        self.checklist.unlink()
+        proposal = {
+            "kind": "lint",
+            "detection": "CI",
+            "tool": "ruff:PLC2701",
+            "proposal": "違反を\r検出する\u2028ルールを\x85入れる",
+        }
+        E.add([(self.item["path"], "違反を防ぐ", proposal)])
+        items = E.load(self.checklist)[E.TODO]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(E.field(items[0], "案"), "違反を 検出する ルールを 入れる")
+        self.assertEqual(E.field(items[0], "検証"), "")
 
     def test_proposals(self):
         self.assertTrue(E.validate_proposal("free text"))

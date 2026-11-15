@@ -181,11 +181,15 @@ def verify(it: dict, body: str) -> str:
         raise ValueError("検証: に fixtures/ 内の JSON 設定を書く")
     config = json.loads(manifest.read_text(encoding="utf-8"))
     patterns = L.sections(body).get("Patterns", "")
-    violations = [
-        line.strip()[2:].split("→", 1)[0].strip()
-        for line in patterns.splitlines()
-        if line.strip().startswith("- ") and "→" in line
+    pattern_lines = [
+        line.strip()[2:] for line in patterns.splitlines() if line.strip().startswith("- ")
     ]
+    if any(
+        "→" not in line or not all(part.strip() for part in line.split("→", 1))
+        for line in pattern_lines
+    ):
+        raise ValueError("Patterns は空でない違反例 → 修正版の形式にする")
+    violations = [line.split("→", 1)[0].strip() for line in pattern_lines]
     cases = config.get("cases", [])
     if not violations or not isinstance(cases, list) or not cases:
         raise ValueError("Patterns の違反例と cases が必要")
@@ -247,7 +251,7 @@ def add(entries: list[tuple[str, str, dict]]) -> list[str]:
         errors = validate_proposal(proposal)
         if errors:
             raise ValueError(f"{path}: {'; '.join(errors)}")
-        lines = [f"  - {label}: {proposal[key].strip()}" for key, label in FIELDS.items()]
+        lines = [f"  - {label}: {' '.join(proposal[key].split())}" for key, label in FIELDS.items()]
         target = path_for(scope)
         loaded.setdefault(target, {TODO: [], DONE: []})[TODO].append(
             {
