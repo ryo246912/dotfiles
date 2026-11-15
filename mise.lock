@@ -240,6 +240,29 @@ url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/bette
 url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212670"
 provenance = "github-attestations"
 
+[[tools."github:dyoshikawa/rulesync"]]
+version = "32.0.0"
+backend = "github:dyoshikawa/rulesync"
+specifiers = ["32.0.0"]
+
+[tools."github:dyoshikawa/rulesync"."platforms.linux-arm64"]
+checksum = "sha256:d481330458f5e27d7f08e24dbcdcda02e3dae9f0ec7664adcc865ccc8095d376"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999470"
+provenance = "github-attestations"
+
+[tools."github:dyoshikawa/rulesync"."platforms.linux-x64"]
+checksum = "sha256:771d23260799a556c9fd0d1f24de95e0d68c9838359c8b67d16f8405dd16de35"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999475"
+provenance = "github-attestations"
+
+[tools."github:dyoshikawa/rulesync"."platforms.macos-arm64"]
+checksum = "sha256:b54d0bd4d1efe07025f724a919cc42dcec0d7438f52750c9b472ac5f90846489"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-darwin-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999476"
+provenance = "github-attestations"
+
 [[tools."github:superfly/flyctl"]]
 version = "0.4.29"
 backend = "github:superfly/flyctl"
