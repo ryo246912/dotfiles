@@ -137,6 +137,7 @@ fi
 # ov
 if command -v ov >/dev/null 2>&1; then
     __generate_and_load_completion "ov"
+    source "$MISE_COMPLETIONS_DIR/_ov"
 fi
 
 # taws
