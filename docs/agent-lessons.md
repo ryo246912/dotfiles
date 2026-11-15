@@ -58,12 +58,13 @@ agent-lessons/
 `references/lesson-format.md` を参照する。
 
 `mise run lessons:setup` で用意した同じcloneを使い、`mise run lessons:sync` で既存教訓と一緒に
-secretlint・commit・pull/rebase・pushする。スキルはローカル保存までを行い、自動pushしない。
+secretlint・commit・pull/rebase・pushする。スキルはローカル保存までを行い、同期が必要なことを伝える。ユーザーが同期を実行し、今回の会話で同期まで明示的に依頼された場合だけスキルから同期する。
 `behavor/` が未作成なら最初の知見保存時に作る。空ディレクトリのcommitは不要。
 
 この知見はレビュー指摘の教訓とは異なる形式で、harvest/review/escalationの対象にしない。
 Basic Memoryのreindexはリポジトリ全体に行うが、`type: lesson` を付けないためSessionStartには注入しない。
 動作確認時に一覧のタイトル・要約・環境・タグから必要な本文だけを読む。
+保存・移行時に一意な引用符付き`permalink`を必ず付ける。欠落・重複があるとreindexでYAMLが書き換わり、一覧が読めなくなるため同期前に修正する。
 旧設定に隣接する `lessons/` は対象repoの知見だけを確認・移行し、保存確認後も旧ファイルは削除しない。
 
 ### scope_key（どこで効くか）

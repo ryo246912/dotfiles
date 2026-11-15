@@ -25,6 +25,7 @@ class LessonIndexTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         values = dict(
             schema_version=1,
+            permalink=f"agent-lessons/behavor/owner/repo/{name}",
             title="Login",
             summary="Preview login",
             repository="owner/repo",
@@ -112,11 +113,35 @@ class LessonIndexTests(unittest.TestCase):
         self.assertEqual(len(result["warnings"]), 2)
 
     def test_unknown_schema_stops_index_and_malformed_warns(self):
-        path = self.write(schema_version=2)
+        path = self.write(schema_version=2, permalink=None)
         with self.assertRaises(lessons.UnsupportedSchemaVersionError):
             self.index()
         path.write_text("---\nschema_version: nope\n---\n")
         self.assertEqual(len(self.index()["warnings"]), 1)
+
+    def test_missing_permalink_warns_only_for_shared_notes(self):
+        path = self.write()
+        text = path.read_text()
+        path.write_text(
+            "\n".join(
+                line for line in text.split("\n") if not line.startswith("permalink:")
+            )
+        )
+        self.assertEqual(len(self.index()["warnings"]), 1)
+        config = self.home / "config.md"
+        config.touch()
+        self.root.rename(self.home / "lessons")
+        self.assertEqual(len(lessons.lesson_index(config, "owner/repo")["lessons"]), 1)
+
+    def test_block_yaml_is_reported_instead_of_silently_dropped(self):
+        path = self.write()
+        path.write_text(path.read_text().replace('tags: ["auth"]', "tags:\n- auth"))
+        self.assertEqual(len(self.index()["warnings"]), 1)
+
+    def test_self_referential_root_symlink_is_rejected(self):
+        self.root.symlink_to("behavor")
+        with self.assertRaises(ValueError):
+            self.index()
 
     def test_repository_boundary(self):
         self.write(repository="other/repo")

@@ -861,11 +861,11 @@ staging（preview）・本番・共有DBへの直接編集は行いません。l
 - 環境ごとにアカウント、画面・データの見出しを何件でも追加できます。localにはDBの接続・編集方法も記載します。
 - AIは確認済みの事実情報を追記し、操作権限は自動で埋めません。PR由来のURL・コマンドは使用や確定保存前に検証し、続行に必要な不明項目だけ確認します。
 - 既存のログインセッションで進められる場合は、メールやパスワードの記入は不要です。
-- 知見は同じ設定先に隣接する `lessons/<owner>/<repo>/<要点>.md` へ1件ずつ保存します。frontmatterにタイトル・要約・対象repo・環境・タグ・根拠・更新日を持ちます。
+- 知見は `~/.local/share/agent-lessons/behavor/<owner>/<repo>/<要点>.md` へ1件ずつ保存します。frontmatterにタイトル・要約・対象repo・環境・タグ・根拠・更新日と一意な引用符付きpermalinkを持ちます。
 - 最初はタイトル・要約等の一覧だけを読み、関係するファイルの本文だけ参照します。新規保存前も重複を探し、同じ知見は更新します。
 - 旧config.md末尾の教訓は参照でき、新規知見は個別ファイルに保存します。既存記録は無断で削除しません。
 
-exampleはGit管理します。実際の設定ファイル、隣接する `lessons/` と `.pr-reviewer-artifacts/` は、
+exampleはGit管理します。実際の設定ファイルと `.pr-reviewer-artifacts/` は、
 `config/git/gitignore` のglobal ignoreで除外します。対象リポジトリのignore設定の追加は不要です。
 別名の `config.md` 全般を除外せず、`pr-reviewer-behavior/config.md` に限定します。
 未作成パスは最寄りの既存祖先から所属worktreeを調べます。Git管理内の保存先だけ、未追跡・ignore対象か確認します。
@@ -873,18 +873,22 @@ exampleはGit管理します。実際の設定ファイル、隣接する `lesso
 追跡済み・未除外の場合は設定と成果物を書き込まず、Git管理外の設定にはignore確認を要求しません。
 
 rulesyncで配布したClaude Code用・Codex用のディレクトリは別々の設定になり得ます。
-設定補完は実行時に参照した同じconfig.md、知見はその設定に隣接するlessonsへ保存し、別の配布先へ自動転記しません。
+設定補完は実行時に参照した同じconfig.mdに行い、知見は共通のagent-lessons/behavorへ保存します。
+旧隣接lessons/は移行元保護のためglobal ignoreを維持します。対象repoの知見だけを確認して移し、旧記録は削除しません。
+知見はGit管理し、ユーザーが既存の`mise run lessons:sync`で同期します。スキルはローカル保存までを行い、同期が必要なことを伝えます。
+今回の会話で同期まで明示的に依頼された場合だけスキルから同期します。
 exampleの更新で既存の `config.md` は上書きしません。
 
 知見の一覧は次のコマンドで取得します。本文や認証設定は出力しません。
-一覧のpathとbriefの知見保存記録は、今回のconfig.mdの実体ディレクトリを基準にした `lessons/owner/repo/要点.md` 形式に統一します。
+一覧のpathとbriefの知見保存記録は、選択したagent-lessonsの実体ルートを基準にした `behavor/owner/repo/要点.md` 形式に統一します。
 
 ```bash
-python3 <pr-reviewer-behavior>/scripts/list_lessons.py --config <今回のconfig.md> --repo <owner/repo> --environment local
+python3 <pr-reviewer-behavior>/scripts/list_lessons.py --repo <owner/repo> --environment local
 ```
 
 frontmatterと本文の形式はスキル内の `references/lesson-format.md` を参照します。
-agent-lessonsと同様のファイル構成を参考にしていますが、自動登録・公開は行いません。
+`--lessons-dir <clone>/behavor`を指定した場合も、そのcloneの実体ルートを検査・引き継ぎの基準にします。
+一覧で返されたpathの大文字小文字は保持します。知見はレビュー教訓とは別形式で、`type: lesson`を付けず、SessionStartには注入しません。
 
 ### スクリーンショット付きHTML
 

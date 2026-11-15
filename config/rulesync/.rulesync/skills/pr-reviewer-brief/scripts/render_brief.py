@@ -805,7 +805,7 @@ def check_manual_test(brief: dict) -> list[str]:
                 and "\\" not in path
                 and not PurePosixPath(path).is_absolute()
                 and ".." not in PurePosixPath(path).parts
-                and len(PurePosixPath(path).parts) >= 4
+                and len(PurePosixPath(path).parts) == 4
                 and PurePosixPath(path).parts[0] in {"behavor", "lessons"}
                 and PurePosixPath(path).suffix == ".md"
                 for path in files

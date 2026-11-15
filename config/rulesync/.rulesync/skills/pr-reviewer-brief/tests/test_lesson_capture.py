@@ -31,6 +31,7 @@ class LessonCaptureTest(unittest.TestCase):
         for path in (
             "/behavor/owner/repo/login.md",
             "behavor/../repo/login.md",
+            "behavor/owner/repo/nested/login.md",
             "config/owner/repo/config.md",
             "behavor/owner/repo/login.json",
             "behavor\\owner\\repo\\login.md",

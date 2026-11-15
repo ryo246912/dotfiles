@@ -113,7 +113,7 @@ for name in filter(None, names):
         if m and CONFLICT.search(m[1]):
             errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
         # マーカーが先頭の --- より前にある・終わりの --- が欠けると match できず、検査が素通りするため
-        elif not m and name.split("/")[0] in ("inbox", "lessons", "archived"):
+        elif not m and name.split("/")[0] in ("inbox", "lessons", "archived", "behavor") and name != "behavor/README.md":
             errors.append(f"frontmatter を読み取れない（衝突マーカーの可能性）: {name}")
 if errors:
     sys.exit("error: " + "\nerror: ".join(errors))

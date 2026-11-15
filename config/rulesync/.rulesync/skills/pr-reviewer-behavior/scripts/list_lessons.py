@@ -95,6 +95,8 @@ def lesson_index(
                 "--lessons-dirはagent-lessonsのbehavorディレクトリを指定する"
             )
         parent = directory.parent.resolve(strict=True)
+    if directory.is_symlink():
+        raise ValueError("知見ルートにsymlinkは使えない")
     root = directory.resolve()
     if root != parent / directory.name:
         raise ValueError("知見ルートのsymlinkで保存先を変更できない")
@@ -124,6 +126,11 @@ def lesson_index(
                 raise UnsupportedSchemaVersionError(
                     f"{relative_path}: schema_version={version}は未対応。一覧取得を停止する"
                 )
+            if config is None and (
+                not isinstance(item.get("permalink"), str)
+                or not item["permalink"].strip()
+            ):
+                raise ValueError("permalinkは空でない引用符付き文字列にする")
             for key in (
                 "title",
                 "summary",
