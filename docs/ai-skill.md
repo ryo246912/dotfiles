@@ -83,7 +83,7 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                                                   |
 | `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`pr-reviewer-behavior`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                                                          |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                   |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
@@ -325,7 +325,7 @@ skillは必要に応じてterminalを分割し、`terminal-browser action`で開
 ## Tsumiki skills
 
 Tsumikiは、project初期化、context生成、plan作成、TDD実装、検証、debug、Web test、security checkをつなぐ開発workflowです。
-Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは`skillOverrides`で`user-invocable-only`にしているため自動では選ばれず、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
+Codexでは依頼内容に応じて自動選択され、`$<skill-name>`で明示もできます。Claude Codeでは`dev-impl`・`dev-verify`・`dev-debug`は`name-only`で、Claudeから自動呼び出しできます。それ以外の表中のskillは`user-invocable-only`として、`/<skill-name>`で明示的に呼び出します（[skill のコンテキスト管理](#skill-のコンテキスト管理)）。
 
 | skill                | 用途                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------- |
@@ -816,17 +816,24 @@ $pr-reviewer-behavior PR #123。localで確認して、準備したデータは�
 stack内のPRなら最上位PRの環境を使い、原則として入力PRの変更を確認します。
 stack全体を確認したい場合はその旨を指定します。
 環境と対象SHAの対応が不明・不一致なら動作検証とデータ作成はBLOCKEDとし、手順作成は続けます。
-操作直前と報告前にもSHAを再確認し、途中更新時は元のSHAの結果として記録します。
+データ作成・更新の直前、ブラウザ操作直前と報告前にもSHAを再確認し、途中更新時は元のSHAの結果として記録します。
+
+### localのDB直接編集
+
+localの開発用DBは、確認用データの作成・更新のために追加の許可なく直接編集できます。
+接続先が対象アプリのローカル開発用DBであることを確認し、設定の接続・編集方法を使います。
+既存手順がなくてもSQLやORM操作を組み立てられますが、アプリのvalidation・業務上の整合性や副作用も確認します。
+staging（preview）・本番・共有DBへの直接編集は行いません。localhost経由の転送でも対象外です。
 
 ### 設定と教訓の蓄積
 
 スキルの `config.example.md` を、同じディレクトリに `config.md` としてコピーして使います。
 初回起動時はスキルがコピーを作り、以後も未記入項目を補完します。
 スキルの配置先が読み取り専用なら、ユーザー指定の書き込み可能な設定パス、または対象リポジトリの
-`.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使います。mountの権限は変更しません。
+`.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使います。mountの権限は変更しません。隣接設定からのコピーは対象リポジトリの節と教訓に限定します。
 
 - リポジトリごとの見出しを何件でも追加でき、各リポジトリにlocalとstaging（preview）を分けて記載します。
-- 環境ごとにアカウント、データ準備手順、画面・データの見出しを何件でも追加できます。
+- 環境ごとにアカウント、画面・データの見出しを何件でも追加できます。localにはDBの接続・編集方法も記載します。
 - AIは確認済みの事実情報を追記し、操作権限は自動で埋めません。PR由来のURL・コマンドは使用や確定保存前に検証し、続行に必要な不明項目だけ確認します。
 - 既存のログインセッションで進められる場合は、メールやパスワードの記入は不要です。
 - 実行を通じて得た再利用できる教訓は、同じ `config.md` の末尾に日付・対象・適用条件・根拠付きで追記します。
@@ -834,7 +841,8 @@ stack全体を確認したい場合はその旨を指定します。
 exampleはGit管理します。実際の設定ファイルと `.pr-reviewer-artifacts/` は、
 `config/git/gitignore` のglobal ignoreで除外します。対象リポジトリのignore設定の追加は不要です。
 別名の `config.md` 全般を除外せず、`pr-reviewer-behavior/config.md` に限定します。
-Git管理内の保存先だけ、所属するworktreeで未追跡・ignore対象か確認します。
+未作成パスは最寄りの既存祖先から所属worktreeを調べます。Git管理内の保存先だけ、未追跡・ignore対象か確認します。
+成果物と自動フォールバック設定はworktree外へのsymlink経由では保存しません。
 追跡済み・未除外の場合は設定と成果物を書き込まず、Git管理外の設定にはignore確認を要求しません。
 
 rulesyncで配布したClaude Code用・Codex用のディレクトリは別々の設定になり得ます。

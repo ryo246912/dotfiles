@@ -90,6 +90,8 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
+    "task-breakdown": "user-invocable-only",
+    "uat-test-design": "user-invocable-only",
     "suggest-rules": "user-invocable-only",
     "lessons-harvest": "user-invocable-only",
     "lessons-review": "user-invocable-only"
