@@ -177,6 +177,50 @@ class VerificationTests(unittest.TestCase):
         self.assertEqual(E.field(items[0], "案"), "違反を 検出する ルールを 入れる")
         self.assertEqual(E.field(items[0], "検証"), "")
 
+    def test_incomplete_proposal_can_be_repaired_without_losing_user_fields(self):
+        original = {
+            **self.item,
+            "lines": ["  - 案: 旧い案", *self.item["lines"], "  - メモ: 検証を準備中"],
+        }
+        E.save(self.checklist, {E.TODO: [original], E.DONE: []})
+        proposal = {
+            "kind": "lint",
+            "detection": "CI",
+            "tool": "ruff:PLC2701",
+            "proposal": "違反を検出する",
+        }
+        self.assertEqual(
+            E.add([(self.item["path"], self.item["title"], proposal)]), [self.item["title"]]
+        )
+        items = E.load(self.checklist)
+        self.assertEqual(len(items[E.TODO]), 1)
+        actual = items[E.TODO][0]
+        self.assertEqual(
+            {key: actual[key] for key in ("checked", "title", "path", "tail")},
+            {key: original[key] for key in ("checked", "title", "path", "tail")},
+        )
+        self.assertEqual({key: E.field(actual, label) for key, label in E.FIELDS.items()}, proposal)
+        for label in ("仕組み", "検証", "メモ"):
+            self.assertEqual(E.field(actual, label), E.field(original, label))
+        self.assertEqual(
+            E.add(
+                [(self.item["path"], self.item["title"], {**proposal, "proposal": "別の案にする"})]
+            ),
+            [],
+        )
+        self.assertEqual(E.field(E.load(self.checklist)[E.TODO][0], "案"), proposal["proposal"])
+
+    def test_completed_entry_is_not_repaired(self):
+        E.save(self.checklist, {E.TODO: [], E.DONE: [self.item]})
+        proposal = {
+            "kind": "lint",
+            "detection": "CI",
+            "tool": "ruff:PLC2701",
+            "proposal": "違反を検出する",
+        }
+        self.assertEqual(E.add([(self.item["path"], self.item["title"], proposal)]), [])
+        self.assertEqual(E.load(self.checklist), {E.TODO: [], E.DONE: [self.item]})
+
     def test_proposals(self):
         self.assertTrue(E.validate_proposal("free text"))
         self.assertFalse(

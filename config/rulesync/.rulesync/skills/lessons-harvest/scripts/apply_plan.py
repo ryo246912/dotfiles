@@ -487,7 +487,10 @@ def main() -> int:
             section("active になった教訓", activated),
             section("範囲を広げた教訓", widened),
             section("retired にした教訓", retired),
-            section("仕組み化のチェックリスト（escalation/<scope_key>.md）に足した教訓", escalated),
+            section(
+                "仕組み化のチェックリスト（escalation/<scope_key>.md）に追加・更新した教訓",
+                escalated,
+            ),
             section("要確認", review),
         ]
     )

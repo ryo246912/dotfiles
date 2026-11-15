@@ -1,6 +1,7 @@
 """Regression coverage for harvest proposal validation and missing-proposal triage."""
 
 import datetime as dt
+import json
 import sys
 import tempfile
 import unittest
@@ -73,11 +74,11 @@ class ProposalTests(unittest.TestCase):
             )
         )
 
-    def run_empty_plan(self):
+    def run_plan(self, plan=None):
         work = self.root / "work"
-        (work / "observations").mkdir(parents=True)
+        (work / "observations").mkdir(parents=True, exist_ok=True)
         (work / "observations/sessions.done").touch()
-        (work / "plan.json").write_text("{}")
+        (work / "plan.json").write_text(json.dumps(plan or {}))
         with (
             patch.object(sys, "argv", ["apply_plan.py", "--work", str(work)]),
             patch.object(escalation, "add") as add,
@@ -87,6 +88,40 @@ class ProposalTests(unittest.TestCase):
         add.assert_called_once_with([])
         self.assertEqual(L.read(self.root / self.path)[0]["status"], "active")
         return (work / "pr-body.md").read_text()
+
+    def run_empty_plan(self):
+        return self.run_plan()
+
+    def test_corrected_plan_repairs_incomplete_proposal(self):
+        target = escalation.path_for("global")
+        escalation.save(
+            target,
+            {
+                escalation.TODO: [
+                    {
+                        "checked": False,
+                        "title": "非公開の名前を参照しない",
+                        "path": self.path,
+                        "tail": "",
+                        "lines": ["  - 案:"],
+                    }
+                ],
+                escalation.DONE: [],
+            },
+        )
+        # 実際の add() と後続の空計画を使い、修正後に同じ要確認が再発しないことを確認する。
+        work = self.root / "work"
+        (work / "observations").mkdir(parents=True)
+        (work / "observations/sessions.done").touch()
+        (work / "plan.json").write_text(json.dumps({"escalate": {self.path: self.proposal}}))
+        with patch.object(sys, "argv", ["apply_plan.py", "--work", str(work)]):
+            self.assertEqual(apply_plan.main(), 0)
+        actual = escalation.load(target)[escalation.TODO][0]
+        self.assertEqual(
+            {key: escalation.field(actual, label) for key, label in escalation.FIELDS.items()},
+            self.proposal,
+        )
+        self.assertNotIn("構造化した案が無い", self.run_empty_plan())
 
     def test_repeated_lesson_without_proposal_goes_to_review(self):
         self.assertIn("構造化した案が無い", self.run_empty_plan())

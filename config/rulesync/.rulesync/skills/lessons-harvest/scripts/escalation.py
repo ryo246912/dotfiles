@@ -234,15 +234,13 @@ def verify(it: dict, body: str) -> str:
 def add(entries: list[tuple[str, str, dict]]) -> list[str]:
     """(教訓のパス, タイトル, 仕組みの案) を、教訓の scope_key のファイルの「未対応」に足す。
 
-    どこかのファイルに既に載っている教訓は足さない。足したタイトルを返す。
+    既存の有効な案と済みの項目は保持し、未対応の不完全な案は更新する。追加・更新したタイトルを返す。
     """
     loaded = {f: load(f) for f in files()}
     listed = {it["path"] for items in loaded.values() for its in items.values() for it in its}
     added, touched = [], set()
     for path, title, proposal in entries:
         scope = scope_of(path)
-        if path in listed:
-            continue
         if not scope:
             print(f"warning: scope_key を読めない教訓のパスを飛ばした: {path}", file=sys.stderr)
             continue
@@ -252,6 +250,36 @@ def add(entries: list[tuple[str, str, dict]]) -> list[str]:
         if errors:
             raise ValueError(f"{path}: {'; '.join(errors)}")
         lines = [f"  - {label}: {' '.join(proposal[key].split())}" for key, label in FIELDS.items()]
+        if path in listed:
+            existing = [
+                (f, section, it)
+                for f, items in loaded.items()
+                for section, its in items.items()
+                for it in its
+                if it["path"] == path
+            ]
+            if any(
+                section == DONE
+                or not validate_proposal({key: field(it, label) for key, label in FIELDS.items()})
+                for _, section, it in existing
+            ):
+                continue
+            for f, _, it in existing:
+                # 提案以外のチェック状態・仕組み・検証設定・メモはユーザーの入力を維持する。
+                it["lines"] = [
+                    *lines,
+                    *[
+                        line
+                        for line in it["lines"]
+                        if not any(
+                            re.match(r"\s*- " + re.escape(label) + ":", line)
+                            for label in FIELDS.values()
+                        )
+                    ],
+                ]
+                touched.add(f)
+            added.append(title)
+            continue
         target = path_for(scope)
         loaded.setdefault(target, {TODO: [], DONE: []})[TODO].append(
             {
