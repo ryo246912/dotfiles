@@ -198,14 +198,18 @@ def relink(moves: dict[str, str | None], titles: dict[str, str]) -> None:
                 {**it, "path": path, "title": " ".join(titles.get(path, it["title"]).split())}
             )
 
-    # 移動先の保存に失敗しても項目を失わないよう、項目が増えるファイル（移動先）を先に保存する
-    def gained(f: Path) -> int:
-        return len(new_todo[f]) - len(loaded.get(f, {TODO: []})[TODO])
-
-    for f in sorted(new_todo, key=gained, reverse=True):
+    # 保存の途中で失敗しても項目を失わないよう、先に全ファイルへ「元の項目 + 増える項目」を保存してから、移動元の項目を外す。
+    # 途中で止まると同じ項目が 2 つのファイルに残るが、add() は載っている教訓を足さないので、再実行で片付く。
+    changed = [f for f in new_todo if new_todo[f] != loaded.get(f, {TODO: []})[TODO]]
+    for f in changed:
         items = loaded.get(f, {TODO: [], DONE: []})
-        if new_todo[f] != items[TODO]:
-            save(f, {**items, TODO: new_todo[f]})
+        have = {it["path"] for it in items[TODO]}
+        save(
+            f,
+            {**items, TODO: [*items[TODO], *(it for it in new_todo[f] if it["path"] not in have)]},
+        )
+    for f in changed:
+        save(f, {**loaded.get(f, {TODO: [], DONE: []}), TODO: new_todo[f]})
 
 
 def mechanism(it: dict) -> str:
