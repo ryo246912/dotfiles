@@ -809,8 +809,14 @@ record_invocation() {
         printf '# %s を作成した sbx-agent の呼び出し（mise run sandbox:recreate が使う）\n' "$SANDBOX_NAME"
         printf 'cd %q || exit 1\n' "$PWD"
         printf 'exec env'
+        # 作成時に未設定だった変数は -u で外す。外さないと、作り直しを実行したシェルの値を
+        # 引き継ぎ、元の sandbox に無かったマウント（SBX_AGENT_MOUNTS）などが足されてしまう。
         for var in SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK; do
-            [[ -n "${!var:-}" ]] && printf ' %q' "${var}=${!var}"
+            if [[ -n "${!var:-}" ]]; then
+                printf ' %q' "${var}=${!var}"
+            else
+                printf ' -u %s' "$var"
+            fi
         done
         printf ' sbx-agent'
         printf ' %q' "${REPLAY_ARGS[@]}" --name "$SANDBOX_NAME" --workspace "$WORKSPACE"
