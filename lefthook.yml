@@ -118,10 +118,10 @@ pre-push:
             run: mise run lint:md
             glob: "**/*.md"
             fail_text: "❌ [pre-push] markdown lint failed. Run: mise run fix:md"
-          - name: lint:actionlint
-            run: mise run lint:actionlint
+          - name: lint:jactionlint
+            run: mise run lint:jactionlint
             glob: ".github/workflows/**/*.{yaml,yml}"
-            fail_text: "❌ [pre-push] actionlint failed."
+            fail_text: "❌ [pre-push] jactionlint failed."
           - name: lint:ghalint
             run: mise run lint:ghalint
             glob: ".github/workflows/**/*.{yaml,yml}"
