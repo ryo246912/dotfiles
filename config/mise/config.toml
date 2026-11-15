@@ -192,6 +192,19 @@ cd "$root" || exit 0
 lefthook install
 """
 
+# メニューバーの余白を、このMacのグローバル設定（defaults -currentHost）へ適用する。
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host   = "current"
+key    = "NSStatusItemSelectionPadding"
+value  = 6
+
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host   = "current"
+key    = "NSStatusItemSpacing"
+value  = 10
+
 # track mode は project config ではなく global config からのみ有効になる実機仕様のため、
 # ここ（deploy先: ~/.config/mise/config.toml）で宣言する。
 # ~/.config 自体の track は ~/.config 全体（repo 管理外のアプリの状態・キャッシュ等も含む）を
