@@ -101,7 +101,7 @@ import html
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -536,7 +536,8 @@ def steps_list(value: str | list[str], tag: str) -> str:
 def status_badge(status: str) -> str:
     """判定は文言と色の両方で区別する。classへ任意の入力を入れない。"""
     colors = {"PASS": "pass", "FAIL": "fail", "BLOCKED": "blocked", "NOT RUN": "not-run"}
-    return f'<span class="test-status test-status-{colors.get(status, "not-run")}">{esc(status)}</span>'
+    meanings = {"PASS": "期待動作を確認", "FAIL": "実行して期待動作との不一致を確認", "BLOCKED": "環境や条件の不足により検証できない", "NOT RUN": "未実行"}
+    return f'<span class="test-status test-status-{colors.get(status, "not-run")}" title="{esc(meanings.get(status, status))}">{esc(status)}</span>'
 
 
 def manual_test_section(brief: dict, workdir: Path) -> str:
@@ -580,9 +581,11 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
                 rows.append(f"<dt>未確認・続行条件</dt><dd>{steps_list(step['pending'], 'ul')}</dd>")
             caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
             figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
-            if not figure:
-                note = step.get("image_note") or "画像なし（未実行、または証拠画像を取得できなかった）"
-                figure = f'<p class="evidence">{inline(note)}</p>'
+            note = step.get("image_note")
+            if note:
+                figure += f'<p class="evidence">{inline(note)}</p>'
+            elif not figure:
+                figure = '<p class="evidence">画像なし（未実行、または証拠画像を取得できなかった）</p>'
             steps.append(
                 f'<li id="{esc(step.get("id", ""))}"><h4>{inline(step.get("title", ""))}</h4>'
                 f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
@@ -614,6 +617,7 @@ def check_manual_test(brief: dict) -> list[str]:
     test = brief.get("manual_test") or {}
     errors = []
     ids = set()
+    has_executed_step = False
     statuses = {"PASS", "FAIL", "BLOCKED", "NOT RUN"}
     for kind in ("preparation", "steps"):
         for i, step in enumerate(test.get(kind, [])):
@@ -631,17 +635,25 @@ def check_manual_test(brief: dict) -> list[str]:
                 errors.append(f"{name}: pendingは未確認事項の文字列配列にする")
             if status == "PASS" and pending:
                 errors.append(f"{name}: 未確認事項が残る場合はPASSにしない")
+            if status in {"PASS", "FAIL"}:
+                has_executed_step = True
             if status in {"PASS", "FAIL"} and not step.get("actual"):
                 errors.append(f"{name}: 実行済みの判定にはactualが必要")
     execution = test.get("execution") or {}
-    if execution:
-        if execution.get("status") not in statuses:
-            errors.append("manual_test.execution.statusが不正")
-        if execution.get("status") in {"PASS", "FAIL"}:
-            if not execution.get("head_sha"):
-                errors.append("実行済みの結果には確認したhead_shaが必要")
-            elif brief.get("head_sha") and execution["head_sha"] != brief["head_sha"]:
-                errors.append("動作確認のSHAがbriefのSHAと異なる。現行版のPASS/FAILとして統合しない")
+    if "execution" in test and not isinstance(test["execution"], dict):
+        errors.append("manual_test.executionはオブジェクトにする")
+        execution = {}
+    if has_executed_step and not execution:
+        errors.append("実行済みステップにはexecutionと確認したhead_shaが必要")
+    if "execution" in test and execution.get("status") not in statuses:
+        errors.append("manual_test.execution.statusが不正")
+    if has_executed_step or execution.get("status") in {"PASS", "FAIL"}:
+        if not execution.get("head_sha"):
+            errors.append("実行済みの結果には確認したhead_shaが必要")
+        elif brief.get("head_sha") and execution["head_sha"] != brief["head_sha"]:
+            errors.append("動作確認のSHAがbriefのSHAと異なる。現行版のPASS/FAILとして統合しない")
+    if "execution" in test and not isinstance(test.get("lesson_capture"), dict):
+        errors.append("実行結果には終了前確認のlesson_captureが必要")
     lesson = test.get("lesson_capture")
     if lesson is not None:
         if not isinstance(lesson, dict):
@@ -650,9 +662,15 @@ def check_manual_test(brief: dict) -> list[str]:
             if lesson.get("status") not in {"SAVED", "NO_CHANGE", "FAILED", "NOT_RUN"}:
                 errors.append("manual_test.lesson_capture.statusが不正")
             files = lesson.get("files", [])
-            valid_files = isinstance(files, list) and all(isinstance(path, str) and path.strip() for path in files)
+            valid_files = isinstance(files, list) and all(
+                isinstance(path, str) and path.strip() and "\\" not in path
+                and not PurePosixPath(path).is_absolute() and ".." not in PurePosixPath(path).parts
+                and len(PurePosixPath(path).parts) >= 4 and PurePosixPath(path).parts[0] == "lessons"
+                and PurePosixPath(path).suffix == ".md"
+                for path in files
+            )
             if not valid_files:
-                errors.append("lesson_capture.filesは知見ファイルパスの文字列配列にする")
+                errors.append("lesson_capture.filesはlessons/以下の相対Markdownパスの配列にする（絶対パス・親参照は不可）")
             if lesson.get("status") == "SAVED" and (not valid_files or not files):
                 errors.append("知見保存済みの場合は確認したファイルパスが必要")
             if not isinstance(lesson.get("note"), str) or not lesson["note"].strip():

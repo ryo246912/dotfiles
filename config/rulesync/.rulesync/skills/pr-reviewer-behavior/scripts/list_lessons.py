@@ -11,16 +11,25 @@ import re
 from pathlib import Path
 
 
+class UnsupportedSchemaVersion(ValueError):
+    """新しい形式の知見を読み飛ばした一覧は返さない。"""
+
+
 def metadata(path: Path) -> dict:
     result = {}
-    size = 0
-    with path.open(encoding="utf-8") as stream:
-        if stream.readline().strip() != "---":
+    with path.open("rb") as stream:
+        opening = stream.readline(6)
+        if opening.strip() != b"---":
             raise ValueError("frontmatterの開始がない")
-        for index, line in enumerate(stream):
-            size += len(line.encode("utf-8"))
-            if index >= 128 or size > 32768:
+        size = len(opening)
+        for _ in range(128):
+            raw = stream.readline(32768 - size + 1)
+            if not raw:
+                break
+            size += len(raw)
+            if size > 32768:
                 raise ValueError("frontmatterが長すぎる")
+            line = raw.decode("utf-8")
             if line.strip() == "---":
                 return result
             if not line.strip() or line.lstrip().startswith("#"):
@@ -32,7 +41,25 @@ def metadata(path: Path) -> dict:
                 result[key] = json.loads(value)
             except ValueError:
                 raise ValueError("frontmatterの値は引用符付き文字列・数値・1行配列で記述する") from None
-    raise ValueError("frontmatterの終端がない")
+    raise ValueError("frontmatterの終端がない、または行数が多すぎる")
+
+
+def repository_directories(root: Path, components: list[str]) -> list[Path]:
+    """旧表記のディレクトリも検索し、repo境界をsymlinkで越えない。"""
+    directories = [root] if root.exists() else []
+    for component in components:
+        matches = []
+        for parent in directories:
+            for candidate in parent.iterdir():
+                if candidate.name.casefold() != component.casefold():
+                    continue
+                if candidate.is_symlink():
+                    raise ValueError("owner/repoの知見ディレクトリにsymlinkは使えない")
+                if not candidate.is_dir() or not candidate.resolve().is_relative_to(root):
+                    raise ValueError("owner/repoの知見ディレクトリが不正")
+                matches.append(candidate)
+        directories = sorted(matches)
+    return directories
 
 
 def lesson_index(config: Path, repository: str, environment: str | None = None, query: str = "") -> dict:
@@ -45,16 +72,18 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
     root = (parent / "lessons").resolve()
     if not root.is_relative_to(parent):
         raise ValueError("lessonsの実体が設定ディレクトリの外にある")
-    directory = root.joinpath(*components)
-    if not directory.resolve().is_relative_to(root):
-        raise ValueError("repoの知見ディレクトリがlessonsの外にある")
+    directories = repository_directories(root, components)
     rows, warnings = [], []
-    paths = sorted(path for path in directory.iterdir() if path.suffix == ".md") if directory.exists() else []
-    for path in paths:
+    paths = sorted((path, directory) for directory in directories
+                   for path in directory.iterdir() if path.suffix == ".md")
+    for path, directory in paths:
         try:
-            if not path.resolve().is_relative_to(root):
-                raise ValueError("知見ファイルの実体がlessonsの外にある")
+            if not path.resolve().is_relative_to(directory):
+                raise ValueError("知見ファイルの実体が対象repoの外にある")
             item = metadata(path)
+            version = item.get("schema_version")
+            if type(version) is int and version > 1:
+                raise UnsupportedSchemaVersion(f"{path}: schema_version={version}は未対応。一覧取得を停止する")
             for key in ("title", "summary", "repository", "environment", "status", "created_at", "updated_at"):
                 if not isinstance(item.get(key), str) or not item[key].strip():
                     raise ValueError(f"frontmatterの{key}は空でない文字列にする")
@@ -77,6 +106,8 @@ def lesson_index(config: Path, repository: str, environment: str | None = None, 
             rows.append({"path": str(path), **{key: item[key] for key in (
                 "title", "summary", "environment", "tags", "updated_at"
             )}})
+        except UnsupportedSchemaVersion:
+            raise
         except (ValueError, OSError, UnicodeError) as error:
             warnings.append({"path": str(path), "reason": str(error)})
     return {"lessons": rows, "warnings": warnings}
