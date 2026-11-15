@@ -25,18 +25,18 @@ microVM の中で動かすための Docker 製ツールです。CLI は `sbx`。
 
 sandbox 関連の mise タスクです（定義は `tasks/sandbox.toml`）。
 
-| タスク                   | 用途                                                                                                                                              | 使うタイミング                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                              | 初回だけ                                   |
-| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み） | 初回・ツール構成を変えたとき               |
-| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                     | 初回・yml を変えたとき                     |
-| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                   | 必要になったとき                           |
-| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                              | 要らなくなったとき                         |
-| `sandbox:recreate`       | sandbox を fzf で複数選択し、作成時と同じ `sbx-agent` の引数で作り直す（`--new --no-attach`。引数で名前を指定することもできる）                   | マウント・template・ホスト設定を変えたとき |
-| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                          | 随時                                       |
-| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                       | 随時                                       |
-| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                    | 容量が気になったとき                       |
-| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                   | 容量が足りないとき                         |
+| タスク                   | 用途                                                                                                                                                                                    | 使うタイミング                             |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `sandbox:setup`          | ホスト側の初期設定（network policy / secret / skills の import / 通知用 SSH 鍵など）                                                                                                    | 初回だけ                                   |
+| `sandbox:build-template` | devcontainer と同じツールチェイン入りの template を、fzf で選んだ agent ごとにビルドして sbx へ読み込む（`sbx-agent:<agent>`。claude を選択済み）                                       | 初回・ツール構成を変えたとき               |
+| `sandbox:mcp-add`        | `config/sbx/mcp*.yml` の MCP をホストの gateway へ登録する（`sbx mcp add`。定義の変更も反映）                                                                                           | 初回・yml を変えたとき                     |
+| `sandbox:mcp-load`       | 登録済み MCP を fzf で複数選択し、起動中の sandbox へ読み込む（`sbx mcp load`）                                                                                                         | 必要になったとき                           |
+| `sandbox:mcp-unload`     | 読み込んだ MCP を fzf で複数選択し、sandbox から外す（`sbx mcp unload`。登録は残る）                                                                                                    | 要らなくなったとき                         |
+| `sandbox:recreate`       | sandbox を fzf で複数選択し、作成時と同じ `sbx-agent` の引数で作り直す（`--new --no-attach`。workspace 外のデータは消えるため実行前に確認する。`--yes` で省略、引数で名前も指定できる） | マウント・template・ホスト設定を変えたとき |
+| `sandbox:template-ls`    | 保存済み template の一覧                                                                                                                                                                | 随時                                       |
+| `sandbox:template-rm`    | template を fzf で複数選択して削除する（引数で tag を指定することもできる）                                                                                                             | 随時                                       |
+| `sandbox:disk`           | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                                                          | 容量が気になったとき                       |
+| `sandbox:prune`          | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                                                         | 容量が足りないとき                         |
 
 ## devcontainer に対する利点
 
@@ -432,7 +432,8 @@ sbx-agent --help
    マウントは作成時に固定されるため、ここに追加したもの（例: mergiraf 用の `git/attributes`）を
    既存の sandbox に反映するには `sbx-agent --new`（`multi-worktree dev ... --new`）で作り直す。
    作成時の呼び出しは `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh` に記録され、
-   `mise run sandbox:recreate` で選んだ sandbox をまとめて同じ指定で作り直せる
+   `mise run sandbox:recreate` で選んだ sandbox をまとめて同じ指定で作り直せる。記録を始める前に作った
+   sandbox は記録が無いため、元のコマンドに `--new` を付けて一度だけ作り直す必要がある
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
 4. `--env` で devcontainer の `remoteEnv` 相当（`AI_AGENT` / `TERM` / `HOST_USER` /
