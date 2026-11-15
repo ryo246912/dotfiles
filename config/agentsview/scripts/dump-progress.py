@@ -26,7 +26,6 @@ CHUNK_BYTES = 1 << 20
 
 def interval() -> float:
     """進捗を出す間隔を環境変数から読む。"""
-
     raw = os.environ.get(INTERVAL_ENV, "15")
     limit = threading.TIMEOUT_MAX
     bad = (
@@ -56,14 +55,12 @@ class Counter:
 
     def __init__(self) -> None:
         """まだ何も書いていない状態を作る。"""
-
         self.lines = 0
         self.written = 0
         self.started = time.monotonic()
 
     def report(self, note: str = "") -> None:
         """今の値を1行でstderrへ出す。"""
-
         elapsed = time.monotonic() - self.started
         print(
             f"  {elapsed:.0f}s: {self.lines} lines, {self.written / 1048576:.1f} MiB{note}",
@@ -74,14 +71,12 @@ class Counter:
 
 def ticker(counter: Counter, every: float, done: threading.Event) -> None:
     """終わるまで、一定時間ごとに進捗を出す。"""
-
     while not done.wait(every):
         counter.report()
 
 
 def main() -> int:
     """標準入力をfileへ写しながら、進捗を報告する。"""
-
     if len(sys.argv) != 2:
         print("usage: dump-progress <file>", file=sys.stderr)
         return 2

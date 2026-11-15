@@ -180,7 +180,7 @@ plugin package から merge する ponytail の hooks 等）は generate 後も�
 ## skill のコンテキストへの載せ方
 
 自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
-（[`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理)）。
+（[`docs/ai-skill.md` の「skill のコンテキスト管理」](ai-skill.md#skill-のコンテキスト管理)）。
 
 ## 生成コマンド
 
