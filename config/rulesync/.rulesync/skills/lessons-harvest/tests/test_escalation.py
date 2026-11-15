@@ -1,4 +1,4 @@
-"""escalation の scope_key 別ファイルへの追加・移動の回帰テスト。"""
+"""escalation の scope_key 別ファイルへの追加・移動の回帰テスト。`mise run test:lessons` から実行する。"""
 
 import sys
 import tempfile
@@ -57,7 +57,7 @@ class EscalationTest(unittest.TestCase):
 
         def flaky(path, items):
             calls.append(path)
-            if len(calls) == 2:
+            if len(calls) == 3:
                 raise OSError("disk")
             real(path, items)
 
@@ -71,7 +71,7 @@ class EscalationTest(unittest.TestCase):
         paths = [
             i["path"] for s in ("github.com/acme/x", "github.com/acme/y") for i in self.todo(s)
         ]
-        self.assertTrue(paths)
+        self.assertEqual(paths, [X, Y])
         E.relink({X: Y}, {})
         self.assertEqual([i["path"] for i in self.todo("github.com/acme/y")], [Y])
 
