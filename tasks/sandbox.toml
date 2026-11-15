@@ -514,15 +514,18 @@ main() {
   # 作り直すと workspace（ホストと共有するディレクトリ）以外の sandbox 内のデータ（$HOME の中身や
   # 後から入れたパッケージなど）は消えるため、実行前に確認する（--yes で省略）。
   assume_yes=false
-  case "${1:-}" in
-    -y | --yes) assume_yes=true; shift ;;
-  esac
+  names=""
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) assume_yes=true ;;
+      -*) echo "error: 不明なオプション: $arg（usage: mise run sandbox:recreate [--yes] [sandbox-name...]）" >&2; exit 2 ;;
+      *) names="${names}${names:+ }$arg" ;;
+    esac
+  done
   command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
   state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent"
 
-  if [ $# -gt 0 ]; then
-    names="$*"
-  else
+  if [ -z "$names" ]; then
     command -v fzf >/dev/null 2>&1 \
       || { echo "usage: mise run sandbox:recreate <sandbox-name>...（fzf があれば省略可）" >&2; exit 2; }
     sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
