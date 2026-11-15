@@ -15,7 +15,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 - プロジェクト単位の設定が生成するのは、あなたが今読んでいる **`CLAUDE.md` と `AGENTS.md`**です。
   ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` / `AGENTS.md` に反映されます。
-  `CLAUDE.md` を直接編集しても次の `generate` で上書きされるので注意してください。
+  `CLAUDE.md` / `AGENTS.md` を直接編集しても次の `generate` で上書きされるので注意してください。
 - グローバル設定は chezmoi で `~/.config/rulesync/` 配下に配布されます。
   - `config/rulesync/rulesync.jsonc` → `~/.config/rulesync/rulesync.jsonc`
   - `config/rulesync/.rulesync/` → `~/.config/rulesync/.rulesync/`
