@@ -57,9 +57,22 @@ python3 <skill>/scripts/list_lessons.py --config <今回のconfig.md> --repo <ow
 ```
 
 出力はパス・タイトル・要約・環境・タグ・更新日だけ。本文・認証設定は出力しない。
-`path`は今回選択したconfig.mdの実体ディレクトリを基準にした相対POSIXパス。例: `lessons/example-org/example-app/preview-login.md`。本文を開くときは `Path(config).resolve().parent / path` として解決し、保存先検査も行う。作業ディレクトリやbrief.jsonの場所を基準にしない。
+`path`は今回選択したconfig.mdの実体ディレクトリを基準にした相対POSIXパス。例: `lessons/example-org/example-app/preview-login.md`。本文を開く前に、下記の「最終パスの実体検査」を絶対パス・相対パスの両方へ適用する。作業ディレクトリやbrief.jsonの場所を基準にしない。
 `--query <検索語>`でタイトル・要約・タグを絞れる。該当候補だけファイルを開いて本文を読む。
 壊れたfrontmatterはwarningsに出るため、そのファイルだけ形式を直す。読み取れない知見を「存在しない」とみなさない。新しいschema_versionは警告に落とさず一覧取得を停止する。未対応の知見を飛ばした一覧で重複判断や保存をせず、対応するツール版で再確認する。
+
+## 最終パスの実体検査（本文の読み取り・保存確認に共通）
+
+設定ファイルだけをresolveしても、lessons配下のsymlinkは検査できない。本文を開く前に、最終ファイル全体の実体を検査する。
+
+1. 今回の設定実体の親を `base = Path(config).resolve(strict=True).parent` とする。
+2. `root = (base / "lessons").resolve(strict=True)` を求め、設定と同じ保存先検査で許可範囲を確認する。
+3. 信頼できる対象owner/repoから、一覧取得と同じ大小文字を区別しない方法で対象repoの実体ディレクトリを確定する。owner/repoディレクトリのsymlinkは拒否する。候補ファイルの親から許可範囲を逆算しない。
+4. 相対参照は `candidate = base / reference`、絶対参照はそのままcandidateとし、**候補全体**を `resolved = candidate.resolve(strict=True)` で解決する。
+5. `resolved.is_relative_to(expected_repo.resolve(strict=True))` で、対象repoの実体配下か確認する。同じlessons内でも別repoなら拒否する。未存在、解決エラー、範囲外、ファイルでない場合は本文を読まず、保存確認を失敗として記録する。
+6. 検査を通ったresolvedだけを読み直しに使う。HTMLのfilesへは `lessons/` と `resolved.relative_to(root)` を結合した相対POSIXパスを渡す。絶対参照もこの同じ検査を通してから相対化する。
+
+一覧で安全と確認できたパスも、引き継ぎ後の読み直し直前に同じ検査を行う。
 
 ## 既存config.mdからの移行
 

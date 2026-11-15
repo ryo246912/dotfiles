@@ -89,8 +89,10 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <段階2で作っ
 - 保存を試して失敗した場合は`FAILED`と、試行内容・観測したエラー・続行条件を記録したか。書き込み可能な設定先を確保できず未試行なら`NOT_RUN`と未試行の理由を記録する。「未実施」と「書き込み失敗」を区別し、勝手に別の保存先へ散らさない。
 
 `manual_test.lesson_capture`に`status`、`files`、`note`を残し、HTMLを再生成する。
-`files`の基準は今回behaviorが選択したconfig.mdの実体ディレクトリで、知見一覧の`path`と同じ `lessons/owner/repo/要点.md` 形式にする。メインの保存確認は `Path(config).resolve().parent / file` で解決して行い、workやbrief.jsonの場所を基準にしない。
-behaviorの引き継ぎが絶対パスの場合は、その実体が今回の設定に隣接するlessonsと対象repoの範囲内か確認し、lessonsの実体からの相対部分に `lessons/` を付けて正規化する。範囲外のパスは転記せずエラーとして扱う。絶対パスをそのままfilesに渡したり、検査を緩めたりしない。
+`files`の基準は今回behaviorが選択したconfig.mdの実体ディレクトリで、知見一覧の`path`と同じ `lessons/owner/repo/要点.md` 形式にする。workやbrief.jsonの場所を基準にしない。
+メインはbehaviorの `references/lesson-format.md` の「最終パスの実体検査」を、絶対パス・相対パスの両方へ適用する。相対参照なら `(Path(config).resolve(strict=True).parent / file).resolve(strict=True)` とし、設定ファイルだけでなく最終ファイル全体を解決する。絶対参照も `Path(file).resolve(strict=True)` を使う。
+対象repoの許可ディレクトリは今回のowner/repoから独立に確定し、owner/repoディレクトリのsymlinkは拒否する。最終実体がその対象repoの実体配下であることを `is_relative_to` で検査してから、その実体パスを読み直す。同じlessons内の別repoや、worktree外へ出るsymlinkも読み取らない。
+未存在・解決エラー・範囲外・ファイルでない場合は保存確認を失敗として扱い、本文を読まず、SAVEDと記録しない。検査を通った実体だけ、lessonsの実体からの相対部分に `lessons/` を付けてfilesへ転記する。絶対パスをそのままfilesへ渡したり、相対参照だけ検査を省略したりしない。
 
 ```json
 {
