@@ -119,9 +119,31 @@ initial_key_repeat = 15
 "NSGlobalDomain" = { "com.apple.swipescrolldirection" = false }
 ```
 
+`defaults -currentHost` 相当のホスト固有設定は、
+`[[bootstrap.macos.defaults_entries]]` に `host = "current"` を指定する。
+メニューバーの余白は `config/mise/config.toml`（配置先:
+`~/.config/mise/config.toml`）で次のように管理している。
+
+```toml
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSelectionPadding"
+value = 6
+
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSpacing"
+value = 10
+```
+
+これらも `mise bootstrap macos defaults apply` で適用する。
+`bootstrap:mac-defaults` タスクはログイン項目を設定し、メニューバーの余白は変更しない。
+反映されない場合はログアウトして再ログインする。
+
 **制約**（このリポジトリで実際に踏んだもの）:
 
-- `defaults -currentHost` 相当（ホスト固有の設定。メニューバーのアイコン間隔など）は非対応。
 - 値は bool/int/float/string のみ。array/dict（キーボードショートカットの割り当てなど）は非対応。
 - macOS の「ログイン項目」に相当する設定はない。`[bootstrap.macos.launchd.agents]` は
   実行ファイル起動用の LaunchAgent 定義で、`.app` バンドルを「ログイン項目」として登録する
