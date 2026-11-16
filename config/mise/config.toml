@@ -174,9 +174,10 @@ experimental               = true
 gpg_verify                 = true
 lockfile                   = true
 minimum_release_age        = "7d"
-# pipx:desloppify は extras 付きのため、minimum_release_age の基準時刻（exclude-newer）が lock 解決の
-# 入力に入り、時刻が変わるたびに別の install（1.0~uv~<hash>）として扱われ、apply のたびに
-# uv sync --dry-run の解決が走る。exact 固定済みなので、遅延対象から外して再解決を止める。
+# pipx:desloppify は extras 付きのため、minimum_release_age の基準時刻が uv の lock 解決の入力に入り、
+# apply のたびに uv sync --dry-run の解決が出力される可能性がある（原因は未検証）。
+# 除外すると extras の依存（Pillow など範囲指定のもの）も 7 日の cutoff を外れるため、
+# 出力を止められると確認できなければこの除外は外すこと。
 minimum_release_age_excludes = ["pipx:desloppify"]
 not_found_system_fallback = false
 trusted_config_paths = [
