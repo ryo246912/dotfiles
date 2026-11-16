@@ -82,7 +82,7 @@ secrets:
     command: gh auth token
 ```
 
-コミット署名も同じ発想で、**SSH agent forwarding が既定で有効**です。devcontainer では
+コミット署名も同じ発想で、**SSH agent forwarding** を使います（v3 kit では利用宣言が必要です）。devcontainer では
 専用の署名鍵を生成してコンテナに mount していましたが、sandbox ではホストの ssh-agent に
 署名を依頼するだけなので**秘密鍵がゲストに渡りません**。
 
@@ -1120,7 +1120,22 @@ devcontainer は SSH で GitHub に出られるため `pushInsteadOf` の打ち�
 | `url.https://github.com/.pushInsteadOf` | ホスト設定の push を SSH に寄せる `pushInsteadOf` を打ち消す |
 | `gc.worktreePruneExpire`                | 見えていない worktree を git gc が消さないようにする         |
 
-コミット署名は **SSH agent forwarding**（sbx の既定で有効）を使います。
+コミット署名は **SSH agent forwarding** を使います。
+v3 kit ではホストの `ssh.agentForwardingEnabled=true` に加え、kit に次の利用宣言が必要です。
+共通 kit（`config/sbx/kits/common/common.yaml`）で宣言しています。
+
+```yaml
+capabilities:
+  - type: com.docker.sandbox/ssh-agent@1
+    config:
+      phase: runtime
+```
+
+宣言がないと、ホストに鍵があっても sandbox の `SSH_AUTH_SOCK` と転送ソケットが作られません。
+これは [Docker sbx issue #835](https://github.com/docker/sbx-releases/issues/835) でも報告されています。
+この修正を反映するには、作業と sandbox 内だけにあるデータを保存してから、修正版の kit で
+sandbox を再作成してください。daemon の再起動だけでは kit の宣言は追加されません。
+
 ホストのパスは sandbox 内に存在しないため、鍵ファイルではなく forwarded agent の公開鍵を
 `key::<pubkey>` 形式で `user.signingkey` に設定します。
 

@@ -713,7 +713,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # それらを「消えた worktree」とみなしてホスト側の worktree を壊すのを防ぐ
     add_git_config gc.worktreePruneExpire never
 
-    # コミット署名: sbx は SSH agent forwarding が既定で有効なので、ホストの秘密鍵を
+    # コミット署名: 共通 v3 kit が SSH agent forwarding を runtime 用に要求し、ホストの秘密鍵を
     # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
     # なく forwarded agent の公開鍵（key:: 形式）を指定する。
     #
