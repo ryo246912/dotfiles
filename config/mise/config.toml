@@ -164,16 +164,16 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 
 [settings]
 # 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
-aqua.registries = ["https://github.com/aquaproj/aqua-registry"]
-auto_install = false
-auto_update = true
+aqua.registries            = ["https://github.com/aquaproj/aqua-registry"]
+auto_install               = false
+auto_update                = true
 auto_update_check_duration = "7d"
-disable_default_registry = true
-disable_update_warning = true
-experimental = true
-gpg_verify = true
-lockfile = true
-minimum_release_age = "7d"
+disable_default_registry   = true
+disable_update_warning     = true
+experimental               = true
+gpg_verify                 = true
+lockfile                   = true
+minimum_release_age        = "7d"
 # pipx:desloppify は extras 付きのため、minimum_release_age の基準時刻（exclude-newer）が lock 解決の
 # 入力に入り、時刻が変わるたびに別の install（1.0~uv~<hash>）として扱われ、apply のたびに
 # uv sync --dry-run の解決が走る。exact 固定済みなので、遅延対象から外して再解決を止める。
