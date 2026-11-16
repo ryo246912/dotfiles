@@ -96,7 +96,7 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
 # 入り先は ~/.local/share/gh/extensions で、read-only mount される ~/.config/gh とは別なので
 # 実行時もそのまま見える。GH_CONFIG_DIR は使い捨てにして image に設定を残さない。
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=v0.2.0
+ARG GH_STACK_VERSION=v0.3.0
 RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
     set -eu; \
     gh_config="$(mktemp -d)"; \
