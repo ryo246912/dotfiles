@@ -1,6 +1,6 @@
 """作業ディレクトリの brief.json・hunks.json・groups.json・スクリーンショットから、資料の HTML を 1 ファイルで作る。
 
-    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out ./plan/pr-123.html
+    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out './plan/pr-123_土地一覧の検索条件を追加.html'
 
 モデルは中身（brief.json）だけを書き、HTML・CSS・図の座標・差分の表はすべてここで作る。
 文章の中では `コード`・**強調**・[文字](URL) が使える。書くことが無い項目は省くか空にする（その章は出ない）。
@@ -16,7 +16,7 @@ brief.json の書式:
                "base": "main", "head": "feature", "files": 3,  # files は pr-<N>.json の changedFiles（件数）
                "additions": 10, "deletions": 2,
                "summary": "stack のとき: この PR が受け持つ範囲を 1〜2 行", "current": true}],
-      "stack": {"number": 7, "trunk": "main"},           # stack でなければ null か省く
+      "stack": {"number": 7, "trunk": "main", "url": "https://..."},           # stack でなければ null か省く
       "mode": "pr",                                      # "ticket" なら TL;DR・スタック構成・前提知識・変更内容だけを出す
       "ticket": {...},                                   # 省けば <workdir>/ticket.json を使う（書式は下）
       "related_prs": [{"number": 123, "title": "...", "url": "...", "state": "open", "summary": "..."}],  # チケットモード用
@@ -42,6 +42,8 @@ brief.json の書式:
                      "evidence": [{"path": "app/x.ts", "lines": "10-20"}]}],
         "glossary": [{"term": "用語", "meaning": "意味", "page": "list", "where": "画面のどこに出るか", "code": "コード上の名前"}],
         "data_model": {"note": "補足",
+                       "trace": [{"entry": "画面の呼び出し元 path:line", "steps": ["router.py:10", "model.py:20"], "result": "参照するテーブル"}],
+                       "evidence": [{"path": "schema.sql", "lines": "10-20", "side": "base"}],
                        "tables": "erDiagram ...",           # 今回の変更に関わるテーブルの構造（カラム・PK/FK・リレーション）
                        "mapping": [{"page": "list", "ui": "画面の項目", "column": "approaches.status"}],
                        "before": "erDiagram ...", "after": "erDiagram ..."}  # スキーマが変わるときだけ
@@ -52,13 +54,23 @@ brief.json の書式:
       },
       "interfaces": [{"kind": "DB / API / 設定 / flag", "target": "対象", "change": "変更", "compat": "互換性・移行"}],
       "manual_test": {
-        "environment": "どこで確かめるか（起動コマンドなど）",
+        "environment": "ユーザーが用意した起動済みのlocal／preview",
+        "execution": {"status": "BLOCKED", "head_sha": "確認したSHA", "url": "http://localhost:3000",
+                      "account": "テスト管理者 / admin", "run_at": "実行日時", "note": "全体の状況"},
+        "preparation": [{"id": "prep-1", "title": "確認データを作る", "actions": ["データ作成操作"],
+                         "expected": ["目的の状態になる"], "status": "PASS", "actual": "実際に確認した結果"}],
+        "data": [{"purpose": "表示確認", "record": "id=1 / テスト項目", "state": "下書き",
+                  "url": "http://localhost:3000/items/1", "source": "作成"}],
+        "cleanup": ["手動確認用にデータを保持。削除方法: ..."],
+        "lesson_capture": {"status": "SAVED", "files": ["lessons/owner/repo/preview-login.md"], "note": "保存後に内容を確認"},
         "preconditions": ["feature flag・権限・アカウントなど"],
-        "seed": {"note": "何のデータを入れるか", "run": "流し方（コマンド）", "language": "sql",
-                 "script": "INSERT INTO ...", "cleanup": "後片付けのスクリプト（任意）"},
+        "seed": {"note": "何のデータを入れるか", "run": "SQL クライアントで対象 DB に接続し、下の SQL を貼り付けて直接実行する手順", "language": "sql",
+                 "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
         "steps": [{"id": "step-1", "title": "何を確かめるか", "url": "http://localhost:3000/x",
                    "actions": ["「新規作成」ボタンを押す", "「名前」に test と入力して「保存」を押す"],
-                   "expected": ["一覧の先頭に test が出る"], "caution": "破壊的な操作の注意（任意）"}]
+                   "expected": ["一覧の先頭に test が出る"], "status": "NOT RUN", "actual": "",
+                   "pending": ["未確認の条件と、確認に必要な次の操作"],
+                   "image_note": "未実行のため未撮影", "caution": "破壊的な操作の注意（任意）"}]
       },
       "focus": [{"path": "app/x.ts", "lines": "10", "why": "なぜ見るべきか"}],
       "unknowns": ["調べきれなかったこと・置いた仮定"]
@@ -89,15 +101,17 @@ import html
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from render_groups import render as render_groups  # noqa: E402
-from render_groups import size_bar  # noqa: E402
-from render_groups import validate as validate_groups  # noqa: E402
-from render_pictures import render_picture  # noqa: E402
+from render_groups import render as render_groups
+from render_groups import render_hunk
+from render_groups import validate as validate_groups
+from render_pictures import render_picture
+
+SCHEMA_VERSION = "1.3"
 
 PAGE = Path(__file__).resolve().parent.parent / "assets" / "page.html"
 esc = html.escape
@@ -131,7 +145,7 @@ def blob_link(brief: dict, path: str, lines: str | None, side: str) -> str:
 
 
 def safe_url(url: str | None) -> str | None:
-    """href に入れてよい URL（http / https）だけを返す。それ以外（javascript: など）は None。"""
+    """Href に入れてよい URL（http / https）だけを返す。それ以外（javascript: など）は None。"""
     return url if url and re.match(r"^https?://", url) else None
 
 
@@ -139,6 +153,15 @@ def link(url: str | None, label: str) -> str:
     """http(s) の URL ならリンクに、それ以外ならリンクにせず文字だけを出す。"""
     safe = safe_url(url)
     return f'<a href="{esc(safe)}">{label}</a>' if safe else label
+
+
+def pr_url(brief: dict, pr: dict) -> str | None:
+    """取得した URL を優先し、省略時はリポジトリと PR 番号から補う。"""
+    if pr.get("url"):
+        return safe_url(pr["url"])
+    if brief.get("repo") and pr.get("number"):
+        return f"https://github.com/{brief['repo']}/pull/{pr['number']}"
+    return None
 
 
 def table(headers: list[str], rows: list[list[str]]) -> str:
@@ -160,16 +183,37 @@ def header(brief: dict, has_groups: bool) -> str:
     meta = []
     ticket = brief.get("ticket")
     if ticket:
-        meta.append(f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>')
+        meta.append(
+            f'<span class="badge">{link(ticket.get("url"), esc(ticket.get("id", "チケット")))}</span>'
+        )
     if brief.get("stack"):
-        meta.append(f'<span class="badge">stack #{brief["stack"]["number"]} · {len(prs)} PR</span>')
+        meta.append(
+            f'<span class="badge"><a href="#stack">stack #{esc(str(brief["stack"]["number"]))} · {len(prs)} PR</a></span>'
+        )
+        meta.append(f"<span>{link(brief['stack'].get('url'), 'stack を GitHub で開く')}</span>")
     for pr in prs[:1] if not brief.get("stack") else []:
-        meta.append(f'<span>{link(pr.get("url"), esc(brief.get("repo", "")) + "#" + str(pr["number"]))}</span>')
+        meta.append(
+            f"<span>{link(pr_url(brief, pr), esc(brief.get('repo', '')) + '#' + str(pr['number']))}</span>"
+        )
         meta.append(f"<span>作成者 {esc(pr.get('author', ''))}</span>")
-        meta.append(f'<span><code>{esc(pr.get("base", ""))}</code> ← <code>{esc(pr.get("head", ""))}</code></span>')
+        meta.append(
+            f"<span><code>{esc(pr.get('base', ''))}</code> ← <code>{esc(pr.get('head', ''))}</code></span>"
+        )
     if brief.get("head_sha"):
-        meta.append(f'<span>head <code>{esc(brief["head_sha"][:7])}</code></span>')
+        commit_url = (
+            f"https://github.com/{brief['repo']}/commit/{brief['head_sha']}"
+            if brief.get("repo")
+            else None
+        )
+        sha_label = "<code>" + esc(brief["head_sha"][:7]) + "</code>"
+        head_link = (
+            f'<a href="#groups">{sha_label}</a>' if has_groups else link(commit_url, sha_label)
+        )
+        meta.append(f"<span>head {head_link}</span>")
+        if has_groups:
+            meta.append(f"<span>{link(commit_url, 'commit を GitHub で開く')}</span>")
     meta.append(f"<span>生成 {dt.datetime.now().strftime('%Y-%m-%d %H:%M')}</span>")
+    meta.append(f"<span>skills schema v{SCHEMA_VERSION}</span>")
     progress = (
         '<div class="meta"><span class="tag" id="diff-stats"></span><span class="progress">確認 '
         '<span id="progress-text">0/0</span><span class="progress-bar"><span id="progress-fill"></span></span></span></div>'
@@ -183,14 +227,18 @@ def stack_section(brief: dict) -> str:
     blocks = []
     for pr in brief.get("prs", []):
         state = pr.get("state", "open").lower()
-        cls = " ".join(c for c in ("current" if pr.get("current") else "", "merged" if state == "merged" else "") if c)
+        cls = " ".join(
+            c
+            for c in ("current" if pr.get("current") else "", "merged" if state == "merged" else "")
+            if c
+        )
         size = (
             f'<span class="tag">{pr.get("files", 0)} files</span><span class="added">+{pr.get("additions", 0)}</span>'
             f'<span class="removed">−{pr.get("deletions", 0)}</span>'
         )
         blocks.append(
-            f'<li class="{cls}"><div class="stack-head">{link(pr.get("url"), "#" + str(pr["number"]))}'
-            f'<strong>{esc(pr["title"])}</strong><span class="tag">{esc(state)}</span>{size}</div>'
+            f'<li class="{cls}"><div class="stack-head">{link(pr_url(brief, pr), "#" + str(pr["number"]))}'
+            f'<strong>{link(pr_url(brief, pr), esc(pr["title"]))}</strong><span class="tag">{esc(state)}</span>{size}</div>'
             f'<p class="stack-sum">{inline(pr.get("summary", ""))}</p></li>'
         )
     trunk = esc(brief["stack"].get("trunk", ""))
@@ -201,17 +249,29 @@ def ticket_block(ticket: dict, workdir: Path) -> str:
     title = esc(ticket.get("title") or "")
     label = f"{esc(ticket.get('id', ''))} {title}".strip()
     meta = " · ".join(esc(v) for v in (ticket.get("source"), ticket.get("status")) if v)
-    parts = [f'<h3>チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
-             + (f' <span class="tag">{meta}</span>' if meta else "") + "</p>"]
+    parts = [
+        f'<h3 id="background-ticket">チケットの内容</h3><p><strong>{link(ticket.get("url"), label)}</strong>'
+        + (f' <span class="tag">{meta}</span>' if meta else "")
+        + "</p>"
+    ]
     if not ticket.get("fetched", True):
-        parts.append('<p class="evidence">チケットの内容は取得できなかった（ID と URL だけを載せている）</p>')
+        parts.append(
+            '<p class="evidence">チケットの内容は取得できなかった（ID と URL だけを載せている）</p>'
+        )
     if ticket.get("summary"):
         parts.append(f"<p>{inline(ticket['summary'])}</p>")
     for key, heading in (("requirements", "やること"), ("acceptance", "受け入れ条件")):
         if ticket.get(key):
-            parts.append(f"<h4>{heading}</h4><ul>" + "".join(f"<li>{inline(i)}</li>" for i in ticket[key]) + "</ul>")
+            parts.append(
+                f"<h4>{heading}</h4><ul>"
+                + "".join(f"<li>{inline(i)}</li>" for i in ticket[key])
+                + "</ul>"
+            )
     if ticket.get("links"):
-        items = "".join(f"<li>{link(l.get('url'), esc(l.get('title') or l.get('url', '')))}</li>" for l in ticket["links"])
+        items = "".join(
+            f"<li>{link(l.get('url'), esc(l.get('title') or l.get('url', '')))}</li>"
+            for l in ticket["links"]
+        )
         parts.append(f"<h4>関連リンク</h4><ul>{items}</ul>")
     parts.append(ticket_body(ticket, workdir))
     return "".join(parts)
@@ -237,7 +297,11 @@ def evidence_links(brief: dict, evidence: list[dict]) -> str:
 
 def load_shots(workdir: Path) -> dict:
     manifest_path = workdir / "screenshots" / "manifest.json"
-    return {s["id"]: s for s in json.loads(manifest_path.read_text())} if manifest_path.exists() else {}
+    return (
+        {s["id"]: s for s in json.loads(manifest_path.read_text())}
+        if manifest_path.exists()
+        else {}
+    )
 
 
 def records_html(records: list | None) -> str:
@@ -245,9 +309,9 @@ def records_html(records: list | None) -> str:
     if not records:
         return ""
     items = "".join(
-        f'<li>{inline(r["ui"])} ← <code>{esc(r["table"])}</code>'
-        + (f' {inline(r["record"])}' if r.get("record") else "")
-        + (f' の <code>{esc(r["column"])}</code>' if r.get("column") else "")
+        f"<li>{inline(r['ui'])} ← <code>{esc(r['table'])}</code>"
+        + (f" {inline(r['record'])}" if r.get("record") else "")
+        + (f" の <code>{esc(r['column'])}</code>" if r.get("column") else "")
         + "</li>"
         for r in records
     )
@@ -255,14 +319,22 @@ def records_html(records: list | None) -> str:
 
 
 def shot_figure(workdir: Path, shot: dict | None, title: str, records: list | None = None) -> str:
-    if shot and shot.get("ok") and (workdir / "screenshots" / shot["path"]).exists():
-        uri = image_data_uri(workdir / "screenshots" / shot["path"])
+    base = (workdir / "screenshots").resolve()
+    path = (base / shot.get("path", "")).resolve() if shot else base
+    if (
+        shot
+        and shot.get("ok")
+        and path.is_relative_to(base)
+        and path.is_file()
+        and path.suffix.lower() in IMAGE_TYPES
+    ):
+        uri = image_data_uri(path)
         return (
             f'<figure><img src="{uri}" alt="{esc(title)}" loading="lazy" />'
-            f'<figcaption>{esc(title)}{records_html(records)}</figcaption></figure>'
+            f"<figcaption>{esc(title)}{records_html(records)}</figcaption></figure>"
         )
     if shot:
-        return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error", ""))}</p>'
+        return f'<p class="evidence">スクリーンショットを撮れなかった: {esc(shot.get("error") or "画像ファイルが無い、または保存先・形式が不正")}</p>'
     return ""
 
 
@@ -273,16 +345,28 @@ def pages_block(brief: dict, workdir: Path) -> str:
     for page in (brief.get("background") or {}).get("pages", []):
         name = page.get("name") or page["id"]
         url = page.get("url", "")
-        url_html = link(url, f"<code>{esc(url)}</code>") if safe_url(url) else (f"<code>{esc(url)}</code>" if url else "")
-        figure = shot_figure(workdir, shots.get(page.get("shot")), name, page.get("records")) if page.get("shot") else ""
+        url_html = (
+            link(url, f"<code>{esc(url)}</code>")
+            if safe_url(url)
+            else (f"<code>{esc(url)}</code>" if url else "")
+        )
+        figure = (
+            shot_figure(workdir, shots.get(page.get("shot")), name, page.get("records"))
+            if page.get("shot")
+            else ""
+        )
         if figure:
             figure = f'<details class="page-shot"><summary>画面を見る</summary>{figure}</details>'
         looks = f"<p>{inline(page['looks'])}</p>" if page.get("looks") else ""
         cards.append(
             f'<div class="page-card" id="page-{esc(page["id"])}"><div class="page-head"><strong>{esc(name)}</strong>{url_html}</div>'
-            f'{looks}{evidence_links(brief, page.get("evidence", []))}{figure}</div>'
+            f"{looks}{evidence_links(brief, page.get('evidence', []))}{figure}</div>"
         )
-    return f'<h3>関係する画面</h3><div class="page-cards">{"".join(cards)}</div>' if cards else ""
+    return (
+        f'<h3 id="background-pages">関係する画面</h3><div class="page-cards">{"".join(cards)}</div>'
+        if cards
+        else ""
+    )
 
 
 def background_section(brief: dict, workdir: Path) -> str:
@@ -290,7 +374,7 @@ def background_section(brief: dict, workdir: Path) -> str:
     parts = [ticket_block(brief["ticket"], workdir)] if brief.get("ticket") else []
     parts.append(pages_block(brief, workdir))
     if bg.get("current"):
-        parts.append("<h3>今の機能</h3>")
+        parts.append('<h3 id="background-current">今の機能</h3>')
         for item in bg["current"]:
             where = page_ref(brief, item.get("page"), item.get("where"))
             if where:
@@ -306,19 +390,48 @@ def background_section(brief: dict, workdir: Path) -> str:
             for g in bg["glossary"]
         ]
         headers = ["用語", "意味"] + (["画面のどこ"] if with_where else []) + ["コード上の名前"]
-        parts.append("<h3>用語集</h3>" + table(headers, rows))
+        parts.append('<h3 id="background-glossary">用語集</h3>' + table(headers, rows))
     model = bg.get("data_model")
     if model:
-        parts.append("<h3>データモデル（今回の変更に関わるテーブル）</h3>")
+        parts.append(
+            '<h3 id="background-data-model">データモデル（今回の変更に関わるテーブル）</h3>'
+        )
         if model.get("note"):
             parts.append(f"<p>{inline(model['note'])}</p>")
+        if model.get("trace"):
+            rows = [
+                [
+                    inline(t["entry"]),
+                    " → ".join(inline(step) for step in t["steps"]),
+                    inline(t["result"]),
+                ]
+                for t in model["trace"]
+            ]
+            parts.append("<h4>データの追跡結果</h4>" + table(["入口", "追跡経路", "結果"], rows))
+        if not model.get("tables"):
+            parts.append(evidence_links(brief, model.get("evidence", [])))
         if model.get("tables"):
-            parts.append(mermaid(model["tables"]))
+            caption = evidence_links(brief, model.get("evidence", []))
+            parts.append(
+                f"<figure>{mermaid(model['tables'])}<figcaption>{caption}</figcaption></figure>"
+            )
         if model.get("mapping"):
-            rows = [[page_ref(brief, m.get("page")), inline(m["ui"]), f"<code>{esc(m['column'])}</code>"] for m in model["mapping"]]
-            parts.append("<h4>画面の項目とテーブルの対応</h4>" + table(["画面", "画面の項目", "テーブル.カラム"], rows))
+            rows = [
+                [
+                    page_ref(brief, m.get("page")),
+                    inline(m["ui"]),
+                    f"<code>{esc(m['column'])}</code>",
+                ]
+                for m in model["mapping"]
+            ]
+            parts.append(
+                "<h4>画面の項目とテーブルの対応</h4>"
+                + table(["画面", "画面の項目", "テーブル.カラム"], rows)
+            )
         if model.get("before") and model.get("after"):
-            parts.append(f"<h4>スキーマの変更前</h4>{mermaid(model['before'])}<h4>スキーマの変更後</h4>{mermaid(model['after'])}")
+            parts.append(
+                f"<h4>スキーマの変更前</h4>{mermaid(model['before'])}<h4>スキーマの変更後</h4>{mermaid(model['after'])}"
+            )
         elif model.get("before") or model.get("after"):
             parts.append(mermaid(model.get("after") or model["before"]))
     return "".join(parts)
@@ -343,7 +456,7 @@ def changes_section(brief: dict) -> str:
     related = [pr for pr in brief.get("related_prs") or [] if pr["number"] not in stacked]
     if related:
         items = "".join(
-            f'<li>{link(pr.get("url"), "#" + str(pr["number"]))} {esc(pr.get("title", ""))}'
+            f"<li>{link(pr_url(brief, pr), '#' + str(pr['number']))} {esc(pr.get('title', ''))}"
             f' <span class="tag">{esc(pr.get("state", ""))}</span>'
             + (f" — {inline(pr['summary'])}" if pr.get("summary") else "")
             + "</li>"
@@ -353,8 +466,14 @@ def changes_section(brief: dict) -> str:
     return "".join(parts)
 
 
-IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
-               ".webp": "image/webp", ".svg": "image/svg+xml"}
+IMAGE_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+}
 MAX_TICKET_IMAGE = 5 * 1024 * 1024
 MAX_TICKET_IMAGES = 20  # 1 つのチケットで埋め込む枚数の上限（HTML が大きくなりすぎないように）
 
@@ -375,7 +494,11 @@ def ticket_image(workdir: Path, src: str, alt: str, caption: str, budget: list[i
         return f'<p class="evidence">画像（取り込めなかった）: {link(src, label)}</p>'
     base = (workdir / "ticket-images").resolve()
     path = (workdir / src).resolve()
-    if not path.is_relative_to(base) or path.suffix.lower() not in IMAGE_TYPES or not path.is_file():
+    if (
+        not path.is_relative_to(base)
+        or path.suffix.lower() not in IMAGE_TYPES
+        or not path.is_file()
+    ):
         return f'<p class="evidence">画像が見つからない: <code>{esc(src)}</code></p>'
     if path.stat().st_size > MAX_TICKET_IMAGE:
         return f'<p class="evidence">画像が大きすぎるので載せていない: <code>{esc(src)}</code></p>'
@@ -466,7 +589,9 @@ def ticket_body(ticket: dict, workdir: Path) -> str:
     for sec in ticket.get("sections") or []:
         body = rich_text(sec.get("body", ""), workdir, budget)
         images = "".join(
-            ticket_image(workdir, img.get("path", ""), img.get("alt", ""), img.get("caption", ""), budget)
+            ticket_image(
+                workdir, img.get("path", ""), img.get("alt", ""), img.get("caption", ""), budget
+            )
             for img in sec.get("images") or []
         )
         count = f' <span class="tag">画像 {len(sec["images"])}</span>' if sec.get("images") else ""
@@ -478,7 +603,7 @@ def ticket_body(ticket: dict, workdir: Path) -> str:
     if comments:
         items = "".join(
             f'<div class="ticket-comment"><p class="evidence">{esc(c.get("author", ""))}'
-            f'{" · " + esc(c["date"]) if c.get("date") else ""}</p>{rich_text(c.get("body", ""), workdir, budget)}</div>'
+            f"{' · ' + esc(c['date']) if c.get('date') else ''}</p>{rich_text(c.get('body', ''), workdir, budget)}</div>"
             for c in comments
         )
         blocks.append(
@@ -495,6 +620,18 @@ def steps_list(value: str | list[str], tag: str) -> str:
     return inline(value)
 
 
+def status_badge(status: str) -> str:
+    """判定は文言と色の両方で区別する。classへ任意の入力を入れない。"""
+    colors = {"PASS": "pass", "FAIL": "fail", "BLOCKED": "blocked", "NOT RUN": "not-run"}
+    meanings = {
+        "PASS": "期待動作を確認",
+        "FAIL": "実行して期待動作との不一致を確認",
+        "BLOCKED": "環境や条件の不足により検証できない",
+        "NOT RUN": "未実行",
+    }
+    return f'<span class="test-status test-status-{colors.get(status, "not-run")}" title="{esc(meanings.get(status, status))}">{esc(status)}</span>'
+
+
 def manual_test_section(brief: dict, workdir: Path) -> str:
     test = brief.get("manual_test") or {}
     shots = load_shots(workdir)
@@ -502,7 +639,29 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
     if test.get("environment"):
         parts.append(f"<h3>環境</h3><p>{inline(test['environment'])}</p>")
     if test.get("preconditions"):
-        parts.append("<h3>前提</h3><ul>" + "".join(f"<li>{inline(p)}</li>" for p in test["preconditions"]) + "</ul>")
+        parts.append(
+            "<h3>前提</h3><ul>"
+            + "".join(f"<li>{inline(p)}</li>" for p in test["preconditions"])
+            + "</ul>"
+        )
+    execution = test.get("execution") or {}
+    if execution:
+        rows = [
+            [
+                label,
+                status_badge(execution[key]) if key == "status" else inline(str(execution[key])),
+            ]
+            for key, label in (
+                ("status", "状況"),
+                ("head_sha", "確認したSHA"),
+                ("url", "確認先URL"),
+                ("account", "アカウント・ロール"),
+                ("run_at", "実行日時"),
+                ("note", "補足"),
+            )
+            if execution.get(key)
+        ]
+        parts.append("<h3>実施状況</h3>" + table(["項目", "記録"], rows))
     seed = test.get("seed")
     if seed:
         lang = esc(seed.get("language", ""))
@@ -510,37 +669,170 @@ def manual_test_section(brief: dict, workdir: Path) -> str:
         if seed.get("note"):
             parts.append(f"<p>{inline(seed['note'])}</p>")
         if seed.get("run"):
-            parts.append(f'<p class="evidence">流し方: <code>{esc(seed["run"])}</code></p>')
-        parts.append(f'<pre class="seed"><code data-lang="{lang}">{esc(seed.get("script", ""))}</code></pre>')
-        if seed.get("cleanup"):
-            parts.append(f'<details><summary>後片付け</summary><pre class="seed"><code data-lang="{lang}">{esc(seed["cleanup"])}</code></pre></details>')
-    steps = []
-    for step in test.get("steps", []):
-        rows = []
-        if step.get("url"):
-            rows.append(f'<dt>URL</dt><dd>{link(step["url"], "<code>" + esc(step["url"]) + "</code>")}</dd>')
-        rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
-        rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
-        caution = f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
-        figure = shot_figure(workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records"))
-        steps.append(
-            f'<li id="{esc(step.get("id", ""))}"><h3>{inline(step.get("title", ""))}</h3>'
-            f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
+            parts.append(f'<p class="evidence">実行手順: {inline(seed["run"])}</p>')
+        parts.append(
+            f'<pre class="seed"><code data-lang="{lang}">{esc(seed.get("script", ""))}</code></pre>'
         )
-    if steps:
-        parts.append(f'<ol class="steps">{"".join(steps)}</ol>')
+        if seed.get("cleanup"):
+            parts.append(
+                f'<details><summary>後片付け</summary><pre class="seed"><code data-lang="{lang}">{esc(seed["cleanup"])}</code></pre></details>'
+            )
+
+    def render_steps(items: list, heading: str) -> str:
+        steps = []
+        for step in items:
+            rows = []
+            if step.get("url"):
+                rows.append(
+                    f"<dt>URL</dt><dd>{link(step['url'], '<code>' + esc(step['url']) + '</code>')}</dd>"
+                )
+            rows.append(f"<dt>操作</dt><dd>{steps_list(step.get('actions', ''), 'ol')}</dd>")
+            rows.append(f"<dt>期待結果</dt><dd>{steps_list(step.get('expected', ''), 'ul')}</dd>")
+            rows.append(f"<dt>判定</dt><dd>{status_badge(step.get('status', 'NOT RUN'))}</dd>")
+            if step.get("actual"):
+                rows.append(f"<dt>実結果</dt><dd>{inline(step['actual'])}</dd>")
+            if step.get("pending"):
+                rows.append(
+                    f"<dt>未確認・続行条件</dt><dd>{steps_list(step['pending'], 'ul')}</dd>"
+                )
+            caution = (
+                f'<p class="callout">{inline(step["caution"])}</p>' if step.get("caution") else ""
+            )
+            figure = shot_figure(
+                workdir, shots.get(step.get("id")), step.get("title", ""), step.get("records")
+            )
+            note = step.get("image_note")
+            if note:
+                figure += f'<p class="evidence">{inline(note)}</p>'
+            elif not figure:
+                figure = (
+                    '<p class="evidence">画像なし（未実行、または証拠画像を取得できなかった）</p>'
+                )
+            steps.append(
+                f'<li id="{esc(step.get("id", ""))}"><h4>{inline(step.get("title", ""))}</h4>'
+                f'<dl class="step">{"".join(rows)}</dl>{caution}{figure}</li>'
+            )
+        return f'<h3>{heading}</h3><ol class="steps">{"".join(steps)}</ol>' if steps else ""
+
+    parts.append(render_steps(test.get("preparation", []), "手動準備・データ準備"))
+    if test.get("data"):
+        rows = [
+            [inline(str(item.get(k, ""))) for k in ("purpose", "record", "state")]
+            + [
+                link(item.get("url"), esc(item.get("url") or "")),
+                inline(str(item.get("source", ""))),
+            ]
+            for item in test["data"]
+        ]
+        parts.append(
+            "<h3>準備済みデータ</h3>"
+            + table(["用途", "ID・表示名", "状態", "開くURL", "作成／再利用"], rows)
+        )
+    parts.append(render_steps(test.get("steps", []), "動作確認"))
+    if test.get("cleanup"):
+        parts.append("<h3>後片付け・手動確認への引き継ぎ</h3>" + steps_list(test["cleanup"], "ul"))
+    lesson = test.get("lesson_capture") or (
+        {"status": "未記録", "note": "終了前の知見保存確認は未記録"} if execution else {}
+    )
+    if lesson:
+        rows = [
+            [label, inline(str(lesson[key]))]
+            for key, label in (
+                ("status", "保存状況"),
+                ("note", "確認内容"),
+            )
+            if lesson.get(key)
+        ]
+        if lesson.get("files"):
+            rows.append(["知見ファイル", steps_list(lesson["files"], "ul")])
+        parts.append("<h3>終了前の知見保存確認</h3>" + table(["項目", "記録"], rows))
     return "".join(parts)
 
 
+def check_manual_test(brief: dict) -> list[str]:
+    """準備・確認のID、判定、実行結果とSHAの対応を検査する。"""
+    test = brief.get("manual_test") or {}
+    errors = []
+    ids = set()
+    has_executed_step = False
+    statuses = {"PASS", "FAIL", "BLOCKED", "NOT RUN"}
+    for kind in ("preparation", "steps"):
+        for i, step in enumerate(test.get(kind, [])):
+            name = f"manual_test.{kind}[{i}]"
+            step_id = step.get("id")
+            if not isinstance(step_id, str) or not step_id or step_id in ids:
+                errors.append(f"{name}: idは準備・確認全体で一意の文字列にする")
+            else:
+                ids.add(step_id)
+            status = step.get("status", "NOT RUN")
+            if status not in statuses:
+                errors.append(f"{name}: 判定はPASS / FAIL / BLOCKED / NOT RUN")
+            pending = step.get("pending", [])
+            if not isinstance(pending, list) or any(not isinstance(item, str) for item in pending):
+                errors.append(f"{name}: pendingは未確認事項の文字列配列にする")
+            if status == "PASS" and pending:
+                errors.append(f"{name}: 未確認事項が残る場合はPASSにしない")
+            if status in {"PASS", "FAIL"}:
+                has_executed_step = True
+            if status in {"PASS", "FAIL"} and not step.get("actual"):
+                errors.append(f"{name}: 実行済みの判定にはactualが必要")
+    execution = test.get("execution") or {}
+    if "execution" in test and not isinstance(test["execution"], dict):
+        errors.append("manual_test.executionはオブジェクトにする")
+        execution = {}
+    if has_executed_step and not execution:
+        errors.append("実行済みステップにはexecutionと確認したhead_shaが必要")
+    if "execution" in test and execution.get("status") not in statuses:
+        errors.append("manual_test.execution.statusが不正")
+    if has_executed_step or execution.get("status") in {"PASS", "FAIL"}:
+        if not execution.get("head_sha"):
+            errors.append("実行済みの結果には確認したhead_shaが必要")
+        elif brief.get("head_sha") and execution["head_sha"] != brief["head_sha"]:
+            errors.append("動作確認のSHAがbriefのSHAと異なる。現行版のPASS/FAILとして統合しない")
+    if "execution" in test and not isinstance(test.get("lesson_capture"), dict):
+        errors.append("実行結果には終了前確認のlesson_captureが必要")
+    lesson = test.get("lesson_capture")
+    if lesson is not None:
+        if not isinstance(lesson, dict):
+            errors.append("manual_test.lesson_captureはオブジェクトにする")
+        else:
+            if lesson.get("status") not in {"SAVED", "NO_CHANGE", "FAILED", "NOT_RUN"}:
+                errors.append("manual_test.lesson_capture.statusが不正")
+            files = lesson.get("files", [])
+            valid_files = isinstance(files, list) and all(
+                isinstance(path, str)
+                and path.strip()
+                and "\\" not in path
+                and not PurePosixPath(path).is_absolute()
+                and ".." not in PurePosixPath(path).parts
+                and len(PurePosixPath(path).parts) >= 4
+                and PurePosixPath(path).parts[0] == "lessons"
+                and PurePosixPath(path).suffix == ".md"
+                for path in files
+            )
+            if not valid_files:
+                errors.append(
+                    "lesson_capture.filesはlessons/以下の相対Markdownパスの配列にする（絶対パス・親参照は不可）"
+                )
+            if lesson.get("status") == "SAVED" and (not valid_files or not files):
+                errors.append("知見保存済みの場合は確認したファイルパスが必要")
+            if not isinstance(lesson.get("note"), str) or not lesson["note"].strip():
+                errors.append("lesson_capture.noteに保存確認・不要・失敗等の理由を書く")
+    return errors
+
+
 def check_page_refs(brief: dict) -> list[str]:
-    """page に書いた id が background.pages にあるか確かめる。"""
+    """Page に書いた id が background.pages にあるか確かめる。"""
     bg = brief.get("background") or {}
     ids = [p["id"] for p in bg.get("pages", [])]
     known = set(ids)
     duplicated = sorted({i for i in ids if ids.count(i) > 1})
-    places = [("background.current", bg.get("current")), ("background.glossary", bg.get("glossary")),
-              ("background.data_model.mapping", (bg.get("data_model") or {}).get("mapping")),
-              ("changes.before_after", (brief.get("changes") or {}).get("before_after"))]
+    places = [
+        ("background.current", bg.get("current")),
+        ("background.glossary", bg.get("glossary")),
+        ("background.data_model.mapping", (bg.get("data_model") or {}).get("mapping")),
+        ("changes.before_after", (brief.get("changes") or {}).get("before_after")),
+    ]
     return [f"background.pages の id が重複している: {duplicated}"] * bool(duplicated) + [
         f"{name}[{i}] の page {item['page']!r} が background.pages に無い"
         for name, items in places
@@ -549,7 +841,12 @@ def check_page_refs(brief: dict) -> list[str]:
     ]
 
 
-SCOPE_LAYERS = (("fe", "画面（FE）"), ("be", "サーバー（BE）"), ("db", "データベース（DB）"), ("infra", "インフラ"))
+SCOPE_LAYERS = (
+    ("fe", "画面（FE）"),
+    ("be", "サーバー（BE）"),
+    ("db", "データベース（DB）"),
+    ("infra", "インフラ"),
+)
 
 
 def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) -> str:
@@ -567,13 +864,18 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
     def new_stat() -> dict:
         return {"files": set(), "added": 0, "removed": 0, "groups": []}
 
-    stats = {(key, i): new_stat() for key, _ in SCOPE_LAYERS for i in [None, *range(len((scope.get(key) or {}).get("parts", [])))]}
+    stats = {
+        (key, i): new_stat()
+        for key, _ in SCOPE_LAYERS
+        for i in [None, *range(len((scope.get(key) or {}).get("parts", [])))]
+    }
     stats[("other", None)] = new_stat()
-    numbers = {g["id"]: n for n, g in enumerate(groups or [], start=1)}
     for group in groups or []:
         for hunk_id in group["hunks"]:
             hunk = hunks[hunk_id]
-            key, part = next(((k, i) for p, k, i in prefixes if hunk["path"].startswith(p)), ("other", None))
+            key, part = next(
+                ((k, i) for p, k, i in prefixes if hunk["path"].startswith(p)), ("other", None)
+            )
             for target in {(key, part), (key, "total")}:
                 stat = stats.setdefault(target, new_stat())
                 stat["files"].add(hunk["path"])
@@ -582,16 +884,12 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
                 if group["id"] not in stat["groups"]:
                     stat["groups"].append(group["id"])
     known = hunks is not None  # 差分が無いときは、変わるかどうかを決めつけない（summary だけ出す）
-    scale = max([s["added"] + s["removed"] for (k, i), s in stats.items() if i != "total"] or [0])
-
-    def chips(stat: dict) -> str:
-        return "".join(f'<a class="gnum" href="#group-{esc(g)}" title="変更グループ {numbers[g]}">{numbers[g]}</a>' for g in stat["groups"])
 
     def size(stat: dict) -> str:
         if not stat["files"]:
             return ""
         return (
-            f'{size_bar(stat["added"], stat["removed"], scale)}<span class="tag">{len(stat["files"])} files</span>'
+            f'<span class="tag">{len(stat["files"])} files</span>'
             f'<span class="added">+{stat["added"]}</span><span class="removed">−{stat["removed"]}</span>'
         )
 
@@ -604,25 +902,100 @@ def scope_section(brief: dict, hunks: dict | None, groups: list[dict] | None) ->
         changed = bool(total["files"])
         rows = []
         parts = layer.get("parts", [])
-        for i, part in enumerate(parts + [{"name": "その他"}] if stats[(key, None)]["files"] and parts else parts):
+        for i, part in enumerate(
+            parts + [{"name": "その他"}] if stats[(key, None)]["files"] and parts else parts
+        ):
             stat = stats[(key, i if i < len(parts) else None)]
             if known and not stat["files"] and not part.get("summary"):
                 continue
-            detail = f'<code>{esc(part["detail"])}</code>' if part.get("detail") else ""
+            detail = f"<code>{esc(part['detail'])}</code>" if part.get("detail") else ""
             rows.append(
                 f'<tr class="{"" if stat["files"] or not known else "unchanged"}"><th>{esc(part["name"])}{detail}</th>'
-                f'<td>{inline(part.get("summary", ""))}</td><td class="scope-size"><span class="scope-meta">{size(stat)}{chips(stat)}</span></td></tr>'
+                f'<td>{inline(part.get("summary", ""))}</td><td class="scope-size"><span class="scope-meta">{size(stat)}</span></td></tr>'
             )
-        badge = f'<span class="tag">{"変わる" if changed else "変わらない"}</span>' if known else ""
-        summary = inline(layer["summary"]) if layer.get("summary") else ("変更なし" if known and not changed else "")
-        table_html = f'<table class="scope-parts"><tbody>{"".join(rows)}</tbody></table>' if rows else ""
-        cls = "scope-layer" + ("" if changed or not known else " unchanged") + (" other" if key == "other" else "")
+        summary = (
+            inline(layer["summary"])
+            if layer.get("summary")
+            else ("変更なし" if known and not changed else "")
+        )
+        table_html = (
+            f'<table class="scope-parts"><tbody>{"".join(rows)}</tbody></table>' if rows else ""
+        )
+        cls = (
+            "scope-layer"
+            + ("" if changed or not known else " unchanged")
+            + (" other" if key == "other" else "")
+        )
         blocks.append(
-            f'<div class="{cls}"><div class="scope-head"><strong>{name}</strong>{badge}'
-            f'<span class="scope-summary">{summary}</span><span class="scope-meta">{size(total)}{chips(total)}</span></div>'
+            f'<div class="{cls}"><div class="scope-head"><strong>{name}</strong>'
+            f'<span class="scope-summary">{summary}</span><span class="scope-meta">{size(total)}</span></div>'
             f"{table_html}</div>"
         )
     return f'<div class="scope">{"".join(blocks)}</div>'
+
+
+def check_data_model(brief: dict, api_calls: list) -> list[str]:
+    """ER 図の省略には追跡結果と根拠が必要。API の利用を省略理由にしない。"""
+    bg = brief.get("background") or {}
+    model = bg.get("data_model") or {}
+    tables = model.get("tables")
+    errors = []
+    # API の変更だけでなく、既存 API の呼び出しも拾う。
+    api_pattern = r"(?i)(\bAPI\b|fetch|mutation|\b(?:GET|POST|PUT|PATCH|DELETE)\s+/|生成クライアント|クライアント.*呼び出し)"
+    api_context = json.dumps(
+        {"interfaces": brief.get("interfaces"), "changes": brief.get("changes")}, ensure_ascii=False
+    )
+    needs_tables = bool(api_calls) or bool(re.search(api_pattern, api_context))
+    trace = model.get("trace")
+    required = bool(tables) or bool(model) or bool(bg.get("pages")) or needs_tables
+    text = lambda value: isinstance(value, str) and bool(value.strip())
+    valid_trace = (
+        isinstance(trace, list)
+        and bool(trace)
+        and all(
+            isinstance(item, dict)
+            and text(item.get("entry"))
+            and text(item.get("result"))
+            and isinstance(item.get("steps"), list)
+            and bool(item["steps"])
+            and all(text(step) for step in item["steps"])
+            for item in trace
+        )
+    )
+    if required and not valid_trace:
+        errors.append(
+            "data_model.trace に空でない文字列の entry・result と、空でない文字列配列 steps が必要"
+        )
+    evidence = model.get("evidence")
+    if required and (
+        not isinstance(evidence, list)
+        or not evidence
+        or any(
+            not isinstance(e, dict)
+            or not text(e.get("path"))
+            or type(e.get("lines")) not in (str, int)
+            or not str(e["lines"]).strip()
+            or e.get("side", "base") not in ("base", "head")
+            for e in evidence
+        )
+    ):
+        errors.append(
+            "data_model.evidence に辿ったファイルの path と lines が必要（side は base または head）"
+        )
+    if tables:
+        if not isinstance(tables, str) or not re.match(r"^\s*erDiagram\b", tables):
+            errors.append("background.data_model.tables は Mermaid の erDiagram ソースにする")
+        return errors
+    if needs_tables:
+        errors.append("API 呼び出し・変更があるため background.data_model.tables の ER 図が必要")
+    if model or bg.get("pages") or needs_tables:
+        if not model.get("note"):
+            errors.append("ER 図を省略する場合は background.data_model.note に調査結果を書く")
+        elif re.search(r"(?i)(API|テーブル|DB|downloaded_)", str(model["note"])):
+            errors.append(
+                "data_model.note に API・テーブル・DB・downloaded_ の言及があるため ER 図を省略できない"
+            )
+    return errors
 
 
 def build(workdir: Path) -> tuple[str, list[str]]:
@@ -642,17 +1015,54 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     hunks, groups = None, None
     has_hunks, has_groups = hunks_path.exists(), groups_path.exists()
     if has_hunks != has_groups:
-        errors.append("hunks.json と groups.json は両方そろえる（片方だけでは変更グループを作れない）")
+        errors.append(
+            "hunks.json と groups.json は両方そろえる（片方だけでは変更グループを作れない）"
+        )
     elif has_hunks and not ticket_mode:
         hunks = {h["id"]: h for h in json.loads(hunks_path.read_text())["hunks"]}
         groups = json.loads(groups_path.read_text())["groups"]
         errors += validate_groups(hunks, groups, "full")
         if not errors:
-            blob = f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}" if brief.get("repo") and brief.get("head_sha") else None
+            blob = (
+                f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}"
+                if brief.get("repo") and brief.get("head_sha")
+                else None
+            )
             groups_html = render_groups(hunks, groups, blob)
 
+    api_calls = []
+    api_calls_path = workdir / "api_calls.json"
+    if not api_calls_path.exists() and (has_hunks or ticket_mode):
+        errors.append("api_calls.json が必要（候補なしでも [] を保存する）")
+    if api_calls_path.exists():
+        try:
+            api_calls = json.loads(api_calls_path.read_text())
+            if not isinstance(api_calls, list):
+                errors.append("api_calls.json は API 呼び出し候補の配列にする")
+                api_calls = []
+        except (ValueError, OSError) as error:
+            errors.append(f"api_calls.json を読めない: {error}")
+    errors += check_data_model(brief, api_calls)
     errors += check_page_refs(brief)
-    errors += [f"scope の {key!r} は fe / be / db / infra のどれか" for key in (brief.get("scope") or {}) if key not in dict(SCOPE_LAYERS)]
+    if not ticket_mode:
+        errors += check_manual_test(brief)
+    for i, focus in enumerate([] if ticket_mode else brief.get("focus", []), start=1):
+        if focus.get("side", "head") not in ("base", "head"):
+            errors.append(f"focus[{i}].side は base または head にする")
+        if "lines" in focus:
+            value = focus["lines"]
+            match = (
+                re.fullmatch(r"([1-9][0-9]*)(?:-([1-9][0-9]*))?", str(value))
+                if type(value) in (str, int)
+                else None
+            )
+            if not match or int(match[1]) > int(match[2] or match[1]):
+                errors.append(f"focus[{i}].lines は正の行番号 N または昇順の N-N にする: {value!r}")
+    errors += [
+        f"scope の {key!r} は fe / be / db / infra のどれか"
+        for key in (brief.get("scope") or {})
+        if key not in dict(SCOPE_LAYERS)
+    ]
     pictures = []
     for i, spec in enumerate([] if ticket_mode else brief.get("pictures", []), start=1):
         try:
@@ -666,15 +1076,25 @@ def build(workdir: Path) -> tuple[str, list[str]]:
     tldr = "".join(f"<p>{inline(line)}</p>" for line in brief["tldr"])
     sections.append(section("tldr", "TL;DR", f'<div class="tldr">{tldr}</div>'))
     if brief.get("scope") and not ticket_mode:
-        sections.append(section("scope", "変更の範囲", scope_section(brief, hunks if groups_html else None, groups if groups_html else None)))
+        sections.append(
+            section(
+                "scope",
+                "変更の範囲",
+                scope_section(
+                    brief, hunks if groups_html else None, groups if groups_html else None
+                ),
+            )
+        )
     if pictures:
         legend = (
             '<div class="legend"><span>変わらない</span><span class="lg-changed">変わる</span>'
             '<span class="lg-added">増える</span><span class="lg-removed">なくなる</span></div>'
         )
-        sections.append(section("pictures", "絵で見る", legend + f'<div class="pictures">{"".join(pictures)}</div>'))
-    if brief.get("stack"):
-        sections.append(section("stack", "スタック構成", stack_section(brief)))
+        sections.append(
+            section(
+                "pictures", "絵で見る", legend + f'<div class="pictures">{"".join(pictures)}</div>'
+            )
+        )
     for sid, title, body in (
         ("background", "前提知識", background_section(brief, workdir)),
         ("changes", "変更内容", changes_section(brief)),
@@ -687,27 +1107,99 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         body = (
             table(
                 ["種類", "対象", "変更", "互換性・移行"],
-                [[inline(i["kind"]), inline(i["target"]), inline(i["change"]), inline(i.get("compat", ""))] for i in interfaces],
+                [
+                    [
+                        inline(i["kind"]),
+                        inline(i["target"]),
+                        inline(i["change"]),
+                        inline(i.get("compat", "")),
+                    ]
+                    for i in interfaces
+                ],
             )
             if interfaces
             else "<p>なし</p>"
         )
         sections.append(section("interfaces", "スキーマ・API・設定の差分", body))
-    if groups_html:
-        sections.append(section("groups", "変更グループ", groups_html))
     body = "" if ticket_mode else manual_test_section(brief, workdir)
     if body:
-        sections.append(section("manual-test", "動作確認手順", body))
+        sections.append(section("manual-test", "動作確認方法", body))
+    if brief.get("stack"):
+        sections.append(section("stack", "スタック構成", stack_section(brief)))
+    if groups_html:
+        sections.append(section("groups", "変更グループ", groups_html))
     if brief.get("focus") and not ticket_mode:
-        items = "".join(
-            f"<li>{blob_link(brief, f['path'], f.get('lines'), 'head')} — {inline(f['why'])}</li>" for f in brief["focus"]
+        items = []
+        blob = (
+            f"https://github.com/{brief['repo']}/blob/{brief['head_sha']}"
+            if brief.get("repo") and brief.get("head_sha")
+            else None
         )
-        sections.append(section("focus", "重点的に見る箇所", f"<ul>{items}</ul>"))
+        for index, focus in enumerate(brief["focus"], start=1):
+            file_hunks = [
+                h for h in (hunks or {}).values() if focus["path"] in (h["path"], h["old_path"])
+            ]
+            side = focus.get(
+                "side",
+                "base"
+                if file_hunks and all(h["status"] == "deleted" for h in file_hunks)
+                else "head",
+            )
+            line_range = str(focus.get("lines", ""))
+            match = re.fullmatch(r"(\d+)(?:-(\d+))?", line_range)
+            start, end = (int(match[1]), int(match[2] or match[1])) if match else (None, None)
+            matches = []
+            for hunk in file_hunks:
+                column = 1 if side == "base" else 2
+                rows = [row[column] for row in hunk["lines"] if row[column] is not None]
+                if (
+                    start is None
+                    or (rows and min(rows) <= end and max(rows) >= start)
+                    or (not rows and start <= hunk["new_start"] <= end)
+                ):
+                    # 同じ hunk が変更グループにも出るため、この表示用の ID にする
+                    matches.append(
+                        render_hunk({**hunk, "id": f"focus-{index}-{hunk['id']}"}, None, blob)
+                    )
+            diff = (
+                "".join(matches)
+                or '<p class="evidence">該当する差分なし（指定範囲はソースリンクで確認）</p>'
+            )
+            items.append(
+                f'<article class="focus-item"><h3>{blob_link(brief, focus["path"], focus.get("lines"), side)}</h3><p>{inline(focus["why"])}</p>{diff}</article>'
+            )
+        sections.append(section("focus", "重点的に見る箇所", "".join(items)))
     if brief.get("unknowns") and not ticket_mode:
         items = "".join(f"<li>{inline(u)}</li>" for u in brief["unknowns"])
         sections.append(section("unknowns", "未確認事項", f"<ul>{items}</ul>"))
 
-    nav = "<nav>" + "".join(f'<a href="#{sid}">{esc(title)}</a>' for sid, title, _ in sections) + "</nav>"
+    nav_items = []
+    for sid, title, _ in sections:
+        nav_items.append(f'<a href="#{sid}">{esc(title)}</a>')
+        if sid == "background":
+            bg = brief.get("background") or {}
+            headings = [
+                ("background-ticket", "チケット内容", brief.get("ticket")),
+                ("background-pages", "関係する画面", bg.get("pages")),
+                ("background-current", "今の機能", bg.get("current")),
+                ("background-glossary", "用語集", bg.get("glossary")),
+                ("background-data-model", "ER図・データモデル", bg.get("data_model")),
+            ]
+            links = "".join(
+                f'<li><a href="#{anchor}">{label}</a></li>'
+                for anchor, label, present in headings
+                if present
+            )
+            if links:
+                nav_items.append(f'<ul class="nav-groups">{links}</ul>')
+        if sid == "groups":
+            ordered_groups = sorted(groups, key=lambda g: g["kind"] == "generated")
+            links = "".join(
+                f'<li><a href="#group-{esc(group["id"])}">{number}. {esc(group["title"])}</a></li>'
+                for number, group in enumerate(ordered_groups, start=1)
+            )
+            nav_items.append(f'<ol class="nav-groups">{links}</ol>')
+    nav = '<nav aria-label="目次">' + "".join(nav_items) + "</nav>"
     content = header(brief, bool(groups_html)) + "".join(body for _, _, body in sections)
     values = {
         "title": esc(brief["title"]),
@@ -717,12 +1209,18 @@ def build(workdir: Path) -> tuple[str, list[str]]:
         "content": content,
     }
     # 1 回の置換で埋める（差し込んだ値の中に {{...}} があっても、それは置き換えない）
-    page = re.sub(r"\{\{(title|head_sha|generated|nav|content)\}\}", lambda m: values[m.group(1)], PAGE.read_text())
+    page = re.sub(
+        r"\{\{(title|head_sha|generated|nav|content)\}\}",
+        lambda m: values[m.group(1)],
+        PAGE.read_text(),
+    )
     return page, []
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--workdir", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()

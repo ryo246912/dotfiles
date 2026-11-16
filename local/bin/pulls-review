@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Open one PR or its entire GitHub stack in pulls.review."""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+
+def gh(*args):
+    return subprocess.check_output(["gh", *args], text=True).strip()
+
+
+def api(path):
+    return json.loads(gh("api", "--hostname", "github.com", path))
+
+
+def resolve_target(value):
+    match = re.fullmatch(r"(?:https://github\.com/)?([^/\s]+)/([^/#\s]+)(?:#|/pull/)([1-9][0-9]*)/?", value)
+    if match:
+        owner, repo, number = match.groups()
+        return f"{owner}/{repo}", int(number)
+    if value and not re.fullmatch(r"[1-9][0-9]*", value):
+        raise ValueError("expected a PR number, owner/repo#123, or GitHub PR URL")
+    repository = gh("repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner")
+    number = value or gh("pr", "view", "--json", "number", "--jq", ".number")
+    return repository, int(number)
+
+
+def review_target(repository, number):
+    pr = api(f"repos/{repository}/pulls/{number}")
+    membership = pr.get("stack")
+    if not membership:
+        return f"https://github.com/{repository}/pull/{number}", None
+    stack = api(f"repos/{repository}/stacks/{int(membership['number'])}")
+    members = stack["pull_requests"]  # GitHub returns bottom-to-top order.
+    numbers = [member["number"] for member in members]
+    if not members or number not in numbers or len(set(numbers)) != len(numbers):
+        raise ValueError("inconsistent stack membership; retry after the stack update completes")
+    if membership.get("size") is not None and membership["size"] != len(members):
+        raise ValueError("stack changed during lookup; retry")
+    # The detail endpoint may omit base.sha. Resolve the ultimate base ref, never
+    # the selected layer's immediate base (which would omit the lower layers).
+    base = stack["base"].get("sha")
+    if not base:
+        from urllib.parse import quote
+        base = api(f"repos/{repository}/commits/{quote(stack['base']['ref'], safe='')}")["sha"]
+    head = members[-1]["head"]["sha"]
+    if not re.fullmatch(r"[0-9a-fA-F]{40,64}", base) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", head):
+        raise ValueError("stack API did not return valid base/head commit IDs")
+    target = f"https://github.com/{repository}/compare/{base}...{head}"
+    return target, stack
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("pr", nargs="?", default="", help="PR number/URL; default: current branch's PR")
+    parser.add_argument("--dry-run", action="store_true", help="print detected stack and review target only")
+    parser.add_argument("--diff", action="store_true", help="write the unified diff to stdout instead of opening the UI")
+    parser.add_argument("--no-open", action="store_true", help="serve the review UI without opening a browser")
+    parser.add_argument("--port", type=int)
+    args = parser.parse_args()
+    if args.diff and args.dry_run:
+        parser.error("--diff cannot be combined with --dry-run")
+    repository, number = resolve_target(args.pr)
+    target, stack = review_target(repository, number)
+    if stack:
+        numbers = ' -> '.join(f"#{p['number']}" for p in stack['pull_requests'])
+        print(f"Stack #{stack['number']}: {numbers}", file=sys.stderr)
+    else:
+        print(f"Single PR: {repository}#{number}", file=sys.stderr)
+    print(f"Review: {target}", file=sys.stderr)
+    if args.dry_run:
+        return
+    if args.diff:
+        endpoint = f"repos/{repository}/pulls/{number}"
+        if stack:
+            endpoint = f"repos/{repository}/compare/{target.rsplit('/compare/', 1)[1]}"
+        subprocess.run(["gh", "api", "--hostname", "github.com", "-H", "Accept: application/vnd.github.diff", endpoint], check=True)
+        return
+    env = os.environ.copy()
+    # Use the same GitHub identity for lookup and the upstream CLI.
+    token = env.get("PULLS_REVIEW_GITHUB_TOKEN") or env.get("GITHUB_TOKEN") or env.get("GH_TOKEN")
+    if token:
+        env["GITHUB_TOKEN"] = token
+    # Use the dotted upstream name to avoid invoking this wrapper recursively.
+    executable = "pulls.review"
+    flags = ["--no-open"] if args.no_open else []
+    if args.port is not None:
+        flags += ["--port", str(args.port)]
+    if not shutil.which(executable):
+        parser.error("pulls.review is missing; run mise install npm:pulls.review")
+    print("AI: select Local agent and Codex or Claude Code in the UI Settings.", file=sys.stderr)
+    subprocess.run([executable, target, *flags], env=env, check=True)
+
+
+if __name__ == "__main__":
+    # gh recognizes GH_TOKEN/GITHUB_TOKEN, not PULLS_REVIEW_GITHUB_TOKEN.
+    if os.environ.get("PULLS_REVIEW_GITHUB_TOKEN"):
+        os.environ["GH_TOKEN"] = os.environ["PULLS_REVIEW_GITHUB_TOKEN"]
+    elif os.environ.get("GITHUB_TOKEN"):
+        os.environ["GH_TOKEN"] = os.environ["GITHUB_TOKEN"]
+    try:
+        main()
+    except (subprocess.CalledProcessError, OSError, ValueError, KeyError, TypeError) as error:
+        print(f"pulls-review: {error}", file=sys.stderr)
+        sys.exit(1)

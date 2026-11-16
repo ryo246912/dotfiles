@@ -53,7 +53,7 @@ basic-memory reindex --search -p agent-lessons
 shell = "bash -c"
 
 ["lessons:sync"]
-description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation.md, push, and reindex Basic Memory"
+description = "Commit local agent-lessons changes, pull, rule lessons checked in escalation/<scope_key>.md, push, and reindex Basic Memory"
 run = '''
 set -euo pipefail
 dir="$HOME/.local/share/agent-lessons"
@@ -76,15 +76,60 @@ for origin in "$(git remote get-url origin)" "$(git remote get-url --push origin
   fi
 done
 
+# agent-lessons-context の裏の pull と同じロックを、git add より前に取る。取らないと、そちらの rebase 中の index を
+# 触ったり、下の rebase --abort で中止したりする。ロックは clone の .git 内に置く（sandbox とホストで共有するのは
+# clone だけで、$HOME 配下の state は共有しない）。別の namespace の pid は判定できないので、異常終了で残った
+# ロックは経過時間（1 時間）だけで捨てる。回収は mv で行い、同時に回収しても片方しか成功しない
+lock="$(git rev-parse --absolute-git-dir)/sync.lock"
+if [ -n "$(find "$lock" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+  mv "$lock" "$lock.stale.$$" 2>/dev/null && rm -rf "$lock.stale.$$"
+fi
+if ! mkdir "$lock" 2>/dev/null; then
+  echo "error: 別の同期が進行中です（$lock）。1 時間以上前の異常終了なら、$lock を消して再実行してください" >&2
+  exit 1
+fi
+trap 'rmdir "$lock"' EXIT
+
 git add --all
 if ! git diff --cached --quiet; then
+  # 衝突マーカーは frontmatter を壊し、日本語のファイル名は Basic Memory が壊れた permalink を作る。どちらも commit しない。
+  # grep -q は最初の一致で閉じて git diff が SIGPIPE になり、pipefail で検査が素通りするうえ、-P は macOS の grep に無い
+  python3 - <<'PY'
+import re
+import subprocess
+import sys
+
+CONFLICT = re.compile(r"^(?:<{7}|\|{7}|={7}|>{7})(?: |$)", re.M)
+FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", re.S)
+git = lambda *a: subprocess.run(["git", *a], check=True, capture_output=True).stdout
+names = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "--no-renames", "-z").decode().split("\0")
+errors = []
+for name in filter(None, names):
+    if not name.isascii():
+        errors.append(f"ASCII でないファイル名: {name}（<日付>-<category>-<hash>.md の形に改名する）")
+    if name.endswith(".md"):
+        m = FRONTMATTER.match(git("show", f":{name}").decode(errors="replace"))
+        if m and CONFLICT.search(m[1]):
+            errors.append(f"frontmatter に衝突マーカーが残っている: {name}")
+        # マーカーが先頭の --- より前にある・終わりの --- が欠けると match できず、検査が素通りするため
+        elif not m and name.split("/")[0] in ("inbox", "lessons", "archived"):
+            errors.append(f"frontmatter を読み取れない（衝突マーカーの可能性）: {name}")
+if errors:
+    sys.exit("error: " + "\nerror: ".join(errors))
+PY
   git diff --cached --no-renames --name-only --diff-filter=ACM -z \
     | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
   git commit --quiet -m "chore: record lessons from $(hostname -s)"
 fi
-git pull --rebase --quiet
+# 直前に commit 済みなので作業ツリーは clean。autostash すると Basic Memory の書き換えと upstream が衝突し、
+# マーカーが残ったまま次の sync で commit されるため、無効にして衝突したら rebase を中止する
+if ! git pull --rebase --no-autostash --quiet; then
+  git rebase --abort 2>/dev/null || true
+  echo "error: git pull --rebase に失敗しました。$dir の状態を確かめてください" >&2
+  exit 1
+fi
 
-# 仕組み化のチェックリスト（escalation.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
+# 仕組み化のチェックリスト（escalation/<scope_key>.md）で印を付けた教訓を ruled にする。別の端末や GitHub 上で付けた印も
 # pull の後に拾う。skill は rulesync が配る先のどちらかにある。
 for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lessons-harvest"; do
   if [ -f "$skill/scripts/escalation.py" ]; then
@@ -93,7 +138,7 @@ for skill in "$HOME/.claude/skills/lessons-harvest" "$HOME/.agents/skills/lesson
     if ! git diff --cached --quiet; then
       git diff --cached --no-renames --name-only --diff-filter=ACM -z \
         | xargs -0 -r secretlint --secretlintrc "$HOME/.config/secretlint/secretlintrc.json"
-      git commit --quiet -m "chore: rule lessons checked in escalation.md"
+      git commit --quiet -m "chore: rule lessons checked in escalation/<scope_key>.md"
     fi
     break
   fi

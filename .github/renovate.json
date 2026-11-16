@@ -60,6 +60,12 @@
       "enabled": false
     },
     {
+      "description": "mergiraf は Codeberg 配布で mise manager の aqua 解決（GitHub 前提）では追えないため、customManager（gitea-releases）側で更新する",
+      "matchManagers": ["mise"],
+      "matchDepNames": ["aqua:codeberg.org/mergiraf/mergiraf"],
+      "enabled": false
+    },
+    {
       "matchPackageNames": ["docker/cli", "aqua:docker/cli"],
       "matchUpdateTypes": ["patch"],
       "enabled": false
@@ -120,6 +126,11 @@
       "groupName": "plannotator"
     },
     {
+      "description": "desloppify の skill（apm/apm.yml の ref）と CLI（mise の pipx:desloppify）を同じPRで更新する",
+      "matchPackageNames": ["desloppify", "peteromallet/desloppify"],
+      "groupName": "desloppify"
+    },
+    {
       "matchPackageNames": [
         "http:terminal-browser",
         "zenbu-labs/terminal-browser",
@@ -135,12 +146,6 @@
     {
       "matchPackageNames": ["mattpocock/skills"],
       "groupName": "mattpocock/skills"
-    },
-    {
-      "description": "resolving-merge-conflicts は v1.3.0 で upstream から削除されたため v1.2.3 に固定する（apm/apm.yml 参照）",
-      "matchManagers": ["apm"],
-      "matchDepNames": ["mattpocock/skills/skills/engineering/resolving-merge-conflicts"],
-      "enabled": false
     }
   ],
   "customManagers": [
@@ -152,6 +157,15 @@
       "depNameTemplate": "opencode/deepseek-flash-free",
       "datasourceTemplate": "custom.opencode-deepseek-flash-free",
       "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "description": "object 形式（git:/path:/ref:）の apm 依存は組み込みの apm manager が読めないため、desloppify の ref だけを扱う",
+      "managerFilePatterns": ["apm/apm.yml"],
+      "matchStrings": [
+        "git:\\s*(?<depName>peteromallet/desloppify)\\s*\\n\\s*path:[^\\n]*\\n\\s*ref:\\s*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "github-tags"
     },
     {
       "customType": "regex",
@@ -225,6 +239,16 @@
       ],
       "packageNameTemplate": "github.com/atotto/clipboard",
       "datasourceTemplate": "go"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/mise/**/*.toml", "config/devcontainer/mise.toml"],
+      "matchStrings": [
+        "\"aqua:codeberg\\.org/mergiraf/mergiraf\"\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "mergiraf/mergiraf",
+      "datasourceTemplate": "gitea-releases",
+      "registryUrlTemplate": "https://codeberg.org"
     },
     {
       "customType": "regex",

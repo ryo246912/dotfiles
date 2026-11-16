@@ -292,15 +292,32 @@ setup_agent_lessons() {
         log_skip "basic-memory / jq が無いため Basic Memory の登録をスキップしました（template をビルドしてください）"
         return 0
     fi
+    # sbx exec の入出力を引き継がず、登録と索引作成を別プロセスで進める。
+    # sandbox ごとの flock で、再アタッチ時の同時実行を防ぐ。
+    if ! command -v flock >/dev/null 2>&1 || ! command -v timeout >/dev/null 2>&1; then
+        log_warn "flock / timeout が無いため Basic Memory の登録をスキップしました"
+        return 0
+    fi
+    local state_dir="${HOME}/.local/state/agent-lessons"
+    mkdir -p "$state_dir" || return 1
+    nohup timeout -k 5 300 flock -n "${state_dir}/setup.lock" \
+        bash "$0" --agent-lessons-index \
+        </dev/null >>"${state_dir}/setup.log" 2>&1 &
+    log_ok "Basic Memory の登録・索引作成をバックグラウンドで開始しました（実行中ならスキップ）。ログ: ${state_dir}/setup.log"
+}
+
+index_agent_lessons() {
+    local host_lessons="${SBX_HOST_AGENT_LESSONS:-}"
     # 登録先はホストと同じ絶対パスにする（ホストの lessons:setup と同じ判定）
+    log_ok "Basic Memory の project 登録を確認します"
     local registered
-    registered=$(basic-memory tool list-projects 2>/dev/null \
+    registered=$(basic-memory tool list-projects \
         | jq -r '[.projects[]? | select(.name == "agent-lessons") | .local_path // empty] | first // empty') || registered=""
     if [ -z "$registered" ]; then
         # 設定は lessons:setup と同じ（日本語の教訓のため embedding を使わない / 自動更新しない）
-        basic-memory config set semantic_search_enabled false >/dev/null 2>&1 || true
-        basic-memory config set auto_update false >/dev/null 2>&1 || true
-        if basic-memory project add agent-lessons "$host_lessons" >/dev/null 2>&1; then
+        basic-memory config set semantic_search_enabled false || true
+        basic-memory config set auto_update false || true
+        if basic-memory project add agent-lessons "$host_lessons"; then
             log_ok "Basic Memory に project agent-lessons を登録しました"
         else
             log_warn "Basic Memory への project agent-lessons の登録に失敗しました"
@@ -310,12 +327,19 @@ setup_agent_lessons() {
         log_warn "Basic Memory の agent-lessons が ${registered} を指しているため登録し直しませんでした"
         return 1
     fi
-    if timeout 120 basic-memory reindex --search -p agent-lessons >/dev/null 2>&1; then
+    log_ok "Basic Memory の agent-lessons の索引を更新します"
+    if timeout -k 5 120 basic-memory reindex --search -p agent-lessons; then
         log_ok "Basic Memory の agent-lessons を索引し直しました"
     else
         log_warn "Basic Memory の agent-lessons の索引に失敗しました"
     fi
 }
+
+# バックグラウンド worker は他の初期化処理を再実行しない。
+if [ "${1:-}" = --agent-lessons-index ]; then
+    index_agent_lessons
+    exit $?
+fi
 
 setup_nvim
 setup_agent_lessons

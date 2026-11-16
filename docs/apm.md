@@ -12,14 +12,14 @@
 
 ## 役割分担（rulesync との住み分け）
 
-| 対象                          | 管理ツール | ソース                                                       | 配布先                                                                 |
-| ----------------------------- | ---------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| このリポジトリの `CLAUDE.md`  | rulesync   | `.rulesync/rules/CLAUDE.md`                                  | リポジトリ直下の `CLAUDE.md`（gitignore）                              |
-| グローバルな自作 skill / rule | rulesync   | `config/rulesync/.rulesync/`                                 | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）             |
-| **外部スキル（グローバル）**  | **APM**    | `apm/apm.yml` の `dependencies.apm`                          | `~/.claude/skills/` 等（`apm install -g`）                             |
-| MCP サーバ（sandbox 用）      | sbx mcp    | `config/sbx/mcp.yml`（APM の `dependencies.mcp` と同じ書式） | ホストの `sbx mcp`（`mise run sandbox:mcp-add`）。agent には登録しない |
+| 対象                                       | 管理ツール | ソース                                                       | 配布先                                                                 |
+| ------------------------------------------ | ---------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| このリポジトリの `CLAUDE.md` / `AGENTS.md` | rulesync   | `.rulesync/rules/CLAUDE.md`                                  | リポジトリ直下の `CLAUDE.md` / `AGENTS.md`（Git 管理）                 |
+| グローバルな自作 skill / rule              | rulesync   | `config/rulesync/.rulesync/`                                 | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）             |
+| **外部スキル（グローバル）**               | **APM**    | `apm/apm.yml` の `dependencies.apm`                          | `~/.claude/skills/` 等（`apm install -g`）                             |
+| MCP サーバ（sandbox 用）                   | sbx mcp    | `config/sbx/mcp.yml`（APM の `dependencies.mcp` と同じ書式） | ホストの `sbx mcp`（`mise run sandbox:mcp-add`）。agent には登録しない |
 
-- **`CLAUDE.md` の生成方式は変更していません。** 従来どおり rulesync が生成します（`docs/rulesync.md` 参照）。
+- **`CLAUDE.md` / `AGENTS.md`** は `.rulesync/rules/CLAUDE.md` を正本として rulesync で生成し、実ファイルも Git 管理します。生成物との差分は `mise run lint:rulesync` と CI で検知します（`docs/rulesync.md` 参照）。
 - **カスタムスキル**は引き続き rulesync（`config/rulesync/`）で管理します。
 - **外部スキル**は upstream 依存として `dependencies.apm` に宣言します。skill 本文はこのリポジトリに持たず、
   pristine な upstream をそのまま使います。
@@ -87,14 +87,16 @@ dependencies:
 
 - **release tag がある依存**は `#<tag>` に pin します。Renovate（`github-tags` datasource）が新しい tag を
   見つけると `apm.yml` を更新し、同じPRで `apm install` を実行して `apm.lock.yaml` も更新します。
-  CLI も配布するリポジトリ（plannotator・crit・ctx など）は `.github/renovate.json` の `groupName` で mise の
+  CLI も配布するリポジトリ（plannotator・crit・ctx・desloppify など）は `.github/renovate.json` の `groupName` で mise の
   CLI 更新と同一PRにまとめます。
 - **release tag が無い依存**（effective-html・tsumiki・diagram-design）は ref を書きません。`apm.lock.yaml`
   の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
   Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
   週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。
-- **Renovate で更新しない依存**: `resolving-merge-conflicts`（v1.3.0 で upstream から削除）は
-  `.github/renovate.json` の packageRules で無効化し、`terminal-browser` は object 形式なので対象外です。
+- **Renovate の apm manager で更新しない依存**: `terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
+  `.github/renovate.json` の regex manager が `ref` だけを更新し、mise の `pipx:desloppify` と同じPRにまとめます。
+  組み込みの apm manager ではないため lockfile は再生成されず、そのPRのブランチで
+  `mise run apm:lock-local` を実行して lockfile を再生成し、commit します。
 - 詳細なfieldと判別規則はAPM公式の[Manifest Schema](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/manifest-schema.md#41-dependenciesapm----listapmdependency)を参照してください。
 
 ### Renovate が lockfile を生成する仕組みと制約
@@ -107,15 +109,16 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
   user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
   scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
-  `mise run apm:validate-lock-version` が失敗します。そのため mise の `github:microsoft/apm`、
+  `mise run apm:validate-lock-version` が失敗します。そのため mise の `aqua:microsoft/apm`、
   `.github/renovate.json` の `constraints.apm`（Renovate が `apm install` に使う version）、
   `apm/apm.lock.yaml` の `apm_version` をすべて `microsoft/apm` として抽出し（`constraints.apm` は組み込みの
   renovate-config manager、`apm_version` は regex manager）、`apm` group の同じPRで揃えて更新します。Renovate は `constraints` を base branch の設定から読むため、このPRで新しい
   APM による lockfile の再生成はできず、`apm_version` の値だけを書き換えます（0.32.0 → 0.33.0 では、
   書き換えた lockfile で `apm install -g --frozen` が成功し、lockfile の内容も変わらないことを確認済み）。
   新しい APM で content hash の計算方法などが変わり install が失敗する場合は、ローカルで
-  `apm install -g --update` を実行して lockfile を再生成し、`mise --cd "$HOME" run apm:sync-lock` で
-  `apm/apm.lock.yaml` に同期してから commit してください。
+  `mise run apm:lock-local --update` を実行して `apm/apm.lock.yaml` を再生成してから commit してください。
+  このタスクは一時ディレクトリで project scope の `apm install` を実行するだけで、`~/.apm` には触れないため、
+  feature ブランチの worktree でも現在の checkout の `apm/apm.yml` から lockfile を作れます。
 - **project scope の生成物を commit しない**: `apm install` は `apm/` 配下に `.claude/`・`.agents/`・
   `apm_modules/` などを生成します。Renovate は変更・未追跡ファイルをすべてPRに含めるため、`.gitignore` で
   `apm/apm.yml`・`apm/apm.lock.yaml` 以外を除外しています。
@@ -157,14 +160,14 @@ lockfile を `0600` で生成しても、その後の `mise bootstrap dotfiles a
 ## コンテキストへの載せ方
 
 外部スキルを足したら、`claude/settings.json` の `skillOverrides` にも追加して一覧への載せ方を決めます
-（書かないと `"on"` 扱いになり、説明文も一覧に載る）。詳細は [`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理) を参照してください。
+（書かないと `"on"` 扱いになり、説明文も一覧に載る）。詳細は [`docs/ai-skill.md` の「skill のコンテキスト管理」](ai-skill.md#skill-のコンテキスト管理) を参照してください。
 
 ## 注意事項
 
 - 配布先（`~/.claude/skills/` 等）は生成物です。skill 本文はこのリポジトリに持たないため、内容を変えたい
   場合は upstream を fork するか、`dependencies.apm` の pin を差し替えます。
-- `apm` 本体はグローバルの mise（`config/mise/config.toml`）の `github:microsoft/apm`
-  バックエンド（GitHub リリースのバイナリ）で管理しています。
+- `apm` 本体はグローバルの mise（`config/mise/config.toml`）の `aqua:microsoft/apm`
+  バックエンド（aqua レジストリ経由の GitHub リリースのバイナリ）で管理しています。
 - `targets` は `claude` / `codex` / `cursor`。`claude` は `~/.claude/skills/`、
   それ以外は共通の `~/.agents/skills/` へ配布されます。`copilot` を外している理由は
   「Renovate が lockfile を生成する仕組みと制約」を参照してください。
