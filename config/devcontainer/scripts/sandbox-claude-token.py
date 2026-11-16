@@ -1,8 +1,8 @@
 """Run Claude setup-token in a terminal and save each confirmed account's token."""
+
 import argparse
 import fcntl
 import os
-from pathlib import Path
 import pty
 import re
 import shutil
@@ -10,6 +10,7 @@ import struct
 import sys
 import tempfile
 import termios
+from pathlib import Path
 
 ACCOUNTS = {"account1": ".claude", "account2": ".claude-account2", "work3": ".claude-work3"}
 
@@ -31,13 +32,20 @@ def main():
         config = home / ACCOUNTS[account]
         dest = home / ".local/state/sbx-agent-credentials" / f"{account}.token"
         while True:
-            answer = input(f"{account} ({config}): setup-token を実行して保存しますか？ [y/n] ").strip().lower()
+            answer = (
+                input(f"{account} ({config}): setup-token を実行して保存しますか？ [y/n] ")
+                .strip()
+                .lower()
+            )
             if answer in ("y", "yes", "n", "no", ""):
                 break
         if answer not in ("y", "yes"):
             print(f"{account}: スキップしました")
             continue
-        print("ブラウザでも対象アカウントを選んでください。既存 token は成功時だけ更新します。", flush=True)
+        print(
+            "ブラウザでも対象アカウントを選んでください。既存 token は成功時だけ更新します。",
+            flush=True,
+        )
         # pty keeps Claude's interactive UI working; capture only in memory.
         output = bytearray()
 
@@ -57,11 +65,13 @@ def main():
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 1000, 0, 0))
             old = termios.tcgetattr(sys.stdin.fileno())
             import tty
+
             tty.setraw(sys.stdin.fileno())
             try:
                 # Same terminal relay used by pty.spawn, retaining the child pid
                 # so we can set its initial terminal size and inspect its exit.
                 import select
+
                 while True:
                     ready, _, _ = select.select([fd, sys.stdin.fileno()], [], [])
                     if fd in ready:
@@ -90,7 +100,9 @@ def main():
         text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
         tokens = set(re.findall(r"sk-ant-oat01-[A-Za-z0-9_-]{40,}", text))
         if len(tokens) != 1:
-            sys.exit(f"{account}: token を一意に抽出できないため保存しませんでした。出力形式を確認してください")
+            sys.exit(
+                f"{account}: token を一意に抽出できないため保存しませんでした。出力形式を確認してください"
+            )
         dest.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         temp_fd, temp_name = tempfile.mkstemp(prefix=".setup-", dir=dest.parent)
         try:

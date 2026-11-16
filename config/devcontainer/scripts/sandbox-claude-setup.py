@@ -1,15 +1,20 @@
 """Configure Claude subscription tokens, kit binding, and selected workspace sandboxes."""
+
 import argparse
 import json
 import os
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
-ACCOUNTS = {"account1": (".claude", "a1"), "account2": (".claude-account2", "a2"), "work3": (".claude-work3", "w3")}
+ACCOUNTS = {
+    "account1": (".claude", "a1"),
+    "account2": (".claude-account2", "a2"),
+    "work3": (".claude-work3", "w3"),
+}
 
 
 def confirm(message):
@@ -26,7 +31,9 @@ def binding():
     # Preserve a pre-existing symlink, other services/mechanisms, and domains.
     path = path.resolve()
     if path.exists():
-        parsed = subprocess.run(["yq", "-o=json", ".", str(path)], capture_output=True, text=True, check=True)
+        parsed = subprocess.run(
+            ["yq", "-o=json", ".", str(path)], capture_output=True, text=True, check=True
+        )
         data = json.loads(parsed.stdout)
         if data is None:
             data = {}
@@ -48,7 +55,13 @@ def binding():
     if original == json.dumps(data, sort_keys=True):
         print("==> Anthropic binding は設定済みです")
         return
-    converted = subprocess.run(["yq", "-P", "-p=json", "."], input=json.dumps(data), capture_output=True, text=True, check=True)
+    converted = subprocess.run(
+        ["yq", "-P", "-p=json", "."],
+        input=json.dumps(data),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         backup = Path(str(path) + ".bak")
@@ -88,35 +101,52 @@ def main():
     repo = Path(os.environ["SBX_DOTFILES_ROOT"]).resolve()
     scripts = repo / "local/bin"
     subprocess.run(["mise", "-C", str(repo), "run", "sandbox:claude-token", *accounts], check=True)
-    # Remove only the conflicting global Anthropic secret, never GitHub/scoped ones.
-    secrets = subprocess.run(["sbx", "secret", "ls"], capture_output=True, text=True, check=True)
-    if any(line.split()[:3] == ["(global)", "service", "anthropic"] or
-           line.split()[:2] == ["(global)", "anthropic"] for line in secrets.stdout.splitlines()):
-        if not confirm("global anthropic 認証を削除しますか？ 他の sandbox にも影響します"):
-            print("共通認証を残して終了します。解除後に sandbox:claude-setup を再実行してください")
-            return
-        subprocess.run(["sbx", "secret", "rm", "anthropic", "--force"], check=True)
+    # Scoped setup-tokens take precedence over global secrets. Keep the global
+    # OAuth login available to the dedicated Chrome sandbox.
     binding()
     print("==> sandbox を準備する workspace:", workspace)
-    print("既存 sandbox を作り直す場合、sandbox 内だけのデータは失われます。必要なデータを保存し、関連セッションを終了してください。")
+    print(
+        "既存 sandbox を作り直す場合、sandbox 内だけのデータは失われます。必要なデータを保存し、関連セッションを終了してください。"
+    )
     for account in accounts:
         config, prefix = ACCOUNTS[account]
         token = Path.home() / ".local/state/sbx-agent-credentials" / (account + ".token")
         if not token.is_file() or not token.stat().st_size:
             print(account + ": token 未登録のため sandbox 準備をスキップ")
             continue
-        command = [str(scripts / "sbx-agent"), "claude", "--claude-account", account,
-                   "--config-dir", str(Path.home() / config), "--name-prefix", prefix,
-                   "--workspace", str(workspace), "--setup-only", "--new"]
+        command = [
+            str(scripts / "sbx-agent"),
+            "claude",
+            "--claude-account",
+            account,
+            "--config-dir",
+            str(Path.home() / config),
+            "--name-prefix",
+            prefix,
+            "--workspace",
+            str(workspace),
+            "--setup-only",
+            "--new",
+        ]
         print(shlex.join(command))
-        if confirm(account + ": この workspace の sandbox を作成/再作成しますか？（既存があれば削除）"):
+        if confirm(
+            account + ": この workspace の sandbox を作成/再作成しますか？（既存があれば削除）"
+        ):
             if not os.environ.get("SBX_AGENT_TEMPLATE"):
-                templates = subprocess.run(["sbx", "template", "ls"], capture_output=True, text=True, check=True)
+                templates = subprocess.run(
+                    ["sbx", "template", "ls"], capture_output=True, text=True, check=True
+                )
                 if "sbx-agent:claude" not in templates.stdout:
-                    if not confirm("Claude template がありません。sandbox:build-template claude でビルドしますか？"):
+                    if not confirm(
+                        "Claude template がありません。sandbox:build-template claude でビルドしますか？"
+                    ):
                         print("template を用意してから sandbox:claude-setup を再実行してください")
                         continue
-                    subprocess.run(["mise", "run", "sandbox:build-template", "claude"], cwd=scripts.parents[1], check=True)
+                    subprocess.run(
+                        ["mise", "run", "sandbox:build-template", "claude"],
+                        cwd=scripts.parents[1],
+                        check=True,
+                    )
             subprocess.run(command, check=True)
     print("==> 完了。準備した sandbox は ccmanager の preset から起動できます")
 
@@ -127,4 +157,6 @@ if __name__ == "__main__":
     except (EOFError, KeyboardInterrupt):
         sys.exit("\n中止しました")
     except subprocess.CalledProcessError:
-        sys.exit("設定コマンドが失敗したため停止しました。表示されたエラーを解消して再実行してください")
+        sys.exit(
+            "設定コマンドが失敗したため停止しました。表示されたエラーを解消して再実行してください"
+        )

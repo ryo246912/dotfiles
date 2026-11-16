@@ -18,7 +18,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
                                        統合・書き直し・不要な教訓の retired は月次の lessons-review
                                                                           │
      ┌────────────────────────────────────────────────────────────────────┤
-     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-self-review（push 前）   ↓ pr-reviewer-comment（観点）
+     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-lessons-review（push 前）   ↓ pr-reviewer-comment（観点）
    received + team                       received + team の Check   given + team
 ```
 
@@ -30,7 +30,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | 週次の収集・昇格         | `lessons-harvest` skill を Claude Desktop のローカル定期タスクで実行                     |
 | 月次の見直し             | `lessons-review` skill を同じく定期タスクで実行（received・given・team のすべて）        |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
-| push 前の突き合わせ      | `pr-author-self-review` skill                                                            |
+| push 前の突き合わせ      | `pr-author-lessons-review` skill                                                         |
 | レビュー時の観点         | `pr-reviewer-comment` / `pr-reviewer-comment-crit`（`references/findings.md`）           |
 | 同期・初期設定のコマンド | `mise run lessons:setup` / `mise run lessons:sync`（`config/mise/tasks/lessons.toml`）   |
 
@@ -43,7 +43,7 @@ commit 前に secretlint を通す。
 ```text
 agent-lessons/
   harvest-state.yml              # targets ファイルごとの前回の実行日（lessons-harvest が週次 PR の中で更新する）
-  escalation.md                  # 仕組み化のチェックリスト（lint・hook・テスト・ルールファイルで防ぐ教訓）
+  escalation/<scope_key>.md      # 仕組み化のチェックリスト。scope_key ごとに分ける（lint・hook・テスト・ルールファイルで防ぐ教訓）
   inbox/<source>/                # 観察（type: lesson_observation）。1 件 1 ファイル
   lessons/<source>/<scope_key>/  # 教訓（type: lesson）
   archived/                      # 週次で skip した観察（status: skipped）と retired の教訓。inbox/・lessons/ と同じ相対パスで置く
@@ -67,11 +67,11 @@ owner・global へ広がる。そのリポジトリの領域に固有の教訓�
 
 ### source（誰の指摘か）
 
-| source     | 内容                                       | 使う場所                                                        |
-| ---------- | ------------------------------------------ | --------------------------------------------------------------- |
-| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-self-review                      |
-| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点           |
-| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-self-review、pr-reviewer-comment |
+| source     | 内容                                       | 使う場所                                                           |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-lessons-review                      |
+| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点              |
+| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-lessons-review、pr-reviewer-comment |
 
 ### 収集対象（targets.yml と targets.<name>.yml）
 
@@ -182,22 +182,22 @@ diff で探すもの（grep する語・コードの形）を書く。
 
 ### status と昇格の基準
 
-| status      | 意味                                                                                                     | 注入   |
-| ----------- | -------------------------------------------------------------------------------------------------------- | ------ |
-| `candidate` | 昇格条件をまだ満たしていない                                                                             | しない |
-| `active`    | 繰り返し出た。守るべき教訓                                                                               | する   |
-| `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation.md` で印を付けると付く | しない |
-| `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                           | しない |
+| status      | 意味                                                                                                                 | 注入   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| `candidate` | 昇格条件をまだ満たしていない                                                                                         | しない |
+| `active`    | 繰り返し出た。守るべき教訓                                                                                           | する   |
+| `ruled`     | 仕組み（lint・hook・テスト・CLAUDE.md などのルールファイル）に移した。`escalation/<scope_key>.md` で印を付けると付く | しない |
+| `retired`   | 出なくなった・他の教訓に統合した・月次の見直しで不要とした。`archived/` へ移す                                       | しない |
 
-| 変更                | 条件                                                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| candidate → active  | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上 |
-| repo → owner        | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                           |
-| owner → global      | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                              |
-| active → retired    | `last_seen` から 90 日                                                                                             |
-| candidate → retired | `last_seen` から 180 日（月次の lessons-review が行う）                                                            |
-| 統合・retired       | 月次の lessons-review で、根本原因が同じ教訓を 1 つにまとめる・誤りや一度きりの事情の教訓を retired にする         |
-| 仕組み化の候補      | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation.md` に足される       |
+| 変更                | 条件                                                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| candidate → active  | `received` / `given`: 異なる PR と訂正されたセッションの合計が 2 以上。`team`: 異なる 3 PR 以上か、指摘者 2 人以上       |
+| repo → owner        | 同じ owner の 2 リポジトリ以上で同じ教訓                                                                                 |
+| owner → global      | `targets.yml`（個人）のリポジトリだけを根拠に、2 owner 以上で同じ教訓                                                    |
+| active → retired    | `last_seen` から 90 日                                                                                                   |
+| candidate → retired | `last_seen` から 180 日（月次の lessons-review が行う）                                                                  |
+| 統合・retired       | 月次の lessons-review で、根本原因が同じ教訓を 1 つにまとめる・誤りや一度きりの事情の教訓を retired にする               |
+| 仕組み化の候補      | active になった後も 2 回以上指摘された（モデルが週次で仕組みの案を書いたものも）。`escalation/<scope_key>.md` に足される |
 
 会社など `targets.<name>.yml` のリポジトリが根拠に含まれる教訓は、自動では `global` に広げない（`global` は個人の
 リポジトリにも注入されるため）。広げる価値がありそうなものは、固有名詞を取り除いた文面案が週次 PR の「要確認」に載る。
@@ -312,7 +312,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される（リポジトリ固有 20 件・広く効くもの 30 件まで） |
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
-| push・PR 作成の前    | `pr-author-self-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                    |
+| push・PR 作成の前    | `pr-author-lessons-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                 |
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
 | 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
@@ -332,35 +332,77 @@ PR の本文に、統合した教訓（統合先 ← 統合元）・書き直し
 要確認が並ぶ。diff で文面を確かめてマージする。**マージするまで週次は止まる**。
 
 - 統合元と retired にした教訓は `archived/` へ移る。根拠の URL は残るので、同じ指摘が候補に戻ってくることはない
-- `escalation.md` の「未対応」は、統合元なら統合先へ向け直し、retired なら外す
+- `escalation/<scope_key>.md` の「未対応」は、統合元なら統合先へ向け直し、retired なら外す
 - 戻したい統合・retired は、その PR の上で `archived/` から `lessons/` へ戻し、`status` を直してからマージする
 
-### 仕組み化する（escalation.md）
+### 仕組み化する（escalation/<scope_key>.md）
 
-教訓を読ませて守らせるより、lint・hook・テスト・ルールファイルで機械的に防ぐほうが確実。active になった後も指摘され
-続ける教訓は、週次の集計が agent-lessons の `escalation.md` の「未対応」に、モデルが書いた仕組みの案付きで足す。
+active になった後も指摘され続ける教訓は、週次の集計が Check と Patterns を根拠に仕組みを提案する。
+案は種別・検知点・ツールに分け、同じツールの設定を 1 PR にまとめられるようにする。
+ファイルは教訓の scope_key ごとに分け、会社と個人のリポジトリの項目を混ぜない。
 
 ```markdown
 ## 未対応
 
-- [ ] 読んだ値で更新する処理は、行ロックか条件付き UPDATE で守る — `lessons/team/github.com/o/r/db-row-locking.md`
-  - 案: semgrep で WHERE が id だけの UPDATE を検出する。同時に 2 回呼ぶテストを足す
-  - 仕組み:
-
-## 済み
-
-- [x] 挙動を変えたら旧名称・旧挙動の記述を grep で全件更新する — `lessons/received/global/doc-behavior-drift.md` (ruled 2026-11-01)
-  - 案: …
-  - 仕組み: pre-commit で旧名を grep する hook（https://github.com/o/r/pull/12）
+- [ ] 外部モジュールの非公開名を参照しない — `lessons/received/global/private-import.md`
+  - 種別: lint
+  - 検知点: CI
+  - ツール: ruff:PLC2701
+  - 案: 外部モジュールの非公開名の参照を検出するルールを有効にする
+  - 仕組み: https://github.com/o/r/pull/12
+  - 検証: fixtures/private-import.json
 ```
 
-1. 「未対応」を見て、対象リポジトリに仕組みを入れる（案はたたき台。ほかの方法でもよい）
-2. 入れたら `[ ]` を `[x]` にし、`仕組み:` に入れたもの（PR の URL など）を書く。GitHub 上で直接直してもよい
-3. `mise run lessons:sync`（週次の段階 0 でも呼ばれる）が、印の付いた教訓を `ruled` にして `## Mechanism` を書き、
-   項目を「済み」へ移して commit・push する
+種別は `lint | custom-check | test | hook | rule-file`、検知点は `editor | pre-commit | CI | review-bot`。
+ツールには `ruff:PLC2701` のような既存ルールの識別子、または追加するチェック・テスト・hook・ファイル名を書く。
+週次の `plan.json` も `kind`・`detection`・`tool`・`proposal` を持つオブジェクトにする。
+具体案が無い教訓は、空の案を足さず週次 PR の「要確認」に回す。
+未対応の既存項目の案が不完全な場合は、修正した構造化案で提案欄を更新する。チェック状態・仕組み・検証設定・メモは保持する。
 
-ruled の教訓は SessionStart で注入されなくなる。仕組みを入れた後にまた同じ指摘を受けたら、週次 PR の「要確認」に載る
-（仕組みが効いていないか、穴がある）。
+1. 対象リポジトリに仕組みを入れ、`仕組み:` に内容や PR の URL を書く
+2. Patterns の各「→」の左側を違反例とし、一般化した実行可能な違反 fixture と修正版 fixture を用意する
+3. `検証:` に agent-lessons 内の検証 JSON の相対パスを書き、`[ ]` を `[x]` にする
+4. `mise run lessons:sync` が検証を実行する。全違反例の検出と全修正版の成功を確認できた教訓だけ `ruled` にして「済み」へ移す
+
+検証 JSON の例（`fixtures/private-import.json`）:
+
+```json
+{
+  "cwd": "/absolute/local/target/checkout",
+  "command": [
+    "ruff",
+    "check",
+    "--config",
+    "/absolute/local/target/checkout/ruff.toml",
+    "{fixture}"
+  ],
+  "cases": [
+    {
+      "pattern": "外部モジュールの非公開名を参照する",
+      "bad": "fixtures/private-import-bad.py",
+      "good": "fixtures/private-import-good.py",
+      "diagnostic": "PLC2701"
+    }
+  ]
+}
+```
+
+`pattern` は対象教訓の Patterns の「→」の左側全文に一致させ、すべての Patterns を `cases` で覆う。
+`bad`・`good` は agent-lessons 内の fixture の相対パス。`cwd` は仕組みを入れたローカル checkout の絶対パス。
+`command` はシェル文字列でなく引数の配列で指定し、`{fixture}` に各 fixture のパスが入る。
+導入した実際のチェックと設定を使う。fixture は別リポジトリにあるため、lint の設定ファイルは上の例のように明示する。
+検証時だけ `--select` でルールを有効化すると、実際の設定漏れを見逃すため使わない。
+違反 fixture は終了コード 1 かつ `diagnostic` の出力、修正版は終了コード 0 が必要で、各実行は 30 秒で打ち切る。
+fixture は元の会社コードをコピーせず、教訓の違反パターンを再現する一般化した例を書く。
+
+検証未設定・不一致・ツール未導入・タイムアウトなどは active のまま残り、sync はエラーを返す。
+`仕組み:` に URL があるだけでは ruled にしない。ルールファイルの種別でも検知を実証する検証が必要。
+ruled の教訓は SessionStart で注入されなくなる。仕組みを入れた後に再び同じ指摘を受けたら、週次 PR の「要確認」に載る。
+
+ツール別のバンドル作業には `escalation.py --list` の JSON 出力を使う。例えば
+`python3 <skill>/scripts/escalation.py --list | jq 'group_by(.tool) | map({tool: .[0].tool, items: .})'`
+で同じツールの案をまとめられる。チェックリストは `escalation/<scope_key>.md` に分け、
+新規項目も教訓の `scope_key` に対応するファイルへ追加する。
 
 ### 何から教訓を作ったかを確かめる
 
@@ -423,8 +465,11 @@ GitHub のコメントへ辿れる。
 # 作業中のリポジトリに効く教訓を見る（SessionStart と同じ出力）
 echo '{}' | agent-lessons-context
 
-# 作業中のリポジトリに効く教訓を、Rule・Patterns・Check 付きで見る（skill と同じ出力）
+# 作業中のリポジトリに効く教訓を、タイトル・場所・Check で選別する（skill の一次選別と同じ出力）
 # Claude Code の skill は ~/.claude/skills、Codex は ~/.agents/skills に配られる（どちらも同じスクリプト）
+python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --summary
+
+# 全候補の Rule・Patterns・Check が必要な場合
 python3 ~/.claude/skills/lessons-harvest/scripts/lessons_query.py --full
 
 # 全教訓の一覧（status を問わない）
@@ -439,17 +484,37 @@ mise run lessons:sync
 ## 制約と注意
 
 - **devcontainer の中では動かない。** Basic Memory と clone はホストにだけあるため、hook は何も出さずに終わる
-- **Docker Sandboxes（`sbx-agent`）では、同期（pull / commit）以外はホストと同じように動く。** ホストの clone を書き込み可
-  （`.git` だけは read-only。sandbox から git hook などを仕込ませないため。SessionStart の裏の `git pull` と、それに続く
-  reindex は sandbox では失敗するので、pull / commit はホストで行う）でマウントし、sandbox 内の
+- **Docker Sandboxes（`sbx-agent`）では、同期と週次収集も sandbox 内で実行できる。** ホストの clone を `.git` を含めて
+  書き込み可でマウントするため、pull / ブランチ作成 / commit / push ができる。sandbox 内の
   `~/.local/share/agent-lessons` から symlink を張る。Basic Memory は template に入れ、project `agent-lessons` を
   sandbox ごとに登録して、アタッチのたびに索引を作り直す（索引の SQLite はホストと共有しない）。sandbox で書いた観察は
-  ホストの clone に直接入るので、ホストの `mise run lessons:sync` で commit / push される。この仕組みより前に作った
-  sandbox にはマウントが無いため、`sbx-agent <agent> --new` で作り直す
+  ホストの clone に直接入り、`mise run lessons:sync` はホストでも sandbox でも実行できる。週次収集は skill のブランチ・PR 手順に従う。
+  以前の `.git` が read-only の sandbox やマウントの無い sandbox は、`sbx-agent <agent> --new` で作り直す。
+  **この共有 clone は、ホストでのコード実行を許容できる信頼済み agent に限って使う。** sandbox が変更した `.git/hooks` や
+  `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）は、後続のホスト側 Git 操作
+  （SessionStart の pull や `lessons:sync`）でコードを実行しうる。この clone については sandbox をホスト実行の信頼境界の内側として扱う。
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
-  push 前の `pr-author-self-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation.md` から仕組み化して `ruled` にし、減らす
+  push 前の `pr-author-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation/<scope_key>.md` から仕組み化して `ruled` にし、減らす
+- **ファイル名は ASCII にする。** Basic Memory はパスから permalink を作るため、日本語のファイル名だとローマ字混じりの
+  壊れた permalink になる。名付けは書き手ごとに違う。タイトルは frontmatter の `title` に日本語で書く
+  - `lessons-record`: `<日付>-<category>-<evidence の sha1>.md`。`basic-memory tool write-note` を使わず直接書くのもこのため
+  - 週次の `lessons-harvest`（`write_observations.py`）: `<日付>-<from か category の ASCII slug>-<バッチ>-<連番>.md`
+  - 教訓: 英語のケバブケースの key（`apply_plan.py` は `[A-Za-z0-9_-]` 以外を拒否する）
+
+  非 ASCII のファイル名があると、`collect.py` などの strict な書き込み側は止まる
+
+- **clone の作業ツリーを `--autostash` で pull しない。** Basic Memory は索引のたびに frontmatter へ permalink を足し、
+  書式も書き換える。その状態で autostash すると upstream と衝突し、衝突マーカーが frontmatter に残ったまま次の
+  `lessons:sync` に commit される（過去に 154 ファイルが壊れた）。pull は `--no-autostash` で行い、衝突したら rebase を
+  中止する。`lessons:sync` は commit 前に衝突マーカーと非 ASCII のファイル名を検査し、`collect.py` などの書き込み側は
+  frontmatter に衝突マーカーがあると止まる
+- **書き手は frontmatter に `permalink` を入れる。** 無いと Basic Memory が索引のたびに permalink を足し、そのとき YAML 全体
+  （リストのブロック形式化・引用符・末尾の改行）を書き直すため、教訓を書いていない 100 件超のファイルが作業ツリーで
+  変更になる。frontmatter に permalink があり他と重ならなければ Basic Memory は書き直さない。`lessonlib.write` は
+  `agent-lessons/<リポジトリ内のパスから .md を除き、小文字にして _ を - にしたもの>` を足す。Basic Memory の slug 化の規則
+  （`PenetratorInc` → `penetrator-inc` など）は再現しない。一意であれば値は何でもよいため
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに
@@ -476,10 +541,26 @@ mise run lessons:sync
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
-- **skill は教訓を 1 回で引く。** `pr-author-self-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
-  scope・source・変更ファイルの glob に合う教訓だけを Rule・Check 付きで 1 回で出す（Basic Memory で 1 件ずつ
-  read-note しない）。SessionStart で注入するのも教訓のタイトルだけにしている
+- **skill は教訓を段階的に読む。** `pr-author-lessons-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
+  scope・source・変更ファイルの glob に合う教訓をタイトル・場所・Check で一覧にし、関係するものと適用可否が不明なものだけ
+  clone の本文（Rule・Patterns・Check）を読む。タイトルだけで除外せず、調査で新たな論点が見つかれば候補を追加する。SessionStart で注入するのも教訓のタイトルだけにしている
 - **昇格を PR にする理由。** 提案をファイルに溜めて人が見に行く方式は回らなかった。PR なら普段の通知で届き、
   diff で確認できる
 - **教訓を項目単位で更新する理由。** LLM にファイル全体を書き直させると、根拠や細部が少しずつ失われる
 - `basic-memory` 0.23.2 は fastmcp のプレリリース版に固定されているため、mise の設定で `uvx_args = "--prerelease=allow"` を付けている
+
+## 作者向けレビューの実行
+
+`/pr-author-lessons-review` は旧 `pr-author-self-review` の新しい名前です。差分と教訓の照合を担当します。
+
+`/pr-author-all-review` は教訓照合 → code-review → pr-author-fix を 1 回ずつ実行します。
+`/pr-author-all-review --loop` は修正・検証・commit・push・CI と再レビュー待ちまで繰り返します。
+各レビューの責務は個別 skill に残し、追加するレビューは
+`config/rulesync/.rulesync/skills/pr-author-all-review/references/stages.md` の一覧で管理します。
+
+オプションを持つ skill は `-h` / `--help`で、処理を開始せず使い方を説明します。
+対象は pr-author-fix、pr-author-all-review、lessons-harvest、pr-reviewer-brief です。
+pr-author-lessons-review も同じヘルプを受け付けます。
+
+配布時は rulesync の生成に加え、旧名の生成済み skill を配布先から手動で削除してください。
+`delete: false` のため、改名だけでは旧 `pr-author-self-review` が残ります（`docs/rulesync.md` の「自作 skill を消しても配布先に残る」を参照）。

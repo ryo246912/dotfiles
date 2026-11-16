@@ -90,7 +90,9 @@ def list_material(work: Path) -> int:
         return 1
     work.mkdir(parents=True, exist_ok=True)
     for source, items in groups.items():
-        (work / f"{source}.json").write_text(json.dumps(items, ensure_ascii=False, separators=(",", ":")))
+        (work / f"{source}.json").write_text(
+            json.dumps(items, ensure_ascii=False, separators=(",", ":"))
+        )
     print(json.dumps({**{s: len(v) for s, v in groups.items()}, "stale": stale}))
     return 0
 
@@ -101,12 +103,14 @@ def load_plan(work: Path) -> dict[str, list]:
     for f in sorted(work.glob("plan-*.json")):
         source = f.stem.removeprefix("plan-")
         for k, v in json.loads(f.read_text()).items():
-            plan.setdefault(k, []).extend(v if k == "review" else ({**e, "source": source} for e in v))
+            plan.setdefault(k, []).extend(
+                v if k == "review" else ({**e, "source": source} for e in v)
+            )
     return plan
 
 
 def check_plan(plan: dict[str, list]) -> list[str]:
-    """plan はモデルが書くので、書き込む前にパス・source・scope と日本語かを検査する。"""
+    """Plan はモデルが書くので、書き込む前にパス・source・scope と日本語かを検査する。"""
     errors: list[str] = []
     metas: dict[str, dict] = {}
 
@@ -121,7 +125,9 @@ def check_plan(plan: dict[str, list]) -> list[str]:
             return None
         metas[rel] = metas.get(rel) or L.read(path)[0]
         if metas[rel].get("source") != source:
-            errors.append(f"{where}: plan-{source}.json に {metas[rel].get('source')} の教訓を書かない: {rel}")
+            errors.append(
+                f"{where}: plan-{source}.json に {metas[rel].get('source')} の教訓を書かない: {rel}"
+            )
         return metas[rel]
 
     used: list[str] = []
@@ -134,7 +140,11 @@ def check_plan(plan: dict[str, list]) -> list[str]:
             src = lesson_ok(rel, f"merge[{i}]", m["source"])
             used.append(rel)
             if into and src:
-                scopes = [str(src.get("scope_key")), *(src.get("repos") or []), *(into.get("repos") or [])]
+                scopes = [
+                    str(src.get("scope_key")),
+                    *(src.get("repos") or []),
+                    *(into.get("repos") or []),
+                ]
                 if e := L.scope_error(str(into.get("scope_key")), scopes):
                     errors.append(f"merge[{i}]: {e}（広げるのは週次の widen）: {rel}")
             if src and src.get("status") == "ruled":
@@ -144,19 +154,34 @@ def check_plan(plan: dict[str, list]) -> list[str]:
     for i, r in enumerate(plan["retire"]):
         lesson_ok(r.get("lesson", ""), f"retire[{i}]", r["source"])
         used.append(r.get("lesson", ""))
-    errors += [f"merge・retire に二重に書いた: {rel}" for rel in sorted(set(used)) if used.count(rel) > 1]
+    errors += [
+        f"merge・retire に二重に書いた: {rel}" for rel in sorted(set(used)) if used.count(rel) > 1
+    ]
 
-    gone = {rel for m in plan["merge"] for rel in m.get("lessons", [])} | {r.get("lesson") for r in plan["retire"]}
+    gone = {rel for m in plan["merge"] for rel in m.get("lessons", [])} | {
+        r.get("lesson") for r in plan["retire"]
+    }
     rewritten = [r.get("lesson", "") for r in plan["rewrite"]]
     for i, r in enumerate(plan["rewrite"]):
         lesson_ok(r.get("lesson", ""), f"rewrite[{i}]", r["source"])
         if r.get("lesson") in gone:
-            errors.append(f"rewrite[{i}]: 統合・retired にする教訓は書き直さない: {r.get('lesson')}")
+            errors.append(
+                f"rewrite[{i}]: 統合・retired にする教訓は書き直さない: {r.get('lesson')}"
+            )
         if not any(r.get(k) for k in TEXT_KEYS):
             errors.append(f"rewrite[{i}]: 書き直す項目（{'・'.join(TEXT_KEYS)}）が無い")
-    errors += [f"rewrite に二重に書いた: {rel}" for rel in sorted(set(rewritten)) if rewritten.count(rel) > 1]
+    errors += [
+        f"rewrite に二重に書いた: {rel}"
+        for rel in sorted(set(rewritten))
+        if rewritten.count(rel) > 1
+    ]
 
-    texts = [(f"rewrite[{i}].{k}", r[k]) for i, r in enumerate(plan["rewrite"]) for k in TEXT_KEYS if r.get(k)]
+    texts = [
+        (f"rewrite[{i}].{k}", r[k])
+        for i, r in enumerate(plan["rewrite"])
+        for k in TEXT_KEYS
+        if r.get(k)
+    ]
     texts += [(f"merge[{i}].reason", m.get("reason", "")) for i, m in enumerate(plan["merge"])]
     texts += [(f"retire[{i}].reason", r.get("reason", "")) for i, r in enumerate(plan["retire"])]
     texts += [(f"review[{i}]", r) for i, r in enumerate(plan["review"])]
@@ -165,9 +190,11 @@ def check_plan(plan: dict[str, list]) -> list[str]:
 
 
 def fold(meta: dict, body: str, src: dict, src_body: str) -> str:
-    """src の観察を meta へ足す。件数は観察の数なので足し、PR・セッションは recount が `## Evidence` から数え直す。"""
+    """Src の観察を meta へ足す。件数は観察の数なので足し、PR・セッションは recount が `## Evidence` から数え直す。"""
     meta["count"] = int(meta.get("count") or 0) + int(src.get("count") or 0)
-    meta["first_seen"] = min(str(meta.get("first_seen") or "9999"), str(src.get("first_seen") or "9999"))
+    meta["first_seen"] = min(
+        str(meta.get("first_seen") or "9999"), str(src.get("first_seen") or "9999")
+    )
     meta["last_seen"] = max(str(meta.get("last_seen") or ""), str(src.get("last_seen") or ""))
     meta["repos"] = sorted(set(meta.get("repos") or []) | set(src.get("repos") or []))
     hashes = set(meta.get("reviewer_hashes") or []) | set(src.get("reviewer_hashes") or [])
@@ -178,12 +205,18 @@ def fold(meta: dict, body: str, src: dict, src_body: str) -> str:
         if meta.get("status") == "candidate":
             meta.update(status="active", activated=src.get("activated"), since_active=0)
         if meta.get("status") == "active":
-            meta["since_active"] = int(meta.get("since_active") or 0) + int(src.get("since_active") or 0)
+            meta["since_active"] = int(meta.get("since_active") or 0) + int(
+                src.get("since_active") or 0
+            )
     sec, src_sec = L.sections(body), L.sections(src_body)
-    patterns = list(dict.fromkeys(L.bullets(sec.get("Patterns", "")) + L.bullets(src_sec.get("Patterns", ""))))
+    patterns = list(
+        dict.fromkeys(L.bullets(sec.get("Patterns", "")) + L.bullets(src_sec.get("Patterns", "")))
+    )
     if patterns:
         body = L.set_section(body, "Patterns", "\n".join(patterns[-L.MAX_PATTERNS :]), before="Why")
-    evidence = list(dict.fromkeys(L.bullets(sec.get("Evidence", "")) + L.bullets(src_sec.get("Evidence", ""))))
+    evidence = list(
+        dict.fromkeys(L.bullets(sec.get("Evidence", "")) + L.bullets(src_sec.get("Evidence", "")))
+    )
     return L.set_section(body, "Evidence", "\n".join(evidence))
 
 
@@ -204,7 +237,7 @@ def apply(work: Path) -> int:
             lessons[rel] = (path, *L.read(path))
         return lessons[rel]
 
-    # escalation.md の「未対応」の向け先（統合先のパス。外すものは None）
+    # escalation/<scope_key>.md の「未対応」の向け先（統合先のパス。外すものは None）
     moves: dict[str, str | None] = {}
     merged, rewritten, retired, stale = [], [], [], []
     for m in plan["merge"]:
@@ -241,11 +274,15 @@ def apply(work: Path) -> int:
         rel = str(path.relative_to(L.LESSONS_DIR))
         _, meta, _ = load(rel)
         if meta.get("type") == "lesson" and is_stale(meta):
-            meta.update(status="retired", retire_reason=f"candidate のまま {CANDIDATE_RETIRE_DAYS} 日たった")
+            meta.update(
+                status="retired", retire_reason=f"candidate のまま {CANDIDATE_RETIRE_DAYS} 日たった"
+            )
             moves[rel] = None
             stale.append(meta["title"])
 
-    changed = {m["into"] for m in plan["merge"]} | set(moves) | {r["lesson"] for r in plan["rewrite"]}
+    changed = (
+        {m["into"] for m in plan["merge"]} | set(moves) | {r["lesson"] for r in plan["rewrite"]}
+    )
     for rel in changed:
         path, meta, body = lessons[rel]
         if meta.get("type") != "lesson":
@@ -267,7 +304,9 @@ def apply(work: Path) -> int:
                 section("統合した教訓（統合先 ← 統合元）", merged),
                 section("書き直した教訓", rewritten),
                 section("retired にした教訓", retired),
-                section(f"candidate のまま {CANDIDATE_RETIRE_DAYS} 日たって retired にした教訓", stale),
+                section(
+                    f"candidate のまま {CANDIDATE_RETIRE_DAYS} 日たって retired にした教訓", stale
+                ),
                 section("要確認", plan["review"]),
             ]
         )

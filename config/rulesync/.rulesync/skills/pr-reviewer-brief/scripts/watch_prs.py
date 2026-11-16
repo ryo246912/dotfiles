@@ -37,7 +37,7 @@ def gh_json(*args: str) -> object:
 
 
 def gh_api_optional(path: str) -> object | None:
-    result = subprocess.run(["gh", "api", path], capture_output=True, text=True)
+    result = subprocess.run(["gh", "api", path], capture_output=True, text=True, check=False)
     return json.loads(result.stdout) if result.returncode == 0 and result.stdout.strip() else None
 
 
@@ -49,8 +49,18 @@ def in_working_hours(hours: str, weekdays: str) -> bool:
 
 
 def open_prs(repo: str, me: str) -> list[dict]:
-    prs = gh_json("pr", "list", "--repo", repo, "--state", "open", "--limit", "1000",
-                  "--json", "number,author,isDraft")
+    prs = gh_json(
+        "pr",
+        "list",
+        "--repo",
+        repo,
+        "--state",
+        "open",
+        "--limit",
+        "1000",
+        "--json",
+        "number,author,isDraft",
+    )
     return [pr for pr in prs if not pr["isDraft"] and pr["author"]["login"] != me]
 
 
@@ -78,7 +88,7 @@ def scan(repo: str, me: str, state: dict) -> list[dict]:
 
 def notify(message: str) -> None:
     if shutil.which("osascript"):
-        script = f"display notification {json.dumps(message)} with title \"pr-reviewer-brief\""
+        script = f'display notification {json.dumps(message)} with title "pr-reviewer-brief"'
         subprocess.run(["osascript", "-e", script], check=False)
     elif shutil.which("notify-send"):
         subprocess.run(["notify-send", "pr-reviewer-brief", message], check=False)
@@ -91,9 +101,13 @@ def save(state: dict) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--interval", type=int, default=600, help="確認の間隔（秒）")
-    parser.add_argument("--max-wait", type=int, default=6600, help="対象が無いまま待つ最長時間（秒）")
+    parser.add_argument(
+        "--max-wait", type=int, default=6600, help="対象が無いまま待つ最長時間（秒）"
+    )
     parser.add_argument("--hours", default="9-20", help="確認する時間帯（時、開始-終了）")
     parser.add_argument("--weekdays", default="1,2,3,4,5", help="確認する曜日（1=月 … 7=日）")
     parser.add_argument("--once", action="store_true", help="1 回だけ確認して終了する")
