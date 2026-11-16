@@ -82,7 +82,7 @@ secrets:
     command: gh auth token
 ```
 
-コミット署名も同じ発想で、**SSH agent forwarding が既定で有効**です。devcontainer では
+コミット署名も同じ発想で、**SSH agent forwarding** を使います（v3 kit では利用宣言が必要です）。devcontainer では
 専用の署名鍵を生成してコンテナに mount していましたが、sandbox ではホストの ssh-agent に
 署名を依頼するだけなので**秘密鍵がゲストに渡りません**。
 
@@ -335,9 +335,9 @@ mise run sandbox:setup
 ### コミット署名用の SSH 鍵を ssh-agent に登録する（Mac で一度だけ）
 
 sandbox 内のコミットは、ホストの ssh-agent を forwarding して SSH 署名します
-（[詳細](#ホストの-git-設定とコミット署名)）。ホストの ssh-agent が空だと `sbx-agent` が
-`ホストの ssh-agent に鍵が無いため sandbox 内のコミット署名を無効化します` と警告し、
-署名なしでコミットされます。次を一度だけ実行してください。
+（[詳細](#ホストの-git-設定とコミット署名)）。`sbx-agent` は署名用の鍵を自動で読み込みます。
+読み込みや sandbox 内での試験署名に失敗した場合は、復旧手順を表示して起動を中止します。
+署名は自動で無効化しません。先に鍵を読み込む場合は、次を一度だけ実行してください。
 
 ```bash
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519
@@ -350,7 +350,7 @@ ssh-add -L   # 公開鍵が 1 行出れば OK
 - 署名に使うのは常に `~/.ssh/id_ed25519`（`SBX_AGENT_SIGNING_KEY` で変更可）です。agent に他の鍵が
   先に入っていても、GitHub に登録済みの同じ鍵で署名するので、再起動のたびに Unverified になって
   `gh ssh-key add` し直すことはありません。
-- このあと `sbx-agent` を起動し直せば警告は消え、sandbox 内のコミットが SSH 署名されます。
+- このあと `sbx-agent` を起動し直し、sandbox 内での試験署名が成功すれば agent が起動します。
 - 署名を GitHub で **Verified** にするには、同じ公開鍵（`ssh-add -L` の出力）を
   GitHub の [SSH and GPG keys](https://github.com/settings/keys) に **Signing key** として
   登録してください。Authentication key とは別の枠なので、認証用に登録済みでも改めて追加が必要です。
@@ -1120,7 +1120,22 @@ devcontainer は SSH で GitHub に出られるため `pushInsteadOf` の打ち�
 | `url.https://github.com/.pushInsteadOf` | ホスト設定の push を SSH に寄せる `pushInsteadOf` を打ち消す |
 | `gc.worktreePruneExpire`                | 見えていない worktree を git gc が消さないようにする         |
 
-コミット署名は **SSH agent forwarding**（sbx の既定で有効）を使います。
+コミット署名は **SSH agent forwarding** を使います。
+v3 kit ではホストの `ssh.agentForwardingEnabled=true` に加え、kit に次の利用宣言が必要です。
+共通 kit（`config/sbx/kits/common/common.yaml`）で宣言しています。
+
+```yaml
+capabilities:
+  - type: com.docker.sandbox/ssh-agent@1
+    config:
+      phase: runtime
+```
+
+宣言がないと、ホストに鍵があっても sandbox の `SSH_AUTH_SOCK` と転送ソケットが作られません。
+これは [Docker sbx issue #835](https://github.com/docker/sbx-releases/issues/835) でも報告されています。
+この修正を反映するには、作業と sandbox 内だけにあるデータを保存してから、修正版の kit で
+sandbox を再作成してください。daemon の再起動だけでは kit の宣言は追加されません。
+
 ホストのパスは sandbox 内に存在しないため、鍵ファイルではなく forwarded agent の公開鍵を
 `key::<pubkey>` 形式で `user.signingkey` に設定します。
 
@@ -1134,9 +1149,11 @@ commit.gpgsign  = true
 `ssh-add -L` の先頭の鍵を使うと、再起動後に agent へ鍵が入る順番が変わったとき（他の SSH 接続で
 別の鍵が先に登録された等）に GitHub 未登録の鍵で署名して Unverified になるためです。
 
-署名用の鍵を ssh-agent に登録できない場合は `commit.gpgsign = false` にして警告します。
-ホストの gitconfig が GPG 署名を有効にしていても GPG 秘密鍵は sandbox に渡らないため、
-無効化しないと commit が毎回失敗するからです。
+署名用の鍵を ssh-agent に登録できない場合は起動を中止します。署名は自動で無効化しません。
+指定した鍵の `.pub` が無い場合も停止し、agent の先頭の鍵には切り替えません。
+アタッチごとに sandbox 内で agent ユーザーによる試験署名を実行し、成功した
+`SSH_AUTH_SOCK` と現在の Git 設定を `sbx run --env` で渡します。
+ホスト側の鍵確認だけでは、sandbox 側の relay socket の不在を検出できないためです。
 
 macOS の ssh-agent は再起動のたびに空になり、`~/.ssh/config` の `AddKeysToAgent yes` も
 「SSH で鍵を使った時点」でしか登録しません。ホストの git が GPG 署名・HTTPS push だと
@@ -1156,6 +1173,29 @@ ssh-add -L   # 公開鍵が表示されれば OK
 
 `ssh-add -L` が `Could not open a connection to your authentication agent` になる場合は
 `SSH_AUTH_SOCK` が古い（tmux の古いセッションなど）ので、新しいシェルから実行してください。
+
+### `Couldn't get agent socket` の復旧
+
+PC ごとに forwarding 設定と daemon が保持する socket が異なることがあります。
+ホスト側で次を確認してください。
+
+```bash
+sbx settings get ssh.agentForwardingEnabled  # true が必要
+ssh-add -l                                  # 署名鍵が読み込まれていること
+```
+
+forwarding が false なら `sbx settings set ssh.agentForwardingEnabled true` を実行します。
+`ssh.agentSocketPath` を設定している場合は、そのパスが現在も有効か確認してください。
+設定を変更した場合は `sbx daemon restart` が必要です（他の稼働中 sandbox への影響も確認）。
+その後、作業を保存し、ホストで有効な `SSH_AUTH_SOCK` を持つ同じシェルから再接続します。
+
+```bash
+sbx stop <sandbox-name>
+sbx-agent <agent> --name <sandbox-name>
+```
+
+`--new` や sandbox の削除は不要です。ステージ済み変更を保持したまま復旧します。
+sandbox 内では `test -S "$SSH_AUTH_SOCK"` と `ssh-add -l` の両方が成功することを確認します。
 
 ### 署名の検証（`allowed_signers`）
 

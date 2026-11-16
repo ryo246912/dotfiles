@@ -713,7 +713,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # それらを「消えた worktree」とみなしてホスト側の worktree を壊すのを防ぐ
     add_git_config gc.worktreePruneExpire never
 
-    # コミット署名: sbx は SSH agent forwarding が既定で有効なので、ホストの秘密鍵を
+    # コミット署名: 共通 v3 kit が SSH agent forwarding を runtime 用に要求し、ホストの秘密鍵を
     # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
     # なく forwarded agent の公開鍵（key:: 形式）を指定する。
     #
@@ -732,6 +732,13 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     #   未保存なら端末で一度だけパスフレーズを聞いて Keychain に保存する
     # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
     log_info "SSH 署名鍵を確認します"
+    if [[ "$(sbx settings get ssh.agentForwardingEnabled 2>/dev/null)" == false ]]; then
+        log_error "sbx の SSH agent forwarding が無効です。ホストで次を実行してから再試行してください"
+        log_error "  sbx settings set ssh.agentForwardingEnabled true"
+        log_error "  sbx daemon restart"
+        log_error "作業中の sandbox は保存してから sbx stop <name> で停止してください（削除は不要です）"
+        exit 1
+    fi
     signing_key="${SBX_AGENT_SIGNING_KEY:-${HOME}/.ssh/id_ed25519}"
     signing_key="${signing_key%.pub}"
     # agent 内の鍵との照合は「鍵種別 + 鍵本体」で行う（comment は agent 側と異なりうる）
@@ -757,8 +764,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         if [[ -n "$signing_key_id" ]]; then
             agent_has_signing_key && signing_pubkey="$signing_key_id"
         else
-            # 鍵ファイルが無い（agent にだけ鍵がある構成）場合は従来通り先頭の鍵を使う
-            signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1)
+            log_error "署名鍵を固定するため ${signing_key}.pub が必要です（SBX_AGENT_SIGNING_KEY で変更可）"
         fi
     fi
     if [[ -n "$signing_pubkey" ]]; then
@@ -785,20 +791,19 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
         fi
     else
-        # ホストの gitconfig が GPG 署名を有効にしていても、GPG 秘密鍵は sandbox に
-        # 渡らないため commit が毎回失敗する。署名だけ無効化する。
-        add_git_config commit.gpgsign false
+        log_error "署名用の鍵を利用できないため起動を中止します（署名は無効化しません）"
         if [[ $agent_rc -eq 2 ]]; then
-            log_warn "ホストの ssh-agent に接続できないため sandbox 内のコミット署名を無効化します"
-            log_warn "  SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-（未設定）} を確認してください（tmux の古いセッションでは古いソケットを指していることがあります）"
+            log_error "ホストの SSH_AUTH_SOCK を確認し、ssh-add -l が成功するシェルから再実行してください"
+            log_error "tmux の古いセッションでは古いソケットを指していることがあります"
         else
-            log_warn "署名用の鍵（${signing_key}）をホストの ssh-agent に登録できないため sandbox 内のコミット署名を無効化します"
+            log_error "署名鍵の公開鍵ファイルと agent への登録を確認してください: ${signing_key}.pub"
             if [[ "$(uname -s)" == Darwin ]]; then
-                log_warn "  一度だけ ssh-add --apple-use-keychain ${signing_key} を実行すると、以降は自動で読み込みます"
+                log_error "  ssh-add --apple-use-keychain \"${signing_key}\""
             else
-                log_warn "  ssh-add ${signing_key} で鍵を登録してください"
+                log_error "  ssh-add \"${signing_key}\""
             fi
         fi
+        exit 1
     fi
 
     if [[ ${#GIT_CONFIG_PAIRS[@]} -gt 0 ]]; then
@@ -1171,6 +1176,30 @@ PYORG
     )
 fi
 
+# ホストで鍵が見えていても、daemon の古い socket や設定により relay が無い場合がある。
+# agent と同じユーザーで実際に署名し、login shell の socket を起動環境へ明示的に渡す。
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    log_info "sandbox 内の SSH 署名を検証します"
+    signing_socket=$(sbx exec -u agent --env "SBX_SIGNING_PUBKEY=$signing_pubkey" "$SANDBOX_NAME" bash -lc '
+        set -eu
+        test -n "${SSH_AUTH_SOCK:-}" && test -S "$SSH_AUTH_SOCK" || {
+            echo "署名用 SSH_AUTH_SOCK が未設定、または relay socket がありません" >&2
+            exit 1
+        }
+        probe=$(mktemp -d)
+        trap "rm -rf -- \"\$probe\"" EXIT
+        printf "%s\n" "$SBX_SIGNING_PUBKEY" >"$probe/key.pub"
+        printf "sbx-agent signing probe\n" | ssh-keygen -Y sign -U -n git -f "$probe/key.pub" >/dev/null
+        printf "%s" "$SSH_AUTH_SOCK"
+    ') || {
+        log_error "sandbox 内で署名できないため起動を中止します。署名設定と作業データは保持しています"
+        log_error "ホストで ssh-add -l と sbx settings get ssh.agentForwardingEnabled を確認してください"
+        log_error "設定変更時は sbx daemon restart、続いて sbx stop $SANDBOX_NAME を実行し、同じシェルで sbx-agent を再実行してください"
+        exit 1
+    }
+    add_env SSH_AUTH_SOCK "$signing_socket"
+fi
+
 if [[ "$SETUP_ONLY" == true ]]; then
     log_info "sandbox の準備が完了しました: $SANDBOX_NAME"
     exit 0
@@ -1179,7 +1208,8 @@ fi
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
 log_info "${AGENT} を起動します"
-run_cmd=(sbx run --name "$SANDBOX_NAME")
+# 再利用時も現在の署名鍵・Git 設定・socket を渡す（overlay は作成時の設定）。
+run_cmd=(sbx run --name "$SANDBOX_NAME" ${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
 [[ -n "$CLAUDE_AUTH_METHOD" ]] && run_cmd+=(--env "SBX_CLAUDE_AUTH_METHOD=$CLAUDE_AUTH_METHOD")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
