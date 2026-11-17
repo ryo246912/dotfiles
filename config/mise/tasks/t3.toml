@@ -133,7 +133,7 @@ def choose_cli_command():
         "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証"),
         "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
         "server-status": (["server-status"], "ホスト側 T3 サービスの状態"),
-        "restart-server": (["restart-server"], "T3 サーバーを再起動（実行中の作業を中断）"),
+        "restart-server": (["restart-server"], "自動起動環境を更新して再起動（実行中の作業を中断）"),
         "version": (["--version"], "T3 のバージョンを表示"),
         "help": (["--help"], "T3 コマンドのヘルプ"),
     }
@@ -212,27 +212,30 @@ def pair(profile, arguments):
     print("スマホではこの loopback URL は使えません。T3 Connect または Tailscale で接続します。")
 
 
-def host_service_command(profile, action):
+def host_service_command(profile):
     label = f"local.t3-sandbox.{profile['account']}"
     if sys.platform == "darwin":
         require("launchctl")
-        verb = ["kickstart", "-k"] if action == "restart-server" else ["print"]
-        return ["launchctl", *verb, f"gui/{os.getuid()}/{label}"]
+        return ["launchctl", "print", f"gui/{os.getuid()}/{label}"]
     if sys.platform == "linux":
         require("systemctl")
-        return ["systemctl", "--user", "restart" if action == "restart-server" else "status", f"{label}.service"]
+        return ["systemctl", "--user", "status", f"{label}.service"]
     raise ValueError("ホストサービスの操作は macOS / Linux 用です")
 
 
 def service_environment():
-    environment = {"PATH": os.environ["PATH"]}
-    for key in ("XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
+    # Activated install paths may be pruned by nested mise runs. Keep stable shims
+    # and the environment selectors that enable config.mac.toml (including sbx).
+    data = Path(os.environ.get("MISE_DATA_DIR", str(Path.home() / ".local/share/mise")))
+    paths = [str(Path.home() / ".local/bin"), str(data / "shims"), *os.environ["PATH"].split(os.pathsep)]
+    environment = {"PATH": os.pathsep.join(dict.fromkeys(paths))}
+    for key in ("MISE_ENV", "HOST_ENV", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
         if key in os.environ:
             environment[key] = os.environ[key]
     return environment
 
 
-def install_service(profile):
+def install_service(profile, refresh=False):
     # The service uses the same global mise task as initial setup.
     require("mise")
     command = [shutil.which("mise"), "--cd", str(Path.home()), "run", "t3:run", "--", profile["account"]]
@@ -248,13 +251,16 @@ def install_service(profile):
                    "EnvironmentVariables": service_environment(),
                    "StandardOutPath": str(logs / f'{profile["account"]}.log'),
                    "StandardErrorPath": str(logs / f'{profile["account"]}.log')}
-        # Do not overwrite/restart a registered job while it may have active turns.
+        # Ordinary setup preserves running jobs. Explicit restart repairs the
+        # saved environment too; kickstart alone would retain the broken PATH.
         domain = f"gui/{os.getuid()}"
         loaded = subprocess.run(["launchctl", "print", f"{domain}/{label}"],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if loaded.returncode == 0:
-            print("自動起動は登録済みです。実行中の T3 は再起動しません")
-            return
+            if not refresh:
+                print("自動起動は登録済みです。実行中の T3 は再起動しません")
+                return
+            run(["launchctl", "bootout", f"{domain}/{label}"])
         path.write_bytes(plistlib.dumps(payload))
         run(["launchctl", "bootstrap", domain, path])
     elif sys.platform == "linux":
@@ -271,7 +277,8 @@ def install_service(profile):
                         "Restart=always\nRestartSec=15\nTimeoutStopSec=30\nUMask=0077\n\n"
                         "[Install]\nWantedBy=default.target\n")
         run(["systemctl", "--user", "daemon-reload"])
-        run(["systemctl", "--user", "enable", "--now", path.name])
+        run(["systemctl", "--user", "enable", path.name])
+        run(["systemctl", "--user", "restart" if refresh else "start", path.name])
     else:
         raise ValueError("自動起動は sbx が動作する macOS / Linux 環境用です")
 
@@ -359,11 +366,11 @@ def main():
         arguments = args.arguments or choose_cli_command()
         print(f"Account: {account} / Command: {' '.join(arguments)}", flush=True)
         if arguments in (["server-status"], ["restart-server"]):
-            command = host_service_command(profile, arguments[0])
             if arguments == ["restart-server"]:
-                run(command)
-                print("再起動を要求しました。server-status とログで起動完了を確認してから pair を選んでください。")
+                install_service(profile, refresh=True)
+                print("自動起動環境を更新して再起動しました。server-status とログで起動完了を確認してから pair を選んでください。")
                 return
+            command = host_service_command(profile)
         else:
             require("sbx")
             if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
