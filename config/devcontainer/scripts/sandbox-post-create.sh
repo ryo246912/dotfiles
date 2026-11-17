@@ -156,9 +156,8 @@ setup_agent_configs() {
 install_lefthook_all() {
     local template="${HOME}/.config/devcontainer/lefthook.local.yml"
 
-    # 既定では lefthook.local.yml のコピーと hook のインストールを行わない。
-    # 有効にする場合はホストで INSTALL_LOCAL_LEFTHOOK=1 を設定する（sbx-agent が --env で渡す）。
-    if [ "${INSTALL_LOCAL_LEFTHOOK:-0}" != "1" ]; then
+    # 既定で配置・インストールする。ホストで INSTALL_LOCAL_LEFTHOOK=0 を指定すると無効。
+    if [ "${INSTALL_LOCAL_LEFTHOOK:-1}" != "1" ]; then
         log_skip "INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook.local.yml の配置をスキップしました"
         return 0
     fi

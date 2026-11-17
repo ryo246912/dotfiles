@@ -8,8 +8,7 @@ environment:
   variables:
     AI_AGENT: "1"
     TERM: xterm-256color
-    LEFTHOOK_CONFIG: lefthook.local.yml
-    INSTALL_LOCAL_LEFTHOOK: "0"
+    INSTALL_LOCAL_LEFTHOOK: "1"
 permissions:
   network:
     # Balanced preset に無い、調査用ドキュメントやツールの取得先を許可する。
