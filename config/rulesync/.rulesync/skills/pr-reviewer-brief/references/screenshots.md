@@ -83,22 +83,22 @@ python3 <skill>/scripts/render_brief.py --workdir <work> --out <段階2で作っ
 
 途中で環境へ接続できずBLOCKEDになった場合も、この確認を省略しない。終了判定の前にbehaviorの知見保存手順を実施する。
 
-- 今回の再利用可能な知見を整理し、実行時に確定した設定先に隣接する`lessons/`へ1知見1ファイルで保存したか。
+- 今回の再利用可能な知見を整理し、`~/.local/share/agent-lessons/behavor/`へ1知見1ファイルで保存したか。
 - 書き込んだファイルを読み直し、タイトル・対象リポジトリ・環境・根拠・本文が保存されたことを確認したか。subagentの「保存した」という要約だけでは完了にしない。メインも引き継がれたファイルの存在と該当箇所を確認する。
 - 重複または新規知見なしの場合は`NO_CHANGE`と理由を記録したか。BLOCKEDでも、確認できた到達条件や接続上の制約は知見候補になるが、未確認の原因を断定して残さない。
-- 保存を試して失敗した場合は`FAILED`と、試行内容・観測したエラー・続行条件を記録したか。書き込み可能な設定先を確保できず未試行なら`NOT_RUN`と未試行の理由を記録する。「未実施」と「書き込み失敗」を区別し、勝手に別の保存先へ散らさない。
+- 保存を試して失敗した場合は`FAILED`と、試行内容・観測したエラー・続行条件を記録したか。agent-lessonsが未初期化・読み取り専用で未試行なら`NOT_RUN`と未試行の理由を記録する。「未実施」と「書き込み失敗」を区別し、勝手に別の保存先へ散らさない。
 
 `manual_test.lesson_capture`に`status`、`files`、`note`を残し、HTMLを再生成する。
-`files`の基準は今回behaviorが選択したconfig.mdの実体ディレクトリで、知見一覧の`path`と同じ `lessons/owner/repo/要点.md` 形式にする。workやbrief.jsonの場所を基準にしない。
-メインはbehaviorの `references/lesson-format.md` の「最終パスの実体検査」を、絶対パス・相対パスの両方へ適用する。相対参照なら `(Path(config).resolve(strict=True).parent / file).resolve(strict=True)` とし、設定ファイルだけでなく最終ファイル全体を解決する。絶対参照も `Path(file).resolve(strict=True)` を使う。
-対象repoの許可ディレクトリは今回のowner/repoから独立に確定し、owner/repoディレクトリのsymlinkは拒否する。最終実体がその対象repoの実体配下であることを `is_relative_to` で確認し、さらに `resolved.parent == expected_repo.resolve(strict=True)`、`resolved.is_file()`、`resolved.suffix == ".md"` をすべて検査してから読み直す。対象repo直下の通常のMarkdownファイルだけを許可し、ネストしたファイルやMarkdown以外は読まない。同じlessons内の別repoや、worktree外へ出るsymlinkも読み取らない。
-未存在・解決エラー・範囲外・ファイルでない場合は保存確認を失敗として扱い、本文を読まず、SAVEDと記録しない。検査を通った実体だけ、lessonsの実体からの相対部分に `lessons/` を付けてfilesへ転記する。絶対パスをそのままfilesへ渡したり、相対参照だけ検査を省略したりしない。
+`files`の基準はagent-lessonsの実体ルートで、知見一覧の`path`と同じ `behavor/owner/repo/要点.md` 形式にする。一覧のpathの大文字小文字を保持し、正規化・再生成しない。workやbrief.jsonの場所を基準にしない。
+メインはbehaviorの `references/lesson-format.md` の「最終パスの実体検査」を、絶対パス・相対パスの両方へ適用する。behaviorから内部情報として受け取った選択済みcloneの実体をbaseに保持する（未指定時は `Path("~/.local/share/agent-lessons").expanduser().resolve(strict=True)`）。相対参照なら `(base / file).resolve(strict=True)` とし、cloneルートだけでなく最終ファイル全体を解決する。絶対参照も `Path(file).resolve(strict=True)` を使う。
+対象repoの許可ディレクトリは今回のowner/repoから独立に確定し、owner/repoディレクトリのsymlinkは拒否する。最終実体がその対象repoの実体配下であることを `is_relative_to` で確認し、さらに `resolved.parent == expected_repo.resolve(strict=True)`、`resolved.is_file()`、`resolved.suffix == ".md"` をすべて検査してから読み直す。対象repo直下の通常のMarkdownファイルだけを許可し、ネストしたファイルやMarkdown以外は読まない。同じbehavor内の別repoや、worktree外へ出るsymlinkも読み取らない。
+未存在・解決エラー・範囲外・ファイルでない場合は保存確認を失敗として扱い、本文を読まず、SAVEDと記録しない。検査を通った実体だけ、behavorの実体からの相対部分に `behavor/` を付けてfilesへ転記する。絶対パスをそのままfilesへ渡したり、相対参照だけ検査を省略したりしない。
 
 ```json
 {
   "status": "SAVED",
-  "files": ["lessons/example-org/example-app/preview-login.md"],
-  "note": "今回の設定先から解決したファイルを読み直し、保存を確認した"
+  "files": ["behavor/example-org/example-app/preview-login.md"],
+  "note": "agent-lessonsのbehavorから解決したファイルを読み直し、保存を確認した"
 }
 ```
 

@@ -1,9 +1,10 @@
 """知見のfrontmatterだけを一覧し、必要な本文を選べるようにする。追加依存なし。
 
-    python3 list_lessons.py --config /path/pr-reviewer-behavior/config.md --repo owner/repo --environment local
+    python3 list_lessons.py --repo owner/repo --environment local
 
 frontmatterの値はJSON互換のスカラーまたは1行配列。本文は出力しない。
-pathはconfig.mdの実体ディレクトリ基準の相対POSIXパス（lessons/...）を返す。
+pathはagent-lessons基準の相対POSIXパス（behavor/...）を返す。
+--configは旧保存先の移行確認専用（lessons/...を返す）。
 """
 
 import argparse
@@ -58,7 +59,9 @@ def repository_directories(root: Path, components: list[str]) -> list[Path]:
                     continue
                 if candidate.is_symlink():
                     raise ValueError("owner/repoの知見ディレクトリにsymlinkは使えない")
-                if not candidate.is_dir() or not candidate.resolve().is_relative_to(root):
+                if not candidate.is_dir() or not candidate.resolve().is_relative_to(
+                    root
+                ):
                     raise ValueError("owner/repoの知見ディレクトリが不正")
                 matches.append(candidate)
         directories = sorted(matches)
@@ -66,17 +69,40 @@ def repository_directories(root: Path, components: list[str]) -> list[Path]:
 
 
 def lesson_index(
-    config: Path, repository: str, environment: str | None = None, query: str = ""
+    config: Path | None,
+    repository: str,
+    environment: str | None = None,
+    query: str = "",
+    *,
+    lessons_dir: Path | None = None,
 ) -> dict:
     components = repository.split("/")
     if len(components) != 2 or any(
-        part in {".", ".."} or not re.fullmatch(r"[A-Za-z0-9_.-]+", part) for part in components
+        part in {".", ".."} or not re.fullmatch(r"[A-Za-z0-9_.-]+", part)
+        for part in components
     ):
         raise ValueError("repoはowner/repoで指定する")
-    parent = config.resolve().parent
-    root = (parent / "lessons").resolve()
-    if not root.is_relative_to(parent):
-        raise ValueError("lessonsの実体が設定ディレクトリの外にある")
+    if config is not None and lessons_dir is not None:
+        raise ValueError("--configと--lessons-dirは同時に指定できない")
+    if config is not None:
+        parent = config.resolve(strict=True).parent
+        directory = parent / "lessons"
+    else:
+        directory = lessons_dir or Path.home() / ".local/share/agent-lessons/behavor"
+        directory = directory.expanduser().absolute()
+        if directory.name != "behavor":
+            raise ValueError(
+                "--lessons-dirはagent-lessonsのbehavorディレクトリを指定する"
+            )
+        parent = directory.parent.resolve(strict=True)
+    if directory.is_symlink():
+        raise ValueError("知見ルートにsymlinkは使えない")
+    root = directory.resolve()
+    if root != parent / directory.name:
+        raise ValueError("知見ルートのsymlinkで保存先を変更できない")
+    if root.exists() and not root.is_dir():
+        raise ValueError("知見ルートがディレクトリではない")
+    prefix = directory.name
     directories = repository_directories(root, components)
     rows, warnings = [], []
     paths = sorted(
@@ -86,9 +112,13 @@ def lesson_index(
         if path.suffix == ".md"
     )
     for path, directory in paths:
-        relative_path = (Path("lessons") / path.relative_to(root)).as_posix()
+        relative_path = (Path(prefix) / path.relative_to(root)).as_posix()
         try:
-            if not path.resolve().is_relative_to(directory):
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or path.resolve().parent != directory.resolve()
+            ):
                 raise ValueError("知見ファイルの実体が対象repoの外にある")
             item = metadata(path)
             version = item.get("schema_version")
@@ -96,6 +126,11 @@ def lesson_index(
                 raise UnsupportedSchemaVersionError(
                     f"{relative_path}: schema_version={version}は未対応。一覧取得を停止する"
                 )
+            if config is None and (
+                not isinstance(item.get("permalink"), str)
+                or not item["permalink"].strip()
+            ):
+                raise ValueError("permalinkは空でない引用符付き文字列にする")
             for key in (
                 "title",
                 "summary",
@@ -107,9 +142,14 @@ def lesson_index(
             ):
                 if not isinstance(item.get(key), str) or not item[key].strip():
                     raise ValueError(f"frontmatterの{key}は空でない文字列にする")
-            if type(item.get("schema_version")) is not int or item["schema_version"] != 1:
+            if (
+                type(item.get("schema_version")) is not int
+                or item["schema_version"] != 1
+            ):
                 raise ValueError("未対応のschema_version")
-            if item["environment"] not in {"local", "staging", "all"} or item["status"] not in {
+            if item["environment"] not in {"local", "staging", "all"} or item[
+                "status"
+            ] not in {
                 "active",
                 "retired",
             }:
@@ -125,7 +165,9 @@ def lesson_index(
                 continue
             if environment and item["environment"] not in {environment, "all"}:
                 continue
-            search = " ".join([item["title"], item["summary"], *item["tags"]]).casefold()
+            search = " ".join(
+                [item["title"], item["summary"], *item["tags"]]
+            ).casefold()
             if query.casefold() not in search:
                 continue
             rows.append(
@@ -133,7 +175,13 @@ def lesson_index(
                     "path": relative_path,
                     **{
                         key: item[key]
-                        for key in ("title", "summary", "environment", "tags", "updated_at")
+                        for key in (
+                            "title",
+                            "summary",
+                            "environment",
+                            "tags",
+                            "updated_at",
+                        )
                     },
                 }
             )
@@ -146,13 +194,25 @@ def lesson_index(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", required=True, type=Path)
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--config", type=Path, help="移行確認用の旧config.md")
+    source.add_argument(
+        "--lessons-dir",
+        type=Path,
+        help="知見ルート（既定: ~/.local/share/agent-lessons/behavor）",
+    )
     parser.add_argument("--repo", required=True)
     parser.add_argument("--environment", choices=("local", "staging"))
     parser.add_argument("--query", default="")
     args = parser.parse_args()
     try:
-        result = lesson_index(args.config, args.repo, args.environment, args.query)
+        result = lesson_index(
+            args.config,
+            args.repo,
+            args.environment,
+            args.query,
+            lessons_dir=args.lessons_dir,
+        )
     except (ValueError, OSError) as error:
         parser.error(str(error))
     print(json.dumps(result, ensure_ascii=False, indent=2))

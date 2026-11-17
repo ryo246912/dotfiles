@@ -62,7 +62,7 @@ brief.json の書式:
         "data": [{"purpose": "表示確認", "record": "id=1 / テスト項目", "state": "下書き",
                   "url": "http://localhost:3000/items/1", "source": "作成"}],
         "cleanup": ["手動確認用にデータを保持。削除方法: ..."],
-        "lesson_capture": {"status": "SAVED", "files": ["lessons/owner/repo/preview-login.md"], "note": "保存後に内容を確認"},
+        "lesson_capture": {"status": "SAVED", "files": ["behavor/owner/repo/preview-login.md"], "note": "保存後に内容を確認"},
         "preconditions": ["feature flag・権限・アカウントなど"],
         "seed": {"note": "何のデータを入れるか", "run": "SQL クライアントで対象 DB に接続し、下の SQL を貼り付けて直接実行する手順", "language": "sql",
                  "script": "INSERT INTO ...（標準 SQL）", "cleanup": "入れたデータだけを削除する標準 SQL"},
@@ -805,14 +805,14 @@ def check_manual_test(brief: dict) -> list[str]:
                 and "\\" not in path
                 and not PurePosixPath(path).is_absolute()
                 and ".." not in PurePosixPath(path).parts
-                and len(PurePosixPath(path).parts) >= 4
-                and PurePosixPath(path).parts[0] == "lessons"
+                and len(PurePosixPath(path).parts) == 4
+                and PurePosixPath(path).parts[0] in {"behavor", "lessons"}
                 and PurePosixPath(path).suffix == ".md"
                 for path in files
             )
             if not valid_files:
                 errors.append(
-                    "lesson_capture.filesはlessons/以下の相対Markdownパスの配列にする（絶対パス・親参照は不可）"
+                    "lesson_capture.filesはbehavor/以下（旧記録はlessons/以下）の相対Markdownパスの配列にする（絶対パス・親参照は不可）"
                 )
             if lesson.get("status") == "SAVED" and (not valid_files or not files):
                 errors.append("知見保存済みの場合は確認したファイルパスが必要")
