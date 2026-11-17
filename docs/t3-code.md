@@ -133,7 +133,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 ### ホストで T3 Connect に登録する
 
 1. `mise run t3:cli` を実行し、公開するアカウント（例: **work3**）→ **connect** を選ぶ。
-   sandbox 内で `t3 connect link --headless` が実行される。
+   その sandbox に必要な通信先を許可してから、sandbox 内で `t3 connect link --headless` が実行される。
 2. relay client の導入確認が出たら **`y` を入力して Enter** を押す。
    Enter だけでは既定の `N` になる。表示バージョンは T3 が指定するものを使う。
 
@@ -154,6 +154,13 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 
 既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
 **T3 Connect** を有効化して本人認証する方法も使える。
+
+T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のように、対象の sandbox に限定して
+認証・リレー用の `clerk.t3.codes:443` / `relay.t3.codes:443` / `app.t3.codes:443` と、
+Cloudflare Tunnel の `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` /
+`cftunnel.com` / `h2.cftunnel.com` の TCP 7844 を許可する。
+setup・サービス起動・CLI の connect 実行時に適用するため、既存 sandbox にも反映される。
+その他の sandbox の共通 policy は変更しない。
 
 ### 接続先のアプリで同じ環境を開く
 

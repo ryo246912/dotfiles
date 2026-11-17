@@ -47,6 +47,11 @@ import tempfile
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774), "work3": (".claude-work3", 3775)}
+T3_CONNECT_NETWORK = ",".join((
+    "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
+    "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
+    "cftunnel.com:7844", "h2.cftunnel.com:7844",
+))
 
 
 def run(args, **kwargs):
@@ -152,6 +157,11 @@ def choose_cli_command():
     return commands[key][0]
 
 
+def allow_t3_connect_network(profile):
+    # Scope T3 authentication and Cloudflare's TCP/HTTP2 edges to this sandbox.
+    run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], T3_CONNECT_NETWORK])
+
+
 def prepare(profile):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
@@ -159,6 +169,7 @@ def prepare(profile):
          "--config-dir", Path.home() / ACCOUNTS[profile["account"]][0],
          "--workspace", profile["workspace"], "--name", profile["name"],
          "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"])
+    allow_t3_connect_network(profile)
     # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
     ports = run(["sbx", "ports", profile["name"]], capture_output=True, text=True)
     mapped = [fields[1] for row in ports.stdout.splitlines()
@@ -373,6 +384,8 @@ def main():
             command = host_service_command(profile)
         else:
             require("sbx")
+            if arguments[0] == "connect" and not any(flag in arguments for flag in ("--help", "-h")):
+                allow_t3_connect_network(profile)
             if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
                 pair(profile, arguments)
                 return
