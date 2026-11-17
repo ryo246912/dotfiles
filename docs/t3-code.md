@@ -24,7 +24,9 @@ mise run sandbox:build-template claude
 ```
 
 template は T3 追加後に再ビルドする。作成済みの sandbox は更新されないので、この構成では
-専用の `t3-account1` / `t3-account2` / `t3-work3` を作る。他用途の sandbox は再利用・削除しない。
+専用の `t3-account1` / `t3-account2` / `t3-work3` を作る。同名の sandbox がある場合は再利用されるため、初回は専用名との衝突がないことを確認する。
+既存 sandbox の mount は setup では更新されない。構成が違う場合は必要なデータを保存し、
+対象 sandbox を停止・削除してから setup で作り直す（自動削除はしない）。
 T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
 macOS のアプリも mise の `[bootstrap.packages]` で管理する。
 `mise bootstrap packages apply brew-cask:t3-code` で導入できる。
@@ -41,6 +43,10 @@ mise run t3:setup
 
 `account1`・`account2`・`work3` の選択メニューが出る。これは既存の Claude サブスク用
 アカウント名で、T3 Connect のログイン名とは別。
+`fzf` で Tab / Shift-Tab を使って複数選択し、Enter で確定する。
+Ctrl-A で全選択、Ctrl-D で選択解除、Esc で設定を変更せず中止できる。
+`fzf` が未導入なら `mise install aqua:junegunn/fzf` で導入する。
+開始前に表示される Workspace が、操作しているプロジェクトのパスであることを確認する。
 
 | 選択     | Claude 設定          | 専用 sbx      | PC 側の接続先           |
 | -------- | -------------------- | ------------- | ----------------------- |
@@ -55,6 +61,8 @@ Claude の認証先をその sandbox に固定する。token が未登録の場�
 mise run sandbox:claude-token account2
 # メニューを使わず指定する場合
 mise run t3:setup -- --account account2 --workspace /path/to/project
+# 複数アカウントをまとめて準備する場合
+mise run t3:setup -- --account account1 account2 work3 --workspace "$PWD"
 ```
 
 `sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
@@ -65,6 +73,13 @@ setup は sandbox を準備し、新規セッションの既定値として `def
 を設定する。既存の T3 設定は上書きしない。macOS では LaunchAgent、Linux では systemd user
 service を登録して T3 をバックグラウンドで起動する。同じ設定で setup を再実行しても、
 実行中のサービスを再起動しない。
+複数選択時もアカウントごとに別の sbx・ポート・データを使うので同時起動できる。
+CPU・メモリの使用量は増えるため、必要なアカウントだけ選ぶ。`--port` の指定は単一選択時だけ利用できる。
+選択した全アカウントの token と profile を確認してから準備を始める。
+途中で起動処理が失敗した場合、それまでに完了したアカウントの設定は保持する。
+
+以前の版でホームディレクトリを Git リポジトリとして参照するエラーが出る場合は、
+タスク定義を更新するまで `--workspace "$PWD"` を付けると、シェルで選んだプロジェクトを明示できる。
 
 ## デスクトップアプリを最初に接続する
 
@@ -138,7 +153,8 @@ XDG_DATA_HOME / XDG_STATE_HOME / XDG_CONFIG_HOME の指定にも対応。
 
 macOS は GUI ログイン後に起動する。Docker Sandboxes 自体も起動しておく。
 サービスの異常終了時は再試行するが、PC の電源オフ・スリープ中は接続できない。
-Linux は systemd user service が必要。WSL は systemd を有効にし、WSL 自体も起動しておく。
+Linux は対応環境に sbx を別途導入し、systemd user service を利用する必要がある。
+このリポジトリの sbx 導入設定は macOS 用。WSL2 ではこの microVM 構成は利用できない。
 Linux でログアウト後も維持する場合は、管理者の方針に従って lingering を設定する。
 
 診断・保守時だけターミナルを使う:
@@ -155,6 +171,9 @@ journalctl --user -u local.t3-sandbox.account2.service
 検証用の `mise run t3:setup -- --no-autostart` と `mise run t3:run -- account2` もあるが普段の運用経路ではない。
 サービスと手動 run は同時に起動しない。サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
+sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して
+`mise run t3:setup -- --account work3 --workspace /path/to/project` を実行し、
+再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
 ## 検証と実機確認
 

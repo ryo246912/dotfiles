@@ -3,21 +3,26 @@
 
 ["t3:setup"]
 description = "Select an account and configure the shared T3 sandbox and auto-start"
-raw         = true
-run         = 'exec mise run t3:_control -- setup'
+# Global tasks otherwise start in the global config directory, losing the caller's repository.
+dir = "{{cwd}}"
+raw = true
+run = 'exec mise run t3:_control -- setup'
 
 ["t3:run"]
 description = "Run T3 in the configured account sandbox (used by the host service)"
+dir         = "{{cwd}}"
 raw         = true
 run         = 'exec mise run t3:_control -- run'
 
 ["t3:cli"]
 description = "Run T3 CLI commands in the selected account sandbox"
+dir         = "{{cwd}}"
 raw         = true
 run         = 'exec mise run t3:_control -- cli'
 
 ["t3:ports"]
 description = "Show the selected account sandbox ports"
+dir         = "{{cwd}}"
 raw         = true
 run         = 'exec mise run t3:_control -- ports'
 
@@ -82,16 +87,29 @@ def load_profile(account):
     return profile
 
 
-def choose_account():
+def choose_accounts():
     if not sys.stdin.isatty():
         raise ValueError("初回は対話ターミナルで実行するか --account を指定してください")
-    for index, (account, (directory, port)) in enumerate(ACCOUNTS.items(), 1):
+    require("fzf")
+    rows = []
+    for account, (directory, port) in ACCOUNTS.items():
         configured = "設定済み" if profile_path(account).exists() else "未設定"
-        print(f"{index}. {account} (~/{directory}, port {port}, {configured})")
-    answer = input("T3 Code で使う sandbox のアカウント [1-3]: ").strip()
-    if answer not in ("1", "2", "3"):
-        raise ValueError("1〜3 を選択してください。設定は変更していません")
-    return list(ACCOUNTS)[int(answer) - 1]
+        rows.append(f"{account}\t~/{directory}\tport {port}\t{configured}")
+    selection = subprocess.run(
+        ["fzf", "--multi", "--layout=reverse", "--prompt=account> ",
+         "--header=Tab: 複数選択 / Ctrl-A: 全選択 / Enter: 確定 / Esc: 中止",
+         "--bind=ctrl-a:select-all,ctrl-d:deselect-all"],
+        input="\n".join(rows) + "\n", text=True, stdout=subprocess.PIPE,
+    )
+    if selection.returncode in (1, 130):
+        raise KeyboardInterrupt
+    selection.check_returncode()
+    selected = list(dict.fromkeys(line.split("\t", 1)[0] for line in selection.stdout.splitlines()))
+    if not selected:
+        raise KeyboardInterrupt
+    if any(account not in ACCOUNTS for account in selected):
+        raise ValueError("選択結果のアカウントが不正です。設定は変更していません")
+    return selected
 
 
 def prepare(profile):
@@ -101,6 +119,14 @@ def prepare(profile):
          "--config-dir", Path.home() / ACCOUNTS[profile["account"]][0],
          "--workspace", profile["workspace"], "--name", profile["name"],
          "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"])
+    # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
+    ports = run(["sbx", "ports", profile["name"]], capture_output=True, text=True)
+    mapped = [fields[1] for row in ports.stdout.splitlines()
+              if len(fields := row.split()) >= 3 and fields[2] == "3773"]
+    if not mapped:
+        run(["sbx", "ports", profile["name"], "--publish", f'{profile["port"]}:3773'])
+    elif str(profile["port"]) not in mapped:
+        raise ValueError(f"{profile['name']} の T3 ポートが profile と一致しません。sbx ports で確認してください")
 
 
 def t3_command(profile, arguments):
@@ -111,7 +137,7 @@ def t3_command(profile, arguments):
 
 def service_environment():
     environment = {"PATH": os.environ["PATH"]}
-    for key in ("XDG_STATE_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
+    for key in ("XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
         if key in os.environ:
             environment[key] = os.environ[key]
     return environment
@@ -158,27 +184,28 @@ def install_service(profile):
         run(["systemctl", "--user", "daemon-reload"])
         run(["systemctl", "--user", "enable", "--now", path.name])
     else:
-        raise ValueError("自動起動は macOS / Linux 用です。WSL では systemd が必要です")
+        raise ValueError("自動起動は sbx が動作する macOS / Linux 環境用です")
 
 
-def setup(args):
-    account = args.account or choose_account()
-    require("git", "sbx", "sbx-agent")
+def account_profile(account, workspace, port):
     token = Path.home() / ".local/state/sbx-agent-credentials" / f"{account}.token"
     if token.is_symlink() or not token.is_file() or not token.stat().st_size:
         raise ValueError(f"{account} の token が未登録です。mise run sandbox:claude-token {account} を実行してください")
-    workspace = Path(args.workspace or os.getcwd()).resolve()
-    workspace = Path(run(["git", "-C", workspace, "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip()).resolve()
     storage = (Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "t3-sandbox" / account).resolve()
     profile = {"account": account, "name": f"t3-{account}", "workspace": str(workspace),
-               "storage": str(storage), "port": args.port or ACCOUNTS[account][1]}
+               "storage": str(storage), "port": port or ACCOUNTS[account][1]}
     if profile_path(account).exists():
         previous = load_profile(account)
         if previous != profile:
             raise ValueError("このアカウントは別の workspace / port で設定済みです。既存の設定は変更していません")
     if profile_path(account).resolve().is_relative_to(storage):
         raise ValueError("ホスト用 profile は sandbox に渡すデータ領域と分けてください")
-    run(["sbx", "ls"], stdout=subprocess.DEVNULL)
+    return profile
+
+
+def setup_account(profile, no_autostart):
+    account = profile["account"]
+    storage = Path(profile["storage"])
     storage.mkdir(parents=True, exist_ok=True, mode=0o700)
     settings = storage / "t3/userdata/settings.json"
     if not settings.exists():
@@ -187,19 +214,39 @@ def setup(args):
     # Publish only after preparation succeeds; failed setup can be retried safely.
     prepare(profile)
     save_json(profile_path(account), profile)
-    if not args.no_autostart:
+    if not no_autostart:
         install_service(profile)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
     print(f"初回のアプリ接続: mise run t3:cli -- {account} pair")
-    if args.no_autostart:
+    if no_autostart:
         print(f"自動起動は未登録です。起動: mise run t3:run -- {account}")
+
+
+def setup(args):
+    accounts = list(dict.fromkeys(args.account or choose_accounts()))
+    if args.port is not None and len(accounts) != 1:
+        raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。複数時はアカウント別の既定ポートを使います")
+    require("git")
+    workspace = Path(args.workspace or os.getcwd()).expanduser().resolve()
+    result = subprocess.run(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError(f"Git リポジトリを確認できません: {workspace}。--workspace /path/to/project を指定してください")
+    workspace = Path(result.stdout.strip()).resolve()
+    print(f"Workspace: {workspace}", flush=True)
+    print("選択したアカウント: " + ", ".join(accounts), flush=True)
+    require("sbx", "sbx-agent")
+    # Validate every selection before creating or starting any sandbox.
+    profiles = [account_profile(account, workspace, args.port) for account in accounts]
+    run(["sbx", "ls"], stdout=subprocess.DEVNULL)
+    for profile in profiles:
+        setup_account(profile, args.no_autostart)
 
 
 def main():
     parser = argparse.ArgumentParser(prog="mise run t3:<task>", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
     initial = sub.add_parser("setup", help="初回のみ: アカウントを選び、共有 sbx と自動起動を設定")
-    initial.add_argument("--account", choices=ACCOUNTS)
+    initial.add_argument("--account", choices=ACCOUNTS, nargs="+", action="extend", help="複数指定可。例: --account account1 work3")
     initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
     initial.add_argument("--port", type=int)
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
