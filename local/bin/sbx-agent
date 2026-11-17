@@ -45,7 +45,7 @@
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
 #   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
-#   CLAUDE_CODE_ENABLE_CFC  Claude in Chrome を起動時に有効化（--claude-oauth の既定: 1。無効化は 0）
+#   CLAUDE_CODE_ENABLE_CFC  明示された値だけ Claude sandbox へ転送（既定値なし）
 #
 # sandbox を作成したときの呼び出しを ${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh に
 # 記録する。`mise run sandbox:recreate` はこれに --new --setup-only を付けて再実行し、
@@ -640,11 +640,10 @@ elif [[ "$CLAUDE_OAUTH" == true ]]; then
     CLAUDE_AUTH_METHOD=oauth
 fi
 [[ -n "$CLAUDE_AUTH_METHOD" ]] && add_env SBX_CLAUDE_AUTH_METHOD "$CLAUDE_AUTH_METHOD"
-if [[ "$AGENT" == claude && "$CLAUDE_OAUTH" == true ]]; then
-    # --chrome は ← で作る派生セッションへ引き継がれないことがある。
-    # sandbox 作成時の環境に設定し、後から起動する daemon / worker にも継承させる。
-    # ホストと共有する CLAUDE_CONFIG_DIR 内の .claude.json は書き換えない。
-    add_env CLAUDE_CODE_ENABLE_CFC "${CLAUDE_CODE_ENABLE_CFC:-1}"
+if [[ "$AGENT" == claude && -n "${CLAUDE_CODE_ENABLE_CFC+x}" ]]; then
+    # Chrome の有効化は呼び出し元（ccmanager の OAuth preset など）が選ぶ。
+    # 明示された値だけ sandbox の環境へ渡し、daemon / worker にも継承させる。
+    add_env CLAUDE_CODE_ENABLE_CFC "$CLAUDE_CODE_ENABLE_CFC"
 fi
 # lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
 add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"

@@ -96,12 +96,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome \"$@\"",
+          "CLAUDE_CODE_ENABLE_CFC=1 exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome \"$@\"",
+          "CLAUDE_CODE_ENABLE_CFC=1 exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"

@@ -1735,30 +1735,23 @@ sbx-agent claude --claude-account account1 --new
 setup-token 用と通常の OAuth 用の Sandbox は併用できます。
 普段は既存の `Claude account1 (Docker Sandbox)` などを使い、Chrome が必要なときだけ
 ccmanager の **Claude OAuth(Docker Sandbox)** を選んでください。
-この preset は `--claude-oauth --name-prefix oauth -- --chrome` で起動し、
+この preset は `CLAUDE_CODE_ENABLE_CFC=1` を指定し、
+`--claude-oauth --name-prefix oauth` で起動します。
 setup-token の account1 / account2 / work3 とは別名の Sandbox を使います。
 共通の `sbxenv.yaml` では Chrome を有効にせず、OAuth preset だけで明示的に有効化します。
 
-`sbx-agent claude --claude-oauth` は sandbox の起動環境に
-`CLAUDE_CODE_ENABLE_CFC=1` も渡します。Claude Code で左矢印キー（←）を押して
-バックグラウンドへ移行したときの派生セッションに `--chrome` が引き継がれなくても、
-起動時に Chrome 連携を有効化するためです。
+環境変数を指定するのは、この OAuth preset の通常起動と fallback 起動だけです。
+`sbx-agent` 自体には Chrome を有効にする既定値を設けず、明示された値だけを sandbox へ転送します。
+これにより、Claude Code で左矢印キー（←）を押してバックグラウンドへ移行したときも、
+派生セッションの起動時に Chrome 連携を有効化できます。
 ホストと共有する `.claude.json` の read-write マウントや書き換えは行いません。
-通常の setup-token preset の環境は変更しません。
 
-自動接続を無効にする場合は、`--chrome` を渡さない直接起動で、
-ホストで `CLAUDE_CODE_ENABLE_CFC=0` を指定してください。
-ccmanager の OAuth preset は `--chrome` を渡すため、環境変数を `0` にするだけでは無効化できません。
-明示的な `--chrome` は環境変数より優先されます。
-
-```bash
-CLAUDE_CODE_ENABLE_CFC=0 sbx-agent claude --claude-oauth --name-prefix oauth
-```
-
-セッション単位では `--no-chrome` で無効化できます。
+直接起動する場合は、Chrome が必要なときだけ同じ変数を指定してください。
+`--chrome` や環境変数を指定しない直接起動には、この preset の有効化設定は追加されません。
+セッション単位で明示的に無効化する場合は `--no-chrome` を使います。
 環境変数の `1` は `/chrome` の「Enabled by default」より優先されます。
 既存 sandbox や起動済み daemon / worker の環境が更新されるとは限らないため、
-この既定値は新規作成する OAuth sandbox で確認してください。
+変更後は新規作成する OAuth sandbox で確認してください。
 `claude daemon stop` はバックグラウンドセッションも終了するため、作業中に実行しないでください。
 
 ホストでは初回に `mise run sandbox:sbx-settings`（または次の設定）を実行します。
@@ -1785,7 +1778,7 @@ setup-token 用 Sandbox の中で `/login` を実行して認証方式を変更�
 手動での起動は次のとおりです。
 
 ```bash
-sbx-agent claude --claude-oauth --name-prefix oauth -- --chrome
+CLAUDE_CODE_ENABLE_CFC=1 sbx-agent claude --claude-oauth --name-prefix oauth
 ```
 
 `--claude-oauth` は `--claude-account` / `--config-dir` と併用できません。
