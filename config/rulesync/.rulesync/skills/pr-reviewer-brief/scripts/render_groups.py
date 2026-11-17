@@ -55,12 +55,14 @@ esc = html.escape
 def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") -> list[str]:
     errors: list[str] = []
     owner: dict[str, str] = {}
-    keys = ("id", "title", "kind", "hunks") + (("risk", "summary", "intent") if stage == "full" else ())
+    keys = ("id", "title", "kind", "hunks") + (
+        ("risk", "summary", "intent") if stage == "full" else ()
+    )
     ids = [group.get("id") for group in groups]
     for group_id in sorted({i for i in ids if ids.count(i) > 1}, key=str):
         errors.append(f"グループの id が重複している: {group_id}")
     kinds = [group.get("kind") for group in groups]
-    if "generated" in kinds and any(k != "generated" for k in kinds[kinds.index("generated"):]):
+    if "generated" in kinds and any(k != "generated" for k in kinds[kinds.index("generated") :]):
         errors.append("generated のグループは最後に並べる（並び順がグループ番号になるため）")
     for group in groups:
         for key in keys:
@@ -74,12 +76,16 @@ def validate(hunks: dict[str, dict], groups: list[dict], stage: str = "full") ->
             if hunk_id not in hunks:
                 errors.append(f"{group.get('id', '?')}: 存在しない hunk {hunk_id}")
             elif hunk_id in owner:
-                errors.append(f"{hunk_id} が {owner[hunk_id]} と {group.get('id', '?')} の両方に入っている")
+                errors.append(
+                    f"{hunk_id} が {owner[hunk_id]} と {group.get('id', '?')} の両方に入っている"
+                )
             else:
                 owner[hunk_id] = group.get("id", "?")
         for hunk_id in group.get("hunk_notes", {}):
             if hunk_id not in group.get("hunks", []):
-                errors.append(f"{group.get('id', '?')}: hunk_notes の {hunk_id} がグループの hunks に無い")
+                errors.append(
+                    f"{group.get('id', '?')}: hunk_notes の {hunk_id} がグループの hunks に無い"
+                )
     missing = [hunk_id for hunk_id in hunks if hunk_id not in owner]
     if missing:
         errors.append(f"どのグループにも入っていない hunk: {', '.join(missing)}")
@@ -110,7 +116,7 @@ def render_hunk(hunk: dict, note: str | None, blob_url: str | None) -> str:
         f'<details class="hunk" id="{hunk["id"]}"{open_attr}><summary><span class="hunk-id">{hunk["id"]}</span>'
         f'<code class="hunk-path">{path}</code><span class="hunk-range">{esc(hunk["header"].split(" @@")[0] + " @@" if hunk["lines"] else "")}</span>'
         f'<span class="added">+{hunk["added"]}</span> <span class="removed">−{hunk["removed"]}</span></summary>'
-        f"{note_html}<div class=\"diff-wrap\">{body}</div></details>"
+        f'{note_html}<div class="diff-wrap">{body}</div></details>'
     )
 
 
@@ -151,15 +157,18 @@ def render_file_map(hunks: dict[str, dict], groups: list[dict], numbers: dict[st
             f'<div class="file"><code title="{esc(path)}">{esc(name)}</code>'
             f'{size_bar(entry["added"], entry["removed"], scale)}<span class="chips">{chips}</span></div>'
         )
-    return (
-        f'<details class="file-map"><summary>変更ファイルの地図（{len(files)} files）</summary>{"".join(rows)}</details>'
-    )
+    return f'<details class="file-map"><summary>変更ファイルの地図（{len(files)} files）</summary>{"".join(rows)}</details>'
 
 
 def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> str:
-    groups = [g for g in groups if g["kind"] != "generated"] + [g for g in groups if g["kind"] == "generated"]
+    groups = [g for g in groups if g["kind"] != "generated"] + [
+        g for g in groups if g["kind"] == "generated"
+    ]
     numbers = {group["id"]: index for index, group in enumerate(groups, start=1)}
-    scale = max((sum(hunks[h]["added"] + hunks[h]["removed"] for h in g["hunks"]) for g in groups), default=0)
+    scale = max(
+        (sum(hunks[h]["added"] + hunks[h]["removed"] for h in g["hunks"]) for g in groups),
+        default=0,
+    )
     overview, details = [], []
     for group in groups:
         members = [hunks[hunk_id] for hunk_id in group["hunks"]]
@@ -170,18 +179,28 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
         kind = f'<span class="tag">{KIND_LABELS[group["kind"]]}</span>'
         prs = "".join(f'<span class="tag">#{n}</span>' for n in group.get("prs", []))
         checkpoints = group.get("checkpoints", [])
-        count = f'<span class="checkpoint-count">確認ポイント {len(checkpoints)}</span>' if checkpoints else ""
+        count = (
+            f'<span class="checkpoint-count">確認ポイント {len(checkpoints)}</span>'
+            if checkpoints
+            else ""
+        )
         overview.append(
             f'<li class="group-row risk-border-{group["risk"]}" data-group="{esc(group["id"])}">'
             f'<a href="#group-{esc(group["id"])}"><span class="group-title">{numbers[group["id"]]}. {esc(group["title"])}</span>'
             f'<span class="group-summary">{esc(group["summary"])}</span></a>'
             f'<span class="group-tags">{count}{kind}{prs}<span class="tag">{files} files / {len(members)} hunks</span>'
-            f'{size_bar(added, removed, scale)}{risk}'
+            f"{size_bar(added, removed, scale)}{risk}"
             f'<span class="done-mark" aria-label="確認済み">✓</span></span></li>'
         )
-        impact = f'<p><strong>影響範囲:</strong> {esc(group["impact"])}</p>' if group.get("impact") else ""
+        impact = (
+            f"<p><strong>影響範囲:</strong> {esc(group['impact'])}</p>"
+            if group.get("impact")
+            else ""
+        )
         checklist = (
-            "<ul class=\"checkpoints\">" + "".join(f"<li>{esc(c)}</li>" for c in checkpoints) + "</ul>"
+            '<ul class="checkpoints">'
+            + "".join(f"<li>{esc(c)}</li>" for c in checkpoints)
+            + "</ul>"
             if checkpoints
             else ""
         )
@@ -203,14 +222,16 @@ def render(hunks: dict[str, dict], groups: list[dict], blob_url: str | None) -> 
     )
     return (
         f'\n<div id="diff-groups" {stats}>'
-        f'{render_file_map(hunks, groups, numbers)}'
+        f"{render_file_map(hunks, groups, numbers)}"
         f'<ol class="group-list">{"".join(overview)}</ol>'
         f'<h3 class="sub">変更グループ詳細</h3>{"".join(details)}</div>\n'
     )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--hunks", required=True, type=Path)
     parser.add_argument("--groups", required=True, type=Path)
     parser.add_argument("--check", choices=["draft", "full"], default="full")

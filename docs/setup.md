@@ -7,7 +7,7 @@
 - [ ] Command Line Tools（CLT）のインストール（未導入時のみ）
   - 未導入のまま `git clone` すると `xcode-select: note: No developer tools were found, requesting install.`
     と出てダイアログが開くだけで clone は失敗する。先に入れておき、ダイアログの「インストール」を押して
-    完了まで待つ（`brew:felixkratz/formulae/borders` のソースビルドにも CLT が要る）
+    完了まで待つ
   - エラーメッセージ中の `sudo xcode-select --switch path/to/Xcode.app` は Xcode.app を別の場所に置いている場合の
     例示なので実行しない
 

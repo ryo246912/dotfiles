@@ -46,7 +46,7 @@ REPLY_CHARS = 200
 
 REJECT = re.compile(
     r"対応しません|対応しない|見送|不要です|意図(どおり|通り)|仕様です|won't fix|wontfix|not (going to|gonna) fix|by design|\bintended\b",
-    re.I,
+    re.IGNORECASE,
 )
 RAW_VERSION = 2  # 1（レビュースレッドだけ）のファイルは会話タブ・レビュー本文が無いので取り直す
 
@@ -139,7 +139,11 @@ def known_evidence() -> set[str]:
     for sub in ("inbox", "lessons", "archived"):
         for p in (L.LESSONS_DIR / sub).rglob("*.md"):
             text = p.read_text(encoding="utf-8")
-            urls.update(re.findall(r"https?://\S+?#(?:discussion_r|issuecomment-|pullrequestreview-)\d+", text))
+            urls.update(
+                re.findall(
+                    r"https?://\S+?#(?:discussion_r|issuecomment-|pullrequestreview-)\d+", text
+                )
+            )
     return urls
 
 
@@ -150,7 +154,10 @@ def list_prs(host: str, repo: str, since: dt.date, until: dt.date, qualifier: st
              "--limit", str(PR_LIMIT), "--json", "number,mergedAt")  # fmt: skip
     if len(prs) < PR_LIMIT or since >= until:
         if len(prs) >= PR_LIMIT:
-            print(f"warning: {repo} {since} で {PR_LIMIT} 件を超えた。残りは取れていない", file=sys.stderr)
+            print(
+                f"warning: {repo} {since} で {PR_LIMIT} 件を超えた。残りは取れていない",
+                file=sys.stderr,
+            )
         return prs
     mid = since + (until - since) // 2
     return list_prs(host, repo, since, mid, qualifier) + list_prs(
@@ -162,7 +169,9 @@ def fetch(host: str, owner: str, name: str, number: int) -> dict:
     """PR の作者と、レビュースレッド・会話タブのコメント・レビュー本文。"""
     path = RAW_DIR / host / owner / name / f"{number}.json"
     RAW_DIR.parent.mkdir(parents=True, exist_ok=True)
-    for d in reversed([path.parent, *itertools.takewhile(lambda d: d != RAW_DIR.parent, path.parent.parents)]):
+    for d in reversed(
+        [path.parent, *itertools.takewhile(lambda d: d != RAW_DIR.parent, path.parent.parents)]
+    ):
         d.mkdir(mode=0o700, exist_ok=True)
         d.chmod(0o700)
     if path.is_file():
@@ -170,7 +179,11 @@ def fetch(host: str, owner: str, name: str, number: int) -> dict:
     raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
     if not isinstance(raw, dict) or raw.get("version") != RAW_VERSION:
         raw = {"version": RAW_VERSION}
-        for key, query in (("threads", QUERY_THREADS), ("comments", QUERY_COMMENTS), ("reviews", QUERY_REVIEWS)):
+        for key, query in (
+            ("threads", QUERY_THREADS),
+            ("comments", QUERY_COMMENTS),
+            ("reviews", QUERY_REVIEWS),
+        ):
             raw[key] = gh("api", "graphql", "--hostname", host, "--paginate", "--slurp",
                           "-F", f"owner={owner}", "-F", f"name={name}", "-F", f"number={number}", "-f", f"query={query}")  # fmt: skip
         # 途中で止まっても壊れたファイルを取得済みとして読まず、同時に動く別の実行とも一時ファイルを共有しない
@@ -183,7 +196,9 @@ def fetch(host: str, owner: str, name: str, number: int) -> dict:
         return [n for p in raw[key] for n in p["data"]["repository"]["pullRequest"][field]["nodes"]]
 
     return {
-        "author": (raw["threads"][0]["data"]["repository"]["pullRequest"]["author"] or {}).get("login", ""),
+        "author": (raw["threads"][0]["data"]["repository"]["pullRequest"]["author"] or {}).get(
+            "login", ""
+        ),
         "threads": nodes("threads", "reviewThreads"),
         "comments": nodes("comments", "comments"),
         "reviews": nodes("reviews", "reviews"),
@@ -191,10 +206,10 @@ def fetch(host: str, owner: str, name: str, number: int) -> dict:
 
 
 def trim(body: str, limit: int) -> str:
-    """bot の定型部分（折りたたみ・HTML・AI 向けの指示文）を落として短くする。"""
-    body = re.sub(r"<details>.*?</details>", "", body, flags=re.S)
-    body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
-    body = re.sub(r"<(a|picture)\b.*?</\1>", "", body, flags=re.S)
+    """Bot の定型部分（折りたたみ・HTML・AI 向けの指示文）を落として短くする。"""
+    body = re.sub(r"<details>.*?</details>", "", body, flags=re.DOTALL)
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+    body = re.sub(r"<(a|picture)\b.*?</\1>", "", body, flags=re.DOTALL)
     body = re.sub(r"<[^>]+>|!\[[^\]]*\]\([^)]*\)", "", body)
     body = re.sub(r"\s+", " ", body).strip()
     return body[:limit] + ("…" if len(body) > limit else "")
@@ -212,16 +227,19 @@ def classify(me: str, pr_author: str, reviewer: str, team: bool) -> str | None:
 
 def rejected(thread: dict, pr_author: str) -> bool:
     """PR の作者がスレッドで却下した指摘。採用されたかは判定しない（返信・resolve・Addressed in などの印が無いまま
-    直された指摘も拾うため。誤った指摘や好みの違いは段階 1 のモデルが外す）。"""
+    直された指摘も拾うため。誤った指摘や好みの違いは段階 1 のモデルが外す）。
+    """
     replies = thread["comments"]["nodes"][1:]
-    return any(REJECT.search(r["body"]) for r in replies if (r["author"] or {}).get("login") == pr_author)
+    return any(
+        REJECT.search(r["body"]) for r in replies if (r["author"] or {}).get("login") == pr_author
+    )
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", required=True, type=Path)
     args = ap.parse_args()
-    L.check_schema(strict=False)
+    L.check_schema(strict=True)  # 書き込み側が止まる状態なら、subagent を回す前にここで止める
     args.work.mkdir(parents=True, exist_ok=True)
 
     today = dt.date.today()
@@ -235,7 +253,11 @@ def main() -> int:
     left: dict[str, int] = {}
 
     for fname, conf in read_targets():
-        since = dt.date.fromisoformat(state[fname]) if fname in state else today - dt.timedelta(days=DEFAULT_DAYS)
+        since = (
+            dt.date.fromisoformat(state[fname])
+            if fname in state
+            else today - dt.timedelta(days=DEFAULT_DAYS)
+        )
         targets_read[fname] = str(since)
         next_since[fname] = str(today)
         prs: dict[tuple[str, int], tuple[str, dict]] = {}
@@ -267,13 +289,19 @@ def main() -> int:
                 items = []
                 for th in pr["threads"]:
                     comments = th["comments"]
-                    if comments["totalCount"] > MAX_COMMENTS or not comments["nodes"] or rejected(th, pr_author):
+                    if (
+                        comments["totalCount"] > MAX_COMMENTS
+                        or not comments["nodes"]
+                        or rejected(th, pr_author)
+                    ):
                         continue
                     last = comments["nodes"][-1] if len(comments["nodes"]) > 1 else None
                     items.append(("thread", comments["nodes"][0], th["path"], last))
                 for kind in ("review", "comment"):
                     for c in pr[f"{kind}s"]:
-                        if (c["author"] or {}).get("login") != pr_author and trim(c["body"], BODY_CHARS):
+                        if (c["author"] or {}).get("login") != pr_author and trim(
+                            c["body"], BODY_CHARS
+                        ):
                             items.append((kind, c, "", None))
                 for kind, first, path, last in items:
                     reviewer = (first["author"] or {}).get("login", "")
@@ -290,8 +318,12 @@ def main() -> int:
                             "targets_file": fname,
                             "evidence": first["url"],
                             "path": path,
-                            "reviewer": "bot" if (first["author"] or {}).get("__typename") == "Bot" else "user",
-                            "reviewer_hash": hashlib.sha1(f"{host}/{reviewer}".encode()).hexdigest()[:8],
+                            "reviewer": "bot"
+                            if (first["author"] or {}).get("__typename") == "Bot"
+                            else "user",
+                            "reviewer_hash": hashlib.sha1(
+                                f"{host}/{reviewer}".encode()
+                            ).hexdigest()[:8],
                             "comment": trim(first["body"], BODY_CHARS),
                             "last_reply": trim(last["body"], REPLY_CHARS) if last else "",
                         }
@@ -304,7 +336,19 @@ def main() -> int:
         old.unlink()  # 集め直したときに、前回の余ったバッチを残さない
     for i, batch in enumerate(batches, 1):
         slim = [
-            {k: c[k] for k in ("id", "kind", "source", "scope_key", "path", "reviewer", "comment", "last_reply")}
+            {
+                k: c[k]
+                for k in (
+                    "id",
+                    "kind",
+                    "source",
+                    "scope_key",
+                    "path",
+                    "reviewer",
+                    "comment",
+                    "last_reply",
+                )
+            }
             for c in batch
         ]
         (args.work / "batches" / f"{i:03d}.json").write_text(
@@ -319,11 +363,18 @@ def main() -> int:
         "personal_repos": personal,
         "candidates": candidates,
     }
-    (args.work / "candidates.json").write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    (args.work / "candidates.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
     by_source: dict[str, int] = {}
     for c in candidates:
         by_source[c["source"]] = by_source.get(c["source"], 0) + 1
-    summary = {"candidates": len(candidates), "batches": len(batches), "by_source": by_source, "left_prs": left}
+    summary = {
+        "candidates": len(candidates),
+        "batches": len(batches),
+        "by_source": by_source,
+        "left_prs": left,
+    }
     print(json.dumps(summary, ensure_ascii=False))
     return 0
 

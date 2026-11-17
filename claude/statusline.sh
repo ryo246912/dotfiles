@@ -188,6 +188,15 @@ case "$config_name" in
 esac
 # sbx labels identify the selected preset, not a verified OAuth identity.
 [ -n "${SBX_CLAUDE_ACCOUNT:-}" ] && account_label="$SBX_CLAUDE_ACCOUNT"
+# OAuth のアカウントは host 共通のログイン先。config dir 名から account1 と断定しない。
+if [ "${SBX_CLAUDE_AUTH_METHOD:-}" = oauth ]; then
+	account_label="sbx"
+fi
+auth_label=""
+case "${SBX_CLAUDE_AUTH_METHOD:-}" in
+setup-token) auth_label="setup-token" ;;
+oauth) auth_label="OAuth" ;;
+esac
 case "$account_label" in
 account1) account_color='\033[1;97;44m' ;;
 account2) account_color='\033[1;97;45m' ;;
@@ -218,6 +227,7 @@ else
 	fi
 fi
 account=$(printf '%b %s \033[0m' "$account_color" "$account_label")
+[ -n "$auth_label" ] && account="$account $auth_label"
 if [ -n "${SBX_CLAUDE_ACCOUNT:-}" ]; then
 	if [ -n "${SBX_CLAUDE_ORG_ID:-}" ]; then
 		# Names are resolved from the observed organization ID, never the preset.
