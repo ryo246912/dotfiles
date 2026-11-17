@@ -85,15 +85,45 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 
 1. ホストの T3 Code アプリを開く。
 2. Settings → Environments で **Local environment をオフ**にし、アプリをリモート操作用にする。
-3. 初回だけ `mise run t3:cli -- account2 pair` を実行する（選択したアカウントに置換）。
-4. Add environment に表の **PC 側の接続先**とペアリングコードを入力する。
-   sandbox 内で生成された URL の IP ではなく、`http://127.0.0.1:3774` などを使う。
+3. 初回だけ `mise run t3:cli` を実行し、fzf で設定済みアカウント → **pair** を選ぶ。
+4. 出力の **Address** と **Token** を Add environment に入力するか、**App link** を開く。
+   PC から到達できる `http://127.0.0.1:3774` などの URL に変換して表示する。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
 
 サービス起動直後に pair が「サーバーがない」と返す場合は、起動完了後に再実行する。
 ペアリングは端末ごとに一度だけでよい。URL / コードは認証情報なのでコミット・共有しない。
 複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
 **以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
+
+引数を覚えていなくても `mise run t3:cli` からアカウントと操作を選択できる。
+アカウントだけ指定した `mise run t3:cli -- work3` はコマンドの選択画面を開く。
+直接の `mise run t3:cli -- work3 pair` も引き続き使える。
+
+| fzf のコマンド | 操作                                           |
+| -------------- | ---------------------------------------------- |
+| pair           | PC のアプリ接続用 Address / Token / URL を発行 |
+| connect        | T3 Connect の初回認証（スマホ接続用）          |
+| sessions       | 接続を許可した端末の一覧                       |
+| server-status  | ホスト側 T3 サービスの状態                     |
+| restart-server | T3 サーバーを再起動（実行中の作業を中断）      |
+| version / help | T3 のバージョン / ヘルプ                       |
+
+### Aqua レジストリの警告で先に進めない場合
+
+`prefer-offline ... /mise/cache/aqua-registry/... cache file does not exist` は、
+ビルド用のキャッシュだけにレジストリを保存し、イメージへ残していなかったことが原因。
+template では公開レジストリのメタデータをイメージに保持するよう修正している。
+T3 の起動経路はログインシェルでの mise 自動起動を避け、欠けたメタデータは
+`mise ls-remote --no-versions-host aqua:cli/cli` で事前取得してから起動する。
+既存 sandbox でもタスク定義の更新後に利用でき、再作成は不要（レジストリ・T3 の取得先への通信は必要）。
+
+1. 修正版の task を取り込む。
+2. `mise run t3:cli` で対象アカウント → **restart-server** を選ぶ。実行中の作業があれば先に終了する。
+3. 起動完了後、同じコマンドで対象アカウント → **pair** を選ぶ。
+4. 表示された Address と Token をアプリへ入力する。
+
+初回は T3 本体やレジストリの取得に時間がかかる。起動していない場合は **server-status** と
+下記のサービスログを確認する。取得先への通信が拒否される場合は `sbx policy log` を確認する。
 
 ## 普段の操作
 
@@ -171,7 +201,7 @@ journalctl --user -u local.t3-sandbox.account2.service
 検証用の `mise run t3:setup -- --no-autostart` と `mise run t3:run -- account2` もあるが普段の運用経路ではない。
 サービスと手動 run は同時に起動しない。サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
-sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して
+sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
 `mise run t3:setup -- --account work3 --workspace /path/to/project` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
