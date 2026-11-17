@@ -6,7 +6,7 @@
 - **アカウントごとに常駐 sbx を一つ**用意し、その中で T3 サーバーとエージェントを動かす。
 - **worktree はセッションごと**に T3 が作成する。同じアカウントのセッションは sbx を共有する。
 - デスクトップもスマホも同じサーバーに接続するので、同じセッションと履歴を見られる。
-- 日常の操作で `t3-session start` やターミナルの常駐は必要ない。
+- 日常の操作で `mise run t3:run` やターミナルの常駐は必要ない。
 
 ## 初回導入
 
@@ -26,7 +26,8 @@ mise run sandbox:build-template claude
 template は T3 追加後に再ビルドする。作成済みの sandbox は更新されないので、この構成では
 専用の `t3-account1` / `t3-account2` / `t3-work3` を作る。他用途の sandbox は再利用・削除しない。
 T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
-macOS の `mise run bootstrap:mac-packages` にも `brew install --cask t3-code` を含めている。
+macOS のアプリも mise の `[bootstrap.packages]` で管理する。
+`mise bootstrap packages apply brew-cask:t3-code` で導入できる。
 Homebrew の公開版がサーバーより古い場合は、アプリも公式リリースの対応する版へ更新する。
 
 ## 最初にアカウントを選ぶ
@@ -35,7 +36,7 @@ Homebrew の公開版がサーバーより古い場合は、アプリも公式�
 
 ```bash
 cd /path/to/project
-t3-sandbox setup
+mise run t3:setup
 ```
 
 `account1`・`account2`・`work3` の選択メニューが出る。これは既存の Claude サブスク用
@@ -53,7 +54,7 @@ Claude の認証先をその sandbox に固定する。token が未登録の場�
 ```bash
 mise run sandbox:claude-token account2
 # メニューを使わず指定する場合
-t3-sandbox setup --account account2 --workspace /path/to/project
+mise run t3:setup -- --account account2 --workspace /path/to/project
 ```
 
 `sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
@@ -69,7 +70,7 @@ service を登録して T3 をバックグラウンドで起動する。同じ�
 
 1. ホストの T3 Code アプリを開く。
 2. Settings → Environments で **Local environment をオフ**にし、アプリをリモート操作用にする。
-3. 初回だけ `t3-sandbox cli account2 pair` を実行する（選択したアカウントに置換）。
+3. 初回だけ `mise run t3:cli -- account2 pair` を実行する（選択したアカウントに置換）。
 4. Add environment に表の **PC 側の接続先**とペアリングコードを入力する。
    sandbox 内で生成された URL の IP ではなく、`http://127.0.0.1:3774` などを使う。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
@@ -110,7 +111,7 @@ PC とスマホを同じ tailnet に接続し、MagicDNS と HTTPS 証明書を�
 ```bash
 # account2 の例。HTTPS port はアカウントごとに分ける。
 tailscale serve --bg --https=8443 http://127.0.0.1:3774
-t3-sandbox cli account2 pair
+mise run t3:cli -- account2 pair
 ```
 
 スマホの Add environment に `https://<PCのMagicDNS名>:8443` とペアリングコードを入力する。
@@ -143,7 +144,7 @@ Linux でログアウト後も維持する場合は、管理者の方針に従�
 診断・保守時だけターミナルを使う:
 
 ```bash
-t3-sandbox ports account2
+mise run t3:ports -- account2
 # macOS
 launchctl print gui/$(id -u)/local.t3-sandbox.account2
 # Linux
@@ -151,15 +152,14 @@ systemctl --user status local.t3-sandbox.account2.service
 journalctl --user -u local.t3-sandbox.account2.service
 ```
 
-検証用の `setup --no-autostart` と `t3-sandbox run account2` もあるが普段の運用経路ではない。
+検証用の `mise run t3:setup -- --no-autostart` と `mise run t3:run -- account2` もあるが普段の運用経路ではない。
 サービスと手動 run は同時に起動しない。サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
-旧 `t3-session` の sandbox / worktree は自動移行・削除しない。必要な変更と履歴を保存して整理する。
 
 ## 検証と実機確認
 
-`python3 scripts/tests/test_t3_sandbox.py` でアカウント選択、profile 分離、起動引数、
-設定保持、サービス定義と失敗時の挙動を検証する。sbx とサービス管理はスタブを使う。
+起動・初期設定・CLI 操作・ポート確認は `config/mise/tasks/t3.toml` にまとめている。
+自動起動サービスも同じ `mise run t3:run` を呼び出す。
 この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
 実際の Claude 認証とスマホ接続は未確認**。
 実機ではアプリで作った複数スレッドが別 worktree・同一アカウントの sbx を使うこと、

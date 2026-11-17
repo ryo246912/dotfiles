@@ -1,4 +1,34 @@
-#!/usr/bin/env python3
+# T3 Code: initial account selection and shared sandbox lifecycle.
+# The implementation stays in mise tasks; no local/bin launcher is installed.
+
+["t3:setup"]
+description = "Select an account and configure the shared T3 sandbox and auto-start"
+raw         = true
+run         = 'exec mise run t3:_control -- setup'
+
+["t3:run"]
+description = "Run T3 in the configured account sandbox (used by the host service)"
+raw         = true
+run         = 'exec mise run t3:_control -- run'
+
+["t3:cli"]
+description = "Run T3 CLI commands in the selected account sandbox"
+raw         = true
+run         = 'exec mise run t3:_control -- cli'
+
+["t3:ports"]
+description = "Show the selected account sandbox ports"
+raw         = true
+run         = 'exec mise run t3:_control -- ports'
+
+["t3:_control"]
+dir = "{{cwd}}"
+hide = true
+raw = true
+run = '''
+main() {
+# Keep stdin available for the account menu.
+python3 /dev/fd/3 "$@" 3<<'PYTHON'
 """Initial account selection and host service for app-driven T3 in a shared sbx."""
 import argparse
 import json
@@ -88,8 +118,9 @@ def service_environment():
 
 
 def install_service(profile):
-    # The service calls this installed launcher, preserving the selected account.
-    command = [sys.executable, str(Path(__file__).absolute()), "run", profile["account"]]
+    # The service uses the same global mise task as initial setup.
+    require("mise")
+    command = [shutil.which("mise"), "--cd", str(Path.home()), "run", "t3:run", "--", profile["account"]]
     label = f'local.t3-sandbox.{profile["account"]}'
     logs = state_root() / "logs"
     logs.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -159,13 +190,13 @@ def setup(args):
     if not args.no_autostart:
         install_service(profile)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
-    print(f"初回のアプリ接続: t3-sandbox cli {account} pair")
+    print(f"初回のアプリ接続: mise run t3:cli -- {account} pair")
     if args.no_autostart:
-        print(f"自動起動は未登録です。起動: t3-sandbox run {account}")
+        print(f"自動起動は未登録です。起動: mise run t3:run -- {account}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="mise run t3:<task>", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
     initial = sub.add_parser("setup", help="初回のみ: アカウントを選び、共有 sbx と自動起動を設定")
     initial.add_argument("--account", choices=ACCOUNTS)
@@ -201,6 +232,11 @@ if __name__ == "__main__":
     try:
         main()
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
-        sys.exit(f"t3-sandbox: {error}")
+        sys.exit(f"t3: {error}")
     except (KeyboardInterrupt, EOFError):
         sys.exit("中止しました")
+PYTHON
+}
+main "$@"
+'''
+shell = "bash -c"

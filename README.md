@@ -12,4 +12,3 @@
 # Setup
 
 - [setup](docs/setup.md)
-- [T3 Code（アプリで操作 / アカウント別共有 sbx / セッション別 worktree）](docs/t3-code.md)
