@@ -70,6 +70,14 @@ else
   echo "docker-desktop is already installed"
 fi
 
+# T3 Code も auto_updates を使うため real brew で入れる。
+# デスクトップアプリからアカウント別の共有 sbx に接続して操作する。
+if ! brew list --cask t3-code &>/dev/null; then
+  brew install --cask t3-code
+else
+  echo "t3-code is already installed"
+fi
+
 # private ホスト限定パッケージ。google-drive/tailscale-app は pkg インストーラが sudo を
 # 要求するため post-apply hook（非対話実行）に含めるとパスワード入力を待って止まってしまう。
 # keycastr/termius/thunderbird は auto_updates を使っており mise の brew-cask シムが未対応。

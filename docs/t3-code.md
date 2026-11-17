@@ -1,156 +1,170 @@
-# T3 Code
+# T3 Code — 普段はアプリだけで操作する
 
-T3 Code は Codex / Claude Code などのセッションをブラウザー・デスクトップ・スマホから操作する UI。
-この構成では **実装セッションごとに Git worktree と Docker Sandbox を分け、T3 サーバーも sandbox 内で起動**する。
-端末や Git 操作も sandbox 内になる。ホストで `t3` を直接起動せず、`t3-session` を使う。
+初回だけターミナルでアカウントと接続を設定する。以降は T3 Code アプリから
+新規セッション・再開・実装・差分確認・コミット・PR 作成まで操作する。
+
+- **アカウントごとに常駐 sbx を一つ**用意し、その中で T3 サーバーとエージェントを動かす。
+- **worktree はセッションごと**に T3 が作成する。同じアカウントのセッションは sbx を共有する。
+- デスクトップもスマホも同じサーバーに接続するので、同じセッションと履歴を見られる。
+- 日常の操作で `t3-session start` やターミナルの常駐は必要ない。
 
 ## 初回導入
 
-Docker Sandboxes の `sbx` が使える PC で実行する。通常の Docker Engine だけでは足りない。
-ホスト側は `config/mise/config.toml`、sandbox 側は `config/devcontainer/mise.toml` に
-`npm:t3 = 0.1.10` を固定している。npm の `t3` は初回実行時に公式リリースの実行ファイルを
-ダウンロードし、SHA256SUMS で確認する。ホストは Node 20.11 以上が必要で、Intel Mac の CLI は非対応。
+Docker Sandboxes の `sbx` が利用できる PC が必要。通常の Docker Engine だけでは足りない。
+ホストの Python 3.9 以上、mise、Git、T3 Code デスクトップアプリも必要。
+`npm:t3` はホストと sandbox の mise 設定で **0.1.10** に固定している。
+初回実行時に公式の実行ファイルを取得し、SHA256SUMS で確認する。
 
 ```bash
 cd /path/to/dotfiles
 mise bootstrap dotfiles apply
 mise install
 mise run sandbox:setup
-mise run sandbox:build-template codex
-command -v t3 t3-session sbx sbx-agent
-sbx ls
+mise run sandbox:build-template claude
 ```
 
-既に sandbox を使っていても、T3 を追加した template は再ビルドする。
-既存 sandbox に新しい template のツールは反映されないため、初回は新しいセッション名を使う。
-既存環境の bootstrap に関する注意は [setup](setup.md)、認証・mount の仕様は
-[Docker Sandboxes](docker-sandboxes.md) を参照。
+template は T3 追加後に再ビルドする。作成済みの sandbox は更新されないので、この構成では
+専用の `t3-account1` / `t3-account2` / `t3-work3` を作る。他用途の sandbox は再利用・削除しない。
+T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
+macOS の `mise run bootstrap:mac-packages` にも `brew install --cask t3-code` を含めている。
+Homebrew の公開版がサーバーより古い場合は、アプリも公式リリースの対応する版へ更新する。
 
-## 実装セッションを開始・再開する
+## 最初にアカウントを選ぶ
+
+初回だけ、最初に登録する Git リポジトリで次を実行する。
 
 ```bash
-cd /path/to/project                 # 毎回同じ元リポジトリから実行
-t3-session start fix-login HEAD     # 初回だけ任意の開始 ref を指定できる
+cd /path/to/project
+t3-sandbox setup
 ```
 
-初回は `t3/fix-login` ブランチと `../worktrees/<repo>-<識別子>-fix-login` を作り、
-`t3-<識別子>-fix-login` という sandbox を準備する。
-元 checkout の未コミット変更はコピーしない。開始 ref のコミットから作業する。
-別の作業には別名を使う。同じセッションを再開するときは次のように開始 ref を省略する。
+`account1`・`account2`・`work3` の選択メニューが出る。これは既存の Claude サブスク用
+アカウント名で、T3 Connect のログイン名とは別。
+
+| 選択     | Claude 設定          | 専用 sbx      | PC 側の接続先           |
+| -------- | -------------------- | ------------- | ----------------------- |
+| account1 | `~/.claude`          | `t3-account1` | `http://127.0.0.1:3773` |
+| account2 | `~/.claude-account2` | `t3-account2` | `http://127.0.0.1:3774` |
+| work3    | `~/.claude-work3`    | `t3-work3`    | `http://127.0.0.1:3775` |
+
+選んだアカウントの `sbx-agent --claude-account` と subscription kit を使い、
+Claude の認証先をその sandbox に固定する。token が未登録の場合は停止する。
 
 ```bash
-t3-session start fix-login
+mise run sandbox:claude-token account2
+# メニューを使わず指定する場合
+t3-sandbox setup --account account2 --workspace /path/to/project
 ```
 
-セッション名は英小文字・数字・ハイフンの 1〜32 文字（末尾ハイフン不可）。
-既存のブランチや別リポジトリのディレクトリは上書きしない。失敗後も worktree は残し、変更を保護する。
-`sbx` がない場合や起動に失敗した場合、ホストでの実行には切り替えない。
+`sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
+Codex など他の provider の認証は sandbox 内の T3 Providers 設定で別途行う。
+このアカウント選択が切り替えるのは Claude の subscription 認証。
 
-T3 は前景起動する。出力された `sbx ports` の sandbox port `3773` に対応する host port を確認し、
-PC から `http://127.0.0.1:<host-port>` を開く。認証は出力されるペアリング案内に従う。
-host port は自動採番なので、複数セッションを同時に起動できる。停止・再起動で番号が変わることがある。
+setup は sandbox を準備し、新規セッションの既定値として `defaultThreadEnvMode: "worktree"`
+を設定する。既存の T3 設定は上書きしない。macOS では LaunchAgent、Linux では systemd user
+service を登録して T3 をバックグラウンドで起動する。同じ設定で setup を再実行しても、
+実行中のサービスを再起動しない。
+
+## デスクトップアプリを最初に接続する
+
+1. ホストの T3 Code アプリを開く。
+2. Settings → Environments で **Local environment をオフ**にし、アプリをリモート操作用にする。
+3. 初回だけ `t3-sandbox cli account2 pair` を実行する（選択したアカウントに置換）。
+4. Add environment に表の **PC 側の接続先**とペアリングコードを入力する。
+   sandbox 内で生成された URL の IP ではなく、`http://127.0.0.1:3774` などを使う。
+5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
+
+サービス起動直後に pair が「サーバーがない」と返す場合は、起動完了後に再実行する。
+ペアリングは端末ごとに一度だけでよい。URL / コードは認証情報なのでコミット・共有しない。
+複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
+**以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
+
+## 普段の操作
+
+1. T3 Code アプリを開き、作業するアカウントの環境を選ぶ。
+2. プロジェクトを選び、新規スレッドを作る。実装時の作業先が **New worktree** か確認する。
+3. アプリから依頼し、実装・確認・コミット・PR 作成を行う。
+4. 再開はアプリの既存スレッドを選ぶ。
+
+T3 サーバーも provider も terminal も sbx 内で動く。ホストの Local environment を
+再びオンにした場合、その環境での作業はこの構成を経由しない。
+プロジェクト単位で local を指定すると worktree の既定値よりそちらが優先される。
+新規作成した空のプロジェクトの最初のスレッドなど、T3 が元フォルダを使う例外もあるため、
+実装前に作業先表示を確認する。worktree 作成には開始コミットが必要。
+
+追加プロジェクトはアプリの Add Project で clone できる。T3 データ領域内の projects など、
+sandbox に渡したディレクトリへ保存する。ホストの任意の別ディレクトリは見えない。
+
+## スマホから接続する（初回のみ）
+
+iOS / Android の公式アプリ、または https://app.t3.codes を使う。
+PC のアプリで対象アカウントの環境を選び、Settings → Sharing & access から
+**T3 Connect** を有効化して本人認証する。スマホで同じ T3 Connect アカウントにログインし、
+対象環境を選ぶと同じセッションを開ける。必要に応じて新規デバイス承認を有効にする。
+標準上限は 3 環境なので、3 アカウントを公開すると 3 台分になる。
+
+sbx のネットワーク制限で Connect / Cloudflare tunnel が動かない場合は、
+`sbx policy log` で必要な通信先を確認するか、ホスト側の Tailscale を使う。
+PC とスマホを同じ tailnet に接続し、MagicDNS と HTTPS 証明書を有効化して初回のみ:
 
 ```bash
-# 別のターミナルで、同じ元リポジトリから実行
-t3-session ports fix-login
-t3-session cli fix-login pair
+# account2 の例。HTTPS port はアカウントごとに分ける。
+tailscale serve --bg --https=8443 http://127.0.0.1:3774
+t3-sandbox cli account2 pair
 ```
 
-T3 の Providers 設定で Codex の認証状態を確認する。
-必要なら sandbox 内で CLI のログインを行う（sandbox 名は開始時の表示を使う）。
+スマホの Add environment に `https://<PCのMagicDNS名>:8443` とペアリングコードを入力する。
+`127.0.0.1` はスマホでは PC を指さない。Web 版にも HTTPS が必要。
+設定後はスマホもアプリの環境選択だけで切り替えられる。
+この経路だけを消すには `tailscale serve --https=8443 off` を使う。
+
+## 自動起動と保存先
+
+| 項目                        | 保存先（既定）                                              |
+| --------------------------- | ----------------------------------------------------------- |
+| ホスト側 profile            | `~/.local/state/t3-sandbox/profiles/<account>.json`         |
+| 履歴・設定・worktree・clone | `~/.local/share/t3-sandbox/<account>/t3/`                   |
+| macOS サービス              | `~/Library/LaunchAgents/local.t3-sandbox.<account>.plist`   |
+| macOS ログ                  | `~/.local/state/t3-sandbox/logs/<account>.log`              |
+| Linux サービス              | `~/.config/systemd/user/local.t3-sandbox.<account>.service` |
+
+データ領域はそのアカウントの sandbox に追加 mount し、ホスト用 profile は mount の外に置く。
+XDG_DATA_HOME / XDG_STATE_HOME / XDG_CONFIG_HOME の指定にも対応。
+別 workspace / port で setup を再実行した場合は、既存設定を変更せず停止する。
+別アカウントを追加しても既存アカウントの T3 とデータを変更しない。
+データはホストに永続化されるが、sandbox の削除・再作成は動いている作業を終了し、
+追加の provider ログインが必要になることもある。認証情報を template に焼き込まない。
+
+macOS は GUI ログイン後に起動する。Docker Sandboxes 自体も起動しておく。
+サービスの異常終了時は再試行するが、PC の電源オフ・スリープ中は接続できない。
+Linux は systemd user service が必要。WSL は systemd を有効にし、WSL 自体も起動しておく。
+Linux でログアウト後も維持する場合は、管理者の方針に従って lingering を設定する。
+
+診断・保守時だけターミナルを使う:
 
 ```bash
-sbx exec -u agent <sandbox-name> bash -lc 'mise exec -- codex login --device-auth'
+t3-sandbox ports account2
+# macOS
+launchctl print gui/$(id -u)/local.t3-sandbox.account2
+# Linux
+systemctl --user status local.t3-sandbox.account2.service
+journalctl --user -u local.t3-sandbox.account2.service
 ```
 
-認証済みの Codex を選び、追加された worktree のプロジェクトでスレッドを開始する。
-このコマンドの「セッション」は一つの実装作業を指す。同じ環境に複数の実装スレッドを作ると
-同じ sandbox / worktree を共有するため、独立した実装はホストで別の `t3-session start <別名>` を実行する。
-T3 UI の worktree 機能だけで新規作成しても sandbox は分かれない。
+検証用の `setup --no-autostart` と `t3-sandbox run account2` もあるが普段の運用経路ではない。
+サービスと手動 run は同時に起動しない。サービスを止める際は実行中の作業を確認する。
+sandbox を停止するだけだとサービスが再試行する。
+旧 `t3-session` の sandbox / worktree は自動移行・削除しない。必要な変更と履歴を保存して整理する。
 
-## スマホから同じセッションを開く
+## 検証と実機確認
 
-iOS / Android の公式 T3 Code アプリ、または https://app.t3.codes を使う。
-PC が起動していて、sandbox と T3 サーバーが動いている必要がある。
-スマホには Git リポジトリや Codex CLI をインストールしない。
-
-### T3 Connect
-
-初回の本人認証はユーザーが行う。別ターミナルで次を実行する。
-
-```bash
-t3-session cli fix-login connect link --headless
-```
-
-表示された URL を開き、コードを確認して承認する。その後、T3 を Ctrl-C で終了して
-`t3-session start fix-login` で再開する。sandbox の中では systemd が使えるとは限らないため、
-サービスを入れる `t3 up` ではなく `connect link` と前景起動を使う。
-スマホで同じ T3 Connect アカウントにログインし、対象の環境を選ぶと同じスレッドを見られる。
-必要に応じて Settings → Sharing & access で新規デバイスの承認を有効にする。
-
-**sandbox ごとに別の T3 環境として数える。** 公式ドキュメントの標準上限は 3 台
-（T3 Chat の契約により拡張可能）。多数のセッションには次の Tailscale 経路も使える。
-sbx のネットワークポリシーが Connect の認証先や Cloudflare tunnel を遮断する場合、
-`sbx policy log` で拒否先を確認する。必要な通信先を個別に許可するか Tailscale 経路を使う。
-この設定では sandbox のネットワーク制限を一括解除しない。
-
-### Tailscale 経由（Connect が利用できない場合）
-
-ホスト PC とスマホを同じ tailnet に接続し、MagicDNS と HTTPS 証明書を有効にする。
-Tailscale はホスト側で動かす。sandbox 内にインストールする必要はない。
-
-```bash
-t3-session ports fix-login
-# 3773 に対応する host port に置換。8443 は未使用の HTTPS port を選ぶ。
-tailscale serve --bg --https=8443 http://127.0.0.1:<host-port>
-t3-session cli fix-login pair
-```
-
-スマホアプリの Settings → Environments → Add environment で
-`https://<PCのMagicDNS名>:8443` と、新しく発行したペアリングコードを入力する。
-PC 内で発行された URL の `127.0.0.1` はスマホには使えない。
-Web 版も HTTPS が必要。複数のセッションを使うときは HTTPS port を分ける。
-ペアリング URL / コードは認証情報なので共有・コミットしない。
-
-公開先の host port が変わったら、Tailscale Serve の転送先を同じ手順で更新する。
-不要になった経路だけを停止するには次を使う（他の Serve 設定をリセットしない）。
-
-```bash
-tailscale serve --https=8443 off
-```
-
-## 停止・履歴・後片付け
-
-前景の T3 を Ctrl-C で終了する。端末を閉じても使いたい場合はホストの tmux 内で
-`t3-session start fix-login` を実行し、tmux から detach する。PC のスリープ中は接続できない。
-
-```bash
-t3-session stop fix-login           # sandbox 全体を停止。ファイルと履歴は残る
-```
-
-worktree のコードはホストにあり、T3 の履歴・設定・Connect 認証は sandbox の agent ユーザーの
-`~/.t3` にある。sandbox の削除・再作成で履歴や追加ログインが消えるため、必要なら先にバックアップする。
-template に認証情報を焼き込まない。
-
-実装が終わったら差分を確認し、コミット・マージ後に、対象 sandbox を既存の sbx 運用で削除する。
-worktree は `git worktree remove <path>` で削除し、不要ならブランチも手動で消す。
-このコマンドは worktree・ブランチ・sandbox を自動削除しない。
-
-## 検証状況と制約
-
-2026-11-18（日本時間）の作業環境には Docker Engine はあるが `sbx` と `/dev/kvm` がない。
-T3 CLI 0.1.10 の導入・ヘルプと、起動スクリプトの構文を確認済み。
-実際の一時 Git リポジトリと sbx のスタブを使う 12 件のテストで、worktree 分離・再開・失敗時の挙動を検証した。
-**実際の microVM 起動、Codex の実会話、スマホからの接続は未確認。**
-実機では初回起動後、PC で作ったテストスレッドがスマホに表示されること、
-別セッションの worktree と sandbox が別になること、停止後の再開で履歴が残ることを確認する。
-
-テストの再実行（Python 3、Git、Bash が必要。実際の sbx は起動しない）:
-
-```bash
-python3 scripts/tests/test_t3_session.py
-```
+`python3 scripts/tests/test_t3_sandbox.py` でアカウント選択、profile 分離、起動引数、
+設定保持、サービス定義と失敗時の挙動を検証する。sbx とサービス管理はスタブを使う。
+この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
+実際の Claude 認証とスマホ接続は未確認**。
+実機ではアプリで作った複数スレッドが別 worktree・同一アカウントの sbx を使うこと、
+アカウント切替、PC 再ログイン後の再接続を確認する。
 
 参考: [公式 README](https://github.com/pingdotgg/t3code)、
 [リモートアクセス](https://github.com/pingdotgg/t3code/blob/main/docs/user/remote-access.md)、
-[バックグラウンド起動](https://github.com/pingdotgg/t3code/blob/main/docs/user/background-service.md)。
+[worktree 設定](https://github.com/pingdotgg/t3code/blob/main/docs/user/project-settings.md)。

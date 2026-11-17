@@ -12,4 +12,4 @@
 # Setup
 
 - [setup](docs/setup.md)
-- [T3 Code（セッション別 worktree / Docker Sandbox / スマホ接続）](docs/t3-code.md)
+- [T3 Code（アプリで操作 / アカウント別共有 sbx / セッション別 worktree）](docs/t3-code.md)
