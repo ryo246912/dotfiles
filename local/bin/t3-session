@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# One worktree and Docker Sandbox per implementation session.
+set -euo pipefail
+
+die() {
+	printf 't3-session: %s\n' "$*" >&2
+	exit 1
+}
+usage() {
+	cat <<'EOF'
+Usage: t3-session <start|cli|ports|stop> SESSION [arguments...]
+  start SESSION [BASE]    Create/reuse a worktree + sbx, then run T3 in foreground.
+  cli SESSION ARGS...    Run t3 commands in that session's existing sandbox.
+  ports SESSION         Show the host loopback port published by sbx.
+  stop SESSION          Stop the sandbox; preserve worktree and T3 history.
+
+Run from the original repository. SESSION: lowercase letters, digits and hyphens.
+Example: t3-session start fix-login HEAD
+         t3-session cli fix-login connect link --headless
+EOF
+}
+[[ ${1:-} != --help && ${1:-} != -h ]] || {
+	usage
+	exit 0
+}
+[[ $# -ge 2 ]] || {
+	usage >&2
+	exit 2
+}
+action=$1 session=$2
+shift 2
+case "$action" in start | cli | ports | stop) ;; *) die "unknown action: $action" ;; esac
+[[ $session =~ ^[a-z0-9][a-z0-9-]{0,31}$ && $session != *- ]] || die 'invalid session name (1-32 characters)'
+for tool in git sbx; do command -v "$tool" >/dev/null || die "$tool is required; see docs/t3-code.md"; done
+root=$(git rev-parse --show-toplevel) || die 'run inside a Git repository'
+root=$(cd "$root" && pwd -P)
+repo=$(basename "$root" | tr -cs 'a-zA-Z0-9-' '-' | cut -c1-16)
+identity=$(printf '%s' "$root" | cksum | awk '{print $1}')
+name="t3-${identity}-${session}"
+branch="t3/$session"
+worktree="$(dirname "$root")/worktrees/${repo}-${identity}-${session}"
+
+validate_worktree() {
+	[[ -d "$worktree" ]] || die "worktree missing: $worktree; run start first"
+	local actual common original
+	actual=$(git -C "$worktree" rev-parse --show-toplevel)
+	[[ $(cd "$actual" && pwd -P) == "$worktree" ]] || die 'unexpected worktree path'
+	common=$(git -C "$worktree" rev-parse --path-format=absolute --git-common-dir)
+	original=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)
+	[[ $common == "$original" ]] || die 'worktree belongs to another repository'
+	[[ $(git -C "$worktree" symbolic-ref --short HEAD) == "$branch" ]] || die "expected branch: $branch"
+}
+
+case "$action" in
+start)
+	[[ $# -le 1 ]] || die 'start accepts at most one base ref'
+	command -v sbx-agent >/dev/null || die 'sbx-agent is required; apply dotfiles first'
+	# Probe before creating branches or directories. Never fall back to host execution.
+	sbx ls >/dev/null
+	if [[ ! -e "$worktree" ]]; then
+		git -C "$root" rev-parse --verify "${1:-HEAD}^{commit}" >/dev/null
+		mkdir -p "$(dirname "$worktree")"
+		git -C "$root" worktree add -b "$branch" "$worktree" "${1:-HEAD}"
+	elif [[ $# -ne 0 ]]; then
+		die 'existing session: omit BASE when resuming'
+	fi
+	validate_worktree
+	# Reuse the existing mounts, Git metadata, toolchain and credential setup.
+	sbx-agent codex --workspace "$worktree" --name "$name" --publish 3773 --setup-only
+	printf 'Worktree: %s\nSandbox: %s\n' "$worktree" "$name"
+	sbx ports "$name"
+	# T3 itself, its terminals and every provider run inside this sandbox.
+	# Keep T3 data outside the repository and the agent-controlled worktree.
+	exec sbx exec -u agent "$name" bash -lc '
+            cd "$1" || exit 1
+            exec mise exec -- t3 --host 0.0.0.0 --port 3773 --no-browser --auto-bootstrap-project-from-cwd
+        ' bash "$worktree"
+	;;
+cli)
+	[[ $# -gt 0 ]] || die 'cli requires t3 arguments'
+	validate_worktree
+	exec sbx exec -u agent "$name" bash -lc 'cd "$1" || exit 1; shift; exec mise exec -- t3 "$@"' bash "$worktree" "$@"
+	;;
+ports | stop)
+	[[ $# -eq 0 ]] || die "$action accepts no additional arguments"
+	validate_worktree
+	exec sbx "$action" "$name"
+	;;
+esac
