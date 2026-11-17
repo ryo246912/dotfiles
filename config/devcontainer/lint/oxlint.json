@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/oxlint_v1.76.0/npm/oxlint/configuration_schema.json",
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/oxlint_v1.87.0/npm/oxlint/configuration_schema.json",
   "categories": {
     "correctness": "error",
     "perf": "error",

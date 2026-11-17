@@ -9,8 +9,8 @@ output:
   - execution_out
 
 post-merge:
-  # post-checkout では glob が常に "no files for inspection" で skip されるため、glob で絞り込まない。
-  jobs: &sync-jobs
+  # マージで取り込んだ設定だけを自動反映する。checkout ではホスト設定を変更しない。
+  jobs:
     - name: ensure-mise-version
       run: |
         required_mise_version=$(awk -F'"' '/^[[:space:]]*min_version[[:space:]]*=/ { print $2; exit }' mise.toml)
@@ -66,7 +66,7 @@ post-merge:
       # 自動では付けない（全エントリのライブ編集を巻き込むため）。移行は target を絞って
       # 1回だけ手動で流す（docs/setup.md の手順と同じコマンド）。
       fail_text: '❌ [post-merge] dotfiles apply failed. 既存の実ファイルとの conflict なら: mise bootstrap dotfiles apply --force --yes "~/.config" "~/.local" "~/.aws" （先に配置先だけにある編集を repo へ取り込むこと。docs/mise.md 参照）'
-    # dotfiles-apply で反映した [tools] のバージョン変更を、git pull / checkout のたびに導入する。
+    # dotfiles-apply で反映した [tools] のバージョン変更を git pull の後に導入する場合の手順。
     # GitHub API の rate limit を避けるため、pre-tools hook（mise.toml）と同じく gh の token を渡す。
     # - name: mise-install
     #   skip:
@@ -96,7 +96,13 @@ post-merge:
         '
 
 post-checkout:
-  jobs: *sync-jobs
+  jobs:
+    - name: lefthook-install
+      run: |
+        mise exec -- sh -c '
+        [ -f "${LEFTHOOK_CONFIG:-lefthook.yml}" ] || exit 0
+        lefthook install
+        '
 
 pre-push:
   jobs:
@@ -106,6 +112,9 @@ pre-push:
       group:
         parallel: true
         jobs:
+          - name: lint:contracts
+            run: mise run lint:contracts
+            fail_text: "❌ [pre-push] config contracts failed. Run: mise run lint:contracts"
           - name: lint:toml
             run: mise run lint:toml
             glob: "**/*.toml"

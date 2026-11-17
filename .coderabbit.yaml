@@ -35,6 +35,12 @@ reviews:
     - "!unmanaged/dbeaver/**"
     - "!config-mac/raycast/**"
   path_instructions:
+    - path: "**/*"
+      instructions: |
+        .rulesync/rules/CLAUDE.md の「escalation からの実装・レビュー規則」を適用してください。
+        文書・コメントの主張は対応する実装の条件と結果に照合し、前提条件、反映手順、
+        macOS/Linux・agent/tool ごとの差、公式仕様の根拠の欠落を確認してください。
+        汎用 lint が意味の一致まで保証すると判断しないでください。
     - path: "config/**/*.json"
       instructions: |
         コメント付き JSONC や既存キーの意図を尊重し、不要な整形だけの指摘は避けてください。

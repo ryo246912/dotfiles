@@ -14,6 +14,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        with:
+          install_args: "aqua:evilmartians/lefthook"
+      - name: Configuration contracts and regressions
+        run: |
+          python3 scripts/check-config-contracts.py
+          python3 -m unittest discover -s scripts/tests -v
   lint:
     if: ${{ ! endsWith(github.actor, '[bot]')}}
     runs-on: ubuntu-slim
