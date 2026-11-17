@@ -164,6 +164,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 
 T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のように、対象の sandbox に限定して
 認証・リレー用の `clerk.t3.codes:443` / `relay.t3.codes:443` / `app.t3.codes:443` と、
+暗号化 DNS 用の `cloudflare-dns.com:853`、
 Cloudflare Tunnel の `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` /
 `cftunnel.com` / `h2.cftunnel.com` の TCP 7844 を許可する。
 setup・サービス起動・CLI の connect 実行時に適用するため、既存 sandbox にも反映される。
