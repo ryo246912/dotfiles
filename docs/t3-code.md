@@ -108,35 +108,6 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 | restart-server | 現在の mise 環境で自動起動定義を更新して再起動（実行中の作業を中断） |
 | version / help | T3 のバージョン / ヘルプ                                             |
 
-### Aqua レジストリの警告で先に進めない場合
-
-`prefer-offline ... /mise/cache/aqua-registry/... cache file does not exist` は、
-ビルド用のキャッシュだけにレジストリを保存し、イメージへ残していなかったことが原因。
-template では公開レジストリのメタデータをイメージに保持するよう修正している。
-T3 の起動経路はログインシェルでの mise 自動起動を避け、欠けたメタデータは
-`mise ls-remote --no-versions-host aqua:cli/cli` で事前取得してから起動する。
-既存 sandbox でもタスク定義の更新後に利用でき、再作成は不要（レジストリ・T3 の取得先への通信は必要）。
-
-1. 修正版の task を取り込む。
-2. `mise run t3:cli` で対象アカウント → **restart-server** を選ぶ。実行中の作業があれば先に終了する。
-3. 起動完了後、同じコマンドで対象アカウント → **pair** を選ぶ。
-4. 表示された Address と Token をアプリへ入力する。
-
-初回は T3 本体やレジストリの取得に時間がかかる。起動していない場合は **server-status** と
-下記のサービスログを確認する。取得先への通信が拒否される場合は `sbx policy log` を確認する。
-
-### pair が NoRunningServerError、サービスログが「sbx が必要です」となる場合
-
-以前の自動起動定義は `MISE_ENV` / `HOST_ENV` を保存していなかった。
-ターミナルでは `mac,work3` などの環境から `sbx` が見える一方、サービスでは
-`config.mac.toml` が有効にならず、T3 起動前に終了してしまう。
-修正版では環境選択と安定した mise shim の PATH を引き継ぐ。
-
-修正版を取り込み、普段 `sbx` が使えるターミナルから `mise run t3:cli` を実行し、
-対象アカウント → **restart-server** を選ぶ。LaunchAgent / systemd の定義も現在の環境で
-更新して再登録するため、単に古いサービスを再起動するだけではない。
-起動後、再び対象アカウント → **pair** を選ぶ。sandbox の再作成や token の再登録は不要。
-
 ## 普段の操作
 
 1. T3 Code アプリを開き、作業するアカウントの環境を選ぶ。
