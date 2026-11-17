@@ -1758,7 +1758,6 @@ CLAUDE_CODE_ENABLE_CFC=0 sbx-agent claude --claude-oauth --name-prefix oauth
 この既定値は新規作成する OAuth sandbox で確認してください。
 `claude daemon stop` はバックグラウンドセッションも終了するため、作業中に実行しないでください。
 
-
 ホストでは初回に `mise run sandbox:sbx-settings`（または次の設定）を実行します。
 
 ```bash
