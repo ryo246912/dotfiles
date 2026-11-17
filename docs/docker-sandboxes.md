@@ -1740,13 +1740,16 @@ setup-token の account1 / account2 / work3 とは別名の Sandbox を使いま
 共通の `sbxenv.yaml` では Chrome を有効にせず、OAuth preset だけで明示的に有効化します。
 
 `sbx-agent claude --claude-oauth` は sandbox の起動環境に
-`CLAUDE_CODE_ENABLE_CFC=1` も渡します。← で作る派生セッションに `--chrome` が
-引き継がれなくても、起動時に Chrome 連携を有効化するためです。
+`CLAUDE_CODE_ENABLE_CFC=1` も渡します。Claude Code で左矢印キー（←）を押して
+バックグラウンドへ移行したときの派生セッションに `--chrome` が引き継がれなくても、
+起動時に Chrome 連携を有効化するためです。
 ホストと共有する `.claude.json` の read-write マウントや書き換えは行いません。
 通常の setup-token preset の環境は変更しません。
 
-自動接続を無効にする場合は、ホストで `CLAUDE_CODE_ENABLE_CFC=0` を指定してください。
-この場合は `--chrome` を付けずに起動します。明示的な `--chrome` は環境変数より優先されます。
+自動接続を無効にする場合は、`--chrome` を渡さない直接起動で、
+ホストで `CLAUDE_CODE_ENABLE_CFC=0` を指定してください。
+ccmanager の OAuth preset は `--chrome` を渡すため、環境変数を `0` にするだけでは無効化できません。
+明示的な `--chrome` は環境変数より優先されます。
 
 ```bash
 CLAUDE_CODE_ENABLE_CFC=0 sbx-agent claude --claude-oauth --name-prefix oauth
