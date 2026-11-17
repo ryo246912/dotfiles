@@ -124,13 +124,54 @@ T3 サーバーも provider も terminal も sbx 内で動く。ホストの Loc
 追加プロジェクトはアプリの Add Project で clone できる。T3 データ領域内の projects など、
 sandbox に渡したディレクトリへ保存する。ホストの任意の別ディレクトリは見えない。
 
-## スマホから接続する（初回のみ）
+## スマホ・別の PC のアプリから接続する（初回のみ）
 
-iOS / Android の公式アプリ、または https://app.t3.codes を使う。
-PC のアプリで対象アカウントの環境を選び、Settings → Sharing & access から
-**T3 Connect** を有効化して本人認証する。スマホで同じ T3 Connect アカウントにログインし、
-対象環境を選ぶと同じセッションを開ける。必要に応じて新規デバイス承認を有効にする。
-標準上限は 3 環境なので、3 アカウントを公開すると 3 台分になる。
+T3 Connect に sandbox の環境を登録すると、デスクトップ・iOS・Android の T3 Code アプリや
+https://app.t3.codes から同じセッションを開ける。T3 Connect のログインは、sandbox に固定した
+Claude の `account1` / `account2` / `work3` とは別のもの。
+
+### ホストで T3 Connect に登録する
+
+1. `mise run t3:cli` を実行し、公開するアカウント（例: **work3**）→ **connect** を選ぶ。
+   sandbox 内で `t3 connect link --headless` が実行される。
+2. relay client の導入確認が出たら **`y` を入力して Enter** を押す。
+   Enter だけでは既定の `N` になる。表示バージョンは T3 が指定するものを使う。
+
+   ```text
+   The T3 relay client is required for T3 Connect.
+   Download and install version 2026.10.4? › (y/N)
+   ```
+
+   relay client は T3 Connect の通信用ツールで、選択した sandbox 内に取得・導入される。
+   ホストへの別途インストール操作は必要ない。
+
+3. 続いて表示される **認証 URL** をブラウザーで開き、T3 Connect にログインする。
+   ターミナルのコードと画面のコードが一致することを確認して承認する。
+4. ターミナルへ戻り、**`✓ Authorized`** と表示されて処理が完了するまで待つ。
+5. 再び `mise run t3:cli` を実行し、同じアカウント → **restart-server** を選ぶ。
+   実行中の作業があれば先に終了する。認証を保存した後に T3 サーバーを起動し直すと、
+   T3 Connect の接続が有効になる。この構成のサーバー起動はホストの自動起動サービスで管理する。
+
+既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
+**T3 Connect** を有効化して本人認証する方法も使える。
+
+### 接続先のアプリで同じ環境を開く
+
+1. 接続する端末に [公式 T3 Code アプリ](https://t3.codes/download) を導入する。
+   スマホは公式サイトから案内される App Store / Google Play のアプリを使う。
+   ブラウザーなら https://app.t3.codes を開く。
+2. アプリの **T3 Connect** から、ホストの認証で使ったものと **同じアカウント** にログインする。
+3. 環境一覧から、登録した sandbox の環境を選ぶ。複数アカウントを登録している場合は、
+   作業したいアカウントの環境を選ぶ。
+4. プロジェクト・既存スレッドを開くと、PC と同じセッションを閲覧・操作できる。
+   以降はアプリで環境を選ぶだけでよく、毎回の `connect` や `pair` は不要。
+
+新規デバイス承認を有効にしている場合は、既に接続済みの PC の
+Settings → Sharing & access で新しい端末のコードを確認して承認する。
+PC・sandbox・T3 サーバーは起動した状態を維持する。
+標準上限は 3 環境なので、3 アカウントの sandbox を公開すると 3 台分になる。
+
+### Tailscale で接続する場合
 
 sbx のネットワーク制限で Connect / Cloudflare tunnel が動かない場合は、
 `sbx policy log` で必要な通信先を確認するか、ホスト側の Tailscale を使う。
