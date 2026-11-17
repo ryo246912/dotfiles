@@ -138,7 +138,7 @@ def choose_cli_command():
         "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証"),
         "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
         "server-status": (["server-status"], "ホスト側 T3 サービスの状態"),
-        "restart-server": (["restart-server"], "自動起動環境を更新して再起動（実行中の作業を中断）"),
+        "restart-server": (["restart-server"], "対象 sbx を停止して再起動（アカウント内の作業を中断）"),
         "version": (["--version"], "T3 のバージョンを表示"),
         "help": (["--help"], "T3 コマンドのヘルプ"),
     }
@@ -246,6 +246,15 @@ def service_environment():
     return environment
 
 
+def stop_sandbox(profile):
+    require("sbx")
+    listing = run(["sbx", "ls"], capture_output=True, text=True)
+    names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
+    if profile["name"] in names:
+        print(f"{profile['name']} を停止し、sandbox 内に残った T3 サーバーを終了します", flush=True)
+        run(["sbx", "stop", profile["name"]])
+
+
 def install_service(profile, refresh=False):
     # The service uses the same global mise task as initial setup.
     require("mise")
@@ -272,6 +281,8 @@ def install_service(profile, refresh=False):
                 print("自動起動は登録済みです。実行中の T3 は再起動しません")
                 return
             run(["launchctl", "bootout", f"{domain}/{label}"])
+        if refresh:
+            stop_sandbox(profile)
         path.write_bytes(plistlib.dumps(payload))
         run(["launchctl", "bootstrap", domain, path])
     elif sys.platform == "linux":
@@ -289,7 +300,10 @@ def install_service(profile, refresh=False):
                         "[Install]\nWantedBy=default.target\n")
         run(["systemctl", "--user", "daemon-reload"])
         run(["systemctl", "--user", "enable", path.name])
-        run(["systemctl", "--user", "restart" if refresh else "start", path.name])
+        if refresh:
+            run(["systemctl", "--user", "stop", path.name])
+            stop_sandbox(profile)
+        run(["systemctl", "--user", "start", path.name])
     else:
         raise ValueError("自動起動は sbx が動作する macOS / Linux 環境用です")
 
@@ -372,14 +386,15 @@ def main():
     profile = load_profile(account)
     if args.action == "run":
         prepare(profile)
-        command = t3_command(profile, ["--host", "0.0.0.0", "--port", "3773", "--no-browser", "--auto-bootstrap-project-from-cwd"])
+        # Headless service entry point; avoid the interactive launcher's PID-only preflight.
+        command = t3_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
     elif args.action == "cli":
         arguments = args.arguments or choose_cli_command()
         print(f"Account: {account} / Command: {' '.join(arguments)}", flush=True)
         if arguments in (["server-status"], ["restart-server"]):
             if arguments == ["restart-server"]:
                 install_service(profile, refresh=True)
-                print("自動起動環境を更新して再起動しました。server-status とログで起動完了を確認してから pair を選んでください。")
+                print("sandbox を停止し、自動起動環境を更新して再起動しました。起動後に pair または connect status で確認してください。")
                 return
             command = host_service_command(profile)
         else:
