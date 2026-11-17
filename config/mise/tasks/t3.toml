@@ -93,11 +93,14 @@ def choose_accounts(multiple=True, configured_only=False):
         raise ValueError("初回は対話ターミナルで実行するか --account を指定してください")
     require("fzf")
     rows = []
+    account_width = max(map(len, ACCOUNTS))
+    directory_width = max(len(f"~/{directory}") for directory, _ in ACCOUNTS.values())
     for account, (directory, port) in ACCOUNTS.items():
         if configured_only and not profile_path(account).exists():
             continue
         configured = "設定済み" if profile_path(account).exists() else "未設定"
-        rows.append(f"{account}\t~/{directory}\tport {port}\t{configured}")
+        location = f"~/{directory}"
+        rows.append(f"{account:<{account_width}}  {location:<{directory_width}}  {f'port {port}':<9}  {configured}")
     if not rows:
         raise ValueError("設定済みのアカウントがありません。先に mise run t3:setup を実行してください")
     options = ["fzf", "--multi" if multiple else "--no-multi", "--layout=reverse", "--prompt=account> "]
@@ -113,7 +116,7 @@ def choose_accounts(multiple=True, configured_only=False):
     if selection.returncode in (1, 130):
         raise KeyboardInterrupt
     selection.check_returncode()
-    selected = list(dict.fromkeys(line.split("\t", 1)[0] for line in selection.stdout.splitlines()))
+    selected = list(dict.fromkeys(line.split(maxsplit=1)[0] for line in selection.stdout.splitlines() if line.strip()))
     if not selected:
         raise KeyboardInterrupt
     if any(account not in ACCOUNTS for account in selected):
@@ -134,15 +137,16 @@ def choose_cli_command():
         "version": (["--version"], "T3 のバージョンを表示"),
         "help": (["--help"], "T3 コマンドのヘルプ"),
     }
+    command_width = max(map(len, commands))
     selection = subprocess.run(
         ["fzf", "--no-multi", "--layout=reverse", "--prompt=command> ", "--header=Enter: 実行 / Esc: 中止"],
-        input="".join(f"{key}\t{description}\n" for key, (_, description) in commands.items()),
+        input="".join(f"{key:<{command_width}}  {description}\n" for key, (_, description) in commands.items()),
         text=True, stdout=subprocess.PIPE,
     )
     if selection.returncode in (1, 130) or not selection.stdout.strip():
         raise KeyboardInterrupt
     selection.check_returncode()
-    key = selection.stdout.split("\t", 1)[0]
+    key = selection.stdout.split(maxsplit=1)[0]
     if key not in commands:
         raise ValueError("選択結果のコマンドが不正です")
     return commands[key][0]
