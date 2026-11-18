@@ -21,10 +21,8 @@ dependencies:
   # - tag が無い依存は ref を書かず、apm.lock.yaml の resolved_commit で pin する。
   #   Renovate の lockFileMaintenance が定期的に最新 commit へ更新する。
   apm:
-    # Plannotatorのreview / annotate / last launcher skills。
+    # Plannotator の差分レビュー用スキル。
     - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.28.6
     # Effective HTMLのartifact作成skills（tag なし）。
     - plannotator/effective-html/skills/html
     - plannotator/effective-html/skills/design-artifact

@@ -1,5 +1,5 @@
 ---
-name: plannotator-live-app
+name: plannotator-custom-app-annotate
 description: devcontainer 内のローカルアプリをホストブラウザで確認し、Plannotator でレビューを受けるときに使う。依存サービスの起動、SSH リバーストンネルの準備、レビュー終了までの待機を扱う。
 targets:
   - claudecode

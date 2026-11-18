@@ -746,13 +746,14 @@ mise --cd "$HOME" run apm:install
 #### 導入構成
 
 - Plannotator CLIはhostとdevcontainer / sbxの両方でmise toolとしてインストールします。
-- `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
-  APMでuser scopeへ配布します。
+- `plannotator-review` と Effective HTML の6スキルは APM でユーザー環境へ配布します。
+- Web アプリのレビューには Rulesync で配布する `plannotator-custom-app-annotate` を使います。
+  公式スキルの一覧と導入状況は [AI スキル一覧](ai-skills.md) を参照してください。
 - APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
   Plannotator用のslash command fileを別途管理しません。
 - Claude Codeのplan review hookはRulesyncのglobal hook、Codexのplan review hookは`~/.codex/hooks.json`で
   設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
-- code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
+- code と HTML の reviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
 
 #### HTML artifactを作成してreviewする
 
@@ -779,14 +780,7 @@ $html-prototype ユーザー登録から完了までの操作可能なprototype�
 $design-artifact $html-plan この実装planをprojectのdesign languageに合わせて可視化して
 ```
 
-作成したHTMLはPlannotator skillからreviewできます。Plannotatorはskill実行時に起動するため、
-container起動時にPlannotatorを常駐起動する必要はありません。
-
-```text
-$plannotator-annotate path/to/artifact.html
-```
-
-CLIを直接実行する場合は次を使います。
+作成した HTML ファイルをレビューするときは、次の CLI コマンドを使います。
 
 ```bash
 plannotator annotate path/to/artifact.html
@@ -810,7 +804,7 @@ dev serverが表示したloopback URLを別のterminalまたはagent sessionか�
 `--app`はlive annotationを必須にし、pageを開けない場合はstatic contentへ自動fallbackせずerrorを返します。
 
 ```text
-$plannotator-annotate http://localhost:8081 --app
+$plannotator-custom-app-annotate http://localhost:8081
 ```
 
 CLIで直接起動する場合は次のとおりです。Viteの例ではportを`5173`に変えます。
@@ -830,7 +824,7 @@ tabを自動で閉じたくない場合は、Plannotator右上の**Settings**を
 **Auto-close Tab**を**Off**にします。この選択はbrowserに保存されるため、以後のreviewにも適用されます。
 ただし、**Send Annotations**は現在のCLI sessionを完了させる操作です。tabを残しても完了画面になり、
 同じannotation UIやlive appを引き続き操作することはできません。agentがfeedbackを反映した後に
-`$plannotator-annotate <URL> --app`をもう一度実行し、新しいreview sessionで確認してください。
+`$plannotator-custom-app-annotate <URL>`をもう一度実行し、新しいreview sessionで確認してください。
 critのように1つの画面をfeedback送信後も継続利用する動作は、Plannotatorの現行session modelでは利用できません。
 
 live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
@@ -863,12 +857,6 @@ GitHub PRをreviewする場合はPR URLを渡します。
 
 ```text
 $plannotator-review https://github.com/owner/repository/pull/123
-```
-
-#### agentの最後の返答をreviewする
-
-```text
-$plannotator-last
 ```
 
 ### `crit` / `crit-cli`
