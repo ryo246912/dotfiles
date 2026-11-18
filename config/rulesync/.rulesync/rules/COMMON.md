@@ -13,47 +13,28 @@ globs:
 
 - 必ず日本語で回答してください。
 
-## コードレビュー・技術調査後のメモ記録
+## 実装と編集
 
-- PR レビューや技術調査が一区切りついたら、理解した内容を `plan/` ディレクトリ配下の `10-memo-xxx.md` のようなメモファイルに加筆する。該当するメモファイルがあれば追記し、無ければ新規に作成する。ただし、追記先のファイルが指定された場合はそのファイルに加筆する
-- 「マークダウンに加筆して」「メモして」などと指示されたら、`plan/` ディレクトリ配下の `10-memo-xxx.md` のようなメモファイルに加筆する。該当するメモファイルがあれば追記し、無ければ新規に作成する。ただし、追記先のファイルが指定された場合はそのファイルに加筆する
-
-## 同種ファイルへの修正適用
-
-- 複数の同種ファイルに同じ修正を適用する場合、Glob ツールで対象ファイルを先に全件洗い出してから修正する
-- 修正対象の一部だけに適用してユーザーへの確認なしに完了報告しない
-
-## コード変更の前に確認する
+### コード変更の前に確認する
 
 - リファクタリングや実装方針の「案」を求められた場合は、コードを変更せずに提案のみを行う
 - 実装（ファイル編集）は「実装して」「コードに反映して」など、変更を明示的に依頼された場合のみ行う
 
-## コードの書き方
+### 同種ファイルへの修正適用
+
+- 複数の同種ファイルに同じ修正を適用する場合、Glob ツールで対象ファイルを先に全件洗い出してから修正する
+- 修正対象の一部だけに適用してユーザーへの確認なしに完了報告しない
+
+### コードの書き方
 
 - コードにはHow、テストコードにはWhat、コミットログにはWhy、コードコメントにはWhy notを書く
 - ユーザーが明示的に指示しない限り、コードコメントやドキュメントには「なぜ別の実装にしなかったのか」以外を基本書かない
   - 特に、コードの内容をそのまま書き出しただけのHowのコメントやドキュメントは書かない
 - 明示的な指示がなく、後方互換が必要ないリポジトリでは、後方互換の維持やデータ移行は行わず、常に理想的かつKISSなコードに書き換える
 
-## Local development environment
+## Git 操作と PR
 
-- devcontainer内でPlannotatorのreview画面を起動したら、reviewerがfeedbackを送信するかsessionを閉じるまで、`plannotator annotate`のprocessを終了、background化、または再起動せずに待つ
-- frontend、backend、databaseなど、host browserからaccessされるlocal serviceを起動するときは、次の順序を守る
-  1. frontendとbackendのdevelopment server、およびSupabaseなど依存するlocal serviceを起動し、それぞれがcontainer内でlistenしていることを確認する
-  2. host browserからaccessするすべてのportについて、`~/.config/devcontainer/scripts/ensure-plannotator-tunnel <port>`を実行し、SSH reverse tunnelを準備する
-  3. 必要なportをすべて準備してから`plannotator annotate <URL> --app`をforegroundで起動する
-- Plannotatorが自動で転送するのはannotation editorとlive-app proxyのportだけである。live appがbrowserから直接accessするAPI、Supabase、asset serverなどのportは自動転送されないため、漏れなく個別に`ensure-plannotator-tunnel`を実行する
-- container内の`curl`だけで動作確認を完了しない。host browserと同じ経路でも画面操作、API request、認証などを確認する
-- 例: Expo Webが`8081`、APIが`3000`、Supabase APIが`54321`でlistenする場合は、各serviceの起動後、Plannotatorの起動前に次を実行する
-
-  ```bash
-  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 8081
-  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 3000
-  ~/.config/devcontainer/scripts/ensure-plannotator-tunnel 54321
-  plannotator annotate http://localhost:8081 --app
-  ```
-
-## コミットの粒度
+### コミットの粒度
 
 - コード実装を依頼されている場合は、変更を未コミットのまま溜め込まず、意味のある作業単位が完了するたびにコミットする
 - 1コミットには、単独で説明・レビューできる1つの目的に必要な変更だけを含める
@@ -64,18 +45,7 @@ globs:
 - 大きな実装は、準備的なリファクタリング、機能実装、テスト、ドキュメントなど、レビュー可能で依存関係が自然な順序のコミットに分割する。ただし、各コミットが壊れた中間状態にならないようにする
 - コミットの実行を禁止された場合、またはユーザーによる確認が必要な場合はコミットせず、その理由と推奨するコミット分割を報告する
 
-## 過去の指摘から学ぶ（agent-lessons）
-
-- SessionStart で「agent-lessons: 過去のレビュー指摘から学んだ教訓」が注入されていたら、該当する作業ではそれに従って実装する
-- Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
-- Claude Code / Codex CLI でレビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
-
-## 権限チェックを通るシェル構文
-
-- 権限チェッカーに渡すコマンドは Bash 互換の構文で書き、`${(f)...}` などの zsh 専用の展開は使わない。サブエージェントにシェル操作を任せるときも、このルールを依頼に含める。
-- `git diff --name-only` の結果を `lessons_query.py --paths` などに渡すときは、`git diff --name-only -z` と `xargs -0` を組み合わせるか、Bash で NUL 区切りの出力を配列に読み込んで `"${files[@]}"` で渡す。実行シェルが zsh なら、Bash の配列処理は `bash -c` 内で実行する。ファイル一覧を `$(...)` の単語分割に任せると、空白や改行を含むパスが分割される。
-
-## PR作成後のレビュー対応
+### PR作成後のレビュー対応
 
 - git push と PR 作成までを依頼された場合は、PR を作成した時点で完了とせず、レビュー対応が終わるまで自律的に対応を続ける
   - この自律対応では、修正・コミット・push のたびにユーザーの承認を求めない。ユーザーが `pr-author-fix` skill を明示的に呼び出した場合は、skill の確認手順に従う
@@ -90,3 +60,23 @@ globs:
   - 指摘同士が矛盾している、または指摘の意図が読み取れない
   - 同じ指摘や CI の失敗が修正後も繰り返し発生し、原因を特定できない
 - テストの skip・無効化や、force push による履歴の書き換えでレビューや CI を通そうとしない
+
+## 調査とレビューの記録
+
+### コードレビュー・技術調査後のメモ記録
+
+- PR レビューや技術調査が一区切りついたら、理解した内容を `plan/` ディレクトリ配下の `10-memo-xxx.md` のようなメモファイルに加筆する。該当するメモファイルがあれば追記し、無ければ新規に作成する。ただし、追記先のファイルが指定された場合はそのファイルに加筆する
+- 「マークダウンに加筆して」「メモして」などと指示されたら、`plan/` ディレクトリ配下の `10-memo-xxx.md` のようなメモファイルに加筆する。該当するメモファイルがあれば追記し、無ければ新規に作成する。ただし、追記先のファイルが指定された場合はそのファイルに加筆する
+
+### 過去の指摘から学ぶ（agent-lessons）
+
+- SessionStart で「agent-lessons: 過去のレビュー指摘から学んだ教訓」が注入されていたら、該当する作業ではそれに従って実装する
+- Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
+- Claude Code / Codex CLI でレビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
+
+## シェル操作
+
+### 権限チェックを通るシェル構文
+
+- 権限チェッカーに渡すコマンドは Bash 互換の構文で書き、`${(f)...}` などの zsh 専用の展開は使わない。サブエージェントにシェル操作を任せるときも、このルールを依頼に含める。
+- `git diff --name-only` の結果を `lessons_query.py --paths` などに渡すときは、`git diff --name-only -z` と `xargs -0` を組み合わせるか、Bash で NUL 区切りの出力を配列に読み込んで `"${files[@]}"` で渡す。実行シェルが zsh なら、Bash の配列処理は `bash -c` 内で実行する。ファイル一覧を `$(...)` の単語分割に任せると、空白や改行を含むパスが分割される。
