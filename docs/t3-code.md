@@ -175,6 +175,11 @@ setup・サービス起動・CLI の connect 実行時に適用するため、�
 | Cloudflare の接続先探索         | `_v2-origintunneld._tcp.argotunnel.com` / `cfd-features.argotunnel.com`                        | 名前単位の許可（SRV / TXT の DNS 問い合わせ用） |
 | Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` / `cftunnel.com` / `h2.cftunnel.com` | TCP 7844                                        |
 
+`cloudflare-dns.com:853` は実機ログで拒否が観測されたため許可している。
+T3 専用ではなく汎用 DNS への経路になるため、sandbox の DNS 名前制限を迂回した
+名前解決や DNS 経由のデータ送信にも利用できる点に注意する。
+この許可が全環境で必要かは未確認で、今回の回線では許可後も接続がタイムアウトしている。
+
 T3 の起動時には `TUNNEL_TRANSPORT_PROTOCOL=http2` を設定し、
 トンネルを上記の TCP 7844 で接続する。UDP / QUIC の許可は追加しない。
 その他の sandbox の共通 policy は変更しない。
