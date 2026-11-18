@@ -82,7 +82,7 @@ devcontainer 内では `crit` ラッパーが `crit UI (host): http://localhost:
 
 ### 指摘候補をコメントとして追加する
 
-各候補を、対象コードの行に line comment として追加する。本文の 1 行目は `No.<n> [<区分>] <一言>` にして、
+各候補を、対象コードの行に line comment として追加する。本文は `**以下、AIでの返信**` から始め、その次の行に `No.<n> [<区分>] <一言>` を書いて、
 crit の UI と表を No で対応させる。複数行の本文は JSON をファイルに書いて `--json --file` で一括追加する。
 
 ```json
@@ -90,7 +90,7 @@ crit の UI と表を No で対応させる。複数行の本文は JSON をフ�
   {
     "file": "app/usecases/orders.py",
     "line": "120-128",
-    "body": "No.1 [should] 更新処理がロックを取っていない\n\n**本PRとの関係**: △ 処理自体は既存だが、PR が足した整合性の保証が同時実行で崩れる\n\n**理由**: <起きる条件と結果>\n\n**関連コード**: `app/models/order.py:45`"
+    "body": "**以下、AIでの返信**\nNo.1 [should] 更新処理がロックを取っていない\n\n**本PRとの関係**: △ 処理自体は既存だが、PR が足した整合性の保証が同時実行で崩れる\n\n**理由**: <起きる条件と結果>\n\n**関連コード**: `app/models/order.py:45`"
   }
 ]
 ```
@@ -122,6 +122,7 @@ crit comment --json --file <comments.json> --author 'Claude Code'
 `crit` が終了したら stdout（または `crit comments --json`）で未 resolve のコメントを読み、各スレッドに **reply で** 答える。
 
 - 根拠となるコード・テスト・ドキュメントを実際に読んでから答える。推測なら推測と書く
+- AI が書く返信の冒頭にも `**以下、AIでの返信**` を入れる
 - 返信は `crit comment --reply-to <id> --author 'Claude Code' '<body>'`。複数あるときは `--json --file` でまとめる
 - ユーザーが新しく付けたコメントは、内容で扱いを分ける
   - PR への指摘（作成者に伝えたいこと）→ 指摘候補として裏取りし（`<refs>/findings.md`）、No・区分・本 PR との関係を付けて表に足す
@@ -175,7 +176,7 @@ resolve は「このスレッドはもう話さない」という意味だけを
 - ユーザーが自分で書いたコメントをそのまま投稿したいと言った場合は、`**以下、AIでの返信**` を付けずにその本文を使う
 - 投稿前に `git rev-parse HEAD` が PR の head と一致していることを確かめる。PR に新しい push があったら、
   `gh pr checkout <N>` で取り直し、行番号を数え直す
-- 投稿後、crit 側のコメントは、ユーザーに確認したうえで投稿済みのものに `投稿済み（draft）` と reply し、`--resolve` で閉じてよい
+- 投稿後、crit 側のコメントは、ユーザーに確認したうえで投稿済みのものに AI 表記を付けて `投稿済み（draft）` と reply し、`--resolve` で閉じてよい
 
 ## 後片付け
 
