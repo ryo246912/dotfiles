@@ -69,6 +69,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:rectangle"                 = "latest" # 1.100
 "brew-cask:slack"                     = "latest" # 4.51.180
 "brew-cask:syncthing-app"             = "latest" # 2.1.2-1
+"brew-cask:thaw-app/tap/thaw@2"       = "latest" # macOS 26 用
 "brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
 "brew-cask:vicinae"                   = "latest" # 0.28.2
 "brew-cask:visual-studio-code"        = "latest" # 1.106.3
