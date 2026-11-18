@@ -476,6 +476,7 @@
 
 - [ ] Thaw
   - [ ] Thaw を起動し、アクセシビリティと画面収録の許可を求められたら「システム設定」→「プライバシーとセキュリティ」で Thaw を ON にする
+  - [ ] 公式 `thaw` cask を導入済みの Mac では、`thaw@2` と競合するため先に `brew uninstall --cask thaw` で削除してから `mise bootstrap packages apply` を実行する
   - [ ] 設定ファイルをインポートする
     - 設定の「プロファイル」から `~/dotfiles/unmanaged/thaw/profile.json` をインポートする
     - 設定を変えたら同じ画面からエクスポートして上記ファイルに上書きし、コミットする
