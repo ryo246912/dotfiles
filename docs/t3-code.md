@@ -162,13 +162,47 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
 **T3 Connect** を有効化して本人認証する方法も使える。
 
-T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のように、対象の sandbox に限定して
-認証・リレー用の `clerk.t3.codes:443` / `relay.t3.codes:443` / `app.t3.codes:443` と、
-暗号化 DNS 用の `cloudflare-dns.com:853`、
-Cloudflare Tunnel の `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` /
-`cftunnel.com` / `h2.cftunnel.com` の TCP 7844 を許可する。
+### sbx から接続するためのネットワーク設定
+
+T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のように、
+対象の sandbox に限定して次の許可を設定する。
 setup・サービス起動・CLI の connect 実行時に適用するため、既存 sandbox にも反映される。
+
+| 用途                            | 接続先                                                                                         | 通信                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| T3 Connect の認証・登録・リレー | `clerk.t3.codes` / `relay.t3.codes` / `app.t3.codes`                                           | TCP 443                                         |
+| 暗号化 DNS                      | `cloudflare-dns.com`                                                                           | TCP 853                                         |
+| Cloudflare の接続先探索         | `_v2-origintunneld._tcp.argotunnel.com` / `cfd-features.argotunnel.com`                        | 名前単位の許可（SRV / TXT の DNS 問い合わせ用） |
+| Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` / `cftunnel.com` / `h2.cftunnel.com` | TCP 7844                                        |
+
+T3 の起動時には `TUNNEL_TRANSPORT_PROTOCOL=http2` を設定し、
+トンネルを上記の TCP 7844 で接続する。UDP / QUIC の許可は追加しない。
 その他の sandbox の共通 policy は変更しない。
+
+sandbox の許可に加え、Mac から外部への TCP 443・853・7844 が利用できる必要がある。
+回線・ルーター・VPN・ファイアウォールが遮断している通信は、sbx の許可では解消できない。
+Mac で暗号化 DNS への到達性を確認するには次を実行する。
+
+```sh
+nc -vz -G 5 cloudflare-dns.com 853
+```
+
+`Operation timed out` になる場合は、別の回線（スマホのテザリングなど）でも比較し、
+利用中のネットワークの制限を確認する。
+`sbx policy log t3-work3` の `BLOCKED REQUESTS` は sandbox の拒否、
+`ALLOWED REQUESTS` の `<dial failed>` は許可後の接続失敗を示す。
+過去の拒否行は残るため、`LAST SEEN` も確認する。
+SRV 名前の許可だけで DNS の到達性や応答形式の問題が解消するとは限らない。
+
+タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
+この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。
+続いて `mise run t3:cli -- work3 connect status` で接続状態を確認し、
+接続できない場合は次のトンネルログを確認する。
+アカウントが異なる場合はコマンドとパスの `work3` を置き換える。
+
+```sh
+tail -n 50 ~/.local/share/t3-sandbox/work3/t3/userdata/logs/relay-client.ndjson
+```
 
 ### 接続先のアプリで同じ環境を開く
 

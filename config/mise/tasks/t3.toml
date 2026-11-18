@@ -50,6 +50,7 @@ ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774
 T3_CONNECT_NETWORK = ",".join((
     "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
     "cloudflare-dns.com:853",
+    "_v2-origintunneld._tcp.argotunnel.com", "cfd-features.argotunnel.com",
     "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
     "cftunnel.com:7844", "h2.cftunnel.com:7844",
 ))
@@ -187,6 +188,7 @@ def t3_command(profile, arguments):
     return ["sbx", "exec", "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
             '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
             'cd "$1" || exit 1; export T3CODE_HOME="$2" MISE_PREFER_OFFLINE=false MISE_OFFLINE=false; '
+            'export TUNNEL_TRANSPORT_PROTOCOL=http2; '
             'if ! compgen -G "${MISE_CACHE_DIR:-/mise/cache}/aqua-registry/sources/*.yaml" >/dev/null; then '
             'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
             'mise --cd /mise cache clear aqua:cli/cli && '
