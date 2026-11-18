@@ -74,6 +74,11 @@ globs:
 - Claude Code / Codex CLI で実装が一区切りして push・PR 作成に進む前に、pr-author-self-review skill で diff と過去の指摘を突き合わせる
 - Claude Code / Codex CLI でレビュー指摘を採用して直したとき、またはユーザーに実装を訂正されたときは、lessons-record skill で教訓を記録する
 
+## 権限チェックを通るシェル構文
+
+- 権限チェッカーに渡すコマンドは Bash 互換の構文で書き、`${(f)...}` などの zsh 専用の展開は使わない。サブエージェントにシェル操作を任せるときも、このルールを依頼に含める。
+- `git diff --name-only` の結果を `lessons_query.py --paths` などに渡すときは、`git diff --name-only -z` と `xargs -0` を組み合わせるか、Bash で NUL 区切りの出力を配列に読み込んで `"${files[@]}"` で渡す。実行シェルが zsh なら、Bash の配列処理は `bash -c` 内で実行する。ファイル一覧を `$(...)` の単語分割に任せると、空白や改行を含むパスが分割される。
+
 ## PR作成後のレビュー対応
 
 - git push と PR 作成までを依頼された場合は、PR を作成した時点で完了とせず、レビュー対応が終わるまで自律的に対応を続ける
