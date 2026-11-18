@@ -2,11 +2,12 @@
 root: true
 targets:
   - claudecode
+  - codexcli
 globs:
   - "**/*"
 ---
 
-# CLAUDE.md
+# Dotfiles repository
 
 This is a personal dotfiles repository managed with [mise](https://mise.jdx.dev/)'s `[dotfiles]` feature (`mise bootstrap dotfiles`).
 
@@ -26,7 +27,7 @@ Tools are managed by [mise](https://mise.jdx.dev/) (`mise.toml`); version upgrad
 
 ## This file itself
 
-`CLAUDE.md` is generated from `.rulesync/rules/CLAUDE.md` by `rulesync generate` — edit the source, not this file. See `docs/rulesync.md`.
+`CLAUDE.md` and `AGENTS.md` are generated from `.rulesync/rules/CLAUDE.md` by `rulesync generate` — edit the source, not this file. See `docs/rulesync.md`.
 
 ## Documentation
 

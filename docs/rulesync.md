@@ -10,12 +10,12 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 | スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                                 | 用途                                                                                                                                                         |
 | ---------------- | ---------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` を生成する自己参照的な設定                                                                                              |
+| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` と `AGENTS.md` を生成する自己参照的な設定                                                                                              |
 | グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
 
-- プロジェクト単位の設定が生成するのは、あなたが今読んでいる **この `CLAUDE.md` そのもの**です。
-  ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` に反映されます。
-  `CLAUDE.md` を直接編集しても次の `generate` で上書きされるので注意してください。
+- プロジェクト単位の設定が生成するのは、あなたが今読んでいる **この `CLAUDE.md` と `AGENTS.md` そのもの**です。
+  ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` と `AGENTS.md` に反映されます。
+  `CLAUDE.md` と `AGENTS.md` を直接編集しても次の `generate` で上書きされるので注意してください。
 - グローバル設定は chezmoi で `~/.config/rulesync/` 配下に配布されます。
   - `config/rulesync/rulesync.jsonc` → `~/.config/rulesync/rulesync.jsonc`
   - `config/rulesync/.rulesync/` → `~/.config/rulesync/.rulesync/`
@@ -46,14 +46,14 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 ## `rulesync init` で生成されるファイルの扱い
 
 このリポジトリでは **rulesync のソースは git 管理し、rulesync の出力先は原則 git 管理しません**。
-ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
+ただし、プロジェクト単位スコープの出力である `CLAUDE.md` と `AGENTS.md` は「このリポジトリ自体で参照したい生成物」なので、
 例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
 
 | 種類                               | 例                                                                              | git 管理 | 理由                                                                                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
 | プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                             | する     | 生成物の正本だから                                                                                                                |
-| プロジェクト単位の生成物           | `CLAUDE.md`                                                                     | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
+| プロジェクト単位の生成物           | `CLAUDE.md` と `AGENTS.md`                                                                     | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
 | プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`                                    | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
 | グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                                | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
 | グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md`            | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
@@ -67,8 +67,8 @@ Rulesync では、`rulesync init` が作る `rulesync.jsonc` と `.rulesync/` �
 その clone は rulesync 的にはすでに初期化済みです。
 
 この状態で `mise run rulesync:generate` を実行しても、`.rulesync/rules/CLAUDE.md` は **入力 source**、
-リポジトリ直下の `CLAUDE.md` は **生成 output** なので、パスが異なりバッティングしません。output の
-`CLAUDE.md` は `.gitignore` で git 管理から外しているため、初回生成で作られるローカル生成物として扱います。
+リポジトリ直下の `CLAUDE.md` と `AGENTS.md` は **生成 output** なので、パスが異なりバッティングしません。output の
+`CLAUDE.md` と `AGENTS.md` は `.gitignore` で git 管理から外しているため、初回生成で作られるローカル生成物として扱います。
 
 ### 既存ファイルと `rulesync init` のバッティングについて
 
