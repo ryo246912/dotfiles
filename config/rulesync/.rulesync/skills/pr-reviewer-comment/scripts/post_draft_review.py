@@ -9,14 +9,13 @@ import json
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 HUNK_HEADER = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 
 def gh_api(*args: str) -> object:
-    result = subprocess.run(
-        ["gh", "api", *args], check=True, capture_output=True, text=True
-    )
+    result = subprocess.run(["gh", "api", *args], check=True, capture_output=True, text=True)
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
@@ -32,7 +31,7 @@ def gh_api_list(path: str) -> list:
 
 
 def commentable_lines(patch: str) -> set[int]:
-    """patch の RIGHT 側で、コメントを付けられる行番号（追加行と文脈行）を返す。"""
+    """Patch の RIGHT 側で、コメントを付けられる行番号（追加行と文脈行）を返す。"""
     lines: set[int] = set()
     current = 0
     for row in patch.splitlines():
@@ -55,7 +54,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="検査だけして投稿しない")
     args = parser.parse_args()
 
-    payload = json.load(open(args.input, encoding="utf-8"))
+    payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
     base = f"repos/{args.repo}/pulls/{args.pr}"
 
     head_sha = gh_api(base)["head"]["sha"]
@@ -79,9 +78,7 @@ def main() -> int:
     errors = []
     for comment in payload["comments"]:
         path = comment["path"]
-        targets = [comment["line"]] + (
-            [comment["start_line"]] if "start_line" in comment else []
-        )
+        targets = [comment["line"]] + ([comment["start_line"]] if "start_line" in comment else [])
         if path not in lines_by_path:
             errors.append(f"{path}: PR の変更ファイルにありません")
             continue
@@ -111,7 +108,12 @@ def main() -> int:
         text=True,
     )
     review = json.loads(result.stdout)
-    print(json.dumps({"id": review["id"], "state": review["state"], "html_url": review["html_url"]}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"id": review["id"], "state": review["state"], "html_url": review["html_url"]},
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

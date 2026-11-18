@@ -82,7 +82,9 @@ class Canvas:
 
     def text(self, x: float, y: float, value: str, cls: str = "", anchor: str = "start") -> None:
         cls_attr = f' class="{cls}"' if cls else ""
-        self.parts.append(f'<text{cls_attr} x="{x:.0f}" y="{y:.0f}" text-anchor="{anchor}">{esc(value)}</text>')
+        self.parts.append(
+            f'<text{cls_attr} x="{x:.0f}" y="{y:.0f}" text-anchor="{anchor}">{esc(value)}</text>'
+        )
 
     def node(self, node: dict, x: float, y: float, w: float, h: float) -> None:
         status = status_of(node)
@@ -93,7 +95,9 @@ class Canvas:
                 self.text(x + w / 2, y + 44 + i * LINE, line, "small", "middle")
             return
         cls = "box" if status == "same" else f"box {status}"
-        self.parts.append(f'<rect class="{cls}" x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" rx="10" />')
+        self.parts.append(
+            f'<rect class="{cls}" x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" rx="10" />'
+        )
         content_h = LINE * len(lines) + (LINE - 3 if node.get("sub") else 0)
         top = y + (h - content_h) / 2 + FONT
         for i, line in enumerate(lines):
@@ -101,14 +105,24 @@ class Canvas:
         if node.get("sub"):
             self.text(x + w / 2, top + len(lines) * LINE - 2, node["sub"], "small", "middle")
         if node.get("badge") is not None:
-            self.parts.append(f'<circle class="badge" cx="{x + w - 4:.0f}" cy="{y + 4:.0f}" r="12" />')
+            self.parts.append(
+                f'<circle class="badge" cx="{x + w - 4:.0f}" cy="{y + 4:.0f}" r="12" />'
+            )
             self.text(x + w - 4, y + 8, str(node["badge"]), "badge-text", "middle")
 
-    def edge(self, path: str, status: str = "same", label: str | None = None, at: tuple[float, float] | None = None) -> None:
+    def edge(
+        self,
+        path: str,
+        status: str = "same",
+        label: str | None = None,
+        at: tuple[float, float] | None = None,
+    ) -> None:
         if status not in STATUSES:
             raise ValueError(f"edge の status は {' / '.join(STATUSES)} のどれか: {status}")
         cls = "edge" if status == "same" else f"edge {status}"
-        self.parts.append(f'<path class="{cls}" d="{path}" marker-end="url(#{self.marker_id}-{status})" />')
+        self.parts.append(
+            f'<path class="{cls}" d="{path}" marker-end="url(#{self.marker_id}-{status})" />'
+        )
         if label and at:
             w = text_width(label, SMALL) + 10
             self.parts.append(
@@ -124,7 +138,7 @@ class Canvas:
         )
         return (
             f'<svg class="dg" viewBox="0 0 {width:.0f} {height:.0f}" role="img" aria-label="{esc(label)}">'
-            f'<defs>{markers}</defs>{"".join(self.parts)}</svg>'
+            f"<defs>{markers}</defs>{''.join(self.parts)}</svg>"
         )
 
 
@@ -135,7 +149,9 @@ def chain(canvas: Canvas, nodes: list[dict], x: float, y: float, row_h: float) -
         w, h = node_size(node)
         top = y + (row_h - h) / 2
         if previous is not None:
-            status = node.get("edge", status_of(node) if status_of(node) in ("added", "removed") else "same")
+            status = node.get(
+                "edge", status_of(node) if status_of(node) in ("added", "removed") else "same"
+            )
             mid = y + row_h / 2
             canvas.edge(f"M{previous + 4:.0f},{mid:.0f} H{x - 4:.0f}", status)
         canvas.node(node, x, top, w, h)
@@ -176,7 +192,10 @@ def before_after(spec: dict, canvas: Canvas) -> tuple[float, float]:
 
 
 def layers(spec: dict, canvas: Canvas) -> tuple[float, float]:
-    natural = [sum(node_size(n)[0] for n in layer["nodes"]) + 20 * (len(layer["nodes"]) - 1) for layer in spec["layers"]]
+    natural = [
+        sum(node_size(n)[0] for n in layer["nodes"]) + 20 * (len(layer["nodes"]) - 1)
+        for layer in spec["layers"]
+    ]
     width = max([420.0, *natural])
     y = 10
     for layer in spec["layers"]:
@@ -186,10 +205,14 @@ def layers(spec: dict, canvas: Canvas) -> tuple[float, float]:
         room = width - 20 * (count - 1)
         needs = [node_size(n)[0] for n in layer["nodes"]]
         # 等分で収まれば等分にし、収まらない箱があれば、必要な幅の比で配る（どの箱も必要な幅を下回らない）
-        widths = [room / count] * count if max(needs) <= room / count else [w * room / sum(needs) for w in needs]
+        widths = (
+            [room / count] * count
+            if max(needs) <= room / count
+            else [w * room / sum(needs) for w in needs]
+        )
         row_h = max(node_size(n)[1] for n in layer["nodes"])
         x = 10
-        for node, box_w in zip(layer["nodes"], widths):
+        for node, box_w in zip(layer["nodes"], widths, strict=False):
             canvas.node(node, x, y, box_w, row_h)
             x += box_w + 20
         y += row_h + GAP_Y
@@ -203,7 +226,7 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
         for end in ("from", "to"):
             if edge[end] not in nodes:
                 raise ValueError(f"edge の {end} に存在しない node: {edge[end]}")
-    rank = {node_id: 0 for node_id in nodes}
+    rank = dict.fromkeys(nodes, 0)
     for _ in nodes:  # 並び順で前から後ろへ向かう矢印だけで、列を決める
         for edge in spec.get("edges", []):
             if order[edge["from"]] < order[edge["to"]]:
@@ -215,17 +238,32 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
     # 同じ列で戻る矢印は列の右に通り道を作るので、その幅（通り道 + ラベル）を、次の列を置く前に空けておく
     lane_room: dict[int, float] = {}
     for c in columns:
-        same = [e for e in spec.get("edges", []) if e["from"] != e["to"] and rank[e["from"]] == rank[e["to"]] == c]
+        same = [
+            e
+            for e in spec.get("edges", [])
+            if e["from"] != e["to"] and rank[e["from"]] == rank[e["to"]] == c
+        ]
         if same:
-            labels = max((text_width(e["label"], SMALL) + 10 for e in same if e.get("label")), default=0)
+            labels = max(
+                (text_width(e["label"], SMALL) + 10 for e in same if e.get("label")), default=0
+            )
             lane_room[c] = 18 + 14 * (len(same) - 1) + 4 + labels
-    col_h = {c: sum(node_size(nodes[n])[1] for n in ids) + GAP_Y * (len(ids) - 1) for c, ids in columns.items()}
+    col_h = {
+        c: sum(node_size(nodes[n])[1] for n in ids) + GAP_Y * (len(ids) - 1)
+        for c, ids in columns.items()
+    }
     # 列を飛ばして右へ進む矢印は、間の箱を横切らないよう、すべての箱の上を通す。その通り道の分だけ上を空ける
     skips = [e for e in spec.get("edges", []) if rank[e["to"]] - rank[e["from"]] > 1]
     # 長く飛ぶ矢印ほど上の通り道・箱に近い縦線にする（入れ子になり、矢印同士が交わらない）
-    skip_lane = {id(e): k for k, e in enumerate(sorted(skips, key=lambda e: rank[e["from"]] - rank[e["to"]]))}
+    skip_lane = {
+        id(e): k for k, e in enumerate(sorted(skips, key=lambda e: rank[e["from"]] - rank[e["to"]]))
+    }
     # 自分自身へ戻る矢印は箱の上に輪で描くので、その分だけ上を空ける
-    top = 30 + 22 * len(skips) + (36 if any(e["from"] == e["to"] for e in spec.get("edges", [])) else 0)
+    top = (
+        30
+        + 22 * len(skips)
+        + (36 if any(e["from"] == e["to"] for e in spec.get("edges", [])) else 0)
+    )
     height = max(col_h.values()) + top + 30
     pos: dict[str, tuple[float, float, float, float]] = {}
     x = 10
@@ -249,7 +287,9 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
         ax, ay, aw, ah = pos[a]
         bx, by, bw, bh = pos[b]
         status = status_of(edge)
-        if rank[b] - rank[a] > 1:  # 列を飛ばして右へ: 列の間の隙間を上り、すべての箱の上を通って下りる
+        if (
+            rank[b] - rank[a] > 1
+        ):  # 列を飛ばして右へ: 列の間の隙間を上り、すべての箱の上を通って下りる
             k = skip_lane[id(edge)]
             lane_y = 22 + 22 * k
             # 縦の線も矢印ごとにずらす（同じ列から出る・同じ列へ入る矢印が重ならないように）
@@ -288,7 +328,9 @@ def flow(spec: dict, canvas: Canvas) -> tuple[float, float, int]:
                 start = f"M{ax + aw / 2:.0f},{ay + ah + 2:.0f} L{ax + aw / 2:.0f},{low:.0f}"
                 start_x = ax + aw / 2
             else:
-                start_x = col_left[rank[a]] - half_gap  # 列でいちばん左の端の外側を下りる（幅の広い箱を横切らない）
+                start_x = (
+                    col_left[rank[a]] - half_gap
+                )  # 列でいちばん左の端の外側を下りる（幅の広い箱を横切らない）
                 start = f"M{ax - 2:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{ay + ah / 2:.0f} L{start_x:.0f},{low:.0f}"
             if lowest[rank[b]] == b:
                 end_x = bx + bw / 2
@@ -324,5 +366,5 @@ def render_picture(spec: dict, index: int) -> str:
     caption = f"<figcaption>{esc(spec['caption'])}</figcaption>" if spec.get("caption") else ""
     return (
         f'<figure class="picture{wide}"><h3>{esc(spec["title"])}</h3>{lead}'
-        f'{canvas.svg(width, height, spec["title"])}{caption}</figure>'
+        f"{canvas.svg(width, height, spec['title'])}{caption}</figure>"
     )
