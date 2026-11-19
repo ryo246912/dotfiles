@@ -3,7 +3,7 @@ name: pr-reviewer-comment-crit
 description: >-
   他人の GitHub PR を crit の UI でレビューする skill。PR へ checkout し、指摘候補（must/should/imo/nit/Q）を
   裏取りしたうえで crit のインラインコメントとして並べ、`crit pr` の UI でユーザーと壁打ちする。選ばれた指摘だけを
-  未 submit の draft レビューとして投稿し、submit 用の本文例まで出す。「crit で PR をレビューしたい」
+  通常は draft レビューとして投稿し、「submitして」または `--submit` の明示があれば公開する。「crit で PR をレビューしたい」
   「PR を crit で見て壁打ちしたい」と crit を使う指定があるときに使う。crit を使わない PR レビューは pr-reviewer-comment、
   自分の PR に付いた指摘への対応は pr-author-fix を使う。
 targets:
@@ -15,8 +15,7 @@ targets:
 
 レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を投稿する**
 までを進める。pr-reviewer-comment skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
-submit（Approve / Comment / Request changes）はユーザーが自分で行う。指摘の取捨と最終的な文面の責任はユーザーにあり、
-この skill は判断材料をそろえて下書きを作る役に徹する。
+「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示された場合は、選ばれた指摘と確認済みの本文で公開する。通常は draft と本文例を作る。
 
 全体の流れ:
 
@@ -25,7 +24,7 @@ submit（Approve / Comment / Request changes）はユーザーが自分で行う
 3. 動作確認手順を書く
 4. 指摘候補を crit のコメントとして並べ、表と一緒に出す
 5. crit の UI でユーザーと壁打ちし、投稿する No を決めてもらう
-6. 選ばれた No を draft レビューとして投稿し、submit 用の本文例を出す
+6. 選ばれた No を draft にするか、明示指定があれば公開する
 
 ## 共通手順の読み込み
 
@@ -149,7 +148,7 @@ No は振り直さない（外した No は欠番にする）。crit 上の元�
 - No ごとの投稿本文案（下の「resolve と投稿の関係」のとおり、スレッド全体を踏まえて書き直したもの。
   `<refs>/draft-review.md` のインラインコメントの書式で書く）
 
-ユーザーが No を選び、本文案を確認したら 6 へ進む。本文の修正を頼まれたら直して出し直す。
+ユーザーが No を選び、本文案を確認したら 6 へ進む。公開指定がある場合はレビュー全体の本文案も提示し、あわせて確認してもらう。本文の修正を頼まれたら直して出し直す。
 
 ### resolve と投稿の関係
 
@@ -164,7 +163,7 @@ resolve は「このスレッドはもう話さない」という意味だけを
 - 質問への回答で懸念が解消し、指摘ではなく確認事項になったなら区分を Q にするか、投稿しないことをユーザーに提案する
 - 書き直した本文は、壁打ちを終えたときに No ごとの投稿本文案として出し、ユーザーに確認してもらう
 
-## 6. draft レビューを投稿し、submit 用の本文例を出す
+## 6. レビューを draft または公開として投稿する
 
 `<refs>/draft-review.md` に従う。pr-reviewer-comment-crit では次の点を加える。
 
@@ -184,7 +183,7 @@ resolve は「このスレッドはもう話さない」という意味だけを
 
 ## してはいけないこと
 
-- レビューを submit しない（`crit push`、`event` を付けた投稿、`submit_pending` の実行を含む）
+- `crit push` や `submit_pending` は実行しない。公開は明示指定があるときに共通手順で行う
 - 他人のブランチへの commit / push、他人のスレッドへの返信、ラベルや状態の変更をしない
 - コードを編集しない（検証のための読み取り・テスト実行は可）
 - 裏を取っていない候補を crit や表に載せない

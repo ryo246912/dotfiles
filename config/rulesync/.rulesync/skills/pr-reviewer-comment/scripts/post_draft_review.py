@@ -1,7 +1,7 @@
-"""PR に未 submit（PENDING）のレビューを作る。
+"""PR に draft または公開済みのレビューを作る。
 
 指定した行が diff にあるか、同じユーザーの PENDING が既に無いかを先に確かめ、
-問題があれば何も投稿せずに終了する。event を付けないので submit はされない。
+問題があれば何も投稿せずに終了する。--submit が指定された場合に event を付ける。
 """
 
 import argparse
@@ -52,9 +52,20 @@ def main() -> int:
     parser.add_argument("--pr", required=True, type=int)
     parser.add_argument("--input", required=True, help="commit_id と comments を持つ JSON")
     parser.add_argument("--dry-run", action="store_true", help="検査だけして投稿しない")
+    parser.add_argument(
+        "--submit",
+        nargs="?",
+        const="COMMENT",
+        choices=("COMMENT", "APPROVE", "REQUEST_CHANGES"),
+        help="指定した種別で直接公開する（種別の既定値: COMMENT）",
+    )
     args = parser.parse_args()
 
     payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    review_body = payload.get("body")
+    if args.submit and (not isinstance(review_body, str) or not review_body.strip()):
+        parser.error("--submit には確認済みのレビュー本文（入力 JSON の body）が必要です")
+
     base = f"repos/{args.repo}/pulls/{args.pr}"
 
     head_sha = gh_api(base)["head"]["sha"]
@@ -100,6 +111,9 @@ def main() -> int:
             for c in payload["comments"]
         ],
     }
+    if args.submit:
+        body.update(event=args.submit, body=review_body)
+
     result = subprocess.run(
         ["gh", "api", "-X", "POST", f"{base}/reviews", "--input", "-"],
         input=json.dumps(body, ensure_ascii=False),

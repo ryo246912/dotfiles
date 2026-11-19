@@ -1,4 +1,4 @@
-# draft レビューの投稿と submit 用の本文例
+# レビューの投稿と submit 用の本文例
 
 pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
@@ -30,7 +30,7 @@ pr-reviewer-comment skill の `scripts/post_draft_review.py` を使う（この 
 
 - 指定した行が diff にあるかを検査する
 - 同じユーザーの PENDING のレビューが既にあれば止める（GitHub は 1 人 1 件しか持てない）
-- `event` を付けずに作成する（PENDING のまま。submit しない）
+- 通常は `event` を付けずに PENDING として作成する。公開指定時は `event` を付け、1 回の API 呼び出しで公開する
 
 ```bash
 python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_review.py \
@@ -40,6 +40,16 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
 ```
 
 `comments.json` はスクラッチパッドなどの一時ディレクトリに置く。先に `--dry-run` で通してから投稿する。
+
+### 公開指定がある場合
+
+「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示されたときに使う。「投稿して」の場合は通常どおり draft を作る。
+指摘の選択と投稿文面の確認は公開時も行う。確認済みのレビュー全体の本文を JSON の `body` に入れる。
+既定の種別は Comment。Approve / Request changes はユーザーが種別を明示したときだけ選ぶ。
+
+通常のコマンドに `--submit` を加える。種別を指定された場合は `--submit APPROVE` または `--submit REQUEST_CHANGES` を使う。
+公開前の検査では、同じ入力・種別に `--dry-run` も付ける。
+既存の PENDING がある場合は公開操作を止めてユーザーに伝える。
 
 `comments.json` の形:
 
@@ -62,7 +72,7 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
 - 既に PENDING のレビューがあれば、新しく作らずにユーザーへ伝える。ユーザーが同意したら、GraphQL の `addPullRequestReviewThread` で既存の PENDING に足す
 - 投稿後に文面を直すときは、**まず今の本文を取り直す**（ユーザーが手で直していることがある）。そのうえで GraphQL の `updatePullRequestReviewComment` で更新する
 
-投稿したら、レビューの URL（`html_url`）と、付けた行の対応表（No・区分・ファイル:行）を報告する。diff の外の指摘をどこに付け替えたかも書く。
+投稿したら、draft か公開済みかを明示し、レビューの URL（`html_url`）と、付けた行の対応表（No・区分・ファイル:行）を報告する。diff の外の指摘をどこに付け替えたかも書く。
 
 ## submit 用の本文例
 
