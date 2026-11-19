@@ -4,8 +4,6 @@ description: devcontainer 内のローカルアプリをホストブラウザで
 targets:
   - claudecode
   - codexcli
-  - copilot
-  - copilotcli
 ---
 
 # Plannotator でローカルアプリをレビューする
