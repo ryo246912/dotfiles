@@ -50,7 +50,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True, help="owner/name")
     parser.add_argument("--pr", required=True, type=int)
-    parser.add_argument("--input", required=True, help="commit_id と comments を持つ JSON")
+    parser.add_argument("--input", required=True, help="commit_id と comments を持つ JSON（--submit では body も必須）")
     parser.add_argument("--dry-run", action="store_true", help="検査だけして投稿しない")
     parser.add_argument(
         "--submit",

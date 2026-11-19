@@ -51,11 +51,12 @@ python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_rev
 公開前の検査では、同じ入力・種別に `--dry-run` も付ける。
 既存の PENDING がある場合は公開操作を止めてユーザーに伝える。
 
-`comments.json` の形:
+`comments.json` の例。公開する場合は確認済みのレビュー本文を `body` に入れる（draft では省略可）。
 
 ```json
 {
   "commit_id": "<head の SHA>",
+  "body": "確認した内容と対応をお願いしたい指摘をまとめます。",
   "comments": [
     {
       "path": "app/usecases/orders.py",

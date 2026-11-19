@@ -11,9 +11,9 @@ targets:
   - codexcli
 ---
 
-# pr-reviewer-comment-crit — crit の UI で PR をレビューし、draft を投稿する
+# pr-reviewer-comment-crit — crit の UI で PR をレビューし、draft を作るか公開する
 
-レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を投稿する**
+レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を作るか公開する**
 までを進める。pr-reviewer-comment skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
 「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示された場合は、選ばれた指摘と確認済みの本文で公開する。通常は draft と本文例を作る。
 
@@ -174,7 +174,7 @@ resolve は「このスレッドはもう話さない」という意味だけを
 - ユーザーが自分で書いたコメントをそのまま投稿したいと言った場合は、`**以下、AIでの返信**` を付けずにその本文を使う
 - 投稿前に `git rev-parse HEAD` が PR の head と一致していることを確かめる。PR に新しい push があったら、
   `gh pr checkout <N>` で取り直し、行番号を数え直す
-- 投稿後、crit 側のコメントは、ユーザーに確認したうえで投稿済みのものに `投稿済み（draft）` と reply し、`--resolve` で閉じてよい
+- 投稿後、crit 側のコメントは、ユーザーに確認したうえで投稿済みのものにレビューの状態に応じて `投稿済み（draft）` または `投稿済み（公開）` と reply し、`--resolve` で閉じてよい
 
 ## 後片付け
 
