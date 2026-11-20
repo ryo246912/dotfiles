@@ -11,9 +11,11 @@ java                              = "temurin-21"
 "pipx:awslogs"                    = "0.15.0"
 
 [bootstrap.packages]
-"brew:ffmpeg"    = "latest"
-"brew:libpq"     = "latest" # 18.6
-"brew:openssl@3" = "latest" # 3.6.5
+"brew-cask:android-platform-tools" = "latest"
+"brew:ffmpeg"                      = "latest"
+"brew:libpq"                       = "latest" # 18.6
+"brew:openssl@3"                   = "latest" # 3.6.5
+"brew:scrcpy"                      = "latest"
 
 [settings]
 trusted_config_paths = [
