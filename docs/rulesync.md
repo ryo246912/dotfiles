@@ -246,9 +246,11 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 `delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
 同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
 
-レビュースキルの改名後は、新しい `pr-reviewer-all-review` と `pr-reviewer-crit` が配布されたことを確認し、
-`~/.claude/skills/` と `~/.agents/skills/` に残った旧名の `pr-reviewer-comment`、`pr-reviewer-comment-crit`
-のディレクトリを手動で削除します。
+レビュースキルの改名後は、次の順で旧名の `pr-reviewer-comment` と `pr-reviewer-comment-crit` を片付けます。
+
+1. 以前のコピーが `~/.config/rulesync/.rulesync/skills/` に残っていれば、旧名のディレクトリを削除します。ローカル設定を追加していた場合は先に退避します。
+2. Rulesync で再配布し、新しい `pr-reviewer-all-review` と `pr-reviewer-crit` が生成されたことを確認します。
+3. `~/.claude/skills/` と `~/.agents/skills/` に残った旧名のディレクトリを削除します。
 
 ### プロジェクト単位の `.codex/config.toml` について
 
