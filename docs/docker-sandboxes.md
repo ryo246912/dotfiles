@@ -479,6 +479,30 @@ agent ごとの設定ディレクトリの対応（`--config-dir` で上書き�
 | codex   | `~/.codex`       | `CODEX_HOME`                   |
 | copilot | `~/.copilot`     | （マウントのみ）               |
 
+#### ホストの Claude 設定の適用
+
+Docker sbx はホストのユーザー設定を自動継承しません。
+`sbx-agent` は設定ディレクトリと symlink 先をマウントし、作成時に加えて
+再接続時も `sbx run --env` で `CLAUDE_CONFIG_DIR` などを渡します。
+Claude の起動引数には `--settings <ホスト設定ディレクトリ>/settings.json` も指定します。
+これは明示的な設定の追加読み込みなので、通常の user 設定より優先されます。
+ホストの hooks / statusLine も適用対象です。macOS 専用のコマンド（`afplay` など）は
+Linux sandbox では実行できないため、必要なら `--config-dir` で Linux 対応の設定を選びます。
+
+作成・再接続時に sandbox 内から設定ファイルを読み、ホスト側との SHA-256 の一致を検証します。
+欠落・リンク切れ・内容不一致の場合は Claude の起動を止めます。`--setup-only` でも検証します。
+sandbox 内の `~/.claude/settings.json` は Docker の既定ファイルとして残り、直接上書きしません。
+ホスト設定を使わない場合は `--no-config` を指定します。
+
+既存 sandbox で検証に失敗したら、ホスト設定と symlink 先のマウントを確認してください。
+作成時に必要なマウントが無かった場合は、sandbox 内だけのデータを保存してから、
+同じ起動オプションに `--new` を付けて再作成します（既存 sandbox は削除されます）。
+マウント済みなら、再接続だけで設定を明示的に読み込みます。
+
+仕様: [Docker の Claude 設定](https://docs.docker.com/ai/sandboxes/agents/claude-code/#configuration)、
+[sbx run の環境変数と引数](https://docs.docker.com/reference/cli/sbx/run/)、
+[Claude の CLI オプション](https://code.claude.com/docs/en/cli-reference)。
+
 `SBX_AGENT_MOUNTS` に `,` 区切りでパスを並べると、追加 workspace をまとめて指定できます
 （`:` は read-only 指定の `:ro` と衝突するため区切り文字は `,`）。
 
