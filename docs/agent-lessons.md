@@ -554,7 +554,7 @@ mise run lessons:sync
 `/pr-lessons-review` は旧 `pr-author-self-review`、後の `pr-author-lessons-review` の新しい名前です。差分と教訓の照合を担当します。
 
 `/pr-author-all-review` は教訓照合、code-review、変更ファイルに該当する専門レビュー、pr-fix を順に実行します。
-`/pr-author-all-review --loop` は修正・検証・commit・push・CI と再レビュー待ちまで繰り返します。
+妥当な推奨案に沿った修正・検証・commit・push、CI と再レビューの確認を繰り返し、判断が必要な項目は最後にまとめて提示します。
 各レビューの責務は個別 skill に残し、追加するレビューは
 `config/rulesync/.rulesync/skills/pr-author-all-review/references/stages.md` の一覧で管理します。
 
