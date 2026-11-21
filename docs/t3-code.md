@@ -165,6 +165,61 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
 **T3 Connect** を有効化して本人認証する方法も使える。
 
+### T3 Connect を sbx 内で使うためのバージョン
+
+sbx 内でも T3 Connect を利用する構成を目指す。Tailscale は必須ではなく、
+T3 Connect の経路が使えない場合の代替手段。
+スマホから T3 Connect を使う際は、スマホ側に Tailscale / VPN は必要ない。
+
+sbx 0.53 / 0.54 系の DNS プロキシでは SRV / TXT を解決できず、
+cloudflared が接続先を発見できない問題が報告されている。
+[公式 issue #791](https://github.com/docker/sbx-releases/issues/791) では、
+[0.55.0-rc4 に修正を収録したとの回答](https://github.com/docker/sbx-releases/issues/791#issuecomment-7008656990)
+がある。公開 Linux バイナリでも、0.54.0 にはなかった DNS プロキシの
+`ResolveSRV` / `ResolveTXT` 処理が 0.55.0-rc4 に含まれることを確認した。
+ただし、この作業環境では macOS の既存 sandbox からの実接続は検証できていない。
+
+このため macOS の mise 設定は **0.55.0-rc4（正式版ではない）** に固定する。
+最新の正式版 0.54.0 へ更新するだけでは、この修正は取り込まれない。
+正式版 0.55.0 以降の公開時には、収録状況を確認して固定バージョンを更新する。
+
+更新は実行中の全 sandbox の作業を保存・終了してから行う。
+sbx のデーモンはホストで共有され、再起動の影響は T3 のアカウントだけに限られない。
+
+```sh
+cd /path/to/dotfiles
+mise bootstrap dotfiles apply
+mise install github:docker/sbx-releases
+sbx version
+sbx daemon restart
+sbx diagnose
+```
+
+`sbx version` が 0.55.0-rc4 を示し、`sbx diagnose` で CLI とデーモンの
+バージョンが一致することを確認する。インストールだけでは、旧デーモンが
+動いたままの可能性がある。別のインストール先の sbx を使っている場合は
+`command -v sbx` も確認する。
+
+続いて `mise run t3:cli` で設定済みアカウント → **restart-server** を選び、
+各アカウントの `connect status` を確認する。work3 の例:
+
+```sh
+mise run t3:cli -- work3 connect status
+```
+
+接続可能になったらスマホの T3 Code アプリで同じ T3 Connect アカウントにログインし、
+環境を開く。バージョン更新だけを理由に sandbox を削除・再作成しない。
+SRV エラーが残る場合はデーモンのバージョンと最新のトンネルログ、
+DNS 解決後に別のエラーへ進んだ場合は TCP 7844 の許可・到達性を確認する。
+DNS 修正の収録と、実際のトンネル接続成功は分けて確認する。
+
+cloudflared は通常の SRV 解決が失敗すると、`1.1.1.1:853` への DoT も試す。
+そのため「sandbox 内では SRV 問題を回避する経路が一切ない」とは断定できない。
+ただし実機では、Mac の TCP 接続が成功する一方、sandbox 内の DoT は TLS
+ハンドシェイクでタイムアウトし、透過プロキシに `<dial failed>` が記録されている。
+SNI と接続先 IP の扱いが原因かは未確定。DNS 修正版への更新を先に検証し、
+証明書検証の無効化や全通信許可で代用しない。
+
 ### sbx から接続するためのネットワーク設定
 
 T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のように、

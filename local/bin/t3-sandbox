@@ -213,7 +213,7 @@ def service_environment():
     data = Path(os.environ.get("MISE_DATA_DIR", str(xdg_data / "mise")))
     paths = [str(Path.home() / ".local/bin"), str(data / "shims"), *os.environ["PATH"].split(os.pathsep)]
     environment = {"PATH": os.pathsep.join(dict.fromkeys(paths))}
-    for key in ("MISE_ENV", "HOST_ENV", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
+    for key in ("MISE_ENV", "HOST_ENV", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR", "SBX_AGENT_SIGNING_KEY"):
         if key in os.environ:
             environment[key] = os.environ[key]
     return environment
@@ -301,7 +301,7 @@ def install_service(profile, refresh=False):
 def account_profile(account, workspace, port):
     token = Path.home() / ".local/state/sbx-agent-credentials" / f"{account}.token"
     if token.is_symlink() or not token.is_file() or not token.stat().st_size:
-        raise ValueError(f"{account} の token が未登録です。mise run sandbox:claude-token {account} を実行してください")
+        raise ValueError(f"{account} の token が未登録です。dotfiles の checkout root に移動して mise run sandbox:claude-token {account} を実行してください")
     storage = (Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "t3-sandbox" / account).resolve()
     profile = {"account": account, "name": f"t3-{account}", "workspace": str(workspace),
                "storage": str(storage), "port": port or ACCOUNTS[account][1]}
