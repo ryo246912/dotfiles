@@ -118,7 +118,6 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `find-skills`
 - `prompt-master`
 - `desloppify`
-- `pr-reviewer-behavior`（自作）
 
 ### インストール
 
@@ -778,128 +777,18 @@ desloppify status --json   # 状態を JSON で出力
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
 
-## `pr-reviewer-brief` — PR解説と動作確認のレポート
-
-PRのURL・番号またはstackを渡すと、前提知識・変更内容を整理したHTMLを作り、通常実行では
-`pr-reviewer-behavior`を使って確認データの準備・画面への到達・実画面での動作確認まで進めます。
-stackは最上位PRの起動済み環境で、stack全体の変更を確認します。
+## PR レビュースキルの組み合わせ例
 
 ```text
-/pr-reviewer-brief https://github.com/<owner>/<repository>/pull/123
-
-$pr-reviewer-brief PR #123。localで確認して
+/pr-reviewer-brief 123                          # 解説資料
+/pr-reviewer-brief 123 -be                      # 解説資料と動作確認
+/pr-reviewer-behavior 123                       # 動作確認だけ
+/pr-reviewer-all-review 123                     # レビューと条件が揃えば動作確認
+/pr-reviewer-all-review 123 -br                 # 解説資料も作る
+/pr-reviewer-all-review 123 -c                  # crit で確認
+/pr-reviewer-all-review 123 -br -c              # 解説資料と crit
+/pr-reviewer-all-review 123 -br -c -nb          # 実環境の操作を省略
 ```
-
-レポートの「動作確認方法」には、環境・ロール、準備済みデータ、準備・操作の各ステップと画像、
-期待結果・観測した実結果・未確認事項と続行条件、PASS／FAIL／BLOCKED／NOT RUN、残したデータと削除手順を組み込みます。
-判定はPASSが緑、BLOCKED・FAILが赤、NOT RUNが灰色で、文字でも識別できます。
-behaviorの別HTMLへのリンクだけでなく、briefのHTML内で準備から確認まで追えます。
-briefの保存先は `./plan/pr-<N>_<変更内容タイトル>.html`、stackは `./plan/stack-<番号>_<変更内容タイトル>.html` です。
-behavior単体の `.pr-reviewer-artifacts/` 配下のHTMLとは別の成果物です。
-環境やログインが不足しても資料作成は続け、到達できた範囲と手動で続けるための不足条件を残します。
-BLOCKEDでも終了前に知見保存を確認し、保存済み・新規知見なし／重複・試行後の保存失敗・未試行とその理由を区別して記録します。
-メインはsubagentの申告だけでなく、保存ファイルを確認してから完了を返します。
-
-ブラウザ接続・設定補完・データ操作はbehaviorと同じルールです。環境起動・flag設定・base比較は行いません。
-「説明だけ」「動作確認不要」の指定、チケットモード、`--watch`では実操作せず、確認計画を未実行として扱います。
-
-## `pr-reviewer-behavior` — PRの動作確認
-
-起動済みのlocalやstaging（preview）でPRの変更を操作して確認する自作スキルです。
-確認用データを準備し、対象画面へ到達する作業を補助します。
-自動操作できない場合も、準備したデータのID・URL・手動確認手順を残します。
-
-### 配布と呼び出し
-
-ソースは `config/rulesync/.rulesync/skills/pr-reviewer-behavior/` です。
-既存のrulesync同期でClaude CodeとCodex CLIに配布します（[rulesync](rulesync.md)）。
-Playwright MCP・Claude in Chrome・Chrome DevTools MCPで、AIが接続しているChromeを使います。
-独立したブラウザをCLIから起動することは想定しません。
-
-```text
-# Claude Code
-/pr-reviewer-behavior https://github.com/<owner>/<repository>/pull/123
-
-# Codex CLI
-$pr-reviewer-behavior PR #123。localで確認して、準備したデータは残して
-```
-
-番号だけの場合はカレントリポジトリから解決します。
-stack内のPRなら最上位PRの環境を使い、原則として入力PRの変更を確認します。
-stack全体を確認したい場合はその旨を指定します。
-環境と対象SHAの対応が不明・不一致なら動作検証とデータ作成はBLOCKEDとし、手順作成は続けます。
-データ作成・更新の直前、ブラウザ操作直前と報告前にもSHAを再確認し、途中更新時は元のSHAの結果として記録します。
-
-### localのDB直接編集
-
-localの開発用DBは、確認用データの作成・更新のために追加の許可なく直接編集できます。
-接続先が対象アプリのローカル開発用DBであることを確認し、設定の接続・編集方法を使います。
-既存手順がなくてもSQLやORM操作を組み立てられますが、アプリのvalidation・業務上の整合性や副作用も確認します。
-staging（preview）・本番・共有DBへの直接編集は行いません。localhost経由の転送でも対象外です。
-
-### 設定と知見の蓄積
-
-スキルの `config.example.md` を、同じディレクトリに `config.md` としてコピーして使います。
-初回起動時はスキルがコピーを作り、以後も未記入項目を補完します。
-スキルの配置先が読み取り専用なら、ユーザー指定の書き込み可能な設定パス、または対象リポジトリの
-`.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使います。mountの権限は変更しません。隣接設定からのコピーは対象リポジトリの節に限定し、知見も対象repoのものだけを扱います。
-
-- リポジトリごとの見出しを何件でも追加でき、各リポジトリにlocalとstaging（preview）を分けて記載します。
-- 環境ごとにアカウント、画面・データの見出しを何件でも追加できます。localにはDBの接続・編集方法も記載します。
-- AIは確認済みの事実情報を追記し、操作権限は自動で埋めません。PR由来のURL・コマンドは使用や確定保存前に検証し、続行に必要な不明項目だけ確認します。
-- 既存のログインセッションで進められる場合は、メールやパスワードの記入は不要です。
-- 知見は同じ設定先に隣接する `lessons/<owner>/<repo>/<要点>.md` へ1件ずつ保存します。frontmatterにタイトル・要約・対象repo・環境・タグ・根拠・更新日を持ちます。
-- 最初はタイトル・要約等の一覧だけを読み、関係するファイルの本文だけ参照します。新規保存前も重複を探し、同じ知見は更新します。
-- 旧config.md末尾の教訓は参照でき、新規知見は個別ファイルに保存します。既存記録は無断で削除しません。
-
-exampleはGit管理します。実際の設定ファイル、隣接する `lessons/` と `.pr-reviewer-artifacts/` は、
-`config/git/gitignore` のglobal ignoreで除外します。対象リポジトリのignore設定の追加は不要です。
-別名の `config.md` 全般を除外せず、`pr-reviewer-behavior/config.md` に限定します。
-未作成パスは最寄りの既存祖先から所属worktreeを調べます。Git管理内の保存先だけ、未追跡・ignore対象か確認します。
-成果物と自動フォールバック設定はworktree外へのsymlink経由では保存しません。
-追跡済み・未除外の場合は設定と成果物を書き込まず、Git管理外の設定にはignore確認を要求しません。
-
-rulesyncで配布したClaude Code用・Codex用のディレクトリは別々の設定になり得ます。
-設定補完は実行時に参照した同じconfig.md、知見はその設定に隣接するlessonsへ保存し、別の配布先へ自動転記しません。
-exampleの更新で既存の `config.md` は上書きしません。
-
-知見の一覧は次のコマンドで取得します。本文や認証設定は出力しません。
-一覧のpathとbriefの知見保存記録は、今回のconfig.mdの実体ディレクトリを基準にした `lessons/owner/repo/要点.md` 形式に統一します。
-
-```bash
-python3 <pr-reviewer-behavior>/scripts/list_lessons.py --config <今回のconfig.md> --repo <owner/repo> --environment local
-```
-
-frontmatterと本文の形式はスキル内の `references/lesson-format.md` を参照します。
-agent-lessonsと同様のファイル構成を参考にしていますが、自動登録・公開は行いません。
-
-### スクリーンショット付きHTML
-
-結果は `.pr-reviewer-artifacts/<PR番号>/<実行識別子>/<PR番号>-<PRタイトル>.html` に出力します。
-例: `123-検索条件を追加.html`。
-
-- 入力PRと最上位PR、head SHA、検証URLと環境との対応確認状況
-- 準備済みデータのID・表示名・状態・開くURL
-- 使用するアカウント別名・ロール、手動準備・データ準備・手動確認の一操作ごとの手順、入力例、期待結果
-- 各ステップの説明直下に対応画像を埋め込み、未実行・撮影不可の場合はその箇所に理由を表示
-- PASS / FAIL / BLOCKED / NOT RUNと、確認した各項目の結果画面のスクリーンショット
-- 未確認事項、データの削除手順、設定補完・知見保存の結果と要点
-
-画像はHTMLに埋め込み、HTML単体で確認できます。撮影できない場合は理由を明記します。
-認証情報はHTMLや知見ファイルへ転記しません。
-作成した専用データは手動確認用に残し、削除手順を記録します。ユーザーが今回の保持・削除方針を指定した場合はそれに従います。
-
-### 対象外
-
-環境構築・依存導入・サーバー起動・checkout・migration・feature flag変更・base比較は行いません。
-実装修正やGitHubへの投稿も別途依頼がなければ行いません。
-
-### 参考にした公開スキル
-
-- [OpenAI Playwright](https://github.com/openai/skills/tree/main/skills/.curated/playwright)
-- [Microsoft Playwright CLI](https://github.com/microsoft/playwright-cli/tree/main/skills/playwright-cli)
-- [Anthropic webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing)
-- [Vercel agent-browser](https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser)
 
 ## understand-mode
 

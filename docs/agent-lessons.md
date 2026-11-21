@@ -18,7 +18,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
                                        統合・書き直し・不要な教訓の retired は月次の lessons-review
                                                                           │
      ┌────────────────────────────────────────────────────────────────────┤
-     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-lessons-review（push 前）   ↓ pr-reviewer-comment（観点）
+     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-lessons-review（push 前）   ↓ pr-reviewer-all-review（観点）
    received + team                       received + team の Check   given + team
 ```
 
@@ -31,7 +31,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | 月次の見直し             | `lessons-review` skill を同じく定期タスクで実行（received・given・team のすべて）        |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
 | push 前の突き合わせ      | `pr-author-lessons-review` skill                                                         |
-| レビュー時の観点         | `pr-reviewer-comment` / `pr-reviewer-comment-crit`（`references/findings.md`）           |
+| レビュー時の観点         | `pr-reviewer-all-review` / `pr-reviewer-crit`（`references/findings.md`）                |
 | 同期・初期設定のコマンド | `mise run lessons:setup` / `mise run lessons:sync`（`config/mise/tasks/lessons.toml`）   |
 
 ## 知見リポジトリの構成
@@ -67,11 +67,11 @@ owner・global へ広がる。そのリポジトリの領域に固有の教訓�
 
 ### source（誰の指摘か）
 
-| source     | 内容                                       | 使う場所                                                           |
-| ---------- | ------------------------------------------ | ------------------------------------------------------------------ |
-| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-lessons-review                      |
-| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点              |
-| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-lessons-review、pr-reviewer-comment |
+| source     | 内容                                       | 使う場所                                                              |
+| ---------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-lessons-review                         |
+| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-all-review / pr-reviewer-crit の観点                      |
+| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-lessons-review、pr-reviewer-all-review |
 
 ### 収集対象（targets.yml と targets.<name>.yml）
 
@@ -314,7 +314,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
 | push・PR 作成の前    | `pr-author-lessons-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                 |
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
-| 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
+| 他人の PR のレビュー | `pr-reviewer-all-review` / `pr-reviewer-crit` が `given`・`team` の教訓を観点として読む                                                                        |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
 | 毎月                 | `lessons-review` が全教訓を見直し、統合・書き直し・retired を `review/<日付>` の PR に出す                                                                     |
 
@@ -541,7 +541,7 @@ mise run lessons:sync
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
-- **skill は教訓を段階的に読む。** `pr-author-lessons-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
+- **skill は教訓を段階的に読む。** `pr-author-lessons-review`・`planning`・`pr-reviewer-all-review` は `lessons_query.py` で、
   scope・source・変更ファイルの glob に合う教訓をタイトル・場所・Check で一覧にし、関係するものと適用可否が不明なものだけ
   clone の本文（Rule・Patterns・Check）を読む。タイトルだけで除外せず、調査で新たな論点が見つかれば候補を追加する。SessionStart で注入するのも教訓のタイトルだけにしている
 - **昇格を PR にする理由。** 提案をファイルに溜めて人が見に行く方式は回らなかった。PR なら普段の通知で届き、
