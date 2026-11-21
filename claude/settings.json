@@ -54,6 +54,7 @@
     "plannotator-review": "name-only",
     "plannotator-annotate": "name-only",
     "plannotator-last": "name-only",
+    "understand": "user-invocable-only",
     "html": "name-only",
     "html-diagram": "name-only",
     "html-plan": "name-only",
