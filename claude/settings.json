@@ -73,6 +73,7 @@
     "pr-reviewer-brief": "name-only",
     "pr-reviewer-behavior": "name-only",
     "tmux": "name-only",
+    "android-debug": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",
     "prompt-master": "user-invocable-only",
