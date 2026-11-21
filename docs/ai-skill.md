@@ -83,7 +83,7 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                                                   |
 | `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`pr-reviewer-behavior`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                   |
+| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`understand`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                     |
 
 - 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
@@ -121,6 +121,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
+- `understand`（Claude Code 専用）
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumiki skills
@@ -144,10 +145,11 @@ mise --cd "$HOME" run apm:install
 
 `mise run apm:install` は user scope で skill をインストールします。Claude Code では
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
+`understand` は依存の `targets` を `claude` に絞っているため、`~/.claude/skills/understand/` にだけ配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
+再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
+更新方法は [APM の pin と Renovate による更新](apm.md#pin-と-renovate-による更新)を参照してください。
 
 ## Plannotator / Effective HTML
 
@@ -913,3 +915,13 @@ agent-lessonsと同様のファイル構成を参考にしていますが、自�
 - [Microsoft Playwright CLI](https://github.com/microsoft/playwright-cli/tree/main/skills/playwright-cli)
 - [Anthropic webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing)
 - [Vercel agent-browser](https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser)
+
+## understand-mode
+
+Claude Code の回答、コード、PR、未コミット差分をブラウザのホワイトボードで読み、気になる箇所を選んで付箋ごとに質問できます。Node.js 18 以上が必要です。PR を指定する場合は `gh` を使います。
+
+1. 直前の回答には `/understand`、未コミット差分には `/understand diff`、PR には `/understand #123のPR` を実行します。
+2. ホワイトボードで気になる箇所を選び、付箋の中で追加質問します。付箋の会話はメインの Claude Code セッションから分岐します。
+3. 「理解を終える」で本筋に返す付箋を選び、返信案を確認して「メインに送って閉じる」を押します。Claude Code に戻って「終わった」と伝えると、まとめた内容がメインの会話に反映されます。
+
+`skillOverrides` は `user-invocable-only` です。upstream の `SKILL.md` にも `disable-model-invocation: true` があり、Claude のスキル一覧に説明文を載せず、`/understand` で手動起動します。 [understand-mode の使い方](https://github.com/fkubota/understand-mode#使い方)
