@@ -1,0 +1,9 @@
+["perch:install"]
+description = "Install or update the native Perch application"
+run = '''
+set -eu
+installer=$(mktemp)
+trap 'rm -f "$installer"' EXIT
+curl -fsSL https://raw.githubusercontent.com/perch-code/perch/main/install.sh -o "$installer"
+PERCH_NO_MODIFY_PATH=1 sh "$installer"
+'''
