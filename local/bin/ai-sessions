@@ -230,6 +230,11 @@ def chunks(text, width):
     yield line
 
 
+def column(text, width):
+    clipped = next(chunks(text, width - 2))
+    return clipped + " " * (width - cells(clipped))
+
+
 def put(screen, y, text, attr=0):
     height, width = screen.getmaxyx()
     if 0 <= y < height and width > 2:
@@ -252,7 +257,7 @@ def show(screen):
     screen.timeout(200)
     rows, cache, pending = [], {}, {}
     selected = None
-    index, preview, waiting, editing, query, scroll = 0, False, False, False, "", 0
+    index, waiting, editing, query, scroll = 0, False, False, "", 0
     refresh_at = 0
     with ThreadPoolExecutor(max_workers=4) as executor:
         while True:
@@ -271,16 +276,20 @@ def show(screen):
                 token = row["launch"][0] if row["launch"] else ""
                 hint = cache.get((token, False), (0, {}))[1].get("prompt") or ""
                 name = row.get("sessionName") or row["branch"]
-                label = "  ".join((row["presetName"], name, " ".join(hint.split())))
+                hint = " ".join(hint.split())
+                label = " ".join((row["presetName"], name, hint))
                 if (not waiting or row["state"] == "waiting_input") and query.casefold() in (
                     label + " " + row["branch"] + " " + row["worktreePath"]
                 ).casefold():
-                    visible.append((row, label))
-            index = next((i for i, (row, _) in enumerate(visible) if row["id"] == selected),
+                    visible.append((row, name, hint))
+            index = next((i for i, (row, _, _) in enumerate(visible) if row["id"] == selected),
                          min(index, max(0, len(visible) - 1)))
             selected_row = visible[index][0] if visible else None
-            selected = selected_row["id"] if selected_row else None
-            requests = [(selected_row["launch"], True)] if preview and selected_row and selected_row["launch"] else []
+            focused = selected_row["id"] if selected_row else None
+            if focused != selected:
+                scroll = 0
+            selected = focused
+            requests = [(selected_row["launch"], True)] if selected_row and selected_row["launch"] else []
             requests.extend((row["launch"], False) for row in rows if row["launch"])
             for (token, launch), full in requests:
                 key = (token, full)
@@ -291,41 +300,45 @@ def show(screen):
             counts = [f"{STATES[state][0]} {sum(row['state'] == state for row in rows)}"
                       for state in ("waiting_input", "busy", "idle", "unknown")]
             put(screen, 0, "AI セッション  " + "  ".join(counts), curses.A_BOLD)
-            limit = max(1, (height - 4) // 2 if preview else height - 3)
+            preset_width = max(10, min(26, width // 4))
+            name_width = max(10, min(22, width // 5))
+            put(screen, 1, "  " + column("状態", 12) + column("エージェント", preset_width)
+                + column("セッション名", name_width) + "直近のプロンプト", curses.A_BOLD)
+            limit = max(1, (height - 5) // 2)
             start = max(0, index - limit + 1)
-            for i, (row, label) in enumerate(visible[start:start + limit], start):
+            for i, (row, name, hint) in enumerate(visible[start:start + limit], start):
                 state, color = STATES.get(row["state"], STATES["unknown"])
                 attr = curses.color_pair(color) if has_colors else 0
                 if i == index:
                     attr |= curses.A_REVERSE
-                put(screen, 1 + i - start, ("› " if i == index else "  ") + state + "  " + label, attr)
+                put(screen, 2 + i - start, ("› " if i == index else "  ") + column(state, 12)
+                    + column(row["presetName"], preset_width) + column(name, name_width) + hint, attr)
             if not visible:
-                put(screen, 1, "該当するセッションがありません")
-            if preview:
-                y = min(limit, len(visible)) + 2
-                put(screen, y, "会話プレビュー", curses.A_BOLD)
-                messages = []
-                if selected_row and selected_row["launch"]:
-                    token = selected_row["launch"][0]
-                    data = cache.get((token, True), (0, {}))[1]
-                    for role, content in data.get("messages", []):
-                        prefix = "You: " if role == "user" else "AI: "
-                        for line in (prefix + content).splitlines():
-                            messages.extend(chunks(line, max(1, width - 2)))
-                    if not messages and data.get("prompt"):
-                        messages = list(chunks("You: " + data["prompt"], max(1, width - 2)))
-                room = max(0, height - y - 2)
-                scroll = min(scroll, max(0, len(messages) - room))
-                end = len(messages) - scroll
-                for line in messages[max(0, end - room):end] if room else []:
-                    y += 1
-                    put(screen, y, line)
-                if not messages:
-                    detail = ("会話ログをまだ取得できません" if selected_row and selected_row["launch"]
-                              else "このセッションの会話を一意に特定できません")
-                    put(screen, y + 1, detail)
+                put(screen, 2, "該当するセッションがありません")
+            y = max(1, min(limit, len(visible))) + 3
+            put(screen, y, "会話プレビュー", curses.A_BOLD)
+            messages = []
+            if selected_row and selected_row["launch"]:
+                token = selected_row["launch"][0]
+                data = cache.get((token, True), (0, {}))[1]
+                for role, content in data.get("messages", []):
+                    prefix = "You: " if role == "user" else "AI: "
+                    for line in (prefix + content).splitlines():
+                        messages.extend(chunks(line, max(1, width - 2)))
+                if not messages and data.get("prompt"):
+                    messages = list(chunks("You: " + data["prompt"], max(1, width - 2)))
+            room = max(0, height - y - 2)
+            scroll = min(scroll, max(0, len(messages) - room))
+            end = len(messages) - scroll
+            for line in messages[max(0, end - room):end] if room else []:
+                y += 1
+                put(screen, y, line)
+            if not messages:
+                detail = ("会話ログをまだ取得できません" if selected_row and selected_row["launch"]
+                          else "このセッションの会話を一意に特定できません")
+                put(screen, y + 1, detail)
             footer = f"/ {query}_" if editing else (
-                "↑↓ 選択  Enter プレビュー  PgUp/PgDn スクロール  / 検索  "
+                "↑↓ 選択  PgUp/PgDn スクロール  / 検索  "
                 f"w {'入力待ちのみ' if waiting else '全件'}  Esc 閉じる"
             )
             put(screen, height - 1, footer)
@@ -346,9 +359,6 @@ def show(screen):
             elif key in ("j", "k", curses.KEY_DOWN, curses.KEY_UP):
                 index = max(0, min(len(visible) - 1, index + (1 if key in ("j", curses.KEY_DOWN) else -1)))
                 selected = visible[index][0]["id"] if visible else None
-                scroll = 0
-            elif key in ("\n", "\r", curses.KEY_ENTER):
-                preview = not preview
                 scroll = 0
             elif key == curses.KEY_PPAGE:
                 scroll += 8
