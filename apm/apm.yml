@@ -64,7 +64,7 @@ dependencies:
     - nidhinjs/prompt-master
     # Ponytail は skill ディレクトリ単位で配布する。
     - DietrichGebert/ponytail/skills/ponytail#v5.1.0
-    - DietrichGebert/ponytail/skills/ponytail-audit#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-audit#v5.3.3
     - DietrichGebert/ponytail/skills/ponytail-debt#v5.1.0
     - DietrichGebert/ponytail/skills/ponytail-gain#v5.1.0
     - DietrichGebert/ponytail/skills/ponytail-help#v5.1.0
