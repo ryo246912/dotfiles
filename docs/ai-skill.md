@@ -28,8 +28,6 @@ skill の本体は APM（[`docs/apm.md`](apm.md)）と rulesync（[`docs/rulesyn
 | `"user-invocable-only"` | Claude からは見えない。`/名前` で手動でだけ使える         |
 | `"off"`                 | Claude からも `/` メニューからも隠す                      |
 
-`public-research` は `on` で配布し、公開 X 投稿の取得や YouTube 動画の検索に使います。
-
 Claude Code の plugin の skill には効きません（下の 2 で plugin ごと切り替える）。
 
 #### 2. plugin をプロジェクトごとにオン・オフする（`enabledPlugins`）
