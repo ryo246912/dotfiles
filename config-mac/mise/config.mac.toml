@@ -9,7 +9,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 # v0.55.0-rc4 に収録（0.53/0.54 は未対応）。正式版 0.55.0 以降が出たら更新する。
 # https://github.com/docker/sbx-releases/issues/791
 "github:docker/sbx-releases" = { version = "0.55.0-rc4", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
-"github:hzqtc/taproom"       = { version = "0.6.2", bin = "taproom" }
+"github:hzqtc/taproom"       = { version = "0.7.1", bin = "taproom" }
 "http:terminal-browser"      = { version = "0.15.3", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
 [bootstrap.packages]
