@@ -227,6 +227,7 @@ mise --cd "$HOME" run rulesync:generate
 `pr-author-fix` は `pr-fix`、`pr-author-lessons-review` は `pr-lessons-review`、`pr-reviewer-behavior` は `pr-behavior-review`、`pr-reviewer-brief` は `pr-brief`、`pr-reviewer-crit` は `pr-crit`、`pr-review-spec` は `pr-spec-review` に変更しました。
 
 Rulesync の `delete: false` により、再生成後も旧名の配布先は残ります。新名で生成されたことを確認してから、`~/.claude/skills/` や `~/.agents/skills/` などの旧名ディレクトリを整理してください。`pr-reviewer-behavior` の隣に保存していた `config.md` と `lessons/` がある場合は、旧ディレクトリを整理する前に対応する `pr-behavior-review` へ引き継いでください。新しい配布先に既存の設定や知見があれば内容を確認して統合します。
+読み取り専用の配布先で使うリポジトリ側の設定は、既存の `.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を引き続き使用します。
 
 ### `~/.codex/skills/` に古い skill が残っている
 
