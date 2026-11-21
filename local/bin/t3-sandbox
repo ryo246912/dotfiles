@@ -12,7 +12,9 @@ import tempfile
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774), "work3": (".claude-work3", 3775)}
-T3_CONNECT_NETWORK = ",".join((
+# Tailscale Serve only publishes HTTPS on these ports.
+TAILSCALE_HTTPS_PORTS = {"account1": 443, "account2": 10000, "work3": 8443}
+T3_CONNECT_NETWORK =",".join((
     "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
     "cloudflare-dns.com:853",
     "_v2-origintunneld._tcp.argotunnel.com:7844",
@@ -103,6 +105,7 @@ def choose_cli_command():
     commands = {
         "pair": (["pair"], "PC のアプリ接続用 URL / Token を発行"),
         "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証"),
+        "tailscale": (["tailscale"], "Tailscale 経由でスマホ接続用の Address / Token を発行"),
         "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
         "ports": (["ports"], "sandbox の公開ポートを表示"),
         "server-status": (["server-status"], "ホスト側 T3 サービスの状態"),
@@ -193,6 +196,31 @@ def pair(profile, arguments):
             print(line)
     print("Address と Token を入力するか、App link を開いて登録してください。")
     print("スマホではこの loopback URL は使えません。T3 Connect または Tailscale で接続します。")
+
+
+def tailscale_pair(profile):
+    # T3 Connect needs SRV/TXT lookups, which the sbx DNS proxy rejects (NOTIMP);
+    # publish the forwarded host port from the Mac instead.
+    cli = shutil.which("tailscale") or "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+    if not os.access(cli, os.X_OK):
+        raise ValueError("tailscale が必要です。docs/t3-code.md を参照してください")
+    status = subprocess.run([cli, "status", "--json"], capture_output=True, text=True)
+    try:
+        host = json.loads(status.stdout)["Self"]["DNSName"].rstrip(".")
+    except (ValueError, KeyError):
+        raise ValueError("Tailscale が未接続です。アプリでログインし、HTTPS Certificates を有効にしてください")
+    https_port = TAILSCALE_HTTPS_PORTS[profile["account"]]
+    run([cli, "serve", "--bg", f"--https={https_port}", f"http://127.0.0.1:{profile['port']}"])
+    base_url = f"https://{host}:{https_port}"
+    result = subprocess.run(t3_command(profile, [
+        "auth", "pairing", "create", "--ttl", "10m", "--label", "phone", "--base-url", base_url]),
+        stdout=subprocess.PIPE, text=True)
+    if result.returncode:
+        raise ValueError("pairing token の発行に失敗しました。mise run t3:cli から server-status を確認してください")
+    print("スマホの Tailscale を接続し、T3 Code アプリの Add environment に入力してください。")
+    print(f"Address: {base_url}")
+    print("".join(line + "\n" for line in result.stdout.splitlines() if line.startswith(("Token:", "Expires"))), end="")
+    print("Token は一度使うと無効です。ブラウザで Pair URL を開かず、アプリに直接入力してください。")
 
 
 def host_service_command(profile):
@@ -397,6 +425,9 @@ def main():
             require("sbx")
             if arguments[0] == "connect" and not any(flag in arguments for flag in ("--help", "-h")):
                 allow_t3_connect_network(profile)
+            if arguments == ["tailscale"]:
+                tailscale_pair(profile)
+                return
             if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
                 pair(profile, arguments)
                 return

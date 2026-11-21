@@ -260,6 +260,23 @@ nc -vz -G 5 1.1.1.1 853
 過去の拒否行は残るため、`LAST SEEN` も確認する。
 SNI の許可は DNS 問い合わせの許可とは異なり、SRV 応答の問題を修復するものではない。
 
+#### 既知の制約: sbx 内の cloudflared は edge に接続できない
+
+実機（sbx v0.53.0）で、sandbox の DNS プロキシが SRV / TXT 問い合わせに NOTIMP（rcode 4）を返し、
+A レコードのみ解決することを確認した。cloudflared は edge の検出に
+`_v2-origintunneld._tcp.argotunnel.com`（SRV）と `cfd-features.argotunnel.com`（TXT）を使うため、
+`server misbehaving` で失敗する。`@1.1.1.1` への直接の DNS（53 番）も、UDP は拒否・TCP は EOF だった。
+
+cloudflared は失敗後に `1.1.1.1:853`（SNI は `cloudflare-dns.com`）への DNS-over-TLS へ
+フォールバックするが、透過プロキシのログでは接続先が `cloudflare-dns.com:853` として扱われ、
+`<dial failed>` が繰り返される。ホストでは `1.1.1.1:853` に TCP 接続できる一方、
+`cloudflare-dns.com` が解決する Web 用 IP の 853 はタイムアウトする。
+そのため、透過プロキシがホスト名で接続し直している可能性が高い（接続先の再解決自体は未確認）。
+`1.1.1.1:853` を sandbox 限定で許可しても、ハンドシェイクは成功しなかった。
+
+この制約は sbx 側の DNS・透過プロキシの挙動によるもので、dotfiles の network allow では解消できない。
+sbx が SRV を扱えるようになるまで、スマホ接続は下記の Tailscale を使う。
+
 タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
 この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。
 続いて `mise run t3:cli -- work3 connect status` で接続状態を確認し、
@@ -288,20 +305,38 @@ PC・sandbox・T3 サーバーは起動した状態を維持する。
 
 ### Tailscale で接続する場合
 
-sbx のネットワーク制限で Connect / Cloudflare tunnel が動かない場合は、
-`sbx policy log` で必要な通信先を確認するか、ホスト側の Tailscale を使う。
-PC とスマホを同じ tailnet に接続し、MagicDNS と HTTPS 証明書を有効化して初回のみ:
+sbx 内の cloudflared が動かない（前節の既知の制約）ため、スマホはホスト側の Tailscale で接続する。
+T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
+
+前提（初回のみ）:
+
+- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
+- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
+- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
 
 ```bash
-# account2 の例。HTTPS port はアカウントごとに分ける。
-tailscale serve --bg --https=8443 http://127.0.0.1:3774
-mise run t3:cli -- account2 pair
+mise run t3:cli -- work3 tailscale
 ```
 
-スマホの Add environment に `https://<PCのMagicDNS名>:8443` とペアリングコードを入力する。
-`127.0.0.1` はスマホでは PC を指さない。Web 版にも HTTPS が必要。
-設定後はスマホもアプリの環境選択だけで切り替えられる。
-この経路だけを消すには `tailscale serve --https=8443 off` を使う。
+`tailscale` はホストの `tailscale serve --bg` で、sandbox の公開ポートを tailnet の HTTPS に出し、
+スマホ用の pairing token を発行する。`serve` の設定は永続し、場所を変えても tailnet のアドレスは変わらない。
+HTTPS ポートは Tailscale Serve の制約（443 / 8443 / 10000）によりアカウントごとに固定する。
+
+| アカウント | sandbox 公開ポート | tailnet の HTTPS ポート |
+| ---------- | ------------------ | ----------------------- |
+| account1   | 3773               | 443                     |
+| account2   | 3774               | 10000                   |
+| work3      | 3775               | 8443                    |
+
+スマホの Add environment に、表示された `https://<MagicDNS名>:<port>` と Token を入力する。
+`127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
+ブラウザで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
+接続後はアプリの環境選択だけで使え、再実行は Token の期限切れ・端末の追加時のみ。
+この経路だけを消すには `tailscale serve --https=8443 off` のように、対応するポートを指定する。
+
+Tailscale は private ホストで `mise run bootstrap:mac-packages` が導入する（`tailscale-app`）。
+`mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
+実機では中断したため使わない。
 
 ## 自動起動と保存先
 
