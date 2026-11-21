@@ -70,10 +70,12 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:slack"                     = "latest" # 4.51.180
 "brew-cask:syncthing-app"             = "latest" # 2.1.2-1
 "brew-cask:t3-code"                   = "latest" # 0.1.9
-"brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
-"brew-cask:vicinae"                   = "latest" # 0.28.2
-"brew-cask:visual-studio-code"        = "latest" # 1.106.3
-"brew-cask:wezterm@nightly"           = "latest"
+# 独自 tap の cask。Thaw 3 は macOS 27 必須のため、macOS 26 では 2.x を使う。Renovate の API 照会対象外なのでバージョン注記は付けない
+"brew-cask:thaw-app/tap/thaw@2"   = "latest"
+"brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
+"brew-cask:visual-studio-code"    = "latest" # 1.106.3
+"brew-cask:wezterm@nightly"       = "latest"
 
 [bootstrap.brew.taps]
 "kamillobinski/thock" = "https://github.com/kamillobinski/homebrew-thock.git"

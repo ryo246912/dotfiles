@@ -15,7 +15,7 @@ ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774
 T3_CONNECT_NETWORK = ",".join((
     "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
     "cloudflare-dns.com:853",
-    "_v2-origintunneld._tcp.argotunnel.com", "cfd-features.argotunnel.com",
+    "_v2-origintunneld._tcp.argotunnel.com:7844",
     "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
     "cftunnel.com:7844", "h2.cftunnel.com:7844",
 ))
@@ -148,10 +148,13 @@ def prepare(profile):
         raise ValueError(f"{profile['name']} の T3 ポートが profile と一致しません。sbx ports で確認してください")
 
 
-def t3_command(profile, arguments):
+def t3_command(profile, arguments, interactive=False):
     # Avoid login-shell mise activation before the missing registry can be fetched.
     # Keep sbx credentials/configuration without sourcing the user's shell startup.
-    return ["sbx", "exec", "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
+    terminal = ["-i"] if interactive else []
+    if interactive and sys.stdin.isatty() and sys.stdout.isatty():
+        terminal.append("-t")
+    return ["sbx", "exec", *terminal, "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
             '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
             'cd "$1" || exit 1; export T3CODE_HOME="$2" MISE_PREFER_OFFLINE=false MISE_OFFLINE=false; '
             'export TUNNEL_TRANSPORT_PROTOCOL=http2; '
@@ -206,10 +209,11 @@ def host_service_command(profile):
 def service_environment():
     # Activated install paths may be pruned by nested mise runs. Keep stable shims
     # and the environment selectors that enable config.mac.toml (including sbx).
-    data = Path(os.environ.get("MISE_DATA_DIR", str(Path.home() / ".local/share/mise")))
+    xdg_data = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+    data = Path(os.environ.get("MISE_DATA_DIR", str(xdg_data / "mise")))
     paths = [str(Path.home() / ".local/bin"), str(data / "shims"), *os.environ["PATH"].split(os.pathsep)]
     environment = {"PATH": os.pathsep.join(dict.fromkeys(paths))}
-    for key in ("MISE_ENV", "HOST_ENV", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
+    for key in ("MISE_ENV", "HOST_ENV", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR"):
         if key in os.environ:
             environment[key] = os.environ[key]
     return environment
@@ -235,6 +239,8 @@ def install_service(profile, refresh=False):
     if sys.platform == "darwin":
         require("launchctl")
         path = Path.home() / "Library/LaunchAgents" / f"{label}.plist"
+        if refresh and not path.is_file():
+            raise ValueError("自動起動は未登録です。登録する場合は mise run t3:setup を実行してください")
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"Label": label, "ProgramArguments": command, "RunAtLoad": True,
                    "KeepAlive": True, "ThrottleInterval": 15, "Umask": 0o077,
@@ -252,12 +258,22 @@ def install_service(profile, refresh=False):
                 return
             run(["launchctl", "bootout", f"{domain}/{label}"])
         if refresh:
-            stop_sandbox(profile)
+            try:
+                stop_sandbox(profile)
+            except Exception:
+                if loaded.returncode == 0:
+                    run(["launchctl", "bootstrap", domain, path])
+                raise
         path.write_bytes(plistlib.dumps(payload))
         run(["launchctl", "bootstrap", domain, path])
     elif sys.platform == "linux":
         require("systemctl")
         path = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "systemd/user" / f"{label}.service"
+        if path.is_file() and not refresh:
+            print("自動起動は登録済みです。サービス定義と実行中の T3 は変更しません")
+            return
+        if refresh and not path.is_file():
+            raise ValueError("自動起動は未登録です。登録する場合は mise run t3:setup を実行してください")
         path.parent.mkdir(parents=True, exist_ok=True)
         def quote(value):
             return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%').replace('\n', '\\n').replace('\r', '\\r') + '"'
@@ -272,7 +288,11 @@ def install_service(profile, refresh=False):
         run(["systemctl", "--user", "enable", path.name])
         if refresh:
             run(["systemctl", "--user", "stop", path.name])
-            stop_sandbox(profile)
+            try:
+                stop_sandbox(profile)
+            except Exception:
+                run(["systemctl", "--user", "start", path.name])
+                raise
         run(["systemctl", "--user", "start", path.name])
     else:
         raise ValueError("自動起動は sbx が動作する macOS / Linux 環境用です")
@@ -319,7 +339,10 @@ def setup(args):
         raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。複数時はアカウント別の既定ポートを使います")
     require("git")
     workspace = Path(args.workspace or os.getcwd()).expanduser().resolve()
-    result = subprocess.run(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    local_git_vars = run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.splitlines()
+    git_environment = {key: value for key, value in os.environ.items() if key not in local_git_vars}
+    result = subprocess.run(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True, env=git_environment)
     if result.returncode:
         raise ValueError(f"Git リポジトリを確認できません: {workspace}。--workspace /path/to/project を指定してください")
     workspace = Path(result.stdout.strip()).resolve()
@@ -377,7 +400,7 @@ def main():
             if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
                 pair(profile, arguments)
                 return
-            command = t3_command(profile, arguments)
+            command = t3_command(profile, arguments, interactive=True)
     os.execvp(command[0], command)
 
 

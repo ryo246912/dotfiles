@@ -16,7 +16,7 @@ includes = ["tasks/*.toml"]
 "aqua:evilmartians/lefthook"     = "2.2.1"
 "aqua:jdx/jactionlint"           = "2.6.0"
 "aqua:mvdan/sh"                  = "3.14.1"
-"aqua:secretlint/secretlint"     = "13.1.0"
+"aqua:secretlint/secretlint"     = "14.0.1"
 "aqua:suzuki-shunsuke/ghalint"   = "1.6.0"
 "aqua:suzuki-shunsuke/pinact"    = "5.0.2"
 "aqua:tamasfe/taplo"             = "0.10.0"
@@ -24,7 +24,7 @@ includes = ["tasks/*.toml"]
 "github:betterleaks/betterleaks" = "1.3.1"
 "github:dyoshikawa/rulesync"     = "32.0.0"
 "github:superfly/flyctl"         = "0.4.29"
-"npm:oxfmt"                      = "0.78.0"
+"npm:oxfmt"                      = "0.79.0"
 "npm:oxlint"                     = "1.87.0"
 
 [hooks]

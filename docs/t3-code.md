@@ -89,7 +89,7 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 4. 出力の **Address** と **Token** を Add environment に入力するか、**App link** を開く。
    PC から到達できる `http://127.0.0.1:3774` などの URL に変換して表示する。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
-6. 初回にプロジェクトが未登録なら、コマンドパレットの **Add existing project** から
+6. 初回にプロジェクトが未登録なら、コマンドパレットの **Add project** → **Local folder** から
    setup で指定した workspace を追加する。
 
 サービス起動直後に pair が「サーバーがない」と返す場合は、起動完了後に再実行する。
@@ -106,6 +106,7 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 | pair           | PC のアプリ接続用 Address / Token / URL を発行                  |
 | connect        | T3 Connect の初回認証（スマホ接続用）                           |
 | sessions       | 接続を許可した端末の一覧                                        |
+| ports          | sandbox の公開ポートを表示                                      |
 | server-status  | ホスト側 T3 サービスの状態                                      |
 | restart-server | ホストサービスと対象 sbx を停止し、自動起動定義を更新して再起動 |
 | version / help | T3 のバージョン / ヘルプ                                        |
@@ -114,6 +115,8 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 サービスの再登録・起動の順に行う。ホストの `sbx exec` 接続だけでなく、sandbox 内の T3 プロセスも終了させる。
 同じアカウント内の実行中の作業は中断するため、終了してから選ぶ。
 保存済みのコード・履歴・認証情報は保持し、sandbox 自体は削除しない。
+`--no-autostart` で設定したアカウントでは、自動起動を勝手に登録せずエラーにする。
+自動起動が必要なら `t3:setup` を `--no-autostart` なしで再実行する。
 
 ## 普段の操作
 
@@ -168,17 +171,18 @@ T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のよう�
 対象の sandbox に限定して次の許可を設定する。
 setup・サービス起動・CLI の connect 実行時に適用するため、既存 sandbox にも反映される。
 
-| 用途                            | 接続先                                                                                         | 通信                                            |
-| ------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| T3 Connect の認証・登録・リレー | `clerk.t3.codes` / `relay.t3.codes` / `app.t3.codes`                                           | TCP 443                                         |
-| 暗号化 DNS                      | `cloudflare-dns.com`                                                                           | TCP 853                                         |
-| Cloudflare の接続先探索         | `_v2-origintunneld._tcp.argotunnel.com` / `cfd-features.argotunnel.com`                        | 名前単位の許可（SRV / TXT の DNS 問い合わせ用） |
-| Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` / `cftunnel.com` / `h2.cftunnel.com` | TCP 7844                                        |
+| 用途                            | 接続先                                                                                         | 通信               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------ |
+| T3 Connect の認証・登録・リレー | `clerk.t3.codes` / `relay.t3.codes` / `app.t3.codes`                                           | TCP 443            |
+| 暗号化 DNS                      | `cloudflare-dns.com`                                                                           | TCP 853            |
+| Cloudflare Tunnel の接続先 SNI  | `_v2-origintunneld._tcp.argotunnel.com`                                                        | TCP 7844（HTTP/2） |
+| Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` / `cftunnel.com` / `h2.cftunnel.com` | TCP 7844           |
 
 `cloudflare-dns.com:853` は実機ログで拒否が観測されたため許可している。
 T3 専用ではなく汎用 DNS への経路になるため、sandbox の DNS 名前制限を迂回した
 名前解決や DNS 経由のデータ送信にも利用できる点に注意する。
-この許可が全環境で必要かは未確認で、今回の回線では許可後も接続がタイムアウトしている。
+この許可が全環境で必要かは未確認。接続先 IP は `1.1.1.1`、TLS の SNI は
+`cloudflare-dns.com` であり、許可ログの名前と実際の接続先を区別する。
 
 T3 の起動時には `TUNNEL_TRANSPORT_PROTOCOL=http2` を設定し、
 トンネルを上記の TCP 7844 で接続する。UDP / QUIC の許可は追加しない。
@@ -189,15 +193,17 @@ sandbox の許可に加え、Mac から外部への TCP 443・853・7844 が利�
 Mac で暗号化 DNS への到達性を確認するには次を実行する。
 
 ```sh
-nc -vz -G 5 cloudflare-dns.com 853
+nc -vz -G 5 1.1.1.1 853
 ```
 
-`Operation timed out` になる場合は、別の回線（スマホのテザリングなど）でも比較し、
+`cloudflare-dns.com` の Web 用 IP に対する TCP 853 の確認では代用できない。
+以前案内したホスト名でのタイムアウトだけでは、回線の TCP 853 遮断は判断できない。
+上記の `1.1.1.1` で `Operation timed out` になる場合は、別の回線（スマホのテザリングなど）でも比較し、
 利用中のネットワークの制限を確認する。
 `sbx policy log t3-work3` の `BLOCKED REQUESTS` は sandbox の拒否、
 `ALLOWED REQUESTS` の `<dial failed>` は許可後の接続失敗を示す。
 過去の拒否行は残るため、`LAST SEEN` も確認する。
-SRV 名前の許可だけで DNS の到達性や応答形式の問題が解消するとは限らない。
+SNI の許可は DNS 問い合わせの許可とは異なり、SRV 応答の問題を修復するものではない。
 
 タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
 この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。
@@ -206,7 +212,7 @@ SRV 名前の許可だけで DNS の到達性や応答形式の問題が解消�
 アカウントが異なる場合はコマンドとパスの `work3` を置き換える。
 
 ```sh
-tail -n 50 ~/.local/share/t3-sandbox/work3/t3/userdata/logs/relay-client.ndjson
+tail -n 50 "${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/work3/t3/userdata/logs/relay-client.ndjson"
 ```
 
 ### 接続先のアプリで同じ環境を開く
@@ -289,9 +295,15 @@ mise タスクは初回設定の `t3:setup` と、接続・診断用の `t3:cli`
 処理本体は `local/bin/t3-sandbox` の Python スクリプトに置き、
 自動起動サービスは mise でツール環境を読み込んでから、このスクリプトを直接呼び出す。
 
-以前のタスク定義から更新する場合は、`mise bootstrap dotfiles apply` で
-スクリプトとタスク定義を配置し、設定済みの各アカウントについて
-`mise run t3:cli -- work3 restart-server` を一度実行する。
+以前のタスク定義から更新する場合は、dotfiles の checkout root へ移動して配置する。
+
+```sh
+cd /path/to/dotfiles
+mise bootstrap dotfiles apply
+```
+
+続いて `mise run t3:cli` で設定済みアカウント → **restart-server** を選ぶ。
+設定済みの `account1` / `account2` / `work3` それぞれについて一度実行する。
 これで既存サービスの呼び出し先も更新される。実行中の作業は先に終了する。
 この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
 実際の Claude 認証とスマホ接続は未確認**。

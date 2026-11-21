@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-14T01:25:28.923283+00:00'
+generated_at: '2026-11-21T09:30:44.334259+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1247,47 +1247,166 @@ dependencies:
   host: github.com
   resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
   resolved_ref: v5.1.0
-  version: 9cc65d0
-  package_type: marketplace_plugin
+  version: unknown
+  virtual_path: skills/ponytail
+  is_virtual: true
+  package_type: claude_skill
   deployed_files:
   - .agents/skills/ponytail
-  - .agents/skills/ponytail-audit
-  - .agents/skills/ponytail-audit/SKILL.md
-  - .agents/skills/ponytail-debt
-  - .agents/skills/ponytail-debt/SKILL.md
-  - .agents/skills/ponytail-gain
-  - .agents/skills/ponytail-gain/SKILL.md
-  - .agents/skills/ponytail-help
-  - .agents/skills/ponytail-help/SKILL.md
-  - .agents/skills/ponytail-review
-  - .agents/skills/ponytail-review/SKILL.md
   - .agents/skills/ponytail/SKILL.md
   - .claude/skills/ponytail
-  - .claude/skills/ponytail-audit
-  - .claude/skills/ponytail-audit/SKILL.md
-  - .claude/skills/ponytail-debt
-  - .claude/skills/ponytail-debt/SKILL.md
-  - .claude/skills/ponytail-gain
-  - .claude/skills/ponytail-gain/SKILL.md
-  - .claude/skills/ponytail-help
-  - .claude/skills/ponytail-help/SKILL.md
-  - .claude/skills/ponytail-review
-  - .claude/skills/ponytail-review/SKILL.md
   - .claude/skills/ponytail/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
-    .agents/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .agents/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-    .agents/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-    .agents/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
     .agents/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
-    .claude/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
-    .claude/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .claude/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-    .claude/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-    .claude/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
     .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
-  content_hash: sha256:3133b97b1d13e831e316574c3dc9634c219ee209b075874813dc2d25492130fb
+  content_hash: sha256:99f0589e5646b46da07b9419a5daa178004b3dd8930fec528918a51ab07f5efc
+- repo_url: dietrichgebert/ponytail
+  materialization_repo_url: DietrichGebert/ponytail
+  name: ponytail-audit
+  host: github.com
+  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
+  resolved_ref: v5.1.0
+  version: unknown
+  virtual_path: skills/ponytail-audit
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ponytail-audit
+  - .agents/skills/ponytail-audit/SKILL.md
+  - .claude/skills/ponytail-audit
+  - .claude/skills/ponytail-audit/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
+    .claude/skills/ponytail-audit/SKILL.md: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
+  content_hash: sha256:1d718f893dabc01caad0dacef86444b5b4b3e1e59409527d66e8b5dd0cd85ae0
+- repo_url: dietrichgebert/ponytail
+  materialization_repo_url: DietrichGebert/ponytail
+  name: ponytail-debt
+  host: github.com
+  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
+  resolved_ref: v5.1.0
+  version: unknown
+  virtual_path: skills/ponytail-debt
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ponytail-debt
+  - .agents/skills/ponytail-debt/SKILL.md
+  - .claude/skills/ponytail-debt
+  - .claude/skills/ponytail-debt/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+    .claude/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:cb56e9f1606257dcbbe196197dffa0cb0e0ea136ad98c7eb44a85bd858b51e38
+- repo_url: dietrichgebert/ponytail
+  materialization_repo_url: DietrichGebert/ponytail
+  name: ponytail-gain
+  host: github.com
+  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
+  resolved_ref: v5.1.0
+  version: unknown
+  virtual_path: skills/ponytail-gain
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ponytail-gain
+  - .agents/skills/ponytail-gain/SKILL.md
+  - .claude/skills/ponytail-gain
+  - .claude/skills/ponytail-gain/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+    .claude/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+  content_hash: sha256:725571b5c159e6504e0a2b337d7e2a9917e22ab87809f182059c2f2562ec9657
+- repo_url: dietrichgebert/ponytail
+  materialization_repo_url: DietrichGebert/ponytail
+  name: ponytail-help
+  host: github.com
+  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
+  resolved_ref: v5.1.0
+  version: unknown
+  virtual_path: skills/ponytail-help
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ponytail-help
+  - .agents/skills/ponytail-help/SKILL.md
+  - .claude/skills/ponytail-help
+  - .claude/skills/ponytail-help/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+    .claude/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:a2cd9a9040fd39626875b77838ae6525893ff6d28e6368b2a188ca899c86956f
+- repo_url: dietrichgebert/ponytail
+  materialization_repo_url: DietrichGebert/ponytail
+  name: ponytail-review
+  host: github.com
+  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
+  resolved_ref: v5.1.0
+  version: unknown
+  virtual_path: skills/ponytail-review
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ponytail-review
+  - .agents/skills/ponytail-review/SKILL.md
+  - .claude/skills/ponytail-review
+  - .claude/skills/ponytail-review/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
+    .claude/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
+  content_hash: sha256:800dc0c86402978e12359f701b9e0c81ba4607a0cd0027f4596d0f835a67eadc
+- repo_url: fkubota/understand-mode
+  name: understand
+  host: github.com
+  resolved_commit: 89ebc91d3826676b6523d31092d90b9018907b69
+  version: unknown
+  virtual_path: skill/understand
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .claude/skills/understand
+  - .claude/skills/understand/SKILL.md
+  - .claude/skills/understand/app/public/app.js
+  - .claude/skills/understand/app/public/favicon.svg
+  - .claude/skills/understand/app/public/index.html
+  - .claude/skills/understand/app/public/style.css
+  - .claude/skills/understand/app/public/vendor/LICENSE-dompurify
+  - .claude/skills/understand/app/public/vendor/LICENSE-marked
+  - .claude/skills/understand/app/public/vendor/LICENSE-mermaid
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega-embed
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega-lite
+  - .claude/skills/understand/app/public/vendor/marked.min.js
+  - .claude/skills/understand/app/public/vendor/mermaid.min.js
+  - .claude/skills/understand/app/public/vendor/purify.min.js
+  - .claude/skills/understand/app/public/vendor/vega-embed.min.js
+  - .claude/skills/understand/app/public/vendor/vega-lite.min.js
+  - .claude/skills/understand/app/public/vendor/vega.min.js
+  - .claude/skills/understand/app/server.js
+  - .claude/skills/understand/pr-guide.md
+  deployed_file_hashes:
+    .claude/skills/understand/SKILL.md: sha256:b496f0dc1708dd4fb81b5c296ac5734b4804426967c4f931ce336c55154ed62f
+    .claude/skills/understand/app/public/app.js: sha256:62d1d87436376a3e12d324fb5efb1566f7ee7e3471323b9e6988f24470bb6358
+    .claude/skills/understand/app/public/favicon.svg: sha256:6b7e69155901fc286e8830bfde9c518fe4c7d9f4885cfe3ea77f26249a462b9e
+    .claude/skills/understand/app/public/index.html: sha256:00388f2e3b78a36ece2b8357d1673a5ed702e631f96b8861d6d4a02228ad92a1
+    .claude/skills/understand/app/public/style.css: sha256:8d308bb4c1db1a79a99f7a2b8493743dbad4d9f5ae4c43be2cf430da2c77cab4
+    .claude/skills/understand/app/public/vendor/LICENSE-dompurify: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+    .claude/skills/understand/app/public/vendor/LICENSE-marked: sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
+    .claude/skills/understand/app/public/vendor/LICENSE-mermaid: sha256:ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80
+    .claude/skills/understand/app/public/vendor/LICENSE-vega: sha256:63727832aaf62004a2b249c933e327f3c90caf49e41a72f4bf436edf632cbda8
+    .claude/skills/understand/app/public/vendor/LICENSE-vega-embed: sha256:32df67148f0fc3db0eb9e263a7b75d07f1eb14c61955005a4a39c6918d10d137
+    .claude/skills/understand/app/public/vendor/LICENSE-vega-lite: sha256:f618900fd0d64046963b29f40590cdd1e341a2f41449f99110d82fd81fea808c
+    .claude/skills/understand/app/public/vendor/marked.min.js: sha256:15fabce5b65898b32b03f5ed25e9f891a729ad4c0d6d877110a7744aa847a894
+    .claude/skills/understand/app/public/vendor/mermaid.min.js: sha256:336df803d87a38b70a01e736e666c8f7601d2ce42f5e47c8fafe5d721074b9a3
+    .claude/skills/understand/app/public/vendor/purify.min.js: sha256:cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31
+    .claude/skills/understand/app/public/vendor/vega-embed.min.js: sha256:b1455caba2fb1a72fb46025ba0ba1316e2dbc7f0dd40a3f6040172bf9c08ba91
+    .claude/skills/understand/app/public/vendor/vega-lite.min.js: sha256:83e215e84e308ee8688fa6503ba0f1cf8a3c05c0d61df2841a0b92bf86809e00
+    .claude/skills/understand/app/public/vendor/vega.min.js: sha256:8f6a3587cf8d4f42c7e08120e3eb05d067e746d554e39d2dcf52acc0bd5ba28f
+    .claude/skills/understand/app/server.js: sha256:b45afac0f9202a07a543d4b4ae67980e8aa581539f2390e1fabf247668d8f2c7
+    .claude/skills/understand/pr-guide.md: sha256:ef958af2a9b801cc5286f429dcf2a1a5dd3ec7126468dad23f11e14a4c72feba
+  content_hash: sha256:1be34e8c9e542f8235c819b5f39546d3f7436e77d19bd6b787d81fcd20d7d602
+  target_subset:
+  - claude
 - repo_url: mattpocock/skills
   name: grill-me
   host: github.com
@@ -1438,6 +1557,36 @@ dependencies:
     .claude/skills/desloppify/__init__.py: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     .claude/skills/desloppify/scoring.md: sha256:eeb9848fe8f7d2239c264709c62e49bec3736c18b1b8de3dc4644a3407138b61
   content_hash: sha256:40151f060da9f3f1c6a55f34fffa093bb31b219d56e448d30c1f1cb85c3992a0
+- repo_url: petrkindlmann/qa-skills
+  name: ai-qa-review
+  host: github.com
+  resolved_commit: 9b075da4cde9e82a749a44bb9e99387c4b91688f
+  resolved_ref: v3.6.0
+  version: unknown
+  virtual_path: skills/ai-qa-review
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/ai-qa-review
+  - .agents/skills/ai-qa-review/SKILL.md
+  - .agents/skills/ai-qa-review/references/mutation-testing.md
+  - .agents/skills/ai-qa-review/references/smell-examples.md
+  - .agents/skills/ai-qa-review/references/testability-refactors.md
+  - .claude/skills/ai-qa-review
+  - .claude/skills/ai-qa-review/SKILL.md
+  - .claude/skills/ai-qa-review/references/mutation-testing.md
+  - .claude/skills/ai-qa-review/references/smell-examples.md
+  - .claude/skills/ai-qa-review/references/testability-refactors.md
+  deployed_file_hashes:
+    .agents/skills/ai-qa-review/SKILL.md: sha256:07a40a415272e346b6120ec867054bced297276029e725a793efb80180af7782
+    .agents/skills/ai-qa-review/references/mutation-testing.md: sha256:161d9cad8061d31892ea42ced42da7ecd03110089cc0ba27f10d46f312c9a155
+    .agents/skills/ai-qa-review/references/smell-examples.md: sha256:bbb31ba40f81ac2ce53ff1a533abf91b065cc6344c3e32e49577cc6ec41cffeb
+    .agents/skills/ai-qa-review/references/testability-refactors.md: sha256:531ea6e918ad1c60b43c73c96f07677e97051f5d85afbd22f679d90443847cc5
+    .claude/skills/ai-qa-review/SKILL.md: sha256:07a40a415272e346b6120ec867054bced297276029e725a793efb80180af7782
+    .claude/skills/ai-qa-review/references/mutation-testing.md: sha256:161d9cad8061d31892ea42ced42da7ecd03110089cc0ba27f10d46f312c9a155
+    .claude/skills/ai-qa-review/references/smell-examples.md: sha256:bbb31ba40f81ac2ce53ff1a533abf91b065cc6344c3e32e49577cc6ec41cffeb
+    .claude/skills/ai-qa-review/references/testability-refactors.md: sha256:531ea6e918ad1c60b43c73c96f07677e97051f5d85afbd22f679d90443847cc5
+  content_hash: sha256:36759b2c4d6a470dd21ccfdfc683679c255c1f14964cc8a57b88655512e1d7e0
 - repo_url: plannotator/effective-html
   name: design-artifact
   host: github.com
@@ -1584,6 +1733,164 @@ dependencies:
     .claude/skills/html-wireframe/SKILL.md: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
     .claude/skills/html-wireframe/agents/openai.yaml: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
   content_hash: sha256:97cdf1d6abaef20857992e0841cfe5a19bbda1144d8de0d2bcdc0bca80952983
+- repo_url: supabase/agent-skills
+  name: supabase-postgres-best-practices
+  host: github.com
+  resolved_commit: 544bfc56c89afe2b87b20017a59b2c6e9502a1fb
+  resolved_ref: v0.1.9
+  version: unknown
+  virtual_path: skills/supabase-postgres-best-practices
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/supabase-postgres-best-practices
+  - .agents/skills/supabase-postgres-best-practices/CHANGELOG.md
+  - .agents/skills/supabase-postgres-best-practices/SKILL.md
+  - .agents/skills/supabase-postgres-best-practices/references/_contributing.md
+  - .agents/skills/supabase-postgres-best-practices/references/_sections.md
+  - .agents/skills/supabase-postgres-best-practices/references/_template.md
+  - .agents/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md
+  - .agents/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md
+  - .agents/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md
+  - .agents/skills/supabase-postgres-best-practices/references/conn-limits.md
+  - .agents/skills/supabase-postgres-best-practices/references/conn-pooling.md
+  - .agents/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md
+  - .agents/skills/supabase-postgres-best-practices/references/data-batch-inserts.md
+  - .agents/skills/supabase-postgres-best-practices/references/data-n-plus-one.md
+  - .agents/skills/supabase-postgres-best-practices/references/data-pagination.md
+  - .agents/skills/supabase-postgres-best-practices/references/data-upsert.md
+  - .agents/skills/supabase-postgres-best-practices/references/lock-advisory.md
+  - .agents/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md
+  - .agents/skills/supabase-postgres-best-practices/references/lock-short-transactions.md
+  - .agents/skills/supabase-postgres-best-practices/references/lock-skip-locked.md
+  - .agents/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md
+  - .agents/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md
+  - .agents/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md
+  - .agents/skills/supabase-postgres-best-practices/references/query-composite-indexes.md
+  - .agents/skills/supabase-postgres-best-practices/references/query-covering-indexes.md
+  - .agents/skills/supabase-postgres-best-practices/references/query-index-types.md
+  - .agents/skills/supabase-postgres-best-practices/references/query-missing-indexes.md
+  - .agents/skills/supabase-postgres-best-practices/references/query-partial-indexes.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-constraints.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-data-types.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-partitioning.md
+  - .agents/skills/supabase-postgres-best-practices/references/schema-primary-keys.md
+  - .agents/skills/supabase-postgres-best-practices/references/security-privileges.md
+  - .agents/skills/supabase-postgres-best-practices/references/security-rls-basics.md
+  - .agents/skills/supabase-postgres-best-practices/references/security-rls-performance.md
+  - .claude/skills/supabase-postgres-best-practices
+  - .claude/skills/supabase-postgres-best-practices/CHANGELOG.md
+  - .claude/skills/supabase-postgres-best-practices/SKILL.md
+  - .claude/skills/supabase-postgres-best-practices/references/_contributing.md
+  - .claude/skills/supabase-postgres-best-practices/references/_sections.md
+  - .claude/skills/supabase-postgres-best-practices/references/_template.md
+  - .claude/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md
+  - .claude/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md
+  - .claude/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md
+  - .claude/skills/supabase-postgres-best-practices/references/conn-limits.md
+  - .claude/skills/supabase-postgres-best-practices/references/conn-pooling.md
+  - .claude/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md
+  - .claude/skills/supabase-postgres-best-practices/references/data-batch-inserts.md
+  - .claude/skills/supabase-postgres-best-practices/references/data-n-plus-one.md
+  - .claude/skills/supabase-postgres-best-practices/references/data-pagination.md
+  - .claude/skills/supabase-postgres-best-practices/references/data-upsert.md
+  - .claude/skills/supabase-postgres-best-practices/references/lock-advisory.md
+  - .claude/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md
+  - .claude/skills/supabase-postgres-best-practices/references/lock-short-transactions.md
+  - .claude/skills/supabase-postgres-best-practices/references/lock-skip-locked.md
+  - .claude/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md
+  - .claude/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md
+  - .claude/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md
+  - .claude/skills/supabase-postgres-best-practices/references/query-composite-indexes.md
+  - .claude/skills/supabase-postgres-best-practices/references/query-covering-indexes.md
+  - .claude/skills/supabase-postgres-best-practices/references/query-index-types.md
+  - .claude/skills/supabase-postgres-best-practices/references/query-missing-indexes.md
+  - .claude/skills/supabase-postgres-best-practices/references/query-partial-indexes.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-constraints.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-data-types.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-partitioning.md
+  - .claude/skills/supabase-postgres-best-practices/references/schema-primary-keys.md
+  - .claude/skills/supabase-postgres-best-practices/references/security-privileges.md
+  - .claude/skills/supabase-postgres-best-practices/references/security-rls-basics.md
+  - .claude/skills/supabase-postgres-best-practices/references/security-rls-performance.md
+  deployed_file_hashes:
+    .agents/skills/supabase-postgres-best-practices/CHANGELOG.md: sha256:751ad110037c85d400018c9894716a04fa46357ff55c22b1169b280752e19e88
+    .agents/skills/supabase-postgres-best-practices/SKILL.md: sha256:ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855
+    .agents/skills/supabase-postgres-best-practices/references/_contributing.md: sha256:191e039e7d94764e6073410b513b559f9a594e0fdf0252a30c2a2986df2ab3bc
+    .agents/skills/supabase-postgres-best-practices/references/_sections.md: sha256:c9e992612b422c7122de0b7542ebc2450db283edaab08cfe86c6d657fcccccd5
+    .agents/skills/supabase-postgres-best-practices/references/_template.md: sha256:6299954250f212caabe339d752c3e5313a8e07d1a182a4e4b425baee91df1bd2
+    .agents/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md: sha256:40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28
+    .agents/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md: sha256:24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106
+    .agents/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md: sha256:630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5
+    .agents/skills/supabase-postgres-best-practices/references/conn-limits.md: sha256:11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2
+    .agents/skills/supabase-postgres-best-practices/references/conn-pooling.md: sha256:88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5
+    .agents/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md: sha256:174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e
+    .agents/skills/supabase-postgres-best-practices/references/data-batch-inserts.md: sha256:531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37
+    .agents/skills/supabase-postgres-best-practices/references/data-n-plus-one.md: sha256:21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2
+    .agents/skills/supabase-postgres-best-practices/references/data-pagination.md: sha256:73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa
+    .agents/skills/supabase-postgres-best-practices/references/data-upsert.md: sha256:2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7
+    .agents/skills/supabase-postgres-best-practices/references/lock-advisory.md: sha256:c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab
+    .agents/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md: sha256:09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347
+    .agents/skills/supabase-postgres-best-practices/references/lock-short-transactions.md: sha256:5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602
+    .agents/skills/supabase-postgres-best-practices/references/lock-skip-locked.md: sha256:6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b
+    .agents/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md: sha256:4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7
+    .agents/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md: sha256:89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098
+    .agents/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md: sha256:2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a
+    .agents/skills/supabase-postgres-best-practices/references/query-composite-indexes.md: sha256:73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554
+    .agents/skills/supabase-postgres-best-practices/references/query-covering-indexes.md: sha256:daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6
+    .agents/skills/supabase-postgres-best-practices/references/query-index-types.md: sha256:472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282
+    .agents/skills/supabase-postgres-best-practices/references/query-missing-indexes.md: sha256:91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1
+    .agents/skills/supabase-postgres-best-practices/references/query-partial-indexes.md: sha256:6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd
+    .agents/skills/supabase-postgres-best-practices/references/schema-constraints.md: sha256:90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8
+    .agents/skills/supabase-postgres-best-practices/references/schema-data-types.md: sha256:e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8
+    .agents/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md: sha256:7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd
+    .agents/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md: sha256:4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab
+    .agents/skills/supabase-postgres-best-practices/references/schema-partitioning.md: sha256:541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90
+    .agents/skills/supabase-postgres-best-practices/references/schema-primary-keys.md: sha256:3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9
+    .agents/skills/supabase-postgres-best-practices/references/security-privileges.md: sha256:095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663
+    .agents/skills/supabase-postgres-best-practices/references/security-rls-basics.md: sha256:e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096
+    .agents/skills/supabase-postgres-best-practices/references/security-rls-performance.md: sha256:2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014
+    .claude/skills/supabase-postgres-best-practices/CHANGELOG.md: sha256:751ad110037c85d400018c9894716a04fa46357ff55c22b1169b280752e19e88
+    .claude/skills/supabase-postgres-best-practices/SKILL.md: sha256:ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855
+    .claude/skills/supabase-postgres-best-practices/references/_contributing.md: sha256:191e039e7d94764e6073410b513b559f9a594e0fdf0252a30c2a2986df2ab3bc
+    .claude/skills/supabase-postgres-best-practices/references/_sections.md: sha256:c9e992612b422c7122de0b7542ebc2450db283edaab08cfe86c6d657fcccccd5
+    .claude/skills/supabase-postgres-best-practices/references/_template.md: sha256:6299954250f212caabe339d752c3e5313a8e07d1a182a4e4b425baee91df1bd2
+    .claude/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md: sha256:40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28
+    .claude/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md: sha256:24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106
+    .claude/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md: sha256:630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5
+    .claude/skills/supabase-postgres-best-practices/references/conn-limits.md: sha256:11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2
+    .claude/skills/supabase-postgres-best-practices/references/conn-pooling.md: sha256:88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5
+    .claude/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md: sha256:174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e
+    .claude/skills/supabase-postgres-best-practices/references/data-batch-inserts.md: sha256:531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37
+    .claude/skills/supabase-postgres-best-practices/references/data-n-plus-one.md: sha256:21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2
+    .claude/skills/supabase-postgres-best-practices/references/data-pagination.md: sha256:73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa
+    .claude/skills/supabase-postgres-best-practices/references/data-upsert.md: sha256:2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7
+    .claude/skills/supabase-postgres-best-practices/references/lock-advisory.md: sha256:c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab
+    .claude/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md: sha256:09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347
+    .claude/skills/supabase-postgres-best-practices/references/lock-short-transactions.md: sha256:5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602
+    .claude/skills/supabase-postgres-best-practices/references/lock-skip-locked.md: sha256:6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b
+    .claude/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md: sha256:4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7
+    .claude/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md: sha256:89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098
+    .claude/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md: sha256:2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a
+    .claude/skills/supabase-postgres-best-practices/references/query-composite-indexes.md: sha256:73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554
+    .claude/skills/supabase-postgres-best-practices/references/query-covering-indexes.md: sha256:daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6
+    .claude/skills/supabase-postgres-best-practices/references/query-index-types.md: sha256:472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282
+    .claude/skills/supabase-postgres-best-practices/references/query-missing-indexes.md: sha256:91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1
+    .claude/skills/supabase-postgres-best-practices/references/query-partial-indexes.md: sha256:6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd
+    .claude/skills/supabase-postgres-best-practices/references/schema-constraints.md: sha256:90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8
+    .claude/skills/supabase-postgres-best-practices/references/schema-data-types.md: sha256:e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8
+    .claude/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md: sha256:7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd
+    .claude/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md: sha256:4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab
+    .claude/skills/supabase-postgres-best-practices/references/schema-partitioning.md: sha256:541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90
+    .claude/skills/supabase-postgres-best-practices/references/schema-primary-keys.md: sha256:3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9
+    .claude/skills/supabase-postgres-best-practices/references/security-privileges.md: sha256:095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663
+    .claude/skills/supabase-postgres-best-practices/references/security-rls-basics.md: sha256:e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096
+    .claude/skills/supabase-postgres-best-practices/references/security-rls-performance.md: sha256:2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014
+  content_hash: sha256:5766a8e9524c3c2a81041409be237c3baf515aa04a135871a21dd351682d173f
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
@@ -1620,11 +1927,345 @@ dependencies:
     .agents/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
     .claude/skills/crit-cli/SKILL.md: sha256:01324c568450ca349414b5a46212ab502726ea8f5cb81cc090611a4848dd29d6
   content_hash: sha256:7a9756c98a7838e87ac532a5e4d3387f71d61eaf52051be919dfdbe588e1d4fa
+- repo_url: vercel-labs/agent-skills
+  name: vercel-react-best-practices
+  host: github.com
+  resolved_commit: 1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62
+  version: unknown
+  virtual_path: skills/react-best-practices
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/react-best-practices
+  - .agents/skills/react-best-practices/AGENTS.md
+  - .agents/skills/react-best-practices/README.md
+  - .agents/skills/react-best-practices/SKILL.md
+  - .agents/skills/react-best-practices/metadata.json
+  - .agents/skills/react-best-practices/rules/_sections.md
+  - .agents/skills/react-best-practices/rules/_template.md
+  - .agents/skills/react-best-practices/rules/advanced-effect-event-deps.md
+  - .agents/skills/react-best-practices/rules/advanced-event-handler-refs.md
+  - .agents/skills/react-best-practices/rules/advanced-init-once.md
+  - .agents/skills/react-best-practices/rules/advanced-use-latest.md
+  - .agents/skills/react-best-practices/rules/async-api-routes.md
+  - .agents/skills/react-best-practices/rules/async-cheap-condition-before-await.md
+  - .agents/skills/react-best-practices/rules/async-defer-await.md
+  - .agents/skills/react-best-practices/rules/async-dependencies.md
+  - .agents/skills/react-best-practices/rules/async-parallel.md
+  - .agents/skills/react-best-practices/rules/async-suspense-boundaries.md
+  - .agents/skills/react-best-practices/rules/bundle-analyzable-paths.md
+  - .agents/skills/react-best-practices/rules/bundle-barrel-imports.md
+  - .agents/skills/react-best-practices/rules/bundle-conditional.md
+  - .agents/skills/react-best-practices/rules/bundle-defer-third-party.md
+  - .agents/skills/react-best-practices/rules/bundle-dynamic-imports.md
+  - .agents/skills/react-best-practices/rules/bundle-preload.md
+  - .agents/skills/react-best-practices/rules/client-event-listeners.md
+  - .agents/skills/react-best-practices/rules/client-localstorage-schema.md
+  - .agents/skills/react-best-practices/rules/client-passive-event-listeners.md
+  - .agents/skills/react-best-practices/rules/client-swr-dedup.md
+  - .agents/skills/react-best-practices/rules/js-batch-dom-css.md
+  - .agents/skills/react-best-practices/rules/js-cache-function-results.md
+  - .agents/skills/react-best-practices/rules/js-cache-property-access.md
+  - .agents/skills/react-best-practices/rules/js-cache-storage.md
+  - .agents/skills/react-best-practices/rules/js-combine-iterations.md
+  - .agents/skills/react-best-practices/rules/js-early-exit.md
+  - .agents/skills/react-best-practices/rules/js-flatmap-filter.md
+  - .agents/skills/react-best-practices/rules/js-hoist-regexp.md
+  - .agents/skills/react-best-practices/rules/js-index-maps.md
+  - .agents/skills/react-best-practices/rules/js-length-check-first.md
+  - .agents/skills/react-best-practices/rules/js-min-max-loop.md
+  - .agents/skills/react-best-practices/rules/js-request-idle-callback.md
+  - .agents/skills/react-best-practices/rules/js-set-map-lookups.md
+  - .agents/skills/react-best-practices/rules/js-tosorted-immutable.md
+  - .agents/skills/react-best-practices/rules/rendering-activity.md
+  - .agents/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md
+  - .agents/skills/react-best-practices/rules/rendering-conditional-render.md
+  - .agents/skills/react-best-practices/rules/rendering-content-visibility.md
+  - .agents/skills/react-best-practices/rules/rendering-hoist-jsx.md
+  - .agents/skills/react-best-practices/rules/rendering-hydration-no-flicker.md
+  - .agents/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md
+  - .agents/skills/react-best-practices/rules/rendering-resource-hints.md
+  - .agents/skills/react-best-practices/rules/rendering-script-defer-async.md
+  - .agents/skills/react-best-practices/rules/rendering-svg-precision.md
+  - .agents/skills/react-best-practices/rules/rendering-usetransition-loading.md
+  - .agents/skills/react-best-practices/rules/rerender-defer-reads.md
+  - .agents/skills/react-best-practices/rules/rerender-dependencies.md
+  - .agents/skills/react-best-practices/rules/rerender-derived-state-no-effect.md
+  - .agents/skills/react-best-practices/rules/rerender-derived-state.md
+  - .agents/skills/react-best-practices/rules/rerender-functional-setstate.md
+  - .agents/skills/react-best-practices/rules/rerender-lazy-state-init.md
+  - .agents/skills/react-best-practices/rules/rerender-memo-with-default-value.md
+  - .agents/skills/react-best-practices/rules/rerender-memo.md
+  - .agents/skills/react-best-practices/rules/rerender-move-effect-to-event.md
+  - .agents/skills/react-best-practices/rules/rerender-no-inline-components.md
+  - .agents/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md
+  - .agents/skills/react-best-practices/rules/rerender-split-combined-hooks.md
+  - .agents/skills/react-best-practices/rules/rerender-transitions.md
+  - .agents/skills/react-best-practices/rules/rerender-use-deferred-value.md
+  - .agents/skills/react-best-practices/rules/rerender-use-ref-transient-values.md
+  - .agents/skills/react-best-practices/rules/server-after-nonblocking.md
+  - .agents/skills/react-best-practices/rules/server-auth-actions.md
+  - .agents/skills/react-best-practices/rules/server-cache-lru.md
+  - .agents/skills/react-best-practices/rules/server-cache-react.md
+  - .agents/skills/react-best-practices/rules/server-dedup-props.md
+  - .agents/skills/react-best-practices/rules/server-hoist-static-io.md
+  - .agents/skills/react-best-practices/rules/server-no-shared-module-state.md
+  - .agents/skills/react-best-practices/rules/server-parallel-fetching.md
+  - .agents/skills/react-best-practices/rules/server-parallel-nested-fetching.md
+  - .agents/skills/react-best-practices/rules/server-serialization.md
+  - .claude/skills/react-best-practices
+  - .claude/skills/react-best-practices/AGENTS.md
+  - .claude/skills/react-best-practices/README.md
+  - .claude/skills/react-best-practices/SKILL.md
+  - .claude/skills/react-best-practices/metadata.json
+  - .claude/skills/react-best-practices/rules/_sections.md
+  - .claude/skills/react-best-practices/rules/_template.md
+  - .claude/skills/react-best-practices/rules/advanced-effect-event-deps.md
+  - .claude/skills/react-best-practices/rules/advanced-event-handler-refs.md
+  - .claude/skills/react-best-practices/rules/advanced-init-once.md
+  - .claude/skills/react-best-practices/rules/advanced-use-latest.md
+  - .claude/skills/react-best-practices/rules/async-api-routes.md
+  - .claude/skills/react-best-practices/rules/async-cheap-condition-before-await.md
+  - .claude/skills/react-best-practices/rules/async-defer-await.md
+  - .claude/skills/react-best-practices/rules/async-dependencies.md
+  - .claude/skills/react-best-practices/rules/async-parallel.md
+  - .claude/skills/react-best-practices/rules/async-suspense-boundaries.md
+  - .claude/skills/react-best-practices/rules/bundle-analyzable-paths.md
+  - .claude/skills/react-best-practices/rules/bundle-barrel-imports.md
+  - .claude/skills/react-best-practices/rules/bundle-conditional.md
+  - .claude/skills/react-best-practices/rules/bundle-defer-third-party.md
+  - .claude/skills/react-best-practices/rules/bundle-dynamic-imports.md
+  - .claude/skills/react-best-practices/rules/bundle-preload.md
+  - .claude/skills/react-best-practices/rules/client-event-listeners.md
+  - .claude/skills/react-best-practices/rules/client-localstorage-schema.md
+  - .claude/skills/react-best-practices/rules/client-passive-event-listeners.md
+  - .claude/skills/react-best-practices/rules/client-swr-dedup.md
+  - .claude/skills/react-best-practices/rules/js-batch-dom-css.md
+  - .claude/skills/react-best-practices/rules/js-cache-function-results.md
+  - .claude/skills/react-best-practices/rules/js-cache-property-access.md
+  - .claude/skills/react-best-practices/rules/js-cache-storage.md
+  - .claude/skills/react-best-practices/rules/js-combine-iterations.md
+  - .claude/skills/react-best-practices/rules/js-early-exit.md
+  - .claude/skills/react-best-practices/rules/js-flatmap-filter.md
+  - .claude/skills/react-best-practices/rules/js-hoist-regexp.md
+  - .claude/skills/react-best-practices/rules/js-index-maps.md
+  - .claude/skills/react-best-practices/rules/js-length-check-first.md
+  - .claude/skills/react-best-practices/rules/js-min-max-loop.md
+  - .claude/skills/react-best-practices/rules/js-request-idle-callback.md
+  - .claude/skills/react-best-practices/rules/js-set-map-lookups.md
+  - .claude/skills/react-best-practices/rules/js-tosorted-immutable.md
+  - .claude/skills/react-best-practices/rules/rendering-activity.md
+  - .claude/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md
+  - .claude/skills/react-best-practices/rules/rendering-conditional-render.md
+  - .claude/skills/react-best-practices/rules/rendering-content-visibility.md
+  - .claude/skills/react-best-practices/rules/rendering-hoist-jsx.md
+  - .claude/skills/react-best-practices/rules/rendering-hydration-no-flicker.md
+  - .claude/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md
+  - .claude/skills/react-best-practices/rules/rendering-resource-hints.md
+  - .claude/skills/react-best-practices/rules/rendering-script-defer-async.md
+  - .claude/skills/react-best-practices/rules/rendering-svg-precision.md
+  - .claude/skills/react-best-practices/rules/rendering-usetransition-loading.md
+  - .claude/skills/react-best-practices/rules/rerender-defer-reads.md
+  - .claude/skills/react-best-practices/rules/rerender-dependencies.md
+  - .claude/skills/react-best-practices/rules/rerender-derived-state-no-effect.md
+  - .claude/skills/react-best-practices/rules/rerender-derived-state.md
+  - .claude/skills/react-best-practices/rules/rerender-functional-setstate.md
+  - .claude/skills/react-best-practices/rules/rerender-lazy-state-init.md
+  - .claude/skills/react-best-practices/rules/rerender-memo-with-default-value.md
+  - .claude/skills/react-best-practices/rules/rerender-memo.md
+  - .claude/skills/react-best-practices/rules/rerender-move-effect-to-event.md
+  - .claude/skills/react-best-practices/rules/rerender-no-inline-components.md
+  - .claude/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md
+  - .claude/skills/react-best-practices/rules/rerender-split-combined-hooks.md
+  - .claude/skills/react-best-practices/rules/rerender-transitions.md
+  - .claude/skills/react-best-practices/rules/rerender-use-deferred-value.md
+  - .claude/skills/react-best-practices/rules/rerender-use-ref-transient-values.md
+  - .claude/skills/react-best-practices/rules/server-after-nonblocking.md
+  - .claude/skills/react-best-practices/rules/server-auth-actions.md
+  - .claude/skills/react-best-practices/rules/server-cache-lru.md
+  - .claude/skills/react-best-practices/rules/server-cache-react.md
+  - .claude/skills/react-best-practices/rules/server-dedup-props.md
+  - .claude/skills/react-best-practices/rules/server-hoist-static-io.md
+  - .claude/skills/react-best-practices/rules/server-no-shared-module-state.md
+  - .claude/skills/react-best-practices/rules/server-parallel-fetching.md
+  - .claude/skills/react-best-practices/rules/server-parallel-nested-fetching.md
+  - .claude/skills/react-best-practices/rules/server-serialization.md
+  deployed_file_hashes:
+    .agents/skills/react-best-practices/AGENTS.md: sha256:fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6
+    .agents/skills/react-best-practices/README.md: sha256:9eafb2123d3b8b2aef41fba0db2648a3f4f49996f8c7c8bb2c86263befd8b48a
+    .agents/skills/react-best-practices/SKILL.md: sha256:71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+    .agents/skills/react-best-practices/metadata.json: sha256:c4e18bac3290fbe1b471a605867d4df68b03144ea26b8befdbe8f9d8fd124354
+    .agents/skills/react-best-practices/rules/_sections.md: sha256:01c59969e4e867f0708c8f8ef9c6d87fab9a07d0586244f429ff84013db8a115
+    .agents/skills/react-best-practices/rules/_template.md: sha256:99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442
+    .agents/skills/react-best-practices/rules/advanced-effect-event-deps.md: sha256:55ed8f9f27a1bff803d6fa55828176207714b02123cbb97ddb8a90d88024a723
+    .agents/skills/react-best-practices/rules/advanced-event-handler-refs.md: sha256:a3097edeecfb2ff6851cd66ed8cdf0617c3c88180504bee824aa6e75a215bbbc
+    .agents/skills/react-best-practices/rules/advanced-init-once.md: sha256:3e4dc22173eb0e2b6dcf583e3babd862b8696328f8f59aee7c4d746c5bc05f6c
+    .agents/skills/react-best-practices/rules/advanced-use-latest.md: sha256:8a3f64dfe5a77d1564248faf17fe662ae75b55d497a243cb30b38eb07ccbbf9a
+    .agents/skills/react-best-practices/rules/async-api-routes.md: sha256:523338540d73427dc14c0cbb19f2741ebccdf8b105a7b2c1b33d2905cf237a42
+    .agents/skills/react-best-practices/rules/async-cheap-condition-before-await.md: sha256:03107c1f70a293cd58a8abc5474c5548e20ea4efdf01b6d45aae7ad0ac1cb32c
+    .agents/skills/react-best-practices/rules/async-defer-await.md: sha256:f3c142d090615abdcc99d31c123be37b31f0f1ed8d9ec9f7789a3bc6883ae0fb
+    .agents/skills/react-best-practices/rules/async-dependencies.md: sha256:16ef469f877e30c6b8e1e1b4bc3e527312fa3c6318cb785a4eca186ea236131a
+    .agents/skills/react-best-practices/rules/async-parallel.md: sha256:6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961
+    .agents/skills/react-best-practices/rules/async-suspense-boundaries.md: sha256:de05fedac2eb7ae563b887b5a424464ec3dfaf84e5b7797467ebe2a796ac8afc
+    .agents/skills/react-best-practices/rules/bundle-analyzable-paths.md: sha256:62090b5c815fd71bf1133dce754f51abc16a9456d0ccd025fd627de27726e92a
+    .agents/skills/react-best-practices/rules/bundle-barrel-imports.md: sha256:e648f6d54525f07a691357040ca5bff6ea3424788a91ff63812adb29622a671b
+    .agents/skills/react-best-practices/rules/bundle-conditional.md: sha256:09c8259c3efb04fc0abb8e412ccbda217c222ae8118516283e571c995fe3a7d4
+    .agents/skills/react-best-practices/rules/bundle-defer-third-party.md: sha256:3719fb47b191e8db4fe22686ec88448ad5af9e6838585425abbe103d0b642e37
+    .agents/skills/react-best-practices/rules/bundle-dynamic-imports.md: sha256:401817a7369f315fc5a68a1095742ff7d53d0461906880dc9d64a41495ee1986
+    .agents/skills/react-best-practices/rules/bundle-preload.md: sha256:d1f7cc28da7cd5ab249acd287edc5b761afcfb194e9cb62cd44c5f3543db2de2
+    .agents/skills/react-best-practices/rules/client-event-listeners.md: sha256:242a873349febc1ce685e85617994784dbab92c2eaa68aed7fed5a83e7680e93
+    .agents/skills/react-best-practices/rules/client-localstorage-schema.md: sha256:0fb7cdf9dc93fdf22f87e3669f953fb9d4ac9b0be42eec4a29fe9a2560610b88
+    .agents/skills/react-best-practices/rules/client-passive-event-listeners.md: sha256:1f35016f9053de69e884ee9be00654e37979c2ca85f5e57764dc2626ff7acb4b
+    .agents/skills/react-best-practices/rules/client-swr-dedup.md: sha256:644652c39c6cc00de8d1c77a7273612e868dc3f7edda30764164c12ec0f764a3
+    .agents/skills/react-best-practices/rules/js-batch-dom-css.md: sha256:480b891b9eaf96e929dc1e964274a4828e3a78009b7d00ccd965a0d425215959
+    .agents/skills/react-best-practices/rules/js-cache-function-results.md: sha256:3daaa11d24f4295cb6be8bc6f407f2ce83cc7b5bd1f0e68891ea8ab835721dc7
+    .agents/skills/react-best-practices/rules/js-cache-property-access.md: sha256:73e47431e74878a927061bf0ddc7cd91a7556cb35d2573f3421e82300d9ae311
+    .agents/skills/react-best-practices/rules/js-cache-storage.md: sha256:11b826b0433898c1ece2d3547010d8e77db9fb240185748c45db91493de9b6cc
+    .agents/skills/react-best-practices/rules/js-combine-iterations.md: sha256:71add08aeeb43091d4ff4c0b2842cce8b4bdef8ad3e732cc034bb5a84827e746
+    .agents/skills/react-best-practices/rules/js-early-exit.md: sha256:925ce5ce87f3347186ca62212f29cc6baa2b8c85a96d2720ad07c3d0abf781c0
+    .agents/skills/react-best-practices/rules/js-flatmap-filter.md: sha256:9e5b166a41914d975bef7635467f8fb32cd98b5c3126c0bc6f163490812fb5f0
+    .agents/skills/react-best-practices/rules/js-hoist-regexp.md: sha256:f9e9aef2f7c2307dd7310f283df85dcada45fc43e9bb941b0c3aa414dec21ec4
+    .agents/skills/react-best-practices/rules/js-index-maps.md: sha256:5df1bdc2cfabb2c98abd55d26762e5c18189535c2e686184f426082e62920391
+    .agents/skills/react-best-practices/rules/js-length-check-first.md: sha256:8b54a311c826b299272f29187fc58bc55772a04c4a72eeb29456ee96dc9fc624
+    .agents/skills/react-best-practices/rules/js-min-max-loop.md: sha256:87dfb67e2f39df6ad8bcfb5b78c5fb364d3c07554ad188a202408d99f3763421
+    .agents/skills/react-best-practices/rules/js-request-idle-callback.md: sha256:ee08f83905b4011abbc33d594033157d77561b5bbd9b36b04f0f409581ffec32
+    .agents/skills/react-best-practices/rules/js-set-map-lookups.md: sha256:a7fd781a6ba9ad49065961b6f9a90ef486bf6b648390e1a08704025f98e1642b
+    .agents/skills/react-best-practices/rules/js-tosorted-immutable.md: sha256:d0a5e1b0fec48a0a81397957e2f068e224329f7c42cb5feeed8aae6fa64025e8
+    .agents/skills/react-best-practices/rules/rendering-activity.md: sha256:1e5e7eaf3555e61d6a2e900089c676527d26259501db5594f59544b6c664f85a
+    .agents/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md: sha256:9c6ae0ca7a51434e803887c64cded760956579a1452ccb80a461a03f9c937c77
+    .agents/skills/react-best-practices/rules/rendering-conditional-render.md: sha256:2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc
+    .agents/skills/react-best-practices/rules/rendering-content-visibility.md: sha256:64eee6d5b916fe74df33363994b27fc7f71bea3bcedc7ee04bda23107ca3e6e4
+    .agents/skills/react-best-practices/rules/rendering-hoist-jsx.md: sha256:93b229560fae92005ed9a2a829064607b39b2e984e92d221d05b2d41df2b7c0e
+    .agents/skills/react-best-practices/rules/rendering-hydration-no-flicker.md: sha256:dc7ab358c67c177bca6e6f360fbc935ebe4efa928c0ba3ebd3f9f3d9e2000ca3
+    .agents/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md: sha256:915bacb934e2927d84b37a3f3d225a47b309ac8f9e494ed2bcb66ce07c5676a2
+    .agents/skills/react-best-practices/rules/rendering-resource-hints.md: sha256:351b1095d641717b930f1b2253282b7120af3023bc74e06c17675168d4286864
+    .agents/skills/react-best-practices/rules/rendering-script-defer-async.md: sha256:4cea07b7875ba7fc2c7465ff23b63a2bb334f90aaf2d9293d38d67b05fdb32ab
+    .agents/skills/react-best-practices/rules/rendering-svg-precision.md: sha256:ed468533f6e95f622859c884b122cf21f9f593ed6bb3d500a54de4b9f9bcb9fb
+    .agents/skills/react-best-practices/rules/rendering-usetransition-loading.md: sha256:3a1249c3f13026b6f54ab5712c388df219d6af01b12aa542749acd99a46f4bc1
+    .agents/skills/react-best-practices/rules/rerender-defer-reads.md: sha256:234050a77faf50cb306be10a9e15bd4421134ab5907e75f13e6d78e2bd262dc9
+    .agents/skills/react-best-practices/rules/rerender-dependencies.md: sha256:17eb5830956fb56486fd3cfc7431f5849d39751730c05ad9e77dd4f0c27169c5
+    .agents/skills/react-best-practices/rules/rerender-derived-state-no-effect.md: sha256:cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a
+    .agents/skills/react-best-practices/rules/rerender-derived-state.md: sha256:1c326bb67b01fb084eb00c8911b0a7cff54681c2315b629f88e49b64eaa6481d
+    .agents/skills/react-best-practices/rules/rerender-functional-setstate.md: sha256:5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58
+    .agents/skills/react-best-practices/rules/rerender-lazy-state-init.md: sha256:4ae844740f266fc8cbf050701230286624a2440ec5be67b9a63d9edc3c580573
+    .agents/skills/react-best-practices/rules/rerender-memo-with-default-value.md: sha256:81c47476564ad8a79fc68fc442734255ca7d6829424359464503fda0a9f9a0dd
+    .agents/skills/react-best-practices/rules/rerender-memo.md: sha256:1f258990c2f27ff6256b3cc5c43300631bb3f0d81f749aed08d07fcdcc131dd1
+    .agents/skills/react-best-practices/rules/rerender-move-effect-to-event.md: sha256:abc2cbf167bee056743023351e96806a411d3398da8802093620aecf0721f029
+    .agents/skills/react-best-practices/rules/rerender-no-inline-components.md: sha256:1cc32907a770272524ba682eef9e7efdd8ad4533b6f89b718a1fcd7d1d0eb6a3
+    .agents/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md: sha256:5bdcf2d1558ba5204e643c887b7b4060f89630969425651eb68e96427d97f800
+    .agents/skills/react-best-practices/rules/rerender-split-combined-hooks.md: sha256:6f45d703343484ef9acef9388397f3642966ae6a5a258899a0cf1f9977cfbf6c
+    .agents/skills/react-best-practices/rules/rerender-transitions.md: sha256:60f4033909a62df5e5b8c601494f9e50a562e2f8c1c2d81eac24f38142265f1c
+    .agents/skills/react-best-practices/rules/rerender-use-deferred-value.md: sha256:8c3579576a61a949884167745dcfaf1d5426ba305cc61fd0a79602d70fda4909
+    .agents/skills/react-best-practices/rules/rerender-use-ref-transient-values.md: sha256:f1a649af9d1d0b5c762f6c9c4c1c70c90d7df82aa10296ee87aadb78c1b76c54
+    .agents/skills/react-best-practices/rules/server-after-nonblocking.md: sha256:d0b8d24a3db9f0f65f9e2bddbf230b0e03a5f60e1229d93a4a18f5e7a991c7c2
+    .agents/skills/react-best-practices/rules/server-auth-actions.md: sha256:a2ca8aa102839251c7971ec784560fab943c20b36fe6f80365d4110c13260c23
+    .agents/skills/react-best-practices/rules/server-cache-lru.md: sha256:1924b64561841923b88a657085097a0aeba3e0ba2d5470b9f5c15cc10d6ae70f
+    .agents/skills/react-best-practices/rules/server-cache-react.md: sha256:fddeea6c870bb3da4134b61d54b7d09b83d2603f929b7547cd3dc1dc269edd5c
+    .agents/skills/react-best-practices/rules/server-dedup-props.md: sha256:c2747424cdac46be62f835f245a0aa887b0090b416d28e2ac8676702645eeb37
+    .agents/skills/react-best-practices/rules/server-hoist-static-io.md: sha256:5abea4dd882b13661bd5f7dfb93f9e547d5f08176c61c448ade91b210ed5d49f
+    .agents/skills/react-best-practices/rules/server-no-shared-module-state.md: sha256:4d869bf1cd2f1632e5ca4c0e64b1cf0e71c5f5a0f940bc8a22174d205e735ed7
+    .agents/skills/react-best-practices/rules/server-parallel-fetching.md: sha256:569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472
+    .agents/skills/react-best-practices/rules/server-parallel-nested-fetching.md: sha256:ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3
+    .agents/skills/react-best-practices/rules/server-serialization.md: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+    .claude/skills/react-best-practices/AGENTS.md: sha256:fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6
+    .claude/skills/react-best-practices/README.md: sha256:9eafb2123d3b8b2aef41fba0db2648a3f4f49996f8c7c8bb2c86263befd8b48a
+    .claude/skills/react-best-practices/SKILL.md: sha256:71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+    .claude/skills/react-best-practices/metadata.json: sha256:c4e18bac3290fbe1b471a605867d4df68b03144ea26b8befdbe8f9d8fd124354
+    .claude/skills/react-best-practices/rules/_sections.md: sha256:01c59969e4e867f0708c8f8ef9c6d87fab9a07d0586244f429ff84013db8a115
+    .claude/skills/react-best-practices/rules/_template.md: sha256:99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442
+    .claude/skills/react-best-practices/rules/advanced-effect-event-deps.md: sha256:55ed8f9f27a1bff803d6fa55828176207714b02123cbb97ddb8a90d88024a723
+    .claude/skills/react-best-practices/rules/advanced-event-handler-refs.md: sha256:a3097edeecfb2ff6851cd66ed8cdf0617c3c88180504bee824aa6e75a215bbbc
+    .claude/skills/react-best-practices/rules/advanced-init-once.md: sha256:3e4dc22173eb0e2b6dcf583e3babd862b8696328f8f59aee7c4d746c5bc05f6c
+    .claude/skills/react-best-practices/rules/advanced-use-latest.md: sha256:8a3f64dfe5a77d1564248faf17fe662ae75b55d497a243cb30b38eb07ccbbf9a
+    .claude/skills/react-best-practices/rules/async-api-routes.md: sha256:523338540d73427dc14c0cbb19f2741ebccdf8b105a7b2c1b33d2905cf237a42
+    .claude/skills/react-best-practices/rules/async-cheap-condition-before-await.md: sha256:03107c1f70a293cd58a8abc5474c5548e20ea4efdf01b6d45aae7ad0ac1cb32c
+    .claude/skills/react-best-practices/rules/async-defer-await.md: sha256:f3c142d090615abdcc99d31c123be37b31f0f1ed8d9ec9f7789a3bc6883ae0fb
+    .claude/skills/react-best-practices/rules/async-dependencies.md: sha256:16ef469f877e30c6b8e1e1b4bc3e527312fa3c6318cb785a4eca186ea236131a
+    .claude/skills/react-best-practices/rules/async-parallel.md: sha256:6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961
+    .claude/skills/react-best-practices/rules/async-suspense-boundaries.md: sha256:de05fedac2eb7ae563b887b5a424464ec3dfaf84e5b7797467ebe2a796ac8afc
+    .claude/skills/react-best-practices/rules/bundle-analyzable-paths.md: sha256:62090b5c815fd71bf1133dce754f51abc16a9456d0ccd025fd627de27726e92a
+    .claude/skills/react-best-practices/rules/bundle-barrel-imports.md: sha256:e648f6d54525f07a691357040ca5bff6ea3424788a91ff63812adb29622a671b
+    .claude/skills/react-best-practices/rules/bundle-conditional.md: sha256:09c8259c3efb04fc0abb8e412ccbda217c222ae8118516283e571c995fe3a7d4
+    .claude/skills/react-best-practices/rules/bundle-defer-third-party.md: sha256:3719fb47b191e8db4fe22686ec88448ad5af9e6838585425abbe103d0b642e37
+    .claude/skills/react-best-practices/rules/bundle-dynamic-imports.md: sha256:401817a7369f315fc5a68a1095742ff7d53d0461906880dc9d64a41495ee1986
+    .claude/skills/react-best-practices/rules/bundle-preload.md: sha256:d1f7cc28da7cd5ab249acd287edc5b761afcfb194e9cb62cd44c5f3543db2de2
+    .claude/skills/react-best-practices/rules/client-event-listeners.md: sha256:242a873349febc1ce685e85617994784dbab92c2eaa68aed7fed5a83e7680e93
+    .claude/skills/react-best-practices/rules/client-localstorage-schema.md: sha256:0fb7cdf9dc93fdf22f87e3669f953fb9d4ac9b0be42eec4a29fe9a2560610b88
+    .claude/skills/react-best-practices/rules/client-passive-event-listeners.md: sha256:1f35016f9053de69e884ee9be00654e37979c2ca85f5e57764dc2626ff7acb4b
+    .claude/skills/react-best-practices/rules/client-swr-dedup.md: sha256:644652c39c6cc00de8d1c77a7273612e868dc3f7edda30764164c12ec0f764a3
+    .claude/skills/react-best-practices/rules/js-batch-dom-css.md: sha256:480b891b9eaf96e929dc1e964274a4828e3a78009b7d00ccd965a0d425215959
+    .claude/skills/react-best-practices/rules/js-cache-function-results.md: sha256:3daaa11d24f4295cb6be8bc6f407f2ce83cc7b5bd1f0e68891ea8ab835721dc7
+    .claude/skills/react-best-practices/rules/js-cache-property-access.md: sha256:73e47431e74878a927061bf0ddc7cd91a7556cb35d2573f3421e82300d9ae311
+    .claude/skills/react-best-practices/rules/js-cache-storage.md: sha256:11b826b0433898c1ece2d3547010d8e77db9fb240185748c45db91493de9b6cc
+    .claude/skills/react-best-practices/rules/js-combine-iterations.md: sha256:71add08aeeb43091d4ff4c0b2842cce8b4bdef8ad3e732cc034bb5a84827e746
+    .claude/skills/react-best-practices/rules/js-early-exit.md: sha256:925ce5ce87f3347186ca62212f29cc6baa2b8c85a96d2720ad07c3d0abf781c0
+    .claude/skills/react-best-practices/rules/js-flatmap-filter.md: sha256:9e5b166a41914d975bef7635467f8fb32cd98b5c3126c0bc6f163490812fb5f0
+    .claude/skills/react-best-practices/rules/js-hoist-regexp.md: sha256:f9e9aef2f7c2307dd7310f283df85dcada45fc43e9bb941b0c3aa414dec21ec4
+    .claude/skills/react-best-practices/rules/js-index-maps.md: sha256:5df1bdc2cfabb2c98abd55d26762e5c18189535c2e686184f426082e62920391
+    .claude/skills/react-best-practices/rules/js-length-check-first.md: sha256:8b54a311c826b299272f29187fc58bc55772a04c4a72eeb29456ee96dc9fc624
+    .claude/skills/react-best-practices/rules/js-min-max-loop.md: sha256:87dfb67e2f39df6ad8bcfb5b78c5fb364d3c07554ad188a202408d99f3763421
+    .claude/skills/react-best-practices/rules/js-request-idle-callback.md: sha256:ee08f83905b4011abbc33d594033157d77561b5bbd9b36b04f0f409581ffec32
+    .claude/skills/react-best-practices/rules/js-set-map-lookups.md: sha256:a7fd781a6ba9ad49065961b6f9a90ef486bf6b648390e1a08704025f98e1642b
+    .claude/skills/react-best-practices/rules/js-tosorted-immutable.md: sha256:d0a5e1b0fec48a0a81397957e2f068e224329f7c42cb5feeed8aae6fa64025e8
+    .claude/skills/react-best-practices/rules/rendering-activity.md: sha256:1e5e7eaf3555e61d6a2e900089c676527d26259501db5594f59544b6c664f85a
+    .claude/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md: sha256:9c6ae0ca7a51434e803887c64cded760956579a1452ccb80a461a03f9c937c77
+    .claude/skills/react-best-practices/rules/rendering-conditional-render.md: sha256:2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc
+    .claude/skills/react-best-practices/rules/rendering-content-visibility.md: sha256:64eee6d5b916fe74df33363994b27fc7f71bea3bcedc7ee04bda23107ca3e6e4
+    .claude/skills/react-best-practices/rules/rendering-hoist-jsx.md: sha256:93b229560fae92005ed9a2a829064607b39b2e984e92d221d05b2d41df2b7c0e
+    .claude/skills/react-best-practices/rules/rendering-hydration-no-flicker.md: sha256:dc7ab358c67c177bca6e6f360fbc935ebe4efa928c0ba3ebd3f9f3d9e2000ca3
+    .claude/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md: sha256:915bacb934e2927d84b37a3f3d225a47b309ac8f9e494ed2bcb66ce07c5676a2
+    .claude/skills/react-best-practices/rules/rendering-resource-hints.md: sha256:351b1095d641717b930f1b2253282b7120af3023bc74e06c17675168d4286864
+    .claude/skills/react-best-practices/rules/rendering-script-defer-async.md: sha256:4cea07b7875ba7fc2c7465ff23b63a2bb334f90aaf2d9293d38d67b05fdb32ab
+    .claude/skills/react-best-practices/rules/rendering-svg-precision.md: sha256:ed468533f6e95f622859c884b122cf21f9f593ed6bb3d500a54de4b9f9bcb9fb
+    .claude/skills/react-best-practices/rules/rendering-usetransition-loading.md: sha256:3a1249c3f13026b6f54ab5712c388df219d6af01b12aa542749acd99a46f4bc1
+    .claude/skills/react-best-practices/rules/rerender-defer-reads.md: sha256:234050a77faf50cb306be10a9e15bd4421134ab5907e75f13e6d78e2bd262dc9
+    .claude/skills/react-best-practices/rules/rerender-dependencies.md: sha256:17eb5830956fb56486fd3cfc7431f5849d39751730c05ad9e77dd4f0c27169c5
+    .claude/skills/react-best-practices/rules/rerender-derived-state-no-effect.md: sha256:cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a
+    .claude/skills/react-best-practices/rules/rerender-derived-state.md: sha256:1c326bb67b01fb084eb00c8911b0a7cff54681c2315b629f88e49b64eaa6481d
+    .claude/skills/react-best-practices/rules/rerender-functional-setstate.md: sha256:5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58
+    .claude/skills/react-best-practices/rules/rerender-lazy-state-init.md: sha256:4ae844740f266fc8cbf050701230286624a2440ec5be67b9a63d9edc3c580573
+    .claude/skills/react-best-practices/rules/rerender-memo-with-default-value.md: sha256:81c47476564ad8a79fc68fc442734255ca7d6829424359464503fda0a9f9a0dd
+    .claude/skills/react-best-practices/rules/rerender-memo.md: sha256:1f258990c2f27ff6256b3cc5c43300631bb3f0d81f749aed08d07fcdcc131dd1
+    .claude/skills/react-best-practices/rules/rerender-move-effect-to-event.md: sha256:abc2cbf167bee056743023351e96806a411d3398da8802093620aecf0721f029
+    .claude/skills/react-best-practices/rules/rerender-no-inline-components.md: sha256:1cc32907a770272524ba682eef9e7efdd8ad4533b6f89b718a1fcd7d1d0eb6a3
+    .claude/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md: sha256:5bdcf2d1558ba5204e643c887b7b4060f89630969425651eb68e96427d97f800
+    .claude/skills/react-best-practices/rules/rerender-split-combined-hooks.md: sha256:6f45d703343484ef9acef9388397f3642966ae6a5a258899a0cf1f9977cfbf6c
+    .claude/skills/react-best-practices/rules/rerender-transitions.md: sha256:60f4033909a62df5e5b8c601494f9e50a562e2f8c1c2d81eac24f38142265f1c
+    .claude/skills/react-best-practices/rules/rerender-use-deferred-value.md: sha256:8c3579576a61a949884167745dcfaf1d5426ba305cc61fd0a79602d70fda4909
+    .claude/skills/react-best-practices/rules/rerender-use-ref-transient-values.md: sha256:f1a649af9d1d0b5c762f6c9c4c1c70c90d7df82aa10296ee87aadb78c1b76c54
+    .claude/skills/react-best-practices/rules/server-after-nonblocking.md: sha256:d0b8d24a3db9f0f65f9e2bddbf230b0e03a5f60e1229d93a4a18f5e7a991c7c2
+    .claude/skills/react-best-practices/rules/server-auth-actions.md: sha256:a2ca8aa102839251c7971ec784560fab943c20b36fe6f80365d4110c13260c23
+    .claude/skills/react-best-practices/rules/server-cache-lru.md: sha256:1924b64561841923b88a657085097a0aeba3e0ba2d5470b9f5c15cc10d6ae70f
+    .claude/skills/react-best-practices/rules/server-cache-react.md: sha256:fddeea6c870bb3da4134b61d54b7d09b83d2603f929b7547cd3dc1dc269edd5c
+    .claude/skills/react-best-practices/rules/server-dedup-props.md: sha256:c2747424cdac46be62f835f245a0aa887b0090b416d28e2ac8676702645eeb37
+    .claude/skills/react-best-practices/rules/server-hoist-static-io.md: sha256:5abea4dd882b13661bd5f7dfb93f9e547d5f08176c61c448ade91b210ed5d49f
+    .claude/skills/react-best-practices/rules/server-no-shared-module-state.md: sha256:4d869bf1cd2f1632e5ca4c0e64b1cf0e71c5f5a0f940bc8a22174d205e735ed7
+    .claude/skills/react-best-practices/rules/server-parallel-fetching.md: sha256:569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472
+    .claude/skills/react-best-practices/rules/server-parallel-nested-fetching.md: sha256:ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3
+    .claude/skills/react-best-practices/rules/server-serialization.md: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+  content_hash: sha256:74f142d28d360d78e8bac4f239a84c87f0ced9015729bc72b5458d82ff45b015
+- repo_url: vercel-labs/agent-skills
+  name: web-design-guidelines
+  host: github.com
+  resolved_commit: 1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62
+  version: unknown
+  virtual_path: skills/web-design-guidelines
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/web-design-guidelines
+  - .agents/skills/web-design-guidelines/SKILL.md
+  - .claude/skills/web-design-guidelines
+  - .claude/skills/web-design-guidelines/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/web-design-guidelines/SKILL.md: sha256:f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f
+    .claude/skills/web-design-guidelines/SKILL.md: sha256:f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f
+  content_hash: sha256:a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a
 - repo_url: vercel-labs/skills
   name: find-skills
   host: github.com
-  resolved_commit: e781cb4d07433dfe1d19e924ed45cc61738c55ec
-  resolved_ref: v1.8.1
+  resolved_commit: 50894c1d98bc45ca1ab127213e59d6525065b5e7
+  resolved_ref: v1.9.0
   version: unknown
   virtual_path: skills/find-skills
   is_virtual: true
@@ -1941,6 +2582,51 @@ deployments:
   - classmethod/tsumiki
   active_owner: classmethod/tsumiki
   content_hash: sha256:cb40a98d985fdc02524ba40935f0de2cfdd2b1b6b1872921c7fba15cf0a715c2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-qa-review
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-qa-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:07a40a415272e346b6120ec867054bced297276029e725a793efb80180af7782
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-qa-review/references/mutation-testing.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:161d9cad8061d31892ea42ced42da7ecd03110089cc0ba27f10d46f312c9a155
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-qa-review/references/smell-examples.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:bbb31ba40f81ac2ce53ff1a533abf91b065cc6344c3e32e49577cc6ec41cffeb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/ai-qa-review/references/testability-refactors.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:531ea6e918ad1c60b43c73c96f07677e97051f5d85afbd22f679d90443847cc5
 - kind: project-relative
   target: claude
   value: .claude/skills/crit
@@ -4845,8 +5531,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail
+  active_owner: dietrichgebert/ponytail/skills/ponytail
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4854,8 +5540,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-audit
+  active_owner: dietrichgebert/ponytail/skills/ponytail-audit
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4863,8 +5549,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-audit
+  active_owner: dietrichgebert/ponytail/skills/ponytail-audit
   content_hash: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
 - kind: project-relative
   target: claude
@@ -4872,8 +5558,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-debt
+  active_owner: dietrichgebert/ponytail/skills/ponytail-debt
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4881,8 +5567,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-debt
+  active_owner: dietrichgebert/ponytail/skills/ponytail-debt
   content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
 - kind: project-relative
   target: claude
@@ -4890,8 +5576,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-gain
+  active_owner: dietrichgebert/ponytail/skills/ponytail-gain
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4899,8 +5585,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-gain
+  active_owner: dietrichgebert/ponytail/skills/ponytail-gain
   content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
 - kind: project-relative
   target: claude
@@ -4908,8 +5594,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-help
+  active_owner: dietrichgebert/ponytail/skills/ponytail-help
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4917,8 +5603,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-help
+  active_owner: dietrichgebert/ponytail/skills/ponytail-help
   content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
 - kind: project-relative
   target: claude
@@ -4926,8 +5612,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-review
+  active_owner: dietrichgebert/ponytail/skills/ponytail-review
   content_hash: null
 - kind: project-relative
   target: claude
@@ -4935,8 +5621,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-review
+  active_owner: dietrichgebert/ponytail/skills/ponytail-review
   content_hash: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
 - kind: project-relative
   target: claude
@@ -4944,8 +5630,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail
+  active_owner: dietrichgebert/ponytail/skills/ponytail
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
 - kind: project-relative
   target: claude
@@ -5003,6 +5689,1032 @@ deployments:
   content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
 - kind: project-relative
   target: claude
+  value: .claude/skills/react-best-practices
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/AGENTS.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/README.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9eafb2123d3b8b2aef41fba0db2648a3f4f49996f8c7c8bb2c86263befd8b48a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/metadata.json
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:c4e18bac3290fbe1b471a605867d4df68b03144ea26b8befdbe8f9d8fd124354
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/_sections.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:01c59969e4e867f0708c8f8ef9c6d87fab9a07d0586244f429ff84013db8a115
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/_template.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/advanced-effect-event-deps.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:55ed8f9f27a1bff803d6fa55828176207714b02123cbb97ddb8a90d88024a723
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/advanced-event-handler-refs.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a3097edeecfb2ff6851cd66ed8cdf0617c3c88180504bee824aa6e75a215bbbc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/advanced-init-once.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3e4dc22173eb0e2b6dcf583e3babd862b8696328f8f59aee7c4d746c5bc05f6c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/advanced-use-latest.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8a3f64dfe5a77d1564248faf17fe662ae75b55d497a243cb30b38eb07ccbbf9a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-api-routes.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:523338540d73427dc14c0cbb19f2741ebccdf8b105a7b2c1b33d2905cf237a42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-cheap-condition-before-await.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:03107c1f70a293cd58a8abc5474c5548e20ea4efdf01b6d45aae7ad0ac1cb32c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-defer-await.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f3c142d090615abdcc99d31c123be37b31f0f1ed8d9ec9f7789a3bc6883ae0fb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-dependencies.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:16ef469f877e30c6b8e1e1b4bc3e527312fa3c6318cb785a4eca186ea236131a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-parallel.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/async-suspense-boundaries.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:de05fedac2eb7ae563b887b5a424464ec3dfaf84e5b7797467ebe2a796ac8afc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-analyzable-paths.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:62090b5c815fd71bf1133dce754f51abc16a9456d0ccd025fd627de27726e92a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-barrel-imports.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:e648f6d54525f07a691357040ca5bff6ea3424788a91ff63812adb29622a671b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-conditional.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:09c8259c3efb04fc0abb8e412ccbda217c222ae8118516283e571c995fe3a7d4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-defer-third-party.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3719fb47b191e8db4fe22686ec88448ad5af9e6838585425abbe103d0b642e37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-dynamic-imports.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:401817a7369f315fc5a68a1095742ff7d53d0461906880dc9d64a41495ee1986
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/bundle-preload.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d1f7cc28da7cd5ab249acd287edc5b761afcfb194e9cb62cd44c5f3543db2de2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/client-event-listeners.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:242a873349febc1ce685e85617994784dbab92c2eaa68aed7fed5a83e7680e93
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/client-localstorage-schema.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:0fb7cdf9dc93fdf22f87e3669f953fb9d4ac9b0be42eec4a29fe9a2560610b88
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/client-passive-event-listeners.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1f35016f9053de69e884ee9be00654e37979c2ca85f5e57764dc2626ff7acb4b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/client-swr-dedup.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:644652c39c6cc00de8d1c77a7273612e868dc3f7edda30764164c12ec0f764a3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-batch-dom-css.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:480b891b9eaf96e929dc1e964274a4828e3a78009b7d00ccd965a0d425215959
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-cache-function-results.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3daaa11d24f4295cb6be8bc6f407f2ce83cc7b5bd1f0e68891ea8ab835721dc7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-cache-property-access.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:73e47431e74878a927061bf0ddc7cd91a7556cb35d2573f3421e82300d9ae311
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-cache-storage.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:11b826b0433898c1ece2d3547010d8e77db9fb240185748c45db91493de9b6cc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-combine-iterations.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:71add08aeeb43091d4ff4c0b2842cce8b4bdef8ad3e732cc034bb5a84827e746
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-early-exit.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:925ce5ce87f3347186ca62212f29cc6baa2b8c85a96d2720ad07c3d0abf781c0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-flatmap-filter.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9e5b166a41914d975bef7635467f8fb32cd98b5c3126c0bc6f163490812fb5f0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-hoist-regexp.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f9e9aef2f7c2307dd7310f283df85dcada45fc43e9bb941b0c3aa414dec21ec4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-index-maps.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5df1bdc2cfabb2c98abd55d26762e5c18189535c2e686184f426082e62920391
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-length-check-first.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8b54a311c826b299272f29187fc58bc55772a04c4a72eeb29456ee96dc9fc624
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-min-max-loop.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:87dfb67e2f39df6ad8bcfb5b78c5fb364d3c07554ad188a202408d99f3763421
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-request-idle-callback.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ee08f83905b4011abbc33d594033157d77561b5bbd9b36b04f0f409581ffec32
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-set-map-lookups.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a7fd781a6ba9ad49065961b6f9a90ef486bf6b648390e1a08704025f98e1642b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/js-tosorted-immutable.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d0a5e1b0fec48a0a81397957e2f068e224329f7c42cb5feeed8aae6fa64025e8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-activity.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1e5e7eaf3555e61d6a2e900089c676527d26259501db5594f59544b6c664f85a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9c6ae0ca7a51434e803887c64cded760956579a1452ccb80a461a03f9c937c77
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-conditional-render.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-content-visibility.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:64eee6d5b916fe74df33363994b27fc7f71bea3bcedc7ee04bda23107ca3e6e4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-hoist-jsx.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:93b229560fae92005ed9a2a829064607b39b2e984e92d221d05b2d41df2b7c0e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-hydration-no-flicker.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:dc7ab358c67c177bca6e6f360fbc935ebe4efa928c0ba3ebd3f9f3d9e2000ca3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:915bacb934e2927d84b37a3f3d225a47b309ac8f9e494ed2bcb66ce07c5676a2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-resource-hints.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:351b1095d641717b930f1b2253282b7120af3023bc74e06c17675168d4286864
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-script-defer-async.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4cea07b7875ba7fc2c7465ff23b63a2bb334f90aaf2d9293d38d67b05fdb32ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-svg-precision.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ed468533f6e95f622859c884b122cf21f9f593ed6bb3d500a54de4b9f9bcb9fb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rendering-usetransition-loading.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3a1249c3f13026b6f54ab5712c388df219d6af01b12aa542749acd99a46f4bc1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-defer-reads.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:234050a77faf50cb306be10a9e15bd4421134ab5907e75f13e6d78e2bd262dc9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-dependencies.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:17eb5830956fb56486fd3cfc7431f5849d39751730c05ad9e77dd4f0c27169c5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-derived-state-no-effect.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-derived-state.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1c326bb67b01fb084eb00c8911b0a7cff54681c2315b629f88e49b64eaa6481d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-functional-setstate.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-lazy-state-init.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4ae844740f266fc8cbf050701230286624a2440ec5be67b9a63d9edc3c580573
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-memo-with-default-value.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:81c47476564ad8a79fc68fc442734255ca7d6829424359464503fda0a9f9a0dd
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-memo.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1f258990c2f27ff6256b3cc5c43300631bb3f0d81f749aed08d07fcdcc131dd1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-move-effect-to-event.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:abc2cbf167bee056743023351e96806a411d3398da8802093620aecf0721f029
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-no-inline-components.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1cc32907a770272524ba682eef9e7efdd8ad4533b6f89b718a1fcd7d1d0eb6a3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5bdcf2d1558ba5204e643c887b7b4060f89630969425651eb68e96427d97f800
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-split-combined-hooks.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:6f45d703343484ef9acef9388397f3642966ae6a5a258899a0cf1f9977cfbf6c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-transitions.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:60f4033909a62df5e5b8c601494f9e50a562e2f8c1c2d81eac24f38142265f1c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-use-deferred-value.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8c3579576a61a949884167745dcfaf1d5426ba305cc61fd0a79602d70fda4909
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/rerender-use-ref-transient-values.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f1a649af9d1d0b5c762f6c9c4c1c70c90d7df82aa10296ee87aadb78c1b76c54
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-after-nonblocking.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d0b8d24a3db9f0f65f9e2bddbf230b0e03a5f60e1229d93a4a18f5e7a991c7c2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-auth-actions.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a2ca8aa102839251c7971ec784560fab943c20b36fe6f80365d4110c13260c23
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-cache-lru.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1924b64561841923b88a657085097a0aeba3e0ba2d5470b9f5c15cc10d6ae70f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-cache-react.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:fddeea6c870bb3da4134b61d54b7d09b83d2603f929b7547cd3dc1dc269edd5c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-dedup-props.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:c2747424cdac46be62f835f245a0aa887b0090b416d28e2ac8676702645eeb37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-hoist-static-io.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5abea4dd882b13661bd5f7dfb93f9e547d5f08176c61c448ade91b210ed5d49f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-no-shared-module-state.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4d869bf1cd2f1632e5ca4c0e64b1cf0e71c5f5a0f940bc8a22174d205e735ed7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-parallel-fetching.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-parallel-nested-fetching.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/react-best-practices/rules/server-serialization.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/CHANGELOG.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:751ad110037c85d400018c9894716a04fa46357ff55c22b1169b280752e19e88
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/_contributing.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:191e039e7d94764e6073410b513b559f9a594e0fdf0252a30c2a2986df2ab3bc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/_sections.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:c9e992612b422c7122de0b7542ebc2450db283edaab08cfe86c6d657fcccccd5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/_template.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6299954250f212caabe339d752c3e5313a8e07d1a182a4e4b425baee91df1bd2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/conn-limits.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/conn-pooling.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/data-batch-inserts.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/data-n-plus-one.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/data-pagination.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/data-upsert.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/lock-advisory.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/lock-short-transactions.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/lock-skip-locked.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/query-composite-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/query-covering-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/query-index-types.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/query-missing-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/query-partial-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-constraints.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-data-types.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-partitioning.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/schema-primary-keys.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/security-privileges.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/security-rls-basics.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096
+- kind: project-relative
+  target: claude
+  value: .claude/skills/supabase-postgres-best-practices/references/security-rls-performance.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014
+- kind: project-relative
+  target: claude
   value: .claude/skills/terminal-browser
   runtime: null
   scope: project
@@ -5028,6 +6740,249 @@ deployments:
   - zenbu-labs/terminal-browser/skill
   active_owner: zenbu-labs/terminal-browser/skill
   content_hash: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b496f0dc1708dd4fb81b5c296ac5734b4804426967c4f931ce336c55154ed62f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/app.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:62d1d87436376a3e12d324fb5efb1566f7ee7e3471323b9e6988f24470bb6358
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/favicon.svg
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:6b7e69155901fc286e8830bfde9c518fe4c7d9f4885cfe3ea77f26249a462b9e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/index.html
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:00388f2e3b78a36ece2b8357d1673a5ed702e631f96b8861d6d4a02228ad92a1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/style.css
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8d308bb4c1db1a79a99f7a2b8493743dbad4d9f5ae4c43be2cf430da2c77cab4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-dompurify
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-marked
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-mermaid
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:63727832aaf62004a2b249c933e327f3c90caf49e41a72f4bf436edf632cbda8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega-embed
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:32df67148f0fc3db0eb9e263a7b75d07f1eb14c61955005a4a39c6918d10d137
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega-lite
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:f618900fd0d64046963b29f40590cdd1e341a2f41449f99110d82fd81fea808c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/marked.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:15fabce5b65898b32b03f5ed25e9f891a729ad4c0d6d877110a7744aa847a894
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/mermaid.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:336df803d87a38b70a01e736e666c8f7601d2ce42f5e47c8fafe5d721074b9a3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/purify.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega-embed.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b1455caba2fb1a72fb46025ba0ba1316e2dbc7f0dd40a3f6040172bf9c08ba91
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega-lite.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:83e215e84e308ee8688fa6503ba0f1cf8a3c05c0d61df2841a0b92bf86809e00
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8f6a3587cf8d4f42c7e08120e3eb05d067e746d554e39d2dcf52acc0bd5ba28f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/server.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b45afac0f9202a07a543d4b4ae67980e8aa581539f2390e1fabf247668d8f2c7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/pr-guide.md
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:ef958af2a9b801cc5286f429dcf2a1a5dd3ec7126468dad23f11e14a4c72feba
+- kind: project-relative
+  target: claude
+  value: .claude/skills/web-design-guidelines
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/web-design-guidelines
+  active_owner: vercel-labs/agent-skills/skills/web-design-guidelines
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/web-design-guidelines/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/web-design-guidelines
+  active_owner: vercel-labs/agent-skills/skills/web-design-guidelines
+  content_hash: sha256:f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/ai-qa-review
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/ai-qa-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:07a40a415272e346b6120ec867054bced297276029e725a793efb80180af7782
+- kind: project-relative
+  target: codex
+  value: .agents/skills/ai-qa-review/references/mutation-testing.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:161d9cad8061d31892ea42ced42da7ecd03110089cc0ba27f10d46f312c9a155
+- kind: project-relative
+  target: codex
+  value: .agents/skills/ai-qa-review/references/smell-examples.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:bbb31ba40f81ac2ce53ff1a533abf91b065cc6344c3e32e49577cc6ec41cffeb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/ai-qa-review/references/testability-refactors.md
+  runtime: null
+  scope: project
+  owners:
+  - petrkindlmann/qa-skills/skills/ai-qa-review
+  active_owner: petrkindlmann/qa-skills/skills/ai-qa-review
+  content_hash: sha256:531ea6e918ad1c60b43c73c96f07677e97051f5d85afbd22f679d90443847cc5
 - kind: project-relative
   target: codex
   value: .agents/skills/crit
@@ -7932,8 +9887,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail
+  active_owner: dietrichgebert/ponytail/skills/ponytail
   content_hash: null
 - kind: project-relative
   target: codex
@@ -7941,8 +9896,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-audit
+  active_owner: dietrichgebert/ponytail/skills/ponytail-audit
   content_hash: null
 - kind: project-relative
   target: codex
@@ -7950,8 +9905,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-audit
+  active_owner: dietrichgebert/ponytail/skills/ponytail-audit
   content_hash: sha256:2b3223a02c386d1263e1b08343cb8eb3a53e444cdafb1d79e26c8ec2a8fcad28
 - kind: project-relative
   target: codex
@@ -7959,8 +9914,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-debt
+  active_owner: dietrichgebert/ponytail/skills/ponytail-debt
   content_hash: null
 - kind: project-relative
   target: codex
@@ -7968,8 +9923,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-debt
+  active_owner: dietrichgebert/ponytail/skills/ponytail-debt
   content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
 - kind: project-relative
   target: codex
@@ -7977,8 +9932,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-gain
+  active_owner: dietrichgebert/ponytail/skills/ponytail-gain
   content_hash: null
 - kind: project-relative
   target: codex
@@ -7986,8 +9941,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-gain
+  active_owner: dietrichgebert/ponytail/skills/ponytail-gain
   content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
 - kind: project-relative
   target: codex
@@ -7995,8 +9950,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-help
+  active_owner: dietrichgebert/ponytail/skills/ponytail-help
   content_hash: null
 - kind: project-relative
   target: codex
@@ -8004,8 +9959,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-help
+  active_owner: dietrichgebert/ponytail/skills/ponytail-help
   content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
 - kind: project-relative
   target: codex
@@ -8013,8 +9968,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-review
+  active_owner: dietrichgebert/ponytail/skills/ponytail-review
   content_hash: null
 - kind: project-relative
   target: codex
@@ -8022,8 +9977,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail-review
+  active_owner: dietrichgebert/ponytail/skills/ponytail-review
   content_hash: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
 - kind: project-relative
   target: codex
@@ -8031,8 +9986,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - dietrichgebert/ponytail
-  active_owner: dietrichgebert/ponytail
+  - dietrichgebert/ponytail/skills/ponytail
+  active_owner: dietrichgebert/ponytail/skills/ponytail
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
 - kind: project-relative
   target: codex
@@ -8090,6 +10045,1032 @@ deployments:
   content_hash: sha256:164f151958cc8aa64954a1d35c1b57f99a58f2c57be9742a86defb9f171fabed
 - kind: project-relative
   target: codex
+  value: .agents/skills/react-best-practices
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/AGENTS.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:fc93e7421177bbf869cce892bc60a6c83a4517d974bc3bf65c4e2c1e58a6ccf6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/README.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9eafb2123d3b8b2aef41fba0db2648a3f4f49996f8c7c8bb2c86263befd8b48a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/metadata.json
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:c4e18bac3290fbe1b471a605867d4df68b03144ea26b8befdbe8f9d8fd124354
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/_sections.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:01c59969e4e867f0708c8f8ef9c6d87fab9a07d0586244f429ff84013db8a115
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/_template.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:99df2a3ea088c6c22de2484ddc7e964d0e9923846f44c63380343ecc64455442
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/advanced-effect-event-deps.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:55ed8f9f27a1bff803d6fa55828176207714b02123cbb97ddb8a90d88024a723
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/advanced-event-handler-refs.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a3097edeecfb2ff6851cd66ed8cdf0617c3c88180504bee824aa6e75a215bbbc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/advanced-init-once.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3e4dc22173eb0e2b6dcf583e3babd862b8696328f8f59aee7c4d746c5bc05f6c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/advanced-use-latest.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8a3f64dfe5a77d1564248faf17fe662ae75b55d497a243cb30b38eb07ccbbf9a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-api-routes.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:523338540d73427dc14c0cbb19f2741ebccdf8b105a7b2c1b33d2905cf237a42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-cheap-condition-before-await.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:03107c1f70a293cd58a8abc5474c5548e20ea4efdf01b6d45aae7ad0ac1cb32c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-defer-await.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f3c142d090615abdcc99d31c123be37b31f0f1ed8d9ec9f7789a3bc6883ae0fb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-dependencies.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:16ef469f877e30c6b8e1e1b4bc3e527312fa3c6318cb785a4eca186ea236131a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-parallel.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:6d2f841896279e976dfcdc1ac89e70771ac188baadfd43c096b5706cb838b961
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/async-suspense-boundaries.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:de05fedac2eb7ae563b887b5a424464ec3dfaf84e5b7797467ebe2a796ac8afc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-analyzable-paths.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:62090b5c815fd71bf1133dce754f51abc16a9456d0ccd025fd627de27726e92a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-barrel-imports.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:e648f6d54525f07a691357040ca5bff6ea3424788a91ff63812adb29622a671b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-conditional.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:09c8259c3efb04fc0abb8e412ccbda217c222ae8118516283e571c995fe3a7d4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-defer-third-party.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3719fb47b191e8db4fe22686ec88448ad5af9e6838585425abbe103d0b642e37
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-dynamic-imports.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:401817a7369f315fc5a68a1095742ff7d53d0461906880dc9d64a41495ee1986
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/bundle-preload.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d1f7cc28da7cd5ab249acd287edc5b761afcfb194e9cb62cd44c5f3543db2de2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/client-event-listeners.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:242a873349febc1ce685e85617994784dbab92c2eaa68aed7fed5a83e7680e93
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/client-localstorage-schema.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:0fb7cdf9dc93fdf22f87e3669f953fb9d4ac9b0be42eec4a29fe9a2560610b88
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/client-passive-event-listeners.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1f35016f9053de69e884ee9be00654e37979c2ca85f5e57764dc2626ff7acb4b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/client-swr-dedup.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:644652c39c6cc00de8d1c77a7273612e868dc3f7edda30764164c12ec0f764a3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-batch-dom-css.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:480b891b9eaf96e929dc1e964274a4828e3a78009b7d00ccd965a0d425215959
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-cache-function-results.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3daaa11d24f4295cb6be8bc6f407f2ce83cc7b5bd1f0e68891ea8ab835721dc7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-cache-property-access.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:73e47431e74878a927061bf0ddc7cd91a7556cb35d2573f3421e82300d9ae311
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-cache-storage.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:11b826b0433898c1ece2d3547010d8e77db9fb240185748c45db91493de9b6cc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-combine-iterations.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:71add08aeeb43091d4ff4c0b2842cce8b4bdef8ad3e732cc034bb5a84827e746
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-early-exit.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:925ce5ce87f3347186ca62212f29cc6baa2b8c85a96d2720ad07c3d0abf781c0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-flatmap-filter.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9e5b166a41914d975bef7635467f8fb32cd98b5c3126c0bc6f163490812fb5f0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-hoist-regexp.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f9e9aef2f7c2307dd7310f283df85dcada45fc43e9bb941b0c3aa414dec21ec4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-index-maps.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5df1bdc2cfabb2c98abd55d26762e5c18189535c2e686184f426082e62920391
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-length-check-first.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8b54a311c826b299272f29187fc58bc55772a04c4a72eeb29456ee96dc9fc624
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-min-max-loop.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:87dfb67e2f39df6ad8bcfb5b78c5fb364d3c07554ad188a202408d99f3763421
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-request-idle-callback.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ee08f83905b4011abbc33d594033157d77561b5bbd9b36b04f0f409581ffec32
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-set-map-lookups.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a7fd781a6ba9ad49065961b6f9a90ef486bf6b648390e1a08704025f98e1642b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/js-tosorted-immutable.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d0a5e1b0fec48a0a81397957e2f068e224329f7c42cb5feeed8aae6fa64025e8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-activity.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1e5e7eaf3555e61d6a2e900089c676527d26259501db5594f59544b6c664f85a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-animate-svg-wrapper.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:9c6ae0ca7a51434e803887c64cded760956579a1452ccb80a461a03f9c937c77
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-conditional-render.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:2ec2fa23c4148285144687050c52369adba3da2fbe3d486f8d3e0aad8f06f2bc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-content-visibility.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:64eee6d5b916fe74df33363994b27fc7f71bea3bcedc7ee04bda23107ca3e6e4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-hoist-jsx.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:93b229560fae92005ed9a2a829064607b39b2e984e92d221d05b2d41df2b7c0e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-hydration-no-flicker.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:dc7ab358c67c177bca6e6f360fbc935ebe4efa928c0ba3ebd3f9f3d9e2000ca3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-hydration-suppress-warning.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:915bacb934e2927d84b37a3f3d225a47b309ac8f9e494ed2bcb66ce07c5676a2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-resource-hints.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:351b1095d641717b930f1b2253282b7120af3023bc74e06c17675168d4286864
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-script-defer-async.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4cea07b7875ba7fc2c7465ff23b63a2bb334f90aaf2d9293d38d67b05fdb32ab
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-svg-precision.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ed468533f6e95f622859c884b122cf21f9f593ed6bb3d500a54de4b9f9bcb9fb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rendering-usetransition-loading.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:3a1249c3f13026b6f54ab5712c388df219d6af01b12aa542749acd99a46f4bc1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-defer-reads.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:234050a77faf50cb306be10a9e15bd4421134ab5907e75f13e6d78e2bd262dc9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-dependencies.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:17eb5830956fb56486fd3cfc7431f5849d39751730c05ad9e77dd4f0c27169c5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-derived-state-no-effect.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:cb11ec76f50aa7b6847269f02d79b120c889a30d9ecd2c1d578f75144419c77a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-derived-state.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1c326bb67b01fb084eb00c8911b0a7cff54681c2315b629f88e49b64eaa6481d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-functional-setstate.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5e68df6b2ae8058e67f476ff1ac67bde159f5a9d18df439e46eabcdeb7b52e58
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-lazy-state-init.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4ae844740f266fc8cbf050701230286624a2440ec5be67b9a63d9edc3c580573
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-memo-with-default-value.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:81c47476564ad8a79fc68fc442734255ca7d6829424359464503fda0a9f9a0dd
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-memo.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1f258990c2f27ff6256b3cc5c43300631bb3f0d81f749aed08d07fcdcc131dd1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-move-effect-to-event.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:abc2cbf167bee056743023351e96806a411d3398da8802093620aecf0721f029
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-no-inline-components.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1cc32907a770272524ba682eef9e7efdd8ad4533b6f89b718a1fcd7d1d0eb6a3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-simple-expression-in-memo.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5bdcf2d1558ba5204e643c887b7b4060f89630969425651eb68e96427d97f800
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-split-combined-hooks.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:6f45d703343484ef9acef9388397f3642966ae6a5a258899a0cf1f9977cfbf6c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-transitions.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:60f4033909a62df5e5b8c601494f9e50a562e2f8c1c2d81eac24f38142265f1c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-use-deferred-value.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:8c3579576a61a949884167745dcfaf1d5426ba305cc61fd0a79602d70fda4909
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/rerender-use-ref-transient-values.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f1a649af9d1d0b5c762f6c9c4c1c70c90d7df82aa10296ee87aadb78c1b76c54
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-after-nonblocking.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:d0b8d24a3db9f0f65f9e2bddbf230b0e03a5f60e1229d93a4a18f5e7a991c7c2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-auth-actions.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:a2ca8aa102839251c7971ec784560fab943c20b36fe6f80365d4110c13260c23
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-cache-lru.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:1924b64561841923b88a657085097a0aeba3e0ba2d5470b9f5c15cc10d6ae70f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-cache-react.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:fddeea6c870bb3da4134b61d54b7d09b83d2603f929b7547cd3dc1dc269edd5c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-dedup-props.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:c2747424cdac46be62f835f245a0aa887b0090b416d28e2ac8676702645eeb37
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-hoist-static-io.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:5abea4dd882b13661bd5f7dfb93f9e547d5f08176c61c448ade91b210ed5d49f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-no-shared-module-state.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:4d869bf1cd2f1632e5ca4c0e64b1cf0e71c5f5a0f940bc8a22174d205e735ed7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-parallel-fetching.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:569a2e9fc04f9606686cd75c5894ef8781b502786a7fffe241396846c7733472
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-parallel-nested-fetching.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:ad5d9656984d4a959997a2367bf59cc6632297b4634a1dd13a087939d83f30b3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/react-best-practices/rules/server-serialization.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/react-best-practices
+  active_owner: vercel-labs/agent-skills/skills/react-best-practices
+  content_hash: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/CHANGELOG.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:751ad110037c85d400018c9894716a04fa46357ff55c22b1169b280752e19e88
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:ad65e776f45e761bafc609d3f506c77c1032225aa65e0c4c02f241b8071e5855
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/_contributing.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:191e039e7d94764e6073410b513b559f9a594e0fdf0252a30c2a2986df2ab3bc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/_sections.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:c9e992612b422c7122de0b7542ebc2450db283edaab08cfe86c6d657fcccccd5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/_template.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6299954250f212caabe339d752c3e5313a8e07d1a182a4e4b425baee91df1bd2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/advanced-full-text-search.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:40c2606bbb4c4dce31308f201b24cc7f58c7df05b1d9c6856fe2b888d3b7cf28
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/advanced-jsonb-indexing.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:24cacf6a8bc35901dd566d24502ce8e57f810a5c196b897e61d52726e521d106
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/conn-idle-timeout.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:630588902c00fcec59a5988cc5d042f76dcf2c923a535abfd8c47dca205eaed5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/conn-limits.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:11b2a67a7c7679cbbc5d807bbb17e69c98484a581d0c8b929c03408f412b81b2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/conn-pooling.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:88cf086bf98ba865d2e9d0579974e1366b14157619d6a93e7da77be91084e4a5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/conn-prepared-statements.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:174e9332fe3dda5c99b2b00159fb1915ae36c00bab3a7882c14e73e4344e946e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/data-batch-inserts.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:531933b82d6a622d0fae29e0ea80be6fe5d78655adf2804c271ea84a1930de37
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/data-n-plus-one.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:21a44905e5b16a42741892ec34bb1bfef124d049b140a76934a9acd0f46f5fc2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/data-pagination.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:73c9fa10a3d439bedea0e11b640bd25bf30dd50f0d9006cf85baf7c3151543fa
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/data-upsert.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2612af83b20a2701dde30ef1f8d7efd26b7e9eef84717226b8f038a2d2150ff7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/lock-advisory.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:c88d259dbf81c3771438f59a165f7eab8acd09999dd370bdf807521c73f35aab
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/lock-deadlock-prevention.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:09aee46f51d7178c8e55fe056cd5a94a64ba2c122fe418e6900cd99f297b2347
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/lock-short-transactions.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:5aa7f61095916986d39644b446cdbcd2bacca7ef698a3bb50b3f82dd60207602
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/lock-skip-locked.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6c45077f430f29cd9cd8f448c94d578e827e7bd023fcdaf717a756acb116fa4b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/monitor-explain-analyze.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:4cb67ffbf8e57f2e5b380b0beb4242528b513723ce314a2c2ffcf083bd4203d7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/monitor-pg-stat-statements.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:89dca99d4e894fcbdcac136be7ad9fbc03d1342904f065c1b198dc9cf495f098
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/monitor-vacuum-analyze.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2892272011710eb49b3f185ec12f15ce9ce4c365792c672f6e2a9c90da426a1a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/query-composite-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:73e42424e671f0266e74fdb220db3196790f69fb43e2b19c7b9483eb4971b554
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/query-covering-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:daf2a7f0477fb7357b62b5fb5b185b1995a77a186347e45cb780e25e7a7589b6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/query-index-types.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:472a74f22c2df203bd0154999b3a5a0187cca2ab3d9a3978e305bb7c32f1a282
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/query-missing-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:91ad8b0ff4365704b4830a7f077c6f140f7140fd5d3ce5cd0b92b160cf9e25f1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/query-partial-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:6448982bc8558c6555284958edc331b29239c6a0130e6b4501dd6d4da607a6dd
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-constraints.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:90e8efda3e9e81095e642911ad4aae2809d160f29414338fa997253238f510f8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-data-types.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:e01b58c14c7f3f65d8ead580b9a4fcf70b83baaab0f9a5f83c569c9fd113e8c8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:7587713d12a65a212365459b3d39e4717d8a79e4073b10bd62f1054d8192c0dd
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-lowercase-identifiers.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:4bc80f70865f2390872591f326c8a6be6456a0aeb5a7e5a2475d7cd9d43059ab
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-partitioning.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:541e13fbeaf4bb1485c9059d4c9417dbdb766cf16f4237cd63a04ada7ec45b90
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/schema-primary-keys.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:3c8beabef82066f9a0838b926da0885117fd2d9a263aaf84cb5ca9e5f0d400e9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/security-privileges.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:095909274a4fb43df785d7144cf674eeb40284d2d45628f14af4108737b93663
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/security-rls-basics.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:e04dd1a3a382aafdaaa73fe9f7976352acdde6e90c2a2470d281b94d4f44b096
+- kind: project-relative
+  target: codex
+  value: .agents/skills/supabase-postgres-best-practices/references/security-rls-performance.md
+  runtime: null
+  scope: project
+  owners:
+  - supabase/agent-skills/skills/supabase-postgres-best-practices
+  active_owner: supabase/agent-skills/skills/supabase-postgres-best-practices
+  content_hash: sha256:2e1faeca7d5746e246b1c78f9492fe2a9cfa41c4d7fa1e23c402d58fa18ea014
+- kind: project-relative
+  target: codex
   value: .agents/skills/terminal-browser
   runtime: null
   scope: project
@@ -8115,6 +11096,24 @@ deployments:
   - zenbu-labs/terminal-browser/skill
   active_owner: zenbu-labs/terminal-browser/skill
   content_hash: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
+- kind: project-relative
+  target: codex
+  value: .agents/skills/web-design-guidelines
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/web-design-guidelines
+  active_owner: vercel-labs/agent-skills/skills/web-design-guidelines
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/web-design-guidelines/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-skills/skills/web-design-guidelines
+  active_owner: vercel-labs/agent-skills/skills/web-design-guidelines
+  content_hash: sha256:f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f
 - kind: project-relative
   target: cursor
   value: .cursor/commands/auto-debug.md
