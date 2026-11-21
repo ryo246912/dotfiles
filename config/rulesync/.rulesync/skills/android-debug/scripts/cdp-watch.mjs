@@ -6,7 +6,12 @@ if (!prefix) {
 }
 
 const tabs = await (await fetch(`http://localhost:${port}/json`)).json();
-const tab = tabs.find(t => t.type === 'page' && t.url.startsWith(prefix));
+const target = new URL(prefix);
+const tab = tabs.find(t => {
+  if (t.type !== 'page' || !URL.canParse(t.url)) return false;
+  const url = new URL(t.url);
+  return url.origin === target.origin && url.pathname.startsWith(target.pathname);
+});
 if (!tab) {
   console.error(`no tab starts with ${prefix}`);
   process.exit(1);
