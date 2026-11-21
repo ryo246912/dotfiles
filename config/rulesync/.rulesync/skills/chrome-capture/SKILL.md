@@ -1,6 +1,6 @@
 ---
 name: chrome-capture
-description: Chrome や Chromium のタブを AV1 MP4 に録画する。Web ページの操作デモやタブの動画収録を依頼されたときに使う。
+description: Chrome や Chromium のタブを AV1 MP4 に録画する。指定 URL を開いて一定時間のタブ録画を依頼されたときに使う。
 targets:
   - claudecode
   - codexcli
