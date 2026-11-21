@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 公開 X 投稿は ID だけを FxTwitter API に渡す。
+x_status_url='^https?://((www\.|mobile\.)?(x|twitter)\.com|(www\.)?(fxtwitter|fixupx)\.com)/([a-zA-Z0-9_]+/status|i/web/status)/([0-9]+)/?([?#].*)?$'
+if [[ $# -eq 2 && $1 == read && $2 =~ $x_status_url ]]; then
+  post_id=${BASH_REMATCH[7]}
+  curl --fail --silent --show-error --max-time 15 \
+    "https://api.fxtwitter.com/status/$post_id" |
+    jq -e '
+      select(.code == 200 and (.tweet | type) == "object")
+      | {schema_version: 1, ok: true, action: "read", channel: "twitter",
+         backend: "fxtwitter", result: .tweet, error: null}
+    '
+  exit
+fi
+
+# PyPI の同名パッケージは別物。公式リリースを既存の mise 管理の uv で実行する。
+exec uvx --from 'https://github.com/Panniantong/Agent-Reach/releases/download/v1.6.1/agent-reach.zip' agent-reach "$@"
