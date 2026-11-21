@@ -151,6 +151,15 @@
   "customManagers": [
     {
       "customType": "regex",
+      "managerFilePatterns": ["config/mise/config.toml"],
+      "matchStrings": [
+        "\"pipx:git\\+https://github\\.com/(?<depName>[^/]+/[^\"]+)\\.git\"\\s*=\\s*\\{\\s*version\\s*=\\s*\"(?<currentValue>v[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "customType": "regex",
       "description": "Pullfrog の無料モデル opencode/deepseek-v<version>-flash-free を新しい version に上げる",
       "managerFilePatterns": [".github/workflows/pullfrog.yml"],
       "matchStrings": ["model:\\s*opencode/deepseek-v(?<currentValue>[0-9.]+)-flash-free"],
