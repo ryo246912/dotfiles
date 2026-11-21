@@ -28,7 +28,8 @@ import sys
 import time
 from pathlib import Path
 
-STATE_PATH = Path("plan/.pr-reviewer-brief/watch-state.json")
+STATE_PATH = Path(".pr-reviewer-artifacts/pr-reviewer-brief/watch-state.json")
+LEGACY_STATE_PATH = Path("plan/.pr-reviewer-brief/watch-state.json")
 
 
 def gh_json(*args: str) -> object:
@@ -95,9 +96,9 @@ def notify(message: str) -> None:
     print(message)
 
 
-def save(state: dict) -> None:
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+def save(path: Path, state: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
 def main() -> int:
@@ -121,11 +122,19 @@ def main() -> int:
     repo = gh_json("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
     me = gh_json("api", "user")["login"]
 
-    if not STATE_PATH.exists():
+    root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+    state_path = root / STATE_PATH
+    legacy_state_path = root / LEGACY_STATE_PATH
+    if state_path.exists():
+        state = json.loads(state_path.read_text())
+    elif legacy_state_path.exists():
+        state = json.loads(legacy_state_path.read_text())
+    else:
         existing = [pr["number"] for pr in open_prs(repo, me)]
-        save({"seen": existing, "done": []})
+        state = {"seen": existing, "done": []}
         print(f"監視を始めた。既存の open な PR {len(existing)} 件は対象にしない", file=sys.stderr)
-    state = json.loads(STATE_PATH.read_text())
+    if not state_path.exists():
+        save(state_path, state)
     deadline = time.monotonic() + args.max_wait
 
     while True:
@@ -136,7 +145,7 @@ def main() -> int:
             break
         time.sleep(min(args.interval, max(1, deadline - time.monotonic())))
 
-    save(state)
+    save(state_path, state)
     print(json.dumps({"repo": repo, "targets": targets}, ensure_ascii=False))
     return 0
 

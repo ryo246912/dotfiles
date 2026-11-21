@@ -37,5 +37,5 @@ Claude Code を立ち上げっぱなしにしておく（tmux の中など）。
 
 3. **1 に戻る**。ユーザーが止めるまで繰り返す
 
-見つけた PR は `./plan/.pr-reviewer-brief/watch-state.json` に記録され、二度は出ない。
+見つけた PR は対象リポジトリのルートにある `.pr-reviewer-artifacts/pr-reviewer-brief/watch-state.json` に記録され、二度は出ない。新しい状態ファイルが無い場合は旧状態を引き継ぐ。
 会話が長くなって自動で compact されても、`/pr-reviewer-brief --watch` を打ち直せば続きから再開できる。

@@ -1,6 +1,6 @@
 """作業ディレクトリの brief.json・hunks.json・groups.json・スクリーンショットから、資料の HTML を 1 ファイルで作る。
 
-    python3 render_brief.py --workdir ./plan/.pr-reviewer-brief/pr-123 --out './plan/pr-123_土地一覧の検索条件を追加.html'
+    python3 render_brief.py --workdir ./.pr-reviewer-artifacts/pr-123/brief --out './.pr-reviewer-artifacts/pr-123/brief/pr-123_土地一覧の検索条件を追加.html'
 
 モデルは中身（brief.json）だけを書き、HTML・CSS・図の座標・差分の表はすべてここで作る。
 文章の中では `コード`・**強調**・[文字](URL) が使える。書くことが無い項目は省くか空にする（その章は出ない）。
