@@ -23,6 +23,7 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
    `device` の端末が複数あるときは、どれを使うかユーザーに確かめ、以降の `adb` と `scrcpy` に `-s <serial>` を付ける。
 3. `curl -s -o /dev/null -w '%{http_code}' -- '<URL>'` で dev server の応答を確かめる。`000`（接続できない）なら、dev server の起動をユーザーに頼んで止まる。
    4xx・5xx でも dev server は動いているので先に進み、画面とログで原因を調べる。
+   続けて `adb reverse --list` を控える。URL のポートか引数のポートが既に別のポートへ転送されていたら、何も起動・転送せずユーザーに伝えて止まる。
 4. scrcpy を Bash tool の background 実行で起動し、後片付けのために scrcpy 自身の PID を控える。前景で起動すると session が止まる。
 
    ```bash
@@ -34,8 +35,7 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
    位置を指定しないと外部ディスプレイ側に出て見つからないことがある。osascript でウィンドウを動かすには補助アクセスの権限が要るため、位置は起動オプションで決める。
 
 5. URL のポートと引数のポートをそれぞれ `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
-   始める前の `adb reverse --list` に同じ `tcp:<port> tcp:<port>` があれば転送し直さず、後片付けでも外さない。
-   同じ端末側ポートが別のポートへ転送されていたら、上書きせずユーザーに伝えて止まる。
+   手順 3 で控えた一覧に同じ `tcp:<port> tcp:<port>` があれば転送し直さず、後片付けでも外さない。
    引数のポートは `lsof -nP -iTCP:<port> -sTCP:LISTEN` で Mac 側の待ち受けを確かめ、待ち受けていなければユーザーに伝える。
 6. URL を開き、3 秒待ってスクリーンショットを撮って Read tool で見る。端末の既定ブラウザが Chrome でなければ `com.android.chrome` を外す。
 
