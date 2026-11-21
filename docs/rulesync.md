@@ -158,10 +158,9 @@ hook は API key の環境変数やファイルを読みません。
 | `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
 | `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
 
-`rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
-plugin package から merge する hooks 等）は generate 後も残る。rulesync が書いた hooks は
-各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
-この設定が無いと rulesync は hooks 一覧を丸ごと置き換えるため、generate のたびに APM 由来の hooks が消える。
+`rulesync.jsonc` の `"preserveUnownedHooks": true` により、手動設定などで追加した hooks は generate 後も残る。
+rulesync が書いた hooks は各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks は
+次回の generate で削除される。将来、APM で配布するパッケージが hooks を追加した場合も、それらは保持される。
 
 ### permissions（`config/rulesync/.rulesync/permissions.jsonc`）
 

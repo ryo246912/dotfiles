@@ -79,17 +79,15 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 
 ### 既定の設定（`claude/settings.json`）
 
-| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `on`                  | crit（`crit` / `crit-cli`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、Ponytail の6スキル、`ai-qa-review`、`silent-failure-hunter`、`supabase-postgres-best-practices`、`vercel-react-best-practices`、`web-design-guidelines`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`pr-reviewer-behavior`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                                                                                                                                                                            |
-
-- 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
+- 複数の skill をまとめて配る package（crit・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
   `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
   `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
   使えなくなります（呼ばれる側は `name-only` 以上にする）。
-- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、ここにも追加します。
+- Ponytail の6スキルと、作者向けレビューで呼ぶ `ai-qa-review`、`silent-failure-hunter`、
+  `supabase-postgres-best-practices`、`web-design-guidelines`、`vercel-react-best-practices` は `name-only` にしています。
+  Claude Code は React のスキルを、配置ディレクトリ `react-best-practices` 内の `SKILL.md` の `name: vercel-react-best-practices`
+  で表示するので、`skillOverrides` にはこの名前を使います。
+- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、`claude/settings.json` の `skillOverrides` にも追加します。
 
 ### plugin の管理
 
