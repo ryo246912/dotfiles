@@ -88,6 +88,7 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
 ## 後片付け
 
 作業を終えるときは、このスキルで起動したプロセスと、追加した転送だけを外す。始める前からあった scrcpy や転送は残す。
+端末が複数あるときは、DevTools の手順や後片付けを含むすべての `adb` に `-s <serial>` を付ける。
 
 ```bash
 kill "$(cat <scratchpad>/scrcpy.pid)" "$(cat <scratchpad>/cdp-watch.pid)"
