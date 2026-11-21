@@ -42,12 +42,12 @@
   "skillOverrides": {
     "crit": "on",
     "crit-cli": "on",
-    "ponytail": "on",
-    "ponytail-audit": "on",
-    "ponytail-debt": "on",
-    "ponytail-gain": "on",
-    "ponytail-help": "on",
-    "ponytail-review": "on",
+    "ponytail": "name-only",
+    "ponytail-audit": "user-invocable-only",
+    "ponytail-debt": "user-invocable-only",
+    "ponytail-gain": "user-invocable-only",
+    "ponytail-help": "user-invocable-only",
+    "ponytail-review": "name-only",
     "memo": "on",
     "planning": "on",
     "pr-author-lessons-review": "on",
@@ -70,6 +70,7 @@
     "pr-reviewer-comment-crit": "name-only",
     "pr-author-fix": "name-only",
     "pr-author-all-review": "name-only",
+    "silent-failure-hunter": "name-only",
     "lessons-record": "name-only",
     "pr-reviewer-comment": "name-only",
     "pr-reviewer-brief": "name-only",
@@ -97,7 +98,11 @@
     "uat-test-design": "user-invocable-only",
     "suggest-rules": "user-invocable-only",
     "lessons-harvest": "user-invocable-only",
-    "lessons-review": "user-invocable-only"
+    "lessons-review": "user-invocable-only",
+    "ai-qa-review": "name-only",
+    "supabase-postgres-best-practices": "name-only",
+    "vercel-react-best-practices": "name-only",
+    "web-design-guidelines": "name-only"
   },
   "hooks": {
     "SessionStart": [
@@ -117,17 +122,6 @@
             "type": "command",
             "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
             "timeout": 40
-          }
-        ]
-      },
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
           }
         ]
       }
@@ -212,32 +206,6 @@
           {
             "type": "command",
             "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Tracking ponytail mode..."
           }
         ]
       }

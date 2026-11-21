@@ -520,6 +520,28 @@
   - [ ] settings syncの同期
   - [ ] 設定ファイルをコピー
 
+### Git 管理外の設定ファイル
+
+使う機能に対応する行だけ設定します。相対パスは dotfiles リポジトリのルートが基準です。
+雛形がある場合はコピー先が未作成ならコピーし、コピー先でプレースホルダーを実際の値に置き換えます。
+既存の設定を引き継ぐ場合は、不足項目だけ追記します。
+
+| 用途                                     | 雛形                                                                                                 | コピー先・設定内容                                                                                                                                                                       |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CodeRabbit の端末設定                    | `config/git/config.secret.sample`                                                                    | `~/.config/git/config.secret` に端末の値を設定する。[初期設定](#初期設定)を参照                                                                                                          |
+| 仕事用 Git の署名                        | `config/git/config.work.secret.sample` / `config/git/config.work3.secret.sample`                     | 利用するロールの `~/.config/git/config.work.secret` / `config.work3.secret` にメールアドレスと署名鍵を設定する。[初期設定](#初期設定)を参照                                              |
+| AWS の SSO・aws-vault                    | `aws/config.example`（配置後は `~/.aws/config.example`）                                             | work2 / work3 の `~/.aws/config` に SSO セッション、アカウント、ロールとプロファイルを設定する。[初期設定](#初期設定)を参照                                                              |
+| Sandbox の許可ドメイン                   | `config/sbx/allow-domains.work3.txt.example`                                                         | 同じディレクトリの `allow-domains.work3.txt` に必要なドメインを記入する。[Sandbox の設定](docker-sandboxes.md)を参照                                                                     |
+| Sandbox の MCP サーバー                  | `config/sbx/mcp.work2.yml.example` / `config/sbx/mcp.work3.yml.example`                              | 同じディレクトリの `mcp.work2.yml` / `mcp.work3.yml` に社内 URL、リポジトリパスなどを設定する。[Sandbox の設定](docker-sandboxes.md)を参照                                               |
+| 仕事用のシェル環境変数                   | なし                                                                                                 | 必要に応じて `~/.zshrc.secret` / `~/.zprofile.secret` を作る。[初期設定](#初期設定)を参照                                                                                                |
+| 仕事用のレビュー教訓の収集対象           | `config/agent-lessons/targets.work.yml.example`                                                      | `~/.config/agent-lessons/targets.work.yml` にリポジトリとチーム収集の有無を設定する。[収集対象の設定](agent-lessons.md#収集対象targetsyml-と-targetsnameyml)を参照                       |
+| 作者向けレビューのリポジトリ別追加段階   | `config/rulesync/.rulesync/skills/pr-author-all-review/work3.md.example`                             | 同じディレクトリの `work3.md` に対象リポジトリ、スキル、変更ファイルの条件を記入し、Rulesync で配布する。[リポジトリ別の追加レビュー](agent-lessons.md#リポジトリ別の追加レビュー)を参照 |
+| PR の動作確認環境                        | `config/rulesync/.rulesync/skills/pr-reviewer-behavior/config.example.md`                            | 初回実行時にスキルが `config.md` を作る。使うリポジトリの接続先、画面、テストデータなどを設定する。[設定と知見の蓄積](ai-skill.md#設定と知見の蓄積)を参照                                |
+| multi-worktree                           | `config/multi-worktree/config.toml.sample`（配置後は `~/.config/multi-worktree/config.toml.sample`） | `~/.config/multi-worktree/config.toml` にリポジトリと worktree の設定を記入する。[基本セットアップ](multi-worktree.md#基本セットアップ)を参照                                            |
+| Vicinae の個人・仕事用ショートカット     | `templates/vicinae/vicinae.secret.yaml.sample`                                                       | 同じディレクトリの `vicinae.secret.yaml` に URL やメールアドレスを設定する。[追加設定](#追加設定)を参照                                                                                  |
+| navi の非公開チートシート                | `config/navi/template.cheat.md`                                                                      | 必要に応じて `config/navi/cheats/<名前>.secret.cheat.md` を作り、個人・仕事用のコマンドを記入する                                                                                        |
+| Claude Code のプロジェクト別ローカル設定 | なし                                                                                                 | 必要に応じて対象プロジェクトの `.claude/settings.local.json` でスキル表示などを設定する。[スキル設定](ai-skill.md)を参照                                                                 |
+
 ### 追加設定
 
 - [ ] システム設定

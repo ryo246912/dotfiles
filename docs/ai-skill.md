@@ -77,14 +77,6 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 > 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
 > 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
 
-### 既定の設定（`claude/settings.json`）
-
-- 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
-  `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
-  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
-  使えなくなります（呼ばれる側は `name-only` 以上にする）。
-- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、`claude/settings.json` の `skillOverrides` にも追加します。
-
 ### plugin の管理
 
 Claude Code の plugin は、skill とは別に `enabledPlugins` で管理します。
@@ -534,9 +526,9 @@ correctness、security、performanceのreviewを置き換えないため、必�
 $ponytail-review を使って、現在のdiffから削除できるabstractionを探してください。
 ```
 
-Ponytailを止めるときは「stop ponytail」または「normal mode」と伝えます。default levelを変える場合は
-`PONYTAIL_DEFAULT_MODE`へ`lite`、`full`、`ultra`、`off`のいずれかを設定します。pluginのalways-on activationには
-Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`から`node`を実行できる必要があります。
+APM は6つのスキルを個別に配布します。必要なときにスキルを直接呼び出してください。
+`pr-author-all-review` は一般レビューのあとに、同じ差分を `ponytail-review` で確認します。
+Ponytail の起動・モード切替用の hooks は配布しません。
 
 ## `ctx-agent-history-search`
 
