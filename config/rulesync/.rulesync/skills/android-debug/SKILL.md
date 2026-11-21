@@ -15,8 +15,8 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
 
 ## 手順
 
-1. `command -v scrcpy adb` で導入を確かめる。無ければ `mise bootstrap packages apply brew:scrcpy brew-cask:android-platform-tools` で入れる。
-   設定に無い環境では、`brew install` ではなく `mise bootstrap packages use` で、その Mac 用の `config/mise/config.*.toml` に追加する。
+1. `command -v scrcpy adb` で導入を確かめる。無ければ `mise install github:Genymobile/scrcpy` で入れる。scrcpy の配布物に adb も入っている。
+   設定に無い環境では、`brew install` ではなく `mise use github:Genymobile/scrcpy` で、その Mac 用の `config/mise/config.*.toml` に追加する。
 2. `adb devices -l` で端末を確かめる。状態が `device` の行が無い、または `unauthorized` なら、端末で USB デバッグを ON にして
    許可 dialog を承認するようユーザーに頼み、済んだと返るまで待つ。
 3. `curl -s -o /dev/null -w '%{http_code}' <URL>` で dev server の応答を確かめる。200 か 3xx 以外なら、dev server の起動をユーザーに頼んで止まる。
