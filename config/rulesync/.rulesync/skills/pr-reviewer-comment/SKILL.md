@@ -19,7 +19,7 @@ description: >-
 | `-h`, `--help` | ヘルプのみ表示して終了                                                                                                  |
 | `--submit`     | 選ばれた指摘と確認済みの本文でレビューを公開。種別を指定する場合は `--submit APPROVE` または `--submit REQUEST_CHANGES` |
 
-既定では指摘候補の提示後に選択を待ち、選んだ指摘を draft にする。
+既定では指摘候補の提示後に選択を待ち、選んだ指摘を draft にする。「submitして」と明示した場合も、選ばれた指摘と確認済みの本文で公開する。
 
 # pr-reviewer-comment — PR レビューの開始から draft または公開まで
 
