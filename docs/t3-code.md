@@ -276,8 +276,7 @@ cloudflared は失敗後に `1.1.1.1:853`（SNI は `cloudflare-dns.com`）へ�
 
 この制約は sbx 側の DNS・透過プロキシの挙動によるもので、dotfiles の network allow では解消できない。
 
-SRV/TXT の NOTIMP は [docker/sbx-releases#791](https://github.com/docker/sbx-releases/issues/791) で報告済みで、
-メンテナーの回答では v0.54.0 には未収録、v0.55.0-rc4（pre-release）に収録されている。
+SRV/TXT の修正と固定バージョンは「T3 Connect を sbx 内で使うためのバージョン」に記載している。
 v0.55.0-rc4 を `t3-work3` で実機確認したところ、SRV / TXT は応答するようになり、
 cloudflared は edge IP（`198.41.192.x`）を取得できた。ただし T3 Connect はまだ接続できない:
 
