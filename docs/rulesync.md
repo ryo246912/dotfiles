@@ -246,6 +246,10 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 `delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
 同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
 
+レビュースキルの改名後は、新しい `pr-reviewer-all-review` と `pr-reviewer-crit` が配布されたことを確認し、
+`~/.claude/skills/` と `~/.agents/skills/` に残った旧名の `pr-reviewer-comment`、`pr-reviewer-comment-crit`
+のディレクトリを手動で削除します。
+
 ### プロジェクト単位の `.codex/config.toml` について
 
 以前は Codex CLI の hooks を有効化するため `.codex/config.toml` に `[features] hooks = true` が生成されていましたが、
