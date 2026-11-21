@@ -6,7 +6,7 @@
 "aqua:lusingander/stu"            = "0.7.6"
 "aqua:pre-commit/pre-commit"      = "4.7.0"
 "github:ByteNess/aws-vault"       = "7.16.2"
-"github:Genymobile/scrcpy"        = "latest"     # 5.0.1
+"github:Genymobile/scrcpy"        = "5.0.1"
 "github:huseyinbabal/taws"        = "1.3.0-rc.8"
 java                              = "temurin-21"
 "pipx:awslogs"                    = "0.15.0"
