@@ -5,14 +5,30 @@ set -euo pipefail
 x_status_url='^https?://((www\.|mobile\.)?(x|twitter)\.com|(www\.)?(fxtwitter|fixupx)\.com)/([a-zA-Z0-9_]+/status|i/web/status)/([0-9]+)/?([?#].*)?$'
 if [[ $# -eq 2 && $1 == read && $2 =~ $x_status_url ]]; then
   post_id=${BASH_REMATCH[7]}
-  curl --fail --silent --show-error --max-time 15 \
-    "https://api.fxtwitter.com/status/$post_id" |
-    jq -e '
+  started=$SECONDS
+  if response=$(curl --fail --silent --show-error --max-time 15 \
+    "https://api.fxtwitter.com/status/$post_id") &&
+    jq -e --argjson elapsed_ms "$(((SECONDS - started) * 1000))" '
       select(.code == 200 and (.tweet | type) == "object")
       | {schema_version: 1, ok: true, action: "read", channel: "twitter",
-         backend: "fxtwitter", result: .tweet, error: null}
-    '
-  exit
+         backend: "fxtwitter",
+         items: [.tweet | {
+           title: null, url, text, author: .author.name,
+           published_at: ((.created_timestamp | numbers | todateiso8601) // null),
+           raw: .
+         }],
+         meta: {elapsed_ms: $elapsed_ms, attempts: [{backend: "fxtwitter", result: "ok"}]},
+         error: null}
+    ' <<< "$response"; then
+    exit 0
+  fi
+  jq -n --argjson elapsed_ms "$(((SECONDS - started) * 1000))" '
+    {schema_version: 1, ok: false, action: "read", channel: "twitter",
+     backend: null, items: [],
+     meta: {elapsed_ms: $elapsed_ms, attempts: [{backend: "fxtwitter", result: "upstream_broken"}]},
+     error: {code: "upstream_broken", message: "FxTwitter could not retrieve the post", hint: ""}}
+  '
+  exit 1
 fi
 
 # PyPI の同名パッケージは別物。公式リリースを既存の mise 管理の uv で実行する。
