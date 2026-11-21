@@ -115,7 +115,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
-- `understand`（Claude Code 専用）
+- `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumiki skills
@@ -139,7 +139,6 @@ mise --cd "$HOME" run apm:install
 
 `mise run apm:install` は user scope で skill をインストールします。Claude Code では
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
-`understand` は依存の `targets` を `claude` に絞っているため、`~/.claude/skills/understand/` にだけ配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
 再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
@@ -917,5 +916,3 @@ Claude Code の回答、コード、PR、未コミット差分をブラウザの
 1. 直前の回答には `/understand`、未コミット差分には `/understand diff`、PR には `/understand #123のPR` を実行します。
 2. ホワイトボードで気になる箇所を選び、付箋の中で追加質問します。付箋の会話はメインの Claude Code セッションから分岐します。
 3. 「理解を終える」で本筋に返す付箋を選び、返信案を確認して「メインに送って閉じる」を押します。Claude Code に戻って「終わった」と伝えると、まとめた内容がメインの会話に反映されます。
-
-`skillOverrides` は `user-invocable-only` です。upstream の `SKILL.md` にも `disable-model-invocation: true` があり、Claude のスキル一覧に説明文を載せず、`/understand` で手動起動します。 [understand-mode の使い方](https://github.com/fkubota/understand-mode#使い方)
