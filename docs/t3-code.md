@@ -210,14 +210,8 @@ mise run t3:cli -- work3 connect status
 接続可能になったらスマホの T3 Code アプリで同じ T3 Connect アカウントにログインし、
 環境を開く。バージョン更新だけを理由に sandbox を削除・再作成しない。
 SRV エラーが残る場合はデーモンのバージョンと最新のトンネルログ、
-DNS 解決後に別のエラーへ進んだ場合は TCP 7844 の許可・到達性を確認する。
+DNS 解決後に別のエラーへ進んだ場合は UDP 7844 の許可と `feature.udp-egress` を確認する。
 DNS 修正の収録と、実際のトンネル接続成功は分けて確認する。
-
-cloudflared は通常の SRV 解決が失敗すると、`1.1.1.1:853` への DoT も試す。
-そのため「sandbox 内では SRV 問題を回避する経路が一切ない」とは断定できない。
-ただし実機では、Mac の TCP 接続が成功する一方、sandbox 内の DoT は TLS
-ハンドシェイクでタイムアウトし、透過プロキシに `<dial failed>` が記録されている。
-SNI と接続先 IP の扱いが原因かは未確定。DNS 修正版への更新を先に検証し、
 証明書検証の無効化や全通信許可で代用しない。
 
 ### sbx から接続するためのネットワーク設定
@@ -226,41 +220,35 @@ T3 用の task は `sbx policy allow network --sandbox t3-work3 ...` のよう�
 対象の sandbox に限定して次の許可を設定する。
 setup・サービス起動・CLI の connect 実行時に適用するため、既存 sandbox にも反映される。
 
-| 用途                            | 接続先                                                                                         | 通信               |
-| ------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------ |
-| T3 Connect の認証・登録・リレー | `clerk.t3.codes` / `relay.t3.codes` / `app.t3.codes`                                           | TCP 443            |
-| 暗号化 DNS                      | `cloudflare-dns.com`                                                                           | TCP 853            |
-| Cloudflare Tunnel の接続先 SNI  | `_v2-origintunneld._tcp.argotunnel.com`                                                        | TCP 7844（HTTP/2） |
-| Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` / `cftunnel.com` / `h2.cftunnel.com` | TCP 7844           |
+| 用途                            | 接続先                                                    | 通信          |
+| ------------------------------- | --------------------------------------------------------- | ------------- |
+| T3 Connect の認証・登録・リレー | `clerk.t3.codes` / `relay.t3.codes` / `app.t3.codes`      | TCP 443       |
+| T3 Connect の公開アドレス       | `*.t3coderelay.com`                                       | TCP 443       |
+| Cloudflare Tunnel の接続先 SNI  | `_v2-origintunneld._tcp.argotunnel.com`                   | TCP 7844      |
+| Cloudflare Tunnel               | `region1.v2.argotunnel.com` / `region2.v2.argotunnel.com` | TCP・UDP 7844 |
 
-`cloudflare-dns.com:853` は実機ログで拒否が観測されたため許可している。
-T3 専用ではなく汎用 DNS への経路になるため、sandbox の DNS 名前制限を迂回した
-名前解決や DNS 経由のデータ送信にも利用できる点に注意する。
-この許可が全環境で必要かは未確認。接続先 IP は `1.1.1.1`、TLS の SNI は
-`cloudflare-dns.com` であり、許可ログの名前と実際の接続先を区別する。
+`*.t3coderelay.com` は `connect status` が自分の公開アドレスを確認するために必要で、
+許可が無いと、トンネルが外から 200 で通っていても sbx のプロキシが 403 を返し、
+`NOT reachable`（HTTP 403）と表示される。
 
-T3 の起動時には `TUNNEL_TRANSPORT_PROTOCOL=http2` を設定し、
-トンネルを上記の TCP 7844 で接続する。UDP / QUIC の許可は追加しない。
-その他の sandbox の共通 policy は変更しない。
-
-sandbox の許可に加え、Mac から外部への TCP 443・853・7844 が利用できる必要がある。
-回線・ルーター・VPN・ファイアウォールが遮断している通信は、sbx の許可では解消できない。
-Mac で暗号化 DNS への到達性を確認するには次を実行する。
+T3 の起動時には `TUNNEL_TRANSPORT_PROTOCOL=quic` を設定し、UDP 7844 で接続する。
+UDP は sbx の実験機能で、既定では無効のため、ホストで一度だけ有効にする。
+これは sbx 全体の設定で、sandbox 単位ではない。
 
 ```sh
-nc -vz -G 5 1.1.1.1 853
+sbx settings set feature.udp-egress true
 ```
 
-`cloudflare-dns.com` の Web 用 IP に対する TCP 853 の確認では代用できない。
-以前案内したホスト名でのタイムアウトだけでは、回線の TCP 853 遮断は判断できない。
-上記の `1.1.1.1` で `Operation timed out` になる場合は、別の回線（スマホのテザリングなど）でも比較し、
-利用中のネットワークの制限を確認する。
+その他の sandbox の共通 policy は変更しない。
+
+sandbox の許可に加え、Mac から外部への TCP 443・UDP 7844 が利用できる必要がある。
+回線・ルーター・VPN・ファイアウォールが遮断している通信は、sbx の許可では解消できない。
 `sbx policy log t3-work3` の `BLOCKED REQUESTS` は sandbox の拒否、
 `ALLOWED REQUESTS` の `<dial failed>` は許可後の接続失敗を示す。
 過去の拒否行は残るため、`LAST SEEN` も確認する。
 SNI の許可は DNS 問い合わせの許可とは異なり、SRV 応答の問題を修復するものではない。
 
-#### 既知の制約: sbx 内の cloudflared は edge に接続できない
+#### 経緯: HTTP/2 では接続できず、QUIC を使う理由
 
 実機（sbx v0.53.0）で、sandbox の DNS プロキシが SRV / TXT 問い合わせに NOTIMP（rcode 4）を返し、
 A レコードのみ解決することを確認した。cloudflared は edge の検出に
@@ -274,23 +262,22 @@ cloudflared は失敗後に `1.1.1.1:853`（SNI は `cloudflare-dns.com`）へ�
 そのため、透過プロキシがホスト名で接続し直している可能性が高い（接続先の再解決自体は未確認）。
 `1.1.1.1:853` を sandbox 限定で許可しても、ハンドシェイクは成功しなかった。
 
-この制約は sbx 側の DNS・透過プロキシの挙動によるもので、dotfiles の network allow では解消できない。
-
 SRV/TXT の修正と固定バージョンは「T3 Connect を sbx 内で使うためのバージョン」に記載している。
-v0.55.0-rc4 を `t3-work3` で実機確認したところ、SRV / TXT は応答するようになり、
-cloudflared は edge IP（`198.41.192.x`）を取得できた。ただし T3 Connect はまだ接続できない:
+v0.55.0-rc4 では SRV / TXT は応答するようになり、cloudflared は edge IP（`198.41.192.x`）を取得できた。
+ただし HTTP/2（TCP 7844）では、TLS ハンドシェイクが `EOF` で失敗する。
 
-- 7844 番への TLS ハンドシェイクが `EOF` で失敗する。
-- ポリシーログでは `h2.cftunnel.com:7844` と `probe.cftunnel.com:7844` が、
-  許可済みでも透過プロキシで `<dial failed>` になる。
-- この 2 つは cloudflared が SNI にだけ使う名前で、DNS には存在しない（`dig` が空）。
-  一方、ホストからは edge IP の TCP 7844 に接続できる。
-- DoT の `cloudflare-dns.com:853` と同じ挙動で、透過プロキシが SNI の名前を宛先として
-  解決し直している可能性が高い（未確認）。`1.1.1.1:853` や `probe.cftunnel.com:7844` の許可を足しても変わらない。
+- 同じ edge IP に対し、sandbox 内から SNI だけを変えて比べると、
+  `region1.v2.argotunnel.com` は成功し、`h2.cftunnel.com` / `cftunnel.com` は即 EOF になった。
+  ホストからは `h2.cftunnel.com` でも成功する。
+- ポリシーログでは、許可済みの `h2.cftunnel.com:7844` / `probe.cftunnel.com:7844` が
+  透過プロキシで `<dial failed>` になる。この 2 つは名前自体は存在する（`dig` は NOERROR）が A レコードが無い。
+- 透過プロキシが宛先 IP ではなく SNI のホスト名で接続し直すため、A レコードの無い名前は接続できない。
+  `1.1.1.1:853` や `probe.cftunnel.com:7844` の許可を足しても変わらない。
 
-そのため、v0.55.0-rc4 でも T3 Connect は使えない。スマホ接続は下記の Tailscale を使う。
-sbx のリリース後に、`dig` で SRV が引けることと、`connect status` の
-`reachable` を再確認する。
+QUIC は SNI に `cftunnel.com` 系を使わないため、この問題を避けられる。
+`feature.udp-egress` を有効にし、UDP 7844 を許可した `t3-work3` で、
+4 本のトンネル接続が QUIC で登録され、`connect status` が接続済みになることを確認した
+（スマホの実機での確認は別）。
 
 タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
 この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。
@@ -320,8 +307,8 @@ PC・sandbox・T3 サーバーは起動した状態を維持する。
 
 ### Tailscale で接続する場合
 
-sbx 内の cloudflared が動かない（前節の既知の制約）ため、スマホはホスト側の Tailscale で接続する。
-T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
+T3 Connect が使えない場合（sbx が rc4 未満、`feature.udp-egress` が無効など）の代替として、
+スマホはホスト側の Tailscale で接続する。T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
 
 前提（初回のみ）:
 

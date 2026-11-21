@@ -16,10 +16,9 @@ ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774
 TAILSCALE_HTTPS_PORTS = {"account1": 443, "account2": 10000, "work3": 8443}
 T3_CONNECT_NETWORK =",".join((
     "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
-    "cloudflare-dns.com:853",
+    "*.t3coderelay.com:443",
     "_v2-origintunneld._tcp.argotunnel.com:7844",
     "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
-    "cftunnel.com:7844", "h2.cftunnel.com:7844", "probe.cftunnel.com:7844",
 ))
 
 
@@ -129,8 +128,11 @@ def choose_cli_command():
 
 
 def allow_t3_connect_network(profile):
-    # Scope T3 authentication and Cloudflare's TCP/HTTP2 edges to this sandbox.
+    # HTTP2 is unusable here: the transparent proxy dials the SNI name (h2.cftunnel.com),
+    # which has no A record. QUIC needs UDP egress (sbx settings feature.udp-egress).
     run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], T3_CONNECT_NETWORK])
+    run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], "--protocol", "udp",
+         "region1.v2.argotunnel.com:7844,region2.v2.argotunnel.com:7844"])
 
 
 def prepare(profile):
@@ -160,7 +162,7 @@ def t3_command(profile, arguments, interactive=False):
     return ["sbx", "exec", *terminal, "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
             '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
             'cd "$1" || exit 1; export T3CODE_HOME="$2" MISE_PREFER_OFFLINE=false MISE_OFFLINE=false; '
-            'export TUNNEL_TRANSPORT_PROTOCOL=http2; '
+            'export TUNNEL_TRANSPORT_PROTOCOL=quic;'
             'if ! compgen -G "${MISE_CACHE_DIR:-/mise/cache}/aqua-registry/sources/*.yaml" >/dev/null; then '
             'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
             'mise --cd /mise cache clear aqua:cli/cli && '
