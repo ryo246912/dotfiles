@@ -59,7 +59,7 @@ dependencies:
     # grill-me が呼び出す interview loop。本体と同じ tag に pin する（Renovate で同一PRにまとめる）。
     - mattpocock/skills/skills/productivity/grilling#v1.2.3
     - cathrynlavery/diagram-design/skills/diagram-design
-    - vercel-labs/skills/skills/find-skills#v1.8.1
+    - vercel-labs/skills/skills/find-skills#v1.9.0
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
     # Ponytail は skill ディレクトリ単位で配布する。
