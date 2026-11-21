@@ -32,7 +32,7 @@
     "name": "today",
     "data": { "text": "{date format=\"yyyy/MM/dd\"}" },
     "createdAt": 1789450052,
-    "expansion": { "keyword": ",d", "apps": [], "word": false }
+    "expansion": { "keyword": ",dt", "apps": [], "word": false }
   },
   {
     "id": "snp-4f61b9106d0f",
