@@ -166,7 +166,7 @@ def prepare(profile):
         raise ValueError(f"{profile['name']} の T3 ポートが profile と一致しません。sbx ports で確認してください")
 
 
-def t3_command(profile, arguments, interactive=False):
+def sandbox_command(profile, arguments, interactive=False, tool="t3"):
     # Avoid login-shell mise activation before the missing registry can be fetched.
     # Keep sbx credentials/configuration without sourcing the user's shell startup.
     terminal = ["-i"] if interactive else []
@@ -180,13 +180,13 @@ def t3_command(profile, arguments, interactive=False):
             'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
             'mise --cd /mise cache clear aqua:cli/cli && '
             'mise --cd /mise ls-remote --no-versions-host aqua:cli/cli >/dev/null || exit 1; fi; '
-            'shift 2; exec mise exec -- t3 "$@"',
-            "bash", profile["workspace"], str(Path(profile["storage"]) / "t3"), *arguments]
+            'shift 2; exec mise exec -- "$@"',
+            "bash", profile["workspace"], str(Path(profile["storage"]) / "t3"), tool, *arguments]
 
 
 def pair(profile, arguments):
     print("ペアリング情報を発行しています（初回は T3 本体・レジストリの取得に時間がかかります）", flush=True)
-    result = subprocess.run(t3_command(profile, arguments), stdout=subprocess.PIPE, text=True)
+    result = subprocess.run(sandbox_command(profile, arguments), stdout=subprocess.PIPE, text=True)
     if result.returncode:
         if result.stdout:
             print(result.stdout, end="")
@@ -229,7 +229,7 @@ def tailscale_pair(profile):
     https_port = TAILSCALE_HTTPS_PORTS[profile["account"]]
     run([cli, "serve", "--bg", f"--https={https_port}", f"http://127.0.0.1:{profile['port']}"])
     base_url = f"https://{host}:{https_port}"
-    result = subprocess.run(t3_command(profile, [
+    result = subprocess.run(sandbox_command(profile, [
         "auth", "pairing", "create", "--ttl", "10m", "--label", "phone", "--base-url", base_url]),
         stdout=subprocess.PIPE, text=True)
     if result.returncode:
@@ -433,7 +433,7 @@ def main():
     if args.action == "run":
         prepare(profile)
         # Headless service entry point; avoid the interactive launcher's PID-only preflight.
-        command = t3_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
+        command = sandbox_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
     elif args.action == "cli":
         arguments = args.arguments or choose_cli_command(account)
         print(f"Account: {account} / Command: {' '.join(arguments)}", flush=True)
@@ -445,8 +445,7 @@ def main():
         elif arguments == ["codex-login"]:
             require("sbx")
             run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], CODEX_NETWORK])
-            command = ["sbx", "exec", "-i", "-u", "agent", profile["name"],
-                       "mise", "--cd", "/mise", "exec", "--", "codex", "login", "--device-auth"]
+            command = sandbox_command(profile, ["login", "--device-auth"], interactive=True, tool="codex")
         elif arguments == ["ports"]:
             require("sbx")
             command = ["sbx", "ports", profile["name"]]
@@ -466,7 +465,7 @@ def main():
             if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
                 pair(profile, arguments)
                 return
-            command = t3_command(profile, arguments, interactive=True)
+            command = sandbox_command(profile, arguments, interactive=True)
     os.execvp(command[0], command)
 
 
