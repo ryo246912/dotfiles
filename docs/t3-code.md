@@ -6,7 +6,7 @@
 - **アカウントごとに常駐 sbx を一つ**用意し、その中で T3 サーバーとエージェントを動かす。
 - **worktree はセッションごと**に T3 が作成する。同じアカウントのセッションは sbx を共有する。
 - デスクトップもスマホも同じサーバーに接続するので、同じセッションと履歴を見られる。
-- 日常の操作で `mise run t3:run` やターミナルの常駐は必要ない。
+- 日常の操作でターミナルの常駐は必要ない。
 
 ## 初回導入
 
@@ -268,7 +268,7 @@ Linux でログアウト後も維持する場合は、管理者の方針に従�
 診断・保守時だけターミナルを使う:
 
 ```bash
-mise run t3:ports -- account2
+mise run t3:cli -- account2 ports
 # macOS
 launchctl print gui/$(id -u)/local.t3-sandbox.account2
 # Linux
@@ -276,8 +276,7 @@ systemctl --user status local.t3-sandbox.account2.service
 journalctl --user -u local.t3-sandbox.account2.service
 ```
 
-検証用の `mise run t3:setup -- --no-autostart` と `mise run t3:run -- account2` もあるが普段の運用経路ではない。
-サービスと手動 run は同時に起動しない。サービスを止める際は実行中の作業を確認する。
+サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
 sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
 `mise run t3:setup -- --account work3 --workspace /path/to/project` を実行し、
@@ -285,8 +284,15 @@ sandbox を削除した場合はサービス経由ではなく、対象アカウ
 
 ## 検証と実機確認
 
-起動・初期設定・CLI 操作・ポート確認は `config/mise/tasks/t3.toml` にまとめている。
-自動起動サービスも同じ `mise run t3:run` を呼び出す。
+mise タスクは初回設定の `t3:setup` と、接続・診断用の `t3:cli` の二つだけ。
+ポート確認・サービス状態・再起動も `t3:cli` のメニューから実行できる。
+処理本体は `local/bin/t3-sandbox` の Python スクリプトに置き、
+自動起動サービスは mise でツール環境を読み込んでから、このスクリプトを直接呼び出す。
+
+以前のタスク定義から更新する場合は、`mise bootstrap dotfiles apply` で
+スクリプトとタスク定義を配置し、設定済みの各アカウントについて
+`mise run t3:cli -- work3 restart-server` を一度実行する。
+これで既存サービスの呼び出し先も更新される。実行中の作業は先に終了する。
 この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
 実際の Claude 認証とスマホ接続は未確認**。
 実機ではアプリで作った複数スレッドが別 worktree・同一アカウントの sbx を使うこと、
