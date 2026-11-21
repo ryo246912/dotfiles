@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-14T01:25:28.923283+00:00'
+generated_at: '2026-11-21T04:39:33.002420+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1288,6 +1288,58 @@ dependencies:
     .claude/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
     .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
   content_hash: sha256:3133b97b1d13e831e316574c3dc9634c219ee209b075874813dc2d25492130fb
+- repo_url: fkubota/understand-mode
+  name: understand
+  host: github.com
+  resolved_commit: 89ebc91d3826676b6523d31092d90b9018907b69
+  version: unknown
+  virtual_path: skill/understand
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .claude/skills/understand
+  - .claude/skills/understand/SKILL.md
+  - .claude/skills/understand/app/public/app.js
+  - .claude/skills/understand/app/public/favicon.svg
+  - .claude/skills/understand/app/public/index.html
+  - .claude/skills/understand/app/public/style.css
+  - .claude/skills/understand/app/public/vendor/LICENSE-dompurify
+  - .claude/skills/understand/app/public/vendor/LICENSE-marked
+  - .claude/skills/understand/app/public/vendor/LICENSE-mermaid
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega-embed
+  - .claude/skills/understand/app/public/vendor/LICENSE-vega-lite
+  - .claude/skills/understand/app/public/vendor/marked.min.js
+  - .claude/skills/understand/app/public/vendor/mermaid.min.js
+  - .claude/skills/understand/app/public/vendor/purify.min.js
+  - .claude/skills/understand/app/public/vendor/vega-embed.min.js
+  - .claude/skills/understand/app/public/vendor/vega-lite.min.js
+  - .claude/skills/understand/app/public/vendor/vega.min.js
+  - .claude/skills/understand/app/server.js
+  - .claude/skills/understand/pr-guide.md
+  deployed_file_hashes:
+    .claude/skills/understand/SKILL.md: sha256:b496f0dc1708dd4fb81b5c296ac5734b4804426967c4f931ce336c55154ed62f
+    .claude/skills/understand/app/public/app.js: sha256:62d1d87436376a3e12d324fb5efb1566f7ee7e3471323b9e6988f24470bb6358
+    .claude/skills/understand/app/public/favicon.svg: sha256:6b7e69155901fc286e8830bfde9c518fe4c7d9f4885cfe3ea77f26249a462b9e
+    .claude/skills/understand/app/public/index.html: sha256:00388f2e3b78a36ece2b8357d1673a5ed702e631f96b8861d6d4a02228ad92a1
+    .claude/skills/understand/app/public/style.css: sha256:8d308bb4c1db1a79a99f7a2b8493743dbad4d9f5ae4c43be2cf430da2c77cab4
+    .claude/skills/understand/app/public/vendor/LICENSE-dompurify: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+    .claude/skills/understand/app/public/vendor/LICENSE-marked: sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
+    .claude/skills/understand/app/public/vendor/LICENSE-mermaid: sha256:ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80
+    .claude/skills/understand/app/public/vendor/LICENSE-vega: sha256:63727832aaf62004a2b249c933e327f3c90caf49e41a72f4bf436edf632cbda8
+    .claude/skills/understand/app/public/vendor/LICENSE-vega-embed: sha256:32df67148f0fc3db0eb9e263a7b75d07f1eb14c61955005a4a39c6918d10d137
+    .claude/skills/understand/app/public/vendor/LICENSE-vega-lite: sha256:f618900fd0d64046963b29f40590cdd1e341a2f41449f99110d82fd81fea808c
+    .claude/skills/understand/app/public/vendor/marked.min.js: sha256:15fabce5b65898b32b03f5ed25e9f891a729ad4c0d6d877110a7744aa847a894
+    .claude/skills/understand/app/public/vendor/mermaid.min.js: sha256:336df803d87a38b70a01e736e666c8f7601d2ce42f5e47c8fafe5d721074b9a3
+    .claude/skills/understand/app/public/vendor/purify.min.js: sha256:cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31
+    .claude/skills/understand/app/public/vendor/vega-embed.min.js: sha256:b1455caba2fb1a72fb46025ba0ba1316e2dbc7f0dd40a3f6040172bf9c08ba91
+    .claude/skills/understand/app/public/vendor/vega-lite.min.js: sha256:83e215e84e308ee8688fa6503ba0f1cf8a3c05c0d61df2841a0b92bf86809e00
+    .claude/skills/understand/app/public/vendor/vega.min.js: sha256:8f6a3587cf8d4f42c7e08120e3eb05d067e746d554e39d2dcf52acc0bd5ba28f
+    .claude/skills/understand/app/server.js: sha256:b45afac0f9202a07a543d4b4ae67980e8aa581539f2390e1fabf247668d8f2c7
+    .claude/skills/understand/pr-guide.md: sha256:ef958af2a9b801cc5286f429dcf2a1a5dd3ec7126468dad23f11e14a4c72feba
+  content_hash: sha256:1be34e8c9e542f8235c819b5f39546d3f7436e77d19bd6b787d81fcd20d7d602
+  target_subset:
+  - claude
 - repo_url: mattpocock/skills
   name: grill-me
   host: github.com
@@ -5028,6 +5080,186 @@ deployments:
   - zenbu-labs/terminal-browser/skill
   active_owner: zenbu-labs/terminal-browser/skill
   content_hash: sha256:1ba1350404b762fe869cdcdf8658b0f0d1dd29d1a90a53d734b6bce77c2e1f47
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b496f0dc1708dd4fb81b5c296ac5734b4804426967c4f931ce336c55154ed62f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/app.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:62d1d87436376a3e12d324fb5efb1566f7ee7e3471323b9e6988f24470bb6358
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/favicon.svg
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:6b7e69155901fc286e8830bfde9c518fe4c7d9f4885cfe3ea77f26249a462b9e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/index.html
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:00388f2e3b78a36ece2b8357d1673a5ed702e631f96b8861d6d4a02228ad92a1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/style.css
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8d308bb4c1db1a79a99f7a2b8493743dbad4d9f5ae4c43be2cf430da2c77cab4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-dompurify
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-marked
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-mermaid
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:63727832aaf62004a2b249c933e327f3c90caf49e41a72f4bf436edf632cbda8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega-embed
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:32df67148f0fc3db0eb9e263a7b75d07f1eb14c61955005a4a39c6918d10d137
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/LICENSE-vega-lite
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:f618900fd0d64046963b29f40590cdd1e341a2f41449f99110d82fd81fea808c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/marked.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:15fabce5b65898b32b03f5ed25e9f891a729ad4c0d6d877110a7744aa847a894
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/mermaid.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:336df803d87a38b70a01e736e666c8f7601d2ce42f5e47c8fafe5d721074b9a3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/purify.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega-embed.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b1455caba2fb1a72fb46025ba0ba1316e2dbc7f0dd40a3f6040172bf9c08ba91
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega-lite.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:83e215e84e308ee8688fa6503ba0f1cf8a3c05c0d61df2841a0b92bf86809e00
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/public/vendor/vega.min.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:8f6a3587cf8d4f42c7e08120e3eb05d067e746d554e39d2dcf52acc0bd5ba28f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/app/server.js
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:b45afac0f9202a07a543d4b4ae67980e8aa581539f2390e1fabf247668d8f2c7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/understand/pr-guide.md
+  runtime: null
+  scope: project
+  owners:
+  - fkubota/understand-mode/skill/understand
+  active_owner: fkubota/understand-mode/skill/understand
+  content_hash: sha256:ef958af2a9b801cc5286f429dcf2a1a5dd3ec7126468dad23f11e14a4c72feba
 - kind: project-relative
   target: codex
   value: .agents/skills/crit
