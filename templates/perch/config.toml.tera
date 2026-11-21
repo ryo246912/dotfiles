@@ -1,0 +1,3 @@
+[[repo]]
+github = "ryo246912/dotfiles"
+root   = {{ get_env(name="PERCH_DOTFILES_ROOT", default="~/dotfiles") | json_encode() }}
