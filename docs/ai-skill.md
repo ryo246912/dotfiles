@@ -77,19 +77,6 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 > 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
 > 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
 
-### 既定の設定（`claude/settings.json`）
-
-- 複数の skill をまとめて配る package（crit・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
-  `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
-  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
-  使えなくなります（呼ばれる側は `name-only` 以上にする）。
-- `ponytail`、`ponytail-review` と、作者向けレビューで呼ぶ `ai-qa-review`、`silent-failure-hunter`、
-  `supabase-postgres-best-practices`、`web-design-guidelines`、`vercel-react-best-practices` は `name-only` にしています。
-  Claude Code は React のスキルを、配置ディレクトリ `react-best-practices` 内の `SKILL.md` の `name: vercel-react-best-practices`
-  で表示するので、`skillOverrides` にはこの名前を使います。
-- `ponytail-audit`、`ponytail-debt`、`ponytail-gain`、`ponytail-help` は `user-invocable-only` にし、Claude Code でユーザーが直接呼び出します。
-- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、`claude/settings.json` の `skillOverrides` にも追加します。
-
 ### plugin の管理
 
 Claude Code の plugin は、skill とは別に `enabledPlugins` で管理します。
