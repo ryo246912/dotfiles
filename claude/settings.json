@@ -79,6 +79,7 @@
     "android-debug": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
     "find-skills": "user-invocable-only",
+    "modern-web-guidance": "name-only",
     "prompt-master": "user-invocable-only",
     "dev-context": "user-invocable-only",
     "dev-debug": "name-only",

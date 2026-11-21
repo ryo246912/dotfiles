@@ -116,6 +116,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `modern-web-guidance`
 - `prompt-master`
 - `desloppify`
 
@@ -691,6 +692,22 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## `modern-web-guidance`
+
+Modern Web Guidance は、Web UI を実装するときに、ブラウザ標準の API や CSS の実装パターンを調べるスキルです。
+APM で配置した後、新しいセッションで Claude Code なら `/modern-web-guidance`、Codex なら `$modern-web-guidance` で呼び出せます。
+Claude Code では既定で `name-only` にしており、スキル一覧に名前だけを表示します。
+たとえば「`$modern-web-guidance` を使って、ダイアログの開閉と背景のアニメーションを実装して」と入力します。
+
+ターミナルから直接調べる場合は Node.js 22 以上が必要です。`search` で候補の ID を探し、`retrieve` にその ID を渡します。
+
+```bash
+npx -y modern-web-guidance@latest search "animate a dialog modal backdrop"
+npx -y modern-web-guidance@latest retrieve "animate-to-from-top-layer"
+```
+
+[Modern Web Guidance の公式ドキュメント](https://developer.chrome.com/docs/modern-web-guidance)
 
 ## desloppify（コードベースの品質改善ループ）
 

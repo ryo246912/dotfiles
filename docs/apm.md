@@ -133,6 +133,10 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 
 ## 使い方
 
+### Modern Web Guidance を使う
+
+[スキルの呼び出し方と CLI の使用例](ai-skill.md#modern-web-guidance)を参照してください。
+
 ### 外部スキルを追加・更新する（依存として取り込む）
 
 `apm/apm.yml` の `dependencies.apm` を編集し（tag pin、tag が無ければ ref なし）、`mise bootstrap dotfiles apply` → `mise --cd "$HOME" run apm:install`
