@@ -34,7 +34,8 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
    位置を指定しないと外部ディスプレイ側に出て見つからないことがある。osascript でウィンドウを動かすには補助アクセスの権限が要るため、位置は起動オプションで決める。
 
 5. URL のポートと引数のポートをそれぞれ `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
-   始める前の `adb reverse --list` に既にあるポートは転送し直さず、後片付けでも外さない。
+   始める前の `adb reverse --list` に同じ `tcp:<port> tcp:<port>` があれば転送し直さず、後片付けでも外さない。
+   同じ端末側ポートが別のポートへ転送されていたら、上書きせずユーザーに伝えて止まる。
    引数のポートは `lsof -nP -iTCP:<port> -sTCP:LISTEN` で Mac 側の待ち受けを確かめ、待ち受けていなければユーザーに伝える。
 6. URL を開き、3 秒待ってスクリーンショットを撮って Read tool で見る。端末の既定ブラウザが Chrome でなければ `com.android.chrome` を外す。
 
@@ -91,7 +92,7 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
 端末が複数あるときは、DevTools の手順や後片付けを含むすべての `adb` に `-s <serial>` を付ける。
 
 ```bash
-kill "$(cat <scratchpad>/scrcpy.pid)" "$(cat <scratchpad>/cdp-watch.pid)"
+for f in <scratchpad>/scrcpy.pid <scratchpad>/cdp-watch.pid; do [ -f "$f" ] && { kill "$(cat "$f")" 2>/dev/null; rm -f "$f"; }; done
 adb forward --remove tcp:<devtools-port>
 adb reverse --remove tcp:<追加したポート>  # ポートごとに繰り返す
 ```
