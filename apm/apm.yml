@@ -68,7 +68,7 @@ dependencies:
     - DietrichGebert/ponytail/skills/ponytail-debt#v5.1.0
     - DietrichGebert/ponytail/skills/ponytail-gain#v5.1.0
     - DietrichGebert/ponytail/skills/ponytail-help#v5.1.0
-    - DietrichGebert/ponytail/skills/ponytail-review#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-review#v5.3.3
     # desloppify は CLI（mise の pipx:desloppify）に同梱された SKILL.md を配布する。skill は CLI と
     # 対で更新される（古いと CLI が警告する）ため、ref は mise の version と揃える。
     # path 末尾が `global` で配置名が skill 名にならないため、object 形式 + alias で書く。
