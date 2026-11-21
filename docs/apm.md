@@ -133,6 +133,21 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 
 ## 使い方
 
+### Modern Web Guidance を使う
+
+Modern Web Guidance は、Web UI を実装するときに、ブラウザ標準の API や CSS の実装パターンを調べるスキルです。
+APM で配置した後、新しい Codex セッションで `$modern-web-guidance` を指定して依頼できます。
+たとえば「`$modern-web-guidance` を使って、ダイアログの開閉と背景のアニメーションを実装して」と入力します。
+
+ターミナルから直接調べる場合は Node.js 22 以上が必要です。`search` で候補の ID を探し、`retrieve` にその ID を渡します。
+
+```bash
+npx -y modern-web-guidance@latest search "animate a dialog modal backdrop"
+npx -y modern-web-guidance@latest retrieve "animate-to-from-top-layer"
+```
+
+[Modern Web Guidance の公式ドキュメント](https://developer.chrome.com/docs/modern-web-guidance)
+
 ### 外部スキルを追加・更新する（依存として取り込む）
 
 `apm/apm.yml` の `dependencies.apm` を編集し（tag pin、tag が無ければ ref なし）、`mise bootstrap dotfiles apply` → `mise --cd "$HOME" run apm:install`
