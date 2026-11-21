@@ -1,13 +1,13 @@
 # T3 Code: initial setup and occasional CLI operations.
 ["t3:setup"]
-description = "Select accounts and configure shared T3 sandboxes and auto-start"
+description = "Select and configure shared T3 sandboxes and auto-start"
 # Preserve the caller's repository when invoked as a global task.
 dir = "{{cwd}}"
 raw = true
 run = 'exec "$HOME/.local/bin/t3-sandbox" setup'
 
 ["t3:cli"]
-description = "Select an account and command with fzf, or run T3 CLI arguments directly"
+description = "Select a T3 operation, provider, and sandbox with fzf"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" cli'

@@ -62,27 +62,27 @@ def load_profile(account):
     return profile
 
 
-def choose_accounts(multiple=True, configured_only=False):
+def choose_accounts(multiple=True, configured_only=False, allowed=ACCOUNTS):
     if not sys.stdin.isatty():
-        raise ValueError("初回は対話ターミナルで実行するか --account を指定してください")
+        raise ValueError("対話ターミナルで実行するか --sbx を指定してください")
     require("fzf")
     rows = []
     account_width = max(map(len, ACCOUNTS))
     directory_width = max(len(f"~/{directory}") for directory, _ in ACCOUNTS.values() if directory)
     for account, (directory, port) in ACCOUNTS.items():
-        if configured_only and not profile_path(account).exists():
+        if account not in allowed or (configured_only and not profile_path(account).exists()):
             continue
         configured = "設定済み" if profile_path(account).exists() else "未設定"
         location = f"~/{directory}" if directory else "sbx OAuth"
         rows.append(f"{account:<{account_width}}  {location:<{directory_width}}  {f'port {port}':<9}  {configured}")
     if not rows:
         raise ValueError("設定済みのアカウントがありません。先に mise run t3:setup を実行してください")
-    options = ["fzf", "--multi" if multiple else "--no-multi", "--layout=reverse", "--prompt=account> "]
+    options = ["fzf", "--multi" if multiple else "--no-multi", "--layout=reverse", "--prompt=sbx> "]
     if multiple:
         options += ["--header=Tab: 複数選択 / Ctrl-A: 全選択 / Enter: 確定 / Esc: 中止",
                     "--bind=ctrl-a:select-all,ctrl-d:deselect-all"]
     else:
-        options += ["--header=操作するアカウントを選択 / Enter: 確定 / Esc: 中止"]
+        options += ["--header=操作する sandbox を選択 / Enter: 確定 / Esc: 中止"]
     selection = subprocess.run(
         options,
         input="\n".join(rows) + "\n", text=True, stdout=subprocess.PIPE,
@@ -93,17 +93,38 @@ def choose_accounts(multiple=True, configured_only=False):
     selected = list(dict.fromkeys(line.split(maxsplit=1)[0] for line in selection.stdout.splitlines() if line.strip()))
     if not selected:
         raise KeyboardInterrupt
-    if any(account not in ACCOUNTS for account in selected):
+    if any(account not in allowed or (configured_only and not profile_path(account).exists())
+           for account in selected):
         raise ValueError("選択結果のアカウントが不正です。設定は変更していません")
     return selected
 
 
-def choose_cli_command(account):
+def choose_cli_item(items, prompt):
     if not sys.stdin.isatty():
-        raise ValueError("対話ターミナルで実行するか、work3 pair のように引数を指定してください")
+        raise ValueError("対話ターミナルで実行するか、--sbx work3 pair のように指定してください")
     require("fzf")
+    width = max(map(len, items))
+    selection = subprocess.run(
+        ["fzf", "--no-multi", "--layout=reverse", f"--prompt={prompt}> ",
+         "--header=Enter: 確定 / Esc: 中止"],
+        input="".join(f"{key:<{width}}  {description}\n" for key, (_, description) in items.items()),
+        text=True, stdout=subprocess.PIPE,
+    )
+    if selection.returncode in (1, 130):
+        raise KeyboardInterrupt
+    selection.check_returncode()
+    if not selection.stdout.strip():
+        raise KeyboardInterrupt
+    key = selection.stdout.split(maxsplit=1)[0]
+    if key not in items:
+        raise ValueError("選択結果が不正です")
+    return items[key][0]
+
+
+def choose_cli_command(account):
     commands = {
         "pair": (["pair"], "PC のアプリ接続用 URL / Token を発行"),
+        "login": (["login"], "Claude / Codex のログイン先を選ぶ"),
         "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証"),
         "tailscale": (["tailscale"], "Tailscale 経由でスマホ接続用の Address / Token を発行"),
         "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
@@ -113,23 +134,33 @@ def choose_cli_command(account):
         "version": (["--version"], "T3 のバージョンを表示"),
         "help": (["--help"], "T3 コマンドのヘルプ"),
     }
-    commands["codex-login"] = (["codex-login"], "この sandbox 内で Codex にログイン")
-    if account == "oauth":
-        commands["claude-login"] = (["claude-login"], "Claude を開いて /login から OAuth 認証")
+    if account == "oauth" or (account is None and not any(
+        profile_path(name).exists() for name in TAILSCALE_HTTPS_PORTS
+    )):
         del commands["tailscale"]
-    command_width = max(map(len, commands))
-    selection = subprocess.run(
-        ["fzf", "--no-multi", "--layout=reverse", "--prompt=command> ", "--header=Enter: 実行 / Esc: 中止"],
-        input="".join(f"{key:<{command_width}}  {description}\n" for key, (_, description) in commands.items()),
-        text=True, stdout=subprocess.PIPE,
-    )
-    if selection.returncode in (1, 130) or not selection.stdout.strip():
-        raise KeyboardInterrupt
-    selection.check_returncode()
-    key = selection.stdout.split(maxsplit=1)[0]
-    if key not in commands:
-        raise ValueError("選択結果のコマンドが不正です")
-    return commands[key][0]
+    return choose_cli_item(commands, "command")
+
+
+def choose_cli_target(account, arguments):
+    arguments = arguments or choose_cli_command(account)
+    if arguments == ["login"]:
+        providers = {"Codex": (["codex-login"], "デバイスコードで認証")}
+        if account == "oauth" or (account is None and profile_path("oauth").exists()):
+            providers["Claude"] = (["claude-login"], "Claude を開いて /login から OAuth 認証")
+        arguments = choose_cli_item(providers, "provider")
+    if arguments == ["claude-login"]:
+        allowed = ("oauth",)
+        if account and account not in allowed:
+            raise ValueError("Claude OAuth ログインには --sbx oauth を指定してください")
+    elif arguments == ["tailscale"]:
+        allowed = TAILSCALE_HTTPS_PORTS
+        if account and account not in allowed:
+            raise ValueError("oauth 用の Tailscale ポートは未設定です。ローカル接続には pair を使ってください")
+    else:
+        allowed = ACCOUNTS
+    if account is None:
+        account = choose_accounts(multiple=False, configured_only=True, allowed=allowed)[0]
+    return account, arguments
 
 
 def allow_t3_connect_network(profile):
@@ -214,8 +245,6 @@ def pair(profile, arguments):
 
 
 def tailscale_pair(profile):
-    if profile["account"] not in TAILSCALE_HTTPS_PORTS:
-        raise ValueError("oauth 用の Tailscale ポートは未設定です。ローカル接続には pair を使ってください")
     # T3 Connect needs SRV/TXT lookups, which the sbx DNS proxy rejects (NOTIMP);
     # publish the forwarded host port from the Mac instead.
     cli = shutil.which("tailscale") or "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
@@ -411,35 +440,42 @@ def main():
     parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
     initial = sub.add_parser("setup", help="初回のみ: アカウントを選び、共有 sbx と自動起動を設定")
-    initial.add_argument("--account", choices=ACCOUNTS, nargs="+", action="extend", help="複数指定可。例: --account account1 work3")
+    initial.add_argument("--sbx", "--account", dest="account", choices=ACCOUNTS, nargs="+", action="extend",
+                         help="複数指定可。例: --sbx account1 work3")
     initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
     initial.add_argument("--port", type=int)
     initial.add_argument("--mcp", action="append", default=[], metavar="NAME",
                          help="oauth に追加する登録済みの sbx MCP（繰り返し指定可）")
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
-    for action in ("run", "cli"):
-        command = sub.add_parser(action)
-        command.add_argument("account", choices=ACCOUNTS, nargs="?" if action == "cli" else None)
-        if action == "cli":
-            command.add_argument("arguments", nargs=argparse.REMAINDER)
-    args = parser.parse_args()
+    service = sub.add_parser("run")
+    service.add_argument("account", choices=ACCOUNTS)
+    cli = sub.add_parser("cli", allow_abbrev=False)
+    cli.add_argument("--sbx", choices=ACCOUNTS, help="対象 sandbox。省略時は fzf で選択")
+    cli.add_argument("arguments", nargs=argparse.REMAINDER, help="操作または T3 CLI の引数")
+    args, leading = parser.parse_known_args()
+    if leading and args.action != "cli":
+        parser.error("unrecognized arguments: " + " ".join(leading))
     if args.action == "setup":
         if args.port is not None and not 1024 <= args.port <= 65535:
             parser.error("--port は 1024〜65535 で指定してください")
         setup(args)
         return
-    account = args.account or choose_accounts(multiple=False, configured_only=True)[0]
-    profile = load_profile(account)
     if args.action == "run":
+        profile = load_profile(args.account)
         prepare(profile)
         # Headless service entry point; avoid the interactive launcher's PID-only preflight.
         command = sandbox_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
     elif args.action == "cli":
-        arguments = args.arguments or choose_cli_command(account)
-        print(f"Account: {account} / Command: {' '.join(arguments)}", flush=True)
+        arguments = [*leading, *args.arguments]
+        account = args.sbx
+        if account is None and arguments and arguments[0] in ACCOUNTS:
+            account = arguments.pop(0)
+        if arguments[:1] == ["--"]:
+            arguments.pop(0)
+        account, arguments = choose_cli_target(account, arguments)
+        profile = load_profile(account)
+        print(f"Sandbox: {account} / Command: {' '.join(arguments)}", flush=True)
         if arguments == ["claude-login"]:
-            if account != "oauth":
-                raise ValueError("claude-login は oauth 用です")
             require("sbx")
             command = ["sbx", "run", "--name", profile["name"]]
         elif arguments == ["codex-login"]:

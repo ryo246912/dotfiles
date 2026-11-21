@@ -127,9 +127,9 @@ Claude の認証先をその sandbox に固定する。token が未登録の場�
 ```bash
 mise run sandbox:claude-token account2
 # メニューを使わず指定する場合
-mise run t3:setup -- --account account2 --workspace /path/to/project
+mise run t3:setup -- --sbx account2 --workspace /path/to/project
 # 複数アカウントをまとめて準備する場合
-mise run t3:setup -- --account account1 account2 work3 --workspace "$PWD"
+mise run t3:setup -- --sbx account1 account2 work3 --workspace "$PWD"
 ```
 
 `sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
@@ -156,18 +156,20 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 sbx mcp add notion-t3-oauth --url https://mcp.notion.com/mcp
 sbx mcp auth notion-t3-oauth
 cd /path/to/project
-mise run t3:setup -- --account oauth --mcp notion-t3-oauth
-mise run t3:cli -- oauth claude-login
-mise run t3:cli -- oauth pair
+mise run t3:setup -- --sbx oauth --mcp notion-t3-oauth
+mise run t3:cli
 ```
 
-`claude-login` は専用 Sandbox の Claude を開く。必要に応じて `/login` を実行し、`/mcp` でツールを確認する。
+**login → Claude → oauth** を選ぶと専用 Sandbox の Claude が開く。
+必要に応じて `/login` を実行し、`/mcp` でツールを確認する。続いて **pair → oauth** で T3 アプリを接続する。
 Claude OAuth は既存の ccmanager OAuth プリセットと同じ sbx のホスト共通認証を使う。
 MCP 側の OAuth はそれぞれの MCP 登録で管理する。T3 に接続したら、新規スレッドのツール一覧でも確認する。
 
 `--mcp NAME` は繰り返し指定でき、`t3-oauth` のゲートウェイに追加する。
 既に割り当てた MCP を外すには `sbx mcp unload NAME --sandbox t3-oauth` を使う。
 `--mcp` での割り当ては sbx の MCP モードの設定とは独立している。
+`sandbox:mcp-load` で割り当てを選び直すときは引き続き使う MCP も選ぶ。手動で登録した名前が
+`sandbox:mcp-add` で未定義と表示されても、`sbx mcp rm` すると登録と OAuth 認可が消える。
 T3 アプリ内では必要なスレッドだけ入力欄で **新しいワークツリー** を選べる。
 
 ## 同じ Sandbox で Codex も使う
@@ -177,11 +179,10 @@ Claude 用イメージにも mise で Codex CLI が入る。Codex は同じ Sand
 表示された URL をホストのブラウザで開く。ChatGPT 側でデバイスコード認証を許可する必要がある場合は先に有効にする。
 
 ```bash
-mise run t3:cli -- oauth codex-login
-# subscription の Sandbox でも同じ操作ができる
-mise run t3:cli -- work3 codex-login
+mise run t3:cli
 ```
 
+**login → Codex → 対象 Sandbox** を選ぶ。subscription の Sandbox でも同じ操作ができる。
 ログイン後、対象の T3 環境を選び、**Settings → Providers → Codex** で有効化・更新する。
 CLI の場所を指定する場合は `/mise/data/shims/codex` を使う。
 新規スレッドのモデル選択で Claude と Codex を切り替える。
@@ -192,7 +193,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 
 1. ホストの T3 Code アプリを開く。
 2. Settings → Environments で **Local environment をオフ**にし、アプリをリモート操作用にする。
-3. 初回だけ `mise run t3:cli` を実行し、fzf で設定済みアカウント → **pair** を選ぶ。
+3. 初回だけ `mise run t3:cli` を実行し、fzf で **pair** → 設定済みの Sandbox を選ぶ。
 4. 出力の **Address** と **Token** を Add environment に入力するか、**App link** を開く。
    PC から到達できる `http://127.0.0.1:3774` などの URL に変換して表示する。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
@@ -204,13 +205,14 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
 **以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
 
-引数を覚えていなくても `mise run t3:cli` からアカウントと操作を選択できる。
-アカウントだけ指定した `mise run t3:cli -- work3` はコマンドの選択画面を開く。
-直接の `mise run t3:cli -- work3 pair` も引き続き使える。
+`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。
+**login** を選ぶと途中で **Claude / Codex** の選択が入り、その操作に対応した Sandbox が表示される。
+スクリプトなどから直接実行する場合は `mise run t3:cli -- --sbx work3 pair` も使える。
 
 | fzf のコマンド | 操作                                                            |
 | -------------- | --------------------------------------------------------------- |
 | pair           | PC のアプリ接続用 Address / Token / URL を発行                  |
+| login          | Claude / Codex を選んでログイン                                 |
 | connect        | T3 Connect の初回認証（スマホ接続用）                           |
 | tailscale      | Tailscale 経由でスマホ接続用の Address / Token を発行           |
 | sessions       | 接続を許可した端末の一覧                                        |
@@ -250,7 +252,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 
 ### ホストで T3 Connect に登録する
 
-1. `mise run t3:cli` を実行し、公開するアカウント（例: **work3**）→ **connect** を選ぶ。
+1. `mise run t3:cli` を実行し、**connect** → 公開する Sandbox（例: **work3**） を選ぶ。
    その sandbox に必要な通信先を許可してから、sandbox 内で `t3 connect link --headless` が実行される。
 2. relay client の導入確認が出たら **`y` を入力して Enter** を押す。
    Enter だけでは既定の `N` になる。表示バージョンは T3 が指定するものを使う。
@@ -266,7 +268,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
 3. 続いて表示される **認証 URL** をブラウザーで開き、T3 Connect にログインする。
    ターミナルのコードと画面のコードが一致することを確認して承認する。
 4. ターミナルへ戻り、**`✓ Authorized`** と表示されて処理が完了するまで待つ。
-5. 再び `mise run t3:cli` を実行し、同じアカウント → **restart-server** を選ぶ。
+5. 再び `mise run t3:cli` を実行し、**restart-server** → 同じ Sandbox を選ぶ。
    実行中の作業があれば先に終了する。認証を保存した後に T3 サーバーを起動し直すと、
    T3 Connect の接続が有効になる。この構成のサーバー起動はホストの自動起動サービスで管理する。
 
@@ -308,11 +310,11 @@ sbx diagnose
 動いたままの可能性がある。別のインストール先の sbx を使っている場合は
 `command -v sbx` も確認する。
 
-続いて `mise run t3:cli` で設定済みアカウント → **restart-server** を選び、
+続いて `mise run t3:cli` で**restart-server** → 設定済みの Sandbox を選び、
 各アカウントの `connect status` を確認する。work3 の例:
 
 ```sh
-mise run t3:cli -- work3 connect status
+mise run t3:cli -- --sbx work3 connect status
 ```
 
 接続可能になったらスマホの T3 Code アプリで同じ T3 Connect アカウントにログインし、
@@ -387,9 +389,9 @@ QUIC は SNI に `cftunnel.com` 系を使わないため、この問題を避け
 4 本のトンネル接続が QUIC で登録され、`connect status` が接続済みになることを確認した
 （スマホの実機での確認は別）。
 
-タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
+タスク更新後は `mise run t3:cli -- --sbx work3 restart-server` で起動設定を反映する。
 この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。
-続いて `mise run t3:cli -- work3 connect status` で接続状態を確認し、
+続いて `mise run t3:cli -- --sbx work3 connect status` で接続状態を確認し、
 接続できない場合は次のトンネルログを確認する。
 アカウントが異なる場合はコマンドとパスの `work3` を置き換える。
 
@@ -426,7 +428,7 @@ T3 Connect が使えない場合（sbx が rc4 未満、`feature.udp-egress` が
 - Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
 
 ```bash
-mise run t3:cli -- work3 tailscale
+mise run t3:cli -- --sbx work3 tailscale
 ```
 
 `tailscale` はホストの `tailscale serve --bg` で、sandbox の公開ポートを tailnet の HTTPS に出し、
@@ -476,7 +478,7 @@ Linux でログアウト後も維持する場合は、管理者の方針に従�
 診断・保守時だけターミナルを使う:
 
 ```bash
-mise run t3:cli -- account2 ports
+mise run t3:cli -- --sbx account2 ports
 # macOS
 launchctl print gui/$(id -u)/local.t3-sandbox.account2
 # Linux
@@ -487,7 +489,7 @@ journalctl --user -u local.t3-sandbox.account2.service
 サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
 sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
-`mise run t3:setup -- --account work3 --workspace /path/to/project` を実行し、
+`mise run t3:setup -- --sbx work3 --workspace /path/to/project` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
 ## 検証と実機確認
@@ -504,7 +506,7 @@ cd /path/to/dotfiles
 mise bootstrap dotfiles apply
 ```
 
-続いて `mise run t3:cli` で設定済みアカウント → **restart-server** を選ぶ。
+続いて `mise run t3:cli` で**restart-server** → 設定済みの Sandbox を選ぶ。
 設定済みのプロファイルごとに一度実行する。
 これで既存サービスの呼び出し先も更新される。実行中の作業は先に終了する。
 この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
