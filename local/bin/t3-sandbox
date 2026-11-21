@@ -177,7 +177,7 @@ def prepare(profile):
     account = profile["account"]
     if account == "oauth":
         auth_args = ["--claude-oauth"]
-        # Use only the explicitly selected registrations for this profile.
+        # This profile assigns MCP separately through sandbox:mcp-load.
         environment = {key: value for key, value in os.environ.items() if key != "SBX_AGENT_STATIC_MCP"}
     else:
         auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account][0]]
@@ -389,7 +389,7 @@ def account_profile(account, workspace, port):
     return profile
 
 
-def setup_account(profile, no_autostart, mcp_servers):
+def setup_account(profile, no_autostart):
     account = profile["account"]
     storage = Path(profile["storage"])
     storage.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -399,14 +399,11 @@ def setup_account(profile, no_autostart, mcp_servers):
     # Keep metadata outside the agent-writable mount. Never store tokens here.
     # Publish only after preparation succeeds; failed setup can be retried safely.
     prepare(profile)
-    if account == "oauth":
-        for name in mcp_servers:
-            run(["sbx", "mcp", "load", name, "--sandbox", profile["name"]])
     save_json(profile_path(account), profile)
     if not no_autostart:
         install_service(profile)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
-    print(f"初回のアプリ接続: mise run t3:cli（{account} → pair を選択）")
+    print(f"初回のアプリ接続: mise run t3:cli（pair → {account} を選択）")
     if no_autostart:
         print(f"自動起動は未登録です。起動: t3-sandbox run {account}")
 
@@ -415,8 +412,6 @@ def setup(args):
     accounts = list(dict.fromkeys(args.account or choose_accounts()))
     if args.port is not None and len(accounts) != 1:
         raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。複数時はアカウント別の既定ポートを使います")
-    if args.mcp and "oauth" not in accounts:
-        raise ValueError("--mcp を使うには oauth を選択してください")
     require("git")
     workspace = Path(args.workspace or os.getcwd()).expanduser().resolve()
     local_git_vars = run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.splitlines()
@@ -433,7 +428,7 @@ def setup(args):
     profiles = [account_profile(account, workspace, args.port) for account in accounts]
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
     for profile in profiles:
-        setup_account(profile, args.no_autostart, dict.fromkeys(args.mcp))
+        setup_account(profile, args.no_autostart)
 
 
 def main():
@@ -444,8 +439,6 @@ def main():
                          help="複数指定可。例: --sbx account1 work3")
     initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
     initial.add_argument("--port", type=int)
-    initial.add_argument("--mcp", action="append", default=[], metavar="NAME",
-                         help="oauth に追加する登録済みの sbx MCP（繰り返し指定可）")
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)

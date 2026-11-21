@@ -7,7 +7,7 @@ raw = true
 run = 'exec "$HOME/.local/bin/t3-sandbox" setup'
 
 ["t3:cli"]
-description = "Select a T3 operation, provider, and sandbox with fzf"
+description = "Select a T3 operation with fzf or run T3 CLI arguments directly"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" cli'

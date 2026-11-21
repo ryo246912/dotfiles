@@ -156,7 +156,10 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 sbx mcp add notion-t3-oauth --url https://mcp.notion.com/mcp
 sbx mcp auth notion-t3-oauth
 cd /path/to/project
-mise run t3:setup -- --sbx oauth --mcp notion-t3-oauth
+mise run t3:setup
+# oauth を選択して Sandbox を作成
+mise run sandbox:mcp-load t3-oauth
+# notion-t3-oauth など、この Sandbox で使う MCP を選択
 mise run t3:cli
 ```
 
@@ -165,10 +168,8 @@ mise run t3:cli
 Claude OAuth は既存の ccmanager OAuth プリセットと同じ sbx のホスト共通認証を使う。
 MCP 側の OAuth はそれぞれの MCP 登録で管理する。T3 に接続したら、新規スレッドのツール一覧でも確認する。
 
-`--mcp NAME` は繰り返し指定でき、`t3-oauth` のゲートウェイに追加する。
-既に割り当てた MCP を外すには `sbx mcp unload NAME --sandbox t3-oauth` を使う。
-`--mcp` での割り当ては sbx の MCP モードの設定とは独立している。
-`sandbox:mcp-load` で割り当てを選び直すときは引き続き使う MCP も選ぶ。手動で登録した名前が
+`sandbox:mcp-load` は選んだ MCP で割り当てを置き換える。引き続き使う MCP も Tab で選ぶ。
+引数を省略すると Sandbox も fzf で選べる。手動で登録した名前が
 `sandbox:mcp-add` で未定義と表示されても、`sbx mcp rm` すると登録と OAuth 認可が消える。
 T3 アプリ内では必要なスレッドだけ入力欄で **新しいワークツリー** を選べる。
 
