@@ -777,6 +777,19 @@ desloppify status --json   # 状態を JSON で出力
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
 
+## PR レビュースキルの組み合わせ例
+
+```text
+/pr-reviewer-brief 123                          # 解説資料
+/pr-reviewer-brief 123 -be                      # 解説資料と動作確認
+/pr-reviewer-behavior 123                       # 動作確認だけ
+/pr-reviewer-all-review 123                     # レビューと条件が揃えば動作確認
+/pr-reviewer-all-review 123 -br                 # 解説資料も作る
+/pr-reviewer-all-review 123 -c                  # crit で確認
+/pr-reviewer-all-review 123 -br -c              # 解説資料と crit
+/pr-reviewer-all-review 123 -br -c -nb          # 実環境の操作を省略
+```
+
 ## understand-mode
 
 Claude Code の回答、コード、PR、未コミット差分をブラウザのホワイトボードで読み、気になる箇所を選んで付箋ごとに質問できます。Node.js 18 以上が必要です。PR を指定する場合は `gh` を使います。
