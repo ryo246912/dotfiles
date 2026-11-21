@@ -1,6 +1,6 @@
 # レビューの投稿と submit 用の本文例
 
-pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
+pr-reviewer-all-review / pr-reviewer-comment-crit skill の共通手順。
 
 ## インラインコメントの書式
 
@@ -26,16 +26,16 @@ pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
 
 ## 投稿のしかた
 
-pr-reviewer-comment skill の `scripts/post_draft_review.py` を使う（この references/ と同じ pr-reviewer-comment skill の中にある）。次の 3 つをまとめて行う。
+pr-reviewer-all-review skill の `scripts/post_draft_review.py` を使う（この references/ と同じ pr-reviewer-all-review skill の中にある）。次の 3 つをまとめて行う。
 
 - 指定した行が diff にあるかを検査する
 - 同じユーザーの PENDING のレビューが既にあれば止める（GitHub は 1 人 1 件しか持てない）
 - 通常は `event` を付けずに PENDING として作成する。公開指定時は `event` を付け、1 回の API 呼び出しで公開する
 
 ```bash
-python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_review.py \
+python3 <pr-reviewer-all-review skill のディレクトリ>/scripts/post_draft_review.py \
   --repo <owner/name> --pr <N> --input <comments.json> --dry-run   # 検査だけ
-python3 <pr-reviewer-comment skill のディレクトリ>/scripts/post_draft_review.py \
+python3 <pr-reviewer-all-review skill のディレクトリ>/scripts/post_draft_review.py \
   --repo <owner/name> --pr <N> --input <comments.json>             # 投稿
 ```
 

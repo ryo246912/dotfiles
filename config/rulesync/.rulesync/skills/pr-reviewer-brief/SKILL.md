@@ -11,7 +11,7 @@ description: >-
   チケットの ID や URL を渡すと、チケットの内容と前提知識をつかむための資料（TL;DR・スタック構成・前提知識・変更内容）を作る。
   「この PR の解説を作って」「PR の前提から分かるようにまとめて」「stack 全体を把握したい」など、レビュー前に
   内容をつかみたいときに使う。`--watch` で新しく作られた PR を監視し、PR ごとに 1 回だけ資料を自動で作る。
-  `--comment` / `-c` を指定すると、資料を作った後に pr-reviewer-comment でレビュー指摘候補も出す。
+  `--comment` / `-c` を指定すると、資料を作った後に pr-reviewer-all-review でレビュー指摘候補も出す。
 targets:
   - claudecode
   - codexcli
@@ -39,7 +39,7 @@ skills schema version: **1.3**（生成 HTML の生成日時の横にも表示�
 表示順は TL;DR → 変更の範囲 → 絵で見る → 前提知識（ER図を含む）→ 変更内容 → スキーマ・API・設定の差分 → 動作確認方法 → スタック構成 → 変更グループ → 重点的に見る箇所 → 未確認事項。内容のない章は省略する。
 
 レビューに入る前に、**その PR が何を変え、なぜ変え、どう確かめるか**を、コードベースを知らない人にも分かる形で
-1 枚の HTML にまとめる。説明に加え、pr-reviewer-behaviorで実施したデータ準備と動作確認を事実として報告する。レビュー指摘の洗い出しは `--comment` 指定時に pr-reviewer-comment へ委譲する。
+1 枚の HTML にまとめる。説明に加え、pr-reviewer-behaviorで実施したデータ準備と動作確認を事実として報告する。レビュー指摘の洗い出しは `--comment` 指定時に pr-reviewer-all-review へ委譲する。
 
 トークンを抑えるため、作業を段階に分け、段階ごとに合うモデルの subagent に任せる。briefレポートの中身はJSONで書き、
 HTML・図の座標・差分の表はスクリプトが作る。この制約はbehaviorが補完する設定や知見Markdownには適用しない。各段階の手順は `references/` にあり、**その段階を担当する subagent だけが読む**。
@@ -73,7 +73,7 @@ PR・stack では段階 0〜3 を実施し、`--comment` / `-c` を指定した�
 | 1    | subagent（`haiku`）                         | `references/collect.md`     | 差分・hunk・変更グループの下書き・チケット・引き継ぎメモ           |
 | 2    | subagent（`sonnet`）                        | `references/write.md`       | `brief.json`・仕上げた `groups.json`・**HTML**                     |
 | 3    | subagent（`sonnet`）。通常のPR・stackで実施 | `references/screenshots.md` | behaviorによるデータ準備・実動作確認、画像・結果の統合、HTML再生成 |
-| 4    | メイン（`--comment` / `-c` 指定時）         | pr-reviewer-comment         | PR ごとのレビュー指摘候補                                          |
+| 4    | メイン（`--comment` / `-c` 指定時）         | pr-reviewer-all-review      | PR ごとのレビュー指摘候補                                          |
 
 ### 段階 0: 対象を決める（メイン）
 
@@ -123,9 +123,9 @@ Agent ツールで、段階ごとに subagent を **1 つずつ順に**起動す
 
 資料を生成したら、まず `target.json` の `repo` と `prs[].number` を使って、資料に含まれる各 PR の現在の `headRefOid` を `gh pr view <番号> --repo <repo> --json headRefOid` で取得し、`prs[].headRefOid` と照合する。SHA が異なるか取得できなければ、変更または取得失敗を報告して段階 4 を止める。資料を再生成する場合は段階 0 から取り直す。
 
-照合できたら資料のパスを提示し、同じリポジトリで pr-reviewer-comment の手順を実行する。レビュー対象の取得時、候補の提示前、選択後の draft・公開の直前にも対象 PR の head を照合し、変わっていれば候補の提示・投稿を止める。PR を直接指定した場合は、資料が stack 全体を扱っていても指定された PR をレビューする。`stack <番号>` を指定した場合は、stack 内で現在の状態が `OPEN` の PR をレビューし、候補を PR ごとに提示する。PR を直接指定した場合も `OPEN` の場合にレビューする。`gh pr view` の `state` で判定し、終了済みの PR は資料に残して段階 4 ではスキップし、その旨を報告する。投稿直前にも `OPEN` を確認する。
+照合できたら資料のパスを提示し、同じリポジトリで pr-reviewer-all-review の手順を実行する。レビュー対象の取得時、候補の提示前、選択後の draft・公開の直前にも対象 PR の head を照合し、変わっていれば候補の提示・投稿を止める。PR を直接指定した場合は、資料が stack 全体を扱っていても指定された PR をレビューする。`stack <番号>` を指定した場合は、stack 内で現在の状態が `OPEN` の PR をレビューし、候補を PR ごとに提示する。PR を直接指定した場合も `OPEN` の場合にレビューする。`gh pr view` の `state` で判定し、終了済みの PR は資料に残して段階 4 ではスキップし、その旨を報告する。投稿直前にも `OPEN` を確認する。
 
-投稿する指摘の選択は PR ごとに確認する。`--comment` / `-c` は候補の作成を依頼する指定で、投稿の承認や公開指定にはならない。選択後は pr-reviewer-comment の通常手順で draft を作り、公開を希望する場合は対象 PR を指定して「submitして」と明示し、同スキルの本文確認を行う。
+投稿する指摘の選択は PR ごとに確認する。`--comment` / `-c` は候補の作成を依頼する指定で、投稿の承認や公開指定にはならない。選択後は pr-reviewer-all-review の通常手順で draft を作り、公開を希望する場合は対象 PR を指定して「submitして」と明示し、同スキルの本文確認を行う。
 
 ### 終わったら（メイン）
 
@@ -146,7 +146,7 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 
 ## してはいけないこと
 
-- brief の作成手順では GitHub へ投稿しない。レビュー投稿は段階 4 で pr-reviewer-comment の確認手順に従う。ラベル・状態変更や、他人のブランチへの commit / push は行わない
+- brief の作成手順では GitHub へ投稿しない。レビュー投稿は段階 4 で pr-reviewer-all-review の確認手順に従う。ラベル・状態変更や、他人のブランチへの commit / push は行わない
 - コードを編集しない。段階3のテストデータ作成・設定補完・知見保存はpr-reviewer-behaviorの範囲で行う。環境起動・checkout・migration・feature flag変更・base比較はしない
 - 根拠のない「今はこう動く」を書かない
 - HTML や SVG を手で書かない（`brief.json` を直して `render_brief.py` で作り直す）
