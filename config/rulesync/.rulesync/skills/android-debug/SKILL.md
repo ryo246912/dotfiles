@@ -20,21 +20,28 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
    その Mac 用の設定に追加する。`--path` を省くと、デバッグ中のプロジェクトの `mise.toml` に書き込まれる。
 2. `adb devices -l` で端末を確かめる。状態が `device` の行が無い、または `unauthorized` なら、端末で USB デバッグを ON にして
    許可 dialog を承認するようユーザーに頼み、済んだと返るまで待つ。
-3. `curl -s -o /dev/null -w '%{http_code}' <URL>` で dev server の応答を確かめる。200 か 3xx 以外なら、dev server の起動をユーザーに頼んで止まる。
-4. scrcpy を Bash tool の background 実行で起動し、後片付けのために `pgrep -nx scrcpy` で PID を控える。前景で起動すると session が止まる。
+   `device` の端末が複数あるときは、どれを使うかユーザーに確かめ、以降の `adb` と `scrcpy` に `-s <serial>` を付ける。
+3. `curl -s -o /dev/null -w '%{http_code}' -- '<URL>'` で dev server の応答を確かめる。`000`（接続できない）なら、dev server の起動をユーザーに頼んで止まる。
+   4xx・5xx でも dev server は動いているので先に進み、画面とログで原因を調べる。
+   続けて `adb reverse --list` を控える。URL のポートか引数のポートが既に別のポートへ転送されていたら、何も起動・転送せずユーザーに伝えて止まる。
+4. scrcpy を Bash tool の background 実行で起動し、後片付けのために scrcpy 自身の PID を控える。前景で起動すると session が止まる。
 
    ```bash
-   scrcpy --window-title 'Android' --stay-awake --max-size 1200 --window-x 100 --window-y 60
+   scrcpy --window-title 'Android' --stay-awake --max-size 1200 --window-x 100 --window-y 60 &
+   echo $! > <scratchpad>/scrcpy.pid
+   wait
    ```
 
    位置を指定しないと外部ディスプレイ側に出て見つからないことがある。osascript でウィンドウを動かすには補助アクセスの権限が要るため、位置は起動オプションで決める。
 
-5. 始める前の `adb reverse --list` を控えてから、URL のポートと引数のポートをそれぞれ `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
+5. URL のポートと引数のポートをそれぞれ `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
+   手順 3 で控えた一覧に同じ `tcp:<port> tcp:<port>` があれば転送し直さず、後片付けでも外さない。
    引数のポートは `lsof -nP -iTCP:<port> -sTCP:LISTEN` で Mac 側の待ち受けを確かめ、待ち受けていなければユーザーに伝える。
 6. URL を開き、3 秒待ってスクリーンショットを撮って Read tool で見る。端末の既定ブラウザが Chrome でなければ `com.android.chrome` を外す。
 
    ```bash
    adb shell am start -a android.intent.action.VIEW -d '<URL>' com.android.chrome
+   sleep 3
    adb exec-out screencap -p > <scratchpad>/android.png
    ```
 
@@ -54,12 +61,15 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
    先頭の `@` は抽象名前空間の印で、`localabstract:` に渡す名前には含めない。
    `chrome_devtools_remote` は前面のブラウザ（Chrome とは限らず、Edge のこともある）、`chrome_devtools_remote_<pid>` は pid のブラウザ。
    `adb shell ps -A | grep <pid>` でどのアプリか確かめる。
-2. `adb forward tcp:9222 localabstract:<socket>` で転送する。
+2. `adb forward tcp:<devtools-port> localabstract:<socket>` で転送する。`<devtools-port>` には、`adb forward --list` にも
+   `lsof -nP -iTCP:<devtools-port> -sTCP:LISTEN` にも出ない空きポート（例: 9222）を選ぶ。
 3. このスキルのディレクトリの `scripts/cdp-watch.mjs` を background 実行し、対象タブの通信・コンソール・例外を記録する。
-   ユーザーに操作を再現してもらい、出力ファイルを読む。
+   ユーザーに操作を再現してもらい、ログを読む。URL のクエリやフラグメントの値は伏せて記録される。
 
    ```bash
-   node <skill-dir>/scripts/cdp-watch.mjs 'http://localhost:<port>' 300
+   node <skill-dir>/scripts/cdp-watch.mjs 'http://localhost:<port>' 300 <devtools-port> > <scratchpad>/cdp.log 2>&1 &
+   echo $! > <scratchpad>/cdp-watch.pid
+   wait
    ```
 
    接続した直後には、接続前に出ていたコンソールメッセージがまとめて再送され、同じ時刻で並ぶ。
@@ -78,10 +88,11 @@ URL の後ろのポートは、フロントエンドが呼ぶ API・バックエ
 
 ## 後片付け
 
-作業を終えるときは、このスキルで起動した scrcpy と、追加した転送だけを外す。始める前からあった scrcpy や転送は残す。
+作業を終えるときは、このスキルで起動したプロセスと、追加した転送だけを外す。始める前からあった scrcpy や転送は残す。
+端末が複数あるときは、DevTools の手順や後片付けを含むすべての `adb` に `-s <serial>` を付ける。
 
 ```bash
-kill <起動した scrcpy の PID>
-adb forward --remove tcp:9222
-adb reverse --remove tcp:<転送したポート>  # ポートごとに繰り返す
+for f in <scratchpad>/scrcpy.pid <scratchpad>/cdp-watch.pid; do [ -f "$f" ] && { kill "$(cat "$f")" 2>/dev/null; rm -f "$f"; }; done
+adb forward --remove tcp:<devtools-port>
+adb reverse --remove tcp:<追加したポート>  # ポートごとに繰り返す
 ```
