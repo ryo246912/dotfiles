@@ -215,9 +215,9 @@ crit push --event request-changes -m "未対応の指摘があります"
 通常は選んだ指摘を**未submit（PENDING）のdraft review**として投稿し、GitHubの画面からsubmitできます。
 「submitして」または `--submit` を明示すると、選んだ指摘と確認済みのレビュー本文を直接公開します。既定の種別はCommentです。
 
-この流れは`pr-reviewer-comment-crit` skill（`config/rulesync/.rulesync/skills/pr-reviewer-comment-crit/SKILL.md`、rulesyncでglobal配布）にまとめています。
-agentに`/pr-reviewer-comment-crit 123`（Codexでは`$pr-reviewer-comment-crit 123`）のように頼むと、以下を順に進めます。指摘の区分（must / should / imo /
-nit / Q）、本PRとの関係（◯ / △ / ☓）、投稿コメントやsubmit本文の書式は、critを使わない`pr-reviewer-comment` skillと共通です。
+この流れは`pr-reviewer-crit` skill（`config/rulesync/.rulesync/skills/pr-reviewer-crit/SKILL.md`、rulesyncでglobal配布）にまとめています。
+agentに`/pr-reviewer-crit 123`（Codexでは`$pr-reviewer-crit 123`）のように頼むと、以下を順に進めます。指摘の区分（must / should / imo /
+nit / Q）、本PRとの関係（◯ / △ / ☓）、投稿コメントやsubmit本文の書式は、critを使わない`pr-reviewer-all-review` skillと共通です。
 
 ### 手順
 
@@ -235,13 +235,13 @@ crit comment --json --file comments.json --author 'Claude Code'   # 本文1行�
 
 # 4. UIで各指摘にreplyして壁打ち → Finish Review → agentがreplyで回答 → 再度crit pr 123 … を繰り返す
 
-# 5. 投稿するNoを決めたら、pr-reviewer-comment skillのscriptでreviewを作る（通常はPENDING）
-python3 <skills>/pr-reviewer-comment/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json --dry-run
-python3 <skills>/pr-reviewer-comment/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json
+# 5. 投稿するNoを決めたら、pr-reviewer-all-review skillのscriptでreviewを作る（通常はPENDING）
+python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json --dry-run
+python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json
 ```
 
 公開を指定された場合は、入力JSONに確認済みのレビュー本文を `body` として追加し、検査と投稿の両方のコマンドに `--submit` を付けます。
-詳細は共通手順の[公開指定がある場合](../config/rulesync/.rulesync/skills/pr-reviewer-comment/references/draft-review.md#公開指定がある場合)を参照してください。
+詳細は共通手順の[公開指定がある場合](../config/rulesync/.rulesync/skills/pr-reviewer-all-review/references/draft-review.md#公開指定がある場合)を参照してください。
 
 壁打ちは**Finish Reviewの往復**で行います。Finish Reviewを押すたびに、未resolveのcommentとreplyがまとめて起動元の
 agentへ渡り、agentが各threadへreplyしてから次のFinish Reviewを待ちます。何往復でもできます。
@@ -251,11 +251,11 @@ devcontainerの`agent_cmd`による**Send now**も使えますが、補助に留
 「commentに対応し、必要ならcodeを編集する」なので、PRのcodeを手元で書き換えることがあります。使うときはcommentに
 「codeは変更せず回答だけ」と書きます。
 
-### pr-reviewer-commentとの共通化
+### pr-reviewer-all-reviewとの共通化
 
-指摘の区分・本PRとの関係・動作確認手順・投稿書式・submit本文例は、critを使わない`pr-reviewer-comment` skillと共通です。重複を避けるため、
-共通部分は`pr-reviewer-comment`の`references/`（`pr-info.md` / `findings.md` / `manual-test.md` / `draft-review.md`）に置き、
-両方のskillがそこを読みます。`pr-reviewer-comment-crit`にはcrit固有の手順だけを書いています。投稿scriptも`pr-reviewer-comment`の
+指摘の区分・本PRとの関係・動作確認手順・投稿書式・submit本文例は、critを使わない`pr-reviewer-all-review` skillと共通です。重複を避けるため、
+共通部分は`pr-reviewer-all-review`の`references/`（`pr-info.md` / `findings.md` / `manual-test.md` / `draft-review.md`）に置き、
+両方のskillがそこを読みます。`pr-reviewer-crit`にはcrit固有の手順だけを書いています。投稿scriptも`pr-reviewer-all-review`の
 `scripts/post_draft_review.py`を使うため、2つのskillは一緒に配布しておきます。
 
 ### 投稿に`crit push`を使わない理由
@@ -273,7 +273,7 @@ devcontainerの`agent_cmd`による**Send now**も使えますが、補助に留
 | PRのheadが進んだ後の古いcomment                     | 投稿されず、staleとしてexport markdownへ退避される     |
 
 さらに`crit push --dry-run`は新規line commentだけを表示し、reply・編集・削除は表示しません。壁打ちのreplyや
-agentが付けた候補がそのまま投稿されやすいため、`pr-reviewer-comment-crit`ではcritを「調査と壁打ちの場」に限定し、投稿は
+agentが付けた候補がそのまま投稿されやすいため、`pr-reviewer-crit`ではcritを「調査と壁打ちの場」に限定し、投稿は
 `post_draft_review.py`で選んだ指摘だけを投稿します。明示指定があれば公開し、通常はdraftを作ります。
 
 自分のPRのthreadへ返信するなど、`crit push`を直接使う場合は上の表に注意し、必ず`--dry-run`に加えてreview fileも確認します。
