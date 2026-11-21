@@ -248,7 +248,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.53.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
+#   "github:docker/sbx-releases" = { version = "0.55.0-rc4", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 mise install
 sbx version
 ```
@@ -257,13 +257,13 @@ aqua registry には `sbx` が未登録のため、github backend で
 [docker/sbx-releases](https://github.com/docker/sbx-releases) のリリース資産を直接取得しています。
 バージョンは renovate が追従します。
 
-### 0.53.0 への更新
+### 0.55.0-rc4 への更新
 
 dotfiles を反映後、ホストで以下を実行してください。
 
 ```bash
 mise install github:docker/sbx-releases
-sbx --version  # 0.53.0
+sbx --version  # 0.55.0-rc4
 sbx daemon restart
 sbx settings set claude.chrome true
 ```
