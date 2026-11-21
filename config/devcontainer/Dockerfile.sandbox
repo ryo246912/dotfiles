@@ -119,7 +119,15 @@ RUN --mount=type=secret,id=github_token \
     rm -rf /mise/data/downloads; \
     mise reshim -C /mise; \
     rsync -a --delete /mise/data/ /mise/data-cache/; \
-    chown -R agent:agent /mise/data /mise/state
+    mkdir -p /mise/aqua-registry; \
+    if [ -d /mise/cache/aqua-registry ]; then \
+      cp -a /mise/cache/aqua-registry/. /mise/aqua-registry/; \
+    fi; \
+    chown -R agent:agent /mise/data /mise/state /mise/aqua-registry
+
+# BuildKit cache mounts are not included in the image. Keep public registry metadata
+# available at runtime, including mise's prefer-offline shell/shim resolution.
+RUN ln -s /mise/aqua-registry /mise/cache/aqua-registry
 
 # gh stack（github/gh-stack）は gh の公式 extension として入れる。gh 2.102 以降の `stack` は
 # 「extension を入れてください」と出すだけの組み込みコマンドで、extension があればそちらが
