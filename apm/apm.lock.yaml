@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-21T13:31:03.403257+00:00'
+generated_at: '2026-11-21T15:05:08.171064+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1283,8 +1283,8 @@ dependencies:
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-debt
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-debt
   is_virtual: true
@@ -1295,9 +1295,9 @@ dependencies:
   - .claude/skills/ponytail-debt
   - .claude/skills/ponytail-debt/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .claude/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-  content_hash: sha256:cb56e9f1606257dcbbe196197dffa0cb0e0ea136ad98c7eb44a85bd858b51e38
+    .agents/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+    .claude/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+  content_hash: sha256:f5d1d2ab891ff0a650a90b67235e487828e7d2a189de08a1ae073032de379407
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-gain
@@ -8336,7 +8336,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-debt
   active_owner: dietrichgebert/ponytail/skills/ponytail-debt
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-gain
@@ -14600,7 +14600,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-debt
   active_owner: dietrichgebert/ponytail/skills/ponytail-debt
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-gain
