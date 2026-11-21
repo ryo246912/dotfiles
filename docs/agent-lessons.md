@@ -553,10 +553,18 @@ mise run lessons:sync
 
 `/pr-author-lessons-review` は旧 `pr-author-self-review` の新しい名前です。差分と教訓の照合を担当します。
 
-`/pr-author-all-review` は教訓照合 → code-review → pr-author-fix を 1 回ずつ実行します。
+`/pr-author-all-review` は教訓照合、code-review、変更ファイルに該当する専門レビュー、pr-author-fix を順に実行します。
 `/pr-author-all-review --loop` は修正・検証・commit・push・CI と再レビュー待ちまで繰り返します。
 各レビューの責務は個別 skill に残し、追加するレビューは
 `config/rulesync/.rulesync/skills/pr-author-all-review/references/stages.md` の一覧で管理します。
+
+### リポジトリ別の追加レビュー
+
+`config/pr-author-all-review/work3.md.example` を `${XDG_CONFIG_HOME:-$HOME/.config}/pr-author-all-review/work3.md`
+にコピーし、対象のリポジトリと追加するスキルを記入します。work2 などは別の `*.md` で管理できます。
+dotfiles 側に実設定を置く場合も `config/pr-author-all-review/*.md` は Git の除外対象です。
+PR のマージ先（PR がなければ `origin`）が対象リポジトリに一致し、かつ関連ファイルが変わった行だけを実行します。
+追加スキルは、その環境で利用できるよう別途配布しておきます。
 
 オプションを持つ skill は `-h` / `--help`で、処理を開始せず使い方を説明します。
 対象は pr-author-fix、pr-author-all-review、lessons-harvest、pr-reviewer-brief です。
