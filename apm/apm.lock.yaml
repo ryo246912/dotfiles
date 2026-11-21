@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-21T09:30:44.334259+00:00'
+generated_at: '2026-11-21T11:05:06.041285+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1321,8 +1321,8 @@ dependencies:
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-help
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-help
   is_virtual: true
@@ -1333,9 +1333,9 @@ dependencies:
   - .claude/skills/ponytail-help
   - .claude/skills/ponytail-help/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-    .claude/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-  content_hash: sha256:a2cd9a9040fd39626875b77838ae6525893ff6d28e6368b2a188ca899c86956f
+    .agents/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
+    .claude/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
+  content_hash: sha256:4582025c3923072fb6c35b8cbd75adf4f7ce47df0eff43cc9a2a39808537fd61
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-review
@@ -5605,7 +5605,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-help
   active_owner: dietrichgebert/ponytail/skills/ponytail-help
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-review
@@ -9961,7 +9961,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-help
   active_owner: dietrichgebert/ponytail/skills/ponytail-help
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-review
