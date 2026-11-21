@@ -1,6 +1,6 @@
 ---
 name: android-debug
-description: USB で Mac に繋いだ Android 実機に、ローカルの dev server の Web 画面を開いて scrcpy で映し、adb と Chrome DevTools Protocol で操作・デバッグするスキル。`/android-debug <URL>` のように、実機での表示確認やログインなどの不具合調査をするときに使う。
+description: USB で Mac に繋いだ Android 実機に、ローカルの dev server の Web 画面を開いて scrcpy で映し、adb と Chrome DevTools Protocol で操作・デバッグするスキル。`/android-debug localhost:3001 80 54321` のように URL と追加で転送するポートを渡し、実機での表示確認やログインなどの不具合調査をするときに使う。
 targets:
   - claudecode
   - codexcli
@@ -8,8 +8,10 @@ targets:
 
 # Android 実機での Web デバッグ
 
-呼び出し時に指定された URL（例: `http://localhost:3001/ja/list/land`）を、USB で繋いだ Android 実機のブラウザで開き、
-Mac に画面を映しながら操作・調査する。URL が無ければ確認する。スクリーンショットなどの一時ファイルは scratchpad に置く。
+引数は `<URL> [port...]`（例: `localhost:3001/ja/list/land 80 54321`）。URL を USB で繋いだ Android 実機のブラウザで開き、
+Mac に画面を映しながら操作・調査する。スキームの無い URL は `http://` を補う。URL が無ければ確認する。
+URL の後ろのポートは、フロントエンドが呼ぶ API・バックエンド・Supabase などのポートで、URL のポートと一緒に転送する。
+スクリーンショットなどの一時ファイルは scratchpad に置く。
 
 ## 手順
 
@@ -26,7 +28,8 @@ Mac に画面を映しながら操作・調査する。URL が無ければ確認
 
    位置を指定しないと外部ディスプレイ側に出て見つからないことがある。osascript でウィンドウを動かすには補助アクセスの権限が要るため、位置は起動オプションで決める。
 
-5. URL のポートを `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
+5. URL のポートと引数のポートをそれぞれ `adb reverse tcp:<port> tcp:<port>` で転送し、`adb reverse --list` で確かめる。
+   引数のポートは `lsof -nP -iTCP:<port> -sTCP:LISTEN` で Mac 側の待ち受けを確かめ、待ち受けていなければユーザーに伝える。
 6. URL を開き、3 秒待ってスクリーンショットを撮って Read tool で見る。端末の既定ブラウザが Chrome でなければ `com.android.chrome` を外す。
 
    ```bash
@@ -66,6 +69,7 @@ Mac に画面を映しながら操作・調査する。URL が無ければ確認
 
 - `net::ERR_CONNECTION_REFUSED http://localhost/...`: フロントエンドが別ポート（`localhost` は 80）の API やバックエンドを呼んでいるのに、そのポートを転送していない。
   Mac 側で `lsof -nP -iTCP:<port> -sTCP:LISTEN` で待ち受けを確かめ、`adb reverse tcp:<port> tcp:<port>` を足す。
+  次回からはそのポートを引数に足して呼び出すよう、ユーザーに伝える。
   外部の認証（Cognito など）が通っても、バックエンドへの login API が失敗するとアプリがサインアウトしてサインイン画面に戻る。
 - USB を挿し直すと、`adb reverse` / `adb forward` の設定は消え、scrcpy も終了する。手順 2・4・5 をやり直す。
 - 原因を探すためにプロジェクトの `.env` など秘密情報を含むファイルを読まない。待ち受けているポートと DevTools のログから判断する。
