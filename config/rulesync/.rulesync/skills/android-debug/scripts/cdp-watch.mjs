@@ -28,9 +28,10 @@ let id = 0;
 const send = (method, params = {}) => ws.send(JSON.stringify({ id: ++id, method, params }));
 const reqs = new Map();
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
-const redact = url => {
-  if (!URL.canParse(url)) return url.slice(0, 200);
-  const u = new URL(url);
+const redact = (url, base) => {
+  if (!url) return '';
+  if (!URL.canParse(url, base)) return url.slice(0, 200);
+  const u = new URL(url, base);
   for (const k of u.searchParams.keys()) u.searchParams.set(k, '*');
   if (u.hash) u.hash = '*';
   return u.href.slice(0, 200);
@@ -49,13 +50,13 @@ ws.onmessage = ({ data }) => {
       reqs.set(params.requestId, params.request.url);
       if (params.redirectResponse && !isAsset(params.redirectResponse.url)) {
         const { url, status, headers } = params.redirectResponse;
-        log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? ''));
+        log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? '', url));
       }
       if (!isAsset(params.request.url)) log('REQ', params.request.method, redact(params.request.url));
       break;
     case 'Network.responseReceived': {
       const { url, status, headers } = params.response;
-      if (!isAsset(url)) log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? ''));
+      if (!isAsset(url)) log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? '', url));
       break;
     }
     case 'Network.responseReceivedExtraInfo':
