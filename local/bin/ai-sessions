@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+"""List live CCManager sessions and preview registered sandbox conversations."""
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+import curses
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import time
+import unicodedata
+
+STATES = {"waiting_input": ("🟡 waiting", 1), "busy": ("🟢 busy", 2),
+          "idle": ("🔴 idle", 3), "unknown": ("⚪ unknown", 0)}
+STATE_DIR = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "ai-sessions"
+REGISTRY = Path.home() / ".config/ccmanager/sessions.json"
+TOKEN = re.compile(r"[a-f0-9]{32}")
+MAX_TAIL = 256 * 1024
+
+
+def read_json(path):
+    try:
+        data = json.loads(path.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, UnicodeError, ValueError):
+        return {}
+
+
+def write_json(path, data):
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as file:
+        temporary = Path(file.name)
+        try:
+            json.dump(data, file, ensure_ascii=True)
+            file.close()
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def session_state_path(session_id):
+    return STATE_DIR / "states" / hashlib.sha256(session_id.encode()).hexdigest()
+
+
+def record_state():
+    env = os.environ
+    session_id = env.get("CCMANAGER_SESSION_ID")
+    state = env.get("CCMANAGER_NEW_STATE")
+    if session_id and state in STATES:
+        write_json(session_state_path(session_id), {
+            "state": state, "branch": env.get("CCMANAGER_WORKTREE_BRANCH"),
+            "presetName": env.get("CCMANAGER_PRESET_NAME"),
+        })
+
+
+def process_tree():
+    output = subprocess.check_output(["ps", "-axo", "pid=,ppid="], text=True)
+    return dict(tuple(map(int, line.split())) for line in output.splitlines() if line.strip())
+
+
+def register(args):
+    write_json(STATE_DIR / "launches" / args.token, {
+        "pid": args.pid, "preset": args.preset, "worktree": os.path.realpath(args.worktree),
+        "sandbox": args.sandbox, "script": str(Path(__file__).resolve()),
+    })
+
+
+def sandbox_marker(token):
+    return Path("/tmp") / f"ai-sessions-{os.getuid()}" / token
+
+
+def agent_hook():
+    token = os.environ.get("AI_SESSIONS_TOKEN", "")
+    if not TOKEN.fullmatch(token):
+        return
+    try:
+        payload = json.load(sys.stdin)
+        if not isinstance(payload, dict) or not payload.get("session_id"):
+            return
+        path = sandbox_marker(token)
+        previous = read_json(path)
+        same_session = previous.get("id") == payload["session_id"]
+        prompt = payload.get("prompt")
+        transcript = payload.get("transcript_path")
+        write_json(path, {
+            "id": payload["session_id"],
+            "path": transcript if isinstance(transcript, str) and transcript else
+                    previous.get("path") if same_session else None,
+            "prompt": prompt[:4000] if isinstance(prompt, str) else
+                      previous.get("prompt") if same_session else None,
+        })
+    except (OSError, ValueError):
+        return
+
+
+def transcript_messages(path):
+    if not isinstance(path, str) or not Path(path).is_absolute():
+        return []
+    try:
+        if not Path(path).is_file():
+            return []
+        with open(path, "rb") as file:
+            file.seek(0, os.SEEK_END)
+            offset = max(0, file.tell() - MAX_TAIL)
+            file.seek(offset)
+            if offset:
+                file.readline(MAX_TAIL)
+            lines = file.read(MAX_TAIL).splitlines()
+    except OSError:
+        return []
+    messages = []
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except (ValueError, UnicodeError):
+            continue
+        if not isinstance(entry, dict):
+            continue
+        message = entry.get("message") if entry.get("type") in {"user", "assistant"} else None
+        if entry.get("type") == "response_item":
+            payload = entry.get("payload")
+            if isinstance(payload, dict) and payload.get("type") == "message":
+                message = payload
+        if not isinstance(message, dict) or message.get("role") not in {"user", "assistant"}:
+            continue
+        content = message.get("content")
+        if isinstance(content, list):
+            content = "\n".join(block["text"] for block in content if isinstance(block, dict)
+                                and block.get("type") in {"text", "input_text", "output_text"}
+                                and isinstance(block.get("text"), str))
+        if (isinstance(content, str) and content.strip()
+                and not content.lstrip().startswith(("<environment_context>", "<user_instructions>", "# AGENTS.md"))):
+            messages.append((message["role"], content[-5000:]))
+    return messages[-16:]
+
+
+def agent_preview(token, full):
+    marker = read_json(sandbox_marker(token))
+    prompt = marker.get("prompt")
+    messages = transcript_messages(marker.get("path")) if full or not prompt else []
+    if not prompt:
+        prompt = next((content for role, content in reversed(messages) if role == "user"), "")
+    print(json.dumps({"prompt": prompt, "messages": messages if full else []}))
+
+
+def fetch_preview(token, launch, full):
+    command = ["sbx", "--no-input", "exec", "-u", "agent", launch["sandbox"], "python3", launch["script"],
+               "agent-preview", token]
+    if full:
+        command.append("--full")
+    try:
+        result = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True,
+                                text=True, check=True, timeout=4)
+        data = json.loads(result.stdout)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {}
+
+
+def live_sessions(include_launches=True):
+    processes = process_tree()
+    records = read_json(REGISTRY).get("sessions", [])
+    if not isinstance(records, list):
+        return []
+    rows = []
+    groups = {}
+    for record in records:
+        if not isinstance(record, dict) or not all(
+            isinstance(record.get(field), str) for field in ("id", "worktreePath")
+        ):
+            continue
+        owner = record.get("ownerPid")
+        if not isinstance(owner, int) or owner not in processes:
+            continue
+        path = os.path.realpath(record["worktreePath"])
+        state = read_json(session_state_path(record["id"]))
+        row = {**record, "branch": state.get("branch") or Path(path).name,
+               "presetName": state.get("presetName") or record.get("presetId") or "default",
+               "state": state.get("state", "unknown"), "launch": None}
+        rows.append(row)
+        groups.setdefault((owner, path, record.get("presetId")), []).append(row)
+    launches = {}
+    launch_files = (STATE_DIR / "launches").glob("*") if include_launches else ()
+    for file in launch_files:
+        if not TOKEN.fullmatch(file.name):
+            continue
+        launch = read_json(file)
+        pid = launch.get("pid")
+        if not isinstance(pid, int) or pid not in processes:
+            continue
+        parent = processes[pid]
+        while parent > 1:
+            key = (parent, launch.get("worktree"), launch.get("preset"))
+            if key in groups:
+                launches.setdefault(key, []).append((file.name, launch))
+                break
+            parent = processes.get(parent, 0)
+    # A preset/worktree may have multiple active children under one CCManager.
+    # The public status hook offers no child PID to disambiguate those sessions.
+    for key, candidates in launches.items():
+        if len(candidates) == 1 and len(groups[key]) == 1:
+            groups[key][0]["launch"] = candidates[0]
+    return sorted(rows, key=lambda row: (STATES.get(row["state"], STATES["unknown"])[1] or 4,
+                                        row["branch"], row["id"]))
+
+
+def clean(text):
+    return "".join(char for char in str(text) if not unicodedata.category(char).startswith("C"))
+
+
+def cells(text):
+    return sum(0 if unicodedata.combining(char) else
+               2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1 for char in text)
+
+
+def chunks(text, width):
+    line = ""
+    occupied = 0
+    for char in clean(text):
+        size = cells(char)
+        if occupied + size > width and line:
+            yield line
+            line, occupied = "", 0
+        line += char
+        occupied += size
+    yield line
+
+
+def put(screen, y, text, attr=0):
+    height, width = screen.getmaxyx()
+    if 0 <= y < height and width > 2:
+        try:
+            screen.addstr(y, 0, next(chunks(text, width - 1)), attr)
+        except curses.error:
+            pass
+
+
+def show(screen):
+    has_colors = curses.has_colors()
+    if has_colors:
+        curses.use_default_colors()
+        for index, color in enumerate((curses.COLOR_YELLOW, curses.COLOR_GREEN, curses.COLOR_RED), 1):
+            curses.init_pair(index, color, -1)
+    try:
+        curses.curs_set(0)
+    except curses.error:
+        pass
+    screen.timeout(200)
+    rows, cache, pending = [], {}, {}
+    selected = None
+    index, preview, waiting, editing, query, scroll = 0, False, False, False, "", 0
+    refresh_at = 0
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        while True:
+            now = time.monotonic()
+            if now >= refresh_at:
+                rows = live_sessions()
+                active = {row["launch"][0] for row in rows if row["launch"]}
+                cache = {key: value for key, value in cache.items() if key[0] in active}
+                refresh_at = now + 1
+            for key, task in list(pending.items()):
+                if task.done():
+                    cache[key] = (now, task.result())
+                    del pending[key]
+            visible = []
+            for row in rows:
+                token = row["launch"][0] if row["launch"] else ""
+                hint = cache.get((token, False), (0, {}))[1].get("prompt") or ""
+                name = row.get("sessionName") or row["branch"]
+                label = "  ".join((row["presetName"], name, " ".join(hint.split())))
+                if (not waiting or row["state"] == "waiting_input") and query.casefold() in (
+                    label + " " + row["branch"] + " " + row["worktreePath"]
+                ).casefold():
+                    visible.append((row, label))
+            index = next((i for i, (row, _) in enumerate(visible) if row["id"] == selected),
+                         min(index, max(0, len(visible) - 1)))
+            selected_row = visible[index][0] if visible else None
+            selected = selected_row["id"] if selected_row else None
+            requests = [(selected_row["launch"], True)] if preview and selected_row and selected_row["launch"] else []
+            requests.extend((row["launch"], False) for row in rows if row["launch"])
+            for (token, launch), full in requests:
+                key = (token, full)
+                if len(pending) < 4 and key not in pending and now - cache.get(key, (-10, {}))[0] >= 3:
+                    pending[key] = executor.submit(fetch_preview, token, launch, full)
+            screen.erase()
+            height, width = screen.getmaxyx()
+            counts = [f"{STATES[state][0]} {sum(row['state'] == state for row in rows)}"
+                      for state in ("waiting_input", "busy", "idle", "unknown")]
+            put(screen, 0, "AI セッション  " + "  ".join(counts), curses.A_BOLD)
+            limit = max(1, (height - 4) // 2 if preview else height - 3)
+            start = max(0, index - limit + 1)
+            for i, (row, label) in enumerate(visible[start:start + limit], start):
+                state, color = STATES.get(row["state"], STATES["unknown"])
+                attr = curses.color_pair(color) if has_colors else 0
+                if i == index:
+                    attr |= curses.A_REVERSE
+                put(screen, 1 + i - start, ("› " if i == index else "  ") + state + "  " + label, attr)
+            if not visible:
+                put(screen, 1, "該当するセッションがありません")
+            if preview:
+                y = min(limit, len(visible)) + 2
+                put(screen, y, "会話プレビュー", curses.A_BOLD)
+                messages = []
+                if selected_row and selected_row["launch"]:
+                    token = selected_row["launch"][0]
+                    data = cache.get((token, True), (0, {}))[1]
+                    for role, content in data.get("messages", []):
+                        prefix = "You: " if role == "user" else "AI: "
+                        for line in (prefix + content).splitlines():
+                            messages.extend(chunks(line, max(1, width - 2)))
+                    if not messages and data.get("prompt"):
+                        messages = list(chunks("You: " + data["prompt"], max(1, width - 2)))
+                room = max(0, height - y - 2)
+                scroll = min(scroll, max(0, len(messages) - room))
+                end = len(messages) - scroll
+                for line in messages[max(0, end - room):end] if room else []:
+                    y += 1
+                    put(screen, y, line)
+                if not messages:
+                    detail = ("会話ログをまだ取得できません" if selected_row and selected_row["launch"]
+                              else "このセッションの会話を一意に特定できません")
+                    put(screen, y + 1, detail)
+            footer = f"/ {query}_" if editing else (
+                "↑↓ 選択  Enter プレビュー  PgUp/PgDn スクロール  / 検索  "
+                f"w {'入力待ちのみ' if waiting else '全件'}  Esc 閉じる"
+            )
+            put(screen, height - 1, footer)
+            screen.refresh()
+            try:
+                key = screen.get_wch()
+            except curses.error:
+                continue
+            if editing:
+                if key in ("\n", "\r", "\x1b"):
+                    editing = False
+                elif key in ("\b", "\x7f", curses.KEY_BACKSPACE):
+                    query = query[:-1]
+                elif isinstance(key, str) and key.isprintable():
+                    query += key
+            elif key in ("q", "\x1b"):
+                return
+            elif key in ("j", "k", curses.KEY_DOWN, curses.KEY_UP):
+                index = max(0, min(len(visible) - 1, index + (1 if key in ("j", curses.KEY_DOWN) else -1)))
+                selected = visible[index][0]["id"] if visible else None
+                scroll = 0
+            elif key in ("\n", "\r", curses.KEY_ENTER):
+                preview = not preview
+                scroll = 0
+            elif key == curses.KEY_PPAGE:
+                scroll += 8
+            elif key == curses.KEY_NPAGE:
+                scroll = max(0, scroll - 8)
+            elif key == "/":
+                editing, query = True, ""
+            elif key == "w":
+                waiting = not waiting
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("show")
+    commands.add_parser("summary")
+    commands.add_parser("record-state")
+    commands.add_parser("agent-hook")
+    registration = commands.add_parser("register")
+    registration.add_argument("token")
+    registration.add_argument("pid", type=int)
+    registration.add_argument("preset")
+    registration.add_argument("worktree")
+    registration.add_argument("sandbox")
+    reader = commands.add_parser("agent-preview")
+    reader.add_argument("token")
+    reader.add_argument("--full", action="store_true")
+    args = parser.parse_args()
+    if hasattr(args, "token") and not TOKEN.fullmatch(args.token):
+        parser.error("invalid launch token")
+    if args.command == "show":
+        curses.wrapper(show)
+    elif args.command == "summary":
+        rows = live_sessions(include_launches=False)
+        if rows:
+            print("AI " + " ".join(
+                f"{STATES[state][0].split()[0]}{sum(row['state'] == state for row in rows)}"
+                for state in ("waiting_input", "busy", "idle", "unknown")
+            ))
+    elif args.command == "record-state":
+        record_state()
+    elif args.command == "register":
+        register(args)
+    elif args.command == "agent-hook":
+        agent_hook()
+    else:
+        agent_preview(args.token, args.full)
+
+
+if __name__ == "__main__":
+    main()
