@@ -560,9 +560,10 @@ mise run lessons:sync
 
 ### リポジトリ別の追加レビュー
 
-`config/pr-author-all-review/work3.md.example` を `${XDG_CONFIG_HOME:-$HOME/.config}/pr-author-all-review/work3.md`
-にコピーし、対象のリポジトリと追加するスキルを記入します。work2 などは別の `*.md` で管理できます。
-dotfiles 側に実設定を置く場合も `config/pr-author-all-review/*.md` は Git の除外対象です。
+dotfiles の `config/rulesync/.rulesync/skills/pr-author-all-review/` で `work3.md.example` を
+同じディレクトリの `work3.md` にコピーし、対象リポジトリと追加スキルを記入します。
+work2 なども別の `*.md` で管理できます。実設定は Git の除外対象で、Rulesync により
+`SKILL.md` と同じ場所へ配布されます。
 PR のマージ先（PR がなければ `origin`）が対象リポジトリに一致し、かつ関連ファイルが変わった行だけを実行します。
 追加スキルは、その環境で利用できるよう別途配布しておきます。
 

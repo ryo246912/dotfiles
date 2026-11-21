@@ -37,6 +37,11 @@ dependencies:
     - plannotator/effective-html/skills/html-prototype
     - plannotator/effective-html/skills/html-plan
     - plannotator/effective-html/skills/html-diagram
+    # /understand は Claude Code のセッションを分岐して使うため、targets を claude に絞る。
+    - git: fkubota/understand-mode
+      path: skill/understand
+      targets:
+        - claude
     # crit（tomasz-tomczyk/crit プラグイン）。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.19.1
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.19.1
