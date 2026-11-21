@@ -106,7 +106,7 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 次の構成にしています。
 
 - **`targets` に `copilot` を含めない**: copilot は scope によって配布先が異なり（project scope は `.github/`、
-  user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
+  user scope は `~/.copilot/`）、tsumiki の commands の配布先が lockfile に入るため、
   scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
   `mise run apm:validate-lock-version` が失敗します。そのため mise の `aqua:microsoft/apm`、
