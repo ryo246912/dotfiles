@@ -11,9 +11,10 @@ import sys
 import tempfile
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
-ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774), "work3": (".claude-work3", 3775)}
+ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774), "work3": (".claude-work3", 3775), "oauth": (None, 3776)}
 # Tailscale Serve only publishes HTTPS on these ports.
 TAILSCALE_HTTPS_PORTS = {"account1": 443, "account2": 10000, "work3": 8443}
+CODEX_NETWORK = "auth.openai.com:443,chatgpt.com:443,api.openai.com:443"
 T3_CONNECT_NETWORK =",".join((
     "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
     "*.t3coderelay.com:443",
@@ -67,12 +68,12 @@ def choose_accounts(multiple=True, configured_only=False):
     require("fzf")
     rows = []
     account_width = max(map(len, ACCOUNTS))
-    directory_width = max(len(f"~/{directory}") for directory, _ in ACCOUNTS.values())
+    directory_width = max(len(f"~/{directory}") for directory, _ in ACCOUNTS.values() if directory)
     for account, (directory, port) in ACCOUNTS.items():
         if configured_only and not profile_path(account).exists():
             continue
         configured = "設定済み" if profile_path(account).exists() else "未設定"
-        location = f"~/{directory}"
+        location = f"~/{directory}" if directory else "sbx OAuth"
         rows.append(f"{account:<{account_width}}  {location:<{directory_width}}  {f'port {port}':<9}  {configured}")
     if not rows:
         raise ValueError("設定済みのアカウントがありません。先に mise run t3:setup を実行してください")
@@ -97,7 +98,7 @@ def choose_accounts(multiple=True, configured_only=False):
     return selected
 
 
-def choose_cli_command():
+def choose_cli_command(account):
     if not sys.stdin.isatty():
         raise ValueError("対話ターミナルで実行するか、work3 pair のように引数を指定してください")
     require("fzf")
@@ -112,6 +113,10 @@ def choose_cli_command():
         "version": (["--version"], "T3 のバージョンを表示"),
         "help": (["--help"], "T3 コマンドのヘルプ"),
     }
+    commands["codex-login"] = (["codex-login"], "この sandbox 内で Codex にログイン")
+    if account == "oauth":
+        commands["claude-login"] = (["claude-login"], "Claude を開いて /login から OAuth 認証")
+        del commands["tailscale"]
     command_width = max(map(len, commands))
     selection = subprocess.run(
         ["fzf", "--no-multi", "--layout=reverse", "--prompt=command> ", "--header=Enter: 実行 / Esc: 中止"],
@@ -138,10 +143,18 @@ def allow_t3_connect_network(profile):
 def prepare(profile):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
-    run(["sbx-agent", "claude", "--claude-account", profile["account"],
-         "--config-dir", Path.home() / ACCOUNTS[profile["account"]][0],
+    account = profile["account"]
+    if account == "oauth":
+        auth_args = ["--claude-oauth"]
+        # Use only the explicitly selected registrations for this profile.
+        environment = {key: value for key, value in os.environ.items() if key != "SBX_AGENT_STATIC_MCP"}
+    else:
+        auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account][0]]
+        environment = os.environ
+    run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
-         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"])
+         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"],
+        env=environment)
     allow_t3_connect_network(profile)
     # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
     ports = run(["sbx", "ports", profile["name"]], capture_output=True, text=True)
@@ -201,6 +214,8 @@ def pair(profile, arguments):
 
 
 def tailscale_pair(profile):
+    if profile["account"] not in TAILSCALE_HTTPS_PORTS:
+        raise ValueError("oauth 用の Tailscale ポートは未設定です。ローカル接続には pair を使ってください")
     # T3 Connect needs SRV/TXT lookups, which the sbx DNS proxy rejects (NOTIMP);
     # publish the forwarded host port from the Mac instead.
     cli = shutil.which("tailscale") or "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
@@ -329,9 +344,10 @@ def install_service(profile, refresh=False):
 
 
 def account_profile(account, workspace, port):
-    token = Path.home() / ".local/state/sbx-agent-credentials" / f"{account}.token"
-    if token.is_symlink() or not token.is_file() or not token.stat().st_size:
-        raise ValueError(f"{account} の token が未登録です。dotfiles の checkout root に移動して mise run sandbox:claude-token {account} を実行してください")
+    if account != "oauth":
+        token = Path.home() / ".local/state/sbx-agent-credentials" / f"{account}.token"
+        if token.is_symlink() or not token.is_file() or not token.stat().st_size:
+            raise ValueError(f"{account} の token が未登録です。dotfiles の checkout root に移動して mise run sandbox:claude-token {account} を実行してください")
     storage = (Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "t3-sandbox" / account).resolve()
     profile = {"account": account, "name": f"t3-{account}", "workspace": str(workspace),
                "storage": str(storage), "port": port or ACCOUNTS[account][1]}
@@ -344,16 +360,19 @@ def account_profile(account, workspace, port):
     return profile
 
 
-def setup_account(profile, no_autostart):
+def setup_account(profile, no_autostart, mcp_servers):
     account = profile["account"]
     storage = Path(profile["storage"])
     storage.mkdir(parents=True, exist_ok=True, mode=0o700)
     settings = storage / "t3/userdata/settings.json"
     if not settings.exists():
-        save_json(settings, {"defaultThreadEnvMode": "worktree"})
+        save_json(settings, {"defaultThreadEnvMode": "local" if account == "oauth" else "worktree"})
     # Keep metadata outside the agent-writable mount. Never store tokens here.
     # Publish only after preparation succeeds; failed setup can be retried safely.
     prepare(profile)
+    if account == "oauth":
+        for name in mcp_servers:
+            run(["sbx", "mcp", "load", name, "--sandbox", profile["name"]])
     save_json(profile_path(account), profile)
     if not no_autostart:
         install_service(profile)
@@ -367,6 +386,8 @@ def setup(args):
     accounts = list(dict.fromkeys(args.account or choose_accounts()))
     if args.port is not None and len(accounts) != 1:
         raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。複数時はアカウント別の既定ポートを使います")
+    if args.mcp and "oauth" not in accounts:
+        raise ValueError("--mcp を使うには oauth を選択してください")
     require("git")
     workspace = Path(args.workspace or os.getcwd()).expanduser().resolve()
     local_git_vars = run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.splitlines()
@@ -383,7 +404,7 @@ def setup(args):
     profiles = [account_profile(account, workspace, args.port) for account in accounts]
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
     for profile in profiles:
-        setup_account(profile, args.no_autostart)
+        setup_account(profile, args.no_autostart, dict.fromkeys(args.mcp))
 
 
 def main():
@@ -393,6 +414,8 @@ def main():
     initial.add_argument("--account", choices=ACCOUNTS, nargs="+", action="extend", help="複数指定可。例: --account account1 work3")
     initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
     initial.add_argument("--port", type=int)
+    initial.add_argument("--mcp", action="append", default=[], metavar="NAME",
+                         help="oauth に追加する登録済みの sbx MCP（繰り返し指定可）")
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
     for action in ("run", "cli"):
         command = sub.add_parser(action)
@@ -412,9 +435,19 @@ def main():
         # Headless service entry point; avoid the interactive launcher's PID-only preflight.
         command = t3_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
     elif args.action == "cli":
-        arguments = args.arguments or choose_cli_command()
+        arguments = args.arguments or choose_cli_command(account)
         print(f"Account: {account} / Command: {' '.join(arguments)}", flush=True)
-        if arguments == ["ports"]:
+        if arguments == ["claude-login"]:
+            if account != "oauth":
+                raise ValueError("claude-login は oauth 用です")
+            require("sbx")
+            command = ["sbx", "run", "--name", profile["name"]]
+        elif arguments == ["codex-login"]:
+            require("sbx")
+            run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], CODEX_NETWORK])
+            command = ["sbx", "exec", "-i", "-u", "agent", profile["name"],
+                       "mise", "--cd", "/mise", "exec", "--", "codex", "login", "--device-auth"]
+        elif arguments == ["ports"]:
             require("sbx")
             command = ["sbx", "ports", profile["name"]]
         elif arguments in (["server-status"], ["restart-server"]):
