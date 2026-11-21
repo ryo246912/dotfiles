@@ -1,6 +1,6 @@
 # PR の情報を集める
 
-pr-reviewer-comment / pr-reviewer-comment-crit skill の共通手順。
+pr-reviewer-all-review / pr-reviewer-comment-crit skill の共通手順。
 
 入力は PR の URL か番号。番号だけなら、カレントディレクトリのリポジトリ（`gh repo view --json nameWithOwner`）の PR とみなす。
 

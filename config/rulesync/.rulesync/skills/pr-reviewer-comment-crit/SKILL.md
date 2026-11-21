@@ -4,7 +4,7 @@ description: >-
   他人の GitHub PR を crit の UI でレビューする skill。PR へ checkout し、指摘候補（must/should/imo/nit/Q）を
   裏取りしたうえで crit のインラインコメントとして並べ、`crit pr` の UI でユーザーと壁打ちする。選ばれた指摘だけを
   通常は draft レビューとして投稿し、「submitして」または `--submit` の明示があれば公開する。「crit で PR をレビューしたい」
-  「PR を crit で見て壁打ちしたい」と crit を使う指定があるときに使う。crit を使わない PR レビューは pr-reviewer-comment、
+  「PR を crit で見て壁打ちしたい」と crit を使う指定があるときに使う。crit を使わない PR レビューは pr-reviewer-all-review、
   自分の PR に付いた指摘への対応は pr-author-fix を使う。
 targets:
   - claudecode
@@ -14,7 +14,7 @@ targets:
 # pr-reviewer-comment-crit — crit の UI で PR をレビューし、draft を作るか公開する
 
 レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を作るか公開する**
-までを進める。pr-reviewer-comment skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
+までを進める。pr-reviewer-all-review skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
 「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示された場合は、選ばれた指摘と確認済みの本文で公開する。通常は draft と本文例を作る。
 
 全体の流れ:
@@ -28,8 +28,8 @@ targets:
 
 ## 共通手順の読み込み
 
-観点・書式・投稿方法は pr-reviewer-comment skill と共通で、pr-reviewer-comment の `references/` にある。rulesync で同じ skills
-ディレクトリに配置されるので、`<この skill のディレクトリ>/../pr-reviewer-comment/references/` を手順に入るときに読む。
+観点・書式・投稿方法は pr-reviewer-all-review skill と共通で、pr-reviewer-all-review の `references/` にある。rulesync で同じ skills
+ディレクトリに配置されるので、`<この skill のディレクトリ>/../pr-reviewer-all-review/references/` を手順に入るときに読む。
 以下ではこのディレクトリを `<refs>` と書く。
 
 | 手順 | 読むファイル             | pr-reviewer-comment-crit で追加・変更すること |
@@ -56,7 +56,7 @@ crit のコメントの行番号は**手元のファイルの行番号**なの�
 
 ## 2. 指摘候補を洗い出し、裏を取る
 
-`<refs>/findings.md` に従う。検証のためにファイルを読む・テストを実行するのはよいが、**コードは編集しない**
+`<refs>/findings.md` に従い、直接確認、利用可能な一般レビュー、変更内容に合う専門レビューを実行する。検証のためにファイルを読む・テストを実行するのはよいが、**コードは編集しない**
 （ユーザーが明示的に頼んだ場合を除く）。
 
 ## 3. 動作確認手順を書く
@@ -104,6 +104,8 @@ crit comment --json --file <comments.json> --author 'Claude Code'
 ### ターミナルにも表と詳細を出す
 
 `<refs>/findings.md` の「出し方」に従う。crit の UI では対象行が見えているので、コメント本文にはコードを貼らなくてよい。
+
+候補の提示前、ユーザーの選択を受け取った時点、投稿直前に、共通手順の「指摘の根拠と鮮度を確認する」に従う。
 
 ## 5. crit の UI で壁打ちし、投稿する No を決めてもらう
 

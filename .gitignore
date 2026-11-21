@@ -31,6 +31,8 @@ config/agent-lessons/targets.*.yml
 # pr-author-all-review の環境別追加段階（雛形は *.md.example）
 /config/rulesync/.rulesync/skills/pr-author-all-review/*.md
 !/config/rulesync/.rulesync/skills/pr-author-all-review/SKILL.md
+/config/rulesync/.rulesync/skills/pr-reviewer-all-review/*.md
+!/config/rulesync/.rulesync/skills/pr-reviewer-all-review/SKILL.md
 # コミットしたくない固有名詞を含む navi チートシート（例: <name>.secret.cheat.md）
 config/navi/cheats/*.secret.cheat.md
 
