@@ -88,10 +88,10 @@ def scan(repo: str, me: str, state: dict) -> list[dict]:
 
 def notify(message: str) -> None:
     if shutil.which("osascript"):
-        script = f'display notification {json.dumps(message)} with title "pr-reviewer-brief"'
+        script = f'display notification {json.dumps(message)} with title "pr-brief"'
         subprocess.run(["osascript", "-e", script], check=False)
     elif shutil.which("notify-send"):
-        subprocess.run(["notify-send", "pr-reviewer-brief", message], check=False)
+        subprocess.run(["notify-send", "pr-brief", message], check=False)
     print(message)
 
 

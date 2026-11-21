@@ -1,6 +1,6 @@
 # 段階 1（チケットモード）: チケットと関連する PR を集める
 
-pr-reviewer-brief skill のチケットモードの段階 1。PR ではなくチケットの ID か URL を渡されたときに使う。軽いモデル（Haiku）で
+pr-brief skill のチケットモードの段階 1。PR ではなくチケットの ID か URL を渡されたときに使う。軽いモデル（Haiku）で
 行う前提で、**考えるより集める**ことに徹する。
 
 入力: `<skill>`・`<work>`、`<work>/target.json`（`{"mode": "ticket", "ticket": "<ID か URL>"}`）。

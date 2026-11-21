@@ -8,9 +8,9 @@ execute または reuse の場合に段階 2 の後で実行する。チケッ�
 どちらかがskip、チケット、監視、「説明だけ」ならbehaviorを起動しない。ブラウザ操作・データ作成・設定補完・知見保存はせず、計画をNOT RUNのまま残し、lesson_captureを`NOT_RUN`と省略理由で記録する。
 実行モードが未指定・矛盾している場合も実操作せず、モード未確認としてメインへ返す。execute は段階 1 から進む。reuse は受領した構造化結果が同じリポジトリ・範囲・SHA を確認したものかを照合し、一致すれば段階 2 へ進む。不一致なら NOT RUN と理由を記録する。reuse では behavior を起動せず、データ準備やブラウザ操作を行わない。
 
-## 1. pr-reviewer-behaviorを使う
+## 1. pr-behavior-reviewを使う
 
-利用環境に配布された `pr-reviewer-behavior/SKILL.md` を読み、その手順を実行する。利用できない場合はBLOCKEDとし、理由と手動確認の開始条件をbriefへ記載する。
+利用環境に配布された `pr-behavior-review/SKILL.md` を読み、その手順を実行する。利用できない場合はBLOCKEDとし、理由と手動確認の開始条件をbriefへ記載する。
 対象PR、`target.json`、固定したhead SHA、`brief.json`の`manual_test`、確認先URL、stack全体の変更範囲を渡す。
 stackでは最上位PRの環境を使い、briefと同じstack全体を確認対象にする。
 

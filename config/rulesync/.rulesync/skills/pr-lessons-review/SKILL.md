@@ -1,5 +1,5 @@
 ---
-name: pr-author-lessons-review
+name: pr-lessons-review
 description: push や PR 作成の前に、agent-lessons に貯めた過去のレビュー指摘（自分が受けた指摘・チームの規約）と現在の diff を突き合わせ、同じ指摘を受けそうな箇所を直す skill。実装が一区切りして push・PR 作成に進む前に使う。
 targets:
   - claudecode
@@ -10,7 +10,7 @@ targets:
 
 `-h` / `--help` があれば、他の引数より優先してこの節の使い方・全オプション・既定動作と終了条件を説明し、その場で終了する。PR の取得、監視、編集、スクリプト実行、commit・push・投稿は行わない。これらは skill の引数であり、内部 CLI のオプションは含めない。不明なオプションでは処理を開始せず、このヘルプを表示する。
 
-使い方: `/pr-author-lessons-review [--base <refまたはSHA>] [--head <refまたはSHA>]`
+使い方: `/pr-lessons-review [--base <refまたはSHA>] [--head <refまたはSHA>]`
 
 | 引数                    | 意味                                                                    |
 | ----------------------- | ----------------------------------------------------------------------- |

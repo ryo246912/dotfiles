@@ -37,7 +37,7 @@ Claude Code は `/pr-reviewer-all-review`、Codex は `$pr-reviewer-all-review` 
 ## レビュー段階と責務
 
 [レビュー段階一覧](references/stages.md) に従い、対象の PR、差分、各段階の結果と未確認事項を記録する。
-`--crit` 指定時は pr-reviewer-crit の checkout・壁打ち・投稿手順を使い、共通のレビュー段階を一度だけ実行する。`--brief`・`--no-behavior` と公開指定の意図・種別も引き継ぐ。
+`--crit` 指定時は pr-crit の checkout・壁打ち・投稿手順を使い、共通のレビュー段階を一度だけ実行する。`--brief`・`--no-behavior` と公開指定の意図・種別も引き継ぐ。
 
 ## 1. PR の情報を集める
 

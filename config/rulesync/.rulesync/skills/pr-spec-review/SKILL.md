@@ -1,14 +1,15 @@
 ---
-name: pr-review-spec
+name: pr-spec-review
 description: >-
   他人の GitHub PR・PR stack、または Jira・Notion などのチケットを起点に、期待される振る舞いを特定し、仕様が適用される箇所に対応漏れがないかをレビューする。
   類似 UI・別画面の表示・共通処理や重複ロジックへの横展開、障害の発生経路、範囲外の追跡を確認し、関連 PR がある場合は選ばれた指摘を draft レビューにする。
   「今回の対応だけで十分か見て」「考慮漏れがないかレビューして」「spec 観点でレビュー」で使う。
 targets:
   - claudecode
+  - codexcli
 ---
 
-# pr-review-spec — 対応の十分性と考慮漏れをレビューする
+# pr-spec-review — 対応の十分性と考慮漏れをレビューする
 
 チケットや PR が求める振る舞いを、同じ仕様が適用される画面・出力・処理で満たしているかを調べる。障害修正では実害の発生経路も追い、範囲外の作業は合意と追跡先を確認する。行単位の実装レビューには `pr-reviewer-all-review` を使う。
 
@@ -25,6 +26,12 @@ targets:
 
 以下の `../` はこのスキルのディレクトリからの相対パス。
 
+## 統合レビューから呼び出されたとき
+
+`pr-author-all-review` と `pr-reviewer-all-review` の専門レビューとして呼び出されたら、親が指定したリポジトリ・base・head・差分と関連チケットを使う。PR やスタックは渡された比較範囲に従い、関連 PR は仕様の根拠として参照する。手順 1〜4 を読み取り専用で行い、調査結果、根拠付きの候補、対象外と未確認事項を親へ返す。手順 5〜6 の質問・投稿は親が管理する。
+
+作成者のローカルレビューでは、親が比較対象に含めたコミット済み・staged・unstaged・未追跡の変更を確認する。未コミットの内容は対象の作業ツリーや index から読み、根拠がコミット・index・作業ツリーのどれにあるかを明記する。PR がなければ、関連チケットや親から渡された要件を使う。入手できた資料で仕様を確定できなければ、推定または未確認として親へ返す。
+
 ## 1. 期待される振る舞いと適用範囲を確定する
 
 - PR の取得は [pr-info.md](../pr-reviewer-all-review/references/pr-info.md) に従う。PR URL が入力された場合は URL のリポジトリを控え、`gh pr view`・`gh pr diff`・`gh pr checks` などには `--repo <owner/repo>` も渡す。関連 PR を調べるときも所属リポジトリを指定する。
@@ -35,7 +42,7 @@ targets:
 
 ## 2. 対応の範囲を把握する
 
-- gh stack は `../pr-reviewer-brief/scripts/get_stack.py` の `--pr <N>` または `--stack <N>` を利用する。PR URL の場合は `--repo <owner/repo>` も渡す。
+- gh stack は `../pr-brief/scripts/get_stack.py` の `--pr <N>` または `--stack <N>` を利用する。PR URL の場合は `--repo <owner/repo>` も渡す。
 - gh stack を使っていなくても、各 PR の base ブランチと他の PR の head ブランチを照合し、統合先まで親を辿る。head を base とする子 PR、本文の関連 PR、マージ済みや base 変更済みの関連 PR もリンクやコミットから確認する。ブランチ名はリポジトリと合わせて照合し、同じ PR は一度だけ辿る。共通の統合先を持つだけの PR は含めない。
 - 各 PR の diff と統合後の全体像を確認する。直列であれば起点の base から末端 head までの累積差分を確認し、分岐があれば各末端と共通の base を確認する。統合後の状態を確認できない分岐はその旨を記す。
 - PR 本文の「入れていないもの」とマージ順序を読み、PR・base → head・受け持ち・変更内容（列、フラグ、API 項目、UI など）を表にする。各 PR の head SHA と根拠を確認した SHA を控える。

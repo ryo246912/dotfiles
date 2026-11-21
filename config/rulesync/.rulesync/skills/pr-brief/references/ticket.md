@@ -1,6 +1,6 @@
 # チケットを見つけて取る
 
-pr-reviewer-brief skill の共通手順。段階 1（`collect.md`・`collect-ticket.md`）から読む。チケット（Linear・Notion・Jira・
+pr-brief skill の共通手順。段階 1（`collect.md`・`collect-ticket.md`）から読む。チケット（Linear・Notion・Jira・
 GitHub Issue など）の内容を MCP などで取り、`<work>/ticket.json` に書く。取れなくても止めない。
 
 ## 1. チケットの ID を見つける

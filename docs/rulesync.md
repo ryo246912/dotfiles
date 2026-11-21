@@ -222,6 +222,12 @@ mise --cd "$HOME" run rulesync:generate
 `rulesync.jsonc` / `config/rulesync/rulesync.jsonc` は `outputRoots` へ移行済みなので、
 この警告が出る場合はリポジトリが最新でない（`mise bootstrap dotfiles apply` 前、または `git pull` 前）可能性が高いです。
 
+### PR レビュースキルの改名
+
+`pr-author-fix` は `pr-fix`、`pr-author-lessons-review` は `pr-lessons-review`、`pr-reviewer-behavior` は `pr-behavior-review`、`pr-reviewer-brief` は `pr-brief`、`pr-reviewer-crit` は `pr-crit`、`pr-review-spec` は `pr-spec-review` に変更しました。
+
+Rulesync の `delete: false` により、再生成後も旧名の配布先は残ります。新名で生成されたことを確認してから、`~/.claude/skills/` や `~/.agents/skills/` などの旧名ディレクトリを整理してください。`pr-reviewer-behavior` の隣に保存していた `config.md` と `lessons/` がある場合は、旧ディレクトリを整理する前に対応する `pr-behavior-review` へ引き継いでください。新しい配布先に既存の設定や知見があれば内容を確認して統合します。
+
 ### `~/.codex/skills/` に古い skill が残っている
 
 rulesync v9.1.0 以降、Codex CLI 向け skill の出力先は `~/.codex/skills/` から Codex 標準の
@@ -249,7 +255,7 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 レビュースキルの改名後は、次の順で旧名の `pr-reviewer-comment` と `pr-reviewer-comment-crit` を片付けます。
 
 1. 以前のコピーが `~/.config/rulesync/.rulesync/skills/` に残っていれば、旧名のディレクトリを削除します。ローカル設定を追加していた場合は先に退避します。
-2. Rulesync で再配布し、新しい `pr-reviewer-all-review` と `pr-reviewer-crit` が生成されたことを確認します。
+2. Rulesync で再配布し、新しい `pr-reviewer-all-review` と `pr-crit` が生成されたことを確認します。
 3. `~/.claude/skills/` と `~/.agents/skills/` に残った旧名のディレクトリを削除します。
 
 ### プロジェクト単位の `.codex/config.toml` について

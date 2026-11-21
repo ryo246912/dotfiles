@@ -1,6 +1,6 @@
 """知見のfrontmatterだけを一覧し、必要な本文を選べるようにする。追加依存なし。
 
-    python3 list_lessons.py --config /path/pr-reviewer-behavior/config.md --repo owner/repo --environment local
+    python3 list_lessons.py --config /path/pr-behavior-review/config.md --repo owner/repo --environment local
 
 frontmatterの値はJSON互換のスカラーまたは1行配列。本文は出力しない。
 pathはconfig.mdの実体ディレクトリ基準の相対POSIXパス（lessons/...）を返す。
