@@ -77,20 +77,6 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 > 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
 > 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
 
-### 既定の設定（`claude/settings.json`）
-
-| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                                                   |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`pr-reviewer-behavior`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                   |
-
-- 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
-  `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
-  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
-  使えなくなります（呼ばれる側は `name-only` 以上にする）。
-- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、ここにも追加します。
-
 ### plugin の管理
 
 Claude Code の plugin は、skill とは別に `enabledPlugins` で管理します。
@@ -121,6 +107,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
+- `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumiki skills
@@ -146,8 +133,8 @@ mise --cd "$HOME" run apm:install
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
+再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
+更新方法は [APM の pin と Renovate による更新](apm.md#pin-と-renovate-による更新)を参照してください。
 
 ## Plannotator / Effective HTML
 
@@ -539,9 +526,9 @@ correctness、security、performanceのreviewを置き換えないため、必�
 $ponytail-review を使って、現在のdiffから削除できるabstractionを探してください。
 ```
 
-Ponytailを止めるときは「stop ponytail」または「normal mode」と伝えます。default levelを変える場合は
-`PONYTAIL_DEFAULT_MODE`へ`lite`、`full`、`ultra`、`off`のいずれかを設定します。pluginのalways-on activationには
-Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`から`node`を実行できる必要があります。
+APM は6つのスキルを個別に配布します。必要なときにスキルを直接呼び出してください。
+`pr-author-all-review` は一般レビューのあとに、同じ差分を `ponytail-review` で確認します。
+Ponytail の起動・モード切替用の hooks は配布しません。
 
 ## `ctx-agent-history-search`
 
@@ -913,3 +900,11 @@ agent-lessonsと同様のファイル構成を参考にしていますが、自�
 - [Microsoft Playwright CLI](https://github.com/microsoft/playwright-cli/tree/main/skills/playwright-cli)
 - [Anthropic webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing)
 - [Vercel agent-browser](https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser)
+
+## understand-mode
+
+Claude Code の回答、コード、PR、未コミット差分をブラウザのホワイトボードで読み、気になる箇所を選んで付箋ごとに質問できます。Node.js 18 以上が必要です。PR を指定する場合は `gh` を使います。
+
+1. 直前の回答には `/understand`、未コミット差分には `/understand diff`、PR には `/understand #123のPR` を実行します。
+2. ホワイトボードで気になる箇所を選び、付箋の中で追加質問します。付箋の会話はメインの Claude Code セッションから分岐します。
+3. 「理解を終える」で本筋に返す付箋を選び、返信案を確認して「メインに送って閉じる」を押します。Claude Code に戻って「終わった」と伝えると、まとめた内容がメインの会話に反映されます。
