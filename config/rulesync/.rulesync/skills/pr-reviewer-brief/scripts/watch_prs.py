@@ -124,17 +124,27 @@ def main() -> int:
 
     root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
     state_path = root / STATE_PATH
-    legacy_state_path = root / LEGACY_STATE_PATH
     if state_path.exists():
         state = json.loads(state_path.read_text())
-    elif legacy_state_path.exists():
-        state = json.loads(legacy_state_path.read_text())
     else:
-        existing = [pr["number"] for pr in open_prs(repo, me)]
-        state = {"seen": existing, "done": []}
-        print(f"監視を始めた。既存の open な PR {len(existing)} 件は対象にしない", file=sys.stderr)
-    if not state_path.exists():
+        legacy_paths = dict.fromkeys(
+            (root / LEGACY_STATE_PATH, Path.cwd() / LEGACY_STATE_PATH)
+        )
+        legacy_states = {
+            path: json.loads(path.read_text()) for path in legacy_paths if path.is_file()
+        }
+        if legacy_states:
+            state = {
+                key: list(dict.fromkeys(item for old in legacy_states.values() for item in old[key]))
+                for key in ("seen", "done")
+            }
+        else:
+            existing = [pr["number"] for pr in open_prs(repo, me)]
+            state = {"seen": existing, "done": []}
+            print(f"監視を始めた。既存の open な PR {len(existing)} 件は対象にしない", file=sys.stderr)
         save(state_path, state)
+        for path in legacy_states:
+            path.unlink()
     deadline = time.monotonic() + args.max_wait
 
     while True:
