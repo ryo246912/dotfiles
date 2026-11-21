@@ -13,7 +13,7 @@
 要点は 3 つ。
 
 1. **sandbox はアカウントごとに 1 つ**（`t3-account1` / `t3-account2` / `t3-work3` / `t3-oauth`）。プロジェクトやセッションごとには作らない。
-2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code）をすべて動かす。
+2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code / Codex）を動かす。
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
 PC のアプリもスマホのアプリも、この 1 つのサーバーに接続する。
@@ -22,11 +22,11 @@ PC のアプリもスマホのアプリも、この 1 つのサーバーに接�
 ```text
 スマホの T3 アプリ ──┐  T3 Connect（インターネット経由・QUIC）
                      │  または Tailscale（tailnet 内の HTTPS）
-PC の T3 アプリ ─────┤  http://127.0.0.1:3773 / 3774 / 3775
+PC の T3 アプリ ─────┤  http://127.0.0.1:3773 / 3774 / 3775 / 3776
                      ▼
 ┌─ Mac（ホスト）─────────────────────────────────────────────┐
 │  公開ポート 3773 → t3-account1 / 3774 → t3-account2 /      │
-│            3775 → t3-work3                                 │
+│            3775 → t3-work3 / 3776 → t3-oauth                 │
 │                                                            │
 │  ┌─ sbx: t3-work3（アカウント work3 用）────────────────┐  │
 │  │  T3 サーバー（1 つ）                                 │  │
@@ -408,7 +408,8 @@ tail -n 50 "${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/work3/t3/userdata/lo
 新規デバイス承認を有効にしている場合は、既に接続済みの PC の
 Settings → Sharing & access で新しい端末のコードを確認して承認する。
 PC・sandbox・T3 サーバーは起動した状態を維持する。
-標準上限は 3 環境なので、3 アカウントの sandbox を公開すると 3 台分になる。
+T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、4 つの sandbox のうち
+モバイルから使う環境を 3 つまで選ぶ。PC のローカル接続は T3 Connect の枠を使わない。
 
 ### Tailscale で接続する場合
 
@@ -501,7 +502,7 @@ mise bootstrap dotfiles apply
 ```
 
 続いて `mise run t3:cli` で設定済みアカウント → **restart-server** を選ぶ。
-設定済みの `account1` / `account2` / `work3` それぞれについて一度実行する。
+設定済みのプロファイルごとに一度実行する。
 これで既存サービスの呼び出し先も更新される。実行中の作業は先に終了する。
 この作業環境には `sbx` と `/dev/kvm` がないため、**microVM、LaunchAgent / systemd の実起動、
 実際の Claude 認証とスマホ接続は未確認**。
