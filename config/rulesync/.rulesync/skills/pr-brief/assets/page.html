@@ -289,7 +289,11 @@
         const head = document.querySelector('meta[name="pr-brief-head"]')?.content ?? "";
         const key = `pr-brief:${location.pathname}:${head}`;
         let done = {};
-        try { done = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
+        try {
+          const saved = localStorage.getItem(key)
+            ?? localStorage.getItem(`pr-reviewer-brief:${location.pathname}:${head}`);
+          done = JSON.parse(saved ?? "{}");
+        } catch {}
         const boxes = [...container.querySelectorAll("input[type=checkbox][data-group]")];
         const update = () => {
           const count = boxes.filter((box) => box.checked).length;
