@@ -5,7 +5,13 @@ if (!prefix) {
   process.exit(2);
 }
 
-const tabs = await (await fetch(`http://localhost:${port}/json`)).json();
+let tabs;
+try {
+  tabs = await (await fetch(`http://localhost:${port}/json`)).json();
+} catch (e) {
+  console.error(`cannot reach DevTools on localhost:${port} (${e.cause?.code ?? e.message}); run adb forward tcp:${port} localabstract:<socket> first`);
+  process.exit(1);
+}
 const target = new URL(prefix);
 const tab = tabs.find(t => {
   if (t.type !== 'page' || !URL.canParse(t.url)) return false;
@@ -22,6 +28,13 @@ let id = 0;
 const send = (method, params = {}) => ws.send(JSON.stringify({ id: ++id, method, params }));
 const reqs = new Map();
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const redact = url => {
+  if (!URL.canParse(url)) return url.slice(0, 200);
+  const u = new URL(url);
+  for (const k of u.searchParams.keys()) u.searchParams.set(k, '*');
+  if (u.hash) u.hash = '*';
+  return u.href.slice(0, 200);
+};
 const isAsset = url => /\/_next\/static|\.(js|css|png|jpe?g|svg|woff2?|ttf|ico)(\?|$)|__nextjs|webpack-hmr/.test(url);
 
 ws.onopen = () => {
@@ -34,11 +47,15 @@ ws.onmessage = ({ data }) => {
   switch (method) {
     case 'Network.requestWillBeSent':
       reqs.set(params.requestId, params.request.url);
-      if (!isAsset(params.request.url)) log('REQ', params.request.method, params.request.url.slice(0, 200));
+      if (params.redirectResponse && !isAsset(params.redirectResponse.url)) {
+        const { url, status, headers } = params.redirectResponse;
+        log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? ''));
+      }
+      if (!isAsset(params.request.url)) log('REQ', params.request.method, redact(params.request.url));
       break;
     case 'Network.responseReceived': {
       const { url, status, headers } = params.response;
-      if (!isAsset(url)) log('RES', status, url.slice(0, 200), headers?.location ?? headers?.Location ?? '');
+      if (!isAsset(url)) log('RES', status, redact(url), redact(headers?.location ?? headers?.Location ?? ''));
       break;
     }
     case 'Network.responseReceivedExtraInfo':
@@ -47,7 +64,7 @@ ws.onmessage = ({ data }) => {
       break;
     case 'Network.loadingFailed':
       log('FAIL', params.errorText, params.blockedReason ?? '', params.corsErrorStatus?.corsError ?? '',
-        (reqs.get(params.requestId) ?? '').slice(0, 200));
+        redact(reqs.get(params.requestId) ?? ''));
       break;
     case 'Runtime.consoleAPICalled':
       if (['error', 'warning'].includes(params.type))
@@ -57,10 +74,10 @@ ws.onmessage = ({ data }) => {
       log('EXCEPTION', (params.exceptionDetails.exception?.description ?? params.exceptionDetails.text).slice(0, 400));
       break;
     case 'Log.entryAdded':
-      if (params.entry.level !== 'verbose') log('LOG', params.entry.level, params.entry.text.slice(0, 400), params.entry.url ?? '');
+      if (params.entry.level !== 'verbose') log('LOG', params.entry.level, params.entry.text.slice(0, 400), redact(params.entry.url ?? ''));
       break;
     case 'Page.frameNavigated':
-      if (!params.frame.parentId) log('NAV', params.frame.url);
+      if (!params.frame.parentId) log('NAV', redact(params.frame.url));
       break;
   }
 };
