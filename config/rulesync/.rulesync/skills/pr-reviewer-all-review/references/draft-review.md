@@ -1,6 +1,6 @@
 # レビューの投稿と submit 用の本文例
 
-pr-reviewer-all-review / pr-reviewer-comment-crit skill の共通手順。
+pr-reviewer-all-review / pr-reviewer-crit skill の共通手順。
 
 ## インラインコメントの書式
 

@@ -31,7 +31,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | 月次の見直し             | `lessons-review` skill を同じく定期タスクで実行（received・given・team のすべて）        |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
 | push 前の突き合わせ      | `pr-author-lessons-review` skill                                                         |
-| レビュー時の観点         | `pr-reviewer-all-review` / `pr-reviewer-comment-crit`（`references/findings.md`）        |
+| レビュー時の観点         | `pr-reviewer-all-review` / `pr-reviewer-crit`（`references/findings.md`）                |
 | 同期・初期設定のコマンド | `mise run lessons:setup` / `mise run lessons:sync`（`config/mise/tasks/lessons.toml`）   |
 
 ## 知見リポジトリの構成
@@ -70,7 +70,7 @@ owner・global へ広がる。そのリポジトリの領域に固有の教訓�
 | source     | 内容                                       | 使う場所                                                              |
 | ---------- | ------------------------------------------ | --------------------------------------------------------------------- |
 | `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-lessons-review                         |
-| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-all-review / pr-reviewer-comment-crit の観点              |
+| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-all-review / pr-reviewer-crit の観点                      |
 | `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-lessons-review、pr-reviewer-all-review |
 
 ### 収集対象（targets.yml と targets.<name>.yml）
@@ -314,7 +314,7 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
 | push・PR 作成の前    | `pr-author-lessons-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                 |
 | 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
-| 他人の PR のレビュー | `pr-reviewer-all-review` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                |
+| 他人の PR のレビュー | `pr-reviewer-all-review` / `pr-reviewer-crit` が `given`・`team` の教訓を観点として読む                                                                        |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
 | 毎月                 | `lessons-review` が全教訓を見直し、統合・書き直し・retired を `review/<日付>` の PR に出す                                                                     |
 

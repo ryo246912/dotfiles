@@ -1,5 +1,5 @@
 ---
-name: pr-reviewer-comment-crit
+name: pr-reviewer-crit
 description: >-
   他人の GitHub PR を crit の UI でレビューする skill。PR へ checkout し、指摘候補（must/should/imo/nit/Q）を
   裏取りしたうえで crit のインラインコメントとして並べ、`crit pr` の UI でユーザーと壁打ちする。選ばれた指摘だけを
@@ -11,7 +11,7 @@ targets:
   - codexcli
 ---
 
-# pr-reviewer-comment-crit — crit の UI で PR をレビューし、draft を作るか公開する
+# pr-reviewer-crit — crit の UI で PR をレビューし、draft を作るか公開する
 
 レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を作るか公開する**
 までを進める。pr-reviewer-all-review skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
@@ -32,12 +32,12 @@ targets:
 ディレクトリに配置されるので、`<この skill のディレクトリ>/../pr-reviewer-all-review/references/` を手順に入るときに読む。
 以下ではこのディレクトリを `<refs>` と書く。
 
-| 手順 | 読むファイル             | pr-reviewer-comment-crit で追加・変更すること |
-| ---- | ------------------------ | --------------------------------------------- |
-| 1    | `<refs>/pr-info.md`      | checkout と HEAD の確認（下記 1）             |
-| 2, 4 | `<refs>/findings.md`     | 候補を crit のコメントにする（下記 4）        |
-| 3    | `<refs>/manual-test.md`  | なし                                          |
-| 6    | `<refs>/draft-review.md` | crit のコメントから作る（下記 6）             |
+| 手順 | 読むファイル             | pr-reviewer-crit で追加・変更すること  |
+| ---- | ------------------------ | -------------------------------------- |
+| 1    | `<refs>/pr-info.md`      | checkout と HEAD の確認（下記 1）      |
+| 2, 4 | `<refs>/findings.md`     | 候補を crit のコメントにする（下記 4） |
+| 3    | `<refs>/manual-test.md`  | なし                                   |
+| 6    | `<refs>/draft-review.md` | crit のコメントから作る（下記 6）      |
 
 `crit` / `crit-cli` skill（APM で配布）の CLI の使い方も前提にする。
 
@@ -167,7 +167,7 @@ resolve は「このスレッドはもう話さない」という意味だけを
 
 ## 6. レビューを draft または公開として投稿する
 
-`<refs>/draft-review.md` に従う。pr-reviewer-comment-crit では次の点を加える。
+`<refs>/draft-review.md` に従う。pr-reviewer-crit では次の点を加える。
 
 - `crit push` は使わない。`crit push` は event 付き（既定は COMMENT）でレビューを作るため投稿した時点で submit され、
   draft にできない。また resolve の有無に関係なく GitHub 上のスレッドへの reply まで投稿する
