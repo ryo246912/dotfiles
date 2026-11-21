@@ -82,8 +82,9 @@ python3 <この skill のディレクトリ>/scripts/get_stack.py --pr <PR 番�
 - 引数は数字だけにして渡す。PR の URL なら `/pull/` の後ろの番号を、`#123` なら `#` を除いた番号を使う
 
 - 出力の `is_stack` が true なら名前は `stack-<stack_number>`、false なら `pr-<N>`
-- **作業ディレクトリ** `./plan/.pr-reviewer-brief/<名前>/` を作り、出力をそのまま `target.json` に保存する
-- **出力先**は `./plan/<名前>_<変更内容タイトル>.html`（例: `pr-123_土地一覧の検索条件を追加.html`）。
+- 対象リポジトリのルート（`git rev-parse --show-toplevel`）を起点に、pr-reviewer-behavior と共通の `.pr-reviewer-artifacts/` を使う。このディレクトリは global ignore の対象。
+- **作業ディレクトリ** `.pr-reviewer-artifacts/<名前>/brief/` を作り、出力をそのまま `target.json` に保存する
+- **出力先**は同じ作業ディレクトリの `<名前>_<変更内容タイトル>.html`。例は `.pr-reviewer-artifacts/pr-123/brief/pr-123_土地一覧の検索条件を追加.html`。
   `<変更内容タイトル>` は段階 2 で決める `brief.json` の `title` を使う。stack・チケットも同じ命名にする。
   ファイル名に使えない文字（`/`・`\`・`:`・`*`・`?`・`"`・`'`・`` ` ``・`$`・`<`・`>`・`|`・制御文字）は `-` に置き換え、
   前後の空白と末尾の `.` を除く。ファイル名全体（接頭辞・区切り・拡張子を含む）が UTF-8 で 255 バイト以内になるよう、タイトルの末尾を文字単位で切り詰める。空になった場合は `変更内容` とする。作業ディレクトリ名は変えない。
