@@ -275,7 +275,23 @@ cloudflared は失敗後に `1.1.1.1:853`（SNI は `cloudflare-dns.com`）へ�
 `1.1.1.1:853` を sandbox 限定で許可しても、ハンドシェイクは成功しなかった。
 
 この制約は sbx 側の DNS・透過プロキシの挙動によるもので、dotfiles の network allow では解消できない。
-sbx が SRV を扱えるようになるまで、スマホ接続は下記の Tailscale を使う。
+
+SRV/TXT の NOTIMP は [docker/sbx-releases#791](https://github.com/docker/sbx-releases/issues/791) で報告済みで、
+メンテナーの回答では v0.54.0 には未収録、v0.55.0-rc4（pre-release）に収録されている。
+v0.55.0-rc4 を `t3-work3` で実機確認したところ、SRV / TXT は応答するようになり、
+cloudflared は edge IP（`198.41.192.x`）を取得できた。ただし T3 Connect はまだ接続できない:
+
+- 7844 番への TLS ハンドシェイクが `EOF` で失敗する。
+- ポリシーログでは `h2.cftunnel.com:7844` と `probe.cftunnel.com:7844` が、
+  許可済みでも透過プロキシで `<dial failed>` になる。
+- この 2 つは cloudflared が SNI にだけ使う名前で、DNS には存在しない（`dig` が空）。
+  一方、ホストからは edge IP の TCP 7844 に接続できる。
+- DoT の `cloudflare-dns.com:853` と同じ挙動で、透過プロキシが SNI の名前を宛先として
+  解決し直している可能性が高い（未確認）。`1.1.1.1:853` や `probe.cftunnel.com:7844` の許可を足しても変わらない。
+
+そのため、v0.55.0-rc4 でも T3 Connect は使えない。スマホ接続は下記の Tailscale を使う。
+sbx のリリース後に、`dig` で SRV が引けることと、`connect status` の
+`reachable` を再確認する。
 
 タスク更新後は `mise run t3:cli -- work3 restart-server` で起動設定を反映する。
 この操作は対象 sandbox の実行中の作業を中断するため、先に終了する。

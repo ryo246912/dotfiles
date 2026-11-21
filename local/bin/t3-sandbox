@@ -19,7 +19,7 @@ T3_CONNECT_NETWORK =",".join((
     "cloudflare-dns.com:853",
     "_v2-origintunneld._tcp.argotunnel.com:7844",
     "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
-    "cftunnel.com:7844", "h2.cftunnel.com:7844",
+    "cftunnel.com:7844", "h2.cftunnel.com:7844", "probe.cftunnel.com:7844",
 ))
 
 
