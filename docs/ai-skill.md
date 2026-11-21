@@ -778,6 +778,17 @@ desloppify status --json   # 状態を JSON で出力
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
 
+## `pr-reviewer-all-review` — レビュアー向けの統合レビュー
+
+`/pr-reviewer-all-review <PR URL または番号>` は、通常の指摘候補の裏取りに加え、`code-review`、
+`ponytail-review`、変更内容に合う専門レビューを実行します。結果をまとめて指摘候補を提示し、
+投稿する候補はユーザーが選びます。`--crit` は crit での確認、`--brief` は解説資料、
+`--behavior` は起動済み環境での動作確認を追加します。
+
+通常の `pr-reviewer-comment` と `pr-reviewer-comment-crit` は、共通の `references/findings.md` に沿って、
+過去の指摘や規約、変更箇所の呼び出し元・呼び出し先、テストを直接読みます。
+Claude Code 同梱の `/code-review` は任意で併用でき、その出力も同じ手順で裏を取ります。
+
 ## `pr-reviewer-brief` — PR解説と動作確認のレポート
 
 PRのURL・番号またはstackを渡すと、前提知識・変更内容を整理したHTMLを作り、通常実行では
