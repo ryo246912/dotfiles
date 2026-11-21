@@ -9,12 +9,16 @@
     }
   },
   "statusHooks": {
+    "busy": {
+      "command": "ai-sessions record-state",
+      "enabled": true
+    },
     "idle": {
-      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero --current-tmux; else macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero; fi",
+      "command": "ai-sessions record-state; if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero --current-tmux; else macos-notify-cli --title \"CCManager - Idle\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}がIdle状態です\" --sound Hero; fi",
       "enabled": true
     },
     "waiting_input": {
-      "command": "if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass --current-tmux; else macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass; fi",
+      "command": "ai-sessions record-state; if [ -n \"$TMUX\" ]; then macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass --current-tmux; else macos-notify-cli --title \"CCManager - 入力待ち\" --message \"${CCMANAGER_WORKTREE_PATH}の${CCMANAGER_WORKTREE_BRANCH}が入力待ちです\" --sound Glass; fi",
       "enabled": true
     }
   },
@@ -80,12 +84,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx exec sbx-agent claude --claude-account account1 --name-prefix a1 -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
@@ -96,12 +100,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "CLAUDE_CODE_ENABLE_CFC=1 exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
+          "CLAUDE_CODE_ENABLE_CFC=1 AI_SESSIONS_PRESET=sbx-oauth-chrome exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "CLAUDE_CODE_ENABLE_CFC=1 exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
+          "CLAUDE_CODE_ENABLE_CFC=1 AI_SESSIONS_PRESET=sbx-oauth-chrome exec sbx-agent claude --claude-oauth --name-prefix oauth -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
@@ -112,12 +116,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx-account2 exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx-account2 exec sbx-agent claude --config-dir \"$HOME/.claude-account2\" --claude-account account2 --name-prefix a2 -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
@@ -128,12 +132,12 @@
         "command": "zsh",
         "args": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx-work3 exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
           "sbx-agent"
         ],
         "fallbackArgs": [
           "-c",
-          "exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
+          "AI_SESSIONS_PRESET=sbx-work3 exec sbx-agent claude --config-dir \"$HOME/.claude-work3\" --claude-account work3 --name-prefix w3 -- \"$@\"",
           "sbx-agent"
         ],
         "detectionStrategy": "claude"
@@ -142,8 +146,16 @@
         "id": "sbx-codex",
         "name": "Codex (Docker Sandbox)",
         "command": "zsh",
-        "args": ["-c", "exec sbx-agent codex -- resume --yolo \"$@\"", "sbx-agent"],
-        "fallbackArgs": ["-c", "exec sbx-agent codex -- --yolo \"$@\"", "sbx-agent"],
+        "args": [
+          "-c",
+          "AI_SESSIONS_PRESET=sbx-codex exec sbx-agent codex -- resume --yolo \"$@\"",
+          "sbx-agent"
+        ],
+        "fallbackArgs": [
+          "-c",
+          "AI_SESSIONS_PRESET=sbx-codex exec sbx-agent codex -- --yolo \"$@\"",
+          "sbx-agent"
+        ],
         "detectionStrategy": "codex"
       },
       {

@@ -38,6 +38,21 @@ Session Actions では次の操作もできます。
 同じディレクトリで複数のエージェントが同時にファイルを編集すると衝突しやすいため、
 2つ目以降は調査・レビュー専用にするなど役割を分けて使います。
 
+## tmux で AI セッションを一覧表示する
+
+`prefix → Ctrl+D → AI セッション一覧` で、ホスト上の複数の ccmanager が管理するセッションを
+まとめて表示します。ステータスバーにも状態別の件数が出ます。
+
+- `↑` / `↓` で行を移動すると、選択中のセッションの直近の会話が自動で表示されます。
+- `/` でセッション名・ブランチ・プロンプトを検索し、`w` で入力待ちだけに絞ります。
+- `PgUp` / `PgDn` で会話をスクロールし、`Esc` で閉じます。
+
+配置後は tmux の設定を再読み込みし、ccmanager を再起動して状態フックを有効にします。
+会話プレビューは、この設定で起動した Docker Sandbox の Claude / Codex が対象です。
+Codex でフックの承認が求められた場合は `/hooks` で設定を確認してください。
+同じ ccmanager が同じ worktree・preset のセッションを複数起動した場合、状態と名前は各行に
+表示されます。会話は ccmanager と sandbox の起動を一意に対応づけられる場合に表示されます。
+
 ## Docker Sandbox で Claude アカウントを切り替える
 
 Docker Sandbox の Claude preset は `--claude-account account1/account2/work3` を渡し、
