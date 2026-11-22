@@ -482,8 +482,9 @@ agent ごとの設定ディレクトリの対応（`--config-dir` で上書き�
 #### ホストの Claude 設定の適用
 
 通常の Claude 起動は、マウントしたホスト設定ディレクトリを `CLAUDE_CONFIG_DIR` で参照します。
-追加の `--settings` や設定ファイルのハッシュ照合は行いません。
-`--claude-oauth` はホスト設定の共有対象外で、sandbox 内の設定を使います。
+ホストの `settings.json` を追加の `--settings` で渡したり、ハッシュ照合したりはしません。
+`--claude-oauth` はホスト設定ファイルの共有対象外で、sandbox 内の設定を使います。
+ただし `MOUNT_CONFIG=true` かつホストの `claude/statusline.sh` が利用可能な場合は、statusLine だけを CLI の `--settings` で追加します。
 
 ホスト設定の自動マウントを止める新規 sandbox は `--no-config` で作成します。
 `--mount` や `SBX_AGENT_MOUNTS` で明示した workspace は、この指定でも引き続き共有されます。
