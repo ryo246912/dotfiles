@@ -709,6 +709,26 @@ npx -y modern-web-guidance@latest retrieve "animate-to-from-top-layer"
 
 [Modern Web Guidance の公式ドキュメント](https://developer.chrome.com/docs/modern-web-guidance)
 
+## `gridlines`
+
+Gridlines は、Web UI にガイド線を引き、サイドバーやツールバー、メニュー、テーブルなどで
+テキスト・アイコン・ボタンの位置がずれている箇所を測定するスキルです。
+
+### 使い方
+
+1. 対象アプリを起動し、確認したいページの URL と UI の範囲を伝えます。依頼例は以下のとおりです。
+
+   - Claude Code では `/gridlines http://localhost:3000/settings のサイドバーを点検して、ラベルとアイコンを揃えて`
+   - Codex では `$gridlines http://localhost:3000/settings のサイドバーを点検して、ラベルとアイコンを揃えて`
+
+2. スキルは幅 1440px と 390px で計測します。メニューやダイアログも対象にする場合は、開き方を依頼に含めます。
+3. ガイド付きの画像と JSON レポートを `.gridlines/` に保存します。レポートの `MISS` を画像と照合し、
+   プロジェクトの余白ルールに従って共通の padding などを修正したあと、同じ条件で再計測します。
+
+ヘッドレスでの計測には Playwright と Chromium が必要です。ブラウザーを操作できる環境では、
+同梱の `probe.js` を対象ページで実行し、`window.__gridlines()` で直接計測できます。
+[Gridlines の README](https://github.com/pritamux/gridlines#readme)
+
 ## desloppify（コードベースの品質改善ループ）
 
 [desloppify](https://github.com/peteromallet/desloppify) は、コードベースをスキャンして「雑な実装（slop）」を検出し、
