@@ -17,7 +17,7 @@
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
 PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下は、dotfiles に OAuth 環境、where-platform に account1 環境を作った例。
+以下は、`xxx` に OAuth 環境、`yyy` に account1 環境を作った例。
 
 ```text
 T3 Code アプリ（接続先を切り替え）
@@ -26,15 +26,15 @@ T3 Code アプリ（接続先を切り替え）
                 account2 3820–3829 / work3 3830–3839
   │
   └─ Mac（ホスト）
-      ├─ 127.0.0.1:3800 → dotfiles-oauth-<パスのハッシュ>-t3
+      ├─ 127.0.0.1:3800 → xxx-oauth-<パスのハッシュ>-t3
       │                    ├─ T3 サーバー（sandbox 内の :3773）
-      │                    ├─ workspace: dotfiles
-      │                    └─ T3 の設定・履歴: dotfiles の環境の保存先
+      │                    ├─ workspace: xxx
+      │                    └─ T3 の設定・履歴: xxx の環境の保存先
       │
-      └─ 127.0.0.1:3810 → where-platform-a1-<パスのハッシュ>-t3
+      └─ 127.0.0.1:3810 → yyy-a1-<パスのハッシュ>-t3
                            ├─ T3 サーバー（sandbox 内の :3773）
-                           ├─ workspace: where-platform
-                           └─ T3 の設定・履歴: where-platform の環境の保存先
+                           ├─ workspace: yyy
+                           └─ T3 の設定・履歴: yyy の環境の保存先
 ```
 
 各環境にはアカウントごとの枠から空いている公開ポートを1つ割り当てる。
@@ -135,10 +135,10 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 ### リポジトリ別の T3 環境を作る
 
 T3 Code アプリに接続したいリポジトリのルートで次を実行する。
-以下は `where-platform` の例。
+以下は `yyy` の例。
 
 ```sh
-cd ~/Programming/work3/where-platform
+cd /path/to/yyy
 mise run t3:setup
 mise run t3:cli
 ```
