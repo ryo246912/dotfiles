@@ -12,31 +12,30 @@
 
 要点は 3 つ。
 
-1. **sandbox は Git リポジトリのルートパスとアカウントの組み合わせごとに 1 つ**。既存の共有環境は `--shared` で操作する。
+1. **sandbox は Git リポジトリのルートパスとアカウントの組み合わせごとに 1 つ**。
 2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code / Codex）を動かす。
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
 PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下は、同じ OAuth アカウントで dotfiles の共有環境と where-platform の専用環境を併用する例。
+以下は、同じ OAuth アカウントで dotfiles と where-platform に別々の環境を作った例。
 
 ```text
 T3 Code アプリ（接続先を切り替え）
   PC はローカルの公開ポート、スマホは T3 Connect で接続
   │
   └─ Mac（ホスト）
-      ├─ 127.0.0.1:3776 → t3-oauth（共有環境）
+      ├─ 127.0.0.1:3780 → dotfiles-oauth-<パスのハッシュ>-t3
       │                    ├─ T3 サーバー（sandbox 内の :3773）
       │                    ├─ workspace: dotfiles
-      │                    └─ T3 の設定・履歴: 共有環境の保存先
+      │                    └─ T3 の設定・履歴: dotfiles の環境の保存先
       │
-      └─ 127.0.0.1:3780 → where-platform-oauth-<パスのハッシュ>-t3
+      └─ 127.0.0.1:3781 → where-platform-oauth-<パスのハッシュ>-t3
                            ├─ T3 サーバー（sandbox 内の :3773）
                            ├─ workspace: where-platform
-                           └─ T3 の設定・履歴: リポジトリ別環境の保存先
+                           └─ T3 の設定・履歴: where-platform の環境の保存先
 ```
 
-共有環境の既定ポートは `t3-account1` が 3773、`t3-account2` が 3774、
-`t3-work3` が 3775、`t3-oauth` が 3776。リポジトリ別環境には 3780 以降の空きポートを自動で割り当てる。
+公開ポートは 3780 以降の空きポートを環境ごとに自動で割り当てる。
 
 ### 各部品の役割
 
@@ -55,20 +54,16 @@ T3 Code アプリ（接続先を切り替え）
 - **セッションごとに sandbox が増えるのか**: 同じ T3 環境で始めたセッションは 1 つの sandbox を共有する。
   同じアカウントでも、リポジトリ別の環境を追加した場合は専用の sandbox ができる。
 - **スマホでは何が見えるのか**: スマホから接続したサーバー（接続先の sandbox）の thread とその履歴。
-  共有環境とリポジトリ別環境はそれぞれアプリに追加できる。
+  リポジトリ別の環境をそれぞれアプリに追加できる。
 - **別のアカウントの sandbox のエージェントも同じ画面で見られるのか**: アプリに各環境を追加すれば切り替えて見られる。
   セッションと履歴はサーバーごとに保存される。
 - **ターミナルや ccmanager で動かしたエージェントは見えるのか**: 見えない。T3 に表示されるのは、
   T3 自身が起動した thread だけ。スマホで見たい作業は、T3 アプリから新規セッションとして始める。
 
-### スマホからの接続経路
+### スマホからの接続
 
-| 経路       | 条件                                                                      | 備考                                                         |
-| ---------- | ------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| T3 Connect | sbx 0.55.0-rc4 以降、`feature.udp-egress` の有効化、QUIC・UDP 7844 の許可 | スマホ側に VPN は不要。出先でも使える。                      |
-| Tailscale  | Mac とスマホの Tailscale、MagicDNS・HTTPS 証明書                          | T3 Connect が使えないときの代替。詳細は後述の Tailscale 節。 |
-
-どちらもサーバーは同じで、経路だけが違う。接続の準備は「スマホ・別の PC のアプリから接続する」を参照する。
+スマホは T3 Connect で接続する。sbx 0.55.0-rc4 以降、`feature.udp-egress` の有効化、
+QUIC と UDP 7844 の許可が必要。接続の準備は「スマホ・別の PC のアプリから接続する」を参照する。
 
 ## 初回導入
 
@@ -112,15 +107,6 @@ Ctrl-A で全選択、Ctrl-D で選択解除、Esc で設定を変更せず中�
 `fzf` が未導入なら `mise install aqua:junegunn/fzf` で導入する。
 開始前に表示される Workspace が、操作しているプロジェクトのパスであることを確認する。
 
-以下の sbx 名とポートは共有環境を使う場合の既定値。
-
-| 選択     | Claude 設定          | 専用 sbx      | PC 側の接続先           |
-| -------- | -------------------- | ------------- | ----------------------- |
-| account1 | `~/.claude`          | `t3-account1` | `http://127.0.0.1:3773` |
-| account2 | `~/.claude-account2` | `t3-account2` | `http://127.0.0.1:3774` |
-| work3    | `~/.claude-work3`    | `t3-work3`    | `http://127.0.0.1:3775` |
-| oauth    | sandbox 内の標準設定 | `t3-oauth`    | `http://127.0.0.1:3776` |
-
 subscription プロファイルは `sbx-agent --claude-account` と subscription kit を使い、
 Claude の認証先をその sandbox に固定する。token が未登録の場合は停止する。
 
@@ -146,8 +132,7 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 
 ### リポジトリ別の T3 環境を作る
 
-既存の共有環境（例: `t3-oauth`）と同じアカウントで、別のリポジトリを
-T3 Code アプリに接続するときは、そのリポジトリのルートで次を実行する。
+T3 Code アプリに接続したいリポジトリのルートで次を実行する。
 以下は `where-platform` の例。
 
 ```sh
@@ -167,9 +152,8 @@ mise run t3:cli
 同名のリポジトリを別の場所に clone した場合も別環境になる。
 初回は環境ごとに 3780 以降の空きポートを自動で割り当てる。
 同じ環境の再セットアップでは登録済みのポートを再利用する。`--port` で初回のポートを指定することもできる。
-既存の共有環境を操作する場合は `mise run t3:cli -- --shared` を使う。共有環境のセットアップは `mise run t3:setup -- --shared`。
 リポジトリ別環境のアプリ接続にはローカルの `pair` または T3 Connect を使う。
-同じ T3 Connect アカウントで登録できるのは、共有環境とリポジトリ別環境を合計して標準で 3 環境まで。
+同じ T3 Connect アカウントで登録できるのは、全リポジトリの環境を合計して標準で 3 環境まで。
 PC のローカル `pair` はこの枠を使わない。
 
 T3 を使わずにリポジトリで Claude を直接開く場合は
@@ -247,7 +231,6 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 | pair           | PC のアプリ接続用 Address / Token / URL を発行                  |
 | login          | Claude / Codex を選んでログイン                                 |
 | connect        | T3 Connect の初回認証（スマホ接続用）                           |
-| tailscale      | Tailscale 経由でスマホ接続用の Address / Token を発行           |
 | sessions       | 接続を許可した端末の一覧                                        |
 | ports          | sandbox の公開ポートを表示                                      |
 | server-status  | ホスト側 T3 サービスの状態                                      |
@@ -446,58 +429,22 @@ tail -n 50 "${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/work3/t3/userdata/lo
 新規デバイス承認を有効にしている場合は、既に接続済みの PC の
 Settings → Sharing & access で新しい端末のコードを確認して承認する。
 PC・sandbox・T3 サーバーは起動した状態を維持する。
-T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、共有環境とリポジトリ別環境を合わせて
+T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、全リポジトリの環境を合わせて
 モバイルから使う環境を 3 つまで選ぶ。PC のローカル接続は T3 Connect の枠を使わない。
-
-### Tailscale で接続する場合
-
-共有の subscription 環境で T3 Connect が使えない場合は、スマホからホスト側の Tailscale で接続できる。T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
-
-前提（初回のみ）:
-
-- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
-- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
-- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
-
-```bash
-mise run t3:cli -- --shared --sbx work3 tailscale
-```
-
-`tailscale` はホストの `tailscale serve --bg` で、sandbox の公開ポートを tailnet の HTTPS に出し、
-スマホ用の pairing token を発行する。`serve` の設定は永続し、場所を変えても tailnet のアドレスは変わらない。
-HTTPS ポートはアカウント間で重複しないよう固定する（この構成では 443 / 8443 / 10000 を使う）。
-OAuth プロファイルはローカルの `pair` または T3 Connect を使う。
-
-| アカウント | sandbox 公開ポート | tailnet の HTTPS ポート |
-| ---------- | ------------------ | ----------------------- |
-| account1   | 3773               | 443                     |
-| account2   | 3774               | 10000                   |
-| work3      | 3775               | 8443                    |
-
-スマホの Add environment に、表示された `https://<MagicDNS名>:<port>` と Token を入力する。
-`127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
-ブラウザで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
-接続後はアプリの環境選択だけで使え、再実行は Token の期限切れ・端末の追加時のみ。
-この経路だけを消すには `tailscale serve --https=8443 off` のように、対応するポートを指定する。
-
-Tailscale は private ホストで `mise run bootstrap:mac-packages` が導入する（`tailscale-app`）。
-`mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
-実機では中断したため使わない。
 
 ## 自動起動と保存先
 
-| 項目                        | 保存先（既定）                                              |
-| --------------------------- | ----------------------------------------------------------- |
-| ホスト側 profile            | `~/.local/state/t3-sandbox/profiles/<account>.json`         |
-| 履歴・設定・worktree・clone | `~/.local/share/t3-sandbox/<account>/t3/`                   |
-| macOS サービス              | `~/Library/LaunchAgents/local.t3-sandbox.<account>.plist`   |
-| macOS ログ                  | `~/.local/state/t3-sandbox/logs/<account>.log`              |
-| Linux サービス              | `~/.config/systemd/user/local.t3-sandbox.<account>.service` |
+| 項目                        | 保存先（既定）                                                   |
+| --------------------------- | ---------------------------------------------------------------- |
+| ホスト側 profile            | `~/.local/state/t3-sandbox/profiles/<sandbox-name>.json`         |
+| 履歴・設定・worktree・clone | `~/.local/share/t3-sandbox/<sandbox-name>/t3/`                   |
+| macOS サービス              | `~/Library/LaunchAgents/local.t3-sandbox.<sandbox-name>.plist`   |
+| macOS ログ                  | `~/.local/state/t3-sandbox/logs/<sandbox-name>.log`              |
+| Linux サービス              | `~/.config/systemd/user/local.t3-sandbox.<sandbox-name>.service` |
 
 データ領域はそのアカウントの sandbox に追加 mount し、ホスト用 profile は mount の外に置く。
 XDG_DATA_HOME / XDG_STATE_HOME / XDG_CONFIG_HOME の指定にも対応。
 同じ環境に別 workspace / port を指定して setup を再実行した場合は、既存設定を変更せず停止する。
-リポジトリ別環境では、表の `<account>` の位置にリポジトリ別 sandbox の名前を使う。
 別アカウントを追加しても既存アカウントの T3 とデータを変更しない。
 データはホストに永続化されるが、sandbox の削除・再作成は動いている作業を終了し、
 追加の provider ログインが必要になることもある。認証情報を template に焼き込まない。
@@ -511,12 +458,8 @@ Linux でログアウト後も維持する場合は、管理者の方針に従�
 診断・保守時だけターミナルを使う:
 
 ```bash
-mise run t3:cli -- --shared --sbx account2 ports
-# macOS
-launchctl print gui/$(id -u)/local.t3-sandbox.account2
-# Linux
-systemctl --user status local.t3-sandbox.account2.service
-journalctl --user -u local.t3-sandbox.account2.service
+mise run t3:cli -- --sbx account2 ports
+mise run t3:cli -- --sbx account2 server-status
 ```
 
 サービスを止める際は実行中の作業を確認する。
