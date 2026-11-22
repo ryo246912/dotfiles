@@ -10,7 +10,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 | スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                                 | 用途                                                                                                                                                         |
 | ---------------- | ---------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` / `AGENTS.md` と、dotfiles 専用 skill（例: `dotfiles-pr-verify`）を生成する自己参照的な設定                             |
+| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` / `AGENTS.md` と、dotfiles 専用 skill（例: `pr-verify-dotfiles`）を生成する自己参照的な設定                             |
 | グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
 
 - プロジェクト単位の設定が生成するのは、あなたが今読んでいる **`CLAUDE.md` と `AGENTS.md`**です。

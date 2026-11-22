@@ -1,11 +1,10 @@
 ---
-name: dotfiles-pr-verify
-description: dotfiles リポジトリの PR を番号か URL で受け取り、PR の最新コミットを detached HEAD で checkout して、変更内容の動作確認を行い、結果を plan/ 配下の HTML に出力する。「#1234 を動作確認して」「この PR を detach で checkout して確認して」など、dotfiles の PR の動作確認を頼まれたときに使う。
-targets:
-  - claudecode
-  - codexcli
+name: pr-verify-dotfiles
+description: >-
+  dotfiles リポジトリの PR を番号か URL で受け取り、PR の最新コミットを detached HEAD で checkout
+  して、変更内容の動作確認を行い、結果を plan/ 配下の HTML に出力する。「#1234 を動作確認して」「この PR を detach で
+  checkout して確認して」など、dotfiles の PR の動作確認を頼まれたときに使う。
 ---
-
 # dotfiles の PR 動作確認
 
 ## スコープ
