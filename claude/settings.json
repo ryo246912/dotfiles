@@ -92,6 +92,7 @@
     "pr-crit": "name-only",
     "pr-fix": "name-only",
     "pr-lessons-review": "name-only",
+    "pr-mobile-review": "name-only",
     "pr-reviewer-all-review": "name-only",
     "pr-spec-review": "name-only",
     "prompt-master": "user-invocable-only",
