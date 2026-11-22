@@ -10,7 +10,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 | スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                                 | 用途                                                                                                                                                         |
 | ---------------- | ---------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` / `AGENTS.md` を生成する自己参照的な設定                                                                                |
+| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` / `AGENTS.md` と、dotfiles 専用 skill（例: `pr-verify-dotfiles`）を生成する自己参照的な設定                             |
 | グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
 
 - プロジェクト単位の設定が生成するのは、あなたが今読んでいる **`CLAUDE.md` と `AGENTS.md`**です。
@@ -50,7 +50,7 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 生成前から指示を参照できるよう、実ファイルを Git 管理します。正本は `.rulesync/rules/CLAUDE.md` です。
 変更後はリポジトリ直下で `rulesync generate` を実行してください。
 `mise run lint:rulesync` は一時ディレクトリで再生成し、`CLAUDE.md`・`AGENTS.md`・
-`.claude/settings.json`・`.codex/hooks.json` の4ファイルを比較して、不足や差分で失敗します。
+`.claude/settings.json`・`.codex/hooks.json` の4ファイルと、`.claude/skills/`・`.agents/skills/` を比較して、不足や差分で失敗します。
 CI でも毎回実行するため、ソース・設定・生成物の更新漏れを検知できます。
 
 | 種類                               | 例                                                                              | git 管理 | 理由                                                                                                                              |
@@ -58,6 +58,7 @@ CI でも毎回実行するため、ソース・設定・生成物の更新漏�
 | プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
 | プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                             | する     | 生成物の正本だから                                                                                                                |
 | プロジェクト単位の生成物           | `CLAUDE.md`, `AGENTS.md`                                                        | する     | 初回 clone とクラウド環境で生成前から参照するため                                                                                 |
+| プロジェクト単位の skill 生成物    | `.claude/skills/`, `.agents/skills/`                                            | する     | 初回 clone とクラウド環境で生成前から dotfiles 専用 skill を使うため                                                              |
 | プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`                                    | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
 | グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                                | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
 | グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md`            | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
