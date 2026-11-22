@@ -5,8 +5,10 @@
 PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [tools]
-# Docker Sandboxes (sbx)。Apple Silicon 専用
-"github:docker/sbx-releases" = { version = "0.53.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
+# Docker Sandboxes (sbx)。Apple Silicon 専用。T3 Connect が使う SRV/TXT の修正は
+# v0.55.0-rc4 に収録（0.53/0.54 は未対応）。正式版 0.55.0 以降が出たら更新する。
+# https://github.com/docker/sbx-releases/issues/791
+"github:docker/sbx-releases" = { version = "0.55.0-rc4", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 "github:hzqtc/taproom"       = { version = "0.6.2", bin = "taproom" }
 "http:terminal-browser"      = { version = "0.15.3", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
@@ -69,10 +71,13 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:rectangle"                 = "latest" # 1.100
 "brew-cask:slack"                     = "latest" # 4.51.180
 "brew-cask:syncthing-app"             = "latest" # 2.1.2-1
-"brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
-"brew-cask:vicinae"                   = "latest" # 0.28.2
-"brew-cask:visual-studio-code"        = "latest" # 1.106.3
-"brew-cask:wezterm@nightly"           = "latest"
+"brew-cask:t3-code"                   = "latest" # 0.1.9
+# 独自 tap の cask。Thaw 3 は macOS 27 必須のため、macOS 26 では 2.x を使う。Renovate の API 照会対象外なのでバージョン注記は付けない
+"brew-cask:thaw-app/tap/thaw@2"   = "latest"
+"brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
+"brew-cask:visual-studio-code"    = "latest" # 1.106.3
+"brew-cask:wezterm@nightly"       = "latest"
 
 [bootstrap.brew.taps]
 "kamillobinski/thock" = "https://github.com/kamillobinski/homebrew-thock.git"

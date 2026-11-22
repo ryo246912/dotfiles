@@ -1,0 +1,632 @@
+#!/usr/bin/env python3
+"""Initial account selection and host service for app-driven T3 in a repository sandbox."""
+import argparse
+from contextlib import contextmanager
+import fcntl
+from hashlib import sha256
+import json
+import os
+from pathlib import Path
+import plistlib
+import re
+import shlex
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
+
+ACCOUNTS = {"account1": ".claude", "account2": ".claude-account2", "work3": ".claude-work3", "oauth": None}
+ACCOUNT_PORTS = {
+    "oauth": range(3800, 3810),
+    "account1": range(3810, 3820),
+    "account2": range(3820, 3830),
+    "work3": range(3830, 3840),
+}
+# Match the account prefixes in the CCManager presets.
+REPOSITORY_PREFIXES = {"account1": "a1", "account2": "a2", "work3": "w3", "oauth": "oauth"}
+CODEX_NETWORK = "auth.openai.com:443,chatgpt.com:443,api.openai.com:443"
+T3_CONNECT_NETWORK =",".join((
+    "clerk.t3.codes:443", "relay.t3.codes:443", "app.t3.codes:443",
+    "*.t3coderelay.com:443",
+    "_v2-origintunneld._tcp.argotunnel.com:7844",
+    "region1.v2.argotunnel.com:7844", "region2.v2.argotunnel.com:7844",
+))
+
+
+def run(args, **kwargs):
+    return subprocess.run([str(arg) for arg in args], check=True, **kwargs)
+
+
+def require(*tools):
+    for tool in tools:
+        if not shutil.which(tool):
+            raise ValueError(f"{tool} が必要です。docs/t3-code.md を参照してください")
+
+
+def state_root():
+    return Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "t3-sandbox"
+
+
+def profile_key(account, repository):
+    slug = re.sub(r"[^a-z0-9]+", "-", repository.name.lower())[:24].strip("-") or "repo"
+    digest = sha256(os.fsencode(repository)).hexdigest()[:16]
+    return f"{slug}-{REPOSITORY_PREFIXES[account]}-{digest}-t3"
+
+
+def profile_path(account, repository):
+    return state_root() / "profiles" / f"{profile_key(account, repository)}.json"
+
+
+def save_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temporary = tempfile.mkstemp(dir=path.parent)
+    try:
+        with os.fdopen(fd, "w") as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def load_profile(account, repository):
+    # Older launch agents invoke the service without a repository argument.
+    key = account if repository is None else profile_key(account, repository)
+    name = f"t3-{account}" if repository is None else key
+    with (state_root() / "profiles" / f"{key}.json").open() as stream:
+        profile = json.load(stream)
+    if profile["account"] != account or profile["name"] != name:
+        raise ValueError("profile のアカウントが一致しません")
+    if repository is not None and profile["workspace"] != str(repository):
+        raise ValueError("profile の workspace が一致しません")
+    return profile
+
+
+def choose_accounts(repository, multiple=True, configured_only=False, allowed=ACCOUNTS):
+    if not sys.stdin.isatty():
+        raise ValueError("対話ターミナルで実行するか --sbx を指定してください")
+    require("fzf")
+    rows = []
+    account_width = max(map(len, ACCOUNTS))
+    directory_width = max(len(f"~/{directory}") for directory in ACCOUNTS.values() if directory)
+    for account, directory in ACCOUNTS.items():
+        path = profile_path(account, repository)
+        if account not in allowed or (configured_only and not path.is_file()):
+            continue
+        configured = "設定済み" if path.is_file() else "未設定"
+        port_label = f"port {load_profile(account, repository)['port']}" if path.is_file() else ""
+        location = f"~/{directory}" if directory else "sbx OAuth"
+        rows.append(f"{account:<{account_width}}  {location:<{directory_width}}  {port_label:<9}  {configured}")
+    if not rows:
+        raise ValueError("設定済みのアカウントがありません。先に mise run t3:setup を実行してください")
+    options = ["fzf", "--multi" if multiple else "--no-multi", "--layout=reverse", "--prompt=sbx> "]
+    if multiple:
+        options += ["--header=Tab: 複数選択 / Ctrl-A: 全選択 / Enter: 確定 / Esc: 中止",
+                    "--bind=ctrl-a:select-all,ctrl-d:deselect-all"]
+    else:
+        options += ["--header=操作する sandbox を選択 / Enter: 確定 / Esc: 中止"]
+    selection = subprocess.run(
+        options,
+        input="\n".join(rows) + "\n", text=True, stdout=subprocess.PIPE,
+    )
+    if selection.returncode in (1, 130):
+        raise KeyboardInterrupt
+    selection.check_returncode()
+    selected = list(dict.fromkeys(line.split(maxsplit=1)[0] for line in selection.stdout.splitlines() if line.strip()))
+    if not selected:
+        raise KeyboardInterrupt
+    if any(account not in allowed or (configured_only and not profile_path(account, repository).is_file())
+           for account in selected):
+        raise ValueError("選択結果のアカウントが不正です。設定は変更していません")
+    return selected
+
+
+def choose_cli_item(items, prompt):
+    if not sys.stdin.isatty():
+        raise ValueError("対話ターミナルで実行するか、--sbx work3 pair のように指定してください")
+    require("fzf")
+    width = max(map(len, items))
+    selection = subprocess.run(
+        ["fzf", "--no-multi", "--layout=reverse", f"--prompt={prompt}> ",
+         "--header=Enter: 確定 / Esc: 中止"],
+        input="".join(f"{key:<{width}}  {description}\n" for key, (_, description) in items.items()),
+        text=True, stdout=subprocess.PIPE,
+    )
+    if selection.returncode in (1, 130):
+        raise KeyboardInterrupt
+    selection.check_returncode()
+    if not selection.stdout.strip():
+        raise KeyboardInterrupt
+    key = selection.stdout.split(maxsplit=1)[0]
+    if key not in items:
+        raise ValueError("選択結果が不正です")
+    return items[key][0]
+
+
+def choose_cli_command():
+    commands = {
+        "pair": (["pair"], "PC のアプリ接続用 URL / Token を発行"),
+        "login": (["login"], "Claude / Codex のログイン先を選ぶ"),
+        "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証（成功後に対象 sbx を再起動）"),
+        "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
+        "ports": (["ports"], "sandbox の公開ポートを表示"),
+        "server-status": (["server-status"], "ホスト側 T3 サービスの状態"),
+        "restart-server": (["restart-server"], "対象 sbx を停止して再起動（アカウント内の作業を中断）"),
+        "version": (["--version"], "T3 のバージョンを表示"),
+        "help": (["--help"], "T3 コマンドのヘルプ"),
+    }
+    return choose_cli_item(commands, "command")
+
+
+def choose_cli_target(account, arguments, repository):
+    arguments = arguments or choose_cli_command()
+    if arguments == ["login"]:
+        providers = {"Codex": (["codex-login"], "デバイスコードで認証")}
+        if account == "oauth" or (account is None and profile_path("oauth", repository).is_file()):
+            providers["Claude"] = (["claude-login"], "Claude を開いて /login から OAuth 認証")
+        arguments = choose_cli_item(providers, "provider")
+    if arguments == ["claude-login"]:
+        allowed = ("oauth",)
+        if account and account not in allowed:
+            raise ValueError("Claude OAuth ログインには --sbx oauth を指定してください")
+    else:
+        allowed = ACCOUNTS
+    if account is None:
+        account = choose_accounts(multiple=False, configured_only=True, allowed=allowed, repository=repository)[0]
+    return account, arguments
+
+
+def allow_t3_connect_network(profile):
+    # HTTP2 is unusable here: the transparent proxy dials the SNI name (h2.cftunnel.com),
+    # which has no A record. QUIC needs UDP egress (sbx settings feature.udp-egress).
+    run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], T3_CONNECT_NETWORK])
+    run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], "--protocol", "udp",
+         "region1.v2.argotunnel.com:7844,region2.v2.argotunnel.com:7844"])
+
+
+def mapped_t3_ports(name):
+    ports = run(["sbx", "ports", name], capture_output=True, text=True)
+    return [int(fields[1]) for row in ports.stdout.splitlines()
+            if len(fields := row.split()) >= 3 and fields[2] == "3773" and fields[1].isdigit()]
+
+
+def prepare(profile):
+    require("sbx", "sbx-agent")
+    run(["sbx", "ls"], stdout=subprocess.DEVNULL)
+    account = profile["account"]
+    if account == "oauth":
+        auth_args = ["--claude-oauth"]
+        # This profile assigns MCP separately through sandbox:mcp-load.
+        environment = {key: value for key, value in os.environ.items() if key != "SBX_AGENT_STATIC_MCP"}
+    else:
+        auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account]]
+        environment = os.environ
+    run(["sbx-agent", "claude", *auth_args,
+         "--workspace", profile["workspace"], "--name", profile["name"],
+         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"],
+        env=environment)
+    mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", profile["workspace"]])
+    if mounted.returncode:
+        raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {profile['workspace']}。"
+                         "既存 sandbox のマウントを確認してください")
+    allow_t3_connect_network(profile)
+    # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
+    mapped = mapped_t3_ports(profile["name"])
+    if not mapped:
+        run(["sbx", "ports", profile["name"], "--publish", f'{profile["port"]}:3773'])
+    elif profile["port"] not in mapped:
+        raise ValueError(f"{profile['name']} の T3 ポートが profile と一致しません。sbx ports で確認してください")
+
+
+def sandbox_command(profile, arguments, interactive=False, tool="t3"):
+    # Avoid login-shell mise activation before the missing registry can be fetched.
+    # Keep sbx credentials/configuration without sourcing the user's shell startup.
+    terminal = ["-i"] if interactive else []
+    if interactive and sys.stdin.isatty() and sys.stdout.isatty():
+        terminal.append("-t")
+    return ["sbx", "exec", *terminal, "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
+            '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
+            'cd "$1" || exit 1; export T3CODE_HOME="$2" MISE_PREFER_OFFLINE=false MISE_OFFLINE=false; '
+            'export TUNNEL_TRANSPORT_PROTOCOL=quic;'
+            'if ! compgen -G "${MISE_CACHE_DIR:-/mise/cache}/aqua-registry/sources/*.yaml" >/dev/null; then '
+            'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
+            'mise --cd /mise cache clear aqua:cli/cli && '
+            'mise --cd /mise ls-remote --no-versions-host aqua:cli/cli >/dev/null || exit 1; fi; '
+            'shift 2; exec mise exec -- "$@"',
+            "bash", profile["workspace"], str(Path(profile["storage"]) / "t3"), tool, *arguments]
+
+
+def pair(profile, arguments):
+    print("ペアリング情報を発行しています（初回は T3 本体・レジストリの取得に時間がかかります）", flush=True)
+    result = subprocess.run(sandbox_command(profile, arguments), stdout=subprocess.PIPE, text=True)
+    if result.returncode:
+        if result.stdout:
+            print(result.stdout, end="")
+        raise ValueError("ペアリングに失敗しました。mise run t3:cli から server-status を確認し、必要なら restart-server を選んでください")
+    raw_url = next((line.removeprefix("Pairing URL: ").strip() for line in result.stdout.splitlines()
+                    if line.startswith("Pairing URL: ")), None)
+    if not raw_url:
+        print(result.stdout, end="")
+        return
+    parsed = urlsplit(raw_url)
+    token = parse_qs(parsed.fragment).get("token", [None])[0]
+    if not token:
+        print(result.stdout, end="")
+        return
+    address = f"http://127.0.0.1:{profile['port']}"
+    url = urlunsplit(("http", f"127.0.0.1:{profile['port']}", parsed.path, parsed.query, parsed.fragment))
+    print("PC の T3 Code アプリで Settings → Environments → Add environment を開きます。")
+    print(f"Address: {address}\nToken: {token}\nPairing URL: {url}")
+    print("App link: t3code://pair?" + urlencode({"pairingUrl": url}))
+    for line in result.stdout.splitlines():
+        if line.startswith("Expires:"):
+            print(line)
+    print("Address と Token を入力するか、App link を開いて登録してください。")
+    print("スマホではこの loopback URL は使えません。T3 Connect または Tailscale で接続します。")
+
+
+def host_service_command(profile, repository):
+    label = "local.t3-sandbox." + profile_key(profile["account"], repository)
+    if sys.platform == "darwin":
+        require("launchctl")
+        return ["launchctl", "print", f"gui/{os.getuid()}/{label}"]
+    if sys.platform == "linux":
+        require("systemctl")
+        return ["systemctl", "--user", "status", f"{label}.service"]
+    raise ValueError("ホストサービスの操作は macOS / Linux 用です")
+
+
+def service_environment():
+    # Activated install paths may be pruned by nested mise runs. Keep stable shims
+    # and the environment selectors that enable config.mac.toml (including sbx).
+    xdg_data = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
+    data = Path(os.environ.get("MISE_DATA_DIR", str(xdg_data / "mise")))
+    paths = [str(Path.home() / ".local/bin"), str(data / "shims"), *os.environ["PATH"].split(os.pathsep)]
+    environment = {"PATH": os.pathsep.join(dict.fromkeys(paths))}
+    for key in ("MISE_ENV", "HOST_ENV", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR", "SBX_AGENT_SIGNING_KEY"):
+        if key in os.environ:
+            environment[key] = os.environ[key]
+    return environment
+
+
+def stop_sandbox(profile):
+    require("sbx")
+    listing = run(["sbx", "ls"], capture_output=True, text=True)
+    names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
+    if profile["name"] in names:
+        print(f"{profile['name']} を停止し、sandbox 内に残った T3 サーバーを終了します", flush=True)
+        run(["sbx", "stop", profile["name"]])
+        return True
+    return False
+
+
+def service_path(label):
+    if sys.platform == "darwin":
+        return Path.home() / "Library/LaunchAgents" / f"{label}.plist"
+    if sys.platform == "linux":
+        config = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+        return config / "systemd/user" / f"{label}.service"
+    raise ValueError("ホストサービスの操作は macOS / Linux 用です")
+
+
+def install_service(profile, repository, refresh=False):
+    # Resolve tool paths through mise without exposing an extra lifecycle task.
+    require("mise")
+    command = [shutil.which("mise"), "--cd", str(Path.home()), "exec", "--",
+               "python3", str(Path(__file__).absolute()), "run", profile["account"]]
+    command += ["--repository", str(repository)]
+    key = profile_key(profile["account"], repository)
+    label = f"local.t3-sandbox.{key}"
+    logs = state_root() / "logs"
+    logs.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if sys.platform == "darwin":
+        require("launchctl")
+        path = service_path(label)
+        if refresh and not path.is_file():
+            raise ValueError("自動起動は未登録です。登録する場合は mise run t3:setup を実行してください")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"Label": label, "ProgramArguments": command, "RunAtLoad": True,
+                   "KeepAlive": True, "ThrottleInterval": 15, "Umask": 0o077,
+                   "EnvironmentVariables": service_environment(),
+                   "StandardOutPath": str(logs / f"{key}.log"),
+                   "StandardErrorPath": str(logs / f"{key}.log")}
+        # Ordinary setup preserves running jobs. Explicit restart repairs the
+        # saved environment too; kickstart alone would retain the broken PATH.
+        domain = f"gui/{os.getuid()}"
+        loaded = subprocess.run(["launchctl", "print", f"{domain}/{label}"],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if loaded.returncode == 0:
+            if not refresh:
+                print("自動起動は登録済みです。実行中の T3 は再起動しません")
+                return
+            run(["launchctl", "bootout", f"{domain}/{label}"])
+        if refresh:
+            try:
+                stop_sandbox(profile)
+            except Exception:
+                if loaded.returncode == 0:
+                    run(["launchctl", "bootstrap", domain, path])
+                raise
+        path.write_bytes(plistlib.dumps(payload))
+        run(["launchctl", "bootstrap", domain, path])
+    elif sys.platform == "linux":
+        require("systemctl")
+        path = service_path(label)
+        if path.is_file() and not refresh:
+            print("自動起動は登録済みです。サービス定義と実行中の T3 は変更しません")
+            return
+        if refresh and not path.is_file():
+            raise ValueError("自動起動は未登録です。登録する場合は mise run t3:setup を実行してください")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        def quote(value):
+            return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%').replace('\n', '\\n').replace('\r', '\\r') + '"'
+        # systemd expands $ even without a shell. Escape it in command arguments.
+        invocation = " ".join(quote(word).replace('$', '$$') for word in command)
+        environment = "\n".join("Environment=" + quote(f"{key}={value}") for key, value in service_environment().items())
+        path.write_text(f"[Unit]\nDescription=T3 Code sandbox ({profile['account']})\n\n"
+                        f"[Service]\nType=simple\nExecStart={invocation}\n{environment}\n"
+                        "Restart=always\nRestartSec=15\nTimeoutStopSec=30\nUMask=0077\n\n"
+                        "[Install]\nWantedBy=default.target\n")
+        run(["systemctl", "--user", "daemon-reload"])
+        run(["systemctl", "--user", "enable", path.name])
+        if refresh:
+            run(["systemctl", "--user", "stop", path.name])
+            try:
+                stop_sandbox(profile)
+            except Exception:
+                run(["systemctl", "--user", "start", path.name])
+                raise
+        run(["systemctl", "--user", "start", path.name])
+    else:
+        raise ValueError("自動起動は sbx が動作する macOS / Linux 環境用です")
+
+
+def account_profile(account, repository, port):
+    if account != "oauth":
+        token = Path.home() / ".local/state/sbx-agent-credentials" / f"{account}.token"
+        if token.is_symlink() or not token.is_file() or not token.stat().st_size:
+            raise ValueError(f"{account} の token が未登録です。dotfiles の checkout root に移動して mise run sandbox:claude-token {account} を実行してください")
+    storage = (Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "t3-sandbox" / profile_key(account, repository)).resolve()
+    profile = {"account": account, "name": profile_key(account, repository), "workspace": str(repository),
+               "storage": str(storage), "port": port}
+    path = profile_path(account, repository)
+    if path.is_file():
+        previous = load_profile(account, repository)
+        if previous != profile:
+            raise ValueError("このアカウントは別の workspace / port で設定済みです。既存の設定は変更していません")
+    if path.resolve().is_relative_to(storage) or path.resolve().is_relative_to(repository):
+        raise ValueError("ホスト用 profile は sandbox に渡すデータ領域と分けてください")
+    return profile
+
+
+def setup_account(profile, repository, no_autostart):
+    account = profile["account"]
+    storage = Path(profile["storage"])
+    storage.mkdir(parents=True, exist_ok=True, mode=0o700)
+    settings = storage / "t3/userdata/settings.json"
+    if not settings.exists():
+        save_json(settings, {"defaultThreadEnvMode": "local" if account == "oauth" else "worktree"})
+    # Keep metadata outside the agent-writable mount. Never store tokens here.
+    # Publish only after preparation succeeds; failed setup can be retried safely.
+    prepare(profile)
+    save_json(profile_path(account, repository), profile)
+    if not no_autostart:
+        install_service(profile, repository)
+    print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
+    print(f"初回のアプリ接続: cd {shlex.quote(str(repository))} && mise run t3:cli（pair → {account}）")
+    if no_autostart:
+        location = f" --repository {shlex.quote(str(repository))}"
+        print(f"自動起動は未登録です。起動: t3-sandbox run {account}{location}")
+
+
+def git_workspace(path):
+    require("git")
+    workspace = Path(path or os.environ.get("MISE_ORIGINAL_CWD") or os.getcwd()).expanduser().resolve()
+    local_git_vars = run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.splitlines()
+    git_environment = {key: value for key, value in os.environ.items() if key not in local_git_vars}
+    result = subprocess.run(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True, env=git_environment)
+    if result.returncode:
+        raise ValueError(f"Git リポジトリを確認できません: {workspace}。対象の Git リポジトリ内で実行してください")
+    return Path(result.stdout.strip()).resolve()
+
+
+def available_port(account, reserved):
+    ports = ACCOUNT_PORTS[account]
+    for port in ports:
+        if port in reserved:
+            continue
+        with socket.socket() as listener:
+            try:
+                listener.bind(("0.0.0.0", port))
+            except OSError:
+                continue
+        return port
+    raise ValueError(f"{account} のポート枠（{ports.start}〜{ports.stop - 1}）に空きがありません")
+
+
+@contextmanager
+def setup_lock():
+    root = state_root()
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (root / "setup.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield root
+
+
+def setup(args):
+    repository = git_workspace(args.workspace)
+    print(f"Workspace: {repository}", flush=True)
+    accounts = list(dict.fromkeys(args.account or choose_accounts(repository=repository)))
+    if args.port is not None and len(accounts) != 1:
+        raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。")
+    print("選択したアカウント: " + ", ".join(accounts), flush=True)
+    require("sbx", "sbx-agent")
+    with setup_lock() as root:
+        registered_ports = {}
+        for path in (root / "profiles").glob("*.json"):
+            with path.open() as stream:
+                registered_ports.setdefault(json.load(stream)["port"], set()).add(path.stem)
+        listing = run(["sbx", "ls"], capture_output=True, text=True)
+        names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
+        profiles = []
+        for account in accounts:
+            key = profile_key(account, repository)
+            path = profile_path(account, repository)
+            port = args.port
+            if path.is_file():
+                if port is None:
+                    port = load_profile(account, repository)["port"]
+            elif port is not None:
+                ports = ACCOUNT_PORTS[account]
+                if port not in ports:
+                    raise ValueError(f"{account} の --port は {ports.start}〜{ports.stop - 1} で指定してください")
+            if port is None:
+                # A previous attempt may have published its port before saving the profile.
+                mapped = mapped_t3_ports(key) if key in names else []
+                port = mapped[0] if mapped else available_port(account, registered_ports)
+            profile = account_profile(account, repository, port)
+            owners = registered_ports.setdefault(profile["port"], set())
+            if conflict := owners - {key}:
+                raise ValueError(f"port {profile['port']} は {', '.join(sorted(conflict))} に登録済みです。別の --port を指定してください")
+            owners.add(key)
+            profiles.append(profile)
+        for profile in profiles:
+            setup_account(profile, repository, args.no_autostart)
+
+
+def reset():
+    repository = git_workspace(None)
+    account = choose_accounts(repository, multiple=False, configured_only=True)[0]
+    name = profile_key(account, repository)
+    print(f"Workspace: {repository}\nSandbox: {name}")
+    print("自動起動、sandbox、T3 の登録を削除します。実行中の作業は中断し、"
+          "sandbox 内だけにあるファイルは消えます。ホスト側の T3 設定・履歴は残ります。")
+    if input("削除しますか？ [y/N] ").strip().lower() not in ("y", "yes"):
+        raise KeyboardInterrupt
+    require("sbx")
+    with setup_lock():
+        profile = load_profile(account, repository)
+        label = f"local.t3-sandbox.{name}"
+        path = service_path(label)
+        if sys.platform == "darwin":
+            require("launchctl")
+            target = f"gui/{os.getuid()}/{label}"
+            loaded = subprocess.run(["launchctl", "print", target],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if loaded.returncode == 0:
+                run(["launchctl", "bootout", target])
+            path.unlink(missing_ok=True)
+        elif path.is_file() or (shutil.which("systemctl") and any(
+            subprocess.run(["systemctl", "--user", state, "--quiet", path.name],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+            for state in ("is-enabled", "is-active")
+        )):
+            require("systemctl")
+            run(["systemctl", "--user", "disable", "--now", path.name])
+            path.unlink(missing_ok=True)
+            run(["systemctl", "--user", "daemon-reload"])
+        if stop_sandbox(profile):
+            run(["sbx", "rm", name])
+        profile_path(account, repository).unlink()
+    print(f"削除済み: {name}。再度使う場合は mise run t3:setup を実行してください。")
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
+    sub = parser.add_subparsers(dest="action", required=True)
+    initial = sub.add_parser("setup", help="アカウントを選び、カレント Git リポジトリ用の sbx と自動起動を設定")
+    initial.add_argument("--sbx", "--account", dest="account", choices=ACCOUNTS, nargs="+", action="extend",
+                         help="複数指定可。例: --sbx account1 work3")
+    initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
+    initial.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
+    initial.add_argument("--port", type=int)
+    initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
+    sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に削除")
+    service = sub.add_parser("run")
+    service.add_argument("account", choices=ACCOUNTS)
+    service.add_argument("--repository", type=Path)
+    cli = sub.add_parser("cli", allow_abbrev=False)
+    cli.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
+    cli.add_argument("--sbx", choices=ACCOUNTS, help="対象 sandbox。省略時は fzf で選択")
+    cli.add_argument("arguments", nargs=argparse.REMAINDER, help="操作または T3 CLI の引数")
+    args, leading = parser.parse_known_args()
+    if leading and (args.action != "cli" or "--shared" in leading):
+        parser.error("unrecognized arguments: " + " ".join(leading))
+    if args.action == "setup":
+        if args.port is not None and not 1024 <= args.port <= 65535:
+            parser.error("--port は 1024〜65535 で指定してください")
+        setup(args)
+        return
+    if args.action == "reset":
+        reset()
+        return
+    if args.action == "run":
+        profile = load_profile(args.account, args.repository)
+        prepare(profile)
+        # Headless service entry point; avoid the interactive launcher's PID-only preflight.
+        command = sandbox_command(profile, ["serve", "--host", "0.0.0.0", "--port", "3773"])
+    elif args.action == "cli":
+        arguments = [*leading, *args.arguments]
+        account = args.sbx
+        if account is None and arguments and arguments[0] in ACCOUNTS:
+            account = arguments.pop(0)
+        if arguments[:1] == ["--"]:
+            arguments.pop(0)
+        repository = git_workspace(None)
+        account, arguments = choose_cli_target(account, arguments, repository)
+        profile = load_profile(account, repository)
+        print(f"Sandbox: {profile['name']} / Command: {' '.join(arguments)}", flush=True)
+        if arguments == ["claude-login"]:
+            require("sbx")
+            command = ["sbx", "run", "--name", profile["name"]]
+        elif arguments == ["codex-login"]:
+            require("sbx")
+            run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], CODEX_NETWORK])
+            command = sandbox_command(profile, ["login", "--device-auth"], interactive=True, tool="codex")
+        elif arguments == ["ports"]:
+            require("sbx")
+            command = ["sbx", "ports", profile["name"]]
+        elif arguments in (["server-status"], ["restart-server"]):
+            if arguments == ["restart-server"]:
+                install_service(profile, repository, refresh=True)
+                print("sandbox を停止し、自動起動環境を更新して再起動しました。起動後に pair または connect status で確認してください。")
+                return
+            command = host_service_command(profile, repository)
+        else:
+            require("sbx")
+            if arguments[0] == "connect" and not any(flag in arguments for flag in ("--help", "-h")):
+                allow_t3_connect_network(profile)
+            if arguments[0] == "pair" and not any(flag in arguments for flag in ("--help", "-h", "--tailscale")):
+                pair(profile, arguments)
+                return
+            command = sandbox_command(profile, arguments, interactive=True)
+            if arguments[:2] == ["connect", "link"] and not any(
+                flag in arguments for flag in ("--help", "-h")
+            ):
+                print("認証が完了すると自動起動が登録済みの sandbox を再起動し、実行中の作業を中断します。", flush=True)
+                run(command)
+                with setup_lock():
+                    label = f"local.t3-sandbox.{profile['name']}"
+                    if service_path(label).is_file():
+                        print("T3 Connect の認証が完了しました。サーバーを再起動します。", flush=True)
+                        install_service(profile, repository, refresh=True)
+                        print("再起動しました。起動後に connect status で確認できます。")
+                    else:
+                        print("T3 Connect の認証が完了しました。自動起動の定義ファイルが見つかりません。")
+                        print("手動で起動している場合は、T3 サーバーを止めてから次のコマンドを実行してください。")
+                        print(f"t3-sandbox run {account} --repository {shlex.quote(str(repository))}")
+                return
+    os.execvp(command[0], command)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        sys.exit(f"t3: {error}")
+    except (KeyboardInterrupt, EOFError):
+        sys.exit("中止しました")

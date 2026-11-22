@@ -23,7 +23,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-comment` 等、`config/rulesync/.rulesync/skills/`）や
+  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-all-review` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
     （`config/rulesync/.rulesync/hooks.json`）、permissions
     （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
@@ -158,10 +158,9 @@ hook は API key の環境変数やファイルを読みません。
 | `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
 | `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
 
-`rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
-plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
-各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
-この設定が無いと rulesync は hooks 一覧を丸ごと置き換えるため、generate のたびに APM 由来の hooks が消える。
+`rulesync.jsonc` の `"preserveUnownedHooks": true` により、手動設定などで追加した hooks は generate 後も残る。
+rulesync が書いた hooks は各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks は
+次回の generate で削除される。将来、APM で配布するパッケージが hooks を追加した場合も、それらは保持される。
 
 ### permissions（`config/rulesync/.rulesync/permissions.jsonc`）
 
@@ -246,6 +245,12 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 
 `delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
 同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
+
+レビュースキルの改名後は、次の順で旧名の `pr-reviewer-comment` と `pr-reviewer-comment-crit` を片付けます。
+
+1. 以前のコピーが `~/.config/rulesync/.rulesync/skills/` に残っていれば、旧名のディレクトリを削除します。ローカル設定を追加していた場合は先に退避します。
+2. Rulesync で再配布し、新しい `pr-reviewer-all-review` と `pr-crit` が生成されたことを確認します。
+3. `~/.claude/skills/` と `~/.agents/skills/` に残った旧名のディレクトリを削除します。
 
 ### プロジェクト単位の `.codex/config.toml` について
 

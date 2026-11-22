@@ -112,6 +112,14 @@ return {
               },
             },
           },
+          -- root_dir がサブディレクトリ（requirements.txt 等）に決まっても親の .venv を見つけるため
+          before_init = function(_, config)
+            local venv = vim.fs.find(".venv", { upward = true, path = config.root_dir, type = "directory" })[1]
+            if venv then
+              config.settings.python = config.settings.python or {}
+              config.settings.python.pythonPath = venv .. "/bin/python"
+            end
+          end,
         }
         if python_server == "basedpyright" then
           -- basedpyright は python.analysis ではなく basedpyright.analysis を読むため同じ設定を渡す
