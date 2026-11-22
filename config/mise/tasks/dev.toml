@@ -59,6 +59,15 @@ case "$source_dir" in
   "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
 esac
 
+# MISE_LOCKED=1 ではグローバル設定から rulesync が PATH に入らない場合がある。
+# checkout があれば mise.lock から導入済みバイナリを優先して解決する。
+if ! { [ -f "$source_dir/mise.toml" ] &&
+       rulesync_bin=$(mise --cd "$source_dir" which rulesync 2>/dev/null); } &&
+   ! rulesync_bin=$(command -v rulesync); then
+  echo "warning: rulesync を解決できません。次回実行時に再試行します" >&2
+  exit 0
+fi
+
 hash_cmd() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
 
 rulesync_hash=$(
@@ -66,7 +75,7 @@ rulesync_hash=$(
     # rulesync 本体の更新だけで出力先・形式が変わることがある（例: v9.1.0 で Codex skills の
     # 出力先が ~/.codex/skills から ~/.agents/skills へ移動）ため、source が同じでも
     # バージョンが変われば再生成する
-    rulesync --version 2>/dev/null
+    "$rulesync_bin" --version 2>/dev/null
     {
       # ~/.config 配下は config/ への symlink-each（mise.toml 参照）なので -L でリンク先を辿る
       find -L "$source_dir/.rulesync" "$HOME/.config/rulesync/.rulesync" -type f 2>/dev/null
@@ -127,16 +136,25 @@ case "$source_dir" in
 esac
 global_dir="$HOME/.config/rulesync"
 
+# MISE_LOCKED=1 ではグローバル設定から rulesync が PATH に入らない場合がある。
+# checkout があれば mise.lock から導入済みバイナリを優先して解決する。
+if ! { [ -f "$source_dir/mise.toml" ] &&
+       rulesync_bin=$(mise --cd "$source_dir" which rulesync 2>/dev/null); } &&
+   ! rulesync_bin=$(command -v rulesync); then
+  echo "error: rulesync を解決できません。mise で rulesync を導入してください" >&2
+  exit 1
+fi
+
 if [ ! -f "$source_dir/mise.toml" ]; then
   echo "warning: $source_dir does not look like the dotfiles repo checkout (no mise.toml); set DOTFILES_DIR if it's cloned elsewhere. Skipping project generation." >&2
 elif [ -f "$source_dir/rulesync.jsonc" ] && [ -d "$source_dir/.rulesync" ]; then
-  (cd "$source_dir" && rulesync generate)
+  (cd "$source_dir" && "$rulesync_bin" generate)
 else
   echo "warning: project rulesync source not found under $source_dir; skipping project generation" >&2
 fi
 
 if [ -f "$global_dir/rulesync.jsonc" ] && [ -d "$global_dir/.rulesync" ]; then
-  (cd "$global_dir" && rulesync generate)
+  (cd "$global_dir" && "$rulesync_bin" generate)
 else
   echo "warning: global rulesync source not found under $global_dir; skipping global generation" >&2
 fi
