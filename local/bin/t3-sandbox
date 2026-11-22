@@ -17,6 +17,12 @@ import tempfile
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 ACCOUNTS = {"account1": ".claude", "account2": ".claude-account2", "work3": ".claude-work3", "oauth": None}
+ACCOUNT_PORTS = {
+    "oauth": range(3800, 3810),
+    "account1": range(3810, 3820),
+    "account2": range(3820, 3830),
+    "work3": range(3830, 3840),
+}
 # Match the account prefixes in the CCManager presets.
 REPOSITORY_PREFIXES = {"account1": "a1", "account2": "a2", "work3": "w3", "oauth": "oauth"}
 CODEX_NETWORK = "auth.openai.com:443,chatgpt.com:443,api.openai.com:443"
@@ -416,8 +422,9 @@ def git_workspace(path):
     return Path(result.stdout.strip()).resolve()
 
 
-def available_port(reserved):
-    for port in range(3780, 65536):
+def available_port(account, reserved):
+    ports = ACCOUNT_PORTS[account]
+    for port in ports:
         if port in reserved:
             continue
         with socket.socket() as listener:
@@ -426,7 +433,7 @@ def available_port(reserved):
             except OSError:
                 continue
         return port
-    raise ValueError("T3 用の空きポートが見つかりません。--port で指定してください")
+    raise ValueError(f"{account} のポート枠（{ports.start}〜{ports.stop - 1}）に空きがありません")
 
 
 def setup(args):
@@ -452,12 +459,17 @@ def setup(args):
             key = profile_key(account, repository)
             path = profile_path(account, repository)
             port = args.port
-            if port is None and path.is_file():
-                port = load_profile(account, repository)["port"]
+            if path.is_file():
+                if port is None:
+                    port = load_profile(account, repository)["port"]
+            elif port is not None:
+                ports = ACCOUNT_PORTS[account]
+                if port not in ports:
+                    raise ValueError(f"{account} の --port は {ports.start}〜{ports.stop - 1} で指定してください")
             if port is None:
                 # A previous attempt may have published its port before saving the profile.
                 mapped = mapped_t3_ports(key) if key in names else []
-                port = mapped[0] if mapped else available_port(registered_ports)
+                port = mapped[0] if mapped else available_port(account, registered_ports)
             profile = account_profile(account, repository, port)
             owners = registered_ports.setdefault(profile["port"], set())
             if conflict := owners - {key}:
