@@ -520,10 +520,14 @@ def reset():
             if loaded.returncode == 0:
                 run(["launchctl", "bootout", target])
             path.unlink(missing_ok=True)
-        elif path.is_file():
+        elif path.is_file() or (shutil.which("systemctl") and any(
+            subprocess.run(["systemctl", "--user", state, "--quiet", path.name],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+            for state in ("is-enabled", "is-active")
+        )):
             require("systemctl")
             run(["systemctl", "--user", "disable", "--now", path.name])
-            path.unlink()
+            path.unlink(missing_ok=True)
             run(["systemctl", "--user", "daemon-reload"])
         if stop_sandbox(profile):
             run(["sbx", "rm", name])
