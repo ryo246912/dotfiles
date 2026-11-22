@@ -502,9 +502,8 @@ done
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
-    add_mount "${HOME}/.config/git/config:ro"
-    add_mount "${HOME}/.config/git/gitignore:ro"
-    add_mount "${HOME}/.config/git/attributes:ro"
+    # ファイル単位では checkout や設定再生成による inode の置換に追従できない。
+    add_mount "${HOME}/.config/git:ro"
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
@@ -809,7 +808,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             grep -qxF "$signer_line" "$allowed_signers" || printf '%s\n' "$signer_line" >>"$allowed_signers"
         fi
         if [[ -s "$allowed_signers" ]]; then
-            add_mount "${allowed_signers}:ro"
+            add_mount "${HOME}/.config/git:ro"
             add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
         fi
     else

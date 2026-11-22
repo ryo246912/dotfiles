@@ -448,7 +448,7 @@ sbx-agent --help
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
+   `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
    `~/.local/share/agent-lessons`（`.git` を含めて書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    これにより sandbox 内でも `lessons:sync` と週次収集の pull / ブランチ作成 / commit / push ができる。
@@ -456,7 +456,13 @@ sbx-agent --help
    `.git/hooks` や `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）の変更は、
    後続のホスト側 Git 操作（SessionStart の pull や `lessons:sync`）でコード実行につながる。
    この共有 clone はホストでのコード実行を許容できる信頼済み agent に限って使い、sandbox をホスト実行の信頼境界の内側として扱う。
-   マウントは作成時にしか付かないため、追加したマウント（例: mergiraf 用の `git/attributes`）を既存の sandbox に反映するには
+   Git 設定は `~/.config/git` ディレクトリ全体を read-only で mount する。ファイル単位では
+   checkout や設定再生成による inode の置換に追従できず、`Stale file handle` になるため。
+   ホスト側のファイル変更は再起動なしで参照でき、`allowed_signers` や `config.*.secret` も共有される。
+   symlink の参照先を読むため、dotfiles リポジトリの mount も維持する。
+   `--no-config` はこれらの自動 mount と Git 設定注入を止めるが、明示的な `--mount` / `SBX_AGENT_MOUNTS` は残る。
+   既存 sandbox の mount/env は変わらないため、共有をやめる場合は必要なデータを保存して `--new --no-config` で再作成する。
+   マウントは作成時にしか付かないため、変更したマウント（個別 Git ファイルからディレクトリへの変更を含む）を既存の sandbox に反映するには
    `sbx-agent <agent> --new`（`multi-worktree dev ... --new`）で作り直す。
    作成時の呼び出しは `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh` に記録され、
    `mise run sandbox:recreate` で選んだ sandbox をまとめて同じ指定で作り直せる。記録を始める前に作った
@@ -1397,9 +1403,9 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 | devcontainer の mount                     | sandbox                                                                                                                                       |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                                                    |
-| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                                                   |
-| `~/.config/git/attributes`                | ✅ `:ro` で渡し、`core.attributesfile` に設定                                                                                                 |
+| `~/.config/git/config`                    | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`include.path` で取り込む                                                                  |
+| `~/.config/git/gitignore`                 | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`core.excludesfile` に設定                                                                 |
+| `~/.config/git/attributes`                | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`core.attributesfile` に設定                                                               |
 | `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbxenv.yaml` の `secrets.github`（`gh auth token`）でプロキシが注入する |
 | `~/.aws/config`                           | ✅ `:ro`                                                                                                                                      |
 | `~/.agents`                               | ✅ `:ro`                                                                                                                                      |
