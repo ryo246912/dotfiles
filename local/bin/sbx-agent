@@ -1239,41 +1239,6 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     add_env SSH_AUTH_SOCK "$signing_socket"
 fi
 
-# 既存 sandbox でも、ホスト設定の欠落を既定設定への暗黙のフォールバックにしない。
-CLAUDE_SETTINGS_ARGS=()
-if [[ "$AGENT" == claude && "$MOUNT_CONFIG" == true ]]; then
-    claude_settings="${CONFIG_DIR}/settings.json"
-    if [[ ! -f "$claude_settings" ]]; then
-        log_error "ホストの Claude 設定が見つかりません: $claude_settings（設定不要なら --no-config）"
-        exit 1
-    fi
-    if ! claude_settings_hash=$(python3 - "$claude_settings" <<'PYSETTINGSVERIFY'
-import hashlib, json, pathlib, sys
-raw = pathlib.Path(sys.argv[1]).read_bytes()
-if not isinstance(json.loads(raw), dict):
-    sys.exit("settings.json must contain an object")
-print(hashlib.sha256(raw).hexdigest())
-PYSETTINGSVERIFY
-    ); then
-        log_error "ホストの Claude 設定を読み込めません: $claude_settings"
-        exit 1
-    fi
-    if ! sbx exec "$SANDBOX_NAME" python3 -c '
-import hashlib, pathlib, sys
-try:
-    raw = pathlib.Path(sys.argv[1]).read_bytes()
-    sys.exit(0 if hashlib.sha256(raw).hexdigest() == sys.argv[2] else 1)
-except OSError:
-    sys.exit(1)
-' "$claude_settings" "$claude_settings_hash"; then
-        log_error "sandbox 内でホストと同じ Claude 設定を参照できません: $claude_settings"
-        log_error "設定ディレクトリ・symlink 先のマウントを確認してください。既存 sandbox の場合は必要なデータを保存し、--new で再作成してください"
-        exit 1
-    fi
-    CLAUDE_SETTINGS_ARGS=(--settings "$claude_settings")
-    log_info "ホストの Claude 設定を確認しました: $claude_settings"
-fi
-
 if [[ "$SETUP_ONLY" == true ]]; then
     log_info "sandbox の準備が完了しました: $SANDBOX_NAME"
     exit 0
@@ -1293,9 +1258,7 @@ if [[ "$CLAUDE_OAUTH" == true && "$MOUNT_CONFIG" == true && -f "${dotfiles_repo:
     oauth_settings=$(jq -cn --arg p "$dotfiles_repo/claude/statusline.sh" '{statusLine:{type:"command",command:("bash " + ($p|@sh))}}') || exit 1
     AGENT_ARGS=(--settings "$oauth_settings" ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
 fi
-if [[ ${#CLAUDE_SETTINGS_ARGS[@]} -gt 0 || ${#AGENT_ARGS[@]} -gt 0 ]]; then
-    run_cmd+=(-- ${CLAUDE_SETTINGS_ARGS[@]+"${CLAUDE_SETTINGS_ARGS[@]}"} ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
-fi
+[[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
 
 if [[ "$REMOVE_ON_EXIT" == true ]]; then
     # sbx env が作った scoped secret も含めて削除する。
