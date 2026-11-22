@@ -502,6 +502,8 @@ done
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
+    # ファイル単位では checkout や設定再生成による inode の置換に追従できない。
+    add_mount "${HOME}/.config/git:ro"
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
@@ -806,7 +808,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             grep -qxF "$signer_line" "$allowed_signers" || printf '%s\n' "$signer_line" >>"$allowed_signers"
         fi
         if [[ -s "$allowed_signers" ]]; then
-            add_mount "${allowed_signers}:ro"
+            add_mount "${HOME}/.config/git:ro"
             add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
         fi
     else
@@ -950,36 +952,6 @@ assert_env_path_unmounted() {
     done
 }
 
-materialize_git_config() {
-    local dst="$1" name tmp
-    if [[ -L "$dst" ]] || ! (umask 077; mkdir -p "$dst"); then
-        log_error "Git 設定のコピー先を作成できません: $dst"
-        return 1
-    fi
-    tmp=$(umask 077; mktemp -d "${dst}.XXXXXX") || return 1
-    for name in config gitignore attributes; do
-        if [[ -f "$HOME/.config/git/$name" ]]; then
-            if ! cp -L "$HOME/.config/git/$name" "$tmp/$name"; then
-                rm -rf "$tmp"
-                log_error "Git 設定をコピーできません: $name"
-                return 1
-            fi
-        fi
-    done
-    # コピー先をファイル単位で mount したりディレクトリごと置換すると、再実行で inode が失われる。
-    for name in config gitignore attributes; do
-        if [[ -f "$tmp/$name" ]]; then
-            if [[ -d "$dst/$name" ]] || ! mv -f "$tmp/$name" "$dst/$name"; then
-                rm -rf "$tmp"
-                return 1
-            fi
-        else
-            rm -f "$dst/$name" || { rm -rf "$tmp"; return 1; }
-        fi
-    done
-    rmdir "$tmp"
-}
-
 prepare_env_files() {
     command -v jq >/dev/null 2>&1 || {
         log_error "--env-file には jq が必要です"
@@ -1046,10 +1018,6 @@ prepare_env_files() {
         path="${spec%:ro}"
         mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
     done
-    if [[ "$MOUNT_CONFIG" == true ]]; then
-        materialize_git_config "$state_dir/git" || exit 1
-        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$state_dir/git" --arg t "$HOME/.config/git" '$m + [{path:$p,target:$t,readOnly:true}]') || exit 1
-    fi
     if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
         # 別 target の rw mount で、明示された read-only mount を迂回しない。
         if ! python3 - "$CLAUDE_PROJECTS_HOST" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYPROJECTS'
