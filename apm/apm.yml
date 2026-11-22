@@ -60,6 +60,7 @@ dependencies:
     - mattpocock/skills/skills/productivity/grilling#v1.2.3
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.9.0
+    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.1
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
     # Ponytail は skill ディレクトリ単位で配布する。

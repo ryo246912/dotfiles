@@ -146,6 +146,11 @@
     {
       "matchPackageNames": ["mattpocock/skills"],
       "groupName": "mattpocock/skills"
+    },
+    {
+      "matchManagers": ["apm"],
+      "matchPackageNames": ["DietrichGebert/ponytail"],
+      "groupName": "ponytail/skills"
     }
   ],
   "customManagers": [
