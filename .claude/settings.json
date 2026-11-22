@@ -13,8 +13,5 @@
         ]
       }
     ]
-  },
-  "worktree": {
-    "bgIsolation": "none"
   }
 }

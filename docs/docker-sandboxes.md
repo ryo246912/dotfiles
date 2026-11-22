@@ -1472,9 +1472,9 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### まとめ
 
-ツールチェイン・ホスト連携・MCP はすべて移植済みで、
-**残る差分は生成物の分離（mount できないため運用で分ける）と
-`~/.claude/settings.json` の read-only 化**です。
+ツールチェイン・ホスト連携・MCP の対応状況は上表のとおりです。
+主な差分は生成物の分離、`~/.claude/settings.json` の read-only 化、
+`~/.config/mise` の共有、および sbx で lefthook を自動配置・インストールしないことです。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 
 ## MCP の扱い
