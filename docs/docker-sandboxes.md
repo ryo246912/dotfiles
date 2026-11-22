@@ -485,7 +485,8 @@ agent ごとの設定ディレクトリの対応（`--config-dir` で上書き�
 追加の `--settings` や設定ファイルのハッシュ照合は行いません。
 `--claude-oauth` はホスト設定の共有対象外で、sandbox 内の設定を使います。
 
-ホスト設定を共有しない新規 sandbox は `--no-config` で作成します。
+ホスト設定の自動マウントを止める新規 sandbox は `--no-config` で作成します。
+`--mount` や `SBX_AGENT_MOUNTS` で明示した workspace は、この指定でも引き続き共有されます。
 既存 sandbox のマウントや作成時の環境変数はこの指定だけでは外れません。
 既存環境を変更する場合は必要なデータを退避してから `--new --no-config` で再作成するか、
 未使用の別名で作成してください。`--new` は既存 sandbox を削除します。
