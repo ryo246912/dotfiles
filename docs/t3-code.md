@@ -12,7 +12,7 @@
 
 要点は 3 つ。
 
-1. **共有 sandbox はアカウントごとに 1 つ**（`t3-account1` / `t3-account2` / `t3-work3` / `t3-oauth`）。同じアカウントにリポジトリ別の sandbox も追加できる。
+1. **sandbox は Git リポジトリのルートパスとアカウントの組み合わせごとに 1 つ**。既存の共有環境は `--shared` で操作する。
 2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code / Codex）を動かす。
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
@@ -36,7 +36,7 @@ T3 Code アプリ（接続先を切り替え）
 ```
 
 共有環境の既定ポートは `t3-account1` が 3773、`t3-account2` が 3774、
-`t3-work3` が 3775、`t3-oauth` が 3776。リポジトリ別環境には未使用のポートを割り当てる。
+`t3-work3` が 3775、`t3-oauth` が 3776。リポジトリ別環境には 3780 以降の空きポートを自動で割り当てる。
 
 ### 各部品の役割
 
@@ -88,8 +88,7 @@ mise run sandbox:build-template claude
 クリップボードや Claude の Chrome 連携などのホスト設定も有効にする場合は、
 別途 `mise run sandbox:sbx-settings` を実行する。このタスクは sbx デーモンを再起動する。
 
-template は T3 追加後に再ビルドする。作成済みの sandbox は更新されないので、この構成では
-専用の `t3-account1` / `t3-account2` / `t3-work3` / `t3-oauth` を作る。同名の sandbox がある場合は再利用されるため、初回は専用名との衝突がないことを確認する。
+template は T3 追加後に再ビルドする。セットアップではリポジトリとアカウントの組み合わせに対応する sandbox を作る。同名の sandbox がある場合は再利用する。
 既存 sandbox の mount は setup では更新されない。構成が違う場合は必要なデータを保存し、
 対象 sandbox を停止・削除してから setup で作り直す（自動削除はしない）。
 T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
@@ -112,6 +111,8 @@ mise run t3:setup
 Ctrl-A で全選択、Ctrl-D で選択解除、Esc で設定を変更せず中止できる。
 `fzf` が未導入なら `mise install aqua:junegunn/fzf` で導入する。
 開始前に表示される Workspace が、操作しているプロジェクトのパスであることを確認する。
+
+以下の sbx 名とポートは共有環境を使う場合の既定値。
 
 | 選択     | Claude 設定          | 専用 sbx      | PC 側の接続先           |
 | -------- | -------------------- | ------------- | ----------------------- |
@@ -143,7 +144,7 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 選択した全アカウントの token と profile を確認してから準備を始める。
 途中で起動処理が失敗した場合、それまでに完了したアカウントの設定は保持する。
 
-### 同じアカウントでリポジトリ別の T3 環境を作る
+### リポジトリ別の T3 環境を作る
 
 既存の共有環境（例: `t3-oauth`）と同じアカウントで、別のリポジトリを
 T3 Code アプリに接続するときは、そのリポジトリのルートで次を実行する。
@@ -151,21 +152,22 @@ T3 Code アプリに接続するときは、そのリポジトリのルートで
 
 ```sh
 cd ~/Programming/work3/where-platform
-mise run t3:setup -- --repo --sbx oauth --workspace "$PWD" --port 3780
-mise run t3:cli -- --repo --sbx oauth pair
+mise run t3:setup
+mise run t3:cli
 ```
 
+セットアップでは fzf でアカウントを選び、CLI では **pair → 同じアカウント** を選ぶ。
 サブディレクトリからの実行でも Git が検出したルートを使う。別の場所からセットアップする場合は、
 `--workspace /path/to/repo` で対象を指定できる。ペアリングは対象リポジトリ内で実行する。
 
-`--repo` は Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
+セットアップは Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
 個別に作る。名前は CCManager の preset と同じアカウント識別子（`a1`、`a2`、`w3`、`oauth`）を使い、
 `<リポジトリ名>-<アカウント識別子>-<パスのハッシュ>-t3` の形式になる。
 リポジトリ名は Git ルートの末尾の名前を小文字にし、英数字以外をハイフンに置き換える。
 同名のリポジトリを別の場所に clone した場合も別環境になる。
-初回は環境ごとに未使用の `--port` を指定する。共有環境の既定値 3773〜3776 は予約済み。
-同じリポジトリの再セットアップでは登録済みのポートを再利用できる。
-`server-status`、`restart-server`、`login` なども `--repo` を付けて実行する。
+初回は環境ごとに 3780 以降の空きポートを自動で割り当てる。
+同じ環境の再セットアップでは登録済みのポートを再利用する。`--port` で初回のポートを指定することもできる。
+既存の共有環境を操作する場合は `mise run t3:cli -- --shared` を使う。共有環境のセットアップは `mise run t3:setup -- --shared`。
 リポジトリ別環境のアプリ接続にはローカルの `pair` または T3 Connect を使う。
 同じ T3 Connect アカウントで登録できるのは、共有環境とリポジトリ別環境を合計して標準で 3 環境まで。
 PC のローカル `pair` はこの枠を使わない。
@@ -188,8 +190,8 @@ sbx mcp auth notion-t3-oauth
 cd /path/to/project
 mise run t3:setup
 # oauth を選択して Sandbox を作成
-mise run sandbox:mcp-load t3-oauth
-# notion-t3-oauth など、この Sandbox で使う MCP を選択
+mise run sandbox:mcp-load
+# セットアップで表示された Sandbox 名と、その Sandbox で使う MCP を選択
 mise run t3:cli
 ```
 
@@ -236,7 +238,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
 **以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
 
-`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。
+`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。対象はカレントリポジトリで設定済みの環境。
 **login** を選ぶと途中で **Claude / Codex** の選択が入り、その操作に対応した Sandbox が表示される。
 スクリプトなどから直接実行する場合は `mise run t3:cli -- --sbx work3 pair` も使える。
 
@@ -449,8 +451,7 @@ T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは
 
 ### Tailscale で接続する場合
 
-T3 Connect が使えない場合（sbx が rc4 未満、`feature.udp-egress` が無効など）の代替として、
-スマホはホスト側の Tailscale で接続する。T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
+共有の subscription 環境で T3 Connect が使えない場合は、スマホからホスト側の Tailscale で接続できる。T3 Connect の中継を使わず、sbx の DNS 制限も受けない。
 
 前提（初回のみ）:
 
@@ -459,7 +460,7 @@ T3 Connect が使えない場合（sbx が rc4 未満、`feature.udp-egress` が
 - Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
 
 ```bash
-mise run t3:cli -- --sbx work3 tailscale
+mise run t3:cli -- --shared --sbx work3 tailscale
 ```
 
 `tailscale` はホストの `tailscale serve --bg` で、sandbox の公開ポートを tailnet の HTTPS に出し、
@@ -510,7 +511,7 @@ Linux でログアウト後も維持する場合は、管理者の方針に従�
 診断・保守時だけターミナルを使う:
 
 ```bash
-mise run t3:cli -- --sbx account2 ports
+mise run t3:cli -- --shared --sbx account2 ports
 # macOS
 launchctl print gui/$(id -u)/local.t3-sandbox.account2
 # Linux

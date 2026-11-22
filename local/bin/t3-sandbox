@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initial account selection and host service for app-driven T3 in a shared sbx."""
+"""Initial account selection and host service for app-driven T3 in a repository sandbox."""
 import argparse
 import fcntl
 from hashlib import sha256
@@ -10,6 +10,7 @@ import plistlib
 import re
 import shlex
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -197,6 +198,12 @@ def allow_t3_connect_network(profile):
          "region1.v2.argotunnel.com:7844,region2.v2.argotunnel.com:7844"])
 
 
+def mapped_t3_ports(name):
+    ports = run(["sbx", "ports", name], capture_output=True, text=True)
+    return [int(fields[1]) for row in ports.stdout.splitlines()
+            if len(fields := row.split()) >= 3 and fields[2] == "3773" and fields[1].isdigit()]
+
+
 def prepare(profile):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
@@ -218,12 +225,10 @@ def prepare(profile):
                          "既存 sandbox のマウントを確認してください")
     allow_t3_connect_network(profile)
     # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
-    ports = run(["sbx", "ports", profile["name"]], capture_output=True, text=True)
-    mapped = [fields[1] for row in ports.stdout.splitlines()
-              if len(fields := row.split()) >= 3 and fields[2] == "3773"]
+    mapped = mapped_t3_ports(profile["name"])
     if not mapped:
         run(["sbx", "ports", profile["name"], "--publish", f'{profile["port"]}:3773'])
-    elif str(profile["port"]) not in mapped:
+    elif profile["port"] not in mapped:
         raise ValueError(f"{profile['name']} の T3 ポートが profile と一致しません。sbx ports で確認してください")
 
 
@@ -437,8 +442,8 @@ def setup_account(profile, repository, no_autostart):
     if not no_autostart:
         install_service(profile, repository)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
-    repo_flag = " --repo" if repository is not None else ""
-    print(f"初回のアプリ接続: mise run t3:cli --{repo_flag} --sbx {account} pair")
+    cli = "mise run t3:cli" if repository is not None else "mise run t3:cli -- --shared"
+    print(f"初回のアプリ接続: {cli}（pair → {account}）")
     if no_autostart:
         location = f" --repository {shlex.quote(str(repository))}" if repository is not None else ""
         print(f"自動起動は未登録です。起動: t3-sandbox run {account}{location}")
@@ -456,13 +461,26 @@ def git_workspace(path):
     return Path(result.stdout.strip()).resolve()
 
 
+def available_port(reserved):
+    for port in range(3780, 65536):
+        if port in reserved:
+            continue
+        with socket.socket() as listener:
+            try:
+                listener.bind(("0.0.0.0", port))
+            except OSError:
+                continue
+        return port
+    raise ValueError("T3 用の空きポートが見つかりません。--port で指定してください")
+
+
 def setup(args):
     workspace = git_workspace(args.workspace)
-    repository = workspace if args.repo else None
-    accounts = list(dict.fromkeys(args.account or choose_accounts(multiple=not args.repo, repository=repository)))
+    repository = None if args.shared else workspace
+    print(f"Workspace: {workspace}", flush=True)
+    accounts = list(dict.fromkeys(args.account or choose_accounts(repository=repository)))
     if args.port is not None and len(accounts) != 1:
         raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。")
-    print(f"Workspace: {workspace}", flush=True)
     print("選択したアカウント: " + ", ".join(accounts), flush=True)
     require("sbx", "sbx-agent")
     root = state_root()
@@ -473,6 +491,9 @@ def setup(args):
         for path in (root / "profiles").glob("*.json"):
             with path.open() as stream:
                 registered_ports.setdefault(json.load(stream)["port"], set()).add(path.stem)
+        listing = run(["sbx", "ls"], capture_output=True, text=True)
+        names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
+        shared_ports = {default for _, default in ACCOUNTS.values()}
         profiles = []
         for account in accounts:
             key = profile_key(account, repository)
@@ -482,8 +503,10 @@ def setup(args):
                 if port is None and path.is_file():
                     port = load_profile(account, repository)["port"]
                 if port is None:
-                    raise ValueError("リポジトリ別の初回セットアップには --port 3780 のように未使用ポートを指定してください")
-                if port in {default for _, default in ACCOUNTS.values()}:
+                    # A previous attempt may have published its port before saving the profile.
+                    mapped = mapped_t3_ports(key) if key in names else []
+                    port = mapped[0] if mapped else available_port(registered_ports.keys() | shared_ports)
+                if port in shared_ports:
                     raise ValueError(f"port {port} は共有 T3 用です。別の --port を指定してください")
             profile = account_profile(account, workspace, port, repository)
             owners = registered_ports.setdefault(profile["port"], set())
@@ -491,7 +514,6 @@ def setup(args):
                 raise ValueError(f"port {profile['port']} は {', '.join(sorted(conflict))} に登録済みです。別の --port を指定してください")
             owners.add(key)
             profiles.append(profile)
-        run(["sbx", "ls"], stdout=subprocess.DEVNULL)
         for profile in profiles:
             setup_account(profile, repository, args.no_autostart)
 
@@ -499,18 +521,22 @@ def setup(args):
 def main():
     parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
-    initial = sub.add_parser("setup", help="初回のみ: アカウントを選び、共有 sbx と自動起動を設定")
+    initial = sub.add_parser("setup", help="アカウントを選び、カレント Git リポジトリ用の sbx と自動起動を設定")
     initial.add_argument("--sbx", "--account", dest="account", choices=ACCOUNTS, nargs="+", action="extend",
                          help="複数指定可。例: --sbx account1 work3")
     initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
-    initial.add_argument("--repo", action="store_true", help="リポジトリ別の T3 環境を設定")
+    scope = initial.add_mutually_exclusive_group()
+    scope.add_argument("--shared", action="store_true", help="アカウントごとの共有 T3 環境を設定")
+    scope.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
     initial.add_argument("--port", type=int)
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)
     service.add_argument("--repository", type=Path)
     cli = sub.add_parser("cli", allow_abbrev=False)
-    cli.add_argument("--repo", action="store_true", help="カレント Git リポジトリの T3 環境を操作")
+    scope = cli.add_mutually_exclusive_group()
+    scope.add_argument("--shared", action="store_true", help="アカウントごとの共有 T3 環境を操作")
+    scope.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
     cli.add_argument("--sbx", choices=ACCOUNTS, help="対象 sandbox。省略時は fzf で選択")
     cli.add_argument("arguments", nargs=argparse.REMAINDER, help="操作または T3 CLI の引数")
     args, leading = parser.parse_known_args()
@@ -533,7 +559,7 @@ def main():
             account = arguments.pop(0)
         if arguments[:1] == ["--"]:
             arguments.pop(0)
-        repository = git_workspace(None) if args.repo else None
+        repository = None if args.shared else git_workspace(None)
         account, arguments = choose_cli_target(account, arguments, repository)
         profile = load_profile(account, repository)
         print(f"Sandbox: {profile['name']} / Command: {' '.join(arguments)}", flush=True)
