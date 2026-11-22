@@ -92,6 +92,10 @@ capabilities:
           - "zenn.dev"
           - "qiita.com"
           - "**.wikipedia.org"
+          # 公開 X 投稿の調査
+          - "x.com"
+          - "twitter.com"
+          - "api.fxtwitter.com"
           # パッケージ・ビルドツールの取得元（Balanced preset に無いもの）
           # mise のバージョン解決・インストール
           - "mise-versions.jdx.dev"
