@@ -148,8 +148,15 @@ mise run t3:cli
 `--workspace /path/to/repo` で対象を指定できる。ペアリングは対象リポジトリ内で実行する。
 
 セットアップは Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
-個別に作る。名前は CCManager の preset と同じアカウント識別子（`a1`、`a2`、`w3`、`oauth`）を使い、
-`<リポジトリ名>-<アカウント識別子>-<パスのハッシュ>-t3` の形式になる。
+個別に作る。sandbox 名には CCManager の preset と同じ `a1`、`a2`、`w3`、`oauth` が入る。
+
+| 選択するアカウント | sandbox 名の例                  |
+| ------------------ | ------------------------------- |
+| account1           | `xxx-a1-<パスのハッシュ>-t3`    |
+| account2           | `xxx-a2-<パスのハッシュ>-t3`    |
+| work3              | `yyy-w3-<パスのハッシュ>-t3`    |
+| oauth              | `yyy-oauth-<パスのハッシュ>-t3` |
+
 リポジトリ名は Git ルートの末尾の名前を小文字にし、英数字以外をハイフンに置き換える。
 同名のリポジトリを別の場所に clone した場合も別環境になる。
 初回はアカウントごとに次の枠から空きポートを自動で割り当てる。
@@ -479,6 +486,26 @@ sandbox を停止するだけだとサービスが再試行する。
 sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
 `mise run t3:setup -- --sbx work3 --workspace /path/to/project` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
+
+### macOS で旧 sandbox の自動起動を解除する
+
+旧 `t3-account1` や `t3-work3` は、LaunchAgent の `KeepAlive` により、sandbox を削除しても再作成されることがある。
+対象の環境で作業を終えてから、Mac のターミナルで自動起動を無効にし、登録中のジョブを取り除く。
+
+```sh
+for account in account1 work3; do
+  service="gui/$(id -u)/local.t3-sandbox.$account"
+  launchctl disable "$service" || break
+  if launchctl print "$service" >/dev/null 2>&1; then
+    launchctl bootout "$service" || break
+  fi
+done
+```
+
+`sbx ls` で旧 sandbox が残っている場合は、必要なファイルを保存してから `sbx stop t3-account1` と
+`sbx rm t3-account1` を実行する。`t3-work3` も同じ手順で削除できる。
+この自動起動解除は旧サービスのラベルだけを対象とする。T3 のホスト側データは
+`~/.local/share/t3-sandbox/` 以下に残る。
 
 ## 検証と実機確認
 
