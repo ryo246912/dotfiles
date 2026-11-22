@@ -193,7 +193,7 @@ def mapped_t3_ports(name):
             if len(fields := row.split()) >= 3 and fields[2] == "3773" and fields[1].isdigit()]
 
 
-def prepare(profile, rebuild=False):
+def prepare(profile):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
     account = profile["account"]
@@ -204,12 +204,10 @@ def prepare(profile, rebuild=False):
     else:
         auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account]]
         environment = os.environ
-    command = ["sbx-agent", "claude", *auth_args,
-               "--workspace", profile["workspace"], "--name", profile["name"],
-               "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"]
-    if rebuild:
-        command.append("--new")
-    run(command, env=environment)
+    run(["sbx-agent", "claude", *auth_args,
+         "--workspace", profile["workspace"], "--name", profile["name"],
+         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"],
+        env=environment)
     mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", profile["workspace"]])
     if mounted.returncode:
         raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {profile['workspace']}。"
@@ -503,43 +501,34 @@ def reset():
     account = choose_accounts(repository, multiple=False, configured_only=True)[0]
     name = profile_key(account, repository)
     print(f"Workspace: {repository}\nSandbox: {name}")
-    print("実行中の作業は中断し、sandbox 内だけにあるファイルは消えます。"
-          "ホスト側の T3 設定・履歴と公開ポートは再利用します。")
-    if input("作り直しますか？ [y/N] ").strip().lower() not in ("y", "yes"):
+    print("自動起動、sandbox、T3 の登録を削除します。実行中の作業は中断し、"
+          "sandbox 内だけにあるファイルは消えます。ホスト側の T3 設定・履歴は残ります。")
+    if input("削除しますか？ [y/N] ").strip().lower() not in ("y", "yes"):
         raise KeyboardInterrupt
-    require("sbx", "sbx-agent")
+    require("sbx")
     with setup_lock():
-        profile = load_profile(account, repository)
-        account_profile(account, repository, profile["port"])
+        load_profile(account, repository)
         label = f"local.t3-sandbox.{name}"
         path = service_path(label)
-        restart = None
         if sys.platform == "darwin":
             require("launchctl")
-            domain = f"gui/{os.getuid()}"
-            target = f"{domain}/{label}"
+            target = f"gui/{os.getuid()}/{label}"
             loaded = subprocess.run(["launchctl", "print", target],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if loaded.returncode == 0:
-                if not path.is_file():
-                    raise ValueError(f"自動起動の設定ファイルが見つかりません: {path}")
                 run(["launchctl", "bootout", target])
-            if path.is_file():
-                restart = ["launchctl", "bootstrap", domain, path]
+            path.unlink(missing_ok=True)
         elif path.is_file():
             require("systemctl")
-            run(["systemctl", "--user", "stop", path.name])
-            restart = ["systemctl", "--user", "start", path.name]
-        try:
-            prepare(profile, rebuild=True)
-        except (OSError, ValueError, subprocess.CalledProcessError, KeyboardInterrupt):
-            if restart:
-                print("自動起動を停止したままにしました。原因を解消して t3:reset を再実行してください。",
-                      file=sys.stderr)
-            raise
-        if restart:
-            run(restart)
-    print(f"再作成済み: {name} — http://127.0.0.1:{profile['port']}")
+            run(["systemctl", "--user", "disable", "--now", path.name])
+            path.unlink()
+            run(["systemctl", "--user", "daemon-reload"])
+        listing = run(["sbx", "ls"], capture_output=True, text=True)
+        names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
+        if name in names:
+            run(["sbx", "rm", name])
+        profile_path(account, repository).unlink()
+    print(f"削除済み: {name}。再度使う場合は mise run t3:setup を実行してください。")
 
 
 def main():
@@ -552,7 +541,7 @@ def main():
     initial.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
     initial.add_argument("--port", type=int)
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
-    sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に再作成")
+    sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に削除")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)
     service.add_argument("--repository", type=Path)

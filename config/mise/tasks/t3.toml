@@ -13,7 +13,7 @@ raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" cli'
 
 ["t3:reset"]
-description = "Recreate a T3 sandbox for the current repository"
+description = "Remove a T3 sandbox and its registration for the current repository"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" reset'
