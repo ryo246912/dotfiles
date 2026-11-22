@@ -150,7 +150,7 @@ def choose_cli_command():
     commands = {
         "pair": (["pair"], "PC のアプリ接続用 URL / Token を発行"),
         "login": (["login"], "Claude / Codex のログイン先を選ぶ"),
-        "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証"),
+        "connect": (["connect", "link", "--headless"], "スマホ用 T3 Connect の初回認証（成功後に対象 sbx を再起動）"),
         "sessions": (["auth", "session", "list"], "接続を許可した端末の一覧"),
         "ports": (["ports"], "sandbox の公開ポートを表示"),
         "server-status": (["server-status"], "ホスト側 T3 サービスの状態"),
@@ -604,6 +604,20 @@ def main():
                 pair(profile, arguments)
                 return
             command = sandbox_command(profile, arguments, interactive=True)
+            if arguments[:2] == ["connect", "link"] and not any(
+                flag in arguments for flag in ("--help", "-h")
+            ):
+                print("認証が完了すると自動起動が登録済みの sandbox を再起動し、実行中の作業を中断します。", flush=True)
+                run(command)
+                with setup_lock():
+                    label = f"local.t3-sandbox.{profile['name']}"
+                    if service_path(label).is_file():
+                        print("T3 Connect の認証が完了しました。サーバーを再起動します。", flush=True)
+                        install_service(profile, repository, refresh=True)
+                        print("再起動しました。起動後に connect status で確認できます。")
+                    else:
+                        print("T3 Connect の認証が完了しました。自動起動が未登録のため、T3 サーバーを手動で起動し直してください。")
+                return
     os.execvp(command[0], command)
 
 
