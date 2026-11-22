@@ -69,10 +69,6 @@ Bash ツールのコマンドは zsh で実行される。bash の感覚で書�
   - 特に、コードの内容をそのまま書き出しただけのHowのコメントやドキュメントは書かない
 - 明示的な指示がなく、後方互換が必要ないリポジトリでは、後方互換の維持やデータ移行は行わず、常に理想的かつKISSなコードに書き換える
 
-## ユーザーへのコードレビュー依頼
-
-- 実装やプランが一区切りつき、ユーザーのレビューが必要なタイミングになったら、ユーザーの指示を待たずに自律的に crit を起動してレビューを依頼する
-
 ## Local development environment
 
 - devcontainer内でPlannotatorのreview画面を起動したら、reviewerがfeedbackを送信するかsessionを閉じるまで、`plannotator annotate`のprocessを終了、background化、または再起動せずに待つ
