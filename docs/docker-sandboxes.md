@@ -1762,7 +1762,8 @@ sbx settings set claude.chrome true
 
 OAuth preset の Claude で初回に `/login` を実行し、普段の Chrome 拡張と同じアカウントで
 ログインしてください。その後 `/chrome` で接続を確認します。
-OAuth 用の `--claude-oauth` は、ホストの `~/.claude` / `.claude.json` を自動共有せず、
+OAuth 用の `--claude-oauth` は、ホストの `~/.claude/projects` だけを読み書き可能で共有します。account1 の会話ログも sandbox から読み書きできます。
+設定・認証ファイル（`~/.claude/settings.json` や `.claude.json`）は自動共有せず、
 Sandbox 内の標準設定ディレクトリを使います。Git・ツール・共有 skills の設定は維持します。
 statusline は account の横に起動時の認証方式を表示します（例: `account1 setup-token` / `sbx OAuth`）。
 OAuth preset は statusline だけを CLI 設定として追加し、ホストの認証ファイルをコピーしません。
@@ -2118,6 +2119,36 @@ CLI の失敗時は hook が理由を stderr に出し、push / PR 作成は続�
 参考: [CodeRabbit auth login](https://docs.coderabbit.ai/cli/reference#auth-login)、
 [sbx SSH port forwarding](https://docs.docker.com/ai/sandboxes/integrations/#port-forwarding)、
 [CodeRabbit の料金・制限](https://docs.coderabbit.ai/management/plans)。
+
+## Claude sandbox の会話ログ
+
+認証方式にかかわらず、選択したホストアカウントの `projects` を
+sandbox の `/home/agent/.claude/projects` へ読み書き可能でマウントします。
+保存先は `--config-dir` 指定を優先し、省略時は次の対応です。
+
+| 起動時の選択          | ホスト側の保存先              |
+| --------------------- | ----------------------------- |
+| 既定・account1・OAuth | `~/.claude/projects`          |
+| account2              | `~/.claude-account2/projects` |
+| work3                 | `~/.claude-work3/projects`    |
+
+その他のアカウント ID は `--config-dir` を指定してください。
+OAuth は従来どおり `--config-dir` と併用できず、`~/.claude/projects` を使います。
+`CLAUDE_CONFIG_DIR` は sandbox 内で設定されます。ホスト側の同名環境変数は入力として使わないため、保存先は `--config-dir` または `--claude-account` で選択してください。
+設定ディレクトリを共有する経路では、その中の `projects` を使い、追加 target マウントは作りません。
+OAuth / `--no-config` では `/home/agent/.claude/projects` への追加マウントで永続化します。
+追加マウントが明示的な read-only マウントと競合する場合はエラーで停止します。
+`--no-config` でも会話ログの永続化は有効です。
+既存の `projects` が symlink の場合は従来の共有先を使うため、アカウント間で同じ保存先になることがあります。
+
+既存 sandbox は内部の会話ログと作業ファイルを退避してから、同じ起動引数に `--new` を付けて再作成します。
+`mise run sandbox:recreate <sandbox名>` は `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox名>.sh` に作成時の呼び出し記録がある場合だけ使えます。記録がない場合は警告してスキップされるため、元のコマンドを一度 `--new` 付きで実行してください。
+`--new` は既存 sandbox を削除します。退避前には実行しないでください。
+退避ログは既存ファイルと衝突しないことを確認して移します。
+再作成後は `/resume` または `claude --resume <セッションID>` で確認します。
+会話ログだけでは sandbox 内の worktree や未コミット変更は復元されません。
+
+マウントには [Docker の additionalWorkspaces](https://docs.docker.com/ai/sandboxes/configuration/environment-files/#additionalworkspaces) の `target` を使用します。
 
 ## 参考
 
