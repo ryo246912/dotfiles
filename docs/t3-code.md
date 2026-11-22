@@ -513,8 +513,8 @@ for account in account1 work3; do
 done
 ```
 
-自動起動の解除に成功したアカウントについて、`sbx ls` で旧 sandbox が残っている場合は、必要なファイルを保存してから `sbx stop t3-account1` と
-`sbx rm t3-account1` を実行する。`t3-work3` も同じ手順で削除できる。
+自動起動を解除できたアカウントごとに、`sbx ls` で `t3-<account>` が残っているか確認する。
+必要なファイルを保存したら、同じアカウント名を入れて `sbx stop t3-<account>` と `sbx rm t3-<account>` を実行する。
 この自動起動解除は旧サービスのラベルだけを対象とする。T3 のホスト側データは
 `${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/` 以下に残る。
 
