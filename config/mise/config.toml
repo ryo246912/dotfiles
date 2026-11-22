@@ -164,6 +164,9 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "pipx:grip"                                                 = "4.6.2"
 "pipx:tftui"                                                = "0.14.1"
 
+# PyPI の同名パッケージとは別のため、公式 GitHub リポジトリのタグを使う。
+"pipx:git+https://github.com/Panniantong/Agent-Reach.git" = { version = "v1.6.1", package_name = "agent-reach" }
+
 [settings]
 # 同梱レジストリにない jactionlint を公式 aqua レジストリから解決する。
 aqua.registries = ["https://github.com/aquaproj/aqua-registry"]
