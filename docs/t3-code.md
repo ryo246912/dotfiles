@@ -144,6 +144,27 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 選択した全アカウントの token と profile を確認してから準備を始める。
 途中で起動処理が失敗した場合、それまでに完了したアカウントの設定は保持する。
 
+### 同じアカウントでリポジトリ別の T3 環境を作る
+
+既存の共有環境（例: `t3-oauth`）と同じアカウントで、別のリポジトリを
+T3 Code アプリに接続するときは、そのリポジトリで次を実行する。
+
+```sh
+mise run t3:setup -- --repo --sbx oauth --workspace "$PWD" --port 3780
+mise run t3:cli -- --repo --sbx oauth pair
+```
+
+`--repo` は Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
+個別に作る。同名のリポジトリを別の場所に clone した場合も別環境になる。
+初回は環境ごとに未使用の `--port` を指定する。共有環境の既定値 3773〜3776 は予約済み。
+同じリポジトリの再セットアップでは登録済みのポートを再利用できる。
+`server-status`、`restart-server`、`login` なども `--repo` を付けて実行する。
+リポジトリ別環境のアプリ接続にはローカルの `pair` または T3 Connect を使う。
+
+T3 を使わずにリポジトリで Claude を直接開く場合は
+`sbx-agent claude --claude-oauth --name-prefix oauth` を使える。
+通常の `sbx-agent` はリポジトリ名・ブランチ名で sandbox 名を組み立てる。
+
 以前の版でホームディレクトリを Git リポジトリとして参照するエラーが出る場合は、
 タスク定義を更新するまで `--workspace "$PWD"` を付けると、シェルで選んだプロジェクトを明示できる。
 
@@ -465,7 +486,8 @@ Tailscale は private ホストで `mise run bootstrap:mac-packages` が導入�
 
 データ領域はそのアカウントの sandbox に追加 mount し、ホスト用 profile は mount の外に置く。
 XDG_DATA_HOME / XDG_STATE_HOME / XDG_CONFIG_HOME の指定にも対応。
-別 workspace / port で setup を再実行した場合は、既存設定を変更せず停止する。
+同じ環境に別 workspace / port を指定して setup を再実行した場合は、既存設定を変更せず停止する。
+リポジトリ別環境では、表の `<account>` の位置にアカウント・リポジトリ名・パスのハッシュを使う。
 別アカウントを追加しても既存アカウントの T3 とデータを変更しない。
 データはホストに永続化されるが、sandbox の削除・再作成は動いている作業を終了し、
 追加の provider ログインが必要になることもある。認証情報を template に焼き込まない。
