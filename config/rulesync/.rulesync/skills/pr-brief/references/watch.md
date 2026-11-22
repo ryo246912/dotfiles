@@ -1,6 +1,6 @@
 # 監視モード（`--watch`）
 
-pr-reviewer-brief skill の監視モード。新しく作られた PR を監視し、PR ごとに最初の 1 回だけ資料を自動で作る。作り直しは
+pr-brief skill の監視モード。新しく作られた PR を監視し、PR ごとに最初の 1 回だけ資料を自動で作る。作り直しは
 ユーザーが手で行う。Claude Code 専用（バックグラウンドのコマンドと subagent を使う）。ユーザーは対象リポジトリで
 Claude Code を立ち上げっぱなしにしておく（tmux の中など）。このセッション（メイン）は監視と依頼だけをするので、
 軽いモデル（`claude --model haiku`）でよい。
@@ -33,9 +33,9 @@ Claude Code を立ち上げっぱなしにしておく（tmux の中など）。
    python3 <skill>/scripts/watch_prs.py --notify "<arg> の資料: <HTML のパス>"
    ```
 
-   失敗したら失敗を通知し、作り直しはしない（ユーザーが手で `/pr-reviewer-brief <arg>` を実行する）
+   失敗したら失敗を通知し、作り直しはしない（ユーザーが手で `/pr-brief <arg>` を実行する）
 
 3. **1 に戻る**。ユーザーが止めるまで繰り返す
 
 見つけた PR は対象リポジトリのルートにある `.pr-reviewer-artifacts/pr-reviewer-brief/watch-state.json` に記録され、二度は出ない。新しい状態ファイルが無い場合はリポジトリルートと起動ディレクトリにある旧状態を統合し、新しいファイルに保存してから引き継いだ旧状態ファイルを削除する。
-会話が長くなって自動で compact されても、`/pr-reviewer-brief --watch` を打ち直せば続きから再開できる。
+会話が長くなって自動で compact されても、`/pr-brief --watch` を打ち直せば続きから再開できる。

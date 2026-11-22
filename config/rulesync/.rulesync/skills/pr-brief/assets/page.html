@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="pr-reviewer-brief-head" content="{{head_sha}}" />
-    <meta name="pr-reviewer-brief-generated" content="{{generated}}" />
+    <meta name="pr-brief-head" content="{{head_sha}}" />
+    <meta name="pr-brief-generated" content="{{generated}}" />
     <title>{{title}}</title>
     <style>
       :root {
@@ -286,10 +286,14 @@
         if (!container) return;
         const d = container.dataset;
         document.getElementById("diff-stats").textContent = `${d.files} files / ${d.hunks} hunks +${d.added} −${d.removed}`;
-        const head = document.querySelector('meta[name="pr-reviewer-brief-head"]')?.content ?? "";
-        const key = `pr-reviewer-brief:${location.pathname}:${head}`;
+        const head = document.querySelector('meta[name="pr-brief-head"]')?.content ?? "";
+        const key = `pr-brief:${location.pathname}:${head}`;
         let done = {};
-        try { done = JSON.parse(localStorage.getItem(key) || "{}"); } catch {}
+        try {
+          const saved = localStorage.getItem(key)
+            ?? localStorage.getItem(`pr-reviewer-brief:${location.pathname}:${head}`);
+          done = JSON.parse(saved ?? "{}");
+        } catch {}
         const boxes = [...container.querySelectorAll("input[type=checkbox][data-group]")];
         const update = () => {
           const count = boxes.filter((box) => box.checked).length;

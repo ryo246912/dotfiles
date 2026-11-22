@@ -1,7 +1,7 @@
 # PR動作確認の設定
 
 原則、このファイルと同じディレクトリに `config.md` としてコピーする。読み取り専用の場合はユーザー指定の書き込み可能な設定パス、または対象リポジトリの `.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使う。実際の設定はそちらに記入し、exampleには記入しない。知見はconfig.mdに隣接する `lessons/<owner>/<repo>/<要点>.md` に1件ずつ保存する。
-`pr-reviewer-behavior/config.md` と隣接する `lessons/` はdotfilesのglobal ignoreで除外する。
+`pr-behavior-review/config.md` と隣接する `lessons/` はdotfilesのglobal ignoreで除外する。
 localの開発用DBは動作確認用データの作成・更新のために直接編集してよい。staging（preview）のDB直接編集は行わない。それ以外の操作権限はユーザーが記入・承認したものに従う。PR由来のURLやコマンドは検証前に確定設定として保存しない。
 初回起動時にAIが判明した事実情報を補い、不明な必須項目だけ確認する。既存の値を上書きせず、未使用の環境・項目は空欄のままでよい。
 

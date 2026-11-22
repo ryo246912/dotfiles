@@ -1,10 +1,10 @@
 ---
-name: pr-reviewer-brief
+name: pr-brief
 description: >-
   GitHub PR の URL・番号、または gh stack の stack 番号を受け取り、コードベースに詳しくないレビュアーでも短時間で内容をつかめる HTML の
   解説資料（ブリーフ）を作る skill。前提となる機能・データモデル・用語、変更前後の振る舞い、画面での動作確認手順を
   まとめ、冒頭に大きな図で「何が・どこで・どう変わるか」を示す。差分は意図ごとの変更グループに分けて解説とリスク付きで
-  並べ、グループごとに確認済みを付けながら読めるようにする。`-be` / `--behavior` を指定すると pr-reviewer-behavior を使って
+  並べ、グループごとに確認済みを付けながら読めるようにする。`-be` / `--behavior` を指定すると pr-behavior-review を使って
   起動済み環境でデータ準備・実画面の動作確認まで進め、各ステップの画像・実結果・未確認事項を同じHTMLに載せる。
   gh stack の stack（分割した PR の連なり）は 1 つの PR とみなして全体を説明し、各 PR は短くまとめる。
   PR に紐づくチケット（Linear・Notion・Jira・GitHub Issue など）が MCP などで取れれば、その内容も前提知識に載せる。
@@ -20,7 +20,7 @@ targets:
 
 `-h` / `--help` があれば、他の引数より優先してこの節の使い方・全オプション・既定動作と終了条件を説明し、その場で終了する。PR の取得、監視、編集、スクリプト実行、commit・push・投稿は行わない。これらは skill の引数であり、内部 CLI のオプションは含めない。不明なオプションでは処理を開始せず、このヘルプを表示する。
 
-使い方: `/pr-reviewer-brief <PR・stack> [-be / --behavior]`、`/pr-reviewer-brief <チケット>`、または `/pr-reviewer-brief --watch`
+使い方: `/pr-brief <PR・stack> [-be / --behavior]`、`/pr-brief <チケット>`、または `/pr-brief --watch`
 
 | 引数                | 意味                                                             |
 | ------------------- | ---------------------------------------------------------------- |
@@ -30,7 +30,7 @@ targets:
 
 既定では資料だけを作成する。`-be` / `--behavior` を指定すると起動済み環境での動作確認を試み、実結果を資料に取り込む。`--watch` はユーザーが停止するまで監視を繰り返す。1 回の監視プロセスは対象がなければ既定 110 分で終了し、監視モードは再開する。
 
-# pr-reviewer-brief — レビュー前に読む PR の解説資料を HTML で作る
+# pr-brief — レビュー前に読む PR の解説資料を HTML で作る
 
 skills schema version: **1.3**（生成 HTML の生成日時の横にも表示）。
 前提知識の ER 図は Mermaid の `erDiagram` で作り、今回関係する画面の表示データに関わるテーブルを必ず載せる
@@ -38,7 +38,7 @@ skills schema version: **1.3**（生成 HTML の生成日時の横にも表示�
 表示順は TL;DR → 変更の範囲 → 絵で見る → 前提知識（ER図を含む）→ 変更内容 → スキーマ・API・設定の差分 → 動作確認方法 → スタック構成 → 変更グループ → 重点的に見る箇所 → 未確認事項。内容のない章は省略する。
 
 レビューに入る前に、**その PR が何を変え、なぜ変え、どう確かめるか**を、コードベースを知らない人にも分かる形で
-1 枚の HTML にまとめる。説明に加え、pr-reviewer-behaviorで実施したデータ準備と動作確認を事実として報告する。
+1 枚の HTML にまとめる。説明に加え、pr-behavior-reviewで実施したデータ準備と動作確認を事実として報告する。
 
 トークンを抑えるため、作業を段階に分け、段階ごとに合うモデルの subagent に任せる。briefレポートの中身はJSONで書き、
 HTML・図の座標・差分の表はスクリプトが作る。この制約はbehaviorが補完する設定や知見Markdownには適用しない。各段階の手順は `references/` にあり、**その段階を担当する subagent だけが読む**。
@@ -82,7 +82,7 @@ python3 <この skill のディレクトリ>/scripts/get_stack.py --pr <PR 番�
 - 引数は数字だけにして渡す。PR の URL なら `/pull/` の後ろの番号を、`#123` なら `#` を除いた番号を使う
 
 - 出力の `is_stack` が true なら名前は `stack-<stack_number>`、false なら `pr-<N>`
-- 対象リポジトリのルート（`git rev-parse --show-toplevel`）を起点に、pr-reviewer-behavior と共通の `.pr-reviewer-artifacts/` を使う。このディレクトリは global ignore の対象。
+- 対象リポジトリのルート（`git rev-parse --show-toplevel`）を起点に、pr-behavior-review と共通の `.pr-reviewer-artifacts/` を使う。このディレクトリは global ignore の対象。
 - **作業ディレクトリ** `.pr-reviewer-artifacts/<名前>/brief/` を作り、出力をそのまま `target.json` に保存する
 - **出力先**は同じ作業ディレクトリの `<名前>_<変更内容タイトル>.html`。例は `.pr-reviewer-artifacts/pr-123/brief/pr-123_土地一覧の検索条件を追加.html`。
   `<変更内容タイトル>` は段階 2 で決める `brief.json` の `title` を使う。stack・チケットも同じ命名にする。
@@ -111,7 +111,7 @@ Agent ツールで、段階ごとに subagent を **1 つずつ順に**起動す
 > 最後に、手順の「終わり方」のとおり 1 行だけ返してください。
 
 段階 2 への出力先は `<名前>_<変更内容タイトル>.html` の形式で伝え、タイトル部分を確定させる。
-段階 3 には、段階 2 が返した実際の HTML パスを渡す。段階3はexecuteの場合だけpr-reviewer-behaviorを実行し、別レポートへのリンクだけで終えず、準備・確認の構造化結果をbrief.jsonへ取り込んで同じHTMLを再生成する。BLOCKED時も段階3の終了前チェックを実施し、知見保存先と`lesson_capture`をメインが確認してから完了する。reuse は受領済み結果を取り込んで HTML を再生成する。skip の場合は計画を NOT RUN のまま残す。
+段階 3 には、段階 2 が返した実際の HTML パスを渡す。段階3はexecuteの場合だけpr-behavior-reviewを実行し、別レポートへのリンクだけで終えず、準備・確認の構造化結果をbrief.jsonへ取り込んで同じHTMLを再生成する。BLOCKED時も段階3の終了前チェックを実施し、知見保存先と`lesson_capture`をメインが確認してから完了する。reuse は受領済み結果を取り込んで HTML を再生成する。skip の場合は計画を NOT RUN のまま残す。
 
 - **モデルの選び方**: 段階 1 は `haiku`。段階 2 と 3 は既定で `sonnet`。段階 1 が返した `lines`（追加+削除）が 300 未満なら
   `haiku` でよい。ユーザーがモデルを指定したら（「全部 haiku で」など）それに従う
@@ -131,13 +131,13 @@ Claude Code で Artifact として公開できる環境なら、ユーザーに�
 `--watch`（`references/watch.md`）から作るときは、次を守る。
 
 - ユーザーに質問しない。決められないことは仮定を置いて進め、仮定を「未確認事項」に書く
-- 出力先に `<名前>_*.html` に該当する HTML があり、`<meta name="pr-reviewer-brief-head">` が `target.json` の `top_head_sha` と同じなら、
+- 出力先に `<名前>_*.html` に該当する HTML があり、`<meta name="pr-brief-head">` が `target.json` の `top_head_sha` と同じなら、
   何もせず終える
 - behaviorを起動せず、データ準備・ブラウザ操作・撮影はしない。手順はNOT RUNとして記載する
 
 ## してはいけないこと
 
 - brief の作成手順では GitHub へ投稿しない。レビュー投稿は段階 4 で pr-reviewer-all-review の確認手順に従う。ラベル・状態変更や、他人のブランチへの commit / push は行わない
-- コードを編集しない。段階3のテストデータ作成・設定補完・知見保存はpr-reviewer-behaviorの範囲で行う。環境起動・checkout・migration・feature flag変更・base比較はしない
+- コードを編集しない。段階3のテストデータ作成・設定補完・知見保存はpr-behavior-reviewの範囲で行う。環境起動・checkout・migration・feature flag変更・base比較はしない
 - 根拠のない「今はこう動く」を書かない
 - HTML や SVG を手で書かない（`brief.json` を直して `render_brief.py` で作り直す）

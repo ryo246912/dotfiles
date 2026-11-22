@@ -1,5 +1,5 @@
 ---
-name: pr-reviewer-behavior
+name: pr-behavior-review
 description: PRのURLまたは番号から変更内容を読み、起動済みのlocalhostやpreviewで、確認用データの準備・対象画面への到達・実ブラウザでの動作確認を行う。PR stackの場合は最上位PRの環境で確認する。手動確認に引き継げるデータと操作手順も残す。
 targets:
   - claudecode

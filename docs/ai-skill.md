@@ -797,9 +797,9 @@ desloppify status --json   # 状態を JSON で出力
 ## PR レビュースキルの組み合わせ例
 
 ```text
-/pr-reviewer-brief 123                          # 解説資料
-/pr-reviewer-brief 123 -be                      # 解説資料と動作確認
-/pr-reviewer-behavior 123                       # 動作確認だけ
+/pr-brief 123                          # 解説資料
+/pr-brief 123 -be                      # 解説資料と動作確認
+/pr-behavior-review 123                       # 動作確認だけ
 /pr-reviewer-all-review 123                     # レビューと条件が揃えば動作確認
 /pr-reviewer-all-review 123 -br                 # 解説資料も作る
 /pr-reviewer-all-review 123 -c                  # crit で確認

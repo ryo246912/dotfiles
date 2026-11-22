@@ -1,6 +1,6 @@
 # 指摘候補の洗い出しと出し方
 
-pr-reviewer-all-review / pr-reviewer-crit skill の共通手順。
+pr-reviewer-all-review / pr-crit skill の共通手順。
 
 agent-lessons が設定済み（`~/.local/share/agent-lessons` がある）なら、読む前に過去の指摘から観点を引いておく。
 自分がよく書く指摘（`given`）とチームの規約（`team`）のうち、PR の変更ファイルに関係するものが対象。ここで引いた観点も、

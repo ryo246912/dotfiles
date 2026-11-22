@@ -1,6 +1,6 @@
 # 段階 2: 解説を書き、HTML を作る
 
-pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレクトリ>`（以下 `<work>`）の材料から、資料の中身を
+pr-brief skill の段階 2。段階 1 が集めた `<作業ディレクトリ>`（以下 `<work>`）の材料から、資料の中身を
 **JSON で**書く。HTML・図の座標・差分の表はスクリプトが作るので、HTML や SVG は書かない。
 
 入力: `<work>` の `target.json`・`pr-<N>.json`・`hunks.json`・`hunks-index.txt`・`groups.json`（下書き）・`notes.md`・
@@ -126,7 +126,7 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
 
 ## 5. 動作確認方法（`manual_test`）
 
-通常のPR・stackは、次の段階でpr-reviewer-behaviorによるデータ準備と実画面確認を行う。
+通常のPR・stackは、次の段階でpr-behavior-reviewによるデータ準備と実画面確認を行う。
 ここでは変更内容と期待動作を根拠付きで整理し、未実行の確認計画を作る。画面がない変更はその旨を記し、実行可能な確認手段を示す。
 
 - `environment`: ユーザーが用意した起動済みのlocal／preview。stackなら最上位PRの環境。環境起動・checkout・flag変更・base比較の手順を実行指示にしない。
