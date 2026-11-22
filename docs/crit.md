@@ -231,7 +231,8 @@ git rev-parse HEAD   # headRefOidと一致すること（critのcomment行番号
 
 # 3. PRの差分（merge-base..head、GitHubと同じ範囲）をcritで開き、指摘候補をline commentとして並べる
 crit pr 123
-crit comment --json --file comments.json --author 'Claude Code'   # 本文1行目は「No.1 [should] 一言」
+# 本文1行目は「**以下、AIでの返信**」、2行目は「No.1 [should] 一言」
+crit comment --json --file comments.json --author 'Claude Code'
 
 # 4. UIで各指摘にreplyして壁打ち → Finish Review → agentがreplyで回答 → 再度crit pr 123 … を繰り返す
 
@@ -281,12 +282,17 @@ agentが付けた候補がそのまま投稿されやすいため、`pr-crit`で
 ```bash
 review_file=$(crit status --json | jq -r '.review_file')
 jq -r '
+  def preview:
+    split("\n")
+    | if .[0] == "**以下、AIでの返信**" then
+        (.[1:] | map(select(test("\\S"))) | first // "")
+      else .[0] end;
   (.files // {} | to_entries[] | .key as $p | .value.comments[]? |
     ( select((.resolved | not) and .github_id == null and .dom_anchor == null)
-      | "NEW-COMMENT  \($p):\(.start_line)-\(.end_line) [\(.id)] replies=\(.replies // [] | length) \(.body | split("\n")[0])" ),
+      | "NEW-COMMENT  \($p):\(.start_line)-\(.end_line) [\(.id)] replies=\(.replies // [] | length) \(.body | preview)" ),
     ( select(.github_id != null) | .id as $root | .replies[]? | select(.github_id == null)
-      | "NEW-REPLY    \($p) [\($root)] \(.body | split("\n")[0])" )),
-  (.review_comments[]? | select(.resolved | not) | "LOCAL-ONLY   (review) [\(.id)] \(.body | split("\n")[0])")
+      | "NEW-REPLY    \($p) [\($root)] \(.body | preview)" )),
+  (.review_comments[]? | select(.resolved | not) | "LOCAL-ONLY   (review) [\(.id)] \(.body | preview)")
 ' "$review_file"
 ```
 
