@@ -81,7 +81,7 @@ def main():
     repo = json.loads(run('gh', 'repo', 'view', '--json', 'nameWithOwner,url'))
     login = run('gh', 'api', 'user', '--jq', '.login')
     identity = hashlib.sha256(f'{repo["url"]}:{login}'.encode()).hexdigest()
-    root = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'pr-author-fix'
+    root = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'pr-fix'
     root.mkdir(parents=True, exist_ok=True)
     path = root / f'{identity}.json'
     pending_path = root / f'{identity}.pending.json'
@@ -112,7 +112,7 @@ def main():
                     return 0
                 delay = args.interval
             except (subprocess.CalledProcessError, OSError, ValueError) as error:
-                print(f'pr-author-fix: {error}', file=sys.stderr)
+                print(f'pr-fix: {error}', file=sys.stderr)
                 if not args.loop:
                     return 1
                 delay = min(max(delay * 2, 60), 3600)
