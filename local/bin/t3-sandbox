@@ -418,7 +418,7 @@ def git_workspace(path):
     result = subprocess.run(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"],
                             capture_output=True, text=True, env=git_environment)
     if result.returncode:
-        raise ValueError(f"Git リポジトリを確認できません: {workspace}。--workspace /path/to/project を指定してください")
+        raise ValueError(f"Git リポジトリを確認できません: {workspace}。対象の Git リポジトリ内で実行してください")
     return Path(result.stdout.strip()).resolve()
 
 
