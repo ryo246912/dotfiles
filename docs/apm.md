@@ -66,11 +66,11 @@ dependencies:
 ```
 
 配置名は path の末尾（path が無ければ repo 名）になります。これが期待する skill 名と異なる場合だけ、object
-形式の `alias` で配置名を明示します（例: `zenbu-labs/terminal-browser` の `skill/`）。object 形式の依存は
-Renovate で更新されないため、upstream の変更で使えなくなったなどの理由で意図的に固定する依存に限ります。
+形式の `alias` で配置名を明示します（例: `zenbu-labs/terminal-browser` の `skill/`）。依存ごとに配布先を
+絞る `targets` も object 形式で指定します。Renovate の組み込み apm manager による version 更新は文字列形式が対象です。
 
 pluginが選択可能なskillsを公開しており、その一部だけが必要な場合はobject formへ`skills`を追加します
-（この場合も Renovate では更新されません）。
+（この場合も apm manager による version 更新の対象外です）。
 
 ```yaml
 dependencies:
@@ -93,7 +93,10 @@ dependencies:
   の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
   Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
   週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。
-- **Renovate の apm manager で更新しない依存**: `terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
+- **object 形式で ref が無い依存**: `fkubota/understand-mode` は `targets: [claude]` を指定するため、object 形式で宣言します。
+  apm manager による version 更新の対象外ですが、lockFileMaintenance の `apm install --update` で
+  `resolved_commit` が upstream の既定ブランチの最新 commit に再解決されます。
+- **object 形式で ref を固定する依存**: `terminal-browser` は object 形式なので対象外です。desloppify も object 形式ですが、
   `.github/renovate.json` の regex manager が `ref` だけを更新し、mise の `pipx:desloppify` と同じPRにまとめます。
   組み込みの apm manager ではないため lockfile は再生成されず、そのPRのブランチで
   `mise run apm:lock-local` を実行して lockfile を再生成し、commit します。
@@ -106,7 +109,7 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 次の構成にしています。
 
 - **`targets` に `copilot` を含めない**: copilot は scope によって配布先が異なり（project scope は `.github/`、
-  user scope は `~/.copilot/`）、tsumiki の commands や ponytail の hooks の配布先が lockfile に入るため、
+  user scope は `~/.copilot/`）、tsumiki の commands の配布先が lockfile に入るため、
   scope ごとに lockfile が変わってしまいます。`claude`・`codex`・`cursor` は両 scope で同じ内容になります。
 - **APM CLI の version を揃える**: lockfile の `apm_version` が mise の APM と一致しないと
   `mise run apm:validate-lock-version` が失敗します。そのため mise の `aqua:microsoft/apm`、
@@ -129,6 +132,10 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 - `~/.apm/apm.lock.yaml` / `~/.apm/apm_modules/` / `~/.claude/skills/` 等: `apm install -g` の生成物（配布先）。
 
 ## 使い方
+
+### Modern Web Guidance を使う
+
+[スキルの呼び出し方と CLI の使用例](ai-skill.md#modern-web-guidance)を参照してください。
 
 ### 外部スキルを追加・更新する（依存として取り込む）
 
