@@ -156,12 +156,15 @@ mise run t3:cli -- --repo --sbx oauth pair
 
 `--repo` は Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
 個別に作る。名前は CCManager の preset と同じアカウント識別子（`a1`、`a2`、`w3`、`oauth`）を使い、
-`where-platform-oauth-<パスのハッシュ>-t3` の形式になる。
+`<リポジトリ名>-<アカウント識別子>-<パスのハッシュ>-t3` の形式になる。
+リポジトリ名は Git ルートの末尾の名前を小文字にし、英数字以外をハイフンに置き換える。
 同名のリポジトリを別の場所に clone した場合も別環境になる。
 初回は環境ごとに未使用の `--port` を指定する。共有環境の既定値 3773〜3776 は予約済み。
 同じリポジトリの再セットアップでは登録済みのポートを再利用できる。
 `server-status`、`restart-server`、`login` なども `--repo` を付けて実行する。
 リポジトリ別環境のアプリ接続にはローカルの `pair` または T3 Connect を使う。
+同じ T3 Connect アカウントで登録できるのは、共有環境とリポジトリ別環境を合計して標準で 3 環境まで。
+PC のローカル `pair` はこの枠を使わない。
 
 T3 を使わずにリポジトリで Claude を直接開く場合は
 `sbx-agent claude --claude-oauth --name-prefix oauth` を使える。
