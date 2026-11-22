@@ -17,27 +17,26 @@
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
 PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下の構成図は共有環境の例。リポジトリ別環境は指定した別のポートを使う。
+以下は、同じ OAuth アカウントで dotfiles の共有環境と where-platform の専用環境を併用する例。
 
 ```text
-スマホの T3 アプリ ──┐  T3 Connect（インターネット経由・QUIC）
-                     │  または Tailscale（tailnet 内の HTTPS）
-PC の T3 アプリ ─────┤  http://127.0.0.1:3773 / 3774 / 3775 / 3776
-                     ▼
-┌─ Mac（ホスト）─────────────────────────────────────────────┐
-│  公開ポート 3773 → t3-account1 / 3774 → t3-account2 /      │
-│            3775 → t3-work3 / 3776 → t3-oauth                 │
-│                                                            │
-│  ┌─ sbx: t3-work3（アカウント work3 用）────────────────┐  │
-│  │  T3 サーバー（1 つ）                                 │  │
-│  │   ├─ thread A → worktree A → Claude Code（work3）    │  │
-│  │   ├─ thread B → worktree B → Claude Code（work3）    │  │
-│  │   └─ thread C → worktree C → Claude Code（work3）    │  │
-│  │  cloudflared（T3 Connect 用のトンネル）              │  │
-│  │  マウント: プロジェクトの workspace / T3 の保存先    │  │
-│  └──────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────┘
+T3 Code アプリ（接続先を切り替え）
+  PC はローカルの公開ポート、スマホは T3 Connect で接続
+  │
+  └─ Mac（ホスト）
+      ├─ 127.0.0.1:3776 → t3-oauth（共有環境）
+      │                    ├─ T3 サーバー（sandbox 内の :3773）
+      │                    ├─ workspace: dotfiles
+      │                    └─ T3 の設定・履歴: 共有環境の保存先
+      │
+      └─ 127.0.0.1:3780 → where-platform-oauth-<パスのハッシュ>-t3
+                           ├─ T3 サーバー（sandbox 内の :3773）
+                           ├─ workspace: where-platform
+                           └─ T3 の設定・履歴: リポジトリ別環境の保存先
 ```
+
+共有環境の既定ポートは `t3-account1` が 3773、`t3-account2` が 3774、
+`t3-work3` が 3775、`t3-oauth` が 3776。リポジトリ別環境には未使用のポートを割り当てる。
 
 ### 各部品の役割
 
@@ -147,12 +146,17 @@ CPU・メモリの使用量は増えるため、必要なアカウントだけ�
 ### 同じアカウントでリポジトリ別の T3 環境を作る
 
 既存の共有環境（例: `t3-oauth`）と同じアカウントで、別のリポジトリを
-T3 Code アプリに接続するときは、そのリポジトリで次を実行する。
+T3 Code アプリに接続するときは、そのリポジトリのルートで次を実行する。
+以下は `where-platform` の例。
 
 ```sh
+cd ~/Programming/work3/where-platform
 mise run t3:setup -- --repo --sbx oauth --workspace "$PWD" --port 3780
 mise run t3:cli -- --repo --sbx oauth pair
 ```
+
+サブディレクトリからの実行でも Git が検出したルートを使う。別の場所からセットアップする場合は、
+`--workspace /path/to/repo` で対象を指定できる。ペアリングは対象リポジトリ内で実行する。
 
 `--repo` は Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
 個別に作る。名前は CCManager の preset と同じアカウント識別子（`a1`、`a2`、`w3`、`oauth`）を使い、
