@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-21T13:31:03.403257+00:00'
+generated_at: '2026-11-22T12:26:17.239902+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -2592,6 +2592,31 @@ dependencies:
     .claude/skills/html-wireframe/SKILL.md: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
     .claude/skills/html-wireframe/agents/openai.yaml: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
   content_hash: sha256:97cdf1d6abaef20857992e0841cfe5a19bbda1144d8de0d2bcdc0bca80952983
+- repo_url: pritamux/gridlines
+  name: gridlines
+  host: github.com
+  resolved_commit: ae393199f0adcc1e09fec3f916444b03bf721d15
+  version: unknown
+  virtual_path: skills/gridlines
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/gridlines
+  - .agents/skills/gridlines/SKILL.md
+  - .agents/skills/gridlines/audit.mjs
+  - .agents/skills/gridlines/probe.js
+  - .claude/skills/gridlines
+  - .claude/skills/gridlines/SKILL.md
+  - .claude/skills/gridlines/audit.mjs
+  - .claude/skills/gridlines/probe.js
+  deployed_file_hashes:
+    .agents/skills/gridlines/SKILL.md: sha256:7a859123476572dfdb9ee03323d8cd4df0532979b43c1f0ddb4a6d1bd8c535a4
+    .agents/skills/gridlines/audit.mjs: sha256:f8a6826ecec79175d858d5c93c009340bbab99303862f6297551eda3b73e141d
+    .agents/skills/gridlines/probe.js: sha256:3a18f734124929fe0f14532b5d48f329031cc6120b8d28b01f86b43966e987a1
+    .claude/skills/gridlines/SKILL.md: sha256:7a859123476572dfdb9ee03323d8cd4df0532979b43c1f0ddb4a6d1bd8c535a4
+    .claude/skills/gridlines/audit.mjs: sha256:f8a6826ecec79175d858d5c93c009340bbab99303862f6297551eda3b73e141d
+    .claude/skills/gridlines/probe.js: sha256:3a18f734124929fe0f14532b5d48f329031cc6120b8d28b01f86b43966e987a1
+  content_hash: sha256:9bd2479f9e6000e30677b78c7608ba095010ccf31675c827358396af16240ab5
 - repo_url: supabase/agent-skills
   name: supabase-postgres-best-practices
   host: github.com
@@ -5484,6 +5509,42 @@ deployments:
   - vercel-labs/skills/skills/find-skills
   active_owner: vercel-labs/skills/skills/find-skills
   content_hash: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/gridlines
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/gridlines/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:7a859123476572dfdb9ee03323d8cd4df0532979b43c1f0ddb4a6d1bd8c535a4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/gridlines/audit.mjs
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:f8a6826ecec79175d858d5c93c009340bbab99303862f6297551eda3b73e141d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/gridlines/probe.js
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:3a18f734124929fe0f14532b5d48f329031cc6120b8d28b01f86b43966e987a1
 - kind: project-relative
   target: claude
   value: .claude/skills/grill-me
@@ -11748,6 +11809,42 @@ deployments:
   - vercel-labs/skills/skills/find-skills
   active_owner: vercel-labs/skills/skills/find-skills
   content_hash: sha256:c00eeea0e13e74fe4a9d84ba0a8542205a1b736d65f13134fe1a6647eb14976f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gridlines
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gridlines/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:7a859123476572dfdb9ee03323d8cd4df0532979b43c1f0ddb4a6d1bd8c535a4
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gridlines/audit.mjs
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:f8a6826ecec79175d858d5c93c009340bbab99303862f6297551eda3b73e141d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/gridlines/probe.js
+  runtime: null
+  scope: project
+  owners:
+  - pritamux/gridlines/skills/gridlines
+  active_owner: pritamux/gridlines/skills/gridlines
+  content_hash: sha256:3a18f734124929fe0f14532b5d48f329031cc6120b8d28b01f86b43966e987a1
 - kind: project-relative
   target: codex
   value: .agents/skills/grill-me
