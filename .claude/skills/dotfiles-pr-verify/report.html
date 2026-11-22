@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PR #{{PR番号}} 動作確認</title>
+    <style>
+      /* T3 Code の html_render ではテーマ変数を使い、単体で開いたときは fallback の色を使う */
+      :root {
+        color-scheme: light dark;
+        --c-fg: var(--foreground, light-dark(#1f2328, #e6edf3));
+        --c-muted: var(--muted-foreground, light-dark(#59636e, #9198a1));
+        --c-border: var(--border, light-dark(#d1d9e0, #3d444d));
+        --c-card: var(--card, light-dark(#f6f8fa, #151b23));
+        --c-code: var(--code-background, light-dark(#eff2f5, #262c36));
+        --c-link: var(--primary, light-dark(#0969da, #4493f8));
+        --c-ok: var(--success, light-dark(#1a7f37, #3fb950));
+        --c-part: var(--warning, light-dark(#9a6700, #d29922));
+        --c-ng: var(--destructive, light-dark(#cf222e, #f85149));
+        --c-radius: var(--radius, 8px);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 860px;
+        color: var(--c-fg);
+        font-family: var(--font-sans, system-ui, sans-serif);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 20px 0 8px;
+      }
+      a {
+        color: var(--c-link);
+      }
+      ul {
+        margin: 4px 0;
+        padding-left: 20px;
+      }
+      code {
+        font-family: var(--font-mono, ui-monospace, monospace);
+        font-size: 12px;
+        background: var(--c-code);
+        padding: 1px 4px;
+        border-radius: 4px;
+        word-break: break-all;
+      }
+      pre {
+        font-family: var(--font-mono, ui-monospace, monospace);
+        font-size: 12px;
+        background: var(--c-code);
+        padding: 10px 12px;
+        border-radius: var(--c-radius);
+        overflow-x: auto;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        word-break: normal;
+      }
+      .meta {
+        color: var(--c-muted);
+        font-size: 12px;
+      }
+      .lead {
+        border-left: 3px solid var(--c-link);
+        padding: 6px 12px;
+        margin: 8px 0;
+      }
+      .box {
+        background: var(--c-card);
+        border: 1px solid var(--c-border);
+        border-radius: var(--c-radius);
+        padding: 12px 14px;
+        margin: 10px 0;
+      }
+      .counts {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 8px 0;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 1px 8px;
+        border-radius: 999px;
+        white-space: nowrap;
+        border: 1px solid currentColor;
+      }
+      .ok {
+        color: var(--c-ok);
+      }
+      .part {
+        color: var(--c-part);
+      }
+      .ng {
+        color: var(--c-ng);
+      }
+      .none {
+        color: var(--c-muted);
+      }
+      details {
+        background: var(--c-card);
+        border: 1px solid var(--c-border);
+        border-radius: var(--c-radius);
+        margin: 8px 0;
+      }
+      summary {
+        cursor: pointer;
+        padding: 10px 14px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        list-style: none;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary::before {
+        content: "▸";
+        color: var(--c-muted);
+      }
+      details[open] > summary::before {
+        content: "▾";
+      }
+      summary .ttl {
+        font-weight: 600;
+        flex: 1;
+        min-width: 0;
+      }
+      details > .body {
+        padding: 0 14px 12px;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 4.5em 1fr;
+        gap: 4px 10px;
+        margin: 6px 0;
+      }
+      dt {
+        color: var(--c-muted);
+        font-size: 12px;
+        padding-top: 2px;
+      }
+      dd {
+        margin: 0;
+        min-width: 0;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      @media (max-width: 560px) {
+        .grid2,
+        dl {
+          grid-template-columns: 1fr;
+        }
+        dd {
+          margin-bottom: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PR #{{PR番号}} 動作確認：{{PRタイトル}}</h1>
+    <div class="meta">実行 {{実行日時}}</div>
+
+    <h2>結論</h2>
+    <div class="counts">
+      <span class="badge ok">成功 {{件数}}</span>
+      <span class="badge part">一部確認 {{件数}}</span>
+      <span class="badge ng">失敗 {{件数}}</span>
+      <span class="badge none">未実施 {{件数}}</span>
+    </div>
+    <p class="lead">{{結論の要約。未確認で残る重要事項も書く}}</p>
+
+    <h2>実施条件</h2>
+    <ul>
+      <li>対象: <a href="{{PRのURL}}">PR #{{PR番号}}</a> {{PRタイトル}}</li>
+      <li>
+        検証コミット: <code>{{headRefOid}}</code>（detached HEAD）。{{報告直前の headRefOid
+        再確認の結果}}
+      </li>
+      <li>
+        実行環境: {{OS・ホストか sandbox か}}。特記のないコマンドの作業ディレクトリは
+        <code>{{リポジトリのパス}}</code>
+      </li>
+      <li>
+        判定: <span class="badge ok">成功</span> 期待結果を確認 ／
+        <span class="badge part">一部確認</span> 確認範囲が限定的 ／
+        <span class="badge ng">失敗</span> 期待結果にならなかった ／
+        <span class="badge none">未実施</span> 実行していない
+      </li>
+    </ul>
+
+    <h2>結果（タップで詳細）</h2>
+
+    <!-- 確認項目ごとに details を 1 つ書く。判定のクラスは ok / part / ng / none -->
+    <details>
+      <summary><span class="ttl">1. {{項目名}}</span><span class="badge ok">成功</span></summary>
+      <div class="body">
+        <dl>
+          <dt>観点</dt>
+          <dd>{{確認観点}}</dd>
+          <dt>期待</dt>
+          <dd>{{期待結果}}</dd>
+          <dt>結果</dt>
+          <dd>{{実行結果。出力の要点と終了コード}}</dd>
+          <dt>補足</dt>
+          <dd>{{確認範囲の限界・失敗した補助手順・作業ディレクトリ}}</dd>
+        </dl>
+        <pre><code>{{実行したコマンド}}</code></pre>
+      </div>
+    </details>
+
+    <h2>未実施事項と作業後の状態</h2>
+    <div class="grid2">
+      <div class="box">
+        <b>未実施</b>
+        <ul>
+          <li>{{実行していない確認と理由}}</li>
+        </ul>
+      </div>
+      <div class="box">
+        <b>作業後の状態</b>
+        <ul>
+          <li>
+            HEAD: <code>{{headRefOid}}</code>（detached）。元のブランチへは
+            <code>git switch {{元のブランチ}}</code> で戻る
+          </li>
+          <li>保持した未コミット変更: {{なし、またはファイル名と内容の要約}}</li>
+          <li>導入したツール: {{なし、またはツール名とバージョン}}</li>
+          <li>実装変更・commit・push は行っていない</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
