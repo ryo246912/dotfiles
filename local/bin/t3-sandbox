@@ -416,7 +416,7 @@ def setup_account(profile, repository, no_autostart):
     if not no_autostart:
         install_service(profile, repository)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
-    print(f"初回のアプリ接続: mise run t3:cli（pair → {account}）")
+    print(f"初回のアプリ接続: cd {shlex.quote(str(repository))} && mise run t3:cli（pair → {account}）")
     if no_autostart:
         location = f" --repository {shlex.quote(str(repository))}"
         print(f"自動起動は未登録です。起動: t3-sandbox run {account}{location}")

@@ -498,23 +498,24 @@ sandbox を削除した場合はサービス経由ではなく、対象アカウ
 
 ### macOS で旧 sandbox の自動起動を解除する
 
-旧 `t3-account1` や `t3-work3` は、LaunchAgent の `KeepAlive` により、sandbox を削除しても再作成されることがある。
+旧 `t3-account1`、`t3-account2`、`t3-work3`、`t3-oauth` は、LaunchAgent の `KeepAlive` により、sandbox を削除しても再作成されることがある。
 対象の環境で作業を終えてから、Mac のターミナルで自動起動を無効にし、登録中のジョブを取り除く。
+以下は `account1` と `work3` の例。対象に応じてループ内のアカウント一覧を変更する。
 
 ```sh
 for account in account1 work3; do
   service="gui/$(id -u)/local.t3-sandbox.$account"
-  launchctl disable "$service" || break
+  launchctl disable "$service" || continue
   if launchctl print "$service" >/dev/null 2>&1; then
-    launchctl bootout "$service" || break
+    launchctl bootout "$service" || continue
   fi
 done
 ```
 
-`sbx ls` で旧 sandbox が残っている場合は、必要なファイルを保存してから `sbx stop t3-account1` と
+自動起動の解除に成功したアカウントについて、`sbx ls` で旧 sandbox が残っている場合は、必要なファイルを保存してから `sbx stop t3-account1` と
 `sbx rm t3-account1` を実行する。`t3-work3` も同じ手順で削除できる。
 この自動起動解除は旧サービスのラベルだけを対象とする。T3 のホスト側データは
-`~/.local/share/t3-sandbox/` 以下に残る。
+`${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/` 以下に残る。
 
 ## 検証と実機確認
 
