@@ -616,7 +616,9 @@ def main():
                         install_service(profile, repository, refresh=True)
                         print("再起動しました。起動後に connect status で確認できます。")
                     else:
-                        print("T3 Connect の認証が完了しました。自動起動が未登録のため、T3 サーバーを手動で起動し直してください。")
+                        print("T3 Connect の認証が完了しました。自動起動の定義ファイルが見つかりません。")
+                        print("手動で起動している場合は、T3 サーバーを止めてから次のコマンドを実行してください。")
+                        print(f"t3-sandbox run {account} --repository {shlex.quote(str(repository))}")
                 return
     os.execvp(command[0], command)
 
