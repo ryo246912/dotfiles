@@ -17,11 +17,13 @@
 3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
 
 PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下は、同じ OAuth アカウントで dotfiles と where-platform に別々の環境を作った例。
+以下は、dotfiles に OAuth 環境、where-platform に account1 環境を作った例。
 
 ```text
 T3 Code アプリ（接続先を切り替え）
   PC はローカルの公開ポート、スマホは T3 Connect で接続
+  公開ポート枠: oauth 3800–3809 / account1 3810–3819
+                account2 3820–3829 / work3 3830–3839
   │
   └─ Mac（ホスト）
       ├─ 127.0.0.1:3800 → dotfiles-oauth-<パスのハッシュ>-t3
@@ -29,7 +31,7 @@ T3 Code アプリ（接続先を切り替え）
       │                    ├─ workspace: dotfiles
       │                    └─ T3 の設定・履歴: dotfiles の環境の保存先
       │
-      └─ 127.0.0.1:3801 → where-platform-oauth-<パスのハッシュ>-t3
+      └─ 127.0.0.1:3810 → where-platform-a1-<パスのハッシュ>-t3
                            ├─ T3 サーバー（sandbox 内の :3773）
                            ├─ workspace: where-platform
                            └─ T3 の設定・履歴: where-platform の環境の保存先
